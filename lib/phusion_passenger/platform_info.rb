@@ -155,6 +155,94 @@ public
 	def self.env_defined?(name)
 		return !ENV[name].nil? && !ENV[name].empty?
 	end
+	
+	def self.cc
+		return ENV['CC'] || "gcc"
+	end
+	
+	def self.cxx
+		return ENV['CXX'] || "g++"
+	end
+	
+	def self.try_compile(language, source, flags = nil)
+		if language == :c
+			compiler = cc
+		elsif language == :cxx
+			compiler = cxx
+		else
+			raise ArgumentError,"Unsupported language '#{language}'"
+		end
+		filename = File.join("/tmp/passenger-compile-check-#{Process.pid}.c")
+		File.open(filename, "w") do |f|
+			f.puts(source)
+		end
+		begin
+			return system("(#{compiler} #{flags} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
+		ensure
+			File.unlink(filename) rescue nil
+			File.unlink("#{filename}.o") rescue nil
+		end
+	end
+	private_class_method :try_compile
+	
+	def self.try_link(language, source, flags = nil)
+		if language == :c
+			compiler = cc
+		elsif language == :cxx
+			compiler = cxx
+		else
+			raise ArgumentError,"Unsupported language '#{language}'"
+		end
+		filename = File.join("/tmp/passenger-link-check-#{Process.pid}.c")
+		File.open(filename, "w") do |f|
+			f.puts(source)
+		end
+		begin
+			return system("(#{compiler} #{flags} '#{filename}' -o '#{filename}.out') >/dev/null 2>/dev/null")
+		ensure
+			File.unlink(filename) rescue nil
+			File.unlink("#{filename}.out") rescue nil
+		end
+	end
+	private_class_method :try_link
+	
+	def self.try_compile_and_run(language, source, flags = nil)
+		if language == :c
+			compiler = cc
+		elsif language == :cxx
+			compiler = cxx
+		else
+			raise ArgumentError,"Unsupported language '#{language}'"
+		end
+		filename = File.join("/tmp/passenger-compile-check-#{Process.pid}.c")
+		File.open(filename, "w") do |f|
+			f.puts(source)
+		end
+		begin
+			if system("(#{compiler} #{flags} '#{filename}' -o '#{filename}.out') >/dev/null 2>/dev/null")
+				if Process.respond_to?(:spawn)
+					pid = Process.spawn("#{filename}.out",
+						:out => ["/dev/null", "w"],
+						:err => ["/dev/null", "w"])
+					
+				else
+					pid = fork do
+						STDOUT.reopen("/dev/null", "w")
+						STDERR.reopen("/dev/null", "w")
+						exec("#{filename}.out")
+					end
+				end
+				pid = Process.waitpid(pid) rescue nil
+				return pid && $?.exitstatus == 0
+			else
+				return false
+			end
+		ensure
+			File.unlink(filename) rescue nil
+			File.unlink("#{filename}.out") rescue nil
+		end
+	end
+	private_class_method :try_compile_and_run
 end
 
 end # module PhusionPassenger

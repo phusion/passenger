@@ -176,8 +176,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->autoDetectRails = DirConfig::UNSET;
 	config->autoDetectRack = DirConfig::UNSET;
 	config->autoDetectWSGI = DirConfig::UNSET;
-	config->railsEnv = NULL;
-	config->rackEnv = NULL;
+	config->environment = NULL;
 	config->appRoot = NULL;
 	config->user = NULL;
 	config->group = NULL;
@@ -222,8 +221,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_THREEWAY_CONFIG(autoDetectRails);
 	MERGE_THREEWAY_CONFIG(autoDetectRack);
 	MERGE_THREEWAY_CONFIG(autoDetectWSGI);
-	MERGE_STR_CONFIG(railsEnv);
-	MERGE_STR_CONFIG(rackEnv);
+	MERGE_STR_CONFIG(environment);
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
 	MERGE_STR_CONFIG(user);
@@ -238,6 +236,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_INT_CONFIG(statThrottleRate);
 	MERGE_STR_CONFIG(restartDir);
 	MERGE_STR_CONFIG(uploadBufferDir);
+	MERGE_STRING_CONFIG(unionStationKey);
 	MERGE_THREEWAY_CONFIG(resolveSymlinksInDocRoot);
 	MERGE_THREEWAY_CONFIG(allowEncodedSlashes);
 	MERGE_THREEWAY_CONFIG(friendlyErrorPages);
@@ -262,6 +261,9 @@ DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_user_switching, userSwitching)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_address, unionStationGatewayAddress)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_union_station_gateway_port, unionStationGatewayPort, int, 1)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGatewayCert)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_dir, analyticsLogDir)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
@@ -278,6 +280,7 @@ DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_use_global_queue, useGlobalQueue
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_max_requests, maxRequests, unsigned long, 0)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformance)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_environment, environment)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_group_name, appGroupName)
@@ -285,6 +288,7 @@ DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_user, user)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_group, group)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_restart_dir, restartDir)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_upload_buffer_dir, uploadBufferDir)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_union_station_key, unionStationKey)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_friendly_error_pages, friendlyErrorPages)
@@ -326,7 +330,6 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rails_auto_detect, autoDetectRails)
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_rails_env, railsEnv)
 
 static const char *
 cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -383,7 +386,6 @@ cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rack_auto_detect, autoDetectRack)
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_rack_env, rackEnv)
 
 
 /*************************************************
@@ -536,6 +538,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS,
 		"The directory in which upload buffer files should be placed."),
+	AP_INIT_TAKE1("UnionStationKey",
+		(Take1Func) cmd_union_station_key,
+		NULL,
+		OR_ALL,
+		"The Union Station key."),
 	AP_INIT_FLAG("PassengerResolveSymlinksInDocumentRoot",
 		(FlagFunc) cmd_passenger_resolve_symlinks_in_document_root,
 		NULL,
@@ -556,6 +563,21 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
+	AP_INIT_TAKE1("UnionStationGatewayAddress",
+		(Take1Func) cmd_union_station_gateway_address,
+		NULL,
+		RSRC_CONF,
+		"The Union Station Gateway host name."),
+	AP_INIT_TAKE1("UnionStationGatewayPort",
+		(Take1Func) cmd_union_station_gateway_port,
+		NULL,
+		RSRC_CONF,
+		"The Union Station Gateway port number."),
+	AP_INIT_TAKE1("UnionStationGatewayCert",
+		(Take1Func) cmd_union_station_gateway_cert,
+		NULL,
+		RSRC_CONF,
+		"The Union Station Gateway certificate."),
 	AP_INIT_TAKE1("PassengerAnalyticsLogDir",
 		(Take1Func) cmd_passenger_analytics_log_dir,
 		NULL,
@@ -601,7 +623,7 @@ const command_rec passenger_commands[] = {
 		RSRC_CONF,
 		"Whether auto-detection of Ruby on Rails applications should be enabled."),
 	AP_INIT_TAKE1("RailsEnv",
-		(Take1Func) cmd_rails_env,
+		(Take1Func) cmd_environment,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rails app must run."),
@@ -628,7 +650,7 @@ const command_rec passenger_commands[] = {
 		RSRC_CONF,
 		"Whether auto-detection of Rack applications should be enabled."),
 	AP_INIT_TAKE1("RackEnv",
-		(Take1Func) cmd_rack_env,
+		(Take1Func) cmd_environment,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rack app must run."),

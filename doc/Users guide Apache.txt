@@ -2049,6 +2049,46 @@ following command to give your Rails application folder that context:
 chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
 -----------------------------------------------------------
 
+==== I've deployed my app on SSL, but the app thinks its not on SSL ====
+
+Rails and many other frameworks infers whether it's running on SSL through the CGI
+environment variable `HTTPS`. Apache always sets this variable when on SSL,
+except when SSL is incorrectly configured.
+
+Most Apache installations already configure SSL by default on port 443
+(conf/extra/httpd-ssl.conf). Some people think they can save some typing in
+subsequent SSL vhost blocks, and omit important options like 'SSLEngine on',
+like this:
+
+--------------------------------------
+# httpd-ssl.conf contains something like:
+# <VirtualHost _default_:443>
+#     SSLEngine on
+#     ...
+# </VirtualHost>
+Include conf/extra/httpd-ssl.conf
+
+<VirtualHost *:443>
+    ServerName www.example.com
+    DocumentRoot /webapps/example/public
+</Virtualhost>
+--------------------------------------
+
+*This is wrong!* In each SSL vhost block you must re-specify all the SSL options.
+Otherwise Apache won't properly detect the vhost as an SSL vhost block. Here's
+the corrected example:
+
+--------------------------------------
+Include conf/extra/httpd-ssl.conf
+
+<VirtualHost *:443>
+    ServerName www.example.com
+    DocumentRoot /webapps/example/public
+    SSLEngine on
+    ...more SSL options here...
+</Virtualhost>
+--------------------------------------
+
 
 [[conflicting_apache_modules]]
 === Conflicting Apache modules ===

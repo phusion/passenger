@@ -840,15 +840,12 @@ protected
 			return PhusionPassenger::NativeSupport.split_by_null_into_hash(data)
 		end
 	else
-		PADDING = "_"
-		NULL = "\0"
+		NULL = "\0".freeze
 		
 		def split_by_null_into_hash(data)
-			data << PADDING
-			array = data.split(NULL)
-			array.pop
-			data.slice!(data.size - 1, data.size - 1)
-			return Hash[*array]
+			args = data.split(NULL, -1)
+			args.pop
+			return Hash[*args]
 		end
 	end
 	

@@ -7,6 +7,7 @@
 
 #include <pthread.h>
 #include <boost/utility.hpp>
+#include <boost/throw_exception.hpp>
 #include <boost/thread/exceptions.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/thread_time.hpp>
@@ -26,10 +27,11 @@
 
 namespace boost
 {
-    class mutex:
-        boost::noncopyable
+    class mutex
     {
     private:
+        mutex(mutex const&);
+        mutex& operator=(mutex const&);        
         pthread_mutex_t m;
     public:
         mutex()
@@ -37,32 +39,37 @@ namespace boost
             int const res=pthread_mutex_init(&m,NULL);
             if(res)
             {
-                throw thread_resource_error("Cannot initialize a mutex", res);
+                boost::throw_exception(thread_resource_error("Cannot initialize a mutex", res));
             }
         }
         ~mutex()
         {
             int ret;
-            do {
+            do
+            {
                 ret = pthread_mutex_destroy(&m);
-            } while (ret == EINTR);
+            } while(ret==EINTR);
         }
         
         void lock()
         {
-            int ret;
-            do {
-                ret = pthread_mutex_lock(&m);
-            } while (ret == EINTR);
-            BOOST_VERIFY(!ret);
+            int res;
+            do
+            {
+                res = pthread_mutex_lock(&m);
+            } while (res==EINTR);
+            if(res) {
+                boost::throw_exception(lock_error(res));
+            }
         }
 
         void unlock()
         {
             int ret;
-            do {
+            do
+            {
                 ret = pthread_mutex_unlock(&m);
-            } while (ret == EINTR);
+            } while (ret==EINTR);
             BOOST_VERIFY(!ret);
         }
         
@@ -72,7 +79,10 @@ namespace boost
             do {
                 res = pthread_mutex_trylock(&m);
             } while (res == EINTR);
-            BOOST_ASSERT(!res || res==EBUSY);
+            if(res && (res!=EBUSY))
+            {
+                boost::throw_exception(lock_error(res));
+            }
             return !res;
         }
 
@@ -88,9 +98,11 @@ namespace boost
 
     typedef mutex try_mutex;
 
-    class timed_mutex:
-        boost::noncopyable
+    class timed_mutex
     {
+    private:
+        timed_mutex(timed_mutex const&);
+        timed_mutex& operator=(timed_mutex const&);        
     private:
         pthread_mutex_t m;
 #ifndef BOOST_PTHREAD_HAS_TIMEDLOCK
@@ -103,14 +115,14 @@ namespace boost
             int const res=pthread_mutex_init(&m,NULL);
             if(res)
             {
-                throw thread_resource_error("Cannot initialize a mutex", res);
+                boost::throw_exception(thread_resource_error("Cannot initialize a mutex", res));
             }
 #ifndef BOOST_PTHREAD_HAS_TIMEDLOCK
             int const res2=pthread_cond_init(&cond,NULL);
             if(res2)
             {
                 BOOST_VERIFY(!pthread_mutex_destroy(&m));
-                throw thread_resource_error("Cannot initialize a condition variable", res2);
+                boost::throw_exception(thread_resource_error("Cannot initialize a condition variable", res2));
             }
             is_locked=false;
 #endif

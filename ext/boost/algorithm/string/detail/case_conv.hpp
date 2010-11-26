@@ -31,7 +31,7 @@ namespace boost {
             struct to_lowerF : public std::unary_function<CharT, CharT>
             {
                 // Constructor
-                to_lowerF( const std::locale& Loc ) : m_Loc( Loc ) {}
+                to_lowerF( const std::locale& Loc ) : m_Loc( &Loc ) {}
 
                 // Operation
                 CharT operator ()( CharT Ch ) const
@@ -39,11 +39,11 @@ namespace boost {
                     #if defined(__BORLANDC__) && (__BORLANDC__ >= 0x560) && (__BORLANDC__ <= 0x564) && !defined(_USE_OLD_RW_STL)
                         return std::tolower( Ch);
                     #else
-                        return std::tolower<CharT>( Ch, m_Loc );
+                        return std::tolower<CharT>( Ch, *m_Loc );
                     #endif
                 }
             private:
-                const std::locale& m_Loc;
+                const std::locale* m_Loc;
             };
 
             // a toupper functor
@@ -51,7 +51,7 @@ namespace boost {
             struct to_upperF : public std::unary_function<CharT, CharT>
             {
                 // Constructor
-                to_upperF( const std::locale& Loc ) : m_Loc( Loc ) {}
+                to_upperF( const std::locale& Loc ) : m_Loc( &Loc ) {}
 
                 // Operation
                 CharT operator ()( CharT Ch ) const
@@ -59,11 +59,11 @@ namespace boost {
                     #if defined(__BORLANDC__) && (__BORLANDC__ >= 0x560) && (__BORLANDC__ <= 0x564) && !defined(_USE_OLD_RW_STL)
                         return std::toupper( Ch);
                     #else
-                        return std::toupper<CharT>( Ch, m_Loc );
+                        return std::toupper<CharT>( Ch, *m_Loc );
                     #endif
                 }
             private:
-                const std::locale& m_Loc;
+                const std::locale* m_Loc;
             };
 
 #if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)

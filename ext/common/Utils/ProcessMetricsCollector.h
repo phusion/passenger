@@ -27,6 +27,7 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/thread.hpp>
+#include <boost/bind.hpp>
 #include <oxt/system_calls.hpp>
 #include <string>
 #include <vector>
@@ -49,10 +50,10 @@
 #include <cerrno>
 #include <cstring>
 
-#include "StaticString.h"
-#include "Exceptions.h"
-#include "Utils.h"
-#include "Utils/FileHandleGuard.h"
+#include <StaticString.h>
+#include <Exceptions.h>
+#include <Utils.h>
+#include <Utils/ScopeGuard.h>
 
 namespace Passenger {
 
@@ -65,8 +66,22 @@ struct ProcessMetrics {
 	pid_t   pid;
 	pid_t   ppid;
 	uint8_t cpu;
+	/** Resident Set Size, amount of memory in RAM. Does not include swap.
+	 * 0 if completely swapped out.
+	 */
 	size_t  rss;
-	size_t  realMemory;
+	/** Proportional Set Size, see measureRealMemory(). Does not include swap.
+	 * -1 if unknown, 0 if completely swapped out.
+	 */
+	ssize_t  pss;
+	/** Private dirty RSS, see measureRealMemory(). Does not include swap.
+	 * -1 if unknown, 0 if completely swapped out.
+	 */
+	ssize_t  privateDirty;
+	/** Amount of memory in swap.
+	 * -1 if unknown, 0 if no swap used.
+	 */
+	ssize_t  swap;
 	/** OS X Snow Leopard does not report the VM size correctly, so don't use this. */
 	size_t  vmsize;
 	pid_t   processGroupId;
@@ -74,10 +89,82 @@ struct ProcessMetrics {
 	
 	ProcessMetrics() {
 		pid = (pid_t) -1;
+		pss = -1;
+		privateDirty = -1;
+		swap = -1;
 	}
 	
 	bool isValid() const {
 		return pid != (pid_t) -1;
+	}
+	
+	/**
+	 * Returns an estimate of the "real" memory usage of a process in KB.
+	 * We don't use the PSS here because that would mean if another
+	 * process that shares memory quits, this process's memory usage
+	 * would suddenly go up.
+	 */
+	size_t realMemory() const {
+		ssize_t swap;
+		if (this->swap != -1) {
+			swap = this->swap;
+		} else {
+			swap = 0;
+		}
+		if (privateDirty != -1) {
+			return privateDirty + swap;
+		} else {
+			return rss + swap;
+		}
+	}
+};
+
+class ProcessMetricMap: public map<pid_t, ProcessMetrics> {
+public:
+	/**
+	 * Returns the total memory usage of all processes in KB, possibly
+	 * including shared memory.
+	 * If measurable, the return value only includes the processes' private
+	 * memory usage (swap is accounted for), and <em>shared</em> is set to the
+	 * amount of shared memory.
+	 * If not measurable, then the return value is an estimate of the total
+	 * memory usage of all processes (which may or may not include shared memory
+	 * as well), and <em>shared</em> is set to -1.
+	 */
+	size_t totalMemory(ssize_t &shared) const {
+		const_iterator it, end = this->end();
+		bool pssAndPrivateDirtyAvailable = true;
+		
+		for (it = begin(); it != end && pssAndPrivateDirtyAvailable; it++) {
+			const ProcessMetrics &metric = it->second;
+			pssAndPrivateDirtyAvailable = pssAndPrivateDirtyAvailable &&
+				metric.pss != -1 && metric.privateDirty != -1;
+		}
+		
+		if (pssAndPrivateDirtyAvailable) {
+			size_t total = 0;
+			size_t priv = 0;
+			
+			for (it = begin(); it != end; it++) {
+				const ProcessMetrics &metric = it->second;
+				total += metric.pss;
+				priv += metric.privateDirty;
+			}
+			
+			shared = total - priv;
+			return total;
+		} else {
+			size_t total = 0;
+			
+			for (it = begin(); it != end; it++) {
+				const ProcessMetrics &metric = it->second;
+				total += metric.realMemory();
+			
+			}
+			
+			shared = -1;
+			return total;
+		}
 	}
 };
 
@@ -89,10 +176,9 @@ class ProcessMetricsCollector {
 public:
 	struct ParseException {};
 	
-	typedef map<pid_t, ProcessMetrics> Map;
-	
 private:
 	bool canMeasureRealMemory;
+	string psOutput;
 	
 	/**
 	 * Scan the given data for the first word that appears on the first line.
@@ -144,16 +230,6 @@ private:
 			throw ParseException();
 		} else {
 			return atoi(nullTerminatedWord);
-		}
-	}
-	
-	static bool beginsWith(const char *str, const char *begin) {
-		size_t str_len = strlen(str);
-		size_t begin_len = strlen(begin);
-		if (str_len < begin_len) {
-			return false;
-		} else {
-			return memcmp(str, begin, begin_len) == 0;
 		}
 	}
 	
@@ -247,8 +323,8 @@ private:
 		return string(data, endOfLine - data);
 	}
 	
-	Map parsePsOutput(const string &output) const {
-		Map result;
+	ProcessMetricMap parsePsOutput(const string &output) const {
+		ProcessMetricMap result;
 		// Ignore first line, it contains the column names.
 		const char *start = strchr(output.c_str(), '\n');
 		if (start != NULL) {
@@ -267,7 +343,6 @@ private:
 			metrics.ppid = (pid_t) readNextWordAsLongLong(&start);
 			metrics.cpu  = readNextWordAsInt(&start);
 			metrics.rss  = (size_t) readNextWordAsLongLong(&start);
-			metrics.realMemory = 0;
 			metrics.vmsize  = (size_t) readNextWordAsLongLong(&start);
 			metrics.processGroupId = (pid_t) readNextWordAsLongLong(&start);
 			metrics.command = readRestOfLine(start);
@@ -294,6 +369,11 @@ public:
 		#endif
 	}
 	
+	/** Mock 'ps' output, used by unit tests. */
+	void setPsOutput(const string &data) {
+		this->psOutput = data;
+	}
+	
 	/**
 	 * Collect metrics for the given process IDs. Nonexistant PIDs are not
 	 * included in the result.
@@ -305,9 +385,9 @@ public:
 	 * @throws RuntimeException
 	 */
 	template<typename Collection, typename ConstIterator>
-	Map collect(const Collection &pids) const {
+	ProcessMetricMap collect(const Collection &pids) const {
 		if (pids.empty()) {
-			return Map();
+			return ProcessMetricMap();
 		}
 		
 		ConstIterator it;
@@ -330,48 +410,66 @@ public:
 			#endif
 			"-p", pidsArg.c_str(), NULL
 		};
-		string psOutput = runCommandAndCaptureOutput(command);
+		
+		string psOutput = this->psOutput;
+		if (psOutput.empty()) {
+			psOutput = runCommandAndCaptureOutput(command);
+		}
 		pidsArg.resize(0);
-		Map result = parsePsOutput(psOutput);
+		ProcessMetricMap result = parsePsOutput(psOutput);
 		psOutput.resize(0);
 		if (canMeasureRealMemory) {
-			Map::iterator it;
+			ProcessMetricMap::iterator it;
 			for (it = result.begin(); it != result.end(); it++) {
-				it->second.realMemory = measureRealMemory(it->second.pid);
+				ProcessMetrics &metric = it->second;
+				measureRealMemory(metric.pid, metric.pss,
+					metric.privateDirty, metric.swap);
 			}
 		}
 		return result;
 	}
 	
-	Map collect(const vector<pid_t> &pids) const {
+	ProcessMetricMap collect(const vector<pid_t> &pids) const {
 		return collect< vector<pid_t>, vector<pid_t>::const_iterator >(pids);
 	}
 	
 	/**
-	 * Attempt to measure a process's "real" memory usage. This is either the
-	 * proportional set size (total size of a process's pages that are in
-	 * memory, where the size of each page is divided by the number of processes
-	 * sharing it) or the private dirty RSS.
+	 * Attempt to measure various parts of a process's memory usage that may
+	 * contribute to insight as to what its "real" memory usage might be.
+	 * Collected information are:
+	 * - The proportional set size: total size of a process's pages that are in
+	 *   memory, where the size of each page is divided by the number of processes
+	 *   sharing it.
+	 * - The private dirty RSS.
+	 * - Amount of memory in swap.
 	 * 
 	 * At this time only OS X and recent Linux versions (>= 2.6.25) support
 	 * measuring the proportional set size. Usually root privileges are required.
 	 *
-	 * Returns 0 if measuring fails, e.g. because we do not have permission
-	 * to do so or because the OS does not support it.
+	 * pss, privateDirty and swap can each be individually set to -1 if that
+	 * part cannot be measured, e.g. because we do not have permission
+	 * to do so or because the OS does not support measuring it.
 	 */
-	static size_t measureRealMemory(pid_t pid) {
+	static void measureRealMemory(pid_t pid, ssize_t &pss, ssize_t &privateDirty, ssize_t &swap) {
 		#ifdef __APPLE__
 			kern_return_t ret;
 			mach_port_t task;
 			
+			swap = -1;
+			
 			ret = task_for_pid(mach_task_self(), pid, &task);
 			if (ret != KERN_SUCCESS) {
-				return 0;
+				pss = -1;
+				privateDirty = -1;
+				return;
 			}
 			
 			mach_vm_address_t addr = 0;
-			size_t result = 0; // in bytes
 			int pagesize = getpagesize();
+			
+			// In bytes.
+			pss = 0;
+			privateDirty = 0;
 			
 			while (true) {
 				mach_vm_address_t size;
@@ -386,20 +484,27 @@ public:
 				}
 				
 				if (info.share_mode == SM_PRIVATE) {
-					result += info.private_pages_resident * pagesize;
-					result += info.shared_pages_resident * pagesize;
+					// shared_pages_resident here means that region
+					// has shared memory only "shared" between 1 process.
+					pss += info.private_pages_resident * pagesize;
+					pss += info.shared_pages_resident * pagesize;
+					privateDirty += info.private_pages_resident * pagesize;
 				} else if (info.share_mode == SM_COW) {
-					result += info.private_pages_resident * pagesize;
-					result += info.shared_pages_resident * pagesize / info.ref_count;
+					pss += info.private_pages_resident * pagesize;
+					pss += info.shared_pages_resident * pagesize / info.ref_count;
+					privateDirty += info.private_pages_resident * pagesize;
 				} else if (info.share_mode == SM_SHARED) {
-					result += info.shared_pages_resident * pagesize / info.ref_count;
+					pss += info.shared_pages_resident * pagesize / info.ref_count;
 				}
 				
 				addr += size;
 			}
 			
 			mach_port_deallocate(mach_task_self(), task);
-			return result / 1024;
+			
+			// Convert result back to KB.
+			pss /= 1024;
+			privateDirty /= 1024;
 		#else
 			string smapsFilename = "/proc/";
 			smapsFilename.append(toString(pid));
@@ -407,12 +512,22 @@ public:
 			
 			FILE *f = syscalls::fopen(smapsFilename.c_str(), "r");
 			if (f == NULL) {
-				return 0;
+				error:
+				pss = -1;
+				privateDirty = -1;
+				swap = -1;
+				return;
 			}
 			
-			FileHandleGuard fileGuard(f);
-			size_t privateDirty = 0; // in KB
-			size_t pss = 0; // in KB
+			ScopeGuard fileGuard(boost::bind(syscalls::fclose, f));
+			bool hasPss = false;
+			bool hasPrivateDirty = false;
+			bool hasSwap = false;
+			
+			// In KB.
+			pss = 0;
+			privateDirty = 0;
+			swap = 0;
 			
 			while (!feof(f)) {
 				char line[1024 * 4];
@@ -421,37 +536,50 @@ public:
 				buf = fgets(line, sizeof(line), f);
 				if (buf == NULL) {
 					if (ferror(f)) {
-						return 0;
+						goto error;
 					} else {
 						break;
 					}
 				}
 				try {
-					if (beginsWith(line, "Pss:")) {
+					if (startsWith(line, "Pss:")) {
 						/* Linux supports Proportional Set Size since kernel 2.6.25.
 						 * See kernel commit ec4dd3eb35759f9fbeb5c1abb01403b2fde64cc9.
 						 */
+						hasPss = true;
 						readNextWord(&buf);
 						pss += readNextWordAsLongLong(&buf);
 						if (readNextWord(&buf) != "kB") {
-							return 0;
+							goto error;
 						}
-					} else if (beginsWith(line, "Private_Dirty:")) {
+					} else if (startsWith(line, "Private_Dirty:")) {
+						hasPrivateDirty = true;
 						readNextWord(&buf);
 						privateDirty += readNextWordAsLongLong(&buf);
 						if (readNextWord(&buf) != "kB") {
-							return 0;
+							goto error;
+						}
+					} else if (startsWith(line, "Swap:")) {
+						hasSwap = true;
+						readNextWord(&buf);
+						swap += readNextWordAsLongLong(&buf);
+						if (readNextWord(&buf) != "kB") {
+							goto error;
 						}
 					}
 				} catch (const ParseException &) {
-					return 0;
+					goto error;
 				}
 			}
 			
-			if (pss != 0) {
-				return pss;
-			} else {
-				return privateDirty;
+			if (!hasPss) {
+				pss = -1;
+			}
+			if (!hasPrivateDirty) {
+				privateDirty = -1;
+			}
+			if (!hasSwap) {
+				swap = -1;
 			}
 		#endif
 	}

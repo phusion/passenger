@@ -205,7 +205,7 @@ namespace tut {
 	
 	TEST_METHOD(9) {
 		// readScalar() should be able to read messages constructed by writeScalar().
-		// This also tests readRaw()/writeRaw() because readScalar()/writeScalar() uses
+		// This also tests readExact()/writeExact() because readScalar()/writeScalar() uses
 		// them internally.
 		writer.writeScalar("hello\n\r world!!!");
 		writer.writeScalar("  and this is a second message");
@@ -380,121 +380,6 @@ namespace tut {
 		ensure(!channel.connected());
 	}
 	
-	TEST_METHOD(15) {
-		// waitUntilReadable() waits for the specified timeout if no data is readable.
-		unsigned long long timeout = 25;
-		ensure("No data is available", !reader.waitUntilReadable(&timeout));
-		ensure("The passed time is deducted from the timeout", timeout < 5);
-	}
-	
-	TEST_METHOD(16) {
-		// waitUntilReadable() waits for less than the specified timeout if data
-		// is not available immediately but still available before the timeout.
-		TempThread thr(boost::bind(&writeDataAfterSomeTime, writer.filenum(), 35));
-		
-		unsigned long long timeout = 1000;
-		ensure("Data is available", reader.waitUntilReadable(&timeout));
-		ensure("At least 35 msec passed.", timeout <= 1000 - 35);
-		ensure("At most 70 msec passed.", timeout >= 1000 - 70);  // depends on system scheduler though
-	}
-	
-	TEST_METHOD(17) {
-		// waitUntilReadable() returns immediately if timeout is 0.
-		unsigned long long timeout = 0;
-		ensure("No data is available", !reader.waitUntilReadable(&timeout));
-		ensure_equals("Timeout is not modified", timeout, 0u);
-		
-		write(writer.filenum(), "hi", 2);
-		ensure("Data is available", reader.waitUntilReadable(&timeout));
-		ensure_equals("Timeout is not modified", timeout, 0u);
-	}
-	
-	TEST_METHOD(18) {
-		// waitUntilReadable() returns immediately if there's data immediately available.
-		unsigned long long timeout = 100;
-		writer.writeRaw("hi", 2);
-		ensure("Data is available", reader.waitUntilReadable(&timeout));
-		ensure("Timeout is not modified", timeout >= 100 - 5);
-	}
-	
-	TEST_METHOD(19) {
-		// readRaw() throws TimeoutException if no data is received within the timeout.
-		unsigned long long timeout = 50;
-		char buf;
-		try {
-			reader.readRaw(&buf, 1, &timeout);
-			fail("No TimeoutException thrown.");
-		} catch (const TimeoutException &) {
-			ensure("The passed time is deducted from timeout", timeout < 5);
-		}
-	}
-	
-	TEST_METHOD(20) {
-		// readRaw() throws TimeoutException if not enough data is received within the timeout.
-		unsigned long long timeout = 20;
-		char buf[100];
-		
-		TempThread thr(boost::bind(&writeDataSlowly, writer.filenum(), sizeof(buf), 1));
-		
-		try {
-			reader.readRaw(&buf, sizeof(buf), &timeout);
-			fail("No TimeoutException thrown.");
-		} catch (const TimeoutException &) {
-			ensure("The passed time is deducted from timeout", timeout < 5);
-		}
-	}
-	
-	TEST_METHOD(21) {
-		// readRaw() throws TimeException if timeout is 0 and no data is immediately available.
-		unsigned long long timeout = 0;
-		char buf;
-		try {
-			reader.readRaw(&buf, 1, &timeout);
-			fail("No TimeoutException thrown.");
-		} catch (const TimeoutException &) {
-			ensure_equals("Timeout unchanged", timeout, 0u);
-		}
-	}
-	
-	TEST_METHOD(22) {
-		// readRaw() throws TimeoutException if timeout is 0 and not enough data is
-		// immediately available.
-		unsigned long long timeout = 0;
-		writer.writeRaw("hi", 2);
-		try {
-			char buf[100];
-			reader.readRaw(&buf, sizeof(buf), &timeout);
-			fail("No TimeoutException thrown.");
-		} catch (const TimeoutException &) {
-			ensure_equals("Timeout is unchanged", timeout, 0u);
-		}
-	}
-	
-	TEST_METHOD(23) {
-		// readRaw() deducts the amount of time spent on waiting from the timeout variable.
-		unsigned long long timeout = 60;
-		char buf[3];
-		
-		// Spawn a thread that writes 100 bytes per second, i.e. each byte takes 10 msec.
-		TempThread thr(boost::bind(&writeDataSlowly, writer.filenum(), 1000, 100));
-		
-		// We read 3 bytes.
-		reader.readRaw(&buf, sizeof(buf), &timeout);
-		ensure("Should have taken at least 20 msec", timeout <= 60 - 20);
-		ensure("Should have taken at most 40 msec", timeout >= 60 - 40);
-	}
-	
-	TEST_METHOD(24) {
-		// readRaw() does not wait and does not modify the timeout variable if there's
-		// immediately enough data available.
-		unsigned long long timeout = 100;
-		char buf[2];
-		
-		writer.writeRaw("hi", 2);
-		reader.readRaw(&buf, 2, &timeout);
-		ensure_equals("Timeout not modified", timeout, 100u);
-	}
-	
 	TEST_METHOD(25) {
 		// readScalar() doesn't throw SecurityException if maxSize is
 		// given but the available amount of data equals maxSize.
@@ -533,7 +418,7 @@ namespace tut {
 		// within the timeout.
 		unsigned long long timeout = 30;
 		string str;
-		writer.writeRaw("xxx", 3); // A part of a random 32-bit integer header.
+		writeExact(writer.filenum(), "xxx", 3); // A part of a random 32-bit integer header.
 		try {
 			reader.readScalar(str, 0, &timeout);
 			fail("TimeoutException expected");
@@ -612,7 +497,7 @@ namespace tut {
 	
 	TEST_METHOD(33) {
 		// readUint32() returns false if EOF was reached prematurely.
-		writer.writeRaw("x", 1);
+		writeExact(writer.filenum(), "x", 1);
 		writer.close();
 		unsigned int i;
 		ensure(!reader.readUint32(i));
@@ -634,7 +519,7 @@ namespace tut {
 		// readUint32() throws TimeoutException if not enough data was available within the timeout.
 		unsigned long long timeout = 30;
 		unsigned int i;
-		writer.writeRaw("xx", 2);
+		writeExact(writer.filenum(), "xx", 2);
 		try {
 			reader.readUint32(i, &timeout);
 			fail("TimeoutException expected");
@@ -661,7 +546,7 @@ namespace tut {
 		// data is immediately available.
 		unsigned long long timeout = 0;
 		unsigned int i;
-		writer.writeRaw("xx", 2);
+		writeExact(writer.filenum(), "xx", 2);
 		try {
 			reader.readUint32(i, &timeout);
 			fail("TimeoutException expected");

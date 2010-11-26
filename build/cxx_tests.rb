@@ -1,18 +1,25 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (C) 2008, 2009  Phusion
+#  Copyright (c) 2010 Phusion
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; version 2 of the License.
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  You should have received a copy of the GNU General Public License along
-#  with this program; if not, write to the Free Software Foundation, Inc.,
-#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
 
 ### C++ components tests ###
 
@@ -169,10 +176,17 @@ TEST_CXX_OBJECTS = {
 		test/cxx/CachedFileStatTest.cpp
 		ext/common/Utils/CachedFileStat.hpp
 		ext/common/Utils/CachedFileStat.cpp),
+	'test/cxx/BufferedIOTest.o' => %w(
+		test/cxx/BufferedIOTest.cpp
+		ext/common/Utils/BufferedIO.h
+		ext/common/Utils/Timer.h),
 	'test/cxx/VariantMapTest.o' => %w(
 		test/cxx/VariantMapTest.cpp
 		ext/common/MessageChannel.h
 		ext/common/Utils/VariantMap.h),
+	'test/cxx/ProcessMetricsCollectorTest.o' => %w(
+		test/cxx/ProcessMetricsCollectorTest.cpp
+		ext/common/Utils/ProcessMetricsCollector.h),
 	'test/cxx/UtilsTest.o' => %w(
 		test/cxx/UtilsTest.cpp
 		ext/common/Utils.h),
@@ -182,7 +196,7 @@ TEST_CXX_OBJECTS = {
 }
 
 desc "Run unit tests for the Apache 2 and Nginx C++ components"
-task 'test:cxx' => ['test/cxx/CxxTestMain', :native_support] do
+task 'test:cxx' => ['test/cxx/CxxTestMain', 'test/support/allocate_memory', :native_support] do
         if ENV['GROUPS'].to_s.empty?
 	        sh "cd test && ./cxx/CxxTestMain"
         else

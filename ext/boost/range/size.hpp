@@ -20,7 +20,7 @@
 #include <boost/range/difference_type.hpp>
 #include <boost/assert.hpp>
 
-namespace boost 
+namespace boost
 {
 
     template< class T >

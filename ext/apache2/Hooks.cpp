@@ -236,7 +236,8 @@ private:
 	 */
 	inline RequestNote *getRequestNote(request_rec *r) {
 		// The union is needed in order to be compliant with
-		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
+		// C99/C++'s strict aliasing rules.
+		// http://cellperformance.beyond3d.com/articles/2006/06/understanding-strict-aliasing.html
 		union {
 			RequestNote *note;
 			void *pointer;
@@ -566,7 +567,10 @@ private:
 		try {
 			AnalyticsLogPtr log;
 			if (config->analyticsEnabled()) {
-				log = analyticsLogger->newTransaction(config->getAppGroupName(appRoot));
+				log = analyticsLogger->newTransaction(
+					config->getAppGroupName(appRoot),
+					"requests",
+					config->unionStationKey);
 				log->message(string("URI: ") + r->uri);
 			} else {
 				log.reset(new AnalyticsLog());
@@ -640,7 +644,7 @@ private:
 					appRoot,
 					config->getAppGroupName(appRoot),
 					mapper.getApplicationTypeString(),
-					mapper.getEnvironment(),
+					config->getEnvironment(),
 					config->getSpawnMethodString(),
 					config->getUser(),
 					config->getGroup(),
@@ -873,43 +877,40 @@ private:
 	/**
 	 * Convert an HTTP header name to a CGI environment name.
 	 */
-	char *http2env(apr_pool_t *p, const char *name) {
-		char *env_name = apr_pstrcat(p, "HTTP_", name, NULL);
-		char *cp;
+	char *httpToEnv(apr_pool_t *p, const char *headerName) {
+		char *result  = apr_pstrcat(p, "HTTP_", headerName, NULL);
+		char *current = result + sizeof("HTTP_") - 1;
 		
-		for (cp = env_name + 5; *cp != 0; cp++) {
-			if (*cp == '-') {
-				*cp = '_';
+		while (*current != '\0') {
+			if (*current == '-') {
+				*current = '_';
 			} else {
-				*cp = apr_toupper(*cp);
+				*current = apr_toupper(*current);
 			}
+			current++;
 		}
 		
-		return env_name;
+		return result;
 	}
 	
-	char *lookupName(apr_table_t *t, const char *name) {
-		const apr_array_header_t *hdrs_arr = apr_table_elts(t);
-		apr_table_entry_t *hdrs = (apr_table_entry_t *) hdrs_arr->elts;
-		int i;
+	const char *lookupInTable(apr_table_t *table, const char *name) {
+		const apr_array_header_t *headers = apr_table_elts(table);
+		apr_table_entry_t *elements = (apr_table_entry_t *) headers->elts;
 		
-		for (i = 0; i < hdrs_arr->nelts; ++i) {
-			if (hdrs[i].key == NULL) {
-				continue;
-			}
-			if (strcasecmp(hdrs[i].key, name) == 0) {
-				return hdrs[i].val;
+		for (int i = 0; i < headers->nelts; i++) {
+			if (elements[i].key != NULL && strcasecmp(elements[i].key, name) == 0) {
+				return elements[i].val;
 			}
 		}
 		return NULL;
 	}
 	
-	char *lookupHeader(request_rec *r, const char *name) {
-		return lookupName(r->headers_in, name);
+	const char *lookupHeader(request_rec *r, const char *name) {
+		return lookupInTable(r->headers_in, name);
 	}
 	
-	char *lookupEnv(request_rec *r, const char *name) {
-		return lookupName(r->subprocess_env, name);
+	const char *lookupEnv(request_rec *r, const char *name) {
+		return lookupInTable(r->subprocess_env, name);
 	}
 	
 	void inline addHeader(apr_table_t *table, const char *name, const char *value) {
@@ -982,7 +983,7 @@ private:
 		hdrs = (apr_table_entry_t *) hdrs_arr->elts;
 		for (i = 0; i < hdrs_arr->nelts; ++i) {
 			if (hdrs[i].key) {
-				addHeader(headers, http2env(r->pool, hdrs[i].key), hdrs[i].val);
+				addHeader(headers, httpToEnv(r->pool, hdrs[i].key), hdrs[i].val);
 			}
 		}
 		
@@ -1337,9 +1338,9 @@ public:
 			"",
 			serverConfig.analyticsLogDir, serverConfig.analyticsLogUser,
 			serverConfig.analyticsLogGroup, serverConfig.analyticsLogPermissions,
-			DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
-			DEFAULT_UNION_STATION_GATEWAY_PORT,
-			"",
+			serverConfig.unionStationGatewayAddress,
+			serverConfig.unionStationGatewayPort,
+			serverConfig.unionStationGatewayCert,
 			serverConfig.prestartURLs);
 		
 		analyticsLogger = ptr(new AnalyticsLogger(agentsStarter.getLoggingSocketAddress(),

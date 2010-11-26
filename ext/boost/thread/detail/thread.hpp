@@ -3,10 +3,12 @@
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
-// (C) Copyright 2007-8 Anthony Williams
+// (C) Copyright 2007-10 Anthony Williams
  
 #include <boost/thread/exceptions.hpp>
+#ifndef BOOST_NO_IOSTREAM
 #include <ostream>
+#endif
 #include <boost/thread/detail/move.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/xtime.hpp>
@@ -39,9 +41,12 @@ namespace boost
             public detail::thread_data_base
         {
         public:
-#ifdef BOOST_HAS_RVALUE_REFS
+#ifndef BOOST_NO_RVALUE_REFERENCES
             thread_data(F&& f_):
                 f(static_cast<F&&>(f_))
+            {}
+            thread_data(F& f_):
+                f(f_)
             {}
 #else
             thread_data(F f_):
@@ -110,14 +115,13 @@ namespace boost
 
         void release_handle();
         
-        mutable boost::mutex thread_info_mutex;
         detail::thread_data_ptr thread_info;
 
         explicit thread(detail::thread_data_ptr data);
 
-        detail::thread_data_ptr get_thread_info() const;
+        detail::thread_data_ptr get_thread_info BOOST_PREVENT_MACRO_SUBSTITUTION () const;
 
-#ifdef BOOST_HAS_RVALUE_REFS
+#ifndef BOOST_NO_RVALUE_REFERENCES
         template<typename F>
         static inline detail::thread_data_ptr make_thread_info(F&& f)
         {
@@ -125,7 +129,7 @@ namespace boost
         }
         static inline detail::thread_data_ptr make_thread_info(void (*f)())
         {
-            return detail::thread_data_ptr(detail::heap_new<detail::thread_data<void(*)()> >(f));
+            return detail::thread_data_ptr(detail::heap_new<detail::thread_data<void(*)()> >(static_cast<void(*&&)()>(f)));
         }
 #else
         template<typename F>
@@ -139,8 +143,9 @@ namespace boost
             return detail::thread_data_ptr(detail::heap_new<detail::thread_data<F> >(f));
         }
 
+#endif
         struct dummy;
-    
+        
     protected:
         template <class F>
         void set_thread_main_function(F f)
@@ -150,22 +155,29 @@ namespace boost
         
         void start_thread(unsigned int stack_size = 0);
         
-        
-#endif
     public:
-#ifdef __SUNPRO_CC 
+#if BOOST_WORKAROUND(__SUNPRO_CC, < 0x5100)
         thread(const volatile thread&); 
 #endif 
         thread();
         virtual ~thread();
 
-#ifdef BOOST_HAS_RVALUE_REFS
+#ifndef BOOST_NO_RVALUE_REFERENCES
+#ifdef BOOST_MSVC
+        template <class F>
+        explicit thread(F f,typename disable_if<boost::is_convertible<F&,detail::thread_move_t<F> >, dummy* >::type=0):
+            thread_info(make_thread_info(static_cast<F&&>(f)))
+        {
+            start_thread();
+        }
+#else
         template <class F>
         thread(F&& f, unsigned int stack_size = 0):
             thread_info(make_thread_info(static_cast<F&&>(f)))
         {
             start_thread(stack_size);
         }
+#endif
 
         thread(thread&& other)
         {
@@ -214,7 +226,7 @@ namespace boost
             x->thread_info.reset();
         }
        
-#ifdef __SUNPRO_CC 
+#if BOOST_WORKAROUND(__SUNPRO_CC, < 0x5100)
         thread& operator=(thread x) 
         { 
             swap(x); 
@@ -352,10 +364,14 @@ namespace boost
         return lhs.swap(rhs);
     }
     
-#ifdef BOOST_HAS_RVALUE_REFS
+#ifndef BOOST_NO_RVALUE_REFERENCES
+    inline thread&& move(thread& t)
+    {
+        return static_cast<thread&&>(t);
+    }
     inline thread&& move(thread&& t)
     {
-        return t;
+        return static_cast<thread&&>(t);
     }
 #else
     inline detail::thread_move_t<thread> move(detail::thread_move_t<thread> t)
@@ -387,7 +403,7 @@ namespace boost
             thread_data(thread_data_)
         {}
         friend class thread;
-        friend id this_thread::get_id();
+        friend id BOOST_THREAD_DECL this_thread::get_id();
     public:
         id():
             thread_data()
@@ -423,6 +439,8 @@ namespace boost
             return !(thread_data<y.thread_data);
         }
 
+#ifndef BOOST_NO_IOSTREAM
+#ifndef BOOST_NO_MEMBER_TEMPLATE_FRIENDS
         template<class charT, class traits>
         friend std::basic_ostream<charT, traits>& 
         operator<<(std::basic_ostream<charT, traits>& os, const id& x)
@@ -436,7 +454,33 @@ namespace boost
                 return os<<"{Not-any-thread}";
             }
         }
+#else
+        template<class charT, class traits>
+        std::basic_ostream<charT, traits>& 
+        print(std::basic_ostream<charT, traits>& os)
+        {
+            if(thread_data)
+            {
+                return os<<thread_data;
+            }
+            else
+            {
+                return os<<"{Not-any-thread}";
+            }
+        }
+
+#endif
+#endif
     };
+
+#if !defined(BOOST_NO_IOSTREAM) && defined(BOOST_NO_MEMBER_TEMPLATE_FRIENDS)
+    template<class charT, class traits>
+    std::basic_ostream<charT, traits>& 
+    operator<<(std::basic_ostream<charT, traits>& os, const thread::id& x)
+    {
+        return x.print(os);
+    }
+#endif
 
     inline bool thread::operator==(const thread& other) const
     {
@@ -454,7 +498,7 @@ namespace boost
         {
             virtual ~thread_exit_function_base()
             {}
-            virtual void operator()() const=0;
+            virtual void operator()()=0;
         };
         
         template<typename F>
@@ -467,13 +511,13 @@ namespace boost
                 f(f_)
             {}
             
-            void operator()() const
+            void operator()()
             {
                 f();
             }
         };
         
-        void add_thread_exit_function(thread_exit_function_base*);
+        void BOOST_THREAD_DECL add_thread_exit_function(thread_exit_function_base*);
     }
     
     namespace this_thread
