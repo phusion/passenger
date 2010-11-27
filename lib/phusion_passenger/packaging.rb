@@ -37,8 +37,7 @@ module Packaging
 		'passenger',
 		'passenger-install-apache2-module',
 		'passenger-install-nginx-module',
-		'passenger-config',
-		'passenger-stress-test'
+		'passenger-config'
 	]
 	
 	SUPER_USER_EXECUTABLES = [

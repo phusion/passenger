@@ -67,6 +67,6 @@ end
 
 task :clean => 'nginx:clean'
 desc "Clean all compiled Nginx files"
-task 'nginx:clean' do
+task 'nginx:clean' => 'common:clean' do
 	sh("rm", "-rf", AGENT_OUTPUT_DIR + "nginx/PassengerHelperAgent")
 end

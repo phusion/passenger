@@ -26,6 +26,10 @@ Release 3.0.1
    This is the command that people can run after donating. It allows people
    to slightly modify Phusion Passenger's display name as a joke. In 3.0.0 it
    was broken because of a typo. This has been fixed.
+ * Removed passenger-stress-test
+   This tool was used during the early life of Phusion Passenger for stress
+   testing websites. Its performance has never been very good and there are
+   much better tools for stress testing, so this tool has now been removed.
  * [Apache] RailsEnv and RackEnv configuration options are now equivalent
    In previous versions, RailsEnv only had effect on Rails 1 and Rails 2 apps
    while RackEnv only had effect on Rack apps. Because Rails 3 apps are
@@ -37,6 +41,11 @@ Release 3.0.1
    constructs that we used in the Nginx configure script.
  * [Nginx] Upgraded default Nginx version to to 0.8.53
    The previous default was 0.8.52.
+ * [Nginx] passenger_enabled now only accepts 'on' or 'off' values
+   Previously it would recognize any value not equal to 'on' as meaning
+   'off'. This caused confusion among users who thought they could also
+   specify 'true', so we now throw a proper error if the value is
+   unrecognized. Fixes issue #583.
 
 
 Release 3.0.0

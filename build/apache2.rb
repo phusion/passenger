@@ -159,7 +159,7 @@ end
 
 task :clean => 'apache2:clean'
 desc "Clean all compiled Apache 2 files"
-task 'apache2:clean' do
+task 'apache2:clean' => 'common:clean' do
 	files = APACHE2_MODULE_OBJECTS.dup
 	files << APACHE2_MOD_PASSENGER_O
 	files << APACHE2_MODULE

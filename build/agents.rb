@@ -75,6 +75,6 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{EXTRA_LDFLAGS}")
 end
 
-task :clean => 'common:clean' do
+task 'common:clean' do
 	sh "rm -f #{AGENT_OUTPUT_DIR}PassengerWatchdog #{AGENT_OUTPUT_DIR}PassengerLoggingAgent"
 end
