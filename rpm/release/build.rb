@@ -90,6 +90,10 @@ OptionParser.new do |opts|
     @verbosity += v ? 1 : -1
   end
 
+  opts.on('-s', '--single', 'Only build a single distro-rev-arch set (for this machine)') do |v|
+    options[:single] = true
+  end
+
   # Do these with options, because the order matters
   opts.on('-b', '--mock-base-dir DIR', "Mock's base directory. Default: #{mock_base_dir}") do |v|
     #mock_repo_dir = v
@@ -128,7 +132,13 @@ if options.key?(:mock_base_dir) || options.key?(:mock_repo_dir)
   end
 end
 
-configs = limit_configs(configs, ARGV)
+limit = ARGV
+if options.key?(:single)
+  # This can probably be simplified
+  limit = [`rpm --queryformat '%{name}\t%{version}' -qf /etc/redhat-release`.sub(/(\w+)-release\t(\d+)/,'\1-\2').sub(/^(rhel|centos|sl)-/,'epel-') + "-#{`rpm -E '%{_host_cpu}'`.strip}"]
+end
+
+configs = limit_configs(configs, limit)
 
 if configs.empty?
   abort "Can't find a set of configs for '#{ARGV[0]}' (hint try 'fedora' or 'fedora-14' or even 'fedora-14-x86_64')"
@@ -178,7 +188,13 @@ mockvolume = @verbosity >= 2 ? %w{-v} : @verbosity < 0 ? %w{-q} : []
 configs.each do |cfg|
   puts "---------------------- Building #{cfg}" if @verbosity >= 0
   pcfg = 'passenger-' + cfg
-  idir = File.join stage_dir, cfg.split(/-/)
+
+  idir = './pkg'
+
+  unless options.key?(:single)
+    idir = File.join stage_dir, cfg.split(/-/)
+  end
+
   # Move *mockvolume to the end, since it causes Ruby to cry in the middle
   # Alt sol'n: *(foo + ['bar'] )
   if noisy_system('mock', '-r', pcfg, "#{stage_dir}/SRPMS/#{srpm}", *mockvolume)
@@ -188,11 +204,13 @@ configs.each do |cfg|
   FileUtils.mkdir_p(idir, :verbose => @verbosity > 0)
   FileUtils.cp(Dir["#{mock_base_dir}/#{pcfg}/result/*.rpm"],
                idir, :verbose => @verbosity > 0)
-  FileUtils.rm_f(Dir["#{idir}/*.src.rpm"], :verbose => @verbosity > 1)
+  FileUtils.rm_f(Dir["#{idir}/*.src.rpm"], :verbose => @verbosity > 1) unless options.key?(:single)
 end
 
-if File.directory?("#{stage_dir}/epel")
-  FileUtils.mv "#{stage_dir}/epel", "#{stage_dir}/rhel", :verbose => @verbosity > 0
+unless options.key?(:single)
+  if File.directory?("#{stage_dir}/epel")
+    FileUtils.mv "#{stage_dir}/epel", "#{stage_dir}/rhel", :verbose => @verbosity > 0
+  end
 end
 
 noisy_system('rpm', '--addsign', *Dir["#{stage_dir}/**/*.rpm"])
