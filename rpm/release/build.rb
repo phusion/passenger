@@ -181,7 +181,7 @@ configs.each do |cfg|
   idir = File.join stage_dir, cfg.split(/-/)
   # Move *mockvolume to the end, since it causes Ruby to cry in the middle
   # Alt sol'n: *(foo + ['bar'] )
-  if noisy_system('mock', '-r', pcfg, "#{rpmtopdir}/SRPMS/#{srpm}", *mockvolume)
+  if noisy_system('mock', '-r', pcfg, "#{stage_dir}/SRPMS/#{srpm}", *mockvolume)
   else
     abort "Mock failed. See above for details"
   end
