@@ -217,4 +217,6 @@ unless options.key?(:single)
   end
 end
 
-noisy_system('rpm', '--addsign', *Dir["#{stage_dir}/**/*.rpm"])
+unless `rpm -E '%{?signature}'`.strip == ''
+  noisy_system('rpm', '--addsign', *Dir["#{options.key?(:single) ? stage_dir : 'pkg'}/**/*.rpm"])
+end
