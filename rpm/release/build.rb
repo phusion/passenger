@@ -136,6 +136,9 @@ end
 
 puts "BUILD:\n  " + configs.join("\n  ") if @verbosity >= 2
 
+# Too much of what follows expects this. Revisit it later.
+Dir.chdir(File.join(File.dirname(__FILE__), '..'))
+
 FileUtils.rm_rf(stage_dir, :verbose => @verbosity > 0)
 FileUtils.mkdir_p(stage_dir, :verbose => @verbosity > 0)
 
