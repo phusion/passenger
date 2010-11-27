@@ -113,6 +113,10 @@ OptionParser.new do |opts|
     end
   end
 
+  opts.on('-d', '--stage-dir DIR', "Staging directory. Default: #{stage_dir}") do |v|
+    stage_dir = v
+  end
+
   opts.on_tail("-h", "--help", "Show this message") do
     puts opts
     exit
