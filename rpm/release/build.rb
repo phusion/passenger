@@ -185,7 +185,9 @@ srcdir=`rpm -E '%{_sourcedir}'`.chomp
 FileUtils.ln_sf(Dir["#{Dir.getwd}/{config/,patches/,release/GPG}*"], srcdir, :verbose => @verbosity > 0)
 
 # No dist for SRPM
-noisy_system(rpmbuild, *((@verbosity > 0 ? [] : %w{--quiet}) + ['--define', 'dist %nil', '-bs', 'passenger.spec']))
+unless noisy_system(rpmbuild, *((@verbosity > 0 ? [] : %w{--quiet}) + ['--define', 'dist %nil', '--define', "passenger_version #{PhusionPassenger::VERSION_STRING}", '-bs', 'passenger.spec']))
+  abort "No SRPM was built. See above for the error"
+end
 
 # I really wish there was a way to query rpmbuild for this via the spec file,
 # but rpmbuild --eval doesn't seem to work
