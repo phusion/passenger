@@ -117,6 +117,11 @@ OptionParser.new do |opts|
     stage_dir = v
   end
 
+  opts.on('-e', '--extra-packages DIR', "Directory for extra packages to install.") do |v|
+    #mock_repo_dir = v
+    options[:extra_packages] = v
+  end
+
   opts.on_tail("-h", "--help", "Show this message") do
     puts opts
     exit
@@ -208,6 +213,9 @@ configs.each do |cfg|
   FileUtils.mkdir_p(idir, :verbose => @verbosity > 0)
   FileUtils.cp(Dir["#{mock_base_dir}/#{pcfg}/result/*.rpm"],
                idir, :verbose => @verbosity > 0)
+  if options.key?(:extra_packages)
+    FileUtils.cp(Dir["#{options[:extra_packages]}/*.rpm"], idir, :verbose => @verbosity > 0)
+  end
   FileUtils.rm_f(Dir["#{idir}/*.src.rpm"], :verbose => @verbosity > 1) unless options.key?(:single)
 end
 
