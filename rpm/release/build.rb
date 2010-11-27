@@ -15,7 +15,7 @@ mock_etc_dir='/etc/mock'
 
 # If rpmbuild-md5 is installed, use it for the SRPM, so EPEL machines can read it.
 rpmbuild = '/usr/bin/rpmbuild' + (File.exist?('/usr/bin/rpmbuild-md5') ? '-md5' : '')
-rpmbuilddir = `rpm -E '%_topdir'`.chomp
+rpmtopdir = `rpm -E '%_topdir'`.chomp
 rpmarch = `rpm -E '%_arch'`.chomp
 
 @verbosity = 0
@@ -170,7 +170,7 @@ srpm=`ls -1t $HOME/rpmbuild/SRPMS | head -1`.chomp
 
 FileUtils.mkdir_p(stage_dir + '/SRPMS', :verbose => @verbosity > 0)
 
-FileUtils.cp("#{rpmbuilddir}/SRPMS/#{srpm}", "#{stage_dir}/SRPMS",
+FileUtils.cp("#{rpmtopdir}/SRPMS/#{srpm}", "#{stage_dir}/SRPMS",
 :verbose => @verbosity > 0)
 
 mockvolume = @verbosity >= 2 ? %w{-v} : @verbosity < 0 ? %w{-q} : []
@@ -181,7 +181,7 @@ configs.each do |cfg|
   idir = File.join stage_dir, cfg.split(/-/)
   # Move *mockvolume to the end, since it causes Ruby to cry in the middle
   # Alt sol'n: *(foo + ['bar'] )
-  if noisy_system('mock', '-r', pcfg, "#{rpmbuilddir}/SRPMS/#{srpm}", *mockvolume)
+  if noisy_system('mock', '-r', pcfg, "#{rpmtopdir}/SRPMS/#{srpm}", *mockvolume)
   else
     abort "Mock failed. See above for details"
   end
