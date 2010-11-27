@@ -84,7 +84,7 @@ Source200: rubygem-passenger.te
 # # Ignore everything after the ?, it's meant to trick rpmbuild into
 # # finding the correct file
 # Source300: http://github.com/gnosek/nginx-upstream-fair/tarball/master?/nginx-upstream-fair.tar.gz
-Patch0: passenger-os-runtime.patch
+#Patch0: passenger-os-runtime.patch
 BuildRoot: %{_tmppath}/%{name}-%{passenger_version}-%{passenger_release}-root-%(%{__id_u} -n)
 Requires: rubygems
 Requires: rubygem(rake) >= 0.8.1
@@ -256,7 +256,7 @@ This package includes an nginx server with Passenger compiled in.
 # %setup -q -T -D -n nginx-%{nginx_version} -a 300
 # # Fix the CWD
 # %setup -q -T -D -n %{gemname}-%{passenger_version}
-%patch0 -p1
+# %patch0 -p1
 %if %{gem_version_mismatch}
   %{warn:
 ***
@@ -276,6 +276,7 @@ perl -pi -e "s{(PREFERRED_NGINX_VERSION\s*=\s*(['\"]))[\d\.]+\2}{\${1}%{nginx_ve
 # The last argument of the package-runtime command gets inserted for
 # --prefix, so that means nginx thinks that dir exists
 %define trunc_path \#{\\@nginx_dir.gsub(%%r{^%{buildroot}},'')}
+
 perl -pi - lib/phusion_passenger/standalone/runtime_installer.rb <<'EOF'
 BEGIN {
 %perlfileckinner
@@ -374,7 +375,7 @@ export LIBEV_LIBS='-lev'
     --with-cc-opt="%{nginx_ccopt} $(pcre-config --cflags)" \
     --with-ld-opt="-Wl,-E" # so the perl module finds its symbols
 
-  # THIS is ugly, yet greatly simplified. It corrects the
+  # THIS is ugly (yet now greatly simplified). It corrects the
   # check-buildroot error on the string saved for 'nginx -V'
   #
   # In any case, fix it correctly later
@@ -382,7 +383,6 @@ export LIBEV_LIBS='-lev'
 
   # Also do it for passenger-standalone (and I thought the above was ugly)
   perl -pi -0777 -e 's!(^\s*run_command_with_throbber.*"Preparing Nginx...".*\n(\s*))(yield.*?\n)!${2}\@\@hack_success = false\n$1yield_result = $3${2}abort "nginx-hack failed" unless \@\@hack_success || system(*(%w{perl -pi -e} + ["%{perlfileescd} s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;", "objs/ngx_auto_config.h"]))\n${2}\# Why is this running many times?\n${2}\@\@hack_success = true\n${2}yield_result\n!im' %{_builddir}/passenger-%{passenger_version}/lib/phusion_passenger/standalone/runtime_installer.rb
-
 
   make %{?_smp_mflags}
 
