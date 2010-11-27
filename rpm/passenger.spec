@@ -9,8 +9,12 @@
 # do not remove the URL above.)
 
 %define gemname passenger
-%define passenger_version 3.0.0
-%define passenger_release 11%{?dist}
+%if %{?passenger_version:0}%{?!passenger_version:1}
+  %define passenger_version 3.0.0
+%endif
+%if %{?passenger_release:0}%{?!passenger_release:1}
+  %define passenger_release 11%{?dist}
+%endif
 %define passenger_epoch 1
 
 %define nginx_version 0.8.53

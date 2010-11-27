@@ -39,7 +39,7 @@ rpmarch = `rpm -E '%_arch'`.chomp
 @can_build = @can_build[rpmarch.to_s == '' ? 'x86_64' : rpmarch]
 @can_build.push rpmarch
 
-bindir=File.dirname($0)
+bindir=File.dirname(File.expand_path __FILE__)
 
 configs = Dir["#{mock_etc_dir}/{#{CFGLIMIT.join ','}}*"].map {|f| f.gsub(%r{.*/([^.]*).cfg}, '\1')}
 
