@@ -4,6 +4,10 @@ require 'fileutils'
 require 'ftools'
 require 'optparse'
 
+$:.unshift File.join(File.dirname(__FILE__), '..', '..', 'lib')
+
+require 'phusion_passenger'
+
 CFGLIMIT=%w{fedora-{13,14} epel-5}
 
 stage_dir='./stage'
@@ -185,7 +189,7 @@ noisy_system(rpmbuild, *((@verbosity > 0 ? [] : %w{--quiet}) + ['--define', 'dis
 
 # I really wish there was a way to query rpmbuild for this via the spec file,
 # but rpmbuild --eval doesn't seem to work
-srpm=`ls -1t $HOME/rpmbuild/SRPMS | head -1`.chomp
+srpm="rubygem-passenger-#{PhusionPassenger::VERSION_STRING}-#{`grep '%define passenger_release' passenger.spec | awk '{print $3}'`.strip}.src.rpm".sub(/%\{[^}]+\}/, '')
 
 FileUtils.mkdir_p(stage_dir + '/SRPMS', :verbose => @verbosity > 0)
 
