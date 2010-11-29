@@ -58,7 +58,7 @@ namespace :package do
 		test_setup
 		create_tarball(@verbosity)
 		# Add a single -v for some feedback
-		noisy_system(*(%w{./rpm/release/build.rb --single} + @build_verbosity))
+		noisy_system(*(%w{./rpm/release/build.rb --single --stage-dir=pkg} + @build_verbosity))
 	end
 
 	desc "Build a Yum repository for the current release"
