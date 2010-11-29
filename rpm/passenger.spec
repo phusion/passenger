@@ -10,10 +10,10 @@
 
 %define gemname passenger
 %if %{?passenger_version:0}%{?!passenger_version:1}
-  %define passenger_version 3.0.0
+  %define passenger_version 3.0.1
 %endif
 %if %{?passenger_release:0}%{?!passenger_release:1}
-  %define passenger_release 11%{?dist}
+  %define passenger_release 1%{?dist}
 %endif
 %define passenger_epoch 1
 
@@ -546,7 +546,6 @@ rm -rf %{buildroot}
 %{_bindir}/passenger-install-apache2-module
 %{_bindir}/passenger-install-nginx-module
 %{_bindir}/passenger-config
-%{_bindir}/passenger-stress-test
 %{_bindir}/passenger-status
 %{_bindir}/passenger-memory-stats
 %{_bindir}/passenger-make-enterprisey
