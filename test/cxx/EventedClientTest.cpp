@@ -5,9 +5,6 @@
 #include "Utils/IOUtils.h"
 
 #include <oxt/thread.hpp>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 
 using namespace Passenger;
 using namespace std;
@@ -25,11 +22,9 @@ namespace tut {
 		EventedClientTest()
 			: exitWatcher(eventLoop)
 		{
-			int fds[2];
-			
-			socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-			fd1 = fds[0];
-			fd2 = fds[1];
+			SocketPair sockets = createUnixSocketPair();
+			fd1 = sockets.first;
+			fd2 = sockets.second;
 			setNonBlocking(fd2);
 			
 			exitWatcher.set<EventedClientTest, &EventedClientTest::unloop>(this);
@@ -383,5 +378,30 @@ namespace tut {
 		EVENTUALLY(2,
 			result = integer == 2;
 		);
+	}
+	
+	TEST_METHOD(17) {
+		// EventedClient.write() ensures that the given data is written
+		// after what's already in the outbox.
+		EventedClient client(eventLoop, fd2);
+		string header(1024 * 4, 'x');
+		string body(1024 * 128, 'y');
+		char buf[header.size() + body.size() + 1024];
+		
+		client.write(header);
+		client.write(body);
+		ensure(client.pendingWrites() > 0);
+		
+		ensure_equals(readExact(fd1, buf, header.size()), (unsigned int) header.size());
+		ensure_equals(StaticString(buf, header.size()), header);
+		
+		client.write("hello world");
+		
+		startEventLoop();
+		EVENT_LOOP_GUARD;
+		
+		unsigned int len = body.size() + strlen("hello world");
+		ensure_equals(readExact(fd1, buf, len), len);
+		ensure_equals(StaticString(buf, len), body + "hello world");
 	}
 }

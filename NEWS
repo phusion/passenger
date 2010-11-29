@@ -37,7 +37,7 @@ Release 3.0.1
    Because this is confusing to users, we've now made RailsEnv and RackEnv
    equivalent. Issue #579.
  * [Nginx] Fixed compilation problems on systems with unpowerful shells
-   Most notable Solaris. Its default shell does not support some basic
+   Most notably Solaris. Its default shell does not support some basic
    constructs that we used in the Nginx configure script.
  * [Nginx] Upgraded default Nginx version to to 0.8.53
    The previous default was 0.8.52.

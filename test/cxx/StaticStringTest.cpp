@@ -83,4 +83,76 @@ namespace tut {
 			string("hello world") < string("hello")
 		);
 	}
+	
+	TEST_METHOD(4) {
+		// Test find()
+		ensure_equals("Assertion 1",
+			StaticString("").find('c'),
+			string::npos
+		);
+		ensure_equals("Assertion 2",
+			StaticString("hello world").find('c'),
+			string::npos
+		);
+		ensure_equals("Assertion 3",
+			StaticString("hello world").find('h'),
+			(string::size_type) 0
+		);
+		ensure_equals("Assertion 4",
+			StaticString("hello world").find('o'),
+			(string::size_type) 4
+		);
+		
+		ensure_equals("Assertion 5",
+			StaticString("hello world").find('h', 1),
+			string::npos
+		);
+		ensure_equals("Assertion 6",
+			StaticString("hello world").find('o', 1),
+			(string::size_type) 4
+		);
+		ensure_equals("Assertion 7",
+			StaticString("hello world").find('o', 5),
+			(string::size_type) 7
+		);
+		
+		ensure_equals("Assertion 8",
+			StaticString("hello world").find('h', 12),
+			string::npos
+		);
+		ensure_equals("Assertion 9",
+			StaticString("hello world").find('h', 20),
+			string::npos
+		);
+	}
+	
+	TEST_METHOD(5) {
+		// Test substr()
+		ensure_equals("Assertion 1",
+			StaticString("hello world").substr(),
+			"hello world");
+		ensure_equals("Assertion 2",
+			StaticString("hello world").substr(1),
+			"ello world");
+		ensure_equals("Assertion 3",
+			StaticString("hello world").substr(4),
+			"o world");
+		ensure_equals("Assertion 4",
+			StaticString("hello world").substr(11),
+			"");
+		
+		try {
+			StaticString("hello world").substr(12);
+			fail("out_of_range expected");
+		} catch (out_of_range &) {
+			// Success.
+		}
+		
+		ensure_equals("Assertion 5",
+			StaticString("hello world").substr(2, 3),
+			"llo");
+		ensure_equals("Assertion 6",
+			StaticString("hello world").substr(6, 10),
+			"world");
+	}
 }

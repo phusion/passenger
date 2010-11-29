@@ -12,7 +12,7 @@
 *.slo
 *.dSYM
 /config.rb
-agents
+/agents
 build/cache
 ext/common/libboost_oxt
 ext/common/libpassenger_common

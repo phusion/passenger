@@ -28,6 +28,7 @@
 #include <string>
 #include <cstring>
 #include <ostream>
+#include <stdexcept>
 
 namespace Passenger {
 
@@ -119,6 +120,30 @@ public:
 	
 	bool equals(const string &other) const {
 		return len == other.size() && memcmp(content, other.data(), len) == 0;
+	}
+	
+	string::size_type find(char c, string::size_type pos = 0) const {
+		if (pos < len) {
+			const char *result = (const char *) memchr(content + pos, c, len - pos);
+			if (result == NULL) {
+				return string::npos;
+			} else {
+				return result - content;
+			}
+		} else {
+			return string::npos;
+		}
+	}
+	
+	StaticString substr(string::size_type pos = 0, string::size_type n = string::npos) const {
+		if (pos > len) {
+			throw out_of_range("Argument 'pos' out of range");
+		} else {
+			if (n > len - pos) {
+				n = len - pos;
+			}
+			return StaticString(content + pos, n);
+		}
 	}
 	
 	bool operator==(const StaticString &other) const {
