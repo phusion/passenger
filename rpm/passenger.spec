@@ -17,7 +17,9 @@
 %endif
 %define passenger_epoch 1
 
-%define nginx_version 0.8.53
+%if %{?nginx_version:0}%{?!nginx_version:1}
+  %define nginx_version 0.8.53
+%endif
 %define nginx_release %{passenger_version}_%{passenger_release}
 %define nginx_user	passenger
 %define nginx_group	%{nginx_user}
