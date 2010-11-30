@@ -21,6 +21,15 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+task 'package:check' do
+	require 'phusion_passenger'
+	
+	File.read("ext/common/Constants.h") =~ /PASSENGER_VERSION \"(.+)\"/
+	if $1 != PhusionPassenger::VERSION_STRING
+		abort "Version number in ext/common/Constants.h doesn't match."
+	end
+end
+
 spec = Gem::Specification.new do |s|
 	s.platform = Gem::Platform::RUBY
 	s.homepage = "http://www.modrails.com/"
@@ -85,7 +94,9 @@ task 'package:filelist' do
 end
 
 Rake::Task['package'].prerequisites.unshift(:doc)
+Rake::Task['package'].prerequisites.unshift('package:check')
 Rake::Task['package:gem'].prerequisites.unshift(:doc)
+Rake::Task['package:gem'].prerequisites.unshift('package:check')
 Rake::Task['package:force'].prerequisites.unshift(:doc)
 task :clobber => :'package:clean'
 
@@ -166,7 +177,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 end
 
 desc "Create a Debian package"
-task 'package:debian' => :fakeroot do
+task 'package:debian' => [:fakeroot, 'package:check'] do
 	if Process.euid != 0
 		STDERR.puts
 		STDERR.puts "*** ERROR: the 'package:debian' task must be run as root."
