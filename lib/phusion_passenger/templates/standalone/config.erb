@@ -1,3 +1,29 @@
+#####################################################
+#
+#       !!!!!!! WARNING, READ THIS !!!!!!!
+#
+#
+#  The fact that Phusion Passenger uses Nginx
+#  internally is considered to be an implementation
+#  detail that the user should not bother with.
+#  We may arbitrarily replace the Nginx core with
+#  something else in the future.
+#
+#  As such, we do not support any kind of custom
+#  Nginx configuration in Phusion Passenger Standalone.
+#  If you need additional Nginx modules or if you need
+#  special Nginx configuration or whatever then you
+#  should use Phusion Passenger for Nginx, NOT
+#  Phusion Passenger Standalone.
+#
+#  You are strongly discouraged from editing this file
+#  and treating Phusion Passenger Standalone as an easy
+#  way to start Nginx. We will not provide any support
+#  for this.
+# 
+#####################################################
+
+
 master_process on;
 worker_processes 1;
 daemon on;
