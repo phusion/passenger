@@ -4,7 +4,7 @@
 #include <boost/bind.hpp>
 
 #include "MessageServer.h"
-#include "ApplicationPool/Client.h"
+#include "MessageClient.h"
 #include "Utils.h"
 #include <string>
 #include <cstring>
@@ -12,7 +12,6 @@
 #include <errno.h>
 
 using namespace Passenger;
-using namespace Passenger::ApplicationPool;
 using namespace boost;
 using namespace std;
 
@@ -21,6 +20,7 @@ namespace tut {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		string socketFilename;
+		string socketAddress;
 		AccountsDatabasePtr accountsDatabase;
 		AccountPtr clientAccount;
 		shared_ptr<MessageServer> server;
@@ -29,6 +29,7 @@ namespace tut {
 		MessageServerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			socketFilename = generation->getPath() + "/socket";
+			socketAddress = "unix:" + socketFilename;
 			accountsDatabase = ptr(new AccountsDatabase());
 			clientAccount = accountsDatabase->add("test", "12345", false);
 			
@@ -44,7 +45,7 @@ namespace tut {
 			}
 		}
 		
-		class SlowClient: public Client {
+		class SlowClient: public MessageClient {
 		private:
 			unsigned int timeToSendUsername;
 			unsigned int timeToSendPassword;
@@ -67,17 +68,17 @@ namespace tut {
 		public:
 			SlowClient(unsigned int timeToSendUsername,
 			           unsigned int timeToSendPassword)
-			         : Client()
+			         : MessageClient()
 			{
 				this->timeToSendUsername = timeToSendUsername;
 				this->timeToSendPassword = timeToSendPassword;
 			}
 		};
 		
-		class CustomClient: public Client {
+		class CustomClient: public MessageClient {
 		public:
 			CustomClient *sendText(const string &text) {
-				data->channel.write(text.c_str(), NULL);
+				channel.write(text.c_str(), NULL);
 				return this;
 			}
 		};
@@ -152,19 +153,19 @@ namespace tut {
 		accountsDatabase->add("hashed_user", Account::createHash("67890"), true);
 		
 		try {
-			Client().connect(socketFilename, "testt", "12345");
+			MessageClient().connect(socketAddress, "testt", "12345");
 			fail("SecurityException expected when invalid username is given");
 		} catch (const SecurityException &) {
 			// Pass.
 		}
 		try {
-			Client().connect(socketFilename, "test", "123456");
+			MessageClient().connect(socketAddress, "test", "123456");
 			fail("SecurityException expected when invalid password is given for an account with plain text password");
 		} catch (const SecurityException &) {
 			// Pass.
 		}
 		try {
-			Client().connect(socketFilename, "test", "678900");
+			MessageClient().connect(socketAddress, "test", "678900");
 			fail("SecurityException expected when invalid password is given for an account with hashed password");
 		} catch (const SecurityException &) {
 			// Pass.
@@ -174,7 +175,7 @@ namespace tut {
 	TEST_METHOD(2) {
 		// It supports hashed passwords.
 		accountsDatabase->add("hashed_user", Account::createHash("67890"), true);
-		Client().connect(socketFilename, "hashed_user", "67890"); // Should not throw exception.
+		MessageClient().connect(socketAddress, "hashed_user", "67890"); // Should not throw exception.
 	}
 	
 	TEST_METHOD(3) {
@@ -191,7 +192,7 @@ namespace tut {
 		
 		try {
 			// This client takes too much time on sending the username.
-			SlowClient(50, 0).connect(socketFilename, "test", "12345");
+			SlowClient(50, 0).connect(socketAddress, "test", "12345");
 			fail("IOException or SystemException expected (1).");
 		} catch (const IOException &e) {
 			// Pass.
@@ -201,7 +202,7 @@ namespace tut {
 		
 		try {
 			// This client takes too much time on sending the password.
-			SlowClient(0, 50).connect(socketFilename, "test", "12345");
+			SlowClient(0, 50).connect(socketAddress, "test", "12345");
 			fail("IOException or SystemException expected (2).");
 		} catch (const IOException &e) {
 			// Pass.
@@ -212,7 +213,7 @@ namespace tut {
 		try {
 			// This client is fast enough at sending the username and
 			// password individually, but the combined time is too long.
-			SlowClient(25, 25).connect(socketFilename, "test", "12345");
+			SlowClient(25, 25).connect(socketAddress, "test", "12345");
 			fail("IOException or SystemException expected (3).");
 		} catch (const IOException &e) {
 			// Pass.
@@ -227,7 +228,7 @@ namespace tut {
 		memset(username, 'x', sizeof(username));
 		username[sizeof(username) - 1] = '\0';
 		try {
-			Client().connect(socketFilename, username, "1234");
+			MessageClient().connect(socketAddress, username, "1234");
 			fail("SecurityException expected");
 		} catch (const SecurityException &e) {
 			// Pass.
@@ -240,7 +241,7 @@ namespace tut {
 		memset(password, 'x', sizeof(password));
 		password[sizeof(password) - 1] = '\0';
 		try {
-			Client().connect(socketFilename, "test", password);
+			MessageClient().connect(socketAddress, "test", password);
 			fail("SecurityException expected");
 		} catch (const SecurityException &e) {
 			// Pass.
@@ -253,8 +254,8 @@ namespace tut {
 		LoggingHandlerPtr handler2(new LoggingHandler());
 		server->addHandler(handler1);
 		server->addHandler(handler2);
-		Client().connect(socketFilename, "test", "12345");
-		Client().connect(socketFilename, "test", "12345");
+		MessageClient().connect(socketAddress, "test", "12345");
+		MessageClient().connect(socketAddress, "test", "12345");
 		
 		usleep(10000); // Give the threads some time to do work.
 		ensure_equals(handler1->clientsAccepted, 2);
@@ -273,12 +274,12 @@ namespace tut {
 		handler1->returnValue = false;
 		
 		CustomClient c1, c2;
-		c1.connect(socketFilename, "test", "12345");
+		c1.connect(socketAddress, "test", "12345");
 		c1.sendText("hello");
 		c1.sendText(" ");
 		usleep(10000); // Give the thread some time to do work.
 		
-		c2.connect(socketFilename, "test", "12345");
+		c2.connect(socketAddress, "test", "12345");
 		c2.sendText("world");
 		usleep(10000); // Give the thread some time to do work.
 		
@@ -296,7 +297,7 @@ namespace tut {
 		server->addHandler(handler2);
 		
 		CustomClient c;
-		c.connect(socketFilename, "test", "12345");
+		c.connect(socketAddress, "test", "12345");
 		c.sendText("hi");
 		usleep(10000); // Give the thread some time to do work.
 		
@@ -312,7 +313,7 @@ namespace tut {
 		server->addHandler(handler2);
 		
 		CustomClient c;
-		c.connect(socketFilename, "test", "12345");
+		c.connect(socketAddress, "test", "12345");
 		c.sendText("hi");
 		usleep(10000); // Give the thread some time to do work.
 		
@@ -340,7 +341,7 @@ namespace tut {
 		
 		handler1->id = 100;
 		handler2->id = 101;
-		c1.connect(socketFilename, "test", "12345");
+		c1.connect(socketAddress, "test", "12345");
 		c1.sendText("hi");
 		usleep(10000); // Give the thread some time to do work.
 		ensure_equals(handler1->latestContext->id, 100);
@@ -348,7 +349,7 @@ namespace tut {
 		
 		handler1->id = 200;
 		handler2->id = 201;
-		c2.connect(socketFilename, "test", "12345");
+		c2.connect(socketAddress, "test", "12345");
 		c2.sendText("hi");
 		usleep(10000); // Give the thread some time to do work.
 		ensure_equals(handler1->latestContext->id, 200);
@@ -368,13 +369,13 @@ namespace tut {
 		server->addHandler(handler2);
 		{
 			{
-				Client().connect(socketFilename, "test", "12345");
+				MessageClient().connect(socketAddress, "test", "12345");
 			}
 			usleep(10000); // Give the threads some time to do work.
 			ensure_equals(handler1->clientsDisconnected, 1);
 			ensure_equals(handler2->clientsDisconnected, 1);
 			
-			Client().connect(socketFilename, "test", "12345");
+			MessageClient().connect(socketAddress, "test", "12345");
 		}
 		usleep(10000); // Give the threads some time to do work.
 		ensure_equals(handler1->clientsDisconnected, 2);
