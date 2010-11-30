@@ -30,7 +30,7 @@ namespace :package do
 	end
 
 	def noisy_system(*args)
-		puts args.join ' ' if @verbosity
+		puts args.join ' ' if @verbosity > 0
 		system(*args)
 	end
 
@@ -73,13 +73,12 @@ namespace :package do
 	end
 
 	task 'rpm_verbosity' do
-		if ENV['verbosity']
-			if ENV['verbosity'] =~ /(true|yes|on)/i
-				@verbosity = 1
-			else
-				@verbosity = ENV['verbosity'].to_i
-				@build_verbosity = %w{-v} * (@verbosity == 0 ? 1 : @verbosity)
-			end
+		if ENV['verbosity'] &&  ENV['verbosity'] =~ /(true|yes|on)/i
+			@verbosity = 1
+			@build_verbosity = %w{-v}
+		else
+			@verbosity = ENV['verbosity'].to_i
+			@build_verbosity = %w{-v} * (@verbosity == 0 ? 1 : @verbosity)
 		end
 	end
 end
