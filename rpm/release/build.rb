@@ -184,9 +184,23 @@ srcdir=`rpm -E '%{_sourcedir}'`.chomp
 
 FileUtils.ln_sf(Dir["#{Dir.getwd}/{config/,patches/,release/GPG}*"], srcdir, :verbose => @verbosity > 0)
 
-# No dist for SRPM
-unless noisy_system(rpmbuild, *((@verbosity > 0 ? [] : %w{--quiet}) + ['--define', 'dist %nil', '--define', "passenger_version #{PhusionPassenger::VERSION_STRING}", '-bs', 'passenger.spec']))
-  abort "No SRPM was built. See above for the error"
+# Force the default versions in the spec file to be the ones in the source so a given SRPM doesn't need a --define to set versions.
+specdir="/tmp/#{`whoami`.strip}-specfile-#{Process.pid}"
+FileUtils.rm_rf(specdir, :verbose => @verbosity > 0)
+begin
+  FileUtils.mkdir_p(specdir, :verbose => @verbosity > 0)
+  FileUtils.cp('passenger.spec', specdir, :verbose => @verbosity > 0)
+  # + must be escaped, but * doesn't? And people wonder why I hate sed.
+  abort "Can't edit specfile" unless noisy_system('sed', '-i',
+    '-e', "s/^\\(\\([[:space:]]*\\)%define[[:space:]]\\+passenger_version[[:space:]]\\)\\+[0-9.]\\+.*/\\2# From Passenger Source\\n\\1#{PhusionPassenger::VERSION_STRING}/",
+    '-e', "s/^\\(\\([[:space:]]*\\)%define[[:space:]]\\+nginx_version[[:space:]]\\)\\+[0-9.]\\+.*/\\2# From Passenger Source\\n\\1#{PhusionPassenger::PREFERRED_NGINX_VERSION}/",
+    "#{specdir}/passenger.spec")
+  # No dist for SRPM
+  unless noisy_system(rpmbuild, *((@verbosity > 0 ? [] : %w{--quiet}) + ['--define', 'dist %nil', '-bs', "#{specdir}/passenger.spec"]))
+    abort "No SRPM was built. See above for the error"
+  end
+ensure
+   FileUtils.rm_rf(specdir, :verbose => @verbosity > 0)
 end
 
 # I really wish there was a way to query rpmbuild for this via the spec file,
