@@ -588,6 +588,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Nov 29 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-1
+- Integration into passenger source
+- Bump to 3.0.1
+
 * Mon Nov 15 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-11
 - Fix passenger-standalone
 
