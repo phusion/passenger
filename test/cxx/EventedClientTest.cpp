@@ -16,7 +16,10 @@ namespace tut {
 		ev::dynamic_loop eventLoop;
 		ev::async exitWatcher;
 		oxt::thread *thr;
+		string lastErrorMessage;
+		int lastErrorCode;
 		AtomicInt integer;
+		string data;
 		
 		EventedClientTest()
 			: exitWatcher(eventLoop)
@@ -29,6 +32,7 @@ namespace tut {
 			exitWatcher.set<EventedClientTest, &EventedClientTest::unloop>(this);
 			exitWatcher.start();
 			thr = NULL;
+			lastErrorCode = -1;
 		}
 		
 		~EventedClientTest() {
@@ -44,6 +48,12 @@ namespace tut {
 		void stopEventLoop() {
 			if (thr != NULL) {
 				exitWatcher.send();
+				waitUntilEventLoopExits();
+			}
+		}
+		
+		void waitUntilEventLoopExits() {
+			if (thr != NULL) {
 				thr->join();
 				delete thr;
 				thr = NULL;
@@ -66,6 +76,28 @@ namespace tut {
 		static void setIntToTwo(EventedClient *client) {
 			EventedClientTest *test = (EventedClientTest *) client->userData;
 			test->integer = 2;
+		}
+		
+		static void saveSystemError(EventedClient *client, const string &message, int code) {
+			EventedClientTest *self = (EventedClientTest *) client->userData;
+			self->lastErrorMessage = message;
+			self->lastErrorCode = code;
+		}
+		
+		static void exitEventLoop(EventedClient *client) {
+			EventedClientTest *self = (EventedClientTest *) client->userData;
+			self->eventLoop.unloop();
+		}
+		
+		static void readAndExitOnEof(EventedClient *client) {
+			EventedClientTest *self = (EventedClientTest *) client->userData;
+			char buf[1024];
+			ssize_t ret = read(client->fd, buf, sizeof(buf));
+			if (ret <= 0) {
+				self->eventLoop.unloop();
+			} else {
+				self->data.append(buf, ret);
+			}
 		}
 	};
 
@@ -402,5 +434,90 @@ namespace tut {
 		unsigned int len = body.size() + strlen("hello world");
 		ensure_equals(readExact(fd1, buf, len), len);
 		ensure_equals(StaticString(buf, len), body + "hello world");
+	}
+	
+	TEST_METHOD(18) {
+		// If writeErrorAction is DISCONNECT_FULL then
+		// EventedClient.write(), upon encountering a write error,
+		// will forcefully disconnect the connection.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.writeErrorAction = EventedClient::DISCONNECT_FULL;
+		client.onSystemError = saveSystemError;
+		fd1.close();
+		client.write("hello");
+		ensure_equals(lastErrorCode, EPIPE);
+		ensure_equals(client.fd, -1);
+	}
+	
+	TEST_METHOD(19) {
+		// If writeErrorAction is DISCONNECT_FULL then
+		// the background writer disconnects the connection
+		// on write error.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.writeErrorAction = EventedClient::DISCONNECT_FULL;
+		client.onSystemError = saveSystemError;
+		
+		string str(1024 * 128, 'x');
+		client.write(str);
+		ensure(client.pendingWrites() > 0);
+		
+		fd1.close();
+		client.onDisconnect = exitEventLoop;
+		startEventLoop();
+		waitUntilEventLoopExits();
+		
+		ensure_equals(lastErrorCode, EPIPE);
+		ensure_equals(client.fd, -1);
+	}
+	
+	TEST_METHOD(20) {
+		// If writeErrorAction is DISCONNECT_WRITE then
+		// EventedClient.write(), upon encountering a write error,
+		// will forcefully disconnect the writer side of the
+		// connection but continue allowing reading.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.writeErrorAction = EventedClient::DISCONNECT_WRITE;
+		client.onSystemError = saveSystemError;
+		client.onReadable = readAndExitOnEof;
+		client.notifyReads(true);
+		
+		writeExact(fd1, "world", 5);
+		fd1.close();
+		client.write("hello");
+		
+		startEventLoop();
+		waitUntilEventLoopExits();
+		
+		ensure(client.fd != -1);
+		ensure_equals(data, "world");
+	}
+	
+	TEST_METHOD(21) {
+		// If writeErrorAction is DISCONNECT_WRITE then
+		// the background writer, upon encountering a write error,
+		// will forcefully disconnect the writer side of the
+		// connection but continue allowing reading.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.writeErrorAction = EventedClient::DISCONNECT_WRITE;
+		client.onSystemError = saveSystemError;
+		client.onReadable = readAndExitOnEof;
+		client.notifyReads(true);
+		
+		string str(1024 * 128, 'x');
+		client.write(str);
+		ensure(client.pendingWrites() > 0);
+		
+		writeExact(fd1, "world", 5);
+		fd1.close();
+		
+		startEventLoop();
+		waitUntilEventLoopExits();
+		
+		ensure(client.fd != -1);
+		ensure_equals(data, "world");
 	}
 }
