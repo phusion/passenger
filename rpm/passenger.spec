@@ -90,7 +90,6 @@ Source200: rubygem-passenger.te
 # # Ignore everything after the ?, it's meant to trick rpmbuild into
 # # finding the correct file
 # Source300: http://github.com/gnosek/nginx-upstream-fair/tarball/master?/nginx-upstream-fair.tar.gz
-Patch0: passenger-os-runtime.patch
 BuildRoot: %{_tmppath}/%{name}-%{passenger_version}-%{passenger_release}-root-%(%{__id_u} -n)
 Requires: rubygems
 Requires: rubygem(rake) >= 0.8.1
@@ -262,7 +261,6 @@ This package includes an nginx server with Passenger compiled in.
 # %setup -q -T -D -n nginx-%{nginx_version} -a 300
 # # Fix the CWD
 # %setup -q -T -D -n %{gemname}-%{passenger_version}
-%patch0 -p1
 %if %{gem_version_mismatch}
   %{warn:
 ***
@@ -433,12 +431,16 @@ cp -ra agents %{buildroot}/%{geminstdir}
 ./bin/passenger package-runtime --nginx-version %{nginx_version} --nginx-tarball %{SOURCE1} %{buildroot}/%{_var}/lib/passenger-standalone
 # Now unpack the tarballs it just created
 # It's 2am, revisit this insanity in the light of morning
-# standalone_dir=$(bash -c 'ls -d $1 | tail -1' -- %{buildroot}/%{_var}/lib/passenger-standalone/%{passenger_version}-*)
-standalone_dir=%{buildroot}/%{_var}/lib/passenger-standalone/natively-packaged
+standalone_dir=$(bash -c 'ls -d $1 | tail -1' -- %{buildroot}/%{_var}/lib/passenger-standalone/%{passenger_version}-*)
+native_dir=%{buildroot}/%{_var}/lib/passenger-standalone/natively-packaged
 
 mkdir -p $standalone_dir/support
 tar -zx -C %{buildroot} -f $standalone_dir/nginx-%{nginx_version}.tar.gz
 tar -zx -C $standalone_dir/support -f $standalone_dir/support.tar.gz
+
+# Hong Li says the binaries are relocatable, so we don't have to jump
+# through hoops to change directories. Just move it.
+mv $standalone_dir $native_dir
 
 # SELINUX
 install -p -m 644 -D selinux/%{name}.pp %{buildroot}%{sharedir}/selinux/packages/%{name}/%{name}.pp
@@ -474,21 +476,21 @@ perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE100} > %{buildroot}
 perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE101} > %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
 
 # CLEANUP
-rm -f $standalone_dir/support/ext/ruby/ruby*/mkmf.log
+rm -f $native_dir/support/ext/ruby/ruby*/mkmf.log
 # Reversed logic from most other tests
 %if %{?fedora:0}%{?!fedora:1}
-rm -f $standalone_dir/support/ext/libev/config.log
+rm -f $native_dir/support/ext/libev/config.log
 %endif
 
 %if %{?fedora:1}%{?!fedora:0}
   %define libevmunge %nil
 %else
-  %define libevmunge $standalone_dir/support/ext/libev/config.status $standalone_dir/support/ext/libev/Makefile
+  %define libevmunge $native_dir/support/ext/libev/config.status $native_dir/support/ext/libev/Makefile
 %endif
 
 perl -pi -e '%perlfileck s{%buildroot}{}g;s<%{_builddir}><%%{_builddir}>g' \
-	$standalone_dir/support/ext/ruby/ruby*/Makefile \
-	$standalone_dir/support/lib/phusion_passenger/standalone/runtime_installer.rb \
+	$native_dir/support/ext/ruby/ruby*/Makefile \
+	$native_dir/support/lib/phusion_passenger/standalone/runtime_installer.rb \
 	%{buildroot}/%{geminstdir}/lib/phusion_passenger/standalone/runtime_installer.rb %libevmunge
 
 # This feels wrong (reordering arch & os) but if it helps....
@@ -496,7 +498,7 @@ perl -pi -e '%perlfileck s{%buildroot}{}g;s<%{_builddir}><%%{_builddir}>g' \
 %define __spec_install_post \
     %{?__debug_package:%{__debug_install_post}} \
     %{__os_install_post} \
-    find $standalone_dir -name \*.o -o -name \*.so | xargs strip ; \
+    find $native_dir -name \*.o -o -name \*.so | xargs strip ; \
     %{__arch_install_post}
 
 %post -n nginx-passenger
