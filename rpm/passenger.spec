@@ -13,7 +13,7 @@
   %define passenger_version 3.0.1
 %endif
 %if %{?passenger_release:0}%{?!passenger_release:1}
-  %define passenger_release 1%{?dist}
+  %define passenger_release 2%{?dist}
 %endif
 %define passenger_epoch 1
 
@@ -90,6 +90,7 @@ Source200: rubygem-passenger.te
 # # Ignore everything after the ?, it's meant to trick rpmbuild into
 # # finding the correct file
 # Source300: http://github.com/gnosek/nginx-upstream-fair/tarball/master?/nginx-upstream-fair.tar.gz
+Patch0: passenger-force-native.patch
 BuildRoot: %{_tmppath}/%{name}-%{passenger_version}-%{passenger_release}-root-%(%{__id_u} -n)
 Requires: rubygems
 Requires: rubygem(rake) >= 0.8.1
@@ -261,6 +262,13 @@ This package includes an nginx server with Passenger compiled in.
 # %setup -q -T -D -n nginx-%{nginx_version} -a 300
 # # Fix the CWD
 # %setup -q -T -D -n %{gemname}-%{passenger_version}
+%patch0 -p1
+
+# Rather than hard-coding the path into the patch, change it here so
+# that it's consistent with the %{ruby} macro, which might be defined on
+# the command-line (4 %'s = 2)
+perl -pi -e '%{perlfileck} s{%%%%GEM_INSTALL_DIR%%%%}{%{geminstdir}};s{%%%%APACHE_INSTALLED_MOD%%%%}{%{_libdir}/httpd/modules/mod_passenger.so}' lib/phusion_passenger.rb ext/common/ResourceLocator.h
+
 %if %{gem_version_mismatch}
   %{warn:
 ***
@@ -294,7 +302,7 @@ export LIBEV_LIBS='-lev'
    %{rake} native_support
 %else
   %{rake} package
-  ./bin/passenger-install-apache2-module --auto
+  %{rake} apache2
 
   ### SELINUX
   rm -rf selinux
@@ -422,6 +430,7 @@ tar -zx -C $standalone_dir/support -f $standalone_dir/support.tar.gz
 # Hong Li says the binaries are relocatable, so we don't have to jump
 # through hoops to change directories. Just move it.
 mv $standalone_dir $native_dir
+mv $native_dir/support/ext/ruby/*-linux $native_dir/support/ext/ruby/native
 
 # Unhack
 mv lib/phusion_passenger/standalone/runtime_installer.rb.nohack lib/phusion_passenger/standalone/runtime_installer.rb
@@ -438,8 +447,8 @@ cd -
 %endif #!only_native_libs
 
 ##### NATIVE LIBS INSTALL
-mkdir -p %{buildroot}/%{geminstdir}/ext/ruby
-cp -ra ext/ruby/*-linux %{buildroot}/%{geminstdir}/ext/ruby
+mkdir -p %{buildroot}/%{geminstdir}/ext/ruby/native
+cp -ra ext/ruby/*-linux/* %{buildroot}/%{geminstdir}/ext/ruby/native
 
 %if !%{only_native_libs}
 #### Clean up everything we don't care about
@@ -461,11 +470,14 @@ perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE100} > %{buildroot}
 perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE101} > %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
 
 # CLEANUP
-rm -f $native_dir/support/ext/ruby/ruby*/mkmf.log
+rm -f $native_dir/support/ext/ruby/native/mkmf.log
 # Reversed logic from most other tests
 %if %{?fedora:0}%{?!fedora:1}
 rm -f $native_dir/support/ext/libev/config.log
 %endif
+
+# REMOVE THIS TO FORCE 'native-packaged' (it's still in doc)
+rm %{buildroot}/%{geminstdir}/DEVELOPERS.TXT
 
 # This is still needed
 %if %{?fedora:1}%{?!fedora:0}
@@ -537,7 +549,8 @@ rm -rf %{buildroot}
 %{_bindir}/passenger-make-enterprisey
 %{gemdir}/gems/%{gemname}-%{gemversion}/
 %doc %{gemdir}/doc/%{gemname}-%{gemversion}
-%doc %{geminstdir}/README
+%doc README
+%doc DEVELOPERS.TXT
 %{gemdir}/cache/%{gemname}-%{gemversion}.gem
 %{gemdir}/specifications/%{gemname}-%{gemversion}.gemspec
 
@@ -570,10 +583,15 @@ rm -rf %{buildroot}
 
 %files native-libs
 # %{geminstdir}/ext/ruby/%{gemnativedir}
-%{geminstdir}/ext/ruby/*-linux
+%{geminstdir}/ext/ruby/native
 
 
 %changelog
+* Tue Nov 30 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-2
+- Remove (most of) the kludges to remove %%{builddir} from installed files.
+- Blessed natively-packaged patch from Hong Li
+- Migration to the more static directory structure
+
 * Mon Nov 29 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-1
 - Integration into passenger source
 - Bump to 3.0.1
