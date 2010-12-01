@@ -277,26 +277,6 @@ This package includes an nginx server with Passenger compiled in.
 # Fix the preferred version
 perl -pi -e "s{(PREFERRED_NGINX_VERSION\s*=\s*(['\"]))[\d\.]+\2}{\${1}%{nginx_version}\$2}" lib/phusion_passenger.rb
 
-# The last argument of the package-runtime command gets inserted for
-# --prefix, so that means nginx thinks that dir exists
-%define trunc_path \#{\\@nginx_dir.gsub(%%r{^%{buildroot}},'')}
-
-perl -pi - lib/phusion_passenger/standalone/runtime_installer.rb <<'EOF'
-BEGIN {
-%perlfileckinner
-$insert = <<'EndInsert';
-qq{$1\n
-$2"--error-log-path=%{trunc_path}/logs/error.log " <<\n
-$2"--http-log-path=%{trunc_path}/logs/access.log " <<\n
-}
-EndInsert
-$insert =~ s/\n//gm;
-}
-s{(^(\s+)"--without-http_fastcgi_module\s*"\s*<<)}{$insert}eemx;
-s{(\./configure.*--prefix=)#{\@nginx_dir}}{${1}%{trunc_path}};
-s{(#\{PlatformInfo.gnu_make\})\s+(install)}{$1 DESTDIR=#{\@nginx_dir} INSTALLDIRS=vendor $2};
-EOF
-
 # RPM finds these in shebangs and assumes they're requirements. Clean them up here rather than in the install-dir.
 find test -type f -print0 | xargs -0 perl -pi -e '%{perlfileck} s{#!(/opt/ruby.*|/usr/bin/ruby1.8)}{%{ruby}}g'
 
@@ -385,9 +365,6 @@ export LIBEV_LIBS='-lev'
   # In any case, fix it correctly later
   perl -pi -e '%{perlfileck} s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;' objs/ngx_auto_config.h
 
-  # Also do it for passenger-standalone (and I thought the above was ugly)
-  perl -pi -0777 -e 's!(^\s*run_command_with_throbber.*"Preparing Nginx...".*\n(\s*))(yield.*?\n)!${2}\@\@hack_success = false\n$1yield_result = $3${2}abort "nginx-hack failed" unless \@\@hack_success || system(*(%w{perl -pi -e} + ["%{perlfileescd} s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;", "objs/ngx_auto_config.h"]))\n${2}\# Why is this running many times?\n${2}\@\@hack_success = true\n${2}yield_result\n!im' %{_builddir}/passenger-%{passenger_version}/lib/phusion_passenger/standalone/runtime_installer.rb
-
   make %{?_smp_mflags}
 
   cd -
@@ -435,7 +412,8 @@ standalone_dir=$(bash -c 'ls -d $1 | tail -1' -- %{buildroot}/%{_var}/lib/passen
 native_dir=%{buildroot}/%{_var}/lib/passenger-standalone/natively-packaged
 
 mkdir -p $standalone_dir/support
-tar -zx -C %{buildroot} -f $standalone_dir/nginx-%{nginx_version}.tar.gz
+mkdir -p $standalone_dir/nginx-%{nginx_version}
+tar -zx -C $standalone_dir/nginx-%{nginx_version} -f $standalone_dir/nginx-%{nginx_version}.tar.gz
 tar -zx -C $standalone_dir/support -f $standalone_dir/support.tar.gz
 
 # Hong Li says the binaries are relocatable, so we don't have to jump
@@ -482,16 +460,9 @@ rm -f $native_dir/support/ext/ruby/ruby*/mkmf.log
 rm -f $native_dir/support/ext/libev/config.log
 %endif
 
-%if %{?fedora:1}%{?!fedora:0}
-  %define libevmunge %nil
-%else
-  %define libevmunge $native_dir/support/ext/libev/config.status $native_dir/support/ext/libev/Makefile
-%endif
-
+# This is still needed
 perl -pi -e '%perlfileck s{%buildroot}{}g;s<%{_builddir}><%%{_builddir}>g' \
-	$native_dir/support/ext/ruby/ruby*/Makefile \
-	$native_dir/support/lib/phusion_passenger/standalone/runtime_installer.rb \
-	%{buildroot}/%{geminstdir}/lib/phusion_passenger/standalone/runtime_installer.rb %libevmunge
+	$native_dir/support/ext/ruby/ruby*/Makefile
 
 # This feels wrong (reordering arch & os) but if it helps....
 # ...Going one step further and also stripping all the installed *.o files
