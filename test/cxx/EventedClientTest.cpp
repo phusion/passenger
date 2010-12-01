@@ -1,6 +1,5 @@
 #include "TestSupport.h"
 #include "EventedClient.h"
-#include "MessageChannel.h"
 #include "Utils/ScopeGuard.h"
 #include "Utils/IOUtils.h"
 
@@ -124,7 +123,7 @@ namespace tut {
 		
 		char buf[100];
 		memset(buf, 0, sizeof(buf));
-		ensure(MessageChannel(fd1).readRaw(buf, strlen("hello world")));
+		ensure(readExact(fd1, buf, strlen("hello world")));
 		ensure_equals(string(buf), "hello world");
 	}
 	
@@ -150,7 +149,7 @@ namespace tut {
 		
 		char buf[str.size()];
 		memset(buf, 0, sizeof(buf));
-		ensure(MessageChannel(fd1).readRaw(buf, str.size()));
+		ensure(readExact(fd1, buf, str.size()));
 		ensure(memcmp(buf, str.c_str(), str.size()) == 0);
 	}
 	
@@ -178,7 +177,7 @@ namespace tut {
 		
 		char buf[str.size()];
 		memset(buf, 0, sizeof(buf));
-		ensure(MessageChannel(fd1).readRaw(buf, str.size()));
+		ensure(readExact(fd1, buf, str.size()));
 		ensure(memcmp(buf, str.c_str(), str.size()) == 0);
 		
 		// readWatcher will become active again after all pending data has been sent.
@@ -234,7 +233,7 @@ namespace tut {
 		);
 		
 		memset(buf, 0, sizeof(buf));
-		ensure(MessageChannel(fd1).readRaw(buf, str.size() - 1));
+		ensure(readExact(fd1, buf, str.size() - 1));
 		ensure(memcmp(buf, str.c_str() + 1, str.size() - 1) == 0);
 		
 		ensure_equals(read(fd1, buf, 1), (ssize_t) 0);
@@ -374,7 +373,7 @@ namespace tut {
 		EVENT_LOOP_GUARD;
 		
 		char buf[str.size()];
-		MessageChannel(fd1).readRaw(buf, str.size());
+		readExact(fd1, buf, str.size());
 		EVENTUALLY(2,
 			result = integer == 2;
 		);
