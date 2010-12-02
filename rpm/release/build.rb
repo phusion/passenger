@@ -76,7 +76,17 @@ def limit_configs(configs, limits)
       abort "ERROR: Cannot build '#{parts[2]}' packages on '#{rpmarch}'"
     end
     tree[parts.join '-']
-  end.flatten
+   # All of a sudden the i386 mock builds are failing IFF they're run after an
+   # x86_64 build. I don't understand how separate processes in separate
+   # (chroot'ed!) environments can pollute each other, and I find it rather
+   # troubling. But for now the workaround is to sort by arch & do i386 first.
+  end.flatten.sort do |a,b|
+    ap = a.split(/-/)
+    ap.unshift(ap.pop)
+    bp = b.split(/-/)
+    bp.unshift(bp.pop)
+    ap <=> bp
+  end
 end
 
 def noisy_system(*args)
