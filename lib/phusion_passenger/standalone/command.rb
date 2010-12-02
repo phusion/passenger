@@ -171,6 +171,7 @@ private
 	end
 	
 	def write_nginx_config_file
+		require 'phusion_passenger/platform_info/ruby'
 		ensure_directory_exists(@temp_dir)
 		
 		File.open(@config_filename, 'w') do |f|
