@@ -30,7 +30,7 @@ namespace :package do
 	end
 
 	def noisy_system(*args)
-		puts args.join ' ' if @verbosity > 0
+		puts(args.join) ' ' if @verbosity > 0
 		system(*args)
 	end
 
@@ -40,8 +40,8 @@ namespace :package do
 		FileUtils.rm_rf(working_dir, :verbose => verbosity > 0)
 		begin
 			FileUtils.mkdir_p("#{working_dir}/#{sub_dir}", :verbose => verbosity > 0)
-			FileUtils.cp_r('.', "#{working_dir}/#{sub_dir}", :verbose => verbosity > 0)
-			noisy_system('tar', "c#{verbosity >= 2 ? 'v' : ''}", "-C", working_dir, '-f', "#{sources_dir}/#{sub_dir}.tar.gz", sub_dir)
+			noisy_system(*(%w{rsync -ra --exclude=.git --exclude=rpm/pkg --exclude=rpm/yum-repo --exclude=*.o --exclude=*.so} + (@verbosity > 2 ? %w{-v} : []) + (@verbosity > 3 ? %w{--progress} : []) + ['.', "#{working_dir}/#{sub_dir}/."] ))
+			noisy_system('tar', "cz#{verbosity >= 2 ? 'v' : ''}", "-C", working_dir, '-f', "#{sources_dir}/#{sub_dir}.tar.gz", sub_dir)
 		ensure
 			FileUtils.rm_rf("#{working_dir}", :verbose => verbosity > 0)
 		end
