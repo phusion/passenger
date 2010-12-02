@@ -569,12 +569,12 @@ rm -rf %{buildroot}
 %doc doc/Users\ guide\ Apache.html
 %doc doc/Users\ guide\ Apache.txt
 %{_libdir}/httpd/modules/mod_passenger.so
-%{httpd_confdir}/passenger.conf
+%config %{httpd_confdir}/passenger.conf
 
 %files -n nginx-passenger
 %doc doc/Users\ guide\ Nginx.html
 %doc doc/Users\ guide\ Nginx.txt
-%{nginx_confdir}/conf.d/passenger.conf
+%config %{nginx_confdir}/conf.d/passenger.conf
 /usr/sbin/nginx.passenger
 %{perldir}/auto/nginx/nginx*
 %{perldir}/nginx*
