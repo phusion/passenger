@@ -365,6 +365,9 @@ export LIBEV_LIBS='-lev'
   # In any case, fix it correctly later
   perl -pi -e '%{perlfileck} s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;' objs/ngx_auto_config.h
 
+  # Also do it for passenger-standalone (and I thought the above was ugly)
+  perl -pi.nohack -0777 -e 's!(^\s*run_command_with_throbber.*"Preparing Nginx...".*\n(\s*))(yield.*?\n)!${2}\@\@hack_success = false\n$1yield_result = $3${2}abort "nginx-hack failed" unless \@\@hack_success || system(*(%w{perl -pi -e} + ["%{perlfileescd} s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;", "objs/ngx_auto_config.h"]))\n${2}\# Why is this running many times?\n${2}\@\@hack_success = true\n${2}yield_result\n!im' %{_builddir}/passenger-%{passenger_version}/lib/phusion_passenger/standalone/runtime_installer.rb
+
   make %{?_smp_mflags}
 
   cd -
@@ -420,6 +423,10 @@ tar -zx -C $standalone_dir/support -f $standalone_dir/support.tar.gz
 # through hoops to change directories. Just move it.
 mv $standalone_dir $native_dir
 
+# Unhack
+mv lib/phusion_passenger/standalone/runtime_installer.rb.nohack lib/phusion_passenger/standalone/runtime_installer.rb
+install -m 0644 lib/phusion_passenger/standalone/runtime_installer.rb $native_dir/support/lib/phusion_passenger/standalone/runtime_installer.rb
+
 # SELINUX
 install -p -m 644 -D selinux/%{name}.pp %{buildroot}%{sharedir}/selinux/packages/%{name}/%{name}.pp
 
@@ -461,8 +468,14 @@ rm -f $native_dir/support/ext/libev/config.log
 %endif
 
 # This is still needed
+%if %{?fedora:1}%{?!fedora:0}
+  %define libevmunge %nil
+%else
+  %define libevmunge $native_dir/support/ext/libev/config.status $native_dir/support/ext/libev/Makefile
+%endif
+
 perl -pi -e '%perlfileck s{%buildroot}{}g;s<%{_builddir}><%%{_builddir}>g' \
-	$native_dir/support/ext/ruby/ruby*/Makefile
+	$native_dir/support/ext/ruby/native/Makefile %{libevmunge}
 
 # This feels wrong (reordering arch & os) but if it helps....
 # ...Going one step further and also stripping all the installed *.o files
