@@ -245,6 +245,6 @@ unless options.key?(:single)
   end
 end
 
-unless `rpm -E '%{?signature}'`.strip == ''
+unless `rpm -E '%{?_signature}'`.strip == ''
   noisy_system('rpm', '--addsign', *Dir["#{options.key?(:single) ? stage_dir : 'pkg'}/**/*.rpm"])
 end
