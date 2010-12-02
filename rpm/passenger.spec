@@ -13,7 +13,7 @@
   %define passenger_version 3.0.1
 %endif
 %if %{?passenger_release:0}%{?!passenger_release:1}
-  %define passenger_release 2%{?dist}
+  %define passenger_release 3%{?dist}
 %endif
 %define passenger_epoch 1
 
@@ -489,12 +489,32 @@ rm %{buildroot}/%{geminstdir}/DEVELOPERS.TXT
 perl -pi -e '%perlfileck s{%buildroot}{}g;s<%{_builddir}><%%{_builddir}>g' \
 	$native_dir/support/ext/ruby/native/Makefile %{libevmunge}
 
+%define base_files base-package-files
+
+### BUILD FILE LIST (To remove files from the base package that will be installed by subpackages)
+cat <<EOF > %{base_files}
+%defattr(-, root, root, -)
+%doc %{gemdir}/doc/%{gemname}-%{gemversion}
+%doc README
+%doc DEVELOPERS.TXT
+%{_bindir}/passenger-install-apache2-module
+%{_bindir}/passenger-install-nginx-module
+%{_bindir}/passenger-config
+%{_bindir}/passenger-status
+%{_bindir}/passenger-memory-stats
+%{_bindir}/passenger-make-enterprisey
+%{gemdir}/cache/%{gemname}-%{gemversion}.gem
+%{gemdir}/specifications/%{gemname}-%{gemversion}.gemspec
+EOF
+
 # This feels wrong (reordering arch & os) but if it helps....
 # ...Going one step further and also stripping all the installed *.o files
+# Move the file find here to catch the byte-compiled Python files
 %define __spec_install_post \
     %{?__debug_package:%{__debug_install_post}} \
     %{__os_install_post} \
     find $native_dir -name \*.o -o -name \*.so | xargs strip ; \
+    find %{buildroot}/%{geminstdir} \\( -type d \\( -name native -o -name agents \\) \\) -prune -o \\( -type f -print \\) | perl -pe 's{^%{buildroot}}{};s{^//}{/};s/([?|*'\\''\"])/\\\\$1/g;s{(^|\\n$)}{\"$&}g' >> %{base_files} \
     %{__arch_install_post}
 
 %post -n nginx-passenger
@@ -539,20 +559,7 @@ fi
 rm -rf %{buildroot}
 
 %if !%{only_native_libs}
-%files
-%defattr(-, root, root, -)
-%{_bindir}/passenger-install-apache2-module
-%{_bindir}/passenger-install-nginx-module
-%{_bindir}/passenger-config
-%{_bindir}/passenger-status
-%{_bindir}/passenger-memory-stats
-%{_bindir}/passenger-make-enterprisey
-%{gemdir}/gems/%{gemname}-%{gemversion}/
-%doc %{gemdir}/doc/%{gemname}-%{gemversion}
-%doc README
-%doc DEVELOPERS.TXT
-%{gemdir}/cache/%{gemname}-%{gemversion}.gem
-%{gemdir}/specifications/%{gemname}-%{gemversion}.gemspec
+%files -f %{base_files}
 
 %files native
 %{geminstdir}/agents
@@ -587,6 +594,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Thu Dec  2 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-3
+- Stop double-packaging files from -native & -native-libs in the base package
+
 * Tue Nov 30 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-2
 - Remove (most of) the kludges to remove %%{builddir} from installed files.
 - Blessed natively-packaged patch from Hong Li
