@@ -76,5 +76,10 @@ if [[ "$run_setup" = "1" || ! $in_mock_group == 1 || ${#yum_pkgs[@]} != 0 ]] ; t
 	if [[ "$run_setup" == "1" ]] ; then
 		sudo `dirname $0`/mocksetup.sh $repo $etc
 	fi
+	
+	if [[ ! "$in_mock_group" == "1" ]] ; then
+		echo "You have been added to the mock group. Please relogin for this to take effect, and re-run 'rake package:rpm'."
+		exit 4
+	fi
 fi
 

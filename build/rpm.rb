@@ -55,8 +55,15 @@ namespace :package do
 			end
 		end
 		
-		abort "Mock setup failed, see above for details" unless
-			noisy_system('./rpm/release/mocksetup-first.sh', *args)
+		result = noisy_system('./rpm/release/mocksetup-first.sh', *args)
+		if !result
+			# exit status 4 means that the user needs to relogin.
+			if $?.exitstatus == 4
+				exit
+			else
+				abort "Mock setup failed, see above for details"
+			end
+		end
 		nginx_fetch.new.fetch(sources_dir)
 	end
 
