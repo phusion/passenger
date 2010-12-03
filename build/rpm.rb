@@ -14,9 +14,6 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'phusion_passenger'
-require 'phusion_passenger/abstract_installer'
-
 namespace :package do
 	@sources_dir = nil
 	@verbosity = 0
@@ -48,9 +45,19 @@ namespace :package do
 	end
 
 	def test_setup(*args)
+		require 'phusion_passenger'
+		require 'phusion_passenger/abstract_installer'
+		nginx_fetch = Class.new(PhusionPassenger::AbstractInstaller) do
+			def fetch(dir)
+				tarball = "nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
+				return true if File.exists?("#{dir}/#{tarball}")
+				download("http://sysoev.ru/nginx/#{tarball}", "#{dir}/#{tarball}")
+			end
+		end
+		
 		abort "Mock setup failed, see above for details" unless
 			noisy_system('./rpm/release/mocksetup-first.sh', *args)
-		NginxFetch.new.fetch(sources_dir)
+		nginx_fetch.new.fetch(sources_dir)
 	end
 
 	desc "Package the current release into a set of RPMs"
@@ -80,13 +87,5 @@ namespace :package do
 			@verbosity = ENV['verbosity'].to_i
 			@build_verbosity = %w{-v} * (@verbosity == 0 ? 1 : @verbosity)
 		end
-	end
-end
-
-class NginxFetch < PhusionPassenger::AbstractInstaller
-	def fetch(dir)
-		tarball = "nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
-		return true if File.exists?("#{dir}/#{tarball}")
-		download("http://sysoev.ru/nginx/#{tarball}", "#{dir}/#{tarball}")
 	end
 end
