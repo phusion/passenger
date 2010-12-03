@@ -30,7 +30,7 @@ namespace :package do
 	end
 
 	def noisy_system(*args)
-		puts(args.join) ' ' if @verbosity > 0
+		puts(args.join(' ')) if @verbosity > 0
 		system(*args)
 	end
 
@@ -48,9 +48,9 @@ namespace :package do
 	end
 
 	def test_setup(*args)
-			abort "Mock setup failed, see above for details" unless
-				noisy_system('./rpm/release/mocksetup-first.sh', *args)
-			NginxFetch.new.fetch(sources_dir)
+		abort "Mock setup failed, see above for details" unless
+			noisy_system('./rpm/release/mocksetup-first.sh', *args)
+		NginxFetch.new.fetch(sources_dir)
 	end
 
 	desc "Package the current release into a set of RPMs"
@@ -84,7 +84,6 @@ namespace :package do
 end
 
 class NginxFetch < PhusionPassenger::AbstractInstaller
-
 	def fetch(dir)
 		tarball = "nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
 		return true if File.exists?("#{dir}/#{tarball}")
