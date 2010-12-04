@@ -69,7 +69,7 @@ if [[ "$run_setup" = "1" || ! $in_mock_group == 1 || ${#yum_pkgs[@]} != 0 ]] ; t
 	read
 
 	if [[ ! $mock_installed == 1 || ! $createrepo_installed == 1 ]] ; then
-		sudo yum -y install $yum_pkgs
+		sudo yum -y install "${yum_pkgs[@]}"
 	fi
 	if [[ ! "$in_mock_group" == "1" ]] ; then
 		sudo usermod -a -G mock $USER
