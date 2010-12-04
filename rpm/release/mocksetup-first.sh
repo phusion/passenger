@@ -1,4 +1,5 @@
 #!/bin/bash -e
+# Checks whether all the prerequities for the package:rpm task are available.
 
 declare -a required_packages=(mock)
 if grep -iq fedora /etc/redhat-release ; then
