@@ -77,7 +77,7 @@ namespace :package do
 
 	desc "Build a Yum repository for the current release"
 	task 'yum' => :rpm_verbosity do
-		test_setup('--need-createrepo')
+		test_setup(*%w{-p createrepo -p rubygem-gem2rpm})
 		create_tarball(@verbosity)
 		# Add a single -v for some feedback
 		noisy_system(*(%w{./rpm/release/build.rb --stage-dir=yum-repo --extra-packages=release/mock-repo} + @build_verbosity))

@@ -9,10 +9,22 @@ else
 		required_packages=( ${required_packages[@]} rpm-build )
 fi
 
-if [ "$1" == '--need-createrepo' ] ; then
-		shift
-		required_packages=( ${required_packages[@]} createrepo )
-fi
+while getopts ':p:' opt
+do
+	case $opt in
+		p)
+			required_packages=( ${required_packages[@]} $OPTARG )
+		;;
+		\?)
+			echo "Invalid flag -$OPTARG" >&2
+			exit 255
+		;;
+		\:)
+			echo "missing argument to -$OPTARG" >&2
+			exit 127
+		;;
+	esac
+done
 
 repo=${1:-/var/lib/mock/passenger-build-repo}
 etc=${2:-/etc/mock}
