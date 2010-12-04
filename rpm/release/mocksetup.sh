@@ -14,41 +14,41 @@ prereqs=`egrep 'packagereq.*default' $(dirname $0)/mock-repo/comps.xml | cut -d\
 
 for cfg in $etc/{fedora-{13,14},epel-5}-*.cfg
 do
-  [ $BUILD_VERBOSITY -ge 2 ] && echo $cfg
-  dir=`dirname $cfg`
-  base=`basename $cfg`
-  new=$dir/passenger-$base
-  perl -p - $repo "$prereqs" $cfg <<-'EOF' > $new
-	# Warning <<- only kills TABS (ASCII 0x9) DO NOT CONVERT THESE
-	# TABS TO SPACES -- IT WILL BREAK
+	[ $BUILD_VERBOSITY -ge 2 ] && echo $cfg
+	dir=`dirname $cfg`
+	base=`basename $cfg`
+	new=$dir/passenger-$base
+	perl -p - $repo "$prereqs" $cfg <<-'EOF' > $new
+		# Warning <<- only kills TABS (ASCII 0x9) DO NOT CONVERT THESE
+		# TABS TO SPACES -- IT WILL BREAK
 
-	sub BEGIN {
-	    our $repo = shift;
-	    our $prereqs = shift;
-	}
+		sub BEGIN {
+				our $repo = shift;
+				our $prereqs = shift;
+		}
 
-	s{opts\['root'\]\s*=\s*'}{${&}passenger-}; #';
-	s{groupinstall [^']+}{$& Ruby build-passenger}; #'
-	s{\binstall buildsys-build}{$& ruby ruby-devel $prereqs};
-	s{^"""}{<<EndRepo . $&}e; #"
+		s{opts\['root'\]\s*=\s*'}{${&}passenger-}; #';
+		s{groupinstall [^']+}{$& Ruby build-passenger}; #'
+		s{\binstall buildsys-build}{$& ruby ruby-devel $prereqs};
+		s{^"""}{<<EndRepo . $&}e; #"
 
-	[build-passenger]
-	name=build-passenger
-	baseurl=file://$repo
-	EndRepo
+		[build-passenger]
+		name=build-passenger
+		baseurl=file://$repo
+		EndRepo
 EOF
-  chgrp mock $new 2>/dev/null || true
-  chmod g+w $new  2>/dev/null || true
+	chgrp mock $new 2>/dev/null || true
+	chmod g+w $new	2>/dev/null || true
 done
 
 mkdir -p $repo
 chmod g+s $repo 2>/dev/null || true
 
 if [ $BUILD_VERBOSITY -ge 1 ]; then
-    rsync_volume='-v'
-    if [ $BUILD_VERBOSITY -ge 2 ]; then
-	rsync_volume='-v --progress'
-    fi
+	rsync_volume='-v'
+	if [ $BUILD_VERBOSITY -ge 2 ]; then
+		rsync_volume='-v --progress'
+	fi
 fi
 
 cp -ra `dirname $0`/mock-repo/* $repo
@@ -56,11 +56,11 @@ chgrp -R mock $repo 2>/dev/null || true
 
 createrepo_volume=
 if [ $BUILD_VERBOSITY -gt 1 ]; then
-    createrepo_volume='-v'
+	createrepo_volume='-v'
 else
-    if [ $BUILD_VERBOSITY -le 0 ]; then
-        createrepo_volume='-q'
-    fi
+	if [ $BUILD_VERBOSITY -le 0 ]; then
+		createrepo_volume='-q'
+	fi
 fi
 
 createrepo $createrepo_volume -g comps.xml $repo

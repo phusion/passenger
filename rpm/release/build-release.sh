@@ -16,17 +16,17 @@ srpm=`ls -1t $stage/SRPMS/*rpm | head -1`
 
 for ver in {epel-5,fedora-{13,14}}
 do
-  echo --------- $ver
-  xdir=$stage/`echo $ver | tr '-' '/'`/x86_64
-  idir=`echo $xdir | sed -e 's/x86_64/i386/'`
-  mock -r passenger-$ver-x86_64 $srpm
-  mkdir -p $xdir $idir
-  cp /var/lib/mock/passenger-$ver-x86_64/result/*noarch.rpm $xdir
-  cp /var/lib/mock/passenger-$ver-x86_64/result/*noarch.rpm $idir
-  cd $xdir/..
-  short=`ls -1t x86_64/*rpm | head -1 | perl -pe 's{.*/(.*)-[^-]+-[^-]+(.noarch.rpm)}{\1\2}'`
-  ln -s x86_64/*rpm $short
-  cd -
+	echo --------- $ver
+	xdir=$stage/`echo $ver | tr '-' '/'`/x86_64
+	idir=`echo $xdir | sed -e 's/x86_64/i386/'`
+	mock -r passenger-$ver-x86_64 $srpm
+	mkdir -p $xdir $idir
+	cp /var/lib/mock/passenger-$ver-x86_64/result/*noarch.rpm $xdir
+	cp /var/lib/mock/passenger-$ver-x86_64/result/*noarch.rpm $idir
+	cd $xdir/..
+	short=`ls -1t x86_64/*rpm | head -1 | perl -pe 's{.*/(.*)-[^-]+-[^-]+(.noarch.rpm)}{\1\2}'`
+	ln -s x86_64/*rpm $short
+	cd -
 done
 
 mv $stage/epel $stage/rhel
