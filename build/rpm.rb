@@ -54,7 +54,7 @@ namespace :package do
 				download("http://sysoev.ru/nginx/#{tarball}", "#{dir}/#{tarball}")
 			end
 		end
-		
+
 		result = noisy_system('./rpm/release/mocksetup-first.sh', *args)
 		if !result
 			# exit status 4 means that the user needs to relogin.
@@ -72,7 +72,7 @@ namespace :package do
 		test_setup
 		create_tarball(@verbosity)
 		# Add a single -v for some feedback
-		noisy_system(*(%w{./rpm/release/build.rb --single --stage-dir=pkg} + @build_verbosity))
+		noisy_system(*(%w{./rpm/release/build.rb --single --stage-dir=pkg --extra-packages=release/mock-repo} + @build_verbosity))
 	end
 
 	desc "Build a Yum repository for the current release"
