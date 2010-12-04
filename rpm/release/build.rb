@@ -245,7 +245,7 @@ configs.each do |cfg|
 	if options.key?(:extra_packages)
 		FileUtils.cp(Dir["#{options[:extra_packages]}/*.rpm"], idir, :verbose => @verbosity > 0)
 	end
-	FileUtils.rm_f(Dir["#{idir}/*.src.rpm"], :verbose => @verbosity > 1) unless options.key?(:single)
+	FileUtils.rm_f(Dir["#{idir}/*.src.rpm"], :verbose => @verbosity > 1)
 end
 
 unless options.key?(:single)
