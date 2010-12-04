@@ -424,9 +424,8 @@ private:
 	 *
 	 * @param clientFd The file descriptor identifying the client to handle the request from.
 	 */
-	void handleRequest(FileDescriptor &clientFd) {
+	void handleRequest(FileDescriptor &clientFd, ScgiRequestParser &parser) {
 		TRACE_POINT();
-		ScgiRequestParser parser(MAX_HEADER_SIZE);
 		StaticString partialRequestBody;
 		char readBuffer[1024 * 16];
 		
@@ -595,12 +594,14 @@ private:
 	void threadMain() {
 		TRACE_POINT();
 		try {
+			ScgiRequestParser parser(MAX_HEADER_SIZE);
 			while (true) {
 				UPDATE_TRACE_POINT();
 				inactivityTimer.start();
 				FileDescriptor fd(acceptConnection());
 				inactivityTimer.stop();
-				handleRequest(fd);
+				parser.reset();
+				handleRequest(fd, parser);
 			}
 		} catch (const boost::thread_interrupted &) {
 			P_TRACE(2, "Client thread " << this << " interrupted.");

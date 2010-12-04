@@ -23,20 +23,18 @@
  *  THE SOFTWARE.
  */
 
-#include <google/dense_hash_map>
-
 #include <string>
-#include <map>
 #include <algorithm>
 #include <cstdlib>
 #include <cstddef>
+#include <ext/hash_map>
 
 #include <StaticString.h>
+#include <Utils/HashMap.h>
 
 namespace Passenger {
 
 using namespace std;
-using namespace google;
 
 /**
  * A highly efficient parser for SCGI requests. It parses the request header and
@@ -135,7 +133,7 @@ public:
 	};
 	
 private:
-	typedef dense_hash_map<StaticString, StaticString, StaticString::Hash> HeaderMap;
+	typedef HashMap<StaticString, StaticString, StaticString::Hash> HeaderMap;
 	
 	State state;
 	ErrorReason errorReason;
@@ -202,11 +200,17 @@ public:
 	 */
 	ScgiRequestParser(size_t maxSize = 0) {
 		this->maxSize = maxSize;
+		reset();
+	}
+	
+	void reset() {
 		state = READING_LENGTH_STRING;
 		errorReason = NONE;
 		lengthStringBufferSize = 0;
 		headerSize = 0;
-		headers.set_empty_key("");
+		headerBuffer.clear();
+		headers.clear();
+		headerData = StaticString();
 	}
 	
 	/**

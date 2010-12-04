@@ -100,6 +100,7 @@ module PlatformInfo
 				if ok
 					hash_namespace = namespace
 					flags << "-DHASH_NAMESPACE=\"#{namespace}\""
+					flags << "-DHASH_MAP_HEADER=\"<#{hash_map_header}>\""
 				end
 			end
 			break if ok
