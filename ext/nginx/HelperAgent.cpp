@@ -210,20 +210,21 @@ private:
 	 *   received by the parser or if the header information was invalid.
 	 * @throws SystemException Request header could not be read.
 	 */
-	bool readAndParseRequestHeaders(FileDescriptor &fd, ScgiRequestParser &parser, string &requestBody) {
+	bool readAndParseRequestHeaders(FileDescriptor &fd, ScgiRequestParser &parser,
+		char *readBuffer, size_t readBufferSize, StaticString &requestBody)
+	{
 		TRACE_POINT();
-		char buf[1024 * 16];
 		ssize_t size;
 		unsigned int accepted = 0;
 		
 		do {
-			size = syscalls::read(fd, buf, sizeof(buf));
+			size = syscalls::read(fd, readBuffer, readBufferSize);
 			if (size == -1) {
 				throw SystemException("Cannot read request header", errno);
 			} else if (size == 0) {
 				break;
 			} else {
-				accepted = parser.feed(buf, size);
+				accepted = parser.feed(readBuffer, size);
 			}
 		} while (parser.acceptingInput());
 
@@ -240,7 +241,7 @@ private:
 			P_ERROR("DOCUMENT_ROOT header is missing.");
 			return false;
 		} else {
-			requestBody.assign(buf + accepted, size - accepted);
+			requestBody = StaticString(readBuffer + accepted, size - accepted);
 			return true;
 		}
 	}
@@ -262,7 +263,7 @@ private:
 	 */
 	void sendRequestBody(SessionPtr &session,
 	                     FileDescriptor &clientFd,
-	                     const string &partialRequestBody,
+	                     const StaticString &partialRequestBody,
 	                     unsigned long contentLength) {
 		TRACE_POINT();
 		char buf[1024 * 16];
@@ -426,13 +427,16 @@ private:
 	void handleRequest(FileDescriptor &clientFd) {
 		TRACE_POINT();
 		ScgiRequestParser parser(MAX_HEADER_SIZE);
-		string partialRequestBody;
+		StaticString partialRequestBody;
+		char readBuffer[1024 * 16];
 		
 		if (!readAndCheckPassword(clientFd)) {
 			P_ERROR("Client did not send a correct password.");
 			return;
 		}
-		if (!readAndParseRequestHeaders(clientFd, parser, partialRequestBody)) {
+		if (!readAndParseRequestHeaders(clientFd, parser, readBuffer,
+			sizeof(readBuffer), partialRequestBody))
+		{
 			return;
 		}
 		
