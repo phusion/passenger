@@ -37,8 +37,7 @@ module Packaging
 		'passenger',
 		'passenger-install-apache2-module',
 		'passenger-install-nginx-module',
-		'passenger-config',
-		'passenger-stress-test'
+		'passenger-config'
 	]
 	
 	SUPER_USER_EXECUTABLES = [
@@ -72,7 +71,7 @@ module Packaging
 		'debian/*',
 		'helper-scripts/*',
 		'ext/common/**/*.{cpp,c,h,hpp}',
-		'ext/apache2/*.{cpp,h,hpp,c,TXT}',
+		'ext/apache2/*.{cpp,h,hpp,c}',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',
 		'ext/boost/**/*',

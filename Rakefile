@@ -36,6 +36,7 @@ require 'build/cxx_tests'
 require 'build/ruby_tests'
 require 'build/integration_tests'
 require 'build/misc'
+require 'build/rpm'
 
 
 #### Default tasks
