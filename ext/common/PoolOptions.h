@@ -229,17 +229,24 @@ struct PoolOptions {
 	
 	/*********************************/
 	
+	enum StringInitPolicy {
+		INIT_STRINGS,
+		DONT_INIT_STRINGS
+	};
+	
 	/**
 	 * Creates a new PoolOptions object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
-	PoolOptions() {
-		appType                 = "rails";
-		environment             = "production";
-		spawnMethod             = "smart-lv2";
+	PoolOptions(StringInitPolicy initStrings = INIT_STRINGS) {
+		if (initStrings == INIT_STRINGS) {
+			appType                 = "rails";
+			environment             = "production";
+			spawnMethod             = "smart-lv2";
+			baseURI                 = "/";
+		}
 		frameworkSpawnerTimeout = -1;
 		appSpawnerTimeout       = -1;
-		baseURI                 = "/";
 		maxRequests             = 0;
 		minProcesses            = 0;
 		useGlobalQueue          = false;
@@ -258,14 +265,14 @@ struct PoolOptions {
 	 * Creates a new PoolOptions object with the given values.
 	 */
 	PoolOptions(const string &appRoot,
-		string appGroupName          = "",
+		const string &appGroupName   = string(),
 		const string &appType        = "rails",
 		const string &environment    = "production",
 		const string &spawnMethod    = "smart-lv2",
-		const string &user           = "",
-		const string &group          = "",
-		const string &defaultUser    = "",
-		const string &defaultGroup   = "",
+		const string &user           = string(),
+		const string &group          = string(),
+		const string &defaultUser    = string(),
+		const string &defaultGroup   = string(),
 		long frameworkSpawnerTimeout = -1,
 		long appSpawnerTimeout       = -1,
 		const string &baseURI        = "/",
@@ -274,7 +281,7 @@ struct PoolOptions {
 		bool useGlobalQueue          = false,
 		bool showVersionInHeader     = true,
 		unsigned long statThrottleRate = 0,
-		const string &restartDir     = "",
+		const string &restartDir     = string(),
 		Account::Rights rights       = DEFAULT_BACKEND_ACCOUNT_RIGHTS,
 		bool debugger                = false,
 		bool analytics               = false,

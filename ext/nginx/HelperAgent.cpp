@@ -442,10 +442,11 @@ private:
 		try {
 			bool enableAnalytics = parser.getHeader("PASSENGER_ANALYTICS") == "true";
 			StaticString appGroupName = parser.getHeader("PASSENGER_APP_GROUP_NAME");
-			PoolOptions options;
+			PoolOptions options(PoolOptions::DONT_INIT_STRINGS);
 			
 			if (parser.getHeader("SCRIPT_NAME").empty()) {
 				options.appRoot = extractDirName(parser.getHeader("DOCUMENT_ROOT"));
+				options.baseURI = "/";
 			} else {
 				options.appRoot = extractDirName(resolveSymlink(parser.getHeader("DOCUMENT_ROOT")));
 				options.baseURI = parser.getHeader("SCRIPT_NAME");
