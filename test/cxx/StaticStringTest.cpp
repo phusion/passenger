@@ -85,7 +85,7 @@ namespace tut {
 	}
 	
 	TEST_METHOD(4) {
-		// Test find()
+		// Test find(char)
 		ensure_equals("Assertion 1",
 			StaticString("").find('c'),
 			string::npos
@@ -127,6 +127,68 @@ namespace tut {
 	}
 	
 	TEST_METHOD(5) {
+		// Test find(str)
+		ensure_equals("Assertion 1",
+			StaticString("").find(""),
+			(string::size_type) 0
+		);
+		ensure_equals("Assertion 2",
+			StaticString("").find("c"),
+			string::npos
+		);
+		ensure_equals("Assertion 3",
+			StaticString("hello world").find("c"),
+			string::npos
+		);
+		ensure_equals("Assertion 4",
+			StaticString("hello world").find("h"),
+			(string::size_type) 0
+		);
+		ensure_equals("Assertion 5",
+			StaticString("hello world").find("o"),
+			(string::size_type) 4
+		);
+		ensure_equals("Assertion 6",
+			StaticString("hello world").find("ello"),
+			(string::size_type) 1
+		);
+		ensure_equals("Assertion 7",
+			StaticString("hello world").find("world"),
+			(string::size_type) 6
+		);
+		ensure_equals("Assertion 8",
+			StaticString("hello world").find("worldd"),
+			string::npos
+		);
+		ensure_equals("Assertion 9",
+			StaticString("hello world").find(""),
+			(string::size_type) 0
+		);
+		
+		ensure_equals("Assertion 10",
+			StaticString("hello world").find("h", 1),
+			string::npos
+		);
+		ensure_equals("Assertion 11",
+			StaticString("hello hello").find("ll", 1),
+			(string::size_type) 2
+		);
+		ensure_equals("Assertion 12",
+			StaticString("hello hello").find("ll", 3),
+			(string::size_type) 8
+		);
+		
+		ensure_equals("Assertion 13",
+			StaticString("hello world").find("he", 12),
+			string::npos
+		);
+		ensure_equals("Assertion 14",
+			StaticString("hello world").find("he", 20),
+			string::npos
+		);
+	}
+	
+	TEST_METHOD(6) {
 		// Test substr()
 		ensure_equals("Assertion 1",
 			StaticString("hello world").substr(),
