@@ -22,6 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_SCGI_REQUEST_PARSER_H_
+#define _PASSENGER_SCGI_REQUEST_PARSER_H_
 
 #include <string>
 #include <algorithm>
@@ -31,6 +33,7 @@
 
 #include <StaticString.h>
 #include <Utils/HashMap.h>
+#include <Utils/GroupAllocator.h>
 
 namespace Passenger {
 
@@ -133,7 +136,7 @@ public:
 	};
 	
 private:
-	typedef HashMap<StaticString, StaticString, StaticString::Hash> HeaderMap;
+	typedef HashMap< StaticString, StaticString, StaticString::Hash, equal_to<StaticString>, GroupAllocator<StaticString> > HeaderMap;
 	
 	State state;
 	ErrorReason errorReason;
@@ -384,3 +387,5 @@ public:
 };
 
 } // namespace Passenger
+
+#endif /* _PASSENGER_SCGI_REQUEST_PARSER_H_ */
