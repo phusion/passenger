@@ -30,7 +30,10 @@
  * There are too many ways to include hash_map/unordered_map!
  * This header autodetects the correct method.
  */
-#if defined(__GNUC__)
+#if defined(HASH_NAMESPACE) && defined(HASH_MAP_HEADER)
+	#include HASH_MAP_HEADER
+	#define HashMap HASH_NAMESPACE::hash_map
+#elif defined(__GNUC__)
 	#include <ext/hash_map>
 	#define HashMap __gnu_cxx::hash_map
 #elif defined(_MSC_VER)
