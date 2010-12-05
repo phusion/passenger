@@ -54,12 +54,14 @@
 #include "Session.h"
 #include "PoolOptions.h"
 #include "MessageServer.h"
+#include "MessageReadersWriters.h"
 #include "FileDescriptor.h"
 #include "ResourceLocator.h"
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
 #include "Utils/Timer.h"
+#include "Utils/IOUtils.h"
 
 using namespace boost;
 using namespace oxt;
@@ -506,17 +508,14 @@ private:
 				UPDATE_TRACE_POINT();
 				AnalyticsScopeLog requestProxyingScope(log, "request proxying");
 				
-				char headers[parser.getHeaderData().size() +
+				char extraHeaders[
 					sizeof("PASSENGER_CONNECT_PASSWORD") +
 					session->getConnectPassword().size() + 1 +
 					sizeof("PASSENGER_GROUP_NAME") +
 					options.getAppGroupName().size() + 1 +
 					sizeof("PASSENGER_TXN_ID") +
 					log->getTxnId().size() + 1];
-				char *end = headers;
-				
-				memcpy(end, parser.getHeaderData().c_str(), parser.getHeaderData().size());
-				end += parser.getHeaderData().size();
+				char *end = extraHeaders;
 				
 				memcpy(end, "PASSENGER_CONNECT_PASSWORD", sizeof("PASSENGER_CONNECT_PASSWORD"));
 				end += sizeof("PASSENGER_CONNECT_PASSWORD");
@@ -543,7 +542,16 @@ private:
 				
 				{
 					AnalyticsScopeLog scope(log, "send request headers");
-					session->sendHeaders(headers, end - headers);
+					char headerSize[sizeof(uint32_t)];
+					StaticString input[] = {
+						StaticString(headerSize, sizeof(uint32_t)),
+						parser.getHeaderData(),
+						StaticString(extraHeaders, end - extraHeaders)
+					};
+					Uint32Message::generate(headerSize,
+						parser.getHeaderData().size() + (end - extraHeaders));
+					gatheredWrite(session->getStream(), input,
+						sizeof(input) / sizeof(StaticString));
 					scope.success();
 				}
 				{
