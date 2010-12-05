@@ -20,7 +20,7 @@ namespace tut {
 	TEST_METHOD(1) {
 		// Status defaults to "200 OK" and buffer is initially empty.
 		ensure_equals(ex.getStatusLine(), "200 OK\r\n");
-		ensure_equals(ex.getBuffer(), "");
+		ensure_equals(ex.getData(), "");
 	}
 	
 	TEST_METHOD(2) {
@@ -35,7 +35,7 @@ namespace tut {
 		ensure_equals("Status was properly extracted.",
 			ex.getStatusLine(), "201 OK\r\n");
 		ensure_equals("All data that we've fed so far has been buffered.",
-			ex.getBuffer(), data);
+			ex.getData(), data);
 	}
 	
 	TEST_METHOD(3) {
@@ -45,7 +45,7 @@ namespace tut {
 		ensure_equals("Status line hasn't changed.",
 			ex.getStatusLine(), "200 OK\r\n");
 		ensure_equals("All data that we've fed so far has been buffered.",
-			ex.getBuffer(), "S");
+			ex.getData(), "S");
 		
 		const char data2[] = "tatus: 300 Abc\r\n";
 		ensure("Parsing not yet complete.", !ex.feed(data2, sizeof(data2) - 1));
@@ -55,7 +55,7 @@ namespace tut {
 		ensure_equals("Status line recognized.",
 			ex.getStatusLine(), "300 Abc\r\n");
 		ensure_equals("All data that we've fed so far has been buffered.",
-			ex.getBuffer(), "Status: 300 Abc\r\n\r\n");
+			ex.getData(), "Status: 300 Abc\r\n\r\n");
 	}
 	
 	TEST_METHOD(4) {
@@ -64,12 +64,12 @@ namespace tut {
 		const char data[] = "Content-Type: text/html";
 		ensure(!ex.feed(data, sizeof(data) - 1));
 		ensure_equals(ex.getStatusLine(), "200 OK\r\n");
-		ensure_equals(ex.getBuffer(), data);
+		ensure_equals(ex.getData(), data);
 		
 		const char data2[] = "\r\nStatus: 201 Hello\r\n\r\n";
 		ensure(ex.feed(data2, sizeof(data2) - 1));
 		ensure_equals(ex.getStatusLine(), "201 Hello\r\n");
-		ensure_equals(ex.getBuffer(),
+		ensure_equals(ex.getData(),
 			"Content-Type: text/html\r\n"
 			"Status: 201 Hello\r\n"
 			"\r\n");
@@ -83,7 +83,7 @@ namespace tut {
 			"Foo: bar\r\n";
 		ensure(!ex.feed(data, sizeof(data) - 1));
 		ensure_equals(ex.getStatusLine(), "200 OK\r\n");
-		ensure_equals(ex.getBuffer(), data);
+		ensure_equals(ex.getData(), data);
 		
 		const char data2[] = "Status: 404 Not Found\r\n";
 		ensure(!ex.feed(data2, sizeof(data2) - 1));
@@ -91,7 +91,7 @@ namespace tut {
 		// Parsing completes when full header has been fed.
 		ensure(ex.feed("\r\n", 2));
 		ensure_equals(ex.getStatusLine(), "404 Not Found\r\n");
-		ensure_equals(ex.getBuffer(), string(data) + data2 + "\r\n");
+		ensure_equals(ex.getData(), string(data) + data2 + "\r\n");
 	}
 	
 	TEST_METHOD(6) {
@@ -103,12 +103,12 @@ namespace tut {
 			"Hello: world";
 		ensure(!ex.feed(data, sizeof(data) - 1));
 		ensure_equals(ex.getStatusLine(), "200 OK\r\n");
-		ensure_equals(ex.getBuffer(), data);
+		ensure_equals(ex.getData(), data);
 		
 		const char data2[] = "\r\n\r\nbody data";
 		ensure(ex.feed(data2, sizeof(data2) - 1));
 		ensure_equals(ex.getStatusLine(), "200 OK\r\n");
-		ensure_equals(ex.getBuffer(), string(data) + data2);
+		ensure_equals(ex.getData(), string(data) + data2);
 	}
 	
 	TEST_METHOD(7) {
@@ -117,12 +117,12 @@ namespace tut {
 		const char data[] = "Status: 500 Internal Se";
 		ensure(!ex.feed(data, sizeof(data) - 1));
 		ensure_equals(ex.getStatusLine(), "200 OK\r\n");
-		ensure_equals(ex.getBuffer(), data);
+		ensure_equals(ex.getData(), data);
 		
 		const char data2[] = "rver Error\r\n\r\n";
 		ensure(ex.feed(data2, sizeof(data2) - 1));
 		ensure_equals(ex.getStatusLine(), "500 Internal Server Error\r\n");
-		ensure_equals(ex.getBuffer(), string(data) + data2);
+		ensure_equals(ex.getData(), string(data) + data2);
 	}
 	
 	TEST_METHOD(8) {
@@ -137,7 +137,7 @@ namespace tut {
 			"bla bla";
 		ensure(ex.feed(data, sizeof(data) - 1));
 		ensure_equals(ex.getStatusLine(), "405 Testing\r\n");
-		ensure_equals(ex.getBuffer(), data);
+		ensure_equals(ex.getData(), data);
 	}
 	
 	TEST_METHOD(9) {
@@ -151,12 +151,12 @@ namespace tut {
 			"B";
 		ensure(!ex.feed(data, sizeof(data) - 1));
 		ensure_equals(ex.getStatusLine(), "200 OK\r\n");
-		ensure_equals(ex.getBuffer(), data);
+		ensure_equals(ex.getData(), data);
 		
 		const char data2[] = "la: bla\r\n\r\n";
 		ensure(ex.feed(data2, sizeof(data2) - 1));
 		ensure_equals(ex.getStatusLine(), "100 Foo\r\n");
-		ensure_equals(ex.getBuffer(), string(data) + data2);
+		ensure_equals(ex.getData(), string(data) + data2);
 	}
 	
 	TEST_METHOD(10) {
@@ -168,7 +168,7 @@ namespace tut {
 			"Statu";
 		ensure(!ex.feed(data, sizeof(data) - 1));
 		ensure_equals(ex.getStatusLine(), "200 OK\r\n");
-		ensure_equals(ex.getBuffer(), data);
+		ensure_equals(ex.getData(), data);
 		
 		const char data2[] =
 			"s: 202 Blabla\r\n"
@@ -176,7 +176,7 @@ namespace tut {
 			"\r\n";
 		ensure(ex.feed(data2, sizeof(data2) - 1));
 		ensure_equals(ex.getStatusLine(), "202 Blabla\r\n");
-		ensure_equals(ex.getBuffer(), string(data) + data2);
+		ensure_equals(ex.getData(), string(data) + data2);
 	}
 	
 	TEST_METHOD(11) {

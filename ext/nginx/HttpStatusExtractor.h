@@ -64,31 +64,46 @@ private:
 	static const char LF = '\x0A';
 
 	string buffer;
+	StaticString data;
 	unsigned int searchStart;
 	bool fullHeaderReceived;
 	string statusLine;
+	
+	static bool containsFullHeader(const StaticString &data, unsigned int &searchStart) {
+		if (data.size() >= 3) {
+			for (; searchStart < data.size() - 3; searchStart++) {
+				if (data[searchStart] == CR &&
+				    data[searchStart + 1] == LF &&
+				    data[searchStart + 2] == CR &&
+				    data[searchStart + 3] == LF) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 	
 	bool extractStatusLine() {
 		static const char statusHeaderName[] = "Status: ";
 		string::size_type start_pos, newline_pos;
 		
-		if (buffer.size() > sizeof(statusHeaderName) - 1
-		 && memcmp(buffer.c_str(), statusHeaderName, sizeof(statusHeaderName) - 1) == 0) {
+		if (data.size() > sizeof(statusHeaderName) - 1
+		 && memcmp(data.c_str(), statusHeaderName, sizeof(statusHeaderName) - 1) == 0) {
 			// Status line starts at beginning of the header.
 			start_pos = sizeof(statusHeaderName) - 1;
-			newline_pos = buffer.find("\x0D\x0A", 0, 2) + 2;
+			newline_pos = data.find("\x0D\x0A", 0, 2) + 2;
 		} else {
 			// Status line is not at the beginning of the header.
 			// Look for it.
-			start_pos = buffer.find("\x0D\x0AStatus: ");
+			start_pos = data.find("\x0D\x0AStatus: ");
 			if (start_pos != string::npos) {
 				start_pos += 2 + sizeof(statusHeaderName) - 1;
-				newline_pos = buffer.find("\x0D\x0A", start_pos, 2) + 2;
+				newline_pos = data.find("\x0D\x0A", start_pos, 2) + 2;
 			}
 		}
 		if (start_pos != string::npos) {
 			// Status line has been found. Extract it.
-			statusLine = buffer.substr(start_pos, newline_pos - start_pos);
+			statusLine = data.substr(start_pos, newline_pos - start_pos);
 			addStatusTextIfNecessary();
 			return true;
 		} else {
@@ -301,7 +316,7 @@ public:
 	 * argument contains a part of the HTTP response body.
 	 * HttpStatusExtractor will only look for the status line in the HTTP
 	 * response header, not in the HTTP response body. All fed data is
-	 * buffered and will be available via getBuffer(), so no data will be
+	 * buffered and will be available via getData(), so no data will be
 	 * lost.
 	 *
 	 * @return Whether the HTTP status has been extracted yet.
@@ -313,18 +328,29 @@ public:
 		if (fullHeaderReceived) {
 			return true;
 		}
-		buffer.append(data, size);
-		for (; buffer.size() >= 3 && searchStart < buffer.size() - 3; searchStart++) {
-			if (buffer[searchStart] == CR &&
-			    buffer[searchStart + 1] == LF &&
-			    buffer[searchStart + 2] == CR &&
-			    buffer[searchStart + 3] == LF) {
+		
+		if (buffer.empty()) {
+			if (containsFullHeader(StaticString(data, size), searchStart)) {
+				fullHeaderReceived = true;
+				this->data = StaticString(data, size);
+				extractStatusLine();
+				return true;
+			} else {
+				buffer.append(data, size);
+				this->data = buffer;
+				return false;
+			}
+		} else {
+			buffer.append(data, size);
+			this->data = buffer;
+			if (containsFullHeader(buffer, searchStart)) {
 				fullHeaderReceived = true;
 				extractStatusLine();
 				return true;
+			} else {
+				return false;
 			}
 		}
-		return false;
 	}
 	
 	/**
@@ -336,15 +362,15 @@ public:
 	 *
 	 * @note The return value includes a trailing CRLF, e.g. "404 Not Found\r\n".
 	 */
-	string getStatusLine() const {
+	const string &getStatusLine() const {
 		return statusLine;
 	}
 	
 	/**
 	 * Get the data that has been fed so far.
 	 */
-	string getBuffer() const {
-		return buffer;
+	StaticString getData() const {
+		return data;
 	}
 };
 

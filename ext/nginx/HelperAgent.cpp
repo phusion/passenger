@@ -342,12 +342,20 @@ private:
 				 */
 				UPDATE_TRACE_POINT();
 				try {
-					string statusLine("HTTP/1.1 ");
-					statusLine.append(ex.getStatusLine());
-					UPDATE_TRACE_POINT();
-					writeExact(clientFd, statusLine);
-					UPDATE_TRACE_POINT();
-					writeExact(clientFd, ex.getBuffer());
+					unsigned int statusLineSize =
+						sizeof("HTTP/1.1 ") - 1
+						+ ex.getStatusLine().size();
+					char statusLine[statusLineSize];
+					memcpy(statusLine, "HTTP/1.1 ", sizeof("HTTP/1.1 ") - 1);
+					memcpy(statusLine + sizeof("HTTP/1.1 ") - 1,
+						ex.getStatusLine().c_str(),
+						ex.getStatusLine().size());
+					
+					StaticString input[] = {
+						StaticString(statusLine, statusLineSize),
+						ex.getData()
+					};
+					gatheredWrite(clientFd, input, 2);
 					break;
 				} catch (const SystemException &e) {
 					if (e.code() == EPIPE) {
