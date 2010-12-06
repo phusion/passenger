@@ -31,6 +31,8 @@
 #include <cstddef>
 #include <ext/hash_map>
 
+#include <oxt/macros.hpp>
+
 #include <StaticString.h>
 #include <Utils/HashMap.h>
 #include <Utils/GroupAllocator.h>
@@ -157,41 +159,33 @@ private:
 	 * Parse the given header data into key-value pairs, returns whether parsing succeeded.
 	 */
 	bool parseHeaderData(const StaticString &data, HeaderMap &output) {
-		bool isName = true; // Whether we're currently expecting a name or a value.
-		const char *startOfString, *current, *end;
-		StaticString key, value;
+		const char *current = data.data();
+		const char *end     = data.data() + data.size();
 		
-		if (data.size() == 0) {
-			return true;
-		}
-		
-		startOfString = data.c_str();
-		end           = data.c_str() + data.size();
-		
-		if (*(end - 1) != '\0') {
-			return false;
-		}
-		
-		for (current = data.c_str(); current != end; current++) {
-			if (isName && *current == '\0') {
-				key = StaticString(startOfString, current - startOfString);
-				if (key.empty()) {
-					return false;
-				}
-				startOfString = current + 1;
-				isName = false;
-			} else if (!isName && *current == '\0') {
-				value = StaticString(startOfString, current - startOfString);
-				startOfString = current + 1;
-				isName = true;
-				
-				output[key] = value;
-				key   = StaticString();
-				value = StaticString();
+		while (current < end) {
+			const char *keyEnd = (const char *) memchr(current, '\0', end - current);
+			if (OXT_UNLIKELY(
+			     OXT_UNLIKELY(keyEnd == NULL)
+			  || OXT_UNLIKELY(keyEnd == current))
+			) {
+				return false;
 			}
+			
+			StaticString key(current, keyEnd - current);
+			current = keyEnd + 1;
+			if (OXT_UNLIKELY(current >= end)) {
+				return false;
+			}
+			
+			const char *valueEnd = (const char *) memchr(current, '\0', end - current);
+			if (OXT_UNLIKELY(valueEnd == NULL)) {
+				return false;
+			}
+			
+			output[key] = StaticString(current, valueEnd - current);
+			current = valueEnd + 1;
 		}
-		
-		return isName;
+		return true;
 	}
 	
 public:
