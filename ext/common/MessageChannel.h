@@ -332,8 +332,12 @@ public:
 	 * @see readScalar(), writeScalar(const string &)
 	 */
 	void writeScalar(const char *data, unsigned int size) {
-		writeUint32(size);
-		writeExact(fd, data, size);
+		uint32_t l = htonl(size);
+		StaticString args[] = {
+			StaticString((const char *) &l, sizeof(uint32_t)),
+			StaticString(data, size)
+		};
+		gatheredWrite(fd, args, 2);
 	}
 	
 	/**
