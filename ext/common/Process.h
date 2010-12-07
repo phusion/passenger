@@ -26,6 +26,7 @@
 #define _PASSENGER_PROCESS_H_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/function.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
@@ -237,9 +238,9 @@ public:
 	SessionPtr newSession(const StandardSession::CloseCallback &closeCallback = StandardSession::CloseCallback(),
 	                      bool initiateNow = true)
 	{
-		SessionPtr session(new StandardSession(pid, closeCallback,
+		SessionPtr session = make_shared<StandardSession>(pid, closeCallback,
 			mainServerSocket->type, mainServerSocket->address,
-			detachKey, connectPassword, gupid));
+			detachKey, connectPassword, gupid);
 		if (initiateNow) {
 			session->initiate();
 		}

@@ -75,7 +75,6 @@ module Packaging
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',
 		'ext/boost/**/*',
-		'ext/google/**/*',
 		'ext/libev/{LICENSE,Changes,README,Makefile.am,Makefile.in}',
 		'ext/libev/{*.m4,autogen.sh,config.guess,config.h.in,config.sub}',
 		'ext/libev/{configure,configure.ac,install-sh,ltmain.sh,missing,mkinstalldirs}',

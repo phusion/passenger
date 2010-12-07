@@ -22,26 +22,34 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-
-#include <google/dense_hash_map>
+#ifndef _PASSENGER_SCGI_REQUEST_PARSER_H_
+#define _PASSENGER_SCGI_REQUEST_PARSER_H_
 
 #include <string>
-#include <map>
+#include <algorithm>
 #include <cstdlib>
+#include <cstddef>
+#include <ext/hash_map>
+
+#include <oxt/macros.hpp>
 
 #include <StaticString.h>
+#include <Utils/HashMap.h>
+#include <Utils/GroupAllocator.h>
 
 namespace Passenger {
 
 using namespace std;
-using namespace google;
 
 /**
- * A parser for SCGI requests. It parses the request header and ignores the
- * body data.
+ * A highly efficient parser for SCGI requests. It parses the request header and
+ * ignores the body data. It supports size limiting for security reasons and it
+ * is zero-copy whenever possible.
  *
- * You can use it by constructing a parser object, then feeding data to the
- * parser until it has reached a final state.
+ * <h2>Usage</h2>
+ * Construct a parser object, then feed data to the parser until it no longer
+ * accepts input, meaning that it has either reached the final (accepting) state
+ * or the error state.
  *
  * Example:
  * @code
@@ -54,7 +62,6 @@ using namespace google;
  *        size = read(fd, buf, sizeof(buf));
  *        bytesAccepted = parser.feed(buf, size);
  *    } while (parser.acceptingInput());
- *    // Parser is done when its return value isn't equal to the input size.
  *    
  *    // Check whether a parse error occured.
  *    if (parser.getState() == ScgiRequestParser::ERROR) {
@@ -62,28 +69,40 @@ using namespace google;
  *    } else {
  *        // All good! Do something with the SCGI header that the parser parsed.
  *        processHeader(parser.getHeaderData());
+ *        print(parser.getHeader("DOCUMENT_ROOT"));
  *        
  *        // If the last buffer passed to the parser also contains body data,
  *        // then the body data starts at 'buf + bytesAccepted'.
  *        if (bytesAccepted < size) {
- *            processBody(buf + bytesAccepted);
- *        }
- *        while (!end_of_file(fd)) {
- *            ... read(...) ...
- *            processBody(...);
+ *            processBody(buf + bytesAccepted, size - bytesAccepted);
  *        }
  *    }
  * @endcode
  *
- * Parser properties:
+ * <h2>Parser properties</h2>
  * - A parser object can only process a single SCGI request. You must discard
  *   the existing parser object and create a new one if you want to process
  *   another SCGI request.
- * - This parser checks whether the header netstring is valid. It will enter
- *   the error state if it encounters a parse error.
- * - However, this parser does not perform any validation of the actual header
- *   contents. For example, it doesn't check that CONTENT_LENGTH is the first
- *   header, or that the SCGI header is present.
+ * - It checks the header netstring for both syntax validity and content validity.
+ *   If the netstring value is too large (larger than the given limit) or equal
+ *   to 0 then the parser will enter an error state.
+ * - It also checks the body for syntax validity, i.e. whether the NULL bytes
+ *   are there, whether the closing comma exists, etc. However it does not check
+ *   the body contents, e.g. it doesn't check that "CONTENT_LENGTH" is the first
+ *   header, or that the "SCGI" header is present.
+ *
+ * <h2>Zero-copy notes</h2>
+ * If the first feed() call contains a full SCGI header, then the parser will enter
+ * zero-copy mode. The return value of getHeaderData() will then refer the passed
+ * data and the internal header map will also refer to that same data. No extra
+ * copy of anything is made. You must ensure that the first call's data is kept
+ * around.
+ *
+ * If the first feed() call does not contain a full SCGI header then the parser
+ * will enter buffering mode. All fed data, in so far they're recognized as SCGI
+ * headers, will be buffered into an internal string. getHeaderData() and the
+ * internal header map will then refer to this internal string. In this case
+ * you don't need to ensure that the original data is kept around.
  */
 class ScgiRequestParser {
 public:
@@ -97,6 +116,9 @@ public:
 	
 	enum ErrorReason {
 		NONE,
+		
+		/** The header has a length of 0 bytes. */
+		EMPTY_HEADER,
 		
 		/** The length string is too large. */
 		LENGTH_STRING_TOO_LARGE,
@@ -116,110 +138,54 @@ public:
 	};
 	
 private:
-	typedef dense_hash_map<StaticString, StaticString, StaticString::Hash> HeaderMap;
-	
-	unsigned long maxSize;
+	typedef HashMap< StaticString, StaticString, StaticString::Hash, equal_to<StaticString>, GroupAllocator<StaticString> > HeaderMap;
 	
 	State state;
 	ErrorReason errorReason;
-	char lengthStringBuffer[sizeof("4294967296")];
 	unsigned int lengthStringBufferSize;
-	unsigned long headerSize;
+	size_t headerSize;
+	size_t maxSize;
+	
+	StaticString headerData;
 	string headerBuffer;
 	HeaderMap headers;
+	char lengthStringBuffer[sizeof("4294967296")];
 	
 	static inline bool isDigit(char byte) {
 		return byte >= '0' && byte <= '9';
 	}
 	
 	/**
-	 * Parse the given header data into key-value pairs.
+	 * Parse the given header data into key-value pairs, returns whether parsing succeeded.
 	 */
-	bool parseHeaderData(const string &data, HeaderMap &output) {
-		bool isName = true; // Whether we're currently expecting a name or a value.
-		const char *startOfString, *current, *end;
-		StaticString key, value;
+	bool parseHeaderData(const StaticString &data, HeaderMap &output) {
+		const char *current = data.data();
+		const char *end     = data.data() + data.size();
 		
-		if (data.size() == 0) {
-			return true;
-		}
-		
-		startOfString = data.c_str();
-		end           = data.c_str() + data.size();
-		
-		if (*(end - 1) != '\0') {
-			return false;
-		}
-		
-		for (current = data.c_str(); current != end; current++) {
-			if (isName && *current == '\0') {
-				key = StaticString(startOfString, current - startOfString);
-				if (key.empty()) {
-					return false;
-				}
-				startOfString = current + 1;
-				isName = false;
-			} else if (!isName && *current == '\0') {
-				value = StaticString(startOfString, current - startOfString);
-				startOfString = current + 1;
-				isName = true;
-				
-				output[key] = value;
-				key   = StaticString();
-				value = StaticString();
+		while (current < end) {
+			const char *keyEnd = (const char *) memchr(current, '\0', end - current);
+			if (OXT_UNLIKELY(
+			     OXT_UNLIKELY(keyEnd == NULL)
+			  || OXT_UNLIKELY(keyEnd == current))
+			) {
+				return false;
 			}
-		}
-		
-		return isName;
-	}
-	
-	/**
-	 * Process the given data, which contains header data and possibly
-	 * some body data as well.
-	 */
-	unsigned int readHeaderData(const char *data, unsigned int size) {
-		unsigned int bytesToRead;
-		
-		// Calculate how many bytes of header data is left to be read.
-		// Do not read past the header data.
-		if (size < headerSize - headerBuffer.size()) {
-			bytesToRead = size;
-		} else {
-			bytesToRead = headerSize - headerBuffer.size();
-		}
-		// Append the newly received header data to the header data buffer.
-		headerBuffer.append(data, bytesToRead);
-		
-		if (headerBuffer.size() == headerSize) {
-			// We've received all header data. Now attempt to parse this.
-			if (bytesToRead < size) {
-				if (data[bytesToRead] == ',') {
-					if (parseHeaderData(headerBuffer, headers)) {
-						state = DONE;
-						return bytesToRead + 1;
-					} else {
-						state = ERROR;
-						errorReason = INVALID_HEADER_DATA;
-						return bytesToRead;
-					}
-				} else {
-					state = ERROR;
-					errorReason = HEADER_TERMINATOR_EXPECTED;
-					return bytesToRead;
-				}
-			} else {
-				if (parseHeaderData(headerBuffer, headers)) {
-					state = EXPECTING_COMMA;
-				} else {
-					state = ERROR;
-					errorReason = INVALID_HEADER_DATA;
-				}
-				return bytesToRead;
+			
+			StaticString key(current, keyEnd - current);
+			current = keyEnd + 1;
+			if (OXT_UNLIKELY(current >= end)) {
+				return false;
 			}
-		} else {
-			// Not all header data has been received yet.
-			return bytesToRead;
+			
+			const char *valueEnd = (const char *) memchr(current, '\0', end - current);
+			if (OXT_UNLIKELY(valueEnd == NULL)) {
+				return false;
+			}
+			
+			output[key] = StaticString(current, valueEnd - current);
+			current = valueEnd + 1;
 		}
+		return true;
 	}
 	
 public:
@@ -229,13 +195,19 @@ public:
 	 * @param maxSize The maximum size that the SCGI data is allowed to
 	 *                be, or 0 if no limit is desired.
 	 */
-	ScgiRequestParser(unsigned long maxSize = 0) {
+	ScgiRequestParser(size_t maxSize = 0) {
 		this->maxSize = maxSize;
+		reset();
+	}
+	
+	void reset() {
 		state = READING_LENGTH_STRING;
 		errorReason = NONE;
 		lengthStringBufferSize = 0;
 		headerSize = 0;
-		headers.set_empty_key("");
+		headerBuffer.clear();
+		headers.clear();
+		headerData = StaticString();
 	}
 	
 	/**
@@ -253,76 +225,112 @@ public:
 	 * @post result <= size
 	 * @post if result <= size: getState() == DONE || getState() == ERROR
 	 */
-	unsigned int feed(const char *data, unsigned int size) {
-		unsigned int i;
+	size_t feed(const char *data, size_t size) {
+		size_t consumed = 0;
 		
-		switch (state) {
-		case READING_LENGTH_STRING:
-			// Keep processing length string data...
-			for (i = 0; i < size; i++) {
-				char byte = data[i];
-				
-				if (lengthStringBufferSize == sizeof(lengthStringBuffer) - 1) {
-					// ...and abort if the length string is too long.
-					state = ERROR;
-					errorReason = LENGTH_STRING_TOO_LARGE;
-					return i;
-				} else if (!isDigit(byte)) {
-					if (byte == ':') {
-						// ...until the end of the length string has been reached.
-						state = READING_HEADER_DATA;
+		while (acceptingInput() && consumed < size) {
+			switch (state) {
+			case READING_LENGTH_STRING:
+				while (consumed < size
+				    && lengthStringBufferSize < sizeof(lengthStringBuffer) - 1
+				    && isDigit(data[consumed])) {
+					lengthStringBuffer[lengthStringBufferSize] = data[consumed];
+					lengthStringBufferSize++;
+					consumed++;
+				}
+				if (consumed < size) {
+					if (data[consumed] == ':') {
+						consumed++;
 						lengthStringBuffer[lengthStringBufferSize] = '\0';
 						headerSize = atol(lengthStringBuffer);
 						if (maxSize > 0 && headerSize > maxSize) {
 							state = ERROR;
 							errorReason = LIMIT_REACHED;
+						} else if (headerSize == 0) {
+							state = ERROR;
+							errorReason = EMPTY_HEADER;
 						} else {
-							headerBuffer.reserve(headerSize);
-							// From here on, process the rest of the data that we've
-							// received, as header data.
-							return readHeaderData(data + i + 1, size - i - 1) + i + 1;
+							state = READING_HEADER_DATA;
 						}
+					} else if (lengthStringBufferSize >= sizeof(lengthStringBuffer) - 1) {
+						state = ERROR;
+						errorReason = LENGTH_STRING_TOO_LARGE;
 					} else {
-						// ...until we encounter a parse error.
 						state = ERROR;
 						errorReason = INVALID_LENGTH_STRING;
-						return i;
 					}
-				} else {
-					lengthStringBuffer[lengthStringBufferSize] = byte;
-					lengthStringBufferSize++;
 				}
+				break;
+				
+			case READING_HEADER_DATA: {
+				const char *localData = data + consumed;
+				size_t localSize = std::min(
+					headerSize - headerBuffer.size(),
+					size - consumed);
+				if (localSize == headerSize) {
+					headerData = StaticString(localData, localSize);
+					state = EXPECTING_COMMA;
+				} else {
+					headerBuffer.reserve(headerSize);
+					headerBuffer.append(localData, localSize);
+					if (headerBuffer.size() == headerSize) {
+						state = EXPECTING_COMMA;
+						headerData = headerBuffer;
+					}
+				}
+				consumed += localSize;
+				break;
 			}
-			return i;
-		
-		case READING_HEADER_DATA:
-			return readHeaderData(data, size);
-		
-		case EXPECTING_COMMA:
-			if (data[0] == ',') {
-				state = DONE;
-				return 1;
-			} else {
-				state = ERROR;
-				errorReason = HEADER_TERMINATOR_EXPECTED;
-				return 0;
+			
+			case EXPECTING_COMMA:
+				if (data[consumed] == ',') {
+					if (parseHeaderData(headerData, headers)) {
+						state = DONE;
+					} else {
+						state = ERROR;
+						errorReason = INVALID_HEADER_DATA;
+					}
+					consumed++;
+				} else {
+					state = ERROR;
+					errorReason = HEADER_TERMINATOR_EXPECTED;
+				}
+				break;
+			
+			default:
+				abort(); // Never reached.
 			}
-		
-		default:
-			return 0;
 		}
+		
+		if (state == EXPECTING_COMMA && headerBuffer.empty()) {
+			/* We got all the header data in a single round, except
+			 * for the closing comma. The static header data isn't
+			 * guaranteed to be around when we do get the comma so
+			 * copy it into the buffer.
+			 */
+			headerBuffer.assign(headerData.c_str(), headerData.size());
+			headerData = headerBuffer;
+		}
+		
+		return consumed;
 	}
 	
 	/**
 	 * Get the raw header data that has been processed so far.
+	 * Please read the zero-copy notes in the class description for
+	 * important information about the life time of the data this
+	 * StaticString points to.
 	 */
-	string getHeaderData() const {
-		return headerBuffer;
+	StaticString getHeaderData() const {
+		return headerData;
 	}
 	
 	/**
 	 * Get the value of the header with the given name.
 	 * Lookup is case-sensitive.
+	 * Please read the zero-copy notes in the class description for
+	 * important information about the life time of the data this
+	 * StaticString points to.
 	 *
 	 * Returns the empty string if there is no such header.
 	 *
@@ -365,7 +373,7 @@ public:
 	
 	/**
 	 * Checks whether this parser is still capable of accepting input (that
-	 * is, that this parser is not in a final state).
+	 * is, that this parser is not in a final/error state).
 	 */
 	bool acceptingInput() const {
 		return state != DONE && state != ERROR;
@@ -373,3 +381,5 @@ public:
 };
 
 } // namespace Passenger
+
+#endif /* _PASSENGER_SCGI_REQUEST_PARSER_H_ */

@@ -55,12 +55,14 @@
 #include <Session.h>
 #include <PoolOptions.h>
 #include <MessageServer.h>
+#include <MessageReadersWriters.h>
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
 #include <ServerInstanceDir.h>
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Utils/Timer.h>
+#include <Utils/IOUtils.h>
 
 using namespace boost;
 using namespace oxt;
@@ -236,20 +238,21 @@ private:
 	 *   received by the parser or if the header information was invalid.
 	 * @throws SystemException Request header could not be read.
 	 */
-	bool readAndParseRequestHeaders(FileDescriptor &fd, ScgiRequestParser &parser, string &requestBody) {
+	bool readAndParseRequestHeaders(FileDescriptor &fd, ScgiRequestParser &parser,
+		char *readBuffer, size_t readBufferSize, StaticString &requestBody)
+	{
 		TRACE_POINT();
-		char buf[1024 * 16];
 		ssize_t size;
 		unsigned int accepted = 0;
 		
 		do {
-			size = syscalls::read(fd, buf, sizeof(buf));
+			size = syscalls::read(fd, readBuffer, readBufferSize);
 			if (size == -1) {
 				throw SystemException("Cannot read request header", errno);
 			} else if (size == 0) {
 				break;
 			} else {
-				accepted = parser.feed(buf, size);
+				accepted = parser.feed(readBuffer, size);
 			}
 		} while (parser.acceptingInput());
 
@@ -266,7 +269,7 @@ private:
 			P_ERROR("DOCUMENT_ROOT header is missing.");
 			return false;
 		} else {
-			requestBody.assign(buf + accepted, size - accepted);
+			requestBody = StaticString(readBuffer + accepted, size - accepted);
 			return true;
 		}
 	}
@@ -288,7 +291,7 @@ private:
 	 */
 	void sendRequestBody(SessionPtr &session,
 	                     FileDescriptor &clientFd,
-	                     const string &partialRequestBody,
+	                     const StaticString &partialRequestBody,
 	                     unsigned long contentLength) {
 		TRACE_POINT();
 		char buf[1024 * 16];
@@ -365,12 +368,20 @@ private:
 				 */
 				UPDATE_TRACE_POINT();
 				try {
-					string statusLine("HTTP/1.1 ");
-					statusLine.append(ex.getStatusLine());
-					UPDATE_TRACE_POINT();
-					writeExact(clientFd, statusLine);
-					UPDATE_TRACE_POINT();
-					writeExact(clientFd, ex.getBuffer());
+					unsigned int statusLineSize =
+						sizeof("HTTP/1.1 ") - 1
+						+ ex.getStatusLine().size();
+					char statusLine[statusLineSize];
+					memcpy(statusLine, "HTTP/1.1 ", sizeof("HTTP/1.1 ") - 1);
+					memcpy(statusLine + sizeof("HTTP/1.1 ") - 1,
+						ex.getStatusLine().c_str(),
+						ex.getStatusLine().size());
+					
+					StaticString input[] = {
+						StaticString(statusLine, statusLineSize),
+						ex.getData()
+					};
+					gatheredWrite(clientFd, input, 2);
 					break;
 				} catch (const SystemException &e) {
 					if (e.code() == EPIPE) {
@@ -453,16 +464,18 @@ private:
 	 *
 	 * @param clientFd The file descriptor identifying the client to handle the request from.
 	 */
-	void handleRequest(FileDescriptor &clientFd) {
+	void handleRequest(FileDescriptor &clientFd, ScgiRequestParser &parser) {
 		TRACE_POINT();
-		ScgiRequestParser parser(MAX_HEADER_SIZE);
-		string partialRequestBody;
+		StaticString partialRequestBody;
+		char readBuffer[1024 * 16];
 		
 		if (!readAndCheckPassword(clientFd)) {
 			P_ERROR("Client did not send a correct password.");
 			return;
 		}
-		if (!readAndParseRequestHeaders(clientFd, parser, partialRequestBody)) {
+		if (!readAndParseRequestHeaders(clientFd, parser, readBuffer,
+			sizeof(readBuffer), partialRequestBody))
+		{
 			return;
 		}
 		
@@ -472,7 +485,7 @@ private:
 			StaticString appRoot = parser.getHeader("PASSENGER_APP_ROOT");
 			StaticString appGroupName = parser.getHeader("PASSENGER_APP_GROUP_NAME");
 			StaticString printStatusLine = parser.getHeader("PASSENGER_STATUS_LINE");
-			PoolOptions options;
+			PoolOptions options(PoolOptions::DONT_INIT_STRINGS);
 			bool shouldPrintStatusLine = printStatusLine.empty() || printStatusLine == "true";
 			
 			if (scriptName.empty()) {
@@ -481,6 +494,7 @@ private:
 				} else {
 					options.appRoot = appRoot;
 				}
+				options.baseURI = "/";
 			} else {
 				if (appRoot.empty()) {
 					options.appRoot = extractDirName(resolveSymlink(parser.getHeader("DOCUMENT_ROOT")));
@@ -549,17 +563,14 @@ private:
 				UPDATE_TRACE_POINT();
 				AnalyticsScopeLog requestProxyingScope(log, "request proxying");
 				
-				char headers[parser.getHeaderData().size() +
+				char extraHeaders[
 					sizeof("PASSENGER_CONNECT_PASSWORD") +
 					session->getConnectPassword().size() + 1 +
 					sizeof("PASSENGER_GROUP_NAME") +
 					options.getAppGroupName().size() + 1 +
 					sizeof("PASSENGER_TXN_ID") +
 					log->getTxnId().size() + 1];
-				char *end = headers;
-				
-				memcpy(end, parser.getHeaderData().c_str(), parser.getHeaderData().size());
-				end += parser.getHeaderData().size();
+				char *end = extraHeaders;
 				
 				memcpy(end, "PASSENGER_CONNECT_PASSWORD", sizeof("PASSENGER_CONNECT_PASSWORD"));
 				end += sizeof("PASSENGER_CONNECT_PASSWORD");
@@ -586,7 +597,16 @@ private:
 				
 				{
 					AnalyticsScopeLog scope(log, "send request headers");
-					session->sendHeaders(headers, end - headers);
+					char headerSize[sizeof(uint32_t)];
+					StaticString input[] = {
+						StaticString(headerSize, sizeof(uint32_t)),
+						parser.getHeaderData(),
+						StaticString(extraHeaders, end - extraHeaders)
+					};
+					Uint32Message::generate(headerSize,
+						parser.getHeaderData().size() + (end - extraHeaders));
+					gatheredWrite(session->getStream(), input,
+						sizeof(input) / sizeof(StaticString));
 					scope.success();
 				}
 				{
@@ -639,12 +659,14 @@ private:
 	void threadMain() {
 		TRACE_POINT();
 		try {
+			ScgiRequestParser parser(MAX_HEADER_SIZE);
 			while (true) {
 				UPDATE_TRACE_POINT();
 				inactivityTimer.start();
 				FileDescriptor fd(acceptConnection());
 				inactivityTimer.stop();
-				handleRequest(fd);
+				parser.reset();
+				handleRequest(fd, parser);
 			}
 		} catch (const boost::thread_interrupted &) {
 			P_TRACE(2, "Client thread " << this << " interrupted.");
