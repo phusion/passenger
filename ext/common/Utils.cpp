@@ -951,7 +951,7 @@ closeAllFileDescriptors(int lastToKeepOpen) {
 	#if defined(F_CLOSEM)
 		int ret;
 		do {
-			ret = fcntl(fd, F_CLOSEM, lastToKeepOpen + 1);
+			ret = fcntl(lastToKeepOpen + 1, F_CLOSEM);
 		} while (ret == -1 && errno == EINTR);
 		if (ret != -1) {
 			return;
