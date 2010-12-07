@@ -37,6 +37,8 @@
 #include <oxt/system_calls.hpp>
 
 #include "SystemTime.h"
+#include "StaticString.h"
+#include "Utils/HashMap.h"
 
 namespace Passenger {
 
@@ -139,7 +141,7 @@ public:
 	
 	typedef shared_ptr<Entry> EntryPtr;
 	typedef list<EntryPtr> EntryList;
-	typedef map<string, EntryList::iterator> EntryMap;
+	typedef HashMap<string, EntryList::iterator, StaticString::Hash> EntryMap;
 	
 	unsigned int maxSize;
 	EntryList entries;
@@ -200,8 +202,7 @@ public:
 			entry = *it->second;
 			
 			// Mark this cache item as most recently used.
-			entries.erase(it->second);
-			entries.push_front(entry);
+			entries.splice(entries.begin(), entries, it->second);
 			cache[filename] = entries.begin();
 		}
 		ret = entry->refresh(throttleRate);
