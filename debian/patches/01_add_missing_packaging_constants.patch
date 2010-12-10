@@ -1,0 +1,39 @@
+commit 13d8421a3c8e17f7664d45721c3b59da745695cb
+Author: Hongli Lai (Phusion) <hongli@phusion.nl>
+Date:   Sat Dec 11 12:14:08 2010 +0100
+
+    Fix the fakeroot task. Issue #592.
+
+diff --git a/lib/phusion_passenger.rb b/lib/phusion_passenger.rb
+index 6019499..e747477 100644
+--- a/lib/phusion_passenger.rb
++++ b/lib/phusion_passenger.rb
+@@ -49,6 +49,8 @@ module PhusionPassenger
+ 	NATIVELY_PACKAGED_SOURCE_ROOT        = "/usr/share/phusion-passenger/source"
+ 	NATIVELY_PACKAGED_DOCDIR             = "/usr/share/doc/phusion-passenger"
+ 	NATIVELY_PACKAGED_RESOURCES_DIR      = "/usr/share/phusion-passenger"
++	NATIVELY_PACKAGED_AGENTS_DIR         = "/usr/lib/phusion-passenger/agents"
++	NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR = "/usr/share/phusion-passenger/helper-scripts"
+ 	NATIVELY_PACKAGED_APACHE2_MODULE     = "/usr/lib/apache2/modules/mod_passenger.so"
+ 	
+ 	# Directory containing the Phusion Passenger Ruby libraries.
+@@ -81,6 +83,10 @@ module PhusionPassenger
+ 		# Directory containing Phusion Passenger resource files.
+ 		RESOURCES_DIR      = File.join(SOURCE_ROOT, "resources")
+ 		
++		AGENTS_DIR         = File.join(SOURCE_ROOT, "agents")
++		
++		HELPER_SCRIPTS_DIR = File.join(SOURCE_ROOT, "helper-scripts")
++		
+ 		# Location of the Apache 2 module.
+ 		APACHE2_MODULE     = File.join(SOURCE_ROOT, "ext", "apache2", "mod_passenger.so")
+ 		
+@@ -91,6 +97,8 @@ module PhusionPassenger
+ 		SOURCE_ROOT        = NATIVELY_PACKAGED_SOURCE_ROOT
+ 		DOCDIR             = NATIVELY_PACKAGED_DOCDIR
+ 		RESOURCES_DIR      = NATIVELY_PACKAGED_RESOURCES_DIR
++		AGENTS_DIR         = NATIVELY_PACKAGED_AGENTS_DIR
++		HELPER_SCRIPTS_DIR = NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR
+ 		APACHE2_MODULE     = NATIVELY_PACKAGED_APACHE2_MODULE
+ 	end
+ 	
