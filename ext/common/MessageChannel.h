@@ -40,6 +40,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <cstdarg>
+#include <cmath>
 #if !APR_HAVE_IOVEC
 	// We don't want apr_want.h to redefine 'struct iovec'.
 	// http://groups.google.com/group/phusion-passenger/browse_thread/thread/7e162f60df212e9c
@@ -51,11 +52,13 @@
 #include "Exceptions.h"
 #include "Utils/Timer.h"
 #include "Utils/MemZeroGuard.h"
+#include "Utils/IOUtils.h"
 
 namespace Passenger {
 
 using namespace std;
 using namespace oxt;
+
 
 /**
  * Convenience class for I/O operations on file descriptors.
@@ -208,7 +211,7 @@ public:
 			data.append(1, DELIMITER);
 		}
 		
-		writeRaw(data);
+		writeExact(fd, data);
 	}
 	
 	/**
@@ -295,7 +298,7 @@ public:
 	 */
 	void writeUint32(unsigned int value) {
 		uint32_t l = htonl(value);
-		writeRaw((const char *) &l, sizeof(uint32_t));
+		writeExact(fd, &l, sizeof(uint32_t));
 	}
 	
 	/**
@@ -330,52 +333,7 @@ public:
 	 */
 	void writeScalar(const char *data, unsigned int size) {
 		writeUint32(size);
-		writeRaw(data, size);
-	}
-	
-	/**
-	 * Send a block of data over the underlying file descriptor.
-	 * This method blocks until everything is sent.
-	 *
-	 * @note Security guarantee: this method will not copy the data in memory,
-	 *       so it's safe to use this method to write passwords to the underlying
-	 *       file descriptor.
-	 *
-	 * @param data The data to send.
-	 * @param size The number of bytes in <tt>data</tt>.
-	 * @pre <tt>data != NULL</tt>
-	 * @throws SystemException An error occured while writing the data to the file descriptor.
-	 * @throws boost::thread_interrupted
-	 * @see readRaw()
-	 */
-	void writeRaw(const char *data, unsigned int size) {
-		ssize_t ret;
-		unsigned int written = 0;
-		do {
-			ret = syscalls::write(fd, data + written, size - written);
-			if (ret == -1) {
-				throw SystemException("write() failed", errno);
-			} else {
-				written += ret;
-			}
-		} while (written < size);
-	}
-	
-	/**
-	 * Send a block of data over the underlying file descriptor.
-	 * This method blocks until everything is sent.
-	 *
-	 * @note Security guarantee: this method will not copy the data in memory,
-	 *       so it's safe to use this method to write passwords to the underlying
-	 *       file descriptor.
-	 *
-	 * @param data The data to send.
-	 * @pre <tt>data != NULL</tt>
-	 * @throws SystemException An error occured while writing the data to the file descriptor.
-	 * @throws boost::thread_interrupted
-	 */
-	void writeRaw(const string &data) {
-		writeRaw(data.c_str(), data.size());
+		writeExact(fd, data, size);
 	}
 	
 	/**
@@ -612,63 +570,21 @@ public:
 	 * @throws TimeoutException Unable to read <tt>size</tt> bytes of data within
 	 *                          <tt>timeout</tt> milliseconds.
 	 * @throws boost::thread_interrupted
-	 * @see writeRaw()
 	 */
 	bool readRaw(void *buf, unsigned int size, unsigned long long *timeout = NULL) {
-		ssize_t ret;
-		unsigned int alreadyRead = 0;
-		
-		while (alreadyRead < size) {
-			if (timeout != NULL && !waitUntilReadable(timeout)) {
-				throw TimeoutException("Cannot read enough data within the specified timeout.");
+		if (timeout != NULL) {
+			unsigned long long t = *timeout * 1000;
+			unsigned int ret;
+			try {
+				ret = Passenger::readExact(fd, buf, size, &t);
+				*timeout = llroundl((long double) t / 1000);
+				return ret == size;
+			} catch (...) {
+				*timeout = llroundl((long double) t / 1000);
+				throw;
 			}
-			ret = syscalls::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
-			if (ret == -1) {
-				throw SystemException("read() failed", errno);
-			} else if (ret == 0) {
-				return false;
-			} else {
-				alreadyRead += ret;
-			}
-		}
-		return true;
-	}
-	
-	/**
-	 * Waits at most <tt>*timeout</tt> milliseconds for the file descriptor to become readable.
-	 * Returns true if it become readable within the timeout, false if the timeout expired.
-	 *
-	 * <tt>*timeout</tt> may be 0, in which case this method will check whether the file
-	 * descriptor is readable, and immediately returns without waiting.
-	 *
-	 * If no exception is thrown, this method deducts the number of milliseconds that has
-	 * passed from <tt>*timeout</tt>.
-	 *
-	 * @throws SystemException
-	 * @throws boost::thread_interrupted
-	 */
-	bool waitUntilReadable(unsigned long long *timeout) {
-		fd_set fds;
-		struct timeval tv;
-		int ret;
-		
-		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
-		tv.tv_sec  = *timeout / 1000;
-		tv.tv_usec = *timeout % 1000 * 1000;
-		
-		Timer timer;
-		ret = syscalls::select(fd + 1, &fds, NULL, NULL, &tv);
-		if (ret == -1) {
-			throw SystemException("select() failed", errno);
 		} else {
-			unsigned long long elapsed = timer.elapsed();
-			if (elapsed > *timeout) {
-				*timeout = 0;
-			} else {
-				*timeout -= elapsed;
-			}
-			return ret != 0;
+			return Passenger::readExact(fd, buf, size) == size;
 		}
 	}
 	

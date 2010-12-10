@@ -1,0 +1,4 @@
+<map id="G" name="G">
+<area shape="rect" id="node1" href="$classPassenger_1_1Session.html" title="Represents a single request/response pair of an application process." alt="" coords="5,5,152,35"/>
+<area shape="rect" id="node3" href="$classPassenger_1_1StandardSession.html" title="A &quot;standard&quot; implementation of Session." alt="" coords="200,5,405,35"/>
+</map>

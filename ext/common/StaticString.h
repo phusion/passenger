@@ -27,7 +27,9 @@
 
 #include <string>
 #include <cstring>
+#include <cstddef>
 #include <ostream>
+#include <stdexcept>
 
 namespace Passenger {
 
@@ -44,6 +46,36 @@ class StaticString {
 private:
 	const char *content;
 	string::size_type len;
+	
+	static const char *memmem(const char *haystack, string::size_type haystack_len,
+		const char *needle, string::size_type needle_len)
+	{
+		if (needle_len == 0) {
+			return haystack;
+		}
+
+		const char *last_possible = haystack + haystack_len - needle_len;
+		do {
+			const char *result = (const char *) memchr(haystack, needle[0], haystack_len);
+			if (result != NULL) {
+				if (result > last_possible) {
+					return NULL;
+				} else if (memcmp(result, needle, needle_len) == 0) {
+					return result;
+				} else {
+					ssize_t new_len = ssize_t(haystack_len) - (result - haystack) - 1;
+					if (new_len <= 0) {
+						return NULL;
+					} else {
+						haystack = result + 1;
+						haystack_len = new_len;
+					}
+				}
+			} else {
+				return NULL;
+			}
+		} while (true);
+	}
 	
 public:
 	/** A hash function object for StaticString. */
@@ -119,6 +151,49 @@ public:
 	
 	bool equals(const string &other) const {
 		return len == other.size() && memcmp(content, other.data(), len) == 0;
+	}
+	
+	string::size_type find(char c, string::size_type pos = 0) const {
+		if (pos < len) {
+			const char *result = (const char *) memchr(content + pos, c, len - pos);
+			if (result == NULL) {
+				return string::npos;
+			} else {
+				return result - content;
+			}
+		} else {
+			return string::npos;
+		}
+	}
+	
+	string::size_type find(const StaticString &s, string::size_type pos = 0) const {
+		if (s.empty()) {
+			return 0;
+		} else if (pos < len) {
+			const char *result = memmem(content + pos, len - pos, s.c_str(), s.size());
+			if (result == NULL) {
+				return string::npos;
+			} else {
+				return result - content;
+			}
+		} else {
+			return string::npos;
+		}
+	}
+	
+	string::size_type find(const char *s, string::size_type pos, string::size_type n) const {
+		return find(StaticString(s, n), pos);
+	}
+	
+	StaticString substr(string::size_type pos = 0, string::size_type n = string::npos) const {
+		if (pos > len) {
+			throw out_of_range("Argument 'pos' out of range");
+		} else {
+			if (n > len - pos) {
+				n = len - pos;
+			}
+			return StaticString(content + pos, n);
+		}
 	}
 	
 	bool operator==(const StaticString &other) const {

@@ -1,18 +1,34 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (C) 2010  Phusion
+#  Copyright (c) 2010 Phusion
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; version 2 of the License.
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  You should have received a copy of the GNU General Public License along
-#  with this program; if not, write to the Free Software Foundation, Inc.,
-#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+
+task 'package:check' do
+	require 'phusion_passenger'
+	
+	File.read("ext/common/Constants.h") =~ /PASSENGER_VERSION \"(.+)\"/
+	if $1 != PhusionPassenger::VERSION_STRING
+		abort "Version number in ext/common/Constants.h doesn't match."
+	end
+end
 
 spec = Gem::Specification.new do |s|
 	s.platform = Gem::Platform::RUBY
@@ -78,7 +94,9 @@ task 'package:filelist' do
 end
 
 Rake::Task['package'].prerequisites.unshift(:doc)
+Rake::Task['package'].prerequisites.unshift('package:check')
 Rake::Task['package:gem'].prerequisites.unshift(:doc)
+Rake::Task['package:gem'].prerequisites.unshift('package:check')
 Rake::Task['package:force'].prerequisites.unshift(:doc)
 task :clobber => :'package:clean'
 
@@ -96,13 +114,13 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	fake_native_support_dir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
 	fake_agents_dir = "#{fakeroot}#{NATIVELY_PACKAGED_AGENTS_DIR}"
 	fake_helper_scripts_dir = "#{fakeroot}#{NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR}"
+	fake_resources_dir = "#{fakeroot}/usr/share/phusion-passenger"
 	fake_docdir = "#{fakeroot}#{NATIVELY_PACKAGED_DOCDIR}"
 	fake_bindir = "#{fakeroot}/usr/bin"
 	fake_sbindir = "#{fakeroot}/usr/sbin"
 	fake_source_root = "#{fakeroot}#{NATIVELY_PACKAGED_SOURCE_ROOT}"
 	fake_apache2_module = "#{fakeroot}#{NATIVELY_PACKAGED_APACHE2_MODULE}"
 	fake_apache2_module_dir = File.dirname(fake_apache2_module)
-	fake_certificates_dir = "#{fakeroot}/usr/share/phusion-passenger/certificates"
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
@@ -124,6 +142,9 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	sh "mkdir -p #{fake_helper_scripts_dir}"
 	sh "cp -R #{HELPER_SCRIPTS_DIR}/* #{fake_helper_scripts_dir}/"
 	
+	sh "mkdir -p #{fake_resources_dir}"
+	sh "cp resources/* #{fake_resources_dir}/"
+	
 	sh "mkdir -p #{fake_docdir}"
 	Packaging::ASCII_DOCS.each do |docfile|
 		sh "cp", docfile, "#{fake_docdir}/"
@@ -143,9 +164,6 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	sh "mkdir -p #{fake_apache2_module_dir}"
 	sh "cp #{APACHE2_MODULE} #{fake_apache2_module_dir}/"
 	
-	sh "mkdir -p #{fake_certificates_dir}"
-	sh "cp misc/*.crt #{fake_certificates_dir}/"
-	
 	sh "mkdir -p #{fake_source_root}"
 	spec.files.each do |filename|
 		next if File.directory?(filename)
@@ -159,28 +177,18 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 end
 
 desc "Create a Debian package"
-task 'package:debian' => :fakeroot do
-	if Process.euid != 0
-		STDERR.puts
-		STDERR.puts "*** ERROR: the 'package:debian' task must be run as root."
-		STDERR.puts
-		exit 1
-	end
-
-	fakeroot = "pkg/fakeroot"
-	raw_arch = `uname -m`.strip
-	arch = case raw_arch
-	when /^i.86$/
-		"i386"
-	when /^x86_64/
-		"amd64"
-	else
-		raw_arch
+task 'package:debian' => 'package:check' do
+	checkbuilddeps = PlatformInfo.find_command("dpkg-checkbuilddeps")
+	debuild = PlatformInfo.find_command("debuild")
+	if !checkbuilddeps || !debuild
+		# devscripts requires dpkg-dev which contains dpkg-checkbuilddeps.
+		abort "Please run `apt-get install devscripts` first."
 	end
 	
-	sh "sed -i 's/Version: .*/Version: #{VERSION_STRING}/' debian/control"
-	sh "cp -R debian #{fakeroot}/DEBIAN"
-	sh "sed -i 's/: any/: #{arch}/' #{fakeroot}/DEBIAN/control"
-	sh "chown -R root:root #{fakeroot}"
-	sh "dpkg -b #{fakeroot} pkg/passenger_#{VERSION_STRING}-#{arch}.deb"
+	if !system(checkbuilddeps)
+		STDERR.puts
+		abort "Please install aforementioned build dependencies first."
+	end
+	
+	sh "debuild"
 end

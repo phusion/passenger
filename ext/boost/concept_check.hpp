@@ -330,7 +330,16 @@ namespace boost
       {
           f(arg);
       }
-      
+
+#if (BOOST_WORKAROUND(__GNUC__, BOOST_TESTED_AT(4) \
+                      && BOOST_WORKAROUND(__GNUC__, > 3)))
+      // Declare a dummy construktor to make gcc happy.
+      // It seems the compiler can not generate a sensible constructor when this is instantiated with a refence type.
+      // (warning: non-static reference "const double& boost::UnaryFunction<YourClassHere>::arg"
+      // in class without a constructor [-Wuninitialized])
+      UnaryFunction();
+#endif
+
       Func f;
       Arg arg;
   };

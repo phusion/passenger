@@ -403,6 +403,8 @@ module Dependencies # :nodoc: all
 				dep.install_command = "apt-get install libaprutil1-dev"
 			elsif tags.include?(:mandriva)
 				dep.install_command = "urpmi libapr-util-devel"
+			elsif tags.include?(:redhat)
+				dep.install_command = "yum install apr-util-devel"
 			end
 		elsif RUBY_PLATFORM =~ /darwin/
 			dep.install_instructions = "Please install Apache from MacPorts, which will " <<

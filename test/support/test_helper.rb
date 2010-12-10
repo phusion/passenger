@@ -305,6 +305,9 @@ module TestHelper
 	end
 	
 	def spawn_process(*args)
+		args.map! do |arg|
+			arg.to_s
+		end
 		if Process.respond_to?(:spawn)
 			return Process.spawn(*args)
 		else

@@ -1,3 +1,53 @@
+Release 3.0.1
+-------------
+
+ * MUCH faster compilation
+   We've applied code aggregation techniques, allowing Phusion Passenger
+   to be compiled much quicker now. For example, compiling the Nginx
+   component (not Nginx itself) on a MacBook Pro now takes only 29
+   seconds instead of 51 seconds, an improvement of 75%! Compiling the
+   Apache module on a slower Dell Inspiron now takes 39 seconds instead of
+   1 minute 22 seconds, or 110% faster!
+ * Fixed malfunction after web server restart
+   On Linux systems that have a non-standard filesystem on /tmp, Phusion
+   Passenger could malfunction after restarting the web server because of
+   a bug that's only triggered on certain filesystems. Issue #569.
+ * Boost upgraded to version 1.44.0.
+   We were on 1.42.0.
+ * Much improved startup error messages
+   Phusion Passenger performs many extensive checks during startup to ensure
+   integrity. However the error message in some situation could be vague.
+   These startup error messages have now been improved dramatically, so that
+   if something goes wrong during startup you will now more likely know why.
+ * Curl < 7.12.1 is now supported
+   The previous version fails to compile with Curl versions earlier than
+   7.12.1. Issue #556.
+ * passenger-make-enterprisey fixed
+   This is the command that people can run after donating. It allows people
+   to slightly modify Phusion Passenger's display name as a joke. In 3.0.0 it
+   was broken because of a typo. This has been fixed.
+ * Removed passenger-stress-test
+   This tool was used during the early life of Phusion Passenger for stress
+   testing websites. Its performance has never been very good and there are
+   much better tools for stress testing, so this tool has now been removed.
+ * [Apache] RailsEnv and RackEnv configuration options are now equivalent
+   In previous versions, RailsEnv only had effect on Rails 1 and Rails 2 apps
+   while RackEnv only had effect on Rack apps. Because Rails 3 apps are
+   considered Rack apps, setting RailsEnv had no effect on Rails 3 apps.
+   Because this is confusing to users, we've now made RailsEnv and RackEnv
+   equivalent. Issue #579.
+ * [Nginx] Fixed compilation problems on systems with unpowerful shells
+   Most notably Solaris. Its default shell does not support some basic
+   constructs that we used in the Nginx configure script.
+ * [Nginx] Upgraded default Nginx version to to 0.8.53
+   The previous default was 0.8.52.
+ * [Nginx] passenger_enabled now only accepts 'on' or 'off' values
+   Previously it would recognize any value not equal to 'on' as meaning
+   'off'. This caused confusion among users who thought they could also
+   specify 'true', so we now throw a proper error if the value is
+   unrecognized. Fixes issue #583.
+
+
 Release 3.0.0
 -------------
 

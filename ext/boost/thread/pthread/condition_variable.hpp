@@ -3,7 +3,7 @@
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
-// (C) Copyright 2007-8 Anthony Williams
+// (C) Copyright 2007-10 Anthony Williams
 
 #include "timespec.hpp"
 #include "pthread_mutex_scoped_lock.hpp"
@@ -51,8 +51,8 @@ namespace boost
         pthread_mutex_t internal_mutex;
         pthread_cond_t cond;
 
-        condition_variable_any(condition_variable&);
-        condition_variable_any& operator=(condition_variable&);
+        condition_variable_any(condition_variable_any&);
+        condition_variable_any& operator=(condition_variable_any&);
 
     public:
         condition_variable_any()
@@ -60,13 +60,13 @@ namespace boost
             int const res=pthread_mutex_init(&internal_mutex,NULL);
             if(res)
             {
-                throw thread_resource_error("Cannot initialize a mutex", res);
+                boost::throw_exception(thread_resource_error("Cannot initialize a mutex", res));
             }
             int const res2=pthread_cond_init(&cond,NULL);
             if(res2)
             {
                 BOOST_VERIFY(!pthread_mutex_destroy(&internal_mutex));
-                throw thread_resource_error("Cannot initialize a condition variable", res2);
+                boost::throw_exception(thread_resource_error("Cannot initialize a condition variable", res2));
             }
         }
         ~condition_variable_any()
@@ -90,7 +90,7 @@ namespace boost
             }
             if(res)
             {
-                throw condition_error();
+                boost::throw_exception(condition_error());
             }
         }
 
@@ -120,7 +120,7 @@ namespace boost
             }
             if(res)
             {
-                throw condition_error();
+                boost::throw_exception(condition_error());
             }
             return true;
         }

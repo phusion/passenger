@@ -123,7 +123,8 @@ private:
 		 * method fails to send all data immediately and EventedClient
 		 * schedules some data to be sent later, when the socket becomes
 		 * readable again. In here we will be watching for read
-		 * and write events.
+		 * and write events. Once all data has been sent out the system
+		 * will transition back to EC_CONNECTED.
 		 */
 		EC_WRITES_PENDING,
 		
@@ -140,8 +141,26 @@ private:
 		EC_TOO_MANY_WRITES_PENDING,
 		
 		/**
-		 * This state is entered from the EC_WRITES_PENDING or the
-		 * EC_TOO_MANY_WRITES_PENDING state when disconnect() is called.
+		 * This state is like EC_CONNECTED, but indicates that the write
+		 * side of the connection has been closed. In this state write()
+		 * calls won't have any effect.
+		 */
+		EC_RO_CONNECTED,
+		
+		/**
+		 * This state is entered from EC_WRITES_PENDING when
+		 * closeWrite() has been called. The system will continue
+		 * to send out pending data but write() calls won't append more
+		 * data to the outbox. After pending data has been sent out,
+		 * the system will transition to EC_RO_CONNECTED.
+		 */
+		EC_RO_CONNECTED_WITH_WRITES_PENDING,
+		
+		/**
+		 * This state is entered from the EC_WRITES_PENDING,
+		 * EC_TOO_MANY_WRITES_PENDING, EC_RO_CONNECTED_WITH_WIRTES_PENDING
+		 * or EC_RO_CONNECTED_WITH_TOO_MANY_WRITES_PENDING state when
+		 * disconnect() is called.
 		 * It means that we want to close the connection as soon as all
 		 * pending outgoing data has been sent. As soon as that happens
 		 * it'll transition to EC_DISCONNECTED. In this state no further
@@ -163,14 +182,16 @@ private:
 	/** Storage for data that could not be sent out immediately. */
 	string outbox;
 	int refcount;
-	bool m_notifyReads;
 	unsigned int outboxLimit;
+	bool m_notifyReads;
 	
 	void _onReadable(ev::io &w, int revents) {
 		emitEvent(onReadable);
 	}
 	
 	void onWritable(ev::io &w, int revents) {
+		assert(state != EC_CONNECTED);
+		assert(state != EC_RO_CONNECTED);
 		assert(state != EC_DISCONNECTED);
 		
 		this_thread::disable_interruption di;
@@ -185,7 +206,11 @@ private:
 			if (ret == -1) {
 				if (errno != EAGAIN) {
 					int e = errno;
-					disconnect(true);
+					if (writeErrorAction == DISCONNECT_FULL) {
+						disconnect(true);
+					} else {
+						closeWrite();
+					}
 					emitSystemErrorEvent("Cannot write data to client", e);
 					return;
 				}
@@ -213,12 +238,18 @@ private:
 		if (outbox.empty()) {
 			switch (state) {
 			case EC_CONNECTED:
+			case EC_RO_CONNECTED:
 				watchReadEvents(m_notifyReads);
 				watchWriteEvents(false);
 				break;
 			case EC_WRITES_PENDING:
 			case EC_TOO_MANY_WRITES_PENDING:
 				state = EC_CONNECTED;
+				watchReadEvents(m_notifyReads);
+				watchWriteEvents(false);
+				break;
+			case EC_RO_CONNECTED_WITH_WRITES_PENDING:
+				state = EC_RO_CONNECTED;
 				watchReadEvents(m_notifyReads);
 				watchWriteEvents(false);
 				break;
@@ -252,7 +283,12 @@ private:
 					watchWriteEvents(true);
 				}
 				break;
+			case EC_RO_CONNECTED:
+				fprintf(stderr, "BUG: when outbox is non-empty the state should never be EC_RO_CONNECTED!\n");
+				abort();
+				break;
 			case EC_WRITES_PENDING:
+			case EC_RO_CONNECTED_WITH_WRITES_PENDING:
 				watchReadEvents(m_notifyReads);
 				watchWriteEvents(true);
 				break;
@@ -299,6 +335,14 @@ private:
 public:
 	/** The client's file descriptor. Could be -1: see <tt>ioAllowed()</tt>. */
 	FileDescriptor fd;
+	
+	/** Controls what to do when a write error is encountered. */
+	enum {
+		/** Forcefully disconnect the client. */
+		DISCONNECT_FULL,
+		/** Close the writer side of the connection, but continue allowing reading. */
+		DISCONNECT_WRITE
+	} writeErrorAction;
 	
 	/**
 	 * Called when the file descriptor becomes readable and read notifications
@@ -350,16 +394,17 @@ public:
 		  writeWatcher(loop),
 		  fd(_fd)
 	{
-		state           = EC_CONNECTED;
-		refcount        = 1;
-		m_notifyReads   = false;
-		outboxLimit     = 1024 * 32;
-		onReadable      = NULL;
-		onDisconnect    = NULL;
-		onDetach        = NULL;
+		state              = EC_CONNECTED;
+		refcount           = 1;
+		m_notifyReads      = false;
+		outboxLimit        = 1024 * 32;
+		writeErrorAction   = DISCONNECT_FULL;
+		onReadable         = NULL;
+		onDisconnect       = NULL;
+		onDetach           = NULL;
 		onPendingDataFlushed = NULL;
-		onSystemError   = NULL;
-		userData        = NULL;
+		onSystemError      = NULL;
+		userData           = NULL;
 		readWatcher.set(fd, ev::READ);
 		readWatcher.set<EventedClient, &EventedClient::_onReadable>(this);
 		writeWatcher.set<EventedClient, &EventedClient::onWritable>(this);
@@ -393,15 +438,33 @@ public:
 	}
 	
 	/**
-	 * Returns whether it is allowed to perform any I/O with this client.
+	 * Returns whether it is allowed to perform some kind of I/O with
+	 * this client, either reading or writing.
 	 * Usually true, and false when the client is either being disconnected
 	 * or has been disconnected. A return value of false indicates that
 	 * <tt>fd</tt> might be -1, but even when it isn't -1 you shouldn't
 	 * access <tt>fd</tt> anymore.
+	 * When the connection is half-closed (e.g. after closeWrite() has
+	 * been called) the return value is still be true. Only when I/O of any
+	 * kind is disallowed will this function return false.
 	 */
 	bool ioAllowed() const {
 		return state != EC_DISCONNECTING_WITH_WRITES_PENDING
 			&& state != EC_DISCONNECTED;
+	}
+	
+	/**
+	 * Returns whether it is allowed to write data to the client.
+	 * Usually true, and false when the client is either being disconnected
+	 * or has been disconnected or when the writer side of the client
+	 * connection has been closed. write() will do nothing if this function
+	 * returns false.
+	 */
+	bool writeAllowed() const {
+		return state == EC_CONNECTED
+			|| state == EC_WRITES_PENDING
+			|| state == EC_TOO_MANY_WRITES_PENDING
+			|| state == EC_RO_CONNECTED_WITH_WRITES_PENDING;
 	}
 	
 	/** Used by unit tests. */
@@ -476,12 +539,15 @@ public:
 	 * network congestion) then the data will be buffered and scheduled for
 	 * sending later.
 	 *
-	 * If an I/O error was encountered then the client connection will be
-	 * closed by calling <tt>disconnect(true)</tt>. This means this method
-	 * could potentially call the <tt>onDisconnect</tt> callback.
+	 * If an I/O error was encountered then the action taken depends on the
+	 * value of <em>writeActionError</em>. By default it is DISCONNECT_FULL,
+	 * meaning the client connection will be closed by calling
+	 * <tt>disconnect(true)</tt>. This means this method could potentially
+	 * call the <tt>onDisconnect</tt> callback.
 	 *
-	 * If the client connection is already being closed or has already
-	 * been closed then this method does nothing.
+	 * If the client connection is already being closed, has already
+	 * been closed or if the writer side is closed, then this method does
+	 * nothing.
 	 *
 	 * The <tt>onPendingDataFlushed</tt> callback will be called after
 	 * this data and whatever existing pending data have been written
@@ -489,7 +555,7 @@ public:
 	 * of time.
 	 */
 	void write(const StaticString data[], unsigned int count) {
-		if (!ioAllowed()) {
+		if (!writeAllowed()) {
 			return;
 		}
 		
@@ -500,7 +566,11 @@ public:
 		ret = gatheredWrite(fd, data, count, outbox);
 		if (ret == -1) {
 			int e = errno;
-			disconnect(true);
+			if (writeErrorAction == DISCONNECT_FULL) {
+				disconnect(true);
+			} else {
+				closeWrite();
+			}
 			emitSystemErrorEvent("Cannot write data to client", e);
 		} else {
 			updateWatcherStates();
@@ -508,6 +578,39 @@ public:
 				emitEvent(onPendingDataFlushed);
 			}
 		}
+	}
+	
+	/**
+	 * Close only the writer side of the client connection.
+	 * After calling this method, subsequent write() calls won't do anything
+	 * anymore. Any pending outgoing data will be sent out whenever the
+	 * opportunity arises.
+	 *
+	 * This function does nothing if the client is being disconnected,
+	 * already disconnected or if only the writer side is closed.
+	 */
+	void closeWrite() {
+		this_thread::disable_syscall_interruption dsi;
+		
+		switch (state) {
+		case EC_CONNECTED:
+			assert(outbox.empty());
+			state = EC_RO_CONNECTED;
+			if (syscalls::shutdown(fd, SHUT_WR) == -1) {
+				int e = errno;
+				emitSystemErrorEvent(
+					"Cannot shutdown writer half of the client socket",
+					e);
+			}
+			break;
+		case EC_WRITES_PENDING:
+		case EC_TOO_MANY_WRITES_PENDING:
+			state = EC_RO_CONNECTED_WITH_WRITES_PENDING;
+			break;
+		default:
+			break;
+		}
+		updateWatcherStates();
 	}
 	
 	/**
@@ -543,7 +646,7 @@ public:
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		
-		if (state == EC_CONNECTED || force) {
+		if (state == EC_CONNECTED || state == EC_RO_CONNECTED || force) {
 			state = EC_DISCONNECTED;
 			watchReadEvents(false);
 			watchWriteEvents(false);
@@ -570,9 +673,10 @@ public:
 	 * Detaches the client file descriptor so that this EventedClient no longer
 	 * has any control over it. Any EventedClient I/O watchers on the client file
 	 * descriptor will be stopped and further I/O on the file descriptor via
-	 * EventedClient will become impossible. The original client file descriptor
-	 * is returned and <tt>onDetach</tt> is called. Subsequent calls to this
-	 * function will return -1 and will no longer call <tt>onDetach</tt>.
+	 * EventedClient will become impossible. Any pending outgoing data will be
+	 * discarded. The original client file descriptor is returned and
+	 * <tt>onDetach</tt> is called. Subsequent calls to this function will
+	 * return -1 and will no longer call <tt>onDetach</tt>.
 	 *
 	 * @post !ioAllowed()
 	 * @post fd == -1

@@ -29,20 +29,6 @@ require 'phusion_passenger/platform_info/operating_system'
 module PhusionPassenger
 
 module PlatformInfo
-	# Returns the host machine's CPU architecture. Please note that this may not be the
-	# same as the Ruby interpreter's CPU architecture because the Ruby interpreter may
-	# be running on a different architectural mode than the default one.
-	def self.cpu_architecture
-		result = `uname -p`.strip
-		# On some systems 'uname -p' returns something like
-		# 'Intel(R) Pentium(R) M processor 1400MHz'.
-		if result == "unknown" || result =~ / /
-			result = `uname -m`.strip
-		end
-		return result
-	end
-	memoize :cpu_architecture
-	
 	# Returns an array of identifiers that describe the current Ruby
 	# interpreter's extension binary compatibility. A Ruby extension
 	# compiled for a certain Ruby interpreter can also be loaded on
@@ -85,7 +71,7 @@ module PlatformInfo
 		elsif RUBY_PLATFORM == "java"
 			ruby_arch = "java"
 		else
-			ruby_arch = cpu_architecture
+			ruby_arch = cpu_architectures[0]
 		end
 		return [ruby_engine, ruby_ext_version, ruby_arch, os_name]
 	end
@@ -130,14 +116,14 @@ module PlatformInfo
 			os_version = "#{components[0]}.#{components[1]}"
 			os_runtime = os_version
 			
-			os_arch = cpu_architecture
+			os_arch = cpu_architectures[0]
 			if os_version >= "10.5" && os_arch =~ /^i.86$/
 				# On Snow Leopard, 'uname -m' returns i386 but
 				# we *know* that everything is x86_64 by default.
 				os_arch = "x86_64"
 			end
 		else
-			os_arch = cpu_architecture
+			os_arch = cpu_architectures[0]
 			
 			cpp = find_command('cpp')
 			if cpp

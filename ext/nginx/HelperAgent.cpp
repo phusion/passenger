@@ -318,7 +318,6 @@ private:
 		HttpStatusExtractor ex;
 		int stream = session->getStream();
 		int eof = false;
-		MessageChannel output(clientFd);
 		char buf[1024 * 32];
 		ssize_t size;
 		
@@ -343,9 +342,9 @@ private:
 					string statusLine("HTTP/1.1 ");
 					statusLine.append(ex.getStatusLine());
 					UPDATE_TRACE_POINT();
-					output.writeRaw(statusLine.c_str(), statusLine.size());
+					writeExact(clientFd, statusLine);
 					UPDATE_TRACE_POINT();
-					output.writeRaw(ex.getBuffer().c_str(), ex.getBuffer().size());
+					writeExact(clientFd, ex.getBuffer());
 					break;
 				} catch (const SystemException &e) {
 					if (e.code() == EPIPE) {
@@ -368,7 +367,7 @@ private:
 			} else {
 				UPDATE_TRACE_POINT();
 				try {
-					output.writeRaw(buf, size);
+					writeExact(clientFd, buf, size);
 				} catch (const SystemException &e) {
 					if (e.code() == EPIPE) {
 						throw ClientDisconnectedException();
@@ -392,31 +391,30 @@ private:
 	 * @param friendly Whether to show a friendly error page.
 	 */
 	void handleSpawnException(FileDescriptor &fd, const SpawnException &e, bool friendly) {
-		MessageChannel channel(fd);
-		channel.writeRaw("HTTP/1.1 500 Internal Server Error\x0D\x0A");
-		channel.writeRaw("Status: 500 Internal Server Error\x0D\x0A");
-		channel.writeRaw("Connection: close\x0D\x0A");
-		channel.writeRaw("Content-Type: text/html; charset=utf-8\x0D\x0A");
+		writeExact(fd, "HTTP/1.1 500 Internal Server Error\x0D\x0A");
+		writeExact(fd, "Status: 500 Internal Server Error\x0D\x0A");
+		writeExact(fd, "Connection: close\x0D\x0A");
+		writeExact(fd, "Content-Type: text/html; charset=utf-8\x0D\x0A");
 		
 		if (friendly) {
 			if (e.hasErrorPage()) {
-				channel.writeRaw("Content-Length: " +
+				writeExact(fd, "Content-Length: " +
 					toString(e.getErrorPage().size()) +
 					"\x0D\x0A");
-				channel.writeRaw("\x0D\x0A");
-				channel.writeRaw(e.getErrorPage());
+				writeExact(fd, "\x0D\x0A");
+				writeExact(fd, e.getErrorPage());
 			} else {
-				channel.writeRaw("Content-Length: " +
+				writeExact(fd, "Content-Length: " +
 					toString(strlen(e.what())) + "\x0D\x0A");
-				channel.writeRaw("\x0D\x0A");
-				channel.writeRaw(e.what());
+				writeExact(fd, "\x0D\x0A");
+				writeExact(fd, e.what());
 			}
 		} else {
 			const char body[] = "<h1>Internal Server Error (500)</h1>";
-			channel.writeRaw("Content-Length: " +
+			writeExact(fd, "Content-Length: " +
 				toString(strlen(body)) + "\x0D\x0A");
-			channel.writeRaw("\x0D\x0A");
-			channel.writeRaw(body);
+			writeExact(fd, "\x0D\x0A");
+			writeExact(fd, body);
 		}
 	}
 	

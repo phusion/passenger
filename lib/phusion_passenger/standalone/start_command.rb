@@ -98,8 +98,8 @@ class StartCommand < Command
 			stop_threads
 		end
 	ensure
-		if @config_filename
-			File.unlink(@config_filename) rescue nil
+		if @temp_dir
+			FileUtils.rm_rf(@temp_dir) rescue nil
 		end
 		@plugin.call_hook(:cleanup)
 	end
@@ -157,13 +157,17 @@ private
 				wrap_desc("The spawn method to use (default: #{@options[:spawn_method]})")) do |value|
 				@options[:spawn_method] = value
 			end
-			opts.on("--analytics",
-				wrap_desc("Enable analytics support")) do
-				@options[:analytics] = true
+			opts.on("--union-station-gateway HOST:PORT", String,
+				wrap_desc("Specify Union Station Gateway host and port")) do |value|
+				host, port = value.split(":", 2)
+				port = port.to_i
+				port = 443 if port == 0
+				@options[:union_station_gateway_address] = host
+				@options[:union_station_gateway_port] = port.to_i
 			end
-			opts.on("--debugger",
-				wrap_desc("Enable debugger support")) do
-				@options[:debugger] = true
+			opts.on("--union-station-key KEY", String,
+				wrap_desc("Specify Union Station key")) do |value|
+				@options[:union_station_key] = value
 			end
 			
 			opts.separator ""
@@ -320,10 +324,6 @@ private
 				end
 			end
 		end
-		
-		nginx_version = @options[:nginx_version]
-		@temp_dir = "#{home}/#{LOCAL_DIR}/standalone/#{runtime_version_string}/nginx-#{nginx_version}/temp"
-		ensure_directory_exists(@temp_dir)
 	end
 	
 	def ensure_directory_exists(dir)
@@ -484,16 +484,16 @@ private
 	
 	#### Config file template helpers ####
 	
-	def nginx_listen_address(for_ping_port = false)
-		if @options[:socket_file]
-			return "unix:" + File.expand_path(@options[:socket_file])
+	def nginx_listen_address(options = @options, for_ping_port = false)
+		if options[:socket_file]
+			return "unix:" + File.expand_path(options[:socket_file])
 		else
 			if for_ping_port
-				port = @options[:ping_port]
+				port = options[:ping_port]
 			else
-				port = @options[:port]
+				port = options[:port]
 			end
-			return "#{@options[:address]}:#{port}"
+			return "#{options[:address]}:#{port}"
 		end
 	end
 	

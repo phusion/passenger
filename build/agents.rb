@@ -1,18 +1,25 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (C) 2010  Phusion
+#  Copyright (c) 2010 Phusion
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; version 2 of the License.
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  You should have received a copy of the GNU General Public License along
-#  with this program; if not, write to the Free Software Foundation, Inc.,
-#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
 
 dependencies = [
 	'ext/common/Watchdog.cpp',
@@ -22,9 +29,9 @@ dependencies = [
 	LIBBOOST_OXT,
 	LIBCOMMON
 ]
-file 'agents/PassengerWatchdog' => dependencies do
-	sh "mkdir -p agents" if !File.directory?("agents")
-	create_executable('agents/PassengerWatchdog',
+file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 		'ext/common/Watchdog.cpp',
 		"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 		"#{LIBCOMMON} " <<
@@ -50,9 +57,9 @@ dependencies = [
 	LIBBOOST_OXT,
 	:libev
 ]
-file 'agents/PassengerLoggingAgent' => dependencies do
-	sh "mkdir -p agents" if !File.directory?("agents")
-	create_executable('agents/PassengerLoggingAgent',
+file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	create_executable(AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
 		'ext/common/LoggingAgent/Main.cpp',
 		"-Iext -Iext/common #{LIBEV_CFLAGS} " <<
 		"#{PlatformInfo.curl_flags} " <<
@@ -68,6 +75,6 @@ file 'agents/PassengerLoggingAgent' => dependencies do
 		"#{EXTRA_LDFLAGS}")
 end
 
-task :clean => 'common:clean' do
-	sh "rm -f agents/PassengerWatchdog agents/PassengerLoggingAgent"
+task 'common:clean' do
+	sh "rm -f #{AGENT_OUTPUT_DIR}PassengerWatchdog #{AGENT_OUTPUT_DIR}PassengerLoggingAgent"
 end

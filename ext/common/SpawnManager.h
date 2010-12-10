@@ -56,6 +56,7 @@
 #include "Logging.h"
 #include "Utils/Base64.h"
 #include "Utils/SystemTime.h"
+#include "Utils/IOUtils.h"
 
 namespace Passenger {
 
@@ -233,23 +234,22 @@ private:
 			serverSocket.close();
 			
 			// Pass arguments to spawn server.
-			MessageChannel ownerSocketChannel(ownerSocket);
-			ownerSocketChannel.writeRaw(socketFilename + "\n");
-			ownerSocketChannel.writeRaw(socketPassword + "\n");
-			ownerSocketChannel.writeRaw(generation->getPath() + "\n");
+			writeExact(ownerSocket, socketFilename + "\n");
+			writeExact(ownerSocket, socketPassword + "\n");
+			writeExact(ownerSocket, generation->getPath() + "\n");
 			if (analyticsLogger != NULL) {
-				ownerSocketChannel.writeRaw(analyticsLogger->getAddress() + "\n");
-				ownerSocketChannel.writeRaw(analyticsLogger->getUsername() + "\n");
-				ownerSocketChannel.writeRaw(Base64::encode(analyticsLogger->getPassword()) + "\n");
-				ownerSocketChannel.writeRaw(analyticsLogger->getNodeName() + "\n");
+				writeExact(ownerSocket, analyticsLogger->getAddress() + "\n");
+				writeExact(ownerSocket, analyticsLogger->getUsername() + "\n");
+				writeExact(ownerSocket, Base64::encode(analyticsLogger->getPassword()) + "\n");
+				writeExact(ownerSocket, analyticsLogger->getNodeName() + "\n");
 			} else {
-				ownerSocketChannel.writeRaw("\n");
-				ownerSocketChannel.writeRaw("\n");
-				ownerSocketChannel.writeRaw("\n");
-				ownerSocketChannel.writeRaw("\n");
+				writeExact(ownerSocket, "\n");
+				writeExact(ownerSocket, "\n");
+				writeExact(ownerSocket, "\n");
+				writeExact(ownerSocket, "\n");
 			}
-			ownerSocketChannel.writeRaw(toString(logLevel) + "\n");
-			ownerSocketChannel.writeRaw(debugLogFile + "\n");
+			writeExact(ownerSocket, toString(logLevel) + "\n");
+			writeExact(ownerSocket, debugLogFile + "\n");
 			
 			this->ownerSocket    = ownerSocket;
 			this->socketFilename = socketFilename;

@@ -27,21 +27,28 @@
 #include <boost/thread.hpp>
 
 #include <cassert>
+#include <cstdlib>
 #include <cstring>
+#include <cerrno>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/resource.h>
 #include <libgen.h>
 #include <fcntl.h>
+#include <poll.h>
+#include <dirent.h>
 #include <limits.h>
-#include "FileDescriptor.h"
-#include "MessageChannel.h"
-#include "MessageServer.h"
-#include "ResourceLocator.h"
-#include "Exceptions.h"
-#include "Utils.h"
-#include "Utils/Base64.h"
-#include "Utils/CachedFileStat.hpp"
-#include "Utils/StrIntUtils.h"
-
-#define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
+#include <unistd.h>
+#include <signal.h>
+#include <FileDescriptor.h>
+#include <MessageChannel.h>
+#include <MessageServer.h>
+#include <ResourceLocator.h>
+#include <Exceptions.h>
+#include <Utils.h>
+#include <Utils/Base64.h>
+#include <Utils/CachedFileStat.hpp>
+#include <Utils/StrIntUtils.h>
 
 #ifndef HOST_NAME_MAX
 	#if defined(_POSIX_HOST_NAME_MAX)
@@ -51,6 +58,11 @@
 	#else
 		#define HOST_NAME_MAX 255
 	#endif
+#endif
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__sun)
+	// Introduced in Solaris 9. Let's hope nobody actually uses
+	// a version that doesn't support this.
+	#define HAS_CLOSEFROM
 #endif
 
 namespace Passenger {
@@ -169,7 +181,7 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 		}
 		
 		try {
-			MessageChannel(fd).writeRaw(contents);
+			writeExact(fd, contents);
 			fd.close();
 		} catch (const SystemException &e) {
 			throw FileSystemException("Cannot write to file " + filename,
@@ -672,8 +684,288 @@ getSignalName(int sig) {
 		return "SIGUSR1";
 	case SIGUSR2:
 		return "SIGUSR2";
+	#ifdef SIGEMT
+		case SIGEMT:
+			return "SIGEMT";
+	#endif
+	#ifdef SIGINFO
+		case SIGINFO:
+			return "SIGINFO";
+	#endif
 	default:
 		return toString(sig);
+	}
+}
+
+void
+resetSignalHandlersAndMask() {
+	sigset_t signal_set;
+	int ret;
+	
+	sigemptyset(&signal_set);
+	do {
+		ret = sigprocmask(SIG_SETMASK, &signal_set, NULL);
+	} while (ret == -1 && errno == EINTR);
+	
+	struct sigaction action;
+	action.sa_handler = SIG_DFL;
+	action.sa_flags   = SA_RESTART;
+	sigemptyset(&action.sa_mask);
+	sigaction(SIGHUP,  &action, NULL);
+	sigaction(SIGINT,  &action, NULL);
+	sigaction(SIGQUIT, &action, NULL);
+	sigaction(SIGILL,  &action, NULL);
+	sigaction(SIGTRAP, &action, NULL);
+	sigaction(SIGABRT, &action, NULL);
+	#ifdef SIGEMT
+		sigaction(SIGEMT,  &action, NULL);
+	#endif
+	sigaction(SIGFPE,  &action, NULL);
+	sigaction(SIGBUS,  &action, NULL);
+	sigaction(SIGSEGV, &action, NULL);
+	sigaction(SIGSYS,  &action, NULL);
+	sigaction(SIGPIPE, &action, NULL);
+	sigaction(SIGALRM, &action, NULL);
+	sigaction(SIGTERM, &action, NULL);
+	sigaction(SIGURG,  &action, NULL);
+	sigaction(SIGSTOP, &action, NULL);
+	sigaction(SIGTSTP, &action, NULL);
+	sigaction(SIGCONT, &action, NULL);
+	sigaction(SIGCHLD, &action, NULL);
+	#ifdef SIGINFO
+		sigaction(SIGINFO, &action, NULL);
+	#endif
+	sigaction(SIGUSR1, &action, NULL);
+	sigaction(SIGUSR2, &action, NULL);
+}
+
+// Async-signal safe way to get the current process's hard file descriptor limit.
+static int
+getFileDescriptorLimit() {
+	long long sysconfResult = sysconf(_SC_OPEN_MAX);
+	
+	struct rlimit rl;
+	long long rlimitResult;
+	if (getrlimit(RLIMIT_NOFILE, &rl) == -1) {
+		rlimitResult = 0;
+	} else {
+		rlimitResult = (long long) rl.rlim_max;
+	}
+	
+	long result;
+	if (sysconfResult > rlimitResult) {
+		result = sysconfResult;
+	} else {
+		result = rlimitResult;
+	}
+	if (result < 0) {
+		// Both calls returned errors.
+		result = 9999;
+	} else if (result < 2) {
+		// The calls reported broken values.
+		result = 2;
+	}
+	return result;
+}
+
+// Async-signal safe function to get the highest file
+// descriptor that the process is currently using.
+// See also http://stackoverflow.com/questions/899038/getting-the-highest-allocated-file-descriptor
+static int
+getHighestFileDescriptor() {
+#if defined(F_MAXFD)
+	int ret;
+	
+	do {
+		ret = fcntl(0, F_MAXFD);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1) {
+		ret = getFileDescriptorLimit();
+	}
+	return ret;
+	
+#else
+	int p[2], ret, flags;
+	pid_t pid = -1;
+	int result = -1;
+	
+	/* Since opendir() may not be async signal safe and thus may lock up
+	 * or crash, we use it in a child process which we kill if we notice
+	 * that things are going wrong.
+	 */
+	
+	// Make a pipe.
+	p[0] = p[1] = -1;
+	do {
+		ret = pipe(p);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1) {
+		goto done;
+	}
+	
+	// Make the read side non-blocking.
+	do {
+		flags = fcntl(p[0], F_GETFL);
+	} while (flags == -1 && errno == EINTR);
+	if (flags == -1) {
+		goto done;
+	}
+	do {
+		fcntl(p[0], F_SETFL, flags | O_NONBLOCK);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1) {
+		goto done;
+	}
+	
+	do {
+		pid = fork();
+	} while (pid == -1 && errno == EINTR);
+	
+	if (pid == 0) {
+		// Don't close p[0] here or it might affect the result.
+		
+		resetSignalHandlersAndMask();
+		
+		struct sigaction action;
+		action.sa_handler = _exit;
+		action.sa_flags   = SA_RESTART;
+		sigemptyset(&action.sa_mask);
+		sigaction(SIGSEGV, &action, NULL);
+		sigaction(SIGPIPE, &action, NULL);
+		sigaction(SIGBUS, &action, NULL);
+		sigaction(SIGILL, &action, NULL);
+		sigaction(SIGFPE, &action, NULL);
+		sigaction(SIGABRT, &action, NULL);
+		
+		DIR *dir = opendir("/dev/fd");
+		if (dir == NULL) {
+			dir = opendir("/proc/self/fd");
+			if (dir == NULL) {
+				_exit(1);
+			}
+		}
+		
+		struct dirent *ent;
+		union {
+			int highest;
+			char data[sizeof(int)];
+		} u;
+		u.highest = -1;
+		
+		while ((ent = readdir(dir)) != NULL) {
+			if (ent->d_name[0] != '.') {
+				int number = atoi(ent->d_name);
+				if (number > u.highest) {
+					u.highest = number;
+				}
+			}
+		}
+		if (u.highest != -1) {
+			ssize_t ret, written = 0;
+			do {
+				ret = write(p[1], u.data + written, sizeof(int) - written);
+				if (ret == -1) {
+					_exit(1);
+				}
+				written += ret;
+			} while (written < (ssize_t) sizeof(int));
+		}
+		closedir(dir);
+		_exit(0);
+		
+	} else if (pid == -1) {
+		goto done;
+		
+	} else {
+		do {
+			ret = close(p[1]);
+		} while (ret == -1 && errno == EINTR);
+		p[1] = -1;
+		
+		union {
+			int highest;
+			char data[sizeof(int)];
+		} u;
+		ssize_t ret, bytesRead = 0;
+		struct pollfd pfd;
+		pfd.fd = p[0];
+		pfd.events = POLLIN;
+		
+		do {
+			do {
+				// The child process must finish within 30 ms, otherwise
+				// we might as well query sysconf.
+				ret = poll(&pfd, 1, 30);
+			} while (ret == -1 && errno == EINTR);
+			if (ret <= 0) {
+				goto done;
+			}
+			
+			do {
+				ret = read(p[0], u.data + bytesRead, sizeof(int) - bytesRead);
+			} while (ret == -1 && ret == EINTR);
+			if (ret == -1) {
+				if (errno != EAGAIN) {
+					goto done;
+				}
+			} else if (ret == 0) {
+				goto done;
+			} else {
+				bytesRead += ret;
+			}
+		} while (bytesRead < (ssize_t) sizeof(int));
+		
+		result = u.highest;
+		goto done;
+	}
+
+done:
+	if (p[0] != -1) {
+		do {
+			ret = close(p[0]);
+		} while (ret == -1 && errno == EINTR);
+	}
+	if (p[1] != -1) {
+		do {
+			close(p[1]);
+		} while (ret == -1 && errno == EINTR);
+	}
+	if (pid != -1) {
+		do {
+			ret = kill(pid, SIGKILL);
+		} while (ret == -1 && errno == EINTR);
+		do {
+			ret = waitpid(pid, NULL, 0);
+		} while (ret == -1 && errno == EINTR);
+	}
+	
+	if (result == -1) {
+		result = getFileDescriptorLimit();
+	}
+	return result;
+#endif
+}
+
+void
+closeAllFileDescriptors(int lastToKeepOpen) {
+	#if defined(F_CLOSEM)
+		int ret;
+		do {
+			ret = fcntl(fd, F_CLOSEM, lastToKeepOpen + 1);
+		} while (ret == -1 && errno == EINTR);
+		if (ret != -1) {
+			return;
+		}
+	#elif defined(HAS_CLOSEFROM)
+		closefrom(lastToKeepOpen + 1);
+		return;
+	#endif
+	
+	for (int i = getHighestFileDescriptor(); i > lastToKeepOpen; i--) {
+		int ret;
+		do {
+			ret = close(i);
+		} while (ret == -1 && errno == EINTR);
 	}
 }
 

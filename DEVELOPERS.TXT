@@ -27,7 +27,8 @@ The following software is optional:
 
 Run the following command to compile everything:
 
- rake
+ rake apache
+ rake nginx
 
 == Directory structure
 
@@ -43,7 +44,9 @@ The most important directories are:
 [ ext/common ]
   Source code shared by the Apache and Nginx modules.
 [ bin ]
-  Executables.
+  User executables.
+[ helper-scripts ]
+  Scripts used during runtime, but not directly executed by the user.
 [ doc ]
   Various documentation.
 [ test ]
@@ -62,14 +65,14 @@ Less important directories:
   functionality necessary for writing robust server software. It provides
   things like support for interruptable system calls and portable backtraces
   for C++. Boost was modified to make use of the functionality provided by OXT.
-[ benchmark ]
-  Benchmark tools.
+[ dev ]
+  Tools for Phusion Passenger developers. Not used during production.
+[ resources ]
+  Various resource files, used during production.
 [ debian ]
   Debian packaging files.
 [ man ]
   Man pages.
-[ misc ]
-  Miscellaneous tools.
 [ build ]
   Rake tasks used by the build system.
 

@@ -115,6 +115,28 @@ public:
 	}
 	
 	/**
+	 * Returns the amount of time that has elapsed since the timer was last started,
+	 * in microseconds. If the timer is currently stopped, then 0 is returned.
+	 */
+	unsigned long long usecElapsed() const {
+		lock_guard<boost::mutex> l(lock);
+		if (startTime.tv_sec == 0 && startTime.tv_usec == 0) {
+			return 0;
+		} else {
+			struct timeval t;
+			unsigned long long now, beginning;
+			int ret;
+			
+			do {
+				ret = gettimeofday(&t, NULL);
+			} while (ret == -1 && errno == EINTR);
+			now = (unsigned long long) t.tv_sec * 1000000 + t.tv_usec;
+			beginning = (unsigned long long) startTime.tv_sec * 1000000 + startTime.tv_usec;
+			return now - beginning;
+		}
+	}
+	
+	/**
 	 * Wait until <em>time</em> miliseconds have elapsed since the timer
 	 * was last started.
 	 */

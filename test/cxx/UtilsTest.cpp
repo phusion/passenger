@@ -1,7 +1,6 @@
 #include "TestSupport.h"
 #include "Utils.h"
 #include "Utils/StrIntUtils.h"
-#include "Utils/IOUtils.h"
 #include "Utils/MemZeroGuard.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -316,9 +315,9 @@ namespace tut {
 		stat("tmp.dir/foo", &buf);
 		stat("tmp.dir/foo/bar", &buf2);
 		ensure_equals(buf.st_mode, buf2.st_mode);
-		ensure_equals(buf.st_mode & 0xFFF,
-			S_IRUSR | S_IWUSR | S_IXUSR | S_ISUID |
-			S_IROTH | S_IXOTH);
+		ensure_equals((mode_t) (buf.st_mode & 0xFFF),
+			(mode_t) (S_IRUSR | S_IWUSR | S_IXUSR | S_ISUID |
+			S_IROTH | S_IXOTH));
 	}
 	
 	TEST_METHOD(43) {
@@ -466,50 +465,9 @@ namespace tut {
 		ensure_equals(stringToLL("    -5abcdef1234"), -5ll);
 	}
 	
-	/***** Test getSocketAddressType() *****/
-	
-	TEST_METHOD(51) {
-		ensure_equals(getSocketAddressType(""), SAT_UNKNOWN);
-		ensure_equals(getSocketAddressType("/foo.socket"), SAT_UNKNOWN);
-		ensure_equals(getSocketAddressType("unix:"), SAT_UNKNOWN);
-		ensure_equals(getSocketAddressType("unix:/"), SAT_UNIX);
-		ensure_equals(getSocketAddressType("unix:/foo.socket"), SAT_UNIX);
-		ensure_equals(getSocketAddressType("tcp:"), SAT_UNKNOWN);
-		ensure_equals(getSocketAddressType("tcp://"), SAT_UNKNOWN);
-		// Doesn't check whether it contains port
-		ensure_equals(getSocketAddressType("tcp://127.0.0.1"), SAT_TCP);
-		ensure_equals(getSocketAddressType("tcp://127.0.0.1:80"), SAT_TCP);
-	}
-	
-	TEST_METHOD(52) {
-		ensure_equals(parseUnixSocketAddress("unix:/foo.socket"), "/foo.socket");
-		try {
-			parseUnixSocketAddress("unix:");
-			fail("ArgumentException expected");
-		} catch (const ArgumentException &e) {
-			// Pass.
-		}
-	}
-	
-	TEST_METHOD(53) {
-		string host;
-		unsigned short port;
-		
-		parseTcpSocketAddress("tcp://127.0.0.1:80", host, port);
-		ensure_equals(host, "127.0.0.1");
-		ensure_equals(port, 80);
-		
-		try {
-			parseTcpSocketAddress("tcp://", host, port);
-			fail("ArgumentException expected");
-		} catch (const ArgumentException &e) {
-			// Pass.
-		}
-	}
-	
 	/***** Test cEscapeString() *****/
 	
-	TEST_METHOD(54) {
+	TEST_METHOD(51) {
 		ensure_equals(cEscapeString(""), "");
 		ensure_equals(cEscapeString("abcdXYZ123!?"), "abcdXYZ123!?");
 		ensure_equals(cEscapeString("foo\n"), "foo\\n");
@@ -517,5 +475,17 @@ namespace tut {
 		ensure_equals(cEscapeString(StaticString("\0\x1\x2\x3\x4\x5\x6\x7\x8\x9", 10)),
 			"\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t");
 		ensure_equals(cEscapeString("\xFF\xFE\t\xD0"), "\\xFF\\xFE\\t\\xD0");
+	}
+	
+	/***** Test escapeHTML() *****/
+	
+	TEST_METHOD(52) {
+		const char weird[] = "Weird \x01\x00 characters?";
+		ensure_equals(escapeHTML(""), "");
+		ensure_equals(escapeHTML("hello\n\r\t WORLD!"), "hello\n\r\t WORLD!");
+		ensure_equals(escapeHTML("<b>bold</b>"), "&lt;b&gt;bold&lt;/b&gt;");
+		ensure_equals(escapeHTML(StaticString(weird, sizeof(weird) - 1)),
+			"Weird &#1;&#0; characters?");
+		ensure_equals(escapeHTML("UTF-8: ☃ ☀; ☁ ☂\x01"), "UTF-8: ☃ ☀; ☁ ☂&#1;");
 	}
 }

@@ -827,8 +827,14 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
          && clcf->name.data[clcf->name.len - 1] == '/') {
             clcf->auto_redirect = 1;
         }
-    } else {
+    } else if (ngx_strcasecmp(value[1].data, (u_char *) "off") == 0) {
         passenger_conf->enabled = 0;
+    } else {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+            "\"passenger_enabled\" must be either set to \"on\" "
+            "or \"off\"");
+
+        return NGX_CONF_ERROR;
     }
 
     return NGX_CONF_OK;

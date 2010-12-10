@@ -272,22 +272,6 @@ public:
 			return NULL;
 		};
 	}
-	
-	/**
-	 * Returns the environment under which the application should be spawned.
-	 *
-	 * @throws FileSystemException An error occured while examening the filesystem.
-	 */
-	const char *getEnvironment() {
-		switch (getApplicationType()) {
-		case RAILS:
-			return config->getRailsEnv();
-		case RACK:
-			return config->getRackEnv();
-		default:
-			return "production";
-		}
-	}
 };
 
 } // namespace Passenger
