@@ -1,18 +1,25 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (C) 2010  Phusion
+#  Copyright (c) 2010 Phusion
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; version 2 of the License.
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  You should have received a copy of the GNU General Public License along
-#  with this program; if not, write to the Free Software Foundation, Inc.,
-#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
 
 require 'rubygems'
 require 'pathname'
@@ -59,6 +66,19 @@ end
 
 #################################################
 
+if string_option('OUTPUT_DIR')
+	OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
+else
+	OUTPUT_DIR = ""
+end
+AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "agents") + "/"
+COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "ext/common") + "/"
+APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "ext/apache2") + "/"
+LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "ext/libev") + "/"
+ruby_extension_archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
+RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
+	OUTPUT_DIR + "ext/ruby/" + ruby_extension_archdir) + "/"
+
 LIBEXT = PlatformInfo.library_extension
 
 # Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
@@ -76,6 +96,10 @@ if boolean_option('STDERR_TO_STDOUT')
 	$stderr = $stdout
 end
 
-if boolean_option('CACHING', true)
-	PlatformInfo.cache_dir = File.expand_path("cache", File.dirname(__FILE__))
+if boolean_option('CACHING', true) && !boolean_option('RELEASE')
+	if OUTPUT_DIR.empty?
+		PlatformInfo.cache_dir = File.expand_path("cache", File.dirname(__FILE__))
+	else
+		PlatformInfo.cache_dir = OUTPUT_DIR + "cache"
+	end
 end

@@ -22,11 +22,13 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#include "Exceptions.h"
-#include "StrIntUtils.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
+#include <Utils/utf8.h>
+#include <Exceptions.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 
@@ -51,15 +53,6 @@ startsWith(const StaticString &str, const StaticString &substr) {
 	} else {
 		return false;
 	}
-}
-
-string
-toLowerCase(const StaticString &str) {
-	string result(str.size(), '\0');
-	for (string::size_type i = 0; i < str.size(); i++) {
-		result[i] = tolower(str[i]);
-	}
-	return result;
 }
 
 void
@@ -322,6 +315,47 @@ cEscapeString(const StaticString &input) {
 			}
 		}
 		current++;
+	}
+	return result;
+}
+
+string
+escapeHTML(const StaticString &input) {
+	string result;
+	result.reserve(input.size() * 1.25);
+	
+	const char *current = (const char *) input.c_str();
+	const char *end     = current + input.size();
+	
+	while (current < end) {
+		char ch = *current;
+		if (ch & 128) {
+			// Multibyte UTF-8 character.
+			const char *prev = current;
+			utf8::advance(current, 1, end);
+			result.append(prev, current - prev);
+			
+		} else {
+			// ASCII character <= 127.
+			if (ch == '<') {
+				result.append("&lt;");
+			} else if (ch == '>') {
+				result.append("&gt;");
+			} else if (ch == '&') {
+				result.append("&amp;");
+			} else if (ch == '"') {
+				result.append("&quot;");
+			} else if (ch == '\'') {
+				result.append("&apos;");
+			} else if (ch >= 0x21 || ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') {
+				result.append(1, ch);
+			} else {
+				result.append("&#");
+				result.append(toString((int) ((unsigned char) ch)));
+				result.append(";");
+			}
+			current++;
+		}
 	}
 	return result;
 }

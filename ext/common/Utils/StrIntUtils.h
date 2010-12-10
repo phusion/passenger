@@ -64,11 +64,6 @@ string fillInMiddle(unsigned int max, const string &prefix, const string &middle
 bool startsWith(const StaticString &str, const StaticString &substr);
 
 /**
- * Converts the string to lowercase.
- */
-string toLowerCase(const StaticString &str);
-
-/**
  * Split the given string using the given separator.
  *
  * @param str The string to split.
@@ -222,6 +217,14 @@ roundUp(IntegerType number, IntegerType multiple) {
  * e.g. "foo\nbar\0" becomes "foo\\nbar\\0".
  */
 string cEscapeString(const StaticString &input);
+
+/**
+ * Escapes HTML special characters the given input string, which is assumed to
+ * contain UTF-8 data. Returns a UTF-8 encoded string.
+ *
+ * @throws utf8::exception A UTF-8 decoding error occurred.
+ */
+string escapeHTML(const StaticString &input);
 
 } // namespace Passenger
 

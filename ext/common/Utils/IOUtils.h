@@ -30,7 +30,8 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
-#include "../StaticString.h"
+#include <StaticString.h>
+#include <FileDescriptor.h>
 
 namespace Passenger {
 
@@ -91,6 +92,12 @@ bool isLocalSocketAddress(const StaticString &address);
  * @ingroup Support
  */
 void setNonBlocking(int fd);
+
+/**
+ * Try to call the Linux accept4() system call. If the system call is
+ * not available, then -1 is returned and errno is set to ENOSYS.
+ */
+int callAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int options);
 
 /**
  * Resolves the given host name and returns a list of IP addresses.
@@ -194,6 +201,107 @@ int connectToUnixServer(const StaticString &filename);
 int connectToTcpServer(const StaticString &hostname, unsigned int port);
 
 /**
+ * Creates a Unix domain socket pair.
+ *
+ * @throws SystemException
+ * @throws boost::thread_interrupted
+ */
+SocketPair createUnixSocketPair();
+
+/**
+ * Creates a pipe.
+ *
+ * @throws SystemException
+ * @throws boost::thread_interrupted
+ */
+Pipe createPipe();
+
+/**
+ * Waits at most <tt>*timeout</tt> microseconds for the file descriptor to become readable.
+ * Returns true if it become readable within the timeout, false if the timeout expired.
+ *
+ * <tt>*timeout</tt> may be 0, in which case this method will check whether the file
+ * descriptor is readable, and immediately returns without waiting.
+ *
+ * If no exception is thrown, this method deducts the number of microseconds that has
+ * passed from <tt>*timeout</tt>.
+ *
+ * @throws SystemException
+ * @throws boost::thread_interrupted
+ */
+bool waitUntilReadable(int fd, unsigned long long *timeout);
+
+/**
+ * Waits at most <tt>*timeout</tt> microseconds for the file descriptor to become writable.
+ * Returns true if it become writable within the timeout, false if the timeout expired.
+ *
+ * <tt>*timeout</tt> may be 0, in which case this method will check whether the file
+ * descriptor is writable, and immediately returns without waiting.
+ *
+ * If no exception is thrown, this method deducts the number of microseconds that has
+ * passed from <tt>*timeout</tt>.
+ *
+ * @throws SystemException
+ * @throws boost::thread_interrupted
+ */
+bool waitUntilWritable(int fd, unsigned long long *timeout);
+
+/**
+ * Attempts to read exactly <tt>size</tt> bytes of data from the given file
+ * descriptor, and put the result in <tt>buf</tt>. On non-blocking sockets
+ * this function will block by poll()ing the socket.
+ *
+ * @param buf The buffer to place the read data in. This buffer must be at least
+ *            <tt>size</tt> bytes long.
+ * @param size The number of bytes to read.
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on reading the <tt>size</tt> bytes
+ *                of data. If the timeout expired then TimeoutException will be
+ *                thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on reading will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
+ * @return The number of bytes read. This is exactly equal to <em>size</em>,
+ *         except when EOF is encountered prematurely.
+ * @pre buf != NULL
+ * @throws SystemException
+ * @throws TimeoutException Unable to read <tt>size</tt> bytes of data within
+ *                          <tt>timeout</tt> microseconds.
+ * @throws boost::thread_interrupted
+ */
+unsigned int readExact(int fd, void *buf, unsigned int size, unsigned long long *timeout = NULL);
+
+/**
+ * Writes a block of data to the given file descriptor and blocks until everything
+ * is written, even for non-blocking sockets. If not everything can be written (e.g.
+ * because the peer closed the connection before accepting everything) then an
+ * exception will be thrown.
+ *
+ * @note Security guarantee: this method will not copy the data in memory,
+ *       so it's safe to use this method to write passwords to the underlying
+ *       file descriptor.
+ *
+ * @param data The data to send.
+ * @param size The number of bytes in <tt>data</tt>.
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on writing the <tt>size</tt> bytes
+ *                of data. If the timeout expired then TimeoutException will be
+ *                thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on writing will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
+ * @pre data != NULL
+ * @throws SystemException
+ * @throws TimeoutException Unable to write <tt>size</tt> bytes of data within
+ *                          <tt>timeout</tt> microseconds.
+ * @throws boost::thread_interrupted
+ */
+void writeExact(int fd, const void *data, unsigned int size, unsigned long long *timeout = NULL);
+void writeExact(int fd, const StaticString &data, unsigned long long *timeout = NULL);
+
+/**
  * Writes a bunch of data to the given file descriptor using a gathering I/O interface.
  * Instead of accepting a single buffer, this function accepts multiple buffers plus
  * a special 'rest' buffer. The rest buffer is written out first, and the data buffers
@@ -247,6 +355,15 @@ void    gatheredWrite(int fd, const StaticString data[], unsigned int dataCount)
  * Useful for unit tests. Pass NULL to restore back to the real writev().
  */
 void setWritevFunction(WritevFunction func);
+
+/**
+ * Closes the given file descriptor and throws an exception if anything goes wrong.
+ * This function also works around certain close() bugs on certain operating systems.
+ *
+ * @throws SystemException
+ * @throws boost::thread_interrupted
+ */
+void safelyClose(int fd);
 
 } // namespace Passenger
 

@@ -51,6 +51,7 @@
 #include "Utils.h"
 #include "Utils/Base64.h"
 #include "Utils/Timer.h"
+#include "Utils/ScopeGuard.h"
 #include "Utils/IOUtils.h"
 #include "Utils/VariantMap.h"
 
@@ -88,37 +89,6 @@ static EventFd *errorEvent;
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
 
 
-class FailGuard {
-private:
-	function<void ()> func;
-public:
-	FailGuard() { }
-	FailGuard(const function<void ()> &_func): func(_func) { }
-	
-	~FailGuard() {
-		if (func != NULL) {
-			func();
-		}
-	}
-	
-	void runNow() {
-		if (func != NULL) {
-			function<void ()> func = this->func;
-			this->func = NULL;
-			func();
-		}
-	}
-	
-	void set(const function<void ()> &func) {
-		this->func = func;
-	}
-	
-	void clear() {
-		func = NULL;
-	}
-};
-
-
 /**
  * Abstract base class for watching agent processes.
  */
@@ -137,6 +107,7 @@ private:
 				pid = this->pid;
 				lock.unlock();
 				
+				// Process can be started before the watcher thread is launched.
 				if (pid == 0) {
 					pid = start();
 				}
@@ -301,22 +272,19 @@ public:
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		string exeFilename = getExeFilename();
-		int fds[2], e, ret;
+		SocketPair fds;
+		int e, ret;
 		pid_t pid;
 		
 		/* Create feedback fd for this agent process. We'll send some startup
 		 * arguments to this agent process through this fd, and we'll receive
 		 * startup information through it as well.
 		 */
-		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
-			int e = errno;
-			throw SystemException("Cannot create a Unix socket pair", e);
-		}
+		fds = createUnixSocketPair();
 		
 		pid = syscalls::fork();
 		if (pid == 0) {
 			// Child
-			long max_fds, i;
 			
 			/* Make sure file descriptor FEEDBACK_FD refers to the newly created
 			 * feedback fd (fds[1]) and close all other file descriptors.
@@ -345,11 +313,7 @@ public:
 				}
 			}
 			
-			/* Close all file descriptors except 0-FEEDBACK_FD. */
-			max_fds = sysconf(_SC_OPEN_MAX);
-			for (i = FEEDBACK_FD + 1; i < max_fds; i++) {
-				syscalls::close(i);
-			}
+			closeAllFileDescriptors(FEEDBACK_FD);
 			
 			/* Become the process group leader so that the watchdog can kill the
 			 * agent as well as all its descendant processes. */
@@ -366,49 +330,58 @@ public:
 			try {
 				MessageChannel(FEEDBACK_FD).write("exec error",
 					toString(e).c_str(), NULL);
-				_exit(1);
 			} catch (...) {
 				fprintf(stderr, "Passenger Watchdog: could not execute %s: %s (%d)\n",
 					exeFilename.c_str(), strerror(e), e);
 				fflush(stderr);
-				_exit(1);
 			}
+			_exit(1);
 		} else if (pid == -1) {
 			// Error
 			e = errno;
-			syscalls::close(fds[0]);
-			syscalls::close(fds[1]);
 			throw SystemException("Cannot fork a new process", e);
 		} else {
 			// Parent
-			FileDescriptor feedbackFd(fds[0]);
+			FileDescriptor feedbackFd = fds[0];
 			vector<string> args;
 			
-			syscalls::close(fds[1]);
+			fds[1].close();
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
-			FailGuard failGuard(boost::bind(killAndWait, pid));
+			ScopeGuard failGuard(boost::bind(killAndWait, pid));
 			
-			// Send startup arguments.
+			/* Send startup arguments. Ignore EPIPE and ECONNRESET here
+			 * because the child process might have sent an feedback message
+			 * without reading startup arguments.
+			 */
 			try {
 				sendStartupArguments(pid, feedbackFd);
 			} catch (const SystemException &ex) {
-				throw SystemException(string("Unable to start the ") + name() +
-					": an error occurred while sending startup arguments",
-					ex.code());
+				if (ex.code() != EPIPE && ex.code() != ECONNRESET) {
+					throw SystemException(string("Unable to start the ") + name() +
+						": an error occurred while sending startup arguments",
+						ex.code());
+				}
 			}
 			
 			// Now read its feedback.
 			try {
-				if (!MessageChannel(feedbackFd).read(args)) {
-					throw EOFException("");
+				ret = MessageChannel(feedbackFd).read(args);
+			} catch (const SystemException &e) {
+				if (e.code() == ECONNRESET) {
+					ret = false;
+				} else {
+					throw SystemException(string("Unable to start the ") + name() +
+						": unable to read its startup information",
+						e.code());
 				}
-			} catch (const EOFException &e) {
+			}
+			if (!ret) {
 				this_thread::disable_interruption di2;
 				this_thread::disable_syscall_interruption dsi2;
 				int status;
 				
-				/* The feedback fd was closed for an unknown reason.
+				/* The feedback fd was prematurely closed for an unknown reason.
 				 * Did the agent process crash?
 				 *
 				 * We use timedWaitPid() here because if the process crashed
@@ -417,7 +390,7 @@ public:
 				 * message, so we give it some time to print the error
 				 * before we kill it.
 				 */
-				ret = timedWaitPid(pid, &status, 1000);
+				ret = timedWaitPid(pid, &status, 5000);
 				if (ret == 0) {
 					/* Doesn't look like it; it seems it's still running.
 					 * We can't do anything without proper feedback so kill
@@ -425,36 +398,40 @@ public:
 					 */
 					failGuard.runNow();
 					throw RuntimeException(string("Unable to start the ") + name() +
-						": an unknown error occurred during its startup");
+						": it froze and reported an unknown error during its startup");
 				} else if (ret != -1 && WIFSIGNALED(status)) {
 					/* Looks like a crash which caused a signal. */
 					throw RuntimeException(string("Unable to start the ") + name() +
 						": it seems to have been killed with signal " +
 						getSignalName(WTERMSIG(status)) + " during startup");
-				} else {
+				} else if (ret == -1) {
 					/* Looks like it exited after detecting an error. */
 					throw RuntimeException(string("Unable to start the ") + name() +
 						": it seems to have crashed during startup for an unknown reason");
+				} else {
+					/* Looks like it exited after detecting an error, but has an exit code. */
+					throw RuntimeException(string("Unable to start the ") + name() +
+						": it seems to have crashed during startup for an unknown reason, "
+						"with exit code " + toString(WEXITSTATUS(status)));
 				}
-			} catch (const SystemException &e) {
-				throw SystemException(string("Unable to start the ") + name() +
-					": unable to read its startup information",
-					e.code());
-			} catch (const RuntimeException &) {
-				/* Rethrow without killing the PID because the process
-				 * is already dead.
-				 */
-				failGuard.clear();
-				throw;
 			}
 			
 			if (args[0] == "system error before exec") {
 				throw SystemException(string("Unable to start the ") + name() +
 					": " + args[1], atoi(args[2]));
 			} else if (args[0] == "exec error") {
-				throw SystemException(string("Unable to start the ") + name() +
-					" because exec(\"" + getExeFilename() + "\") failed",
-					atoi(args[1]));
+				e = atoi(args[1]);
+				if (e == ENOENT) {
+					throw RuntimeException(string("Unable to start the ") + name() +
+						" because its executable (" + getExeFilename() + ") "
+						"doesn't exist. This probably means that your "
+						"Phusion Passenger installation is broken or "
+						"incomplete. Please reinstall Phusion Passenger");
+				} else {
+					throw SystemException(string("Unable to start the ") + name() +
+						" because exec(\"" + getExeFilename() + "\") failed",
+						atoi(args[1]));
+				}
 			} else if (!processStartupInfo(pid, feedbackFd, args)) {
 				throw RuntimeException(string("The ") + name() +
 					" sent an unknown startup info message '" +
@@ -540,7 +517,7 @@ public:
 	}
 	
 	/**
-	 * Returns the agent process feedback fd, or NULL if the agent process
+	 * Returns the agent process feedback fd, or -1 if the agent process
 	 * hasn't been started yet. Can be used to check whether this agent process
 	 * has exited without using waitpid().
 	 */
@@ -681,13 +658,8 @@ private:
 			if (pid == 0) {
 				// Child
 				int prio, ret, e;
-				long max_fds, i;
 				
-				// Close all unnecessary file descriptors.
-				max_fds = sysconf(_SC_OPEN_MAX);
-				for (i = 3; i < max_fds; i++) {
-					syscalls::close(i);
-				}
+				closeAllFileDescriptors(2);
 				
 				// Make process nicer.
 				do {
@@ -919,11 +891,6 @@ forceAllAgentsShutdown(vector<AgentWatcher *> &watchers) {
 
 int
 main(int argc, char *argv[]) {
-	/* Become the session leader so that Apache can't kill this
-	 * watchdog with killpg() during shutdown, and so that a
-	 * Ctrl-C only affects the web server.
-	 */
-	setsid();
 	disableOomKiller();
 	
 	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");

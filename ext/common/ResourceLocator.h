@@ -26,58 +26,108 @@
 #define _PASSENGER_RESOURCE_LOCATOR_H_
 
 #include <string>
-#include "Utils.h"
+#include <IniFile.h>
+#include <Exceptions.h>
+#include <Utils.h>
 
 namespace Passenger {
 
+using namespace boost;
+
+
+/**
+ * Locates various Phusion Passenger resources on the filesystem.
+ */
 class ResourceLocator {
 private:
-	string root;
-	bool nativelyPackaged;
+	string agentsDir;
+	string helperScriptsDir;
+	string resourcesDir;
+	string docDir;
+	string rubyLibDir;
+	string compilableSourceDir;
+	string apache2Module;
 	
-public:
-	ResourceLocator(const string &passengerRoot) {
-		root = passengerRoot;
-		nativelyPackaged = !fileExists(root + "/Rakefile") ||
-			!fileExists(root + "/DEVELOPERS.TXT");
+	string getOption(const string &file, const IniFileSectionPtr &section, const string &key) const {
+		if (section->hasKey(key)) {
+			return section->get(key);
+		} else {
+			throw RuntimeException("Option '" + key + "' missing in file " + file);
+		}
 	}
 	
-	string getSourceRoot() const {
-		if (nativelyPackaged) {
-			return "/usr/lib/phusion-passenger/source";
+public:
+	ResourceLocator(const string &rootOrFile) {
+		if (getFileType(rootOrFile) == FT_DIRECTORY) {
+			string root = rootOrFile;
+			bool nativelyPackaged = !fileExists(root + "/Rakefile") ||
+				!fileExists(root + "/DEVELOPERS.TXT");
+			
+			if (nativelyPackaged) {
+				agentsDir           = "/usr/lib/phusion-passenger/agents";
+				helperScriptsDir    = "/usr/share/phusion-passenger/helper-scripts";
+				resourcesDir        = "/usr/share/phusion-passenger";
+				docDir              = "/usr/share/doc/phusion-passenger";
+				rubyLibDir          = "";
+				compilableSourceDir = "/usr/share/phusion-passenger/compilable-source";
+				apache2Module       = "/usr/lib/apache2/modules/mod_passenger.so";
+			} else {
+				agentsDir           = root + "/agents";
+				helperScriptsDir    = root + "/helper-scripts";
+				resourcesDir        = root + "/resources";
+				docDir              = root + "/doc";
+				rubyLibDir          = root + "/lib";
+				compilableSourceDir = root;
+				apache2Module       = root + "ext/apache2/mod_passenger.so";
+			}
+			
 		} else {
-			return root;
+			string file = rootOrFile;
+			IniFileSectionPtr options = IniFile(file).section("locations");
+			agentsDir           = getOption(file, options, "agents");
+			helperScriptsDir    = getOption(file, options, "helper_scripts");
+			resourcesDir        = getOption(file, options, "resources");
+			docDir              = getOption(file, options, "doc");
+			rubyLibDir          = getOption(file, options, "rubylib");
+			compilableSourceDir = getOption(file, options, "compilable_source");
+			apache2Module       = getOption(file, options, "apache2_module");
 		}
 	}
 	
 	string getAgentsDir() const {
-		if (nativelyPackaged) {
-			return "/usr/lib/phusion-passenger/agents";
-		} else {
-			return root + "/agents";
-		}
+		return agentsDir;
 	}
 	
 	string getHelperScriptsDir() const {
-		if (nativelyPackaged) {
-			return "/usr/share/phusion-passenger/helper-scripts";
-		} else {
-			return root + "/helper-scripts";
-		}
+		return helperScriptsDir;
 	}
 	
 	string getSpawnServerFilename() const {
 		return getHelperScriptsDir() + "/passenger-spawn-server";
 	}
 	
-	string getCertificatesDir() const {
-		if (nativelyPackaged) {
-			return "/usr/share/phusion-passenger/certificates";
-		} else {
-			return root + "/misc";
-		}
+	string getResourcesDir() const {
+		return resourcesDir;
+	}
+	
+	string getDocDir() const {
+		return docDir;
+	}
+	
+	// Can be empty.
+	string getRubyLibDir() const {
+		return rubyLibDir;
+	}
+	
+	string getCompilableSourceDir() const {
+		return compilableSourceDir;
+	}
+	
+	string getApache2ModuleFilename() const {
+		return apache2Module;
 	}
 };
+
 
 }
 

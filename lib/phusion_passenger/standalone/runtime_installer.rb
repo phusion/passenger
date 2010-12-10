@@ -420,7 +420,7 @@ private
 		# Then compile it.
 		yield(0, 1, 2, "Preparing Phusion Passenger...")
 		Dir.chdir(@support_dir) do
-			run_rake_task!("nginx CACHING=no") do |progress, total|
+			run_rake_task!("nginx RELEASE=yes") do |progress, total|
 				yield(progress, total, 2, "Compiling Phusion Passenger...")
 			end
 		end
@@ -429,7 +429,16 @@ private
 	def install_nginx_from_source(source_dir)
 		require 'phusion_passenger/platform_info/compiler'
 		Dir.chdir(source_dir) do
-			command = "sh ./configure '--prefix=#{@nginx_dir}' --without-pcre " <<
+			# RPM thinks it's being smart by scanning binaries for
+			# paths and refusing to create package if it detects any
+			# hardcoded thats that point to /usr or other important
+			# locations. For Phusion Passenger Standalone we do not
+			# care at all what the Nginx configured prefix is because
+			# we pass it its resource locations during runtime, so
+			# work around the problem by configure Nginx with prefix
+			# /tmp.
+			command = "sh ./configure --prefix=/tmp " <<
+				"--without-pcre " <<
 				"--without-http_rewrite_module " <<
 				"--without-http_fastcgi_module " <<
 				"'--add-module=#{@support_dir}/ext/nginx'"
@@ -455,9 +464,12 @@ private
 				exit 1
 			end
 			
-			command = "#{PlatformInfo.gnu_make} install"
-			run_command_with_throbber(command, "Copying files...") do |status_text|
-				yield(1, 1, status_text)
+			yield(1, 1, 'Copying files...')
+			if !system("mkdir -p '#{@nginx_dir}/sbin'") ||
+			   !system("cp -pR objs/nginx '#{@nginx_dir}/sbin/'")
+				STDERR.puts
+				STDERR.puts "*** ERROR: unable to copy Nginx binaries."
+				exit 1
 			end
 		end
 	end

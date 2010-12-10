@@ -1,0 +1,4 @@
+<map id="G" name="G">
+<area shape="rect" id="node1" href="$classPassenger_1_1EventedServer.html" title="A base class for writing single&#45;threaded, evented servers that use non&#45;blocking I/O..." alt="" coords="7,5,196,35"/>
+<area shape="rect" id="node3" href="$classPassenger_1_1EventedMessageServer.html" title="Note when overriding onNewClient: call the parent method first! It does some initialization..." alt="" coords="245,5,493,35"/>
+</map>

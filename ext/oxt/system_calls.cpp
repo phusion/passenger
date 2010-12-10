@@ -291,6 +291,16 @@ syscalls::select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 	return ret;
 }
 
+int
+syscalls::poll(struct pollfd fds[], nfds_t nfds, int timeout) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::poll(fds, nfds, timeout)
+	);
+	return ret;
+}
+
 FILE *
 syscalls::fopen(const char *path, const char *mode) {
 	FILE *ret;

@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <poll.h>
 #include <cstdio>
 #include <ctime>
 #include <cassert>
@@ -147,6 +148,7 @@ namespace oxt {
 		
 		int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
 		           struct timeval *timeout);
+		int poll(struct pollfd fds[], nfds_t nfds, int timeout);
 		
 		FILE *fopen(const char *path, const char *mode);
 		size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);

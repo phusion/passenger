@@ -1,3 +1,29 @@
+#####################################################
+#
+#       !!!!!!! WARNING, READ THIS !!!!!!!
+#
+#
+#  The fact that Phusion Passenger uses Nginx
+#  internally is considered to be an implementation
+#  detail that the user should not bother with.
+#  We may arbitrarily replace the Nginx core with
+#  something else in the future.
+#
+#  As such, we do not support any kind of custom
+#  Nginx configuration in Phusion Passenger Standalone.
+#  If you need additional Nginx modules or if you need
+#  special Nginx configuration or whatever then you
+#  should use Phusion Passenger for Nginx, NOT
+#  Phusion Passenger Standalone.
+#
+#  You are strongly discouraged from editing this file
+#  and treating Phusion Passenger Standalone as an easy
+#  way to start Nginx. We will not provide any support
+#  for this.
+# 
+#####################################################
+
+
 master_process on;
 worker_processes 1;
 daemon on;
@@ -10,9 +36,7 @@ events {
 }
 
 http {
-    include '<%= nginx_dir %>/conf/mime.types';
-    client_body_temp_path '<%= @temp_dir %>/client';
-    proxy_temp_path '<%= @temp_dir %>/proxy';
+    include '<%= PhusionPassenger::RESOURCES_DIR %>/mime.types';
     passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_root '<%= passenger_root %>';
     passenger_abort_on_startup_error on;
@@ -20,6 +44,12 @@ http {
     passenger_max_pool_size <%= @options[:max_pool_size] %>;
     passenger_min_instances <%= @options[:min_instances] %>;
     <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
+    
+    <% if @options[:union_station_gateway_address] %>
+        union_station_gateway_address <%= @options[:union_station_gateway_address] %>;
+        union_station_gateway_port <%= @options[:union_station_gateway_port] %>;
+        union_station_gateway_cert -;
+    <% end %>
     
     default_type application/octet-stream;
     client_max_body_size 50m;
@@ -41,22 +71,24 @@ http {
 
     <% if @options[:ping_port] %>
     server {
-        listen <%= nginx_listen_address(true) %>;
+        listen <%= nginx_listen_address(@options, true) %>;
         root '<%= LIBDIR %>/phusion_passenger/templates/standalone_default_root';
     }
     <% end %>
     
     <% for app in @apps %>
     server {
-        listen <%= @options[:address] %>:<%= @options[:port] %>;
+        listen <%= nginx_listen_address(app) %>;
         server_name <%= app[:server_names].join(' ') %>;
         root '<%= app[:root] %>/public';
         passenger_enabled on;
         rails_env <%= app[:env] %>;
         passenger_spawn_method <%= app[:spawn_method] %>;
         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
-        <% if app[:analytics] %>passenger_analytics on;<% end %>
-        <% if app[:debugger] %>passenger_debugger on;<% end %>
+        <% if app[:union_station_key] %>
+            passenger_analytics on;
+            union_station_key <%= app[:union_station_key] %>;
+        <% end %>
     }
     <% end %>
 }

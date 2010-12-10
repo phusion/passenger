@@ -4,9 +4,6 @@
 #include "Utils/IOUtils.h"
 
 #include <oxt/thread.hpp>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 
 using namespace Passenger;
 using namespace std;
@@ -19,21 +16,23 @@ namespace tut {
 		ev::dynamic_loop eventLoop;
 		ev::async exitWatcher;
 		oxt::thread *thr;
+		string lastErrorMessage;
+		int lastErrorCode;
 		AtomicInt integer;
+		string data;
 		
 		EventedClientTest()
 			: exitWatcher(eventLoop)
 		{
-			int fds[2];
-			
-			socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-			fd1 = fds[0];
-			fd2 = fds[1];
+			SocketPair sockets = createUnixSocketPair();
+			fd1 = sockets.first;
+			fd2 = sockets.second;
 			setNonBlocking(fd2);
 			
 			exitWatcher.set<EventedClientTest, &EventedClientTest::unloop>(this);
 			exitWatcher.start();
 			thr = NULL;
+			lastErrorCode = -1;
 		}
 		
 		~EventedClientTest() {
@@ -49,6 +48,12 @@ namespace tut {
 		void stopEventLoop() {
 			if (thr != NULL) {
 				exitWatcher.send();
+				waitUntilEventLoopExits();
+			}
+		}
+		
+		void waitUntilEventLoopExits() {
+			if (thr != NULL) {
 				thr->join();
 				delete thr;
 				thr = NULL;
@@ -71,6 +76,28 @@ namespace tut {
 		static void setIntToTwo(EventedClient *client) {
 			EventedClientTest *test = (EventedClientTest *) client->userData;
 			test->integer = 2;
+		}
+		
+		static void saveSystemError(EventedClient *client, const string &message, int code) {
+			EventedClientTest *self = (EventedClientTest *) client->userData;
+			self->lastErrorMessage = message;
+			self->lastErrorCode = code;
+		}
+		
+		static void exitEventLoop(EventedClient *client) {
+			EventedClientTest *self = (EventedClientTest *) client->userData;
+			self->eventLoop.unloop();
+		}
+		
+		static void readAndExitOnEof(EventedClient *client) {
+			EventedClientTest *self = (EventedClientTest *) client->userData;
+			char buf[1024];
+			ssize_t ret = read(client->fd, buf, sizeof(buf));
+			if (ret <= 0) {
+				self->eventLoop.unloop();
+			} else {
+				self->data.append(buf, ret);
+			}
 		}
 	};
 
@@ -128,7 +155,7 @@ namespace tut {
 		
 		char buf[100];
 		memset(buf, 0, sizeof(buf));
-		ensure(MessageChannel(fd1).readRaw(buf, strlen("hello world")));
+		ensure(readExact(fd1, buf, strlen("hello world")));
 		ensure_equals(string(buf), "hello world");
 	}
 	
@@ -154,7 +181,7 @@ namespace tut {
 		
 		char buf[str.size()];
 		memset(buf, 0, sizeof(buf));
-		ensure(MessageChannel(fd1).readRaw(buf, str.size()));
+		ensure(readExact(fd1, buf, str.size()));
 		ensure(memcmp(buf, str.c_str(), str.size()) == 0);
 	}
 	
@@ -182,7 +209,7 @@ namespace tut {
 		
 		char buf[str.size()];
 		memset(buf, 0, sizeof(buf));
-		ensure(MessageChannel(fd1).readRaw(buf, str.size()));
+		ensure(readExact(fd1, buf, str.size()));
 		ensure(memcmp(buf, str.c_str(), str.size()) == 0);
 		
 		// readWatcher will become active again after all pending data has been sent.
@@ -238,7 +265,7 @@ namespace tut {
 		);
 		
 		memset(buf, 0, sizeof(buf));
-		ensure(MessageChannel(fd1).readRaw(buf, str.size() - 1));
+		ensure(readExact(fd1, buf, str.size() - 1));
 		ensure(memcmp(buf, str.c_str() + 1, str.size() - 1) == 0);
 		
 		ensure_equals(read(fd1, buf, 1), (ssize_t) 0);
@@ -378,9 +405,119 @@ namespace tut {
 		EVENT_LOOP_GUARD;
 		
 		char buf[str.size()];
-		MessageChannel(fd1).readRaw(buf, str.size());
+		readExact(fd1, buf, str.size());
 		EVENTUALLY(2,
 			result = integer == 2;
 		);
+	}
+	
+	TEST_METHOD(17) {
+		// EventedClient.write() ensures that the given data is written
+		// after what's already in the outbox.
+		EventedClient client(eventLoop, fd2);
+		string header(1024 * 4, 'x');
+		string body(1024 * 128, 'y');
+		char buf[header.size() + body.size() + 1024];
+		
+		client.write(header);
+		client.write(body);
+		ensure(client.pendingWrites() > 0);
+		
+		ensure_equals(readExact(fd1, buf, header.size()), (unsigned int) header.size());
+		ensure_equals(StaticString(buf, header.size()), header);
+		
+		client.write("hello world");
+		
+		startEventLoop();
+		EVENT_LOOP_GUARD;
+		
+		unsigned int len = body.size() + strlen("hello world");
+		ensure_equals(readExact(fd1, buf, len), len);
+		ensure_equals(StaticString(buf, len), body + "hello world");
+	}
+	
+	TEST_METHOD(18) {
+		// If writeErrorAction is DISCONNECT_FULL then
+		// EventedClient.write(), upon encountering a write error,
+		// will forcefully disconnect the connection.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.writeErrorAction = EventedClient::DISCONNECT_FULL;
+		client.onSystemError = saveSystemError;
+		fd1.close();
+		client.write("hello");
+		ensure_equals(lastErrorCode, EPIPE);
+		ensure_equals(client.fd, -1);
+	}
+	
+	TEST_METHOD(19) {
+		// If writeErrorAction is DISCONNECT_FULL then
+		// the background writer disconnects the connection
+		// on write error.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.writeErrorAction = EventedClient::DISCONNECT_FULL;
+		client.onSystemError = saveSystemError;
+		
+		string str(1024 * 128, 'x');
+		client.write(str);
+		ensure(client.pendingWrites() > 0);
+		
+		fd1.close();
+		client.onDisconnect = exitEventLoop;
+		startEventLoop();
+		waitUntilEventLoopExits();
+		
+		ensure_equals(lastErrorCode, EPIPE);
+		ensure_equals(client.fd, -1);
+	}
+	
+	TEST_METHOD(20) {
+		// If writeErrorAction is DISCONNECT_WRITE then
+		// EventedClient.write(), upon encountering a write error,
+		// will forcefully disconnect the writer side of the
+		// connection but continue allowing reading.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.writeErrorAction = EventedClient::DISCONNECT_WRITE;
+		client.onSystemError = saveSystemError;
+		client.onReadable = readAndExitOnEof;
+		client.notifyReads(true);
+		
+		writeExact(fd1, "world", 5);
+		fd1.close();
+		client.write("hello");
+		
+		startEventLoop();
+		waitUntilEventLoopExits();
+		
+		ensure(client.fd != -1);
+		ensure_equals(data, "world");
+	}
+	
+	TEST_METHOD(21) {
+		// If writeErrorAction is DISCONNECT_WRITE then
+		// the background writer, upon encountering a write error,
+		// will forcefully disconnect the writer side of the
+		// connection but continue allowing reading.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.writeErrorAction = EventedClient::DISCONNECT_WRITE;
+		client.onSystemError = saveSystemError;
+		client.onReadable = readAndExitOnEof;
+		client.notifyReads(true);
+		
+		string str(1024 * 128, 'x');
+		client.write(str);
+		ensure(client.pendingWrites() > 0);
+		
+		writeExact(fd1, "world", 5);
+		fd1.close();
+		
+		startEventLoop();
+		waitUntilEventLoopExits();
+		
+		ensure(client.fd != -1);
+		ensure_equals(data, "world");
 	}
 }

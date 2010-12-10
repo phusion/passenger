@@ -356,6 +356,23 @@ string getHostName();
  */
 string getSignalName(int sig);
 
+/**
+ * Resets the current process's signal handler disposition and signal mask
+ * to default values. One should call this every time one forks a child process;
+ * non-default signal masks/handler dispositions can cause all kinds of weird quirks,
+ * like waitpid() malfunctioning on OS X.
+ *
+ * This function is async-signal safe.
+ */
+void resetSignalHandlersAndMask();
+
+/**
+ * Close all file descriptors that are higher than <em>lastToKeepOpen</em>.
+ * This function is async-signal safe. But make sure there are no other
+ * threads running that might open file descriptors!
+ */
+void closeAllFileDescriptors(int lastToKeepOpen);
+
 
 /**
  * Represents a buffered upload file.

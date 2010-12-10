@@ -171,6 +171,9 @@ private
 	end
 	
 	def write_nginx_config_file
+		require 'phusion_passenger/platform_info/ruby'
+		ensure_directory_exists(@temp_dir)
+		
 		File.open(@config_filename, 'w') do |f|
 			f.chmod(0644)
 			template_filename = File.join(TEMPLATES_DIR, "standalone", "config.erb")
@@ -195,7 +198,7 @@ private
 		else
 			nginx_bin = "#{nginx_dir}/sbin/nginx"
 		end
-		return "#{nginx_bin} -c '#{@config_filename}'"
+		return "#{nginx_bin} -c '#{@config_filename}' -p '#{@temp_dir}/'"
 	end
 	
 	# Returns the port on which to ping Nginx.
@@ -218,7 +221,8 @@ private
 	
 	def create_nginx_controller(extra_options = {})
 		require_daemon_controller
-		@config_filename = "/tmp/passenger-standalone.#{$$}.conf"
+		@temp_dir        = "/tmp/passenger-standalone.#{$$}"
+		@config_filename = "#{@temp_dir}/config"
 		opts = {
 			:identifier    => 'Nginx',
 			:before_start  => method(:write_nginx_config_file),

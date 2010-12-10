@@ -1,24 +1,31 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (C) 2010  Phusion
+#  Copyright (c) 2010 Phusion
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; version 2 of the License.
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  You should have received a copy of the GNU General Public License along
-#  with this program; if not, write to the Free Software Foundation, Inc.,
-#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
 
 desc "Build Nginx helper agent"
 task :nginx => [
-	'agents/nginx/PassengerHelperAgent',
-	'agents/PassengerWatchdog',
-	'agents/PassengerLoggingAgent',
+	AGENT_OUTPUT_DIR + 'nginx/PassengerHelperAgent',
+	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
+	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
 	:native_support
 ]
 
@@ -43,9 +50,10 @@ dependencies = [
 	LIBBOOST_OXT,
 	LIBCOMMON,
 ]
-file 'agents/nginx/PassengerHelperAgent' => dependencies do
-	sh "mkdir -p agents/nginx" if !File.directory?("agents/nginx")
-	create_executable "agents/nginx/PassengerHelperAgent",
+file AGENT_OUTPUT_DIR + 'nginx/PassengerHelperAgent' => dependencies do
+	output_dir = "#{AGENT_OUTPUT_DIR}nginx"
+	sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
+	create_executable "#{output_dir}/PassengerHelperAgent",
 		'ext/nginx/HelperAgent.cpp',
 		"-Iext -Iext/common " <<
 		"#{PlatformInfo.portability_cflags} " <<
@@ -59,6 +67,6 @@ end
 
 task :clean => 'nginx:clean'
 desc "Clean all compiled Nginx files"
-task 'nginx:clean' do
-	sh("rm", "-rf", "agents/nginx/PassengerHelperAgent")
+task 'nginx:clean' => 'common:clean' do
+	sh("rm", "-rf", AGENT_OUTPUT_DIR + "nginx/PassengerHelperAgent")
 end

@@ -47,6 +47,10 @@ def create_executable(target, sources, linkflags = "#{PlatformInfo.portability_c
 	sh "#{CXX} #{sources} -o #{target} #{linkflags}"
 end
 
+def create_c_executable(target, sources, linkflags = "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
+	sh "#{CC} #{sources} -o #{target} #{linkflags}"
+end
+
 def create_shared_library(target, sources, flags = "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
 	if RUBY_PLATFORM =~ /darwin/
 		shlib_flag = "-flat_namespace -bundle -undefined dynamic_lookup"

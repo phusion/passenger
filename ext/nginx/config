@@ -1,12 +1,14 @@
 if ! test -f "$ngx_addon_dir/../common/libpassenger_common.a" || \
    ! test -f "$ngx_addon_dir/../common/libboost_oxt.a"; then
     echo "*** The Phusion Passenger support files are not yet compiled. Compiling them for you... ***"
-    echo "*** Running 'rake nginx' in $ngx_addon_dir... ***"
-    if ! (cd $ngx_addon_dir; rake nginx); then
+    echo "*** Running 'rake nginx RELEASE=yes' in $ngx_addon_dir... ***"
+    if ! cd $ngx_addon_dir; then
         exit 1
-    else
-        echo "*** Phusion Passenger support files have been successfully compiled. ***"
     fi
+    if ! rake nginx RELEASE=yes; then
+        exit 1
+    fi
+    echo "*** Phusion Passenger support files have been successfully compiled. ***"
 fi
 
 ngx_feature="Math library"

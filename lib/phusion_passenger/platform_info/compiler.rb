@@ -22,18 +22,11 @@
 #  THE SOFTWARE.
 
 require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/operating_system'
 
 module PhusionPassenger
 
 module PlatformInfo
-	def self.cc
-		return ENV['CC'] || "gcc"
-	end
-	
-	def self.cxx
-		return ENV['CXX'] || "g++"
-	end
-	
 	def self.gnu_make
 		gmake = find_command('gmake')
 		if !gmake
@@ -77,6 +70,11 @@ module PlatformInfo
 		end
 	end
 	memoize :compiler_visibility_flag_generates_warnings?, true
+	
+	def self.has_math_library?
+		return try_link(:c, "int main() { return 0; }\n", '-lmath')
+	end
+	memoize :has_math_library?, true
 	
 	# Compiler flags that should be used for compiling every C/C++ program,
 	# for portability reasons. These flags should be specified as last
@@ -139,6 +137,10 @@ module PlatformInfo
 			# http://groups.google.com/group/phusion-passenger/browse_thread/thread/aad4bd9d8d200561
 			flags << '-DBOOST_SP_USE_PTHREADS'
 		end
+		
+		flags << '-DHAS_SFENCE' if supports_sfence_instruction?
+		flags << '-DHAS_LFENCE' if supports_lfence_instruction?
+		
 		return flags.compact.join(" ").strip
 	end
 	memoize :portability_cflags, true
@@ -148,10 +150,12 @@ module PlatformInfo
 	# when invoking the linker.
 	def self.portability_ldflags
 		if RUBY_PLATFORM =~ /solaris/
-			return '-lxnet -lrt -lsocket -lnsl -lpthread'
+			result = '-lxnet -lrt -lsocket -lnsl -lpthread'
 		else
-			return '-lpthread'
+			result = '-lpthread'
 		end
+		flags << ' -lmath' if has_math_library?
+		return result
 	end
 	memoize :portability_ldflags
 	
@@ -174,28 +178,6 @@ module PlatformInfo
 			return nil
 		end
 	end
-
-private
-	def self.try_compile(language, source, flags = nil)
-		if language == :c
-			compiler = cc
-		elsif language == :cxx
-			compiler = cxx
-		else
-			raise ArgumentError,"Unsupported language '#{language}'"
-		end
-		filename = File.join("/tmp/passenger-compile-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
-			f.puts(source)
-		end
-		begin
-			return system("(#{compiler} #{flags} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.o") rescue nil
-		end
-	end
-	private_class_method :try_compile
 end
 
 end # module PhusionPassenger

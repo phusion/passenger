@@ -752,7 +752,7 @@ namespace boost {
 
             \param Output An output iterator to which the result will be copied
             \param Input An input string
-            \param N Length of the head.                 
+            \param N Length of the tail.                 
                 For N>=0, at most N characters are extracted.
                 For N<0, size(Input)-|N| characters are extracted.
             \return An output iterator pointing just after the last inserted character or
@@ -797,7 +797,7 @@ namespace boost {
             considered to be the tail. The input sequence is modified in-place.
 
             \param Input An input string
-            \param N Length of the head
+            \param N Length of the tail
                 For N>=0, at most N characters are extracted.
                 For N<0, size(Input)-|N| characters are extracted.
         */

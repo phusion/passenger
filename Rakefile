@@ -20,9 +20,9 @@ source_root = File.expand_path(File.dirname(__FILE__))
 $LOAD_PATH.unshift(source_root)
 $LOAD_PATH.unshift("#{source_root}/lib")
 
+require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
 require 'build/basics'
 require 'build/config'
-require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
 require 'build/common_library'
 require 'build/ruby_extension'
 require 'build/agents'
@@ -36,6 +36,7 @@ require 'build/cxx_tests'
 require 'build/ruby_tests'
 require 'build/integration_tests'
 require 'build/misc'
+require 'build/rpm'
 
 
 #### Default tasks

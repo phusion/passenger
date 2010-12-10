@@ -67,7 +67,7 @@ using namespace oxt;
 class LoggingServer: public EventedMessageServer {
 private:
 	static const int MAX_LOG_SINK_CACHE_SIZE = 512;
-	static const int GARBAGE_COLLECTION_TIMEOUT = 1.25 * 60 * 60;  // 1 hour 15 minutes
+	static const int GARBAGE_COLLECTION_TIMEOUT = (int) (1.25 * 60 * 60);  // 1 hour 15 minutes
 	
 	struct LogSink;
 	typedef shared_ptr<LogSink> LogSinkPtr;
@@ -195,7 +195,7 @@ private:
 		virtual void flush() {
 			if (bufferSize > 0) {
 				lastFlushed = ev_now(server->getLoop());
-				MessageChannel(fd).writeRaw(StaticString(buffer, bufferSize));
+				writeExact(fd, buffer, bufferSize);
 				bufferSize = 0;
 				notifyChanges();
 			}

@@ -203,7 +203,7 @@ public:
 				"already been closed or discarded.");
 		}
 		try {
-			MessageChannel(stream).writeRaw(block, size);
+			writeExact(stream, block, size);
 		} catch (SystemException &e) {
 			e.setBriefMessage("An error occured while sending the "
 				"request body to the request handler");
