@@ -837,7 +837,26 @@ getHighestFileDescriptor() {
 		sigaction(SIGFPE, &action, NULL);
 		sigaction(SIGABRT, &action, NULL);
 		
-		DIR *dir = opendir("/dev/fd");
+		DIR *dir = NULL;
+		#ifdef __APPLE__
+			/* /dev/fd can always be trusted on OS X. */
+			dir = opendir("/dev/fd");
+		#else
+			/* On FreeBSD and possibly other operating systems, /dev/fd only
+			 * works if fdescfs is mounted. If it isn't mounted then /dev/fd
+			 * still exists but always returns [0, 1, 2] and thus can't be
+			 * trusted. If /dev and /dev/fd are on different filesystems
+			 * then that probably means fdescfs is mounted.
+			 */
+			struct stat dirbuf1, dirbuf2;
+			if (stat("/dev", &dirbuf1) == -1
+			 || stat("/dev/fd", &dirbuf2) == -1) {
+				_exit(1);
+			}
+			if (dirbuf1.st_dev != dirbuf2.st_dev) {
+				dir = opendir("/dev/fd");
+			}
+		#endif
 		if (dir == NULL) {
 			dir = opendir("/proc/self/fd");
 			if (dir == NULL) {

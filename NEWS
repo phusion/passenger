@@ -9,6 +9,11 @@ Release 3.0.2
    There was a typo in a NetBSD-specific fcntl() call. It also turns out that
    NetBSD doesn't support some ISO C99 math functions like llroundl(); this
    has been worked around by using other functions. Issue #593.
+ * Fixed file descriptor closing issues on FreeBSD
+   Phusion Passenger child processes didn't correct close file descriptors
+   on FreeBSD because it queries /dev/fd to do that. On FreeBSD /dev/fd
+   only returns meaningful results if fdescfs is mounted, which it isn't
+   by default. Issue #597.
 
 
 Release 3.0.1
