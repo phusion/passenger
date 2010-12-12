@@ -1,3 +1,9 @@
+passenger (3.0.1-1bbox2) hardy; urgency=low
+
+  * Fixed packaging bug with vendored libev
+
+ -- John Leach <john@brightbox.co.uk>  Sun, 12 Dec 2010 16:57:41 +0000
+
 passenger (3.0.1-1bbox1) hardy; urgency=low
 
   * New Upstream Version, 3.0.1
