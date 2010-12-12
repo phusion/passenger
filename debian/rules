@@ -19,6 +19,7 @@ passengermodule = usr/lib/apache2/modules/mod_passenger.so
 
 clean::
 	rake clean
+	rm -f $(CURDIR)/ext/libev/config.*
 
 build/passenger-common build/libapache2-mod-passenger build/passenger-doc::
 	rake fakeroot APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no RELEASE=yes
