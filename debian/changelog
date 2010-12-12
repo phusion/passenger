@@ -1,3 +1,10 @@
+passenger (3.0.1-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 3.0.1
+  * Added 01_add_missing_packaging_constants.patch to fix issue #592
+
+ -- John Leach <john@brightbox.co.uk>  Sun, 12 Dec 2010 14:20:31 +0000
+
 passenger (3.0.0-1bbox3) hardy; urgency=low
 
   * Fixed clean of vendored libev
