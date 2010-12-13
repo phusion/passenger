@@ -1,6 +1,9 @@
 #!/bin/bash -e
 # Checks whether all the prerequities for the package:rpm task are available.
 
+BUILD_VERBOSITY=${BUILD_VERBOSITY:-0}
+[ $BUILD_VERBOSITY -ge 3 ] && set -x
+
 declare -a required_packages=(mock)
 if grep -iq fedora /etc/redhat-release ; then
 		# fedora-packager has rpmbuild-md5 for the SRPM
