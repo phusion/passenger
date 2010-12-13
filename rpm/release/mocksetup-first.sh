@@ -25,6 +25,7 @@ do
 		;;
 	esac
 done
+shift $(($OPTIND - 1))
 
 repo=${1:-/var/lib/mock/passenger-build-repo}
 etc=${2:-/etc/mock}
