@@ -416,7 +416,7 @@ mkdir -p %{buildroot}/%{_var}/log/passenger-analytics
 cp -ra agents %{buildroot}/%{geminstdir}
 
 # PASSENGER STANDALONE (this is going to recompile nginx)
-./bin/passenger package-runtime --nginx-version %{nginx_version} --nginx-tarball %{SOURCE1} %{buildroot}/%{_var}/lib/passenger-standalone
+%{ruby} ./bin/passenger package-runtime --nginx-version %{nginx_version} --nginx-tarball %{SOURCE1} %{buildroot}/%{_var}/lib/passenger-standalone
 # Now unpack the tarballs it just created
 # It's 2am, revisit this insanity in the light of morning
 standalone_dir=$(bash -c 'ls -d $1 | tail -1' -- %{buildroot}/%{_var}/lib/passenger-standalone/%{passenger_version}-*)
