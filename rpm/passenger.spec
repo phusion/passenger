@@ -112,6 +112,7 @@ BuildRequires: curl-devel
 %endif
 BuildRequires: doxygen
 BuildRequires: asciidoc
+BuildRequires: graphviz
 # standaline build deps
 %if %{?fedora:1}%{?!fedora:0}
 BuildRequires: libev-devel
