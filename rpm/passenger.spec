@@ -13,7 +13,7 @@
   %define passenger_version 3.0.1
 %endif
 %if %{?passenger_release:0}%{?!passenger_release:1}
-  %define passenger_release 3%{?dist}
+  %define passenger_release 4%{?dist}
 %endif
 %define passenger_epoch 1
 
@@ -198,7 +198,7 @@ package.
 
 %if !%{only_native_libs}
 
-%package standalone
+%package -n passenger-standalone
 Summary: Standalone Phusion Passenger Server
 Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
@@ -206,7 +206,9 @@ Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires: libev
 %endif
 Epoch: %{passenger_epoch}
-%description standalone
+Obsoletes: rubygem-passenger-standalone
+Provides: rubygem-passenger-standalone
+%description -n passenger-standalone
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
 of Ruby web applications, such as those built on the revolutionary
 Ruby on Rails web framework, a breeze. It follows the usual Ruby on
@@ -567,7 +569,7 @@ rm -rf %{buildroot}
 %{sharedir}/selinux/packages/%{name}/%{name}.pp
 %{_var}/log/passenger-analytics
 
-%files standalone
+%files -n passenger-standalone
 %doc doc/Users\ guide\ Standalone.html
 %doc doc/Users\ guide\ Standalone.txt
 %{_bindir}/passenger
@@ -595,6 +597,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Dec 13 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-4
+- rename rubygem-passenger-standalone to passenger-standalone
+- Add graphviz to the build requirements (for /usr/bin/dot)
+
 * Thu Dec  2 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-3
 - Stop double-packaging files from -native & -native-libs in the base package
 

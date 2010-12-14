@@ -98,7 +98,7 @@ p#tm {
         <div class="or">or</div>
         <div class="cmd">yum install mod_passenger</div>
         <div class="or">or</div>
-        <div class="cmd">yum install rubygem-passenger-standalone</div>
+        <div class="cmd">yum install passenger-standalone</div>
       </div>
 
       <h2>More Info?</h2>
