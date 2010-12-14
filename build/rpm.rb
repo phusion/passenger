@@ -92,7 +92,7 @@ namespace :package do
 			@build_verbosity = %w{-v}
 		else
 			@verbosity = ENV['verbosity'].to_i
-			@build_verbosity = %w{-v} * (@verbosity == 0 ? 1 : @verbosity)
+			@build_verbosity = %w{-v} * (ENV['verbosity'].nil? ? 1 : @verbosity)
 		end
 	end
 end
