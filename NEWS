@@ -5,6 +5,8 @@ Release 3.0.2
    The Nginx compilation process was broken due to not correctly reverting
    the working directory of the Nginx configure script. This has been fixed:
    issue #595.
+ * [Nginx] Fixed crash if passenger_root refers to a nonexistant directory
+   Issue #599.
  * Fixed compilation problems on NetBSD
    There was a typo in a NetBSD-specific fcntl() call. It also turns out that
    NetBSD doesn't support some ISO C99 math functions like llroundl(); this
