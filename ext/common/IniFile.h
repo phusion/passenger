@@ -12,6 +12,7 @@
 #include <cctype>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <Exceptions.h>
 
 namespace Passenger {
 
@@ -295,6 +296,11 @@ public:
 		currentColumn = 1;
 		upcomingTokenPtrIsStale = true;
 		iniFileStream.open(fileName.c_str());
+		if (iniFileStream.fail()) {
+			int e = errno;
+			throw FileSystemException("Cannot open file '" + fileName + "' for reading",
+				e, fileName);
+		}
 	}
 
 	~IniFileLexer() {
@@ -390,7 +396,7 @@ protected:
 		}
 
 		void parseSection() {
-			Token token = acceptAndReturnif (Token::SECTION_NAME);
+			Token token = acceptAndReturnif(Token::SECTION_NAME);
 			acceptIfEOL();
 
 			string sectionName = token.value;
@@ -447,7 +453,9 @@ protected:
 	};
 	
 public:
-	IniFile(const string &iniFileName) : name(iniFileName) {
+	IniFile(const string &iniFileName)
+		: name(iniFileName)
+	{
 		IniFileParser parser(this);
 	}
 

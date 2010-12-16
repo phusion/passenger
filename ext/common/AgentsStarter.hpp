@@ -553,11 +553,19 @@ public:
 				killProcessGroupAndWait(&pid, 5000);
 				guard.clear();
 				if (e == ENOENT) {
+					string passengerRootConfig;
+					if (type == APACHE) {
+						passengerRootConfig = "PassengerRoot";
+					} else {
+						passengerRootConfig = "passenger_root";
+					}
 					throw RuntimeException("Unable to start the Phusion Passenger watchdog "
 						"because its executable (" + watchdogFilename + ") does "
 						"not exist. This probably means that your Phusion Passenger "
-						"installation is broken or incomplete. Please reinstall "
-						"Phusion Passenger");
+						"installation is broken or incomplete, or that your '" +
+						passengerRootConfig + "' directive is set to the wrong value. "
+						"Please reinstall Phusion Passenger or fix your '" +
+						passengerRootConfig + "' directive, whichever is applicable.");
 				} else {
 					throw SystemException("Unable to start the Phusion Passenger watchdog (" +
 						watchdogFilename + ")", e);

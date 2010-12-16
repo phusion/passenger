@@ -58,7 +58,8 @@ private:
 	
 public:
 	ResourceLocator(const string &rootOrFile) {
-		if (getFileType(rootOrFile) == FT_DIRECTORY) {
+		FileType rootOrFileType = getFileType(rootOrFile);
+		if (rootOrFileType == FT_DIRECTORY || rootOrFileType == FT_NONEXISTANT) {
 			string root = rootOrFile;
 			bool nativelyPackaged = !fileExists(root + "/Rakefile") ||
 				!fileExists(root + "/DEVELOPERS.TXT");
