@@ -78,7 +78,7 @@ namespace :package do
 		end
 		FileUtils.cp(Dir["rpm/doc/*.shtml"], repo, :verbose => @verbosity > 0)
 		FileUtils.cp('rpm/doc/example_yum_repository_htaccess', "#{repo}/.htaccess.example", :verbose => @verbosity > 0)
-		FileUtils.cp('rpm/release/RPM-GPG-KEY-stealthymonkeys'. "#{repo}/RPM-GPG-KEY-stealthymonkeys.asc")
+		FileUtils.cp('rpm/release/RPM-GPG-KEY-stealthymonkeys', "#{repo}/RPM-GPG-KEY-stealthymonkeys.asc")
 	end
 
 	task 'rpm_verbosity' do
