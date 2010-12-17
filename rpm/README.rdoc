@@ -22,9 +22,11 @@ Passenger}[http://modrails.org] for Fedora Core 13+, RHEL 5.5+, and CentOS
                   statically linked (nginx does not support dynamically
                   loadable modules)
 
-[rubygem-passenger-standalone] The passenger-standalone server. As of
-			       3.0.0-11 this package is correctly built
-			       and installed and is now safe to use.
+[passenger-standalone] The passenger-standalone server. As of 3.0.0-11 this
+                       package is correctly built and installed and is now
+                       safe to use. This package was renamed from
+                       rubygems-passenger-standalone in 3.0.1-4. No action is
+                       required to upgrade from older packages via yum.
 
 === Supporting Packages
 
