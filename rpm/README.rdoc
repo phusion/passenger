@@ -51,7 +51,7 @@ Passenger}[http://modrails.org] for Fedora Core 13+, RHEL 5.5+, and CentOS
 
 [rubygem-file-tail] Library to tail files in Ruby. Required by rubygem-passenger.
 
-[rubygem-spruz] "Useful Stuff." Required by rubygem-file-tail.
+[rubygem-spruz] “Useful Stuff.” Required by rubygem-file-tail.
 
 === Other Packages
 
