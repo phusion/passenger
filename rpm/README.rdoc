@@ -56,10 +56,10 @@ Passenger}[http://modrails.org] for Fedora Core 13+, RHEL 5.5+, and CentOS
 === Other Packages
 
 [rubygem-passenger-debuginfo] Standard debugger symbols for the above
-			      packages. (Turned off in the 3.0.0 tree
-			      due to debugging symbols containing
-			      %builddir paths. This will be reinstaed in
-			      a later release)
+                              packages. (Turned off in the 3.0.0 tree
+                              due to debugging symbols containing
+                              %builddir paths. This will be reinstaed in
+                              a later release)
 
 == Etc.
 
