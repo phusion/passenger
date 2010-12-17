@@ -10,10 +10,10 @@
 
 %define gemname passenger
 %if %{?passenger_version:0}%{?!passenger_version:1}
-  %define passenger_version 3.0.1
+  %define passenger_version 3.0.2
 %endif
 %if %{?passenger_release:0}%{?!passenger_release:1}
-  %define passenger_release 4%{?dist}
+  %define passenger_release 1%{?dist}
 %endif
 %define passenger_epoch 1
 
@@ -597,6 +597,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Thu Dec 16 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.2-1
+- Bump to 3.0.2
+
 * Mon Dec 13 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-4
 - rename rubygem-passenger-standalone to passenger-standalone
 - Add graphviz to the build requirements (for /usr/bin/dot)
