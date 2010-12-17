@@ -61,6 +61,32 @@ Passenger}[http://modrails.org] for Fedora Core 13+, RHEL 5.5+, and CentOS
                               %builddir paths. This will be reinstaed in
                               a later release)
 
+== Building Your Own Packages
+
+There are 3 ways to build packages:
+
+=== An Official Release via SRPM
+
+This is the simplest option, and the only option that doesn't (likely) require
+sudo access.
+
+1. Download an SRPM from {the repository}[http://passenger.stealthymonkeys.com/SRPMS]
+2. rpmbuild --rebuild <SRPM file>
+
+=== Testing Packages via Git
+
+1. Clone this repository
+2. +rake package:rpm+
+
+=== A Testing {Yum}[http://fedoraproject.org/wiki/Tools/yum] Repository via Git
+
+1. Clone this repository
+2. +rake package:yum+
+
+The first time the two rake tasks above are run they will probably need to sudo
+in order to install and/or setup some of the dependencies. It will prompt you
+with a list of commands it will run, and ask you to hit “return” to continue.
+
 == Etc.
 
 More to come!
