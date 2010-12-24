@@ -1,0 +1,156 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          passenger3
+# Required-Start:    $local_fs $remote_fs $network $syslog
+# Required-Stop:     $local_fs $remote_fs $network $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: starts the passenger3 web servers
+# Description:       starts passenger3
+### END INIT INFO
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+NAME=passenger3
+DESC=passenger3
+
+#
+# Configuration
+#
+RVM_SHELL="/usr/local/bin/rvm-shell"
+
+PASSENGER_CONFIG_DIR="/etc/passenger3"
+PASSENGER_START_OPTIONS="daemonize user environment socket spawn-method max-pool-size min-instances"
+PASSENGER_STOP_OPTIONS="pid-file"
+PASSENGER_STATUS_OPTIONS="pid-file"
+
+#
+# Example config /etc/passenger3/blog-app
+# --- CUT --
+# rvm: ruby-1.9.2-p0
+# cwd: /var/www/blog-app/current
+# user : mongrel
+# environment : staging_aws
+# socket: tmp/sockets/passenger.sock
+# pid-file: /tmp/pids/passenger.pid
+# spawn-method:smart_l2
+# max-pool-size:2
+# min-instances:1
+# --- CUT --
+
+#
+# Functions
+#
+
+passenger_set_configs() {
+  if [ ! -d $PASSENGER_CONFIG_DIR ]; then
+    echo "Directory does not exist: $PASSENGER_CONFIG_DIR"
+    exit 1
+  fi
+
+  if [ -n "$1" ]; then
+    unset PASSENGER_CONFIG_FILES
+    PASSENGER_CONFIG_FILES[0]="$1"
+  else
+    PASSENGER_CONFIG_FILES=`ls $PASSENGER_CONFIG_DIR`
+  fi
+}
+
+passenger_is_option() {
+  case "$1" in *$2*) RESULT="TRUE" ;; *) RESULT="FALSE" ;; esac
+}
+
+passenger_build_command() {
+  local command="$1"
+  local config_file="$PASSENGER_CONFIG_DIR/$2"
+  local allowed_options="$3"
+  local rvm=""
+  local cwd=""
+  local arguments=""
+
+  echo "Passenger3 $command $2"
+
+  if [ ! -f "$config_file" ]; then
+    echo "Config file does not exist: $config_file"
+    return 0
+  fi
+
+  while read LINE; do
+    name=${LINE%%:*};
+    value=${LINE##*:}
+
+    passenger_is_option "$allowed_options" "$name"
+
+    if [ $RESULT = 'TRUE' ]; then
+      arguments="$arguments --$name $value"
+    fi
+
+    [ "$name" = "rvm" ] && rvm="$value"
+    [ "$name" = "cwd" ] && cwd="$value"
+  done < "$config_file"
+
+  if [ -z "$rvm" ]; then
+    echo "rvm option is not specified"
+    return 0
+  fi
+
+  if [ -z "$cwd" ]; then
+    echo "cwd options is not specified"
+    return 0
+  fi
+
+  PASSENGER_COMMAND="$RVM_SHELL $rvm -c 'cd $cwd && passenger $command $arguments'"
+  [ -n "$PASSENGER_DEBUG" ] &&  echo "$PASSENGER_COMMAND"
+}
+
+#
+# Main functions
+#
+
+passenger_start() {
+  for config_file in ${PASSENGER_CONFIG_FILES[@]}; do
+    passenger_build_command start "$config_file" "$PASSENGER_START_OPTIONS"
+    if [ -n "$PASSENGER_COMMAND" ]; then
+      eval $PASSENGER_COMMAND
+    fi
+  done
+}
+
+passenger_stop() {
+  for config_file in ${PASSENGER_CONFIG_FILES[@]}; do
+    passenger_build_command stop "$config_file" "$PASSENGER_STOP_OPTIONS"
+    if [ -n "$PASSENGER_COMMAND" ]; then
+      eval $PASSENGER_COMMAND
+    fi
+  done
+}
+
+passenger_status() {
+  for config_file in ${PASSENGER_CONFIG_FILES[@]}; do
+    passenger_build_command status "$config_file" "$PASSENGER_STATUS_OPTIONS"
+    if [ -n "$PASSENGER_COMMAND" ]; then
+      eval $PASSENGER_COMMAND
+    fi
+  done
+}
+
+case "$1" in
+  start)
+    passenger_set_configs "$2"
+    passenger_start
+  ;;
+  stop)
+    passenger_set_configs "$2"
+    passenger_stop
+  ;;
+  status)
+    passenger_set_configs "$2"
+    passenger_status
+  ;;
+  *)
+   echo "Usage: $NAME {start|stop|status} [config_name]"
+   exit 1
+  ;;
+esac
+
+exit 0
