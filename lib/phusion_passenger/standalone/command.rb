@@ -100,12 +100,14 @@ private
 	def parse_options!(command_name, description = nil)
 		help = false
 		
-		global_config_file = File.join(ENV['HOME'], LOCAL_DIR, "standalone", "config")
-		if File.exist?(global_config_file)
-			require 'phusion_passenger/standalone/config_file' unless defined?(ConfigFile)
-			global_options = ConfigFile.new(:global_config, global_config_file).options
-			@options.merge!(global_options)
-		end
+                if ENV['HOME']
+                    global_config_file = File.join(ENV['HOME'], LOCAL_DIR, "standalone", "config")
+                    if File.exist?(global_config_file)
+                            require 'phusion_passenger/standalone/config_file' unless defined?(ConfigFile)
+                            global_options = ConfigFile.new(:global_config, global_config_file).options
+                            @options.merge!(global_options)
+                    end
+                end
 		
 		require_optparse
 		parser = OptionParser.new do |opts|
