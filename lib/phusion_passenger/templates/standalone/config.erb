@@ -89,6 +89,10 @@ http {
             passenger_analytics on;
             union_station_key <%= app[:union_station_key] %>;
         <% end %>
+        <% if nginx_listen_address(app) =~ /^unix:/ %>
+          # Unix domain sockets are always local
+          passenger_set_cgi_param REMOTE_ADDR 127.0.0.1;
+        <% end %>
     }
     <% end %>
 }
