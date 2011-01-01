@@ -13,17 +13,17 @@ body {
 }
 
 a {
-  color: #666;
+  color: #717c8d;
 }
 a:visited {
-  color: #333;
+  color: #7687a2;
 }
 
 h1 {
   margin-top: 0;
   padding: 0.5em;
   color: #fff;
-  background-color: #666;
+  background-color: #717c8d;
 }
 div#content {
   padding: 0 1em;
@@ -37,6 +37,7 @@ pre,
 p#tm {
   font-size: 80%;
   text-align: right;
+  margin-bottom: 2em;
 }
 .per-distro-cmds dd,
 .cmd {
@@ -56,6 +57,11 @@ p#tm {
   text-align: center;
 }
     </style>
+
+    <!--#if expr="${SERVER_NAME} = /stealthymonkeys.com/"-->
+    <script type="text/javascript" src="http://use.typekit.com/keb1kea.js"></script>
+    <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
+    <!--#endif -->
   </head>
 
   <body>
