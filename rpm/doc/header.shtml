@@ -132,8 +132,7 @@ p#tm {
         <a href="http://github.com/<!--#echo var="repo"
         -->/passenger/tree/master/rpm"><!--#echo var="prefix" --> GitHub
         Passenger Repository</a>. Comments, questions, patches, and pull
-        requests are
-        always welcome.
+        requests are always welcome.
       </p>
 
       <h2><!--#echo var="REQUEST_URI" --></h2>
