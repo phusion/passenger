@@ -77,6 +77,7 @@ p#tm {
         href="https://www.scientificlinux.org/">Scientific Linux</a>).
       </p>
 
+      <!--#if expr="${REQUEST_URI} = '/'" -->
       <p>
         The easiest way to install Passenger and keep it up to date is to
         install the passenger-release package:
@@ -106,8 +107,16 @@ p#tm {
         <div class="or">or</div>
         <div class="cmd">yum install passenger-standalone</div>
       </div>
+      <!--#endif -->
 
-      <h2>More Info?</h2>
+      <h2>Need More Information?</h2>
+
+      <!--#if expr="${REQUEST_URI} != '/'" -->
+      <p>
+        <a href="/">Installation instructions</a> can be found <a href="/">at
+        the root of this server</a>.
+      </p>
+      <!--#endif -->
 
       <p>
         The source files and documentation for these packages are maintained
