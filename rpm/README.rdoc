@@ -4,6 +4,8 @@ This project is an attempt to build RPMs for {Phusion
 Passenger}[http://modrails.org] for Fedora Core 13+, RHEL 5.5+, and CentOS
 5.5+ (both via EPEL)
 
+== Installation
+
 == Packages
 
 === Yum Package
@@ -71,17 +73,17 @@ This is the simplest option, and the only option that doesn't (likely) require
 sudo access.
 
 1. Download an SRPM from {the repository}[http://passenger.stealthymonkeys.com/SRPMS]
-2. rpmbuild --rebuild <SRPM file>
+2. <code>rpmbuild --rebuild <SRPM file></code>
 
 === Testing Packages via Git
 
 1. Clone this repository
-2. +rake package:rpm+
+2. <code>rake package:rpm</code>
 
 === A Testing {Yum}[http://fedoraproject.org/wiki/Tools/yum] Repository via Git
 
 1. Clone this repository
-2. +rake package:yum+
+2. <code>rake package:yum</code>
 
 The first time the two rake tasks above are run they will probably need to sudo
 in order to install and/or setup some of the dependencies. It will prompt you
