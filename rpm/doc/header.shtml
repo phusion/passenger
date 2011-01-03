@@ -35,10 +35,6 @@ pre,
   font-family: Courier New, Andale Mono, Courier, monospace;
 }
 
-dd.prop {
-  font-family: baskerville, bodoni svtytwo os, bodoni, georgia, times new roman, serif;
-}
-
 p#tm {
   font-size: 80%;
   text-align: right;
@@ -55,6 +51,17 @@ p#tm {
 .per-distro-cmds dd {
   margin-bottom: 0.5em;
 }
+
+dd.prop {
+  font-family: baskerville, bodoni svtytwo os, bodoni, georgia, times new roman, serif;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  white-space: normal;
+}
+
+
+
 .or {
   padding: 0.5em;
   font-size: 125%;
