@@ -34,6 +34,11 @@ pre,
   /* I think Courier New looks the best, but Andale Mono is preferable to the default */
   font-family: Courier New, Andale Mono, Courier, monospace;
 }
+
+dd.prop {
+  font-family: baskerville, bodoni svtytwo os, bodoni, georgia, times new roman, serif;
+}
+
 p#tm {
   font-size: 80%;
   text-align: right;
@@ -94,6 +99,12 @@ p#tm {
         href="http://fedoraproject.org/wiki/EPEL">EPEL</a>)</dt>
         <dd>rpm -Uvh <a
         href="rhel/5/passenger-release.noarch.rpm">http://<!--#echo var="SERVER_NAME" -->/rhel/5/passenger-release.noarch.rpm</a></dd>
+        <dt><strong>RHEL 6 / CentOS 6 / ScientificLinux 6</strong>: (note, these packages depend on <a
+        href="http://fedoraproject.org/wiki/EPEL">EPEL</a>)</dt>
+        <dd class="prop">
+          These packages will be available as soon as there is
+          a stable beta of either CentOS 6 or SL 6 to use as a build platform.
+        </dd>
       </dl>
 
       <p>
