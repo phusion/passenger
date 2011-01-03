@@ -1,18 +1,21 @@
 diff --git a/lib/phusion_passenger.rb b/lib/phusion_passenger.rb
-index 6019499..2728455 100644
+index e747477..27e82f1 100644
 --- a/lib/phusion_passenger.rb
 +++ b/lib/phusion_passenger.rb
-@@ -88,10 +88,11 @@ module PhusionPassenger
+@@ -94,12 +94,12 @@ module PhusionPassenger
  		# Not available when natively packaged.
  		NATIVE_SUPPORT_DIR = File.join(SOURCE_ROOT, "ext", "ruby")
  	else
 -		SOURCE_ROOT        = NATIVELY_PACKAGED_SOURCE_ROOT
 -		DOCDIR             = NATIVELY_PACKAGED_DOCDIR
 -		RESOURCES_DIR      = NATIVELY_PACKAGED_RESOURCES_DIR
+-		AGENTS_DIR         = NATIVELY_PACKAGED_AGENTS_DIR
+-		HELPER_SCRIPTS_DIR = NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR
 -		APACHE2_MODULE     = NATIVELY_PACKAGED_APACHE2_MODULE
 +		SOURCE_ROOT        = '%%GEM_INSTALL_DIR%%'
 +		DOCDIR             = "#{SOURCE_ROOT}/doc"
 +		RESOURCES_DIR      = "#{SOURCE_ROOT}/resources"
++		HELPER_SCRIPTS_DIR = "#{SOURCE_ROOT}/helper-scripts"
 +		APACHE2_MODULE     = '%%APACHE_INSTALLED_MOD%%'
 +		NATIVE_SUPPORT_DIR = "#{SOURCE_ROOT}/ext/ruby"
  	end

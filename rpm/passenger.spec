@@ -10,10 +10,10 @@
 
 %define gemname passenger
 %if %{?passenger_version:0}%{?!passenger_version:1}
-  %define passenger_version 3.0.1
+  %define passenger_version 3.0.2
 %endif
 %if %{?passenger_release:0}%{?!passenger_release:1}
-  %define passenger_release 3%{?dist}
+  %define passenger_release 1%{?dist}
 %endif
 %define passenger_epoch 1
 
@@ -112,6 +112,7 @@ BuildRequires: curl-devel
 %endif
 BuildRequires: doxygen
 BuildRequires: asciidoc
+BuildRequires: graphviz
 # standaline build deps
 %if %{?fedora:1}%{?!fedora:0}
 BuildRequires: libev-devel
@@ -197,7 +198,7 @@ package.
 
 %if !%{only_native_libs}
 
-%package standalone
+%package -n passenger-standalone
 Summary: Standalone Phusion Passenger Server
 Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
@@ -205,7 +206,9 @@ Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires: libev
 %endif
 Epoch: %{passenger_epoch}
-%description standalone
+Obsoletes: rubygem-passenger-standalone
+Provides: rubygem-passenger-standalone
+%description -n passenger-standalone
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
 of Ruby web applications, such as those built on the revolutionary
 Ruby on Rails web framework, a breeze. It follows the usual Ruby on
@@ -416,7 +419,7 @@ mkdir -p %{buildroot}/%{_var}/log/passenger-analytics
 cp -ra agents %{buildroot}/%{geminstdir}
 
 # PASSENGER STANDALONE (this is going to recompile nginx)
-./bin/passenger package-runtime --nginx-version %{nginx_version} --nginx-tarball %{SOURCE1} %{buildroot}/%{_var}/lib/passenger-standalone
+%{ruby} ./bin/passenger package-runtime --nginx-version %{nginx_version} --nginx-tarball %{SOURCE1} %{buildroot}/%{_var}/lib/passenger-standalone
 # Now unpack the tarballs it just created
 # It's 2am, revisit this insanity in the light of morning
 standalone_dir=$(bash -c 'ls -d $1 | tail -1' -- %{buildroot}/%{_var}/lib/passenger-standalone/%{passenger_version}-*)
@@ -566,7 +569,7 @@ rm -rf %{buildroot}
 %{sharedir}/selinux/packages/%{name}/%{name}.pp
 %{_var}/log/passenger-analytics
 
-%files standalone
+%files -n passenger-standalone
 %doc doc/Users\ guide\ Standalone.html
 %doc doc/Users\ guide\ Standalone.txt
 %{_bindir}/passenger
@@ -594,6 +597,13 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Thu Dec 16 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.2-1
+- Bump to 3.0.2
+
+* Mon Dec 13 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-4
+- rename rubygem-passenger-standalone to passenger-standalone
+- Add graphviz to the build requirements (for /usr/bin/dot)
+
 * Thu Dec  2 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.1-3
 - Stop double-packaging files from -native & -native-libs in the base package
 

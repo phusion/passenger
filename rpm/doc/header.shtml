@@ -13,17 +13,17 @@ body {
 }
 
 a {
-  color: #666;
+  color: #717c8d;
 }
 a:visited {
-  color: #333;
+  color: #7687a2;
 }
 
 h1 {
   margin-top: 0;
   padding: 0.5em;
   color: #fff;
-  background-color: #666;
+  background-color: #717c8d;
 }
 div#content {
   padding: 0 1em;
@@ -34,9 +34,11 @@ pre,
   /* I think Courier New looks the best, but Andale Mono is preferable to the default */
   font-family: Courier New, Andale Mono, Courier, monospace;
 }
+
 p#tm {
   font-size: 80%;
   text-align: right;
+  margin-bottom: 2em;
 }
 .per-distro-cmds dd,
 .cmd {
@@ -49,6 +51,17 @@ p#tm {
 .per-distro-cmds dd {
   margin-bottom: 0.5em;
 }
+
+dd.prop {
+  font-family: baskerville, bodoni svtytwo os, bodoni, georgia, times new roman, serif;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  white-space: normal;
+}
+
+
+
 .or {
   padding: 0.5em;
   font-size: 125%;
@@ -56,6 +69,11 @@ p#tm {
   text-align: center;
 }
     </style>
+
+    <!--#if expr="${SERVER_NAME} = /stealthymonkeys.com/"-->
+    <script type="text/javascript" src="http://use.typekit.com/keb1kea.js"></script>
+    <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
+    <!--#endif -->
   </head>
 
   <body>
@@ -71,6 +89,7 @@ p#tm {
         href="https://www.scientificlinux.org/">Scientific Linux</a>).
       </p>
 
+      <!--#if expr="${REQUEST_URI} = '/'" -->
       <p>
         The easiest way to install Passenger and keep it up to date is to
         install the passenger-release package:
@@ -87,6 +106,12 @@ p#tm {
         href="http://fedoraproject.org/wiki/EPEL">EPEL</a>)</dt>
         <dd>rpm -Uvh <a
         href="rhel/5/passenger-release.noarch.rpm">http://<!--#echo var="SERVER_NAME" -->/rhel/5/passenger-release.noarch.rpm</a></dd>
+        <dt><strong>RHEL 6 / CentOS 6 / ScientificLinux 6</strong>: (note, these packages depend on <a
+        href="http://fedoraproject.org/wiki/EPEL">EPEL</a>)</dt>
+        <dd class="prop">
+          These packages will be available as soon as there is
+          a stable beta of either CentOS 6 or SL 6 to use as a build platform.
+        </dd>
       </dl>
 
       <p>
@@ -98,16 +123,34 @@ p#tm {
         <div class="or">or</div>
         <div class="cmd">yum install mod_passenger</div>
         <div class="or">or</div>
-        <div class="cmd">yum install rubygem-passenger-standalone</div>
+        <div class="cmd">yum install passenger-standalone</div>
       </div>
+      <!--#endif -->
 
-      <h2>More Info?</h2>
+      <h2>Need More Information?</h2>
+
+      <!--#if expr="${REQUEST_URI} != '/'" -->
+      <p>
+        <a href="/">Installation instructions</a> can be found <a href="/">at
+        the root of this server</a>.
+      </p>
+      <!--#endif -->
+
+      <!--#if expr="${SERVER_NAME} = /stealthymonkeys.com/"-->
+        <!--#set var="repo" value="erikogan" -->
+        <!--#set var="prefix" value="my fork of the main" -->
+      <!--#else -->
+        <!--#set var="repo" value="FooBarWidget" -->
+        <!--#set var="prefix" value="the" -->
+      <!--#endif -->
 
       <p>
         The source files and documentation for these packages are maintained
-        in a <a href="http://github.com/erikogan/rubygem-passenger">GitHub
-        repository</a>. Comments, questions, patches, and pull requests are
-        always welcome.
+        in
+        <a href="http://github.com/<!--#echo var="repo"
+        -->/passenger/tree/master/rpm"><!--#echo var="prefix" --> GitHub
+        Passenger Repository</a>. Comments, questions, patches, and pull
+        requests are always welcome.
       </p>
 
       <h2><!--#echo var="REQUEST_URI" --></h2>

@@ -1,0 +1,5 @@
+Options +Includes
+IndexOptions +FancyIndexing +IgnoreCase +SuppressDescription +NameWidth=* +SuppressHTMLPreamble
+HeaderName /header.shtml
+ReadmeName /footer.shtml
+IndexIgnore header.shtml footer.shtml
