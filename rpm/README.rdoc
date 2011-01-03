@@ -23,9 +23,11 @@ The passenger-release package adds a new Yum repository to your configuration.
 From here you can use the {yum}[http://prefetch.net/articles/yum.html] command
 to install Passenger packages:
 
-<pre>yum install nginx-passenger</pre>
-<pre>yum install mod_passenger</pre>
-<pre>yum install passenger-standalone</pre>
+<code>yum install nginx-passenger</code>
+
+<code>yum install mod_passenger</code>
+
+<code>yum install passenger-standalone</code>
 
 (You probably only need one of the commands above)
 
