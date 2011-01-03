@@ -6,6 +6,29 @@ Passenger}[http://modrails.org] for Fedora Core 13+, RHEL 5.5+, and CentOS
 
 == Installation
 
+The easiest way to install Passenger and keep it up to date is to install the
+passenger-release package from the {main repository}[http://passenger.stealthymonkeys.com]:
+
+[Fedora Core 14] <code>rpm -Uvh http://passenger.stealthymonkeys.com/fedora/14/passenger-release.noarch.rpm</code>
+[Fedora Core 13] <code>rpm -Uvh http://passenger.stealthymonkeys.com/fedora/14/passenger-release.noarch.rpm</code>
+[RHEL / CentOS / ScientificLinux 5.x + EPEL] <code>rpm -Uvh http://passenger.stealthymonkeys.com/rhel/5/passenger-release.noarch.rpm</code>
+[RHEL / CentOS / ScientificLinux 6.x + EPEL] These packages will be available
+                                             as soon as there is a stable beta
+                                             of either CentOS 6 or SL 6 to use
+                                             as a build platform.
+
+*NOTE:* The RHEL-based distributions are built upon packages in {EPEL}[http://fedoraproject.org/wiki/EPEL], and require it to be installed.
+
+The passenger-release package adds a new Yum repository to your configuration.
+From here you can use the {yum}[http://prefetch.net/articles/yum.html] command
+to install Passenger packages:
+
+<pre>yum install nginx-passenger</pre>
+<pre>yum install mod_passenger</pre>
+<pre>yum install passenger-standalone</pre>
+
+(You probably only need one of the commands above)
+
 == Packages
 
 === Yum Package
