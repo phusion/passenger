@@ -17,7 +17,7 @@ passenger-release package from the {main repository}[http://passenger.stealthymo
                                              of either CentOS 6 or SL 6 to use
                                              as a build platform.
 
-*NOTE:* The RHEL-based distributions are built upon packages in {EPEL}[http://fedoraproject.org/wiki/EPEL], and require it to be installed.
+*NOTE*: The RHEL-based distributions are built upon packages in {EPEL}[http://fedoraproject.org/wiki/EPEL], and require it to be installed.
 
 The passenger-release package adds a new Yum repository to your configuration.
 From here you can use the {yum}[http://prefetch.net/articles/yum.html] command
