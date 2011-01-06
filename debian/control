@@ -40,10 +40,23 @@ Package: passenger-doc
 Section: doc
 Architecture: all
 Suggests: www-browse
-Description: Rails and Rac support for Apache2 - Documentation
+Description: Rails and Rack support for Apache2 - Documentation
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
  deployment of Ruby web applications, such as those built on the
  revolutionary Ruby on Rails web framework, a breeze.
  .
  This package provides the documentation for Phusion Passenger.
+
+Package: passenger-dev
+Section: libdevel
+Priority: extra
+Depends: passenger-common (= ${binary:Version}), ${shlibs:Depends},
+ ${misc:Depends}
+Architecture: any
+Description: Rails and Rac support for Apache2 - Documentation
+ Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
+ deployment of Ruby web applications, such as those built on the
+ revolutionary Ruby on Rails web framework, a breeze.
+ .
+ This package contains the development environment for the blkid library.
 
