@@ -5,6 +5,7 @@
 #include <string>
 #include <set>
 #include <regex.h>
+#include <cstring>
 
 #include <StaticString.h>
 #include <Utils/StrIntUtils.h>
@@ -471,6 +472,10 @@ public:
 	int responseTime;
 	set<string> hints;
 	
+	SimpleContext() {
+		responseTime = 0;
+	}
+	
 	virtual string getURI() const {
 		return uri;
 	}
@@ -485,6 +490,161 @@ public:
 	
 	virtual bool hasHint(const string &name) const {
 		return hints.find(name) != hints.end();
+	}
+};
+
+class ContextFromLog: public Context {
+private:
+	StaticString logData;
+	mutable SimpleContext *parsedData;
+	
+	struct ParseState {
+		unsigned long long requestProcessingStart;
+		unsigned long long requestProcessingEnd;
+	};
+	
+	static void parseLine(const StaticString &txnId, unsigned long long timestamp,
+		const StaticString &data, SimpleContext &ctx, ParseState &state)
+	{
+		if (startsWith(data, "BEGIN: request processing")) {
+			state.requestProcessingStart = extractEventTimestamp(data);
+		} else if (startsWith(data, "END: request processing")
+		        || startsWith(data, "FAIL: request processing")) {
+			state.requestProcessingEnd = extractEventTimestamp(data);
+		} else if (startsWith(data, "URI: ")) {
+			ctx.uri = data.substr(data.find(':') + 2);
+		} else if (startsWith(data, "Controller action: ")) {
+			StaticString value = data.substr(data.find(':') + 2);
+			size_t pos = value.find('#');
+			if (pos != string::npos) {
+				ctx.controller = value.substr(0, pos);
+			}
+		}
+	}
+	
+	static void reallyParse(const StaticString &data, SimpleContext &ctx) {
+		const char *current = data.data();
+		const char *end     = data.data() + data.size();
+		ParseState state;
+		
+		memset(&state, 0, sizeof(state));
+		while (current < end) {
+			current = skipNewlines(current, end);
+			if (current < end) {
+				const char *endOfLine = findEndOfLine(current, end);
+				StaticString line(current, endOfLine - current);
+				if (!line.empty()) {
+					StaticString txnId;
+					unsigned long long timestamp;
+					StaticString lineData;
+					
+					if (splitLine(line, txnId, timestamp, lineData)) {
+						parseLine(txnId, timestamp, lineData, ctx,
+						state);
+					}
+				}
+				current = endOfLine;
+			}
+		}
+		
+		if (state.requestProcessingEnd != 0) {
+			ctx.responseTime = int(state.requestProcessingEnd -
+				state.requestProcessingStart);
+		}
+	}
+	
+	static bool splitLine(const StaticString &line, StaticString &txnId,
+		unsigned long long &timestamp, StaticString &data)
+	{
+		size_t firstDelim = line.find(' ');
+		if (firstDelim == string::npos) {
+			return false;
+		}
+		
+		size_t secondDelim = line.find(' ', firstDelim + 1);
+		if (secondDelim == string::npos) {
+			return false;
+		}
+		
+		txnId = line.substr(0, firstDelim);
+		timestamp = hexatriToULL(line.substr(firstDelim + 1, secondDelim - firstDelim - 1));
+		data = line.substr(secondDelim + 1);
+		return true;
+	}
+	
+	static unsigned long long extractEventTimestamp(const StaticString &data) {
+		size_t pos = data.find('(');
+		if (pos == string::npos) {
+			return 0;
+		} else {
+			pos++;
+			size_t start = pos;
+			while (pos < data.size() && isDigit(data[pos])) {
+				pos++;
+			}
+			if (pos >= data.size()) {
+				return 0;
+			} else {
+				return hexatriToULL(data.substr(start, pos - start));
+			}
+		}
+	}
+	
+	static bool isNewline(char ch) {
+		return ch == '\n' || ch == '\r';
+	}
+	
+	static bool isDigit(char ch) {
+		return ch >= '0' && ch <= '9';
+	}
+	
+	static const char *skipNewlines(const char *current, const char *end) {
+		while (current < end && isNewline(*current)) {
+			current++;
+		}
+		return current;
+	}
+	
+	static const char *findEndOfLine(const char *current, const char *end) {
+		while (current < end && !isNewline(*current)) {
+			current++;
+		}
+		return current;
+	}
+	
+	SimpleContext *parse() const {
+		if (parsedData == NULL) {
+			auto_ptr<SimpleContext> ctx(new SimpleContext());
+			reallyParse(logData, *ctx.get());
+			parsedData = ctx.release();
+		}
+		return parsedData;
+	}
+	
+public:
+	ContextFromLog(const StaticString &logData) {
+		this->logData = logData;
+		parsedData = NULL;
+	}
+	
+	~ContextFromLog() {
+		delete parsedData;
+	}
+	
+	virtual string getURI() const {
+		return parse()->uri;
+	}
+	
+	virtual string getController() const {
+		return parse()->getController();
+	}
+	
+	virtual int getResponseTime() const {
+		return parse()->getResponseTime();
+	}
+	
+	virtual bool hasHint(const string &name) const {
+		return parse()->hasHint(name);
 	}
 };
 

@@ -172,9 +172,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/SystemTimeTest.cpp
 		ext/common/Utils/SystemTime.h
 		ext/common/Utils/SystemTime.cpp),
-	'test/cxx/FilterTest.o' => %w(
-		test/cxx/FilterTest.cpp
-		ext/common/LoggingAgent/Filter.h),
+	'test/cxx/FilterSupportTest.o' => %w(
+		test/cxx/FilterSupportTest.cpp
+		ext/common/LoggingAgent/FilterSupport.h),
 	'test/cxx/CachedFileStatTest.o' => %w(
 		test/cxx/CachedFileStatTest.cpp
 		ext/common/Utils/CachedFileStat.hpp

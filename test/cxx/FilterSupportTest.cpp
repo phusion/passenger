@@ -1,5 +1,5 @@
 #include "TestSupport.h"
-#include "LoggingAgent/Filter.h"
+#include "LoggingAgent/FilterSupport.h"
 
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -12,11 +12,11 @@ using namespace std;
 using namespace oxt;
 
 namespace tut {
-	struct FilterTest {
+	struct FilterSupportTest {
 		SimpleContext ctx;
 	};
 	
-	DEFINE_TEST_GROUP(FilterTest);
+	DEFINE_TEST_GROUP_WITH_LIMIT(FilterSupportTest, 100);
 	
 	/******** Generic tests *******/
 	
@@ -235,5 +235,42 @@ namespace tut {
 		// >= does not work if right operand is a string
 		// =~ does not work if left operand is not a string
 		// =~ does not work if right operand is not a regexp
+	}
+	
+	
+	/******** ContextFromLog tests *******/
+	
+	TEST_METHOD(50) {
+		// It extracts information from the logs
+		ContextFromLog ctx(
+			"1234-abcd 1234 BEGIN: request processing (1235, 10, 10)\n"
+			"1234-abcd 1240 URI: /foo\n"
+			"1234-abcd 1241 Controller action: HomeController#index\n"
+			"1234-abcd 2234 END: request processing (2234, 10, 10)\n"
+		);
+		ensure_equals(ctx.getURI(), "/foo");
+		ensure_equals(ctx.getController(), "HomeController");
+		ensure_equals(ctx.getResponseTime(), 46655);
+	}
+	
+	TEST_METHOD(51) {
+		// It ignores empty lines and invalid lines
+		ContextFromLog ctx(
+			"\n"
+			"\n"
+			"    \n"
+			"1234-abcd 1234 URI: /foo\n"
+			"URI: /bar\n"
+			"\n"
+		);
+		ensure_equals(ctx.getURI(), "/foo");
+	}
+	
+	TEST_METHOD(52) {
+		// It does only extracts the response time if both the begin and end events are available
+		ContextFromLog ctx(
+			"1234-abcd 1234 BEGIN: request processing (1235, 10, 10)\n"
+		);
+		ensure_equals(ctx.getResponseTime(), 0);
 	}
 }
