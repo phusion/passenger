@@ -287,7 +287,7 @@ private:
 	Token matchInteger() {
 		unsigned int start = pos;
 		
-		// Accept initial digit.
+		// Accept initial minus or digit.
 		pos++;
 		
 		while (pos < data.size() && isDigit(data[pos])) {
@@ -350,6 +350,8 @@ public:
 			return logToken(matchRegexp());
 		case '"':
 			return logToken(matchString());
+		case '-':
+			return logToken(matchInteger());
 		default:
 			if (isDigit(current())) {
 				return logToken(matchInteger());

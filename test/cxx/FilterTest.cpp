@@ -70,7 +70,7 @@ namespace tut {
 	
 	TEST_METHOD(8) {
 		// Test advanced string regexp matching
-		Filter f("uri =~ /(hello|world)\nhi/");
+		Filter f("uri =~ /(hello|world)\\nhi/");
 		ctx.uri = "hello\nhi";
 		ensure("(1)", f.run(ctx));
 		ctx.uri = "world\nhi";
@@ -100,6 +100,23 @@ namespace tut {
 		
 		f = Filter("\"hello\" == \"world\"");
 		ensure("(2)", !f.run(ctx));
+	}
+	
+	TEST_METHOD(12) {
+		// Right operand may be a field.
+		Filter f("\"hello\" == uri");
+		ctx.uri = "hello";
+		ensure("(1)", f.run(ctx));
+		
+		f = Filter("\"hello\" == uri");
+		ctx.uri = "world";
+		ensure("(2)", !f.run(ctx));
+	}
+	
+	TEST_METHOD(13) {
+		// String syntax supports \n, \r, \t
+		ctx.uri = "hello\r\n\tworld";
+		ensure(Filter("uri == \"hello\\r\\n\\tworld\"").run(ctx));
 	}
 	
 	
@@ -159,10 +176,55 @@ namespace tut {
 		ensure("(2)", !f.run(ctx));
 	}
 	
+	TEST_METHOD(26) {
+		// Negative integers work
+		ctx.responseTime = -23;
+		ensure(Filter("response_time == -23").run(ctx));
+	}
+	
+	TEST_METHOD(27) {
+		// Left operand may be a literal.
+		ensure("(1)", Filter("2 == 2").run(ctx));
+		ensure("(2)", !Filter("2 != 2").run(ctx));
+		ensure("(3)", Filter("1 < 2").run(ctx));
+		ensure("(4)", !Filter("1 < 0").run(ctx));
+		ensure("(5)", Filter("1 <= 1").run(ctx));
+		ensure("(6)", !Filter("1 <= 0").run(ctx));
+		ensure("(7)", Filter("2 > 1").run(ctx));
+		ensure("(8)", !Filter("2 > 2").run(ctx));
+		ensure("(9)", Filter("2 >= 2").run(ctx));
+		ensure("(10)", !Filter("2 >= 3").run(ctx));
+	}
+	
+	TEST_METHOD(28) {
+		// Right operand may be a field.
+		ctx.responseTime = 2;
+		ensure("(1)", Filter("2 == response_time").run(ctx));
+		ensure("(2)", !Filter("2 != 2").run(ctx));
+		
+		ensure("(3)", Filter("1 < response_time").run(ctx));
+		ctx.responseTime = 0;
+		ensure("(4)", !Filter("1 < response_time").run(ctx));
+		
+		ctx.responseTime = 1;
+		ensure("(5)", Filter("1 <= response_time").run(ctx));
+		ctx.responseTime = 0;
+		ensure("(6)", !Filter("1 <= response_time").run(ctx));
+		
+		ctx.responseTime = 1;
+		ensure("(7)", Filter("2 > response_time").run(ctx));
+		ctx.responseTime = 2;
+		ensure("(8)", !Filter("2 > response_time").run(ctx));
+		
+		ensure("(9)", Filter("2 >= response_time").run(ctx));
+		ctx.responseTime = 3;
+		ensure("(10)", !Filter("2 >= response_time").run(ctx));
+	}
+	
 	
 	/******** Error tests *******/
 	
-	TEST_METHOD(30) {
+	TEST_METHOD(40) {
 		// < does not work if left operand is a string
 		// < does not work if right operand is a string
 		// <= does not work if left operand is a string
