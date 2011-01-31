@@ -243,10 +243,10 @@ namespace tut {
 	TEST_METHOD(50) {
 		// It extracts information from the logs
 		ContextFromLog ctx(
-			"1234-abcd 1234 BEGIN: request processing (1235, 10, 10)\n"
-			"1234-abcd 1240 URI: /foo\n"
-			"1234-abcd 1241 Controller action: HomeController#index\n"
-			"1234-abcd 2234 END: request processing (2234, 10, 10)\n"
+			"1234-abcd 1234 0 BEGIN: request processing (1235, 10, 10)\n"
+			"1234-abcd 1240 1 URI: /foo\n"
+			"1234-abcd 1241 2 Controller action: HomeController#index\n"
+			"1234-abcd 2234 3 END: request processing (2234, 10, 10)\n"
 		);
 		ensure_equals(ctx.getURI(), "/foo");
 		ensure_equals(ctx.getController(), "HomeController");
@@ -259,7 +259,7 @@ namespace tut {
 			"\n"
 			"\n"
 			"    \n"
-			"1234-abcd 1234 URI: /foo\n"
+			"1234-abcd 1234 0 URI: /foo\n"
 			"URI: /bar\n"
 			"\n"
 		);
@@ -269,7 +269,7 @@ namespace tut {
 	TEST_METHOD(52) {
 		// It does only extracts the response time if both the begin and end events are available
 		ContextFromLog ctx(
-			"1234-abcd 1234 BEGIN: request processing (1235, 10, 10)\n"
+			"1234-abcd 1234 0 BEGIN: request processing (1235, 10, 10)\n"
 		);
 		ensure_equals(ctx.getResponseTime(), 0);
 	}

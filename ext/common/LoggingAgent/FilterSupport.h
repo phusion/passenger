@@ -536,9 +536,13 @@ private:
 				if (!line.empty()) {
 					StaticString txnId;
 					unsigned long long timestamp;
+					unsigned int writeCount;
 					StaticString lineData;
 					
-					if (splitLine(line, txnId, timestamp, lineData)) {
+					// If we want to do more complicated analysis we should sort
+					// the lines but for the purposes of ContextFromLog
+					// analyzing the data without sorting is good enough.
+					if (splitLine(line, txnId, timestamp, writeCount, lineData)) {
 						parseLine(txnId, timestamp, lineData, ctx,
 						state);
 					}
@@ -554,7 +558,8 @@ private:
 	}
 	
 	static bool splitLine(const StaticString &line, StaticString &txnId,
-		unsigned long long &timestamp, StaticString &data)
+		unsigned long long &timestamp, unsigned int &writeCount,
+		StaticString &data)
 	{
 		size_t firstDelim = line.find(' ');
 		if (firstDelim == string::npos) {
@@ -566,9 +571,16 @@ private:
 			return false;
 		}
 		
+		size_t thirdDelim = line.find(' ', secondDelim + 1);
+		if (thirdDelim == string::npos) {
+			return false;
+		}
+		
 		txnId = line.substr(0, firstDelim);
 		timestamp = hexatriToULL(line.substr(firstDelim + 1, secondDelim - firstDelim - 1));
-		data = line.substr(secondDelim + 1);
+		writeCount = (unsigned int) hexatriToULL(line.substr(secondDelim + 1,
+			thirdDelim - secondDelim - 1));
+		data = line.substr(thirdDelim + 1);
 		return true;
 	}
 	

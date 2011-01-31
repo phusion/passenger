@@ -45,6 +45,7 @@
 #include "DataStoreId.h"
 #include "RemoteSender.h"
 #include "ChangeNotifier.h"
+#include "FilterSupport.h"
 #include "../EventedMessageServer.h"
 #include "../MessageReadersWriters.h"
 #include "../StaticString.h"
@@ -55,6 +56,7 @@
 #include "../Utils/MD5.h"
 #include "../Utils/IOUtils.h"
 #include "../Utils/StrIntUtils.h"
+#include "../Utils/StringMap.h"
 
 
 namespace Passenger {
@@ -299,6 +301,7 @@ private:
 		int refcount;
 		bool crashProtect, discarded;
 		string data;
+		string filters;
 		
 		Transaction(LoggingServer *server) {
 			this->server = server;
@@ -307,7 +310,7 @@ private:
 		
 		~Transaction() {
 			if (logSink != NULL) {
-				if (!discarded) {
+				if (!discarded && passesFilter()) {
 					logSink->append(dataStoreId, data);
 				}
 				server->closeLogSink(logSink);
@@ -337,6 +340,35 @@ private:
 			stream << "      Node    : " << getNodeName() << "\n";
 			stream << "      Category: " << getCategory() << "\n";
 			stream << "      Refcount: " << refcount << "\n";
+		}
+	
+	private:
+		bool passesFilter() {
+			if (filters.empty()) {
+				return true;
+			}
+			
+			const char *current = filters.data();
+			const char *end     = filters.data() + filters.size();
+			bool result         = true;
+			FilterSupport::ContextFromLog ctx(data);
+			
+			// 'filters' may contain multiple filter sources, separated
+			// by '\1' characters. Process each.
+			while (current < end && result) {
+				StaticString tmp(current, end - current);
+				size_t pos = tmp.find('\1');
+				if (pos == string::npos) {
+					pos = tmp.size();
+				}
+				
+				StaticString source(current, pos);
+				FilterSupport::Filter &filter = server->compileFilter(source);
+				result = filter.run(ctx);
+				
+				current = tmp.data() + pos + 1;
+			}
+			return result;
 		}
 	};
 	
@@ -372,6 +404,8 @@ private:
 	typedef shared_ptr<Client> ClientPtr;
 	typedef map<string, TransactionPtr> TransactionMap;
 	
+	typedef shared_ptr<FilterSupport::Filter> FilterPtr;
+	
 	string dir;
 	gid_t gid;
 	string dirPermissions;
@@ -392,6 +426,7 @@ private:
 	 */
 	list<LogSinkPtr> inactiveLogSinks;
 	int inactiveLogSinksCount;
+	StringMap<FilterPtr> filters;
 	RandomGenerator randomGenerator;
 	bool refuseNewConnections;
 	bool exitRequested;
@@ -404,6 +439,16 @@ private:
 	
 	bool expectingArgumentsCount(Client *client, const vector<StaticString> &args, unsigned int size) {
 		if (args.size() == size) {
+			return true;
+		} else {
+			sendErrorToClient(client, "Invalid number of arguments");
+			client->disconnect();
+			return false;
+		}
+	}
+	
+	bool expectingMinArgumentsCount(Client *client, const vector<StaticString> &args, unsigned int size) {
+		if (args.size() >= size) {
 			return true;
 		} else {
 			sendErrorToClient(client, "Invalid number of arguments");
@@ -429,6 +474,26 @@ private:
 			return false;
 		} else {
 			return true;
+		}
+	}
+	
+	static bool getBool(const vector<StaticString> &args, unsigned int index,
+		bool defaultValue = false)
+	{
+		if (index < args.size()) {
+			return args[index] == "true";
+		} else {
+			return defaultValue;
+		}
+	}
+	
+	static StaticString getStaticString(const vector<StaticString> &args,
+		unsigned int index, const StaticString &defaultValue = "")
+	{
+		if (index < args.size()) {
+			return args[index];
+		} else {
+			return defaultValue;
 		}
 	}
 	
@@ -649,6 +714,16 @@ private:
 			inactiveLogSinksCount--;
 			logSinkCache.erase(logSink->cacheIterator);
 		}
+	}
+	
+	FilterSupport::Filter &compileFilter(const StaticString &source) {
+		// TODO: garbage collect filters based on time
+		FilterPtr filter = filters.get(source);
+		if (filter == NULL) {
+			filter = make_shared<FilterSupport::Filter>(source);
+			filters.set(source, filter);
+		}
+		return *filter;
 	}
 	
 	bool writeLogEntry(Client *client, const TransactionPtr &transaction,
@@ -897,7 +972,7 @@ protected:
 			}
 			
 		} else if (args[0] == "openTransaction") {
-			if (OXT_UNLIKELY( !expectingArgumentsCount(client, args, 8)
+			if (OXT_UNLIKELY( !expectingMinArgumentsCount(client, args, 7)
 			               || !expectingLoggerType(client) )) {
 				return true;
 			}
@@ -908,7 +983,8 @@ protected:
 			StaticString category  = args[4];
 			StaticString timestamp = args[5];
 			StaticString unionStationKey = args[6];
-			bool         crashProtect    = args[7] == "true";
+			bool         crashProtect    = getBool(args, 7, true);
+			StaticString filters         = getStaticString(args, 8);
 			
 			if (OXT_UNLIKELY( !validTxnId(txnId) )) {
 				sendErrorToClient(client, "Invalid transaction ID format");
@@ -980,6 +1056,9 @@ protected:
 				transaction->writeCount   = 0;
 				transaction->refcount     = 0;
 				transaction->crashProtect = crashProtect;
+				if (!filters.empty()) {
+					transaction->filters = filters;
+				}
 				transaction->discarded    = false;
 				transactions.insert(make_pair(txnId, transaction));
 			} else {

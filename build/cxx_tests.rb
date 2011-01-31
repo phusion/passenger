@@ -134,6 +134,7 @@ TEST_CXX_OBJECTS = {
 		ext/common/LoggingAgent/RemoteSender.h
 		ext/common/LoggingAgent/ChangeNotifier.h
 		ext/common/LoggingAgent/DataStoreId.h
+		ext/common/LoggingAgent/FilterSupport.h
 		ext/common/Logging.h
 		ext/common/Utils.h
 		ext/common/EventedServer.h
