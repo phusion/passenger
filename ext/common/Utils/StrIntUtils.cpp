@@ -56,8 +56,9 @@ startsWith(const StaticString &str, const StaticString &substr) {
 	}
 }
 
+template<typename OutputString>
 void
-split(const string &str, char sep, vector<string> &output) {
+_split(const StaticString &str, char sep, vector<OutputString> &output) {
 	string::size_type start, pos;
 	start = 0;
 	output.clear();
@@ -66,6 +67,16 @@ split(const string &str, char sep, vector<string> &output) {
 		start = pos + 1;
 	}
 	output.push_back(str.substr(start));
+}
+
+void
+split(const StaticString &str, char sep, vector<string> &output) {
+	_split(str, sep, output);
+}
+
+void
+split(const StaticString &str, char sep, vector<StaticString> &output) {
+	_split(str, sep, output);
 }
 
 string toString(const vector<string> &vec) {
