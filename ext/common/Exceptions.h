@@ -343,6 +343,20 @@ public:
 	virtual const char *what() const throw() { return msg.c_str(); }
 };
 
+/**
+ * A parser detected a syntax error.
+ *
+ * @ingroup Exceptions
+ */
+class SyntaxError: public oxt::tracable_exception {
+private:
+	string msg;
+public:
+	SyntaxError(const string &message): msg(message) {}
+	virtual ~SyntaxError() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_EXCEPTIONS_H_ */

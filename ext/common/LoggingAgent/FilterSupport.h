@@ -1,3 +1,30 @@
+/*
+ *  Phusion Passenger - http://www.modrails.com/
+ *  Copyright (c) 2011 Phusion
+ *
+ *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+#ifndef _PASSENGER_FILTER_SUPPORT_H_
+#define _PASSENGER_FILTER_SUPPORT_H_
+
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <oxt/tracable_exception.hpp>
@@ -17,14 +44,6 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
-class SyntaxError: public oxt::tracable_exception {
-private:
-	string msg;
-public:
-	SyntaxError(const string &message): msg(message) {}
-	virtual ~SyntaxError() throw() {}
-	virtual const char *what() const throw() { return msg.c_str(); }
-};
 
 class Tokenizer {
 public:
@@ -1275,5 +1294,8 @@ public:
 	}
 };
 
+
 } // namespace FilterSupport
 } // namespace Passenger
+
+#endif /* _PASSENGER_FILTER_SUPPORT_H_ */
