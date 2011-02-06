@@ -126,8 +126,8 @@ private:
 	static bool isLiteralChar(char ch) {
 		return (ch >= 'a' && ch <= 'z')
 			|| (ch >= 'A' && ch <= 'Z')
-			|| (ch >= '0' && ch <= '9'
-			|| ch == '_');
+			|| (ch >= '0' && ch <= '9')
+			|| ch == '_';
 	}
 	
 	static bool isDigit(char ch) {
