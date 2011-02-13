@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/bin/sh -e
 
-set -x
-set -e
+BUILD_VERBOSITY=${BUILD_VERBOSITY:-0}
+[ $BUILD_VERBOSITY -ge 3 ] && set -x
 
 reldir=`dirname $0`
 stage=./stage-release

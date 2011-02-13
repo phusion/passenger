@@ -492,7 +492,17 @@ module Dependencies # :nodoc: all
 					"<b>apt-get install libcurl4-openssl-dev</b> " +
 					"or <b>libcurl4-gnutls-dev</b>, whichever you prefer."
 			elsif tags.include?(:redhat)
-				dep.install_command = "yum install curl-devel"
+				begin
+					release = File.read("/etc/redhat-release")
+				rescue
+					release = nil
+				end
+				if release =~ /release 4/
+					# http://code.google.com/p/phusion-passenger/issues/detail?id=554
+					dep.install_command = "yum install zlib-devel e2fsprogs-devel krb5-devel libidn-devel"
+				else
+					dep.install_command = "yum install curl-devel"
+				end
 			end
 		end
 	end

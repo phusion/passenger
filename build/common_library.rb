@@ -71,6 +71,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			AgentsStarter.cpp
 			AgentsStarter.h
 			AgentsStarter.hpp
+			IniFile.h
 			ResourceLocator.h
 			MessageClient.h
 			MessageChannel.h

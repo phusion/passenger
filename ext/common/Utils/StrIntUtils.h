@@ -70,7 +70,8 @@ bool startsWith(const StaticString &str, const StaticString &substr);
  * @param sep The separator to use.
  * @param output The vector to write the output to.
  */
-void split(const string &str, char sep, vector<string> &output);
+void split(const StaticString &str, char sep, vector<string> &output);
+void split(const StaticString &str, char sep, vector<StaticString> &output);
 
 /**
  * Convert anything to a string.

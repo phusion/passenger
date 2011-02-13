@@ -581,10 +581,18 @@ public:
 			unsigned int ret;
 			try {
 				ret = Passenger::readExact(fd, buf, size, &t);
-				*timeout = llroundl((long double) t / 1000);
+				#ifdef __NetBSD__
+					*timeout = llround((double) t / 1000);
+				#else
+					*timeout = llroundl((long double) t / 1000);
+				#endif
 				return ret == size;
 			} catch (...) {
-				*timeout = llroundl((long double) t / 1000);
+				#ifdef __NetBSD__
+					*timeout = llround((double) t / 1000);
+				#else
+					*timeout = llroundl((long double) t / 1000);
+				#endif
 				throw;
 			}
 		} else {

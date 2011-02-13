@@ -910,5 +910,33 @@ namespace tut {
 		ensure(fileExists(filename));
 	}
 	
+	TEST_METHOD(33) {
+		// A transaction is only written to the sink if it passes all given filters.
+		// Test logging of new transaction.
+		SystemTime::forceAll(YESTERDAY);
+		
+		AnalyticsLogPtr log = logger->newTransaction("foobar", "requests", "",
+			"uri == \"/foo\""
+			"\1"
+			"uri != \"/bar\"");
+		log->message("URI: /foo");
+		log->message("transaction 1");
+		log->flushToDiskAfterClose(true);
+		log.reset();
+		
+		log = logger->newTransaction("foobar", "requests", "",
+			"uri == \"/foo\""
+			"\1"
+			"uri == \"/bar\"");
+		log->message("URI: /foo");
+		log->message("transaction 2");
+		log->flushToDiskAfterClose(true);
+		log.reset();
+		
+		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt");
+		ensure("(1)", data.find("transaction 1\n") != string::npos);
+		ensure("(2)", data.find("transaction 2\n") == string::npos);
+	}
+	
 	/************************************/
 }
