@@ -11,6 +11,7 @@
 *.la
 *.slo
 *.dSYM
+*.gch
 /config.rb
 /agents
 build/cache

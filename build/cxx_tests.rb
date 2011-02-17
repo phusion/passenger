@@ -199,8 +199,21 @@ file 'test/cxx/CxxTestMain' => cxx_tests_dependencies.flatten do
 	create_executable("test/cxx/CxxTestMain", objects, TEST_CXX_LDFLAGS)
 end
 
+deps = [
+	'test/cxx/TestSupport.h',
+	'ext/oxt/thread.hpp',
+	'ext/oxt/tracable_exception.hpp',
+	'ext/common/ServerInstanceDir.h',
+	'ext/common/Exceptions.h',
+	'ext/common/Utils.h',
+	'ext/common/Utils/SystemTime.h'
+]
+file 'test/cxx/TestSupport.h.gch' => deps do
+	compile_cxx 'test/cxx/TestSupport.h', "-o test/cxx/TestSupport.h.gch #{TEST_CXX_CFLAGS}"
+end
+
 TEST_CXX_OBJECTS.each_pair do |target, sources|
-	file(target => sources + ['test/cxx/TestSupport.h']) do
+	file(target => sources + ['test/cxx/TestSupport.h', 'test/cxx/TestSupport.h.gch']) do
 		compile_cxx sources[0], "-o #{target} #{TEST_CXX_CFLAGS}"
 	end
 end
