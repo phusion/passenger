@@ -57,7 +57,7 @@ protected
 		raise ArgumentError, "The 'path' argument may not be nil" if path.nil?
 		return Pathname.new(path).realpath.to_s
 	rescue Errno::ENOENT => e
-		raise InvalidAPath, e.message
+		raise InvalidPath, e.message
 	end
 	
 	# Assert that +path+ is a directory. Raises +InvalidPath+ if it isn't.
