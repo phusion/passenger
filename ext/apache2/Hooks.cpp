@@ -731,6 +731,55 @@ private:
 		}
 	}
 	
+	unsigned int
+	escapeUri(unsigned char *dst, const unsigned char *src, size_t size) {
+		static const char hex[] = "0123456789abcdef";
+			           /* " ", "#", "%", "?", %00-%1F, %7F-%FF */
+		static uint32_t escape[] = {
+		       0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+
+		                   /* ?>=< ;:98 7654 3210  /.-, +*)( '&%$ #"!  */
+		       0x80000029, /* 1000 0000 0000 0000  0000 0000 0010 1001 */
+
+		                   /* _^]\ [ZYX WVUT SRQP  ONML KJIH GFED CBA@ */
+		       0x00000000, /* 0000 0000 0000 0000  0000 0000 0000 0000 */
+
+		                   /*  ~}| {zyx wvut srqp  onml kjih gfed cba` */
+		       0x80000000, /* 1000 0000 0000 0000  0000 0000 0000 0000 */
+
+		       0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+		       0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+		       0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+		       0xffffffff  /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+		};
+		
+		if (dst == NULL) {
+			/* find the number of the characters to be escaped */
+			unsigned int n = 0;
+			while (size > 0) {
+				if (escape[*src >> 5] & (1 << (*src & 0x1f))) {
+					n++;
+				}
+				src++;
+				size--;
+			}
+			return n;
+		}
+		
+		while (size > 0) {
+			if (escape[*src >> 5] & (1 << (*src & 0x1f))) {
+				*dst++ = '%';
+				*dst++ = hex[*src >> 4];
+				*dst++ = hex[*src & 0xf];
+				src++;
+			} else {
+				*dst++ = *src++;
+			}
+			size--;
+		}
+		return 0;
+	}
+	
 	/**
 	 * Convert an HTTP header name to a CGI environment name.
 	 */
@@ -794,6 +843,18 @@ private:
 	{
 		const char *baseURI = mapper.getBaseURI();
 		
+		/*
+		 * Apache unescapes URI's before passing them to Phusion Passenger,
+		 * but backend processes expect the escaped version.
+		 * http://code.google.com/p/phusion-passenger/issues/detail?id=404
+		 */
+		size_t uriLen = strlen(r->uri);
+		unsigned int escaped = escapeUri(NULL, (const unsigned char *) r->uri, uriLen);
+		char escapedUri[uriLen + 2 * escaped + 1];
+		escapeUri((unsigned char *) escapedUri, (const unsigned char *) r->uri, uriLen);
+		escapedUri[uriLen + 2 * escaped] = '\0';
+		
+		
 		// Set standard CGI variables.
 		#ifdef AP_GET_SERVER_VERSION_DEPRECATED
 			addHeader(output, "SERVER_SOFTWARE", ap_get_server_banner());
@@ -828,19 +889,19 @@ private:
 		} else {
 			const char *request_uri;
 			if (r->args != NULL) {
-				request_uri = apr_pstrcat(r->pool, r->uri, "?", r->args, NULL);
+				request_uri = apr_pstrcat(r->pool, escapedUri, "?", r->args, NULL);
 			} else {
-				request_uri = r->uri;
+				request_uri = escapedUri;
 			}
 			addHeader(output, "REQUEST_URI", request_uri);
 		}
 		
 		if (strcmp(baseURI, "/") == 0) {
 			addHeader(output, "SCRIPT_NAME", "");
-			addHeader(output, "PATH_INFO", r->uri);
+			addHeader(output, "PATH_INFO", escapedUri);
 		} else {
 			addHeader(output, "SCRIPT_NAME", baseURI);
-			addHeader(output, "PATH_INFO", r->uri + strlen(baseURI));
+			addHeader(output, "PATH_INFO", escapedUri + strlen(baseURI));
 		}
 		
 		// Set HTTP headers.
