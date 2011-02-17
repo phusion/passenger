@@ -184,12 +184,12 @@ TEST_CXX_OBJECTS = {
 
 desc "Run unit tests for the Apache 2 and Nginx C++ components"
 task 'test:cxx' => ['test/cxx/CxxTestMain', 'test/support/allocate_memory', :native_support] do
-        if ENV['GROUPS'].to_s.empty?
-	        sh "cd test && ./cxx/CxxTestMain"
-        else
-                args = ENV['GROUPS'].split(",").map{ |name| "-g #{name}" }
-                sh "cd test && ./cxx/CxxTestMain #{args.join(' ')}"
-        end
+	if ENV['GROUPS'].to_s.empty?
+		sh "cd test && ./cxx/CxxTestMain"
+	else
+		args = ENV['GROUPS'].split(",").map{ |name| "-g #{name}" }
+		sh "cd test && ./cxx/CxxTestMain #{args.join(' ')}"
+	end
 end
 
 cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys, :libev,
