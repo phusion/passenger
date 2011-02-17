@@ -1,3 +1,32 @@
+Release 3.0.3
+-------------
+
+ * [Nginx] Preferred Nginx version upgraded to 0.8.54
+   The previous preferred version was 0.8.53.
+ * PATH_INFO and REQUEST_URI now contain the original escaped URI
+   Phusion Passenger passes the URI, as reported by Apache/Nginx, to
+   application processes through the PATH_INFO and REQUEST_URI variables.
+   These variables are supposed to contain the original, unescaped URI, e.g.
+   /clubs/%C3%BC. Both Apache and Nginx thought that it would be a good idea
+   to unescape the URI before passing it to modules like Phusion Passenger,
+   thereby causing PATH_INFO and REQUEST_URI to contain the unescaped URI,
+   e.g. /clubs/ü. This causes all sorts of encoding problems. We now manually
+   re-escape the URI when setting PATH_INFO and REQUEST_URI. Issue #404.
+ * The installer no longer detects directories as potential commands
+   Previously the installer would look in $PATH for everything that's
+   executable, including directories. If one has /usr/lib in $PATH
+   and a directory /usr/lib/gcc exists then the installer would recognize
+   /usr/lib/gcc as the compiler. We now explicitly check whether the item
+   is also a file.
+ * PseudoIO now responds to #to_io
+   Phusion Passenger sets STDERR to a PseudoIO object in order to capture
+   anything written to STDERR during application startup. This breaks
+   some libraries which expect STDERR to respond to #to_io. This has now
+   been fixed. Issue #607.
+ * Fixed various other minor bugs
+   See the git commit log for details.
+
+
 Release 3.0.2
 -------------
 
