@@ -1,5 +1,5 @@
 #include "TestSupport.h"
-#include "LoggingAgent/FilterSupport.h"
+#include "agents/LoggingAgent/FilterSupport.h"
 
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>

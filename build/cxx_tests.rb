@@ -155,7 +155,7 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/SystemTime.cpp),
 	'test/cxx/FilterSupportTest.o' => %w(
 		test/cxx/FilterSupportTest.cpp
-		ext/common/LoggingAgent/FilterSupport.h),
+		ext/common/agents/LoggingAgent/FilterSupport.h),
 	'test/cxx/CachedFileStatTest.o' => %w(
 		test/cxx/CachedFileStatTest.cpp
 		ext/common/Utils/CachedFileStat.hpp
