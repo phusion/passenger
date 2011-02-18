@@ -32,7 +32,7 @@ task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
 
 desc "Clean all compiled test files"
 task 'test:clean' do
-	sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/cxx/CxxTestMain test/cxx/*.o")
+	sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/cxx/CxxTestMain test/cxx/*.o test/cxx/*.gch")
 	sh("rm -f test/support/allocate_memory")
 end
 
