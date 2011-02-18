@@ -83,7 +83,7 @@ module Packaging
 		'test/*.example',
 		'test/support/*.{c,cpp,h,rb}',
 		'test/tut/*',
-		'test/cxx/*.{cpp,h}',
+		'test/cxx/**/*.{cpp,h}',
 		'test/oxt/*.{cpp,hpp}',
 		'test/ruby/**/*',
 		'test/integration_tests/**/*',

@@ -12,9 +12,9 @@
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Socket.h>
 #include <ApplicationPool2/Session.h>
-#include <PriorityQueue.h>
 #include <FileDescriptor.h>
 #include <Logging.h>
+#include <Utils/PriorityQueue.h>
 #include <Utils/SystemTime.h>
 
 namespace Passenger {
@@ -27,55 +27,105 @@ using namespace boost;
 class ProcessList: public list<ProcessPtr> {
 public:
 	iterator last_iterator() {
-		iterator last = end();
-		last--;
-		return last;
+		if (empty()) {
+			return end();
+		} else {
+			iterator last = end();
+			last--;
+			return last;
+		}
 	}
 };
 
 /**
+ * Represents an application process, as spawned by a Spawner. Every Process has
+ * a PID, an admin socket and a list of sockets on which it listens for
+ * connections. A Process is usually contained inside a Group.
+ *
+ * The admin socket is used for garbage collection: writing to it or closing it
+ * causes the Process to gracefully terminate itself. The admin socket is not
+ * used for data.
+ *
  * Except for the otherwise documented parts, this class is not thread-safe,
- * so only use within the ApplicationPool lock.
+ * so only use within the Pool lock.
  */
 class Process: public enable_shared_from_this<Process> {
 private:
 	friend class Group;
 	
+	/** A mutex to protect access to 'group'. */
 	mutable boost::mutex backrefSyncher;
+	/** Group inside the Pool that this Process belongs to. */
 	weak_ptr<Group> group;
 	
+	/** A subset of 'sockets': all sockets that speak the
+	 * "session" protocol, sorted by socket.usage(). */
 	PriorityQueue<Socket> sessionSockets;
 	
+	/** The iterator inside the associated Group's process list. */
 	ProcessList::iterator it;
+	/** The handle inside the associated Group's process priority queue. */
 	PriorityQueue<Process>::Handle pqHandle;
 	
 	void indexSessionSockets() {
 		SocketList::iterator it;
+		concurrency = 0;
 		for (it = sockets->begin(); it != sockets->end(); it++) {
 			Socket *socket = &(*it);
 			if (socket->protocol == "session") {
 				socket->pqHandle = sessionSockets.push(socket, socket->usage());
+				if (concurrency != -1) {
+					if (socket->concurrency == 0) {
+						// If one of the sockets has a concurrency of
+						// 0 (unlimited) then we mark this entire Process
+						// as having a concurrency of 0.
+						concurrency = -1;
+					} else {
+						concurrency += socket->concurrency;
+					}
+				}
 			}
+		}
+		if (concurrency == -1) {
+			concurrency = 0;
 		}
 	}
 	
 public:
-	/* Read-only fields, set once during initialization and never written to again.
-	 * Reading is thread-safe.
-	 */
-	pid_t pid;
-	string gupid;
-	FileDescriptor adminSocket;
-	SocketListPtr sockets;
-	unsigned long long spawnStartTime;
+	/*************************************************************
+	 * Read-only fields, set once during initialization and never
+	 * written to again. Reading is thread-safe.
+	 *************************************************************/
 	
-	/* Information used by Pool. Do not write to these from outside the Pool.
-	 * If you read these make sure the Pool isn't concurrently modifying.
-	 */
-	unsigned long long spawnTime;
-	unsigned long long lastUsed;
+	/** Process PID. */
+	pid_t pid;
+	/** UUID for this process, randomly generated and will never appear again. */
+	string gupid;
+	/** Admin socket, see class description. */
+	FileDescriptor adminSocket;
+	/** The sockets that this Process listens on for connections. */
+	SocketListPtr sockets;
+	/** Time at which we started spawning this process. */
+	unsigned long long spawnStartTime;
+	/** The maximum amount of concurrent sessions this process can handle.
+	 * 0 means unlimited. */
 	int concurrency;
+	
+	
+	/*************************************************************
+	 * Information used by Pool. Do not write to these from
+	 * outside the Pool. If you read these make sure the Pool
+	 * isn't concurrently modifying.
+	 *************************************************************/
+	
+	/** Time at which we finished spawning this process, i.e. when this
+	 * process was finished initializing. */
+	unsigned long long spawnTime;
+	/** Last time when a session was opened for this Process. */
+	unsigned long long lastUsed;
+	/** Number of sessions currently open. */
 	int sessions;
+	
 	
 	Process(pid_t pid, const string &gupid, const FileDescriptor &adminSocket,
 		const SocketListPtr &sockets, unsigned long long spawnStartTime)
@@ -90,8 +140,17 @@ public:
 		
 		lastUsed    = SystemTime::getUsec();
 		spawnTime   = lastUsed;
-		concurrency = 0;
 		sessions    = 0;
+	}
+	
+	~Process() {
+		SocketList::const_iterator it, end = sockets->end();
+		for (it = sockets->begin(); it != end; it++) {
+			if (getSocketAddressType(it->address) == SAT_UNIX) {
+				string filename = parseUnixSocketAddress(it->address);
+				syscalls::unlink(filename.c_str());
+			}
+		}
 	}
 	
 	// Thread-safe.
@@ -112,7 +171,16 @@ public:
 	}
 	
 	int usage() const {
-		return (int) (((long long) sessions * INT_MAX) / (double) concurrency);
+		if (concurrency == 0) {
+			// Allows Group.pqueue to give idle sockets more priority.
+			if (sessions == 0) {
+				return 0;
+			} else {
+				return 1;
+			}
+		} else {
+			return (int) (((long long) sessions * INT_MAX) / (double) concurrency);
+		}
 	}
 	
 	bool atFullCapacity() const {

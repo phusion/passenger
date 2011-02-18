@@ -46,6 +46,10 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 		'Utils/MD5.o' => %w(
 			Utils/MD5.cpp
 			Utils/MD5.h),
+		'Utils/fib.o' => %w(
+			Utils/fib.c
+			Utils/fib.h
+			Utils/fibpriv.h),
 		'Utils/SystemTime.o' => %w(
 			Utils/SystemTime.cpp
 			Utils/SystemTime.h),

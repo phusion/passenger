@@ -74,29 +74,39 @@ private:
 	
 	vector<const StaticString *> getStringFields() const {
 		vector<const StaticString *> result;
-		result.reserve(12);
+		result.reserve(18);
+		
 		result.push_back(&appRoot);
 		result.push_back(&appGroupName);
 		result.push_back(&appType);
+		result.push_back(&startCommand);
+		result.push_back(&startupFile);
+		result.push_back(&processTitle);
+		
 		result.push_back(&environment);
 		result.push_back(&baseURI);
 		result.push_back(&spawnMethod);
 		result.push_back(&user);
+		
 		result.push_back(&group);
 		result.push_back(&defaultUser);
 		result.push_back(&defaultGroup);
 		result.push_back(&restartDir);
+		
 		result.push_back(&ruby);
 		result.push_back(&groupSecret);
 		result.push_back(&hostName);
 		result.push_back(&uri);
+		
 		return result;
 	}
 	
 	static inline void
 	appendKeyValue(vector<string> &vec, const char *key, const StaticString &value) {
-		vec.push_back(key);
-		vec.push_back(value.toString());
+		if (!value.empty()) {
+			vec.push_back(key);
+			vec.push_back(value.toString());
+		}
 	}
 	
 	static inline void
@@ -143,8 +153,32 @@ public:
 	 */
 	StaticString appGroupName;
 	
-	/** The application type. Either "rails", "rack" or "wsgi". */
+	/** The application's type, used for determining the command to invoke to
+	 * spawn an application process as well as determining the startup file's
+	 * filename. Either "classic-rails", "rack", "wsgi" or the empty string.
+	 * In case of the latter, 'startCommand' and 'startupFile' (which MUST
+	 * be set) will dictate the startup command and the startup file's
+	 * filename. */
 	StaticString appType;
+	
+	/** The command for spawning the application process. This is a list of
+	 * arguments, separated by '\1', e.g. "ruby\1foo.rb". Only used
+	 * during spawning and only if appType.empty(). */
+	StaticString startCommand;
+	
+	/** Filename of the application's startup file. Only actually used for
+	 * determining user switching info. Only used during spawning and only
+	 * if appType.empty(). */
+	StaticString startupFile;
+	
+	/** The process title to assign to the application process. Only used
+	 * during spawning. May be empty in which case no particular process
+	 * title is assigned. Only used during spawning and only if
+	 * appType.empty(). */
+	StaticString processTitle;
+	
+	/** The maximum amount of time that may be spent on spawning the process. */
+	unsigned int startTimeout;
 	
 	/**
 	 * The RAILS_ENV/RACK_ENV environment that should be used. May not be an
@@ -287,7 +321,7 @@ public:
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
 	Options() {
-		appType                 = "rails";
+		startTimeout            = 60 * 1000;
 		environment             = "production";
 		baseURI                 = "/";
 		spawnMethod             = "smart-lv2";
@@ -312,6 +346,12 @@ public:
 		return *this;
 	}
 	
+	Options copyAndPersist() const {
+		Options cpy(*this);
+		cpy.persist(*this);
+		return cpy;
+	}
+	
 	/**
 	 * Assign <em>other</em>'s string fields' values into this Option
 	 * object, and store the data in this Option object's internal storage
@@ -320,21 +360,20 @@ public:
 	Options &persist(const Options &other) {
 		vector<const StaticString *> strings = getStringFields();
 		vector<const StaticString *> otherStrings = other.getStringFields();
-		vector<const StaticString *>::iterator it, it2;
+		unsigned int i;
 		size_t otherLen = 0;
 		char *end;
 		
-		for (it = otherStrings.begin(); it != otherStrings.end(); it++) {
-			otherLen += (*it)->size() + 1;
+		assert(strings.size() == otherStrings.size());
+		for (i = 0; i < otherStrings.size(); i++) {
+			otherLen += otherStrings[i]->size() + 1;
 		}
 		
 		shared_array<char> data(new char[otherLen]);
-		end = storage.get();
-		it  = strings.begin();
-		it2 = otherStrings.begin();
-		for (; it != otherStrings.end(); it++, it2++) {
-			const StaticString *str = *it;
-			const StaticString *otherStr = *it2;
+		end = data.get();
+		for (i = 0; i < otherStrings.size(); i++) {
+			const StaticString *str = strings[i];
+			const StaticString *otherStr = otherStrings[i];
 			
 			*const_cast<StaticString *>(str) = StaticString(end, otherStr->size());
 			memcpy(end, otherStr->c_str(), otherStr->size());
@@ -374,6 +413,11 @@ public:
 		appendKeyValue (vec, "app_root",           appRoot);
 		appendKeyValue (vec, "app_group_name",     getAppGroupName());
 		appendKeyValue (vec, "app_type",           appType);
+		if (appType.empty()) {
+			appendKeyValue (vec, "start_command", startCommand);
+			appendKeyValue (vec, "process_title", processTitle);
+		}
+		appendKeyValue3(vec, "start_timeout",      startTimeout);
 		appendKeyValue (vec, "environment",        environment);
 		appendKeyValue (vec, "base_uri",           baseURI);
 		appendKeyValue (vec, "spawn_method",       spawnMethod);
@@ -408,6 +452,42 @@ public:
 			return appRoot;
 		} else {
 			return appGroupName;
+		}
+	}
+	
+	string getStartCommand(const ResourceLocator &resourceLocator) const {
+		if (appType == "classic-rails") {
+			return ruby + "\1" + resourceLocator.getHelperScriptsDir() + "/classic-rails-loader.rb";
+		} else if (appType == "rack") {
+			return ruby + "\1" + resourceLocator.getHelperScriptsDir() + "/rack-loader.rb";
+		} else if (appType == "wsgi") {
+			return "python\1" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";
+		} else {
+			return startCommand;
+		}
+	}
+	
+	StaticString getStartupFile() const {
+		if (appType == "classic-rails") {
+			return "config/environment.rb";
+		} else if (appType == "rack") {
+			return "config.ru";
+		} else if (appType == "wsgi") {
+			return "passenger_wsgi.py";
+		} else {
+			return startupFile;
+		}
+	}
+	
+	StaticString getProcessTitle() const {
+		if (appType == "classic-rails") {
+			return "Passenger RailsApp";
+		} else if (appType == "rack") {
+			return "Passenger RackApp";
+		} else if (appType == "wsgi") {
+			return "Passenger WsgiApp";
+		} else {
+			return processTitle;
 		}
 	}
 	

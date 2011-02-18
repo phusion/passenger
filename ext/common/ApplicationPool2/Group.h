@@ -90,6 +90,7 @@ private:
 		}
 	}
 	
+	/** @pre count > 0 */
 	SessionPtr newSession() {
 		Process *process   = pqueue.top();
 		SessionPtr session = process->newSession();

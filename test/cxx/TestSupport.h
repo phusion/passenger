@@ -18,6 +18,7 @@
 #include <oxt/tracable_exception.hpp>
 
 #include "../tut/tut.h"
+#include "ResourceLocator.h"
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
@@ -69,6 +70,9 @@ using namespace oxt;
 			fail("SHOULD_NEVER_HAPPEN(" #code ") failed");			\
 		}									\
 	} while (0)
+
+
+extern ResourceLocator *resourceLocator;
 
 
 /**

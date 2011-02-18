@@ -26,7 +26,7 @@ public:
 private:
 	/** For keeping the OS process alive until all of a Process's sessions are closed. */
 	ProcessPtr process;
-	/** Socket to use for this session. Guaranteed to be alive thanks to the 'sockets' reference. */
+	/** Socket to use for this session. Guaranteed to be alive thanks to the 'process' reference. */
 	Socket *socket;
 	
 	Connection connection;

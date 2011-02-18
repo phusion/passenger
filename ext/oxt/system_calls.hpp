@@ -155,6 +155,7 @@ namespace oxt {
 		int fclose(FILE *fp);
 		int unlink(const char *pathname);
 		int stat(const char *path, struct stat *buf);
+		int lstat(const char *path, struct stat *buf);
 		
 		time_t time(time_t *t);
 		unsigned int sleep(unsigned int seconds);

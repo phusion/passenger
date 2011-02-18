@@ -351,6 +351,16 @@ syscalls::stat(const char *path, struct stat *buf) {
 	return ret;
 }
 
+int
+syscalls::lstat(const char *path, struct stat *buf) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::lstat(path, buf)
+	);
+	return ret;
+}
+
 time_t
 syscalls::time(time_t *t) {
 	time_t ret;

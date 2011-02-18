@@ -7,6 +7,8 @@
 
 namespace TestSupport {
 
+ResourceLocator *resourceLocator = NULL;
+
 void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
                                           ServerInstanceDir::GenerationPtr &generation)
 {

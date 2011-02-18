@@ -8,12 +8,15 @@
 #include <boost/make_shared.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/bind.hpp>
+#include <oxt/system_calls.hpp>
 #include <sys/types.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
 #include <unistd.h>
+#include <pwd.h>
+#include <grp.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
 #include <FileDescriptor.h>
@@ -22,25 +25,133 @@
 #include <StaticString.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/ScopeGuard.h>
+#include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
+
+namespace tut {
+	struct ApplicationPool2_DirectSpawnerTest;
+	struct ApplicationPool2_SmartSpawnerTest;
+}
 
 namespace Passenger {
 namespace ApplicationPool2 {
 
 using namespace std;
 using namespace boost;
+using namespace oxt;
 
 
 class Spawner {
+private:
+	friend class tut::ApplicationPool2_DirectSpawnerTest;
+	friend class tut::ApplicationPool2_SmartSpawnerTest;
+	
+	void sendSpawnRequest(int connection, const string &gupid, const Options &options,
+		unsigned long long &timeout)
+	{
+		try {
+			writeExact(connection,
+				"You have control 1.0\n"
+				"passenger_version: " PASSENGER_VERSION "\n"
+				"gupid: " + gupid + "\n",
+				&timeout);
+			
+			vector<string> args;
+			vector<string>::const_iterator it, end;
+			options.toVector(args);
+			for (it = args.begin(); it != args.end(); it++) {
+				const string &key = *it;
+				it++;
+				const string &value = *it;
+				writeExact(connection, key + ": " + value + "\n", &timeout);
+			}
+			writeExact(connection, "\n", &timeout);
+		} catch (const SystemException &e) {
+			if (e.code() == EPIPE) {
+				/* Ignore this. Process might have written an
+				 * error response before reading the arguments,
+				 * in which case we'll want to show that instead.
+				 */
+			} else {
+				throw;
+			}
+		}
+	}
+	
+	ProcessPtr handleSpawnResponse(BufferedIO &io, pid_t pid, const string &gupid,
+		unsigned long long spawnStartTime, FileDescriptor &adminSocket,
+		unsigned long long &timeout)
+	{
+		SocketListPtr sockets = make_shared<SocketList>();
+		while (true) {
+			string line = io.readLine(1024 * 4, &timeout);
+			if (line.empty()) {
+				throw EOFException("Premature end-of-stream");
+			} else if (line[line.size() - 1] != '\n') {
+				throw IOException("Invalid line: no newline character found");
+			} else if (line == "\n") {
+				break;
+			}
+			
+			string::size_type pos = line.find(": ");
+			if (pos == string::npos) {
+				throw IOException("Invalid line: no separator found");
+			}
+			
+			string key = line.substr(0, pos);
+			string value = line.substr(pos + 2, line.size() - pos - 3);
+			if (key == "socket") {
+				// socket: <name>;<address>;<protocol>;<concurrency>
+				vector<string> args;
+				split(value, ';', args);
+				if (args.size() == 4) {
+					sockets->add(args[0], args[1], args[2], atoi(args[3]));
+				} else {
+					throw IOException("Invalid response format for 'socket' option");
+				}
+			} else {
+				throw IOException("Unknown key '" + key + "'");
+			}
+		}
+		
+		return make_shared<Process>(pid, gupid, adminSocket, sockets, spawnStartTime);
+	}
+	
 protected:
 	struct UserSwitchingInfo {
 		bool switchUser;
 		string username;
+		string home;
+		string shell;
 		uid_t uid;
 		gid_t gid;
 		int ngroups;
 		shared_array<gid_t> gidset;
 	};
+	
+	static void killAndWaitpid(pid_t pid) {
+		syscalls::kill(pid, SIGKILL);
+		syscalls::waitpid(pid, NULL, 0);
+	}
+	
+	/**
+	 * Behaves like <tt>waitpid(pid, status, WNOHANG)</tt>, but waits at most
+	 * <em>timeout</em> miliseconds for the process to exit.
+	 */
+	static int timedWaitpid(pid_t pid, int *status, unsigned long long timeout) {
+		Timer timer;
+		int ret;
+		
+		do {
+			ret = syscalls::waitpid(pid, status, WNOHANG);
+			if (ret > 0 || ret == -1) {
+				return ret;
+			} else {
+				syscalls::usleep(10000);
+			}
+		} while (timer.elapsed() < timeout);
+		return 0; // timed out
+	}
 	
 	void createCommandArgs(const vector<string> &command, shared_array<const char *> &args) {
 		args.reset(new const char *[command.size()]);
@@ -52,18 +163,133 @@ protected:
 	
 	UserSwitchingInfo prepareUserSwitching(const Options &options) {
 		UserSwitchingInfo info;
-		// TODO
+		if (geteuid() != 0) {
+			struct passwd *userInfo = getpwuid(geteuid());
+			if (userInfo == NULL) {
+				throw RuntimeException("Cannot get user database entry for user " +
+					getProcessUsername() + "; it looks like your system's " +
+					"user database is broken, please fix it.");
+			}
+			
+			info.switchUser = false;
+			info.username = userInfo->pw_name;
+			info.home = userInfo->pw_dir;
+			info.shell = userInfo->pw_shell;
+			info.uid = geteuid();
+			info.gid = getegid();
+			info.ngroups = 0;
+			return info;
+		}
+		
+		string defaultGroup;
+		string startupFile = options.getStartupFile();
+		struct passwd *userInfo = NULL;
+		struct group *groupInfo = NULL;
+		
+		if (options.defaultGroup.empty()) {
+			struct passwd *info = getpwnam(options.defaultUser.c_str());
+			if (info == NULL) {
+				throw RuntimeException("Cannot get user database entry for username '" +
+					options.defaultUser + "'");
+			}
+			struct group *group = getgrgid(info->pw_gid);
+			if (group == NULL) {
+				throw RuntimeException(string("Cannot get group database entry for ") +
+					"the default group belonging to username '" +
+					options.defaultUser + "'");
+			}
+			defaultGroup = group->gr_name;
+		} else {
+			defaultGroup = options.defaultGroup;
+		}
+		
+		if (!options.user.empty()) {
+			userInfo = getpwnam(options.user.c_str());
+		} else {
+			struct stat buf;
+			if (syscalls::lstat(startupFile.c_str(), &buf) == -1) {
+				int e = errno;
+				throw SystemException("Cannot lstat(\"" + startupFile +
+					"\")", e);
+			}
+			userInfo = getpwuid(buf.st_uid);
+		}
+		if (userInfo == NULL || userInfo->pw_uid == 0) {
+			userInfo = getpwnam(options.defaultUser.c_str());
+		}
+		
+		if (!options.group.empty()) {
+			if (options.group == "!STARTUP_FILE!") {
+				struct stat buf;
+				if (syscalls::lstat(startupFile.c_str(), &buf) == -1) {
+					int e = errno;
+					throw SystemException("Cannot lstat(\"" +
+						startupFile + "\")", e);
+				}
+				groupInfo = getgrgid(buf.st_gid);
+			} else {
+				groupInfo = getgrnam(options.group.c_str());
+			}
+		} else if (userInfo != NULL) {
+			groupInfo = getgrgid(userInfo->pw_gid);
+		}
+		if (groupInfo == NULL || groupInfo->gr_gid == 0) {
+			groupInfo = getgrnam(defaultGroup.c_str());
+		}
+		
+		if (userInfo == NULL) {
+			throw RuntimeException("Cannot determine a user to lower privilege to");
+		}
+		if (groupInfo == NULL) {
+			throw RuntimeException("Cannot determine a group to lower privilege to");
+		}
+		
+		#ifdef __APPLE__
+			int groups[1024];
+			info.ngroups = sizeof(groups) / sizeof(int);
+		#else
+			gid_t groups[1024];
+			info.ngroups = sizeof(groups) / sizeof(gid_t);
+		#endif
+		int ret;
+		info.switchUser = true;
+		info.username = userInfo->pw_name;
+		info.home = userInfo->pw_dir;
+		info.shell = userInfo->pw_shell;
+		info.uid = userInfo->pw_uid;
+		info.gid = groupInfo->gr_gid;
+		ret = getgrouplist(userInfo->pw_name, groupInfo->gr_gid,
+			groups, &info.ngroups);
+		if (ret == -1) {
+			int e = errno;
+			throw SystemException("getgrouplist() failed", e);
+		}
+		info.gidset = shared_array<gid_t>(new gid_t[info.ngroups]);
+		for (int i = 0; i < info.ngroups; i++) {
+			info.gidset[i] = groups[i];
+		}
 		return info;
 	}
 	
-	map<string, string> prepareEnvironmentVariablesFromPool(const Options &options) {
-		// $USER, $LOGNAME, $SHELL, $PYTHONUNBUFFERED=1
-		// TODO
-		return map<string, string>();
-	}
-	
-	void resetSignalHandlers() {
+	map<string, string> prepareEnvironmentVariablesFromPool(const Options &options,
+		const UserSwitchingInfo &info)
+	{
+		map<string, string> result;
 		
+		result["USER"] = info.username;
+		result["LOGNAME"] = info.username;
+		result["SHELL"] = info.shell;
+		result["PYTHONUNBUFFERED"] = "1";
+		result["HOME"] = info.home;
+		
+		if (options.environmentVariables != NULL) {
+			vector<string> strings = *options.environmentVariables->getItems();
+			for (unsigned int i = 0; i < strings.size(); i += 2) {
+				result[strings[i]] = strings[i + 1];
+			}
+		}
+		
+		return result;
 	}
 	
 	void setWorkingDirectory(const Options &options) {
@@ -78,11 +304,83 @@ protected:
 	}
 	
 	void switchUser(const UserSwitchingInfo &info) {
-		// TODO
+		if (info.switchUser) {
+			if (setgroups(info.ngroups, info.gidset.get()) == -1) {
+				int e = errno;
+				throw SystemException("setgroups() failed", e);
+			}
+			if (setgid(info.gid) == -1) {
+				int e = errno;
+				throw SystemException("setsid() failed", e);
+			}
+			if (setuid(info.uid) == -1) {
+				int e = errno;
+				throw SystemException("setuid() failed", e);
+			}
+		}
 	}
 	
 	void setEnvironmentVariables(const map<string, string> &vars) {
+		map<string, string>::const_iterator it, end = vars.end();
+		for (it = vars.begin(); it != end; it++) {
+			setenv(it->first.c_str(), it->second.c_str(), 1);
+		}
+	}
+	
+	ProcessPtr negotiateSpawn(pid_t pid, FileDescriptor &adminSocket,
+		const RandomGeneratorPtr &randomGenerator, const Options &options)
+	{
+		BufferedIO io(adminSocket);
+		unsigned long long spawnStartTime = SystemTime::getUsec();
+		string gupid = randomGenerator->generateAsciiString(43);
+		unsigned long long timeout = options.startTimeout * 1000;
 		
+		string result = io.readLine(1024, &timeout);
+		if (result == "I have control 1.0\n") {
+			sendSpawnRequest(adminSocket, gupid, options, timeout);
+			result = io.readLine(1024, &timeout);
+			if (result == "Ready\n") {
+				return handleSpawnResponse(io, pid, gupid,
+					spawnStartTime, adminSocket, timeout);
+			} else {
+				handleSpawnErrorResponse(io, result, timeout);
+			}
+		} else {
+			handleSpawnErrorResponse(io, result, timeout);
+		}
+		return ProcessPtr(); // Never reached.
+	}
+	
+	void handleSpawnErrorResponse(BufferedIO &io, const string &line, unsigned long long &timeout) {
+		if (line == "Error\n") {
+			map<string, string> attributes;
+			
+			while (true) {
+				string line = io.readLine(1024 * 4, &timeout);
+				if (line.empty()) {
+					throw EOFException("Premature end-of-stream in error response");
+				} else if (line[line.size() - 1] != '\n') {
+					throw IOException("Invalid line in error response: no newline character found");
+				} else if (line == "\n") {
+					break;
+				}
+				
+				string::size_type pos = line.find(": ");
+				if (pos == string::npos) {
+					throw IOException("Invalid line in error response: no separator found");
+				}
+				
+				string key = line.substr(0, pos);
+				string value = line.substr(pos + 2, line.size() - pos - 3);
+				attributes[key] = value;
+			}
+			
+			throw SpawnException("Web application failed to start",
+				io.readAll(&timeout), attributes["html"] == "true");
+		} else {
+			throw IOException("Invalid startup response: \"" +
+				cEscapeString(line) + "\"");
+		}
 	}
 	
 public:
@@ -95,79 +393,288 @@ public:
 };
 typedef shared_ptr<Spawner> SpawnerPtr;
 
-#if 0
+
 class SmartSpawner: public Spawner, public enable_shared_from_this<SmartSpawner> {
 private:
-	vector<string> command;
-	PoolOptions options;
+	struct SpawnResult {
+		pid_t pid;
+		FileDescriptor adminSocket;
+	};
 	
-	boost::mutex syncher;
+	ResourceLocator resourceLocator;
+	vector<string> preloaderCommand;
+	RandomGeneratorPtr randomGenerator;
+	Options options;
+	
+	mutable boost::mutex syncher;
 	pid_t pid;
 	FileDescriptor adminSocket;
-	string socketFilename;
-	unsigned long long lastUsed;
+	string socketAddress;
+	unsigned long long m_lastUsed;
+	
+	vector<string> createRealPreloaderCommand(shared_array<const char *> &args) {
+		vector<string> command;
+		
+		if (options.loadShellEnvvars) {
+			string agentsDir = resourceLocator.getAgentsDir();
+			command.push_back(agentsDir + "/SpawnPreparer");
+			command.push_back(agentsDir + "/SpawnPreparer");
+			command.push_back(agentsDir + "/EnvPrinter");
+		}
+		command.push_back(preloaderCommand[0]);
+		command.push_back("Passenger AppPreloader: " + options.appRoot);
+		for (unsigned int i = 1; i < preloaderCommand.size(); i++) {
+			command.push_back(preloaderCommand[i]);
+		}
+		
+		createCommandArgs(command, args);
+		return command;
+	}
 	
 	bool serverStarted() const {
 		return pid != -1;
 	}
 	
-	void processStartReply(int fd) {
-		MessageChannel channel(fd);
-		
-	}
-	
-	void startServer(const PoolOptions &options) {
+	void startServer() {
 		assert(!serverStarted());
 		
-		shared_array<char *> args;
+		shared_array<const char *> args;
+		vector<string> command = createRealPreloaderCommand(args);
 		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
-		FileDescriptor adminSocket[2] = createUnixSocketPair();
+		map<string, string> envvars = prepareEnvironmentVariablesFromPool(options, userSwitchingInfo);
+		SocketPair adminSocket = createUnixSocketPair();
 		pid_t pid;
-		
-		createCommandArgs(command, args);
 		
 		pid = syscalls::fork();
 		if (pid == 0) {
-			if (adminSocket[0] != 3) {
-				dup2(adminSocket[0], 3);
-			}
-			closeAllFileDescriptors(3);
-			resetSignalHandlers();
+			resetSignalHandlersAndMask();
+			int adminSocketCopy = dup2(adminSocket.first, 3);
+			dup2(adminSocketCopy, 0);
+			dup2(adminSocketCopy, 1);
+			closeAllFileDescriptors(2);
+			setWorkingDirectory(options);
+			setEnvironmentVariables(envvars);
 			switchUser(userSwitchingInfo);
-			execvp(command[0].c_str(), (char * const *) args);
+			execvp(command[0].c_str(), (char * const *) args.get());
 			
 			int e = errno;
-			fprintf(stderr,
-				"*** ERROR ***: Cannot execute PassengerSpawnPreparationAgent (\"%s\"): %s (%d)\n",
-				command[0].c_str(),
+			fpurge(stdout);
+			fpurge(stderr);
+			printf("Error\n\n");
+			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
 				strerror(e), e);
+			fprintf(stderr, "Cannot execute \"%s\": %s (%d)\n",
+				command[0].c_str(), strerror(e), e);
+			fflush(stdout);
+			fflush(stderr);
 			_exit(1);
 			
 		} else if (pid == -1) {
-			int = errno;
+			int e = errno;
 			throw SystemException("Cannot fork a new process", e);
 			
 		} else {
-			adminSocket[0].close();
-			processStartReply(adminSocket[1]);
+			adminSocket.first.close();
+			this->socketAddress = negotiateStartup(adminSocket.second);
 			this->pid = pid;
-			this->adminSocket = adminSocket[1];
+			this->adminSocket = adminSocket.second;
 		}
 	}
 	
 	void stopServer() {
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
+		
 		if (!serverStarted()) {
 			return;
 		}
-		if (timedWaitpid(pid, 5000) == 0) {
+		adminSocket.close();
+		if (timedWaitpid(pid, NULL, 5000) == 0) {
 			P_TRACE(2, "Spawn server did not exit in time, killing it...");
 			syscalls::kill(pid, SIGKILL);
 			syscalls::waitpid(pid, NULL, 0);
 		}
+		// Delete socket after the process has exited so that it
+		// doesn't crash upon deleting a nonexistant file.
+		if (getSocketAddressType(socketAddress) == SAT_UNIX) {
+			string filename = parseUnixSocketAddress(socketAddress);
+			syscalls::unlink(filename.c_str());
+		}
 		pid = -1;
-		adminSocket.close();
+		socketAddress.clear();
 	}
 	
+	void sendStartupRequest(int fd, unsigned long long &timeout) {
+		try {
+			writeExact(fd,
+				"You have control 1.0\n"
+				"passenger_version: " PASSENGER_VERSION "\n"
+				"app_root: " + options.appRoot + "\n"
+				"\n",
+				&timeout);
+		} catch (const SystemException &e) {
+			if (e.code() == EPIPE) {
+				/* Ignore this. Process might have written an
+				 * error response before reading the arguments,
+				 * in which case we'll want to show that instead.
+				 */
+			} else {
+				throw;
+			}
+		}
+	}
+	
+	string handleStartupResponse(BufferedIO &io, unsigned long long &timeout) {
+		string socketAddress;
+		
+		while (true) {
+			string line = io.readLine(1024 * 4, &timeout);
+			if (line.empty()) {
+				throw EOFException("Premature end-of-stream");
+			} else if (line[line.size() - 1] != '\n') {
+				throw IOException("Invalid line: no newline character found");
+			} else if (line == "\n") {
+				break;
+			}
+			
+			string::size_type pos = line.find(": ");
+			if (pos == string::npos) {
+				throw IOException("Invalid line: no separator found");
+			}
+			
+			string key = line.substr(0, pos);
+			string value = line.substr(pos + 2, line.size() - pos - 3);
+			if (key == "socket") {
+				socketAddress = value;
+			} else {
+				throw IOException("Unknown key '" + key + "'");
+			}
+		}
+		
+		if (socketAddress.empty()) {
+			throw RuntimeException("Preloader application did not report a socket address");
+		}
+		
+		return socketAddress;
+	}
+	
+	void handleErrorResponse(BufferedIO &io, const string &line, unsigned long long &timeout) {
+		if (line == "Error\n") {
+			map<string, string> attributes;
+			
+			while (true) {
+				string line = io.readLine(1024 * 4, &timeout);
+				if (line.empty()) {
+					throw EOFException("Premature end-of-stream in error response");
+				} else if (line[line.size() - 1] != '\n') {
+					throw IOException("Invalid line in error response: no newline character found");
+				} else if (line == "\n") {
+					break;
+				}
+				
+				string::size_type pos = line.find(": ");
+				if (pos == string::npos) {
+					throw IOException("Invalid line in error response: no separator found");
+				}
+				
+				string key = line.substr(0, pos);
+				string value = line.substr(pos + 2, line.size() - pos - 3);
+				attributes[key] = value;
+			}
+			
+			throw SpawnException("Application preloader failed to start",
+				io.readAll(&timeout), attributes["html"] == "true");
+		} else {
+			throw IOException("Invalid startup response: \"" +
+				cEscapeString(line) + "\"");
+		}
+	}
+	
+	string negotiateStartup(FileDescriptor &fd) {
+		BufferedIO io(fd);
+		unsigned long long timeout = 60 * 1000000;
+		
+		string result = io.readLine(1024, &timeout);
+		if (result == "I have control 1.0\n") {
+			sendStartupRequest(fd, timeout);
+			result = io.readLine(1024, &timeout);
+			if (result == "Ready\n") {
+				return handleStartupResponse(io, timeout);
+			} else {
+				handleErrorResponse(io, result, timeout);
+			}
+		} else {
+			handleErrorResponse(io, result, timeout);
+		}
+		return ""; // Never reached.
+	}
+	
+	SpawnResult sendSpawnCommand(const Options &options) {
+		FileDescriptor fd = connectToServer(socketAddress);
+		MessageChannel channel(fd);
+		BufferedIO io(fd);
+		unsigned long long timeout = options.startTimeout * 1000;
+		string result;
+		vector<string> args;
+		vector<string>::const_iterator it;
+		
+		writeExact(fd, "spawn\n", &timeout);
+		options.toVector(args);
+		for (it = args.begin(); it != args.end(); it++) {
+			const string &key = *it;
+			it++;
+			const string &value = *it;
+			writeExact(fd, key + ": " + value + "\n", &timeout);
+		}
+		writeExact(fd, "\n", &timeout);
+		
+		result = io.readLine(1024, &timeout);
+		if (result == "OK\n") {
+			pid_t spawnedPid;
+			FileDescriptor adminSocket;
+			
+			spawnedPid = atoi(io.readLine(1024, &timeout).c_str());
+			if (spawnedPid <= 0) {
+				throw IOException("Application preloader returned an invalid PID");
+			}
+			// TODO: we really should be checking UID
+			if (getsid(spawnedPid) != getsid(pid)) {
+				throw SecurityException("Application preloader returned a PID that doesn't belong to the same session");
+			}
+			
+			writeExact(fd, "Ready to receive FD\n");
+			adminSocket = channel.readFileDescriptor(false);
+			writeExact(fd, "Received FD\n");
+			
+			SpawnResult result;
+			result.pid = spawnedPid;
+			result.adminSocket = adminSocket;
+			return result;
+			
+		} else if (result == "Error\n") {
+			handleSpawnErrorResponse(io, result, timeout);
+			
+		} else {
+			throw IOException("Invalid spawn command response: \"" +
+				cEscapeString(result) + "\"");
+		}
+		
+		return SpawnResult(); // Never reached.
+	}
+	
+	template<typename Exception>
+	SpawnResult sendSpawnCommandAgain(const Exception &e, const Options &options) {
+		P_WARN("An error occurred while spawning a process: " << e.what());
+		P_WARN("The application preloader seems to have crashed, restarting it and trying again...");
+		stopServer();
+		startServer();
+		ScopeGuard guard(boost::bind(&SmartSpawner::stopServer, this));
+		SpawnResult result = sendSpawnCommand(options);
+		guard.clear();
+		return result;
+	}
+	
+	/*
 	RubyInfo reallyQueryRubyInfo(const string &ruby) {
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -231,55 +738,62 @@ private:
 			return it->second;
 		}
 	}
-	
-	ProcessPtr sendSpawnCommand(const PoolOptions &options) {
-		FileDescriptor fd = connectToUnixServer(socketFilename);
-		return negotiateStartup(fd, -1, options);
-	}
-	
-	template<typename Exception>
-	void sendSpawnCommandAgain(const Exception &e, const PoolOptions &options) {
-		P_WARN("The spawn server seems to have crashed, restarting it and trying again...");
-		stopServer();
-		startServer();
-		sendSpawnCommand(options);
-	}
+	*/
 	
 public:
-	SmartSpawner(const vector<string> &command, const PoolOptions &options) {
-		this->command = command;
-		this->options = options;
-		//this->options.pin();
+	SmartSpawner(const ResourceLocator &_resourceLocator,
+		const vector<string> &_preloaderCommand,
+		const RandomGeneratorPtr &_randomGenerator,
+		const Options &_options)
+		: resourceLocator(_resourceLocator),
+		  preloaderCommand(_preloaderCommand),
+		  randomGenerator(_randomGenerator)
+	{
+		if (preloaderCommand.size() < 2) {
+			throw ArgumentException("preloaderCommand must have at least 2 elements");
+		}
+		
+		options = _options.copyAndPersist();
 		pid = -1;
-		lastUsed = SystemTime::getUsec();
-		command.push_front("/path/to/PassengerSpawnPreparationAgent");
-		command.push_front("/path/to/PassengerSpawnPreparationAgent");
+		m_lastUsed = SystemTime::getUsec();
 	}
 	
 	virtual ~SmartSpawner() {
+		lock_guard<boost::mutex> lock(syncher);
 		stopServer();
 	}
 	
-	virtual ProcessPtr spawn(const PoolOptions &options) {
+	virtual ProcessPtr spawn(const Options &options) {
+		assert(options.appType == this->options.appType);
+		assert(options.appRoot == this->options.appRoot);
+		assert(options.spawnMethod == "smart");
+		
 		lock_guard<boost::mutex> lock(syncher);
-		lastUsed = SystemTime::getUsec();
+		m_lastUsed = SystemTime::getUsec();
 		if (!serverStarted()) {
 			startServer();
 		}
+		
+		SpawnResult result;
 		try {
-			return sendSpawnCommand(options);
+			result = sendSpawnCommand(options);
 		} catch (const SystemException &e) {
-			return sendSpawnCommandAgain(e, options);
+			result = sendSpawnCommandAgain(e, options);
 		} catch (const IOException &e) {
-			return sendSpawnCommandAgain(e, options);
+			result = sendSpawnCommandAgain(e, options);
 		}
+		return negotiateSpawn(result.pid, result.adminSocket, randomGenerator, options);
 	}
 	
 	virtual unsigned long long lastUsed() const {
-		return lastUsed;
+		lock_guard<boost::mutex> lock(syncher);
+		return m_lastUsed;
+	}
+	
+	pid_t getPreloaderPid() const {
+		return pid;
 	}
 };
-#endif
 
 
 class DirectSpawner: public Spawner {
@@ -288,188 +802,82 @@ private:
 	RandomGeneratorPtr randomGenerator;
 	
 	vector<string> createCommand(const Options &options, shared_array<const char *> &args) {
-		vector<string> command;
-		string agentsDir = resourceLocator.getAgentsDir();
-		agentsDir = "/Users/hongli/Projects/passenger/play/ApplicationPool2";
-		string prepAgent = agentsDir + "/spawn-preparer";
+		vector<string> startCommand;
+		string processTitle;
 		
-		command.push_back(agentsDir + "/spawn-preparer");
-		command.push_back(agentsDir + "/spawn-preparer");
-		command.push_back(agentsDir + "/env-printer");
-		
-		if (options.appType == "rails") {
-			command.push_back(options.ruby);
-			command.push_back("Passenger RailsApp");
-			command.push_back(agentsDir + "/rails-loader.rb");
-		} else if (options.appType == "rack") {
-			command.push_back(options.ruby);
-			command.push_back("Passenger RackApp");
-			command.push_back(agentsDir + "/rack-loader.rb");
-		} else if (options.appType == "wsgi") {
-			command.push_back("python");
-			command.push_back("Passenger RailsApp");
-			command.push_back(agentsDir + "/wsgi-loader.py");
+		split(options.getStartCommand(resourceLocator), '\1', startCommand);
+		if (startCommand.empty()) {
+			throw RuntimeException("No startCommand given");
+		}
+		if (options.getProcessTitle().empty()) {
+			processTitle = startCommand[0];
 		} else {
-			throw ArgumentException("Unknown application type '" + options.appType + "'");
+			processTitle = options.getProcessTitle() + ": " + options.appRoot;
+		}
+		
+		vector<string> command;
+		
+		if (options.loadShellEnvvars) {
+			string agentsDir = resourceLocator.getAgentsDir();
+			command.push_back(agentsDir + "/SpawnPreparer");
+			command.push_back(agentsDir + "/SpawnPreparer");
+			command.push_back(agentsDir + "/EnvPrinter");
+		}
+		command.push_back(startCommand[0]);
+		command.push_back(processTitle);
+		for (unsigned int i = 1; i < startCommand.size(); i++) {
+			command.push_back(startCommand[i]);
 		}
 		
 		createCommandArgs(command, args);
 		return command;
 	}
 	
-	void passOptions(int fd, const string &gupid, const Options &options,
-		unsigned long long &timeout)
-	{
-		try {
-			writeExact(fd,
-				"You have control 1.0\n"
-				"passenger_version: " PASSENGER_VERSION "\n"
-				"gupid: " + gupid + "\n",
-				&timeout);
-	
-			vector<string> args;
-			vector<string>::const_iterator it, end;
-			options.toVector(args);
-			for (it = args.begin(); it != args.end(); it++) {
-				const string &key = *it;
-				it++;
-				const string &value = *it;
-				writeExact(fd, key + ": " + value + "\n", &timeout);
-			}
-			writeExact(fd, "\n", &timeout);
-		} catch (const SystemException &e) {
-			if (e.code() == EPIPE) {
-				/* Ignore this. Process might have written an
-				 * error response before reading the arguments,
-				 * in which case we'll want to show that instead.
-				 */
-			} else {
-				throw;
-			}
-		}
-	}
-	
-	ProcessPtr handleStartupResponse(BufferedIO &io, pid_t pid, const string &gupid,
-		unsigned long long spawnStartTime, FileDescriptor &adminSocket,
-		unsigned long long &timeout)
-	{
-		SocketListPtr sockets = make_shared<SocketList>();
-		while (true) {
-			string line = io.readLine(1024 * 4, &timeout);
-			if (line.empty()) {
-				throw EOFException("Premature end-of-stream");
-			} else if (line[line.size() - 1] != '\n') {
-				throw IOException("Invalid line: no newline character found");
-			} else if (line == "\n") {
-				break;
-			}
-			
-			string::size_type pos = line.find(": ");
-			if (pos == string::npos) {
-				throw IOException("Invalid line: no separator found");
-			}
-			
-			string key = line.substr(0, pos);
-			string value = line.substr(pos + 2, line.size() - pos - 3);
-			if (key == "socket") {
-				// socket: <name>;<address>;<protocol>;<concurrency>
-				vector<string> args;
-				split(value, ';', args);
-				if (args.size() == 4) {
-					sockets->add(args[0], args[1], args[2], atoi(args[3]));
-				} else {
-					throw IOException("Invalid response format for 'socket' option");
-				}
-			} else {
-				throw IOException("Unknown key '" + key + "'");
-			}
-		}
-		
-		return make_shared<Process>(pid, gupid, adminSocket, sockets, spawnStartTime);
-	}
-	
-	void handleErrorResponse(BufferedIO &io, const string &line, unsigned long long &timeout) {
-		if (line == "Error\n") {
-			map<string, string> attributes;
-			
-			while (true) {
-				string line = io.readLine(1024 * 4, &timeout);
-				if (line.empty()) {
-					throw EOFException("Premature end-of-stream in error response");
-				} else if (line[line.size() - 1] != '\n') {
-					throw IOException("Invalid line in error response: no newline character found");
-				} else if (line == "\n") {
-					break;
-				}
-				
-				string::size_type pos = line.find(": ");
-				if (pos == string::npos) {
-					throw IOException("Invalid line in error response: no separator found");
-				}
-				
-				string key = line.substr(0, pos);
-				string value = line.substr(pos + 2, line.size() - pos - 3);
-				attributes[key] = value;
-			}
-			
-			throw SpawnException("Web application failed to start",
-				io.readAll(&timeout), attributes["html"] == "true");
-		} else {
-			throw IOException("Invalid startup response");
-		}
-	}
-	
-	ProcessPtr negotiateStartup(pid_t pid, FileDescriptor &adminSocket, const Options &options) {
-		BufferedIO io(adminSocket);
-		unsigned long long spawnStartTime = SystemTime::getUsec();
-		string gupid = randomGenerator->generateAsciiString(43);
-		unsigned long long timeout = 60 * 1000000;
-		
-		string result = io.readLine(1024, &timeout);
-		if (result == "I have control 1.0\n") {
-			passOptions(adminSocket, gupid, options, timeout);
-			result = io.readLine(1024, &timeout);
-			if (result == "Ready\n") {
-				return handleStartupResponse(io, pid, gupid,
-					spawnStartTime, adminSocket, timeout);
-			} else {
-				handleErrorResponse(io, result, timeout);
-			}
-		} else {
-			handleErrorResponse(io, result, timeout);
-		}
-		return ProcessPtr(); // Never reached.
-	}
-	
 public:
-	DirectSpawner(const ResourceLocator &_resourceLocator, const RandomGeneratorPtr &_randomGenerator)
+	DirectSpawner(const ResourceLocator &_resourceLocator,
+		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
 		: resourceLocator(_resourceLocator),
 		  randomGenerator(_randomGenerator)
-		{ }
+	{
+		if (_randomGenerator == NULL) {
+			randomGenerator = make_shared<RandomGenerator>();
+		} else {
+			randomGenerator = _randomGenerator;
+		}
+	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
+		assert(options.spawnMethod == "conservative" || options.spawnMethod == "direct");
+		
 		shared_array<const char *> args;
 		vector<string> command = createCommand(options, args);
 		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
+		map<string, string> envvars = prepareEnvironmentVariablesFromPool(options, userSwitchingInfo);
 		SocketPair adminSocket = createUnixSocketPair();
 		pid_t pid;
 		
 		pid = syscalls::fork();
 		if (pid == 0) {
-			resetSignalHandlers();
+			resetSignalHandlersAndMask();
 			int adminSocketCopy = dup2(adminSocket.first, 3);
 			dup2(adminSocketCopy, 0);
 			dup2(adminSocketCopy, 1);
 			closeAllFileDescriptors(2);
 			setWorkingDirectory(options);
+			setEnvironmentVariables(envvars);
 			switchUser(userSwitchingInfo);
-			execvp(command[0].c_str(), (char * const *) args.get());
+			execvp(args[0], (char * const *) args.get());
 			
 			int e = errno;
+			fpurge(stdout);
+			fpurge(stderr);
 			printf("Error\n\n");
-			printf("Cannot execute the spawn preparation tool (\"%s\"): %s (%d)\n",
+			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
+				strerror(e), e);
+			fprintf(stderr, "Cannot execute \"%s\": %s (%d)\n",
 				command[0].c_str(), strerror(e), e);
 			fflush(stdout);
+			fflush(stderr);
 			_exit(1);
 			
 		} else if (pid == -1) {
@@ -479,7 +887,8 @@ public:
 		} else {
 			ScopeGuard guard(boost::bind(killAndWaitpid, pid));
 			adminSocket.first.close();
-			ProcessPtr process = negotiateStartup(pid, adminSocket.second, options);
+			ProcessPtr process = negotiateSpawn(pid, adminSocket.second,
+				randomGenerator, options);
 			guard.clear();
 			return process;
 		}
@@ -492,38 +901,23 @@ private:
 	ResourceLocator resourceLocator;
 	RandomGeneratorPtr randomGenerator;
 	
-	SpawnerPtr createSmartSpawner(const Options &options) {
-		#if 0
-		if (options.spawnMethod == "conservative" || options.spawnMethod == "direct") {
-			return SpawnerPtr();
-		}
-		
-		string key;
-		vector<string> command;
-		
-		if (options.appType == "rails") {
-			//RubyInfo info = queryRubyInfo(options.ruby);
-			//if (info.supportsFork) {
-				command.push_back(options.ruby);
-				command.push_back("Passenger SpawnServer: " + options.appRoot());
-				command.push_back("/path/to/rails/spawn-server");
-			//}
+	SpawnerPtr tryCreateSmartSpawner(const Options &options) {
+		string dir = resourceLocator.getHelperScriptsDir();
+		vector<string> preloaderCommand;
+		if (options.appType == "classic-rails") {
+			preloaderCommand.push_back(options.ruby);
+			preloaderCommand.push_back(dir + "/classic-rails-preloader.rb");
 		} else if (options.appType == "rack") {
-			//RubyInfo info = queryRubyInfo(options.ruby);
-			//if (info.supportsFork) {
-				command.push_back(options.ruby);
-				command.push_back("Passenger SpawnServer: " + options.appRoot());
-				command.push_back("/path/to/rack/spawn-server");
-			//}
-		}
-		
-		if (key.empty()) {
-			return SpawnerPtr();
+			preloaderCommand.push_back(options.ruby);
+			preloaderCommand.push_back(dir + "/rack-preloader.rb");
+		} else if (options.appType == "wsgi") {
+			preloaderCommand.push_back("python");
+			preloaderCommand.push_back(dir + "/wsgi-preloader.py");
 		} else {
-			return make_shared<SmartSpawner>(command, options);
+			return SpawnerPtr();
 		}
-		#endif
-		return SpawnerPtr();
+		return make_shared<SmartSpawner>(resourceLocator, preloaderCommand,
+			randomGenerator, options);
 	}
 	
 public:
@@ -541,219 +935,21 @@ public:
 	virtual ~SpawnerFactory() { }
 	
 	virtual SpawnerPtr create(const Options &options) {
-		SpawnerPtr spawner = createSmartSpawner(options);
-		if (spawner) {
+		if (options.spawnMethod == "smart" || options.spawnMethod == "smart-lv2") {
+			SpawnerPtr spawner = tryCreateSmartSpawner(options);
+			if (spawner == NULL) {
+				spawner = make_shared<DirectSpawner>(resourceLocator, randomGenerator);
+			}
 			return spawner;
-		} else {
+		} else if (options.spawnMethod == "direct" || options.spawnMethod == "conservative") {
 			return make_shared<DirectSpawner>(resourceLocator, randomGenerator);
+		} else {
+			throw ArgumentException("Unknown spawn method '" + options.spawnMethod + "'");
 		}
 	}
 };
 
 typedef shared_ptr<SpawnerFactory> SpawnerFactoryPtr;
-
-
-#if 0
-class AppSpawner {
-private:
-	struct SpawnServer {
-		string key;
-		pid_t pid;
-		FileDescriptor adminPipe;
-		string socketFilename;
-		time_t lastUsed;
-		
-		SpawnServer() {
-			pid = -1;
-			lastUsed = 0;
-		}
-		
-		~SpawnServer() {
-			if (pid != 0) {
-				adminPipe.close();
-				if (!timedWaitpid(pid, 2000)) {
-					kill(pid, SIGKILL);
-					waitpid(pid, NULL, 0);
-				}
-			}
-		}
-	};
-	
-	typedef shared_ptr<SpawnServer> SpawnServerPtr;
-	typedef map<string, SpawnServerPtr> SpawnServerMap;
-	
-	/* struct RubyInfo {
-		bool supportsFork: 1;
-		bool multicoreThreading: 1;
-	};
-	
-	typedef map<string, RubyInfo> RubyInfoMap; */
-	
-	boost::mutex syncher;
-	SpawnServerMap spawnServers;
-	RubyInfoMap rubyInfo;
-	
-	/*
-	RubyInfo reallyQueryRubyInfo(const string &ruby) {
-		//this_thread::disable_interruption di;
-		//this_thread::disable_syscall_interruption dsi;
-		FileDescriptor pipe[2] = createPipe();
-		pid_t pid = syscalls::fork();
-		if (pid == 0) {
-			dup2(pipe[1], 1);
-			closeAllFileDescriptors(2);
-			execlp(ruby.c_str(), ruby.c_str(),
-				"/path/to/ruby/info/script",
-				(char *) 0);
-			
-			int e = errno;
-			fprintf(stderr, "***ERROR***: Cannot exec(\"%s\"): %s (%d)",
-				ruby.c_str(), strerror(e), e);
-			fflush(stderr);
-			_exit(1);
-		} else if (pid == -1) {
-			int e = errno;
-			throw SystemException("Cannot fork a new process", e);
-		} else {
-			ScopeGuard guard(boost::bind(killAndWaitpid, pid));
-			pipe[1].close();
-			string data;
-			{
-				//this_thread::restore_interruption ri(di);
-				//this_thread::restore_interruption rsi(dsi);
-				// Spend up to 1 minute executing this script.
-				// Cold booting JRuby can take quite some time.
-				bool ret = readAllData(pipe[0], data, 60000);
-				if (!ret) {
-					throw RuntimeException(
-						"Unable to query the capabilities of Ruby "
-						"interpreter '" + ruby + "': "
-						"the info query script failed to finish "
-						"within 1 minute");
-				}
-			}
-			if (data.size() != 2) {
-				throw RuntimeException(
-					"Unable to query the capabilities of Ruby "
-					"interpreter '" + ruby + "': "
-					"the info query script returned " +
-					toString(data.size()) + " bytes "
-					"instead of the expected 2 bytes");
-			}
-			
-			RubyInfo info;
-			info.supportsFork = data[0] == '1';
-			info.multicoreThreading = data[1] == '1';
-			return info;
-		}
-	}
-	
-	RubyInfo queryRubyInfo(const string &ruby) {
-		RubyInfoMap::iterator it = rubyInfo.find(ruby);
-		if (it == rubyInfo.end() || ruby changed) {
-			rubyInfo.erase(ruby);
-			rubyInfo.insert(make_pair(ruby, reallyQueryRubyInfo(ruby)));
-		} else {
-			return it->second;
-		}
-	} */
-	
-	SpawnServerPtr lookupOrCreateSpawnServer(const PoolOptions &options) {
-		if (options.spawnMethod == "conservative") {
-			return SpawnServerPtr();
-		}
-		
-		string key;
-		vector<string> command;
-		
-		if (options.appType == "rails") {
-			//RubyInfo info = queryRubyInfo(options.ruby);
-			//if (info.supportsFork) {
-				key = "ruby\0" +
-					options.ruby + "\0" +
-					options.getAppGroupName() + "\0" +
-					options.environment + "\0" +
-					options.user + "\0" +
-					options.group;
-				command.push_back(options.ruby);
-				command.push_back("Passenger SpawnServer: " + options.appRoot());
-				command.push_back("/path/to/rails/spawn-server");
-			//}
-		} else if (options.appType == "rack") {
-			//RubyInfo info = queryRubyInfo(options.ruby);
-			//if (info.supportsFork) {
-				key = "rack\0" + options.ruby + "\0" + options.getAppGroupName() +
-					"\0" + options.environment;
-				command.push_back(options.ruby);
-				command.push_back("Passenger SpawnServer: " + options.appRoot());
-				command.push_back("/path/to/rack/spawn-server");
-			//}
-		}
-		
-		if (key.empty()) {
-			return SpawnServerPtr();
-		} else {
-			SpawnServerPtr server;
-			SpawnServerMap::iterator it = spawnServers.find(key);
-			if (it == spawnServers.end()) {
-				server = createSpawnServer(key, command, options);
-				spawnServers.insert(make_pair(key, server));
-			} else {
-				server = it->second;
-			}
-			server->lastUsed = time(NULL);
-			return server;
-		}
-	}
-	
-	SpawnServerPtr createSpawnServer(const string &key, const vector<string> &command,
-		const PoolOptions &options)
-	{
-		SpawnServerPtr server = make_shared<SpawnServer>();
-		server->key = key;
-		
-		const char *file = command[0].c_str();
-		char args[command.size()];
-		for (unsigned int i = 1; i < command.size(); i++) {
-			args[i - 1] = command[i].c_str();
-		}
-		args[command.size() - 1] = NULL;
-		
-		FileDescriptor adminSocket[2] = createUnixSocketPair();
-		pid_t pid;
-		
-		pid = fork();
-		if (pid == 0) {
-			execvp(file, (char * const *) args);
-			_exit(1);
-		} else if (pid == -1) {
-			throw;
-		} else {
-			server->pid = pid;
-			return server;
-		}
-	}
-	
-	ProcessPtr spawnWithSpawnServer(const SpawnServerPtr &spawnServer, PoolOptions options) {
-		return ProcessPtr();
-	}
-	
-	ProcessPtr spawnDirectly(const PoolOptions &options) {
-		return ProcessPtr();
-	}
-	
-public:
-	virtual ProcessPtr spawn(const PoolOptions &options) {
-		unique_lock<boost::mutex> lock(syncher);
-		SpawnServerPtr spawnServer = lookupOrCreateSpawnServer(options);
-		if (spawnServer != NULL) {
-			return spawnWithSpawnServer(spawnServer, options);
-		} else {
-			return spawnDirectly(options);
-		}
-	}
-};
-#endif
 
 
 } // namespace ApplicationPool2

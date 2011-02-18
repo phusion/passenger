@@ -24,7 +24,7 @@
 ### C++ components tests ###
 
 TEST_CXX_CFLAGS = "-Iext -Iext/common " <<
-	"#{LIBEV_CFLAGS} #{PlatformInfo.curl_flags} -Itest/support " <<
+	"#{LIBEV_CFLAGS} #{PlatformInfo.curl_flags} -Itest/cxx -Itest/support " <<
 	"#{TEST_COMMON_CFLAGS}"
 TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
@@ -36,6 +36,22 @@ TEST_CXX_OBJECTS = {
 	'test/cxx/TestSupport.o' => %w(
 		test/cxx/TestSupport.cpp
 		test/cxx/TestSupport.h),
+	'test/cxx/ApplicationPool2/DirectSpawnerTest.o' => %w(
+		test/cxx/ApplicationPool2/DirectSpawnerTest.cpp
+		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
+		ext/common/ApplicationPool2/Pool.h
+		ext/common/ApplicationPool2/Options.h
+		ext/common/ApplicationPool2/Process.h
+		ext/common/ApplicationPool2/Socket.h
+		ext/common/ApplicationPool2/Spawner.h),
+	'test/cxx/ApplicationPool2/SmartSpawnerTest.o' => %w(
+		test/cxx/ApplicationPool2/SmartSpawnerTest.cpp
+		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
+		ext/common/ApplicationPool2/Pool.h
+		ext/common/ApplicationPool2/Options.h
+		ext/common/ApplicationPool2/Process.h
+		ext/common/ApplicationPool2/Socket.h
+		ext/common/ApplicationPool2/Spawner.h),
 	'test/cxx/MessageChannelTest.o' => %w(
 		test/cxx/MessageChannelTest.cpp
 		ext/common/MessageChannel.h
@@ -190,8 +206,15 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/IOUtils.h)
 }
 
+dependencies = [
+	'test/cxx/CxxTestMain',
+	'test/support/allocate_memory',
+	:native_support,
+	AGENT_OUTPUT_DIR + 'SpawnPreparer',
+	AGENT_OUTPUT_DIR + 'EnvPrinter'
+]
 desc "Run unit tests for the Apache 2 and Nginx C++ components"
-task 'test:cxx' => ['test/cxx/CxxTestMain', 'test/support/allocate_memory', :native_support] do
+task 'test:cxx' => dependencies do
 	if ENV['GROUPS'].to_s.empty?
 		sh "cd test && ./cxx/CxxTestMain"
 	else

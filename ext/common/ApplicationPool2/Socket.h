@@ -8,7 +8,7 @@
 #include <boost/weak_ptr.hpp>
 #include <climits>
 #include <cassert>
-#include <PriorityQueue.h>
+#include <Utils/PriorityQueue.h>
 #include <Utils/IOUtils.h>
 
 namespace Passenger {
@@ -117,7 +117,7 @@ public:
 	Connection checkoutConnection() {
 		lock_guard<boost::mutex> l(connectionPoolLock);
 		
-		if (idleConnections.empty()) {
+		if (!idleConnections.empty()) {
 			Connection connection = idleConnections.back();
 			idleConnections.pop_back();
 			return connection;
@@ -155,7 +155,13 @@ public:
 	
 	int usage() const {
 		if (concurrency == 0) {
-			return 0;
+			// Allows Process.sessionSockets to give
+			// idle sockets more priority.
+			if (sessions == 0) {
+				return 0;
+			} else {
+				return 1;
+			}
 		} else {
 			return (int) (((long long) sessions * INT_MAX) / (double) concurrency);
 		}

@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <unistd.h>
 
 #include "Utils.h"
 
@@ -97,6 +98,10 @@ main(int argc, char *argv[]) {
 	tut::runner.get().set_callback(&reporter);
 	allGroups = tut::runner.get().list_groups();
 	parseOptions(argc, argv);
+	
+	char path[PATH_MAX + 1];
+	getcwd(path, PATH_MAX);
+	resourceLocator = new ResourceLocator(extractDirName(path));
 	
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {
