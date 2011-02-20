@@ -15,6 +15,8 @@
 #include <cstring>
 #include <cerrno>
 #include <unistd.h>
+#include <pthread.h>
+#include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pwd.h>
 #include <grp.h>
 #include <ApplicationPool2/Process.h>
@@ -827,6 +829,67 @@ private:
 	ResourceLocator resourceLocator;
 	RandomGeneratorPtr randomGenerator;
 	
+	static void *detachProcessMain(void *arg) {
+		this_thread::disable_syscall_interruption dsi;
+		pid_t pid = (pid_t) (long) arg;
+		syscalls::waitpid(pid, NULL, 0);
+		return NULL;
+	}
+	
+	void detachProcess(pid_t pid) {
+		// Using raw pthread API because we don't want to register such
+		// trivial threads on the oxt::thread list.
+		pthread_t thr;
+		pthread_attr_t attr;
+		size_t stack_size = 64 * 1024;
+		
+		unsigned long min_stack_size;
+		bool stack_min_size_defined;
+		bool round_stack_size;
+		
+		#ifdef PTHREAD_STACK_MIN
+			// PTHREAD_STACK_MIN may not be a constant macro so we need
+			// to evaluate it dynamically.
+			min_stack_size = PTHREAD_STACK_MIN;
+			stack_min_size_defined = true;
+		#else
+			// Assume minimum stack size is 128 KB.
+			min_stack_size = 128 * 1024;
+			stack_min_size_defined = false;
+		#endif
+		if (stack_size != 0 && stack_size < min_stack_size) {
+			stack_size = min_stack_size;
+			round_stack_size = !stack_min_size_defined;
+		} else {
+			round_stack_size = true;
+		}
+		
+		if (round_stack_size) {
+			// Round stack size up to page boundary.
+			long page_size;
+			#if defined(_SC_PAGESIZE)
+				page_size = sysconf(_SC_PAGESIZE);
+			#elif defined(_SC_PAGE_SIZE)
+				page_size = sysconf(_SC_PAGE_SIZE);
+			#elif defined(PAGESIZE)
+				page_size = sysconf(PAGESIZE);
+			#elif defined(PAGE_SIZE)
+				page_size = sysconf(PAGE_SIZE);
+			#else
+				page_size = getpagesize();
+			#endif
+			if (stack_size % page_size != 0) {
+				stack_size = stack_size - (stack_size % page_size) + page_size;
+			}
+		}
+		
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, 1);
+		pthread_attr_getstacksize(&attr, &stack_size);
+		pthread_create(&thr, &attr, detachProcessMain, (void *) (long) pid);
+		pthread_attr_destroy(&attr);
+	}
+	
 	vector<string> createCommand(const Options &options, shared_array<const char *> &args) {
 		vector<string> startCommand;
 		string processTitle;
@@ -915,6 +978,7 @@ public:
 			adminSocket.first.close();
 			ProcessPtr process = negotiateSpawn(pid, adminSocket.second,
 				randomGenerator, options);
+			detachProcess(process->pid);
 			guard.clear();
 			return process;
 		}
