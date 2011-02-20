@@ -6,6 +6,12 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct ApplicationPool2_DirectSpawnerTest {
+		BackgroundEventLoop bg;
+		
+		ApplicationPool2_DirectSpawnerTest() {
+			bg.start();
+		}
+		
 		shared_ptr<DirectSpawner> createSpawner(const Options &options) {
 			return make_shared<DirectSpawner>(*resourceLocator);
 		}

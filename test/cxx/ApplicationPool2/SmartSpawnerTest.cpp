@@ -11,6 +11,12 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct ApplicationPool2_SmartSpawnerTest {
+		BackgroundEventLoop bg;
+		
+		ApplicationPool2_SmartSpawnerTest() {
+			bg.start();
+		}
+		
 		~ApplicationPool2_SmartSpawnerTest() {
 			setLogLevel(0);
 		}
@@ -26,7 +32,8 @@ namespace tut {
 				command.push_back("exit-immediately");
 			}
 			
-			return make_shared<SmartSpawner>(*resourceLocator,
+			return make_shared<SmartSpawner>(bg.libev,
+				*resourceLocator,
 				command,
 				make_shared<RandomGenerator>(),
 				options);

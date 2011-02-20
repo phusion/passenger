@@ -24,6 +24,15 @@
 #include "Utils.h"
 #include "Utils/SystemTime.h"
 
+extern "C" {
+	struct ev_loop;
+	struct ev_async;
+}
+
+namespace Passenger {
+	class SafeLibev;
+}
+
 namespace TestSupport {
 
 using namespace std;
@@ -257,6 +266,20 @@ public:
 	operator int() const {
 		return get();
 	}
+};
+
+struct BackgroundEventLoopPrivate;
+
+struct BackgroundEventLoop {
+	struct ev_loop *loop;
+	ev_async *async;
+	SafeLibev *libev;
+	BackgroundEventLoopPrivate *priv;
+	
+	BackgroundEventLoop();
+	~BackgroundEventLoop();
+	
+	void start();
 };
 
 } // namespace TestSupport

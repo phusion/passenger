@@ -20,6 +20,7 @@
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
 #include <FileDescriptor.h>
+#include <SafeLibev.h>
 #include <Exceptions.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
@@ -129,7 +130,8 @@ protected:
 		shared_array<gid_t> gidset;
 	};
 	
-	static void killAndWaitpid(pid_t pid) {
+	static void nonInterruptableKillAndWaitpid(pid_t pid) {
+		this_thread::disable_syscall_interruption dsi;
 		syscalls::kill(pid, SIGKILL);
 		syscalls::waitpid(pid, NULL, 0);
 	}
@@ -401,6 +403,7 @@ private:
 		FileDescriptor adminSocket;
 	};
 	
+	SafeLibev *libev;
 	ResourceLocator resourceLocator;
 	vector<string> preloaderCommand;
 	RandomGeneratorPtr randomGenerator;
@@ -411,6 +414,18 @@ private:
 	FileDescriptor adminSocket;
 	string socketAddress;
 	unsigned long long m_lastUsed;
+	
+	void onPreloaderOutputReadable(ev::io &io, int revents) {
+		char buf[1024 * 8];
+		ssize_t ret;
+		
+		ret = syscalls::read(adminSocket, buf, sizeof(buf));
+		if (ret <= 0) {
+			preloaderOutputWatcher.stop();
+		} else {
+			write(1, buf, ret);
+		}
+	}
 	
 	vector<string> createRealPreloaderCommand(shared_array<const char *> &args) {
 		vector<string> command;
@@ -474,10 +489,14 @@ private:
 			throw SystemException("Cannot fork a new process", e);
 			
 		} else {
+			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
 			adminSocket.first.close();
 			this->socketAddress = negotiateStartup(adminSocket.second);
 			this->pid = pid;
 			this->adminSocket = adminSocket.second;
+			preloaderOutputWatcher.set(adminSocket.second, ev::READ);
+			libev->start(preloaderOutputWatcher);
+			guard.clear();
 		}
 	}
 	
@@ -494,6 +513,7 @@ private:
 			syscalls::kill(pid, SIGKILL);
 			syscalls::waitpid(pid, NULL, 0);
 		}
+		libev->stop(preloaderOutputWatcher);
 		// Delete socket after the process has exited so that it
 		// doesn't crash upon deleting a nonexistant file.
 		if (getSocketAddressType(socketAddress) == SAT_UNIX) {
@@ -741,7 +761,10 @@ private:
 	*/
 	
 public:
-	SmartSpawner(const ResourceLocator &_resourceLocator,
+	ev::io preloaderOutputWatcher;
+	
+	SmartSpawner(SafeLibev *_libev,
+		const ResourceLocator &_resourceLocator,
 		const vector<string> &_preloaderCommand,
 		const RandomGeneratorPtr &_randomGenerator,
 		const Options &_options)
@@ -753,9 +776,12 @@ public:
 			throw ArgumentException("preloaderCommand must have at least 2 elements");
 		}
 		
+		libev = _libev;
 		options = _options.copyAndPersist();
 		pid = -1;
 		m_lastUsed = SystemTime::getUsec();
+		
+		preloaderOutputWatcher.set<SmartSpawner, &SmartSpawner::onPreloaderOutputReadable>(this);
 	}
 	
 	virtual ~SmartSpawner() {
@@ -885,7 +911,7 @@ public:
 			throw SystemException("Cannot fork a new process", e);
 			
 		} else {
-			ScopeGuard guard(boost::bind(killAndWaitpid, pid));
+			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
 			adminSocket.first.close();
 			ProcessPtr process = negotiateSpawn(pid, adminSocket.second,
 				randomGenerator, options);
@@ -898,6 +924,7 @@ public:
 
 class SpawnerFactory {
 private:
+	SafeLibev *libev;
 	ResourceLocator resourceLocator;
 	RandomGeneratorPtr randomGenerator;
 	
@@ -916,14 +943,16 @@ private:
 		} else {
 			return SpawnerPtr();
 		}
-		return make_shared<SmartSpawner>(resourceLocator, preloaderCommand,
-			randomGenerator, options);
+		return make_shared<SmartSpawner>(libev, resourceLocator,
+			preloaderCommand, randomGenerator, options);
 	}
 	
 public:
-	SpawnerFactory(const ResourceLocator &_resourceLocator,
+	SpawnerFactory(SafeLibev *_libev,
+		const ResourceLocator &_resourceLocator,
 		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr())
-		: resourceLocator(_resourceLocator)
+		: libev(_libev),
+		  resourceLocator(_resourceLocator)
 	{
 		if (randomGenerator != NULL) {
 			this->randomGenerator = randomGenerator;

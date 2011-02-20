@@ -64,7 +64,7 @@ def process_client_command(client, command)
 			end
 		end
 		a.close
-		#Process.detach(pid)
+		Process.detach(pid)
 		
 		client.write("OK\n")
 		client.write("#{pid}\n")

@@ -82,6 +82,13 @@ private:
 		cond.notify_all();
 	}
 	
+	void runAndNotify(const Callback *callback, bool *done) {
+		(*callback)();
+		unique_lock<boost::mutex> l(syncher);
+		*done = true;
+		cond.notify_all();
+	}
+	
 public:
 	SafeLibev(struct ev_loop *loop) {
 		this->loop = loop;
@@ -97,6 +104,10 @@ public:
 	
 	struct ev_loop *getLoop() const {
 		return loop;
+	}
+	
+	void setCurrentThread() {
+		loopThread = pthread_self();
 	}
 	
 	template<typename Watcher>
@@ -137,8 +148,13 @@ public:
 			callback();
 		} else {
 			unique_lock<boost::mutex> l(syncher);
-			commands.push_back(callback);
+			bool done = false;
+			commands.push_back(boost::bind(&SafeLibev::runAndNotify, this,
+				&callback, &done));
 			ev_async_send(loop, &async);
+			while (!done) {
+				cond.wait(l);
+			}
 		}
 	}
 };
