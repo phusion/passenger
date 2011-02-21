@@ -44,8 +44,7 @@ private:
 public:
 	Callback onClose;
 	
-	Session(const ProcessPtr &process, Socket *socket)
-	{
+	Session(const ProcessPtr &process, Socket *socket) {
 		this->process   = process;
 		this->socket    = socket;
 		closed          = false;

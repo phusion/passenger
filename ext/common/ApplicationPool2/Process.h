@@ -42,9 +42,13 @@ public:
  * a PID, an admin socket and a list of sockets on which it listens for
  * connections. A Process is usually contained inside a Group.
  *
- * The admin socket is used for garbage collection: writing to it or closing it
- * causes the Process to gracefully terminate itself. The admin socket is not
- * used for data.
+ * The admin socket, an anonymous Unix domain socket, is mapped to the process's
+ * STDIN and STDOUT and has two functions.
+ *
+ * 1. It acts as the main communication channel with the process. Commands are
+ *    sent to and responses are received from it.
+ * 2. It's used for garbage collection: closing it causes the Process to gracefully
+ *    terminate itself.
  *
  * Except for the otherwise documented parts, this class is not thread-safe,
  * so only use within the Pool lock.
