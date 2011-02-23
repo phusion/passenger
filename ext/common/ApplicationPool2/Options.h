@@ -31,6 +31,7 @@
 #include <Account.h>
 #include <Logging.h>
 #include <Constants.h>
+#include <ResourceLocator.h>
 #include <StaticString.h>
 #include <StringListCreator.h>
 

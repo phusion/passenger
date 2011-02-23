@@ -30,7 +30,7 @@ exceptionIsInstanceOf(const tracable_exception &e) {
 		} \
 	} while (false)
 
-static ExceptionPtr
+ExceptionPtr
 copyException(const tracable_exception &e) {
 	TRY_COPY_EXCEPTION(FileSystemException);
 	TRY_COPY_EXCEPTION(TimeRetrievalException);
@@ -54,6 +54,8 @@ copyException(const tracable_exception &e) {
 	TRY_COPY_EXCEPTION(NonExistentUserException);
 	TRY_COPY_EXCEPTION(NonExistentGroupException);
 	TRY_COPY_EXCEPTION(SecurityException);
+	
+	TRY_COPY_EXCEPTION(SyntaxError);
 	
 	return make_shared<tracable_exception>(e);
 }
@@ -90,17 +92,36 @@ rethrowException(const ExceptionPtr &e) {
 	TRY_RETHROW_EXCEPTION(NonExistentGroupException);
 	TRY_RETHROW_EXCEPTION(SecurityException);
 	
+	TRY_RETHROW_EXCEPTION(SyntaxError);
+	
 	throw tracable_exception(*e);
 }
 
-Group::Group(const PoolPtr &pool, const Options &options) {
-	this->pool       = pool;
-	name             = options.getAppGroupName();
+static boost::mutex &
+SuperGroup::getPoolSyncher(const PoolPtr &pool) {
+	return pool->syncher;
+}
+
+Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const ComponentInfo &_info)
+	superGroup(_superGroup),
+	info(_info)
+{
 	secret           = generateSecret();
 	count            = 0;
 	spawnThread      = NULL;
 	spawner          = pool->spawnerFactory->create(options);
+	isDefault        = false;
 	resetOptions(options);
+}
+
+PoolPtr
+Group::getPool() const {
+	SuperGroupPtr superGroup = getSuperGroup();
+	if (superGroup != NULL) {
+		return superGroup->getPool();
+	} else {
+		return PoolPtr();
+	}
 }
 
 void
@@ -153,10 +174,9 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	}
 }
 
-// The 'group' parameter is for keeping the current Group object alive while this thread is running.
-// The '_pool' parameter exists because accessing group->pool is not allowed until the lock on the pool is obtained.
+// The 'self' parameter is for keeping the current Group object alive while this thread is running.
 void
-Group::spawnThreadMain(GroupPtr group, weak_ptr<Pool> _pool, SpawnerPtr spawner, Options options) {
+Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 	bool done = false;
 	while (!done) {
 		ProcessPtr process;
@@ -202,17 +222,6 @@ Group::spawnThreadMain(GroupPtr group, weak_ptr<Pool> _pool, SpawnerPtr spawner,
 		lock.unlock();
 		runAllActions(actions);
 	}
-}
-
-bool
-Group::garbageCollectable(unsigned long long now) const {
-	if (now == 0) {
-		now = SystemTime::getUsec();
-	}
-	return usage() == 0
-		&& getWaitlist.empty()
-		&& options.getSpawnerTimeout() != 0
-		&& now - spawner->lastUsed() > (unsigned long long) options.getSpawnerTimeout() * 1000000;
 }
 
 bool

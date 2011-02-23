@@ -20,7 +20,6 @@
 #include <SafeLibev.h>
 #include <Exceptions.h>
 #include <RandomGenerator.h>
-#include <Lock.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -49,7 +48,7 @@ private:
 	mutable boost::mutex syncher;
 	
 	SpawnerFactoryPtr spawnerFactory;
-	SafeLibev *safeLibev;
+	SafeLibev *libev;
 	unsigned int max;
 	unsigned long long maxIdleTime;
 	
@@ -264,10 +263,10 @@ private:
 	}
 	
 public:
-	Pool(SafeLibev *safeLibev, const SpawnerFactoryPtr &spawnerFactory,
+	Pool(SafeLibev *libev, const SpawnerFactoryPtr &spawnerFactory,
 		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr())
 	{
-		this->safeLibev = safeLibev;
+		this->libev = libev;
 		this->spawnerFactory = spawnerFactory;
 		if (randomGenerator != NULL) {
 			this->randomGenerator = randomGenerator;
@@ -280,11 +279,11 @@ public:
 		
 		garbageCollectionTimer.set<Pool, &Pool::garbageCollect>(this);
 		garbageCollectionTimer.set(maxIdleTime / 1000000.0, maxIdleTime / 1000000.0);
-		safeLibev->start(garbageCollectionTimer);
+		libev->start(garbageCollectionTimer);
 	}
 	
 	~Pool() {
-		safeLibev->stop(garbageCollectionTimer);
+		libev->stop(garbageCollectionTimer);
 		
 		GroupMap::iterator it;
 		vector<GroupPtr>::iterator it2;

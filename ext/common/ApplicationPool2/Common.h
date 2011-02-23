@@ -5,6 +5,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <oxt/tracable_exception.hpp>
+#include <Utils/StringMap.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -25,6 +26,7 @@ typedef shared_ptr<Group> GroupPtr;
 typedef shared_ptr<Process> ProcessPtr;
 typedef shared_ptr<Session> SessionPtr;
 typedef shared_ptr<tracable_exception> ExceptionPtr;
+typedef StringMap<SuperGroupPtr> SuperGroupMap;
 typedef function<void (const SessionPtr &session, const ExceptionPtr &e)> GetCallback;
 typedef function<void ()> Callback;
 
@@ -35,6 +37,7 @@ struct Ticket {
 	ExceptionPtr exception;
 };
 
+ExceptionPtr copyException(const tracable_exception &e);
 void rethrowException(const ExceptionPtr &e);
 
 } // namespace ApplicationPool2

@@ -8,8 +8,10 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <oxt/macros.hpp>
+#include <oxt/thread.hpp>
 #include <cassert>
 #include <ApplicationPool2/Common.h>
+#include <ApplicationPool2/ComponentInfo.h>
 #include <ApplicationPool2/Spawner.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
@@ -22,8 +24,6 @@ using namespace boost;
 using namespace oxt;
 
 
-typedef map<string, GroupPtr> GroupMap;
-
 /**
  * Except for otherwise documented parts, this class is not thread-safe,
  * so only access within ApplicationPool lock.
@@ -31,6 +31,7 @@ typedef map<string, GroupPtr> GroupMap;
 class Group: public enable_shared_from_this<Group> {
 private:
 	friend class Pool;
+	friend class SuperGroup;
 	
 	struct GetAction {
 		GetCallback callback;
@@ -38,7 +39,7 @@ private:
 	};
 	
 	mutable boost::mutex backrefSyncher;
-	weak_ptr<Pool> pool;
+	weak_ptr<SuperGroup> superGroup;
 	
 	
 	static void _onSessionClose(Session *session) {
@@ -51,8 +52,7 @@ private:
 	
 	string generateSecret() const;
 	void onSessionClose(const ProcessPtr &process, Session *session);
-	void spawnThreadMain(GroupPtr group, weak_ptr<Pool> pool, SpawnerPtr spawner,
-		Options options);
+	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options);
 	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
@@ -71,7 +71,7 @@ private:
 	
 	void resetOptions(const Options &newOptions) {
 		options = newOptions;
-		options.persist();
+		options.persist(newOptions);
 		options.clearPerRequestFields();
 		options.groupSecret = secret;
 	}
@@ -159,6 +159,7 @@ public:
 	Options options;
 	string name;
 	string secret;
+	ComponentInfo componentInfo;
 	
 	/**
 	 * All processes in this group are stored in 'processes'. 'pqueue'
@@ -198,7 +199,7 @@ public:
 	boost::thread *spawnThread;
 	SpawnerPtr spawner;
 	
-	Group(const PoolPtr &pool, const Options &options);
+	Group(const SuperGroupPtr &superGroup, const Options &options, const ComponentInfo &info);
 	
 	~Group() {
 		delete spawnThread;
@@ -239,20 +240,23 @@ public:
 	}
 	
 	// Thread-safe.
-	PoolPtr getPool() const {
+	SuperGroupPtr getSuperGroup() const {
 		lock_guard<boost::mutex> lock(backrefSyncher);
-		return pool.lock();
+		return superGroup.lock();
 	}
 	
 	// Thread-safe.
-	void setPool(const PoolPtr &pool) {
+	void setSuperGroup(const SuperGroupPtr &superGroup) {
 		lock_guard<boost::mutex> lock(backrefSyncher);
-		this->pool = pool;
+		this->superGroup = superGroup;
 	}
+	
+	// Thread-safe.
+	PoolPtr getPool() const;
 	
 	// Thread-safe.
 	bool detached() const {
-		return getPool() == NULL;
+		return getSuperGroup() == NULL;
 	}
 	
 	void attach(const ProcessPtr &process) {
@@ -298,7 +302,16 @@ public:
 		return result;
 	}
 	
-	bool garbageCollectable(unsigned long long now = 0) const;
+	bool garbageCollectable(unsigned long long now = 0) const {
+		if (now == 0) {
+			now = SystemTime::getUsec();
+		}
+		return usage() == 0
+			&& getWaitlist.empty()
+			&& options.getSpawnerTimeout() != 0
+			&& now - spawner->lastUsed() >
+				(unsigned long long) options.getSpawnerTimeout() * 1000000;
+	}
 	
 	/** Whether a new process should be spawned for this group in case
 	 * another get action is to be performed.
@@ -311,9 +324,12 @@ public:
 	 */
 	void spawn() {
 		if (!spawning()) {
-			spawnThread = new oxt::thread(boost::bind(&Group::spawnThreadMain,
-				this, shared_from_this(), pool, spawner,
-				options.copy().persist().clearPerRequestFields()));
+			spawnThread = new oxt::thread(
+				boost::bind(&Group::spawnThreadMain,
+					this, shared_from_this(), spawner,
+					options.copyAndPersist().clearPerRequestFields()),
+				"Group process spawner",
+				1024 * 64);
 		}
 	}
 	
