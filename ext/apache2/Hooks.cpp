@@ -570,7 +570,8 @@ private:
 				log = analyticsLogger->newTransaction(
 					config->getAppGroupName(appRoot),
 					"requests",
-					config->unionStationKey);
+					config->unionStationKey,
+					config->getUnionStationFilterString());
 				log->message(string("URI: ") + r->uri);
 			} else {
 				log.reset(new AnalyticsLog());
@@ -1061,6 +1062,7 @@ private:
 			addHeader(headers, "PASSENGER_GROUP_NAME",
 				config->getAppGroupName(appRoot).c_str());
 			addHeader(headers, "PASSENGER_TXN_ID", log->getTxnId().c_str());
+			addHeader(headers, "PASSENGER_UNION_STATION_KEY", config->unionStationKey.c_str());
 		}
 		
 		// Now send the headers.

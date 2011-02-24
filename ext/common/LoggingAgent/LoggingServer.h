@@ -984,7 +984,8 @@ protected:
 			StaticString timestamp = args[5];
 			StaticString unionStationKey = args[6];
 			bool         crashProtect    = getBool(args, 7, true);
-			StaticString filters         = getStaticString(args, 8);
+			bool         ack             = getBool(args, 8, false);
+			StaticString filters         = getStaticString(args, 9);
 			
 			if (OXT_UNLIKELY( !validTxnId(txnId) )) {
 				sendErrorToClient(client, "Invalid transaction ID format");
@@ -1087,14 +1088,19 @@ protected:
 			transaction->refcount++;
 			writeLogEntry(client, transaction, timestamp, "ATTACH");
 			
+			if (ack) {
+				client->writeArrayMessage("ok", NULL);
+			}
+			
 		} else if (args[0] == "closeTransaction") {
-			if (OXT_UNLIKELY( !expectingArgumentsCount(client, args, 3)
+			if (OXT_UNLIKELY( !expectingMinArgumentsCount(client, args, 3)
 			               || !expectingLoggerType(client) )) {
 				return true;
 			}
 			
 			string txnId = args[1];
 			StaticString timestamp = args[2];
+			bool         ack       = getBool(args, 3, false);
 			
 			TransactionMap::iterator it = transactions.find(txnId);
 			if (OXT_UNLIKELY( it == transactions.end() )) {
@@ -1122,6 +1128,10 @@ protected:
 				if (transaction->refcount == 0) {
 					transactions.erase(it);
 				}
+			}
+			
+			if (ack) {
+				client->writeArrayMessage("ok", NULL);
 			}
 		
 		} else if (args[0] == "init") {

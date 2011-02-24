@@ -107,8 +107,13 @@ class AnalyticsLogger
 		
 		def close(flush_to_disk = false)
 			@shared_data.synchronize do
+				# We need an ACK here. See abstract_request_handler.rb finalize_request.
 				@shared_data.client.write("closeTransaction", @txn_id,
-					AnalyticsLogger.timestamp_string)
+					AnalyticsLogger.timestamp_string, true)
+				result = @shared_data.client.read
+				if result != ["ok"]
+					raise "Expected logging server to respond with 'ok', but got #{result.inspect} instead"
+				end
 				if flush_to_disk
 					@shared_data.client.write("flush")
 					result = @shared_data.client.read
@@ -152,6 +157,11 @@ class AnalyticsLogger
 			@node_name = `hostname`.strip
 		end
 		@random_dev = File.open("/dev/urandom")
+		
+		# This mutex protects the following instance variables, but
+		# not the contents of @shared_data.
+		@mutex = Mutex.new
+		
 		@shared_data = SharedData.new
 		if @server_address && local_socket_address?(@server_address)
 			@max_connect_tries = 10
@@ -163,18 +173,22 @@ class AnalyticsLogger
 	end
 	
 	def clear_connection
-		@shared_data.synchronize do
-			@random_dev = File.open("/dev/urandom") if @random_dev.closed?
-			@shared_data.unref
-			@shared_data = SharedData.new
+		@mutex.synchronize do
+			@shared_data.synchronize do
+				@random_dev = File.open("/dev/urandom") if @random_dev.closed?
+				@shared_data.unref
+				@shared_data = SharedData.new
+			end
 		end
 	end
 	
 	def close
-		@shared_data.synchronize do
-			@random_dev.close
-			@shared_data.unref
-			@shared_data = nil
+		@mutex.synchronize do
+			@shared_data.synchronize do
+				@random_dev.close
+				@shared_data.unref
+				@shared_data = nil
+			end
 		end
 	end
 	
@@ -187,7 +201,8 @@ class AnalyticsLogger
 		
 		txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(36)
 		txn_id << "-#{random_token(11)}"
-		@shared_data.synchronize do
+		Lock.new(@mutex).synchronize do |lock|
+		Lock.new(@shared_data.mutex).synchronize do |shared_data_lock|
 			try_count = 0
 			if current_time >= @next_reconnect_time
 				while try_count < @max_connect_tries
@@ -197,12 +212,21 @@ class AnalyticsLogger
 							txn_id, group_name, "", category,
 							AnalyticsLogger.timestamp_string,
 							union_station_key,
+							true,
 							true)
+						result = @shared_data.client.read
+						if result != ["ok"]
+							raise "Expected logging server to respond with 'ok', but got #{result.inspect} instead"
+						end
 						return Log.new(@shared_data, txn_id)
 					rescue Errno::ENOENT, *NETWORK_ERRORS
 						try_count += 1
 						disconnect(true)
+						shared_data_lock.reset(@shared_data.mutex, false)
+						lock.unlock
 						sleep RETRY_SLEEP if try_count < @max_connect_tries
+						lock.lock
+						shared_data_lock.lock
 					rescue Exception => e
 						disconnect
 						raise e
@@ -214,6 +238,7 @@ class AnalyticsLogger
 				@next_reconnect_time = current_time + @reconnect_timeout
 			end
 			return Log.new
+		end
 		end
 	end
 	
@@ -224,7 +249,8 @@ class AnalyticsLogger
 			raise ArgumentError, "Transaction ID may not be empty"
 		end
 		
-		@shared_data.synchronize do
+		Lock.new(@mutex).synchronize do |lock|
+		Lock.new(@shared_data.mutex).synchronize do |shared_data_lock|
 			try_count = 0
 			if current_time >= @next_reconnect_time
 				while try_count < @max_connect_tries
@@ -239,7 +265,11 @@ class AnalyticsLogger
 					rescue Errno::ENOENT, *NETWORK_ERRORS
 						try_count += 1
 						disconnect(true)
+						shared_data_lock.reset(@shared_data.mutex, false)
+						lock.unlock
 						sleep RETRY_SLEEP if try_count < @max_connect_tries
+						lock.lock
+						shared_data_lock.lock
 					rescue Exception => e
 						disconnect
 						raise e
@@ -252,6 +282,7 @@ class AnalyticsLogger
 			end
 			return Log.new
 		end
+		end
 	end
 
 private
@@ -261,7 +292,42 @@ private
 		'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 	
+	class Lock
+		def initialize(mutex)
+			@mutex = mutex
+			@locked = false
+		end
+		
+		def reset(mutex, lock_now = true)
+			unlock if @locked
+			@mutex = mutex
+			lock if lock_now
+		end
+		
+		def synchronize
+			lock if !@locked
+			begin
+				yield(self)
+			ensure
+				unlock if @locked
+			end
+		end
+		
+		def lock
+			raise if @locked
+			@mutex.lock
+			@locked = true
+		end
+		
+		def unlock
+			raise if !@locked
+			@mutex.unlock
+			@locked = false
+		end
+	end
+	
 	class SharedData
+		attr_reader :mutex
 		attr_accessor :client
 		
 		def initialize
