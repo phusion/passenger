@@ -48,6 +48,7 @@ using namespace oxt;
 class Tokenizer {
 public:
 	enum TokenType {
+		NONE,
 		NOT,
 		AND,
 		OR,
@@ -81,7 +82,9 @@ public:
 		unsigned int size;
 		StaticString rawValue;
 		
-		Token() { }
+		Token() {
+			type = NONE;
+		}
 		
 		Token(TokenType _type, unsigned int _pos, unsigned int _size, const StaticString &_rawValue)
 			: type(_type),
@@ -383,6 +386,8 @@ public:
 	
 	static string typeToString(TokenType type) {
 		switch (type) {
+		case NONE:
+			return "NONE";
 		case NOT:
 			return "NOT";
 		case AND:
@@ -1096,8 +1101,10 @@ private:
 		if (lookahead.type == type) {
 			return match();
 		} else {
-			throw SyntaxError("Expected a " + Tokenizer::typeToString(type) +
-				" token, but got " + lookahead.toString());
+			raiseSyntaxError("Expected a " + Tokenizer::typeToString(type) +
+				" token, but got " + lookahead.toString(),
+				lookahead);
+			return Token(); // Shut up compiler warning.
 		}
 	}
 	
@@ -1107,8 +1114,17 @@ private:
 		return old;
 	}
 	
-	void raiseSyntaxError(const string &msg = "") {
-		throw SyntaxError(msg);
+	void raiseSyntaxError(const string &msg = "", const Token &token = Token()) {
+		if (token.type != Tokenizer::NONE) {
+			string message = "at character " + toString(token.pos + 1);
+			if (!msg.empty()) {
+				message.append(": ");
+				message.append(msg);
+			}
+			throw SyntaxError(message);
+		} else {
+			throw SyntaxError(msg);
+		}
 	}
 	
 	BooleanComponentPtr matchMultiExpression() {
@@ -1158,7 +1174,7 @@ private:
 				return component;
 			}
 		} else {
-			raiseSyntaxError("expected a left parenthesis or an identifier");
+			raiseSyntaxError("expected a left parenthesis or an identifier", next);
 			return BooleanComponentPtr(); // Shut up compiler warning.
 		}
 	}
@@ -1169,7 +1185,7 @@ private:
 		comparison->comparator = matchComparator();
 		comparison->object     = matchValue(match());
 		if (!comparatorAcceptsValueTypes(comparison->comparator, comparison->subject.getType(), comparison->object.getType())) {
-			raiseSyntaxError("the comparator cannot operate on the given combination of types");
+			raiseSyntaxError("the comparator cannot operate on the given combination of types", subjectToken);
 		}
 		return comparison;
 	}
@@ -1182,7 +1198,7 @@ private:
 		} else if (id.rawValue == "has_hint") {
 			function = make_shared<HasHintFunctionCall>();
 		} else {
-			raiseSyntaxError("unknown function '" + id.rawValue + "'");
+			raiseSyntaxError("unknown function '" + id.rawValue + "'", id);
 		}
 		
 		match(Tokenizer::LPARENTHESIS);
@@ -1204,7 +1220,7 @@ private:
 		} else if (token.type == Tokenizer::IDENTIFIER) {
 			return matchContextFieldIdentifier(token);
 		} else {
-			raiseSyntaxError();
+			raiseSyntaxError("", token);
 			return Value(); // Shut up compiler warning.
 		}
 	}
@@ -1217,7 +1233,7 @@ private:
 			match();
 			return OR;
 		} else {
-			raiseSyntaxError();
+			raiseSyntaxError("", peek());
 			return AND; // Shut up compiler warning.
 		}
 	}
@@ -1248,7 +1264,7 @@ private:
 			match();
 			return LESS_THAN_OR_EQUALS;
 		} else {
-			raiseSyntaxError();
+			raiseSyntaxError("", peek());
 			return MATCHES; // Shut up compiler warning.
 		}
 	}
@@ -1262,7 +1278,7 @@ private:
 		} else if (token.type == Tokenizer::INTEGER) {
 			return Value(atoi(token.rawValue.toString()));
 		} else {
-			raiseSyntaxError("regular expression, string or integer expected");
+			raiseSyntaxError("regular expression, string or integer expected", token);
 			return Value(); // Shut up compiler warning.
 		}
 	}
@@ -1275,7 +1291,7 @@ private:
 		} else if (token.rawValue == "response_time") {
 			return Value(Context::RESPONSE_TIME);
 		} else {
-			raiseSyntaxError("unknown field '" + token.rawValue + "'");
+			raiseSyntaxError("unknown field '" + token.rawValue + "'", token);
 			return Value(); // Shut up compiler warning.
 		}
 	}
