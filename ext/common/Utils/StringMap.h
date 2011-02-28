@@ -50,27 +50,119 @@ class StringMap {
 private:
 	struct Entry {
 		string key;
-		T value;
+		pair<StaticString, T> pair;
 	};
 	
 	typedef map<StaticString, Entry> InternalMap;
-	typedef typename InternalMap::iterator Iterator;
-	typedef typename InternalMap::const_iterator ConstIterator;
+	typedef typename InternalMap::iterator InternalIterator;
+	typedef typename InternalMap::const_iterator InternalConstIterator;
 	typedef typename InternalMap::value_type ValueType;
 	InternalMap store;
 	
 public:
+	class const_iterator {
+	private:
+		InternalConstIterator it;
+		
+	public:
+		const_iterator() { }
+		
+		const_iterator(const InternalConstIterator &_it)
+			: it(_it)
+			{ }
+		
+		const_iterator &operator=(const const_iterator &value) {
+			it = value.it;
+			return *this;
+		}
+		
+		const_iterator &operator++() {
+			it++;
+			return *this;
+		}
+		
+		const_iterator operator++(int) {
+			const_iterator copy(*this);
+			operator++();
+			return copy;
+		}
+		
+		bool operator==(const const_iterator &other) {
+			return it == other.it;
+		}
+		
+		bool operator!=(const const_iterator &other) {
+			return it != other.it;
+		}
+		
+		const pair<const StaticString, const T> &operator*() {
+			return (pair<const StaticString, const T> &) it->second.pair;
+		}
+		
+		const pair<const StaticString, const T> *operator->() {
+			return &(**this);
+		}
+	};
+	
+	class iterator {
+	private:
+		InternalIterator it;
+		
+	public:
+		iterator() { }
+		
+		iterator(const InternalIterator &_it)
+			: it(_it)
+			{ }
+		
+		iterator &operator=(const iterator &value) {
+			it = value.it;
+			return *this;
+		}
+		
+		iterator &operator++() {
+			it++;
+			return *this;
+		}
+		
+		iterator operator++(int) {
+			iterator copy(*this);
+			operator++();
+			return copy;
+		}
+		
+		bool operator==(const iterator &other) {
+			return it == other.it;
+		}
+		
+		bool operator!=(const iterator &other) {
+			return it != other.it;
+		}
+		
+		pair<StaticString, T> &operator*() {
+			return it->second.pair;
+		}
+		
+		pair<StaticString, T> *operator->() {
+			return &(**this);
+		}
+		
+		operator const_iterator() const {
+			return const_iterator(it);
+		}
+	};
+	
 	T get(const StaticString &key) const {
-		ConstIterator it = store.find(key);
+		InternalConstIterator it = store.find(key);
 		if (it == store.end()) {
 			return T();
 		} else {
-			return it->second.value;
+			return it->second.pair.second;
 		}
 	}
 	
 	bool set(const StaticString &key, const T &value) {
-		pair<Iterator, bool> result = store.insert(make_pair(key, Entry()));
+		pair<InternalIterator, bool> result = store.insert(make_pair(key, Entry()));
 		if (result.second) {
 			// Key has been inserted. Copy it internally and point key
 			// to the copy.
@@ -78,19 +170,36 @@ public:
 			StaticString &originalKey = const_cast<StaticString &>(node.first);
 			Entry &entry = node.second;
 			entry.key = key;
-			entry.value = value;
+			entry.pair.first = entry.key;
+			entry.pair.second = value;
 			originalKey = entry.key;
 			return true;
 		} else {
 			// Key already exists. Update value.
 			Entry &entry = result.first->second;
-			entry.value = value;
+			entry.pair.second = value;
 			return false;
 		}
 	}
 	
 	bool remove(const StaticString &key) {
 		return store.erase(key) > 0;
+	}
+	
+	iterator begin() {
+		return iterator(store.begin());
+	}
+	
+	const_iterator begin() const {
+		return const_iterator(store.begin());
+	}
+	
+	iterator end() {
+		return iterator(store.end());
+	}
+	
+	const_iterator end() const {
+		return const_iterator(store.end());
 	}
 };
 

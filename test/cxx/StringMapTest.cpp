@@ -1,6 +1,7 @@
 #include "TestSupport.h"
 #include "Utils/StringMap.h"
 #include <string>
+#include <map>
 
 using namespace Passenger;
 using namespace std;
@@ -66,5 +67,65 @@ namespace tut {
 		ensure_equals(m.get("hello"), "");
 		ensure_equals(m.get("foo"), "bar");
 		ensure(!m.remove("hello"));
+	}
+	
+	TEST_METHOD(6) {
+		// Test iterators.
+		StringMap<int> m;
+		m.set("a", 1);
+		m.set("b", 2);
+		m.set("c", 3);
+		m.set("d", 4);
+		
+		map<string, int> m2, m3;
+		
+		StringMap<int>::iterator it, end = m.end();
+		for (it = m.begin(); it != end; it++) {
+			pair<StaticString, int> p = *it;
+			m2[it->first] = it->second;
+			m3[p.first] = p.second;
+		}
+		
+		ensure_equals(m2.size(), 4u);
+		ensure_equals(m2["a"], 1);
+		ensure_equals(m2["b"], 2);
+		ensure_equals(m2["c"], 3);
+		ensure_equals(m2["d"], 4);
+		
+		ensure_equals(m3.size(), 4u);
+		ensure_equals(m3["a"], 1);
+		ensure_equals(m3["b"], 2);
+		ensure_equals(m3["c"], 3);
+		ensure_equals(m3["d"], 4);
+	}
+	
+	TEST_METHOD(7) {
+		// Test const_iterators.
+		StringMap<int> m;
+		m.set("a", 1);
+		m.set("b", 2);
+		m.set("c", 3);
+		m.set("d", 4);
+		
+		map<string, int> m2, m3;
+		
+		StringMap<int>::const_iterator it, end = m.end();
+		for (it = m.begin(); it != end; it++) {
+			pair<const StaticString, const int> p = *it;
+			m2[it->first] = it->second;
+			m3[p.first] = p.second;
+		}
+		
+		ensure_equals(m2.size(), 4u);
+		ensure_equals(m2["a"], 1);
+		ensure_equals(m2["b"], 2);
+		ensure_equals(m2["c"], 3);
+		ensure_equals(m2["d"], 4);
+		
+		ensure_equals(m3.size(), 4u);
+		ensure_equals(m3["a"], 1);
+		ensure_equals(m3["b"], 2);
+		ensure_equals(m3["c"], 3);
+		ensure_equals(m3["d"], 4);
 	}
 }
