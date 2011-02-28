@@ -124,7 +124,7 @@ private:
 		generation++;
 	}
 	
-	vector<ComponentInfo> loadComponentInfos(const Options &options) {
+	vector<ComponentInfo> loadComponentInfos(const Options &options) const {
 		vector<ComponentInfo> infos;
 		ComponentInfo info;
 		info.name = "default";
@@ -182,9 +182,12 @@ private:
 	
 	void assignGetWaitlistToGroups() {
 		while (!getWaitlist.empty()) {
-			GetAction action = getWaitlist.front();
+			GetAction &action = getWaitlist.front();
+			Group *group = route(action.options);
+			Options adjustedOptions = action.options;
+			adjustOptions(adjustedOptions, group);
+			group->get(adjustedOptions, action.callback);
 			getWaitlist.pop();
-			defaultGroup->get(action.options, action.callback);
 		}
 	}
 	
