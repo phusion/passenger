@@ -115,8 +115,8 @@ private:
 			(state == INITIALIZING || state == DESTROYING || state == DESTROYED));
 		assert((defaultGroup == NULL) ==
 			(state == INITIALIZING || state == DESTROYING || state == DESTROYED));
-		assert(!( state == READY || state == DESTROYING || state == DESTROYED ) ||
-			!( getWaitlist.empty() ));
+		assert(!( state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED ) ||
+			( getWaitlist.empty() ));
 	}
 	
 	void setState(State newState) {
@@ -372,7 +372,7 @@ public:
 	 * necessary resources have become free.
 	 *
 	 * @invariant
-	 *    if state == READY || state == DESTROYING || state == DESTROYED:
+	 *    if state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED:
 	 *       getWaitlist.empty()
 	 */
 	queue<GetAction> getWaitlist;
