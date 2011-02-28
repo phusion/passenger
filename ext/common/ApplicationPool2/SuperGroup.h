@@ -1,6 +1,10 @@
 #ifndef _PASSENGER_APPLICATION_POOL2_SUPER_GROUP_H_
 #define _PASSENGER_APPLICATION_POOL2_SUPER_GROUP_H_
 
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <oxt/thread.hpp>
 #include <vector>
 #include <utility>
@@ -96,6 +100,14 @@ private:
 	unsigned int generation;
 	
 	
+	// Thread-safe.
+	static boost::mutex &getPoolSyncher(const PoolPtr &pool);
+	
+	void createInterruptableThread(const function<void ()> &func, const string &name,
+		unsigned int stackSize);
+	void createNonInterruptableThread(const function<void ()> &func, const string &name,
+		unsigned int stackSize);
+	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
 		
@@ -106,8 +118,6 @@ private:
 		assert(!( state == READY || state == DESTROYING || state == DESTROYED ) ||
 			!( getWaitlist.empty() ));
 	}
-	
-	static boost::mutex &getPoolSyncher(const PoolPtr &pool);
 	
 	void setState(State newState) {
 		state = newState;
@@ -370,7 +380,7 @@ public:
 		defaultGroup = NULL;
 		this->options = options.copyAndPersist();
 		generation = 0;
-		oxt::thread(
+		createNonInterruptableThread(
 			boost::bind(
 				&SuperGroup::initialize,
 				this,
@@ -407,7 +417,7 @@ public:
 			defaultGroup = NULL;
 			if (getWaitlist.empty()) {
 				setState(DESTROYING);
-				oxt::thread(
+				createNonInterruptableThread(
 					boost::bind(
 						&SuperGroup::doDestroy,
 						this,
@@ -419,7 +429,7 @@ public:
 			} else {
 				// Spawning this thread before setState() so that
 				// it doesn't change the state when done.
-				oxt::thread(
+				createNonInterruptableThread(
 					boost::bind(
 						&SuperGroup::doDestroy,
 						this,
@@ -429,7 +439,7 @@ public:
 					"SuperGroup destroyer",
 					1024 * 256);
 				setState(INITIALIZING);
-				oxt::thread(
+				createNonInterruptableThread(
 					boost::bind(
 						&SuperGroup::initialize,
 						this,
@@ -481,7 +491,7 @@ public:
 		case DESTROYED:
 			getWaitlist.push(GetAction(newOptions, callback));
 			setState(INITIALIZING);
-			oxt::thread(
+			createNonInterruptableThread(
 				boost::bind(
 					&SuperGroup::initialize,
 					this,
@@ -522,7 +532,7 @@ public:
 	void restart(const Options &options) {
 		verifyInvariants();
 		if (state == READY) {
-			oxt::thread(
+			createInterruptableThread(
 				boost::bind(
 					&SuperGroup::doRestart,
 					this,

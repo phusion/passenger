@@ -1,6 +1,7 @@
 #include <typeinfo>
 #include <boost/make_shared.hpp>
 #include <ApplicationPool2/Pool.h>
+#include <ApplicationPool2/SuperGroup.h>
 #include <ApplicationPool2/Group.h>
 #include <Exceptions.h>
 
@@ -16,7 +17,7 @@ template<typename T>
 bool
 exceptionIsInstanceOf(const tracable_exception &e) {
 	try {
-		dynamic_cast<T>(e);
+		dynamic_cast<T &>(e);
 		return true;
 	} catch (const bad_cast &) {
 		return false;
@@ -97,10 +98,26 @@ rethrowException(const ExceptionPtr &e) {
 	throw tracable_exception(*e);
 }
 
+
 static boost::mutex &
 SuperGroup::getPoolSyncher(const PoolPtr &pool) {
 	return pool->syncher;
 }
+
+void
+SuperGroup::createInterruptableThread(const function<void ()> &func, const string &name,
+	unsigned int stackSize)
+{
+	getPool()->interruptableThreads.create_thread(func, name, stackSize);
+}
+
+void
+SuperGroup::createNonInterruptableThread(const function<void ()> &func, const string &name,
+	unsigned int stackSize)
+{
+	getPool()->nonInterruptableThreads.create_thread(func, name, stackSize);
+}
+
 
 Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const ComponentInfo &_info)
 	superGroup(_superGroup),
@@ -110,7 +127,7 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	count            = 0;
 	spawnThread      = NULL;
 	spawner          = pool->spawnerFactory->create(options);
-	isDefault        = false;
+	m_spawning       = false;
 	resetOptions(options);
 }
 
@@ -122,6 +139,13 @@ Group::getPool() const {
 	} else {
 		return PoolPtr();
 	}
+}
+
+void
+Group::createInterruptableThread(const function<void ()> &func, const string &name,
+	unsigned int stackSize)
+{
+	getPool()->interruptableThreads.create_thread(func, name, stackSize);
 }
 
 void
@@ -213,10 +237,7 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 		}
 		
 		done = (unsigned long) count < options.minProcesses && !pool->atFullCapacity(false);
-		if (done) {
-			delete spawnThread;
-			spawnThread = NULL;
-		}
+		m_spawning = !done;
 		
 		verifyInvariants();
 		lock.unlock();

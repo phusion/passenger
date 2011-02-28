@@ -7,6 +7,7 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
 #include <cassert>
@@ -50,6 +51,8 @@ private:
 		}
 	}
 	
+	void createInterruptableThread(const function<void ()> &func, const string &name,
+		unsigned int stackSize);
 	string generateSecret() const;
 	void onSessionClose(const ProcessPtr &process, Session *session);
 	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options);
@@ -196,14 +199,10 @@ public:
 	 */
 	queue<GetCallback> getWaitlist;
 	
-	boost::thread *spawnThread;
 	SpawnerPtr spawner;
+	bool m_spawning;
 	
 	Group(const SuperGroupPtr &superGroup, const Options &options, const ComponentInfo &info);
-	
-	~Group() {
-		delete spawnThread;
-	}
 	
 	SessionPtr get(const Options &newOptions, const GetCallback &callback) {
 		if (needsRestart()) {
@@ -324,12 +323,13 @@ public:
 	 */
 	void spawn() {
 		if (!spawning()) {
-			spawnThread = new oxt::thread(
+			createInterruptableThread(
 				boost::bind(&Group::spawnThreadMain,
 					this, shared_from_this(), spawner,
 					options.copyAndPersist().clearPerRequestFields()),
 				"Group process spawner",
 				1024 * 64);
+			m_spawning = true;
 		}
 	}
 	
@@ -341,7 +341,7 @@ public:
 	void restart(const Options &options);
 	
 	bool spawning() const {
-		return spawnThread != NULL;
+		return m_spawning;
 	}
 };
 

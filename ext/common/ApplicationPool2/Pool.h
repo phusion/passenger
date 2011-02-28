@@ -9,6 +9,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/function.hpp>
+#include <oxt/dynamic_thread_group.hpp>
 #include <cassert>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Process.h>
@@ -26,6 +27,7 @@ namespace ApplicationPool2 {
 
 using namespace std;
 using namespace boost;
+using namespace oxt;
 
 
 class Pool: public enable_shared_from_this<Pool> {
@@ -54,6 +56,19 @@ private:
 	
 	RandomGeneratorPtr randomGenerator;
 	ev::timer garbageCollectionTimer;
+	
+	/**
+	 * Code can register background threads in one of these dynamic thread groups
+	 * to ensure that threads are interrupted and/or joined properly upon Pool
+	 * destruction.
+	 * All threads in 'interruptableThreads' will be interrupted and joined upon
+	 * Pool destruction.
+	 * All threads in 'nonInterruptableThreads' will be joined, but not interrupted,
+	 * upon Pool destruction.
+	 */
+	dynamic_thread_group interruptableThreads;
+	dynamic_thread_group nonInterruptableThreads;
+	
 	SuperGroupMap superGroups;
 	/**
 	 * get() requests that...
@@ -283,6 +298,9 @@ public:
 	}
 	
 	~Pool() {
+		interruptableThreads.interrupt_and_join_all();
+		nonInterruptableThreads.join_all();
+		
 		libev->stop(garbageCollectionTimer);
 		
 		GroupMap::iterator it;

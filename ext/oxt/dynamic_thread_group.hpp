@@ -181,6 +181,32 @@ public:
 		thread::interrupt_and_join_multiple(threads, nthreads_copy);
 	}
 	
+	void join_all() {
+		// See comments from interrupt_and_join_all().
+		boost::unique_lock<boost::mutex> l(lock);
+		list<thread_handle_ptr> thread_handles_copy;
+		list<thread_handle_ptr>::iterator it;
+		thread_handle_ptr handle;
+		unsigned int nthreads_copy = nthreads;
+		thread *threads[nthreads];
+		unsigned int i = 0;
+		
+		// We make a copy so that the handles aren't destroyed prematurely.
+		thread_handles_copy = thread_handles;
+		for (it = thread_handles.begin(); it != thread_handles.end(); it++, i++) {
+			handle = *it;
+			handle->removed_from_list = true;
+			threads[i] = handle->thr;
+		}
+		thread_handles.clear();
+		nthreads = 0;
+		
+		l.unlock();
+		for (i = 0; i < nthreads_copy; i++) {
+			threads[i]->join();
+		}
+	}
+	
 	/**
 	 * Returns the number of threads currently in this thread group.
 	 */
