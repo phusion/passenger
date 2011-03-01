@@ -259,7 +259,7 @@ BackgroundEventLoop::~BackgroundEventLoop() {
 	ev_async_stop(loop, async);
 	delete libev;
 	delete priv;
-	delete async;
+	free(async);
 	ev_loop_destroy(loop);
 }
 
