@@ -36,6 +36,13 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 		'Logging.o' => %w(
 			Logging.cpp
 			Logging.h),
+		'ApplicationPool2/Implementation.o' => %w(
+			ApplicationPool2/Implementation.cpp
+			ApplicationPool2/Common.h
+			ApplicationPool2/Pool.h
+			ApplicationPool2/SuperGroup.h
+			ApplicationPool2/Group.h
+			ApplicationPool2/Session.h),
 		'Utils/CachedFileStat.o' => %w(
 			Utils/CachedFileStat.cpp
 			Utils/CachedFileStat.h
@@ -142,6 +149,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 				sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
 				sh "mkdir -p #{output_dir}/Utils" if !File.directory?("#{output_dir}/Utils")
 				sh "mkdir -p #{output_dir}/agents/LoggingAgent" if !File.directory?("#{output_dir}/agents/LoggingAgent")
+				sh "mkdir -p #{output_dir}/ApplicationPool2" if !File.directory?("#{output_dir}/ApplicationPool2")
 				compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
 			end
 		end

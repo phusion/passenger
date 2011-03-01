@@ -331,7 +331,7 @@ public:
 		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
 		showVersionInHeader     = true;
 		debugger                = false;
-		loadShellEnvvars        = false;
+		loadShellEnvvars        = true;
 		analytics               = false;
 		printExceptions         = true;
 		

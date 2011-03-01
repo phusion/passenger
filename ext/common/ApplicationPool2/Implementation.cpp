@@ -17,7 +17,7 @@ template<typename T>
 bool
 exceptionIsInstanceOf(const tracable_exception &e) {
 	try {
-		dynamic_cast<T &>(e);
+		dynamic_cast<T>(e);
 		return true;
 	} catch (const bad_cast &) {
 		return false;
@@ -99,7 +99,7 @@ rethrowException(const ExceptionPtr &e) {
 }
 
 
-static boost::mutex &
+boost::mutex &
 SuperGroup::getPoolSyncher(const PoolPtr &pool) {
 	return pool->syncher;
 }
@@ -124,15 +124,14 @@ SuperGroup::createNonInterruptableThread(const function<void ()> &func, const st
 }
 
 
-Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const ComponentInfo &_info)
-	superGroup(_superGroup),
-	info(_info)
+Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const ComponentInfo &info)
+	: superGroup(_superGroup),
+	  componentInfo(info)
 {
-	secret           = generateSecret();
-	count            = 0;
-	spawnThread      = NULL;
-	spawner          = pool->spawnerFactory->create(options);
-	m_spawning       = false;
+	secret     = generateSecret();
+	count      = 0;
+	spawner    = getPool()->spawnerFactory->create(options);
+	m_spawning = false;
 	resetOptions(options);
 }
 

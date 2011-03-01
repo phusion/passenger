@@ -32,7 +32,8 @@ using namespace oxt;
 
 
 class Pool: public enable_shared_from_this<Pool> {
-private:
+public:
+	friend class tut::ApplicationPool2_PoolTest;
 	friend class SuperGroup;
 	friend class Group;
 	
@@ -325,6 +326,7 @@ private:
 	{
 		SuperGroupPtr superGroup = make_shared<SuperGroup>(shared_from_this(),
 			options);
+		superGroup->initialize();
 		superGroups.set(options.getAppGroupName(), superGroup);
 		SessionPtr session = superGroup->get(options, callback);
 		/* Callback should now have been put on the wait list,
@@ -376,8 +378,8 @@ public:
 		verifyExpensiveInvariants();
 	}
 	
-	void asyncGet(const Options &options, const GetCallback &callback) {
-		ScopedLock lock(syncher);
+	void asyncGet(const Options &options, const GetCallback &callback, bool lockNow = true) {
+		DynamicScopedLock lock(syncher, lockNow);
 		
 		verifyInvariants();
 		
@@ -459,6 +461,7 @@ public:
 				 * the missing SuperGroup.
 				 */
 				superGroup = make_shared<SuperGroup>(shared_from_this(), options);
+				superGroup->initialize();
 				superGroups.set(options.getAppGroupName(), superGroup);
 				SessionPtr session = superGroup->get(options, callback);
 				/* The SuperGroup is still initializing so the callback
@@ -540,7 +543,7 @@ public:
 	
 	bool atFullCapacity(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
-		return usage(false) < max;
+		return usage(false) >= max;
 	}
 	
 	SuperGroupPtr findSuperGroupBySecret(const string &secret, bool lock = true) const {

@@ -40,7 +40,6 @@ TEST_CXX_OBJECTS = {
 	'test/cxx/ApplicationPool2/DirectSpawnerTest.o' => %w(
 		test/cxx/ApplicationPool2/DirectSpawnerTest.cpp
 		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
-		ext/common/ApplicationPool2/Pool.h
 		ext/common/ApplicationPool2/Options.h
 		ext/common/ApplicationPool2/Process.h
 		ext/common/ApplicationPool2/Socket.h
@@ -48,7 +47,6 @@ TEST_CXX_OBJECTS = {
 	'test/cxx/ApplicationPool2/SmartSpawnerTest.o' => %w(
 		test/cxx/ApplicationPool2/SmartSpawnerTest.cpp
 		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
-		ext/common/ApplicationPool2/Pool.h
 		ext/common/ApplicationPool2/Options.h
 		ext/common/ApplicationPool2/Process.h
 		ext/common/ApplicationPool2/Socket.h
@@ -58,6 +56,11 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/Process.h
 		ext/common/ApplicationPool2/Socket.h
 		ext/common/ApplicationPool2/Session.h),
+	'test/cxx/ApplicationPool2/PoolTest.o' => %w(
+		test/cxx/ApplicationPool2/PoolTest.cpp
+		ext/common/ApplicationPool2/SuperGroup.h
+		ext/common/ApplicationPool2/Group.h
+		ext/common/ApplicationPool2/Pool.h),
 	'test/cxx/MessageChannelTest.o' => %w(
 		test/cxx/MessageChannelTest.cpp
 		ext/common/MessageChannel.h

@@ -183,7 +183,7 @@ private:
 		// No-op.
 	}
 	
-	void initialize(SuperGroupPtr self, Options options, unsigned int generation) {
+	void doInitialize(SuperGroupPtr self, Options options, unsigned int generation) {
 		vector<ComponentInfo> componentInfos;
 		vector<ComponentInfo>::const_iterator it;
 		ExceptionPtr exception;
@@ -321,7 +321,7 @@ private:
 		
 		// In the future we can run more destruction code here,
 		// without holding the lock. Note that any destruction
-		// code may not interfere with initialize().
+		// code may not interfere with doInitialize().
 		
 		lock_guard<boost::mutex> lock(getPoolSyncher(pool));
 		if (OXT_UNLIKELY(getPool() == NULL || this->generation != generation)) {
@@ -367,6 +367,9 @@ public:
 	 */
 	queue<GetWaiter> getWaitlist;
 	
+	/** One MUST call initialize() after construction because shared_from_this()
+	 * is not available in the constructor.
+	 */
 	SuperGroup(const PoolPtr &pool, const Options &options) {
 		this->pool = pool;
 		this->options = options.copyAndPersist();
@@ -375,9 +378,12 @@ public:
 		state = INITIALIZING;
 		defaultGroup = NULL;
 		generation = 0;
+	}
+	
+	void initialize() {
 		createNonInterruptableThread(
 			boost::bind(
-				&SuperGroup::initialize,
+				&SuperGroup::doInitialize,
 				this,
 				// Keep reference to self to prevent destruction.
 				shared_from_this(),
@@ -385,10 +391,6 @@ public:
 				generation),
 			"SuperGroup initializer",
 			1024 * 64);
-	}
-	
-	~SuperGroup() {
-		destroy();
 	}
 	
 	// Thread-safe.
@@ -445,7 +447,7 @@ public:
 				setState(INITIALIZING);
 				createNonInterruptableThread(
 					boost::bind(
-						&SuperGroup::initialize,
+						&SuperGroup::doInitialize,
 						this,
 						// Keep reference to self to prevent destruction.
 						shared_from_this(),
@@ -492,7 +494,7 @@ public:
 		case INITIALIZING:
 			getWaitlist.push(GetWaiter(newOptions, callback));
 			verifyInvariants();
-			break;
+			return SessionPtr();
 		case READY:
 		case RESTARTING:
 			if (needsRestart()) {
@@ -508,14 +510,13 @@ public:
 				verifyInvariants();
 				return defaultGroup->get(newOptions, callback);
 			}
-			break;
 		case DESTROYING:
 		case DESTROYED:
 			getWaitlist.push(GetWaiter(newOptions, callback));
 			setState(INITIALIZING);
 			createNonInterruptableThread(
 				boost::bind(
-					&SuperGroup::initialize,
+					&SuperGroup::doInitialize,
 					this,
 					// Keep reference to self to prevent destruction.
 					shared_from_this(),
@@ -524,9 +525,10 @@ public:
 				"SuperGroup initializer",
 				1024 * 64);
 			verifyInvariants();
-			break;
+			return SessionPtr();
 		default:
 			abort();
+			return SessionPtr(); // Shut up compiler warning.
 		};
 	}
 	

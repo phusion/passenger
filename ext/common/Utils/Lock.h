@@ -18,8 +18,12 @@ public:
 		: unique_lock<boost::mutex>(m, defer_lock)
 	{
 		if (lockNow) {
-			m.lock();
+			lock();
 		}
+	}
+	
+	~DynamicScopedLock() {
+		this->~unique_lock<boost::mutex>();
 	}
 };
 

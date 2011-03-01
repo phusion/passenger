@@ -8,6 +8,10 @@
 #include <ApplicationPool2/Options.h>
 #include <Utils/StringMap.h>
 
+namespace tut {
+	struct ApplicationPool2_PoolTest;
+}
+
 namespace Passenger {
 namespace ApplicationPool2 {
 

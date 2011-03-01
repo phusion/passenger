@@ -186,6 +186,10 @@ public:
 		return store.erase(key) > 0;
 	}
 	
+	bool empty() const {
+		return store.empty();
+	}
+	
 	iterator begin() {
 		return iterator(store.begin());
 	}

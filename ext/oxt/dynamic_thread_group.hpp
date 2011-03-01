@@ -128,7 +128,7 @@ public:
 	 * @throws thread_resource_error Cannot create a thread.
 	 * @post this->num_threads() == old->num_threads() + 1
 	 */
-	void create_thread(boost::function<void ()> &func, const string &name = "", unsigned int stack_size = 0) {
+	void create_thread(const boost::function<void ()> &func, const string &name = "", unsigned int stack_size = 0) {
 		boost::lock_guard<boost::mutex> l(lock);
 		thread_handle_ptr handle(new thread_handle());
 		thread_handles.push_back(handle);
