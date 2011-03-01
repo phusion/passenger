@@ -1,5 +1,6 @@
 #include <typeinfo>
 #include <boost/make_shared.hpp>
+#include <oxt/backtrace.hpp>
 #include <ApplicationPool2/Pool.h>
 #include <ApplicationPool2/SuperGroup.h>
 #include <ApplicationPool2/Group.h>
@@ -154,6 +155,7 @@ Group::createInterruptableThread(const function<void ()> &func, const string &na
 
 void
 Group::onSessionClose(const ProcessPtr &process, Session *session) {
+	TRACE_POINT();
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
 	if (OXT_UNLIKELY(pool == NULL)) {
@@ -166,6 +168,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	}
 	
 	verifyInvariants();
+	UPDATE_TRACE_POINT();
 	
 	/* Update statistics. */
 	process->sessionClosed(session);
@@ -177,6 +180,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		/* ...so if there are clients waiting for a process to
 		 * become available, call them now.
 		 */
+		UPDATE_TRACE_POINT();
 		assignSessionsToGetWaitersQuickly(lock);
 	} else if (!pool->getWaitlist.empty()) {
 		/* Someone might be trying to get() a session for a different
@@ -192,6 +196,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		 * in case there's a waiter on the pool's get wait list that's older
 		 * than X seconds.
 		 */
+		UPDATE_TRACE_POINT();
 		vector<Callback> actions;
 		// Will take care of processing pool->getWaitlist.
 		pool->detachProcess(process, false);
@@ -205,12 +210,19 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.
 void
 Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+	
 	bool done = false;
 	while (!done) {
 		ProcessPtr process;
 		ExceptionPtr exception;
 		try {
+			this_thread::restore_interruption ri(di);
+			this_thread::restore_syscall_interruption rsi(dsi);
 			process = spawner->spawn(options);
+		} catch (const thread_interrupted &) {
+			return;
 		} catch (const tracable_exception &e) {
 			exception = copyException(e);
 			// Let other (unexpected) exceptions crash the program so
@@ -243,7 +255,8 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 			pool->assignSessionsToGetWaiters(actions);
 		}
 		
-		done = (unsigned long) count < options.minProcesses && !pool->atFullCapacity(false);
+		done = (unsigned long) count >= options.minProcesses
+			|| pool->atFullCapacity(false);
 		m_spawning = !done;
 		
 		verifyInvariants();

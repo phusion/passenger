@@ -5,6 +5,7 @@
 #include <boost/shared_ptr.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Socket.h>
 #include <FileDescriptor.h>
@@ -52,6 +53,7 @@ public:
 	}
 	
 	~Session() {
+		TRACE_POINT();
 		// If user doesn't close() explicitly, we penalize performance.
 		if (OXT_UNLIKELY(initiated() && !closed)) {
 			reallyClose(false);

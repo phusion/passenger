@@ -186,6 +186,10 @@ public:
 		return store.erase(key) > 0;
 	}
 	
+	unsigned int size() const {
+		return store.size();
+	}
+	
 	bool empty() const {
 		return store.empty();
 	}

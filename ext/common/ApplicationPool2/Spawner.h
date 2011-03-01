@@ -986,6 +986,29 @@ public:
 };
 
 
+class DummySpawner: public Spawner {
+private:
+	boost::mutex lock;
+	unsigned int count;
+	
+public:
+	DummySpawner() {
+		count = 0;
+	}
+	
+	virtual ProcessPtr spawn(const Options &options) {
+		SocketPair adminSocket = createUnixSocketPair();
+		SocketListPtr sockets = make_shared<SocketList>();
+		sockets->add("main", "tcp://127.0.0.1:1234", "session", 3);
+		
+		lock_guard<boost::mutex> l(lock);
+		count++;
+		return make_shared<Process>(count, toString(count), adminSocket.second,
+			sockets, SystemTime::getUsec());
+	}
+};
+
+
 class SpawnerFactory {
 private:
 	SafeLibev *libev;
@@ -1036,6 +1059,8 @@ public:
 			return spawner;
 		} else if (options.spawnMethod == "direct" || options.spawnMethod == "conservative") {
 			return make_shared<DirectSpawner>(resourceLocator, randomGenerator);
+		} else if (options.spawnMethod == "dummy") {
+			return make_shared<DummySpawner>();
 		} else {
 			throw ArgumentException("Unknown spawn method '" + options.spawnMethod + "'");
 		}

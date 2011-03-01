@@ -22,7 +22,7 @@ namespace tut {
 		
 		Options createOptions() {
 			Options options;
-			options.loadShellEnvvars = false;
+			options.spawnMethod = "dummy";
 			return options;
 		}
 		
@@ -41,16 +41,26 @@ namespace tut {
 	
 	TEST_METHOD(2) {
 		// get() actions on empty pools cannot be immediately satisfied.
-		// Instead they're put on a wait list.
+		// Instead a new process will be spawned. In the mean time get()
+		// actions are put on a wait list which will be processed as soon
+		// as the new process is done spawning.
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
 		options.startupFile  = "stub/rack/start.rb";
+		
 		ScopedLock l(pool->syncher);
 		pool->asyncGet(options, callback, false);
 		ensure(currentSession == NULL);
 		ensure(currentException == NULL);
 		ensure(pool->getWaitlist.empty());
 		ensure(!pool->superGroups.empty());
+		l.unlock();
+		
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 1;
+		);
+		ensure(currentSession != NULL);
+		ensure(currentException == NULL);
 	}
 }

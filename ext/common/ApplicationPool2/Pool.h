@@ -10,6 +10,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/function.hpp>
 #include <oxt/dynamic_thread_group.hpp>
+#include <oxt/backtrace.hpp>
 #include <cassert>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Process.h>
@@ -358,11 +359,13 @@ public:
 	}
 	
 	~Pool() {
+		TRACE_POINT();
 		interruptableThreads.interrupt_and_join_all();
 		nonInterruptableThreads.join_all();
 		
 		libev->stop(garbageCollectionTimer);
 		
+		UPDATE_TRACE_POINT();
 		SuperGroupMap::iterator it;
 		vector<SuperGroupPtr>::iterator it2;
 		vector<SuperGroupPtr> superGroupsToDetach;
@@ -544,6 +547,22 @@ public:
 	bool atFullCapacity(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
 		return usage(false) >= max;
+	}
+	
+	unsigned int getProcessCount(bool lock = true) const {
+		DynamicScopedLock l(syncher, lock);
+		unsigned int result = 0;
+		SuperGroupMap::const_iterator it, end = superGroups.end();
+		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
+			const SuperGroupPtr &superGroup = it->second;
+			vector<GroupPtr> &groups = superGroup->groups;
+			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+			for (g_it = groups.begin(); g_it != g_end; g_it++) {
+				const GroupPtr &group = *g_it;
+				result += group->count;
+			}
+		}
+		return result;
 	}
 	
 	SuperGroupPtr findSuperGroupBySecret(const string &secret, bool lock = true) const {
