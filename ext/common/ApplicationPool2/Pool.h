@@ -296,6 +296,7 @@ public:
 				 || deadline < earliestGroupDeadline) {
 					earliestGroupDeadline = deadline;
 				}
+				// TODO: actually garbage collect the spawners
 			}
 			
 			if (superGroup->garbageCollectable(now)) {
@@ -319,7 +320,11 @@ public:
 		lock.unlock();
 		runAllActions(actions);
 		
-		timer.start((nextDeadline - now + 1000000) / 1000000.0, 0.0);
+		if (nextDeadline == 0) {
+			timer.start(maxIdleTime / 1000000.0, 0.0);
+		} else {
+			timer.start((nextDeadline - now + 1000000) / 1000000.0, 0.0);
+		}
 	}
 	
 	SuperGroupPtr createSuperGroupAndAsyncGetFromIt(const Options &options,
@@ -381,6 +386,8 @@ public:
 		verifyExpensiveInvariants();
 	}
 	
+	// 'lockNow == false' may only be used during unit tests. We should never
+	// call the callback while holding the lock.
 	void asyncGet(const Options &options, const GetCallback &callback, bool lockNow = true) {
 		DynamicScopedLock lock(syncher, lockNow);
 		
@@ -393,7 +400,9 @@ public:
 			SessionPtr session = existingSuperGroup->get(options, callback);
 			existingSuperGroup->verifyInvariants();
 			verifyInvariants();
-			lock.unlock();
+			if (lockNow) {
+				lock.unlock();
+			}
 			if (session != NULL) {
 				callback(session, ExceptionPtr());
 			}

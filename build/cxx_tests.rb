@@ -224,12 +224,14 @@ dependencies = [
 ]
 desc "Run unit tests for the Apache 2 and Nginx C++ components"
 task 'test:cxx' => dependencies do
-	if ENV['GROUPS'].to_s.empty?
-		sh "cd test && ./cxx/CxxTestMain"
-	else
-		args = ENV['GROUPS'].split(",").map{ |name| "-g #{name}" }
-		sh "cd test && ./cxx/CxxTestMain #{args.join(' ')}"
+	args = ENV['GROUPS'].to_s.split(",").map{ |name| "-g #{name}" }
+	command = "./cxx/CxxTestMain #{args.join(' ')}".strip
+	if boolean_option('GDB')
+		command = "gdb --args #{command}"
+	elsif boolean_option('VALGRIND')
+		command = "valgrind --dsymutil=yes #{command}"
 	end
+	sh "cd test && #{command}"
 end
 
 cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys, :libev,

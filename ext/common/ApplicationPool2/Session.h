@@ -33,13 +33,17 @@ private:
 	Connection connection;
 	bool closed;
 	
-	void reallyClose(bool success) {
+	void deinitiate(bool success) {
 		connection.fail = !success;
-		closed = true;
 		socket->checkinConnection(connection);
+		connection.fd = -1;
+	}
+	
+	void callOnClose() {
 		if (OXT_LIKELY(onClose != NULL)) {
 			onClose(this);
 		}
+		closed = true;
 	}
 
 public:
@@ -55,8 +59,11 @@ public:
 	~Session() {
 		TRACE_POINT();
 		// If user doesn't close() explicitly, we penalize performance.
-		if (OXT_UNLIKELY(initiated() && !closed)) {
-			reallyClose(false);
+		if (OXT_LIKELY(initiated())) {
+			deinitiate(false);
+		}
+		if (OXT_LIKELY(!closed)) {
+			callOnClose();
 		}
 	}
 	
@@ -89,8 +96,11 @@ public:
 	}
 	
 	void close(bool success) {
-		if (OXT_LIKELY(initiated() && !closed)) {
-			reallyClose(success);
+		if (OXT_LIKELY(initiated())) {
+			deinitiate(success);
+		}
+		if (OXT_LIKELY(!closed)) {
+			callOnClose();
 		}
 	}
 };

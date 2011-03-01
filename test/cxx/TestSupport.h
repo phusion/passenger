@@ -248,6 +248,14 @@ public:
 		val = 0;
 	}
 	
+	AtomicInt(int value) {
+		val = value;
+	}
+	
+	AtomicInt(const AtomicInt &other) {
+		val = other.val;
+	}
+	
 	int get() const {
 		lock_guard<boost::mutex> l(lock);
 		return val;
@@ -261,6 +269,19 @@ public:
 	AtomicInt &operator=(int value) {
 		set(value);
 		return *this;
+	}
+	
+	AtomicInt &operator++() {
+		lock_guard<boost::mutex> l(lock);
+		val++;
+		return *this;
+	}
+	
+	AtomicInt operator++(int) {
+		lock_guard<boost::mutex> l(lock);
+		AtomicInt temp(*this);
+		val++;
+		return temp;
 	}
 	
 	operator int() const {

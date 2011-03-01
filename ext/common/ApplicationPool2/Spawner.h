@@ -999,7 +999,7 @@ public:
 	virtual ProcessPtr spawn(const Options &options) {
 		SocketPair adminSocket = createUnixSocketPair();
 		SocketListPtr sockets = make_shared<SocketList>();
-		sockets->add("main", "tcp://127.0.0.1:1234", "session", 3);
+		sockets->add("main", "tcp://127.0.0.1:1234", "session", 1);
 		
 		lock_guard<boost::mutex> l(lock);
 		count++;
