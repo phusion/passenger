@@ -109,7 +109,7 @@ private:
 			GetAction actions[getWaitlist.size()];
 			unsigned int count = 0;
 			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
-				actions[count].callback = getWaitlist.front();
+				actions[count].callback = getWaitlist.front().callback;
 				actions[count].session  = newSession();
 				getWaitlist.pop();
 				count++;
@@ -125,7 +125,7 @@ private:
 			actions.reserve(getWaitlist.size());
 			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
 				GetAction action;
-				action.callback = getWaitlist.front();
+				action.callback = getWaitlist.front().callback;
 				action.session  = newSession();
 				getWaitlist.pop();
 				actions.push_back(action);
@@ -143,7 +143,8 @@ private:
 	void assignSessionsToGetWaiters(vector<Callback> &postLockActions) {
 		while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
 			postLockActions.push_back(boost::bind(
-				getWaitlist.front(), newSession(), ExceptionPtr()));
+				getWaitlist.front().callback, newSession(),
+				ExceptionPtr()));
 			getWaitlist.pop();
 		}
 	}
@@ -153,7 +154,8 @@ private:
 	{
 		while (!getWaitlist.empty()) {
 			postLockActions.push_back(boost::bind(
-				getWaitlist.front(), SessionPtr(), exception));
+				getWaitlist.front().callback, SessionPtr(),
+				exception));
 			getWaitlist.pop();
 		}
 	}
@@ -197,7 +199,7 @@ public:
 	 *    if getWaitlist is non-empty:
 	 *       !processes.empty() || spawning()
 	 */
-	queue<GetCallback> getWaitlist;
+	queue<GetWaiter> getWaitlist;
 	
 	SpawnerPtr spawner;
 	bool m_spawning;
@@ -220,7 +222,7 @@ public:
 			 * or has failed to spawn.
 			 */
 			assert(spawning());
-			getWaitlist.push(callback);
+			getWaitlist.push(GetWaiter(newOptions, callback));
 			return SessionPtr();
 		} else {
 			Process *process = pqueue.top();
@@ -230,7 +232,7 @@ public:
 				 * Wait until a new one has been spawned or until
 				 * resources have become free.
 				 */
-				getWaitlist.push(callback);
+				getWaitlist.push(GetWaiter(newOptions, callback));
 				return SessionPtr();
 			} else {
 				return newSession();

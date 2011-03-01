@@ -21,6 +21,7 @@
 #include <SafeLibev.h>
 #include <Exceptions.h>
 #include <RandomGenerator.h>
+#include <Utils/Lock.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -34,18 +35,6 @@ class Pool: public enable_shared_from_this<Pool> {
 private:
 	friend class SuperGroup;
 	friend class Group;
-	
-	struct GetWaiter {
-		Options options;
-		GetCallback callback;
-		
-		GetWaiter(const Options &o, const GetCallback &cb)
-			: options(o),
-			  callback(cb)
-		{
-			options.persist();
-		}
-	};
 	
 	mutable boost::mutex syncher;
 	
@@ -70,26 +59,35 @@ private:
 	dynamic_thread_group nonInterruptableThreads;
 	
 	SuperGroupMap superGroups;
+	
 	/**
 	 * get() requests that...
 	 * - cannot be immediately satisfied because the pool is at full
-	 *   capacity and existing no processes can be killed,
-	 * - and for which the group isn't in the pool,
-	 * ...are put on this wait list. This wait list is processed when one
-	 * of the following things happen:
+	 *   capacity and no existing processes can be killed,
+	 * - and for which the super group isn't in the pool,
+	 * ...are put on this wait list.
 	 *
-	 * - A process has been spawned but has no get waiters.
-	 *   This process can be killed and the resulting free capacity
-	 *   will be used to use spawn a process for this get request.
-	 * - A process (that has apparently been spawned in the mean time) is
-	 *   done processing a request. This process can then be killed
-	 *   to free capacity.
+	 * This wait list is processed when one of the following things happen:
+	 *
+	 * - A process has been spawned but its associated group has
+	 *   no get waiters. This process can be killed and the resulting
+	 *   free capacity will be used to use spawn a process for this
+	 *   get request.
+	 * - A process (that has apparently been spawned after getWaitlist
+	 *   was populated) is done processing a request. This process can
+	 *   then be killed to free capacity.
 	 * - A process has failed to spawn, resulting in capacity to
 	 *   become free.
+	 * - A SuperGroup failed to initialize, resulting in free capacity.
+	 * - Someone commanded Pool to detach a process, resulting in free
+	 *   capacity.
+	 * - Someone commanded Pool to detach a SuperGroup, resulting in
+	 *   free capacity.
+	 * - The 'max' option has been increased, resulting in free capacity.
 	 *
 	 * Invariant 1:
 	 *    for all options in getWaitlist:
-	 *       options.getAppGroupName() is not in 'groups'.
+	 *       options.getAppGroupName() is not in 'superGroups'.
 	 *
 	 * Invariant 2:
 	 *    if getWaitlist is non-empty:
@@ -107,14 +105,16 @@ private:
 	}
 	
 	void verifyExpensiveInvariants() const {
+		#ifndef NDEBUG
 		vector<GetWaiter>::const_iterator it, end = getWaitlist.end();
 		for (it = getWaitlist.begin(); it != end; it++) {
 			const GetWaiter &waiter = *it;
-			assert(groups.find(waiter.options.getAppGroupName()) == groups.end());
+			assert(superGroups.get(waiter.options.getAppGroupName()) == NULL);
 		}
+		#endif
 	}
 	
-	ProcessPtr findMostIdleProcess() const {
+	ProcessPtr findOldestIdleProcess() const {
 		// TODO
 		return ProcessPtr();
 	}
@@ -122,15 +122,21 @@ private:
 	ProcessPtr findBestProcessToTrash() const {
 		ProcessPtr oldestProcess;
 		
-		GroupMap::const_iterator it, end = groups.end();
-		for (it = groups.begin(); it != end; it++) {
-			const GroupPtr group = it->second;
-			const ProcessList &processes = group->processes;
-			ProcessList::const_iterator it2, end2 = processes.end();
-			for (it2 = processes.begin(); it2 != end2; it2++) {
-				const ProcessPtr process = *it2;
-				if (oldestProcess == NULL || process->lastUsed < oldestProcess->lastUsed) {
-					oldestProcess = process;
+		SuperGroupMap::const_iterator it, end = superGroups.end();
+		for (it = superGroups.begin(); it != end; it++) {
+			const SuperGroupPtr &superGroup = it->second;
+			const vector<GroupPtr> &groups = superGroup->groups;
+			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+			for (g_it = groups.begin(); g_it != g_end; g_it++) {
+				const GroupPtr &group = *g_it;
+				const ProcessList &processes = group->processes;
+				ProcessList::const_iterator p_it, p_end = processes.end();
+				for (p_it = processes.begin(); p_it != p_end; p_it++) {
+					const ProcessPtr process = *p_it;
+					if (oldestProcess == NULL
+					 || process->lastUsed < oldestProcess->lastUsed) {
+						oldestProcess = process;
+					}
 				}
 			}
 		}
@@ -138,6 +144,10 @@ private:
 		return oldestProcess;
 	}
 	
+	/** Process all waiters on the getWaitlist. Call when capacity has become free.
+	 * This function assign sessions to them by calling get() on the corresponding
+	 * SuperGroups, or by creating more SuperGroups, in so far the new capacity allows.
+	 */
 	void assignSessionsToGetWaiters(vector<Callback> &postLockActions) {
 		bool done = false;
 		vector<GetWaiter>::iterator it, end = getWaitlist.end();
@@ -146,9 +156,9 @@ private:
 		for (it = getWaitlist.begin(); it != end && !done; it++) {
 			GetWaiter &waiter = *it;
 			
-			Group *group = findMatchingGroup(waiter.options);
-			if (group != NULL) {
-				SessionPtr session = group->get(waiter.options, waiter.callback);
+			SuperGroup *superGroup = findMatchingSuperGroup(waiter.options);
+			if (superGroup != NULL) {
+				SessionPtr session = superGroup->get(waiter.options, waiter.callback);
 				if (session != NULL) {
 					postLockActions.push_back(boost::bind(
 						waiter.callback, session, ExceptionPtr()));
@@ -157,7 +167,7 @@ private:
 				 *       the group's get wait list.
 				 */
 			} else if (!atFullCapacity(false)) {
-				createGroupAndAsyncGetFromIt(waiter.options, waiter.callback);
+				createSuperGroupAndAsyncGetFromIt(waiter.options, waiter.callback);
 			} else {
 				/* Still cannot satisfy this get request. Keep it on the get
 				 * wait list and try again later.
@@ -169,19 +179,49 @@ private:
 		getWaitlist = newWaitlist;
 	}
 	
+	void possiblySpawnMoreProcessesForExistingGroups() {
+		SuperGroupMap::iterator it, end = superGroups.end();
+		for (it = superGroups.begin(); it != end; it++) {
+			SuperGroupPtr &superGroup = it->second;
+			vector<GroupPtr> &groups = superGroup->groups;
+			vector<GroupPtr>::iterator g_it, g_end = groups.end();
+			for (g_it = groups.begin(); g_it != g_end; g_it++) {
+				GroupPtr &group = *g_it;
+				if (!group->getWaitlist.empty() && group->shouldSpawn()) {
+					group->spawn();
+				}
+				group->verifyInvariants();
+			}
+		}
+	}
+	
 	void migrateGroupGetWaitlistToPool(const GroupPtr &group) {
 		getWaitlist.reserve(getWaitlist.size() + group->getWaitlist.size());
 		while (!group->getWaitlist.empty()) {
-			getWaitlist.push_back(GetWaiter(group->options,
-				group->getWaitlist.front()));
+			getWaitlist.push_back(group->getWaitlist.front());
 			group->getWaitlist.pop();
 		}
 	}
 	
-	void forceDetachGroup(const GroupPtr &group) {
-		assert(groups.erase(group->name) == 1);
-		group->detachAll();
-		group->setPool(PoolPtr());
+	void migrateSuperGroupGetWaitlistToPool(const SuperGroupPtr &superGroup) {
+		getWaitlist.reserve(getWaitlist.size() + superGroup->getWaitlist.size());
+		while (!superGroup->getWaitlist.empty()) {
+			getWaitlist.push_back(superGroup->getWaitlist.front());
+			superGroup->getWaitlist.pop();
+		}
+	}
+	
+	/**
+	 * Forcefully destroys and detaches the given SuperGroup. After detaching
+	 * the SuperGroup may have a non-empty getWaitlist so be sure to do
+	 * something with it.
+	 */
+	void forceDetachSuperGroup(const SuperGroupPtr &superGroup) {
+		bool removed = superGroups.remove(superGroup->name);
+		assert(removed);
+		(void) removed; // Shut up compiler warning.
+		superGroup->destroy(false);
+		superGroup->setPool(PoolPtr());
 	}
 	
 	void runAllActions(const vector<Callback> &actions) {
@@ -201,80 +241,98 @@ private:
 		ticket->cond.notify_one();
 	}
 	
-	Group *findMatchingGroup(const Options &options) {
-		GroupMap::iterator it = groups.find(options.getAppGroupName());
-		if (OXT_LIKELY(it != groups.end())) {
-			return it->second.get();
-		} else {
-			return NULL;
-		}
+	SuperGroup *findMatchingSuperGroup(const Options &options) {
+		return superGroups.get(options.getAppGroupName()).get();
 	}
 	
 	void garbageCollect(ev::timer &timer, int revents) {
 		ScopedLock lock(syncher);
-		GroupMap::iterator group_it, group_end = groups.end();
-		vector<GroupPtr> groupsToDetach;
+		SuperGroupMap::iterator it, end = superGroups.end();
+		vector<SuperGroupPtr> superGroupsToDetach;
 		unsigned long long now = SystemTime::getUsec();
 		unsigned long long nextDeadline = 0;
 		
 		verifyInvariants();
 		
-		for (group_it = groups.begin(); group_it != group_end; group_it++) {
-			GroupPtr group = group_it->second;
-			ProcessList &processes = group->processes;
-			ProcessList::iterator process_it, process_end = processes.end();
+		for (it = superGroups.begin(); it != end; it++) {
+			SuperGroupPtr superGroup = it->second;
+			vector<GroupPtr> &groups = superGroup->groups;
+			vector<GroupPtr>::iterator g_it, g_end = groups.end();
+			unsigned long long earliestGroupDeadline = 0;
 			
-			group->verifyInvariants();
+			superGroup->verifyInvariants();
 			
-			for (process_it = processes.begin(); process_it != process_end; process_it++) {
-				ProcessPtr process = *process_it;
+			for (g_it = groups.begin(); g_it != g_end; g_it++) {
+				GroupPtr group = *g_it;
+				ProcessList &processes = group->processes;
+				ProcessList::iterator p_it, p_end = processes.end();
 				
-				if (process->sessions == 0 && process->lastUsed - now >= maxIdleTime) {
-					ProcessList::iterator prev = process_it;
-					prev--;
-					group->processes.erase(process_it);
-					process_it = prev;
-				} else {
-					unsigned long long deadline = process->lastUsed + maxIdleTime;
-					if (nextDeadline == 0 || deadline < nextDeadline) {
-						nextDeadline = deadline;
+				for (p_it = processes.begin(); p_it != p_end; p_it++) {
+					ProcessPtr process = *p_it;
+					
+					if (process->sessions == 0
+					 && process->lastUsed - now >= maxIdleTime) {
+						ProcessList::iterator prev = p_it;
+						prev--;
+						group->detach(process);
+						p_it = prev;
+					} else {
+						unsigned long long deadline =
+							process->lastUsed + maxIdleTime;
+						if (nextDeadline == 0
+						 || deadline < nextDeadline) {
+							nextDeadline = deadline;
+						}
 					}
 				}
-			}
-			
-			if (group->garbageCollectable(now)) {
-				groupsToDetach.push_back(group);
-			} else {
-				unsigned long long deadline = group->spawner->lastUsed() + maxIdleTime;
-				if (nextDeadline == 0 || deadline < nextDeadline) {
-					nextDeadline = deadline;
+				
+				group->verifyInvariants();
+				
+				unsigned long long deadline =
+					group->spawner->lastUsed() + maxIdleTime;
+				if (earliestGroupDeadline == 0
+				 || deadline < earliestGroupDeadline) {
+					earliestGroupDeadline = deadline;
 				}
 			}
 			
-			group->verifyInvariants();
+			if (superGroup->garbageCollectable(now)) {
+				superGroupsToDetach.push_back(superGroup);
+			} else {
+				if (nextDeadline == 0 || earliestGroupDeadline < nextDeadline) {
+					nextDeadline = earliestGroupDeadline;
+				}
+			}
+			
+			superGroup->verifyInvariants();
 		}
 		
-		vector<GroupPtr>::const_iterator it;
-		for (it = groupsToDetach.begin(); it != groupsToDetach.end(); it++) {
-			detachGroup(*it, false);
+		vector<SuperGroupPtr>::const_iterator it2;
+		vector<Callback> actions;
+		for (it2 = superGroupsToDetach.begin(); it2 != superGroupsToDetach.end(); it2++) {
+			detachSuperGroup(*it2, false, &actions);
 		}
 		
 		verifyInvariants();
 		lock.unlock();
+		runAllActions(actions);
 		
 		timer.start((nextDeadline - now + 1000000) / 1000000.0, 0.0);
 	}
 	
-	GroupPtr createGroupAndAsyncGetFromIt(const Options &options, const GetCallback &callback) {
-		GroupPtr group = make_shared<Group>(shared_from_this(), options);
-		groups.insert(make_pair(options.getAppGroupName(), group));
-		SessionPtr session = group->get(options, callback);
+	SuperGroupPtr createSuperGroupAndAsyncGetFromIt(const Options &options,
+		const GetCallback &callback)
+	{
+		SuperGroupPtr superGroup = make_shared<SuperGroup>(shared_from_this(),
+			options);
+		superGroups.set(options.getAppGroupName(), superGroup);
+		SessionPtr session = superGroup->get(options, callback);
 		/* Callback should now have been put on the wait list,
 		 * unless something has changed and we forgot to update
 		 * some code here...
 		 */
 		assert(session == NULL);
-		return group;
+		return superGroup;
 	}
 	
 public:
@@ -303,14 +361,15 @@ public:
 		
 		libev->stop(garbageCollectionTimer);
 		
-		GroupMap::iterator it;
-		vector<GroupPtr>::iterator it2;
-		vector<GroupPtr> detachGroups;
-		for (it = groups.begin(); it != groups.end(); it++) {
-			detachGroups.push_back(it->second);
+		SuperGroupMap::iterator it;
+		vector<SuperGroupPtr>::iterator it2;
+		vector<SuperGroupPtr> superGroupsToDetach;
+		vector<Callback> actions;
+		for (it = superGroups.begin(); it != superGroups.end(); it++) {
+			superGroupsToDetach.push_back(it->second);
 		}
-		for (it2 = detachGroups.begin(); it2 != detachGroups.end(); it2++) {
-			detachGroup(*it2, false);
+		for (it2 = superGroupsToDetach.begin(); it2 != superGroupsToDetach.end(); it2++) {
+			detachSuperGroup(*it2, false, &actions);
 		}
 		
 		verifyInvariants();
@@ -348,11 +407,13 @@ public:
 			 * configure the system to let something like this happen
 			 * as least as possible, but let's try to handle it as well
 			 * as we can.
+			 *
+			 * First, try to trash an idle process that's the oldest.
 			 */
-			ProcessPtr process = findMostIdleProcess();
+			ProcessPtr process = findOldestIdleProcess();
 			if (process == NULL) {
 				/* All processes are doing something. We have no choice
-				 * but to trash a process.
+				 * but to trash a non-idle process.
 				 */
 				process = findBestProcessToTrash();
 			} else {
@@ -360,19 +421,25 @@ public:
 				assert(process->getGroup()->getWaitlist.empty());
 			}
 			if (process == NULL) {
-				/* All groups are currently spawning so nothing can be killed.
-				 * Have it done later.
+				/* All (super)groups are currently initializing/restarting/spawning/etc
+				 * so nothing can be killed. We have no choice but to satisfy this
+				 * get() action later when resources become available.
 				 */
 				getWaitlist.push_back(GetWaiter(options, callback));
 			} else {
 				GroupPtr group;
+				SuperGroupPtr superGroup;
 				
 				group = process->getGroup();
 				assert(group != NULL);
-				group->detach(process);
+				superGroup = group->getSuperGroup();
+				assert(superGroup != NULL);
 				
-				if (group->garbageCollectable()) {
-					forceDetachGroup(group);
+				group->detach(process);
+				if (superGroup->garbageCollectable()) {
+					assert(group->garbageCollectable());
+					forceDetachSuperGroup(superGroup);
+					assert(superGroup->getWaitlist.empty());
 				} else if (group->processes.empty()
 				        && !group->spawning()
 				        && !group->getWaitlist.empty())
@@ -380,21 +447,27 @@ public:
 					/* This group no longer has any processes - either
 					 * spawning or alive - to satisfy its get waiters.
 					 * We migrate the group's get wait list to the pool's
-					 * get wait list and detach the group. The group's original
-					 * get waiters will get their chances later.
+					 * get wait list. The group's original get waiters
+					 * will get their chances later.
 					 */
 					migrateGroupGetWaitlistToPool(group);
-					forceDetachGroup(group);
 				}
+				group->verifyInvariants();
+				superGroup->verifyInvariants();
 				
-				group = make_shared<Group>(shared_from_this(), options);
-				groups.insert(make_pair(options.getAppGroupName(), group));
-				SessionPtr session = group->get(options, callback);
-				/* Callback should now have been put on the wait list,
+				/* Now that a process has been trashed we can create
+				 * the missing SuperGroup.
+				 */
+				superGroup = make_shared<SuperGroup>(shared_from_this(), options);
+				superGroups.set(options.getAppGroupName(), superGroup);
+				SessionPtr session = superGroup->get(options, callback);
+				/* The SuperGroup is still initializing so the callback
+				 * should now have been put on the wait list,
 				 * unless something has changed and we forgot to update
 				 * some code here...
 				 */
 				assert(session == NULL);
+				superGroup->verifyInvariants();
 			}
 			
 			assert(atFullCapacity(false));
@@ -442,15 +515,7 @@ public:
 			 */
 			vector<Callback> actions;
 			assignSessionsToGetWaiters(actions);
-			
-			GroupMap::iterator it, end = groups.end();
-			for (it = groups.begin(); it != end; it++) {
-				GroupPtr group = it->second;
-				if (!group->getWaitlist.empty() && group->shouldSpawn()) {
-					group->spawn();
-				}
-				group->verifyInvariants();
-			}
+			possiblySpawnMoreProcessesForExistingGroups();
 			
 			verifyInvariants();
 			verifyExpensiveInvariants();
@@ -464,11 +529,11 @@ public:
 	
 	unsigned int usage(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
-		GroupMap::const_iterator it, end = groups.end();
+		SuperGroupMap::const_iterator it, end = superGroups.end();
 		int result = 0;
-		for (it = groups.begin(); it != end; it++) {
-			Group *group = it->second.get();
-			result += group->usage();
+		for (it = superGroups.begin(); it != end; it++) {
+			const SuperGroupPtr &superGroup = it->second;
+			result += superGroup->usage();
 		}
 		return result;
 	}
@@ -478,50 +543,73 @@ public:
 		return usage(false) < max;
 	}
 	
-	GroupPtr findGroupBySecret(const string &secret, bool lock = true) const {
+	SuperGroupPtr findSuperGroupBySecret(const string &secret, bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
-		GroupMap::const_iterator it, end = groups.end();
-		for (it = groups.begin(); OXT_LIKELY(it != end); it++) {
-			const GroupPtr group = it->second;
-			if (group->secret == secret) {
-				return group;
+		SuperGroupMap::const_iterator it, end = superGroups.end();
+		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
+			const SuperGroupPtr &superGroup = it->second;
+			if (superGroup->secret == secret) {
+				return superGroup;
 			}
 		}
-		return GroupPtr();
+		return SuperGroupPtr();
 	}
 	
 	ProcessPtr findProcessByGupid(const string &gupid, bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
-		GroupMap::const_iterator it, end = groups.end();
-		for (it = groups.begin(); OXT_LIKELY(it != end); it++) {
-			const GroupPtr group = it->second;
-			const ProcessList &processes = group->processes;
-			ProcessList::const_iterator it2, end2 = processes.end();
-			for (it2 = processes.begin(); it2 != end2; it2++) {
-				const ProcessPtr process = *it2;
-				if (process->gupid == gupid) {
-					return process;
+		SuperGroupMap::const_iterator it, end = superGroups.end();
+		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
+			const SuperGroupPtr &superGroup = it->second;
+			vector<GroupPtr> &groups = superGroup->groups;
+			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+			for (g_it = groups.begin(); g_it != g_end; g_it++) {
+				const GroupPtr &group = *g_it;
+				const ProcessList &processes = group->processes;
+				ProcessList::const_iterator p_it, p_end = processes.end();
+				for (p_it = processes.begin(); p_it != p_end; p_it++) {
+					const ProcessPtr &process = *p_it;
+					if (process->gupid == gupid) {
+						return process;
+					}
 				}
 			}
 		}
 		return ProcessPtr();
 	}
 	
-	bool detachGroup(const GroupPtr &group, bool lock = true) {
+	bool detachSuperGroup(const SuperGroupPtr &superGroup, bool lock = true,
+		vector<Callback> *postLockActions = NULL)
+	{
+		assert(lock || postLockActions != NULL);
 		DynamicScopedLock l(syncher, lock);
-		if (OXT_LIKELY(group->getPool().get() == this)) {
-			GroupMap::iterator it = groups.find(group->name);
-			if (OXT_LIKELY(it != groups.end())) {
+		
+		if (OXT_LIKELY(superGroup->getPool().get() == this)) {
+			if (OXT_LIKELY(superGroups.get(superGroup->name) != NULL)) {
 				verifyInvariants();
 				verifyExpensiveInvariants();
 				
-				forceDetachGroup(group);
-				if (!group->getWaitlist.empty()) {
-					migrateGroupGetWaitlistToPool(group);
+				forceDetachSuperGroup(superGroup);
+				/* If this SuperGroup might had get waiters, either
+				 * on itself or in one of its groups, then we must
+				 * reprocess them immediately. Detaching such a
+				 * SuperGroup is essentially the same as restarting it.
+				 */
+				migrateSuperGroupGetWaitlistToPool(superGroup);
+				
+				vector<Callback> actions;
+				assignSessionsToGetWaiters(actions);
+				possiblySpawnMoreProcessesForExistingGroups();
+				
+				verifyInvariants();
+				verifyExpensiveInvariants();
+				
+				if (lock) {
+					l.unlock();
+					runAllActions(actions);
+				} else {
+					*postLockActions = actions;
 				}
 				
-				verifyInvariants();
-				verifyExpensiveInvariants();
 				return true;
 			} else {
 				return false;
@@ -537,6 +625,8 @@ public:
 		if (group != NULL && group->getPool().get() == this) {
 			verifyInvariants();
 			
+			SuperGroupPtr superGroup = group->getSuperGroup();
+			
 			group->detach(process);
 			if (group->processes.empty()
 			 && !group->spawning()
@@ -544,23 +634,37 @@ public:
 				migrateGroupGetWaitlistToPool(group);
 			}
 			group->verifyInvariants();
-			if (group->garbageCollectable()) {
-				detachGroup(group, false);
+			superGroup->verifyInvariants();
+			
+			vector<Callback> actions, actions2;
+			assignSessionsToGetWaiters(actions);
+			
+			if (superGroup->garbageCollectable()) {
+				// possiblySpawnMoreProcessesForExistingGroups()
+				// already called via detachSuperGroup().
+				detachSuperGroup(superGroup, false, &actions2);
+			} else {
+				possiblySpawnMoreProcessesForExistingGroups();
 			}
 			
 			verifyInvariants();
 			verifyExpensiveInvariants();
+			
+			l.unlock();
+			runAllActions(actions);
+			runAllActions(actions2);
+			
 			return true;
 		} else {
 			return false;
 		}
 	}
 	
-	bool detachGroup(const string &groupSecret) {
+	bool detachSuperGroup(const string &superGroupSecret) {
 		LockGuard l(syncher);
-		GroupPtr group = findGroupBySecret(groupSecret, false);
-		if (group != NULL) {
-			return detachGroup(group, false);
+		SuperGroupPtr superGroup = findSuperGroupBySecret(superGroupSecret, false);
+		if (superGroup != NULL) {
+			return detachSuperGroup(superGroup, false);
 		} else {
 			return false;
 		}

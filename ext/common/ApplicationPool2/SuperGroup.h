@@ -74,18 +74,6 @@ private:
 	friend class Pool;
 	friend class Group;
 	
-	struct GetAction {
-		Options options;
-		GetCallback callback;
-		
-		GetAction(const Options &o, const GetCallback &cb)
-			: options(o),
-			  callback(cb)
-		{
-			options.persist(o);
-		}
-	};
-	
 	Options options;
 	/** A number for concurrency control, incremented every time the state changes.
 	 * Every background thread in SuperGroup spawns knows the generation number
@@ -102,6 +90,7 @@ private:
 	
 	// Thread-safe.
 	static boost::mutex &getPoolSyncher(const PoolPtr &pool);
+	string generateSecret() const;
 	
 	void createInterruptableThread(const function<void ()> &func, const string &name,
 		unsigned int stackSize);
@@ -158,35 +147,34 @@ private:
 		return make_pair(GroupPtr(), 0);
 	}
 	
-	void forceDetachGroup(const GroupPtr &group) {
+	void detachGroup(const GroupPtr &group) {
 		group->detachAll();
 		group->setSuperGroup(SuperGroupPtr());
 		while (!group->getWaitlist.empty()) {
-			GetCallback callback = group->getWaitlist.front();
+			getWaitlist.push(group->getWaitlist.front());
 			group->getWaitlist.pop();
-			getWaitlist.push(GetAction(group->options, callback));
 		}
 	}
 	
-	void forceDetachGroups(const vector<GroupPtr> &groups) {
+	void detachGroups(const vector<GroupPtr> &groups) {
 		vector<GroupPtr>::const_iterator it, end = groups.end();
 		
 		for (it = groups.begin(); it != end; it++) {
 			const GroupPtr &group = *it;
 			// doRestart() may temporarily nullify elements in 'groups'.
 			if (group != NULL) {
-				forceDetachGroup(group);
+				detachGroup(group);
 			}
 		}
 	}
 	
 	void assignGetWaitlistToGroups() {
 		while (!getWaitlist.empty()) {
-			GetAction &action = getWaitlist.front();
-			Group *group = route(action.options);
-			Options adjustedOptions = action.options;
+			GetWaiter &waiter = getWaitlist.front();
+			Group *group = route(waiter.options);
+			Options adjustedOptions = waiter.options;
 			adjustOptions(adjustedOptions, group);
-			group->get(adjustedOptions, action.callback);
+			group->get(adjustedOptions, waiter.callback);
 			getWaitlist.pop();
 		}
 	}
@@ -219,24 +207,24 @@ private:
 		}
 		
 		unique_lock<boost::mutex> lock(getPoolSyncher(pool));
-		if (OXT_UNLIKELY(generation != this->generation)) {
+		if (OXT_UNLIKELY(getPool() == NULL || generation != this->generation)) {
 			return;
 		}
 		assert(state == INITIALIZING);
 		verifyInvariants();
 		
 		if (componentInfos.empty()) {
-			// Somehow initialization failed. Maybe something has deleted
-			// the supergroup files while we're working.
+			/* Somehow initialization failed. Maybe something has deleted
+			 * the supergroup files while we're working.
+			 */
 			setState(DESTROYED);
 			
 			vector<Callback> callbacks;
 			callbacks.reserve(getWaitlist.size());
 			while (!getWaitlist.empty()) {
-				GetAction &action = getWaitlist.front();
-				// TODO: generate proper exception
-				callbacks.push_back(boost::bind(action.callback,
-					SessionPtr(), ExceptionPtr()));
+				GetWaiter &waiter = getWaitlist.front();
+				callbacks.push_back(boost::bind(waiter.callback,
+					SessionPtr(), exception));
 				getWaitlist.pop();
 			}
 			lock.unlock();
@@ -273,7 +261,7 @@ private:
 		}
 		
 		lock_guard<boost::mutex> lock(getPoolSyncher(pool));
-		if (OXT_UNLIKELY(this->generation != generation)) {
+		if (OXT_UNLIKELY(getPool() == NULL || this->generation != generation)) {
 			return;
 		}
 		assert(state == RESTARTING);
@@ -309,7 +297,7 @@ private:
 		
 		// Some components might have been deleted, so delete the
 		// corresponding groups.
-		forceDetachGroups(groups);
+		detachGroups(groups);
 		
 		// Tell all previous existing groups to restart.
 		for (g_it = updatedGroups.begin(); g_it != updatedGroups.end(); g_it++) {
@@ -336,7 +324,7 @@ private:
 		// code may not interfere with initialize().
 		
 		lock_guard<boost::mutex> lock(getPoolSyncher(pool));
-		if (OXT_UNLIKELY(this->generation != generation)) {
+		if (OXT_UNLIKELY(getPool() == NULL || this->generation != generation)) {
 			return;
 		}
 		
@@ -355,6 +343,8 @@ public:
 	weak_ptr<Pool> pool;
 	
 	State state;
+	string name;
+	string secret;
 	
 	/** Invariant:
 	 * groups.empty() == (state == INITIALIZING || state == DESTROYING || state == DESTROYED)
@@ -375,13 +365,15 @@ public:
 	 *    if state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED:
 	 *       getWaitlist.empty()
 	 */
-	queue<GetAction> getWaitlist;
+	queue<GetWaiter> getWaitlist;
 	
 	SuperGroup(const PoolPtr &pool, const Options &options) {
 		this->pool = pool;
+		this->options = options.copyAndPersist();
+		this->name = options.getAppGroupName();
+		secret = generateSecret();
 		state = INITIALIZING;
 		defaultGroup = NULL;
-		this->options = options.copyAndPersist();
 		generation = 0;
 		createNonInterruptableThread(
 			boost::bind(
@@ -411,14 +403,23 @@ public:
 		this->pool = pool;
 	}
 	
-	void destroy() {
+	/**
+	 * If allowReinitialization is true then destroying a SuperGroup that
+	 * has get waiters will make it reinitialize. Otherwise this SuperGroup
+	 * will be forcefully set to the DESTROYING state and getWaitlist will be
+	 * left untouched; in this case it is up to the caller to the empty
+	 * the getWaitlist and do something with it, otherwise the invariant
+	 * will be broken.
+	 */
+	void destroy(bool allowReinitialization = true) {
+		verifyInvariants();
 		switch (state) {
 		case INITIALIZING:
 		case READY:
 		case RESTARTING:
-			forceDetachGroups(groups);
+			detachGroups(groups);
 			defaultGroup = NULL;
-			if (getWaitlist.empty()) {
+			if (getWaitlist.empty() || !allowReinitialization) {
 				setState(DESTROYING);
 				createNonInterruptableThread(
 					boost::bind(
@@ -460,18 +461,36 @@ public:
 		default:
 			abort();
 		}
+		if (allowReinitialization) {
+			verifyInvariants();
+		}
 	}
 	
-	void garbageCollect() {
-		//if (all groups are garbage collectable) {
-		//	cleanup();
-		//}
+	/**
+	 * @post
+	 *    if result:
+	 *       getWaitlist.empty()
+	 */
+	bool garbageCollectable(unsigned long long now = 0) const {
+		if (state == READY) {
+			vector<GroupPtr>::const_iterator it, end = groups.end();
+			bool result = true;
+			
+			for (it = groups.begin(); result && it != end; it++) {
+				result = result && (*it)->garbageCollectable(now);
+			}
+			assert(!result || getWaitlist.empty());
+			return result;
+		} else {
+			assert(!(state == DESTROYED) || getWaitlist.empty());
+			return state == DESTROYED;
+		}
 	}
 	
 	SessionPtr get(const Options &newOptions, const GetCallback &callback) {
 		switch (state) {
 		case INITIALIZING:
-			getWaitlist.push(GetAction(newOptions, callback));
+			getWaitlist.push(GetWaiter(newOptions, callback));
 			verifyInvariants();
 			break;
 		case READY:
@@ -492,7 +511,7 @@ public:
 			break;
 		case DESTROYING:
 		case DESTROYED:
-			getWaitlist.push(GetAction(newOptions, callback));
+			getWaitlist.push(GetWaiter(newOptions, callback));
 			setState(INITIALIZING);
 			createNonInterruptableThread(
 				boost::bind(

@@ -5,6 +5,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <oxt/tracable_exception.hpp>
+#include <ApplicationPool2/Options.h>
 #include <Utils/StringMap.h>
 
 namespace Passenger {
@@ -29,6 +30,18 @@ typedef shared_ptr<tracable_exception> ExceptionPtr;
 typedef StringMap<SuperGroupPtr> SuperGroupMap;
 typedef function<void (const SessionPtr &session, const ExceptionPtr &e)> GetCallback;
 typedef function<void ()> Callback;
+
+struct GetWaiter {
+	Options options;
+	GetCallback callback;
+	
+	GetWaiter(const Options &o, const GetCallback &cb)
+		: options(o),
+		  callback(cb)
+	{
+		options.persist(o);
+	}
+};
 
 struct Ticket {
 	boost::mutex syncher;

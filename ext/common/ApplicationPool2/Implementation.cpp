@@ -104,6 +104,11 @@ SuperGroup::getPoolSyncher(const PoolPtr &pool) {
 	return pool->syncher;
 }
 
+string
+SuperGroup::generateSecret() const {
+	return getPool()->randomGenerator->generateAsciiString(43);
+}
+
 void
 SuperGroup::createInterruptableThread(const function<void ()> &func, const string &name,
 	unsigned int stackSize)
@@ -174,7 +179,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		 * become available, call them now.
 		 */
 		assignSessionsToGetWaitersQuickly(lock);
-	} else {
+	} else if (!pool->getWaitlist.empty()) {
 		/* Someone might be trying to get() a session for a different
 		 * group that couldn't be spawned because of lack of pool capacity.
 		 * If this group isn't under sufficiently load (as apparent by the
@@ -189,8 +194,8 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		 * than X seconds.
 		 */
 		vector<Callback> actions;
-		pool->detachGroup(shared_from_this(), false);
-		pool->assignSessionsToGetWaiters(actions);
+		// Will take care of processing pool->getWaitlist.
+		pool->detachProcess(process, false);
 		pool->verifyInvariants();
 		verifyInvariants();
 		lock.unlock();
@@ -213,6 +218,9 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 			// gdb can generate a backtrace.
 		}
 		PoolPtr pool = getPool();
+		if (pool == NULL) {
+			return;
+		}
 		unique_lock<boost::mutex> lock(pool->syncher);
 		pool = getPool();
 		if (pool == NULL) {
@@ -249,7 +257,7 @@ bool
 Group::shouldSpawn() const {
 	return !spawning()
 		&& (count == 0 || pqueue.top()->atFullCapacity())
-		&& !getPool()->atFullCapacity();
+		&& !getPool()->atFullCapacity(false);
 }
 
 void

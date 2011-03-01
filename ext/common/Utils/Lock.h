@@ -12,7 +12,7 @@ typedef lock_guard<boost::mutex> LockGuard;
 typedef unique_lock<boost::mutex> ScopedLock;
 
 /** Nicer syntax for conditionally locking the mutex during construction. */
-class DynamicScopedLock: unique_lock<boost::mutex> {
+class DynamicScopedLock: public unique_lock<boost::mutex> {
 public:
 	DynamicScopedLock(boost::mutex &m, bool lockNow = true)
 		: unique_lock<boost::mutex>(m, defer_lock)
