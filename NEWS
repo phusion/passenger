@@ -1,3 +1,17 @@
+Release 3.0.4
+-------------
+
+ * [Apache] Changed mod_dir workaround hook priority
+   Phusion Passenger temporarily disables mod_dir on all Phusion
+   Passenger-handled requests in order to avoid conflicts. In order to do this
+   it registers some Apache hooks with the APR_HOOK_MIDDLE priority, but it
+   turned out that this breaks some other modules like mod_python. The hook
+   priority has been changed to APR_HOOK_LAST to match mod_dir's hook
+   priorities. Issue reported by Jay Freeman.
+ * Added support for Union Station: http://www.unionstationapp.com/
+ * Some error messages have been improved.
+
+
 Release 3.0.3
 -------------
 
