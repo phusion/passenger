@@ -321,6 +321,7 @@ create_request(ngx_http_request_t *r)
     size_t                         len, size, key_len, val_len, content_length;
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
+    ngx_str_t                      escaped_uri;
     u_char                         min_instances_string[12];
     u_char                         framework_spawner_idle_time_string[12];
     u_char                         app_spawner_idle_time_string[12];
@@ -367,6 +368,19 @@ create_request(ngx_http_request_t *r)
     }
     
     
+    /*
+     * Nginx unescapes URI's before passing them to Phusion Passenger,
+     * but backend processes expect the escaped version.
+     * http://code.google.com/p/phusion-passenger/issues/detail?id=404
+     */
+    escaped_uri.len =
+        2 * ngx_escape_uri(NULL, r->uri.data, r->uri.len, NGX_ESCAPE_URI)
+        + r->uri.len;
+    escaped_uri.data = ngx_pnalloc(r->pool, escaped_uri.len + 1);
+    escaped_uri.data[escaped_uri.len] = '\0';
+    ngx_escape_uri(escaped_uri.data, r->uri.data, r->uri.len, NGX_ESCAPE_URI);
+
+
     /**************************************************
      * Determine the request header length.
      **************************************************/
@@ -381,16 +395,20 @@ create_request(ngx_http_request_t *r)
     /* +1 for trailing null */
     len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
     
-    /* DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT and PATH_INFO. */
+    /* DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT, PATH_INFO and REQUEST_URI. */
     len += sizeof("DOCUMENT_ROOT") + context->public_dir.len + 1;
     if (context->base_uri.len > 0) {
         len += sizeof("SCRIPT_NAME") + context->base_uri.len + 1;
         len += sizeof("RAILS_RELATIVE_URL_ROOT") +
                context->base_uri.len + 1;
-        len += sizeof("PATH_INFO") + r->uri.len - context->base_uri.len + 1;
+        len += sizeof("PATH_INFO") + escaped_uri.len - context->base_uri.len + 1;
     } else {
         len += sizeof("SCRIPT_NAME") + sizeof("");
-        len += sizeof("PATH_INFO") + r->uri.len + 1;
+        len += sizeof("PATH_INFO") + escaped_uri.len + 1;
+    }
+    len += sizeof("REQUEST_URI") + escaped_uri.len + 1;
+    if (r->args.len > 0) {
+        len += 1 + r->args.len;
     }
     
     /* Various other HTTP headers. */
@@ -569,7 +587,7 @@ create_request(ngx_http_request_t *r)
     b->last = ngx_snprintf(b->last, 10, "%ui", content_length);
     *b->last++ = (u_char) 0;
     
-    /* Build DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT and PATH_INFO. */
+    /* Build DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT, PATH_INFO and REQUEST_URI. */
     b->last = ngx_copy(b->last, "DOCUMENT_ROOT", sizeof("DOCUMENT_ROOT"));
     b->last = ngx_copy(b->last, context->public_dir.data,
                        context->public_dir.len + 1);
@@ -585,17 +603,25 @@ create_request(ngx_http_request_t *r)
                            context->base_uri.len + 1);
         
         b->last = ngx_copy(b->last, "PATH_INFO", sizeof("PATH_INFO"));
-        b->last = ngx_copy(b->last, r->uri.data + context->base_uri.len,
-                           r->uri.len - context->base_uri.len);
+        b->last = ngx_copy(b->last, escaped_uri.data + context->base_uri.len,
+                           escaped_uri.len - context->base_uri.len);
         b->last = ngx_copy(b->last, "", 1);
     } else {
         b->last = ngx_copy(b->last, "SCRIPT_NAME", sizeof("SCRIPT_NAME"));
         b->last = ngx_copy(b->last, "", sizeof(""));
         
         b->last = ngx_copy(b->last, "PATH_INFO", sizeof("PATH_INFO"));
-        b->last = ngx_copy(b->last, r->uri.data, r->uri.len);
+        b->last = ngx_copy(b->last, escaped_uri.data, escaped_uri.len);
         b->last = ngx_copy(b->last, "", 1);
     }
+    
+    b->last = ngx_copy(b->last, "REQUEST_URI", sizeof("REQUEST_URI"));
+    b->last = ngx_copy(b->last, escaped_uri.data, escaped_uri.len);
+    if (r->args.len > 0) {
+        b->last = ngx_copy(b->last, "?", 1);
+        b->last = ngx_copy(b->last, r->args.data, r->args.len);
+    }
+    b->last = ngx_copy(b->last, "", 1);
     
     /* Various other HTTP headers. */
     if (r->headers_in.content_type != NULL

@@ -134,6 +134,7 @@ TEST_CXX_OBJECTS = {
 		ext/common/LoggingAgent/RemoteSender.h
 		ext/common/LoggingAgent/ChangeNotifier.h
 		ext/common/LoggingAgent/DataStoreId.h
+		ext/common/LoggingAgent/FilterSupport.h
 		ext/common/Logging.h
 		ext/common/Utils.h
 		ext/common/EventedServer.h
@@ -172,6 +173,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/SystemTimeTest.cpp
 		ext/common/Utils/SystemTime.h
 		ext/common/Utils/SystemTime.cpp),
+	'test/cxx/FilterSupportTest.o' => %w(
+		test/cxx/FilterSupportTest.cpp
+		ext/common/LoggingAgent/FilterSupport.h),
 	'test/cxx/CachedFileStatTest.o' => %w(
 		test/cxx/CachedFileStatTest.cpp
 		ext/common/Utils/CachedFileStat.hpp
@@ -184,6 +188,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/VariantMapTest.cpp
 		ext/common/MessageChannel.h
 		ext/common/Utils/VariantMap.h),
+	'test/cxx/StringMapTest.o' => %w(
+		test/cxx/StringMapTest.cpp
+		ext/common/Utils/StringMap.h),
 	'test/cxx/ProcessMetricsCollectorTest.o' => %w(
 		test/cxx/ProcessMetricsCollectorTest.cpp
 		ext/common/Utils/ProcessMetricsCollector.h),
