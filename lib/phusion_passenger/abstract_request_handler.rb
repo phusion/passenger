@@ -704,6 +704,11 @@ private
 				end
 				Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = nil
 			ensure
+				# It is important that the following call receives an ACK
+				# from the logging server and that we don't close the socket
+				# connection until the ACK has been received, otherwise
+				# the helper agent may close the transaction before this
+				# process's openTransaction command is processed.
 				log.close
 			end
 		end

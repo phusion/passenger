@@ -1,3 +1,66 @@
+Release 3.0.4
+-------------
+
+ * [Apache] Changed mod_dir workaround hook priority
+   Phusion Passenger temporarily disables mod_dir on all Phusion
+   Passenger-handled requests in order to avoid conflicts. In order to do this
+   it registers some Apache hooks with the APR_HOOK_MIDDLE priority, but it
+   turned out that this breaks some other modules like mod_python. The hook
+   priority has been changed to APR_HOOK_LAST to match mod_dir's hook
+   priorities. Issue reported by Jay Freeman.
+ * Added support for Union Station: http://www.unionstationapp.com/
+ * Some error messages have been improved.
+
+
+Release 3.0.3
+-------------
+
+ * [Nginx] Preferred Nginx version upgraded to 0.8.54
+   The previous preferred version was 0.8.53.
+ * PATH_INFO and REQUEST_URI now contain the original escaped URI
+   Phusion Passenger passes the URI, as reported by Apache/Nginx, to
+   application processes through the PATH_INFO and REQUEST_URI variables.
+   These variables are supposed to contain the original, unescaped URI, e.g.
+   /clubs/%C3%BC. Both Apache and Nginx thought that it would be a good idea
+   to unescape the URI before passing it to modules like Phusion Passenger,
+   thereby causing PATH_INFO and REQUEST_URI to contain the unescaped URI,
+   e.g. /clubs/ü. This causes all sorts of encoding problems. We now manually
+   re-escape the URI when setting PATH_INFO and REQUEST_URI. Issue #404.
+ * The installer no longer detects directories as potential commands
+   Previously the installer would look in $PATH for everything that's
+   executable, including directories. If one has /usr/lib in $PATH
+   and a directory /usr/lib/gcc exists then the installer would recognize
+   /usr/lib/gcc as the compiler. We now explicitly check whether the item
+   is also a file.
+ * PseudoIO now responds to #to_io
+   Phusion Passenger sets STDERR to a PseudoIO object in order to capture
+   anything written to STDERR during application startup. This breaks
+   some libraries which expect STDERR to respond to #to_io. This has now
+   been fixed. Issue #607.
+ * Fixed various other minor bugs
+   See the git commit log for details.
+
+
+Release 3.0.2
+-------------
+
+ * [Nginx] Fixed compilation problems
+   The Nginx compilation process was broken due to not correctly reverting
+   the working directory of the Nginx configure script. This has been fixed:
+   issue #595.
+ * [Nginx] Fixed crash if passenger_root refers to a nonexistant directory
+   Issue #599.
+ * Fixed compilation problems on NetBSD
+   There was a typo in a NetBSD-specific fcntl() call. It also turns out that
+   NetBSD doesn't support some ISO C99 math functions like llroundl(); this
+   has been worked around by using other functions. Issue #593.
+ * Fixed file descriptor closing issues on FreeBSD
+   Phusion Passenger child processes didn't correct close file descriptors
+   on FreeBSD because it queries /dev/fd to do that. On FreeBSD /dev/fd
+   only returns meaningful results if fdescfs is mounted, which it isn't
+   by default. Issue #597.
+
+
 Release 3.0.1
 -------------
 

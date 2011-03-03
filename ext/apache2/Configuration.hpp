@@ -185,6 +185,8 @@ struct DirConfig {
 	
 	string unionStationKey;
 	
+	vector<string> unionStationFilters;
+	
 	/**
 	 * Whether Phusion Passenger should show friendly error pages.
 	 */
@@ -329,6 +331,23 @@ struct DirConfig {
 	
 	bool analyticsEnabled() const {
 		return analytics == ENABLED;
+	}
+	
+	string getUnionStationFilterString() const {
+		if (unionStationFilters.empty()) {
+			return string();
+		} else {
+			string result;
+			vector<string>::const_iterator it;
+			
+			for (it = unionStationFilters.begin(); it != unionStationFilters.end(); it++) {
+				if (it != unionStationFilters.begin()) {
+					result.append(1, '\1');
+				}
+				result.append(*it);
+			}
+			return result;
+		}
 	}
 	
 	/*************************************/

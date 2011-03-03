@@ -113,7 +113,14 @@ namespace boost
 
         virtual const char* what() const throw()
         {
-            return "boost::lock_error";
+            if(message.empty())
+            {
+                return "boost::lock_error";
+            }
+            else
+            {
+                return message.c_str();
+            }
         }
     };
 

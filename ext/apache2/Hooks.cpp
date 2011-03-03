@@ -570,7 +570,8 @@ private:
 				log = analyticsLogger->newTransaction(
 					config->getAppGroupName(appRoot),
 					"requests",
-					config->unionStationKey);
+					config->unionStationKey,
+					config->getUnionStationFilterString());
 				log->message(string("URI: ") + r->uri);
 			} else {
 				log.reset(new AnalyticsLog());
@@ -874,6 +875,55 @@ private:
 		}
 	}
 	
+	unsigned int
+	escapeUri(unsigned char *dst, const unsigned char *src, size_t size) {
+		static const char hex[] = "0123456789abcdef";
+			           /* " ", "#", "%", "?", %00-%1F, %7F-%FF */
+		static uint32_t escape[] = {
+		       0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+
+		                   /* ?>=< ;:98 7654 3210  /.-, +*)( '&%$ #"!  */
+		       0x80000029, /* 1000 0000 0000 0000  0000 0000 0010 1001 */
+
+		                   /* _^]\ [ZYX WVUT SRQP  ONML KJIH GFED CBA@ */
+		       0x00000000, /* 0000 0000 0000 0000  0000 0000 0000 0000 */
+
+		                   /*  ~}| {zyx wvut srqp  onml kjih gfed cba` */
+		       0x80000000, /* 1000 0000 0000 0000  0000 0000 0000 0000 */
+
+		       0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+		       0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+		       0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+		       0xffffffff  /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+		};
+		
+		if (dst == NULL) {
+			/* find the number of the characters to be escaped */
+			unsigned int n = 0;
+			while (size > 0) {
+				if (escape[*src >> 5] & (1 << (*src & 0x1f))) {
+					n++;
+				}
+				src++;
+				size--;
+			}
+			return n;
+		}
+		
+		while (size > 0) {
+			if (escape[*src >> 5] & (1 << (*src & 0x1f))) {
+				*dst++ = '%';
+				*dst++ = hex[*src >> 4];
+				*dst++ = hex[*src & 0xf];
+				src++;
+			} else {
+				*dst++ = *src++;
+			}
+			size--;
+		}
+		return 0;
+	}
+	
 	/**
 	 * Convert an HTTP header name to a CGI environment name.
 	 */
@@ -928,6 +978,17 @@ private:
 			return APR_ENOMEM;
 		}
 		
+		/*
+		 * Apache unescapes URI's before passing them to Phusion Passenger,
+		 * but backend processes expect the escaped version.
+		 * http://code.google.com/p/phusion-passenger/issues/detail?id=404
+		 */
+		size_t uriLen = strlen(r->uri);
+		unsigned int escaped = escapeUri(NULL, (const unsigned char *) r->uri, uriLen);
+		char escapedUri[uriLen + 2 * escaped + 1];
+		escapeUri((unsigned char *) escapedUri, (const unsigned char *) r->uri, uriLen);
+		escapedUri[uriLen + 2 * escaped] = '\0';
+		
 		
 		// Set standard CGI variables.
 		addHeader(headers, "SERVER_SOFTWARE", ap_get_server_version());
@@ -959,19 +1020,19 @@ private:
 		} else {
 			const char *request_uri;
 			if (r->args != NULL) {
-				request_uri = apr_pstrcat(r->pool, r->uri, "?", r->args, NULL);
+				request_uri = apr_pstrcat(r->pool, escapedUri, "?", r->args, NULL);
 			} else {
-				request_uri = r->uri;
+				request_uri = escapedUri;
 			}
 			addHeader(headers, "REQUEST_URI", request_uri);
 		}
 		
 		if (strcmp(baseURI, "/") == 0) {
 			addHeader(headers, "SCRIPT_NAME", "");
-			addHeader(headers, "PATH_INFO", r->uri);
+			addHeader(headers, "PATH_INFO", escapedUri);
 		} else {
 			addHeader(headers, "SCRIPT_NAME", baseURI);
-			addHeader(headers, "PATH_INFO", r->uri + strlen(baseURI));
+			addHeader(headers, "PATH_INFO", escapedUri + strlen(baseURI));
 		}
 		
 		// Set HTTP headers.
@@ -1001,6 +1062,7 @@ private:
 			addHeader(headers, "PASSENGER_GROUP_NAME",
 				config->getAppGroupName(appRoot).c_str());
 			addHeader(headers, "PASSENGER_TXN_ID", log->getTxnId().c_str());
+			addHeader(headers, "PASSENGER_UNION_STATION_KEY", config->unionStationKey.c_str());
 		}
 		
 		// Now send the headers.
@@ -1742,8 +1804,8 @@ passenger_register_hooks(apr_pool_t *p) {
 	ap_hook_fixups(prepare_request_when_not_in_high_performance_mode, NULL, rewrite_module, APR_HOOK_FIRST);
 	ap_hook_fixups(save_state_before_rewrite_rules, NULL, rewrite_module, APR_HOOK_LAST);
 	ap_hook_fixups(undo_redirection_to_dispatch_cgi, rewrite_module, NULL, APR_HOOK_FIRST);
-	ap_hook_fixups(start_blocking_mod_dir, NULL, dir_module, APR_HOOK_MIDDLE);
-	ap_hook_fixups(end_blocking_mod_dir, dir_module, NULL, APR_HOOK_MIDDLE);
+	ap_hook_fixups(start_blocking_mod_dir, NULL, dir_module, APR_HOOK_LAST);
+	ap_hook_fixups(end_blocking_mod_dir, dir_module, NULL, APR_HOOK_LAST);
 	
 	ap_hook_handler(handle_request_when_in_high_performance_mode, NULL, NULL, APR_HOOK_FIRST);
 	ap_hook_handler(start_blocking_mod_autoindex, NULL, autoindex_module, APR_HOOK_LAST);

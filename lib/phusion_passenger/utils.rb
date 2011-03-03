@@ -57,7 +57,7 @@ protected
 		raise ArgumentError, "The 'path' argument may not be nil" if path.nil?
 		return Pathname.new(path).realpath.to_s
 	rescue Errno::ENOENT => e
-		raise InvalidAPath, e.message
+		raise InvalidPath, e.message
 	end
 	
 	# Assert that +path+ is a directory. Raises +InvalidPath+ if it isn't.
@@ -511,6 +511,10 @@ protected
 	end
 	module_function :process_is_alive?
 	
+	# Wraps another IO object. Everything written to the PseudoIO will
+	# not only be immediately forwarded to the underlying IO object but
+	# will also be captured in a buffer. The contents of the buffer
+	# can be retrieved by calling #done!.
 	class PseudoIO
 		def initialize(sink)
 			@sink = sink || File.open("/dev/null", "w")
@@ -521,6 +525,10 @@ protected
 			result = @buffer.string
 			@buffer = nil
 			return result
+		end
+		
+		def to_io
+			return self
 		end
 		
 		def method_missing(*args, &block)

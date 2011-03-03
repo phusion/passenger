@@ -31,17 +31,8 @@ namespace :package do
 		system(*args)
 	end
 
-	def create_tarball(verbosity = 0)
-		working_dir = "/tmp/#{`whoami`.strip}-passenger-rpm-#{Process.pid}"
-		sub_dir = "passenger-#{PhusionPassenger::VERSION_STRING}"
-		FileUtils.rm_rf(working_dir, :verbose => verbosity > 0)
-		begin
-			FileUtils.mkdir_p("#{working_dir}/#{sub_dir}", :verbose => verbosity > 0)
-			noisy_system(*(%w{rsync -ra --exclude=.git --exclude=rpm/pkg --exclude=rpm/yum-repo --exclude=*.o --exclude=*.so} + (@verbosity > 2 ? %w{-v} : []) + (@verbosity > 3 ? %w{--progress} : []) + ['.', "#{working_dir}/#{sub_dir}/."] ))
-			noisy_system('tar', "cz#{verbosity >= 2 ? 'v' : ''}", "-C", working_dir, '-f', "#{sources_dir}/#{sub_dir}.tar.gz", sub_dir)
-		ensure
-			FileUtils.rm_rf("#{working_dir}", :verbose => verbosity > 0)
-		end
+	def copy_tarball(verbosity = 0)
+		FileUtils.cp(File.join('pkg', "passenger-#{PhusionPassenger::VERSION_STRING}.tar.gz"), sources_dir, :verbose => verbosity > 0)
 	end
 
 	def test_setup(*args)
@@ -54,6 +45,8 @@ namespace :package do
 				download("http://sysoev.ru/nginx/#{tarball}", "#{dir}/#{tarball}")
 			end
 		end
+
+		ENV['BUILD_VERBOSITY'] = @verbosity.to_s
 
 		result = noisy_system('./rpm/release/mocksetup-first.sh', *args)
 		if !result
@@ -68,22 +61,24 @@ namespace :package do
 	end
 
 	desc "Package the current release into a set of RPMs"
-	task 'rpm' => :rpm_verbosity do
+	task 'rpm' => [:package, :rpm_verbosity] do
 		test_setup
-		create_tarball(@verbosity)
-		# Add a single -v for some feedback
-		noisy_system(*(%w{./rpm/release/build.rb --single --stage-dir=pkg --extra-packages=release/mock-repo} + @build_verbosity))
+		copy_tarball(@verbosity)
+		noisy_system(*(%w{./rpm/release/build.rb --single} + ["--stage-dir=#{ENV['stage_dir'] || 'pkg'}", "--extra-packages=#{ENV['extra_packages'] || 'release/mock-repo'}"] + @build_verbosity))
 	end
 
 	desc "Build a Yum repository for the current release"
-	task 'yum' => :rpm_verbosity do
+	task 'yum' => [:package, :rpm_verbosity] do
 		test_setup(*%w{-p createrepo -p rubygem-gem2rpm})
-		create_tarball(@verbosity)
-		# Add a single -v for some feedback
-		noisy_system(*(%w{./rpm/release/build.rb --stage-dir=yum-repo --extra-packages=release/mock-repo} + @build_verbosity))
-		Dir["yum-repo/{fedora,rhel}/*/{i386,x86_64}"].each do |dir|
+		copy_tarball(@verbosity)
+		noisy_system(*(%w{./rpm/release/build.rb --include-release} + ["--stage-dir=#{ENV['stage_dir'] || 'yum-repo'}", "--extra-packages=#{ENV['extra_packages'] || 'release/mock-repo'}"] + @build_verbosity))
+		repo=File.expand_path("#{ENV['stage_dir'] || 'yum-repo'}", 'rpm')
+		Dir["#{repo}/{fedora,rhel}/*/{i386,x86_64}"].each do |dir|
 			noisy_system('createrepo', dir)
 		end
+		FileUtils.cp(Dir["rpm/doc/*.shtml"], repo, :verbose => @verbosity > 0)
+		FileUtils.cp('rpm/doc/example_yum_repository_htaccess', "#{repo}/.htaccess.example", :verbose => @verbosity > 0)
+		FileUtils.cp('rpm/release/RPM-GPG-KEY-stealthymonkeys', "#{repo}/RPM-GPG-KEY-stealthymonkeys.asc")
 	end
 
 	task 'rpm_verbosity' do
@@ -91,8 +86,8 @@ namespace :package do
 			@verbosity = 1
 			@build_verbosity = %w{-v}
 		else
-			@verbosity = ENV['verbosity'].to_i
-			@build_verbosity = %w{-v} * (@verbosity == 0 ? 1 : @verbosity)
+			@verbosity = ENV['verbosity'] ? ENV['verbosity'].to_i : 1
+			@build_verbosity = %w{-v} * @verbosity
 		end
 	end
 end
