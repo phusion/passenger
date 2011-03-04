@@ -702,6 +702,7 @@ private:
 	typedef shared_ptr<FunctionCall> FunctionCallPtr;
 	
 	struct BooleanComponent {
+		virtual ~BooleanComponent() { }
 		virtual bool evaluate(const Context &ctx) = 0;
 	};
 	
