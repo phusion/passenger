@@ -254,7 +254,7 @@ public:
 		pool->setMaxIdleTime(poolIdleTime);
 		
 		messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
-		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
+		messageServer->addHandler(ptr(new ApplicationPool::Server(pool, analyticsLogger)));
 		messageServer->addHandler(ptr(new BacktracesServer()));
 		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
 		

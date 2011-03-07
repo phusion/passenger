@@ -449,6 +449,8 @@ public:
 		RESPONSE_TIME
 	};
 	
+	virtual ~Context() { }
+	
 	virtual string getURI() const = 0;
 	virtual string getController() const = 0;
 	virtual int getResponseTime() const = 0;
@@ -700,6 +702,7 @@ private:
 	typedef shared_ptr<FunctionCall> FunctionCallPtr;
 	
 	struct BooleanComponent {
+		virtual ~BooleanComponent() { }
 		virtual bool evaluate(const Context &ctx) = 0;
 	};
 	
