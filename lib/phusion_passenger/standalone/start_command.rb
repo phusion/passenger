@@ -209,7 +209,7 @@ private
 			end
                         opts.on("--binaries-url-root URL", String,
                                 wrap_desc("If Nginx needs to be installed, then the specified URL will be checked " +
-                                          "for binaries prior to a manual build.")) do |value|
+                                          "for binaries prior to a local build.")) do |value|
                                 @options[:binaries_url_root] = value
                         end
 		end
