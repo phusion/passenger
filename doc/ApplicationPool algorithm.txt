@@ -328,7 +328,7 @@ private function checkout_without_lock(app_root, options):
 			# this function.
 			new_app_group_creatable.wait
 			goto beginning of function
-		elsif count == max:
+		elsif count >= max:
 			# The pool is full, and not all processes are busy, but
 			# we're in a though situation nevertheless: there are
 			# several processes which are inactive, and none of them
