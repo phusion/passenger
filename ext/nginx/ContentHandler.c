@@ -430,8 +430,8 @@ create_request(ngx_http_request_t *r)
                                   slcf, use_global_queue);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_FRIENDLY_ERROR_PAGES",
                                   slcf, friendly_error_pages);
-    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_ANALYTICS",
-                                  slcf, analytics);
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("UNION_STATION_SUPPORT",
+                                  slcf, union_station_support);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_DEBUGGER",
                                   slcf, debugger);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_SHOW_VERSION_IN_HEADER",
@@ -660,8 +660,8 @@ create_request(ngx_http_request_t *r)
                                   slcf, use_global_queue);
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_FRIENDLY_ERROR_PAGES",
                                   slcf, friendly_error_pages);
-    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_ANALYTICS",
-                                  slcf, analytics);
+    SERIALIZE_BOOLEAN_CONFIG_DATA("UNION_STATION_SUPPORT",
+                                  slcf, union_station_support);
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_DEBUGGER",
                                   slcf, debugger);
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_SHOW_VERSION_IN_HEADER",

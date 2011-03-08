@@ -566,7 +566,11 @@ private:
 		UPDATE_TRACE_POINT();
 		try {
 			AnalyticsLogPtr log;
-			if (config->analyticsEnabled()) {
+			fprintf(stderr, "use union station: %d (%d)\n",
+				(int)config->useUnionStation(),
+				(int)config->unionStationSupport);
+			fflush(stderr);
+			if (config->useUnionStation()) {
 				log = analyticsLogger->newTransaction(
 					config->getAppGroupName(appRoot),
 					"requests",
@@ -662,7 +666,7 @@ private:
 					config->getRestartDir(),
 					DEFAULT_BACKEND_ACCOUNT_RIGHTS,
 					false,
-					config->analyticsEnabled(),
+					config->useUnionStation(),
 					log->isNull() ? AnalyticsLogPtr() : log
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
@@ -1058,7 +1062,7 @@ private:
 			addHeader(headers, env[i].key, env[i].val);
 		}
 		
-		if (config->analyticsEnabled()) {
+		if (config->useUnionStation()) {
 			addHeader(headers, "PASSENGER_GROUP_NAME",
 				config->getAppGroupName(appRoot).c_str());
 			addHeader(headers, "PASSENGER_TXN_ID", log->getTxnId().c_str());

@@ -437,7 +437,7 @@ private:
 		}
 		
 		try {
-			bool enableAnalytics = parser.getHeader("PASSENGER_ANALYTICS") == "true";
+			bool useUnionStation = parser.getHeader("UNION_STATION_SUPPORT") == "true";
 			StaticString appGroupName = parser.getHeader("PASSENGER_APP_GROUP_NAME");
 			PoolOptions options;
 			
@@ -471,7 +471,7 @@ private:
 			
 			UPDATE_TRACE_POINT();
 			AnalyticsLogPtr log;
-			if (enableAnalytics) {
+			if (useUnionStation) {
 				log = analyticsLogger->newTransaction(
 					options.getAppGroupName(),
 					"requests",
@@ -522,7 +522,7 @@ private:
 					session->getConnectPassword().size() + 1);
 				end += session->getConnectPassword().size() + 1;
 				
-				if (enableAnalytics) {
+				if (useUnionStation) {
 					memcpy(end, "PASSENGER_GROUP_NAME", sizeof("PASSENGER_GROUP_NAME"));
 					end += sizeof("PASSENGER_GROUP_NAME");
 					

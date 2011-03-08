@@ -42,7 +42,7 @@ typedef struct {
     ngx_flag_t   enabled;
     ngx_flag_t   use_global_queue;
     ngx_flag_t   friendly_error_pages;
-    ngx_flag_t   analytics;
+    ngx_flag_t   union_station_support;
     ngx_flag_t   debugger;
     ngx_flag_t   show_version_in_header;
     ngx_str_t    environment;
