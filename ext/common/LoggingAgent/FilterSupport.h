@@ -274,7 +274,7 @@ private:
 		}
 	}
 	
-	Token matchString() {
+	Token matchString(char terminator) {
 		unsigned int start = pos;
 		bool endFound = false;
 		
@@ -291,7 +291,7 @@ private:
 				} else {
 					pos++;
 				}
-			} else if (ch == '"') {
+			} else if (ch == terminator) {
 				pos++;
 				endFound = true;
 			} else {
@@ -372,7 +372,9 @@ public:
 		case '/':
 			return logToken(matchRegexp());
 		case '"':
-			return logToken(matchString());
+			return logToken(matchString('"'));
+		case '\'':
+			return logToken(matchString('\''));
 		case '-':
 			return logToken(matchInteger());
 		default:

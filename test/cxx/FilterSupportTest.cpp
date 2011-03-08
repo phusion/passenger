@@ -114,9 +114,31 @@ namespace tut {
 	}
 	
 	TEST_METHOD(13) {
-		// String syntax supports \n, \r, \t
-		ctx.uri = "hello\r\n\tworld";
-		ensure(Filter("uri == \"hello\\r\\n\\tworld\"").run(ctx));
+		// String syntax supports \\, \n, \r, \t
+		ctx.uri = "hello\r\n\tworld\\";
+		ensure(Filter("uri == \"hello\\r\\n\\tworld\\\\\"").run(ctx));
+	}
+	
+	TEST_METHOD(14) {
+		// Strings can also start and end with single quote characters.
+		ctx.uri = "hello world";
+		ensure(Filter("uri == 'hello world'").run(ctx));
+	}
+	
+	TEST_METHOD(15) {
+		// Begin and end quote characters must match.
+		try {
+			Filter("uri == 'hello world\"");
+			fail("Syntax error expected");
+		} catch (const SyntaxError &) {
+			// Pass.
+		}
+		try {
+			Filter("uri == \"hello world'");
+			fail("Syntax error expected");
+		} catch (const SyntaxError &) {
+			// Pass.
+		}
 	}
 	
 	
