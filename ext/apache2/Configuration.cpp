@@ -36,6 +36,7 @@
 
 #include "Configuration.hpp"
 #include "Utils.h"
+#include <agents/LoggingAgent/FilterSupport.h>
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
  * to learn why.
@@ -159,6 +160,17 @@ destroy_config_struct(void *x) {
 	return APR_SUCCESS;
 }
 
+template<typename Collection, typename T> static bool
+contains(const Collection &coll, const T &item) {
+	typename Collection::const_iterator it;
+	for (it = coll.begin(); it != coll.end(); it++) {
+		if (*it == item) {
+			return true;
+		}
+	}
+	return false;
+}
+
 
 extern "C" {
 
@@ -196,7 +208,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->restartDir = NULL;
 	config->uploadBufferDir = NULL;
 	config->friendlyErrorPages = DirConfig::UNSET;
-	config->analytics = DirConfig::UNSET;
+	config->unionStationSupport = DirConfig::UNSET;
 	/*************************************/
 	return config;
 }
@@ -237,10 +249,16 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_STR_CONFIG(restartDir);
 	MERGE_STR_CONFIG(uploadBufferDir);
 	MERGE_STRING_CONFIG(unionStationKey);
+	config->unionStationFilters = base->unionStationFilters;
+	for (vector<string>::const_iterator it = add->unionStationFilters.begin(); it != add->unionStationFilters.end(); it++) {
+		if (!contains(config->unionStationFilters, *it)) {
+			config->unionStationFilters.push_back(*it);
+		}
+	}
 	MERGE_THREEWAY_CONFIG(resolveSymlinksInDocRoot);
 	MERGE_THREEWAY_CONFIG(allowEncodedSlashes);
 	MERGE_THREEWAY_CONFIG(friendlyErrorPages);
-	MERGE_THREEWAY_CONFIG(analytics);
+	MERGE_THREEWAY_CONFIG(unionStationSupport);
 	/*************************************/
 	return config;
 }
@@ -292,7 +310,7 @@ DEFINE_DIR_STR_CONFIG_SETTER(cmd_union_station_key, unionStationKey)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_friendly_error_pages, friendlyErrorPages)
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_analytics, analytics)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_union_station_support, unionStationSupport)
 
 static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -307,6 +325,24 @@ cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 		return "PassengerSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
 	}
 	return NULL;
+}
+
+static const char *
+cmd_union_station_filter(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	if (strlen(arg) == 0) {
+		return "UnionStationFilter may not be set to the empty string";
+	} else {
+		try {
+			FilterSupport::Filter f(arg);
+			config->unionStationFilters.push_back(arg);
+			return NULL;
+		} catch (const SyntaxError &e) {
+			string message = "Syntax error in Union Station filter: ";
+			message.append(e.what());
+			return strdup(message.c_str());
+		}
+	}
 }
 
 
@@ -543,6 +579,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_ALL,
 		"The Union Station key."),
+	AP_INIT_TAKE1("UnionStationFilter",
+		(Take1Func) cmd_union_station_filter,
+		NULL,
+		OR_ALL,
+		"A filter for Union Station data."),
 	AP_INIT_FLAG("PassengerResolveSymlinksInDocumentRoot",
 		(FlagFunc) cmd_passenger_resolve_symlinks_in_document_root,
 		NULL,
@@ -603,11 +644,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Prestart the given web applications during startup."),
-	AP_INIT_TAKE1("PassengerAnalytics",
-		(Take1Func) cmd_passenger_analytics,
+	AP_INIT_FLAG("UnionStationSupport",
+		(Take1Func) cmd_union_station_support,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Whether to enable analytics logging."),
+		"Whether to enable logging through Union Station."),
 	
 	/*****************************/
 

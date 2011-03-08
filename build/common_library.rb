@@ -81,6 +81,9 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			agents/Base.cpp
 			agents/Base.h
 			Utils/VariantMap.h),
+		'agents/LoggingAgent/FilterSupport.o' => %w(
+			agents/LoggingAgent/FilterSupport.cpp
+			agents/LoggingAgent/FilterSupport.h),
 		#'BCrypt.o' => %w(
 		#	BCrypt.cpp
 		#	BCrypt.h
@@ -134,6 +137,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			file object_file => dependencies do
 				sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
 				sh "mkdir -p #{output_dir}/Utils" if !File.directory?("#{output_dir}/Utils")
+				sh "mkdir -p #{output_dir}/agents/LoggingAgent" if !File.directory?("#{output_dir}/agents/LoggingAgent")
 				compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
 			end
 		end

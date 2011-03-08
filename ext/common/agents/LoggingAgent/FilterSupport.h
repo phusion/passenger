@@ -25,6 +25,8 @@
 #ifndef _PASSENGER_FILTER_SUPPORT_H_
 #define _PASSENGER_FILTER_SUPPORT_H_
 
+#ifdef __cplusplus
+
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <oxt/tracable_exception.hpp>
@@ -35,6 +37,7 @@
 #include <cstring>
 
 #include <StaticString.h>
+#include <Exceptions.h>
 #include <Utils/StrIntUtils.h>
 
 namespace Passenger {
@@ -48,6 +51,7 @@ using namespace oxt;
 class Tokenizer {
 public:
 	enum TokenType {
+		NONE,
 		NOT,
 		AND,
 		OR,
@@ -81,7 +85,9 @@ public:
 		unsigned int size;
 		StaticString rawValue;
 		
-		Token() { }
+		Token() {
+			type = NONE;
+		}
 		
 		Token(TokenType _type, unsigned int _pos, unsigned int _size, const StaticString &_rawValue)
 			: type(_type),
@@ -224,7 +230,7 @@ private:
 		}
 	}
 	
-	Token matchRegexp() {
+	Token matchRegexp(char terminator) {
 		unsigned int start = pos;
 		bool endFound = false;
 		
@@ -241,7 +247,7 @@ private:
 				} else {
 					pos++;
 				}
-			} else if (ch == '/') {
+			} else if (ch == terminator) {
 				pos++;
 				endFound = true;
 			} else {
@@ -271,7 +277,7 @@ private:
 		}
 	}
 	
-	Token matchString() {
+	Token matchString(char terminator) {
 		unsigned int start = pos;
 		bool endFound = false;
 		
@@ -288,7 +294,7 @@ private:
 				} else {
 					pos++;
 				}
-			} else if (ch == '"') {
+			} else if (ch == terminator) {
 				pos++;
 				endFound = true;
 			} else {
@@ -367,9 +373,19 @@ public:
 		case ',':
 			return logToken(matchToken(COMMA, 1));
 		case '/':
-			return logToken(matchRegexp());
+			return logToken(matchRegexp('/'));
+		case '%':
+			expectingAtLeast(3);
+			if (memcmp(data.data() + pos, "%r{", 3) != 0) {
+				raiseSyntaxError("expected '%r{', but found '" +
+					data.substr(pos, 3) + "'");
+			}
+			pos += 2;
+			return logToken(matchRegexp('}'));
 		case '"':
-			return logToken(matchString());
+			return logToken(matchString('"'));
+		case '\'':
+			return logToken(matchString('\''));
 		case '-':
 			return logToken(matchInteger());
 		default:
@@ -383,6 +399,8 @@ public:
 	
 	static string typeToString(TokenType type) {
 		switch (type) {
+		case NONE:
+			return "NONE";
 		case NOT:
 			return "NOT";
 		case AND:
@@ -443,6 +461,8 @@ public:
 		CONTROLLER,
 		RESPONSE_TIME
 	};
+	
+	virtual ~Context() { }
 	
 	virtual string getURI() const = 0;
 	virtual string getController() const = 0;
@@ -695,6 +715,7 @@ private:
 	typedef shared_ptr<FunctionCall> FunctionCallPtr;
 	
 	struct BooleanComponent {
+		virtual ~BooleanComponent() { }
 		virtual bool evaluate(const Context &ctx) = 0;
 	};
 	
@@ -1096,8 +1117,10 @@ private:
 		if (lookahead.type == type) {
 			return match();
 		} else {
-			throw SyntaxError("Expected a " + Tokenizer::typeToString(type) +
-				" token, but got " + lookahead.toString());
+			raiseSyntaxError("Expected a " + Tokenizer::typeToString(type) +
+				" token, but got " + lookahead.toString(),
+				lookahead);
+			return Token(); // Shut up compiler warning.
 		}
 	}
 	
@@ -1107,8 +1130,17 @@ private:
 		return old;
 	}
 	
-	void raiseSyntaxError(const string &msg = "") {
-		throw SyntaxError(msg);
+	void raiseSyntaxError(const string &msg = "", const Token &token = Token()) {
+		if (token.type != Tokenizer::NONE) {
+			string message = "at character " + toString(token.pos + 1);
+			if (!msg.empty()) {
+				message.append(": ");
+				message.append(msg);
+			}
+			throw SyntaxError(message);
+		} else {
+			throw SyntaxError(msg);
+		}
 	}
 	
 	BooleanComponentPtr matchMultiExpression() {
@@ -1158,7 +1190,7 @@ private:
 				return component;
 			}
 		} else {
-			raiseSyntaxError("expected a left parenthesis or an identifier");
+			raiseSyntaxError("expected a left parenthesis or an identifier", next);
 			return BooleanComponentPtr(); // Shut up compiler warning.
 		}
 	}
@@ -1169,7 +1201,7 @@ private:
 		comparison->comparator = matchComparator();
 		comparison->object     = matchValue(match());
 		if (!comparatorAcceptsValueTypes(comparison->comparator, comparison->subject.getType(), comparison->object.getType())) {
-			raiseSyntaxError("the comparator cannot operate on the given combination of types");
+			raiseSyntaxError("the comparator cannot operate on the given combination of types", subjectToken);
 		}
 		return comparison;
 	}
@@ -1182,7 +1214,7 @@ private:
 		} else if (id.rawValue == "has_hint") {
 			function = make_shared<HasHintFunctionCall>();
 		} else {
-			raiseSyntaxError("unknown function '" + id.rawValue + "'");
+			raiseSyntaxError("unknown function '" + id.rawValue + "'", id);
 		}
 		
 		match(Tokenizer::LPARENTHESIS);
@@ -1204,7 +1236,7 @@ private:
 		} else if (token.type == Tokenizer::IDENTIFIER) {
 			return matchContextFieldIdentifier(token);
 		} else {
-			raiseSyntaxError();
+			raiseSyntaxError("", token);
 			return Value(); // Shut up compiler warning.
 		}
 	}
@@ -1217,7 +1249,7 @@ private:
 			match();
 			return OR;
 		} else {
-			raiseSyntaxError();
+			raiseSyntaxError("", peek());
 			return AND; // Shut up compiler warning.
 		}
 	}
@@ -1248,7 +1280,7 @@ private:
 			match();
 			return LESS_THAN_OR_EQUALS;
 		} else {
-			raiseSyntaxError();
+			raiseSyntaxError("", peek());
 			return MATCHES; // Shut up compiler warning.
 		}
 	}
@@ -1262,7 +1294,7 @@ private:
 		} else if (token.type == Tokenizer::INTEGER) {
 			return Value(atoi(token.rawValue.toString()));
 		} else {
-			raiseSyntaxError("regular expression, string or integer expected");
+			raiseSyntaxError("regular expression, string or integer expected", token);
 			return Value(); // Shut up compiler warning.
 		}
 	}
@@ -1275,7 +1307,7 @@ private:
 		} else if (token.rawValue == "response_time") {
 			return Value(Context::RESPONSE_TIME);
 		} else {
-			raiseSyntaxError("unknown field '" + token.rawValue + "'");
+			raiseSyntaxError("unknown field '" + token.rawValue + "'", token);
 			return Value(); // Shut up compiler warning.
 		}
 	}
@@ -1297,5 +1329,25 @@ public:
 
 } // namespace FilterSupport
 } // namespace Passenger
+
+#endif /* __cplusplus */
+
+
+/********* C bindings *********/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef void *PassengerFilter;
+
+PassengerFilter *passenger_filter_create(const char *source, int size, char **error);
+void passenger_filter_free(PassengerFilter *filter);
+char *passenger_filter_validate(const char *source, int size);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* _PASSENGER_FILTER_SUPPORT_H_ */

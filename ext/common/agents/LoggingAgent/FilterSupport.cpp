@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2011 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,27 +22,41 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_CONSTANTS_H_
-#define _PASSENGER_CONSTANTS_H_
+#include "FilterSupport.h"
+#include <cstring>
+#include <cstdlib>
 
-/* Don't forget to update lib/phusion_passenger.rb too. */
-#define PASSENGER_VERSION "3.0.5"
+using namespace Passenger;
 
-#define FEEDBACK_FD 3
+PassengerFilter *
+passenger_filter_create(const char *source, int size, char **error) {
+	if (size == -1) {
+		size = strlen(source);
+	}
+	try {
+		return (PassengerFilter *) new FilterSupport::Filter(StaticString(source, size));
+	} catch (const SyntaxError &e) {
+		if (error != NULL) {
+			*error = strdup(e.what());
+		}
+		return NULL;
+	}
+}
 
-#define DEFAULT_LOG_LEVEL 0
-#define DEFAULT_MAX_POOL_SIZE 6
-#define DEFAULT_POOL_IDLE_TIME 300
-#define DEFAULT_MAX_INSTANCES_PER_APP 0
-#define DEFAULT_WEB_APP_USER "nobody"
-#define DEFAULT_ANALYTICS_LOG_USER DEFAULT_WEB_APP_USER
-#define DEFAULT_ANALYTICS_LOG_GROUP ""
-#define DEFAULT_ANALYTICS_LOG_PERMISSIONS "u=rwx,g=rx,o=rx"
-#define DEFAULT_UNION_STATION_GATEWAY_ADDRESS "gateway.unionstationapp.com"
-#define DEFAULT_UNION_STATION_GATEWAY_PORT 443
+void
+passenger_filter_free(PassengerFilter *filter) {
+	delete (FilterSupport::Filter *) filter;
+}
 
-#define MESSAGE_SERVER_MAX_USERNAME_SIZE 100
-#define MESSAGE_SERVER_MAX_PASSWORD_SIZE 100
-#define DEFAULT_BACKEND_ACCOUNT_RIGHTS Account::DETACH
-
-#endif /* _PASSENGER_CONSTANTS_H */
+char *
+passenger_filter_validate(const char *source, int size) {
+	if (size == -1) {
+		size = strlen(source);
+	}
+	try {
+		FilterSupport::Filter(StaticString(source, size));
+		return NULL;
+	} catch (const SyntaxError &e) {
+		return strdup(e.what());
+	}
+}

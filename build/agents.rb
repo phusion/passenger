@@ -82,6 +82,7 @@ dependencies = [
 	'ext/common/agents/LoggingAgent/RemoteSender.h',
 	'ext/common/agents/LoggingAgent/ChangeNotifier.h',
 	'ext/common/agents/LoggingAgent/DataStoreId.h',
+	'ext/common/agents/LoggingAgent/FilterSupport.h',
 	'ext/common/ServerInstanceDir.h',
 	'ext/common/Logging.h',
 	'ext/common/EventedServer.h',

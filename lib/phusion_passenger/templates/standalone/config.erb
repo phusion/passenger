@@ -86,7 +86,7 @@ http {
         passenger_spawn_method <%= app[:spawn_method] %>;
         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
         <% if app[:union_station_key] %>
-            passenger_analytics on;
+            union_station_support on;
             union_station_key <%= app[:union_station_key] %>;
         <% end %>
     }

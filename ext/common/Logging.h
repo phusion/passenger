@@ -430,6 +430,47 @@ public:
 
 class AnalyticsLogger {
 private:
+	/** A special lock type for AnalyticsLoggerSharedData that also
+	 * keeps a smart pointer to the data structure so that the mutex
+	 * is not destroyed prematurely.
+	 */
+	struct SharedDataLock {
+		AnalyticsLoggerSharedDataPtr sharedData;
+		bool locked;
+		
+		SharedDataLock(const AnalyticsLoggerSharedDataPtr &d)
+			: sharedData(d)
+		{
+			d->lock.lock();
+			locked = true;
+		}
+		
+		~SharedDataLock() {
+			if (locked) {
+				sharedData->lock.unlock();
+			}
+		}
+		
+		void reset(const AnalyticsLoggerSharedDataPtr &d, bool lockNow = true) {
+			if (locked) {
+				sharedData->lock.unlock();
+			}
+			sharedData = d;
+			if (lockNow) {
+				sharedData->lock.lock();
+				locked = true;
+			} else {
+				locked = false;
+			}
+		}
+		
+		void lock() {
+			assert(!locked);
+			sharedData->lock.lock();
+			locked = true;
+		}
+	};
+	
 	static const int RETRY_SLEEP = 200000; // microseconds
 	
 	string serverAddress;
@@ -437,10 +478,13 @@ private:
 	string password;
 	string nodeName;
 	RandomGenerator randomGenerator;
+	
+	/** Lock protecting the fields that follow, but not the contents of the shared data. */
+	mutable boost::mutex lock;
+	
 	unsigned int maxConnectTries;
 	unsigned long long reconnectTimeout;
 	unsigned long long nextReconnectTime;
-	
 	/** @invariant sharedData != NULL */
 	AnalyticsLoggerSharedDataPtr sharedData;
 	
@@ -547,7 +591,8 @@ public:
 		
 		integerToHexatri<unsigned long long>(timestamp, timestampStr);
 		
-		lock_guard<boost::mutex> l(sharedData->lock);
+		unique_lock<boost::mutex> l(lock);
+		SharedDataLock sl(sharedData);
 		
 		if (SystemTime::getUsec() >= nextReconnectTime) {
 			unsigned int tryCount = 0;
@@ -566,8 +611,20 @@ public:
 						timestampStr,
 						unionStationKey.c_str(),
 						"true",
+						"true",
 						filters.c_str(),
 						NULL);
+					
+					vector<string> args;
+					sharedData->client.read(args);
+					if (args.size() == 2 && args[0] == "error") {
+						disconnect();
+						throw IOException("The logging server responded with an error: " + args[1]);
+					} else if (args.empty() || args[0] != "ok") {
+						disconnect();
+						throw IOException("The logging server sent an unexpected reply.");
+					}
+					
 					return ptr(new AnalyticsLog(sharedData,
 						string(txnId, end - txnId),
 						groupName, category,
@@ -577,9 +634,13 @@ public:
 					if (e.code() == ENOENT || isNetworkError(e.code())) {
 						tryCount++;
 						disconnect(true);
+						sl.reset(sharedData, false);
+						l.unlock();
 						if (tryCount < maxConnectTries) {
 							syscalls::usleep(RETRY_SLEEP);
 						}
+						l.lock();
+						sl.lock();
 					} else {
 						disconnect();
 						throw;
@@ -605,7 +666,8 @@ public:
 		char timestampStr[2 * sizeof(unsigned long long) + 1];
 		integerToHexatri<unsigned long long>(SystemTime::getUsec(), timestampStr);
 		
-		lock_guard<boost::mutex> l(sharedData->lock);
+		unique_lock<boost::mutex> l(lock);
+		SharedDataLock sl(sharedData);
 		
 		if (SystemTime::getUsec() >= nextReconnectTime) {
 			unsigned int tryCount = 0;
@@ -633,9 +695,13 @@ public:
 					if (e.code() == EPIPE || isNetworkError(e.code())) {
 						tryCount++;
 						disconnect(true);
+						sl.reset(sharedData, false);
+						l.unlock();
 						if (tryCount < maxConnectTries) {
 							syscalls::usleep(RETRY_SLEEP);
 						}
+						l.lock();
+						sl.lock();
 					} else {
 						disconnect();
 						throw;
@@ -652,12 +718,12 @@ public:
 	}
 	
 	void setMaxConnectTries(unsigned int value) {
-		lock_guard<boost::mutex> l(sharedData->lock);
+		lock_guard<boost::mutex> l(lock);
 		maxConnectTries = value;
 	}
 	
 	void setReconnectTimeout(unsigned long long usec) {
-		lock_guard<boost::mutex> l(sharedData->lock);
+		lock_guard<boost::mutex> l(lock);
 		reconnectTimeout = usec;
 	}
 	
@@ -678,6 +744,8 @@ public:
 	}
 	
 	FileDescriptor getConnection() const {
+		lock_guard<boost::mutex> l(lock);
+		lock_guard<boost::mutex> l2(sharedData->lock);
 		return sharedData->client.getConnection();
 	}
 	

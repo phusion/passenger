@@ -1,3 +1,44 @@
+Release 3.0.5
+-------------
+
+ * [Apache] Fixed Union Station process statistics collection
+   Union Station users that are using Apache may notice that no process
+   information show up in Union Station. This is because of a bug in
+   Phusion Passenger's Apache version, which has now been fixed.
+ * [Apache] PassengerAnalytics has been renamed to UnionStationSupport
+   This option has been renamed for consistency reasons.
+ * [Nginx] passenger_analytics has been renamed to union_station_support
+   This option has been renamed for consistency reasons.
+ * Fixed Union Station data on older libcurl versions
+   Some Union Station users have reported that their data don't show up.
+   Upon investigation this turned out to be a compatibility with older
+   libcurl versions. Affected systems include all RHEL 5 based systems,
+   such as RHEL 5.5 and CentOS 5.5. We've now fixed compatibility
+   with older libcurl versions.
+ * Added support for the Union Station filter language
+   This language can be used to limit the kind of data that's sent to
+   Union Station. Please read
+   https://engage.unionstationapp.com/help#filtering for details.
+ * Fixed a PassengerMaxPoolSize/passenger_max_pool_size violation bug
+   People who host a lot of different applications on Phusion Passenger
+   may notice that it sometimes spawns more processes than is allowed
+   by PassengerMaxPoolSize/passenger_max_pool_size. This has been fixed.
+
+
+Release 3.0.4
+-------------
+
+ * [Apache] Changed mod_dir workaround hook priority
+   Phusion Passenger temporarily disables mod_dir on all Phusion
+   Passenger-handled requests in order to avoid conflicts. In order to do this
+   it registers some Apache hooks with the APR_HOOK_MIDDLE priority, but it
+   turned out that this breaks some other modules like mod_python. The hook
+   priority has been changed to APR_HOOK_LAST to match mod_dir's hook
+   priorities. Issue reported by Jay Freeman.
+ * Added support for Union Station: http://www.unionstationapp.com/
+ * Some error messages have been improved.
+
+
 Release 3.0.3
 -------------
 

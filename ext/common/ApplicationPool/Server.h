@@ -95,6 +95,8 @@ class Server: public MessageServer::Handler {
 	/** The application pool that's being exposed through the socket. */
 	ApplicationPool::Ptr pool;
 	
+	AnalyticsLoggerPtr analyticsLogger;
+	
 	
 	/*********************************************
 	 * Message handler methods
@@ -173,8 +175,9 @@ public:
 	 *
 	 * @param pool The pool to expose.
 	 */
-	Server(ApplicationPool::Ptr pool) {
+	Server(const ApplicationPool::Ptr &pool, const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr()) {
 		this->pool = pool;
+		this->analyticsLogger = analyticsLogger;
 	}
 	
 	virtual MessageServer::ClientContextPtr newClient(CommonClientContext &commonContext) {
