@@ -15,6 +15,10 @@ Release 3.0.5
    libcurl versions. Affected systems include all RHEL 5 based systems,
    such as RHEL 5.5 and CentOS 5.5. We've now fixed compatibility
    with older libcurl versions.
+ * Added support for the Union Station filter language
+   This language can be used to limit the kind of data that's sent to
+   Union Station. Please read
+   https://engage.unionstationapp.com/help#filtering for details.
  * Fixed a PassengerMaxPoolSize/passenger_max_pool_size violation bug
    People who host a lot of different applications on Phusion Passenger
    may notice that it sometimes spawns more processes than is allowed
