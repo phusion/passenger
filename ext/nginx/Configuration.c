@@ -36,6 +36,7 @@
 #include "Configuration.h"
 #include "ContentHandler.h"
 #include "../common/Constants.h"
+#include "../common/LoggingAgent/FilterSupport.h"
 
 
 static ngx_str_t headers_to_hide[] = {
@@ -286,6 +287,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->app_rights.data = NULL;
     conf->app_rights.len = 0;
     conf->base_uris = NGX_CONF_UNSET_PTR;
+    conf->union_station_filters = NGX_CONF_UNSET_PTR;
     conf->min_instances = NGX_CONF_UNSET;
     conf->framework_spawner_idle_time = NGX_CONF_UNSET;
     conf->app_spawner_idle_time = NGX_CONF_UNSET;
@@ -357,6 +359,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_uint_t                    i, j;
     ngx_array_t                   hide_headers;
     ngx_str_t                    *prev_base_uris, *base_uri;
+    ngx_str_t                    *prev_union_station_filters, *union_station_filter;
     ngx_keyval_t                 *src;
     ngx_hash_key_t               *hk;
     ngx_hash_init_t               hash;
@@ -395,6 +398,24 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                 return NGX_CONF_ERROR;
             }
             *base_uri = prev_base_uris[i];
+        }
+    }
+    
+    if (prev->union_station_filters != NGX_CONF_UNSET_PTR) {
+        if (conf->union_station_filters == NGX_CONF_UNSET_PTR) {
+            conf->union_station_filters = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
+            if (conf->union_station_filters == NULL) {
+                return NGX_CONF_ERROR;
+            }
+        }
+        
+        prev_union_station_filters = (ngx_str_t *) prev->union_station_filters->elts;
+        for (i = 0; i < prev->union_station_filters->nelts; i++) {
+            union_station_filter = (ngx_str_t *) ngx_array_push(conf->union_station_filters);
+            if (union_station_filter == NULL) {
+                return NGX_CONF_ERROR;
+            }
+            *union_station_filter = prev_union_station_filters[i];
         }
     }
 
@@ -840,6 +861,51 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     return NGX_CONF_OK;
 }
 
+char *
+union_station_filter(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    char  *p = conf;
+
+    ngx_str_t         *value, *s;
+    ngx_array_t      **a;
+    ngx_conf_post_t   *post;
+    char              *message;
+
+    a = (ngx_array_t **) (p + cmd->offset);
+
+    if (*a == NGX_CONF_UNSET_PTR) {
+        *a = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
+        if (*a == NULL) {
+            return NGX_CONF_ERROR;
+        }
+    }
+
+    s = ngx_array_push(*a);
+    if (s == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    value = cf->args->elts;
+
+    *s = value[1];
+
+    if (cmd->post) {
+        post = cmd->post;
+        return post->post_handler(cf, post, s);
+    }
+
+    message = passenger_filter_validate((const char *) value[1].data, value[1].len);
+    if (message != NULL) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+            "Union Station filter syntax error: %s; ",
+            message);
+        free(message);
+        return NGX_CONF_ERROR;
+    }
+
+    return NGX_CONF_OK;
+}
+
 static char *
 set_null_terminated_keyval_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -1207,6 +1273,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, union_station_gateway_cert),
+      NULL },
+
+    { ngx_string("union_station_filter"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      union_station_filter,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, union_station_filters),
       NULL },
 
     { ngx_string("passenger_debugger"),

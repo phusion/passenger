@@ -56,6 +56,7 @@ typedef struct {
     ngx_int_t    app_spawner_idle_time;
     ngx_str_t    union_station_key;
     ngx_array_t *base_uris;
+    ngx_array_t *union_station_filters;
 
     /************************************/
 } passenger_loc_conf_t;

@@ -25,6 +25,8 @@
 #ifndef _PASSENGER_FILTER_SUPPORT_H_
 #define _PASSENGER_FILTER_SUPPORT_H_
 
+#ifdef __cplusplus
+
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <oxt/tracable_exception.hpp>
@@ -35,6 +37,7 @@
 #include <cstring>
 
 #include <StaticString.h>
+#include <Exceptions.h>
 #include <Utils/StrIntUtils.h>
 
 namespace Passenger {
@@ -1326,5 +1329,25 @@ public:
 
 } // namespace FilterSupport
 } // namespace Passenger
+
+#endif /* __cplusplus */
+
+
+/********* C bindings *********/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef void *PassengerFilter;
+
+PassengerFilter *passenger_filter_create(const char *source, int size, char **error);
+void passenger_filter_free(PassengerFilter *filter);
+char *passenger_filter_validate(const char *source, int size);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* _PASSENGER_FILTER_SUPPORT_H_ */

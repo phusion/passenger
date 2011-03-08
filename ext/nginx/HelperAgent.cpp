@@ -475,7 +475,8 @@ private:
 				log = analyticsLogger->newTransaction(
 					options.getAppGroupName(),
 					"requests",
-					parser.getHeader("PASSENGER_UNION_STATION_KEY"));
+					parser.getHeader("PASSENGER_UNION_STATION_KEY"),
+					parser.getHeader("UNION_STATION_FILTERS"));
 				options.analytics = true;
 				options.log = log;
 			} else {
