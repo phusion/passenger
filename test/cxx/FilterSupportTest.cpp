@@ -39,7 +39,7 @@ namespace tut {
 	}
 	
 	
-	/******** String tests *******/
+	/******** String and regexp tests *******/
 	
 	TEST_METHOD(5) {
 		// Test string comparison
@@ -126,7 +126,7 @@ namespace tut {
 	}
 	
 	TEST_METHOD(15) {
-		// Begin and end quote characters must match.
+		// String begin and end quote characters must match.
 		try {
 			Filter("uri == 'hello world\"");
 			fail("Syntax error expected");
@@ -135,6 +135,24 @@ namespace tut {
 		}
 		try {
 			Filter("uri == \"hello world'");
+			fail("Syntax error expected");
+		} catch (const SyntaxError &) {
+			// Pass.
+		}
+	}
+	
+	TEST_METHOD(16) {
+		// Regular expressions can also start with %r{ and end with }.
+		ctx.uri = "hello world";
+		ensure(Filter("uri =~ %r{hello}").run(ctx));
+		try {
+			Filter("uri =~ /hello}");
+			fail("Syntax error expected");
+		} catch (const SyntaxError &) {
+			// Pass.
+		}
+		try {
+			Filter("uri =~ %r{hello/");
 			fail("Syntax error expected");
 		} catch (const SyntaxError &) {
 			// Pass.

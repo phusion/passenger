@@ -227,7 +227,7 @@ private:
 		}
 	}
 	
-	Token matchRegexp() {
+	Token matchRegexp(char terminator) {
 		unsigned int start = pos;
 		bool endFound = false;
 		
@@ -244,7 +244,7 @@ private:
 				} else {
 					pos++;
 				}
-			} else if (ch == '/') {
+			} else if (ch == terminator) {
 				pos++;
 				endFound = true;
 			} else {
@@ -370,7 +370,15 @@ public:
 		case ',':
 			return logToken(matchToken(COMMA, 1));
 		case '/':
-			return logToken(matchRegexp());
+			return logToken(matchRegexp('/'));
+		case '%':
+			expectingAtLeast(3);
+			if (memcmp(data.data() + pos, "%r{", 3) != 0) {
+				raiseSyntaxError("expected '%r{', but found '" +
+					data.substr(pos, 3) + "'");
+			}
+			pos += 2;
+			return logToken(matchRegexp('}'));
 		case '"':
 			return logToken(matchString('"'));
 		case '\'':
