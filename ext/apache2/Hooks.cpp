@@ -566,10 +566,6 @@ private:
 		UPDATE_TRACE_POINT();
 		try {
 			AnalyticsLogPtr log;
-			fprintf(stderr, "use union station: %d (%d)\n",
-				(int)config->useUnionStation(),
-				(int)config->unionStationSupport);
-			fflush(stderr);
 			if (config->useUnionStation()) {
 				log = analyticsLogger->newTransaction(
 					config->getAppGroupName(appRoot),
