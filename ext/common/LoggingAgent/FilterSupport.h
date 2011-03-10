@@ -69,6 +69,8 @@ public:
 		REGEXP,
 		STRING,
 		INTEGER,
+		TRUE_LIT,
+		FALSE_LIT,
 		IDENTIFIER,
 		END_OF_DATA
 	};
@@ -129,7 +131,7 @@ private:
 		return data[pos + 1];
 	}
 	
-	static bool isLiteralChar(char ch) {
+	static bool isIdentifierChar(char ch) {
 		return (ch >= 'a' && ch <= 'z')
 			|| (ch >= 'A' && ch <= 'Z')
 			|| (ch >= '0' && ch <= '9')
@@ -142,7 +144,7 @@ private:
 	
 	Token logToken(const Token &token) const {
 		if (debug) {
-			printf("Token: %s\n", token.toString().c_str());
+			printf("# Token: %s\n", token.toString().c_str());
 		}
 		return token;
 	}
@@ -330,12 +332,20 @@ private:
 		    ch == '_') {
 			unsigned int start = pos;
 			pos++;
-			while (pos < data.size() && isLiteralChar(current())) {
+			while (pos < data.size() && isIdentifierChar(current())) {
 				pos++;
 			}
-			return Token(IDENTIFIER, start, pos - start, data.substr(start, pos - start));
+			
+			StaticString val = data.substr(start, pos - start);
+			if (val == "true") {
+				return Token(TRUE_LIT, start, pos - start, val);
+			} else if (val == "false") {
+				return Token(FALSE_LIT, start, pos - start, val);
+			} else {
+				return Token(IDENTIFIER, start, pos - start, val);
+			}
 		} else {
-			raiseSyntaxError();
+			raiseSyntaxError("Identifier expected, but got an unknown token");
 			return Token(); // Shut up compiler warning.
 		}
 	}
@@ -435,6 +445,10 @@ public:
 			return "STRING";
 		case INTEGER:
 			return "INTEGER";
+		case TRUE_LIT:
+			return "TRUE";
+		case FALSE_LIT:
+			return "FALSE";
 		case IDENTIFIER:
 			return "IDENTIFIER";
 		case END_OF_DATA:
@@ -450,6 +464,7 @@ enum ValueType {
 	REGEXP_TYPE,
 	STRING_TYPE,
 	INTEGER_TYPE,
+	BOOLEAN_TYPE,
 	UNKNOWN_TYPE
 };
 
@@ -488,6 +503,19 @@ public:
 			return getResponseTime();
 		default:
 			return 0;
+		}
+	}
+	
+	bool queryBoolField(FieldIdentifier id) const {
+		switch (id) {
+		case URI:
+			return !getURI().empty();
+		case CONTROLLER:
+			return !getController().empty();
+		case RESPONSE_TIME:
+			return getResponseTime() > 0;
+		default:
+			return false;
 		}
 	}
 	
@@ -732,7 +760,8 @@ private:
 		GREATER_THAN,
 		GREATER_THAN_OR_EQUALS,
 		LESS_THAN,
-		LESS_THAN_OR_EQUALS
+		LESS_THAN_OR_EQUALS,
+		UNKNOWN_COMPARATOR
 	};
 	
 	struct MultiExpression: public BooleanComponent {
@@ -746,16 +775,21 @@ private:
 		
 		virtual bool evaluate(const Context &ctx) {
 			bool result = firstExpression->evaluate(ctx);
-			vector<Part>::iterator it = rest.begin(), end = rest.end();
-			while (it != end && result) {
-				Part &part = *it;
-				if (part.theOperator == AND) {
-					result = result && part.expression->evaluate(ctx);
+			unsigned int i = 0;
+			bool done = i == rest.size();
+			
+			while (!done) {
+				Part &nextPart = rest[i];
+				if (nextPart.theOperator == AND) {
+					result = result && nextPart.expression->evaluate(ctx);
+					done = !result;
 				} else {
-					result = result || part.expression->evaluate(ctx);
+					result = result || nextPart.expression->evaluate(ctx);
 				}
-				it++;
+				i++;
+				done = done || i == rest.size();
 			}
+			
 			return result;
 		}
 	};
@@ -777,6 +811,7 @@ private:
 			REGEXP_LITERAL,
 			STRING_LITERAL,
 			INTEGER_LITERAL,
+			BOOLEAN_LITERAL,
 			CONTEXT_FIELD_IDENTIFIER
 		};
 		
@@ -790,6 +825,7 @@ private:
 				} regexp;
 			} stringOrRegexpValue;
 			int intValue;
+			bool boolValue;
 			Context::FieldIdentifier contextFieldIdentifier;
 		} u;
 		
@@ -811,6 +847,7 @@ private:
 			new (u.stringOrRegexpValue.stringStorage) string(value.data(), value.size());
 			if (regexp) {
 				int options = REG_EXTENDED;
+				u.stringOrRegexpValue.regexp.options = 0;
 				if (caseInsensitive) {
 					options |= REG_ICASE;
 					u.stringOrRegexpValue.regexp.options |=
@@ -825,6 +862,11 @@ private:
 		Value(int val) {
 			source = INTEGER_LITERAL;
 			u.intValue = val;
+		}
+		
+		Value(bool val) {
+			source = BOOLEAN_LITERAL;
+			u.boolValue = val;
 		}
 		
 		Value(Context::FieldIdentifier identifier) {
@@ -857,6 +899,12 @@ private:
 				return storedString();
 			case INTEGER_LITERAL:
 				return toString(u.intValue);
+			case BOOLEAN_LITERAL:
+				if (u.boolValue) {
+					return "true";
+				} else {
+					return "false";
+				}
 			case CONTEXT_FIELD_IDENTIFIER:
 				return ctx.queryStringField(u.contextFieldIdentifier);
 			default:
@@ -872,8 +920,27 @@ private:
 				return atoi(storedString());
 			case INTEGER_LITERAL:
 				return u.intValue;
+			case BOOLEAN_LITERAL:
+				return (int) u.boolValue;
 			case CONTEXT_FIELD_IDENTIFIER:
 				return ctx.queryIntField(u.contextFieldIdentifier);
+			default:
+				return 0;
+			}
+		}
+		
+		bool getBooleanValue(const Context &ctx) const {
+			switch (source) {
+			case REGEXP_LITERAL:
+				return true;
+			case STRING_LITERAL:
+				return !storedString().empty();
+			case INTEGER_LITERAL:
+				return (bool) u.intValue;
+			case BOOLEAN_LITERAL:
+				return u.boolValue;
+			case CONTEXT_FIELD_IDENTIFIER:
+				return ctx.queryBoolField(u.contextFieldIdentifier);
 			default:
 				return 0;
 			}
@@ -887,6 +954,8 @@ private:
 				return STRING_TYPE;
 			case INTEGER_LITERAL:
 				return INTEGER_TYPE;
+			case BOOLEAN_LITERAL:
+				return BOOLEAN_TYPE;
 			case CONTEXT_FIELD_IDENTIFIER:
 				return Context::getFieldType(u.contextFieldIdentifier);
 			default:
@@ -933,10 +1002,25 @@ private:
 			case INTEGER_LITERAL:
 				u.intValue = other.u.intValue;
 				break;
+			case BOOLEAN_LITERAL:
+				u.boolValue = other.u.boolValue;
+				break;
 			case CONTEXT_FIELD_IDENTIFIER:
 				u.contextFieldIdentifier = other.u.contextFieldIdentifier;
 				break;
 			}
+		}
+	};
+	
+	struct SingleValueComponent: public BooleanComponent {
+		Value val;
+		
+		SingleValueComponent(const Value &v)
+			: val(v)
+			{ }
+		
+		virtual bool evaluate(const Context &ctx) {
+			return val.getBooleanValue(ctx);
 		}
 	};
 	
@@ -951,6 +1035,8 @@ private:
 				return compareStringOrRegexp(subject.getStringValue(ctx), ctx);
 			case INTEGER_TYPE:
 				return compareInteger(subject.getIntegerValue(ctx), ctx);
+			case BOOLEAN_TYPE:
+				return compareBoolean(subject.getBooleanValue(ctx), ctx);
 			default:
 				// error
 				return false;
@@ -994,6 +1080,19 @@ private:
 				return false;
 			}
 		}
+		
+		bool compareBoolean(bool value, const Context &ctx) {
+			bool value2 = object.getBooleanValue(ctx);
+			switch (comparator) {
+			case EQUALS:
+				return value == value2;
+			case NOT_EQUALS:
+				return value != value2;
+			default:
+				// error
+				return false;
+			}
+		}
 	};
 	
 	struct FunctionCall: public BooleanComponent {
@@ -1032,11 +1131,14 @@ private:
 	Tokenizer tokenizer;
 	BooleanComponentPtr root;
 	Token lookahead;
+	bool debug;
 	
 	static bool isLiteralToken(const Token &token) {
 		return token.type == Tokenizer::REGEXP
 			|| token.type == Tokenizer::STRING
-			|| token.type == Tokenizer::INTEGER;
+			|| token.type == Tokenizer::INTEGER
+			|| token.type == Tokenizer::TRUE_LIT
+			|| token.type == Tokenizer::FALSE_LIT;
 	}
 	
 	static bool isValueToken(const Token &token) {
@@ -1048,6 +1150,29 @@ private:
 			|| token.type == Tokenizer::OR;
 	}
 	
+	static Comparator determineComparator(Tokenizer::TokenType type) {
+		switch (type) {
+		case Tokenizer::MATCHES:
+			return MATCHES;
+		case Tokenizer::NOT_MATCHES:
+			return NOT_MATCHES;
+		case Tokenizer::EQUALS:
+			return EQUALS;
+		case Tokenizer::NOT_EQUALS:
+			return NOT_EQUALS;
+		case Tokenizer::GREATER_THAN:
+			return GREATER_THAN;
+		case Tokenizer::GREATER_THAN_OR_EQUALS:
+			return GREATER_THAN_OR_EQUALS;
+		case Tokenizer::LESS_THAN:
+			return LESS_THAN;
+		case Tokenizer::LESS_THAN_OR_EQUALS:
+			return LESS_THAN_OR_EQUALS;
+		default:
+			return UNKNOWN_COMPARATOR;
+		}
+	}
+	
 	static bool comparatorAcceptsValueTypes(Comparator cmp, ValueType subjectType, ValueType objectType) {
 		switch (cmp) {
 		case MATCHES:
@@ -1055,7 +1180,7 @@ private:
 			return subjectType == STRING_TYPE && objectType == REGEXP_TYPE;
 		case EQUALS:
 		case NOT_EQUALS:
-			return (subjectType == STRING_TYPE || subjectType == INTEGER_TYPE)
+			return (subjectType == STRING_TYPE || subjectType == INTEGER_TYPE || subjectType == BOOLEAN_TYPE)
 				&& subjectType == objectType;
 		case GREATER_THAN:
 		case GREATER_THAN_OR_EQUALS:
@@ -1105,6 +1230,19 @@ private:
 		return result;
 	}
 	
+	void logMatch(int level, const char *name) const {
+		if (level > 100) {
+			// If level is too deep then it's probably a bug.
+			abort();
+		}
+		if (debug) {
+			for (int i = 0; i < level; i++) {
+				printf("   ");
+			}
+			printf("Matching: %s\n", name);
+		}
+	}
+	
 	Token peek() const {
 		return lookahead;
 	}
@@ -1143,21 +1281,23 @@ private:
 		}
 	}
 	
-	BooleanComponentPtr matchMultiExpression() {
+	BooleanComponentPtr matchMultiExpression(int level) {
+		logMatch(level, "matchMultiExpression()");
 		MultiExpressionPtr result = make_shared<MultiExpression>();
 		
-		result->firstExpression = matchExpression();
+		result->firstExpression = matchExpression(level + 1);
 		while (isLogicalOperatorToken(peek())) {
 			MultiExpression::Part part;
-			part.theOperator = matchOperator();
-			part.expression  = matchExpression();
+			part.theOperator = matchOperator(level + 1);
+			part.expression  = matchExpression(level + 1);
 			result->rest.push_back(part);
 		}
 		
 		return result;
 	}
 	
-	BooleanComponentPtr matchExpression() {
+	BooleanComponentPtr matchExpression(int level) {
+		logMatch(level, "matchExpression()");
 		bool negate = false;
 		
 		if (peek(Tokenizer::NOT)) {
@@ -1167,7 +1307,8 @@ private:
 		
 		Token next = peek();
 		if (next.type == Tokenizer::LPARENTHESIS) {
-			BooleanComponentPtr expression = matchMultiExpression();
+			match();
+			BooleanComponentPtr expression = matchMultiExpression(level + 1);
 			match(Tokenizer::RPARENTHESIS);
 			if (negate) {
 				return make_shared<Negation>(expression);
@@ -1176,12 +1317,17 @@ private:
 			}
 		} else if (isValueToken(next)) {
 			BooleanComponentPtr component;
-			next = match();
+			Token &current = next;
+			match();
 			
 			if (peek(Tokenizer::LPARENTHESIS)) {
-				component = matchFunctionCall(next);
+				component = matchFunctionCall(level + 1, current);
+			} else if (determineComparator(peek().type) != UNKNOWN_COMPARATOR) {
+				component = matchComparison(level + 1, current);
+			} else if (current.type == Tokenizer::TRUE_LIT || current.type == Tokenizer::FALSE_LIT) {
+				component = matchSingleValueComponent(level + 1, current);
 			} else {
-				component = matchComparison(next);
+				raiseSyntaxError("expected a function call, comparison or boolean literal", current);
 			}
 			
 			if (negate) {
@@ -1195,18 +1341,25 @@ private:
 		}
 	}
 	
-	ComparisonPtr matchComparison(const Token &subjectToken) {
+	BooleanComponentPtr matchSingleValueComponent(int level, const Token &token) {
+		logMatch(level, "matchSingleValueComponent()");
+		return make_shared<SingleValueComponent>(matchLiteral(level + 1, token));
+	}
+	
+	ComparisonPtr matchComparison(int level, const Token &subjectToken) {
+		logMatch(level, "matchComparison()");
 		ComparisonPtr comparison = make_shared<Comparison>();
-		comparison->subject    = matchValue(subjectToken);
-		comparison->comparator = matchComparator();
-		comparison->object     = matchValue(match());
+		comparison->subject    = matchValue(level + 1, subjectToken);
+		comparison->comparator = matchComparator(level + 1);
+		comparison->object     = matchValue(level + 1, match());
 		if (!comparatorAcceptsValueTypes(comparison->comparator, comparison->subject.getType(), comparison->object.getType())) {
 			raiseSyntaxError("the comparator cannot operate on the given combination of types", subjectToken);
 		}
 		return comparison;
 	}
 	
-	FunctionCallPtr matchFunctionCall(const Token &id) {
+	FunctionCallPtr matchFunctionCall(int level, const Token &id) {
+		logMatch(level, "matchFunctionCall()");
 		FunctionCallPtr function;
 		
 		if (id.rawValue == "starts_with") {
@@ -1219,10 +1372,10 @@ private:
 		
 		match(Tokenizer::LPARENTHESIS);
 		if (isValueToken(peek())) {
-			function->arguments.push_back(matchValue(match()));
+			function->arguments.push_back(matchValue(level + 1, match()));
 			while (peek(Tokenizer::COMMA)) {
 				match();
-				function->arguments.push_back(matchValue(match()));
+				function->arguments.push_back(matchValue(level + 1, match()));
 			}
 		}
 		match(Tokenizer::RPARENTHESIS);
@@ -1230,22 +1383,27 @@ private:
 		return function;
 	}
 	
-	Value matchValue(const Token &token) {
+	Value matchValue(int level, const Token &token) {
+		logMatch(level, "matchValue()");
 		if (isLiteralToken(token)) {
-			return matchLiteral(token);
+			return matchLiteral(level + 1, token);
 		} else if (token.type == Tokenizer::IDENTIFIER) {
-			return matchContextFieldIdentifier(token);
+			return matchContextFieldIdentifier(level + 1, token);
 		} else {
-			raiseSyntaxError("", token);
+			raiseSyntaxError("Unrecognized value token " +
+				Tokenizer::typeToString(token.type), token);
 			return Value(); // Shut up compiler warning.
 		}
 	}
 	
-	LogicalOperator matchOperator() {
+	LogicalOperator matchOperator(int level) {
+		logMatch(level, "matchOperator()");
 		if (peek(Tokenizer::AND)) {
+			logMatch(level + 1, "AND");
 			match();
 			return AND;
 		} else if (peek(Tokenizer::OR)) {
+			logMatch(level + 1, "OR");
 			match();
 			return OR;
 		} else {
@@ -1254,52 +1412,45 @@ private:
 		}
 	}
 	
-	Comparator matchComparator() {
-		if (peek(Tokenizer::MATCHES)) {
-			match();
-			return MATCHES;
-		} else if (peek(Tokenizer::NOT_MATCHES)) {
-			match();
-			return NOT_MATCHES;
-		} else if (peek(Tokenizer::EQUALS)) {
-			match();
-			return EQUALS;
-		} else if (peek(Tokenizer::NOT_EQUALS)) {
-			match();
-			return NOT_EQUALS;
-		} else if (peek(Tokenizer::GREATER_THAN)) {
-			match();
-			return GREATER_THAN;
-		} else if (peek(Tokenizer::GREATER_THAN_OR_EQUALS)) {
-			match();
-			return GREATER_THAN_OR_EQUALS;
-		} else if (peek(Tokenizer::LESS_THAN)) {
-			match();
-			return LESS_THAN;
-		} else if (peek(Tokenizer::LESS_THAN_OR_EQUALS)) {
-			match();
-			return LESS_THAN_OR_EQUALS;
-		} else {
+	Comparator matchComparator(int level) {
+		logMatch(level, "matchComparator()");
+		Comparator comparator = determineComparator(peek().type);
+		if (comparator == UNKNOWN_COMPARATOR) {
 			raiseSyntaxError("", peek());
 			return MATCHES; // Shut up compiler warning.
+		} else {
+			logMatch(level + 1, Tokenizer::typeToString(peek().type).c_str());
+			match();
+			return comparator;
 		}
 	}
 	
-	Value matchLiteral(const Token &token) {
+	Value matchLiteral(int level, const Token &token) {
+		logMatch(level, "matchLiteral()");
 		if (token.type == Tokenizer::REGEXP) {
+			logMatch(level + 1, "regexp");
 			return Value(true, unescapeCString(token.rawValue.substr(1, token.rawValue.size() - 2)),
 				token.options & Tokenizer::REGEXP_OPTION_CASE_INSENSITIVE);
 		} else if (token.type == Tokenizer::STRING) {
+			logMatch(level + 1, "string");
 			return Value(false, unescapeCString(token.rawValue.substr(1, token.rawValue.size() - 2)));
 		} else if (token.type == Tokenizer::INTEGER) {
+			logMatch(level + 1, "integer");
 			return Value(atoi(token.rawValue.toString()));
+		} else if (token.type == Tokenizer::TRUE_LIT) {
+			logMatch(level + 1, "true");
+			return Value(true);
+		} else if (token.type == Tokenizer::FALSE_LIT) {
+			logMatch(level + 1, "false");
+			return Value(false);
 		} else {
-			raiseSyntaxError("regular expression, string or integer expected", token);
+			raiseSyntaxError("regular expression, string, integer or boolean expected", token);
 			return Value(); // Shut up compiler warning.
 		}
 	}
 	
-	Value matchContextFieldIdentifier(const Token &token) {
+	Value matchContextFieldIdentifier(int level, const Token &token) {
+		logMatch(level, "matchContextFieldIdentifier()");
 		if (token.rawValue == "uri") {
 			return Value(Context::URI);
 		} else if (token.rawValue == "controller") {
@@ -1311,13 +1462,15 @@ private:
 			return Value(); // Shut up compiler warning.
 		}
 	}
-
+	
 public:
 	Filter(const StaticString &source, bool debug = false)
 		: tokenizer(source, debug)
 	{
+		this->debug = debug;
 		lookahead = tokenizer.getNext();
-		root = matchMultiExpression();
+		root = matchMultiExpression(0);
+		logMatch(0, "end of data");
 		match(Tokenizer::END_OF_DATA);
 	}
 	
