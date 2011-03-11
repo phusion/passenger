@@ -29,7 +29,7 @@ extern "C" {
 
 PassengerCachedFileStat *
 cached_file_stat_new(unsigned int max_size) {
-	return new CachedFileStat(max_size);
+	return (PassengerCachedFileStat *) new Passenger::CachedFileStat(max_size);
 }
 
 void
