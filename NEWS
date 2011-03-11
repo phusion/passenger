@@ -9,7 +9,7 @@ Release 3.0.5
    This option has been renamed for consistency reasons.
  * [Nginx] passenger_analytics has been renamed to union_station_support
    This option has been renamed for consistency reasons.
- * Fixed Union Station data on older libcurl versions
+ * Fixed Union Station data sending on older libcurl versions
    Some Union Station users have reported that their data don't show up.
    Upon investigation this turned out to be a compatibility with older
    libcurl versions. Affected systems include all RHEL 5 based systems,
