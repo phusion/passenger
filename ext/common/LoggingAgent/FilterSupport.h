@@ -34,6 +34,7 @@
 #include <string>
 #include <set>
 #include <regex.h>
+#include <cstdio>
 #include <cstring>
 
 #include <StaticString.h>
