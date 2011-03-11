@@ -207,6 +207,11 @@ private
 				          "be used instead of downloading from the Internet")) do |value|
 				@options[:nginx_tarball] = File.expand_path(value)
 			end
+			opts.on("--binaries-url-root URL", String,
+				wrap_desc("If Nginx needs to be installed, then the specified URL will be " +
+				          "checked for binaries prior to a local build.")) do |value|
+				@options[:binaries_url_root] = value
+			end
 		end
 		@plugin.call_hook(:done_parsing_options)
 	end
@@ -294,6 +299,7 @@ private
 			:nginx_dir   => nginx_dir,
 			:version     => @options[:nginx_version],
 			:tarball     => @options[:nginx_tarball],
+			:binaries_url_root => @options[:binaries_url_root],
 			:plugin      => @plugin)
 		installer.start
 	end
