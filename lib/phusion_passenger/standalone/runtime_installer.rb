@@ -386,7 +386,7 @@ private
 			color_puts "<banner>Downloading Nginx...</banner>"
 			basename = "nginx-#{@version}.tar.gz"
 			tarball  = "#{@working_dir}/#{basename}"
-			if !download("http://sysoev.ru/nginx/#{basename}", tarball)
+			if !download("http://nginx.org/download/#{basename}", tarball)
 				return nil
 			end
 		end
