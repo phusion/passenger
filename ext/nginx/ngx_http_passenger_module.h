@@ -46,18 +46,18 @@ extern ngx_module_t ngx_http_passenger_module;
 /**
  * A static schema string to be assigned to Nginx 'upstream' strctures.
  */
-extern ngx_str_t    passenger_schema_string;
+extern ngx_str_t                passenger_schema_string;
 
-extern ngx_str_t    passenger_placeholder_upstream_address;
+extern ngx_str_t                passenger_placeholder_upstream_address;
 
 /**
  * A CachedFileStat object used for caching stat() calls.
  */
-extern CachedFileStat *passenger_stat_cache;
+extern PassengerCachedFileStat *passenger_stat_cache;
 
-extern AgentsStarter  *passenger_agents_starter;
+extern AgentsStarter           *passenger_agents_starter;
 
-extern ngx_cycle_t    *passenger_current_cycle;
+extern ngx_cycle_t             *passenger_current_cycle;
 
 #endif /* _PASSENGER_NGINX_MODULE_H_ */
 
