@@ -215,9 +215,8 @@ module PlatformInfo
 				architectures = ["-arch i386 -arch ppc -arch x86_64 -arch ppc64"]
 			else
 				architectures = []
-				output.split("\n").grep(/for architecture/).each do |line|
-					line =~ /for architecture (.*?)\)/
-					architectures << "-arch #{$1}"
+				output.scan(/for architecture (.*?)\)/).each do |(arch)|
+					architectures << "-arch #{arch}" unless arch =~ /ppc/
 				end
 			end
 			flags << architectures.compact.join(' ')
