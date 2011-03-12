@@ -606,10 +606,6 @@ private:
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
 			abort();
-		} catch (const std::exception &e) {
-			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
-				<< "   exception: " << e.what() << "\n"
-				<< "   backtrace: not available");
 		}
 	}
 	
