@@ -639,6 +639,25 @@ prestartWebApps(const ResourceLocator &locator, const string &serializedprestart
 	}
 }
 
+void
+runAndPrintExceptions(const function<void ()> &func, bool toAbort) {
+	try {
+		func();
+	} catch (const boost::thread_interrupted &) {
+		throw;
+	} catch (const tracable_exception &e) {
+		P_ERROR("Exception: " << e.what() << "\n" << e.backtrace());
+		if (toAbort) {
+			abort();
+		}
+	}
+}
+
+void
+runAndPrintExceptions(const function<void ()> &func) {
+	runAndPrintExceptions(func, true);
+}
+
 string
 getHostName() {
 	char hostname[HOST_NAME_MAX + 1];

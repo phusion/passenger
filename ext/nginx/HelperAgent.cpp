@@ -522,7 +522,7 @@ private:
 					session->getConnectPassword().size() + 1);
 				end += session->getConnectPassword().size() + 1;
 				
-				if (useUnionStation) {
+				if (!log->isNull()) {
 					memcpy(end, "PASSENGER_GROUP_NAME", sizeof("PASSENGER_GROUP_NAME"));
 					end += sizeof("PASSENGER_GROUP_NAME");
 					
@@ -634,7 +634,7 @@ public:
 		this->serverSocket = serverSocket;
 		this->analyticsLogger = logger;
 		thr = new oxt::thread(
-			bind(&Client::threadMain, this),
+			boost::bind(&Client::threadMain, this),
 			"Client thread " + toString(number),
 			CLIENT_THREAD_STACK_SIZE
 		);
@@ -860,8 +860,11 @@ public:
 			messageServer->getSocketFilename().c_str(),
 			NULL);
 		
+		function<void ()> func = boost::bind(prestartWebApps,
+			resourceLocator,
+			options.get("prestart_urls"));
 		prestarterThread = ptr(new oxt::thread(
-			boost::bind(prestartWebApps, resourceLocator, options.get("prestart_urls"))
+			boost::bind(runAndPrintExceptions, func, true)
 		));
 	}
 	
@@ -893,8 +896,9 @@ public:
 		TRACE_POINT();
 		
 		startClientHandlerThreads();
+		function<void ()> func = boost::bind(&MessageServer::mainLoop, messageServer.get());
 		messageServerThread = ptr(new oxt::thread(
-			boost::bind(&MessageServer::mainLoop, messageServer.get()),
+			boost::bind(runAndPrintExceptions, func, true),
 			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
 		));
 		

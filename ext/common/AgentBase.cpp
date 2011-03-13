@@ -207,6 +207,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	char messageBuf[1024];
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
 		void *backtraceStore[512];
+		backtraceStore[0] = '\0'; // Don't let gdb print uninitialized contents.
 	#endif
 	
 	char *end = messageBuf;

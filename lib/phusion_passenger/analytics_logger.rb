@@ -168,7 +168,7 @@ class AnalyticsLogger
 		else
 			@max_connect_tries = 1
 		end
-		@reconnect_timeout = 60
+		@reconnect_timeout = 1
 		@next_reconnect_time = Time.utc(1980, 1, 1)
 	end
 	
@@ -234,7 +234,7 @@ class AnalyticsLogger
 				end
 				# Failed to connect.
 				DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
-					"retrying in #{@reconnect_timeout} seconds.")
+					"retrying in #{@reconnect_timeout} second(s).")
 				@next_reconnect_time = current_time + @reconnect_timeout
 			end
 			return Log.new
@@ -277,7 +277,7 @@ class AnalyticsLogger
 				end
 				# Failed to connect.
 				DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
-					"retrying in #{@reconnect_timeout} seconds.")
+					"retrying in #{@reconnect_timeout} second(s).")
 				@next_reconnect_time = current_time + @reconnect_timeout
 			end
 			return Log.new

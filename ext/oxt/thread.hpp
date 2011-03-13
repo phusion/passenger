@@ -83,7 +83,7 @@ private:
 		#endif
 	}
 	
-	static void thread_main(boost::function<void ()> func, thread_data_ptr data) {
+	static void thread_main(const boost::function<void ()> func, thread_data_ptr data) {
 		#ifdef OXT_BACKTRACE_IS_ENABLED
 			initialize_backtrace_support_for_this_thread i(data->name);
 			data->registration = i.registration;
@@ -129,7 +129,7 @@ public:
 	 * @throws boost::thread_resource_error Something went wrong during
 	 *     creation of the thread.
 	 */
-	explicit thread(boost::function<void ()> func, const std::string &name = "", unsigned int stack_size = 0) {
+	explicit thread(const boost::function<void ()> func, const std::string &name = "", unsigned int stack_size = 0) {
 		initialize_data(name);
 		
 		set_thread_main_function(boost::bind(thread_main, func, data));
