@@ -112,6 +112,18 @@ private:
 					pid = start();
 				}
 				ret = syscalls::waitpid(pid, &status, 0);
+				if (ret == -1 && errno == ECHILD) {
+					/* If the agent is attached to gdb then waitpid()
+					 * here can return -1 with errno == ECHILD.
+					 * Fallback to kill() polling for checking
+					 * whether the agent is alive.
+					 */
+					ret = pid;
+					status = 0;
+					P_WARN("waitpid() on " << name() << " return -1 with " <<
+						"errno = ECHILD, falling back to kill polling");
+					waitpidUsingKillPolling(pid);
+				}
 				
 				lock.lock();
 				this->pid = 0;
@@ -120,8 +132,10 @@ private:
 				this_thread::disable_interruption di;
 				this_thread::disable_syscall_interruption dsi;
 				if (ret == -1) {
+					int e = errno;
 					P_WARN(name() << " crashed or killed for "
-						"an unknown reason, restarting it...");
+						"an unknown reason (errno = " <<
+						strerror(e) << "), restarting it...");
 				} else if (WIFEXITED(status)) {
 					if (WEXITSTATUS(status) == 0) {
 						/* When the web server is gracefully exiting, it will
@@ -242,6 +256,18 @@ protected:
 			}
 		} while (timer.elapsed() < timeout);
 		return 0; // timed out
+	}
+	
+	static void waitpidUsingKillPolling(pid_t pid) {
+		bool done = false;
+		
+		while (!done) {
+			int ret = syscalls::kill(pid, 0);
+			done = ret == -1;
+			if (!done) {
+				syscalls::usleep(20000);
+			}
+		}
 	}
 	
 public:
