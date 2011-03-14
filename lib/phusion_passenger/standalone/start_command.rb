@@ -145,6 +145,10 @@ private
 				wrap_desc("Framework environment (default: #{@options[:env]})")) do |value|
 				@options[:env] = value
 			end
+			opts.on("-R", "--rackup FILE", String,
+				wrap_desc("If Rack application detected, run this rackup file")) do |value|
+				ENV["RACKUP_FILE"] = value
+			end
 			opts.on("--max-pool-size NUMBER", Integer,
 				wrap_desc("Maximum number of application processes (default: #{@options[:max_pool_size]})")) do |value|
 				@options[:max_pool_size] = value
