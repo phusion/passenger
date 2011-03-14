@@ -406,20 +406,23 @@ private
 		if File.exist?(log_file)
 			backward = 0
 		else
-			# File::Tail bails out if the file doesn't exist, so wait until it exists.
+			# tail bails out if the file doesn't exist, so wait until it exists.
 			while !File.exist?(log_file)
 				sleep 1
 			end
 			backward = 10
 		end
 		
-		File::Tail::Logfile.open(log_file, :backward => backward) do |log|
-			log.interval = 0.1
-			log.max_interval = 1
-			log.tail do |line|
-				@console_mutex.synchronize do
-					STDOUT.write(line)
-					STDOUT.flush
+		IO.popen("tail -f -n #{backward} \"#{log_file}\"", "rb") do |f|
+			while true
+				begin
+					line = f.readline
+					@console_mutex.synchronize do
+						STDOUT.write(line)
+						STDOUT.flush
+					end
+				rescue EOFError
+					break
 				end
 			end
 		end

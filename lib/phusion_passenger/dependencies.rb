@@ -571,23 +571,6 @@ module Dependencies # :nodoc: all
 		dep.website = "http://www.zlib.net/"
 	end
 	
-	File_Tail = Dependency.new do |dep|
-		dep.name = "file-tail"
-		dep.define_checker do |result|
-			begin
-				begin
-					require 'rubygems'
-				rescue LoadError
-				end
-				require 'file/tail'
-				result.found
-			rescue LoadError
-				result.not_found
-			end
-		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install file-tail</b>"
-	end
-	
 	Daemon_Controller = Dependency.new do |dep|
 		dep.name = "daemon_controller >= 0.2.5"
 		dep.install_instructions = "Please install RubyGems first, then run " <<

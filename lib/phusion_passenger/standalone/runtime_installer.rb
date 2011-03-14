@@ -86,7 +86,6 @@ protected
 			Dependencies::Curl_Dev,
 			Dependencies::OpenSSL_Dev,
 			Dependencies::Zlib_Dev,
-			Dependencies::File_Tail,
 			Dependencies::Daemon_Controller,
 		]
 		if Dependencies.fastthread_required?
