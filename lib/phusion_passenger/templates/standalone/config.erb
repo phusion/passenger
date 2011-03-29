@@ -44,6 +44,7 @@ http {
     passenger_max_pool_size <%= @options[:max_pool_size] %>;
     passenger_min_instances <%= @options[:min_instances] %>;
     <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
+    <% if debugging? %>passenger_log_level 2;<% end %>
     
     <% if @options[:union_station_gateway_address] %>
         union_station_gateway_address <%= @options[:union_station_gateway_address] %>;
