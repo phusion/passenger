@@ -156,6 +156,15 @@ public
 		return !ENV[name].nil? && !ENV[name].empty?
 	end
 	
+	def self.tmpdir
+		result = ENV['TMPDIR']
+		if result && !result.empty?
+			return result
+		else
+			return '/tmp'
+		end
+	end
+	
 	def self.cc
 		return ENV['CC'] || "gcc"
 	end
