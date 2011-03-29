@@ -683,7 +683,7 @@ private
 	
 	def finalize_request(headers, has_error)
 		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
-		if log
+		if log && !log.closed?
 			exception_occurred = false
 			begin
 				log.end_measure("app request handler processing", has_error)

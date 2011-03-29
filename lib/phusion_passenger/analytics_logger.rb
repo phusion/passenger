@@ -85,9 +85,10 @@ class AnalyticsLogger
 				yield
 			rescue Exception
 				error = true
+				is_closed = closed?
 				raise
 			ensure
-				end_measure(name, error)
+				end_measure(name, error) if !is_closed
 			end
 		end
 		
@@ -124,6 +125,16 @@ class AnalyticsLogger
 				@shared_data.unref
 				@shared_data = nil
 			end if @shared_data
+		end
+		
+		def closed?
+			if @shared_data
+				@shared_data.synchronize do
+					return !@shared_data.client.connected?
+				end
+			else
+				return nil
+			end
 		end
 	
 	private
