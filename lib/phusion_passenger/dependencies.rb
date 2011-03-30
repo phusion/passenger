@@ -452,8 +452,8 @@ module Dependencies # :nodoc: all
 	Curl_Dev = Dependency.new do |dep|
 		dep.name = "Curl development headers with SSL support"
 		dep.define_checker do |result|
-			source_file = "#{PlatformInfo.tmpdir}/passenger-curl-check.c"
-			output_file = "#{PlatformInfo.tmpdir}/passenger-curl-check"
+			source_file = "#{PlatformInfo.tmpexedir}/passenger-curl-check.c"
+			output_file = "#{PlatformInfo.tmpexedir}/passenger-curl-check"
 			begin
 				found = true
 				File.open(source_file, 'w') do |f|
@@ -510,8 +510,8 @@ module Dependencies # :nodoc: all
 	OpenSSL_Dev = Dependency.new do |dep|
 		dep.name = "OpenSSL development headers"
 		dep.define_checker do |result|
-			source_file = "#{PlatformInfo.tmpdir}/passenger-openssl-check.c"
-			object_file = "#{PlatformInfo.tmpdir}/passenger-openssl-check.o"
+			source_file = "#{PlatformInfo.tmpexedir}/passenger-openssl-check.c"
+			object_file = "#{PlatformInfo.tmpexedir}/passenger-openssl-check.o"
 			begin
 				File.open(source_file, 'w') do |f|
 					f.write("#include <openssl/ssl.h>")
@@ -542,13 +542,13 @@ module Dependencies # :nodoc: all
 	Zlib_Dev = Dependency.new do |dep|
 		dep.name = "Zlib development headers"
 		dep.define_checker do |result|
-			source_file = "#{PlatformInfo.tmpdir}/zlib-check.c"
-			object_file = "#{PlatformInfo.tmpdir}/zlib-check.o"
+			source_file = "#{PlatformInfo.tmpexedir}/zlib-check.c"
+			object_file = "#{PlatformInfo.tmpexedir}/zlib-check.o"
 			begin
 				File.open(source_file, 'w') do |f|
 					f.write("#include <zlib.h>")
 				end
-				Dir.chdir(PlatformInfo.tmpdir) do
+				Dir.chdir(File.dirname(source_file)) do
 					if system("(g++ -c zlib-check.c) >/dev/null 2>/dev/null")
 						result.found
 					else
