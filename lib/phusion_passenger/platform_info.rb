@@ -143,8 +143,9 @@ public
 	# This function exists because system('which') doesn't always behave
 	# correctly, for some weird reason.
 	def self.find_command(name)
-		ENV['PATH'].split(File::PATH_SEPARATOR).detect do |directory|
-			path = File.join(directory, name.to_s)
+		name = name.to_s
+		ENV['PATH'].to_s.split(File::PATH_SEPARATOR).detect do |directory|
+			path = File.join(directory, name)
 			if File.file?(path) && File.executable?(path)
 				return path
 			end
