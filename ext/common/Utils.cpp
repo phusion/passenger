@@ -660,9 +660,14 @@ runAndPrintExceptions(const function<void ()> &func) {
 
 string
 getHostName() {
-	char hostname[HOST_NAME_MAX + 1];
-	if (gethostname(hostname, sizeof(hostname)) == 0) {
-		hostname[sizeof(hostname) - 1] = '\0';
+	long hostNameMax = HOST_NAME_MAX;
+	if (hostNameMax < 255) {
+		// https://bugzilla.redhat.com/show_bug.cgi?id=130733
+		hostNameMax = 255;
+	}
+	char hostname[hostNameMax + 1];
+	if (gethostname(hostname, hostNameMax) == 0) {
+		hostname[hostNameMax] = '\0';
 		return hostname;
 	} else {
 		int e = errno;
