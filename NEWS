@@ -1,3 +1,21 @@
+Release 3.0.6
+-------------
+
+ * Fixed various compilation problems such as XCode 4 support and OpenBSD support.
+ * Fixed various Union Station-related stability issues.
+ * Fixed an issue with host name detection on certain platforms.
+ * Improved error logging in various parts.
+ * The dependency on the file-tail library has been removed.
+ * During installation, check whether /tmp is mounted with 'noexec'.
+   Phusion Passenger's installer relies on /tmp *not* being mounted
+   with 'noexec'. If it is then the installer will now show a helpful
+   error message instead of bailing out in a confusing manner. Users
+   can now tell the installer to use a different directory for storing
+   temporary files by customizing the $TMPDIR environment variable.
+ * Phusion Passenger Standalone can now run Rackup files that are not named 'config.ru'.
+   The filename can be passed through the command line using the -R option.
+
+
 Release 3.0.5
 -------------
 
