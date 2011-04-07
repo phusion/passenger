@@ -27,18 +27,13 @@ $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/admin_tools/memory_stats'
+require 'phusion_passenger/admin_tools/color'
 
 include PhusionPassenger
 
-# ANSI color codes
-RESET   = "\e[0m"
-BOLD    = "\e[1m"
-WHITE   = "\e[37m"
-YELLOW  = "\e[33m"
-BLUE_BG = "\e[44m"
-
 # Container for tabular data.
 class Table
+    include AdminTools
 	def initialize(column_names)
 		@column_names = column_names
 		@rows = []
@@ -81,19 +76,19 @@ class Table
 				left_bar_size = free_space / 2
 				right_bar_size = free_space - left_bar_size
 			end
-			result = "#{BLUE_BG}#{BOLD}#{YELLOW}\n"
+			result = "#{Color.blue_bg}#{Color.bold}#{Color.yellow}\n"
 			result << "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
 			if !@rows.empty?
-				result << WHITE
+				result << Color.white
 				result << header
 			end
 		else
 			result = header.dup
 		end
 		if @rows.empty?
-			result << RESET
+			result << Color.reset
 		else
-			result << ("-" * header.size) << "#{RESET}\n"
+			result << ("-" * header.size) << "#{Color.reset}\n"
 			@rows.each do |row|
 				result << sprintf(format_string, *row).rstrip << "\n"
 			end
@@ -111,7 +106,7 @@ class App
 		if @stats.apache_processes
 			print_process_list("Apache processes", @stats.apache_processes)
 		else
-			puts "#{BLUE_BG}#{BOLD}#{YELLOW}------------- Apache processes -------------#{RESET}\n"
+			puts "#{Color.blue_bg}#{Color.bold}#{Color.yellow}------------- Apache processes -------------#{Color.reset}\n"
 			STDERR.puts "*** WARNING: The Apache executable cannot be found."
 			STDERR.puts "Please set the APXS2 environment variable to your 'apxs2' " <<
 				"executable's filename, or set the HTTPD environment variable " <<
