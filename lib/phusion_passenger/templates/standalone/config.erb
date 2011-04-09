@@ -91,5 +91,6 @@ http {
             union_station_key <%= app[:union_station_key] %>;
         <% end %>
     }
+    passenger_pre_start http://<%= nginx_listen_address(app) %>;
     <% end %>
 }
