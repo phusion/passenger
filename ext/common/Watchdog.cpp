@@ -104,7 +104,7 @@ private:
 	void threadMain() {
 		try {
 			pid_t pid, ret;
-			int status;
+			int status, e;
 			
 			while (!this_thread::interruption_requested()) {
 				lock.lock();
@@ -127,6 +127,9 @@ private:
 					P_WARN("waitpid() on " << name() << " return -1 with " <<
 						"errno = ECHILD, falling back to kill polling");
 					waitpidUsingKillPolling(pid);
+					e = 0;
+				} else {
+					e = errno;
 				}
 				
 				lock.lock();
@@ -136,7 +139,6 @@ private:
 				this_thread::disable_interruption di;
 				this_thread::disable_syscall_interruption dsi;
 				if (ret == -1) {
-					int e = errno;
 					P_WARN(name() << " crashed or killed for "
 						"an unknown reason (errno = " <<
 						strerror(e) << "), restarting it...");
