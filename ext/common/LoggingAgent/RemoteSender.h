@@ -97,6 +97,8 @@ private:
 					throw IOException("Unable to create a CURL handle");
 				}
 			}
+			curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+			curl_easy_setopt(curl, CURLOPT_TIMEOUT, 180);
 			curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, lastErrorMessage);
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlDataReceived);
@@ -162,6 +164,7 @@ private:
 			ScopeGuard guard(boost::bind(&Server::resetConnection, this));
 			prepareRequest(pingURL);
 			
+			curl_easy_setopt(curl, CURLOPT_TIMEOUT, 45);
 			curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
 			if (curl_easy_perform(curl) != 0) {
 				P_DEBUG("Could not ping Union Station gateway server " << ip
