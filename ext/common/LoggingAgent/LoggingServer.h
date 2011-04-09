@@ -120,7 +120,7 @@ private:
 		
 		virtual void append(const DataStoreId &dataStoreId,
 			const StaticString &data) = 0;
-		virtual void flush() { }
+		virtual bool flush() { return true; }
 		virtual void dump(ostream &stream) const { }
 	};
 	
@@ -171,11 +171,14 @@ private:
 			}
 		}
 		
-		virtual void flush() {
+		virtual bool flush() {
 			if (bufferSize > 0) {
 				lastFlushed = ev_now(server->getLoop());
 				writeExact(fd, buffer, bufferSize);
 				bufferSize = 0;
+				return true;
+			} else {
+				return false;
 			}
 		}
 		
@@ -246,13 +249,16 @@ private:
 			}
 		}
 		
-		virtual void flush() {
+		virtual bool flush() {
 			if (bufferSize > 0) {
 				lastFlushed = ev_now(server->getLoop());
 				StaticString data(buffer, bufferSize);
 				server->remoteSender.schedule(unionStationKey, nodeName,
 					category, &data, 1);
 				bufferSize = 0;
+				return true;
+			} else {
+				return false;
 			}
 		}
 		
@@ -1246,7 +1252,8 @@ public:
 		TransactionMap::const_iterator it;
 		TransactionMap::const_iterator end = transactions.end();
 		
-		stream << "Number of clients: " << getClients().size() << "\n";
+		stream << "Number of clients : " << getClients().size() << "\n";
+		stream << "RemoteSender queue: " << remoteSender.queued() << " items\n";
 		stream << "Open transactions: " << transactions.size() << "\n";
 		for (it = transactions.begin(); it != end; it++) {
 			const TransactionPtr &transaction = it->second;

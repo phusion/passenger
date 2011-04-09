@@ -164,7 +164,6 @@ private:
 			ScopeGuard guard(boost::bind(&Server::resetConnection, this));
 			prepareRequest(pingURL);
 			
-			curl_easy_setopt(curl, CURLOPT_TIMEOUT, 45);
 			curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
 			if (curl_easy_perform(curl) != 0) {
 				P_DEBUG("Could not ping Union Station gateway server " << ip
@@ -470,7 +469,13 @@ public:
 			}
 		}
 		
-		queue.add(item);
+		if (!queue.tryAdd(item)) {
+			P_WARN("The Union Station gateway isn't responding quickly enough; dropping packet.");
+		}
+	}
+	
+	unsigned int queued() const {
+		return queue.size();
 	}
 };
 
