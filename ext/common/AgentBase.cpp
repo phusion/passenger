@@ -154,8 +154,12 @@ appendSignalReason(char *buf, siginfo_t *info) {
 	#endif
 	SI_CODE_HANDLER(SI_QUEUE);
 	SI_CODE_HANDLER(SI_TIMER);
-	SI_CODE_HANDLER(SI_ASYNCIO);
-	SI_CODE_HANDLER(SI_MESGQ);
+	#ifdef SI_ASYNCIO
+		SI_CODE_HANDLER(SI_ASYNCIO);
+	#endif
+	#ifdef SI_MESGQ
+		SI_CODE_HANDLER(SI_MESGQ);
+	#endif
 	#ifdef SI_SIGIO
 		SI_CODE_HANDLER(SI_SIGIO);
 	#endif
