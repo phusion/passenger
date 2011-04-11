@@ -3,6 +3,7 @@
 // fork()ing from the Spawner and before exec()ing.
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/param.h>
 #include <cstdio>
 #include <cstdlib>
@@ -157,14 +158,27 @@ loadShellEnvironmentVariables(const char *shell, const char *envPrinterAgent) {
 		"quietly_load /etc/profile\n"
 		"quietly_load ~/.bash_profile || quietly_load ~/.profile\n"
 		"quietly_load ~/.bashrc\n"
+		"umask\n"
 		"exec \"$1\"";
 	const char *argv[] = { shell, "-c", script, shell, envPrinterAgent, NULL };
 	string result = runCommand(argv);
 	const char *current = result.c_str();
 	const char *end = current + result.size();
+	char *sep;
+	
+	// Process umask.
+	sep = (char *) strchr(current, '\n');
+	if (sep == NULL) {
+		return;
+	}
+	*sep = '\0';
+	umask((mode_t) strtol(current, (char **) NULL, 8));
+	current = sep + 1;
+	
+	// Process environment variables.
 	while (current < end) {
 		size_t len = strlen(current);
-		const char *sep = strchr(current, '=');
+		sep = strchr(current, '=');
 		if (sep != NULL) {
 			char *name = (char *) malloc(sep - current + 1);
 			const char *value = sep + 1;
