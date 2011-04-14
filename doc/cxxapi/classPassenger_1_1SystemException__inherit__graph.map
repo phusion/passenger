@@ -1,0 +1,4 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$classPassenger_1_1FileSystemException.html" title="A filesystem error, as returned by the operating system." alt="" coords="5,83,232,112"/>
+<area shape="rect" id="node5" href="$classPassenger_1_1TimeRetrievalException.html" title="Unable to retrieve the system time using time()." alt="" coords="256,83,499,112"/>
+</map>

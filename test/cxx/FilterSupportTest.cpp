@@ -14,6 +14,19 @@ using namespace oxt;
 namespace tut {
 	struct FilterSupportTest {
 		SimpleContext ctx;
+		
+		bool eval(const StaticString &source, bool debug = false) {
+			return Filter(source, debug).run(ctx);
+		}
+		
+		bool validate(const StaticString &source) {
+			try {
+				Filter f(source);
+				return true;
+			} catch (const SyntaxError &) {
+				return false;
+			}
+		}
 	};
 	
 	DEFINE_TEST_GROUP_WITH_LIMIT(FilterSupportTest, 100);
@@ -39,7 +52,7 @@ namespace tut {
 	}
 	
 	
-	/******** String tests *******/
+	/******** String and regexp tests *******/
 	
 	TEST_METHOD(5) {
 		// Test string comparison
@@ -114,9 +127,49 @@ namespace tut {
 	}
 	
 	TEST_METHOD(13) {
-		// String syntax supports \n, \r, \t
-		ctx.uri = "hello\r\n\tworld";
-		ensure(Filter("uri == \"hello\\r\\n\\tworld\"").run(ctx));
+		// String syntax supports \\, \n, \r, \t
+		ctx.uri = "hello\r\n\tworld\\";
+		ensure(Filter("uri == \"hello\\r\\n\\tworld\\\\\"").run(ctx));
+	}
+	
+	TEST_METHOD(14) {
+		// Strings can also start and end with single quote characters.
+		ctx.uri = "hello world";
+		ensure(Filter("uri == 'hello world'").run(ctx));
+	}
+	
+	TEST_METHOD(15) {
+		// String begin and end quote characters must match.
+		try {
+			Filter("uri == 'hello world\"");
+			fail("Syntax error expected");
+		} catch (const SyntaxError &) {
+			// Pass.
+		}
+		try {
+			Filter("uri == \"hello world'");
+			fail("Syntax error expected");
+		} catch (const SyntaxError &) {
+			// Pass.
+		}
+	}
+	
+	TEST_METHOD(16) {
+		// Regular expressions can also start with %r{ and end with }.
+		ctx.uri = "hello world";
+		ensure(Filter("uri =~ %r{hello}").run(ctx));
+		try {
+			Filter("uri =~ /hello}");
+			fail("Syntax error expected");
+		} catch (const SyntaxError &) {
+			// Pass.
+		}
+		try {
+			Filter("uri =~ %r{hello/");
+			fail("Syntax error expected");
+		} catch (const SyntaxError &) {
+			// Pass.
+		}
 	}
 	
 	
@@ -222,19 +275,96 @@ namespace tut {
 	}
 	
 	
+	/******** Boolean and expression combination tests *******/
+	
+	TEST_METHOD(30) {
+		ensure("(1)", Filter("true").run(ctx));
+		ensure("(2)", !Filter("false").run(ctx));
+		ensure("(3)", Filter("true && 1 == 1").run(ctx));
+		ensure("(4)", Filter("true || 1 == 0").run(ctx));
+		ensure("(5)", !Filter("false && 1 == 1").run(ctx));
+		ensure("(6)", !Filter("false || 1 == 0").run(ctx));
+		ensure("(7)", Filter("false || 1 == 1").run(ctx));
+	}
+	
+	TEST_METHOD(31) {
+		ensure(Filter("true == true").run(ctx));
+		ensure(!Filter("true == false").run(ctx));
+		ensure(Filter("true != false").run(ctx));
+		ensure(!Filter("true != true").run(ctx));
+		
+		ensure(Filter("false == false").run(ctx));
+		ensure(!Filter("false == true").run(ctx));
+		ensure(Filter("false != true").run(ctx));
+		ensure(!Filter("false != false").run(ctx));
+	}
+	
+	TEST_METHOD(32) {
+		ensure("(1)", eval("true && true && true"));
+		ensure("(2)", !eval("true && true && false"));
+		ensure("(3)", !eval("true && false && false"));
+		ensure("(4)", !eval("false && false && false"));
+		ensure("(5)", !eval("false && true && false"));
+		ensure("(6)", !eval("false && false && true"));
+		ensure("(7)", !eval("false && true && false"));
+		
+		ensure("(8)", eval("true || true || true"));
+		ensure("(9)", eval("true || true || false"));
+		ensure("(10)", eval("true || false || false"));
+		ensure("(11)", !eval("false || false || false"));
+		ensure("(12)", eval("false || true || false"));
+		ensure("(13)", eval("false || false || true"));
+		ensure("(14)", eval("false || true || false"));
+		
+		ensure("(15)", eval("false || true && true"));
+		ensure("(16)", !eval("true || false && false"));
+		ensure("(17)", eval("true || (false && false)"));
+		
+		ctx.uri = "foo";
+		ctx.responseTime = 10;
+		ensure("(20)", eval("uri == 'foo' && (response_time == 1 || response_time == 10)"));
+		ensure("(21)", eval("(uri == 'foo' && response_time == 1) || response_time == 10"));
+	}
+	
+	
 	/******** Error tests *******/
 	
 	TEST_METHOD(40) {
 		// < does not work if left operand is a string
+		ensure(!validate("'' < 1"));
 		// < does not work if right operand is a string
+		ensure(!validate("1 < ''"));
+		
 		// <= does not work if left operand is a string
+		ensure(!validate("'' <= 1"));
 		// <= does not work if right operand is a string
+		ensure(!validate("1 <= ''"));
+		
 		// > does not work if left operand is a string
-		// < does not work if right operand is a string
+		ensure(!validate("'' > 1"));
+		// > does not work if right operand is a string
+		ensure(!validate("1 > ''"));
+		
 		// >= does not work if left operand is a string
+		ensure(!validate("'' >= 1"));
 		// >= does not work if right operand is a string
+		ensure(!validate("1 >= ''"));
+		
 		// =~ does not work if left operand is not a string
+		ensure(!validate("1 =~ //"));
+		ensure(!validate("// =~ //"));
+		ensure(!validate("false =~ //"));
 		// =~ does not work if right operand is not a regexp
+		ensure(!validate("'' =~ ''"));
+		ensure(!validate("'' =~ 1"));
+		ensure(!validate("'' =~ false"));
+	}
+	
+	TEST_METHOD(41) {
+		// Source must evaluate to a boolean.
+		ensure(!validate("1"));
+		ensure(!validate("'hello'"));
+		ensure(!validate("/abc/"));
 	}
 	
 	

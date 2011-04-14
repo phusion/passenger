@@ -44,6 +44,7 @@ http {
     passenger_max_pool_size <%= @options[:max_pool_size] %>;
     passenger_min_instances <%= @options[:min_instances] %>;
     <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
+    <% if debugging? %>passenger_log_level 2;<% end %>
     
     <% if @options[:union_station_gateway_address] %>
         union_station_gateway_address <%= @options[:union_station_gateway_address] %>;
@@ -86,9 +87,10 @@ http {
         passenger_spawn_method <%= app[:spawn_method] %>;
         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
         <% if app[:union_station_key] %>
-            passenger_analytics on;
+            union_station_support on;
             union_station_key <%= app[:union_station_key] %>;
         <% end %>
     }
+    passenger_pre_start http://<%= nginx_listen_address(app) %>;
     <% end %>
 }

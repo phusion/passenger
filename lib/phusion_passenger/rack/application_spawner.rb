@@ -217,8 +217,9 @@ private
 		# itself doesn't preload Rack. This is necessary because some broken
 		# Rails apps explicitly specify a Rack version as dependency.
 		require 'rack'
-		rackup_code = ::File.read("config.ru")
-		eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, "config.ru")
+		rackup_file = ENV["RACKUP_FILE"] || "config.ru"
+		rackup_code = ::File.read(rackup_file)
+		eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, rackup_file)
 	end
 	private_class_method :load_rack_app
 end

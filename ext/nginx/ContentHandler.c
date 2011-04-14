@@ -322,6 +322,7 @@ create_request(ngx_http_request_t *r)
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
     ngx_str_t                      escaped_uri;
+    ngx_str_t                     *union_station_filters = NULL;
     u_char                         min_instances_string[12];
     u_char                         framework_spawner_idle_time_string[12];
     u_char                         app_spawner_idle_time_string[12];
@@ -429,8 +430,8 @@ create_request(ngx_http_request_t *r)
                                   slcf, use_global_queue);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_FRIENDLY_ERROR_PAGES",
                                   slcf, friendly_error_pages);
-    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_ANALYTICS",
-                                  slcf, analytics);
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("UNION_STATION_SUPPORT",
+                                  slcf, union_station_support);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_DEBUGGER",
                                   slcf, debugger);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_SHOW_VERSION_IN_HEADER",
@@ -469,6 +470,19 @@ create_request(ngx_http_request_t *r)
     *end = '\0';
     len += sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME") +
            ngx_strlen(app_spawner_idle_time_string) + 1;
+    
+    if (slcf->union_station_filters != NGX_CONF_UNSET_PTR && slcf->union_station_filters->nelts > 0) {
+        len += sizeof("UNION_STATION_FILTERS");
+        
+        union_station_filters = (ngx_str_t *) slcf->union_station_filters->elts;
+        for (i = 0; i < slcf->union_station_filters->nelts; i++) {
+            if (i != 0) {
+                len++;
+            }
+            len += union_station_filters[i].len;
+        }
+        len++;
+    }
 
 
     /***********************/
@@ -646,8 +660,8 @@ create_request(ngx_http_request_t *r)
                                   slcf, use_global_queue);
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_FRIENDLY_ERROR_PAGES",
                                   slcf, friendly_error_pages);
-    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_ANALYTICS",
-                                  slcf, analytics);
+    SERIALIZE_BOOLEAN_CONFIG_DATA("UNION_STATION_SUPPORT",
+                                  slcf, union_station_support);
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_DEBUGGER",
                                   slcf, debugger);
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_SHOW_VERSION_IN_HEADER",
@@ -692,6 +706,20 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME"));
     b->last = ngx_copy(b->last, app_spawner_idle_time_string,
                        ngx_strlen(app_spawner_idle_time_string) + 1);
+
+    if (slcf->union_station_filters != NGX_CONF_UNSET_PTR && slcf->union_station_filters->nelts > 0) {
+        b->last = ngx_copy(b->last, "UNION_STATION_FILTERS",
+                           sizeof("UNION_STATION_FILTERS"));
+        
+        for (i = 0; i < slcf->union_station_filters->nelts; i++) {
+            if (i != 0) {
+                b->last = ngx_copy(b->last, "\1", 1);
+            }
+            b->last = ngx_copy(b->last, union_station_filters[i].data,
+                               union_station_filters[i].len);
+        }
+        b->last = ngx_copy(b->last, "\0", 1);
+    }
 
     /***********************/
     /***********************/

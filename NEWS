@@ -1,3 +1,69 @@
+Release 3.0.7
+-------------
+
+ * Fixed a bug passenger-install-apache2-module. It could crash on
+   some systems due to a typo in the code.
+ * Upgraded preferred Nginx version to 1.0.0.
+ * Phusion Passenger Standalone now pre-starts application processes
+   at startup instead of doing that at the first request.
+ * When sending data to Union Station, the HTTP status code is now also
+   logged.
+ * Various Union Station-related stability improvements.
+ * The Linux OOM killer was previously erroneously disabled for all
+   Phusion Passenger processes, including application processes. The
+   intention was to only disable it for the Watchdog. This has been
+   fixed, and the Watchdog is now the only process for which the OOM
+   killer is disabled.
+ * Fixed some compilation problems on OpenBSD.
+ * Due to a typo, the dependency on file-tail was not entirely removed
+   in 3.0.6. This has now been fixed.
+
+
+Release 3.0.6
+-------------
+
+ * Fixed various compilation problems such as XCode 4 support and OpenBSD support.
+ * Fixed various Union Station-related stability issues.
+ * Fixed an issue with host name detection on certain platforms.
+ * Improved error logging in various parts.
+ * The dependency on the file-tail library has been removed.
+ * During installation, check whether /tmp is mounted with 'noexec'.
+   Phusion Passenger's installer relies on /tmp *not* being mounted
+   with 'noexec'. If it is then the installer will now show a helpful
+   error message instead of bailing out in a confusing manner. Users
+   can now tell the installer to use a different directory for storing
+   temporary files by customizing the $TMPDIR environment variable.
+ * Phusion Passenger Standalone can now run Rackup files that are not named 'config.ru'.
+   The filename can be passed through the command line using the -R option.
+
+
+Release 3.0.5
+-------------
+
+ * [Apache] Fixed Union Station process statistics collection
+   Union Station users that are using Apache may notice that no process
+   information show up in Union Station. This is because of a bug in
+   Phusion Passenger's Apache version, which has now been fixed.
+ * [Apache] PassengerAnalytics has been renamed to UnionStationSupport
+   This option has been renamed for consistency reasons.
+ * [Nginx] passenger_analytics has been renamed to union_station_support
+   This option has been renamed for consistency reasons.
+ * Fixed Union Station data sending on older libcurl versions
+   Some Union Station users have reported that their data don't show up.
+   Upon investigation this turned out to be a compatibility with older
+   libcurl versions. Affected systems include all RHEL 5 based systems,
+   such as RHEL 5.5 and CentOS 5.5. We've now fixed compatibility
+   with older libcurl versions.
+ * Added support for the Union Station filter language
+   This language can be used to limit the kind of data that's sent to
+   Union Station. Please read
+   https://engage.unionstationapp.com/help#filtering for details.
+ * Fixed a PassengerMaxPoolSize/passenger_max_pool_size violation bug
+   People who host a lot of different applications on Phusion Passenger
+   may notice that it sometimes spawns more processes than is allowed
+   by PassengerMaxPoolSize/passenger_max_pool_size. This has been fixed.
+
+
 Release 3.0.4
 -------------
 

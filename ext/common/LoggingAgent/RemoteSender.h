@@ -79,6 +79,9 @@ private:
 		string hostHeader;
 		string responseBody;
 		
+		string pingURL;
+		string sinkURL;
+		
 		void resetConnection() {
 			if (curl != NULL) {
 				#ifdef HAS_CURL_EASY_RESET
@@ -94,6 +97,8 @@ private:
 					throw IOException("Unable to create a CURL handle");
 				}
 			}
+			curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+			curl_easy_setopt(curl, CURLOPT_TIMEOUT, 180);
 			curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, lastErrorMessage);
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlDataReceived);
@@ -112,8 +117,7 @@ private:
 			responseBody.clear();
 		}
 		
-		void prepareRequest(const string &uri) {
-			string url = string("https://") + ip + ":" + toString(port) + uri;
+		void prepareRequest(const string &url) {
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 			responseBody.clear();
 		}
@@ -137,6 +141,13 @@ private:
 				throw IOException("Unable to create a CURL linked list");
 			}
 			
+			// Older libcurl versions didn't strdup() any option 
+			// strings so we need to keep these in memory.
+			pingURL = string("https://") + ip + ":" + toString(port) +
+				"/ping";
+			sinkURL = string("https://") + ip + ":" + toString(port) +
+				"/sink";
+			
 			curl = NULL;
 			resetConnection();
 		}
@@ -151,7 +162,7 @@ private:
 		bool ping() {
 			P_DEBUG("Pinging Union Station gateway " << ip << ":" << port);
 			ScopeGuard guard(boost::bind(&Server::resetConnection, this));
-			prepareRequest("/ping");
+			prepareRequest(pingURL);
 			
 			curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
 			if (curl_easy_perform(curl) != 0) {
@@ -172,7 +183,7 @@ private:
 		
 		bool send(const Item &item) {
 			ScopeGuard guard(boost::bind(&Server::resetConnection, this));
-			prepareRequest("/sink");
+			prepareRequest(sinkURL);
 			
 			struct curl_httppost *post = NULL;
 			struct curl_httppost *last = NULL;
@@ -458,7 +469,13 @@ public:
 			}
 		}
 		
-		queue.add(item);
+		if (!queue.tryAdd(item)) {
+			P_WARN("The Union Station gateway isn't responding quickly enough; dropping packet.");
+		}
+	}
+	
+	unsigned int queued() const {
+		return queue.size();
 	}
 };
 

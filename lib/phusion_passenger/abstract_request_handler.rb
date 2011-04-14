@@ -683,7 +683,8 @@ private
 	
 	def finalize_request(headers, has_error)
 		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
-		if log
+		if log && !log.closed?
+			exception_occurred = false
 			begin
 				log.end_measure("app request handler processing", has_error)
 				if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
@@ -703,13 +704,26 @@ private
 					GC.clear_stats
 				end
 				Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = nil
+			rescue Exception
+				# Maybe this exception was raised while communicating
+				# with the logging agent. If that is the case then
+				# log.close may also raise an exception, but we're only
+				# interested in the original exception. So if this
+				# situation occurs we must ignore any exceptions raised
+				# by log.close.
+				exception_occurred = true
+				raise
 			ensure
 				# It is important that the following call receives an ACK
-				# from the logging server and that we don't close the socket
+				# from the logging agent and that we don't close the socket
 				# connection until the ACK has been received, otherwise
 				# the helper agent may close the transaction before this
 				# process's openTransaction command is processed.
-				log.close
+				begin
+					log.close
+				rescue
+					raise if !exception_occurred
+				end
 			end
 		end
 		

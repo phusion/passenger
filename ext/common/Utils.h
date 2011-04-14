@@ -26,6 +26,7 @@
 #define _PASSENGER_UTILS_H_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/function.hpp>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string>
@@ -343,6 +344,15 @@ bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
 
 void prestartWebApps(const ResourceLocator &locator, const string &serializedprestartURLs);
+
+/**
+ * Runs the given function and catches any tracable_exceptions. Upon catching such an exception,
+ * its message and backtrace will be printed. If toAbort is true then it will call abort(),
+ * otherwise the exception is swallowed.
+ * thread_interrupted and all other exceptions are silently propagated.
+ */
+void runAndPrintExceptions(const function<void ()> &func, bool toAbort);
+void runAndPrintExceptions(const function<void ()> &func);
 
 /**
  * Returns the system's host name.

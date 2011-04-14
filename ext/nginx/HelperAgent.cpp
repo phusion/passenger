@@ -313,7 +313,9 @@ private:
 	 *                                     before we were able to send back the
 	 *                                     full response.
 	 */
-	void forwardResponse(SessionPtr &session, FileDescriptor &clientFd) {
+	void forwardResponse(SessionPtr &session, FileDescriptor &clientFd,
+		const AnalyticsLogPtr &log)
+	{
 		TRACE_POINT();
 		HttpStatusExtractor ex;
 		int stream = session->getStream();
@@ -345,6 +347,11 @@ private:
 					writeExact(clientFd, statusLine);
 					UPDATE_TRACE_POINT();
 					writeExact(clientFd, ex.getBuffer());
+					if (!log->isNull()) {
+						string partialStatusLine = ex.getStatusLine();
+						partialStatusLine.erase(partialStatusLine.size() - 2, 2);
+						log->message("Status: " + partialStatusLine);
+					}
 					break;
 				} catch (const SystemException &e) {
 					if (e.code() == EPIPE) {
@@ -437,7 +444,7 @@ private:
 		}
 		
 		try {
-			bool enableAnalytics = parser.getHeader("PASSENGER_ANALYTICS") == "true";
+			bool useUnionStation = parser.getHeader("UNION_STATION_SUPPORT") == "true";
 			StaticString appGroupName = parser.getHeader("PASSENGER_APP_GROUP_NAME");
 			PoolOptions options;
 			
@@ -471,11 +478,12 @@ private:
 			
 			UPDATE_TRACE_POINT();
 			AnalyticsLogPtr log;
-			if (enableAnalytics) {
+			if (useUnionStation) {
 				log = analyticsLogger->newTransaction(
 					options.getAppGroupName(),
 					"requests",
-					parser.getHeader("PASSENGER_UNION_STATION_KEY"));
+					parser.getHeader("PASSENGER_UNION_STATION_KEY"),
+					parser.getHeader("UNION_STATION_FILTERS"));
 				options.analytics = true;
 				options.log = log;
 			} else {
@@ -521,7 +529,7 @@ private:
 					session->getConnectPassword().size() + 1);
 				end += session->getConnectPassword().size() + 1;
 				
-				if (enableAnalytics) {
+				if (!log->isNull()) {
 					memcpy(end, "PASSENGER_GROUP_NAME", sizeof("PASSENGER_GROUP_NAME"));
 					end += sizeof("PASSENGER_GROUP_NAME");
 					
@@ -554,7 +562,7 @@ private:
 					scope.success();
 				}
 				
-				forwardResponse(session, clientFd);
+				forwardResponse(session, clientFd, log);
 				
 				requestProxyingScope.success();
 			} catch (const SpawnException &e) {
@@ -605,10 +613,6 @@ private:
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
 			abort();
-		} catch (const std::exception &e) {
-			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
-				<< "   exception: " << e.what() << "\n"
-				<< "   backtrace: not available");
 		}
 	}
 	
@@ -637,7 +641,7 @@ public:
 		this->serverSocket = serverSocket;
 		this->analyticsLogger = logger;
 		thr = new oxt::thread(
-			bind(&Client::threadMain, this),
+			boost::bind(&Client::threadMain, this),
 			"Client thread " + toString(number),
 			CLIENT_THREAD_STACK_SIZE
 		);
@@ -863,8 +867,11 @@ public:
 			messageServer->getSocketFilename().c_str(),
 			NULL);
 		
+		function<void ()> func = boost::bind(prestartWebApps,
+			resourceLocator,
+			options.get("prestart_urls"));
 		prestarterThread = ptr(new oxt::thread(
-			boost::bind(prestartWebApps, resourceLocator, options.get("prestart_urls"))
+			boost::bind(runAndPrintExceptions, func, true)
 		));
 	}
 	
@@ -896,8 +903,9 @@ public:
 		TRACE_POINT();
 		
 		startClientHandlerThreads();
+		function<void ()> func = boost::bind(&MessageServer::mainLoop, messageServer.get());
 		messageServerThread = ptr(new oxt::thread(
-			boost::bind(&MessageServer::mainLoop, messageServer.get()),
+			boost::bind(runAndPrintExceptions, func, true),
 			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
 		));
 		

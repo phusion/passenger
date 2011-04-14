@@ -639,11 +639,35 @@ prestartWebApps(const ResourceLocator &locator, const string &serializedprestart
 	}
 }
 
+void
+runAndPrintExceptions(const function<void ()> &func, bool toAbort) {
+	try {
+		func();
+	} catch (const boost::thread_interrupted &) {
+		throw;
+	} catch (const tracable_exception &e) {
+		P_ERROR("Exception: " << e.what() << "\n" << e.backtrace());
+		if (toAbort) {
+			abort();
+		}
+	}
+}
+
+void
+runAndPrintExceptions(const function<void ()> &func) {
+	runAndPrintExceptions(func, true);
+}
+
 string
 getHostName() {
-	char hostname[HOST_NAME_MAX + 1];
-	if (gethostname(hostname, sizeof(hostname)) == 0) {
-		hostname[sizeof(hostname) - 1] = '\0';
+	long hostNameMax = HOST_NAME_MAX;
+	if (hostNameMax < 255) {
+		// https://bugzilla.redhat.com/show_bug.cgi?id=130733
+		hostNameMax = 255;
+	}
+	char hostname[hostNameMax + 1];
+	if (gethostname(hostname, hostNameMax) == 0) {
+		hostname[hostNameMax] = '\0';
 		return hostname;
 	} else {
 		int e = errno;

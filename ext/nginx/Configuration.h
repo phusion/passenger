@@ -42,7 +42,7 @@ typedef struct {
     ngx_flag_t   enabled;
     ngx_flag_t   use_global_queue;
     ngx_flag_t   friendly_error_pages;
-    ngx_flag_t   analytics;
+    ngx_flag_t   union_station_support;
     ngx_flag_t   debugger;
     ngx_flag_t   show_version_in_header;
     ngx_str_t    environment;
@@ -56,6 +56,7 @@ typedef struct {
     ngx_int_t    app_spawner_idle_time;
     ngx_str_t    union_station_key;
     ngx_array_t *base_uris;
+    ngx_array_t *union_station_filters;
 
     /************************************/
 } passenger_loc_conf_t;

@@ -61,6 +61,12 @@ class AbstractInstaller
 	def start
 		before_install
 		install!
+	rescue PlatformInfo::RuntimeError => e
+		new_screen
+		color_puts "<red>An error occurred</red>"
+		puts
+		puts e.message
+		exit 1
 	ensure
 		after_install
 	end

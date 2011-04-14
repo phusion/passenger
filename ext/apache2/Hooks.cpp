@@ -566,7 +566,7 @@ private:
 		UPDATE_TRACE_POINT();
 		try {
 			AnalyticsLogPtr log;
-			if (config->analyticsEnabled()) {
+			if (config->useUnionStation()) {
 				log = analyticsLogger->newTransaction(
 					config->getAppGroupName(appRoot),
 					"requests",
@@ -662,7 +662,7 @@ private:
 					config->getRestartDir(),
 					DEFAULT_BACKEND_ACCOUNT_RIGHTS,
 					false,
-					config->analyticsEnabled(),
+					config->useUnionStation(),
 					log->isNull() ? AnalyticsLogPtr() : log
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
@@ -770,6 +770,7 @@ private:
 						r->status);
 				}
 				apr_table_setn(r->headers_out, "Status", r->status_line);
+				log->message(string("Status: ") + r->status_line);
 				
 				bool xsendfile = hasModXsendfile() &&
 					apr_table_get(r->err_headers_out, "X-Sendfile");
@@ -1058,7 +1059,7 @@ private:
 			addHeader(headers, env[i].key, env[i].val);
 		}
 		
-		if (config->analyticsEnabled()) {
+		if (!log->isNull()) {
 			addHeader(headers, "PASSENGER_GROUP_NAME",
 				config->getAppGroupName(appRoot).c_str());
 			addHeader(headers, "PASSENGER_TXN_ID", log->getTxnId().c_str());
