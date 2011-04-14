@@ -53,6 +53,7 @@ using namespace Passenger;
 
 static struct ev_loop *eventLoop;
 static LoggingServer *loggingServer;
+static int exitCode = 0;
 
 static struct ev_loop *
 createEventLoop() {
@@ -119,6 +120,12 @@ void
 caughtExitSignal(ev::sig &watcher, int revents) {
 	P_DEBUG("Caught signal, exiting...");
 	ev_unloop(eventLoop, EVUNLOOP_ONE);
+	/* We only consider the "exit" command to be a graceful way to shut down
+	 * the logging agent, so upon receiving an exit signal we want to return
+	 * a non-zero exit code. This is because we want the watchdog to restart
+	 * the logging agent when it's killed by SIGTERM.
+	 */
+	exitCode = 1;
 }
 
 void
@@ -270,7 +277,7 @@ main(int argc, char *argv[]) {
 		/********** Initialized! Enter main loop... **********/
 		
 		ev_loop(eventLoop, 0);
-		return 0;
+		return exitCode;
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		return 1;

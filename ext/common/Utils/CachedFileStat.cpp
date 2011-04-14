@@ -27,29 +27,23 @@
 
 extern "C" {
 
-struct CachedFileStat {
-	Passenger::CachedFileStat cfs;
-	
-	CachedFileStat(unsigned int maxSize): cfs(maxSize) { }
-};
-
-CachedFileStat *
+PassengerCachedFileStat *
 cached_file_stat_new(unsigned int max_size) {
-	return new CachedFileStat(max_size);
+	return (PassengerCachedFileStat *) new Passenger::CachedFileStat(max_size);
 }
 
 void
-cached_file_stat_free(CachedFileStat *cstat) {
-	delete cstat;
+cached_file_stat_free(PassengerCachedFileStat *cstat) {
+	delete (Passenger::CachedFileStat *) cstat;
 }
 
 int
-cached_file_stat_perform(CachedFileStat *cstat,
+cached_file_stat_perform(PassengerCachedFileStat *cstat,
                          const char *filename,
                          struct stat *buf,
                          unsigned int throttle_rate) {
 	try {
-		return cstat->cfs.stat(filename, buf, throttle_rate);
+		return ((Passenger::CachedFileStat *) cstat)->stat(filename, buf, throttle_rate);
 	} catch (const Passenger::TimeRetrievalException &e) {
 		errno = e.code();
 		return -1;

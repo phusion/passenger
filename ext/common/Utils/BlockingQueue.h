@@ -37,7 +37,7 @@ using namespace boost;
 template<typename T>
 class BlockingQueue {
 private:
-	timed_mutex lock;
+	mutable timed_mutex lock;
 	condition_variable_any added;
 	condition_variable_any removed;
 	unsigned int max;
@@ -52,6 +52,11 @@ public:
 		this->max = max;
 	}
 	
+	unsigned int size() const {
+		lock_guard<timed_mutex> l(lock);
+		return queue.size();
+	}
+	
 	void add(const T &item) {
 		unique_lock<timed_mutex> l(lock);
 		while (atMaxCapacity()) {
@@ -61,6 +66,20 @@ public:
 		added.notify_one();
 		if (!atMaxCapacity()) {
 			removed.notify_one();
+		}
+	}
+	
+	bool tryAdd(const T &item) {
+		lock_guard<timed_mutex> l(lock);
+		if (!atMaxCapacity()) {
+			queue.push(item);
+			added.notify_one();
+			if (!atMaxCapacity()) {
+				removed.notify_one();
+			}
+			return true;
+		} else {
+			return false;
 		}
 	}
 	

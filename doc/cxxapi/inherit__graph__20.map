@@ -1,0 +1,3 @@
+<map id="G" name="G">
+<area shape="rect" id="node1" href="$structPassenger_1_1MessageServer_1_1DisconnectEventBroadcastGuard.html" title="Calls clientDisconnected() on all handlers when destroyed." alt="" coords="7,5,420,35"/>
+</map>

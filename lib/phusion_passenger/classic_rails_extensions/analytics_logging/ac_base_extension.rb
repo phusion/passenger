@@ -51,7 +51,9 @@ protected
 			log.measure("view rendering") do
 				result = render_without_passenger(*args, &block)
 				view_runtime = @view_runtime || @rendering_runtime
-				log.message "View rendering time: #{(view_runtime * 1000).to_i}"
+				if view_runtime
+					log.message "View rendering time: #{(view_runtime * 1000).to_i}"
+				end
 				return result
 			end
 		else

@@ -47,6 +47,7 @@
 #include "RandomGenerator.h"
 #include "Logging.h"
 #include "Exceptions.h"
+#include "StaticString.h"
 #include "ResourceLocator.h"
 #include "Utils.h"
 #include "Utils/Base64.h"
@@ -79,6 +80,7 @@ static unsigned int maxInstancesPerApp;
 static unsigned int poolIdleTime;
 static string  serializedPrestartURLs;
 
+static string oldOomScore;
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
 static string loggingAgentAddress;
@@ -87,6 +89,8 @@ static RandomGenerator *randomGenerator;
 static EventFd *errorEvent;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
+
+static string setOomScore(const StaticString &score);
 
 
 /**
@@ -100,7 +104,7 @@ private:
 	void threadMain() {
 		try {
 			pid_t pid, ret;
-			int status;
+			int status, e;
 			
 			while (!this_thread::interruption_requested()) {
 				lock.lock();
@@ -112,6 +116,21 @@ private:
 					pid = start();
 				}
 				ret = syscalls::waitpid(pid, &status, 0);
+				if (ret == -1 && errno == ECHILD) {
+					/* If the agent is attached to gdb then waitpid()
+					 * here can return -1 with errno == ECHILD.
+					 * Fallback to kill() polling for checking
+					 * whether the agent is alive.
+					 */
+					ret = pid;
+					status = 0;
+					P_WARN("waitpid() on " << name() << " return -1 with " <<
+						"errno = ECHILD, falling back to kill polling");
+					waitpidUsingKillPolling(pid);
+					e = 0;
+				} else {
+					e = errno;
+				}
 				
 				lock.lock();
 				this->pid = 0;
@@ -121,7 +140,8 @@ private:
 				this_thread::disable_syscall_interruption dsi;
 				if (ret == -1) {
 					P_WARN(name() << " crashed or killed for "
-						"an unknown reason, restarting it...");
+						"an unknown reason (errno = " <<
+						strerror(e) << "), restarting it...");
 				} else if (WIFEXITED(status)) {
 					if (WEXITSTATUS(status) == 0) {
 						/* When the web server is gracefully exiting, it will
@@ -244,6 +264,18 @@ protected:
 		return 0; // timed out
 	}
 	
+	static void waitpidUsingKillPolling(pid_t pid) {
+		bool done = false;
+		
+		while (!done) {
+			int ret = syscalls::kill(pid, 0);
+			done = ret == -1;
+			if (!done) {
+				syscalls::usleep(20000);
+			}
+		}
+	}
+	
 public:
 	AgentWatcher() {
 		thr = NULL;
@@ -318,6 +350,8 @@ public:
 			/* Become the process group leader so that the watchdog can kill the
 			 * agent as well as all its descendant processes. */
 			setpgid(getpid(), getpid());
+			
+			setOomScore(oldOomScore);
 			
 			try {
 				execProgram();
@@ -689,6 +723,8 @@ private:
 					_exit(1);
 				}
 				
+				setOomScore(oldOomScore);
+				
 				execlp("/bin/sh", "/bin/sh", "-c", "find . | xargs touch", (char *) 0);
 				e = errno;
 				fprintf(stderr, "Cannot execute 'find . | xargs touch': %s (%d)\n",
@@ -722,22 +758,44 @@ public:
 
 
 /**
- * Most operating systems overcommit memory. We *know* that this watchdog process
- * doesn't use much memory; on OS X it uses about 200 KB of private RSS. If the
- * watchdog is killed by the system Out-Of-Memory Killer or then it's all over:
- * the system administrator will have to restart the web server for Phusion
- * Passenger to be usable again. So in this function we do whatever is necessary
- * to prevent this watchdog process from becoming a candidate for the OS's
- * Out-Of-Memory Killer.
+ * Linux-only way to change OOM killer configuration for
+ * current process. Requires root privileges, which we
+ * should have.
  */
-static void
-disableOomKiller() {
-	// Linux-only way to disable OOM killer for current process. Requires root
-	// privileges, which we should have.
-	FILE *f = fopen("/proc/self/oom_adj", "w");
-	if (f != NULL) {
-		fprintf(f, "-17");
+static string
+setOomScore(const StaticString &score) {
+	if (!score.empty()) {
+		string oldScore;
+		
+		FILE *f = fopen("/proc/self/oom_adj", "r");
+		if (f == NULL) {
+			return "";
+		}
+		char buf[1024];
+		size_t bytesRead;
+		while (true) {
+			bytesRead = fread(buf, 1, sizeof(buf), f);
+			if (bytesRead == 0 && feof(f)) {
+				break;
+			} else if (bytesRead == 0 && ferror(f)) {
+				fclose(f);
+				return "";
+			} else {
+				oldScore.append(buf, bytesRead);
+			}
+		}
 		fclose(f);
+		
+		f = fopen("/proc/self/oom_adj", "w");
+		if (f == NULL) {
+			return "";
+		}
+		fwrite(score.data(), 1, score.size(), f);
+		fclose(f);
+		
+		return oldScore;
+	} else {
+		return "";
 	}
 }
 
@@ -891,7 +949,16 @@ forceAllAgentsShutdown(vector<AgentWatcher *> &watchers) {
 
 int
 main(int argc, char *argv[]) {
-	disableOomKiller();
+	/*
+	 * Most operating systems overcommit memory. We *know* that this watchdog process
+	 * doesn't use much memory; on OS X it uses about 200 KB of private RSS. If the
+	 * watchdog is killed by the system Out-Of-Memory Killer or then it's all over:
+	 * the system administrator will have to restart the web server for Phusion
+	 * Passenger to be usable again. So here we disable Linux's OOM killer
+	 * for this watchdog. Note that the OOM score is inherited by child processes
+	 * so we need to restore it after each fork().
+	 */
+	oldOomScore = setOomScore("-17");
 	
 	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");
 	logLevel      = agentsOptions.getInt("log_level");

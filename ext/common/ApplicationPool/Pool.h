@@ -943,7 +943,7 @@ private:
 					this_thread::restore_syscall_interruption rsi(dsi);
 					newAppGroupCreatable.wait(l);
 					goto beginning_of_function;
-				} else if (count == max) {
+				} else if (count >= max) {
 					processInfo = inactiveApps.front();
 					P_DEBUG("Killing process " << processInfo->process->getPid() <<
 						" because an extra slot is necessary for spawning");

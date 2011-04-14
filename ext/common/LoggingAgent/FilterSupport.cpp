@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2011 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,42 +22,45 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_CHANGE_NOTIFIER_H_
-#define _PASSENGER_CHANGE_NOTIFIER_H_
+#include "FilterSupport.h"
+#include <cstring>
+#include <cstdlib>
 
-#include <boost/function.hpp>
-#include <boost/shared_ptr.hpp>
-#include <string>
-#include <ev++.h>
-#include "DataStoreId.h"
-#include "../EventedClient.h"
-#include "../FileDescriptor.h"
-#include "../StaticString.h"
+using namespace Passenger;
 
-namespace Passenger {
+extern "C" {
 
-using namespace std;
-using namespace boost;
+PassengerFilter *
+passenger_filter_create(const char *source, int size, char **error) {
+	if (size == -1) {
+		size = strlen(source);
+	}
+	try {
+		return (PassengerFilter *) new FilterSupport::Filter(StaticString(source, size));
+	} catch (const SyntaxError &e) {
+		if (error != NULL) {
+			*error = strdup(e.what());
+		}
+		return NULL;
+	}
+}
 
+void
+passenger_filter_free(PassengerFilter *filter) {
+	delete (FilterSupport::Filter *) filter;
+}
 
-class ChangeNotifier {
-public:
-	typedef function<string (const StaticString &groupName, const StaticString &nodeName,
-		const StaticString &category)> GetLastPosFunction;
-	
-	GetLastPosFunction getLastPos;
-	
-	ChangeNotifier(struct ev_loop *_loop) { }
-	virtual ~ChangeNotifier() { }
-	
-	virtual void addClient(const FileDescriptor &fd) { }
-	
-	virtual void changed(const DataStoreId &dataStoreId) { }
-};
+char *
+passenger_filter_validate(const char *source, int size) {
+	if (size == -1) {
+		size = strlen(source);
+	}
+	try {
+		FilterSupport::Filter(StaticString(source, size));
+		return NULL;
+	} catch (const SyntaxError &e) {
+		return strdup(e.what());
+	}
+}
 
-typedef shared_ptr<ChangeNotifier> ChangeNotifierPtr;
-
-
-} // namespace Passenger
-
-#endif /* _PASSENGER_CHANGE_NOTIFIER_H_ */
+} // extern "C"

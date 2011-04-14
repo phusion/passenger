@@ -45,7 +45,6 @@ dependencies = [
 	'ext/common/LoggingAgent/Main.cpp',
 	'ext/common/LoggingAgent/LoggingServer.h',
 	'ext/common/LoggingAgent/RemoteSender.h',
-	'ext/common/LoggingAgent/ChangeNotifier.h',
 	'ext/common/LoggingAgent/DataStoreId.h',
 	'ext/common/LoggingAgent/FilterSupport.h',
 	'ext/common/ServerInstanceDir.h',
