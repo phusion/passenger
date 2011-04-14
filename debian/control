@@ -58,5 +58,5 @@ Description: Rails and Rac support for Apache2 - Documentation
  deployment of Ruby web applications, such as those built on the
  revolutionary Ruby on Rails web framework, a breeze.
  .
- This package contains the development environment for the blkid library.
+ This package contains the development environment for passenger
 

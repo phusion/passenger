@@ -1,3 +1,1 @@
-../../ext/common/libboost_oxt.a usr/lib/
-../../ext/common/libpassenger_common.a usr/lib/
-../../ext/common/Constants.h usr/include/passenger/
+../../ext/{boost,common,google,nginx,oxt,ruby} usr/lib/phusion-passenger/ext/
