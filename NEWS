@@ -1,3 +1,24 @@
+Release 3.0.7
+-------------
+
+ * Fixed a bug passenger-install-apache2-module. It could crash on
+   some systems due to a typo in the code.
+ * Upgraded preferred Nginx version to 1.0.0.
+ * Phusion Passenger Standalone now pre-starts application processes
+   at startup instead of doing that at the first request.
+ * When sending data to Union Station, the HTTP status code is now also
+   logged.
+ * Various Union Station-related stability improvements.
+ * The Linux OOM killer was previously erroneously disabled for all
+   Phusion Passenger processes, including application processes. The
+   intention was to only disable it for the Watchdog. This has been
+   fixed, and the Watchdog is now the only process for which the OOM
+   killer is disabled.
+ * Fixed some compilation problems on OpenBSD.
+ * Due to a typo, the dependency on file-tail was not entirely removed
+   in 3.0.6. This has now been fixed.
+
+
 Release 3.0.6
 -------------
 
