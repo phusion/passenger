@@ -92,11 +92,13 @@ string pointerToIntString(void *pointer);
  * Converts the given integer string to an unsigned long long integer.
  */
 unsigned long long stringToULL(const StaticString &str);
+unsigned int stringToUint(const StaticString &str);
 
 /**
  * Converts the given integer string to a long long integer.
  */
 long long stringToLL(const StaticString &str);
+int stringToInt(const StaticString &str);
 
 /**
  * Converts the given hexadecimal string to an unsigned long long integer.

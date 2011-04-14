@@ -483,6 +483,8 @@ public:
 	virtual string getURI() const = 0;
 	virtual string getController() const = 0;
 	virtual int getResponseTime() const = 0;
+	virtual string getStatus() const = 0;
+	virtual int getStatusCode() const = 0;
 	virtual bool hasHint(const string &name) const = 0;
 	
 	string queryStringField(FieldIdentifier id) const {
@@ -537,11 +539,14 @@ class SimpleContext: public Context {
 public:
 	string uri;
 	string controller;
+	string status;
 	int responseTime;
+	int statusCode;
 	set<string> hints;
 	
 	SimpleContext() {
 		responseTime = 0;
+		statusCode = 0;
 	}
 	
 	virtual string getURI() const {
@@ -554,6 +559,14 @@ public:
 	
 	virtual int getResponseTime() const {
 		return responseTime;
+	}
+	
+	virtual string getStatus() const {
+		return status;
+	}
+	
+	virtual int getStatusCode() const {
+		return statusCode;
 	}
 	
 	virtual bool hasHint(const string &name) const {
@@ -587,6 +600,10 @@ private:
 			if (pos != string::npos) {
 				ctx.controller = value.substr(0, pos);
 			}
+		} else if (startsWith(data, "Status: ")) {
+			StaticString value = data.substr(data.find(':') + 2);
+			ctx.status = value;
+			ctx.statusCode = stringToInt(value);
 		}
 	}
 	
@@ -721,6 +738,14 @@ public:
 	
 	virtual int getResponseTime() const {
 		return parse()->getResponseTime();
+	}
+	
+	virtual string getStatus() const {
+		return parse()->getStatus();
+	}
+	
+	virtual int getStatusCode() const {
+		return parse()->getStatusCode();
 	}
 	
 	virtual bool hasHint(const string &name) const {

@@ -376,11 +376,14 @@ namespace tut {
 			"1234-abcd 1234 0 BEGIN: request processing (1235, 10, 10)\n"
 			"1234-abcd 1240 1 URI: /foo\n"
 			"1234-abcd 1241 2 Controller action: HomeController#index\n"
-			"1234-abcd 2234 3 END: request processing (2234, 10, 10)\n"
+			"1234-abcd 1242 3 Status: 200 OK\n"
+			"1234-abcd 2234 4 END: request processing (2234, 10, 10)\n"
 		);
 		ensure_equals(ctx.getURI(), "/foo");
 		ensure_equals(ctx.getController(), "HomeController");
 		ensure_equals(ctx.getResponseTime(), 46655);
+		ensure_equals(ctx.getStatus(), "200 OK");
+		ensure_equals(ctx.getStatusCode(), 200);
 	}
 	
 	TEST_METHOD(51) {
