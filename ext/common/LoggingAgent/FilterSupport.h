@@ -475,7 +475,9 @@ public:
 	enum FieldIdentifier {
 		URI,
 		CONTROLLER,
-		RESPONSE_TIME
+		RESPONSE_TIME,
+		STATUS,
+		STATUS_CODE
 	};
 	
 	virtual ~Context() { }
@@ -495,6 +497,10 @@ public:
 			return getController();
 		case RESPONSE_TIME:
 			return toString(getResponseTime());
+		case STATUS:
+			return getStatus();
+		case STATUS_CODE:
+			return toString(getStatusCode());
 		default:
 			return "";
 		}
@@ -504,6 +510,8 @@ public:
 		switch (id) {
 		case RESPONSE_TIME:
 			return getResponseTime();
+		case STATUS_CODE:
+			return getStatusCode();
 		default:
 			return 0;
 		}
@@ -517,6 +525,10 @@ public:
 			return !getController().empty();
 		case RESPONSE_TIME:
 			return getResponseTime() > 0;
+		case STATUS:
+			return !getStatus().empty();
+		case STATUS_CODE:
+			return getStatusCode() > 0;
 		default:
 			return false;
 		}
@@ -526,8 +538,10 @@ public:
 		switch (id) {
 		case URI:
 		case CONTROLLER:
+		case STATUS:
 			return STRING_TYPE;
 		case RESPONSE_TIME:
+		case STATUS_CODE:
 			return INTEGER_TYPE;
 		default:
 			return UNKNOWN_TYPE;
@@ -1483,6 +1497,10 @@ private:
 			return Value(Context::CONTROLLER);
 		} else if (token.rawValue == "response_time") {
 			return Value(Context::RESPONSE_TIME);
+		} else if (token.rawValue == "status") {
+			return Value(Context::STATUS);
+		} else if (token.rawValue == "status_code") {
+			return Value(Context::STATUS_CODE);
 		} else {
 			raiseSyntaxError("unknown field '" + token.rawValue + "'", token);
 			return Value(); // Shut up compiler warning.

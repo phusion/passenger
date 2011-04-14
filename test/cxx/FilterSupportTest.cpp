@@ -51,6 +51,21 @@ namespace tut {
 		}
 	}
 	
+	TEST_METHOD(2) {
+		// Test support for various fields.
+		ctx.uri = "foo";
+		ctx.controller = "bar";
+		ctx.responseTime = 1;
+		ctx.status = "200 OK";
+		ctx.statusCode = 201;
+		ensure(eval(
+			"uri == 'foo' "
+			"&& response_time == 1"
+			"&& status == '200 OK'"
+			"&& status_code == 201"
+		));
+	}
+	
 	
 	/******** String and regexp tests *******/
 	
