@@ -770,6 +770,7 @@ private:
 						r->status);
 				}
 				apr_table_setn(r->headers_out, "Status", r->status_line);
+				log->message(string("Status: ") + r->status_line);
 				
 				bool xsendfile = hasModXsendfile() &&
 					apr_table_get(r->err_headers_out, "X-Sendfile");
