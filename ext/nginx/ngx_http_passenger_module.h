@@ -28,6 +28,7 @@
 #ifndef _PASSENGER_NGINX_MODULE_H_
 #define _PASSENGER_NGINX_MODULE_H_
 
+#include <ngx_config.h>
 #include <ngx_core.h>
 #include "../common/AgentsStarter.h"
 #include "../common/Utils/CachedFileStat.h"
