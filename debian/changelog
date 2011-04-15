@@ -1,3 +1,9 @@
+passenger (3.0.7-1bbox2) lucid; urgency=low
+
+  * Made passenger-dev suitable for building nginx-passenger
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 15 Apr 2011 11:36:04 +0100
+
 passenger (3.0.7-1bbox1) lucid; urgency=low
 
   * New upstream version, 3.0.7
