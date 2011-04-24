@@ -1451,13 +1451,6 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_loc_conf_t, upstream.pass_request_headers),
       NULL },
 
-    { ngx_string("scgi_pass_request_body"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
-      ngx_conf_set_flag_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, upstream.pass_request_body),
-      NULL },
-
     { ngx_string("scgi_intercept_errors"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
@@ -1505,13 +1498,6 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_size_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, upstream.temp_file_write_size_conf),
-      NULL },
-
-    { ngx_string("scgi_var"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE2,
-      ngx_scgi_set_keyval_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, vars_source),
       NULL },
 
     { ngx_string("scgi_hide_header"),
