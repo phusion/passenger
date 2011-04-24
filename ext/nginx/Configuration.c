@@ -319,6 +319,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.intercept_errors = NGX_CONF_UNSET;
 
     conf->upstream_config.cyclic_temp_file = 0;
+    conf->upstream_config.change_buffering = 1;
     
     #define DEFINE_VAR_TO_PASS(header_name, var_name) \
         kv = ngx_array_push(conf->vars_source);       \
