@@ -104,6 +104,7 @@ int stringToInt(const StaticString &str);
  * Converts the given hexadecimal string to an unsigned long long integer.
  */
 unsigned long long hexToULL(const StaticString &str);
+unsigned int hexToUint(const StaticString &str);
 
 /**
  * Converts the given hexatridecimal (base 36) string to an unsigned long long integer.

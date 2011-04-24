@@ -419,7 +419,7 @@ namespace tut {
 		ensure(strcmp(buf, "1ljj") == 0);
 	}
 	
-	/***** Test hexToULL() and hexatriToULL() *****/
+	/***** Test hexToULL(), hexToUint() and hexatriToULL() *****/
 	
 	TEST_METHOD(49) {
 		ensure_equals(hexToULL(""), 0ull);
@@ -436,6 +436,21 @@ namespace tut {
 		ensure_equals(hexToULL("dEaDbEeF"), 3735928559ull);
 		ensure_equals(hexToULL("09a2s89"), 2466ull);
 		ensure_equals(hexToULL(" 9a2s89"), 0ull);
+		
+		ensure_equals(hexToUint(""), 0u);
+		ensure_equals(hexToUint("   "), 0u);
+		ensure_equals(hexToUint("1"), 1u);
+		ensure_equals(hexToUint("9"), 9u);
+		ensure_equals(hexToUint("a"), 10u);
+		ensure_equals(hexToUint("B"), 11u);
+		ensure_equals(hexToUint("1234"), 4660u);
+		ensure_equals(hexToUint("1a6b"), 6763u);
+		ensure_equals(hexToUint("1A6B"), 6763u);
+		ensure_equals(hexToUint("1a6B"), 6763u);
+		ensure_equals(hexToUint("deadbeef"), 3735928559u);
+		ensure_equals(hexToUint("dEaDbEeF"), 3735928559u);
+		ensure_equals(hexToUint("09a2s89"), 2466u);
+		ensure_equals(hexToUint(" 9a2s89"), 0u);
 		
 		ensure_equals(hexatriToULL(""), 0ull);
 		ensure_equals(hexatriToULL("   "), 0ull);

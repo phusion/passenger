@@ -195,14 +195,16 @@ stringToInt(const StaticString &str) {
 	return stringToSignedNumeric<int>(str);
 }
 
-unsigned long long
-hexToULL(const StaticString &hex) {
-	unsigned long long result = 0;
-	string::size_type i = 0;
+template<typename Numeric>
+static Numeric
+hexToUnsignedNumeric(const StaticString &hex) {
+	const char *pos = hex.data();
+	const char *end = hex.data() + hex.size();
+	Numeric result = 0;
 	bool done = false;
 	
-	while (i < hex.size() && !done) {
-		char c = hex[i];
+	while (pos < end && !done) {
+		char c = *pos;
 		if (c >= '0' && c <= '9') {
 			result *= 16;
 			result += c - '0';
@@ -215,9 +217,19 @@ hexToULL(const StaticString &hex) {
 		} else {
 			done = true;
 		}
-		i++;
+		pos++;
 	}
 	return result;
+}
+
+unsigned long long
+hexToULL(const StaticString &hex) {
+	return hexToUnsignedNumeric<unsigned long long>(hex);
+}
+
+unsigned int
+hexToUint(const StaticString &hex) {
+	return hexToUnsignedNumeric<unsigned int>(hex);
 }
 
 unsigned long long
