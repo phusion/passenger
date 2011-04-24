@@ -128,6 +128,9 @@ TEST_CXX_OBJECTS = {
 	'test/cxx/HttpStatusExtractorTest.o' => %w(
 		test/cxx/HttpStatusExtractorTest.cpp
 		ext/nginx/HttpStatusExtractor.h),
+	'test/cxx/DechunkerTest.o' => %w(
+		test/cxx/DechunkerTest.cpp
+		ext/common/Utils/Dechunker.h),
 	'test/cxx/LoggingTest.o' => %w(
 		test/cxx/LoggingTest.cpp
 		ext/common/LoggingAgent/LoggingServer.h
