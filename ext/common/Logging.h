@@ -42,6 +42,7 @@
 #include <sstream>
 #include <cstdio>
 #include <ctime>
+#include <cerrno>
 
 #include "RandomGenerator.h"
 #include "FileDescriptor.h"
