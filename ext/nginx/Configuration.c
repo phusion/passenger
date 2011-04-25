@@ -41,12 +41,12 @@
 
 static ngx_str_t headers_to_hide[] = {
     /* NOTE: Do not hide the "Status" header; some broken HTTP clients
-     * expect this header. See http://tinyurl.com/87rezm
+     * expect this header. http://code.google.com/p/phusion-passenger/issues/detail?id=177
      */
     ngx_string("X-Accel-Expires"),
     ngx_string("X-Accel-Redirect"),
     ngx_string("X-Accel-Limit-Rate"),
-    ngx_string("X-Accel-Buffer"),
+    ngx_string("X-Accel-Buffering"),
     ngx_null_string
 };
 
