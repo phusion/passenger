@@ -63,14 +63,22 @@
  *    The maximum supported needle size depends on the definition of sbmh_size_t. See
  *    its typedef for more information.
  *
- * 2. Initialize the structure with sbmh_init(). This structure is now usable for
+ *    This structure contains haystack search state information and callback
+ *    information. The section 'Reuse' explains why this is important.
+ *
+ * 2. Allocate a StreamBMH_Occ structure somewhere.
+ *    This structure contains the Boyer-Moore-Horspool occurrance table. The secion
+ *    'Reuse' explains why this is important.
+ *
+ * 3. Initialize both structures with sbmh_init(). The structures are now usable for
  *    searching the given needle, and only the given needle.
  *    You must ensure that the StreamBMH structure has at least SBMH_SIZE(needle_len)
  *    bytes of space, otherwise sbmh_init() will overwrite too much memory.
  *    sbmh_init() does NOT make a copy of the needle data.
  *
- * 3. Feed haystack data using sbmh_feed(). You must pass it the same needle that you
- *    passed to sbmh_init(). We do not store a pointer to the needle passed to
+ * 4. Feed haystack data using sbmh_feed(). You must pass it the same needle that you
+ *    passed to sbmh_init(), and the same StreamBMH and StreamBMH_Occ structures.
+ *    This library does not store a pointer to the needle passed to
  *    sbmh_init() for memory efficiency reasons: the caller already has a pointer
  *    to the needle data so there's no need for us to store it.
  *
@@ -85,7 +93,11 @@
  *    - If the needle was already found, then any additional call to sbmh_feed()
  *      will cause it to return 0: nothing in the fed data is analyzed.
  *
- * There's no need deinitialize the StreamBMH structure. Just free its memory.
+ * There's no need deinitialize the StreamBMH/StreamBMH_Occ structures. Just free their
+ * memory.
+ *
+ *
+ * == Convenience
  *
  * There's a convenience macro, SBMH_ALLOC_AND_INIT(), for combining steps 1 and 2.
  * It accepts a NULL-terminated needle and allocates the StreamBMH structure using
@@ -100,17 +112,35 @@
  *   free(ctx);
  *
  *
- * == Reuse
+ * == Reusing: finding the same needle in a different haystack
  *
- * You can reuse the StreamBMH structure for finding the same needle in a different
- * haystack. Call sbmh_reset() to reset all of its internal state except for the
- * Boyer-Moore-Horspool occurance table which contains needle-specific preparation data.
+ * You can reuse the StreamBMH structure and the StreamBMH_Occ structure for
+ * finding the same needle in a different haystack.
+ *
+ * StreamBMH contains the haystack search state. It must be reset every time
+ * you want to search in a new haystack. Call sbmh_reset() to do so.
+ *
+ * The StreamBMH_Occ structure must not be changed because it only contains
+ * needle-specific preparation data, not haystack-specific state. You can
+ * just reuse the old StreamBMH_Occ structure.
+ *
  * You can then call sbmh_feed() to analyze haystack data.
  *
- * You can reuse an existing StreamBMH structure for finding a *different* needle
- * as well. Call sbmh_init() to re-initialize it for use with a different needle.
+ *
+ * == Reusing: finding a different needle
+ *
+ * You can reuse an existing StreamBMH/StreamBMH_Occ structure for finding a
+ * *different* needle as well. Call sbmh_init() to re-initialize both structures
+ * for use with a different needle.
  * However you must make sure that the StreamBMH structure is at least
  * SBMH_SIZE(new_needle_len) bytes big.
+ *
+ *
+ * == Multithreading
+ *
+ * Once initialized, it is safe to share a StreamBMH_Occ structure and the
+ * needle among multiple threads as long as they don't modify either of these.
+ * Each thread must however have its own StreamBMH structure.
  *
  *
  * == Recognition of non-needle data
@@ -187,6 +217,10 @@ typedef unsigned char sbmh_size_t;
 
 typedef void (*sbmh_data_cb)(const struct StreamBMH *ctx, const unsigned char *data, size_t len);
 
+struct StreamBMH_Occ {
+	sbmh_size_t occ[256];
+};
+
 struct StreamBMH {
 	/***** Public but read-only fields *****/
 	bool          found;
@@ -197,7 +231,6 @@ struct StreamBMH {
 	
 	/***** Internal fields, do not access. *****/
 	sbmh_size_t   lookbehind_size;
-	sbmh_size_t   occ[256];
 	// Algorithm uses at most needle_len - 1 bytes of space in lookbehind buffer.
 	unsigned char lookbehind[];
 };
@@ -231,28 +264,33 @@ sbmh_reset(struct StreamBMH *restrict ctx) {
 }
 
 inline void
-sbmh_init(struct StreamBMH *restrict ctx, const unsigned char *restrict needle,
-	sbmh_size_t needle_len)
+sbmh_init(struct StreamBMH *restrict ctx, struct StreamBMH_Occ *restrict occ,
+	const unsigned char *restrict needle, sbmh_size_t needle_len)
 {
 	sbmh_size_t i;
 	unsigned int j;
 	
-	assert(needle_len > 0);
-	sbmh_reset(ctx);
-	ctx->callback = NULL;
-	ctx->user_data = NULL;
-	
-	/* Initialize occurrance table. */
-	for (j = 0; j < 256; j++) {
-		ctx->occ[j] = needle_len;
+	if (ctx != NULL) {
+		sbmh_reset(ctx);
+		ctx->callback = NULL;
+		ctx->user_data = NULL;
 	}
 	
-	/* Populate occurance table with analysis of the needle,
-	 * ignoring last letter.
-	 */
-	if (needle_len >= 1) {
-		for (i = 0; i < needle_len - 1; i++) {
-			ctx->occ[needle[i]] = needle_len - 1 - i;
+	if (occ != NULL) {
+		assert(needle_len > 0);
+		
+		/* Initialize occurrance table. */
+		for (j = 0; j < 256; j++) {
+			occ->occ[j] = needle_len;
+		}
+		
+		/* Populate occurance table with analysis of the needle,
+		 * ignoring last letter.
+		 */
+		if (needle_len >= 1) {
+			for (i = 0; i < needle_len - 1; i++) {
+				occ->occ[needle[i]] = needle_len - 1 - i;
+			}
 		}
 	}
 }
@@ -270,7 +308,8 @@ sbmh_lookup_char(const struct StreamBMH *restrict ctx,
 
 inline bool
 sbmh_memcmp(const struct StreamBMH *restrict ctx,
-	const unsigned char *restrict needle, const unsigned char *restrict data,
+	const unsigned char *restrict needle,
+	const unsigned char *restrict data,
 	ssize_t pos, sbmh_size_t len)
 {
 	ssize_t i = 0;
@@ -289,7 +328,7 @@ sbmh_memcmp(const struct StreamBMH *restrict ctx,
 }
 
 inline size_t
-sbmh_feed(struct StreamBMH *restrict ctx,
+sbmh_feed(struct StreamBMH *restrict ctx, const struct StreamBMH_Occ *restrict occtable,
 	const unsigned char *restrict needle, sbmh_size_t needle_len,
 	const unsigned char *restrict data, size_t len)
 {
@@ -306,7 +345,7 @@ sbmh_feed(struct StreamBMH *restrict ctx,
 	 */
 	ssize_t pos = -ctx->lookbehind_size;
 	unsigned char last_needle_char = needle[needle_len - 1];
-	const sbmh_size_t *occ = ctx->occ;
+	const sbmh_size_t *occ = occtable->occ;
 	
 	if (pos < 0) {
 		SBMH_DEBUG2("[sbmh] considering lookbehind: (%s)(%s)\n",
@@ -342,7 +381,7 @@ sbmh_feed(struct StreamBMH *restrict ctx,
 					int(pos + needle_len));
 				return pos + needle_len;
 			} else {
-				pos += ctx->occ[ch];
+				pos += occ[ch];
 			}
 		}
 		
