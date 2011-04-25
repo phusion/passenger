@@ -452,8 +452,8 @@ module Dependencies # :nodoc: all
 	Curl_Dev = Dependency.new do |dep|
 		dep.name = "Curl development headers with SSL support"
 		dep.define_checker do |result|
-			source_file = '/tmp/passenger-curl-check.c'
-			output_file = '/tmp/passenger-curl-check'
+			source_file = "#{PlatformInfo.tmpexedir}/passenger-curl-check.c"
+			output_file = "#{PlatformInfo.tmpexedir}/passenger-curl-check"
 			begin
 				found = true
 				File.open(source_file, 'w') do |f|
@@ -510,8 +510,8 @@ module Dependencies # :nodoc: all
 	OpenSSL_Dev = Dependency.new do |dep|
 		dep.name = "OpenSSL development headers"
 		dep.define_checker do |result|
-			source_file = '/tmp/passenger-openssl-check.c'
-			object_file = '/tmp/passenger-openssl-check.o'
+			source_file = "#{PlatformInfo.tmpexedir}/passenger-openssl-check.c"
+			object_file = "#{PlatformInfo.tmpexedir}/passenger-openssl-check.o"
 			begin
 				File.open(source_file, 'w') do |f|
 					f.write("#include <openssl/ssl.h>")
@@ -542,20 +542,22 @@ module Dependencies # :nodoc: all
 	Zlib_Dev = Dependency.new do |dep|
 		dep.name = "Zlib development headers"
 		dep.define_checker do |result|
+			source_file = "#{PlatformInfo.tmpexedir}/zlib-check.c"
+			object_file = "#{PlatformInfo.tmpexedir}/zlib-check.o"
 			begin
-				File.open('/tmp/r8ee-check.c', 'w') do |f|
+				File.open(source_file, 'w') do |f|
 					f.write("#include <zlib.h>")
 				end
-				Dir.chdir('/tmp') do
-					if system("(g++ -c r8ee-check.c) >/dev/null 2>/dev/null")
+				Dir.chdir(File.dirname(source_file)) do
+					if system("(g++ -c zlib-check.c) >/dev/null 2>/dev/null")
 						result.found
 					else
 						result.not_found
 					end
 				end
 			ensure
-				File.unlink('/tmp/r8ee-check.c') rescue nil
-				File.unlink('/tmp/r8ee-check.o') rescue nil
+				File.unlink(source_file) rescue nil
+				File.unlink(object_file) rescue nil
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
@@ -569,23 +571,6 @@ module Dependencies # :nodoc: all
 			end
 		end
 		dep.website = "http://www.zlib.net/"
-	end
-	
-	File_Tail = Dependency.new do |dep|
-		dep.name = "file-tail"
-		dep.define_checker do |result|
-			begin
-				begin
-					require 'rubygems'
-				rescue LoadError
-				end
-				require 'file/tail'
-				result.found
-			rescue LoadError
-				result.not_found
-			end
-		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install file-tail</b>"
 	end
 	
 	Daemon_Controller = Dependency.new do |dep|

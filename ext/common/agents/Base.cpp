@@ -52,11 +52,10 @@ static const char digits[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
 };
 
-// Pre-allocate some static memory for use in signal handlers in case the stack isn't usable.
-static char messageBuf[1024];
-#ifdef LIBC_HAS_BACKTRACE_FUNC
-	static void *backtraceStore[512];
-#endif
+// Pre-allocate an alternative stack for use in signal handlers in case
+// the normal stack isn't usable.
+static char *alternativeStack;
+static unsigned int alternativeStackSize;
 
 static void
 ignoreSigpipe() {
@@ -117,6 +116,27 @@ appendULL(char *buf, unsigned long long value) {
 	return buf + size;
 }
 
+static char *
+appendSignalName(char *buf, int signo) {
+	switch (signo) {
+	case SIGABRT:
+		buf = appendText(buf, "SIGABRT");
+		break;
+	case SIGSEGV:
+		buf = appendText(buf, "SIGSEGV");
+		break;
+	case SIGBUS:
+		buf = appendText(buf, "SIGBUS");
+		break;
+	default:
+		return appendULL(buf, (unsigned long long) signo);
+	}
+	buf = appendText(buf, "(");
+	buf = appendULL(buf, (unsigned long long) signo);
+	buf = appendText(buf, ")");
+	return buf;
+}
+
 #define SI_CODE_HANDLER(name) \
 	case name: \
 		buf = appendText(buf, #name); \
@@ -125,6 +145,8 @@ appendULL(char *buf, unsigned long long value) {
 // Must be async signal safe.
 static char *
 appendSignalReason(char *buf, siginfo_t *info) {
+	bool handled = true;
+	
 	switch (info->si_code) {
 	SI_CODE_HANDLER(SI_USER);
 	#ifdef SI_KERNEL
@@ -132,8 +154,12 @@ appendSignalReason(char *buf, siginfo_t *info) {
 	#endif
 	SI_CODE_HANDLER(SI_QUEUE);
 	SI_CODE_HANDLER(SI_TIMER);
-	SI_CODE_HANDLER(SI_ASYNCIO);
-	SI_CODE_HANDLER(SI_MESGQ);
+	#ifdef SI_ASYNCIO
+		SI_CODE_HANDLER(SI_ASYNCIO);
+	#endif
+	#ifdef SI_MESGQ
+		SI_CODE_HANDLER(SI_MESGQ);
+	#endif
 	#ifdef SI_SIGIO
 		SI_CODE_HANDLER(SI_SIGIO);
 	#endif
@@ -141,8 +167,31 @@ appendSignalReason(char *buf, siginfo_t *info) {
 		SI_CODE_HANDLER(SI_TKILL);
 	#endif
 	default:
-		buf = appendText(buf, "#");
-		buf = appendULL(buf, (unsigned long long) info->si_code);
+		switch (info->si_signo) {
+		case SIGSEGV:
+			switch (info->si_code) {
+			SI_CODE_HANDLER(SEGV_MAPERR);
+			SI_CODE_HANDLER(SEGV_ACCERR);
+			default:
+				handled = false;
+				break;
+			}
+			break;
+		case SIGBUS:
+			switch (info->si_code) {
+			SI_CODE_HANDLER(BUS_ADRALN);
+			SI_CODE_HANDLER(BUS_ADRERR);
+			SI_CODE_HANDLER(BUS_OBJERR);
+			default:
+				handled = false;
+				break;
+			}
+			break;
+		};
+		if (!handled) {
+			buf = appendText(buf, "#");
+			buf = appendULL(buf, (unsigned long long) info->si_code);
+		}
 		break;
 	}
 	
@@ -159,6 +208,11 @@ appendSignalReason(char *buf, siginfo_t *info) {
 static void
 abortHandler(int signo, siginfo_t *info, void *ctx) {
 	pid_t pid = getpid();
+	char messageBuf[1024];
+	#ifdef LIBC_HAS_BACKTRACE_FUNC
+		void *backtraceStore[512];
+		backtraceStore[0] = '\0'; // Don't let gdb print uninitialized contents.
+	#endif
 	
 	char *end = messageBuf;
 	end = appendText(end, "[ pid=");
@@ -166,7 +220,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	end = appendText(end, ", timestamp=");
 	end = appendULL(end, (unsigned long long) time(NULL));
 	end = appendText(end, " ] Process aborted! signo=");
-	end = appendULL(end, (unsigned long long) signo);
+	end = appendSignalName(end, signo);
 	end = appendText(end, ", reason=");
 	end = appendSignalReason(end, info);
 	
@@ -181,9 +235,11 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	write(STDERR_FILENO, messageBuf, end - messageBuf);
 	
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
-		/* For some reason, it would appear that the ABRT signal
-		 * handler has a deadline on some systems: the process will
+		/* For some reason, it would appear that fatal signal
+		 * handlers have a deadline on some systems: the process will
 		 * be killed if the signal handler doesn't finish in time.
+		 * This killing appears to be triggered at some system calls,
+		 * including but not limited to nanosleep().
 		 * backtrace() might be slow and running crash-watch is
 		 * definitely slow, so we do our work in a child process
 		 * in order not to be affected by the deadline. But preferably
@@ -226,16 +282,39 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	#endif
 	
 	// Run default signal handler.
-	kill(getpid(), SIGABRT);
+	kill(getpid(), signo);
 }
 
 static void
 installAbortHandler() {
+	alternativeStackSize = MINSIGSTKSZ + 64 * 1024;
+	alternativeStack = (char *) malloc(alternativeStackSize);
+	if (alternativeStack == NULL) {
+		fprintf(stderr, "Cannot allocate an alternative with a size of %u bytes!\n",
+			alternativeStackSize);
+		fflush(stderr);
+		abort();
+	}
+	
+	stack_t stack;
+	stack.ss_sp = alternativeStack;
+	stack.ss_size = alternativeStackSize;
+	stack.ss_flags = 0;
+	if (sigaltstack(&stack, NULL) != 0) {
+		int e = errno;
+		fprintf(stderr, "Cannot install an alternative stack for use in signal handlers: %s (%d)\n",
+			strerror(e), e);
+		fflush(stderr);
+		abort();
+	}
+	
 	struct sigaction action;
 	action.sa_sigaction = abortHandler;
 	action.sa_flags = SA_RESETHAND | SA_SIGINFO;
 	sigemptyset(&action.sa_mask);
 	sigaction(SIGABRT, &action, NULL);
+	sigaction(SIGSEGV, &action, NULL);
+	sigaction(SIGBUS, &action, NULL);
 }
 
 bool

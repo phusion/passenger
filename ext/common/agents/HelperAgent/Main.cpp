@@ -28,8 +28,9 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <cstring>
+#include <cassert>
+#include <cerrno>
 #include <unistd.h>
-#include <errno.h>
 #include <limits.h>
 #include <pwd.h>
 #include <grp.h>
@@ -63,6 +64,9 @@
 #include <Utils.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
+#include <Utils/Dechunker.h>
+#include <Utils/HttpHeaderBufferer.h>
+#include <Utils/StreamBoyerMooreHorspool.h>
 
 using namespace boost;
 using namespace oxt;
@@ -153,6 +157,11 @@ private:
 	 */
 	Timer inactivityTimer;
 	
+	int currentClient;
+	HttpHeaderBufferer headerBufferer;
+	struct StreamBMH *statusFinder;
+	struct StreamBMH *transferEncodingFinder;
+	
 	class EnvironmentVariablesStringListCreator: public StringListCreator {
 	public:
 		StaticString data;
@@ -177,6 +186,254 @@ private:
 			return items;
 		}
 	};
+	
+	/** Given a substring containing the start of the header value,
+	 * extracts the substring that contains a single header value.
+	 *
+	 *   const char *data =
+	 *      "Status: 200 OK\r\n"
+	 *      "Foo: bar\r\n";
+	 *   extractHeaderValue(data + strlen("Status:"), strlen(data) - strlen("Status:"));
+	 *      // "200 OK"
+	 */
+	static StaticString extractHeaderValue(const char *data, size_t size) {
+		const char *start = data;
+		const char *end   = data + size;
+		const char *terminator;
+		
+		while (start < end && *start == ' ') {
+			start++;
+		}
+		
+		terminator = (const char *) memchr(start, '\r', end - start);
+		if (terminator == NULL) {
+			return StaticString();
+		} else {
+			return StaticString(start, terminator - start);
+		}
+	}
+	
+	StaticString extractAndSanitizeHttpStatus(const StaticString &header, char buf[32]) {
+		StaticString status;
+		size_t accepted;
+		
+		sbmh_reset(statusFinder);
+		accepted = sbmh_feed(statusFinder,
+			(const unsigned char *) "Status:",
+			sizeof("Status:") - 1,
+			(const unsigned char *) header.data(),
+			header.size());
+		if (statusFinder->found) {
+			status = extractHeaderValue(header.data() + accepted,
+				header.size() - accepted);
+			if (status.find(' ') == string::npos) {
+				int code = stringToInt(status);
+				switch (code) {
+				case 100:
+					status = "100 Continue";
+					break;
+				case 101:
+					status = "101 Switching Protocols";
+					break;
+				case 102:
+					status = "102 Processing";
+					break;
+				case 200:
+					status = "200 OK";
+					break;
+				case 201:
+					status = "201 Created";
+					break;
+				case 202:
+					status = "202 Accepted";
+					break;
+				case 203:
+					status = "203 Non-Authoritative Information";
+					break;
+				case 204:
+					status = "204 No Content";
+					break;
+				case 205:
+					status = "205 Reset Content";
+					break;
+				case 206:
+					status = "206 Partial Content";
+					break;
+				case 207:
+					status = "207 Multi-Status";
+					break;
+				case 300:
+					status = "300 Multiple Choices";
+					break;
+				case 301:
+					status = "301 Moved Permanently";
+					break;
+				case 302:
+					status = "302 Found";
+					break;
+				case 303:
+					status = "303 See Other";
+					break;
+				case 304:
+					status = "304 Not Modified";
+					break;
+				case 305:
+					status = "305 Use Proxy";
+					break;
+				case 306:
+					status = "306 Switch Proxy";
+					break;
+				case 307:
+					status = "307 Temporary Redirect";
+					break;
+				case 308:
+					// Google Gears: http://code.google.com/p/gears/wiki/ResumableHttpRequestsProposal
+					status = "308 Resume Incomplete";
+					break;
+				case 400:
+					status = "400 Bad Request";
+					break;
+				case 401:
+					status = "401 Unauthorized";
+					break;
+				case 402:
+					status = "402 Payment Required";
+					break;
+				case 403:
+					status = "403 Forbidden";
+					break;
+				case 404:
+					status = "404 Not Found";
+					break;
+				case 405:
+					status = "405 Method Not Allowed";
+					break;
+				case 406:
+					status = "406 Not Acceptable";
+					break;
+				case 407:
+					status = "407 Proxy Authentication Required";
+					break;
+				case 408:
+					status = "408 Request Timeout";
+					break;
+				case 409:
+					status = "409 Conflict";
+					break;
+				case 410:
+					status = "410 Gone";
+					break;
+				case 411:
+					status = "411 Length Required";
+					break;
+				case 412:
+					status = "412 Precondition Failed";
+					break;
+				case 413:
+					status = "413 Request Entity Too Large";
+					break;
+				case 414:
+					status = "414 Request-URI Too Long";
+					break;
+				case 415:
+					status = "415 Unsupported Media Type";
+					break;
+				case 416:
+					status = "416 Requested Range Not Satisfiable";
+					break;
+				case 417:
+					status = "417 Expectation Failed";
+					break;
+				case 418:
+					status = "418 Not A Funny April Fools Joke";
+					break;
+				case 422:
+					status = "422 Unprocessable Entity";
+					break;
+				case 423:
+					status = "423 Locked";
+					break;
+				case 424:
+					status = "424 Unordered Collection";
+					break;
+				case 426:
+					status = "426 Upgrade Required";
+					break;
+				case 449:
+					status = "449 Retry With";
+					break;
+				case 450:
+					status = "450 Blocked";
+					break;
+				case 500:
+					status = "500 Internal Server Error";
+					break;
+				case 501:
+					status = "501 Not Implemented";
+					break;
+				case 502:
+					status = "502 Bad Gateway";
+					break;
+				case 503:
+					status = "503 Service Unavailable";
+					break;
+				case 504:
+					status = "504 Gateway Timeout";
+					break;
+				case 505:
+					status = "505 HTTP Version Not Supported";
+					break;
+				case 506:
+					status = "506 Variant Also Negotiates";
+					break;
+				case 507:
+					status = "507 Insufficient Storage";
+					break;
+				case 509:
+					status = "509 Bandwidth Limit Exceeded";
+					break;
+				case 510:
+					status = "510 Not Extended";
+					break;
+				default:
+					snprintf(buf, 32,
+						"%d Unknown Status Code",
+						code);
+					buf[31] = '\0';
+					status = buf;
+				}
+			}
+		} else {
+			status = "200 OK";
+		}
+		
+		return status;
+	}
+	
+	bool detectChunkedTransferEncodingAndRemoveHeader(const StaticString &header) {
+		size_t accepted;
+		
+		sbmh_reset(transferEncodingFinder);
+		accepted = sbmh_feed(transferEncodingFinder,
+			(const unsigned char *) "Transfer-Encoding:",
+			sizeof("Transfer-Encoding:") - 1,
+			(const unsigned char *) header.data(),
+			header.size());
+		if (transferEncodingFinder->found) {
+			StaticString value = extractHeaderValue(header.data() + accepted,
+				header.size() - accepted);
+			if (value == "chunked") {
+				// Remove Transfer-Encoding header.
+				char *tmp = (char *) (header.data() + accepted - 2);
+				*tmp = '_';
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
 	
 	/**
 	 * Attempts to accept a connection made by the client.
@@ -342,57 +599,121 @@ private:
 	 *                                     before we were able to send back the
 	 *                                     full response.
 	 */
-	void forwardResponse(SessionPtr &session, bool printStatusLine, FileDescriptor &clientFd) {
+	void forwardResponse(SessionPtr &session, bool printStatusLine, FileDescriptor &clientFd,
+		const AnalyticsLogPtr &log)
+	{
 		TRACE_POINT();
 		HttpStatusExtractor ex;
 		int stream = session->getStream();
 		int eof = false;
-		char buf[1024 * 32];
+		char buf[1024 * 24];
+		size_t accepted;
 		ssize_t size;
+		bool chunked = false;
+		Dechunker dechunker;
 		
-		/* Read data from the backend process until we're able to
-		 * extract the HTTP status line from it.
+		currentClient = clientFd;
+		
+		/* Read data from the backend process until we
+		 * have at least an entire response header, or
+		 * until some error occurred.
 		 */
-		while (printStatusLine && !eof) {
+		headerBufferer.reset();
+		while (!eof && headerBufferer.acceptingInput()) {
 			UPDATE_TRACE_POINT();
 			size = syscalls::read(stream, buf, sizeof(buf));
 			if (size == 0) {
 				eof = true;
 			} else if (size == -1) {
 				throw SystemException("Cannot read response from backend process", errno);
-			} else if (ex.feed(buf, size)) {
-				/* We now have an HTTP status line. Send back
-				 * a proper HTTP response, then exit this while
-				 * loop and continue with forwarding the rest
-				 * of the response data.
-				 */
-				UPDATE_TRACE_POINT();
-				try {
-					unsigned int statusLineSize =
-						sizeof("HTTP/1.1 ") - 1
-						+ ex.getStatusLine().size();
-					char statusLine[statusLineSize];
-					memcpy(statusLine, "HTTP/1.1 ", sizeof("HTTP/1.1 ") - 1);
-					memcpy(statusLine + sizeof("HTTP/1.1 ") - 1,
-						ex.getStatusLine().c_str(),
-						ex.getStatusLine().size());
-					
-					StaticString input[] = {
-						StaticString(statusLine, statusLineSize),
-						ex.getData()
-					};
-					gatheredWrite(clientFd, input, 2);
-					break;
-				} catch (const SystemException &e) {
-					if (e.code() == EPIPE) {
-						throw ClientDisconnectedException();
-					} else {
-						throw;
-					}
-				}
+			} else {
+				accepted = headerBufferer.feed(buf, size);
 			}
 		}
 		
+		/* Now process the response header as well as whatever part of the
+		 * response body we've already received.
+		 */
+		if (!headerBufferer.acceptingInput() && !headerBufferer.hasError()) {
+			UPDATE_TRACE_POINT();
+			assert(!eof);
+			StaticString headerData = headerBufferer.getData();
+			StaticString nonHeaderData(buf + accepted, size - accepted);
+			StaticString status;
+			char statusTmp[32];
+			
+			status = extractAndSanitizeHttpStatus(headerData, statusTmp);
+			/* Nginx's proxy_module doesn't support HTTP 1.1 chunked
+			 * transfer encoding so we need to strip that header and
+			 * dechunk the data before passing to Nginx.
+			 */
+			chunked = detectChunkedTransferEncodingAndRemoveHeader(headerData);
+			
+			if (!log->isNull()) {
+				UPDATE_TRACE_POINT();
+				log->message("Status: " + status);
+			}
+			
+			UPDATE_TRACE_POINT();
+			
+			StaticString parts[6];
+			unsigned int nparts = 0;
+			
+			if (printStatusLine) {
+				parts[nparts++] = "HTTP/1.1 ";
+				parts[nparts++] = status;
+				parts[nparts++] = "\r\n";
+			}
+			if (chunked) {
+				P_TRACE(2, "Chunked response detected");
+				// Disable Nginx response buffering.
+				parts[nparts++] = "X-Accel-Buffering: no\r\n";
+			}
+			parts[nparts++] = headerData;
+			if (!chunked) {
+				// If the response doesn't have the chunked transfer encoding
+				// then forward the beginning of the response body as-in.
+				// Otherwise we have to filter it through the dechunker.
+				parts[nparts++] = nonHeaderData;
+			}
+			
+			try {
+				gatheredWrite(clientFd, parts, nparts);
+			} catch (const SystemException &e) {
+				if (e.code() == EPIPE) {
+					throw ClientDisconnectedException();
+				} else {
+					throw;
+				}
+			}
+			
+			if (chunked) {
+				dechunker.onData = forwardResponseChunk;
+				dechunker.userData = this;
+				dechunker.feed(nonHeaderData.data(), nonHeaderData.size());
+				if (dechunker.hasError()) {
+					P_ERROR("The backend process's chunked response is not valid (" <<
+						dechunker.getErrorMessage() << ")");
+					return;
+				}
+			}
+			
+		} else if (!headerBufferer.acceptingInput()) {
+			// Error: header too large.
+			assert(!eof);
+			assert(headerBufferer.hasError());
+			P_ERROR("The backend process's HTTP response header is too large. "
+				"For security reasons Phusion Passenger doesn't allow response "
+				"headers larger than 128 KB.");
+			return;
+			
+		} else {
+			// Error: incomplete header.
+			assert(eof);
+			return;
+		}
+		
+		/* Forward remaining response body. */
 		UPDATE_TRACE_POINT();
 		while (!eof) {
 			UPDATE_TRACE_POINT();
@@ -403,15 +724,33 @@ private:
 				throw SystemException("Cannot read response from backend process", errno);
 			} else {
 				UPDATE_TRACE_POINT();
-				try {
-					writeExact(clientFd, buf, size);
-				} catch (const SystemException &e) {
-					if (e.code() == EPIPE) {
-						throw ClientDisconnectedException();
-					} else {
-						throw;
+				if (chunked) {
+					dechunker.feed(buf, size);
+					if (dechunker.hasError()) {
+						P_ERROR("The backend process's chunked response is not valid (" <<
+							dechunker.getErrorMessage() << ")");
+						return;
 					}
+				} else {
+					forwardResponseChunk(buf, size, this);
 				}
+			}
+		}
+		
+		if (chunked && dechunker.acceptingInput()) {
+			P_WARN("The backend process's chunked response lacks a terminating chunk.");
+		}
+	}
+	
+	static void forwardResponseChunk(const char *data, size_t size, void *userData) {
+		Client *self = (Client *) userData;
+		try {
+			writeExact(self->currentClient, data, size);
+		} catch (const SystemException &e) {
+			if (e.code() == EPIPE) {
+				throw ClientDisconnectedException();
+			} else {
+				throw;
 			}
 		}
 	}
@@ -580,7 +919,7 @@ private:
 					session->getConnectPassword().size() + 1);
 				end += session->getConnectPassword().size() + 1;
 				
-				if (useUnionStation) {
+				if (!log->isNull()) {
 					memcpy(end, "PASSENGER_GROUP_NAME", sizeof("PASSENGER_GROUP_NAME"));
 					end += sizeof("PASSENGER_GROUP_NAME");
 					
@@ -622,8 +961,7 @@ private:
 					scope.success();
 				}
 				
-				
-				forwardResponse(session, shouldPrintStatusLine, clientFd);
+				forwardResponse(session, shouldPrintStatusLine, clientFd, log);
 				
 				requestProxyingScope.success();
 			} catch (const SpawnException &e) {
@@ -676,10 +1014,6 @@ private:
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
 			abort();
-		} catch (const std::exception &e) {
-			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
-				<< "   exception: " << e.what() << "\n"
-				<< "   backtrace: not available");
 		}
 	}
 	
@@ -707,8 +1041,14 @@ public:
 		this->defaultGroup = defaultGroup;
 		this->serverSocket = serverSocket;
 		this->analyticsLogger = logger;
+		
+		SBMH_ALLOC_AND_INIT(statusFinder,
+			"Status:");
+		SBMH_ALLOC_AND_INIT(transferEncodingFinder,
+			"Transfer-Encoding:");
+		
 		thr = new oxt::thread(
-			bind(&Client::threadMain, this),
+			boost::bind(&Client::threadMain, this),
 			"Client thread " + toString(number),
 			CLIENT_THREAD_STACK_SIZE
 		);
@@ -726,6 +1066,9 @@ public:
 			thr->interrupt_and_join();
 		}
 		delete thr;
+		
+		free(statusFinder);
+		free(transferEncodingFinder);
 	}
 	
 	oxt::thread *getThread() const {
@@ -937,8 +1280,11 @@ public:
 			messageServer->getSocketFilename().c_str(),
 			NULL);
 		
+		function<void ()> func = boost::bind(prestartWebApps,
+			resourceLocator,
+			options.get("prestart_urls"));
 		prestarterThread = ptr(new oxt::thread(
-			boost::bind(prestartWebApps, resourceLocator, options.get("prestart_urls"))
+			boost::bind(runAndPrintExceptions, func, true)
 		));
 	}
 	
@@ -970,8 +1316,9 @@ public:
 		TRACE_POINT();
 		
 		startClientHandlerThreads();
+		function<void ()> func = boost::bind(&MessageServer::mainLoop, messageServer.get());
 		messageServerThread = ptr(new oxt::thread(
-			boost::bind(&MessageServer::mainLoop, messageServer.get()),
+			boost::bind(runAndPrintExceptions, func, true),
 			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
 		));
 		

@@ -46,6 +46,11 @@ module PlatformInfo
 	end
 	memoize :gnu_make, true
 	
+	# Checks whether the compiler supports "-arch #{arch}".
+	def self.compiler_supports_architecture?(arch)
+		return try_compile(:c, '', "-arch #{arch}")
+	end
+	
 	def self.compiler_supports_visibility_flag?
 		return try_compile(:c, '', '-fvisibility=hidden')
 	end

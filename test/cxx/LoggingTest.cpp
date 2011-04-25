@@ -114,33 +114,6 @@ namespace tut {
 			}
 			return client;
 		}
-		
-		void setChangeNotifier(const ChangeNotifierPtr &notifier) {
-			server->setChangeNotifier(notifier);
-		}
-		
-		
-		class MyChangeNotifier: public ChangeNotifier {
-		public:
-			boost::mutex lock;
-			AtomicInt added;
-			set<DataStoreId> changes;
-			
-			MyChangeNotifier(struct ev_loop *loop)
-				: ChangeNotifier(loop)
-				{ }
-			
-			virtual void addClient(const FileDescriptor &fd) {
-				added = added + 1;
-			}
-		
-			virtual void changed(const DataStoreId &dataStoreId) {
-				lock_guard<boost::mutex> l(lock);
-				changes.insert(dataStoreId);
-			}
-		};
-		
-		typedef shared_ptr<MyChangeNotifier> MyChangeNotifierPtr;
 	};
 	
 	DEFINE_TEST_GROUP(LoggingTest);
@@ -555,53 +528,6 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(19) {
-		// getLastPos() works
-		SystemTime::forceAll(YESTERDAY);
-		
-		AnalyticsLogPtr log = logger->newTransaction("foobar");
-		log->message("hello world");
-		log->flushToDiskAfterClose(true);
-		log.reset();
-		
-		SystemTime::forceAll(TODAY);
-		
-		log = logger->newTransaction("foobar");
-		log->message("hello world");
-		log->flushToDiskAfterClose(true);
-		log.reset();
-		
-		stopLoggingServer(false);
-		
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
-		struct stat buf;
-		ensure_equals(stat(filename.c_str(), &buf), 0);
-		string lastPos = server->getLastPos("foobar", "localhost", "requests");
-		ensure_equals(lastPos, "2010/01/13/12/" + toString(buf.st_size));
-	}
-	
-	TEST_METHOD(20) {
-		// getLastPos() returns the empty string if log.txt or if one of
-		// the subdirectories are missing.
-		SystemTime::forceAll(YESTERDAY);
-		
-		AnalyticsLogPtr log = logger->newTransaction("foobar");
-		log->message("hello world");
-		log->flushToDiskAfterClose(true);
-		log.reset();
-		
-		stopLoggingServer(false);
-		
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
-		unlink(filename.c_str());
-		
-		string lastPos = server->getLastPos("foobar", "localhost", "requests");
-		ensure_equals(lastPos, "");
-		
-		lastPos = server->getLastPos("baz", "localhost", "requests");
-		ensure_equals(lastPos, "");
-	}
-	
 	TEST_METHOD(21) {
 		// The server temporarily buffers data in memory.
 		SystemTime::forceAll(YESTERDAY);
@@ -806,92 +732,7 @@ namespace tut {
 		ensure(log->isNull());
 	}
 	
-	TEST_METHOD(30) {
-		// The "watchChanges" command causes the server to detach the
-		// client and to pass it to the change notifier.
-		MyChangeNotifierPtr notifier(new MyChangeNotifier(eventLoop));
-		stopLoggingServer();
-		startLoggingServer(boost::bind(&LoggingTest::setChangeNotifier, this, notifier));
-		
-		vector<string> args;
-		MessageClient client = createConnection(false);
-		client.write("watchChanges", NULL, NULL);
-		ensure(client.read(args));
-		EVENTUALLY(1,
-			result = notifier->added == 1;
-		);
-		// MyChangeNotifier doesn't store the client file descriptor
-		// so should be closed.
-		ensure(!client.read(args));
-	}
-	
-	TEST_METHOD(31) {
-		// The server notifies the given ChangeNotifier with the
-		// appropriate changes whenever a log file sink is flushed.
-		MyChangeNotifierPtr notifier(new MyChangeNotifier(eventLoop));
-		stopLoggingServer();
-		startLoggingServer(boost::bind(&LoggingTest::setChangeNotifier, this, notifier));
-		
-		AnalyticsLogPtr log = logger->newTransaction("foo", "requests");
-		log->message("hello world");
-		log.reset();
-		
-		log = logger->newTransaction("bar", "requests");
-		log->message("hello world");
-		log.reset();
-		
-		SHOULD_NEVER_HAPPEN(100,
-			lock_guard<boost::mutex> l(notifier->lock);
-			result = !notifier->changes.empty();
-		);
-		
-		MessageChannel channel(logger->getConnection());
-		vector<string> args;
-		channel.write("flush", NULL);
-		ensure("(1)", channel.read(args));
-		
-		EVENTUALLY(1,
-			lock_guard<boost::mutex> l(notifier->lock);
-			result = notifier->changes.size() == 2;
-		);
-		unique_lock<boost::mutex> l(notifier->lock);
-		ensure("(2)",
-			notifier->changes.find(DataStoreId("foo", "localhost", "requests")) !=
-			notifier->changes.end());
-		ensure("(3)",
-			notifier->changes.find(DataStoreId("bar", "localhost", "requests")) !=
-			notifier->changes.end());
-		notifier->changes.clear();
-		l.unlock();
-		
-		
-		log = logger->newTransaction("baz", "exceptions");
-		log->message("hello world");
-		log.reset();
-		
-		channel.write("flush", NULL);
-		ensure("(4)", channel.read(args));
-		
-		log = logger->newTransaction("bazz", "exceptions");
-		log->message("hello world");
-		log.reset();
-		
-		EVENTUALLY(1,
-			lock_guard<boost::mutex> l(notifier->lock);
-			result = notifier->changes.size() == 1;
-		);
-		l.lock();
-		ensure("(5)",
-			notifier->changes.find(DataStoreId("baz", "localhost", "exceptions")) !=
-			notifier->changes.end());
-		l.unlock();
-		SHOULD_NEVER_HAPPEN(100,
-			lock_guard<boost::mutex> l(notifier->lock);
-			result = notifier->changes.size() != 1;
-		);
-	}
-	
-	TEST_METHOD(32) {
+	TEST_METHOD(29) {
 		// One can supply a custom node name per openTransaction command.
 		MessageClient client1 = createConnection();
 		vector<string> args;
@@ -910,7 +751,7 @@ namespace tut {
 		ensure(fileExists(filename));
 	}
 	
-	TEST_METHOD(33) {
+	TEST_METHOD(30) {
 		// A transaction is only written to the sink if it passes all given filters.
 		// Test logging of new transaction.
 		SystemTime::forceAll(YESTERDAY);

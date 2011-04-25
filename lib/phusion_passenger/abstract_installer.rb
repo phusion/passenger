@@ -68,6 +68,12 @@ class AbstractInstaller
 	rescue Abort
 		puts
 		return false
+	rescue PlatformInfo::RuntimeError => e
+		new_screen
+		puts "<red>An error occurred</red>"
+		puts
+		puts e.message
+		exit 1
 	ensure
 		after_install
 	end

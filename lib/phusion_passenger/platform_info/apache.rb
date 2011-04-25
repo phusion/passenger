@@ -212,13 +212,23 @@ module PlatformInfo
 			# (http://code.google.com/p/phusion-passenger/issues/detail?id=236)
 			output = `file "#{httpd}"`.strip
 			if output =~ /Mach-O fat file/ && output !~ /for architecture/
-				architectures = ["-arch i386 -arch ppc -arch x86_64 -arch ppc64"]
+				architectures = ["i386", "ppc", "x86_64", "ppc64"]
 			else
 				architectures = []
 				output.split("\n").grep(/for architecture/).each do |line|
 					line =~ /for architecture (.*?)\)/
-					architectures << "-arch #{$1}"
+					architectures << $1
 				end
+			end
+			# The compiler may not support all architectures in the binary.
+			# XCode 4 seems to have removed support for the PPC architecture
+			# even though there are still plenty of Apache binaries around
+			# containing PPC components.
+			architectures.reject! do |arch|
+				!compiler_supports_architecture?(arch)
+			end
+			architectures.map! do |arch|
+				"-arch #{arch}"
 			end
 			flags << architectures.compact.join(' ')
 		end
@@ -264,7 +274,7 @@ module PlatformInfo
 	# headers are placed into the same directory as the Apache headers,
 	# and so 'apr-config' and 'apu-config' won't be necessary in that case.
 	def self.apr_config_needed_for_building_apache_modules?
-		filename = File.join("/tmp/passenger-platform-check-#{Process.pid}.c")
+		filename = File.join("#{tmpexedir}/passenger-platform-check-#{Process.pid}.c")
 		File.open(filename, "w") do |f|
 			f.puts("#include <apr.h>")
 		end

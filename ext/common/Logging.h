@@ -42,6 +42,7 @@
 #include <sstream>
 #include <cstdio>
 #include <ctime>
+#include <cerrno>
 
 #include "RandomGenerator.h"
 #include "FileDescriptor.h"
@@ -550,7 +551,7 @@ public:
 			maxConnectTries = 1;
 		}
 		maxConnectTries   = 10;
-		reconnectTimeout  = 60 * 1000000;
+		reconnectTimeout  = 1000000;
 		nextReconnectTime = 0;
 	}
 	
@@ -649,7 +650,7 @@ public:
 				
 				// Failed to connect.
 				P_WARN("Cannot connect to the logging agent (" << serverAddress << "); " <<
-					"retrying in " << reconnectTimeout / 1000000 << " seconds.");
+					"retrying in " << reconnectTimeout / 1000000 << " second(s).");
 				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 			}
 		}
@@ -711,7 +712,7 @@ public:
 			
 			// Failed to connect.
 			P_WARN("Cannot connect to the logging agent (" << serverAddress << "); " <<
-				"retrying in " << reconnectTimeout / 1000000 << " seconds.");
+				"retrying in " << reconnectTimeout / 1000000 << " second(s).");
 			nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 		}
 		return ptr(new AnalyticsLog());

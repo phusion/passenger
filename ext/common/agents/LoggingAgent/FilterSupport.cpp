@@ -28,6 +28,8 @@
 
 using namespace Passenger;
 
+extern "C" {
+
 PassengerFilter *
 passenger_filter_create(const char *source, int size, char **error) {
 	if (size == -1) {
@@ -60,3 +62,5 @@ passenger_filter_validate(const char *source, int size) {
 		return strdup(e.what());
 	}
 }
+
+} // extern "C"

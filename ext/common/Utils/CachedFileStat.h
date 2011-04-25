@@ -34,11 +34,11 @@ extern "C" {
 
 /** C bindings for Passenger::CachedFileStat. */
 
-typedef struct CachedFileStat CachedFileStat;
+typedef void PassengerCachedFileStat;
 
-CachedFileStat *cached_file_stat_new(unsigned int max_size);
-void cached_file_stat_free(CachedFileStat *cstat);
-int  cached_file_stat_perform(CachedFileStat *cstat,
+PassengerCachedFileStat *cached_file_stat_new(unsigned int max_size);
+void cached_file_stat_free(PassengerCachedFileStat *cstat);
+int  cached_file_stat_perform(PassengerCachedFileStat *cstat,
                               const char *filename,
                               struct stat *buf,
                               unsigned int throttle_rate);

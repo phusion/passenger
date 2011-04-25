@@ -322,7 +322,7 @@ create_request(ngx_http_request_t *r)
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
     ngx_str_t                      escaped_uri;
-    ngx_str_t                     *union_station_filters;
+    ngx_str_t                     *union_station_filters = NULL;
     u_char                         min_instances_string[12];
     u_char                         framework_spawner_idle_time_string[12];
     u_char                         app_spawner_idle_time_string[12];

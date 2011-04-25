@@ -28,6 +28,7 @@
 #ifndef _PASSENGER_NGINX_STATIC_CONTENT_HANDLER_H_
 #define _PASSENGER_NGINX_STATIC_CONTENT_HANDLER_H_
 
+#include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
 

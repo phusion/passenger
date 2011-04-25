@@ -85,9 +85,10 @@ class AnalyticsLogger
 				yield
 			rescue Exception
 				error = true
+				is_closed = closed?
 				raise
 			ensure
-				end_measure(name, error)
+				end_measure(name, error) if !is_closed
 			end
 		end
 		
@@ -124,6 +125,16 @@ class AnalyticsLogger
 				@shared_data.unref
 				@shared_data = nil
 			end if @shared_data
+		end
+		
+		def closed?
+			if @shared_data
+				@shared_data.synchronize do
+					return !@shared_data.client.connected?
+				end
+			else
+				return nil
+			end
 		end
 	
 	private
@@ -168,7 +179,7 @@ class AnalyticsLogger
 		else
 			@max_connect_tries = 1
 		end
-		@reconnect_timeout = 60
+		@reconnect_timeout = 1
 		@next_reconnect_time = Time.utc(1980, 1, 1)
 	end
 	
@@ -234,7 +245,7 @@ class AnalyticsLogger
 				end
 				# Failed to connect.
 				DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
-					"retrying in #{@reconnect_timeout} seconds.")
+					"retrying in #{@reconnect_timeout} second(s).")
 				@next_reconnect_time = current_time + @reconnect_timeout
 			end
 			return Log.new
@@ -277,7 +288,7 @@ class AnalyticsLogger
 				end
 				# Failed to connect.
 				DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
-					"retrying in #{@reconnect_timeout} seconds.")
+					"retrying in #{@reconnect_timeout} second(s).")
 				@next_reconnect_time = current_time + @reconnect_timeout
 			end
 			return Log.new

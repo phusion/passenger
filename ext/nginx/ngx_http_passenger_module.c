@@ -49,12 +49,12 @@
 #define HELPER_SERVER_PASSWORD_SIZE     64
 
 
-static int      first_start = 1;
-ngx_str_t       passenger_schema_string;
-ngx_str_t       passenger_placeholder_upstream_address;
-CachedFileStat *passenger_stat_cache;
-AgentsStarter  *passenger_agents_starter = NULL;
-ngx_cycle_t    *passenger_current_cycle;
+static int               first_start = 1;
+ngx_str_t                passenger_schema_string;
+ngx_str_t                passenger_placeholder_upstream_address;
+PassengerCachedFileStat *passenger_stat_cache;
+AgentsStarter           *passenger_agents_starter = NULL;
+ngx_cycle_t             *passenger_current_cycle;
 
 
 /*
