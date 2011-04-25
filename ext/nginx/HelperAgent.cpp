@@ -45,7 +45,6 @@
 #include "oxt/system_calls.hpp"
 
 #include "ScgiRequestParser.h"
-#include "HttpStatusExtractor.h"
 
 #include "AgentBase.h"
 #include "HelperAgent/BacktracesServer.h"
@@ -585,7 +584,6 @@ private:
 		const AnalyticsLogPtr &log)
 	{
 		TRACE_POINT();
-		HttpStatusExtractor ex;
 		int stream = session->getStream();
 		int eof = false;
 		char buf[1024 * 24];
