@@ -267,10 +267,6 @@ private
 		return !@options[:daemonize] && @options[:log_file] != "/dev/null"
 	end
 	
-	def listening_on_unix_domain_socket?
-		return !!@options[:socket_file]
-	end
-	
 	# Returns the URL that Nginx will be listening on.
 	def listen_url
 		if @options[:socket_file]
