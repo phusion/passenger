@@ -138,6 +138,16 @@ map_uri_to_page_cache_file(ngx_http_request_t *r, ngx_str_t *public_dir,
         }
         end = ngx_copy(end, "index.html", sizeof("index.html"));
 
+    } else if (filename[filename_len - 1] == '/') {
+        /* if the filename ends with '/' check for filename + "index.html". */
+        
+        if (filename_len + sizeof("index.html") > page_cache_file->len) {
+            /* Page cache filename doesn't fit in the buffer. */
+            return 0;
+        }
+        
+        end = ngx_copy(page_cache_file->data, filename, filename_len);
+        end = ngx_copy(end, "index.html", sizeof("index.html"));
     } else {
         /* Otherwise, the page cache file is just filename + ".html". */
 
