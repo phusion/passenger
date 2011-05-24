@@ -317,7 +317,7 @@ private
 	end
 	
 	def run_rake_task!(target)
-		total_lines = `#{rake} #{target} --dry-run`.split("\n").size - 1
+		total_lines = `#{rake} #{target} --dry-run STDERR_TO_STDOUT=1`.split("\n").size - 1
 		backlog = ""
 		
 		IO.popen("#{rake} #{target} --trace STDERR_TO_STDOUT=1", "r") do |io|
