@@ -21,7 +21,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
+ASCIIDOC_FLAGS = "-b html5 -a toc -a theme=flask -a numbered -a toclevels=3 -a icons"
 
 desc "Generate all documentation"
 task :doc => Packaging::ASCII_DOCS

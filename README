@@ -32,7 +32,7 @@ our website.
 You may also first generate a .gem file, and then install that.
 First, make sure that you have the following software installed:
 - Doxygen: http://www.stack.nl/~dimitri/doxygen/
-- Asciidoc: http://www.methods.co.nz/asciidoc/
+- Asciidoc >= 8.6.5: http://www.methods.co.nz/asciidoc/
 
 Next, run:
 
