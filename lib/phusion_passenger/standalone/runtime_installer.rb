@@ -220,6 +220,9 @@ private
 		
 		max_width = 79
 		progress_bar_width = 45
+
+                total_progress = total_progress.abs
+
 		text = sprintf("[%-#{progress_bar_width}s] %s",
 			'*' * (progress_bar_width * total_progress).to_i,
 			status_text)
