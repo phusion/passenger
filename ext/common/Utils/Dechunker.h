@@ -117,7 +117,7 @@ public:
 				} else {
 					emitDataEvent(current, dataSize);
 					current += dataSize;
-					remainingDataSize -= dataSize;
+					remainingDataSize -= (unsigned int) dataSize;
 					if (remainingDataSize == 0) {
 						state = EXPECTING_NON_FINAL_CR;
 					}
