@@ -209,7 +209,7 @@ protected
 
 	# Overrided method.
 	def initialize_server # :nodoc:
-		$0 = "Passenger FrameworkSpawner: #{@framework_version}"
+		$0 = "PassengerFrameworkSpawner: #{@framework_version}"
 		@spawners = AbstractServerCollection.new
 		channel = MessageChannel.new(@owner_socket)
 		begin
