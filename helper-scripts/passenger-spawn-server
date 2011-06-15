@@ -30,7 +30,7 @@ OWNER_SOCKET_FD  = 4
 begin
 	STDOUT.sync = true
 	STDERR.sync = true
-	$0 = "Passenger spawn server"
+	$0 = "PassengerSpawnServer"
 	if GC.respond_to?(:copy_on_write_friendly=)
 		GC.copy_on_write_friendly = true
 	end
