@@ -836,7 +836,7 @@ The default value is 'on'.
 
 ==== passenger_user <username> ====
 If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
-by default run the web application as the owner if the file 'config/environment.rb'
+by default run the web application as the owner of the file 'config/environment.rb'
 (for Rails apps) or 'config.ru' (for Rack apps). This option allows you to override
 that behavior and explicitly set a user to run the web application as, regardless
 of the ownership of 'environment.rb'/'config.ru'.
