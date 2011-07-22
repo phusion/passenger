@@ -422,7 +422,6 @@ create_request(ngx_http_request_t *r)
         server_name_len = (int) ((const u_char *) tmp - r->headers_in.host->value.data);
     }
     len += sizeof("SERVER_NAME") + server_name_len + 1;
-    fprintf(stderr, "len = %d\n", server_name_len); fflush(stderr);
     
     /* Various other HTTP headers. */
     if (r->headers_in.content_type != NULL
