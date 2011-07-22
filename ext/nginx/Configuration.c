@@ -339,7 +339,6 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     DEFINE_VAR_TO_PASS("REMOTE_PORT",     "$remote_port");
     DEFINE_VAR_TO_PASS("SERVER_ADDR",     "$server_addr");
     DEFINE_VAR_TO_PASS("SERVER_PORT",     "$server_port");
-    DEFINE_VAR_TO_PASS("SERVER_NAME",     "$server_name");
 
     return conf;
 }
