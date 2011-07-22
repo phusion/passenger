@@ -1951,7 +1951,7 @@ To solve this problem, please <<specifying_correct_apache_install,specify the
 correct Apache installation>>, and <<install_passenger,reinstall Phusion
 Passenger>>.
 
-==== I get a "304 Forbidden" error ====
+==== I get a "403 Forbidden" error ====
 
 See next subsection.
 
