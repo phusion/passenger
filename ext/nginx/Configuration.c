@@ -460,7 +460,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->upstream_config.bufs.num < 2) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                           "there must be at least 2 \"scgi_buffers\"");
+                           "there must be at least 2 \"passenger_buffers\"");
         return NGX_CONF_ERROR;
     }
 
@@ -484,9 +484,9 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->upstream_config.busy_buffers_size < size) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-             "\"scgi_busy_buffers_size\" must be equal or bigger than "
-             "maximum of the value of \"scgi_buffer_size\" and "
-             "one of the \"scgi_buffers\"");
+             "\"passenger_busy_buffers_size\" must be equal or bigger than "
+             "maximum of the value of \"passenger_buffer_size\" and "
+             "one of the \"passenger_buffers\"");
 
         return NGX_CONF_ERROR;
     }
@@ -495,8 +495,8 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         > (conf->upstream_config.bufs.num - 1) * conf->upstream_config.bufs.size)
     {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-             "\"scgi_busy_buffers_size\" must be less than "
-             "the size of all \"scgi_buffers\" minus one buffer");
+             "\"passenger_busy_buffers_size\" must be less than "
+             "the size of all \"passenger_buffers\" minus one buffer");
 
         return NGX_CONF_ERROR;
     }
@@ -515,9 +515,9 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->upstream_config.temp_file_write_size < size) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-             "\"scgi_temp_file_write_size\" must be equal or bigger than "
-             "maximum of the value of \"scgi_buffer_size\" and "
-             "one of the \"scgi_buffers\"");
+             "\"passenger_temp_file_write_size\" must be equal or bigger than "
+             "maximum of the value of \"passenger_buffer_size\" and "
+             "one of the \"passenger_buffers\"");
 
         return NGX_CONF_ERROR;
     }
@@ -538,10 +538,10 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         && conf->upstream_config.max_temp_file_size < size)
     {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-             "\"scgi_max_temp_file_size\" must be equal to zero to disable "
+             "\"passenger_max_temp_file_size\" must be equal to zero to disable "
              "the temporary files usage or must be equal or bigger than "
-             "maximum of the value of \"scgi_buffer_size\" and "
-             "one of the \"scgi_buffers\"");
+             "maximum of the value of \"passenger_buffer_size\" and "
+             "one of the \"passenger_buffers\"");
 
         return NGX_CONF_ERROR;
     }
@@ -1199,6 +1199,27 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, upstream_config.buffering),
+      NULL },
+
+    { ngx_string("passenger_buffer_size"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_size_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, upstream_config.buffer_size),
+      NULL },
+
+    { ngx_string("passenger_buffers"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE2,
+      ngx_conf_set_bufs_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, upstream_config.bufs),
+      NULL },
+
+    { ngx_string("passenger_busy_buffers_size"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_size_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, upstream_config.busy_buffers_size_conf),
       NULL },
 
     { ngx_string("passenger_spawn_method"),
