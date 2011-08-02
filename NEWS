@@ -1,3 +1,30 @@
+Release 3.0.8
+-------------
+
+ * [Nginx] Upgraded preferred Nginx version to 1.0.5.
+ * [Nginx] Fixed various compilation problems on various platforms.
+ * [Nginx] We now ensure that SERVER_NAME is equal to HTTP_HOST without the port part.
+   This is needed for Rack compliance. By default Nginx sets SERVER_NAME to
+   whatever is specified in the server_name directive, but that's not necessarily
+   the correct value. This fixes, for example, the use of the 'map' statement
+   in config.ru.
+ * [Nginx] Added the options passenger_buffer_size, passenger_buffers and passenger_busy_buffers_size.
+   These options are similar to proxy_module's similarly named options. You can
+   use these to e.g. increase the maximum header size limit.
+ * [Nginx] passenger_pre_start now supports virtual hosts that listen on Unix domain sockets.
+ * [Apache] Fixed the pcre.h compilation problem.
+ * [Standalone] Fixed 'passenger stop'.
+   It didn't work properly because it kept waiting for 'tail' to exit.
+   We now properly terminate 'tail' as well.
+ * Fixed compatibility with Rake 0.9.
+ * Fixed various Ruby 1.9 compatibility issues.
+ * Various documentation improvements.
+ * New Union Station filter language features.
+   It now supports status codes and response times.
+   Please refer to https://engage.unionstationapp.com/help#filtering
+   for more information.
+
+
 Release 3.0.7
 -------------
 
