@@ -68,4 +68,8 @@ class WelcomeController < ApplicationController
 		end
 		render :nothing => true
 	end
+	
+	def pid
+	  render :text => $$
+        end
 end

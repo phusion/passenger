@@ -325,6 +325,7 @@ create_request(ngx_http_request_t *r)
     ngx_str_t                      escaped_uri;
     ngx_str_t                     *union_station_filters = NULL;
     u_char                         min_instances_string[12];
+    u_char                         max_requests_string[12];
     u_char                         framework_spawner_idle_time_string[12];
     u_char                         app_spawner_idle_time_string[12];
     u_char                        *end;
@@ -463,6 +464,14 @@ create_request(ngx_http_request_t *r)
     *end = '\0';
     len += sizeof("PASSENGER_MIN_INSTANCES") +
            ngx_strlen(min_instances_string) + 1;
+
+    end = ngx_snprintf(max_requests_string,
+                       sizeof(max_requests_string) - 1,
+                       "%d",
+                       (slcf->max_requests == (ngx_int_t) -1) ? 0 : slcf->max_requests);
+    *end = '\0';
+    len += sizeof("PASSENGER_MAX_REQUESTS") +
+          ngx_strlen(max_requests_string) + 1;
     
     end = ngx_snprintf(framework_spawner_idle_time_string,
                        sizeof(framework_spawner_idle_time_string) - 1,
@@ -713,6 +722,11 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_MIN_INSTANCES"));
     b->last = ngx_copy(b->last, min_instances_string,
                        ngx_strlen(min_instances_string) + 1);
+
+    b->last = ngx_copy(b->last, "PASSENGER_MAX_REQUESTS",
+                       sizeof("PASSENGER_MAX_REQUESTS"));
+    b->last = ngx_copy(b->last, max_requests_string,
+                       ngx_strlen(max_requests_string) + 1);
 
     b->last = ngx_copy(b->last, "PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME",
                        sizeof("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
