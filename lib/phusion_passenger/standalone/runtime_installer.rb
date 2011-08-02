@@ -307,7 +307,7 @@ private
 			if !File.directory?(dir)
 				FileUtils.mkdir_p(dir)
 			end
-			FileUtils.install(filename, "#{target}/#{filename}")
+			FileUtils.install(filename, "#{target}/#{filename}", :mode => File.stat(filename).mode)
 			yield(i + 1, files.size)
 		end
 	end
