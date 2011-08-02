@@ -345,7 +345,7 @@ done this, you need to remove the Phusion Passenger files.
   `sudo apt-get remove libapache2-mod-passenger`.
 
 
-== Deploying a Ruby on Rails application ==
+== Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3.x) application ==
 
 Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
 the domain 'www.mycook.com'. You can either deploy your application to the
@@ -490,7 +490,7 @@ a shell console, just like one would normally run migrations.
 See <<capistrano,Capistrano recipe>>.
 
 
-== Deploying a Rack-based Ruby application ==
+== Deploying a Rack-based Ruby application (including Rails >= 3) ==
 
 Phusion Passenger supports arbitrary Ruby web applications that follow the
 link:http://rack.rubyforge.org/[Rack] interface.

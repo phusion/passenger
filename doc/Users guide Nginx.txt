@@ -276,7 +276,7 @@ Nginx binary.
 
 
 [[deploying_a_ror_app]]
-== Deploying a Ruby on Rails application ==
+== Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3) application ==
 
 Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
 the domain 'www.mycook.com'. You can either deploy your application to the
@@ -409,7 +409,7 @@ See <<capistrano,Capistrano recipe>>.
 
 
 [[deploying_a_rack_app]]
-== Deploying a Rack-based Ruby application ==
+== Deploying a Rack-based Ruby application (including Rails >= 3) ==
 
 Phusion Passenger supports arbitrary Ruby web applications that follow the
 link:http://rack.rubyforge.org/[Rack] interface.
