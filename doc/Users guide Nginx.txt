@@ -826,6 +826,12 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'on'.
 
+==== passenger_buffer_size ====
+==== passenger_buffers ====
+==== passenger_busy_buffer_size ====
+These options have the same effect as proxy_module's similarly named options.
+They can be used to modify the maximum allowed HTTP header size.
+
 === Security options ===
 [[PassengerUserSwitching]]
 ==== passenger_user_switching <on|off> ====
