@@ -404,16 +404,20 @@ private
 		end
 		
 		IO.popen("tail -f -n #{backward} \"#{log_file}\"", "rb") do |f|
-			while true
-				begin
-					line = f.readline
-					@console_mutex.synchronize do
-						STDOUT.write(line)
-						STDOUT.flush
+			begin
+				while true
+					begin
+						line = f.readline
+						@console_mutex.synchronize do
+							STDOUT.write(line)
+							STDOUT.flush
+						end
+					rescue EOFError
+						break
 					end
-				rescue EOFError
-					break
 				end
+			ensure
+				Process.kill('TERM', f.pid)
 			end
 		end
 	end
