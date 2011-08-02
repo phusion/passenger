@@ -437,6 +437,7 @@ private
 			# work around the problem by configure Nginx with prefix
 			# /tmp.
 			command = "sh ./configure --prefix=/tmp " <<
+				"--with-cc-opt='-Wno-error' " <<
 				"--without-pcre " <<
 				"--without-http_rewrite_module " <<
 				"--without-http_fastcgi_module " <<
