@@ -150,7 +150,7 @@ void setDebugFile(const char *logFile = NULL);
 #endif
 
 
-/********** Transaction logging facilities *********/
+/********** Analytics logging facilities *********/
 
 struct AnalyticsLoggerSharedData {
 	boost::mutex lock;
