@@ -187,6 +187,10 @@ TEST_CXX_OBJECTS = {
 		test/cxx/BufferedIOTest.cpp
 		ext/common/Utils/BufferedIO.h
 		ext/common/Utils/Timer.h),
+	'test/cxx/MessageIOTest.o' => %w(
+		test/cxx/MessageIOTest.cpp
+		ext/common/Utils/MessageIO.h
+		ext/common/Utils/IOUtils.h),
 	'test/cxx/VariantMapTest.o' => %w(
 		test/cxx/VariantMapTest.cpp
 		ext/common/MessageChannel.h

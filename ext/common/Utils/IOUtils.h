@@ -367,6 +367,11 @@ void setWritevFunction(WritevFunction func);
 
 /**
  * Receive a file descriptor over the given Unix domain socket.
+ * This is a low-level function that directly wraps the Unix file
+ * descriptor passing system calls. You should not use this directly;
+ * instead you should use readFileDescriptorWithNegotiation() from MessageIO.h
+ * which is safer. See MessageIO.h for more information about the
+ * negotiation protocol for file descriptor passing.
  *
  * @param timeout A pointer to an integer, which specifies the maximum number of
  *                microseconds that may be spent on receiving the file descriptor.
@@ -387,6 +392,11 @@ int readFileDescriptor(int fd, unsigned long long *timeout = NULL);
 
 /**
  * Pass the file descriptor 'fdToSend' over the Unix socket 'fd'.
+ * This is a low-level function that directly wraps the Unix file
+ * descriptor passing system calls. You should not use this directly;
+ * instead you should use writeFileDescriptorWithNegotiation() from MessageIO.h
+ * which is safer. See MessageIO.h for more information about the
+ * negotiation protocol for file descriptor passing.
  *
  * @param timeout A pointer to an integer, which specifies the maximum number of
  *                microseconds that may be spent on trying to pass the file descriptor.
