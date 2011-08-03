@@ -40,7 +40,6 @@ describe "Phusion Passenger for Nginx" do
 		end
 	end
 	
-	
 	describe "MyCook(tm) beta running a root URI" do
 		before :all do
 			@server = "http://1.passenger.test:#{@nginx.port}"
@@ -122,16 +121,6 @@ describe "Phusion Passenger for Nginx" do
 		end
 		
 		it_should_behave_like "HelloWorld Rack application"
-		
-		it_should_behave_like "MyCook(tm) beta"
-		include_shared_example_group "CGI environment variables compliance"
-
-		it "should handle 3 requests and respawn" do
-			pid = get('/welcome/pid')
-			get('/welcome/pid').should == pid
-			get('/welcome/pid').should == pid
-			get('/welcome/pid').should_not == pid
-		end
 	end
 	
 	describe "Rack application running in sub-URI" do
@@ -159,14 +148,6 @@ describe "Phusion Passenger for Nginx" do
 		end
 		
 		it_should_behave_like "HelloWorld Rack application"
-		
-		it "should not respawn" do
-			pid = get('/welcome/pid')
-			10.times do
-				get('/welcome/pid').should == pid
-			end
-		end
-		
 	end
 	
 	describe "Rack application running within Rails directory structure" do
@@ -211,6 +192,11 @@ describe "Phusion Passenger for Nginx" do
 				server[:root]        = "#{@stub.full_app_root}/public"
 				server[:passenger_app_group_name] = "secondary"
 				server[:passenger_show_version_in_header] = "off"
+			end
+			@nginx.add_server do |server|
+				server[:server_name] = "2.passenger.test"
+				server[:root]        = "#{@stub.full_app_root}/public"
+				server[:passenger_max_requests] = 3
 			end
 			@nginx.start
 		end
@@ -265,6 +251,14 @@ describe "Phusion Passenger for Nginx" do
 			response = get_response('/')
 			response["X-Powered-By"].should include("Phusion Passenger")
 			response["X-Powered-By"].should_not include(PhusionPassenger::VERSION_STRING)
+		end
+		
+		it "respawns the app after handling max_requests requests" do
+			@server = "http://2.passenger.test:#{@nginx.port}/"
+			pid = get("/pid")
+			get("/pid").should == pid
+			get("/pid").should == pid
+			get("/pid").should_not == pid
 		end
 	end
 	
