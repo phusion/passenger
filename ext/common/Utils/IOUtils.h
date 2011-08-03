@@ -345,10 +345,19 @@ ssize_t gatheredWrite(int fd, const StaticString data[], unsigned int dataCount,
  * @param fd The file descriptor to write to.
  * @param data An array of buffers to be written.
  * @param count Number of items in <em>data</em>.
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on writing all the data.
+ *                If the timeout expired then TimeoutException will be thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on writing will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
  * @throws SystemException Something went wrong.
+ * @throws TimeoutException Unable to write all given data within
+ *                          <tt>timeout</tt> microseconds.
  * @throws boost::thread_interrupted
  */
-void    gatheredWrite(int fd, const StaticString data[], unsigned int dataCount);
+void    gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, unsigned long long *timeout = NULL);
 
 /**
  * Sets a writev-emulating function that gatheredWrite() should call instead of the real writev().

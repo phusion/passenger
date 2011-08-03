@@ -860,7 +860,7 @@ eraseBeginningOfIoVec(struct iovec *iov, size_t count, size_t index, size_t offs
 }
 
 void
-gatheredWrite(int fd, const StaticString data[], unsigned int count) {
+gatheredWrite(int fd, const StaticString data[], unsigned int count, unsigned long long *timeout) {
 	struct iovec iov[count];
 	size_t total, iovCount;
 	size_t written = 0;
@@ -868,6 +868,9 @@ gatheredWrite(int fd, const StaticString data[], unsigned int count) {
 	total = staticStringArrayToIoVec(data, count, iov, iovCount);
 	
 	while (written < total) {
+		if (timeout != NULL && !waitUntilWritable(fd, timeout)) {
+			throw TimeoutException("Cannot write enough data within the specified timeout");
+		}
 		ssize_t ret = writevFunction(fd, iov, std::min(iovCount, (size_t) IOV_MAX));
 		if (ret == -1) {
 			int e = errno;

@@ -1,5 +1,6 @@
 #include "TestSupport.h"
-#include "Utils/IOUtils.h"
+#include <Utils/IOUtils.h>
+#include <Utils/SystemTime.h>
 #include <oxt/system_calls.hpp>
 #include <boost/bind.hpp>
 #include <sys/types.h>
@@ -483,6 +484,25 @@ namespace tut {
 		gatheredWrite(0, data, 4);
 		ensure_equals(writevCalled, 4);
 		ensure_equals(writevData, "hellomyworld!!");
+	}
+	
+	TEST_METHOD(45) {
+		// Test writev() timeout support.
+		setWritevFunction(NULL);
+		Pipe p = createPipe();
+		unsigned long long startTime = SystemTime::getUsec();
+		unsigned long long timeout = 30000;
+		try {
+			StaticString data[] = { "hello", "world" };
+			for (int i = 0; i < 1024 * 1024; i++) {
+				gatheredWrite(p[1], data, 2, &timeout);
+			}
+			fail("TimeoutException expected");
+		} catch (const TimeoutException &) {
+			unsigned long long elapsed = SystemTime::getUsec() - startTime;
+			ensure("30 msec have passed", elapsed >= 29000 && elapsed <= 45000);
+			ensure(timeout <= 2000);
+		}
 	}
 	
 	/***** Test waitUntilReadable() *****/
