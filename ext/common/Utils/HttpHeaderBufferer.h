@@ -54,6 +54,16 @@ using namespace std;
  */
 class HttpHeaderBufferer {
 private:
+	struct StaticData {
+		StreamBMH_Occ occ;
+		
+		StaticData() {
+			sbmh_init(NULL, &occ, (const unsigned char *) "\r\n\r\n", 4);
+		}
+	};
+	
+	static StaticData staticData;
+	
 	string buffer;
 	StaticString data;
 	unsigned int max;
@@ -70,6 +80,7 @@ private:
 public:
 	HttpHeaderBufferer() {
 		sbmh_init(&u.terminatorFinder,
+			&staticData.occ,
 			(const unsigned char *) "\r\n\r\n",
 			4);
 		max = 1024 * 128;
@@ -97,6 +108,7 @@ public:
 		if (buffer.empty()) {
 			feedSize = std::min<size_t>(size, max);
 			accepted = sbmh_feed(&u.terminatorFinder,
+				&staticData.occ,
 				(const unsigned char *) "\r\n\r\n",
 				4,
 				(const unsigned char *) data,
@@ -115,6 +127,7 @@ public:
 		} else {
 			feedSize = std::min<size_t>(size, max - buffer.size());
 			accepted = sbmh_feed(&u.terminatorFinder,
+				&staticData.occ,
 				(const unsigned char *) "\r\n\r\n",
 				4,
 				(const unsigned char *) data,

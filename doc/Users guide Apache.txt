@@ -247,7 +247,7 @@ about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
 
 ==== Via a gem or a source tarball ====
 
-To ugrade or downgrade Phusion Passenger via the gem or the source tarball, install the newer
+To upgrade or downgrade Phusion Passenger via the gem or the source tarball, install the newer
 or older version as you normally would; that is, install the gem or unpack the tarball, and
 run `passenger-install-apache2-module`. Eventually `passenger-install-apache2-module` will tell
 you to copy & paste some settings into the Apache configuration file; something that looks along
@@ -345,7 +345,7 @@ done this, you need to remove the Phusion Passenger files.
   `sudo apt-get remove libapache2-mod-passenger`.
 
 
-== Deploying a Ruby on Rails application ==
+== Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3.x) application ==
 
 Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
 the domain 'www.mycook.com'. You can either deploy your application to the
@@ -490,7 +490,7 @@ a shell console, just like one would normally run migrations.
 See <<capistrano,Capistrano recipe>>.
 
 
-== Deploying a Rack-based Ruby application ==
+== Deploying a Rack-based Ruby application (including Rails >= 3) ==
 
 Phusion Passenger supports arbitrary Ruby web applications that follow the
 link:http://rack.rubyforge.org/[Rack] interface.
@@ -935,7 +935,7 @@ The default value is 'on'.
 
 ==== PassengerUser <username> ====
 If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
-by default run the web application as the owner if the file 'config/environment.rb'
+by default run the web application as the owner of the file 'config/environment.rb'
 (for Rails apps) or 'config.ru' (for Rack apps). This option allows you to override
 that behavior and explicitly set a user to run the web application as, regardless
 of the ownership of 'environment.rb'/'config.ru'.
@@ -1951,7 +1951,7 @@ To solve this problem, please <<specifying_correct_apache_install,specify the
 correct Apache installation>>, and <<install_passenger,reinstall Phusion
 Passenger>>.
 
-==== I get a "304 Forbidden" error ====
+==== I get a "403 Forbidden" error ====
 
 See next subsection.
 

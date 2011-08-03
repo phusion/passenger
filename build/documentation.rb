@@ -21,16 +21,9 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
-DOXYGEN = 'doxygen'
+ASCIIDOC_FLAGS = "-b html5 -a toc -a theme=flask -a numbered -a toclevels=3 -a icons"
 
 desc "Generate all documentation"
-task :doc => [:rdoc]
-
-if PlatformInfo.find_command(DOXYGEN)
-	task :doc => :doxygen
-end
-
 task :doc => Packaging::ASCII_DOCS
 
 Packaging::ASCII_DOCS.each do |target|
@@ -49,36 +42,8 @@ Packaging::ASCII_DOCS.each do |target|
 			sh "echo 'asciidoc required to build docs' > '#{target}'"
 		end
 	end
-end
-
-task :clobber => [:'doxygen:clobber'] do
-	sh "rm -f *.html"
-end
-
-desc "Generate Doxygen C++ API documentation if necessary"
-task :doxygen => ['doc/cxxapi']
-file 'doc/cxxapi' => Dir['ext/apache2/*.{h,c,cpp}'] do
-	sh "cd doc && doxygen"
-end
-
-desc "Force generation of Doxygen C++ API documentation"
-task :'doxygen:force' do
-	sh "cd doc && doxygen"
-end
-
-desc "Remove generated Doxygen C++ API documentation"
-task :'doxygen:clobber' do
-	sh "rm -rf doc/cxxapi"
-end
-
-Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do |rd|
-	rd.main = "README"
-	rd.rdoc_dir = "doc/rdoc"
-	rd.rdoc_files.include("README", "DEVELOPERS.TXT",
-		"lib/phusion_passenger/*.rb",
-		"lib/phusion_passenger/*/*.rb",
-		"ext/phusion_passenger/*.c")
-	rd.template = "./doc/template/horo"
-	rd.title = "Passenger Ruby API"
-	rd.options << "-S" << "-N" << "-p" << "-H"
+	
+	task :clean do
+		sh "rm -f '#{target}'"
+	end
 end

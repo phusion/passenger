@@ -33,7 +33,9 @@
 
 #include <string>
 #include <set>
-#include <regex.h>
+#ifndef _PCREPOSIX_H
+	#include <regex.h>
+#endif
 #include <cstdio>
 #include <cstring>
 

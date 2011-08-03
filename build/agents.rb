@@ -44,7 +44,6 @@ end
 dependencies = [
 	'ext/common/agents/HelperAgent/Main.cpp',
 	'ext/common/agents/HelperAgent/ScgiRequestParser.h',
-	'ext/common/agents/HelperAgent/HttpStatusExtractor.h',
 	'ext/common/agents/HelperAgent/BacktracesServer.h',
 	'ext/common/StaticString.h',
 	'ext/common/Account.h',

@@ -46,12 +46,6 @@ spec = Gem::Specification.new do |s|
 	s.add_dependency 'rack'
 	s.files = FileList[*Packaging::GLOB] - FileList[*Packaging::EXCLUDE_GLOB]
 	s.executables = Packaging::USER_EXECUTABLES + Packaging::SUPER_USER_EXECUTABLES
-	s.has_rdoc = true
-	s.extra_rdoc_files = ['README']
-	s.rdoc_options <<
-		"-S" << "-N" << "-p" << "-H" <<
-		'--main' << 'README' <<
-		'--title' << 'Passenger Ruby API'
 	s.description = "Easy and robust Ruby web application deployment."
 end
 

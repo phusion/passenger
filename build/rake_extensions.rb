@@ -104,6 +104,11 @@ def subdir(dir, &block)
 end
 
 class Subdir # :nodoc:
+	# Rake 0.9 compatibility since methods like <tt>task<tt> and <tt>desc</tt>
+	# aren't available in Object anymore.
+	# See: https://github.com/jimweirich/rake/issues/33#issuecomment-1213705
+	include Rake::DSL if defined?(Rake::DSL)
+	
 	def initialize(dir)
 		@dir = dir
 		@toplevel_dir = Pathname.getwd

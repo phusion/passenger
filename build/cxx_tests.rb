@@ -106,9 +106,6 @@ TEST_CXX_OBJECTS = {
 		test/cxx/ScgiRequestParserTest.cpp
 		ext/common/agents/HelperAgent/ScgiRequestParser.h
 		ext/common/StaticString.h),
-	'test/cxx/HttpStatusExtractorTest.o' => %w(
-		test/cxx/HttpStatusExtractorTest.cpp
-		ext/common/agents/HelperAgent/HttpStatusExtractor.h),
 	'test/cxx/DechunkerTest.o' => %w(
 		test/cxx/DechunkerTest.cpp
 		ext/common/Utils/Dechunker.h),

@@ -46,7 +46,6 @@
 #include <oxt/system_calls.hpp>
 
 #include <agents/HelperAgent/ScgiRequestParser.h>
-#include <agents/HelperAgent/HttpStatusExtractor.h>
 #include <agents/HelperAgent/BacktracesServer.h>
 
 #include <agents/Base.h>
@@ -73,6 +72,9 @@ using namespace oxt;
 using namespace Passenger;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
+
+static StreamBMH_Occ statusFinder_occ;
+static StreamBMH_Occ transferEncodingFinder_occ;
 
 struct ClientDisconnectedException { };
 
@@ -159,8 +161,14 @@ private:
 	
 	int currentClient;
 	HttpHeaderBufferer headerBufferer;
-	struct StreamBMH *statusFinder;
-	struct StreamBMH *transferEncodingFinder;
+	union {
+		struct StreamBMH ctx;
+		char padding[SBMH_SIZE(sizeof("Status:") - 1)];
+	} statusFinder;
+	union {
+		struct StreamBMH ctx;
+		char padding[SBMH_SIZE(sizeof("Transfer-Encoding:") - 1)];
+	} transferEncodingFinder;
 	
 	class EnvironmentVariablesStringListCreator: public StringListCreator {
 	public:
@@ -217,13 +225,14 @@ private:
 		StaticString status;
 		size_t accepted;
 		
-		sbmh_reset(statusFinder);
-		accepted = sbmh_feed(statusFinder,
+		sbmh_reset(&statusFinder.ctx);
+		accepted = sbmh_feed(&statusFinder.ctx,
+			&statusFinder_occ,
 			(const unsigned char *) "Status:",
 			sizeof("Status:") - 1,
 			(const unsigned char *) header.data(),
 			header.size());
-		if (statusFinder->found) {
+		if (statusFinder.ctx.found) {
 			status = extractHeaderValue(header.data() + accepted,
 				header.size() - accepted);
 			if (status.find(' ') == string::npos) {
@@ -413,13 +422,14 @@ private:
 	bool detectChunkedTransferEncodingAndRemoveHeader(const StaticString &header) {
 		size_t accepted;
 		
-		sbmh_reset(transferEncodingFinder);
-		accepted = sbmh_feed(transferEncodingFinder,
+		sbmh_reset(&transferEncodingFinder.ctx);
+		accepted = sbmh_feed(&transferEncodingFinder.ctx,
+			&transferEncodingFinder_occ,
 			(const unsigned char *) "Transfer-Encoding:",
 			sizeof("Transfer-Encoding:") - 1,
 			(const unsigned char *) header.data(),
 			header.size());
-		if (transferEncodingFinder->found) {
+		if (transferEncodingFinder.ctx.found) {
 			StaticString value = extractHeaderValue(header.data() + accepted,
 				header.size() - accepted);
 			if (value == "chunked") {
@@ -603,7 +613,6 @@ private:
 		const AnalyticsLogPtr &log)
 	{
 		TRACE_POINT();
-		HttpStatusExtractor ex;
 		int stream = session->getStream();
 		int eof = false;
 		char buf[1024 * 24];
@@ -1042,10 +1051,8 @@ public:
 		this->serverSocket = serverSocket;
 		this->analyticsLogger = logger;
 		
-		SBMH_ALLOC_AND_INIT(statusFinder,
-			"Status:");
-		SBMH_ALLOC_AND_INIT(transferEncodingFinder,
-			"Transfer-Encoding:");
+		sbmh_init(&statusFinder.ctx, NULL, NULL, 0);
+		sbmh_init(&transferEncodingFinder.ctx, NULL, NULL, 0);
 		
 		thr = new oxt::thread(
 			boost::bind(&Client::threadMain, this),
@@ -1066,9 +1073,6 @@ public:
 			thr->interrupt_and_join();
 		}
 		delete thr;
-		
-		free(statusFinder);
-		free(transferEncodingFinder);
 	}
 	
 	oxt::thread *getThread() const {
@@ -1236,6 +1240,13 @@ public:
 		this->defaultGroup  = defaultGroup;
 		feedbackChannel     = MessageChannel(feedbackFd);
 		numberOfThreads     = maxPoolSize * 4;
+		
+		sbmh_init(NULL, &statusFinder_occ,
+			(const unsigned char *) "Status:",
+			strlen("Status:"));
+		sbmh_init(NULL, &transferEncodingFinder_occ,
+			(const unsigned char *) "Transfer-Encoding:",
+			strlen("Transfer-Encoding:"));
 		
 		UPDATE_TRACE_POINT();
 		requestSocketPassword = Base64::decode(options.get("request_socket_password"));

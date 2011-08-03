@@ -267,10 +267,6 @@ private
 		return !@options[:daemonize] && @options[:log_file] != "/dev/null"
 	end
 	
-	def listening_on_unix_domain_socket?
-		return !!@options[:socket_file]
-	end
-	
 	# Returns the URL that Nginx will be listening on.
 	def listen_url
 		if @options[:socket_file]
@@ -408,16 +404,20 @@ private
 		end
 		
 		IO.popen("tail -f -n #{backward} \"#{log_file}\"", "rb") do |f|
-			while true
-				begin
-					line = f.readline
-					@console_mutex.synchronize do
-						STDOUT.write(line)
-						STDOUT.flush
+			begin
+				while true
+					begin
+						line = f.readline
+						@console_mutex.synchronize do
+							STDOUT.write(line)
+							STDOUT.flush
+						end
+					rescue EOFError
+						break
 					end
-				rescue EOFError
-					break
 				end
+			ensure
+				Process.kill('TERM', f.pid)
 			end
 		end
 	end

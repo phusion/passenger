@@ -61,7 +61,7 @@ public:
 	
 	unsigned int size() const {
 		lock_guard<boost::mutex> l(lock);
-		return accounts.size();
+		return (unsigned int) accounts.size();
 	}
 	
 	vector<string> listUsernames() const {
