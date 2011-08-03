@@ -471,7 +471,7 @@ create_request(ngx_http_request_t *r)
                        (slcf->max_requests == (ngx_int_t) -1) ? 0 : slcf->max_requests);
     *end = '\0';
     len += sizeof("PASSENGER_MAX_REQUESTS") +
-          ngx_strlen(max_requests_string) + 1;
+           ngx_strlen(max_requests_string) + 1;
     
     end = ngx_snprintf(framework_spawner_idle_time_string,
                        sizeof(framework_spawner_idle_time_string) - 1,
