@@ -366,6 +366,43 @@ void    gatheredWrite(int fd, const StaticString data[], unsigned int dataCount,
 void setWritevFunction(WritevFunction func);
 
 /**
+ * Receive a file descriptor over the given Unix domain socket.
+ *
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on receiving the file descriptor.
+ *                If the timeout expired then TimeoutException will be thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on receiving will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
+ * @return The received file descriptor.
+ * @throws SystemException Something went wrong.
+ * @throws IOException Whatever was received doesn't seem to be a
+ *                     file descriptor.
+ * @throws TimeoutException Unable to receive a file descriptor within
+ *                          <tt>timeout</tt> microseconds.
+ * @throws boost::thread_interrupted
+ */
+int readFileDescriptor(int fd, unsigned long long *timeout = NULL);
+
+/**
+ * Pass the file descriptor 'fdToSend' over the Unix socket 'fd'.
+ *
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on trying to pass the file descriptor.
+ *                If the timeout expired then TimeoutException will be thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on writing will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
+ * @throws SystemException Something went wrong.
+ * @throws TimeoutException Unable to pass the file descriptor within
+ *                          <tt>timeout</tt> microseconds.
+ * @throws boost::thread_interrupted
+ */
+void writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout = NULL);
+
+/**
  * Closes the given file descriptor and throws an exception if anything goes wrong.
  * This function also works around certain close() bugs on certain operating systems.
  *

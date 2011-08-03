@@ -895,6 +895,116 @@ setWritevFunction(WritevFunction func) {
 	}
 }
 
+int
+readFileDescriptor(int fd, unsigned long long *timeout) {
+	if (timeout != NULL && !waitUntilReadable(fd, timeout)) {
+		throw TimeoutException("Cannot receive file descriptor within the specified timeout");
+	}
+	
+	struct msghdr msg;
+	struct iovec vec;
+	char dummy[1];
+	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
+		// File descriptor passing macros (CMSG_*) seem to be broken
+		// on 64-bit MacOS X. This structure works around the problem.
+		struct {
+			struct cmsghdr header;
+			int fd;
+		} control_data;
+		#define EXPECTED_CMSG_LEN sizeof(control_data)
+	#else
+		char control_data[CMSG_SPACE(sizeof(int))];
+		#define EXPECTED_CMSG_LEN CMSG_LEN(sizeof(int))
+	#endif
+	struct cmsghdr *control_header;
+	int ret;
+	
+	msg.msg_name    = NULL;
+	msg.msg_namelen = 0;
+	
+	dummy[0]       = '\0';
+	vec.iov_base   = dummy;
+	vec.iov_len    = sizeof(dummy);
+	msg.msg_iov    = &vec;
+	msg.msg_iovlen = 1;
+	
+	msg.msg_control    = (caddr_t) &control_data;
+	msg.msg_controllen = sizeof(control_data);
+	msg.msg_flags      = 0;
+	
+	ret = syscalls::recvmsg(fd, &msg, 0);
+	if (ret == -1) {
+		throw SystemException("Cannot read file descriptor with recvmsg()", errno);
+	}
+	
+	control_header = CMSG_FIRSTHDR(&msg);
+	if (control_header == NULL) {
+		throw IOException("No valid file descriptor received.");
+	}
+	if (control_header->cmsg_len   != EXPECTED_CMSG_LEN
+	 || control_header->cmsg_level != SOL_SOCKET
+	 || control_header->cmsg_type  != SCM_RIGHTS) {
+		throw IOException("No valid file descriptor received.");
+	}
+	
+	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
+		return control_data.fd;
+	#else
+		return *((int *) CMSG_DATA(control_header));
+	#endif
+}
+
+void
+writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout) {
+	if (timeout != NULL && !waitUntilWritable(fd, timeout)) {
+		throw TimeoutException("Cannot send file descriptor within the specified timeout");
+	}
+	
+	struct msghdr msg;
+	struct iovec vec;
+	char dummy[1];
+	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
+		struct {
+			struct cmsghdr header;
+			int fd;
+		} control_data;
+	#else
+		char control_data[CMSG_SPACE(sizeof(int))];
+	#endif
+	struct cmsghdr *control_header;
+	int ret;
+	
+	msg.msg_name = NULL;
+	msg.msg_namelen = 0;
+	
+	/* Linux and Solaris require msg_iov to be non-NULL. */
+	dummy[0]       = '\0';
+	vec.iov_base   = dummy;
+	vec.iov_len    = sizeof(dummy);
+	msg.msg_iov    = &vec;
+	msg.msg_iovlen = 1;
+	
+	msg.msg_control    = (caddr_t) &control_data;
+	msg.msg_controllen = sizeof(control_data);
+	msg.msg_flags      = 0;
+	
+	control_header = CMSG_FIRSTHDR(&msg);
+	control_header->cmsg_level = SOL_SOCKET;
+	control_header->cmsg_type  = SCM_RIGHTS;
+	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
+		control_header->cmsg_len = sizeof(control_data);
+		control_data.fd = fdToSend;
+	#else
+		control_header->cmsg_len = CMSG_LEN(sizeof(int));
+		memcpy(CMSG_DATA(control_header), &fdToSend, sizeof(int));
+	#endif
+	
+	ret = syscalls::sendmsg(fd, &msg, 0);
+	if (ret == -1) {
+		throw SystemException("Cannot send file descriptor with sendmsg()", errno);
+	}
+}
+
 void
 safelyClose(int fd) {
 	if (syscalls::close(fd) == -1) {
