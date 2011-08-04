@@ -38,7 +38,6 @@ require 'phusion_passenger/platform_info/documentation_tools'
 include PhusionPassenger
 include PhusionPassenger::PlatformInfo
 
-require 'build/rdoctask'
 require 'build/packagetask'
 require 'build/gempackagetask'
 require 'build/rake_extensions'
