@@ -1,0 +1,13 @@
+diff --git a/build/documentation.rb b/build/documentation.rb
+index 93b6b92..be4416b 100644
+--- a/build/documentation.rb
++++ b/build/documentation.rb
+@@ -21,7 +21,7 @@
+ #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ #  THE SOFTWARE.
+ 
+-ASCIIDOC_FLAGS = "-b html5 -a toc -a theme=flask -a numbered -a toclevels=3 -a icons"
++ASCIIDOC_FLAGS = "-b html4 -a toc -a numbered -a toclevels=3 -a icons"
+ 
+ desc "Generate all documentation"
+ task :doc => Packaging::ASCII_DOCS

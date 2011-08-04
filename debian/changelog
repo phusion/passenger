@@ -1,3 +1,11 @@
+passenger (3.0.8-1bbox1) lucid; urgency=low
+
+  * New upstream release, 3.0.8
+  * Added 01_disable_html5_documentation.patch to fix documentation build with
+    older versions of asciidoc
+
+ -- John Leach <john@brightbox.co.uk>  Thu, 04 Aug 2011 22:28:58 +0100
+
 passenger (3.0.7-1bbox2) lucid; urgency=low
 
   * Made passenger-dev suitable for building nginx-passenger
