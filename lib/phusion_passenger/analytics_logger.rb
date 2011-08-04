@@ -24,7 +24,7 @@
 require 'thread'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/debug_logging'
-require 'phusion_passenger/message_client'
+require 'phusion_passenger/message_channel'
 
 module PhusionPassenger
 
@@ -38,24 +38,33 @@ class AnalyticsLogger
 	class Log
 		attr_reader :txn_id
 		
-		def initialize(shared_data = nil, txn_id = nil)
-			if shared_data
-				@shared_data = shared_data
+		def initialize(connection = nil, txn_id = nil)
+			if connection
+				@connection = connection
 				@txn_id = txn_id
-				shared_data.ref
+				connection.ref
 			end
 		end
 		
 		def null?
-			return !@shared_data
+			return !@connection
 		end
 		
 		def message(text)
-			@shared_data.synchronize do
-				@shared_data.client.write("log", @txn_id,
-					AnalyticsLogger.timestamp_string)
-				@shared_data.client.write_scalar(text)
-			end if @shared_data
+			@connection.synchronize do
+				return if !@connection.connected?
+				begin
+					@connection.channel.write("log", @txn_id,
+						AnalyticsLogger.timestamp_string)
+					@connection.channel.write_scalar(text)
+				rescue SystemCallError, IOError => e
+					@connection.disconnect
+					DebugLogging.warn("Error communicating with the logging agent: #{e.message}")
+				rescue Exception => e
+					@connection.disconnect
+					raise e
+				end
+			end if @connection
 		end
 		
 		def begin_measure(name, extra_info = nil)
@@ -107,30 +116,39 @@ class AnalyticsLogger
 		end
 		
 		def close(flush_to_disk = false)
-			@shared_data.synchronize do
-				# We need an ACK here. See abstract_request_handler.rb finalize_request.
-				@shared_data.client.write("closeTransaction", @txn_id,
-					AnalyticsLogger.timestamp_string, true)
-				result = @shared_data.client.read
-				if result != ["ok"]
-					raise "Expected logging server to respond with 'ok', but got #{result.inspect} instead"
-				end
-				if flush_to_disk
-					@shared_data.client.write("flush")
-					result = @shared_data.client.read
+			@connection.synchronize do
+				begin
+					# We need an ACK here. See abstract_request_handler.rb finalize_request.
+					@connection.channel.write("closeTransaction", @txn_id,
+						AnalyticsLogger.timestamp_string, true)
+					result = @connection.channel.read
 					if result != ["ok"]
-						raise "Invalid logging server response #{result.inspect} to the 'flush' command"
+						raise "Expected logging agent to respond with 'ok', but got #{result.inspect} instead"
 					end
+					if flush_to_disk
+						@connection.channel.write("flush")
+						result = @connection.channel.read
+						if result != ["ok"]
+							raise "Invalid logging agent response #{result.inspect} to the 'flush' command"
+						end
+					end
+				rescue SystemCallError, IOError => e
+					@connection.disconnect
+					DebugLogging.warn("Error communicating with the logging agent: #{e.message}")
+				rescue Exception => e
+					@connection.disconnect
+					raise e
+				ensure
+					@connection.unref
+					@connection = nil
 				end
-				@shared_data.unref
-				@shared_data = nil
-			end if @shared_data
+			end if @connection
 		end
 		
 		def closed?
-			if @shared_data
-				@shared_data.synchronize do
-					return !@shared_data.client.connected?
+			if @connection
+				@connection.synchronize do
+					return !@connection.connected?
 				end
 			else
 				return nil
@@ -170,10 +188,10 @@ class AnalyticsLogger
 		@random_dev = File.open("/dev/urandom")
 		
 		# This mutex protects the following instance variables, but
-		# not the contents of @shared_data.
+		# not the contents of @connection.
 		@mutex = Mutex.new
 		
-		@shared_data = SharedData.new
+		@connection = Connection.new(nil)
 		if @server_address && local_socket_address?(@server_address)
 			@max_connect_tries = 10
 		else
@@ -185,20 +203,20 @@ class AnalyticsLogger
 	
 	def clear_connection
 		@mutex.synchronize do
-			@shared_data.synchronize do
+			@connection.synchronize do
 				@random_dev = File.open("/dev/urandom") if @random_dev.closed?
-				@shared_data.unref
-				@shared_data = SharedData.new
+				@connection.unref
+				@connection = Connection.new(nil)
 			end
 		end
 	end
 	
 	def close
 		@mutex.synchronize do
-			@shared_data.synchronize do
+			@connection.synchronize do
 				@random_dev.close
-				@shared_data.unref
-				@shared_data = nil
+				@connection.unref
+				@connection = nil
 			end
 		end
 	end
@@ -212,44 +230,53 @@ class AnalyticsLogger
 		
 		txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(36)
 		txn_id << "-#{random_token(11)}"
+		
 		Lock.new(@mutex).synchronize do |lock|
-		Lock.new(@shared_data.mutex).synchronize do |shared_data_lock|
-			try_count = 0
-			if current_time >= @next_reconnect_time
-				while try_count < @max_connect_tries
+			if current_time < @next_reconnect_time
+				return Log.new
+			end
+			
+			Lock.new(@connection.mutex).synchronize do |connection_lock|
+				if !@connection.connected?
 					begin
-						connect if !connected?
-						@shared_data.client.write("openTransaction",
-							txn_id, group_name, "", category,
-							AnalyticsLogger.timestamp_string,
-							union_station_key,
-							true,
-							true)
-						result = @shared_data.client.read
-						if result != ["ok"]
-							raise "Expected logging server to respond with 'ok', but got #{result.inspect} instead"
-						end
-						return Log.new(@shared_data, txn_id)
-					rescue Errno::ENOENT, *NETWORK_ERRORS
-						try_count += 1
-						disconnect(true)
-						shared_data_lock.reset(@shared_data.mutex, false)
-						lock.unlock
-						sleep RETRY_SLEEP if try_count < @max_connect_tries
-						lock.lock
-						shared_data_lock.lock
+						connect
+						connection_lock.reset(@connection.mutex)
+					rescue SystemCallError, IOError
+						@connection.disconnect
+						DebugLogging.warn("Cannot connect to the logging agent at #{@server_address}; " +
+							"retrying in #{@reconnect_timeout} second(s).")
+						@next_reconnect_time = current_time + @reconnect_timeout
+						return Log.new
 					rescue Exception => e
-						disconnect
+						@connection.disconnect
 						raise e
 					end
 				end
-				# Failed to connect.
-				DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
-					"retrying in #{@reconnect_timeout} second(s).")
-				@next_reconnect_time = current_time + @reconnect_timeout
+				
+				begin
+					@connection.channel.write("openTransaction",
+						txn_id, group_name, "", category,
+						AnalyticsLogger.timestamp_string,
+						union_station_key,
+						true,
+						true)
+					result = @connection.channel.read
+					if result != ["ok"]
+						raise "Expected logging server to respond with 'ok', but got #{result.inspect} instead"
+					end
+					return Log.new(@connection, txn_id)
+				rescue SystemCallError, IOError
+					@connection.disconnect
+					DebugLogging.warn("The logging agent at #{@server_address}" <<
+						" closed the connection; will reconnect in " <<
+						"#{@reconnect_timeout} second(s).")
+					@next_reconnect_time = current_time + @reconnect_timeout
+					return Log.new
+				rescue Exception => e
+					@connection.disconnect
+					raise e
+				end
 			end
-			return Log.new
-		end
 		end
 	end
 	
@@ -261,38 +288,46 @@ class AnalyticsLogger
 		end
 		
 		Lock.new(@mutex).synchronize do |lock|
-		Lock.new(@shared_data.mutex).synchronize do |shared_data_lock|
-			try_count = 0
-			if current_time >= @next_reconnect_time
-				while try_count < @max_connect_tries
+			if current_time < @next_reconnect_time
+				return Log.new
+			end
+			
+			Lock.new(@connection.mutex).synchronize do |connection_lock|
+				if !@connection.connected?
 					begin
-						connect if !connected?
-						@shared_data.client.write("openTransaction",
-							txn_id, group_name, "", category,
-							AnalyticsLogger.timestamp_string,
-							union_station_key,
-							true)
-						return Log.new(@shared_data, txn_id)
-					rescue Errno::ENOENT, *NETWORK_ERRORS
-						try_count += 1
-						disconnect(true)
-						shared_data_lock.reset(@shared_data.mutex, false)
-						lock.unlock
-						sleep RETRY_SLEEP if try_count < @max_connect_tries
-						lock.lock
-						shared_data_lock.lock
+						connect
+						connection_lock.reset(@connection.mutex)
+					rescue SystemCallError, IOError
+						@connection.disconnect
+						DebugLogging.warn("Cannot connect to the logging agent at #{@server_address}; " +
+							"retrying in #{@reconnect_timeout} second(s).")
+						@next_reconnect_time = current_time + @reconnect_timeout
+						return Log.new
 					rescue Exception => e
-						disconnect
+						@connection.disconnect
 						raise e
 					end
 				end
-				# Failed to connect.
-				DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
-					"retrying in #{@reconnect_timeout} second(s).")
-				@next_reconnect_time = current_time + @reconnect_timeout
+				
+				begin
+					@connection.channel.write("openTransaction",
+						txn_id, group_name, "", category,
+						AnalyticsLogger.timestamp_string,
+						union_station_key,
+						true)
+					return Log.new(@connection, txn_id)
+				rescue SystemCallError, IOError
+					@connection.disconnect
+					DebugLogging.warn("The logging agent at #{@server_address}" <<
+						" closed the connection; will reconnect in " <<
+						"#{@reconnect_timeout} second(s).")
+					@next_reconnect_time = current_time + @reconnect_timeout
+					return Log.new
+				rescue Exception => e
+					@connection.disconnect
+					raise e
+				end
 			end
-			return Log.new
-		end
 		end
 	end
 
@@ -337,18 +372,23 @@ private
 		end
 	end
 	
-	class SharedData
+	class Connection
 		attr_reader :mutex
-		attr_accessor :client
+		attr_accessor :channel
 		
-		def initialize
+		def initialize(io)
 			@mutex = Mutex.new
 			@refcount = 1
+			@channel = MessageChannel.new(io) if io
 		end
 		
-		def disconnect(check_error_response = false)
-			# TODO: implement check_error_response support
-			@client.close if @client
+		def connected?
+			return !!@channel
+		end
+		
+		def disconnect
+			@channel.close if @channel
+			@channel = nil
 		end
 		
 		def ref
@@ -369,29 +409,46 @@ private
 		end
 	end
 	
-	def connected?
-		return @shared_data.client && @shared_data.client.connected?
-	end
-	
 	def connect
-		@shared_data.client = MessageClient.new(@username, @password, @server_address)
-		@shared_data.client.write("init", @node_name)
-		args = @shared_data.client.read
-		if !args
-			raise Errno::ECONNREFUSED, "Cannot connect to logging server"
-		elsif args.size != 1
-			raise IOError, "Logging server returned an invalid reply for the 'init' command"
-		elsif args[0] == "server shutting down"
-			raise Errno::ECONNREFUSED, "Cannot connect to logging server"
-		elsif args[0] != "ok"
-			raise IOError, "Logging server returned an invalid reply for the 'init' command"
+		socket  = connect_to_server(@server_address)
+		channel = MessageChannel.new(socket)
+		
+		result = channel.read
+		if result.nil?
+			raise EOFError
+		elsif result.size != 2 || result[0] != "version"
+			raise IOError, "The logging agent didn't sent a valid version identifier"
+		elsif result[1] != "1"
+			raise IOError, "Unsupported logging agent protocol version #{result[1]}"
 		end
-	end
-	
-	def disconnect(check_error_response = false)
-		@shared_data.disconnect(check_error_response)
-		@shared_data.unref
-		@shared_data = SharedData.new
+		
+		channel.write_scalar(@username)
+		channel.write_scalar(@password)
+		
+		result = channel.read
+		if result.nil?
+			raise EOFError
+		elsif result[0] != "ok"
+			raise SecurityError, result[0]
+		end
+		
+		channel.write("init", @node_name)
+		args = channel.read
+		if !args
+			raise Errno::ECONNREFUSED, "Cannot connect to logging agent"
+		elsif args.size != 1
+			raise IOError, "Logging agent returned an invalid reply for the 'init' command"
+		elsif args[0] == "server shutting down"
+			raise Errno::ECONNREFUSED, "Cannot connect to logging agent"
+		elsif args[0] != "ok"
+			raise IOError, "Logging agent returned an invalid reply for the 'init' command"
+		end
+		
+		@connection.unref
+		@connection = Connection.new(socket)
+	rescue Exception => e
+		socket.close if socket && !socket.closed?
+		raise e
 	end
 	
 	def random_token(length)
