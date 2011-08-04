@@ -339,7 +339,7 @@ namespace boost
             if(thread_info)
             {
                 unique_lock<mutex> lk(thread_info->sleep_mutex);
-                while(thread_info->sleep_condition.timed_wait(lk,st));
+                while(thread_info->sleep_condition.timed_wait(lk,st)) {};
             }
             else
             {

@@ -321,12 +321,14 @@ create_request(ngx_http_request_t *r)
     size_t                         len, size, key_len, val_len, content_length;
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
+    int                            server_name_len;
     ngx_str_t                      escaped_uri;
     ngx_str_t                     *union_station_filters = NULL;
     u_char                         min_instances_string[12];
     u_char                         framework_spawner_idle_time_string[12];
     u_char                         app_spawner_idle_time_string[12];
     u_char                        *end;
+    void                          *tmp;
     ngx_uint_t                     i, n;
     ngx_buf_t                     *b;
     ngx_chain_t                   *cl, *body;
@@ -411,6 +413,15 @@ create_request(ngx_http_request_t *r)
     if (r->args.len > 0) {
         len += 1 + r->args.len;
     }
+    
+    /* SERVER_NAME; must be equal to HTTP_HOST without the port part */
+    tmp = memchr(r->headers_in.host->value.data, ':', r->headers_in.host->value.len);
+    if (tmp == NULL) {
+        server_name_len = r->headers_in.host->value.len;
+    } else {
+        server_name_len = (int) ((const u_char *) tmp - r->headers_in.host->value.data);
+    }
+    len += sizeof("SERVER_NAME") + server_name_len + 1;
     
     /* Various other HTTP headers. */
     if (r->headers_in.content_type != NULL
@@ -635,6 +646,12 @@ create_request(ngx_http_request_t *r)
         b->last = ngx_copy(b->last, "?", 1);
         b->last = ngx_copy(b->last, r->args.data, r->args.len);
     }
+    b->last = ngx_copy(b->last, "", 1);
+    
+    /* SERVER_NAME */
+    b->last = ngx_copy(b->last, "SERVER_NAME", sizeof("SERVER_NAME"));
+    b->last = ngx_copy(b->last, r->headers_in.host->value.data,
+                       server_name_len);
     b->last = ngx_copy(b->last, "", 1);
     
     /* Various other HTTP headers. */

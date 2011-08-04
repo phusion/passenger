@@ -79,7 +79,8 @@ split(const StaticString &str, char sep, vector<StaticString> &output) {
 	_split(str, sep, output);
 }
 
-string toString(const vector<string> &vec) {
+string
+toString(const vector<string> &vec) {
 	vector<StaticString> vec2;
 	vec2.reserve(vec.size());
 	for (vector<string>::const_iterator it = vec.begin(); it != vec.end(); it++) {
@@ -88,7 +89,8 @@ string toString(const vector<string> &vec) {
 	return toString(vec2);
 }
 
-string toString(const vector<StaticString> &vec) {
+string
+toString(const vector<StaticString> &vec) {
 	string result = "[";
 	vector<StaticString>::const_iterator it;
 	unsigned int i;
@@ -128,9 +130,10 @@ pointerToIntString(void *pointer) {
 	}
 }
 
-unsigned long long
-stringToULL(const StaticString &str) {
-	unsigned long long result = 0;
+template<typename Numeric>
+static Numeric
+stringToUnsignedNumeric(const StaticString &str) {
+	Numeric result = 0;
 	string::size_type i = 0;
 	const char *data = str.data();
 	
@@ -145,9 +148,20 @@ stringToULL(const StaticString &str) {
 	return result;
 }
 
-long long
-stringToLL(const StaticString &str) {
-	long long result = 0;
+unsigned long long
+stringToULL(const StaticString &str) {
+	return stringToUnsignedNumeric<unsigned long long>(str);
+}
+
+unsigned int
+stringToUint(const StaticString &str) {
+	return stringToUnsignedNumeric<unsigned int>(str);
+}
+
+template<typename Numeric>
+static Numeric
+stringToSignedNumeric(const StaticString &str) {
+	Numeric result = 0;
 	string::size_type i = 0;
 	const char *data = str.data();
 	bool minus = false;
@@ -171,14 +185,26 @@ stringToLL(const StaticString &str) {
 	}
 }
 
-unsigned long long
-hexToULL(const StaticString &hex) {
-	unsigned long long result = 0;
-	string::size_type i = 0;
+long long
+stringToLL(const StaticString &str) {
+	return stringToSignedNumeric<long long>(str);
+}
+
+int
+stringToInt(const StaticString &str) {
+	return stringToSignedNumeric<int>(str);
+}
+
+template<typename Numeric>
+static Numeric
+hexToUnsignedNumeric(const StaticString &hex) {
+	const char *pos = hex.data();
+	const char *end = hex.data() + hex.size();
+	Numeric result = 0;
 	bool done = false;
 	
-	while (i < hex.size() && !done) {
-		char c = hex[i];
+	while (pos < end && !done) {
+		char c = *pos;
 		if (c >= '0' && c <= '9') {
 			result *= 16;
 			result += c - '0';
@@ -191,9 +217,19 @@ hexToULL(const StaticString &hex) {
 		} else {
 			done = true;
 		}
-		i++;
+		pos++;
 	}
 	return result;
+}
+
+unsigned long long
+hexToULL(const StaticString &hex) {
+	return hexToUnsignedNumeric<unsigned long long>(hex);
+}
+
+unsigned int
+hexToUint(const StaticString &hex) {
+	return hexToUnsignedNumeric<unsigned int>(hex);
 }
 
 unsigned long long
