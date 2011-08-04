@@ -33,7 +33,9 @@
 
 #include <string>
 #include <set>
-#include <regex.h>
+#ifndef _PCREPOSIX_H
+	#include <regex.h>
+#endif
 #include <cstdio>
 #include <cstring>
 
@@ -475,7 +477,11 @@ public:
 	enum FieldIdentifier {
 		URI,
 		CONTROLLER,
-		RESPONSE_TIME
+		RESPONSE_TIME,
+		RESPONSE_TIME_WITHOUT_GC,
+		STATUS,
+		STATUS_CODE,
+		GC_TIME
 	};
 	
 	virtual ~Context() { }
@@ -483,7 +489,14 @@ public:
 	virtual string getURI() const = 0;
 	virtual string getController() const = 0;
 	virtual int getResponseTime() const = 0;
+	virtual string getStatus() const = 0;
+	virtual int getStatusCode() const = 0;
+	virtual int getGcTime() const = 0;
 	virtual bool hasHint(const string &name) const = 0;
+	
+	int getResponseTimeWithoutGc() const {
+		return getResponseTime() - getGcTime();
+	}
 	
 	string queryStringField(FieldIdentifier id) const {
 		switch (id) {
@@ -493,6 +506,14 @@ public:
 			return getController();
 		case RESPONSE_TIME:
 			return toString(getResponseTime());
+		case RESPONSE_TIME_WITHOUT_GC:
+			return toString(getResponseTimeWithoutGc());
+		case STATUS:
+			return getStatus();
+		case STATUS_CODE:
+			return toString(getStatusCode());
+		case GC_TIME:
+			return toString(getGcTime());
 		default:
 			return "";
 		}
@@ -502,6 +523,12 @@ public:
 		switch (id) {
 		case RESPONSE_TIME:
 			return getResponseTime();
+		case RESPONSE_TIME_WITHOUT_GC:
+			return getResponseTimeWithoutGc();
+		case STATUS_CODE:
+			return getStatusCode();
+		case GC_TIME:
+			return getGcTime();
 		default:
 			return 0;
 		}
@@ -515,6 +542,14 @@ public:
 			return !getController().empty();
 		case RESPONSE_TIME:
 			return getResponseTime() > 0;
+		case RESPONSE_TIME_WITHOUT_GC:
+			return getResponseTimeWithoutGc() > 0;
+		case STATUS:
+			return !getStatus().empty();
+		case STATUS_CODE:
+			return getStatusCode() > 0;
+		case GC_TIME:
+			return getGcTime() > 0;
 		default:
 			return false;
 		}
@@ -524,8 +559,12 @@ public:
 		switch (id) {
 		case URI:
 		case CONTROLLER:
+		case STATUS:
 			return STRING_TYPE;
 		case RESPONSE_TIME:
+		case RESPONSE_TIME_WITHOUT_GC:
+		case STATUS_CODE:
+		case GC_TIME:
 			return INTEGER_TYPE;
 		default:
 			return UNKNOWN_TYPE;
@@ -537,11 +576,16 @@ class SimpleContext: public Context {
 public:
 	string uri;
 	string controller;
+	string status;
 	int responseTime;
+	int statusCode;
+	int gcTime;
 	set<string> hints;
 	
 	SimpleContext() {
 		responseTime = 0;
+		statusCode = 0;
+		gcTime = 0;
 	}
 	
 	virtual string getURI() const {
@@ -554,6 +598,18 @@ public:
 	
 	virtual int getResponseTime() const {
 		return responseTime;
+	}
+	
+	virtual string getStatus() const {
+		return status;
+	}
+	
+	virtual int getStatusCode() const {
+		return statusCode;
+	}
+	
+	virtual int getGcTime() const {
+		return gcTime;
 	}
 	
 	virtual bool hasHint(const string &name) const {
@@ -569,6 +625,10 @@ private:
 	struct ParseState {
 		unsigned long long requestProcessingStart;
 		unsigned long long requestProcessingEnd;
+		unsigned long long smallestTimestamp;
+		unsigned long long largestTimestamp;
+		unsigned long long gcTimeStart;
+		unsigned long long gcTimeEnd;
 	};
 	
 	static void parseLine(const StaticString &txnId, unsigned long long timestamp,
@@ -587,15 +647,33 @@ private:
 			if (pos != string::npos) {
 				ctx.controller = value.substr(0, pos);
 			}
+		} else if (startsWith(data, "Status: ")) {
+			StaticString value = data.substr(data.find(':') + 2);
+			ctx.status = value;
+			ctx.statusCode = stringToInt(value);
+		} else if (startsWith(data, "Initial GC time: ")) {
+			StaticString value = data.substr(data.find(':') + 2);
+			state.gcTimeStart = stringToULL(value);
+		} else if (startsWith(data, "Final GC time: ")) {
+			StaticString value = data.substr(data.find(':') + 2);
+			state.gcTimeEnd = stringToULL(value);
+		}
+		
+		if (state.smallestTimestamp == 0 || timestamp < state.smallestTimestamp) {
+			state.smallestTimestamp = timestamp;
+		}
+		if (timestamp > state.largestTimestamp) {
+			state.largestTimestamp = timestamp;
 		}
 	}
 	
 	static void reallyParse(const StaticString &data, SimpleContext &ctx) {
 		const char *current = data.data();
 		const char *end     = data.data() + data.size();
-		ParseState state;
 		
+		ParseState state;
 		memset(&state, 0, sizeof(state));
+		
 		while (current < end) {
 			current = skipNewlines(current, end);
 			if (current < end) {
@@ -622,6 +700,12 @@ private:
 		if (state.requestProcessingEnd != 0) {
 			ctx.responseTime = int(state.requestProcessingEnd -
 				state.requestProcessingStart);
+		} else if (state.smallestTimestamp != 0) {
+			ctx.responseTime = state.largestTimestamp - state.smallestTimestamp;
+		}
+		
+		if (state.gcTimeEnd != 0) {
+			ctx.gcTime = state.gcTimeEnd - state.gcTimeStart;
 		}
 	}
 	
@@ -721,6 +805,18 @@ public:
 	
 	virtual int getResponseTime() const {
 		return parse()->getResponseTime();
+	}
+	
+	virtual string getStatus() const {
+		return parse()->getStatus();
+	}
+	
+	virtual int getStatusCode() const {
+		return parse()->getStatusCode();
+	}
+	
+	virtual int getGcTime() const {
+		return parse()->getGcTime();
 	}
 	
 	virtual bool hasHint(const string &name) const {
@@ -1458,6 +1554,14 @@ private:
 			return Value(Context::CONTROLLER);
 		} else if (token.rawValue == "response_time") {
 			return Value(Context::RESPONSE_TIME);
+		} else if (token.rawValue == "response_time_without_gc") {
+			return Value(Context::RESPONSE_TIME_WITHOUT_GC);
+		} else if (token.rawValue == "status") {
+			return Value(Context::STATUS);
+		} else if (token.rawValue == "status_code") {
+			return Value(Context::STATUS_CODE);
+		} else if (token.rawValue == "gc_time") {
+			return Value(Context::GC_TIME);
 		} else {
 			raiseSyntaxError("unknown field '" + token.rawValue + "'", token);
 			return Value(); // Shut up compiler warning.

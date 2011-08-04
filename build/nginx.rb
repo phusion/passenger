@@ -32,7 +32,6 @@ task :nginx => [
 dependencies = [
 	'ext/nginx/HelperAgent.cpp',
 	'ext/nginx/ScgiRequestParser.h',
-	'ext/nginx/HttpStatusExtractor.h',
 	'ext/common/StaticString.h',
 	'ext/common/Account.h',
 	'ext/common/AccountsDatabase.h',

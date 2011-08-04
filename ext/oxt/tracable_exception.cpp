@@ -52,7 +52,9 @@ tracable_exception::tracable_exception() {
 	}
 }
 
-tracable_exception::tracable_exception(const tracable_exception &other) {
+tracable_exception::tracable_exception(const tracable_exception &other)
+	: std::exception()
+{
 	list<trace_point *>::const_iterator it;
 	for (it = other.backtrace_copy.begin(); it != other.backtrace_copy.end(); it++) {
 		trace_point *p = new trace_point(

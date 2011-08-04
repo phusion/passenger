@@ -51,6 +51,24 @@ namespace tut {
 		}
 	}
 	
+	TEST_METHOD(2) {
+		// Test support for various fields.
+		ctx.uri = "foo";
+		ctx.controller = "bar";
+		ctx.responseTime = 800;
+		ctx.status = "200 OK";
+		ctx.statusCode = 201;
+		ctx.gcTime = 30;
+		ensure(eval(
+			"uri == 'foo' "
+			" && response_time == 800"
+			" && response_time_without_gc == 770"
+			" && status == '200 OK'"
+			" && status_code == 201"
+			" && gc_time == 30"
+		));
+	}
+	
 	
 	/******** String and regexp tests *******/
 	
@@ -376,11 +394,17 @@ namespace tut {
 			"1234-abcd 1234 0 BEGIN: request processing (1235, 10, 10)\n"
 			"1234-abcd 1240 1 URI: /foo\n"
 			"1234-abcd 1241 2 Controller action: HomeController#index\n"
-			"1234-abcd 2234 3 END: request processing (2234, 10, 10)\n"
+			"1234-abcd 1242 3 Status: 200 OK\n"
+			"1234-abcd 1243 4 Initial GC time: 1\n"
+			"1234-abcd 1244 5 Final GC time: 10\n"
+			"1234-abcd 2234 10 END: request processing (2234, 10, 10)\n"
 		);
 		ensure_equals(ctx.getURI(), "/foo");
 		ensure_equals(ctx.getController(), "HomeController");
 		ensure_equals(ctx.getResponseTime(), 46655);
+		ensure_equals(ctx.getStatus(), "200 OK");
+		ensure_equals(ctx.getStatusCode(), 200);
+		ensure_equals(ctx.getGcTime(), 9);
 	}
 	
 	TEST_METHOD(51) {
@@ -397,10 +421,13 @@ namespace tut {
 	}
 	
 	TEST_METHOD(52) {
-		// It does only extracts the response time if both the begin and end events are available
+		// If the begin or end "request processing" event is not available
+		// then it derives the response time from the entire transaction.
 		ContextFromLog ctx(
-			"1234-abcd 1234 0 BEGIN: request processing (1235, 10, 10)\n"
+			"1234-abcd 1234 0 ATTACH\n"
+			"1234-abcd 1235 1 BEGIN: request processing (1235, 10, 10)\n"
+			"1234-abcd 1236 2 DETACH\n"
 		);
-		ensure_equals(ctx.getResponseTime(), 0);
+		ensure_equals(ctx.getResponseTime(), 2);
 	}
 }

@@ -7,6 +7,13 @@ shared_examples_for "HelloWorld Rack application" do
 		get('/').should =~ /hello/
 	end
 	
+	it "supports responses with the 'chunked' transfer encoding" do
+		get('/chunked').should ==
+			"chunk1\n" +
+			"chunk2\n" +
+			"chunk3\n"
+	end
+	
 	it "supports restarting via restart.txt" do
 		get('/').should =~ /hello/
 		File.write("#{@stub.app_root}/config.ru", %q{
