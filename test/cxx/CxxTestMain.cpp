@@ -98,25 +98,20 @@ main(int argc, char *argv[]) {
 	allGroups = tut::runner.get().list_groups();
 	parseOptions(argc, argv);
 	
-	try {
-		bool all_ok = true;
-		if (runMode == RUN_ALL_GROUPS) {
-			tut::runner.get().run_tests();
-			all_ok = reporter.all_ok();
-		} else {
-			all_ok = true;
-			for (groupnames_iterator it = groupsToRun.begin(); it != groupsToRun.end(); it++) {
-				tut::runner.get().run_tests(*it);
-				all_ok = all_ok && reporter.all_ok();
-			}
+	bool all_ok = true;
+	if (runMode == RUN_ALL_GROUPS) {
+		tut::runner.get().run_tests();
+		all_ok = reporter.all_ok();
+	} else {
+		all_ok = true;
+		for (groupnames_iterator it = groupsToRun.begin(); it != groupsToRun.end(); it++) {
+			tut::runner.get().run_tests(*it);
+			all_ok = all_ok && reporter.all_ok();
 		}
-		if (all_ok) {
-			return 0;
-		} else {
-			return 1;
-		}
-	} catch (const std::exception &ex) {
-		cerr << "*** Exception raised: " << ex.what() << endl;
-		return 2;
+	}
+	if (all_ok) {
+		return 0;
+	} else {
+		return 1;
 	}
 }
