@@ -67,12 +67,9 @@ class Installer < PhusionPassenger::AbstractInstaller
 		check_whether_we_can_write_to(SOURCE_ROOT) || exit(1)
 		
 		download_and_install = should_we_download_and_install_nginx_automatically?
-		if pcre_is_installed?
-			@pcre_source_dir = nil
-		else
-			@pcre_source_dir = download_and_extract_pcre
-		end
+
 		if download_and_install
+			@pcre_source_dir = download_and_extract_pcre
 			nginx_source_dir = download_and_extract_nginx
 			if nginx_source_dir.nil?
 				show_possible_solutions_for_download_and_extraction_problems
@@ -85,6 +82,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 				extra_nginx_configure_flags = @extra_configure_flags
 			end
 		else
+			@pcre_source_dir = ask_for_pcre_source_dir
 			nginx_source_dir = ask_for_nginx_source_dir
 			nginx_prefix = ask_for_nginx_install_prefix
 			extra_nginx_configure_flags = ask_for_extra_nginx_configure_flags(nginx_prefix)
@@ -238,6 +236,30 @@ private
 				prefix = "/opt/nginx"
 			end
 			return prefix
+		end
+	end
+
+	def ask_for_pcre_source_dir
+		new_screen
+		color_puts "<banner>Where is your PCRE source code located?</banner>"
+		puts
+		if @pcre_source_dir
+			color_puts "<b>=> #{@pcre_source_dir}</b>"
+			return @pcre_source_dir
+		else
+			return prompt("Please specify the directory") do |input|
+				if input =~ %r(/)
+					if File.exist?("#{input}/pcreposix.c")
+						true
+					else
+						color_puts "<red>'#{input}' does not look like an PCRE source directory.</red>"
+						false
+					end
+				else
+					color_puts "<red>Please specify an absolute path.</red>"
+					false
+				end
+			end
 		end
 	end
 	
@@ -451,6 +473,13 @@ parser = OptionParser.new do |opts|
 	        "#{' ' * 37}directory. Conflicts with --auto-download.") do |dir|
 		options[:nginx_source_dir] = dir
 	end
+	opts.on("--pcre-source-dir=DIR", String, "Compile and install Nginx using the given\n" <<
+	        "#{' ' * 37}PCRE source directory, instead of\n" <<
+	        "#{' ' * 37}interactively asking to download+install\n" <<
+	        "#{' ' * 37}or to use an existing PCRE source\n" <<
+	        "#{' ' * 37}directory. Conflicts with --auto-download.") do |dir|
+		options[:pcre_source_dir] = dir
+	end
 	opts.on("--extra-configure-flags=STRING", String, "Pass these extra flags to Nginx's\n" <<
 	        "#{' ' * 37}'configure' script, instead of asking for\n" <<
 	        "#{' ' * 37}it interactively. Only applicable if\n" <<
@@ -470,8 +499,8 @@ rescue OptionParser::ParseError => e
 	exit 1
 end
 
-if options[:auto_download] && options[:nginx_source_dir]
-	STDERR.puts "You cannot specify both --auto-download and --nginx-source-dir."
+if options[:auto_download] && (options[:nginx_source_dir] || options[:pcre_source_dir])
+	STDERR.puts "You cannot specify both --auto-download and --nginx-source-dir or --pcre-source-dir."
 	exit 1
 end
 
