@@ -162,7 +162,9 @@ main(int argc, char *argv[]) {
 		false, DEFAULT_UNION_STATION_GATEWAY_ADDRESS);
 	int    unionStationGatewayPort = options.getInt("union_station_gateway_port",
 		false, DEFAULT_UNION_STATION_GATEWAY_PORT);
-	string unionStationGatewayCert = options.get("union_station_gateway_cert", false);
+	string unionStationGatewayCert  = options.get("union_station_gateway_cert", false);
+	string unionStationProxyAddress = options.get("union_station_proxy_address", false);
+	string unionStationProxyType    = options.get("union_station_proxy_type", false);
 	
 	curl_global_init(CURL_GLOBAL_ALL);
 	
@@ -251,7 +253,9 @@ main(int argc, char *argv[]) {
 			"u=rwx,g=rx,o=rx", GROUP_NOT_GIVEN,
 			unionStationGatewayAddress,
 			unionStationGatewayPort,
-			unionStationGatewayCert);
+			unionStationGatewayCert,
+			unionStationProxyAddress,
+			unionStationProxyType);
 		loggingServer = &server;
 		
 		
@@ -276,6 +280,7 @@ main(int argc, char *argv[]) {
 		
 		/********** Initialized! Enter main loop... **********/
 		
+		P_DEBUG("Logging agent online, listening at " << socketAddress);
 		ev_loop(eventLoop, 0);
 		return exitCode;
 	} catch (const tracable_exception &e) {

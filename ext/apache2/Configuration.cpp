@@ -282,6 +282,8 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_address, unionStationGatewayAddress)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_union_station_gateway_port, unionStationGatewayPort, int, 1)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGatewayCert)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_address, unionStationProxyAddress)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_type, unionStationProxyType)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_dir, analyticsLogDir)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
@@ -619,6 +621,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Union Station Gateway certificate."),
+	AP_INIT_TAKE1("UnionStationProxyAddress",
+		(Take1Func) cmd_union_station_proxy_address,
+		NULL,
+		RSRC_CONF,
+		"The address of the proxy that should be used for sending data to Union Station."),
+	AP_INIT_TAKE1("UnionStationProxyType",
+		(Take1Func) cmd_union_station_proxy_type,
+		NULL,
+		RSRC_CONF,
+		"The type of the proxy that should be used for sending data to Union Station."),
 	AP_INIT_TAKE1("PassengerAnalyticsLogDir",
 		(Take1Func) cmd_passenger_analytics_log_dir,
 		NULL,
