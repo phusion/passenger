@@ -28,6 +28,7 @@ TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx " <<
 	"#{TEST_COMMON_CFLAGS}"
 TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
+	"#{PlatformInfo.zlib_libs} " <<
 	"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 TEST_CXX_OBJECTS = {
 	'test/cxx/CxxTestMain.o' => %w(
