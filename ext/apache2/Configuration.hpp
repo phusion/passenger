@@ -387,6 +387,8 @@ struct ServerConfig {
 	string unionStationGatewayAddress;
 	int unionStationGatewayPort;
 	string unionStationGatewayCert;
+	string unionStationProxyAddress;
+	string unionStationProxyType;
 	
 	/** Directory in which analytics logs should be saved. */
 	string analyticsLogDir;
@@ -409,7 +411,9 @@ struct ServerConfig {
 		tempDir            = getSystemTempDir();
 		unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
 		unionStationGatewayPort    = DEFAULT_UNION_STATION_GATEWAY_PORT;
-		unionStationGatewayCert    = "";
+		unionStationGatewayCert    = string();
+		unionStationProxyAddress   = string();
+		unionStationProxyType      = string();
 		analyticsLogUser   = DEFAULT_ANALYTICS_LOG_USER;
 		analyticsLogGroup  = DEFAULT_ANALYTICS_LOG_GROUP;
 		analyticsLogPermissions = DEFAULT_ANALYTICS_LOG_PERMISSIONS;
@@ -453,6 +457,13 @@ struct ServerConfig {
 			analyticsLogDir = string(getSystemTempDir()) +
 				"/passenger-analytics-logs." +
 				username;
+		}
+		
+		if (unionStationProxyType != ""
+		 && unionStationProxyType != "http"
+		 && unionStationProxyType != "socks5") {
+			throw ConfigurationException(string("The option 'UnionStationProxyType' ") +
+				"may only be set to 'http' or 'socks5'.");
 		}
 	}
 };

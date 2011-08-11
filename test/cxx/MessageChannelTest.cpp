@@ -458,7 +458,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = timer.elapsed();
-			ensure("Spent at least 35 msec waiting", elapsed >= 35);
+			ensure("Spent at least 35 msec waiting", elapsed >= 34);
 			ensure("Spent at most 60 msec waiting", elapsed <= 60);
 			ensure("The passed time is deducted from timeout", timeout < 5);
 		}

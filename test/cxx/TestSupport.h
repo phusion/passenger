@@ -93,6 +93,14 @@ string readAll(const string &filename);
 string readAll(int fd);
 
 /**
+ * Writes zeroes into the given file descriptor its buffer is full (i.e.
+ * the next write will block).
+ *
+ * @throws SystemException
+ */
+void writeUntilFull(int fd);
+
+/**
  * Look for 'toFind' inside 'str', replace it with 'replaceWith' and return the result.
  * Only the first occurence of 'toFind' is replaced.
  */
