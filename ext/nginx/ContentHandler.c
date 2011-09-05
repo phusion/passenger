@@ -338,7 +338,6 @@ create_request(ngx_http_request_t *r)
     ngx_http_script_engine_t       e, le;
     ngx_http_core_srv_conf_t      *cscf;
     passenger_loc_conf_t          *slcf;
-    passenger_main_conf_t         *main_conf;
     passenger_context_t           *context;
     ngx_http_script_len_code_pt    lcode;
     #if (NGX_HTTP_SSL)
@@ -347,7 +346,6 @@ create_request(ngx_http_request_t *r)
     
     cscf = ngx_http_get_module_srv_conf(r, ngx_http_core_module);
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
-    main_conf = &passenger_main_conf;
     context = ngx_http_get_module_ctx(r, ngx_http_passenger_module);
     if (context == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
