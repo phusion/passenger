@@ -72,6 +72,8 @@ private:
 		string ip;
 		unsigned short port;
 		string certificate;
+		string proxyAddress;
+		string proxyType;
 		
 		CURL *curl;
 		struct curl_slist *headers;
@@ -103,6 +105,16 @@ private:
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlDataReceived);
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
+			if (!proxyAddress.empty()) {
+				curl_easy_setopt(curl, CURLOPT_PROXY, proxyAddress.c_str());
+				if (proxyType.empty() || proxyType == "http") {
+					curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
+				} else if (proxyType == "socks5") {
+					curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+				} else {
+					throw RuntimeException("Only 'http' and 'socks5' proxies are supported.");
+				}
+			}
 			if (certificate.empty()) {
 				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
 			} else {
@@ -129,10 +141,14 @@ private:
 		}
 		
 	public:
-		Server(const string &ip, const string &hostName, unsigned short port, const string &cert) {
+		Server(const string &ip, const string &hostName, unsigned short port, const string &cert,
+			const string &proxyAddress, const string &proxyType)
+		{
 			this->ip = ip;
 			this->port = port;
 			certificate = cert;
+			this->proxyAddress = proxyAddress;
+			this->proxyType = proxyType;
 			
 			hostHeader = "Host: " + hostName;
 			headers = NULL;
@@ -245,6 +261,8 @@ private:
 	string gatewayAddress;
 	unsigned short gatewayPort;
 	string certificate;
+	string proxyAddress;
+	string proxyType;
 	BlockingQueue<Item> queue;
 	oxt::thread *thr;
 	
@@ -298,7 +316,8 @@ private:
 		
 		servers.clear();
 		for (it = ips.begin(); it != ips.end(); it++) {
-			ServerPtr server(new Server(*it, gatewayAddress, gatewayPort, certificate));
+			ServerPtr server = make_shared<Server>(*it, gatewayAddress, gatewayPort,
+				certificate, proxyAddress, proxyType);
 			if (server->ping()) {
 				servers.push_back(server);
 			} else {
@@ -418,12 +437,15 @@ private:
 	}
 	
 public:
-	RemoteSender(const string &gatewayAddress, unsigned short gatewayPort, const string &certificate)
+	RemoteSender(const string &gatewayAddress, unsigned short gatewayPort, const string &certificate,
+		const string &proxyAddress, const string &proxyType)
 		: queue(1024)
 	{
 		this->gatewayAddress = gatewayAddress;
 		this->gatewayPort = gatewayPort;
 		this->certificate = certificate;
+		this->proxyAddress = proxyAddress;
+		this->proxyType = proxyType;
 		thr = new oxt::thread(
 			boost::bind(&RemoteSender::threadMain, this),
 			"RemoteSender thread",

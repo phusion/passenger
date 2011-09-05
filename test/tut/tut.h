@@ -1100,6 +1100,7 @@ private:
                 test_result::ex_ctor, ex);
             return tr;
         }
+        /*
         catch (const std::exception& ex)
         {
             // test failed with std::exception
@@ -1122,6 +1123,7 @@ private:
                 test_result::ex);
             return tr;
         }
+        */
 
         // test passed
         test_result tr(name_,ti->first, current_test_name, test_result::ok);

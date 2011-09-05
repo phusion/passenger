@@ -1,5 +1,6 @@
 #include <dirent.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <grp.h>
 #include "TestSupport.h"
@@ -52,6 +53,52 @@ readAll(int fd) {
 		}
 	}
 	return result;
+}
+
+void
+writeUntilFull(int fd) {
+	int flags, ret;
+	char buf[1024];
+	
+	memset(buf, 0, sizeof(buf));
+	flags = fcntl(fd, F_GETFL);
+	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	
+	while (true) {
+		ret = write(fd, buf, sizeof(buf));
+		if (ret == -1) {
+			int e = errno;
+			if (e == EAGAIN) {
+				break;
+			} else {
+				throw SystemException("write() failed", e);
+			}
+		}
+	}
+	while (true) {
+		ret = write(fd, buf, 50);
+		if (ret == -1) {
+			int e = errno;
+			if (e == EAGAIN) {
+				break;
+			} else {
+				throw SystemException("write() failed", e);
+			}
+		}
+	}
+	while (true) {
+		ret = write(fd, buf, 1);
+		if (ret == -1) {
+			int e = errno;
+			if (e == EAGAIN) {
+				break;
+			} else {
+				throw SystemException("write() failed", e);
+			}
+		}
+	}
+	
+	fcntl(fd, F_SETFL, flags);
 }
 
 string

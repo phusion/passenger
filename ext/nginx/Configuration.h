@@ -80,6 +80,8 @@ typedef struct {
     ngx_str_t    union_station_gateway_address;
     ngx_uint_t   union_station_gateway_port;
     ngx_str_t    union_station_gateway_cert;
+    ngx_str_t    union_station_proxy_address;
+    ngx_str_t    union_station_proxy_type;
     ngx_array_t *prestart_uris;
 } passenger_main_conf_t;
 

@@ -28,6 +28,7 @@ TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx " <<
 	"#{TEST_COMMON_CFLAGS}"
 TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
+	"#{PlatformInfo.zlib_libs} " <<
 	"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 TEST_CXX_OBJECTS = {
 	'test/cxx/CxxTestMain.o' => %w(
@@ -187,6 +188,10 @@ TEST_CXX_OBJECTS = {
 		test/cxx/BufferedIOTest.cpp
 		ext/common/Utils/BufferedIO.h
 		ext/common/Utils/Timer.h),
+	'test/cxx/MessageIOTest.o' => %w(
+		test/cxx/MessageIOTest.cpp
+		ext/common/Utils/MessageIO.h
+		ext/common/Utils/IOUtils.h),
 	'test/cxx/VariantMapTest.o' => %w(
 		test/cxx/VariantMapTest.cpp
 		ext/common/MessageChannel.h

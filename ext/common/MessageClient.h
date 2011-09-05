@@ -26,12 +26,14 @@
 #define _PASSENGER_MESSAGE_CLIENT_H_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/bind.hpp>
 #include <string>
 
 #include "StaticString.h"
-#include "MessageChannel.h"
 #include "Exceptions.h"
+#include "Utils/MessageIO.h"
 #include "Utils/IOUtils.h"
+#include "Utils/ScopeGuard.h"
 
 
 namespace Passenger {
@@ -42,17 +44,16 @@ using namespace boost;
 class MessageClient {
 protected:
 	FileDescriptor fd;
-	MessageChannel channel;
 	bool shouldAutoDisconnect;
 	
 	/* sendUsername() and sendPassword() exist and are virtual in order to facilitate unit testing. */
 	
-	virtual void sendUsername(MessageChannel &channel, const string &username) {
-		channel.writeScalar(username);
+	virtual void sendUsername(int fd, const StaticString &username, unsigned long long *timeout) {
+		writeScalarMessage(fd, username);
 	}
 	
-	virtual void sendPassword(MessageChannel &channel, const StaticString &userSuppliedPassword) {
-		channel.writeScalar(userSuppliedPassword.c_str(), userSuppliedPassword.size());
+	virtual void sendPassword(int fd, const StaticString &userSuppliedPassword, unsigned long long *timeout) {
+		writeScalarMessage(fd, userSuppliedPassword);
 	}
 	
 	/**
@@ -64,13 +65,15 @@ protected:
 	 * @throws boost::thread_interrupted
 	 * @pre <tt>channel</tt> is connected.
 	 */
-	void authenticate(const string &username, const StaticString &userSuppliedPassword) {
+	void authenticate(const StaticString &username, const StaticString &userSuppliedPassword,
+		unsigned long long *timeout)
+	{
 		vector<string> args;
 		
-		sendUsername(channel, username);
-		sendPassword(channel, userSuppliedPassword);
+		sendUsername(fd, username, timeout);
+		sendPassword(fd, userSuppliedPassword, timeout);
 		
-		if (!channel.read(args)) {
+		if (!readArrayMessage(fd, args, timeout)) {
 			throw IOException("The message server did not send an authentication response.");
 		} else if (args.size() != 1) {
 			throw IOException("The authentication response that the message server sent is not valid.");
@@ -79,11 +82,15 @@ protected:
 		}
 	}
 	
+	void checkConnection() {
+		if (!connected()) {
+			throw IOException("Not connected");
+		}
+	}
+	
 	void autoDisconnect() {
 		if (shouldAutoDisconnect) {
-			// Closes the connection without throwing close exceptions.
-			fd = FileDescriptor();
-			channel = MessageChannel();
+			fd.close(false);
 		}
 	}
 	
@@ -122,48 +129,35 @@ public:
 	 * @throws boost::thread_interrupted
 	 * @post connected()
 	 */
-	MessageClient *connect(const string &serverAddress, const string &username,
+	MessageClient *connect(const string &serverAddress, const StaticString &username,
 		const StaticString &userSuppliedPassword)
 	{
 		TRACE_POINT();
-		try {
-			fd = connectToServer(serverAddress.c_str());
-			channel = MessageChannel(fd);
-			
-			vector<string> args;
-			if (!read(args)) {
-				throw IOException("The message server closed the connection before sending a version identifier.");
-			}
-			if (args.size() != 2 || args[0] != "version") {
-				throw IOException("The message server didn't sent a valid version identifier.");
-			}
-			if (args[1] != "1") {
-				string message = string("Unsupported message server protocol version ") +
-					args[1] + ".";
-				throw IOException(message);
-			}
-			
-			authenticate(username, userSuppliedPassword);
-			return this;
-		} catch (const RuntimeException &) {
-			autoDisconnect();
-			throw;
-		} catch (const SystemException &) {
-			autoDisconnect();
-			throw;
-		} catch (const IOException &) {
-			autoDisconnect();
-			throw;
-		} catch (const boost::thread_interrupted &) {
-			autoDisconnect();
-			throw;
+		ScopeGuard g(boost::bind(&MessageClient::autoDisconnect, this));
+		
+		fd = connectToServer(serverAddress.c_str());
+		
+		vector<string> args;
+		if (!readArrayMessage(fd, args)) {
+			throw IOException("The message server closed the connection before sending a version identifier.");
 		}
+		if (args.size() != 2 || args[0] != "version") {
+			throw IOException("The message server didn't sent a valid version identifier.");
+		}
+		if (args[1] != "1") {
+			string message = string("Unsupported message server protocol version ") +
+				args[1] + ".";
+			throw IOException(message);
+		}
+		
+		authenticate(username, userSuppliedPassword, NULL);
+		
+		g.clear();
+		return this;
 	}
 	
 	void disconnect() {
 		fd.close();
-		fd = FileDescriptor();
-		channel = MessageChannel();
 	}
 	
 	bool connected() const {
@@ -180,15 +174,24 @@ public:
 	
 	/**
 	 * @throws SystemException
+	 * @throws TimeoutException
 	 * @throws boost::thread_interrupted
 	 */
-	bool read(vector<string> &args) {
-		try {
-			return channel.read(args);
-		} catch (const SystemException &e) {
-			autoDisconnect();
-			throw;
-		}
+	bool read(vector<string> &args, unsigned long long *timeout = NULL) {
+		return readArray(args);
+	}
+	
+	/**
+	 * @throws SystemException
+	 * @throws TimeoutException
+	 * @throws boost::thread_interrupted
+	 */
+	bool readArray(vector<string> &args, unsigned long long *timeout = NULL) {
+		checkConnection();
+		ScopeGuard g(boost::bind(&MessageClient::autoDisconnect, this));
+		bool result = readArrayMessage(fd, args, timeout);
+		g.clear();
+		return result;
 	}
 	
 	/**
@@ -198,17 +201,15 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	bool readScalar(string &output, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
+		checkConnection();
+		ScopeGuard g(boost::bind(&MessageClient::autoDisconnect, this));
 		try {
-			return channel.readScalar(output, maxSize, timeout);
-		} catch (const SystemException &) {
-			autoDisconnect();
-			throw;
-		} catch (const SecurityException &) {
-			autoDisconnect();
-			throw;
-		} catch (const TimeoutException &) {
-			autoDisconnect();
-			throw;
+			output = readScalarMessage(fd, maxSize, timeout);
+			g.clear();
+			return true;
+		} catch (const EOFException &) {
+			g.clear();
+			return false;
 		}
 	}
 	
@@ -218,15 +219,16 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	int readFileDescriptor(bool negotiate = true) {
-		try {
-			return channel.readFileDescriptor(negotiate);
-		} catch (const SystemException &) {
-			autoDisconnect();
-			throw;
-		} catch (const IOException &) {
-			autoDisconnect();
-			throw;
+		checkConnection();
+		ScopeGuard g(boost::bind(&MessageClient::autoDisconnect, this));
+		int result;
+		if (negotiate) {
+			result = Passenger::readFileDescriptorWithNegotiation(fd);
+		} else {
+			result = Passenger::readFileDescriptor(fd);
 		}
+		g.clear();
+		return result;
 	}
 	
 	/**
@@ -234,11 +236,12 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	void write(const char *name, ...) {
+		checkConnection();
 		va_list ap;
 		va_start(ap, name);
 		try {
 			try {
-				channel.write(name, ap);
+				writeArrayMessage(fd, name, ap);
 			} catch (const SystemException &) {
 				autoDisconnect();
 				throw;
@@ -252,28 +255,26 @@ public:
 	
 	/**
 	 * @throws SystemException
+	 * @throws TimeoutException
 	 * @throws boost::thread_interrupted
 	 */
-	void writeScalar(const char *data, unsigned int size) {
-		try {
-			channel.writeScalar(data, size);
-		} catch (const SystemException &) {
-			autoDisconnect();
-			throw;
-		}
+	void writeScalar(const char *data, unsigned int size, unsigned long long *timeout = NULL) {
+		checkConnection();
+		ScopeGuard g(boost::bind(&MessageClient::autoDisconnect, this));
+		writeScalarMessage(fd, data, size, timeout);
+		g.clear();
 	}
 	
 	/**
 	 * @throws SystemException
+	 * @throws TimeoutException
 	 * @throws boost::thread_interrupted
 	 */
-	void writeScalar(const StaticString &data) {
-		try {
-			channel.writeScalar(data.c_str(), data.size());
-		} catch (const SystemException &) {
-			autoDisconnect();
-			throw;
-		}
+	void writeScalar(const StaticString &data, unsigned long long *timeout = NULL) {
+		checkConnection();
+		ScopeGuard g(boost::bind(&MessageClient::autoDisconnect, this));
+		writeScalarMessage(fd, data, timeout);
+		g.clear();
 	}
 	
 	/**
@@ -281,12 +282,14 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	void writeFileDescriptor(int fileDescriptor, bool negotiate = true) {
-		try {
-			channel.writeFileDescriptor(fileDescriptor, negotiate);
-		} catch (const SystemException &) {
-			autoDisconnect();
-			throw;
+		checkConnection();
+		ScopeGuard g(boost::bind(&MessageClient::autoDisconnect, this));
+		if (negotiate) {
+			Passenger::writeFileDescriptorWithNegotiation(fd, fileDescriptor);
+		} else {
+			Passenger::writeFileDescriptor(fd, fileDescriptor);
 		}
+		g.clear();
 	}
 };
 

@@ -53,6 +53,7 @@
 #include "Utils/Timer.h"
 #include "Utils/MemZeroGuard.h"
 #include "Utils/IOUtils.h"
+#include "Utils/MessageIO.h"
 
 namespace Passenger {
 
@@ -194,52 +195,9 @@ public:
 	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
 	 * @see read(), write(const char *, ...)
 	 */
-	template<typename StringArrayType, typename StringArrayConstIteratorType>
+	template<typename StringArrayType>
 	void write(const StringArrayType &args) {
-		StringArrayConstIteratorType it;
-		string data;
-		uint16_t dataSize = 0;
-
-		for (it = args.begin(); it != args.end(); it++) {
-			dataSize += it->size() + 1;
-		}
-		data.reserve(dataSize + sizeof(dataSize));
-		dataSize = htons(dataSize);
-		data.append((const char *) &dataSize, sizeof(dataSize));
-		for (it = args.begin(); it != args.end(); it++) {
-			data.append(*it);
-			data.append(1, DELIMITER);
-		}
-		
-		writeExact(fd, data);
-	}
-	
-	/**
-	 * Send an array message, which consists of the given elements, over the underlying
-	 * file descriptor.
-	 *
-	 * @param args The message elements.
-	 * @throws SystemException An error occured while writing the data to the file descriptor.
-	 * @throws boost::thread_interrupted
-	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
-	 * @see read(), write(const char *, ...)
-	 */
-	void write(const list<string> &args) {
-		write<list<string>, list<string>::const_iterator>(args);
-	}
-	
-	/**
-	 * Send an array message, which consists of the given elements, over the underlying
-	 * file descriptor.
-	 *
-	 * @param args The message elements.
-	 * @throws SystemException An error occured while writing the data to the file descriptor.
-	 * @throws boost::thread_interrupted
-	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
-	 * @see read(), write(const char *, ...)
-	 */
-	void write(const vector<string> &args) {
-		write<vector<string>, vector<string>::const_iterator>(args);
+		writeArrayMessage(fd, args);
 	}
 	
 	/**
@@ -252,18 +210,7 @@ public:
 	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
 	 */
 	void write(const char *name, va_list &ap) {
-		list<string> args;
-		args.push_back(name);
-		
-		while (true) {
-			const char *arg = va_arg(ap, const char *);
-			if (arg == NULL) {
-				break;
-			} else {
-				args.push_back(arg);
-			}
-		}
-		write(args);
+		writeArrayMessage(fd, name, ap);
 	}
 	
 	/**
@@ -297,8 +244,7 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	void writeUint32(unsigned int value) {
-		uint32_t l = htonl(value);
-		writeExact(fd, &l, sizeof(uint32_t));
+		Passenger::writeUint32(fd, value);
 	}
 	
 	/**
@@ -314,7 +260,7 @@ public:
 	 * @see readScalar(), writeScalar(const char *, unsigned int)
 	 */
 	void writeScalar(const string &str) {
-		writeScalar(str.c_str(), str.size());
+		writeScalarMessage(fd, str);
 	}
 	
 	/**
@@ -332,8 +278,7 @@ public:
 	 * @see readScalar(), writeScalar(const string &)
 	 */
 	void writeScalar(const char *data, unsigned int size) {
-		writeUint32(size);
-		writeExact(fd, data, size);
+		writeScalarMessage(fd, data, size);
 	}
 	
 	/**
@@ -348,69 +293,10 @@ public:
 	 * @see readFileDescriptor()
 	 */
 	void writeFileDescriptor(int fileDescriptor, bool negotiate = true) {
-		// See message_channel.rb for more info about negotiation.
 		if (negotiate) {
-			vector<string> args;
-			
-			if (!read(args)) {
-				throw IOException("Unexpected end of stream encountered while pre-negotiating a file descriptor");
-			} else if (args.size() != 1 || args[0] != "pass IO") {
-				throw IOException("FD passing pre-negotiation message expected.");
-			}
-		}
-		
-		struct msghdr msg;
-		struct iovec vec;
-		char dummy[1];
-		#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
-			struct {
-				struct cmsghdr header;
-				int fd;
-			} control_data;
-		#else
-			char control_data[CMSG_SPACE(sizeof(int))];
-		#endif
-		struct cmsghdr *control_header;
-		int ret;
-	
-		msg.msg_name = NULL;
-		msg.msg_namelen = 0;
-	
-		/* Linux and Solaris require msg_iov to be non-NULL. */
-		dummy[0]       = '\0';
-		vec.iov_base   = dummy;
-		vec.iov_len    = sizeof(dummy);
-		msg.msg_iov    = &vec;
-		msg.msg_iovlen = 1;
-	
-		msg.msg_control    = (caddr_t) &control_data;
-		msg.msg_controllen = sizeof(control_data);
-		msg.msg_flags      = 0;
-		
-		control_header = CMSG_FIRSTHDR(&msg);
-		control_header->cmsg_level = SOL_SOCKET;
-		control_header->cmsg_type  = SCM_RIGHTS;
-		#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
-			control_header->cmsg_len = sizeof(control_data);
-			control_data.fd = fileDescriptor;
-		#else
-			control_header->cmsg_len = CMSG_LEN(sizeof(int));
-			memcpy(CMSG_DATA(control_header), &fileDescriptor, sizeof(int));
-		#endif
-		
-		ret = syscalls::sendmsg(fd, &msg, 0);
-		if (ret == -1) {
-			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
-		}
-		
-		if (negotiate) {
-			vector<string> args;
-			
-			if (!read(args)) {
-				throw IOException("Unexpected end of stream encountered while post-negotiating a file descriptor");
-			} else if (args.size() != 1 || args[0] != "got IO") {
-				throw IOException("FD passing post-negotiation message expected.");
-			}
+			Passenger::writeFileDescriptorWithNegotiation(fd, fileDescriptor);
+		} else {
+			Passenger::writeFileDescriptor(fd, fileDescriptor);
 		}
 	}
 	
@@ -425,44 +311,12 @@ public:
 	 * @see write()
 	 */
 	bool read(vector<string> &args) {
-		uint16_t size;
-		int ret;
-		unsigned int alreadyRead = 0;
-		
-		do {
-			ret = syscalls::read(fd, (char *) &size + alreadyRead, sizeof(size) - alreadyRead);
-			if (ret == -1) {
-				throw SystemException("read() failed", errno);
-			} else if (ret == 0) {
-				return false;
-			}
-			alreadyRead += ret;
-		} while (alreadyRead < sizeof(size));
-		size = ntohs(size);
-		
-		string buffer;
-		args.clear();
-		buffer.reserve(size);
-		while (buffer.size() < size) {
-			char tmp[1024 * 8];
-			ret = syscalls::read(fd, tmp, min(size - buffer.size(), sizeof(tmp)));
-			if (ret == -1) {
-				throw SystemException("read() failed", errno);
-			} else if (ret == 0) {
-				return false;
-			}
-			buffer.append(tmp, ret);
+		try {
+			args = readArrayMessage(fd);
+			return true;
+		} catch (const EOFException &) {
+			return false;
 		}
-		
-		if (!buffer.empty()) {
-			string::size_type start = 0, pos;
-			const string &const_buffer(buffer);
-			while ((pos = const_buffer.find('\0', start)) != string::npos) {
-				args.push_back(const_buffer.substr(start, pos - start));
-				start = pos + 1;
-			}
-		}
-		return true;
 	}
 	
 	/**
@@ -610,74 +464,11 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	int readFileDescriptor(bool negotiate = true) {
-		// See message_channel.rb for more info about negotiation.
 		if (negotiate) {
-			write("pass IO", NULL);
+			Passenger::readFileDescriptorWithNegotiation(fd);
+		} else {
+			Passenger::readFileDescriptor(fd);
 		}
-		
-		struct msghdr msg;
-		struct iovec vec;
-		char dummy[1];
-		#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
-			// File descriptor passing macros (CMSG_*) seem to be broken
-			// on 64-bit MacOS X. This structure works around the problem.
-			struct {
-				struct cmsghdr header;
-				int fd;
-			} control_data;
-			#define EXPECTED_CMSG_LEN sizeof(control_data)
-		#else
-			char control_data[CMSG_SPACE(sizeof(int))];
-			#define EXPECTED_CMSG_LEN CMSG_LEN(sizeof(int))
-		#endif
-		struct cmsghdr *control_header;
-		int ret;
-
-		msg.msg_name    = NULL;
-		msg.msg_namelen = 0;
-		
-		dummy[0]       = '\0';
-		vec.iov_base   = dummy;
-		vec.iov_len    = sizeof(dummy);
-		msg.msg_iov    = &vec;
-		msg.msg_iovlen = 1;
-
-		msg.msg_control    = (caddr_t) &control_data;
-		msg.msg_controllen = sizeof(control_data);
-		msg.msg_flags      = 0;
-		
-		ret = syscalls::recvmsg(fd, &msg, 0);
-		if (ret == -1) {
-			throw SystemException("Cannot read file descriptor with recvmsg()", errno);
-		}
-		
-		control_header = CMSG_FIRSTHDR(&msg);
-		if (control_header == NULL) {
-			throw IOException("No valid file descriptor received.");
-		}
-		if (control_header->cmsg_len   != EXPECTED_CMSG_LEN
-		 || control_header->cmsg_level != SOL_SOCKET
-		 || control_header->cmsg_type  != SCM_RIGHTS) {
-			throw IOException("No valid file descriptor received.");
-		}
-		
-		#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
-			int fd = control_data.fd;
-		#else
-			int fd = *((int *) CMSG_DATA(control_header));
-		#endif
-		
-		if (negotiate) {
-			try {
-				write("got IO", NULL);
-			} catch (...) {
-				this_thread::disable_syscall_interruption dsi;
-				syscalls::close(fd);
-				throw;
-			}
-		}
-		
-		return fd;
 	}
 	
 	/**
