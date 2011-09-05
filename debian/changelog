@@ -1,3 +1,9 @@
+passenger (3.0.9-1bbox1) lucid; urgency=low
+
+  * New upstream release, 3.0.9
+
+ -- John Leach <john@dogen>  Mon, 05 Sep 2011 22:21:03 +0100
+
 passenger (3.0.8-1bbox1) lucid; urgency=low
 
   * New upstream release, 3.0.8
