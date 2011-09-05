@@ -42,7 +42,7 @@ namespace :package do
 			def fetch(dir)
 				tarball = "nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
 				return true if File.exists?("#{dir}/#{tarball}")
-				download("http://sysoev.ru/nginx/#{tarball}", "#{dir}/#{tarball}")
+				download("http://www.nginx.org/download/#{tarball}", "#{dir}/#{tarball}")
 			end
 		end
 

@@ -70,7 +70,7 @@ class AppProcess
 			return nil
 		end
 		
-		search_results = Gem.cache.search(Gem::Dependency.new('rails', gem_version_spec), true)
+		search_results = search_gem('rails', gem_version_spec)
 		found_version = search_results.map do |x|
 			x.version.version
 		end.sort.last
@@ -79,7 +79,7 @@ class AppProcess
 			# date because the Rails version may have been installed now.
 			# So we reload the RubyGems cache and try again.
 			Gem.clear_paths
-			search_results = Gem.cache.search(Gem::Dependency.new('rails', gem_version_spec), true)
+			search_results = search_gem('rails', gem_version_spec)
 			found_version = search_results.map do |x|
 				x.version.version
 			end.sort.last
@@ -91,6 +91,18 @@ class AppProcess
 				gem_version_spec)
 		else
 			return found_version
+		end
+	end
+	
+	def self.search_gem(gem_name, gem_version_spec)
+		if defined?(Gem::Specification) && Gem::Specification.respond_to?(:find_all_by_name)
+			return Gem::Specification.find_all_by_name(gem_name, gem_version_spec)
+		elsif Gem.respond_to?(:source_index)
+			dep = Gem::Dependency.new(gem_name, gem_version_spec)
+			return Gem.source_index.search(dep, true)
+		else
+			dep = Gem::Dependency.new(gem_name, gem_version_spec)
+			return Gem.cache.search(dep, true)
 		end
 	end
 	

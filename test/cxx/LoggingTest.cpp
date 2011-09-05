@@ -152,7 +152,7 @@ namespace tut {
 			log->getGroupName(), log->getCategory());
 		log2->message("message 2");
 		log2->flushToDiskAfterClose(true);
-
+		
 		log.reset();
 		log2.reset();
 		
@@ -268,24 +268,6 @@ namespace tut {
 		ensure_equals(data, "localhost");
 	}
 	
-	TEST_METHOD(10) {
-		// newTransaction() reestablishes the connection to the logging
-		// server if the logging server crashed and was restarted
-		SystemTime::forceAll(TODAY);
-		
-		logger->newTransaction("foobar");
-		stopLoggingServer();
-		startLoggingServer();
-		
-		AnalyticsLogPtr log = logger->newTransaction("foobar");
-		log->message("hello");
-		log->flushToDiskAfterClose(true);
-		log.reset();
-		
-		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt");
-		ensure("(1)", data.find("hello\n") != string::npos);
-	}
-	
 	TEST_METHOD(11) {
 		// newTransaction() does not reconnect to the server for a short
 		// period of time if connecting failed
@@ -305,22 +287,36 @@ namespace tut {
 	}
 	
 	TEST_METHOD(12) {
-		// continueTransaction() reestablishes the connection to the logging
-		// server if the logging server crashed and was restarted
+		// If the logging server crashed and was restarted then
+		// newTransaction() and continueTransaction() print a warning and return
+		// a null log object. One of the next newTransaction()/continueTransaction()
+		// calls will reestablish the connection when the connection timeout
+		// has passed.
 		SystemTime::forceAll(TODAY);
+		AnalyticsLogPtr log, log2;
 		
-		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		log = logger->newTransaction("foobar");
 		logger2->continueTransaction(log->getTxnId(), "foobar");
 		stopLoggingServer();
 		startLoggingServer();
 		
-		AnalyticsLogPtr log2 = logger2->continueTransaction(log->getTxnId(), "foobar");
+		log = logger->newTransaction("foobar");
+		ensure("(1)", log->isNull());
+		log2 = logger2->continueTransaction("some-id", "foobar");
+		ensure("(2)", log2->isNull());
+		
+		SystemTime::forceAll(TODAY + 60000000);
+		log = logger->newTransaction("foobar");
+		ensure("(3)", !log->isNull());
+		log2 = logger2->continueTransaction(log->getTxnId(), "foobar");
+		ensure("(4)", !log2->isNull());
 		log2->message("hello");
 		log2->flushToDiskAfterClose(true);
+		log.reset();
 		log2.reset();
 		
 		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt");
-		ensure("(1)", data.find("hello\n") != string::npos);
+		ensure("(5)", data.find("hello\n") != string::npos);
 	}
 	
 	TEST_METHOD(13) {

@@ -345,16 +345,72 @@ ssize_t gatheredWrite(int fd, const StaticString data[], unsigned int dataCount,
  * @param fd The file descriptor to write to.
  * @param data An array of buffers to be written.
  * @param count Number of items in <em>data</em>.
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on writing all the data.
+ *                If the timeout expired then TimeoutException will be thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on writing will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
  * @throws SystemException Something went wrong.
+ * @throws TimeoutException Unable to write all given data within
+ *                          <tt>timeout</tt> microseconds.
  * @throws boost::thread_interrupted
  */
-void    gatheredWrite(int fd, const StaticString data[], unsigned int dataCount);
+void    gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, unsigned long long *timeout = NULL);
 
 /**
  * Sets a writev-emulating function that gatheredWrite() should call instead of the real writev().
  * Useful for unit tests. Pass NULL to restore back to the real writev().
  */
 void setWritevFunction(WritevFunction func);
+
+/**
+ * Receive a file descriptor over the given Unix domain socket.
+ * This is a low-level function that directly wraps the Unix file
+ * descriptor passing system calls. You should not use this directly;
+ * instead you should use readFileDescriptorWithNegotiation() from MessageIO.h
+ * which is safer. See MessageIO.h for more information about the
+ * negotiation protocol for file descriptor passing.
+ *
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on receiving the file descriptor.
+ *                If the timeout expired then TimeoutException will be thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on receiving will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
+ * @return The received file descriptor.
+ * @throws SystemException Something went wrong.
+ * @throws IOException Whatever was received doesn't seem to be a
+ *                     file descriptor.
+ * @throws TimeoutException Unable to receive a file descriptor within
+ *                          <tt>timeout</tt> microseconds.
+ * @throws boost::thread_interrupted
+ */
+int readFileDescriptor(int fd, unsigned long long *timeout = NULL);
+
+/**
+ * Pass the file descriptor 'fdToSend' over the Unix socket 'fd'.
+ * This is a low-level function that directly wraps the Unix file
+ * descriptor passing system calls. You should not use this directly;
+ * instead you should use writeFileDescriptorWithNegotiation() from MessageIO.h
+ * which is safer. See MessageIO.h for more information about the
+ * negotiation protocol for file descriptor passing.
+ *
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on trying to pass the file descriptor.
+ *                If the timeout expired then TimeoutException will be thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on writing will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
+ * @throws SystemException Something went wrong.
+ * @throws TimeoutException Unable to pass the file descriptor within
+ *                          <tt>timeout</tt> microseconds.
+ * @throws boost::thread_interrupted
+ */
+void writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout = NULL);
 
 /**
  * Closes the given file descriptor and throws an exception if anything goes wrong.

@@ -192,7 +192,7 @@ private
 		new_screen
 		color_puts "<banner>Downloading Nginx...</banner>"
 		
-		url = "http://sysoev.ru/nginx/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
+		url = "http://www.nginx.org/download/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
 		dirname = "nginx-#{PREFERRED_NGINX_VERSION}"
 		tarball = "#{@working_dir}/nginx.tar.gz"
 		

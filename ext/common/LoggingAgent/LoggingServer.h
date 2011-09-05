@@ -185,7 +185,8 @@ private:
 		virtual void dump(ostream &stream) const {
 			stream << "   Log file: file=" << filename << ", "
 				"opened=" << opened << ", "
-				"age=" << long(ev_now(server->getLoop()) - lastUsed) << "\n";
+				"lastUsed=" << long(ev_now(server->getLoop()) - lastUsed) << "s ago, "
+				"lastFlushed=" << long(ev_now(server->getLoop()) - lastFlushed) << "s ago\n";
 		}
 	};
 	
@@ -268,7 +269,8 @@ private:
 				"node=" << nodeName << ", "
 				"category=" << category << ", "
 				"opened=" << opened << ", "
-				"age=" << long(ev_now(server->getLoop()) - lastUsed) << ", "
+				"lastUsed=" << long(ev_now(server->getLoop()) - lastUsed) << "s ago, "
+				"lastFlushed=" << long(ev_now(server->getLoop()) - lastFlushed) << "s ago, "
 				"bufferSize=" << bufferSize <<
 				"\n";
 		}
@@ -1206,11 +1208,15 @@ public:
 		gid_t gid = GROUP_NOT_GIVEN,
 		const string &unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
 		unsigned short unionStationGatewayPort = DEFAULT_UNION_STATION_GATEWAY_PORT,
-		const string &unionStationGatewayCert = "")
+		const string &unionStationGatewayCert = "",
+		const string &unionStationProxyAddress = "",
+		const string &unionStationProxyPort = "")
 		: EventedMessageServer(loop, fd, accountsDatabase),
 		  remoteSender(unionStationGatewayAddress,
 		               unionStationGatewayPort,
-		               unionStationGatewayCert),
+		               unionStationGatewayCert,
+		               unionStationProxyAddress,
+		               unionStationProxyPort),
 		  garbageCollectionTimer(loop),
 		  sinkFlushingTimer(loop),
 		  exitTimer(loop)

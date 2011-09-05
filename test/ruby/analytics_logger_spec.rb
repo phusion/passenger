@@ -76,28 +76,11 @@ describe AnalyticsLogger do
 		mock_time(TODAY)
 		
 		@logger.new_transaction("foobar").close(true)
-		shared_data = @logger.instance_variable_get(:"@shared_data")
-		shared_data.synchronize do
-			shared_data.client.close
+		connection = @logger.instance_variable_get(:"@connection")
+		connection.synchronize do
+			connection.channel.close
+			connection.channel = nil
 		end
-		
-		log = @logger.new_transaction("foobar")
-		begin
-			log.message("hello")
-		ensure
-			log.close(true)
-		end
-		
-		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
-		File.read(log_file).should =~ /hello/
-	end
-	
-	specify "#new_transaction reestablishes the connection to the logging server if the logging server crashed and was restarted" do
-		mock_time(TODAY)
-		
-		@logger.new_transaction("foobar").close
-		kill_agent
-		start_agent
 		
 		log = @logger.new_transaction("foobar")
 		begin
@@ -157,9 +140,10 @@ describe AnalyticsLogger do
 		log2 = @logger2.continue_transaction(log.txn_id, "foobar")
 		log2.close(true)
 		
-		shared_data = @logger2.instance_variable_get(:"@shared_data")
-		shared_data.synchronize do
-			shared_data.client.close
+		connection = @logger2.instance_variable_get(:"@connection")
+		connection.synchronize do
+			connection.channel.close
+			connection.channel = nil
 		end
 		
 		log2 = @logger2.continue_transaction(log.txn_id, "foobar")
@@ -173,7 +157,7 @@ describe AnalyticsLogger do
 		File.read(log_file).should =~ /hello/
 	end
 	
-	specify "#continue_transaction reestablishes the connection to the logging server if the logging server crashed and was restarted" do
+	specify "#new_transaction and #continue_transaction eventually reestablish the connection to the logging server if the logging server crashed and was restarted" do
 		mock_time(TODAY)
 		
 		log = @logger.new_transaction("foobar")
@@ -181,12 +165,20 @@ describe AnalyticsLogger do
 		kill_agent
 		start_agent
 		
+		log = @logger.new_transaction("foobar")
+		log.should be_null
+		log2 = @logger2.continue_transaction("1234-abcd", "foobar")
+		log2.should be_null
+		
+		mock_time(TODAY + 60)
+		log = @logger.new_transaction("foobar")
 		log2 = @logger2.continue_transaction(log.txn_id, "foobar")
 		begin
 			log2.message("hello")
 		ensure
 			log2.close(true)
 		end
+		log.close(true)
 		
 		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
 		File.read(log_file).should =~ /hello/
@@ -243,9 +235,9 @@ describe AnalyticsLogger do
 	specify "#clear_connection closes the connection" do
 		@logger.new_transaction("foobar").close
 		@logger.clear_connection
-		shared_data = @logger.instance_variable_get(:"@shared_data")
-		shared_data.synchronize do
-			shared_data.client.should be_nil
+		connection = @logger.instance_variable_get(:"@connection")
+		connection.synchronize do
+			connection.channel.should be_nil
 		end
 	end
 end

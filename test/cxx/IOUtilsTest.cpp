@@ -1,5 +1,6 @@
 #include "TestSupport.h"
-#include "Utils/IOUtils.h"
+#include <Utils/IOUtils.h>
+#include <Utils/SystemTime.h>
 #include <oxt/system_calls.hpp>
 #include <boost/bind.hpp>
 #include <sys/types.h>
@@ -52,23 +53,6 @@ namespace tut {
 			Pipe p = createPipe();
 			setNonBlocking(p.second);
 			return p;
-		}
-		
-		void writeUntilFull(int fd) {
-			char buf[1024 * 4];
-			memset(buf, 0, sizeof(buf));
-			bool done = false;
-			while (!done) {
-				ssize_t ret = write(fd, buf, sizeof(buf));
-				if (ret == -1) {
-					if (errno == EAGAIN) {
-						done = true;
-					} else {
-						int e = errno;
-						throw SystemException("Cannot write to pipe", e);
-					}
-				}
-			}
 		}
 		
 		static void writeDataAfterSomeTime(int fd, unsigned int sleepTimeInUsec) {
@@ -485,6 +469,25 @@ namespace tut {
 		ensure_equals(writevData, "hellomyworld!!");
 	}
 	
+	TEST_METHOD(45) {
+		// Test writev() timeout support.
+		setWritevFunction(NULL);
+		Pipe p = createPipe();
+		unsigned long long startTime = SystemTime::getUsec();
+		unsigned long long timeout = 30000;
+		try {
+			StaticString data[] = { "hello", "world" };
+			for (int i = 0; i < 1024 * 1024; i++) {
+				gatheredWrite(p[1], data, 2, &timeout);
+			}
+			fail("TimeoutException expected");
+		} catch (const TimeoutException &) {
+			unsigned long long elapsed = SystemTime::getUsec() - startTime;
+			ensure("30 msec have passed", elapsed >= 29000 && elapsed <= 45000);
+			ensure(timeout <= 2000);
+		}
+	}
+	
 	/***** Test waitUntilReadable() *****/
 	
 	TEST_METHOD(50) {
@@ -791,6 +794,53 @@ namespace tut {
 			fail("ArgumentException expected");
 		} catch (const ArgumentException &e) {
 			// Pass.
+		}
+	}
+	
+	/***** Test readFileDescriptor() and writeFileDescriptor() *****/
+	
+	TEST_METHOD(80) {
+		// Test whether it works.
+		SocketPair sockets = createUnixSocketPair();
+		Pipe pipes = createPipe();
+		writeFileDescriptor(sockets[0], pipes[1]);
+		FileDescriptor fd = readFileDescriptor(sockets[1]);
+		writeExact(fd, "hello");
+		char buf[6];
+		ensure_equals(readExact(pipes[0], buf, 5), 5u);
+		buf[5] = '\0';
+		ensure_equals(StaticString(buf), "hello");
+	}
+	
+	TEST_METHOD(81) {
+		// Test whether timeout works.
+		SocketPair sockets = createUnixSocketPair();
+		Pipe pipes = createPipe();
+		
+		unsigned long long timeout = 30000;
+		unsigned long long startTime = SystemTime::getUsec();
+		try {
+			FileDescriptor fd = readFileDescriptor(sockets[0], &timeout);
+			fail("TimeoutException expected");
+		} catch (const TimeoutException &) {
+			unsigned long long elapsed = SystemTime::getUsec() - startTime;
+			ensure("readFileDescriptor() timed out after 30 msec",
+				elapsed >= 29000 && elapsed <= 45000);
+			ensure(timeout <= 2000);
+		}
+		
+		writeUntilFull(sockets[0]);
+		
+		startTime = SystemTime::getUsec();
+		timeout = 30000;
+		try {
+			writeFileDescriptor(sockets[0], pipes[0], &timeout);
+			fail("TimeoutException expected");
+		} catch (const TimeoutException &) {
+			unsigned long long elapsed = SystemTime::getUsec() - startTime;
+			ensure("writeFileDescriptor() timed out after 30 msec",
+				elapsed >= 29000 && elapsed <= 45000);
+			ensure(timeout <= 2000);
 		}
 	}
 }
