@@ -36,11 +36,10 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "Session.h"
-#include "MessageChannel.h"
-#include "Exceptions.h"
-#include "Logging.h"
-#include "Utils.h"
+#include <Session.h>
+#include <Exceptions.h>
+#include <Logging.h>
+#include <Utils.h>
 
 namespace Passenger {
 

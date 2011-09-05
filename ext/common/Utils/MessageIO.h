@@ -300,26 +300,28 @@ readArrayMessage(int fd, unsigned long long *timeout = NULL) {
  *                total number of microseconds spent on reading will be deducted
  *                from <tt>timeout</tt>.
  *                Pass NULL if you do not want to enforce a timeout.
- * @throws EOFException End-of-file was reached before a full integer could be read.
+ * @return True if a scalar message was read, false if EOF was encountered.
  * @throws SystemException Something went wrong.
  * @throws SecurityException The message body is larger than allowed by maxSize.
  * @throws TimeoutException Unable to read the necessary data within
  *                          <tt>timeout</tt> microseconds.
  * @throws boost::thread_interrupted
  */
-inline string
-readScalarMessage(int fd, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
+inline bool
+readScalarMessage(int fd, string &output, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
 	uint32_t size;
 	if (!readUint32(fd, size, timeout)) {
-		throw EOFException("EOF encountered before a 32-bit scalar message header could be read");
+		return false;
 	}
 	
 	if (maxSize != 0 && size > (uint32_t) maxSize) {
 		throw SecurityException("The scalar message body is larger than the size limit");
 	}
 	
-	string output;
 	unsigned int remaining = size;
+	if (!output.empty()) {
+		output.clear();
+	}
 	output.reserve(size);
 	if (OXT_LIKELY(remaining > 0)) {
 		char buf[1024 * 32];
@@ -329,13 +331,43 @@ readScalarMessage(int fd, unsigned int maxSize = 0, unsigned long long *timeout 
 			unsigned int blockSize = min((unsigned int) sizeof(buf), remaining);
 			
 			if (readExact(fd, buf, blockSize, timeout) != blockSize) {
-				throw EOFException("EOF encountered before the full scalar message body could be read");
+				return false;
 			}
 			output.append(buf, blockSize);
 			remaining -= blockSize;
 		}
 	}
-	return output;
+	return true;
+}
+
+/**
+ * Reads a scalar message from the given file descriptor.
+ *
+ * @param maxSize The maximum number of bytes that may be read. If the
+ *                scalar to read is larger than this, then a SecurityException
+ *                will be thrown. Set to 0 for no size limit.
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on reading the necessary data.
+ *                If the timeout expired then TimeoutException will be thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on reading will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
+ * @throws EOFException End-of-file was reached before a full integer could be read.
+ * @throws SystemException Something went wrong.
+ * @throws SecurityException The message body is larger than allowed by maxSize.
+ * @throws TimeoutException Unable to read the necessary data within
+ *                          <tt>timeout</tt> microseconds.
+ * @throws boost::thread_interrupted
+ */
+inline string
+readScalarMessage(int fd, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
+	string output;
+	if (readScalarMessage(fd, output, maxSize, timeout)) {
+		return output;
+	} else {
+		throw EOFException("EOF encountered before a full scalar message could be read");
+	}
 }
 
 
