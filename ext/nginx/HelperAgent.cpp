@@ -818,6 +818,7 @@ private:
 				parser.getHeader("PASSENGER_APP_RIGHTS"),
 				DEFAULT_BACKEND_ACCOUNT_RIGHTS);
 			options.minProcesses   = atol(parser.getHeader("PASSENGER_MIN_INSTANCES"));
+			options.maxRequests    = atol(parser.getHeader("PASSENGER_MAX_REQUESTS"));
 			options.frameworkSpawnerTimeout = atol(parser.getHeader("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
 			options.appSpawnerTimeout       = atol(parser.getHeader("PASSENGER_APP_SPAWNER_IDLE_TIME"));
 			options.debugger       = parser.getHeader("PASSENGER_DEBUGGER") == "true";
