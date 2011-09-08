@@ -307,6 +307,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->base_uris = NGX_CONF_UNSET_PTR;
     conf->union_station_filters = NGX_CONF_UNSET_PTR;
     conf->min_instances = NGX_CONF_UNSET;
+    conf->max_requests = NGX_CONF_UNSET;
     conf->framework_spawner_idle_time = NGX_CONF_UNSET;
     conf->app_spawner_idle_time = NGX_CONF_UNSET;
 
@@ -398,6 +399,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->app_group_name, prev->app_group_name, NULL);
     ngx_conf_merge_str_value(conf->app_rights, prev->app_rights, NULL);
     ngx_conf_merge_value(conf->min_instances, prev->min_instances, (ngx_int_t) -1);
+    ngx_conf_merge_value(conf->max_requests, prev->max_requests, (ngx_int_t) -1);
     ngx_conf_merge_value(conf->framework_spawner_idle_time, prev->framework_spawner_idle_time, (ngx_int_t) -1);
     ngx_conf_merge_value(conf->app_spawner_idle_time, prev->app_spawner_idle_time, (ngx_int_t) -1);
     
@@ -1038,6 +1040,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_num_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, min_instances),
+      NULL },
+
+    { ngx_string("passenger_max_requests"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, max_requests),
       NULL },
 
     { ngx_string("passenger_max_instances_per_app"),
