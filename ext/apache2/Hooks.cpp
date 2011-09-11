@@ -54,7 +54,6 @@
 #include "Utils/Timer.h"
 #include "Logging.h"
 #include "AgentsStarter.hpp"
-#include "ApplicationPool/Client.h"
 #include "DirectoryMapper.h"
 #include "Constants.h"
 
