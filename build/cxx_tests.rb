@@ -116,10 +116,10 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/StreamBoyerMooreHorspool.h),
 	'test/cxx/LoggingTest.o' => %w(
 		test/cxx/LoggingTest.cpp
-		ext/common/LoggingAgent/LoggingServer.h
-		ext/common/LoggingAgent/RemoteSender.h
-		ext/common/LoggingAgent/DataStoreId.h
-		ext/common/LoggingAgent/FilterSupport.h
+		ext/common/agents/LoggingAgent/LoggingServer.h
+		ext/common/agents/LoggingAgent/RemoteSender.h
+		ext/common/agents/LoggingAgent/DataStoreId.h
+		ext/common/agents/LoggingAgent/FilterSupport.h
 		ext/common/Logging.h
 		ext/common/Utils.h
 		ext/common/EventedServer.h

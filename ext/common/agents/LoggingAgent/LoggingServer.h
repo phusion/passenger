@@ -55,6 +55,7 @@
 #include <Utils.h>
 #include <Utils/MD5.h>
 #include <Utils/IOUtils.h>
+#include <Utils/MessageIO.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/StringMap.h>
 

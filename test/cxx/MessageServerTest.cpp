@@ -51,18 +51,18 @@ namespace tut {
 			unsigned int timeToSendPassword;
 			
 		protected:
-			virtual void sendUsername(MessageChannel &channel, const string &username) {
+			virtual void sendUsername(int fd, const StaticString &username, unsigned long long *timeout) {
 				if (timeToSendUsername > 0) {
 					usleep(timeToSendUsername * 1000);
 				}
-				channel.writeScalar(username);
+				writeScalarMessage(fd, username);
 			}
 
-			virtual void sendPassword(MessageChannel &channel, const StaticString &userSuppliedPassword) {
+			virtual void sendPassword(int fd, const StaticString &userSuppliedPassword, unsigned long long *timeout) {
 				if (timeToSendPassword > 0) {
 					usleep(timeToSendPassword * 1000);
 				}
-				channel.writeScalar(userSuppliedPassword.c_str(), userSuppliedPassword.size());
+				writeScalarMessage(fd, userSuppliedPassword);
 			}
 			
 		public:
@@ -78,7 +78,7 @@ namespace tut {
 		class CustomClient: public MessageClient {
 		public:
 			CustomClient *sendText(const string &text) {
-				channel.write(text.c_str(), NULL);
+				write(text.c_str(), NULL);
 				return this;
 			}
 		};
@@ -181,7 +181,7 @@ namespace tut {
 	TEST_METHOD(3) {
 		// It disconnects the client if the client does not supply a username and
 		// password within a time limit.
-		server->setLoginTimeout(40);
+		server->setLoginTimeout(30);
 		
 		/* These can throw either an IOException or SystemException:
 		 * - An IOException is raised when connect() encounters EOF.

@@ -44,6 +44,7 @@
 #include "../FileDescriptor.h"
 #include "../Exceptions.h"
 #include "../Utils.h"
+#include "../Utils/MessageIO.h"
 
 namespace Passenger {
 namespace ApplicationPool {
@@ -73,6 +74,7 @@ using namespace oxt;
  * @ingroup Support
  */
 class Server: public MessageServer::Handler {
+private:
 	struct SpecificContext: public MessageServer::ClientContext {
 		/**
 		 * Maps session ID to sessions created by ApplicationPool::get(). Session IDs
@@ -106,9 +108,9 @@ class Server: public MessageServer::Handler {
 		TRACE_POINT();
 		commonContext.requireRights(Account::DETACH);
 		if (pool->detach(args[1])) {
-			commonContext.channel.write("true", NULL);
+			writeArrayMessage(commonContext.fd, "true");
 		} else {
-			commonContext.channel.write("false", NULL);
+			writeArrayMessage(commonContext.fd, "false");
 		}
 	}
 	
@@ -133,19 +135,19 @@ class Server: public MessageServer::Handler {
 	void processGetActive(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		commonContext.channel.write(toString(pool->getActive()).c_str(), NULL);
+		writeArrayMessage(commonContext.fd, toString(pool->getActive()).c_str());
 	}
 	
 	void processGetCount(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		commonContext.channel.write(toString(pool->getCount()).c_str(), NULL);
+		writeArrayMessage(commonContext.fd, toString(pool->getCount()).c_str());
 	}
 	
 	void processGetGlobalQueueSize(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		commonContext.channel.write(toString(pool->getGlobalQueueSize()).c_str(), NULL);
+		writeArrayMessage(commonContext.fd, toString(pool->getGlobalQueueSize()).c_str());
 	}
 	
 	void processSetMaxPerApp(CommonClientContext &commonContext, SpecificContext *specificContext, unsigned int maxPerApp) {
@@ -157,7 +159,7 @@ class Server: public MessageServer::Handler {
 	void processInspect(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
-		commonContext.channel.writeScalar(pool->inspect());
+		writeScalarMessage(commonContext.fd, pool->inspect());
 	}
 	
 	void processToXml(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
@@ -166,7 +168,7 @@ class Server: public MessageServer::Handler {
 		bool includeSensitiveInfo =
 			commonContext.account->hasRights(Account::INSPECT_SENSITIVE_INFO) &&
 			args[1] == "true";
-		commonContext.channel.writeScalar(pool->toXml(includeSensitiveInfo));
+		writeScalarMessage(commonContext.fd, pool->toXml(includeSensitiveInfo));
 	}
 	
 public:
