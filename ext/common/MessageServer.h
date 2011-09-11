@@ -40,16 +40,15 @@
 #include <cerrno>
 #include <cassert>
 
-#include <Account.h>
-#include <AccountsDatabase.h>
-#include <Constants.h>
-#include <MessageChannel.h>
-#include <FileDescriptor.h>
-#include <Logging.h>
-#include <Exceptions.h>
-#include <Utils/StrIntUtils.h>
-#include <Utils/IOUtils.h>
-#include <Utils/MessageIO.h>
+#include "Account.h"
+#include "AccountsDatabase.h"
+#include "Constants.h"
+#include "FileDescriptor.h"
+#include "MessageChannel.h"
+#include "Logging.h"
+#include "Exceptions.h"
+#include "Utils/StrIntUtils.h"
+#include "Utils/IOUtils.h"
 
 namespace Passenger {
 
@@ -182,6 +181,8 @@ public:
 	public:
 		/** The client's socket file descriptor. */
 		FileDescriptor fd;
+		
+		/** The channel that's associated with the client's socket. */
 		MessageChannel channel;
 		
 		/** The account with which the client authenticated. */
@@ -194,7 +195,7 @@ public:
 		
 		/** Returns a string representation for this client context. */
 		string name() {
-			return toString(fd);
+			return toString(channel.filenum());
 		}
 		
 		/**
@@ -209,13 +210,10 @@ public:
 		void requireRights(Account::Rights rights) {
 			if (!account->hasRights(rights)) {
 				P_TRACE(2, "Security error: insufficient rights to execute this command.");
-				writeArrayMessage(fd,
-					"SecurityException",
-					"Insufficient rights to execute this command.",
-					NULL);
+				channel.write("SecurityException", "Insufficient rights to execute this command.", NULL);
 				throw SecurityException("Insufficient rights to execute this command.");
 			} else {
-				writeArrayMessage(fd, "Passed security");
+				channel.write("Passed security", NULL);
 			}
 		}
 	};
@@ -358,39 +356,40 @@ protected:
 	 *
 	 * @return A smart pointer to an Account object, or NULL if authentication failed.
 	 */
-	AccountPtr authenticate(const FileDescriptor &client) {
+	AccountPtr authenticate(FileDescriptor &client) {
+		MessageChannel channel(client);
 		string username, password;
 		MemZeroGuard passwordGuard(password);
 		unsigned long long timeout = loginTimeout;
 		
 		try {
-			writeArrayMessage(client, "version", "1", NULL);
+			channel.write("version", "1", NULL);
 			
 			try {
-				if (!readScalarMessage(client, username, MESSAGE_SERVER_MAX_USERNAME_SIZE, &timeout)) {
+				if (!channel.readScalar(username, MESSAGE_SERVER_MAX_USERNAME_SIZE, &timeout)) {
 					return AccountPtr();
 				}
 			} catch (const SecurityException &) {
-				writeArrayMessage(client, "The supplied username is too long.");
+				channel.write("The supplied username is too long.", NULL);
 				return AccountPtr();
 			}
 			
 			try {
-				if (!readScalarMessage(client, password, MESSAGE_SERVER_MAX_PASSWORD_SIZE, &timeout)) {
+				if (!channel.readScalar(password, MESSAGE_SERVER_MAX_PASSWORD_SIZE, &timeout)) {
 					return AccountPtr();
 				}
 			} catch (const SecurityException &) {
-				writeArrayMessage(client, "The supplied password is too long.");
+				channel.write("The supplied password is too long.", NULL);
 				return AccountPtr();
 			}
 			
 			AccountPtr account = accountsDatabase->authenticate(username, password);
 			passwordGuard.zeroNow();
 			if (account == NULL) {
-				writeArrayMessage(client, "Invalid username or password.");
+				channel.write("Invalid username or password.", NULL);
 				return AccountPtr();
 			} else {
-				writeArrayMessage(client, "ok");
+				channel.write("ok", NULL);
 				return account;
 			}
 		} catch (const SystemException &) {
@@ -460,7 +459,7 @@ protected:
 			
 			while (!this_thread::interruption_requested()) {
 				UPDATE_TRACE_POINT();
-				if (!readArrayMessage(commonContext.fd, args)) {
+				if (!commonContext.channel.read(args)) {
 					// Client closed connection.
 					break;
 				}
