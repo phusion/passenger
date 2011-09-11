@@ -30,9 +30,9 @@
 #include <sys/types.h>
 #include <map>
 #include <string>
-#include "MessageChannel.h"
-#include "Exceptions.h"
-#include "Utils/StrIntUtils.h"
+#include <Exceptions.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/MessageIO.h>
 
 namespace Passenger {
 
@@ -130,30 +130,17 @@ public:
 	}
 	
 	/**
-	 * Populates a VariantMap from the data in <em>fd</em>. MessageChannel
+	 * Populates a VariantMap from the data in <em>fd</em>. MessageIO
 	 * is used to read from the file descriptor.
 	 *
 	 * @throws SystemException
 	 * @throws IOException
-	 * @see <tt>readFrom(MessageChannel &)</tt>
 	 */
 	void readFrom(int fd) {
-		MessageChannel channel(fd);
-		readFrom(channel);
-	}
-	
-	/**
-	 * Populates a VariantMap from the data in <em>channel</em>. The first
-	 * message in the channel must be a message as sent by writeToChannel().
-	 *
-	 * @throws SystemException
-	 * @throws IOException
-	 */
-	void readFrom(MessageChannel &channel) {
 		TRACE_POINT();
 		vector<string> args;
 		
-		if (!channel.read(args)) {
+		if (!readArrayMessage(fd, args)) {
 			throw IOException("Unexpected end-of-file encountered");
 		}
 		if (args.size() == 0) {
@@ -308,19 +295,14 @@ public:
 		return store.size();
 	}
 	
-	void writeToFd(int fd) const {
-		MessageChannel channel(fd);
-		writeToChannel(channel);
-	}
-	
 	/**
 	 * Writes a representation of the contents in this VariantMap to
-	 * the given channel. The data can be unserialized with
-	 * <tt>readFrom(MessageChannel &)</tt>.
+	 * the given file descriptor with MessageIO. The data can be
+	 * unserialized with <tt>readFrom(fd)</tt>.
 	 *
 	 * @throws SystemException
 	 */
-	void writeToChannel(MessageChannel &channel) const {
+	void writeToFd(int fd) const {
 		map<string, string>::const_iterator it;
 		map<string, string>::const_iterator end = store.end();
 		vector<string> args;
@@ -331,7 +313,7 @@ public:
 			args.push_back(it->first);
 			args.push_back(it->second);
 		}
-		channel.write(args);
+		writeArrayMessage(fd, args);
 	}
 	
 	string inspect() const {

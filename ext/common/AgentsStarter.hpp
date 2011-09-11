@@ -501,7 +501,7 @@ public:
 			 * reading the arguments. We'll notice that later.
 			 */
 			try {
-				watchdogArgs.writeToChannel(feedbackChannel);
+				watchdogArgs.writeToFd(feedbackFd);
 			} catch (const SystemException &e) {
 				if (e.code() != EPIPE && e.code() != ECONNRESET) {
 					inspectWatchdogCrashReason(pid);
