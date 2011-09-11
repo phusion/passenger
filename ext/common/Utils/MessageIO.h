@@ -426,19 +426,67 @@ writeArrayMessage(int fd, const Collection &args, unsigned long long *timeout = 
 }
 
 inline void
-writeArrayMessage(int fd, const StaticString &name, va_list &ap, unsigned long long *timeout = NULL) {
-	vector<StaticString> args;
+writeArrayMessage(int fd, const StaticString args[], unsigned int nargs, unsigned long long *timeout = NULL) {
+	unsigned int i;
+	uint16_t bodySize = 0;
 	
-	args.push_back(name);
-	while (true) {
+	for (i = 0; i < nargs; i++) {
+		bodySize += args[i].size() + 1;
+	}
+	
+	scoped_array<char> data(new char[sizeof(uint16_t) + bodySize]);
+	uint16_t header = htons(bodySize);
+	memcpy(data.get(), &header, sizeof(uint16_t));
+	
+	char *dataEnd = data.get() + sizeof(uint16_t);
+	for (i = 0; i < nargs; i++) {
+		memcpy(dataEnd, args[i].data(), args[i].size());
+		dataEnd += args[i].size();
+		*dataEnd = '\0';
+		dataEnd++;
+	}
+	
+	writeExact(fd, data.get(), sizeof(uint16_t) + bodySize, timeout);
+}
+
+inline void
+writeArrayMessage(int fd, const StaticString &name, va_list &ap, unsigned long long *timeout = NULL) {
+	StaticString args[10];
+	unsigned int nargs = 1;
+	bool done = false;
+	
+	args[0] = name;
+	do {
 		const char *arg = va_arg(ap, const char *);
 		if (arg == NULL) {
-			break;
+			done = true;
 		} else {
-			args.push_back(arg);
+			args[nargs] = arg;
+			nargs++;
 		}
+	} while (!done && nargs < sizeof(args) / sizeof(StaticString));
+	
+	if (done) {
+		writeArrayMessage(fd, args, nargs, timeout);
+	} else {
+		// Arguments don't fit in static array. Use dynamic
+		// array instead.
+		vector<StaticString> dyn_args;
+		
+		for (unsigned int i = 0; i < nargs; i++) {
+			dyn_args.push_back(args[i]);
+		}
+		do {
+			const char *arg = va_arg(ap, const char *);
+			if (arg == NULL) {
+				done = true;
+			} else {
+				dyn_args.push_back(arg);
+			}
+		} while (!done);
+		
+		writeArrayMessage(fd, dyn_args, timeout);
 	}
-	writeArrayMessage(fd, args, timeout);
 }
 
 struct _VaGuard {
@@ -462,6 +510,12 @@ writeArrayMessage(int fd, const StaticString &name, ...) {
 	va_start(ap, name);
 	_VaGuard guard(ap);
 	writeArrayMessage(fd, name, ap);
+}
+
+inline void
+writeArrayMessage(int fd, const char *name) {
+	StaticString str = name;
+	writeArrayMessage(fd, &str, 1, NULL);
 }
 
 /** Version of writeArrayMessage() that accepts a variadic list of 'const char *'
