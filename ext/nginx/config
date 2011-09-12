@@ -1,7 +1,7 @@
 PATH="$ngx_addon_dir/../../bin:$PATH"
 export PATH
 
-if ! passenger-config --compiled; then
+if test "x$PASSENGER_LIBS" = "x" && ! passenger-config --compiled; then
     echo "*** The Phusion Passenger support files are not yet compiled. Compiling them for you... ***"
     echo "*** Running 'rake nginx RELEASE=yes' in $ngx_addon_dir... ***"
     old_dir=`pwd`
@@ -28,7 +28,12 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/StaticContentHandler.h \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
     `passenger-config --includedir`/common/Constants.h"
-CORE_LIBS="$CORE_LIBS `passenger-config --libs` -lstdc++ -lpthread"
+if test "x$PASSENGER_LIBS" = "x"; then
+    CORE_LIBS="$CORE_LIBS `passenger-config --libs`"
+else
+    CORE_LIBS="$CORE_LIBS $PASSENGER_LIBS"
+fi
+CORE_LIBS="$CORE_LIBS -lstdc++ -lpthread"
 
 nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g'`
 

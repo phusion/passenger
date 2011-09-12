@@ -177,13 +177,14 @@ private
 		File.open(@location_config_filename, 'w') do |f|
 			f.puts '[locations]'
 			f.puts "bin=#{PhusionPassenger.bin_dir}"
-			f.puts "agents=#{passenger_support_files_dir}/agents"
+			f.puts "agents=#{passenger_support_files_dir}"
 			f.puts "helper_scripts=#{PhusionPassenger.helper_scripts_dir}"
 			f.puts "resources=#{PhusionPassenger.resources_dir}"
 			f.puts "doc=#{PhusionPassenger.doc_dir}"
-			f.puts "runtimelib=#{passenger_support_files_dir}/libout/common"
+			f.puts "runtimelib=#{passenger_support_files_dir}"
 			f.puts "headers=#{PhusionPassenger.header_dir}"
 			f.puts "rubylib=#{PhusionPassenger.ruby_libdir}"
+			f.puts "ruby_native_support=#{ruby_native_support_dir}"
 			if PhusionPassenger.compilable_source_dir
 				f.puts "compilable_source=#{PhusionPassenger.compilable_source_dir}"
 			end
@@ -208,7 +209,7 @@ private
 		if @options[:nginx_bin]
 			nginx_bin = @options[:nginx_bin]
 		else
-			nginx_bin = "#{nginx_dir}/sbin/nginx"
+			nginx_bin = "#{nginx_dir}/nginx"
 		end
 		return "#{nginx_bin} -c '#{@config_filename}' -p '#{@temp_dir}/'"
 	end

@@ -27,7 +27,7 @@ module Standalone
 module Utils
 private
 	def require_platform_info_binary_compatibility
-		if !defined?(PlatformInfo) || !PlatformInfo.respond_to?(:cpu_architecture)
+		if !defined?(PlatformInfo) || !PlatformInfo.respond_to?(:cxx_binary_compatibility_id)
 			require 'phusion_passenger/platform_info/binary_compatibility'
 		end
 	end

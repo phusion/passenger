@@ -98,6 +98,7 @@ module PhusionPassenger
 			@runtime_libdir        = get_option(filename, options, 'runtimelib')
 			@header_dir            = get_option(filename, options, 'headers')
 			@apache2_module_path   = get_option(filename, options, 'apache2_module')
+			@ruby_native_support_dir = get_option(filename, options, 'ruby_native_support', false)
 		else
 			root = root_or_file
 			@originally_packaged = File.exist?("#{root}/Rakefile") &&
@@ -112,6 +113,7 @@ module PhusionPassenger
 				@runtime_libdir        = "#{root}/libout/common".freeze
 				@header_dir            = "#{root}/ext".freeze
 				@apache2_module        = "#{root}/ext/apache2/mod_passenger.so".freeze
+				@ruby_native_support_dir = nil
 			else
 				@bin_dir               = NATIVELY_PACKAGED_BIN_DIR
 				@agents_dir            = NATIVELY_PACKAGED_AGENTS_DIR
@@ -122,6 +124,7 @@ module PhusionPassenger
 				@runtime_libdir        = NATIVELY_PACKAGED_RUNTIME_LIBDIR
 				@header_dir            = NATIVELY_PACKAGED_HEADER_DIR
 				@apache2_module        = NATIVELY_PACKAGED_APACHE2_MODULE
+				@ruby_native_support_dir = nil
 			end
 		end
 	end
@@ -187,6 +190,11 @@ module PhusionPassenger
 		return "#{resources_dir}/templates"
 	end
 	
+	# Only non-nil if explicitly set in location config file.
+	def self.ruby_native_support_dir
+		return @ruby_native_support_dir
+	end
+	
 	def self.runtime_libraries_compiled?
 		return File.exist?("#{runtime_libdir}/libpassenger_common.a") &&
 			File.exist?("#{runtime_libdir}/libboost_oxt.a")
@@ -231,12 +239,14 @@ private
 		return File.dirname(ruby_libdir)
 	end
 	
-	def self.get_option(filename, options, key)
+	def self.get_option(filename, options, key, reuqired = true)
 		value = options[key]
 		if value
 			return value
-		else
+		elsif required
 			raise "Option '#{key}' missing in file '#{filename}'"
+		else
+			return nil
 		end
 	end
 	

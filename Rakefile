@@ -23,21 +23,24 @@ $LOAD_PATH.unshift("#{source_root}/lib")
 require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
 require 'build/basics'
 require 'build/config'
-require 'build/common_library'
-require 'build/ruby_extension'
-require 'build/agents'
-require 'build/apache2'
-require 'build/nginx'
-require 'build/documentation'
-require 'build/packaging'
-require 'build/test_basics'
-require 'build/oxt_tests'
-require 'build/cxx_tests'
-require 'build/ruby_tests'
-require 'build/integration_tests'
-require 'build/misc'
-require 'build/rpm'
-
+if boolean_option('ONLY_RUBY')
+	require 'build/ruby_extension'
+else
+	require 'build/ruby_extension'
+	require 'build/common_library'
+	require 'build/agents'
+	require 'build/apache2'
+	require 'build/nginx'
+	require 'build/documentation'
+	require 'build/packaging'
+	require 'build/test_basics'
+	require 'build/oxt_tests'
+	require 'build/cxx_tests'
+	require 'build/ruby_tests'
+	require 'build/integration_tests'
+	require 'build/misc'
+	require 'build/rpm'
+end
 
 #### Default tasks
 

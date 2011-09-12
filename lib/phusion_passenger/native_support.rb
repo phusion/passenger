@@ -30,6 +30,7 @@ class NativeSupportLoader
 	
 	def start
 		require 'phusion_passenger'
+		load_from_custom_ruby_native_support_dir ||
 		load_from_source_dir ||
 		load_from_load_path ||
 		load_from_home ||
@@ -40,7 +41,7 @@ private
 	def archdir
 		@archdir ||= begin
 			require 'phusion_passenger/platform_info/binary_compatibility'
-			PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
+			PlatformInfo.ruby_extension_binary_compatibility_id
 		end
 	end
 	
@@ -72,6 +73,18 @@ private
 				File.expand_path("#{PhusionPassenger.root}/libout/ruby")
 		else
 			return nil
+		end
+	end
+	
+	def load_from_custom_ruby_native_support_dir
+		if PhusionPassenger.ruby_native_support_dir
+			begin
+				require "#{PhusionPassenger.ruby_native_support_dir}/#{library_name}"
+			rescue LoadError
+				return false
+			end
+		else
+			return false
 		end
 	end
 	

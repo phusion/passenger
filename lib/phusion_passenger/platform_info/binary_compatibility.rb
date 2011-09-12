@@ -56,7 +56,7 @@ module PlatformInfo
 	#   because extensions must be able to support all of the Ruby
 	#   executable's architectures.
 	# - The operating system for which the Ruby interpreter was compiled.
-	def self.ruby_extension_binary_compatibility_ids
+	def self.ruby_extension_binary_compatibility_id
 		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
 		ruby_ext_version = RUBY_VERSION
 		if RUBY_PLATFORM =~ /darwin/
@@ -73,23 +73,21 @@ module PlatformInfo
 		else
 			ruby_arch = cpu_architectures[0]
 		end
-		return [ruby_engine, ruby_ext_version, ruby_arch, os_name]
+		return "#{ruby_engine}-#{ruby_ext_version}-#{ruby_arch}-#{os_name}"
 	end
-	memoize :ruby_extension_binary_compatibility_ids
+	memoize :ruby_extension_binary_compatibility_id
 	
 	# Returns an identifier string that describes the current
-	# platform's binary compatibility with regard to Phusion Passenger
-	# binaries, both the Ruby extension and the C++ binaries. Two
-	# systems with the same binary compatibility identifiers
-	# are able to run the same Phusion Passenger binaries.
+	# platform's binary compatibility with regard to C/C++
+	# binaries. Two systems with the same binary compatibility
+	# identifiers are able to run the same C/C++ binaries.
 	#
 	# The the string depends on the following factors:
-	# - The Ruby extension binary compatibility identifiers.
 	# - The operating system name.
 	# - Operating system runtime identifier.
 	#   This may include the kernel version, libc version, C++ ABI version,
 	#   etc. Everything that is of interest for binary compatibility with
-	#   Phusion Passenger's C++ components.
+	#   regard to C/C++ binaries.
 	# - Operating system default runtime architecture.
 	#   This is not the same as the CPU architecture; some CPUs support
 	#   multiple architectures, e.g. Intel Core 2 Duo supports x86 and
@@ -100,10 +98,7 @@ module PlatformInfo
 	#   This component identifies the architecture that is used when
 	#   compiling a binary with the system's C++ compiler with its default
 	#   options.
-	def self.passenger_binary_compatibility_id
-		ruby_engine, ruby_ext_version, ruby_arch, os_name =
-			ruby_extension_binary_compatibility_ids
-		
+	def self.cxx_binary_compatibility_id
 		if os_name == "macosx"
 			# RUBY_PLATFORM gives us the kernel version, but we want
 			# the OS X version.
@@ -152,24 +147,9 @@ module PlatformInfo
 			end
 		end
 		
-		if ruby_engine == "jruby"
-			# For JRuby it's kinda useless to prepend "java" as extension
-			# architecture because JRuby doesn't allow any other extension
-			# architecture.
-			identifier = ""
-		else
-			identifier = "#{ruby_arch}-"
-		end
-		identifier << "#{ruby_engine}#{ruby_ext_version}-"
-		# If the extension architecture is the same as the OS architecture
-		# then there's no need to specify it twice.
-		if ruby_arch != os_arch
-			identifier << "#{os_arch}-"
-		end
-		identifier << "#{os_name}-#{os_runtime}"
-		return identifier
+		return "#{os_arch}-#{os_name}-#{os_runtime}"
 	end
-	memoize :passenger_binary_compatibility_id
+	memoize :cxx_binary_compatibility_id
 end
 
 end # module PhusionPassenger

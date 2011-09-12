@@ -31,6 +31,7 @@ class PackageRuntimeCommand < Command
 	end
 	
 	def run
+		require_platform_info_binary_compatibility
 		destdir = File.expand_path("passenger-standalone")
 		description =
 			"Package the Phusion Passenger Standalone runtime into the specified directory.\n" <<
@@ -47,20 +48,22 @@ class PackageRuntimeCommand < Command
 		end
 		
 		destdir     = File.expand_path(@args[0]) if @args[0]
-		runtime_dir = "#{destdir}/#{runtime_version_string(@options[:nginx_version])}"
-		support_dir = "#{runtime_dir}/support"
-		nginx_dir   = "#{runtime_dir}/nginx-#{@options[:nginx_version]}"
+		runtime_dir = "#{destdir}/#{PhusionPassenger::VERSION_STRING}"
+		support_dir = "#{runtime_dir}/support-#{PlatformInfo.cxx_binary_compatibility_id}"
+		ruby_dir    = "#{runtime_dir}/rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}"
+		nginx_dir   = "#{runtime_dir}/nginx-#{@options[:nginx_version]}-#{PlatformInfo.cxx_binary_compatibility_id}"
 		
 		sh "rm", "-rf", support_dir
 		sh "rm", "-rf", nginx_dir
 		
 		require 'phusion_passenger/standalone/runtime_installer'
 		installer = RuntimeInstaller.new(
-			:source_root => PhusionPassenger.compilable_source_dir,
+			:targets     => [:nginx, :ruby, :support_binaries],
 			:support_dir => support_dir,
+			:ruby_dir    => ruby_dir,
 			:nginx_dir   => nginx_dir,
-			:version     => @options[:nginx_version],
-			:tarball     => @options[:nginx_tarball],
+			:nginx_version     => @options[:nginx_version],
+			:nginx_tarball     => @options[:nginx_tarball],
 			:download_binaries => false)
 		installer.run
 		
@@ -69,13 +72,18 @@ class PackageRuntimeCommand < Command
 			puts "cd #{support_dir}"
 			sh "tar -c . | gzip --best > ../#{support_dir_name}.tar.gz"
 		end
+		Dir.chdir(ruby_dir) do
+			ruby_dir_name = File.basename(ruby_dir)
+			puts "cd #{ruby_dir}"
+			sh "tar -c . | gzip --best > ../#{ruby_dir_name}.tar.gz"
+		end
 		Dir.chdir(nginx_dir) do
 			nginx_dir_name   = File.basename(nginx_dir)
 			puts "cd #{nginx_dir}"
 			sh "tar -c . | gzip --best > ../#{nginx_dir_name}.tar.gz"
 		end
 		puts "cd #{runtime_dir}"
-		sh "rm", "-rf", support_dir, nginx_dir
+		sh "rm", "-rf", support_dir, ruby_dir, nginx_dir
 	end
 
 private

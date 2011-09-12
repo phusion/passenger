@@ -23,10 +23,14 @@
 
 desc "Build Nginx support files"
 task :nginx => [
+	:nginx_without_native_support,
+	:native_support
+]
+
+task :nginx_without_native_support => [
 	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',
 	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
-	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
-	:native_support
+	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent'
 ]
 
 task :clean => 'nginx:clean'
