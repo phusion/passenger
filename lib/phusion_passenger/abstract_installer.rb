@@ -136,10 +136,10 @@ protected
 			puts "<red>Some required software is not installed.</red>"
 			puts "But don't worry, this installer will tell you how to install them.\n"
 			puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
-			if PhusionPassenger.natively_packaged?
-				wait(10)
-			else
+			if PhusionPassenger.originally_packaged?
 				wait
+			else
+				wait(10)
 			end
 			
 			line

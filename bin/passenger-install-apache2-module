@@ -78,7 +78,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def run_steps
-		if PhusionPassenger.natively_packaged?
+		if !PhusionPassenger.originally_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
 			show_deployment_example
@@ -174,10 +174,10 @@ private
 				:module_location => PhusionPassenger.apache2_module_path,
 				:passenger_root => PhusionPassenger.root,
 				:ruby => PlatformInfo.ruby_command
-			if PhusionPassenger.natively_packaged?
-				wait(10)
-			else
+			if PhusionPassenger.originally_packaged?
 				wait
+			else
+				wait(10)
 			end
 		end
 	end
