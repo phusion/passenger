@@ -236,7 +236,7 @@ private
 		if value
 			return value
 		else
-			raise "Option '#{key}' missing in file #{filename}"
+			raise "Option '#{key}' missing in file '#{filename}'"
 		end
 	end
 	

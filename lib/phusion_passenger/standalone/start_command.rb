@@ -284,7 +284,7 @@ private
 	def install_runtime
 		require 'phusion_passenger/standalone/runtime_installer'
 		installer = RuntimeInstaller.new(
-			:source_root => PhusionPassenger.compilable_source_dir,
+			:targets     => :both,
 			:support_dir => passenger_support_files_dir,
 			:nginx_dir   => nginx_dir,
 			:version     => @options[:nginx_version],
@@ -295,7 +295,7 @@ private
 	end
 	
 	def passenger_support_files_dir
-		return "#{@runtime_dir}/support"
+		return @runtime_dir
 	end
 	
 	def nginx_dir

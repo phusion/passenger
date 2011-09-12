@@ -174,6 +174,22 @@ private
 		require 'phusion_passenger/platform_info/ruby'
 		ensure_directory_exists(@temp_dir)
 		
+		File.open(@location_config_filename, 'w') do |f|
+			f.puts '[locations]'
+			f.puts "bin=#{PhusionPassenger.bin_dir}"
+			f.puts "agents=#{passenger_support_files_dir}/agents"
+			f.puts "helper_scripts=#{PhusionPassenger.helper_scripts_dir}"
+			f.puts "resources=#{PhusionPassenger.resources_dir}"
+			f.puts "doc=#{PhusionPassenger.doc_dir}"
+			f.puts "runtimelib=#{passenger_support_files_dir}/libout/common"
+			f.puts "headers=#{PhusionPassenger.header_dir}"
+			f.puts "rubylib=#{PhusionPassenger.ruby_libdir}"
+			if PhusionPassenger.compilable_source_dir
+				f.puts "compilable_source=#{PhusionPassenger.compilable_source_dir}"
+			end
+		end
+		puts File.read(@location_config_filename) if debugging?
+		
 		File.open(@config_filename, 'w') do |f|
 			f.chmod(0644)
 			template_filename = File.join(PhusionPassenger.templates_dir,
@@ -219,6 +235,7 @@ private
 		require_daemon_controller
 		@temp_dir        = "/tmp/passenger-standalone.#{$$}"
 		@config_filename = "#{@temp_dir}/config"
+		@location_config_filename = "#{@temp_dir}/locations.ini"
 		opts = {
 			:identifier    => 'Nginx',
 			:before_start  => method(:write_nginx_config_file),

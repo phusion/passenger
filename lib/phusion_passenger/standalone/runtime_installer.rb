@@ -37,7 +37,6 @@ module Standalone
 # non-interactive.
 #
 # The following option must be given:
-# - source_root: Path to the Phusion Passenger source root.
 # - targets: One of the following:
 #   * :nginx   - to indicate that you only want to compile and install Nginx.
 #   * :support_binaries - to indicate that you only want to compile and install the
@@ -184,7 +183,7 @@ private
 	def binary_support_files_should_be_installed?
 		return (@targets == :support_binaries || @targets == :both) && (
 			!File.exist?("#{@support_dir}/agents/PassengerHelperAgent") ||
-			!File.exist?("#{@support_dir}/ext/common/libpassenger_common.a")
+			!File.exist?("#{@support_dir}/libout/common/libpassenger_common.a")
 		)
 	end
 	

@@ -48,13 +48,12 @@ private:
 	string rubyLibDir;
 	string compilableSourceDir;
 	string headerDir;
-	string apache2Module;
 	
-	string getOption(const string &file, const IniFileSectionPtr &section, const string &key) const {
+	static string getOption(const string &file, const IniFileSectionPtr &section, const string &key) {
 		if (section->hasKey(key)) {
 			return section->get(key);
 		} else {
-			throw RuntimeException("Option '" + key + "' missing in file " + file);
+			throw RuntimeException("Option '" + key + "' missing in file '" + file + "'");
 		}
 	}
 	
@@ -71,25 +70,12 @@ public:
 			rubyLibDir          = getOption(file, options, "rubylib");
 			compilableSourceDir = getOption(file, options, "compilable_source");
 			headerDir           = getOption(file, options, "headers");
-			apache2Module       = getOption(file, options, "apache2_module");
 		} else {
 			string root = rootOrFile;
-			bool nativelyPackaged = !fileExists(root + "/Rakefile") ||
-				!fileExists(root + "/DEVELOPERS.TXT");
+			bool originallyPackaged = fileExists(root + "/Rakefile")
+				&& fileExists(root + "/DEVELOPERS.TXT");
 			
-			if (nativelyPackaged) {
-				string NAMESPACE_DIR = "phusion-passenger";
-				
-				binDir              = "/usr/bin";
-				agentsDir           = "/usr/lib/" + NAMESPACE_DIR + "/agents";
-				helperScriptsDir    = "/usr/share/" + NAMESPACE_DIR + "/helper-scripts";
-				resourcesDir        = "/usr/share/" + NAMESPACE_DIR;
-				docDir              = "/usr/share/doc/" + NAMESPACE_DIR;
-				rubyLibDir          = "";
-				compilableSourceDir = "/usr/share/" + NAMESPACE_DIR + "/compilable-source";
-				headerDir           = "/usr/include/" + NAMESPACE_DIR;
-				apache2Module       = "/usr/lib/apache2/modules/mod_passenger.so";
-			} else {
+			if (originallyPackaged) {
 				binDir              = root + "/bin";
 				agentsDir           = root + "/agents";
 				helperScriptsDir    = root + "/helper-scripts";
@@ -98,7 +84,17 @@ public:
 				rubyLibDir          = root + "/lib";
 				compilableSourceDir = root;
 				headerDir           = root + "/ext";
-				apache2Module       = root + "/ext/apache2/mod_passenger.so";
+			} else {
+				string NAMESPACE_DIR = "phusion-passenger";
+				
+				binDir              = "/usr/bin";
+				agentsDir           = "/usr/lib/" + NAMESPACE_DIR + "/agents";
+				helperScriptsDir    = "/usr/share/" + NAMESPACE_DIR + "/helper-scripts";
+				resourcesDir        = "/usr/share/" + NAMESPACE_DIR;
+				docDir              = "/usr/share/doc/" + NAMESPACE_DIR;
+				rubyLibDir          = "";
+				compilableSourceDir = "";
+				headerDir           = "/usr/include/" + NAMESPACE_DIR;
 			}
 		}
 	}
@@ -136,10 +132,6 @@ public:
 	// Directory must contain ext/boost, ext/oxt and ext/common headers.
 	string getHeaderDir() const {
 		return headerDir;
-	}
-	
-	string getApache2ModuleFilename() const {
-		return apache2Module;
 	}
 };
 
