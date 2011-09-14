@@ -138,8 +138,24 @@ public:
 	 * @see read(), write(const char *, ...)
 	 */
 	template<typename StringArrayType>
-	void write(const StringArrayType &args) {
+	void writeEx(const StringArrayType &args) {
 		writeArrayMessage(fd, args);
+	}
+	
+	void write(const vector<StaticString> &args) {
+		writeArrayMessageEx(fd, args);
+	}
+	
+	void write(const vector<string> &args) {
+		writeArrayMessageEx(fd, args);
+	}
+	
+	void write(const list<StaticString> &args) {
+		writeArrayMessageEx(fd, args);
+	}
+	
+	void write(const list<string> &args) {
+		writeArrayMessageEx(fd, args);
 	}
 	
 	/**

@@ -566,7 +566,7 @@ namespace tut {
 		log.reset();
 		
 		vector<string> args;
-		writeArrayMessage(logger->getConnection(), "flush");
+		writeArrayMessage(logger->getConnection(), "flush", NULL);
 		ensure(readArrayMessage(logger->getConnection(), args));
 		ensure_equals(args.size(), 1u);
 		ensure_equals(args[0], "ok");
@@ -591,10 +591,10 @@ namespace tut {
 		log2->message("message 2");
 		log2.reset();
 		
-		writeArrayMessage(logger->getConnection(), "flush");
+		writeArrayMessage(logger->getConnection(), "flush", NULL);
 		ensure(readArrayMessage(logger->getConnection(), args));
 		
-		writeArrayMessage(logger2->getConnection(), "flush");
+		writeArrayMessage(logger2->getConnection(), "flush", NULL);
 		ensure(readArrayMessage(logger2->getConnection(), args));
 		
 		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
