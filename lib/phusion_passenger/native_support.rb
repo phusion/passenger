@@ -80,6 +80,7 @@ private
 		if PhusionPassenger.ruby_native_support_dir
 			begin
 				require "#{PhusionPassenger.ruby_native_support_dir}/#{library_name}"
+				return true
 			rescue LoadError
 				return false
 			end
