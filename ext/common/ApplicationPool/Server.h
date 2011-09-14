@@ -108,9 +108,9 @@ private:
 		TRACE_POINT();
 		commonContext.requireRights(Account::DETACH);
 		if (pool->detach(args[1])) {
-			writeArrayMessage(commonContext.fd, "true");
+			writeArrayMessage(commonContext.fd, "true", NULL);
 		} else {
-			writeArrayMessage(commonContext.fd, "false");
+			writeArrayMessage(commonContext.fd, "false", NULL);
 		}
 	}
 	
@@ -135,19 +135,19 @@ private:
 	void processGetActive(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		writeArrayMessage(commonContext.fd, toString(pool->getActive()).c_str());
+		writeArrayMessage(commonContext.fd, toString(pool->getActive()).c_str(), NULL);
 	}
 	
 	void processGetCount(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		writeArrayMessage(commonContext.fd, toString(pool->getCount()).c_str());
+		writeArrayMessage(commonContext.fd, toString(pool->getCount()).c_str(), NULL);
 	}
 	
 	void processGetGlobalQueueSize(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		writeArrayMessage(commonContext.fd, toString(pool->getGlobalQueueSize()).c_str());
+		writeArrayMessage(commonContext.fd, toString(pool->getGlobalQueueSize()).c_str(), NULL);
 	}
 	
 	void processSetMaxPerApp(CommonClientContext &commonContext, SpecificContext *specificContext, unsigned int maxPerApp) {

@@ -319,7 +319,7 @@ readScalarMessage(int fd, string &output, unsigned int maxSize = 0, unsigned lon
 	}
 	
 	unsigned int remaining = size;
-	if (!output.empty()) {
+	if (OXT_UNLIKELY(!output.empty())) {
 		output.clear();
 	}
 	output.reserve(size);
@@ -434,7 +434,7 @@ writeUint32(int fd, uint32_t value, unsigned long long *timeout = NULL) {
  */
 template<typename Collection>
 inline void
-writeArrayMessage(int fd, const Collection &args, unsigned long long *timeout = NULL) {
+writeArrayMessageEx(int fd, const Collection &args, unsigned long long *timeout = NULL) {
 	typename Collection::const_iterator it, end = args.end();
 	uint16_t bodySize = 0;
 	
@@ -455,6 +455,16 @@ writeArrayMessage(int fd, const Collection &args, unsigned long long *timeout = 
 	}
 	
 	writeExact(fd, data.get(), sizeof(uint16_t) + bodySize, timeout);
+}
+
+inline void
+writeArrayMessage(int fd, const vector<StaticString> &args, unsigned long long *timeout = NULL) {
+	writeArrayMessageEx(fd, args, timeout);
+}
+
+inline void
+writeArrayMessage(int fd, const vector<string> &args, unsigned long long *timeout = NULL) {
+	writeArrayMessageEx(fd, args, timeout);
 }
 
 inline void
@@ -546,8 +556,7 @@ writeArrayMessage(int fd, const StaticString &name, ...) {
 
 inline void
 writeArrayMessage(int fd, const char *name) {
-	StaticString str = name;
-	writeArrayMessage(fd, &str, 1, NULL);
+	abort();
 }
 
 /** Version of writeArrayMessage() that accepts a variadic list of 'const char *'

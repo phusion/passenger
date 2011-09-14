@@ -50,7 +50,6 @@
 #include <MessageReadersWriters.h>
 #include <StaticString.h>
 #include <Exceptions.h>
-#include <MessageChannel.h>
 #include <Constants.h>
 #include <Utils.h>
 #include <Utils/MD5.h>
