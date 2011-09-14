@@ -633,7 +633,6 @@ private:
 	
 	SpawnResult sendSpawnCommand(const Options &options) {
 		FileDescriptor fd = connectToServer(socketAddress);
-		MessageChannel channel(fd);
 		BufferedIO io(fd);
 		unsigned long long timeout = options.startTimeout * 1000;
 		string result;
@@ -665,7 +664,7 @@ private:
 			}
 			
 			writeExact(fd, "Ready to receive FD\n");
-			adminSocket = channel.readFileDescriptor(false);
+			adminSocket = readFileDescriptor(fd);
 			writeExact(fd, "Received FD\n");
 			
 			SpawnResult result;
