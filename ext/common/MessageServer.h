@@ -136,7 +136,7 @@ using namespace oxt;
  *       {
  *           if (args[0] == "ping") {
  *               MyContext *myContext = (MyContext *) specificContext.get();
- *               commonContext.channel.write("pong", toString(specificContext->count).c_str(), NULL);
+ *               writeArrayMessage(commonContext.fd, "pong", toString(specificContext->count).c_str(), NULL);
  *               specificContext->count++;
  *               return true;
  *           } else {
@@ -195,7 +195,7 @@ public:
 		
 		/** Returns a string representation for this client context. */
 		string name() {
-			return toString(channel.filenum());
+			return toString(fd);
 		}
 		
 		/**
@@ -210,10 +210,10 @@ public:
 		void requireRights(Account::Rights rights) {
 			if (!account->hasRights(rights)) {
 				P_TRACE(2, "Security error: insufficient rights to execute this command.");
-				channel.write("SecurityException", "Insufficient rights to execute this command.", NULL);
+				writeArrayMessage(fd, "SecurityException", "Insufficient rights to execute this command.", NULL);
 				throw SecurityException("Insufficient rights to execute this command.");
 			} else {
-				channel.write("Passed security", NULL);
+				writeArrayMessage(fd, "Passed security", NULL);
 			}
 		}
 	};
@@ -459,7 +459,7 @@ protected:
 			
 			while (!this_thread::interruption_requested()) {
 				UPDATE_TRACE_POINT();
-				if (!commonContext.channel.read(args)) {
+				if (!readArrayMessage(commonContext.fd, args)) {
 					// Client closed connection.
 					break;
 				}
