@@ -96,6 +96,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 	# Define compilation targets for the object files in libpassenger_common.
 	flags =  "-Iext -Iext/common #{LIBEV_CFLAGS} #{extra_compiler_flags} "
 	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
+	flags.strip!
 	
 	if boolean_option('RELEASE')
 		sources = []
