@@ -254,4 +254,4 @@ private
 		value = get_option(filename, options, key)
 		return value == 'yes' || value == 'true' || value == 'on' || value == '1'
 	end
-end if !defined?(PhusionPassenger::LIBDIR)
+end if !defined?(PhusionPassenger::VERSION_STRING)
