@@ -109,12 +109,25 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{EXTRA_LDFLAGS}")
 end
 
-file AGENT_OUTPUT_DIR + 'SpawnPreparer' => 'ext/common/agents/SpawnPreparer.cpp' do
+dependencies = [
+	'ext/common/agents/SpawnPreparer.cpp',
+	LIBCOMMON,
+	LIBBOOST_OXT
+]
+file AGENT_OUTPUT_DIR + 'SpawnPreparer' => dependencies do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'SpawnPreparer',
-		'ext/common/agents/SpawnPreparer.cpp')
+		'ext/common/agents/SpawnPreparer.cpp',
+		"-Iext -Iext/common " <<
+		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+		"#{LIBCOMMON} " <<
+		"#{LIBBOOST_OXT} " <<
+		"#{PlatformInfo.portability_ldflags} " <<
+		"#{EXTRA_LDFLAGS}")
 end
 
 file AGENT_OUTPUT_DIR + 'EnvPrinter' => 'ext/common/agents/EnvPrinter.c' do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_c_executable(AGENT_OUTPUT_DIR + 'EnvPrinter',
 		'ext/common/agents/EnvPrinter.c')
 end

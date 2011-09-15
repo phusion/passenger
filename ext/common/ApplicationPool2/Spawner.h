@@ -49,6 +49,19 @@ private:
 	friend class tut::ApplicationPool2_DirectSpawnerTest;
 	friend class tut::ApplicationPool2_SmartSpawnerTest;
 	
+	static void appendNullTerminatedKeyValue(string &output, const StaticString &key,
+		const StaticString &value)
+	{
+		unsigned int minCapacity = key.size() + value.size() + 2;
+		if (output.capacity() < minCapacity) {
+			output.reserve(minCapacity + 1024);
+		}
+		output.append(key.data(), key.size());
+		output.append(1, '\0');
+		output.append(value.data(), value.size());
+		output.append(1, '\0');
+	}
+	
 	void sendSpawnRequest(int connection, const string &gupid, const Options &options,
 		unsigned long long &timeout)
 	{
@@ -157,7 +170,9 @@ protected:
 		return 0; // timed out
 	}
 	
-	void createCommandArgs(const vector<string> &command, shared_array<const char *> &args) {
+	static void createCommandArgs(const vector<string> &command,
+		shared_array<const char *> &args)
+	{
 		args.reset(new const char *[command.size()]);
 		for (unsigned int i = 1; i < command.size(); i++) {
 			args[i - 1] = command[i].c_str();
@@ -275,25 +290,20 @@ protected:
 		return info;
 	}
 	
-	map<string, string> prepareEnvironmentVariablesFromPool(const Options &options,
-		const UserSwitchingInfo &info)
-	{
-		map<string, string> result;
+	string serializeEnvvarsFromPoolOptions(const Options &options) const {
+		vector< pair<StaticString, StaticString> >::const_iterator it, end;
+		string result;
 		
-		result["USER"] = info.username;
-		result["LOGNAME"] = info.username;
-		result["SHELL"] = info.shell;
-		result["PYTHONUNBUFFERED"] = "1";
-		result["HOME"] = info.home;
+		appendNullTerminatedKeyValue(result, "PYTHONUNBUFFERED", "1");
 		
-		if (options.environmentVariables != NULL) {
-			vector<string> strings = *options.environmentVariables->getItems();
-			for (unsigned int i = 0; i < strings.size(); i += 2) {
-				result[strings[i]] = strings[i + 1];
-			}
+		it  = options.environmentVariables.begin();
+		end = options.environmentVariables.end();
+		while (it != end) {
+			appendNullTerminatedKeyValue(result, it->first, it->second);
+			it++;
 		}
 		
-		return result;
+		return Base64::encode(result);
 	}
 	
 	void setWorkingDirectory(const Options &options) {
@@ -321,13 +331,11 @@ protected:
 				int e = errno;
 				throw SystemException("setuid() failed", e);
 			}
-		}
-	}
-	
-	void setEnvironmentVariables(const map<string, string> &vars) {
-		map<string, string>::const_iterator it, end = vars.end();
-		for (it = vars.begin(); it != end; it++) {
-			setenv(it->first.c_str(), it->second.c_str(), 1);
+			
+			setenv("USER", info.username.c_str(), 1);
+			setenv("LOGNAME", info.username.c_str(), 1);
+			setenv("SHELL", info.shell.c_str(), 1);
+			setenv("HOME", info.home.c_str(), 1);
 		}
 	}
 	
@@ -429,15 +437,22 @@ private:
 		}
 	}
 	
-	vector<string> createRealPreloaderCommand(shared_array<const char *> &args) {
+	vector<string> createRealPreloaderCommand(const Options &options,
+		shared_array<const char *> &args)
+	{
+		string agentsDir = resourceLocator.getAgentsDir();
 		vector<string> command;
 		
 		if (options.loadShellEnvvars) {
-			string agentsDir = resourceLocator.getAgentsDir();
+			command.push_back("bash");
+			command.push_back("bash");
+			command.push_back("-lc");
+			command.push_back("exec \"$@\"");
+		} else {
 			command.push_back(agentsDir + "/SpawnPreparer");
-			command.push_back(agentsDir + "/SpawnPreparer");
-			command.push_back(agentsDir + "/EnvPrinter");
 		}
+		command.push_back(agentsDir + "/SpawnPreparer");
+		command.push_back(serializeEnvvarsFromPoolOptions(options));
 		command.push_back(preloaderCommand[0]);
 		command.push_back("Passenger AppPreloader: " + options.appRoot);
 		for (unsigned int i = 1; i < preloaderCommand.size(); i++) {
@@ -456,9 +471,8 @@ private:
 		assert(!serverStarted());
 		
 		shared_array<const char *> args;
-		vector<string> command = createRealPreloaderCommand(args);
+		vector<string> command = createRealPreloaderCommand(options, args);
 		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
-		map<string, string> envvars = prepareEnvironmentVariablesFromPool(options, userSwitchingInfo);
 		SocketPair adminSocket = createUnixSocketPair();
 		pid_t pid;
 		
@@ -470,7 +484,6 @@ private:
 			dup2(adminSocketCopy, 1);
 			closeAllFileDescriptors(2);
 			setWorkingDirectory(options);
-			setEnvironmentVariables(envvars);
 			switchUser(userSwitchingInfo);
 			execvp(command[0].c_str(), (char * const *) args.get());
 			
@@ -889,32 +902,36 @@ private:
 		pthread_attr_destroy(&attr);
 	}
 	
-	vector<string> createCommand(const Options &options, shared_array<const char *> &args) {
-		vector<string> startCommand;
+	vector<string> createCommand(const Options &options, shared_array<const char *> &args) const {
+		vector<string> startCommandArgs;
 		string processTitle;
+		string agentsDir = resourceLocator.getAgentsDir();
+		vector<string> command;
 		
-		split(options.getStartCommand(resourceLocator), '\1', startCommand);
-		if (startCommand.empty()) {
+		split(options.getStartCommand(resourceLocator), '\1', startCommandArgs);
+		if (startCommandArgs.empty()) {
 			throw RuntimeException("No startCommand given");
 		}
 		if (options.getProcessTitle().empty()) {
-			processTitle = startCommand[0];
+			processTitle = startCommandArgs[0];
 		} else {
 			processTitle = options.getProcessTitle() + ": " + options.appRoot;
 		}
 		
-		vector<string> command;
-		
 		if (options.loadShellEnvvars) {
-			string agentsDir = resourceLocator.getAgentsDir();
+			command.push_back("bash");
+			command.push_back("bash");
+			command.push_back("-lc");
+			command.push_back("exec \"$@\"");
+		} else {
 			command.push_back(agentsDir + "/SpawnPreparer");
-			command.push_back(agentsDir + "/SpawnPreparer");
-			command.push_back(agentsDir + "/EnvPrinter");
 		}
-		command.push_back(startCommand[0]);
+		command.push_back(agentsDir + "/SpawnPreparer");
+		command.push_back(serializeEnvvarsFromPoolOptions(options));
+		command.push_back(startCommandArgs[0]);
 		command.push_back(processTitle);
-		for (unsigned int i = 1; i < startCommand.size(); i++) {
-			command.push_back(startCommand[i]);
+		for (unsigned int i = 1; i < startCommandArgs.size(); i++) {
+			command.push_back(startCommandArgs[i]);
 		}
 		
 		createCommandArgs(command, args);
@@ -940,7 +957,6 @@ public:
 		shared_array<const char *> args;
 		vector<string> command = createCommand(options, args);
 		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
-		map<string, string> envvars = prepareEnvironmentVariablesFromPool(options, userSwitchingInfo);
 		SocketPair adminSocket = createUnixSocketPair();
 		pid_t pid;
 		
@@ -952,7 +968,6 @@ public:
 			dup2(adminSocketCopy, 1);
 			closeAllFileDescriptors(2);
 			setWorkingDirectory(options);
-			setEnvironmentVariables(envvars);
 			switchUser(userSwitchingInfo);
 			execvp(args[0], (char * const *) args.get());
 			

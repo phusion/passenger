@@ -37,6 +37,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/TestSupport.cpp
 		test/cxx/TestSupport.h
 		ext/common/SafeLibev.h),
+	'test/cxx/ApplicationPool2/OptionsTest.o' => %w(
+		test/cxx/ApplicationPool2/OptionsTest.cpp
+		ext/common/ApplicationPool2/Options.h),
 	'test/cxx/ApplicationPool2/DirectSpawnerTest.o' => %w(
 		test/cxx/ApplicationPool2/DirectSpawnerTest.cpp
 		test/cxx/ApplicationPool2/SpawnerTestCases.cpp

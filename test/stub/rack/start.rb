@@ -26,6 +26,12 @@ while true
 			client.write("pong\n")
 		elsif line == "pid\n"
 			client.write("#{Process.pid}\n")
+		elsif line == "envvars\n"
+			str = ""
+			ENV.each_pair do |key, value|
+				str << "#{key} = #{value}\n"
+			end
+			client.write(str)
 		else
 			client.write("unknown request\n")
 		end

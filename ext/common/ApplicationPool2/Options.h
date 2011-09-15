@@ -27,6 +27,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 #include <boost/shared_array.hpp>
 #include <Account.h>
 #include <Logging.h>
@@ -87,8 +88,8 @@ private:
 		result.push_back(&environment);
 		result.push_back(&baseURI);
 		result.push_back(&spawnMethod);
-		result.push_back(&user);
 		
+		result.push_back(&user);
 		result.push_back(&group);
 		result.push_back(&defaultUser);
 		result.push_back(&defaultGroup);
@@ -242,8 +243,7 @@ public:
 	 *
 	 * @invariant environmentVariables.size() is an even number.
 	 */
-	// TODO: rename to LazyStringList
-	StringListCreatorPtr environmentVariables;
+	vector< pair<StaticString, StaticString> > environmentVariables;
 	
 	/**
 	 * Whether to show the Phusion Passenger version number in the
@@ -359,36 +359,66 @@ public:
 	 * area.
 	 */
 	Options &persist(const Options &other) {
-		vector<const StaticString *> strings = getStringFields();
-		vector<const StaticString *> otherStrings = other.getStringFields();
+		const vector<const StaticString *> strings = getStringFields();
+		const vector<const StaticString *> otherStrings = other.getStringFields();
 		unsigned int i;
 		size_t otherLen = 0;
 		char *end;
 		
 		assert(strings.size() == otherStrings.size());
+		
+		// Calculate the desired length of the internal storage area.
+		// All strings are NULL-terminated.
 		for (i = 0; i < otherStrings.size(); i++) {
 			otherLen += otherStrings[i]->size() + 1;
+		}
+		for (i = 0; i < other.environmentVariables.size(); i++) {
+			otherLen += environmentVariables[i].first.size() + 1;
+			otherLen += environmentVariables[i].second.size() + 1;
 		}
 		
 		shared_array<char> data(new char[otherLen]);
 		end = data.get();
+		
+		// Copy string fields into the internal storage area.
 		for (i = 0; i < otherStrings.size(); i++) {
 			const StaticString *str = strings[i];
 			const StaticString *otherStr = otherStrings[i];
 			
+			// Point current object's field to the data in the
+			// internal storage area.
 			*const_cast<StaticString *>(str) = StaticString(end, otherStr->size());
+			
+			// Copy over the string data.
 			memcpy(end, otherStr->c_str(), otherStr->size());
 			end += otherStr->size();
 			*end = '\0';
 			end++;
 		}
 		
-		storage = data;
-		
-		if (environmentVariables != NULL) {
-			// Prefetch items now while we still can.
-			environmentVariables->getItems();
+		// Copy environmentVariables names and values into the internal storage area.
+		for (i = 0; i < other.environmentVariables.size(); i++) {
+			const pair<StaticString, StaticString> &p = other.environmentVariables[i];
+			
+			environmentVariables[i] = make_pair(
+				StaticString(end, p.first.size()),
+				StaticString(end + p.first.size() + 1, p.second.size())
+			);
+			
+			// Copy over string data.
+			memcpy(end, p.first.data(), p.first.size());
+			end += p.first.size();
+			*end = '\0';
+			end++;
+			
+			// Copy over value data.
+			memcpy(end, p.second.data(), p.second.size());
+			end += p.second.size();
+			*end = '\0';
+			end++;
 		}
+		
+		storage = data;
 		
 		return *this;
 	}
@@ -498,33 +528,6 @@ public:
 		} else {
 			return spawnerTimeout;
 		}
-	}
-	
-	/**
-	 * Serializes the items in environmentVariables into a string, which
-	 * can be used to create a SimpleStringListCreator object.
-	 *
-	 * @throws Anything thrown by environmentVariables->getItems().
-	 */
-	string serializeEnvironmentVariables() const {
-		vector<string>::const_iterator it, end;
-		string result;
-		
-		if (environmentVariables) {
-			result.reserve(1024);
-			
-			StringListPtr items = environmentVariables->getItems();
-			end = items->end();
-			
-			for (it = items->begin(); it != end; it++) {
-				result.append(*it);
-				result.append(1, '\0');
-				it++;
-				result.append(*it);
-				result.append(1, '\0');
-			}
-		}
-		return Base64::encode(result);
 	}
 };
 

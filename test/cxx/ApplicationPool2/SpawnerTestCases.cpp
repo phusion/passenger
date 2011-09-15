@@ -105,5 +105,24 @@
 		ensure_equals(readAll(conn.fd), toString(process->pid) + "\n");
 	}
 	
-	// Environment variables.
-	// User switching.
+	TEST_METHOD(7) {
+		// Custom environment variables can be passed.
+		Options options = createOptions();
+		options.appRoot = "stub/rack";
+		options.startCommand = "ruby\1" "start.rb";
+		options.startupFile  = "stub/rack/start.rb";
+		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
+		options.environmentVariables.push_back(make_pair("PASSENGER_BAR", "bar"));
+		SpawnerPtr spawner = createSpawner(options);
+		ProcessPtr process = spawner->spawn(options);
+		ensure_equals(process->sockets->size(), 1u);
+		
+		Connection conn = process->sockets->front().checkoutConnection();
+		ScopeGuard guard(boost::bind(checkin, process, &conn));
+		writeExact(conn.fd, "envvars\n");
+		string envvars = readAll(conn.fd);
+		ensure("(1)", envvars.find("PASSENGER_FOO = foo\n") != string::npos);
+		ensure("(2)", envvars.find("PASSENGER_BAR = bar\n") != string::npos);
+	}
+	
+	// User switching works.
