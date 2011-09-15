@@ -40,6 +40,7 @@ using namespace boost;
  */
 class ResourceLocator {
 private:
+	string root;
 	string binDir;
 	string agentsDir;
 	string helperScriptsDir;
@@ -59,6 +60,7 @@ private:
 	
 public:
 	ResourceLocator(const string &rootOrFile) {
+		root = rootOrFile;
 		if (getFileType(rootOrFile) == FT_REGULAR) {
 			string file = rootOrFile;
 			IniFileSectionPtr options = IniFile(file).section("locations");
@@ -97,6 +99,10 @@ public:
 				headerDir           = "/usr/include/" + NAMESPACE_DIR;
 			}
 		}
+	}
+	
+	string getRoot() const {
+		return root;
 	}
 	
 	string getAgentsDir() const {

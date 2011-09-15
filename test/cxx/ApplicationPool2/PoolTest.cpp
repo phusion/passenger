@@ -7,6 +7,8 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct ApplicationPool2_PoolTest {
+		ServerInstanceDirPtr serverInstanceDir;
+		ServerInstanceDir::GenerationPtr generation;
 		BackgroundEventLoop bg;
 		PoolPtr pool;
 		GetCallback callback;
@@ -15,8 +17,9 @@ namespace tut {
 		AtomicInt number;
 		
 		ApplicationPool2_PoolTest() {
+			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			pool = make_shared<Pool>(bg.libev,
-				make_shared<SpawnerFactory>(bg.libev, *resourceLocator));
+				make_shared<SpawnerFactory>(bg.libev, *resourceLocator, generation));
 			bg.start();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);
 		}

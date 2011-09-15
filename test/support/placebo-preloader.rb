@@ -1,7 +1,10 @@
 #!/usr/bin/env ruby
-# An application preloader which doesn't actually preload anything.
+# An application preloader which doesn't actually preload anything
+# and executes the requested start command.
+
 DIR = File.expand_path(File.dirname(__FILE__))
 require "#{DIR}/../../lib/phusion_passenger"
+PhusionPassenger.locate_directories
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/native_support'
 require 'socket'

@@ -1,0 +1,156 @@
+module PhusionPassenger
+
+module PreloaderUtils
+	extend self
+	
+	# Prepare an application process using rules for the given spawn options.
+	# This method is to be called before loading the application code.
+	#
+	# +startup_file+ is the application type's startup file, e.g.
+	# "config/environment.rb" for Rails apps and "config.ru" for Rack apps.
+	# +options+ are the spawn options that were given.
+	#
+	# This function may modify +options+. The modified options are to be
+	# passed to the request handler.
+	def before_loading_app_code_step1(startup_file, options)
+		if false
+		path, is_parent = check_directory_tree_permissions(options["app_root"])
+		if path
+			username = Etc.getpwuid(Process.euid).name
+			groupname = Etc.getgrgid(Process.egid).name
+			message = "This application process is currently running as " +
+				"user '#{username}' and group '#{groupname}' and must be " +
+				"able to access its application root directory " +
+				"'#{options["app_root"]}'. "
+			if is_parent
+				message << "However the parent directory '#{path}' " +
+					"has wrong permissions, thereby preventing " +
+					"this process from accessing its application " +
+					"root directory. Please fix the permissions " +
+					"of the directory '#{path}' first."
+			else
+				message << "However this directory is not accessible " +
+					"because it has wrong permissions. Please fix " +
+					"these permissions first."
+			end
+			raise(message)
+		end
+		end
+		
+		# Instantiate the analytics logger if requested. Can be nil.
+		require 'phusion_passenger/analytics_logger'
+		options["analytics_logger"] = AnalyticsLogger.new_from_options(options)
+	end
+	
+	def run_load_path_setup_code
+		# rack-preloader.rb depends on the 'rack' library, but the app
+		# might want us to use a bundled version instead of a
+		# gem/apt-get/yum/whatever-installed version. Therefore we must setup
+		# the correct load paths before requiring 'rack'.
+		#
+		# The most popular tool for bundling dependencies is Bundler. Bundler
+		# works as follows:
+		# - If the bundle is locked then a file .bundle/environment.rb exists
+		#   which will setup the load paths.
+		# - If the bundle is not locked then the load paths must be set up by
+		#   calling Bundler.setup.
+		# - Rails 3's boot.rb automatically loads .bundle/environment.rb or
+		#   calls Bundler.setup if that's not available.
+		# - Other Rack apps might not have a boot.rb but we still want to setup
+		#   Bundler.
+		# - Some Rails 2 apps might have explicitly added Bundler support.
+		#   These apps call Bundler.setup in their preinitializer.rb.
+		#
+		# So the strategy is as follows:
+		
+		# Our strategy might be completely unsuitable for the app or the
+		# developer is using something other than Bundler, so we let the user
+		# manually specify a load path setup file.
+		if options["load_path_setup_file"]
+			require File.expand_path(options["load_path_setup_file"])
+		
+		# The app developer may also override our strategy with this magic file.
+		elsif File.exist?('config/setup_load_paths.rb')
+			require File.expand_path('config/setup_load_paths')
+		
+		# If the Bundler lock environment file exists then load that. If it
+		# exists then there's a 99.9% chance that loading it is the correct
+		# thing to do.
+		elsif File.exist?('.bundle/environment.rb')
+			require File.expand_path('.bundle/environment')
+		
+		# If the Bundler environment file doesn't exist then there are two
+		# possibilities:
+		# 1. Bundler is not used, in which case we don't have to do anything.
+		# 2. Bundler *is* used, but the gems are not locked and we're supposed
+		#    to call Bundler.setup.
+		#
+		# The existence of Gemfile indicates whether (2) is true:
+		elsif File.exist?('Gemfile')
+			# In case of Rails 3, config/boot.rb already calls Bundler.setup.
+			# However older versions of Rails may not so loading boot.rb might
+			# not be the correct thing to do. To be on the safe side we
+			# call Bundler.setup ourselves; calling Bundler.setup twice is
+			# harmless. If this isn't the correct thing to do after all then
+			# there's always the load_path_setup_file option and
+			# setup_load_paths.rb.
+			require 'rubygems'
+			require 'bundler/setup'
+		end
+		
+		# Bundler might remove Phusion Passenger from the load path in its zealous
+		# attempt to un-require RubyGems, so here we put Phusion Passenger back
+		# into the load path. This must be done before loading the app's startup
+		# file because the app might require() Phusion Passenger files.
+		if $LOAD_PATH.first != PhusionPassenger.ruby_libdir
+			$LOAD_PATH.unshift(PhusionPassenger.ruby_libdir)
+			$LOAD_PATH.uniq!
+		end
+		
+		
+		# !!! NOTE !!!
+		# If the app is using Bundler then any dependencies required past this
+		# point must be specified in the Gemfile. Like ruby-debug if debugging is on...
+	end
+	
+	def before_loading_app_code_step2(options)
+		if options["debugger"]
+			require 'ruby-debug'
+			if !Debugger.respond_to?(:ctrl_port)
+				raise "Your version of ruby-debug is too old. Please upgrade to the latest version."
+			end
+			Debugger.start_remote('127.0.0.1', [0, 0])
+			Debugger.start
+		end
+	end
+	
+	# This method is to be called after loading the application code but
+	# before forking a worker process.
+	def after_loading_app_code(options)
+		# Even though run_load_path_setup_code() restores the Phusion Passenger
+		# load path after setting up Bundler, the app itself might also
+		# remove Phusion Passenger from the load path for whatever reason,
+		# so here we restore the load path again.
+		if $LOAD_PATH.first != PhusionPassenger.ruby_libdir
+			$LOAD_PATH.unshift(PhusionPassenger.ruby_libdir)
+			$LOAD_PATH.uniq!
+		end
+		
+		# Post-install framework extensions. Possibly preceded by a call to
+		# PhusionPassenger.install_framework_extensions!
+		if defined?(::Rails) && !defined?(::Rails::VERSION)
+			require 'rails/version'
+		end
+		if defined?(::Rails) && ::Rails::VERSION::MAJOR <= 2
+			require 'phusion_passenger/classic_rails_extensions/init'
+			ClassicRailsExtensions.init!(options)
+			# Rails 3 extensions are installed by
+			# PhusionPassenger.install_framework_extensions!
+		end
+	end
+	
+	def start_request_handler
+	end
+end
+
+end

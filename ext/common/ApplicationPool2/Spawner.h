@@ -1,5 +1,34 @@
+
 #ifndef _PASSENGER_APPLICATION_POOL_SPAWNER_H_
 #define _PASSENGER_APPLICATION_POOL_SPAWNER_H_
+
+/*
+ * This file implements application spawning support. Several classes
+ * are provided which all implement the Spawner interface. The spawn()
+ * method spawns an application process based on the given options
+ * and returns a Process object which contains information about the
+ * spawned process.
+ *
+ * The DirectSpawner class spawns application processes directly.
+ *
+ * The SmartSpawner class spawns application processes through a
+ * preloader process. The preloader process loads the application
+ * code into its address space and then listens on a socket for spawn
+ * commands. Upon receiving a spawn command, it will fork() itself.
+ * This makes spawning multiple application processes much faster.
+ * Note that a single SmartSpawner instance is only usable for a
+ * single application.
+ *
+ * DummySpawner doesn't do anything. It returns dummy Process objects.
+ *
+ * DirectSpawner, SmartSpawner and DummySpawner all implement the Spawner interface.
+ *
+ * SpawnerFactory is a convenience class which takes an Options objects
+ * and figures out, based on options.spawnMethod, whether to create
+ * a DirectSpawner or a SmartSpawner. In case of the smart spawning
+ * method, SpawnerFactory also automatically figures out which preloader
+ * to use based on options.appType.
+ */
 
 #include <string>
 #include <map>
@@ -49,6 +78,9 @@ private:
 	friend class tut::ApplicationPool2_DirectSpawnerTest;
 	friend class tut::ApplicationPool2_SmartSpawnerTest;
 	
+	/**
+	 * Appends key + "\0" + value + "\0" to 'output'.
+	 */
 	static void appendNullTerminatedKeyValue(string &output, const StaticString &key,
 		const StaticString &value)
 	{
@@ -68,7 +100,10 @@ private:
 		try {
 			writeExact(connection,
 				"You have control 1.0\n"
+				"passenger_root: " + resourceLocator.getRoot() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
+				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
+				"generation_dir: " + generation->getPath() + "\n"
 				"gupid: " + gupid + "\n",
 				&timeout);
 			
@@ -144,6 +179,9 @@ protected:
 		int ngroups;
 		shared_array<gid_t> gidset;
 	};
+	
+	ResourceLocator resourceLocator;
+	ServerInstanceDir::GenerationPtr generation;
 	
 	static void nonInterruptableKillAndWaitpid(pid_t pid) {
 		this_thread::disable_syscall_interruption dsi;
@@ -295,6 +333,13 @@ protected:
 		string result;
 		
 		appendNullTerminatedKeyValue(result, "PYTHONUNBUFFERED", "1");
+		appendNullTerminatedKeyValue(result, "RAILS_ENV", options.environment);
+		appendNullTerminatedKeyValue(result, "RACK_ENV", options.environment);
+		appendNullTerminatedKeyValue(result, "WSGI_ENV", options.environment);
+		if (!options.baseURI.empty() && options.baseURI != "/") {
+			appendNullTerminatedKeyValue(result, "RAILS_RELATIVE_URL_ROOT", options.environment);
+			appendNullTerminatedKeyValue(result, "RACK_BASE_URI", options.environment);
+		}
 		
 		it  = options.environmentVariables.begin();
 		end = options.environmentVariables.end();
@@ -332,6 +377,10 @@ protected:
 				throw SystemException("setuid() failed", e);
 			}
 			
+			// We set these environment variables here instead of
+			// in the SpawnPreparer because SpawnPreparer mightt
+			// be executed by bash, but these environment variables
+			// must be set before bash.
 			setenv("USER", info.username.c_str(), 1);
 			setenv("LOGNAME", info.username.c_str(), 1);
 			setenv("SHELL", info.shell.c_str(), 1);
@@ -396,6 +445,10 @@ protected:
 	}
 	
 public:
+	Spawner(const ResourceLocator &_resourceLocator)
+		: resourceLocator(_resourceLocator)
+		{ }
+	
 	virtual ~Spawner() { }
 	virtual ProcessPtr spawn(const Options &options) = 0;
 	
@@ -414,7 +467,6 @@ private:
 	};
 	
 	SafeLibev *libev;
-	ResourceLocator resourceLocator;
 	vector<string> preloaderCommand;
 	RandomGeneratorPtr randomGenerator;
 	Options options;
@@ -435,6 +487,19 @@ private:
 		} else {
 			write(1, buf, ret);
 		}
+	}
+	
+	string getPreloaderCommandString() const {
+		string result;
+		unsigned int i;
+		
+		for (i = 0; i < preloaderCommand.size(); i++) {
+			if (i != 0) {
+				result.append(1, '\0');
+			}
+			result.append(preloaderCommand[i]);
+		}
+		return result;
 	}
 	
 	vector<string> createRealPreloaderCommand(const Options &options,
@@ -463,12 +528,17 @@ private:
 		return command;
 	}
 	
-	bool serverStarted() const {
+	void throwPreloaderSpawnException(const string &msg, SpawnException::ErrorKind errorKind) {
+		throw SpawnException(msg, errorKind)
+			.setPreloaderCommand(getPreloaderCommandString());
+	}
+	
+	bool preloaderStarted() const {
 		return pid != -1;
 	}
 	
-	void startServer() {
-		assert(!serverStarted());
+	void startPreloader() {
+		assert(!preloaderStarted());
 		
 		shared_array<const char *> args;
 		vector<string> command = createRealPreloaderCommand(options, args);
@@ -515,11 +585,11 @@ private:
 		}
 	}
 	
-	void stopServer() {
+	void stopPreloader() {
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		
-		if (!serverStarted()) {
+		if (!preloaderStarted()) {
 			return;
 		}
 		adminSocket.close();
@@ -543,7 +613,10 @@ private:
 		try {
 			writeExact(fd,
 				"You have control 1.0\n"
+				"passenger_root: " + resourceLocator.getRoot() + "\n"
+				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
+				"generation_dir: " + generation->getPath() + "\n"
 				"app_root: " + options.appRoot + "\n"
 				"\n",
 				&timeout);
@@ -554,8 +627,16 @@ private:
 				 * in which case we'll want to show that instead.
 				 */
 			} else {
-				throw;
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. There was an I/O error while "
+					"sending the startup request message to it: " +
+					e.sys(),
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
 			}
+		} catch (const TimeoutException &) {
+			throwPreloaderSpawnException("An error occurred while starting up the "
+				"preloader: it did not read the startup request message in time.",
+				SpawnException::PRELOADER_STARTUP_TIMEOUT);
 		}
 	}
 	
@@ -563,18 +644,41 @@ private:
 		string socketAddress;
 		
 		while (true) {
-			string line = io.readLine(1024 * 4, &timeout);
+			string line;
+			
+			try {
+				line = io.readLine(1024 * 4, &timeout);
+			} catch (const SystemException &e) {
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. There was an I/O error while reading its "
+					"startup response: " + e.sys(),
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+			} catch (const TimeoutException &) {
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader: it did not write a startup response in time.",
+					SpawnException::PRELOADER_STARTUP_TIMEOUT);
+			}
+			
 			if (line.empty()) {
-				throw EOFException("Premature end-of-stream");
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. It unexpected closed the connection while "
+					"sending its startup response.",
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
 			} else if (line[line.size() - 1] != '\n') {
-				throw IOException("Invalid line: no newline character found");
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. It sent a line without a newline character "
+					"in its startup response.",
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
 			} else if (line == "\n") {
 				break;
 			}
 			
 			string::size_type pos = line.find(": ");
 			if (pos == string::npos) {
-				throw IOException("Invalid line: no separator found");
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. It sent a startup response line without "
+					"separator.",
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
 			}
 			
 			string key = line.substr(0, pos);
@@ -582,66 +686,146 @@ private:
 			if (key == "socket") {
 				socketAddress = value;
 			} else {
-				throw IOException("Unknown key '" + key + "'");
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. It sent an unknown startup response line "
+					"called '" + key + "'.",
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
 			}
 		}
 		
 		if (socketAddress.empty()) {
-			throw RuntimeException("Preloader application did not report a socket address");
+			throwPreloaderSpawnException("An error occurred while starting up "
+				"the preloader. It did not report a socket address in its "
+				"startup response.",
+				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
 		}
 		
 		return socketAddress;
 	}
 	
 	void handleErrorResponse(BufferedIO &io, const string &line, unsigned long long &timeout) {
-		if (line == "Error\n") {
-			map<string, string> attributes;
+		map<string, string> attributes;
+		
+		while (true) {
+			string line;
 			
-			while (true) {
-				string line = io.readLine(1024 * 4, &timeout);
-				if (line.empty()) {
-					throw EOFException("Premature end-of-stream in error response");
-				} else if (line[line.size() - 1] != '\n') {
-					throw IOException("Invalid line in error response: no newline character found");
-				} else if (line == "\n") {
-					break;
-				}
-				
-				string::size_type pos = line.find(": ");
-				if (pos == string::npos) {
-					throw IOException("Invalid line in error response: no separator found");
-				}
-				
-				string key = line.substr(0, pos);
-				string value = line.substr(pos + 2, line.size() - pos - 3);
-				attributes[key] = value;
+			try {
+				line = io.readLine(1024 * 4, &timeout);
+			} catch (const SystemException &e) {
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. There was an I/O error while reading its "
+					"startup response: " + e.sys(),
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+			} catch (const TimeoutException &) {
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader: it did not write a startup response in time.",
+					SpawnException::PRELOADER_STARTUP_TIMEOUT);
 			}
 			
-			throw SpawnException("Application preloader failed to start",
-				io.readAll(&timeout), attributes["html"] == "true");
-		} else {
-			throw IOException("Invalid startup response: \"" +
-				cEscapeString(line) + "\"");
+			if (line.empty()) {
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. It unexpected closed the connection while "
+					"sending its startup response.",
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+			} else if (line[line.size() - 1] != '\n') {
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. It sent a line without a newline character "
+					"in its startup response.",
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+			} else if (line == "\n") {
+				break;
+			}
+			
+			string::size_type pos = line.find(": ");
+			if (pos == string::npos) {
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. It sent a startup response line without "
+					"separator.",
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+			}
+			
+			string key = line.substr(0, pos);
+			string value = line.substr(pos + 2, line.size() - pos - 3);
+			attributes[key] = value;
 		}
+		
+		try {
+			string message = io.readAll(&timeout);
+			throw SpawnException("An error occured while starting up the preloader.",
+				message,
+				attributes["html"] == "true")
+				.setPreloaderCommand(getPreloaderCommandString());
+		} catch (const SystemException &e) {
+			throwPreloaderSpawnException("An error occurred while starting up "
+				"the preloader. It tried to report an error message, but "
+				"an I/O error occurred while reading this error message: " +
+				e.sys(),
+				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+		} catch (const TimeoutException &) {
+			throwPreloaderSpawnException("An error occurred while starting up "
+				"the preloader. It tried to report an error message, but "
+				"it took too much time doing that.",
+				SpawnException::PRELOADER_STARTUP_TIMEOUT);
+		}
+	}
+	
+	void handleInvalidResponseType(const string &line) {
+		throwPreloaderSpawnException("An error occurred while starting up "
+			"the preloader. It sent an unknown response type \"" +
+			cEscapeString(line) + "\".",
+			SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
 	}
 	
 	string negotiateStartup(FileDescriptor &fd) {
 		BufferedIO io(fd);
 		unsigned long long timeout = 60 * 1000000;
 		
-		string result = io.readLine(1024, &timeout);
+		string result;
+		try {
+			result = io.readLine(1024, &timeout);
+		} catch (const SystemException &e) {
+			throwPreloaderSpawnException("An error occurred while starting up "
+				"the preloader. There was an I/O error while reading its "
+				"handshake message: " + e.sys(),
+				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+		} catch (const TimeoutException &) {
+			throwPreloaderSpawnException("An error occurred while starting up "
+				"the preloader: it did not write a handshake message in time.",
+				SpawnException::PRELOADER_STARTUP_TIMEOUT);
+		}
+		
 		if (result == "I have control 1.0\n") {
 			sendStartupRequest(fd, timeout);
-			result = io.readLine(1024, &timeout);
+			try {
+				result = io.readLine(1024, &timeout);
+			} catch (const SystemException &e) {
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader. There was an I/O error while reading its "
+					"startup response: " + e.sys(),
+					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+			} catch (const TimeoutException &) {
+				throwPreloaderSpawnException("An error occurred while starting up "
+					"the preloader: it did not write a startup response in time.",
+					SpawnException::PRELOADER_STARTUP_TIMEOUT);
+			}
 			if (result == "Ready\n") {
 				return handleStartupResponse(io, timeout);
-			} else {
+			} else if (result == "Error\n") {
 				handleErrorResponse(io, result, timeout);
+			} else {
+				handleInvalidResponseType(result);
 			}
 		} else {
-			handleErrorResponse(io, result, timeout);
+			if (result == "Error\n") {
+				handleErrorResponse(io, result, timeout);
+			} else {
+				handleInvalidResponseType(result);
+			}
 		}
-		return ""; // Never reached.
+		
+		// Never reached, shut up compiler warning.
+		abort();
+		return "";
 	}
 	
 	SpawnResult sendSpawnCommand(const Options &options) {
@@ -700,89 +884,25 @@ private:
 	SpawnResult sendSpawnCommandAgain(const Exception &e, const Options &options) {
 		P_WARN("An error occurred while spawning a process: " << e.what());
 		P_WARN("The application preloader seems to have crashed, restarting it and trying again...");
-		stopServer();
-		startServer();
-		ScopeGuard guard(boost::bind(&SmartSpawner::stopServer, this));
+		stopPreloader();
+		startPreloader();
+		ScopeGuard guard(boost::bind(&SmartSpawner::stopPreloader, this));
 		SpawnResult result = sendSpawnCommand(options);
 		guard.clear();
 		return result;
 	}
-	
-	/*
-	RubyInfo reallyQueryRubyInfo(const string &ruby) {
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
-		FileDescriptor pipe[2] = createPipe();
-		pid_t pid = syscalls::fork();
-		if (pid == 0) {
-			dup2(pipe[1], 1);
-			closeAllFileDescriptors(2);
-			execlp(ruby.c_str(), ruby.c_str(),
-				"/path/to/ruby/info/script",
-				(char *) 0);
-			
-			int e = errno;
-			fprintf(stderr, "***ERROR***: Cannot exec(\"%s\"): %s (%d)",
-				ruby.c_str(), strerror(e), e);
-			fflush(stderr);
-			_exit(1);
-		} else if (pid == -1) {
-			int e = errno;
-			throw SystemException("Cannot fork a new process", e);
-		} else {
-			ScopeGuard guard(boost::bind(killAndWaitpid, pid));
-			pipe[1].close();
-			string data;
-			{
-				//this_thread::restore_interruption ri(di);
-				//this_thread::restore_interruption rsi(dsi);
-				// Spend up to 1 minute executing this script.
-				// Cold booting JRuby can take quite some time.
-				bool ret = readAllData(pipe[0], data, 60000);
-				if (!ret) {
-					throw RuntimeException(
-						"Unable to query the capabilities of Ruby "
-						"interpreter '" + ruby + "': "
-						"the info query script failed to finish "
-						"within 1 minute");
-				}
-			}
-			if (data.size() != 2) {
-				throw RuntimeException(
-					"Unable to query the capabilities of Ruby "
-					"interpreter '" + ruby + "': "
-					"the info query script returned " +
-					toString(data.size()) + " bytes "
-					"instead of the expected 2 bytes");
-			}
-			
-			RubyInfo info;
-			info.supportsFork = data[0] == '1';
-			info.multicoreThreading = data[1] == '1';
-			return info;
-		}
-	}
-	
-	RubyInfo queryRubyInfo(const string &ruby) {
-		RubyInfoMap::iterator it = rubyInfo.find(ruby);
-		if (it == rubyInfo.end() || ruby changed) {
-			rubyInfo.erase(ruby);
-			rubyInfo.insert(make_pair(ruby, reallyQueryRubyInfo(ruby)));
-		} else {
-			return it->second;
-		}
-	}
-	*/
 	
 public:
 	ev::io preloaderOutputWatcher;
 	
 	SmartSpawner(SafeLibev *_libev,
 		const ResourceLocator &_resourceLocator,
+		const ServerInstanceDir::GenerationPtr &_generation,
 		const vector<string> &_preloaderCommand,
 		const RandomGeneratorPtr &_randomGenerator,
 		const Options &_options)
-		: resourceLocator(_resourceLocator),
+		: Spawner(_resourceLocator),
+		  libev(_libev),
 		  preloaderCommand(_preloaderCommand),
 		  randomGenerator(_randomGenerator)
 	{
@@ -790,9 +910,9 @@ public:
 			throw ArgumentException("preloaderCommand must have at least 2 elements");
 		}
 		
-		libev = _libev;
-		options = _options.copyAndPersist();
-		pid = -1;
+		generation = _generation;
+		options    = _options.copyAndPersist();
+		pid        = -1;
 		m_lastUsed = SystemTime::getUsec();
 		
 		preloaderOutputWatcher.set<SmartSpawner, &SmartSpawner::onPreloaderOutputReadable>(this);
@@ -800,18 +920,18 @@ public:
 	
 	virtual ~SmartSpawner() {
 		lock_guard<boost::mutex> lock(syncher);
-		stopServer();
+		stopPreloader();
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
 		assert(options.appType == this->options.appType);
 		assert(options.appRoot == this->options.appRoot);
-		assert(options.spawnMethod == "smart");
+		assert(options.spawnMethod == "smart" || options.spawnMethod == "smart-lv2");
 		
 		lock_guard<boost::mutex> lock(syncher);
 		m_lastUsed = SystemTime::getUsec();
-		if (!serverStarted()) {
-			startServer();
+		if (!preloaderStarted()) {
+			startPreloader();
 		}
 		
 		SpawnResult result;
@@ -838,7 +958,6 @@ public:
 
 class DirectSpawner: public Spawner {
 private:
-	ResourceLocator resourceLocator;
 	RandomGeneratorPtr randomGenerator;
 	
 	static void *detachProcessMain(void *arg) {
@@ -940,10 +1059,11 @@ private:
 	
 public:
 	DirectSpawner(const ResourceLocator &_resourceLocator,
+		const ServerInstanceDir::GenerationPtr &_generation,
 		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
-		: resourceLocator(_resourceLocator),
-		  randomGenerator(_randomGenerator)
+		: Spawner(_resourceLocator)
 	{
+		generation = _generation;
 		if (_randomGenerator == NULL) {
 			randomGenerator = make_shared<RandomGenerator>();
 		} else {
@@ -1006,7 +1126,9 @@ private:
 	unsigned int count;
 	
 public:
-	DummySpawner() {
+	DummySpawner(const ResourceLocator &resourceLocator)
+		: Spawner(resourceLocator)
+	{
 		count = 0;
 	}
 	
@@ -1027,6 +1149,7 @@ class SpawnerFactory {
 private:
 	SafeLibev *libev;
 	ResourceLocator resourceLocator;
+	ServerInstanceDir::GenerationPtr generation;
 	RandomGeneratorPtr randomGenerator;
 	
 	SpawnerPtr tryCreateSmartSpawner(const Options &options) {
@@ -1045,15 +1168,17 @@ private:
 			return SpawnerPtr();
 		}
 		return make_shared<SmartSpawner>(libev, resourceLocator,
-			preloaderCommand, randomGenerator, options);
+			generation, preloaderCommand, randomGenerator, options);
 	}
 	
 public:
 	SpawnerFactory(SafeLibev *_libev,
 		const ResourceLocator &_resourceLocator,
+		const ServerInstanceDir::GenerationPtr &_generation,
 		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr())
 		: libev(_libev),
-		  resourceLocator(_resourceLocator)
+		  resourceLocator(_resourceLocator),
+		  generation(_generation)
 	{
 		if (randomGenerator != NULL) {
 			this->randomGenerator = randomGenerator;
@@ -1068,13 +1193,15 @@ public:
 		if (options.spawnMethod == "smart" || options.spawnMethod == "smart-lv2") {
 			SpawnerPtr spawner = tryCreateSmartSpawner(options);
 			if (spawner == NULL) {
-				spawner = make_shared<DirectSpawner>(resourceLocator, randomGenerator);
+				spawner = make_shared<DirectSpawner>(resourceLocator,
+					generation, randomGenerator);
 			}
 			return spawner;
 		} else if (options.spawnMethod == "direct" || options.spawnMethod == "conservative") {
-			return make_shared<DirectSpawner>(resourceLocator, randomGenerator);
+			return make_shared<DirectSpawner>(resourceLocator, generation,
+				randomGenerator);
 		} else if (options.spawnMethod == "dummy") {
-			return make_shared<DummySpawner>();
+			return make_shared<DummySpawner>(resourceLocator);
 		} else {
 			throw ArgumentException("Unknown spawn method '" + options.spawnMethod + "'");
 		}

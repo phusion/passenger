@@ -11,9 +11,12 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct ApplicationPool2_SmartSpawnerTest {
+		ServerInstanceDirPtr serverInstanceDir;
+		ServerInstanceDir::GenerationPtr generation;
 		BackgroundEventLoop bg;
 		
 		ApplicationPool2_SmartSpawnerTest() {
+			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			bg.start();
 		}
 		
@@ -34,6 +37,7 @@ namespace tut {
 			
 			return make_shared<SmartSpawner>(bg.libev,
 				*resourceLocator,
+				generation,
 				command,
 				make_shared<RandomGenerator>(),
 				options);
@@ -65,7 +69,7 @@ namespace tut {
 		// Give it some time to exit.
 		usleep(300000);
 		
-		// No exception.
+		// No exception at next spawn.
 		setLogLevel(-1);
 		spawner->spawn(options);
 	}
