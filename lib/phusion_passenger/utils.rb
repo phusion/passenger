@@ -40,10 +40,14 @@ module PhusionPassenger
 
 # Utility functions.
 module Utils
-protected
-	def private_class_method(name)
-		metaclass = class << self; self; end
-		metaclass.send(:private, name)
+	extend self    # Make methods available as class methods.
+	
+	def self.included(klass)
+		# When included into another class, make sure that Utils
+		# methods are made private.
+		public_instance_methods(false).each do |method_name|
+			klass.send(:private, method_name)
+		end
 	end
 	
 	# Return the canonicalized version of +path+. This path is guaranteed to
