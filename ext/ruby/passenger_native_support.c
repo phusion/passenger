@@ -47,12 +47,12 @@
 #include <limits.h>
 #include <grp.h>
 #include <signal.h>
+#include <pthread.h>
 #ifdef HAVE_ALLOCA_H
 	#include <alloca.h>
 #endif
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 	#define HAVE_KQUEUE
-	#include <pthread.h>
 	#include <sys/event.h>
 	#include <sys/time.h>
 #endif
@@ -623,6 +623,70 @@ process_times(VALUE self) {
 	return rb_struct_new(S_ProcessTimes, rb_ull2inum(utime), rb_ull2inum(stime));
 }
 
+static void *
+detach_process_main(void *arg) {
+	pid_t pid = (pid_t) (long) arg;
+	int ret;
+	do {
+		ret = waitpid(pid, NULL, 0);
+	} while (ret == -1 && errno == EINTR);
+	return NULL;
+}
+
+static VALUE
+detach_process(VALUE self, VALUE pid) {
+	pthread_t thr;
+	pthread_attr_t attr;
+	size_t stack_size = 64 * 1024;
+	
+	unsigned long min_stack_size;
+	int stack_min_size_defined;
+	int round_stack_size;
+	
+	#ifdef PTHREAD_STACK_MIN
+		// PTHREAD_STACK_MIN may not be a constant macro so we need
+		// to evaluate it dynamically.
+		min_stack_size = PTHREAD_STACK_MIN;
+		stack_min_size_defined = 1;
+	#else
+		// Assume minimum stack size is 128 KB.
+		min_stack_size = 128 * 1024;
+		stack_min_size_defined = 0;
+	#endif
+	if (stack_size != 0 && stack_size < min_stack_size) {
+		stack_size = min_stack_size;
+		round_stack_size = !stack_min_size_defined;
+	} else {
+		round_stack_size = 1;
+	}
+	
+	if (round_stack_size) {
+		// Round stack size up to page boundary.
+		long page_size;
+		#if defined(_SC_PAGESIZE)
+			page_size = sysconf(_SC_PAGESIZE);
+		#elif defined(_SC_PAGE_SIZE)
+			page_size = sysconf(_SC_PAGE_SIZE);
+		#elif defined(PAGESIZE)
+			page_size = sysconf(PAGESIZE);
+		#elif defined(PAGE_SIZE)
+			page_size = sysconf(PAGE_SIZE);
+		#else
+			page_size = getpagesize();
+		#endif
+		if (stack_size % page_size != 0) {
+			stack_size = stack_size - (stack_size % page_size) + page_size;
+		}
+	}
+	
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, 1);
+	pthread_attr_getstacksize(&attr, &stack_size);
+	pthread_create(&thr, &attr, detach_process_main, (void *) NUM2LONG(pid));
+	pthread_attr_destroy(&attr);
+	return Qnil;
+}
+
 #if defined(HAVE_KQUEUE) || defined(IN_DOXYGEN)
 typedef struct {
 	VALUE klass;
@@ -1021,6 +1085,7 @@ Init_passenger_native_support() {
 	rb_define_singleton_method(mNativeSupport, "writev3", f_writev3, 4);
 	rb_define_singleton_method(mNativeSupport, "switch_user", switch_user, 3);
 	rb_define_singleton_method(mNativeSupport, "process_times", process_times, 0);
+	rb_define_singleton_method(mNativeSupport, "detach_process", detach_process, 1);
 	
 	#ifdef HAVE_KQUEUE
 		cFileSystemWatcher = rb_define_class_under(mNativeSupport,

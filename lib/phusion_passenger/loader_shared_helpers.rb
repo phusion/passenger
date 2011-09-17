@@ -1,6 +1,10 @@
+# encoding: binary
+require 'phusion_passenger/public_api'
+
 module PhusionPassenger
 
-module PreloaderUtils
+# Provides shared functions for loader and preloader apps.
+module LoaderSharedHelpers
 	extend self
 	
 	# Prepare an application process using rules for the given spawn options.
@@ -149,7 +153,64 @@ module PreloaderUtils
 		end
 	end
 	
-	def start_request_handler
+	def create_socket_address(protocol, address)
+		if protocol == 'unix'
+			return "unix:#{address}"
+		elsif protocol == 'tcp'
+			return "tcp://#{address}"
+		else
+			raise ArgumentError, "Unknown protocol '#{protocol}'"
+		end
+	end
+	
+	def advertise_sockets(output, request_handler)
+		sockets = request_handler.server_sockets
+		output.puts "socket: main;#{create_socket_address(sockets[:main][1], sockets[:main][0])};session;1"
+		output.puts "socket: http;#{create_socket_address(sockets[:http][1], sockets[:http][0])};http;1"
+	end
+	
+	# To be called before the request handler main loop is entered, but after the app
+	# startup file has been loaded. This function will fire off necessary events
+	# and perform necessary preparation tasks.
+	#
+	# +forked+ indicates whether the current worker process is forked off from
+	# an ApplicationSpawner that has preloaded the app code.
+	# +options+ are the spawn options that were passed.
+	def before_handling_requests(forked, options)
+		if forked && options["analytics_logger"]
+			options["analytics_logger"].clear_connection
+		end
+		
+		# If we were forked from a preloader process then clear or
+		# re-establish ActiveRecord database connections. This prevents
+		# child processes from concurrently accessing the same
+		# database connection handles.
+		if forked && defined?(ActiveRecord::Base)
+			if ActiveRecord::Base.respond_to?(:clear_all_connections!)
+				ActiveRecord::Base.clear_all_connections!
+			elsif ActiveRecord::Base.respond_to?(:clear_active_connections!)
+				ActiveRecord::Base.clear_active_connections!
+			elsif ActiveRecord::Base.respond_to?(:connected?) &&
+			      ActiveRecord::Base.connected?
+				ActiveRecord::Base.establish_connection
+			end
+		end
+		
+		# Fire off events.
+		PhusionPassenger.call_event(:starting_worker_process, forked)
+		if options["pool_account_username"] && options["pool_account_password_base64"]
+			password = options["pool_account_password_base64"].unpack('m').first
+			PhusionPassenger.call_event(:credentials,
+				options["pool_account_username"], password)
+		else
+			PhusionPassenger.call_event(:credentials, nil, nil)
+		end
+	end
+	
+	# To be called after the request handler main loop is exited. This function
+	# will fire off necessary events perform necessary cleanup tasks.
+	def after_handling_requests
+		PhusionPassenger.call_event(:stopping_worker_process)
 	end
 end
 
