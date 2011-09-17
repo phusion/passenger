@@ -179,7 +179,8 @@ public:
 	 * appType.empty(). */
 	StaticString processTitle;
 	
-	/** The maximum amount of time that may be spent on spawning the process. */
+	/** The maximum amount of time, in milliseconds, that may be spent
+	 * on spawning the process or the preloader. */
 	unsigned int startTimeout;
 	
 	/**

@@ -38,6 +38,7 @@
 #include <boost/shared_array.hpp>
 #include <boost/bind.hpp>
 #include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 #include <sys/types.h>
 #include <cstdio>
 #include <cstdlib>
@@ -55,6 +56,7 @@
 #include <Exceptions.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
+#include <ServerInstanceDir.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/Timer.h>
@@ -169,6 +171,68 @@ private:
 	}
 	
 protected:
+	/**
+	 * Given a file descriptor, captures its output in a background thread
+	 * and also forwards it immediately to a target file descriptor.
+	 * Call stop() to stop the background thread and to obtain the captured
+	 * output so far.
+	 */
+	class BackgroundIOCapturer {
+	private:
+		FileDescriptor fd;
+		int target;
+		oxt::thread thr;
+		string data;
+		
+		void capture() {
+			TRACE_POINT();
+			while (true) {
+				char buf[1024 * 8];
+				ssize_t ret;
+				
+				UPDATE_TRACE_POINT();
+				ret = syscalls::read(fd, buf, sizeof(buf));
+				if (ret == 0) {
+					break;
+				} else if (ret == -1) {
+					int e = errno;
+					P_WARN("Background I/O capturer error: " <<
+						strerror(e) << " (" << e << ")");
+					break;
+				} else {
+					data.append(buf, ret);
+					if (target != -1) {
+						UPDATE_TRACE_POINT();
+						writeExact(target, buf, ret);
+					}
+				}
+			}
+		}
+		
+	public:
+		BackgroundIOCapturer(const FileDescriptor &_fd, int _target)
+			: fd(_fd),
+			  target(_target),
+			  thr(boost::bind(&BackgroundIOCapturer::capture, this),
+			      "Background I/O capturer", 64 * 1024)
+			{ }
+		
+		~BackgroundIOCapturer() {
+			thr.interrupt_and_join();
+		}
+		
+		const FileDescriptor &getFd() const {
+			return fd;
+		}
+		
+		const string &stop() {
+			thr.interrupt_and_join();
+			return data;
+		}
+	};
+	
+	typedef shared_ptr<BackgroundIOCapturer> BackgroundIOCapturerPtr;
+	
 	struct UserSwitchingInfo {
 		bool switchUser;
 		string username;
@@ -474,8 +538,11 @@ private:
 	mutable boost::mutex syncher;
 	pid_t pid;
 	FileDescriptor adminSocket;
+	FileDescriptor errorPipe;
 	string socketAddress;
 	unsigned long long m_lastUsed;
+	
+	BackgroundIOCapturerPtr stderrCapturer;
 	
 	void onPreloaderOutputReadable(ev::io &io, int revents) {
 		char buf[1024 * 8];
@@ -484,8 +551,20 @@ private:
 		ret = syscalls::read(adminSocket, buf, sizeof(buf));
 		if (ret <= 0) {
 			preloaderOutputWatcher.stop();
-		} else {
-			write(1, buf, ret);
+		} else if (forwardStdout) {
+			write(STDOUT_FILENO, buf, ret);
+		}
+	}
+	
+	void onPreloaderErrorReadable(ev::io &io, int revents) {
+		char buf[1024 * 8];
+		ssize_t ret;
+		
+		ret = syscalls::read(errorPipe, buf, sizeof(buf));
+		if (ret <= 0) {
+			preloaderErrorWatcher.stop();
+		} else if (forwardStderr) {
+			write(STDERR_FILENO, buf, ret);
 		}
 	}
 	
@@ -528,8 +607,46 @@ private:
 		return command;
 	}
 	
+	void resetStderrCapturer() {
+		stderrCapturer.reset();
+	}
+	
 	void throwPreloaderSpawnException(const string &msg, SpawnException::ErrorKind errorKind) {
-		throw SpawnException(msg, errorKind)
+		// Stop the stderr capturing thread and get the captured stderr
+		// output so far.
+		string stderrOutput = stderrCapturer->stop();
+		
+		// If the exception wasn't due to a timeout, try to capture the
+		// remaining stderr output for at most 2 seconds.
+		if (errorKind != SpawnException::PRELOADER_STARTUP_TIMEOUT
+		 && errorKind != SpawnException::APP_STARTUP_TIMEOUT) {
+			bool done = false;
+			unsigned long long timeout = 2000;
+			while (!done) {
+				char buf[1024 * 32];
+				unsigned int ret;
+				
+				try {
+					ret = readExact(stderrCapturer->getFd(), buf,
+						sizeof(buf), &timeout);
+					if (ret == 0) {
+						done = true;
+					} else {
+						stderrOutput.append(buf, ret);
+					}
+				} catch (const SystemException &e) {
+					P_WARN("Stderr I/O capture error: " << e.what());
+					done = true;
+				} catch (const TimeoutException &) {
+					done = true;
+				}
+			}
+		}
+		stderrCapturer.reset();
+		
+		// Now throw SpawnException with the captured stderr output
+		// as error response.
+		throw SpawnException(msg, stderrOutput, false, errorKind)
 			.setPreloaderCommand(getPreloaderCommandString());
 	}
 	
@@ -544,14 +661,17 @@ private:
 		vector<string> command = createRealPreloaderCommand(options, args);
 		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
 		SocketPair adminSocket = createUnixSocketPair();
+		Pipe errorPipe = createPipe();
 		pid_t pid;
 		
 		pid = syscalls::fork();
 		if (pid == 0) {
 			resetSignalHandlersAndMask();
 			int adminSocketCopy = dup2(adminSocket.first, 3);
+			int errorPipeCopy = dup2(errorPipe.second, 4);
 			dup2(adminSocketCopy, 0);
 			dup2(adminSocketCopy, 1);
+			dup2(errorPipeCopy, 2);
 			closeAllFileDescriptors(2);
 			setWorkingDirectory(options);
 			switchUser(userSwitchingInfo);
@@ -576,11 +696,21 @@ private:
 		} else {
 			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
 			adminSocket.first.close();
-			this->socketAddress = negotiateStartup(adminSocket.second);
+			errorPipe.second.close();
+			
+			stderrCapturer = make_shared<BackgroundIOCapturer>(
+				errorPipe.first,
+				forwardStderr ? STDERR_FILENO : -1);
+			ScopeGuard guard2(boost::bind(&SmartSpawner::resetStderrCapturer, this));
+			
+			this->socketAddress = negotiateStartup(adminSocket.second, options);
 			this->pid = pid;
 			this->adminSocket = adminSocket.second;
+			this->errorPipe = errorPipe.first;
 			preloaderOutputWatcher.set(adminSocket.second, ev::READ);
+			preloaderErrorWatcher.set(errorPipe.first, ev::READ);
 			libev->start(preloaderOutputWatcher);
+			libev->start(preloaderErrorWatcher);
 			guard.clear();
 		}
 	}
@@ -593,12 +723,14 @@ private:
 			return;
 		}
 		adminSocket.close();
+		errorPipe.close();
 		if (timedWaitpid(pid, NULL, 5000) == 0) {
 			P_TRACE(2, "Spawn server did not exit in time, killing it...");
 			syscalls::kill(pid, SIGKILL);
 			syscalls::waitpid(pid, NULL, 0);
 		}
 		libev->stop(preloaderOutputWatcher);
+		libev->stop(preloaderErrorWatcher);
 		// Delete socket after the process has exited so that it
 		// doesn't crash upon deleting a nonexistant file.
 		if (getSocketAddressType(socketAddress) == SAT_UNIX) {
@@ -776,9 +908,9 @@ private:
 			SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
 	}
 	
-	string negotiateStartup(FileDescriptor &fd) {
+	string negotiateStartup(FileDescriptor &fd, const Options &options) {
 		BufferedIO io(fd);
-		unsigned long long timeout = 60 * 1000000;
+		unsigned long long timeout = options.startTimeout * 1000;
 		
 		string result;
 		try {
@@ -894,6 +1026,12 @@ private:
 	
 public:
 	ev::io preloaderOutputWatcher;
+	ev::io preloaderErrorWatcher;
+	
+	/** Whether to forward the preloader process's stdout to our stdout. True by default. */
+	bool forwardStdout;
+	/** Whether to forward the preloader process's stderr to our stderr. True by default. */
+	bool forwardStderr;
 	
 	SmartSpawner(SafeLibev *_libev,
 		const ResourceLocator &_resourceLocator,
@@ -910,12 +1048,16 @@ public:
 			throw ArgumentException("preloaderCommand must have at least 2 elements");
 		}
 		
+		forwardStdout = true;
+		forwardStderr = true;
+		
 		generation = _generation;
 		options    = _options.copyAndPersist();
 		pid        = -1;
 		m_lastUsed = SystemTime::getUsec();
 		
 		preloaderOutputWatcher.set<SmartSpawner, &SmartSpawner::onPreloaderOutputReadable>(this);
+		preloaderErrorWatcher.set<SmartSpawner, &SmartSpawner::onPreloaderErrorReadable>(this);
 	}
 	
 	virtual ~SmartSpawner() {

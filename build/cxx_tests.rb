@@ -63,7 +63,8 @@ TEST_CXX_OBJECTS = {
 		test/cxx/ApplicationPool2/PoolTest.cpp
 		ext/common/ApplicationPool2/SuperGroup.h
 		ext/common/ApplicationPool2/Group.h
-		ext/common/ApplicationPool2/Pool.h),
+		ext/common/ApplicationPool2/Pool.h
+		ext/common/ApplicationPool2/Spawner.h),
 	'test/cxx/MessageChannelTest.o' => %w(
 		test/cxx/MessageChannelTest.cpp
 		ext/common/MessageChannel.h

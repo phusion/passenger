@@ -92,4 +92,71 @@ namespace tut {
 			// Pass.
 		}
 	}
+	
+	TEST_METHOD(32) {
+		// If the preloader didn't start within the timeout
+		// then it's killed and an exception is thrown, with
+		// whatever stderr output as error page.
+		Options options = createOptions();
+		options.appRoot      = "stub/rack";
+		options.startCommand = "ruby\1" "start.rb";
+		options.startupFile  = "stub/rack/start.rb";
+		options.startTimeout = 300;
+		
+		vector<string> preloaderCommand;
+		preloaderCommand.push_back("bash");
+		preloaderCommand.push_back("-c");
+		preloaderCommand.push_back("echo hello world >&2; sleep 60");
+		SmartSpawner spawner(bg.libev,
+			*resourceLocator,
+			generation,
+			preloaderCommand,
+			make_shared<RandomGenerator>(),
+			options);
+		spawner.forwardStdout = false;
+		spawner.forwardStderr = false;
+		
+		try {
+			spawner.spawn(options);
+			fail("SpawnException expected");
+		} catch (const SpawnException &e) {
+			ensure_equals(e.getErrorKind(),
+				SpawnException::PRELOADER_STARTUP_TIMEOUT);
+			ensure_equals(e.getErrorPage(),
+				"hello world\n");
+		}
+	}
+	
+	TEST_METHOD(33) {
+		// If the preloader crashed during startup without returning
+		// a proper error response, then its stderr output is used
+		// as error response instead.
+		Options options = createOptions();
+		options.appRoot      = "stub/rack";
+		options.startCommand = "ruby\1" "start.rb";
+		options.startupFile  = "stub/rack/start.rb";
+		
+		vector<string> preloaderCommand;
+		preloaderCommand.push_back("bash");
+		preloaderCommand.push_back("-c");
+		preloaderCommand.push_back("echo hello world >&2");
+		SmartSpawner spawner(bg.libev,
+			*resourceLocator,
+			generation,
+			preloaderCommand,
+			make_shared<RandomGenerator>(),
+			options);
+		spawner.forwardStdout = false;
+		spawner.forwardStderr = false;
+		
+		try {
+			spawner.spawn(options);
+			fail("SpawnException expected");
+		} catch (const SpawnException &e) {
+			ensure_equals(e.getErrorKind(),
+				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+			ensure_equals(e.getErrorPage(),
+				"hello world\n");
+		}
+	}
 }
