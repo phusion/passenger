@@ -1161,9 +1161,6 @@ private:
 		} else if (options.appType == "rack") {
 			preloaderCommand.push_back(options.ruby);
 			preloaderCommand.push_back(dir + "/rack-preloader.rb");
-		} else if (options.appType == "wsgi") {
-			preloaderCommand.push_back("python");
-			preloaderCommand.push_back(dir + "/wsgi-preloader.py");
 		} else {
 			return SpawnerPtr();
 		}

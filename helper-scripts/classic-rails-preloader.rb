@@ -1,6 +1,4 @@
 #!/usr/bin/env ruby
-require 'socket'
-
 module PhusionPassenger
 module App
 	def self.options
@@ -41,7 +39,7 @@ module App
 	end
 	
 	def self.preload_app
-		LaderUtils.before_loading_app_code_step1('config/environment.rb', options)
+		LoaderSharedHelpers.before_loading_app_code_step1('config/environment.rb', options)
 		LoaderSharedHelpers.before_loading_app_code_step2(options)
 		
 		require File.expand_path('config/environment')
@@ -115,7 +113,7 @@ module App
 	if PreloaderSharedHelpers.run_main_loop(options) == :forked
 		handler = negotiate_spawn_command
 		handler.main_loop
-		PreloaderSharedHelpers.after_handling_requests
+		LoaderSharedHelpers.after_handling_requests
 	end
 	
 end # module App

@@ -214,4 +214,4 @@ module LoaderSharedHelpers
 	end
 end
 
-end
+end # module PhusionPassenger

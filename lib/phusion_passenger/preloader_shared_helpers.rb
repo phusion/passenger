@@ -1,5 +1,8 @@
 # encoding: binary
 
+require 'socket'
+require 'phusion_passenger/native_support'
+
 module PhusionPassenger
 
 # Provides shared functions for preloader apps.
@@ -62,7 +65,14 @@ module PreloaderSharedHelpers
 				end
 			end
 			if ios.include?(STDIN)
-				STDIN.read(1)
+				if STDIN.tty?
+					begin
+						# Prevent bash from exiting when we press Ctrl-D.
+						STDIN.read_nonblock(1)
+					rescue Errno::EAGAIN
+						# Do nothing.
+					end
+				end
 				break
 			end
 		end
@@ -75,4 +85,4 @@ module PreloaderSharedHelpers
 	end
 end
 
-end
+end # module PhusionPassenger
