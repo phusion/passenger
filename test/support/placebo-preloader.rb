@@ -5,7 +5,6 @@
 DIR = File.expand_path(File.dirname(__FILE__))
 require "#{DIR}/../../lib/phusion_passenger"
 PhusionPassenger.locate_directories
-require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/native_support'
 require 'socket'
 
@@ -26,7 +25,7 @@ puts "Ready"
 puts "socket: unix:#{socket_filename}"
 puts
 
-def process_client_command(client, command)
+def process_client_command(server, client, command)
 	if command == "spawn\n"
 		options = {}
 		while (line = client.readline) != "\n"
@@ -39,43 +38,24 @@ def process_client_command(client, command)
 		process_title = command[0] if !process_title || process_title.empty?
 		command[0] = [command[0], process_title]
 		
-		a, b = UNIXSocket.pair
-		if Process.respond_to?(:spawn)
-			spawn_options = command.dup
-			spawn_options << {
-				:in => a,
-				:out => a,
-				:err => :err,
-				:close_others => true
-			}
-			pid = Process.spawn(*spawn_options)
-		else
-			pid = fork do
-				begin
-					STDIN.reopen(a)
-					STDOUT.reopen(a)
-					if defined?(PhusionPassenger::NativeSupport)
-						PhusionPassenger::NativeSupport.close_all_file_descriptors([0, 1, 2])
-					end
-					exec(*command)
-				rescue Exception => e
-					STDERR.puts "*** ERROR: #{e}\n#{e.backtrace.join("\n")}"
-				ensure
-					STDERR.flush
-					exit!(1)
-				end
+		pid = fork do
+			begin
+				STDIN.reopen(client)
+				STDOUT.reopen(client)
+				STDOUT.sync = true
+				server.close
+				client.close
+				puts "OK"
+				puts Process.pid
+				exec(*command)
+			rescue Exception => e
+				STDERR.puts "*** ERROR: #{e}\n#{e.backtrace.join("\n")}"
+			ensure
+				STDERR.flush
+				exit!(1)
 			end
 		end
-		a.close
 		Process.detach(pid)
-		
-		client.write("OK\n")
-		client.write("#{pid}\n")
-		client.readline
-		client.send_io(b)
-		client.readline
-		
-		b.close
 	elsif command == "pid\n"
 		client.write("#{Process.pid}\n")
 	else
@@ -90,7 +70,7 @@ begin
 		if ios.include?(server)
 			client = server.accept
 			begin
-				process_client_command(client, client.readline)
+				process_client_command(server, client, client.readline)
 			ensure
 				client.close
 			end

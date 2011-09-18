@@ -33,8 +33,9 @@
 		try {
 			spawner->spawn(options);
 			fail("Timeout expected");
-		} catch (const TimeoutException &) {
-			// Pass.
+		} catch (const SpawnException &e) {
+			ensure_equals(e.getErrorKind(),
+				SpawnException::APP_STARTUP_TIMEOUT);
 		}
 	}
 
@@ -49,8 +50,9 @@
 		try {
 			spawner->spawn(options);
 			fail("Exception expected");
-		} catch (const IOException &) {
-			// Pass.
+		} catch (const SpawnException &e) {
+			ensure_equals(e.getErrorKind(),
+				SpawnException::APP_STARTUP_PROTOCOL_ERROR);
 		}
 	}
 
@@ -66,6 +68,8 @@
 			spawner->spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
+			ensure_equals(e.getErrorKind(),
+				SpawnException::APP_STARTUP_EXPLAINABLE_ERROR);
 			ensure_equals(e.getErrorPage(),
 				"He's dead, Jim!\n"
 				"Relax, I'm a doctor.\n");
@@ -83,9 +87,10 @@
 		SpawnerPtr spawner = createSpawner(options);
 		try {
 			spawner->spawn(options);
-			fail("TimeoutException expected");
-		} catch (const TimeoutException &) {
-			// Pass.
+			fail("Timeout expected");
+		} catch (const SpawnException &e) {
+			ensure_equals(e.getErrorKind(),
+				SpawnException::APP_STARTUP_TIMEOUT);
 		}
 	}
 

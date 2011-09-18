@@ -8,11 +8,15 @@ using namespace std;
 
 namespace tut {
 	struct ApplicationPool2_ProcessTest {
+		BackgroundEventLoop bg;
 		SocketListPtr sockets;
 		SocketPair adminSocket;
+		Pipe errorPipe;
 		FileDescriptor server1, server2, server3;
 		
 		ApplicationPool2_ProcessTest() {
+			bg.start();
+			
 			struct sockaddr_in addr;
 			socklen_t len = sizeof(addr);
 			sockets = make_shared<SocketList>();
@@ -36,6 +40,7 @@ namespace tut {
 				"session", 3);
 			
 			adminSocket = createUnixSocketPair();
+			errorPipe = createPipe();
 		}
 	};
 	
@@ -43,14 +48,18 @@ namespace tut {
 	
 	TEST_METHOD(1) {
 		// Test initial state.
-		ProcessPtr process = make_shared<Process>(123, "", adminSocket[0], sockets, 0);
+		ProcessPtr process = make_shared<Process>(bg.libev,
+			123, "", adminSocket[0],
+			errorPipe[0], sockets, 0);
 		ensure_equals(process->usage(), 0);
 		ensure(!process->atFullCapacity());
 	}
 	
 	TEST_METHOD(2) {
 		// Test opening and closing sessions.
-		ProcessPtr process = make_shared<Process>(123, "", adminSocket[0], sockets, 0);
+		ProcessPtr process = make_shared<Process>(bg.libev,
+			123, "", adminSocket[0],
+			errorPipe[0], sockets, 0);
 		SessionPtr session = process->newSession();
 		SessionPtr session2 = process->newSession();
 		ensure_equals(process->sessions, 2);
@@ -61,7 +70,9 @@ namespace tut {
 	TEST_METHOD(3) {
 		// newSession() checks out the socket with the smallest usage number
 		// and sessionClosed() restores the session usage statistics.
-		ProcessPtr process = make_shared<Process>(123, "", adminSocket[0], sockets, 0);
+		ProcessPtr process = make_shared<Process>(bg.libev,
+			123, "", adminSocket[0],
+			errorPipe[0], sockets, 0);
 		
 		// The first 3 newSession() commands check out an idle socket.
 		SessionPtr session1 = process->newSession();
@@ -98,7 +109,9 @@ namespace tut {
 	
 	TEST_METHOD(4) {
 		// If all sockets are at their full capacity then newSession() will fail.
-		ProcessPtr process = make_shared<Process>(123, "", adminSocket[0], sockets, 0);
+		ProcessPtr process = make_shared<Process>(bg.libev,
+			123, "", adminSocket[0],
+			errorPipe[0], sockets, 0);
 		vector<SessionPtr> sessions;
 		for (int i = 0; i < 9; i++) {
 			ensure(!process->atFullCapacity());

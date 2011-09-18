@@ -7,12 +7,14 @@
 #include <boost/make_shared.hpp>
 #include <oxt/macros.hpp>
 #include <sys/types.h>
+#include <cstdio>
 #include <climits>
 #include <cassert>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Socket.h>
 #include <ApplicationPool2/Session.h>
 #include <FileDescriptor.h>
+#include <SafeLibev.h>
 #include <Logging.h>
 #include <Utils/PriorityQueue.h>
 #include <Utils/SystemTime.h>
@@ -71,6 +73,18 @@ private:
 	/** The handle inside the associated Group's process priority queue. */
 	PriorityQueue<Process>::Handle pqHandle;
 	
+	void onErrorPipeReadable(ev::io &io, int revents) {
+		char buf[1024 * 8];
+		ssize_t ret;
+		
+		ret = syscalls::read(errorPipe, buf, sizeof(buf));
+		if (ret <= 0) {
+			errorPipeWatcher.stop();
+		} else if (forwardStderr) {
+			write(STDERR_FILENO, buf, ret);
+		}
+	}
+	
 	void indexSessionSockets() {
 		SocketList::iterator it;
 		concurrency = 0;
@@ -101,12 +115,21 @@ public:
 	 * written to again. Reading is thread-safe.
 	 *************************************************************/
 	
+	/** The libev event loop to use. */
+	SafeLibev *libev;
 	/** Process PID. */
 	pid_t pid;
 	/** UUID for this process, randomly generated and will never appear again. */
 	string gupid;
 	/** Admin socket, see class description. */
 	FileDescriptor adminSocket;
+	/** Pipe on which this process outputs errors. Mapped to the process's STDERR.
+	 * Only Processes spawned by DirectSpawner have this set.
+	 * SmartSpawner-spawned Processes use the same STDERR as their parent preloader processes.
+	 */
+	FileDescriptor errorPipe;
+	/** The libevent watcher that watches for data on errorPipe, if available. */
+	ev::io errorPipeWatcher;
 	/** The sockets that this Process listens on for connections. */
 	SocketListPtr sockets;
 	/** Time at which we started spawning this process. */
@@ -114,6 +137,8 @@ public:
 	/** The maximum amount of concurrent sessions this process can handle.
 	 * 0 means unlimited. */
 	int concurrency;
+	/** Whether to automatically forward data from errorPipe to our STDERR. */
+	bool forwardStderr;
 	
 	
 	/*************************************************************
@@ -131,20 +156,34 @@ public:
 	int sessions;
 	
 	
-	Process(pid_t pid, const string &gupid, const FileDescriptor &adminSocket,
-		const SocketListPtr &sockets, unsigned long long spawnStartTime)
+	Process(SafeLibev *_libev,
+		pid_t _pid,
+		const string &_gupid,
+		const FileDescriptor &_adminSocket,
+		const FileDescriptor &_errorPipe,
+		const SocketListPtr &_sockets,
+		unsigned long long _spawnStartTime,
+		bool _forwardStderr = false)
+		: libev(_libev),
+		  pid(_pid),
+		  gupid(_gupid),
+		  adminSocket(_adminSocket),
+		  errorPipe(_errorPipe),
+		  sockets(_sockets),
+		  spawnStartTime(_spawnStartTime),
+		  forwardStderr(_forwardStderr)
 	{
-		this->pid         = pid;
-		this->gupid       = gupid;
-		this->adminSocket = adminSocket;
-		this->sockets     = sockets;
-		this->spawnStartTime = spawnStartTime;
+		if (errorPipe != -1) {
+			errorPipeWatcher.set<Process, &Process::onErrorPipeReadable>(this);
+			errorPipeWatcher.set(errorPipe, ev::READ);
+			libev->start(errorPipeWatcher);
+		}
 		
 		indexSessionSockets();
 		
-		lastUsed    = SystemTime::getUsec();
-		spawnTime   = lastUsed;
-		sessions    = 0;
+		lastUsed  = SystemTime::getUsec();
+		spawnTime = lastUsed;
+		sessions  = 0;
 	}
 	
 	~Process() {
@@ -154,6 +193,9 @@ public:
 				string filename = parseUnixSocketAddress(it->address);
 				syscalls::unlink(filename.c_str());
 			}
+		}
+		if (errorPipe != -1) {
+			libev->stop(errorPipeWatcher);
 		}
 	}
 	

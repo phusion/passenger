@@ -21,9 +21,13 @@ module PreloaderSharedHelpers
 		if command !~ /\n\Z/
 			STDERR.puts "Command must end with a newline"
 		elsif command == "spawn\n"
-			while (line = client.readline) != "\n"
+			while client.readline != "\n"
 				# Do nothing.
 			end
+			
+			# Improve copy-on-write friendliness.
+			GC.start
+			
 			pid = fork
 			if pid.nil?
 				client.puts "OK"
