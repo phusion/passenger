@@ -76,7 +76,7 @@ using namespace oxt;
 
 
 class Spawner {
-public:
+protected:
 	friend class tut::ApplicationPool2_DirectSpawnerTest;
 	friend class tut::ApplicationPool2_SmartSpawnerTest;
 	
@@ -154,6 +154,35 @@ public:
 		shared_array<gid_t> gidset;
 	};
 	
+	// Structure to be passed to negotiateSpawn().
+	// Contains arguments as well as working state.
+	struct NegotiationDetails {
+		// Arguments.
+		SafeLibev *libev;
+		BackgroundIOCapturerPtr stderrCapturer;
+		pid_t pid;
+		FileDescriptor adminSocket;
+		FileDescriptor errorPipe;
+		const Options *options;
+		bool forwardStderr;
+		
+		// Working state.
+		BufferedIO io;
+		string gupid;
+		unsigned long long spawnStartTime;
+		unsigned long long timeout;
+		
+		NegotiationDetails() {
+			libev = (SafeLibev *) NULL;
+			pid = 0;
+			options = NULL;
+			forwardStderr = false;
+			spawnStartTime = 0;
+			timeout = 0;
+		}
+	};
+	
+	
 private:
 	/**
 	 * Appends key + "\0" + value + "\0" to 'output'.
@@ -171,29 +200,29 @@ private:
 		output.append(1, '\0');
 	}
 	
-	void sendSpawnRequest(int connection, const string &gupid, const Options &options,
-		unsigned long long &timeout)
-	{
+	void sendSpawnRequest(NegotiationDetails &details) {
 		try {
-			writeExact(connection,
+			writeExact(details.adminSocket,
 				"You have control 1.0\n"
 				"passenger_root: " + resourceLocator.getRoot() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
 				"generation_dir: " + generation->getPath() + "\n"
-				"gupid: " + gupid + "\n",
-				&timeout);
+				"gupid: " + details.gupid + "\n",
+				&details.timeout);
 			
 			vector<string> args;
 			vector<string>::const_iterator it, end;
-			options.toVector(args);
+			details.options->toVector(args);
 			for (it = args.begin(); it != args.end(); it++) {
 				const string &key = *it;
 				it++;
 				const string &value = *it;
-				writeExact(connection, key + ": " + value + "\n", &timeout);
+				writeExact(details.adminSocket,
+					key + ": " + value + "\n",
+					&details.timeout);
 			}
-			writeExact(connection, "\n", &timeout);
+			writeExact(details.adminSocket, "\n", &details.timeout);
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE) {
 				/* Ignore this. Process might have written an
@@ -206,34 +235,24 @@ private:
 		}
 	}
 	
-	ProcessPtr handleSpawnResponse(BufferedIO &io,
-		SafeLibev *libev,
-		BackgroundIOCapturerPtr stderrCapturer,
-		pid_t pid,
-		const string &gupid,
-		unsigned long long spawnStartTime,
-		const FileDescriptor &adminSocket,
-		const FileDescriptor &errorPipe,
-		bool forwardStderr,
-		unsigned long long &timeout)
-	{
+	ProcessPtr handleSpawnResponse(NegotiationDetails &details) {
 		SocketListPtr sockets = make_shared<SocketList>();
 		while (true) {
 			string line;
 			
 			try {
-				line = io.readLine(1024 * 4, &timeout);
+				line = details.io.readLine(1024 * 4, &details.timeout);
 			} catch (const SystemException &e) {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application. There was an I/O error while reading its "
 					"startup response: " + e.sys(),
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					details);
 			} catch (const TimeoutException &) {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application: it did not write a startup response in time.",
 					SpawnException::APP_STARTUP_TIMEOUT,
-					stderrCapturer);
+					details);
 			}
 			
 			if (line.empty()) {
@@ -241,13 +260,13 @@ private:
 					"web application. It unexpected closed the connection while "
 					"sending its startup response.",
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					details);
 			} else if (line[line.size() - 1] != '\n') {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application. It sent a line without a newline character "
 					"in its startup response.",
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					details);
 			} else if (line == "\n") {
 				break;
 			}
@@ -274,12 +293,14 @@ private:
 			}
 		}
 		
-		return make_shared<Process>(libev, pid, gupid, adminSocket, errorPipe,
-			sockets, spawnStartTime, forwardStderr);
+		return make_shared<Process>(details.libev, details.pid,
+			details.gupid, details.adminSocket, details.errorPipe,
+			sockets, details.spawnStartTime, details.forwardStderr);
 	}
 	
 protected:
 	ResourceLocator resourceLocator;
+	RandomGeneratorPtr randomGenerator;
 	ServerInstanceDir::GenerationPtr generation;
 	
 	static void nonInterruptableKillAndWaitpid(pid_t pid) {
@@ -317,26 +338,22 @@ protected:
 		args[command.size() - 1] = NULL;
 	}
 	
-	/** Used by negotiateSpawn() and subfunctions to construct and throw a SpawnException.
-	 * stderrCapturer is the BackgroundIOCapturer that was used to capture the process's
-	 * stderr during spawning.
-	 */
 	void throwAppSpawnException(const string &msg,
 		SpawnException::ErrorKind errorKind,
-		BackgroundIOCapturerPtr &stderrCapturer)
+		NegotiationDetails &details)
 	{
 		// Stop the stderr capturing thread and get the captured stderr
 		// output so far.
 		string stderrOutput;
-		if (stderrCapturer != NULL) {
-			stderrOutput = stderrCapturer->stop();
+		if (details.stderrCapturer != NULL) {
+			stderrOutput = details.stderrCapturer->stop();
 		}
 		
 		// If the exception wasn't due to a timeout, try to capture the
 		// remaining stderr output for at most 2 seconds.
 		if (errorKind != SpawnException::PRELOADER_STARTUP_TIMEOUT
 		 && errorKind != SpawnException::APP_STARTUP_TIMEOUT
-		 && stderrCapturer != NULL) {
+		 && details.stderrCapturer != NULL) {
 			bool done = false;
 			unsigned long long timeout = 2000;
 			while (!done) {
@@ -344,7 +361,7 @@ protected:
 				unsigned int ret;
 				
 				try {
-					ret = readExact(stderrCapturer->getFd(), buf,
+					ret = readExact(details.stderrCapturer->getFd(), buf,
 						sizeof(buf), &timeout);
 					if (ret == 0) {
 						done = true;
@@ -359,7 +376,7 @@ protected:
 				}
 			}
 		}
-		stderrCapturer.reset();
+		details.stderrCapturer.reset();
 		
 		// Now throw SpawnException with the captured stderr output
 		// as error response.
@@ -485,8 +502,12 @@ protected:
 		appendNullTerminatedKeyValue(result, "RACK_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "WSGI_ENV", options.environment);
 		if (!options.baseURI.empty() && options.baseURI != "/") {
-			appendNullTerminatedKeyValue(result, "RAILS_RELATIVE_URL_ROOT", options.environment);
-			appendNullTerminatedKeyValue(result, "RACK_BASE_URI", options.environment);
+			appendNullTerminatedKeyValue(result,
+				"RAILS_RELATIVE_URL_ROOT",
+				options.environment);
+			appendNullTerminatedKeyValue(result,
+				"RACK_BASE_URI",
+				options.environment);
 		}
 		
 		it  = options.environmentVariables.begin();
@@ -536,80 +557,66 @@ protected:
 		}
 	}
 	
-	ProcessPtr negotiateSpawn(SafeLibev *libev,
-		BackgroundIOCapturerPtr &stderrCapturer,
-		pid_t pid,
-		const FileDescriptor &adminSocket,
-		const FileDescriptor &errorPipe,
-		const RandomGeneratorPtr &randomGenerator,
-		const Options &options,
-		bool forwardStderr = false)
-	{
-		BufferedIO io(adminSocket);
-		unsigned long long spawnStartTime = SystemTime::getUsec();
-		string gupid = randomGenerator->generateAsciiString(43);
-		unsigned long long timeout = options.startTimeout * 1000;
+	ProcessPtr negotiateSpawn(NegotiationDetails &details) {
+		details.io = BufferedIO(details.adminSocket);
+		details.spawnStartTime = SystemTime::getUsec();
+		details.gupid = randomGenerator->generateAsciiString(43);
+		details.timeout = details.options->startTimeout * 1000;
 		
 		string result;
 		try {
-			result = io.readLine(1024, &timeout);
+			result = details.io.readLine(1024, &details.timeout);
 		} catch (const SystemException &e) {
 			throwAppSpawnException("An error occurred while starting the "
 				"web application. There was an I/O error while reading its "
 				"handshake message: " + e.sys(),
 				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer);
+				details);
 		} catch (const TimeoutException &) {
 			throwAppSpawnException("An error occurred while starting the "
 				"web application: it did not write a handshake message in time.",
 				SpawnException::APP_STARTUP_TIMEOUT,
-				stderrCapturer);
+				details);
 		}
 		
 		if (result == "I have control 1.0\n") {
-			sendSpawnRequest(adminSocket, gupid, options, timeout);
+			sendSpawnRequest(details);
 			try {
-				result = io.readLine(1024, &timeout);
+				result = details.io.readLine(1024, &details.timeout);
 			} catch (const SystemException &e) {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application. There was an I/O error while reading its "
 					"startup response: " + e.sys(),
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					details);
 			} catch (const TimeoutException &) {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application: it did not write a startup response in time.",
 					SpawnException::APP_STARTUP_TIMEOUT,
-					stderrCapturer);
+					details);
 			}
 			if (result == "Ready\n") {
-				return handleSpawnResponse(io, libev, stderrCapturer,
-					pid, gupid,
-					spawnStartTime, adminSocket, errorPipe,
-					forwardStderr, timeout);
+				return handleSpawnResponse(details);
 			} else if (result == "Error\n") {
-				handleSpawnErrorResponse(io, stderrCapturer, timeout);
+				handleSpawnErrorResponse(details);
 			} else {
-				handleInvalidSpawnResponseType(result, stderrCapturer);
+				handleInvalidSpawnResponseType(result, details);
 			}
 		} else {
 			if (result == "Error\n") {
-				handleSpawnErrorResponse(io, stderrCapturer, timeout);
+				handleSpawnErrorResponse(details);
 			} else {
-				handleInvalidSpawnResponseType(result, stderrCapturer);
+				handleInvalidSpawnResponseType(result, details);
 			}
 		}
 		return ProcessPtr(); // Never reached.
 	}
 	
-	void handleSpawnErrorResponse(BufferedIO &io,
-		BackgroundIOCapturerPtr &stderrCapturer,
-		unsigned long long &timeout)
-	{
+	void handleSpawnErrorResponse(NegotiationDetails &details) {
 		map<string, string> attributes;
 		
 		while (true) {
-			string line = io.readLine(1024 * 4, &timeout);
+			string line = details.io.readLine(1024 * 4, &details.timeout);
 			if (line.empty()) {
 				throw EOFException("Premature end-of-stream in error response");
 			} else if (line[line.size() - 1] != '\n') {
@@ -629,7 +636,7 @@ protected:
 		}
 		
 		try {
-			string message = io.readAll(&timeout);
+			string message = details.io.readAll(&details.timeout);
 			throw SpawnException("An error occured while starting the web application.",
 				message,
 				attributes["html"] == "true",
@@ -640,22 +647,22 @@ protected:
 				"an I/O error occurred while reading this error message: " +
 				e.sys(),
 				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer);
+				details);
 		} catch (const TimeoutException &) {
 			throwAppSpawnException("An error occurred while starting the "
 				"web application. It tried to report an error message, but "
 				"it took too much time doing that.",
 				SpawnException::APP_STARTUP_TIMEOUT,
-				stderrCapturer);
+				details);
 		}
 	}
 	
-	void handleInvalidSpawnResponseType(const string &line, BackgroundIOCapturerPtr &stderrCapturer) {
+	void handleInvalidSpawnResponseType(const string &line, NegotiationDetails &details) {
 		throwAppSpawnException("An error occurred while starting "
 			"the web application. It sent an unknown response type \"" +
 			cEscapeString(line) + "\".",
 			SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-			stderrCapturer);
+			details);
 	}
 	
 public:
@@ -682,7 +689,6 @@ private:
 	
 	SafeLibev *libev;
 	vector<string> preloaderCommand;
-	RandomGeneratorPtr randomGenerator;
 	Options options;
 	
 	mutable boost::mutex syncher;
@@ -1179,8 +1185,10 @@ private:
 			return result;
 			
 		} else if (result == "Error\n") {
-			BackgroundIOCapturerPtr stderrCapturer;
-			handleSpawnErrorResponse(io, stderrCapturer, timeout);
+			NegotiationDetails details;
+			details.io = io;
+			details.timeout = timeout;
+			handleSpawnErrorResponse(details);
 			
 		} else {
 			throw IOException("Invalid spawn command response: \"" +
@@ -1215,12 +1223,11 @@ public:
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const vector<string> &_preloaderCommand,
-		const RandomGeneratorPtr &_randomGenerator,
-		const Options &_options)
+		const Options &_options,
+		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
 		: Spawner(_resourceLocator),
 		  libev(_libev),
-		  preloaderCommand(_preloaderCommand),
-		  randomGenerator(_randomGenerator)
+		  preloaderCommand(_preloaderCommand)
 	{
 		if (preloaderCommand.size() < 2) {
 			throw ArgumentException("preloaderCommand must have at least 2 elements");
@@ -1236,6 +1243,12 @@ public:
 		
 		preloaderOutputWatcher.set<SmartSpawner, &SmartSpawner::onPreloaderOutputReadable>(this);
 		preloaderErrorWatcher.set<SmartSpawner, &SmartSpawner::onPreloaderErrorReadable>(this);
+		
+		if (_randomGenerator == NULL) {
+			randomGenerator = make_shared<RandomGenerator>();
+		} else {
+			randomGenerator = _randomGenerator;
+		}
 	}
 	
 	virtual ~SmartSpawner() {
@@ -1262,10 +1275,13 @@ public:
 		} catch (const IOException &e) {
 			result = sendSpawnCommandAgain(e, options);
 		}
-		BackgroundIOCapturerPtr stderrCapturer;
-		return negotiateSpawn(libev, stderrCapturer, result.pid,
-			result.adminSocket, FileDescriptor(), randomGenerator,
-			options);
+		
+		NegotiationDetails details;
+		details.libev = libev;
+		details.pid = result.pid;
+		details.adminSocket = result.adminSocket;
+		details.options = &options;
+		return negotiateSpawn(details);
 	}
 	
 	virtual unsigned long long lastUsed() const {
@@ -1282,7 +1298,6 @@ public:
 class DirectSpawner: public Spawner {
 private:
 	SafeLibev *libev;
-	RandomGeneratorPtr randomGenerator;
 	
 	static int startBackgroundThread(void *(*mainFunction)(void *), void *arg) {
 		// Using raw pthread API because we don't want to register such
@@ -1451,14 +1466,19 @@ public:
 			adminSocket.first.close();
 			errorPipe.second.close();
 			
-			BackgroundIOCapturerPtr stderrCapturer =
+			NegotiationDetails details;
+			details.libev = libev;
+			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
 					forwardStderr ? STDERR_FILENO : -1);
+			details.pid = pid;
+			details.adminSocket = adminSocket.second;
+			details.errorPipe = errorPipe.first;
+			details.options = &options;
+			details.forwardStderr = forwardStderr;
 			
-			ProcessPtr process = negotiateSpawn(libev, stderrCapturer, pid,
-				adminSocket.second, errorPipe.first, randomGenerator,
-				options, forwardStderr);
+			ProcessPtr process = negotiateSpawn(details);
 			detachProcess(process->pid);
 			guard.clear();
 			return process;
@@ -1514,22 +1534,23 @@ private:
 			return SpawnerPtr();
 		}
 		return make_shared<SmartSpawner>(libev, resourceLocator,
-			generation, preloaderCommand, randomGenerator, options);
+			generation, preloaderCommand, options,
+			randomGenerator);
 	}
 	
 public:
 	SpawnerFactory(SafeLibev *_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
-		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr())
+		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
 		: libev(_libev),
 		  resourceLocator(_resourceLocator),
 		  generation(_generation)
 	{
-		if (randomGenerator != NULL) {
-			this->randomGenerator = randomGenerator;
+		if (randomGenerator == NULL) {
+			randomGenerator = make_shared<RandomGenerator>();
 		} else {
-			this->randomGenerator = make_shared<RandomGenerator>();
+			randomGenerator = _randomGenerator;
 		}
 	}
 	

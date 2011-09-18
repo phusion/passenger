@@ -39,7 +39,6 @@ namespace tut {
 				*resourceLocator,
 				generation,
 				command,
-				make_shared<RandomGenerator>(),
 				options);
 		}
 		
@@ -111,7 +110,6 @@ namespace tut {
 			*resourceLocator,
 			generation,
 			preloaderCommand,
-			make_shared<RandomGenerator>(),
 			options);
 		spawner.forwardStdout = false;
 		spawner.forwardStderr = false;
@@ -144,7 +142,6 @@ namespace tut {
 			*resourceLocator,
 			generation,
 			preloaderCommand,
-			make_shared<RandomGenerator>(),
 			options);
 		spawner.forwardStdout = false;
 		spawner.forwardStderr = false;
