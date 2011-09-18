@@ -273,7 +273,11 @@ private:
 			
 			string::size_type pos = line.find(": ");
 			if (pos == string::npos) {
-				throw IOException("Invalid line: no separator found");
+				throwAppSpawnException("An error occurred while starting the "
+					"web application. It sent a startup response line without "
+					"separator.",
+					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+					details);
 			}
 			
 			string key = line.substr(0, pos);
@@ -286,10 +290,18 @@ private:
 				if (args.size() == 4) {
 					sockets->add(args[0], args[1], args[2], atoi(args[3]));
 				} else {
-					throw IOException("Invalid response format for 'socket' option");
+					throwAppSpawnException("An error occurred while starting the "
+						"web application. It reported a wrongly formatted 'socket'"
+						"response value: '" + value + "'",
+						SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+						details);
 				}
 			} else {
-				throw IOException("Unknown key '" + key + "'");
+				throwAppSpawnException("An error occurred while starting the "
+					"web application. It sent an unknown startup response line "
+					"called '" + key + "'.",
+					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+					details);
 			}
 		}
 		
@@ -618,16 +630,28 @@ protected:
 		while (true) {
 			string line = details.io.readLine(1024 * 4, &details.timeout);
 			if (line.empty()) {
-				throw EOFException("Premature end-of-stream in error response");
+				throwAppSpawnException("An error occurred while starting the "
+					"web application. It unexpected closed the connection while "
+					"sending its startup response.",
+					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+					details);
 			} else if (line[line.size() - 1] != '\n') {
-				throw IOException("Invalid line in error response: no newline character found");
+				throwAppSpawnException("An error occurred while starting the "
+					"web application. It sent a line without a newline character "
+					"in its startup response.",
+					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+					details);
 			} else if (line == "\n") {
 				break;
 			}
 			
 			string::size_type pos = line.find(": ");
 			if (pos == string::npos) {
-				throw IOException("Invalid line in error response: no separator found");
+				throwAppSpawnException("An error occurred while starting the "
+					"web application. It sent a startup response line without "
+					"separator.",
+					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+					details);
 			}
 			
 			string key = line.substr(0, pos);
@@ -767,12 +791,16 @@ private:
 	{
 		// Stop the stderr capturing thread and get the captured stderr
 		// output so far.
-		string stderrOutput = stderrCapturer->stop();
+		string stderrOutput;
+		if (stderrCapturer != NULL) {
+			stderrOutput = stderrCapturer->stop();
+		}
 		
 		// If the exception wasn't due to a timeout, try to capture the
 		// remaining stderr output for at most 2 seconds.
 		if (errorKind != SpawnException::PRELOADER_STARTUP_TIMEOUT
-		 && errorKind != SpawnException::APP_STARTUP_TIMEOUT) {
+		 && errorKind != SpawnException::APP_STARTUP_TIMEOUT
+		 && stderrCapturer != NULL) {
 			bool done = false;
 			unsigned long long timeout = 2000;
 			while (!done) {
@@ -1172,11 +1200,23 @@ private:
 			
 			spawnedPid = atoi(io.readLine(1024, &timeout).c_str());
 			if (spawnedPid <= 0) {
-				throw IOException("Application preloader returned an invalid PID");
+				BackgroundIOCapturerPtr stderrCapturer;
+				throwPreloaderSpawnException("An error occurred while starting "
+					"the web application. Its preloader responded to the "
+					"'spawn' command with an invalid PID: '" +
+					toString(spawnedPid) + "'",
+					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+					stderrCapturer);
 			}
 			// TODO: we really should be checking UID
 			if (getsid(spawnedPid) != getsid(pid)) {
-				throw SecurityException("Application preloader returned a PID that doesn't belong to the same session");
+				BackgroundIOCapturerPtr stderrCapturer;
+				throwPreloaderSpawnException("An error occurred while starting "
+					"the web application. Its preloader responded to the "
+					"'spawn' command with a PID that doesn't belong to "
+					"the same session: '" + toString(spawnedPid) + "'",
+					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+					stderrCapturer);
 			}
 			
 			SpawnResult result;
@@ -1191,8 +1231,8 @@ private:
 			handleSpawnErrorResponse(details);
 			
 		} else {
-			throw IOException("Invalid spawn command response: \"" +
-				cEscapeString(result) + "\"");
+			NegotiationDetails details;
+			handleInvalidSpawnResponseType(result, details);
 		}
 		
 		return SpawnResult(); // Never reached.
