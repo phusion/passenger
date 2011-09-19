@@ -386,8 +386,8 @@ public:
 		verifyExpensiveInvariants();
 	}
 	
-	// 'lockNow == false' may only be used during unit tests. We should never
-	// call the callback while holding the lock.
+	// 'lockNow == false' may only be used during unit tests. Normally we
+	// should never call the callback while holding the lock.
 	void asyncGet(const Options &options, const GetCallback &callback, bool lockNow = true) {
 		DynamicScopedLock lock(syncher, lockNow);
 		

@@ -55,8 +55,11 @@ namespace tut {
 		ensure(!pool->atFullCapacity());
 	}
 	
+	
+	/*********** Test asyncGet() ***********/
+	
 	TEST_METHOD(2) {
-		// get() actions on empty pools cannot be immediately satisfied.
+		// asyncGet() actions on empty pools cannot be immediately satisfied.
 		// Instead a new process will be spawned. In the mean time get()
 		// actions are put on a wait list which will be processed as soon
 		// as the new process is done spawning.
@@ -78,29 +81,37 @@ namespace tut {
 	}
 	
 	TEST_METHOD(3) {
-		// If one matching process already exists and it's idle then
-		// the get() will use it.
+		// If one matching process already exists and it's not at full
+		// capacity then asyncGet() will immediately use it.
 		Options options = createOptions();
+		
+		// Spawn a process and opens a session with it.
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = number == 1;
 		);
 		
+		// Close the session so that the process is now idle.
 		ProcessPtr process = currentSession->getProcess();
 		currentSession.reset();
-		ensure_equals(process->usage(), 0u);
+		ensure_equals(process->usage(), 0);
+		ensure(!process->atFullCapacity());
 		
+		// Verify test assertion.
 		ScopedLock l(pool->syncher);
 		pool->asyncGet(options, callback, false);
 		ensure_equals("callback is immediately called", number, 2);
 	}
-	#endif
+	
 	TEST_METHOD(4) {
-		// If one matching process already exists but it's not idle,
+		// If one matching process already exists but it's at full capacity,
 		// and the limits prevent spawning of a new process,
-		// then get() will put the get action on the group's wait
-		// queue. When the process becomes idle it will process
-		// the request.
+		// then asyncGet() will put the get action on the group's wait
+		// queue. When the process is no longer at full capacity it will
+		// process the request.
+		
+		// Spawn a process and verify that it's at full capacity.
+		// Keep its session open.
 		Options options = createOptions();
 		options.appGroupName = "test";
 		pool->setMax(1);
@@ -112,7 +123,9 @@ namespace tut {
 		ProcessPtr process = session1->getProcess();
 		currentSession.reset();
 		ensure_equals(process->sessions, 1);
+		ensure(process->atFullCapacity());
 		
+		// Now call asyncGet() again.
 		pool->asyncGet(options, callback);
 		ensure_equals("callback is not yet called", number, 1);
 		ensure_equals("the get action has been put on the wait list",
@@ -127,17 +140,17 @@ namespace tut {
 	}
 	
 	TEST_METHOD(5) {
-		// If one matching process already exists but it's not idle,
+		// If one matching process already exists but it's at full capacity,
 		// and the limits and pool capacity allow spawning of a new process,
 		// then get() will put the get action on the group's wait
 		// queue while spawning a process in the background.
-		// Either the existing process or the new process will process
-		// the action, whichever becomes first available.
+		// Either the existing process or the newly spawned process
+		// will process the action, whichever becomes first available.
 		
 		// Here we test the case in which the existing process becomes
 		// available first.
 		
-		// Spawn a regular process.
+		// Spawn a regular process and keep its session open.
 		Options options = createOptions();
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
@@ -152,11 +165,12 @@ namespace tut {
 		options.startCommand = "sleep\1" "60";
 		pool->asyncGet(options, callback);
 		
-		// Release first process.
+		// Release the session on the first process.
 		session1.reset();
 		
-		ensure_equals(number, 2);
-		ensure_equals(currentSession->getProcess(), process1);
+		ensure_equals("The callback should have been called twice now", number, 2);
+		ensure_equals("The first process handled the second asyncGet() request",
+			currentSession->getProcess(), process1);
 	}
 	
 	TEST_METHOD(6) {
@@ -182,10 +196,12 @@ namespace tut {
 		ensure_equals(number, 2);
 		ensure(currentSession->getProcess() != process1);
 	}
-	
+	#endif
 	TEST_METHOD(7) {
 		// If multiple matching processes exist, and one of them is idle,
-		// then get() will use that.
+		// then asyncGet() will use that.
+		
+		// Spawn 3 processes and keep a session open with 1 of them.
 		Options options = createOptions();
 		options.minProcesses = 3;
 		pool->asyncGet(options, callback);
@@ -196,25 +212,53 @@ namespace tut {
 			result = pool->getProcessCount() == 3;
 		);
 		SessionPtr session1 = currentSession;
+		ProcessPtr process1 = currentSession->getProcess();
+		currentSession.reset();
 		
+		// Now open another session. It should complete immediately
+		// and should not use the first process.
 		ScopedLock l(pool->syncher);
-		pool->asyncGet(options, callback);
-		ensure_equals(number, 2);
+		pool->asyncGet(options, callback, false);
+		ensure_equals("asyncGet() completed immediately", number, 2);
 		SessionPtr session2 = currentSession;
+		ProcessPtr process2 = currentSession->getProcess();
+		l.unlock();
+		currentSession.reset();
+		ensure(process2 != process1);
+		
+		// Now open yet another session. It should also complete immediately
+		// and should not use the first or the second process.
+		l.lock();
+		pool->asyncGet(options, callback, false);
+		ensure_equals("asyncGet() completed immediately", number, 3);
+		SessionPtr session3 = currentSession;
+		ProcessPtr process3 = currentSession->getProcess();
+		l.unlock();
+		currentSession.reset();
+		ensure(process3 != process1);
+		ensure(process3 != process2);
 	}
-	
+	#if 0
 	TEST_METHOD(8) {
-		// If multiple matching processes exist, and none of them are idle,
-		// and no more processes may be spawned,
-		// then get() will put the action on the group's wait queue.
-		// The process that first becomes idle will process the action.
+		// If multiple matching processes exist, and all of them are at
+		// full capacity except one, then asyncGet() will use that.
 	}
 	
 	TEST_METHOD(9) {
-		// If multiple matching processes exist, and none of them are idle,
-		// a new process may be spawned,
-		// then get() will put the action on the group's wait queue.
-		// The process that first becomes idle or the newly spawned process
+		// If multiple matching processes exist, and all of them are at full capacity,
+		// and no more processes may be spawned,
+		// then asyncGet() will put the action on the group's wait queue.
+		// The process that first becomes not at full capacity will process the action.
+	}
+	
+	TEST_METHOD(10) {
+		// If multiple matching processes exist, and all of them are at full capacity,
+		// and a new process may be spawned,
+		// then asyncGet() will put the action on the group's wait queue and spawn the
+		// new process.
+		// The process that first becomes not at full capacity
+		// or the newly spawned process
 		// will process the action, whichever is earlier.
 	}
+	#endif
 }
