@@ -48,15 +48,15 @@ namespace tut {
 		}
 	};
 	
-	DEFINE_TEST_GROUP(ApplicationPool2_PoolTest);
-	#if 0
+	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_PoolTest, 100);
+	
 	TEST_METHOD(1) {
 		// Test initial state.
 		ensure(!pool->atFullCapacity());
 	}
 	
 	
-	/*********** Test asyncGet() ***********/
+	/*********** Test asyncGet() behavior on a single SuperGroup and Group ***********/
 	
 	TEST_METHOD(2) {
 		// asyncGet() actions on empty pools cannot be immediately satisfied.
@@ -196,7 +196,7 @@ namespace tut {
 		ensure_equals(number, 2);
 		ensure(currentSession->getProcess() != process1);
 	}
-	#endif
+	
 	TEST_METHOD(7) {
 		// If multiple matching processes exist, and one of them is idle,
 		// then asyncGet() will use that.
@@ -238,7 +238,7 @@ namespace tut {
 		ensure(process3 != process1);
 		ensure(process3 != process2);
 	}
-	#if 0
+	
 	TEST_METHOD(8) {
 		// If multiple matching processes exist, and all of them are at
 		// full capacity except one, then asyncGet() will use that.
@@ -260,5 +260,84 @@ namespace tut {
 		// or the newly spawned process
 		// will process the action, whichever is earlier.
 	}
-	#endif
+	
+	
+	/*********** Test asyncGet() behavior on multiple SuperGroups,
+	             each with a single Group ***********/
+	
+	TEST_METHOD(20) {
+		// If the pool is full, and one tries to asyncGet() from a nonexistant group,
+		// then it will kill the oldest idle process and spawn a new process.
+	}
+	
+	TEST_METHOD(21) {
+		// If the pool is full, and one tries to asyncGet() from a nonexistant group,
+		// and all existing processes are non-idle, then it will
+		// kill the oldest process and spawn a new process.
+	}
+	
+	
+	/*********** Test detachProcess() ***********/
+	
+	TEST_METHOD(30) {
+		// detachProcess() detaches the process from the group.
+	}
+	
+	TEST_METHOD(31) {
+		// If the containing group had waiters on it, and detachProcess()
+		// detaches the only process in the group, then a new process
+		// is automatically spawned to handle the waiters.
+	}
+	
+	TEST_METHOD(32) {
+		// If the pool had waiters on it then detachProcess() will
+		// automatically create the SuperGroups that were requested
+		// by the waiters.
+	}
+	
+	TEST_METHOD(33) {
+		// If the containing SuperGroup becomes garbage collectable after
+		// detaching the process, then detachProcess() also detaches the
+		// containing SuperGroup.
+	}
+	
+	TEST_METHOD(34) {
+		// If the containing SuperGroup becomes garbage collectable after
+		// detaching the process, and the pool had waiters on it, then
+		// detachProcess() will automatically create the SuperGroups that
+		// were requested by the waiters.
+	}
+	
+	
+	/*********** Other tests ***********/
+	
+	TEST_METHOD(40) {
+		// The pool is considered to be at full capacity if and only
+		// if all SuperGroups are at full capacity.
+	}
+	
+	TEST_METHOD(41) {
+		// If the pool is at full capacity, then increasing max will cause
+		// new processes to be spawned. Any queued get requests are processed
+		// as those new processes become available or as existing processes
+		// become available.
+	}
+	
+	TEST_METHOD(42) {
+		// getProcessCount() returns the number of processes in the pool.
+	}
+	
+	TEST_METHOD(43) {
+		// Each spawned process has a GUPID, which can be looked up
+		// through findProcessByGupid().
+	}
+	
+	TEST_METHOD(44) {
+		// findProcessByGupid() returns a NULL pointer if there is
+		// no matching process.
+	}
+	
+	// Process idle cleaning.
+	// Spawner idle cleaning.
+	// Process metrics collection.
 }

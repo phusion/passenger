@@ -117,8 +117,30 @@ public:
 	}
 	
 	ProcessPtr findOldestIdleProcess() const {
-		// TODO
-		return ProcessPtr();
+		ProcessPtr oldestIdleProcess;
+		
+		SuperGroupMap::const_iterator it, end = superGroups.end();
+		for (it = superGroups.begin(); it != end; it++) {
+			const SuperGroupPtr &superGroup = it->second;
+			const vector<GroupPtr> &groups = superGroup->groups;
+			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+			for (g_it = groups.begin(); g_it != g_end; g_it++) {
+				const GroupPtr &group = *g_it;
+				const ProcessList &processes = group->processes;
+				ProcessList::const_iterator p_it, p_end = processes.end();
+				for (p_it = processes.begin(); p_it != p_end; p_it++) {
+					const ProcessPtr process = *p_it;
+					if (process->usage() == 0
+					     && (oldestIdleProcess == NULL
+					         || process->lastUsed < oldestIdleProcess->lastUsed)
+					) {
+						oldestIdleProcess = process;
+					}
+				}
+			}
+		}
+		
+		return oldestIdleProcess;
 	}
 	
 	ProcessPtr findBestProcessToTrash() const {
@@ -147,7 +169,7 @@ public:
 	}
 	
 	/** Process all waiters on the getWaitlist. Call when capacity has become free.
-	 * This function assign sessions to them by calling get() on the corresponding
+	 * This function assigns sessions to them by calling get() on the corresponding
 	 * SuperGroups, or by creating more SuperGroups, in so far the new capacity allows.
 	 */
 	void assignSessionsToGetWaiters(vector<Callback> &postLockActions) {
@@ -620,7 +642,7 @@ public:
 				verifyExpensiveInvariants();
 				
 				forceDetachSuperGroup(superGroup);
-				/* If this SuperGroup might had get waiters, either
+				/* If this SuperGroup had get waiters, either
 				 * on itself or in one of its groups, then we must
 				 * reprocess them immediately. Detaching such a
 				 * SuperGroup is essentially the same as restarting it.
@@ -657,6 +679,8 @@ public:
 			verifyInvariants();
 			
 			SuperGroupPtr superGroup = group->getSuperGroup();
+			assert(superGroup->state != SuperGroup::INITIALIZING);
+			assert(superGroup->getWaitlist.empty());
 			
 			group->detach(process);
 			if (group->processes.empty()

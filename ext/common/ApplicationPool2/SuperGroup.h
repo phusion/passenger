@@ -361,9 +361,15 @@ public:
 	 * are put on this wait list, which must be processed as soon as the
 	 * necessary resources have become free.
 	 *
-	 * @invariant
+	 * Invariant:
 	 *    if state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED:
 	 *       getWaitlist.empty()
+	 * Equivalently:
+	 *    if state != INITIALIZING:
+	 *       getWaitlist.empty()
+	 * Equivalently:
+	 *    if !getWaitlist.empty():
+	 *       state == INITIALIZING
 	 */
 	queue<GetWaiter> getWaitlist;
 	
@@ -389,7 +395,7 @@ public:
 				shared_from_this(),
 				options.copyAndPersist(),
 				generation),
-			"SuperGroup initializer",
+			"SuperGroup initializer: " + name,
 			1024 * 64);
 	}
 	
@@ -430,7 +436,7 @@ public:
 						// Keep reference to self to prevent destruction.
 						shared_from_this(),
 						generation),
-					"SuperGroup destroyer",
+					"SuperGroup destroyer: " + name,
 					1024 * 256);
 			} else {
 				// Spawning this thread before setState() so that
