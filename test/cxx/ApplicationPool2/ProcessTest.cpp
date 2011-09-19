@@ -64,7 +64,9 @@ namespace tut {
 		SessionPtr session2 = process->newSession();
 		ensure_equals(process->sessions, 2);
 		process->sessionClosed(session.get());
+		ensure_equals(process->sessions, 1);
 		process->sessionClosed(session2.get());
+		ensure_equals(process->sessions, 0);
 	}
 	
 	TEST_METHOD(3) {
@@ -87,6 +89,8 @@ namespace tut {
 		SessionPtr session5 = process->newSession();
 		ensure(session4->getSocket()->name != session5->getSocket()->name);
 		
+		// There should now be 1 process with 1 session
+		// and 2 processes with 2 sessions.
 		map<int, int> sessionCount;
 		SocketList::const_iterator it;
 		for (it = process->sockets->begin(); it != process->sockets->end(); it++) {
@@ -96,6 +100,8 @@ namespace tut {
 		ensure_equals(sessionCount[1], 1);
 		ensure_equals(sessionCount[2], 2);
 		
+		// Closing the first 3 sessions will result in no processes having 1 session
+		// and 1 process having 2 sessions.
 		process->sessionClosed(session1.get());
 		process->sessionClosed(session2.get());
 		process->sessionClosed(session3.get());

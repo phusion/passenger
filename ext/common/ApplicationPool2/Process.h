@@ -78,6 +78,14 @@ public:
  *
  * Except for the otherwise documented parts, this class is not thread-safe,
  * so only use within the Pool lock.
+ *
+ * == Normal usage
+ *
+ * 1. Create a session with newSession().
+ * 2. Initiate the session by calling initiate() on it.
+ * 3. Perform I/O through session->fd().
+ * 4. When done, close the session by calling close() on it.
+ * 5. Call process.sessionClosed().
  */
 class Process: public enable_shared_from_this<Process> {
 private:
@@ -176,7 +184,9 @@ public:
 	unsigned long long spawnTime;
 	/** Last time when a session was opened for this Process. */
 	unsigned long long lastUsed;
-	/** Number of sessions currently open. */
+	/** Number of sessions currently open.
+	 * @invariant session >= 0
+	 */
 	int sessions;
 	
 	
@@ -241,6 +251,14 @@ public:
 	}
 	
 	int usage() const {
+		/* Different processes within a Group may have different
+		 * 'concurrency' values. We want:
+		 * - Group.pqueue to sort the processes from least used to most used.
+		 * - to give processes with concurrency == 0 more priority over processes
+		 *   with concurrency > 0.
+		 * Therefore, we describe our usage as a percentage of 'concurrency', with
+		 * the percentage value in [0..INT_MAX] instead of [0..1].
+		 */
 		if (concurrency == 0) {
 			// Allows Group.pqueue to give idle sockets more priority.
 			if (sessions == 0) {
@@ -258,6 +276,10 @@ public:
 	}
 	
 	/**
+	 * Create a new communication session with this process. This will connect to one
+	 * of the session sockets or reuse an existing connection. See Session for
+	 * more information about sessions.
+	 *
 	 * One SHOULD call sessionClosed() when one's done with the session.
 	 * Failure to do so will mess up internal statistics but will otherwise
 	 * not result in any harmful behavior.

@@ -41,6 +41,10 @@ using namespace oxt;
 
 
 /**
+ * Represents a communication session with a process. A communication session
+ * within Phusion Passenger is usually a single request + response but the API
+ * allows arbitrary I/O. See Process's class overview for normal usage of Session.
+ *
  * Not thread-safe, but Pool's and Process's API encourage that
  * a Session is only used by 1 thread and then thrown away.
  */
@@ -107,7 +111,7 @@ public:
 		connection.fail = true;
 	}
 	
-	bool initiated() {
+	bool initiated() const {
 		return connection.fd != -1;
 	}
 	

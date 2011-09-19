@@ -135,7 +135,10 @@ public:
 		return *this;
 	}
 	
-	/** One MUST call checkinConnection() when one's done using the Connection.
+	/**
+	 * Connect to this socket or reuse an existing connection.
+	 *
+	 * One MUST call checkinConnection() when one's done using the Connection.
 	 * Failure to do so will result in a resource leak.
 	 */
 	Connection checkoutConnection() {
@@ -178,6 +181,14 @@ public:
 	}
 	
 	int usage() const {
+		/* Different sockets within a Process may have different
+		 * 'concurrency' values. We want:
+		 * - Process.sessionSockets to sort the sockets from least used to most used.
+		 * - to give sockets with concurrency == 0 more priority over sockets
+		 *   with concurrency > 0.
+		 * Therefore, we describe our usage as a percentage of 'concurrency', with
+		 * the percentage value in [0..INT_MAX] instead of [0..1].
+		 */
 		if (concurrency == 0) {
 			// Allows Process.sessionSockets to give
 			// idle sockets more priority.
