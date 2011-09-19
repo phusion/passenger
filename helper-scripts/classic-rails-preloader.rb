@@ -107,6 +107,7 @@ module App
 	################## Main code ##################
 	
 	
+	GC.copy_on_write_friendly = true if GC.respond_to?(:copy_on_write_friendly=)
 	handshake_and_read_startup_request
 	init_passenger
 	preload_app
