@@ -51,6 +51,7 @@ module PreloaderSharedHelpers
 		original_pid = Process.pid
 		socket_filename = "#{options['generation_dir']}/backends/preloader.#{Process.pid}"
 		server = UNIXServer.new(socket_filename)
+		server.close_on_exec!
 		
 		puts "Ready"
 		puts "socket: unix:#{socket_filename}"
