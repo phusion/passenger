@@ -69,7 +69,7 @@ using namespace oxt;
 class LoggingServer: public EventedMessageServer {
 private:
 	static const int MAX_LOG_SINK_CACHE_SIZE = 512;
-	static const int GARBAGE_COLLECTION_TIMEOUT = (int) (1.25 * 60 * 60);  // 1 hour 15 minutes
+	static const int GARBAGE_COLLECTION_TIMEOUT = 4500;  // 1 hour 15 minutes
 	
 	struct LogSink;
 	typedef shared_ptr<LogSink> LogSinkPtr;
