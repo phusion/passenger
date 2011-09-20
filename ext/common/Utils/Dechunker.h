@@ -229,4 +229,4 @@ public:
 
 } // namespace Passenger
 
-#endif _PASSENGER_DECHUNKER_H_
+#endif /* _PASSENGER_DECHUNKER_H_ */
