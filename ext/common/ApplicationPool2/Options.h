@@ -425,8 +425,8 @@ public:
 	}
 	
 	Options &clearPerRequestFields() {
-		hostName = "";
-		uri      = "";
+		hostName = string();
+		uri      = string();
 		log.reset();
 		return *this;
 	}

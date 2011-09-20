@@ -448,7 +448,7 @@ public:
 						// Keep reference to self to prevent destruction.
 						shared_from_this(),
 						generation),
-					"SuperGroup destroyer",
+					"SuperGroup destroyer: " + name,
 					1024 * 256);
 				setState(INITIALIZING);
 				createNonInterruptableThread(
@@ -459,7 +459,7 @@ public:
 						shared_from_this(),
 						options.copyAndPersist(),
 						generation),
-					"SuperGroup initializer",
+					"SuperGroup initializer: " + name,
 					1024 * 64);
 			}
 			break;
@@ -528,7 +528,7 @@ public:
 					shared_from_this(),
 					newOptions.copyAndPersist(),
 					generation),
-				"SuperGroup initializer",
+				"SuperGroup initializer: " + name,
 				1024 * 64);
 			verifyInvariants();
 			return SessionPtr();
@@ -570,7 +570,7 @@ public:
 					shared_from_this(),
 					options.copyAndPersist(),
 					generation),
-				"SuperGroup restarter",
+				"SuperGroup restarter: " + name,
 				1024 * 64);
 			state = RESTARTING;
 		}

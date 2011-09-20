@@ -16,6 +16,8 @@
 #include <ApplicationPool2/Spawner.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
+#include <Utils/CachedFileStat.hpp>
+#include <Utils/FileChangeChecker.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -41,6 +43,10 @@ private:
 	
 	mutable boost::mutex backrefSyncher;
 	weak_ptr<SuperGroup> superGroup;
+	CachedFileStat cstat;
+	FileChangeChecker fileChangeChecker;
+	string restartFile;
+	string alwaysRestartFile;
 	
 	
 	static void _onSessionClose(Session *session) {
@@ -207,7 +213,7 @@ public:
 	Group(const SuperGroupPtr &superGroup, const Options &options, const ComponentInfo &info);
 	
 	SessionPtr get(const Options &newOptions, const GetCallback &callback) {
-		if (needsRestart()) {
+		if (needsRestart(newOptions)) {
 			restart(newOptions);
 		} else {
 			mergeOptions(newOptions);
@@ -335,9 +341,10 @@ public:
 		}
 	}
 	
-	bool needsRestart() const {
-		// TODO
-		return false;
+	bool needsRestart(const Options &options) {
+		struct stat buf;
+		return cstat.stat(alwaysRestartFile, &buf, options.statThrottleRate) == 0 ||
+		       fileChangeChecker.changed(restartFile, options.statThrottleRate);
 	}
 	
 	void restart(const Options &options);

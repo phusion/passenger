@@ -133,6 +133,13 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	count      = 0;
 	spawner    = getPool()->spawnerFactory->create(options);
 	m_spawning = false;
+	if (options.restartDir.empty()) {
+		restartFile = options.appRoot + "/tmp/restart.txt";
+		alwaysRestartFile = options.appRoot + "/always_restart.txt";
+	} else {
+		restartFile = options.restartDir + "/restart.txt";
+		alwaysRestartFile = options.restartDir + "/always_restart.txt";
+	}
 	resetOptions(options);
 }
 

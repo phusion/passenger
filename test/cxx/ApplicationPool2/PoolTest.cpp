@@ -340,4 +340,7 @@ namespace tut {
 	// Process idle cleaning.
 	// Spawner idle cleaning.
 	// Process metrics collection.
+	// Restarting.
+	// Spawn exceptions.
+	// Died processes.
 }
