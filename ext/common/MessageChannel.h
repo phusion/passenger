@@ -423,9 +423,9 @@ public:
 	 */
 	int readFileDescriptor(bool negotiate = true) {
 		if (negotiate) {
-			Passenger::readFileDescriptorWithNegotiation(fd);
+			return Passenger::readFileDescriptorWithNegotiation(fd);
 		} else {
-			Passenger::readFileDescriptor(fd);
+			return Passenger::readFileDescriptor(fd);
 		}
 	}
 	
