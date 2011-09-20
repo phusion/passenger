@@ -18,7 +18,7 @@ template<typename T>
 bool
 exceptionIsInstanceOf(const tracable_exception &e) {
 	try {
-		dynamic_cast<T>(e);
+		(void) dynamic_cast<T>(e);
 		return true;
 	} catch (const bad_cast &) {
 		return false;

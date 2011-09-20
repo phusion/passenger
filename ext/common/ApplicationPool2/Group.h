@@ -111,7 +111,9 @@ private:
 	
 	template<typename Lock>
 	void assignSessionsToGetWaitersQuickly(Lock &lock) {
+		#ifndef __clang__
 		if (OXT_LIKELY(getWaitlist.size() < 50)) {
+			// Clang doesn't support variable-length non-POD arrays.
 			GetAction actions[getWaitlist.size()];
 			unsigned int count = 0;
 			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
@@ -126,7 +128,9 @@ private:
 			for (unsigned int i = 0; i < count; i++) {
 				actions[i].callback(actions[i].session, ExceptionPtr());
 			}
-		} else {
+		} else
+		#endif /* __clang__ */
+		{
 			vector<GetAction> actions;
 			actions.reserve(getWaitlist.size());
 			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
