@@ -109,7 +109,8 @@ public:
 		  address(_address),
 		  protocol(_protocol),
 		  concurrency(_concurrency),
-		  sessions(0)
+		  sessions(0),
+		  totalConnections(0)
 		{ }
 	
 	Socket(const Socket &other)
