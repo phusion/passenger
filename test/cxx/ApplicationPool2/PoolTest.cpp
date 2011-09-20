@@ -242,6 +242,49 @@ namespace tut {
 	TEST_METHOD(8) {
 		// If multiple matching processes exist, and all of them are at
 		// full capacity except one, then asyncGet() will use that.
+		
+		// Spawn 2 processes and open 4 sessions.
+		Options options = createOptions();
+		options.minProcesses = 2;
+		pool->setMax(3);
+		GroupPtr group = pool->findOrCreateGroup(options);
+		dynamic_pointer_cast<DummySpawner>(group->spawner)->concurrency = 2;
+		
+		vector<SessionPtr> sessions;
+		int expectedNumber = 1;
+		for (int i = 0; i < 4; i++) {
+			pool->asyncGet(options, callback);
+			EVENTUALLY(5,
+				result = number == expectedNumber;
+			);
+			expectedNumber++;
+			sessions.push_back(currentSession);
+			currentSession.reset();
+		}
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 2;
+		);
+		
+		// Each process now has 2 sessions open and are at full capacity.
+		ProcessPtr process1 = group->processes[0];
+		ProcessPtr process2 = group->processes[1];
+		ensure_equals(process1->sessions, 2);
+		ensure(process1->atFullCapacity());
+		ensure_equals(process2->sessions, 2);
+		ensure(process2->atFullCapacity());
+		
+		// Spawn another process.
+		group->spawn();
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 3;
+		);
+		// asyncGet() should now use the newly spawned process.
+		pool->asyncGet(options, callback);
+		SessionPtr session = currentSession;
+		currentSession.reset();
+		ensure(session->getProcess() != process1);
+		ensure(session->getProcess() != process2);
+		ensure_equals(session->getProcess()->sessions, 1);
 	}
 	
 	TEST_METHOD(9) {
@@ -343,4 +386,5 @@ namespace tut {
 	// Restarting.
 	// Spawn exceptions.
 	// Died processes.
+	// Persistent connections.
 }

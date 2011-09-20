@@ -52,6 +52,24 @@ using namespace boost;
 
 class ProcessList: public list<ProcessPtr> {
 public:
+	ProcessPtr &get(unsigned int index) {
+		iterator it = begin(), end = this->end();
+		unsigned int i = 0;
+		while (i != index && it != end) {
+			i++;
+			it++;
+		}
+		if (it == end) {
+			throw RuntimeException("Index out of bounds");
+		} else {
+			return *it;
+		}
+	}
+	
+	ProcessPtr &operator[](unsigned int index) {
+		return get(index);
+	}
+	
 	iterator last_iterator() {
 		if (empty()) {
 			return end();
@@ -213,7 +231,9 @@ public:
 			libev->start(errorPipeWatcher);
 		}
 		
-		indexSessionSockets();
+		if (OXT_LIKELY(sockets != NULL)) {
+			indexSessionSockets();
+		}
 		
 		lastUsed  = SystemTime::getUsec();
 		spawnTime = lastUsed;
@@ -221,11 +241,13 @@ public:
 	}
 	
 	~Process() {
-		SocketList::const_iterator it, end = sockets->end();
-		for (it = sockets->begin(); it != end; it++) {
-			if (getSocketAddressType(it->address) == SAT_UNIX) {
-				string filename = parseUnixSocketAddress(it->address);
-				syscalls::unlink(filename.c_str());
+		if (OXT_LIKELY(sockets != NULL)) {
+			SocketList::const_iterator it, end = sockets->end();
+			for (it = sockets->begin(); it != end; it++) {
+				if (getSocketAddressType(it->address) == SAT_UNIX) {
+					string filename = parseUnixSocketAddress(it->address);
+					syscalls::unlink(filename.c_str());
+				}
 			}
 		}
 		if (errorPipe != -1) {

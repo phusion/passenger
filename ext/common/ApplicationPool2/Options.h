@@ -309,6 +309,17 @@ public:
 	 */
 	AnalyticsLogPtr log;
 	
+	/** When true, Pool::get() and Pool::asyncGet() will create the necessary
+	 * SuperGroup and Group structures just as normally, and will even handle
+	 * restarting logic, but will not actually spawn any processes and will not
+	 * open a session with an existing process. Instead, a fake Session object
+	 * is returned which points to a Process object that isn't stored anywhere
+	 * in the Pool structures and isn't mapped to any real OS process. It does
+	 * however point to the real Group structure.
+	 * False by default.
+	 */
+	bool noop;
+	
 	
 	/*********** Spawn options automatically set by Pool ***********/
 	
@@ -340,6 +351,8 @@ public:
 		minProcesses            = 1;
 		statThrottleRate        = 0;
 		spawnerTimeout          = -1;
+		
+		noop                    = false;
 		
 		/*********************************/
 	}
@@ -428,14 +441,13 @@ public:
 		hostName = string();
 		uri      = string();
 		log.reset();
+		noop     = false;
 		return *this;
 	}
 	
 	/**
-	 * Append the information in this Options object to the given
-	 * string vector, except for environmentVariables.
-	 *
-	 * @param vec The vector to store the information in.
+	 * Append any spawning-relevant information in this Options object
+	 * to the given string vector, except for environmentVariables.
 	 */
 	void toVector(vector<string> &vec) const {
 		if (vec.capacity() < vec.size() + 40) {

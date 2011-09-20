@@ -31,8 +31,8 @@ public:
 	enum State {
 		/** This SuperGroup is being initialized. 'groups' is empty and
 		 * get() actions cannot be immediately satisfied, so they
-		 * are placed in getWaitlist. Once the SuperGroups is done
-		 * loading the state will transition to READY. Calling destroy()
+		 * are placed in getWaitlist. Once the SuperGroup is done
+		 * loading the state it will transition to READY. Calling destroy()
 		 * will make it transition to DESTROYING. If initialization
 		 * failed it will transition to DESTROYED.
 		 */
@@ -46,11 +46,14 @@ public:
 		/** This SuperGroup is being restarted. The SuperGroup
 		 * information is being reloaded from the data source
 		 * and processes are being restarted. In this state
-		 * get() actions can still be statisfied.
+		 * get() actions can still be statisfied, and the data
+		 * structures still contain the old information. Once reloading
+		 * is done the data structures will be atomically swapped
+		 * with the newly reloaded ones.
 		 * Once the restart is completed, the state will transition
 		 * to READY.
 		 * Re-restarting won't have any effect in this state.
-		 * destroy() will cause the restart to the aborted and will
+		 * destroy() will cause the restart to be aborted and will
 		 * cause a transition to DESTROYING.
 		 */
 		RESTARTING,
@@ -90,6 +93,7 @@ private:
 	
 	// Thread-safe.
 	static boost::mutex &getPoolSyncher(const PoolPtr &pool);
+	static void runAllActions(const vector<Callback> &actions);
 	string generateSecret() const;
 	
 	void createInterruptableThread(const function<void ()> &func, const string &name,
@@ -168,13 +172,17 @@ private:
 		}
 	}
 	
-	void assignGetWaitlistToGroups() {
+	void assignGetWaitlistToGroups(vector<Callback> &postLockActions) {
 		while (!getWaitlist.empty()) {
 			GetWaiter &waiter = getWaitlist.front();
 			Group *group = route(waiter.options);
 			Options adjustedOptions = waiter.options;
 			adjustOptions(adjustedOptions, group);
-			group->get(adjustedOptions, waiter.callback);
+			SessionPtr session = group->get(adjustedOptions, waiter.callback);
+			if (session != NULL) {
+				postLockActions.push_back(boost::bind(
+					waiter.callback, session, ExceptionPtr()));
+			}
 			getWaitlist.pop();
 		}
 	}
@@ -213,26 +221,20 @@ private:
 		assert(state == INITIALIZING);
 		verifyInvariants();
 		
+		vector<Callback> actions;
 		if (componentInfos.empty()) {
 			/* Somehow initialization failed. Maybe something has deleted
 			 * the supergroup files while we're working.
 			 */
+			assert(exception != NULL);
 			setState(DESTROYED);
 			
-			vector<Callback> callbacks;
-			callbacks.reserve(getWaitlist.size());
+			actions.reserve(getWaitlist.size());
 			while (!getWaitlist.empty()) {
-				GetWaiter &waiter = getWaitlist.front();
-				callbacks.push_back(boost::bind(waiter.callback,
+				const GetWaiter &waiter = getWaitlist.front();
+				actions.push_back(boost::bind(waiter.callback,
 					SessionPtr(), exception));
 				getWaitlist.pop();
-			}
-			lock.unlock();
-			
-			vector<Callback>::const_iterator it;
-			for (it = callbacks.begin(); it != callbacks.end(); it++) {
-				const Callback &callback = *it;
-				callback();
 			}
 		} else {
 			for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
@@ -245,10 +247,12 @@ private:
 				}
 			}
 			setState(READY);
-			assignGetWaitlistToGroups();
+			assignGetWaitlistToGroups(actions);
 		}
 		
 		verifyInvariants();
+		lock.unlock();
+		runAllActions(actions);
 	}
 	
 	void doRestart(SuperGroupPtr self, Options options, unsigned int generation) {
@@ -260,7 +264,7 @@ private:
 			return;
 		}
 		
-		lock_guard<boost::mutex> lock(getPoolSyncher(pool));
+		unique_lock<boost::mutex> lock(getPoolSyncher(pool));
 		if (OXT_UNLIKELY(getPool() == NULL || this->generation != generation)) {
 			return;
 		}
@@ -308,9 +312,12 @@ private:
 		groups = allGroups;
 		defaultGroup = findDefaultGroup(allGroups);
 		setState(READY);
-		assignGetWaitlistToGroups();
+		vector<Callback> actions;
+		assignGetWaitlistToGroups(actions);
 		
 		verifyInvariants();
+		lock.unlock();
+		runAllActions(actions);
 	}
 	
 	void doDestroy(SuperGroupPtr self, unsigned int generation) {

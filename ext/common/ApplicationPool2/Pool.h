@@ -100,6 +100,13 @@ public:
 	 */
 	vector<GetWaiter> getWaitlist;
 	
+	static void runAllActions(const vector<Callback> &actions) {
+		vector<Callback>::const_iterator it, end = actions.end();
+		for (it = actions.begin(); it != end; it++) {
+			(*it)();
+		}
+	}
+	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
 		assert(!( !getWaitlist.empty() ) || ( atFullCapacity(false) ));
@@ -248,13 +255,6 @@ public:
 		superGroup->setPool(PoolPtr());
 	}
 	
-	void runAllActions(const vector<Callback> &actions) {
-		vector<Callback>::const_iterator it, end = actions.end();
-		for (it = actions.begin(); it != end; it++) {
-			(*it)();
-		}
-	}
-	
 	static void syncGetCallback(Ticket *ticket, const SessionPtr &session, const ExceptionPtr &e) {
 		ScopedLock lock(ticket->syncher);
 		if (OXT_LIKELY(session != NULL)) {
@@ -349,13 +349,18 @@ public:
 		}
 	}
 	
-	SuperGroupPtr createSuperGroupAndAsyncGetFromIt(const Options &options,
-		const GetCallback &callback)
-	{
+	SuperGroupPtr createSuperGroup(const Options &options) {
 		SuperGroupPtr superGroup = make_shared<SuperGroup>(shared_from_this(),
 			options);
 		superGroup->initialize();
 		superGroups.set(options.getAppGroupName(), superGroup);
+		return superGroup;
+	}
+	
+	SuperGroupPtr createSuperGroupAndAsyncGetFromIt(const Options &options,
+		const GetCallback &callback)
+	{
+		SuperGroupPtr superGroup = createSuperGroup(options);
 		SessionPtr session = superGroup->get(options, callback);
 		/* Callback should now have been put on the wait list,
 		 * unless something has changed and we forgot to update
@@ -531,6 +536,14 @@ public:
 			rethrowException(ticket->exception);
 			return SessionPtr(); // Shut up compiler warning.
 		}
+	}
+	
+	GroupPtr findOrCreateGroup(const Options &options) {
+		Options options2 = options;
+		options2.noop = true;
+		
+		Ticket ticket;
+		return get(options2, &ticket)->getProcess()->getGroup();
 	}
 	
 	void setMax(unsigned int max) {

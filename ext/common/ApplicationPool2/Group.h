@@ -99,8 +99,8 @@ private:
 		}
 	}
 	
-	/** @pre count > 0 */
 	SessionPtr newSession() {
+		assert(count > 0);
 		Process *process   = pqueue.top();
 		SessionPtr session = process->newSession();
 		session->onClose   = _onSessionClose;
@@ -213,16 +213,24 @@ public:
 	Group(const SuperGroupPtr &superGroup, const Options &options, const ComponentInfo &info);
 	
 	SessionPtr get(const Options &newOptions, const GetCallback &callback) {
-		if (needsRestart(newOptions)) {
+		if (OXT_UNLIKELY(needsRestart(newOptions))) {
 			restart(newOptions);
 		} else {
 			mergeOptions(newOptions);
 		}
-		if (shouldSpawn()) {
+		if (OXT_UNLIKELY(!newOptions.noop && shouldSpawn())) {
 			spawn();
 		}
 		
-		if (count == 0) {
+		if (OXT_UNLIKELY(newOptions.noop)) {
+			ProcessPtr process = make_shared<Process>((SafeLibev *) NULL,
+				0, string(), FileDescriptor(), FileDescriptor(),
+				SocketListPtr(), 0);
+			process->setGroup(shared_from_this());
+			return make_shared<Session>(process, (Socket *) NULL);
+		}
+		
+		if (OXT_UNLIKELY(count == 0)) {
 			/* We don't have any processes yet, but it's on the way.
 			 * Call the callback after a process has been spawned
 			 * or has failed to spawn.

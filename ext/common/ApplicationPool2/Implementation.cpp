@@ -105,6 +105,11 @@ SuperGroup::getPoolSyncher(const PoolPtr &pool) {
 	return pool->syncher;
 }
 
+void
+SuperGroup::runAllActions(const vector<Callback> &actions) {
+	Pool::runAllActions(actions);
+}
+
 string
 SuperGroup::generateSecret() const {
 	return getPool()->randomGenerator->generateAsciiString(43);
