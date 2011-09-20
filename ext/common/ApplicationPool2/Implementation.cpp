@@ -267,6 +267,11 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 			pool->assignSessionsToGetWaiters(actions);
 		}
 		
+		// Temporarily mark this Group as 'not spawning' so
+		// that pool->usage() doesn't take this thread's spawning
+		// state into account.
+		m_spawning = false;
+		
 		done = (unsigned long) count >= options.minProcesses
 			|| pool->atFullCapacity(false);
 		m_spawning = !done;

@@ -1557,18 +1557,21 @@ private:
 	
 public:
 	unsigned int concurrency;
+	unsigned int spawnTime;
 	
 	DummySpawner(const ResourceLocator &resourceLocator)
 		: Spawner(resourceLocator)
 	{
 		count = 0;
 		concurrency = 1;
+		spawnTime = 0;
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
 		SocketPair adminSocket = createUnixSocketPair();
 		SocketListPtr sockets = make_shared<SocketList>();
 		sockets->add("main", "tcp://127.0.0.1:1234", "session", concurrency);
+		syscalls::usleep(spawnTime);
 		
 		lock_guard<boost::mutex> l(lock);
 		count++;
@@ -1578,6 +1581,8 @@ public:
 			SystemTime::getUsec());
 	}
 };
+
+typedef shared_ptr<DummySpawner> DummerSpawnerPtr;
 
 
 class SpawnerFactory {

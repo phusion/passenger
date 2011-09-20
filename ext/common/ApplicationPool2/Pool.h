@@ -543,6 +543,9 @@ public:
 		options2.noop = true;
 		
 		Ticket ticket;
+		// Forcefully create SuperGroup, don't care whether resource limits
+		// actually allow it.
+		createSuperGroup(options);
 		return get(options2, &ticket)->getProcess()->getGroup();
 	}
 	

@@ -161,8 +161,8 @@ namespace tut {
 		currentSession.reset();
 		
 		// Now spawn a process that never finishes.
-		options.spawnMethod  = "direct";
-		options.startCommand = "sleep\1" "60";
+		SpawnerPtr spawner = process1->getGroup()->spawner;
+		dynamic_pointer_cast<DummySpawner>(spawner)->spawnTime = 5000000;
 		pool->asyncGet(options, callback);
 		
 		// Release the session on the first process.
@@ -240,13 +240,68 @@ namespace tut {
 	}
 	
 	TEST_METHOD(8) {
-		// If multiple matching processes exist, and all of them are at
-		// full capacity except one, then asyncGet() will use that.
+		// If multiple matching processes exist, then asyncGet() will use
+		// the one with the smallest usage number.
+		
+		// Spawn 2 processes, each with a concurrency of 2.
+		Options options = createOptions();
+		options.minProcesses = 2;
+		pool->setMax(2);
+		GroupPtr group = pool->findOrCreateGroup(options);
+		dynamic_pointer_cast<DummySpawner>(group->spawner)->concurrency = 2;
+		{
+			LockGuard l(pool->syncher);
+			group->spawn();
+		}
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 2;
+		);
+		
+		// asyncGet() selects some process.
+		pool->asyncGet(options, callback);
+		ensure_equals(number, 1);
+		SessionPtr session1 = currentSession;
+		ProcessPtr process1 = currentSession->getProcess();
+		currentSession.reset();
+		
+		// The first process now has 1 session, so next asyncGet() should
+		// select the other process.
+		pool->asyncGet(options, callback);
+		ensure_equals(number, 2);
+		SessionPtr session2 = currentSession;
+		ProcessPtr process2 = currentSession->getProcess();
+		currentSession.reset();
+		ensure("(1)", process1 != process2);
+		
+		// Both processes now have an equal number of sessions. Next asyncGet()
+		// can select either.
+		pool->asyncGet(options, callback);
+		ensure_equals(number, 3);
+		SessionPtr session3 = currentSession;
+		ProcessPtr process3 = currentSession->getProcess();
+		currentSession.reset();
+		
+		// One process now has the lowest number of sessions. Next
+		// asyncGet() should select that one.
+		pool->asyncGet(options, callback);
+		ensure_equals(number, 4);
+		SessionPtr session4 = currentSession;
+		ProcessPtr process4 = currentSession->getProcess();
+		currentSession.reset();
+		ensure(process3 != process4);
+	}
+	
+	TEST_METHOD(9) {
+		// If multiple matching processes exist, and all of them are at full capacity,
+		// and no more processes may be spawned,
+		// then asyncGet() will put the action on the group's wait queue.
+		// The process that first becomes not at full capacity will process the action.
 		
 		// Spawn 2 processes and open 4 sessions.
 		Options options = createOptions();
+		options.appGroupName = "test";
 		options.minProcesses = 2;
-		pool->setMax(3);
+		pool->setMax(2);
 		GroupPtr group = pool->findOrCreateGroup(options);
 		dynamic_pointer_cast<DummySpawner>(group->spawner)->concurrency = 2;
 		
@@ -265,33 +320,21 @@ namespace tut {
 			result = pool->getProcessCount() == 2;
 		);
 		
-		// Each process now has 2 sessions open and are at full capacity.
-		ProcessPtr process1 = group->processes[0];
-		ProcessPtr process2 = group->processes[1];
-		ensure_equals(process1->sessions, 2);
-		ensure(process1->atFullCapacity());
-		ensure_equals(process2->sessions, 2);
-		ensure(process2->atFullCapacity());
+		SuperGroupPtr superGroup = pool->superGroups.get("test");
+		ensure_equals(superGroup->groups[0]->getWaitlist.size(), 0u);
+		ensure(pool->atFullCapacity());
 		
-		// Spawn another process.
-		group->spawn();
-		EVENTUALLY(5,
-			result = pool->getProcessCount() == 3;
-		);
-		// asyncGet() should now use the newly spawned process.
+		// Now try to open another session.
 		pool->asyncGet(options, callback);
-		SessionPtr session = currentSession;
-		currentSession.reset();
-		ensure(session->getProcess() != process1);
-		ensure(session->getProcess() != process2);
-		ensure_equals(session->getProcess()->sessions, 1);
-	}
-	
-	TEST_METHOD(9) {
-		// If multiple matching processes exist, and all of them are at full capacity,
-		// and no more processes may be spawned,
-		// then asyncGet() will put the action on the group's wait queue.
-		// The process that first becomes not at full capacity will process the action.
+		ensure_equals("The get request has been put on the wait list",
+			pool->superGroups.get("test")->groups[0]->getWaitlist.size(), 1u);
+		
+		// Close an existing session so that one process is no
+		// longer at full capacity.
+		sessions[0].reset();
+		ensure_equals("The get request has been removed from the wait list",
+			pool->superGroups.get("test")->groups[0]->getWaitlist.size(), 0u);
+		ensure(pool->atFullCapacity());
 	}
 	
 	TEST_METHOD(10) {
