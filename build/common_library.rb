@@ -150,7 +150,11 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 				sh "mkdir -p #{output_dir}/Utils" if !File.directory?("#{output_dir}/Utils")
 				sh "mkdir -p #{output_dir}/agents/LoggingAgent" if !File.directory?("#{output_dir}/agents/LoggingAgent")
 				sh "mkdir -p #{output_dir}/ApplicationPool2" if !File.directory?("#{output_dir}/ApplicationPool2")
-				compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
+				if source_file =~ /\.c$/
+					compile_c("ext/common/#{source_file}", "#{flags} -o #{object_file}")
+				else
+					compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
+				end
 			end
 		end
 	end
