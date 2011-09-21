@@ -121,7 +121,7 @@ feedbackFdBecameReadable(ev::io &watcher, int revents) {
 void
 caughtExitSignal(ev::sig &watcher, int revents) {
 	P_DEBUG("Caught signal, exiting...");
-	ev_unloop(eventLoop, EVUNLOOP_ONE);
+	ev_break(eventLoop, EVBREAK_ONE);
 	/* We only consider the "exit" command to be a graceful way to shut down
 	 * the logging agent, so upon receiving an exit signal we want to return
 	 * a non-zero exit code. This is because we want the watchdog to restart

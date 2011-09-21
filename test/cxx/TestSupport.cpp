@@ -226,7 +226,7 @@ struct BackgroundEventLoopPrivate {
 static void
 signalBackgroundEventLoopExit(struct ev_loop *loop, ev_async *async, int revents) {
 	BackgroundEventLoop *bg = (BackgroundEventLoop *) async->data;
-	ev_unloop(bg->loop, EVUNLOOP_ALL);
+	ev_break(bg->loop, EVBREAK_ALL);
 }
 
 static void
@@ -236,7 +236,7 @@ startBackgroundLoop(BackgroundEventLoop *bg) {
 	bg->priv->started = true;
 	bg->priv->cond.notify_all();
 	l.unlock();
-	ev_loop(bg->loop, 0);
+	ev_run(bg->loop, 0);
 }
 
 BackgroundEventLoop::BackgroundEventLoop() {
