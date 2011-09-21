@@ -92,43 +92,56 @@ module PlatformInfo
 	def self.portability_cflags
 		flags = ["-D_REENTRANT -I/usr/local/include"]
 		
-		# Google SparseHash flags.
-		# Figure out header for hash function object and its namespace.
-		# Based on stl_hash.m4 and stl_hash_fun.m4 in the Google SparseHash sources.
-		hash_namespace = nil
-		ok = false
-		['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
-			['ext/hash_map', 'hash_map'].each do |hash_map_header|
+		# There are too many implementations of of the hash map!
+		# Figure out the right one.
+		ok = try_compile(:cxx, %Q{
+			#include <tr1/unordered_map>
+			int
+			main() {
+				std::tr1::unordered_map<int, int> m;
+				return 0;
+			}
+		})
+		if ok
+			flags << "-DHAS_TR1_UNORDERED_MAP"
+		else
+			hash_namespace = nil
+			ok = false
+			['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
+				['hash_map', 'ext/hash_map'].each do |hash_map_header|
+					ok = try_compile(:cxx, %Q{
+						#include <#{hash_map_header}>
+						int
+						main() {
+							#{namespace}::hash_map<int, int> m;
+							return 0;
+						}
+					})
+					if ok
+						hash_namespace = namespace
+						flags << "-DHASH_NAMESPACE=\"#{namespace}\""
+						flags << "-DHASH_MAP_HEADER=\"<#{hash_map_header}>\""
+						flags << "-DHASH_MAP_CLASS=\"hash_map\""
+					end
+					break if ok
+				end
+				break if ok
+			end
+			['ext/hash_fun.h', 'functional', 'tr1/functional',
+			 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
+			 'stl/_hash_fun.h'].each do |hash_function_header|
 				ok = try_compile(:cxx, %Q{
-					#include <#{hash_map_header}>
+					#include <#{hash_function_header}>
 					int
 					main() {
-						#{namespace}::hash_map<int, int> m;
+						#{hash_namespace}::hash<int>()(5);
 						return 0;
 					}
 				})
 				if ok
-					hash_namespace = namespace
-					flags << "-DHASH_NAMESPACE=\"#{namespace}\""
-					flags << "-DHASH_MAP_HEADER=\"<#{hash_map_header}>\""
+					flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
+					break
 				end
-			end
-			break if ok
-		end
-		['ext/hash_fun.h', 'functional', 'tr1/functional',
-		 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
-		 'stl/_hash_fun.h'].each do |hash_function_header|
-			ok = try_compile(:cxx, %Q{
-				#include <#{hash_function_header}>
-				int
-				main() {
-					#{hash_namespace}::hash<int>()(5);
-					return 0;
-				}
-			})
-			if ok
-				flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
-				break
 			end
 		end
 		

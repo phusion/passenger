@@ -29,7 +29,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstddef>
-#include <ext/hash_map>
 
 #include <oxt/macros.hpp>
 

@@ -50,7 +50,7 @@ class StringMap {
 private:
 	struct Entry {
 		string key;
-		pair<StaticString, T> pair;
+		pair<StaticString, T> thePair;
 	};
 	
 	typedef map<StaticString, Entry> InternalMap;
@@ -96,7 +96,7 @@ public:
 		}
 		
 		const pair<const StaticString, const T> &operator*() {
-			return (pair<const StaticString, const T> &) it->second.pair;
+			return (pair<const StaticString, const T> &) it->second.thePair;
 		}
 		
 		const pair<const StaticString, const T> *operator->() {
@@ -140,7 +140,7 @@ public:
 		}
 		
 		pair<StaticString, T> &operator*() {
-			return it->second.pair;
+			return it->second.thePair;
 		}
 		
 		pair<StaticString, T> *operator->() {
@@ -157,7 +157,7 @@ public:
 		if (it == store.end()) {
 			return T();
 		} else {
-			return it->second.pair.second;
+			return it->second.thePair.second;
 		}
 	}
 	
@@ -170,14 +170,14 @@ public:
 			StaticString &originalKey = const_cast<StaticString &>(node.first);
 			Entry &entry = node.second;
 			entry.key = key;
-			entry.pair.first = entry.key;
-			entry.pair.second = value;
+			entry.thePair.first = entry.key;
+			entry.thePair.second = value;
 			originalKey = entry.key;
 			return true;
 		} else {
 			// Key already exists. Update value.
 			Entry &entry = result.first->second;
-			entry.pair.second = value;
+			entry.thePair.second = value;
 			return false;
 		}
 	}
