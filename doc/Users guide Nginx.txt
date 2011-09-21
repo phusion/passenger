@@ -1032,6 +1032,35 @@ applications, each which must be available at all times.
 This option may only occur once, in the 'http' configuration block.
 The default value is '300'.
 
+[[PassengerMaxRequests]]
+==== passenger_max_requests <integer> ====
+The maximum number of requests an application instance will process. After
+serving that many requests, the application instance will be shut down and
+Phusion Passenger will restart it. A value of 0 means that there is no maximum:
+an application instance will thus be shut down when its idle timeout has been
+reached.
+
+This option is useful if your application is leaking memory. By shutting
+it down after a certain number of requests, all of its memory is guaranteed
+to be freed by the operating system.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '0'.
+
+[CAUTION]
+=====================================================
+The <<PassengerMaxRequests,passenger_max_requests>> directive should be considered
+as a workaround for misbehaving applications. It is advised that you fix the
+problem in your application rather than relying on these directives as a
+measure to avoid memory leaks.
+=====================================================
+
 [[PassengerPreStart]]
 ==== passenger_pre_start <url> ====
 By default, Phusion Passenger does not start any application instances until said

@@ -45,18 +45,18 @@
 #include <pwd.h>
 #include <signal.h>
 
-#include "AbstractSpawnManager.h"
-#include "ServerInstanceDir.h"
-#include "FileDescriptor.h"
-#include "Constants.h"
-#include "MessageChannel.h"
-#include "AccountsDatabase.h"
-#include "RandomGenerator.h"
-#include "Exceptions.h"
-#include "Logging.h"
-#include "Utils/Base64.h"
-#include "Utils/SystemTime.h"
-#include "Utils/IOUtils.h"
+#include <AbstractSpawnManager.h>
+#include <ServerInstanceDir.h>
+#include <FileDescriptor.h>
+#include <Constants.h>
+#include <AccountsDatabase.h>
+#include <RandomGenerator.h>
+#include <Exceptions.h>
+#include <Logging.h>
+#include <Utils/Base64.h>
+#include <Utils/SystemTime.h>
+#include <Utils/IOUtils.h>
+#include <Utils/MessageIO.h>
 
 namespace Passenger {
 
@@ -268,9 +268,8 @@ private:
 	FileDescriptor connect() const {
 		TRACE_POINT();
 		FileDescriptor fd = connectToUnixServer(socketFilename.c_str());
-		MessageChannel channel(fd);
 		UPDATE_TRACE_POINT();
-		channel.writeScalar(socketPassword);
+		writeScalarMessage(fd, socketPassword);
 		return fd;
 	}
 	
@@ -286,13 +285,11 @@ private:
 	ProcessPtr sendSpawnCommand(const PoolOptions &options) {
 		TRACE_POINT();
 		FileDescriptor connection;
-		MessageChannel channel;
 		
 		P_DEBUG("Spawning a new application process for " << options.appRoot << "...");
 		
 		try {
 			connection = connect();
-			channel = MessageChannel(connection);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not connect to the spawn server: ") +
 				e.sys());
@@ -337,7 +334,7 @@ private:
 				args.push_back(Base64::encode(password));
 			}
 			
-			channel.write(args);
+			writeArrayMessage(connection, args);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
 				"command to the spawn server: ") + e.sys());
@@ -346,7 +343,7 @@ private:
 		try {
 			UPDATE_TRACE_POINT();
 			// Read status.
-			if (!channel.read(args)) {
+			if (!readArrayMessage(connection, args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
 			}
 			if (args.size() != 1) {
@@ -356,7 +353,7 @@ private:
 				UPDATE_TRACE_POINT();
 				string errorPage;
 				
-				if (!channel.readScalar(errorPage)) {
+				if (!readScalarMessage(connection, errorPage)) {
 					throw SpawnException("The spawn server has exited unexpectedly.");
 				}
 				throw SpawnException("An error occured while spawning the application.",
@@ -367,7 +364,7 @@ private:
 			
 			// Read application info.
 			UPDATE_TRACE_POINT();
-			if (!channel.read(args)) {
+			if (!readArrayMessage(connection, args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
 			}
 			if (args.size() != 3) {
@@ -380,7 +377,7 @@ private:
 			
 			UPDATE_TRACE_POINT();
 			for (i = 0; i < nServerSockets; i++) {
-				if (!channel.read(args)) {
+				if (!readArrayMessage(connection, args)) {
 					throw SpawnException("The spawn server has exited unexpectedly.");
 				}
 				if (args.size() != 3) {
@@ -398,7 +395,7 @@ private:
 		
 		UPDATE_TRACE_POINT();
 		try {
-			ownerPipe = channel.readFileDescriptor();
+			ownerPipe = readFileDescriptorWithNegotiation(connection);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not receive the spawned "
 				"application's owner pipe from the spawn server: ") +
@@ -454,11 +451,9 @@ private:
 	void sendReloadCommand(const string &appRoot) {
 		TRACE_POINT();
 		FileDescriptor connection;
-		MessageChannel channel;
 		
 		try {
 			connection = connect();
-			channel = MessageChannel(connection);
 		} catch (SystemException &e) {
 			e.setBriefMessage("Could not connect to the spawn server");
 			throw;
@@ -468,7 +463,7 @@ private:
 		}
 		
 		try {
-			channel.write("reload", appRoot.c_str(), NULL);
+			writeArrayMessage(connection, "reload", appRoot.c_str(), NULL);
 		} catch (SystemException &e) {
 			e.setBriefMessage("Could not write 'reload' command to the spawn server");
 			throw;

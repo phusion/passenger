@@ -61,6 +61,11 @@ module PlatformInfo
 	end
 	memoize :compiler_supports_wno_attributes_flag?, true
 	
+	def self.compiler_supports_wno_missing_field_initializers_flag?
+		return try_compile(:c, '', '-Wno-missing-field-initializers')
+	end
+	memoize :compiler_supports_wno_missing_field_initializers_flag?
+	
 	# Returns whether compiling C++ with -fvisibility=hidden might result
 	# in tons of useless warnings, like this:
 	# http://code.google.com/p/phusion-passenger/issues/detail?id=526

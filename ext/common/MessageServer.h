@@ -70,7 +70,7 @@ using namespace oxt;
  * - Designed for simple request/response cycles. That is, a client sends a request, and
  *   the server may respond with arbitrary data. The server does not respond sporadically,
  *   i.e. it only responds after a request.
- * - Requests are discrete MessageChannel array messages, not byte streams.
+ * - Requests are MessageIO array messages.
  * - Connections are authenticated. Connecting clients must send a username and password,
  *   which are then checked against an accounts database. The associated account is known
  *   throughout the entire connection life time so that it's possible to implement
@@ -136,7 +136,7 @@ using namespace oxt;
  *       {
  *           if (args[0] == "ping") {
  *               MyContext *myContext = (MyContext *) specificContext.get();
- *               commonContext.channel.write("pong", toString(specificContext->count).c_str(), NULL);
+ *               writeArrayMessage(commonContext.fd, "pong", toString(specificContext->count).c_str(), NULL);
  *               specificContext->count++;
  *               return true;
  *           } else {
@@ -195,7 +195,7 @@ public:
 		
 		/** Returns a string representation for this client context. */
 		string name() {
-			return toString(channel.filenum());
+			return toString(fd);
 		}
 		
 		/**
@@ -210,10 +210,10 @@ public:
 		void requireRights(Account::Rights rights) {
 			if (!account->hasRights(rights)) {
 				P_TRACE(2, "Security error: insufficient rights to execute this command.");
-				channel.write("SecurityException", "Insufficient rights to execute this command.", NULL);
+				writeArrayMessage(fd, "SecurityException", "Insufficient rights to execute this command.", NULL);
 				throw SecurityException("Insufficient rights to execute this command.");
 			} else {
-				channel.write("Passed security", NULL);
+				writeArrayMessage(fd, "Passed security", NULL);
 			}
 		}
 	};
@@ -356,45 +356,45 @@ protected:
 	 *
 	 * @return A smart pointer to an Account object, or NULL if authentication failed.
 	 */
-	AccountPtr authenticate(FileDescriptor &client) {
-		MessageChannel channel(client);
+	AccountPtr authenticate(const FileDescriptor &client) {
 		string username, password;
 		MemZeroGuard passwordGuard(password);
 		unsigned long long timeout = loginTimeout;
 		
 		try {
-			channel.write("version", "1", NULL);
+			writeArrayMessage(client, &timeout, "version", "1", NULL);
 			
 			try {
-				if (!channel.readScalar(username, MESSAGE_SERVER_MAX_USERNAME_SIZE, &timeout)) {
+				if (!readScalarMessage(client, username, MESSAGE_SERVER_MAX_USERNAME_SIZE, &timeout)) {
 					return AccountPtr();
 				}
 			} catch (const SecurityException &) {
-				channel.write("The supplied username is too long.", NULL);
+				writeArrayMessage(client, &timeout, "The supplied username is too long.", NULL);
 				return AccountPtr();
 			}
 			
 			try {
-				if (!channel.readScalar(password, MESSAGE_SERVER_MAX_PASSWORD_SIZE, &timeout)) {
+				if (!readScalarMessage(client, password, MESSAGE_SERVER_MAX_PASSWORD_SIZE, &timeout)) {
 					return AccountPtr();
 				}
 			} catch (const SecurityException &) {
-				channel.write("The supplied password is too long.", NULL);
+				writeArrayMessage(client, &timeout, "The supplied password is too long.", NULL);
 				return AccountPtr();
 			}
 			
 			AccountPtr account = accountsDatabase->authenticate(username, password);
 			passwordGuard.zeroNow();
 			if (account == NULL) {
-				channel.write("Invalid username or password.", NULL);
+				writeArrayMessage(client, &timeout, "Invalid username or password.", NULL);
 				return AccountPtr();
 			} else {
-				channel.write("ok", NULL);
+				writeArrayMessage(client, &timeout, "ok", NULL);
 				return account;
 			}
 		} catch (const SystemException &) {
 			return AccountPtr();
 		} catch (const TimeoutException &) {
+			P_WARN("Login timeout");
 			return AccountPtr();
 		}
 	}
@@ -439,7 +439,7 @@ protected:
 	/**
 	 * The main function for a thread which handles a client.
 	 */
-	void clientHandlingMainLoop(FileDescriptor &client) {
+	void clientHandlingMainLoop(FileDescriptor client) {
 		TRACE_POINT();
 		vector<string> args;
 		
@@ -459,7 +459,7 @@ protected:
 			
 			while (!this_thread::interruption_requested()) {
 				UPDATE_TRACE_POINT();
-				if (!commonContext.channel.read(args)) {
+				if (!readArrayMessage(commonContext.fd, args)) {
 					// Client closed connection.
 					break;
 				}
@@ -503,7 +503,7 @@ public:
 	MessageServer(const string &socketFilename, AccountsDatabasePtr accountsDatabase) {
 		this->socketFilename   = socketFilename;
 		this->accountsDatabase = accountsDatabase;
-		loginTimeout = 2000;
+		loginTimeout = 2000000;
 		startListening();
 	}
 	
@@ -562,7 +562,7 @@ public:
 	}
 	
 	/**
-	 * Sets the maximum number of milliseconds that clients may spend on logging in.
+	 * Sets the maximum number of microseconds that clients may spend on logging in.
 	 * Clients that take longer are disconnected.
 	 *
 	 * @pre timeout != 0

@@ -44,6 +44,7 @@
 #include "../FileDescriptor.h"
 #include "../Exceptions.h"
 #include "../Utils.h"
+#include "../Utils/MessageIO.h"
 
 namespace Passenger {
 namespace ApplicationPool {
@@ -164,13 +165,12 @@ private:
 	 */
 	class EnvironmentVariablesFetcher: public StringListCreator {
 	private:
-		MessageChannel &channel;
+		int fd;
 		PoolOptions &options;
 		mutable StringListPtr result;
 	public:
-		EnvironmentVariablesFetcher(MessageChannel &theChannel, PoolOptions &theOptions)
-			: channel(theChannel),
-			  options(theOptions)
+		EnvironmentVariablesFetcher(int theFd, PoolOptions &theOptions)
+			: fd(theFd), options(theOptions)
 		{ }
 		
 		/**
@@ -189,14 +189,14 @@ private:
 			 * where the connection with the client will be broken.
 			 */
 			try {
-				channel.write("getEnvironmentVariables", NULL);
+				writeArrayMessage(fd, "getEnvironmentVariables", NULL);
 			} catch (const SystemException &e) {
 				throw ClientCommunicationError(
 					"Unable to send a 'getEnvironmentVariables' request to the client",
 					e.code());
 			}
 			try {
-				if (!channel.readScalar(data)) {
+				if (!readScalarMessage(fd, data)) {
 					throw ClientCommunicationError("Unable to read a reply from the client for the 'getEnvironmentVariables' request.");
 				}
 			} catch (const SystemException &e) {
@@ -278,7 +278,7 @@ private:
 		try {
 			PoolOptions options(args, 1, analyticsLogger);
 			options.environmentVariables = ptr(new EnvironmentVariablesFetcher(
-				commonContext.channel, options));
+				commonContext.fd, options));
 			options.initiateSession = false;
 			session = pool->get(options);
 			specificContext->sessions[specificContext->lastSessionID] = session;
@@ -290,23 +290,23 @@ private:
 			if (e.hasErrorPage()) {
 				P_TRACE(3, "Client " << commonContext.name() << ": SpawnException "
 					"occured (with error page)");
-				commonContext.channel.write("SpawnException", e.what(), "true", NULL);
-				commonContext.channel.writeScalar(e.getErrorPage());
+				writeArrayMessage(commonContext.fd, "SpawnException", e.what(), "true", NULL);
+				writeScalarMessage(commonContext.fd, e.getErrorPage());
 			} else {
 				P_TRACE(3, "Client " << commonContext.name() << ": SpawnException "
 					"occured (no error page)");
-				commonContext.channel.write("SpawnException", e.what(), "false", NULL);
+				writeArrayMessage(commonContext.fd, "SpawnException", e.what(), "false", NULL);
 			}
 			failed = true;
 		} catch (const BusyException &e) {
 			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
-			commonContext.channel.write("BusyException", e.what(), NULL);
+			writeArrayMessage(commonContext.fd, "BusyException", e.what(), NULL);
 			failed = true;
 		} catch (const IOException &e) {
 			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
-			commonContext.channel.write("IOException", e.what(), NULL);
+			writeArrayMessage(commonContext.fd, "IOException", e.what(), NULL);
 			failed = true;
 		}
 		UPDATE_TRACE_POINT();
@@ -314,7 +314,8 @@ private:
 			this_thread::disable_syscall_interruption dsi;
 			try {
 				UPDATE_TRACE_POINT();
-				commonContext.channel.write("ok",
+				writeArrayMessage(commonContext.fd,
+					"ok",
 					toString(session->getPid()).c_str(),
 					session->getSocketType().c_str(),
 					session->getSocketName().c_str(),
@@ -344,9 +345,9 @@ private:
 		TRACE_POINT();
 		commonContext.requireRights(Account::DETACH);
 		if (pool->detach(args[1])) {
-			commonContext.channel.write("true", NULL);
+			writeArrayMessage(commonContext.fd, "true", NULL);
 		} else {
-			commonContext.channel.write("false", NULL);
+			writeArrayMessage(commonContext.fd, "false", NULL);
 		}
 	}
 	
@@ -371,19 +372,19 @@ private:
 	void processGetActive(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		commonContext.channel.write(toString(pool->getActive()).c_str(), NULL);
+		writeArrayMessage(commonContext.fd, toString(pool->getActive()).c_str(), NULL);
 	}
 	
 	void processGetCount(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		commonContext.channel.write(toString(pool->getCount()).c_str(), NULL);
+		writeArrayMessage(commonContext.fd, toString(pool->getCount()).c_str(), NULL);
 	}
 	
 	void processGetGlobalQueueSize(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		commonContext.channel.write(toString(pool->getGlobalQueueSize()).c_str(), NULL);
+		writeArrayMessage(commonContext.fd, toString(pool->getGlobalQueueSize()).c_str(), NULL);
 	}
 	
 	void processSetMaxPerApp(CommonClientContext &commonContext, SpecificContext *specificContext, unsigned int maxPerApp) {
@@ -395,13 +396,13 @@ private:
 	void processGetSpawnServerPid(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
-		commonContext.channel.write(toString(pool->getSpawnServerPid()).c_str(), NULL);
+		writeArrayMessage(commonContext.fd, toString(pool->getSpawnServerPid()).c_str(), NULL);
 	}
 	
 	void processInspect(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
-		commonContext.channel.writeScalar(pool->inspect());
+		writeScalarMessage(commonContext.fd, pool->inspect());
 	}
 	
 	void processToXml(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
@@ -410,7 +411,7 @@ private:
 		bool includeSensitiveInfo =
 			commonContext.account->hasRights(Account::INSPECT_SENSITIVE_INFO) &&
 			args[1] == "true";
-		commonContext.channel.writeScalar(pool->toXml(includeSensitiveInfo));
+		writeScalarMessage(commonContext.fd, pool->toXml(includeSensitiveInfo));
 	}
 	
 public:

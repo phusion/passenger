@@ -155,7 +155,7 @@ namespace tut {
 	/***** Test readArrayMessage() and writeArrayMessage() *****/
 	
 	TEST_METHOD(20) {
-		// They work.
+		// Test <= 10 arguments.
 		writeArrayMessage(pipes[1], "ab", "cd", "efg", NULL);
 		writeArrayMessage(pipes[1], "ab", "cd", "efh", NULL);
 		
@@ -182,6 +182,56 @@ namespace tut {
 	}
 	
 	TEST_METHOD(21) {
+		// Test > 10 arguments.
+		writeArrayMessage(pipes[1], "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "a", "b", NULL);
+		writeArrayMessage(pipes[1], "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", NULL);
+		
+		unsigned char buf[26];
+		readExact(pipes[0], buf, 26);
+		ensure_equals(buf[0], 0u);
+		ensure_equals(buf[1], 24u);
+		ensure_equals(buf[2], '1');
+		ensure_equals(buf[3], '\0');
+		ensure_equals(buf[4], '2');
+		ensure_equals(buf[5], '\0');
+		ensure_equals(buf[6], '3');
+		ensure_equals(buf[7], '\0');
+		ensure_equals(buf[8], '4');
+		ensure_equals(buf[9], '\0');
+		ensure_equals(buf[10], '5');
+		ensure_equals(buf[11], '\0');
+		ensure_equals(buf[12], '6');
+		ensure_equals(buf[13], '\0');
+		ensure_equals(buf[14], '7');
+		ensure_equals(buf[15], '\0');
+		ensure_equals(buf[16], '8');
+		ensure_equals(buf[17], '\0');
+		ensure_equals(buf[18], '9');
+		ensure_equals(buf[19], '\0');
+		ensure_equals(buf[20], '0');
+		ensure_equals(buf[21], '\0');
+		ensure_equals(buf[22], 'a');
+		ensure_equals(buf[23], '\0');
+		ensure_equals(buf[24], 'b');
+		ensure_equals(buf[25], '\0');
+		
+		vector<string> args = readArrayMessage(pipes[0]);
+		ensure_equals(args.size(), 12u);
+		ensure_equals(args[0], "c");
+		ensure_equals(args[1], "d");
+		ensure_equals(args[2], "e");
+		ensure_equals(args[3], "f");
+		ensure_equals(args[4], "g");
+		ensure_equals(args[5], "h");
+		ensure_equals(args[6], "i");
+		ensure_equals(args[7], "j");
+		ensure_equals(args[8], "k");
+		ensure_equals(args[9], "l");
+		ensure_equals(args[10], "m");
+		ensure_equals(args[11], "n");
+	}
+	
+	TEST_METHOD(22) {
 		// readArrayMessage() throws EOFException on premature EOF.
 		writeExact(pipes[1], "\x00");
 		pipes[1].close();
@@ -201,7 +251,7 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(22) {
+	TEST_METHOD(23) {
 		// Test timeout.
 		unsigned long long timeout = 30000;
 		unsigned long long startTime = SystemTime::getUsec();
@@ -228,7 +278,7 @@ namespace tut {
 		}
 	}
 	
-	/***** Test readArrayMessage() and writeArrayMessage() *****/
+	/***** Test readScalarMessage() and writeScalarMessage() *****/
 	
 	TEST_METHOD(30) {
 		// They work.

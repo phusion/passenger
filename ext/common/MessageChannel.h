@@ -62,68 +62,10 @@ using namespace oxt;
 
 
 /**
- * Convenience class for I/O operations on file descriptors.
- *
- * This class provides convenience methods for:
- *  - sending and receiving raw data over a file descriptor.
- *  - sending and receiving messages over a file descriptor.
- *  - file descriptor passing over a Unix socket.
- *  - data size limit enforcement and time constraint enforcement.
- * All of these methods use exceptions for error reporting.
- *
- * There are two kinds of messages:
- *  - Array messages. These are just a list of strings, and the message
- *    itself has a specific length. The contained strings may not
- *    contain NUL characters (<tt>'\\0'</tt>). Note that an array message
- *    must have at least one element.
- *  - Scalar messages. These are byte strings which may contain arbitrary
- *    binary data. Scalar messages also have a specific length.
- * The protocol is designed to be low overhead, easy to implement and
- * easy to parse.
- *
- * MessageChannel is to be wrapped around a file descriptor. For example:
- * @code
- *    int p[2];
- *    pipe(p);
- *    MessageChannel channel1(p[0]);
- *    MessageChannel channel2(p[1]);
- *    
- *    // Send an array message.
- *    channel2.write("hello", "world !!", NULL);
- *    list<string> args;
- *    channel1.read(args);    // args now contains { "hello", "world !!" }
- *
- *    // Send a scalar message.
- *    channel2.writeScalar("some long string which can contain arbitrary binary data");
- *    string str;
- *    channel1.readScalar(str);
- * @endcode
- *
- * The life time of a MessageChannel is independent from that of the
- * wrapped file descriptor. If a MessageChannel object is destroyed,
- * the file descriptor is not automatically closed. Call close()
- * if you want to close the file descriptor.
- *
- * @note I/O operations are not buffered.
- * @note Be careful with mixing the sending/receiving of array messages,
- *    scalar messages and file descriptors. If you send a collection of any
- *    of these in a specific order, then the receiving side must receive them
- *    in the exact some order. So suppose you first send a message, then a
- *    file descriptor, then a scalar, then the receiving side must first
- *    receive a message, then a file descriptor, then a scalar. If the
- *    receiving side does things in the wrong order then bad things will
- *    happen.
- * @note MessageChannel is not thread-safe, but is reentrant.
- * @note Some methods throw SecurityException and TimeoutException. When these
- *    exceptions are thrown, the channel will be left in an inconsistent state
- *    because only parts of the data have been read. You should close the channel
- *    after having caught these exceptions.
- *
- * @ingroup Support
+ * Convenience wrapper class for MessageIO operations on file descriptors.
  */
 class MessageChannel {
 private:
-	const static char DELIMITER = '\0';
 	int fd;
 	
 	#ifdef __OpenBSD__
@@ -196,8 +138,24 @@ public:
 	 * @see read(), write(const char *, ...)
 	 */
 	template<typename StringArrayType>
-	void write(const StringArrayType &args) {
+	void writeEx(const StringArrayType &args) {
 		writeArrayMessage(fd, args);
+	}
+	
+	void write(const vector<StaticString> &args) {
+		writeArrayMessageEx(fd, args);
+	}
+	
+	void write(const vector<string> &args) {
+		writeArrayMessageEx(fd, args);
+	}
+	
+	void write(const list<StaticString> &args) {
+		writeArrayMessageEx(fd, args);
+	}
+	
+	void write(const list<string> &args) {
+		writeArrayMessageEx(fd, args);
 	}
 	
 	/**
@@ -465,9 +423,9 @@ public:
 	 */
 	int readFileDescriptor(bool negotiate = true) {
 		if (negotiate) {
-			Passenger::readFileDescriptorWithNegotiation(fd);
+			return Passenger::readFileDescriptorWithNegotiation(fd);
 		} else {
-			Passenger::readFileDescriptor(fd);
+			return Passenger::readFileDescriptor(fd);
 		}
 	}
 	
