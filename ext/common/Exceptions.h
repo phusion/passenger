@@ -235,6 +235,7 @@ public:
 		: msg(message), m_errorPage(errorPage)
 	{
 		assert(!isHTML
+			|| errorKind == UNDEFINED_ERROR
 			|| errorKind == PRELOADER_STARTUP_EXPLAINABLE_ERROR
 			|| errorKind == APP_STARTUP_EXPLAINABLE_ERROR);
 		this->errorKind = errorKind;

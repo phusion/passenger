@@ -84,10 +84,8 @@ namespace tut {
 		shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
 			spawner->spawn(options);
-			fail("Exception expected");
-		} catch (const IOException &) {
-			// Pass.
-		} catch (const SystemException &) {
+			fail("SpawnException expected");
+		} catch (const SpawnException &) {
 			// Pass.
 		}
 	}

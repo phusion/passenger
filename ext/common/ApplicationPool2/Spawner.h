@@ -1200,7 +1200,18 @@ private:
 	}
 	
 	SpawnResult sendSpawnCommand(const Options &options) {
-		FileDescriptor fd = connectToServer(socketAddress);
+		FileDescriptor fd;
+		try {
+			fd = connectToServer(socketAddress);
+		} catch (const SystemException &e) {
+			BackgroundIOCapturerPtr stderrCapturer;
+			throwPreloaderSpawnException("An error occurred while starting "
+				"the application. Unable to connect to the preloader's "
+				"socket: " + string(e.what()),
+				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+				stderrCapturer);
+		}
+		
 		BufferedIO io(fd);
 		unsigned long long timeout = options.startTimeout * 1000;
 		string result;
@@ -1336,6 +1347,8 @@ public:
 		} catch (const SystemException &e) {
 			result = sendSpawnCommandAgain(e, options);
 		} catch (const IOException &e) {
+			result = sendSpawnCommandAgain(e, options);
+		} catch (const SpawnException &e) {
 			result = sendSpawnCommandAgain(e, options);
 		}
 		
