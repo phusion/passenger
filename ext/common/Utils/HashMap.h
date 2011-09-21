@@ -30,7 +30,10 @@
  * There are too many ways to include hash_map/unordered_map!
  * This header autodetects the correct method.
  */
-#if defined(HASH_NAMESPACE) && defined(HASH_MAP_HEADER)
+#if defined(HAS_TR1_UNORDERED_MAP)
+	#include <tr1/unordered_map>
+	#define HashMap std::tr1::unordered_map
+#elif defined(HASH_NAMESPACE) && defined(HASH_MAP_HEADER)
 	#include HASH_MAP_HEADER
 	#define HashMap HASH_NAMESPACE::hash_map
 #elif defined(__GNUC__)
@@ -40,7 +43,7 @@
 	#include <hash_map>
 	#define HashMap stdext::hash_map
 #else
-	#include <unordered_map>
+	#include <tr/unordered_map>
 	#define HashMap std::tr1::unordered_map;
 #endif
 
