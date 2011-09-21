@@ -863,7 +863,7 @@ private:
 			exitTimer.stop();
 			exitRequested = false;
 			refuseNewConnections = false;
-			ev_unloop(getLoop(), EVUNLOOP_ONE);
+			ev_break(getLoop(), EVBREAK_ONE);
 		}
 	}
 	
@@ -1110,7 +1110,7 @@ protected:
 			}
 			if (args.size() == 2 && args[1] == "immediately") {
 				// Immediate exit.
-				ev_unloop(getLoop(), EVUNLOOP_ONE);
+				ev_break(getLoop(), EVBREAK_ONE);
 			} else if (args.size() == 2 && args[1] == "semi-gracefully") {
 				// Semi-graceful exit: refuse new connections, shut down
 				// a few seconds after the last client has disconnected.
