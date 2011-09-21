@@ -33,7 +33,9 @@ end
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.
 # Should be included last in the command string, even after PlatformInfo.portability_cflags.
-EXTRA_CXXFLAGS = "-Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-missing-field-initializers -Wno-long-long #{OPTIMIZATION_FLAGS}".strip
+EXTRA_CXXFLAGS = "-Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
+EXTRA_CXXFLAGS << " -Wno-missing-field-initializers" if PlatformInfo.compiler_supports_wno_missing_field_initializers_flag?
+EXTRA_CXXFLAGS << " #{OPTIMIZATION_FLAGS}" if !OPTIMIZATION_FLAGS.empty?
 
 # Extra linker flags that should always be passed to the linker.
 # Should be included last in the command string, even after PlatformInfo.portability_ldflags.
