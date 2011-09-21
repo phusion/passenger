@@ -115,6 +115,7 @@ protected:
 		int target;
 		oxt::thread thr;
 		string data;
+		bool stopped;
 		
 		void capture() {
 			TRACE_POINT();
@@ -147,11 +148,14 @@ protected:
 			: fd(_fd),
 			  target(_target),
 			  thr(boost::bind(&BackgroundIOCapturer::capture, this),
-			      "Background I/O capturer", 64 * 1024)
+			      "Background I/O capturer", 64 * 1024),
+			  stopped(false)
 			{ }
 		
 		~BackgroundIOCapturer() {
-			thr.interrupt_and_join();
+			if (!stopped) {
+				thr.interrupt_and_join();
+			}
 		}
 		
 		const FileDescriptor &getFd() const {
@@ -160,6 +164,7 @@ protected:
 		
 		const string &stop() {
 			thr.interrupt_and_join();
+			stopped = true;
 			return data;
 		}
 	};
