@@ -882,8 +882,8 @@ private:
 			execvp(command[0].c_str(), (char * const *) args.get());
 			
 			int e = errno;
-			fpurge(stdout);
-			fpurge(stderr);
+			purgeStdio(stdout);
+			purgeStdio(stderr);
 			printf("Error\n\n");
 			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
 				strerror(e), e);
@@ -1522,8 +1522,8 @@ public:
 			execvp(args[0], (char * const *) args.get());
 			
 			int e = errno;
-			fpurge(stdout);
-			fpurge(stderr);
+			purgeStdio(stdout);
+			purgeStdio(stderr);
 			printf("Error\n\n");
 			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
 				strerror(e), e);

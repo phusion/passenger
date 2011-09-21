@@ -43,7 +43,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <limits.h>
+#include <limits.h> // Also for __GLIBC__ macro.
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
@@ -51,6 +51,13 @@
 
 #ifdef __linux__
 	#include <sys/syscall.h>
+#endif
+
+#if defined(__APPLE__)
+	#define HAVE_FPURGE
+#elif defined(__GLIBC__)
+	#include <stdio_ext.h>
+	#define HAVE___FPURGE
 #endif
 
 #include "Timer.h"
@@ -73,6 +80,19 @@ using namespace oxt;
 
 static WritevFunction writevFunction = syscalls::writev;
 
+
+bool
+purgeStdio(FILE *f) {
+	#if defined(HAVE_FPURGE)
+		fpurge(f);
+		return true;
+	#elif defined(HAVE___FPURGE)
+		__fpurge(f);
+		return true;
+	#else
+		return false;
+	#endif
+}
 
 ServerAddressType
 getSocketAddressType(const StaticString &address) {

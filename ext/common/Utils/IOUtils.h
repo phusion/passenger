@@ -27,6 +27,7 @@
 
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <cstdio>
 #include <unistd.h>
 #include <string>
 #include <vector>
@@ -44,6 +45,8 @@ enum ServerAddressType {
 };
 
 typedef ssize_t (*WritevFunction)(int fildes, const struct iovec *iov, int iovcnt);
+
+bool purgeStdio(FILE *f);
 
 /**
  * Accepts a server address in one of the following formats, and returns which one it is:
