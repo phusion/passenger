@@ -410,7 +410,16 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	do {
 		ret = ::nanosleep(&req2, &rem2);
 		e = errno;
-		req2 = rem2;
+		// nanosleep() on some systems is sometimes buggy. rem2
+		// could end up containing a tv_sec with a value near 2^32-1,
+		// probably because of integer wrapping bugs in the kernel.
+		// So we check for those.
+		if (rem2.tv_sec < req->tv_sec) {
+			req2 = rem2;
+		} else {
+			req2.tv_sec = 0;
+			req2.tv_nsec = 0;
+		}
 	} while (ret == -1 && e == EINTR && !this_thread::syscalls_interruptable());
 	if (ret == -1 && e == EINTR && this_thread::syscalls_interruptable()) {
 		throw thread_interrupted();
