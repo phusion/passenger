@@ -206,6 +206,11 @@ public:
 	 * @invariant session >= 0
 	 */
 	int sessions;
+	enum {
+		ENABLED,
+		DISABLING,
+		DISABLED
+	} enabled;
 	
 	
 	Process(SafeLibev *_libev,
@@ -223,7 +228,9 @@ public:
 		  errorPipe(_errorPipe),
 		  sockets(_sockets),
 		  spawnStartTime(_spawnStartTime),
-		  forwardStderr(_forwardStderr)
+		  forwardStderr(_forwardStderr),
+		  sessions(0),
+		  enabled(ENABLED)
 	{
 		if (errorPipe != -1) {
 			errorPipeWatcher.set<Process, &Process::onErrorPipeReadable>(this);
@@ -237,7 +244,6 @@ public:
 		
 		lastUsed  = SystemTime::getUsec();
 		spawnTime = lastUsed;
-		sessions  = 0;
 	}
 	
 	~Process() {

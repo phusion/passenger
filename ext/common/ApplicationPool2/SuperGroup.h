@@ -151,8 +151,8 @@ private:
 		return make_pair(GroupPtr(), 0);
 	}
 	
-	void detachGroup(const GroupPtr &group) {
-		group->detachAll();
+	void detachGroup(const GroupPtr &group, vector<Callback> &postLockActions) {
+		group->detachAll(postLockActions);
 		group->setSuperGroup(SuperGroupPtr());
 		while (!group->getWaitlist.empty()) {
 			getWaitlist.push(group->getWaitlist.front());
@@ -160,14 +160,14 @@ private:
 		}
 	}
 	
-	void detachGroups(const vector<GroupPtr> &groups) {
+	void detachGroups(const vector<GroupPtr> &groups, vector<Callback> &postLockActions) {
 		vector<GroupPtr>::const_iterator it, end = groups.end();
 		
 		for (it = groups.begin(); it != end; it++) {
 			const GroupPtr &group = *it;
 			// doRestart() may temporarily nullify elements in 'groups'.
 			if (group != NULL) {
-				detachGroup(group);
+				detachGroup(group, postLockActions);
 			}
 		}
 	}
@@ -275,6 +275,7 @@ private:
 		vector<GroupPtr> updatedGroups;
 		vector<GroupPtr> newGroups;
 		vector<GroupPtr>::const_iterator g_it;
+		vector<Callback> actions;
 		this->options = options;
 		
 		// Update the component information for existing groups.
@@ -301,7 +302,7 @@ private:
 		
 		// Some components might have been deleted, so delete the
 		// corresponding groups.
-		detachGroups(groups);
+		detachGroups(groups, actions);
 		
 		// Tell all previous existing groups to restart.
 		for (g_it = updatedGroups.begin(); g_it != updatedGroups.end(); g_it++) {
@@ -312,7 +313,6 @@ private:
 		groups = allGroups;
 		defaultGroup = findDefaultGroup(allGroups);
 		setState(READY);
-		vector<Callback> actions;
 		assignGetWaitlistToGroups(actions);
 		
 		verifyInvariants();
@@ -426,13 +426,13 @@ public:
 	 * the getWaitlist and do something with it, otherwise the invariant
 	 * will be broken.
 	 */
-	void destroy(bool allowReinitialization = true) {
+	void destroy(vector<Callback> &postLockActions, bool allowReinitialization = true) {
 		verifyInvariants();
 		switch (state) {
 		case INITIALIZING:
 		case READY:
 		case RESTARTING:
-			detachGroups(groups);
+			detachGroups(groups, postLockActions);
 			defaultGroup = NULL;
 			if (getWaitlist.empty() || !allowReinitialization) {
 				setState(DESTROYING);

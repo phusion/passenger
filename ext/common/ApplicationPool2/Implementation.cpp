@@ -134,10 +134,12 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	: superGroup(_superGroup),
 	  componentInfo(info)
 {
-	secret     = generateSecret();
-	count      = 0;
-	spawner    = getPool()->spawnerFactory->create(options);
-	m_spawning = false;
+	secret         = generateSecret();
+	count          = 0;
+	disablingCount = 0;
+	disabledCount  = 0;
+	spawner        = getPool()->spawnerFactory->create(options);
+	m_spawning     = false;
 	if (options.restartDir.empty()) {
 		restartFile = options.appRoot + "/tmp/restart.txt";
 		alwaysRestartFile = options.appRoot + "/always_restart.txt";
@@ -254,7 +256,7 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 		
 		vector<Callback> actions;
 		if (process != NULL) {
-			attach(process);
+			attach(process, actions);
 			if (getWaitlist.empty()) {
 				pool->assignSessionsToGetWaiters(actions);
 			} else {
@@ -291,13 +293,22 @@ Group::shouldSpawn() const {
 
 void
 Group::restart(const Options &options) {
+	vector<Callback> actions;
+	
 	secret = generateSecret();
 	resetOptions(options);
 	spawner = getPool()->spawnerFactory->create(options);
 	while (!processes.empty()) {
 		ProcessPtr process = processes.front();
-		detach(process);
+		detach(process, actions);
 		processes.pop_front();
+	}
+	
+	if (!actions.empty()) {
+		getPool()->nonInterruptableThreads.create_thread(
+			boost::bind(Pool::runAllActionsWithCopy, actions),
+			"Post lock actions runner",
+			64 * 1024);
 	}
 }
 

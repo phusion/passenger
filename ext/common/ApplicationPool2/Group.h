@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <queue>
+#include <deque>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -41,6 +42,16 @@ private:
 		SessionPtr session;
 	};
 	
+	struct DisableWaiter {
+		ProcessPtr process;
+		Callback callback;
+		
+		DisableWaiter(const ProcessPtr &_process, const Callback &_callback)
+			: process(_process),
+			  callback(_callback)
+			{ }
+	};
+	
 	mutable boost::mutex backrefSyncher;
 	weak_ptr<SuperGroup> superGroup;
 	CachedFileStat cstat;
@@ -66,16 +77,22 @@ private:
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
 		
-		// Verify processes and pqueue invariants.
-		assert(processes.empty() == (pqueue.top() == NULL));
 		assert(count >= 0);
+		assert(0 <= disablingCount && disablingCount <= count);
 		assert(processes.empty() == (count == 0));
+		assert(processes.empty() == (pqueue.top() == NULL));
+		assert(disabledCount >= 0);
+		assert(disabledProcesses.empty() == (disabledCount == 0));
+		assert(!( count > 0 && disablingCount == count ) || ( spawning() ));
 		
 		// Verify getWaitlist invariants.
 		assert(!( !getWaitlist.empty() ) || ( processes.empty() || pqueue.top()->atFullCapacity() ));
 		assert(!( !processes.empty() && !pqueue.top()->atFullCapacity() ) || ( getWaitlist.empty() ));
 		assert(!( processes.empty() && !spawning() ) || ( getWaitlist.empty() ));
 		assert(!( !getWaitlist.empty() ) || ( !processes.empty() || spawning() ));
+		
+		// Verify disableWaitlist invariants.
+		assert((int) disableWaitlist.size() >= disablingCount);
 	}
 	
 	void resetOptions(const Options &newOptions) {
@@ -170,6 +187,21 @@ private:
 		}
 	}
 	
+	void removeFromDisableWaitlist(const ProcessPtr &p, vector<Callback> &postLockActions) {
+		deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
+		deque<DisableWaiter> newList;
+		for (it = disableWaitlist.begin(); it != disableWaitlist.end(); it++) {
+			const DisableWaiter &waiter = *it;
+			const ProcessPtr process = waiter.process;
+			if (process == p) {
+				postLockActions.push_back(waiter.callback);
+			} else {
+				newList.push_back(waiter);
+			}
+		}
+		disableWaitlist = newList;
+	}
+	
 public:
 	Options options;
 	string name;
@@ -177,18 +209,36 @@ public:
 	ComponentInfo componentInfo;
 	
 	/**
-	 * All processes in this group are stored in 'processes'. 'pqueue'
-	 * orders them according to usage() values from small to large.
+	 * 'processes' contains all enabled processes in this group.
+	 * 'disabledProcesses' contains all disabled processes in this group.
+	 * They do not intersect.
 	 *
-	 * Invariant:
-	 *    processes.empty() == (pqueue.top() == NULL)
+	 * 'pqueue' orders all enabled processes according to usage() values, from small to large.
+	 * 'count' indicates the total number of enabled processes in this group.
+	 * 'disablingCount' indicates the number of processes in 'processes' with enabled == DISABLING.
+	 * 'disabledCount' indicates the number of disabled processes.
+	 *
+	 * Invariants:
+	 *    count >= 0
+	 *    0 <= disablingCount <= count
 	 *    processes.size() == count
+	 *    processes.empty() == (pqueue.top() == NULL)
+	 *    disabledProcesses.size() == disabledCount
 	 *    if pqueue.top().atFullCapacity():
-	 *       All processes are at full capacity.
+	 *       All enabled processes are at full capacity.
+	 *    if (count > 0) and (disablingCount == count):
+	 *       spawning()
+	 *    for all process in processes:
+	 *       process.enabled == Process::ENABLED || process.enabled == Process::DISABLING
+	 *    for all process in disabledProcesses:
+	 *       process.enabled == Process::DISABLED
 	 */
 	int count;
-	ProcessList processes;
+	int disablingCount;
+	int disabledCount;
 	PriorityQueue<Process> pqueue;
+	ProcessList processes;
+	ProcessList disabledProcesses;
 	
 	/**
 	 * get() requests for this group that cannot be immediately satisfied are
@@ -197,9 +247,9 @@ public:
 	 *
 	 * Invariant 1:
 	 *    if getWaitlist is non-empty:
-	 *       processes.empty() or (all processes are at full capacity)
+	 *       processes.empty() or (all enabled processes are at full capacity)
 	 * Equivalently:
-	 *    if !processes.empty() and (a process is not at full capacity):
+	 *    if !processes.empty() and (an enabled process is not at full capacity):
 	 *        getWaitlist is empty.
 	 *
 	 * Invariant 2:
@@ -210,6 +260,11 @@ public:
 	 *       !processes.empty() || spawning()
 	 */
 	queue<GetWaiter> getWaitlist;
+	/**
+	 * Invariant:
+	 *    disableWaitlist.size() >= disablingCount
+	 */
+	deque<DisableWaiter> disableWaitlist;
 	
 	SpawnerPtr spawner;
 	bool m_spawning;
@@ -278,39 +333,151 @@ public:
 		return getSuperGroup() == NULL;
 	}
 	
-	void attach(const ProcessPtr &process) {
+	/**
+	 * Attaches the given process to this Group and mark it as enabled. This
+	 * function doesn't touch getWaitlist so be sure to fix its invariants
+	 * afterwards if necessary.
+	 */
+	void attach(const ProcessPtr &process, vector<Callback> &postLockActions) {
+		assert(process->getGroup() == NULL);
 		process->setGroup(shared_from_this());
 		processes.push_back(process);
 		process->it = processes.last_iterator();
 		process->pqHandle = pqueue.push(process.get(), process->usage());
+		process->enabled = Process::ENABLED;
 		count++;
+		
+		// Disable all processes in 'disableWaitlist' and call their callbacks
+		// outside the lock.
+		deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
+		postLockActions.reserve(postLockActions.size() + disableWaitlist.size());
+		for (it = disableWaitlist.begin(); it != disableWaitlist.end(); it++) {
+			const DisableWaiter &waiter = *it;
+			const ProcessPtr process = waiter.process;
+			// The same process can appear multiple times in disableWaitlist.
+			assert(process->enabled == Process::DISABLING
+				|| process->enabled == Process::DISABLED);
+			if (process->enabled == Process::DISABLING) {
+				process->enabled = Process::DISABLED;
+				processes.erase(process->it);
+				pqueue.erase(process->pqHandle);
+				disabledProcesses.push_back(process);
+				process->it = disabledProcesses.last_iterator();
+				count--;
+				disablingCount--;
+				disabledCount++;
+			}
+			postLockActions.push_back(waiter.callback);
+		}
+		disableWaitlist.clear();
 	}
 	
 	/**
 	 * Detaches the given process from this Group. This function doesn't touch
 	 * getWaitlist so be sure to fix its invariants afterwards if necessary.
 	 */
-	void detach(const ProcessPtr &process) {
-		assert(process->group.lock().get() == this);
-		assert(count > 0);
-		process->setGroup(GroupPtr());
-		processes.erase(process->it);
-		pqueue.erase(process->pqHandle);
-		count--;
+	void detach(const ProcessPtr &process, vector<Callback> &postLockActions) {
+		assert(process->getGroup().get() == this);
+		if (process->enabled == Process::ENABLED || process->enabled == Process::DISABLING) {
+			assert(count > 0);
+			process->setGroup(GroupPtr());
+			processes.erase(process->it);
+			pqueue.erase(process->pqHandle);
+			count--;
+			if (process->enabled == Process::DISABLING) {
+				disablingCount--;
+				removeFromDisableWaitlist(process, postLockActions);
+			}
+		} else {
+			assert(!disabledProcesses.empty());
+			process->setGroup(GroupPtr());
+			disabledProcesses.erase(process->it);
+			disabledCount--;
+		}
 	}
 	
 	/**
 	 * Detaches all processes from this Group. This function doesn't touch
 	 * getWaitlist so be sure to fix its invariants afterwards if necessary.
 	 */
-	void detachAll() {
+	void detachAll(vector<Callback> &postLockActions) {
 		ProcessList::iterator it, end = processes.end();
 		for (it = processes.begin(); it != end; it++) {
-			(*it)->group.reset();
+			(*it)->setGroup(GroupPtr());
 		}
+		
 		processes.clear();
+		disabledProcesses.clear();
 		pqueue.clear();
 		count = 0;
+		disablingCount = 0;
+		disabledCount = 0;
+		
+		postLockActions.reserve(disableWaitlist.size());
+		while (!disableWaitlist.empty()) {
+			const DisableWaiter &waiter = disableWaitlist.front();
+			assert(waiter.process->enabled == Process::DISABLING);
+			postLockActions.push_back(waiter.callback);
+			disableWaitlist.pop_front();
+		}
+	}
+	
+	/**
+	 * Marks the given process as enabled. This function doesn't touch getWaitlist
+	 * so be sure to fix its invariants afterwards if necessary.
+	 */
+	void enable(const ProcessPtr &process, vector<Callback> &postLockActions) {
+		assert(process->getGroup().get() == this);
+		if (process->enabled == Process::DISABLING) {
+			process->enabled = Process::ENABLED;
+			disablingCount--;
+			removeFromDisableWaitlist(process, postLockActions);
+		} else if (process->enabled == Process::DISABLED) {
+			disabledProcesses.erase(process->it);
+			processes.push_back(process);
+			process->it = processes.last_iterator();
+			process->pqHandle = pqueue.push(process.get(), process->usage());
+			process->enabled = Process::ENABLED;
+			count++;
+			disabledCount--;
+		}
+	}
+	
+	/**
+	 * Marks the given process as disabled.
+	 */
+	bool disable(const ProcessPtr &process, const Callback &callback) {
+		assert(process->getGroup().get() == this);
+		if (process->enabled == Process::ENABLED) {
+			assert(count > 0);
+			if (count - disablingCount == 1) {
+				/* All processes are going to be disabled, so in order
+				 * to avoid blocking requests we first spawn a new process
+				 * and disable this process after the other one is done
+				 * spawning. We do this irregardless of resource limits
+				 * because we assume the administrator knows what he's
+				 * doing.
+				 */
+				process->enabled = Process::DISABLING;
+				disablingCount++;
+				disableWaitlist.push_back(DisableWaiter(process, callback));
+				spawn();
+				return false;
+			} else {
+				assert(count - disablingCount > 1);
+				processes.erase(process->it);
+				disabledProcesses.push_back(process);
+				pqueue.erase(process->pqHandle);
+				process->it = disabledProcesses.last_iterator();
+				process->enabled = Process::DISABLED;
+				return true;
+			}
+		} else if (process->enabled == Process::DISABLING) {
+			disableWaitlist.push_back(DisableWaiter(process, callback));
+			return false;
+		} else {
+			return true;
+		}
 	}
 	
 	unsigned int usage() const {
@@ -327,6 +494,7 @@ public:
 		}
 		return usage() == 0
 			&& getWaitlist.empty()
+			&& disabledProcesses.empty()
 			&& options.getSpawnerTimeout() != 0
 			&& now - spawner->lastUsed() >
 				(unsigned long long) options.getSpawnerTimeout() * 1000000;

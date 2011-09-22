@@ -107,6 +107,10 @@ public:
 		}
 	}
 	
+	static void runAllActionsWithCopy(vector<Callback> actions) {
+		runAllActions(actions);
+	}
+	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
 		assert(!( !getWaitlist.empty() ) || ( atFullCapacity(false) ));
@@ -247,11 +251,11 @@ public:
 	 * the SuperGroup may have a non-empty getWaitlist so be sure to do
 	 * something with it.
 	 */
-	void forceDetachSuperGroup(const SuperGroupPtr &superGroup) {
+	void forceDetachSuperGroup(const SuperGroupPtr &superGroup, vector<Callback> &postLockActions) {
 		bool removed = superGroups.remove(superGroup->name);
 		assert(removed);
 		(void) removed; // Shut up compiler warning.
-		superGroup->destroy(false);
+		superGroup->destroy(postLockActions, false);
 		superGroup->setPool(PoolPtr());
 	}
 	
@@ -273,6 +277,7 @@ public:
 		ScopedLock lock(syncher);
 		SuperGroupMap::iterator it, end = superGroups.end();
 		vector<SuperGroupPtr> superGroupsToDetach;
+		vector<Callback> actions;
 		unsigned long long now = SystemTime::getUsec();
 		unsigned long long nextDeadline = 0;
 		
@@ -298,7 +303,7 @@ public:
 					 && process->lastUsed - now >= maxIdleTime) {
 						ProcessList::iterator prev = p_it;
 						prev--;
-						group->detach(process);
+						group->detach(process, actions);
 						p_it = prev;
 					} else {
 						unsigned long long deadline =
@@ -333,7 +338,6 @@ public:
 		}
 		
 		vector<SuperGroupPtr>::const_iterator it2;
-		vector<Callback> actions;
 		for (it2 = superGroupsToDetach.begin(); it2 != superGroupsToDetach.end(); it2++) {
 			detachSuperGroup(*it2, false, &actions);
 		}
@@ -443,6 +447,8 @@ public:
 			verifyInvariants();
 			
 		} else {
+			vector<Callback> actions;
+			
 			/* Uh oh, the app super group isn't in the pool but we don't
 			 * have the resources to make a new one. The sysadmin should
 			 * configure the system to let something like this happen
@@ -476,10 +482,10 @@ public:
 				superGroup = group->getSuperGroup();
 				assert(superGroup != NULL);
 				
-				group->detach(process);
+				group->detach(process, actions);
 				if (superGroup->garbageCollectable()) {
 					assert(group->garbageCollectable());
-					forceDetachSuperGroup(superGroup);
+					forceDetachSuperGroup(superGroup, actions);
 					assert(superGroup->getWaitlist.empty());
 				} else if (group->processes.empty()
 				        && !group->spawning()
@@ -515,6 +521,18 @@ public:
 			assert(atFullCapacity(false));
 			verifyInvariants();
 			verifyExpensiveInvariants();
+			
+			if (!actions.empty()) {
+				if (lockNow) {
+					lock.unlock();
+					runAllActions(actions);
+				} else {
+					// This state is not allowed. If we reach
+					// here then it probably indicates a bug in
+					// the test suite.
+					abort();
+				}
+			}
 		}
 	}
 	
@@ -657,7 +675,9 @@ public:
 				verifyInvariants();
 				verifyExpensiveInvariants();
 				
-				forceDetachSuperGroup(superGroup);
+				vector<Callback> actions;
+				
+				forceDetachSuperGroup(superGroup, actions);
 				/* If this SuperGroup had get waiters, either
 				 * on itself or in one of its groups, then we must
 				 * reprocess them immediately. Detaching such a
@@ -665,7 +685,6 @@ public:
 				 */
 				migrateSuperGroupGetWaitlistToPool(superGroup);
 				
-				vector<Callback> actions;
 				assignSessionsToGetWaiters(actions);
 				possiblySpawnMoreProcessesForExistingGroups();
 				
@@ -675,8 +694,14 @@ public:
 				if (lock) {
 					l.unlock();
 					runAllActions(actions);
-				} else {
+				} else if (postLockActions->empty()) {
 					*postLockActions = actions;
+				} else {
+					postLockActions->reserve(postLockActions->size() +
+						actions.size());
+					for (unsigned int i = 0; i < actions.size(); i++) {
+						postLockActions->push_back(actions[i]);
+					}
 				}
 				
 				return true;
@@ -694,11 +719,12 @@ public:
 		if (group != NULL && group->getPool().get() == this) {
 			verifyInvariants();
 			
+			vector<Callback> actions;
 			SuperGroupPtr superGroup = group->getSuperGroup();
 			assert(superGroup->state != SuperGroup::INITIALIZING);
 			assert(superGroup->getWaitlist.empty());
 			
-			group->detach(process);
+			group->detach(process, actions);
 			if (group->processes.empty()
 			 && !group->spawning()
 			 && !group->getWaitlist.empty()) {
@@ -707,13 +733,12 @@ public:
 			group->verifyInvariants();
 			superGroup->verifyInvariants();
 			
-			vector<Callback> actions, actions2;
 			assignSessionsToGetWaiters(actions);
 			
 			if (superGroup->garbageCollectable()) {
 				// possiblySpawnMoreProcessesForExistingGroups()
 				// already called via detachSuperGroup().
-				detachSuperGroup(superGroup, false, &actions2);
+				detachSuperGroup(superGroup, false, &actions);
 			} else {
 				possiblySpawnMoreProcessesForExistingGroups();
 			}
@@ -723,7 +748,6 @@ public:
 			
 			l.unlock();
 			runAllActions(actions);
-			runAllActions(actions2);
 			
 			return true;
 		} else {
