@@ -313,10 +313,15 @@ private:
 			if (key == "socket") {
 				// socket: <name>;<address>;<protocol>;<concurrency>
 				// TODO: in case of TCP sockets, check whether it points to localhost
+				// TODO: in case of unix sockets, check whether filename is absolute
+				// and whether owner is correct
 				vector<string> args;
 				split(value, ';', args);
 				if (args.size() == 4) {
-					sockets->add(args[0], args[1], args[2], atoi(args[3]));
+					sockets->add(args[0],
+						fixupSocketAddress(*details.options, args[1]),
+						args[2],
+						atoi(args[3]));
 				} else {
 					throwAppSpawnException("An error occurred while starting the "
 						"web application. It reported a wrongly formatted 'socket'"
@@ -366,6 +371,30 @@ protected:
 			}
 		} while (timer.elapsed() < timeout);
 		return 0; // timed out
+	}
+	
+	static string fixupSocketAddress(const Options &options, const string &address) {
+		if (!options.preexecChroot.empty() && !options.postexecChroot.empty()) {
+			ServerAddressType type = getSocketAddressType(address);
+			if (type == SAT_UNIX) {
+				string filename = parseUnixSocketAddress(address);
+				string fixedAddress = "unix:";
+				if (!options.preexecChroot.empty()) {
+					fixedAddress.append(options.preexecChroot.data(),
+						options.preexecChroot.size());
+				}
+				if (!options.postexecChroot.empty()) {
+					fixedAddress.append(options.postexecChroot.data(),
+						options.postexecChroot.size());
+				}
+				fixedAddress.append(filename);
+				return fixedAddress;
+			} else {
+				return address;
+			}
+		} else {
+			return address;
+		}
 	}
 	
 	static void createCommandArgs(const vector<string> &command,
@@ -594,6 +623,21 @@ protected:
 			setenv("LOGNAME", info.username.c_str(), 1);
 			setenv("SHELL", info.shell.c_str(), 1);
 			setenv("HOME", info.home.c_str(), 1);
+		}
+	}
+	
+	void setChroot(const Options &options) {
+		if (!options.preexecChroot.empty()) {
+			int ret = chroot(options.preexecChroot.c_str());
+			if (ret == -1) {
+				int e = errno;
+				fprintf(stderr, "Cannot chroot() to '%s': %s (%d)\n",
+					options.preexecChroot.c_str(),
+					strerror(e),
+					e);
+				fflush(stderr);
+				_exit(1);
+			}
 		}
 	}
 	
@@ -875,6 +919,8 @@ private:
 		
 		pid = syscalls::fork();
 		if (pid == 0) {
+			purgeStdio(stdout);
+			purgeStdio(stderr);
 			resetSignalHandlersAndMask();
 			int adminSocketCopy = dup2(adminSocket.first, 3);
 			int errorPipeCopy = dup2(errorPipe.second, 4);
@@ -883,12 +929,11 @@ private:
 			dup2(errorPipeCopy, 2);
 			closeAllFileDescriptors(2);
 			setWorkingDirectory(options);
+			setChroot(options);
 			switchUser(userSwitchingInfo);
 			execvp(command[0].c_str(), (char * const *) args.get());
 			
 			int e = errno;
-			purgeStdio(stdout);
-			purgeStdio(stderr);
 			printf("Error\n\n");
 			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
 				strerror(e), e);
@@ -989,6 +1034,7 @@ private:
 	
 	string handleStartupResponse(BufferedIO &io,
 		BackgroundIOCapturerPtr &stderrCapturer,
+		const Options &options,
 		unsigned long long &timeout)
 	{
 		string socketAddress;
@@ -1039,7 +1085,7 @@ private:
 			string key = line.substr(0, pos);
 			string value = line.substr(pos + 2, line.size() - pos - 3);
 			if (key == "socket") {
-				socketAddress = value;
+				socketAddress = fixupSocketAddress(options, value);
 			} else {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader. It sent an unknown startup response line "
@@ -1185,7 +1231,7 @@ private:
 					stderrCapturer);
 			}
 			if (result == "Ready\n") {
-				return handleStartupResponse(io, stderrCapturer, timeout);
+				return handleStartupResponse(io, stderrCapturer, options, timeout);
 			} else if (result == "Error\n") {
 				handleErrorResponse(io, stderrCapturer, timeout);
 			} else {
@@ -1515,6 +1561,8 @@ public:
 		
 		pid = syscalls::fork();
 		if (pid == 0) {
+			purgeStdio(stdout);
+			purgeStdio(stderr);
 			resetSignalHandlersAndMask();
 			int adminSocketCopy = dup2(adminSocket.first, 3);
 			int errorPipeCopy = dup2(errorPipe.second, 4);
@@ -1523,12 +1571,11 @@ public:
 			dup2(errorPipeCopy, 2);
 			closeAllFileDescriptors(2);
 			setWorkingDirectory(options);
+			setChroot(options);
 			switchUser(userSwitchingInfo);
 			execvp(args[0], (char * const *) args.get());
 			
 			int e = errno;
-			purgeStdio(stdout);
-			purgeStdio(stderr);
 			printf("Error\n\n");
 			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
 				strerror(e), e);

@@ -76,7 +76,7 @@ private:
 	
 	vector<const StaticString *> getStringFields() const {
 		vector<const StaticString *> result;
-		result.reserve(18);
+		result.reserve(20);
 		
 		result.push_back(&appRoot);
 		result.push_back(&appGroupName);
@@ -94,6 +94,9 @@ private:
 		result.push_back(&defaultUser);
 		result.push_back(&defaultGroup);
 		result.push_back(&restartDir);
+		
+		result.push_back(&preexecChroot);
+		result.push_back(&postexecChroot);
 		
 		result.push_back(&ruby);
 		result.push_back(&groupSecret);
@@ -216,6 +219,9 @@ public:
 	 * An empty string means that the default directory should be used.
 	 */
 	StaticString restartDir;
+	
+	StaticString preexecChroot;
+	StaticString postexecChroot;
 	
 	/**
 	 * Path to the Ruby interpreter to use, in case the application to spawn
@@ -470,6 +476,8 @@ public:
 		appendKeyValue (vec, "default_user",       defaultUser);
 		appendKeyValue (vec, "default_group",      defaultGroup);
 		appendKeyValue (vec, "restart_dir",        restartDir);
+		appendKeyValue (vec, "preexec_chroot",     preexecChroot);
+		appendKeyValue (vec, "postexec_chroot",    postexecChroot);
 		appendKeyValue (vec, "ruby",               ruby);
 		appendKeyValue3(vec, "rights",             rights);
 		appendKeyValue4(vec, "show_version_in_header", showVersionInHeader);
