@@ -158,6 +158,12 @@ private:
 			getWaitlist.push(group->getWaitlist.front());
 			group->getWaitlist.pop();
 		}
+		for (unsigned int i = 0; i < groups.size(); i++) {
+			if (groups[i] == group) {
+				groups.erase(groups.begin() + i);
+				break;
+			}
+		}
 	}
 	
 	void detachGroups(const vector<GroupPtr> &groups, vector<Callback> &postLockActions) {
@@ -416,6 +422,11 @@ public:
 	void setPool(const PoolPtr &pool) {
 		lock_guard<boost::mutex> lock(backrefSyncher);
 		this->pool = pool;
+	}
+	
+	// Thread-safe.
+	bool detached() const {
+		return getPool() == NULL;
 	}
 	
 	/**

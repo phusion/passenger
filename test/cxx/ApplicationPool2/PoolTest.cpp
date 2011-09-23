@@ -345,6 +345,83 @@ namespace tut {
 		// The process that first becomes not at full capacity
 		// or the newly spawned process
 		// will process the action, whichever is earlier.
+		// Here we test the case where an existing process is earlier.
+		
+		// Spawn 2 processes and open 4 sessions.
+		Options options = createOptions();
+		options.minProcesses = 2;
+		pool->setMax(3);
+		GroupPtr group = pool->findOrCreateGroup(options);
+		dynamic_pointer_cast<DummySpawner>(group->spawner)->concurrency = 2;
+		
+		vector<SessionPtr> sessions;
+		int expectedNumber = 1;
+		for (int i = 0; i < 4; i++) {
+			pool->asyncGet(options, callback);
+			EVENTUALLY(5,
+				result = number == expectedNumber;
+			);
+			expectedNumber++;
+			sessions.push_back(currentSession);
+			currentSession.reset();
+		}
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 2;
+		);
+		
+		// The next asyncGet() should spawn a new process and the action should be queued.
+		ScopedLock l(pool->syncher);
+		dynamic_pointer_cast<DummySpawner>(group->spawner)->spawnTime = 5000000;
+		pool->asyncGet(options, callback, false);
+		ensure(group->spawning());
+		ensure_equals(group->getWaitlist.size(), 1u);
+		l.unlock();
+		
+		// Close one of the sessions. Now it will process the action.
+		ProcessPtr process = sessions[0]->getProcess();
+		sessions[0].reset();
+		ensure_equals(number, 5);
+		ensure_equals(currentSession->getProcess(), process);
+		ensure_equals(group->getWaitlist.size(), 0u);
+		ensure_equals(pool->getProcessCount(), 2u);
+	}
+	
+	TEST_METHOD(11) {
+		// Here we test the case where the newly spawned process is earlier.
+		
+		// Spawn 2 processes and open 4 sessions.
+		Options options = createOptions();
+		options.minProcesses = 2;
+		pool->setMax(3);
+		GroupPtr group = pool->findOrCreateGroup(options);
+		dynamic_pointer_cast<DummySpawner>(group->spawner)->concurrency = 2;
+		
+		vector<SessionPtr> sessions;
+		int expectedNumber = 1;
+		for (int i = 0; i < 4; i++) {
+			pool->asyncGet(options, callback);
+			EVENTUALLY(5,
+				result = number == expectedNumber;
+			);
+			expectedNumber++;
+			sessions.push_back(currentSession);
+			currentSession.reset();
+		}
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 2;
+		);
+		
+		// The next asyncGet() should spawn a new process. After it's done
+		// spawning it will process the action.
+		pool->asyncGet(options, callback, false);
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 3;
+		);
+		EVENTUALLY(5,
+			result = number == 5;
+		);
+		ensure_equals(currentSession->getProcess()->pid, 3);
+		ensure_equals(group->getWaitlist.size(), 0u);
 	}
 	
 	
@@ -354,12 +431,76 @@ namespace tut {
 	TEST_METHOD(20) {
 		// If the pool is full, and one tries to asyncGet() from a nonexistant group,
 		// then it will kill the oldest idle process and spawn a new process.
+		Options options = createOptions();
+		pool->setMax(2);
+		
+		// Get from /foo and close its session immediately.
+		options.appRoot = "/foo";
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		ProcessPtr process1 = currentSession->getProcess();
+		GroupPtr group1 = process1->getGroup();
+		SuperGroupPtr superGroup1 = group1->getSuperGroup();
+		currentSession.reset();
+		
+		// Get from /bar and keep its session open.
+		options.appRoot = "/bar";
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 2;
+		);
+		SessionPtr session2 = currentSession;
+		currentSession.reset();
+		
+		// Get from /baz. The process for /foo should be killed now.
+		options.appRoot = "/baz";
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 3;
+		);
+		
+		ensure_equals(pool->getProcessCount(), 2u);
+		ensure(superGroup1->detached());
 	}
 	
 	TEST_METHOD(21) {
 		// If the pool is full, and one tries to asyncGet() from a nonexistant group,
 		// and all existing processes are non-idle, then it will
 		// kill the oldest process and spawn a new process.
+		Options options = createOptions();
+		pool->setMax(2);
+		
+		// Get from /foo and close its session immediately.
+		options.appRoot = "/foo";
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		SessionPtr session1 = currentSession;
+		ProcessPtr process1 = currentSession->getProcess();
+		GroupPtr group1 = process1->getGroup();
+		SuperGroupPtr superGroup1 = group1->getSuperGroup();
+		
+		// Get from /bar and keep its session open.
+		options.appRoot = "/bar";
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 2;
+		);
+		SessionPtr session2 = currentSession;
+		currentSession.reset();
+		
+		// Get from /baz. The process for /foo should be killed now.
+		options.appRoot = "/baz";
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 3;
+		);
+		
+		ensure_equals(pool->getProcessCount(), 2u);
+		ensure(superGroup1->detached());
 	}
 	
 	
