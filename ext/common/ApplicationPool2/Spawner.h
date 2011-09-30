@@ -590,7 +590,9 @@ protected:
 	}
 	
 	void setWorkingDirectory(const Options &options) {
-		if (chdir(options.appRoot.c_str()) == -1) {
+		if (chdir(options.appRoot.c_str()) == 0) {
+			setenv("PWD", options.appRoot.c_str(), 1);
+		} else {
 			int e = errno;
 			printf("Error\n\n");
 			printf("Cannot change working directory to '%s': %s (%d)\n",
