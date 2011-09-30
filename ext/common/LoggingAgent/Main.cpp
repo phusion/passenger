@@ -268,7 +268,7 @@ main(int argc, char *argv[]) {
 		if (feedbackFdAvailable()) {
 			feedbackFdWatcher.set<&feedbackFdBecameReadable>();
 			feedbackFdWatcher.start(FEEDBACK_FD, ev::READ);
-			writeArrayMessage(FEEDBACK_FD, "initialized");
+			writeArrayMessage(FEEDBACK_FD, "initialized", NULL);
 		}
 		sigintWatcher.set<&caughtExitSignal>();
 		sigintWatcher.start(SIGINT);
