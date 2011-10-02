@@ -151,7 +151,7 @@ protected
 	# Overrided method.
 	def initialize_server # :nodoc:
 		report_app_init_status(MessageChannel.new(@owner_socket)) do
-			$0 = "Passenger ApplicationSpawner: #{@app_root}"
+			$0 = "Passenger ApplicationSpawner: #{@options['app_group_name']}"
 			prepare_app_process('config.ru', @options)
 			@app = self.class.send(:load_rack_app)
 			after_loading_app_code(@options)
@@ -189,7 +189,7 @@ private
 
 	def self.start_request_handler(channel, app, forked, options)
 		app_root = options["app_root"]
-		$0 = "Rack: #{app_root}"
+		$0 = "Rack: #{options['app_group_name']}"
 		reader, writer = IO.pipe
 		begin
 			reader.close_on_exec!
