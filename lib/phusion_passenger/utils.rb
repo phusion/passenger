@@ -330,7 +330,7 @@ protected
 		# attempt to un-require RubyGems, so here we put Phusion Passenger back
 		# into the load path. This must be done before loading the app's startup
 		# file because the app might require() Phusion Passenger files.
-		if $LOAD_PATH.first != LIBDIR
+		if not $LOAD_PATH.include?(LIBDIR)
 			$LOAD_PATH.unshift(LIBDIR)
 			$LOAD_PATH.uniq!
 		end
