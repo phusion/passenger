@@ -8,7 +8,7 @@ types {
     application/x-javascript              js;
     application/atom+xml                  atom;
     application/rss+xml                   rss;
-    application/cache-manifest            manifest;
+    text/cache-manifest                   manifest appcache;
 
     text/mathml                           mml;
     text/plain                            txt;
