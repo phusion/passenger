@@ -172,7 +172,7 @@ protected
 	# Overrided method.
 	def initialize_server # :nodoc:
 		report_app_init_status(MessageChannel.new(@owner_socket)) do
-			$0 = "Passenger ApplicationSpawner: #{@app_root}"
+			$0 = "Passenger ApplicationSpawner: #{@options['app_group_name']}"
 			prepare_app_process('config/environment.rb', @options)
 			if defined?(RAILS_ENV)
 				Object.send(:remove_const, :RAILS_ENV)
@@ -299,7 +299,7 @@ private
 	# used).
 	def self.start_request_handler(channel, forked, options)
 		app_root = options["app_root"]
-		$0 = "Rails: #{app_root}"
+		$0 = "Rails: #{options['app_group_name']}"
 		reader, writer = IO.pipe
 		begin
 			reader.close_on_exec!

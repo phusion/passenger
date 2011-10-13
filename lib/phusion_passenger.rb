@@ -206,7 +206,7 @@ module PhusionPassenger
 	STANDALONE_BINARIES_URL_ROOT  = "http://standalone-binaries.modrails.com"
 	
 	
-	if $LOAD_PATH.first != ruby_libdir
+	if !$LOAD_PATH.include?(ruby_libdir)
 		$LOAD_PATH.unshift(ruby_libdir)
 		$LOAD_PATH.uniq!
 	end

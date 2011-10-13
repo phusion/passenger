@@ -1,3 +1,4 @@
+# encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
 #  Copyright (c) 2010 Phusion
 #
@@ -151,7 +152,7 @@ protected
 	# Overrided method.
 	def initialize_server # :nodoc:
 		report_app_init_status(MessageChannel.new(@owner_socket)) do
-			$0 = "Passenger ApplicationSpawner: #{@app_root}"
+			$0 = "Passenger ApplicationSpawner: #{@options['app_group_name']}"
 			prepare_app_process('config.ru', @options)
 			@app = self.class.send(:load_rack_app)
 			after_loading_app_code(@options)
@@ -189,7 +190,7 @@ private
 
 	def self.start_request_handler(channel, app, forked, options)
 		app_root = options["app_root"]
-		$0 = "Rack: #{app_root}"
+		$0 = "Rack: #{options['app_group_name']}"
 		reader, writer = IO.pipe
 		begin
 			reader.close_on_exec!
@@ -218,7 +219,9 @@ private
 		# Rails apps explicitly specify a Rack version as dependency.
 		require 'rack'
 		rackup_file = ENV["RACKUP_FILE"] || "config.ru"
-		rackup_code = ::File.read(rackup_file)
+		rackup_code = ::File.open(rackup_file, 'rb') do |f|
+			f.read
+		end
 		eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, rackup_file)
 	end
 	private_class_method :load_rack_app
