@@ -1043,7 +1043,7 @@ main(int argc, char *argv[]) {
 			(*it)->sendStartupInfo(FEEDBACK_FD);
 		}
 		
-		writeArrayMessage(FEEDBACK_FD, "All agents started");
+		writeArrayMessage(FEEDBACK_FD, "All agents started", NULL);
 		
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;

@@ -8,6 +8,7 @@ types {
     application/x-javascript              js;
     application/atom+xml                  atom;
     application/rss+xml                   rss;
+    text/cache-manifest                   manifest appcache;
 
     text/mathml                           mml;
     text/plain                            txt;
@@ -57,6 +58,7 @@ types {
     application/octet-stream              eot;
     application/octet-stream              iso img;
     application/octet-stream              msi msp msm;
+    application/octet-stream              gem;
 
     audio/midi                            mid midi kar;
     audio/mpeg                            mp3;

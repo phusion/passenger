@@ -331,7 +331,7 @@ module Utils
 		# attempt to un-require RubyGems, so here we put Phusion Passenger back
 		# into the load path. This must be done before loading the app's startup
 		# file because the app might require() Phusion Passenger files.
-		if $LOAD_PATH.first != PhusionPassenger.ruby_libdir
+		if !$LOAD_PATH.include?(PhusionPassenger.ruby_libdir)
 			$LOAD_PATH.unshift(PhusionPassenger.ruby_libdir)
 			$LOAD_PATH.uniq!
 		end
@@ -360,8 +360,13 @@ module Utils
 		# load path after setting up Bundler, the app itself might also
 		# remove Phusion Passenger from the load path for whatever reason,
 		# so here we restore the load path again.
+<<<<<<< HEAD
 		if $LOAD_PATH.first != PhusionPassenger.ruby_libdir
 			$LOAD_PATH.unshift(PhusionPassenger.ruby_libdir)
+=======
+		if !$LOAD_PATH.include?(LIBDIR)
+			$LOAD_PATH.unshift(LIBDIR)
+>>>>>>> master
 			$LOAD_PATH.uniq!
 		end
 		
