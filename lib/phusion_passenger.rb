@@ -108,7 +108,7 @@ module PhusionPassenger
 	STANDALONE_BINARIES_URL_ROOT  = "http://standalone-binaries.modrails.com"
 	
 	
-	if $LOAD_PATH.first != LIBDIR
+	if !$LOAD_PATH.include?(LIBDIR)
 		$LOAD_PATH.unshift(LIBDIR)
 		$LOAD_PATH.uniq!
 	end
