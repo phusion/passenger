@@ -1,3 +1,4 @@
+# encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
 #  Copyright (c) 2010 Phusion
 #
@@ -218,7 +219,9 @@ private
 		# Rails apps explicitly specify a Rack version as dependency.
 		require 'rack'
 		rackup_file = ENV["RACKUP_FILE"] || "config.ru"
-		rackup_code = ::File.read(rackup_file)
+		rackup_code = ::File.open(rackup_file, 'rb') do |f|
+			f.read
+		end
 		eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, rackup_file)
 	end
 	private_class_method :load_rack_app
