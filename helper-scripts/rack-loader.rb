@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# encoding: binary
 module PhusionPassenger
 module App
 	def self.options
@@ -49,7 +50,9 @@ module App
 		require 'rubygems'
 		require 'rack'
 		rackup_file = ENV["RACKUP_FILE"] || options["rackup_file"] || "config.ru"
-		rackup_code = ::File.read(rackup_file)
+		rackup_code = ::File.open(rackup_file, 'rb') do |f|
+			f.read
+		end
 		@@app = eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app",
 			TOPLEVEL_BINDING, rackup_file)
 		
