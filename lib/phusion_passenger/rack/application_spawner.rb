@@ -218,7 +218,7 @@ private
 		# Rails apps explicitly specify a Rack version as dependency.
 		require 'rack'
 		rackup_file = ENV["RACKUP_FILE"] || "config.ru"
-		rackup_code = ::File.read(rackup_file)
+		rackup_code = ::File.read(rackup_file, File.size(rackup_file)) # binary reading for non ascii char
 		eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, rackup_file)
 	end
 	private_class_method :load_rack_app
