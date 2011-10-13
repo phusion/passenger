@@ -508,18 +508,91 @@ namespace tut {
 	
 	TEST_METHOD(30) {
 		// detachProcess() detaches the process from the group.
+		Options options = createOptions();
+		options.appGroupName = "test";
+		options.minProcesses = 2;
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 2;
+		);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+
+		pool->detachProcess(currentSession->getProcess());
+		ensure(currentSession->getProcess()->detached());
+		LockGuard l(pool->syncher);
+		ensure_equals(pool->superGroups.get("test")->defaultGroup->count, 1);
 	}
 	
 	TEST_METHOD(31) {
 		// If the containing group had waiters on it, and detachProcess()
 		// detaches the only process in the group, then a new process
 		// is automatically spawned to handle the waiters.
+		Options options = createOptions();
+		options.appGroupName = "test";
+		pool->setMax(1);
+		pool->spawnerFactory->dummySpawnTime = 1000000;
+
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		SessionPtr session1 = currentSession;
+		currentSession.reset();
+
+		pool->asyncGet(options, callback);
+		
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(pool->superGroups.get("test")->defaultGroup->getWaitlist.size(), 1u);
+		}
+
+		pool->detachProcess(session1->getProcess());
+		{
+			LockGuard l(pool->syncher);
+			ensure(pool->superGroups.get("test")->defaultGroup->spawning());
+			ensure_equals(pool->superGroups.get("test")->defaultGroup->count, 0);
+			ensure_equals(pool->superGroups.get("test")->defaultGroup->getWaitlist.size(), 1u);
+		}
 	}
 	
 	TEST_METHOD(32) {
 		// If the pool had waiters on it then detachProcess() will
 		// automatically create the SuperGroups that were requested
 		// by the waiters.
+		Options options = createOptions();
+		options.appGroupName = "test";
+		pool->setMax(1);
+		pool->spawnerFactory->dummySpawnTime = 30000;
+
+		// Begin spawning a process.
+		pool->asyncGet(options, callback);
+		ensure(pool->atFullCapacity());
+
+		// asyncGet() on another group should now put it on the waiting list.
+		Options options2 = createOptions();
+		options2.appGroupName = "test2";
+		pool->spawnerFactory->dummySpawnTime = 90000;
+		pool->asyncGet(options2, callback);
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(pool->getWaitlist.size(), 1u);
+		}
+
+		// Eventually the dummy process for "test" is now done spawning.
+		// We then detach it.
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		SessionPtr session1 = currentSession;
+		currentSession.reset();
+		pool->detachProcess(session1->getProcess());
+		{
+			LockGuard l(pool->syncher);
+			ensure(pool->superGroups.get("test2") != NULL);
+			ensure_equals(pool->getWaitlist.size(), 0u);
+		}
 	}
 	
 	TEST_METHOD(33) {
@@ -572,4 +645,5 @@ namespace tut {
 	// Died processes.
 	// Persistent connections.
 	// Temporarily disabling a process.
+	// When a process has become idle, and there are waiters on the pool, consider detaching it in order to satisfy a waiter.
 }

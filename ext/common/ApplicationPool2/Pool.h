@@ -33,8 +33,8 @@ using namespace oxt;
 
 
 class Pool: public enable_shared_from_this<Pool> {
+// Actually private, but marked public so that unit tests can access the fields.
 public:
-	friend class tut::ApplicationPool2_PoolTest;
 	friend class SuperGroup;
 	friend class Group;
 	

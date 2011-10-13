@@ -1649,7 +1649,7 @@ public:
 	}
 };
 
-typedef shared_ptr<DummySpawner> DummerSpawnerPtr;
+typedef shared_ptr<DummySpawner> DummySpawnerPtr;
 
 
 class SpawnerFactory {
@@ -1677,6 +1677,10 @@ private:
 	}
 	
 public:
+	// Properties for DummySpawner
+	unsigned int dummyConcurrency;
+	unsigned int dummySpawnTime;
+
 	SpawnerFactory(SafeLibev *_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
@@ -1685,6 +1689,8 @@ public:
 		  resourceLocator(_resourceLocator),
 		  generation(_generation)
 	{
+		dummyConcurrency = 1;
+		dummySpawnTime   = 0;
 		if (randomGenerator == NULL) {
 			randomGenerator = make_shared<RandomGenerator>();
 		} else {
@@ -1707,7 +1713,10 @@ public:
 			return make_shared<DirectSpawner>(libev, resourceLocator,
 				generation, randomGenerator);
 		} else if (options.spawnMethod == "dummy") {
-			return make_shared<DummySpawner>(resourceLocator);
+			DummySpawnerPtr spawner = make_shared<DummySpawner>(resourceLocator);
+			spawner->concurrency = dummyConcurrency;
+			spawner->spawnTime   = dummySpawnTime;
+			return spawner;
 		} else {
 			throw ArgumentException("Unknown spawn method '" + options.spawnMethod + "'");
 		}
