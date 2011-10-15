@@ -49,7 +49,7 @@ namespace tut {
 	TEST_METHOD(1) {
 		// Test initial state.
 		ProcessPtr process = make_shared<Process>(bg.libev,
-			123, "", adminSocket[0],
+			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0);
 		ensure_equals(process->usage(), 0);
 		ensure(!process->atFullCapacity());
@@ -58,7 +58,7 @@ namespace tut {
 	TEST_METHOD(2) {
 		// Test opening and closing sessions.
 		ProcessPtr process = make_shared<Process>(bg.libev,
-			123, "", adminSocket[0],
+			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0);
 		SessionPtr session = process->newSession();
 		SessionPtr session2 = process->newSession();
@@ -73,7 +73,7 @@ namespace tut {
 		// newSession() checks out the socket with the smallest usage number
 		// and sessionClosed() restores the session usage statistics.
 		ProcessPtr process = make_shared<Process>(bg.libev,
-			123, "", adminSocket[0],
+			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0);
 		
 		// The first 3 newSession() commands check out an idle socket.
@@ -116,7 +116,7 @@ namespace tut {
 	TEST_METHOD(4) {
 		// If all sockets are at their full capacity then newSession() will fail.
 		ProcessPtr process = make_shared<Process>(bg.libev,
-			123, "", adminSocket[0],
+			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0);
 		vector<SessionPtr> sessions;
 		for (int i = 0; i < 9; i++) {

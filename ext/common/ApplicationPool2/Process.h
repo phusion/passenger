@@ -171,6 +171,7 @@ public:
 	pid_t pid;
 	/** UUID for this process, randomly generated and will never appear again. */
 	string gupid;
+	string connectPassword;
 	/** Admin socket, see class description. */
 	FileDescriptor adminSocket;
 	/** Pipe on which this process outputs errors. Mapped to the process's STDERR.
@@ -218,6 +219,7 @@ public:
 	Process(SafeLibev *_libev,
 		pid_t _pid,
 		const string &_gupid,
+		const string &_connectPassword,
 		const FileDescriptor &_adminSocket,
 		const FileDescriptor &_errorPipe,
 		const SocketListPtr &_sockets,
@@ -226,6 +228,7 @@ public:
 		: libev(_libev),
 		  pid(_pid),
 		  gupid(_gupid),
+		  connectPassword(_connectPassword),
 		  adminSocket(_adminSocket),
 		  errorPipe(_errorPipe),
 		  sockets(_sockets),
@@ -367,6 +370,7 @@ public:
 	void toXml(Stream &stream, bool includeSockets = true) const {
 		stream << "<pid>" << pid << "</pid>";
 		stream << "<gupid>" << gupid << "</gupid>";
+		stream << "<connect_password>" << connectPassword << "</connect_password>";
 		stream << "<concurrency>" << concurrency << "</concurrency>";
 		stream << "<sessions>" << sessions << "</sessions>";
 		stream << "<usage>" << usage() << "</usage>";

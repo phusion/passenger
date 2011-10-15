@@ -283,7 +283,8 @@ public:
 		
 		if (OXT_UNLIKELY(newOptions.noop)) {
 			ProcessPtr process = make_shared<Process>((SafeLibev *) NULL,
-				0, string(), FileDescriptor(), FileDescriptor(),
+				0, string(), string(),
+				FileDescriptor(), FileDescriptor(),
 				SocketListPtr(), 0);
 			process->setGroup(shared_from_this());
 			return make_shared<Session>(process, (Socket *) NULL);

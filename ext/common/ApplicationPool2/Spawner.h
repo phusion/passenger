@@ -197,6 +197,7 @@ protected:
 		// Working state.
 		BufferedIO io;
 		string gupid;
+		string connectPassword;
 		unsigned long long spawnStartTime;
 		unsigned long long timeout;
 		
@@ -236,7 +237,8 @@ private:
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
 				"generation_dir: " + generation->getPath() + "\n"
-				"gupid: " + details.gupid + "\n",
+				"gupid: " + details.gupid + "\n"
+				"connect_password: " + details.connectPassword + "\n",
 				&details.timeout);
 			
 			vector<string> args;
@@ -339,7 +341,8 @@ private:
 		}
 		
 		return make_shared<Process>(details.libev, details.pid,
-			details.gupid, details.adminSocket, details.errorPipe,
+			details.gupid, details.connectPassword,
+			details.adminSocket, details.errorPipe,
 			sockets, details.spawnStartTime, details.forwardStderr);
 	}
 	
@@ -646,7 +649,9 @@ protected:
 	ProcessPtr negotiateSpawn(NegotiationDetails &details) {
 		details.io = BufferedIO(details.adminSocket);
 		details.spawnStartTime = SystemTime::getUsec();
-		details.gupid = randomGenerator->generateAsciiString(43);
+		details.gupid = integerToHex(SystemTime::get() / 60) + "-" +
+			randomGenerator->generateAsciiString(11);
+		details.connectPassword = randomGenerator->generateAsciiString(43);
 		details.timeout = details.options->startTimeout * 1000;
 		
 		string result;
@@ -1668,7 +1673,8 @@ public:
 		
 		lock_guard<boost::mutex> l(lock);
 		count++;
-		return make_shared<Process>((SafeLibev *) NULL, (pid_t) count,
+		return make_shared<Process>((SafeLibev *) NULL,
+			(pid_t) count, string(),
 			toString(count),
 			adminSocket.second, FileDescriptor(), sockets,
 			SystemTime::getUsec());
