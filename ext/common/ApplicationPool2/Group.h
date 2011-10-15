@@ -480,6 +480,13 @@ public:
 		}
 	}
 	
+	void asyncCleanupSpawner() {
+		createInterruptableThread(
+			boost::bind(&Spawner::cleanup, spawner),
+			"Group spawner cleanup: " + name,
+			1024 * 64);
+	}
+
 	unsigned int usage() const {
 		int result = count;
 		if (spawning()) {
@@ -515,7 +522,7 @@ public:
 				boost::bind(&Group::spawnThreadMain,
 					this, shared_from_this(), spawner,
 					options.copyAndPersist().clearPerRequestFields()),
-				"Group process spawner",
+				"Group process spawner: " + name,
 				1024 * 64);
 			m_spawning = true;
 		}

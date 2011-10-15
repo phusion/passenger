@@ -206,6 +206,8 @@ public:
 	 * @invariant session >= 0
 	 */
 	int sessions;
+	/** Number of sessions opened so far. */
+	unsigned int processed;
 	enum {
 		ENABLED,
 		DISABLING,
@@ -230,6 +232,7 @@ public:
 		  spawnStartTime(_spawnStartTime),
 		  forwardStderr(_forwardStderr),
 		  sessions(0),
+		  processed(0),
 		  enabled(ENABLED)
 	{
 		if (errorPipe != -1) {
@@ -319,6 +322,7 @@ public:
 		} else {
 			socket->sessions++;
 			this->sessions++;
+			processed++;
 			socket->pqHandle = sessionSockets.push(socket, socket->usage());
 			lastUsed = SystemTime::getUsec();
 			return make_shared<Session>(shared_from_this(), socket);
@@ -335,6 +339,45 @@ public:
 		this->sessions--;
 		sessionSockets.decrease(socket->pqHandle, socket->usage());
 		assert(!atFullCapacity());
+	}
+
+	/**
+	 * Returns the uptime of this process so far, as a string.
+	 */
+	string uptime() const {
+		unsigned long long seconds = (SystemTime::getUsec() - spawnTime) / 1000000;
+		stringstream result;
+		
+		if (seconds >= 60) {
+			unsigned long long minutes = seconds / 60;
+			if (minutes >= 60) {
+				unsigned long long hours = minutes / 60;
+				minutes = minutes % 60;
+				result << hours << "h ";
+			}
+			
+			seconds = seconds % 60;
+			result << minutes << "m ";
+		}
+		result << seconds << "s";
+		return result.str();
+	}
+
+	template<typename Stream>
+	void toXml(Stream &stream, bool includeSockets = true) const {
+		stream << "<pid>" << pid << "</pid>";
+		stream << "<gupid>" << gupid << "</gupid>";
+		stream << "<concurrency>" << concurrency << "</concurrency>";
+		stream << "<sessions>" << sessions << "</sessions>";
+		stream << "<usage>" << usage() << "</usage>";
+		stream << "<processed>" << sessions << "</processed>";
+		stream << "<spawn_time>" << spawnTime << "</spawn_time>";
+		stream << "<last_used>" << lastUsed << "</last_used>";
+		stream << "<uptime>" << uptime() << "</uptime>";
+		if (includeSockets) {
+			stream << "<sockets>";
+			stream << "</sockets>";
+		}
 	}
 };
 

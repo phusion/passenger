@@ -429,6 +429,23 @@ public:
 		return getPool() == NULL;
 	}
 	
+	const char *getStateName() const {
+		switch (state) {
+		case INITIALIZING:
+			return "INITIALIZING";
+		case READY:
+			return "READY";
+		case RESTARTING:
+			return "RESTARTING";
+		case DESTROYING:
+			return "DESTROYING";
+		case DESTROYED:
+			return "DESTROYED";
+		default:
+			abort();
+		}
+	}
+
 	/**
 	 * If allowReinitialization is true then destroying a SuperGroup that
 	 * has get waiters will make it reinitialize. Otherwise this SuperGroup

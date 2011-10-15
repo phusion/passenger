@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <sstream>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -279,15 +280,15 @@ public:
 		vector<SuperGroupPtr> superGroupsToDetach;
 		vector<Callback> actions;
 		unsigned long long now = SystemTime::getUsec();
-		unsigned long long nextDeadline = 0;
+		unsigned long long nextGcRunTime = 0;
 		
 		verifyInvariants();
 		
+		// For all supergroups and groups...
 		for (it = superGroups.begin(); it != end; it++) {
 			SuperGroupPtr superGroup = it->second;
 			vector<GroupPtr> &groups = superGroup->groups;
 			vector<GroupPtr>::iterator g_it, g_end = groups.end();
-			unsigned long long earliestGroupDeadline = 0;
 			
 			superGroup->verifyInvariants();
 			
@@ -299,39 +300,40 @@ public:
 				for (p_it = processes.begin(); p_it != p_end; p_it++) {
 					ProcessPtr process = *p_it;
 					
+					// ...detach processes that have been idle for more than maxIdleTime.
+					unsigned long long processGcTime =
+							process->lastUsed + maxIdleTime;
 					if (process->sessions == 0
-					 && process->lastUsed - now >= maxIdleTime) {
+					 && now >= processGcTime) {
 						ProcessList::iterator prev = p_it;
 						prev--;
 						group->detach(process, actions);
 						p_it = prev;
-					} else {
-						unsigned long long deadline =
-							process->lastUsed + maxIdleTime;
-						if (nextDeadline == 0
-						 || deadline < nextDeadline) {
-							nextDeadline = deadline;
-						}
+					} else if (nextGcRunTime == 0
+						    || processGcTime < nextGcRunTime) {
+						nextGcRunTime = processGcTime;
 					}
 				}
 				
 				group->verifyInvariants();
 				
-				unsigned long long deadline =
-					group->spawner->lastUsed() + maxIdleTime;
-				if (earliestGroupDeadline == 0
-				 || deadline < earliestGroupDeadline) {
-					earliestGroupDeadline = deadline;
+				// ...cleanup the spawner if it's been idle for more than maxIdleTime.
+				if (group->spawner->cleanable()) {
+					unsigned long long spawnerGcTime =
+						group->spawner->lastUsed() + maxIdleTime;
+					if (now >= spawnerGcTime) {
+						group->asyncCleanupSpawner();
+					} else if (nextGcRunTime == 0
+					        || spawnerGcTime < nextGcRunTime) {
+						nextGcRunTime = spawnerGcTime;
+					}
 				}
-				// TODO: actually garbage collect the spawners
 			}
 			
+			// ...remove entire supergroup if it has become garbage
+			// collectable after detaching idle processes.
 			if (superGroup->garbageCollectable(now)) {
 				superGroupsToDetach.push_back(superGroup);
-			} else {
-				if (nextDeadline == 0 || earliestGroupDeadline < nextDeadline) {
-					nextDeadline = earliestGroupDeadline;
-				}
 			}
 			
 			superGroup->verifyInvariants();
@@ -346,10 +348,11 @@ public:
 		lock.unlock();
 		runAllActions(actions);
 		
-		if (nextDeadline == 0) {
+		// Schedule next garbage collection run.
+		if (nextGcRunTime == 0) {
 			timer.start(maxIdleTime / 1000000.0, 0.0);
 		} else {
-			timer.start((nextDeadline - now + 1000000) / 1000000.0, 0.0);
+			timer.start((nextGcRunTime - now + 1000000) / 1000000.0, 0.0);
 		}
 	}
 	
@@ -773,6 +776,84 @@ public:
 		} else {
 			return false;
 		}
+	}
+
+	string toXml(bool includeSecrets = true) const {
+		LockGuard l(syncher);
+		stringstream result;
+		SuperGroupMap::const_iterator sg_it;
+		vector<GroupPtr>::const_iterator g_it;
+		ProcessList::const_iterator p_it;
+
+		result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
+		result << "<info version=\"2\">";
+		
+		result << "<count>" << getProcessCount() << "</count>";
+		result << "<max>" << max << "</max>";
+		result << "<usage>" << usage(false) << "</usage>";
+		
+		result << "<supergroups>";
+		for (sg_it = superGroups.begin(); sg_it != superGroups.end(); sg_it++) {
+			const SuperGroupPtr &superGroup = sg_it->second;
+
+			result << "<name>" << escapeForXml(superGroup->name) << "</name>";
+			result << "<state>" << superGroup->getStateName() << "</state>";
+			result << "<get_wait_list_size>" << superGroup->getWaitlist.size() << "</get_wait_list_size>";
+			result << "<usage>" << superGroup->usage() << "</usage>";
+			if (includeSecrets) {
+				result << "<secret>" << escapeForXml(superGroup->secret) << "</secret>";
+			}
+
+			for (g_it = superGroup->groups.begin(); g_it != superGroup->groups.end(); g_it++) {
+				const GroupPtr &group = *g_it;
+
+				if (group->componentInfo.isDefault) {
+					result << "<group default=\"true\">";
+				} else {
+					result << "<group>";
+				}
+				result << "<name>" << escapeForXml(group->componentInfo.name) << "</name>";
+				result << "<app_root>" << escapeForXml(group->options.appRoot) << "</app_root>";
+				result << "<app_type>" << escapeForXml(group->options.appType) << "</app_type>";
+				result << "<environment>" << escapeForXml(group->options.environment) << "</environment>";
+				result << "<process_count>" << (group->count + group->disabledCount) << "</process_count>";
+				result << "<usage>" << group->usage() << "</usage>";
+				result << "<secret>" << escapeForXml(group->secret) << "</secret>";
+				result << "<get_wait_list_size>" << group->getWaitlist.size() << "</get_wait_list_size>";
+				result << "<disable_wait_list_size>" << group->disableWaitlist.size() << "</disable_wait_list_size>";
+				if (group->spawning()) {
+					result << "<spawning/>";
+				}
+				if (includeSecrets) {
+					result << "<secret>" << escapeForXml(group->secret) << "</secret>";
+				}
+
+				result << "<processes>";
+				for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
+					const ProcessPtr &process = *p_it;
+					result << "<process>";
+					if (process->enabled == Process::DISABLING) {
+						result << "<disabling/>";
+					}
+					process->toXml(result, includeSecrets);
+					result << "</process>";
+				}
+				for (p_it = group->disabledProcesses.begin(); p_it != group->disabledProcesses.end(); p_it++) {
+					const ProcessPtr &process = *p_it;
+					result << "<process>";
+					result << "<disabled/>";
+					process->toXml(result, includeSecrets);
+					result << "</process>";
+				}
+				result << "</processes>";
+
+				result << "</group>";
+			}
+		}
+		result << "</supergroups>";
+
+		result << "</info>";
+		return result.str();
 	}
 };
 

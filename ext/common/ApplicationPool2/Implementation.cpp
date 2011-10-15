@@ -134,6 +134,7 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	: superGroup(_superGroup),
 	  componentInfo(info)
 {
+	name           = _superGroup->name + "#" + info.name;
 	secret         = generateSecret();
 	count          = 0;
 	disablingCount = 0;
@@ -188,7 +189,9 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	process->sessionClosed(session);
 	pqueue.decrease(process->pqHandle, process->usage());
 	
-	/* This group now has a process that's guaranteed to be... */
+	/* This group now has a process that's guaranteed to be not at
+	 * full capacity...
+	 */
 	assert(!process->atFullCapacity());
 	if (!getWaitlist.empty()) {
 		/* ...so if there are clients waiting for a process to

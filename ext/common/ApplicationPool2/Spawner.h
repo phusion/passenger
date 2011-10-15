@@ -771,6 +771,12 @@ public:
 	virtual ~Spawner() { }
 	virtual ProcessPtr spawn(const Options &options) = 0;
 	
+	virtual bool cleanable() const {
+		return false;
+	}
+
+	virtual void cleanup() { }
+
 	virtual unsigned long long lastUsed() const {
 		return 0;
 	}
@@ -789,7 +795,11 @@ private:
 	vector<string> preloaderCommand;
 	Options options;
 	
+	// Protects everything else.
 	mutable boost::mutex syncher;
+	// Protects m_lastUsed;
+	mutable boost::mutex simpleFieldSyncher;
+
 	pid_t pid;
 	FileDescriptor adminSocket;
 	FileDescriptor errorPipe;
@@ -1389,7 +1399,10 @@ public:
 		assert(options.spawnMethod == "smart" || options.spawnMethod == "smart-lv2");
 		
 		lock_guard<boost::mutex> lock(syncher);
-		m_lastUsed = SystemTime::getUsec();
+		{
+			lock_guard<boost::mutex> lock2(simpleFieldSyncher);
+			m_lastUsed = SystemTime::getUsec();
+		}
 		if (!preloaderStarted()) {
 			startPreloader();
 		}
@@ -1412,9 +1425,22 @@ public:
 		details.options = &options;
 		return negotiateSpawn(details);
 	}
+
+	virtual bool cleanable() const {
+		return true;
+	}
 	
-	virtual unsigned long long lastUsed() const {
+	virtual void cleanup() {
+		{
+			lock_guard<boost::mutex> lock2(simpleFieldSyncher);
+			m_lastUsed = SystemTime::getUsec();
+		}
 		lock_guard<boost::mutex> lock(syncher);
+		stopPreloader();
+	}
+
+	virtual unsigned long long lastUsed() const {
+		lock_guard<boost::mutex> lock(simpleFieldSyncher);
 		return m_lastUsed;
 	}
 	

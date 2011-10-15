@@ -599,13 +599,16 @@ namespace tut {
 		// If the containing SuperGroup becomes garbage collectable after
 		// detaching the process, then detachProcess() also detaches the
 		// containing SuperGroup.
-	}
-	
-	TEST_METHOD(34) {
-		// If the containing SuperGroup becomes garbage collectable after
-		// detaching the process, and the pool had waiters on it, then
-		// detachProcess() will automatically create the SuperGroups that
-		// were requested by the waiters.
+		Options options = createOptions();
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		ProcessPtr process = currentSession->getProcess();
+		currentSession.reset();
+		pool->detachProcess(process);
+		LockGuard l(pool->syncher);
+		ensure(pool->superGroups.empty());
 	}
 	
 	
