@@ -42,6 +42,7 @@
 #include <Logging.h>
 #include <Utils/PriorityQueue.h>
 #include <Utils/SystemTime.h>
+#include <Utils/ProcessMetricsCollector.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -214,6 +215,7 @@ public:
 		DISABLING,
 		DISABLED
 	} enabled;
+	ProcessMetrics metrics;
 	
 	
 	Process(SafeLibev *_libev,
@@ -379,7 +381,19 @@ public:
 		stream << "<last_used>" << lastUsed << "</last_used>";
 		stream << "<uptime>" << uptime() << "</uptime>";
 		if (includeSockets) {
+			SocketList::const_iterator it;
+
 			stream << "<sockets>";
+			for (it = sockets->begin(); it != sockets->end(); it++) {
+				const Socket &socket = *it;
+				stream << "<socket>";
+				stream << "<name>" << escapeForXml(socket.name) << "</name>";
+				stream << "<address>" << escapeForXml(socket.address) << "</address>";
+				stream << "<protocol>" << escapeForXml(socket.protocol) << "</protocol>";
+				stream << "<concurrency>" << socket.concurrency << "</concurrency>";
+				stream << "<sessions>" << socket.sessions << "</sessions>";
+				stream << "</socket>";
+			}
 			stream << "</sockets>";
 		}
 	}

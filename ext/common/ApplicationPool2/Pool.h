@@ -24,6 +24,8 @@
 #include <Exceptions.h>
 #include <RandomGenerator.h>
 #include <Utils/Lock.h>
+#include <Utils/SystemTime.h>
+#include <Utils/ProcessMetricsCollector.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -48,6 +50,7 @@ public:
 	
 	RandomGeneratorPtr randomGenerator;
 	ev::timer garbageCollectionTimer;
+	ev::timer analyticsCollectionTimer;
 	
 	/**
 	 * Code can register background threads in one of these dynamic thread groups
@@ -275,6 +278,7 @@ public:
 	}
 	
 	void garbageCollect(ev::timer &timer, int revents) {
+		TRACE_POINT();
 		ScopedLock lock(syncher);
 		SuperGroupMap::iterator it, end = superGroups.end();
 		vector<SuperGroupPtr> superGroupsToDetach;
@@ -320,7 +324,8 @@ public:
 				// ...cleanup the spawner if it's been idle for more than maxIdleTime.
 				if (group->spawner->cleanable()) {
 					unsigned long long spawnerGcTime =
-						group->spawner->lastUsed() + maxIdleTime;
+						group->spawner->lastUsed() +
+						group->options.getSpawnerTimeout();
 					if (now >= spawnerGcTime) {
 						group->asyncCleanupSpawner();
 					} else if (nextGcRunTime == 0
@@ -354,6 +359,104 @@ public:
 		} else {
 			timer.start((nextGcRunTime - now + 1000000) / 1000000.0, 0.0);
 		}
+	}
+
+	void collectAnalytics(ev::timer &timer, int revents) {
+		TRACE_POINT();
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
+		vector<pid_t> pids;
+		unsigned int max;
+		
+		// Collect all the PIDs.
+		{
+			UPDATE_TRACE_POINT();
+			LockGuard l(syncher);
+			max = this->max;
+		}
+		pids.reserve(max);
+		{
+			UPDATE_TRACE_POINT();
+			LockGuard l(syncher);
+			SuperGroupMap::const_iterator sg_it, sg_end = superGroups.end();
+			
+			for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+				const SuperGroupPtr &superGroup = sg_it->second;
+				vector<GroupPtr>::const_iterator g_it, g_end = superGroup->groups.end();
+
+				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
+					const GroupPtr &group = *g_it;
+					ProcessList::const_iterator p_it, p_end = group->processes.end();
+
+					for (p_it = group->processes.begin(); p_it != p_end; p_it++) {
+						const ProcessPtr &process = *p_it;
+						pids.push_back(process->pid);
+					}
+
+					p_end = group->disabledProcesses.end();
+					for (p_it = group->disabledProcesses.begin(); p_it != p_end; p_it++) {
+						const ProcessPtr &process = *p_it;
+						pids.push_back(process->pid);
+					}
+				}
+			}
+		}
+		
+		ProcessMetricMap allMetrics;
+		try {
+			// Now collect the process metrics and store them in the
+			// data structures, and log the state into the analytics logs.
+			UPDATE_TRACE_POINT();
+			allMetrics = ProcessMetricsCollector().collect(pids);
+		} catch (const ProcessMetricsCollector::ParseException &) {
+			P_WARN("Unable to collect process metrics: cannot parse 'ps' output.");
+			goto end;
+		}
+
+		{
+			UPDATE_TRACE_POINT();
+			LockGuard l(syncher);
+			SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
+			
+			UPDATE_TRACE_POINT();
+			for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+				const SuperGroupPtr &superGroup = sg_it->second;
+				vector<GroupPtr>::iterator g_it, g_end = superGroup->groups.end();
+
+				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
+					const GroupPtr &group = *g_it;
+					ProcessList::iterator p_it, p_end = group->processes.end();
+
+					for (p_it = group->processes.begin(); p_it != p_end; p_it++) {
+						ProcessPtr &process = *p_it;
+						ProcessMetricMap::const_iterator metrics_it =
+							allMetrics.find(process->pid);
+						if (metrics_it != allMetrics.end()) {
+							process->metrics = metrics_it->second;
+						}
+					}
+
+					p_end = group->disabledProcesses.end();
+					for (p_it = group->disabledProcesses.begin(); p_it != p_end; p_it++) {
+						ProcessPtr &process = *p_it;
+						ProcessMetricMap::const_iterator metrics_it =
+							allMetrics.find(process->pid);
+						if (metrics_it != allMetrics.end()) {
+							process->metrics = metrics_it->second;
+						}
+					}
+				}
+			}
+		}
+		
+		end:
+		// Sleep for about 4 seconds, aligned to seconds boundary
+		// for saving power on laptops.
+		ev_now_update();
+		unsigned long long currentTime = SystemTime::getUsec();
+		unsigned long long deadline =
+			roundUp<unsigned long long>(currentTime, 1000000) + 4000000;
+		timer.start((deadline - currentTime) / 1000000.0, 0.0);
 	}
 	
 	SuperGroupPtr createSuperGroup(const Options &options) {
@@ -393,8 +496,11 @@ public:
 		maxIdleTime = 30 * 1000000;
 		
 		garbageCollectionTimer.set<Pool, &Pool::garbageCollect>(this);
-		garbageCollectionTimer.set(maxIdleTime / 1000000.0, maxIdleTime / 1000000.0);
+		garbageCollectionTimer.set(maxIdleTime / 1000000.0, 0.0);
 		libev->start(garbageCollectionTimer);
+		analyticsCollectionTimer.set<Pool, &Pool::collectAnalytics>(this);
+		analyticsCollectionTimer.set(3.0, 0.0);
+		libev->start(analyticsCollectionTimer);
 	}
 	
 	~Pool() {
@@ -788,7 +894,7 @@ public:
 		result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
 		result << "<info version=\"2\">";
 		
-		result << "<count>" << getProcessCount() << "</count>";
+		result << "<process_count>" << getProcessCount(false) << "</process_count>";
 		result << "<max>" << max << "</max>";
 		result << "<usage>" << usage(false) << "</usage>";
 		

@@ -627,15 +627,11 @@ namespace tut {
 	}
 	
 	TEST_METHOD(42) {
-		// getProcessCount() returns the number of processes in the pool.
-	}
-	
-	TEST_METHOD(43) {
 		// Each spawned process has a GUPID, which can be looked up
 		// through findProcessByGupid().
 	}
 	
-	TEST_METHOD(44) {
+	TEST_METHOD(43) {
 		// findProcessByGupid() returns a NULL pointer if there is
 		// no matching process.
 	}
