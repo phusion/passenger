@@ -30,7 +30,8 @@ task :nginx => [
 task :nginx_without_native_support => [
 	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',
 	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
-	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent'
+	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
+	AGENT_OUTPUT_DIR + 'SpawnPreparer'
 ]
 
 task :clean => 'nginx:clean'

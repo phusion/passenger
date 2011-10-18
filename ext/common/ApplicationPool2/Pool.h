@@ -325,7 +325,7 @@ public:
 				if (group->spawner->cleanable()) {
 					unsigned long long spawnerGcTime =
 						group->spawner->lastUsed() +
-						group->options.getSpawnerTimeout();
+						group->options.getSpawnerTimeout() * 1000000;
 					if (now >= spawnerGcTime) {
 						group->asyncCleanupSpawner();
 					} else if (nextGcRunTime == 0
@@ -452,7 +452,7 @@ public:
 		end:
 		// Sleep for about 4 seconds, aligned to seconds boundary
 		// for saving power on laptops.
-		ev_now_update();
+		ev_now_update(libev->getLoop());
 		unsigned long long currentTime = SystemTime::getUsec();
 		unsigned long long deadline =
 			roundUp<unsigned long long>(currentTime, 1000000) + 4000000;
@@ -479,6 +479,9 @@ public:
 		assert(session == NULL);
 		return superGroup;
 	}
+
+	// Debugging helper function, implemented in .cpp file so that GDB can access it.
+	const SuperGroupPtr getSuperGroup(const char *name);
 	
 public:
 	Pool(SafeLibev *libev, const SpawnerFactoryPtr &spawnerFactory,
@@ -493,7 +496,7 @@ public:
 		}
 		
 		max         = 6;
-		maxIdleTime = 30 * 1000000;
+		maxIdleTime = 60 * 1000000;
 		
 		garbageCollectionTimer.set<Pool, &Pool::garbageCollect>(this);
 		garbageCollectionTimer.set(maxIdleTime / 1000000.0, 0.0);

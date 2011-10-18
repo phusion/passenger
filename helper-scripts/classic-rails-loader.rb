@@ -27,6 +27,7 @@ module App
 		require 'phusion_passenger/utils/tmpdir'
 		require 'phusion_passenger/loader_shared_helpers'
 		require 'phusion_passenger/classic_rails/request_handler'
+		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
 		NativeSupport.disable_stdio_buffering
 	rescue Exception => e

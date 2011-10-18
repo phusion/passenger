@@ -645,4 +645,5 @@ namespace tut {
 	// Persistent connections.
 	// Temporarily disabling a process.
 	// When a process has become idle, and there are waiters on the pool, consider detaching it in order to satisfy a waiter.
+	// If the app fails to spawn, then it stops trying to spawn minProcesses processes.
 }

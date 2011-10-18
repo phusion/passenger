@@ -95,7 +95,9 @@ public:
 		}
 	}
 	
+	const string &getConnectPassword() const;
 	pid_t getPid() const;
+	const string &getGupid() const;
 	
 	ProcessPtr getProcess() const {
 		return process;

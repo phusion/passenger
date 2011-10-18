@@ -33,6 +33,7 @@ module App
 		require 'phusion_passenger/preloader_shared_helpers'
 		require 'phusion_passenger/loader_shared_helpers'
 		require 'phusion_passenger/rack/request_handler'
+		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
 		NativeSupport.disable_stdio_buffering
 	rescue Exception => e
@@ -45,7 +46,7 @@ module App
 	
 	def self.preload_app
 		LoaderSharedHelpers.before_loading_app_code_step1('config.ru', options)
-		LoaderSharedHelpers.run_load_path_setup_code
+		LoaderSharedHelpers.run_load_path_setup_code(options)
 		LoaderSharedHelpers.before_loading_app_code_step2(options)
 		
 		require 'rubygems'
@@ -74,6 +75,7 @@ module App
 			name, value = line.strip.split(/: */, 2)
 			options[name] = value
 		end
+		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		
 		handler = Rack::RequestHandler.new(STDIN, app, options)
 		LoaderSharedHelpers.before_handling_requests(true, options)

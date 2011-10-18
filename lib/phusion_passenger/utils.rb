@@ -818,17 +818,12 @@ module Utils
 			"app_type"         => "rails",
 			"environment"      => "production",
 			"spawn_method"     => "smart-lv2",
-			"framework_spawner_timeout" => -1,
-			"app_spawner_timeout"       => -1,
+			"spawner_timeout"  => -1,
 			"print_exceptions" => true
 		}
 		options = defaults.merge(options)
 		options["app_group_name"]            = options["app_root"] if !options["app_group_name"]
-		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
-		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i
-		if options.has_key?("print_framework_loading_exceptions")
-			options["print_framework_loading_exceptions"] = to_boolean(options["print_framework_loading_exceptions"])
-		end
+		options["spawner_timeout"]           = options["spawner_timeout"].to_i
 		# Force this to be a boolean for easy use with Utils#unmarshal_and_raise_errors.
 		options["print_exceptions"]          = to_boolean(options["print_exceptions"])
 		

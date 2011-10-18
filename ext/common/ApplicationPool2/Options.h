@@ -465,8 +465,8 @@ public:
 		appendKeyValue (vec, "app_type",           appType);
 		if (appType.empty()) {
 			appendKeyValue (vec, "start_command", startCommand);
-			appendKeyValue (vec, "process_title", processTitle);
 		}
+		appendKeyValue (vec, "process_title",      getProcessTitle());
 		appendKeyValue3(vec, "start_timeout",      startTimeout);
 		appendKeyValue (vec, "environment",        environment);
 		appendKeyValue (vec, "base_uri",           baseURI);

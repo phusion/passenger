@@ -100,6 +100,12 @@ rethrowException(const ExceptionPtr &e) {
 }
 
 
+const SuperGroupPtr
+Pool::getSuperGroup(const char *name) {
+	return superGroups.get(name);
+}
+
+
 boost::mutex &
 SuperGroup::getPoolSyncher(const PoolPtr &pool) {
 	return pool->syncher;
@@ -227,6 +233,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.
 void
 Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
+	TRACE_POINT();
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
 	
@@ -235,6 +242,7 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 		ProcessPtr process;
 		ExceptionPtr exception;
 		try {
+			UPDATE_TRACE_POINT();
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
 			process = spawner->spawn(options);
@@ -245,6 +253,7 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 			// Let other (unexpected) exceptions crash the program so
 			// gdb can generate a backtrace.
 		}
+		UPDATE_TRACE_POINT();
 		PoolPtr pool = getPool();
 		if (pool == NULL) {
 			return;
@@ -257,6 +266,7 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 		
 		verifyInvariants();
 		
+		UPDATE_TRACE_POINT();
 		vector<Callback> actions;
 		if (process != NULL) {
 			attach(process, actions);
@@ -270,6 +280,7 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 			// processes currently alive we should just use them.
 			assignExceptionToGetWaiters(exception, actions);
 			pool->assignSessionsToGetWaiters(actions);
+			done = true;
 		}
 		
 		// Temporarily mark this Group as 'not spawning' so
@@ -277,10 +288,12 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 		// state into account.
 		m_spawning = false;
 		
-		done = (unsigned long) count >= options.minProcesses
+		done = done
+			|| (unsigned long) count >= options.minProcesses
 			|| pool->atFullCapacity(false);
 		m_spawning = !done;
 		
+		UPDATE_TRACE_POINT();
 		verifyInvariants();
 		lock.unlock();
 		runAllActions(actions);
@@ -310,7 +323,7 @@ Group::restart(const Options &options) {
 	if (!actions.empty()) {
 		getPool()->nonInterruptableThreads.create_thread(
 			boost::bind(Pool::runAllActionsWithCopy, actions),
-			"Post lock actions runner",
+			"Post lock actions runner: " + name,
 			64 * 1024);
 	}
 }
@@ -321,9 +334,19 @@ Group::generateSecret() const {
 }
 
 
+const string &
+Session::getConnectPassword() const {
+	return process->connectPassword;
+}
+
 pid_t
 Session::getPid() const {
 	return process->pid;
+}
+
+const string &
+Session::getGupid() const {
+	return process->gupid;
 }
 
 

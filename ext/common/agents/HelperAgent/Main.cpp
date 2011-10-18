@@ -45,19 +45,19 @@
 #include <oxt/thread.hpp>
 #include <oxt/system_calls.hpp>
 
+#include <ev++.h>
+
 #include <agents/HelperAgent/ScgiRequestParser.h>
 #include <agents/HelperAgent/BacktracesServer.h>
 
 #include <agents/Base.h>
 #include <Constants.h>
-#include <ApplicationPool/Pool.h>
-#include <ApplicationPool/Server.h>
-#include <Session.h>
-#include <PoolOptions.h>
+#include <ApplicationPool2/Pool.h>
 #include <MessageServer.h>
 #include <MessageReadersWriters.h>
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
+#include <SafeLibev.h>
 #include <ServerInstanceDir.h>
 #include <Exceptions.h>
 #include <Utils.h>
@@ -71,6 +71,7 @@
 using namespace boost;
 using namespace oxt;
 using namespace Passenger;
+using namespace Passenger::ApplicationPool2;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
 
@@ -138,7 +139,8 @@ private:
 	unsigned int number;
 	
 	/** The application pool to which this Client object belongs to. */
-	ApplicationPool::Ptr pool;
+	PoolPtr pool;
+	Ticket ticket;
 	
 	/** This client's password. */
 	string password;
@@ -568,7 +570,8 @@ private:
 		
 		if (partialRequestBody.size() > 0) {
 			UPDATE_TRACE_POINT();
-			session->sendBodyBlock(partialRequestBody.c_str(),
+			writeExact(session->fd(),
+				partialRequestBody.c_str(),
 				partialRequestBody.size());
 			bytesForwarded = partialRequestBody.size();
 		}
@@ -589,7 +592,7 @@ private:
 				throw SystemException("Cannot read request body", errno);
 			} else {
 				UPDATE_TRACE_POINT();
-				session->sendBodyBlock(buf, size);
+				writeExact(session->fd(), buf, size);
 				bytesForwarded += size;
 				done = bytesForwarded == contentLength;
 			}
@@ -613,7 +616,7 @@ private:
 		const AnalyticsLogPtr &log)
 	{
 		TRACE_POINT();
-		int stream = session->getStream();
+		int stream = session->fd();
 		int eof = false;
 		char buf[1024 * 24];
 		size_t accepted;
@@ -833,12 +836,14 @@ private:
 			StaticString appRoot = parser.getHeader("PASSENGER_APP_ROOT");
 			StaticString appGroupName = parser.getHeader("PASSENGER_APP_GROUP_NAME");
 			StaticString printStatusLine = parser.getHeader("PASSENGER_STATUS_LINE");
-			PoolOptions options(PoolOptions::DONT_INIT_STRINGS);
+			string documentRootDir;
+			Options options;
 			bool shouldPrintStatusLine = printStatusLine.empty() || printStatusLine == "true";
 			
 			if (scriptName.empty()) {
 				if (appRoot.empty()) {
-					options.appRoot = extractDirName(parser.getHeader("DOCUMENT_ROOT"));
+					documentRootDir = extractDirName(parser.getHeader("DOCUMENT_ROOT"));
+					options.appRoot = documentRootDir;
 				} else {
 					options.appRoot = appRoot;
 				}
@@ -851,12 +856,9 @@ private:
 				}
 				options.baseURI = scriptName;
 			}
-			if (appGroupName.empty()) {
-				options.appGroupName = options.appRoot;
-			} else {
+			if (!appGroupName.empty()) {
 				options.appGroupName = appGroupName;
 			}
-			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
 			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");
 			options.spawnMethod    = parser.getHeader("PASSENGER_SPAWN_METHOD");
 			options.user           = parser.getHeader("PASSENGER_USER");
@@ -869,15 +871,14 @@ private:
 				DEFAULT_BACKEND_ACCOUNT_RIGHTS);
 			options.minProcesses   = atol(parser.getHeader("PASSENGER_MIN_INSTANCES"));
 			options.maxRequests    = atol(parser.getHeader("PASSENGER_MAX_REQUESTS"));
-			options.frameworkSpawnerTimeout = atol(parser.getHeader("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
-			options.appSpawnerTimeout       = atol(parser.getHeader("PASSENGER_APP_SPAWNER_IDLE_TIME"));
+			options.spawnerTimeout = atol(parser.getHeader("PASSENGER_SPAWNER_IDLE_TIME"));
 			options.debugger       = parser.getHeader("PASSENGER_DEBUGGER") == "true";
 			options.showVersionInHeader = parser.getHeader("PASSENGER_SHOW_VERSION_IN_HEADER") == "true";
 			options.maxRequests    = atol(parser.getHeader("PASSENGER_MAX_REQUESTS"));
 			options.statThrottleRate = atol(parser.getHeader("PASSENGER_STAT_THROTTLE_RATE"));
 			options.restartDir     = parser.getHeader("PASSENGER_RESTART_DIR");
-			options.environmentVariables = make_shared<EnvironmentVariablesStringListCreator>(
-				parser.getHeaderData());
+			//options.environmentVariables = make_shared<EnvironmentVariablesStringListCreator>(
+			//	parser.getHeaderData());
 			
 			UPDATE_TRACE_POINT();
 			AnalyticsLogPtr log;
@@ -890,7 +891,7 @@ private:
 				options.analytics = true;
 				options.log = log;
 			} else {
-				log.reset(new AnalyticsLog());
+				log = make_shared<AnalyticsLog>();
 			}
 			
 			AnalyticsScopeLog requestProcessingScope(log, "request processing");
@@ -904,7 +905,7 @@ private:
 				
 				{
 					AnalyticsScopeLog scope(log, "get from pool");
-					session = pool->get(options);
+					session = pool->get(options, &ticket);
 					scope.success();
 					log->message("Application PID: " + toString(session->getPid()) +
 						" (GUPID: " + session->getGupid() + ")");
@@ -912,6 +913,9 @@ private:
 				
 				UPDATE_TRACE_POINT();
 				AnalyticsScopeLog requestProxyingScope(log, "request proxying");
+				ScopeGuard g(boost::bind(&Pool::detachProcess, pool, session->getProcess(), true));
+				session->initiate();
+				g.clear();
 				
 				char extraHeaders[
 					sizeof("PASSENGER_CONNECT_PASSWORD") +
@@ -955,7 +959,7 @@ private:
 					};
 					Uint32Message::generate(headerSize,
 						parser.getHeaderData().size() + (end - extraHeaders));
-					gatheredWrite(session->getStream(), input,
+					gatheredWrite(session->fd(), input,
 						sizeof(input) / sizeof(StaticString));
 					scope.success();
 				}
@@ -967,12 +971,13 @@ private:
 						clientFd,
 						partialRequestBody,
 						contentLength);
-					session->shutdownWriter();
+					syscalls::shutdown(session->fd(), SHUT_WR);
 					scope.success();
 				}
 				
 				forwardResponse(session, shouldPrintStatusLine, clientFd, log);
 				
+				session->close(false); // We don't support keep-alive connections yet.
 				requestProxyingScope.success();
 			} catch (const SpawnException &e) {
 				handleSpawnException(clientFd, shouldPrintStatusLine, e,
@@ -1038,7 +1043,7 @@ public:
 	 *   This value is determined and assigned by the server.
 	 * @param serverSocket The server socket to accept this clients connection from.
 	 */
-	Client(unsigned int number, ApplicationPool::Ptr pool,
+	Client(unsigned int number, PoolPtr pool,
 	       const string &password, const string &defaultUser,
 	       const string &defaultGroup, int serverSocket,
 	       const AnalyticsLoggerPtr &logger)
@@ -1098,9 +1103,13 @@ typedef shared_ptr<Client> ClientPtr;
  */
 class Server {
 private:
-	static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 64 * 128;
+	static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 64 * 1024;
+	static const int EVENT_LOOP_THREAD_STACK_SIZE = 128 * 1024;
 	
 	FileDescriptor feedbackFd;
+	struct ev_loop *loop;
+	SafeLibev *safeLibev;
+	ev::async loopExitWatcher;
 	bool userSwitching;
 	string defaultUser;
 	string defaultGroup;
@@ -1111,17 +1120,16 @@ private:
 	ServerInstanceDir::GenerationPtr generation;
 	set<ClientPtr> clients;
 	AnalyticsLoggerPtr analyticsLogger;
-	ApplicationPool::Ptr pool;
+	RandomGeneratorPtr randomGenerator;
+	SpawnerFactoryPtr spawnerFactory;
+	PoolPtr pool;
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
 	ResourceLocator resourceLocator;
 	shared_ptr<oxt::thread> prestarterThread;
 	shared_ptr<oxt::thread> messageServerThread;
+	shared_ptr<oxt::thread> eventLoopThread;
 	EventFd exitEvent;
-	
-	string getRequestSocketFilename() const {
-		return generation->getPath() + "/request.socket";
-	}
 	
 	/**
 	 * Starts listening for client connections on this server's request socket.
@@ -1220,6 +1228,29 @@ private:
 		}
 		return result;
 	}
+
+	static struct ev_loop *createEventLoop() {
+		struct ev_loop *loop;
+		
+		// libev doesn't like choosing epoll and kqueue because the author
+		// thinks they're broken, so let's try to force it.
+		loop = ev_default_loop(EVBACKEND_EPOLL);
+		if (loop == NULL) {
+			loop = ev_default_loop(EVBACKEND_KQUEUE);
+		}
+		if (loop == NULL) {
+			loop = ev_default_loop(0);
+		}
+		if (loop == NULL) {
+			throw RuntimeException("Cannot create an event loop");
+		} else {
+			return loop;
+		}
+	}
+
+	void onLoopExit(ev::async &async, int revents) {
+		ev_break(loop, EVBREAK_ONE);
+	}
 	
 public:
 	Server(FileDescriptor feedbackFd, pid_t webServerPid, const string &tempDir,
@@ -1240,6 +1271,12 @@ public:
 		this->defaultGroup  = defaultGroup;
 		numberOfThreads     = maxPoolSize * 4;
 		
+		loop = createEventLoop();
+		safeLibev = new SafeLibev(loop);
+		loopExitWatcher.set(loop);
+		loopExitWatcher.set<Server, &Server::onLoopExit>(this);
+		loopExitWatcher.start();
+
 		sbmh_init(NULL, &statusFinder_occ,
 			(const unsigned char *) "Status:",
 			strlen("Status:"));
@@ -1269,18 +1306,15 @@ public:
 		analyticsLogger = ptr(new AnalyticsLogger(options.get("logging_agent_address"),
 			"logging", loggingAgentPassword));
 		
-		pool = ptr(new ApplicationPool::Pool(
-			resourceLocator.getSpawnServerFilename(), generation,
-			accountsDatabase, rubyCommand,
-			analyticsLogger,
-			options.getInt("log_level"),
-			options.get("debug_log_file", false)
-		));
+		randomGenerator = make_shared<RandomGenerator>();
+		spawnerFactory = make_shared<SpawnerFactory>(safeLibev, resourceLocator,
+			generation, randomGenerator);
+		pool = make_shared<Pool>(safeLibev, spawnerFactory, randomGenerator);
 		pool->setMax(maxPoolSize);
-		pool->setMaxPerApp(maxInstancesPerApp);
-		pool->setMaxIdleTime(poolIdleTime);
+		//pool->setMaxPerApp(maxInstancesPerApp);
+		//pool->setMaxIdleTime(poolIdleTime);
 		
-		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
+		//messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
 		messageServer->addHandler(ptr(new BacktracesServer()));
 		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
 		
@@ -1319,6 +1353,13 @@ public:
 		}
 		oxt::thread::interrupt_and_join_multiple(threads, clients.size());
 		clients.clear();
+
+		loopExitWatcher.send();
+		eventLoopThread->join();
+		loopExitWatcher.stop();
+		pool.reset();
+		delete safeLibev;
+		ev_loop_destroy(loop);
 		
 		P_TRACE(2, "All threads have been shut down.");
 	}
@@ -1332,6 +1373,12 @@ public:
 			boost::bind(runAndPrintExceptions, func, true),
 			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
 		));
+		func = boost::bind(ev_run, loop, 0);
+		eventLoopThread = make_shared<oxt::thread>(
+			boost::bind(runAndPrintExceptions, func, true),
+			"Event loop thread",
+			128 * 1024
+		);
 		
 		/* Wait until the watchdog closes the feedback fd (meaning it
 		 * was killed) or until we receive an exit message.
@@ -1371,6 +1418,10 @@ public:
 			}
 		}
 	}
+
+	string getRequestSocketFilename() const {
+		return generation->getPath() + "/request.socket";
+	}
 };
 
 /**
@@ -1403,15 +1454,13 @@ main(int argc, char *argv[]) {
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
 			options);
-		P_DEBUG("Passenger helper agent started on PID " << getpid());
+		P_DEBUG("PassengerHelperAgent online, listening at unix:" <<
+			server.getRequestSocketFilename());
 		
 		UPDATE_TRACE_POINT();
 		server.mainLoop();
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
-		return 1;
-	} catch (const std::exception &e) {
-		P_ERROR(e.what());
 		return 1;
 	}
 	

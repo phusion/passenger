@@ -30,6 +30,7 @@ module PreloaderSharedHelpers
 			
 			pid = fork
 			if pid.nil?
+				$0 = "$0 (forking...)"
 				client.puts "OK"
 				client.puts Process.pid
 				client.flush

@@ -859,6 +859,7 @@ private:
 			command.push_back("bash");
 			command.push_back("-lc");
 			command.push_back("exec \"$@\"");
+			command.push_back("SpawnPreparerShell");
 		} else {
 			command.push_back(agentsDir + "/SpawnPreparer");
 		}
@@ -1547,6 +1548,7 @@ private:
 			command.push_back("bash");
 			command.push_back("-lc");
 			command.push_back("exec \"$@\"");
+			command.push_back("SpawnPreparerShell");
 		} else {
 			command.push_back(agentsDir + "/SpawnPreparer");
 		}

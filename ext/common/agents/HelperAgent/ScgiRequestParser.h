@@ -34,7 +34,6 @@
 
 #include <StaticString.h>
 #include <Utils/HashMap.h>
-#include <Utils/GroupAllocator.h>
 
 namespace Passenger {
 
@@ -137,7 +136,7 @@ public:
 	};
 	
 private:
-	typedef HashMap< StaticString, StaticString, StaticString::Hash, equal_to<StaticString>, GroupAllocator<StaticString> > HeaderMap;
+	typedef HashMap< StaticString, StaticString, StaticString::Hash, equal_to<StaticString> > HeaderMap;
 	
 	State state;
 	ErrorReason errorReason;

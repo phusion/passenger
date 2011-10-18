@@ -262,6 +262,7 @@ private:
 	}
 	
 	void doRestart(SuperGroupPtr self, Options options, unsigned int generation) {
+		TRACE_POINT();
 		vector<ComponentInfo> componentInfos = loadComponentInfos(options);
 		vector<ComponentInfo>::const_iterator it;
 		
@@ -285,6 +286,7 @@ private:
 		this->options = options;
 		
 		// Update the component information for existing groups.
+		UPDATE_TRACE_POINT();
 		for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
 			const ComponentInfo &info = *it;
 			pair<GroupPtr, unsigned int> result =
@@ -321,12 +323,14 @@ private:
 		setState(READY);
 		assignGetWaitlistToGroups(actions);
 		
+		UPDATE_TRACE_POINT();
 		verifyInvariants();
 		lock.unlock();
 		runAllActions(actions);
 	}
 	
 	void doDestroy(SuperGroupPtr self, unsigned int generation) {
+		TRACE_POINT();
 		PoolPtr pool = getPool();
 		if (OXT_UNLIKELY(pool == NULL)) {
 			return;
@@ -341,6 +345,7 @@ private:
 			return;
 		}
 		
+		UPDATE_TRACE_POINT();
 		assert(state == DESTROYING);
 		verifyInvariants();
 		state = DESTROYED;

@@ -6,6 +6,34 @@ module PhusionPassenger
 # Provides shared functions for loader and preloader apps.
 module LoaderSharedHelpers
 	extend self
+
+	def to_boolean(value)
+		return !(value.nil? || value == false || value == "false")
+	end
+	
+	def sanitize_spawn_options(options)
+		defaults = {
+			"app_type"         => "rails",
+			"environment"      => "production",
+			"spawn_method"     => "smart",
+			"spawner_timeout"  => -1,
+			"print_exceptions" => true
+		}
+		options = defaults.merge(options)
+		options["app_group_name"]            = options["app_root"] if !options["app_group_name"]
+		options["spawner_timeout"]           = options["spawner_timeout"].to_i
+		# Force this to be a boolean for easy use with Utils#unmarshal_and_raise_errors.
+		options["print_exceptions"]          = to_boolean(options["print_exceptions"])
+		
+		options["analytics"]                 = to_boolean(options["analytics"])
+		options["show_version_in_header"]    = to_boolean(options["show_version_in_header"])
+		
+		# Smart spawning is not supported when using ruby-debug.
+		options["debugger"]     = to_boolean(options["debugger"])
+		options["spawn_method"] = "direct" if options["debugger"]
+		
+		return options
+	end
 	
 	# Prepare an application process using rules for the given spawn options.
 	# This method is to be called before loading the application code.
@@ -46,7 +74,7 @@ module LoaderSharedHelpers
 		options["analytics_logger"] = AnalyticsLogger.new_from_options(options)
 	end
 	
-	def run_load_path_setup_code
+	def run_load_path_setup_code(options)
 		# rack-preloader.rb depends on the 'rack' library, but the app
 		# might want us to use a bundled version instead of a
 		# gem/apt-get/yum/whatever-installed version. Therefore we must setup
@@ -177,6 +205,10 @@ module LoaderSharedHelpers
 	# an ApplicationSpawner that has preloaded the app code.
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
+		if forked && options["process_title"] && !options["process_title"].empty?
+			$0 = options["process_title"] + ": " + options["app_group_name"]
+		end
+
 		if forked && options["analytics_logger"]
 			options["analytics_logger"].clear_connection
 		end
