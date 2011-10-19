@@ -105,9 +105,10 @@ private:
 			int status, e;
 			
 			while (!this_thread::interruption_requested()) {
-				lock.lock();
-				pid = this->pid;
-				lock.unlock();
+				{
+					lock_guard<boost::mutex> l(lock);
+					pid = this->pid;
+				}
 				
 				// Process can be started before the watcher thread is launched.
 				if (pid == 0) {
@@ -130,9 +131,10 @@ private:
 					e = errno;
 				}
 				
-				lock.lock();
-				this->pid = 0;
-				lock.unlock();
+				{
+					lock_guard<boost::mutex> l(lock);
+					this->pid = 0;
+				}
 				
 				this_thread::disable_interruption di;
 				this_thread::disable_syscall_interruption dsi;
