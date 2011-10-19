@@ -54,6 +54,7 @@
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
+#include <Utils/IOUtils.h>
 
 namespace Passenger {
 
@@ -235,9 +236,10 @@ private:
 	
 	string runCommandAndCaptureOutput(const char **command) const {
 		pid_t pid;
-		int e, p[2];
+		int e;
+		Pipe p;
 		
-		syscalls::pipe(p);
+		p = createPipe();
 		
 		this_thread::disable_syscall_interruption dsi;
 		pid = syscalls::fork();
@@ -254,18 +256,17 @@ private:
 			dup2(p[1], 1);
 			close(p[0]);
 			close(p[1]);
+			closeAllFileDescriptors(2);
 			execvp(command[0], (char * const *) command);
 			_exit(1);
 		} else if (pid == -1) {
 			e = errno;
-			syscalls::close(p[0]);
-			syscalls::close(p[1]);
 			throw SystemException("Cannot fork() a new process", e);
 		} else {
 			bool done = false;
 			string result;
 			
-			syscalls::close(p[1]);
+			p[1].close();
 			while (!done) {
 				char buf[1024 * 4];
 				ssize_t ret;
@@ -274,14 +275,12 @@ private:
 					this_thread::restore_syscall_interruption rsi(dsi);
 					ret = syscalls::read(p[0], buf, sizeof(buf));
 				} catch (const thread_interrupted &) {
-					syscalls::close(p[0]);
 					syscalls::kill(SIGKILL, pid);
 					syscalls::waitpid(pid, NULL, 0);
 					throw;
 				}
 				if (ret == -1) {
 					e = errno;
-					syscalls::close(p[0]);
 					syscalls::kill(SIGKILL, pid);
 					syscalls::waitpid(pid, NULL, 0);
 					throw SystemException("Cannot read output from the 'ps' command", e);
@@ -289,7 +288,7 @@ private:
 				done = ret == 0;
 				result.append(buf, ret);
 			}
-			syscalls::close(p[0]);
+			p[0].close();
 			syscalls::waitpid(pid, NULL, 0);
 			
 			if (result.empty()) {
