@@ -33,6 +33,7 @@
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Socket.h>
 #include <FileDescriptor.h>
+#include <Utils/ScopeGuard.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -66,6 +67,12 @@ private:
 		socket->checkinConnection(connection);
 		connection.fd = -1;
 	}
+
+	void callOnInitiateFailure() {
+		if (OXT_LIKELY(onInitiateFailure != NULL)) {
+			onInitiateFailure(this);
+		}
+	}
 	
 	void callOnClose() {
 		if (OXT_LIKELY(onClose != NULL)) {
@@ -75,12 +82,14 @@ private:
 	}
 
 public:
+	Callback onInitiateFailure;
 	Callback onClose;
 	
 	Session(const ProcessPtr &process, Socket *socket) {
 		this->process   = process;
 		this->socket    = socket;
 		closed          = false;
+		onInitiateFailure = NULL;
 		onClose         = NULL;
 	}
 	
@@ -109,8 +118,10 @@ public:
 	
 	void initiate() {
 		assert(!closed);
+		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));
 		connection = socket->checkoutConnection();
 		connection.fail = true;
+		g.clear();
 	}
 	
 	bool initiated() const {

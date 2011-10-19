@@ -185,14 +185,12 @@ module PlatformInfo
 	
 	# C compiler flags that should be passed in order to enable debugging information.
 	def self.debugging_cflags
-		if RUBY_PLATFORM =~ /openbsd/
-			# According to OpenBSD's pthreads man page, pthreads do not work
-			# correctly when an app is compiled with -g. It recommends using
-			# -ggdb instead.
-			return '-ggdb'
-		else
-			return '-g'
-		end
+		# According to OpenBSD's pthreads man page, pthreads do not work
+		# correctly when an app is compiled with -g. It recommends using
+		# -ggdb instead.
+		#
+		# In any case we'll always want to use -ggdb for better GDB debugging.
+		return '-ggdb'
 	end
 	
 	def self.export_dynamic_flags

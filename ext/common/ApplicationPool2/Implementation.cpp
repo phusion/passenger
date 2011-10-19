@@ -175,6 +175,31 @@ Group::createInterruptableThread(const function<void ()> &func, const string &na
 }
 
 void
+Group::onSessionInitiateFailure(const ProcessPtr &process, Session *session) {
+	vector<Callback> actions;
+
+	TRACE_POINT();
+	// Standard resource management boilerplate stuff...
+	PoolPtr pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL)) {
+		return;
+	}
+	unique_lock<boost::mutex> lock(pool->syncher);
+	pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL)) {
+		return;
+	}
+
+	UPDATE_TRACE_POINT();
+	if (pool->detachProcessUnlocked(process, actions)) {
+		P_DEBUG("Could not initiate a session with process " <<
+			process->inspect() << ", detached from pool");
+	}
+	lock.unlock();
+	runAllActions(actions);
+}
+
+void
 Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	TRACE_POINT();
 	// Standard resource management boilerplate stuff...
@@ -222,7 +247,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		UPDATE_TRACE_POINT();
 		vector<Callback> actions;
 		// Will take care of processing pool->getWaitlist.
-		pool->detachProcess(process, false);
+		pool->detachProcessUnlocked(process, actions);
 		pool->verifyInvariants();
 		verifyInvariants();
 		lock.unlock();
@@ -331,6 +356,21 @@ Group::restart(const Options &options) {
 string
 Group::generateSecret() const {
 	return getPool()->randomGenerator->generateAsciiString(43);
+}
+
+
+string
+Process::inspect() const {
+	stringstream result;
+	result << "(pid=";
+	result << pid;
+	GroupPtr group = getGroup();
+	if (group != NULL) {
+		result << ", group=";
+		result << group->name;
+	}
+	result << ")";
+	return result.str();
 }
 
 

@@ -262,6 +262,43 @@ public:
 		superGroup->destroy(postLockActions, false);
 		superGroup->setPool(PoolPtr());
 	}
+
+	bool detachProcessUnlocked(const ProcessPtr &process, vector<Callback> &postLockActions) {
+		GroupPtr group = process->getGroup();
+		if (group != NULL && group->getPool().get() == this) {
+			verifyInvariants();
+			
+			SuperGroupPtr superGroup = group->getSuperGroup();
+			assert(superGroup->state != SuperGroup::INITIALIZING);
+			assert(superGroup->getWaitlist.empty());
+			
+			group->detach(process, postLockActions);
+			if (group->processes.empty()
+			 && !group->spawning()
+			 && !group->getWaitlist.empty()) {
+				migrateGroupGetWaitlistToPool(group);
+			}
+			group->verifyInvariants();
+			superGroup->verifyInvariants();
+			
+			assignSessionsToGetWaiters(postLockActions);
+			
+			if (superGroup->garbageCollectable()) {
+				// possiblySpawnMoreProcessesForExistingGroups()
+				// already called via detachSuperGroup().
+				detachSuperGroup(superGroup, false, &postLockActions);
+			} else {
+				possiblySpawnMoreProcessesForExistingGroups();
+			}
+			
+			verifyInvariants();
+			verifyExpensiveInvariants();
+			
+			return true;
+		} else {
+			return false;
+		}
+	}
 	
 	static void syncGetCallback(Ticket *ticket, const SessionPtr &session, const ExceptionPtr &e) {
 		ScopedLock lock(ticket->syncher);
@@ -825,48 +862,15 @@ public:
 		}
 	}
 	
-	bool detachProcess(const ProcessPtr &process, bool lock = true) {
-		DynamicScopedLock l(syncher, lock);
-		GroupPtr group = process->getGroup();
-		if (group != NULL && group->getPool().get() == this) {
-			verifyInvariants();
-			
-			vector<Callback> actions;
-			SuperGroupPtr superGroup = group->getSuperGroup();
-			assert(superGroup->state != SuperGroup::INITIALIZING);
-			assert(superGroup->getWaitlist.empty());
-			
-			group->detach(process, actions);
-			if (group->processes.empty()
-			 && !group->spawning()
-			 && !group->getWaitlist.empty()) {
-				migrateGroupGetWaitlistToPool(group);
-			}
-			group->verifyInvariants();
-			superGroup->verifyInvariants();
-			
-			assignSessionsToGetWaiters(actions);
-			
-			if (superGroup->garbageCollectable()) {
-				// possiblySpawnMoreProcessesForExistingGroups()
-				// already called via detachSuperGroup().
-				detachSuperGroup(superGroup, false, &actions);
-			} else {
-				possiblySpawnMoreProcessesForExistingGroups();
-			}
-			
-			verifyInvariants();
-			verifyExpensiveInvariants();
-			
-			l.unlock();
-			runAllActions(actions);
-			
-			return true;
-		} else {
-			return false;
-		}
+	bool detachProcess(const ProcessPtr &process) {
+		ScopedLock l(syncher);
+		vector<Callback> actions;
+		bool result = detachProcessUnlocked(process, actions);
+		l.unlock();
+		runAllActions(actions);
+		return result;
 	}
-	
+
 	bool detachSuperGroup(const string &superGroupSecret) {
 		LockGuard l(syncher);
 		SuperGroupPtr superGroup = findSuperGroupBySecret(superGroupSecret, false);
@@ -878,10 +882,14 @@ public:
 	}
 	
 	bool detachProcess(const string &gupid) {
-		LockGuard l(syncher);
+		ScopedLock l(syncher);
 		ProcessPtr process = findProcessByGupid(gupid, false);
 		if (process != NULL) {
-			return detachProcess(process, false);
+			vector<Callback> actions;
+			bool result = detachProcessUnlocked(process, actions);
+			l.unlock();
+			runAllActions(actions);
+			return result;
 		} else {
 			return false;
 		}

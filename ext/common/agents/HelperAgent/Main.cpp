@@ -913,9 +913,7 @@ private:
 				
 				UPDATE_TRACE_POINT();
 				AnalyticsScopeLog requestProxyingScope(log, "request proxying");
-				ScopeGuard g(boost::bind(&Pool::detachProcess, pool, session->getProcess(), true));
 				session->initiate();
-				g.clear();
 				
 				char extraHeaders[
 					sizeof("PASSENGER_CONNECT_PASSWORD") +

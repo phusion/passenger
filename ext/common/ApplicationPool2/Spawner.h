@@ -647,7 +647,6 @@ protected:
 	}
 	
 	ProcessPtr negotiateSpawn(NegotiationDetails &details) {
-		details.io = BufferedIO(details.adminSocket);
 		details.spawnStartTime = SystemTime::getUsec();
 		details.gupid = integerToHex(SystemTime::get() / 60) + "-" +
 			randomGenerator->generateAsciiString(11);
@@ -794,6 +793,7 @@ private:
 	struct SpawnResult {
 		pid_t pid;
 		FileDescriptor adminSocket;
+		BufferedIO io;
 	};
 	
 	SafeLibev *libev;
@@ -1325,6 +1325,7 @@ private:
 			SpawnResult result;
 			result.pid = spawnedPid;
 			result.adminSocket = fd;
+			result.io = io;
 			return result;
 			
 		} else if (result == "Error\n") {
@@ -1428,6 +1429,7 @@ public:
 		details.libev = libev;
 		details.pid = result.pid;
 		details.adminSocket = result.adminSocket;
+		details.io = result.io;
 		details.options = &options;
 		return negotiateSpawn(details);
 	}
@@ -1637,6 +1639,7 @@ public:
 					forwardStderr ? STDERR_FILENO : -1);
 			details.pid = pid;
 			details.adminSocket = adminSocket.second;
+			details.io = BufferedIO(adminSocket.second);
 			details.errorPipe = errorPipe.first;
 			details.options = &options;
 			details.forwardStderr = forwardStderr;

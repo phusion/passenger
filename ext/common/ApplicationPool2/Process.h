@@ -368,6 +368,8 @@ public:
 		return result.str();
 	}
 
+	string inspect() const;
+
 	template<typename Stream>
 	void toXml(Stream &stream, bool includeSockets = true) const {
 		stream << "<pid>" << pid << "</pid>";

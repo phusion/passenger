@@ -60,6 +60,14 @@ private:
 	string alwaysRestartFile;
 	
 	
+	static void _onSessionInitiateFailure(Session *session) {
+		const ProcessPtr &process = session->getProcess();
+		GroupPtr group = process->getGroup();
+		if (OXT_LIKELY(group != NULL)) {
+			group->onSessionInitiateFailure(process, session);
+		}
+	}
+
 	static void _onSessionClose(Session *session) {
 		const ProcessPtr &process = session->getProcess();
 		GroupPtr group = process->getGroup();
@@ -71,6 +79,7 @@ private:
 	void createInterruptableThread(const function<void ()> &func, const string &name,
 		unsigned int stackSize);
 	string generateSecret() const;
+	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
 	void onSessionClose(const ProcessPtr &process, Session *session);
 	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options);
 	
@@ -120,6 +129,7 @@ private:
 		assert(count > 0);
 		Process *process   = pqueue.top();
 		SessionPtr session = process->newSession();
+		session->onInitiateFailure = _onSessionInitiateFailure;
 		session->onClose   = _onSessionClose;
 		pqueue.pop();
 		process->pqHandle  = pqueue.push(process, process->usage());
