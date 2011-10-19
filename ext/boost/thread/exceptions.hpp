@@ -38,7 +38,7 @@ namespace boost
         std::string message;
         
         thread_exception():
-            m_sys_err(0)
+            m_sys_err(-1)
         {}
     
         thread_exception(const std::string &description, int sys_err_code):
@@ -106,6 +106,12 @@ namespace boost
         lock_error(int sys_err_code):
             thread_exception(sys_err_code)
         {}
+    
+        lock_error(const std::string &message)
+        {
+            this->message = "boost::lock_error: ";
+            this->message.append(message);
+        }
     
         ~lock_error() throw()
         {}
