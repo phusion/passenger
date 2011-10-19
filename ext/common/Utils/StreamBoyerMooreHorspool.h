@@ -67,7 +67,7 @@
  *    information. The section 'Reuse' explains why this is important.
  *
  * 2. Allocate a StreamBMH_Occ structure somewhere.
- *    This structure contains the Boyer-Moore-Horspool occurrance table. The secion
+ *    This structure contains the Boyer-Moore-Horspool occurrance table. The section
  *    'Reuse' explains why this is important.
  *
  * 3. Initialize both structures with sbmh_init(). The structures are now usable for
@@ -231,8 +231,10 @@ struct StreamBMH {
 	
 	/***** Internal fields, do not access. *****/
 	sbmh_size_t   lookbehind_size;
-	// Algorithm uses at most needle_len - 1 bytes of space in lookbehind buffer.
-	unsigned char lookbehind[];
+	/* After this field comes a 'lookbehind' field whose size is determined
+	 * by the allocator (e.g. SBMH_ALLOC_AND_INIT).
+	 * Algorithm uses at most needle_len - 1 bytes of space in lookbehind buffer.
+	 */
 };
 
 #define SBMH_SIZE(needle_len) (sizeof(struct StreamBMH) + (needle_len) - 1)
@@ -255,6 +257,9 @@ struct StreamBMH {
 	#define SBMH_DEBUG1(format, arg1) do { /* nothing */ } while (false)
 	#define SBMH_DEBUG2(format, arg1, arg2) do { /* nothing */ } while (false)
 #endif
+
+/* Accessor for the lookbehind field. */
+#define _SBMH_LOOKBEHIND(ctx) ((unsigned char *) ctx + sizeof(struct StreamBMH))
 
 
 inline void
@@ -300,7 +305,7 @@ sbmh_lookup_char(const struct StreamBMH *restrict ctx,
 	const unsigned char *restrict data, ssize_t pos)
 {
 	if (pos < 0) {
-		return ctx->lookbehind[ctx->lookbehind_size + pos];
+		return _SBMH_LOOKBEHIND(ctx)[ctx->lookbehind_size + pos];
 	} else {
 		return data[pos];
 	}
@@ -346,10 +351,11 @@ sbmh_feed(struct StreamBMH *restrict ctx, const struct StreamBMH_Occ *restrict o
 	ssize_t pos = -ctx->lookbehind_size;
 	unsigned char last_needle_char = needle[needle_len - 1];
 	const sbmh_size_t *occ = occtable->occ;
+	unsigned char *lookbehind = _SBMH_LOOKBEHIND(ctx);
 	
 	if (pos < 0) {
 		SBMH_DEBUG2("[sbmh] considering lookbehind: (%s)(%s)\n",
-			std::string((const char *) ctx->lookbehind, ctx->lookbehind_size).c_str(),
+			std::string((const char *) lookbehind, ctx->lookbehind_size).c_str(),
 			std::string((const char *) data, len).c_str());
 		
 		/* Lookbehind buffer is not empty. Perform Boyer-Moore-Horspool
@@ -374,7 +380,7 @@ sbmh_feed(struct StreamBMH *restrict ctx, const struct StreamBMH_Occ *restrict o
 				ctx->found = true;
 				ctx->lookbehind_size = 0;
 				if (pos > -ctx->lookbehind_size && ctx->callback != NULL) {
-					ctx->callback(ctx, ctx->lookbehind,
+					ctx->callback(ctx, lookbehind,
 						ctx->lookbehind_size + pos);
 				}
 				SBMH_DEBUG1("[sbmh] found using lookbehind; end = %d\n",
@@ -408,7 +414,7 @@ sbmh_feed(struct StreamBMH *restrict ctx, const struct StreamBMH_Occ *restrict o
 			/* Discard lookbehind buffer. */
 			SBMH_DEBUG("[sbmh] no match; discarding lookbehind\n");
 			if (ctx->callback != NULL) {
-				ctx->callback(ctx, ctx->lookbehind, ctx->lookbehind_size);
+				ctx->callback(ctx, lookbehind, ctx->lookbehind_size);
 			}
 			ctx->lookbehind_size = 0;
 		} else {
@@ -420,21 +426,21 @@ sbmh_feed(struct StreamBMH *restrict ctx, const struct StreamBMH_Occ *restrict o
 			
 			if (bytesToCutOff > 0 && ctx->callback != NULL) {
 				// The cut off data is guaranteed not to contain the needle.
-				ctx->callback(ctx, ctx->lookbehind, bytesToCutOff);
+				ctx->callback(ctx, lookbehind, bytesToCutOff);
 			}
 			
-			memmove(ctx->lookbehind,
-				ctx->lookbehind + bytesToCutOff,
+			memmove(lookbehind,
+				lookbehind + bytesToCutOff,
 				ctx->lookbehind_size - bytesToCutOff);
 			ctx->lookbehind_size -= bytesToCutOff;
 			
 			assert(ssize_t(ctx->lookbehind_size + len) < ssize_t(needle_len));
-			memcpy(ctx->lookbehind + ctx->lookbehind_size,
+			memcpy(lookbehind + ctx->lookbehind_size,
 				data, len);
 			ctx->lookbehind_size += len;
 			
 			SBMH_DEBUG1("[sbmh] update lookbehind -> (%s)\n",
-				std::string((const char *) ctx->lookbehind, ctx->lookbehind_size).c_str());
+				std::string((const char *) lookbehind, ctx->lookbehind_size).c_str());
 			return len;
 		}
 	}
@@ -484,11 +490,11 @@ sbmh_feed(struct StreamBMH *restrict ctx, const struct StreamBMH_Occ *restrict o
 			pos++;
 		}
 		if (size_t(pos) < len) {
-			memcpy(ctx->lookbehind, data + pos, len - pos);
+			memcpy(lookbehind, data + pos, len - pos);
 			ctx->lookbehind_size = len - pos;
 			SBMH_DEBUG2("[sbmh] adding %d trailing bytes to lookbehind -> (%s)\n",
 				int(len - pos),
-				std::string((const char *) ctx->lookbehind,
+				std::string((const char *) lookbehind,
 					ctx->lookbehind_size).c_str());
 		}
 	}
