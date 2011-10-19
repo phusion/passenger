@@ -78,6 +78,46 @@ using namespace Passenger::ApplicationPool2;
 static StreamBMH_Occ statusFinder_occ;
 static StreamBMH_Occ transferEncodingFinder_occ;
 
+
+struct AgentOptions {
+	pid_t   webServerPid;
+	string  tempDir;
+	bool    userSwitching;
+	string  defaultUser;
+	string  defaultGroup;
+	string  passengerRoot;
+	string  rubyCommand;
+	unsigned int generationNumber;
+	unsigned int maxPoolSize;
+	unsigned int maxInstancesPerApp;
+	unsigned int poolIdleTime;
+	string requestSocketPassword;
+	string messageSocketPassword;
+	string loggingAgentAddress;
+	string loggingAgentPassword;
+	string prestartUrls;
+
+	AgentOptions(const VariantMap &options) {
+		webServerPid  = options.getPid("web_server_pid");
+		tempDir       = options.get("temp_dir");
+		userSwitching = options.getBool("user_switching");
+		defaultUser   = options.get("default_user");
+		defaultGroup  = options.get("default_group");
+		passengerRoot = options.get("passenger_root");
+		rubyCommand   = options.get("ruby");
+		generationNumber   = options.getInt("generation_number");
+		maxPoolSize        = options.getInt("max_pool_size");
+		maxInstancesPerApp = options.getInt("max_instances_per_app");
+		poolIdleTime       = options.getInt("pool_idle_time");
+		requestSocketPassword = Base64::decode(options.get("request_socket_password"));
+		messageSocketPassword = Base64::decode(options.get("message_socket_password"));
+		loggingAgentAddress   = options.get("logging_agent_address");
+		loggingAgentPassword  = options.get("logging_agent_password");
+		prestartUrls          = options.get("prestart_urls");
+	}
+};
+
+
 struct ClientDisconnectedException { };
 
 class ExitHandler: public MessageServer::Handler {
@@ -1085,15 +1125,12 @@ private:
 	static const int EVENT_LOOP_THREAD_STACK_SIZE = 128 * 1024;
 	
 	FileDescriptor feedbackFd;
+	const AgentOptions &options;
 	struct ev_loop *loop;
 	SafeLibev *safeLibev;
 	ev::async loopExitWatcher;
-	bool userSwitching;
-	string defaultUser;
-	string defaultGroup;
 	unsigned int numberOfThreads;
 	FileDescriptor requestSocket;
-	string requestSocketPassword;
 	ServerInstanceDir serverInstanceDir;
 	ServerInstanceDir::GenerationPtr generation;
 	set<ClientPtr> clients;
@@ -1136,8 +1173,9 @@ private:
 	 */
 	void startClientHandlerThreads() {
 		for (unsigned int i = 0; i < numberOfThreads; i++) {
-			ClientPtr client(new Client(i + 1, pool, requestSocketPassword,
-				defaultUser, defaultGroup, requestSocket,
+			ClientPtr client(new Client(i + 1, pool,
+				options.requestSocketPassword,
+				options.defaultUser, options.defaultGroup, requestSocket,
 				analyticsLogger));
 			clients.insert(client);
 		}
@@ -1231,23 +1269,14 @@ private:
 	}
 	
 public:
-	Server(FileDescriptor feedbackFd, pid_t webServerPid, const string &tempDir,
-		bool userSwitching, const string &defaultUser, const string &defaultGroup,
-		const string &passengerRoot, const string &rubyCommand, unsigned int generationNumber,
-		unsigned int maxPoolSize, unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-		const VariantMap &options)
-		: serverInstanceDir(webServerPid, tempDir, false),
-		  resourceLocator(passengerRoot)
+	Server(FileDescriptor feedbackFd, const AgentOptions &_options)
+		: options(_options),
+		  serverInstanceDir(options.webServerPid, options.tempDir, false),
+		  resourceLocator(options.passengerRoot)
 	{
-		string messageSocketPassword;
-		string loggingAgentPassword;
-		
 		TRACE_POINT();
-		this->feedbackFd    = feedbackFd;
-		this->userSwitching = userSwitching;
-		this->defaultUser   = defaultUser;
-		this->defaultGroup  = defaultGroup;
-		numberOfThreads     = maxPoolSize * 4;
+		this->feedbackFd = feedbackFd;
+		numberOfThreads  = options.maxPoolSize * 4;
 		
 		loop = createEventLoop();
 		safeLibev = new SafeLibev(loop);
@@ -1263,32 +1292,29 @@ public:
 			strlen("Transfer-Encoding:"));
 		
 		UPDATE_TRACE_POINT();
-		requestSocketPassword = Base64::decode(options.get("request_socket_password"));
-		messageSocketPassword = Base64::decode(options.get("message_socket_password"));
-		loggingAgentPassword  = options.get("logging_agent_password");
-		generation = serverInstanceDir.getGeneration(generationNumber);
+		generation = serverInstanceDir.getGeneration(options.generationNumber);
 		startListening();
 		accountsDatabase = AccountsDatabase::createDefault(generation,
-			userSwitching, defaultUser, defaultGroup);
-		accountsDatabase->add("_web_server", messageSocketPassword, false, Account::EXIT);
+			options.userSwitching, options.defaultUser, options.defaultGroup);
+		accountsDatabase->add("_web_server", options.messageSocketPassword, false, Account::EXIT);
 		messageServer = ptr(new MessageServer(generation->getPath() + "/socket", accountsDatabase));
 		
 		createFile(generation->getPath() + "/helper_agent.pid",
 			toString(getpid()), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 		
-		if (geteuid() == 0 && !userSwitching) {
-			lowerPrivilege(defaultUser, defaultGroup);
+		if (geteuid() == 0 && !options.userSwitching) {
+			lowerPrivilege(options.defaultUser, options.defaultGroup);
 		}
 		
 		UPDATE_TRACE_POINT();
-		analyticsLogger = ptr(new AnalyticsLogger(options.get("logging_agent_address"),
-			"logging", loggingAgentPassword));
+		analyticsLogger = ptr(new AnalyticsLogger(options.loggingAgentAddress,
+			"logging", options.loggingAgentPassword));
 		
 		randomGenerator = make_shared<RandomGenerator>();
 		spawnerFactory = make_shared<SpawnerFactory>(safeLibev, resourceLocator,
 			generation, randomGenerator);
 		pool = make_shared<Pool>(safeLibev, spawnerFactory, randomGenerator);
-		pool->setMax(maxPoolSize);
+		pool->setMax(options.maxPoolSize);
 		//pool->setMaxPerApp(maxInstancesPerApp);
 		//pool->setMaxIdleTime(poolIdleTime);
 		
@@ -1305,7 +1331,8 @@ public:
 		
 		function<void ()> func = boost::bind(prestartWebApps,
 			resourceLocator,
-			options.get("prestart_urls"));
+			options.prestartUrls
+		);
 		prestarterThread = ptr(new oxt::thread(
 			boost::bind(runAndPrintExceptions, func, true)
 		));
@@ -1412,26 +1439,11 @@ public:
 int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
-	VariantMap options = initializeAgent(argc, argv, "PassengerHelperAgent");
-	pid_t   webServerPid  = options.getPid("web_server_pid");
-	string  tempDir       = options.get("temp_dir");
-	bool    userSwitching = options.getBool("user_switching");
-	string  defaultUser   = options.get("default_user");
-	string  defaultGroup  = options.get("default_group");
-	string  passengerRoot = options.get("passenger_root");
-	string  rubyCommand   = options.get("ruby");
-	unsigned int generationNumber   = options.getInt("generation_number");
-	unsigned int maxPoolSize        = options.getInt("max_pool_size");
-	unsigned int maxInstancesPerApp = options.getInt("max_instances_per_app");
-	unsigned int poolIdleTime       = options.getInt("pool_idle_time");
+	AgentOptions options(initializeAgent(argc, argv, "PassengerHelperAgent"));
 	
 	try {
 		UPDATE_TRACE_POINT();
-		Server server(FEEDBACK_FD, webServerPid, tempDir,
-			userSwitching, defaultUser, defaultGroup,
-			passengerRoot, rubyCommand, generationNumber,
-			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			options);
+		Server server(FEEDBACK_FD, options);
 		P_DEBUG("PassengerHelperAgent online, listening at unix:" <<
 			server.getRequestSocketFilename());
 		
