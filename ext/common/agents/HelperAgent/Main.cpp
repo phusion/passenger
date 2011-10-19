@@ -173,31 +173,6 @@ private:
 		char padding[SBMH_SIZE(sizeof("Transfer-Encoding:") - 1)];
 	} transferEncodingFinder;
 	
-	class EnvironmentVariablesStringListCreator: public StringListCreator {
-	public:
-		StaticString data;
-		mutable StringListPtr items;
-		
-		EnvironmentVariablesStringListCreator(const StaticString &data) {
-			this->data = data;
-		}
-		
-		virtual const StringListPtr getItems() const {
-			if (items == NULL) {
-				StringListPtr items = make_shared<StringList>();
-				if (!data.empty()) {
-					string::size_type start = 0, pos;
-					while ((pos = data.find('\0', start)) != string::npos) {
-						items->push_back(data.substr(start, pos - start));
-						start = pos + 1;
-					}
-				}
-				this->items = items;
-			}
-			return items;
-		}
-	};
-	
 	/** Given a substring containing the start of the header value,
 	 * extracts the substring that contains a single header value.
 	 *
@@ -839,6 +814,7 @@ private:
 			string documentRootDir;
 			Options options;
 			bool shouldPrintStatusLine = printStatusLine.empty() || printStatusLine == "true";
+			ScgiRequestParser::const_iterator it, end;
 			
 			if (scriptName.empty()) {
 				if (appRoot.empty()) {
@@ -877,8 +853,12 @@ private:
 			options.maxRequests    = atol(parser.getHeader("PASSENGER_MAX_REQUESTS"));
 			options.statThrottleRate = atol(parser.getHeader("PASSENGER_STAT_THROTTLE_RATE"));
 			options.restartDir     = parser.getHeader("PASSENGER_RESTART_DIR");
-			//options.environmentVariables = make_shared<EnvironmentVariablesStringListCreator>(
-			//	parser.getHeaderData());
+			options.environmentVariables.clear();
+			options.environmentVariables.reserve(parser.size());
+			end = parser.end();
+			for (it = parser.begin(); it != end; it++) {
+				options.environmentVariables.push_back(make_pair(it->first, it->second));
+			}
 			
 			UPDATE_TRACE_POINT();
 			AnalyticsLogPtr log;

@@ -104,6 +104,9 @@ using namespace std;
  */
 class ScgiRequestParser {
 public:
+	typedef HashMap< StaticString, StaticString, StaticString::Hash, equal_to<StaticString> > HeaderMap;
+	typedef HeaderMap::const_iterator const_iterator;
+
 	enum State {
 		READING_LENGTH_STRING,
 		READING_HEADER_DATA,
@@ -136,8 +139,6 @@ public:
 	};
 	
 private:
-	typedef HashMap< StaticString, StaticString, StaticString::Hash, equal_to<StaticString> > HeaderMap;
-	
 	State state;
 	ErrorReason errorReason;
 	unsigned int lengthStringBufferSize;
@@ -351,6 +352,18 @@ public:
 	 */
 	bool hasHeader(const StaticString &name) const {
 		return headers.find(name) != headers.end();
+	}
+	
+	unsigned int size() const {
+		return headers.size();
+	}
+
+	const_iterator begin() const {
+		return headers.begin();
+	}
+
+	const_iterator end() const {
+		return headers.end();
 	}
 	
 	/**
