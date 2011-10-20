@@ -18,8 +18,8 @@ namespace tut {
 		
 		ApplicationPool2_PoolTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			pool = make_shared<Pool>(bg.libev,
-				make_shared<SpawnerFactory>(bg.libev, *resourceLocator, generation));
+			pool = make_shared<Pool>(bg.safe,
+				make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation));
 			bg.start();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);
 		}

@@ -35,7 +35,7 @@ namespace tut {
 				command.push_back("exit-immediately");
 			}
 			
-			return make_shared<SmartSpawner>(bg.libev,
+			return make_shared<SmartSpawner>(bg.safe,
 				*resourceLocator,
 				generation,
 				command,
@@ -104,7 +104,7 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2; sleep 60");
-		SmartSpawner spawner(bg.libev,
+		SmartSpawner spawner(bg.safe,
 			*resourceLocator,
 			generation,
 			preloaderCommand,
@@ -136,7 +136,7 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
-		SmartSpawner spawner(bg.libev,
+		SmartSpawner spawner(bg.safe,
 			*resourceLocator,
 			generation,
 			preloaderCommand,

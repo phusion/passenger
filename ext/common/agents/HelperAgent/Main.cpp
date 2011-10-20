@@ -57,7 +57,7 @@
 #include <MessageReadersWriters.h>
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
-#include <SafeLibev.h>
+#include <BackgroundEventLoop.cpp>
 #include <ServerInstanceDir.h>
 #include <Exceptions.h>
 #include <Utils.h>
@@ -1126,9 +1126,10 @@ private:
 	
 	FileDescriptor feedbackFd;
 	const AgentOptions &options;
-	struct ev_loop *loop;
-	SafeLibev *safeLibev;
-	ev::async loopExitWatcher;
+	
+	BackgroundEventLoop poolLoop;
+	BackgroundEventLoop requestLoop;
+
 	unsigned int numberOfThreads;
 	FileDescriptor requestSocket;
 	ServerInstanceDir serverInstanceDir;
@@ -1244,29 +1245,6 @@ private:
 		}
 		return result;
 	}
-
-	static struct ev_loop *createEventLoop() {
-		struct ev_loop *loop;
-		
-		// libev doesn't like choosing epoll and kqueue because the author
-		// thinks they're broken, so let's try to force it.
-		loop = ev_default_loop(EVBACKEND_EPOLL);
-		if (loop == NULL) {
-			loop = ev_default_loop(EVBACKEND_KQUEUE);
-		}
-		if (loop == NULL) {
-			loop = ev_default_loop(0);
-		}
-		if (loop == NULL) {
-			throw RuntimeException("Cannot create an event loop");
-		} else {
-			return loop;
-		}
-	}
-
-	void onLoopExit(ev::async &async, int revents) {
-		ev_break(loop, EVBREAK_ONE);
-	}
 	
 public:
 	Server(FileDescriptor feedbackFd, const AgentOptions &_options)
@@ -1277,12 +1255,6 @@ public:
 		TRACE_POINT();
 		this->feedbackFd = feedbackFd;
 		numberOfThreads  = options.maxPoolSize * 4;
-		
-		loop = createEventLoop();
-		safeLibev = new SafeLibev(loop);
-		loopExitWatcher.set(loop);
-		loopExitWatcher.set<Server, &Server::onLoopExit>(this);
-		loopExitWatcher.start();
 
 		sbmh_init(NULL, &statusFinder_occ,
 			(const unsigned char *) "Status:",
@@ -1311,9 +1283,10 @@ public:
 			"logging", options.loggingAgentPassword));
 		
 		randomGenerator = make_shared<RandomGenerator>();
-		spawnerFactory = make_shared<SpawnerFactory>(safeLibev, resourceLocator,
-			generation, randomGenerator);
-		pool = make_shared<Pool>(safeLibev, spawnerFactory, randomGenerator);
+		spawnerFactory = make_shared<SpawnerFactory>(poolLoop.safe,
+			resourceLocator, generation, randomGenerator);
+		pool = make_shared<Pool>(poolLoop.safe,
+			spawnerFactory, randomGenerator);
 		pool->setMax(options.maxPoolSize);
 		//pool->setMaxPerApp(maxInstancesPerApp);
 		//pool->setMaxIdleTime(poolIdleTime);
@@ -1359,31 +1332,28 @@ public:
 		oxt::thread::interrupt_and_join_multiple(threads, clients.size());
 		clients.clear();
 
-		loopExitWatcher.send();
-		eventLoopThread->join();
-		loopExitWatcher.stop();
+		poolLoop.stop();
+		requestLoop.stop();
 		pool.reset();
-		delete safeLibev;
-		ev_loop_destroy(loop);
 		
 		P_TRACE(2, "All threads have been shut down.");
 	}
 	
 	void mainLoop() {
 		TRACE_POINT();
-		
+		function<void ()> func;
+
 		startClientHandlerThreads();
-		function<void ()> func = boost::bind(&MessageServer::mainLoop, messageServer.get());
+		
+		func = boost::bind(&MessageServer::mainLoop, messageServer.get());
 		messageServerThread = ptr(new oxt::thread(
 			boost::bind(runAndPrintExceptions, func, true),
 			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
 		));
-		func = boost::bind(ev_run, loop, 0);
-		eventLoopThread = make_shared<oxt::thread>(
-			boost::bind(runAndPrintExceptions, func, true),
-			"Event loop thread",
-			128 * 1024
-		);
+		
+		poolLoop.start("Pool event loop");
+		requestLoop.start("Request event loop");
+
 		
 		/* Wait until the watchdog closes the feedback fd (meaning it
 		 * was killed) or until we receive an exit message.

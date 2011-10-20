@@ -16,7 +16,7 @@ namespace tut {
 		}
 		
 		shared_ptr<DirectSpawner> createSpawner(const Options &options) {
-			return make_shared<DirectSpawner>(bg.libev,
+			return make_shared<DirectSpawner>(bg.safe,
 				*resourceLocator, generation);
 		}
 		
@@ -42,7 +42,7 @@ namespace tut {
 		options.startupFile  = ".";
 		options.startTimeout = 300;
 		
-		DirectSpawner spawner(bg.libev, *resourceLocator, generation);
+		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
 		spawner.forwardStderr = false;
 		
 		try {
@@ -65,7 +65,7 @@ namespace tut {
 		options.startCommand = "bash\1" "-c\1" "echo hello world >&2";
 		options.startupFile  = ".";
 		
-		DirectSpawner spawner(bg.libev, *resourceLocator, generation);
+		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
 		spawner.forwardStderr = false;
 		
 		try {
