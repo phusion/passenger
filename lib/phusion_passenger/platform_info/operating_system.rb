@@ -30,7 +30,7 @@ module PlatformInfo
 	# Returns the operating system's name. This name is in lowercase and contains no spaces,
 	# and thus is suitable to be used in some kind of ID. E.g. "linux", "macosx".
 	def self.os_name
-		if Config::CONFIG['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
+		if rb_config['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
 			return "macosx"
 		else
 			return RUBY_PLATFORM.sub(/.*?-/, '')

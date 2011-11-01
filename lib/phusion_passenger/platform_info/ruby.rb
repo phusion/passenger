@@ -93,7 +93,7 @@ module PlatformInfo
 	# interpreter; use ruby_command instead.
 	def self.ruby_executable
 		@@ruby_executable ||=
-			Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
+			rb_config['bindir'] + '/' + rb_config['RUBY_INSTALL_NAME'] + rb_config['EXEEXT']
 	end
 	
 	# Returns whether the Ruby interpreter supports process forking.
@@ -103,7 +103,7 @@ module PlatformInfo
 		return Process.respond_to?(:fork) &&
 			RUBY_ENGINE != "jruby" &&
 			RUBY_ENGINE != "macruby" &&
-			Config::CONFIG['target_os'] !~ /mswin|windows|mingw/
+			rb_config['target_os'] !~ /mswin|windows|mingw/
 	end
 	
 	# Returns the correct 'gem' command for this Ruby interpreter.
@@ -152,7 +152,7 @@ module PlatformInfo
 	
 	# Returns whether the current Ruby interpreter is managed by RVM.
 	def self.in_rvm?
-		bindir = Config::CONFIG['bindir']
+		bindir = rb_config['bindir']
 		return bindir.include?('/.rvm/') || bindir.include?('/rvm/')
 	end
 	
@@ -246,7 +246,7 @@ module PlatformInfo
 	def self.locate_ruby_tool(name)
 		result = locate_ruby_tool_by_basename(name)
 		if !result
-			exeext = Config::CONFIG['EXEEXT']
+			exeext = rb_config['EXEEXT']
 			exeext = nil if exeext.empty?
 			if exeext
 				result = locate_ruby_tool_by_basename("#{name}#{exeext}")
@@ -324,7 +324,7 @@ private
 	#
 	#   transform_according_to_ruby_exec_format("rake")    => "jrake", "rake1.8", etc
 	def self.transform_according_to_ruby_exec_format(name)
-		install_name = Config::CONFIG['RUBY_INSTALL_NAME']
+		install_name = rb_config['RUBY_INSTALL_NAME']
 		if install_name.include?('ruby')
 			format = install_name.sub('ruby', '%s')
 			return sprintf(format, name)
