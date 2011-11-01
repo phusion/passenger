@@ -334,6 +334,15 @@ public
 		end
 	end
 	private_class_method :try_compile_and_run
+
+	def self.rb_config
+		if defined?(::RbConfig)
+			return ::RbConfig::CONFIG
+		else
+			return ::Config::CONFIG
+		end
+	end
+	private_class_method :rb_config
 end
 
 end # module PhusionPassenger
