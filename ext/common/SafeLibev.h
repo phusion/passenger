@@ -109,6 +109,10 @@ public:
 	void setCurrentThread() {
 		loopThread = pthread_self();
 	}
+
+	pthread_t getCurrentThread() const {
+		return loopThread;
+	}
 	
 	template<typename Watcher>
 	void start(Watcher &watcher) {
@@ -156,6 +160,12 @@ public:
 				cond.wait(l);
 			}
 		}
+	}
+
+	void runAsync(const Callback &callback) {
+		unique_lock<boost::mutex> l(syncher);
+		commands.push_back(callback);
+		ev_async_send(loop, &async);
 	}
 };
 
