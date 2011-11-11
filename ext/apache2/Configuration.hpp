@@ -382,6 +382,9 @@ struct ServerConfig {
 	
 	/** Whether user switching support is enabled. */
 	bool userSwitching;
+
+	/** Whether response buffering support is enabled. */
+	bool bufferResponse;
 	
 	/** See PoolOptions for more info. */
 	string defaultUser;

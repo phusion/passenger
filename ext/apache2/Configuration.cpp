@@ -276,6 +276,7 @@ DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsign
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_instances_per_app, maxInstancesPerApp, unsigned int, 0)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsigned int, 0)
 DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_user_switching, userSwitching)
+DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_buffer_response, bufferResponse)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
@@ -511,6 +512,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Whether to enable user switching support."),
+	AP_INIT_FLAG("PassengerBufferResponse",
+		(FlagFunc) cmd_passenger_buffer_response,
+		NULL,
+		RSRC_CONF,
+		"Whether to enable buffering response."),
 	AP_INIT_TAKE1("PassengerUser",
 		(Take1Func) cmd_passenger_user,
 		NULL,
