@@ -417,6 +417,7 @@ struct ServerConfig {
 		maxInstancesPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		poolIdleTime       = DEFAULT_POOL_IDLE_TIME;
 		userSwitching      = true;
+		bufferResponse     = true;
 		defaultUser        = DEFAULT_WEB_APP_USER;
 		tempDir            = getSystemTempDir();
 		unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
