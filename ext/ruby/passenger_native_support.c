@@ -276,7 +276,7 @@ close_all_file_descriptors(VALUE self, VALUE exceptions) {
 	
 	for (i = sysconf(_SC_OPEN_MAX) - 1; i >= 0; i--) {
 		int is_exception = 0;
-		#ifdef HAVE_RB_RESERVED_FD_P
+		#ifdef RB_RESERVED_FD_P
 			is_exception = rb_reserved_fd_p((int) i);
 		#endif
 		for (j = 0; j < RARRAY_LEN(exceptions) && !is_exception; j++) {
