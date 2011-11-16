@@ -192,6 +192,11 @@ struct DirConfig {
 	 */
 	Threeway unionStationSupport;
 	
+	/**
+	 * Whether response buffering support is enabled.
+	 */
+	Threeway bufferResponse;
+	
 	/*************************************/
 	/*************************************/
 	
@@ -327,6 +332,10 @@ struct DirConfig {
 	bool useUnionStation() const {
 		return unionStationSupport == ENABLED;
 	}
+
+	bool getBufferResponse() const {
+		return bufferResponse != DISABLED;
+	}
 	
 	string getUnionStationFilterString() const {
 		if (unionStationFilters.empty()) {
@@ -382,9 +391,6 @@ struct ServerConfig {
 	
 	/** Whether user switching support is enabled. */
 	bool userSwitching;
-
-	/** Whether response buffering support is enabled. */
-	bool bufferResponse;
 	
 	/** See PoolOptions for more info. */
 	string defaultUser;
@@ -417,7 +423,6 @@ struct ServerConfig {
 		maxInstancesPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		poolIdleTime       = DEFAULT_POOL_IDLE_TIME;
 		userSwitching      = true;
-		bufferResponse     = true;
 		defaultUser        = DEFAULT_WEB_APP_USER;
 		tempDir            = getSystemTempDir();
 		unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
