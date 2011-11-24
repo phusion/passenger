@@ -80,7 +80,8 @@ typedef shared_ptr<PassengerBucketState> PassengerBucketStatePtr;
  */
 apr_bucket *passenger_bucket_create(SessionPtr session,
                                     PassengerBucketStatePtr state,
-                                    apr_bucket_alloc_t *list);
+                                    apr_bucket_alloc_t *list,
+                                    bool bufferResponse);
 
 } // namespace Passenger
 

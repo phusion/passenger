@@ -721,7 +721,7 @@ private:
 			/* Setup the bucket brigade. */
 			bucketState = ptr(new PassengerBucketState());
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
-			b = passenger_bucket_create(session, bucketState, r->connection->bucket_alloc);
+			b = passenger_bucket_create(session, bucketState, r->connection->bucket_alloc, config->getBufferResponse());
 			
 			/* The bucket (b) still has a reference to the session, so the reset()
 			 * call here is guaranteed not to throw any exceptions.
