@@ -1235,6 +1235,22 @@ private:
 			r->connection->keepalive = AP_CONN_CLOSE;
 			apr_brigade_destroy(bb);
 			
+			/* Set informative status instead of generic 500 in case of
+			 * connection problems
+			 */
+			if (APR_STATUS_IS_TIMEUP(rv) || APR_STATUS_IS_ECONNRESET(rv))
+				throw UploadException(HTTP_REQUEST_TIME_OUT);
+
+			/* When content length limit is exceeded, error bucket is
+			 * created for request which is then passed to output filters.
+			 * 'ap_http_header_filter' output filter calls ap_die and
+			 * fails with AP_FILTER_ERROR when error is present.
+			 * Mark request as completely served so that ap_die won't
+			 * be called again for this request in ap_process_request
+			 */
+			if ((rv == AP_FILTER_ERROR) && (r->status == HTTP_REQUEST_ENTITY_TOO_LARGE))
+				throw UploadException(OK);
+
 			char buf[150], *errorString, message[1024];
 			errorString = apr_strerror(rv, buf, sizeof(buf));
 			if (errorString != NULL) {
