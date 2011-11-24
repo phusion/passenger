@@ -101,6 +101,25 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 
 /**
+ * Exception during upload.
+ *
+ * @ingroup Exceptions
+ */
+class UploadException: public std::exception {
+private:
+	string msg;
+	int http_status;
+public:
+	UploadException(const string &message, int status = HTTP_INTERNAL_SERVER_ERROR)
+		: msg(message), http_status(status) {}
+	UploadException(int status): msg(""), http_status(status) {}
+	virtual ~UploadException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+	bool hasMessage() const throw() { return !msg.empty(); }
+	int getHttpStatus() const throw() { return http_status; }
+};
+
+/**
  * Apache hook functions, wrapped in a class.
  *
  * @ingroup Core
