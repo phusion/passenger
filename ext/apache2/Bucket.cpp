@@ -44,6 +44,7 @@ struct BucketData {
 	SessionPtr session;
 	PassengerBucketStatePtr state;
 	int stream;
+	bool bufferResponse;
 	
 	~BucketData() {
 		/* The session here is an ApplicationPoolServer::RemoteSession.
@@ -80,7 +81,7 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 	*str = NULL;
 	*len = 0;
 	
-	if (block == APR_NONBLOCK_READ) {
+	if (!data->bufferResponse && block == APR_NONBLOCK_READ) {
 		/*
 		 * The bucket brigade that Hooks::handleRequest() passes using
 		 * ap_pass_brigade() is always passed through ap_content_length_filter,
@@ -130,7 +131,7 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 		 * which can read the next chunk from the stream.
 		 */
 		APR_BUCKET_INSERT_AFTER(bucket, passenger_bucket_create(
-			data->session, data->state, bucket->list));
+			data->session, data->state, bucket->list, data->bufferResponse));
 		
 		/* The newly created Passenger Bucket has a reference to the session
 		 * object, so we can delete data here.
@@ -163,11 +164,12 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 }
 
 static apr_bucket *
-passenger_bucket_make(apr_bucket *bucket, SessionPtr session, PassengerBucketStatePtr state) {
+passenger_bucket_make(apr_bucket *bucket, SessionPtr session, PassengerBucketStatePtr state, bool bufferResponse) {
 	BucketData *data = new BucketData();
 	data->session  = session;
 	data->stream   = session->getStream();
 	data->state    = state;
+	data->bufferResponse = bufferResponse;
 	
 	bucket->type   = &apr_bucket_type_passenger_pipe;
 	bucket->length = (apr_size_t)(-1);
@@ -177,14 +179,14 @@ passenger_bucket_make(apr_bucket *bucket, SessionPtr session, PassengerBucketSta
 }
 
 apr_bucket *
-passenger_bucket_create(SessionPtr session, PassengerBucketStatePtr state, apr_bucket_alloc_t *list) {
+passenger_bucket_create(SessionPtr session, PassengerBucketStatePtr state, apr_bucket_alloc_t *list, bool bufferResponse) {
 	apr_bucket *bucket;
 	
 	bucket = (apr_bucket *) apr_bucket_alloc(sizeof(*bucket), list);
 	APR_BUCKET_INIT(bucket);
 	bucket->free = apr_bucket_free;
 	bucket->list = list;
-	return passenger_bucket_make(bucket, session, state);
+	return passenger_bucket_make(bucket, session, state, bufferResponse);
 }
 
 } // namespace Passenger

@@ -192,6 +192,11 @@ struct DirConfig {
 	 */
 	Threeway unionStationSupport;
 	
+	/**
+	 * Whether response buffering support is enabled.
+	 */
+	Threeway bufferResponse;
+	
 	/*************************************/
 	/*************************************/
 	
@@ -326,6 +331,10 @@ struct DirConfig {
 	
 	bool useUnionStation() const {
 		return unionStationSupport == ENABLED;
+	}
+
+	bool getBufferResponse() const {
+		return bufferResponse != DISABLED;
 	}
 	
 	string getUnionStationFilterString() const {
