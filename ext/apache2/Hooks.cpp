@@ -874,6 +874,11 @@ private:
 				e.backtrace());
 			return HTTP_INTERNAL_SERVER_ERROR;
 			
+		} catch (const UploadException &e) {
+			if (e.hasMessage())
+				P_ERROR(e.what() << "\n");
+			return e.getHttpStatus();
+		
 		} catch (const tracable_exception &e) {
 			P_ERROR("Unexpected error in mod_passenger: " <<
 				e.what() << "\n" << "  Backtrace:\n" << e.backtrace());
@@ -1242,7 +1247,7 @@ private:
 					rv);
 			}
 			message[sizeof(message) - 1] = '\0';
-			throw RuntimeException(message);
+			throw UploadException(message);
 		}
 		
 		/* If this fails, it means that a filter is written incorrectly and that
