@@ -17,7 +17,7 @@ Release 3.0.10
    We already supported Ruby 1.9.3 since 3.0.8, but due to bugs in Ruby
    1.9.3's build system Phusion Passenger would fail to detect Ruby 1.9.3
    features on some systems. Fixes issue #714.
- * Fixed a bug in PassengerPreSpawn
+ * Fixed a bug in PassengerPreStart
    A regression was introduced in 3.0.8, causing the prespawn script to
    connect to the host name instead of to 127.0.0.1. Fix contributed by
    Andy Allan.
