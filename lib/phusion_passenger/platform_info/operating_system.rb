@@ -155,7 +155,8 @@ module PlatformInfo
 	memoize :supports_lfence_instruction?, true
 
 	def self.requires_no_tls_direct_seg_refs?
-		return File.exists?("/proc/xen/capabilities")
+		arch = cpu_architectures[0]
+		return arch == "x86" && File.exists?("/proc/xen/capabilities")
 	end
 	memoize :requires_no_tls_direct_seg_refs?, true
 end
