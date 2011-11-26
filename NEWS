@@ -23,6 +23,8 @@ Release 3.0.10
    A regression was introduced in 3.0.8, causing the prespawn script to
    connect to the host name instead of to 127.0.0.1. Fix contributed by
    Andy Allan.
+ * Fixed compatibility with GCC 4.6
+   Affected systems include Ubuntu 11.10.
  * Fixed various compilation problems.
  * Fixed some Ruby 1.9 encoding problems.
  * Fixed some Ruby 1.9.3 deprecation warnings.
