@@ -2,7 +2,7 @@ Release 3.0.10
 --------------
 
  * [Nginx] Dropped support for Nginx versions older than 1.0.0
- * [Nginx] Fixed support for Nginx 1.1.8.
+ * [Nginx] Fixed support for Nginx 1.1.4+.
  * [Nginx] New option passenger_max_requests
    This is equivalent to the PassengerMaxRequests option in the Apache
    version: Phusion Passenger will automatically shutdown a worker process
