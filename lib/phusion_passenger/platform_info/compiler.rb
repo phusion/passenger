@@ -66,6 +66,11 @@ module PlatformInfo
 	end
 	memoize :compiler_supports_wno_missing_field_initializers_flag?
 	
+	def self.compiler_supports_no_tls_direct_seg_refs_option?
+		return try_compile(:c, '', '-mno-tls-direct-seg-refs')
+	end
+	memoize :compiler_supports_no_tls_direct_seg_refs_option?, true
+	
 	# Returns whether compiling C++ with -fvisibility=hidden might result
 	# in tons of useless warnings, like this:
 	# http://code.google.com/p/phusion-passenger/issues/detail?id=526
