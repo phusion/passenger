@@ -2,7 +2,7 @@ Release 3.0.11
 --------------
 
  * Fixed a compilation problem on platforms without alloca.h, such as FreeBSD 7.
- * Improved performance and solves some warnings on Xen systems by compiling
+ * Improved performance and solved some warnings on Xen systems by compiling
    with `-mno-tls-direct-seg-refs`. Patch contributed by Michał Pokrywka.
 
 
