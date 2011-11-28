@@ -91,6 +91,11 @@ module PlatformInfo
 	end
 	memoize :has_math_library?, true
 	
+	def self.has_alloca_h?
+		return try_compile(:c, '#include <alloca.h>')
+	end
+	memoize :has_alloca_h?, true
+
 	# Compiler flags that should be used for compiling every C/C++ program,
 	# for portability reasons. These flags should be specified as last
 	# when invoking the compiler.
@@ -153,6 +158,7 @@ module PlatformInfo
 			flags << '-DBOOST_SP_USE_PTHREADS'
 		end
 		
+		flags << '-DHAS_ALLOCA_H' if has_alloca_h?
 		flags << '-DHAS_SFENCE' if supports_sfence_instruction?
 		flags << '-DHAS_LFENCE' if supports_lfence_instruction?
 		
