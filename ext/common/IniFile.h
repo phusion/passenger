@@ -176,7 +176,7 @@ protected:
 	}
 
 	void accept() {
-		if (upcomingChar == EOF) return;
+		if ((int) upcomingChar == EOF) return;
 	
 		lastAcceptedChar = (char)iniFileStream.get();
 		upcomingChar     = (char)iniFileStream.peek();
@@ -189,7 +189,7 @@ protected:
 	}
 
 	void ignore() {
-		if (upcomingChar == EOF) return;
+		if ((int) upcomingChar == EOF) return;
 	
 		upcomingChar = (char)iniFileStream.peek();
 		currentColumn++;
@@ -261,7 +261,7 @@ protected:
 		int column = currentColumn;
 		string result;
 	
-		while (upcomingChar != '\n' && upcomingChar != EOF) {
+		while (upcomingChar != '\n' && (int) upcomingChar != EOF) {
 			result.append(1, upcomingChar);
 			accept();
 		}
@@ -282,7 +282,7 @@ protected:
 		int column = currentColumn;
 		string result;
 	
-		while (upcomingChar != EOF) {
+		while ((int) upcomingChar != EOF) {
 			result.append(1, upcomingChar);
 			accept();
 		}

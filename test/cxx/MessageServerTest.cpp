@@ -42,6 +42,7 @@ namespace tut {
 			if (serverThread != NULL) {
 				serverThread->interrupt_and_join();
 			}
+			Passenger::setLogLevel(0);
 		}
 		
 		class SlowClient: public Client {
@@ -180,7 +181,8 @@ namespace tut {
 	TEST_METHOD(3) {
 		// It disconnects the client if the client does not supply a username and
 		// password within a time limit.
-		server->setLoginTimeout(40);
+		Passenger::setLogLevel(-1);
+		server->setLoginTimeout(40000);
 		
 		/* These can throw either an IOException or SystemException:
 		 * - An IOException is raised when connect() encounters EOF.

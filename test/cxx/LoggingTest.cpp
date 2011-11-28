@@ -1,7 +1,8 @@
 #include "TestSupport.h"
-#include "Logging.h"
-#include "MessageClient.h"
-#include "LoggingAgent/LoggingServer.h"
+#include <Logging.h>
+#include <MessageClient.h>
+#include <LoggingAgent/LoggingServer.h>
+#include <Utils/MessageIO.h>
 
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -565,9 +566,8 @@ namespace tut {
 		log.reset();
 		
 		vector<string> args;
-		MessageChannel channel(logger->getConnection());
-		channel.write("flush", NULL);
-		ensure(channel.read(args));
+		writeArrayMessage(logger->getConnection(), "flush", NULL);
+		ensure(readArrayMessage(logger->getConnection(), args));
 		ensure_equals(args.size(), 1u);
 		ensure_equals(args[0], "ok");
 		
@@ -591,13 +591,11 @@ namespace tut {
 		log2->message("message 2");
 		log2.reset();
 		
-		MessageChannel channel(logger->getConnection());
-		channel.write("flush", NULL);
-		ensure(channel.read(args));
+		writeArrayMessage(logger->getConnection(), "flush", NULL);
+		ensure(readArrayMessage(logger->getConnection(), args));
 		
-		channel = MessageChannel(logger2->getConnection());
-		channel.write("flush", NULL);
-		ensure(channel.read(args));
+		writeArrayMessage(logger2->getConnection(), "flush", NULL);
+		ensure(readArrayMessage(logger2->getConnection(), args));
 		
 		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
 		struct stat buf;

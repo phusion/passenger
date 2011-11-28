@@ -2181,15 +2181,96 @@ allow the attacker to cause a Denial-of-Service.</p></div>
 directory that&#8217;s readable by Apache, but only writable by administrators.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_security_options">5.10. Security options</h3>
+<h3 id="PassengerBufferResponse">5.10. PassengerBufferResponse &lt;on|off&gt;</h3>
+<div class="paragraph"><p>When turned on, application-generated responses are buffered in memory. By buffering
+responses, protection is provided against slow HTTP clients that can not read your
+response immediately.</p></div>
+<div class="paragraph"><p>For example, consider an HTTP client that&#8217;s on a dial-up modem link, and your
+application instance generates a 2 MB response. If response buffering is turned
+off then your application instance will be blocked until the entire 2 MB has been
+sent out to the HTTP client. This disallows your application instance to do any useful
+work in the mean time. By enabling response buffering, Phusion Passenger will read
+the application response as quickly as possible and will take care of slow clients.</p></div>
+<div class="paragraph"><p>However, keep in mind that enabling this option will make streaming responses
+impossible. Consider for example this piece of Rails code:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>render :text =&gt; lambda { |response, output|
+    10.times do |i|
+        output.write("entry #{i}\n")
+        output.flush
+        sleep 1
+    end
+}</pre>
+</div></div>
+<div class="paragraph"><p>&#8230;or this piece of Rack code:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>class Response
+    def each
+        10.times do |i|
+            yield("entry #{i}\n")
+            sleep 1
+        end
+    end
+end
+
+app = lambda do |env|
+    [200, { "Content-Type" =&gt; "text/plain" }, Response.new]
+end</pre>
+</div></div>
+<div class="paragraph"><p>When response buffering is turned on, Phusion Passenger will wait until
+the application is done sending the entire response before forwarding it
+to the client. The client will not receive anything for 10 seconds,
+after which it receives the entire response at once.
+When response buffering is turned off, it works as expected: the client
+receives an "entry X" message every second for 10 seconds.</p></div>
+<div class="paragraph"><p>This option may occur in the following places:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+In the global server configuration.
+</p>
+</li>
+<li>
+<p>
+In a virtual host configuration block.
+</p>
+</li>
+<li>
+<p>
+In a <span class="monospaced">&lt;Directory&gt;</span> or <span class="monospaced">&lt;Location&gt;</span> block.
+</p>
+</li>
+<li>
+<p>
+In <em>.htaccess</em>.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>on</em>.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img src="./images/icons/note.png" alt="Note">
+</td>
+<td class="content">
+<div class="paragraph"><p>The <a href="#PassengerBufferResponse">PassengerBufferResponse</a> directive should be turned off
+if responses can be huge. Because entire responses are buffered in memory when turned on.</p></div>
+</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_security_options">5.11. Security options</h3>
 <div class="sect3">
-<h4 id="PassengerUserSwitching">5.10.1. PassengerUserSwitching &lt;on|off&gt;</h4>
+<h4 id="PassengerUserSwitching">5.11.1. PassengerUserSwitching &lt;on|off&gt;</h4>
 <div class="paragraph"><p>Whether to enable <a href="#user_switching">user switching support</a>.</p></div>
 <div class="paragraph"><p>This option may only occur once, in the global server configuration.
 The default value is <em>on</em>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_passengeruser_lt_username_gt">5.10.2. PassengerUser &lt;username&gt;</h4>
+<h4 id="_passengeruser_lt_username_gt">5.11.2. PassengerUser &lt;username&gt;</h4>
 <div class="paragraph"><p>If <a href="#user_switching">user switching support</a> is enabled, then Phusion Passenger will
 by default run the web application as the owner of the file <em>config/environment.rb</em>
 (for Rails apps) or <em>config.ru</em> (for Rack apps). This option allows you to override
@@ -2216,7 +2297,7 @@ In a <span class="monospaced">&lt;Directory&gt;</span> or <span class="monospace
 <div class="paragraph"><p>In each place, it may be specified at most once.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_passengergroup_lt_group_name_gt">5.10.3. PassengerGroup &lt;group name&gt;</h4>
+<h4 id="_passengergroup_lt_group_name_gt">5.11.3. PassengerGroup &lt;group name&gt;</h4>
 <div class="paragraph"><p>If <a href="#user_switching">user switching support</a> is enabled, then Phusion Passenger will
 by default run the web application as the primary group of the owner of the file
 <em>config/environment.rb</em> (for Rails apps) or <em>config.ru</em> (for Rack apps). This option
@@ -2245,7 +2326,7 @@ In a <span class="monospaced">&lt;Directory&gt;</span> or <span class="monospace
 <div class="paragraph"><p>In each place, it may be specified at most once.</p></div>
 </div>
 <div class="sect3">
-<h4 id="PassengerDefaultUser">5.10.4. PassengerDefaultUser &lt;username&gt;</h4>
+<h4 id="PassengerDefaultUser">5.11.4. PassengerDefaultUser &lt;username&gt;</h4>
 <div class="paragraph"><p>Phusion Passenger enables <a href="#user_switching">user switching support</a> by default.
 This configuration option allows one to specify the user that applications must
 run as, if user switching fails or is disabled.</p></div>
@@ -2253,7 +2334,7 @@ run as, if user switching fails or is disabled.</p></div>
 The default value is <em>nobody</em>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="PassengerDefaultGroup">5.10.5. PassengerDefaultGroup &lt;group name&gt;</h4>
+<h4 id="PassengerDefaultGroup">5.11.5. PassengerDefaultGroup &lt;group name&gt;</h4>
 <div class="paragraph"><p>Phusion Passenger enables <a href="#user_switching">user switching support</a> by default.
 This configuration option allows one to specify the group that applications must
 run as, if user switching fails or is disabled.</p></div>
@@ -2262,7 +2343,7 @@ The default value is the primary group of the user specifified by
 <a href="#PassengerDefaultUser">PassengerDefaultUser</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_passengerfriendlyerrorpages_lt_on_off_gt">5.10.6. PassengerFriendlyErrorPages &lt;on|off&gt;</h4>
+<h4 id="_passengerfriendlyerrorpages_lt_on_off_gt">5.11.6. PassengerFriendlyErrorPages &lt;on|off&gt;</h4>
 <div class="paragraph"><p>Phusion Passenger can display friendly error pages whenever an application fails
 to start. This friendly error page presents the startup error message, some
 suggestions for solving the problem, and a backtrace. This feature is very useful
@@ -2297,9 +2378,9 @@ In <em>.htaccess</em>, if <span class="monospaced">AllowOverride Options</span> 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_resource_control_and_optimization_options">5.11. Resource control and optimization options</h3>
+<h3 id="_resource_control_and_optimization_options">5.12. Resource control and optimization options</h3>
 <div class="sect3">
-<h4 id="_passengermaxpoolsize_lt_integer_gt">5.11.1. PassengerMaxPoolSize &lt;integer&gt;</h4>
+<h4 id="_passengermaxpoolsize_lt_integer_gt">5.12.1. PassengerMaxPoolSize &lt;integer&gt;</h4>
 <div class="paragraph"><p>The maximum number of Ruby on Rails or Rack application instances that may
 be simultaneously active. A larger number results in higher memory usage,
 but improved ability to handle concurrent HTTP clients.</p></div>
@@ -2326,7 +2407,7 @@ by about 33%. And it&#8217;s not hard to install.</td>
 </div>
 </div>
 <div class="sect3">
-<h4 id="PassengerMinInstances">5.11.2. PassengerMinInstances &lt;integer&gt;</h4>
+<h4 id="PassengerMinInstances">5.12.2. PassengerMinInstances &lt;integer&gt;</h4>
 <div class="paragraph"><p>This specifies the minimum number of application instances that must be kept around
 whenever Phusion Passenger cleans up idle instances. You should set this option to a
 non-zero value if you want to avoid potentially long startup times after a website
@@ -2396,7 +2477,7 @@ In <em>.htaccess</em>, if <span class="monospaced">AllowOverride Limits</span> i
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>1</em>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_passengermaxinstancesperapp_lt_integer_gt">5.11.3. PassengerMaxInstancesPerApp &lt;integer&gt;</h4>
+<h4 id="_passengermaxinstancesperapp_lt_integer_gt">5.12.3. PassengerMaxInstancesPerApp &lt;integer&gt;</h4>
 <div class="paragraph"><p>The maximum number of application instances that may be simultaneously active
 for a single application. This helps to make sure that a single application
 will not occupy all available slots in the application pool.</p></div>
@@ -2408,7 +2489,7 @@ will be enforced.</p></div>
 The default value is <em>0</em>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="PassengerPoolIdleTime">5.11.4. PassengerPoolIdleTime &lt;integer&gt;</h4>
+<h4 id="PassengerPoolIdleTime">5.12.4. PassengerPoolIdleTime &lt;integer&gt;</h4>
 <div class="paragraph"><p>The maximum number of seconds that an application instance may be idle. That is,
 if an application instance hasn&#8217;t received any traffic after the given number of
 seconds, then it will be shutdown in order to conserve memory.</p></div>
@@ -2430,7 +2511,7 @@ applications, each which must be available at all times.</p></div>
 The default value is <em>300</em>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="PassengerMaxRequests">5.11.5. PassengerMaxRequests &lt;integer&gt;</h4>
+<h4 id="PassengerMaxRequests">5.12.5. PassengerMaxRequests &lt;integer&gt;</h4>
 <div class="paragraph"><p>The maximum number of requests an application instance will process. After
 serving that many requests, the application instance will be shut down and
 Phusion Passenger will restart it. A value of 0 means that there is no maximum:
@@ -2478,7 +2559,7 @@ measure to avoid memory leaks.</p></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_passengerstatthrottlerate_lt_integer_gt">5.11.6. PassengerStatThrottleRate &lt;integer&gt;</h4>
+<h4 id="_passengerstatthrottlerate_lt_integer_gt">5.12.6. PassengerStatThrottleRate &lt;integer&gt;</h4>
 <div class="paragraph"><p>By default, Phusion Passenger performs several filesystem checks (or, in
 programmers jargon, <em>stat() calls</em>) each time a request is processed:</p></div>
 <div class="ulist"><ul>
@@ -2530,7 +2611,7 @@ In <em>.htaccess</em>, if <span class="monospaced">AllowOverride Limits</span> i
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>0</em>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="PassengerPreStart">5.11.7. PassengerPreStart &lt;url&gt;</h4>
+<h4 id="PassengerPreStart">5.12.7. PassengerPreStart &lt;url&gt;</h4>
 <div class="paragraph"><p>By default, Phusion Passenger does not start any application instances until said
 web application is first accessed. The result is that the first visitor of said
 web application might experience a small delay as Phusion Passenger is starting
@@ -2758,7 +2839,7 @@ the request ending up at a different web server in the cluster.</p></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="PassengerHighPerformance">5.11.8. PassengerHighPerformance &lt;on|off&gt;</h4>
+<h4 id="PassengerHighPerformance">5.12.8. PassengerHighPerformance &lt;on|off&gt;</h4>
 <div class="paragraph"><p>By default, Phusion Passenger is compatible with mod_rewrite and most other
 Apache modules. However, a lot of effort is required in order to be compatible.
 If you turn <em>PassengerHighPerformance</em> to <em>on</em>, then Phusion Passenger will be
@@ -2837,9 +2918,9 @@ then you can enable high performance mode for a certain URL only. For example:</
 </div>
 </div>
 <div class="sect2">
-<h3 id="_compatibility_options">5.12. Compatibility options</h3>
+<h3 id="_compatibility_options">5.13. Compatibility options</h3>
 <div class="sect3">
-<h4 id="PassengerResolveSymlinksInDocumentRoot">5.12.1. PassengerResolveSymlinksInDocumentRoot &lt;on|off&gt;</h4>
+<h4 id="PassengerResolveSymlinksInDocumentRoot">5.13.1. PassengerResolveSymlinksInDocumentRoot &lt;on|off&gt;</h4>
 <div class="paragraph"><p>Configures whether Phusion Passenger should resolve symlinks in the document root.
 Please refer to <a href="#application_detection">How Phusion Passenger detects whether a virtual host is a web application</a> for more information.</p></div>
 <div class="paragraph"><p>This option may occur in the following places:</p></div>
@@ -2868,7 +2949,7 @@ In <em>.htaccess</em>, if <span class="monospaced">AllowOverride Options</span> 
 <div class="paragraph"><p>In each place, it may be specified at most once. It is off by default.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_passengerallowencodedslashes_lt_on_off_gt">5.12.2. PassengerAllowEncodedSlashes &lt;on|off&gt;</h4>
+<h4 id="_passengerallowencodedslashes_lt_on_off_gt">5.13.2. PassengerAllowEncodedSlashes &lt;on|off&gt;</h4>
 <div class="paragraph"><p>By default, Apache doesn&#8217;t support URLs with encoded slashes (%2f), e.g. URLs like
 this: <span class="monospaced">/users/fujikura%2fyuu</span>. If you access such an URL then Apache will return a
 404 Not Found error. This can be solved by turning on PassengerAllowEncodedSlashes
@@ -2936,9 +3017,9 @@ displaying maintenance.html will work fine even for URLs starting with "/users".
 </div>
 </div>
 <div class="sect2">
-<h3 id="_logging_and_debugging_options">5.13. Logging and debugging options</h3>
+<h3 id="_logging_and_debugging_options">5.14. Logging and debugging options</h3>
 <div class="sect3">
-<h4 id="_passengerloglevel_lt_integer_gt">5.13.1. PassengerLogLevel &lt;integer&gt;</h4>
+<h4 id="_passengerloglevel_lt_integer_gt">5.14.1. PassengerLogLevel &lt;integer&gt;</h4>
 <div class="paragraph"><p>This option allows one to specify how much information Phusion Passenger should
 write to the Apache error log file. A higher log level value means that more
 information will be logged.</p></div>
@@ -2971,7 +3052,7 @@ information will be logged.</p></div>
 The default is <em>0</em>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_passengerdebuglogfile_lt_filename_gt">5.13.2. PassengerDebugLogFile &lt;filename&gt;</h4>
+<h4 id="_passengerdebuglogfile_lt_filename_gt">5.14.2. PassengerDebugLogFile &lt;filename&gt;</h4>
 <div class="paragraph"><p>By default Phusion Passenger debugging and error messages are written to the global
 web server error log. This option allows one to specify the file that debugging and
 error messages should be written to instead.</p></div>
@@ -2979,9 +3060,9 @@ error messages should be written to instead.</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_ruby_on_rails_specific_options">5.14. Ruby on Rails-specific options</h3>
+<h3 id="_ruby_on_rails_specific_options">5.15. Ruby on Rails-specific options</h3>
 <div class="sect3">
-<h4 id="_railsautodetect_lt_on_off_gt">5.14.1. RailsAutoDetect &lt;on|off&gt;</h4>
+<h4 id="_railsautodetect_lt_on_off_gt">5.15.1. RailsAutoDetect &lt;on|off&gt;</h4>
 <div class="paragraph"><p>Whether Phusion Passenger should automatically detect whether a virtual host&#8217;s
 document root is a Ruby on Rails application. The default is <em>on</em>.</p></div>
 <div class="paragraph"><p>This option may occur in the global server configuration or in a virtual host
@@ -3011,7 +3092,7 @@ application by using the <a href="#RailsBaseURI">RailsBaseURI</a> configuration 
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="RailsBaseURI">5.14.2. RailsBaseURI &lt;uri&gt;</h4>
+<h4 id="RailsBaseURI">5.15.2. RailsBaseURI &lt;uri&gt;</h4>
 <div class="paragraph"><p>Used to specify that the given URI is a Rails application. See
 <a href="#deploying_rails_to_sub_uri">Deploying Rails to a sub URI</a> for an example.</p></div>
 <div class="paragraph"><p>It is allowed to specify this option multiple times. Do this to deploy multiple
@@ -3041,7 +3122,7 @@ In <em>.htaccess</em>, if <span class="monospaced">AllowOverride Options</span> 
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="rails_env">5.14.3. RailsEnv &lt;string&gt;</h4>
+<h4 id="rails_env">5.15.3. RailsEnv &lt;string&gt;</h4>
 <div class="paragraph"><p>This option allows one to specify the default <span class="monospaced">RAILS_ENV</span> value.</p></div>
 <div class="paragraph"><p>This option may occur in the following places:</p></div>
 <div class="ulist"><ul>
@@ -3069,7 +3150,7 @@ In <em>.htaccess</em>, if <span class="monospaced">AllowOverride Options</span> 
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>production</em>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_railsframeworkspawneridletime_lt_integer_gt">5.14.4. RailsFrameworkSpawnerIdleTime &lt;integer&gt;</h4>
+<h4 id="_railsframeworkspawneridletime_lt_integer_gt">5.15.4. RailsFrameworkSpawnerIdleTime &lt;integer&gt;</h4>
 <div class="paragraph"><p>The FrameworkSpawner server (explained in <a href="#spawning_methods_explained">Spawning methods explained</a>) has an idle timeout, just like the backend processes spawned by
 Phusion Passenger do. That is, it will automatically shutdown if it hasn&#8217;t done
 anything for a given period.</p></div>
@@ -3098,7 +3179,7 @@ In a virtual host configuration block.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>1800</em> (30 minutes).</p></div>
 </div>
 <div class="sect3">
-<h4 id="_railsappspawneridletime_lt_integer_gt">5.14.5. RailsAppSpawnerIdleTime &lt;integer&gt;</h4>
+<h4 id="_railsappspawneridletime_lt_integer_gt">5.15.5. RailsAppSpawnerIdleTime &lt;integer&gt;</h4>
 <div class="paragraph"><p>The ApplicationSpawner server (explained in <a href="#spawning_methods_explained">Spawning methods explained</a>) has an idle timeout, just like the backend processes spawned by
 Phusion Passenger do. That is, it will automatically shutdown if it hasn&#8217;t done
 anything for a given period.</p></div>
@@ -3128,9 +3209,9 @@ In a virtual host configuration block.
 </div>
 </div>
 <div class="sect2">
-<h3 id="_rack_specific_options">5.15. Rack-specific options</h3>
+<h3 id="_rack_specific_options">5.16. Rack-specific options</h3>
 <div class="sect3">
-<h4 id="_rackautodetect_lt_on_off_gt">5.15.1. RackAutoDetect &lt;on|off&gt;</h4>
+<h4 id="_rackautodetect_lt_on_off_gt">5.16.1. RackAutoDetect &lt;on|off&gt;</h4>
 <div class="paragraph"><p>Whether Phusion Passenger should automatically detect whether a virtual host&#8217;s
 document root is a Rack application. The default is <em>on</em>.</p></div>
 <div class="paragraph"><p>This option may occur in the global server configuration or in a virtual host
@@ -3160,7 +3241,7 @@ application by using the <a href="#RackBaseURI">RackBaseURI</a> configuration op
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="RackBaseURI">5.15.2. RackBaseURI &lt;uri&gt;</h4>
+<h4 id="RackBaseURI">5.16.2. RackBaseURI &lt;uri&gt;</h4>
 <div class="paragraph"><p>Used to specify that the given URI is a Rack application. See
 <a href="#deploying_rack_to_sub_uri">Deploying Rack to a sub URI</a> for an example.</p></div>
 <div class="paragraph"><p>It is allowed to specify this option multiple times. Do this to deploy multiple
@@ -3190,7 +3271,7 @@ In <em>.htaccess</em>, if <span class="monospaced">AllowOverride Options</span> 
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="rack_env">5.15.3. RackEnv &lt;string&gt;</h4>
+<h4 id="rack_env">5.16.3. RackEnv &lt;string&gt;</h4>
 <div class="paragraph"><p>The given value will be accessible in Rack applications in the <span class="monospaced">RACK_ENV</span>
 environment variable. This allows one to define the environment in which
 Rack applications are run, very similar to <span class="monospaced">RAILS_ENV</span>.</p></div>
@@ -3221,27 +3302,27 @@ In <em>.htaccess</em>, if <span class="monospaced">AllowOverride Options</span> 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_deprecated_options">5.16. Deprecated options</h3>
+<h3 id="_deprecated_options">5.17. Deprecated options</h3>
 <div class="paragraph"><p>The following options have been deprecated, but are still supported for backwards
 compatibility reasons.</p></div>
 <div class="sect3">
-<h4 id="_railsruby">5.16.1. RailsRuby</h4>
+<h4 id="_railsruby">5.17.1. RailsRuby</h4>
 <div class="paragraph"><p>Deprecated in favor of <a href="#PassengerRuby">PassengerRuby</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_railsuserswitching">5.16.2. RailsUserSwitching</h4>
+<h4 id="_railsuserswitching">5.17.2. RailsUserSwitching</h4>
 <div class="paragraph"><p>Deprecated in favor of <a href="#PassengerUserSwitching">PassengerUserSwitching</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_railsdefaultuser">5.16.3. RailsDefaultUser</h4>
+<h4 id="_railsdefaultuser">5.17.3. RailsDefaultUser</h4>
 <div class="paragraph"><p>Deprecated in favor of <a href="#PassengerDefaultUser">PassengerDefaultUser</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_railsallowmodrewrite">5.16.4. RailsAllowModRewrite</h4>
+<h4 id="_railsallowmodrewrite">5.17.4. RailsAllowModRewrite</h4>
 <div class="paragraph"><p>This option doesn&#8217;t do anything anymore in recent versions of Phusion Passenger.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_railsspawnmethod">5.16.5. RailsSpawnMethod</h4>
+<h4 id="_railsspawnmethod">5.17.5. RailsSpawnMethod</h4>
 <div class="paragraph"><p>Deprecated in favor of <a href="#PassengerSpawnMethod">PassengerSpawnMethod</a>.</p></div>
 </div>
 </div>
@@ -4781,7 +4862,7 @@ has no effect.</p></div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2011-08-11 22:39:09 CEST
+Last updated 2011-11-28 12:40:23 CET
 </div>
 </div>
 </body>

@@ -49,12 +49,12 @@
 #include "MessageServer.h"
 #include "ServerInstanceDir.h"
 #include "ResourceLocator.h"
-#include "MessageChannel.h"
 #include "FileDescriptor.h"
 #include "Logging.h"
 #include "Exceptions.h"
 #include "Utils.h"
 #include "Utils/Timer.h"
+#include "Utils/MessageIO.h"
 
 using namespace std;
 using namespace boost;
@@ -137,7 +137,6 @@ private:
 	ServerInstanceDir serverInstanceDir;
 	ServerInstanceDir::GenerationPtr generation;
 	FileDescriptor feedbackFd;
-	MessageChannel feedbackChannel;
 	AnalyticsLoggerPtr analyticsLogger;
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
@@ -152,7 +151,7 @@ private:
 		TRACE_POINT();
 		vector<string> args;
 		
-		if (!feedbackChannel.read(args)) {
+		if (!readArrayMessage(feedbackFd, args)) {
 			throw IOException("The watchdog unexpectedly closed the connection.");
 		}
 		if (args[0] != "request socket password" && args[0] != "message socket password") {
@@ -218,7 +217,6 @@ public:
 		string loggingAgentPassword;
 		
 		this->feedbackFd  = feedbackFd;
-		feedbackChannel   = MessageChannel(feedbackFd);
 		
 		UPDATE_TRACE_POINT();
 		messageSocketPassword = Base64::decode(options.get("message_socket_password"));
@@ -259,7 +257,8 @@ public:
 		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
 		
 		UPDATE_TRACE_POINT();
-		feedbackChannel.write("initialized",
+		writeArrayMessage(feedbackFd,
+			"initialized",
 			"",  // Request socket filename; not available in the Apache helper server.
 			messageServer->getSocketFilename().c_str(),
 			NULL);

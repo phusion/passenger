@@ -696,7 +696,7 @@ public:
 	template<typename T>
 	static bool instanceof(const std::exception &e) {
 		try {
-			dynamic_cast<const T &>(e);
+			(void) dynamic_cast<const T &>(e);
 			return true;
 		} catch (const bad_cast &) {
 			return false;

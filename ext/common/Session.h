@@ -41,11 +41,11 @@
 #include <oxt/backtrace.hpp>
 #include <oxt/system_calls.hpp>
 
-#include "MessageChannel.h"
-#include "StaticString.h"
-#include "Exceptions.h"
-#include "Utils/StrIntUtils.h"
-#include "Utils/IOUtils.h"
+#include <StaticString.h>
+#include <Exceptions.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/IOUtils.h>
+#include <Utils/MessageIO.h>
 
 namespace Passenger {
 
@@ -159,7 +159,7 @@ public:
 				"because the I/O stream has already been closed or discarded.");
 		}
 		try {
-			MessageChannel(stream).writeScalar(headers, size);
+			writeScalarMessage(stream, headers, size);
 		} catch (SystemException &e) {
 			e.setBriefMessage("An error occured while writing headers "
 				"to the request handler");
@@ -221,32 +221,6 @@ public:
 	 *          been closed or discarded.
 	 */
 	virtual int getStream() const = 0;
-	
-	/**
-	 * Set the timeout value for reading data from the I/O channel.
-	 * If no data can be read within the timeout period, then the
-	 * read call will fail with error EAGAIN or EWOULDBLOCK.
-	 *
-	 * @pre The I/O channel hasn't been closed or discarded.
-	 * @pre initiated()
-	 * @param msec The timeout, in milliseconds. If 0 is given,
-	 *             there will be no timeout.
-	 * @throws SystemException Cannot set the timeout.
-	 */
-	virtual void setReaderTimeout(unsigned int msec) = 0;
-	
-	/**
-	 * Set the timeout value for writing data from the I/O channel.
-	 * If no data can be written within the timeout period, then the
-	 * write call will fail with error EAGAIN or EWOULDBLOCK.
-	 *
-	 * @pre The I/O channel hasn't been closed or discarded.
-	 * @pre initiated()
-	 * @param msec The timeout, in milliseconds. If 0 is given,
-	 *             there will be no timeout.
-	 * @throws SystemException Cannot set the timeout.
-	 */
-	virtual void setWriterTimeout(unsigned int msec) = 0;
 	
 	/**
 	 * Indicate that we don't want to read data anymore from the I/O channel.
@@ -395,14 +369,6 @@ public:
 	
 	virtual int getStream() const {
 		return fd;
-	}
-	
-	virtual void setReaderTimeout(unsigned int msec) {
-		MessageChannel(fd).setReadTimeout(msec);
-	}
-	
-	virtual void setWriterTimeout(unsigned int msec) {
-		MessageChannel(fd).setWriteTimeout(msec);
 	}
 	
 	virtual void shutdownReader() {

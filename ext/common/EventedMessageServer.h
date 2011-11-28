@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -28,6 +28,10 @@
 #include <boost/shared_ptr.hpp>
 #include <ev++.h>
 #include <cstdarg>
+#include <cstdlib>
+#ifdef HAS_ALLOCA_H_
+	#include <alloca.h>
+#endif
 #include "EventedServer.h"
 #include "MessageReadersWriters.h"
 #include "AccountsDatabase.h"
@@ -87,7 +91,8 @@ public:
 		}
 		va_end(ap);
 		
-		StaticString args[count + 1];
+		StaticString *args = (StaticString *)
+			alloca((count + 1) * sizeof(StaticString));
 		unsigned int i = 1;
 		
 		args[0] = name;
@@ -109,7 +114,8 @@ public:
 	void writeArrayMessage(StaticString args[], unsigned int count) {
 		char headerBuf[sizeof(uint16_t)];
 		unsigned int outSize = ArrayMessage::outputSize(count);
-		StaticString out[outSize];
+		StaticString *out = (StaticString *)
+			alloca(outSize * sizeof(StaticString));
 		
 		ArrayMessage::generate(args, count, headerBuf, out, outSize);
 		write(out, outSize);

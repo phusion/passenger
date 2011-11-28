@@ -96,6 +96,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 	# Define compilation targets for the object files in libpassenger_common.
 	flags =  "-Iext -Iext/common #{LIBEV_CFLAGS} #{extra_compiler_flags} "
 	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
+	flags.strip!
 	
 	if boolean_option('RELEASE')
 		sources = []
@@ -138,7 +139,11 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 				sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
 				sh "mkdir -p #{output_dir}/Utils" if !File.directory?("#{output_dir}/Utils")
 				sh "mkdir -p #{output_dir}/LoggingAgent" if !File.directory?("#{output_dir}/LoggingAgent")
-				compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
+				if source_file =~ /\.c$/
+					compile_c("ext/common/#{source_file}", "#{flags} -o #{object_file}")
+				else
+					compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
+				end
 			end
 		end
 	end

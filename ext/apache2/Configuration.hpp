@@ -26,17 +26,12 @@
 #define _PASSENGER_CONFIGURATION_HPP_
 
 #include "Utils.h"
-#include "MessageChannel.h"
 #include "Logging.h"
 #include "ServerInstanceDir.h"
 #include "Constants.h"
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
  * to learn why.
- *
- * MessageChannel.h must be included -- even though we don't actually use
- * MessageChannel.h in here, it's necessary to make sure that apr_want.h
- * doesn't b0rk on 'struct iovec'.
  */
 #include "Configuration.h"
 
@@ -197,6 +192,11 @@ struct DirConfig {
 	 */
 	Threeway unionStationSupport;
 	
+	/**
+	 * Whether response buffering support is enabled.
+	 */
+	Threeway bufferResponse;
+	
 	/*************************************/
 	/*************************************/
 	
@@ -331,6 +331,10 @@ struct DirConfig {
 	
 	bool useUnionStation() const {
 		return unionStationSupport == ENABLED;
+	}
+
+	bool getBufferResponse() const {
+		return bufferResponse != DISABLED;
 	}
 	
 	string getUnionStationFilterString() const {

@@ -44,6 +44,7 @@
 #include "../Exceptions.h"
 #include "../Utils.h"
 #include "../Utils/IOUtils.h"
+#include "../Utils/MessageIO.h"
 #include "../Utils/Base64.h"
 #include "../Utils/VariantMap.h"
 
@@ -265,10 +266,9 @@ main(int argc, char *argv[]) {
 		ev::sig sigquitWatcher(eventLoop);
 		
 		if (feedbackFdAvailable()) {
-			MessageChannel feedbackChannel(FEEDBACK_FD);
 			feedbackFdWatcher.set<&feedbackFdBecameReadable>();
 			feedbackFdWatcher.start(FEEDBACK_FD, ev::READ);
-			feedbackChannel.write("initialized", NULL);
+			writeArrayMessage(FEEDBACK_FD, "initialized", NULL);
 		}
 		sigintWatcher.set<&caughtExitSignal>();
 		sigintWatcher.start(SIGINT);
