@@ -66,6 +66,24 @@ ignoreSigpipe() {
 	sigaction(SIGPIPE, &action, NULL);
 }
 
+static bool
+hasEnvOption(const char *name, bool defaultValue = false) {
+	const char *value = getenv(name);
+	if (value != NULL) {
+		if (*value != '\0') {
+			return strcmp(value, "yes") == 0
+				|| strcmp(value, "y") == 0
+				|| strcmp(value, "1") == 0
+				|| strcmp(value, "on") == 0
+				|| strcmp(value, "true") == 0;
+		} else {
+			return defaultValue;
+		}
+	} else {
+		return defaultValue;
+	}
+}
+
 // No idea whether strlen() is async signal safe, but let's not risk it
 // and write our own version instead that's guaranteed to be safe.
 static size_t
@@ -328,7 +346,9 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	VariantMap options;
 	
 	ignoreSigpipe();
-	installAbortHandler();
+	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
+		installAbortHandler();
+	}
 	setup_syscall_interruption_support();
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);

@@ -30,7 +30,7 @@ module PlatformInfo
 	# Returns the operating system's name. This name is in lowercase and contains no spaces,
 	# and thus is suitable to be used in some kind of ID. E.g. "linux", "macosx".
 	def self.os_name
-		if Config::CONFIG['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
+		if rb_config['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
 			return "macosx"
 		else
 			return RUBY_PLATFORM.sub(/.*?-/, '')
@@ -153,6 +153,11 @@ module PlatformInfo
 			}))
 	end
 	memoize :supports_lfence_instruction?, true
+
+	def self.requires_no_tls_direct_seg_refs?
+		return File.exists?("/proc/xen/capabilities") && cpu_architectures[0] == "x86"
+	end
+	memoize :requires_no_tls_direct_seg_refs?, true
 end
 
 end # module PhusionPassenger

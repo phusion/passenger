@@ -407,7 +407,7 @@ namespace boost
         {
             if(owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock already owned"));
             }
             m->lock();
             is_locked=true;
@@ -416,7 +416,7 @@ namespace boost
         {
             if(owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock already owned"));
             }
             is_locked=m->try_lock();
             return is_locked;
@@ -442,7 +442,7 @@ namespace boost
         {
             if(!owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock not owned"));
             }
             m->unlock();
             is_locked=false;
@@ -650,7 +650,7 @@ namespace boost
         {
             if(owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock already owned"));
             }
             m->lock_shared();
             is_locked=true;
@@ -659,7 +659,7 @@ namespace boost
         {
             if(owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock already owned"));
             }
             is_locked=m->try_lock_shared();
             return is_locked;
@@ -668,7 +668,7 @@ namespace boost
         {
             if(owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock already owned"));
             }
             is_locked=m->timed_lock_shared(target_time);
             return is_locked;
@@ -678,7 +678,7 @@ namespace boost
         {
             if(owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock already owned"));
             }
             is_locked=m->timed_lock_shared(target_time);
             return is_locked;
@@ -687,7 +687,7 @@ namespace boost
         {
             if(!owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock not owned"));
             }
             m->unlock_shared();
             is_locked=false;
@@ -847,7 +847,7 @@ namespace boost
         {
             if(owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock already owned"));
             }
             m->lock_upgrade();
             is_locked=true;
@@ -856,7 +856,7 @@ namespace boost
         {
             if(owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock already owned"));
             }
             is_locked=m->try_lock_upgrade();
             return is_locked;
@@ -865,7 +865,7 @@ namespace boost
         {
             if(!owns_lock())
             {
-                boost::throw_exception(boost::lock_error());
+                boost::throw_exception(boost::lock_error("lock not owned"));
             }
             m->unlock_upgrade();
             is_locked=false;

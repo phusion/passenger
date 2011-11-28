@@ -38,23 +38,23 @@
 #include <cstring>
 #include <cerrno>
 
-#include "Constants.h"
-#include "AgentBase.h"
-#include "ServerInstanceDir.h"
-#include "FileDescriptor.h"
-#include "MessageChannel.h"
-#include "Constants.h"
-#include "RandomGenerator.h"
-#include "Logging.h"
-#include "Exceptions.h"
-#include "StaticString.h"
-#include "ResourceLocator.h"
-#include "Utils.h"
-#include "Utils/Base64.h"
-#include "Utils/Timer.h"
-#include "Utils/ScopeGuard.h"
-#include "Utils/IOUtils.h"
-#include "Utils/VariantMap.h"
+#include <Constants.h>
+#include <AgentBase.h>
+#include <ServerInstanceDir.h>
+#include <FileDescriptor.h>
+#include <Constants.h>
+#include <RandomGenerator.h>
+#include <Logging.h>
+#include <Exceptions.h>
+#include <StaticString.h>
+#include <ResourceLocator.h>
+#include <Utils.h>
+#include <Utils/Base64.h>
+#include <Utils/Timer.h>
+#include <Utils/ScopeGuard.h>
+#include <Utils/IOUtils.h>
+#include <Utils/MessageIO.h>
+#include <Utils/VariantMap.h>
 
 using namespace std;
 using namespace boost;
@@ -107,9 +107,10 @@ private:
 			int status, e;
 			
 			while (!this_thread::interruption_requested()) {
-				lock.lock();
-				pid = this->pid;
-				lock.unlock();
+				{
+					lock_guard<boost::mutex> l(lock);
+					pid = this->pid;
+				}
 				
 				// Process can be started before the watcher thread is launched.
 				if (pid == 0) {
@@ -132,9 +133,10 @@ private:
 					e = errno;
 				}
 				
-				lock.lock();
-				this->pid = 0;
-				lock.unlock();
+				{
+					lock_guard<boost::mutex> l(lock);
+					this->pid = 0;
+				}
 				
 				this_thread::disable_interruption di;
 				this_thread::disable_syscall_interruption dsi;
@@ -287,12 +289,12 @@ public:
 	}
 	
 	/**
-	 * Send the started agent process's startup information over the given channel,
-	 * to the starter process. May throw arbitrary exceptions.
+	 * Send the started agent process's startup information over the given
+	 * file descriptor, to the starter process. May throw arbitrary exceptions.
 	 *
 	 * @pre start() has been called and succeeded.
 	 */
-	virtual void sendStartupInfo(MessageChannel &channel) = 0;
+	virtual void sendStartupInfo(int fd) = 0;
 	
 	/** Returns the name of the agent that this class is watching. */
 	virtual const char *name() const = 0;
@@ -332,7 +334,8 @@ public:
 				/* Something went wrong, report error through feedback fd. */
 				e = errno;
 				try {
-					MessageChannel(fds[1]).write("system error before exec",
+					writeArrayMessage(fds[1],
+						"system error before exec",
 						"dup2() failed",
 						toString(e).c_str(),
 						NULL);
@@ -362,8 +365,10 @@ public:
 			}
 			e = errno;
 			try {
-				MessageChannel(FEEDBACK_FD).write("exec error",
-					toString(e).c_str(), NULL);
+				writeArrayMessage(FEEDBACK_FD,
+					"exec error",
+					toString(e).c_str(),
+					NULL);
 			} catch (...) {
 				fprintf(stderr, "Passenger Watchdog: could not execute %s: %s (%d)\n",
 					exeFilename.c_str(), strerror(e), e);
@@ -400,7 +405,7 @@ public:
 			
 			// Now read its feedback.
 			try {
-				ret = MessageChannel(feedbackFd).read(args);
+				ret = readArrayMessage(feedbackFd, args);
 			} catch (const SystemException &e) {
 				if (e.code() == ECONNRESET) {
 					ret = false;
@@ -612,8 +617,9 @@ public:
 		messageSocketPassword = randomGenerator->generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 	}
 	
-	virtual void sendStartupInfo(MessageChannel &channel) {
-		channel.write("HelperAgent info",
+	virtual void sendStartupInfo(int fd) {
+		writeArrayMessage(fd,
+			"HelperAgent info",
 			requestSocketFilename.c_str(),
 			Base64::encode(requestSocketPassword).c_str(),
 			messageSocketFilename.c_str(),
@@ -660,8 +666,9 @@ public:
 		agentFilename = resourceLocator.getAgentsDir() + "/PassengerLoggingAgent";
 	}
 	
-	virtual void sendStartupInfo(MessageChannel &channel) {
-		channel.write("LoggingServer info",
+	virtual void sendStartupInfo(int fd) {
+		writeArrayMessage(fd,
+			"LoggingServer info",
 			loggingAgentAddress.c_str(),
 			loggingAgentPassword.c_str(),
 			NULL);
@@ -980,7 +987,6 @@ main(int argc, char *argv[]) {
 		randomGenerator = new RandomGenerator();
 		errorEvent = new EventFd();
 		
-		MessageChannel feedbackChannel(FEEDBACK_FD);
 		serverInstanceDir.reset(new ServerInstanceDir(webServerPid, tempDir));
 		generation = serverInstanceDir->newGeneration(userSwitching, defaultUser,
 			defaultGroup, webServerWorkerUid, webServerWorkerGid);
@@ -1012,8 +1018,10 @@ main(int argc, char *argv[]) {
 			try {
 				(*it)->start();
 			} catch (const std::exception &e) {
-				feedbackChannel.write("Watchdog startup error",
-					e.what(), NULL);
+				writeArrayMessage(FEEDBACK_FD,
+					"Watchdog startup error",
+					e.what(),
+					NULL);
 				forceAllAgentsShutdown(watchers);
 				return 1;
 			}
@@ -1023,24 +1031,27 @@ main(int argc, char *argv[]) {
 			try {
 				(*it)->startWatching();
 			} catch (const std::exception &e) {
-				feedbackChannel.write("Watchdog startup error",
-					e.what(), NULL);
+				writeArrayMessage(FEEDBACK_FD,
+					"Watchdog startup error",
+					e.what(),
+					NULL);
 				forceAllAgentsShutdown(watchers);
 				return 1;
 			}
 			// Allow other exceptions to propagate and crash the watchdog.
 		}
 		
-		feedbackChannel.write("Basic startup info",
+		writeArrayMessage(FEEDBACK_FD,
+			"Basic startup info",
 			serverInstanceDir->getPath().c_str(),
 			toString(generation->getNumber()).c_str(),
 			NULL);
 		
 		for (it = watchers.begin(); it != watchers.end(); it++) {
-			(*it)->sendStartupInfo(feedbackChannel);
+			(*it)->sendStartupInfo(FEEDBACK_FD);
 		}
 		
-		feedbackChannel.write("All agents started", NULL);
+		writeArrayMessage(FEEDBACK_FD, "All agents started", NULL);
 		
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;

@@ -300,26 +300,28 @@ readArrayMessage(int fd, unsigned long long *timeout = NULL) {
  *                total number of microseconds spent on reading will be deducted
  *                from <tt>timeout</tt>.
  *                Pass NULL if you do not want to enforce a timeout.
- * @throws EOFException End-of-file was reached before a full integer could be read.
+ * @return True if a scalar message was read, false if EOF was encountered.
  * @throws SystemException Something went wrong.
  * @throws SecurityException The message body is larger than allowed by maxSize.
  * @throws TimeoutException Unable to read the necessary data within
  *                          <tt>timeout</tt> microseconds.
  * @throws boost::thread_interrupted
  */
-inline string
-readScalarMessage(int fd, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
+inline bool
+readScalarMessage(int fd, string &output, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
 	uint32_t size;
 	if (!readUint32(fd, size, timeout)) {
-		throw EOFException("EOF encountered before a 32-bit scalar message header could be read");
+		return false;
 	}
 	
 	if (maxSize != 0 && size > (uint32_t) maxSize) {
 		throw SecurityException("The scalar message body is larger than the size limit");
 	}
 	
-	string output;
 	unsigned int remaining = size;
+	if (OXT_UNLIKELY(!output.empty())) {
+		output.clear();
+	}
 	output.reserve(size);
 	if (OXT_LIKELY(remaining > 0)) {
 		char buf[1024 * 32];
@@ -329,13 +331,43 @@ readScalarMessage(int fd, unsigned int maxSize = 0, unsigned long long *timeout 
 			unsigned int blockSize = min((unsigned int) sizeof(buf), remaining);
 			
 			if (readExact(fd, buf, blockSize, timeout) != blockSize) {
-				throw EOFException("EOF encountered before the full scalar message body could be read");
+				return false;
 			}
 			output.append(buf, blockSize);
 			remaining -= blockSize;
 		}
 	}
-	return output;
+	return true;
+}
+
+/**
+ * Reads a scalar message from the given file descriptor.
+ *
+ * @param maxSize The maximum number of bytes that may be read. If the
+ *                scalar to read is larger than this, then a SecurityException
+ *                will be thrown. Set to 0 for no size limit.
+ * @param timeout A pointer to an integer, which specifies the maximum number of
+ *                microseconds that may be spent on reading the necessary data.
+ *                If the timeout expired then TimeoutException will be thrown.
+ *                If this function returns without throwing an exception, then the
+ *                total number of microseconds spent on reading will be deducted
+ *                from <tt>timeout</tt>.
+ *                Pass NULL if you do not want to enforce a timeout.
+ * @throws EOFException End-of-file was reached before a full integer could be read.
+ * @throws SystemException Something went wrong.
+ * @throws SecurityException The message body is larger than allowed by maxSize.
+ * @throws TimeoutException Unable to read the necessary data within
+ *                          <tt>timeout</tt> microseconds.
+ * @throws boost::thread_interrupted
+ */
+inline string
+readScalarMessage(int fd, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
+	string output;
+	if (readScalarMessage(fd, output, maxSize, timeout)) {
+		return output;
+	} else {
+		throw EOFException("EOF encountered before a full scalar message could be read");
+	}
 }
 
 
@@ -402,7 +434,7 @@ writeUint32(int fd, uint32_t value, unsigned long long *timeout = NULL) {
  */
 template<typename Collection>
 inline void
-writeArrayMessage(int fd, const Collection &args, unsigned long long *timeout = NULL) {
+writeArrayMessageEx(int fd, const Collection &args, unsigned long long *timeout = NULL) {
 	typename Collection::const_iterator it, end = args.end();
 	uint16_t bodySize = 0;
 	
@@ -426,19 +458,77 @@ writeArrayMessage(int fd, const Collection &args, unsigned long long *timeout = 
 }
 
 inline void
-writeArrayMessage(int fd, const StaticString &name, va_list &ap, unsigned long long *timeout = NULL) {
-	vector<StaticString> args;
+writeArrayMessage(int fd, const vector<StaticString> &args, unsigned long long *timeout = NULL) {
+	writeArrayMessageEx(fd, args, timeout);
+}
+
+inline void
+writeArrayMessage(int fd, const vector<string> &args, unsigned long long *timeout = NULL) {
+	writeArrayMessageEx(fd, args, timeout);
+}
+
+inline void
+writeArrayMessage(int fd, const StaticString args[], unsigned int nargs, unsigned long long *timeout = NULL) {
+	unsigned int i;
+	uint16_t bodySize = 0;
 	
-	args.push_back(name);
-	while (true) {
+	for (i = 0; i < nargs; i++) {
+		bodySize += args[i].size() + 1;
+	}
+	
+	scoped_array<char> data(new char[sizeof(uint16_t) + bodySize]);
+	uint16_t header = htons(bodySize);
+	memcpy(data.get(), &header, sizeof(uint16_t));
+	
+	char *dataEnd = data.get() + sizeof(uint16_t);
+	for (i = 0; i < nargs; i++) {
+		memcpy(dataEnd, args[i].data(), args[i].size());
+		dataEnd += args[i].size();
+		*dataEnd = '\0';
+		dataEnd++;
+	}
+	
+	writeExact(fd, data.get(), sizeof(uint16_t) + bodySize, timeout);
+}
+
+inline void
+writeArrayMessage(int fd, const StaticString &name, va_list &ap, unsigned long long *timeout = NULL) {
+	StaticString args[10];
+	unsigned int nargs = 1;
+	bool done = false;
+	
+	args[0] = name;
+	do {
 		const char *arg = va_arg(ap, const char *);
 		if (arg == NULL) {
-			break;
+			done = true;
 		} else {
-			args.push_back(arg);
+			args[nargs] = arg;
+			nargs++;
 		}
+	} while (!done && nargs < sizeof(args) / sizeof(StaticString));
+	
+	if (done) {
+		writeArrayMessage(fd, args, nargs, timeout);
+	} else {
+		// Arguments don't fit in static array. Use dynamic
+		// array instead.
+		vector<StaticString> dyn_args;
+		
+		for (unsigned int i = 0; i < nargs; i++) {
+			dyn_args.push_back(args[i]);
+		}
+		do {
+			const char *arg = va_arg(ap, const char *);
+			if (arg == NULL) {
+				done = true;
+			} else {
+				dyn_args.push_back(arg);
+			}
+		} while (!done);
+		
+		writeArrayMessage(fd, dyn_args, timeout);
 	}
-	writeArrayMessage(fd, args, timeout);
 }
 
 struct _VaGuard {
@@ -462,6 +552,11 @@ writeArrayMessage(int fd, const StaticString &name, ...) {
 	va_start(ap, name);
 	_VaGuard guard(ap);
 	writeArrayMessage(fd, name, ap);
+}
+
+inline void
+writeArrayMessage(int fd, const char *name) {
+	abort();
 }
 
 /** Version of writeArrayMessage() that accepts a variadic list of 'const char *'

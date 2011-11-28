@@ -33,13 +33,13 @@
 #include <sys/types.h>
 #include <cstring>
 #include <arpa/inet.h>
-#include "StaticString.h"
-#include "Exceptions.h"
-#include "Utils/MemZeroGuard.h"
+#include <StaticString.h>
+#include <Exceptions.h>
+#include <Utils/MemZeroGuard.h>
 
 /**
  * This file provides a bunch of classes for reading and writing messages in the
- * MessageChannel format. Unlike MessageChannel, whose operations take control over
+ * MessageIO format. Unlike MessageIO functions, whose operations take control over
  * the I/O handle and may block, these classes act like parsers and data generators.
  * To read messages one must feed data to them. To write messages one must instruct
  * the classes to generate a bunch of data. These classes will never block, making

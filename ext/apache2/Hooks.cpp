@@ -54,16 +54,11 @@
 #include "Logging.h"
 #include "AgentsStarter.hpp"
 #include "ApplicationPool/Client.h"
-#include "MessageChannel.h"
 #include "DirectoryMapper.h"
 #include "Constants.h"
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
  * compilation will fail on OpenBSD.
- *
- * apr_want.h *must* come after MessageChannel.h, otherwise compilation will
- * fail on platforms on which apr_want.h tries to redefine 'struct iovec'.
- * http://groups.google.com/group/phusion-passenger/browse_thread/thread/7e162f60df212e9c
  */
 #include <ap_config.h>
 #include <ap_release.h>
@@ -726,7 +721,7 @@ private:
 			/* Setup the bucket brigade. */
 			bucketState = ptr(new PassengerBucketState());
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
-			b = passenger_bucket_create(session, bucketState, r->connection->bucket_alloc);
+			b = passenger_bucket_create(session, bucketState, r->connection->bucket_alloc, config->getBufferResponse());
 			
 			/* The bucket (b) still has a reference to the session, so the reset()
 			 * call here is guaranteed not to throw any exceptions.

@@ -2310,7 +2310,55 @@ applications, each which must be available at all times.</p></div>
 The default value is <em>300</em>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="PassengerPreStart">5.7.5. passenger_pre_start &lt;url&gt;</h4>
+<h4 id="PassengerMaxRequests">5.7.5. passenger_max_requests &lt;integer&gt;</h4>
+<div class="paragraph"><p>The maximum number of requests an application instance will process. After
+serving that many requests, the application instance will be shut down and
+Phusion Passenger will restart it. A value of 0 means that there is no maximum:
+an application instance will thus be shut down when its idle timeout has been
+reached.</p></div>
+<div class="paragraph"><p>This option is useful if your application is leaking memory. By shutting
+it down after a certain number of requests, all of its memory is guaranteed
+to be freed by the operating system.</p></div>
+<div class="paragraph"><p>This option may occur in the following places:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+In the <em>http</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In a <em>server</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In a <em>location</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In an <em>if</em> configuration scope.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>0</em>.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img src="./images/icons/caution.png" alt="Caution">
+</td>
+<td class="content">
+<div class="paragraph"><p>The <a href="#PassengerMaxRequests">passenger_max_requests</a> directive should be considered
+as a workaround for misbehaving applications. It is advised that you fix the
+problem in your application rather than relying on these directives as a
+measure to avoid memory leaks.</p></div>
+</td>
+</tr></table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="PassengerPreStart">5.7.6. passenger_pre_start &lt;url&gt;</h4>
 <div class="paragraph"><p>By default, Phusion Passenger does not start any application instances until said
 web application is first accessed. The result is that the first visitor of said
 web application might experience a small delay as Phusion Passenger is starting
@@ -3704,7 +3752,7 @@ has no effect.</p></div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2011-08-11 22:39:09 CEST
+Last updated 2011-09-15 09:09:01 CEST
 </div>
 </div>
 </body>

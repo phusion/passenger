@@ -1,5 +1,7 @@
 #include "TestSupport.h"
-#include "MessageReadersWriters.h"
+#include <MessageReadersWriters.h>
+#include <cstdlib>
+#include <alloca.h>
 
 using namespace Passenger;
 using namespace std;
@@ -382,7 +384,8 @@ namespace tut {
 	TEST_METHOD(34) {
 		// generate() works.
 		StaticString args[] = { "ab", "cde" };
-		StaticString out[ArrayMessage::outputSize(2)];
+		StaticString *out = (StaticString *)
+			alloca(ArrayMessage::outputSize(2) * sizeof(StaticString));
 		char buf[sizeof(uint16_t)];
 		ArrayMessage::generate(args, 2, buf, out, ArrayMessage::outputSize(2));
 		

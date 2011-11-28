@@ -61,6 +61,16 @@ module PlatformInfo
 	end
 	memoize :compiler_supports_wno_attributes_flag?, true
 	
+	def self.compiler_supports_wno_missing_field_initializers_flag?
+		return try_compile(:c, '', '-Wno-missing-field-initializers')
+	end
+	memoize :compiler_supports_wno_missing_field_initializers_flag?
+	
+	def self.compiler_supports_no_tls_direct_seg_refs_option?
+		return try_compile(:c, '', '-mno-tls-direct-seg-refs')
+	end
+	memoize :compiler_supports_no_tls_direct_seg_refs_option?, true
+	
 	# Returns whether compiling C++ with -fvisibility=hidden might result
 	# in tons of useless warnings, like this:
 	# http://code.google.com/p/phusion-passenger/issues/detail?id=526
@@ -81,6 +91,11 @@ module PlatformInfo
 	end
 	memoize :has_math_library?, true
 	
+	def self.has_alloca_h?
+		return try_compile(:c, '#include <alloca.h>')
+	end
+	memoize :has_alloca_h?, true
+
 	# Compiler flags that should be used for compiling every C/C++ program,
 	# for portability reasons. These flags should be specified as last
 	# when invoking the compiler.
@@ -143,6 +158,7 @@ module PlatformInfo
 			flags << '-DBOOST_SP_USE_PTHREADS'
 		end
 		
+		flags << '-DHAS_ALLOCA_H' if has_alloca_h?
 		flags << '-DHAS_SFENCE' if supports_sfence_instruction?
 		flags << '-DHAS_LFENCE' if supports_lfence_instruction?
 		

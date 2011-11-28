@@ -52,11 +52,16 @@ typedef struct {
     ngx_str_t    app_group_name;
     ngx_str_t    app_rights;
     ngx_int_t    min_instances;
+    ngx_int_t    max_requests;
     ngx_int_t    framework_spawner_idle_time;
     ngx_int_t    app_spawner_idle_time;
     ngx_str_t    union_station_key;
     ngx_array_t *base_uris;
     ngx_array_t *union_station_filters;
+
+#if (NGX_HTTP_CACHE)
+    ngx_http_complex_value_t cache_key;
+#endif
 
     /************************************/
 } passenger_loc_conf_t;
