@@ -1319,6 +1319,13 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_loc_conf_t, upstream_config.busy_buffers_size_conf),
       NULL },
 
+    { ngx_string("passenger_read_timeout"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_msec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, upstream_config.read_timeout),
+      NULL },
+       
     { ngx_string("passenger_spawn_method"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,

@@ -194,9 +194,10 @@ describe "Phusion Passenger for Nginx" do
 				server[:passenger_show_version_in_header] = "off"
 			end
 			@nginx.add_server do |server|
-				server[:server_name] = "2.passenger.test"
-				server[:root]        = "#{@stub.full_app_root}/public"
+				server[:server_name]            = "2.passenger.test"
+				server[:root]                   = "#{@stub.full_app_root}/public"
 				server[:passenger_max_requests] = 3
+				server[:passenger_read_timeout] = '3000ms'
 			end
 			@nginx.start
 		end
@@ -260,6 +261,18 @@ describe "Phusion Passenger for Nginx" do
 			get("/pid").should == pid
 			get("/pid").should_not == pid
 		end
+		
+		it "respects read_timeout setting" do
+			@server = "http://2.passenger.test:#{@nginx.port}/"
+
+			response = get_response('/?sleep_seconds=1')
+			response["Status"].should == "200"
+
+			response = get_response('/?sleep_seconds=5')
+			# response["Status"].should == "504" doesn't work???
+			response.class.should == Net::HTTPGatewayTimeOut 
+		end
+		
 	end
 	
 	
