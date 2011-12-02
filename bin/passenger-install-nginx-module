@@ -392,6 +392,7 @@ private
 	def build_nginx_configure_command(prefix, extra_configure_flags = nil)
 		command = "sh ./configure --prefix='#{prefix}' "
 		command << "--with-http_ssl_module "
+		command << "--with-http_gzip_static_module "
 		command << "--with-cc-opt='-Wno-error' "
 		if @pcre_source_dir
 			command << "--with-pcre='#{@pcre_source_dir}' "
