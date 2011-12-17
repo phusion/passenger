@@ -922,9 +922,7 @@ getHighestFileDescriptor() {
 		goto done;
 		
 	} else {
-		do {
-			ret = close(p[1]);
-		} while (ret == -1 && errno == EINTR);
+		close(p[1]); // Do not retry on EINTR: http://news.ycombinator.com/item?id=3363819
 		p[1] = -1;
 		
 		union {
@@ -965,15 +963,12 @@ getHighestFileDescriptor() {
 	}
 
 done:
+	// Do not retry on EINTR: http://news.ycombinator.com/item?id=3363819
 	if (p[0] != -1) {
-		do {
-			ret = close(p[0]);
-		} while (ret == -1 && errno == EINTR);
+		close(p[0]);
 	}
 	if (p[1] != -1) {
-		do {
-			close(p[1]);
-		} while (ret == -1 && errno == EINTR);
+		close(p[1]);
 	}
 	if (pid != -1) {
 		do {
@@ -1007,6 +1002,11 @@ closeAllFileDescriptors(int lastToKeepOpen) {
 	#endif
 	
 	for (int i = getHighestFileDescriptor(); i > lastToKeepOpen; i--) {
+		/* Even though we normally shouldn't retry on EINTR
+		 * (http://news.ycombinator.com/item?id=3363819)
+		 * it's okay to do that here because because this function
+		 * may only be called in a single-threaded environment.
+		 */
 		int ret;
 		do {
 			ret = close(i);

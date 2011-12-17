@@ -142,8 +142,10 @@ syscalls::close(int fd) {
 	 * when coding for POSIX we can't just loop on EINTR or we
 	 * could run into race conditions with other threads.
 	 * http://www.daemonology.net/blog/2011-12-17-POSIX-close-is-broken.html
-	 * However on Linux close() releases the file descriptor
-	 * when it returns EINTR.
+	 *
+	 * On Linux close() releases the file descriptor when it
+	 * returns EINTR. FreeBSD presumably does that too but I'm
+	 * not sure.
 	 * http://news.ycombinator.com/item?id=3363884
 	 */
 	#ifdef __linux__

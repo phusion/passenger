@@ -422,7 +422,10 @@ void writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout = NUL
  * @throws SystemException
  * @throws boost::thread_interrupted
  */
-void safelyClose(int fd);
+#ifndef _PASSENGER_SAFELY_CLOSE_DEFINED_
+	#define _PASSENGER_SAFELY_CLOSE_DEFINED_
+	void safelyClose(int fd, bool ignoreErrors = false);
+#endif
 
 } // namespace Passenger
 
