@@ -137,12 +137,36 @@ syscalls::writev(int fd, const struct iovec *iov, int iovcnt) {
 
 int
 syscalls::close(int fd) {
-	int ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		ret = ::close(fd)
-	);
-	return ret;
+	/* Apparently POSIX says that if close() returns EINTR the
+	 * file descriptor will be left in an undefined state, so
+	 * when coding for POSIX we can't just loop on EINTR or we
+	 * could run into race conditions with other threads.
+	 * http://www.daemonology.net/blog/2011-12-17-POSIX-close-is-broken.html
+	 * However on Linux close() releases the file descriptor
+	 * when it returns EINTR.
+	 * http://news.ycombinator.com/item?id=3363884
+	 */
+	#ifdef __linux__
+		int ret = ::close(fd);
+		if (ret == -1 && errno == EINTR && this_thread::syscalls_interruptable()) {
+			throw thread_interrupted();
+		} else {
+			return ret;
+		}
+	#else
+		/* Let's hope for the best... Maybe we should print some kind of
+		 * warning here. This would actually explain why some people get
+		 * mysterious EBADF errors. I think the best thing we can do is
+		 * to manually whitelist operating systems as we find out their
+		 * behaviors.
+		 */
+		int ret;
+		CHECK_INTERRUPTION(
+			ret == -1,
+			ret = ::close(fd)
+		);
+		return ret;
+	#endif
 }
 
 int

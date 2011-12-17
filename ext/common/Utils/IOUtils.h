@@ -414,7 +414,10 @@ void writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout = NUL
 
 /**
  * Closes the given file descriptor and throws an exception if anything goes wrong.
- * This function also works around certain close() bugs on certain operating systems.
+ * This function also works around certain close() bugs and quirks on certain
+ * operating systems, such as the FreeBSD ENOTCONN-on-close bug and the fact that
+ * when close() returns EINTR the state of the file descriptor is unspecified.
+ * See IOUtils.cpp and ext/oxt/system_calls.cpp for details.
  *
  * @throws SystemException
  * @throws boost::thread_interrupted
