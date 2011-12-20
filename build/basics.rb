@@ -24,6 +24,7 @@
 require 'rubygems'
 require 'pathname'
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
 require 'phusion_passenger/packaging'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/platform_info/operating_system'

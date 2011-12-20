@@ -15,5 +15,6 @@ $LOAD_PATH.unshift("#{source_root}/lib")
 $LOAD_PATH.unshift("#{source_root}/test")
 
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
 require 'support/test_helper'
 include TestHelper
