@@ -41,6 +41,7 @@
 #include <Exceptions.h>
 #include <Logging.h>
 #include <Utils.h>
+#include <Utils/IOUtils.h>
 
 namespace Passenger {
 
@@ -123,9 +124,7 @@ public:
 		int ret;
 		
 		if (ownerPipe != -1) {
-			do {
-				ret = close(ownerPipe);
-			} while (ret == -1 && errno == EINTR);
+			safelyClose(ownerPipe, true);
 		}
 		for (it = serverSockets.begin(); it != serverSockets.end(); it++) {
 			const SocketInfo &info = it->second;

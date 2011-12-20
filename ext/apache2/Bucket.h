@@ -83,7 +83,8 @@ typedef shared_ptr<PassengerBucketState> PassengerBucketStatePtr;
  * - It can store its current state in a PassengerBucketState data structure.
  */
 apr_bucket *passenger_bucket_create(const PassengerBucketStatePtr &state,
-                                    apr_bucket_alloc_t *list);
+                                    apr_bucket_alloc_t *list,
+                                    bool bufferResponse);
 
 } // namespace Passenger
 
