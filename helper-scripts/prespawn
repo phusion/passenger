@@ -102,7 +102,7 @@ class TCPPrespawnLocation < PrespawnLocation
 	end
 
 	def connect
-		TCPSocket.new(request_host, request_port)
+		TCPSocket.new('127.0.0.1', request_port)
 	end
 end
 

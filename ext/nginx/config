@@ -35,6 +35,18 @@ else
 fi
 CORE_LIBS="$CORE_LIBS -lstdc++ -lpthread"
 
+ngx_feature="Math library"
+ngx_feature_name=
+ngx_feature_run=no
+ngx_feature_incs="#include <math.h>"
+ngx_feature_path=
+ngx_feature_libs="-lm"
+ngx_feature_test="pow(1, 2)"
+. auto/feature
+if [ $ngx_found = yes ]; then
+    CORE_LIBS="$CORE_LIBS -lm"
+fi
+
 nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g'`
 
 nginx_major_version=`echo "$nginx_version" | cut -d . -f 1`

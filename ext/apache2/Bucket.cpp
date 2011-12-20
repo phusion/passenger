@@ -45,6 +45,7 @@ static const apr_bucket_type_t apr_bucket_type_passenger_pipe = {
 struct BucketData {
 	FileDescriptor fd;
 	PassengerBucketStatePtr state;
+	bool bufferResponse;
 };
 
 static void
@@ -65,7 +66,7 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 	*str = NULL;
 	*len = 0;
 	
-	if (block == APR_NONBLOCK_READ) {
+	if (!data->bufferResponse && block == APR_NONBLOCK_READ) {
 		/*
 		 * The bucket brigade that Hooks::handleRequest() passes using
 		 * ap_pass_brigade() is always passed through ap_content_length_filter,
@@ -115,7 +116,7 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 		 * which can read the next chunk from the stream.
 		 */
 		APR_BUCKET_INSERT_AFTER(bucket, passenger_bucket_create(
-			data->state, bucket->list));
+			data->state, bucket->list, data->bufferResponse));
 		
 		/* The newly created Passenger Bucket has a reference to the session
 		 * object, so we can delete data here.
@@ -148,9 +149,10 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 }
 
 static apr_bucket *
-passenger_bucket_make(apr_bucket *bucket, const PassengerBucketStatePtr &state) {
+passenger_bucket_make(apr_bucket *bucket, const PassengerBucketStatePtr &state, bool bufferResponse) {
 	BucketData *data = new BucketData();
 	data->state    = state;
+	data->bufferResponse = bufferResponse;
 	
 	bucket->type   = &apr_bucket_type_passenger_pipe;
 	bucket->length = (apr_size_t)(-1);
@@ -160,14 +162,14 @@ passenger_bucket_make(apr_bucket *bucket, const PassengerBucketStatePtr &state) 
 }
 
 apr_bucket *
-passenger_bucket_create(const PassengerBucketStatePtr &state, apr_bucket_alloc_t *list) {
+passenger_bucket_create(const PassengerBucketStatePtr &state, apr_bucket_alloc_t *list, bool bufferResponse) {
 	apr_bucket *bucket;
 	
 	bucket = (apr_bucket *) apr_bucket_alloc(sizeof(*bucket), list);
 	APR_BUCKET_INIT(bucket);
 	bucket->free = apr_bucket_free;
 	bucket->list = list;
-	return passenger_bucket_make(bucket, state);
+	return passenger_bucket_make(bucket, state, bufferResponse);
 }
 
 } // namespace Passenger

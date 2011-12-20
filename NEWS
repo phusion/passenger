@@ -1,3 +1,49 @@
+Release 3.0.12
+--------------
+
+ * Fixed compatibility with Nginx < 1.0.10.
+
+
+Release 3.0.11
+--------------
+
+ * Fixed a compilation problem on platforms without alloca.h, such as FreeBSD 7.
+ * Improved performance and solved some warnings on Xen systems by compiling
+   with `-mno-tls-direct-seg-refs`. Patch contributed by Michał Pokrywka.
+
+
+Release 3.0.10
+--------------
+
+ * [Nginx] Dropped support for Nginx versions older than 1.0.0
+ * [Nginx] Fixed support for Nginx 1.1.4+
+ * [Nginx, Standalone] Upgraded default Nginx version to 1.0.10
+   The previously default version was 1.0.5.
+ * [Nginx] New option passenger_max_requests
+   This is equivalent to the PassengerMaxRequests option in the Apache
+   version: Phusion Passenger will automatically shutdown a worker process
+   once it has processed the specified number of requests.
+   Contributed by Paul Kmiec.
+ * [Apache] New option PassengerBufferResponse
+   The Apache version did not buffer responses. This could block the Ruby
+   worker process in case of slow clients. We now enable response buffering
+   by default. It can be turned off through this option. Feature contributed
+   by Ryo Onodera.
+ * Fixed remaining Ruby 1.9.3 compatibility problems
+   We already supported Ruby 1.9.3 since 3.0.8, but due to bugs in Ruby
+   1.9.3's build system Phusion Passenger would fail to detect Ruby 1.9.3
+   features on some systems. Fixes issue #714.
+ * Fixed a bug in PassengerPreStart
+   A regression was introduced in 3.0.8, causing the prespawn script to
+   connect to the host name instead of to 127.0.0.1. Fix contributed by
+   Andy Allan.
+ * Fixed compatibility with GCC 4.6
+   Affected systems include Ubuntu 11.10.
+ * Fixed various compilation problems.
+ * Fixed some Ruby 1.9 encoding problems.
+ * Fixed some Ruby 1.9.3 deprecation warnings.
+
+
 Release 3.0.9
 -------------
 

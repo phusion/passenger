@@ -224,7 +224,12 @@ module Dependencies # :nodoc: all
 			require 'rbconfig'
 			begin
 				require 'mkmf'
-				header_dir = Config::CONFIG['rubyhdrdir'] || Config::CONFIG['archdir']
+				if defined?(::RbConfig)
+					config = ::RbConfig::CONFIG
+				else
+					config = ::Config::CONFIG
+				end
+				header_dir = config['rubyhdrdir'] || config['archdir']
 				result.found(File.exist?("#{header_dir}/ruby.h"))
 			rescue LoadError, SystemExit
 				# On RedHat/Fedora/CentOS, if ruby-devel is not installed then

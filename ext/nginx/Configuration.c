@@ -362,6 +362,10 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     DEFINE_VAR_TO_PASS("SERVER_ADDR",     "$server_addr");
     DEFINE_VAR_TO_PASS("SERVER_PORT",     "$server_port");
 
+#if NGINX_VERSION_NUM >= 1000010
+    ngx_str_set(&conf->upstream_config.module, "passenger");
+#endif
+
     return conf;
 }
 
@@ -585,6 +589,57 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               &conf->upstream_config.temp_path,
                               prev->upstream_config.temp_path,
                               &ngx_http_proxy_temp_path);
+
+#if (NGX_HTTP_CACHE)
+
+    ngx_conf_merge_ptr_value(conf->upstream_config.cache,
+                             prev->upstream_config.cache, NULL);
+
+    if (conf->upstream_config.cache && conf->upstream_config.cache->data == NULL) {
+        ngx_shm_zone_t  *shm_zone;
+
+        shm_zone = conf->upstream_config.cache;
+
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "\"scgi_cache\" zone \"%V\" is unknown",
+                           &shm_zone->shm.name);
+
+        return NGX_CONF_ERROR;
+    }
+
+    ngx_conf_merge_uint_value(conf->upstream_config.cache_min_uses,
+                              prev->upstream_config.cache_min_uses, 1);
+
+    ngx_conf_merge_bitmask_value(conf->upstream_config.cache_use_stale,
+                              prev->upstream_config.cache_use_stale,
+                              (NGX_CONF_BITMASK_SET
+                               | NGX_HTTP_UPSTREAM_FT_OFF));
+
+    if (conf->upstream_config.cache_use_stale & NGX_HTTP_UPSTREAM_FT_OFF) {
+        conf->upstream_config.cache_use_stale = NGX_CONF_BITMASK_SET
+                                                | NGX_HTTP_UPSTREAM_FT_OFF;
+    }
+
+    if (conf->upstream_config.cache_methods == 0) {
+        conf->upstream_config.cache_methods = prev->upstream_config.cache_methods;
+    }
+
+    conf->upstream_config.cache_methods |= NGX_HTTP_GET | NGX_HTTP_HEAD;
+
+    ngx_conf_merge_ptr_value(conf->upstream_config.cache_bypass,
+                             prev->upstream_config.cache_bypass, NULL);
+
+    ngx_conf_merge_ptr_value(conf->upstream_config.no_cache,
+                             prev->upstream_config.no_cache, NULL);
+
+    ngx_conf_merge_ptr_value(conf->upstream_config.cache_valid,
+                             prev->upstream_config.cache_valid, NULL);
+
+    if (conf->cache_key.value.data == NULL) {
+        conf->cache_key = prev->cache_key;
+    }
+
+#endif
 
     ngx_conf_merge_value(conf->upstream_config.pass_request_headers,
                          prev->upstream_config.pass_request_headers, 1);

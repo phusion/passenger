@@ -625,7 +625,7 @@ inline int
 readFileDescriptorWithNegotiation(int fd, unsigned long long *timeout = NULL) {
 	writeArrayMessage(fd, timeout, "pass IO", NULL);
 	int result = readFileDescriptor(fd, timeout);
-	ScopeGuard guard(boost::bind(safelyClose, result));
+	ScopeGuard guard(boost::bind(safelyClose, result, false));
 	writeArrayMessage(fd, timeout, "got IO", NULL);
 	guard.clear();
 	return result;

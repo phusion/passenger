@@ -35,7 +35,6 @@ end
 
 have_header('alloca.h')
 have_header('ruby/io.h')
-have_func('rb_reserved_fd_p')
 
 with_cflags($CFLAGS) do
 	create_makefile('passenger_native_support')

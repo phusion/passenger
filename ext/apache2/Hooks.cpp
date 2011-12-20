@@ -589,7 +589,7 @@ private:
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
 			
 			bucketState = make_shared<PassengerBucketState>(conn);
-			b = passenger_bucket_create(bucketState, r->connection->bucket_alloc);
+			b = passenger_bucket_create(bucketState, r->connection->bucket_alloc, config->getBufferResponse());
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 			
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);

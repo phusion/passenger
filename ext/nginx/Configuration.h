@@ -59,6 +59,10 @@ typedef struct {
     ngx_array_t *base_uris;
     ngx_array_t *union_station_filters;
 
+#if (NGX_HTTP_CACHE)
+    ngx_http_complex_value_t cache_key;
+#endif
+
     /************************************/
 } passenger_loc_conf_t;
 
