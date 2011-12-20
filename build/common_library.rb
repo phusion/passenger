@@ -283,6 +283,43 @@ else
 end
 
 
+########## libeio ##########
+
+if USE_VENDORED_LIBEIO
+	LIBEIO_SOURCE_DIR = File.expand_path("../ext/libeio", File.dirname(__FILE__)) + "/"
+	LIBEIO_CFLAGS = "-Iext/libeio"
+	LIBEIO_LIBS = LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
+	
+	task :libeio => LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
+	
+	dependencies = [
+		"ext/libeio/configure",
+		"ext/libeio/config.h.in",
+		"ext/libeio/Makefile.am"
+	]
+	file LIBEIO_OUTPUT_DIR + "Makefile" => dependencies do
+		sh "mkdir -p #{LIBEIO_OUTPUT_DIR}" if !File.directory?(LIBEIO_OUTPUT_DIR)
+		sh "cd #{LIBEIO_OUTPUT_DIR} && sh #{LIBEIO_SOURCE_DIR}configure --disable-shared --enable-static"
+	end
+	
+	libeio_sources = Dir["ext/libeio/{*.c,*.h}"]
+	file LIBEIO_OUTPUT_DIR + ".libs/libeio.a" => [LIBEIO_OUTPUT_DIR + "Makefile"] + libeio_sources do
+		sh "rm -f #{LIBEIO_OUTPUT_DIR}/libeio.la"
+		sh "cd #{LIBEIO_OUTPUT_DIR} && make libeio.la"
+	end
+	
+	task :clean do
+		if File.exist?(LIBEIO_OUTPUT_DIR + "Makefile")
+			sh "cd #{LIBEIO_OUTPUT_DIR} && make maintainer-clean"
+		end
+	end
+else
+	LIBEIO_CFLAGS = string_option('LIBIO_CFLAGS', '-I/usr/include/libeio')
+	LIBEIO_LIBS   = string_option('LIBIO_LIBS', '-leio')
+	task :libeio  # do nothing
+end
+
+
 ##############################
 
 

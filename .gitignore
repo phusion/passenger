@@ -2,6 +2,7 @@
 
 .cache
 .DS_Store
+autom4te.cache
 *.o
 *.so
 *.bundle
@@ -29,6 +30,10 @@ ext/libev/stamp-h1
 ext/libev/ev.3
 ext/libev/ev.pod
 ext/libev/.libs
+ext/libeio/Makefile
+ext/libeio/config.h
+ext/libeio/config.log
+ext/libeio/config.status
 ext/ruby/*/Makefile
 ext/ruby/*/mkmf.log
 ext/*.a

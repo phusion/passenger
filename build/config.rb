@@ -44,3 +44,5 @@ EXTRA_LDFLAGS  = ""
 
 # Whether to use the vendored libev or the system one.
 USE_VENDORED_LIBEV = boolean_option("USE_VENDORED_LIBEV", true)
+# Whether to use the vendored libeio or the system one.
+USE_VENDORED_LIBEIO = boolean_option("USE_VENDORED_LIBEIO", true)
