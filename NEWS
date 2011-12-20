@@ -1,3 +1,9 @@
+Release 3.0.12
+--------------
+
+ * Fixed compatibility with Nginx < 1.0.10.
+
+
 Release 3.0.11
 --------------
 

@@ -362,7 +362,9 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     DEFINE_VAR_TO_PASS("SERVER_ADDR",     "$server_addr");
     DEFINE_VAR_TO_PASS("SERVER_PORT",     "$server_port");
 
+#if NGINX_VERSION_NUM >= 1000010
     ngx_str_set(&conf->upstream_config.module, "passenger");
+#endif
 
     return conf;
 }
