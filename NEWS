@@ -2,6 +2,7 @@ Release 3.0.12
 --------------
 
  * Fixed compatibility with Nginx < 1.0.10.
+ * Fixed a /proc deprecation warning on Linux kernel >= 3.0.
 
 
 Release 3.0.11

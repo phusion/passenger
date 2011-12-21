@@ -90,7 +90,7 @@ static EventFd *errorEvent;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
 
-static string setOomScore(const StaticString &score);
+static void setOomScore(const StaticString &score);
 
 
 /**
@@ -764,46 +764,87 @@ public:
 };
 
 
+enum OomFileType {
+	OOM_ADJ,
+	OOM_SCORE_ADJ
+};
+
+static FILE *
+openOomAdjFile(const char *mode, OomFileType &type) {
+	FILE *f = fopen("/proc/self/oom_score_adj", mode);
+	if (f == NULL) {
+		f = fopen("/proc/self/oom_adj", mode);
+		if (f == NULL) {
+			return NULL;
+		} else {
+			type = OOM_ADJ;
+			return f;
+		}
+	} else {
+		type = OOM_SCORE_ADJ;
+		return f;
+	}
+}
+
 /**
  * Linux-only way to change OOM killer configuration for
  * current process. Requires root privileges, which we
  * should have.
  */
-static string
+static void
 setOomScore(const StaticString &score) {
-	if (!score.empty()) {
-		string oldScore;
-		
-		FILE *f = fopen("/proc/self/oom_adj", "r");
-		if (f == NULL) {
-			return "";
-		}
-		char buf[1024];
-		size_t bytesRead;
-		while (true) {
-			bytesRead = fread(buf, 1, sizeof(buf), f);
-			if (bytesRead == 0 && feof(f)) {
-				break;
-			} else if (bytesRead == 0 && ferror(f)) {
-				fclose(f);
-				return "";
-			} else {
-				oldScore.append(buf, bytesRead);
-			}
-		}
-		fclose(f);
-		
-		f = fopen("/proc/self/oom_adj", "w");
-		if (f == NULL) {
-			return "";
-		}
+	if (score.empty()) {
+		return;
+	}
+
+	FILE *f;
+	OomFileType type;
+	
+	f = openOomAdjFile("r", type);
+	if (f != NULL) {
 		fwrite(score.data(), 1, score.size(), f);
 		fclose(f);
-		
-		return oldScore;
-	} else {
+	}
+}
+
+static string
+setOomScoreNeverKill() {
+	string oldScore;
+	FILE *f;
+	OomFileType type;
+	
+	f = openOomAdjFile("r", type);
+	if (f == NULL) {
 		return "";
 	}
+	char buf[1024];
+	size_t bytesRead;
+	while (true) {
+		bytesRead = fread(buf, 1, sizeof(buf), f);
+		if (bytesRead == 0 && feof(f)) {
+			break;
+		} else if (bytesRead == 0 && ferror(f)) {
+			fclose(f);
+			return "";
+		} else {
+			oldScore.append(buf, bytesRead);
+		}
+	}
+	fclose(f);
+	
+	f = openOomAdjFile("w", type);
+	if (f == NULL) {
+		return "";
+	}
+	if (type == OOM_SCORE_ADJ) {
+		fprintf(f, "-1000\n");
+	} else {
+		assert(type == OOM_ADJ);
+		fprintf(f, "-17\n");
+	}
+	fclose(f);
+	
+	return oldScore;
 }
 
 /**
@@ -965,7 +1006,7 @@ main(int argc, char *argv[]) {
 	 * for this watchdog. Note that the OOM score is inherited by child processes
 	 * so we need to restore it after each fork().
 	 */
-	oldOomScore = setOomScore("-17");
+	oldOomScore = setOomScoreNeverKill();
 	
 	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");
 	logLevel      = agentsOptions.getInt("log_level");
