@@ -1,0 +1,10 @@
+#!/bin/sh
+echo "This is not how you install Phusion Passenger! Please run one of:"
+echo
+echo "  ./bin/passenger-install-apache2-module"
+echo "  ./bin/passenger-install-nginx-module"
+echo
+echo "When unsure, please consult the manual (see 'doc' directory)."
+echo
+echo "*** ABORTED"
+exit 1
