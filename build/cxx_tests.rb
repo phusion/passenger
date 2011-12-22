@@ -24,9 +24,9 @@
 ### C++ components tests ###
 
 TEST_CXX_CFLAGS = "-Iext -Iext/common " <<
-	"#{LIBEV_CFLAGS} #{PlatformInfo.curl_flags} -Itest/cxx -Itest/support " <<
+	"#{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} #{PlatformInfo.curl_flags} -Itest/cxx -Itest/support " <<
 	"#{TEST_COMMON_CFLAGS}"
-TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
+TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} #{LIBEIO_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
 	"#{PlatformInfo.zlib_libs} " <<
 	"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
@@ -175,6 +175,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/ServerInstanceDirTest.cpp
 		ext/common/ServerInstanceDir.h
 		ext/common/Utils.h),
+	'test/cxx/FileBackedPipeTest.o' => %w(
+		test/cxx/FileBackedPipeTest.cpp
+		ext/common/agents/HelperAgent/FileBackedPipe.h),
 	'test/cxx/FileChangeCheckerTest.o' => %w(
 		test/cxx/FileChangeCheckerTest.cpp
 		ext/common/Utils/FileChangeChecker.h
@@ -239,7 +242,7 @@ task 'test:cxx' => dependencies do
 end
 
 cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys, :libev,
-	TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY]
+	TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY, 'ext/common/MultiLibeio.cpp']
 file 'test/cxx/CxxTestMain' => cxx_tests_dependencies.flatten do
 	objects = TEST_CXX_OBJECTS.keys.join(' ')
 	create_executable("test/cxx/CxxTestMain", objects, TEST_CXX_LDFLAGS)

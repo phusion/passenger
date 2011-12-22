@@ -314,8 +314,8 @@ if USE_VENDORED_LIBEIO
 		end
 	end
 else
-	LIBEIO_CFLAGS = string_option('LIBIO_CFLAGS', '-I/usr/include/libeio')
-	LIBEIO_LIBS   = string_option('LIBIO_LIBS', '-leio')
+	LIBEIO_CFLAGS = string_option('LIBEIO_CFLAGS', '-I/usr/include/libeio')
+	LIBEIO_LIBS   = string_option('LIBEIO_LIBS', '-leio')
 	task :libeio  # do nothing
 end
 

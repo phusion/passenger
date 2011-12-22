@@ -46,6 +46,10 @@ public:
 	static void shutdown();
 	static void waitUntilIdle();
 
+	MultiLibeio(SafeLibev *libev) {
+		this->libev = libev;
+	}
+
 	SafeLibev *getLibev() const {
 		return libev;
 	}

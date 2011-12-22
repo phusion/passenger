@@ -8,7 +8,8 @@
 #include <cstring>
 #include <unistd.h>
 
-#include "Utils.h"
+#include <MultiLibeio.cpp>
+#include <Utils.h>
 
 using namespace std;
 
@@ -102,6 +103,8 @@ main(int argc, char *argv[]) {
 	char path[PATH_MAX + 1];
 	getcwd(path, PATH_MAX);
 	resourceLocator = new ResourceLocator(extractDirName(path));
+
+	Passenger::MultiLibeio::init();
 	
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {
@@ -114,6 +117,7 @@ main(int argc, char *argv[]) {
 			all_ok = all_ok && reporter.all_ok();
 		}
 	}
+	Passenger::MultiLibeio::shutdown();
 	if (all_ok) {
 		return 0;
 	} else {

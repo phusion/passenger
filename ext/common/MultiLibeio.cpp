@@ -121,16 +121,20 @@ executeWrapper(eio_req *req) {
 
 void
 MultiLibeio::init() {
-	quit = false;
 	eio_init(wantPoll, NULL);
 	thr = new oxt::thread(threadMain, "MultiLibeio dispatcher", 1024 * 64);
 }
 
 void
 MultiLibeio::shutdown() {
-	lock_guard<boost::mutex> l(syncher);
+	unique_lock<boost::mutex> l(syncher);
 	quit = true;
 	cond.notify_one();
+	l.unlock();
+	thr->join();
+	delete thr;
+	thr = NULL;
+	quit = false;
 }
 
 void

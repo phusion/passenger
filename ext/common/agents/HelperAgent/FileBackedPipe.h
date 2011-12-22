@@ -13,10 +13,10 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include <eio.h>
-
 #include <oxt/macros.hpp>
 #include <SafeLibev.h>
+#include <MultiLibeio.h>
+#include <StaticString.h>
 #include <Exceptions.h>
 #include <FileDescriptor.h>
 #include <Utils/StrIntUtils.h>
@@ -37,54 +37,7 @@ public:
 private:
 	typedef function<void (int err, const char *data, size_t size)> EioReadCallback;
 
-	struct EioUserData {
-		weak_ptr<FileBackedPipe> wself;
-
-		EioUserData(FileBackedPipe *self)
-			: wself(self->shared_from_this())
-			{ }
-		
-		shared_ptr<FileBackedPipe> lock() {
-			return wself.lock();
-		}
-	};
-
-	struct EioOpenUserData: public EioUserData {
-		string filename;
-
-		EioOpenUserData(FileBackedPipe *self, const string &_filename)
-			: EioUserData(self),
-			  filename(_filename)
-			{ }
-	};
-
-	struct EioReadUserData: public EioUserData {
-		FileDescriptor fd;
-
-		EioReadUserData(FileBackedPipe *self)
-			: EioUserData(self),
-			  fd(self->file.fd)
-			{ }
-	};
-
-	struct EioWriteUserData: public EioUserData {
-		FileDescriptor fd;
-		char *buffer;
-		size_t size;
-
-		EioWriteUserData(FileBackedPipe *self, const string &_buffer)
-			: EioUserData(self)
-		{
-			buffer = new char[_buffer.size()];
-			memcpy(buffer, _buffer.data(), _buffer.size());
-			size = _buffer.size();
-		}
-
-		~EioWriteUserData() {
-			delete[] buffer;
-		}
-	};
-
+	SafeLibev *libev;
 	const string dir;
 	const size_t threshold;
 
@@ -92,9 +45,7 @@ private:
 
 	bool started;
 	bool ended;
-	string eioOpenFilename;
-	shared_array<char> eioReadBuffer;
-	EioReadCallback eioReadCallback;
+	MultiLibeio libeio;
 
 	enum {
 		/* No data event handler is currently being called. */
@@ -192,8 +143,12 @@ private:
 				filename << getpid();
 				filename << ".";
 				filename << pointerToIntString(this);
-				eio_open(filename.str().c_str(), O_CREAT | O_RDWR | O_TRUNC,
-					0, 0, eioOpenCallback, new EioOpenUserData(this, filename.str()));
+				libeio.open(filename.str().c_str(), O_CREAT | O_RDWR | O_TRUNC, 0, 0,
+					boost::bind(&FileBackedPipe::openCallback, this,
+						_1, filename.str(),
+						weak_ptr<FileBackedPipe>(shared_from_this())
+					)
+				);
 			}
 			break;
 		
@@ -214,57 +169,59 @@ private:
 	void writeBufferToFile() {
 		assert(dataState == IN_FILE);
 		if (!file.writingToFile) {
-			size_t size = file.writeBuffer.size();
+			shared_array<char> buffer(new char[file.writeBuffer.size()]);
+			memcpy(buffer.get(), file.writeBuffer.data(), file.writeBuffer.size());
 			file.writingToFile = true;
-
-			EioWriteUserData *userData = new EioWriteUserData(this, file.writeBuffer);
-			eio_write(file.fd, userData->buffer, userData->size, file.writtenSize,
-				0, writeBufferToFileCallback, userData);
+			libeio.write(file.fd, buffer.get(), file.writeBuffer.size(),
+				file.writtenSize, 0, boost::bind(
+					&FileBackedPipe::writeBufferToFileCallback, this,
+					_1, file.fd, buffer, file.writeBuffer.size(),
+					weak_ptr<FileBackedPipe>(shared_from_this())
+				)
+			);
 		}
 	}
 
-	static int writeBufferToFileCallback(eio_req *req) {
-		auto_ptr<EioWriteUserData> userData((EioWriteUserData *) req->data);
-		shared_ptr<FileBackedPipe> self = userData->lock();
-		if (self == NULL) {
-			return 0;
+	void writeBufferToFileCallback(eio_req req, FileDescriptor fd,
+		shared_array<char> buffer, size_t size, weak_ptr<FileBackedPipe> wself)
+	{
+		shared_ptr<FileBackedPipe> self = wself.lock();
+		if (self == NULL || EIO_CANCELLED(&req)) {
+			return;
 		}
 
-		if (req->result < 0) {
+		if (req.result < 0) {
 			// TODO: set error
 		} else {
-			assert(self->dataState == IN_FILE);
-			self->file.writeBuffer.erase(0, userData->size);
-			self->file.writtenSize += userData->size;
-			self->file.writingToFile = false;
-			if (!self->file.writeBuffer.empty()) {
-				self->writeBufferToFile();
+			assert(dataState == IN_FILE);
+			file.writeBuffer.erase(0, size);
+			file.writtenSize += size;
+			file.writingToFile = false;
+			if (!file.writeBuffer.empty()) {
+				writeBufferToFile();
 			}
 		}
-		return 0;
 	}
 
-	static int eioOpenCallback(eio_req *req) {
-		auto_ptr<EioOpenUserData> userData((EioOpenUserData *) req->data);
-		shared_ptr<FileBackedPipe> self = userData->lock();
-		if (self == NULL) {
-			if (req->result != -1) {
-				eio_close(req->result, 0, successCallback, NULL);
-				eio_unlink(userData->filename.c_str(), 0, successCallback, NULL);
+	void openCallback(eio_req req, string filename, weak_ptr<FileBackedPipe> &wself) {
+		shared_ptr<FileBackedPipe> self = wself.lock();
+		if (self == NULL || EIO_CANCELLED(&req)) {
+			if (req.result != -1 || EIO_CANCELLED(&req)) {
+				eio_close(req.result, 0, successCallback, NULL);
+				eio_unlink(filename.c_str(), 0, successCallback, NULL);
 			}
-			return 0;
+			return;
 		}
 
-		assert(self->dataState = OPENING_FILE);
-		if (req->result < 0) {
+		assert(dataState = OPENING_FILE);
+		if (req.result < 0) {
 			// TODO: set error
 		} else {
-			eio_unlink(userData->filename.c_str(), 0, successCallback, NULL);
-			self->dataState = IN_FILE;
-			self->file.fd = req->result;
-			self->writeBufferToFile();
+			eio_unlink(filename.c_str(), 0, successCallback, NULL);
+			dataState = IN_FILE;
+			file.fd = FileDescriptor(req.result);
+			writeBufferToFile();
 		}
-		return 0;
 	}
 
 	static int successCallback(eio_req *req) {
@@ -272,42 +229,38 @@ private:
 	}
 
 	void readBlockFromFileOrWriteBuffer(const EioReadCallback &callback) {
-		assert(eioReadBuffer == NULL);
 		if (file.readOffset >= file.writtenSize) {
 			StaticString data = StaticString(file.writeBuffer).substr(
 				file.readOffset - file.writtenSize, 1024 * 16);
 			callback(0, data.data(), data.size());
 		} else {
-			eio_req *req;
-
-			eioReadBuffer.reset(new char[1024 * 16]);
-			eioReadCallback = callback;
-			req = eio_read(file.fd, eioReadBuffer.get(),
-				1024 * 16, file.readOffset, 0,
-				eioReadCallback_wrapper, new EioReadUserData(this));
+			shared_array<char> buffer(new char[1024 * 16]);
+			eio_req *req = libeio.read(file.fd, buffer.get(), 1024 * 16, file.readOffset, 0,
+				boost::bind(
+					&FileBackedPipe::readCallback, this,
+					_1, file.fd, buffer, callback,
+					weak_ptr<FileBackedPipe>(shared_from_this())
+				)
+			);
 			if (req == NULL) {
 				throw RuntimeException("eio_read() failed!");
 			}
 		}
 	}
 
-	static int eioReadCallback_wrapper(eio_req *req) {
-		auto_ptr<EioReadUserData> userData((EioReadUserData *) req->data);
-		shared_ptr<FileBackedPipe> self = userData->lock();
-		if (self == NULL) {
-			return 0;
+	void readCallback(eio_req req, FileDescriptor fd, shared_array<char> buffer,
+		EioReadCallback callback, weak_ptr<FileBackedPipe> wself)
+	{
+		shared_ptr<FileBackedPipe> self = wself.lock();
+		if (self == NULL || EIO_CANCELLED(&req)) {
+			return;
 		}
 
-		EioReadCallback callback = self->eioReadCallback;
-		shared_array<char> buffer = self->eioReadBuffer;
-		self->eioReadCallback = EioReadCallback();
-		self->eioReadBuffer.reset();
-		if (req->result < 0) {
-			callback(req->errorno, NULL, 0);
+		if (req.result < 0) {
+			callback(req.errorno, NULL, 0);
 		} else {
-			callback(0, buffer.get(), req->result);
+			callback(0, buffer.get(), req.result);
 		}
-		return 0;
 	}
 
 	void dataConsumed(const char *data, size_t size, size_t consumed, bool done) {
@@ -378,7 +331,7 @@ private:
 				} else {
 					callOnData(memory.data, memory.size, boost::bind(
 						&FileBackedPipe::dataConsumed, this,
-						NULL, memory.size, _1, _2));
+						(const char *) 0, memory.size, _1, _2));
 				}
 			}
 			break;
@@ -414,7 +367,7 @@ private:
 		} else {
 			callOnData(data, size, boost::bind(
 				&FileBackedPipe::dataConsumed, this,
-				NULL, size, _1, _2));
+				(const char *) 0, size, _1, _2));
 		}
 	}
 
@@ -424,9 +377,11 @@ public:
 	//ErrorCallback onError;
 	Callback onBufferDrained;
 
-	FileBackedPipe(const string &_dir, size_t _threshold = 1024 * 8)
-		: dir(_dir),
-		  threshold(_threshold)
+	FileBackedPipe(SafeLibev *_libev, const string &_dir, size_t _threshold = 1024 * 8)
+		: libev(_libev),
+		  dir(_dir),
+		  threshold(_threshold),
+		  libeio(_libev)
 	{
 		consumedCallCount = 0;
 		started = false;
@@ -445,11 +400,11 @@ public:
 	}
 	
 	bool resetable() const {
-		return dataSTate == IN_MEMORY;
+		return dataState == IN_MEMORY;
 	}
 
 	void reset() {
-		if (OXT_UNLIKELY(eventCallState == CALLING_EVENT_NOW)) {
+		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 		}
 		assert(resetable());
@@ -485,12 +440,13 @@ public:
 	bool write(const char *data, size_t size) {
 		assert(!ended);
 
-		if (OXT_UNLIKELY(eventCallState == CALLING_EVENT_NOW)) {
+		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 
 		} else if (!started || dataEventState != NOT_CALLING_EVENT) {
 			assert(!started || getBufferSize() > 0);
 			addToBuffer(data, size);
+			return false;
 
 		} else {
 			assert(started);
@@ -500,17 +456,18 @@ public:
 			bool immediatelyConsumed = callOnData(data, size, boost::bind(
 				&FileBackedPipe::dataConsumed, this,
 				data, size, _1, _2));
-			assert(eventCallState != CALLING_EVENT_NOW);
+			assert(dataEventState != CALLING_EVENT_NOW);
 			if (!immediatelyConsumed) {
 				addToBuffer(data, size);
 			}
+			return immediatelyConsumed;
 		}
 	}
 
 	void end() {
 		assert(!ended);
 
-		if (OXT_UNLIKELY(eventCallState == CALLING_EVENT_NOW)) {
+		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 
 		} else if (!started || dataEventState != NOT_CALLING_EVENT) {
@@ -530,24 +487,26 @@ public:
 	}
 
 	void start() {
-		if (OXT_UNLIKELY(eventCallState == CALLING_EVENT_NOW)) {
+		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 		}
 		if (!started) {
 			started = true;
-			if (getBufferSize() > 0 && eventCallState == NOT_CALLING_EVENT) {
+			if (getBufferSize() > 0 && dataEventState == NOT_CALLING_EVENT) {
 				processBuffer(0);
 			}
 		}
 	}
 
 	void stop() {
-		if (OXT_UNLIKELY(eventCallState == CALLING_EVENT_NOW)) {
+		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 		}
 		started = false;
 	}
 };
+
+typedef shared_ptr<FileBackedPipe> FileBackedPipePtr;
 
 
 } // namespace Passenger
