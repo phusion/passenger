@@ -241,7 +241,7 @@ task 'test:cxx' => dependencies do
 	sh "cd test && #{command}"
 end
 
-cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys, :libev,
+cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys, :libev, :libeio,
 	TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY, 'ext/common/MultiLibeio.cpp']
 file 'test/cxx/CxxTestMain' => cxx_tests_dependencies.flatten do
 	objects = TEST_CXX_OBJECTS.keys.join(' ')

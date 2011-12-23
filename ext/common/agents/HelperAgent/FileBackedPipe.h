@@ -486,6 +486,10 @@ public:
 		}
 	}
 
+	bool isStarted() const {
+		return started;
+	}
+
 	void start() {
 		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");

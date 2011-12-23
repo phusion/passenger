@@ -69,6 +69,16 @@ namespace tut {
 			bg.safe->run(boost::bind(consumedCallback, consumed, done));
 		}
 
+		bool isStarted() {
+			bool result;
+			bg.safe->run(boost::bind(&FileBackedPipeTest::real_isStarted, this, &result));
+			return result;
+		}
+
+		void real_isStarted(bool *result) {
+			*result = pipe->isStarted();
+		}
+
 		void onData(const char *data, size_t size, const FileBackedPipe::ConsumeCallback &consumed) {
 			consumeCallbackThread = pthread_self();
 			receivedData.append(data, size);
@@ -105,5 +115,19 @@ namespace tut {
 		receivedData.clear();
 		callConsumedCallback(5, false);
 		ensure_equals(getBufferSize(), 0u);
+	}
+
+	TEST_METHOD(3) {
+		// When the consume callback is called with done=false, the pipe should be paused.
+		init();
+		startPipe();
+		doneAfterConsuming = true;
+		write("hello");
+		ensure(!isStarted());
+	}
+
+	TEST_METHOD(4) {
+		// After consuming some data, if the pipe is still in started mode then
+		// it should emit any remaining data.
 	}
 }
