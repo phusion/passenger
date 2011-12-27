@@ -36,7 +36,7 @@ using namespace boost;
 
 class MultiLibeio {
 private:
-	SafeLibev *libev;
+	SafeLibev * const libev;
 
 public:
 	typedef function<void (eio_req *req)> ExecuteCallback;
@@ -46,9 +46,9 @@ public:
 	static void shutdown();
 	static void waitUntilIdle();
 
-	MultiLibeio(SafeLibev *libev) {
-		this->libev = libev;
-	}
+	MultiLibeio(SafeLibev *_libev)
+		: libev(_libev)
+		{ }
 
 	SafeLibev *getLibev() const {
 		return libev;

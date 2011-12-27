@@ -34,14 +34,22 @@ public:
 	//typedef function<void (const ExceptionPtr &exception)> ErrorCallback;
 	typedef function<void ()> Callback;
 
+	enum DataState {
+		IN_MEMORY,
+		OPENING_FILE,
+		IN_FILE
+	};
+
 private:
 	typedef function<void (int err, const char *data, size_t size)> EioReadCallback;
 
-	SafeLibev *libev;
+	SafeLibev * const libev;
 	const string dir;
-	const size_t threshold;
+	size_t threshold;
 
 	unsigned int consumedCallCount;
+	const char *currentData;
+	size_t currentDataSize;
 
 	bool started;
 	bool ended;
@@ -61,11 +69,7 @@ private:
 		PREPARING_NEXT_EVENT_CALL
 	} dataEventState;
 
-	enum {
-		IN_MEMORY,
-		OPENING_FILE,
-		IN_FILE
-	} dataState;
+	DataState dataState;
 
 	struct {
 		char *data;
@@ -92,14 +96,25 @@ private:
 		string writeBuffer;
 	} file;
 
-	bool callOnData(const char *data, size_t size, const ConsumeCallback &consumed) {
+	bool callOnData(const char *data, size_t size, bool passDataToConsumedCallback) {
 		unsigned int oldConsumedCallCount = consumedCallCount;
 		dataEventState = CALLING_EVENT_NOW;
-		if (OXT_LIKELY(onData != NULL)) {
-			onData(data, size, consumed);
-		} else {
-			consumed(0, true);
+
+		assert(currentData == NULL);
+		assert(currentDataSize == 0);
+		if (passDataToConsumedCallback) {
+			currentData = data;
 		}
+		currentDataSize = size;
+
+		if (OXT_LIKELY(onData != NULL)) {
+			onData(data, size, boost::bind(
+				&FileBackedPipe::dataConsumed, this,
+				_1, _2));
+		} else {
+			real_dataConsumed(0, true);
+		}
+
 		if (consumedCallCount == oldConsumedCallCount) {
 			// 'consumed' callback not called.
 			dataEventState = WAITING_FOR_EVENT_FINISH;
@@ -263,17 +278,22 @@ private:
 		}
 	}
 
-	void dataConsumed(const char *data, size_t size, size_t consumed, bool done) {
+	void dataConsumed(size_t consumed, bool done) {
 		if (pthread_equal(pthread_self(), libev->getCurrentThread())) {
-			real_dataConsumed(data, size, consumed, done);
+			real_dataConsumed(consumed, done);
 		} else {
 			libev->runAsync(boost::bind(
 				&FileBackedPipe::real_dataConsumed, this,
-				data, size, consumed, done));
+				consumed, done));
 		}
 	}
 
-	void real_dataConsumed(const char *data, size_t size, size_t consumed, bool done) {
+	void real_dataConsumed(size_t consumed, bool done) {
+		const char *data = currentData;
+		size_t size = currentDataSize;
+		currentData = NULL;
+		currentDataSize = 0;
+
 		assert(consumed <= size);
 		consumedCallCount++;
 		if (done) {
@@ -283,11 +303,13 @@ private:
 		if (getBufferSize() == 0) {
 			// Data passed to write() was immediately consumed.
 			assert(dataEventState == CALLING_EVENT_NOW);
+			assert(data != NULL);
 			if (started) {
 				if (consumed < size) {
-					bool immediatelyConsumed = callOnData(data + consumed, size - consumed,
-						boost::bind(&FileBackedPipe::dataConsumed, this,
-							data + consumed, size - consumed, _1, _2));
+					bool immediatelyConsumed = callOnData(
+						data + consumed,
+						size - consumed,
+						true);
 					if (!immediatelyConsumed) {
 						addToBuffer(data + consumed, size - consumed);
 					}
@@ -329,9 +351,7 @@ private:
 						onEnd();
 					}
 				} else {
-					callOnData(memory.data, memory.size, boost::bind(
-						&FileBackedPipe::dataConsumed, this,
-						(const char *) 0, memory.size, _1, _2));
+					callOnData(memory.data, memory.size, false);
 				}
 			}
 			break;
@@ -365,9 +385,7 @@ private:
 		if (err != 0) {
 			// TODO: set error
 		} else {
-			callOnData(data, size, boost::bind(
-				&FileBackedPipe::dataConsumed, this,
-				(const char *) 0, size, _1, _2));
+			callOnData(data, size, false);
 		}
 	}
 
@@ -384,6 +402,8 @@ public:
 		  libeio(_libev)
 	{
 		consumedCallCount = 0;
+		currentData = NULL;
+		currentDataSize = 0;
 		started = false;
 		ended = false;
 		dataEventState = NOT_CALLING_EVENT;
@@ -408,6 +428,8 @@ public:
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 		}
 		assert(resetable());
+		currentData = NULL;
+		currentDataSize = 0;
 		started = false;
 		ended = false;
 		dataEventState = NOT_CALLING_EVENT;
@@ -419,6 +441,10 @@ public:
 		file.writingToFile = false;
 		file.readOffset = 0;
 		file.writtenSize = 0;
+	}
+
+	void setThreshold(size_t value) {
+		threshold = value;
 	}
 
 	size_t getBufferSize() const {
@@ -437,6 +463,10 @@ public:
 		}
 	}
 
+	DataState getDataState() const {
+		return dataState;
+	}
+
 	bool write(const char *data, size_t size) {
 		assert(!ended);
 
@@ -453,9 +483,7 @@ public:
 			assert(dataEventState == NOT_CALLING_EVENT);
 			assert(getBufferSize() == 0);
 
-			bool immediatelyConsumed = callOnData(data, size, boost::bind(
-				&FileBackedPipe::dataConsumed, this,
-				data, size, _1, _2));
+			bool immediatelyConsumed = callOnData(data, size, true);
 			assert(dataEventState != CALLING_EVENT_NOW);
 			if (!immediatelyConsumed) {
 				addToBuffer(data, size);

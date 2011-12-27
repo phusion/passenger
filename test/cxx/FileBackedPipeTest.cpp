@@ -19,7 +19,9 @@ namespace tut {
 		size_t toConsume;
 		bool doneAfterConsuming;
 		pthread_t consumeCallbackThread;
+		unsigned int consumeCallbackCount;
 		string receivedData;
+		bool ended;
 		FileBackedPipe::ConsumeCallback consumedCallback;
 
 		FileBackedPipeTest()
@@ -28,10 +30,14 @@ namespace tut {
 			consumeImmediately = true;
 			toConsume = 9999;
 			doneAfterConsuming = false;
+			consumeCallbackCount = 0;
+			ended = false;
 			pipe = make_shared<FileBackedPipe>(bg.safe, "tmp.pipe");
+			pipe->onEnd = boost::bind(&FileBackedPipeTest::onEnd, this);
 		}
 		
 		~FileBackedPipeTest() {
+			MultiLibeio::waitUntilIdle();
 			bg.stop();
 		}
 
@@ -65,6 +71,10 @@ namespace tut {
 			bg.safe->run(boost::bind(&FileBackedPipe::start, pipe.get()));
 		}
 
+		void endPipe() {
+			bg.safe->run(boost::bind(&FileBackedPipe::end, pipe.get()));
+		}
+
 		void callConsumedCallback(size_t consumed, bool done) {
 			bg.safe->run(boost::bind(consumedCallback, consumed, done));
 		}
@@ -79,14 +89,32 @@ namespace tut {
 			*result = pipe->isStarted();
 		}
 
+		FileBackedPipe::DataState getDataState() {
+			FileBackedPipe::DataState result;
+			bg.safe->run(boost::bind(&FileBackedPipeTest::real_getDataState, this, &result));
+			return result;
+		}
+
+		void real_getDataState(FileBackedPipe::DataState *result) {
+			*result = pipe->getDataState();
+		}
+
 		void onData(const char *data, size_t size, const FileBackedPipe::ConsumeCallback &consumed) {
 			consumeCallbackThread = pthread_self();
+			consumeCallbackCount++;
+			if (!receivedData.empty()) {
+				receivedData.append("\n");
+			}
 			receivedData.append(data, size);
 			if (consumeImmediately) {
 				consumed(std::min(toConsume, size), doneAfterConsuming);
 			} else {
 				consumedCallback = consumed;
 			}
+		}
+
+		void onEnd() {
+			ended = true;
 		}
 	};
 
@@ -124,10 +152,122 @@ namespace tut {
 		doneAfterConsuming = true;
 		write("hello");
 		ensure(!isStarted());
+		ensure_equals(getBufferSize(), 0u);
 	}
 
 	TEST_METHOD(4) {
 		// After consuming some data, if the pipe is still in started mode then
 		// it should emit any remaining data.
+		init();
+		startPipe();
+		toConsume = 3;
+		write("hello");
+		ensure_equals(getBufferSize(), 0u);
+		ensure_equals(receivedData,
+			"hello\n"
+			"lo");
+		ensure_equals(consumeCallbackCount, 2u);
+	}
+
+	TEST_METHOD(5) {
+		// Writing to a stopped pipe will cause the data to be buffer.
+		// This buffer will be passed to the data callback when we
+		// start the pipe again. If the data callback doesn't consume
+		// everything at once then the pipe will try again until
+		// everything's consumed.
+		init();
+		toConsume = 3;
+		write("hello");
+		ensure_equals(getBufferSize(), 5u);
+		ensure_equals(receivedData, "");
+		ensure_equals(consumeCallbackCount, 0u);
+		startPipe();
+		ensure_equals(getBufferSize(), 0u);
+		ensure_equals(consumeCallbackCount, 2u);
+		ensure_equals(receivedData,
+			"hello\n"
+			"lo");
+	}
+
+	TEST_METHOD(6) {
+		// When the data doesn't fit in the memory buffer it will
+		// write to a file. Test whether writing to the file and
+		// reading from the file works correctly.
+		pipe->setThreshold(5);
+		init();
+		write("hello");
+		ensure_equals(getBufferSize(), 5u);
+		ensure_equals(getDataState(), FileBackedPipe::IN_MEMORY);
+		write("world");
+		ensure_equals(getBufferSize(), 10u);
+		usleep(25000);
+		ensure_equals(getBufferSize(), 10u);
+		ensure_equals(getDataState(), FileBackedPipe::IN_FILE);
+		startPipe();
+		usleep(25000);
+		ensure_equals(getBufferSize(), 0u);
+		ensure_equals(receivedData, "helloworld");
+	}
+
+	TEST_METHOD(7) {
+		// Test end() on a started, empty pipe.
+		init();
+		startPipe();
+		endPipe();
+		ensure_equals(consumeCallbackCount, 0u);
+		ensure(ended);
+	}
+
+	TEST_METHOD(8) {
+		// Test end() on a started pipe after writing data to
+		// it that's immediately consumed.
+		init();
+		startPipe();
+		write("hello");
+		endPipe();
+		ensure_equals(consumeCallbackCount, 1u);
+		ensure_equals(receivedData, "hello");
+		ensure(ended);
+	}
+
+	TEST_METHOD(9) {
+		// Test end() on a started pipe that has data buffered in memory.
+		init();
+		consumeImmediately = false;
+		startPipe();
+		write("hello");
+		endPipe();
+		ensure_equals(getDataState(), FileBackedPipe::IN_MEMORY);
+		ensure(!ended);
+
+		callConsumedCallback(3, false);
+		ensure_equals(receivedData,
+			"hello\n"
+			"lo");
+		ensure(!ended);
+		callConsumedCallback(2, false);
+		ensure(ended);
+	}
+
+	TEST_METHOD(10) {
+		// Test end() on a started pipe that has data buffered on disk.
+		init();
+		consumeImmediately = false;
+		pipe->setThreshold(1);
+		startPipe();
+		write("hello");
+		endPipe();
+		usleep(25000);
+		ensure_equals(getDataState(), FileBackedPipe::IN_FILE);
+		ensure(!ended);
+
+		callConsumedCallback(3, false);
+		usleep(25000);
+		ensure_equals(receivedData,
+			"hello\n"
+			"lo");
+		ensure(!ended);
+		callConsumedCallback(2, false);
+		ensure(ended);
 	}
 }
