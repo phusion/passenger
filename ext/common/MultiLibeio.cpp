@@ -139,7 +139,7 @@ MultiLibeio::shutdown() {
 
 void
 MultiLibeio::waitUntilIdle() {
-	while (eio_nreqs() != 0) {
+	while (eio_nreqs() != 0 || eio_nready() != 0 || eio_npending() != 0) {
 		syscalls::usleep(10000);
 	}
 }

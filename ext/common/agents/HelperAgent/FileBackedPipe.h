@@ -127,6 +127,12 @@ private:
 		}
 	}
 
+	void callOnEnd() {
+		if (onEnd) {
+			onEnd();
+		}
+	}
+
 	void addToBuffer(const char *data, size_t size) {
 		size_t bytesToCopy;
 
@@ -315,8 +321,8 @@ private:
 					}
 				} else {
 					dataEventState = NOT_CALLING_EVENT;
-					if (ended && onEnd) {
-						onEnd();
+					if (ended) {
+						callOnEnd();
 					}
 				}
 			} else {
@@ -347,8 +353,8 @@ private:
 					if (onBufferDrained) {
 						onBufferDrained();
 					}
-					if (ended && onEnd) {
-						onEnd();
+					if (ended) {
+						callOnEnd();
 					}
 				} else {
 					callOnData(memory.data, memory.size, false);
@@ -364,8 +370,8 @@ private:
 					if (onBufferDrained) {
 						onBufferDrained();
 					}
-					if (ended && onEnd) {
-						onEnd();
+					if (ended) {
+						callOnEnd();
 					}
 				} else {
 					dataEventState = PREPARING_NEXT_EVENT_CALL;
@@ -508,9 +514,7 @@ public:
 			assert(getBufferSize() == 0);
 
 			ended = true;
-			if (onEnd) {
-				onEnd();
-			}
+			callOnEnd();
 		}
 	}
 
@@ -524,8 +528,12 @@ public:
 		}
 		if (!started) {
 			started = true;
-			if (getBufferSize() > 0 && dataEventState == NOT_CALLING_EVENT) {
-				processBuffer(0);
+			if (dataEventState == NOT_CALLING_EVENT) {
+				if (getBufferSize() > 0) {
+					processBuffer(0);
+				} else if (ended) {
+					callOnEnd();
+				}
 			}
 		}
 	}
