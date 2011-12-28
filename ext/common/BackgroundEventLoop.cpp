@@ -24,6 +24,7 @@
  */
 #include <cstdlib>
 #include <boost/bind.hpp>
+#include <boost/make_shared.hpp>
 #include <oxt/thread.hpp>
 #include <ev++.h>
 #include <BackgroundEventLoop.h>
@@ -78,7 +79,7 @@ BackgroundEventLoop::BackgroundEventLoop() {
 	async->data = this;
 	ev_async_init(async, signalBackgroundEventLoopExit);
 	ev_async_start(loop, async);
-	safe = new SafeLibev(loop);
+	safe = make_shared<SafeLibev>(loop);
 	priv = new BackgroundEventLoopPrivate();
 	priv->thr = NULL;
 	priv->started = false;
@@ -87,10 +88,8 @@ BackgroundEventLoop::BackgroundEventLoop() {
 BackgroundEventLoop::~BackgroundEventLoop() {
 	stop();
 	ev_async_stop(loop, async);
-	delete safe;
 	delete priv;
 	free(async);
-	ev_loop_destroy(loop);
 }
 
 void

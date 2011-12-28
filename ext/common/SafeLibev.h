@@ -30,6 +30,7 @@
 #include <list>
 #include <memory>
 #include <boost/thread.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 
@@ -113,6 +114,7 @@ private:
 	}
 	
 public:
+	/** SafeLibev takes over ownership of the loop object. */
 	SafeLibev(struct ev_loop *loop) {
 		this->loop = loop;
 		loopThread = pthread_self();
@@ -130,6 +132,8 @@ public:
 			ev_timer_stop(loop, &timer->realTimer);
 			delete timer;
 		}
+
+		ev_loop_destroy(loop);
 	}
 	
 	struct ev_loop *getLoop() const {
@@ -207,6 +211,8 @@ public:
 		ev_timer_start(loop, &timer->realTimer);
 	}
 };
+
+typedef shared_ptr<SafeLibev> SafeLibevPtr;
 
 
 } // namespace Passenger

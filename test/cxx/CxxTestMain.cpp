@@ -1,5 +1,6 @@
 #include "TestSupport.h"
 #include "../tut/tut_reporter.h"
+#include "../support/valgrind.h"
 #include <oxt/system_calls.hpp>
 #include <string>
 #include <signal.h>
@@ -86,6 +87,11 @@ parseOptions(int argc, char *argv[]) {
 	}
 }
 
+static int
+doNothing(eio_req *req) {
+	return 0;
+}
+
 int
 main(int argc, char *argv[]) {
 	signal(SIGPIPE, SIG_IGN);
@@ -105,6 +111,13 @@ main(int argc, char *argv[]) {
 	resourceLocator = new ResourceLocator(extractDirName(path));
 
 	Passenger::MultiLibeio::init();
+	eio_set_idle_timeout(9999); // Never timeout.
+	eio_set_min_parallel(1);
+	eio_set_max_parallel(1);
+	if (RUNNING_ON_VALGRIND) {
+		// Start an EIO thread to warm up Valgrind.
+		eio_nop(0, doNothing, NULL);
+	}
 	
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {

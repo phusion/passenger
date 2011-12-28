@@ -167,7 +167,7 @@ public:
 	 *************************************************************/
 	
 	/** The libev event loop to use. */
-	SafeLibev *libev;
+	SafeLibev * const libev;
 	/** Process PID. */
 	pid_t pid;
 	/** UUID for this process, randomly generated and will never appear again. */
@@ -218,7 +218,7 @@ public:
 	ProcessMetrics metrics;
 	
 	
-	Process(SafeLibev *_libev,
+	Process(SafeLibev * const _libev,
 		pid_t _pid,
 		const string &_gupid,
 		const string &_connectPassword,

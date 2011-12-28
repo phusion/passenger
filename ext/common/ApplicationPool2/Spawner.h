@@ -796,7 +796,7 @@ private:
 		BufferedIO io;
 	};
 	
-	SafeLibev *libev;
+	SafeLibevPtr libev;
 	vector<string> preloaderCommand;
 	Options options;
 	
@@ -1363,7 +1363,7 @@ public:
 	/** Whether to forward the preloader process's stderr to our stderr. True by default. */
 	bool forwardStderr;
 	
-	SmartSpawner(SafeLibev *_libev,
+	SmartSpawner(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const vector<string> &_preloaderCommand,
@@ -1426,7 +1426,7 @@ public:
 		}
 		
 		NegotiationDetails details;
-		details.libev = libev;
+		details.libev = libev.get();
 		details.pid = result.pid;
 		details.adminSocket = result.adminSocket;
 		details.io = result.io;
@@ -1460,7 +1460,7 @@ public:
 
 class DirectSpawner: public Spawner {
 private:
-	SafeLibev *libev;
+	SafeLibevPtr libev;
 	
 	static int startBackgroundThread(void *(*mainFunction)(void *), void *arg) {
 		// Using raw pthread API because we don't want to register such
@@ -1570,7 +1570,7 @@ public:
 	/** Whether to forward spawned processes' stderr to our stderr. True by default. */
 	bool forwardStderr;
 	
-	DirectSpawner(SafeLibev *_libev,
+	DirectSpawner(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
@@ -1632,7 +1632,7 @@ public:
 			errorPipe.second.close();
 			
 			NegotiationDetails details;
-			details.libev = libev;
+			details.libev = libev.get();
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
@@ -1691,7 +1691,7 @@ typedef shared_ptr<DummySpawner> DummySpawnerPtr;
 
 class SpawnerFactory {
 private:
-	SafeLibev *libev;
+	SafeLibevPtr libev;
 	ResourceLocator resourceLocator;
 	ServerInstanceDir::GenerationPtr generation;
 	RandomGeneratorPtr randomGenerator;
@@ -1718,7 +1718,7 @@ public:
 	unsigned int dummyConcurrency;
 	unsigned int dummySpawnTime;
 
-	SpawnerFactory(SafeLibev *_libev,
+	SpawnerFactory(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())

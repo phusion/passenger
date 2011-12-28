@@ -47,10 +47,10 @@ static bool quit = false;
 
 
 struct Data {
-	SafeLibev *libev;
+	SafeLibevPtr libev;
 	MultiLibeio::Callback callback;
 
-	Data(SafeLibev *_libev, const MultiLibeio::Callback &_callback)
+	Data(const SafeLibevPtr &_libev, const MultiLibeio::Callback &_callback)
 		: libev(_libev),
 		  callback(_callback)
 		{ }
@@ -59,7 +59,7 @@ struct Data {
 struct CustomData: public Data {
 	MultiLibeio::ExecuteCallback execute;
 
-	CustomData(SafeLibev *_libev,
+	CustomData(const SafeLibevPtr &_libev,
 		const MultiLibeio::Callback &_callback,
 		const MultiLibeio::ExecuteCallback &_execute)
 		: Data(_libev, _callback),
@@ -135,13 +135,6 @@ MultiLibeio::shutdown() {
 	delete thr;
 	thr = NULL;
 	quit = false;
-}
-
-void
-MultiLibeio::waitUntilIdle() {
-	while (eio_nreqs() != 0 || eio_nready() != 0 || eio_npending() != 0) {
-		syscalls::usleep(10000);
-	}
 }
 
 #define MAKE_REQUEST(code) \

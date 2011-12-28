@@ -71,17 +71,19 @@ public:
 private:
 	typedef function<void (int err, const char *data, size_t size)> EioReadCallback;
 
+	// We already have a shared_ptr reference to libev through MultiLibeio.
 	SafeLibev * const libev;
 	const string dir;
 	size_t threshold;
 
-	unsigned int consumedCallCount;
 	const char *currentData;
 	size_t currentDataSize;
+	MultiLibeio libeio;
+	unsigned int consumedCallCount;
 
 	bool started;
 	bool ended;
-	MultiLibeio libeio;
+	bool endReached;
 
 	enum {
 		/* No data event handler is currently being called. */
@@ -154,6 +156,7 @@ private:
 	}
 
 	void callOnEnd() {
+		endReached = true;
 		if (onEnd) {
 			onEnd();
 		}
@@ -268,7 +271,7 @@ private:
 			if (openTimeout == 0) {
 				finalizeOpenFile(req.result);
 			} else {
-				libeio.getLibev()->runAfter(openTimeout,
+				libev->runAfter(openTimeout,
 					boost::bind(&FileBackedPipe::finalizeOpenFileAfterTimeout, this,
 						weak_ptr<FileBackedPipe>(shared_from_this()), FileDescriptor(req.result)));
 			}
@@ -448,8 +451,8 @@ public:
 	// should at least take before it finishes. For unit testing purposes.
 	unsigned int openTimeout;
 
-	FileBackedPipe(SafeLibev *_libev, const string &_dir, size_t _threshold = 1024 * 8)
-		: libev(_libev),
+	FileBackedPipe(const SafeLibevPtr &_libev, const string &_dir, size_t _threshold = 1024 * 8)
+		: libev(_libev.get()),
 		  dir(_dir),
 		  threshold(_threshold),
 		  libeio(_libev),
@@ -460,6 +463,7 @@ public:
 		currentDataSize = 0;
 		started = false;
 		ended = false;
+		endReached = false;
 		dataEventState = NOT_CALLING_EVENT;
 		dataState = IN_MEMORY;
 		memory.data = NULL;
@@ -486,6 +490,7 @@ public:
 		currentDataSize = 0;
 		started = false;
 		ended = false;
+		endReached = false;
 		dataEventState = NOT_CALLING_EVENT;
 		dataState = IN_MEMORY;
 		delete[] memory.data;
@@ -570,11 +575,15 @@ public:
 		return started;
 	}
 
+	bool reachedEnd() const {
+		return endReached;
+	}
+
 	void start() {
 		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 		}
-		if (!started) {
+		if (!started && !endReached) {
 			started = true;
 			if (dataEventState == NOT_CALLING_EVENT) {
 				if (getBufferSize() > 0) {

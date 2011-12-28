@@ -25,6 +25,7 @@
 #ifndef _BACKGROUND_EVENT_LOOP_H_
 #define _BACKGROUND_EVENT_LOOP_H_
 
+#include <boost/shared_ptr.hpp>
 #include <string>
 
 extern "C" {
@@ -34,6 +35,7 @@ extern "C" {
 
 namespace Passenger {
 	using namespace std;
+	using namespace boost;
 
 	class SafeLibev;
 	struct BackgroundEventLoopPrivate;
@@ -42,7 +44,7 @@ namespace Passenger {
 	struct BackgroundEventLoop {
 		struct ev_loop *loop;
 		ev_async *async;
-		SafeLibev *safe;
+		shared_ptr<SafeLibev> safe;
 		BackgroundEventLoopPrivate *priv;
 		
 		BackgroundEventLoop();

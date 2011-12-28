@@ -39,7 +39,6 @@ namespace tut {
 		~FileBackedPipeTest() {
 			bg.stop();
 			pipe.reset();
-			MultiLibeio::waitUntilIdle();
 		}
 
 		void init() {
@@ -72,6 +71,10 @@ namespace tut {
 			bg.safe->run(boost::bind(&FileBackedPipe::start, pipe.get()));
 		}
 
+		void stopPipe() {
+			bg.safe->run(boost::bind(&FileBackedPipe::stop, pipe.get()));
+		}
+
 		void endPipe() {
 			bg.safe->run(boost::bind(&FileBackedPipe::end, pipe.get()));
 		}
@@ -88,6 +91,16 @@ namespace tut {
 
 		void real_isStarted(bool *result) {
 			*result = pipe->isStarted();
+		}
+
+		bool reachedEnd() {
+			bool result;
+			bg.safe->run(boost::bind(&FileBackedPipeTest::real_reachedEnd, this, &result));
+			return result;
+		}
+
+		void real_reachedEnd(bool *result) {
+			*result = pipe->reachedEnd();
 		}
 
 		FileBackedPipe::DataState getDataState() {
@@ -273,25 +286,26 @@ namespace tut {
 
 		write("world");
 		EVENTUALLY(5,
-			result = getDataState() == FileBackedPipe::IN_FILE;
+			result = getDataState() == FileBackedPipe::IN_FILE && consumeCallbackCount == 1;
 		);
-		ensure_equals(getBufferSize(), 10u);
-		ensure_equals(consumeCallbackCount, 1);
-		ensure_equals(receivedData, "hello");
+		ensure_equals("(2)", getBufferSize(), 10u);
+		ensure_equals("(3)", receivedData, "hello");
 
 		callConsumedCallback(4, false);
-		ensure_equals(getDataState(), FileBackedPipe::IN_FILE);
-		ensure_equals(getBufferSize(), 6u);
-		ensure_equals(consumeCallbackCount, 2);
-		ensure_equals(receivedData,
+		EVENTUALLY(5,
+			result = consumeCallbackCount == 2;
+		);
+		ensure_equals("(4)", getDataState(), FileBackedPipe::IN_FILE);
+		ensure_equals("(5)", getBufferSize(), 6u);
+		ensure_equals("(7)", receivedData,
 			"hello\n"
 			"oworld");
 		
 		callConsumedCallback(6, false);
-		ensure_equals(getDataState(), FileBackedPipe::IN_FILE);
-		ensure_equals(getBufferSize(), 0u);
-		ensure_equals(consumeCallbackCount, 2);
-		ensure_equals(receivedData,
+		ensure_equals("(8)", getDataState(), FileBackedPipe::IN_FILE);
+		ensure_equals("(9)", getBufferSize(), 0u);
+		ensure_equals("(10)", consumeCallbackCount, 2);
+		ensure_equals("(11)", receivedData,
 			"hello\n"
 			"oworld");
 	}
@@ -436,5 +450,25 @@ namespace tut {
 		);
 		ensure_equals(receivedData, "hello");
 		ensure(ended);
+	}
+
+	TEST_METHOD(20) {
+		// Starting a pipe whose end has already been processed will have no effect.
+		init();
+		startPipe();
+		write("hello");
+		endPipe();
+		ensure_equals(consumeCallbackCount, 1);
+		ensure(ended);
+		
+		stopPipe();
+		ensure(reachedEnd());
+		ensure(!isStarted());
+
+		startPipe();
+		ensure_equals(consumeCallbackCount, 1);
+		ensure(ended);
+		ensure(reachedEnd());
+		ensure(!isStarted());
 	}
 }
