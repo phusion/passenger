@@ -203,16 +203,97 @@ namespace tut {
 	TEST_METHOD(7) {
 		// Test writing to a pipe whose consume callback hasn't
 		// been called yet and whose data state is IN_MEMORY.
+		init();
+		startPipe();
+		consumeImmediately = false;
+		write("hello");
+
+		write("world");
+		ensure_equals(getDataState(), FileBackedPipe::IN_MEMORY);
+		ensure_equals(getBufferSize(), 10u);
+		ensure_equals(consumeCallbackCount, 1);
+		ensure_equals(receivedData, "hello");
+
+		callConsumedCallback(4, false);
+		ensure_equals(getBufferSize(), 6u);
+		ensure_equals(consumeCallbackCount, 2);
+		ensure_equals(receivedData,
+			"hello\n"
+			"oworld");
+		
+		callConsumedCallback(6, false);
+		ensure_equals(getBufferSize(), 0u);
+		ensure_equals(consumeCallbackCount, 2);
+		ensure_equals(receivedData,
+			"hello\n"
+			"oworld");
 	}
 
 	TEST_METHOD(8) {
 		// Test writing to a pipe whose consume callback hasn't
 		// been called yet and whose data state is OPENING_FILE.
+		pipe->setThreshold(3);
+		pipe->openTimeout = 30;
+		init();
+		startPipe();
+		consumeImmediately = false;
+		write("hello");
+
+		write("world");
+		ensure_equals(getDataState(), FileBackedPipe::OPENING_FILE);
+		ensure_equals(getBufferSize(), 10u);
+		ensure_equals(consumeCallbackCount, 1);
+		ensure_equals(receivedData, "hello");
+
+		callConsumedCallback(4, false);
+		ensure_equals(getDataState(), FileBackedPipe::OPENING_FILE);
+		ensure_equals(getBufferSize(), 6u);
+		ensure_equals(consumeCallbackCount, 2);
+		ensure_equals(receivedData,
+			"hello\n"
+			"oworld");
+		
+		callConsumedCallback(6, false);
+		ensure_equals(getDataState(), FileBackedPipe::OPENING_FILE);
+		ensure_equals(getBufferSize(), 0u);
+		ensure_equals(consumeCallbackCount, 2);
+		ensure_equals(receivedData,
+			"hello\n"
+			"oworld");
 	}
 
 	TEST_METHOD(9) {
 		// Test writing to a pipe whose consume callback hasn't
 		// been called yet and whose data state is IN_FILE.
+		pipe->setThreshold(3);
+		init();
+		startPipe();
+		consumeImmediately = false;
+		write("hello");
+
+		write("world");
+		EVENTUALLY(5,
+			result = getDataState() == FileBackedPipe::IN_FILE;
+		);
+		ensure_equals(getBufferSize(), 10u);
+		ensure_equals(consumeCallbackCount, 1);
+		ensure_equals(receivedData, "hello");
+
+		callConsumedCallback(4, false);
+		ensure_equals(getDataState(), FileBackedPipe::IN_FILE);
+		ensure_equals(getBufferSize(), 6u);
+		ensure_equals(consumeCallbackCount, 2);
+		ensure_equals(receivedData,
+			"hello\n"
+			"oworld");
+		
+		callConsumedCallback(6, false);
+		ensure_equals(getDataState(), FileBackedPipe::IN_FILE);
+		ensure_equals(getBufferSize(), 0u);
+		ensure_equals(consumeCallbackCount, 2);
+		ensure_equals(receivedData,
+			"hello\n"
+			"oworld");
 	}
 
 	TEST_METHOD(10) {
