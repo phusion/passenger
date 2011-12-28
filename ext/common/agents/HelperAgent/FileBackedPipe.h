@@ -27,6 +27,24 @@ using namespace std;
 using namespace boost;
 
 
+/**
+ * A pipe which buffers data in memory, or if the data becomes too large, to disk.
+ * If you write some data to the pipe then the pipe will push some data to the
+ * 'onData' callback. This callback is allowed to take an arbitrary amount of time
+ * to consume the data. The pipe guarantees that, while the callback is busy
+ * consuming data, any newly written data will be buffered, either to memory
+ * or to disk. Thus, one can write a virtually unlimited amount of data into
+ * the pipe without filling up the system's RAM, even when the data is slowly
+ * consumed. FileBackedPipe is highly optimized: in case the 'onData' callback
+ * is fast enough, FileBackedPipe operates in an entirely zero-copy manner and
+ * without any kinds of heap allocations.
+ *
+ * FileBackedPipe assumes the usage of an event loop. It is *not* thread-safe!
+ * All FileBackedPipe methods may only be called from the event loop on which it
+ * is installed.
+ *
+ * FileBackedPipe *must* be dynamically allocated and assigned to a shared_ptr.
+ */
 class FileBackedPipe: public enable_shared_from_this<FileBackedPipe> {
 public:
 	class ConsumeCallback {
@@ -72,7 +90,7 @@ private:
 	typedef function<void (int err, const char *data, size_t size)> EioReadCallback;
 
 	// We already have a shared_ptr reference to libev through MultiLibeio.
-	SafeLibev * const libev;
+	SafeLibev *libev;
 	const string dir;
 	size_t threshold;
 
@@ -160,6 +178,10 @@ private:
 		if (onEnd) {
 			onEnd();
 		}
+	}
+
+	SafeLibev *getLibev() const {
+		return libeio.getLibev().get();
 	}
 
 	void addToBuffer(const char *data, size_t size) {
@@ -271,7 +293,7 @@ private:
 			if (openTimeout == 0) {
 				finalizeOpenFile(req.result);
 			} else {
-				libev->runAfter(openTimeout,
+				getLibev()->runAfter(openTimeout,
 					boost::bind(&FileBackedPipe::finalizeOpenFileAfterTimeout, this,
 						weak_ptr<FileBackedPipe>(shared_from_this()), FileDescriptor(req.result)));
 			}
@@ -331,10 +353,10 @@ private:
 	}
 
 	void dataConsumed(size_t consumed, bool done) {
-		if (pthread_equal(pthread_self(), libev->getCurrentThread())) {
+		if (pthread_equal(pthread_self(), getLibev()->getCurrentThread())) {
 			real_dataConsumed(consumed, done);
 		} else {
-			libev->runAsync(boost::bind(
+			getLibev()->runAsync(boost::bind(
 				&FileBackedPipe::real_dataConsumed, this,
 				consumed, done));
 		}
@@ -452,8 +474,7 @@ public:
 	unsigned int openTimeout;
 
 	FileBackedPipe(const SafeLibevPtr &_libev, const string &_dir, size_t _threshold = 1024 * 8)
-		: libev(_libev.get()),
-		  dir(_dir),
+		: dir(_dir),
 		  threshold(_threshold),
 		  libeio(_libev),
 		  openTimeout(0)
@@ -481,11 +502,12 @@ public:
 		return dataState == IN_MEMORY;
 	}
 
-	void reset() {
+	void reset(const SafeLibevPtr &_libev) {
 		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 		}
 		assert(resetable());
+		libeio = MultiLibeio(_libev);
 		currentData = NULL;
 		currentDataSize = 0;
 		started = false;
