@@ -105,12 +105,12 @@ public:
 		{ }
 	
 	Socket(const string &_name, const string &_address, const string &_protocol, int _concurrency)
-		: name(_name),
+		: totalConnections(0),
+		  name(_name),
 		  address(_address),
 		  protocol(_protocol),
 		  concurrency(_concurrency),
-		  sessions(0),
-		  totalConnections(0)
+		  sessions(0)
 		{ }
 	
 	Socket(const Socket &other)
