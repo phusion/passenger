@@ -37,8 +37,9 @@ namespace tut {
 		}
 		
 		~FileBackedPipeTest() {
-			MultiLibeio::waitUntilIdle();
 			bg.stop();
+			pipe.reset();
+			MultiLibeio::waitUntilIdle();
 		}
 
 		void init() {
@@ -76,7 +77,7 @@ namespace tut {
 		}
 
 		void callConsumedCallback(size_t consumed, bool done) {
-			bg.safe->run(boost::bind(consumedCallback, consumed, done));
+			bg.safe->run(boost::bind(consumedCallback.toFunction(), consumed, done));
 		}
 
 		bool isStarted() {
@@ -147,6 +148,12 @@ namespace tut {
 
 	TEST_METHOD(3) {
 		// Test writing to an empty, stopped pipe and starting it later.
+		init();
+		write("hello");
+		startPipe();
+		ensure_equals(consumeCallbackCount, 1);
+		ensure_equals(receivedData, "hello");
+		ensure_equals(getBufferSize(), 0u);
 	}
 
 	TEST_METHOD(4) {
@@ -184,10 +191,10 @@ namespace tut {
 		write("hello");
 		ensure_equals(getBufferSize(), 5u);
 		ensure_equals(receivedData, "");
-		ensure_equals(consumeCallbackCount, 0u);
+		ensure_equals(consumeCallbackCount, 0);
 		startPipe();
 		ensure_equals(getBufferSize(), 0u);
-		ensure_equals(consumeCallbackCount, 2u);
+		ensure_equals(consumeCallbackCount, 2);
 		ensure_equals(receivedData,
 			"hello\n"
 			"lo");
@@ -233,7 +240,7 @@ namespace tut {
 		init();
 		startPipe();
 		endPipe();
-		ensure_equals(consumeCallbackCount, 0u);
+		ensure_equals(consumeCallbackCount, 0);
 		ensure(ended);
 	}
 
@@ -244,7 +251,7 @@ namespace tut {
 		startPipe();
 		write("hello");
 		endPipe();
-		ensure_equals(consumeCallbackCount, 1u);
+		ensure_equals(consumeCallbackCount, 1);
 		ensure_equals(receivedData, "hello");
 		ensure(ended);
 	}
@@ -298,7 +305,7 @@ namespace tut {
 		init();
 		endPipe();
 		startPipe();
-		ensure_equals(consumeCallbackCount, 0u);
+		ensure_equals(consumeCallbackCount, 0);
 		ensure_equals(receivedData, "");
 		ensure(ended);
 	}
@@ -317,6 +324,23 @@ namespace tut {
 	}
 
 	TEST_METHOD(17) {
+		// Test end() on a non-empty, stopped pipe with dataState == IN_FILE.
+		pipe->setThreshold(3);
+		pipe->openTimeout = 30;
+		init();
+		write("hello");
+		ensure_equals(getDataState(), FileBackedPipe::OPENING_FILE);
+		endPipe();
+		startPipe();
+		EVENTUALLY(5,
+			result = consumeCallbackCount == 1;
+		);
+		ensure_equals(getDataState(), FileBackedPipe::OPENING_FILE);
+		ensure_equals(receivedData, "hello");
+		ensure(ended);
+	}
+
+	TEST_METHOD(18) {
 		// Test end() on a non-empty, stopped pipe with dataState == IN_FILE.
 		pipe->setThreshold(3);
 		init();

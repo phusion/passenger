@@ -29,7 +29,35 @@ using namespace boost;
 
 class FileBackedPipe: public enable_shared_from_this<FileBackedPipe> {
 public:
-	typedef function<void (size_t size, bool done)> ConsumeCallback;
+	class ConsumeCallback {
+	private:
+		mutable weak_ptr<FileBackedPipe> wself;
+
+	public:
+		ConsumeCallback() { }
+
+		ConsumeCallback(const shared_ptr<FileBackedPipe> &self)
+			: wself(self)
+			{ }
+
+		void operator()(size_t consumed, bool done) const {
+			shared_ptr<FileBackedPipe> self = wself.lock();
+			if (self != NULL) {
+				wself.reset();
+				self->dataConsumed(consumed, done);
+			}
+		}
+
+		function<void (size_t, bool)> toFunction() const {
+			shared_ptr<FileBackedPipe> self = wself.lock();
+			if (self != NULL) {
+				return boost::bind(&ConsumeCallback::operator(), this, _1, _2);
+			} else {
+				return function<void (size_t, bool)>();
+			}
+		}
+	};
+
 	typedef function<void (const char *data, size_t size, const ConsumeCallback &consumed)> DataCallback;
 	//typedef function<void (const ExceptionPtr &exception)> ErrorCallback;
 	typedef function<void ()> Callback;
@@ -108,9 +136,7 @@ private:
 		currentDataSize = size;
 
 		if (OXT_LIKELY(onData != NULL)) {
-			onData(data, size, boost::bind(
-				&FileBackedPipe::dataConsumed, this,
-				_1, _2));
+			onData(data, size, ConsumeCallback(shared_from_this()));
 		} else {
 			real_dataConsumed(0, true);
 		}
@@ -239,9 +265,26 @@ private:
 			// TODO: set error
 		} else {
 			eio_unlink(filename.c_str(), 0, successCallback, NULL);
-			dataState = IN_FILE;
-			file.fd = FileDescriptor(req.result);
-			writeBufferToFile();
+			if (openTimeout == 0) {
+				finalizeOpenFile(req.result);
+			} else {
+				libeio.getLibev()->runAfter(openTimeout,
+					boost::bind(&FileBackedPipe::finalizeOpenFileAfterTimeout, this,
+						weak_ptr<FileBackedPipe>(shared_from_this()), FileDescriptor(req.result)));
+			}
+		}
+	}
+
+	void finalizeOpenFile(const FileDescriptor &fd) {
+		dataState = IN_FILE;
+		file.fd = fd;
+		writeBufferToFile();
+	}
+
+	void finalizeOpenFileAfterTimeout(weak_ptr<FileBackedPipe> wself, FileDescriptor fd) {
+		shared_ptr<FileBackedPipe> self = wself.lock();
+		if (self != NULL) {
+			self->finalizeOpenFile(fd);
 		}
 	}
 
@@ -401,11 +444,16 @@ public:
 	//ErrorCallback onError;
 	Callback onBufferDrained;
 
+	// The amount of time, in milliseconds, that the open() operation
+	// should at least take before it finishes. For unit testing purposes.
+	unsigned int openTimeout;
+
 	FileBackedPipe(SafeLibev *_libev, const string &_dir, size_t _threshold = 1024 * 8)
 		: libev(_libev),
 		  dir(_dir),
 		  threshold(_threshold),
-		  libeio(_libev)
+		  libeio(_libev),
+		  openTimeout(0)
 	{
 		consumedCallCount = 0;
 		currentData = NULL;
