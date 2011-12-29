@@ -39,6 +39,13 @@ using namespace boost;
  * is fast enough, FileBackedPipe operates in an entirely zero-copy manner and
  * without any kinds of heap allocations.
  *
+ * By default, FileBackedPipe is stopped, meaning that when you write to it,
+ * the data will be buffered and the 'onData' callback will not be called.
+ * You must start it by calling start().
+ *
+ * When you're done writing data to the pipe, call end() to signal end-of-stream.
+ * Once all buffered data has been consumed, the 'onEnd' callback will be called.
+ *
  * FileBackedPipe assumes the usage of an event loop. It is *not* thread-safe!
  * All FileBackedPipe methods may only be called from the event loop on which it
  * is installed.
@@ -173,7 +180,14 @@ private:
 		}
 	}
 
+	void callOnBufferDrained() {
+		if (onBufferDrained) {
+			onBufferDrained();
+		}
+	}
+
 	void callOnEnd() {
+		assert(!endReached);
 		endReached = true;
 		if (onEnd) {
 			onEnd();
@@ -418,9 +432,7 @@ private:
 			memory.size -= consumed;
 			if (started) {
 				if (memory.size == 0) {
-					if (onBufferDrained) {
-						onBufferDrained();
-					}
+					callOnBufferDrained();
 					if (ended) {
 						callOnEnd();
 					}
@@ -435,9 +447,7 @@ private:
 			file.readOffset += consumed;
 			if (started) {
 				if (getBufferSize() == 0) {
-					if (onBufferDrained) {
-						onBufferDrained();
-					}
+					callOnBufferDrained();
 					if (ended) {
 						callOnEnd();
 					}
@@ -528,6 +538,9 @@ public:
 		threshold = value;
 	}
 
+	/**
+	 * Returns the amount of data that has been buffered.
+	 */
 	size_t getBufferSize() const {
 		switch (dataState) {
 		case IN_MEMORY:
@@ -548,6 +561,14 @@ public:
 		return dataState;
 	}
 
+	/**
+	 * Writes the given data to the pipe. Returns whether all data is immediately
+	 * consumed by the 'onData' callback. If the return value is false then it
+	 * means some data has been buffered. You can check the size of the buffer
+	 * by calling getBufferSize().
+	 *
+	 * Note that this method may invoke the 'onData' callback immediately.
+	 */
 	bool write(const char *data, size_t size) {
 		assert(!ended);
 
