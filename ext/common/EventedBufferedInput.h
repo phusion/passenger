@@ -5,12 +5,13 @@
 #include <cassert>
 
 #include <boost/bind.hpp>
-#include <boost/shared_from_this.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <oxt/system_calls.hpp>
 #include <ev++.h>
 
+#include <SafeLibev.h>
 #include <FileDescriptor.h>
 #include <StaticString.h>
 
@@ -20,94 +21,113 @@ using namespace boost;
 using namespace oxt;
 
 template<size_t bufferSize = 1024 * 8>
-class EventedBufferedInput: public enable_shared_from_this<EventedBufferedInput> {
+class EventedBufferedInput: public enable_shared_from_this< EventedBufferedInput<bufferSize> > {
 private:
+	enum State {
+		LIVE,
+		END_OF_STREAM,
+		READ_ERROR,
+		CLOSED
+	};
+
 	SafeLibev *libev;
 	FileDescriptor fd;
 	ev::io watcher;
-	StaticString unconsumed;
-	bool stopped;
-	bool resumeAfterProcessingEvents;
+	StaticString buffer;
+	State state;
+	bool paused;
+	bool socketPaused;
 	bool nextTickInstalled;
-	bool eof;
-	int  error;
-	char buffer[bufferSize];
+	int error;
+	char bufferData[bufferSize];
 
 	void onReadable(ev::io &watcher, int revents) {
-		assert(!nextTickInstalled);
-		assert(unconsumed.empty());
-		ssize_t ret = syscalls::read(fd, buffer, sizeof(buffer));
+		ssize_t ret = syscalls::read(fd, bufferData, bufferSize);
 		if (ret == -1) {
 			if (errno != EAGAIN) {
 				error = errno;
-				if (unconsumed.empty()) {
+				assert(state == LIVE);
+				assert(!socketPaused);
+				assert(buffer.empty());
+				assert(!paused);
+
+				watcher.stop();
+				state = READ_ERROR;
+				if (onError) {
 					onError("Cannot read from socket", error);
 				}
 			}
+
 		} else if (ret == 0) {
-			eof = true;
-			if (unconsumed.empty()) {
-				onData(StaticString());
-			}
+			assert(state == LIVE);
+			assert(!socketPaused);
+			assert(buffer.empty());
+			assert(!paused);
+
+			watcher.stop();
+			state = END_OF_STREAM;
+			onData(StaticString());
+
 		} else {
-			unconsumed = StaticString(buffer, ret);
-			processEvents();
+			assert(state == LIVE);
+			assert(!socketPaused);
+			assert(buffer.empty());
+			assert(!paused);
+
+			buffer = StaticString(bufferData, ret);
+			processBuffer();
 		}
 	}
 
-	void processEventsInNextTick() {
+	void processBufferInNextTick() {
 		if (!nextTickInstalled) {
 			nextTickInstalled = true;
 			libev->runAsync(boost::bind(
-				realProcessEventsInNextTick,
-				weak_ptr< EventedBufferedInput<bufferSize> >(shared_from_this())
+				realProcessBufferInNextTick,
+				weak_ptr< EventedBufferedInput<bufferSize> >(this->shared_from_this())
 			));
 		}
 	}
 
-	static void realProcessEventsInNextTick(weak_ptr< EventedBufferedInput<bufferSize> > wself) {
+	static void realProcessBufferInNextTick(weak_ptr< EventedBufferedInput<bufferSize> > wself) {
 		shared_ptr< EventedBufferedInput<bufferSize> > self = wself.lock();
 		if (self != NULL) {
 			self->nextTickInstalled = false;
-			self->processEvents();
+			self->processBuffer();
 		}
 	}
 
-	void processEvents() {
-		if (stopped && !resumeAfterProcessingEvents) {
+	void processBuffer() {
+		if (state == CLOSED) {
+			return;
+		}
+		assert(state == LIVE);
+		if (paused || buffer.empty() || fd == -1) {
 			return;
 		}
 
-		if (!unconsumed.empty()) {
-			assert(!unconsumed.empty());
+		assert(buffer.size() > 0);
 
-			size_t consumed = onData(unconsumed);
-			if (consumed == unconsumed.size()) {
-				unconsumed = StaticString();
-				if (eof) {
-					onEnd();
-				} else if (error != 0) {
-					onError("Cannot read from socket", error);
-				} else if (resumeAfterProcessingEvents) {
-					stopped = false;
-					resumeAfterProcessingEvents = false;
-					watcher.start();
-				}
-			} else {
-				unconsumed = unconsumed.substr(consumed);
-				if (!stopped) {
-					stopped = true;
-					resumeAfterProcessingEvents = true;
-					watcher.stop();
-					processEventsInNextTick();
-				} else if (resumeAfterProcessingEvents) {
-					processEventsInNextTick();
-				}
+		size_t consumed = onData(buffer);
+		if (state == CLOSED) {
+			return;
+		}
+		if (consumed == buffer.size()) {
+			buffer = StaticString();
+			if (!paused && socketPaused) {
+				socketPaused = false;
+				watcher.start();
 			}
-		} else if (eof) {
-			this.onEnd();
-		} else if (error != 0) {
-			onError("Cannot read from socket", error);
+		} else {
+			buffer = buffer.substr(consumed);
+			if (!socketPaused) {
+				socketPaused = true;
+				watcher.stop();
+			}
+			if (!paused) {
+				// Consume rest of the data in the next tick.
+				processBufferInNextTick();
+			}
 		}
 	}
 
@@ -138,13 +158,13 @@ public:
 	void reset(SafeLibev *libev, const FileDescriptor &fd) {
 		this->libev = libev;
 		this->fd = fd;
-		unconsumed = StaticString();
-		stopped = true;
-		resumeAfterProcessingEvents = false;
+		buffer = StaticString();
+		state = LIVE;
+		paused = false;
+		socketPaused = false;
 		nextTickInstalled = false;
-		eof = false;
 		error = 0;
-		if (watcher.started()) {
+		if (watcher.is_active()) {
 			watcher.stop();
 		}
 		if (libev != NULL) {
@@ -153,23 +173,31 @@ public:
 	}
 
 	void stop() {
-		stopped = true;
-		resumeAfterProcessingEvents = false;
-		watcher.stop();
+		if (state == LIVE && !paused) {
+			paused = true;
+			if (!socketPaused) {
+				socketPaused = true;
+				watcher.stop();
+			}
+		}
 	}
 
 	void start() {
-		if (!unconsumed.empty()) {
-			resumeAfterProcessingEvents = true;
-			processEventsInNextTick();
-		} else {
-			stopped = false;
-			watcher.start();
+		if (state == LIVE && paused) {
+			assert(socketPaused);
+			
+			paused = false;
+			if (!buffer.empty()) {
+				processBufferInNextTick();
+			} else {
+				socketPaused = false;
+				watcher.start();
+			}
 		}
 	}
 
 	bool started() const {
-		return !stopped;
+		return !paused;
 	}
 };
 
