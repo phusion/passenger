@@ -130,7 +130,7 @@ public:
 
 	FileBackedPipePtr requestBodyPipe;
 	FileBackedPipePtr responsePipe;
-	string clientWriteBuffer;
+	string writeBuffer;
 	string appWriteBuffer;
 
 	Options options;
@@ -556,13 +556,13 @@ private:
 		}
 	}
 
-	void onRequestBodyPipeCommit(const ClientPtr &client, bool direct) {
+	void onRequestBodyPipeBufferDrained(const ClientPtr &client, bool direct) {
 		if (!client->connected()) {
 			return;
 		}
 		switch (client->state) {
 		case BUFFERING_REQUEST_BODY:
-			state_bufferingRequestBody_onRequestBodyPipeCommit(client, direct);
+			state_bufferingRequestBody_onRequestBodyPipeBufferDrained(client, direct);
 			break;
 		default:
 			abort();
@@ -579,7 +579,7 @@ private:
 		}
 	}
 
-	void onResponsePipeCommit(const ClientPtr &client, bool direct) {
+	void onResponsePipeBufferDrained(const ClientPtr &client, bool direct) {
 		if (!client->connected()) {
 			return;
 		}
@@ -654,18 +654,17 @@ private:
 
 	void state_bufferingRequestBody_verifyInvariants(const ClientPtr &client) const {
 		assert(client->requestBodyIsBuffered);
-		assert(!client->requestBodyPipe.started());
+		assert(!client->requestBodyPipe->started());
 	}
 
 	size_t state_bufferingRequestBody_onClientData(const ClientPtr &client, const char *data, size_t size) {
 		state_bufferingRequestBody_verifyInvariants(client);
 
-		if (!client->requestBodyPipe.write(data, size)) {
-			// The pipe cannot accept the data quickly enough, so
-			// suspend reading from the client until the pipe has
-			// committed the data.
+		if (!client->requestBodyPipe->write(data, size)) {
+			// The pipe cannot write the data to disk quickly enough, so
+			// suspend reading from the client until the pipe is done.
 			client->backgroundOperations++;
-			client->clientInput.stop();
+			client->clientInput->stop();
 		}
 		return size;
 	}
@@ -673,28 +672,21 @@ private:
 	void state_bufferingRequestBody_onClientEof(const ClientPtr &client) {
 		state_bufferingRequestBody_verifyInvariants(client);
 
-		client->clientInput.stop();
+		client->clientInput->stop();
+		client->requestBodyPipe->end();
 		checkoutSession(client);
 	}
 
-	void state_bufferingRequestBody_onRequestBodyPipeCommit(const ClientPtr &client, bool direct) {
-		if (direct) {
-			state_bufferingRequestBody_onRequestBodyPipeCommit_real(client);
-		} else {
-			libev->runAsync(boost::bind(&RequestHandler::state_bufferingRequestBody_onRequestBodyPipeCommitted_real,
-				this, client));
+	void state_bufferingRequestBody_onRequestBodyPipeBufferDrained(const ClientPtr &client) {
+		if (!client->connected()) {
+			return;
 		}
-	}
-
-	void state_bufferingRequestBody_onRequestBodyPipeCommitted_real(const ClientPtr &client) {
-		if (client->connected()) {
-			// Now that the pipe has committed the data, resume reading
-			// from the client socket.
-			state_bufferingRequestBody_verifyInvariants(client);
-			assert(!client->clientInput.started());
-			client->backgroundOperations--;
-			client->clientInput.start();
-		}
+		// Now that the pipe has committed the data to disk.
+		// Resume reading from the client socket.
+		state_bufferingRequestBody_verifyInvariants(client);
+		assert(!client->clientInput->started());
+		client->backgroundOperations--;
+		client->clientInput->start();
 	}
 
 
@@ -826,44 +818,28 @@ private:
 		state_common_verifyInvariants(client);
 
 		client->responsePipe->end();
+		client->appInput->stop();
 	}
 
-	void state_common_onResponsePipeCommit(const ClientPtr &client, bool direct) {
-		libev->runAsync(boost::bind(
-			&RequestHandler::state_common_onResponsePipeCommit_real,
-			this, client
-		));
-	}
-
-	void state_common_onResponsePipeCommit_real(const ClientPtr &client) {
-		if (client->connected()) {
-			state_common_verifyInvariants(client);
-			client->backgroundOperations--;
-			client->appInput->start();
+	void state_common_onResponsePipeBufferDrained(const ClientPtr &client) {
+		if (!client->connected()) {
+			return;
 		}
+		state_common_verifyInvariants(client);
+		client->backgroundOperations--;
+		client->appInput->start();
 	}
 
 	// Component: response pipe -> client
 
-	FileBackedPipe::ConsumeResult state_common_onResponsePipeData(const ClientPtr &client,
-		const char *data, size_t size, bool direct)
+	void state_common_onResponsePipeData(const ClientPtr &client,
+		const char *data, size_t size, const FileBackedPipe::ConsumeCallback &consumed)
 	{
-		if (direct) {
-			return state_common_onResponsePipeData_direct(client, data, size);
-		} else {
-			libev->runAsync(boost::bind(
-				&RequestHandler::state_common_onResponsePipeData_indirect,
-				this, client, string(data, size)
-			));
-			// Stop the response pipe until event loop has process this packet.
-			return FileBackedPipe::ConsumeResult(size, true);
+		if (!client->connected()) {
+			consumed(0, true);
+			return;
 		}
-	}
-
-	FileBackedPipe::ConsumeResult state_common_onResponsePipeData_direct(const ClientPtr &client,
-		const char *data, size_t size)
-	{
-		state_sendingHeaderToApp_verifyInvariants(client);
+		state_common_verifyInvariants(client);
 
 		ssize_t ret = syscalls::write(client->fd, data, size);
 		if (ret == -1) {
@@ -877,73 +853,22 @@ private:
 			} else {
 				disconnectWithClientSocketWriteError(errno);
 			}
-			return FileBackedPipe::ConsumeResult(0, true);
+			consumed(0, true);
 		} else {
-			return FileBackedPipe::ConsumeResult(ret, false);
-		}
-	}
-
-	void state_common_onResponsePipeData_indirect(const ClientPtr &client,
-		string data)
-	{
-		state_sendingHeaderToApp_verifyInvariants(client);
-		assert(!client->responsePipe->started());
-
-		StaticString bufs[] = { data };
-		ssize_t ret = gatheredWrite(client->fd, bufs, 1, client->clientWriteBuffer);
-		if (ret == -1) {
-			if (errno == EAGAIN) {
-				// Resume forwarding app response after we're done writing out the
-				// entire buffer.
-				client->clientWriteWatcher.start();
-			} else if (errno == EPIPE) {
-				// If the client closed the connection then disconnect quietly.
-				disconnect(client);
-			} else {
-				disconnectWithClientSocketWriteError(errno);
-			}
-			return 0;
-		} else if (client->clientWriteBuffer.empty()) {
-			// Resume forwarding app response now.
-			client->responsePipe->start();
-		} else {
-			// Resume forwarding app response after we're done writing out the
-			// entire buffer.
-			client->writeWatcher.start();
+			consumed(ret, false);
 		}
 	}
 
 	void state_common_onClientWritable(const ClientPtr &client) {
-		state_sendingHeaderToApp_verifyInvariants(client);
+		state_common_verifyInvariants(client);
 
-		if (client->clientWriteBuffer.empty()) {
-			// clientWriteWatcher was started by state_common_onResponsePipeData_direct().
-			// Continue forwarding data from the response pipe to the client.
-			client->clientWriteWatcher.stop();
-			assert(!client->responsePipe.started());
-			client->responsePipe.start();
-		} else {
-			// clientWriteWatcher was started by state_common_onResponsePipeData_indirect().
-			ssize_t ret = gatheredWrite(client->fd, NULL, 0, client->clientWriteBuffer);
-			if (ret == -1) {
-				disconnect(client);
-			} else if (client->clientWriteBuffer.empty()) {
-				
-			}
-
-			client->clientWriteWatcher.stop();
-			state_sendingHeaderToApp_onResponsePipeData_indirect(client, string());
-		}
+		// Continue forwarding data from the response pipe to the client.
+		client->clientWriteWatcher.stop();
+		assert(!client->responsePipe->started());
+		client->responsePipe->start();
 	}
 
-	void state_common_onResponsePipeEof(const ClientPtr &client, bool direct) {
-		libev->runAsync(boost::bind(
-			&RequestHandler::state_common_onResponsePipeEof_real,
-			this, client
-		));
-	}
-
-	void state_common_onResponsePipeEof_real(const ClientPtr &client) {
+	void state_common_onResponsePipeEof(const ClientPtr &client) {
 		state_sendingHeaderToApp_verifyInvariants(client);
 
 		syscalls::shutdown(client->fd, SHUT_WR);
@@ -958,7 +883,7 @@ private:
 	}
 
 	void sendHeaderToApp(const ClientPtr &client) {
-		assert(!client->requestBodyPipe.started());
+		assert(!client->requestBodyPipe->started());
 		ssize_t ret = gatheredWrite(client->session->fd(), data, 1, client->appWriteBuffer);
 		if (ret == -1 && errno != EAGAIN) {
 			disconnectWithAppSocketWriteError(client, errno);
