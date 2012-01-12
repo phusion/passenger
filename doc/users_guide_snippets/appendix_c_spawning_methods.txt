@@ -122,7 +122,7 @@ assuming that your Ruby interpreter is <<reducing_memory_usage,copy-on-write fri
 Of course, smart spawning is not without gotchas. But if you understand the
 gotchas you can easily reap the benefits of smart spawning.
 
-=== Smart spawning gotcha #1: unintential file descriptor sharing ===
+=== Smart spawning gotcha #1: unintentional file descriptor sharing ===
 
 Because worker processes are created by forking from an ApplicationSpawner
 server, it will share all file descriptors that are opened by the
@@ -133,7 +133,7 @@ connection, a pipe, etc. If different worker processes write to such a file
 descriptor at the same time, then their write calls will be interleaved, which
 may potentially cause problems.
 
-The problem commonly involves socket connections that are unintentially being
+The problem commonly involves socket connections that are unintentionally being
 shared. You can fix it by closing and reestablishing the connection when Phusion
 Passenger is creating a new worker process. Phusion Passenger provides the API
 call `PhusionPassenger.on_event(:starting_worker_process)` to do so. So you
@@ -198,7 +198,7 @@ result is now as follows:
  | Worker process 2   |-----/
  +--------------------+
 
-As you can see, Worker process 1 and Worker process 2 have the same Memcache
+As you can see, Worker process 1 and Worker process 2 have the same Memcached
 connection.
 
 Suppose that users Joe and Jane visit your website at the same time. Joe's
@@ -250,7 +250,7 @@ end
 
 ==== Example 2: Log file sharing (not harmful) ====
 
-There are also cases in which unintential file descriptor sharing is not harmful.
+There are also cases in which unintentional file descriptor sharing is not harmful.
 One such case is log file file descriptor sharing. Even if two processes write
 to the log file at the same time, the worst thing that can happen is that the
 data in the log file is interleaved.
