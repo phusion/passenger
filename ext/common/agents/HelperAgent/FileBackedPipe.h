@@ -84,7 +84,7 @@ public:
 	};
 
 	typedef function<void (const char *data, size_t size, const ConsumeCallback &consumed)> DataCallback;
-	//typedef function<void (const ExceptionPtr &exception)> ErrorCallback;
+	typedef void (*ErrorCallback)(const shared_ptr<FileBackedPipe> &source, int errorCode);
 	typedef function<void ()> Callback;
 
 	enum DataState {
@@ -97,7 +97,6 @@ private:
 	typedef function<void (int err, const char *data, size_t size)> EioReadCallback;
 
 	// We already have a shared_ptr reference to libev through MultiLibeio.
-	SafeLibev *libev;
 	const string dir;
 	size_t threshold;
 
@@ -109,6 +108,7 @@ private:
 	bool started;
 	bool ended;
 	bool endReached;
+	bool hasError;
 
 	enum {
 		/* No data event handler is currently being called. */
@@ -191,6 +191,13 @@ private:
 		endReached = true;
 		if (onEnd) {
 			onEnd();
+		}
+	}
+
+	void setError(int errorCode) {
+		hasError = true;
+		if (onError) {
+			onError(shared_from_this(), errorCode);
 		}
 	}
 
@@ -277,7 +284,7 @@ private:
 		}
 
 		if (req.result < 0) {
-			// TODO: set error
+			setError(req.errorno);
 		} else {
 			assert(dataState == IN_FILE);
 			file.writeBuffer.erase(0, size);
@@ -301,7 +308,7 @@ private:
 
 		assert(dataState = OPENING_FILE);
 		if (req.result < 0) {
-			// TODO: set error
+			setError(req.errorno);
 		} else {
 			eio_unlink(filename.c_str(), 0, successCallback, NULL);
 			if (openTimeout == 0) {
@@ -467,7 +474,7 @@ private:
 
 	void processBuffer_readCallback(int err, const char *data, size_t size) {
 		if (err != 0) {
-			// TODO: set error
+			setError(err);
 		} else {
 			callOnData(data, size, false);
 		}
@@ -476,17 +483,17 @@ private:
 public:
 	DataCallback onData;
 	Callback onEnd;
-	//ErrorCallback onError;
+	ErrorCallback onError;
 	Callback onBufferDrained;
 
 	// The amount of time, in milliseconds, that the open() operation
 	// should at least take before it finishes. For unit testing purposes.
 	unsigned int openTimeout;
 
-	FileBackedPipe(const SafeLibevPtr &_libev, const string &_dir, size_t _threshold = 1024 * 8)
+	FileBackedPipe(const SafeLibevPtr &libev, const string &_dir, size_t _threshold = 1024 * 8)
 		: dir(_dir),
 		  threshold(_threshold),
-		  libeio(_libev),
+		  libeio(libev),
 		  openTimeout(0)
 	{
 		consumedCallCount = 0;
@@ -495,6 +502,7 @@ public:
 		started = false;
 		ended = false;
 		endReached = false;
+		hasError = false;
 		dataEventState = NOT_CALLING_EVENT;
 		dataState = IN_MEMORY;
 		memory.data = NULL;
@@ -512,17 +520,18 @@ public:
 		return dataState == IN_MEMORY;
 	}
 
-	void reset(const SafeLibevPtr &_libev) {
+	void reset(const SafeLibevPtr &libev) {
 		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 		}
 		assert(resetable());
-		libeio = MultiLibeio(_libev);
+		libeio = MultiLibeio(libev);
 		currentData = NULL;
 		currentDataSize = 0;
 		started = false;
 		ended = false;
 		endReached = false;
+		hasError = false;
 		dataEventState = NOT_CALLING_EVENT;
 		dataState = IN_MEMORY;
 		delete[] memory.data;
@@ -571,6 +580,7 @@ public:
 	 */
 	bool write(const char *data, size_t size) {
 		assert(!ended);
+		assert(!hasError);
 
 		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
@@ -596,6 +606,7 @@ public:
 
 	void end() {
 		assert(!ended);
+		assert(!hasError);
 
 		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
@@ -623,6 +634,7 @@ public:
 	}
 
 	void start() {
+		assert(!hasError);
 		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 		}
