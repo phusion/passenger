@@ -45,6 +45,8 @@ public:
 	static void init();
 	static void shutdown();
 
+	MultiLibeio() { }
+
 	MultiLibeio(const SafeLibevPtr &_libev)
 		: libev(_libev)
 		{ }

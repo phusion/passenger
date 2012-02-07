@@ -32,8 +32,10 @@ namespace tut {
 			doneAfterConsuming = false;
 			consumeCallbackCount = 0;
 			ended = false;
-			pipe = make_shared<FileBackedPipe>(bg.safe, "tmp.pipe");
-			pipe->onEnd = boost::bind(&FileBackedPipeTest::onEnd, this);
+			pipe = make_shared<FileBackedPipe>("tmp.pipe");
+			pipe->userData = this;
+			pipe->onData = onData;
+			pipe->onEnd = onEnd;
 		}
 		
 		~FileBackedPipeTest() {
@@ -42,8 +44,7 @@ namespace tut {
 		}
 
 		void init() {
-			pipe->onData = boost::bind(&FileBackedPipeTest::onData,
-				this, _1, _2, _3);
+			pipe->reset(bg.safe);
 			bg.start();
 		}
 
@@ -113,22 +114,26 @@ namespace tut {
 			*result = pipe->getDataState();
 		}
 
-		void onData(const char *data, size_t size, const FileBackedPipe::ConsumeCallback &consumed) {
-			consumeCallbackThread = pthread_self();
-			if (!receivedData.empty()) {
-				receivedData.append("\n");
+		static void onData(const FileBackedPipePtr &source, const char *data,
+			size_t size, const FileBackedPipe::ConsumeCallback &consumed)
+		{
+			FileBackedPipeTest *self = (FileBackedPipeTest *) source->userData;
+			self->consumeCallbackThread = pthread_self();
+			if (!self->receivedData.empty()) {
+				self->receivedData.append("\n");
 			}
-			receivedData.append(data, size);
-			consumeCallbackCount++;
-			if (consumeImmediately) {
-				consumed(std::min(toConsume, size), doneAfterConsuming);
+			self->receivedData.append(data, size);
+			self->consumeCallbackCount++;
+			if (self->consumeImmediately) {
+				consumed(std::min(self->toConsume, size), self->doneAfterConsuming);
 			} else {
-				consumedCallback = consumed;
+				self->consumedCallback = consumed;
 			}
 		}
 
-		void onEnd() {
-			ended = true;
+		static void onEnd(const FileBackedPipePtr &source) {
+			FileBackedPipeTest *self = (FileBackedPipeTest *) source->userData;
+			self->ended = true;
 		}
 	};
 

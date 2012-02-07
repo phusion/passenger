@@ -83,9 +83,10 @@ public:
 		}
 	};
 
-	typedef function<void (const char *data, size_t size, const ConsumeCallback &consumed)> DataCallback;
+	typedef void (*DataCallback)(const shared_ptr<FileBackedPipe> &source, const char *data,
+		size_t size, const ConsumeCallback &consumed);
 	typedef void (*ErrorCallback)(const shared_ptr<FileBackedPipe> &source, int errorCode);
-	typedef function<void ()> Callback;
+	typedef void (*Callback)(const shared_ptr<FileBackedPipe> &source);
 
 	enum DataState {
 		IN_MEMORY,
@@ -163,7 +164,7 @@ private:
 		currentDataSize = size;
 
 		if (OXT_LIKELY(onData != NULL)) {
-			onData(data, size, ConsumeCallback(shared_from_this()));
+			onData(shared_from_this(), data, size, ConsumeCallback(shared_from_this()));
 		} else {
 			real_dataConsumed(0, true);
 		}
@@ -181,22 +182,22 @@ private:
 	}
 
 	void callOnBufferDrained() {
-		if (onBufferDrained) {
-			onBufferDrained();
+		if (onBufferDrained != NULL) {
+			onBufferDrained(shared_from_this());
 		}
 	}
 
 	void callOnEnd() {
 		assert(!endReached);
 		endReached = true;
-		if (onEnd) {
-			onEnd();
+		if (onEnd != NULL) {
+			onEnd(shared_from_this());
 		}
 	}
 
 	void setError(int errorCode) {
 		hasError = true;
-		if (onError) {
+		if (onError != NULL) {
 			onError(shared_from_this(), errorCode);
 		}
 	}
@@ -485,17 +486,22 @@ public:
 	Callback onEnd;
 	ErrorCallback onError;
 	Callback onBufferDrained;
+	void *userData;
 
 	// The amount of time, in milliseconds, that the open() operation
 	// should at least take before it finishes. For unit testing purposes.
 	unsigned int openTimeout;
 
-	FileBackedPipe(const SafeLibevPtr &libev, const string &_dir, size_t _threshold = 1024 * 8)
+	FileBackedPipe(const string &_dir, size_t _threshold = 1024 * 8)
 		: dir(_dir),
 		  threshold(_threshold),
-		  libeio(libev),
 		  openTimeout(0)
 	{
+		onData = NULL;
+		onEnd = NULL;
+		onError = NULL;
+		onBufferDrained = NULL;
+
 		consumedCallCount = 0;
 		currentData = NULL;
 		currentDataSize = 0;
@@ -520,7 +526,7 @@ public:
 		return dataState == IN_MEMORY;
 	}
 
-	void reset(const SafeLibevPtr &libev) {
+	void reset(const SafeLibevPtr &libev = SafeLibevPtr()) {
 		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
 			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
 		}
