@@ -1,97 +1,168 @@
+/*
+   STAGES
+   
+     Accept connect password
+              |
+             \|/
+          Read header
+              |
+             \|/
+       +------+-----+
+       |            |
+       |            |
+      \|/           |
+     Buffer         |
+     request        |
+     body           |
+       |            |
+       |            |
+      \|/           |
+    Checkout <------+
+    session
+       |
+       |
+      \|/
+  Send header
+    to app
+       |
+       |
+      \|/
+  Send request
+   body to app
+   and forward
+   response to
+     client
+
+
+
+     OVERVIEW OF I/O CHANNELS, PIPES AND WATCHERS
+
+
+                             OPTIONAL:                                       appOutputWatcher
+                          clientBodyBuffer                                         (o)
+                                 |                                                  |
+    +----------+                 |             +-----------+                        |   +---------------+
+    |          |     ------ clientInput -----> |  Request  | ---------------->          |               |
+    |  Client  | fd                            |  Handler  |                    session |  Application  |
+    |          |     <--- clientOutputPipe --- |           | <--- appInput ---          |               |
+    +----------+ |                             +-----------+                            +---------------+
+                 |
+                (o)
+        clientOutputWatcher
+
+ */
+
+#include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
+#include <boost/make_shared.hpp>
+#include <ev++.h>
+
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <sys/un.h>
+#include <cassert>
+
+#include <Logging.h>
+#include <EventedBufferedInput.h>
+#include <ApplicationPool2/Pool.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/IOUtils.h>
+#include <agents/HelperAgent/AgentOptions.h>
+#include <agents/HelperAgent/FileBackedPipe.h>
+#include <agents/HelperAgent/ScgiRequestParser.h>
+
+namespace Passenger {
+
+using namespace std;
+using namespace boost;
+using namespace oxt;
+using namespace ApplicationPool2;
+
+class RequestHandler;
+
+#define RH_WARN(client, x) P_WARN("[Client " << client->name() << "] " << x)
+#define RH_DEBUG(client, x) P_DEBUG("[Client " << client->name() << "] " << x)
+#define RH_TRACE(client, level, x) P_TRACE(level, "[Client " << client->name() << "] " << x)
+
+
 class Client: public enable_shared_from_this<Client> {
 private:
-	static size_t onClientSocketData(weak_ptr<Client> wself, const StaticString &data) {
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onClientData(self, data);
-		}
-	}
+	struct ev_loop *getLoop() const;
+	const SafeLibevPtr &getSafeLibev() const;
 
-	static size_t onClientSocketError(weak_ptr<Client> wself, const char *message, int errnoCode) {
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onClientError(self, message, errnoCode);
-		}
-	}
+	static size_t onClientInputData(weak_ptr<Client> wself, const StaticString &data);
+	static void onClientInputError(weak_ptr<Client> wself, const char *message, int errnoCode);
 
-	static size_t onAppSocketData(weak_ptr<Client> wself, const StaticString &data) {
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onAppSocketData(self, data);
-		}
-	}
+	static void onClientBodyBufferData(const FileBackedPipePtr &source,
+		const char *data, size_t size,
+		const FileBackedPipe::ConsumeCallback &callback);
+	static void onClientBodyBufferEnd(const FileBackedPipePtr &source);
+	static void onClientBodyBufferError(const FileBackedPipePtr &source, int errorCode);
+	static void onClientBodyBufferDrained(const FileBackedPipePtr &source);
+	
+	static void onClientOutputPipeData(const FileBackedPipePtr &source,
+		const char *data, size_t size,
+		const FileBackedPipe::ConsumeCallback &callback);
+	static void onClientOutputPipeEnd(const FileBackedPipePtr &source);
+	static void onClientOutputPipeError(const FileBackedPipePtr &source, int errorCode);
+	static void onClientOutputPipeDrained(const FileBackedPipePtr &source);
+	
+	void onClientOutputWritable(ev::io &io, int revents);
+	
+	static size_t onAppInputData(weak_ptr<Client> wself, const StaticString &data);
+	static void onAppInputError(weak_ptr<Client> wself, const char *message, int errnoCode);
+	
+	void onAppOutputWritable(ev::io &io, int revents);
 
-	static size_t onAppSocketError(weak_ptr<Client> wself, const char *message, int errnoCode) {
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onAppSocketError(self, message, errnoCode);
-		}
-	}
-
-	static FileBackedPipe::ConsumeResult onRequestBodyPipeData(
-		weak_ptr<Client> wself, const char *data, size_t size, bool direct)
-	{
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onRequestBodyPipeData(self, data, size, direct);
-		}
-	}
-
-	static FileBackedPipe::ConsumeResult onRequestBodyPipeEof(
-		weak_ptr<Client> wself, bool direct)
-	{
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onRequestBodyPipeEof(self, direct);
-		}
-	}
-
-	static FileBackedPipe::ConsumeResult onRequestBodyPipeCommit(weak_ptr<Client> wself,
-		bool direct)
-	{
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onRequestBodyPipeCommit(self, direct);
-		}
-	}
-
-	static FileBackedPipe::ConsumeResult onResponsePipeData(
-		weak_ptr<Client> wself, const char *data, size_t size, bool direct)
-	{
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onResponsePipeData(self, data, size, direct);
-		}
-	}
-
-	static FileBackedPipe::ConsumeResult onResponsePipeEof(
-		weak_ptr<Client> wself, bool direct)
-	{
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onResponsePipeEof(self, direct);
-		}
-	}
-
-	static FileBackedPipe::ConsumeResult onResponsePipeCommit(weak_ptr<Client> wself,
-		bool direct)
-	{
-		shared_ptr<Client> self = wself.lock();
-		if (self != NULL) {
-			return self->requestHandler->onResponsePipeCommit(self, direct);
-		}
-	}
 
 	void resetPrimitiveFields() {
-		state = DISCONNECTED;
 		requestHandler = NULL;
-		backgroundOperating = false;
+		state = DISCONNECTED;
+		backgroundOperations = 0;
+		requestBodyIsBuffered = false;
 		freeBufferedConnectPassword();
 		sessionCheckedOut = false;
 		sessionCheckoutTry = 0;
 	}
 
 public:
+	/** Back reference to the RequestHandler that this Client is associated with.
+	 * NULL when this Client is not in the pool or is disconnected. */
+	RequestHandler *requestHandler;
+	/** File descriptor of the client socket. Is empty when this Client is not
+	 * in the pool or is disconnected. */
+	FileDescriptor fd;
+	/** The last associated file descriptor number is stored here. It is not
+	 * cleared after disassociating. Its only purpose is to make logging calls
+	 * like RH_DEBUG() print the correct client name after disconnect() is called.
+	 * Do not use this value for anything else as it may not refer to a valid
+	 * file descriptor. */
+	int fdnum;
+
+
+	/***** Client <-> RequestHandler I/O channels, pipes and watchers *****/
+
+	/** Client input channel. */
+	EventedBufferedInputPtr clientInput;
+	/** If request body buffering is turned on, it will be buffered into this FileBackedPipe. */
+	FileBackedPipePtr clientBodyBuffer;
+	/** Client output pipe. */
+	FileBackedPipePtr clientOutputPipe;
+	/** Client output channel watcher. */
+	ev::io clientOutputWatcher;
+
+
+	/***** RequestHandler <-> Application I/O channels, pipes and watchers *****/
+
+	/** Application input channel. */
+	EventedBufferedInputPtr appInput;
+	string appOutputBuffer;
+	/** Application output channel watcher. */
+	ev::io appOutputWatcher;
+
+
+	/***** State variables *****/
+
 	enum {
 		BEGIN_READING_CONNECT_PASSWORD,
 		STILL_READING_CONNECT_PASSWORD,
@@ -99,103 +170,162 @@ public:
 		BUFFERING_REQUEST_BODY,
 		CHECKING_OUT_SESSION,
 		SENDING_HEADER_TO_APP,
-		FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE,
+		FORWARDING_BODY_TO_APP,
 
 		// Special states
-		WRITING_CLIENT_BUFFER,
+		WRITING_SIMPLE_RESPONSE,
 		DISCONNECTED
-	};
+	} state;
 
-	RequestHandler *requestHandler;
-	FileDescriptor fd;
-	EventedBufferedInputPtr clientInput;
-	EventedBufferedInputPtr appInput;
-	ev::io clientWriteWatcher;
-	ev::io appWriteWatcher;
-
-	/* Whether a background operation is currently in progress, e.g.
+	/* How many background operations are currently in progress, e.g.
 	 * an asyncGet() or bodyBuffer.add(). If the client is disconnected
-	 * while this flag is true, then the Client object is not returned
-	 * into Client object pool in order to give the completion callbacks
-	 * a chance to cancel properly.
-	 *
-	 * One should also check clientInput->hasBackgroundOperations.
+	 * while this flag is true, then the Client object is not reassociateable
+	 * in order to give the completion callbacks a chance to cancel properly.
 	 */
-	bool backgroundOperating;
+	unsigned int backgroundOperations;
 
 	struct {
 		char *data;
 		unsigned int alreadyRead;
 	} bufferedConnectPassword;
 
-	FileBackedPipePtr requestBodyPipe;
-	FileBackedPipePtr responsePipe;
-	string writeBuffer;
-	string appWriteBuffer;
-
 	Options options;
-	ScgiRequestparser scgiParser;
-	bool sessionCheckedOut;
+	ScgiRequestParser scgiParser;
 	SessionPtr session;
+	bool requestBodyIsBuffered;
+	bool sessionCheckedOut;
 	unsigned int sessionCheckoutTry;
 
+
 	Client() {
+		fdnum = -1;
+
+		clientInput = make_shared< EventedBufferedInput<> >();
+		
+		clientBodyBuffer = make_shared<FileBackedPipe>("/tmp");
+		clientBodyBuffer->userData  = this;
+		clientBodyBuffer->onData    = onClientBodyBufferData;
+		clientBodyBuffer->onEnd     = onClientBodyBufferEnd;
+		clientBodyBuffer->onError   = onClientBodyBufferError;
+		clientBodyBuffer->onBufferDrained = onClientBodyBufferDrained;
+
+		clientOutputPipe = make_shared<FileBackedPipe>("/tmp");
+		clientOutputPipe->userData  = this;
+		clientOutputPipe->onData    = onClientOutputPipeData;
+		clientOutputPipe->onEnd     = onClientOutputPipeEnd;
+		clientOutputPipe->onError   = onClientOutputPipeError;
+		clientOutputPipe->onBufferDrained = onClientOutputPipeDrained;
+
+		clientOutputWatcher.set<Client, &Client::onClientOutputWritable>(this);
+
+		
+		appInput = make_shared< EventedBufferedInput<> >();
+		
+		appOutputWatcher.set<Client, &Client::onAppOutputWritable>(this);
+		
+
 		bufferedConnectPassword.data = NULL;
 		bufferedConnectPassword.alreadyRead = 0;
-		clientInput = make_shared<EventedBufferedInput>();
-		clientInput->onData = boost::bind(onClientSocketData,
-			weak_ptr<Client>(shared_from_this()), _1);
-		clientInput->onError = boost::bind(onClientSocketError,
-			weak_ptr<Client>(shared_from_this()), _1);
-		
-		appInput = make_shared<EventedBufferedInput>();
-		appInput->onData = boost::bind(onAppSocketData,
-			weak_ptr<Client>(shared_from_this()), _1);
-		appInput->onError = boost::bind(onAppSocketError,
-			weak_ptr<Client>(shared_from_this()), _1);
-		
-		requestBodyPipe = make_shared<FileBackedPipe>(threadPool);
-		requestBodyPipe->onData = boost::bind(onRequestBodyPipeData,
-			weak_ptr<Client>(shared_from_this()), _1, _2, _3);
-		requestBodyPipe->onEnd = boost::bind(onRequestBodyPipeEnd,
-			weak_ptr<Client>(shared_from_this()), _1);
-		requestBodyPipe->onCommit = boost::bind(onRequestBodyPipeCommit,
-			weak_ptr<Client>(shared_from_this()), _1);
-		
-		responsePipe = make_shared<FileBackedPipe>(threadPool);
-		responsePipe->onData = boost::bind(onResponsePipeData,
-			weak_ptr<Client>(shared_from_this()), _1, _2, _3);
-		responsePipe->onEnd = boost::bind(onResponsePipeEnd,
-			weak_ptr<Client>(shared_from_this()), _1);
-		responsePipe->onCommit = boost::bind(onResponsePipeCommit,
-			weak_ptr<Client>(shared_from_this()), _1);
-		
 		resetPrimitiveFields();
 	}
 
 	~Client() {
+		clientBodyBuffer->userData = NULL;
+		clientOutputPipe->userData = NULL;
 		freeBufferedConnectPassword();
 	}
 
-	bool resetable() {
-		return !backgroundOperating
-			&& clientInput->resetable()
-			&& appInput->resetable()
-			&& requestBodyPipe->resetable()
-			&& responsePipe->resetable();
+	void initialize() {
+		clientInput->onData = boost::bind(onClientInputData,
+			weak_ptr<Client>(shared_from_this()), _1);
+		clientInput->onError = boost::bind(onClientInputError,
+			weak_ptr<Client>(shared_from_this()), _1, _2);
+		
+		appInput->onData = boost::bind(onAppInputData,
+			weak_ptr<Client>(shared_from_this()), _1);
+		appInput->onError = boost::bind(onAppInputError,
+			weak_ptr<Client>(shared_from_this()), _1, _2);
 	}
 
-	void reset() {
-		assert(resetable());
+	void disassociate() {
+		assert(requestHandler != NULL);
 		resetPrimitiveFields();
-		clientWriteBuffer.resize(0);
-		appWriteBuffer.resize(0);
+		fd = FileDescriptor();
+
+		clientInput->reset(NULL, FileDescriptor());
+		clientBodyBuffer->reset();
+		clientOutputPipe->reset();
+		clientOutputWatcher.stop();
+
+		appInput->reset(NULL, FileDescriptor());
+		appOutputBuffer.resize(0);
+		appOutputWatcher.stop();
+		
 		scgiParser.reset();
 		session.reset();
-		clientInput->reset(NULL, FileDescriptor());
-		appInput->reset(NULL, FileDescriptor());
-		requestBodyPipe->reset();
-		responsePipe->reset();
+	}
+
+	void associate(RequestHandler *handler, const FileDescriptor &_fd) {
+		assert(requestHandler == NULL);
+		requestHandler = handler;
+		fd = _fd;
+		fdnum = _fd;
+		state = BEGIN_READING_CONNECT_PASSWORD;
+
+		clientInput->reset(getSafeLibev().get(), _fd);
+		clientInput->start();
+		clientBodyBuffer->reset(getSafeLibev());
+		clientOutputPipe->reset(getSafeLibev());
+		clientOutputPipe->start();
+		clientOutputWatcher.set(getLoop());
+
+		appOutputWatcher.set(getLoop());
+	}
+
+	bool reassociateable() const {
+		return requestHandler == NULL
+			&& backgroundOperations == 0
+			&& clientInput->resetable()
+			&& clientBodyBuffer->resetable()
+			&& clientOutputPipe->resetable()
+			&& appInput->resetable();
+	}
+
+	string name() const {
+		if (fdnum == -1) {
+			return "(null)";
+		} else {
+			return toString(fdnum);
+		}
+	}
+
+	bool connected() const {
+		return requestHandler != NULL;
+	}
+
+	const char *getStateName() const {
+		switch (state) {
+		case BEGIN_READING_CONNECT_PASSWORD:
+			return "BEGIN_READING_CONNECT_PASSWORD";
+		case STILL_READING_CONNECT_PASSWORD:
+			return "STILL_READING_CONNECT_PASSWORD";
+		case READING_HEADER:
+			return "READING_HEADER";
+		case BUFFERING_REQUEST_BODY:
+			return "BUFFERING_REQUEST_BODY";
+		case CHECKING_OUT_SESSION:
+			return "CHECKING_OUT_SESSION";
+		case SENDING_HEADER_TO_APP:
+			return "SENDING_HEADER_TO_APP";
+		case FORWARDING_BODY_TO_APP:
+			return "FORWARDING_BODY_TO_APP";
+		case WRITING_SIMPLE_RESPONSE:
+			return "WRITING_SIMPLE_RESPONSE";
+		case DISCONNECTED:
+			return "DISCONNECTED";
+		default:
+			return "UNKNOWN";
+		}
 	}
 
 	void freeBufferedConnectPassword() {
@@ -206,99 +336,51 @@ public:
 		}
 	}
 
-	void _onClientSocketWritable(ev::io &io, int revents) {
-		requestHandler->onClientSocketWritable(shared_from_this());
+	void verifyInvariants() const {
+		assert((requestHandler == NULL) == (fd == -1));
+		assert((requestHandler == NULL) == (state == DISCONNECTED));
 	}
 
-	void _onAppSocketWritable(ev::io &io, int revents) {
-		requestHandler->onAppSocketWritable(shared_from_this());
+	template<typename Stream>
+	void inspect(Stream &stream) const {
+		const char *indent = "    ";
+		stream
+			<< indent << "state = " << getStateName() << "\n"
+			<< indent << "requestBodyIsBuffered = " << requestBodyIsBuffered << "\n"
+			<< indent << "clientInput.started = " << clientInput->started() << "\n";
 	}
 };
 
+typedef shared_ptr<Client> ClientPtr;
 
-/*
-   Stages:
-   
-   Accept connect password
-            |
-            |
-       Read header
-            |
-            |
-           / \
-          /   \
-         /     \
-        /       \
-       /         \
-    Buffer        \
-    request       /
-    body         /
-      |         /
-      |        /
-   Checkout --+
-   session
-      |
-      |
- Send header
-   to app
-      |
-      |
- Send request
-  body to app
-  and forward
-  response to
-    client
-
- */
 
 class RequestHandler {
 private:
 	friend class Client;
 
-	SafeLibev *libev;
+	const SafeLibevPtr libev;
+	FileDescriptor requestSocket;
+	PoolPtr pool;
+	const AgentOptions &options;
+	ev::io requestSocketWatcher;
 	HashMap<int, ClientPtr> clients;
 	bool accept4Available;
 
-
-	FileDescriptor acceptNonBlockingSocket(int sock) {
-		if (accept4Available) {
-			FileDescriptor fd = callAccept4(requestSocket, ..., O_NONBLOCK);
-			if (fd == -1 && errno == ENOSYS) {
-				accept4Available = false;
-				return acceptNonBlockingSocket(sock);
-			} else {
-				return fd;
-			}
-		} else {
-			FileDescriptor fd = syscalls::accept(requestSocket, ...);
-			if (fd != -1) {
-				int e = errno;
-				makeNonBlock(fd);
-				errno = e;
-			}
-			return fd;
-		}
-	}
 
 	void disconnect(const ClientPtr &client) {
 		// Prevent Client object from being destroyed until we're done.
 		ClientPtr reference = client;
 
+		RH_DEBUG(client, "Disconnected");
 		clients.erase(client->fd);
-		client->state = Client::DISCONNECTED;
 		client->requestHandler = NULL;
-		client->clientInput.stop();
-		client->appInput.stop();
-		if (client->writeWatcher.started()) {
-			client->writeWatcher.stop();
-		}
-		if (client->appWriteWatcher.started()) {
-			client->appWriteWatcher.stop();
-		}
+		client->fd = FileDescriptor();
+		client->state = Client::DISCONNECTED;
+		client->verifyInvariants();
 	}
 
 	void disconnectWithError(const ClientPtr &client, const StaticString &message) {
-		P_WARN("Disconnected client " << client->name() << " with error: " << message);
+		RH_WARN(client, "Disconnecting with error: " << message);
 		disconnect(client);
 	}
 
@@ -323,36 +405,173 @@ private:
 		disconnect(client);
 	}
 
+	void writeSimpleResponse(const ClientPtr &client, const StaticString &data) {
+		assert(client->state < Client::FORWARDING_BODY_TO_APP);
+		client->state = Client::WRITING_SIMPLE_RESPONSE;
+		client->clientOutputPipe->write(data.data(), data.size());
+	}
+
+
+	/*****************************************************
+	 * COMPONENT: appInput -> clientOutputPipe plumbing
+	 *
+	 * The following code handles forwarding data from
+	 * appInput to clientOutputPipe.
+	 *****************************************************/
+	
+	size_t onAppInputData(const ClientPtr &client, const StaticString &data) {
+		if (!data.empty()) {
+			if (!client->clientOutputPipe->write(data.data(), data.size())) {
+				client->backgroundOperations++;
+				client->appInput->stop();
+			}
+			return data.size();
+		} else {
+			onAppInputEof(client);
+			return 0;
+		}
+	}
+
+	void onAppInputEof(const ClientPtr &client) {
+		client->clientOutputPipe->end();
+		client->appInput->stop();
+	}
+
+	void onAppInputError(const ClientPtr &client, const char *message, int errorCode) {
+		if (errorCode == ECONNRESET) {
+			// We might as well treat ECONNRESET like an EOF.
+			// http://stackoverflow.com/questions/2974021/what-does-econnreset-mean-in-the-context-of-an-af-local-socket
+			onAppInputEof(client);
+		} else {
+			stringstream message;
+			message << "application socket read error: ";
+			message << strerror(errorCode);
+			message << " (errno " << errorCode << ")";
+			disconnectWithError(client, message.str());
+		}
+	}
+
+	void onClientOutputPipeDrained(const ClientPtr &client) {
+		client->backgroundOperations--;
+		client->appInput->start();
+	}
+
+
+	/*****************************************************
+	 * COMPONENT: clientOutputPipe -> client fd plumbing
+	 *
+	 * The following code handles forwarding data from
+	 * clientOutputPipe to the client socket.
+	 *****************************************************/
+
+	void onClientOutputPipeData(const ClientPtr &client, const char *data,
+		size_t size, const FileBackedPipe::ConsumeCallback &consumed)
+	{
+		assert(client->connected());
+		ssize_t ret = syscalls::write(client->fd, data, size);
+		if (ret == -1) {
+			if (errno == EAGAIN) {
+				// Wait until the client socket is writable before resuming writing data.
+				client->clientOutputWatcher.start();
+			} else if (errno == EPIPE) {
+				// If the client closed the connection then disconnect quietly.
+				disconnect(client);
+			} else {
+				disconnectWithClientSocketWriteError(client, errno);
+			}
+			consumed(0, true);
+		} else {
+			consumed(ret, false);
+		}
+	}
+
+	void onClientOutputPipeEnd(const ClientPtr &client) {
+		assert(client->connected());
+		disconnect(client);
+	}
+
+	void onClientOutputPipeError(const ClientPtr &client, int errorCode) {
+		assert(client->connected());
+		stringstream message;
+		message << "client output pipe error: ";
+		message << strerror(errorCode);
+		message << " (errno " << errorCode << ")";
+		disconnectWithError(client, message.str());
+	}
+
+	void onClientOutputWritable(const ClientPtr &client) {
+		assert(client->connected());
+		// Continue forwarding output data to the client.
+		client->clientOutputWatcher.stop();
+		assert(!client->clientOutputPipe->isStarted());
+		client->clientOutputPipe->start();
+	}
+
+
+	/*****************************************************
+	 * COMPONENT: client acceptor
+	 *
+	 * The following code accepts new client connections
+	 * and forwards events to the appropriate functions
+	 * depending on the client state.
+	 *****************************************************/
+
+	FileDescriptor acceptNonBlockingSocket(int sock) {
+		union {
+			struct sockaddr_in inaddr;
+			struct sockaddr_un unaddr;
+		} u;
+		socklen_t addrlen = sizeof(u);
+
+		if (accept4Available) {
+			FileDescriptor fd = callAccept4(requestSocket,
+				(struct sockaddr *) &u, &addrlen, O_NONBLOCK);
+			if (fd == -1 && errno == ENOSYS) {
+				accept4Available = false;
+				return acceptNonBlockingSocket(sock);
+			} else {
+				return fd;
+			}
+		} else {
+			FileDescriptor fd = syscalls::accept(requestSocket,
+				(struct sockaddr *) &u, &addrlen);
+			if (fd != -1) {
+				int e = errno;
+				setNonBlocking(fd);
+				errno = e;
+			}
+			return fd;
+		}
+	}
+
 
 	void onAcceptable(ev::io &io, int revents) {
-		bool done = false;
+		bool endReached = false;
+		unsigned int count = 0;
 
-		while (!done) {
+		while (!endReached && count < 10) {
 			FileDescriptor fd = acceptNonBlockingSocket(requestSocket);
 			if (fd == -1) {
 				if (errno == EAGAIN) {
-					done = true;
+					endReached = true;
 				} else {
 					int e = errno;
 					throw SystemException("Cannot accept client", e);
 				}
 			} else {
-				client = make_shared<Client>();
-				client->fd = fd;
-				client->clientInput->reset(libev, fd);
-				client->clientInput->start();
-				client->writeWatcher.set(libev->getLoop());
-				client->writeWatcher.set<Client, Client::_onClientSocketWritable>(client.get());
-				clients.insert(make_pair((int) fd, client));
+				ClientPtr client = make_shared<Client>();
+				client->initialize();
+				client->associate(this, fd);
+				clients.insert(make_pair<int, ClientPtr>(fd, client));
+				count++;
+				RH_DEBUG(client, "New client accepted");
 			}
 		}
 	}
 
 
-	size_t onClientData(const ClientPtr &client, const StaticString &data) {
-		if (!client->connected()) {
-			return;
-		}
+	size_t onClientInputData(const ClientPtr &client, const StaticString &data) {
+		assert(client->connected());
 		if (data.empty()) {
 			onClientEof(client);
 			return 0;
@@ -364,30 +583,34 @@ private:
 	size_t onClientRealData(const ClientPtr &client, const char *buf, size_t size) {
 		size_t consumed = 0;
 
-		while (consumed < size && client->state != Client::DISCONNECTED && client->clientInput.started()) {
+		while (consumed < size && client->connected() && client->clientInput->started()) {
 			const char *data = buf + consumed;
-			size_t len       = ret - consumed;
+			size_t len       = size - consumed;
+			size_t locallyConsumed;
 
+			RH_TRACE(client, 3, "Client data: \"" << cEscapeString(StaticString(data, len)) << "\"");
 			switch (client->state) {
-			case BEGIN_READING_CONNECT_PASSWORD:
-				consumed += state_beginReadingConnectPassword_onClientData(data, len);
+			case Client::BEGIN_READING_CONNECT_PASSWORD:
+				locallyConsumed = state_beginReadingConnectPassword_onClientData(client, data, len);
 				break;
-			case STILL_READING_CONNECT_PASSWORD:
-				consumed += state_stillReadingConnectPassword_onClientData(data, len);
+			case Client::STILL_READING_CONNECT_PASSWORD:
+				locallyConsumed = state_stillReadingConnectPassword_onClientData(client, data, len);
 				break;
-			case READING_HEADER:
-				consumed += state_readingHeader_onClientData(data, len);
+			case Client::READING_HEADER:
+				locallyConsumed = state_readingHeader_onClientData(client, data, len);
 				break;
-			case BUFFERING_REQUEST_BODY:
-				consumed += state_bufferingRequestBody_onClientData(data, len);
+			case Client::BUFFERING_REQUEST_BODY:
+				locallyConsumed = state_bufferingRequestBody_onClientData(client, data, len);
 				break;
-			case FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE:
-				consumed += state_forwardingBodyToAppAndReadingItsResponse_onClientData(data, len);
+			case Client::FORWARDING_BODY_TO_APP:
+				locallyConsumed = state_forwardingBodyToApp_onClientData(client, data, len);
 				break;
 			default:
 				abort();
 			}
 
+			consumed += locallyConsumed;
+			RH_TRACE(client, 3, "Client data: consumed " << locallyConsumed << " bytes");
 			assert(consumed <= size);
 		}
 
@@ -395,12 +618,13 @@ private:
 	}
 
 	void onClientEof(const ClientPtr &client) {
+		RH_TRACE(client, 3, "Client sent EOF");
 		switch (client->state) {
-		case BUFFERING_REQUEST_BODY:
+		case Client::BUFFERING_REQUEST_BODY:
 			state_bufferingRequestBody_onClientEof(client);
 			break;
-		case FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE:
-			state_forwardingBodyToAppAndReadingItsResponse_onClientEof(client);
+		case Client::FORWARDING_BODY_TO_APP:
+			state_forwardingBodyToApp_onClientEof(client);
 			break;
 		default:
 			disconnect(client);
@@ -408,103 +632,12 @@ private:
 		}
 	}
 
-	void onClientError(const ClientPtr &client, const char *message, int errnoCode) {
-		if (!client->connected()) {
-			return;
-		}
+	void onClientInputError(const ClientPtr &client, const char *message, int errnoCode) {
+		assert(client->connected());
 		if (errnoCode == ECONNRESET) {
 			// We might as well treat ECONNRESET like an EOF.
 			// http://stackoverflow.com/questions/2974021/what-does-econnreset-mean-in-the-context-of-an-af-local-socket
 			onClientEof(client);
-		} else {
-			switch (client->state) {
-			default:
-				stringstream message;
-				message << "client socket read error: ";
-				message << strerror(errnoCode);
-				message << " (errno " << errnoCode << ")";
-				disconnectWithError(client, message.str());
-				break;
-			}
-		}
-	}
-
-	void onClientWritable(const ClientPtr &client) {
-		if (!client->connected()) {
-			return;
-		}
-		switch (client->state) {
-		case SENDING_HEADER_TO_APP:
-			state_sendingHeaderToApp_onClientWritable(client);
-			break;
-		case WRITING_CLIENT_BUFFER:
-			state_writingClientBuffer_onClientWritable(client);
-			break;
-		case FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE:
-			state_forwardingBodyToAppAndReadingItsResponse_onClientWritable(client);
-			break;
-		default:
-			abort();
-		}
-	}
-
-	size_t onAppSocketData(const ClientPtr &client, const StaticString &data) {
-		if (!client->connected()) {
-			return;
-		}
-		if (data.empty()) {
-			onAppSocketEof(client);
-			return 0;
-		} else {
-			return onAppSocketRealData(client, data.data(), data.size());
-		}
-	}
-
-	size_t onAppSocketRealData(const ClientPtr &client, const char *data, size_t size) {
-		size_t consumed = 0;
-
-		while (consumed < size && client->state != Client::DISCONNECTED && client->clientInput.started()) {
-			const char *data = buf + consumed;
-			size_t len       = ret - consumed;
-
-			switch (client->state) {
-			case SENDING_HEADER_TO_APP:
-				consumed += state_sendingHeaderToApp_onAppSocketData(data, len);
-				break;
-			case FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE:
-				consumed += state_forwardingBodyToAppAndReadingItsResponse_onAppSocketData(data, len);
-				break;
-			default:
-				abort();
-			}
-
-			assert(consumed <= size);
-		}
-
-		return consumed;
-	}
-
-	void onAppSocketEof(const ClientPtr &client) {
-		switch (client->state) {
-		case SENDING_HEADER_TO_APP:
-			state_sendingHeaderToApp_onAppSocketEof(client);
-			break;
-		case FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE:
-			state_forwardingBodyToAppAndReadingItsResponse_onAppSocketEof(client);
-			break;
-		default:
-			abort();
-		}
-	}
-
-	void onAppSocketError(const ClientPtr &client, const char *message, int errnoCode) {
-		if (!client->connected()) {
-			return;
-		}
-		if (e == ECONNRESET) {
-			// We might as well treat ECONNRESET like an EOF.
-			// http://stackoverflow.com/questions/2974021/what-does-econnreset-mean-in-the-context-of-an-af-local-socket
-			onAppSocketEof(client);
 		} else {
 			stringstream message;
 			message << "client socket read error: ";
@@ -514,86 +647,78 @@ private:
 		}
 	}
 
-	void onAppSocketWritable(const ClientPtr &client) {
-		if (!client->connected()) {
-			return;
-		}
+
+	void onClientBodyBufferData(const ClientPtr &client, const char *data, size_t size, const FileBackedPipe::ConsumeCallback &consumed) {
+		assert(client->connected());
 		switch (client->state) {
-		case SENDING_HEADER_TO_APP:
-			state_sendingHeaderToApp_onAppSocketWritable(client);
-			break;
-		case FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE:
-			state_forwardingBodyToAppAndReadingItsResponse_onAppSocketWritable(client);
+		case Client::FORWARDING_BODY_TO_APP:
+			state_forwardingBodyToApp_onClientBodyBufferData(client, data, size, consumed);
 			break;
 		default:
 			abort();
 		}
 	}
 
-	void onRequestBodyPipeData(const ClientPtr &client, const char *data, size_t size, bool direct) {
-		if (!client->connected()) {
-			return;
-		}
+	void onClientBodyBufferError(const ClientPtr &client, int errorCode) {
+		stringstream message;
+		message << "client body buffer error: ";
+		message << strerror(errorCode);
+		message << " (errno " << errorCode << ")";
+		disconnectWithError(client, message.str());
+	}
+
+	void onClientBodyBufferEnd(const ClientPtr &client) {
+		assert(client->connected());
 		switch (client->state) {
-		case FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE:
-			state_forwardingBodyToAppAndReadingItsResponse_onRequestBodyPipeData(client, data, size, direct);
+		case Client::FORWARDING_BODY_TO_APP:
+			state_forwardingBodyToApp_onClientBodyBufferEnd(client);
 			break;
 		default:
 			abort();
 		}
 	}
 
-	void onRequestBodyPipeEof(const ClientPtr &client, bool direct) {
-		if (!client->connected()) {
-			return;
-		}
+	void onClientBodyBufferDrained(const ClientPtr &client) {
+		assert(client->connected());
 		switch (client->state) {
-		case FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE:
-			state_forwardingBodyToAppAndReadingItsResponse_onRequestBodyPipeEof(client, direct);
+		case Client::BUFFERING_REQUEST_BODY:
+			state_bufferingRequestBody_onClientBodyBufferDrained(client);
 			break;
 		default:
 			abort();
 		}
 	}
 
-	void onRequestBodyPipeBufferDrained(const ClientPtr &client, bool direct) {
-		if (!client->connected()) {
-			return;
-		}
+	void onAppOutputWritable(const ClientPtr &client) {
+		assert(client->connected());
 		switch (client->state) {
-		case BUFFERING_REQUEST_BODY:
-			state_bufferingRequestBody_onRequestBodyPipeBufferDrained(client, direct);
+		case Client::SENDING_HEADER_TO_APP:
+			state_sendingHeaderToApp_onAppOutputWritable(client);
+			break;
+		case Client::FORWARDING_BODY_TO_APP:
+			state_forwardingBodyToApp_onAppOutputWritable(client);
 			break;
 		default:
 			abort();
 		}
 	}
 
-	void onResponsePipeData(const ClientPtr &client, const char *data, size_t size, bool direct) {
-		if (!client->connected()) {
-			return;
-		}
-		switch (client->state) {
-		default:
-			abort();
-		}
-	}
 
-	void onResponsePipeBufferDrained(const ClientPtr &client, bool direct) {
-		if (!client->connected()) {
-			return;
-		}
-		switch (client->state) {
-		default:
-			abort();
-		}
-	}
+	/*****************************************************
+	 * COMPONENT: client -> application plumbing
+	 *
+	 * The following code implements forwarding data from
+	 * the client to the application. Code is seperated
+	 * by client state.
+	 *****************************************************/
 
 
 	/******* State: BEGIN_READING_CONNECT_PASSWORD *******/
 
 	void checkConnectPassword(const ClientPtr &client, const char *data, unsigned int len) {
-		if (StaticString(data, len) == options.connectPassword) {
+		RH_TRACE(client, 2, "Given connect password: \"" << cEscapeString(StaticString(data, len)) << "\"");
+		if (StaticString(data, len) == options.requestSocketPassword) {
+			RH_TRACE(client, 2, "Connect password is correct; switching to state READING_HEADER");
 			client->state = Client::READING_HEADER;
 			client->freeBufferedConnectPassword();
 		} else {
@@ -602,11 +727,11 @@ private:
 	}
 
 	size_t state_beginReadingConnectPassword_onClientData(const ClientPtr &client, const char *data, size_t size) {
-		if (size >= options.connectPassword.size()) {
-			checkConnectPassword(client, data, options.connectPassword.size());
-			return options.connectPassword.size();
+		if (size >= options.requestSocketPassword.size()) {
+			checkConnectPassword(client, data, options.requestSocketPassword.size());
+			return options.requestSocketPassword.size();
 		} else {
-			client->bufferedConnectPassword.data = malloc(options.connectPassword.size());
+			client->bufferedConnectPassword.data = (char *) malloc(options.requestSocketPassword.size());
 			client->bufferedConnectPassword.alreadyRead = size;
 			memcpy(client->bufferedConnectPassword.data, data, size);
 			client->state = Client::STILL_READING_CONNECT_PASSWORD;
@@ -618,14 +743,14 @@ private:
 	/******* State: STILL_READING_CONNECT_PASSWORD *******/
 
 	size_t state_stillReadingConnectPassword_onClientData(const ClientPtr &client, const char *data, size_t size) {
-		size_t consumed = std::min<size_t>(len, options.connectPassword.size() -
+		size_t consumed = std::min<size_t>(size, options.requestSocketPassword.size() -
 			client->bufferedConnectPassword.alreadyRead);
 		memcpy(client->bufferedConnectPassword.data + client->bufferedConnectPassword.alreadyRead,
 			data, consumed);
 		client->bufferedConnectPassword.alreadyRead += consumed;
-		if (client->bufferedConnectPassword.alreadyRead == options.connectPassword.size()) {
+		if (client->bufferedConnectPassword.alreadyRead == options.requestSocketPassword.size()) {
 			checkConnectPassword(client, client->bufferedConnectPassword.data,
-				options.connectPassword.size());
+				options.requestSocketPassword.size());
 		}
 		return consumed;
 	}
@@ -634,15 +759,15 @@ private:
 	/******* State: READING_HEADER *******/
 
 	size_t state_readingHeader_onClientData(const ClientPtr &client, const char *data, size_t size) {
-		size_t consumed = client->scgiParser.feed(data, len);
+		size_t consumed = client->scgiParser.feed(data, size);
 		if (!client->scgiParser.acceptingInput()) {
-			if (client->scgiParser.hasError()) {
+			if (client->scgiParser.getState() == ScgiRequestParser::ERROR) {
 				disconnectWithError(client, "invalid SCGI header");
 			} else if (client->scgiParser.getHeader("PASSENGER_BUFFERING") == "true") {
 				client->state = Client::BUFFERING_REQUEST_BODY;
 				client->requestBodyIsBuffered = true;
 			} else {
-				client->clientInput.stop();
+				client->clientInput->stop();
 				checkoutSession(client);
 			}
 		}
@@ -654,13 +779,13 @@ private:
 
 	void state_bufferingRequestBody_verifyInvariants(const ClientPtr &client) const {
 		assert(client->requestBodyIsBuffered);
-		assert(!client->requestBodyPipe->started());
+		assert(!client->clientBodyBuffer->isStarted());
 	}
 
 	size_t state_bufferingRequestBody_onClientData(const ClientPtr &client, const char *data, size_t size) {
 		state_bufferingRequestBody_verifyInvariants(client);
 
-		if (!client->requestBodyPipe->write(data, size)) {
+		if (!client->clientBodyBuffer->write(data, size)) {
 			// The pipe cannot write the data to disk quickly enough, so
 			// suspend reading from the client until the pipe is done.
 			client->backgroundOperations++;
@@ -673,16 +798,13 @@ private:
 		state_bufferingRequestBody_verifyInvariants(client);
 
 		client->clientInput->stop();
-		client->requestBodyPipe->end();
+		client->clientBodyBuffer->end();
 		checkoutSession(client);
 	}
 
-	void state_bufferingRequestBody_onRequestBodyPipeBufferDrained(const ClientPtr &client) {
-		if (!client->connected()) {
-			return;
-		}
-		// Now that the pipe has committed the data to disk.
-		// Resume reading from the client socket.
+	void state_bufferingRequestBody_onClientBodyBufferDrained(const ClientPtr &client) {
+		// Now that the pipe has committed the data to disk
+		// resume reading from the client socket.
 		state_bufferingRequestBody_verifyInvariants(client);
 		assert(!client->clientInput->started());
 		client->backgroundOperations--;
@@ -693,8 +815,8 @@ private:
 	/******* State: CHECKING_OUT_SESSION *******/
 
 	void state_checkingOutSession_verifyInvariants(const ClientPtr &client) {
-		assert(!client->clientInput.started());
-		assert(!client->requestBodyPipe.started());
+		assert(!client->clientInput->started());
+		assert(!client->clientBodyBuffer->isStarted());
 	}
 
 	void checkoutSession(const ClientPtr &client) {
@@ -702,13 +824,13 @@ private:
 		Options &options = client->options;
 
 		options.appRoot = parser.getHeader("PASSENGER_APP_ROOT");
-		// ...
+		// TODO
 
 		client->state = Client::CHECKING_OUT_SESSION;
 		pool->asyncGet(client->options, boost::bind(&RequestHandler::sessionCheckedOut,
 			this, client, _1, _2));
 		if (!client->sessionCheckedOut) {
-			client->backgroundOperating = true;
+			client->backgroundOperations++;
 		}
 	}
 
@@ -727,15 +849,15 @@ private:
 		}
 
 		state_checkingOutSession_verifyInvariants(client);
-		client->backgroundOperating = false;
-		client->sessionCheckedOut   = true;
+		client->backgroundOperations--;
+		client->sessionCheckedOut = true;
 
 		if (e != NULL) {
 			try {
 				shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
-				writeSimpleResponse(client, e2.getErrorPage());
+				writeSimpleResponse(client, e2->getErrorPage());
 			} catch (const bad_cast &) {
-				writeSimpleResponse(client, e.what());
+				writeSimpleResponse(client, e->what());
 			}
 		} else {
 			client->session = session;
@@ -755,7 +877,7 @@ private:
 					boost::bind(&RequestHandler::sessionCheckedOut,
 						this, client, _1, _2));
 				if (!client->sessionCheckedOut) {
-					client->backgroundOperating = true;
+					client->backgroundOperations++;
 				}
 			} else {
 				disconnectWithError(client, "could not initiate a session");
@@ -763,115 +885,11 @@ private:
 			return;
 		}
 		
-		client->appInput.reset(libev, client->session->fd());
-		client->appInput.start();
-		client->appWriteWatcher.set(libev->getLoop());
-		client->appWriteWatcher.set(client->session->fd());
-		sendHeaderToApp(client);
-	}
-
-
-	/******* Common code for states SENDING_HEADER_TO_APP        *******
-	 ******* and FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE *******/
-
-	/* In these two states, the RequestHandler tries to forward the app
-	 * response to the client. The setup looks like this:
-	 *
-	 *   app    <===================>  client
-	 *  socket      response pipe
-	 *
-	 * So the code here is split into two components:
-	 * - Code for reading app socket data and writing the data
-	 *   to the response pipe.
-	 * - Code for forwarding the data in the response pipe
-	 *   to the client.
-	 */
-
-	void state_common_verifyInvariants(const ClientPtr &client) {
-		switch (client->state) {
-		case SENDING_HEADER_TO_APP:
-			state_sendingHeaderToApp_verifyInvariants(client);
-			break;
-		case FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE:
-			state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(client);
-			break;
-		default:
-			abort();
-		}
-	}
-
-	// Component: app socket -> response pipe
-
-	size_t state_common_onAppSocketData(const ClientPtr &client, const char *data,
-		size_t size)
-	{
-		state_common_verifyInvariants(client);
-
-		if (!client->responsePipe.write(data, size)) {
-			client->backgroundOperations++;
-			client->appInput->stop();
-		}
-		return size;
-	}
-
-	void state_common_onAppSocketEof(const ClientPtr &client) {
-		state_common_verifyInvariants(client);
-
-		client->responsePipe->end();
-		client->appInput->stop();
-	}
-
-	void state_common_onResponsePipeBufferDrained(const ClientPtr &client) {
-		if (!client->connected()) {
-			return;
-		}
-		state_common_verifyInvariants(client);
-		client->backgroundOperations--;
+		client->appInput->reset(libev.get(), client->session->fd());
 		client->appInput->start();
-	}
-
-	// Component: response pipe -> client
-
-	void state_common_onResponsePipeData(const ClientPtr &client,
-		const char *data, size_t size, const FileBackedPipe::ConsumeCallback &consumed)
-	{
-		if (!client->connected()) {
-			consumed(0, true);
-			return;
-		}
-		state_common_verifyInvariants(client);
-
-		ssize_t ret = syscalls::write(client->fd, data, size);
-		if (ret == -1) {
-			if (errno == EAGAIN) {
-				// Wait until the client socket is writable before resuming
-				// forwarding app response.
-				client->clientWriteWatcher.start();
-			} else if (errno == EPIPE) {
-				// If the client closed the connection then disconnect quietly.
-				disconnect(client);
-			} else {
-				disconnectWithClientSocketWriteError(errno);
-			}
-			consumed(0, true);
-		} else {
-			consumed(ret, false);
-		}
-	}
-
-	void state_common_onClientWritable(const ClientPtr &client) {
-		state_common_verifyInvariants(client);
-
-		// Continue forwarding data from the response pipe to the client.
-		client->clientWriteWatcher.stop();
-		assert(!client->responsePipe->started());
-		client->responsePipe->start();
-	}
-
-	void state_common_onResponsePipeEof(const ClientPtr &client) {
-		state_sendingHeaderToApp_verifyInvariants(client);
-
-		syscalls::shutdown(client->fd, SHUT_WR);
+		client->appOutputWatcher.set(libev->getLoop());
+		client->appOutputWatcher.set(client->session->fd());
+		sendHeaderToApp(client);
 	}
 
 
@@ -879,63 +897,63 @@ private:
 
 	void state_sendingHeaderToApp_verifyInvariants(const ClientPtr &client) {
 		assert(!client->clientInput->started());
-		assert(!client->requestBodyPipe->started());
+		assert(!client->clientOutputPipe->isStarted());
 	}
 
 	void sendHeaderToApp(const ClientPtr &client) {
-		assert(!client->requestBodyPipe->started());
-		ssize_t ret = gatheredWrite(client->session->fd(), data, 1, client->appWriteBuffer);
+		assert(!client->clientOutputPipe->isStarted());
+		StaticString data[] = { "" }; // TODO
+		ssize_t ret = gatheredWrite(client->session->fd(), data, 1, client->appOutputBuffer);
 		if (ret == -1 && errno != EAGAIN) {
 			disconnectWithAppSocketWriteError(client, errno);
-		} else if (!client->appWriteBuffer.empty()) {
+		} else if (!client->appOutputBuffer.empty()) {
 			client->state = Client::SENDING_HEADER_TO_APP;
-			client->appWriteWatcher.start();
+			client->appOutputWatcher.start();
 		} else {
 			sendBodyToApp(client);
 		}
 	}
 
-	// Component: header -> app socket
-
-	void state_sendingHeaderToApp_onAppSocketWritable(const ClientPtr &client) {
+	void state_sendingHeaderToApp_onAppOutputWritable(const ClientPtr &client) {
 		state_sendingHeaderToApp_verifyInvariants(client);
 
-		ssize_t ret = gatheredWrite(client->session->fd(), NULL, 0, client->appWriteBuffer);
+		ssize_t ret = gatheredWrite(client->session->fd(), NULL, 0, client->appOutputBuffer);
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EPIPE) {
 				disconnectWithAppSocketWriteError(client, errno);
 			}
-		} else if (client->appWriteBuffer.empty()) {
-			client->appWriteWatcher.stop();
+		} else if (client->appOutputBuffer.empty()) {
+			client->appOutputWatcher.stop();
 			sendBodyToApp(client);
 		}
 	}
 
 
-	/******* State: FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE *******/
+	/******* State: FORWARDING_BODY_TO_APP *******/
 
-	void state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(const ClientPtr &client) {
-		assert(client->requestBodyPipe->started());
-		assert(client->requestBodyIsBuffered == !client->clientInput->started());
+	void state_forwardingBodyToApp_verifyInvariants(const ClientPtr &client) {
+		assert(client->state == Client::FORWARDING_BODY_TO_APP);
 	}
 
 	void sendBodyToApp(const ClientPtr &client) {
-		assert(client->appWriteBuffer.empty());
+		assert(client->appOutputBuffer.empty());
+		assert(!client->clientBodyBuffer->isStarted());
 		assert(!client->clientInput->started());
-		assert(!client->clientWriteWatcher.started());
-		assert(!client->appWriteWatcher.started());
-		client->state = Client::FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE;
-		client->requestBodyPipe.start();
-		if (!client->requestBodyIsBuffered) {
+		assert(!client->appOutputWatcher.is_active());
+
+		client->state = Client::FORWARDING_BODY_TO_APP;
+		if (client->requestBodyIsBuffered) {
+			client->clientBodyBuffer->start();
+		} else {
 			client->clientInput->start();
 		}
-		client->appInput.start();
 	}
 
-	size_t state_forwardingBodyToAppAndReadingItsResponse_onClientData(const ClientPtr &client,
+
+	size_t state_forwardingBodyToApp_onClientData(const ClientPtr &client,
 		const char *data, size_t size)
 	{
-		state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(client);
+		state_forwardingBodyToApp_verifyInvariants(client);
 		assert(!client->requestBodyIsBuffered);
 
 		ssize_t ret = syscalls::write(client->session->fd(), data, size);
@@ -944,10 +962,11 @@ private:
 				// App is not ready yet to receive this data. Try later
 				// when the app socket is writable.
 				client->clientInput->stop();
-				client->appWriteWatcher.start();
+				client->appOutputWatcher.start();
 			} else if (errno == EPIPE) {
-				// Disconnect after response forwarding is done.
+				// Client will be disconnected after response forwarding is done.
 				client->clientInput->stop();
+				syscalls::shutdown(client->fd, SHUT_RD);
 			} else {
 				disconnectWithAppSocketWriteError(client, errno);
 			}
@@ -957,153 +976,82 @@ private:
 		}
 	}
 
-	void   state_forwardingBodyToAppAndReadingItsResponse_onClientEof(const ClientPtr &client) {
-		state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(client);
+	void state_forwardingBodyToApp_onClientEof(const ClientPtr &client) {
+		state_forwardingBodyToApp_verifyInvariants(client);
 		assert(!client->requestBodyIsBuffered);
 
-		client->appInput->stop();
+		client->clientInput->stop();
 		syscalls::shutdown(client->session->fd(), SHUT_WR);
 	}
 
-	void   state_forwardingBodyToAppAndReadingItsResponse_onClientWritable(const ClientPtr &client) {
-		state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(client);
-
-		client->appInput.start();
-		client->clientWriteWatcher.stop();
-	}
-
-	size_t state_forwardingBodyToAppAndReadingItsResponse_onRequestBodyPipeData(const ClientPtr &client,
-		const char *data, size_t size, bool direct)
-	{
-		if (direct) {
-			StaticString str(data, size);
-			return state_forwardingBodyToAppAndReadingItsResponse_onRequestBodyPipeData_real<StaticString>(
-				client, str);
-		} else {
-			string str(data, size);
-			libev->runAsync(boost::bind(
-				&RequestHandler::state_forwardingBodyToAppAndReadingItsResponse_onRequestBodyPipeData_real,
-				this, client, str
-			));
-			return size;
-		}
-	}
-
-	template<typename StringType>
-	size_t state_forwardingBodyToAppAndReadingItsResponse_onRequestBodyPipeData_real(
-		const ClientPtr &client, StringType data)
-	{
-		state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(client);
-		assert(client->requestBodyIsBuffered);
-
-		ssize_t ret = syscalls::write(client->session->fd(), data, size);
-		if (ret == -1) {
-			if (errno == EAGAIN) {
-				// App is not ready yet to receive this data. Try later
-				// when the app socket is writable.
-				client->requestBodyPipe->stop();
-				client->appWriteWatcher.start();
-			} else if (errno == EPIPE) {
-				// Disconnect after response forwarding is done.
-				client->requestBodyPipe->stop();
-			} else {
-				disconnectWithAppSocketWriteError(client, errno);
-			}
-			return 0;
-		} else {
-			return ret;
-		}
-	}
-
-	void   state_forwardingBodyToAppAndReadingItsResponse_onRequestBodyPipeEof(const ClientPtr &client) {
-		state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(client);
-		assert(client->requestBodyIsBuffered);
-
-		client->appInput->stop();
-		syscalls::shutdown(client->session->fd(), SHUT_WR);
-	}
-
-	size_t state_forwardingBodyToAppAndReadingItsResponse_onAppSocketData(const ClientPtr &client,
-		const char *data, size_t size)
-	{
-		state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(client);
-
-		ssize_t ret = syscalls::write(client->fd, data, size);
-		if (ret == -1) {
-			if (errno == EAGAIN) {
-				// Wait until the client socket is writable before resuming
-				// forwarding app response.
-				client->appInput.stop();
-				client->clientWriteWatcher.start();
-			} else {
-				disconnectWithClientSocketWriteError(errno);
-			}
-			return 0;
-		} else {
-			return ret;
-		}
-	}
-
-	void   state_forwardingBodyToAppAndReadingItsResponse_onAppSocketEof(const ClientPtr &client) {
-		state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(client);
-
-		/* When we're here, we can be sure that all app socket data has
-		 * been forwarded to the client socket, so we stop here regardless
-		 * of whether the app has consumed the header or not. It's quite
-		 * possible that the app sent a response without really reading
-		 * the request.
-		 */
-		disconnect(client);
-	}
-
-	void   state_forwardingBodyToAppAndReadingItsResponse_onAppSocketWritable(const ClientPtr &client) {
-		state_forwardingBodyToAppAndReadingItsResponse_verifyInvariants(client);
+	void state_forwardingBodyToApp_onAppOutputWritable(const ClientPtr &client) {
+		state_forwardingBodyToApp_verifyInvariants(client);
+		assert(!client->requestBodyIsBuffered);
 
 		client->clientInput->start();
-		client->appWriteWatcher.stop();
+		client->clientOutputWatcher.stop();
 	}
 
 
-	/******* State: WRITING_CLIENT_BUFFER *******/
+	void state_forwardingBodyToApp_onClientBodyBufferData(const ClientPtr &client,
+		const char *data, size_t size, const FileBackedPipe::ConsumeCallback &consumed)
+	{
+		state_forwardingBodyToApp_verifyInvariants(client);
+		assert(client->requestBodyIsBuffered);
 
-	void writeSimpleResponse(const ClientPtr &client, const StaticString &response) {
-		assert(client->state < Client::FORWARDING_BODY_TO_APP_AND_READING_ITS_RESPONSE);
-		client->clientInput.stop();
-		ssize_t ret = gatheredWrite(client->fd, &response, 1, client->writeBuffer);
+		ssize_t ret = syscalls::write(client->session->fd(), data, size);
 		if (ret == -1) {
 			if (errno == EAGAIN) {
-				state = Client::WRITING_CLIENT_BUFFER;
-				client->writeWatcher.start();
+				// App is not ready yet to receive this data. Try later
+				// when the app socket is writable.
+				client->clientBodyBuffer->stop();
+				client->appOutputWatcher.start();
 			} else if (errno == EPIPE) {
-				disconnect(client);
+				// Client will be disconnected after response forwarding is done.
+				syscalls::shutdown(client->fd, SHUT_RD);
 			} else {
-				disconnectWithClientWriteError(client, errno);
+				disconnectWithAppSocketWriteError(client, errno);
 			}
-		} else if ((size_t) ret != response.size()) {
-			state = Client::WRITING_CLIENT_BUFFER;
-			client->writeWatcher.start();
+			consumed(0, true);
 		} else {
-			disconnect(client);
+			consumed(ret, false);
 		}
 	}
 
-	void state_writingClientBuffer_onClientWritable(const ClientPtr &client) {
-		StaticString data = client->writeBuffer;
-		ssize_t ret = gatheredWrite(client->fd, &data, 1, client->writeBuffer);
-		if (ret == -1) {
-			if (errno == EPIPE) {
-				disconnect(client);
-			} else if (errno != EAGAIN) {
-				disconnectWithClientSocketWriteError(client, errno);
-			}
-		} else if ((size_t) ret == data.size()) {
-			disconnect(client);
-		}
+	void state_forwardingBodyToApp_onClientBodyBufferEnd(const ClientPtr &client) {
+		state_forwardingBodyToApp_verifyInvariants(client);
+		assert(client->requestBodyIsBuffered);
+
+		syscalls::shutdown(client->session->fd(), SHUT_WR);
 	}
+
 
 public:
-	RequestHandler(SafeLibev *libev) {
-		this->libev = libev;
+	RequestHandler(const SafeLibevPtr &_libev, const FileDescriptor &_requestSocket,
+		const PoolPtr &_pool, const AgentOptions &_options)
+		: libev(_libev),
+		  requestSocket(_requestSocket),
+		  pool(_pool),
+		  options(_options)
+	{
 		accept4Available = true;
+		requestSocketWatcher.set(_requestSocket, ev::READ);
+		requestSocketWatcher.set(_libev->getLoop());
+		requestSocketWatcher.set<RequestHandler, &RequestHandler::onAcceptable>(this);
+		requestSocketWatcher.start();
+	}
+
+	template<typename Stream>
+	void inspect(Stream &stream) const {
+		stream << clients.size() << " clients:\n";
+		HashMap<int, ClientPtr>::const_iterator it;
+		for (it = clients.begin(); it != clients.end(); it++) {
+			const ClientPtr &client = it->second;
+			stream << "  Client " << client->fd << ":\n";
+			client->inspect(stream);
+		}
 	}
 };
+
+
+} // namespace Passenger

@@ -138,13 +138,13 @@ public:
 	EventedBufferedInput() {
 		reset(NULL, FileDescriptor());
 		watcher.set<EventedBufferedInput<bufferSize>,
-			EventedBufferedInput<bufferSize>::onReadable>(this);
+			&EventedBufferedInput<bufferSize>::onReadable>(this);
 	}
 
 	EventedBufferedInput(SafeLibev *libev, const FileDescriptor &fd) {
 		reset(libev, fd);
 		watcher.set<EventedBufferedInput<bufferSize>,
-			EventedBufferedInput<bufferSize>::onReadable>(this);
+			&EventedBufferedInput<bufferSize>::onReadable>(this);
 	}
 
 	~EventedBufferedInput() {
@@ -160,8 +160,8 @@ public:
 		this->fd = fd;
 		buffer = StaticString();
 		state = LIVE;
-		paused = false;
-		socketPaused = false;
+		paused = true;
+		socketPaused = true;
 		nextTickInstalled = false;
 		error = 0;
 		if (watcher.is_active()) {
@@ -169,6 +169,9 @@ public:
 		}
 		if (libev != NULL) {
 			watcher.set(libev->getLoop());
+		}
+		if (fd != -1) {
+			watcher.set(fd, ev::READ);
 		}
 	}
 

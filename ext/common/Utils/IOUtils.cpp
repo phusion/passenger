@@ -175,7 +175,7 @@ setNonBlocking(int fd) {
 }
 
 int
-tryAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int options) {
+callAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int options) {
 	#if defined(__linux__) && defined(__x86_64__)
 		int ret;
 		do {
