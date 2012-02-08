@@ -91,8 +91,8 @@ private:
 	struct ev_loop *getLoop() const;
 	const SafeLibevPtr &getSafeLibev() const;
 
-	static size_t onClientInputData(weak_ptr<Client> wself, const StaticString &data);
-	static void onClientInputError(weak_ptr<Client> wself, const char *message, int errnoCode);
+	static size_t onClientInputData(const EventedBufferedInputPtr &source, const StaticString &data);
+	static void onClientInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode);
 
 	static void onClientBodyBufferData(const FileBackedPipePtr &source,
 		const char *data, size_t size,
@@ -110,8 +110,8 @@ private:
 	
 	void onClientOutputWritable(ev::io &io, int revents);
 	
-	static size_t onAppInputData(weak_ptr<Client> wself, const StaticString &data);
-	static void onAppInputError(weak_ptr<Client> wself, const char *message, int errnoCode);
+	static size_t onAppInputData(const EventedBufferedInputPtr &source, const StaticString &data);
+	static void onAppInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode);
 	
 	void onAppOutputWritable(ev::io &io, int revents);
 
@@ -202,6 +202,9 @@ public:
 		fdnum = -1;
 
 		clientInput = make_shared< EventedBufferedInput<> >();
+		clientInput->onData   = onClientInputData;
+		clientInput->onError  = onClientInputError;
+		clientInput->userData = this;
 		
 		clientBodyBuffer = make_shared<FileBackedPipe>("/tmp");
 		clientBodyBuffer->userData  = this;
@@ -221,6 +224,9 @@ public:
 
 		
 		appInput = make_shared< EventedBufferedInput<> >();
+		appInput->onData   = onAppInputData;
+		appInput->onError  = onAppInputError;
+		appInput->userData = this;
 		
 		appOutputWatcher.set<Client, &Client::onAppOutputWritable>(this);
 		
@@ -231,21 +237,11 @@ public:
 	}
 
 	~Client() {
+		clientInput->userData      = NULL;
 		clientBodyBuffer->userData = NULL;
 		clientOutputPipe->userData = NULL;
+		appInput->userData         = NULL;
 		freeBufferedConnectPassword();
-	}
-
-	void initialize() {
-		clientInput->onData = boost::bind(onClientInputData,
-			weak_ptr<Client>(shared_from_this()), _1);
-		clientInput->onError = boost::bind(onClientInputError,
-			weak_ptr<Client>(shared_from_this()), _1, _2);
-		
-		appInput->onData = boost::bind(onAppInputData,
-			weak_ptr<Client>(shared_from_this()), _1);
-		appInput->onError = boost::bind(onAppInputError,
-			weak_ptr<Client>(shared_from_this()), _1, _2);
 	}
 
 	void associate(RequestHandler *handler, const FileDescriptor &_fd) {
@@ -362,7 +358,7 @@ public:
 		stream
 			<< indent << "state = " << getStateName() << "\n"
 			<< indent << "requestBodyIsBuffered = " << requestBodyIsBuffered << "\n"
-			<< indent << "clientInput.started = " << clientInput->started() << "\n";
+			<< indent << "clientInput.started = " << clientInput->isStarted() << "\n";
 	}
 };
 
@@ -614,7 +610,6 @@ private:
 				}
 			} else {
 				ClientPtr client = make_shared<Client>();
-				client->initialize();
 				client->associate(this, fd);
 				clients.insert(make_pair<int, ClientPtr>(fd, client));
 				count++;
@@ -640,7 +635,7 @@ private:
 	size_t onClientRealData(const ClientPtr &client, const char *buf, size_t size) {
 		size_t consumed = 0;
 
-		while (consumed < size && client->connected() && client->clientInput->started()) {
+		while (consumed < size && client->connected() && client->clientInput->isStarted()) {
 			const char *data = buf + consumed;
 			size_t len       = size - consumed;
 			size_t locallyConsumed;
@@ -885,7 +880,7 @@ private:
 		// Now that the pipe has committed the data to disk
 		// resume reading from the client socket.
 		state_bufferingRequestBody_verifyInvariants(client);
-		assert(!client->clientInput->started());
+		assert(!client->clientInput->isStarted());
 		client->backgroundOperations--;
 		client->clientInput->start();
 	}
@@ -894,7 +889,7 @@ private:
 	/******* State: CHECKING_OUT_SESSION *******/
 
 	void state_checkingOutSession_verifyInvariants(const ClientPtr &client) {
-		assert(!client->clientInput->started());
+		assert(!client->clientInput->isStarted());
 		assert(!client->clientBodyBuffer->isStarted());
 	}
 
@@ -992,12 +987,12 @@ private:
 	}
 
 	void state_sendingHeaderToApp_verifyInvariants(const ClientPtr &client) {
-		assert(!client->clientInput->started());
+		assert(!client->clientInput->isStarted());
 		assert(!client->clientBodyBuffer->isStarted());
 	}
 
 	void sendHeaderToApp(const ClientPtr &client) {
-		assert(!client->clientInput->started());
+		assert(!client->clientInput->isStarted());
 		assert(!client->clientBodyBuffer->isStarted());
 
 		RH_TRACE(client, 2, "Sending headers to application");
@@ -1053,7 +1048,7 @@ private:
 	void sendBodyToApp(const ClientPtr &client) {
 		assert(client->appOutputBuffer.empty());
 		assert(!client->clientBodyBuffer->isStarted());
-		assert(!client->clientInput->started());
+		assert(!client->clientInput->isStarted());
 		assert(!client->appOutputWatcher.is_active());
 
 		RH_TRACE(client, 2, "Sending body to application");

@@ -41,6 +41,12 @@ private:
 	int error;
 	char bufferData[bufferSize];
 
+	void resetCallbackFields() {
+		onData = NULL;
+		onError = NULL;
+		userData = NULL;
+	}
+
 	void onReadable(ev::io &watcher, int revents) {
 		ssize_t ret = syscalls::read(fd, bufferData, bufferSize);
 		if (ret == -1) {
@@ -53,8 +59,9 @@ private:
 
 				watcher.stop();
 				state = READ_ERROR;
-				if (onError) {
-					onError("Cannot read from socket", error);
+				if (onError != NULL) {
+					onError(EventedBufferedInput<bufferSize>::shared_from_this(),
+						"Cannot read from socket", error);
 				}
 			}
 
@@ -66,7 +73,8 @@ private:
 
 			watcher.stop();
 			state = END_OF_STREAM;
-			onData(StaticString());
+			onData(EventedBufferedInput<bufferSize>::shared_from_this(),
+				StaticString());
 
 		} else {
 			assert(state == LIVE);
@@ -108,7 +116,8 @@ private:
 
 		assert(buffer.size() > 0);
 
-		size_t consumed = onData(buffer);
+		size_t consumed = onData(EventedBufferedInput<bufferSize>::shared_from_this(),
+			buffer);
 		if (state == CLOSED) {
 			return;
 		}
@@ -132,16 +141,22 @@ private:
 	}
 
 public:
-	function<size_t (const StaticString &data)> onData;
-	function<void (const char *message, int errnoCode)> onError;
+	typedef size_t (*DataCallback)(const shared_ptr< EventedBufferedInput<bufferSize> > &source, const StaticString &data);
+	typedef void (*ErrorCallback)(const shared_ptr< EventedBufferedInput<bufferSize> > &source, const char *message, int errnoCode);
+
+	DataCallback onData;
+	ErrorCallback onError;
+	void *userData;
 
 	EventedBufferedInput() {
+		resetCallbackFields();
 		reset(NULL, FileDescriptor());
 		watcher.set<EventedBufferedInput<bufferSize>,
 			&EventedBufferedInput<bufferSize>::onReadable>(this);
 	}
 
 	EventedBufferedInput(SafeLibev *libev, const FileDescriptor &fd) {
+		resetCallbackFields();
 		reset(libev, fd);
 		watcher.set<EventedBufferedInput<bufferSize>,
 			&EventedBufferedInput<bufferSize>::onReadable>(this);
@@ -199,7 +214,7 @@ public:
 		}
 	}
 
-	bool started() const {
+	bool isStarted() const {
 		return !paused;
 	}
 };

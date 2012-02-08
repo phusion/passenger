@@ -14,20 +14,20 @@ Client::getSafeLibev() const {
 }
 
 size_t
-Client::onClientInputData(weak_ptr<Client> wself, const StaticString &data) {
-	shared_ptr<Client> self = wself.lock();
-	if (self != NULL) {
-		return self->requestHandler->onClientInputData(self, data);
+Client::onClientInputData(const EventedBufferedInputPtr &source, const StaticString &data) {
+	Client *client = (Client *) source->userData;
+	if (client != NULL) {
+		return client->requestHandler->onClientInputData(client->shared_from_this(), data);
 	} else {
 		return 0;
 	}
 }
 
 void
-Client::onClientInputError(weak_ptr<Client> wself, const char *message, int errnoCode) {
-	shared_ptr<Client> self = wself.lock();
-	if (self != NULL) {
-		self->requestHandler->onClientInputError(self, message, errnoCode);
+Client::onClientInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode) {
+	Client *client = (Client *) source->userData;
+	if (client != NULL) {
+		client->requestHandler->onClientInputError(client->shared_from_this(), message, errnoCode);
 	}
 }
 
@@ -114,20 +114,20 @@ Client::onClientOutputWritable(ev::io &io, int revents) {
 
 
 size_t
-Client::onAppInputData(weak_ptr<Client> wself, const StaticString &data) {
-	shared_ptr<Client> self = wself.lock();
-	if (self != NULL) {
-		return self->requestHandler->onAppInputData(self, data);
+Client::onAppInputData(const EventedBufferedInputPtr &source, const StaticString &data) {
+	Client *client = (Client *) source->userData;
+	if (client != NULL) {
+		return client->requestHandler->onAppInputData(client->shared_from_this(), data);
 	} else {
 		return 0;
 	}
 }
 
 void
-Client::onAppInputError(weak_ptr<Client> wself, const char *message, int errnoCode) {
-	shared_ptr<Client> self = wself.lock();
-	if (self != NULL) {
-		self->requestHandler->onAppInputError(self, message, errnoCode);
+Client::onAppInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode) {
+	Client *client = (Client *) source->userData;
+	if (client != NULL) {
+		client->requestHandler->onAppInputError(client->shared_from_this(), message, errnoCode);
 	}
 }
 
