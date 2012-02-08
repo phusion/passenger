@@ -131,7 +131,7 @@ protected:
 					break;
 				} else if (ret == -1) {
 					P_WARN("Background I/O capturer error: " <<
-						strerror(e) << " (" << e << ")");
+						strerror(e) << " (errno=" << e << ")");
 					break;
 				} else {
 					data.append(buf, ret);
@@ -569,6 +569,7 @@ protected:
 		vector< pair<StaticString, StaticString> >::const_iterator it, end;
 		string result;
 		
+		appendNullTerminatedKeyValue(result, "IN_PASSENGER", "1");
 		appendNullTerminatedKeyValue(result, "PYTHONUNBUFFERED", "1");
 		appendNullTerminatedKeyValue(result, "RAILS_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "RACK_ENV", options.environment);
@@ -598,7 +599,7 @@ protected:
 		} else {
 			int e = errno;
 			printf("Error\n\n");
-			printf("Cannot change working directory to '%s': %s (%d)\n",
+			printf("Cannot change working directory to '%s': %s (errno=%d)\n",
 				options.appRoot.c_str(), strerror(e), e);
 			fflush(stdout);
 			_exit(1);
@@ -621,7 +622,7 @@ protected:
 			}
 			
 			// We set these environment variables here instead of
-			// in the SpawnPreparer because SpawnPreparer mightt
+			// in the SpawnPreparer because SpawnPreparer might
 			// be executed by bash, but these environment variables
 			// must be set before bash.
 			setenv("USER", info.username.c_str(), 1);
@@ -636,7 +637,7 @@ protected:
 			int ret = chroot(options.preexecChroot.c_str());
 			if (ret == -1) {
 				int e = errno;
-				fprintf(stderr, "Cannot chroot() to '%s': %s (%d)\n",
+				fprintf(stderr, "Cannot chroot() to '%s': %s (errno=%d)\n",
 					options.preexecChroot.c_str(),
 					strerror(e),
 					e);
@@ -955,7 +956,7 @@ private:
 			printf("Error\n\n");
 			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
 				strerror(e), e);
-			fprintf(stderr, "Cannot execute \"%s\": %s (%d)\n",
+			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",
 				command[0].c_str(), strerror(e), e);
 			fflush(stdout);
 			fflush(stderr);
@@ -1403,7 +1404,6 @@ public:
 	virtual ProcessPtr spawn(const Options &options) {
 		assert(options.appType == this->options.appType);
 		assert(options.appRoot == this->options.appRoot);
-		assert(options.spawnMethod == "smart" || options.spawnMethod == "smart-lv2");
 		
 		lock_guard<boost::mutex> lock(syncher);
 		{
@@ -1587,8 +1587,6 @@ public:
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
-		assert(options.spawnMethod == "conservative" || options.spawnMethod == "direct");
-		
 		shared_array<const char *> args;
 		vector<string> command = createCommand(options, args);
 		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
@@ -1616,7 +1614,7 @@ public:
 			printf("Error\n\n");
 			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
 				strerror(e), e);
-			fprintf(stderr, "Cannot execute \"%s\": %s (%d)\n",
+			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",
 				command[0].c_str(), strerror(e), e);
 			fflush(stdout);
 			fflush(stderr);

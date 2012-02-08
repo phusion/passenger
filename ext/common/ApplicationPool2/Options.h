@@ -160,7 +160,7 @@ public:
 	
 	/** The application's type, used for determining the command to invoke to
 	 * spawn an application process as well as determining the startup file's
-	 * filename. Either "classic-rails", "rack", "wsgi" or the empty string.
+	 * filename. Either "classic-rails", "rack", "wsgi" or the empty string (default).
 	 * In case of the latter, 'startCommand' and 'startupFile' (which MUST
 	 * be set) will dictate the startup command and the startup file's
 	 * filename. */
@@ -343,7 +343,7 @@ public:
 		startTimeout            = 60 * 1000;
 		environment             = "production";
 		baseURI                 = "/";
-		spawnMethod             = "smart-lv2";
+		spawnMethod             = "smart";
 		defaultUser             = "nobody";
 		ruby                    = "ruby";
 		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
