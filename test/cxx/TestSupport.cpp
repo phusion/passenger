@@ -142,6 +142,11 @@ replaceStringInFile(const char *filename, const string &toFind, const string &re
 	fclose(f);
 }
 
+bool
+containsSubstring(const StaticString &str, const StaticString &substr) {
+	return str.find(substr) != string::npos;
+}
+
 void
 writeFile(const string &filename, const string &contents) {
 	FILE *f = fopen(filename.c_str(), "w");

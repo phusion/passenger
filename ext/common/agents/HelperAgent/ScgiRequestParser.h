@@ -323,6 +323,10 @@ public:
 	StaticString getHeaderData() const {
 		return headerData;
 	}
+
+	const_iterator getHeaderIterator(const StaticString &name) const {
+		return headers.find(name);
+	}
 	
 	/**
 	 * Get the value of the header with the given name.

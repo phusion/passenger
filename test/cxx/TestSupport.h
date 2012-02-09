@@ -129,6 +129,11 @@ string replaceString(const string &str, const string &toFind, const string &repl
 void replaceStringInFile(const char *filename, const string &toFind, const string &replaceWith);
 
 /**
+ * Returns whether 'str' contains the given substring.
+ */
+bool containsSubstring(const StaticString &str, const StaticString &substr);
+
+/**
  * Writes the given data into the given file.
  *
  * @throws FileSystemException

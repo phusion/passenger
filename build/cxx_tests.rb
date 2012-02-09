@@ -176,6 +176,12 @@ TEST_CXX_OBJECTS = {
 		test/cxx/ServerInstanceDirTest.cpp
 		ext/common/ServerInstanceDir.h
 		ext/common/Utils.h),
+	'test/cxx/RequestHandlerTest.o' => %w(
+		test/cxx/RequestHandlerTest.cpp
+		ext/common/agents/HelperAgent/RequestHandler.h
+		ext/common/agents/HelperAgent/FileBackedPipe.h
+		ext/common/agents/HelperAgent/AgentOptions.h
+		ext/common/ApplicationPool2/Pool.h),
 	'test/cxx/FileBackedPipeTest.o' => %w(
 		test/cxx/FileBackedPipeTest.cpp
 		ext/common/agents/HelperAgent/FileBackedPipe.h),

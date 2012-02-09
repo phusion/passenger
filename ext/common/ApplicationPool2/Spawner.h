@@ -1716,6 +1716,9 @@ public:
 	unsigned int dummyConcurrency;
 	unsigned int dummySpawnTime;
 
+	// Properties for SmartSpawner and DirectSpawner.
+	bool forwardStderr;
+
 	SpawnerFactory(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
@@ -1726,6 +1729,7 @@ public:
 	{
 		dummyConcurrency = 1;
 		dummySpawnTime   = 0;
+		forwardStderr    = true;
 		if (randomGenerator == NULL) {
 			randomGenerator = make_shared<RandomGenerator>();
 		} else {
@@ -1742,11 +1746,16 @@ public:
 				spawner = make_shared<DirectSpawner>(libev,
 					resourceLocator, generation,
 					randomGenerator);
+				static_pointer_cast<DirectSpawner>(spawner)->forwardStderr = forwardStderr;
+			} else {
+				static_pointer_cast<SmartSpawner>(spawner)->forwardStderr = forwardStderr;
 			}
 			return spawner;
 		} else if (options.spawnMethod == "direct" || options.spawnMethod == "conservative") {
-			return make_shared<DirectSpawner>(libev, resourceLocator,
+			shared_ptr<DirectSpawner> spawner = make_shared<DirectSpawner>(libev, resourceLocator,
 				generation, randomGenerator);
+			spawner->forwardStderr = forwardStderr;
+			return spawner;
 		} else if (options.spawnMethod == "dummy") {
 			DummySpawnerPtr spawner = make_shared<DummySpawner>(resourceLocator);
 			spawner->concurrency = dummyConcurrency;

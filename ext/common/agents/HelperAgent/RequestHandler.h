@@ -52,6 +52,9 @@
 
  */
 
+#ifndef _PASSENGER_REQUEST_HANDLER_H_
+#define _PASSENGER_REQUEST_HANDLER_H_
+
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/make_shared.hpp>
@@ -65,9 +68,11 @@
 #include <Logging.h>
 #include <EventedBufferedInput.h>
 #include <MessageReadersWriters.h>
+#include <HttpConstants.h>
 #include <ApplicationPool2/Pool.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
+#include <Utils/HttpHeaderBufferer.h>
 #include <agents/HelperAgent/AgentOptions.h>
 #include <agents/HelperAgent/FileBackedPipe.h>
 #include <agents/HelperAgent/ScgiRequestParser.h>
@@ -124,6 +129,7 @@ private:
 		freeBufferedConnectPassword();
 		sessionCheckedOut = false;
 		sessionCheckoutTry = 0;
+		responseHeaderSeen = false;
 	}
 
 public:
@@ -193,9 +199,12 @@ public:
 	Options options;
 	ScgiRequestParser scgiParser;
 	SessionPtr session;
+	unsigned int sessionCheckoutTry;
 	bool requestBodyIsBuffered;
 	bool sessionCheckedOut;
-	unsigned int sessionCheckoutTry;
+
+	bool responseHeaderSeen;
+	HttpHeaderBufferer responseHeaderBufferer;
 
 
 	Client() {
@@ -277,6 +286,7 @@ public:
 		
 		scgiParser.reset();
 		session.reset();
+		responseHeaderBufferer.reset();
 	}
 
 	void discard() {
@@ -414,11 +424,23 @@ private:
 		disconnect(client);
 	}
 
+	static bool getBoolOption(const ClientPtr &client, const StaticString &name, bool defaultValue = false) {
+		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
+		if (it != client->scgiParser.end()) {
+			return it->second == "true";
+		} else {
+			return defaultValue;
+		}
+	}
+
 	void writeSimpleResponse(const ClientPtr &client, const StaticString &data) {
 		assert(client->state < Client::FORWARDING_BODY_TO_APP);
 		client->state = Client::WRITING_SIMPLE_RESPONSE;
 
 		stringstream str;
+		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
+			str << "HTTP/1.1 500 Internal Server Error\r\n";
+		}
 		str << "Status: 500\r\n";
 		str << "Content-Length: " << data.size() << "\r\n";
 		str << "Content-Type: text/plain\r\n";
@@ -438,6 +460,97 @@ private:
 	 * appInput to clientOutputPipe.
 	 *****************************************************/
 	
+	/** Given a substring containing the start of the header value,
+	 * extracts the substring that contains a single header value.
+	 *
+	 *   const char *data =
+	 *      "Status: 200 OK\r\n"
+	 *      "Foo: bar\r\n";
+	 *   extractHeaderValue(data + strlen("Status:"), strlen(data) - strlen("Status:"));
+	 *      // "200 OK"
+	 */
+	static StaticString extractHeaderValue(const char *data, size_t size) {
+		const char *start = data;
+		const char *end   = data + size;
+		const char *terminator;
+		
+		while (start < end && *start == ' ') {
+			start++;
+		}
+		
+		terminator = (const char *) memchr(start, '\r', end - start);
+		if (terminator == NULL) {
+			return StaticString();
+		} else {
+			return StaticString(start, terminator - start);
+		}
+	}
+
+	/*
+	 * Given a full header and possibly some rest data, possibly modify the header
+	 * and send both to the clientOutputPipe.
+	 */
+	void processResponseHeader(const ClientPtr &client, const string &currentPacket,
+		const StaticString &header, const StaticString &rest)
+	{
+		/* Note: we don't strip out the Status header because some broken HTTP clients depend on it.
+		 * http://groups.google.com/group/phusion-passenger/browse_thread/thread/03e0381684fbae09
+		 */
+		
+		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
+			/* Extract the status code and prepend an HTTP status line to the response. */
+			string::size_type pos = header.find("Status:");
+			if (OXT_UNLIKELY(pos == string::npos)) {
+				disconnectWithError(client, "application response format error (no status header)");
+				return;
+			}
+
+			string data;
+			data.reserve(30 + header.size() + rest.size());
+			data.append("HTTP/1.1 ");
+
+			StaticString value = extractHeaderValue(
+				header.data() + pos + sizeof("Status:") - 1,
+				header.size() - pos - (sizeof("Status:") - 1));
+			int statusCode = stringToInt(value);
+			const char *statusCodeAndReasonPhrase = getStatusCodeAndReasonPhrase(statusCode);
+			if (OXT_LIKELY(statusCodeAndReasonPhrase != NULL)) {
+				data.append(statusCodeAndReasonPhrase);
+				data.append("\r\n");
+			} else {
+				data.append(toString(statusCode));
+				data.append(" Unknown Reason\r\n");
+			}
+			data.append(header);
+			data.append(rest);
+			writeToClientOutputPipe(client, data);
+			return;
+		}
+
+		if (header.data() == currentPacket.data()) {
+			/* Header was not modified and it occurs
+			 * in the first packet that the application sent,
+			 * so send the entire packet.
+			 */
+			writeToClientOutputPipe(client, currentPacket);
+		} else {
+			/* Header was not modified and it didn't
+			 * occur in the first packet that the application sent,
+			 * so send out the full header and whatever rest data
+			 * that we've already received.
+			 */
+			writeToClientOutputPipe(client, header);
+			writeToClientOutputPipe(client, rest);
+		}
+	}
+
+	void writeToClientOutputPipe(const ClientPtr &client, const StaticString &data) {
+		if (!client->clientOutputPipe->write(data.data(), data.size())) {
+			client->backgroundOperations++;
+			client->appInput->stop();
+		}
+	}
+
 	size_t onAppInputData(const ClientPtr &client, const StaticString &data) {
 		if (!client->connected()) {
 			return 0;
@@ -445,11 +558,26 @@ private:
 
 		if (!data.empty()) {
 			RH_TRACE(client, 3, "Application sent data: \"" << cEscapeString(data) << "\"");
-			if (!client->clientOutputPipe->write(data.data(), data.size())) {
-				client->backgroundOperations++;
-				client->appInput->stop();
+
+			// Buffer the application response until we've encountered the end of the header.
+			if (!client->responseHeaderSeen) {
+				size_t consumed = client->responseHeaderBufferer.feed(data.data(), data.size());
+				if (!client->responseHeaderBufferer.acceptingInput()) {
+					if (client->responseHeaderBufferer.hasError()) {
+						disconnectWithError(client, "application response format error (invalid header)");
+					} else {
+						// Now that we have a full header, do something with it.
+						client->responseHeaderSeen = true;
+						StaticString header = client->responseHeaderBufferer.getData();
+						StaticString rest = data.substr(consumed);
+						processResponseHeader(client, data, header, rest);
+					}
+				}
+			} else {
+				writeToClientOutputPipe(client, data);
 			}
 			return data.size();
+
 		} else {
 			onAppInputEof(client);
 			return 0;
@@ -834,7 +962,7 @@ private:
 		if (!client->scgiParser.acceptingInput()) {
 			if (client->scgiParser.getState() == ScgiRequestParser::ERROR) {
 				disconnectWithError(client, "invalid SCGI header");
-			} else if (client->scgiParser.getHeader("PASSENGER_BUFFERING") == "true") {
+			} else if (getBoolOption(client, "PASSENGER_BUFFERING")) {
 				RH_TRACE(client, 3, "Valid SCGI header; buffering request body");
 				client->state = Client::BUFFERING_REQUEST_BODY;
 				client->requestBodyIsBuffered = true;
@@ -893,12 +1021,19 @@ private:
 		assert(!client->clientBodyBuffer->isStarted());
 	}
 
+	static void fillPoolOption(const ClientPtr &client, StaticString &field, const StaticString &name) {
+		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
+		if (it != client->scgiParser.end()) {
+			field = it->second;
+		}
+	}
+
 	void checkoutSession(const ClientPtr &client) {
-		const ScgiRequestParser &parser = client->scgiParser;
 		Options &options = client->options;
 
-		options.appRoot = parser.getHeader("PASSENGER_APP_ROOT");
-		options.appType = parser.getHeader("PASSENGER_APP_TYPE");
+		fillPoolOption(client, options.appRoot, "PASSENGER_APP_ROOT");
+		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
+		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
 		// TODO
 
 		RH_TRACE(client, 2, "Checking out session: appRoot=" << options.appRoot);
@@ -931,9 +1066,14 @@ private:
 		if (e != NULL) {
 			try {
 				shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
-				RH_WARN(client, "Cannot checkout session. " << e2->what() <<
-					"\n" << e2->getErrorPage());
-				writeSimpleResponse(client, e2->getErrorPage());
+				if (e2->getErrorPage().empty()) {
+					RH_WARN(client, "Cannot checkout session. " << e2->what());
+					writeSimpleResponse(client, e2->what());
+				} else {
+					RH_WARN(client, "Cannot checkout session. " << e2->what() <<
+						"\nError page:\n" << e2->getErrorPage());
+					writeSimpleResponse(client, e2->getErrorPage());
+				}
 			} catch (const bad_cast &) {
 				RH_WARN(client, "Cannot checkout session; error messages can be found above");
 				writeSimpleResponse(client, e->what());
@@ -1169,3 +1309,5 @@ public:
 
 
 } // namespace Passenger
+
+#endif /* _PASSENGER_REQUEST_HANDLER_H_ */

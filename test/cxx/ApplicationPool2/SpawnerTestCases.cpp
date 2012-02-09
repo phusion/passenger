@@ -131,3 +131,4 @@
 	}
 	
 	// User switching works.
+	// It raises an exception if getStartupCommand() is empty.

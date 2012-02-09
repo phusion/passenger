@@ -149,6 +149,7 @@ task :compile_app => [LIBCOMMON, LIBBOOST_OXT, :libev, :libeio] do
 	exe = source.sub(/\.cpp$/, '')
 	begin
 		create_executable(exe, source,
+			"-DSTANDALONE " <<
 			"-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
 			"#{PlatformInfo.portability_cflags} " <<
 			"#{EXTRA_CXXFLAGS} " <<

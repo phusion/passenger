@@ -253,7 +253,7 @@ public:
 		return m_hasErrorPage;
 	}
 	
-	const string getErrorPage() const {
+	const string &getErrorPage() const {
 		return m_errorPage;
 	}
 	
