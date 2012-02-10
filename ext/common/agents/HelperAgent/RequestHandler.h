@@ -456,8 +456,9 @@ private:
 	/*****************************************************
 	 * COMPONENT: appInput -> clientOutputPipe plumbing
 	 *
-	 * The following code handles forwarding data from
-	 * appInput to clientOutputPipe.
+	 * The following code receives data from appInput,
+	 * possibly modifies it, and forwards it to
+	 * clientOutputPipe.
 	 *****************************************************/
 	
 	/** Given a substring containing the start of the header value,
@@ -574,6 +575,8 @@ private:
 					}
 				}
 			} else {
+				// The header has already been processed so forward it
+				// directly to clientOutputPipe.
 				writeToClientOutputPipe(client, data);
 			}
 			return data.size();
@@ -986,7 +989,9 @@ private:
 	size_t state_bufferingRequestBody_onClientData(const ClientPtr &client, const char *data, size_t size) {
 		state_bufferingRequestBody_verifyInvariants(client);
 
+		RH_DEBUG(client, "writing to clientBodyBuffer");
 		if (!client->clientBodyBuffer->write(data, size)) {
+			RH_DEBUG(client, "stopping clientBodyBuffer");
 			// The pipe cannot write the data to disk quickly enough, so
 			// suspend reading from the client until the pipe is done.
 			client->backgroundOperations++; // TODO: figure out whether this is necessary
@@ -1007,6 +1012,7 @@ private:
 	void state_bufferingRequestBody_onClientBodyBufferDrained(const ClientPtr &client) {
 		// Now that the pipe has committed the data to disk
 		// resume reading from the client socket.
+		RH_DEBUG(client, "clientBodyBuffer drained");
 		state_bufferingRequestBody_verifyInvariants(client);
 		assert(!client->clientInput->isStarted());
 		client->backgroundOperations--;
