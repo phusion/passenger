@@ -23,7 +23,7 @@
 #  THE SOFTWARE.
 
 require 'phusion_passenger/abstract_request_handler'
-require 'phusion_passenger/utils/rewindable_input'
+require 'phusion_passenger/utils/tee_input'
 
 module PhusionPassenger
 module Rack
@@ -65,7 +65,7 @@ class RequestHandler < AbstractRequestHandler
 protected
 	# Overrided method.
 	def process_request(env, input, output, full_http_response)
-		rewindable_input = PhusionPassenger::Utils::RewindableInput.new(input)
+		rewindable_input = PhusionPassenger::Utils::TeeInput.new(input, env)
 		begin
 			env[RACK_VERSION]      = RACK_VERSION_VALUE
 			env[RACK_INPUT]        = rewindable_input
