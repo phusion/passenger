@@ -209,6 +209,10 @@ public:
 
 	Client() {
 		fdnum = -1;
+		// TODO: we only need this right now because the scgiParser buffer
+		// is invalidated as soon as onClientData exits. Figure out a way
+		// to not copy anything if we can do everything before onClientData
+		// exits.
 		scgiParser.setZeroCopy(false);
 
 		clientInput = make_shared< EventedBufferedInput<> >();
@@ -1053,9 +1057,7 @@ private:
 		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
 		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
 		// TODO
-RH_DEBUG(client, "header: \"" << cEscapeString(client->scgiParser.getHeaderData()) << "\"");
-RH_DEBUG(client, "appRoot: " << client->scgiParser.getHeader("PASSENGER_APP_ROOT"));
-RH_DEBUG(client, "appType: " << client->scgiParser.getHeader("PASSENGER_APP_TYPE"));
+
 		RH_TRACE(client, 2, "Checking out session: appRoot=" << options.appRoot);
 		client->state = Client::CHECKING_OUT_SESSION;
 		pool->asyncGet(client->options, boost::bind(&RequestHandler::sessionCheckedOut,

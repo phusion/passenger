@@ -272,4 +272,7 @@ namespace tut {
 		shutdown(connection, SHUT_WR);
 		ensure_equals(stripHeaders(readAll(connection)), "ok");
 	}
+
+	// it replaces HTTP_CONTENT_LENGTH with CONTENT_LENGTH
+	// it replaces HTTP_CONTENT_TYPE with CONTENT_TYPE
 }
