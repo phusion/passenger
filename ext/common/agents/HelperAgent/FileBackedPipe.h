@@ -181,17 +181,17 @@ private:
 		}
 	}
 
-	void callOnBufferDrained() {
-		if (onBufferDrained != NULL) {
-			onBufferDrained(shared_from_this());
-		}
-	}
-
 	void callOnEnd() {
 		assert(!endReached);
 		endReached = true;
 		if (onEnd != NULL) {
 			onEnd(shared_from_this());
+		}
+	}
+
+	void callOnCommit() {
+		if (onCommit != NULL) {
+			onCommit(shared_from_this());
 		}
 	}
 
@@ -291,7 +291,9 @@ private:
 			file.writeBuffer.erase(0, size);
 			file.writtenSize += size;
 			file.writingToFile = false;
-			if (!file.writeBuffer.empty()) {
+			if (file.writeBuffer.empty()) {
+				callOnCommit();
+			} else {
 				writeBufferToFile();
 			}
 		}
@@ -440,7 +442,7 @@ private:
 			memory.size -= consumed;
 			if (started) {
 				if (memory.size == 0) {
-					callOnBufferDrained();
+					//callOnConsumed();
 					if (ended) {
 						callOnEnd();
 					}
@@ -455,7 +457,7 @@ private:
 			file.readOffset += consumed;
 			if (started) {
 				if (getBufferSize() == 0) {
-					callOnBufferDrained();
+					//callOnConsumed();
 					if (ended) {
 						callOnEnd();
 					}
@@ -485,7 +487,7 @@ public:
 	DataCallback onData;
 	Callback onEnd;
 	ErrorCallback onError;
-	Callback onBufferDrained;
+	Callback onCommit;
 	void *userData;
 
 	// The amount of time, in milliseconds, that the open() operation
@@ -500,7 +502,7 @@ public:
 		onData = NULL;
 		onEnd = NULL;
 		onError = NULL;
-		onBufferDrained = NULL;
+		onCommit = NULL;
 
 		consumedCallCount = 0;
 		currentData = NULL;
@@ -554,7 +556,7 @@ public:
 	}
 
 	/**
-	 * Returns the amount of data that has been buffered.
+	 * Returns the amount of data that has been buffered, both in memory and on disk.
 	 */
 	size_t getBufferSize() const {
 		switch (dataState) {
@@ -578,9 +580,10 @@ public:
 
 	/**
 	 * Writes the given data to the pipe. Returns whether all data is immediately
-	 * consumed by the 'onData' callback. If the return value is false then it
-	 * means some data has been buffered. You can check the size of the buffer
-	 * by calling getBufferSize().
+	 * consumed by the 'onData' callback or whether the data buffered into a memory buffer.
+	 * That is, if the data is not immediately consumed and it is queued to be written
+	 * to disk, then false is returned. In the latter case, the 'onCommit' callback is
+	 * called when all buffered data has been written to disk.
 	 *
 	 * Note that this method may invoke the 'onData' callback immediately.
 	 */
@@ -594,7 +597,7 @@ public:
 		} else if (!started || dataEventState != NOT_CALLING_EVENT) {
 			assert(!started || getBufferSize() > 0);
 			addToBuffer(data, size);
-			return false;
+			return dataState == IN_MEMORY;
 
 		} else {
 			assert(started);
@@ -605,8 +608,10 @@ public:
 			assert(dataEventState != CALLING_EVENT_NOW);
 			if (!immediatelyConsumed) {
 				addToBuffer(data, size);
+				return dataState == IN_MEMORY;
+			} else {
+				return true;
 			}
-			return immediatelyConsumed;
 		}
 	}
 
@@ -637,6 +642,10 @@ public:
 
 	bool reachedEnd() const {
 		return endReached;
+	}
+
+	bool isCommittingToDisk() const {
+		return (dataState == OPENING_FILE || dataState == IN_FILE) && !file.writeBuffer.empty();
 	}
 
 	void start() {

@@ -142,6 +142,7 @@ private:
 	State state;
 	ErrorReason errorReason;
 	unsigned int lengthStringBufferSize;
+	bool zeroCopyEnabled;
 	size_t headerSize;
 	size_t maxSize;
 	
@@ -196,6 +197,7 @@ public:
 	 */
 	ScgiRequestParser(size_t maxSize = 0) {
 		this->maxSize = maxSize;
+		zeroCopyEnabled = true;
 		reset();
 	}
 	
@@ -207,6 +209,10 @@ public:
 		headerBuffer.clear();
 		headers.clear();
 		headerData = StaticString();
+	}
+
+	void setZeroCopy(bool enabled) {
+		zeroCopyEnabled = enabled;
 	}
 	
 	/**
@@ -266,11 +272,13 @@ public:
 				size_t localSize = std::min(
 					headerSize - headerBuffer.size(),
 					size - consumed);
-				if (localSize == headerSize) {
+				if (localSize == headerSize && zeroCopyEnabled) {
 					headerData = StaticString(localData, localSize);
 					state = EXPECTING_COMMA;
 				} else {
-					headerBuffer.reserve(headerSize);
+					if (headerBuffer.capacity() < headerSize) {
+						headerBuffer.reserve(headerSize);
+					}
 					headerBuffer.append(localData, localSize);
 					if (headerBuffer.size() == headerSize) {
 						state = EXPECTING_COMMA;
@@ -392,6 +400,15 @@ public:
 	 */
 	bool acceptingInput() const {
 		return state != DONE && state != ERROR;
+	}
+
+	void persist() {
+		if (headerData.data() != headerBuffer.data()) {
+			headerBuffer.assign(headerData.data(), headerData.size());
+			headerData = headerBuffer;
+			headers.clear();
+			parseHeaderData(headerData, headers);
+		}
 	}
 };
 

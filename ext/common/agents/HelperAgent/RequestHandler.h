@@ -104,14 +104,14 @@ private:
 		const FileBackedPipe::ConsumeCallback &callback);
 	static void onClientBodyBufferEnd(const FileBackedPipePtr &source);
 	static void onClientBodyBufferError(const FileBackedPipePtr &source, int errorCode);
-	static void onClientBodyBufferDrained(const FileBackedPipePtr &source);
+	static void onClientBodyBufferCommit(const FileBackedPipePtr &source);
 	
 	static void onClientOutputPipeData(const FileBackedPipePtr &source,
 		const char *data, size_t size,
 		const FileBackedPipe::ConsumeCallback &callback);
 	static void onClientOutputPipeEnd(const FileBackedPipePtr &source);
 	static void onClientOutputPipeError(const FileBackedPipePtr &source, int errorCode);
-	static void onClientOutputPipeDrained(const FileBackedPipePtr &source);
+	static void onClientOutputPipeCommit(const FileBackedPipePtr &source);
 	
 	void onClientOutputWritable(ev::io &io, int revents);
 	
@@ -209,6 +209,7 @@ public:
 
 	Client() {
 		fdnum = -1;
+		scgiParser.setZeroCopy(false);
 
 		clientInput = make_shared< EventedBufferedInput<> >();
 		clientInput->onData   = onClientInputData;
@@ -220,14 +221,14 @@ public:
 		clientBodyBuffer->onData    = onClientBodyBufferData;
 		clientBodyBuffer->onEnd     = onClientBodyBufferEnd;
 		clientBodyBuffer->onError   = onClientBodyBufferError;
-		clientBodyBuffer->onBufferDrained = onClientBodyBufferDrained;
+		clientBodyBuffer->onCommit  = onClientBodyBufferCommit;
 
 		clientOutputPipe = make_shared<FileBackedPipe>("/tmp");
 		clientOutputPipe->userData  = this;
 		clientOutputPipe->onData    = onClientOutputPipeData;
 		clientOutputPipe->onEnd     = onClientOutputPipeEnd;
 		clientOutputPipe->onError   = onClientOutputPipeError;
-		clientOutputPipe->onBufferDrained = onClientOutputPipeDrained;
+		clientOutputPipe->onCommit  = onClientOutputPipeCommit;
 
 		clientOutputWatcher.set<Client, &Client::onClientOutputWritable>(this);
 
@@ -487,6 +488,26 @@ private:
 		}
 	}
 
+	static StaticString lookupHeader(const StaticString &headerData, const StaticString &name) {
+		string::size_type searchStart = 0;
+		while (searchStart < headerData.size()) {
+			string::size_type pos = headerData.find(name, searchStart);
+			if (OXT_UNLIKELY(pos == string::npos)) {
+				return StaticString();
+			} else if ((pos == 0 || headerData[pos - 1] == '\n')
+				&& headerData.size() > pos + name.size()
+				&& headerData[pos + name.size()] == ':')
+			{
+				return extractHeaderValue(
+					headerData.data() + pos + name.size() + 1,
+					headerData.size() - pos - name.size() - 1);
+			} else {
+				searchStart = pos + name.size() + 1;
+			}
+		}
+		return StaticString();
+	}
+
 	/*
 	 * Given a full header and possibly some rest data, possibly modify the header
 	 * and send both to the clientOutputPipe.
@@ -499,21 +520,13 @@ private:
 		 */
 		
 		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
-			/* Extract the status code and prepend an HTTP status line to the response. */
-			string::size_type pos = header.find("Status:");
-			if (OXT_UNLIKELY(pos == string::npos)) {
-				disconnectWithError(client, "application response format error (no status header)");
-				return;
-			}
+			StaticString value = lookupHeader(header, "Status");
+			int statusCode = stringToInt(value);
 
 			string data;
 			data.reserve(30 + header.size() + rest.size());
 			data.append("HTTP/1.1 ");
 
-			StaticString value = extractHeaderValue(
-				header.data() + pos + sizeof("Status:") - 1,
-				header.size() - pos - (sizeof("Status:") - 1));
-			int statusCode = stringToInt(value);
 			const char *statusCodeAndReasonPhrase = getStatusCodeAndReasonPhrase(statusCode);
 			if (OXT_LIKELY(statusCodeAndReasonPhrase != NULL)) {
 				data.append(statusCodeAndReasonPhrase);
@@ -546,7 +559,9 @@ private:
 	}
 
 	void writeToClientOutputPipe(const ClientPtr &client, const StaticString &data) {
-		if (!client->clientOutputPipe->write(data.data(), data.size())) {
+		bool wasCommittingToDisk = client->clientOutputPipe->isCommittingToDisk();
+		bool nowCommittingToDisk = !client->clientOutputPipe->write(data.data(), data.size());
+		if (!wasCommittingToDisk && nowCommittingToDisk) {
 			client->backgroundOperations++;
 			client->appInput->stop();
 		}
@@ -615,7 +630,7 @@ private:
 		}
 	}
 
-	void onClientOutputPipeDrained(const ClientPtr &client) {
+	void onClientOutputPipeCommit(const ClientPtr &client) {
 		if (!client->connected()) {
 			return;
 		}
@@ -874,14 +889,14 @@ private:
 		}
 	}
 
-	void onClientBodyBufferDrained(const ClientPtr &client) {
+	void onClientBodyBufferCommit(const ClientPtr &client) {
 		if (!client->connected()) {
 			return;
 		}
 
 		switch (client->state) {
 		case Client::BUFFERING_REQUEST_BODY:
-			state_bufferingRequestBody_onClientBodyBufferDrained(client);
+			state_bufferingRequestBody_onClientBodyBufferCommit(client);
 			break;
 		default:
 			abort();
@@ -988,10 +1003,9 @@ private:
 
 	size_t state_bufferingRequestBody_onClientData(const ClientPtr &client, const char *data, size_t size) {
 		state_bufferingRequestBody_verifyInvariants(client);
+		assert(!client->clientBodyBuffer->isCommittingToDisk());
 
-		RH_DEBUG(client, "writing to clientBodyBuffer");
 		if (!client->clientBodyBuffer->write(data, size)) {
-			RH_DEBUG(client, "stopping clientBodyBuffer");
 			// The pipe cannot write the data to disk quickly enough, so
 			// suspend reading from the client until the pipe is done.
 			client->backgroundOperations++; // TODO: figure out whether this is necessary
@@ -1004,15 +1018,13 @@ private:
 		state_bufferingRequestBody_verifyInvariants(client);
 
 		RH_TRACE(client, 3, "Done buffering request body; checking out session");
-		client->clientInput->stop();
 		client->clientBodyBuffer->end();
 		checkoutSession(client);
 	}
 
-	void state_bufferingRequestBody_onClientBodyBufferDrained(const ClientPtr &client) {
+	void state_bufferingRequestBody_onClientBodyBufferCommit(const ClientPtr &client) {
 		// Now that the pipe has committed the data to disk
 		// resume reading from the client socket.
-		RH_DEBUG(client, "clientBodyBuffer drained");
 		state_bufferingRequestBody_verifyInvariants(client);
 		assert(!client->clientInput->isStarted());
 		client->backgroundOperations--;
@@ -1041,7 +1053,9 @@ private:
 		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
 		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
 		// TODO
-
+RH_DEBUG(client, "header: \"" << cEscapeString(client->scgiParser.getHeaderData()) << "\"");
+RH_DEBUG(client, "appRoot: " << client->scgiParser.getHeader("PASSENGER_APP_ROOT"));
+RH_DEBUG(client, "appType: " << client->scgiParser.getHeader("PASSENGER_APP_TYPE"));
 		RH_TRACE(client, 2, "Checking out session: appRoot=" << options.appRoot);
 		client->state = Client::CHECKING_OUT_SESSION;
 		pool->asyncGet(client->options, boost::bind(&RequestHandler::sessionCheckedOut,

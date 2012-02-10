@@ -59,6 +59,7 @@ private:
 
 				watcher.stop();
 				state = READ_ERROR;
+				paused = true;
 				if (onError != NULL) {
 					onError(EventedBufferedInput<bufferSize>::shared_from_this(),
 						"Cannot read from socket", error);
@@ -73,6 +74,7 @@ private:
 
 			watcher.stop();
 			state = END_OF_STREAM;
+			paused = true;
 			onData(EventedBufferedInput<bufferSize>::shared_from_this(),
 				StaticString());
 

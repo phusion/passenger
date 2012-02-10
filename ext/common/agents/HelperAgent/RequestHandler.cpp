@@ -61,10 +61,10 @@ Client::onClientBodyBufferError(const FileBackedPipePtr &source, int errorCode) 
 }
 
 void
-Client::onClientBodyBufferDrained(const FileBackedPipePtr &source) {
+Client::onClientBodyBufferCommit(const FileBackedPipePtr &source) {
 	Client *client = (Client *) source->userData;
 	if (client != NULL) {
-		client->requestHandler->onClientBodyBufferDrained(client->shared_from_this());
+		client->requestHandler->onClientBodyBufferCommit(client->shared_from_this());
 	}
 }
 
@@ -98,10 +98,10 @@ Client::onClientOutputPipeError(const FileBackedPipePtr &source, int errorCode) 
 }
 
 void
-Client::onClientOutputPipeDrained(const FileBackedPipePtr &source) {
+Client::onClientOutputPipeCommit(const FileBackedPipePtr &source) {
 	Client *client = (Client *) source->userData;
 	if (client != NULL) {
-		client->requestHandler->onClientOutputPipeDrained(client->shared_from_this());
+		client->requestHandler->onClientOutputPipeCommit(client->shared_from_this());
 	}
 }
 

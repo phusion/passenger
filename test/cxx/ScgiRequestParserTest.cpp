@@ -87,6 +87,20 @@ namespace tut {
 		ensure_equals(parser.getErrorReason(),
 			ScgiRequestParser::LIMIT_REACHED);
 	}
+
+	TEST_METHOD(7) {
+		// It makes an internal copy of the data if zero-copy mode is disabled.
+		char data[] = "20:hello\0world\0foo\0bar\0,";
+		parser.setZeroCopy(false);
+		ensure_equals("It accepted all input.",
+			parser.feed(data, sizeof(data) - 1),
+			sizeof(data) - 1);
+		memset(data, 0, sizeof(data));
+		ensure_equals(parser.getHeaderData(),
+			string("hello\0world\0foo\0bar\0", 20));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("foo") == "bar");
+	}
 	
 	/***** Test parsing a complete SCGI request in multiple passes. *****/
 	
@@ -168,6 +182,19 @@ namespace tut {
 			parser.getState(), ScgiRequestParser::DONE);
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
+			string("hello\0world\0foo\0bar\0", 20));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("foo") == "bar");
+	}
+
+	TEST_METHOD(13) {
+		// It makes an internal copy of the data.
+		char data[] = "20:hello\0world\0foo\0bar\0,";
+		for (unsigned int i = 0; i < sizeof(data) - 1; i++) {
+			ensure_equals(parser.feed(&data[i], 1), 1u);
+		}
+		memset(data, 0, sizeof(data));
+		ensure_equals(parser.getHeaderData(),
 			string("hello\0world\0foo\0bar\0", 20));
 		ensure(parser.getHeader("hello") == "world");
 		ensure(parser.getHeader("foo") == "bar");

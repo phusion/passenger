@@ -265,14 +265,10 @@ namespace tut {
 		SHOULD_NEVER_HAPPEN(200,
 			result = fileExists("tmp.output");
 		);
-		printf("press enter\n");
-		getchar();
 		writeExact(connection, "world\n");
 		SHOULD_NEVER_HAPPEN(200,
 			result = fileExists("tmp.output");
 		);
-		printf("press enter\n");
-		getchar();
 		shutdown(connection, SHUT_WR);
 		ensure_equals(stripHeaders(readAll(connection)), "ok");
 	}

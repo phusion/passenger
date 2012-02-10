@@ -23,6 +23,7 @@ namespace tut {
 		string receivedData;
 		bool ended;
 		FileBackedPipe::ConsumeCallback consumedCallback;
+		AtomicInt commitCount;
 
 		FileBackedPipeTest()
 			: tmpdir("tmp.pipe")
@@ -36,6 +37,7 @@ namespace tut {
 			pipe->userData = this;
 			pipe->onData = onData;
 			pipe->onEnd = onEnd;
+			pipe->onCommit = onCommit;
 		}
 		
 		~FileBackedPipeTest() {
@@ -104,6 +106,16 @@ namespace tut {
 			*result = pipe->reachedEnd();
 		}
 
+		bool isCommittingToDisk() {
+			bool result;
+			bg.safe->run(boost::bind(&FileBackedPipeTest::real_isCommittingToDisk, this, &result));
+			return result;
+		}
+
+		void real_isCommittingToDisk(bool *result) {
+			*result = pipe->isCommittingToDisk();
+		}
+
 		FileBackedPipe::DataState getDataState() {
 			FileBackedPipe::DataState result;
 			bg.safe->run(boost::bind(&FileBackedPipeTest::real_getDataState, this, &result));
@@ -135,6 +147,11 @@ namespace tut {
 			FileBackedPipeTest *self = (FileBackedPipeTest *) source->userData;
 			self->ended = true;
 		}
+
+		static void onCommit(const FileBackedPipePtr &source) {
+			FileBackedPipeTest *self = (FileBackedPipeTest *) source->userData;
+			self->commitCount++;
+		}
 	};
 
 	DEFINE_TEST_GROUP(FileBackedPipeTest);
@@ -148,6 +165,7 @@ namespace tut {
 			pthread_equal(consumeCallbackThread, bg.safe->getCurrentThread()));
 		ensure_equals(receivedData, "hello");
 		ensure_equals("nothing buffered", getBufferSize(), 0u);
+		ensure("not committing to disk", !isCommittingToDisk());
 	}
 
 	TEST_METHOD(2) {
@@ -155,13 +173,14 @@ namespace tut {
 		init();
 		startPipe();
 		consumeImmediately = false;
-		ensure("not immediately consumed", !write("hello"));
+		write("hello");
 		ensure_equals(receivedData, "hello");
 		ensure_equals("everything buffered", getBufferSize(), sizeof("hello") - 1);
 
 		receivedData.clear();
 		callConsumedCallback(5, false);
 		ensure_equals(getBufferSize(), 0u);
+		ensure("not committing to disk", !isCommittingToDisk());
 	}
 
 	TEST_METHOD(3) {
@@ -172,6 +191,7 @@ namespace tut {
 		ensure_equals(consumeCallbackCount, 1);
 		ensure_equals(receivedData, "hello");
 		ensure_equals(getBufferSize(), 0u);
+		ensure("not committing to disk", !isCommittingToDisk());
 	}
 
 	TEST_METHOD(4) {
@@ -182,6 +202,7 @@ namespace tut {
 		write("hello");
 		ensure(!isStarted());
 		ensure_equals(getBufferSize(), 0u);
+		ensure("not committing to disk", !isCommittingToDisk());
 	}
 
 	TEST_METHOD(5) {
@@ -192,6 +213,7 @@ namespace tut {
 		toConsume = 3;
 		write("hello");
 		ensure_equals(getBufferSize(), 0u);
+		ensure("not committing to disk", !isCommittingToDisk());
 		ensure_equals(receivedData,
 			"hello\n"
 			"lo");
@@ -208,10 +230,12 @@ namespace tut {
 		toConsume = 3;
 		write("hello");
 		ensure_equals(getBufferSize(), 5u);
+		ensure("not committing to disk", !isCommittingToDisk());
 		ensure_equals(receivedData, "");
 		ensure_equals(consumeCallbackCount, 0);
 		startPipe();
 		ensure_equals(getBufferSize(), 0u);
+		ensure("not committing to disk", !isCommittingToDisk());
 		ensure_equals(consumeCallbackCount, 2);
 		ensure_equals(receivedData,
 			"hello\n"
@@ -229,11 +253,13 @@ namespace tut {
 		write("world");
 		ensure_equals(getDataState(), FileBackedPipe::IN_MEMORY);
 		ensure_equals(getBufferSize(), 10u);
+		ensure("not committing to disk", !isCommittingToDisk());
 		ensure_equals(consumeCallbackCount, 1);
 		ensure_equals(receivedData, "hello");
 
 		callConsumedCallback(4, false);
 		ensure_equals(getBufferSize(), 6u);
+		ensure("not committing to disk", !isCommittingToDisk());
 		ensure_equals(consumeCallbackCount, 2);
 		ensure_equals(receivedData,
 			"hello\n"
@@ -241,6 +267,7 @@ namespace tut {
 		
 		callConsumedCallback(6, false);
 		ensure_equals(getBufferSize(), 0u);
+		ensure("not committing to disk", !isCommittingToDisk());
 		ensure_equals(consumeCallbackCount, 2);
 		ensure_equals(receivedData,
 			"hello\n"
@@ -260,6 +287,7 @@ namespace tut {
 		write("world");
 		ensure_equals(getDataState(), FileBackedPipe::OPENING_FILE);
 		ensure_equals(getBufferSize(), 10u);
+		ensure("committing to disk", isCommittingToDisk());
 		ensure_equals(consumeCallbackCount, 1);
 		ensure_equals(receivedData, "hello");
 
@@ -294,6 +322,7 @@ namespace tut {
 			result = getDataState() == FileBackedPipe::IN_FILE && consumeCallbackCount == 1;
 		);
 		ensure_equals("(2)", getBufferSize(), 10u);
+		ensure("not committing to disk", !isCommittingToDisk());
 		ensure_equals("(3)", receivedData, "hello");
 
 		callConsumedCallback(4, false);
@@ -475,5 +504,54 @@ namespace tut {
 		ensure(ended);
 		ensure(reachedEnd());
 		ensure(!isStarted());
+	}
+
+	TEST_METHOD(21) {
+		// If the written data is immediately consumed, then write() returns true
+		// and the commit callback is never called.
+		init();
+		startPipe();
+		ensure(write("hello"));
+		SHOULD_NEVER_HAPPEN(40,
+			result = commitCount > 0;
+		);
+	}
+
+	TEST_METHOD(22) {
+		// If the written data is not immediately consumed but fits
+		// into the memory buffer, then write() returns true and the
+		// commit callback is never called.
+		consumeImmediately = false;
+		init();
+		startPipe();
+		ensure(write("hello"));
+		SHOULD_NEVER_HAPPEN(40,
+			result = commitCount > 0;
+		);
+	}
+	
+	TEST_METHOD(23) {
+		// If the pipe is paused and the written data fits into the memory
+		// buffer, then write() returns true and the commit callback is never called.
+		init();
+		ensure(write("hello"));
+		SHOULD_NEVER_HAPPEN(40,
+			result = commitCount > 0;
+		);
+	}
+
+	TEST_METHOD(24) {
+		// If the written data is not immediately consumed and must be written
+		// to the disk, then write() returns false. onCommit is called after
+		// the data has been written out to the disk.
+		pipe->setThreshold(3);
+		pipe->openTimeout = 20;
+		init();
+		ensure(!write("hello"));
+		ensure("committing to disk", isCommittingToDisk());
+		EVENTUALLY(1,
+			result = commitCount == 1;
+		);
+		ensure("not committing to disk", !isCommittingToDisk());
 	}
 }
