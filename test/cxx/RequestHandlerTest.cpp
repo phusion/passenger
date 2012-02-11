@@ -182,7 +182,7 @@ namespace tut {
 
 	TEST_METHOD(11) {
 		// If the app crashes at startup with an error page then it renders
-		// a pretty error page.
+		// a friendly error page.
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'Error'\n"
@@ -202,6 +202,8 @@ namespace tut {
 		string response = readAll(connection);
 		ensure(containsSubstring(response, "HTTP/1.1 500 Internal Server Error\r\n"));
 		ensure(containsSubstring(response, "Status: 500\r\n"));
+		ensure(containsSubstring(response, "Content-Type: text/html; charset=UTF-8\r\n"));
+		ensure(containsSubstring(response, "<html>"));
 		ensure(containsSubstring(response, "I have failed"));
 	}
 
@@ -226,6 +228,35 @@ namespace tut {
 		ensure(!containsSubstring(response, "HTTP/1.1 "));
 		ensure(containsSubstring(response, "Status: 500\r\n"));
 		ensure(containsSubstring(response, "I have failed"));
+	}
+
+	TEST_METHOD(13) {
+		// If PASSENGER_FRIENDLY_ERROR_PAGES is false then it does not render
+		// a friendly error page.
+		TempDir tempdir("tmp.handler");
+		writeFile("tmp.handler/start.rb",
+			"STDERR.puts 'Error'\n"
+			"STDERR.puts\n"
+			"STDERR.puts 'I have failed'\n");
+
+		setLogLevel(-2);
+		spawnerFactory->forwardStderr = false;
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
+			"PASSENGER_APP_TYPE", "",
+			"PASSENGER_START_COMMAND", ("ruby\1" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_FRIENDLY_ERROR_PAGES", "false",
+			"PATH_INFO", "/",
+			NULL);
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 500 Internal Server Error\r\n"));
+		ensure(containsSubstring(response, "Status: 500\r\n"));
+		ensure(containsSubstring(response, "Content-Type: text/html; charset=UTF-8\r\n"));
+		ensure(containsSubstring(response, "<html>"));
+		ensure(!containsSubstring(response, "I have failed"));
+		ensure(containsSubstring(response, "We're sorry, but something went wrong"));
 	}
 
 	TEST_METHOD(20) {

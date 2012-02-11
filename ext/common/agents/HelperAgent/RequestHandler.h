@@ -440,26 +440,29 @@ private:
 		client->state = Client::WRITING_SIMPLE_RESPONSE;
 
 		string templatesDir = resourceLocator.getResourcesDir() + "/templates";
-		string cssFile = templatesDir + "/error_layout.css";
-		string errorLayoutFile = templatesDir + "/error_layout.html.template";
-		string generalErrorFile =
-			isHTML
-			? templatesDir + "/general_error_with_html.html.template"
-			: templatesDir + "/general_error.html.template";
-		string css = readAll(cssFile);
-		StringMap<StaticString> params;
+		string data;
 
-		params.set("TITLE", "Internal server error");
-		params.set("CSS", css);
-		params.set("APP_ROOT", client->options.appRoot);
-		params.set("ENVIRONMENT", client->options.environment);
-		params.set("MESSAGE", message);
-		string content = applyTemplate(readAll(generalErrorFile), params);
-		params.set("CONTENT", content);
-		string data = applyTemplate(readAll(errorLayoutFile), params);
+		if (getBoolOption(client, "PASSENGER_FRIENDLY_ERROR_PAGES", true)) {
+			string cssFile = templatesDir + "/error_layout.css";
+			string errorLayoutFile = templatesDir + "/error_layout.html.template";
+			string generalErrorFile =
+				isHTML
+				? templatesDir + "/general_error_with_html.html.template"
+				: templatesDir + "/general_error.html.template";
+			string css = readAll(cssFile);
+			StringMap<StaticString> params;
 
-		css.resize(0);
-		content.resize(0);
+			params.set("TITLE", "Internal server error");
+			params.set("CSS", css);
+			params.set("APP_ROOT", client->options.appRoot);
+			params.set("ENVIRONMENT", client->options.environment);
+			params.set("MESSAGE", message);
+			string content = applyTemplate(readAll(generalErrorFile), params);
+			params.set("CONTENT", content);
+			data = applyTemplate(readAll(errorLayoutFile), params);
+		} else {
+			data = readAll(templatesDir + "/undisclosed_error.html.template");
+		}
 
 		stringstream str;
 		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
@@ -467,7 +470,7 @@ private:
 		}
 		str << "Status: 500\r\n";
 		str << "Content-Length: " << data.size() << "\r\n";
-		str << "Content-Type: text/plain\r\n";
+		str << "Content-Type: text/html; charset=UTF-8\r\n";
 		str << "\r\n";
 
 		const string &header = str.str();
