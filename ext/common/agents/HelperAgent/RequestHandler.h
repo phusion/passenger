@@ -209,11 +209,6 @@ public:
 
 	Client() {
 		fdnum = -1;
-		// TODO: we only need this right now because the scgiParser buffer
-		// is invalidated as soon as onClientData exits. Figure out a way
-		// to not copy anything if we can do everything before onClientData
-		// exits.
-		scgiParser.setZeroCopy(false);
 
 		clientInput = make_shared< EventedBufferedInput<> >();
 		clientInput->onData   = onClientInputData;
@@ -979,12 +974,56 @@ private:
 
 	/******* State: READING_HEADER *******/
 
+	bool modifyClientHeaders(const ClientPtr &client) {
+		ScgiRequestParser &parser = client->scgiParser;
+		ScgiRequestParser::HeaderMap &map = parser.getMap();
+		ScgiRequestParser::iterator it, end = map.end();
+		bool modified = false;
+
+		/* The Rack spec specifies that HTTP_CONTENT_LENGTH and HTTP_CONTENT_TYPE must
+		 * not exist and that their respective non-HTTP_ versions should exist instead.
+		 */
+
+		if ((it = map.find("HTTP_CONTENT_LENGTH")) != end) {
+			if (map.find("CONTENT_LENGTH") == end) {
+				map["CONTENT_LENGTH"] = it->second;
+				map.erase("HTTP_CONTENT_LENGTH");
+			} else {
+				map.erase(it);
+			}
+			modified = true;
+		}
+
+		if ((it = map.find("HTTP_CONTENT_TYPE")) != end) {
+			if (map.find("CONTENT_TYPE") == end) {
+				map["CONTENT_TYPE"] = it->second;
+				map.erase("HTTP_CONTENT_TYPE");
+			} else {
+				map.erase(it);
+			}
+			modified = true;
+		}
+
+		return modified;
+	}
+
 	size_t state_readingHeader_onClientData(const ClientPtr &client, const char *data, size_t size) {
 		size_t consumed = client->scgiParser.feed(data, size);
 		if (!client->scgiParser.acceptingInput()) {
 			if (client->scgiParser.getState() == ScgiRequestParser::ERROR) {
 				disconnectWithError(client, "invalid SCGI header");
-			} else if (getBoolOption(client, "PASSENGER_BUFFERING")) {
+				return consumed;
+			}
+
+			bool modified = modifyClientHeaders(client);
+			/* TODO: in case the headers are not modified, we only need to rebuild the header data
+			 * right now because the scgiParser buffer is invalidated as soon as onClientData exits.
+			 * We should figure out a way to not copy anything if we can do everything before
+			 * onClientData exits.
+			 */
+			client->scgiParser.rebuildData(modified);
+
+			if (getBoolOption(client, "PASSENGER_BUFFERING")) {
 				RH_TRACE(client, 3, "Valid SCGI header; buffering request body");
 				client->state = Client::BUFFERING_REQUEST_BODY;
 				client->requestBodyIsBuffered = true;
@@ -1055,6 +1094,7 @@ private:
 
 		fillPoolOption(client, options.appRoot, "PASSENGER_APP_ROOT");
 		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
+		fillPoolOption(client, options.spawnMethod, "PASSENGER_SPAWN_METHOD");
 		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
 		// TODO
 

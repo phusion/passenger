@@ -46,6 +46,7 @@ namespace tut {
 			rackAppPath = root + "/test/stub/rack";
 			defaultHeaders["PASSENGER_LOAD_SHELL_ENVVARS"] = "false";
 			defaultHeaders["PASSENGER_APP_TYPE"] = "rack";
+			defaultHeaders["PASSENGER_SPAWN_METHOD"] = "direct";
 		}
 		
 		~RequestHandlerTest() {
@@ -273,6 +274,32 @@ namespace tut {
 		ensure_equals(stripHeaders(readAll(connection)), "ok");
 	}
 
-	// it replaces HTTP_CONTENT_LENGTH with CONTENT_LENGTH
-	// it replaces HTTP_CONTENT_TYPE with CONTENT_TYPE
+	TEST_METHOD(30) {
+		// It replaces HTTP_CONTENT_LENGTH with CONTENT_LENGTH.
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PATH_INFO", "/env",
+			"HTTP_CONTENT_LENGTH", "5",
+			NULL);
+		writeExact(connection, "hello");
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "CONTENT_LENGTH = 5\n"));
+		ensure(!containsSubstring(response, "HTTP_CONTENT_LENGTH"));
+	}
+	
+	TEST_METHOD(31) {
+		// It replaces HTTP_CONTENT_TYPE with CONTENT_TYPE.
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PATH_INFO", "/env",
+			"HTTP_CONTENT_TYPE", "application/json",
+			NULL);
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "CONTENT_TYPE = application/json\n"));
+		ensure(!containsSubstring(response, "HTTP_CONTENT_TYPE"));
+	}
 }

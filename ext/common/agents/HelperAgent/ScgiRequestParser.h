@@ -106,6 +106,7 @@ class ScgiRequestParser {
 public:
 	typedef HashMap< StaticString, StaticString, StaticString::Hash, equal_to<StaticString> > HeaderMap;
 	typedef HeaderMap::const_iterator const_iterator;
+	typedef HeaderMap::iterator iterator;
 
 	enum State {
 		READING_LENGTH_STRING,
@@ -142,7 +143,6 @@ private:
 	State state;
 	ErrorReason errorReason;
 	unsigned int lengthStringBufferSize;
-	bool zeroCopyEnabled;
 	size_t headerSize;
 	size_t maxSize;
 	
@@ -197,7 +197,6 @@ public:
 	 */
 	ScgiRequestParser(size_t maxSize = 0) {
 		this->maxSize = maxSize;
-		zeroCopyEnabled = true;
 		reset();
 	}
 	
@@ -211,10 +210,6 @@ public:
 		headerData = StaticString();
 	}
 
-	void setZeroCopy(bool enabled) {
-		zeroCopyEnabled = enabled;
-	}
-	
 	/**
 	 * Feed SCGI request data to the parser.
 	 *
@@ -272,7 +267,7 @@ public:
 				size_t localSize = std::min(
 					headerSize - headerBuffer.size(),
 					size - consumed);
-				if (localSize == headerSize && zeroCopyEnabled) {
+				if (localSize == headerSize) {
 					headerData = StaticString(localData, localSize);
 					state = EXPECTING_COMMA;
 				} else {
@@ -365,6 +360,10 @@ public:
 	bool hasHeader(const StaticString &name) const {
 		return headers.find(name) != headers.end();
 	}
+
+	HeaderMap &getMap() {
+		return headers;
+	}
 	
 	unsigned int size() const {
 		return headers.size();
@@ -402,8 +401,43 @@ public:
 		return state != DONE && state != ERROR;
 	}
 
-	void persist() {
-		if (headerData.data() != headerBuffer.data()) {
+	/**
+	 * If one has modified the headers in this ScgiRequestParser, then getHeaderData()
+	 * still returns the original header data that doesn't contain any modifications.
+	 * Call rebuildData(true) to synchronize that data with the new header map state.
+	 *
+	 * Calling rebuildData(false) will internalize the header data, if it wasn't
+	 * already so.
+	 */
+	void rebuildData(bool modified) {
+		if (modified) {
+			string *newHeaderBuffer;
+			const_iterator it, end = headers.end();
+
+			if (headerData.data() == headerBuffer.data()) {
+				// headerBuffer already used; allocate new temporary storage.
+				newHeaderBuffer = new string();
+			} else {
+				// headerBuffer unused; use it directly.
+				newHeaderBuffer = &headerBuffer;
+			}
+			newHeaderBuffer->reserve(headerSize);
+			for (it = headers.begin(); it != end; it++) {
+				newHeaderBuffer->append(it->first);
+				newHeaderBuffer->append(1, '\0');
+				newHeaderBuffer->append(it->second);
+				newHeaderBuffer->append(1, '\0');
+			}
+
+			if (headerData.data() == headerBuffer.data()) {
+				headerBuffer = *newHeaderBuffer;
+				delete newHeaderBuffer;
+			}
+			headerData = headerBuffer;
+			headers.clear();
+			parseHeaderData(headerData, headers);
+
+		} else if (headerData.data() != headerBuffer.data()) {
 			headerBuffer.assign(headerData.data(), headerData.size());
 			headerData = headerBuffer;
 			headers.clear();

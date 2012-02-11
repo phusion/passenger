@@ -45,7 +45,7 @@ module App
 	
 	def self.load_app
 		LoaderSharedHelpers.before_loading_app_code_step1('config.ru', options)
-		LoaderSharedHelpers.run_load_path_setup_code
+		LoaderSharedHelpers.run_load_path_setup_code(options)
 		LoaderSharedHelpers.before_loading_app_code_step2(options)
 		
 		require 'rubygems'

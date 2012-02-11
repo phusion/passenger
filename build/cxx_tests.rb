@@ -180,6 +180,7 @@ TEST_CXX_OBJECTS = {
 		test/cxx/RequestHandlerTest.cpp
 		ext/common/agents/HelperAgent/RequestHandler.h
 		ext/common/agents/HelperAgent/FileBackedPipe.h
+		ext/common/agents/HelperAgent/ScgiRequestParser.h
 		ext/common/agents/HelperAgent/AgentOptions.h
 		ext/common/ApplicationPool2/Pool.h),
 	'test/cxx/FileBackedPipeTest.o' => %w(

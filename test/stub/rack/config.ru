@@ -5,6 +5,12 @@ app = lambda do |env|
         [200, { "Content-Type" => "text/html", "Transfer-Encoding" => "chunked" }, chunks]
     when '/pid'
         [200, { "Content-Type" => "text/html" }, [$$]]
+    when '/env'
+        body = ''
+        env.each_pair do |key, value|
+            body << "#{key} = #{value}\n"
+        end
+        [200, { "Content-Type" => "text/html" }, [body]]
     when '/upload'
         File.open(env['HTTP_X_OUTPUT'], 'w') do |f|
             while line = env['rack.input'].gets
