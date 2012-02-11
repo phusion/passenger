@@ -1008,10 +1008,15 @@ private:
 	}
 
 	size_t state_readingHeader_onClientData(const ClientPtr &client, const char *data, size_t size) {
-		size_t consumed = client->scgiParser.feed(data, size);
-		if (!client->scgiParser.acceptingInput()) {
-			if (client->scgiParser.getState() == ScgiRequestParser::ERROR) {
-				disconnectWithError(client, "invalid SCGI header");
+		ScgiRequestParser &parser = client->scgiParser;
+		size_t consumed = parser.feed(data, size);
+		if (!parser.acceptingInput()) {
+			if (parser.getState() == ScgiRequestParser::ERROR) {
+				if (parser.getErrorReason() == ScgiRequestParser::LIMIT_REACHED) {
+					disconnectWithError(client, "SCGI header too large");
+				} else {
+					disconnectWithError(client, "invalid SCGI header");
+				}
 				return consumed;
 			}
 
@@ -1021,7 +1026,7 @@ private:
 			 * We should figure out a way to not copy anything if we can do everything before
 			 * onClientData exits.
 			 */
-			client->scgiParser.rebuildData(modified);
+			parser.rebuildData(modified);
 
 			if (getBoolOption(client, "PASSENGER_BUFFERING")) {
 				RH_TRACE(client, 3, "Valid SCGI header; buffering request body");
