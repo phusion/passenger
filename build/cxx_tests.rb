@@ -244,7 +244,7 @@ task 'test:cxx' => dependencies do
 	if boolean_option('GDB')
 		command = "gdb --args #{command}"
 	elsif boolean_option('VALGRIND')
-		command = "valgrind --dsymutil=yes #{command}"
+		command = "valgrind --dsymutil=yes --db-attach=yes --child-silent-after-fork=yes #{command}"
 	end
 	sh "cd test && #{command}"
 end
