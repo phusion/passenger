@@ -1,5 +1,6 @@
 /*
- * Sets given environment variables, then execs the given command.
+ * Sets given environment variables, dumps the entire environment to
+ * a given file (for diagnostics purposes), then execs the given command.
  *
  * This is a separate executable because it does quite
  * some non-async-signal-safe stuff that we can't do after
@@ -16,6 +17,10 @@
 
 using namespace std;
 using namespace Passenger;
+
+extern "C" {
+	extern char **environ;
+}
 
 static void
 setGivenEnvVars(const char *envvarsData) {
@@ -44,6 +49,23 @@ setGivenEnvVars(const char *envvarsData) {
 	}
 }
 
+static void
+dumpEnvVars() {
+	const char *dir;
+	if ((dir = getenv("PASSENGER_DEBUG_DIR")) != NULL) {
+		FILE *f = fopen((string(dir) + "/envvars").c_str(), "w");
+		if (f != NULL) {
+			int i = 0;
+			while (environ[i] != NULL) {
+				fputs(environ[i], f);
+				putc('\n', f);
+				i++;
+			}
+			fclose(f);
+		}
+	}
+}
+
 // Usage: SpawnPreparer <envvars> <executable> <exec args...>
 int
 main(int argc, char *argv[]) {
@@ -57,6 +79,7 @@ main(int argc, char *argv[]) {
 	char **execArgs = &argv[3];
 	
 	setGivenEnvVars(envvars);
+	dumpEnvVars();
 	
 	execvp(executable, (char * const *) execArgs);
 	int e = errno;

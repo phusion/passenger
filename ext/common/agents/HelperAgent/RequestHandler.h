@@ -435,7 +435,7 @@ private:
 		}
 	}
 
-	void writeErrorResponse(const ClientPtr &client, const StaticString &message, bool isHTML = false) {
+	void writeErrorResponse(const ClientPtr &client, const StaticString &message, const SpawnException *e = NULL) {
 		assert(client->state < Client::FORWARDING_BODY_TO_APP);
 		client->state = Client::WRITING_SIMPLE_RESPONSE;
 
@@ -446,7 +446,7 @@ private:
 			string cssFile = templatesDir + "/error_layout.css";
 			string errorLayoutFile = templatesDir + "/error_layout.html.template";
 			string generalErrorFile =
-				isHTML
+				(e != NULL && e->isHTML())
 				? templatesDir + "/general_error_with_html.html.template"
 				: templatesDir + "/general_error.html.template";
 			string css = readAll(cssFile);
@@ -457,6 +457,12 @@ private:
 			params.set("APP_ROOT", client->options.appRoot);
 			params.set("ENVIRONMENT", client->options.environment);
 			params.set("MESSAGE", message);
+			if (e != NULL) {
+				params.set("ENVVARS", e->getEnvvars());
+			}
+			if (params.get("ENVVARS").empty()) {
+				params.set("ENVVARS", "Unknown");
+			}
 			string content = applyTemplate(readAll(generalErrorFile), params);
 			params.set("CONTENT", content);
 			data = applyTemplate(readAll(errorLayoutFile), params);
@@ -1121,6 +1127,13 @@ private:
 		}
 	}
 
+	static void fillPoolOption(const ClientPtr &client, bool &field, const StaticString &name) {
+		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
+		if (it != client->scgiParser.end()) {
+			field = it->second == "true";
+		}
+	}
+
 	void checkoutSession(const ClientPtr &client) {
 		Options &options = client->options;
 
@@ -1128,6 +1141,7 @@ private:
 		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
 		fillPoolOption(client, options.spawnMethod, "PASSENGER_SPAWN_METHOD");
 		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
+		fillPoolOption(client, options.loadShellEnvvars, "PASSENGER_LOAD_SHELL_ENVVARS");
 		// TODO
 
 		RH_TRACE(client, 2, "Checking out session: appRoot=" << options.appRoot);
@@ -1166,7 +1180,7 @@ private:
 				} else {
 					RH_WARN(client, "Cannot checkout session. " << e2->what() <<
 						"\nError page:\n" << e2->getErrorPage());
-					writeErrorResponse(client, e2->getErrorPage(), e2->isHTML());
+					writeErrorResponse(client, e2->getErrorPage(), e2.get());
 				}
 			} catch (const bad_cast &) {
 				RH_WARN(client, "Cannot checkout session; error messages can be found above");

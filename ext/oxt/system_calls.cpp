@@ -199,6 +199,26 @@ syscalls::dup2(int filedes, int filedes2) {
 }
 
 int
+syscalls::mkdir(const char *pathname, mode_t mode) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::mkdir(pathname, mode)
+	);
+	return ret;
+}
+
+int
+syscalls::chown(const char *path, uid_t owner, gid_t group) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::chown(path, owner, group)
+	);
+	return ret;
+}
+
+int
 syscalls::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 	int ret;
 	CHECK_INTERRUPTION(

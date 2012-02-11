@@ -150,10 +150,16 @@ using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
 
 static RequestHandler *handler;
+struct ev_loop *loop;
 
 static void
 sighup_cb(struct ev_loop *loop, ev_signal *w, int revents) {
 	handler->inspect(cout);
+}
+
+static void
+sigint_cb(struct ev_loop *loop, ev_signal *w, int revents) {
+	ev_break(loop, EVBREAK_ONE);
 }
 
 static void
@@ -172,19 +178,34 @@ main() {
 	ignoreSigpipe();
 	setLogLevel(3);
 	MultiLibeio::init();
-	struct ev_loop *loop = EV_DEFAULT;
-	struct ev_signal sigwatcher;
+	loop = EV_DEFAULT;
 	SafeLibevPtr libev = make_shared<SafeLibev>(loop);
 	AgentOptions options;
 	ServerInstanceDir serverInstanceDir(getpid());
+	#ifdef __linux__
+		const char *nogroup = "nogroup";
+		const char *root = "/home/hongli/Projects/passenger";
+	#else
+		const char *nogroup = "nobody";
+		const char *root = "/Users/hongli/Projects/passenger";
+	#endif
+	options.passengerRoot = root;
 	SpawnerFactoryPtr spawnerFactory = make_shared<SpawnerFactory>(libev,
-		ResourceLocator("/Users/hongli/Projects/passenger"), serverInstanceDir.newGeneration(true, "nobody", "nobody", getpid(), getgid()));
+		ResourceLocator(root),
+		serverInstanceDir.newGeneration(true, "nobody", nogroup, getpid(), getgid()));
 	PoolPtr pool = make_shared<Pool>(libev.get(), spawnerFactory);
 	FileDescriptor requestSocket = createTcpServer("127.0.0.1", 3000);
 	setNonBlocking(requestSocket);
 	handler = new RequestHandler(libev, requestSocket, pool, options);
-	ev_signal_init(&sigwatcher, sighup_cb, SIGQUIT);
-	ev_signal_start(loop, &sigwatcher);
+	
+	struct ev_signal sighupwatcher;
+	ev_signal_init(&sighupwatcher, sighup_cb, SIGQUIT);
+	ev_signal_start(loop, &sighupwatcher);
+
+	struct ev_signal sigintwatcher;
+	ev_signal_init(&sigintwatcher, sigint_cb, SIGINT);
+	ev_signal_start(loop, &sigintwatcher);
+	
 	P_DEBUG("Started");
 	ev_run(loop, 0);
 	delete handler;

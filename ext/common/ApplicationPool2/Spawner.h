@@ -84,6 +84,7 @@
 #include <Utils/ScopeGuard.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
+#include <Utils/StrIntUtils.h>
 
 namespace tut {
 	struct ApplicationPool2_DirectSpawnerTest;
@@ -154,6 +155,8 @@ protected:
 		
 		~BackgroundIOCapturer() {
 			if (!stopped) {
+				this_thread::disable_interruption di;
+				this_thread::disable_syscall_interruption dsi;
 				thr.interrupt_and_join();
 			}
 		}
@@ -163,6 +166,8 @@ protected:
 		}
 		
 		const string &stop() {
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
 			thr.interrupt_and_join();
 			stopped = true;
 			return data;
@@ -171,6 +176,73 @@ protected:
 	
 	typedef shared_ptr<BackgroundIOCapturer> BackgroundIOCapturerPtr;
 	
+	/**
+	 * A temporary directory for spawned child processes to write
+	 * debugging information to. It is removed after spawning has
+	 * determined to be successful or failed.
+	 */
+	struct DebugDir {
+		string path;
+
+		DebugDir(uid_t uid, gid_t gid) {
+			path = "/tmp/passenger.spawn-debug.";
+			path.append(toString(getpid()));
+			path.append("-");
+			path.append(pointerToIntString(this));
+
+			if (syscalls::mkdir(path.c_str(), 0700) == -1) {
+				int e = errno;
+				throw FileSystemException("Cannot create directory '" +
+					path + "'", e, path);
+			}
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
+			syscalls::chown(path.c_str(), uid, gid);
+		}
+
+		~DebugDir() {
+			// TODO: merge back to removeDirTree()
+			vector<string> command;
+			command.push_back("rm");
+			command.push_back("rm");
+			command.push_back("-rf");
+			command.push_back(path);
+			spawnProcess(command);
+		}
+
+		const string &getPath() const {
+			return path;
+		}
+
+		string readFile(const string &name) const {
+			try {
+				return readAll(path + "/" + name);
+			} catch (const SystemException &) {
+				return "";
+			}
+		}
+
+		void spawnProcess(vector<string> &command) {
+			shared_array<const char *> args;
+			Spawner::createCommandArgs(command, args);
+
+			pid_t pid = syscalls::fork();
+			if (pid == 0) {
+				resetSignalHandlersAndMask();
+				closeAllFileDescriptors(2);
+				execvp(command[0].c_str(), (char * const *) args.get());
+				_exit(1);
+			} else if (pid == -1) {
+				int e = errno;
+				throw SystemException("Cannot fork a new process", e);
+			} else {
+				syscalls::waitpid(pid, 0, NULL);
+			}
+		}
+	};
+
+	typedef shared_ptr<DebugDir> DebugDirPtr;
+
 	struct UserSwitchingInfo {
 		bool switchUser;
 		string username;
@@ -193,6 +265,7 @@ protected:
 		FileDescriptor errorPipe;
 		const Options *options;
 		bool forwardStderr;
+		DebugDirPtr debugDir;
 		
 		// Working state.
 		BufferedIO io;
@@ -452,7 +525,15 @@ protected:
 		
 		// Now throw SpawnException with the captured stderr output
 		// as error response.
-		throw SpawnException(msg, stderrOutput, false, errorKind);
+		SpawnException e(msg, stderrOutput, false, errorKind);
+		annotateAppSpawnException(e, details);
+		throw e;
+	}
+
+	void annotateAppSpawnException(SpawnException &e, NegotiationDetails &details) {
+		if (details.debugDir != NULL) {
+			e.setEnvvars(details.debugDir->readFile("envvars"));
+		}
 	}
 	
 	UserSwitchingInfo prepareUserSwitching(const Options &options) {
@@ -740,10 +821,12 @@ protected:
 		
 		try {
 			string message = details.io.readAll(&details.timeout);
-			throw SpawnException("An error occured while starting the web application.",
+			SpawnException e("An error occured while starting the web application.",
 				message,
 				attributes["html"] == "true",
 				SpawnException::APP_STARTUP_EXPLAINABLE_ERROR);
+			annotateAppSpawnException(e, details);
+			throw e;
 		} catch (const SystemException &e) {
 			throwAppSpawnException("An error occurred while starting the "
 				"web application. It tried to report an error message, but "
@@ -1592,10 +1675,12 @@ public:
 		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
 		SocketPair adminSocket = createUnixSocketPair();
 		Pipe errorPipe = createPipe();
+		DebugDirPtr debugDir = make_shared<DebugDir>(userSwitchingInfo.uid, userSwitchingInfo.gid);
 		pid_t pid;
 		
 		pid = syscalls::fork();
 		if (pid == 0) {
+			setenv("PASSENGER_DEBUG_DIR", debugDir->getPath().c_str(), 1);
 			purgeStdio(stdout);
 			purgeStdio(stderr);
 			resetSignalHandlersAndMask();
@@ -1641,6 +1726,7 @@ public:
 			details.errorPipe = errorPipe.first;
 			details.options = &options;
 			details.forwardStderr = forwardStderr;
+			details.debugDir = debugDir;
 			
 			ProcessPtr process = negotiateSpawn(details);
 			detachProcess(process->pid);

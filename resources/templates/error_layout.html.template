@@ -33,7 +33,7 @@
 				<dt>Group</dt>
 				<dd>{{GROUP}}</dd>
 				<dt>Environment variables</dt>
-				<dd>{{ENVIRONMENT_VARIABLES}}</dd>
+				<dd>{{ENVVARS}}</dd>
 				</dl>
 			</div>
 		</div>

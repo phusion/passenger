@@ -495,7 +495,7 @@ public:
 		createInterruptableThread(
 			boost::bind(&Spawner::cleanup, spawner),
 			"Group spawner cleanup: " + name,
-			1024 * 64);
+			POOL_HELPER_THREAD_STACK_SIZE);
 	}
 
 	unsigned int usage() const {
@@ -534,7 +534,7 @@ public:
 					this, shared_from_this(), spawner,
 					options.copyAndPersist().clearPerRequestFields()),
 				"Group process spawner: " + name,
-				1024 * 64);
+				POOL_HELPER_THREAD_STACK_SIZE);
 			m_spawning = true;
 		}
 	}

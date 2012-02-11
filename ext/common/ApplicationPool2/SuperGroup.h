@@ -414,7 +414,7 @@ public:
 				options.copyAndPersist(),
 				generation),
 			"SuperGroup initializer: " + name,
-			1024 * 64);
+			POOL_HELPER_THREAD_STACK_SIZE);
 	}
 	
 	// Thread-safe.
@@ -477,7 +477,7 @@ public:
 						shared_from_this(),
 						generation),
 					"SuperGroup destroyer: " + name,
-					1024 * 256);
+					POOL_HELPER_THREAD_STACK_SIZE + 1024 * 256);
 			} else {
 				// Spawning this thread before setState() so that
 				// it doesn't change the state when done.
@@ -489,7 +489,7 @@ public:
 						shared_from_this(),
 						generation),
 					"SuperGroup destroyer: " + name,
-					1024 * 256);
+					POOL_HELPER_THREAD_STACK_SIZE + 1024 * 256);
 				setState(INITIALIZING);
 				createNonInterruptableThread(
 					boost::bind(
@@ -569,7 +569,7 @@ public:
 					newOptions.copyAndPersist(),
 					generation),
 				"SuperGroup initializer: " + name,
-				1024 * 64);
+				POOL_HELPER_THREAD_STACK_SIZE);
 			verifyInvariants();
 			return SessionPtr();
 		default:
@@ -611,7 +611,7 @@ public:
 					options.copyAndPersist(),
 					generation),
 				"SuperGroup restarter: " + name,
-				1024 * 64);
+				POOL_HELPER_THREAD_STACK_SIZE);
 			state = RESTARTING;
 		}
 		verifyInvariants();

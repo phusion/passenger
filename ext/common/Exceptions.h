@@ -220,6 +220,7 @@ private:
 	bool m_isHTML;
 	string m_errorPage;
 	string preloaderCommand;
+	string envvars;
 	
 public:
 	SpawnException(const string &message, ErrorKind errorKind = UNDEFINED_ERROR)
@@ -272,6 +273,15 @@ public:
 	
 	const string &getPreloaderCommand() const {
 		return preloaderCommand;
+	}
+
+	SpawnException &setEnvvars(const string &value) {
+		envvars = value;
+		return *this;
+	}
+
+	const string &getEnvvars() const {
+		return envvars;
 	}
 };
 
