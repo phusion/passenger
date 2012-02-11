@@ -5,7 +5,7 @@
 	<meta name="generator" content="Phusion Passenger">
 	<title>{{TITLE}}</title>
 	<style type="text/css">
-		{{CSS}}
+		{{CSS|raw}}
 	</style>
 	<link rel="stylesheet" type="text/css" href="http://www.modrails.com/error_pages/1.0/error_page.css">
 </head>
@@ -21,19 +21,17 @@
 		<div id="site_body">
 			<h1 class="error_title">{{TITLE}}</h1>
 			<div id="content">
-				{{CONTENT}}
+				{{CONTENT|raw}}
 
 				<dl>
 				<dt>Application root</dt>
-				<dd>{{APP_ROOT}}</dd>
+				<dd style="text-align: left">{{APP_ROOT}}</dd>
 				<dt>Environment (value of RAILS_ENV, RACK_ENV, WSGI_ENV and PASSENGER_ENV)</dt>
-				<dd>{{ENVIRONMENT}}</dd>
-				<dt>User</dt>
-				<dd>{{USER}}</dd>
-				<dt>Group</dt>
-				<dd>{{GROUP}}</dd>
+				<dd style="text-align: left">{{ENVIRONMENT}}</dd>
+				<dt>User and groups</dt>
+				<dd style="text-align: left"><pre>{{USER_INFO|default=Unknown}}</pre></dd>
 				<dt>Environment variables</dt>
-				<dd>{{ENVVARS}}</dd>
+				<dd style="text-align: left"><pre>{{ENVVARS|default=Unknown}}</pre></dd>
 				</dl>
 			</div>
 		</div>

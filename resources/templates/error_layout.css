@@ -54,6 +54,8 @@ dd {
 
 pre {
 	overflow: auto;
+	white-space: pre-wrap;
+	text-align: left;
 }
 
 table.backtrace th {

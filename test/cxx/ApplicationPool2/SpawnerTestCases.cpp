@@ -129,6 +129,22 @@
 		ensure("(1)", envvars.find("PASSENGER_FOO = foo\n") != string::npos);
 		ensure("(2)", envvars.find("PASSENGER_BAR = bar\n") != string::npos);
 	}
+
+	TEST_METHOD(8) {
+		// Any raised SpawnExceptions take note of the process's environment variables.
+		Options options = createOptions();
+		options.appRoot      = "stub";
+		options.startCommand = "echo\1" "hello world";
+		options.startupFile  = ".";
+		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
+		SpawnerPtr spawner = createSpawner(options);
+		try {
+			spawner->spawn(options);
+			fail("Exception expected");
+		} catch (const SpawnException &e) {
+			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
+		}
+	}
 	
 	// User switching works.
 	// It raises an exception if getStartupCommand() is empty.

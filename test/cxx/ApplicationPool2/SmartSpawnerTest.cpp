@@ -154,4 +154,33 @@ namespace tut {
 				"hello world\n");
 		}
 	}
+
+	TEST_METHOD(34) {
+		// If the preloader encountered an error, then the resulting SpawnException
+		// takes note of the process's environment variables.
+		Options options = createOptions();
+		options.appRoot      = "stub/rack";
+		options.startCommand = "ruby\1" "start.rb";
+		options.startupFile  = "stub/rack/start.rb";
+		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
+		
+		vector<string> preloaderCommand;
+		preloaderCommand.push_back("bash");
+		preloaderCommand.push_back("-c");
+		preloaderCommand.push_back("echo hello world >&2");
+		SmartSpawner spawner(bg.safe,
+			*resourceLocator,
+			generation,
+			preloaderCommand,
+			options);
+		spawner.forwardStdout = false;
+		spawner.forwardStderr = false;
+		
+		try {
+			spawner.spawn(options);
+			fail("SpawnException expected");
+		} catch (const SpawnException &e) {
+			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
+		}
+	}
 }

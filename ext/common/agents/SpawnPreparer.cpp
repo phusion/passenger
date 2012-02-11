@@ -50,16 +50,35 @@ setGivenEnvVars(const char *envvarsData) {
 }
 
 static void
-dumpEnvVars() {
+dumpInformation() {
 	const char *dir;
 	if ((dir = getenv("PASSENGER_DEBUG_DIR")) != NULL) {
-		FILE *f = fopen((string(dir) + "/envvars").c_str(), "w");
+		FILE *f;
+
+		f = fopen((string(dir) + "/envvars").c_str(), "w");
 		if (f != NULL) {
 			int i = 0;
 			while (environ[i] != NULL) {
 				fputs(environ[i], f);
 				putc('\n', f);
 				i++;
+			}
+			fclose(f);
+		}
+
+		f = fopen((string(dir) + "/user_info").c_str(), "w");
+		if (f != NULL) {
+			pid_t pid = fork();
+			if (pid == 0) {
+				dup2(fileno(f), 1);
+				execlp("id", "id", (char *) 0);
+				_exit(1);
+			} else if (pid == -1) {
+				int e = errno;
+				fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
+					strerror(e), e);
+			} else {
+				waitpid(pid, 0, NULL);
 			}
 			fclose(f);
 		}
@@ -79,7 +98,7 @@ main(int argc, char *argv[]) {
 	char **execArgs = &argv[3];
 	
 	setGivenEnvVars(envvars);
-	dumpEnvVars();
+	dumpInformation();
 	
 	execvp(executable, (char * const *) execArgs);
 	int e = errno;

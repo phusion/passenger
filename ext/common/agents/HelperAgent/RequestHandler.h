@@ -458,14 +458,12 @@ private:
 			params.set("ENVIRONMENT", client->options.environment);
 			params.set("MESSAGE", message);
 			if (e != NULL) {
-				params.set("ENVVARS", e->getEnvvars());
+				params.set("ENVVARS", e->get("envvars"));
+				params.set("USER_INFO", e->get("user_info"));
 			}
-			if (params.get("ENVVARS").empty()) {
-				params.set("ENVVARS", "Unknown");
-			}
-			string content = applyTemplate(readAll(generalErrorFile), params);
+			string content = Template::apply(readAll(generalErrorFile), params);
 			params.set("CONTENT", content);
-			data = applyTemplate(readAll(errorLayoutFile), params);
+			data = Template::apply(readAll(errorLayoutFile), params);
 		} else {
 			data = readAll(templatesDir + "/undisclosed_error.html.template");
 		}

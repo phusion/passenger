@@ -27,6 +27,7 @@
 
 #include <oxt/tracable_exception.hpp>
 #include <string>
+#include <map>
 #include <sstream>
 #include <cstring>
 #include <cassert>
@@ -220,7 +221,7 @@ private:
 	bool m_isHTML;
 	string m_errorPage;
 	string preloaderCommand;
-	string envvars;
+	map<string, string> annotations;
 	
 public:
 	SpawnException(const string &message, ErrorKind errorKind = UNDEFINED_ERROR)
@@ -275,13 +276,24 @@ public:
 		return preloaderCommand;
 	}
 
-	SpawnException &setEnvvars(const string &value) {
-		envvars = value;
-		return *this;
+	void addAnnotations(const map<string, string> &annotations) {
+		map<string, string>::const_iterator it, end = annotations.end();
+		for (it = annotations.begin(); it != end; it++) {
+			this->annotations[it->first] = it->second;
+		}
 	}
 
-	const string &getEnvvars() const {
-		return envvars;
+	string operator[](const string &name) const {
+		return get(name);
+	}
+
+	string get(const string &name, const string &defaultValue = string()) const {
+		map<string, string>::const_iterator it = annotations.find(name);
+		if (it == annotations.end()) {
+			return defaultValue;
+		} else {
+			return it->second;
+		}
 	}
 };
 

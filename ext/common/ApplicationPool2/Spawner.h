@@ -72,6 +72,7 @@
 #include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pwd.h>
 #include <grp.h>
+#include <dirent.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
 #include <FileDescriptor.h>
@@ -214,12 +215,24 @@ protected:
 			return path;
 		}
 
-		string readFile(const string &name) const {
-			try {
-				return readAll(path + "/" + name);
-			} catch (const SystemException &) {
-				return "";
+		map<string, string> readAll() {
+			map<string, string> result;
+			DIR *dir = opendir(path.c_str());
+			ScopeGuard guard(boost::bind(closedir, dir));
+			struct dirent *ent;
+
+			while ((ent = readdir(dir)) != NULL) {
+				if (ent->d_name[0] != '.') {
+					try {
+						result.insert(make_pair<string, string>(
+							ent->d_name,
+							Passenger::readAll(path + "/" + ent->d_name)));
+					} catch (const SystemException &) {
+						// Do nothing.
+					}
+				}
 			}
+			return result;
 		}
 
 		void spawnProcess(vector<string> &command) {
@@ -530,9 +543,9 @@ protected:
 		throw e;
 	}
 
-	void annotateAppSpawnException(SpawnException &e, NegotiationDetails &details) {
+	virtual void annotateAppSpawnException(SpawnException &e, NegotiationDetails &details) {
 		if (details.debugDir != NULL) {
-			e.setEnvvars(details.debugDir->readFile("envvars"));
+			e.addAnnotations(details.debugDir->readAll());
 		}
 	}
 	
@@ -881,7 +894,8 @@ private:
 	};
 	
 	SafeLibevPtr libev;
-	vector<string> preloaderCommand;
+	const vector<string> preloaderCommand;
+	map<string, string> preloaderAnnotations;
 	Options options;
 	
 	// Protects everything else.
@@ -961,7 +975,8 @@ private:
 	
 	void throwPreloaderSpawnException(const string &msg,
 		SpawnException::ErrorKind errorKind,
-		BackgroundIOCapturerPtr &stderrCapturer)
+		BackgroundIOCapturerPtr &stderrCapturer,
+		const DebugDirPtr &debugDir)
 	{
 		// Stop the stderr capturing thread and get the captured stderr
 		// output so far.
@@ -1001,8 +1016,16 @@ private:
 		
 		// Now throw SpawnException with the captured stderr output
 		// as error response.
-		throw SpawnException(msg, stderrOutput, false, errorKind)
-			.setPreloaderCommand(getPreloaderCommandString());
+		SpawnException e(msg, stderrOutput, false, errorKind);
+		e.setPreloaderCommand(getPreloaderCommandString());
+		annotatePreloaderException(e, debugDir);
+		throw e;
+	}
+
+	void annotatePreloaderException(SpawnException &e, const DebugDirPtr &debugDir) {
+		if (debugDir != NULL) {
+			e.addAnnotations(debugDir->readAll());
+		}
 	}
 	
 	bool preloaderStarted() const {
@@ -1017,10 +1040,12 @@ private:
 		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
 		SocketPair adminSocket = createUnixSocketPair();
 		Pipe errorPipe = createPipe();
+		DebugDirPtr debugDir = make_shared<DebugDir>(userSwitchingInfo.uid, userSwitchingInfo.gid);
 		pid_t pid;
 		
 		pid = syscalls::fork();
 		if (pid == 0) {
+			setenv("PASSENGER_DEBUG_DIR", debugDir->getPath().c_str(), 1);
 			purgeStdio(stdout);
 			purgeStdio(stderr);
 			resetSignalHandlersAndMask();
@@ -1059,8 +1084,8 @@ private:
 					errorPipe.first,
 					forwardStderr ? STDERR_FILENO : -1);
 			
-			this->socketAddress = negotiateStartup(adminSocket.second,
-				stderrCapturer, options);
+			this->socketAddress = negotiatePreloaderStartup(adminSocket.second,
+				stderrCapturer, debugDir, options);
 			this->pid = pid;
 			this->adminSocket = adminSocket.second;
 			this->errorPipe = errorPipe.first;
@@ -1068,6 +1093,7 @@ private:
 			preloaderErrorWatcher.set(errorPipe.first, ev::READ);
 			libev->start(preloaderOutputWatcher);
 			libev->start(preloaderErrorWatcher);
+			preloaderAnnotations = debugDir->readAll();
 			guard.clear();
 		}
 	}
@@ -1100,6 +1126,7 @@ private:
 	
 	void sendStartupRequest(int fd,
 		BackgroundIOCapturerPtr &stderrCapturer,
+		const DebugDirPtr &debugDir,
 		unsigned long long &timeout)
 	{
 		try {
@@ -1124,18 +1151,21 @@ private:
 					"sending the startup request message to it: " +
 					e.sys(),
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			}
 		} catch (const TimeoutException &) {
 			throwPreloaderSpawnException("An error occurred while starting up the "
 				"preloader: it did not read the startup request message in time.",
 				SpawnException::PRELOADER_STARTUP_TIMEOUT,
-				stderrCapturer);
+				stderrCapturer,
+				debugDir);
 		}
 	}
 	
 	string handleStartupResponse(BufferedIO &io,
 		BackgroundIOCapturerPtr &stderrCapturer,
+		const DebugDirPtr &debugDir,
 		const Options &options,
 		unsigned long long &timeout)
 	{
@@ -1151,12 +1181,14 @@ private:
 					"the preloader. There was an I/O error while reading its "
 					"startup response: " + e.sys(),
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader: it did not write a startup response in time.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			}
 			
 			if (line.empty()) {
@@ -1164,13 +1196,15 @@ private:
 					"the preloader. It unexpected closed the connection while "
 					"sending its startup response.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			} else if (line[line.size() - 1] != '\n') {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader. It sent a line without a newline character "
 					"in its startup response.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			} else if (line == "\n") {
 				break;
 			}
@@ -1181,7 +1215,8 @@ private:
 					"the preloader. It sent a startup response line without "
 					"separator.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			}
 			
 			string key = line.substr(0, pos);
@@ -1193,7 +1228,8 @@ private:
 					"the preloader. It sent an unknown startup response line "
 					"called '" + key + "'.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			}
 		}
 		
@@ -1202,7 +1238,8 @@ private:
 				"the preloader. It did not report a socket address in its "
 				"startup response.",
 				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer);
+				stderrCapturer,
+				debugDir);
 		}
 		
 		return socketAddress;
@@ -1210,6 +1247,7 @@ private:
 	
 	void handleErrorResponse(BufferedIO &io,
 		BackgroundIOCapturerPtr &stderrCapturer,
+		const DebugDirPtr &debugDir,
 		unsigned long long &timeout)
 	{
 		map<string, string> attributes;
@@ -1224,12 +1262,14 @@ private:
 					"the preloader. There was an I/O error while reading its "
 					"startup response: " + e.sys(),
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader: it did not write a startup response in time.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			}
 			
 			if (line.empty()) {
@@ -1237,13 +1277,15 @@ private:
 					"the preloader. It unexpected closed the connection while "
 					"sending its startup response.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			} else if (line[line.size() - 1] != '\n') {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader. It sent a line without a newline character "
 					"in its startup response.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			} else if (line == "\n") {
 				break;
 			}
@@ -1254,7 +1296,8 @@ private:
 					"the preloader. It sent a startup response line without "
 					"separator.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			}
 			
 			string key = line.substr(0, pos);
@@ -1264,37 +1307,45 @@ private:
 		
 		try {
 			string message = io.readAll(&timeout);
-			throw SpawnException("An error occured while starting up the preloader.",
+			SpawnException e("An error occured while starting up the preloader.",
 				message,
 				attributes["html"] == "true",
-				SpawnException::PRELOADER_STARTUP_EXPLAINABLE_ERROR)
-				.setPreloaderCommand(getPreloaderCommandString());
+				SpawnException::PRELOADER_STARTUP_EXPLAINABLE_ERROR);
+			e.setPreloaderCommand(getPreloaderCommandString());
+			annotatePreloaderException(e, debugDir);
+			throw e;
 		} catch (const SystemException &e) {
 			throwPreloaderSpawnException("An error occurred while starting up "
 				"the preloader. It tried to report an error message, but "
 				"an I/O error occurred while reading this error message: " +
 				e.sys(),
 				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer);
+				stderrCapturer,
+				debugDir);
 		} catch (const TimeoutException &) {
 			throwPreloaderSpawnException("An error occurred while starting up "
 				"the preloader. It tried to report an error message, but "
 				"it took too much time doing that.",
 				SpawnException::PRELOADER_STARTUP_TIMEOUT,
-				stderrCapturer);
+				stderrCapturer,
+				debugDir);
 		}
 	}
 	
-	void handleInvalidResponseType(const string &line, BackgroundIOCapturerPtr &stderrCapturer) {
+	void handleInvalidResponseType(const string &line, BackgroundIOCapturerPtr &stderrCapturer,
+		const DebugDirPtr &debugDir)
+	{
 		throwPreloaderSpawnException("An error occurred while starting up "
 			"the preloader. It sent an unknown response type \"" +
 			cEscapeString(line) + "\".",
 			SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-			stderrCapturer);
+			stderrCapturer,
+			debugDir);
 	}
 	
-	string negotiateStartup(FileDescriptor &fd,
+	string negotiatePreloaderStartup(FileDescriptor &fd,
 		BackgroundIOCapturerPtr &stderrCapturer,
+		const DebugDirPtr &debugDir,
 		const Options &options)
 	{
 		BufferedIO io(fd);
@@ -1308,16 +1359,18 @@ private:
 				"the preloader. There was an I/O error while reading its "
 				"handshake message: " + e.sys(),
 				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer);
+				stderrCapturer,
+				debugDir);
 		} catch (const TimeoutException &) {
 			throwPreloaderSpawnException("An error occurred while starting up "
 				"the preloader: it did not write a handshake message in time.",
 				SpawnException::PRELOADER_STARTUP_TIMEOUT,
-				stderrCapturer);
+				stderrCapturer,
+				debugDir);
 		}
 		
 		if (result == "I have control 1.0\n") {
-			sendStartupRequest(fd, stderrCapturer, timeout);
+			sendStartupRequest(fd, stderrCapturer, debugDir, timeout);
 			try {
 				result = io.readLine(1024, &timeout);
 			} catch (const SystemException &e) {
@@ -1325,25 +1378,27 @@ private:
 					"the preloader. There was an I/O error while reading its "
 					"startup response: " + e.sys(),
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader: it did not write a startup response in time.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
-					stderrCapturer);
+					stderrCapturer,
+					debugDir);
 			}
 			if (result == "Ready\n") {
-				return handleStartupResponse(io, stderrCapturer, options, timeout);
+				return handleStartupResponse(io, stderrCapturer, debugDir, options, timeout);
 			} else if (result == "Error\n") {
-				handleErrorResponse(io, stderrCapturer, timeout);
+				handleErrorResponse(io, stderrCapturer, debugDir, timeout);
 			} else {
-				handleInvalidResponseType(result, stderrCapturer);
+				handleInvalidResponseType(result, stderrCapturer, debugDir);
 			}
 		} else {
 			if (result == "Error\n") {
-				handleErrorResponse(io, stderrCapturer, timeout);
+				handleErrorResponse(io, stderrCapturer, debugDir, timeout);
 			} else {
-				handleInvalidResponseType(result, stderrCapturer);
+				handleInvalidResponseType(result, stderrCapturer, debugDir);
 			}
 		}
 		
@@ -1362,7 +1417,8 @@ private:
 				"the application. Unable to connect to the preloader's "
 				"socket: " + string(e.what()),
 				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer);
+				stderrCapturer,
+				DebugDirPtr());
 		}
 		
 		BufferedIO io(fd);
@@ -1393,7 +1449,8 @@ private:
 					"'spawn' command with an invalid PID: '" +
 					toString(spawnedPid) + "'",
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					DebugDirPtr());
 			}
 			// TODO: we really should be checking UID
 			if (getsid(spawnedPid) != getsid(pid)) {
@@ -1403,7 +1460,8 @@ private:
 					"'spawn' command with a PID that doesn't belong to "
 					"the same session: '" + toString(spawnedPid) + "'",
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer);
+					stderrCapturer,
+					DebugDirPtr());
 			}
 			
 			SpawnResult result;
@@ -1438,6 +1496,12 @@ private:
 		return result;
 	}
 	
+protected:
+	virtual void annotateAppSpawnException(SpawnException &e, NegotiationDetails &details) {
+		Spawner::annotateAppSpawnException(e, details);
+		e.addAnnotations(preloaderAnnotations);
+	}
+
 public:
 	ev::io preloaderOutputWatcher;
 	ev::io preloaderErrorWatcher;
