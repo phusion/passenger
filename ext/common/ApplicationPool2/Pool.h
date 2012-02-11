@@ -549,6 +549,7 @@ public:
 		nonInterruptableThreads.join_all();
 		
 		libev->stop(garbageCollectionTimer);
+		libev->stop(analyticsCollectionTimer);
 		
 		UPDATE_TRACE_POINT();
 		SuperGroupMap::iterator it;
