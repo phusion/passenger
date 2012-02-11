@@ -49,7 +49,7 @@ module App
 		Utils.passenger_tmpdir = options["generation_dir"]
 		NativeSupport.disable_stdio_buffering
 	rescue Exception => e
-		LoaderSharedHelpers.about_to_abort if defined?(LoaderSharedHelpers)
+		LoaderSharedHelpers.about_to_abort(e) if defined?(LoaderSharedHelpers)
 		puts "Error"
 		puts
 		puts format_exception(e)
@@ -94,7 +94,7 @@ module App
 		LoaderSharedHelpers.after_loading_app_code(options)
 		
 	rescue Exception => e
-		LoaderSharedHelpers.about_to_abort
+		LoaderSharedHelpers.about_to_abort(e)
 		puts "Error"
 		puts
 		puts format_exception(e)

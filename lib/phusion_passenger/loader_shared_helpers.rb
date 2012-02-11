@@ -13,8 +13,9 @@ module LoaderSharedHelpers
 	end
 
 	# To be called whenever the (pre)loader is about to abort with an error.
-	def about_to_abort
+	def about_to_abort(exception = nil)
 		dump_ruby_environment
+		dump_envvars
 	end
 
 	def to_boolean(value)
@@ -55,6 +56,18 @@ module LoaderSharedHelpers
 			File.open("#{dir}/loaded_libs", "w") do |f|
 				$LOADED_FEATURES.each do |filename|
 					f.puts filename
+				end
+			end
+		end
+	rescue SystemCallError
+		# Don't care.
+	end
+
+	def dump_envvars
+		if dir = ENV['PASSENGER_DEBUG_DIR']
+			File.open("#{dir}/envvars", "w") do |f|
+				ENV.each_pair do |key, value|
+					f.puts "#{key}=#{value}"
 				end
 			end
 		end
