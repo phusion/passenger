@@ -42,6 +42,7 @@ namespace tut {
 			requestSocket = createUnixServer(serverFilename);
 			setNonBlocking(requestSocket);
 
+			agentOptions.passengerRoot = resourceLocator->getRoot();
 			root = resourceLocator->getRoot();
 			rackAppPath = root + "/test/stub/rack";
 			defaultHeaders["PASSENGER_LOAD_SHELL_ENVVARS"] = "false";

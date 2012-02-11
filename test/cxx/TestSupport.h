@@ -93,20 +93,6 @@ void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDi
                                           ServerInstanceDir::GenerationPtr &generation);
 
 /**
- * Read all data from the given file until EOF.
- *
- * @throws SystemException
- */
-string readAll(const string &filename);
-
-/**
- * Read all data from the given file descriptor until EOF.
- *
- * @throws SystemException
- */
-string readAll(int fd);
-
-/**
  * Writes zeroes into the given file descriptor its buffer is full (i.e.
  * the next write will block).
  *

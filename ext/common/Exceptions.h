@@ -69,7 +69,7 @@ public:
 	SystemException(const string &briefMessage, int errorCode) {
 		stringstream str;
 		
-		str << strerror(errorCode) << " (" << errorCode << ")";
+		str << strerror(errorCode) << " (errno=" << errorCode << ")";
 		systemMessage = str.str();
 		
 		setBriefMessage(briefMessage);

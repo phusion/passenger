@@ -38,8 +38,7 @@ module App
 	rescue Exception => e
 		puts "Error"
 		puts
-		puts e
-		puts e.backtrace
+		puts LoaderSharedHelpers.format_exception(e)
 		exit 1
 	end
 	
@@ -61,8 +60,7 @@ module App
 	rescue Exception => e
 		puts "Error"
 		puts
-		puts e
-		puts e.backtrace
+		puts LoaderSharedHelpers.format_exception(e)
 		exit 1
 	end
 	

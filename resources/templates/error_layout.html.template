@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta name="generator" content="Phusion Passenger">
+	<title>{{TITLE}}</title>
+	<style type="text/css">
+		{{CSS}}
+	</style>
+	<link rel="stylesheet" type="text/css" href="http://www.modrails.com/error_pages/1.0/error_page.css">
+</head>
+
+<body>
+
+	<div id="site_container">
+		<div id="site_header">
+			<ul class="corporate_identity">
+				<li class="logo"><a href="http://www.modrails.com"><span>Phusion Passenger</span></a></li>
+			</ul>
+		</div>
+		<div id="site_body">
+			<h1 class="error_title">{{TITLE}}</h1>
+			<div id="content">
+				{{CONTENT}}
+
+				<dl>
+				<dt>Application root</dt>
+				<dd>{{APP_ROOT}}</dd>
+				<dt>Environment (value of RAILS_ENV, RACK_ENV, WSGI_ENV and PASSENGER_ENV)</dt>
+				<dd>{{ENVIRONMENT}}</dd>
+				<dt>User</dt>
+				<dd>{{USER}}</dd>
+				<dt>Group</dt>
+				<dd>{{GROUP}}</dd>
+				<dt>Environment variables</dt>
+				<dd>{{ENVIRONMENT_VARIABLES}}</dd>
+				</dl>
+			</div>
+		</div>
+		<div id="site_footer">
+			<!--
+			   You are free to modify the footer as you see fit,
+			   but we kindly ask of you to preserve to following
+			   text. Thank you.
+			-->
+			<div class="container">
+				Powered by <a href="http://www.modrails.com/">Phusion Passenger</a>,
+				<tt>mod_rails</tt> / <tt>mod_rack</tt> for Apache.
+			</div>
+		</div>
+	</div>
+
+</body>
+</html>
+

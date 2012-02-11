@@ -52,6 +52,10 @@ dd {
 	font-family: 'Bitstream Vera Sans Mono', 'Courier New', Monospace;
 }
 
+pre {
+	overflow: auto;
+}
+
 table.backtrace th {
 	background: #8470a6;
 	color: white;

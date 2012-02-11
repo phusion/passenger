@@ -73,6 +73,7 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/HttpHeaderBufferer.h>
+#include <Utils/Template.h>
 #include <agents/HelperAgent/AgentOptions.h>
 #include <agents/HelperAgent/FileBackedPipe.h>
 #include <agents/HelperAgent/ScgiRequestParser.h>
@@ -383,6 +384,7 @@ private:
 	FileDescriptor requestSocket;
 	PoolPtr pool;
 	const AgentOptions &options;
+	const ResourceLocator resourceLocator;
 	ev::io requestSocketWatcher;
 	HashMap<int, ClientPtr> clients;
 	bool accept4Available;
@@ -433,9 +435,31 @@ private:
 		}
 	}
 
-	void writeSimpleResponse(const ClientPtr &client, const StaticString &data) {
+	void writeErrorResponse(const ClientPtr &client, const StaticString &message, bool isHTML = false) {
 		assert(client->state < Client::FORWARDING_BODY_TO_APP);
 		client->state = Client::WRITING_SIMPLE_RESPONSE;
+
+		string templatesDir = resourceLocator.getResourcesDir() + "/templates";
+		string cssFile = templatesDir + "/error_layout.css";
+		string errorLayoutFile = templatesDir + "/error_layout.html.template";
+		string generalErrorFile =
+			isHTML
+			? templatesDir + "/general_error_with_html.html.template"
+			: templatesDir + "/general_error.html.template";
+		string css = readAll(cssFile);
+		StringMap<StaticString> params;
+
+		params.set("TITLE", "Internal server error");
+		params.set("CSS", css);
+		params.set("APP_ROOT", client->options.appRoot);
+		params.set("ENVIRONMENT", client->options.environment);
+		params.set("MESSAGE", message);
+		string content = applyTemplate(readAll(generalErrorFile), params);
+		params.set("CONTENT", content);
+		string data = applyTemplate(readAll(errorLayoutFile), params);
+
+		css.resize(0);
+		content.resize(0);
 
 		stringstream str;
 		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
@@ -1135,15 +1159,15 @@ private:
 				shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
 				if (e2->getErrorPage().empty()) {
 					RH_WARN(client, "Cannot checkout session. " << e2->what());
-					writeSimpleResponse(client, e2->what());
+					writeErrorResponse(client, e2->what());
 				} else {
 					RH_WARN(client, "Cannot checkout session. " << e2->what() <<
 						"\nError page:\n" << e2->getErrorPage());
-					writeSimpleResponse(client, e2->getErrorPage());
+					writeErrorResponse(client, e2->getErrorPage(), e2->isHTML());
 				}
 			} catch (const bad_cast &) {
 				RH_WARN(client, "Cannot checkout session; error messages can be found above");
-				writeSimpleResponse(client, e->what());
+				writeErrorResponse(client, e->what());
 			}
 		} else {
 			RH_TRACE(client, 3, "Session checked out: pid=" << session->getPid() <<
@@ -1353,7 +1377,8 @@ public:
 		: libev(_libev),
 		  requestSocket(_requestSocket),
 		  pool(_pool),
-		  options(_options)
+		  options(_options),
+		  resourceLocator(_options.passengerRoot)
 	{
 		accept4Available = true;
 		requestSocketWatcher.set(_requestSocket, ev::READ);

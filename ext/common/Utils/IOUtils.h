@@ -430,6 +430,20 @@ void writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout = NUL
 	void safelyClose(int fd, bool ignoreErrors = false);
 #endif
 
+/**
+ * Read all data from the given file until EOF.
+ *
+ * @throws SystemException
+ */
+string readAll(const string &filename);
+
+/**
+ * Read all data from the given file descriptor until EOF.
+ *
+ * @throws SystemException
+ */
+string readAll(int fd);
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_IO_UTILS_H_ */

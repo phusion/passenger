@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h> // Also for __GLIBC__ macro.
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
@@ -60,10 +61,11 @@
 	#define HAVE___FPURGE
 #endif
 
-#include "Timer.h"
-#include "IOUtils.h"
-#include "StrIntUtils.h"
-#include "../Exceptions.h"
+#include <Exceptions.h>
+#include <Utils/Timer.h>
+#include <Utils/IOUtils.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/ScopeGuard.h>
 
 namespace Passenger {
 
@@ -1014,6 +1016,40 @@ safelyClose(int fd, bool ignoreErrors) {
 			throw SystemException("Cannot close file descriptor", e);
 		}
 	}
+}
+
+string
+readAll(const string &filename) {
+	FILE *f = fopen(filename.c_str(), "rb");
+	if (f != NULL) {
+		StdioGuard guard(f);
+		return readAll(fileno(f));
+	} else {
+		int e = errno;
+		throw FileSystemException("Cannot open '" + filename + "' for reading",
+			e, filename);
+	}
+}
+
+string
+readAll(int fd) {
+	string result;
+	char buf[1024 * 32];
+	ssize_t ret;
+	while (true) {
+		do {
+			ret = read(fd, buf, sizeof(buf));
+		} while (ret == -1 && errno == EINTR);
+		if (ret == 0) {
+			break;
+		} else if (ret == -1) {
+			int e = errno;
+			throw SystemException("Cannot read from file descriptor", e);
+		} else {
+			result.append(buf, ret);
+		}
+	}
+	return result;
 }
 
 

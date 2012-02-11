@@ -244,6 +244,14 @@ module LoaderSharedHelpers
 	def after_handling_requests
 		PhusionPassenger.call_event(:stopping_worker_process)
 	end
+
+	def format_exception(e)
+		result = "#{e} (#{e.class})"
+		if !e.backtrace.empty?
+			result << "\n  " << e.backtrace.join("\n  ")
+		end
+		return result
+	end
 end
 
 end # module PhusionPassenger
