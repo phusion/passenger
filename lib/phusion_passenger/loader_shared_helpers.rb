@@ -7,6 +7,16 @@ module PhusionPassenger
 module LoaderSharedHelpers
 	extend self
 
+	# To be called by the (pre)loader as soon as possible.
+	def init
+		dump_ruby_environment
+	end
+
+	# To be called whenever the (pre)loader is about to abort with an error.
+	def about_to_abort
+		dump_ruby_environment
+	end
+
 	def to_boolean(value)
 		return !(value.nil? || value == false || value == "false")
 	end
@@ -33,6 +43,23 @@ module LoaderSharedHelpers
 		options["spawn_method"] = "direct" if options["debugger"]
 		
 		return options
+	end
+
+	def dump_ruby_environment
+		if dir = ENV['PASSENGER_DEBUG_DIR']
+			File.open("#{dir}/load_path", "w") do |f|
+				$LOAD_PATH.each do |path|
+					f.puts path
+				end
+			end
+			File.open("#{dir}/loaded_libs", "w") do |f|
+				$LOADED_FEATURES.each do |filename|
+					f.puts filename
+				end
+			end
+		end
+	rescue SystemCallError
+		# Don't care.
 	end
 	
 	# Prepare an application process using rules for the given spawn options.
@@ -243,14 +270,6 @@ module LoaderSharedHelpers
 	# will fire off necessary events perform necessary cleanup tasks.
 	def after_handling_requests
 		PhusionPassenger.call_event(:stopping_worker_process)
-	end
-
-	def format_exception(e)
-		result = "#{e} (#{e.class})"
-		if !e.backtrace.empty?
-			result << "\n  " << e.backtrace.join("\n  ")
-		end
-		return result
 	end
 end
 

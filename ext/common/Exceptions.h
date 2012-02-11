@@ -283,14 +283,18 @@ public:
 		}
 	}
 
+	const map<string, string> &getAnnotations() const {
+		return annotations;
+	}
+
 	string operator[](const string &name) const {
 		return get(name);
 	}
 
-	string get(const string &name, const string &defaultValue = string()) const {
+	string get(const string &name) const {
 		map<string, string>::const_iterator it = annotations.find(name);
 		if (it == annotations.end()) {
-			return defaultValue;
+			return string();
 		} else {
 			return it->second;
 		}

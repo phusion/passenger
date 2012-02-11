@@ -1062,7 +1062,7 @@ private:
 			
 			int e = errno;
 			printf("Error\n\n");
-			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
+			printf("Cannot execute \"%s\": %s (errno=%d)\n", command[0].c_str(),
 				strerror(e), e);
 			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",
 				command[0].c_str(), strerror(e), e);
@@ -1761,7 +1761,7 @@ public:
 			
 			int e = errno;
 			printf("Error\n\n");
-			printf("Cannot execute \"%s\": %s (%d)\n", command[0].c_str(),
+			printf("Cannot execute \"%s\": %s (errno=%d)\n", command[0].c_str(),
 				strerror(e), e);
 			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",
 				command[0].c_str(), strerror(e), e);

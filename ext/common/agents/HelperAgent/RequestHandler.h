@@ -64,6 +64,7 @@
 #include <arpa/inet.h>
 #include <sys/un.h>
 #include <cassert>
+#include <cctype>
 
 #include <Logging.h>
 #include <EventedBufferedInput.h>
@@ -458,8 +459,17 @@ private:
 			params.set("ENVIRONMENT", client->options.environment);
 			params.set("MESSAGE", message);
 			if (e != NULL) {
-				params.set("ENVVARS", e->get("envvars"));
-				params.set("USER_INFO", e->get("user_info"));
+				// Store all SpawnException annotations into 'params',
+				// but convert its name to uppercase.
+				const map<string, string> &annotations = e->getAnnotations();
+				map<string, string>::const_iterator it, end = annotations.end();
+				for (it = annotations.begin(); it != end; it++) {
+					string name = it->first;
+					for (string::size_type i = 0; i < name.size(); i++) {
+						name[i] = toupper(name[i]);
+					}
+					params.set(name, it->second);
+				}
 			}
 			string content = Template::apply(readAll(generalErrorFile), params);
 			params.set("CONTENT", content);

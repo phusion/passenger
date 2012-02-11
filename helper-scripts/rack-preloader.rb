@@ -9,6 +9,22 @@ module App
 	def self.app
 		return @@app
 	end
+
+	def self.format_exception(e)
+		result = "#{e} (#{e.class})"
+		if !e.backtrace.empty?
+			result << "\n  " << e.backtrace.join("\n  ")
+		end
+		return result
+	end
+
+	def self.exit_code_for_exception(e)
+		if e.is_a?(SystemExit)
+			return e.status
+		else
+			return 1
+		end
+	end
 	
 	def self.handshake_and_read_startup_request
 		STDOUT.sync = true
@@ -33,14 +49,16 @@ module App
 		require 'phusion_passenger/preloader_shared_helpers'
 		require 'phusion_passenger/loader_shared_helpers'
 		require 'phusion_passenger/rack/request_handler'
+		LoaderSharedHelpers.init
 		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
 		NativeSupport.disable_stdio_buffering
 	rescue Exception => e
+		LoaderSharedHelpers.about_to_abort if defined?(LoaderSharedHelpers)
 		puts "Error"
 		puts
-		puts LoaderSharedHelpers.format_exception(e)
-		exit 1
+		puts format_exception(e)
+		exit exit_code_for_exception(e)
 	end
 	
 	def self.preload_app
@@ -59,10 +77,11 @@ module App
 		
 		LoaderSharedHelpers.after_loading_app_code(options)
 	rescue Exception => e
+		LoaderSharedHelpers.about_to_abort
 		puts "Error"
 		puts
-		puts LoaderSharedHelpers.format_exception(e)
-		exit 1
+		puts format_exception(e)
+		exit exit_code_for_exception(e)
 	end
 	
 	def self.negotiate_spawn_command

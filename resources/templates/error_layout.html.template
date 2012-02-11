@@ -32,6 +32,10 @@
 				<dd style="text-align: left"><pre>{{USER_INFO|default=Unknown}}</pre></dd>
 				<dt>Environment variables</dt>
 				<dd style="text-align: left"><pre>{{ENVVARS|default=Unknown}}</pre></dd>
+				<dt>Load path</dt>
+				<dd><pre>{{LOAD_PATH|default=N/A}}</pre></dd>
+				<dt>Loaded libraries</dt>
+				<dd><pre>{{LOADED_LIBS|default=N/A}}</pre></dd>
 				</dl>
 			</div>
 		</div>
