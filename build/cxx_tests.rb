@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -227,7 +227,10 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils.h),
 	'test/cxx/IOUtilsTest.o' => %w(
 		test/cxx/IOUtilsTest.cpp
-		ext/common/Utils/IOUtils.h)
+		ext/common/Utils/IOUtils.h),
+	'test/cxx/TemplateTest.o' => %w(
+		test/cxx/TemplateTest.cpp
+		ext/common/Utils/Template.h)
 }
 
 dependencies = [

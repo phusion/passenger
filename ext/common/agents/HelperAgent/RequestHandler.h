@@ -32,17 +32,17 @@
           Read header
               |
              \|/
-       +------+-----+
-       |            |
-       |            |
-      \|/           |
-     Buffer         |
-     request        |
-     body           |
-       |            |
-       |            |
-      \|/           |
-    Checkout <------+
+       +------+------+
+       |             |
+       |             |
+      \|/            |
+     Buffer          |
+     request         |
+     body            |
+       |             |
+       |             |
+      \|/            |
+    Checkout <-------+
     session
        |
        |
@@ -54,9 +54,6 @@
       \|/
   Send request
    body to app
-   and forward
-   response to
-     client
 
 
 

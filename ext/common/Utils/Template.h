@@ -1,3 +1,6 @@
+#ifndef _PASSENGER_TEMPLATE_H_
+#define _PASSENGER_TEMPLATE_H_
+
 #include <string>
 #include <cstring>
 #include <cstdio>
@@ -10,8 +13,23 @@ namespace Passenger {
 using namespace std;
 
 
+/**
+ * Implements a simple templating language.
+ */
 class Template {
 private:
+	typedef string::size_type size_type;
+
+	struct State {
+		string result;
+		const StringMap<StaticString> &substitutions;
+
+		State(const StaticString &content, const StringMap<StaticString> &_substitutions)
+			: result(content.data(), content.size()),
+			  substitutions(_substitutions)
+			{ }
+	};
+
 	struct Options {
 		bool raw;
 		string defaultValue;
@@ -20,6 +38,8 @@ private:
 			raw = false;
 		}
 	};
+
+	StaticString content;
 
 	static bool isNameCharacter(char ch) {
 		return (ch >= 'a' && ch <= 'z')
@@ -75,70 +95,110 @@ private:
 		return options;
 	}
 
-	static string &replaceAll(string &str, const string &from, const string &to) {
-		string::size_type index = 0;
-		while (true) {
-			index = str.find(from, index);
-			if (index == string::npos) {
-				break;
-			}
-			str.replace(index, from.size(), to);
-			index += to.size();
-		}
-		return str;
-	}
-
 	static string &makeBreakable(string &html) {
-		replaceAll(html, "=", "=<wbr>");
-		replaceAll(html, ",", ",<wbr>");
-		replaceAll(html, ";", ";<wbr>");
-		replaceAll(html, ":", ":<wbr>");
+		string::size_type i = 0;
+		while (i < html.size()) {
+			char ch = html[i];
+			if (ch == '=' || ch == ',' || ch == ';' || ch == ':') {
+				html.insert(i + 1, "<wbr>");
+				i++;
+			} else if (ch == '&') {
+				// HTML escape character; skip to end.
+				do {
+					i++;
+				} while (i < html.size() && html[i] != ';');
+				if (i < html.size()) {
+					i++;
+				}
+			} else {
+				i++;
+			}
+		}
 		return html;
 	}
 
+	size_type processIf(State &state, size_type pos, size_type conditionEndPos, const string &name) {
+		const size_t prefixSize = sizeof("if ") - 1;
+		const size_t endIfSize  = sizeof("{{/if}}") - 1;
+		const string condition = name.substr(prefixSize, name.size() - prefixSize);
+		const string evalResult = state.substitutions.get(condition);
+
+		conditionEndPos += sizeof("}}") - 1;
+		size_type endIfPos = state.result.find("{{/if}}", conditionEndPos);
+
+		if (!evalResult.empty() && evalResult != "false") {
+			const string subContent = state.result.substr(conditionEndPos, endIfPos - conditionEndPos);
+			state.result.replace(pos, endIfPos + endIfSize - pos, subContent);
+			return pos + subContent.size();
+		} else {
+			state.result.erase(pos, endIfPos - pos + sizeof("{{/if}}") - 1);
+			return pos;
+		}
+	}
+
+	size_type processSubsitution(State &state, size_type pos, size_type endPos, string name) {
+		Options options;
+		size_type sep = name.find('|');
+		if (sep != string::npos) {
+			const string optionsString = name.substr(sep + 1);
+			name = name.substr(0, sep);
+			options = parseOptions(optionsString);
+		}
+
+		string value = state.substitutions.get(name);
+		if (value.empty()) {
+			value = options.defaultValue;
+		}
+		if (!options.raw) {
+			value = escapeHTML(value);
+			makeBreakable(value);
+		}
+
+		state.result.replace(pos, endPos - pos + (sizeof("}}") - 1), value);
+		return pos + value.size();
+	}
+
+	size_type processCommand(State &state, size_type pos) {
+		size_type endPos = state.result.find("}}", pos);
+		if (endPos == string::npos) {
+			return state.result.size();
+		}
+		
+		string name = state.result.substr(pos + 2, endPos - pos - 2);
+		if (startsWith(name, "if ")) {
+			return processIf(state, pos, endPos, name);
+		} else {
+			return processSubsitution(state, pos, endPos, name);
+		}
+	}
+
 public:
-	static string apply(const StaticString &templateContent, const StringMap<StaticString> &substitutions) {
-		string result = templateContent;
-		string::size_type searchStart = 0;
-		string::size_type beginPos, endPos;
+	Template(const StaticString &_content)
+		: content(_content)
+		{ }
+	
+	string apply(const StringMap<StaticString> &substitutions) {
+		State state(content, substitutions);
+		size_type searchStart = 0;
 
-		while (searchStart < result.size()) {
-			beginPos = result.find("{{", searchStart);
-			if (beginPos == string::npos) {
-				searchStart = result.size();
+		while (searchStart < state.result.size()) {
+			size_type pos = state.result.find("{{", searchStart);
+			if (pos == string::npos) {
+				searchStart = state.result.size();
 			} else {
-				endPos = result.find("}}", beginPos);
-				if (endPos == string::npos) {
-					searchStart = result.size();
-					continue;
-				}
-				
-				string name = result.substr(beginPos + 2, endPos - beginPos - 2);
-				Options options;
-				string::size_type sep;
-				if ((sep = name.find('|')) != string::npos) {
-					string optionsString = name.substr(sep + 1);
-					name = name.substr(0, sep);
-					options = parseOptions(optionsString);
-				}
-
-				string value = substitutions.get(name);
-				if (value.empty()) {
-					value = options.defaultValue;
-				}
-				if (!options.raw) {
-					value = escapeHTML(value);
-					makeBreakable(value);
-				}
-
-				result.replace(beginPos, endPos - beginPos + 2, value);
-				searchStart = beginPos + value.size();
+				searchStart = processCommand(state, pos);
 			}
 		}
 
-		return result;
+		return state.result;
+	}
+
+	static string apply(const StaticString &content, const StringMap<StaticString> &substitutions) {
+		return Template(content).apply(substitutions);
 	}
 };
 
 
 } // namespace Passenger
+
+#endif /* _PASSENGER_TEMPLATE_H_ */
