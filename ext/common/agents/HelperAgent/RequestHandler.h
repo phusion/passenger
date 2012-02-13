@@ -467,6 +467,9 @@ private:
 		disconnect(client);
 	}
 
+	// GDB helper function, implemented in .cpp file to prevent inlining.
+	Client *getClientPointer(const ClientPtr &client);
+
 	static bool getBoolOption(const ClientPtr &client, const StaticString &name, bool defaultValue = false) {
 		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
 		if (it != client->scgiParser.end()) {
@@ -1058,8 +1061,9 @@ private:
 	/******* State: STILL_READING_CONNECT_PASSWORD *******/
 
 	size_t state_stillReadingConnectPassword_onClientData(const ClientPtr &client, const char *data, size_t size) {
-		size_t consumed = std::min<size_t>(size, options.requestSocketPassword.size() -
-			client->bufferedConnectPassword.alreadyRead);
+		size_t consumed = std::min<size_t>(size,
+			options.requestSocketPassword.size() -
+				client->bufferedConnectPassword.alreadyRead);
 		memcpy(client->bufferedConnectPassword.data + client->bufferedConnectPassword.alreadyRead,
 			data, consumed);
 		client->bufferedConnectPassword.alreadyRead += consumed;

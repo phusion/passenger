@@ -22,13 +22,14 @@ namespace tut {
 	struct RequestHandlerTest {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
+		string serverFilename;
+		FileDescriptor requestSocket;
+		AgentOptions agentOptions;
+
 		BackgroundEventLoop bg;
 		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr pool;
-		string serverFilename;
-		FileDescriptor requestSocket;
 		shared_ptr<RequestHandler> handler;
-		AgentOptions agentOptions;
 		FileDescriptor connection;
 		map<string, string> defaultHeaders;
 
@@ -52,6 +53,7 @@ namespace tut {
 		}
 		
 		~RequestHandlerTest() {
+			setLogLevel(0);
 			unlink(serverFilename.c_str());
 		}
 
@@ -145,6 +147,40 @@ namespace tut {
 	}
 
 	TEST_METHOD(3) {
+		// Test sending request data in pieces.
+		defaultHeaders["PASSENGER_APP_ROOT"] = rackAppPath;
+		defaultHeaders["PATH_INFO"] = "/";
+
+		string request;
+		map<string, string>::const_iterator it, end = defaultHeaders.end();
+		for (it = defaultHeaders.begin(); it != end; it++) {
+			request.append(it->first);
+			request.append(1, '\0');
+			request.append(it->second);
+			request.append(1, '\0');
+		}
+		request = toString(request.size()) + ":" + request;
+		request.append(",");
+
+		init();
+		connect();
+		string::size_type i = 0;
+		while (i < request.size()) {
+			const string piece = const_cast<const string &>(request).substr(i, 5);
+			writeExact(connection, piece);
+			usleep(10000);
+			i += piece.size();
+		}
+
+		string response = readAll(connection);
+		string body = stripHeaders(response);
+		ensure("Status line is correct", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
+		ensure("Headers are correct", containsSubstring(response, "Content-Type: text/html\r\n"));
+		ensure("Contains a Status header", containsSubstring(response, "Status: 200\r\n"));
+		ensure_equals(body, "hello <b>world</b>");
+	}
+
+	TEST_METHOD(4) {
 		// The response doesn't contain an HTTP status line if PASSENGER_PRINT_STATUS_LINE is false.
 		init();
 		connect();
@@ -158,7 +194,7 @@ namespace tut {
 		ensure(containsSubstring(response, "Status: 200\r\n"));
 	}
 
-	TEST_METHOD(4) {
+	TEST_METHOD(5) {
 		// It denies access if the connect password is wrong.
 		agentOptions.requestSocketPassword = "hello world";
 		setLogLevel(-1);
@@ -194,7 +230,7 @@ namespace tut {
 		ensure_equals(response, "");
 	}
 
-	TEST_METHOD(5) {
+	TEST_METHOD(6) {
 		// It disconnects us if the connect password is not sent within a certain time.
 		agentOptions.requestSocketPassword = "hello world";
 		setLogLevel(-1);
@@ -207,6 +243,23 @@ namespace tut {
 		readAll(connection);
 		timer.stop();
 		ensure(timer.elapsed() <= 60);
+	}
+
+	TEST_METHOD(7) {
+		// It works correct if the connect password is sent in pieces.
+		agentOptions.requestSocketPassword = "hello world";
+		init();
+		connect();
+		writeExact(connection, "hello");
+		usleep(10000);
+		writeExact(connection, " world");
+		usleep(10000);
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PATH_INFO", "/",
+			NULL
+		);
+		ensure(containsSubstring(readAll(connection), "hello <b>world</b>"));
 	}
 	
 	TEST_METHOD(10) {

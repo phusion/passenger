@@ -176,6 +176,12 @@ Client::onTimeout(ev::timer &timer, int revents) {
 }
 
 
+Client *
+RequestHandler::getClientPointer(const ClientPtr &client) {
+	return client.get();
+}
+
+
 } // namespace Passenger
 
 #ifdef STANDALONE
