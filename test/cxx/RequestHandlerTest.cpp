@@ -4,6 +4,7 @@
 #include <agents/HelperAgent/AgentOptions.h>
 #include <ApplicationPool2/Pool.h>
 #include <Utils/IOUtils.h>
+#include <Utils/Timer.h>
 
 #include <boost/shared_array.hpp>
 #include <string>
@@ -155,6 +156,57 @@ namespace tut {
 		string response = readAll(connection);
 		ensure(!containsSubstring(response, "HTTP/1.1 "));
 		ensure(containsSubstring(response, "Status: 200\r\n"));
+	}
+
+	TEST_METHOD(4) {
+		// It denies access if the connect password is wrong.
+		agentOptions.requestSocketPassword = "hello world";
+		setLogLevel(-1);
+		init();
+
+		connect();
+		writeExact(connection, "hello world");
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PATH_INFO", "/",
+			NULL
+		);
+		ensure(containsSubstring(readAll(connection), "hello <b>world</b>"));
+
+		connect();
+		try {
+			sendHeaders(defaultHeaders,
+				"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+				"PATH_INFO", "/",
+				NULL
+			);
+		} catch (const SystemException &e) {
+			ensure_equals(e.code(), EPIPE);
+			return;
+		}
+		string response;
+		try {
+			response = readAll(connection);
+		} catch (const SystemException &e) {
+			ensure_equals(e.code(), ECONNRESET);
+			return;
+		}
+		ensure_equals(response, "");
+	}
+
+	TEST_METHOD(5) {
+		// It disconnects us if the connect password is not sent within a certain time.
+		agentOptions.requestSocketPassword = "hello world";
+		setLogLevel(-1);
+		handler = make_shared<RequestHandler>(bg.safe, requestSocket, pool, agentOptions);
+		handler->connectPasswordTimeout = 40;
+		bg.start();
+
+		connect();
+		Timer timer;
+		readAll(connection);
+		timer.stop();
+		ensure(timer.elapsed() <= 60);
 	}
 	
 	TEST_METHOD(10) {

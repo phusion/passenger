@@ -122,6 +122,7 @@ class Client: public enable_shared_from_this<Client> {
 private:
 	struct ev_loop *getLoop() const;
 	const SafeLibevPtr &getSafeLibev() const;
+	unsigned int getConnectPasswordTimeout(const RequestHandler *handler) const;
 
 	static size_t onClientInputData(const EventedBufferedInputPtr &source, const StaticString &data);
 	static void onClientInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode);
@@ -146,6 +147,8 @@ private:
 	static void onAppInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode);
 	
 	void onAppOutputWritable(ev::io &io, int revents);
+
+	void onTimeout(ev::timer &timer, int revents);
 
 
 	void resetPrimitiveFields() {
@@ -223,6 +226,9 @@ public:
 		unsigned int alreadyRead;
 	} bufferedConnectPassword;
 
+	// Used for enforcing the connection timeout.
+	ev::timer timeoutTimer;
+
 	Options options;
 	ScgiRequestParser scgiParser;
 	SessionPtr session;
@@ -265,6 +271,9 @@ public:
 		appInput->userData = this;
 		
 		appOutputWatcher.set<Client, &Client::onAppOutputWritable>(this);
+
+
+		timeoutTimer.set<Client, &Client::onTimeout>(this);
 		
 
 		bufferedConnectPassword.data = NULL;
@@ -295,6 +304,9 @@ public:
 		clientOutputWatcher.set(getLoop());
 
 		appOutputWatcher.set(getLoop());
+
+		timeoutTimer.set(getLoop());
+		timeoutTimer.start(getConnectPasswordTimeout(handler) / 1000.0, 0.0);
 	}
 
 	void disassociate() {
@@ -311,6 +323,7 @@ public:
 		appOutputBuffer.resize(0);
 		appOutputWatcher.stop();
 		
+		timeoutTimer.stop();
 		scgiParser.reset();
 		session.reset();
 		responseHeaderBufferer.reset();
@@ -328,6 +341,8 @@ public:
 
 		appInput->stop();
 		appOutputWatcher.stop();
+
+		timeoutTimer.stop();
 	}
 
 	bool reassociateable() const {
@@ -986,6 +1001,23 @@ private:
 	}
 
 
+	void onTimeout(const ClientPtr &client) {
+		if (!client->connected()) {
+			return;
+		}
+
+		switch (client->state) {
+		case Client::BEGIN_READING_CONNECT_PASSWORD:
+		case Client::STILL_READING_CONNECT_PASSWORD:
+			disconnectWithError(client, "no connect password received within timeout");
+			break;
+		default:
+			disconnectWithError(client, "timeout");
+			break;
+		}
+	}
+
+
 	/*****************************************************
 	 * COMPONENT: client -> application plumbing
 	 *
@@ -1003,6 +1035,7 @@ private:
 			RH_TRACE(client, 2, "Connect password is correct; reading header");
 			client->state = Client::READING_HEADER;
 			client->freeBufferedConnectPassword();
+			client->timeoutTimer.stop();
 		} else {
 			disconnectWithError(client, "wrong connect password");
 		}
@@ -1422,6 +1455,9 @@ private:
 
 
 public:
+	// For unit testing purposes.
+	unsigned int connectPasswordTimeout; // milliseconds
+
 	RequestHandler(const SafeLibevPtr &_libev, const FileDescriptor &_requestSocket,
 		const PoolPtr &_pool, const AgentOptions &_options)
 		: libev(_libev),
@@ -1431,6 +1467,8 @@ public:
 		  resourceLocator(_options.passengerRoot)
 	{
 		accept4Available = true;
+		connectPasswordTimeout = 15000;
+
 		requestSocketWatcher.set(_requestSocket, ev::READ);
 		requestSocketWatcher.set(_libev->getLoop());
 		requestSocketWatcher.set<RequestHandler, &RequestHandler::onAcceptable>(this);

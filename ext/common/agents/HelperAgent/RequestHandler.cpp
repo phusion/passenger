@@ -38,6 +38,11 @@ Client::getSafeLibev() const {
 	return requestHandler->libev;
 }
 
+unsigned int
+Client::getConnectPasswordTimeout(const RequestHandler *handler) const {
+	return handler->connectPasswordTimeout;
+}
+
 size_t
 Client::onClientInputData(const EventedBufferedInputPtr &source, const StaticString &data) {
 	Client *client = (Client *) source->userData;
@@ -161,6 +166,13 @@ void
 Client::onAppOutputWritable(ev::io &io, int revents) {
 	assert(requestHandler != NULL);
 	requestHandler->onAppOutputWritable(shared_from_this());
+}
+
+
+void
+Client::onTimeout(ev::timer &timer, int revents) {
+	assert(requestHandler != NULL);
+	requestHandler->onTimeout(shared_from_this());
 }
 
 
