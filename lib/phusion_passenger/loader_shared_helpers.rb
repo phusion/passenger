@@ -9,13 +9,14 @@ module LoaderSharedHelpers
 
 	# To be called by the (pre)loader as soon as possible.
 	def init
+		# We don't dump PATH info because at this point it's
+		# unlikely to be changed.
 		dump_ruby_environment
 	end
 
 	# To be called whenever the (pre)loader is about to abort with an error.
 	def about_to_abort(exception = nil)
-		dump_ruby_environment
-		dump_envvars
+		dump_all_information
 	end
 
 	def to_boolean(value)
@@ -44,6 +45,11 @@ module LoaderSharedHelpers
 		options["spawn_method"] = "direct" if options["debugger"]
 		
 		return options
+	end
+
+	def dump_all_information
+		dump_ruby_environment
+		dump_envvars
 	end
 
 	def dump_ruby_environment

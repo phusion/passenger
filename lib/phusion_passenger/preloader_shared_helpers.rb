@@ -54,6 +54,10 @@ module PreloaderSharedHelpers
 		server = UNIXServer.new(socket_filename)
 		server.close_on_exec!
 		
+		# Update the dump information just before telling the preloader that we're
+		# ready because the HelperAgent will read and memorize this information.
+		LoaderSharedHelpers.dump_all_information
+
 		puts "Ready"
 		puts "socket: unix:#{socket_filename}"
 		puts
