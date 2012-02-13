@@ -99,4 +99,20 @@ namespace tut {
 			NULL);
 		ensure_equals(result, "hello. good morning. ");
 	}
+
+	TEST_METHOD(10) {
+		// Test nesting substitutions within 'if's.
+		string result = apply("hello. {{if name}}good morning {{name}}.{{/if}}",
+			"name", "joe",
+			NULL);
+		ensure_equals(result, "hello. good morning joe.");
+	}
+
+	TEST_METHOD(11) {
+		// Test auto-breaking on certain characters.
+		string result = apply("{{content}}",
+			"content", "Hello, world: a=b;c=d",
+			NULL);
+		ensure_equals(result, "Hello,<wbr> world:<wbr> a=<wbr>b;<wbr>c=<wbr>d");
+	}
 }

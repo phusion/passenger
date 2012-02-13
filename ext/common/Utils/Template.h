@@ -14,7 +14,7 @@ using namespace std;
 
 
 /**
- * Implements a simple templating language.
+ * Implements a simple HTML templating language.
  */
 class Template {
 private:
@@ -101,7 +101,7 @@ private:
 			char ch = html[i];
 			if (ch == '=' || ch == ',' || ch == ';' || ch == ':') {
 				html.insert(i + 1, "<wbr>");
-				i++;
+				i += sizeof("<wbr>");
 			} else if (ch == '&') {
 				// HTML escape character; skip to end.
 				do {
@@ -125,11 +125,16 @@ private:
 
 		conditionEndPos += sizeof("}}") - 1;
 		size_type endIfPos = state.result.find("{{/if}}", conditionEndPos);
+		if (endIfPos == string::npos) {
+			return state.result.size();
+		}
 
 		if (!evalResult.empty() && evalResult != "false") {
 			const string subContent = state.result.substr(conditionEndPos, endIfPos - conditionEndPos);
-			state.result.replace(pos, endIfPos + endIfSize - pos, subContent);
-			return pos + subContent.size();
+			State subState(subContent, state.substitutions);
+			apply(subState);
+			state.result.replace(pos, endIfPos + endIfSize - pos, subState.result);
+			return pos + subState.result.size();
 		} else {
 			state.result.erase(pos, endIfPos - pos + sizeof("{{/if}}") - 1);
 			return pos;
@@ -172,13 +177,7 @@ private:
 		}
 	}
 
-public:
-	Template(const StaticString &_content)
-		: content(_content)
-		{ }
-	
-	string apply(const StringMap<StaticString> &substitutions) {
-		State state(content, substitutions);
+	void apply(State &state) {
 		size_type searchStart = 0;
 
 		while (searchStart < state.result.size()) {
@@ -189,7 +188,16 @@ public:
 				searchStart = processCommand(state, pos);
 			}
 		}
+	}
 
+public:
+	Template(const StaticString &_content)
+		: content(_content)
+		{ }
+	
+	string apply(const StringMap<StaticString> &substitutions) {
+		State state(content, substitutions);
+		apply(state);
 		return state.result;
 	}
 
