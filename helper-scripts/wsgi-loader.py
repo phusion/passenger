@@ -22,7 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-import sys, os, re, imp, traceback, socket, select, struct
+import sys, os, re, imp, traceback, socket, select, struct, logging
 from socket import _fileobject
 
 options = {}
@@ -99,8 +99,7 @@ class RequestHandler:
 					except KeyboardInterrupt:
 						done = True
 					except Exception, e:
-						traceback.print_tb(sys.exc_info()[2])
-						sys.stderr.write(str(e.__class__) + ": " + str(e) + "\n")
+						logging.exception("WSGI application raised an exception!")
 				finally:
 					try:
 						client.close()
@@ -209,6 +208,9 @@ class RequestHandler:
 
 
 if __name__ == "__main__":
+	logging.basicConfig(
+		level = logging.WARNING,
+		format = "[ pid=" + str(os.getpid()) + ", time=%(asctime)s ]: %(message)s")
 	handshake_and_read_startup_request()
 	app_module = load_app()
 	socket_filename, server_socket = create_server_socket()
