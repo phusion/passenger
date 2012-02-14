@@ -49,7 +49,6 @@ class RequestHandler < AbstractRequestHandler
 	CRLF           = "\r\n"   # :nodoc:
 	NEWLINE        = "\n"     # :nodoc:
 	STATUS         = "Status: "       # :nodoc:
-	X_POWERED_BY   = "X-Powered-By: "   # :nodoc:
 	NAME_VALUE_SEPARATOR = ": "       # :nodoc:
 
 	# +app+ is the Rack application object.
@@ -82,8 +81,7 @@ protected
 					output.write("Connection: close#{CRLF}")
 				end
 				headers_output = [
-					STATUS, status.to_i.to_s, CRLF,
-					X_POWERED_BY, @passenger_header, CRLF
+					STATUS, status.to_i.to_s, CRLF
 				]
 				headers.each do |key, values|
 					if values.is_a?(String)

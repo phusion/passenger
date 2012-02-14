@@ -91,6 +91,7 @@
 #include <Logging.h>
 #include <EventedBufferedInput.h>
 #include <MessageReadersWriters.h>
+#include <Constants.h>
 #include <HttpConstants.h>
 #include <ApplicationPool2/Pool.h>
 #include <Utils/StrIntUtils.h>
@@ -686,6 +687,9 @@ private:
 			prefix.append(status.value);
 			prefix.append("\r\n");
 		}
+
+		// Add X-Powered-By.
+		prefix.append("X-Powered-By: Phusion Passenger " PASSENGER_VERSION "\r\n");
 
 
 		if (prefix.empty() && newHeaderData.empty()) {
