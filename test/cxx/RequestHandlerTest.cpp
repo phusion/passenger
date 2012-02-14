@@ -34,7 +34,7 @@ namespace tut {
 		map<string, string> defaultHeaders;
 
 		string root;
-		string rackAppPath;
+		string rackAppPath, wsgiAppPath;
 		
 		RequestHandlerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
@@ -47,9 +47,11 @@ namespace tut {
 			agentOptions.passengerRoot = resourceLocator->getRoot();
 			root = resourceLocator->getRoot();
 			rackAppPath = root + "/test/stub/rack";
+			wsgiAppPath = root + "/test/stub/wsgi";
 			defaultHeaders["PASSENGER_LOAD_SHELL_ENVVARS"] = "false";
-			defaultHeaders["PASSENGER_APP_TYPE"] = "rack";
+			defaultHeaders["PASSENGER_APP_TYPE"] = "wsgi";
 			defaultHeaders["PASSENGER_SPAWN_METHOD"] = "direct";
+			defaultHeaders["REQUEST_METHOD"] = "GET";
 		}
 		
 		~RequestHandlerTest() {
@@ -117,14 +119,14 @@ namespace tut {
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/",
 			NULL);
 		string response = readAll(connection);
 		string body = stripHeaders(response);
 		ensure("Status line is correct", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("Headers are correct", containsSubstring(response, "Content-Type: text/html\r\n"));
-		ensure("Contains a Status header", containsSubstring(response, "Status: 200\r\n"));
+		ensure("Contains a Status header", containsSubstring(response, "Status: 200 OK\r\n"));
 		ensure_equals(body, "hello <b>world</b>");
 	}
 
@@ -134,21 +136,21 @@ namespace tut {
 		for (int i = 0; i < 10; i++) {
 			connect();
 			sendHeaders(defaultHeaders,
-				"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+				"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 				"PATH_INFO", "/",
 				NULL);
 			string response = readAll(connection);
 			string body = stripHeaders(response);
 			ensure("Status line is correct", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 			ensure("Headers are correct", containsSubstring(response, "Content-Type: text/html\r\n"));
-			ensure("Contains a Status header", containsSubstring(response, "Status: 200\r\n"));
+			ensure("Contains a Status header", containsSubstring(response, "Status: 200 OK\r\n"));
 			ensure_equals(body, "hello <b>world</b>");
 		}
 	}
 
 	TEST_METHOD(3) {
 		// Test sending request data in pieces.
-		defaultHeaders["PASSENGER_APP_ROOT"] = rackAppPath;
+		defaultHeaders["PASSENGER_APP_ROOT"] = wsgiAppPath;
 		defaultHeaders["PATH_INFO"] = "/";
 
 		string request;
@@ -176,25 +178,11 @@ namespace tut {
 		string body = stripHeaders(response);
 		ensure("Status line is correct", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("Headers are correct", containsSubstring(response, "Content-Type: text/html\r\n"));
-		ensure("Contains a Status header", containsSubstring(response, "Status: 200\r\n"));
+		ensure("Contains a Status header", containsSubstring(response, "Status: 200 OK\r\n"));
 		ensure_equals(body, "hello <b>world</b>");
 	}
 
 	TEST_METHOD(4) {
-		// The response doesn't contain an HTTP status line if PASSENGER_PRINT_STATUS_LINE is false.
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
-			"PASSENGER_PRINT_STATUS_LINE", "false",
-			"PATH_INFO", "/",
-			NULL);
-		string response = readAll(connection);
-		ensure(!containsSubstring(response, "HTTP/1.1 "));
-		ensure(containsSubstring(response, "Status: 200\r\n"));
-	}
-
-	TEST_METHOD(5) {
 		// It denies access if the connect password is wrong.
 		agentOptions.requestSocketPassword = "hello world";
 		setLogLevel(-1);
@@ -203,7 +191,7 @@ namespace tut {
 		connect();
 		writeExact(connection, "hello world");
 		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/",
 			NULL
 		);
@@ -212,7 +200,7 @@ namespace tut {
 		connect();
 		try {
 			sendHeaders(defaultHeaders,
-				"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+				"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 				"PATH_INFO", "/",
 				NULL
 			);
@@ -230,7 +218,7 @@ namespace tut {
 		ensure_equals(response, "");
 	}
 
-	TEST_METHOD(6) {
+	TEST_METHOD(5) {
 		// It disconnects us if the connect password is not sent within a certain time.
 		agentOptions.requestSocketPassword = "hello world";
 		setLogLevel(-1);
@@ -245,7 +233,7 @@ namespace tut {
 		ensure(timer.elapsed() <= 60);
 	}
 
-	TEST_METHOD(7) {
+	TEST_METHOD(6) {
 		// It works correct if the connect password is sent in pieces.
 		agentOptions.requestSocketPassword = "hello world";
 		init();
@@ -255,7 +243,7 @@ namespace tut {
 		writeExact(connection, " world");
 		usleep(10000);
 		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/",
 			NULL
 		);
@@ -281,7 +269,7 @@ namespace tut {
 			NULL);
 		string response = readAll(connection);
 		ensure(containsSubstring(response, "HTTP/1.1 500 Internal Server Error\r\n"));
-		ensure(containsSubstring(response, "Status: 500\r\n"));
+		ensure(containsSubstring(response, "Status: 500 Internal Server Error\r\n"));
 		ensure(containsSubstring(response, "I have failed"));
 	}
 
@@ -306,7 +294,7 @@ namespace tut {
 			NULL);
 		string response = readAll(connection);
 		ensure(containsSubstring(response, "HTTP/1.1 500 Internal Server Error\r\n"));
-		ensure(containsSubstring(response, "Status: 500\r\n"));
+		ensure(containsSubstring(response, "Status: 500 Internal Server Error\r\n"));
 		ensure(containsSubstring(response, "Content-Type: text/html; charset=UTF-8\r\n"));
 		ensure(containsSubstring(response, "<html>"));
 		ensure(containsSubstring(response, "I have failed"));
@@ -331,7 +319,7 @@ namespace tut {
 			NULL);
 		string response = readAll(connection);
 		ensure(!containsSubstring(response, "HTTP/1.1 "));
-		ensure(containsSubstring(response, "Status: 500\r\n"));
+		ensure(containsSubstring(response, "Status: 500 Internal Server Error\r\n"));
 		ensure(containsSubstring(response, "I have failed"));
 	}
 
@@ -357,7 +345,7 @@ namespace tut {
 			NULL);
 		string response = readAll(connection);
 		ensure(containsSubstring(response, "HTTP/1.1 500 Internal Server Error\r\n"));
-		ensure(containsSubstring(response, "Status: 500\r\n"));
+		ensure(containsSubstring(response, "Status: 500 Internal Server Error\r\n"));
 		ensure(containsSubstring(response, "Content-Type: text/html; charset=UTF-8\r\n"));
 		ensure(containsSubstring(response, "<html>"));
 		ensure(!containsSubstring(response, "I have failed"));
@@ -371,7 +359,7 @@ namespace tut {
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/upload",
 			"HTTP_X_OUTPUT", (root + "/test/tmp.output").c_str(),
 			NULL);
@@ -394,7 +382,7 @@ namespace tut {
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PASSENGER_BUFFERING", "true",
 			"PATH_INFO", "/upload",
 			"HTTP_X_OUTPUT", (root + "/test/tmp.output").c_str(),
@@ -416,7 +404,7 @@ namespace tut {
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/env",
 			"HTTP_CONTENT_LENGTH", "5",
 			NULL);
@@ -431,12 +419,61 @@ namespace tut {
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/env",
 			"HTTP_CONTENT_TYPE", "application/json",
 			NULL);
 		string response = readAll(connection);
 		ensure(containsSubstring(response, "CONTENT_TYPE = application/json\n"));
 		ensure(!containsSubstring(response, "HTTP_CONTENT_TYPE"));
+	}
+
+	TEST_METHOD(35) {
+		// The response doesn't contain an HTTP status line if PASSENGER_PRINT_STATUS_LINE is false.
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PASSENGER_PRINT_STATUS_LINE", "false",
+			"PATH_INFO", "/",
+			NULL);
+		string response = readAll(connection);
+		ensure(!containsSubstring(response, "HTTP/1.1 "));
+		ensure(containsSubstring(response, "Status: 200 OK\r\n"));
+	}
+
+	TEST_METHOD(36) {
+		// If the application outputs a status line without a reason phrase,
+		// then a reason phrase is automatically appended.
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/custom_status",
+			"HTTP_X_CUSTOM_STATUS", "201",
+			NULL);
+			string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 201 Created\r\n"));
+		ensure(containsSubstring(response, "Status: 201 Created\r\n"));
+	}
+
+	TEST_METHOD(37) {
+		// If the application outputs a status line with a custom reason phrase,
+		// then that reason phrase is used.
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/custom_status",
+			"HTTP_X_CUSTOM_STATUS", "201 Bunnies Jump",
+			NULL);
+			string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 201 Bunnies Jump\r\n"));
+		ensure(containsSubstring(response, "Status: 201 Bunnies Jump\r\n"));
+	}
+	
+	TEST_METHOD(38) {
+		// If the application doesn't output a status line then it rejects the application response.
+		// TODO
 	}
 }

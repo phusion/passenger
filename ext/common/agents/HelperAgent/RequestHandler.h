@@ -406,8 +406,11 @@ public:
 		const char *indent = "    ";
 		stream
 			<< indent << "state = " << getStateName() << "\n"
-			<< indent << "requestBodyIsBuffered = " << requestBodyIsBuffered << "\n"
-			<< indent << "clientInput.started = " << clientInput->isStarted() << "\n";
+			<< indent << "requestBodyIsBuffered    = " << requestBodyIsBuffered << "\n"
+			<< indent << "responseHeaderSeen       = " << responseHeaderSeen << "\n"
+			<< indent << "clientInput started      = " << clientInput->isStarted() << "\n"
+			<< indent << "clientOutputPipe started = " << clientOutputPipe->isStarted() << "\n"
+			;
 	}
 };
 
@@ -522,7 +525,7 @@ private:
 		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
 			str << "HTTP/1.1 500 Internal Server Error\r\n";
 		}
-		str << "Status: 500\r\n";
+		str << "Status: 500 Internal Server Error\r\n";
 		str << "Content-Length: " << data.size() << "\r\n";
 		str << "Content-Type: text/html; charset=UTF-8\r\n";
 		str << "\r\n";
@@ -542,6 +545,40 @@ private:
 	 * clientOutputPipe.
 	 *****************************************************/
 	
+	struct Header {
+		StaticString key;
+		StaticString value;
+
+		Header() { }
+
+		Header(const StaticString &_key, const StaticString &_value)
+			: key(_key),
+			  value(_value)
+			{ }
+		
+		bool empty() const {
+			return key.empty();
+		}
+
+		const char *begin() const {
+			return key.data();
+		}
+
+		const char *end() const {
+			return value.data() + value.size() + sizeof("\r\n") - 1;
+		}
+
+		size_t size() const {
+			return end() - begin();
+		}
+	};
+
+	static char *appendData(char *pos, const char *end, const StaticString &data) {
+		size_t size = std::min<size_t>(end - pos, data.size());
+		memcpy(pos, data.data(), size);
+		return pos + size;
+	}
+
 	/** Given a substring containing the start of the header value,
 	 * extracts the substring that contains a single header value.
 	 *
@@ -568,24 +605,25 @@ private:
 		}
 	}
 
-	static StaticString lookupHeader(const StaticString &headerData, const StaticString &name) {
+	static Header lookupHeader(const StaticString &headerData, const StaticString &name) {
 		string::size_type searchStart = 0;
 		while (searchStart < headerData.size()) {
 			string::size_type pos = headerData.find(name, searchStart);
 			if (OXT_UNLIKELY(pos == string::npos)) {
-				return StaticString();
+				return Header();
 			} else if ((pos == 0 || headerData[pos - 1] == '\n')
 				&& headerData.size() > pos + name.size()
 				&& headerData[pos + name.size()] == ':')
 			{
-				return extractHeaderValue(
+				StaticString value = extractHeaderValue(
 					headerData.data() + pos + name.size() + 1,
 					headerData.size() - pos - name.size() - 1);
+				return Header(headerData.substr(pos, name.size()), value);
 			} else {
 				searchStart = pos + name.size() + 1;
 			}
 		}
-		return StaticString();
+		return Header();
 	}
 
 	/*
@@ -593,48 +631,89 @@ private:
 	 * and send both to the clientOutputPipe.
 	 */
 	void processResponseHeader(const ClientPtr &client, const string &currentPacket,
-		const StaticString &header, const StaticString &rest)
+		const StaticString &headerData, const StaticString &rest)
 	{
 		/* Note: we don't strip out the Status header because some broken HTTP clients depend on it.
 		 * http://groups.google.com/group/phusion-passenger/browse_thread/thread/03e0381684fbae09
 		 */
 		
-		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
-			StaticString value = lookupHeader(header, "Status");
-			int statusCode = stringToInt(value);
+		/* 'newHeader' contains the modified header. If empty, it means
+		 * the header has not been modified, in which case 'headerData' should be used.
+		 * 'prefix' contains data that we want to send before the header
+		 * (before both 'headerData' and 'newHeader'.
+		 */
+		string prefix, newHeaderData;
 
-			string data;
-			data.reserve(30 + header.size() + rest.size());
-			data.append("HTTP/1.1 ");
-
-			const char *statusCodeAndReasonPhrase = getStatusCodeAndReasonPhrase(statusCode);
-			if (OXT_LIKELY(statusCodeAndReasonPhrase != NULL)) {
-				data.append(statusCodeAndReasonPhrase);
-				data.append("\r\n");
-			} else {
-				data.append(toString(statusCode));
-				data.append(" Unknown Reason\r\n");
-			}
-			data.append(header);
-			data.append(rest);
-			writeToClientOutputPipe(client, data);
+		Header status = lookupHeader(headerData, "Status");
+		if (status.empty()) {
+			disconnectWithError(client, "application sent malformed response: it didn't send a Status header.");
 			return;
 		}
 
-		if (header.data() == currentPacket.data()) {
-			/* Header was not modified and it occurs
-			 * in the first packet that the application sent,
-			 * so send the entire packet.
-			 */
-			writeToClientOutputPipe(client, currentPacket);
+		if (status.value.find(' ') == string::npos) {
+			// Status header contains no reason phrase; add it.
+
+			int statusCode = stringToInt(status.value);
+			const char *statusCodeAndReasonPhrase = getStatusCodeAndReasonPhrase(statusCode);
+			char newStatus[100];
+			char *pos = newStatus;
+			const char *end = newStatus + 100;
+
+			pos = appendData(pos, end, "Status: ");
+			if (statusCodeAndReasonPhrase == NULL) {
+				pos = appendData(pos, end, toString(statusCode));
+				pos = appendData(pos, end, " Unknown Reason-Phrase\r\n");
+			} else {
+				pos = appendData(pos, end, statusCodeAndReasonPhrase);
+				pos = appendData(pos, end, "\r\n");
+			}
+
+			newHeaderData = headerData;
+			newHeaderData.replace(status.begin() - headerData.data(), status.size(),
+				newStatus, pos - newStatus);
+			status = Header();
+		}
+
+		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
+			// Prepend HTTP status line.
+
+			if (status.empty()) {
+				assert(!newHeaderData.empty());
+				status = lookupHeader(newHeaderData, "Status");
+			}
+			prefix.reserve(prefix.size() + status.value.size() + sizeof("HTTP/1.1\r\n") - 1);
+			prefix.append("HTTP/1.1 ");
+			prefix.append(status.value);
+			prefix.append("\r\n");
+		}
+
+
+		if (prefix.empty() && newHeaderData.empty()) {
+			// Header has not been modified.
+			if (headerData.data() == currentPacket.data()) {
+				/* The header occurs in the first packet that the
+				 * application sent, so send the entire packet.
+				 */
+				writeToClientOutputPipe(client, currentPacket);
+			} else {
+				/* It didn't occur in the first packet that the application
+				 * sent, so send out the full header and whatever rest data
+				 * that we've already received.
+				 */
+				writeToClientOutputPipe(client, headerData);
+				writeToClientOutputPipe(client, rest);
+			}
 		} else {
-			/* Header was not modified and it didn't
-			 * occur in the first packet that the application sent,
-			 * so send out the full header and whatever rest data
-			 * that we've already received.
-			 */
-			writeToClientOutputPipe(client, header);
-			writeToClientOutputPipe(client, rest);
+			// Header has been modified.
+			if (newHeaderData.empty()) {
+				prefix.reserve(headerData.size() + rest.size());
+				prefix.append(headerData);
+			} else {
+				prefix.reserve(newHeaderData.size() + rest.size());
+				prefix.append(newHeaderData);
+			}
+			prefix.append(rest);
+			writeToClientOutputPipe(client, prefix);
 		}
 	}
 
