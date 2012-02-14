@@ -57,7 +57,9 @@ def load_app():
 	return imp.load_source('passenger_wsgi', 'passenger_wsgi.py')
 
 def create_server_socket():
-	filename = '/tmp/foo'
+	global options
+
+	filename = options['generation_dir'] + '/backends/wsgi.' + str(os.getpid())
 	s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 	try:
 		os.remove(filename)
@@ -170,6 +172,7 @@ class RequestHandler:
 				# Before the first output, send the stored headers.
 				status, response_headers = headers_sent[:] = headers_set
 				output_stream.send('Status: %s\r\n' % status)
+				output_stream.send('X-Powered-By: Phusion Passenger\r\n')
 				for header in response_headers:
 					output_stream.send('%s: %s\r\n' % header)
 				output_stream.send('\r\n')
