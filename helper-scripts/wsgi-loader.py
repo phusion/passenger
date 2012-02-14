@@ -210,7 +210,9 @@ class RequestHandler:
 if __name__ == "__main__":
 	logging.basicConfig(
 		level = logging.WARNING,
-		format = "[ pid=" + str(os.getpid()) + ", time=%(asctime)s ]: %(message)s")
+		format = "[ pid=%(process)d, time=%(asctime)s ]: %(message)s")
+	if hasattr(logging, 'captureWarnings'):
+		logging.captureWarnings(True)
 	handshake_and_read_startup_request()
 	app_module = load_app()
 	socket_filename, server_socket = create_server_socket()
