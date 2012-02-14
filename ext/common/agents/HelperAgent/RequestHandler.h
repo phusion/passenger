@@ -497,12 +497,12 @@ private:
 			string css = readAll(cssFile);
 			StringMap<StaticString> params;
 
-			params.set("TITLE", "Internal server error");
 			params.set("CSS", css);
 			params.set("APP_ROOT", client->options.appRoot);
 			params.set("ENVIRONMENT", client->options.environment);
 			params.set("MESSAGE", message);
 			if (e != NULL) {
+				params.set("TITLE", "Web application could not be started");
 				// Store all SpawnException annotations into 'params',
 				// but convert its name to uppercase.
 				const map<string, string> &annotations = e->getAnnotations();
@@ -514,6 +514,8 @@ private:
 					}
 					params.set(name, it->second);
 				}
+			} else {
+				params.set("TITLE", "Internal server error");
 			}
 			string content = Template::apply(readAll(generalErrorFile), params);
 			params.set("CONTENT", content);
