@@ -691,7 +691,11 @@ private:
 		}
 
 		// Add X-Powered-By.
-		prefix.append("X-Powered-By: Phusion Passenger " PASSENGER_VERSION "\r\n");
+		if (client->options.showVersionInHeader) {
+			prefix.append("X-Powered-By: Phusion Passenger " PASSENGER_VERSION "\r\n");
+		} else {
+			prefix.append("X-Powered-By: Phusion Passenger\r\n");
+		}
 
 
 		if (prefix.empty() && newHeaderData.empty()) {
@@ -1192,6 +1196,34 @@ private:
 		return modified;
 	}
 
+	void fillPoolOptions(const ClientPtr &client) {
+		Options &options = client->options;
+		ScgiRequestParser::const_iterator it, end = client->scgiParser.end();
+
+		options = Options();
+		
+		fillPoolOption(client, options.appRoot, "PASSENGER_APP_ROOT");
+		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
+		fillPoolOption(client, options.environment, "PASSENGER_ENV");
+		fillPoolOption(client, options.ruby, "PASSENGER_RUBY");
+		fillPoolOption(client, options.spawnMethod, "PASSENGER_SPAWN_METHOD");
+		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
+		fillPoolOption(client, options.loadShellEnvvars, "PASSENGER_LOAD_SHELL_ENVVARS");
+		fillPoolOption(client, options.showVersionInHeader, "PASSENGER_SHOW_VERSION_IN_HEADER");
+		
+		for (it = client->scgiParser.begin(); it != end; it++) {
+			if (!startsWith(it->first, "PASSENGER_")
+			 && !startsWith(it->first, "HTTP_")
+			 && it->first != "PATH_INFO"
+			 && it->first != "SCRIPT_NAME"
+			 && it->first != "CONTENT_LENGTH"
+			 && it->first != "CONTENT_TYPE")
+			{
+				options.environmentVariables.push_back(*it);
+			}
+		}
+	}
+
 	size_t state_readingHeader_onClientData(const ClientPtr &client, const char *data, size_t size) {
 		ScgiRequestParser &parser = client->scgiParser;
 		size_t consumed = parser.feed(data, size);
@@ -1212,6 +1244,7 @@ private:
 			 * onClientData exits.
 			 */
 			parser.rebuildData(modified);
+			fillPoolOptions(client);
 
 			if (getBoolOption(client, "PASSENGER_BUFFERING")) {
 				RH_TRACE(client, 3, "Valid SCGI header; buffering request body");
@@ -1287,16 +1320,7 @@ private:
 	}
 
 	void checkoutSession(const ClientPtr &client) {
-		Options &options = client->options;
-
-		fillPoolOption(client, options.appRoot, "PASSENGER_APP_ROOT");
-		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
-		fillPoolOption(client, options.spawnMethod, "PASSENGER_SPAWN_METHOD");
-		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
-		fillPoolOption(client, options.loadShellEnvvars, "PASSENGER_LOAD_SHELL_ENVVARS");
-		// TODO
-
-		RH_TRACE(client, 2, "Checking out session: appRoot=" << options.appRoot);
+		RH_TRACE(client, 2, "Checking out session: appRoot=" << client->options.appRoot);
 		client->state = Client::CHECKING_OUT_SESSION;
 		pool->asyncGet(client->options, boost::bind(&RequestHandler::sessionCheckedOut,
 			this, client, _1, _2));
