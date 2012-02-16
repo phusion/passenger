@@ -333,8 +333,8 @@ public:
 		fd = FileDescriptor();
 
 		clientInput->stop();
-		clientBodyBuffer->stop();
-		clientOutputPipe->stop();
+		clientBodyBuffer->reset();
+		clientOutputPipe->reset();
 		clientOutputWatcher.stop();
 
 		appInput->stop();
@@ -828,13 +828,13 @@ private:
 			if (errno == EAGAIN) {
 				// Wait until the client socket is writable before resuming writing data.
 				client->clientOutputWatcher.start();
+				consumed(0, true);
 			} else if (errno == EPIPE) {
 				// If the client closed the connection then disconnect quietly.
 				disconnect(client);
 			} else {
 				disconnectWithClientSocketWriteError(client, errno);
 			}
-			consumed(0, true);
 		} else {
 			consumed(ret, false);
 		}
@@ -1543,13 +1543,14 @@ private:
 				// when the app socket is writable.
 				client->clientBodyBuffer->stop();
 				client->appOutputWatcher.start();
+				consumed(0, true);
 			} else if (errno == EPIPE) {
 				// Client will be disconnected after response forwarding is done.
 				syscalls::shutdown(client->fd, SHUT_RD);
+				consumed(0, true);
 			} else {
 				disconnectWithAppSocketWriteError(client, errno);
 			}
-			consumed(0, true);
 		} else {
 			consumed(ret, false);
 		}

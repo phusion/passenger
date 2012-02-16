@@ -57,19 +57,21 @@ public:
 	class ConsumeCallback {
 	private:
 		mutable weak_ptr<FileBackedPipe> wself;
+		unsigned int generation;
 
 	public:
 		ConsumeCallback() { }
 
-		ConsumeCallback(const shared_ptr<FileBackedPipe> &self)
-			: wself(self)
+		ConsumeCallback(const shared_ptr<FileBackedPipe> &self, unsigned int _generation)
+			: wself(self),
+			  generation(_generation)
 			{ }
 
 		void operator()(size_t consumed, bool done) const {
 			shared_ptr<FileBackedPipe> self = wself.lock();
 			if (self != NULL) {
 				wself.reset();
-				self->dataConsumed(consumed, done);
+				self->dataConsumed(consumed, done, generation);
 			}
 		}
 
@@ -105,6 +107,7 @@ private:
 	size_t currentDataSize;
 	MultiLibeio libeio;
 	unsigned int consumedCallCount;
+	unsigned int generation;
 
 	bool started;
 	bool ended;
@@ -164,9 +167,10 @@ private:
 		currentDataSize = size;
 
 		if (OXT_LIKELY(onData != NULL)) {
-			onData(shared_from_this(), data, size, ConsumeCallback(shared_from_this()));
+			onData(shared_from_this(), data, size, ConsumeCallback(shared_from_this(),
+				generation));
 		} else {
-			real_dataConsumed(0, true);
+			real_dataConsumed(0, true, generation);
 		}
 
 		if (consumedCallCount == oldConsumedCallCount) {
@@ -239,7 +243,7 @@ private:
 				filename << pointerToIntString(this);
 				libeio.open(filename.str().c_str(), O_CREAT | O_RDWR | O_TRUNC, 0, 0,
 					boost::bind(&FileBackedPipe::openCallback, this,
-						_1, filename.str(),
+						_1, filename.str(), generation,
 						weak_ptr<FileBackedPipe>(shared_from_this())
 					)
 				);
@@ -270,6 +274,7 @@ private:
 				file.writtenSize, 0, boost::bind(
 					&FileBackedPipe::writeBufferToFileCallback, this,
 					_1, file.fd, buffer, file.writeBuffer.size(),
+					generation,
 					weak_ptr<FileBackedPipe>(shared_from_this())
 				)
 			);
@@ -277,10 +282,11 @@ private:
 	}
 
 	void writeBufferToFileCallback(eio_req req, FileDescriptor fd,
-		shared_array<char> buffer, size_t size, weak_ptr<FileBackedPipe> wself)
+		shared_array<char> buffer, size_t size,
+		unsigned int generation, weak_ptr<FileBackedPipe> wself)
 	{
 		shared_ptr<FileBackedPipe> self = wself.lock();
-		if (self == NULL || EIO_CANCELLED(&req)) {
+		if (self == NULL || EIO_CANCELLED(&req) || generation != self->generation) {
 			return;
 		}
 
@@ -299,9 +305,11 @@ private:
 		}
 	}
 
-	void openCallback(eio_req req, string filename, weak_ptr<FileBackedPipe> &wself) {
+	void openCallback(eio_req req, string filename, unsigned int generation,
+		weak_ptr<FileBackedPipe> &wself)
+	{
 		shared_ptr<FileBackedPipe> self = wself.lock();
-		if (self == NULL || EIO_CANCELLED(&req)) {
+		if (self == NULL || EIO_CANCELLED(&req) || generation != self->generation) {
 			if (req.result != -1 || EIO_CANCELLED(&req)) {
 				eio_close(req.result, 0, successCallback, NULL);
 				eio_unlink(filename.c_str(), 0, successCallback, NULL);
@@ -319,7 +327,8 @@ private:
 			} else {
 				getLibev()->runAfter(openTimeout,
 					boost::bind(&FileBackedPipe::finalizeOpenFileAfterTimeout, this,
-						weak_ptr<FileBackedPipe>(shared_from_this()), FileDescriptor(req.result)));
+						weak_ptr<FileBackedPipe>(shared_from_this()),
+						generation, FileDescriptor(req.result)));
 			}
 		}
 	}
@@ -330,9 +339,11 @@ private:
 		writeBufferToFile();
 	}
 
-	void finalizeOpenFileAfterTimeout(weak_ptr<FileBackedPipe> wself, FileDescriptor fd) {
+	void finalizeOpenFileAfterTimeout(weak_ptr<FileBackedPipe> wself,
+		unsigned int generation, FileDescriptor fd)
+	{
 		shared_ptr<FileBackedPipe> self = wself.lock();
-		if (self != NULL) {
+		if (self != NULL || generation != self->generation) {
 			self->finalizeOpenFile(fd);
 		}
 	}
@@ -351,7 +362,7 @@ private:
 			eio_req *req = libeio.read(file.fd, buffer.get(), 1024 * 16, file.readOffset, 0,
 				boost::bind(
 					&FileBackedPipe::readCallback, this,
-					_1, file.fd, buffer, callback,
+					_1, file.fd, buffer, callback, generation,
 					weak_ptr<FileBackedPipe>(shared_from_this())
 				)
 			);
@@ -362,10 +373,10 @@ private:
 	}
 
 	void readCallback(eio_req req, FileDescriptor fd, shared_array<char> buffer,
-		EioReadCallback callback, weak_ptr<FileBackedPipe> wself)
+		EioReadCallback callback, unsigned int generation, weak_ptr<FileBackedPipe> wself)
 	{
 		shared_ptr<FileBackedPipe> self = wself.lock();
-		if (self == NULL || EIO_CANCELLED(&req)) {
+		if (self == NULL || EIO_CANCELLED(&req) || generation != self->generation) {
 			return;
 		}
 
@@ -376,17 +387,25 @@ private:
 		}
 	}
 
-	void dataConsumed(size_t consumed, bool done) {
+	void dataConsumed(size_t consumed, bool done, unsigned int oldGeneration) {
+		if (OXT_UNLIKELY(oldGeneration != generation)) {
+			throw RuntimeException("Don't call the consumed callback after you've reset the FileBackedPipe!");
+		}
+		
 		if (pthread_equal(pthread_self(), getLibev()->getCurrentThread())) {
-			real_dataConsumed(consumed, done);
+			real_dataConsumed(consumed, done, oldGeneration);
 		} else {
 			getLibev()->runAsync(boost::bind(
 				&FileBackedPipe::real_dataConsumed, this,
-				consumed, done));
+				consumed, done, oldGeneration));
 		}
 	}
 
-	void real_dataConsumed(size_t consumed, bool done) {
+	void real_dataConsumed(size_t consumed, bool done, unsigned int oldGeneration) {
+		if (OXT_UNLIKELY(oldGeneration != generation)) {
+			throw RuntimeException("Don't call the consumed callback after you've reset the FileBackedPipe!");
+		}
+
 		const char *data = currentData;
 		size_t size = currentDataSize;
 		currentData = NULL;
@@ -404,11 +423,12 @@ private:
 			assert(data != NULL);
 			if (started) {
 				if (consumed < size) {
+					unsigned int oldGeneration = generation;
 					bool immediatelyConsumed = callOnData(
 						data + consumed,
 						size - consumed,
 						true);
-					if (!immediatelyConsumed) {
+					if (generation == oldGeneration && !immediatelyConsumed) {
 						addToBuffer(data + consumed, size - consumed);
 					}
 				} else {
@@ -505,6 +525,7 @@ public:
 		onCommit = NULL;
 
 		consumedCallCount = 0;
+		generation = 0;
 		currentData = NULL;
 		currentDataSize = 0;
 		started = false;
@@ -525,14 +546,12 @@ public:
 	}
 	
 	bool resetable() const {
-		return dataState == IN_MEMORY;
+		//return dataState == IN_MEMORY;
+		return true;
 	}
 
 	void reset(const SafeLibevPtr &libev = SafeLibevPtr()) {
-		if (OXT_UNLIKELY(dataEventState == CALLING_EVENT_NOW)) {
-			throw RuntimeException("This function may not be called within a FileBackedPipe event handler.");
-		}
-		assert(resetable());
+		generation++;
 		libeio = MultiLibeio(libev);
 		currentData = NULL;
 		currentDataSize = 0;
@@ -604,11 +623,16 @@ public:
 			assert(dataEventState == NOT_CALLING_EVENT);
 			assert(getBufferSize() == 0);
 
+			unsigned int oldGeneration = generation;
 			bool immediatelyConsumed = callOnData(data, size, true);
-			assert(dataEventState != CALLING_EVENT_NOW);
-			if (!immediatelyConsumed) {
-				addToBuffer(data, size);
-				return dataState == IN_MEMORY;
+			if (generation == oldGeneration) {
+				assert(dataEventState != CALLING_EVENT_NOW);
+				if (!immediatelyConsumed) {
+					addToBuffer(data, size);
+					return dataState == IN_MEMORY;
+				} else {
+					return true;
+				}
 			} else {
 				return true;
 			}

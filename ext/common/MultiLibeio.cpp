@@ -93,7 +93,7 @@ wantPoll() {
 static int
 dispatch(eio_req *req) {
 	auto_ptr<Data> data((Data *) req->data);
-	data->libev->runAsync(boost::bind(data->callback, *req));
+	data->libev->runLaterTS(boost::bind(data->callback, *req));
 	return 0;
 }
 

@@ -249,6 +249,27 @@ namespace tut {
 		);
 		ensure(containsSubstring(readAll(connection), "hello <b>world</b>"));
 	}
+
+	TEST_METHOD(7) {
+		// It closes the connection with the application if the client has closed the connection.
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/stream",
+			NULL
+		);
+		BufferedIO io(connection);
+		ensure_equals(io.readLine(), "HTTP/1.1 200 OK\r\n");
+		ensure_equals(pool->getProcessCount(), 1u);
+		SuperGroupPtr superGroup = pool->superGroups.get(wsgiAppPath);
+		ProcessPtr process = superGroup->defaultGroup->processes.front();
+		ensure_equals(process->sessions, 1);
+		connection.close();
+		EVENTUALLY(5,
+			result = process->sessions == 0;
+		);
+	}
 	
 	TEST_METHOD(10) {
 		// If the app crashes at startup without an error page then it renders

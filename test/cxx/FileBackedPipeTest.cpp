@@ -18,6 +18,7 @@ namespace tut {
 		bool consumeImmediately;
 		size_t toConsume;
 		bool doneAfterConsuming;
+		bool resetOnData;
 		pthread_t consumeCallbackThread;
 		AtomicInt consumeCallbackCount;
 		string receivedData;
@@ -31,6 +32,7 @@ namespace tut {
 			consumeImmediately = true;
 			toConsume = 9999;
 			doneAfterConsuming = false;
+			resetOnData = false;
 			consumeCallbackCount = 0;
 			ended = false;
 			pipe = make_shared<FileBackedPipe>("tmp.pipe");
@@ -136,6 +138,9 @@ namespace tut {
 			}
 			self->receivedData.append(data, size);
 			self->consumeCallbackCount++;
+			if (self->resetOnData) {
+				source->reset();
+			}
 			if (self->consumeImmediately) {
 				consumed(std::min(self->toConsume, size), self->doneAfterConsuming);
 			} else {
@@ -322,7 +327,6 @@ namespace tut {
 			result = getDataState() == FileBackedPipe::IN_FILE && consumeCallbackCount == 1;
 		);
 		ensure_equals("(2)", getBufferSize(), 10u);
-		ensure("not committing to disk", !isCommittingToDisk());
 		ensure_equals("(3)", receivedData, "hello");
 
 		callConsumedCallback(4, false);
@@ -553,5 +557,43 @@ namespace tut {
 			result = commitCount == 1;
 		);
 		ensure("not committing to disk", !isCommittingToDisk());
+	}
+
+	TEST_METHOD(25) {
+		// It may be reset inside the onData callback.
+		resetOnData = true;
+		consumeImmediately = false;
+		init();
+		startPipe();
+		write("hello");
+		ensure(!isStarted());
+		ensure_equals(getBufferSize(), 0u);
+	}
+
+	TEST_METHOD(26) {
+		// It may be reset inside the onData callback while there is data buffered in memory.
+		consumeImmediately = false;
+		init();
+		startPipe();
+		write("hello");
+		ensure_equals("(1)", getBufferSize(), 5u);
+		resetOnData = true;
+		callConsumedCallback(1, false);
+		ensure("(2)", !isStarted());
+		ensure_equals("(3)", getBufferSize(), 0u);
+	}
+
+	TEST_METHOD(27) {
+		// It may be reset inside the onData callback while there is data buffered on disk.
+		pipe->setThreshold(3);
+		consumeImmediately = false;
+		init();
+		startPipe();
+		write("hello");
+		ensure_equals("(1)", getBufferSize(), 5u);
+		resetOnData = true;
+		callConsumedCallback(1, false);
+		ensure("(2)", !isStarted());
+		ensure_equals("(3)", getBufferSize(), 0u);
 	}
 }

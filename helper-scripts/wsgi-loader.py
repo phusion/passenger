@@ -22,7 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-import sys, os, re, imp, traceback, socket, select, struct, logging
+import sys, os, re, imp, traceback, socket, select, struct, logging, errno
 from socket import _fileobject
 
 options = {}
@@ -166,16 +166,20 @@ class RequestHandler:
 		headers_sent = []
 		
 		def write(data):
-			if not headers_set:
-				raise AssertionError("write() before start_response()")
-			elif not headers_sent:
-				# Before the first output, send the stored headers.
-				status, response_headers = headers_sent[:] = headers_set
-				output_stream.send('Status: %s\r\n' % status)
-				for header in response_headers:
-					output_stream.send('%s: %s\r\n' % header)
-				output_stream.send('\r\n')
-			output_stream.send(data)
+			try:
+				if not headers_set:
+					raise AssertionError("write() before start_response()")
+				elif not headers_sent:
+					# Before the first output, send the stored headers.
+					status, response_headers = headers_sent[:] = headers_set
+					output_stream.send('Status: %s\r\n' % status)
+					for header in response_headers:
+						output_stream.send('%s: %s\r\n' % header)
+					output_stream.send('\r\n')
+				output_stream.send(data)
+			except IOError, e:
+				if e.errno != errno.EPIPE:
+					raise e
 		
 		def start_response(status, response_headers, exc_info = None):
 			if exc_info:
