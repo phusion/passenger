@@ -322,7 +322,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(12) {
-		// Error pages respect the PASSENGER_PRINT_STATUS_LINE option.
+		// Error pages respect the PASSENGER_STATUS_LINE option.
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'I have failed'");
@@ -335,7 +335,7 @@ namespace tut {
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
 			"PASSENGER_START_COMMAND", ("ruby\1" + root + "/test/tmp.handler/start.rb").c_str(),
-			"PASSENGER_PRINT_STATUS_LINE", "false",
+			"PASSENGER_STATUS_LINE", "false",
 			"PATH_INFO", "/",
 			NULL);
 		string response = readAll(connection);
@@ -450,12 +450,12 @@ namespace tut {
 	}
 
 	TEST_METHOD(35) {
-		// The response doesn't contain an HTTP status line if PASSENGER_PRINT_STATUS_LINE is false.
+		// The response doesn't contain an HTTP status line if PASSENGER_STATUS_LINE is false.
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PASSENGER_PRINT_STATUS_LINE", "false",
+			"PASSENGER_STATUS_LINE", "false",
 			"PATH_INFO", "/",
 			NULL);
 		string response = readAll(connection);

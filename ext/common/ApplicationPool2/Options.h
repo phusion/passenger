@@ -239,24 +239,8 @@ public:
 	/**
 	 * Environment variables which should be passed to the spawned application
 	 * process.
-	 *
-	 * If a new application process is started, then the getItems() method
-	 * on this object will be called, which is to return environment
-	 * variables that should be passed to the newly spawned backend process.
-	 * Odd indices in the resulting array contain keys, even indices contain
-	 * the value for the key in the previous index.
-	 *
-	 * May be set to NULL.
-	 *
-	 * @invariant environmentVariables.size() is an even number.
 	 */
 	vector< pair<StaticString, StaticString> > environmentVariables;
-	
-	/**
-	 * Whether to show the Phusion Passenger version number in the
-	 * X-Powered-By header.
-	 */
-	bool showVersionInHeader;
 	
 	/** Whether debugger support should be enabled. */
 	bool debugger;
@@ -266,7 +250,11 @@ public:
 	 */
 	bool loadShellEnvvars;
 	
-	/** Whether analytics logging should be enabled. */
+	/** Whether Union Station logging should be enabled. This option only affects
+	 * whether the application enables Union Station support; whether a request
+	 * actually results in data being logged to Union Station depends on whether
+	 * the 'log' member is set.
+	 */
 	bool analytics;
 	
 	/**
@@ -347,7 +335,6 @@ public:
 		defaultUser             = "nobody";
 		ruby                    = "ruby";
 		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
-		showVersionInHeader     = true;
 		debugger                = false;
 		loadShellEnvvars        = true;
 		analytics               = false;
@@ -480,7 +467,6 @@ public:
 		appendKeyValue (vec, "postexec_chroot",    postexecChroot);
 		appendKeyValue (vec, "ruby",               ruby);
 		appendKeyValue3(vec, "rights",             rights);
-		appendKeyValue4(vec, "show_version_in_header", showVersionInHeader);
 		appendKeyValue4(vec, "debugger",           debugger);
 		appendKeyValue4(vec, "analytics",          analytics);
 		appendKeyValue4(vec, "print_exceptions",   printExceptions);

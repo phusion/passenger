@@ -485,6 +485,13 @@ protected:
 			return address;
 		}
 	}
+
+	static void checkChrootDirectories(const Options &options) {
+		if (!options.preexecChroot.empty()) {
+			// TODO: check whether appRoot is a child directory of preexecChroot
+			// and whether postexecChroot is a child directory of appRoot.
+		}
+	}
 	
 	static void createCommandArgs(const vector<string> &command,
 		shared_array<const char *> &args)
@@ -1027,13 +1034,14 @@ private:
 			e.addAnnotations(debugDir->readAll());
 		}
 	}
-	
+
 	bool preloaderStarted() const {
 		return pid != -1;
 	}
 	
 	void startPreloader() {
 		assert(!preloaderStarted());
+		checkChrootDirectories(options);
 		
 		shared_array<const char *> args;
 		vector<string> command = createRealPreloaderCommand(options, args);
@@ -1055,6 +1063,7 @@ private:
 			dup2(adminSocketCopy, 1);
 			dup2(errorPipeCopy, 2);
 			closeAllFileDescriptors(2);
+			// TODO: shouldn't we set the working directory after switching user?
 			setWorkingDirectory(options);
 			setChroot(options);
 			switchUser(userSwitchingInfo);
@@ -1754,6 +1763,7 @@ public:
 			dup2(adminSocketCopy, 1);
 			dup2(errorPipeCopy, 2);
 			closeAllFileDescriptors(2);
+			// TODO: shouldn't we set the working directory after switching user?
 			setWorkingDirectory(options);
 			setChroot(options);
 			switchUser(userSwitchingInfo);

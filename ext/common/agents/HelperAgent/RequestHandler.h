@@ -158,6 +158,7 @@ private:
 		sessionCheckedOut = false;
 		sessionCheckoutTry = 0;
 		responseHeaderSeen = false;
+		appRoot.clear();
 	}
 
 public:
@@ -230,6 +231,7 @@ public:
 	Options options;
 	ScgiRequestParser scgiParser;
 	SessionPtr session;
+	string appRoot;
 	unsigned int sessionCheckoutTry;
 	bool requestBodyIsBuffered;
 	bool sessionCheckedOut;
@@ -525,7 +527,7 @@ private:
 		}
 
 		stringstream str;
-		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
+		if (getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
 			str << "HTTP/1.1 500 Internal Server Error\r\n";
 		}
 		str << "Status: 500 Internal Server Error\r\n";
@@ -677,7 +679,7 @@ private:
 			status = Header();
 		}
 
-		if (getBoolOption(client, "PASSENGER_PRINT_STATUS_LINE", true)) {
+		if (getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
 			// Prepend HTTP status line.
 
 			if (status.empty()) {
@@ -691,7 +693,7 @@ private:
 		}
 
 		// Add X-Powered-By.
-		if (client->options.showVersionInHeader) {
+		if (getBoolOption(client, "PASSENGER_SHOW_VERSION_IN_HEADER", true)) {
 			prefix.append("X-Powered-By: Phusion Passenger " PASSENGER_VERSION "\r\n");
 		} else {
 			prefix.append("X-Powered-By: Phusion Passenger\r\n");
@@ -716,10 +718,10 @@ private:
 		} else {
 			// Header has been modified.
 			if (newHeaderData.empty()) {
-				prefix.reserve(headerData.size() + rest.size());
+				prefix.reserve(prefix.size() + headerData.size() + rest.size());
 				prefix.append(headerData);
 			} else {
-				prefix.reserve(newHeaderData.size() + rest.size());
+				prefix.reserve(prefix.size() + newHeaderData.size() + rest.size());
 				prefix.append(newHeaderData);
 			}
 			prefix.append(rest);
@@ -1196,20 +1198,80 @@ private:
 		return modified;
 	}
 
+	static void fillPoolOption(const ClientPtr &client, StaticString &field, const StaticString &name) {
+		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
+		if (it != client->scgiParser.end()) {
+			field = it->second;
+		}
+	}
+
+	static void fillPoolOption(const ClientPtr &client, bool &field, const StaticString &name) {
+		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
+		if (it != client->scgiParser.end()) {
+			field = it->second == "true";
+		}
+	}
+
+	static void fillPoolOption(const ClientPtr &client, unsigned long &field, const StaticString &name) {
+		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
+		if (it != client->scgiParser.end()) {
+			field = stringToUint(it->second);
+		}
+	}
+
+	static void fillPoolOption(const ClientPtr &client, long &field, const StaticString &name) {
+		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
+		if (it != client->scgiParser.end()) {
+			field = stringToInt(it->second);
+		}
+	}
+
 	void fillPoolOptions(const ClientPtr &client) {
 		Options &options = client->options;
+		ScgiRequestParser &parser = client->scgiParser;
 		ScgiRequestParser::const_iterator it, end = client->scgiParser.end();
 
 		options = Options();
+
+		StaticString scriptName = parser.getHeader("SCRIPT_NAME");
+		StaticString appRoot = parser.getHeader("PASSENGER_APP_ROOT");
+		if (scriptName.empty()) {
+			if (appRoot.empty()) {
+				StaticString documentRoot = parser.getHeader("DOCUMENT_ROOT");
+				if (documentRoot.empty()) {
+					disconnectWithError(client, "no PASSENGER_APP_ROOT or DOCUMENT_ROOT headers set.");
+					return;
+				}
+				client->appRoot = extractDirName(documentRoot);
+				options.appRoot = client->appRoot;
+			} else {
+				options.appRoot = appRoot;
+			}
+		} else {
+			if (appRoot.empty()) {
+				client->appRoot = extractDirName(resolveSymlink(parser.getHeader("DOCUMENT_ROOT")));
+				options.appRoot = client->appRoot;
+			} else {
+				options.appRoot = appRoot;
+			}
+			options.baseURI = scriptName;
+		}
 		
-		fillPoolOption(client, options.appRoot, "PASSENGER_APP_ROOT");
+		fillPoolOption(client, options.appGroupName, "PASSENGER_APP_GROUP_NAME");
 		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
 		fillPoolOption(client, options.environment, "PASSENGER_ENV");
 		fillPoolOption(client, options.ruby, "PASSENGER_RUBY");
+		fillPoolOption(client, options.user, "PASSENGER_USER");
+		fillPoolOption(client, options.group, "PASSENGER_GROUP");
+		fillPoolOption(client, options.minProcesses, "PASSENGER_MIN_INSTANCES");
+		fillPoolOption(client, options.maxRequests, "PASSENGER_MAX_REQUESTS");
 		fillPoolOption(client, options.spawnMethod, "PASSENGER_SPAWN_METHOD");
 		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
+		fillPoolOption(client, options.spawnerTimeout, "PASSENGER_SPAWNER_IDLE_TIME");
+		fillPoolOption(client, options.statThrottleRate, "PASSENGER_STAT_THROTTLE_RATE");
+		fillPoolOption(client, options.restartDir, "PASSENGER_RESTART_DIR");
 		fillPoolOption(client, options.loadShellEnvvars, "PASSENGER_LOAD_SHELL_ENVVARS");
-		fillPoolOption(client, options.showVersionInHeader, "PASSENGER_SHOW_VERSION_IN_HEADER");
+		fillPoolOption(client, options.debugger, "PASSENGER_DEBUGGER");
 		
 		for (it = client->scgiParser.begin(); it != end; it++) {
 			if (!startsWith(it->first, "PASSENGER_")
@@ -1221,6 +1283,24 @@ private:
 			{
 				options.environmentVariables.push_back(*it);
 			}
+		}
+	}
+
+	void initializeUnionStation() {
+		if (getBoolOption(client, "UNION_STATION_SUPPORT", false)) {
+			Options &options = client->options;
+			ScgiRequestParser &parser = client->scgiParser;
+
+			StaticString key = parser.get("PASSENGER_UNION_STATION_KEY");
+			StaticString filters = parser.get("UNION_STATION_FILTERS");
+			if (key.empty()) {
+				disconnectWithError(client, "header PASSENGER_UNION_STATION_KEY must be set.");
+				return;
+			}
+
+			client->options.analytics = true;
+			//client->options.log = analyticsLogger->newTransaction(options.getAppGroupName(),
+			//	"requests", key, filters);
 		}
 	}
 
@@ -1245,6 +1325,13 @@ private:
 			 */
 			parser.rebuildData(modified);
 			fillPoolOptions(client);
+			if (!client->connected()) {
+				return consumed;
+			}
+			initializeUnionStation();
+			if (!client->connected()) {
+				return consumed;
+			}
 
 			if (getBoolOption(client, "PASSENGER_BUFFERING")) {
 				RH_TRACE(client, 3, "Valid SCGI header; buffering request body");
@@ -1303,20 +1390,6 @@ private:
 	void state_checkingOutSession_verifyInvariants(const ClientPtr &client) {
 		assert(!client->clientInput->isStarted());
 		assert(!client->clientBodyBuffer->isStarted());
-	}
-
-	static void fillPoolOption(const ClientPtr &client, StaticString &field, const StaticString &name) {
-		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
-		if (it != client->scgiParser.end()) {
-			field = it->second;
-		}
-	}
-
-	static void fillPoolOption(const ClientPtr &client, bool &field, const StaticString &name) {
-		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
-		if (it != client->scgiParser.end()) {
-			field = it->second == "true";
-		}
 	}
 
 	void checkoutSession(const ClientPtr &client) {
