@@ -32,6 +32,8 @@
 				<dd style="text-align: left"><pre>{{USER_INFO|default=Unknown}}</pre></dd>
 				<dt>Environment variables</dt>
 				<dd style="text-align: left"><pre>{{ENVVARS|default=Unknown}}</pre></dd>
+				<dt>Ulimits</dt>
+				<dd style="text-align: left"><pre>{{ULIMIT|default=Unknown}}</pre></dd>
 				{{if LOAD_PATH}}
 					<dt style="text-align: left">Load path</dt>
 					<dd><pre>{{LOAD_PATH}}</pre></dd>

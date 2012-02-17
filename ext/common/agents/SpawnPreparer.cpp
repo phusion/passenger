@@ -82,6 +82,23 @@ dumpInformation() {
 			}
 			fclose(f);
 		}
+
+		f = fopen((string(dir) + "/ulimit").c_str(), "w");
+		if (f != NULL) {
+			pid_t pid = fork();
+			if (pid == 0) {
+				dup2(fileno(f), 1);
+				execlp("ulimit", "ulimit", "-a", (char *) 0);
+				_exit(1);
+			} else if (pid == -1) {
+				int e = errno;
+				fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
+					strerror(e), e);
+			} else {
+				waitpid(pid, 0, NULL);
+			}
+			fclose(f);
+		}
 	}
 }
 
