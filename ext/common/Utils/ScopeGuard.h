@@ -34,6 +34,12 @@ namespace Passenger {
 using namespace boost;
 
 
+#ifndef _PASSENGER_SAFELY_CLOSE_DEFINED_
+	#define _PASSENGER_SAFELY_CLOSE_DEFINED_
+	void safelyClose(int fd, bool ignoreErrors = false);
+#endif
+
+
 /**
  * Guard object for making sure that a certain function is going to be
  * called when the object goes out of scope. To avoid the function from
@@ -84,6 +90,26 @@ public:
 		if (f != NULL) {
 			fclose(f);
 		}
+	}
+};
+
+class FdGuard: public noncopyable {
+private:
+	int fd;
+
+public:
+	FdGuard(int _fd)
+		: fd(_fd)
+		{ }
+	
+	~FdGuard() {
+		if (fd != -1) {
+			safelyClose(fd);
+		}
+	}
+
+	void clear() {
+		fd = -1;
 	}
 };
 

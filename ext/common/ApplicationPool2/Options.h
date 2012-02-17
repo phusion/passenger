@@ -30,7 +30,7 @@
 #include <utility>
 #include <boost/shared_array.hpp>
 #include <Account.h>
-#include <Logging.h>
+#include <UnionStation.h>
 #include <Constants.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
@@ -298,10 +298,10 @@ public:
 	StaticString uri;
 	
 	/**
-	 * An analytics log object to log things to. May be the null pointer,
-	 * in which case analytics logging is disabled for this request.
+	 * A Union Station logger object to log things to. May be the null pointer,
+	 * in which case Union Station logging is disabled for this request.
 	 */
-	AnalyticsLogPtr log;
+	UnionStation::LoggerPtr logger;
 	
 	/** When true, Pool::get() and Pool::asyncGet() will create the necessary
 	 * SuperGroup and Group structures just as normally, and will even handle
@@ -433,7 +433,7 @@ public:
 	Options &clearPerRequestFields() {
 		hostName = string();
 		uri      = string();
-		log.reset();
+		logger.reset();
 		noop     = false;
 		return *this;
 	}

@@ -93,6 +93,7 @@
 #include <MessageReadersWriters.h>
 #include <Constants.h>
 #include <HttpConstants.h>
+#include <UnionStation.h>
 #include <ApplicationPool2/Pool.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
@@ -423,12 +424,16 @@ typedef shared_ptr<Client> ClientPtr;
 class RequestHandler {
 private:
 	friend class Client;
+	typedef UnionStation::LoggerFactory LoggerFactory;
+	typedef UnionStation::LoggerFactoryPtr LoggerFactoryPtr;
+	typedef UnionStation::LoggerPtr LoggerPtr;
 
 	const SafeLibevPtr libev;
 	FileDescriptor requestSocket;
 	PoolPtr pool;
 	const AgentOptions &options;
 	const ResourceLocator resourceLocator;
+	LoggerFactoryPtr loggerFactory;
 	ev::io requestSocketWatcher;
 	HashMap<int, ClientPtr> clients;
 	bool accept4Available;
@@ -577,12 +582,6 @@ private:
 			return end() - begin();
 		}
 	};
-
-	static char *appendData(char *pos, const char *end, const StaticString &data) {
-		size_t size = std::min<size_t>(end - pos, data.size());
-		memcpy(pos, data.data(), size);
-		return pos + size;
-	}
 
 	/** Given a substring containing the start of the header value,
 	 * extracts the substring that contains a single header value.
@@ -1286,21 +1285,21 @@ private:
 		}
 	}
 
-	void initializeUnionStation() {
+	void initializeUnionStation(const ClientPtr &client) {
 		if (getBoolOption(client, "UNION_STATION_SUPPORT", false)) {
 			Options &options = client->options;
 			ScgiRequestParser &parser = client->scgiParser;
 
-			StaticString key = parser.get("PASSENGER_UNION_STATION_KEY");
-			StaticString filters = parser.get("UNION_STATION_FILTERS");
+			StaticString key = parser.getHeader("PASSENGER_UNION_STATION_KEY");
+			StaticString filters = parser.getHeader("UNION_STATION_FILTERS");
 			if (key.empty()) {
 				disconnectWithError(client, "header PASSENGER_UNION_STATION_KEY must be set.");
 				return;
 			}
 
 			client->options.analytics = true;
-			//client->options.log = analyticsLogger->newTransaction(options.getAppGroupName(),
-			//	"requests", key, filters);
+			client->options.logger = loggerFactory->newTransaction(
+				options.getAppGroupName(), "requests", key, filters);
 		}
 	}
 
@@ -1328,7 +1327,7 @@ private:
 			if (!client->connected()) {
 				return consumed;
 			}
-			initializeUnionStation();
+			initializeUnionStation(client);
 			if (!client->connected()) {
 				return consumed;
 			}
@@ -1642,8 +1641,10 @@ public:
 	// For unit testing purposes.
 	unsigned int connectPasswordTimeout; // milliseconds
 
-	RequestHandler(const SafeLibevPtr &_libev, const FileDescriptor &_requestSocket,
-		const PoolPtr &_pool, const AgentOptions &_options)
+	RequestHandler(const SafeLibevPtr &_libev,
+		const FileDescriptor &_requestSocket,
+		const PoolPtr &_pool,
+		const AgentOptions &_options)
 		: libev(_libev),
 		  requestSocket(_requestSocket),
 		  pool(_pool),
@@ -1652,6 +1653,9 @@ public:
 	{
 		accept4Available = true;
 		connectPasswordTimeout = 15000;
+
+		loggerFactory = make_shared<LoggerFactory>(_options.loggingAgentAddress,
+			"logging", _options.loggingAgentPassword);
 
 		requestSocketWatcher.set(_requestSocket, ev::READ);
 		requestSocketWatcher.set(_libev->getLoop());
