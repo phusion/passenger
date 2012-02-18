@@ -175,11 +175,11 @@ class RequestHandler:
 				elif not headers_sent:
 					# Before the first output, send the stored headers.
 					status, response_headers = headers_sent[:] = headers_set
-					output_stream.send('Status: %s\r\n' % status)
+					output_stream.sendall('Status: %s\r\n' % status)
 					for header in response_headers:
-						output_stream.send('%s: %s\r\n' % header)
-					output_stream.send('\r\n')
-				output_stream.send(data)
+						output_stream.sendall('%s: %s\r\n' % header)
+					output_stream.sendall('\r\n')
+				output_stream.sendall(data)
 			except IOError, e:
 				# Mark this exception as coming from the Phusion Passenger
 				# socket and not some other socket.
@@ -215,7 +215,7 @@ class RequestHandler:
 				result.close()
 	
 	def process_ping(self, env, input_stream, output_stream):
-		output_stream.send("pong")
+		output_stream.sendall("pong")
 
 
 if __name__ == "__main__":
