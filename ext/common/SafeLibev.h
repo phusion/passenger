@@ -29,6 +29,7 @@
 #include <vector>
 #include <list>
 #include <memory>
+#include <climits>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
@@ -48,7 +49,7 @@ private:
 	typedef function<void ()> Callback;
 
 	struct Command {
-		unsigned int id;
+		int id;
 		Callback callback;
 
 		Command(unsigned int _id, const Callback &_callback)
@@ -133,6 +134,14 @@ private:
 		*done = true;
 		cond.notify_all();
 	}
+
+	void incNextCommandId() {
+		if (nextCommandId == INT_MAX) {
+			nextCommandId = 0;
+		} else {
+			nextCommandId++;
+		}
+	}
 	
 public:
 	/** SafeLibev takes over ownership of the loop object. */
@@ -187,7 +196,7 @@ public:
 			commands.push_back(Command(nextCommandId,
 				boost::bind(&SafeLibev::startWatcherAndNotify<Watcher>,
 					this, &watcher, &done)));
-			nextCommandId++;
+			incNextCommandId();
 			ev_async_send(loop, &async);
 			while (!done) {
 				cond.wait(l);
@@ -205,7 +214,7 @@ public:
 			commands.push_back(Command(nextCommandId,
 				boost::bind(&SafeLibev::stopWatcherAndNotify<Watcher>,
 					this, &watcher, &done)));
-			nextCommandId++;
+			incNextCommandId();
 			ev_async_send(loop, &async);
 			while (!done) {
 				cond.wait(l);
@@ -227,7 +236,7 @@ public:
 		commands.push_back(Command(nextCommandId,
 			boost::bind(&SafeLibev::runAndNotify, this,
 				&callback, &done)));
-		nextCommandId++;
+		incNextCommandId();
 		ev_async_send(loop, &async);
 		while (!done) {
 			cond.wait(l);
@@ -253,7 +262,7 @@ public:
 			unique_lock<boost::mutex> l(syncher);
 			commands.push_back(Command(nextCommandId, callback));
 			result = nextCommandId;
-			nextCommandId++;
+			incNextCommandId();
 		}
 		if (!ev_is_active(&idle)) {
 			ev_idle_start(loop, &idle);
@@ -267,7 +276,7 @@ public:
 			unique_lock<boost::mutex> l(syncher);
 			commands.push_back(Command(nextCommandId, callback));
 			result = nextCommandId;
-			nextCommandId++;
+			incNextCommandId();
 		}
 		ev_async_send(loop, &async);
 		return result;
@@ -280,7 +289,7 @@ public:
 	 * in the future, while a return value of false means that the callback has already
 	 * been called or is currently being called.
 	 */
-	bool cancelCommand(unsigned int id) {
+	bool cancelCommand(int id) {
 		unique_lock<boost::mutex> l(syncher);
 		// TODO: we can do a binary search because the command ID
 		// is monotically increasing except on overflow.
