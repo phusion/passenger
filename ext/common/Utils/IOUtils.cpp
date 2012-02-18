@@ -396,23 +396,23 @@ connectToServer(const StaticString &address) {
 
 int
 connectToUnixServer(const StaticString &filename) {
-	int fd, ret;
-	struct sockaddr_un addr;
-	
-	if (filename.size() > sizeof(addr.sun_path) - 1) {
-		string message = "Cannot connect to Unix socket '";
-		message.append(filename.toString());
-		message.append("': filename is too long.");
-		throw RuntimeException(message);
-	}
-	
-	fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
+	int fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {
 		int e = errno;
 		throw SystemException("Cannot create a Unix socket file descriptor", e);
 	}
-	
+
 	FdGuard guard(fd, true);
+	int ret;
+	struct sockaddr_un addr;
+	
+	if (filename.size() > sizeof(addr.sun_path) - 1) {
+		string message = "Cannot connect to Unix socket '";
+		message.append(filename.data(), filename.size());
+		message.append("': filename is too long.");
+		throw RuntimeException(message);
+	}
+	
 	addr.sun_family = AF_UNIX;
 	memcpy(addr.sun_path, filename.c_str(), filename.size());
 	addr.sun_path[filename.size()] = '\0';
@@ -451,6 +451,51 @@ connectToUnixServer(const StaticString &filename) {
 	}
 	abort();   // Never reached.
 	return -1; // Shut up compiler warning.
+}
+
+void
+setupNonBlockingUnixSocket(NUnix_State &state, const StaticString &filename) {
+	state.fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
+	if (state.fd == -1) {
+		int e = errno;
+		throw SystemException("Cannot create a Unix socket file descriptor", e);
+	}
+
+	state.filename = filename;
+	setNonBlocking(state.fd);
+}
+
+bool
+connectToUnixServer(NUnix_State &state) {
+	struct sockaddr_un addr;
+	int ret;
+	
+	if (state.filename.size() > sizeof(addr.sun_path) - 1) {
+		string message = "Cannot connect to Unix socket '";
+		message.append(state.filename.data(), state.filename.size());
+		message.append("': filename is too long.");
+		throw RuntimeException(message);
+	}
+
+	addr.sun_family = AF_UNIX;
+	memcpy(addr.sun_path, state.filename.data(), state.filename.size());
+	addr.sun_path[state.filename.size()] = '\0';
+
+	ret = syscalls::connect(state.fd, (const sockaddr *) &addr, sizeof(addr));
+	if (ret == -1) {
+		if (errno == EINPROGRESS || errno == EWOULDBLOCK) {
+			return false;
+		} else if (errno == EISCONN) {
+			return true;
+		} else {
+			int e = errno;
+			string message = "Cannot connect to Unix socket '";
+			message.append(state.filename.data(), state.filename.size());
+			throw SystemException(message, e);
+		}
+	} else {
+		return true;
+	}
 }
 
 int
@@ -504,6 +549,99 @@ connectToTcpServer(const StaticString &hostname, unsigned int port) {
 	}
 	
 	return fd;
+}
+
+void
+setupNonBlockingTcpSocket(NTCP_State &state, const StaticString &hostname, int port) {
+	int ret;
+
+	memset(&state.hints, 0, sizeof(state.hints));
+	state.hints.ai_family   = PF_UNSPEC;
+	state.hints.ai_socktype = SOCK_STREAM;
+	ret = getaddrinfo(hostname.toString().c_str(), toString(port).c_str(),
+		&state.hints, &state.res);
+	if (ret != 0) {
+		string message = "Cannot resolve IP address '";
+		message.append(hostname.data(), hostname.size());
+		message.append(":");
+		message.append(toString(port));
+		message.append("': ");
+		message.append(gai_strerror(ret));
+		throw IOException(message);
+	}
+
+	state.fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
+	if (state.fd == -1) {
+		int e = errno;
+		throw SystemException("Cannot create a TCP socket file descriptor", e);
+	}
+
+	state.hostname = hostname;
+	state.port = port;
+	setNonBlocking(state.fd);
+}
+
+bool
+connectToTcpServer(NTCP_State &state) {
+	int ret;
+
+	ret = syscalls::connect(state.fd, state.res->ai_addr, state.res->ai_addrlen);
+	if (ret == -1) {
+		if (errno == EINPROGRESS || errno == EWOULDBLOCK) {
+			return false;
+		} else if (errno == EISCONN) {
+			freeaddrinfo(state.res);
+			state.res = NULL;
+			return true;
+		} else {
+			int e = errno;
+			string message = "Cannot connect to TCP socket '";
+			message.append(state.hostname);
+			message.append(":");
+			message.append(toString(state.port));
+			message.append("'");
+			throw SystemException(message, e);
+		}
+	} else {
+		freeaddrinfo(state.res);
+		state.res = NULL;
+		return true;
+	}
+}
+
+void
+setupNonBlockingSocket(NConnect_State &state, const StaticString &address) {
+	TRACE_POINT();
+	state.type = getSocketAddressType(address);
+	switch (state.type) {
+	case SAT_UNIX:
+		setupNonBlockingUnixSocket(state.unix, parseUnixSocketAddress(address));
+		break;
+	case SAT_TCP: {
+		string host;
+		unsigned short port;
+		
+		parseTcpSocketAddress(address, host, port);
+		setupNonBlockingTcpSocket(state.tcp, host, port);
+		break;
+	}
+	default:
+		throw ArgumentException(string("Unknown address type for '") + address + "'");
+	}
+}
+
+bool
+connectToServer(NConnect_State &state) {
+	switch (state.type) {
+	case SAT_UNIX:
+		connectToUnixServer(state.unix);
+		break;
+	case SAT_TCP:
+		connectToTcpServer(state.tcp);
+		break;
+	default:
+		throw RuntimeException("Unknown address type");
+	}
 }
 
 SocketPair

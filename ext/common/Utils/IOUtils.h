@@ -26,9 +26,12 @@
 #define _PASSENGER_IO_UTILS_H_
 
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/uio.h>
 #include <cstdio>
+#include <cstddef>
 #include <unistd.h>
+#include <netdb.h>
 #include <string>
 #include <vector>
 #include <StaticString.h>
@@ -166,10 +169,11 @@ int createUnixServer(const StaticString &filename, unsigned int backlogSize = 0,
 int createTcpServer(const char *address = "0.0.0.0", unsigned short port = 0, unsigned int backlogSize = 0);
 
 /**
- * Connect to a server at the given address.
+ * Connect to a server at the given address in a blocking manner.
  *
  * @param address An address as accepted by getSocketAddressType().
  * @return The file descriptor of the connected client socket.
+ * @throws ArgumentException Unknown address type.
  * @throws RuntimeException Something went wrong.
  * @throws SystemException Something went wrong while connecting to the server.
  * @throws IOException Something went wrong while connecting to the server.
@@ -179,7 +183,7 @@ int createTcpServer(const char *address = "0.0.0.0", unsigned short port = 0, un
 int connectToServer(const StaticString &address);
 
 /**
- * Connect to a Unix server socket at <tt>filename</tt>.
+ * Connect to a Unix server socket at <tt>filename</tt> in a blocking manner.
  *
  * @param filename The filename of the socket to connect to.
  * @return The file descriptor of the connected client socket.
@@ -191,7 +195,7 @@ int connectToServer(const StaticString &address);
 int connectToUnixServer(const StaticString &filename);
 
 /**
- * Connect to a TCP server socket at the given host name and port.
+ * Connect to a TCP server socket at the given host name and port in a blocking manner.
  *
  * @param hostname The host name of the TCP server.
  * @param port The port number of the TCP server.
@@ -202,6 +206,116 @@ int connectToUnixServer(const StaticString &filename);
  * @ingroup Support
  */
 int connectToTcpServer(const StaticString &hostname, unsigned int port);
+
+/** State structure for non-blocking connectToUnixServer(). */
+struct NUnix_State {
+	FileDescriptor fd;
+	string filename;
+};
+
+/**
+ * Setup a Unix domain socket for non-blocking connecting. When done,
+ * the file descriptor can be accessed through <tt>state.fd</tt>.
+ *
+ * @param state A state structure.
+ * @param filename The filename of the socket to connect to.
+ * @throws SystemException Something went wrong.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
+ */
+void setupNonBlockingUnixSocket(NUnix_State &state, const StaticString &filename);
+
+/**
+ * Connect a Unix domain socket in non-blocking mode.
+ *
+ * @param state A state structure.
+ * @return True if the socket was successfully connected, false if the socket isn't
+ *         ready yet, in which case the caller should select() on the socket until it's writable.
+ * @throws RuntimeException Something went wrong.
+ * @throws SystemException Something went wrong while connecting to the Unix server.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
+ */
+bool connectToUnixServer(NUnix_State &state);
+
+/** State structure for non-blocking connectToTcpServer(). */
+struct NTCP_State {
+	FileDescriptor fd;
+	struct addrinfo hints, *res;
+	string hostname;
+	int port;
+
+	NTCP_State() {
+		memset(&hints, 0, sizeof(hints));
+		res = NULL;
+		port = 0;
+	}
+
+	~NTCP_State() {
+		if (res != NULL) {
+			freeaddrinfo(res);
+		}
+	}
+};
+
+/**
+ * Setup a TCP socket for non-blocking connecting. When done,
+ * the file descriptor can be accessed through <tt>state.fd</tt>.
+ *
+ * @param state A state structure.
+ * @param hostname The host name of the TCP server.
+ * @param port The port number of the TCP server.
+ * @throws IOException Something went wrong.
+ * @throws SystemException Something went wrong.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
+ */
+void setupNonBlockingTcpSocket(NTCP_State &state, const StaticString &hostname, int port);
+
+/**
+ * Connect a TCP socket in non-blocking mode.
+ *
+ * @param state A state structure.
+ * @return True if the socket was successfully connected, false if the socket isn't
+ *         ready yet, in which case the caller should select() on the socket until it's writable.
+ * @throws SystemException Something went wrong while connecting to the server.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
+ */
+bool connectToTcpServer(NTCP_State &state);
+
+struct NConnect_State {
+	ServerAddressType type;
+	NUnix_State unix;
+	NTCP_State tcp;
+};
+
+/**
+ * Setup a socket for non-blocking connecting to the given address.
+ *
+ * @param A state structure.
+ * @param address An address as accepted by getSocketAddressType().
+ * @throws ArgumentException Unknown address type.
+ * @throws RuntimeException Something went wrong.
+ * @throws SystemException Something went wrong.
+ * @throws IOException Something went wrong.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
+ */
+void setupNonBlockingSocket(NConnect_State &state, const StaticString &address);
+
+/**
+ * Connect a socket in non-blocking mode.
+ *
+ * @param state A state structure.
+ * @return True if the socket was successfully connected, false if the socket isn't
+ *         ready yet, in which case the caller should select() on the socket until it's writable.
+ * @throws RuntimeException Something went wrong.
+ * @throws SystemException Something went wrong.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
+ */
+bool connectToServer(NConnect_State &state);
 
 /**
  * Creates a Unix domain socket pair.
