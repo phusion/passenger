@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010, 2011 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -27,8 +27,8 @@ module PhusionPassenger
 	# Phusion Passenger version number. Don't forget to edit ext/common/Constants.h too.
 	VERSION_STRING = '3.0.11'
 	
-	PREFERRED_NGINX_VERSION = '1.0.11'
-	PREFERRED_PCRE_VERSION  = '8.21'
+	PREFERRED_NGINX_VERSION = '1.0.12'
+	PREFERRED_PCRE_VERSION  = '8.30'
 	STANDALONE_INTERFACE_VERSION  = 1
 	
 	
