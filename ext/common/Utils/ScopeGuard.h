@@ -96,15 +96,17 @@ public:
 class FdGuard: public noncopyable {
 private:
 	int fd;
+	bool ignoreErrors;
 
 public:
-	FdGuard(int _fd)
-		: fd(_fd)
+	FdGuard(int _fd, bool _ignoreErrors = false)
+		: fd(_fd),
+		  ignoreErrors(_ignoreErrors)
 		{ }
 	
 	~FdGuard() {
 		if (fd != -1) {
-			safelyClose(fd);
+			safelyClose(fd, ignoreErrors);
 		}
 	}
 

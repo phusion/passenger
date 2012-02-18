@@ -596,7 +596,7 @@ private:
 		unsigned long long timeout = 15000000;
 		
 		fd = connectToServer(serverAddress);
-		FdGuard guard(fd);
+		FdGuard guard(fd, true);
 		if (!readArrayMessage(fd, args, &timeout)) {
 			throw IOException("The logging agent closed the connection before sending a version identifier.");
 		}
