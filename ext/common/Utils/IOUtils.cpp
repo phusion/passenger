@@ -274,6 +274,7 @@ createUnixServer(const StaticString &filename, unsigned int backlogSize, bool au
 		throw SystemException("Cannot create a Unix socket file descriptor", e);
 	}
 	
+	FdGuard guard(fd, true);
 	addr.sun_family = AF_LOCAL;
 	strncpy(addr.sun_path, filename.c_str(), filename.size());
 	addr.sun_path[filename.size()] = '\0';
@@ -284,30 +285,19 @@ createUnixServer(const StaticString &filename, unsigned int backlogSize, bool au
 		} while (ret == -1 && errno == EINTR);
 	}
 	
-	try {
-		ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
-	} catch (...) {
-		safelyClose(fd, true);
-		throw;
-	}
+	ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
 	if (ret == -1) {
 		int e = errno;
 		string message = "Cannot bind Unix socket '";
 		message.append(filename.toString());
 		message.append("'");
-		safelyClose(fd, true);
 		throw SystemException(message, e);
 	}
 	
 	if (backlogSize == 0) {
 		backlogSize = 1024;
 	}
-	try {
-		ret = syscalls::listen(fd, backlogSize);
-	} catch (...) {
-		safelyClose(fd, true);
-		throw;
-	}
+	ret = syscalls::listen(fd, backlogSize);
 	if (ret == -1) {
 		int e = errno;
 		string message = "Cannot listen on Unix socket '";
@@ -317,6 +307,7 @@ createUnixServer(const StaticString &filename, unsigned int backlogSize, bool au
 		throw SystemException(message, e);
 	}
 	
+	guard.clear();
 	return fd;
 }
 
@@ -348,53 +339,40 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 		throw SystemException("Cannot create a TCP socket file descriptor", e);
 	}
 	
-	try {
-		ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
-	} catch (...) {
-		safelyClose(fd, true);
-		throw;
-	}
+	FdGuard guard(fd, true);
+	ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
 	if (ret == -1) {
 		int e = errno;
 		string message = "Cannot bind a TCP socket on address '";
 		message.append(address);
 		message.append("' port ");
 		message.append(toString(port));
-		safelyClose(fd, true);
 		throw SystemException(message, e);
 	}
 	
 	optval = 1;
-	try {
-		if (syscalls::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-			&optval, sizeof(optval)) == -1) {
-				printf("so_reuseaddr failed: %s\n", strerror(errno));
-			}
-	} catch (...) {
-		safelyClose(fd, true);
-		throw;
+	if (syscalls::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+		&optval, sizeof(optval)) == -1)
+	{
+		int e = errno;
+		fprintf(stderr, "so_reuseaddr failed: %s\n", strerror(e));
 	}
-	// Ignore SO_REUSEPORT error, it's not fatal.
+	// Ignore SO_REUSEADDR error, it's not fatal.
 	
 	if (backlogSize == 0) {
 		backlogSize = 1024;
 	}
-	try {
-		ret = syscalls::listen(fd, backlogSize);
-	} catch (...) {
-		safelyClose(fd, true);
-		throw;
-	}
+	ret = syscalls::listen(fd, backlogSize);
 	if (ret == -1) {
 		int e = errno;
 		string message = "Cannot listen on TCP socket '";
 		message.append(address);
 		message.append("' port ");
 		message.append(toString(port));
-		safelyClose(fd, true);
 		throw SystemException(message, e);
 	}
 	
+	guard.clear();
 	return fd;
 }
 
@@ -434,6 +412,7 @@ connectToUnixServer(const StaticString &filename) {
 		throw SystemException("Cannot create a Unix socket file descriptor", e);
 	}
 	
+	FdGuard guard(fd, true);
 	addr.sun_family = AF_UNIX;
 	memcpy(addr.sun_path, filename.c_str(), filename.size());
 	addr.sun_path[filename.size()] = '\0';
@@ -441,12 +420,7 @@ connectToUnixServer(const StaticString &filename) {
 	bool retry = true;
 	int counter = 0;
 	while (retry) {
-		try {
-			ret = syscalls::connect(fd, (const sockaddr *) &addr, sizeof(addr));
-		} catch (...) {
-			safelyClose(fd, true);
-			throw;
-		}
+		ret = syscalls::connect(fd, (const sockaddr *) &addr, sizeof(addr));
 		if (ret == -1) {
 			#if defined(sun) || defined(__sun)
 				/* Solaris has this nice kernel bug where connecting to
@@ -468,10 +442,10 @@ connectToUnixServer(const StaticString &filename) {
 				string message("Cannot connect to Unix socket '");
 				message.append(filename.toString());
 				message.append("'");
-				safelyClose(fd, true);
 				throw SystemException(message, e);
 			}
 		} else {
+			guard.clear();
 			return fd;
 		}
 	}
