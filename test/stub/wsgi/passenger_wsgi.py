@@ -27,6 +27,7 @@ def application(env, start_response):
 		status = env['HTTP_X_CUSTOM_STATUS']
 		body = 'ok'
 	elif path == '/stream':
+		sleep_time = float(env.get('HTTP_X_SLEEP', 0.1))
 		def body():
 			i = 0
 			while True:
@@ -34,7 +35,7 @@ def application(env, start_response):
 				yield("%x\r\n" % len(data))
 				yield(data)
 				yield("\r\n")
-				time.sleep(0.1)
+				time.sleep(sleep_time)
 				i += 1
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
 		return body()
