@@ -233,6 +233,9 @@ main() {
 		const char *root = "/Users/hongli/Projects/passenger";
 	#endif
 	options.passengerRoot = root;
+	options.loggingAgentAddress = "unix:/tmp/agent";
+	options.loggingAgentPassword = "1234";
+
 	SpawnerFactoryPtr spawnerFactory = make_shared<SpawnerFactory>(libev,
 		ResourceLocator(root),
 		serverInstanceDir.newGeneration(true, "nobody", nogroup, getpid(), getgid()));

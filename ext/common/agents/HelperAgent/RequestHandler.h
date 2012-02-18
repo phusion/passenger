@@ -81,6 +81,7 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <ev++.h>
+#include <list>
 
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -398,6 +399,18 @@ public:
 			bufferedConnectPassword.data = NULL;
 			bufferedConnectPassword.alreadyRead = 0;
 		}
+	}
+
+	bool useUnionStation() const {
+		return options.logger != NULL;
+	}
+
+	UnionStation::LoggerPtr getLogger() const {
+		return options.logger;
+	}
+
+	void logMessage(const StaticString &message) {
+		options.logger->message(message);
 	}
 
 	void verifyInvariants() const {
@@ -1300,6 +1313,22 @@ private:
 			client->options.analytics = true;
 			client->options.logger = loggerFactory->newTransaction(
 				options.getAppGroupName(), "requests", key, filters);
+			
+			//requestProcessing = client->pushScopeLog("request processing");
+
+			StaticString staticRequestURI = parser.getHeader("REQUEST_URI");
+			if (!staticRequestURI.empty()) {
+				client->logMessage("URI: " + staticRequestURI);
+			} else {
+				string requestURI = parser.getHeader("SCRIPT_NAME");
+				requestURI.append(parser.getHeader("PATH_INFO"));
+				StaticString queryString = parser.getHeader("QUERY_STRING");
+				if (!queryString.empty()) {
+					requestURI.append("?");
+					requestURI.append(queryString);
+				}
+				client->logMessage("URI: " + requestURI);
+			}
 		}
 	}
 

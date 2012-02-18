@@ -357,10 +357,12 @@ public:
 	void message(const StaticString &text) {
 		TRACE_POINT();
 		if (connection == NULL) {
+			P_TRACE(3, "[Union Station log to null] " << text);
 			return;
 		}
 		ConnectionLock l(connection);
 		if (!connection->connected()) {
+			P_TRACE(3, "[Union Station log to null] " << text);
 			return;
 		}
 		
@@ -371,6 +373,7 @@ public:
 		ConnectionGuard guard(connection);
 		try {
 			unsigned long long timeout = IO_TIMEOUT;
+			P_TRACE(3, "[Union Station log] " << txnId << " " << timestamp << " " << text);
 			writeArrayMessage(connection->fd, &timeout,
 				"log",
 				txnId.c_str(),
@@ -425,9 +428,9 @@ public:
 typedef shared_ptr<Logger> LoggerPtr;
 
 
-class ScopeLog: public boost::noncopyable {
+class ScopeLog {
 private:
-	Logger * const log;
+	Logger *log;
 	enum {
 		NAME,
 		GRANULAR
@@ -453,32 +456,37 @@ private:
 	}
 	
 public:
+	ScopeLog()
+		: log(NULL)
+		{ }
+
 	ScopeLog(const LoggerPtr &_log, const char *name)
 		: log(_log.get())
 	{
 		type = NAME;
 		data.name = name;
 		ok = false;
-		if (log != NULL && !log->isNull()) {
-			char message[150];
-			char *pos = message;
-			const char *end = message + sizeof(message);
-			struct rusage usage;
 
-			pos = appendData(pos, end, "BEGIN: ");
-			pos = appendData(pos, end, name);
-			pos = appendData(pos, end, " (");
-			pos = appendData(pos, end, usecToString(SystemTime::getUsec()));
-			pos = appendData(pos, end, ",");
-			if (getrusage(RUSAGE_SELF, &usage) == -1) {
-				int e = errno;
-				throw SystemException("getrusage() failed", e);
-			}
-			pos = appendData(pos, end, timevalToString(usage.ru_utime));
-			pos = appendData(pos, end, ",");
-			pos = appendData(pos, end, timevalToString(usage.ru_stime));
-			pos = appendData(pos, end, ") ");
+		char message[150];
+		char *pos = message;
+		const char *end = message + sizeof(message);
+		struct rusage usage;
 
+		pos = appendData(pos, end, "BEGIN: ");
+		pos = appendData(pos, end, name);
+		pos = appendData(pos, end, " (");
+		pos = appendData(pos, end, usecToString(SystemTime::getUsec()));
+		pos = appendData(pos, end, ",");
+		if (getrusage(RUSAGE_SELF, &usage) == -1) {
+			int e = errno;
+			throw SystemException("getrusage() failed", e);
+		}
+		pos = appendData(pos, end, timevalToString(usage.ru_utime));
+		pos = appendData(pos, end, ",");
+		pos = appendData(pos, end, timevalToString(usage.ru_stime));
+		pos = appendData(pos, end, ") ");
+
+		if (log != NULL) {
 			log->message(StaticString(message, pos - message));
 		}
 	}
@@ -503,32 +511,30 @@ public:
 			return;
 		}
 		if (type == NAME) {
-			if (!log->isNull()) {
-				char message[150];
-				char *pos = message;
-				const char *end = message + sizeof(message);
-				struct rusage usage;
-				
-				if (ok) {
-					pos = appendData(pos, end, "END: ");
-				} else {
-					pos = appendData(pos, end, "FAIL: ");
-				}
-				pos = appendData(pos, end, data.name);
-				pos = appendData(pos, end, " (");
-				pos = appendData(pos, end, usecToString(SystemTime::getUsec()));
-				pos = appendData(pos, end, ",");
-				if (getrusage(RUSAGE_SELF, &usage) == -1) {
-					int e = errno;
-					throw SystemException("getrusage() failed", e);
-				}
-				pos = appendData(pos, end, timevalToString(usage.ru_utime));
-				pos = appendData(pos, end, ",");
-				pos = appendData(pos, end, timevalToString(usage.ru_stime));
-				pos = appendData(pos, end, ")");
-
-				log->message(StaticString(message, pos - message));
+			char message[150];
+			char *pos = message;
+			const char *end = message + sizeof(message);
+			struct rusage usage;
+			
+			if (ok) {
+				pos = appendData(pos, end, "END: ");
+			} else {
+				pos = appendData(pos, end, "FAIL: ");
 			}
+			pos = appendData(pos, end, data.name);
+			pos = appendData(pos, end, " (");
+			pos = appendData(pos, end, usecToString(SystemTime::getUsec()));
+			pos = appendData(pos, end, ",");
+			if (getrusage(RUSAGE_SELF, &usage) == -1) {
+				int e = errno;
+				throw SystemException("getrusage() failed", e);
+			}
+			pos = appendData(pos, end, timevalToString(usage.ru_utime));
+			pos = appendData(pos, end, ",");
+			pos = appendData(pos, end, timevalToString(usage.ru_stime));
+			pos = appendData(pos, end, ")");
+
+			log->message(StaticString(message, pos - message));
 		} else {
 			if (ok) {
 				log->message(data.granular.endMessage);
