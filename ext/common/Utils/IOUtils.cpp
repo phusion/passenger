@@ -615,14 +615,14 @@ setupNonBlockingSocket(NConnect_State &state, const StaticString &address) {
 	state.type = getSocketAddressType(address);
 	switch (state.type) {
 	case SAT_UNIX:
-		setupNonBlockingUnixSocket(state.unix, parseUnixSocketAddress(address));
+		setupNonBlockingUnixSocket(state.s_unix, parseUnixSocketAddress(address));
 		break;
 	case SAT_TCP: {
 		string host;
 		unsigned short port;
 		
 		parseTcpSocketAddress(address, host, port);
-		setupNonBlockingTcpSocket(state.tcp, host, port);
+		setupNonBlockingTcpSocket(state.s_tcp, host, port);
 		break;
 	}
 	default:
@@ -634,11 +634,9 @@ bool
 connectToServer(NConnect_State &state) {
 	switch (state.type) {
 	case SAT_UNIX:
-		connectToUnixServer(state.unix);
-		break;
+		return connectToUnixServer(state.s_unix);
 	case SAT_TCP:
-		connectToTcpServer(state.tcp);
-		break;
+		return connectToTcpServer(state.s_tcp);
 	default:
 		throw RuntimeException("Unknown address type");
 	}

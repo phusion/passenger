@@ -286,8 +286,8 @@ bool connectToTcpServer(NTCP_State &state);
 
 struct NConnect_State {
 	ServerAddressType type;
-	NUnix_State unix;
-	NTCP_State tcp;
+	NUnix_State s_unix;
+	NTCP_State s_tcp;
 };
 
 /**
