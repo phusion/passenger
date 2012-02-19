@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2011 Phusion
+ *  Copyright (c) 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -371,7 +371,7 @@ public:
 	string inspect() const;
 
 	template<typename Stream>
-	void toXml(Stream &stream, bool includeSockets = true) const {
+	void inspectXml(Stream &stream, bool includeSockets = true) const {
 		stream << "<pid>" << pid << "</pid>";
 		stream << "<gupid>" << gupid << "</gupid>";
 		stream << "<connect_password>" << connectPassword << "</connect_password>";
@@ -382,6 +382,20 @@ public:
 		stream << "<spawn_time>" << spawnTime << "</spawn_time>";
 		stream << "<last_used>" << lastUsed << "</last_used>";
 		stream << "<uptime>" << uptime() << "</uptime>";
+		switch (enabled) {
+		case ENABLED:
+			stream << "<enabled>enabled</enabled>";
+			break;
+		case DISABLING:
+			stream << "<enabled>disabling</enabled>";
+			break;
+		case DISABLED:
+			stream << "<enabled>disabled</enabled>";
+			break;
+		default:
+			stream << "<enabled>unknown</enabled>";
+			break;
+		}
 		if (includeSockets) {
 			SocketList::const_iterator it;
 

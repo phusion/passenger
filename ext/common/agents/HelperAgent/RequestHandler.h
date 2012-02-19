@@ -1356,6 +1356,7 @@ private:
 			}
 
 			client->options.analytics = true;
+			client->options.unionStationKey = key;
 			client->options.logger = loggerFactory->newTransaction(
 				options.getAppGroupName(), "requests", key, filters);
 			
@@ -1739,9 +1740,7 @@ public:
 	{
 		accept4Available = true;
 		connectPasswordTimeout = 15000;
-
-		loggerFactory = make_shared<LoggerFactory>(_options.loggingAgentAddress,
-			"logging", _options.loggingAgentPassword);
+		loggerFactory = pool->loggerFactory;
 
 		requestSocketWatcher.set(_requestSocket, ev::READ);
 		requestSocketWatcher.set(_libev->getLoop());

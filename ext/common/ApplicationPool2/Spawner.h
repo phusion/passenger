@@ -86,6 +86,7 @@
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/Base64.h>
 
 namespace tut {
 	struct ApplicationPool2_DirectSpawnerTest;

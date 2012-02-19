@@ -34,7 +34,6 @@
 #include <Constants.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
-#include <StringListCreator.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -99,6 +98,7 @@ private:
 		result.push_back(&postexecChroot);
 		
 		result.push_back(&ruby);
+		result.push_back(&unionStationKey);
 		result.push_back(&groupSecret);
 		result.push_back(&hostName);
 		result.push_back(&uri);
@@ -253,9 +253,12 @@ public:
 	/** Whether Union Station logging should be enabled. This option only affects
 	 * whether the application enables Union Station support; whether a request
 	 * actually results in data being logged to Union Station depends on whether
-	 * the 'log' member is set.
+	 * the 'logger' member is set.
+	 *
+	 * If this is set to true, then 'unionStationKey' must be non-empty.
 	 */
 	bool analytics;
+	StaticString unionStationKey;
 	
 	/**
 	 * Whether application processes should print exceptions that occurred during
@@ -469,6 +472,7 @@ public:
 		appendKeyValue3(vec, "rights",             rights);
 		appendKeyValue4(vec, "debugger",           debugger);
 		appendKeyValue4(vec, "analytics",          analytics);
+		appendKeyValue (vec, "union_station_key",  unionStationKey);
 		appendKeyValue4(vec, "print_exceptions",   printExceptions);
 		
 		appendKeyValue3(vec, "max_requests",       maxRequests);

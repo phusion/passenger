@@ -160,7 +160,6 @@ public:
 			for (it = begin(); it != end; it++) {
 				const ProcessMetrics &metric = it->second;
 				total += metric.realMemory();
-			
 			}
 			
 			shared = -1;

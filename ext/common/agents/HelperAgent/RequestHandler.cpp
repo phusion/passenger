@@ -240,7 +240,9 @@ main() {
 	SpawnerFactoryPtr spawnerFactory = make_shared<SpawnerFactory>(libev,
 		ResourceLocator(root),
 		serverInstanceDir.newGeneration(true, "nobody", nogroup, getpid(), getgid()));
-	PoolPtr pool = make_shared<Pool>(libev.get(), spawnerFactory);
+	UnionStation::LoggerFactoryPtr loggerFactory = make_shared<UnionStation::LoggerFactory>(options.loggingAgentAddress,
+			"logging", options.loggingAgentPassword);
+	PoolPtr pool = make_shared<Pool>(libev.get(), spawnerFactory, loggerFactory);
 	FileDescriptor requestSocket = createTcpServer("127.0.0.1", 3000);
 	setNonBlocking(requestSocket);
 	handler = new RequestHandler(libev, requestSocket, pool, options);

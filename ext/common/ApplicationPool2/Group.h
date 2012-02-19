@@ -574,6 +574,39 @@ public:
 	bool spawning() const {
 		return m_spawning;
 	}
+
+	template<typename Stream>
+	void inspectXml(Stream &stream, bool includeSecrets = true) const {
+		ProcessList::const_iterator it;
+
+		stream << "<name>" << escapeForXml(name) << "</name>";
+		stream << "<component_name>" << escapeForXml(componentInfo.name) << "</component_name>";
+		stream << "<app_root>" << escapeForXml(options.appRoot) << "</app_root>";
+		stream << "<app_type>" << escapeForXml(options.appType) << "</app_type>";
+		stream << "<environment>" << escapeForXml(options.environment) << "</environment>";
+		stream << "<process_count>" << (count + disabledCount) << "</process_count>";
+		stream << "<usage>" << usage() << "</usage>";
+		stream << "<get_wait_list_size>" << getWaitlist.size() << "</get_wait_list_size>";
+		stream << "<disable_wait_list_size>" << disableWaitlist.size() << "</disable_wait_list_size>";
+		if (spawning()) {
+			stream << "<spawning/>";
+		}
+		if (includeSecrets) {
+			stream << "<secret>" << escapeForXml(secret) << "</secret>";
+		}
+
+		for (it = processes.begin(); it != processes.end(); it++) {
+			stream << "<process>";
+			(*it)->inspectXml(stream, includeSecrets);
+			stream << "</process>";
+		}
+		
+		for (it = disabledProcesses.begin(); it != disabledProcesses.end(); it++) {
+			stream << "<process>";
+			(*it)->inspectXml(stream, includeSecrets);
+			stream << "</process>";
+		}
+	}
 };
 
 

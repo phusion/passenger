@@ -44,6 +44,7 @@
 #include <ApplicationPool2/Session.h>
 #include <ApplicationPool2/Spawner.h>
 #include <ApplicationPool2/Options.h>
+#include <UnionStation.h>
 #include <SafeLibev.h>
 #include <Exceptions.h>
 #include <RandomGenerator.h>
@@ -64,15 +65,19 @@ class Pool: public enable_shared_from_this<Pool> {
 public:
 	friend class SuperGroup;
 	friend class Group;
-	
-	mutable boost::mutex syncher;
+	typedef UnionStation::LoggerFactory LoggerFactory;
+	typedef UnionStation::LoggerFactoryPtr LoggerFactoryPtr;
+	typedef UnionStation::LoggerPtr LoggerPtr;
 	
 	SpawnerFactoryPtr spawnerFactory;
+	LoggerFactoryPtr loggerFactory;
+	RandomGeneratorPtr randomGenerator;
+
+	mutable boost::mutex syncher;
 	SafeLibev *libev;
 	unsigned int max;
 	unsigned long long maxIdleTime;
 	
-	RandomGeneratorPtr randomGenerator;
 	ev::timer garbageCollectionTimer;
 	ev::timer analyticsCollectionTimer;
 	
@@ -422,6 +427,14 @@ public:
 		}
 	}
 
+	struct ProcessAnalyticsLogEntry {
+		string groupName;
+		string key;
+		stringstream data;
+	};
+
+	typedef shared_ptr<ProcessAnalyticsLogEntry> ProcessAnalyticsLogEntryPtr;
+
 	void collectAnalytics(ev::timer &timer, int revents) {
 		TRACE_POINT();
 		this_thread::disable_interruption di;
@@ -476,7 +489,8 @@ public:
 
 		{
 			UPDATE_TRACE_POINT();
-			LockGuard l(syncher);
+			vector<ProcessAnalyticsLogEntryPtr> logEntries;
+			ScopedLock l(syncher);
 			SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
 			
 			UPDATE_TRACE_POINT();
@@ -506,7 +520,28 @@ public:
 							process->metrics = metrics_it->second;
 						}
 					}
+
+					// Log to Union Station.
+					if (group->options.analytics && loggerFactory != NULL) {
+						ProcessAnalyticsLogEntryPtr entry = make_shared<ProcessAnalyticsLogEntry>();
+						stringstream &xml = entry->data;
+
+						entry->groupName = group->name;
+						entry->key = group->options.unionStationKey;
+						xml << "Group: <group>";
+						group->inspectXml(xml, false);
+						xml << "</group>";
+					}
 				}
+			}
+
+			l.unlock();
+			while (!logEntries.empty()) {
+				ProcessAnalyticsLogEntryPtr entry = logEntries.back();
+				logEntries.pop_back();
+				LoggerPtr logger = loggerFactory->newTransaction(entry->groupName,
+					"processes", entry->key);
+				logger->message(entry->data.str());
 			}
 		}
 		
@@ -546,10 +581,12 @@ public:
 	
 public:
 	Pool(SafeLibev *libev, const SpawnerFactoryPtr &spawnerFactory,
+		const LoggerFactoryPtr &loggerFactory = LoggerFactoryPtr(),
 		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr())
 	{
 		this->libev = libev;
 		this->spawnerFactory = spawnerFactory;
+		this->loggerFactory = loggerFactory;
 		if (randomGenerator != NULL) {
 			this->randomGenerator = randomGenerator;
 		} else {
@@ -954,41 +991,7 @@ public:
 				} else {
 					result << "<group>";
 				}
-				result << "<name>" << escapeForXml(group->componentInfo.name) << "</name>";
-				result << "<app_root>" << escapeForXml(group->options.appRoot) << "</app_root>";
-				result << "<app_type>" << escapeForXml(group->options.appType) << "</app_type>";
-				result << "<environment>" << escapeForXml(group->options.environment) << "</environment>";
-				result << "<process_count>" << (group->count + group->disabledCount) << "</process_count>";
-				result << "<usage>" << group->usage() << "</usage>";
-				result << "<secret>" << escapeForXml(group->secret) << "</secret>";
-				result << "<get_wait_list_size>" << group->getWaitlist.size() << "</get_wait_list_size>";
-				result << "<disable_wait_list_size>" << group->disableWaitlist.size() << "</disable_wait_list_size>";
-				if (group->spawning()) {
-					result << "<spawning/>";
-				}
-				if (includeSecrets) {
-					result << "<secret>" << escapeForXml(group->secret) << "</secret>";
-				}
-
-				result << "<processes>";
-				for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
-					const ProcessPtr &process = *p_it;
-					result << "<process>";
-					if (process->enabled == Process::DISABLING) {
-						result << "<disabling/>";
-					}
-					process->toXml(result, includeSecrets);
-					result << "</process>";
-				}
-				for (p_it = group->disabledProcesses.begin(); p_it != group->disabledProcesses.end(); p_it++) {
-					const ProcessPtr &process = *p_it;
-					result << "<process>";
-					result << "<disabled/>";
-					process->toXml(result, includeSecrets);
-					result << "</process>";
-				}
-				result << "</processes>";
-
+				group->inspectXml(result, includeSecrets);
 				result << "</group>";
 			}
 		}
