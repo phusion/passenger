@@ -1562,6 +1562,8 @@ public:
 		assert(options.appType == this->options.appType);
 		assert(options.appRoot == this->options.appRoot);
 		
+		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
+
 		lock_guard<boost::mutex> lock(syncher);
 		{
 			lock_guard<boost::mutex> lock2(simpleFieldSyncher);
@@ -1588,7 +1590,10 @@ public:
 		details.adminSocket = result.adminSocket;
 		details.io = result.io;
 		details.options = &options;
-		return negotiateSpawn(details);
+		ProcessPtr process = negotiateSpawn(details);
+		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
+			", pid=" << process->pid);
+		return process;
 	}
 
 	virtual bool cleanable() const {
@@ -1744,6 +1749,8 @@ public:
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
+		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
+
 		shared_array<const char *> args;
 		vector<string> command = createCommand(options, args);
 		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
@@ -1806,6 +1813,8 @@ public:
 			ProcessPtr process = negotiateSpawn(details);
 			detachProcess(process->pid);
 			guard.clear();
+			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
+				", pid=" << process->pid);
 			return process;
 		}
 	}
@@ -1838,7 +1847,7 @@ public:
 		lock_guard<boost::mutex> l(lock);
 		count++;
 		return make_shared<Process>((SafeLibev *) NULL,
-			(pid_t) count, string(),
+			(pid_t) count, "gupid-" + toString(count),
 			toString(count),
 			adminSocket.second, FileDescriptor(), sockets,
 			SystemTime::getUsec());

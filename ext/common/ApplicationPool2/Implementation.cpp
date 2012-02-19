@@ -324,6 +324,10 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 			} else {
 				assignSessionsToGetWaiters(actions);
 			}
+			P_DEBUG("Attached process " << process->inspect() <<
+				" to group " << name <<
+				": new process count = " << count <<
+				", remaining get waiters = " << getWaitlist.size());
 		} else {
 			// TODO: sure this is the best thing? if there are
 			// processes currently alive we should just use them.
@@ -338,9 +342,14 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 		m_spawning = false;
 		
 		done = done
-			|| (unsigned long) count >= options.minProcesses
+			|| ((unsigned long) count >= options.minProcesses && getWaitlist.empty())
 			|| pool->atFullCapacity(false);
 		m_spawning = !done;
+		if (done) {
+			P_DEBUG("Spawn loop done");
+		} else {
+			P_DEBUG("Continue spawning");
+		}
 		
 		UPDATE_TRACE_POINT();
 		verifyInvariants();

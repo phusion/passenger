@@ -15,9 +15,13 @@ namespace tut {
 		SessionPtr currentSession;
 		ExceptionPtr currentException;
 		AtomicInt number;
+		boost::mutex syncher;
+		list<SessionPtr> sessions;
+		bool retainSessions;
 		
 		ApplicationPool2_PoolTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
+			retainSessions = false;
 			pool = make_shared<Pool>(bg.safe.get(),
 				make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation));
 			bg.start();
@@ -28,8 +32,10 @@ namespace tut {
 			// Explicitly destroy these here because they can run
 			// additional code that depend on other fields in this
 			// class.
-			currentSession.reset();
 			pool.reset();
+			lock_guard<boost::mutex> l(syncher);
+			currentSession.reset();
+			sessions.clear();
 		}
 		
 		Options createOptions() {
@@ -42,9 +48,18 @@ namespace tut {
 		}
 		
 		void _callback(const SessionPtr &session, const ExceptionPtr &e) {
-			currentSession = session;
-			currentException = e;
-			number++;
+			SessionPtr oldSession;
+			{
+				LockGuard l(syncher);
+				oldSession = currentSession;
+				currentSession = session;
+				currentException = e;
+				number++;
+				if (retainSessions && session != NULL) {
+					sessions.push_back(session);
+				}
+			}
+			// destroy old session object outside the lock.
 		}
 	};
 	
@@ -617,23 +632,67 @@ namespace tut {
 	TEST_METHOD(40) {
 		// The pool is considered to be at full capacity if and only
 		// if all SuperGroups are at full capacity.
+		Options options = createOptions();
+		Options options2 = createOptions();
+		options2.appGroupName = "test";
+
+		pool->setMax(2);
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+
+		pool->asyncGet(options2, callback);
+		EVENTUALLY(5,
+			result = number == 2;
+		);
+
+		ensure_equals(pool->getProcessCount(), 2u);
+		ensure(pool->atFullCapacity());
+		pool->detachSuperGroup(pool->getSuperGroup("test"));
+		ensure(!pool->atFullCapacity());
 	}
 	
 	TEST_METHOD(41) {
-		// If the pool is at full capacity, then increasing max will cause
+		// If the pool is at full capacity, then increasing 'max' will cause
 		// new processes to be spawned. Any queued get requests are processed
 		// as those new processes become available or as existing processes
 		// become available.
+		Options options = createOptions();
+		retainSessions = true;
+		pool->setMax(1);
+
+		pool->asyncGet(options, callback);
+		pool->asyncGet(options, callback);
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+
+		pool->setMax(4);
+		EVENTUALLY(5,
+			result = number == 3;
+		);
+		ensure_equals(pool->getProcessCount(), 3u);
 	}
 	
 	TEST_METHOD(42) {
 		// Each spawned process has a GUPID, which can be looked up
 		// through findProcessByGupid().
+		Options options = createOptions();
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		string gupid = currentSession->getProcess()->gupid;
+		ensure(!gupid.empty());
+		ensure_equals(currentSession->getProcess(), pool->findProcessByGupid(gupid));
 	}
 	
 	TEST_METHOD(43) {
 		// findProcessByGupid() returns a NULL pointer if there is
 		// no matching process.
+		ensure(pool->findProcessByGupid("none") == NULL);
 	}
 	
 	// Process idle cleaning.

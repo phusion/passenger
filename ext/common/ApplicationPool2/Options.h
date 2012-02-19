@@ -312,7 +312,7 @@ public:
 	 * open a session with an existing process. Instead, a fake Session object
 	 * is returned which points to a Process object that isn't stored anywhere
 	 * in the Pool structures and isn't mapped to any real OS process. It does
-	 * however point to the real Group structure.
+	 * however point to the real Group structure. Useful for unit tests.
 	 * False by default.
 	 */
 	bool noop;

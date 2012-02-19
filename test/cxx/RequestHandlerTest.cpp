@@ -57,6 +57,8 @@ namespace tut {
 		~RequestHandlerTest() {
 			setLogLevel(0);
 			unlink(serverFilename.c_str());
+			handler.reset();
+			pool.reset();
 		}
 
 		void init() {
