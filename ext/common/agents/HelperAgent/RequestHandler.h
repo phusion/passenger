@@ -163,6 +163,9 @@ private:
 	}
 
 	void freeScopeLogs() {
+		endScopeLog(&scopeLogs.requestProxying, false);
+		endScopeLog(&scopeLogs.getFromPool, false);
+		endScopeLog(&scopeLogs.bufferingRequestBody, false);
 		endScopeLog(&scopeLogs.requestProcessing, false);
 	}
 
@@ -238,7 +241,11 @@ public:
 	SessionPtr session;
 	string appRoot;
 	struct {
-		UnionStation::ScopeLog *requestProcessing;
+		UnionStation::ScopeLog
+			*requestProcessing,
+			*bufferingRequestBody,
+			*getFromPool,
+			*requestProxying;
 	} scopeLogs;
 	unsigned int sessionCheckoutTry;
 	bool requestBodyIsBuffered;
@@ -497,6 +504,9 @@ private:
 
 	void disconnectWithError(const ClientPtr &client, const StaticString &message) {
 		RH_WARN(client, "Disconnecting with error: " << message);
+		if (client->useUnionStation()) {
+			client->logMessage("Disconnecting with error: " + message);
+		}
 		disconnect(client);
 	}
 
@@ -824,6 +834,7 @@ private:
 		}
 
 		RH_TRACE(client, 3, "Application sent EOF");
+		client->endScopeLog(&client->scopeLogs.requestProxying);
 		client->clientOutputPipe->end();
 		client->appInput->stop();
 	}
@@ -1337,10 +1348,10 @@ private:
 			Options &options = client->options;
 			ScgiRequestParser &parser = client->scgiParser;
 
-			StaticString key = parser.getHeader("PASSENGER_UNION_STATION_KEY");
+			StaticString key = parser.getHeader("UNION_STATION_KEY");
 			StaticString filters = parser.getHeader("UNION_STATION_FILTERS");
 			if (key.empty()) {
-				disconnectWithError(client, "header PASSENGER_UNION_STATION_KEY must be set.");
+				disconnectWithError(client, "header UNION_STATION_KEY must be set.");
 				return;
 			}
 
@@ -1399,6 +1410,7 @@ private:
 				RH_TRACE(client, 3, "Valid SCGI header; buffering request body");
 				client->state = Client::BUFFERING_REQUEST_BODY;
 				client->requestBodyIsBuffered = true;
+				client->beginScopeLog(&client->scopeLogs.bufferingRequestBody, "buffering request body");
 			} else {
 				RH_TRACE(client, 3, "Valid SCGI header; not buffering request body; checking out session");
 				client->clientInput->stop();
@@ -1434,6 +1446,7 @@ private:
 
 		RH_TRACE(client, 3, "Done buffering request body; checking out session");
 		client->clientBodyBuffer->end();
+		client->endScopeLog(&client->scopeLogs.bufferingRequestBody);
 		checkoutSession(client);
 	}
 
@@ -1457,6 +1470,7 @@ private:
 	void checkoutSession(const ClientPtr &client) {
 		RH_TRACE(client, 2, "Checking out session: appRoot=" << client->options.appRoot);
 		client->state = Client::CHECKING_OUT_SESSION;
+		client->beginScopeLog(&client->scopeLogs.getFromPool, "get from pool");
 		pool->asyncGet(client->options, boost::bind(&RequestHandler::sessionCheckedOut,
 			this, client, _1, _2));
 		if (!client->sessionCheckedOut) {
@@ -1483,6 +1497,7 @@ private:
 		client->sessionCheckedOut = true;
 
 		if (e != NULL) {
+			client->endScopeLog(&client->scopeLogs.getFromPool, false);
 			try {
 				shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
 				if (e2->getErrorPage().empty()) {
@@ -1525,6 +1540,14 @@ private:
 				disconnectWithError(client, "could not initiate a session");
 			}
 			return;
+		}
+		
+		if (client->useUnionStation()) {
+			client->endScopeLog(&client->scopeLogs.getFromPool);
+			client->logMessage("Application PID: " +
+				toString(client->session->getPid()) +
+				" (GUPID: " + client->session->getGupid() + ")");
+			client->beginScopeLog(&client->scopeLogs.requestProxying, "request proxying");
 		}
 		
 		client->appInput->reset(libev.get(), client->session->fd());
