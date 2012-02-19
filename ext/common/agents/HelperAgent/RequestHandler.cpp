@@ -196,8 +196,9 @@ static RequestHandler *handler;
 struct ev_loop *loop;
 
 static void
-sighup_cb(struct ev_loop *loop, ev_signal *w, int revents) {
+sigquit_cb(struct ev_loop *loop, ev_signal *w, int revents) {
 	handler->inspect(cout);
+	cout.flush();
 }
 
 static void
@@ -244,9 +245,9 @@ main() {
 	setNonBlocking(requestSocket);
 	handler = new RequestHandler(libev, requestSocket, pool, options);
 	
-	struct ev_signal sighupwatcher;
-	ev_signal_init(&sighupwatcher, sighup_cb, SIGQUIT);
-	ev_signal_start(loop, &sighupwatcher);
+	struct ev_signal sigquitwatcher;
+	ev_signal_init(&sigquitwatcher, sigquit_cb, SIGQUIT);
+	ev_signal_start(loop, &sigquitwatcher);
 
 	struct ev_signal sigintwatcher;
 	ev_signal_init(&sigintwatcher, sigint_cb, SIGINT);

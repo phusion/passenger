@@ -428,9 +428,9 @@ public:
 typedef shared_ptr<Logger> LoggerPtr;
 
 
-class ScopeLog {
+class ScopeLog: public noncopyable {
 private:
-	Logger *log;
+	Logger * const log;
 	enum {
 		NAME,
 		GRANULAR
@@ -640,6 +640,7 @@ private:
 			throw IOException("Logging server returned an invalid reply for the 'init' command");
 		}
 		
+		guard.clear();
 		return make_shared<Connection>(fd);
 	}
 	

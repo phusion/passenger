@@ -81,7 +81,6 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <ev++.h>
-#include <list>
 
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -163,6 +162,10 @@ private:
 		appRoot.clear();
 	}
 
+	void freeScopeLogs() {
+		endScopeLog(&scopeLogs.requestProcessing, false);
+	}
+
 public:
 	/** Back reference to the RequestHandler that this Client is associated with.
 	 * NULL when this Client is not in the pool or is disconnected. */
@@ -234,6 +237,9 @@ public:
 	ScgiRequestParser scgiParser;
 	SessionPtr session;
 	string appRoot;
+	struct {
+		UnionStation::ScopeLog *requestProcessing;
+	} scopeLogs;
 	unsigned int sessionCheckoutTry;
 	bool requestBodyIsBuffered;
 	bool sessionCheckedOut;
@@ -280,6 +286,7 @@ public:
 
 		bufferedConnectPassword.data = NULL;
 		bufferedConnectPassword.alreadyRead = 0;
+		memset(&scopeLogs, 0, sizeof(scopeLogs));
 		resetPrimitiveFields();
 	}
 
@@ -289,6 +296,7 @@ public:
 		clientOutputPipe->userData = NULL;
 		appInput->userData         = NULL;
 		freeBufferedConnectPassword();
+		freeScopeLogs();
 	}
 
 	void associate(RequestHandler *handler, const FileDescriptor &_fd) {
@@ -329,6 +337,7 @@ public:
 		scgiParser.reset();
 		session.reset();
 		responseHeaderBufferer.reset();
+		freeScopeLogs();
 	}
 
 	void discard() {
@@ -345,6 +354,8 @@ public:
 		appOutputWatcher.stop();
 
 		timeoutTimer.stop();
+
+		freeScopeLogs();
 	}
 
 	bool reassociateable() const {
@@ -409,6 +420,20 @@ public:
 		return options.logger;
 	}
 
+	void beginScopeLog(UnionStation::ScopeLog **scopeLog, const char *name) {
+		if (options.logger != NULL) {
+			*scopeLog = new UnionStation::ScopeLog(options.logger, name);
+		}
+	}
+
+	void endScopeLog(UnionStation::ScopeLog **scopeLog, bool success = true) {
+		if (success && *scopeLog != NULL) {
+			(*scopeLog)->success();
+		}
+		delete *scopeLog;
+		*scopeLog = NULL;
+	}
+
 	void logMessage(const StaticString &message) {
 		options.logger->message(message);
 	}
@@ -421,12 +446,20 @@ public:
 	template<typename Stream>
 	void inspect(Stream &stream) const {
 		const char *indent = "    ";
+
+		stream << indent << "state = " << getStateName() << "\n";
+		if (session == NULL) {
+			stream << indent << "session = NULL\n";
+		} else {
+			stream << indent << "session pid       = " << session->getPid() << "\n";
+			stream << indent << "session initiated = " << session->initiated() << "\n";
+		}
 		stream
-			<< indent << "state = " << getStateName() << "\n"
 			<< indent << "requestBodyIsBuffered    = " << requestBodyIsBuffered << "\n"
-			<< indent << "responseHeaderSeen       = " << responseHeaderSeen << "\n"
 			<< indent << "clientInput started      = " << clientInput->isStarted() << "\n"
 			<< indent << "clientOutputPipe started = " << clientOutputPipe->isStarted() << "\n"
+			<< indent << "appInput started         = " << appInput->isStarted() << "\n"
+			<< indent << "responseHeaderSeen       = " << responseHeaderSeen << "\n"
 			;
 	}
 };
@@ -808,7 +841,7 @@ private:
 			stringstream message;
 			message << "application socket read error: ";
 			message << strerror(errorCode);
-			message << " (errno " << errorCode << ")";
+			message << " (errno=" << errorCode << ")";
 			disconnectWithError(client, message.str());
 		}
 	}
@@ -860,6 +893,7 @@ private:
 		}
 
 		RH_TRACE(client, 2, "Client output pipe ended; disconnecting client");
+		client->endScopeLog(&client->scopeLogs.requestProcessing);
 		disconnect(client);
 	}
 
@@ -1314,7 +1348,7 @@ private:
 			client->options.logger = loggerFactory->newTransaction(
 				options.getAppGroupName(), "requests", key, filters);
 			
-			//requestProcessing = client->pushScopeLog("request processing");
+			client->beginScopeLog(&client->scopeLogs.requestProcessing, "request processing");
 
 			StaticString staticRequestURI = parser.getHeader("REQUEST_URI");
 			if (!staticRequestURI.empty()) {
