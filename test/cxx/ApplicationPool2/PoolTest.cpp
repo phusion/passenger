@@ -646,4 +646,8 @@ namespace tut {
 	// Temporarily disabling a process.
 	// When a process has become idle, and there are waiters on the pool, consider detaching it in order to satisfy a waiter.
 	// If the app fails to spawn, then it stops trying to spawn minProcesses processes.
+
+	// If one closes the session before it has reached EOF, and process's maximum concurrency
+	// has already been reached, then the pool should ping the process so that it can detect
+	// when the session's connection has been released by the app.
 }
