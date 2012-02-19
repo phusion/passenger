@@ -637,7 +637,7 @@ static VALUE
 detach_process(VALUE self, VALUE pid) {
 	pthread_t thr;
 	pthread_attr_t attr;
-	size_t stack_size = 64 * 1024;
+	size_t stack_size = 96 * 1024;
 	
 	unsigned long min_stack_size;
 	int stack_min_size_defined;
@@ -681,7 +681,7 @@ detach_process(VALUE self, VALUE pid) {
 	
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, 1);
-	pthread_attr_getstacksize(&attr, &stack_size);
+	pthread_attr_setstacksize(&attr, stack_size);
 	pthread_create(&thr, &attr, detach_process_main, (void *) NUM2LONG(pid));
 	pthread_attr_destroy(&attr);
 	return Qnil;

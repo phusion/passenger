@@ -1674,7 +1674,7 @@ private:
 		
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr, 1);
-		pthread_attr_getstacksize(&attr, &stack_size);
+		pthread_attr_setstacksize(&attr, stack_size);
 		ret = pthread_create(&thr, &attr, mainFunction, arg);
 		pthread_attr_destroy(&attr);
 		return ret;
