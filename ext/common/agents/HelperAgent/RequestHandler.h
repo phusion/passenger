@@ -150,6 +150,11 @@ private:
 	void onTimeout(ev::timer &timer, int revents);
 
 
+	static const char *boolStr(bool val) {
+		static const char *strs[] = { "false", "true" };
+		return strs[val];
+	}
+
 	void resetPrimitiveFields() {
 		requestHandler = NULL;
 		state = DISCONNECTED;
@@ -454,19 +459,21 @@ public:
 	void inspect(Stream &stream) const {
 		const char *indent = "    ";
 
-		stream << indent << "state = " << getStateName() << "\n";
+		stream << indent << "state                    = " << getStateName() << "\n";
 		if (session == NULL) {
-			stream << indent << "session = NULL\n";
+			stream << indent << "session                  = NULL\n";
 		} else {
-			stream << indent << "session pid       = " << session->getPid() << "\n";
-			stream << indent << "session initiated = " << session->initiated() << "\n";
+			stream << indent << "session pid              = " << session->getPid() << "\n";
+			stream << indent << "session gupid            = " << session->getGupid() << "\n";
+			stream << indent << "session initiated        = " << boolStr(session->initiated()) << "\n";
 		}
 		stream
-			<< indent << "requestBodyIsBuffered    = " << requestBodyIsBuffered << "\n"
-			<< indent << "clientInput started      = " << clientInput->isStarted() << "\n"
-			<< indent << "clientOutputPipe started = " << clientOutputPipe->isStarted() << "\n"
-			<< indent << "appInput started         = " << appInput->isStarted() << "\n"
-			<< indent << "responseHeaderSeen       = " << responseHeaderSeen << "\n"
+			<< indent << "requestBodyIsBuffered    = " << boolStr(requestBodyIsBuffered) << "\n"
+			<< indent << "clientInput started      = " << boolStr(clientInput->isStarted()) << "\n"
+			<< indent << "clientOutputPipe started = " << boolStr(clientOutputPipe->isStarted()) << "\n"
+			<< indent << "appInput started         = " << boolStr(appInput->isStarted()) << "\n"
+			<< indent << "responseHeaderSeen       = " << boolStr(responseHeaderSeen) << "\n"
+			<< indent << "useUnionStation          = " << boolStr(useUnionStation()) << "\n"
 			;
 	}
 };
@@ -889,6 +896,7 @@ private:
 				consumed(0, true);
 			} else if (errno == EPIPE) {
 				// If the client closed the connection then disconnect quietly.
+				client->logMessage("Disconnecting: client stopped reading prematurely");
 				disconnect(client);
 			} else {
 				disconnectWithClientSocketWriteError(client, errno);
@@ -1551,6 +1559,7 @@ private:
 			client->beginScopeLog(&client->scopeLogs.requestProxying, "request proxying");
 		}
 		
+		setNonBlocking(client->session->fd());
 		client->appInput->reset(libev.get(), client->session->fd());
 		client->appInput->start();
 		client->appOutputWatcher.set(libev->getLoop());
