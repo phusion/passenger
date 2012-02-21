@@ -99,8 +99,8 @@ void setDebugFile(const char *logFile = NULL);
 				"[ pid=" << ((unsigned long) getpid()) <<  \
 				" thr=" << pthread_self() << \
 				" file=" << __FILE__ << ":" << (unsigned long) __LINE__ << \
-				" time=" << datetime_buf << "." << std::setfill('0') << std::setw(3) << \
-					(unsigned long) (tv.tv_usec / 1000) << \
+				" time=" << datetime_buf << "." << std::setfill('0') << std::setw(4) << \
+					(unsigned long) (tv.tv_usec / 100) << \
 				" ]: " << \
 				expr << std::endl;	\
 			*stream << sstream.str();		\
