@@ -375,14 +375,13 @@ Group::restart(const Options &options) {
 	while (!processes.empty()) {
 		ProcessPtr process = processes.front();
 		detach(process, actions);
-		processes.pop_front();
 	}
 	
 	if (!actions.empty()) {
 		getPool()->nonInterruptableThreads.create_thread(
 			boost::bind(Pool::runAllActionsWithCopy, actions),
 			"Post lock actions runner: " + name,
-			64 * 1024);
+			POOL_HELPER_THREAD_STACK_SIZE);
 	}
 }
 

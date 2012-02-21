@@ -1,5 +1,9 @@
 #include <TestSupport.h>
 #include <ApplicationPool2/Pool.h>
+#include <Utils/IOUtils.h>
+#include <MessageReadersWriters.h>
+#include <map>
+#include <vector>
 
 using namespace std;
 using namespace Passenger;
@@ -61,6 +65,62 @@ namespace tut {
 				}
 			}
 			// destroy old session object outside the lock.
+		}
+
+		void sendHeaders(int connection, ...) {
+			va_list ap;
+			const char *arg;
+			vector<StaticString> args;
+
+			va_start(ap, connection);
+			while ((arg = va_arg(ap, const char *)) != NULL) {
+				args.push_back(StaticString(arg, strlen(arg) + 1));
+			}
+			va_end(ap);
+
+			shared_array<StaticString> args_array(new StaticString[args.size() + 1]);
+			unsigned int totalSize = 0;
+			for (unsigned int i = 0; i < args.size(); i++) {
+				args_array[i + 1] = args[i];
+				totalSize += args[i].size();
+			}
+			char sizeHeader[sizeof(uint32_t)];
+			Uint32Message::generate(sizeHeader, totalSize);
+			args_array[0] = StaticString(sizeHeader, sizeof(uint32_t));
+			
+			gatheredWrite(connection, args_array.get(), args.size() + 1, NULL);
+		}
+
+		string stripHeaders(const string &str) {
+			string::size_type pos = str.find("\r\n\r\n");
+			if (pos == string::npos) {
+				return str;
+			} else {
+				string result = str;
+				result.erase(0, pos + 4);
+				return result;
+			}
+		}
+
+		string sendRequest(const Options &options, const char *path) {
+			int oldNumber = number;
+			pool->asyncGet(options, callback);
+			EVENTUALLY(5,
+				result = number == oldNumber + 1;
+			);
+			currentSession->initiate();
+			sendHeaders(currentSession->fd(),
+				"PATH_INFO", path,
+				"REQUEST_METHOD", "GET",
+				NULL);
+			shutdown(currentSession->fd(), SHUT_WR);
+			string body = stripHeaders(readAll(currentSession->fd()));
+			ProcessPtr process = currentSession->getProcess();
+			currentSession.reset();
+			EVENTUALLY(5,
+				result = process->usage() == 0;
+			);
+			return body;
 		}
 	};
 	
@@ -710,7 +770,7 @@ namespace tut {
 		
 		currentSession.reset();
 		sessions.pop_back();
-		EVENTUALLY(1,
+		EVENTUALLY(2,
 			result = pool->getProcessCount() == 1;
 		);
 	}
@@ -731,20 +791,55 @@ namespace tut {
 		);
 		ensure_equals(pool->getProcessCount(), 2u);
 		
-		EVENTUALLY(1,
+		EVENTUALLY(2,
 			SpawnerPtr spawner = pool->getSuperGroup("test1")->defaultGroup->spawner;
 			result = static_pointer_cast<DummySpawner>(spawner)->cleanCount >= 1;
 		);
-		EVENTUALLY(1,
+		EVENTUALLY(2,
 			SpawnerPtr spawner = pool->getSuperGroup("test2")->defaultGroup->spawner;
 			result = static_pointer_cast<DummySpawner>(spawner)->cleanCount >= 1;
 		);
 	}
-	
-	// Process metrics collection.
-	// Restarting.
+
+	TEST_METHOD(47) {
+		// It should restart the app if restart.txt is created or updated.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+		ProcessPtr process;
+		pool->setMax(1);
+
+		// Send normal request.
+		ensure_equals(sendRequest(options, "/"), "hello <b>world</b>");
+
+		// Modify application; it shouldn't have effect yet.
+		writeFile("tmp.wsgi/passenger_wsgi.py",
+			"def application(env, start_response):\n"
+			"	start_response('200 OK', [('Content-Type', 'text/html')])\n"
+			"	return ['restarted']\n");
+		ensure_equals(sendRequest(options, "/"), "hello <b>world</b>");
+
+		// Create restart.txt and send request again. The change should now be activated.
+		touchFile("tmp.wsgi/tmp/restart.txt", 1);
+		ensure_equals(sendRequest(options, "/"), "restarted");
+
+		// Modify application again; it shouldn't have effect yet.
+		writeFile("tmp.wsgi/passenger_wsgi.py",
+			"def application(env, start_response):\n"
+			"	start_response('200 OK', [('Content-Type', 'text/html')])\n"
+			"	return ['restarted 2']\n");
+		ensure_equals(sendRequest(options, "/"), "restarted");
+
+		// Touch restart.txt and send request again. The change should now be activated.
+		touchFile("tmp.wsgi/tmp/restart.txt", 2);
+		ensure_equals(sendRequest(options, "/"), "restarted 2");
+	}
+
 	// Spawn exceptions.
 	// Died processes.
+	// Process metrics collection.
 	// Persistent connections.
 	// Temporarily disabling a process.
 	// When a process has become idle, and there are waiters on the pool, consider detaching it in order to satisfy a waiter.
