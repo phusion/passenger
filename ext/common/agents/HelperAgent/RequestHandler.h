@@ -896,7 +896,9 @@ private:
 				consumed(0, true);
 			} else if (errno == EPIPE) {
 				// If the client closed the connection then disconnect quietly.
-				client->logMessage("Disconnecting: client stopped reading prematurely");
+				if (client->useUnionStation()) {
+					client->logMessage("Disconnecting: client stopped reading prematurely");
+				}
 				disconnect(client);
 			} else {
 				disconnectWithClientSocketWriteError(client, errno);

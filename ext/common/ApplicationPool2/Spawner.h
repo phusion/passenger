@@ -1829,6 +1829,7 @@ private:
 public:
 	unsigned int concurrency;
 	unsigned int spawnTime;
+	unsigned int cleanCount;
 	
 	DummySpawner(const ResourceLocator &resourceLocator)
 		: Spawner(resourceLocator)
@@ -1836,6 +1837,7 @@ public:
 		count = 0;
 		concurrency = 1;
 		spawnTime = 0;
+		cleanCount = 0;
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
@@ -1851,6 +1853,14 @@ public:
 			toString(count),
 			adminSocket.second, FileDescriptor(), sockets,
 			SystemTime::getUsec());
+	}
+
+	virtual bool cleanable() const {
+		return true;
+	}
+
+	virtual void cleanup() {
+		cleanCount++;
 	}
 };
 

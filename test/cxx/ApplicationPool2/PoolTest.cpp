@@ -32,6 +32,7 @@ namespace tut {
 			// Explicitly destroy these here because they can run
 			// additional code that depend on other fields in this
 			// class.
+			pool->destroy();
 			pool.reset();
 			lock_guard<boost::mutex> l(syncher);
 			currentSession.reset();
@@ -694,9 +695,52 @@ namespace tut {
 		// no matching process.
 		ensure(pool->findProcessByGupid("none") == NULL);
 	}
+
+	TEST_METHOD(44) {
+		// Test process idle cleaning.
+		Options options = createOptions();
+		retainSessions = true;
+		pool->setMaxIdleTime(50000);
+		pool->asyncGet(options, callback);
+		pool->asyncGet(options, callback);
+		EVENTUALLY(2,
+			result = number == 2;
+		);
+		ensure_equals(pool->getProcessCount(), 2u);
+		
+		currentSession.reset();
+		sessions.pop_back();
+		EVENTUALLY(1,
+			result = pool->getProcessCount() == 1;
+		);
+	}
+
+	TEST_METHOD(45) {
+		// Test spawner idle cleaning.
+		Options options = createOptions();
+		options.appGroupName = "test1";
+		Options options2 = createOptions();
+		options2.appGroupName = "test2";
+
+		retainSessions = true;
+		pool->setMaxIdleTime(50000);
+		pool->asyncGet(options, callback);
+		pool->asyncGet(options2, callback);
+		EVENTUALLY(2,
+			result = number == 2;
+		);
+		ensure_equals(pool->getProcessCount(), 2u);
+		
+		EVENTUALLY(1,
+			SpawnerPtr spawner = pool->getSuperGroup("test1")->defaultGroup->spawner;
+			result = static_pointer_cast<DummySpawner>(spawner)->cleanCount >= 1;
+		);
+		EVENTUALLY(1,
+			SpawnerPtr spawner = pool->getSuperGroup("test2")->defaultGroup->spawner;
+			result = static_pointer_cast<DummySpawner>(spawner)->cleanCount >= 1;
+		);
+	}
 	
-	// Process idle cleaning.
-	// Spawner idle cleaning.
 	// Process metrics collection.
 	// Restarting.
 	// Spawn exceptions.

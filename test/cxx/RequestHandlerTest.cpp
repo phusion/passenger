@@ -58,6 +58,7 @@ namespace tut {
 			setLogLevel(0);
 			unlink(serverFilename.c_str());
 			handler.reset();
+			pool->destroy();
 			pool.reset();
 		}
 

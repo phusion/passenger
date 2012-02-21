@@ -29,6 +29,7 @@
 #include <vector>
 #include <utility>
 #include <sstream>
+#include <iomanip>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -344,6 +345,7 @@ public:
 	}
 	
 	void garbageCollect(ev::timer &timer, int revents) {
+		PoolPtr self = shared_from_this(); // Keep pool object alive.
 		TRACE_POINT();
 		ScopedLock lock(syncher);
 		SuperGroupMap::iterator it, end = superGroups.end();
@@ -352,6 +354,7 @@ public:
 		unsigned long long now = SystemTime::getUsec();
 		unsigned long long nextGcRunTime = 0;
 		
+		P_DEBUG("Garbage collection time");
 		verifyInvariants();
 		
 		// For all supergroups and groups...
@@ -377,6 +380,8 @@ public:
 					 && now >= processGcTime) {
 						ProcessList::iterator prev = p_it;
 						prev--;
+						P_DEBUG("Garbage collect idle process: " << process->inspect() <<
+							", group=" << group->name);
 						group->detach(process, actions);
 						p_it = prev;
 					} else if (nextGcRunTime == 0
@@ -393,6 +398,7 @@ public:
 						group->spawner->lastUsed() +
 						group->options.getSpawnerTimeout() * 1000000;
 					if (now >= spawnerGcTime) {
+						P_DEBUG("Garbage collect idle spawner: group=" << group->name);
 						group->asyncCleanupSpawner();
 					} else if (nextGcRunTime == 0
 					        || spawnerGcTime < nextGcRunTime) {
@@ -404,6 +410,7 @@ public:
 			// ...remove entire supergroup if it has become garbage
 			// collectable after detaching idle processes.
 			if (superGroup->garbageCollectable(now)) {
+				P_DEBUG("Garbage collect SuperGroup: " << superGroup->name);
 				superGroupsToDetach.push_back(superGroup);
 			}
 			
@@ -418,13 +425,17 @@ public:
 		verifyInvariants();
 		lock.unlock();
 		runAllActions(actions);
-		
+
 		// Schedule next garbage collection run.
-		if (nextGcRunTime == 0) {
-			timer.start(maxIdleTime / 1000000.0, 0.0);
+		ev_tstamp tstamp;
+		if (nextGcRunTime == 0 || nextGcRunTime <= now) {
+			tstamp = maxIdleTime / 1000000.0;
 		} else {
-			timer.start((nextGcRunTime - now + 1000000) / 1000000.0, 0.0);
+			tstamp = (nextGcRunTime - now) / 1000000.0;
 		}
+		timer.start(tstamp, 0.0);
+		P_DEBUG("Garbage collection done; next garbage collect in " <<
+			std::fixed << std::setprecision(3) << tstamp << " sec");
 	}
 
 	struct ProcessAnalyticsLogEntry {
@@ -436,6 +447,7 @@ public:
 	typedef shared_ptr<ProcessAnalyticsLogEntry> ProcessAnalyticsLogEntryPtr;
 
 	void collectAnalytics(ev::timer &timer, int revents) {
+		PoolPtr self = shared_from_this(); // Keep pool object alive.
 		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -606,12 +618,12 @@ public:
 	
 	~Pool() {
 		TRACE_POINT();
+		destroy();
+		
+		UPDATE_TRACE_POINT();
 		interruptableThreads.interrupt_and_join_all();
 		nonInterruptableThreads.join_all();
-		
-		libev->stop(garbageCollectionTimer);
-		libev->stop(analyticsCollectionTimer);
-		
+
 		UPDATE_TRACE_POINT();
 		SuperGroupMap::iterator it;
 		vector<SuperGroupPtr>::iterator it2;
@@ -626,6 +638,11 @@ public:
 		
 		verifyInvariants();
 		verifyExpensiveInvariants();
+	}
+
+	void destroy() {
+		libev->stop(garbageCollectionTimer);
+		libev->stop(analyticsCollectionTimer);
 	}
 	
 	// 'lockNow == false' may only be used during unit tests. Normally we
@@ -807,6 +824,20 @@ public:
 			verifyInvariants();
 			verifyExpensiveInvariants();
 		}
+	}
+
+	void activateNewMaxIdleTime() {
+		LockGuard l(syncher);
+		garbageCollectionTimer.stop();
+		garbageCollectionTimer.start(maxIdleTime / 1000000.0, 0.0);
+	}
+
+	void setMaxIdleTime(unsigned long long value) {
+		{
+			LockGuard l(syncher);
+			maxIdleTime = value;
+		}
+		libev->runSync(boost::bind(&Pool::activateNewMaxIdleTime, this));
 	}
 	
 	unsigned int usage(bool lock = true) const {

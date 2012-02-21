@@ -148,6 +148,10 @@ private:
 			(*it)();
 		}
 	}
+
+	static void cleanupSpawner(SpawnerPtr spawner) {
+		spawner->cleanup();
+	}
 	
 	SessionPtr newSession() {
 		assert(count > 0);
@@ -514,10 +518,10 @@ public:
 			return true;
 		}
 	}
-	
+
 	void asyncCleanupSpawner() {
 		createInterruptableThread(
-			boost::bind(&Spawner::cleanup, spawner),
+			boost::bind(cleanupSpawner, spawner),
 			"Group spawner cleanup: " + name,
 			POOL_HELPER_THREAD_STACK_SIZE);
 	}
