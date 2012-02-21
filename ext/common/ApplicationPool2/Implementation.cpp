@@ -331,6 +331,8 @@ Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
 		} else {
 			// TODO: sure this is the best thing? if there are
 			// processes currently alive we should just use them.
+			P_DEBUG("Could not spawn process appRoot=" << name <<
+				": " << exception->what());
 			assignExceptionToGetWaiters(exception, actions);
 			pool->assignSessionsToGetWaiters(actions);
 			done = true;

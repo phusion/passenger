@@ -4,6 +4,8 @@
 #include <MessageReadersWriters.h>
 #include <map>
 #include <vector>
+#include <cerrno>
+#include <signal.h>
 
 using namespace std;
 using namespace Passenger;
@@ -14,6 +16,7 @@ namespace tut {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		BackgroundEventLoop bg;
+		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr pool;
 		GetCallback callback;
 		SessionPtr currentSession;
@@ -26,8 +29,8 @@ namespace tut {
 		ApplicationPool2_PoolTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			retainSessions = false;
-			pool = make_shared<Pool>(bg.safe.get(),
-				make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation));
+			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation);
+			pool = make_shared<Pool>(bg.safe.get(), spawnerFactory);
 			bg.start();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);
 		}
@@ -36,6 +39,7 @@ namespace tut {
 			// Explicitly destroy these here because they can run
 			// additional code that depend on other fields in this
 			// class.
+			setLogLevel(0);
 			pool->destroy();
 			pool.reset();
 			lock_guard<boost::mutex> l(syncher);
@@ -49,6 +53,7 @@ namespace tut {
 			options.appRoot = "stub/rack";
 			options.startCommand = "ruby\1" "start.rb";
 			options.startupFile  = "stub/rack/start.rb";
+			options.loadShellEnvvars = false;
 			return options;
 		}
 		
@@ -686,11 +691,54 @@ namespace tut {
 		LockGuard l(pool->syncher);
 		ensure(pool->superGroups.empty());
 	}
+
+	
+	/*********** Test disabling and enabling processes ***********/
+
+	TEST_METHOD(40) {
+		// Disabling a process under idle conditions should succeed immediately.
+		/*
+		Options options = createOptions();
+		options.minProcesses = 2;
+		options.noop = true;
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 2;
+		);
+
+		options.minProcesses = 0;
+		options.noop = false;
+		vector<ProcessPtr> processes = pool->getProcesses();
+		ensure_equals(processes, );
+		*/
+	}
+
+	// Disabling the sole process in a group should trigger a new process spawn.
+	// Disabling should succeed after the new process has been spawned.
+
+	// Duppose that a previous disable command triggered a new process spawn,
+	// and the spawn fails. Then the processes which were marked as 'disabled'
+	// should be marked 'enabled' again, and the callbacks for the previous
+	// disable commands should be called.
+
+	// asyncGet() should not select a process that's being disabled, unless
+	// it's the only process in the group.
+
+	// Disabling a process that's already being disabled should result in the
+	// callback being called after disabling is done.
+
+	// Enabling a process that's being disabled should immediately mark the process
+	// as being enabled and should call all the queued disable command callbacks.
+
+	// Enabling a process that's disabled works.
 	
 	
 	/*********** Other tests ***********/
 	
-	TEST_METHOD(40) {
+	TEST_METHOD(50) {
 		// The pool is considered to be at full capacity if and only
 		// if all SuperGroups are at full capacity.
 		Options options = createOptions();
@@ -714,7 +762,7 @@ namespace tut {
 		ensure(!pool->atFullCapacity());
 	}
 	
-	TEST_METHOD(41) {
+	TEST_METHOD(51) {
 		// If the pool is at full capacity, then increasing 'max' will cause
 		// new processes to be spawned. Any queued get requests are processed
 		// as those new processes become available or as existing processes
@@ -737,7 +785,7 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 3u);
 	}
 	
-	TEST_METHOD(42) {
+	TEST_METHOD(52) {
 		// Each spawned process has a GUPID, which can be looked up
 		// through findProcessByGupid().
 		Options options = createOptions();
@@ -750,13 +798,13 @@ namespace tut {
 		ensure_equals(currentSession->getProcess(), pool->findProcessByGupid(gupid));
 	}
 	
-	TEST_METHOD(43) {
+	TEST_METHOD(53) {
 		// findProcessByGupid() returns a NULL pointer if there is
 		// no matching process.
 		ensure(pool->findProcessByGupid("none") == NULL);
 	}
 
-	TEST_METHOD(44) {
+	TEST_METHOD(54) {
 		// Test process idle cleaning.
 		Options options = createOptions();
 		retainSessions = true;
@@ -775,7 +823,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(45) {
+	TEST_METHOD(55) {
 		// Test spawner idle cleaning.
 		Options options = createOptions();
 		options.appGroupName = "test1";
@@ -801,7 +849,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(47) {
+	TEST_METHOD(56) {
 		// It should restart the app if restart.txt is created or updated.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
@@ -837,13 +885,102 @@ namespace tut {
 		ensure_equals(sendRequest(options, "/"), "restarted 2");
 	}
 
-	// Spawn exceptions.
-	// Died processes.
+	TEST_METHOD(57) {
+		// Test spawn exceptions.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+		spawnerFactory->forwardStderr = false;
+
+		writeFile("tmp.wsgi/passenger_wsgi.py",
+			"import sys\n"
+			"sys.stderr.write('Something went wrong!')\n"
+			"exit(1)\n");
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+
+		ensure(currentException != NULL);
+		shared_ptr<SpawnException> e = dynamic_pointer_cast<SpawnException>(currentException);
+		ensure_equals(e->getErrorPage(), "Something went wrong!");
+	}
+
+	TEST_METHOD(58) {
+		// If a process fails to spawn, then it stops trying to spawn minProcesses processes.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+		options.minProcesses = 4;
+		spawnerFactory->forwardStderr = false;
+
+		writeFile("tmp.wsgi/counter", "0");
+		// Our application starts successfully the first two times,
+		// and fails all the other times.
+		writeFile("tmp.wsgi/passenger_wsgi.py",
+			"import sys\n"
+
+			"def application(env, start_response):\n"
+			"	pass\n"
+
+			"counter = int(open('counter', 'r').read())\n"
+			"f = open('counter', 'w')\n"
+			"f.write(str(counter + 1))\n"
+			"f.close()\n"
+			"if counter >= 2:\n"
+			"	sys.stderr.write('Something went wrong!')\n"
+			"	exit(1)\n");
+
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 2;
+		);
+		EVENTUALLY(2,
+			result = !pool->getSuperGroup("tmp.wsgi")->defaultGroup->spawning();
+		);
+		SHOULD_NEVER_HAPPEN(500,
+			result = pool->getProcessCount() > 2;
+		);
+	}
+
+	TEST_METHOD(59) {
+		// It removes the process from the pool if session->initiate() fails.
+		Options options = createOptions();
+		options.appRoot = "stub/wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		pid_t pid = currentSession->getPid();
+		
+		kill(pid, SIGTERM);
+		// Wait until process is gone.
+		EVENTUALLY(5,
+			result = kill(pid, 0) == -1 && (errno == ESRCH || errno == EPERM || errno == ECHILD);
+		);
+
+		try {
+			currentSession->initiate();
+			fail("Initiate is supposed to fail");
+		} catch (const SystemException &e) {
+			ensure_equals(e.code(), ECONNREFUSED);
+		}
+		ensure_equals(pool->getProcessCount(), 0u);
+	}
+
 	// Process metrics collection.
 	// Persistent connections.
-	// Temporarily disabling a process.
 	// When a process has become idle, and there are waiters on the pool, consider detaching it in order to satisfy a waiter.
-	// If the app fails to spawn, then it stops trying to spawn minProcesses processes.
 
 	// If one closes the session before it has reached EOF, and process's maximum concurrency
 	// has already been reached, then the pool should ping the process so that it can detect

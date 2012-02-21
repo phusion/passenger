@@ -855,6 +855,29 @@ public:
 		DynamicScopedLock l(syncher, lock);
 		return usage(false) >= max;
 	}
+
+	vector<ProcessPtr> getProcesses() const {
+		LockGuard l(syncher);
+		vector<ProcessPtr> result;
+		SuperGroupMap::const_iterator it, end = superGroups.end();
+		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
+			const SuperGroupPtr &superGroup = it->second;
+			vector<GroupPtr> &groups = superGroup->groups;
+			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+			for (g_it = groups.begin(); g_it != g_end; g_it++) {
+				const GroupPtr &group = *g_it;
+				ProcessList::const_iterator p_it;
+
+				for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
+					result.push_back(*p_it);
+				}
+				for (p_it = group->disabledProcesses.begin(); p_it != group->disabledProcesses.end(); p_it++) {
+					result.push_back(*p_it);
+				}
+			}
+		}
+		return result;
+	}
 	
 	unsigned int getProcessCount(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
