@@ -96,8 +96,6 @@ class RequestHandler:
 								self.process_ping(env, input_stream, client)
 							else:
 								self.process_request(env, input_stream, client)
-						else:
-							done = True
 					except KeyboardInterrupt:
 						done = True
 					except IOError, e:
