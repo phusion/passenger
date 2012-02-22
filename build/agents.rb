@@ -43,6 +43,8 @@ end
 
 dependencies = [
 	'ext/common/agents/HelperAgent/Main.cpp',
+	'ext/common/agents/HelperAgent/RequestHandler.h',
+	'ext/common/agents/HelperAgent/RequestHandler.cpp',
 	'ext/common/agents/HelperAgent/ScgiRequestParser.h',
 	'ext/common/agents/HelperAgent/BacktracesServer.h',
 	'ext/common/StaticString.h',
@@ -60,18 +62,20 @@ dependencies = [
 	'ext/common/ApplicationPool/Server.h',
 	LIBBOOST_OXT,
 	LIBCOMMON,
-	:libev
+	:libev,
+	:libeio
 ]
 file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable "#{AGENT_OUTPUT_DIR}PassengerHelperAgent",
 		'ext/common/agents/HelperAgent/Main.cpp',
-		"-Iext -Iext/common #{LIBEV_CFLAGS} " <<
+		"-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
 		"#{PlatformInfo.portability_cflags} " <<
 		"#{EXTRA_CXXFLAGS}  " <<
 		"#{LIBCOMMON} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{LIBEV_LIBS} " <<
+		"#{LIBEIO_LIBS} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
 		"#{EXTRA_LDFLAGS}"

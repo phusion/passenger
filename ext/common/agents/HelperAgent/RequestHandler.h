@@ -840,7 +840,7 @@ private:
 			return;
 		}
 
-		RH_TRACE(client, 3, "Application sent EOF");
+		RH_DEBUG(client, "Application sent EOF");
 		client->endScopeLog(&client->scopeLogs.requestProxying);
 		client->clientOutputPipe->end();
 		client->appInput->stop();
@@ -1188,9 +1188,9 @@ private:
 	/******* State: BEGIN_READING_CONNECT_PASSWORD *******/
 
 	void checkConnectPassword(const ClientPtr &client, const char *data, unsigned int len) {
-		RH_TRACE(client, 2, "Given connect password: \"" << cEscapeString(StaticString(data, len)) << "\"");
+		RH_TRACE(client, 3, "Given connect password: \"" << cEscapeString(StaticString(data, len)) << "\"");
 		if (StaticString(data, len) == options.requestSocketPassword) {
-			RH_TRACE(client, 2, "Connect password is correct; reading header");
+			RH_TRACE(client, 3, "Connect password is correct; reading header");
 			client->state = Client::READING_HEADER;
 			client->freeBufferedConnectPassword();
 			client->timeoutTimer.stop();
@@ -1524,7 +1524,7 @@ private:
 				writeErrorResponse(client, e->what());
 			}
 		} else {
-			RH_TRACE(client, 3, "Session checked out: pid=" << session->getPid() <<
+			RH_DEBUG(client, "Session checked out: pid=" << session->getPid() <<
 				", gupid=" << session->getGupid());
 			client->session = session;
 			initiateSession(client);
@@ -1538,7 +1538,7 @@ private:
 			client->session->initiate();
 		} catch (const SystemException &e2) {
 			if (client->sessionCheckoutTry < 10) {
-				RH_TRACE(client, 2, "Error checking out session (" << e2.what() <<
+				RH_DEBUG(client, "Error checking out session (" << e2.what() <<
 					"); retrying (attempt " << client->sessionCheckoutTry << ")");
 				client->sessionCheckedOut = false;
 				pool->asyncGet(client->options,

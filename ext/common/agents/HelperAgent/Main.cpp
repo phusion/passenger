@@ -47,7 +47,8 @@
 
 #include <ev++.h>
 
-#include <agents/HelperAgent/ScgiRequestParser.h>
+#include <agents/HelperAgent/RequestHandler.h>
+#include <agents/HelperAgent/RequestHandler.cpp>
 #include <agents/HelperAgent/BacktracesServer.h>
 #include <agents/HelperAgent/AgentOptions.h>
 
@@ -60,7 +61,9 @@
 #include <ResourceLocator.h>
 #include <BackgroundEventLoop.cpp>
 #include <ServerInstanceDir.h>
+#include <UnionStation.h>
 #include <Exceptions.h>
+#include <MultiLibeio.cpp>
 #include <Utils.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
@@ -76,8 +79,8 @@ using namespace Passenger::ApplicationPool2;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
 
-static StreamBMH_Occ statusFinder_occ;
-static StreamBMH_Occ transferEncodingFinder_occ;
+//static StreamBMH_Occ statusFinder_occ;
+//static StreamBMH_Occ transferEncodingFinder_occ;
 
 
 struct ClientDisconnectedException { };
@@ -109,6 +112,7 @@ public:
 	}
 };
 
+#if 0
 /**
  * A representation of a Client from the Server's point of view. This class
  * contains the methods used to communicate from a server to a connected
@@ -1075,6 +1079,7 @@ public:
 };
 
 typedef shared_ptr<Client> ClientPtr;
+#endif
 
 /**
  * A representation of the Server responsible for handling Client instances.
@@ -1092,18 +1097,17 @@ private:
 	BackgroundEventLoop poolLoop;
 	BackgroundEventLoop requestLoop;
 
-	unsigned int numberOfThreads;
 	FileDescriptor requestSocket;
 	ServerInstanceDir serverInstanceDir;
 	ServerInstanceDir::GenerationPtr generation;
-	set<ClientPtr> clients;
-	AnalyticsLoggerPtr analyticsLogger;
+	UnionStation::LoggerFactoryPtr loggerFactory;
 	RandomGeneratorPtr randomGenerator;
 	SpawnerFactoryPtr spawnerFactory;
 	PoolPtr pool;
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
 	ResourceLocator resourceLocator;
+	shared_ptr<RequestHandler> requestHandler;
 	shared_ptr<oxt::thread> prestarterThread;
 	shared_ptr<oxt::thread> messageServerThread;
 	shared_ptr<oxt::thread> eventLoopThread;
@@ -1126,22 +1130,8 @@ private:
 				S_IRGRP | S_IWGRP | S_IXGRP |
 				S_IROTH | S_IWOTH | S_IXOTH);
 		} while (ret == -1 && errno == EINTR);
-	}
-	
-	/**
-	 * Starts the client handler threads that are responsible for handling the communication
-	 * between the client and this Server.
-	 *
-	 * @see Client
-	 */
-	void startClientHandlerThreads() {
-		for (unsigned int i = 0; i < numberOfThreads; i++) {
-			ClientPtr client(new Client(i + 1, pool,
-				options.requestSocketPassword,
-				options.defaultUser, options.defaultGroup, requestSocket,
-				analyticsLogger));
-			clients.insert(client);
-		}
+
+		setNonBlocking(requestSocket);
 	}
 	
 	/**
@@ -1186,16 +1176,16 @@ private:
 	}
 	
 	void resetWorkerThreadInactivityTimers() {
-		set<ClientPtr>::iterator it;
+		/* set<ClientPtr>::iterator it;
 		
 		for (it = clients.begin(); it != clients.end(); it++) {
 			ClientPtr client = *it;
 			client->resetInactivityTimer();
-		}
+		} */
 	}
 	
 	unsigned long long minWorkerThreadInactivityTime() const {
-		set<ClientPtr>::const_iterator it;
+		/* set<ClientPtr>::const_iterator it;
 		unsigned long long result = 0;
 		
 		for (it = clients.begin(); it != clients.end(); it++) {
@@ -1205,7 +1195,8 @@ private:
 				result = inactivityTime;
 			}
 		}
-		return result;
+		return result; */
+		return 0;
 	}
 	
 public:
@@ -1216,14 +1207,6 @@ public:
 	{
 		TRACE_POINT();
 		this->feedbackFd = feedbackFd;
-		numberOfThreads  = options.maxPoolSize * 4;
-
-		sbmh_init(NULL, &statusFinder_occ,
-			(const unsigned char *) "Status:",
-			strlen("Status:"));
-		sbmh_init(NULL, &transferEncodingFinder_occ,
-			(const unsigned char *) "Transfer-Encoding:",
-			strlen("Transfer-Encoding:"));
 		
 		UPDATE_TRACE_POINT();
 		generation = serverInstanceDir.getGeneration(options.generationNumber);
@@ -1241,21 +1224,23 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		analyticsLogger = ptr(new AnalyticsLogger(options.loggingAgentAddress,
-			"logging", options.loggingAgentPassword));
-		
+		loggerFactory = make_shared<UnionStation::LoggerFactory>(options.loggingAgentAddress,
+			"logging", options.loggingAgentPassword);
 		randomGenerator = make_shared<RandomGenerator>();
 		spawnerFactory = make_shared<SpawnerFactory>(poolLoop.safe,
 			resourceLocator, generation, randomGenerator);
-		pool = make_shared<Pool>(poolLoop.safe,
-			spawnerFactory, randomGenerator);
+		pool = make_shared<Pool>(poolLoop.safe.get(), spawnerFactory, loggerFactory,
+			randomGenerator);
 		pool->setMax(options.maxPoolSize);
 		//pool->setMaxPerApp(maxInstancesPerApp);
-		//pool->setMaxIdleTime(poolIdleTime);
+		//pool->setMaxIdleTime(options.poolIdleTime);
 		
 		//messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
 		messageServer->addHandler(ptr(new BacktracesServer()));
 		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
+
+		requestHandler = make_shared<RequestHandler>(requestLoop.safe,
+			requestSocket, pool, options);
 		
 		UPDATE_TRACE_POINT();
 		writeArrayMessage(feedbackFd,
@@ -1277,9 +1262,6 @@ public:
 		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
-		oxt::thread *threads[clients.size()];
-		set<ClientPtr>::iterator it;
-		unsigned int i = 0;
 		
 		P_DEBUG("Shutting down helper agent...");
 		prestarterThread->interrupt_and_join();
@@ -1287,16 +1269,11 @@ public:
 			messageServerThread->interrupt_and_join();
 		}
 		
-		for (it = clients.begin(); it != clients.end(); it++, i++) {
-			ClientPtr client = *it;
-			threads[i] = client->getThread();
-		}
-		oxt::thread::interrupt_and_join_multiple(threads, clients.size());
-		clients.clear();
-
+		pool->destroy();
+		pool.reset();
+		requestHandler.reset();
 		poolLoop.stop();
 		requestLoop.stop();
-		pool.reset();
 		
 		P_TRACE(2, "All threads have been shut down.");
 	}
@@ -1305,8 +1282,6 @@ public:
 		TRACE_POINT();
 		function<void ()> func;
 
-		startClientHandlerThreads();
-		
 		func = boost::bind(&MessageServer::mainLoop, messageServer.get());
 		messageServerThread = ptr(new oxt::thread(
 			boost::bind(runAndPrintExceptions, func, true),
