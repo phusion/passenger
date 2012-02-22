@@ -1,7 +1,7 @@
-passenger (3.0.11-2bbox1) lucid; urgency=low
+passenger (3.0.11-2bbox2) lucid; urgency=low
 
   * Support for ruby 1.9.x (adds passenger-common1.8 and
-	  passenger-common1.9.1)
+    passenger-common1.9.1)
 
  -- John Leach <john@brightbox.co.uk>  Wed, 22 Feb 2012 17:43:02 +0000
 
