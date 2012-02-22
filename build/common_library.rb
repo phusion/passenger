@@ -270,12 +270,14 @@ if USE_VENDORED_LIBEV
 		sh "rm -f #{LIBEV_OUTPUT_DIR}/libev.la"
 		sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la"
 	end
-	
-	task :clean do
+
+	task 'libev:clean' do
 		if File.exist?(LIBEV_OUTPUT_DIR + "Makefile")
 			sh "cd #{LIBEV_OUTPUT_DIR} && make maintainer-clean"
 		end
 	end
+	
+	task :clean => 'libev:clean'
 else
 	LIBEV_CFLAGS = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
 	LIBEV_LIBS   = string_option('LIBEV_LIBS', '-lev')
