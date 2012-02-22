@@ -221,7 +221,7 @@ private:
 				}
 				done = true;
 			} else {
-				FileDescriptor clientfdGuard = clientfd;
+				FileDescriptor clientfdGuard(clientfd);
 				int optval = 1;
 				
 				setNonBlocking(clientfdGuard);

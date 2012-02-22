@@ -255,6 +255,10 @@ public:
 	bool isStarted() const {
 		return !paused;
 	}
+
+	const FileDescriptor &getFd() const {
+		return fd;
+	}
 };
 
 typedef shared_ptr< EventedBufferedInput<> > EventedBufferedInputPtr;

@@ -323,7 +323,7 @@ private:
 		} else {
 			eio_unlink(filename.c_str(), 0, successCallback, NULL);
 			if (openTimeout == 0) {
-				finalizeOpenFile(req.result);
+				finalizeOpenFile(FileDescriptor(req.result));
 			} else {
 				getLibev()->runAfter(openTimeout,
 					boost::bind(&FileBackedPipe::finalizeOpenFileAfterTimeout, this,

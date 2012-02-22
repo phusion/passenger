@@ -60,12 +60,14 @@ private:
 	Socket *socket;
 	
 	Connection connection;
+	FileDescriptor theFd;
 	bool closed;
 	
 	void deinitiate(bool success) {
 		connection.fail = !success;
 		socket->checkinConnection(connection);
 		connection.fd = -1;
+		theFd = FileDescriptor();
 	}
 
 	void callOnInitiateFailure() {
@@ -121,6 +123,7 @@ public:
 		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));
 		connection = socket->checkoutConnection();
 		connection.fail = true;
+		theFd = FileDescriptor(connection.fd, false);
 		g.clear();
 	}
 	
@@ -128,12 +131,8 @@ public:
 		return connection.fd != -1;
 	}
 	
-	int fd() const {
-		if (OXT_LIKELY(!closed)) {
-			return connection.fd;
-		} else {
-			return -1;
-		}
+	const FileDescriptor &fd() const {
+		return theFd;
 	}
 	
 	void close(bool success) {

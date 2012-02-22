@@ -859,7 +859,8 @@ private:
 			stringstream message;
 			message << "application socket read error: ";
 			message << strerror(errorCode);
-			message << " (errno=" << errorCode << ")";
+			message << " (fd=" << client->appInput->getFd();
+			message << ", errno=" << errorCode << ")";
 			disconnectWithError(client, message.str());
 		}
 	}
@@ -958,8 +959,8 @@ private:
 		socklen_t addrlen = sizeof(u);
 
 		if (accept4Available) {
-			FileDescriptor fd = callAccept4(requestSocket,
-				(struct sockaddr *) &u, &addrlen, O_NONBLOCK);
+			FileDescriptor fd(callAccept4(requestSocket,
+				(struct sockaddr *) &u, &addrlen, O_NONBLOCK));
 			if (fd == -1 && errno == ENOSYS) {
 				accept4Available = false;
 				return acceptNonBlockingSocket(sock);
@@ -967,8 +968,8 @@ private:
 				return fd;
 			}
 		} else {
-			FileDescriptor fd = syscalls::accept(requestSocket,
-				(struct sockaddr *) &u, &addrlen);
+			FileDescriptor fd(syscalls::accept(requestSocket,
+				(struct sockaddr *) &u, &addrlen));
 			if (fd != -1) {
 				int e = errno;
 				setNonBlocking(fd);
@@ -1561,6 +1562,7 @@ private:
 			client->beginScopeLog(&client->scopeLogs.requestProxying, "request proxying");
 		}
 		
+		RH_DEBUG(client, "Session initiated: fd=" << client->session->fd());
 		setNonBlocking(client->session->fd());
 		client->appInput->reset(libev.get(), client->session->fd());
 		client->appInput->start();

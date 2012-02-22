@@ -1350,7 +1350,7 @@ main(int argc, char *argv[]) {
 	
 	try {
 		UPDATE_TRACE_POINT();
-		Server server(FEEDBACK_FD, options);
+		Server server(FileDescriptor(FEEDBACK_FD), options);
 		P_DEBUG("PassengerHelperAgent online, listening at unix:" <<
 			server.getRequestSocketFilename());
 		

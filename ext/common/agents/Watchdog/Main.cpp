@@ -123,7 +123,8 @@ private:
 					 */
 					ret = pid;
 					status = 0;
-					P_WARN("waitpid() on " << name() << " return -1 with " <<
+					P_WARN("waitpid() on " << name() << " (pid=" << pid <<
+						") returned -1 with " <<
 						"errno = ECHILD, falling back to kill polling");
 					waitpidUsingKillPolling(pid);
 					e = 0;
@@ -139,7 +140,7 @@ private:
 				this_thread::disable_interruption di;
 				this_thread::disable_syscall_interruption dsi;
 				if (ret == -1) {
-					P_WARN(name() << " crashed or killed for "
+					P_WARN(name() << " (pid=" << pid << ") crashed or killed for "
 						"an unknown reason (errno = " <<
 						strerror(e) << "), restarting it...");
 				} else if (WIFEXITED(status)) {
@@ -152,11 +153,13 @@ private:
 						 */
 						return;
 					} else {
-						P_WARN(name() << " crashed with exit status " <<
+						P_WARN(name() << " (pid=" << pid <<
+							") crashed with exit status " <<
 							WEXITSTATUS(status) << ", restarting it...");
 					}
 				} else {
-					P_WARN(name() << " crashed with signal " <<
+					P_WARN(name() << " (pid=" << pid <<
+						") crashed with signal " <<
 						getSignalName(WTERMSIG(status)) <<
 						", restarting it...");
 				}
