@@ -187,6 +187,7 @@ RequestHandler::getClientPointer(const ClientPtr &client) {
 #ifdef STANDALONE
 #include <MultiLibeio.cpp>
 #include <iostream>
+#include <agents/Base.h>
 
 using namespace std;
 using namespace Passenger;
@@ -217,9 +218,9 @@ ignoreSigpipe() {
 
 int
 main() {
-	printf("Client: %d\n", (int)sizeof(Client));
 	setup_syscall_interruption_support();
 	ignoreSigpipe();
+	installAbortHandler();
 	setLogLevel(3);
 	MultiLibeio::init();
 	loop = EV_DEFAULT;
@@ -243,7 +244,7 @@ main() {
 	UnionStation::LoggerFactoryPtr loggerFactory = make_shared<UnionStation::LoggerFactory>(options.loggingAgentAddress,
 			"logging", options.loggingAgentPassword);
 	PoolPtr pool = make_shared<Pool>(libev.get(), spawnerFactory, loggerFactory);
-	FileDescriptor requestSocket = createTcpServer("127.0.0.1", 3000);
+	FileDescriptor requestSocket(createTcpServer("127.0.0.1", 3000));
 	setNonBlocking(requestSocket);
 	handler = new RequestHandler(libev, requestSocket, pool, options);
 	

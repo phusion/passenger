@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -41,9 +41,10 @@
 #endif
 
 #include <agents/Base.h>
-#include "Constants.h"
-#include "Exceptions.h"
-#include "Logging.h"
+#include <Constants.h>
+#include <Exceptions.h>
+#include <Logging.h>
+#include <Utils.h>
 
 namespace Passenger {
 
@@ -96,6 +97,12 @@ safeStrlen(const char *str) {
 	return size;
 }
 
+// Async-signal safe way to print to stderr.
+static void
+safePrintErr(const char *message) {
+	write(STDERR_FILENO, message, strlen(message));
+}
+
 // Must be async signal safe.
 static char *
 appendText(char *buf, const char *text) {
@@ -145,6 +152,9 @@ appendSignalName(char *buf, int signo) {
 		break;
 	case SIGBUS:
 		buf = appendText(buf, "SIGBUS");
+		break;
+	case SIGFPE:
+		buf = appendText(buf, "SIGFPE");
 		break;
 	default:
 		return appendULL(buf, (unsigned long long) signo);
@@ -205,7 +215,10 @@ appendSignalReason(char *buf, siginfo_t *info) {
 				break;
 			}
 			break;
-		};
+		default:
+			handled = false;
+			break;
+		}
 		if (!handled) {
 			buf = appendText(buf, "#");
 			buf = appendULL(buf, (unsigned long long) info->si_code);
@@ -221,6 +234,79 @@ appendSignalReason(char *buf, siginfo_t *info) {
 	}
 	
 	return buf;
+}
+
+static void
+dumpWithCrashWatch(char *messageBuf) {
+	pid_t pid = getpid();
+	const char *pidStr = messageBuf;
+	char *end = messageBuf;
+	end = appendULL(end, (unsigned long long) pid);
+	*end = '\0';
+	
+	pid_t child = fork();
+	if (child == 0) {
+		// Sleep for a short while to allow the parent process to raise SIGSTOP.
+		// Strictly speaking usleep() is not async-signal safe so let's hope
+		// it works.
+		usleep(100000);
+
+		resetSignalHandlersAndMask();
+
+		child = fork();
+		if (child == 0) {
+			execlp("crash-watch", "crash-watch", "--dump", pidStr, (char * const) 0);
+			if (errno == ENOENT) {
+				safePrintErr("Crash-watch is not installed. Please install it with 'gem install crash-watch' "
+					"or download it from https://github.com/FooBarWidget/crash-watch.\n");
+			} else {
+				int e = errno;
+				end = messageBuf;
+				end = appendText(end, "crash-watch is installed, but it could not be executed! ");
+				end = appendText(end, "(execlp() returned errno=");
+				end = appendULL(end, e);
+				end = appendText(end, ") Please check your file permissions or something.\n");
+				write(STDERR_FILENO, messageBuf, end - messageBuf);
+			}
+			_exit(1);
+
+		} else if (child == -1) {
+			int e = errno;
+			end = messageBuf;
+			end = appendText(end, "Could not execute crash-watch: fork() failed with errno=");
+			end = appendULL(end, e);
+			end = appendText(end, "\n");
+			write(STDERR_FILENO, messageBuf, end - messageBuf);
+			_exit(1);
+
+		} else {
+			int status;
+			int ret = waitpid(child, &status, 0);
+			if (ret == -1) {
+				safePrintErr("Could not waitpid() on the crash-watch child process.\n");
+				_exit(1);
+			} else {
+				if (status != 0) {
+					// Crash-watch failed and didn't tell the parent process
+					// to continue, so do it ourselves.
+					kill(pid, SIGCONT);
+				}
+				_exit(0);
+			}
+		}
+
+	} else if (child == -1) {
+		int e = errno;
+		end = messageBuf;
+		end = appendText(end, "Could not execute crash-watch: fork() failed with errno=");
+		end = appendULL(end, e);
+		end = appendText(end, "\n");
+		write(STDERR_FILENO, messageBuf, end - messageBuf);
+
+	} else {
+		raise(SIGSTOP);
+		// Will continue after the child process or crash-watch has done its job.
+	}
 }
 
 static void
@@ -253,57 +339,39 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	write(STDERR_FILENO, messageBuf, end - messageBuf);
 	
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
-		/* For some reason, it would appear that fatal signal
-		 * handlers have a deadline on some systems: the process will
-		 * be killed if the signal handler doesn't finish in time.
-		 * This killing appears to be triggered at some system calls,
-		 * including but not limited to nanosleep().
-		 * backtrace() might be slow and running crash-watch is
-		 * definitely slow, so we do our work in a child process
-		 * in order not to be affected by the deadline. But preferably
-		 * we don't fork because forking will cause us to lose
-		 * thread information.
-		 */
-		#ifdef __linux__
-			bool hasDeadline = false;
-		#else
-			// Mac OS X has a deadline. Not sure about other systems.
-			bool hasDeadline = true;
-		#endif
-		if (!hasDeadline || fork() == 0) {
-			int frames = backtrace(backtraceStore, sizeof(backtraceStore) / sizeof(void *));
-			end = messageBuf;
-			end = appendText(end, "--------------------------------------\n");
-			end = appendText(end, "[ pid=");
-			end = appendULL(end, (unsigned long long) pid);
-			end = appendText(end, " ] Backtrace with ");
-			end = appendULL(end, (unsigned long long) frames);
-			end = appendText(end, " frames:\n");
-			write(STDERR_FILENO, messageBuf, end - messageBuf);
-			backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
-			
-			end = messageBuf;
-			end = appendText(end, "--------------------------------------\n");
-			end = appendText(end, "[ pid=");
-			end = appendULL(end, (unsigned long long) pid);
-			end = appendText(end, " ] Dumping a more detailed backtrace with crash-watch "
-				"('gem install crash-watch' if you don't have it)...\n");
-			write(STDERR_FILENO, messageBuf, end - messageBuf);
-			
-			end = messageBuf;
-			end = appendText(end, "crash-watch --dump ");
-			end = appendULL(end, (unsigned long long) getpid());
-			*end = '\0';
-			system(messageBuf);
-			_exit(1);
-		}
+		int frames = backtrace(backtraceStore, sizeof(backtraceStore) / sizeof(void *));
+		end = messageBuf;
+		end = appendText(end, "--------------------------------------\n");
+		end = appendText(end, "[ pid=");
+		end = appendULL(end, (unsigned long long) pid);
+		end = appendText(end, " ] Backtrace with ");
+		end = appendULL(end, (unsigned long long) frames);
+		end = appendText(end, " frames:\n");
+		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
+
+		end = messageBuf;
+		end = appendText(end, "--------------------------------------\n");
+		end = appendText(end, "[ pid=");
+		end = appendULL(end, (unsigned long long) pid);
+		end = appendText(end, " ] Dumping a more detailed backtrace with crash-watch...\n");
+		write(STDERR_FILENO, messageBuf, end - messageBuf);
+	#else
+		end = messageBuf;
+		end = appendText(end, "--------------------------------------\n");
+		end = appendText(end, "[ pid=");
+		end = appendULL(end, (unsigned long long) pid);
+		end = appendText(end, " ] Dumping a backtrace with crash-watch...\n");
+		write(STDERR_FILENO, messageBuf, end - messageBuf);
 	#endif
-	
+
+	dumpWithCrashWatch(messageBuf);
+
 	// Run default signal handler.
-	kill(getpid(), signo);
+	raise(signo);
 }
 
-static void
+void
 installAbortHandler() {
 	alternativeStackSize = MINSIGSTKSZ + 64 * 1024;
 	alternativeStack = (char *) malloc(alternativeStackSize);
@@ -333,6 +401,7 @@ installAbortHandler() {
 	sigaction(SIGABRT, &action, NULL);
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
+	sigaction(SIGFPE, &action, NULL);
 }
 
 bool
