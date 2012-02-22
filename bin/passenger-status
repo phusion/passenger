@@ -29,16 +29,11 @@ PhusionPassenger.locate_directories
 
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/admin_tools/server_instance'
+require 'phusion_passenger/utils/ansi_colors'
 require 'optparse'
 
 include PhusionPassenger::AdminTools
-
-# ANSI color codes
-RESET    = "\e[0m"
-BOLD     = "\e[1m"
-YELLOW   = "\e[33m"
-BLACK_BG = "\e[40m"
-BLUE_BG  = "\e[44m"
+include PhusionPassenger::Utils::AnsiColors
 
 def show_status(server_instance, options = {})
 	server_instance.connect(:passenger_status) do

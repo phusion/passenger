@@ -32,7 +32,7 @@
 #include <oxt/thread.hpp>
 #include <vector>
 #include <utility>
-#include <cassert>
+#include <Logging.h>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/ComponentInfo.h>
 #include <ApplicationPool2/Group.h>
@@ -128,11 +128,11 @@ private:
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
 		
-		assert(groups.empty() ==
+		P_ASSERT(groups.empty() ==
 			(state == INITIALIZING || state == DESTROYING || state == DESTROYED));
-		assert((defaultGroup == NULL) ==
+		P_ASSERT((defaultGroup == NULL) ==
 			(state == INITIALIZING || state == DESTROYING || state == DESTROYED));
-		assert(!( state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED ) ||
+		P_ASSERT(!( state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED ) ||
 			( getWaitlist.empty() ));
 	}
 	
@@ -226,6 +226,7 @@ private:
 		vector<ComponentInfo>::const_iterator it;
 		ExceptionPtr exception;
 		
+		P_TRACE(2, "Initializing SuperGroup " << inspect() << " in the background...");
 		try {
 			componentInfos = loadComponentInfos(options);
 		} catch (const tracable_exception &e) {
@@ -248,7 +249,8 @@ private:
 		if (OXT_UNLIKELY(getPool() == NULL || generation != this->generation)) {
 			return;
 		}
-		assert(state == INITIALIZING);
+		P_TRACE(2, "Initialization of SuperGroup " << inspect() << " almost done; grabbed lock");
+		P_ASSERT(state == INITIALIZING);
 		verifyInvariants();
 		
 		vector<Callback> actions;
@@ -256,7 +258,7 @@ private:
 			/* Somehow initialization failed. Maybe something has deleted
 			 * the supergroup files while we're working.
 			 */
-			assert(exception != NULL);
+			P_ASSERT(exception != NULL);
 			setState(DESTROYED);
 			
 			actions.reserve(getWaitlist.size());
@@ -281,6 +283,7 @@ private:
 		}
 		
 		verifyInvariants();
+		P_TRACE(2, "Done initializing SuperGroup " << inspect());
 		lock.unlock();
 		runAllActions(actions);
 	}
@@ -299,7 +302,7 @@ private:
 		if (OXT_UNLIKELY(getPool() == NULL || this->generation != generation)) {
 			return;
 		}
-		assert(state == RESTARTING);
+		P_ASSERT(state == RESTARTING);
 		verifyInvariants();
 		
 		vector<GroupPtr> allGroups;
@@ -370,7 +373,7 @@ private:
 		}
 		
 		UPDATE_TRACE_POINT();
-		assert(state == DESTROYING);
+		P_ASSERT(state == DESTROYING);
 		verifyInvariants();
 		state = DESTROYED;
 		verifyInvariants();
@@ -551,10 +554,10 @@ public:
 			for (it = groups.begin(); result && it != end; it++) {
 				result = result && (*it)->garbageCollectable(now);
 			}
-			assert(!result || getWaitlist.empty());
+			P_ASSERT(!result || getWaitlist.empty());
 			return result;
 		} else {
-			assert(!(state == DESTROYED) || getWaitlist.empty());
+			P_ASSERT(!(state == DESTROYED) || getWaitlist.empty());
 			return state == DESTROYED;
 		}
 	}
@@ -639,6 +642,10 @@ public:
 			state = RESTARTING;
 		}
 		verifyInvariants();
+	}
+
+	string inspect() const {
+		return name;
 	}
 };
 

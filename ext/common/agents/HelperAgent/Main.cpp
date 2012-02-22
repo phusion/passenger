@@ -38,6 +38,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <sstream>
 
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
@@ -68,22 +69,84 @@
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
-#include <Utils/Dechunker.h>
-#include <Utils/HttpHeaderBufferer.h>
-#include <Utils/StreamBoyerMooreHorspool.h>
 
 using namespace boost;
 using namespace oxt;
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
 
-#define REQUEST_SOCKET_PASSWORD_SIZE     64
 
-//static StreamBMH_Occ statusFinder_occ;
-//static StreamBMH_Occ transferEncodingFinder_occ;
-
-
-struct ClientDisconnectedException { };
+class RemoteController: public MessageServer::Handler {
+private:
+	struct SpecificContext: public MessageServer::ClientContext {
+	};
+	
+	typedef MessageServer::CommonClientContext CommonClientContext;
+	
+	PoolPtr pool;
+	
+	
+	/*********************************************
+	 * Message handler methods
+	 *********************************************/
+	
+	void processDetach(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+		TRACE_POINT();
+		commonContext.requireRights(Account::DETACH);
+		/* if (pool->detach(args[1])) {
+			writeArrayMessage(commonContext.fd, "true", NULL);
+		} else { */
+			writeArrayMessage(commonContext.fd, "false", NULL);
+		//}
+	}
+	
+	void processInspect(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+		TRACE_POINT();
+		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
+		writeScalarMessage(commonContext.fd, pool->inspect());
+	}
+	
+	void processToXml(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+		TRACE_POINT();
+		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
+		bool includeSensitiveInfo =
+			commonContext.account->hasRights(Account::INSPECT_SENSITIVE_INFO) &&
+			args[1] == "true";
+		writeScalarMessage(commonContext.fd, pool->toXml(includeSensitiveInfo));
+	}
+	
+public:
+	RemoteController(const PoolPtr &pool) {
+		this->pool = pool;
+	}
+	
+	virtual MessageServer::ClientContextPtr newClient(CommonClientContext &commonContext) {
+		return make_shared<SpecificContext>();
+	}
+	
+	virtual bool processMessage(CommonClientContext &commonContext,
+	                            MessageServer::ClientContextPtr &_specificContext,
+	                            const vector<string> &args)
+	{
+		SpecificContext *specificContext = (SpecificContext *) _specificContext.get();
+		try {
+			if (args[0] == "detach" && args.size() == 2) {
+				processDetach(commonContext, specificContext, args);
+			} else if (args[0] == "inspect" && args.size() == 1) {
+				processInspect(commonContext, specificContext, args);
+			} else if (args[0] == "toXml" && args.size() == 2) {
+				processToXml(commonContext, specificContext, args);
+			} else {
+				return false;
+			}
+		} catch (const SecurityException &) {
+			/* Client does not have enough rights to perform a certain action.
+			 * It has already been notified of this; ignore exception and move on.
+			 */
+		}
+		return true;
+	}
+};
 
 class ExitHandler: public MessageServer::Handler {
 private:
@@ -1233,10 +1296,10 @@ public:
 			randomGenerator);
 		pool->setMax(options.maxPoolSize);
 		//pool->setMaxPerApp(maxInstancesPerApp);
-		//pool->setMaxIdleTime(options.poolIdleTime);
+		pool->setMaxIdleTime(options.poolIdleTime); // * 1000000
 		
-		//messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
-		messageServer->addHandler(ptr(new BacktracesServer()));
+		messageServer->addHandler(make_shared<RemoteController>(pool));
+		messageServer->addHandler(make_shared<BacktracesServer>());
 		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
 
 		requestHandler = make_shared<RequestHandler>(requestLoop.safe,

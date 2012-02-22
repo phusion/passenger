@@ -163,6 +163,11 @@ private:
 						getSignalName(WTERMSIG(status)) <<
 						", restarting it...");
 				}
+
+				const char *sleepTime;
+				if ((sleepTime = getenv("PASSENGER_AGENT_RESTART_SLEEP")) != NULL) {
+					sleep(atoi(sleepTime));
+				}
 			}
 		} catch (const boost::thread_interrupted &) {
 		} catch (const tracable_exception &e) {

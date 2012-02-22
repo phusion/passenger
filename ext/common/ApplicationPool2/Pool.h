@@ -37,7 +37,6 @@
 #include <boost/function.hpp>
 #include <oxt/dynamic_thread_group.hpp>
 #include <oxt/backtrace.hpp>
-#include <cassert>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Group.h>
@@ -46,6 +45,7 @@
 #include <ApplicationPool2/Spawner.h>
 #include <ApplicationPool2/Options.h>
 #include <UnionStation.h>
+#include <Logging.h>
 #include <SafeLibev.h>
 #include <Exceptions.h>
 #include <RandomGenerator.h>
@@ -147,8 +147,8 @@ public:
 	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
-		assert(!( !getWaitlist.empty() ) || ( atFullCapacity(false) ));
-		assert(!( !atFullCapacity(false) ) || ( getWaitlist.empty() ));
+		P_ASSERT(!( !getWaitlist.empty() ) || ( atFullCapacity(false) ));
+		P_ASSERT(!( !atFullCapacity(false) ) || ( getWaitlist.empty() ));
 	}
 	
 	void verifyExpensiveInvariants() const {
@@ -156,7 +156,7 @@ public:
 		vector<GetWaiter>::const_iterator it, end = getWaitlist.end();
 		for (it = getWaitlist.begin(); it != end; it++) {
 			const GetWaiter &waiter = *it;
-			assert(superGroups.get(waiter.options.getAppGroupName()) == NULL);
+			P_ASSERT(superGroups.get(waiter.options.getAppGroupName()) == NULL);
 		}
 		#endif
 	}
@@ -287,7 +287,7 @@ public:
 	 */
 	void forceDetachSuperGroup(const SuperGroupPtr &superGroup, vector<Callback> &postLockActions) {
 		bool removed = superGroups.remove(superGroup->name);
-		assert(removed);
+		P_ASSERT(removed);
 		(void) removed; // Shut up compiler warning.
 		superGroup->destroy(postLockActions, false);
 		superGroup->setPool(PoolPtr());
@@ -299,8 +299,8 @@ public:
 			verifyInvariants();
 			
 			SuperGroupPtr superGroup = group->getSuperGroup();
-			assert(superGroup->state != SuperGroup::INITIALIZING);
-			assert(superGroup->getWaitlist.empty());
+			P_ASSERT(superGroup->state != SuperGroup::INITIALIZING);
+			P_ASSERT(superGroup->getWaitlist.empty());
 			
 			group->detach(process, postLockActions);
 			if (group->processes.empty()
@@ -423,8 +423,6 @@ public:
 		}
 		
 		verifyInvariants();
-		lock.unlock();
-		runAllActions(actions);
 
 		// Schedule next garbage collection run.
 		ev_tstamp tstamp;
@@ -433,9 +431,12 @@ public:
 		} else {
 			tstamp = (nextGcRunTime - now) / 1000000.0;
 		}
-		timer.start(tstamp, 0.0);
 		P_DEBUG("Garbage collection done; next garbage collect in " <<
 			std::fixed << std::setprecision(3) << tstamp << " sec");
+
+		lock.unlock();
+		runAllActions(actions);
+		timer.start(tstamp, 0.0);
 	}
 
 	struct ProcessAnalyticsLogEntry {
@@ -584,7 +585,7 @@ public:
 		 * unless something has changed and we forgot to update
 		 * some code here...
 		 */
-		assert(session == NULL);
+		P_ASSERT(session == NULL);
 		return superGroup;
 	}
 
@@ -651,14 +652,17 @@ public:
 		DynamicScopedLock lock(syncher, lockNow);
 		
 		verifyInvariants();
+		P_TRACE(2, "asyncGet(appRoot=" << options.appRoot << ")");
 		
 		SuperGroup *existingSuperGroup = findMatchingSuperGroup(options);
 		if (OXT_LIKELY(existingSuperGroup != NULL)) {
 			/* Best case: the app super group is already in the pool. Let's use it. */
+			P_TRACE(2, "Found existing SuperGroup");
 			existingSuperGroup->verifyInvariants();
 			SessionPtr session = existingSuperGroup->get(options, callback);
 			existingSuperGroup->verifyInvariants();
 			verifyInvariants();
+			P_TRACE(2, "asyncGet() finished");
 			if (lockNow) {
 				lock.unlock();
 			}
@@ -670,9 +674,11 @@ public:
 			/* The app super group isn't in the pool and we have enough free
 			 * resources to make a new one.
 			 */
+			P_TRACE(2, "Spawning new SuperGroup");
 			SuperGroupPtr superGroup = createSuperGroupAndAsyncGetFromIt(options, callback);
 			superGroup->verifyInvariants();
 			verifyInvariants();
+			P_TRACE(2, "asyncGet() finished");
 			
 		} else {
 			vector<Callback> actions;
@@ -685,6 +691,7 @@ public:
 			 *
 			 * First, try to trash an idle process that's the oldest.
 			 */
+			P_TRACE(2, "Pool is at full capacity; trying to free a process...");
 			ProcessPtr process = findOldestIdleProcess();
 			if (process == NULL) {
 				/* All processes are doing something. We have no choice
@@ -693,28 +700,30 @@ public:
 				process = findBestProcessToTrash();
 			} else {
 				// Check invariant.
-				assert(process->getGroup()->getWaitlist.empty());
+				P_ASSERT(process->getGroup()->getWaitlist.empty());
 			}
 			if (process == NULL) {
 				/* All (super)groups are currently initializing/restarting/spawning/etc
 				 * so nothing can be killed. We have no choice but to satisfy this
 				 * get() action later when resources become available.
 				 */
+				P_TRACE(2, "Could not free a process; putting request to getWaitlist");
 				getWaitlist.push_back(GetWaiter(options, callback));
 			} else {
 				GroupPtr group;
 				SuperGroupPtr superGroup;
 				
+				P_TRACE(2, "Freeing process " << process->inspect());
 				group = process->getGroup();
-				assert(group != NULL);
+				P_ASSERT(group != NULL);
 				superGroup = group->getSuperGroup();
-				assert(superGroup != NULL);
+				P_ASSERT(superGroup != NULL);
 				
 				group->detach(process, actions);
 				if (superGroup->garbageCollectable()) {
-					assert(group->garbageCollectable());
+					P_ASSERT(group->garbageCollectable());
 					forceDetachSuperGroup(superGroup, actions);
-					assert(superGroup->getWaitlist.empty());
+					P_ASSERT(superGroup->getWaitlist.empty());
 				} else if (group->processes.empty()
 				        && !group->spawning()
 				        && !group->getWaitlist.empty())
@@ -742,13 +751,14 @@ public:
 				 * unless something has changed and we forgot to update
 				 * some code here...
 				 */
-				assert(session == NULL);
+				P_ASSERT(session == NULL);
 				superGroup->verifyInvariants();
 			}
 			
-			assert(atFullCapacity(false));
+			P_ASSERT(atFullCapacity(false));
 			verifyInvariants();
 			verifyExpensiveInvariants();
+			P_TRACE(2, "asyncGet() finished");
 			
 			if (!actions.empty()) {
 				if (lockNow) {
@@ -758,7 +768,7 @@ public:
 					// This state is not allowed. If we reach
 					// here then it probably indicates a bug in
 					// the test suite.
-					abort();
+					P_ABORT();
 				}
 			}
 		}
@@ -797,7 +807,7 @@ public:
 	
 	void setMax(unsigned int max) {
 		ScopedLock l(syncher);
-		assert(max > 0);
+		P_ASSERT(max > 0);
 		verifyInvariants();
 		verifyExpensiveInvariants();
 		bool bigger = max > this->max;
@@ -837,7 +847,7 @@ public:
 			LockGuard l(syncher);
 			maxIdleTime = value;
 		}
-		libev->runSync(boost::bind(&Pool::activateNewMaxIdleTime, this));
+		libev->run(boost::bind(&Pool::activateNewMaxIdleTime, this));
 	}
 	
 	unsigned int usage(bool lock = true) const {
@@ -932,7 +942,7 @@ public:
 	bool detachSuperGroup(const SuperGroupPtr &superGroup, bool lock = true,
 		vector<Callback> *postLockActions = NULL)
 	{
-		assert(lock || postLockActions != NULL);
+		P_ASSERT(lock || postLockActions != NULL);
 		DynamicScopedLock l(syncher, lock);
 		
 		if (OXT_LIKELY(superGroup->getPool().get() == this)) {
@@ -1009,6 +1019,47 @@ public:
 		} else {
 			return false;
 		}
+	}
+
+	string inspect() const {
+		LockGuard l(syncher);
+		stringstream result;
+		
+		result << "----------- General information -----------" << endl;
+		result << "Max pool size     : " << max << endl;
+		result << "Processes         : " << getProcessCount(false) << endl;
+		result << "Requests in queue : " << getWaitlist.size() << endl;
+		//result << "active   = " << active << endl;
+		//result << "inactive = " << inactiveApps.size() << endl;
+		result << endl;
+		
+		result << "----------- Groups -----------" << endl;
+		SuperGroupMap::const_iterator sg_it, sg_end = superGroups.end();
+		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+			const SuperGroupPtr &superGroup = sg_it->second;
+			const Group *group = superGroup->defaultGroup;
+			ProcessList::const_iterator p_it;
+			
+			result << group->name << ":" << endl;
+			if (group->spawning()) {
+				result << "  (spawning new process...)" << endl;
+			}
+			result << "  Requests in queue: " << group->getWaitlist.size() << endl;
+			for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
+				const ProcessPtr &process = *p_it;
+				char buf[128];
+				
+				snprintf(buf, sizeof(buf),
+						"PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
+						(unsigned long) process->pid,
+						process->sessions,
+						process->processed,
+						process->uptime().c_str());
+				result << "  " << buf << endl;
+			}
+			result << endl;
+		}
+		return result.str();
 	}
 
 	string toXml(bool includeSecrets = true) const {

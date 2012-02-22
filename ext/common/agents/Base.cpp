@@ -280,19 +280,11 @@ dumpWithCrashWatch(char *messageBuf) {
 			_exit(1);
 
 		} else {
-			int status;
-			int ret = waitpid(child, &status, 0);
-			if (ret == -1) {
-				safePrintErr("Could not waitpid() on the crash-watch child process.\n");
-				_exit(1);
-			} else {
-				if (status != 0) {
-					// Crash-watch failed and didn't tell the parent process
-					// to continue, so do it ourselves.
-					kill(pid, SIGCONT);
-				}
-				_exit(0);
-			}
+			waitpid(child, NULL, 0);
+			// Crash-watch may or may not resume the parent process.
+			// We do it ourselves just to be sure.
+			kill(pid, SIGCONT);
+			_exit(0);
 		}
 
 	} else if (child == -1) {

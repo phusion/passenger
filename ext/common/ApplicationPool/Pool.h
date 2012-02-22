@@ -307,7 +307,7 @@ private:
 	 * Verify that all the invariants are correct.
 	 */
 	bool inline verifyState() {
-	#if PASSENGER_DEBUG
+	#if PASSENGER_DEBUG && 0
 		// Invariants for _groups_.
 		GroupMap::const_iterator it;
 		unsigned int totalSize = 0;
@@ -654,9 +654,9 @@ private:
 			group->size++;
 			mutateCount(count + 1);
 			
-			P_ASSERT_WITH_VOID_RETURN(verifyState(),
-				"Background spawning: ApplicationPool state is valid:\n" <<
-				inspectWithoutLock());
+			//P_ASSERT_WITH_VOID_RETURN(verifyState(),
+			//	"Background spawning: ApplicationPool state is valid:\n" <<
+			//	inspectWithoutLock());
 			
 			if (group->size >= options.minProcesses
 			 || !spawningAllowed(group, options)) {
@@ -1143,8 +1143,8 @@ public:
 			{
 				unique_lock<boost::timed_mutex> l(lock);
 				p = checkoutWithoutLock(l, options);
-				P_ASSERT(verifyState(), SessionPtr(),
-					"get(): ApplicationPool state is valid:\n" << inspectWithoutLock());
+				//P_ASSERT(verifyState(), SessionPtr(),
+				//	"get(): ApplicationPool state is valid:\n" << inspectWithoutLock());
 			}
 			ProcessInfoPtr &processInfo = p.first;
 			
@@ -1164,8 +1164,8 @@ public:
 					unique_lock<boost::timed_mutex> l(lock);
 					detachWithoutLock(processInfo->process->getDetachKey());
 					processInfo->sessions--;
-					P_ASSERT(verifyState(), SessionPtr(),
-						"get(): ApplicationPool state is valid:\n" << inspectWithoutLock());
+					//P_ASSERT(verifyState(), SessionPtr(),
+					//	"get(): ApplicationPool state is valid:\n" << inspectWithoutLock());
 				}
 				if (e.code() == EMFILE || attempt == MAX_GET_ATTEMPTS) {
 					/* A "too many open files" (EMFILE) error is probably unrecoverable,
@@ -1189,8 +1189,8 @@ public:
 					unique_lock<boost::timed_mutex> l(lock);
 					detachWithoutLock(processInfo->process->getDetachKey());
 					processInfo->sessions--;
-					P_ASSERT(verifyState(), SessionPtr(),
-						"get(): ApplicationPool state is valid:\n" << inspectWithoutLock());
+					//P_ASSERT(verifyState(), SessionPtr(),
+					//	"get(): ApplicationPool state is valid:\n" << inspectWithoutLock());
 				}
 				if (attempt == MAX_GET_ATTEMPTS) {
 					string message("Cannot connect to an existing "
@@ -1222,6 +1222,7 @@ public:
 		newAppGroupCreatable.notify_all();
 		globalQueuePositionBecameAvailable.notify_all();
 		
+		/*
 		P_ASSERT_WITH_VOID_RETURN(groups.size() == 0,
 			"groups.size() == 0\n" << inspectWithoutLock());
 		P_ASSERT_WITH_VOID_RETURN(inactiveApps.size() == 0,
@@ -1232,6 +1233,7 @@ public:
 			"active == 0\n" << inspectWithoutLock());
 		P_ASSERT_WITH_VOID_RETURN(verifyState(),
 			"ApplicationPool state is valid:\n" << inspectWithoutLock());
+		*/
 		
 		// TODO: clear cstat and fileChangeChecker, and reload all spawner servers.
 	}
