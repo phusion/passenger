@@ -1,3 +1,9 @@
+passenger (3.0.11-2bbox3) lucid; urgency=low
+
+  * Added ruby1.9.1-dev build dependency
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 22 Feb 2012 23:34:40 +0000
+
 passenger (3.0.11-2bbox2) lucid; urgency=low
 
   * Support for ruby 1.9.x (adds passenger-common1.8 and
