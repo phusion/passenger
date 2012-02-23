@@ -53,6 +53,8 @@ static const char digits[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
 };
 
+static bool shouldDumpWithCrashWatch = true;
+
 // Pre-allocate an alternative stack for use in signal handlers in case
 // the normal stack isn't usable.
 static char *alternativeStack;
@@ -357,7 +359,9 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		write(STDERR_FILENO, messageBuf, end - messageBuf);
 	#endif
 
-	dumpWithCrashWatch(messageBuf);
+	if (shouldDumpWithCrashWatch) {
+		dumpWithCrashWatch(messageBuf);
+	}
 
 	// Run default signal handler.
 	raise(signo);
@@ -407,6 +411,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	VariantMap options;
 	
 	ignoreSigpipe();
+	shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
 		installAbortHandler();
 	}
