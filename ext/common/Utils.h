@@ -301,7 +301,7 @@ void makeDirTree(const string &path, const StaticString &mode = "u=rwx,g=,o=",
  * Remove an entire directory tree recursively. If the directory doesn't exist then this
  * function does nothing.
  *
- * @throws FileSystemException Something went wrong.
+ * @throws RuntimeException Something went wrong.
  */
 void removeDirTree(const string &path);
 
