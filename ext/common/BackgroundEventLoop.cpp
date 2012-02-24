@@ -99,7 +99,7 @@ BackgroundEventLoop::start(const string &threadName) {
 	priv->thr = new oxt::thread(
 		boost::bind(startBackgroundLoop, this),
 		threadName,
-		256 * 1024
+		1024 * 1024
 	);
 	while (!priv->started) {
 		priv->cond.wait(l);
