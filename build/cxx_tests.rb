@@ -78,25 +78,6 @@ TEST_CXX_OBJECTS = {
 		ext/common/Exceptions.h
 		ext/common/StaticString.h
 		ext/common/Utils/MemZeroGuard.h),
-	'test/cxx/SpawnManagerTest.o' => %w(
-		test/cxx/SpawnManagerTest.cpp
-		ext/common/SpawnManager.h
-		ext/common/AbstractSpawnManager.h
-		ext/common/PoolOptions.h
-		ext/common/Logging.h
-		ext/common/StringListCreator.h
-		ext/common/Process.h
-		ext/common/AccountsDatabase.h
-		ext/common/Account.h
-		ext/common/Session.h
-		ext/common/Constants.h
-		ext/common/MessageChannel.h),
-	'test/cxx/PoolOptionsTest.o' => %w(
-		test/cxx/PoolOptionsTest.cpp
-		ext/common/PoolOptions.h
-		ext/common/Session.h
-		ext/common/Logging.h
-		ext/common/StringListCreator.h),
 	'test/cxx/StaticStringTest.o' => %w(
 		test/cxx/StaticStringTest.cpp
 		ext/common/StaticString.h),
@@ -133,13 +114,9 @@ TEST_CXX_OBJECTS = {
 		ext/common/EventedClient.h),
 	'test/cxx/MessageServerTest.o' => %w(
 		test/cxx/MessageServerTest.cpp
-		ext/common/PoolOptions.h
-		ext/common/SpawnManager.h
-		ext/common/Session.h
 		ext/common/Logging.h
 		ext/common/Account.h
 		ext/common/AccountsDatabase.h
-		ext/common/Session.h
 		ext/common/MessageServer.h
 		ext/common/MessageChannel.h),
 	'test/cxx/ServerInstanceDir.o' => %w(
