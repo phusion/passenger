@@ -1296,7 +1296,7 @@ public:
 			randomGenerator);
 		pool->setMax(options.maxPoolSize);
 		//pool->setMaxPerApp(maxInstancesPerApp);
-		pool->setMaxIdleTime(options.poolIdleTime); // * 1000000
+		pool->setMaxIdleTime(options.poolIdleTime * 1000000);
 		
 		messageServer->addHandler(make_shared<RemoteController>(pool));
 		messageServer->addHandler(make_shared<BacktracesServer>());
