@@ -282,6 +282,15 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.
 void
 Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
+	try {
+		spawnThreadRealMain(spawner, options);
+	} catch (const thread_interrupted &) {
+		// Return.
+	}
+}
+
+void
+Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 	TRACE_POINT();
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;

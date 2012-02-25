@@ -106,6 +106,7 @@ private:
 	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
 	void onSessionClose(const ProcessPtr &process, Session *session);
 	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options);
+	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options);
 	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
@@ -150,7 +151,11 @@ private:
 	}
 
 	static void cleanupSpawner(SpawnerPtr spawner) {
-		spawner->cleanup();
+		try {
+			spawner->cleanup();
+		} catch (const thread_interrupted &) {
+			// Return.
+		}
 	}
 	
 	SessionPtr newSession() {

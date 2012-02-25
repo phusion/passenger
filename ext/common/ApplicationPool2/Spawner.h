@@ -122,27 +122,31 @@ protected:
 		
 		void capture() {
 			TRACE_POINT();
-			while (!this_thread::interruption_requested()) {
-				char buf[1024 * 8];
-				ssize_t ret;
-				
-				UPDATE_TRACE_POINT();
-				ret = syscalls::read(fd, buf, sizeof(buf));
-				int e = errno;
-				this_thread::disable_syscall_interruption dsi;
-				if (ret == 0) {
-					break;
-				} else if (ret == -1) {
-					P_WARN("Background I/O capturer error: " <<
-						strerror(e) << " (errno=" << e << ")");
-					break;
-				} else {
-					data.append(buf, ret);
-					if (target != -1) {
-						UPDATE_TRACE_POINT();
-						writeExact(target, buf, ret);
+			try {
+				while (!this_thread::interruption_requested()) {
+					char buf[1024 * 8];
+					ssize_t ret;
+					
+					UPDATE_TRACE_POINT();
+					ret = syscalls::read(fd, buf, sizeof(buf));
+					int e = errno;
+					this_thread::disable_syscall_interruption dsi;
+					if (ret == 0) {
+						break;
+					} else if (ret == -1) {
+						P_WARN("Background I/O capturer error: " <<
+							strerror(e) << " (errno=" << e << ")");
+						break;
+					} else {
+						data.append(buf, ret);
+						if (target != -1) {
+							UPDATE_TRACE_POINT();
+							writeExact(target, buf, ret);
+						}
 					}
 				}
+			} catch (const thread_interrupted &) {
+				// Return.
 			}
 		}
 		
@@ -203,13 +207,7 @@ protected:
 		}
 
 		~DebugDir() {
-			// TODO: merge back to removeDirTree()
-			vector<string> command;
-			command.push_back("rm");
-			command.push_back("rm");
-			command.push_back("-rf");
-			command.push_back(path);
-			spawnProcess(command);
+			removeDirTree(path);
 		}
 
 		const string &getPath() const {
@@ -234,24 +232,6 @@ protected:
 				}
 			}
 			return result;
-		}
-
-		void spawnProcess(vector<string> &command) {
-			shared_array<const char *> args;
-			Spawner::createCommandArgs(command, args);
-
-			pid_t pid = syscalls::fork();
-			if (pid == 0) {
-				resetSignalHandlersAndMask();
-				closeAllFileDescriptors(2);
-				execvp(command[0].c_str(), (char * const *) args.get());
-				_exit(1);
-			} else if (pid == -1) {
-				int e = errno;
-				throw SystemException("Cannot fork a new process", e);
-			} else {
-				syscalls::waitpid(pid, 0, NULL);
-			}
 		}
 	};
 

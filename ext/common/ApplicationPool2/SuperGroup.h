@@ -220,8 +220,16 @@ private:
 	void adjustOptions(Options &options, const Group *group) const {
 		// No-op.
 	}
-	
+
 	void doInitialize(SuperGroupPtr self, Options options, unsigned int generation) {
+		try {
+			realDoInitialize(options, generation);
+		} catch (const thread_interrupted &) {
+			// Return;
+		}
+	}
+
+	void realDoInitialize(const Options &options, unsigned int generation) {
 		vector<ComponentInfo> componentInfos;
 		vector<ComponentInfo>::const_iterator it;
 		ExceptionPtr exception;
@@ -245,50 +253,63 @@ private:
 			return;
 		}
 		
-		unique_lock<boost::mutex> lock(getPoolSyncher(pool));
-		if (OXT_UNLIKELY(getPool() == NULL || generation != this->generation)) {
-			return;
-		}
-		P_TRACE(2, "Initialization of SuperGroup " << inspect() << " almost done; grabbed lock");
-		P_ASSERT(state == INITIALIZING);
-		verifyInvariants();
-		
 		vector<Callback> actions;
-		if (componentInfos.empty()) {
-			/* Somehow initialization failed. Maybe something has deleted
-			 * the supergroup files while we're working.
-			 */
-			P_ASSERT(exception != NULL);
-			setState(DESTROYED);
+		{
+			unique_lock<boost::mutex> lock(getPoolSyncher(pool));
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
+			NOT_EXPECTING_EXCEPTIONS();
+			if (OXT_UNLIKELY(getPool() == NULL || generation != this->generation)) {
+				return;
+			}
+			P_TRACE(2, "Initialization of SuperGroup " << inspect() << " almost done; grabbed lock");
+			P_ASSERT(state == INITIALIZING);
+			verifyInvariants();
 			
-			actions.reserve(getWaitlist.size());
-			while (!getWaitlist.empty()) {
-				const GetWaiter &waiter = getWaitlist.front();
-				actions.push_back(boost::bind(waiter.callback,
-					SessionPtr(), exception));
-				getWaitlist.pop();
-			}
-		} else {
-			for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
-				const ComponentInfo &info = *it;
-				GroupPtr group = make_shared<Group>(shared_from_this(),
-					options, info);
-				groups.push_back(group);
-				if (info.isDefault) {
-					defaultGroup = group.get();
+			if (componentInfos.empty()) {
+				/* Somehow initialization failed. Maybe something has deleted
+				 * the supergroup files while we're working.
+				 */
+				P_ASSERT(exception != NULL);
+				setState(DESTROYED);
+				
+				actions.reserve(getWaitlist.size());
+				while (!getWaitlist.empty()) {
+					const GetWaiter &waiter = getWaitlist.front();
+					actions.push_back(boost::bind(waiter.callback,
+						SessionPtr(), exception));
+					getWaitlist.pop();
 				}
+			} else {
+				for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
+					const ComponentInfo &info = *it;
+					GroupPtr group = make_shared<Group>(shared_from_this(),
+						options, info);
+					groups.push_back(group);
+					if (info.isDefault) {
+						defaultGroup = group.get();
+					}
+				}
+
+				setState(READY);
+				assignGetWaitlistToGroups(actions);
 			}
-			setState(READY);
-			assignGetWaitlistToGroups(actions);
+			
+			verifyInvariants();
+			P_TRACE(2, "Done initializing SuperGroup " << inspect());
 		}
-		
-		verifyInvariants();
-		P_TRACE(2, "Done initializing SuperGroup " << inspect());
-		lock.unlock();
 		runAllActions(actions);
 	}
 	
 	void doRestart(SuperGroupPtr self, Options options, unsigned int generation) {
+		try {
+			realDoRestart(options, generation);
+		} catch (const thread_interrupted &) {
+			// Return.
+		}
+	}
+
+	void realDoRestart(const Options &options, unsigned int generation) {
 		TRACE_POINT();
 		vector<ComponentInfo> componentInfos = loadComponentInfos(options);
 		vector<ComponentInfo>::const_iterator it;
@@ -430,7 +451,7 @@ public:
 		defaultGroup = NULL;
 		generation = 0;
 	}
-	
+
 	void initialize() {
 		createNonInterruptableThread(
 			boost::bind(
