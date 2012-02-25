@@ -21,10 +21,6 @@ public:
 			lock();
 		}
 	}
-	
-	~DynamicScopedLock() {
-		this->~unique_lock<boost::mutex>();
-	}
 };
 
 } // namespace Passenger
