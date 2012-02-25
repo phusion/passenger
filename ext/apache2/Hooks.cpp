@@ -950,7 +950,7 @@ private:
 			config->showFriendlyErrorPages() ? "true" : "false");
 		if (config->useUnionStation() && !config->unionStationKey.empty()) {
 			addHeader(output, "UNION_STATION_SUPPORT", "true");
-			addHeader(output, "PASSENGER_UNION_STATION_KEY", config->unionStationKey);
+			addHeader(output, "UNION_STATION_KEY", config->unionStationKey);
 			if (!config->unionStationFilters.empty()) {
 				addHeader(output, "UNION_STATION_FILTERS",
 					config->getUnionStationFilterString());
