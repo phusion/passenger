@@ -145,6 +145,58 @@
 			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
 		}
 	}
+
+	TEST_METHOD(9) {SHOW_EXCEPTION_BACKTRACE(
+		// It raises an exception if the user does not have a access to one
+		// of the app root's parent directories, or the app root itself.
+		system("mkdir -p tmp.check/a/b/c");
+		TempDirCopy dir("stub/rack", "tmp.check/a/b/c/d");
+		TempDir dir2("tmp.check");
+
+		char buffer[PATH_MAX];
+		string cwd = getcwd(buffer, sizeof(buffer));
+
+		Options options = createOptions();
+		options.appRoot = "tmp.check/a/b/c/d";
+		options.appType = "rack";
+		SpawnerPtr spawner = createSpawner(options);
+
+		if (getuid() != 0) {
+			// TODO: implement this test for root too
+			system("chmod 000 tmp.check/a/b/c/d");
+			system("chmod 600 tmp.check/a/b/c");
+			system("chmod 600 tmp.check/a");
+
+			try {
+				spawner->spawn(options);
+				fail("SpawnException expected");
+			} catch (const SpawnException &e) {
+				ensure(containsSubstring(e.getErrorPage(),
+					"the parent directory '" + cwd + "/tmp.check/a' has wrong permissions"));
+			}
+
+			system("chmod 700 tmp.check/a");
+			try {
+				spawner->spawn(options);
+				fail("SpawnException expected");
+			} catch (const SpawnException &e) {
+				ensure(containsSubstring(e.getErrorPage(),
+					"the parent directory '" + cwd + "/tmp.check/a/b/c' has wrong permissions"));
+			}
+
+			system("chmod 700 tmp.check/a/b/c");
+			try {
+				spawner->spawn(options);
+				fail("SpawnException expected");
+			} catch (const SpawnException &e) {
+				ensure(containsSubstring(e.getErrorPage(),
+					"However this directory is not accessible because it has wrong permissions."));
+			}
+
+			system("chmod 700 tmp.check/a/b/c/d");
+			//spawner->spawn(options); // Should not throw.
+		}
+	);}
 	
 	// User switching works.
 	// It raises an exception if getStartupCommand() is empty.

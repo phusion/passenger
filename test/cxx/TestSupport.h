@@ -157,7 +157,7 @@ private:
 public:
 	TempDir(const string &name) {
 		this->name = name;
-		if (mkdir(name.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0) {
+		if (mkdir(name.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 			int e = errno;
 			string message = "Cannot create directory '";
 			message.append(name);

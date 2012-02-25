@@ -237,9 +237,38 @@ protected:
 
 	typedef shared_ptr<DebugDir> DebugDirPtr;
 
-	struct UserSwitchingInfo {
+	struct SpawnPreparationInfo {
+		// General
+
+		/** Absolute application root path. */
+		string appRoot;
+		/** Absolute pre-exec chroot path. If no chroot is configured, then this is "/". */
+		string chrootDir;
+		/** Absolute application root path inside the chroot. If no chroot is
+		 * configured then this is is equal to appRoot. */
+		string appRootInsideChroot;
+		/** A list of all parent directories of the appRoot, as well as appRoot itself.
+		 * The pre-exec chroot directory is included, and this list goes no futher than that.
+		 * For example if appRoot is /var/jail/foo/bar/baz and the chroot is /var/jail,
+		 * then this list contains:
+		 *   /var/jail/foo
+		 *   /var/jail/foo/bar
+		 *   /var/jail/foo/bar/baz
+		 */
+		vector<string> appRootPaths;
+		/** Same as appRootPaths, but without the chroot component. For example if
+		 * appRoot is /var/jail/foo/bar/baz and the chroot is /var/jail, then this list
+		 * contains:
+		 *   /foo
+		 *   /foo/bar
+		 *   /foo/bar/baz
+		 */
+		vector<string> appRootPathsInsideChroot;
+
+		// User switching
 		bool switchUser;
 		string username;
+		string groupname;
 		string home;
 		string shell;
 		uid_t uid;
@@ -247,7 +276,7 @@ protected:
 		int ngroups;
 		shared_array<gid_t> gidset;
 	};
-	
+
 	// Structure to be passed to negotiateSpawn().
 	// Contains arguments as well as working state.
 	struct NegotiationDetails {
@@ -537,8 +566,37 @@ protected:
 		}
 	}
 	
-	UserSwitchingInfo prepareUserSwitching(const Options &options) {
-		UserSwitchingInfo info;
+	SpawnPreparationInfo prepareSpawn(const Options &options) const {
+		SpawnPreparationInfo info;
+		prepareChroot(info, options);
+		prepareUserSwitching(info, options);
+		prepareSwitchingWorkingDirectory(info, options);
+		return info;
+	}
+
+	void prepareChroot(SpawnPreparationInfo &info, const Options &options) const {
+		info.appRoot = absolutizePath(options.appRoot);
+		if (options.preexecChroot.empty()) {
+			info.chrootDir = "/";
+		} else {
+			info.chrootDir = absolutizePath(options.preexecChroot);
+		}
+		if (info.appRoot != info.chrootDir && startsWith(info.appRoot, info.chrootDir + "/")) {
+			throw SpawnException("Invalid configuration: '" + info.chrootDir +
+				"' has been configured as the chroot jail, but the application " +
+				"root directory '" + info.appRoot + "' is not a subdirectory of the " +
+				"chroot directory, which it must be.");
+		}
+		if (info.appRoot == info.chrootDir) {
+			info.appRootInsideChroot = "/";
+		} else if (info.chrootDir == "/") {
+			info.appRootInsideChroot = info.appRoot;
+		} else {
+			info.appRootInsideChroot = info.appRoot.substr(info.chrootDir.size());
+		}
+	}
+
+	void prepareUserSwitching(SpawnPreparationInfo &info, const Options &options) const {
 		if (geteuid() != 0) {
 			struct passwd *userInfo = getpwuid(geteuid());
 			if (userInfo == NULL) {
@@ -546,15 +604,22 @@ protected:
 					getProcessUsername() + "; it looks like your system's " +
 					"user database is broken, please fix it.");
 			}
+			struct group *groupInfo = getgrgid(userInfo->pw_uid);
+			if (groupInfo == NULL) {
+				throw RuntimeException(string("Cannot get group database entry for ") +
+					"the default group belonging to username '" +
+					getProcessUsername() + "'");
+			}
 			
 			info.switchUser = false;
 			info.username = userInfo->pw_name;
+			info.groupname = groupInfo->gr_name;
 			info.home = userInfo->pw_dir;
 			info.shell = userInfo->pw_shell;
 			info.uid = geteuid();
 			info.gid = getegid();
 			info.ngroups = 0;
-			return info;
+			return;
 		}
 		
 		string defaultGroup;
@@ -630,6 +695,7 @@ protected:
 		int ret;
 		info.switchUser = true;
 		info.username = userInfo->pw_name;
+		info.groupname = groupInfo->gr_name;
 		info.home = userInfo->pw_dir;
 		info.shell = userInfo->pw_shell;
 		info.uid = userInfo->pw_uid;
@@ -644,7 +710,32 @@ protected:
 		for (int i = 0; i < info.ngroups; i++) {
 			info.gidset[i] = groups[i];
 		}
-		return info;
+	}
+
+	void prepareSwitchingWorkingDirectory(SpawnPreparationInfo &info, const Options &options) const {
+		vector<string> components;
+		split(info.appRootInsideChroot, '/', components);
+		assert(components.front() == "");
+		components.erase(components.begin());
+
+		for (unsigned int i = 0; i < components.size(); i++) {
+			string path;
+			for (unsigned int j = 0; j <= i; j++) {
+				path.append("/");
+				path.append(components[j]);
+			}
+			if (path.empty()) {
+				path = "/";
+			}
+			if (info.chrootDir == "/") {
+				info.appRootPaths.push_back(path);
+			} else {
+				info.appRootPaths.push_back(info.chrootDir + path);
+			}
+			info.appRootPathsInsideChroot.push_back(path);
+		}
+
+		assert(info.appRootPathsInsideChroot.back() == info.appRootInsideChroot);
 	}
 	
 	string serializeEnvvarsFromPoolOptions(const Options &options) const {
@@ -674,33 +765,29 @@ protected:
 		
 		return Base64::encode(result);
 	}
-	
-	void setWorkingDirectory(const Options &options) {
-		if (chdir(options.appRoot.c_str()) == 0) {
-			setenv("PWD", options.appRoot.c_str(), 1);
-		} else {
-			int e = errno;
-			printf("Error\n\n");
-			printf("Cannot change working directory to '%s': %s (errno=%d)\n",
-				options.appRoot.c_str(), strerror(e), e);
-			fflush(stdout);
-			_exit(1);
-		}
-	}
-	
-	void switchUser(const UserSwitchingInfo &info) {
+
+	void switchUser(const SpawnPreparationInfo &info) {
 		if (info.switchUser) {
 			if (setgroups(info.ngroups, info.gidset.get()) == -1) {
 				int e = errno;
-				throw SystemException("setgroups() failed", e);
+				fprintf(stderr, "Error\n\n");
+				fprintf(stderr, "setgroups() failed: %s (errno=%d)\n",
+					strerror(e), e);
+				_exit(1);
 			}
 			if (setgid(info.gid) == -1) {
 				int e = errno;
-				throw SystemException("setsid() failed", e);
+				fprintf(stderr, "Error\n\n");
+				fprintf(stderr, "setgid() failed: %s (errno=%d)\n",
+					strerror(e), e);
+				_exit(1);
 			}
 			if (setuid(info.uid) == -1) {
 				int e = errno;
-				throw SystemException("setuid() failed", e);
+				fprintf(stderr, "Error\n\n");
+				fprintf(stderr, "setuid() failed: %s (errno=%d)\n",
+					strerror(e), e);
+				_exit(1);
 			}
 			
 			// We set these environment variables here instead of
@@ -714,18 +801,78 @@ protected:
 		}
 	}
 	
-	void setChroot(const Options &options) {
-		if (!options.preexecChroot.empty()) {
-			int ret = chroot(options.preexecChroot.c_str());
+	void setChroot(const SpawnPreparationInfo &info) {
+		if (info.chrootDir != "/") {
+			int ret = chroot(info.chrootDir.c_str());
 			if (ret == -1) {
 				int e = errno;
 				fprintf(stderr, "Cannot chroot() to '%s': %s (errno=%d)\n",
-					options.preexecChroot.c_str(),
+					info.chrootDir.c_str(),
 					strerror(e),
 					e);
 				fflush(stderr);
 				_exit(1);
 			}
+		}
+	}
+	
+	void setWorkingDirectory(const SpawnPreparationInfo &info) {
+		vector<string>::const_iterator it, end = info.appRootPathsInsideChroot.end();
+		int ret;
+
+		for (it = info.appRootPathsInsideChroot.begin(); it != end; it++) {
+			struct stat buf;
+			ret = stat(it->c_str(), &buf);
+			if (ret == -1 && errno == EACCES) {
+				char parent[PATH_MAX];
+				const char *end = strrchr(it->c_str(), '/');
+				memcpy(parent, it->c_str(), end - it->c_str());
+				parent[end - it->c_str()] = '\0';
+
+				printf("Error\n\n");
+				printf("This web application process is being run as user '%s' and group '%s' "
+					"and must be able to access its application root directory '%s'. "
+					"However, the parent directory '%s' has wrong permissions, thereby "
+					"preventing this process from accessing its application root directory. "
+					"Please fix the permissions of the directory '%s' first.",
+					info.username.c_str(),
+					info.groupname.c_str(),
+					info.appRootPaths.back().c_str(),
+					parent,
+					parent);
+				fflush(stdout);
+				_exit(1);
+			} else if (ret == -1) {
+				int e = errno;
+				printf("Error\n\n");
+				printf("Unable to stat() directory '%s': %s (errno=%d)\n",
+					it->c_str(), strerror(e), e);
+				fflush(stdout);
+				_exit(1);
+			}
+		}
+
+		ret = chdir(info.appRootPathsInsideChroot.back().c_str());
+		if (ret == 0) {
+			setenv("PWD", info.appRootPathsInsideChroot.back().c_str(), 1);
+		} else if (ret == -1 && errno == EACCES) {
+			printf("Error\n\n");
+			printf("This web application process is being run as user '%s' and group '%s' "
+				"and must be able to access its application root directory '%s'. "
+				"However this directory is not accessible because it has wrong permissions. "
+				"Please fix these permissions first.",
+				info.username.c_str(),
+				info.groupname.c_str(),
+				info.appRootPaths.back().c_str());
+			fflush(stdout);
+			_exit(1);
+		} else {
+			int e = errno;
+			printf("Error\n\n");
+			printf("Unable to change working directory to '%s': %s (errno=%d)\n",
+				info.appRootPathsInsideChroot.back().c_str(), strerror(e), e);
+			fflush(stdout);
+			_exit(1);
 		}
 	}
 	
@@ -1019,17 +1166,17 @@ private:
 	bool preloaderStarted() const {
 		return pid != -1;
 	}
-	
+
 	void startPreloader() {
 		assert(!preloaderStarted());
 		checkChrootDirectories(options);
 		
 		shared_array<const char *> args;
 		vector<string> command = createRealPreloaderCommand(options, args);
-		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
+		SpawnPreparationInfo preparation = prepareSpawn(options);
 		SocketPair adminSocket = createUnixSocketPair();
 		Pipe errorPipe = createPipe();
-		DebugDirPtr debugDir = make_shared<DebugDir>(userSwitchingInfo.uid, userSwitchingInfo.gid);
+		DebugDirPtr debugDir = make_shared<DebugDir>(preparation.uid, preparation.gid);
 		pid_t pid;
 		
 		pid = syscalls::fork();
@@ -1044,10 +1191,9 @@ private:
 			dup2(adminSocketCopy, 1);
 			dup2(errorPipeCopy, 2);
 			closeAllFileDescriptors(2);
-			// TODO: shouldn't we set the working directory after switching user?
-			setWorkingDirectory(options);
-			setChroot(options);
-			switchUser(userSwitchingInfo);
+			setChroot(preparation);
+			switchUser(preparation);
+			setWorkingDirectory(preparation);
 			execvp(command[0].c_str(), (char * const *) args.get());
 			
 			int e = errno;
@@ -1733,10 +1879,10 @@ public:
 
 		shared_array<const char *> args;
 		vector<string> command = createCommand(options, args);
-		UserSwitchingInfo userSwitchingInfo = prepareUserSwitching(options);
+		SpawnPreparationInfo preparation = prepareSpawn(options);
 		SocketPair adminSocket = createUnixSocketPair();
 		Pipe errorPipe = createPipe();
-		DebugDirPtr debugDir = make_shared<DebugDir>(userSwitchingInfo.uid, userSwitchingInfo.gid);
+		DebugDirPtr debugDir = make_shared<DebugDir>(preparation.uid, preparation.gid);
 		pid_t pid;
 		
 		pid = syscalls::fork();
@@ -1751,10 +1897,9 @@ public:
 			dup2(adminSocketCopy, 1);
 			dup2(errorPipeCopy, 2);
 			closeAllFileDescriptors(2);
-			// TODO: shouldn't we set the working directory after switching user?
-			setWorkingDirectory(options);
-			setChroot(options);
-			switchUser(userSwitchingInfo);
+			setChroot(preparation);
+			switchUser(preparation);
+			setWorkingDirectory(preparation);
 			execvp(args[0], (char * const *) args.get());
 			
 			int e = errno;

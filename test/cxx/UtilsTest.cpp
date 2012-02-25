@@ -15,10 +15,13 @@ using namespace std;
 namespace tut {
 	struct UtilsTest {
 		vector<string> output;
+		string cwd;
 		string oldPath;
 		TempDir tempDir;
 		
 		UtilsTest(): tempDir("tmp.dir") {
+			char buffer[PATH_MAX];
+			cwd = getcwd(buffer, sizeof(buffer));
 			oldPath = getenv("PATH");
 			unsetenv("PASSENGER_TEMP_DIR");
 		}
@@ -26,6 +29,7 @@ namespace tut {
 		~UtilsTest() {
 			setenv("PATH", oldPath.c_str(), 1);
 			unsetenv("PASSENGER_TEMP_DIR");
+			chdir(cwd.c_str());
 		}
 		
 		void testMakeDirTreeMode(const char *name, const char *mode, mode_t expected) {
@@ -530,5 +534,49 @@ namespace tut {
 		ensure_equals(escapeHTML(StaticString(weird, sizeof(weird) - 1)),
 			"Weird &#1;&#0; characters?");
 		ensure_equals(escapeHTML("UTF-8: ☃ ☀; ☁ ☂\x01"), "UTF-8: ☃ ☀; ☁ ☂&#1;");
+	}
+
+	/***** Test absolutizePath() *****/
+
+	TEST_METHOD(53) {
+		ensure_equals(absolutizePath(""), cwd);
+		ensure_equals(absolutizePath("."), cwd);
+		ensure_equals(absolutizePath("foo"), cwd + "/foo");
+		ensure_equals(absolutizePath("foo/bar"), cwd + "/foo/bar");
+		ensure_equals(absolutizePath("foo//bar"), cwd + "/foo/bar");
+		ensure_equals(absolutizePath("foo/bar///baz"), cwd + "/foo/bar/baz");
+		ensure_equals(absolutizePath("foo/./bar"), cwd + "/foo/bar");
+		ensure_equals(absolutizePath("foo/bar/../baz"), cwd + "/foo/baz");
+		ensure_equals(absolutizePath("foo/bar/../.."), cwd);
+		ensure_equals(absolutizePath("foo/.././bar"), cwd + "/bar");
+		ensure_equals(absolutizePath("foo/../bar/./baz"), cwd + "/bar/baz");
+		ensure_equals(absolutizePath("foo/"), cwd + "/foo");
+		ensure_equals(absolutizePath("foo//"), cwd + "/foo");
+
+		ensure_equals(absolutizePath("/"), "/");
+		ensure_equals(absolutizePath("////"), "/");
+		ensure_equals(absolutizePath("/."), "/");
+		ensure_equals(absolutizePath("/foo"), "/foo");
+		ensure_equals(absolutizePath("/foo/bar"), "/foo/bar");
+		ensure_equals(absolutizePath("/foo//bar"), "/foo/bar");
+		ensure_equals(absolutizePath("/foo/bar///baz"), "/foo/bar/baz");
+		ensure_equals(absolutizePath("/foo/./bar"), "/foo/bar");
+		ensure_equals(absolutizePath("/foo/bar/../baz"), "/foo/baz");
+		ensure_equals(absolutizePath("/foo/bar/../.."), "/");
+		ensure_equals(absolutizePath("/foo/.././bar"), "/bar");
+		ensure_equals(absolutizePath("/foo/../bar/./baz"), "/bar/baz");
+		ensure_equals(absolutizePath("/foo/"), "/foo");
+		ensure_equals(absolutizePath("/foo//"), "/foo");
+		ensure_equals(absolutizePath("//foo/bar"), "/foo/bar");
+		ensure_equals(absolutizePath("///foo//bar"), "/foo/bar");
+		ensure_equals(absolutizePath("/../.."), "/");
+		ensure_equals(absolutizePath("/../.././foo"), "/foo");
+
+		chdir("/usr/lib");
+		ensure_equals(absolutizePath(".."), "/usr");
+		ensure_equals(absolutizePath("."), "/usr/lib");
+		ensure_equals(absolutizePath("../.."), "/");
+		ensure_equals(absolutizePath("../../foo"), "/foo");
+		ensure_equals(absolutizePath("../.././foo/bar"), "/foo/bar");
 	}
 }

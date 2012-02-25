@@ -91,30 +91,6 @@ module LoaderSharedHelpers
 	# This function may modify +options+. The modified options are to be
 	# passed to the request handler.
 	def before_loading_app_code_step1(startup_file, options)
-		if false
-		path, is_parent = check_directory_tree_permissions(options["app_root"])
-		if path
-			username = Etc.getpwuid(Process.euid).name
-			groupname = Etc.getgrgid(Process.egid).name
-			message = "This application process is currently running as " +
-				"user '#{username}' and group '#{groupname}' and must be " +
-				"able to access its application root directory " +
-				"'#{options["app_root"]}'. "
-			if is_parent
-				message << "However the parent directory '#{path}' " +
-					"has wrong permissions, thereby preventing " +
-					"this process from accessing its application " +
-					"root directory. Please fix the permissions " +
-					"of the directory '#{path}' first."
-			else
-				message << "However this directory is not accessible " +
-					"because it has wrong permissions. Please fix " +
-					"these permissions first."
-			end
-			raise(message)
-		end
-		end
-		
 		# Instantiate the analytics logger if requested. Can be nil.
 		require 'phusion_passenger/analytics_logger'
 		options["analytics_logger"] = AnalyticsLogger.new_from_options(options)

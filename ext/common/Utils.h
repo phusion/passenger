@@ -221,6 +221,12 @@ string getProcessUsername();
 mode_t parseModeString(const StaticString &mode);
 
 /**
+ * Turns the given path into an absolute path. Unlike realpath(), this function does
+ * not resolve symlinks.
+ */
+string absolutizePath(const StaticString &path);
+
+/**
  * Return the path name for the directory in which the system stores general
  * temporary files. This is usually "/tmp", but might be something else depending
  * on some environment variables.
