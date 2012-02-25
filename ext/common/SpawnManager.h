@@ -229,7 +229,7 @@ private:
 			pid = 0;
 			throw SystemException("Unable to fork a process", e);
 		} else {
-			FileDescriptor ownerSocket = fds[0];
+			FileDescriptor ownerSocket(fds[0]);
 			syscalls::close(fds[1]);
 			serverSocket.close();
 			
@@ -267,7 +267,7 @@ private:
 	 */
 	FileDescriptor connect() const {
 		TRACE_POINT();
-		FileDescriptor fd = connectToUnixServer(socketFilename.c_str());
+		FileDescriptor fd(connectToUnixServer(socketFilename.c_str()));
 		UPDATE_TRACE_POINT();
 		writeScalarMessage(fd, socketPassword);
 		return fd;

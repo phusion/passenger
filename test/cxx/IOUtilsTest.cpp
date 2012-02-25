@@ -804,7 +804,7 @@ namespace tut {
 		SocketPair sockets = createUnixSocketPair();
 		Pipe pipes = createPipe();
 		writeFileDescriptor(sockets[0], pipes[1]);
-		FileDescriptor fd = readFileDescriptor(sockets[1]);
+		FileDescriptor fd(readFileDescriptor(sockets[1]));
 		writeExact(fd, "hello");
 		char buf[6];
 		ensure_equals(readExact(pipes[0], buf, 5), 5u);
@@ -820,7 +820,7 @@ namespace tut {
 		unsigned long long timeout = 30000;
 		unsigned long long startTime = SystemTime::getUsec();
 		try {
-			FileDescriptor fd = readFileDescriptor(sockets[0], &timeout);
+			FileDescriptor fd(readFileDescriptor(sockets[0], &timeout));
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
