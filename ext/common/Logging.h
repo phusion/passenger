@@ -40,6 +40,7 @@
 #include <pthread.h>
 #include <string>
 #include <map>
+#include <exception>
 #include <stdexcept>
 #include <iomanip>
 #include <ostream>
@@ -164,6 +165,42 @@ void setDebugFile(const char *logFile = NULL);
 	#define P_TRACE(level, expr) do { /* nothing */ } while (false)
 	#define P_ASSERT(expr) ((void) 0)
 #endif
+
+
+class NotExpectingExceptions {
+private:
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+	const char *filename;
+	const char *function;
+	unsigned int line;
+
+public:
+	NotExpectingExceptions(const char *_filename, unsigned int _line, const char *_function) {
+		filename = _filename;
+		line = _line;
+		function = _function;
+	}
+
+	~NotExpectingExceptions() {
+		if (std::uncaught_exception()) {
+			P_ERROR("Unexpected exception detected at " << filename <<
+				":" << line << ", function '" << function << "'!");
+		}
+	}
+};
+
+/**
+ * Put this in code sections where you don't expect *any* exceptions to be thrown.
+ * This macro will automatically disables interruptions in the current scope,
+ * and will print an error message whenever the scope exits with an exception.
+ *
+ * When inside critical sections, you should put this macro right after the lock
+ * object so that the error message is displayed before unlocking the lock;
+ * otherwise other threads may run before the error message is displayed, and
+ * those threads may see an inconsistant state and crash.
+ */
+#define NOT_EXPECTING_EXCEPTIONS() NotExpectingExceptions __nee(__FILE__, __LINE__, __PRETTY_FUNCTION__)
 
 
 /********** Analytics logging facilities *********/

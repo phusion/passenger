@@ -193,8 +193,11 @@ using namespace std;
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
 
+static SafeLibevPtr libev;
 static RequestHandler *handler;
-struct ev_loop *loop;
+static struct ev_loop *loop;
+static PoolPtr pool;
+static struct ev_signal sigquitwatcher, sigintwatcher;
 
 static void
 sigquit_cb(struct ev_loop *loop, ev_signal *w, int revents) {
@@ -204,6 +207,13 @@ sigquit_cb(struct ev_loop *loop, ev_signal *w, int revents) {
 
 static void
 sigint_cb(struct ev_loop *loop, ev_signal *w, int revents) {
+	P_WARN("Exiting loop");
+	delete handler;
+	handler = NULL;
+	pool->destroy();
+	pool.reset();
+	ev_signal_stop(loop, &sigquitwatcher);
+	ev_signal_stop(loop, &sigintwatcher);
 	ev_break(loop, EVBREAK_ONE);
 }
 
@@ -220,19 +230,19 @@ int
 main() {
 	setup_syscall_interruption_support();
 	ignoreSigpipe();
-	installAbortHandler();
+	//installAbortHandler();
 	setLogLevel(3);
 	MultiLibeio::init();
 	loop = EV_DEFAULT;
-	SafeLibevPtr libev = make_shared<SafeLibev>(loop);
+	libev = make_shared<SafeLibev>(loop);
 	AgentOptions options;
 	ServerInstanceDir serverInstanceDir(getpid());
+	char root[PATH_MAX];
+	getcwd(root, sizeof(root));
 	#ifdef __linux__
 		const char *nogroup = "nogroup";
-		const char *root = "/home/hongli/Projects/passenger";
 	#else
 		const char *nogroup = "nobody";
-		const char *root = "/Users/hongli/Projects/passenger";
 	#endif
 	options.passengerRoot = root;
 	options.loggingAgentAddress = "unix:/tmp/agent";
@@ -242,23 +252,22 @@ main() {
 		ResourceLocator(root),
 		serverInstanceDir.newGeneration(true, "nobody", nogroup, getpid(), getgid()));
 	UnionStation::LoggerFactoryPtr loggerFactory = make_shared<UnionStation::LoggerFactory>(options.loggingAgentAddress,
-			"logging", options.loggingAgentPassword);
-	PoolPtr pool = make_shared<Pool>(libev.get(), spawnerFactory, loggerFactory);
+		"logging", options.loggingAgentPassword);
+	pool = make_shared<Pool>(libev.get(), spawnerFactory, loggerFactory);
 	FileDescriptor requestSocket(createTcpServer("127.0.0.1", 3000));
 	setNonBlocking(requestSocket);
 	handler = new RequestHandler(libev, requestSocket, pool, options);
 	
-	struct ev_signal sigquitwatcher;
 	ev_signal_init(&sigquitwatcher, sigquit_cb, SIGQUIT);
 	ev_signal_start(loop, &sigquitwatcher);
 
-	struct ev_signal sigintwatcher;
 	ev_signal_init(&sigintwatcher, sigint_cb, SIGINT);
 	ev_signal_start(loop, &sigintwatcher);
-	
+
 	P_DEBUG("Started");
 	ev_run(loop, 0);
-	delete handler;
+
+	MultiLibeio::shutdown();
 	return 0;
 }
 #endif

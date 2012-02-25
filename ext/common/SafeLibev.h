@@ -160,6 +160,11 @@ public:
 	}
 	
 	~SafeLibev() {
+		destroy();
+		ev_loop_destroy(loop);
+	}
+
+	void destroy() {
 		ev_async_stop(loop, &async);
 		ev_idle_stop(loop, &idle);
 
@@ -169,8 +174,7 @@ public:
 			ev_timer_stop(loop, &timer->realTimer);
 			delete timer;
 		}
-
-		ev_loop_destroy(loop);
+		timers.clear();
 	}
 	
 	struct ev_loop *getLoop() const {

@@ -343,7 +343,7 @@ public:
 	SuperGroup *findMatchingSuperGroup(const Options &options) {
 		return superGroups.get(options.getAppGroupName()).get();
 	}
-	
+
 	void garbageCollect(ev::timer &timer, int revents) {
 		PoolPtr self = shared_from_this(); // Keep pool object alive.
 		TRACE_POINT();
@@ -410,7 +410,6 @@ public:
 			// ...remove entire supergroup if it has become garbage
 			// collectable after detaching idle processes.
 			if (superGroup->garbageCollectable(now)) {
-				P_DEBUG("Garbage collect SuperGroup: " << superGroup->name);
 				superGroupsToDetach.push_back(superGroup);
 			}
 			
@@ -419,6 +418,7 @@ public:
 		
 		vector<SuperGroupPtr>::const_iterator it2;
 		for (it2 = superGroupsToDetach.begin(); it2 != superGroupsToDetach.end(); it2++) {
+			P_DEBUG("Garbage collect SuperGroup: " << (*it2)->inspect());
 			detachSuperGroup(*it2, false, &actions);
 		}
 		
@@ -620,7 +620,13 @@ public:
 	~Pool() {
 		TRACE_POINT();
 		destroy();
-		
+	}
+
+	void destroy() {
+		TRACE_POINT();
+		libev->stop(garbageCollectionTimer);
+		libev->stop(analyticsCollectionTimer);
+
 		UPDATE_TRACE_POINT();
 		interruptableThreads.interrupt_and_join_all();
 		nonInterruptableThreads.join_all();
@@ -641,11 +647,6 @@ public:
 		verifyExpensiveInvariants();
 	}
 
-	void destroy() {
-		libev->stop(garbageCollectionTimer);
-		libev->stop(analyticsCollectionTimer);
-	}
-	
 	// 'lockNow == false' may only be used during unit tests. Normally we
 	// should never call the callback while holding the lock.
 	void asyncGet(const Options &options, const GetCallback &callback, bool lockNow = true) {
