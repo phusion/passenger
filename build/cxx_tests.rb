@@ -91,35 +91,6 @@ TEST_CXX_OBJECTS = {
 		ext/common/Session.h
 		ext/common/Constants.h
 		ext/common/MessageChannel.h),
-	'test/cxx/ApplicationPool_ServerTest.o' => %w(
-		test/cxx/ApplicationPool_ServerTest.cpp
-		ext/common/ApplicationPool/Interface.h
-		ext/common/ApplicationPool/Server.h
-		ext/common/ApplicationPool/Pool.h
-		ext/common/Account.h
-		ext/common/AccountsDatabase.h
-		ext/common/MessageServer.h
-		ext/common/MessageClient.h
-		ext/common/Session.h
-		ext/common/PoolOptions.h
-		ext/common/Logging.h
-		ext/common/StringListCreator.h
-		ext/common/MessageChannel.h
-		ext/common/Utils/ProcessMetricsCollector.h),
-	'test/cxx/ApplicationPool_PoolTest.o' => %w(
-		test/cxx/ApplicationPool_PoolTest.cpp
-		test/cxx/ApplicationPool_PoolTestCases.cpp
-		ext/common/ApplicationPool/Interface.h
-		ext/common/ApplicationPool/Pool.h
-		ext/common/AbstractSpawnManager.h
-		ext/common/SpawnManager.h
-		ext/common/PoolOptions.h
-		ext/common/Logging.h
-		ext/common/StringListCreator.h
-		ext/common/Utils/FileChangeChecker.h
-		ext/common/Utils/CachedFileStat.hpp
-		ext/common/Process.h
-		ext/common/Session.h),
 	'test/cxx/PoolOptionsTest.o' => %w(
 		test/cxx/PoolOptionsTest.cpp
 		ext/common/PoolOptions.h
@@ -162,7 +133,6 @@ TEST_CXX_OBJECTS = {
 		ext/common/EventedClient.h),
 	'test/cxx/MessageServerTest.o' => %w(
 		test/cxx/MessageServerTest.cpp
-		ext/common/ApplicationPool/Pool.h
 		ext/common/PoolOptions.h
 		ext/common/SpawnManager.h
 		ext/common/Session.h

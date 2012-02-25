@@ -227,6 +227,11 @@ module LoaderSharedHelpers
 	# an ApplicationSpawner that has preloaded the app code.
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
+		if forked
+			# Reseed pseudo-random number generator for security reasons.
+			srand
+		end
+
 		if forked && options["process_title"] && !options["process_title"].empty?
 			$0 = options["process_title"] + ": " + options["app_group_name"]
 		end
