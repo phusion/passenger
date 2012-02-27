@@ -478,6 +478,7 @@ private:
 		result << "<sessions>" << processInfo->sessions << "</sessions>";
 		result << "<processed>" << processInfo->processed << "</processed>";
 		result << "<uptime>" << processInfo->uptime() << "</uptime>";
+		result << "<last_used>" << processInfo->lastUsed << "</last_used>";
 		if (processInfo->metrics.isValid()) {
 			const ProcessMetrics &metrics = processInfo->metrics;
 			result << "<has_metrics>true</has_metrics>";
