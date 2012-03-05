@@ -28,6 +28,7 @@
 #include <oxt/thread.hpp>
 #include <oxt/backtrace.hpp>
 #include <MessageServer.h>
+#include <Utils/MessageIO.h>
 
 namespace Passenger {
 
@@ -46,7 +47,7 @@ public:
 		if (args[0] == "backtraces") {
 			UPDATE_TRACE_POINT();
 			commonContext.requireRights(Account::INSPECT_BACKTRACES);
-			commonContext.channel.writeScalar(oxt::thread::all_backtraces());
+			writeScalarMessage(commonContext.fd, oxt::thread::all_backtraces());
 			return true;
 		} else {
 			return false;

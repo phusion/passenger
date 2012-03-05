@@ -66,12 +66,6 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/Group.h
 		ext/common/ApplicationPool2/Pool.h
 		ext/common/ApplicationPool2/Spawner.h),
-	'test/cxx/MessageChannelTest.o' => %w(
-		test/cxx/MessageChannelTest.cpp
-		ext/common/MessageChannel.h
-		ext/common/Exceptions.h
-		ext/common/Utils.h
-		ext/common/Utils/Timer.h),
 	'test/cxx/MessageReadersWritersTest.o' => %w(
 		test/cxx/MessageReadersWritersTest.cpp
 		ext/common/MessageReadersWriters.h

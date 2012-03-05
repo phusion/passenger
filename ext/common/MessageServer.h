@@ -44,7 +44,6 @@
 #include "AccountsDatabase.h"
 #include "Constants.h"
 #include "FileDescriptor.h"
-#include "MessageChannel.h"
 #include "Logging.h"
 #include "Exceptions.h"
 #include "Utils/StrIntUtils.h"
@@ -182,15 +181,12 @@ public:
 		/** The client's socket file descriptor. */
 		FileDescriptor fd;
 		
-		/** The channel that's associated with the client's socket. */
-		MessageChannel channel;
-		
 		/** The account with which the client authenticated. */
 		AccountPtr account;
 		
 		
 		CommonClientContext(FileDescriptor &theFd, AccountPtr &theAccount)
-			: fd(theFd), channel(theFd), account(theAccount)
+			: fd(theFd), account(theAccount)
 		{ }
 		
 		/** Returns a string representation for this client context. */

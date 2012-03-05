@@ -24,53 +24,9 @@
 
 module PhusionPassenger
 
-# This class provides convenience methods for:
-# - sending and receiving raw data over an IO channel.
-# - sending and receiving messages over an IO channel.
-# - file descriptor (IO object) passing over a Unix socket.
-# All of these methods use exceptions for error reporting.
-#
-# There are two kinds of messages:
-# [ Array messages ]
-#   These are just a list of strings, and the message
-#   itself has a specific length. The contained strings may not
-#   contain NUL characters (<tt>'\\0'</tt>). Note that an array message
-#   must have at least one element.
-# [ Scalar messages ]
-#   These are byte strings which may contain arbitrary
-#   binary data. Scalar messages also have a specific length.
-#
-# The protocol is designed to be low overhead, easy to implement and
-# easy to parse.
-#
-# MessageChannel is to be wrapped around an IO object. For example:
-#
-#  a, b = IO.pipe
-#  channel1 = MessageChannel.new(a)
-#  channel2 = MessageChannel.new(b)
-#  
-#  # Send an array message.
-#  channel2.write("hello", "world !!")
-#  channel1.read    # => ["hello", "world !!"]
-#  
-#  # Send a scalar message.
-#  channel2.write_scalar("some long string which can contain arbitrary binary data")
-#  channel1.read_scalar
-#
-# The life time of a MessageChannel is independent from that of the
-# wrapped IO object. If a MessageChannel object is destroyed,
-# the underlying IO object is not automatically closed. Call close()
-# if you want to close the underlying IO object.
-#
-# Note:
-# Be careful with mixing the sending/receiving of array messages,
-# scalar messages and IO objects. If you send a collection of any
-# of these in a specific order, then the receiving side must receive them
-# in the exact some order. So suppose you first send a message, then an
-# IO object, then a scalar, then the receiving side must first
-# receive a message, then an IO object, then a scalar. If the
-# receiving side does things in the wrong order then bad things will
-# happen.
+# This class allows reading and writing structured messages over
+# I/O channels. This is the Ruby implementation of ext/common/Utils/MessageIO.h;
+# see that file for more information.
 class MessageChannel
 	HEADER_SIZE = 2                  # :nodoc:
 	DELIMITER = "\0"                 # :nodoc:

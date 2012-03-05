@@ -167,7 +167,7 @@ public:
 			UPDATE_TRACE_POINT();
 			exitEvent.notify();
 			UPDATE_TRACE_POINT();
-			commonContext.channel.write("exit command received", NULL);
+			writeArrayMessage(commonContext.fd, "exit command received", NULL);
 			return true;
 		} else {
 			return false;
