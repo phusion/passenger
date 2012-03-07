@@ -10,5 +10,5 @@
   # This required option may only occur once, in the global server
   # configuration.
   #
-  PassengerRoot "/home/jordi/work/suse/passenger"
+  PassengerRoot "@PassengerRoot@"
 </IfModule>

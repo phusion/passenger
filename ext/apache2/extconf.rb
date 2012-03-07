@@ -1,9 +1,8 @@
 m = open("Makefile", "wb")
-PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/../..")
 data =<<EOF
 SHELL=/bin/sh
 
-PASSENGER_DIR=#{PASSENGER_ROOT}
+PASSENGER_DIR=../..
 
 all install static install-so install-rb:
 \t[ -d $(PASSENGER_DIR) ] || (echo "ERROR: Passenger dir $(PASSENGER_DIR) not found" && exit)
@@ -13,7 +12,6 @@ all install static install-so install-rb:
 \tcd $(PASSENGER_DIR) && rm -v test/stub/wsgi/passenger_wsgi.pyc  2> /dev/null || echo "passenger_wsgi.pyc already removed"
 \tcd $(PASSENGER_DIR) && mv -v ext/ruby/*/passenger_native_support.so lib/ 2>/dev/null || [ -f lib/passenger_native_support.so ] ||echo "ERROR: lib/passenger_native_support.so not found."
 \tcd $(PASSENGER_DIR) && rm -rv ext/ruby/ruby-*-linux || echo "ruby-*-linux already removed"
-\tsed -i -e "s,@PassengerRoot@,$(PASSENGER_DIR)," config/mod_passenger_root.include
 
 
 EOF
