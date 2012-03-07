@@ -928,7 +928,7 @@ private:
 		addHeader(output, "PASSENGER_APP_GROUP_NAME", config->getAppGroupName(appRoot));
 		addHeader(output, "PASSENGER_USE_GLOBAL_QUEUE",
 			config->usingGlobalQueue() ? "true" : "false");
-		addHeader(output, "PASSENGER_ENVIRONMENT", config->getEnvironment());
+		addHeader(output, "PASSENGER_ENV", config->getEnvironment());
 		addHeader(output, "PASSENGER_SPAWN_METHOD", config->getSpawnMethodString());
 		addHeader(output, "PASSENGER_USER", config->getUser());
 		addHeader(output, "PASSENGER_GROUP", config->getGroup());
