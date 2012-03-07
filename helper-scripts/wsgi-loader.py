@@ -41,7 +41,7 @@ def readline():
 def handshake_and_read_startup_request():
 	global options
 
-	print("I have control 1.0")
+	print("!> I have control 1.0")
 	if readline() != "You have control 1.0\n":
 		abort("Invalid initialization header")
 	
@@ -70,8 +70,8 @@ def create_server_socket():
 	return (filename, s)
 
 def advertise_sockets(socket_filename):
-	print("socket: main;unix:%s;session;1" % socket_filename)
-	print("")
+	print("!> socket: main;unix:%s;session;1" % socket_filename)
+	print("!> ")
 
 
 class RequestHandler:
@@ -226,6 +226,6 @@ if __name__ == "__main__":
 	app_module = load_app()
 	socket_filename, server_socket = create_server_socket()
 	handler = RequestHandler(server_socket, sys.stdin, app_module.application)
-	print("Ready")
+	print("!> Ready")
 	advertise_sockets(socket_filename)
 	handler.main_loop()

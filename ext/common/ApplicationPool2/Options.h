@@ -445,7 +445,7 @@ public:
 	 * Append any spawning-relevant information in this Options object
 	 * to the given string vector, except for environmentVariables.
 	 */
-	void toVector(vector<string> &vec) const {
+	void toVector(vector<string> &vec, const ResourceLocator &resourceLocator) const {
 		if (vec.capacity() < vec.size() + 40) {
 			vec.reserve(vec.size() + 40);
 		}
@@ -453,9 +453,7 @@ public:
 		appendKeyValue (vec, "app_root",           appRoot);
 		appendKeyValue (vec, "app_group_name",     getAppGroupName());
 		appendKeyValue (vec, "app_type",           appType);
-		if (appType.empty()) {
-			appendKeyValue (vec, "start_command", startCommand);
-		}
+		appendKeyValue (vec, "start_command",      getStartCommand(resourceLocator));
 		appendKeyValue (vec, "process_title",      getProcessTitle());
 		appendKeyValue3(vec, "start_timeout",      startTimeout);
 		appendKeyValue (vec, "environment",        environment);

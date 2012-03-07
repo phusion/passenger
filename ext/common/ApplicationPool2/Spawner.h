@@ -277,8 +277,10 @@ protected:
 		shared_array<gid_t> gidset;
 	};
 
-	// Structure to be passed to negotiateSpawn().
-	// Contains arguments as well as working state.
+	/**
+	 * Structure containing arguments and working state for negotiating
+	 * the spawning protocol.
+	 */
 	struct NegotiationDetails {
 		// Arguments.
 		SafeLibev *libev;
@@ -306,6 +308,29 @@ protected:
 			timeout = 0;
 		}
 	};
+
+	/**
+	 * Structure containing arguments and working state for negotiating
+	 * the preloader startup protocol.
+	 */
+	struct StartupDetails {
+		// Arguments.
+		FileDescriptor adminSocket;
+		BufferedIO io;
+		BackgroundIOCapturerPtr stderrCapturer;
+		DebugDirPtr debugDir;
+		const Options *options;
+		bool forwardStderr;
+
+		// Working state.
+		unsigned long long timeout;
+
+		StartupDetails() {
+			options = NULL;
+			forwardStderr = false;
+			timeout = 0;
+		}
+	};
 	
 	
 private:
@@ -324,7 +349,7 @@ private:
 		output.append(value.data(), value.size());
 		output.append(1, '\0');
 	}
-	
+
 	void sendSpawnRequest(NegotiationDetails &details) {
 		try {
 			writeExact(details.adminSocket,
@@ -339,7 +364,7 @@ private:
 			
 			vector<string> args;
 			vector<string>::const_iterator it, end;
-			details.options->toVector(args);
+			details.options->toVector(args, resourceLocator);
 			for (it = args.begin(); it != args.end(); it++) {
 				const string &key = *it;
 				it++;
@@ -360,14 +385,14 @@ private:
 			}
 		}
 	}
-	
+
 	ProcessPtr handleSpawnResponse(NegotiationDetails &details) {
 		SocketListPtr sockets = make_shared<SocketList>();
 		while (true) {
 			string line;
 			
 			try {
-				line = details.io.readLine(1024 * 4, &details.timeout);
+				line = readMessageLine(details);
 			} catch (const SystemException &e) {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application. There was an I/O error while reading its "
@@ -563,6 +588,23 @@ protected:
 	virtual void annotateAppSpawnException(SpawnException &e, NegotiationDetails &details) {
 		if (details.debugDir != NULL) {
 			e.addAnnotations(details.debugDir->readAll());
+		}
+	}
+
+	template<typename Details>
+	static string readMessageLine(Details &details) {
+		while (true) {
+			string result = details.io.readLine(1024 * 4, &details.timeout);
+			if (result.empty()) {
+				return result;
+			} else if (startsWith(result, "!> ")) {
+				result.erase(0, sizeof("!> ") - 1);
+				return result;
+			} else if (details.forwardStderr) {
+				// TODO: also capture data into a buffer so that the process's
+				// stdout data can be displayed if the process fails to spawn.
+				write(STDOUT_FILENO, result.data(), result.size());
+			}
 		}
 	}
 	
@@ -770,23 +812,29 @@ protected:
 		if (info.switchUser) {
 			if (setgroups(info.ngroups, info.gidset.get()) == -1) {
 				int e = errno;
-				fprintf(stderr, "Error\n\n");
-				fprintf(stderr, "setgroups() failed: %s (errno=%d)\n",
+				printf("!> Error\n");
+				printf("!> \n");
+				printf("setgroups() failed: %s (errno=%d)\n",
 					strerror(e), e);
+				fflush(stdout);
 				_exit(1);
 			}
 			if (setgid(info.gid) == -1) {
 				int e = errno;
-				fprintf(stderr, "Error\n\n");
-				fprintf(stderr, "setgid() failed: %s (errno=%d)\n",
+				printf("!> Error\n");
+				printf("!> \n");
+				printf("setgid() failed: %s (errno=%d)\n",
 					strerror(e), e);
+				fflush(stdout);
 				_exit(1);
 			}
 			if (setuid(info.uid) == -1) {
 				int e = errno;
-				fprintf(stderr, "Error\n\n");
-				fprintf(stderr, "setuid() failed: %s (errno=%d)\n",
+				printf("!> Error\n");
+				printf("!> \n");
+				printf("setuid() failed: %s (errno=%d)\n",
 					strerror(e), e);
+				fflush(stdout);
 				_exit(1);
 			}
 			
@@ -829,12 +877,13 @@ protected:
 				memcpy(parent, it->c_str(), end - it->c_str());
 				parent[end - it->c_str()] = '\0';
 
-				printf("Error\n\n");
+				printf("!> Error\n");
+				printf("!> \n");
 				printf("This web application process is being run as user '%s' and group '%s' "
 					"and must be able to access its application root directory '%s'. "
 					"However, the parent directory '%s' has wrong permissions, thereby "
 					"preventing this process from accessing its application root directory. "
-					"Please fix the permissions of the directory '%s' first.",
+					"Please fix the permissions of the directory '%s' first.\n",
 					info.username.c_str(),
 					info.groupname.c_str(),
 					info.appRootPaths.back().c_str(),
@@ -844,7 +893,8 @@ protected:
 				_exit(1);
 			} else if (ret == -1) {
 				int e = errno;
-				printf("Error\n\n");
+				printf("!> Error\n");
+				printf("!> \n");
 				printf("Unable to stat() directory '%s': %s (errno=%d)\n",
 					it->c_str(), strerror(e), e);
 				fflush(stdout);
@@ -856,11 +906,12 @@ protected:
 		if (ret == 0) {
 			setenv("PWD", info.appRootPathsInsideChroot.back().c_str(), 1);
 		} else if (ret == -1 && errno == EACCES) {
-			printf("Error\n\n");
+			printf("!> Error\n");
+			printf("!> \n");
 			printf("This web application process is being run as user '%s' and group '%s' "
 				"and must be able to access its application root directory '%s'. "
 				"However this directory is not accessible because it has wrong permissions. "
-				"Please fix these permissions first.",
+				"Please fix these permissions first.\n",
 				info.username.c_str(),
 				info.groupname.c_str(),
 				info.appRootPaths.back().c_str());
@@ -868,7 +919,8 @@ protected:
 			_exit(1);
 		} else {
 			int e = errno;
-			printf("Error\n\n");
+			printf("!> Error\n");
+			printf("!> \n");
 			printf("Unable to change working directory to '%s': %s (errno=%d)\n",
 				info.appRootPathsInsideChroot.back().c_str(), strerror(e), e);
 			fflush(stdout);
@@ -885,7 +937,7 @@ protected:
 		
 		string result;
 		try {
-			result = details.io.readLine(1024, &details.timeout);
+			result = readMessageLine(details);
 		} catch (const SystemException &e) {
 			throwAppSpawnException("An error occurred while starting the "
 				"web application. There was an I/O error while reading its "
@@ -902,7 +954,7 @@ protected:
 		if (result == "I have control 1.0\n") {
 			sendSpawnRequest(details);
 			try {
-				result = details.io.readLine(1024, &details.timeout);
+				result = readMessageLine(details);
 			} catch (const SystemException &e) {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application. There was an I/O error while reading its "
@@ -936,7 +988,7 @@ protected:
 		map<string, string> attributes;
 		
 		while (true) {
-			string line = details.io.readLine(1024 * 4, &details.timeout);
+			string line = readMessageLine(details);
 			if (line.empty()) {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application. It unexpected closed the connection while "
@@ -1110,6 +1162,14 @@ private:
 	
 	void throwPreloaderSpawnException(const string &msg,
 		SpawnException::ErrorKind errorKind,
+		StartupDetails &details)
+	{
+		throwPreloaderSpawnException(msg, errorKind, details.stderrCapturer,
+			details.debugDir);
+	}
+
+	void throwPreloaderSpawnException(const string &msg,
+		SpawnException::ErrorKind errorKind,
 		BackgroundIOCapturerPtr &stderrCapturer,
 		const DebugDirPtr &debugDir)
 	{
@@ -1197,7 +1257,8 @@ private:
 			execvp(command[0].c_str(), (char * const *) args.get());
 			
 			int e = errno;
-			printf("Error\n\n");
+			printf("!> Error\n");
+			printf("!> \n");
 			printf("Cannot execute \"%s\": %s (errno=%d)\n", command[0].c_str(),
 				strerror(e), e);
 			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",
@@ -1215,13 +1276,19 @@ private:
 			adminSocket.first.close();
 			errorPipe.second.close();
 			
-			BackgroundIOCapturerPtr stderrCapturer =
+			StartupDetails details;
+			details.adminSocket = adminSocket.second;
+			details.io = BufferedIO(adminSocket.second);
+			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
 					forwardStderr ? STDERR_FILENO : -1);
+			details.debugDir = debugDir;
+			details.options = &options;
+			details.timeout = options.startTimeout * 1000;
+			details.forwardStderr = forwardStderr;
 			
-			this->socketAddress = negotiatePreloaderStartup(adminSocket.second,
-				stderrCapturer, debugDir, options);
+			this->socketAddress = negotiatePreloaderStartup(details);
 			this->pid = pid;
 			this->adminSocket = adminSocket.second;
 			this->errorPipe = errorPipe.first;
@@ -1260,21 +1327,17 @@ private:
 		socketAddress.clear();
 	}
 	
-	void sendStartupRequest(int fd,
-		BackgroundIOCapturerPtr &stderrCapturer,
-		const DebugDirPtr &debugDir,
-		unsigned long long &timeout)
-	{
+	void sendStartupRequest(StartupDetails &details) {
 		try {
-			writeExact(fd,
+			writeExact(details.adminSocket,
 				"You have control 1.0\n"
 				"passenger_root: " + resourceLocator.getRoot() + "\n"
 				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"generation_dir: " + generation->getPath() + "\n"
-				"app_root: " + options.appRoot + "\n"
+				"app_root: " + details.options->appRoot + "\n"
 				"\n",
-				&timeout);
+				&details.timeout);
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE) {
 				/* Ignore this. Process might have written an
@@ -1287,44 +1350,35 @@ private:
 					"sending the startup request message to it: " +
 					e.sys(),
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			}
 		} catch (const TimeoutException &) {
 			throwPreloaderSpawnException("An error occurred while starting up the "
 				"preloader: it did not read the startup request message in time.",
 				SpawnException::PRELOADER_STARTUP_TIMEOUT,
-				stderrCapturer,
-				debugDir);
+				details);
 		}
 	}
 	
-	string handleStartupResponse(BufferedIO &io,
-		BackgroundIOCapturerPtr &stderrCapturer,
-		const DebugDirPtr &debugDir,
-		const Options &options,
-		unsigned long long &timeout)
-	{
+	string handleStartupResponse(StartupDetails &details) {
 		string socketAddress;
 		
 		while (true) {
 			string line;
 			
 			try {
-				line = io.readLine(1024 * 4, &timeout);
+				line = readMessageLine(details);
 			} catch (const SystemException &e) {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader. There was an I/O error while reading its "
 					"startup response: " + e.sys(),
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader: it did not write a startup response in time.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
-					stderrCapturer,
-					debugDir);
+					details);
 			}
 			
 			if (line.empty()) {
@@ -1332,15 +1386,13 @@ private:
 					"the preloader. It unexpected closed the connection while "
 					"sending its startup response.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			} else if (line[line.size() - 1] != '\n') {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader. It sent a line without a newline character "
 					"in its startup response.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			} else if (line == "\n") {
 				break;
 			}
@@ -1351,8 +1403,7 @@ private:
 					"the preloader. It sent a startup response line without "
 					"separator.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			}
 			
 			string key = line.substr(0, pos);
@@ -1364,8 +1415,7 @@ private:
 					"the preloader. It sent an unknown startup response line "
 					"called '" + key + "'.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			}
 		}
 		
@@ -1374,38 +1424,31 @@ private:
 				"the preloader. It did not report a socket address in its "
 				"startup response.",
 				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer,
-				debugDir);
+				details);
 		}
 		
 		return socketAddress;
 	}
 	
-	void handleErrorResponse(BufferedIO &io,
-		BackgroundIOCapturerPtr &stderrCapturer,
-		const DebugDirPtr &debugDir,
-		unsigned long long &timeout)
-	{
+	void handleErrorResponse(StartupDetails &details) {
 		map<string, string> attributes;
 		
 		while (true) {
 			string line;
 			
 			try {
-				line = io.readLine(1024 * 4, &timeout);
+				line = readMessageLine(details);
 			} catch (const SystemException &e) {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader. There was an I/O error while reading its "
 					"startup response: " + e.sys(),
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader: it did not write a startup response in time.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
-					stderrCapturer,
-					debugDir);
+					details);
 			}
 			
 			if (line.empty()) {
@@ -1413,15 +1456,13 @@ private:
 					"the preloader. It unexpected closed the connection while "
 					"sending its startup response.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			} else if (line[line.size() - 1] != '\n') {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader. It sent a line without a newline character "
 					"in its startup response.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			} else if (line == "\n") {
 				break;
 			}
@@ -1432,8 +1473,7 @@ private:
 					"the preloader. It sent a startup response line without "
 					"separator.",
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			}
 			
 			string key = line.substr(0, pos);
@@ -1442,13 +1482,13 @@ private:
 		}
 		
 		try {
-			string message = io.readAll(&timeout);
+			string message = details.io.readAll(&details.timeout);
 			SpawnException e("An error occured while starting up the preloader.",
 				message,
 				attributes["html"] == "true",
 				SpawnException::PRELOADER_STARTUP_EXPLAINABLE_ERROR);
 			e.setPreloaderCommand(getPreloaderCommandString());
-			annotatePreloaderException(e, debugDir);
+			annotatePreloaderException(e, details.debugDir);
 			throw e;
 		} catch (const SystemException &e) {
 			throwPreloaderSpawnException("An error occurred while starting up "
@@ -1456,85 +1496,69 @@ private:
 				"an I/O error occurred while reading this error message: " +
 				e.sys(),
 				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer,
-				debugDir);
+				details);
 		} catch (const TimeoutException &) {
 			throwPreloaderSpawnException("An error occurred while starting up "
 				"the preloader. It tried to report an error message, but "
 				"it took too much time doing that.",
 				SpawnException::PRELOADER_STARTUP_TIMEOUT,
-				stderrCapturer,
-				debugDir);
+				details);
 		}
 	}
 	
-	void handleInvalidResponseType(const string &line, BackgroundIOCapturerPtr &stderrCapturer,
-		const DebugDirPtr &debugDir)
-	{
+	void handleInvalidResponseType(StartupDetails &details, const string &line) {
 		throwPreloaderSpawnException("An error occurred while starting up "
 			"the preloader. It sent an unknown response type \"" +
 			cEscapeString(line) + "\".",
 			SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-			stderrCapturer,
-			debugDir);
+			details);
 	}
 	
-	string negotiatePreloaderStartup(FileDescriptor &fd,
-		BackgroundIOCapturerPtr &stderrCapturer,
-		const DebugDirPtr &debugDir,
-		const Options &options)
-	{
-		BufferedIO io(fd);
-		unsigned long long timeout = options.startTimeout * 1000;
-		
+	string negotiatePreloaderStartup(StartupDetails &details) {
 		string result;
 		try {
-			result = io.readLine(1024, &timeout);
+			result = readMessageLine(details);
 		} catch (const SystemException &e) {
 			throwPreloaderSpawnException("An error occurred while starting up "
 				"the preloader. There was an I/O error while reading its "
 				"handshake message: " + e.sys(),
 				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer,
-				debugDir);
+				details);
 		} catch (const TimeoutException &) {
 			throwPreloaderSpawnException("An error occurred while starting up "
 				"the preloader: it did not write a handshake message in time.",
 				SpawnException::PRELOADER_STARTUP_TIMEOUT,
-				stderrCapturer,
-				debugDir);
+				details);
 		}
 		
 		if (result == "I have control 1.0\n") {
-			sendStartupRequest(fd, stderrCapturer, debugDir, timeout);
+			sendStartupRequest(details);
 			try {
-				result = io.readLine(1024, &timeout);
+				result = readMessageLine(details);
 			} catch (const SystemException &e) {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader. There was an I/O error while reading its "
 					"startup response: " + e.sys(),
 					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					debugDir);
+					details);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
 					"the preloader: it did not write a startup response in time.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
-					stderrCapturer,
-					debugDir);
+					details);
 			}
 			if (result == "Ready\n") {
-				return handleStartupResponse(io, stderrCapturer, debugDir, options, timeout);
+				return handleStartupResponse(details);
 			} else if (result == "Error\n") {
-				handleErrorResponse(io, stderrCapturer, debugDir, timeout);
+				handleErrorResponse(details);
 			} else {
-				handleInvalidResponseType(result, stderrCapturer, debugDir);
+				handleInvalidResponseType(details, result);
 			}
 		} else {
 			if (result == "Error\n") {
-				handleErrorResponse(io, stderrCapturer, debugDir, timeout);
+				handleErrorResponse(details);
 			} else {
-				handleInvalidResponseType(result, stderrCapturer, debugDir);
+				handleInvalidResponseType(details, result);
 			}
 		}
 		
@@ -1564,7 +1588,7 @@ private:
 		vector<string>::const_iterator it;
 		
 		writeExact(fd, "spawn\n", &timeout);
-		options.toVector(args);
+		options.toVector(args, resourceLocator);
 		for (it = args.begin(); it != args.end(); it++) {
 			const string &key = *it;
 			it++;
@@ -1903,7 +1927,8 @@ public:
 			execvp(args[0], (char * const *) args.get());
 			
 			int e = errno;
-			printf("Error\n\n");
+			printf("!> Error\n");
+			printf("!> \n");
 			printf("Cannot execute \"%s\": %s (errno=%d)\n", command[0].c_str(),
 				strerror(e), e);
 			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",

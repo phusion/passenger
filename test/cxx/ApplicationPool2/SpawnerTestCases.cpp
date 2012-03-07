@@ -44,7 +44,7 @@
 		// in exceptions.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "echo\1" "hello world";
+		options.startCommand = "echo\1" "!> hello world";
 		options.startupFile  = ".";
 		SpawnerPtr spawner = createSpawner(options);
 		try {
@@ -134,7 +134,7 @@
 		// Any raised SpawnExceptions take note of the process's environment variables.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "echo\1" "hello world";
+		options.startCommand = "echo\1" "!> hello world";
 		options.startupFile  = ".";
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		SpawnerPtr spawner = createSpawner(options);
@@ -146,7 +146,7 @@
 		}
 	}
 
-	TEST_METHOD(9) {SHOW_EXCEPTION_BACKTRACE(
+	TEST_METHOD(9) {
 		// It raises an exception if the user does not have a access to one
 		// of the app root's parent directories, or the app root itself.
 		system("mkdir -p tmp.check/a/b/c");
@@ -171,7 +171,7 @@
 				spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
-				ensure(containsSubstring(e.getErrorPage(),
+				ensure("(1)", containsSubstring(e.getErrorPage(),
 					"the parent directory '" + cwd + "/tmp.check/a' has wrong permissions"));
 			}
 
@@ -180,7 +180,7 @@
 				spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
-				ensure(containsSubstring(e.getErrorPage(),
+				ensure("(2)", containsSubstring(e.getErrorPage(),
 					"the parent directory '" + cwd + "/tmp.check/a/b/c' has wrong permissions"));
 			}
 
@@ -189,14 +189,14 @@
 				spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
-				ensure(containsSubstring(e.getErrorPage(),
+				ensure("(3)", containsSubstring(e.getErrorPage(),
 					"However this directory is not accessible because it has wrong permissions."));
 			}
 
 			system("chmod 700 tmp.check/a/b/c/d");
-			//spawner->spawn(options); // Should not throw.
+			spawner->spawn(options); // Should not throw.
 		}
-	);}
+	}
 	
 	// User switching works.
 	// It raises an exception if getStartupCommand() is empty.

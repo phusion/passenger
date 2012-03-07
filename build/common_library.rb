@@ -38,6 +38,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			Logging.h),
 		'ApplicationPool2/Implementation.o' => %w(
 			ApplicationPool2/Implementation.cpp
+			ApplicationPool2/Spawner.h
 			ApplicationPool2/Common.h
 			ApplicationPool2/Pool.h
 			ApplicationPool2/SuperGroup.h

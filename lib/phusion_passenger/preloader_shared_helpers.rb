@@ -58,9 +58,9 @@ module PreloaderSharedHelpers
 		# ready because the HelperAgent will read and memorize this information.
 		LoaderSharedHelpers.dump_all_information
 
-		puts "Ready"
-		puts "socket: unix:#{socket_filename}"
-		puts
+		puts "!> Ready"
+		puts "!> socket: unix:#{socket_filename}"
+		puts "!> "
 		
 		while true
 			ios = select([server, STDIN])[0]

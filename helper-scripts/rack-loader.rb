@@ -29,7 +29,7 @@ module App
 	def self.handshake_and_read_startup_request
 		STDOUT.sync = true
 		STDERR.sync = true
-		puts "I have control 1.0"
+		puts "!> I have control 1.0"
 		abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
 		
 		@@options = {}
@@ -54,8 +54,8 @@ module App
 		NativeSupport.disable_stdio_buffering
 	rescue Exception => e
 		LoaderSharedHelpers.about_to_abort(e) if defined?(LoaderSharedHelpers)
-		puts "Error"
-		puts
+		puts "!> Error"
+		puts "!> "
 		puts format_exception(e)
 		exit exit_code_for_exception(e)
 	end
@@ -77,8 +77,8 @@ module App
 		LoaderSharedHelpers.after_loading_app_code(options)
 	rescue Exception => e
 		LoaderSharedHelpers.about_to_abort(e)
-		puts "Error"
-		puts
+		puts "!> Error"
+		puts "!> "
 		puts format_exception(e)
 		exit exit_code_for_exception(e)
 	end
@@ -92,9 +92,9 @@ module App
 	load_app
 	handler = Rack::RequestHandler.new(STDIN, app, options)
 	LoaderSharedHelpers.before_handling_requests(false, options)
-	puts "Ready"
+	puts "!> Ready"
 	LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
-	puts
+	puts "!> "
 	handler.main_loop
 	LoaderSharedHelpers.after_handling_requests
 	

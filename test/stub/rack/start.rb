@@ -3,7 +3,7 @@ require 'socket'
 
 STDOUT.sync = true
 STDERR.sync = true
-puts "I have control 1.0"
+puts "!> I have control 1.0"
 abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
 
 options = {}
@@ -13,9 +13,9 @@ while (line = STDIN.readline) != "\n"
 end
 
 server = TCPServer.new('127.0.0.1', 0)
-puts "Ready"
-puts "socket: main;tcp://127.0.0.1:#{server.addr[1]};session;1"
-puts
+puts "!> Ready"
+puts "!> socket: main;tcp://127.0.0.1:#{server.addr[1]};session;1"
+puts "!> "
 
 while true
 	ios = select([server, STDIN])[0]

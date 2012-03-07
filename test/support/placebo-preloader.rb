@@ -10,7 +10,7 @@ require 'socket'
 
 STDOUT.sync = true
 STDERR.sync = true
-puts "I have control 1.0"
+puts "!> I have control 1.0"
 abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
 
 options = {}
@@ -21,9 +21,9 @@ end
 
 socket_filename = "/tmp/placebo-preloader.sock.#{Process.pid}"
 server = UNIXServer.new(socket_filename)
-puts "Ready"
-puts "socket: unix:#{socket_filename}"
-puts
+puts "!> Ready"
+puts "!> socket: unix:#{socket_filename}"
+puts "!> "
 
 def process_client_command(server, client, command)
 	if command == "spawn\n"
