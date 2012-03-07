@@ -70,12 +70,16 @@ OPTIMIZE = boolean_option("OPTIMIZE")
 CC       = string_option("CC", "gcc")
 CXX      = string_option("CXX", "g++")
 LIBEXT   = PlatformInfo.library_extension
-# TODO: consider -fcommon
 if OPTIMIZE
 	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O2 -DBOOST_DISABLE_ASSERTS".strip
 else
 	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS".strip
 end
+OPTIMIZATION_FLAGS << " -fcommon"
+OPTIMIZATION_FLAGS << " -fvisibility=hidden" if PlatformInfo.compiler_supports_visibility_flag?
+OPTIMIZATION_FLAGS << " -Wno-attributes" if PlatformInfo.compiler_supports_visibility_flag? &&
+	PlatformInfo.compiler_visibility_flag_generates_warnings? &&
+	PlatformInfo.compiler_supports_wno_attributes_flag?
 
 # Agent-specific compiler and linker flags.
 AGENT_CFLAGS  = ""
@@ -87,10 +91,6 @@ AGENT_LDFLAGS = PlatformInfo.export_dynamic_flags
 EXTRA_CXXFLAGS = "-Wall -Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
 EXTRA_CXXFLAGS << " -Wno-missing-field-initializers" if PlatformInfo.compiler_supports_wno_missing_field_initializers_flag?
 EXTRA_CXXFLAGS << " -mno-tls-direct-seg-refs" if PlatformInfo.requires_no_tls_direct_seg_refs? && PlatformInfo.compiler_supports_no_tls_direct_seg_refs_option?
-EXTRA_CXXFLAGS << " -fvisibility=hidden" if PlatformInfo.compiler_supports_visibility_flag?
-EXTRA_CXXFLAGS << " -Wno-attributes" if PlatformInfo.compiler_supports_visibility_flag? &&
-	PlatformInfo.compiler_visibility_flag_generates_warnings? &&
-	PlatformInfo.compiler_supports_wno_attributes_flag?
 EXTRA_CXXFLAGS << " #{OPTIMIZATION_FLAGS}" if !OPTIMIZATION_FLAGS.empty?
 
 # Extra linker flags that should always be passed to the linker.
