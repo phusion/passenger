@@ -72,6 +72,8 @@ module Packaging
 		'helper-scripts/*',
 		'ext/common/**/*.{cpp,c,h,hpp}',
 		'ext/apache2/*.{cpp,h,hpp,c}',
+    'ext/apache2/config/mod_passenger.conf',
+    'ext/apache2/config/mod_passenger_root.include',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',
 		'ext/boost/**/*',

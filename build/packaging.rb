@@ -53,6 +53,29 @@ Rake::GemPackageTask.new(spec) do |pkg|
 	pkg.need_tar_gz = true
 end
 
+spec_apache2 = Gem::Specification.new do |s|
+	s.platform = Gem::Platform::RUBY
+	s.homepage = "http://www.modrails.com/"
+	s.summary = "Easy and robust Ruby web application deployment"
+	s.name = "passenger_apache2"
+	s.version = VERSION_STRING
+	s.rubyforge_project = "passenger"
+	s.author = "Phusion - http://www.phusion.nl/"
+	s.email = "info@phusion.nl"
+	s.require_paths = ["lib"]
+	s.add_dependency 'rake', '>= 0.8.1'
+	s.add_dependency 'fastthread', '>= 1.0.1'
+	s.add_dependency 'daemon_controller', '>= 0.2.5'
+	s.add_dependency 'rack'
+	s.files = FileList[*Packaging::GLOB] - FileList[*Packaging::EXCLUDE_GLOB]
+	s.executables = Packaging::USER_EXECUTABLES + Packaging::SUPER_USER_EXECUTABLES
+	s.description = "Easy and robust Ruby web application deployment."
+  s.extensions = ['ext/apache2/extconf.rb']
+end
+
+Rake::GemPackageTask.new(spec_apache2) do |pkg|
+	pkg.need_tar_gz = true
+end
 task 'package:filelist' do
 	# The package:filelist task is used by Phusion Passenger Lite
 	# to obtain a list of files that it must copy to a temporary
