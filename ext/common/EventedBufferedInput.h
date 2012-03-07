@@ -256,6 +256,10 @@ public:
 		return !paused;
 	}
 
+	bool endReached() const {
+		return state == END_OF_STREAM;
+	}
+
 	const FileDescriptor &getFd() const {
 		return fd;
 	}

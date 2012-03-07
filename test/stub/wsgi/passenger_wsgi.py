@@ -39,6 +39,16 @@ def application(env, start_response):
 				i += 1
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
 		return body()
+	elif path == '/blob':
+		size = int(env.get('HTTP_X_SIZE', 1024 * 1024 * 10))
+		def body():
+			written = 0
+			while written < size:
+				data = 'x' * min(1024 * 8, size - written)
+				yield(data)
+				written += len(data)
+		start_response(status, [('Content-Type', 'text/plain')])
+		return body()
 	else:
 		body = 'hello <b>world</b>'
 	

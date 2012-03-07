@@ -324,6 +324,7 @@ public:
 		clientOutputPipe->reset(getSafeLibev());
 		clientOutputPipe->start();
 		clientOutputWatcher.set(getLoop());
+		clientOutputWatcher.set(_fd, ev::WRITE);
 
 		appOutputWatcher.set(getLoop());
 
@@ -459,21 +460,24 @@ public:
 	void inspect(Stream &stream) const {
 		const char *indent = "    ";
 
-		stream << indent << "state                    = " << getStateName() << "\n";
+		stream << indent << "state                      = " << getStateName() << "\n";
 		if (session == NULL) {
-			stream << indent << "session                  = NULL\n";
+			stream << indent << "session                    = NULL\n";
 		} else {
-			stream << indent << "session pid              = " << session->getPid() << "\n";
-			stream << indent << "session gupid            = " << session->getGupid() << "\n";
-			stream << indent << "session initiated        = " << boolStr(session->initiated()) << "\n";
+			stream << indent << "session pid                = " << session->getPid() << "\n";
+			stream << indent << "session gupid              = " << session->getGupid() << "\n";
+			stream << indent << "session initiated          = " << boolStr(session->initiated()) << "\n";
 		}
 		stream
-			<< indent << "requestBodyIsBuffered    = " << boolStr(requestBodyIsBuffered) << "\n"
-			<< indent << "clientInput started      = " << boolStr(clientInput->isStarted()) << "\n"
-			<< indent << "clientOutputPipe started = " << boolStr(clientOutputPipe->isStarted()) << "\n"
-			<< indent << "appInput started         = " << boolStr(appInput->isStarted()) << "\n"
-			<< indent << "responseHeaderSeen       = " << boolStr(responseHeaderSeen) << "\n"
-			<< indent << "useUnionStation          = " << boolStr(useUnionStation()) << "\n"
+			<< indent << "requestBodyIsBuffered      = " << boolStr(requestBodyIsBuffered) << "\n"
+			<< indent << "clientInput started        = " << boolStr(clientInput->isStarted()) << "\n"
+			<< indent << "clientOutputPipe started   = " << boolStr(clientOutputPipe->isStarted()) << "\n"
+			<< indent << "clientOutputPipe ended     = " << boolStr(clientOutputPipe->reachedEnd()) << "\n"
+			<< indent << "clientOutputWatcher active = " << boolStr(clientOutputWatcher.is_active()) << "\n"
+			<< indent << "appInput started           = " << boolStr(appInput->isStarted()) << "\n"
+			<< indent << "appInput ended             = " << boolStr(appInput->endReached()) << "\n"
+			<< indent << "responseHeaderSeen         = " << boolStr(responseHeaderSeen) << "\n"
+			<< indent << "useUnionStation            = " << boolStr(useUnionStation()) << "\n"
 			;
 	}
 };
@@ -843,7 +847,6 @@ private:
 		RH_DEBUG(client, "Application sent EOF");
 		client->endScopeLog(&client->scopeLogs.requestProxying);
 		client->clientOutputPipe->end();
-		client->appInput->stop();
 	}
 
 	void onAppInputError(const ClientPtr &client, const char *message, int errorCode) {
@@ -889,22 +892,26 @@ private:
 			return;
 		}
 
+		RH_TRACE(client, 2, "Forwarding " << size << " bytes of application data to client.");
 		ssize_t ret = syscalls::write(client->fd, data, size);
+		int e = errno;
 		if (ret == -1) {
-			if (errno == EAGAIN) {
-				// Wait until the client socket is writable before resuming writing data.
+			RH_TRACE(client, 2, "Could not write to socket: " << strerror(e) << " (errno=" << e << ")");
+			if (e == EAGAIN) {
+				RH_TRACE(client, 2, "Waiting until the client socket is writable again.");
 				client->clientOutputWatcher.start();
 				consumed(0, true);
-			} else if (errno == EPIPE) {
+			} else if (e == EPIPE) {
 				// If the client closed the connection then disconnect quietly.
 				if (client->useUnionStation()) {
 					client->logMessage("Disconnecting: client stopped reading prematurely");
 				}
 				disconnect(client);
 			} else {
-				disconnectWithClientSocketWriteError(client, errno);
+				disconnectWithClientSocketWriteError(client, e);
 			}
 		} else {
+			RH_TRACE(client, 2, "Forwarded " << ret << " bytes.");
 			consumed(ret, false);
 		}
 	}
@@ -937,6 +944,7 @@ private:
 		}
 
 		// Continue forwarding output data to the client.
+		RH_TRACE(client, 2, "Client socket became writable again.");
 		client->clientOutputWatcher.stop();
 		assert(!client->clientOutputPipe->isStarted());
 		client->clientOutputPipe->start();

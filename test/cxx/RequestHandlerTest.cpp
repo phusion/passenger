@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <sstream>
 #include <cstdarg>
 #include <sys/socket.h>
 
@@ -112,6 +113,18 @@ namespace tut {
 				result.erase(0, pos + 4);
 				return result;
 			}
+		}
+
+		string inspect() {
+			string result;
+			bg.safe->runSync(boost::bind(&RequestHandlerTest::real_inspect, this, &result));
+			return result;
+		}
+
+		void real_inspect(string *result) {
+			stringstream stream;
+			handler->inspect(stream);
+			*result = stream.str();
 		}
 	};
 
@@ -476,7 +489,7 @@ namespace tut {
 			"PATH_INFO", "/custom_status",
 			"HTTP_X_CUSTOM_STATUS", "201",
 			NULL);
-			string response = readAll(connection);
+		string response = readAll(connection);
 		ensure(containsSubstring(response, "HTTP/1.1 201 Created\r\n"));
 		ensure(containsSubstring(response, "Status: 201 Created\r\n"));
 	}
@@ -491,7 +504,7 @@ namespace tut {
 			"PATH_INFO", "/custom_status",
 			"HTTP_X_CUSTOM_STATUS", "201 Bunnies Jump",
 			NULL);
-			string response = readAll(connection);
+		string response = readAll(connection);
 		ensure(containsSubstring(response, "HTTP/1.1 201 Bunnies Jump\r\n"));
 		ensure(containsSubstring(response, "Status: 201 Bunnies Jump\r\n"));
 	}
@@ -499,5 +512,27 @@ namespace tut {
 	TEST_METHOD(38) {
 		// If the application doesn't output a status line then it rejects the application response.
 		// TODO
+	}
+
+	TEST_METHOD(39) {
+		// Test handling of slow clients that can't receive response data fast enough.
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/blob",
+			"HTTP_X_SIZE", "10485760",
+			NULL);
+		EVENTUALLY(10,
+			result = containsSubstring(inspect(), "appInput ended             = true");
+		);
+		string result = stripHeaders(readAll(connection));
+		ensure_equals(result.size(), 10485760u);
+		const char *data = result.data();
+		const char *end  = result.data() + result.size();
+		while (data < end) {
+			ensure_equals(*data, 'x');
+			data++;
+		}
 	}
 }
