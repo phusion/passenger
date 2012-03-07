@@ -1076,6 +1076,7 @@ public:
 		result << "<process_count>" << getProcessCount(false) << "</process_count>";
 		result << "<max>" << max << "</max>";
 		result << "<usage>" << usage(false) << "</usage>";
+		result << "<get_wait_list_size>" << getWaitlist.size() << "</get_wait_list_size>";
 		
 		result << "<supergroups>";
 		for (sg_it = superGroups.begin(); sg_it != superGroups.end(); sg_it++) {

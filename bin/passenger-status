@@ -57,9 +57,8 @@ def show_status(server_instance, options = {})
 			puts "#{YELLOW}#{BLUE_BG}#{BOLD}----------- Application groups -----------#{RESET}"
 			server_instance.groups.each do |group|
 				puts "#{group.name}:"
-				if group.name !~ %r{^/} || true
-					puts "  App root: #{group.app_root}"
-				end
+				puts "  App root: #{group.app_root}"
+				puts "  (spawning new process...)" if group.spawning?
 				group.processes.each do |process|
 					printf "  * PID: %-5d   Sessions: %-2d   Processed: %-5d   Uptime: %s\n",
 						process.pid, process.sessions, process.processed,

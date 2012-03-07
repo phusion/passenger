@@ -604,6 +604,8 @@ public:
 			stream << "<secret>" << escapeForXml(secret) << "</secret>";
 		}
 
+		stream << "<processes>";
+		
 		for (it = processes.begin(); it != processes.end(); it++) {
 			stream << "<process>";
 			(*it)->inspectXml(stream, includeSecrets);
@@ -615,6 +617,8 @@ public:
 			(*it)->inspectXml(stream, includeSecrets);
 			stream << "</process>";
 		}
+
+		stream << "</processes>";
 	}
 };
 
