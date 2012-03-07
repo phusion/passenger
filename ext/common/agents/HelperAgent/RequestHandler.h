@@ -161,6 +161,8 @@ private:
 		backgroundOperations = 0;
 		requestBodyIsBuffered = false;
 		freeBufferedConnectPassword();
+		contentLength = 0;
+		clientBodyAlreadyRead = 0;
 		sessionCheckedOut = false;
 		sessionCheckoutTry = 0;
 		responseHeaderSeen = false;
@@ -241,6 +243,8 @@ public:
 	// Used for enforcing the connection timeout.
 	ev::timer timeoutTimer;
 
+	long long contentLength;
+	unsigned long long clientBodyAlreadyRead;
 	Options options;
 	ScgiRequestParser scgiParser;
 	SessionPtr session;
@@ -326,7 +330,7 @@ public:
 		clientOutputWatcher.set(getLoop());
 		clientOutputWatcher.set(_fd, ev::WRITE);
 
-		appOutputWatcher.set(getLoop());
+		// appOutputWatcher is initialized in initiateSession.
 
 		timeoutTimer.set(getLoop());
 		timeoutTimer.start(getConnectPasswordTimeout(handler) / 1000.0, 0.0);
@@ -470,6 +474,8 @@ public:
 		}
 		stream
 			<< indent << "requestBodyIsBuffered      = " << boolStr(requestBodyIsBuffered) << "\n"
+			<< indent << "contentLength              = " << contentLength << "\n"
+			<< indent << "clientBodyAlreadyRead      = " << clientBodyAlreadyRead << "\n"
 			<< indent << "clientInput started        = " << boolStr(clientInput->isStarted()) << "\n"
 			<< indent << "clientOutputPipe started   = " << boolStr(clientOutputPipe->isStarted()) << "\n"
 			<< indent << "clientOutputPipe ended     = " << boolStr(clientOutputPipe->reachedEnd()) << "\n"
@@ -549,6 +555,21 @@ private:
 		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
 		if (it != client->scgiParser.end()) {
 			return it->second == "true";
+		} else {
+			return defaultValue;
+		}
+	}
+
+	static long long getLongLongOption(const ClientPtr &client, const StaticString &name, long long defaultValue = -1) {
+		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
+		if (it != client->scgiParser.end()) {
+			long long result = stringToULL(it->second);
+			// The client may send a malicious integer, so check for this.
+			if (result < 0) {
+				return defaultValue;
+			} else {
+				return result;
+			}
 		} else {
 			return defaultValue;
 		}
@@ -799,6 +820,7 @@ private:
 		bool wasCommittingToDisk = client->clientOutputPipe->isCommittingToDisk();
 		bool nowCommittingToDisk = !client->clientOutputPipe->write(data.data(), data.size());
 		if (!wasCommittingToDisk && nowCommittingToDisk) {
+			RH_TRACE(client, 3, "Buffering response data to disk; temporarily stopping application socket.");
 			client->backgroundOperations++;
 			client->appInput->stop();
 		}
@@ -873,6 +895,7 @@ private:
 			return;
 		}
 
+		RH_TRACE(client, 3, "Done buffering response data to disk; resuming application socket.");
 		client->backgroundOperations--;
 		client->appInput->start();
 	}
@@ -892,11 +915,11 @@ private:
 			return;
 		}
 
-		RH_TRACE(client, 2, "Forwarding " << size << " bytes of application data to client.");
+		RH_TRACE(client, 3, "Forwarding " << size << " bytes of application data to client.");
 		ssize_t ret = syscalls::write(client->fd, data, size);
 		int e = errno;
 		if (ret == -1) {
-			RH_TRACE(client, 2, "Could not write to socket: " << strerror(e) << " (errno=" << e << ")");
+			RH_TRACE(client, 3, "Could not write to client socket: " << strerror(e) << " (errno=" << e << ")");
 			if (e == EAGAIN) {
 				RH_TRACE(client, 2, "Waiting until the client socket is writable again.");
 				client->clientOutputWatcher.start();
@@ -911,7 +934,7 @@ private:
 				disconnectWithClientSocketWriteError(client, e);
 			}
 		} else {
-			RH_TRACE(client, 2, "Forwarded " << ret << " bytes.");
+			RH_TRACE(client, 3, "Managed to forward " << ret << " bytes.");
 			consumed(ret, false);
 		}
 	}
@@ -944,7 +967,7 @@ private:
 		}
 
 		// Continue forwarding output data to the client.
-		RH_TRACE(client, 2, "Client socket became writable again.");
+		RH_TRACE(client, 3, "Client socket became writable again.");
 		client->clientOutputWatcher.stop();
 		assert(!client->clientOutputPipe->isStarted());
 		client->clientOutputPipe->start();
@@ -1417,6 +1440,7 @@ private:
 			 * onClientData exits.
 			 */
 			parser.rebuildData(modified);
+			client->contentLength = getLongLongOption(client, "CONTENT_LENGTH");
 			fillPoolOptions(client);
 			if (!client->connected()) {
 				return consumed;
@@ -1431,6 +1455,11 @@ private:
 				client->state = Client::BUFFERING_REQUEST_BODY;
 				client->requestBodyIsBuffered = true;
 				client->beginScopeLog(&client->scopeLogs.bufferingRequestBody, "buffering request body");
+				if (client->contentLength == 0) {
+					client->clientInput->stop();
+					state_bufferingRequestBody_onClientEof(client);
+					return 0;
+				}
 			} else {
 				RH_TRACE(client, 3, "Valid SCGI header; not buffering request body; checking out session");
 				client->clientInput->stop();
@@ -1452,12 +1481,30 @@ private:
 		state_bufferingRequestBody_verifyInvariants(client);
 		assert(!client->clientBodyBuffer->isCommittingToDisk());
 
+		if (client->contentLength >= 0) {
+			size = std::min<unsigned long long>(
+				size,
+				(unsigned long long) client->contentLength - client->clientBodyAlreadyRead
+			);
+		}
+
 		if (!client->clientBodyBuffer->write(data, size)) {
 			// The pipe cannot write the data to disk quickly enough, so
 			// suspend reading from the client until the pipe is done.
 			client->backgroundOperations++; // TODO: figure out whether this is necessary
 			client->clientInput->stop();
 		}
+		client->clientBodyAlreadyRead += size;
+
+		RH_TRACE(client, 3, "Buffered " << size << " bytes of client body data; total=" <<
+			client->clientBodyAlreadyRead << ", content-length=" << client->contentLength);
+		assert(client->contentLength == -1 || client->clientBodyAlreadyRead <= (unsigned long long) client->contentLength);
+
+		if (client->contentLength >= 0 && client->clientBodyAlreadyRead == (unsigned long long) client->contentLength) {
+			client->clientInput->stop();
+			state_bufferingRequestBody_onClientEof(client);
+		}
+
 		return size;
 	}
 
@@ -1575,7 +1622,7 @@ private:
 		client->appInput->reset(libev.get(), client->session->fd());
 		client->appInput->start();
 		client->appOutputWatcher.set(libev->getLoop());
-		client->appOutputWatcher.set(client->session->fd());
+		client->appOutputWatcher.set(client->session->fd(), ev::WRITE);
 		sendHeaderToApp(client);
 	}
 
@@ -1655,11 +1702,13 @@ private:
 		assert(!client->clientInput->isStarted());
 		assert(!client->appOutputWatcher.is_active());
 
-		RH_TRACE(client, 2, "Sending body to application");
+		RH_TRACE(client, 2, "Begin sending body to application");
 
 		client->state = Client::FORWARDING_BODY_TO_APP;
 		if (client->requestBodyIsBuffered) {
 			client->clientBodyBuffer->start();
+		} else if (client->contentLength == 0) {
+			state_forwardingBodyToApp_onClientEof(client);
 		} else {
 			client->clientInput->start();
 		}
@@ -1672,22 +1721,41 @@ private:
 		state_forwardingBodyToApp_verifyInvariants(client);
 		assert(!client->requestBodyIsBuffered);
 
+		if (client->contentLength >= 0) {
+			size = std::min<unsigned long long>(
+				size,
+				(unsigned long long) client->contentLength - client->clientBodyAlreadyRead
+			);
+		}
+
+		RH_TRACE(client, 3, "Forwarding " << size << " bytes of client body data to application.");
 		ssize_t ret = syscalls::write(client->session->fd(), data, size);
+		int e = errno;
 		if (ret == -1) {
-			if (errno == EAGAIN) {
-				// App is not ready yet to receive this data. Try later
-				// when the app socket is writable.
+			RH_TRACE(client, 3, "Could not write to application socket: " << strerror(e) << " (errno=" << e << ")");
+			if (e == EAGAIN) {
+				RH_TRACE(client, 2, "Waiting until the application socket is writable again.");
 				client->clientInput->stop();
 				client->appOutputWatcher.start();
-			} else if (errno == EPIPE) {
+			} else if (e == EPIPE) {
 				// Client will be disconnected after response forwarding is done.
 				client->clientInput->stop();
 				syscalls::shutdown(client->fd, SHUT_RD);
 			} else {
-				disconnectWithAppSocketWriteError(client, errno);
+				disconnectWithAppSocketWriteError(client, e);
 			}
 			return 0;
 		} else {
+			client->clientBodyAlreadyRead += size;
+
+			RH_TRACE(client, 3, "Managed to forward " << ret << " bytes; total=" <<
+				client->clientBodyAlreadyRead << ", content-length=" << client->contentLength);
+			assert(client->contentLength == -1 || client->clientBodyAlreadyRead <= (unsigned long long) client->contentLength);
+			if (client->contentLength >= 0 && client->clientBodyAlreadyRead == (unsigned long long) client->contentLength) {
+				client->clientInput->stop();
+				state_forwardingBodyToApp_onClientEof(client);
+			}
+
 			return ret;
 		}
 	}
@@ -1705,6 +1773,7 @@ private:
 		state_forwardingBodyToApp_verifyInvariants(client);
 		assert(!client->requestBodyIsBuffered);
 
+		RH_TRACE(client, 3, "Application socket became writable again.");
 		client->clientInput->start();
 		client->clientOutputWatcher.stop();
 	}

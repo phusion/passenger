@@ -56,16 +56,19 @@ class ServerInstance
 	end
 	
 	class Stats
-		attr_accessor :max, :count, :active, :global_queue_size
+		attr_accessor :max, :usage, :get_wait_list_size
 	end
 	
 	class Group
-		attr_reader :app_root, :name, :environment, :processes
+		attr_reader :app_root, :name, :environment, :spawning, :processes
+
+		alias spawning? spawning
 		
-		def initialize(app_root, name, environment)
+		def initialize(app_root, name, environment, spawning)
 			@app_root = app_root
 			@name = name
 			@environment = environment
+			@spawning = spawning
 			@processes = []
 		end
 	end
@@ -258,35 +261,36 @@ class ServerInstance
 		doc = REXML::Document.new(xml)
 		stats = Stats.new
 		stats.max = doc.elements["info/max"].text.to_i
-		stats.count = doc.elements["info/count"].text.to_i
-		stats.active = doc.elements["info/active"].text.to_i
-		stats.global_queue_size = doc.elements["info/global_queue_size"].text.to_i
+		stats.usage = doc.elements["info/usage"].text.to_i
+		stats.get_wait_list_size = doc.elements["info/get_wait_list_size"].text.to_i
 		return stats
 	end
 	
-	def global_queue_size
-		return stats.global_queue_size
+	def get_wait_list_size
+		return stats.get_wait_list_size
 	end
 	
 	def groups
 		doc = REXML::Document.new(xml)
 		
 		groups = []
-		doc.elements.each("info/groups/group") do |group_xml|
+		doc.elements.each("info/supergroups/group") do |group_xml|
 			group = Group.new(group_xml.elements["app_root"].text,
 				group_xml.elements["name"].text,
-				group_xml.elements["environment"].text)
+				group_xml.elements["environment"].text,
+				!!group_xml.elements["spawning"])
 			group_xml.elements.each("processes/process") do |process_xml|
 				process = Process.new(group)
 				process_xml.elements.each do |element|
-					if element.name == "server_sockets"
-						element.elements.each("server_socket") do |server_socket|
+					if element.name == "sockets"
+						element.elements.each("socket") do |server_socket|
 							name = server_socket.elements["name"].text.to_sym
 							address = server_socket.elements["address"].text
-							address_type = server_socket.elements["type"].text
+							protocol = server_socket.elements["protocol"].text
 							process.server_sockets[name] = OpenStruct.new(
-								:address => address,
-								:address_type => address_type
+								:name     => name,
+								:address  => address,
+								:protocol => protocol
 							)
 						end
 					else

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -38,6 +38,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <iostream>
 #include <sstream>
 
 #include <boost/thread.hpp>
@@ -1167,6 +1168,7 @@ private:
 	RandomGeneratorPtr randomGenerator;
 	SpawnerFactoryPtr spawnerFactory;
 	PoolPtr pool;
+	ev::sig sigquitWatcher;
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
 	ResourceLocator resourceLocator;
@@ -1261,6 +1263,11 @@ private:
 		return result; */
 		return 0;
 	}
+
+	void onSigquit(ev::sig &signal, int revents) {
+		requestHandler->inspect(cout);
+		cout.flush();
+	}
 	
 public:
 	Server(FileDescriptor feedbackFd, const AgentOptions &_options)
@@ -1304,6 +1311,11 @@ public:
 
 		requestHandler = make_shared<RequestHandler>(requestLoop.safe,
 			requestSocket, pool, options);
+
+		sigquitWatcher.set(requestLoop.loop);
+		sigquitWatcher.set(SIGQUIT);
+		sigquitWatcher.set<Server, &Server::onSigquit>(this);
+		sigquitWatcher.start();
 		
 		UPDATE_TRACE_POINT();
 		writeArrayMessage(feedbackFd,
@@ -1410,6 +1422,7 @@ int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
 	AgentOptions options(initializeAgent(argc, argv, "PassengerHelperAgent"));
+	MultiLibeio::init();
 	
 	try {
 		UPDATE_TRACE_POINT();
@@ -1424,6 +1437,7 @@ main(int argc, char *argv[]) {
 		return 1;
 	}
 	
+	MultiLibeio::shutdown();
 	P_TRACE(2, "Helper agent exited.");
 	return 0;
 }

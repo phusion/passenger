@@ -535,4 +535,10 @@ namespace tut {
 			data++;
 		}
 	}
+
+	// Test application that reads the client body slower than the client sends it.
+	// Test that RequestHandler does not pass any client body data when CONTENT_LENGTH == 0 (when buffering is on).
+	// Test that RequestHandler does not pass any client body data when CONTENT_LENGTH == 0 (when buffering is off).
+	// Test that RequestHandler does not read more than CONTENT_LENGTH bytes from the client body (when buffering is on).
+	// Test that RequestHandler does not read more than CONTENT_LENGTH bytes from the client body (when buffering is off).
 }
