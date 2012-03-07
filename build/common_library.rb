@@ -261,8 +261,10 @@ if USE_VENDORED_LIBEV
 		"ext/libev/Makefile.am"
 	]
 	file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
+		cflags = "#{EXTRA_CXXFLAGS} -Wno-comment -Wno-unused"
 		sh "mkdir -p #{LIBEV_OUTPUT_DIR}" if !File.directory?(LIBEV_OUTPUT_DIR)
-		sh "cd #{LIBEV_OUTPUT_DIR} && sh #{LIBEV_SOURCE_DIR}configure --disable-shared --enable-static"
+		sh "cd #{LIBEV_OUTPUT_DIR} && sh #{LIBEV_SOURCE_DIR}configure " +
+			"--disable-shared --enable-static CFLAGS='#{cflags}'"
 	end
 	
 	libev_sources = Dir["ext/libev/{*.c,*.h}"]
@@ -300,8 +302,10 @@ if USE_VENDORED_LIBEIO
 		"ext/libeio/Makefile.am"
 	]
 	file LIBEIO_OUTPUT_DIR + "Makefile" => dependencies do
+		cflags = "#{EXTRA_CXXFLAGS} -Wno-comment -Wno-unused"
 		sh "mkdir -p #{LIBEIO_OUTPUT_DIR}" if !File.directory?(LIBEIO_OUTPUT_DIR)
-		sh "cd #{LIBEIO_OUTPUT_DIR} && sh #{LIBEIO_SOURCE_DIR}configure --disable-shared --enable-static"
+		sh "cd #{LIBEIO_OUTPUT_DIR} && sh #{LIBEIO_SOURCE_DIR}configure " +
+			"--disable-shared --enable-static CFLAGS='#{cflags}'"
 	end
 	
 	libeio_sources = Dir["ext/libeio/{*.c,*.h}"]

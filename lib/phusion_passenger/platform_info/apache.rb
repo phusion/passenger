@@ -163,12 +163,6 @@ module PlatformInfo
 	# Also includes APR and APU compiler flags if with_apr_flags is true.
 	def self.apache2_module_cflags(with_apr_flags = true)
 		flags = ["-fPIC"]
-		if compiler_supports_visibility_flag?
-			flags << "-fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED"
-			if compiler_visibility_flag_generates_warnings? && compiler_supports_wno_attributes_flag?
-				flags << "-Wno-attributes"
-			end
-		end
 		if with_apr_flags
 			flags << apr_flags
 			flags << apu_flags

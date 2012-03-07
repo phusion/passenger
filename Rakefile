@@ -22,7 +22,6 @@ $LOAD_PATH.unshift("#{source_root}/lib")
 
 require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
 require 'build/basics'
-require 'build/config'
 if boolean_option('ONLY_RUBY')
 	require 'build/ruby_extension'
 else

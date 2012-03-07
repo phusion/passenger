@@ -33,7 +33,8 @@ file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 		'ext/common/agents/Watchdog/Main.cpp',
-		"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+		"-Iext -Iext/common " <<
+		"#{PlatformInfo.portability_cflags} #{AGENT_CFLAGS} #{EXTRA_CXXFLAGS} " <<
 		"#{LIBCOMMON} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
@@ -71,7 +72,8 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable "#{AGENT_OUTPUT_DIR}PassengerHelperAgent",
 		'ext/common/agents/HelperAgent/Main.cpp',
-		"-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
+		"-Iext -Iext/common " <<
+		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
 		"#{PlatformInfo.portability_cflags} " <<
 		"#{EXTRA_CXXFLAGS}  " <<
 		"#{LIBCOMMON} " <<
@@ -103,7 +105,8 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
 		'ext/common/agents/LoggingAgent/Main.cpp',
-		"-Iext -Iext/common #{LIBEV_CFLAGS} " <<
+		"-Iext -Iext/common " <<
+		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} " <<
 		"#{PlatformInfo.curl_flags} " <<
 		"#{PlatformInfo.zlib_flags} " <<
 		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
@@ -127,7 +130,7 @@ file AGENT_OUTPUT_DIR + 'SpawnPreparer' => dependencies do
 	create_executable(AGENT_OUTPUT_DIR + 'SpawnPreparer',
 		'ext/common/agents/SpawnPreparer.cpp',
 		"-Iext -Iext/common " <<
-		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+		"#{AGENT_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 		"#{LIBCOMMON} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{PlatformInfo.portability_ldflags} " <<

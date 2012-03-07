@@ -348,14 +348,22 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		end = appendText(end, "--------------------------------------\n");
 		end = appendText(end, "[ pid=");
 		end = appendULL(end, (unsigned long long) pid);
-		end = appendText(end, " ] Dumping a more detailed backtrace with crash-watch...\n");
+		if (shouldDumpWithCrashWatch) {
+			end = appendText(end, " ] Dumping a more detailed backtrace with crash-watch...\n");
+		} else {
+			end = appendText(end, " ]\n");
+		}
 		write(STDERR_FILENO, messageBuf, end - messageBuf);
 	#else
 		end = messageBuf;
 		end = appendText(end, "--------------------------------------\n");
 		end = appendText(end, "[ pid=");
 		end = appendULL(end, (unsigned long long) pid);
-		end = appendText(end, " ] Dumping a backtrace with crash-watch...\n");
+		if (shouldDumpWithCrashWatch) {
+			end = appendText(end, " ] Dumping a backtrace with crash-watch...\n");
+		} else {
+			end = appendText(end, " ]\n");
+		}
 		write(STDERR_FILENO, messageBuf, end - messageBuf);
 	#endif
 

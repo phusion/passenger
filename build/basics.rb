@@ -66,6 +66,38 @@ end
 
 #################################################
 
+OPTIMIZE = boolean_option("OPTIMIZE")
+CC       = string_option("CC", "gcc")
+CXX      = string_option("CXX", "g++")
+LIBEXT   = PlatformInfo.library_extension
+# TODO: consider -fcommon
+if OPTIMIZE
+	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O2 -DBOOST_DISABLE_ASSERTS".strip
+else
+	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS".strip
+end
+
+# Agent-specific compiler and linker flags.
+AGENT_CFLAGS  = ""
+# Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
+AGENT_LDFLAGS = PlatformInfo.export_dynamic_flags
+
+# Extra compiler flags that should always be passed to the C/C++ compiler.
+# Should be included last in the command string, even after PlatformInfo.portability_cflags.
+EXTRA_CXXFLAGS = "-Wall -Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
+EXTRA_CXXFLAGS << " -Wno-missing-field-initializers" if PlatformInfo.compiler_supports_wno_missing_field_initializers_flag?
+EXTRA_CXXFLAGS << " -mno-tls-direct-seg-refs" if PlatformInfo.requires_no_tls_direct_seg_refs? && PlatformInfo.compiler_supports_no_tls_direct_seg_refs_option?
+EXTRA_CXXFLAGS << " -fvisibility=hidden" if PlatformInfo.compiler_supports_visibility_flag?
+EXTRA_CXXFLAGS << " -Wno-attributes" if PlatformInfo.compiler_supports_visibility_flag? &&
+	PlatformInfo.compiler_visibility_flag_generates_warnings? &&
+	PlatformInfo.compiler_supports_wno_attributes_flag?
+EXTRA_CXXFLAGS << " #{OPTIMIZATION_FLAGS}" if !OPTIMIZATION_FLAGS.empty?
+
+# Extra linker flags that should always be passed to the linker.
+# Should be included last in the command string, even after PlatformInfo.portability_ldflags.
+EXTRA_LDFLAGS  = ""
+
+
 if string_option('OUTPUT_DIR')
 	OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
 else
@@ -80,10 +112,11 @@ ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id
 RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
 	OUTPUT_DIR + "libout/ruby/" + ruby_extension_archdir) + "/"
 
-LIBEXT = PlatformInfo.library_extension
 
-# Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
-AGENT_LDFLAGS = PlatformInfo.export_dynamic_flags
+# Whether to use the vendored libev or the system one.
+USE_VENDORED_LIBEV = boolean_option("USE_VENDORED_LIBEV", true)
+# Whether to use the vendored libeio or the system one.
+USE_VENDORED_LIBEIO = boolean_option("USE_VENDORED_LIBEIO", true)
 
 
 verbose true if !boolean_option('REALLY_QUIET')
