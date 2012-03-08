@@ -21,27 +21,29 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+watchdog_libs = COMMON_LIBRARY.only(:base, 'AgentsBase.o', 'Utils/Base64.o')
 dependencies = [
 	'ext/common/agents/Watchdog/Main.cpp',
 	'ext/common/ServerInstanceDir.h',
 	'ext/common/ResourceLocator.h',
 	'ext/common/Utils/VariantMap.h',
 	LIBBOOST_OXT,
-	LIBCOMMON
-]
+	watchdog_libs.link_objects
+].flatten
 file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 		'ext/common/agents/Watchdog/Main.cpp',
 		"-Iext -Iext/common " <<
 		"#{PlatformInfo.portability_cflags} #{AGENT_CFLAGS} #{EXTRA_CXXFLAGS} " <<
-		"#{LIBCOMMON} " <<
+		"#{watchdog_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
 		"#{EXTRA_LDFLAGS}")
 end
 
+helper_agent_libs = COMMON_LIBRARY.only(:base, :other)
 dependencies = [
 	'ext/common/agents/HelperAgent/Main.cpp',
 	'ext/common/agents/HelperAgent/RequestHandler.h',
@@ -64,10 +66,10 @@ dependencies = [
 	'ext/common/ApplicationPool2/Process.h',
 	'ext/common/ApplicationPool2/Session.h',
 	LIBBOOST_OXT,
-	LIBCOMMON,
+	helper_agent_libs.link_objects,
 	:libev,
 	:libeio
-]
+].flatten
 file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable "#{AGENT_OUTPUT_DIR}PassengerHelperAgent",
@@ -76,7 +78,7 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
 		"#{PlatformInfo.portability_cflags} " <<
 		"#{EXTRA_CXXFLAGS}  " <<
-		"#{LIBCOMMON} " <<
+		"#{helper_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{LIBEV_LIBS} " <<
 		"#{LIBEIO_LIBS} " <<
@@ -85,6 +87,8 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 		"#{EXTRA_LDFLAGS}"
 end
 
+logging_agent_libs = COMMON_LIBRARY.only(:base, :logging_agent, 'AgentsBase.o',
+	'Utils/Base64.o', 'Utils/MD5.o')
 dependencies = [
 	'ext/common/agents/LoggingAgent/Main.cpp',
 	'ext/common/agents/LoggingAgent/LoggingServer.h',
@@ -97,10 +101,10 @@ dependencies = [
 	'ext/common/EventedClient.h',
 	'ext/common/Utils/VariantMap.h',
 	'ext/common/Utils/BlockingQueue.h',
-	LIBCOMMON,
+	logging_agent_libs.link_objects,
 	LIBBOOST_OXT,
 	:libev
-]
+].flatten
 file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
@@ -110,7 +114,7 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{PlatformInfo.curl_flags} " <<
 		"#{PlatformInfo.zlib_flags} " <<
 		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
-		"#{LIBCOMMON} " <<
+		"#{logging_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{LIBEV_LIBS} " <<
 		"#{PlatformInfo.curl_libs} " <<
@@ -120,18 +124,19 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{EXTRA_LDFLAGS}")
 end
 
+spawn_preparer_libs = COMMON_LIBRARY.only('Utils/Base64.o')
 dependencies = [
 	'ext/common/agents/SpawnPreparer.cpp',
-	LIBCOMMON,
+	spawn_preparer_libs.link_objects,
 	LIBBOOST_OXT
-]
+].flatten
 file AGENT_OUTPUT_DIR + 'SpawnPreparer' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'SpawnPreparer',
 		'ext/common/agents/SpawnPreparer.cpp',
 		"-Iext -Iext/common " <<
 		"#{AGENT_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
-		"#{LIBCOMMON} " <<
+		"#{spawn_preparer_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{EXTRA_LDFLAGS}")

@@ -26,7 +26,8 @@
 TEST_CXX_CFLAGS = "-Iext -Iext/common " <<
 	"#{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} #{PlatformInfo.curl_flags} -Itest/cxx -Itest/support " <<
 	"#{TEST_COMMON_CFLAGS}"
-TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} #{LIBEIO_LIBS} " <<
+TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
+	"#{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} #{LIBEIO_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
 	"#{PlatformInfo.zlib_libs} " <<
 	"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
@@ -193,9 +194,15 @@ task 'test:cxx' => dependencies do
 	sh "cd test && #{command}"
 end
 
-cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys, :libev, :libeio,
-	TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY, 'ext/common/MultiLibeio.cpp']
-file 'test/cxx/CxxTestMain' => cxx_tests_dependencies.flatten do
+dependencies = [
+	TEST_CXX_OBJECTS.keys,
+	:libev,
+	:libeio,
+	TEST_BOOST_OXT_LIBRARY,
+	TEST_COMMON_LIBRARY.link_objects,
+	'ext/common/MultiLibeio.cpp'
+].flatten
+file 'test/cxx/CxxTestMain' => dependencies.flatten do
 	objects = TEST_CXX_OBJECTS.keys.join(' ')
 	create_executable("test/cxx/CxxTestMain", objects, TEST_CXX_LDFLAGS)
 end
