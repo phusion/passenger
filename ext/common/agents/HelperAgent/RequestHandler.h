@@ -921,7 +921,7 @@ private:
 		if (ret == -1) {
 			RH_TRACE(client, 3, "Could not write to client socket: " << strerror(e) << " (errno=" << e << ")");
 			if (e == EAGAIN) {
-				RH_TRACE(client, 2, "Waiting until the client socket is writable again.");
+				RH_TRACE(client, 3, "Waiting until the client socket is writable again.");
 				client->clientOutputWatcher.start();
 				consumed(0, true);
 			} else if (e == EPIPE) {
@@ -1734,7 +1734,7 @@ private:
 		if (ret == -1) {
 			RH_TRACE(client, 3, "Could not write to application socket: " << strerror(e) << " (errno=" << e << ")");
 			if (e == EAGAIN) {
-				RH_TRACE(client, 2, "Waiting until the application socket is writable again.");
+				RH_TRACE(client, 3, "Waiting until the application socket is writable again.");
 				client->clientInput->stop();
 				client->appOutputWatcher.start();
 			} else if (e == EPIPE) {

@@ -185,6 +185,7 @@ private
 			f.puts "headers=#{PhusionPassenger.header_dir}"
 			f.puts "rubylib=#{PhusionPassenger.ruby_libdir}"
 			f.puts "ruby_native_support=#{ruby_native_support_dir}"
+			f.puts "apache2_module=/nonexistent"
 			if PhusionPassenger.compilable_source_dir
 				f.puts "compilable_source=#{PhusionPassenger.compilable_source_dir}"
 			end
