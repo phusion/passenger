@@ -31,8 +31,9 @@ task :nginx_without_native_support => [
 	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',
 	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
-	AGENT_OUTPUT_DIR + 'SpawnPreparer'
-]
+	AGENT_OUTPUT_DIR + 'SpawnPreparer',
+	COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).link_objects
+].flatten
 
 task :clean => 'nginx:clean'
 desc "Clean all compiled Nginx files"

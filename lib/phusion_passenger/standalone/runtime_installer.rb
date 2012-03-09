@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010, 2011 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -25,6 +25,7 @@ require 'phusion_passenger'
 require 'phusion_passenger/abstract_installer'
 require 'phusion_passenger/packaging'
 require 'phusion_passenger/dependencies'
+require 'phusion_passenger/common_library'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/binary_compatibility'
 require 'phusion_passenger/standalone/utils'
@@ -465,7 +466,7 @@ private
 		begin_progress_bar
 		yield(0, 1, 0, "Preparing Ruby extension...")
 		Dir.chdir(PhusionPassenger.compilable_source_dir) do
-			run_rake_task!("native_support ONLY_RUBY=yes RELEASE=yes RUBY_EXTENSION_OUTPUT_DIR='#{@ruby_dir}'") do |progress, total|
+			run_rake_task!("native_support CACHING=false ONLY_RUBY=yes RUBY_EXTENSION_OUTPUT_DIR='#{@ruby_dir}'") do |progress, total|
 				yield(progress, total, 1, "Compiling Ruby extension...")
 			end
 			system "rm -rf '#{@ruby_dir}'/{*.log,*.o,Makefile}"
@@ -478,16 +479,17 @@ private
 		yield(0, 1, 0, "Preparing Phusion Passenger...")
 		Dir.chdir(PhusionPassenger.compilable_source_dir) do
 			args = "nginx_without_native_support" +
-				" RELEASE=yes" +
+				" CACHING=false" +
 				" OUTPUT_DIR='#{@support_dir}'" +
 				" AGENT_OUTPUT_DIR='#{@support_dir}'" +
 				" COMMON_OUTPUT_DIR='#{@support_dir}'" +
-				" LIBEV_OUTPUT_DIR='#{@support_dir}'"
+				" LIBEV_OUTPUT_DIR='#{@support_dir}/libev'" +
+				" LIBEIO_OUTPUT_DIR='#{@support_dir}/libeio'"
 			run_rake_task!(args) do |progress, total|
 				yield(progress, total, 1, "Compiling Phusion Passenger...")
 			end
-			system "rm -rf '#{@support_dir}'/{*.dSYM,*.o,*.lo,*.h,*.log,Makefile,libboost_oxt}"
-			system "rm -rf '#{@support_dir}'/{libpassenger_common,libtool,stamp-h1,config.status}"
+			system "rm -rf '#{@support_dir}'/{*.o,*.dSYM,libboost_oxt}"
+			system "rm -rf '#{@support_dir}'/*/{*.o,*.lo,*.h,*.log,Makefile,libtool,stamp-h1,config.status,.deps}"
 		end
 		return 2
 	end
@@ -506,13 +508,19 @@ private
 			shell = PlatformInfo.find_command('bash') || "sh"
 			command = ""
 			if @targets.include?(:support_binaries)
-				command << "env PASSENGER_LIBS='#{@support_dir}/libboost_oxt.a #{@support_dir}/libpassenger_common.a' "
+				nginx_libs = COMMON_LIBRARY.
+					only(*NGINX_LIBS_SELECTOR).
+					set_output_dir("#{PhusionPassenger.runtime_libdir}/libpassenger_common").
+					link_objects_as_string
+				command << "env PASSENGER_LIBS='#{nginx_libs} #{@support_dir}/libboost_oxt.a' "
 			end
 			command << "#{shell} ./configure --prefix=/tmp " <<
 				"--with-cc-opt='-Wno-error' " <<
 				"--without-pcre " <<
 				"--without-http_rewrite_module " <<
 				"--without-http_fastcgi_module " <<
+				"--without-http_scgi_module " <<
+				"--without-http_uwsgi_module " <<
 				"'--add-module=#{PhusionPassenger.compilable_source_dir}/ext/nginx'"
 			run_command_with_throbber(command, "Preparing Nginx...") do |status_text|
 				yield(0, 1, status_text)
@@ -540,6 +548,11 @@ private
 			if !system("cp -pR objs/nginx '#{@nginx_dir}/'")
 				STDERR.puts
 				STDERR.puts "*** ERROR: unable to copy Nginx binaries."
+				exit 1
+			end
+			if !system("strip '#{@nginx_dir}/nginx'")
+				STDERR.puts
+				STDERR.puts "*** ERROR: unable to strip debugging symbols from the Nginx binary."
 				exit 1
 			end
 		end

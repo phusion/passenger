@@ -3,12 +3,12 @@ export PATH
 
 if test "x$PASSENGER_LIBS" = "x" && ! passenger-config --compiled; then
     echo "*** The Phusion Passenger support files are not yet compiled. Compiling them for you... ***"
-    echo "*** Running 'rake nginx RELEASE=yes' in $ngx_addon_dir... ***"
+    echo "*** Running 'rake nginx CACHING=false' in $ngx_addon_dir... ***"
     old_dir=`pwd`
     if ! cd $ngx_addon_dir; then
         exit 1
     fi
-    if ! rake nginx RELEASE=yes; then
+    if ! rake nginx CACHING=false; then
         exit 1
     fi
     cd "$old_dir"
@@ -29,7 +29,7 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
     `passenger-config --includedir`/common/Constants.h"
 if test "x$PASSENGER_LIBS" = "x"; then
-    CORE_LIBS="$CORE_LIBS `passenger-config --libs`"
+    CORE_LIBS="$CORE_LIBS `passenger-config --nginx-libs`"
 else
     CORE_LIBS="$CORE_LIBS $PASSENGER_LIBS"
 fi

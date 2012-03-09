@@ -112,7 +112,7 @@ module PhusionPassenger
 				@compilable_source_dir = root.dup.freeze
 				@runtime_libdir        = "#{root}/libout/common".freeze
 				@header_dir            = "#{root}/ext".freeze
-				@apache2_module        = "#{root}/ext/apache2/mod_passenger.so".freeze
+				@apache2_module_path   = "#{root}/ext/apache2/mod_passenger.so".freeze
 				@ruby_native_support_dir = nil
 			else
 				@bin_dir               = NATIVELY_PACKAGED_BIN_DIR
@@ -123,7 +123,7 @@ module PhusionPassenger
 				@compilable_source_dir = nil
 				@runtime_libdir        = NATIVELY_PACKAGED_RUNTIME_LIBDIR
 				@header_dir            = NATIVELY_PACKAGED_HEADER_DIR
-				@apache2_module        = NATIVELY_PACKAGED_APACHE2_MODULE
+				@apache2_module_path   = NATIVELY_PACKAGED_APACHE2_MODULE
 				@ruby_native_support_dir = nil
 			end
 		end

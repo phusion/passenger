@@ -32,10 +32,12 @@ dependencies = [
 ].flatten
 file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
-		'ext/common/agents/Watchdog/Main.cpp',
+	compile_cxx("ext/common/agents/Watchdog/Main.cpp",
+		"-o #{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
 		"-Iext -Iext/common " <<
-		"#{PlatformInfo.portability_cflags} #{AGENT_CFLAGS} #{EXTRA_CXXFLAGS} " <<
+		"#{PlatformInfo.portability_cflags} #{AGENT_CFLAGS} #{EXTRA_CXXFLAGS}")
+	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
+		"#{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
 		"#{watchdog_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
@@ -43,7 +45,9 @@ file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 		"#{EXTRA_LDFLAGS}")
 end
 
-helper_agent_libs = COMMON_LIBRARY.only(:base, :other)
+helper_agent_libs = COMMON_LIBRARY.
+	only(:base, :other).
+	exclude('AgentsStarter.o')
 dependencies = [
 	'ext/common/agents/HelperAgent/Main.cpp',
 	'ext/common/agents/HelperAgent/RequestHandler.h',
@@ -72,19 +76,21 @@ dependencies = [
 ].flatten
 file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-	create_executable "#{AGENT_OUTPUT_DIR}PassengerHelperAgent",
-		'ext/common/agents/HelperAgent/Main.cpp',
+	compile_cxx("ext/common/agents/HelperAgent/Main.cpp",
+		"-o #{AGENT_OUTPUT_DIR}PassengerHelperAgent.o " <<
 		"-Iext -Iext/common " <<
 		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
 		"#{PlatformInfo.portability_cflags} " <<
-		"#{EXTRA_CXXFLAGS}  " <<
+		"#{EXTRA_CXXFLAGS}")
+	create_executable("#{AGENT_OUTPUT_DIR}PassengerHelperAgent",
+		"#{AGENT_OUTPUT_DIR}PassengerHelperAgent.o",
 		"#{helper_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{LIBEV_LIBS} " <<
 		"#{LIBEIO_LIBS} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_LDFLAGS}"
+		"#{EXTRA_LDFLAGS}")
 end
 
 logging_agent_libs = COMMON_LIBRARY.only(:base, :logging_agent, 'AgentsBase.o',
@@ -107,13 +113,15 @@ dependencies = [
 ].flatten
 file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-	create_executable(AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
-		'ext/common/agents/LoggingAgent/Main.cpp',
+	compile_cxx("ext/common/agents/LoggingAgent/Main.cpp",
+		"-o #{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o " <<
 		"-Iext -Iext/common " <<
 		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} " <<
 		"#{PlatformInfo.curl_flags} " <<
 		"#{PlatformInfo.zlib_flags} " <<
-		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}")
+	create_executable("#{AGENT_OUTPUT_DIR}PassengerLoggingAgent",
+		"#{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o",
 		"#{logging_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{LIBEV_LIBS} " <<
