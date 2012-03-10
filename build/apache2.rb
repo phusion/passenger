@@ -66,7 +66,7 @@ APACHE2_MODULE_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cfla
 APACHE2_MODULE_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
 	APACHE2_OUTPUT_DIR + "module_libboost_oxt",
 	PlatformInfo.apache2_module_cflags)
-APACHE2_MODULE_COMMON_LIBRARY    = COMMON_LIBRARY.
+APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
 	only(:base).
 	set_namespace("apache2").
 	set_output_dir(APACHE2_OUTPUT_DIR + "module_libpassenger_common").
@@ -95,7 +95,7 @@ end
 
 
 dependencies = [
-	APACHE2_MODULE_COMMON_LIBRARY,
+	APACHE2_MODULE_COMMON_LIBRARIES,
 	APACHE2_MODULE_BOOST_OXT_LIBRARY,
 	APACHE2_MOD_PASSENGER_O,
 	APACHE2_MODULE_OBJECTS
@@ -110,7 +110,7 @@ file APACHE2_MODULE => dependencies do
 		"#{PlatformInfo.apache2_module_cflags} " <<
 		"#{PlatformInfo.portability_cflags} " <<
 		"#{EXTRA_CXXFLAGS} " <<
-		"#{APACHE2_MODULE_COMMON_LIBRARY} " <<
+		"#{APACHE2_MODULE_COMMON_LIBRARIES.join(' ')} " <<
 		"#{APACHE2_MODULE_BOOST_OXT_LIBRARY} " <<
 		"#{PlatformInfo.apache2_module_ldflags} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
