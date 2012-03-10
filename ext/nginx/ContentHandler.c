@@ -100,7 +100,7 @@ detect_application_type(const ngx_str_t *public_dir) {
     ngx_snprintf(filename, sizeof(filename), "%s/%s",
                  public_dir->data, "../config/environment.rb");
     if (file_exists(filename, 1)) {
-        return AP_RAILS;
+        return AP_CLASSIC_RAILS;
     }
         
     ngx_memzero(filename, sizeof(filename));
@@ -374,9 +374,9 @@ create_request(ngx_http_request_t *r)
     }
     
     switch (context->app_type) {
-    case AP_RAILS:
-        app_type_string = (const u_char *) "rails";
-        app_type_string_len = sizeof("rails");
+    case AP_CLASSIC_RAILS:
+        app_type_string = (const u_char *) "classic-rails";
+        app_type_string_len = sizeof("classic-rails");
         break;
     case AP_RACK:
         app_type_string = (const u_char *) "rack";
@@ -387,8 +387,8 @@ create_request(ngx_http_request_t *r)
         app_type_string_len = sizeof("wsgi");
         break;
     default:
-        app_type_string = (const u_char *) "rails";
-        app_type_string_len = sizeof("rails");
+        app_type_string = (const u_char *) "classic-rails";
+        app_type_string_len = sizeof("classic-rails");
         break;
     }
     

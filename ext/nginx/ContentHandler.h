@@ -33,7 +33,7 @@
 
 
 typedef enum {
-    AP_RAILS,
+    AP_CLASSIC_RAILS,
     AP_RACK,
     AP_WSGI,
     AP_NONE
