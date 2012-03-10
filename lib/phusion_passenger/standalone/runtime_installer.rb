@@ -488,8 +488,20 @@ private
 			run_rake_task!(args) do |progress, total|
 				yield(progress, total, 1, "Compiling Phusion Passenger...")
 			end
+
 			system "rm -rf '#{@support_dir}'/{*.o,*.dSYM,libboost_oxt}"
 			system "rm -rf '#{@support_dir}'/*/{*.o,*.lo,*.h,*.log,Makefile,libtool,stamp-h1,config.status,.deps}"
+			
+			# Retain only the object files that are needed for linking the Phusion Passenger module into Nginx.
+			nginx_libs = COMMON_LIBRARY.
+				only(*NGINX_LIBS_SELECTOR).
+				set_output_dir("#{@support_dir}/libpassenger_common").
+				link_objects
+			(Dir["#{@support_dir}/libpassenger_common/**/*"] - nginx_libs).each do |filename|
+				if File.file?(filename)
+					File.unlink(filename)
+				end
+			end
 		end
 		return 2
 	end
