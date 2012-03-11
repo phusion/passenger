@@ -48,22 +48,17 @@ module LoaderSharedHelpers
 	
 	def sanitize_spawn_options(options)
 		defaults = {
-			"app_type"         => "rails",
+			"app_type"         => "rack",
 			"environment"      => "production",
-			"spawn_method"     => "smart",
-			"spawner_timeout"  => -1,
 			"print_exceptions" => true
 		}
 		options = defaults.merge(options)
 		options["app_group_name"]            = options["app_root"] if !options["app_group_name"]
-		options["spawner_timeout"]           = options["spawner_timeout"].to_i
-		# Force this to be a boolean for easy use with Utils#unmarshal_and_raise_errors.
 		options["print_exceptions"]          = to_boolean(options["print_exceptions"])
-		
 		options["analytics"]                 = to_boolean(options["analytics"])
 		options["show_version_in_header"]    = to_boolean(options["show_version_in_header"])
-		
-		# Smart spawning is not supported when using ruby-debug.
+		# TODO: smart spawning is not supported when using ruby-debug. We should raise an error
+		# in this case.
 		options["debugger"]     = to_boolean(options["debugger"])
 		options["spawn_method"] = "direct" if options["debugger"]
 		

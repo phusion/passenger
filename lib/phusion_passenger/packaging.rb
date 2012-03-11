@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -74,6 +74,10 @@ module Packaging
 		'ext/libev/{*.m4,autogen.sh,config.guess,config.h.in,config.sub}',
 		'ext/libev/{configure,configure.ac,install-sh,ltmain.sh,missing,mkinstalldirs}',
 		'ext/libev/{*.h,*.c}',
+		'ext/libeio/{LICENSE,Changes,README,Makefile.am,Makefile.in}',
+		'ext/libeio/{*.m4,autogen.sh,config.guess,config.h.in,config.sub}',
+		'ext/libeio/{configure,configure.ac,install-sh,ltmain.sh,missing,mkinstalldirs}',
+		'ext/libeio/{*.h,*.c}',
 		'ext/oxt/*.hpp',
 		'ext/oxt/*.cpp',
 		'ext/oxt/detail/*.hpp',

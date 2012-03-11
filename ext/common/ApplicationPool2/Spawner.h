@@ -789,12 +789,16 @@ protected:
 		appendNullTerminatedKeyValue(result, "RAILS_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "RACK_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "WSGI_ENV", options.environment);
+		appendNullTerminatedKeyValue(result, "PASSENGER_ENV", options.environment);
 		if (!options.baseURI.empty() && options.baseURI != "/") {
 			appendNullTerminatedKeyValue(result,
 				"RAILS_RELATIVE_URL_ROOT",
 				options.environment);
 			appendNullTerminatedKeyValue(result,
 				"RACK_BASE_URI",
+				options.environment);
+			appendNullTerminatedKeyValue(result,
+				"PASSENGER_BASE_URI",
 				options.environment);
 		}
 		
