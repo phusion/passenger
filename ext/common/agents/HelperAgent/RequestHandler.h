@@ -594,8 +594,12 @@ private:
 
 			params.set("CSS", css);
 			params.set("APP_ROOT", client->options.appRoot);
+			params.set("RUBY", client->options.ruby);
 			params.set("ENVIRONMENT", client->options.environment);
 			params.set("MESSAGE", message);
+			params.set("IS_RUBY_APP",
+				(client->options.appType == "classic-rails" || client->options.appType == "rack")
+				? "true" : "false");
 			if (e != NULL) {
 				params.set("TITLE", "Web application could not be started");
 				// Store all SpawnException annotations into 'params',
