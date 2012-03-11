@@ -180,7 +180,7 @@ setNonBlocking(int fd) {
 
 int
 callAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int options) {
-	#if defined(__NR_accept4) || defined(SYS_ACCEPT4) || 1
+	#if defined(__NR_accept4) || defined(SYS_ACCEPT4)
 		int ret;
 		do {
 			ret = ::accept4(sock, addr, addr_len, options);
