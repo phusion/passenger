@@ -475,9 +475,16 @@ namespace tut {
 		Pipe p = createPipe();
 		unsigned long long startTime = SystemTime::getUsec();
 		unsigned long long timeout = 30000;
+		char data1[1024], data2[1024];
+		StaticString data[] = {
+			StaticString(data1, sizeof(data1) - 1),
+			StaticString(data2, sizeof(data2) - 1)
+		};
+		memset(data1, 'x', sizeof(data1));
+		memset(data2, 'y', sizeof(data2));
+
 		try {
-			StaticString data[] = { "hello", "world" };
-			for (int i = 0; i < 1024 * 1024; i++) {
+			for (int i = 0; i < 1024; i++) {
 				gatheredWrite(p[1], data, 2, &timeout);
 			}
 			fail("TimeoutException expected");
