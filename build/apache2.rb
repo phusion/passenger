@@ -51,7 +51,6 @@ APACHE2_MODULE_INPUT_FILES = {
 		ext/common/Exceptions.h
 		ext/common/Logging.h
 		ext/common/RandomGenerator.h
-		ext/common/MessageChannel.h
 		ext/common/ServerInstanceDir.h
 		ext/common/Constants.h
 		ext/common/Utils.h

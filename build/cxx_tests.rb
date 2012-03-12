@@ -112,8 +112,7 @@ TEST_CXX_OBJECTS = {
 		ext/common/Logging.h
 		ext/common/Account.h
 		ext/common/AccountsDatabase.h
-		ext/common/MessageServer.h
-		ext/common/MessageChannel.h),
+		ext/common/MessageServer.h),
 	'test/cxx/ServerInstanceDir.o' => %w(
 		test/cxx/ServerInstanceDirTest.cpp
 		ext/common/ServerInstanceDir.h
@@ -156,7 +155,6 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/IOUtils.h),
 	'test/cxx/VariantMapTest.o' => %w(
 		test/cxx/VariantMapTest.cpp
-		ext/common/MessageChannel.h
 		ext/common/Utils/VariantMap.h),
 	'test/cxx/StringMapTest.o' => %w(
 		test/cxx/StringMapTest.cpp

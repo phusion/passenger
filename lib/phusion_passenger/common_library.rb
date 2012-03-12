@@ -390,7 +390,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			IniFile.h
 			ResourceLocator.h
 			MessageClient.h
-			MessageChannel.h
 			ServerInstanceDir.h
 			Utils/VariantMap.h
 		)
