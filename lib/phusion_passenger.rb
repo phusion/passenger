@@ -196,7 +196,7 @@ module PhusionPassenger
 	end
 	
 	def self.runtime_libraries_compiled?
-		return File.exist?("#{runtime_libdir}/libpassenger_common.a") &&
+		return File.exist?("#{runtime_libdir}/libpassenger_common") &&
 			File.exist?("#{runtime_libdir}/libboost_oxt.a")
 	end
 	
