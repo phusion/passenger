@@ -89,7 +89,7 @@ module PhusionPassenger
 			end
 			
 			@originally_packaged   = false
-			@bindir                = get_option(filename, options, 'bin')
+			@bin_dir               = get_option(filename, options, 'bin')
 			@agents_dir            = get_option(filename, options, 'agents')
 			@helper_scripts_dir    = get_option(filename, options, 'helper_scripts')
 			@resources_dir         = get_option(filename, options, 'resources')
