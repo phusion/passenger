@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010, 2011 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -43,93 +43,6 @@ class Exception
 	end
 end
 
-class ConditionVariable
-	# This is like ConditionVariable.wait(), but allows one to wait a maximum
-	# amount of time. Returns true if this condition was signaled, false if a
-	# timeout occurred.
-	def timed_wait(mutex, secs)
-		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
-		if secs > 100000000
-			# NOTE: If one calls timeout() on FreeBSD 5 with an
-			# argument of more than 100000000, then MRI will become
-			# stuck in an infite loop, blocking all threads. It seems
-			# that MRI uses select() to implement sleeping.
-			# I think that a value of more than 100000000 overflows
-			# select()'s data structures, causing it to behave incorrectly.
-			# So we just make sure we can't sleep more than 100000000
-			# seconds.
-			secs = 100000000
-		end
-		if ruby_engine == "jruby"
-			if secs > 0
-				return wait(mutex, secs)
-			else
-				return wait(mutex)
-			end
-		elsif RUBY_VERSION >= '1.9.2'
-			if secs > 0
-				t1 = Time.now
-				wait(mutex, secs)
-				t2 = Time.now
-				return t2.to_f - t1.to_f < secs
-			else
-				wait(mutex)
-				return true
-			end
-		else
-			if secs > 0
-				Timeout.timeout(secs) do
-					wait(mutex)
-				end
-			else
-				wait(mutex)
-			end
-			return true
-		end
-	rescue Timeout::Error
-		return false
-	end
-	
-	# This is like ConditionVariable.wait(), but allows one to wait a maximum
-	# amount of time. Raises Timeout::Error if the timeout has elapsed.
-	def timed_wait!(mutex, secs)
-		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
-		if secs > 100000000
-			# See the corresponding note for timed_wait().
-			secs = 100000000
-		end
-		if ruby_engine == "jruby"
-			if secs > 0
-				if !wait(mutex, secs)
-					raise Timeout::Error, "Timeout"
-				end
-			else
-				wait(mutex)
-			end
-		elsif RUBY_VERSION >= '1.9.2'
-			if secs > 0
-				t1 = Time.now
-				wait(mutex, secs)
-				t2 = Time.now
-				if t2.to_f - t1.to_f >= secs
-					raise Timeout::Error, "Timeout"
-				end
-			else
-				wait(mutex)
-			end
-		else
-			if secs > 0
-				Timeout.timeout(secs) do
-					wait(mutex)
-				end
-			else
-				wait(mutex)
-			end
-		end
-		return nil
-	end
-end
-
 class IO
 	if defined?(PhusionPassenger::NativeSupport)
 		# Writes all of the strings in the +components+ array into the given file
@@ -166,12 +79,20 @@ class IO
 		end
 	end
 	
-	if defined?(Fcntl::F_SETFD)
+	if IO.method_defined?(:close_on_exec=)
 		def close_on_exec!
-			fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+			self.close_on_exec = true
 		end
 	else
-		def close_on_exec!
+		require 'fcntl'
+
+		if defined?(Fcntl::F_SETFD)
+			def close_on_exec!
+				fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+			end
+		else
+			def close_on_exec!
+			end
 		end
 	end
 end
@@ -207,40 +128,6 @@ module Signal
 		result.delete("STOP")
 		
 		return result
-	end
-end
-
-module Process
-	def self.timed_waitpid(pid, max_time)
-		done = false
-		start_time = Time.now
-		while Time.now - start_time < max_time && !done
-			done = Process.waitpid(pid, Process::WNOHANG)
-			sleep 0.1 if !done
-		end
-		return !!done
-	rescue Errno::ECHILD
-		return true
-	end
-end
-
-# MRI's implementations of UNIXSocket#recv_io and UNIXSocket#send_io
-# are broken on 64-bit FreeBSD 7, OpenBSD and x86_64/ppc64 OS X. So
-# we override them with our own implementation.
-ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
-if ruby_engine == "ruby" && defined?(PhusionPassenger::NativeSupport) && (
-  RUBY_PLATFORM =~ /freebsd/ ||
-  RUBY_PLATFORM =~ /openbsd/ ||
-  (RUBY_PLATFORM =~ /darwin/ && RUBY_PLATFORM !~ /universal/)
-)
-	UNIXSocket.class_eval do
-		def recv_io(klass = IO)
-			return klass.for_fd(PhusionPassenger::NativeSupport.recv_fd(self.fileno))
-		end
-		
-		def send_io(io)
-			PhusionPassenger::NativeSupport.send_fd(self.fileno, io.fileno)
-		end
 	end
 end
 
