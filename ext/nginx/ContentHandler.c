@@ -1281,7 +1281,7 @@ process_header(ngx_http_request_t *r)
                 h->key.len = sizeof("Server") - 1;
                 h->key.data = (u_char *) "Server";
                 if( slcf->show_version_in_header == 0 ) {
-                    h->value.data = (u_char *) (NGINX_VER);
+                    h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger (mod_rails/mod_rack)");
                 } else {
                     h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger " PASSENGER_VERSION " (mod_rails/mod_rack)");
                 }
