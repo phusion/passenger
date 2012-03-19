@@ -1145,7 +1145,7 @@ server {
 }
 ---------------------------
 
-Then specify the 'server_name' valuue followed by the sub-URI, like this:
+Then specify the 'server_name' value followed by the sub-URI, like this:
 
 ---------------------------
 server {
