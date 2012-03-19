@@ -1,9 +1,10 @@
 Release 3.0.12
 --------------
 
- * [Nginx] Preferred Nginx version upgraded to 1.0.11.
- * [Nginx] Preferred PCRE version upgraded to 8.21.
+ * [Nginx] Preferred Nginx version upgraded to 1.0.14.
+ * [Nginx] Preferred PCRE version upgraded to 8.30.
  * [Nginx] Fixed compatibility with Nginx < 1.0.10.
+ * [Nginx] Fixed a memory disclosure security problem as documented at http://www.nginx.org/en/security_advisories.html
  * Fixed a /proc deprecation warning on Linux kernel >= 3.0.
 
 
