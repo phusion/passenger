@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -49,6 +49,7 @@ module Packaging
 	# A list of globs which match all files that should be packaged
 	# in the Phusion Passenger gem or tarball.
 	GLOB = [
+		'configure',
 		'Rakefile',
 		'README',
 		'DEVELOPERS.TXT',
