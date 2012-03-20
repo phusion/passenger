@@ -48,6 +48,18 @@
 				<dd><pre>{{ENVVARS|default=Unknown}}</pre></dd>
 				<dt>Ulimits</dt>
 				<dd><pre>{{ULIMIT|default=Unknown}}</pre></dd>
+				{{if RUBY_INFO}}
+					<dt>General Ruby interpreter information</dt>
+					<dd><pre>{{RUBY_INFO}}</pre></dd>
+				{{/if}}
+				{{if RBCONFIG}}
+					<dt>Ruby configuration (RbConfig::CONFIG)</dt>
+					<dd><pre>{{RBCONFIG}}</pre></dd>
+				{{/if}}
+				{{if ACTIVATED_GEMS}}
+					<dt>Activated Ruby gems</dt>
+					<dd><pre>{{ACTIVATED_GEMS}}</pre></dd>
+				{{/if}}
 				{{if LOAD_PATH}}
 					<dt>Ruby load path ($LOAD_PATH)</dt>
 					<dd><pre>{{LOAD_PATH}}</pre></dd>
