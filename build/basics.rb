@@ -76,7 +76,7 @@ else
 	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS".strip
 end
 OPTIMIZATION_FLAGS << " -fcommon"
-OPTIMIZATION_FLAGS << " -fvisibility=hidden" if PlatformInfo.compiler_supports_visibility_flag?
+OPTIMIZATION_FLAGS << " -fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED" if PlatformInfo.compiler_supports_visibility_flag?
 OPTIMIZATION_FLAGS << " -Wno-attributes" if PlatformInfo.compiler_supports_visibility_flag? &&
 	PlatformInfo.compiler_visibility_flag_generates_warnings? &&
 	PlatformInfo.compiler_supports_wno_attributes_flag?
