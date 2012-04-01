@@ -230,16 +230,9 @@ private:
 	 * The existance of a request note means that the handler should be run.
 	 */
 	inline RequestNote *getRequestNote(request_rec *r) {
-		// The union is needed in order to be compliant with
-		// C99/C++'s strict aliasing rules.
-		// http://cellperformance.beyond3d.com/articles/2006/06/understanding-strict-aliasing.html
-		union {
-			RequestNote *note;
-			void *pointer;
-		} u;
-		u.note = 0;
-		apr_pool_userdata_get(&u.pointer, "Phusion Passenger", r->pool);
-		return u.note;
+		void *note = 0;
+		apr_pool_userdata_get(&note, "Phusion Passenger", r->pool);
+		return (RequestNote *) note;
 	}
 	
 	/**
