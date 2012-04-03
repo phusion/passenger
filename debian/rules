@@ -22,9 +22,9 @@ clean::
 
 build/passenger-common build/libapache2-mod-passenger build/passenger-doc::
 	rm -rf $(DEB_DESTDIR)	
-	rake fakeroot APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no RELEASE=yes
+	ruby1.8 -S rake fakeroot APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no RELEASE=yes
 	mv $(builddir) $(DEB_DESTDIR)
-	rake1.9.1 fakeroot APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no RELEASE=yes
+	ruby1.9.1 -S rake fakeroot APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no RELEASE=yes
 	mv $(builddir)/usr/lib/ruby/1.9.1 $(DEB_DESTDIR)/usr/lib/ruby/
 
 install/passenger-common::
