@@ -1,3 +1,10 @@
+passenger (3.0.11-2bbox5) lucid; urgency=low
+
+  * Fix dependencies to avoid conflicts when upgrading from old
+	  passenger-common packages
+
+ -- John Leach <john@brightbox.co.uk>  Thu, 05 Apr 2012 12:51:50 +0100
+
 passenger (3.0.11-2bbox4) lucid; urgency=low
 
   * Added libgoogle-perftools-dev build dependency, for building with Ruby
