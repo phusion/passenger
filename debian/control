@@ -28,8 +28,9 @@ Description: Rails and Rack support for Apache2
 
 Package: passenger-common1.8
 Architecture: any
-Depends: ${shlibs:Depends}, passenger-common, ruby1.8
-Conflicts: libapache2-mod-passenger (< 2.2.1-1bbox1)
+Depends: ${shlibs:Depends}, passenger-common (= ${binary:Version}), ruby1.8
+Conflicts: libapache2-mod-passenger (< 2.2.1-1bbox1), passenger-common
+ (< 3.0.11-2bbox2), passenger-common (< 3.0.11+103)
 Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
 Description: Rails and Rack support for Apache2
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
@@ -40,8 +41,10 @@ Description: Rails and Rack support for Apache2
 
 Package: passenger-common1.9.1
 Architecture: any
-Depends: ${shlibs:Depends}, passenger-common, ruby1.9.1 (>= 1.9.2)
-Conflicts: libapache2-mod-passenger (< 2.2.1-1bbox1)
+Depends: ${shlibs:Depends}, passenger-common (= ${binary:Version}),
+ ruby1.9.1 (>= 1.9.2)
+Conflicts: libapache2-mod-passenger (< 2.2.1-1bbox1), passenger-common
+ (< 3.0.11-2bbox2), passenger-common (< 3.0.11+103)
 Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
 Description: Rails and Rack support for Apache2
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
