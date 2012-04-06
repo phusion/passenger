@@ -14,9 +14,10 @@ XS-Vcs-browser: http://github.com/johnl/deb-passenger/tree/master
 
 Package: passenger-common
 Architecture: any
-Depends: ${shlibs:Depends}, ruby-rack, passenger-common1.8 (= ${binary:Version}) | 
+Depends: ${shlibs:Depends}, ${misc:Depends}, ruby-rack,
+ passenger-common1.8 (= ${binary:Version}) |
  passenger-common1.9.1 (= ${binary:Version})
-Conflicts: libapache2-mod-passenger (< 2.2.1-1bbox1)
+Conflicts: libapache2-mod-passenger (<< 2.2.1-1bbox1)
 Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
 Description: Rails and Rack support for Apache2
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
@@ -28,9 +29,10 @@ Description: Rails and Rack support for Apache2
 
 Package: passenger-common1.8
 Architecture: any
-Depends: ${shlibs:Depends}, passenger-common (= ${binary:Version}), ruby1.8
-Conflicts: libapache2-mod-passenger (< 2.2.1-1bbox1), passenger-common
- (< 3.0.11-2bbox2), passenger-common (< 3.0.11+103)
+Depends: ${shlibs:Depends}, ${misc:Depends}, passenger-common (=
+ ${binary:Version}), ruby1.8
+Conflicts: libapache2-mod-passenger (<< 2.2.1-1bbox1), passenger-common
+ (<< 3.0.11-2bbox2), passenger-common (<< 3.0.11+103)
 Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
 Description: Rails and Rack support for Apache2
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
@@ -41,10 +43,11 @@ Description: Rails and Rack support for Apache2
 
 Package: passenger-common1.9.1
 Architecture: any
-Depends: ${shlibs:Depends}, passenger-common (= ${binary:Version}),
+Depends: ${shlibs:Depends}, ${misc:Depends}, passenger-common (=
+ ${binary:Version}),
  ruby1.9.1 (>= 1.9.2)
-Conflicts: libapache2-mod-passenger (< 2.2.1-1bbox1), passenger-common
- (< 3.0.11-2bbox2), passenger-common (< 3.0.11+103)
+Conflicts: libapache2-mod-passenger (<< 2.2.1-1bbox1), passenger-common
+ (<< 3.0.11-2bbox2), passenger-common (<< 3.0.11+103)
 Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
 Description: Rails and Rack support for Apache2
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
@@ -56,7 +59,7 @@ Description: Rails and Rack support for Apache2
 
 Package: libapache2-mod-passenger
 Architecture: any
-Depends: ${shlibs:Depends}, apache2.2-common, 
+Depends: ${shlibs:Depends}, ${misc:Depends}, apache2.2-common,
  passenger-common (= ${binary:Version})
 Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
 Description: Rails and Rack support for Apache2
