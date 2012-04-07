@@ -79,6 +79,9 @@ using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
+#ifdef APLOG_USE_MODULE
+	APLOG_USE_MODULE(passenger);
+#endif
 
 /**
  * If the HTTP client sends POST data larger than this value (in bytes),
@@ -99,6 +102,10 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 	#endif
 #endif
 
+#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
+	// Apache >= 2.4
+	#define AP_2_4_OR_LATER
+#endif
 
 /**
  * Apache hook functions, wrapped in a class.
@@ -980,14 +987,23 @@ private:
 		
 		
 		// Set standard CGI variables.
-		addHeader(headers, "SERVER_SOFTWARE", ap_get_server_version());
+		#ifdef AP_GET_SERVER_VERSION_DEPRECATED
+			addHeader(headers, "SERVER_SOFTWARE", ap_get_server_banner());
+		#else
+			addHeader(headers, "SERVER_SOFTWARE", ap_get_server_version());
+		#endif
 		addHeader(headers, "SERVER_PROTOCOL", r->protocol);
 		addHeader(headers, "SERVER_NAME",     ap_get_server_name(r));
 		addHeader(headers, "SERVER_ADMIN",    r->server->server_admin);
 		addHeader(headers, "SERVER_ADDR",     r->connection->local_ip);
 		addHeader(headers, "SERVER_PORT",     apr_psprintf(r->pool, "%u", ap_get_server_port(r)));
-		addHeader(headers, "REMOTE_ADDR",     r->connection->remote_ip);
-		addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
+		#ifdef AP_2_4_OR_LATER
+			addHeader(headers, "REMOTE_ADDR",     r->connection->client_ip);
+			addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->client_addr->port));
+		#else
+			addHeader(headers, "REMOTE_ADDR",     r->connection->remote_ip);
+			addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
+		#endif
 		addHeader(headers, "REMOTE_USER",     r->user);
 		addHeader(headers, "REQUEST_METHOD",  r->method);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
@@ -1383,7 +1399,11 @@ public:
 			getpid(), serverConfig.tempDir,
 			serverConfig.userSwitching,
 			serverConfig.defaultUser, serverConfig.defaultGroup,
-			unixd_config.user_id, unixd_config.group_id,
+			#ifdef AP_2_4_OR_LATER
+				ap_unixd_config.user_id, ap_unixd_config.group_id,
+			#else
+				unixd_config.user_id, unixd_config.group_id,
+			#endif
 			serverConfig.root, serverConfig.ruby, serverConfig.maxPoolSize,
 			serverConfig.maxInstancesPerApp, serverConfig.poolIdleTime,
 			"",
