@@ -157,9 +157,8 @@ file AGENT_OUTPUT_DIR + 'EnvPrinter' => 'ext/common/agents/EnvPrinter.c' do
 end
 
 task 'common:clean' do
-	sh "rm -rf #{AGENT_OUTPUT_DIR}PassengerWatchdog #{AGENT_OUTPUT_DIR}PassengerWatchdog.dSYM"
-	sh "rm -rf #{AGENT_OUTPUT_DIR}PassengerHelperAgent #{AGENT_OUTPUT_DIR}PassengerHelperAgent.dSYM"
-	sh "rm -rf #{AGENT_OUTPUT_DIR}PassengerLoggingAgent #{AGENT_OUTPUT_DIR}PassengerLoggingAgent.dSYM"
-	sh "rm -rf #{AGENT_OUTPUT_DIR}SpawnPreparer #{AGENT_OUTPUT_DIR}SpawnPreparer.dSYM"
-	sh "rm -rf #{AGENT_OUTPUT_DIR}EnvPrinter #{AGENT_OUTPUT_DIR}EnvPrinter.dSYM"
+	['PassengerWatchdog', 'PassengerHelperAgent', 'PassengerLoggingAgent', 'SpawnPreparer', 'EnvPrinter'].each do |agent|
+		sh "rm -rf #{AGENT_OUTPUT_DIR}#{agent} #{AGENT_OUTPUT_DIR}#{agent}.o #{AGENT_OUTPUT_DIR}#{agent}.dSYM"
+	end
+	sh "rm -rf agents"
 end

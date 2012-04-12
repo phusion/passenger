@@ -44,9 +44,5 @@ file "#{output_dir}/Makefile" => "#{source_dir}/extconf.rb" do
 end
 
 task 'native_support:clean' do
-	Dir["ext/ruby/*"].each do |entry|
-		if File.exist?("#{entry}/Makefile")
-			sh "rm -rf #{entry}"
-		end
-	end
+	sh "echo rm -rf #{output_dir}"
 end

@@ -50,6 +50,7 @@ end
 desc "Remove compiled files"
 task :clean do
 	sh "rm -rf build/cache"
+	sh "rm -rf libout"
 end
 
 desc "Remove all generated files"
