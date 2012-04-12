@@ -2,7 +2,7 @@ Release 3.0.12
 --------------
 
  * [Apache] Support Apache 2.4. The event MPM is now also supported.
- * [Nginx] Preferred Nginx version upgraded to 1.0.14.
+ * [Nginx] Preferred Nginx version upgraded to 1.0.15.
  * [Nginx] Preferred PCRE version upgraded to 8.30.
  * [Nginx] Fixed compatibility with Nginx < 1.0.10.
  * [Nginx] Nginx is now installed with http_gzip_static_module by default.
