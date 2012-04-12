@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -79,6 +79,10 @@ using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
+#ifdef APLOG_USE_MODULE
+	APLOG_USE_MODULE(passenger);
+#endif
+
 
 /**
  * If the HTTP client sends POST data larger than this value (in bytes),
@@ -97,6 +101,11 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 	#if AP_SERVER_PATCHLEVEL_NUMBER >= 14
 		#define AP_GET_SERVER_VERSION_DEPRECATED
 	#endif
+#endif
+
+#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
+	// Apache >= 2.4
+	#define unixd_config ap_unixd_config
 #endif
 
 
@@ -980,14 +989,23 @@ private:
 		
 		
 		// Set standard CGI variables.
-		addHeader(headers, "SERVER_SOFTWARE", ap_get_server_version());
+		#ifdef AP_GET_SERVER_VERSION_DEPRECATED
+			addHeader(headers, "SERVER_SOFTWARE", ap_get_server_description());
+		#else
+			addHeader(headers, "SERVER_SOFTWARE", ap_get_server_version());
+		#endif
 		addHeader(headers, "SERVER_PROTOCOL", r->protocol);
 		addHeader(headers, "SERVER_NAME",     ap_get_server_name(r));
 		addHeader(headers, "SERVER_ADMIN",    r->server->server_admin);
 		addHeader(headers, "SERVER_ADDR",     r->connection->local_ip);
 		addHeader(headers, "SERVER_PORT",     apr_psprintf(r->pool, "%u", ap_get_server_port(r)));
-		addHeader(headers, "REMOTE_ADDR",     r->connection->remote_ip);
-		addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
+		#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
+			addHeader(headers, "REMOTE_ADDR", r->connection->client_ip);
+			addHeader(headers, "REMOTE_PORT", apr_psprintf(r->pool, "%d", r->connection->client_addr->port));
+		#else
+			addHeader(headers, "REMOTE_ADDR", r->connection->remote_ip);
+			addHeader(headers, "REMOTE_PORT", apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
+		#endif
 		addHeader(headers, "REMOTE_USER",     r->user);
 		addHeader(headers, "REQUEST_METHOD",  r->method);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
