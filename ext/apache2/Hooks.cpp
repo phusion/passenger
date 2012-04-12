@@ -990,7 +990,7 @@ private:
 		
 		// Set standard CGI variables.
 		#ifdef AP_GET_SERVER_VERSION_DEPRECATED
-			addHeader(headers, "SERVER_SOFTWARE", ap_get_server_description());
+			addHeader(headers, "SERVER_SOFTWARE", ap_get_server_banner());
 		#else
 			addHeader(headers, "SERVER_SOFTWARE", ap_get_server_version());
 		#endif
