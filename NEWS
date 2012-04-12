@@ -13,9 +13,11 @@ Release 3.1.0
 Release 3.0.12
 --------------
 
- * [Nginx] Preferred Nginx version upgraded to 1.0.14.
+ * [Apache] Support Apache 2.4. The event MPM is now also supported.
+ * [Nginx] Preferred Nginx version upgraded to 1.0.15.
  * [Nginx] Preferred PCRE version upgraded to 8.30.
  * [Nginx] Fixed compatibility with Nginx < 1.0.10.
+ * [Nginx] Nginx is now installed with http_gzip_static_module by default.
  * [Nginx] Fixed a memory disclosure security problem.
    The issue is documented at http://www.nginx.org/en/security_advisories.html
    and affects more modules than just Phusion Passenger. Users are advised

@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -80,6 +80,17 @@ module PlatformInfo
 		end
 	end
 	memoize :httpd
+
+	# The Apache version, or nil if Apache is not found.
+	def self.httpd_version
+		if httpd
+			`#{httpd} -v` =~ %r{Apache/([\d\.]+)}
+			return $1
+		else
+			return nil
+		end
+	end
+	memoize :httpd_version
 	
 	# The absolute path to the 'apr-config' or 'apr-1-config' executable,
 	# or nil if not found.
