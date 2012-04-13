@@ -80,7 +80,7 @@ dumpInformation() {
 				fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
 					strerror(e), e);
 			} else {
-				waitpid(pid, 0, NULL);
+				waitpid(pid, NULL, 0);
 			}
 			fclose(f);
 		}
@@ -97,7 +97,7 @@ dumpInformation() {
 				fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
 					strerror(e), e);
 			} else {
-				waitpid(pid, 0, NULL);
+				waitpid(pid, NULL, 0);
 			}
 			fclose(f);
 		}
