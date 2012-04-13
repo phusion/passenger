@@ -50,7 +50,7 @@ using namespace boost;
 static const uid_t USER_NOT_GIVEN = (uid_t) -1;
 static const gid_t GROUP_NOT_GIVEN = (gid_t) -1;
 
-typedef struct CachedFileStat CachedFileStat;
+class CachedFileStat;
 class ResourceLocator;
 
 /** Enumeration which indicates what kind of file a file is. */

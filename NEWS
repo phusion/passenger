@@ -1,8 +1,25 @@
+Release 3.0.12
+--------------
+
+ * [Apache] Support Apache 2.4. The event MPM is now also supported.
+ * [Nginx] Preferred Nginx version upgraded to 1.0.15.
+ * [Nginx] Preferred PCRE version upgraded to 8.30.
+ * [Nginx] Fixed compatibility with Nginx < 1.0.10.
+ * [Nginx] Nginx is now installed with http_gzip_static_module by default.
+ * [Nginx] Fixed a memory disclosure security problem.
+   The issue is documented at http://www.nginx.org/en/security_advisories.html
+   and affects more modules than just Phusion Passenger. Users are advised
+   to upgrade as soon as possible. Patch submitted by Gregory Potamianos.
+ * [Nginx] passenger_show_version_in_header now hides the Phusion Passenger version number from the 'Server:' header too.
+   Patch submitted by Gregory Potamianos.
+ * Fixed a /proc deprecation warning on Linux kernel >= 3.0.
+
+
 Release 3.0.11
 --------------
 
  * Fixed a compilation problem on platforms without alloca.h, such as FreeBSD 7.
- * Improved performance and solves some warnings on Xen systems by compiling
+ * Improved performance and solved some warnings on Xen systems by compiling
    with `-mno-tls-direct-seg-refs`. Patch contributed by Michał Pokrywka.
 
 

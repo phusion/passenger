@@ -42,7 +42,10 @@ using namespace boost;
 using namespace oxt;
 
 
-void safelyClose(int fd);
+#ifndef _PASSENGER_SAFELY_CLOSE_DEFINED_
+	#define _PASSENGER_SAFELY_CLOSE_DEFINED_
+	void safelyClose(int fd, bool ignoreErrors = false);
+#endif
 
 
 /**
@@ -81,11 +84,7 @@ private:
 				this_thread::disable_syscall_interruption dsi;
 				int theFd = fd;
 				fd = -1;
-				if (checkErrors) {
-					safelyClose(theFd);
-				} else {
-					syscalls::close(fd);
-				}
+				safelyClose(theFd, !checkErrors);
 			}
 		}
 		

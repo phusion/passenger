@@ -67,7 +67,7 @@ module PlatformInfo
 					return filename
 				else
 					STDERR.puts "Your RVM wrapper scripts are too old. Please " +
-						"update them first by running 'rvm update --head && " +
+						"update them first by running 'rvm get head && " +
 						"rvm reload && rvm repair all'."
 					exit 1
 				end

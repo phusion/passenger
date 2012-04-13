@@ -40,9 +40,9 @@ namespace oxt {
 
 using namespace std;
 using namespace boost;
-class trace_point;
+struct trace_point;
 class tracable_exception;
-class thread_registration;
+struct thread_registration;
 
 extern boost::mutex _thread_registration_mutex;
 extern list<thread_registration *> _registered_threads;
