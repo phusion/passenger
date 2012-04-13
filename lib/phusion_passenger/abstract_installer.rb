@@ -225,7 +225,7 @@ protected
 					result = default_value
 					done = true
 				else
-					done = false
+					done = !block_given? || yield(result)
 				end
 			else
 				done = !block_given? || yield(result)
