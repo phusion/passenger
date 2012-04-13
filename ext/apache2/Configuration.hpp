@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -76,6 +76,9 @@ struct DirConfig {
 	
 	/** Whether to autodetect WSGI applications. */
 	Threeway autoDetectWSGI;
+
+	/** The Ruby interpreter to use. */
+	const char *ruby;
 	
 	/** The environment (RAILS_ENV/RACK_ENV/WSGI_ENV) under which
 	 * applications should operate. */
@@ -353,9 +356,6 @@ struct DirConfig {
  * the default value if the value is not specified.
  */
 struct ServerConfig {
-	/** The filename of the Ruby interpreter to use. */
-	const char *ruby;
-	
 	/** The Passenger root folder. */
 	const char *root;
 	
@@ -403,7 +403,6 @@ struct ServerConfig {
 	set<string> prestartURLs;
 	
 	ServerConfig() {
-		ruby               = "ruby";
 		root               = NULL;
 		logLevel           = DEFAULT_LOG_LEVEL;
 		debugLogFile       = NULL;

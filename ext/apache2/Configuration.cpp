@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -188,6 +188,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->autoDetectRails = DirConfig::UNSET;
 	config->autoDetectRack = DirConfig::UNSET;
 	config->autoDetectWSGI = DirConfig::UNSET;
+	config->ruby = NULL;
 	config->environment = NULL;
 	config->appRoot = NULL;
 	config->user = NULL;
@@ -234,6 +235,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_THREEWAY_CONFIG(autoDetectRails);
 	MERGE_THREEWAY_CONFIG(autoDetectRack);
 	MERGE_THREEWAY_CONFIG(autoDetectWSGI);
+	MERGE_STR_CONFIG(ruby);
 	MERGE_STR_CONFIG(environment);
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
@@ -271,7 +273,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
  *************************************************/
 
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_root, root)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int, 0)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_debug_log_file, debugLogFile)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
@@ -302,6 +303,7 @@ DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_use_global_queue, useGlobalQueue
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_max_requests, maxRequests, unsigned long, 0)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformance)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_environment, environment)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
@@ -472,7 +474,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("PassengerRuby",
 		(Take1Func) cmd_passenger_ruby,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The Ruby interpreter to use."),
 	AP_INIT_TAKE1("PassengerLogLevel",
 		(Take1Func) cmd_passenger_log_level,
@@ -727,7 +729,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("RailsRuby",
 		(Take1Func) cmd_passenger_ruby,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Deprecated option."),
 	AP_INIT_TAKE1("RailsMaxPoolSize",
 		(Take1Func) cmd_passenger_max_pool_size,

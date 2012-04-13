@@ -935,6 +935,7 @@ private:
 		addHeader(output, "PASSENGER_APP_GROUP_NAME", config->getAppGroupName(appRoot));
 		addHeader(output, "PASSENGER_USE_GLOBAL_QUEUE",
 			config->usingGlobalQueue() ? "true" : "false");
+		addHeader(output, "PASSENGER_RUBY", config->ruby);
 		addHeader(output, "PASSENGER_ENV", config->getEnvironment());
 		addHeader(output, "PASSENGER_SPAWN_METHOD", config->getSpawnMethodString());
 		addHeader(output, "PASSENGER_USER", config->getUser());
@@ -1245,7 +1246,7 @@ public:
 			serverConfig.userSwitching,
 			serverConfig.defaultUser, serverConfig.defaultGroup,
 			unixd_config.user_id, unixd_config.group_id,
-			serverConfig.root, serverConfig.ruby, serverConfig.maxPoolSize,
+			serverConfig.root, "ruby", serverConfig.maxPoolSize,
 			serverConfig.maxInstancesPerApp, serverConfig.poolIdleTime,
 			"",
 			serverConfig.analyticsLogDir, serverConfig.analyticsLogUser,
