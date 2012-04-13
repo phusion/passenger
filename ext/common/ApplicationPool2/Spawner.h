@@ -103,8 +103,8 @@ using namespace oxt;
 
 class Spawner {
 protected:
-	friend class tut::ApplicationPool2_DirectSpawnerTest;
-	friend class tut::ApplicationPool2_SmartSpawnerTest;
+	friend struct tut::ApplicationPool2_DirectSpawnerTest;
+	friend struct tut::ApplicationPool2_SmartSpawnerTest;
 	
 	/**
 	 * Given a file descriptor, captures its output in a background thread
