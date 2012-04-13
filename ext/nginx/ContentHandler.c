@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010 Phusion
+ * Copyright (C) 2010, 2011, 2012 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -473,6 +473,7 @@ create_request(ngx_http_request_t *r)
                                   slcf, debugger);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_SHOW_VERSION_IN_HEADER",
                                   slcf, show_version_in_header);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_RUBY", slcf, ruby);
     len += sizeof("PASSENGER_ENV") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
@@ -696,6 +697,9 @@ create_request(ngx_http_request_t *r)
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_SHOW_VERSION_IN_HEADER",
                                   slcf, show_version_in_header);
     
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_RUBY",
+                              slcf, ruby);
+
     b->last = ngx_copy(b->last, "PASSENGER_ENV",
                        sizeof("PASSENGER_ENV"));
     b->last = ngx_copy(b->last, slcf->environment.data,

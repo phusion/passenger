@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010 Phusion
+ * Copyright (C) 2010, 2011, 2012 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -122,11 +122,6 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     
     conf = &passenger_main_conf;
     *conf = *((passenger_main_conf_t *) conf_pointer);
-    
-    if (conf->ruby.len == 0) {
-        conf->ruby.data = (u_char *) "ruby";
-        conf->ruby.len  = sizeof("ruby") - 1;
-    }
     
     if (conf->log_level == (ngx_int_t) NGX_CONF_UNSET) {
         conf->log_level = DEFAULT_LOG_LEVEL;
@@ -290,6 +285,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->union_station_support = NGX_CONF_UNSET;
     conf->debugger = NGX_CONF_UNSET;
     conf->show_version_in_header = NGX_CONF_UNSET;
+    conf->ruby.data = NULL;
+    conf->ruby.len = 0;
     conf->environment.data = NULL;
     conf->environment.len = 0;
     conf->spawn_method.data = NULL;
@@ -395,6 +392,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->union_station_support, prev->union_station_support, 0);
     ngx_conf_merge_value(conf->debugger, prev->debugger, 0);
     ngx_conf_merge_value(conf->show_version_in_header, prev->show_version_in_header, 1);
+    ngx_conf_merge_str_value(conf->ruby, prev->ruby, NULL);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
     ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
     ngx_conf_merge_str_value(conf->union_station_key, prev->union_station_key, NULL);
@@ -1042,10 +1040,10 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("passenger_ruby"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, ruby),
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, ruby),
       NULL },
 
     { ngx_string("passenger_log_level"),

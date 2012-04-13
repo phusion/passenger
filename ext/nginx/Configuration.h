@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010 Phusion
+ * Copyright (C) 2010, 2011, 2012 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,6 +45,7 @@ typedef struct {
     ngx_flag_t   union_station_support;
     ngx_flag_t   debugger;
     ngx_flag_t   show_version_in_header;
+    ngx_str_t    ruby;
     ngx_str_t    environment;
     ngx_str_t    user;
     ngx_str_t    group;
@@ -68,7 +69,6 @@ typedef struct {
 
 typedef struct {
     ngx_str_t    root_dir;
-    ngx_str_t    ruby;
     ngx_int_t    log_level;
     ngx_str_t    debug_log_file;
     ngx_flag_t   abort_on_startup_error;
