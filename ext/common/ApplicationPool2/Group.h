@@ -43,6 +43,7 @@
 #include <ApplicationPool2/Options.h>
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/FileChangeChecker.h>
+#include <Utils/SmallVector.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -171,42 +172,21 @@ private:
 	
 	template<typename Lock>
 	void assignSessionsToGetWaitersQuickly(Lock &lock) {
-		#ifndef __clang__
-		if (OXT_LIKELY(getWaitlist.size() < 50)) {
-			// Clang doesn't support variable-length non-POD arrays.
-			GetAction actions[getWaitlist.size()];
-			unsigned int count = 0;
-			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
-				actions[count].callback = getWaitlist.front().callback;
-				actions[count].session  = newSession();
-				getWaitlist.pop();
-				count++;
-			}
-			
-			verifyInvariants();
-			lock.unlock();
-			for (unsigned int i = 0; i < count; i++) {
-				actions[i].callback(actions[i].session, ExceptionPtr());
-			}
-		} else
-		#endif /* __clang__ */
-		{
-			vector<GetAction> actions;
-			actions.reserve(getWaitlist.size());
-			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
-				GetAction action;
-				action.callback = getWaitlist.front().callback;
-				action.session  = newSession();
-				getWaitlist.pop();
-				actions.push_back(action);
-			}
-			
-			verifyInvariants();
-			lock.unlock();
-			vector<GetAction>::const_iterator it, end = actions.end();
-			for (it = actions.begin(); it != actions.end(); it++) {
-				it->callback(it->session, ExceptionPtr());
-			}
+		SmallVector<GetAction, 50> actions;
+		actions.reserve(getWaitlist.size());
+		while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
+			GetAction action;
+			action.callback = getWaitlist.front().callback;
+			action.session  = newSession();
+			getWaitlist.pop();
+			actions.push_back(action);
+		}
+		
+		verifyInvariants();
+		lock.unlock();
+		SmallVector<GetAction, 50>::const_iterator it, end = actions.end();
+		for (it = actions.begin(); it != end; it++) {
+			it->callback(it->session, ExceptionPtr());
 		}
 	}
 	
