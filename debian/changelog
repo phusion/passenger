@@ -1,3 +1,9 @@
+passenger (3.0.12-1bbox1+ng) lucid; urgency=low
+
+  * New upstream release, 3.0.12
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 13 Apr 2012 17:19:42 +0100
+
 passenger (3.0.11-2bbox5) lucid; urgency=low
 
   * Fix dependencies to avoid conflicts when upgrading from old
