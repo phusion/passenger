@@ -1197,8 +1197,10 @@ process_header(ngx_http_request_t *r)
     ngx_table_elt_t                *h;
     ngx_http_upstream_header_t     *hh;
     ngx_http_upstream_main_conf_t  *umcf;
+    passenger_loc_conf_t           *slcf;
 
     umcf = ngx_http_get_module_main_conf(r, ngx_http_upstream_module);
+    slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
 
     for ( ;;  ) {
 
@@ -1227,8 +1229,10 @@ process_header(ngx_http_request_t *r)
             h->value.data = h->key.data + h->key.len + 1;
             h->lowcase_key = h->key.data + h->key.len + 1 + h->value.len + 1;
 
-            ngx_cpystrn(h->key.data, r->header_name_start, h->key.len + 1);
-            ngx_cpystrn(h->value.data, r->header_start, h->value.len + 1);
+            ngx_memcpy(h->key.data, r->header_name_start, h->key.len);
+            h->key.data[h->key.len] = '\0';
+            ngx_memcpy(h->value.data, r->header_start, h->value.len);
+            h->value.data[h->value.len] = '\0';
 
             if (h->key.len == r->lowcase_index) {
                 ngx_memcpy(h->lowcase_key, r->lowcase_header, h->key.len);
@@ -1276,7 +1280,11 @@ process_header(ngx_http_request_t *r)
 
                 h->key.len = sizeof("Server") - 1;
                 h->key.data = (u_char *) "Server";
-                h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger " PASSENGER_VERSION " (mod_rails/mod_rack)");
+                if( slcf->show_version_in_header == 0 ) {
+                    h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger (mod_rails/mod_rack)");
+                } else {
+                    h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger " PASSENGER_VERSION " (mod_rails/mod_rack)");
+                }
                 h->value.len = ngx_strlen(h->value.data);
                 h->lowcase_key = (u_char *) "server";
             }

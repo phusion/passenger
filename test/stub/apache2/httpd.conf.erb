@@ -29,6 +29,10 @@ Listen 127.0.0.1:<%= @port %>
 <% if !has_builtin_module?('mod_env.c') %>
 	LoadModule env_module "<%= modules_dir %>/mod_env.so"
 <% end %>
+<% if PlatformInfo.httpd_version >= '2.4.0' %>
+	LoadModule authz_core_module "<%= modules_dir %>/mod_authz_core.so"
+	LoadModule unixd_module "<%= modules_dir %>/mod_unixd.so"
+<% end %>
 LoadModule passenger_module "<%= @mod_passenger %>"
 
 PassengerRoot "<%= @passenger_root %>"
@@ -57,6 +61,11 @@ MaxClients           10
 	MaxSpareThreads       1
 	ThreadsPerChild       2
 </IfModule>
+<IfModule mpm_event_module>
+	MinSpareThreads       1
+	MaxSpareThreads       1
+	ThreadsPerChild       2
+</IfModule>
 
 <Directory />
 	AllowOverride all
@@ -66,12 +75,14 @@ ServerAdmin admin@passenger.test
 ServerName passenger.test
 DocumentRoot "<%= @server_root %>"
 
-LockFile  <%= @server_root %>/httpd.lock
+<% if PlatformInfo.httpd_version < '2.4.0' %>
+	LockFile  <%= @server_root %>/httpd.lock
+<% end %>
 PidFile   <%= @server_root %>/httpd.pid
 ErrorLog  <%= @passenger_root %>/test/test.log
 CustomLog <%= @server_root %>/access.log combined
 
-<% if !vhosts.empty? %>
+<% if !vhosts.empty? && PlatformInfo.httpd_version < '2.4.0' %>
 	NameVirtualHost *:<%= @port %>
 <% end %>
 <% for vhost in vhosts %>

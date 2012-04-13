@@ -1050,7 +1050,7 @@ uninstalling the Phusion Passenger files, so that Nginx behaves as if Phusion
 Passenger was never installed in the first place. This might be useful to you if,
 for example, you seem to be experiencing a problem caused by Phusion Passenger,
 but you want to make sure whether that&#8217;s actually the case, without having
-to through the hassle of uninstalling Phusion Passenger completely. When disabled,
+to go through the hassle of uninstalling Phusion Passenger completely. When disabled,
 Phusion Passenger will not occupy any memory or CPU or otherwise interfere with
 Nginx.</p></div>
 <div class="paragraph"><p>To unload Phusion Passenger, edit your Nginx configuration file(s)
@@ -2459,7 +2459,7 @@ passenger_pre_start http://bar.com:3500/;      # &lt;--- added</pre>
     rails_base_uri /store;
 }</pre>
 </div></div>
-<div class="paragraph"><p>Then specify the <em>server_name</em> valuue followed by the sub-URI, like this:</p></div>
+<div class="paragraph"><p>Then specify the <em>server_name</em> value followed by the sub-URI, like this:</p></div>
 <div class="listingblock">
 <div class="content monospaced">
 <pre>server {
@@ -3569,7 +3569,7 @@ gotchas you can easily reap the benefits of smart spawning.</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_smart_spawning_gotcha_1_unintential_file_descriptor_sharing">11.3. Smart spawning gotcha #1: unintential file descriptor sharing</h3>
+<h3 id="_smart_spawning_gotcha_1_unintentional_file_descriptor_sharing">11.3. Smart spawning gotcha #1: unintentional file descriptor sharing</h3>
 <div class="paragraph"><p>Because worker processes are created by forking from an ApplicationSpawner
 server, it will share all file descriptors that are opened by the
 ApplicationSpawner server. (This is part of the semantics of the Unix
@@ -3578,7 +3578,7 @@ it.) A file descriptor is a handle which can be an opened file, an opened socket
 connection, a pipe, etc. If different worker processes write to such a file
 descriptor at the same time, then their write calls will be interleaved, which
 may potentially cause problems.</p></div>
-<div class="paragraph"><p>The problem commonly involves socket connections that are unintentially being
+<div class="paragraph"><p>The problem commonly involves socket connections that are unintentionally being
 shared. You can fix it by closing and reestablishing the connection when Phusion
 Passenger is creating a new worker process. Phusion Passenger provides the API
 call <span class="monospaced">PhusionPassenger.on_event(:starting_worker_process)</span> to do so. So you
@@ -3644,7 +3644,7 @@ result is now as follows:</p></div>
 | Worker process 2   |-----/
 +--------------------+</pre>
 </div></div>
-<div class="paragraph"><p>As you can see, Worker process 1 and Worker process 2 have the same Memcache
+<div class="paragraph"><p>As you can see, Worker process 1 and Worker process 2 have the same Memcached
 connection.</p></div>
 <div class="paragraph"><p>Suppose that users Joe and Jane visit your website at the same time. Joe&#8217;s
 request is handled by Worker process 1, and Jane&#8217;s request is handled by Worker
@@ -3695,7 +3695,7 @@ http://www.gnu.org/software/src-highlite -->
 </div>
 <div class="sect3">
 <h4 id="_example_2_log_file_sharing_not_harmful">11.3.2. Example 2: Log file sharing (not harmful)</h4>
-<div class="paragraph"><p>There are also cases in which unintential file descriptor sharing is not harmful.
+<div class="paragraph"><p>There are also cases in which unintentional file descriptor sharing is not harmful.
 One such case is log file file descriptor sharing. Even if two processes write
 to the log file at the same time, the worst thing that can happen is that the
 data in the log file is interleaved.</p></div>
@@ -3752,7 +3752,7 @@ has no effect.</p></div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2011-09-15 09:09:01 CEST
+Last updated 2012-03-20 10:52:52 CET
 </div>
 </div>
 </body>

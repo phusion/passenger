@@ -137,12 +137,45 @@ syscalls::writev(int fd, const struct iovec *iov, int iovcnt) {
 
 int
 syscalls::close(int fd) {
-	int ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		ret = ::close(fd)
-	);
-	return ret;
+	/* Apparently POSIX says that if close() returns EINTR the
+	 * file descriptor will be left in an undefined state, so
+	 * when coding for POSIX we can't just loop on EINTR or we
+	 * could run into race conditions with other threads.
+	 * http://www.daemonology.net/blog/2011-12-17-POSIX-close-is-broken.html
+	 *
+	 * On Linux, FreeBSD and OpenBSD, close() releases the file
+	 * descriptor when it returns EINTR. HP-UX does not.
+	 * http://news.ycombinator.com/item?id=3363884
+	 *
+	 * MacOS X is insane because although the system call does
+	 * release the file descriptor, the close() function as
+	 * implemented by libSystem may call pthread_testcancel() first
+	 * which can also return EINTR. Whether this happens depends
+	 * on whether unix2003 is enabled.
+	 * http://www.reddit.com/r/programming/comments/ng6vt/posix_close2_is_broken/c38xrgu
+	 */
+	#if defined(_hpux)
+		int ret;
+		CHECK_INTERRUPTION(
+			ret == -1,
+			ret = ::close(fd)
+		);
+		return ret;
+	#else
+		/* TODO: If it's not known whether the OS releases the file
+		 * descriptor on EINTR-on-close(), we should print some kind of
+		 * warning here. This would actually explain why some people get
+		 * mysterious EBADF errors. I think the best thing we can do is
+		 * to manually whitelist operating systems as we find out their
+		 * behaviors.
+		 */
+		int ret = ::close(fd);
+		if (ret == -1 && errno == EINTR && this_thread::syscalls_interruptable()) {
+			throw thread_interrupted();
+		} else {
+			return ret;
+		}
+	#endif
 }
 
 int
