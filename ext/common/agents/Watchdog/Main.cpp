@@ -977,7 +977,7 @@ cleanupAgentsInBackground(vector<AgentWatcher *> &watchers) {
 	} else if (pid == -1) {
 		// Error
 		e = errno;
-		throw SystemException("fork() failed", errno);
+		throw SystemException("fork() failed", e);
 		
 	} else {
 		// Parent

@@ -144,7 +144,7 @@ private:
 		ClientSet::iterator it;
 		ClientSet::iterator end = clients.end();
 		
-		for (it = clients.begin(); it != clients.end(); it++) {
+		for (it = clients.begin(); it != end; it++) {
 			(*it)->unref();
 		}
 		clients.clear();

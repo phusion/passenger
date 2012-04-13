@@ -213,7 +213,7 @@ private:
 	void removeFromDisableWaitlist(const ProcessPtr &p, vector<Callback> &postLockActions) {
 		deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
 		deque<DisableWaiter> newList;
-		for (it = disableWaitlist.begin(); it != disableWaitlist.end(); it++) {
+		for (it = disableWaitlist.begin(); it != end; it++) {
 			const DisableWaiter &waiter = *it;
 			const ProcessPtr process = waiter.process;
 			if (process == p) {
@@ -375,7 +375,7 @@ public:
 		// outside the lock.
 		deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
 		postLockActions.reserve(postLockActions.size() + disableWaitlist.size());
-		for (it = disableWaitlist.begin(); it != disableWaitlist.end(); it++) {
+		for (it = disableWaitlist.begin(); it != end; it++) {
 			const DisableWaiter &waiter = *it;
 			const ProcessPtr process = waiter.process;
 			// The same process can appear multiple times in disableWaitlist.
