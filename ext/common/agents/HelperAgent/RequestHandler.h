@@ -85,6 +85,7 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <sys/un.h>
+#include <typeinfo>
 #include <cassert>
 #include <cctype>
 
@@ -1580,7 +1581,8 @@ private:
 					writeErrorResponse(client, e2->getErrorPage(), e2.get());
 				}
 			} else {
-				RH_WARN(client, "Cannot checkout session; error messages can be found above");
+				RH_WARN(client, "Cannot checkout session (exception type " <<
+					typeid(*e).name() << "): " << e->what());
 				writeErrorResponse(client, e->what());
 			}
 		} else {
