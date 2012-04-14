@@ -672,7 +672,7 @@ protected:
 		}
 		
 		string defaultGroup;
-		string startupFile = options.getStartupFile();
+		string startupFile = absolutizePath(options.getStartupFile(), info.appRoot);
 		struct passwd *userInfo = NULL;
 		struct group *groupInfo = NULL;
 		

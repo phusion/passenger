@@ -578,5 +578,11 @@ namespace tut {
 		ensure_equals(absolutizePath("../.."), "/");
 		ensure_equals(absolutizePath("../../foo"), "/foo");
 		ensure_equals(absolutizePath("../.././foo/bar"), "/foo/bar");
+
+		ensure_equals(absolutizePath("..", "/usr/local/bin"), "/usr/local");
+		ensure_equals(absolutizePath(".", "/usr/local/bin"), "/usr/local/bin");
+		ensure_equals(absolutizePath("../..", "/usr/local/bin"), "/usr");
+		ensure_equals(absolutizePath("../../foo", "/usr/local/bin"), "/usr/foo");
+		ensure_equals(absolutizePath("../.././foo/bar", "/usr/local/bin"), "/usr/foo/bar");
 	}
 }

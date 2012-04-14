@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -441,12 +441,18 @@ parseModeString(const StaticString &mode) {
 }
 
 string
-absolutizePath(const StaticString &path) {
+absolutizePath(const StaticString &path, const StaticString &workingDir) {
 	vector<string> components;
 	if (!startsWith(path, "/")) {
-		char buffer[PATH_MAX];
-		getcwd(buffer, sizeof(buffer));
-		split(buffer + 1, '/', components);
+		if (workingDir.empty()) {
+			char buffer[PATH_MAX];
+			getcwd(buffer, sizeof(buffer));
+			split(buffer + 1, '/', components);
+		} else {
+			string absoluteWorkingDir = absolutizePath(workingDir);
+			split(StaticString(absoluteWorkingDir.data() + 1, absoluteWorkingDir.size() - 1),
+				'/', components);
+		}
 	}
 
 	const char *begin = path.data();

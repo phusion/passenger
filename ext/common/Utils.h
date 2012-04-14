@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -224,7 +224,7 @@ mode_t parseModeString(const StaticString &mode);
  * Turns the given path into an absolute path. Unlike realpath(), this function does
  * not resolve symlinks.
  */
-string absolutizePath(const StaticString &path);
+string absolutizePath(const StaticString &path, const StaticString &workingDir = "");
 
 /**
  * Return the path name for the directory in which the system stores general
