@@ -646,11 +646,12 @@ protected:
 					getProcessUsername() + "; it looks like your system's " +
 					"user database is broken, please fix it.");
 			}
-			struct group *groupInfo = getgrgid(userInfo->pw_uid);
+			struct group *groupInfo = getgrgid(userInfo->pw_gid);
 			if (groupInfo == NULL) {
 				throw RuntimeException(string("Cannot get group database entry for ") +
 					"the default group belonging to username '" +
-					getProcessUsername() + "'");
+					getProcessUsername() + "'; it looks like your system's " +
+					"user database is broken, please fix it.");
 			}
 			
 			info.switchUser = false;
