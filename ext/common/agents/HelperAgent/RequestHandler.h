@@ -82,6 +82,11 @@
 #include <boost/make_shared.hpp>
 #include <ev++.h>
 
+#if defined(__GLIBCXX__) || defined(__APPLE__)
+	#include <cxxabi.h>
+	#define CXX_ABI_API_AVAILABLE
+#endif
+
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <sys/un.h>
@@ -1581,9 +1586,29 @@ private:
 					writeErrorResponse(client, e2->getErrorPage(), e2.get());
 				}
 			} else {
+				string typeName;
+				#ifdef CXX_ABI_API_AVAILABLE
+					int status;
+					char *tmp = abi::__cxa_demangle(typeid(*e).name(), 0, 0, &status);
+					if (tmp != NULL) {
+						typeName = tmp;
+						free(tmp);
+					} else {
+						typeName = typeid(*e).name();
+					}
+				#else
+					typeName = typeid(*e).name();
+				#endif
+
 				RH_WARN(client, "Cannot checkout session (exception type " <<
-					typeid(*e).name() << "): " << e->what());
-				writeErrorResponse(client, e->what());
+					typeName << "): " << e->what());
+				string response = "An internal error occurred while trying to spawn the application.\n";
+				response.append("Exception type: ");
+				response.append(typeName);
+				response.append("\n");
+				response.append("Error message: ");
+				response.append(e->what());
+				writeErrorResponse(client, response);
 			}
 		} else {
 			RH_DEBUG(client, "Session checked out: pid=" << session->getPid() <<
