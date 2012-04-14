@@ -537,6 +537,12 @@ protected:
 		}
 		args[command.size() - 1] = NULL;
 	}
+
+	void possiblyRaiseInternalError(const Options &options) {
+		if (options.raiseInternalError) {
+			throw RuntimeException("An internal error!");
+		}
+	}
 	
 	void throwAppSpawnException(const string &msg,
 		SpawnException::ErrorKind errorKind,
@@ -1714,10 +1720,12 @@ public:
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
+		TRACE_POINT();
 		assert(options.appType == this->options.appType);
 		assert(options.appRoot == this->options.appRoot);
 		
 		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
+		possiblyRaiseInternalError(options);
 
 		lock_guard<boost::mutex> lock(syncher);
 		{
@@ -1904,7 +1912,9 @@ public:
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
+		TRACE_POINT();
 		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
+		possiblyRaiseInternalError(options);
 
 		shared_array<const char *> args;
 		vector<string> command = createCommand(options, args);
@@ -1996,6 +2006,9 @@ public:
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
+		TRACE_POINT();
+		possiblyRaiseInternalError(options);
+
 		SocketPair adminSocket = createUnixSocketPair();
 		SocketListPtr sockets = make_shared<SocketList>();
 		sockets->add("main", "tcp://127.0.0.1:1234", "session", concurrency);

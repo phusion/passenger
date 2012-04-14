@@ -1381,6 +1381,7 @@ private:
 		fillPoolOption(client, options.restartDir, "PASSENGER_RESTART_DIR");
 		fillPoolOption(client, options.loadShellEnvvars, "PASSENGER_LOAD_SHELL_ENVVARS");
 		fillPoolOption(client, options.debugger, "PASSENGER_DEBUGGER");
+		fillPoolOption(client, options.raiseInternalError, "PASSENGER_RAISE_INTERNAL_ERROR");
 		
 		for (it = client->scgiParser.begin(); it != end; it++) {
 			if (!startsWith(it->first, "PASSENGER_")
@@ -1602,12 +1603,18 @@ private:
 
 				RH_WARN(client, "Cannot checkout session (exception type " <<
 					typeName << "): " << e->what());
+				
 				string response = "An internal error occurred while trying to spawn the application.\n";
 				response.append("Exception type: ");
 				response.append(typeName);
-				response.append("\n");
-				response.append("Error message: ");
+				response.append("\nError message: ");
 				response.append(e->what());
+				shared_ptr<tracable_exception> e3 = dynamic_pointer_cast<tracable_exception>(e);
+				if (e3 != NULL) {
+					response.append("\nBacktrace:\n");
+					response.append(e3->backtrace());
+				}
+
 				writeErrorResponse(client, response);
 			}
 		} else {

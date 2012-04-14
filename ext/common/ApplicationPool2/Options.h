@@ -265,6 +265,12 @@ public:
 	 * application initialization.
 	 */
 	bool printExceptions;
+
+	/**
+	 * Whether Spawner should raise an internal error when spawning. Used
+	 * during unit tests.
+	 */
+	bool raiseInternalError;
 	
 	
 	/*********** Per-group pool options that should be set manually ***********/
@@ -342,6 +348,7 @@ public:
 		loadShellEnvvars        = true;
 		analytics               = false;
 		printExceptions         = true;
+		raiseInternalError      = false;
 		
 		maxRequests             = 0;
 		minProcesses            = 1;

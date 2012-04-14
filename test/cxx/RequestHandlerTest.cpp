@@ -338,6 +338,33 @@ namespace tut {
 	}
 
 	TEST_METHOD(12) {
+		// If spawning fails because of an internal error then it reports the error appropriately.
+		TempDir tempdir("tmp.handler");
+		writeFile("tmp.handler/start.rb", "");
+
+		setLogLevel(-2);
+		spawnerFactory->forwardStderr = false;
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
+			"PASSENGER_APP_TYPE", "",
+			"PASSENGER_START_COMMAND", ("ruby\1" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_RAISE_INTERNAL_ERROR", "true",
+			"PATH_INFO", "/",
+			NULL);
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 500 Internal Server Error\r\n"));
+		ensure(containsSubstring(response, "Status: 500 Internal Server Error\r\n"));
+		ensure(containsSubstring(response, "Content-Type: text/html; charset=UTF-8\r\n"));
+		ensure(containsSubstring(response, "<html>"));
+		ensure(containsSubstring(response, "An internal error occurred while trying to spawn the application."));
+		ensure(containsSubstring(response, "Passenger:<wbr>:<wbr>RuntimeException"));
+		ensure(containsSubstring(response, "An internal error!"));
+		ensure(containsSubstring(response, "Spawner.h"));
+	}
+
+	TEST_METHOD(13) {
 		// Error pages respect the PASSENGER_STATUS_LINE option.
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb",
@@ -360,7 +387,7 @@ namespace tut {
 		ensure(containsSubstring(response, "I have failed"));
 	}
 
-	TEST_METHOD(13) {
+	TEST_METHOD(14) {
 		// If PASSENGER_FRIENDLY_ERROR_PAGES is false then it does not render
 		// a friendly error page.
 		TempDir tempdir("tmp.handler");
