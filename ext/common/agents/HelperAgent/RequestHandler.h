@@ -1569,8 +1569,8 @@ private:
 
 		if (e != NULL) {
 			client->endScopeLog(&client->scopeLogs.getFromPool, false);
-			try {
-				shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
+			shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
+			if (e2 != NULL) {
 				if (e2->getErrorPage().empty()) {
 					RH_WARN(client, "Cannot checkout session. " << e2->what());
 					writeErrorResponse(client, e2->what());
@@ -1579,7 +1579,7 @@ private:
 						"\nError page:\n" << e2->getErrorPage());
 					writeErrorResponse(client, e2->getErrorPage(), e2.get());
 				}
-			} catch (const bad_cast &) {
+			} else {
 				RH_WARN(client, "Cannot checkout session; error messages can be found above");
 				writeErrorResponse(client, e->what());
 			}
