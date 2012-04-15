@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -21,15 +21,13 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-ASCIIDOC_FLAGS = "-b html5 -a toc -a theme=flask -a numbered -a toclevels=3 -a icons"
-
 desc "Generate all documentation"
 task :doc => Packaging::ASCII_DOCS
 
 Packaging::ASCII_DOCS.each do |target|
 	source = target.sub(/\.html$/, '.txt')
 	file target => [source] + Dir["doc/users_guide_snippets/**/*"] do
-		if PlatformInfo.asciidoc
+		if PlatformInfo.find_command('mizuho')
 			if target =~ /apache/i
 				type = "-a apache"
 			elsif target =~ /nginx/i
@@ -37,9 +35,9 @@ Packaging::ASCII_DOCS.each do |target|
 			else
 				type = nil
 			end
-	  		sh "#{PlatformInfo.asciidoc} #{ASCIIDOC_FLAGS} #{type} '#{source}'"
+	  		sh "mizuho -c juvia --juvia-url http://juvia.phusion.nl --juvia-site-key q0ptarhn8o9xanwomq8zkgewbtwffyz #{type} '#{source}'"
 		else
-			sh "echo 'asciidoc required to build docs' > '#{target}'"
+			sh "echo 'Mizuho required to build docs' > '#{target}'"
 		end
 	end
 	

@@ -29,7 +29,6 @@ require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/linux'
 require 'phusion_passenger/platform_info/curl'
-require 'phusion_passenger/platform_info/documentation_tools'
 
 module PhusionPassenger
 
@@ -110,9 +109,9 @@ module Dependencies # :nodoc: all
 		return (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
 	end
 	
-	# Returns whether asciidoc is required in order to be able to package all files
+	# Returns whether Mizuho is required in order to be able to package all files
 	# in the packaging list.
-	def self.asciidoc_required?
+	def self.mizuho_required?
 		return Packaging::ASCII_DOCS.any? do |fn|
 			!File.exist?("#{SOURCE_ROOT}/#{fn}")
 		end
@@ -610,23 +609,18 @@ module Dependencies # :nodoc: all
 		end
 	end
 	
-	AsciiDoc = Dependency.new do |dep|
-		dep.name = "Asciidoc"
+	Mizuho = Dependency.new do |dep|
+		dep.name = "Mizuho"
 		dep.define_checker do |result|
-			if PlatformInfo.asciidoc.nil?
+			mizuho = PlatformInfo.find_command('mizuho')
+			if mizuho.nil?
 				result.not_found
 			else
-				result.found(PlatformInfo.asciidoc)
+				result.found(mizuho)
 			end
 		end
-		if RUBY_PLATFORM =~ /darwin/
-			# Installing asciidoc with source-highlight is too much of a pain on OS X,
-			# so recommend Mizuho instead.
-			dep.website = "http://github.com/FooBarWidget/mizuho"
-			dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install mizuho</b>"
-		else
-			dep.website = "http://www.methods.co.nz/asciidoc/"
-		end
+		dep.website = "http://github.com/FooBarWidget/mizuho"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install mizuho</b>"
 	end
 end
 
