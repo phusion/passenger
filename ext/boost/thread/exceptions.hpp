@@ -9,7 +9,6 @@
 #define BOOST_THREAD_EXCEPTIONS_PDM070801_H
 
 #include <boost/thread/detail/config.hpp>
-#include <oxt/tracable_exception.hpp>
 
 //  pdm: Sorry, but this class is used all over the place & I end up
 //       with recursive headers if I don't separate it
@@ -19,44 +18,26 @@
 
 #include <string>
 #include <stdexcept>
-#include <sstream>
-#include <cstring>
 
 #include <boost/config/abi_prefix.hpp>
 
 namespace boost
 {
 
-    class thread_interrupted:
-        public oxt::tracable_exception
+    class BOOST_SYMBOL_VISIBLE thread_interrupted
     {};
 
-    class thread_exception:
-        public oxt::tracable_exception
+    class BOOST_SYMBOL_VISIBLE thread_exception:
+        public std::exception
     {
     protected:
-        std::string message;
-        
         thread_exception():
-            m_sys_err(-1)
+            m_sys_err(0)
         {}
-    
-        thread_exception(const std::string &description, int sys_err_code):
-            m_sys_err(sys_err_code)
-        {
-            std::ostringstream s;
-            s << description << ": ";
-            s << strerror(sys_err_code) << " (" << sys_err_code << ")";
-            message.assign(s.str());
-        }
     
         thread_exception(int sys_err_code):
             m_sys_err(sys_err_code)
-        {
-            std::ostringstream s;
-            s << strerror(sys_err_code) << " (" << sys_err_code << ")";
-            message.assign(s.str());
-        }
+        {}
     
 
     public:
@@ -68,24 +49,13 @@ namespace boost
         {
             return m_sys_err;
         }
-        
-        virtual const char *what() const throw()
-        {
-            if(message.empty())
-            {
-                return std::exception::what();
-            }
-            else
-            {
-                return message.c_str();
-            }
-        }
     
+
     private:
         int m_sys_err;
     };
 
-    class condition_error:
+    class BOOST_SYMBOL_VISIBLE condition_error:
         public std::exception
     {
     public:
@@ -96,7 +66,7 @@ namespace boost
     };
     
 
-    class lock_error:
+    class BOOST_SYMBOL_VISIBLE lock_error:
         public thread_exception
     {
     public:
@@ -107,30 +77,17 @@ namespace boost
             thread_exception(sys_err_code)
         {}
     
-        lock_error(const std::string &message)
-        {
-            this->message = "boost::lock_error: ";
-            this->message.append(message);
-        }
-    
         ~lock_error() throw()
         {}
     
 
         virtual const char* what() const throw()
         {
-            if(message.empty())
-            {
-                return "boost::lock_error";
-            }
-            else
-            {
-                return message.c_str();
-            }
+            return "boost::lock_error";
         }
     };
 
-    class thread_resource_error:
+    class BOOST_SYMBOL_VISIBLE thread_resource_error:
         public thread_exception
     {
     public:
@@ -141,29 +98,18 @@ namespace boost
             thread_exception(sys_err_code)
         {}
     
-        thread_resource_error(const std::string &description, int sys_err_code):
-            thread_exception(description, sys_err_code)
-        {}
-    
         ~thread_resource_error() throw()
         {}
     
 
         virtual const char* what() const throw()
         {
-            if(message.empty())
-            {
-                return "boost::thread_resource_error";
-            }
-            else
-            {
-                return message.c_str();
-            }
+            return "boost::thread_resource_error";
         }
     
     };
 
-    class unsupported_thread_option:
+    class BOOST_SYMBOL_VISIBLE unsupported_thread_option:
         public thread_exception
     {
     public:
@@ -185,7 +131,7 @@ namespace boost
     
     };
 
-    class invalid_thread_argument:
+    class BOOST_SYMBOL_VISIBLE invalid_thread_argument:
         public thread_exception
     {
     public:
@@ -207,7 +153,7 @@ namespace boost
     
     };
 
-    class thread_permission_error:
+    class BOOST_SYMBOL_VISIBLE thread_permission_error:
         public thread_exception
     {
     public:
