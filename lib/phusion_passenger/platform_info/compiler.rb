@@ -148,9 +148,9 @@ module PlatformInfo
 				flags << '-DHAS_ALLOCA_H_ -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
 			else
 				flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
-				flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
 				flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
 			end
+			flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
 			flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
 		elsif RUBY_PLATFORM =~ /openbsd/
 			flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
