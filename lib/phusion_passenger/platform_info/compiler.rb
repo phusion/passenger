@@ -145,7 +145,7 @@ module PlatformInfo
 			flags << '-pthreads'
 			if RUBY_PLATFORM =~ /solaris2.11/
 				# skip the _XOPEN_SOURCE and _XPG4_2 definitions in later versions of Solaris / OpenIndiana
-				flags << '-DHAS_ALLOCA_H_ -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
+				flags << '-D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
 			else
 				flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
 				flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
@@ -163,7 +163,7 @@ module PlatformInfo
 			flags << '-DBOOST_SP_USE_PTHREADS'
 		end
 		
-		flags << '-DHAS_ALLOCA_H' if has_alloca_h?
+		flags << '-DHAS_ALLOCA_H_' if has_alloca_h?
 		flags << '-DHAS_SFENCE' if supports_sfence_instruction?
 		flags << '-DHAS_LFENCE' if supports_lfence_instruction?
 		
