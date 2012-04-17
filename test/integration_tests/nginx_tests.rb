@@ -8,7 +8,7 @@ require 'integration_tests/hello_world_wsgi_spec'
 describe "Phusion Passenger for Nginx" do
 	before :all do
 		if !CONFIG['nginx']
-			STDERR.puts "*** ERROR: You must set the 'nginx' config option in test/config.yml."
+			STDERR.puts "*** ERROR: You must set the 'nginx' config option in test/config.json."
 			exit!(1)
 		end
 		
