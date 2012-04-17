@@ -69,15 +69,9 @@ static int setenv(const char *name, const char *value, int override) {
 	typedef factory::object object; \
 	factory name## _group(#name)
 
-#ifdef __clang__
-	#define TEST_METHOD(i) \
-		template<> \
-		void object::test<i>()
-#else
-	#define TEST_METHOD(i) \
-		template<> template<> \
-		void object::test<i>()
-#endif
+#define TEST_METHOD(i) \
+	template<> template<> \
+	void object::test<i>()
 
 /**
  * Template Unit Tests Framework for C++.

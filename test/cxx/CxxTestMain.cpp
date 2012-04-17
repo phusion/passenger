@@ -11,6 +11,8 @@
 
 #include <MultiLibeio.cpp>
 #include <Utils.h>
+#include <Utils/IOUtils.h>
+#include <Utils/json.h>
 
 using namespace std;
 
@@ -92,6 +94,16 @@ doNothing(eio_req *req) {
 	return 0;
 }
 
+static void
+loadConfigFile() {
+	Json::Reader reader;
+	if (!reader.parse(readAll("config.json"), testConfig)) {
+		fprintf(stderr, "Cannot parse config.json: %s\n",
+			reader.getFormattedErrorMessages().c_str());
+		exit(1);
+	}
+}
+
 int
 main(int argc, char *argv[]) {
 	signal(SIGPIPE, SIG_IGN);
@@ -119,6 +131,8 @@ main(int argc, char *argv[]) {
 		// Start an EIO thread to warm up Valgrind.
 		eio_nop(0, doNothing, NULL);
 	}
+
+	loadConfigFile();
 	
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {

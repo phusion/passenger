@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <ApplicationPool2/Spawner.h>
 #include <Logging.h>
+#include <Utils/json.h>
 #include <unistd.h>
 #include <climits>
 #include <signal.h>
@@ -50,11 +51,11 @@ namespace tut {
 		}
 	};
 	
-	DEFINE_TEST_GROUP(ApplicationPool2_SmartSpawnerTest);
+	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_SmartSpawnerTest, 80);
 	
 	#include "SpawnerTestCases.cpp"
 	
-	TEST_METHOD(30) {
+	TEST_METHOD(70) {
 		// If the preloader has crashed then SmartSpawner will
 		// restart it and try again.
 		Options options = createOptions();
@@ -73,7 +74,7 @@ namespace tut {
 		spawner->spawn(options);
 	}
 	
-	TEST_METHOD(31) {
+	TEST_METHOD(71) {
 		// If the preloader still crashes after the restart then
 		// SmartSpawner will throw an exception.
 		Options options = createOptions();
@@ -90,7 +91,7 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(32) {
+	TEST_METHOD(72) {
 		// If the preloader didn't start within the timeout
 		// then it's killed and an exception is thrown, with
 		// whatever stderr output as error page.
@@ -123,7 +124,7 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(33) {
+	TEST_METHOD(73) {
 		// If the preloader crashed during startup without returning
 		// a proper error response, then its stderr output is used
 		// as error response instead.
@@ -155,7 +156,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(34) {
+	TEST_METHOD(74) {
 		// If the preloader encountered an error, then the resulting SpawnException
 		// takes note of the process's environment variables.
 		Options options = createOptions();

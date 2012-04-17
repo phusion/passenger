@@ -8,10 +8,13 @@
 #include <BackgroundEventLoop.cpp>
 #include <Utils/IOUtils.h>
 #include <Utils/ScopeGuard.h>
+#include <Utils/json.h>
 
 namespace TestSupport {
 
 ResourceLocator *resourceLocator = NULL;
+Json::Value testConfig;
+
 
 void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
                                           ServerInstanceDir::GenerationPtr &generation)

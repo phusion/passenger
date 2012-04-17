@@ -1,5 +1,6 @@
 #include <TestSupport.h>
 #include <ApplicationPool2/Spawner.h>
+#include <Utils/json.h>
 
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
@@ -28,17 +29,17 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP(ApplicationPool2_DirectSpawnerTest);
+	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_DirectSpawnerTest, 80);
 	
 	#include "SpawnerTestCases.cpp"
 	
-	TEST_METHOD(30) {
+	TEST_METHOD(70) {
 		// If the application didn't start within the timeout
 		// then whatever was written to stderr is used as the
 		// SpawnException error page.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "bash\1" "-c\1" "echo hello world >&2; sleep 60";
+		options.startCommand = "perl\1" "-e\1" "print STDERR \"hello world\\n\"; sleep(60)";
 		options.startupFile  = ".";
 		options.startTimeout = 300;
 		
@@ -56,13 +57,13 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(31) {
+	TEST_METHOD(71) {
 		// If the application crashed during startup without returning
 		// a proper error response, then its stderr output is used
 		// as error response instead.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "bash\1" "-c\1" "echo hello world >&2";
+		options.startCommand = "perl\1" "-e\1" "print STDERR \"hello world\\n\"";
 		options.startupFile  = ".";
 		
 		DirectSpawner spawner(bg.safe, *resourceLocator, generation);

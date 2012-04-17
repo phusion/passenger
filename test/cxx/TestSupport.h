@@ -24,6 +24,7 @@
 #include "Exceptions.h"
 #include "Utils.h"
 #include "Utils/SystemTime.h"
+#include <Utils/json-forwards.h>
 
 extern "C" {
 	struct ev_loop;
@@ -83,6 +84,7 @@ using namespace oxt;
 
 
 extern ResourceLocator *resourceLocator;
+extern Json::Value testConfig;
 
 
 /**

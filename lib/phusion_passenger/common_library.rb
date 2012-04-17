@@ -419,6 +419,13 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			Utils/fib.h
 			Utils/fibpriv.h
 		)
+	define_component 'Utils/jsoncpp.o',
+		:source   => 'Utils/jsoncpp.cpp',
+		:category => :other,
+		:deps     => %w(
+			Utils/json.h
+			Utils/json-forwards.h
+		)
 
 	#'BCrypt.o' => %w(
 	#	BCrypt.cpp
