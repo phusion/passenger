@@ -818,8 +818,20 @@ namespace tut {
 		
 		currentSession.reset();
 		sessions.pop_back();
+
+		// One of the processes still has a session open and should
+		// not be idle cleaned.
 		EVENTUALLY(2,
 			result = pool->getProcessCount() == 1;
+		);
+		SHOULD_NEVER_HAPPEN(150,
+			result = pool->getProcessCount() == 0;
+		);
+
+		// It shouldn't clean more processes than minInstances allows.
+		sessions.clear();
+		SHOULD_NEVER_HAPPEN(150,
+			result = pool->getProcessCount() == 0;
 		);
 	}
 

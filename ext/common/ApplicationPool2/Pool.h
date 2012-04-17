@@ -375,9 +375,10 @@ public:
 					
 					// ...detach processes that have been idle for more than maxIdleTime.
 					unsigned long long processGcTime =
-							process->lastUsed + maxIdleTime;
+						process->lastUsed + maxIdleTime;
 					if (process->sessions == 0
-					 && now >= processGcTime) {
+					 && now >= processGcTime
+					 && (unsigned long) group->count > group->options.minProcesses) {
 						ProcessList::iterator prev = p_it;
 						prev--;
 						P_DEBUG("Garbage collect idle process: " << process->inspect() <<
@@ -385,7 +386,7 @@ public:
 						group->detach(process, actions);
 						p_it = prev;
 					} else if (nextGcRunTime == 0
-						    || processGcTime < nextGcRunTime) {
+					        || processGcTime < nextGcRunTime) {
 						nextGcRunTime = processGcTime;
 					}
 				}
