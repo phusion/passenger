@@ -1,3 +1,296 @@
+Release 3.1.0
+-------------
+
+ * Rewritten evented request handler.
+ * Rewritten application pool.
+ * Rewritten spawner.
+ * More stable Union Station support.
+ * More stable Python WSGI support.
+ * Many internal robustness improvements.
+ * Better relocatability without wasting space.
+ * Support multiple Ruby versions.
+ * [Apache] Environment variables can now be set with SetEnv. Wrapper scripts are no longer necessary.
+ * Apps are now started through bash so that environment variable settings in bashrc are respected.
+
+
+Release 3.0.12
+--------------
+
+ * [Apache] Support Apache 2.4. The event MPM is now also supported.
+ * [Nginx] Preferred Nginx version upgraded to 1.0.15.
+ * [Nginx] Preferred PCRE version upgraded to 8.30.
+ * [Nginx] Fixed compatibility with Nginx < 1.0.10.
+ * [Nginx] Nginx is now installed with http_gzip_static_module by default.
+ * [Nginx] Fixed a memory disclosure security problem.
+   The issue is documented at http://www.nginx.org/en/security_advisories.html
+   and affects more modules than just Phusion Passenger. Users are advised
+   to upgrade as soon as possible. Patch submitted by Gregory Potamianos.
+ * [Nginx] passenger_show_version_in_header now hides the Phusion Passenger version number from the 'Server:' header too.
+   Patch submitted by Gregory Potamianos.
+ * Fixed a /proc deprecation warning on Linux kernel >= 3.0.
+
+
+Release 3.0.11
+--------------
+
+ * Fixed a compilation problem on platforms without alloca.h, such as FreeBSD 7.
+ * Improved performance and solved some warnings on Xen systems by compiling
+   with `-mno-tls-direct-seg-refs`. Patch contributed by Michał Pokrywka.
+
+
+Release 3.0.10
+--------------
+
+ * [Nginx] Dropped support for Nginx versions older than 1.0.0
+ * [Nginx] Fixed support for Nginx 1.1.4+
+ * [Nginx, Standalone] Upgraded default Nginx version to 1.0.10
+   The previously default version was 1.0.5.
+ * [Nginx] New option passenger_max_requests
+   This is equivalent to the PassengerMaxRequests option in the Apache
+   version: Phusion Passenger will automatically shutdown a worker process
+   once it has processed the specified number of requests.
+   Contributed by Paul Kmiec.
+ * [Apache] New option PassengerBufferResponse
+   The Apache version did not buffer responses. This could block the Ruby
+   worker process in case of slow clients. We now enable response buffering
+   by default. It can be turned off through this option. Feature contributed
+   by Ryo Onodera.
+ * Fixed remaining Ruby 1.9.3 compatibility problems
+   We already supported Ruby 1.9.3 since 3.0.8, but due to bugs in Ruby
+   1.9.3's build system Phusion Passenger would fail to detect Ruby 1.9.3
+   features on some systems. Fixes issue #714.
+ * Fixed a bug in PassengerPreStart
+   A regression was introduced in 3.0.8, causing the prespawn script to
+   connect to the host name instead of to 127.0.0.1. Fix contributed by
+   Andy Allan.
+ * Fixed compatibility with GCC 4.6
+   Affected systems include Ubuntu 11.10.
+ * Fixed various compilation problems.
+ * Fixed some Ruby 1.9 encoding problems.
+ * Fixed some Ruby 1.9.3 deprecation warnings.
+
+
+Release 3.0.9
+-------------
+
+ * [Nginx] Fixed a NULL pointer crash that occurs on HTTP/1.0 requests
+   when the Host header isn't given.
+ * Fixed deprecation warnings on RubyGems >= 1.6.
+ * Improved Union Station support stability.
+
+
+Release 3.0.8
+-------------
+
+ * [Nginx] Upgraded preferred Nginx version to 1.0.5.
+ * [Nginx] Fixed various compilation problems on various platforms.
+ * [Nginx] We now ensure that SERVER_NAME is equal to HTTP_HOST without the port part.
+   This is needed for Rack compliance. By default Nginx sets SERVER_NAME to
+   whatever is specified in the server_name directive, but that's not necessarily
+   the correct value. This fixes, for example, the use of the 'map' statement
+   in config.ru.
+ * [Nginx] Added the options passenger_buffer_size, passenger_buffers and passenger_busy_buffers_size.
+   These options are similar to proxy_module's similarly named options. You can
+   use these to e.g. increase the maximum header size limit.
+ * [Nginx] passenger_pre_start now supports virtual hosts that listen on Unix domain sockets.
+ * [Apache] Fixed the pcre.h compilation problem.
+ * [Standalone] Fixed 'passenger stop'.
+   It didn't work properly because it kept waiting for 'tail' to exit.
+   We now properly terminate 'tail' as well.
+ * Fixed compatibility with Rake 0.9.
+ * Fixed various Ruby 1.9 compatibility issues.
+ * Various documentation improvements.
+ * New Union Station filter language features.
+   It now supports status codes and response times.
+   Please refer to https://engage.unionstationapp.com/help#filtering
+   for more information.
+
+
+Release 3.0.7
+-------------
+
+ * Fixed a bug passenger-install-apache2-module. It could crash on
+   some systems due to a typo in the code.
+ * Upgraded preferred Nginx version to 1.0.0.
+ * Phusion Passenger Standalone now pre-starts application processes
+   at startup instead of doing that at the first request.
+ * When sending data to Union Station, the HTTP status code is now also
+   logged.
+ * Various Union Station-related stability improvements.
+ * The Linux OOM killer was previously erroneously disabled for all
+   Phusion Passenger processes, including application processes. The
+   intention was to only disable it for the Watchdog. This has been
+   fixed, and the Watchdog is now the only process for which the OOM
+   killer is disabled.
+ * Fixed some compilation problems on OpenBSD.
+ * Due to a typo, the dependency on file-tail was not entirely removed
+   in 3.0.6. This has now been fixed.
+
+
+Release 3.0.6
+-------------
+
+ * Fixed various compilation problems such as XCode 4 support and OpenBSD support.
+ * Fixed various Union Station-related stability issues.
+ * Fixed an issue with host name detection on certain platforms.
+ * Improved error logging in various parts.
+ * The dependency on the file-tail library has been removed.
+ * During installation, check whether /tmp is mounted with 'noexec'.
+   Phusion Passenger's installer relies on /tmp *not* being mounted
+   with 'noexec'. If it is then the installer will now show a helpful
+   error message instead of bailing out in a confusing manner. Users
+   can now tell the installer to use a different directory for storing
+   temporary files by customizing the $TMPDIR environment variable.
+ * Phusion Passenger Standalone can now run Rackup files that are not named 'config.ru'.
+   The filename can be passed through the command line using the -R option.
+
+
+Release 3.0.5
+-------------
+
+ * [Apache] Fixed Union Station process statistics collection
+   Union Station users that are using Apache may notice that no process
+   information show up in Union Station. This is because of a bug in
+   Phusion Passenger's Apache version, which has now been fixed.
+ * [Apache] PassengerAnalytics has been renamed to UnionStationSupport
+   This option has been renamed for consistency reasons.
+ * [Nginx] passenger_analytics has been renamed to union_station_support
+   This option has been renamed for consistency reasons.
+ * Fixed Union Station data sending on older libcurl versions
+   Some Union Station users have reported that their data don't show up.
+   Upon investigation this turned out to be a compatibility with older
+   libcurl versions. Affected systems include all RHEL 5 based systems,
+   such as RHEL 5.5 and CentOS 5.5. We've now fixed compatibility
+   with older libcurl versions.
+ * Added support for the Union Station filter language
+   This language can be used to limit the kind of data that's sent to
+   Union Station. Please read
+   https://engage.unionstationapp.com/help#filtering for details.
+ * Fixed a PassengerMaxPoolSize/passenger_max_pool_size violation bug
+   People who host a lot of different applications on Phusion Passenger
+   may notice that it sometimes spawns more processes than is allowed
+   by PassengerMaxPoolSize/passenger_max_pool_size. This has been fixed.
+
+
+Release 3.0.4
+-------------
+
+ * [Apache] Changed mod_dir workaround hook priority
+   Phusion Passenger temporarily disables mod_dir on all Phusion
+   Passenger-handled requests in order to avoid conflicts. In order to do this
+   it registers some Apache hooks with the APR_HOOK_MIDDLE priority, but it
+   turned out that this breaks some other modules like mod_python. The hook
+   priority has been changed to APR_HOOK_LAST to match mod_dir's hook
+   priorities. Issue reported by Jay Freeman.
+ * Added support for Union Station: http://www.unionstationapp.com/
+ * Some error messages have been improved.
+
+
+Release 3.0.3
+-------------
+
+ * [Nginx] Preferred Nginx version upgraded to 0.8.54
+   The previous preferred version was 0.8.53.
+ * PATH_INFO and REQUEST_URI now contain the original escaped URI
+   Phusion Passenger passes the URI, as reported by Apache/Nginx, to
+   application processes through the PATH_INFO and REQUEST_URI variables.
+   These variables are supposed to contain the original, unescaped URI, e.g.
+   /clubs/%C3%BC. Both Apache and Nginx thought that it would be a good idea
+   to unescape the URI before passing it to modules like Phusion Passenger,
+   thereby causing PATH_INFO and REQUEST_URI to contain the unescaped URI,
+   e.g. /clubs/ü. This causes all sorts of encoding problems. We now manually
+   re-escape the URI when setting PATH_INFO and REQUEST_URI. Issue #404.
+ * The installer no longer detects directories as potential commands
+   Previously the installer would look in $PATH for everything that's
+   executable, including directories. If one has /usr/lib in $PATH
+   and a directory /usr/lib/gcc exists then the installer would recognize
+   /usr/lib/gcc as the compiler. We now explicitly check whether the item
+   is also a file.
+ * PseudoIO now responds to #to_io
+   Phusion Passenger sets STDERR to a PseudoIO object in order to capture
+   anything written to STDERR during application startup. This breaks
+   some libraries which expect STDERR to respond to #to_io. This has now
+   been fixed. Issue #607.
+ * Fixed various other minor bugs
+   See the git commit log for details.
+
+
+Release 3.0.2
+-------------
+
+ * [Nginx] Fixed compilation problems
+   The Nginx compilation process was broken due to not correctly reverting
+   the working directory of the Nginx configure script. This has been fixed:
+   issue #595.
+ * [Nginx] Fixed crash if passenger_root refers to a nonexistant directory
+   Issue #599.
+ * Fixed compilation problems on NetBSD
+   There was a typo in a NetBSD-specific fcntl() call. It also turns out that
+   NetBSD doesn't support some ISO C99 math functions like llroundl(); this
+   has been worked around by using other functions. Issue #593.
+ * Fixed file descriptor closing issues on FreeBSD
+   Phusion Passenger child processes didn't correct close file descriptors
+   on FreeBSD because it queries /dev/fd to do that. On FreeBSD /dev/fd
+   only returns meaningful results if fdescfs is mounted, which it isn't
+   by default. Issue #597.
+
+
+Release 3.0.1
+-------------
+
+ * MUCH faster compilation
+   We've applied code aggregation techniques, allowing Phusion Passenger
+   to be compiled much quicker now. For example, compiling the Nginx
+   component (not Nginx itself) on a MacBook Pro now takes only 29
+   seconds instead of 51 seconds, an improvement of 75%! Compiling the
+   Apache module on a slower Dell Inspiron now takes 39 seconds instead of
+   1 minute 22 seconds, or 110% faster!
+ * Fixed malfunction after web server restart
+   On Linux systems that have a non-standard filesystem on /tmp, Phusion
+   Passenger could malfunction after restarting the web server because of
+   a bug that's only triggered on certain filesystems. Issue #569.
+ * Boost upgraded to version 1.44.0.
+   We were on 1.42.0.
+ * Much improved startup error messages
+   Phusion Passenger performs many extensive checks during startup to ensure
+   integrity. However the error message in some situation could be vague.
+   These startup error messages have now been improved dramatically, so that
+   if something goes wrong during startup you will now more likely know why.
+ * Curl < 7.12.1 is now supported
+   The previous version fails to compile with Curl versions earlier than
+   7.12.1. Issue #556.
+ * passenger-make-enterprisey fixed
+   This is the command that people can run after donating. It allows people
+   to slightly modify Phusion Passenger's display name as a joke. In 3.0.0 it
+   was broken because of a typo. This has been fixed.
+ * Removed passenger-stress-test
+   This tool was used during the early life of Phusion Passenger for stress
+   testing websites. Its performance has never been very good and there are
+   much better tools for stress testing, so this tool has now been removed.
+ * [Apache] RailsEnv and RackEnv configuration options are now equivalent
+   In previous versions, RailsEnv only had effect on Rails 1 and Rails 2 apps
+   while RackEnv only had effect on Rack apps. Because Rails 3 apps are
+   considered Rack apps, setting RailsEnv had no effect on Rails 3 apps.
+   Because this is confusing to users, we've now made RailsEnv and RackEnv
+   equivalent. Issue #579.
+ * [Nginx] Fixed compilation problems on systems with unpowerful shells
+   Most notably Solaris. Its default shell does not support some basic
+   constructs that we used in the Nginx configure script.
+ * [Nginx] Upgraded default Nginx version to to 0.8.53
+   The previous default was 0.8.52.
+ * [Nginx] passenger_enabled now only accepts 'on' or 'off' values
+   Previously it would recognize any value not equal to 'on' as meaning
+   'off'. This caused confusion among users who thought they could also
+   specify 'true', so we now throw a proper error if the value is
+   unrecognized. Fixes issue #583.
+
+
+Release 3.0.0
+-------------
+
+This is a major release with many changes. Please read our blog for details.
+
+
 Release 2.2.15
 --------------
 
@@ -81,7 +374,7 @@ Release 2.2.11
 
  * This release fixes a regression that appeared in 2.2.10 which only
    affects Apache. When under high load, Apache might freeze and stop
-   responding to requests. It is caused by a race conditions which is
+   responding to requests. It is caused by a race condition which is
    why it escaped our last release testing.
    
    This problem does not affect Nginx; you only have to upgrade if
@@ -98,6 +391,7 @@ Release 2.2.10
    could lead to mysterious crashes.
  * Fixed some compilation problems on newer GCC versions. Issue #430.
  * Support #size method in rack.input.
+
 
 
 Release 2.2.9

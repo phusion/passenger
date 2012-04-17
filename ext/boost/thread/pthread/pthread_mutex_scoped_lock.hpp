@@ -1,6 +1,6 @@
 #ifndef BOOST_PTHREAD_MUTEX_SCOPED_LOCK_HPP
 #define BOOST_PTHREAD_MUTEX_SCOPED_LOCK_HPP
-//  (C) Copyright 2007 Anthony Williams 
+//  (C) Copyright 2007-8 Anthony Williams 
 //
 //  Distributed under the Boost Software License, Version 1.0. (See
 //  accompanying file LICENSE_1_0.txt or copy at
@@ -9,6 +9,8 @@
 #include <pthread.h>
 #include <boost/assert.hpp>
 
+#include <boost/config/abi_prefix.hpp>
+
 namespace boost
 {
     namespace pthread
@@ -16,15 +18,25 @@ namespace boost
         class pthread_mutex_scoped_lock
         {
             pthread_mutex_t* m;
+            bool locked;
         public:
             explicit pthread_mutex_scoped_lock(pthread_mutex_t* m_):
-                m(m_)
+                m(m_),locked(true)
             {
                 BOOST_VERIFY(!pthread_mutex_lock(m));
             }
-            ~pthread_mutex_scoped_lock()
+            void unlock()
             {
                 BOOST_VERIFY(!pthread_mutex_unlock(m));
+                locked=false;
+            }
+            
+            ~pthread_mutex_scoped_lock()
+            {
+                if(locked)
+                {
+                    unlock();
+                }
             }
             
         };
@@ -46,5 +58,7 @@ namespace boost
         };
     }
 }
+
+#include <boost/config/abi_suffix.hpp>
 
 #endif

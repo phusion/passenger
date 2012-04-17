@@ -42,7 +42,9 @@
 
 namespace boost {
 
-#ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
+#if defined( __CODEGEARC__ )
+BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_pointer,T,__is_pointer(T))
+#elif !defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
 
 namespace detail {
 
@@ -111,7 +113,7 @@ no_type BOOST_TT_DECL is_pointer_tester(...);
 
 template <bool>
 struct is_pointer_select
-    : ::boost::type_traits::false_result
+    : public ::boost::type_traits::false_result
 {
 };
 
@@ -131,7 +133,7 @@ struct is_pointer_select<false>
 
 template <typename T>
 struct is_pointer_impl
-    : is_pointer_select<
+    : public is_pointer_select<
           ::boost::type_traits::ice_or<
               ::boost::is_reference<T>::value
             , ::boost::is_array<T>::value

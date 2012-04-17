@@ -15,30 +15,37 @@
 #include <locale>
 #include <functional>
 
+#include <boost/type_traits/make_unsigned.hpp>
+
 namespace boost {
     namespace algorithm {
         namespace detail {
 
 //  case conversion functors -----------------------------------------------//
 
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#pragma warning(push)
+#pragma warning(disable:4512) //assignment operator could not be generated
+#endif
+
             // a tolower functor
             template<typename CharT>
             struct to_lowerF : public std::unary_function<CharT, CharT>
             {
                 // Constructor
-                to_lowerF( const std::locale& Loc ) : m_Loc( Loc ) {}
+                to_lowerF( const std::locale& Loc ) : m_Loc( &Loc ) {}
 
                 // Operation
                 CharT operator ()( CharT Ch ) const
                 {
                     #if defined(__BORLANDC__) && (__BORLANDC__ >= 0x560) && (__BORLANDC__ <= 0x564) && !defined(_USE_OLD_RW_STL)
-                        return std::tolower( Ch);
+                        return std::tolower( static_cast<typename boost::make_unsigned <CharT>::type> ( Ch ));
                     #else
-                        return std::tolower<CharT>( Ch, m_Loc );
+                        return std::tolower<CharT>( Ch, *m_Loc );
                     #endif
                 }
             private:
-                const std::locale& m_Loc;
+                const std::locale* m_Loc;
             };
 
             // a toupper functor
@@ -46,20 +53,24 @@ namespace boost {
             struct to_upperF : public std::unary_function<CharT, CharT>
             {
                 // Constructor
-                to_upperF( const std::locale& Loc ) : m_Loc( Loc ) {}
+                to_upperF( const std::locale& Loc ) : m_Loc( &Loc ) {}
 
                 // Operation
                 CharT operator ()( CharT Ch ) const
                 {
                     #if defined(__BORLANDC__) && (__BORLANDC__ >= 0x560) && (__BORLANDC__ <= 0x564) && !defined(_USE_OLD_RW_STL)
-                        return std::toupper( Ch);
+                        return std::toupper( static_cast<typename boost::make_unsigned <CharT>::type> ( Ch ));
                     #else
-                        return std::toupper<CharT>( Ch, m_Loc );
+                        return std::toupper<CharT>( Ch, *m_Loc );
                     #endif
                 }
             private:
-                const std::locale& m_Loc;
+                const std::locale* m_Loc;
             };
+
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#pragma warning(pop)
+#endif
 
 // algorithm implementation -------------------------------------------------------------------------
 
@@ -71,8 +82,8 @@ namespace boost {
                 FunctorT Functor)
             {
                 return std::transform( 
-                    begin(Input), 
-                    end(Input), 
+                    ::boost::begin(Input), 
+                    ::boost::end(Input), 
                     Output,
                     Functor);
             }
@@ -84,9 +95,9 @@ namespace boost {
                 FunctorT Functor)
             {
                 std::transform( 
-                    begin(Input), 
-                    end(Input), 
-                    begin(Input),
+                    ::boost::begin(Input), 
+                    ::boost::end(Input), 
+                    ::boost::begin(Input),
                     Functor);
             }
 
@@ -96,11 +107,11 @@ namespace boost {
                 FunctorT Functor)
             {
                 return SequenceT(
-                    make_transform_iterator(
-                        begin(Input),
+                    ::boost::make_transform_iterator(
+                        ::boost::begin(Input),
                         Functor),
-                    make_transform_iterator(
-                        end(Input), 
+                    ::boost::make_transform_iterator(
+                        ::boost::end(Input), 
                         Functor));
             }
 

@@ -1,7 +1,8 @@
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'socket'
-require 'support/config'
 require 'phusion_passenger/message_channel'
-include PhusionPassenger
+
+module PhusionPassenger
 
 describe MessageChannel do
 	describe "scenarios with a single channel" do
@@ -47,6 +48,22 @@ describe MessageChannel do
 			@reader.read.should be_nil
 		end
 		
+		specify "#read_hash works" do
+			@writer.write("hello", "world")
+			@reader.read_hash.should == { "hello" => "world" }
+			
+			@writer.write("hello", "world", "foo", "bar", "", "...")
+			@reader.read_hash.should == { "hello" => "world", "foo" => "bar", "" => "..." }
+		end
+		
+		specify "#read_hash throws an exception if the array message doesn't have an even number of items" do
+			@writer.write("foo")
+			lambda { @reader.read_hash }.should raise_error(MessageChannel::InvalidHashError)
+			
+			@writer.write("foo", "bar", "baz")
+			lambda { @reader.read_hash }.should raise_error(MessageChannel::InvalidHashError)
+		end
+		
 		it "can read a single written scalar message" do
 			@writer.write_scalar("hello world")
 			@reader.read_scalar.should == "hello world"
@@ -62,9 +79,17 @@ describe MessageChannel do
 			@reader.read_scalar.should be_nil
 		end
 		
+		it "puts the data into the given buffer" do
+			buffer = ''
+			@writer.write_scalar("x" * 100)
+			result = @reader.read_scalar(buffer)
+			result.object_id.should == buffer.object_id
+			buffer.should == "x" * 100
+		end
+		
 		it "raises SecurityError when a received scalar message's size is larger than a specified maximum" do
 			@writer.write_scalar(" " * 100)
-			lambda { @reader.read_scalar(99) }.should raise_error(SecurityError)
+			lambda { @reader.read_scalar('', 99) }.should raise_error(SecurityError)
 		end
 	end
 	
@@ -74,10 +99,28 @@ describe MessageChannel do
 			Process.waitpid(@pid) rescue nil
 		end
 		
+		def spawn_process
+			@parent_socket, @child_socket = UNIXSocket.pair
+			@pid = fork do
+				@parent_socket.close
+				@channel = MessageChannel.new(@child_socket)
+				begin
+					yield
+				rescue Exception => e
+					print_exception("child", e)
+				ensure
+					@child_socket.close
+					exit!
+				end
+			end
+			@child_socket.close
+			@channel = MessageChannel.new(@parent_socket)
+		end
+		
 		it "both processes can read and write a single array message" do
 			spawn_process do
 				x = @channel.read
-				@channel.write("#{x}!")
+				@channel.write("#{x[0]}!")
 			end
 			@channel.write("hello")
 			@channel.read.should == ["hello!"]
@@ -87,13 +130,13 @@ describe MessageChannel do
 			garbage_files = ["garbage1.dat", "garbage2.dat", "garbage3.dat"]
 			spawn_process do
 				garbage_files.each do |name|
-					data = File.read("stub/#{name}")
+					data = File.binread("stub/#{name}")
 					@channel.write_scalar(data)
 				end
 			end
 			
 			garbage_files.each do |name|
-				data = File.read("stub/#{name}")
+				data = File.binread("stub/#{name}")
 				@channel.read_scalar.should == data
 			end
 		end
@@ -125,7 +168,7 @@ describe MessageChannel do
 		end
 		
 		it "has stream properties" do
-			garbage = File.read("stub/garbage1.dat")
+			garbage = File.binread("stub/garbage1.dat")
 			spawn_process do
 				@channel.write("hello", "world")
 				@channel.write_scalar(garbage)
@@ -147,24 +190,7 @@ describe MessageChannel do
 			@channel.read.should == ["Uhm, watch your step.", "WAAHH?!", "Calm down, Motoko!!",
 				"TASTE MY WRATH! ULTIMATE SWORD TECHNIQUE!! DRAGON'S BREATH SL--"]
 		end
-		
-		def spawn_process
-			@parent_socket, @child_socket = UNIXSocket.pair
-			@pid = fork do
-				@parent_socket.close
-				@channel = MessageChannel.new(@child_socket)
-				begin
-					yield
-				rescue Exception => e
-					print_exception("child", e)
-				ensure
-					@child_socket.close
-					exit!
-				end
-			end
-			@child_socket.close
-			@channel = MessageChannel.new(@parent_socket)
-		end
 	end
 end
 
+end # module PhusionPassenger

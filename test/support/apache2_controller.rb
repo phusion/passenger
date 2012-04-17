@@ -1,6 +1,7 @@
 require 'erb'
 require 'fileutils'
-require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/apache'
+require 'phusion_passenger/platform_info/ruby'
 
 # A class for starting, stopping and restarting Apache, and for manipulating
 # its configuration file. This is used by the integration tests.
@@ -40,6 +41,7 @@ require 'phusion_passenger/platform_info'
 #       apache.stop
 #   end
 class Apache2Controller
+	include PhusionPassenger
 	STUB_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/apache2")
 	
 	class VHost
@@ -60,6 +62,7 @@ class Apache2Controller
 	
 	attr_accessor :port
 	attr_accessor :vhosts
+	attr_reader :server_root
 	
 	def initialize(options = nil)
 		set(options) if options
@@ -67,8 +70,8 @@ class Apache2Controller
 		@vhosts = []
 		@extra = []
 		@server_root = File.expand_path('tmp.apache2')
-		@passenger_root = File.expand_path(File.dirname(__FILE__) + "/../..")
-		@mod_passenger = File.expand_path(File.dirname(__FILE__) + "/../../ext/apache2/mod_passenger.so")
+		@passenger_root = File.expand_path(PhusionPassenger.root)
+		@mod_passenger = File.expand_path(PhusionPassenger.root + "/libout/apache2/mod_passenger.so")
 	end
 	
 	def set(options)
@@ -123,7 +126,11 @@ class Apache2Controller
 		rescue Timeout::Error
 			raise "Could not start an Apache server."
 		end
-		File.chmod(0666, *Dir["#{@server_root}/*"]) rescue nil
+		Dir["#{@server_root}/*"].each do |filename|
+			if File.file?(filename)
+				File.chmod(0666, filename)
+			end
+		end
 	end
 	
 	def graceful_restart
@@ -173,6 +180,7 @@ class Apache2Controller
 			raise "Unable to stop Apache."
 		end
 		if File.exist?(@server_root)
+			FileUtils.chmod_R(0777, @server_root)
 			FileUtils.rm_r(@server_root)
 		end
 	end

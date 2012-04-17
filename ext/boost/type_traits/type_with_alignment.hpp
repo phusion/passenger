@@ -86,7 +86,7 @@ struct lower_alignment_helper_impl<false>
 {
     template <std::size_t target, class TestType>
     struct apply
-      : mpl::if_c<(alignment_of<TestType>::value == target), TestType, char>
+      : public mpl::if_c<(alignment_of<TestType>::value == target), TestType, char>
     {
         enum { value = (alignment_of<TestType>::value == target) };
     };
@@ -94,7 +94,7 @@ struct lower_alignment_helper_impl<false>
 
 template <bool found, std::size_t target, class TestType>
 struct lower_alignment_helper
-  : lower_alignment_helper_impl<found>::template apply<target,TestType>
+  : public lower_alignment_helper_impl<found>::template apply<target,TestType>
 {
 };
 #else
@@ -189,8 +189,10 @@ struct is_pod< ::boost::detail::lower_alignment<Align> >
 
 // This alignment method originally due to Brian Parker, implemented by David
 // Abrahams, and then ported here by Doug Gregor.
+namespace detail{
+
 template <std::size_t Align>
-class type_with_alignment
+class type_with_alignment_imp
 {
     typedef ::boost::detail::lower_alignment<Align> t1;
     typedef typename mpl::if_c<
@@ -208,6 +210,14 @@ class type_with_alignment
     typedef align_t type;
 };
 
+}
+
+template <std::size_t Align>
+class type_with_alignment 
+  : public ::boost::detail::type_with_alignment_imp<Align>
+{
+};
+
 #if defined(__GNUC__)
 namespace align {
 struct __attribute__((__aligned__(2))) a2 {};
@@ -215,6 +225,8 @@ struct __attribute__((__aligned__(4))) a4 {};
 struct __attribute__((__aligned__(8))) a8 {};
 struct __attribute__((__aligned__(16))) a16 {};
 struct __attribute__((__aligned__(32))) a32 {};
+struct __attribute__((__aligned__(64))) a64 {};
+struct __attribute__((__aligned__(128))) a128 {};
 }
 
 template<> class type_with_alignment<1>  { public: typedef char type; };
@@ -223,6 +235,8 @@ template<> class type_with_alignment<4>  { public: typedef align::a4 type; };
 template<> class type_with_alignment<8>  { public: typedef align::a8 type; };
 template<> class type_with_alignment<16> { public: typedef align::a16 type; };
 template<> class type_with_alignment<32> { public: typedef align::a32 type; };
+template<> class type_with_alignment<64> { public: typedef align::a64 type; };
+template<> class type_with_alignment<128> { public: typedef align::a128 type; };
 
 namespace detail {
 BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a2,true)
@@ -230,6 +244,101 @@ BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a4,true)
 BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a8,true)
 BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a16,true)
 BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a32,true)
+BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a64,true)
+BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a128,true)
+}
+#endif
+#if (defined(BOOST_MSVC) || (defined(BOOST_INTEL) && defined(_MSC_VER))) && _MSC_VER >= 1300
+//
+// MSVC supports types which have alignments greater than the normal
+// maximum: these are used for example in the types __m64 and __m128
+// to provide types with alignment requirements which match the SSE
+// registers.  Therefore we extend type_with_alignment<> to support
+// such types, however, we have to be careful to use a builtin type
+// whenever possible otherwise we break previously working code:
+// see http://article.gmane.org/gmane.comp.lib.boost.devel/173011
+// for an example and test case.  Thus types like a8 below will
+// be used *only* if the existing implementation can't provide a type
+// with suitable alignment.  This does mean however, that type_with_alignment<>
+// may return a type which cannot be passed through a function call
+// by value (and neither can any type containing such a type like
+// Boost.Optional).  However, this only happens when we have no choice 
+// in the matter because no other "ordinary" type is available.
+//
+namespace align {
+struct __declspec(align(8)) a8 { 
+   char m[8]; 
+   typedef a8 type;
+};
+struct __declspec(align(16)) a16 { 
+   char m[16]; 
+   typedef a16 type;
+};
+struct __declspec(align(32)) a32 { 
+   char m[32]; 
+   typedef a32 type;
+};
+struct __declspec(align(64)) a64 
+{ 
+   char m[64]; 
+   typedef a64 type;
+};
+struct __declspec(align(128)) a128 { 
+   char m[128]; 
+   typedef a128 type;
+};
+}
+
+template<> class type_with_alignment<8>  
+{ 
+   typedef mpl::if_c<
+      ::boost::alignment_of<boost::detail::max_align>::value < 8,
+      align::a8,
+      boost::detail::type_with_alignment_imp<8> >::type t1; 
+public: 
+   typedef t1::type type;
+};
+template<> class type_with_alignment<16> 
+{ 
+   typedef mpl::if_c<
+      ::boost::alignment_of<boost::detail::max_align>::value < 16,
+      align::a16,
+      boost::detail::type_with_alignment_imp<16> >::type t1; 
+public: 
+   typedef t1::type type;
+};
+template<> class type_with_alignment<32> 
+{ 
+   typedef mpl::if_c<
+      ::boost::alignment_of<boost::detail::max_align>::value < 32,
+      align::a32,
+      boost::detail::type_with_alignment_imp<32> >::type t1; 
+public: 
+   typedef t1::type type;
+};
+template<> class type_with_alignment<64> {
+   typedef mpl::if_c<
+      ::boost::alignment_of<boost::detail::max_align>::value < 64,
+      align::a64,
+      boost::detail::type_with_alignment_imp<64> >::type t1; 
+public: 
+   typedef t1::type type;
+};
+template<> class type_with_alignment<128> {
+   typedef mpl::if_c<
+      ::boost::alignment_of<boost::detail::max_align>::value < 128,
+      align::a128,
+      boost::detail::type_with_alignment_imp<128> >::type t1; 
+public: 
+   typedef t1::type type;
+};
+
+namespace detail {
+BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a8,true)
+BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a16,true)
+BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a32,true)
+BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a64,true)
+BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a128,true)
 }
 #endif
 
@@ -254,10 +363,12 @@ namespace detail {
 
 typedef ::boost::align::a16 max_align;
 
+//#if ! BOOST_WORKAROUND(__CODEGEARC__, BOOST_TESTED_AT(0x610))
 BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a2,true)
 BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a4,true)
 BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a8,true)
 BOOST_TT_AUX_BOOL_TRAIT_IMPL_SPEC1(is_pod,::boost::align::a16,true)
+//#endif
 }
 
 template <std::size_t N> struct type_with_alignment

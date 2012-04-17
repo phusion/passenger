@@ -78,6 +78,7 @@ shared_examples_for "MyCook(tm) beta" do
 			socket.write("POST #{base_uri}/uploads/single HTTP/1.1\r\n")
 			socket.write("Host: #{uri.host}\r\n")
 			socket.write("Transfer-Encoding: chunked\r\n")
+			socket.write("Content-Type: application/x-www-form-urlencoded\r\n")
 			socket.write("\r\n")
 			
 			chunk = "foo=bar!"
@@ -147,34 +148,7 @@ shared_examples_for "MyCook(tm) beta" do
 	
 	it "sets the 'Status' header" do
 		response = get_response('/nonexistant')
-		response["Status"].should == "404 Not Found"
-	end
-	
-	describe "CGI environment variables compliance" do
-		specify "REQUEST_URI contains the request URI including query string" do
-			cgi_envs = get('/welcome/cgi_environment?foo=escaped%20string')
-			cgi_envs.should include("REQUEST_URI = #{@base_uri}/welcome/cgi_environment?foo=escaped%20string\n")
-		end
-		
-		specify "PATH_INFO contains the request URI without the base URI and without the query string" do
-			cgi_envs = get('/welcome/cgi_environment?foo=escaped%20string')
-			cgi_envs.should include("PATH_INFO = /welcome/cgi_environment\n")
-		end
-		
-		specify "QUERY_STRING contains the query string" do
-			cgi_envs = get('/welcome/cgi_environment?foo=escaped%20string')
-			cgi_envs.should include("QUERY_STRING = foo=escaped%20string\n")
-		end
-		
-		specify "QUERY_STRING must be present even when there's no query string" do
-			cgi_envs = get('/welcome/cgi_environment')
-			cgi_envs.should include("QUERY_STRING = \n")
-		end
-		
-		specify "SCRIPT_NAME contains the base URI, or the empty string if the app is deployed on the root URI" do
-			cgi_envs = get('/welcome/cgi_environment')
-			cgi_envs.should include("SCRIPT_NAME = #{@base_uri}\n")
-		end
+		response["Status"].should == "404"
 	end
 	
 	if Process.uid == 0

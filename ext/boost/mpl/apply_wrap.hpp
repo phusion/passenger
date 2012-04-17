@@ -6,7 +6,7 @@
 #ifndef BOOST_MPL_APPLY_WRAP_HPP_INCLUDED
 #define BOOST_MPL_APPLY_WRAP_HPP_INCLUDED
 
-// Copyright Aleksey Gurtovoy 2000-2004
+// Copyright Aleksey Gurtovoy 2000-2008
 //
 // Distributed under the Boost Software License, Version 1.0. 
 // (See accompanying file LICENSE_1_0.txt or copy at 
@@ -14,9 +14,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source$
-// $Date: 2004-09-03 11:56:59 -0400 (Fri, 03 Sep 2004) $
-// $Revision: 24892 $
+// $Id: apply_wrap.hpp 49272 2008-10-11 06:50:46Z agurtovoy $
+// $Date: 2008-10-11 02:50:46 -0400 (Sat, 11 Oct 2008) $
+// $Revision: 49272 $
 
 #if !defined(BOOST_MPL_PREPROCESSING_MODE)
 #   include <boost/mpl/aux_/arity.hpp>
@@ -39,9 +39,10 @@
 #   include <boost/mpl/aux_/preprocessor/params.hpp>
 #   include <boost/mpl/aux_/preprocessor/enum.hpp>
 #   include <boost/mpl/aux_/preprocessor/add.hpp>
+#   include <boost/mpl/aux_/config/bcc.hpp>
+#   include <boost/mpl/aux_/config/ctps.hpp>
 #   include <boost/mpl/aux_/config/dtp.hpp>
 #   include <boost/mpl/aux_/config/eti.hpp>
-#   include <boost/mpl/aux_/config/ctps.hpp>
 #   include <boost/mpl/aux_/config/msvc.hpp>
 #   include <boost/mpl/aux_/config/workaround.hpp>
 
@@ -80,7 +81,7 @@ namespace boost { namespace mpl {
 
 // For gcc 4.4 compatability, we must include the
 // BOOST_PP_ITERATION_DEPTH test inside an #else clause.
-#else
+#else // BOOST_PP_IS_ITERATING
 #if BOOST_PP_ITERATION_DEPTH() == 1
 
 #   define i_ BOOST_PP_FRAME_ITERATION(1)
@@ -177,6 +178,33 @@ struct BOOST_PP_CAT(apply_wrap,i_)<AUX778076_APPLY_WRAP_SPEC_PARAMS(i_, int)>
 
 #   define j_ BOOST_PP_FRAME_ITERATION(2)
 
+#if i_ == 0 && j_ == 0 \
+    && defined(BOOST_MPL_CFG_BCC590_WORKAROUNDS) \
+    && !defined(BOOST_MPL_CFG_NO_HAS_APPLY)
+
+template< typename F, bool F_has_apply >
+struct apply_wrap_impl0_bcb {
+    typedef typename F::template apply< na > type;
+};
+
+template< typename F >
+struct apply_wrap_impl0_bcb< F, true > {
+    typedef typename F::apply type;
+};
+
+template<
+      typename F BOOST_PP_COMMA_IF(i_) AUX778076_APPLY_WRAP_PARAMS(i_, typename T)
+    >
+struct BOOST_PP_CAT(apply_wrap_impl,i_)<
+          BOOST_MPL_PP_ADD(i_, j_)
+        , F
+        BOOST_PP_COMMA_IF(i_) AUX778076_APPLY_WRAP_PARAMS(i_, T)
+        >
+{
+    typedef apply_wrap_impl0_bcb< F, aux::has_apply< F >::value >::type type;
+};
+#else
+
 template<
       typename F BOOST_PP_COMMA_IF(i_) AUX778076_APPLY_WRAP_PARAMS(i_, typename T)
     >
@@ -198,6 +226,9 @@ struct BOOST_PP_CAT(apply_wrap_impl,i_)<
         > type;
 };
 
+#endif
+
 #   undef j_
+
 #endif // BOOST_PP_ITERATION_DEPTH()
 #endif // BOOST_PP_IS_ITERATING

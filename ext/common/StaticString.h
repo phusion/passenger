@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,6 +27,9 @@
 
 #include <string>
 #include <cstring>
+#include <cstddef>
+#include <ostream>
+#include <stdexcept>
 
 namespace Passenger {
 
@@ -44,7 +47,71 @@ private:
 	const char *content;
 	string::size_type len;
 	
+	static const char *memmem(const char *haystack, string::size_type haystack_len,
+		const char *needle, string::size_type needle_len)
+	{
+		if (needle_len == 0) {
+			return haystack;
+		}
+
+		const char *last_possible = haystack + haystack_len - needle_len;
+		do {
+			const char *result = (const char *) memchr(haystack, needle[0], haystack_len);
+			if (result != NULL) {
+				if (result > last_possible) {
+					return NULL;
+				} else if (memcmp(result, needle, needle_len) == 0) {
+					return result;
+				} else {
+					ssize_t new_len = ssize_t(haystack_len) - (result - haystack) - 1;
+					if (new_len <= 0) {
+						return NULL;
+					} else {
+						haystack = result + 1;
+						haystack_len = new_len;
+					}
+				}
+			} else {
+				return NULL;
+			}
+		} while (true);
+	}
+	
 public:
+	/** A hash function object for StaticString. */
+	struct Hash {
+		size_t operator()(const StaticString &str) const {
+			const char *data = str.content;
+			const char *end  = str.content + str.len;
+			size_t result    = 0;
+			
+			#if defined(__i386__) || defined(__x86_64__)
+				/* When on x86 or x86_64, process 4 or 8 bytes
+				 * per iteration by treating the data as an
+				 * array of longs. Luckily for us these
+				 * architectures can read longs even on unaligned
+				 * addresses.
+				 */
+				const char *last_long = str.content +
+					str.len / sizeof(unsigned long) *
+					sizeof(unsigned long);
+				
+				while (data < last_long) {
+					result = result * 33 + *((unsigned long *) data);
+					data += sizeof(unsigned long);
+				}
+				
+				/* Process leftover data byte-by-byte. */
+			#endif
+			
+			while (data < end) {
+				result = result * 33 + *data;
+				data++;
+			}
+			return result;
+		}
+	};
+	
 	StaticString() {
 		content = "";
 		len = 0;
@@ -78,12 +145,24 @@ public:
 		return len;
 	}
 	
+	char operator[](string::size_type i) const {
+		return content[i];
+	}
+	
+	char at(string::size_type i) const {
+		return content[i];
+	}
+	
 	const char *c_str() const {
 		return content;
 	}
 	
 	const char *data() const {
 		return content;
+	}
+	
+	string toString() const {
+		return string(content, len);
 	}
 	
 	bool equals(const StaticString &other) const {
@@ -94,20 +173,73 @@ public:
 		return len == other.size() && memcmp(content, other.data(), len) == 0;
 	}
 	
+	string::size_type find(char c, string::size_type pos = 0) const {
+		if (pos < len) {
+			const char *result = (const char *) memchr(content + pos, c, len - pos);
+			if (result == NULL) {
+				return string::npos;
+			} else {
+				return result - content;
+			}
+		} else {
+			return string::npos;
+		}
+	}
+	
+	string::size_type find(const StaticString &s, string::size_type pos = 0) const {
+		if (s.empty()) {
+			return 0;
+		} else if (pos < len) {
+			const char *result = memmem(content + pos, len - pos, s.c_str(), s.size());
+			if (result == NULL) {
+				return string::npos;
+			} else {
+				return result - content;
+			}
+		} else {
+			return string::npos;
+		}
+	}
+	
+	string::size_type find(const char *s, string::size_type pos, string::size_type n) const {
+		return find(StaticString(s, n), pos);
+	}
+	
+	StaticString substr(string::size_type pos = 0, string::size_type n = string::npos) const {
+		if (pos > len) {
+			throw out_of_range("Argument 'pos' out of range");
+		} else {
+			if (n > len - pos) {
+				n = len - pos;
+			}
+			return StaticString(content + pos, n);
+		}
+	}
+	
 	bool operator==(const StaticString &other) const {
 		return len == other.len && memcmp(content, other.content, len) == 0;
 	}
 	
+	bool operator==(const string &other) const {
+		return len == other.size() && memcmp(content, other.data(), len) == 0;
+	}
+	
 	bool operator==(const char *other) const {
-		return memcmp(content, other, strlen(other)) == 0;
+		size_t other_len = strlen(other);
+		return len == other_len && memcmp(content, other, other_len) == 0;
 	}
 	
 	bool operator!=(const StaticString &other) const {
-		return len == other.len && memcmp(content, other.content, len) != 0;
+		return len != other.len || memcmp(content, other.content, len) != 0;
+	}
+	
+	bool operator!=(const string &other) const {
+		return len != other.size() || memcmp(content, other.data(), len) != 0;
 	}
 	
 	bool operator!=(const char *other) const {
-		return memcmp(content, other, strlen(other)) != 0;
+		size_t other_len = strlen(other);
+		return len != other_len || memcmp(content, other, other_len) != 0;
 	}
 	
 	bool operator<(const StaticString &other) const {
@@ -142,6 +274,44 @@ public:
 		return string(content, len);
 	}
 };
+
+inline string
+operator+(const char *lhs, const StaticString &rhs) {
+	return StaticString(lhs) + rhs;
+}
+
+inline string
+operator+(const string &lhs, const StaticString &rhs) {
+	string result = lhs;
+	result.append(rhs.data(), rhs.size());
+	return result;
+}
+
+inline ostream &
+operator<<(ostream &os, const StaticString &str) {
+	os.write(str.data(), str.size());
+	return os;
+}
+
+inline bool
+operator==(const string &other, const StaticString &str) {
+	return str == other;
+}
+
+inline bool
+operator==(const char *other, const StaticString &str) {
+	return str == other;
+}
+
+inline bool
+operator!=(const string &other, const StaticString &str) {
+	return str != other;
+}
+
+inline bool
+operator!=(const char *other, const StaticString &str) {
+	return str != other;
+}
 
 } // namespace Passenger
 

@@ -20,6 +20,10 @@ namespace boost {
 
 //  temporary format and find result storage --------------------------------//
 
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#pragma warning(push)
+#pragma warning(disable:4512) //assignment operator could not be generated
+#endif
             template< 
                 typename ForwardIteratorT,
                 typename FormatterT,
@@ -48,7 +52,9 @@ namespace boost {
                 find_format_store& operator=( FindResultT FindResult )
                 {
                     iterator_range<ForwardIteratorT>::operator=(FindResult);
-                    m_FormatResult=m_Formatter(FindResult);
+                    if( !this->empty() ) {
+                        m_FormatResult=m_Formatter(FindResult);
+                    }
                     
                     return *this;
                 }
@@ -64,6 +70,18 @@ namespace boost {
                 const formatter_type& m_Formatter;
             };
 
+            template<typename InputT, typename FindResultT>
+            bool check_find_result(InputT&, FindResultT& FindResult)
+            {
+                typedef BOOST_STRING_TYPENAME 
+                    range_const_iterator<InputT>::type input_iterator_type; 
+                iterator_range<input_iterator_type> ResultRange(FindResult);
+                return !ResultRange.empty();
+            }
+
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#pragma warning(pop)
+#endif
         } // namespace detail
     } // namespace algorithm
 } // namespace boost

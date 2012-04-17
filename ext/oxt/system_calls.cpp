@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008 Phusion
+ * Copyright (c) 2010 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -85,6 +85,26 @@ oxt::setup_syscall_interruption_support() {
 		errno = _my_errno; \
 	} while (false)
 
+int
+syscalls::open(const char *path, int oflag) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::open(path, oflag)
+	);
+	return ret;
+}
+
+int
+syscalls::open(const char *path, int oflag, mode_t mode) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::open(path, oflag, mode)
+	);
+	return ret;
+}
+
 ssize_t
 syscalls::read(int fd, void *buf, size_t count) {
 	ssize_t ret;
@@ -105,12 +125,95 @@ syscalls::write(int fd, const void *buf, size_t count) {
 	return ret;
 }
 
+ssize_t
+syscalls::writev(int fd, const struct iovec *iov, int iovcnt) {
+	ssize_t ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::writev(fd, iov, iovcnt)
+	);
+	return ret;
+}
+
 int
 syscalls::close(int fd) {
+	/* Apparently POSIX says that if close() returns EINTR the
+	 * file descriptor will be left in an undefined state, so
+	 * when coding for POSIX we can't just loop on EINTR or we
+	 * could run into race conditions with other threads.
+	 * http://www.daemonology.net/blog/2011-12-17-POSIX-close-is-broken.html
+	 *
+	 * On Linux, FreeBSD and OpenBSD, close() releases the file
+	 * descriptor when it returns EINTR. HP-UX does not.
+	 * http://news.ycombinator.com/item?id=3363884
+	 *
+	 * MacOS X is insane because although the system call does
+	 * release the file descriptor, the close() function as
+	 * implemented by libSystem may call pthread_testcancel() first
+	 * which can also return EINTR. Whether this happens depends
+	 * on whether unix2003 is enabled.
+	 * http://www.reddit.com/r/programming/comments/ng6vt/posix_close2_is_broken/c38xrgu
+	 */
+	#if defined(_hpux)
+		int ret;
+		CHECK_INTERRUPTION(
+			ret == -1,
+			ret = ::close(fd)
+		);
+		return ret;
+	#else
+		/* TODO: If it's not known whether the OS releases the file
+		 * descriptor on EINTR-on-close(), we should print some kind of
+		 * warning here. This would actually explain why some people get
+		 * mysterious EBADF errors. I think the best thing we can do is
+		 * to manually whitelist operating systems as we find out their
+		 * behaviors.
+		 */
+		int ret = ::close(fd);
+		if (ret == -1 && errno == EINTR && this_thread::syscalls_interruptable()) {
+			throw thread_interrupted();
+		} else {
+			return ret;
+		}
+	#endif
+}
+
+int
+syscalls::pipe(int filedes[2]) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
-		ret = ::close(fd)
+		ret = ::pipe(filedes)
+	);
+	return ret;
+}
+
+int
+syscalls::dup2(int filedes, int filedes2) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::dup2(filedes, filedes2)
+	);
+	return ret;
+}
+
+int
+syscalls::mkdir(const char *pathname, mode_t mode) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::mkdir(pathname, mode)
+	);
+	return ret;
+}
+
+int
+syscalls::chown(const char *path, uid_t owner, gid_t group) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::chown(path, owner, group)
 	);
 	return ret;
 }
@@ -180,28 +283,34 @@ syscalls::socketpair(int d, int type, int protocol, int sv[2]) {
 ssize_t
 syscalls::recvmsg(int s, struct msghdr *msg, int flags) {
 	ssize_t ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		#ifdef _AIX53
+	#ifdef _AIX53
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::nrecvmsg(s, msg, flags)
-		#else
+		);
+	#else
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::recvmsg(s, msg, flags)
-		#endif
-	);
+		);
+	#endif
 	return ret;
 }
 
 ssize_t
 syscalls::sendmsg(int s, const struct msghdr *msg, int flags) {
 	ssize_t ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		#ifdef _AIX53
+	#ifdef _AIX53
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::nsendmsg(s, msg, flags)
-		#else
+		);
+	#else
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::sendmsg(s, msg, flags)
-		#endif
-	);
+		);
+	#endif
 	return ret;
 }
 
@@ -225,12 +334,42 @@ syscalls::shutdown(int s, int how) {
 	return ret;
 }
 
+int
+syscalls::select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, struct timeval *timeout) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::select(nfds, readfds, writefds, errorfds, timeout)
+	);
+	return ret;
+}
+
+int
+syscalls::poll(struct pollfd fds[], nfds_t nfds, int timeout) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::poll(fds, nfds, timeout)
+	);
+	return ret;
+}
+
 FILE *
 syscalls::fopen(const char *path, const char *mode) {
 	FILE *ret;
 	CHECK_INTERRUPTION(
 		ret == NULL,
 		ret = ::fopen(path, mode)
+	);
+	return ret;
+}
+
+size_t
+syscalls::fread(void *ptr, size_t size, size_t nitems, FILE *stream) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == 0 && ferror(stream),
+		ret = ::fread(ptr, size, nitems, stream)
 	);
 	return ret;
 }
@@ -265,6 +404,16 @@ syscalls::stat(const char *path, struct stat *buf) {
 	return ret;
 }
 
+int
+syscalls::lstat(const char *path, struct stat *buf) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::lstat(path, buf)
+	);
+	return ret;
+}
+
 time_t
 syscalls::time(time_t *t) {
 	time_t ret;
@@ -273,6 +422,36 @@ syscalls::time(time_t *t) {
 		ret = ::time(t)
 	);
 	return ret;
+}
+
+unsigned int
+syscalls::sleep(unsigned int seconds) {
+	// We use syscalls::nanosleep() here not only to reuse interruption
+	// handling code, but also to avoid potentional infinite loops
+	// in combination with oxt::thread::interrupt_and_join().
+	// Upon interruption sleep() returns the number of seconds unslept
+	// but interrupt_and_join() keeps interrupting the thread every 10
+	// msec. Depending on the implementation of sleep(), it might return
+	// the same value as its original argument. A naive implementation
+	// of syscalls::sleep() that sleeps again with the return value
+	// could easily cause an infinite loop. nanosleep() has a large
+	// enough resolution so it won't trigger the problem.
+	struct timespec spec, rem;
+	int ret;
+	
+	spec.tv_sec = seconds;
+	spec.tv_nsec = 0;
+	ret = syscalls::nanosleep(&spec, &rem);
+	if (ret == 0) {
+		return 0;
+	} else if (errno == EINTR) {
+		return rem.tv_sec;
+	} else {
+		// No sure what to do here. There's an error
+		// but we can't return -1. Let's just hope
+		// this never happens.
+		return 0;
+	}
 }
 
 int
@@ -294,7 +473,19 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	do {
 		ret = ::nanosleep(&req2, &rem2);
 		e = errno;
-		req2 = rem2;
+		if (ret == -1) {
+			/* nanosleep() on some systems is sometimes buggy. rem2
+			 * could end up containing a tv_sec with a value near 2^32-1,
+			 * probably because of integer wrapping bugs in the kernel.
+			 * So we check for those.
+			 */
+			if (rem2.tv_sec < req->tv_sec) {
+				req2 = rem2;
+			} else {
+				req2.tv_sec = 0;
+				req2.tv_nsec = 0;
+			}
+		}
 	} while (ret == -1 && e == EINTR && !this_thread::syscalls_interruptable());
 	if (ret == -1 && e == EINTR && this_thread::syscalls_interruptable()) {
 		throw thread_interrupted();
@@ -322,6 +513,16 @@ syscalls::kill(pid_t pid, int sig) {
 	CHECK_INTERRUPTION(
 		ret == -1,
 		ret = ::kill(pid, sig)
+	);
+	return ret;
+}
+
+int
+syscalls::killpg(pid_t pgrp, int sig) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::killpg(pgrp, sig)
 	);
 	return ret;
 }

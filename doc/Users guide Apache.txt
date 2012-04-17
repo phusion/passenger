@@ -1,4 +1,5 @@
-= Phusion Passenger users guide =
+Phusion Passenger users guide
+=============================
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
@@ -19,7 +20,9 @@ This guide assumes that the reader is somewhat familiar with Apache and with
 using the commandline.
 
 
-== Supported operating systems ==
+== Support information ==
+
+=== Supported operating systems ===
 
 Phusion Passenger works on any POSIX-compliant operating system. In other
 words: practically any operating system on earth, except Microsoft Windows.
@@ -32,10 +35,18 @@ The only POSIX-compliant operating system on which Phusion Passenger for Apache 
 known not to work at this time, is OpenBSD. Please use Phusion Passenger for Nginx
 instead.
 
-If Phusion Passenger does not work on your platform then please
+Please
 link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
 or
-link:http://groups.google.com/group/phusion-passenger[join our discussion list].
+link:http://groups.google.com/group/phusion-passenger[join our discussion forum]
+if it doesn't work on your POSIX-compliant operating system.
+
+=== Where to get support ===
+
+* link:http://code.google.com/p/phusion-passenger/issues/list[Issue tracker] - report
+  bugs here.
+* link:http://groups.google.com/group/phusion-passenger[Discussion forum] - post a
+  message here if you're experiencing problems.
 
 
 == Installing, upgrading and uninstalling Phusion Passenger ==
@@ -236,7 +247,7 @@ about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
 
 ==== Via a gem or a source tarball ====
 
-To ugrade or downgrade Phusion Passenger via the gem or the source tarball, install the newer
+To upgrade or downgrade Phusion Passenger via the gem or the source tarball, install the newer
 or older version as you normally would; that is, install the gem or unpack the tarball, and
 run `passenger-install-apache2-module`. Eventually `passenger-install-apache2-module` will tell
 you to copy & paste some settings into the Apache configuration file; something that looks along
@@ -248,9 +259,10 @@ PassengerRoot ...
 PassengerRuby ...
 -----------------------------------
 
-Because you already have Phusion Passenger installed, you already have the same settings
-in your Apache configuration file, just with different values. Replace the old settings with
-the new ones that the installer outputs.
+Because you already had Phusion Passenger installed, you already had similar settings
+in your Apache configuration file, just with different values. *Replace* the old settings with
+the new ones that the installer outputs. It is important that the old settings are removed,
+otherwise Phusion Passenger may malfunction.
 
 When you're done, restart Apache.
 
@@ -266,7 +278,9 @@ uninstalling the Phusion Passenger files, so that Apache behaves as if Phusion
 Passenger was never installed in the first place. This might be useful to you if,
 for example, you seem to be experiencing a problem caused by Phusion Passenger,
 but you want to make sure whether that's actually the case, without having
-to through the hassle of uninstalling Phusion Passenger completely.
+to through the hassle of uninstalling Phusion Passenger completely. When disabled,
+Phusion Passenger will not occupy any memory or CPU or otherwise interfere with
+Apache.
 
 To unload Phusion Passenger from Apache, edit your Apache configuration file(s)
 and comment out:
@@ -331,7 +345,7 @@ done this, you need to remove the Phusion Passenger files.
   `sudo apt-get remove libapache2-mod-passenger`.
 
 
-== Deploying a Ruby on Rails application ==
+== Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3.x) application ==
 
 Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
 the domain 'www.mycook.com'. You can either deploy your application to the
@@ -392,8 +406,8 @@ Suppose that you already have a virtual host:
 And you want your Ruby on Rails application to be accessible from the URL
 'http://www.phusion.nl/rails'.
 
-To do this, make a symlink from your Ruby on Rails application's 'public'
-folder to a directory in the document root. For example:
+To do this, make a symlink in the virtual host's document root, and have it
+point to your Ruby on Rails application's 'public' folder. For example:
 -------------------------------------------
 ln -s /webapps/mycook/public /websites/phusion/rails
 -------------------------------------------
@@ -476,7 +490,7 @@ a shell console, just like one would normally run migrations.
 See <<capistrano,Capistrano recipe>>.
 
 
-== Deploying a Rack-based Ruby application ==
+== Deploying a Rack-based Ruby application (including Rails >= 3) ==
 
 Phusion Passenger supports arbitrary Ruby web applications that follow the
 link:http://rack.rubyforge.org/[Rack] interface.
@@ -600,8 +614,8 @@ Suppose that you already have a virtual host:
 And you want your Rack application to be accessible from the URL
 'http://www.phusion.nl/rack'.
 
-To do this, make a symlink from your Rack application's 'public'
-folder to a directory in the document root. For example:
+To do this, make a symlink in the virtual host's document root, and have it
+point to your Rack application's 'public' folder. For example:
 -------------------------------------------
 ln -s /webapps/rackapp/public /websites/phusion/rack
 -------------------------------------------
@@ -683,29 +697,18 @@ this option as well. Please read
 
 This required option may only occur once, in the global server configuration.
 
-=== PassengerLogLevel <integer> ===
-This option allows one to specify how much information Phusion Passenger should
-write to the Apache error log file. A higher log level value means that more
-information will be logged.
-
-Possible values are:
-
-- '0': Show only errors and warnings.
-- '1': Show the most important debugging information. This might be useful for
-       system administrators who are trying to figure out the cause of a
-       problem.
-- '2': Show more debugging information. This is typically only useful for developers.
-- '3': Show even more debugging information.
-
-This option may only occur once, in the global server configuration.
-The default is '0'.
-
 [[PassengerRuby]]
 === PassengerRuby <filename> ===
 This option allows one to specify the Ruby interpreter to use.
 
-This option may only occur once, in the global server configuration.
-The default is 'ruby'.
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
 
 [[PassengerAppRoot]]
 === PassengerAppRoot <path/to/root> ===
@@ -734,6 +737,32 @@ Example:
 </VirtualHost>
 -----------------------------
 
+[[PassengerSpawnMethod]]
+=== PassengerSpawnMethod <string> ===
+[TIP]
+."What spawn method should I use?"
+=========================================================
+This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
+understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
+
+************************************************
+If your application works on Mongrel, but not on Phusion Passenger, then set
+`PassengerSpawnMethod` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
+************************************************
+
+However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
+methods bring many benefits.
+=========================================================
+
+include::users_guide_snippets/passenger_spawn_method.txt[]
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is 'smart-lv2'.
+
 [[PassengerUseGlobalQueue]]
 === PassengerUseGlobalQueue <on|off> ===
 Turns the use of global queuing on or off.
@@ -743,28 +772,12 @@ This option may occur in the following places:
  * In the global server configuration.
  * In a virtual host configuration block.
 
-In each place, it may be specified at most once. The default value is 'off'.
+In each place, it may be specified at most once. The default value is 'on'.
 
 'This feature is sponsored by http://www.37signals.com/[37signals].'
 
 include::users_guide_snippets/global_queueing_explained.txt[]
 
-
-[[PassengerUserSwitching]]
-=== PassengerUserSwitching <on|off> ===
-Whether to enable <<user_switching,user switching support>>.
-
-This option may only occur once, in the global server configuration.
-The default value is 'on'.
-
-[[PassengerDefaultUser]]
-=== PassengerDefaultUser <username> ===
-Phusion Passenger enables <<user_switching,user switching support>> by default.
-This configuration option allows one to specify which user Rails/Rack
-applications must run as, if user switching fails or is disabled.
-
-This option may only occur once, in the global server configuration.
-The default value is 'nobody'.
 
 === PassengerEnabled <on|off> ===
 You can set this option to 'off' to completely disable Phusion Passenger for
@@ -916,6 +929,150 @@ allow the attacker to cause a Denial-of-Service.
 You can prevent this from happening by pointing PassengerRestartDir to a
 directory that's readable by Apache, but only writable by administrators.
 
+[[PassengerBufferResponse]]
+=== PassengerBufferResponse <on|off> ===
+When turned on, application-generated responses are buffered in memory. By buffering
+responses, protection is provided against slow HTTP clients that can not read your
+response immediately.
+
+For example, consider an HTTP client that's on a dial-up modem link, and your
+application instance generates a 2 MB response. If response buffering is turned
+off then your application instance will be blocked until the entire 2 MB has been
+sent out to the HTTP client. This disallows your application instance to do any useful
+work in the mean time. By enabling response buffering, Phusion Passenger will read
+the application response as quickly as possible and will take care of slow clients.
+
+However, keep in mind that enabling this option will make streaming responses
+impossible. Consider for example this piece of Rails code:
+
+--------------------------------
+render :text => lambda { |response, output|
+    10.times do |i|
+        output.write("entry #{i}\n")
+        output.flush
+        sleep 1
+    end
+}
+--------------------------------
+
+...or this piece of Rack code:
+
+--------------------------------
+class Response
+    def each
+        10.times do |i|
+            yield("entry #{i}\n")
+            sleep 1
+        end
+    end
+end
+
+app = lambda do |env|
+    [200, { "Content-Type" => "text/plain" }, Response.new]
+end
+--------------------------------
+
+When response buffering is turned on, Phusion Passenger will wait until
+the application is done sending the entire response before forwarding it
+to the client. The client will not receive anything for 10 seconds,
+after which it receives the entire response at once.
+When response buffering is turned off, it works as expected: the client
+receives an "entry X" message every second for 10 seconds.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
+[NOTE]
+=====================================================
+The <<PassengerBufferResponse,PassengerBufferResponse>> directive should be turned off
+if responses can be huge. Because entire responses are buffered in memory when turned on.
+=====================================================
+
+=== Security options ===
+
+[[PassengerUserSwitching]]
+==== PassengerUserSwitching <on|off> ====
+Whether to enable <<user_switching,user switching support>>.
+
+This option may only occur once, in the global server configuration.
+The default value is 'on'.
+
+==== PassengerUser <username> ====
+If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
+by default run the web application as the owner of the file 'config/environment.rb'
+(for Rails apps) or 'config.ru' (for Rack apps). This option allows you to override
+that behavior and explicitly set a user to run the web application as, regardless
+of the ownership of 'environment.rb'/'config.ru'.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+
+In each place, it may be specified at most once.
+
+==== PassengerGroup <group name> ====
+If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
+by default run the web application as the primary group of the owner of the file
+'config/environment.rb' (for Rails apps) or 'config.ru' (for Rack apps). This option
+allows you to override that behavior and explicitly set a group to run the web application
+as, regardless of the ownership of 'environment.rb'/'config.ru'.
+
+'<group name>' may also be set to the special value '!STARTUP_FILE!', in which case
+the web application's group will be set to 'environment.rb'/'config.ru''s group.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+
+In each place, it may be specified at most once.
+
+[[PassengerDefaultUser]]
+==== PassengerDefaultUser <username> ====
+Phusion Passenger enables <<user_switching,user switching support>> by default.
+This configuration option allows one to specify the user that applications must
+run as, if user switching fails or is disabled.
+
+This option may only occur once, in the global server configuration.
+The default value is 'nobody'.
+
+[[PassengerDefaultGroup]]
+==== PassengerDefaultGroup <group name> ====
+Phusion Passenger enables <<user_switching,user switching support>> by default.
+This configuration option allows one to specify the group that applications must
+run as, if user switching fails or is disabled.
+
+This option may only occur once, in the global server configuration.
+The default value is the primary group of the user specifified by
+<<PassengerDefaultUser,PassengerDefaultUser>>.
+
+==== PassengerFriendlyErrorPages <on|off> ====
+Phusion Passenger can display friendly error pages whenever an application fails
+to start. This friendly error page presents the startup error message, some
+suggestions for solving the problem, and a backtrace. This feature is very useful
+during application development and useful for less experienced system administrators,
+but the page might reveal potentially sensitive information, depending on the
+application. Experienced system administrators who are using Phusion Passenger
+on serious production servers should consider turning this feature off.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
 
 === Resource control and optimization options ===
 
@@ -942,6 +1099,57 @@ The default value is '6'.
 TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
 Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
 by about 33%. And it's not hard to install.
+
+[[PassengerMinInstances]]
+==== PassengerMinInstances <integer> ====
+This specifies the minimum number of application instances that must be kept around
+whenever Phusion Passenger cleans up idle instances. You should set this option to a
+non-zero value if you want to avoid potentially long startup times after a website
+has been idle for an extended period.
+
+Please note that this option does *not* pre-start application instances during Apache
+startup. It just makes sure that when the application is first accessed:
+
+1. at least the given number of instances will be spawned.
+2. the given number of processes will be kept around even when instances are being
+   idle cleaned (see <<PassengerPoolIdleTime,PassengerPoolIdleTime>>).
+
+If you want to pre-start application instances during Apache startup, then you should use the <<PassengerPreStart,PassengerPreStart>> directive, possibly in combination with
+'PassengerMinInstances'. This behavior might seem counter-intuitive at first sight,
+but <<PassengerPreStart,PassengerPreStart>> explains the rationale behind it.
+
+For example, suppose that you have the following configuration:
+
+---------------------------------
+PassengerMaxPoolSize 15
+PassengerPoolIdleTime 10
+
+<VirtualHost *:80>
+    ServerName foobar.com
+    DocumentRoot /webapps/foobar/public
+    PassengerMinInstances 3
+</VirtualHost>
+---------------------------------
+
+When you start Apache, there are 0 application instances for 'foobar.com'. Things will
+stay that way until someone visits 'foobar.com'. Suppose that there is only 1 visitor.
+1 application instance will be started immediately to serve the visitor, while 2 will
+be spawned in the background. After 10 seconds, when the idle timeout has
+been reached, these 3 application instances will not be cleaned up.
+
+Now suppose that there's a sudden spike of traffic, and 100 users visit 'foobar.com'
+simultanously. Phusion Passenger will start 12 more application instances. After the idle
+timeout of 10 seconds have passed, Phusion Passenger will clean up 12 application
+instances, keeping 3 instances around.
+
+The PassengerMinInstances option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Limits` is on.
+
+In each place, it may be specified at most once. The default value is '1'.
 
 ==== PassengerMaxInstancesPerApp <integer> ====
 The maximum number of application instances that may be simultaneously active
@@ -1040,6 +1248,201 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is '0'.
 
+[[PassengerPreStart]]
+==== PassengerPreStart <url> ====
+By default, Phusion Passenger does not start any application instances until said
+web application is first accessed. The result is that the first visitor of said
+web application might experience a small delay as Phusion Passenger is starting
+the web application on demand. If that is undesirable, then this directive can be
+used to pre-started application instances during Apache startup.
+
+A few things to be careful of:
+
+- This directive accepts the *URL* of the web application you want to pre-start,
+  not a on/off value! This might seem a bit weird, but read on for rationale. As
+  for the specifics of the URL:
+  * The domain part of the URL must be equal to the value of the 'ServerName'
+    directive of the VirtualHost block that defines the web application.
+  * Unless the web application is deployed on port 80, the URL should contain
+    the web application's port number too.
+  * The path part of the URL must point to some URI that the web application
+    handles.
+- You will probably want to combine this option with
+  <<PassengerMinInstances,PassengerMinInstances>> because application instances
+  started with 'PassengerPreStart' are subject to the usual idle timeout rules.
+  See the example below for an explanation.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified any number of times.
+
+===== Example 1: basic usage =====
+
+Suppose that you have the following web applications.
+
+---------------------------
+<VirtualHost *:80>
+   ServerName foo.com
+   DocumentRoot /webapps/foo/public
+</VirtualHost>
+
+<VirtualHost *:3500>
+   ServerName bar.com
+   DocumentRoot /webapps/bar/public
+</VirtualHost>
+---------------------------
+
+You want both of them to be pre-started during Apache startup. The URL for
+foo.com is 'http://foo.com/' (or, equivalently, 'http://foo.com:80/') and
+the URL for bar.com is 'http://bar.com:3500/'. So we add two PassengerPreStart
+directives, like this:
+
+---------------------------
+<VirtualHost *:80>
+   ServerName foo.com
+   DocumentRoot /webapps/foo/public
+</VirtualHost>
+
+<VirtualHost *:3500>
+   ServerName bar.com
+   DocumentRoot /webapps/bar/public
+</VirtualHost>
+
+PassengerPreStart http://foo.com/           # <--- added
+PassengerPreStart http://bar.com:3500/      # <--- added
+---------------------------
+
+===== Example 2: pre-starting apps that are deployed in sub-URIs =====
+
+Suppose that you have a web application deployed in a sub-URI '/store', like this:
+
+---------------------------
+<VirtualHost *:80>
+   ServerName myblog.com
+   DocumentRoot /webapps/wordpress
+   RailsBaseURI /store
+</VirtualHost>
+---------------------------
+
+Then specify the domain name of its containing virtual host followed by the sub-URI,
+like this:
+
+---------------------------
+<VirtualHost *:80>
+   ServerName myblog.com
+   DocumentRoot /webapps/wordpress
+   RailsBaseURI /store
+</VirtualHost>
+
+PassengerPreStart http://myblog.com/store    # <----- added
+---------------------------
+
+The sub-URI *must* be included; if you don't then the directive will have no effect.
+The following example is wrong and won't pre-start the store web application:
+
+---------------------------
+PassengerPreStart http://myblog.com/    # <----- WRONG! Missing "/store" part.
+---------------------------
+
+===== Example 3: combining with PassengerMinInstances =====
+
+Application instances started with PassengerPreStart are
+also subject to the idle timeout rules as specified by
+<<PassengerPoolIdleTime,PassengerPoolIdleTime>>! That means that by default,
+the pre-started application instances for foo.com are bar.com are shut down
+after a few minutes of inactivity. If you don't want that to happen, then
+you should combine PassengerPreStart with
+<<PassengerMinInstances,PassengerMinInstances>>, like this:
+
+---------------------------
+<VirtualHost *:80>
+   ServerName foo.com
+   DocumentRoot /webapps/foo/public
+   PassengerMinInstances 1      # <--- added
+</VirtualHost>
+
+<VirtualHost *:3500>
+   ServerName bar.com
+   DocumentRoot /webapps/bar/public
+   PassengerMinInstances 1      # <--- added
+</VirtualHost>
+
+PassengerPreStart http://foo.com/
+PassengerPreStart http://bar.com:3500/
+---------------------------
+
+===== So why a URL? Why not just an on/off flag? =====
+
+A directive that accepts a simple on/off flag is definitely more intuitive,
+but due technical difficulties w.r.t. the way Apache works, it's very hard
+to implement it like that:
+
+- It is very hard to obtain a full list of web applications defined in the
+  Apache configuration file(s). In other words, it's hard for Phusion Passenger
+  to know which web applications are deployed on Apache until a web application
+  is first accessed, and without such a list Phusion Passenger wouldn't know
+  which web applications to pre-start. It's probably not completely impossible
+  to obtain such a list, but this brings us to the following point;
+- Users expect things like 'mod_env' to work even in combination with Phusion
+  Passenger. For example some people put ``SetEnv PATH=....'' in their virtual
+  host block and they expect the web application to pick that environment variable
+  up when it's started. Information like this is stored in module-specific
+  locations that Phusion Passenger cannot access directly. Even if the previous
+  bullet point is solved and we can obtain a list of web applications,
+  we cannot start the application with the correct mod_env information.
+  mod_env is just one such example; there are probably many other Apache modules,
+  all of which people expect to work, but we cannot answer to those expectations
+  if PassengerPreStart is implemented as a simple on/off flag.
+
+So as a compromise, we made it accept a URL. This is easier to implement for
+us and altough it looks weird, it behaves consistently w.r.t. cooperation
+with other Apache modules.
+
+===== What does Phusion Passenger do with the URL? =====
+
+During Apache startup, Phusion Passenger will send a dummy HEAD request to the
+given URL and discard the result. In other words, Phusion Passenger simulates a
+web access at the given URL. However this simulated request is always sent to
+localhost, *not* to the IP that the domain resolves to. Suppose that bar.com
+in example 1 resolves to 209.85.227.99; Phusion Passenger will
+send the following HTTP request to 127.0.0.1 port 3500 (and not to 209.85.227.99
+port 3500):
+
+----------------------
+HEAD / HTTP/1.1
+Host: bar.com
+Connection: close
+----------------------
+
+Similarly, for example 2, Phusion Passenger will send the following HTTP request
+to 127.0.0.1 port 80:
+
+----------------------
+HEAD /store HTTP/1.1
+Host: myblog.com
+Connection: close
+----------------------
+
+===== Do I need to edit /etc/hosts and point the domain in the URL to 127.0.0.1? =====
+
+No. See previous subsection.
+
+===== My web application consists of multiple web servers. What URL do I need to specify, and in which web server's Apache config file? =====
+
+Put the web application's virtual host's ServerName value and the virtual host's
+port in the URL, and put
+PassengerPreStart on all machines that you want to pre-start the web application
+on. The simulated web request is always sent to 127.0.0.1, with the domain name
+in the URL as value for the 'Host' HTTP header, so you don't need to worry about
+the request ending up at a different web server in the cluster.
+
+===== Does PassengerPreStart support https:// URLs? =====
+
+Yes. And it does not perform any certificate validation.
+
 [[PassengerHighPerformance]]
 ==== PassengerHighPerformance <on|off> ====
 By default, Phusion Passenger is compatible with mod_rewrite and most other
@@ -1110,6 +1513,10 @@ then you can enable high performance mode for a certain URL only. For example:
 
 This enables high performance mode for
 http://www.foo.com/chatroom/ajax_update_poll only.
+
+
+/////////////////////////////////////////
+/////////////////////////////////////////
 
 
 === Compatibility options ===
@@ -1184,6 +1591,33 @@ interferes with passthrough rules, not with any other mod_rewrite rules. The rul
 displaying maintenance.html will work fine even for URLs starting with "/users".
 
 
+=== Logging and debugging options ===
+
+==== PassengerLogLevel <integer> ====
+This option allows one to specify how much information Phusion Passenger should
+write to the Apache error log file. A higher log level value means that more
+information will be logged.
+
+Possible values are:
+
+- '0': Show only errors and warnings.
+- '1': Show the most important debugging information. This might be useful for
+       system administrators who are trying to figure out the cause of a
+       problem.
+- '2': Show more debugging information. This is typically only useful for developers.
+- '3': Show even more debugging information.
+
+This option may only occur once, in the global server configuration.
+The default is '0'.
+
+==== PassengerDebugLogFile <filename> ====
+By default Phusion Passenger debugging and error messages are written to the global
+web server error log. This option allows one to specify the file that debugging and
+error messages should be written to instead.
+
+This option may only occur once, in the global server configuration.
+
+
 === Ruby on Rails-specific options ===
 
 ==== RailsAutoDetect <on|off> ====
@@ -1247,32 +1681,6 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'production'.
 
-[[RailsSpawnMethod]]
-==== RailsSpawnMethod <string> ====
-[TIP]
-."What spawn method should I use?"
-=========================================================
-This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
-understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
-
-************************************************
-If your application works on Mongrel, but not on Phusion Passenger, then set
-`RailsSpawnMethod` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
-************************************************
-
-However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
-methods bring many benefits.
-=========================================================
-
-include::users_guide_snippets/rails_spawn_method.txt[]
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is 'smart-lv2'.
-
 ==== RailsFrameworkSpawnerIdleTime <integer> ====
 The FrameworkSpawner server (explained in <<spawning_methods_explained,Spawning
 methods explained>>) has an idle timeout, just like the backend processes spawned by
@@ -1286,7 +1694,7 @@ Setting a higher value will mean that the FrameworkSpawner server is kept around
 longer, which may slightly increase memory usage. But as long as the
 FrameworkSpawner server is running, the time to spawn a Ruby on Rails backend
 process only takes about 40% of the time that is normally needed, assuming that
-you're using the 'smart' <<RailsSpawnMethod,spawning method>>. So if your
+you're using the 'smart' <<PassengerSpawnMethod,spawning method>>. So if your
 system has enough memory, is it recommended that you set this option to a high
 value or to '0'.
 
@@ -1310,7 +1718,7 @@ Setting a higher value will mean that the ApplicationSpawner server is kept arou
 longer, which may slightly increase memory usage. But as long as the
 ApplicationSpawner server is running, the time to spawn a Ruby on Rails backend
 process only takes about 10% of the time that is normally needed, assuming that
-you're using the 'smart' or 'smart-lv2' <<RailsSpawnMethod,spawning method>>. So if your
+you're using the 'smart' or 'smart-lv2' <<PassengerSpawnMethod,spawning method>>. So if your
 system has enough memory, is it recommended that you set this option to a high
 value or to '0'.
 
@@ -1402,6 +1810,9 @@ Deprecated in favor of <<PassengerDefaultUser,PassengerDefaultUser>>.
 
 ==== RailsAllowModRewrite ====
 This option doesn't do anything anymore in recent versions of Phusion Passenger.
+
+==== RailsSpawnMethod ====
+Deprecated in favor of <<PassengerSpawnMethod,PassengerSpawnMethod>>.
 
 
 == Troubleshooting ==
@@ -1593,7 +2004,7 @@ inside the Apache error logs. It will tell you what exactly went wrong.
 
 ==== My Rails application works on Mongrel, but not on Phusion Passenger ====
 
-Please try setting <<RailsSpawnMethod,RailsSpawnMethod>> to 'conservative'.
+Please try setting <<PassengerSpawnMethod,PassengerSpawnMethod>> to 'conservative'.
 
 ==== Phusion Passenger has been compiled against the wrong Apache installation ====
 
@@ -1610,7 +2021,7 @@ To solve this problem, please <<specifying_correct_apache_install,specify the
 correct Apache installation>>, and <<install_passenger,reinstall Phusion
 Passenger>>.
 
-==== I get a "304 Forbidden" error ====
+==== I get a "403 Forbidden" error ====
 
 See next subsection.
 
@@ -1708,6 +2119,46 @@ following command to give your Rails application folder that context:
 chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
 -----------------------------------------------------------
 
+==== I've deployed my app on SSL, but the app thinks its not on SSL ====
+
+Rails and many other frameworks infers whether it's running on SSL through the CGI
+environment variable `HTTPS`. Apache always sets this variable when on SSL,
+except when SSL is incorrectly configured.
+
+Most Apache installations already configure SSL by default on port 443
+(conf/extra/httpd-ssl.conf). Some people think they can save some typing in
+subsequent SSL vhost blocks, and omit important options like 'SSLEngine on',
+like this:
+
+--------------------------------------
+# httpd-ssl.conf contains something like:
+# <VirtualHost _default_:443>
+#     SSLEngine on
+#     ...
+# </VirtualHost>
+Include conf/extra/httpd-ssl.conf
+
+<VirtualHost *:443>
+    ServerName www.example.com
+    DocumentRoot /webapps/example/public
+</Virtualhost>
+--------------------------------------
+
+*This is wrong!* In each SSL vhost block you must re-specify all the SSL options.
+Otherwise Apache won't properly detect the vhost as an SSL vhost block. Here's
+the corrected example:
+
+--------------------------------------
+Include conf/extra/httpd-ssl.conf
+
+<VirtualHost *:443>
+    ServerName www.example.com
+    DocumentRoot /webapps/example/public
+    SSLEngine on
+    ...more SSL options here...
+</Virtualhost>
+--------------------------------------
+
 
 [[conflicting_apache_modules]]
 === Conflicting Apache modules ===
@@ -1726,9 +2177,9 @@ for all Phusion Passenger hosts.
 VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.
 
 
-== Analysis and system maintenance tools ==
+== Analysis and system maintenance ==
 
-include::users_guide_snippets/analysis_and_system_maintenance_tools.txt[]
+include::users_guide_snippets/analysis_and_system_maintenance.txt[]
 
 
 == Tips ==
@@ -1773,28 +2224,7 @@ These kind of mod_rewrite rules are no longer required, and you can safely remov
 them.
 
 === Page caching support ===
-For each HTTP request, Phusion Passenger will automatically look for a corresponding
-page cache file, and serve that if it exists. It does this by appending ".html" to
-the filename that the URI normally maps to, and checking whether that file exists.
-This check occurs after checking whether the original mapped filename exists (as part
-of static asset serving). All this is done without the need for special mod_rewrite
-rules.
-
-For example, suppose that the browser requests '/foo/bar'.
-
-1. Phusion Passenger will first check whether this URI maps to a static file, i.e.
-   whether the file 'foo/bar' exists in the web application's 'public' directory.
-   If it does then Phusion Passenger will serve this file through Apache immediately.
-2. If that doesn't exist, then Phusion Passenger will check whether the file
-   'foo/bar.html' exists. If it does then Phusion Passenger will serve this file
-   through Apache immediately.
-3. If 'foo/bar.html' doesn't exist either, then Phusion Passenger will forward the
-   request to the underlying web application.
-
-Note that Phusion Passenger's page caching support doesn't work if your web
-application uses a non-standard page cache directory, i.e. if it doesn't cache to
-the 'public' directory. In that case you'll need to use mod_rewrite to serve such
-page cache files.
+include::users_guide_snippets/under_the_hood/page_caching_support.txt[]
 
 [[application_detection]]
 === How Phusion Passenger detects whether a virtual host is a web application ===

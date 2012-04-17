@@ -6,7 +6,7 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2008-02-27 15:00:24 -0500 (Wed, 27 Feb 2008) $
+ * $Date: 2008-11-12 14:37:53 -0500 (Wed, 12 Nov 2008) $
  */
 
 
@@ -43,10 +43,11 @@ public:
    * wraps went. Ex: add a negative number and wrapping under could occur,
    * this would be indicated by a negative return value. If wrapping over 
    * took place, a positive value would be returned */
-  int_type add(int_type v) 
+  template< typename IntT >
+  IntT add(IntT v) 
   {
     int_type remainder = static_cast<int_type>(v % (wrap_val));
-    int_type overflow = static_cast<int_type>(v / (wrap_val));
+    IntT overflow = static_cast<IntT>(v / (wrap_val));
     value_ = static_cast<int_type>(value_ + remainder);
     return calculate_wrap(overflow);
   }
@@ -56,26 +57,28 @@ public:
    * Ex: subtract a negative number and wrapping over could 
    * occur, this would be indicated by a negative return value. If 
    * wrapping under took place, a positive value would be returned. */
-  int_type subtract(int_type v) 
+  template< typename IntT >
+  IntT subtract(IntT v) 
   {
     int_type remainder = static_cast<int_type>(v % (wrap_val));
-    int_type underflow = static_cast<int_type>(-(v / (wrap_val)));
+    IntT underflow = static_cast<IntT>(-(v / (wrap_val)));
     value_ = static_cast<int_type>(value_ - remainder);
     return calculate_wrap(underflow) * -1;
   }
 private:
   int_type value_;
 
-  int_type calculate_wrap(int_type wrap)
+  template< typename IntT >
+  IntT calculate_wrap(IntT wrap)
   {
     if ((value_) >= wrap_val) 
     {
-      wrap++;
+      ++wrap;
       value_ -= (wrap_val);
     }
     else if(value_ < 0) 
     {
-      wrap--;
+      --wrap;
       value_ += (wrap_val);
     }
     return wrap;
@@ -114,10 +117,11 @@ public:
    * wraps went. Ex: add a negative number and wrapping under could occur,
    * this would be indicated by a negative return value. If wrapping over 
    * took place, a positive value would be returned */
-  int_type add(int_type v) 
+  template< typename IntT >
+  IntT add(IntT v) 
   {
     int_type remainder = static_cast<int_type>(v % (wrap_max - wrap_min + 1));
-    int_type overflow = static_cast<int_type>(v / (wrap_max - wrap_min + 1));
+    IntT overflow = static_cast<IntT>(v / (wrap_max - wrap_min + 1));
     value_ = static_cast<int_type>(value_ + remainder);
     return calculate_wrap(overflow);
   }
@@ -126,10 +130,11 @@ public:
    * wraps went. Ex: subtract a negative number and wrapping over could 
    * occur, this would be indicated by a positive return value. If 
    * wrapping under took place, a negative value would be returned */
-  int_type subtract(int_type v) 
+  template< typename IntT >
+  IntT subtract(IntT v) 
   {
     int_type remainder = static_cast<int_type>(v % (wrap_max - wrap_min + 1));
-    int_type underflow = static_cast<int_type>(-(v / (wrap_max - wrap_min + 1)));
+    IntT underflow = static_cast<IntT>(-(v / (wrap_max - wrap_min + 1)));
     value_ = static_cast<int_type>(value_ - remainder);
     return calculate_wrap(underflow);
   }
@@ -137,16 +142,17 @@ public:
 private:
   int_type value_;
 
-  int_type calculate_wrap(int_type wrap)
+  template< typename IntT >
+  IntT calculate_wrap(IntT wrap)
   {
     if ((value_) > wrap_max) 
     {
-      wrap++;
+      ++wrap;
       value_ -= (wrap_max - wrap_min + 1);
     }
     else if((value_) < wrap_min) 
     {
-      wrap--;
+      --wrap;
       value_ += (wrap_max - wrap_min + 1);
     }
     return wrap;

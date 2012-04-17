@@ -36,20 +36,33 @@
 // FreeBSD 3.x has pthreads support, but defines _POSIX_THREADS in <pthread.h>
 // and not in <unistd.h>
 //
-#if (defined(__FreeBSD__) && (__FreeBSD__ <= 3)) || defined(__OpenBSD__)
+#if (defined(__FreeBSD__) && (__FreeBSD__ <= 3))\
+   || defined(__OpenBSD__) || defined(__DragonFly__) 
 #  define BOOST_HAS_PTHREADS
 #endif
 
 //
 // No wide character support in the BSD header files:
 //
-#if !(defined(__FreeBSD__) && (__FreeBSD__ >= 5))
+#if defined(__NetBSD__)
+#define __NetBSD_GCC__ (__GNUC__         * 1000000 \
+                       + __GNUC_MINOR__ *    1000 \
+                       + __GNUC_PATCHLEVEL__)
+// XXX - the following is required until c++config.h
+//       defines _GLIBCXX_HAVE_SWPRINTF and friends
+//       or the preprocessor conditionals are removed
+//       from the cwchar header.
+#define _GLIBCXX_HAVE_SWPRINTF 1
+#endif
+
+#if !((defined(__FreeBSD__) && (__FreeBSD__ >= 5)) \
+      || (defined(__NetBSD_GCC__) && (__NetBSD_GCC__ >= 2095003)) || defined(__DragonFly__))
 #  define BOOST_NO_CWCHAR
 #endif
 //
 // The BSD <ctype.h> has macros only, no functions:
 //
-#if !defined(__OpenBSD__)
+#if !defined(__OpenBSD__) || defined(__DragonFly__)
 #  define BOOST_NO_CTYPE_FUNCTIONS
 #endif
 

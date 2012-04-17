@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008 Phusion
+ * Copyright (c) 2010 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,19 @@ list<thread_registration *> _registered_threads;
 // Register main thread.
 static initialize_backtrace_support_for_this_thread main_thread_initialization("Main thread");
 
+
+namespace {
+	struct backtrace_data {
+		vector<trace_point *> list;
+		spin_lock lock;
+		
+		backtrace_data() {
+			list.reserve(50);
+		}
+	};
+}
+
+
 /*
  * boost::thread_specific_storage is pretty expensive. So we use the __thread
  * keyword whenever possible - that's almost free.
@@ -66,65 +79,60 @@ static initialize_backtrace_support_for_this_thread main_thread_initialization("
  */
 #if OXT_GCC_VERSION >= 40102 && !defined(__FreeBSD__) && \
    !defined(__SOLARIS__) && !defined(__OpenBSD__) && !defined(__APPLE__)
-	static __thread spin_lock *backtrace_lock = NULL;
-	static __thread vector<trace_point *> *current_backtrace = NULL;
+	static __thread backtrace_data *thread_specific_backtrace_data;
 	
 	void
 	_init_backtrace_tls() {
-		backtrace_lock = new spin_lock();
-		current_backtrace = new vector<trace_point *>();
-		current_backtrace->reserve(50);
+		thread_specific_backtrace_data = new backtrace_data();
 	}
 	
 	void
 	_finalize_backtrace_tls() {
-		delete backtrace_lock;
-		delete current_backtrace;
+		delete thread_specific_backtrace_data;
 	}
 	
-	spin_lock *
-	_get_backtrace_lock() {
-		return backtrace_lock;
-	}
-	
-	vector<trace_point *> *
-	_get_current_backtrace() {
-		return current_backtrace;
+	bool
+	_get_backtrace_list_and_its_lock(vector<trace_point *> **backtrace_list, spin_lock **lock) {
+		if (OXT_LIKELY(thread_specific_backtrace_data != NULL)) {
+			*backtrace_list = &thread_specific_backtrace_data->list;
+			*lock = &thread_specific_backtrace_data->lock;
+			return true;
+		} else {
+			return false;
+		}
 	}
 #else
-	static thread_specific_ptr<spin_lock> backtrace_lock;
-	static thread_specific_ptr< vector<trace_point *> > current_backtrace;
+	static thread_specific_ptr<backtrace_data> thread_specific_backtrace_data;
 	
 	void _init_backtrace_tls() {
-		// Not implemented.
+		/* Not implemented on purpose.
+		 *
+		 * It is not safe to use thread_specific_backtrace_data here
+		 * because this function may be called by
+		 * initialize_backtrace_support_for_this_thread's constructor,
+		 * which in turn may be called by the global static variable
+		 * main_thread_initialization. C++ does not guarantee initialization
+		 * order so thread_specific_backtrace_data may not be usable at
+		 * this time.
+		 */
 	}
 	
 	void _finalize_backtrace_tls() {
-		// Not implemented.
+		// Not implemented either.
 	}
-
-	spin_lock *
-	_get_backtrace_lock() {
-		spin_lock *result;
 	
-		result = backtrace_lock.get();
-		if (OXT_UNLIKELY(result == NULL)) {
-			result = new spin_lock();
-			backtrace_lock.reset(result);
+	bool
+	_get_backtrace_list_and_its_lock(vector<trace_point *> **backtrace_list, spin_lock **lock) {
+		backtrace_data *data;
+		
+		data = thread_specific_backtrace_data.get();
+		if (OXT_UNLIKELY(data == NULL)) {
+			data = new backtrace_data();
+			thread_specific_backtrace_data.reset(data);
 		}
-		return result;
-	}
-
-	vector<trace_point *> *
-	_get_current_backtrace() {
-		vector<trace_point *> *result;
-	
-		result = current_backtrace.get();
-		if (OXT_UNLIKELY(result == NULL)) {
-			result = new vector<trace_point *>();
-			current_backtrace.reset(result);
-		}
-		return result;
+		*backtrace_list = &data->list;
+		*lock = &data->lock;
+		return true;
 	}
 #endif
 

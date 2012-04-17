@@ -1,21 +1,22 @@
 //  Boost config.hpp configuration header file  ------------------------------//
 
-//  (C) Copyright John Maddock 2001 - 2003.
-//  (C) Copyright Darin Adler 2001.
-//  (C) Copyright Peter Dimov 2001.
-//  (C) Copyright Bill Kempf 2002.
-//  (C) Copyright Jens Maurer 2002.
-//  (C) Copyright David Abrahams 2002 - 2003.
-//  (C) Copyright Gennaro Prota 2003.
-//  (C) Copyright Eric Friedman 2003.
-//  Use, modification and distribution are subject to the
-//  Boost Software License, Version 1.0. (See accompanying file
-//  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//  Copyright (c) 2001-2003 John Maddock
+//  Copyright (c) 2001 Darin Adler
+//  Copyright (c) 2001 Peter Dimov
+//  Copyright (c) 2002 Bill Kempf 
+//  Copyright (c) 2002 Jens Maurer
+//  Copyright (c) 2002-2003 David Abrahams
+//  Copyright (c) 2003 Gennaro Prota
+//  Copyright (c) 2003 Eric Friedman
+//  Copyright (c) 2010 Eric Jourdanneau, Joel Falcou
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// http://www.boost.org/LICENSE_1_0.txt)
 
-//  See http://www.boost.org for most recent version.
+//  See http://www.boost.org/ for most recent version.
 
 //  Boost config.hpp policy and rationale documentation has been moved to
-//  http://www.boost.org/libs/config
+//  http://www.boost.org/libs/config/
 //
 //  This file is intended to be stable, and relatively unchanging.
 //  It should contain boilerplate code only - no compiler specific
@@ -24,17 +25,40 @@
 #ifndef BOOST_CONFIG_SUFFIX_HPP
 #define BOOST_CONFIG_SUFFIX_HPP
 
+#if defined(__GNUC__) && (__GNUC__ >= 4)
+//
+// Some GCC-4.x versions issue warnings even when __extension__ is used,
+// so use this as a workaround:
+//
+#pragma GCC system_header
+#endif
+
+//
+// ensure that visibility macros are always defined, thus symplifying use
+//
+#ifndef BOOST_SYMBOL_EXPORT
+# define BOOST_SYMBOL_EXPORT
+#endif
+#ifndef BOOST_SYMBOL_IMPORT
+# define BOOST_SYMBOL_IMPORT
+#endif
+#ifndef BOOST_SYMBOL_VISIBLE
+# define BOOST_SYMBOL_VISIBLE
+#endif
+
 //
 // look for long long by looking for the appropriate macros in <limits.h>.
 // Note that we use limits.h rather than climits for maximal portability,
 // remember that since these just declare a bunch of macros, there should be
 // no namespace issues from this.
 //
-#if !defined(BOOST_HAS_LONG_LONG)                                               \
+#if !defined(BOOST_HAS_LONG_LONG) && !defined(BOOST_NO_LONG_LONG)                                              \
    && !defined(BOOST_MSVC) && !defined(__BORLANDC__)
 # include <limits.h>
 # if (defined(ULLONG_MAX) || defined(ULONG_LONG_MAX) || defined(ULONGLONG_MAX))
 #   define BOOST_HAS_LONG_LONG
+# else
+#   define BOOST_NO_LONG_LONG
 # endif
 #endif
 
@@ -80,6 +104,13 @@
 #endif
 
 //
+// Normalize BOOST_NO_STATIC_ASSERT and (depricated) BOOST_HAS_STATIC_ASSERT:
+//
+#if !defined(BOOST_NO_STATIC_ASSERT) && !defined(BOOST_HAS_STATIC_ASSERT)
+#  define BOOST_HAS_STATIC_ASSERT
+#endif
+
+//
 // if there is no __int64 then there is no specialisation
 // for numeric_limits<__int64> either:
 //
@@ -121,6 +152,15 @@
 #  endif
 
 //
+// Without partial specialization, partial 
+// specialization with default args won't work either:
+//
+#  if defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION) \
+      && !defined(BOOST_NO_PARTIAL_SPECIALIZATION_IMPLICIT_DEFAULT_ARGS)
+#     define BOOST_NO_PARTIAL_SPECIALIZATION_IMPLICIT_DEFAULT_ARGS
+#  endif
+
+//
 // Without member template support, we can't have template constructors
 // in the standard library either:
 //
@@ -145,6 +185,13 @@
 //
 #if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP) && !defined(BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL)
 #  define BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL
+#endif
+
+//
+// Without typeid support we have no dynamic RTTI either:
+//
+#if defined(BOOST_NO_TYPEID) && !defined(BOOST_NO_RTTI)
+#  define BOOST_NO_RTTI
 #endif
 
 //
@@ -206,7 +253,8 @@
 // from here then add to the appropriate compiler section):
 //
 #if (defined(__MT__) || defined(_MT) || defined(_REENTRANT) \
-    || defined(_PTHREADS)) && !defined(BOOST_HAS_THREADS)
+    || defined(_PTHREADS) || defined(__APPLE__) || defined(__DragonFly__)) \
+    && !defined(BOOST_HAS_THREADS)
 #  define BOOST_HAS_THREADS
 #endif
 
@@ -232,6 +280,8 @@
 #ifndef BOOST_HAS_THREADS
 #  undef BOOST_HAS_PTHREADS
 #  undef BOOST_HAS_PTHREAD_MUTEXATTR_SETTYPE
+#  undef BOOST_HAS_PTHREAD_YIELD
+#  undef BOOST_HAS_PTHREAD_DELAY_NP
 #  undef BOOST_HAS_WINTHREADS
 #  undef BOOST_HAS_BETHREADS
 #  undef BOOST_HAS_MPTASKS
@@ -255,11 +305,11 @@
 // Define BOOST_NO_SLIST and BOOST_NO_HASH if required.
 // Note that this is for backwards compatibility only.
 //
-#  ifndef BOOST_HAS_SLIST
+#  if !defined(BOOST_HAS_SLIST) && !defined(BOOST_NO_SLIST)
 #     define BOOST_NO_SLIST
 #  endif
 
-#  ifndef BOOST_HAS_HASH
+#  if !defined(BOOST_HAS_HASH) && !defined(BOOST_NO_HASH)
 #     define BOOST_NO_HASH
 #  endif
 
@@ -284,6 +334,38 @@
 #  define BOOST_HASH_MAP_HEADER <hash_map>
 #endif
 
+//
+// Set BOOST_NO_INITIALIZER_LISTS if there is no library support.
+//
+
+#if defined(BOOST_NO_0X_HDR_INITIALIZER_LIST) && !defined(BOOST_NO_INITIALIZER_LISTS)
+#  define BOOST_NO_INITIALIZER_LISTS
+#endif
+#if defined(BOOST_NO_INITIALIZER_LISTS) && !defined(BOOST_NO_0X_HDR_INITIALIZER_LIST)
+#  define BOOST_NO_0X_HDR_INITIALIZER_LIST
+#endif
+
+//
+// Set BOOST_HAS_RVALUE_REFS when BOOST_NO_RVALUE_REFERENCES is not defined
+//
+#if !defined(BOOST_NO_RVALUE_REFERENCES) && !defined(BOOST_HAS_RVALUE_REFS)
+#define BOOST_HAS_RVALUE_REFS
+#endif
+
+//
+// Set BOOST_HAS_VARIADIC_TMPL when BOOST_NO_VARIADIC_TEMPLATES is not defined
+//
+#if !defined(BOOST_NO_VARIADIC_TEMPLATES) && !defined(BOOST_HAS_VARIADIC_TMPL)
+#define BOOST_HAS_VARIADIC_TMPL
+#endif
+
+//
+// Set BOOST_NO_DECLTYPE_N3276 when BOOST_NO_DECLTYPE is defined
+//
+#if !defined(BOOST_NO_DECLTYPE_N3276) && defined(BOOST_NO_DECLTYPE)
+#define BOOST_NO_DECLTYPE_N3276
+#endif
+
 //  BOOST_HAS_ABI_HEADERS
 //  This macro gets set if we have headers that fix the ABI,
 //  and prevent ODR violations when linking to external libraries:
@@ -304,7 +386,7 @@
 //  works as expected with standard conforming compilers.  The resulting
 //  double inclusion of <cstddef> is harmless.
 
-# ifdef BOOST_NO_STDC_NAMESPACE
+# if defined(BOOST_NO_STDC_NAMESPACE) && defined(__cplusplus)
 #   include <cstddef>
     namespace std { using ::ptrdiff_t; using ::size_t; }
 # endif
@@ -323,7 +405,7 @@
 
 //  BOOST_NO_STD_MIN_MAX workaround  -----------------------------------------//
 
-#  ifdef BOOST_NO_STD_MIN_MAX
+#  if defined(BOOST_NO_STD_MIN_MAX) && defined(__cplusplus)
 
 namespace std {
   template <class _Tp>
@@ -361,7 +443,7 @@ namespace std {
 //    with
 //       BOOST_USE_FACET(Type, loc);
 //    Note do not add a std:: prefix to the front of BOOST_USE_FACET!
-//  Use for BOOST_HAS_FACET is analagous.
+//  Use for BOOST_HAS_FACET is analogous.
 
 #if defined(BOOST_NO_STD_USE_FACET)
 #  ifdef BOOST_HAS_TWO_ARG_USE_FACET
@@ -423,12 +505,18 @@ namespace std {
 #  define BOOST_DEDUCED_TYPENAME
 #endif
 
+#ifndef BOOST_NO_TYPENAME_WITH_CTOR
+#  define BOOST_CTOR_TYPENAME typename
+#else
+#  define BOOST_CTOR_TYPENAME
+#endif
+
 // long long workaround ------------------------------------------//
 // On gcc (and maybe other compilers?) long long is alway supported
 // but it's use may generate either warnings (with -ansi), or errors
 // (with -pedantic -ansi) unless it's use is prefixed by __extension__
 //
-#if defined(BOOST_HAS_LONG_LONG)
+#if defined(BOOST_HAS_LONG_LONG) && defined(__cplusplus)
 namespace boost{
 #  ifdef __GNUC__
    __extension__ typedef long long long_long_type;
@@ -442,12 +530,11 @@ namespace boost{
 
 // BOOST_[APPEND_]EXPLICIT_TEMPLATE_[NON_]TYPE macros --------------------------//
 //
-// Some compilers have problems with function templates whose
-// template parameters don't appear in the function parameter
-// list (basically they just link one instantiation of the
-// template in the final executable). These macros provide a
-// uniform way to cope with the problem with no effects on the
-// calling syntax.
+// Some compilers have problems with function templates whose template
+// parameters don't appear in the function parameter list (basically
+// they just link one instantiation of the template in the final
+// executable). These macros provide a uniform way to cope with the
+// problem with no effects on the calling syntax.
 
 // Example:
 //
@@ -483,23 +570,23 @@ namespace boost{
 //
 
 
-#if defined BOOST_NO_EXPLICIT_FUNCTION_TEMPLATE_ARGUMENTS
+#if defined(BOOST_NO_EXPLICIT_FUNCTION_TEMPLATE_ARGUMENTS) && defined(__cplusplus)
 
 #  include "boost/type.hpp"
 #  include "boost/non_type.hpp"
 
-#  define BOOST_EXPLICIT_TEMPLATE_TYPE(t)         boost::type<t>* = 0
-#  define BOOST_EXPLICIT_TEMPLATE_TYPE_SPEC(t)    boost::type<t>*
-#  define BOOST_EXPLICIT_TEMPLATE_NON_TYPE(t, v)  boost::non_type<t, v>* = 0
+#  define BOOST_EXPLICIT_TEMPLATE_TYPE(t)              boost::type<t>* = 0
+#  define BOOST_EXPLICIT_TEMPLATE_TYPE_SPEC(t)         boost::type<t>*
+#  define BOOST_EXPLICIT_TEMPLATE_NON_TYPE(t, v)       boost::non_type<t, v>* = 0
 #  define BOOST_EXPLICIT_TEMPLATE_NON_TYPE_SPEC(t, v)  boost::non_type<t, v>*
 
-#  define BOOST_APPEND_EXPLICIT_TEMPLATE_TYPE(t)         \
+#  define BOOST_APPEND_EXPLICIT_TEMPLATE_TYPE(t)        \
              , BOOST_EXPLICIT_TEMPLATE_TYPE(t)
-#  define BOOST_APPEND_EXPLICIT_TEMPLATE_TYPE_SPEC(t)    \
+#  define BOOST_APPEND_EXPLICIT_TEMPLATE_TYPE_SPEC(t)   \
              , BOOST_EXPLICIT_TEMPLATE_TYPE_SPEC(t)
-#  define BOOST_APPEND_EXPLICIT_TEMPLATE_NON_TYPE(t, v)  \
+#  define BOOST_APPEND_EXPLICIT_TEMPLATE_NON_TYPE(t, v) \
              , BOOST_EXPLICIT_TEMPLATE_NON_TYPE(t, v)
-#  define BOOST_APPEND_EXPLICIT_TEMPLATE_NON_TYPE_SPEC(t, v)  \
+#  define BOOST_APPEND_EXPLICIT_TEMPLATE_NON_TYPE_SPEC(t, v)    \
              , BOOST_EXPLICIT_TEMPLATE_NON_TYPE_SPEC(t, v)
 
 #else
@@ -519,6 +606,12 @@ namespace boost{
 
 #endif // defined BOOST_NO_EXPLICIT_FUNCTION_TEMPLATE_ARGUMENTS
 
+// When BOOST_NO_STD_TYPEINFO is defined, we can just import
+// the global definition into std namespace:
+#if defined(BOOST_NO_STD_TYPEINFO) && defined(__cplusplus)
+#include <typeinfo>
+namespace std{ using ::type_info; }
+#endif
 
 // ---------------------------------------------------------------------------//
 
@@ -543,6 +636,20 @@ namespace boost{
 #define BOOST_DO_JOIN2( X, Y ) X##Y
 
 //
+// Helper macros BOOST_NOEXCEPT, BOOST_NOEXCEPT_IF, BOOST_NOEXCEPT_EXPR
+// These aid the transition to C++11 while still supporting C++03 compilers
+//
+#ifdef BOOST_NO_NOEXCEPT
+#  define BOOST_NOEXCEPT
+#  define BOOST_NOEXCEPT_IF(Predicate)
+#  define BOOST_NOEXCEPT_EXPR(Expression) false
+#else
+#  define BOOST_NOEXCEPT noexcept
+#  define BOOST_NOEXCEPT_IF(Predicate) noexcept((Predicate))
+#  define BOOST_NOEXCEPT_EXPR(Expression) noexcept((Expression))
+#endif
+
+//
 // Set some default values for compiler/library/platform names.
 // These are for debugging config setup only:
 //
@@ -561,6 +668,37 @@ namespace boost{
 #     endif
 #  endif
 
+//
+// Set some default values GPU support
+//
+#  ifndef BOOST_GPU_ENABLED
+#  define BOOST_GPU_ENABLED 
+#  endif
+
+//
+// constexpr workarounds
+// 
+#if defined(BOOST_NO_CONSTEXPR)
+#define BOOST_CONSTEXPR
+#define BOOST_CONSTEXPR_OR_CONST const
+#else
+#define BOOST_CONSTEXPR constexpr
+#define BOOST_CONSTEXPR_OR_CONST constexpr
 #endif
 
+#define BOOST_STATIC_CONSTEXPR  static BOOST_CONSTEXPR_OR_CONST
+
+// BOOST_FORCEINLINE ---------------------------------------------//
+// Macro to use in place of 'inline' to force a function to be inline
+#if !defined(BOOST_FORCEINLINE)
+#  if defined(_MSC_VER)
+#    define BOOST_FORCEINLINE __forceinline
+#  elif defined(__GNUC__) && __GNUC__ > 3
+#    define BOOST_FORCEINLINE inline __attribute__ ((always_inline))
+#  else
+#    define BOOST_FORCEINLINE inline
+#  endif
+#endif
+
+#endif
 

@@ -1,0 +1,1 @@
+LoadModule passenger_module /usr/lib/apache2/modules/mod_passenger.so

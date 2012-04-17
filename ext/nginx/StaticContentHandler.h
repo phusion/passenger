@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2008 Phusion
+ * Copyright (C) 2010 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #ifndef _PASSENGER_NGINX_STATIC_CONTENT_HANDLER_H_
 #define _PASSENGER_NGINX_STATIC_CONTENT_HANDLER_H_
 
+#include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
 

@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -21,7 +21,15 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'rbconfig'
+require 'phusion_passenger'
+require 'phusion_passenger/packaging'
 require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/apache'
+require 'phusion_passenger/platform_info/ruby'
+require 'phusion_passenger/platform_info/linux'
+require 'phusion_passenger/platform_info/curl'
+
 module PhusionPassenger
 
 # Represents a dependency software that Passenger requires. It's used by the
@@ -100,6 +108,14 @@ module Dependencies # :nodoc: all
 	def self.fastthread_required?
 		return (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
 	end
+	
+	# Returns whether Mizuho is required in order to be able to package all files
+	# in the packaging list.
+	def self.mizuho_required?
+		return Packaging::ASCII_DOCS.any? do |fn|
+			!File.exist?("#{PhusionPassenger.doc_dir}/#{fn}")
+		end
+	end
 
 	GCC = Dependency.new do |dep|
 		dep.name = "GNU C++ compiler"
@@ -128,13 +144,91 @@ module Dependencies # :nodoc: all
 		dep.website = "http://gcc.gnu.org/"
 	end
 	
+	Make = Dependency.new do |dep|
+		dep.name = "The 'make' tool"
+		dep.define_checker do |result|
+			make = PlatformInfo.find_command('make')
+			if make
+				result.found(make)
+			else
+				result.not_found
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			case PlatformInfo.linux_distro
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install build-essential"
+			when :rhel, :fedora, :centos
+				dep.install_command = "yum install make"
+			end
+		elsif RUBY_PLATFORM =~ /darwin/
+			dep.install_instructions = "Please install the Apple Development Tools: http://developer.apple.com/tools/"
+		end
+		dep.website = "http://www.gnu.org/software/make/"
+	end
+	
+	GnuMake = Dependency.new do |dep|
+		dep.name = "GNU make"
+		dep.define_checker do |result|
+			make = PlatformInfo.gnu_make
+			if make
+				result.found(make)
+			else
+				result.not_found
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			case PlatformInfo.linux_distro
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install build-essential"
+			when :rhel, :fedora, :centos
+				dep.install_command = "yum install make"
+			end
+		elsif RUBY_PLATFORM =~ /darwin/
+			dep.install_instructions = "Please install the Apple Development Tools: http://developer.apple.com/tools/"
+		end
+		dep.website = "http://www.gnu.org/software/make/"
+	end
+	
+	DownloadTool = Dependency.new do |dep|
+		dep.name = "A download tool like 'wget' or 'curl'"
+		dep.define_checker do |result|
+			tool = PlatformInfo.find_command('wget')
+			if tool
+				result.found(tool)
+			else
+				tool = PlatformInfo.find_command('curl')
+				if tool
+					result.found(tool)
+				else
+					result.not_found
+				end
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			case PlatformInfo.linux_distro
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install wget curl"
+			when :rhel, :fedora, :centos
+				dep.install_command = "yum install wget curl"
+			end
+		else
+			dep.install_instructions = "Please install either wget (http://www.gnu.org/software/wget/) or curl (http://curl.haxx.se/)."
+		end
+	end
+	
 	Ruby_DevHeaders = Dependency.new do |dep|
 		dep.name = "Ruby development headers"
 		dep.define_checker do |result|
 			require 'rbconfig'
 			begin
 				require 'mkmf'
-				header_dir = Config::CONFIG['rubyhdrdir'] || Config::CONFIG['archdir']
+				if defined?(::RbConfig)
+					config = ::RbConfig::CONFIG
+				else
+					config = ::Config::CONFIG
+				end
+				header_dir = config['rubyhdrdir'] || config['archdir']
 				result.found(File.exist?("#{header_dir}/ruby.h"))
 			rescue LoadError, SystemExit
 				# On RedHat/Fedora/CentOS, if ruby-devel is not installed then
@@ -209,7 +303,7 @@ module Dependencies # :nodoc: all
 			end
 		end
 		dep.website = "http://rake.rubyforge.org/"
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install rake</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install rake</b>"
 	end
 	
 	Apache2 = Dependency.new do |dep|
@@ -313,6 +407,8 @@ module Dependencies # :nodoc: all
 				dep.install_command = "apt-get install libaprutil1-dev"
 			elsif tags.include?(:mandriva)
 				dep.install_command = "urpmi libapr-util-devel"
+			elsif tags.include?(:redhat)
+				dep.install_command = "yum install apr-util-devel"
 			end
 		elsif RUBY_PLATFORM =~ /darwin/
 			dep.install_instructions = "Please install Apache from MacPorts, which will " <<
@@ -337,7 +433,7 @@ module Dependencies # :nodoc: all
 				result.not_found
 			end
 		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install fastthread</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install fastthread</b>"
 	end
 
 	Rack = Dependency.new do |dep|
@@ -354,14 +450,72 @@ module Dependencies # :nodoc: all
 				result.not_found
 			end
 		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install rack</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install rack</b>"
+	end
+	
+	Curl_Dev = Dependency.new do |dep|
+		dep.name = "Curl development headers with SSL support"
+		dep.define_checker do |result|
+			source_file = "#{PlatformInfo.tmpexedir}/passenger-curl-check.c"
+			output_file = "#{PlatformInfo.tmpexedir}/passenger-curl-check"
+			begin
+				found = true
+				File.open(source_file, 'w') do |f|
+					f.puts("#include <curl/curl.h>")
+					f.puts("int main() {")
+					f.puts("  curl_global_init(CURL_GLOBAL_ALL);")
+					f.puts("  return 0;")
+					f.puts("}")
+				end
+				Dir.chdir(File.dirname(source_file)) do
+					command = "(gcc #{ENV['CFLAGS']} " +
+						"-o '#{output_file}' '#{source_file}' " +
+						"#{PlatformInfo.curl_flags} #{PlatformInfo.curl_libs}) " +
+						">/dev/null 2>/dev/null"
+					if !system(command)
+						found = false
+					end
+				end
+				
+				if found && !PlatformInfo.curl_supports_ssl?
+					dep.install_comments = "Curl was found, but it doesn't support SSL."
+					found = false
+				end
+				result.found(found)
+			ensure
+				File.unlink(source_file) rescue nil
+				File.unlink(output_file) rescue nil
+			end
+		end
+		dep.install_instructions = "Please download Curl from <b>http://curl.haxx.se/libcurl</b> " +
+			"and make sure you install it <b>with SSL support</b>."
+		if RUBY_PLATFORM =~ /linux/
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
+				dep.install_instructions = "Please run " +
+					"<b>apt-get install libcurl4-openssl-dev</b> " +
+					"or <b>libcurl4-gnutls-dev</b>, whichever you prefer."
+			elsif tags.include?(:redhat)
+				begin
+					release = File.read("/etc/redhat-release")
+				rescue
+					release = nil
+				end
+				if release =~ /release 4/
+					# http://code.google.com/p/phusion-passenger/issues/detail?id=554
+					dep.install_command = "yum install zlib-devel e2fsprogs-devel krb5-devel libidn-devel"
+				else
+					dep.install_command = "yum install curl-devel"
+				end
+			end
+		end
 	end
 	
 	OpenSSL_Dev = Dependency.new do |dep|
 		dep.name = "OpenSSL development headers"
 		dep.define_checker do |result|
-			source_file = '/tmp/passenger-openssl-check.c'
-			object_file = '/tmp/passenger-openssl-check.o'
+			source_file = "#{PlatformInfo.tmpexedir}/passenger-openssl-check.c"
+			object_file = "#{PlatformInfo.tmpexedir}/passenger-openssl-check.o"
 			begin
 				File.open(source_file, 'w') do |f|
 					f.write("#include <openssl/ssl.h>")
@@ -392,20 +546,22 @@ module Dependencies # :nodoc: all
 	Zlib_Dev = Dependency.new do |dep|
 		dep.name = "Zlib development headers"
 		dep.define_checker do |result|
+			source_file = "#{PlatformInfo.tmpexedir}/zlib-check.c"
+			object_file = "#{PlatformInfo.tmpexedir}/zlib-check.o"
 			begin
-				File.open('/tmp/r8ee-check.c', 'w') do |f|
+				File.open(source_file, 'w') do |f|
 					f.write("#include <zlib.h>")
 				end
-				Dir.chdir('/tmp') do
-					if system("(g++ -c r8ee-check.c) >/dev/null 2>/dev/null")
+				Dir.chdir(File.dirname(source_file)) do
+					if system("(g++ -c zlib-check.c) >/dev/null 2>/dev/null")
 						result.found
 					else
 						result.not_found
 					end
 				end
 			ensure
-				File.unlink('/tmp/r8ee-check.c') rescue nil
-				File.unlink('/tmp/r8ee-check.o') rescue nil
+				File.unlink(source_file) rescue nil
+				File.unlink(object_file) rescue nil
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
@@ -419,6 +575,52 @@ module Dependencies # :nodoc: all
 			end
 		end
 		dep.website = "http://www.zlib.net/"
+	end
+	
+	Daemon_Controller = Dependency.new do |dep|
+		dep.name = "daemon_controller >= 0.2.5"
+		dep.install_instructions = "Please install RubyGems first, then run " <<
+			"<b>#{PlatformInfo.gem_command || "gem"} install daemon_controller</b>"
+		dep.define_checker do |result|
+			begin
+				begin
+					require 'rubygems'
+				rescue LoadError
+				end
+				require 'daemon_controller'
+				begin
+					require 'daemon_controller/version'
+					too_old = DaemonController::VERSION_STRING < '0.2.5'
+				rescue LoadError
+					too_old = true
+				end
+				if too_old
+					result.not_found
+					dep.install_instructions = "Your version of daemon_controller is too old. " <<
+						"Please upgrade with the following commands:\n" <<
+						"   <b>#{PlatformInfo.gem_command || "gem"} uninstall FooBarWidget-daemon_controller</b>\n" <<
+						"   <b>#{PlatformInfo.gem_command || "gem"} install daemon_controller</b>"
+				else
+					result.found
+				end
+			rescue LoadError
+				result.not_found
+			end
+		end
+	end
+	
+	Mizuho = Dependency.new do |dep|
+		dep.name = "Mizuho"
+		dep.define_checker do |result|
+			mizuho = PlatformInfo.find_command('mizuho')
+			if mizuho.nil?
+				result.not_found
+			else
+				result.found(mizuho)
+			end
+		end
+		dep.website = "http://github.com/FooBarWidget/mizuho"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install mizuho</b>"
 	end
 end
 

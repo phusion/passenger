@@ -1,0 +1,26 @@
+<banner>Deploying a Ruby on Rails application: an example</banner>
+
+Suppose you have a Rails application in <b>/somewhere</b>. Add a virtual host to your
+Apache configuration file and set its DocumentRoot to <b>/somewhere/public</b>:
+<b>
+   <VirtualHost *:80>
+      ServerName www.yourhost.com
+      # !!! Be sure to point DocumentRoot to 'public'!
+      DocumentRoot /somewhere/public    
+      <Directory /somewhere/public>
+         # This relaxes Apache security settings.
+         AllowOverride all
+         # MultiViews must be turned off.
+         Options -MultiViews
+      </Directory>
+   </VirtualHost>
+</b>
+And that's it! You may also want to check the Users Guide for security and
+optimization tips, troubleshooting and other useful information:
+
+  <yellow><%= @users_guide %></yellow>
+
+Enjoy Phusion Passenger, a product of Phusion (<b><%= @phusion_website %></b>) :-)
+<b><%= @passenger_website %></b>
+
+Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.

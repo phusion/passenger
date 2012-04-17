@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008 Phusion
+ * Copyright (c) 2010 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,9 @@
 	                     + __GNUC_PATCH_LEVEL__)
 #endif
 
-#if (OXT_GCC_VERSION > 40100 && defined(__i386__)) || defined(IN_DOXYGEN)
+#if defined(__APPLE__)
+	#include "detail/spin_lock_darwin.hpp"
+#elif (OXT_GCC_VERSION > 40100 && (defined(__i386__) || defined(__x86_64__))) || defined(IN_DOXYGEN)
 	// GCC 4.0 doesn't support __sync instructions while GCC 4.2
 	// does. I'm not sure whether support for it started in 4.1 or
 	// 4.2, so the above version check may have to be changed later.

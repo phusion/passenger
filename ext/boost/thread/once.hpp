@@ -18,6 +18,8 @@
 #error "Boost threads unavailable on this platform"
 #endif
 
+#include <boost/config/abi_prefix.hpp>
+
 namespace boost
 {
     inline void call_once(void (*func)(),once_flag& flag)
@@ -25,5 +27,7 @@ namespace boost
         call_once(flag,func);
     }
 }
+
+#include <boost/config/abi_suffix.hpp>
 
 #endif

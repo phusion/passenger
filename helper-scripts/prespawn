@@ -1,0 +1,145 @@
+#!/usr/bin/env ruby
+#  Phusion Passenger - http://www.modrails.com/
+#  Copyright (c) 2010, 2011 Phusion
+#
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+
+STDOUT.sync = true
+STDERR.sync = true
+
+require 'uri'
+require 'socket'
+
+class PrespawnLocation
+	class InvalidURLError < RuntimeError
+		def initialize(url)
+			@url = url
+		end
+
+		def to_s
+			message
+		end
+
+		def message
+			"'#{@url}' is not a valid URL."
+		end
+	end
+
+	def self.parse(url)
+		uri = uri_for(url)
+
+		location = if uri.host == 'unix'
+			UNIXPrespawnLocation.new(uri)
+		else
+			case uri.scheme
+				when 'http'
+					TCPPrespawnLocation.new(uri)
+				when 'https'
+					SSLPrespawnLocation.new(uri)
+			end
+		end
+
+		unless location
+			raise InvalidURLError, url
+		end
+
+		location
+	end
+
+	def self.uri_for(url)
+		URI.parse(url)
+	rescue URI::InvalidURIError
+		raise InvalidURLError, url
+	end
+
+	def initialize(uri)
+		@uri = uri
+	end
+
+	def request_path
+		@uri.path.empty? ? '/' : @uri.path
+	end
+
+	def request_host
+		@uri.host
+	end
+
+	def socket
+		@socket ||= connect
+	end
+
+	def head_request
+		socket.write("HEAD #{request_path} HTTP/1.1\r\n")
+		socket.write("Host: #{request_host}\r\n")
+		socket.write("Connection: close\r\n")
+		socket.write("\r\n")
+
+		socket.read
+	end
+end
+
+class TCPPrespawnLocation < PrespawnLocation
+	def request_port
+		@uri.port
+	end
+
+	def connect
+		TCPSocket.new('127.0.0.1', request_port)
+	end
+end
+
+class SSLPrespawnLocation < TCPPrespawnLocation
+	def connect
+		require 'openssl'
+		socket = OpenSSL::SSL::SSLSocket.new(super)
+		socket.sync_close = true
+		socket.connect
+		socket
+	end
+end
+
+class UNIXPrespawnLocation < PrespawnLocation
+	def request_path
+		super.split(':', 2).last
+	end
+
+	def request_host
+		'_'
+	end
+
+	def socket_path
+		@uri.path.split(':', 2).first
+	end
+
+	def connect
+		UNIXSocket.new(socket_path)
+	end
+end
+
+url = ARGV[0]
+begin
+	prespawn_location = PrespawnLocation.parse(url)
+rescue PrespawnLocation::InvalidURLError => e
+	STDERR.puts "*** ERROR: #{e}"
+	exit 1
+end
+
+prespawn_location.head_request

@@ -39,7 +39,7 @@ namespace boost {
             public:
                 // Construction
                 const_formatF(const RangeT& Format) :
-                    m_Format(begin(Format), end(Format)) {}
+                    m_Format(::boost::begin(Format), ::boost::end(Format)) {}
 
                 // Operation
 #if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
@@ -70,7 +70,7 @@ namespace boost {
                 template< typename Range2T >
                 const RangeT& operator()(const Range2T& Replace) const
                 {
-                    return RangeT(begin(Replace), end(Replace));
+                    return RangeT(::boost::begin(Replace), ::boost::end(Replace));
                 }
             };
 
@@ -86,6 +86,31 @@ namespace boost {
                     return empty_container<CharT>();
                 }
             };
+
+//  dissect format functor ----------------------------------------------------//
+
+            // dissect format functor
+            template<typename FinderT>
+            struct dissect_formatF
+            {
+            public:
+                // Construction
+                dissect_formatF(FinderT Finder) :
+                  m_Finder(Finder) {}
+
+                  // Operation
+                  template<typename RangeT>
+                  inline iterator_range< 
+                      BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type>
+                  operator()(const RangeT& Replace) const
+                  {
+                      return m_Finder(::boost::begin(Replace), ::boost::end(Replace));
+                  }
+
+            private:
+                FinderT m_Finder;
+            };
+
 
         } // namespace detail
     } // namespace algorithm

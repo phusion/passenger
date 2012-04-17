@@ -19,6 +19,9 @@ namespace boost {
 //* is a type T an [cv-qualified-] integral type described in the standard (3.9.1p3)
 // as an extention we include long long, as this is likely to be added to the
 // standard at a later date
+#if defined( __CODEGEARC__ )
+BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_integral,T,__is_integral(T))
+#else
 BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_integral,T,false)
 
 BOOST_TT_AUX_BOOL_TRAIT_CV_SPEC1(is_integral,unsigned char,true)
@@ -65,6 +68,8 @@ BOOST_TT_AUX_BOOL_TRAIT_CV_SPEC1(is_integral, ::boost::long_long_type,true)
 BOOST_TT_AUX_BOOL_TRAIT_CV_SPEC1(is_integral,unsigned __int64,true)
 BOOST_TT_AUX_BOOL_TRAIT_CV_SPEC1(is_integral,__int64,true)
 #endif
+
+#endif  // non-CodeGear implementation
 
 } // namespace boost
 

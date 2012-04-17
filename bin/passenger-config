@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,22 +22,58 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
-$LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
-require 'phusion_passenger/constants'
+source_root = File.expand_path("..", File.dirname(__FILE__))
+$LOAD_PATH.unshift("#{source_root}/lib")
+require 'phusion_passenger'
+PhusionPassenger.locate_directories
+
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/compiler'
 
 def help
 	puts "Tool for showing Passenger configuration information."
-	puts "Usage: passenger-config <OPTIONS>"
+	puts "Usage: passenger-config <OPTION>"
 	puts
 	puts "Options:"
-	puts "  --root      Show Passenger's root directory."
-	puts "  --version   Show Passenger's version number."
+	puts "  --root                     Show Phusion Passenger's root directory."
+	puts "  --nginx-module-source-dir  Show the Nginx module source's directory."
+	puts "  --nginx-libs               Show Nginx runtime library flags."
+	puts "  --includedir               Show header location."
+	puts "  --compiled                 Check whether runtime libraries are compiled."
+	puts "  --version                  Show version number."
+end
+
+def common_library
+	require 'phusion_passenger/common_library'
+	return COMMON_LIBRARY.
+		only(*NGINX_LIBS_SELECTOR).
+		set_output_dir("#{PhusionPassenger.runtime_libdir}/libpassenger_common")
 end
 
 case ARGV[0]
 when "--root"
-	puts PASSENGER_ROOT
+	puts PhusionPassenger.root
+when "--nginx-module-source-dir"
+	puts PhusionPassenger.nginx_module_source_dir
+when "--nginx-libs"
+	text = "#{common_library.link_objects_as_string} #{PhusionPassenger.runtime_libdir}/libboost_oxt.a"
+	if PhusionPassenger::PlatformInfo.has_math_library?
+		text << " -lm"
+	end
+	puts text
+when "--includedir"
+	puts PhusionPassenger.header_dir
+when "--compiled"
+	common_library.link_objects.each do |filename|
+		if !File.exist?(filename)
+			exit 1
+		end
+	end
+	if File.exist?("#{PhusionPassenger.runtime_libdir}/libboost_oxt.a")
+		exit 0
+	else
+		exit 1
+	end
 when "--version"
 	puts PhusionPassenger::VERSION_STRING
 else

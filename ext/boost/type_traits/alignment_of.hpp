@@ -12,6 +12,7 @@
 #include <boost/config.hpp>
 #include <cstddef>
 
+#include <boost/type_traits/intrinsics.hpp>
 // should be the last #include
 #include <boost/type_traits/detail/size_t_trait_def.hpp>
 
@@ -30,6 +31,10 @@ template <typename T> struct alignment_of;
 // get the alignment of some arbitrary type:
 namespace detail {
 
+#ifdef BOOST_MSVC
+#pragma warning(push)
+#pragma warning(disable:4324) // structure was padded due to __declspec(align())
+#endif
 template <typename T>
 struct alignment_of_hack
 {
@@ -37,7 +42,9 @@ struct alignment_of_hack
     T t;
     alignment_of_hack();
 };
-
+#ifdef BOOST_MSVC
+#pragma warning(pop)
+#endif
 
 template <unsigned A, unsigned S>
 struct alignment_logic
@@ -49,11 +56,32 @@ struct alignment_logic
 template< typename T >
 struct alignment_of_impl
 {
+#if defined(BOOST_MSVC) && (BOOST_MSVC >= 1400)
+    //
+    // With MSVC both the native __alignof operator
+    // and our own logic gets things wrong from time to time :-(
+    // Using a combination of the two seems to make the most of a bad job:
+    //
+    BOOST_STATIC_CONSTANT(std::size_t, value =
+        (::boost::detail::alignment_logic<
+            sizeof(::boost::detail::alignment_of_hack<T>) - sizeof(T),
+            __alignof(T)
+        >::value));
+#elif !defined(BOOST_ALIGNMENT_OF)
     BOOST_STATIC_CONSTANT(std::size_t, value =
         (::boost::detail::alignment_logic<
             sizeof(::boost::detail::alignment_of_hack<T>) - sizeof(T),
             sizeof(T)
         >::value));
+#else
+   //
+   // We put this here, rather than in the definition of
+   // alignment_of below, because MSVC's __alignof doesn't
+   // always work in that context for some unexplained reason.
+   // (See type_with_alignment tests for test cases).
+   //
+   BOOST_STATIC_CONSTANT(std::size_t, value = BOOST_ALIGNMENT_OF(T));
+#endif
 };
 
 } // namespace detail
@@ -65,7 +93,7 @@ BOOST_TT_AUX_SIZE_T_TRAIT_DEF1(alignment_of,T,::boost::detail::alignment_of_impl
 #ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
 template <typename T>
 struct alignment_of<T&>
-    : alignment_of<T*>
+    : public alignment_of<T*>
 {
 };
 #endif

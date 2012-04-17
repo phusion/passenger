@@ -65,8 +65,8 @@ namespace boost {
             void constraints()
             {
                 // Operation
-                begin((*pFo)( (*pF)(i,i) ));
-                end((*pFo)( (*pF)(i,i) ));
+                ::boost::begin((*pFo)( (*pF)(i,i) ));
+                ::boost::end((*pFo)( (*pF)(i,i) ));
             }
         private:
             IteratorT i;

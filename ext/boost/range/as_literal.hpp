@@ -8,8 +8,8 @@
 // For more information, see http://www.boost.org/libs/range/
 //
 
-#ifndef BOOST_RANGE_DETAIL_AS_LITERAL_HPP
-#define BOOST_RANGE_DETAIL_AS_LITERAL_HPP
+#ifndef BOOST_RANGE_AS_LITERAL_HPP
+#define BOOST_RANGE_AS_LITERAL_HPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
@@ -25,7 +25,9 @@
 #include <boost/detail/workaround.hpp>
 
 #include <cstring>
+#ifndef BOOST_NO_CWCHAR
 #include <cwchar>
+#endif
 
 namespace boost
 {
@@ -36,38 +38,41 @@ namespace boost
             return strlen( s );
         }
 
+#ifndef BOOST_NO_CWCHAR
         inline std::size_t length( const wchar_t* s )
         {
             return wcslen( s );
         }
+#endif
 
         //
         // Remark: the compiler cannot choose between T* and T[sz]
         // overloads, so we must put the T* internal to the
         // unconstrained version.
-        // 
+        //
 
         inline bool is_char_ptr( char* )
         {
             return true;
         }
-        
+
         inline bool is_char_ptr( const char* )
         {
             return true;
         }
 
-        
+#ifndef BOOST_NO_CWCHAR
         inline bool is_char_ptr( wchar_t* )
         {
             return true;
         }
-        
+
         inline bool is_char_ptr( const wchar_t* )
         {
             return true;
         }
-        
+#endif
+
         template< class T >
         inline long is_char_ptr( T /* r */ )
         {
@@ -75,30 +80,30 @@ namespace boost
         }
 
         template< class T >
-        inline iterator_range<T*> 
+        inline iterator_range<T*>
         make_range( T* const r, bool )
         {
             return iterator_range<T*>( r, r + length(r) );
         }
 
         template< class T >
-        inline iterator_range<BOOST_DEDUCED_TYPENAME range_iterator<T>::type> 
+        inline iterator_range<BOOST_DEDUCED_TYPENAME range_iterator<T>::type>
         make_range( T& r, long )
         {
             return boost::make_iterator_range( r );
         }
 
     }
-    
+
     template< class Range >
-    inline iterator_range<BOOST_DEDUCED_TYPENAME range_iterator<Range>::type> 
+    inline iterator_range<BOOST_DEDUCED_TYPENAME range_iterator<Range>::type>
     as_literal( Range& r )
     {
         return range_detail::make_range( r, range_detail::is_char_ptr(r) );
     }
 
     template< class Range >
-    inline iterator_range<BOOST_DEDUCED_TYPENAME range_iterator<const Range>::type> 
+    inline iterator_range<BOOST_DEDUCED_TYPENAME range_iterator<const Range>::type>
     as_literal( const Range& r )
     {
         return range_detail::make_range( r, range_detail::is_char_ptr(r) );
@@ -107,22 +112,13 @@ namespace boost
     template< class Char, std::size_t sz >
     inline iterator_range<Char*> as_literal( Char (&arr)[sz] )
     {
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x590)) && __BORLANDC__ >= 0x590
-        return boost::make_iterator_range<Char*>( arr, arr + sz - 1 );
-#else
-        return boost::make_iterator_range( arr, arr + sz - 1 );
-#endif
+        return range_detail::make_range( arr, range_detail::is_char_ptr(arr) );
     }
 
-    
     template< class Char, std::size_t sz >
     inline iterator_range<const Char*> as_literal( const Char (&arr)[sz] )
     {
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x590)) && __BORLANDC__ >= 0x590
-        return boost::make_iterator_range<const Char*>( arr, arr + sz - 1 );
-#else
-        return boost::make_iterator_range( arr, arr + sz - 1 );
-#endif
+        return range_detail::make_range( arr, range_detail::is_char_ptr(arr) );
     }
 }
 

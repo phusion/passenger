@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -28,17 +28,16 @@
 
 namespace Passenger {
 
-unsigned int _logLevel = 0;
+int _logLevel = 0;
 ostream *_logStream = &cerr;
-ostream *_debugStream = &cerr;
 
-unsigned int
+int
 getLogLevel() {
 	return _logLevel;
 }
 
 void
-setLogLevel(unsigned int value) {
+setLogLevel(int value) {
 	_logLevel = value;
 }
 
@@ -50,13 +49,13 @@ setDebugFile(const char *logFile) {
 			if (stream->fail()) {
 				delete stream;
 			} else {
-				if (_debugStream != NULL && _debugStream != &cerr) {
-					delete _debugStream;
+				if (_logStream != NULL && _logStream != &cerr) {
+					delete _logStream;
 				}
-				_debugStream = stream;
+				_logStream = stream;
 			}
 		} else {
-			_debugStream = &cerr;
+			_logStream = &cerr;
 		}
 	#endif
 }

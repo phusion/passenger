@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -34,8 +34,9 @@
 #include <ap_config.h>
 #undef AP_HAVE_DESIGNATED_INITIALIZER
 
-#include "Configuration.h"
+#include "Configuration.hpp"
 #include "Utils.h"
+#include <agents/LoggingAgent/FilterSupport.h>
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
  * to learn why.
@@ -46,10 +47,111 @@ using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
-#define DEFAULT_LOG_LEVEL 0
-#define DEFAULT_MAX_POOL_SIZE 6
-#define DEFAULT_POOL_IDLE_TIME 300
-#define DEFAULT_MAX_INSTANCES_PER_APP 0
+namespace Passenger { ServerConfig serverConfig; }
+
+#define MERGE_THREEWAY_CONFIG(field) \
+	config->field = (add->field == DirConfig::UNSET) ? base->field : add->field
+#define MERGE_STR_CONFIG(field) \
+	config->field = (add->field == NULL) ? base->field : add->field
+#define MERGE_STRING_CONFIG(field) \
+	config->field = (add->field.empty()) ? base->field : add->field
+#define MERGE_INT_CONFIG(field) \
+	config->field = (add->field ## Specified) ? add->field : base->field; \
+	config->field ## Specified = base->field ## Specified || add->field ## Specified
+
+#define DEFINE_DIR_STR_CONFIG_SETTER(functionName, fieldName)                    \
+	static const char *                                                      \
+	functionName(cmd_parms *cmd, void *pcfg, const char *arg) {              \
+		DirConfig *config = (DirConfig *) pcfg;                          \
+		config->fieldName = arg;                                         \
+		return NULL;                                                     \
+	}
+#define DEFINE_DIR_INT_CONFIG_SETTER(functionName, fieldName, integerType, minValue)            \
+	static const char *                                                                     \
+	functionName(cmd_parms *cmd, void *pcfg, const char *arg) {                             \
+		DirConfig *config = (DirConfig *) pcfg;                                         \
+		char *end;                                                                      \
+		long int result;                                                                \
+		                                                                                \
+		result = strtol(arg, &end, 10);                                                 \
+		if (*end != '\0') {                                                             \
+			string message = "Invalid number specified for ";                       \
+			message.append(cmd->directive->directive);                              \
+			message.append(".");                                                    \
+			                                                                        \
+			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
+				message.size() + 1);                                            \
+			memcpy(messageStr, message.c_str(), message.size() + 1);                \
+			return messageStr;                                                      \
+		} else if (result < minValue) {                                                 \
+			string message = "Value for ";                                          \
+			message.append(cmd->directive->directive);                              \
+			message.append(" must be greater than or equal to " #minValue ".");     \
+			                                                                        \
+			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
+				message.size() + 1);                                            \
+			memcpy(messageStr, message.c_str(), message.size() + 1);                \
+			return messageStr;                                                      \
+		} else {                                                                        \
+			config->fieldName = (integerType) result;                               \
+			config->fieldName ## Specified = true;                                  \
+			return NULL;                                                            \
+		}                                                                               \
+	}
+#define DEFINE_DIR_THREEWAY_CONFIG_SETTER(functionName, fieldName)           \
+	static const char *                                                  \
+	functionName(cmd_parms *cmd, void *pcfg, const char *arg) {          \
+		DirConfig *config = (DirConfig *) pcfg;                      \
+		if (arg) {                                                   \
+			config->fieldName = DirConfig::ENABLED;              \
+		} else {                                      	             \
+			config->fieldName = DirConfig::DISABLED;             \
+		}                                                            \
+		return NULL;                                                 \
+	}
+
+#define DEFINE_SERVER_STR_CONFIG_SETTER(functionName, fieldName)                 \
+	static const char *                                                      \
+	functionName(cmd_parms *cmd, void *dummy, const char *arg) {             \
+		serverConfig.fieldName = arg;                                    \
+		return NULL;                                                     \
+	}
+#define DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(functionName, fieldName)             \
+	static const char *                                                      \
+	functionName(cmd_parms *cmd, void *dummy, int arg) {                     \
+		serverConfig.fieldName = arg;                                    \
+		return NULL;                                                     \
+	}
+#define DEFINE_SERVER_INT_CONFIG_SETTER(functionName, fieldName, integerType, minValue)         \
+	static const char *                                                                     \
+	functionName(cmd_parms *cmd, void *pcfg, const char *arg) {                             \
+		char *end;                                                                      \
+		long int result;                                                                \
+		                                                                                \
+		result = strtol(arg, &end, 10);                                                 \
+		if (*end != '\0') {                                                             \
+			string message = "Invalid number specified for ";                       \
+			message.append(cmd->directive->directive);                              \
+			message.append(".");                                                    \
+			                                                                        \
+			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
+				message.size() + 1);                                            \
+			memcpy(messageStr, message.c_str(), message.size() + 1);                \
+			return messageStr;                                                      \
+		} else if (result < minValue) {                                                 \
+			string message = "Value for ";                                          \
+			message.append(cmd->directive->directive);                              \
+			message.append(" must be greater than or equal to " #minValue ".");     \
+			                                                                        \
+			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
+				message.size() + 1);                                            \
+			memcpy(messageStr, message.c_str(), message.size() + 1);                \
+			return messageStr;                                                      \
+		} else {                                                                        \
+			serverConfig.fieldName = (integerType) result;                          \
+			return NULL;                                                            \
+		}                                                                               \
+	}
 
 
 template<typename T> static apr_status_t
@@ -58,21 +160,26 @@ destroy_config_struct(void *x) {
 	return APR_SUCCESS;
 }
 
+template<typename Collection, typename T> static bool
+contains(const Collection &coll, const T &item) {
+	typename Collection::const_iterator it;
+	for (it = coll.begin(); it != coll.end(); it++) {
+		if (*it == item) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+extern "C" {
+
 static DirConfig *
 create_dir_config_struct(apr_pool_t *pool) {
 	DirConfig *config = new DirConfig();
 	apr_pool_cleanup_register(pool, config, destroy_config_struct<DirConfig>, apr_pool_cleanup_null);
 	return config;
 }
-
-static ServerConfig *
-create_server_config_struct(apr_pool_t *pool) {
-	ServerConfig *config = new ServerConfig();
-	apr_pool_cleanup_register(pool, config, destroy_config_struct<ServerConfig>, apr_pool_cleanup_null);
-	return config;
-}
-
-extern "C" {
 
 void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
@@ -81,17 +188,18 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->autoDetectRails = DirConfig::UNSET;
 	config->autoDetectRack = DirConfig::UNSET;
 	config->autoDetectWSGI = DirConfig::UNSET;
-	config->allowModRewrite = DirConfig::UNSET;
-	config->railsEnv = NULL;
+	config->ruby = NULL;
+	config->environment = NULL;
 	config->appRoot = NULL;
-	config->rackEnv = NULL;
+	config->user = NULL;
+	config->group = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
 	config->frameworkSpawnerTimeout = -1;
 	config->appSpawnerTimeout = -1;
 	config->maxRequests = 0;
 	config->maxRequestsSpecified = false;
-	config->memoryLimit = 0;
-	config->memoryLimitSpecified = false;
+	config->minInstances = 1;
+	config->minInstancesSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
 	config->useGlobalQueue = DirConfig::UNSET;
 	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
@@ -100,6 +208,9 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->statThrottleRateSpecified = false;
 	config->restartDir = NULL;
 	config->uploadBufferDir = NULL;
+	config->friendlyErrorPages = DirConfig::UNSET;
+	config->unionStationSupport = DirConfig::UNSET;
+	config->bufferResponse = DirConfig::UNSET;
 	/*************************************/
 	return config;
 }
@@ -121,98 +232,39 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 		config->rackBaseURIs.insert(*it);
 	}
 	
-	config->autoDetectRails = (add->autoDetectRails == DirConfig::UNSET) ? base->autoDetectRails : add->autoDetectRails;
-	config->autoDetectRack = (add->autoDetectRack == DirConfig::UNSET) ? base->autoDetectRack : add->autoDetectRack;
-	config->autoDetectWSGI = (add->autoDetectWSGI == DirConfig::UNSET) ? base->autoDetectWSGI : add->autoDetectWSGI;
-	config->allowModRewrite = (add->allowModRewrite == DirConfig::UNSET) ? base->allowModRewrite : add->allowModRewrite;
-	config->railsEnv = (add->railsEnv == NULL) ? base->railsEnv : add->railsEnv;
-	config->appRoot = (add->appRoot == NULL) ? base->appRoot : add->appRoot;
-	config->rackEnv = (add->rackEnv == NULL) ? base->rackEnv : add->rackEnv;
+	MERGE_THREEWAY_CONFIG(autoDetectRails);
+	MERGE_THREEWAY_CONFIG(autoDetectRack);
+	MERGE_THREEWAY_CONFIG(autoDetectWSGI);
+	MERGE_STR_CONFIG(ruby);
+	MERGE_STR_CONFIG(environment);
+	MERGE_STR_CONFIG(appRoot);
+	MERGE_STRING_CONFIG(appGroupName);
+	MERGE_STR_CONFIG(user);
+	MERGE_STR_CONFIG(group);
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	config->frameworkSpawnerTimeout = (add->frameworkSpawnerTimeout == -1) ? base->frameworkSpawnerTimeout : add->frameworkSpawnerTimeout;
 	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
-	config->maxRequests = (add->maxRequestsSpecified) ? add->maxRequests : base->maxRequests;
-	config->maxRequestsSpecified = base->maxRequestsSpecified || add->maxRequestsSpecified;
-	config->memoryLimit = (add->memoryLimitSpecified) ? add->memoryLimit : base->memoryLimit;
-	config->memoryLimitSpecified = base->memoryLimitSpecified || add->memoryLimitSpecified;
-	config->highPerformance = (add->highPerformance == DirConfig::UNSET) ? base->highPerformance : add->highPerformance;
-	config->useGlobalQueue = (add->useGlobalQueue == DirConfig::UNSET) ? base->useGlobalQueue : add->useGlobalQueue;
-	config->statThrottleRate = (add->statThrottleRateSpecified) ? add->statThrottleRate : base->statThrottleRate;
-	config->statThrottleRateSpecified = base->statThrottleRateSpecified || add->statThrottleRateSpecified;
-	config->restartDir = (add->restartDir == NULL) ? base->restartDir : add->restartDir;
-	config->uploadBufferDir = (add->uploadBufferDir == NULL) ? base->uploadBufferDir : add->uploadBufferDir;
-	config->resolveSymlinksInDocRoot = (add->resolveSymlinksInDocRoot == DirConfig::UNSET) ? base->resolveSymlinksInDocRoot : add->resolveSymlinksInDocRoot;
-	config->allowEncodedSlashes = (add->allowEncodedSlashes == DirConfig::UNSET) ? base->allowEncodedSlashes : add->allowEncodedSlashes;
+	MERGE_INT_CONFIG(maxRequests);
+	MERGE_INT_CONFIG(minInstances);
+	MERGE_THREEWAY_CONFIG(highPerformance);
+	MERGE_THREEWAY_CONFIG(useGlobalQueue);
+	MERGE_INT_CONFIG(statThrottleRate);
+	MERGE_STR_CONFIG(restartDir);
+	MERGE_STR_CONFIG(uploadBufferDir);
+	MERGE_STRING_CONFIG(unionStationKey);
+	config->unionStationFilters = base->unionStationFilters;
+	for (vector<string>::const_iterator it = add->unionStationFilters.begin(); it != add->unionStationFilters.end(); it++) {
+		if (!contains(config->unionStationFilters, *it)) {
+			config->unionStationFilters.push_back(*it);
+		}
+	}
+	MERGE_THREEWAY_CONFIG(resolveSymlinksInDocRoot);
+	MERGE_THREEWAY_CONFIG(allowEncodedSlashes);
+	MERGE_THREEWAY_CONFIG(friendlyErrorPages);
+	MERGE_THREEWAY_CONFIG(unionStationSupport);
+	MERGE_THREEWAY_CONFIG(bufferResponse);
 	/*************************************/
 	return config;
-}
-
-void *
-passenger_config_create_server(apr_pool_t *p, server_rec *s) {
-	ServerConfig *config = create_server_config_struct(p);
-	config->ruby = NULL;
-	config->root = NULL;
-	config->logLevel = DEFAULT_LOG_LEVEL;
-	config->maxPoolSize = DEFAULT_MAX_POOL_SIZE;
-	config->maxPoolSizeSpecified = false;
-	config->maxInstancesPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
-	config->maxInstancesPerAppSpecified = false;
-	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
-	config->poolIdleTimeSpecified = false;
-	config->userSwitching = true;
-	config->userSwitchingSpecified = false;
-	config->defaultUser = NULL;
-	config->tempDir = NULL;
-	return config;
-}
-
-void *
-passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
-	ServerConfig *config = create_server_config_struct(p);
-	ServerConfig *base = (ServerConfig *) basev;
-	ServerConfig *add = (ServerConfig *) addv;
-	
-	config->ruby = (add->ruby == NULL) ? base->ruby : add->ruby;
-	config->root = (add->root == NULL) ? base->root : add->root;
-	config->logLevel = (add->logLevel) ? base->logLevel : add->logLevel;
-	config->maxPoolSize = (add->maxPoolSizeSpecified) ? base->maxPoolSize : add->maxPoolSize;
-	config->maxPoolSizeSpecified = base->maxPoolSizeSpecified || add->maxPoolSizeSpecified;
-	config->maxInstancesPerApp = (add->maxInstancesPerAppSpecified) ? base->maxInstancesPerApp : add->maxInstancesPerApp;
-	config->maxInstancesPerAppSpecified = base->maxInstancesPerAppSpecified || add->maxInstancesPerAppSpecified;
-	config->poolIdleTime = (add->poolIdleTime) ? base->poolIdleTime : add->poolIdleTime;
-	config->poolIdleTimeSpecified = base->poolIdleTimeSpecified || add->poolIdleTimeSpecified;
-	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
-	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
-	config->defaultUser = (add->defaultUser == NULL) ? base->defaultUser : add->defaultUser;
-	config->tempDir = (add->tempDir == NULL) ? base->tempDir : add->tempDir;
-	return config;
-}
-
-void
-passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
-	ServerConfig *final = (ServerConfig *) passenger_config_create_server(pool, main_server);
-	server_rec *s;
-	
-	for (s = main_server; s != NULL; s = s->next) {
-		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
-		final->ruby = (final->ruby != NULL) ? final->ruby : config->ruby;
-		final->root = (final->root != NULL) ? final->root : config->root;
-		final->logLevel = (final->logLevel != 0) ? final->logLevel : config->logLevel;
-		final->maxPoolSize = (final->maxPoolSizeSpecified) ? final->maxPoolSize : config->maxPoolSize;
-		final->maxPoolSizeSpecified = final->maxPoolSizeSpecified || config->maxPoolSizeSpecified;
-		final->maxInstancesPerApp = (final->maxInstancesPerAppSpecified) ? final->maxInstancesPerApp : config->maxInstancesPerApp;
-		final->maxInstancesPerAppSpecified = final->maxInstancesPerAppSpecified || config->maxInstancesPerAppSpecified;
-		final->poolIdleTime = (final->poolIdleTimeSpecified) ? final->poolIdleTime : config->poolIdleTime;
-		final->poolIdleTimeSpecified = final->poolIdleTimeSpecified || config->poolIdleTimeSpecified;
-		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
-		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
-		final->defaultUser = (final->defaultUser != NULL) ? final->defaultUser : config->defaultUser;
-		final->tempDir = (final->tempDir != NULL) ? final->tempDir : config->tempDir;
-	}
-	for (s = main_server; s != NULL; s = s->next) {
-		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
-		*config = *final;
-	}
 }
 
 
@@ -220,222 +272,84 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
  * Passenger settings
  *************************************************/
 
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_root, root)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int, 0)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_debug_log_file, debugLogFile)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_instances_per_app, maxInstancesPerApp, unsigned int, 0)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsigned int, 0)
+DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_user_switching, userSwitching)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_address, unionStationGatewayAddress)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_union_station_gateway_port, unionStationGatewayPort, int, 1)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGatewayCert)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_address, unionStationProxyAddress)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_type, unionStationProxyType)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_dir, analyticsLogDir)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_permissions, analyticsLogPermissions)
+
 static const char *
-cmd_passenger_root(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->root = arg;
+cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.prestartURLs.insert(arg);
 	return NULL;
 }
 
-static const char *
-cmd_passenger_log_level(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerLogLevel.";
-	} else if (result < 0 || result > 9) {
-		return "Value for PassengerLogLevel must be between 0 and 9.";
-	} else {
-		config->logLevel = (unsigned int) result;
-		return NULL;
-	}
-}
+DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_min_instances, minInstances, unsigned long, 0)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_use_global_queue, useGlobalQueue)
+DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_max_requests, maxRequests, unsigned long, 0)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformance)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_environment, environment)
+DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_group_name, appGroupName)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_user, user)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_group, group)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_restart_dir, restartDir)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_upload_buffer_dir, uploadBufferDir)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_union_station_key, unionStationKey)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_friendly_error_pages, friendlyErrorPages)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_union_station_support, unionStationSupport)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_buffer_response, bufferResponse)
 
 static const char *
-cmd_passenger_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->ruby = arg;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerMaxPoolSize.";
-	} else if (result <= 0) {
-		return "Value for PassengerMaxPoolSize must be greater than 0.";
-	} else {
-		config->maxPoolSize = (unsigned int) result;
-		config->maxPoolSizeSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
-cmd_passenger_max_instances_per_app(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerMaxInstancesPerApp.";
-	} else {
-		config->maxInstancesPerApp = (unsigned int) result;
-		config->maxInstancesPerAppSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
-cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerPoolIdleTime.";
-	} else if (result < 0) {
-		return "Value for PassengerPoolIdleTime must be greater than or equal to 0.";
-	} else {
-		config->poolIdleTime = (unsigned int) result;
-		config->poolIdleTimeSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
-cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
+cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	if (arg) {
-		config->useGlobalQueue = DirConfig::ENABLED;
+	if (strcmp(arg, "smart") == 0) {
+		config->spawnMethod = DirConfig::SM_SMART;
+	} else if (strcmp(arg, "smart-lv2") == 0) {
+		config->spawnMethod = DirConfig::SM_SMART_LV2;
+	} else if (strcmp(arg, "conservative") == 0) {
+		config->spawnMethod = DirConfig::SM_CONSERVATIVE;
 	} else {
-		config->useGlobalQueue = DirConfig::DISABLED;
+		return "PassengerSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
 	}
 	return NULL;
 }
 
 static const char *
-cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->userSwitching = arg;
-	config->userSwitchingSpecified = true;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->defaultUser = arg;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_temp_dir(cmd_parms *cmd, void *dummy, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->tempDir = arg;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_union_station_filter(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerMaxRequests.";
-	} else if (result < 0) {
-		return "Value for PassengerMaxRequests must be greater than or equal to 0.";
+	if (strlen(arg) == 0) {
+		return "UnionStationFilter may not be set to the empty string";
 	} else {
-		config->maxRequests = (unsigned long) result;
-		config->maxRequestsSpecified = true;
-		return NULL;
+		try {
+			FilterSupport::Filter f(arg);
+			config->unionStationFilters.push_back(arg);
+			return NULL;
+		} catch (const SyntaxError &e) {
+			string message = "Syntax error in Union Station filter: ";
+			message.append(e.what());
+			return strdup(message.c_str());
+		}
 	}
-}
-
-static const char *
-cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (arg) {
-		config->highPerformance = DirConfig::ENABLED;
-	} else {
-		config->highPerformance = DirConfig::DISABLED;
-	}
-	return NULL;
-}
-
-static const char *
-cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (arg) {
-		config->enabled = DirConfig::ENABLED;
-	} else {
-		config->enabled = DirConfig::DISABLED;
-	}
-	return NULL;
-}
-
-static const char *
-cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerStatThrottleRate.";
-	} else if (result < 0) {
-		return "Value for PassengerStatThrottleRate must be greater than or equal to 0.";
-	} else {
-		config->statThrottleRate = (unsigned long) result;
-		config->statThrottleRateSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
-cmd_passenger_restart_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->restartDir = arg;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->appRoot = arg;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_upload_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->uploadBufferDir = arg;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->resolveSymlinksInDocRoot = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->allowEncodedSlashes = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
 }
 
 
@@ -458,41 +372,7 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-static const char *
-cmd_rails_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->autoDetectRails = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
-cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->allowModRewrite = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
-cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->railsEnv = arg;
-	return NULL;
-}
-
-static const char *
-cmd_rails_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (strcmp(arg, "smart") == 0) {
-		config->spawnMethod = DirConfig::SM_SMART;
-	} else if (strcmp(arg, "smart-lv2") == 0) {
-		config->spawnMethod = DirConfig::SM_SMART_LV2;
-	} else if (strcmp(arg, "conservative") == 0) {
-		config->spawnMethod = DirConfig::SM_CONSERVATIVE;
-	} else {
-		return "RailsSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
-	}
-	return NULL;
-}
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rails_auto_detect, autoDetectRails)
 
 static const char *
 cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -548,31 +428,14 @@ cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-static const char *
-cmd_rack_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->autoDetectRack = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
-cmd_rack_env(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->rackEnv = arg;
-	return NULL;
-}
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rack_auto_detect, autoDetectRack)
 
 
 /*************************************************
  * WSGI-specific settings
  *************************************************/
 
-static const char *
-cmd_wsgi_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->autoDetectWSGI = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_wsgi_auto_detect, autoDetectWSGI)
 
 
 /*************************************************
@@ -588,6 +451,15 @@ cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, int arg) {
+	fprintf(stderr, "WARNING: The 'RailsAllowModRewrite' option is obsolete: "
+		"Phusion Passenger now fully supports mod_rewrite. "
+		"Please remove this option from your configuration file.");
+	fflush(stderr);
+	return NULL;
+}
+
 
 typedef const char * (*Take1Func)();
 typedef const char * (*FlagFunc)();
@@ -599,21 +471,31 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Passenger root folder."),
+	AP_INIT_TAKE1("PassengerRuby",
+		(Take1Func) cmd_passenger_ruby,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The Ruby interpreter to use."),
 	AP_INIT_TAKE1("PassengerLogLevel",
 		(Take1Func) cmd_passenger_log_level,
 		NULL,
 		RSRC_CONF,
 		"Passenger log verbosity."),
-	AP_INIT_TAKE1("PassengerRuby",
-		(Take1Func) cmd_passenger_ruby,
+	AP_INIT_TAKE1("PassengerDebugLogFile",
+		(Take1Func) cmd_passenger_debug_log_file,
 		NULL,
 		RSRC_CONF,
-		"The Ruby interpreter to use."),
+		"Passenger debug log file."),
 	AP_INIT_TAKE1("PassengerMaxPoolSize",
 		(Take1Func) cmd_passenger_max_pool_size,
 		NULL,
 		RSRC_CONF,
 		"The maximum number of simultaneously alive application instances."),
+	AP_INIT_TAKE1("PassengerMinInstances",
+		(Take1Func) cmd_passenger_min_instances,
+		NULL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
+		"The minimum number of application instances to keep when cleaning idle instances."),
 	AP_INIT_TAKE1("PassengerMaxInstancesPerApp",
 		(Take1Func) cmd_passenger_max_instances_per_app,
 		NULL,
@@ -634,11 +516,26 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Whether to enable user switching support."),
+	AP_INIT_TAKE1("PassengerUser",
+		(Take1Func) cmd_passenger_user,
+		NULL,
+		ACCESS_CONF | RSRC_CONF,
+		"The user that Ruby applications must run as."),
+	AP_INIT_TAKE1("PassengerGroup",
+		(Take1Func) cmd_passenger_group,
+		NULL,
+		ACCESS_CONF | RSRC_CONF,
+		"The group that Ruby applications must run as."),
 	AP_INIT_TAKE1("PassengerDefaultUser",
 		(Take1Func) cmd_passenger_default_user,
 		NULL,
 		RSRC_CONF,
-		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
+		"The user that Ruby applications must run as when user switching fails or is disabled."),
+	AP_INIT_TAKE1("PassengerDefaultGroup",
+		(Take1Func) cmd_passenger_default_group,
+		NULL,
+		RSRC_CONF,
+		"The group that Ruby applications must run as when user switching fails or is disabled."),
 	AP_INIT_TAKE1("PassengerTempDir",
 		(Take1Func) cmd_passenger_temp_dir,
 		NULL,
@@ -659,6 +556,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_ALL,
 		"Enable or disable Phusion Passenger."),
+	AP_INIT_TAKE1("PassengerAppGroupName",
+		(Take1Func) cmd_passenger_app_group_name,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The temp directory that Passenger should use."),
 	AP_INIT_TAKE1("PassengerStatThrottleRate",
 		(Take1Func) cmd_passenger_stat_throttle_rate,
 		NULL,
@@ -679,6 +581,21 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS,
 		"The directory in which upload buffer files should be placed."),
+	AP_INIT_TAKE1("UnionStationKey",
+		(Take1Func) cmd_union_station_key,
+		NULL,
+		OR_ALL,
+		"The Union Station key."),
+	AP_INIT_TAKE1("UnionStationFilter",
+		(Take1Func) cmd_union_station_filter,
+		NULL,
+		OR_ALL,
+		"A filter for Union Station data."),
+	AP_INIT_FLAG("PassengerBufferResponse",
+		(FlagFunc) cmd_passenger_buffer_response,
+		NULL,
+		OR_ALL,
+		"Whether to enable buffering response."),
 	AP_INIT_FLAG("PassengerResolveSymlinksInDocumentRoot",
 		(FlagFunc) cmd_passenger_resolve_symlinks_in_document_root,
 		NULL,
@@ -689,6 +606,71 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Whether to support encoded slashes in the URL"),
+	AP_INIT_FLAG("PassengerFriendlyErrorPages",
+		(FlagFunc) cmd_passenger_friendly_error_pages,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to display friendly error pages when something goes wrong"),
+	AP_INIT_TAKE1("PassengerSpawnMethod",
+		(Take1Func) cmd_passenger_spawn_method,
+		NULL,
+		RSRC_CONF,
+		"The spawn method to use."),
+	AP_INIT_TAKE1("UnionStationGatewayAddress",
+		(Take1Func) cmd_union_station_gateway_address,
+		NULL,
+		RSRC_CONF,
+		"The Union Station Gateway host name."),
+	AP_INIT_TAKE1("UnionStationGatewayPort",
+		(Take1Func) cmd_union_station_gateway_port,
+		NULL,
+		RSRC_CONF,
+		"The Union Station Gateway port number."),
+	AP_INIT_TAKE1("UnionStationGatewayCert",
+		(Take1Func) cmd_union_station_gateway_cert,
+		NULL,
+		RSRC_CONF,
+		"The Union Station Gateway certificate."),
+	AP_INIT_TAKE1("UnionStationProxyAddress",
+		(Take1Func) cmd_union_station_proxy_address,
+		NULL,
+		RSRC_CONF,
+		"The address of the proxy that should be used for sending data to Union Station."),
+	AP_INIT_TAKE1("UnionStationProxyType",
+		(Take1Func) cmd_union_station_proxy_type,
+		NULL,
+		RSRC_CONF,
+		"The type of the proxy that should be used for sending data to Union Station."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogDir",
+		(Take1Func) cmd_passenger_analytics_log_dir,
+		NULL,
+		RSRC_CONF,
+		"Directory in which to store analytics logs."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogUser",
+		(Take1Func) cmd_passenger_analytics_log_user,
+		NULL,
+		RSRC_CONF,
+		"The owner of analytics files."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogGroup",
+		(Take1Func) cmd_passenger_analytics_log_group,
+		NULL,
+		RSRC_CONF,
+		"The group of analytics files."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogPermissions",
+		(Take1Func) cmd_passenger_analytics_log_permissions,
+		NULL,
+		RSRC_CONF,
+		"The permissions of analytics files."),
+	AP_INIT_TAKE1("PassengerPreStart",
+		(Take1Func) cmd_passenger_pre_start,
+		NULL,
+		RSRC_CONF,
+		"Prestart the given web applications during startup."),
+	AP_INIT_FLAG("UnionStationSupport",
+		(Take1Func) cmd_union_station_support,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to enable logging through Union Station."),
 	
 	/*****************************/
 
@@ -703,27 +685,17 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of Ruby on Rails applications should be enabled."),
-	AP_INIT_FLAG("RailsAllowModRewrite",
-		(FlagFunc) cmd_rails_allow_mod_rewrite,
-		NULL,
-		RSRC_CONF,
-		"Whether custom mod_rewrite rules should be allowed."),
 	AP_INIT_TAKE1("RailsEnv",
-		(Take1Func) cmd_rails_env,
+		(Take1Func) cmd_environment,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rails app must run."),
-	AP_INIT_TAKE1("RailsSpawnMethod",
-		(Take1Func) cmd_rails_spawn_method,
-		NULL,
-		RSRC_CONF,
-		"The spawn method to use."),
-	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime", // TODO: document this
+	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime",
 		(Take1Func) cmd_rails_framework_spawner_idle_time,
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that a framework spawner may be idle before it is shutdown."),
-	AP_INIT_TAKE1("RailsAppSpawnerIdleTime", // TODO: document this
+	AP_INIT_TAKE1("RailsAppSpawnerIdleTime",
 		(Take1Func) cmd_rails_app_spawner_idle_time,
 		NULL,
 		RSRC_CONF,
@@ -741,7 +713,7 @@ const command_rec passenger_commands[] = {
 		RSRC_CONF,
 		"Whether auto-detection of Rack applications should be enabled."),
 	AP_INIT_TAKE1("RackEnv",
-		(Take1Func) cmd_rack_env,
+		(Take1Func) cmd_environment,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rack app must run."),
@@ -757,7 +729,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("RailsRuby",
 		(Take1Func) cmd_passenger_ruby,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Deprecated option."),
 	AP_INIT_TAKE1("RailsMaxPoolSize",
 		(Take1Func) cmd_passenger_max_pool_size,
@@ -784,6 +756,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Deprecated option."),
+	AP_INIT_TAKE1("RailsSpawnMethod",
+		(Take1Func) cmd_passenger_spawn_method,
+		NULL,
+		RSRC_CONF,
+		"Deprecated option."),
 	
 	// Obsolete options.
 	AP_INIT_TAKE1("RailsSpawnServer",
@@ -791,6 +768,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Obsolete option."),
+	AP_INIT_FLAG("RailsAllowModRewrite",
+		(FlagFunc) cmd_rails_allow_mod_rewrite,
+		NULL,
+		RSRC_CONF,
+		"Whether custom mod_rewrite rules should be allowed."),
 	
 	{ NULL }
 };

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,9 +22,10 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/..")
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
-$LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
+require 'phusion_passenger'
+PhusionPassenger.locate_directories
 
 # The Apache executable may be located in an 'sbin' folder. We add
 # the 'sbin' folders to $PATH just in case. On some systems
@@ -33,10 +34,10 @@ $LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
 ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 
 require 'optparse'
-require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/ruby'
+require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/dependencies'
 require 'phusion_passenger/abstract_installer'
-include PlatformInfo
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
@@ -44,6 +45,9 @@ class Installer < PhusionPassenger::AbstractInstaller
 	def dependencies
 		result = [
 			Dependencies::GCC,
+			Dependencies::Curl_Dev,
+			Dependencies::OpenSSL_Dev,
+			Dependencies::Zlib_Dev,
 			Dependencies::Ruby_DevHeaders,
 			Dependencies::Ruby_OpenSSL,
 			Dependencies::RubyGems,
@@ -70,11 +74,11 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def users_guide
-		return "#{DOCDIR}/Users guide Apache.html"
+		return "#{PhusionPassenger.doc_dir}/Users guide Apache.html"
 	end
 	
-	def install!
-		if PhusionPassenger.natively_packaged?
+	def run_steps
+		if !PhusionPassenger.originally_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
 			show_deployment_example
@@ -120,7 +124,7 @@ private
 				mpm = nil
 			end
 		end
-		if mpm != "prefork" && mpm != "worker"
+		if mpm != "prefork" && mpm != "worker" && mpm != "event"
 			new_screen
 			render_template 'apache2/apache_must_be_compiled_with_compatible_mpm',
 				:current_mpm => mpm
@@ -147,33 +151,34 @@ private
 	def install_apache2_module
 		puts
 		line
-		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
+		puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
-			puts "#{RUBY} -S #{PlatformInfo.rake} --trace clean apache2"
-			return sh(RUBY, "-S", PlatformInfo.rake, "--trace", "clean", "apache2")
+			puts "#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes"
+			return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes")
 		else
-			puts "#{RUBY} -S #{PlatformInfo.rake} clean apache2"
-			return sh(RUBY, "-S", PlatformInfo.rake, "clean", "apache2")
+			puts "#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes"
+			return sh("#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes")
 		end
 	end
 	
-	def show_apache2_config_snippets
-		puts
-		line
-		if PhusionPassenger.natively_packaged?
-			module_location = "#{PASSENGER_ROOT}/lib/phusion_passenger/mod_passenger.so"
+	def show_apache2_config_snippets(bare = false)
+		if bare
+			puts "LoadModule passenger_module #{PhusionPassenger.apache2_module_path}"
+			puts "PassengerRoot #{PhusionPassenger.root}"
+			puts "PassengerRuby #{PlatformInfo.ruby_command}"
 		else
-			module_location = "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so"
-		end
-		render_template 'apache2/config_snippets',
-			:module_location => module_location,
-			:passenger_root => PASSENGER_ROOT,
-			:ruby => RUBY
-		if PhusionPassenger.natively_packaged?
-			wait(10)
-		else
-			wait
+			puts
+			line
+			render_template 'apache2/config_snippets',
+				:module_location => PhusionPassenger.apache2_module_path,
+				:passenger_root => PhusionPassenger.root,
+				:ruby => PlatformInfo.ruby_command
+			if PhusionPassenger.originally_packaged?
+				wait
+			else
+				wait(10)
+			end
 		end
 	end
 	
@@ -211,6 +216,9 @@ parser = OptionParser.new do |opts|
 	opts.on("--apr-config-path PATH", String, "Path to 'apr-config' command.") do |value|
 		ENV['APR_CONFIG'] = value
 	end
+	opts.on("--snippet", "Show just the Apache config snippet.") do
+		options[:snippet] = true
+	end
 end
 begin
 	parser.parse!
@@ -221,4 +229,9 @@ rescue OptionParser::ParseError => e
 	exit 1
 end
 
-Installer.new(options).start
+installer = Installer.new(options)
+if options[:snippet]
+	installer.send(:show_apache2_config_snippets, true)
+else
+	installer.run
+end

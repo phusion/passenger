@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -26,6 +26,7 @@
 #define _PASSENGER_UTILS_H_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/function.hpp>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string>
@@ -38,6 +39,7 @@
 #include <cstring>
 #include <errno.h>
 #include <unistd.h>
+#include "StaticString.h"
 #include "Exceptions.h"
 
 namespace Passenger {
@@ -45,7 +47,11 @@ namespace Passenger {
 using namespace std;
 using namespace boost;
 
-typedef struct CachedFileStat CachedFileStat;
+static const uid_t USER_NOT_GIVEN = (uid_t) -1;
+static const gid_t GROUP_NOT_GIVEN = (gid_t) -1;
+
+class CachedFileStat;
+class ResourceLocator;
 
 /** Enumeration which indicates what kind of file a file is. */
 typedef enum {
@@ -83,78 +89,6 @@ ptr(T *pointer) {
 }
 
 /**
- * Used internally by toString(). Do not use directly.
- *
- * @internal
- */
-template<typename T>
-struct AnythingToString {
-	string operator()(T something) {
-		stringstream s;
-		s << something;
-		return s.str();
-	}
-};
-
-/**
- * Used internally by toString(). Do not use directly.
- *
- * @internal
- */
-template<>
-struct AnythingToString< vector<string> > {
-	string operator()(const vector<string> &v) {
-		string result("[");
-		vector<string>::const_iterator it;
-		unsigned int i;
-		for (it = v.begin(), i = 0; it != v.end(); it++, i++) {
-			result.append("'");
-			result.append(*it);
-			if (i == v.size() - 1) {
-				result.append("'");
-			} else {
-				result.append("', ");
-			}
-		}
-		result.append("]");
-		return result;
-	}
-};
-
-/**
- * Convert anything to a string.
- *
- * @param something The thing to convert.
- * @ingroup Support
- */
-template<typename T> string
-toString(T something) {
-	return AnythingToString<T>()(something);
-}
-
-/**
- * Converts the given string to an integer.
- * @ingroup Support
- */
-int atoi(const string &s);
-
-/**
- * Converts the given string to a long integer.
- * @ingroup Support
- */
-long atol(const string &s);
-
-/**
- * Split the given string using the given separator.
- *
- * @param str The string to split.
- * @param sep The separator to use.
- * @param output The vector to write the output to.
- * @ingroup Support
- */
-void split(const string &str, char sep, vector<string> &output);
-
-/**
  * Check whether the specified file exists.
  *
  * @param filename The filename to check.
@@ -166,7 +100,7 @@ void split(const string &str, char sep, vector<string> &output);
  * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool fileExists(const char *filename, CachedFileStat *cstat = 0,
+bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
                 unsigned int throttleRate = 0);
 
 /**
@@ -181,33 +115,30 @@ bool fileExists(const char *filename, CachedFileStat *cstat = 0,
  * @throws boost::thread_interrupted
  * @ingroup Support
  */
-FileType getFileType(const char *filename, CachedFileStat *cstat = 0,
+FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
                      unsigned int throttleRate = 0);
 
 /**
- * Find the location of the Passenger spawn server script.
+ * Create the given file with the given contents, permissions and ownership.
+ * This function does not leave behind junk files: if the ownership cannot be set
+ * or if not all data can be written then then the file will be deleted.
  *
- * @param passengerRoot The Passenger root folder. If NULL is given, then
- *      the spawn server is found by scanning $PATH. For security reasons,
- *      only absolute paths are scanned.
- * @return An absolute path to the spawn server script, or
- *         an empty string on error.
- * @throws FileSystemException Unable to access parts of the filesystem.
+ * @param filename The file to create.
+ * @param contents The contents to write to the file.
+ * @param permissions The desired file permissions.
+ * @param owner The desired file owner. Specify USER_NOT_GIVEN if you want to use the current
+ *              process's owner as the file owner.
+ * @param group The desired file group. Specify GROUP_NOT_GIVEN if you want to use the current
+ *              process's group as the file group.
+ * @param overwrite Whether to overwrite the file if it exists. If set to false
+ *                  and the file exists then nothing will happen.
+ * @throws FileSystemException Something went wrong.
  * @ingroup Support
  */
-string findSpawnServer(const char *passengerRoot = NULL);
-
-/**
- * Find the location of the Passenger ApplicationPool server
- * executable.
- *
- * @param passengerRoot The Passenger root folder.
- * @return An absolute path to the executable.
- * @throws FileSystemException Unable to access parts of the filesystem.
- * @pre passengerRoot != NULL
- * @ingroup Support
- */
-string findApplicationPoolServer(const char *passengerRoot);
+void createFile(const string &filename, const StaticString &contents,
+                mode_t permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
+                uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN,
+                bool overwrite = true);
 
 /**
  * Returns a canonical version of the specified path. All symbolic links
@@ -229,17 +160,28 @@ string canonicalizePath(const string &path);
  * If <em>path</em> doesn't refer to a symlink then this method will return
  * <em>path</em>.
  *
+ * <em>path</em> MUST be null-terminated!
+ *
  * @throws FileSystemException Something went wrong.
  * @ingroup Support
  */
-string resolveSymlink(const string &path);
+string resolveSymlink(const StaticString &path);
 
 /**
  * Given a path, extracts its directory name.
+ * <em>path</em> MUST be null-terminated!
  *
  * @ingroup Support
  */
-string extractDirName(const string &path);
+string extractDirName(const StaticString &path);
+
+/**
+ * Given a path, extracts its base name.
+ * <em>path</em> MUST be null-terminated!
+ *
+ * @ingroup Support
+ */
+string extractBaseName(const StaticString &path);
 
 /**
  * Escape the given raw string into an XML value.
@@ -251,19 +193,38 @@ string escapeForXml(const string &input);
 
 /**
  * Returns the username of the user that the current process is running as.
- * If the user has no associated username, then the "UID xxxx" is returned,
+ * If the user has no associated username, then "UID xxxx" is returned,
  * where xxxx is the current UID.
  */
 string getProcessUsername();
 
 /**
- * Given a username that's supposed to be the "lowest user" in the user switching mechanism,
- * checks whether this username exists. If so, this users's UID and GID will be stored into
- * the arguments of the same names. If not, <em>uid</em> and <em>gid</em> will be set to
- * the UID and GID of the "nobody" user. If that user doesn't exist either, then <em>uid</em>
- * and <em>gid</em> will be set to -1.
+ * Converts a mode string into a mode_t value.
+ *
+ * At this time only the symbolic mode strings are supported, e.g. something like looks
+ * this: "u=rwx,g=w,o=rx". The grammar is as follows:
+ * @code
+ *   mode   ::= (clause ("," clause)*)?
+ *   clause ::= who "=" permission*
+ *   who    ::= "u" | "g" | "o"
+ *   permission ::= "r" | "w" | "x" | "s"
+ * @endcode
+ *
+ * Notes:
+ * - The mode value starts with 0. So if you specify "u=rwx", then the group and world
+ *   permissions will be empty (set to 0).
+ * - The "s" permission is only allowed for who == "u" or who == "g".
+ * - The return value does not depend on the umask.
+ *
+ * @throws InvalidModeStringException The mode string cannot be parsed.
  */
-void determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid);
+mode_t parseModeString(const StaticString &mode);
+
+/**
+ * Turns the given path into an absolute path. Unlike realpath(), this function does
+ * not resolve symlinks.
+ */
+string absolutizePath(const StaticString &path, const StaticString &workingDir = "");
 
 /**
  * Return the path name for the directory in which the system stores general
@@ -275,38 +236,9 @@ void determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid);
  */
 const char *getSystemTempDir();
 
-/**
- * Return the path name for the directory in which Phusion Passenger-specific
- * temporary files are to be stored. This directory is unique for this instance
- * of the web server in which Phusion Passenger is running.
- *
- * The calculated value will be stored in an internal variable, so that subsequent
- * calls will return the same value. To bypass the usage of this internal variable,
- * set <tt>bypassCache</tt> to true. In this case, the value of the internal
- * variable will be set to the newly calculated value.
- *
- * @param bypassCache Whether the value of the internal variable should be bypassed.
- * @param parentDir The directory under which the Phusion Passenger-specific
- *                  temp directory should be located. If set to the empty string,
- *                  then the return value of getSystemTempDir() will be used.
- *                  This argument only has effect if the value of the internal
- *                  variable is not consulted.
- * @ensure !result.empty()
- * @ingroup Support
- */
-string getPassengerTempDir(bool bypassCache = false, const string &parentDir = "");
-
-/**
- * Force subsequent calls to <tt>getPassengerTempDir(false, ...)</tt> to return the given value.
- * <tt>dir</tt> is not created automatically if it doesn't exist.
- *
- * <tt>dir</tt> may also be an empty string, in which case it will cause the next
- * call to <tt>getPassengerTempDir()</tt> to re-calculate the temp directory's path.
- */
-void setPassengerTempDir(const string &dir);
-
-/* Create a temporary directory for storing Phusion Passenger-specific temp files,
- * such as temporarily buffered uploads, sockets for backend processes, etc.
+/* Create a temporary directory for storing Phusion Passenger instance-specific
+ * temp files, such as temporarily buffered uploads, sockets for backend
+ * processes, etc.
  * The directory that will be created is the one returned by
  * <tt>getPassengerTempDir(false, parentDir)</tt>. This call stores the path to
  * this temp directory in an internal variable, so that subsequent calls to
@@ -350,29 +282,32 @@ void setPassengerTempDir(const string &dir);
  * @throws SystemException Something went wrong.
  * @throws FileSystemException Something went wrong.
  */
-void createPassengerTempDir(const string &parentDir, bool userSwitching,
+/* void createPassengerTempDir(const string &parentDir, bool userSwitching,
                             const string &lowestUser,
-                            uid_t workerUid, gid_t workerGid);
+                            uid_t workerUid, gid_t workerGid); */
 
 /**
  * Create the directory at the given path, creating intermediate directories
- * if necessary. The created directories' permissions are as specified by the
- * 'mode' parameter. You can specify this directory's owner and group through
- * the 'owner' and 'group' parameters. A value of -1 for 'owner' or 'group'
- * means that the owner/group should not be changed.
+ * if necessary. The created directories' permissions are exactly as specified
+ * by the 'mode' parameter (i.e. the umask will be ignored). You can specify
+ * this directory's owner and group through the 'owner' and 'group' parameters.
+ * A value of USER_NOT_GIVEN for 'owner' and/or GROUP_NOT_GIVEN 'group' means
+ * that the owner/group should not be changed.
  *
  * If 'path' already exists, then nothing will happen.
  *
- * @throws IOException Something went wrong.
- * @throws SystemException Something went wrong.
+ * @param mode A mode string, as supported by parseModeString().
  * @throws FileSystemException Something went wrong.
+ * @throws InvalidModeStringException The mode string cannot be parsed.
  */
-void makeDirTree(const string &path, const char *mode = "u=rwx,g=,o=", uid_t owner = (uid_t) -1, gid_t group = (gid_t) -1);
+void makeDirTree(const string &path, const StaticString &mode = "u=rwx,g=,o=",
+	uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN);
 
 /**
- * Remove an entire directory tree recursively.
+ * Remove an entire directory tree recursively. If the directory doesn't exist then this
+ * function does nothing.
  *
- * @throws FileSystemException Something went wrong.
+ * @throws RuntimeException Something went wrong.
  */
 void removeDirTree(const string &path);
 
@@ -418,30 +353,46 @@ bool verifyRackDir(const string &dir, CachedFileStat *cstat = 0,
 bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
 
-/**
- * Create a new Unix server socket which is bounded to <tt>filename</tt>.
- *
- * @param filename The filename to bind the socket to.
- * @param backlogSize The size of the socket's backlog. Specify 0 to use the
- *                    platform's maximum allowed backlog size.
- * @param autoDelete Whether <tt>filename</tt> should be deleted, if it already exists.
- * @return The file descriptor of the newly created Unix server socket.
- * @throws RuntimeException Something went wrong.
- * @throws SystemException Something went wrong while creating the Unix server socket.
- * @throws boost::thread_interrupted A system call has been interrupted.
- */
-int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool autoDelete = true);
+void prestartWebApps(const ResourceLocator &locator, const string &serializedprestartURLs);
 
 /**
- * Connect to a Unix server socket at <tt>filename</tt>.
- *
- * @param filename The filename of the socket to connect to.
- * @return The file descriptor of the connected client socket.
- * @throws RuntimeException Something went wrong.
- * @throws SystemException Something went wrong while connecting to the Unix server.
- * @throws boost::thread_interrupted A system call has been interrupted.
+ * Runs the given function and catches any tracable_exceptions. Upon catching such an exception,
+ * its message and backtrace will be printed. If toAbort is true then it will call abort(),
+ * otherwise the exception is swallowed.
+ * thread_interrupted and all other exceptions are silently propagated.
  */
-int connectToUnixServer(const char *filename);
+void runAndPrintExceptions(const function<void ()> &func, bool toAbort);
+void runAndPrintExceptions(const function<void ()> &func);
+
+/**
+ * Returns the system's host name.
+ *
+ * @throws SystemException The host name cannot be retrieved.
+ */
+string getHostName();
+
+/**
+ * Convert a signal number to its associated name.
+ */
+string getSignalName(int sig);
+
+/**
+ * Resets the current process's signal handler disposition and signal mask
+ * to default values. One should call this every time one forks a child process;
+ * non-default signal masks/handler dispositions can cause all kinds of weird quirks,
+ * like waitpid() malfunctioning on OS X.
+ *
+ * This function is async-signal safe.
+ */
+void resetSignalHandlersAndMask();
+
+/**
+ * Close all file descriptors that are higher than <em>lastToKeepOpen</em>.
+ * This function is async-signal safe. But make sure there are no other
+ * threads running that might open file descriptors!
+ */
+void closeAllFileDescriptors(int lastToKeepOpen);
+
 
 /**
  * Represents a buffered upload file.

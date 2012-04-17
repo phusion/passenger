@@ -14,23 +14,32 @@ Listen 127.0.0.1:<%= @port %>
 <% if !has_builtin_module?('mod_mime.c') %>
 	LoadModule mime_module "<%= modules_dir %>/mod_mime.so"
 <% end %>
+<% if !has_builtin_module?('mod_autoindex.c') %>
+	LoadModule autoindex_module "<%= modules_dir %>/mod_autoindex.so"
+<% end %>
 <% if !has_builtin_module?('mod_dir.c') %>
 	LoadModule dir_module "<%= modules_dir %>/mod_dir.so"
 <% end %>
 <% if !has_builtin_module?('mod_alias.c') %>
 	LoadModule alias_module "<%= modules_dir %>/mod_alias.so"
 <% end %>
-<% if !has_builtin_module?('mod_rewrite.c') && has_module?('mod_rewrite.so') %>
+<% if !has_builtin_module?('mod_rewrite.c') %>
 	LoadModule rewrite_module "<%= modules_dir %>/mod_rewrite.so"
 <% end %>
 <% if !has_builtin_module?('mod_env.c') %>
 	LoadModule env_module "<%= modules_dir %>/mod_env.so"
 <% end %>
+<% if PlatformInfo.httpd_version >= '2.4.0' %>
+	LoadModule authz_core_module "<%= modules_dir %>/mod_authz_core.so"
+	LoadModule unixd_module "<%= modules_dir %>/mod_unixd.so"
+<% end %>
 LoadModule passenger_module "<%= @mod_passenger %>"
 
 PassengerRoot "<%= @passenger_root %>"
-PassengerRuby "<%= PlatformInfo::RUBY %>"
-PassengerDefaultUser <%= CONFIG['lowest_user'] %>
+PassengerRuby "<%= PlatformInfo.ruby_command %>"
+PassengerDefaultUser <%= CONFIG['default_user'] %>
+PassengerDefaultGroup <%= CONFIG['default_group'] %>
+PassengerTempDir "<%= @passenger_temp_dir %>"
 RailsEnv production
 RackEnv production
 PassengerLogLevel 1
@@ -40,14 +49,19 @@ PassengerLogLevel 1
 
 TypesConfig "<%= @server_root %>/mime.types"
 StartServers          1
-ServerLimit          50
+ServerLimit          10
 MaxRequestsPerChild  50
-MaxClients           50
+MaxClients           10
 <IfModule mpm_prefork_module>
 	MinSpareServers       1
 	MaxSpareServers       1
 </IfModule>
 <IfModule mpm_worker_module>
+	MinSpareThreads       1
+	MaxSpareThreads       1
+	ThreadsPerChild       2
+</IfModule>
+<IfModule mpm_event_module>
 	MinSpareThreads       1
 	MaxSpareThreads       1
 	ThreadsPerChild       2
@@ -61,12 +75,14 @@ ServerAdmin admin@passenger.test
 ServerName passenger.test
 DocumentRoot "<%= @server_root %>"
 
-LockFile  <%= @server_root %>/httpd.lock
+<% if PlatformInfo.httpd_version < '2.4.0' %>
+	LockFile  <%= @server_root %>/httpd.lock
+<% end %>
 PidFile   <%= @server_root %>/httpd.pid
-ErrorLog  <%= @passenger_root %>/test/apache2.log
+ErrorLog  <%= @passenger_root %>/test/test.log
 CustomLog <%= @server_root %>/access.log combined
 
-<% if !vhosts.empty? %>
+<% if !vhosts.empty? && PlatformInfo.httpd_version < '2.4.0' %>
 	NameVirtualHost *:<%= @port %>
 <% end %>
 <% for vhost in vhosts %>

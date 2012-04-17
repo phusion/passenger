@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,10 +22,8 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
-	# Phusion Passenger version number.
-	# Don't forget to edit ext/common/Version.h too.
-	VERSION_STRING = '2.2.15'
-	
-	DEFAULT_FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
-	DEFAULT_APP_SPAWNER_MAX_IDLE_TIME       = 10 * 60
+	PASSENGER_ANALYTICS_WEB_LOG = "PASSENGER_ANALYTICS_WEB_LOG"
+	PASSENGER_TXN_ID = "PASSENGER_TXN_ID"
+	PASSENGER_GROUP_NAME = "PASSENGER_GROUP_NAME"
+	PASSENGER_UNION_STATION_KEY = "PASSENGER_UNION_STATION_KEY"
 end
