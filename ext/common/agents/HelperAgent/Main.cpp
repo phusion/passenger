@@ -1241,12 +1241,7 @@ private:
 	}
 	
 	void resetWorkerThreadInactivityTimers() {
-		/* set<ClientPtr>::iterator it;
-		
-		for (it = clients.begin(); it != clients.end(); it++) {
-			ClientPtr client = *it;
-			client->resetInactivityTimer();
-		} */
+		requestHandler->resetInactivityTimer();
 	}
 	
 	unsigned long long minWorkerThreadInactivityTime() const {
@@ -1261,7 +1256,7 @@ private:
 			}
 		}
 		return result; */
-		return 0;
+		return requestHandler->inactivityTime();
 	}
 
 	void onSigquit(ev::sig &signal, int revents) {
@@ -1344,6 +1339,7 @@ public:
 			messageServerThread->interrupt_and_join();
 		}
 		
+		messageServer.reset();
 		pool->destroy();
 		pool.reset();
 		requestHandler.reset();

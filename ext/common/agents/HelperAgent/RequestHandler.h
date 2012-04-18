@@ -105,6 +105,7 @@
 #include <Utils/IOUtils.h>
 #include <Utils/HttpHeaderBufferer.h>
 #include <Utils/Template.h>
+#include <Utils/Timer.h>
 #include <agents/HelperAgent/AgentOptions.h>
 #include <agents/HelperAgent/FileBackedPipe.h>
 #include <agents/HelperAgent/ScgiRequestParser.h>
@@ -512,6 +513,7 @@ private:
 	LoggerFactoryPtr loggerFactory;
 	ev::io requestSocketWatcher;
 	HashMap<int, ClientPtr> clients;
+	Timer inactivityTimer;
 	bool accept4Available;
 
 
@@ -523,6 +525,10 @@ private:
 		client->discard();
 		client->verifyInvariants();
 		RH_DEBUG(client, "Disconnected; new client count = " << clients.size());
+
+		if (clients.empty()) {
+			inactivityTimer.start();
+		}
 	}
 
 	void disconnectWithError(const ClientPtr &client, const StaticString &message) {
@@ -1041,6 +1047,10 @@ private:
 				count++;
 				RH_DEBUG(client, "New client accepted; new client count = " << clients.size());
 			}
+		}
+
+		if (OXT_LIKELY(!clients.empty())) {
+			inactivityTimer.stop();
 		}
 	}
 
@@ -1885,6 +1895,20 @@ public:
 			stream << "  Client " << client->fd << ":\n";
 			client->inspect(stream);
 		}
+	}
+
+	void resetInactivityTimer() {
+		libev->run(boost::bind(&Timer::start, &inactivityTimer));
+	}
+
+	void getInactivityTime(unsigned long long *result) const {
+		*result = inactivityTimer.elapsed();
+	}
+
+	unsigned long long inactivityTime() const {
+		unsigned long long result;
+		libev->run(boost::bind(&RequestHandler::getInactivityTime, this, &result));
+		return result;
 	}
 };
 
