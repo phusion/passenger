@@ -699,7 +699,9 @@ public:
 				/* All processes are doing something. We have no choice
 				 * but to trash a non-idle process.
 				 */
-				process = findBestProcessToTrash();
+				if (options.allowTrashingNonIdleProcesses) {
+					process = findBestProcessToTrash();
+				}
 			} else {
 				// Check invariant.
 				P_ASSERT(process->getGroup()->getWaitlist.empty());
@@ -1042,24 +1044,26 @@ public:
 			const Group *group = superGroup->defaultGroup;
 			ProcessList::const_iterator p_it;
 			
-			result << group->name << ":" << endl;
-			if (group->spawning()) {
-				result << "  (spawning new process...)" << endl;
+			if (group != NULL) {
+				result << group->name << ":" << endl;
+				if (group->spawning()) {
+					result << "  (spawning new process...)" << endl;
+				}
+				result << "  Requests in queue: " << group->getWaitlist.size() << endl;
+				for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
+					const ProcessPtr &process = *p_it;
+					char buf[128];
+					
+					snprintf(buf, sizeof(buf),
+							"PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
+							(unsigned long) process->pid,
+							process->sessions,
+							process->processed,
+							process->uptime().c_str());
+					result << "  " << buf << endl;
+				}
+				result << endl;
 			}
-			result << "  Requests in queue: " << group->getWaitlist.size() << endl;
-			for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
-				const ProcessPtr &process = *p_it;
-				char buf[128];
-				
-				snprintf(buf, sizeof(buf),
-						"PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
-						(unsigned long) process->pid,
-						process->sessions,
-						process->processed,
-						process->uptime().c_str());
-				result << "  " << buf << endl;
-			}
-			result << endl;
 		}
 		return result.str();
 	}

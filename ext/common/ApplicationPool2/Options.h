@@ -322,6 +322,11 @@ public:
 	 * False by default.
 	 */
 	bool noop;
+
+	/** Specifies whether, if the pool is already full, the pool is allowed to
+	 * trash a non-idle process in order to free capacity. True by default.
+	 */
+	bool allowTrashingNonIdleProcesses;
 	
 	
 	/*********** Spawn options automatically set by Pool ***********/
@@ -356,6 +361,7 @@ public:
 		spawnerTimeout          = -1;
 		
 		noop                    = false;
+		allowTrashingNonIdleProcesses = true;
 		
 		/*********************************/
 	}

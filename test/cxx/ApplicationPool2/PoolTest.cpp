@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <ApplicationPool2/Pool.h>
 #include <Utils/IOUtils.h>
+#include <Utils/json.h>
 #include <MessageReadersWriters.h>
 #include <map>
 #include <vector>
@@ -52,8 +53,11 @@ namespace tut {
 			options.spawnMethod = "dummy";
 			options.appRoot = "stub/rack";
 			options.startCommand = "ruby\1" "start.rb";
-			options.startupFile  = "stub/rack/start.rb";
+			options.startupFile  = "start.rb";
 			options.loadShellEnvvars = false;
+			options.user = testConfig["normal_user_1"].asCString();
+			options.defaultUser = testConfig["default_user"].asCString();
+			options.defaultGroup = testConfig["default_group"].asCString();
 			return options;
 		}
 		
@@ -990,9 +994,39 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 0u);
 	}
 
+	TEST_METHOD(60) {
+		// When a process has become idle, and there are waiters on the pool,
+		// consider detaching it in order to satisfy a waiter.
+		Options options1 = createOptions();
+		Options options2 = createOptions();
+		options2.appRoot = "stub/wsgi";
+		options2.allowTrashingNonIdleProcesses = false;
+
+		retainSessions = true;
+		pool->setMax(2);
+		pool->asyncGet(options1, callback);
+		pool->asyncGet(options1, callback);
+		EVENTUALLY(3,
+			result = pool->getProcessCount() == 2;
+		);
+		pool->asyncGet(options2, callback);
+		ensure_equals(pool->getWaitlist.size(), 1u);
+		ensure_equals(number, 2u);
+
+		currentSession.reset();
+		sessions.pop_front();
+		EVENTUALLY(3,
+			result = number == 3;
+		);
+		ensure_equals(pool->getProcessCount(), 2u);
+		SuperGroupPtr superGroup1 = pool->superGroups.get("stub/rack");
+		SuperGroupPtr superGroup2 = pool->superGroups.get("stub/rack");
+		ensure_equals(superGroup1->defaultGroup->count, 1u);
+		ensure_equals(superGroup2->defaultGroup->count, 1u);
+	}
+
 	// Process metrics collection.
 	// Persistent connections.
-	// When a process has become idle, and there are waiters on the pool, consider detaching it in order to satisfy a waiter.
 
 	// If one closes the session before it has reached EOF, and process's maximum concurrency
 	// has already been reached, then the pool should ping the process so that it can detect
