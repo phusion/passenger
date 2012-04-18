@@ -243,18 +243,21 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	/* Update statistics. */
 	process->sessionClosed(session);
 	pqueue.decrease(process->pqHandle, process->usage());
-	
+
+	bool maxRequestsReached = options.maxRequests > 0
+		&& process->processed >= options.maxRequests;
+
 	/* This group now has a process that's guaranteed to be not at
 	 * full capacity...
 	 */
 	assert(!process->atFullCapacity());
-	if (!getWaitlist.empty()) {
+	if (!getWaitlist.empty() && !maxRequestsReached) {
 		/* ...so if there are clients waiting for a process to
 		 * become available, call them now.
 		 */
 		UPDATE_TRACE_POINT();
 		assignSessionsToGetWaitersQuickly(lock);
-	} else if (!pool->getWaitlist.empty()) {
+	} else if (!pool->getWaitlist.empty() || maxRequestsReached) {
 		/* Someone might be trying to get() a session for a different
 		 * group that couldn't be spawned because of lack of pool capacity.
 		 * If this group isn't under sufficiently load (as apparent by the
@@ -267,8 +270,22 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		 * future to detach this group even if the wait list is non-empty
 		 * in case there's a waiter on the pool's get wait list that's older
 		 * than X seconds.
+		 *
+		 * ---- OR ----
+		 *
+		 * This process has processed its maximum number of requests,
+		 * so we detach it.
 		 */
 		UPDATE_TRACE_POINT();
+		if (!pool->getWaitlist.empty()) {
+			P_DEBUG("Process " << process->inspect() << " is no longer at "
+				"full capacity; detaching it in order to make room in the pool");
+		} else {
+			P_DEBUG("Process " << process->inspect() <<
+				" has reached its maximum number of requests (" <<
+				options.maxRequests << "); detaching it");
+		}
+
 		vector<Callback> actions;
 		// Will take care of processing pool->getWaitlist.
 		pool->detachProcessUnlocked(process, actions);

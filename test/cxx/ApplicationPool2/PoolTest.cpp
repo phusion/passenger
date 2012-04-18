@@ -1025,6 +1025,30 @@ namespace tut {
 		ensure_equals(superGroup2->defaultGroup->count, 1u);
 	}
 
+	TEST_METHOD(61) {
+		// A process is detached after processing maxRequests sessions.
+		{
+			Ticket ticket;
+			Options options = createOptions();
+			options.maxRequests = 5;
+			pool->get(options, &ticket).reset();
+
+			vector<ProcessPtr> processes = pool->getProcesses();
+			ensure_equals(processes.size(), 1u);
+			pid_t origPid = processes[0]->pid;
+
+			for (int i = 0; i < 3; i++) {
+				pool->get(options, &ticket).reset();
+				processes = pool->getProcesses();
+				ensure_equals(processes.size(), 1u);
+				ensure_equals(processes[0]->pid, origPid);
+			}
+
+			pool->get(options, &ticket).reset();
+		}
+		ensure_equals(pool->getProcessCount(), 0u);
+	}
+
 	// Process metrics collection.
 	// Persistent connections.
 
