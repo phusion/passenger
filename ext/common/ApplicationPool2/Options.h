@@ -294,8 +294,8 @@ public:
 	 */
 	unsigned long statThrottleRate;
 	
-	/** In seconds. */
-	long spawnerTimeout;
+	/** The number of seconds that preloader processes may stay alive idling. */
+	long maxPreloaderIdleTime;
 	
 	
 	/*********** Per-request options that should be set manually and that only matter to Pool ***********/
@@ -342,7 +342,7 @@ public:
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
 	Options() {
-		startTimeout            = 60 * 1000;
+		startTimeout            = 90 * 1000;
 		environment             = "production";
 		baseURI                 = "/";
 		spawnMethod             = "smart";
@@ -358,7 +358,7 @@ public:
 		maxRequests             = 0;
 		minProcesses            = 1;
 		statThrottleRate        = 0;
-		spawnerTimeout          = -1;
+		maxPreloaderIdleTime    = -1;
 		
 		noop                    = false;
 		allowTrashingNonIdleProcesses = true;
@@ -486,11 +486,6 @@ public:
 		appendKeyValue (vec, "union_station_key",  unionStationKey);
 		appendKeyValue4(vec, "print_exceptions",   printExceptions);
 		
-		appendKeyValue3(vec, "max_requests",       maxRequests);
-		appendKeyValue3(vec, "min_processes",      minProcesses);
-		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
-		appendKeyValue2(vec, "spawner_timeout",    spawnerTimeout);
-		
 		appendKeyValue (vec, "group_secret",       groupSecret);
 		
 		/*********************************/
@@ -544,11 +539,11 @@ public:
 		}
 	}
 	
-	unsigned long getSpawnerTimeout() const {
-		if (spawnerTimeout == -1) {
+	unsigned long getMaxPreloaderIdleTime() const {
+		if (maxPreloaderIdleTime == -1) {
 			return 5 * 60;
 		} else {
-			return spawnerTimeout;
+			return maxPreloaderIdleTime;
 		}
 	}
 };

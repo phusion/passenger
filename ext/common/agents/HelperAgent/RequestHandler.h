@@ -1376,7 +1376,7 @@ private:
 		fillPoolOption(client, options.maxRequests, "PASSENGER_MAX_REQUESTS");
 		fillPoolOption(client, options.spawnMethod, "PASSENGER_SPAWN_METHOD");
 		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
-		fillPoolOption(client, options.spawnerTimeout, "PASSENGER_SPAWNER_IDLE_TIME");
+		fillPoolOption(client, options.maxPreloaderIdleTime, "PASSENGER_MAX_PRELOADER_IDLE_TIME");
 		fillPoolOption(client, options.statThrottleRate, "PASSENGER_STAT_THROTTLE_RATE");
 		fillPoolOption(client, options.restartDir, "PASSENGER_RESTART_DIR");
 		fillPoolOption(client, options.loadShellEnvvars, "PASSENGER_LOAD_SHELL_ENVVARS");

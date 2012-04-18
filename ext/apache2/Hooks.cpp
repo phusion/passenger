@@ -933,8 +933,6 @@ private:
 		addHeader(output, "PASSENGER_STATUS_LINE", "false");
 		addHeader(output, "PASSENGER_APP_ROOT", appRoot);
 		addHeader(output, "PASSENGER_APP_GROUP_NAME", config->getAppGroupName(appRoot));
-		addHeader(output, "PASSENGER_USE_GLOBAL_QUEUE",
-			config->usingGlobalQueue() ? "true" : "false");
 		addHeader(output, "PASSENGER_RUBY", config->ruby);
 		addHeader(output, "PASSENGER_ENV", config->getEnvironment());
 		addHeader(output, "PASSENGER_SPAWN_METHOD", config->getSpawnMethodString());
@@ -943,10 +941,8 @@ private:
 		addHeader(output, "PASSENGER_APP_TYPE", mapper.getApplicationTypeString());
 		addHeader(output, "PASSENGER_MIN_INSTANCES",
 			apr_psprintf(r->pool, "%ld", config->getMinInstances()));
-		addHeader(output, "PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME",
-			apr_psprintf(r->pool, "%ld", config->frameworkSpawnerTimeout));
-		addHeader(output, "PASSENGER_APP_SPAWNER_IDLE_TIME",
-			apr_psprintf(r->pool, "%ld", config->appSpawnerTimeout));
+		addHeader(output, "PASSENGER_MAX_PRELOADER_IDLE_TIME",
+			apr_psprintf(r->pool, "%ld", config->maxPreloaderIdleTime));
 		addHeader(output, "PASSENGER_DEBUGGER", "false");
 		addHeader(output, "PASSENGER_SHOW_VERSION_IN_HEADER", "true");
 		addHeader(output, "PASSENGER_MAX_REQUESTS",

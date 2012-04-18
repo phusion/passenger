@@ -763,22 +763,6 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'smart-lv2'.
 
-[[PassengerUseGlobalQueue]]
-=== PassengerUseGlobalQueue <on|off> ===
-Turns the use of global queuing on or off.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is 'on'.
-
-'This feature is sponsored by http://www.37signals.com/[37signals].'
-
-include::users_guide_snippets/global_queueing_explained.txt[]
-
-
 === PassengerEnabled <on|off> ===
 You can set this option to 'off' to completely disable Phusion Passenger for
 a certain location. This is useful if, for example, you want to integrate a PHP
@@ -1189,6 +1173,30 @@ applications, each which must be available at all times.
 
 This option may only occur once, in the global server configuration.
 The default value is '300'.
+
+==== PassengerMaxPreloaderIdleTime <integer> ====
+The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
+methods explained>>) has an idle timeout, just like the backend processes spawned by
+Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
+anything for a given period.
+
+This option allows you to set the ApplicationSpawner server's idle timeout, in
+seconds. A value of '0' means that it should never idle timeout.
+
+Setting a higher value will mean that the ApplicationSpawner server is kept around
+longer, which may slightly increase memory usage. But as long as the
+ApplicationSpawner server is running, the time to spawn a Ruby on Rails backend
+process only takes about 10% of the time that is normally needed, assuming that
+you're using the 'smart' or 'smart-lv2' <<PassengerSpawnMethod,spawning method>>. So if your
+system has enough memory, is it recommended that you set this option to a high
+value or to '0'.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is '300' (5 minutes).
 
 [[PassengerMaxRequests]]
 ==== PassengerMaxRequests <integer> ====
@@ -1618,7 +1626,10 @@ error messages should be written to instead.
 This option may only occur once, in the global server configuration.
 
 
-=== Ruby on Rails-specific options ===
+=== Classic Ruby on Rails (<= 2.x)-specific options ===
+
+These options only have effect on classic Ruby on Rails 1.x and 2.x applications.
+Ruby on Rails >= 3.x applications are considered Rack applications.
 
 ==== RailsAutoDetect <on|off> ====
 Whether Phusion Passenger should automatically detect whether a virtual host's
@@ -1680,54 +1691,6 @@ This option may occur in the following places:
  * In '.htaccess', if `AllowOverride Options` is on.
 
 In each place, it may be specified at most once. The default value is 'production'.
-
-==== RailsFrameworkSpawnerIdleTime <integer> ====
-The FrameworkSpawner server (explained in <<spawning_methods_explained,Spawning
-methods explained>>) has an idle timeout, just like the backend processes spawned by
-Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
-anything for a given period.
-
-This option allows you to set the FrameworkSpawner server's idle timeout, in
-seconds. A value of '0' means that it should never idle timeout.
-
-Setting a higher value will mean that the FrameworkSpawner server is kept around
-longer, which may slightly increase memory usage. But as long as the
-FrameworkSpawner server is running, the time to spawn a Ruby on Rails backend
-process only takes about 40% of the time that is normally needed, assuming that
-you're using the 'smart' <<PassengerSpawnMethod,spawning method>>. So if your
-system has enough memory, is it recommended that you set this option to a high
-value or to '0'.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is '1800' (30 minutes).
-
-==== RailsAppSpawnerIdleTime <integer> ====
-The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
-methods explained>>) has an idle timeout, just like the backend processes spawned by
-Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
-anything for a given period.
-
-This option allows you to set the ApplicationSpawner server's idle timeout, in
-seconds. A value of '0' means that it should never idle timeout.
-
-Setting a higher value will mean that the ApplicationSpawner server is kept around
-longer, which may slightly increase memory usage. But as long as the
-ApplicationSpawner server is running, the time to spawn a Ruby on Rails backend
-process only takes about 10% of the time that is normally needed, assuming that
-you're using the 'smart' or 'smart-lv2' <<PassengerSpawnMethod,spawning method>>. So if your
-system has enough memory, is it recommended that you set this option to a high
-value or to '0'.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is '600' (10 minutes).
 
 === Rack-specific options ===
 

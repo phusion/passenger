@@ -347,8 +347,7 @@ create_request(ngx_http_request_t *r)
     ngx_str_t                     *union_station_filters = NULL;
     u_char                         min_instances_string[12];
     u_char                         max_requests_string[12];
-    u_char                         framework_spawner_idle_time_string[12];
-    u_char                         app_spawner_idle_time_string[12];
+    u_char                         max_preloader_idle_time_string[12];
     u_char                        *end;
     void                          *tmp;
     ngx_uint_t                     i, n;
@@ -499,23 +498,14 @@ create_request(ngx_http_request_t *r)
     len += sizeof("PASSENGER_MAX_REQUESTS") +
            ngx_strlen(max_requests_string) + 1;
     
-    end = ngx_snprintf(framework_spawner_idle_time_string,
-                       sizeof(framework_spawner_idle_time_string) - 1,
+    end = ngx_snprintf(max_preloader_idle_time_string,
+                       sizeof(max_preloader_idle_time_string) - 1,
                        "%d",
-                       (slcf->framework_spawner_idle_time == (ngx_int_t) -1) ?
-                           -1 : slcf->framework_spawner_idle_time);
+                       (slcf->max_preloader_idle_time == (ngx_int_t) -1) ?
+                           -1 : slcf->max_preloader_idle_time);
     *end = '\0';
-    len += sizeof("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME") +
-           ngx_strlen(framework_spawner_idle_time_string) + 1;
-    
-    end = ngx_snprintf(app_spawner_idle_time_string,
-                       sizeof(app_spawner_idle_time_string) - 1,
-                       "%d",
-                       (slcf->app_spawner_idle_time == (ngx_int_t) -1) ?
-                           -1 : slcf->app_spawner_idle_time);
-    *end = '\0';
-    len += sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME") +
-           ngx_strlen(app_spawner_idle_time_string) + 1;
+    len += sizeof("PASSENGER_MAX_PRELOADER_IDLE_TIME") +
+           ngx_strlen(max_preloader_idle_time_string) + 1;
     
     if (slcf->union_station_filters != NGX_CONF_UNSET_PTR && slcf->union_station_filters->nelts > 0) {
         len += sizeof("UNION_STATION_FILTERS");
@@ -735,15 +725,10 @@ create_request(ngx_http_request_t *r)
     b->last = ngx_copy(b->last, max_requests_string,
                        ngx_strlen(max_requests_string) + 1);
 
-    b->last = ngx_copy(b->last, "PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME",
-                       sizeof("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
-    b->last = ngx_copy(b->last, framework_spawner_idle_time_string,
-                       ngx_strlen(framework_spawner_idle_time_string) + 1);
-
-    b->last = ngx_copy(b->last, "PASSENGER_APP_SPAWNER_IDLE_TIME",
-                       sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME"));
-    b->last = ngx_copy(b->last, app_spawner_idle_time_string,
-                       ngx_strlen(app_spawner_idle_time_string) + 1);
+    b->last = ngx_copy(b->last, "PASSENGER_MAX_PRELOADER_IDLE_TIME",
+                       sizeof("PASSENGER_MAX_PRELOADER_IDLE_TIME"));
+    b->last = ngx_copy(b->last, max_preloader_idle_time_string,
+                       ngx_strlen(max_preloader_idle_time_string) + 1);
 
     if (slcf->union_station_filters != NGX_CONF_UNSET_PTR && slcf->union_station_filters->nelts > 0) {
         b->last = ngx_copy(b->last, "UNION_STATION_FILTERS",

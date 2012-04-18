@@ -106,18 +106,12 @@ struct DirConfig {
 	const char *group;
 	
 	/**
-	 * The idle timeout, in seconds, of Rails framework spawners.
-	 * May also be 0 (which indicates that the framework spawner should
-	 * never idle timeout) or -1 (which means that the value is not specified).
-	 */
-	long frameworkSpawnerTimeout;
-	
-	/**
-	 * The idle timeout, in seconds, of Rails application spawners.
+	 * The idle timeout, in seconds, of preloader processes.
 	 * May also be 0 (which indicates that the application spawner should
-	 * never idle timeout) or -1 (which means that the value is not specified).
+	 * never idle timeout) or -1 (which means that the value is not specified,
+	 * and the default value should be used).
 	 */
-	long appSpawnerTimeout;
+	long maxPreloaderIdleTime;
 	
 	/**
 	 * The maximum number of requests that the spawned application may process
@@ -148,9 +142,6 @@ struct DirConfig {
 	
 	/** Whether high performance mode should be turned on. */
 	Threeway highPerformance;
-	
-	/** Whether global queuing should be used. */
-	Threeway useGlobalQueue;
 	
 	/**
 	 * Whether encoded slashes in URLs should be supported. This however conflicts
@@ -282,10 +273,6 @@ struct DirConfig {
 	
 	bool highPerformanceMode() const {
 		return highPerformance == ENABLED;
-	}
-	
-	bool usingGlobalQueue() const {
-		return useGlobalQueue != DISABLED;
 	}
 	
 	bool allowsEncodedSlashes() const {

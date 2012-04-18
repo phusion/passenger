@@ -393,11 +393,11 @@ public:
 				
 				group->verifyInvariants();
 				
-				// ...cleanup the spawner if it's been idle for more than maxIdleTime.
+				// ...cleanup the spawner if it's been idle for more than preloaderIdleTime.
 				if (group->spawner->cleanable()) {
 					unsigned long long spawnerGcTime =
 						group->spawner->lastUsed() +
-						group->options.getSpawnerTimeout() * 1000000;
+						group->options.getMaxPreloaderIdleTime() * 1000000;
 					if (now >= spawnerGcTime) {
 						P_DEBUG("Garbage collect idle spawner: group=" << group->name);
 						group->asyncCleanupSpawner();

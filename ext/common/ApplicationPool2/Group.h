@@ -141,7 +141,7 @@ private:
 		options.maxRequests      = other.maxRequests;
 		options.minProcesses     = other.minProcesses;
 		options.statThrottleRate = other.statThrottleRate;
-		options.spawnerTimeout   = other.spawnerTimeout;
+		options.maxPreloaderIdleTime = other.maxPreloaderIdleTime;
 	}
 	
 	void runAllActions(const vector<Callback> &actions) {
@@ -526,9 +526,9 @@ public:
 		return usage() == 0
 			&& getWaitlist.empty()
 			&& disabledProcesses.empty()
-			&& options.getSpawnerTimeout() != 0
+			&& options.getMaxPreloaderIdleTime() != 0
 			&& now - spawner->lastUsed() >
-				(unsigned long long) options.getSpawnerTimeout() * 1000000;
+				(unsigned long long) options.getMaxPreloaderIdleTime() * 1000000;
 	}
 	
 	/** Whether a new process should be spawned for this group in case
