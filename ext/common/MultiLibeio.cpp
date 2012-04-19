@@ -76,6 +76,7 @@ threadMain() {
 			cond.wait(l);
 		}
 		if (!quit) {
+			shouldPoll = false;
 			l.unlock();
 			eio_poll();
 			l.lock();
