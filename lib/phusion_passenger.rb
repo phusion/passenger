@@ -94,7 +94,7 @@ module PhusionPassenger
 			@helper_scripts_dir    = get_option(filename, options, 'helper_scripts')
 			@resources_dir         = get_option(filename, options, 'resources')
 			@doc_dir               = get_option(filename, options, 'doc')
-			@compilable_source_dir = nil
+			@compilable_source_dir = get_option(filename, options, 'compilable_source')
 			@runtime_libdir        = get_option(filename, options, 'runtimelib')
 			@header_dir            = get_option(filename, options, 'headers')
 			@apache2_module_path   = get_option(filename, options, 'apache2_module')
