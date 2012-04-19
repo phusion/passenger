@@ -627,7 +627,7 @@ For example:
         Allow from all
     </Directory>
 
-    RackBaseURI /rails                    # <-- These lines have
+    RackBaseURI /rack                     # <-- These lines have
     <Directory /websites/phusion/rails>   # <-- been added.
         Options -MultiViews               # <--
     </Directory>                          # <--
