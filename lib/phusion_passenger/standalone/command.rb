@@ -177,11 +177,19 @@ private
 		File.open(@location_config_filename, 'w') do |f|
 			f.puts '[locations]'
 			f.puts "bin=#{PhusionPassenger.bin_dir}"
-			f.puts "agents=#{passenger_support_files_dir}"
+			if debugging?
+				f.puts "agents=#{PhusionPassenger.agents_dir}"
+			else
+				f.puts "agents=#{passenger_support_files_dir}"
+			end
 			f.puts "helper_scripts=#{PhusionPassenger.helper_scripts_dir}"
 			f.puts "resources=#{PhusionPassenger.resources_dir}"
 			f.puts "doc=#{PhusionPassenger.doc_dir}"
-			f.puts "runtimelib=#{passenger_support_files_dir}"
+			if debugging?
+				f.puts "runtimelib=#{PhusionPassenger.runtime_libdir}"
+			else
+				f.puts "runtimelib=#{passenger_support_files_dir}"
+			end
 			f.puts "headers=#{PhusionPassenger.header_dir}"
 			f.puts "rubylib=#{PhusionPassenger.ruby_libdir}"
 			f.puts "ruby_native_support=#{ruby_native_support_dir}"

@@ -239,7 +239,7 @@ private
 		return File.dirname(ruby_libdir)
 	end
 	
-	def self.get_option(filename, options, key, reuqired = true)
+	def self.get_option(filename, options, key, required = true)
 		value = options[key]
 		if value
 			return value
