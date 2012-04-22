@@ -1376,6 +1376,7 @@ private:
 			options.baseURI = scriptName;
 		}
 		
+		options.logLevel = getLogLevel();
 		fillPoolOption(client, options.appGroupName, "PASSENGER_APP_GROUP_NAME");
 		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
 		fillPoolOption(client, options.environment, "PASSENGER_ENV");

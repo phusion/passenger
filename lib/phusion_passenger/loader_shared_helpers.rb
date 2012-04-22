@@ -23,6 +23,7 @@
 #  THE SOFTWARE.
 
 require 'phusion_passenger/public_api'
+require 'phusion_passenger/debug_logging'
 
 module PhusionPassenger
 
@@ -57,6 +58,7 @@ module LoaderSharedHelpers
 		options["print_exceptions"]          = to_boolean(options["print_exceptions"])
 		options["analytics"]                 = to_boolean(options["analytics"])
 		options["show_version_in_header"]    = to_boolean(options["show_version_in_header"])
+		options["log_level"]                 = options["log_level"].to_i if options["log_level"]
 		# TODO: smart spawning is not supported when using ruby-debug. We should raise an error
 		# in this case.
 		options["debugger"]     = to_boolean(options["debugger"])
@@ -135,6 +137,8 @@ module LoaderSharedHelpers
 	# This function may modify +options+. The modified options are to be
 	# passed to the request handler.
 	def before_loading_app_code_step1(startup_file, options)
+		DebugLogging.log_level = options["log_level"] if options["log_level"]
+
 		# Instantiate the analytics logger if requested. Can be nil.
 		require 'phusion_passenger/analytics_logger'
 		options["analytics_logger"] = AnalyticsLogger.new_from_options(options)

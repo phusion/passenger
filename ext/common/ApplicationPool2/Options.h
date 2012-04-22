@@ -181,6 +181,11 @@ public:
 	 * title is assigned. Only used during spawning and only if
 	 * appType.empty(). */
 	StaticString processTitle;
+
+	/**
+	 * Defaults to DEFAULT_LOG_LEVEL.
+	 */
+	int logLevel;
 	
 	/** The maximum amount of time, in milliseconds, that may be spent
 	 * on spawning the process or the preloader. */
@@ -342,6 +347,7 @@ public:
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
 	Options() {
+		logLevel                = DEFAULT_LOG_LEVEL;
 		startTimeout            = 90 * 1000;
 		environment             = "production";
 		baseURI                 = "/";
@@ -468,6 +474,7 @@ public:
 		appendKeyValue (vec, "app_type",           appType);
 		appendKeyValue (vec, "start_command",      getStartCommand(resourceLocator));
 		appendKeyValue (vec, "process_title",      getProcessTitle());
+		appendKeyValue2(vec, "log_level",          logLevel);
 		appendKeyValue3(vec, "start_timeout",      startTimeout);
 		appendKeyValue (vec, "environment",        environment);
 		appendKeyValue (vec, "base_uri",           baseURI);

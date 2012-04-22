@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -516,7 +516,10 @@ private
 				raise
 			ensure
 				finalize_request(headers, has_error)
+				trace(3, "Request done.")
 			end
+		else
+			trace(2, "No headers parsed; disconnecting client.")
 		end
 		return true
 	rescue => e
