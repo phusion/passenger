@@ -462,8 +462,6 @@ create_request(ngx_http_request_t *r)
     #endif
     
     /* Lengths of Passenger application pool options. */
-    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_USE_GLOBAL_QUEUE",
-                                  slcf, use_global_queue);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_FRIENDLY_ERROR_PAGES",
                                   slcf, friendly_error_pages);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("UNION_STATION_SUPPORT",
@@ -676,8 +674,6 @@ create_request(ngx_http_request_t *r)
     
 
     /* Build Passenger application pool option headers. */
-    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_USE_GLOBAL_QUEUE",
-                                  slcf, use_global_queue);
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_FRIENDLY_ERROR_PAGES",
                                   slcf, friendly_error_pages);
     SERIALIZE_BOOLEAN_CONFIG_DATA("UNION_STATION_SUPPORT",

@@ -280,7 +280,6 @@ passenger_create_loc_conf(ngx_conf_t *cf)
      */
 
     conf->enabled = NGX_CONF_UNSET;
-    conf->use_global_queue = NGX_CONF_UNSET;
     conf->friendly_error_pages = NGX_CONF_UNSET;
     conf->union_station_support = NGX_CONF_UNSET;
     conf->debugger = NGX_CONF_UNSET;
@@ -386,7 +385,6 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_script_copy_code_t  *copy;
 
     ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
-    ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 1);
     ngx_conf_merge_value(conf->friendly_error_pages, prev->friendly_error_pages, 1);
     ngx_conf_merge_value(conf->union_station_support, prev->union_station_support, 0);
     ngx_conf_merge_value(conf->debugger, prev->debugger, 0);
@@ -984,6 +982,15 @@ rails_framework_spawner_idle_time(ngx_conf_t *cf, ngx_command_t *cmd, void *conf
 }
 
 static char *
+passenger_use_global_queue(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_conf_log_error(NGX_LOG_ALERT, cf, 0, "The 'passenger_use_global_queue' "
+        "directive is obsolete and doesn't do anything anymore. Global queuing "
+        "is now always enabled. Please remove this configuration directive.");
+    return NGX_CONF_OK;
+}
+
+static char *
 set_null_terminated_keyval_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     char  *p = conf;
@@ -1071,13 +1078,6 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_flag_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, abort_on_startup_error),
-      NULL },
-
-    { ngx_string("passenger_use_global_queue"),
-      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
-      ngx_conf_set_flag_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, use_global_queue),
       NULL },
 
     { ngx_string("passenger_friendly_error_pages"),
@@ -1384,6 +1384,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_num_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, max_preloader_idle_time),
+      NULL },
+
+    { ngx_string("passenger_use_global_queue"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      passenger_use_global_queue,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
       NULL },
 
       ngx_null_command

@@ -229,7 +229,6 @@ http {
         listen 80;
         root /webapps/foo/public;
         passenger_enabled on;
-        passenger_use_global_queue on;
     }
 }
 -----------------------------------
@@ -678,23 +677,6 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 === Connection handling options ===
-
-[[PassengerUseGlobalQueue]]
-==== passenger_use_global_queue <on|off> ====
-Turns the use of global queuing on or off.
-
-This option may occur in the following places:
-
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
-
-In each place, it may be specified at most once. The default value is 'on'.
-
-'This feature is sponsored by http://www.37signals.com/[37signals].'
-
-include::users_guide_snippets/global_queueing_explained.txt[]
 
 ==== passenger_ignore_client_abort <on|off> ====
 Normally, when the HTTP client aborts the connection (e.g. when the user clicked on "Stop"
