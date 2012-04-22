@@ -1345,10 +1345,21 @@ private:
 				"passenger_root: " + resourceLocator.getRoot() + "\n"
 				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
-				"generation_dir: " + generation->getPath() + "\n"
-				"app_root: " + details.options->appRoot + "\n"
-				"\n",
+				"generation_dir: " + generation->getPath() + "\n",
 				&details.timeout);
+
+			vector<string> args;
+			vector<string>::const_iterator it, end;
+			details.options->toVector(args, resourceLocator);
+			for (it = args.begin(); it != args.end(); it++) {
+				const string &key = *it;
+				it++;
+				const string &value = *it;
+				writeExact(details.adminSocket,
+					key + ": " + value + "\n",
+					&details.timeout);
+			}
+			writeExact(details.adminSocket, "\n", &details.timeout);
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE) {
 				/* Ignore this. Process might have written an
