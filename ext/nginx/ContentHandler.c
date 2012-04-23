@@ -941,6 +941,7 @@ process_status_line(ngx_http_request_t *r)
     }
 
     u = r->upstream;
+    u->headers_in.content_length_n = r->headers_out.content_length_n;
 
     if (rc == NGX_HTTP_SCGI_PARSE_NO_HEADER) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
@@ -1005,6 +1006,7 @@ parse_status_line(ngx_http_request_t *r, passenger_context_t *context)
     } state;
 
     u = r->upstream;
+    u->headers_in.content_length_n = r->headers_out.content_length_n;
 
     state = r->state;
 
@@ -1441,6 +1443,7 @@ passenger_content_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     u = r->upstream;
+    u->headers_in.content_length_n = r->headers_out.content_length_n;
     
     u->schema = passenger_schema_string;
     u->output.tag = (ngx_buf_tag_t) &ngx_http_passenger_module;
