@@ -473,11 +473,11 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_size_value(conf->upstream_config.buffer_size,
                               prev->upstream_config.buffer_size,
-                              (size_t) ngx_pagesize);
+                              16 * 1024);
 
 
     ngx_conf_merge_bufs_value(conf->upstream_config.bufs, prev->upstream_config.bufs,
-                              8, ngx_pagesize);
+                              8, 16 * 1024);
 
     if (conf->upstream_config.bufs.num < 2) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
