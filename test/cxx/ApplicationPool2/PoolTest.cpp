@@ -1011,7 +1011,7 @@ namespace tut {
 		);
 		pool->asyncGet(options2, callback);
 		ensure_equals(pool->getWaitlist.size(), 1u);
-		ensure_equals(number, 2u);
+		ensure_equals(number, 2);
 
 		currentSession.reset();
 		sessions.pop_front();
@@ -1021,8 +1021,8 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 2u);
 		SuperGroupPtr superGroup1 = pool->superGroups.get("stub/rack");
 		SuperGroupPtr superGroup2 = pool->superGroups.get("stub/rack");
-		ensure_equals(superGroup1->defaultGroup->count, 1u);
-		ensure_equals(superGroup2->defaultGroup->count, 1u);
+		ensure_equals(superGroup1->defaultGroup->count, 1);
+		ensure_equals(superGroup2->defaultGroup->count, 1);
 	}
 
 	TEST_METHOD(61) {
@@ -1055,4 +1055,6 @@ namespace tut {
 	// If one closes the session before it has reached EOF, and process's maximum concurrency
 	// has already been reached, then the pool should ping the process so that it can detect
 	// when the session's connection has been released by the app.
+
+	/*****************************/
 }

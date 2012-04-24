@@ -281,23 +281,10 @@ public:
 	/*********** Per-group pool options that should be set manually ***********/
 	
 	/**
-	 * The maximum number of requests that the spawned application may process
-	 * before exiting. A value of 0 means unlimited.
-	 */
-	unsigned long maxRequests;
-	
-	/**
 	 * The minimum number of processes for the current group that the application
 	 * pool's cleaner thread should keep around.
 	 */
 	unsigned long minProcesses;
-	
-	/**
-	 * A throttling rate for file stats. When set to a non-zero value N,
-	 * restart.txt and other files which are usually stat()ted on every
-	 * ApplicationPool::get() call will be stat()ed at most every N seconds.
-	 */
-	unsigned long statThrottleRate;
 	
 	/** The number of seconds that preloader processes may stay alive idling. */
 	long maxPreloaderIdleTime;
@@ -317,6 +304,19 @@ public:
 	 */
 	UnionStation::LoggerPtr logger;
 	
+	/**
+	 * A throttling rate for file stats. When set to a non-zero value N,
+	 * restart.txt and other files which are usually stat()ted on every
+	 * ApplicationPool::get() call will be stat()ed at most every N seconds.
+	 */
+	unsigned long statThrottleRate;
+
+	/**
+	 * The maximum number of requests that the spawned application may process
+	 * before exiting. A value of 0 means unlimited.
+	 */
+	unsigned long maxRequests;
+
 	/** When true, Pool::get() and Pool::asyncGet() will create the necessary
 	 * SuperGroup and Group structures just as normally, and will even handle
 	 * restarting logic, but will not actually spawn any processes and will not
@@ -332,6 +332,9 @@ public:
 	 * trash a non-idle process in order to free capacity. True by default.
 	 */
 	bool allowTrashingNonIdleProcesses;
+
+	/*-----------------*/
+	/*-----------------*/
 	
 	
 	/*********** Spawn options automatically set by Pool ***********/
@@ -361,11 +364,11 @@ public:
 		printExceptions         = true;
 		raiseInternalError      = false;
 		
-		maxRequests             = 0;
 		minProcesses            = 1;
-		statThrottleRate        = 0;
 		maxPreloaderIdleTime    = -1;
 		
+		statThrottleRate        = 0;
+		maxRequests             = 0;
 		noop                    = false;
 		allowTrashingNonIdleProcesses = true;
 		

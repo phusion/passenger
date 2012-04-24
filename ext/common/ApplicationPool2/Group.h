@@ -542,6 +542,7 @@ public:
 	 */
 	void spawn() {
 		if (!spawning()) {
+			P_DEBUG("Spawning new process for group " << name);
 			createInterruptableThread(
 				boost::bind(&Group::spawnThreadMain,
 					this, shared_from_this(), spawner,

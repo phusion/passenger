@@ -397,6 +397,7 @@ void
 Group::restart(const Options &options) {
 	vector<Callback> actions;
 	
+	P_DEBUG("Restarting group " << name);
 	secret = generateSecret();
 	resetOptions(options);
 	spawner = getPool()->spawnerFactory->create(options);
