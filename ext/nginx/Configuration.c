@@ -391,7 +391,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->show_version_in_header, prev->show_version_in_header, 1);
     ngx_conf_merge_str_value(conf->ruby, prev->ruby, NULL);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
-    ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
+    ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart");
     ngx_conf_merge_str_value(conf->union_station_key, prev->union_station_key, NULL);
     ngx_conf_merge_str_value(conf->user, prev->user, "");
     ngx_conf_merge_str_value(conf->group, prev->group, "");

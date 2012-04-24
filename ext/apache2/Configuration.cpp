@@ -317,14 +317,12 @@ DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_buffer_response, bufferResponse)
 static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	if (strcmp(arg, "smart") == 0) {
+	if (strcmp(arg, "smart") == 0 || strcmp(arg, "smart-lv2") == 0) {
 		config->spawnMethod = DirConfig::SM_SMART;
-	} else if (strcmp(arg, "smart-lv2") == 0) {
-		config->spawnMethod = DirConfig::SM_SMART_LV2;
-	} else if (strcmp(arg, "conservative") == 0) {
-		config->spawnMethod = DirConfig::SM_CONSERVATIVE;
+	} else if (strcmp(arg, "conservative") == 0 || strcmp(arg, "direct") == 0) {
+		config->spawnMethod = DirConfig::SM_DIRECT;
 	} else {
-		return "PassengerSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
+		return "PassengerSpawnMethod may only be 'smart', 'direct'.";
 	}
 	return NULL;
 }

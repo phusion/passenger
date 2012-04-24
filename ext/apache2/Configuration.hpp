@@ -61,7 +61,7 @@ using namespace std;
  */
 struct DirConfig {
 	enum Threeway { ENABLED, DISABLED, UNSET };
-	enum SpawnMethod { SM_UNSET, SM_SMART, SM_SMART_LV2, SM_CONSERVATIVE };
+	enum SpawnMethod { SM_UNSET, SM_SMART, SM_DIRECT };
 	
 	Threeway enabled;
 	
@@ -246,12 +246,10 @@ struct DirConfig {
 		switch (spawnMethod) {
 		case SM_SMART:
 			return "smart";
-		case SM_SMART_LV2:
-			return "smart-lv2";
-		case SM_CONSERVATIVE:
-			return "conservative";
+		case SM_DIRECT:
+			return "direct";
 		default:
-			return "smart-lv2";
+			return "smart";
 		}
 	}
 	
