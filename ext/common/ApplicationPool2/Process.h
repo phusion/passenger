@@ -184,7 +184,7 @@ public:
 	ev::io errorPipeWatcher;
 	/** The sockets that this Process listens on for connections. */
 	SocketListPtr sockets;
-	/** Time at which we started spawning this process. */
+	/** Time at which we started spawning this process. Microseconds resolution. */
 	unsigned long long spawnStartTime;
 	/** The maximum amount of concurrent sessions this process can handle.
 	 * 0 means unlimited. */

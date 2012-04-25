@@ -1052,6 +1052,8 @@ namespace tut {
 	// Process metrics collection.
 	// Persistent connections.
 
+	// If a process fails to spawn, it sends a SpawnException result to all get waiters.
+	// If a process fails to spawn, the existing processes are kept alive and continue to be able to serve requests.
 	// If one closes the session before it has reached EOF, and process's maximum concurrency
 	// has already been reached, then the pool should ping the process so that it can detect
 	// when the session's connection has been released by the app.
