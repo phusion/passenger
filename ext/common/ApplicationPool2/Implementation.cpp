@@ -400,6 +400,8 @@ Group::restart(const Options &options) {
 	P_DEBUG("Restarting group " << name);
 	secret = generateSecret();
 	resetOptions(options);
+	// TODO: shutting down the old spawner can be blocking.
+	// We should do this asynchronously.
 	spawner = getPool()->spawnerFactory->create(options);
 	while (!processes.empty()) {
 		ProcessPtr process = processes.front();
