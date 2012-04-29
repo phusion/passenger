@@ -1264,6 +1264,7 @@ private:
 			purgeStdio(stdout);
 			purgeStdio(stderr);
 			resetSignalHandlersAndMask();
+			disableMallocDebugging();
 			int adminSocketCopy = dup2(adminSocket.first, 3);
 			int errorPipeCopy = dup2(errorPipe.second, 4);
 			dup2(adminSocketCopy, 0);
@@ -1950,6 +1951,7 @@ public:
 			purgeStdio(stdout);
 			purgeStdio(stderr);
 			resetSignalHandlersAndMask();
+			disableMallocDebugging();
 			int adminSocketCopy = dup2(adminSocket.first, 3);
 			int errorPipeCopy = dup2(errorPipe.second, 4);
 			dup2(adminSocketCopy, 0);

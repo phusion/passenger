@@ -594,6 +594,7 @@ removeDirTree(const string &path) {
 	pid = syscalls::fork();
 	if (pid == 0) {
 		resetSignalHandlersAndMask();
+		disableMallocDebugging();
 		int devnull = open("/dev/null", O_RDONLY);
 		if (devnull != -1) {
 			dup2(devnull, 2);
@@ -616,6 +617,7 @@ removeDirTree(const string &path) {
 	pid = syscalls::fork();
 	if (pid == 0) {
 		resetSignalHandlersAndMask();
+		disableMallocDebugging();
 		closeAllFileDescriptors(2);
 		execlp("rm", "rm", "-rf", c_path, (char * const) 0);
 		perror("Cannot execute rm");
@@ -846,6 +848,15 @@ resetSignalHandlersAndMask() {
 	#endif
 	sigaction(SIGUSR1, &action, NULL);
 	sigaction(SIGUSR2, &action, NULL);
+}
+
+void
+disableMallocDebugging() {
+	unsetenv("MALLOC_FILL_SPACE");
+	unsetenv("MALLOC_PROTECT_BEFORE");
+	unsetenv("MallocGuardEdges");
+	unsetenv("MallocScribble");
+	unsetenv("MallocPreScribble");
 }
 
 // Async-signal safe way to get the current process's hard file descriptor limit.

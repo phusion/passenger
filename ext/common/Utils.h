@@ -387,6 +387,11 @@ string getSignalName(int sig);
 void resetSignalHandlersAndMask();
 
 /**
+ * Disables malloc() debugging facilities on OS X.
+ */
+void disableMallocDebugging();
+
+/**
  * Close all file descriptors that are higher than <em>lastToKeepOpen</em>.
  * This function is async-signal safe. But make sure there are no other
  * threads running that might open file descriptors!
