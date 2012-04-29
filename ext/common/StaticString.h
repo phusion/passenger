@@ -25,6 +25,7 @@
 #ifndef _PASSENGER_STATIC_STRING_H_
 #define _PASSENGER_STATIC_STRING_H_
 
+#include <sys/types.h>
 #include <string>
 #include <cstring>
 #include <cstddef>
