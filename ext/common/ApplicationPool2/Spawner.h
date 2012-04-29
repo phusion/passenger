@@ -67,6 +67,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
+#include <cassert>
 #include <unistd.h>
 #include <pthread.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
@@ -116,9 +117,8 @@ protected:
 	private:
 		FileDescriptor fd;
 		int target;
-		oxt::thread thr;
 		string data;
-		bool stopped;
+		oxt::thread *thr;
 		
 		void capture() {
 			TRACE_POINT();
@@ -154,16 +154,16 @@ protected:
 		BackgroundIOCapturer(const FileDescriptor &_fd, int _target)
 			: fd(_fd),
 			  target(_target),
-			  thr(boost::bind(&BackgroundIOCapturer::capture, this),
-			      "Background I/O capturer", 64 * 1024),
-			  stopped(false)
+			  thr(NULL)
 			{ }
 		
 		~BackgroundIOCapturer() {
-			if (!stopped) {
+			if (thr != NULL) {
 				this_thread::disable_interruption di;
 				this_thread::disable_syscall_interruption dsi;
-				thr.interrupt_and_join();
+				thr->interrupt_and_join();
+				delete thr;
+				thr = NULL;
 			}
 		}
 		
@@ -171,11 +171,19 @@ protected:
 			return fd;
 		}
 		
+		void start() {
+			assert(thr == NULL);
+			thr = new oxt::thread(boost::bind(&BackgroundIOCapturer::capture, this),
+				"Background I/O capturer", 64 * 1024);
+		}
+		
 		const string &stop() {
+			assert(thr != NULL);
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
-			thr.interrupt_and_join();
-			stopped = true;
+			thr->interrupt_and_join();
+			delete thr;
+			thr = NULL;
 			return data;
 		}
 	};
@@ -1294,6 +1302,7 @@ private:
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
 					forwardStderr ? STDERR_FILENO : -1);
+			details.stderrCapturer->start();
 			details.debugDir = debugDir;
 			details.options = &options;
 			details.timeout = options.startTimeout * 1000;
@@ -1978,6 +1987,7 @@ public:
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
 					forwardStderr ? STDERR_FILENO : -1);
+			details.stderrCapturer->start();
 			details.pid = pid;
 			details.adminSocket = adminSocket.second;
 			details.io = BufferedIO(adminSocket.second);
