@@ -116,6 +116,7 @@ module App
 			name, value = line.strip.split(/: */, 2)
 			options[name] = value
 		end
+		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		
 		handler = ClassicRails::RequestHandler.new(STDIN, options)
 		LoaderSharedHelpers.before_handling_requests(true, options)
