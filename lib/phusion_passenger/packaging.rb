@@ -73,7 +73,7 @@ module Packaging
 		'ext/boost/**/*',
 		'ext/libev/{LICENSE,Changes,README,Makefile.am,Makefile.in}',
 		'ext/libev/{*.m4,autogen.sh,config.guess,config.h.in,config.sub}',
-		'ext/libev/{configure,configure.ac,install-sh,ltmain.sh,missing,mkinstalldirs}',
+		'ext/libev/{configure,configure.ac,depcomp,install-sh,ltmain.sh,missing,mkinstalldirs}',
 		'ext/libev/{*.h,*.c}',
 		'ext/libeio/{LICENSE,Changes,README,Makefile.am,Makefile.in}',
 		'ext/libeio/{*.m4,autogen.sh,config.guess,config.h.in,config.sub}',
