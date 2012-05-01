@@ -36,6 +36,7 @@ doc/*.html
 test/test.log
 test/apache2.log
 test/config.yml
+test/config.json
 test/coverage
 test/cxx/CxxTestMain
 test/oxt/oxt_test_main
