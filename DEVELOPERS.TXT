@@ -14,6 +14,7 @@ The tests need the following software installed:
 * mime-types >= 1.15
 * sqlite3-ruby
 * json
+* daemon_controller >= 1.0.0
 
 The following software is optional:
 

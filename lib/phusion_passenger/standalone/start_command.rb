@@ -242,24 +242,40 @@ private
 			end
 		end
 	end
+
+	def check_port(address, port)
+		begin
+			socket = Socket.new(Socket::Constants::AF_INET, Socket::Constants::SOCK_STREAM, 0)
+			sockaddr = Socket.pack_sockaddr_in(port, address)
+			begin
+				socket.connect_nonblock(sockaddr)
+			rescue Errno::ENOENT, Errno::EINPROGRESS, Errno::EAGAIN, Errno::EWOULDBLOCK
+				if select(nil, [socket], nil, 0.1)
+					begin
+						socket.connect_nonblock(sockaddr)
+					rescue Errno::EISCONN
+					end
+				else
+					raise Errno::ECONNREFUSED
+				end
+			end
+			return true
+		rescue Errno::ECONNREFUSED
+			return false
+		ensure
+			socket.close if socket
+		end
+	end
 	
 	def check_port_availability
-		if !@options[:socket_file]
-			begin
-				TCPSocket.new(@options[:address], @options[:port]).close
-				port_taken = true
-			rescue SystemCallError
-				port_taken = false
-			end
-			if port_taken
-				error "The address #{@options[:address]}:#{@options[:port]} is already " <<
-				      "in use by another process, perhaps another Phusion Passenger " <<
-				      "Standalone instance.\n\n" <<
-				      "If you want to run this Phusion Passenger Standalone instance on " <<
-				      "another port, use the -p option, like this:\n\n" <<
-				      "  passenger start -p #{@options[:port] + 1}"
-				exit 1
-			end
+		if !@options[:socket_file] && check_port(@options[:address], @options[:port])
+			error "The address #{@options[:address]}:#{@options[:port]} is already " <<
+			      "in use by another process, perhaps another Phusion Passenger " <<
+			      "Standalone instance.\n\n" <<
+			      "If you want to run this Phusion Passenger Standalone instance on " <<
+			      "another port, use the -p option, like this:\n\n" <<
+			      "  passenger start -p #{@options[:port] + 1}"
+			exit 1
 		end
 	end
 	
