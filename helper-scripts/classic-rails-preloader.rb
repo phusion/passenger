@@ -46,7 +46,6 @@ module App
 		require 'phusion_passenger/utils/tmpdir'
 		require 'phusion_passenger/preloader_shared_helpers'
 		require 'phusion_passenger/loader_shared_helpers'
-		require 'phusion_passenger/classic_rails/request_handler'
 		LoaderSharedHelpers.init
 		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
@@ -118,7 +117,13 @@ module App
 		end
 		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		
-		handler = ClassicRails::RequestHandler.new(STDIN, options)
+		if Rails::VERSION::STRING >= '2.3.0'
+			require 'phusion_passenger/rack/request_handler'
+			handler = Rack::RequestHandler.new(STDIN, ActionController::Dispatcher.new, options)
+		else
+			require 'phusion_passenger/classic_rails/request_handler'
+			handler = ClassicRails::RequestHandler.new(STDIN, options)
+		end
 		LoaderSharedHelpers.before_handling_requests(true, options)
 		puts "!> Ready"
 		LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
