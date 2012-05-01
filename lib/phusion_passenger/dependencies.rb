@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -578,7 +578,7 @@ module Dependencies # :nodoc: all
 	end
 	
 	Daemon_Controller = Dependency.new do |dep|
-		dep.name = "daemon_controller >= 0.2.5"
+		dep.name = "daemon_controller >= 1.0.0"
 		dep.install_instructions = "Please install RubyGems first, then run " <<
 			"<b>#{PlatformInfo.gem_command || "gem"} install daemon_controller</b>"
 		dep.define_checker do |result|
@@ -590,7 +590,7 @@ module Dependencies # :nodoc: all
 				require 'daemon_controller'
 				begin
 					require 'daemon_controller/version'
-					too_old = DaemonController::VERSION_STRING < '0.2.5'
+					too_old = DaemonController::VERSION_STRING < '1.0.0'
 				rescue LoadError
 					too_old = true
 				end
