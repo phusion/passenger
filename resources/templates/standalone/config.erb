@@ -90,6 +90,28 @@ http {
             union_station_support on;
             union_station_key <%= app[:union_station_key] %>;
         <% end %>
+
+        location ~ ^/assets/ {
+            error_page 490 = @static_asset;
+            error_page 491 = @dynamic_request;
+            recursive_error_pages on;
+
+            if (-f $request_filename) {
+                return 490;
+            }
+            if (!-f $request_filename) {
+                return 491;
+            }
+        }
+        location @static_asset {
+            gzip_static on;
+            expires max;
+            add_header Cache-Control public;
+            add_header ETag "";
+        }
+        location @dynamic_request {
+            passenger_enabled on;
+        }
     }
     passenger_pre_start http://<%= nginx_listen_address(app) %>;
     <% end %>
