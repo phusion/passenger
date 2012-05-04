@@ -1,9 +1,21 @@
 import os, time
 
+def file_exist(filename):
+	try:
+		os.stat(filename)
+		return True
+	except OSError:
+		return False
+
 def application(env, start_response):
 	path   = env['PATH_INFO']
 	status = '200 OK'
 	body   = None
+
+	filename = env.get('HTTP_X_WAIT_FOR_FILE')
+	if filename is not None:
+		while not file_exist(filename):
+			time.sleep(0.01)
 
 	if path == '/pid':
 		body = os.getpid()
@@ -13,6 +25,7 @@ def application(env, start_response):
 			body += pair[0] + ' = ' + str(pair[1]) + "\n"
 		body = body
 	elif path == '/upload':
+		sleep_time = float(env.get('HTTP_X_SLEEP', 0))
 		f = open(env['HTTP_X_OUTPUT'], 'w')
 		try:
 			line = env['wsgi.input'].readline()
@@ -20,6 +33,8 @@ def application(env, start_response):
 				f.write(line)
 				f.flush()
 				line = env['wsgi.input'].readline()
+				if sleep_time > 0:
+					time.sleep(sleep_time)
 		finally:
 			f.close()
 		body = 'ok'

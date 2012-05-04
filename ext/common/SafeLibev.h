@@ -227,6 +227,7 @@ public:
 	}
 	
 	void run(const Callback &callback) {
+		assert(callback != NULL);
 		if (pthread_equal(pthread_self(), loopThread)) {
 			callback();
 		} else {
@@ -235,6 +236,7 @@ public:
 	}
 
 	void runSync(const Callback &callback) {
+		assert(callback != NULL);
 		unique_lock<boost::mutex> l(syncher);
 		bool done = false;
 		commands.push_back(Command(nextCommandId,
@@ -253,6 +255,7 @@ public:
 
 	// TODO: make it possible to call this from a thread
 	void runAfter(unsigned int timeout, const Callback &callback) {
+		assert(callback != NULL);
 		Timer *timer = new Timer(this, callback);
 		ev_timer_init(&timer->realTimer, timeoutHandler, timeout / 1000.0, 0);
 		timers.push_front(timer);
@@ -261,6 +264,7 @@ public:
 	}
 
 	unsigned int runLater(const Callback &callback) {
+		assert(callback != NULL);
 		unsigned int result;
 		{
 			unique_lock<boost::mutex> l(syncher);
@@ -275,6 +279,7 @@ public:
 	}
 	
 	unsigned int runLaterTS(const Callback &callback) {
+		assert(callback != NULL);
 		unsigned int result;
 		{
 			unique_lock<boost::mutex> l(syncher);

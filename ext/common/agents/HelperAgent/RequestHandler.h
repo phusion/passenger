@@ -314,6 +314,9 @@ public:
 	}
 
 	~Client() {
+		if (requestHandler != NULL) {
+			discard();
+		}
 		clientInput->userData      = NULL;
 		clientBodyBuffer->userData = NULL;
 		clientOutputPipe->userData = NULL;
@@ -471,26 +474,28 @@ public:
 	void inspect(Stream &stream) const {
 		const char *indent = "    ";
 
-		stream << indent << "state                      = " << getStateName() << "\n";
+		stream << indent << "state                       = " << getStateName() << "\n";
 		if (session == NULL) {
-			stream << indent << "session                    = NULL\n";
+			stream << indent << "session                     = NULL\n";
 		} else {
-			stream << indent << "session pid                = " << session->getPid() << "\n";
-			stream << indent << "session gupid              = " << session->getGupid() << "\n";
-			stream << indent << "session initiated          = " << boolStr(session->initiated()) << "\n";
+			stream << indent << "session pid                 = " << session->getPid() << "\n";
+			stream << indent << "session gupid               = " << session->getGupid() << "\n";
+			stream << indent << "session initiated           = " << boolStr(session->initiated()) << "\n";
 		}
 		stream
-			<< indent << "requestBodyIsBuffered      = " << boolStr(requestBodyIsBuffered) << "\n"
-			<< indent << "contentLength              = " << contentLength << "\n"
-			<< indent << "clientBodyAlreadyRead      = " << clientBodyAlreadyRead << "\n"
-			<< indent << "clientInput started        = " << boolStr(clientInput->isStarted()) << "\n"
-			<< indent << "clientOutputPipe started   = " << boolStr(clientOutputPipe->isStarted()) << "\n"
-			<< indent << "clientOutputPipe ended     = " << boolStr(clientOutputPipe->reachedEnd()) << "\n"
-			<< indent << "clientOutputWatcher active = " << boolStr(clientOutputWatcher.is_active()) << "\n"
-			<< indent << "appInput started           = " << boolStr(appInput->isStarted()) << "\n"
-			<< indent << "appInput ended             = " << boolStr(appInput->endReached()) << "\n"
-			<< indent << "responseHeaderSeen         = " << boolStr(responseHeaderSeen) << "\n"
-			<< indent << "useUnionStation            = " << boolStr(useUnionStation()) << "\n"
+			<< indent << "requestBodyIsBuffered       = " << boolStr(requestBodyIsBuffered) << "\n"
+			<< indent << "contentLength               = " << contentLength << "\n"
+			<< indent << "clientBodyAlreadyRead       = " << clientBodyAlreadyRead << "\n"
+			<< indent << "clientInput started         = " << boolStr(clientInput->isStarted()) << "\n"
+			<< indent << "clientBodyBuffer started    = " << boolStr(clientBodyBuffer->isStarted()) << "\n"
+			<< indent << "clientBodyBuffer reachedEnd = " << boolStr(clientBodyBuffer->reachedEnd()) << "\n"
+			<< indent << "clientOutputPipe started    = " << boolStr(clientOutputPipe->isStarted()) << "\n"
+			<< indent << "clientOutputPipe reachedEnd = " << boolStr(clientOutputPipe->reachedEnd()) << "\n"
+			<< indent << "clientOutputWatcher active  = " << boolStr(clientOutputWatcher.is_active()) << "\n"
+			<< indent << "appInput started            = " << boolStr(appInput->isStarted()) << "\n"
+			<< indent << "appInput reachedEnd         = " << boolStr(appInput->endReached()) << "\n"
+			<< indent << "responseHeaderSeen          = " << boolStr(responseHeaderSeen) << "\n"
+			<< indent << "useUnionStation             = " << boolStr(useUnionStation()) << "\n"
 			;
 	}
 };
@@ -933,8 +938,8 @@ private:
 
 		RH_TRACE(client, 3, "Forwarding " << size << " bytes of application data to client.");
 		ssize_t ret = syscalls::write(client->fd, data, size);
-		int e = errno;
 		if (ret == -1) {
+			int e = errno;
 			RH_TRACE(client, 3, "Could not write to client socket: " << strerror(e) << " (errno=" << e << ")");
 			if (e == EAGAIN) {
 				RH_TRACE(client, 3, "Waiting until the client socket is writable again.");
@@ -1056,6 +1061,7 @@ private:
 
 
 	size_t onClientInputData(const ClientPtr &client, const StaticString &data) {
+		RH_TRACE(client, 3, "Event: onClientInputData");
 		if (!client->connected()) {
 			return 0;
 		}
@@ -1106,7 +1112,7 @@ private:
 	}
 
 	void onClientEof(const ClientPtr &client) {
-		RH_TRACE(client, 3, "Client sent EOF");
+		RH_TRACE(client, 3, "Event: onClientEof; client sent EOF");
 		switch (client->state) {
 		case Client::BUFFERING_REQUEST_BODY:
 			state_bufferingRequestBody_onClientEof(client);
@@ -1121,6 +1127,7 @@ private:
 	}
 
 	void onClientInputError(const ClientPtr &client, const char *message, int errnoCode) {
+		RH_TRACE(client, 3, "Event: onClientInputError");
 		if (!client->connected()) {
 			return;
 		}
@@ -1140,6 +1147,7 @@ private:
 
 
 	void onClientBodyBufferData(const ClientPtr &client, const char *data, size_t size, const FileBackedPipe::ConsumeCallback &consumed) {
+		RH_TRACE(client, 3, "Event: onClientBodyBufferData");
 		if (!client->connected()) {
 			return;
 		}
@@ -1154,6 +1162,7 @@ private:
 	}
 
 	void onClientBodyBufferError(const ClientPtr &client, int errorCode) {
+		RH_TRACE(client, 3, "Event: onClientBodyBufferError");
 		if (!client->connected()) {
 			return;
 		}
@@ -1166,6 +1175,7 @@ private:
 	}
 
 	void onClientBodyBufferEnd(const ClientPtr &client) {
+		RH_TRACE(client, 3, "Event: onClientBodyBufferEnd");
 		if (!client->connected()) {
 			return;
 		}
@@ -1180,6 +1190,7 @@ private:
 	}
 
 	void onClientBodyBufferCommit(const ClientPtr &client) {
+		RH_TRACE(client, 3, "Event: onClientBodyBufferCommit");
 		if (!client->connected()) {
 			return;
 		}
@@ -1194,6 +1205,7 @@ private:
 	}
 
 	void onAppOutputWritable(const ClientPtr &client) {
+		RH_TRACE(client, 3, "Event: onAppOutputWritable");
 		if (!client->connected()) {
 			return;
 		}
@@ -1212,6 +1224,7 @@ private:
 
 
 	void onTimeout(const ClientPtr &client) {
+		RH_TRACE(client, 3, "Event: onTimeout");
 		if (!client->connected()) {
 			return;
 		}
@@ -1820,11 +1833,16 @@ private:
 
 	void state_forwardingBodyToApp_onAppOutputWritable(const ClientPtr &client) {
 		state_forwardingBodyToApp_verifyInvariants(client);
-		assert(!client->requestBodyIsBuffered);
 
 		RH_TRACE(client, 3, "Application socket became writable again.");
-		client->clientInput->start();
-		client->clientOutputWatcher.stop();
+		client->appOutputWatcher.stop();
+		if (client->requestBodyIsBuffered) {
+			assert(!client->clientBodyBuffer->isStarted());
+			client->clientBodyBuffer->start();
+		} else {
+			assert(!client->clientInput->isStarted());
+			client->clientInput->start();
+		}
 	}
 
 
@@ -1834,22 +1852,24 @@ private:
 		state_forwardingBodyToApp_verifyInvariants(client);
 		assert(client->requestBodyIsBuffered);
 
+		RH_TRACE(client, 3, "Forwarding " << size << " bytes of buffered client body data to application.");
 		ssize_t ret = syscalls::write(client->session->fd(), data, size);
 		if (ret == -1) {
-			if (errno == EAGAIN) {
-				// App is not ready yet to receive this data. Try later
-				// when the app socket is writable.
-				client->clientBodyBuffer->stop();
+			int e = errno;
+			RH_TRACE(client, 3, "Could not write to application socket: " << strerror(e) << " (errno=" << e << ")");
+			if (e == EAGAIN) {
+				RH_TRACE(client, 3, "Waiting until the application socket is writable again.");
 				client->appOutputWatcher.start();
 				consumed(0, true);
-			} else if (errno == EPIPE) {
+			} else if (e == EPIPE) {
 				// Client will be disconnected after response forwarding is done.
 				syscalls::shutdown(client->fd, SHUT_RD);
 				consumed(0, true);
 			} else {
-				disconnectWithAppSocketWriteError(client, errno);
+				disconnectWithAppSocketWriteError(client, e);
 			}
 		} else {
+			RH_TRACE(client, 3, "Managed to forward " << ret << " bytes.");
 			consumed(ret, false);
 		}
 	}

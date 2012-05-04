@@ -217,8 +217,11 @@ class DeleteFileEventually {
 private:
 	string filename;
 public:
-	DeleteFileEventually(const string &filename) {
+	DeleteFileEventually(const string &filename, bool deleteNow = true) {
 		this->filename = filename;
+		if (deleteNow) {
+			unlink(filename.c_str());
+		}
 	}
 	
 	~DeleteFileEventually() {

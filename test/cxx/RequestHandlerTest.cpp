@@ -463,6 +463,46 @@ namespace tut {
 		ensure_equals(stripHeaders(readAll(connection)), "ok");
 	}
 
+	TEST_METHOD(22) {
+		set_test_name("Test buffering of large request bodies that fit in neither the socket "
+		              "buffer nor the FileBackedPipe memory buffer, and that the application "
+		              "cannot read quickly enough.");
+
+		DeleteFileEventually d1("/tmp/wait.txt");
+		DeleteFileEventually d2("/tmp/output.txt");
+
+		// 2.6 MB of request body. Guaranteed not to fit in any socket buffer.
+		string requestBody;
+		for (int i = 0; i < 204800; i++) {
+			requestBody.append("hello world!\n");
+		}
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/upload",
+			"PASSENGER_BUFFERING", "true",
+			"HTTP_X_WAIT_FOR_FILE", "/tmp/wait.txt",
+			"HTTP_X_OUTPUT", "/tmp/output.txt",
+			NULL);
+		
+		// Should not block.
+		writeExact(connection, requestBody);
+		shutdown(connection, SHUT_WR);
+		
+		EVENTUALLY(5,
+			result = containsSubstring(inspect(), "session initiated           = true");
+		);
+		touchFile("/tmp/wait.txt");
+
+		string result = stripHeaders(readAll(connection));
+		ensure_equals(result, "ok");
+		struct stat buf;
+		ensure(stat("/tmp/output.txt", &buf) == 0);
+		ensure_equals(buf.st_size, (off_t) requestBody.size());
+	}
+
 	TEST_METHOD(30) {
 		// It replaces HTTP_CONTENT_LENGTH with CONTENT_LENGTH.
 		init();
@@ -542,7 +582,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(39) {
-		// Test handling of slow clients that can't receive response data fast enough.
+		// Test handling of slow clients that can't receive response data fast enough (response buffering).
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -551,7 +591,7 @@ namespace tut {
 			"HTTP_X_SIZE", "10485760",
 			NULL);
 		EVENTUALLY(10,
-			result = containsSubstring(inspect(), "appInput ended             = true");
+			result = containsSubstring(inspect(), "appInput reachedEnd         = true");
 		);
 		string result = stripHeaders(readAll(connection));
 		ensure_equals(result.size(), 10485760u);
@@ -568,4 +608,6 @@ namespace tut {
 	// Test that RequestHandler does not pass any client body data when CONTENT_LENGTH == 0 (when buffering is off).
 	// Test that RequestHandler does not read more than CONTENT_LENGTH bytes from the client body (when buffering is on).
 	// Test that RequestHandler does not read more than CONTENT_LENGTH bytes from the client body (when buffering is off).
+	// Test small response buffering.
+	// Test large response buffering.
 }
