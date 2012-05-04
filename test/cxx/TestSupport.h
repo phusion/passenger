@@ -239,7 +239,7 @@ public:
 	oxt::thread thread;
 	
 	TempThread(boost::function<void ()> func)
-		: thread(func)
+		: thread(boost::bind(runAndPrintExceptions, func, true))
 		{ }
 	
 	~TempThread() {

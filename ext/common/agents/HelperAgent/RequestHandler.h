@@ -170,6 +170,7 @@ private:
 		freeBufferedConnectPassword();
 		contentLength = 0;
 		clientBodyAlreadyRead = 0;
+		checkoutSessionAfterCommit = false;
 		sessionCheckedOut = false;
 		sessionCheckoutTry = 0;
 		responseHeaderSeen = false;
@@ -266,6 +267,7 @@ public:
 	unsigned int sessionCheckoutTry;
 	bool requestBodyIsBuffered;
 	bool sessionCheckedOut;
+	bool checkoutSessionAfterCommit;
 
 	bool responseHeaderSeen;
 	HttpHeaderBufferer responseHeaderBufferer;
@@ -567,6 +569,10 @@ private:
 
 	// GDB helper function, implemented in .cpp file to prevent inlining.
 	Client *getClientPointer(const ClientPtr &client);
+
+	void getInactivityTime(unsigned long long *result) const {
+		*result = inactivityTimer.elapsed();
+	}
 
 	static bool getBoolOption(const ClientPtr &client, const StaticString &name, bool defaultValue = false) {
 		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
@@ -1536,8 +1542,13 @@ private:
 		assert(client->contentLength == -1 || client->clientBodyAlreadyRead <= (unsigned long long) client->contentLength);
 
 		if (client->contentLength >= 0 && client->clientBodyAlreadyRead == (unsigned long long) client->contentLength) {
-			client->clientInput->stop();
-			state_bufferingRequestBody_onClientEof(client);
+			if (client->clientBodyBuffer->isCommittingToDisk()) {
+				RH_TRACE(client, 3, "Done buffering request body, but clientBodyBuffer not yet done committing data to disk; waiting until it's done");
+				client->checkoutSessionAfterCommit = true;
+			} else {
+				client->clientInput->stop();
+				state_bufferingRequestBody_onClientEof(client);
+			}
 		}
 
 		return size;
@@ -1558,7 +1569,12 @@ private:
 		state_bufferingRequestBody_verifyInvariants(client);
 		assert(!client->clientInput->isStarted());
 		client->backgroundOperations--;
-		client->clientInput->start();
+		if (client->checkoutSessionAfterCommit) {
+			RH_TRACE(client, 3, "Done committing request body to disk");
+			state_bufferingRequestBody_onClientEof(client);
+		} else {
+			client->clientInput->start();
+		}
 	}
 
 
@@ -1808,7 +1824,7 @@ private:
 			}
 			return 0;
 		} else {
-			client->clientBodyAlreadyRead += size;
+			client->clientBodyAlreadyRead += ret;
 
 			RH_TRACE(client, 3, "Managed to forward " << ret << " bytes; total=" <<
 				client->clientBodyAlreadyRead << ", content-length=" << client->contentLength);
@@ -1920,10 +1936,6 @@ public:
 
 	void resetInactivityTimer() {
 		libev->run(boost::bind(&Timer::start, &inactivityTimer));
-	}
-
-	void getInactivityTime(unsigned long long *result) const {
-		*result = inactivityTimer.elapsed();
 	}
 
 	unsigned long long inactivityTime() const {
