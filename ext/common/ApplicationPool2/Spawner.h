@@ -52,8 +52,11 @@
  * method, SpawnerFactory also automatically figures out which preloader
  * to use based on options.appType.
  *
- * # NOTE
- * Do not destroy a SmartSpawner until all child processes.
+ * ## SmartSpawner event loop
+ *
+ * Do not pass the request handler event loop to SmartSpawner! SmartSpawner
+ * uses the event loop for inter-thread synchronization and performs slow
+ * and blocking operations.
  */
 
 #include <string>
