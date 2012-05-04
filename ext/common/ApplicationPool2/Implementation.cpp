@@ -83,6 +83,16 @@ copyException(const tracable_exception &e) {
 	
 	TRY_COPY_EXCEPTION(SyntaxError);
 	
+	TRY_COPY_EXCEPTION(boost::lock_error);
+	TRY_COPY_EXCEPTION(boost::thread_resource_error);
+	TRY_COPY_EXCEPTION(boost::unsupported_thread_option);
+	TRY_COPY_EXCEPTION(boost::invalid_thread_argument);
+	TRY_COPY_EXCEPTION(boost::thread_permission_error);
+
+	TRY_COPY_EXCEPTION(boost::thread_interrupted);
+	TRY_COPY_EXCEPTION(boost::thread_exception);
+	TRY_COPY_EXCEPTION(boost::condition_error);
+
 	return make_shared<tracable_exception>(e);
 }
 
@@ -119,6 +129,16 @@ rethrowException(const ExceptionPtr &e) {
 	TRY_RETHROW_EXCEPTION(SecurityException);
 	
 	TRY_RETHROW_EXCEPTION(SyntaxError);
+
+	TRY_RETHROW_EXCEPTION(boost::lock_error);
+	TRY_RETHROW_EXCEPTION(boost::thread_resource_error);
+	TRY_RETHROW_EXCEPTION(boost::unsupported_thread_option);
+	TRY_RETHROW_EXCEPTION(boost::invalid_thread_argument);
+	TRY_RETHROW_EXCEPTION(boost::thread_permission_error);
+
+	TRY_RETHROW_EXCEPTION(boost::thread_interrupted);
+	TRY_RETHROW_EXCEPTION(boost::thread_exception);
+	TRY_RETHROW_EXCEPTION(boost::condition_error);
 	
 	throw tracable_exception(*e);
 }
@@ -450,6 +470,34 @@ Session::getPid() const {
 const string &
 Session::getGupid() const {
 	return process->gupid;
+}
+
+
+SmartSpawner::PreloaderErrorWatcher::PreloaderErrorWatcher(
+	const SafeLibevPtr &_libev,
+	const FileDescriptor &_errorPipe,
+	bool _forwardStderr)
+	: libev(_libev),
+	  errorPipe(_errorPipe),
+	  forwardStderr(_forwardStderr)
+{
+	errorWatcher.set(errorPipe, ev::READ);
+	errorWatcher.set<PreloaderErrorWatcher, &PreloaderErrorWatcher::onErrorReadable>(this);
+	libev->start(errorWatcher);
+}
+
+void
+SmartSpawner::PreloaderErrorWatcher::onErrorReadable(ev::io &io, int revents) {
+	char buf[1024 * 8];
+	ssize_t ret;
+	
+	ret = syscalls::read(errorPipe, buf, sizeof(buf));
+	if (ret <= 0) {
+		libev->stop(errorWatcher);
+		delete this;
+	} else if (forwardStderr) {
+		write(STDERR_FILENO, buf, ret);
+	}
 }
 
 
