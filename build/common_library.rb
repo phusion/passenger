@@ -121,7 +121,7 @@ if USE_VENDORED_LIBEV
 		cflags = "#{EXTRA_CXXFLAGS} -Wno-comment -Wno-unused"
 		sh "mkdir -p #{LIBEV_OUTPUT_DIR}" if !File.directory?(LIBEV_OUTPUT_DIR)
 		sh "cd #{LIBEV_OUTPUT_DIR} && sh #{LIBEV_SOURCE_DIR}configure " +
-			"--disable-shared --enable-static CFLAGS='#{cflags}'"
+			"--disable-shared --enable-static CFLAGS='#{cflags}' orig_CFLAGS=1"
 	end
 	
 	libev_sources = Dir["ext/libev/{*.c,*.h}"]

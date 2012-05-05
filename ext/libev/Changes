@@ -1,5 +1,37 @@
 Revision history for libev, a high-performance and full-featured event loop.
 
+TODO: ev_loop_wakeup
+TODO: EV_STANDALONE == NO_HASSEL (do not use clock_gettime in ev_standalone)
+
+4.11 Sat Feb  4 19:52:39 CET 2012
+	- INCOMPATIBLE CHANGE: ev_timer_again now clears the pending status, as
+          was documented already, but not implemented in the repeating case.
+        - new compiletime symbols: EV_NO_SMP and EV_NO_THREADS.
+	- fix a race where the workaround against the epoll fork bugs
+          caused signals to not be handled anymore.
+	- correct backend_fudge for most backends, and implement a windows
+          specific workaround to avoid looping because we call both
+          select and Sleep, both with different time resolutions.
+        - document range and guarantees of ev_sleep.
+        - document reasonable ranges for periodics interval and offset.
+        - rename backend_fudge to backend_mintime to avoid future confusion :)
+	- change the default periodic reschedule function to hopefully be more
+          exact and correct even in corner cases or in the far future.
+        - do not rely on -lm anymore: use it when available but use our
+          own floor () if it is missing. This should make it easier to embed,
+          as no external libraries are required.
+        - strategically import macros from libecb and mark rarely-used functions
+          as cache-cold (saving almost 2k code size on typical amd64 setups).
+        - add Symbols.ev and Symbols.event files, that were missing.
+        - fix backend_mintime value for epoll (was 1/1024, is 1/1000 now).
+        - fix #3 "be smart about timeouts" to not "deadlock" when
+          timeout == now, also improve the section overall.
+        - avoid "AVOIDING FINISHING BEFORE RETURNING" idiom.
+        - support new EV_API_STATIC mode to make all libev symbols
+          static.
+        - supply default CFLAGS of -g -O3 with gcc when original CFLAGS
+          were empty.
+
 4.04 Wed Feb 16 09:01:51 CET 2011
 	- fix two problems in the native win32 backend, where reuse of fd's
           with different underlying handles caused handles not to be removed
@@ -94,7 +126,7 @@ Revision history for libev, a high-performance and full-featured event loop.
           that this is a race condition regardless of EV_SIGNALFD.
 	- backport inotify code to C89.
         - inotify file descriptors could leak into child processes.
-        - ev_stat watchers could keep an errornous extra ref on the loop,
+        - ev_stat watchers could keep an erroneous extra ref on the loop,
           preventing exit when unregistering all watchers (testcases
           provided by ry@tinyclouds.org).
         - implement EV_WIN32_HANDLE_TO_FD and EV_WIN32_CLOSE_FD configuration
@@ -162,7 +194,7 @@ Revision history for libev, a high-performance and full-featured event loop.
           Malek Hadj-Ali).
         - implement ev_suspend and ev_resume.
         - new EV_CUSTOM revents flag for use by applications.
-        - add documentation section about priorites.
+        - add documentation section about priorities.
         - add a glossary to the dcoumentation.
         - extend the ev_fork description slightly.
         - optimize a jump out of call_pending.

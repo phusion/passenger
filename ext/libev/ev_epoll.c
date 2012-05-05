@@ -144,11 +144,13 @@ epoll_poll (EV_P_ ev_tstamp timeout)
   int i;
   int eventcnt;
 
+  if (expect_false (epoll_epermcnt))
+    timeout = 0.;
+
   /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs, which is below */
   /* the default libev max wait time, however. */
   EV_RELEASE_CB;
-  eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax,
-                         epoll_epermcnt ? 0 : ev_timeout_to_ms (timeout));
+  eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, timeout * 1e3);
   EV_ACQUIRE_CB;
 
   if (expect_false (eventcnt < 0))
@@ -168,8 +170,12 @@ epoll_poll (EV_P_ ev_tstamp timeout)
       int got  = (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
                | (ev->events & (EPOLLIN  | EPOLLERR | EPOLLHUP) ? EV_READ  : 0);
 
-      /* check for spurious notification */
-      /* we assume that fd is always in range, as we never shrink the anfds array */
+      /*
+       * check for spurious notification.
+       * this only finds spurious notifications on egen updates
+       * other spurious notifications will be found by epoll_ctl, below
+       * we assume that fd is always in range, as we never shrink the anfds array
+       */
       if (expect_false ((uint32_t)anfds [fd].egen != (uint32_t)(ev->data.u64 >> 32)))
         {
           /* recreate kernel state */
@@ -181,8 +187,15 @@ epoll_poll (EV_P_ ev_tstamp timeout)
         {
           anfds [fd].emask = want;
 
-          /* we received an event but are not interested in it, try mod or del */
-          /* I don't think we ever need MOD, but let's handle it anyways */
+          /*
+           * we received an event but are not interested in it, try mod or del
+           * this often happens because we optimistically do not unregister fds
+           * when we are no longer interested in them, but also when we get spurious
+           * notifications for fds from another process. this is partially handled
+           * above with the gencounter check (== our fd is not the event fd), and
+           * partially here, when epoll_ctl returns an error (== a child has the fd
+           * but we closed it).
+           */
           ev->events = (want & EV_READ  ? EPOLLIN  : 0)
                      | (want & EV_WRITE ? EPOLLOUT : 0);
 
@@ -225,7 +238,7 @@ epoll_init (EV_P_ int flags)
 #ifdef EPOLL_CLOEXEC
   backend_fd = epoll_create1 (EPOLL_CLOEXEC);
 
-  if (backend_fd <= 0)
+  if (backend_fd < 0)
 #endif
     backend_fd = epoll_create (256);
 
@@ -234,9 +247,9 @@ epoll_init (EV_P_ int flags)
 
   fcntl (backend_fd, F_SETFD, FD_CLOEXEC);
 
-  backend_fudge  = 0.; /* kernel sources seem to indicate this to be zero */
-  backend_modify = epoll_modify;
-  backend_poll   = epoll_poll;
+  backend_mintime = 1e-3; /* epoll does sometimes return early, this is just to avoid the worst */
+  backend_modify  = epoll_modify;
+  backend_poll    = epoll_poll;
 
   epoll_eventmax = 64; /* initial number of events receivable per poll */
   epoll_events = (struct epoll_event *)ev_malloc (sizeof (struct epoll_event) * epoll_eventmax);

@@ -517,9 +517,9 @@ namespace ev {
     }
   };
 
-  inline tstamp now () throw ()
+  inline tstamp now (EV_P) throw ()
   {
-    return ev_time ();
+    return ev_now (EV_A);
   }
 
   inline void delay (tstamp interval) throw ()

@@ -3,7 +3,7 @@
 /* Define to 1 if you have the `clock_gettime' function. */
 #undef HAVE_CLOCK_GETTIME
 
-/* "use syscall interface for clock_gettime" */
+/* Define to 1 to use the syscall interface for clock_gettime */
 #undef HAVE_CLOCK_SYSCALL
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
@@ -15,6 +15,9 @@
 /* Define to 1 if you have the `eventfd' function. */
 #undef HAVE_EVENTFD
 
+/* Define to 1 if the floor function is available */
+#undef HAVE_FLOOR
+
 /* Define to 1 if you have the `inotify_init' function. */
 #undef HAVE_INOTIFY_INIT
 
@@ -23,9 +26,6 @@
 
 /* Define to 1 if you have the `kqueue' function. */
 #undef HAVE_KQUEUE
-
-/* Define to 1 if you have the `m' library (-lm). */
-#undef HAVE_LIBM
 
 /* Define to 1 if you have the `rt' library (-lrt). */
 #undef HAVE_LIBRT

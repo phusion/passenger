@@ -230,7 +230,7 @@ VERSION_INFO = 4:0:0
 EXTRA_DIST = LICENSE Changes libev.m4 autogen.sh \
 	     ev_vars.h ev_wrap.h \
 	     ev_epoll.c ev_select.c ev_poll.c ev_kqueue.c ev_port.c ev_win32.c \
-	     ev.3 ev.pod
+	     ev.3 ev.pod Symbols.ev Symbols.event
 
 man_MANS = ev.3
 include_HEADERS = ev.h ev++.h event.h
@@ -765,6 +765,9 @@ uninstall-man: uninstall-man3
 	tags uninstall uninstall-am uninstall-includeHEADERS \
 	uninstall-libLTLIBRARIES uninstall-man uninstall-man3
 
+
+ev.3: ev.pod
+	pod2man -n LIBEV -r "libev-$(VERSION)" -c "libev - high performance full featured event loop" -s3 <$< >$@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
