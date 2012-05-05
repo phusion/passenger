@@ -13,6 +13,14 @@ autom4te.cache
 *.slo
 *.dSYM
 *.gch
+*.swp
+*~.nib
+*.pbxuser
+*.perspective
+*.perspectivev3
+*.mode1v3
+*.mode2v3
+xcuserdata
 /config.rb
 /agents
 /libout
