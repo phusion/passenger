@@ -46,6 +46,16 @@ module PlatformInfo
 	end
 	memoize :gnu_make, true
 	
+	def self.cc_is_clang?
+		`#{cc} --version 2>&1` =~ /clang version/
+	end
+	memoize :cc_is_clang?
+
+	def self.cxx_is_clang?
+		`#{cxx} --version 2>&1` =~ /clang version/
+	end
+	memoize :cxx_is_clang?
+
 	# Checks whether the compiler supports "-arch #{arch}".
 	def self.compiler_supports_architecture?(arch)
 		return try_compile(:c, '', "-arch #{arch}")
@@ -60,7 +70,7 @@ module PlatformInfo
 		return try_compile(:c, '', '-Wno-attributes')
 	end
 	memoize :compiler_supports_wno_attributes_flag?, true
-	
+
 	def self.compiler_supports_wno_missing_field_initializers_flag?
 		return try_compile(:c, '', '-Wno-missing-field-initializers')
 	end
@@ -201,7 +211,11 @@ module PlatformInfo
 		# -ggdb instead.
 		#
 		# In any case we'll always want to use -ggdb for better GDB debugging.
-		return '-ggdb'
+		if cc_is_clang? || cxx_is_clang?
+			return '-g'
+		else
+			return '-ggdb'
+		end
 	end
 	
 	def self.export_dynamic_flags

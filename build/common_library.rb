@@ -118,7 +118,8 @@ if USE_VENDORED_LIBEV
 		"ext/libev/Makefile.am"
 	]
 	file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
-		cflags = "#{EXTRA_CXXFLAGS} -Wno-comment -Wno-unused"
+		# Disable all warnings: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
+		cflags = "#{EXTRA_CXXFLAGS} -w"
 		sh "mkdir -p #{LIBEV_OUTPUT_DIR}" if !File.directory?(LIBEV_OUTPUT_DIR)
 		sh "cd #{LIBEV_OUTPUT_DIR} && sh #{LIBEV_SOURCE_DIR}configure " +
 			"--disable-shared --enable-static CFLAGS='#{cflags}' orig_CFLAGS=1"
@@ -159,7 +160,9 @@ if USE_VENDORED_LIBEIO
 		"ext/libeio/Makefile.am"
 	]
 	file LIBEIO_OUTPUT_DIR + "Makefile" => dependencies do
-		cflags = "#{EXTRA_CXXFLAGS} -Wno-comment -Wno-unused"
+		# Disable all warnings. The author has a clear standpoint on that:
+		# http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
+		cflags = "#{EXTRA_CXXFLAGS} -w"
 		sh "mkdir -p #{LIBEIO_OUTPUT_DIR}" if !File.directory?(LIBEIO_OUTPUT_DIR)
 		sh "cd #{LIBEIO_OUTPUT_DIR} && sh #{LIBEIO_SOURCE_DIR}configure " +
 			"--disable-shared --enable-static CFLAGS='#{cflags}'"
