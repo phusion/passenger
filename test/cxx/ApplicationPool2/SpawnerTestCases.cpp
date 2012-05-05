@@ -225,7 +225,7 @@
 	TEST_METHOD(9) {
 		// It raises an exception if the user does not have a access to one
 		// of the app root's parent directories, or the app root itself.
-		system("mkdir -p tmp.check/a/b/c");
+		runShellCommand("mkdir -p tmp.check/a/b/c");
 		TempDirCopy dir("stub/rack", "tmp.check/a/b/c/d");
 		TempDir dir2("tmp.check");
 
@@ -239,9 +239,9 @@
 
 		if (getuid() != 0) {
 			// TODO: implement this test for root too
-			system("chmod 000 tmp.check/a/b/c/d");
-			system("chmod 600 tmp.check/a/b/c");
-			system("chmod 600 tmp.check/a");
+			runShellCommand("chmod 000 tmp.check/a/b/c/d");
+			runShellCommand("chmod 600 tmp.check/a/b/c");
+			runShellCommand("chmod 600 tmp.check/a");
 
 			try {
 				spawner->spawn(options);
@@ -251,7 +251,7 @@
 					"the parent directory '" + cwd + "/tmp.check/a' has wrong permissions"));
 			}
 
-			system("chmod 700 tmp.check/a");
+			runShellCommand("chmod 700 tmp.check/a");
 			try {
 				spawner->spawn(options);
 				fail("SpawnException expected");
@@ -260,7 +260,7 @@
 					"the parent directory '" + cwd + "/tmp.check/a/b/c' has wrong permissions"));
 			}
 
-			system("chmod 700 tmp.check/a/b/c");
+			runShellCommand("chmod 700 tmp.check/a/b/c");
 			try {
 				spawner->spawn(options);
 				fail("SpawnException expected");
@@ -269,7 +269,7 @@
 					"However this directory is not accessible because it has wrong permissions."));
 			}
 
-			system("chmod 700 tmp.check/a/b/c/d");
+			runShellCommand("chmod 700 tmp.check/a/b/c/d");
 			spawner->spawn(options); // Should not throw.
 		}
 	}
@@ -685,7 +685,7 @@
 		SETUP_USER_SWITCHING_TEST();
 		options.user = testConfig["normal_user_1"].asCString();
 		RUN_USER_SWITCHING_TEST();
-		system(("groups " + testConfig["normal_user_1"].asString() + " > /tmp/info2.txt").c_str());
+		runShellCommand(("groups " + testConfig["normal_user_1"].asString() + " > /tmp/info2.txt").c_str());
 		string defaultGroups = strip(readAll("/tmp/info2.txt"));
 		// default_groups.gsub!(/.*: */, '')
 		ensure_equals(groups, defaultGroups);

@@ -857,6 +857,51 @@ disableMallocDebugging() {
 	unsetenv("MallocGuardEdges");
 	unsetenv("MallocScribble");
 	unsetenv("MallocPreScribble");
+
+	const char *libs = getenv("DYLD_INSERT_LIBRARIES");
+	if (libs != NULL && strstr(libs, "/usr/lib/libgmalloc.dylib")) {
+		string newLibs = libs;
+		string::size_type pos = newLibs.find("/usr/lib/libgmalloc.dylib");
+		size_t len = strlen("/usr/lib/libgmalloc.dylib");
+
+		// Erase all leading ':' too.
+		while (pos > 0 && newLibs[pos - 1] == ':') {
+			pos--;
+			len++;
+		}
+		// Erase all trailing ':' too.
+		while (pos + len < newLibs.size() && newLibs[pos + len] == ':') {
+			len++;
+		}
+
+		newLibs.erase(pos, len);
+		if (newLibs.empty()) {
+			unsetenv("DYLD_INSERT_LIBRARIES");
+		} else {
+			setenv("DYLD_INSERT_LIBRARIES", newLibs.c_str(), 1);
+		}
+	}
+}
+
+int
+runShellCommand(const StaticString &command) {
+	pid_t pid = fork();
+	if (pid == 0) {
+		resetSignalHandlersAndMask();
+		disableMallocDebugging();
+		closeAllFileDescriptors(2);
+		execlp("/bin/sh", "/bin/sh", "-c", command.data(), (char * const) 0);
+		_exit(1);
+	} else if (pid == -1) {
+		return -1;
+	} else {
+		int status;
+		if (waitpid(pid, &status, 0) == -1) {
+			return -1;
+		} else {
+			return status;
+		}
+	}
 }
 
 // Async-signal safe way to get the current process's hard file descriptor limit.
