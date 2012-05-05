@@ -73,6 +73,12 @@ static int setenv(const char *name, const char *value, int override) {
 	template<> template<> \
 	void object::test<i>()
 
+#ifdef __GNUC__
+    #define TUT_UNUSED __attribute__((unused))
+#else
+    #define TUT_UNUSED
+#endif
+
 /**
  * Template Unit Tests Framework for C++.
  * http://tut.dozen.ru
@@ -661,7 +667,7 @@ namespace
  * Tests provided condition.
  * Throws if false.
  */
-void ensure(bool cond)
+TUT_UNUSED void ensure(bool cond)
 {
     if (!cond)
     {
@@ -674,7 +680,7 @@ void ensure(bool cond)
  * Tests provided condition.
  * Throws if true.
  */
-void ensure_not(bool cond)
+TUT_UNUSED void ensure_not(bool cond)
 {
     ensure(!cond);
 }
@@ -770,7 +776,7 @@ void ensure_distance(const T& actual, const T& expected, const T& distance)
 /**
  * Unconditionally fails with message.
  */
-void fail(const char* msg = "")
+TUT_UNUSED void fail(const char* msg = "")
 {
     throw failure(msg);
 }
