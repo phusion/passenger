@@ -1,7 +1,7 @@
 /*
  * libecb - http://software.schmorp.de/pkg/libecb
  *
- * Copyright (©) 2009-2011 Marc Alexander Lehmann <libecb@schmorp.de>
+ * Copyright (©) 2009-2012 Marc Alexander Lehmann <libecb@schmorp.de>
  * Copyright (©) 2011 Emanuele Giaquinta
  * All rights reserved.
  *
@@ -56,7 +56,7 @@
  * an issue with that they should have done it right in the first place.
  */
 #ifndef ECB_GCC_VERSION
-  #if !defined(__GNUC_MINOR__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_C) || defined(__SUNPRO_CC) || defined(__llvm__) || defined(__clang__)
+  #if !defined __GNUC_MINOR__ || defined __INTEL_COMPILER || defined __SUNPRO_C || defined __SUNPRO_CC || defined __llvm__ || defined __clang__
     #define ECB_GCC_VERSION(major,minor) 0
   #else
     #define ECB_GCC_VERSION(major,minor) (__GNUC__ > (major) || (__GNUC__ == (major) && __GNUC_MINOR__ >= (minor)))
@@ -68,34 +68,48 @@
 /* ECB_NO_THREADS - ecb is not used by multiple threads, ever */
 /* ECB_NO_SMP     - ecb might be used in multiple threads, but only on a single cpu */
 
+#if ECB_NO_THREADS
+# define ECB_NO_SMP 1
+#endif
+
 #if ECB_NO_THREADS || ECB_NO_SMP
   #define ECB_MEMORY_FENCE do { } while (0)
 #endif
 
 #ifndef ECB_MEMORY_FENCE
-  #if ECB_GCC_VERSION(2,5) || defined(__INTEL_COMPILER) || defined(__clang__)
-    #if __i386__
+  #if ECB_GCC_VERSION(2,5) || defined __INTEL_COMPILER || (__llvm__ && __GNUC__) || __SUNPRO_C >= 0x5110 || __SUNPRO_CC >= 0x5110
+    #if __i386 || __i386__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("lock; orb $0, -1(%%esp)" : : : "memory")
       #define ECB_MEMORY_FENCE_ACQUIRE ECB_MEMORY_FENCE /* non-lock xchg might be enough */
       #define ECB_MEMORY_FENCE_RELEASE do { } while (0) /* unlikely to change in future cpus */
-    #elif __amd64
+    #elif __amd64 || __amd64__ || __x86_64 || __x86_64__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mfence" : : : "memory")
       #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("lfence" : : : "memory")
       #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("sfence") /* play safe - not needed in any current cpu */
     #elif __powerpc__ || __ppc__ || __powerpc64__ || __ppc64__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync" : : : "memory")
-    #elif defined(__ARM_ARCH_6__ ) || defined(__ARM_ARCH_6J__ ) \
-       || defined(__ARM_ARCH_6K__) || defined(__ARM_ARCH_6ZK__)
-      #define ECB_MEMORY_FENCE __asm__ __volatile__ ("mcr p15,0,%0,c7,c10,5" : : "r" (0) : "memory")
-    #elif defined(__ARM_ARCH_7__ ) || defined(__ARM_ARCH_7A__ ) \
-       || defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7R__ )
+    #elif defined __ARM_ARCH_6__  || defined __ARM_ARCH_6J__  \
+       || defined __ARM_ARCH_6K__ || defined __ARM_ARCH_6ZK__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mcr p15,0,%0,c7,c10,5" : : "r" (0) : "memory")
+    #elif defined __ARM_ARCH_7__  || defined __ARM_ARCH_7A__  \
+       || defined __ARM_ARCH_7M__ || defined __ARM_ARCH_7R__ 
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb" : : : "memory")
+    #elif __sparc || __sparc__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("membar #LoadStore | #LoadLoad | #StoreStore | #StoreLoad | " : : : "memory")
+      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("membar #LoadStore | #LoadLoad"                               : : : "memory")
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("membar #LoadStore |             #StoreStore")
+    #elif defined __s390__ || defined __s390x__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("bcr 15,0" : : : "memory")
+    #elif defined __mips__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync" : : : "memory")
+    #elif defined __alpha__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mb" : : : "memory")
     #endif
   #endif
 #endif
 
 #ifndef ECB_MEMORY_FENCE
-  #if ECB_GCC_VERSION(4,4) || defined(__INTEL_COMPILER) || defined(__clang__)
+  #if ECB_GCC_VERSION(4,4) || defined __INTEL_COMPILER || defined __clang__
     #define ECB_MEMORY_FENCE         __sync_synchronize ()
     /*#define ECB_MEMORY_FENCE_ACQUIRE ({ char dummy = 0; __sync_lock_test_and_set (&dummy, 1); }) */
     /*#define ECB_MEMORY_FENCE_RELEASE ({ char dummy = 1; __sync_lock_release      (&dummy   ); }) */
@@ -104,9 +118,16 @@
     #define ECB_MEMORY_FENCE         _ReadWriteBarrier ()
     #define ECB_MEMORY_FENCE_ACQUIRE _ReadWriteBarrier () /* according to msdn, _ReadBarrier is not a load fence */
     #define ECB_MEMORY_FENCE_RELEASE _WriteBarrier ()
-  #elif defined(_WIN32)
+  #elif defined _WIN32
     #include <WinNT.h>
     #define ECB_MEMORY_FENCE         MemoryBarrier () /* actually just xchg on x86... scary */
+  #elif __SUNPRO_C >= 0x5110 || __SUNPRO_CC >= 0x5110
+    #include <mbarrier.h>
+    #define ECB_MEMORY_FENCE         __machine_rw_barrier ()
+    #define ECB_MEMORY_FENCE_ACQUIRE __machine_r_barrier  ()
+    #define ECB_MEMORY_FENCE_RELEASE __machine_w_barrier  ()
+  #elif __xlC__
+    #define ECB_MEMORY_FENCE         __sync ()
   #endif
 #endif
 
@@ -128,11 +149,11 @@
   #endif
 #endif
 
-#if !defined(ECB_MEMORY_FENCE_ACQUIRE) && defined(ECB_MEMORY_FENCE)
+#if !defined ECB_MEMORY_FENCE_ACQUIRE && defined ECB_MEMORY_FENCE
   #define ECB_MEMORY_FENCE_ACQUIRE ECB_MEMORY_FENCE
 #endif
 
-#if !defined(ECB_MEMORY_FENCE_RELEASE) && defined(ECB_MEMORY_FENCE)
+#if !defined ECB_MEMORY_FENCE_RELEASE && defined ECB_MEMORY_FENCE
   #define ECB_MEMORY_FENCE_RELEASE ECB_MEMORY_FENCE
 #endif
 
@@ -291,6 +312,36 @@ typedef int ecb_bool;
   }
 #endif
 
+ecb_function_ uint8_t  ecb_bitrev8  (uint8_t  x) ecb_const;
+ecb_function_ uint8_t  ecb_bitrev8  (uint8_t  x)
+{
+  return (  (x * 0x0802U & 0x22110U)
+          | (x * 0x8020U & 0x88440U)) * 0x10101U >> 16; 
+}
+
+ecb_function_ uint16_t ecb_bitrev16 (uint16_t x) ecb_const;
+ecb_function_ uint16_t ecb_bitrev16 (uint16_t x)
+{
+  x = ((x >>  1) &     0x5555) | ((x &     0x5555) <<  1);
+  x = ((x >>  2) &     0x3333) | ((x &     0x3333) <<  2);
+  x = ((x >>  4) &     0x0f0f) | ((x &     0x0f0f) <<  4);
+  x = ( x >>  8              ) | ( x               <<  8);
+
+  return x;
+}
+
+ecb_function_ uint32_t ecb_bitrev32 (uint32_t x) ecb_const;
+ecb_function_ uint32_t ecb_bitrev32 (uint32_t x)
+{
+  x = ((x >>  1) & 0x55555555) | ((x & 0x55555555) <<  1);
+  x = ((x >>  2) & 0x33333333) | ((x & 0x33333333) <<  2);
+  x = ((x >>  4) & 0x0f0f0f0f) | ((x & 0x0f0f0f0f) <<  4);
+  x = ((x >>  8) & 0x00ff00ff) | ((x & 0x00ff00ff) <<  8);
+  x = ( x >> 16              ) | ( x               << 16);
+
+  return x;
+}
+
 /* popcount64 is only available on 64 bit cpus as gcc builtin */
 /* so for this version we are lazy */
 ecb_function_ int ecb_popcount64 (uint64_t x) ecb_const;
@@ -349,25 +400,25 @@ ecb_inline uint64_t ecb_rotr64 (uint64_t x, unsigned int count) { return (x << (
   #define ecb_unreachable() __builtin_unreachable ()
 #else
   /* this seems to work fine, but gcc always emits a warning for it :/ */
-  ecb_function_ void ecb_unreachable (void) ecb_noreturn;
-  ecb_function_ void ecb_unreachable (void) { }
+  ecb_inline void ecb_unreachable (void) ecb_noreturn;
+  ecb_inline void ecb_unreachable (void) { }
 #endif
 
 /* try to tell the compiler that some condition is definitely true */
 #define ecb_assume(cond) do { if (!(cond)) ecb_unreachable (); } while (0)
 
-ecb_function_ unsigned char ecb_byteorder_helper (void) ecb_const;
-ecb_function_ unsigned char
+ecb_inline unsigned char ecb_byteorder_helper (void) ecb_const;
+ecb_inline unsigned char
 ecb_byteorder_helper (void)
 {
   const uint32_t u = 0x11223344;
   return *(unsigned char *)&u;
 }
 
-ecb_function_ ecb_bool ecb_big_endian    (void) ecb_const;
-ecb_function_ ecb_bool ecb_big_endian    (void) { return ecb_byteorder_helper () == 0x11; }
-ecb_function_ ecb_bool ecb_little_endian (void) ecb_const;
-ecb_function_ ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () == 0x44; }
+ecb_inline ecb_bool ecb_big_endian    (void) ecb_const;
+ecb_inline ecb_bool ecb_big_endian    (void) { return ecb_byteorder_helper () == 0x11; }
+ecb_inline ecb_bool ecb_little_endian (void) ecb_const;
+ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () == 0x44; }
 
 #if ECB_GCC_VERSION(3,0) || ECB_C99
   #define ecb_mod(m,n) ((m) % (n) + ((m) % (n) < 0 ? (n) : 0))

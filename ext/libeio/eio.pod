@@ -766,7 +766,7 @@ request finish on its own.
 =item 3) open callback adds more requests
 
 In the open callback, if the open was not successful, copy C<<
-req->errorno >> to C<< grp->errorno >> and set C<< grp->errorno >> to
+req->errorno >> to C<< grp->errorno >> and set C<< grp->result >> to
 C<-1> to signal an error.
 
 Otherwise, malloc some memory or so and issue a read request, adding the
@@ -774,10 +774,10 @@ read request to the group.
 
 =item 4) continue issuing requests till finished
 
-In the real callback, check for errors and possibly continue with
+In the read callback, check for errors and possibly continue with
 C<eio_close> or any other eio request in the same way.
 
-As soon as no new requests are added the group request will finish. Make
+As soon as no new requests are added, the group request will finish. Make
 sure you I<always> set C<< grp->result >> to some sensible value.
 
 =back

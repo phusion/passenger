@@ -1,7 +1,7 @@
 /*
  * libeio API header
  *
- * Copyright (c) 2007,2008,2009,2010,2011 Marc Alexander Lehmann <libeio@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011,2012 Marc Alexander Lehmann <libeio@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -183,7 +183,7 @@ enum
   EIO_WD_OPEN, EIO_WD_CLOSE,
 
   EIO_CLOSE, EIO_DUP2,
-  EIO_READ, EIO_WRITE,
+  EIO_SEEK, EIO_READ, EIO_WRITE,
   EIO_READAHEAD, EIO_SENDFILE,
   EIO_FSTAT, EIO_FSTATVFS,
   EIO_FTRUNCATE, EIO_FUTIME, EIO_FCHMOD, EIO_FCHOWN,
@@ -212,11 +212,22 @@ enum
   EIO_REQ_TYPE_NUM
 };
 
+/* seek whence modes */
+/* these are guaranteed to hasve the traditional 0, 1, 2 values, */
+/* so you might as wlel use those */
+enum
+{
+  EIO_SEEK_SET = 0,
+  EIO_SEEK_CUR = 1,
+  EIO_SEEK_END = 2
+};
+
+
 /* mlockall constants */
 enum
 {
   EIO_MCL_CURRENT = 1,
-  EIO_MCL_FUTURE  = 2,
+  EIO_MCL_FUTURE  = 2
 };
 
 /* request priorities */
@@ -224,7 +235,7 @@ enum
 enum {
   EIO_PRI_MIN     = -4,
   EIO_PRI_MAX     =  4,
-  EIO_PRI_DEFAULT =  0,
+  EIO_PRI_DEFAULT =  0
 };
 
 /* eio request structure */
@@ -246,7 +257,7 @@ struct eio_req
 
   int type;        /* EIO_xxx constant ETP */
   int int1;        /* all applicable requests: file descriptor; sendfile: output fd; open, msync, mlockall, readdir: flags */
-  long int2;       /* chown, fchown: uid; sendfile: input fd; open, chmod, mkdir, mknod: file mode, sync_file_range, fallocate: flags */
+  long int2;       /* chown, fchown: uid; sendfile: input fd; open, chmod, mkdir, mknod: file mode, seek: whence, sync_file_range, fallocate: flags */
   long int3;       /* chown, fchown: gid; rename, link: working directory of new name */
   int errorno;     /* errno value on syscall return */
 
@@ -328,6 +339,7 @@ eio_req *eio_sync_file_range (int fd, off_t offset, size_t nbytes, unsigned int 
 eio_req *eio_fallocate (int fd, int mode, off_t offset, size_t len, int pri, eio_cb cb, void *data);
 eio_req *eio_close     (int fd, int pri, eio_cb cb, void *data);
 eio_req *eio_readahead (int fd, off_t offset, size_t length, int pri, eio_cb cb, void *data);
+eio_req *eio_seek      (int fd, off_t offset, int whence, int pri, eio_cb cb, void *data);
 eio_req *eio_read      (int fd, void *buf, size_t length, off_t offset, int pri, eio_cb cb, void *data);
 eio_req *eio_write     (int fd, void *buf, size_t length, off_t offset, int pri, eio_cb cb, void *data);
 eio_req *eio_fstat     (int fd, int pri, eio_cb cb, void *data); /* stat buffer=ptr2 allocated dynamically */

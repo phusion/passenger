@@ -6,6 +6,7 @@ TODO: openbsd requires stdint.h for intptr_t - why posix?
 TODO: make mtouch/readdir maybe others cancellable in-request
 TODO: fadvise request
 TODO: fdopendir/utimensat
+TODO: maybe work around 3.996gb barrier in pread/pwrite as well, maybe readahead etc.?
 1.0
 	- fix a deadlock where a wakeup signal could be missed when
           a timeout occured at the same time.
@@ -65,4 +66,7 @@ TODO: fdopendir/utimensat
         - use utime now uses nanosecond resolution on posix 2008 systems.
         - allow taking advantage of posix 2008 xxxat functions and fdopendir
           by implementing a working directory abstraction.
+        - make readahead emulation behave more like actual readahead by never failing.
+        - added EIO_LSEEK (untested).
+        - wtf. etp_proc returned 0, and no compiler ever complained.
 
