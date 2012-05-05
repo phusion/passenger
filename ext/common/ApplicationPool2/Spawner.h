@@ -51,12 +51,6 @@
  * a DirectSpawner or a SmartSpawner. In case of the smart spawning
  * method, SpawnerFactory also automatically figures out which preloader
  * to use based on options.appType.
- *
- * ## SmartSpawner event loop
- *
- * Do not pass the request handler event loop to SmartSpawner! SmartSpawner
- * uses the event loop for inter-thread synchronization and performs slow
- * and blocking operations.
  */
 
 #include <string>
@@ -85,6 +79,7 @@
 #include <ApplicationPool2/Options.h>
 #include <FileDescriptor.h>
 #include <SafeLibev.h>
+#include <BackgroundEventLoop.h>
 #include <Exceptions.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
@@ -1128,6 +1123,11 @@ private:
 		void onErrorReadable(ev::io &io, int revents);
 	};
 	
+	/** A background loop for synchronizing multithreaded operations on this SmartSpawner. */
+	BackgroundEventLoop syncLoop;
+	/** The event loop that created Process objects should use, and that I/O forwarding
+	 * functions should use. For example data on the error pipe is forwarded using this event loop.
+	 */
 	SafeLibevPtr libev;
 	const vector<string> preloaderCommand;
 	map<string, string> preloaderAnnotations;
@@ -1135,7 +1135,7 @@ private:
 	ev::io preloaderOutputWatcher;
 	
 	// Protects m_lastUsed and pid. Everything else is synchronized
-	// through the event loop.
+	// through syncLoop.
 	mutable boost::mutex simpleFieldSyncher;
 
 	pid_t pid;
@@ -1785,10 +1785,13 @@ public:
 		} else {
 			randomGenerator = _randomGenerator;
 		}
+
+		syncLoop.start("SmartSpawner sync loop");
 	}
 	
 	virtual ~SmartSpawner() {
-		libev->runSync(boost::bind(&SmartSpawner::stopPreloader, this));
+		syncLoop.safe->runSync(boost::bind(&SmartSpawner::stopPreloader, this));
+		syncLoop.stop();
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
@@ -1801,7 +1804,7 @@ public:
 
 		ProcessPtr process;
 		ExceptionPtr ex;
-		libev->runSync(boost::bind(&SmartSpawner::realSpawn, this, &options,
+		syncLoop.safe->runSync(boost::bind(&SmartSpawner::realSpawn, this, &options,
 			&process, &ex));
 		if (process != NULL) {
 			return process;
@@ -1820,7 +1823,7 @@ public:
 			lock_guard<boost::mutex> l(simpleFieldSyncher);
 			m_lastUsed = SystemTime::getUsec();
 		}
-		libev->runSync(boost::bind(&SmartSpawner::stopPreloader, this));
+		syncLoop.safe->runSync(boost::bind(&SmartSpawner::stopPreloader, this));
 	}
 
 	virtual unsigned long long lastUsed() const {

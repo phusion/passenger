@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2011 Phusion
+ *  Copyright (c) 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -40,17 +40,19 @@ namespace Passenger {
 	class SafeLibev;
 	struct BackgroundEventLoopPrivate;
 
-	/* Implements a libev event loop that runs in a background thread. */
+	/**
+	 * Implements a libev event loop that runs in a background thread.
+	 */
 	struct BackgroundEventLoop {
 		struct ev_loop *loop;
 		ev_async *async;
 		shared_ptr<SafeLibev> safe;
 		BackgroundEventLoopPrivate *priv;
 		
-		BackgroundEventLoop();
+		BackgroundEventLoop(bool scalable = false);
 		~BackgroundEventLoop();
 		
-		void start(const string &threadName = "");
+		void start(const string &threadName = "", unsigned int stackSize = 1024 * 1024);
 		void stop();
 	};
 

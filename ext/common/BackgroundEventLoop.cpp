@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2011 Phusion
+ *  Copyright (c) 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -61,7 +61,7 @@ startBackgroundLoop(BackgroundEventLoop *bg) {
 	ev_run(bg->loop, 0);
 }
 
-BackgroundEventLoop::BackgroundEventLoop() {
+BackgroundEventLoop::BackgroundEventLoop(bool scalable) {
 	TRACE_POINT();
 	loop = ev_loop_new(EVBACKEND_EPOLL);
 	if (loop == NULL) {
@@ -74,7 +74,17 @@ BackgroundEventLoop::BackgroundEventLoop() {
 		throw RuntimeException("Cannot create an event loop");
 	}
 
-	loop = ev_loop_new(EVFLAG_AUTO);
+	if (scalable) {
+		loop = ev_loop_new(EVBACKEND_KQUEUE);
+		if (loop == NULL) {
+			loop = ev_loop_new(EVBACKEND_EPOLL);
+		}
+		if (loop == NULL) {
+			loop = ev_loop_new(EVFLAG_AUTO);
+		}
+	} else {
+		loop = ev_loop_new(EVBACKEND_POLL);
+	}
 	async = (ev_async *) malloc(sizeof(ev_async));
 	async->data = this;
 	ev_async_init(async, signalBackgroundEventLoopExit);
@@ -93,13 +103,13 @@ BackgroundEventLoop::~BackgroundEventLoop() {
 }
 
 void
-BackgroundEventLoop::start(const string &threadName) {
+BackgroundEventLoop::start(const string &threadName, unsigned int stackSize) {
 	assert(priv->thr == NULL);
 	unique_lock<boost::mutex> l(priv->lock);
 	priv->thr = new oxt::thread(
 		boost::bind(startBackgroundLoop, this),
 		threadName,
-		1024 * 1024
+		stackSize
 	);
 	while (!priv->started) {
 		priv->cond.wait(l);
