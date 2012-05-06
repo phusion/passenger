@@ -217,7 +217,7 @@ private
 		filename = ENV['PASSENGER_ROOT']
 		return filename if filename
 		
-		filename = "#{ruby_libdir}/locations.ini"
+		filename = "#{ruby_libdir}/phusion_passenger/locations.ini"
 		return filename if File.exist?(filename)
 		
 		require 'etc' if !defined?(Etc)

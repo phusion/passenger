@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -38,43 +38,8 @@ using namespace boost;
 /**
  * Locates various Phusion Passenger resources on the filesystem. All Phusion Passenger
  * files are located through this class. There's similar code in lib/phusion_passenger.rb.
- * The Phusion Passenger files can be installed in 2 configurations:
- *
- * 1. ORIGINAL SOURCE TREE
- *    This is the source tree that you get when you checkout Phusion Passenger from git,
- *    when you install Phusion Passenger from a gem or when you extract it from a tarball.
- *    This configuration does not come with any binaries until you compile them.
- *    Everything, including compiled binaries, are stored in a single directory tree.
- *
- *    Phusion Passenger Standalone does things a little differently. It looks for
- *    its binaries in one of these places, whichever first exists:
- *    (a) ~/.passenger/standalone/<VERSION>/<TYPE-AND-ARCH>
- *    (b) /var/lib/passenger-standalone/<VERSION-AND-ARCH>
- *    If neither directories exist, then Passenger Standalone compiles the binaries and
- *    stores them in (b) (when running as root) or in (a). It still looks for everything
- *    else (like the .rb files) in the original source tree.
- *
- * 2. NATIVELY PACKAGED
- *    Phusion Passenger is packaged, usually (but not necessarily) through a DEB or RPM
- *    package. This configuration comes not only with all necessary binaries, but also
- *    with some (but not all) source files. This is because when you run Phusion Passenger
- *    with a different Ruby interpreter than the packager intended, Phusion Passenger
- *    must be able to compile a new Ruby extension for that Ruby interpreter. This
- *    configuration does not however allow compiling against a different Apache or Nginx
- *    version than the packager intended.
- *
- *    In this configuration, files are scattered throughout the filesystem for FHS
- *    compliance. The exact locations of the different types of files can be specified
- *    through a configuration file.
- *
- *    This configuration also does not allow running Phusion Passenger Standalone against
- *    a different Nginx version than the packager intended, but does allow running
- *    against a different Ruby version. The Standalone binaries are stored in
- *    /var/lib/passenger-standalone/<VERSION-AND-ARCH>. Passenger Standalone will make no
- *    attempt to compile something to ~/.passenger/standalone/<VERSION>.
- *
- *    If either the non-Standalone or the Standalone Passenger needs to have a new Ruby
- *    extension compiled, then it will store that in ~/.passenger/native_support/<VERSION>/<ARCH>.
+ * See PACKAGING.txt.md for an introduction about where Phusion Passenger expects its
+ * files to be located.
  */
 class ResourceLocator {
 private:
