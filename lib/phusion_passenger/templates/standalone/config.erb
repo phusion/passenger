@@ -27,7 +27,7 @@
 master_process on;
 worker_processes 1;
 daemon on;
-error_log '<%= @options[:log_file] %>';
+error_log '<%= @options[:log_file] %>' info;
 pid '<%= @options[:pid_file] %>';
 <% if @options[:user] %>user <%= @options[:user] %> <%= default_group_for(@options[:user]) %>;<% end %>
 
@@ -36,6 +36,7 @@ events {
 }
 
 http {
+    log_format debug '[$time_local] $msec  "$request" $status conn=$connection sent=$bytes_sent body_sent=$body_bytes_sent';
     include '<%= PhusionPassenger::RESOURCES_DIR %>/mime.types';
     passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_root '<%= passenger_root %>';
