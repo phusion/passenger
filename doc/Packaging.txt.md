@@ -1,6 +1,6 @@
 # Introduction
 
-Phusion Passenger can be configured in 2 ways, the "original source tree"
+Phusion Passenger can be configured in 2 ways, the "originally packaged"
 configuration and the "natively packaged" configuration. Depending on the
 configuration, Phusion Passenger locates its files (also called _assets_)
 in a different manner.
