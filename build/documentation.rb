@@ -57,21 +57,10 @@ Packaging::ASCII_DOCS.each do |target|
 	end
 end
 
-file 'doc/markdown-script.js' => ['doc/templates/application.js', 'doc/templates/jquery-1.7.2.min.js'] do
-	sh "cat doc/templates/jquery-1.7.2.min.js > doc/markdown-script.js"
-	sh "echo >> doc/markdown-script.js"
-	sh "cat doc/templates/application.js >> doc/markdown-script.js"
-end
-
-task :clean do
-	sh "rm -f doc/script.js"
-end
-
 def create_markdown_compilation_task(target)
-	source = target.sub(/\.html$/, '.txt.markdown')
+	source = target.sub(/\.html$/, '.txt.md')
 	dependencies = [
 		source,
-		'doc/markdown-script.js',
 		'doc/templates/markdown.html.erb',
 		'doc/templates/bootstrap.min.css'
 	]
