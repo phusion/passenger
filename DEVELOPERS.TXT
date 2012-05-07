@@ -20,10 +20,8 @@ The following software is optional:
 
 * RCov, for code coverage
 * RDoc, for generating HTML Ruby API documentation
-* Doxygen, for generating HTML C++ API documentation
-* dot (part of Graphviz), for generating diagrams in HTML API documentation
-* The font "Bitstream Vera Sans", used in the class diagrams. See http://www.gnome.org/fonts
 * AsciiDoc >= 8.2.5, for converting various doc/*.txt documents to HTML
+* BlueCloth, for convering various doc/*.txt.md documents to HTML
 
 == Compiling Phusion Passenger
 

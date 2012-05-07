@@ -5,7 +5,7 @@ configuration and the "natively packaged" configuration. Depending on the
 configuration, Phusion Passenger locates its files (also called _assets_)
 in a different manner.
 
-### Originally packaged
+## Originally packaged
 
 This is the configuration you get when you checkout Phusion Passenger from git,
 when you install Phusion Passenger from a gem or when you extract it from a tarball.
@@ -29,7 +29,7 @@ determining where to store compiled binaries:
    stores them in (b) (when running as root) or in (a). It still looks for everything
    else (like the .rb files) in the source root.
 
-### Natively packaged
+## Natively packaged
 
 Phusion Passenger is packaged, usually (but not necessarily) through a DEB or RPM
 package. This configuration comes not only with all necessary binaries, but also
@@ -55,7 +55,7 @@ If either the non-Standalone or the Standalone Passenger needs to have a new Rub
 extension compiled, then it will store that in `~/.passenger/native_support/<VERSION>/<ARCH>`.
 
 
-## The location configuration file
+# The location configuration file
 
 The Phusion Passenger administration tools, such as `passenger-status`, look for a
 location configuration file in the following places, in the given order:
@@ -108,9 +108,9 @@ Thus, if you're packaging Phusion Passenger, then we recommend the following:
    used by packagers.
 
 
-## The Phusion Passenger Ruby libraries
+# The Phusion Passenger Ruby libraries
 
-### phusion_passenger.rb
+## phusion_passenger.rb
 
 The Phusion Passenger administration tools are written in Ruby. So the first thing
 they do is trying to load `phusion_passenger.rb`, which is the source file
@@ -120,7 +120,7 @@ tries to look for phusion_passenger.rb in `<OWN_DIRECTORY>/../lib` where
 phusion_passenger.rb is not there, then it tries to load it from the normal Ruby
 load path.
 
-### Ruby extension
+## Ruby extension
 
 The Phusion Passenger loader scripts try to load the Phusion Passenger Ruby
 extension (`passenger_native_support.so`) from the following places, in the given order:
@@ -134,7 +134,7 @@ If it cannot find the Ruby extension in any of the above places, then it will
 attempt to compile the Ruby extension and store it in
 `~/.passenger/native_support/<VERSION>/<ARCH>`.
 
-### Conclusion for packagers
+## Conclusion for packagers
 
 If you're packaging Phusion Passenger then you should put both phusion_passenger.rb
 and `passenger_native_support.so` somewhere in the Ruby load path, or make sure that
@@ -142,7 +142,7 @@ that directory is included in the `$RUBYLIB` environment variable. You cannot sp
 a custom directory though the location configuration file.
 
 
-## Asset types
+# Asset types
 
 Throughout the Phusion Passenger codebase, we refer to all kinds of assets. Here's
 a list of all possible assets and asset directories.
@@ -220,7 +220,7 @@ a list of all possible assets and asset directories.
    Value when originally packaged: `<SOURCE_ROOT>/ext/ruby`.
 
 
-## Vendoring of libraries
+# Vendoring of libraries
 
 Phusion Passenger vendors libev and libeio in order to make installation easier
 for users on operating systems without proper package management, like OS X.
@@ -234,9 +234,9 @@ before compiling:
 Note that we require at least libev 4.11 and libeio 1.0.
 
 
-## Misc notes
+# Misc notes
 
-### Generating gem and tarball
+## Generating gem and tarball
 
 Use the following command to generate a gem and tarball, in which Phusion
 Passenger is originally packaged and without any binaries:
@@ -245,7 +245,7 @@ Passenger is originally packaged and without any binaries:
 
 The files will be stored in `pkg/`.
 
-### Fakeroot
+## Fakeroot
 
 You can generate a fakeroot with the command `rake fakeroot`. This will
 generate an FHS-compliant directory tree in `pkg/fakeroot`, which you can
