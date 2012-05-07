@@ -38,7 +38,7 @@ using namespace boost;
 /**
  * Locates various Phusion Passenger resources on the filesystem. All Phusion Passenger
  * files are located through this class. There's similar code in lib/phusion_passenger.rb.
- * See PACKAGING.txt.md for an introduction about where Phusion Passenger expects its
+ * See doc/PACKAGING.txt.md for an introduction about where Phusion Passenger expects its
  * files to be located.
  */
 class ResourceLocator {
