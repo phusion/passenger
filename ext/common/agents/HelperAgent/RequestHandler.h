@@ -849,7 +849,10 @@ private:
 		if (!wasCommittingToDisk && nowCommittingToDisk) {
 			RH_TRACE(client, 3, "Buffering response data to disk; temporarily stopping application socket.");
 			client->backgroundOperations++;
-			client->appInput->stop();
+			// If the data comes from writeErrorResponse(), then appInput is not available.
+			if (client->session != NULL && client->session->initiated()) {
+				client->appInput->stop();
+			}
 		}
 	}
 
@@ -924,7 +927,10 @@ private:
 
 		RH_TRACE(client, 3, "Done buffering response data to disk; resuming application socket.");
 		client->backgroundOperations--;
-		client->appInput->start();
+		// If the data comes from writeErrorResponse(), then appInput is not available.
+		if (client->session != NULL && client->session->initiated()) {
+			client->appInput->start();
+		}
 	}
 
 
