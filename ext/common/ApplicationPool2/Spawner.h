@@ -56,7 +56,6 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <set>
 #include <utility>
 #include <boost/make_shared.hpp>
 #include <boost/shared_array.hpp>
@@ -79,7 +78,6 @@
 #include <ApplicationPool2/Options.h>
 #include <FileDescriptor.h>
 #include <SafeLibev.h>
-#include <BackgroundEventLoop.h>
 #include <Exceptions.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
@@ -1080,12 +1078,14 @@ public:
 	virtual ~Spawner() { }
 	virtual ProcessPtr spawn(const Options &options) = 0;
 	
+	/** Does not depend on the event loop. */
 	virtual bool cleanable() const {
 		return false;
 	}
 
 	virtual void cleanup() { }
 
+	/** Does not depend on the event loop. */
 	virtual unsigned long long lastUsed() const {
 		return 0;
 	}
@@ -1102,29 +1102,26 @@ private:
 	};
 
 	/**
-	 * Handles forwarding any data on the error pipe to our stderr,
-	 * and keeps the error pipe alive until it has reached EOF (meaning that all
-	 * processes that refer to the error pipe have exited).
-	 *
-	 * A PreloaderErrorWatcher destroys itself upon encountering EOF. In theory
-	 * we can leak memory by stopping the event loop before EOF is encountered,
-	 * but in practice we don't care because the process is being shut down
-	 * anyway.
+	 * Handles forwarding any data on the given pipe to our stderr,
+	 * and keeps the pipe alive until it has reached EOF (meaning that all
+	 * processes that refer to the pipe have exited). A PipeWatcher
+	 * destroys itself upon encountering EOF.
 	 */
-	struct PreloaderErrorWatcher {
+	struct PipeWatcher: public enable_shared_from_this<PipeWatcher> {
 		SafeLibevPtr libev;
-		FileDescriptor errorPipe;
-		ev::io errorWatcher;
-		bool forwardStderr;
+		FileDescriptor fd;
+		ev::io watcher;
+		shared_ptr<PipeWatcher> selfPointer;
+		bool forward;
 
-		PreloaderErrorWatcher(const SafeLibevPtr &_libev,
-			const FileDescriptor &_errorPipe,
-			bool _forwardStderr);
-		void onErrorReadable(ev::io &io, int revents);
+		PipeWatcher(const SafeLibevPtr &_libev,
+			const FileDescriptor &_fd,
+			bool _forward);
+		~PipeWatcher();
+		void start();
+		void onReadable(ev::io &io, int revents);
 	};
 	
-	/** A background loop for synchronizing multithreaded operations on this SmartSpawner. */
-	BackgroundEventLoop syncLoop;
 	/** The event loop that created Process objects should use, and that I/O forwarding
 	 * functions should use. For example data on the error pipe is forwarded using this event loop.
 	 */
@@ -1133,10 +1130,12 @@ private:
 	map<string, string> preloaderAnnotations;
 	Options options;
 	ev::io preloaderOutputWatcher;
+	shared_ptr<PipeWatcher> preloaderErrorWatcher;
 	
-	// Protects m_lastUsed and pid. Everything else is synchronized
-	// through syncLoop.
+	// Protects m_lastUsed and pid.
 	mutable boost::mutex simpleFieldSyncher;
+	// Protects everything else.
+	mutable boost::mutex syncher;
 
 	pid_t pid;
 	FileDescriptor adminSocket;
@@ -1326,13 +1325,16 @@ private:
 			details.forwardStderr = forwardStderr;
 			
 			this->socketAddress = negotiatePreloaderStartup(details);
+			this->pid = pid;
 			this->adminSocket = adminSocket.second;
 			{
 				lock_guard<boost::mutex> l(simpleFieldSyncher);
 				this->pid = pid;
 			}
 			preloaderOutputWatcher.set(adminSocket.second, ev::READ);
-			new PreloaderErrorWatcher(libev, errorPipe.first, forwardStderr);
+			preloaderErrorWatcher = make_shared<PipeWatcher>(libev,
+				errorPipe.first, forwardStderr);
+			preloaderErrorWatcher->start();
 			preloaderAnnotations = debugDir->readAll();
 			guard.clear();
 		}
@@ -1352,8 +1354,13 @@ private:
 			syscalls::waitpid(pid, NULL, 0);
 		}
 		libev->stop(preloaderOutputWatcher);
+		// Detach the error pipe; it will truly be closed after the error
+		// pipe has reached EOF.
+		preloaderErrorWatcher.reset();
 		// Delete socket after the process has exited so that it
 		// doesn't crash upon deleting a nonexistant file.
+		// TODO: in Passenger 4 we must check whether the file really was
+		// owned by the preloader, otherwise this is a potential security flaw.
 		if (getSocketAddressType(socketAddress) == SAT_UNIX) {
 			string filename = parseUnixSocketAddress(socketAddress);
 			syscalls::unlink(filename.c_str());
@@ -1785,13 +1792,11 @@ public:
 		} else {
 			randomGenerator = _randomGenerator;
 		}
-
-		syncLoop.start("SmartSpawner sync loop");
 	}
 	
 	virtual ~SmartSpawner() {
-		syncLoop.safe->runSync(boost::bind(&SmartSpawner::stopPreloader, this));
-		syncLoop.stop();
+		lock_guard<boost::mutex> l(syncher);
+		stopPreloader();
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
@@ -1802,16 +1807,35 @@ public:
 		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
 		possiblyRaiseInternalError(options);
 
-		ProcessPtr process;
-		ExceptionPtr ex;
-		syncLoop.safe->runSync(boost::bind(&SmartSpawner::realSpawn, this, &options,
-			&process, &ex));
-		if (process != NULL) {
-			return process;
-		} else {
-			rethrowException(ex);
-			return ProcessPtr(); // Shut up compiler warning.
+		{
+			lock_guard<boost::mutex> l(simpleFieldSyncher);
+			m_lastUsed = SystemTime::getUsec();
 		}
+		if (!preloaderStarted()) {
+			startPreloader();
+		}
+		
+		SpawnResult result;
+		try {
+			result = sendSpawnCommand(options);
+		} catch (const SystemException &e) {
+			result = sendSpawnCommandAgain(e, options);
+		} catch (const IOException &e) {
+			result = sendSpawnCommandAgain(e, options);
+		} catch (const SpawnException &e) {
+			result = sendSpawnCommandAgain(e, options);
+		}
+		
+		NegotiationDetails details;
+		details.libev = libev.get();
+		details.pid = result.pid;
+		details.adminSocket = result.adminSocket;
+		details.io = result.io;
+		details.options = &options;
+		ProcessPtr process = negotiateSpawn(details);
+		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
+			", pid=" << process->pid);
+		return process;
 	}
 
 	virtual bool cleanable() const {
@@ -1823,7 +1847,8 @@ public:
 			lock_guard<boost::mutex> l(simpleFieldSyncher);
 			m_lastUsed = SystemTime::getUsec();
 		}
-		syncLoop.safe->runSync(boost::bind(&SmartSpawner::stopPreloader, this));
+		lock_guard<boost::mutex> lock(syncher);
+		stopPreloader();
 	}
 
 	virtual unsigned long long lastUsed() const {

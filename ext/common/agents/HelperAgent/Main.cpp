@@ -1360,8 +1360,8 @@ public:
 			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
 		));
 		
-		poolLoop.start("Pool event loop");
-		requestLoop.start("Request event loop");
+		poolLoop.start("Pool event loop", 0);
+		requestLoop.start("Request event loop", 0);
 
 		
 		/* Wait until the watchdog closes the feedback fd (meaning it

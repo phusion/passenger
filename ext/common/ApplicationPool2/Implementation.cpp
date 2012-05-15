@@ -420,8 +420,8 @@ Group::restart(const Options &options) {
 	P_DEBUG("Restarting group " << name);
 	secret = generateSecret();
 	resetOptions(options);
-	// TODO: shutting down the old spawner can be blocking.
-	// We should do this asynchronously.
+	// TODO: we're actually not allowed to call the old spawner's destructor here.
+	// move this to a background thread.
 	spawner = getPool()->spawnerFactory->create(options);
 	while (!processes.empty()) {
 		ProcessPtr process = processes.front();
@@ -473,29 +473,38 @@ Session::getGupid() const {
 }
 
 
-SmartSpawner::PreloaderErrorWatcher::PreloaderErrorWatcher(
+SmartSpawner::PipeWatcher::PipeWatcher(
 	const SafeLibevPtr &_libev,
-	const FileDescriptor &_errorPipe,
-	bool _forwardStderr)
+	const FileDescriptor &_fd,
+	bool _forward)
 	: libev(_libev),
-	  errorPipe(_errorPipe),
-	  forwardStderr(_forwardStderr)
+	  fd(_fd),
+	  forward(_forward)
 {
-	errorWatcher.set(errorPipe, ev::READ);
-	errorWatcher.set<PreloaderErrorWatcher, &PreloaderErrorWatcher::onErrorReadable>(this);
-	libev->start(errorWatcher);
+	watcher.set(fd, ev::READ);
+	watcher.set<PipeWatcher, &PipeWatcher::onReadable>(this);
+	libev->start(watcher);
+}
+
+SmartSpawner::PipeWatcher::~PipeWatcher() {
+	libev->stop(watcher);
 }
 
 void
-SmartSpawner::PreloaderErrorWatcher::onErrorReadable(ev::io &io, int revents) {
+SmartSpawner::PipeWatcher::start() {
+	selfPointer = shared_from_this();
+}
+
+void
+SmartSpawner::PipeWatcher::onReadable(ev::io &io, int revents) {
 	char buf[1024 * 8];
 	ssize_t ret;
 	
-	ret = syscalls::read(errorPipe, buf, sizeof(buf));
+	ret = syscalls::read(fd, buf, sizeof(buf));
 	if (ret <= 0) {
-		libev->stop(errorWatcher);
-		delete this;
-	} else if (forwardStderr) {
+		libev->stop(watcher);
+		selfPointer.reset();
+	} else if (forward) {
 		write(STDERR_FILENO, buf, ret);
 	}
 }

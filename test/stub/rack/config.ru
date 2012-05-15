@@ -19,6 +19,9 @@ app = lambda do |env|
             end
         end
         [200, { "Content-Type" => "text/html" }, ["ok"]]
+    when '/print_stderr'
+        STDERR.puts "hello world!"
+        [200, { "Content-Type" => "text/html" }, ["ok"]]
     else
         [200, { "Content-Type" => "text/html" }, ["hello <b>world</b>"]]
     end

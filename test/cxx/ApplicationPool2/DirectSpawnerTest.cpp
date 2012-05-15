@@ -15,6 +15,10 @@ namespace tut {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			bg.start();
 		}
+
+		~ApplicationPool2_DirectSpawnerTest() {
+			unlink("stub/wsgi/passenger_wsgi.pyc");
+		}
 		
 		shared_ptr<DirectSpawner> createSpawner(const Options &options) {
 			return make_shared<DirectSpawner>(bg.safe,
