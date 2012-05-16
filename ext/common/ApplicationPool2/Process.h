@@ -384,7 +384,9 @@ public:
 		stream << "<concurrency>" << concurrency << "</concurrency>";
 		stream << "<sessions>" << sessions << "</sessions>";
 		stream << "<usage>" << usage() << "</usage>";
-		stream << "<processed>" << sessions << "</processed>";
+		stream << "<processed>" << processed << "</processed>";
+		stream << "<spawner_creation_time>" << spawnerCreationTime << "</spawner_creation_time>";
+		stream << "<spawn_start_time>" << spawnStartTime << "</spawn_start_time>";
 		stream << "<spawn_end_time>" << spawnEndTime << "</spawn_end_time>";
 		stream << "<last_used>" << lastUsed << "</last_used>";
 		stream << "<uptime>" << uptime() << "</uptime>";
