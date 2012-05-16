@@ -31,8 +31,6 @@
 #include <cstdlib>
 #ifdef HAS_ALLOCA_H_
 	#include <alloca.h>
-#else
-	#error "alloca is required."
 #endif
 #include "EventedServer.h"
 #include "MessageReadersWriters.h"
