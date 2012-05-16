@@ -472,7 +472,8 @@ private:
 		return make_shared<Process>(details.libev, details.pid,
 			details.gupid, details.connectPassword,
 			details.adminSocket, details.errorPipe,
-			sockets, details.spawnStartTime, details.forwardStderr);
+			sockets, creationTime, details.spawnStartTime,
+			details.forwardStderr);
 	}
 	
 protected:
@@ -1071,8 +1072,14 @@ protected:
 	}
 	
 public:
+	/**
+	 * Timestamp at which this Spawner was created. Microseconds resolution.
+	 */
+	const unsigned long long creationTime;
+
 	Spawner(const ResourceLocator &_resourceLocator)
-		: resourceLocator(_resourceLocator)
+		: resourceLocator(_resourceLocator),
+		  creationTime(SystemTime::getUsec())
 		{ }
 	
 	virtual ~Spawner() { }
@@ -2102,7 +2109,7 @@ public:
 			(pid_t) count, "gupid-" + toString(count),
 			toString(count),
 			adminSocket.second, FileDescriptor(), sockets,
-			SystemTime::getUsec());
+			SystemTime::getUsec(), SystemTime::getUsec());
 	}
 
 	virtual bool cleanable() const {

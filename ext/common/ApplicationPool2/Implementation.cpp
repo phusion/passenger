@@ -182,10 +182,10 @@ SuperGroup::createNonInterruptableThread(const function<void ()> &func, const st
 
 Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const ComponentInfo &info)
 	: superGroup(_superGroup),
+	  name(_superGroup->name + "#" + info.name),
+	  secret(generateSecret(_superGroup)),
 	  componentInfo(info)
 {
-	name           = _superGroup->name + "#" + info.name;
-	secret         = generateSecret();
 	count          = 0;
 	disablingCount = 0;
 	disabledCount  = 0;
@@ -418,7 +418,6 @@ Group::restart(const Options &options) {
 	vector<Callback> actions;
 	
 	P_DEBUG("Restarting group " << name);
-	secret = generateSecret();
 	resetOptions(options);
 	// TODO: we're actually not allowed to call the old spawner's destructor here.
 	// move this to a background thread.
@@ -437,8 +436,8 @@ Group::restart(const Options &options) {
 }
 
 string
-Group::generateSecret() const {
-	return getPool()->randomGenerator->generateAsciiString(43);
+Group::generateSecret(const SuperGroupPtr &superGroup) {
+	return superGroup->getPool()->randomGenerator->generateAsciiString(43);
 }
 
 

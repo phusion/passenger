@@ -103,7 +103,7 @@ private:
 	
 	void createInterruptableThread(const function<void ()> &func, const string &name,
 		unsigned int stackSize);
-	string generateSecret() const;
+	static string generateSecret(const SuperGroupPtr &superGroup);
 	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
 	void onSessionClose(const ProcessPtr &process, Session *session);
 	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options);
@@ -227,8 +227,12 @@ private:
 	
 public:
 	Options options;
-	string name;
-	string secret;
+	/** This name uniquely identifies this Group within its Pool. It can also be used as the display name. */
+	const string name;
+	/** A secret token that may be known among all processes in this Group. Used for securing
+	 * intra-group process communication.
+	 */
+	const string secret;
 	ComponentInfo componentInfo;
 	
 	/**
@@ -308,7 +312,7 @@ public:
 			ProcessPtr process = make_shared<Process>((SafeLibev *) NULL,
 				0, string(), string(),
 				FileDescriptor(), FileDescriptor(),
-				SocketListPtr(), 0);
+				SocketListPtr(), 0, 0);
 			process->setGroup(shared_from_this());
 			return make_shared<Session>(process, (Socket *) NULL);
 		}
@@ -538,7 +542,7 @@ public:
 	
 	/** Start spawning a new process in the background, in case this
 	 * isn't already happening. Will ensure that at least options.minProcesses
-	 * are started.
+	 * processes are spawned.
 	 */
 	void spawn() {
 		if (!spawning()) {

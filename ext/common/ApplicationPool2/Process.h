@@ -184,6 +184,9 @@ public:
 	ev::io errorPipeWatcher;
 	/** The sockets that this Process listens on for connections. */
 	SocketListPtr sockets;
+	/** Time at which the Spawner that created this process was created.
+	 * Microseconds resolution. */
+	unsigned long long spawnerCreationTime;
 	/** Time at which we started spawning this process. Microseconds resolution. */
 	unsigned long long spawnStartTime;
 	/** The maximum amount of concurrent sessions this process can handle.
@@ -200,8 +203,9 @@ public:
 	 *************************************************************/
 	
 	/** Time at which we finished spawning this process, i.e. when this
-	 * process was finished initializing. */
-	unsigned long long spawnTime;
+	 * process was finished initializing. Microseconds resolution.
+	 */
+	unsigned long long spawnEndTime;
 	/** Last time when a session was opened for this Process. */
 	unsigned long long lastUsed;
 	/** Number of sessions currently open.
@@ -225,6 +229,7 @@ public:
 		const FileDescriptor &_adminSocket,
 		const FileDescriptor &_errorPipe,
 		const SocketListPtr &_sockets,
+		unsigned long long _spawnerCreationTime,
 		unsigned long long _spawnStartTime,
 		bool _forwardStderr = false)
 		: libev(_libev),
@@ -234,6 +239,7 @@ public:
 		  adminSocket(_adminSocket),
 		  errorPipe(_errorPipe),
 		  sockets(_sockets),
+		  spawnerCreationTime(_spawnerCreationTime),
 		  spawnStartTime(_spawnStartTime),
 		  forwardStderr(_forwardStderr),
 		  sessions(0),
@@ -250,8 +256,8 @@ public:
 			indexSessionSockets();
 		}
 		
-		lastUsed  = SystemTime::getUsec();
-		spawnTime = lastUsed;
+		lastUsed     = SystemTime::getUsec();
+		spawnEndTime = lastUsed;
 	}
 	
 	~Process() {
@@ -350,7 +356,7 @@ public:
 	 * Returns the uptime of this process so far, as a string.
 	 */
 	string uptime() const {
-		unsigned long long seconds = (SystemTime::getUsec() - spawnTime) / 1000000;
+		unsigned long long seconds = (SystemTime::getUsec() - spawnEndTime) / 1000000;
 		stringstream result;
 		
 		if (seconds >= 60) {
@@ -379,7 +385,7 @@ public:
 		stream << "<sessions>" << sessions << "</sessions>";
 		stream << "<usage>" << usage() << "</usage>";
 		stream << "<processed>" << sessions << "</processed>";
-		stream << "<spawn_time>" << spawnTime << "</spawn_time>";
+		stream << "<spawn_end_time>" << spawnEndTime << "</spawn_end_time>";
 		stream << "<last_used>" << lastUsed << "</last_used>";
 		stream << "<uptime>" << uptime() << "</uptime>";
 		switch (enabled) {
