@@ -123,7 +123,11 @@ TEST_CXX_OBJECTS = {
 		ext/common/agents/HelperAgent/FileBackedPipe.h
 		ext/common/agents/HelperAgent/ScgiRequestParser.h
 		ext/common/agents/HelperAgent/AgentOptions.h
-		ext/common/ApplicationPool2/Pool.h),
+		ext/common/ApplicationPool2/Pool.h
+		ext/common/ApplicationPool2/SuperGroup.h
+		ext/common/ApplicationPool2/Group.h
+		ext/common/ApplicationPool2/Process.h
+		ext/common/ApplicationPool2/Spawner.h),
 	'test/cxx/FileBackedPipeTest.o' => %w(
 		test/cxx/FileBackedPipeTest.cpp
 		ext/common/agents/HelperAgent/FileBackedPipe.h),
