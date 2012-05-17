@@ -45,6 +45,7 @@ public:
 	void clear() {
 		fh_destroyheap(&heap);
 		fh_initheap(&heap);
+		heap.fh_keys = 1;
 	}
 };
 
