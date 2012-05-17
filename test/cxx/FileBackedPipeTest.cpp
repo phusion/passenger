@@ -584,6 +584,25 @@ namespace tut {
 	}
 
 	TEST_METHOD(27) {
+		// It may be reset inside the onData callback while there is data buffered in memory,
+		// soon to be written on disk.
+		pipe->setThreshold(3);
+		pipe->openTimeout = 40;
+		consumeImmediately = false;
+		init();
+		startPipe();
+		write("hello");
+		ensure_equals("(1)", getBufferSize(), 5u);
+		ensure("(2)", isCommittingToDisk());
+		usleep(20000);
+		ensure("(3)", isCommittingToDisk());
+		resetOnData = true;
+		callConsumedCallback(1, false);
+		ensure("(4)", !isStarted());
+		ensure_equals("(5)", getBufferSize(), 0u);
+	}
+
+	TEST_METHOD(28) {
 		// It may be reset inside the onData callback while there is data buffered on disk.
 		pipe->setThreshold(3);
 		consumeImmediately = false;
@@ -591,9 +610,17 @@ namespace tut {
 		startPipe();
 		write("hello");
 		ensure_equals("(1)", getBufferSize(), 5u);
+		usleep(20000);
+		ensure("(2)", !isCommittingToDisk());
+
 		resetOnData = true;
+		// The following call will trigger a libeio read operation on the buffer file.
 		callConsumedCallback(1, false);
-		ensure("(2)", !isStarted());
-		ensure_equals("(3)", getBufferSize(), 0u);
+
+		EVENTUALLY(1,
+			result = !isStarted();
+		);
+		ensure("(3)", !isStarted());
+		ensure_equals("(4)", getBufferSize(), 0u);
 	}
 }
