@@ -633,6 +633,7 @@ public:
 		nonInterruptableThreads.join_all();
 
 		UPDATE_TRACE_POINT();
+		ScopedLock l(syncher);
 		SuperGroupMap::iterator it;
 		vector<SuperGroupPtr>::iterator it2;
 		vector<SuperGroupPtr> superGroupsToDetach;
@@ -646,6 +647,12 @@ public:
 		
 		verifyInvariants();
 		verifyExpensiveInvariants();
+		l.unlock();
+		runAllActions(actions);
+
+		// detachSuperGroup() may launch additional threads, so wait for them.
+		interruptableThreads.interrupt_and_join_all();
+		nonInterruptableThreads.join_all();
 	}
 
 	// 'lockNow == false' may only be used during unit tests. Normally we

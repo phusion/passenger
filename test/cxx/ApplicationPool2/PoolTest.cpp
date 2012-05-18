@@ -117,6 +117,10 @@ namespace tut {
 			EVENTUALLY(5,
 				result = number == oldNumber + 1;
 			);
+			if (currentException != NULL) {
+				P_ERROR("get() exception: " << currentException->what());
+				abort();
+			}
 			currentSession->initiate();
 			sendHeaders(currentSession->fd(),
 				"PATH_INFO", path,
