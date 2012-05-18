@@ -104,6 +104,29 @@ loadConfigFile() {
 	}
 }
 
+static void
+abortHandler(int signo, siginfo_t *info, void *ctx) {
+	// Stop itself so that we can attach it to gdb.
+	raise(SIGSTOP);
+	// Run default signal handler.
+	raise(signo);
+}
+
+static void
+installAbortHandler() {
+	const char *stopOnAbort = getenv("STOP_ON_ABORT");
+	if (stopOnAbort != NULL && *stopOnAbort != '\0' && *stopOnAbort != '0') {
+		struct sigaction action;
+		action.sa_sigaction = abortHandler;
+		action.sa_flags = SA_RESETHAND | SA_SIGINFO;
+		sigemptyset(&action.sa_mask);
+		sigaction(SIGABRT, &action, NULL);
+		sigaction(SIGSEGV, &action, NULL);
+		sigaction(SIGBUS, &action, NULL);
+		sigaction(SIGFPE, &action, NULL);
+	}
+}
+
 int
 main(int argc, char *argv[]) {
 	signal(SIGPIPE, SIG_IGN);
@@ -133,6 +156,7 @@ main(int argc, char *argv[]) {
 	}
 
 	loadConfigFile();
+	installAbortHandler();
 	
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {
