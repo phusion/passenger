@@ -498,7 +498,7 @@ namespace tut {
 		
 		// The next asyncGet() should spawn a new process. After it's done
 		// spawning it will process the action.
-		pool->asyncGet(options, callback, false);
+		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 3;
 		);
