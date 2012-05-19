@@ -191,6 +191,7 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	disabledCount  = 0;
 	spawner        = getPool()->spawnerFactory->create(options);
 	m_spawning     = false;
+	m_restarting   = false;
 	if (options.restartDir.empty()) {
 		restartFile = options.appRoot + "/tmp/restart.txt";
 		alwaysRestartFile = options.appRoot + "/always_restart.txt";
@@ -353,6 +354,11 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		if (pool == NULL) {
 			return;
 		}
+		{
+			LockGuard l(pool->debugSyncher);
+			pool->spawnLoopIteration++;
+			P_TRACE(2, "Entering spawn loop iteration " << pool->spawnLoopIteration);
+		}
 		unique_lock<boost::mutex> lock(pool->syncher);
 		pool = getPool();
 		if (pool == NULL) {
@@ -360,6 +366,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		}
 		
 		verifyInvariants();
+		P_ASSERT(m_spawning || m_restarting);
 		
 		UPDATE_TRACE_POINT();
 		vector<Callback> actions;
@@ -391,10 +398,15 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		
 		done = done
 			|| ((unsigned long) count >= options.minProcesses && getWaitlist.empty())
-			|| pool->atFullCapacity(false);
+			|| pool->atFullCapacity(false)
+			|| m_restarting;
 		m_spawning = !done;
 		if (done) {
-			P_DEBUG("Spawn loop done");
+			if (m_restarting) {
+				P_DEBUG("Spawn loop aborted because the group is being restarted");
+			} else {
+				P_DEBUG("Spawn loop done");
+			}
 		} else {
 			P_DEBUG("Continue spawning");
 		}
@@ -416,23 +428,64 @@ Group::shouldSpawn() const {
 void
 Group::restart(const Options &options) {
 	vector<Callback> actions;
-	
+
+	assert(!m_restarting);
 	P_DEBUG("Restarting group " << name);
-	resetOptions(options);
-	// TODO: we're actually not allowed to call the old spawner's destructor here.
-	// move this to a background thread.
-	spawner = getPool()->spawnerFactory->create(options);
-	while (!processes.empty()) {
-		ProcessPtr process = processes.front();
-		detach(process, actions);
+	m_spawning = false;
+	m_restarting = true;
+	detachAll(actions);
+	getPool()->nonInterruptableThreads.create_thread(
+		boost::bind(&Group::finalizeRestart, this, shared_from_this(), options.copyAndPersist(),
+			getPool()->spawnerFactory, actions),
+		"Group restarter: " + name,
+		POOL_HELPER_THREAD_STACK_SIZE
+	);
+}
+
+// The 'self' parameter is for keeping the current Group object alive while this thread is running.
+void
+Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
+	vector<Callback> postLockActions)
+{
+	TRACE_POINT();
+
+	Pool::runAllActions(postLockActions);
+	postLockActions.clear();
+
+	// Create a new spawner.
+	SpawnerPtr newSpawner = spawnerFactory->create(options);
+	SpawnerPtr oldSpawner;
+
+	// Standard resource management boilerplate stuff...
+	UPDATE_TRACE_POINT();
+	PoolPtr pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL)) {
+		return;
 	}
+	LockGuard l(pool->syncher);
+	pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL)) {
+		return;
+	}
+
+	// Run some sanity checks.
+	verifyInvariants();
+	assert(m_restarting);
+	UPDATE_TRACE_POINT();
 	
-	if (!actions.empty()) {
-		getPool()->nonInterruptableThreads.create_thread(
-			boost::bind(Pool::runAllActionsWithCopy, actions),
-			"Post lock actions runner: " + name,
-			POOL_HELPER_THREAD_STACK_SIZE);
+	// Atomically swap the new spawner with the old one.
+	resetOptions(options);
+	oldSpawner = spawner;
+	spawner    = newSpawner;
+
+	m_restarting = false;
+	if (!getWaitlist.empty()) {
+		spawn();
 	}
+	P_DEBUG("Restart of group " << name << " done");
+	verifyInvariants();
+	Pool::runAllActions(postLockActions);
+	// oldSpawner will now be destroyed, outside the lock.
 }
 
 string

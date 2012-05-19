@@ -2151,6 +2151,7 @@ private:
 public:
 	// Properties for DummySpawner
 	unsigned int dummyConcurrency;
+	unsigned int dummySpawnerCreationSleepTime;
 	unsigned int dummySpawnTime;
 
 	// Properties for SmartSpawner and DirectSpawner.
@@ -2165,6 +2166,7 @@ public:
 		  generation(_generation)
 	{
 		dummyConcurrency = 1;
+		dummySpawnerCreationSleepTime = 0;
 		dummySpawnTime   = 0;
 		forwardStderr    = true;
 		if (randomGenerator == NULL) {
@@ -2194,6 +2196,7 @@ public:
 			spawner->forwardStderr = forwardStderr;
 			return spawner;
 		} else if (options.spawnMethod == "dummy") {
+			syscalls::usleep(dummySpawnerCreationSleepTime);
 			DummySpawnerPtr spawner = make_shared<DummySpawner>(resourceLocator);
 			spawner->concurrency = dummyConcurrency;
 			spawner->spawnTime   = dummySpawnTime;

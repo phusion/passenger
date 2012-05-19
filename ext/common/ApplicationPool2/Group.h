@@ -108,6 +108,8 @@ private:
 	void onSessionClose(const ProcessPtr &process, Session *session);
 	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options);
 	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options);
+	void finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
+		vector<Callback> postLockActions);
 	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
@@ -123,11 +125,14 @@ private:
 		// Verify getWaitlist invariants.
 		assert(!( !getWaitlist.empty() ) || ( processes.empty() || pqueue.top()->atFullCapacity() ));
 		assert(!( !processes.empty() && !pqueue.top()->atFullCapacity() ) || ( getWaitlist.empty() ));
-		assert(!( processes.empty() && !spawning() ) || ( getWaitlist.empty() ));
-		assert(!( !getWaitlist.empty() ) || ( !processes.empty() || spawning() ));
+		assert(!( processes.empty() && !spawning() && !restarting() ) || ( getWaitlist.empty() ));
+		assert(!( !getWaitlist.empty() ) || ( !processes.empty() || spawning() || restarting() ));
 		
 		// Verify disableWaitlist invariants.
 		assert((int) disableWaitlist.size() >= disablingCount);
+
+		// Verify m_spawning and m_restarting.
+		assert(!( m_restarting ) || !m_spawning);
 	}
 	
 	void resetOptions(const Options &newOptions) {
@@ -280,11 +285,11 @@ public:
 	 *        getWaitlist is empty.
 	 *
 	 * Invariant 2:
-	 *    if processes.empty() && !spawning():
+	 *    if processes.empty() && !spawning() && !restarting():
 	 *       getWaitlist is empty
 	 * Equivalently:
 	 *    if getWaitlist is non-empty:
-	 *       !processes.empty() || spawning()
+	 *       !processes.empty() || spawning() || restarting()
 	 */
 	queue<GetWaiter> getWaitlist;
 	/**
@@ -294,18 +299,32 @@ public:
 	deque<DisableWaiter> disableWaitlist;
 	
 	SpawnerPtr spawner;
+	/**
+	 * Whether process(es) are being spawned right now.
+	 */
 	bool m_spawning;
+	/** Whether a restart is in progress. While restarting is in progress,
+	 * it is not possible to signal the desire to spawn new process. If spawning
+	 * was already in progress when the restart was initiated, then the spawning
+	 * will abort as soon as possible.
+	 *
+	 * Invariant:
+	 *    if m_restarting: !m_spawning
+	 */
+	bool m_restarting;
 	
 	Group(const SuperGroupPtr &superGroup, const Options &options, const ComponentInfo &info);
 	
 	SessionPtr get(const Options &newOptions, const GetCallback &callback) {
-		if (OXT_UNLIKELY(needsRestart(newOptions))) {
-			restart(newOptions);
-		} else {
-			mergeOptions(newOptions);
-		}
-		if (OXT_UNLIKELY(!newOptions.noop && shouldSpawn())) {
-			spawn();
+		if (OXT_LIKELY(!restarting())) {
+			if (OXT_UNLIKELY(needsRestart(newOptions))) {
+				restart(newOptions);
+			} else {
+				mergeOptions(newOptions);
+			}
+			if (OXT_UNLIKELY(!newOptions.noop && shouldSpawn())) {
+				spawn();
+			}
 		}
 		
 		if (OXT_UNLIKELY(newOptions.noop)) {
@@ -322,7 +341,7 @@ public:
 			 * Call the callback after a process has been spawned
 			 * or has failed to spawn.
 			 */
-			assert(spawning());
+			assert(spawning() || restarting());
 			getWaitlist.push(GetWaiter(newOptions, callback));
 			return SessionPtr();
 		} else {
@@ -541,12 +560,12 @@ public:
 	bool shouldSpawn() const;
 	
 	/** Start spawning a new process in the background, in case this
-	 * isn't already happening. Will ensure that at least options.minProcesses
-	 * processes are spawned.
+	 * isn't already happening and the group isn't being restarted.
+	 * Will ensure that at least options.minProcesses processes are spawned.
 	 */
 	void spawn() {
-		if (!spawning()) {
-			P_DEBUG("Spawning new process for group " << name);
+		if (!spawning() && !restarting()) {
+			P_DEBUG("Requested spawning of new process for group " << name);
 			createInterruptableThread(
 				boost::bind(&Group::spawnThreadMain,
 					this, shared_from_this(), spawner,
@@ -558,15 +577,23 @@ public:
 	}
 	
 	bool needsRestart(const Options &options) {
-		struct stat buf;
-		return cstat.stat(alwaysRestartFile, &buf, options.statThrottleRate) == 0 ||
-		       fileChangeChecker.changed(restartFile, options.statThrottleRate);
+		if (m_restarting) {
+			return false;
+		} else {
+			struct stat buf;
+			return cstat.stat(alwaysRestartFile, &buf, options.statThrottleRate) == 0 ||
+			       fileChangeChecker.changed(restartFile, options.statThrottleRate);
+		}
 	}
 	
 	void restart(const Options &options);
 	
 	bool spawning() const {
 		return m_spawning;
+	}
+
+	bool restarting() const {
+		return m_restarting;
 	}
 
 	template<typename Stream>
@@ -584,6 +611,9 @@ public:
 		stream << "<disable_wait_list_size>" << disableWaitlist.size() << "</disable_wait_list_size>";
 		if (spawning()) {
 			stream << "<spawning/>";
+		}
+		if (restarting()) {
+			stream << "<restarting/>";
 		}
 		if (includeSecrets) {
 			stream << "<secret>" << escapeForXml(secret) << "</secret>";

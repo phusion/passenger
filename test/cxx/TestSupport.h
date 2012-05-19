@@ -52,20 +52,22 @@ using namespace oxt;
 		}                                                     \
 	} while (0)
 
-#define EVENTUALLY(deadline, code)					\
-	do {								\
-		time_t deadlineTime = time(NULL) + deadline;		\
-		bool result = false;					\
-		while (!result && time(NULL) < deadlineTime) {		\
-			code						\
-			if (!result) {					\
-				usleep(10000);				\
-			}						\
-		}							\
-		if (!result) {						\
-			fail("EVENTUALLY(" #code ") failed");		\
-		}							\
+#define EVENTUALLY2(deadlineMsec, sleepTimeMsec, code)					\
+	do {										\
+		unsigned long long deadlineTime = SystemTime::getMsec(true) + deadlineMsec;	\
+		bool result = false;							\
+		while (!result && SystemTime::getMsec(true) < deadlineTime) {		\
+			code								\
+			if (!result) {							\
+				usleep(sleepTimeMsec * 1000);				\
+			}								\
+		}									\
+		if (!result) {								\
+			fail("EVENTUALLY(" #code ") failed");				\
+		}									\
 	} while (0)
+
+#define EVENTUALLY(deadlineSec, code) EVENTUALLY2(deadlineSec * 1000, 10, code)
 
 #define SHOULD_NEVER_HAPPEN(deadline, code)						\
 	do {										\

@@ -1053,6 +1053,85 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 0u);
 	}
 
+	TEST_METHOD(62) {
+		// If we restart while spawning is in progress, then the spawn
+		// loop will exit as soon as it has detected that we're restarting.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		spawnerFactory->dummySpawnTime = 20000;
+		spawnerFactory->dummySpawnerCreationSleepTime = 100000;
+
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.minProcesses = 3;
+
+		// Trigger spawn loop. The spawn loop itself won't take longer than 3*20=60 msec.
+		pool->findOrCreateGroup(options);
+		ScopedLock l(pool->syncher);
+		pool->asyncGet(options, callback, false);
+		// Wait until spawn loop tries to grab the lock.
+		EVENTUALLY(2,
+			LockGuard l2(pool->debugSyncher);
+			result = pool->spawnLoopIteration == 1;
+		);
+		l.unlock();
+
+		// At this point, the spawn loop is about to attach its first spawned
+		// process to the group. We wait until it has succeeded doing so.
+		// Remaining maximum time in the spawn loop: 2*20=40 msec.
+		EVENTUALLY2(200, 0,
+			result = pool->getProcessCount() == 1;
+		);
+
+		// Trigger restart. It will immediately detach the sole process in the pool,
+		// and it will finish after approximately 100 msec,
+		// allowing the spawn loop to detect that the restart flag is true.
+		touchFile("tmp.wsgi/tmp/restart.txt");
+		pool->asyncGet(options, callback);
+		ensure_equals("(1)", pool->getProcessCount(), 0u);
+
+		// The spawn loop will succeed at spawning the second process.
+		// Upon attaching it, it should detect the restart the stop,
+		// so that it never spawns the third process.
+		SHOULD_NEVER_HAPPEN(300,
+			LockGuard l2(pool->debugSyncher);
+			result = pool->spawnLoopIteration > 2;
+		);
+		ensure_equals("(2)", pool->getProcessCount(), 1u);
+	}
+
+	TEST_METHOD(63) {
+		// If a get() request comes in while the restart is in progress, then
+		// that get() request will be put into the get waiters list, which will
+		// be processed after spawning is done.
+
+		// Spawn 2 processes.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.minProcesses = 2;
+		pool->asyncGet(options, callback);
+		EVENTUALLY(2,
+			result = pool->getProcessCount() == 2;
+		);
+		
+		// Trigger a restart. The creation of the new spawner should take a while.
+		spawnerFactory->dummySpawnerCreationSleepTime = 20000;
+		touchFile("tmp.wsgi/tmp/restart.txt");
+		pool->asyncGet(options, callback);
+		GroupPtr group = pool->findOrCreateGroup(options);
+		ensure_equals(pool->getProcessCount(), 0u);
+		ensure_equals(group->getWaitlist.size(), 1u);
+
+		// Now that the restart is in progress, perform a get().
+		pool->asyncGet(options, callback);
+		ensure_equals(group->getWaitlist.size(), 2u);
+		EVENTUALLY(2,
+			result = number == 3;
+		);
+		ensure_equals("The restart function respects minProcesses",
+			pool->getProcessCount(), 2u);
+	}
+
 	// Process metrics collection.
 	// Persistent connections.
 

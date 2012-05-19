@@ -133,6 +133,9 @@ public:
 	 *       getWaitlist is empty.
 	 */
 	vector<GetWaiter> getWaitlist;
+
+	mutable boost::mutex debugSyncher;
+	unsigned int spawnLoopIteration;
 	
 	static void runAllActions(const vector<Callback> &actions) {
 		vector<Callback>::const_iterator it, end = actions.end();
@@ -616,6 +619,8 @@ public:
 		analyticsCollectionTimer.set<Pool, &Pool::collectAnalytics>(this);
 		analyticsCollectionTimer.set(3.0, 0.0);
 		libev->start(analyticsCollectionTimer);
+
+		spawnLoopIteration = 0;
 	}
 	
 	~Pool() {
@@ -810,9 +815,14 @@ public:
 		options2.noop = true;
 		
 		Ticket ticket;
-		// Forcefully create SuperGroup, don't care whether resource limits
-		// actually allow it.
-		createSuperGroup(options);
+		{
+			LockGuard l(syncher);
+			if (superGroups.get(options.getAppGroupName()) == NULL) {
+				// Forcefully create SuperGroup, don't care whether resource limits
+				// actually allow it.
+				createSuperGroup(options);
+			}
+		}
 		return get(options2, &ticket)->getProcess()->getGroup();
 	}
 	
