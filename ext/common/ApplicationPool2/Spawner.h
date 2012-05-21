@@ -1339,6 +1339,7 @@ private:
 				this->pid = pid;
 			}
 			preloaderOutputWatcher.set(adminSocket.second, ev::READ);
+			libev->start(preloaderOutputWatcher);
 			preloaderErrorWatcher = make_shared<PipeWatcher>(libev,
 				errorPipe.first, forwardStderr);
 			preloaderErrorWatcher->start();
