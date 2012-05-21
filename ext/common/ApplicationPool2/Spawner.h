@@ -117,6 +117,7 @@ protected:
 	private:
 		FileDescriptor fd;
 		int target;
+		boost::mutex dataSyncher;
 		string data;
 		oxt::thread *thr;
 		
@@ -138,7 +139,10 @@ protected:
 							strerror(e) << " (errno=" << e << ")");
 						break;
 					} else {
-						data.append(buf, ret);
+						{
+							lock_guard<boost::mutex> l(dataSyncher);
+							data.append(buf, ret);
+						}
 						if (target != -1) {
 							UPDATE_TRACE_POINT();
 							writeExact(target, buf, ret);
@@ -177,14 +181,20 @@ protected:
 				"Background I/O capturer", 64 * 1024);
 		}
 		
-		const string &stop() {
+		string stop() {
 			assert(thr != NULL);
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			thr->interrupt_and_join();
 			delete thr;
 			thr = NULL;
+			lock_guard<boost::mutex> l(dataSyncher);
 			return data;
+		}
+
+		void appendToBuffer(const StaticString &dataToAdd) {
+			lock_guard<boost::mutex> l(dataSyncher);
+			data.append(dataToAdd.data(), dataToAdd.size());
 		}
 	};
 	
@@ -615,10 +625,11 @@ protected:
 			} else if (startsWith(result, "!> ")) {
 				result.erase(0, sizeof("!> ") - 1);
 				return result;
-			} else if (details.forwardStderr) {
-				// TODO: also capture data into a buffer so that the process's
-				// stdout data can be displayed if the process fails to spawn.
-				write(STDOUT_FILENO, result.data(), result.size());
+			} else {
+				details.stderrCapturer->appendToBuffer(result);
+				if (details.forwardStderr) {
+					write(STDOUT_FILENO, result.data(), result.size());
+				}
 			}
 		}
 	}

@@ -90,14 +90,23 @@ module App
 		puts "!> I have control 1.0"
 		abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
 		
-		while (line = STDIN.readline) != "\n"
-			name, value = line.strip.split(/: */, 2)
-			options[name] = value
+		begin
+			while (line = STDIN.readline) != "\n"
+				name, value = line.strip.split(/: */, 2)
+				options[name] = value
+			end
+			@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
+			
+			handler = Rack::RequestHandler.new(STDIN, app, options)
+			LoaderSharedHelpers.before_handling_requests(true, options)
+		rescue Exception => e
+			LoaderSharedHelpers.about_to_abort(e)
+			puts "!> Error"
+			puts "!> "
+			puts format_exception(e)
+			exit exit_code_for_exception(e)
 		end
-		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
-		
-		handler = Rack::RequestHandler.new(STDIN, app, options)
-		LoaderSharedHelpers.before_handling_requests(true, options)
+
 		puts "!> Ready"
 		LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
 		puts "!> "
