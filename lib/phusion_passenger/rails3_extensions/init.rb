@@ -133,8 +133,10 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 				env[PASSENGER_UNION_STATION_KEY])
 			begin
 				request = ActionDispatch::Request.new(env)
-				controller = request.parameters['controller'].humanize + "Controller"
-				action = request.parameters['action']
+				if request.parameters['controller']
+					controller = request.parameters['controller'].humanize + "Controller"
+					action = request.parameters['action']
+				end
 				
 				request_txn_id = env[PASSENGER_TXN_ID]
 				message = exception.message
@@ -143,7 +145,7 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 				message.gsub!("\n", "")
 				backtrace_string = [exception.backtrace.join("\n")].pack('m')
 				backtrace_string.gsub!("\n", "")
-				if action
+				if action && controller
 					controller_action = "#{controller}##{action}"
 				else
 					controller_action = controller
@@ -153,7 +155,7 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 				log.message("Message: #{message}")
 				log.message("Class: #{exception.class.name}")
 				log.message("Backtrace: #{backtrace_string}")
-				log.message("Controller action: #{controller_action}")
+				log.message("Controller action: #{controller_action}") if controller_action
 			ensure
 				log.close
 			end
