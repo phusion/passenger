@@ -164,7 +164,7 @@ module PlatformInfo
 			[ENV['rvm_path'], "~/.rvm", "/usr/local/rvm"].each do |path|
 				next if path.nil?
 				path = File.expand_path(path)
-				script_path = File.join(pathh, 'scripts', 'rvm')
+				script_path = File.join(path, 'scripts', 'rvm')
 				return path if File.directory?(path) && File.exist?(script_path)
 			end
 			# Failure to locate the RVM path is probably caused by the
