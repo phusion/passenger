@@ -343,6 +343,7 @@ public:
 			 */
 			assert(spawning() || restarting());
 			getWaitlist.push(GetWaiter(newOptions, callback));
+			P_DEBUG("No session checked out yet: group is spawning or restarting");
 			return SessionPtr();
 		} else {
 			Process *process = pqueue.top();
@@ -353,8 +354,10 @@ public:
 				 * resources have become free.
 				 */
 				getWaitlist.push(GetWaiter(newOptions, callback));
+				P_DEBUG("No session checked out yet: all processes are at full capacity");
 				return SessionPtr();
 			} else {
+				P_DEBUG("Session checked out from process " << process->inspect());
 				return newSession();
 			}
 		}

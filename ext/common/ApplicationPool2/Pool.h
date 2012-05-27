@@ -803,7 +803,9 @@ public:
 		lock.unlock();
 		
 		if (OXT_LIKELY(ticket->session != NULL)) {
-			return ticket->session;
+			SessionPtr session = ticket->session;
+			ticket->session.reset();
+			return session;
 		} else {
 			rethrowException(ticket->exception);
 			return SessionPtr(); // Shut up compiler warning.
@@ -1042,8 +1044,8 @@ public:
 		}
 	}
 
-	string inspect() const {
-		LockGuard l(syncher);
+	string inspect(bool lock = true) const {
+		DynamicScopedLock l(syncher, lock);
 		stringstream result;
 		
 		result << "----------- General information -----------" << endl;
