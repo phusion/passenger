@@ -10,7 +10,7 @@ While this may sound simple, there's not just one way to spawn worker processes.
 Let's go over the different spawning methods. For simplicity's sake, let's
 assume that we're only talking about Ruby on Rails applications.
 
-=== The most straightforward and traditional way: conservative spawning ===
+=== The most straightforward and traditional way: direct spawning ===
 
 Phusion Passenger could create a new Ruby process, which will then load the
 Rails application along with the entire Rails framework. This process will then
@@ -22,7 +22,7 @@ what mongrel_cluster performs: it creates N worker processes, each which loads
 a full copy of the Rails application and the Rails framework in memory. The Thin
 application server employs pretty much the same approach.
 
-Note that Phusion Passenger's version of conservative spawning differs slightly
+Note that Phusion Passenger's version of direct spawning differs slightly
 from mongrel_cluster. Mongrel_cluster creates entirely new Ruby processes. In
 programmers jargon, mongrel_cluster creates new Ruby processes by forking the
 current process and exec()-ing a new Ruby interpreter. Phusion Passenger on the
@@ -33,23 +33,23 @@ programmers jargon, Phusion Passenger calls fork(), but not exec().
 
 NOTE: Smart spawning is supported for all Ruby applications but not for WSGI applications.
 
-While conservative spawning works well, it's not as efficient as it could be
+While direct spawning works well, it's not as efficient as it could be
 because each worker process has its own private copy of the Rails application
 as well as the Rails framework. This wastes memory as well as startup time.
 
-image:images/conservative_spawning.png[Worker processes and conservative spawning] +
-'Figure: Worker processes and conservative spawning. Each worker process has its
+image:images/direct_spawning.png[Worker processes and direct spawning] +
+'Figure: Worker processes and direct spawning. Each worker process has its
 own private copy of the application code and Rails framework code.'
 
 It is possible to make the different worker processes share the memory occupied
 by application and Rails framework code, by utilizing so-called
 copy-on-write semantics of the virtual memory system on modern operating
 systems. As a side effect, the startup time is also reduced. This is technique
-is exploited by Phusion Passenger's 'smart' and 'smart-lv2' spawn methods.
+is exploited by Phusion Passenger's 'smart' spawn method.
 
 ==== How it works ====
 
-When the 'smart-lv2' spawn method is being used, Phusion Passenger will first
+When the 'smart' spawn method is being used, Phusion Passenger will first
 create a so-called 'ApplicationSpawner server' process. This process loads the
 entire Rails application along with the Rails framework, by loading
 'environment.rb'. Then, whenever Phusion Passenger needs a new worker process,
@@ -64,59 +64,37 @@ processes will share as much common
 memory as possible. That is, they will all share the same application and Rails
 framework code.
 
-image:images/smart-lv2.png[] +
-'Figure: Worker processes and the smart-lv2 spawn method. All worker processes,
+image:images/smart.png[] +
+'Figure: Worker processes and the smart spawn method. All worker processes,
 as well as the ApplicationSpawner, share the same application code and Rails
 framework code.'
 
-The 'smart' spawn method goes even further, by caching the Rails framework in
-another process called the 'FrameworkSpawner server'. This process only loads
-the Rails framework, not the application. When a FrameworkSpawner server is
-instructed to create a new worker process, it will create a new
-ApplicationSpawner to which the instruction will be delegated. All those
-ApplicationSpawner servers, as well as all worker processes created by those
-ApplicationSpawner servers, will share the same Rails framework code.
-
-The 'smart-lv2' method allows different worker processes that belong to the same
-application to share memory. The 'smart' method allows different worker
-processes - that happen to use the same Rails version - to share memory, even if
-they don't belong to the same application.
+The 'smart' method allows different worker processes that belong to the same
+application to share memory.
 
 Notes:
 
 - Vendored Rails frameworks cannot be shared by different applications, even if
   both vendored Rails frameworks are the same version. So for efficiency reasons
   we don't recommend vendoring Rails.
-- ApplicationSpawner and FrameworkSpawner servers have an idle timeout just
-  like worker processes. If an ApplicationSpawner/FrameworkSpawner server hasn't
-  been instructed to do anything for a while, it will be shutdown in order to
-  conserve memory. This idle timeout is configurable.
+- ApplicationSpawner servers have an idle timeout just like worker processes.
+  If an ApplicationSpawner/FrameworkSpawner server hasn't been instructed to do
+  anything for a while, it will be shutdown in order to conserve memory. This
+  idle timeout is configurable.
 
 ==== Summary of benefits ====
 
 Suppose that Phusion Passenger needs a new worker process for an application
 that uses Rails 2.2.1.
 
-- If the 'smart-lv2' spawning method is used, and an ApplicationSpawner server
-  for this application is already running, then worker process creation time is
-  about 10 times faster than conservative spawning. This worker process will also
-  share application and Rails framework code memory with the ApplicationSpawner
-  server and the worker processes that had been spawned by this ApplicationSpawner
-  server.
-- If the 'smart' spawning method is used, and a FrameworkSpawner server for
-  Rails 2.2.1 is already running, but no ApplicationSpawner server for this
-  application is running, then worker process creation time is about 2 times
-  faster than conservative spawning. If there is an ApplicationSpawner server
-  for this application running, then worker process creation time is about 10
-  times faster. This worker process will also share application and Rails
-  framework code memory with the ApplicationSpawner and FrameworkSpawner
-  servers.
+If the 'smart' spawning method is used, and an ApplicationSpawner server
+for this application is already running, then worker process creation time is
+about 10 times faster than direct spawning. This worker process will also
+share application and Rails framework code memory with the ApplicationSpawner
+server and the worker processes that had been spawned by this ApplicationSpawner
+server.
 
-You could compare ApplicationSpawner and FrameworkSpawner servers with stem
-cells, that have the ability to quickly change into more specific cells (worker
-process).
-
-In practice, the smart spawning methods could mean a memory saving of about 33%,
+In practice, the smart spawning method could mean a memory saving of about 33%,
 assuming that your Ruby interpreter is <<reducing_memory_usage,copy-on-write friendly>>.
 
 Of course, smart spawning is not without gotchas. But if you understand the
@@ -147,7 +125,7 @@ if defined?(PhusionPassenger)
             # We're in smart spawning mode.
             ... code to reestablish socket connections here ...
         else
-            # We're in conservative spawning mode. We don't need to do anything.
+            # We're in direct spawning mode. We don't need to do anything.
         end
     end
 end
@@ -242,7 +220,7 @@ if defined?(PhusionPassenger)
             # We're in smart spawning mode.
             reestablish_connection_to_memcached
         else
-            # We're in conservative spawning mode. We don't need to do anything.
+            # We're in direct spawning mode. We don't need to do anything.
         end
     end
 end
@@ -276,7 +254,7 @@ if defined?(PhusionPassenger)
             # We're in smart spawning mode.
             ... code to revive threads here ...
         else
-            # We're in conservative spawning mode. We don't need to do anything.
+            # We're in direct spawning mode. We don't need to do anything.
         end
     end
 end
