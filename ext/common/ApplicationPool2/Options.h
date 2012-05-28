@@ -264,12 +264,6 @@ public:
 	 */
 	bool analytics;
 	StaticString unionStationKey;
-	
-	/**
-	 * Whether application processes should print exceptions that occurred during
-	 * application initialization.
-	 */
-	bool printExceptions;
 
 	/**
 	 * Whether Spawner should raise an internal error when spawning. Used
@@ -361,7 +355,6 @@ public:
 		debugger                = false;
 		loadShellEnvvars        = true;
 		analytics               = false;
-		printExceptions         = true;
 		raiseInternalError      = false;
 		
 		minProcesses            = 1;
@@ -494,7 +487,6 @@ public:
 		appendKeyValue4(vec, "debugger",           debugger);
 		appendKeyValue4(vec, "analytics",          analytics);
 		appendKeyValue (vec, "union_station_key",  unionStationKey);
-		appendKeyValue4(vec, "print_exceptions",   printExceptions);
 		
 		appendKeyValue (vec, "group_secret",       groupSecret);
 		

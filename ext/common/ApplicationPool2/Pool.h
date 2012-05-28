@@ -135,7 +135,7 @@ public:
 	vector<GetWaiter> getWaitlist;
 
 	mutable boost::mutex debugSyncher;
-	unsigned int spawnLoopIteration;
+	unsigned short spawnLoopIteration;
 	
 	static void runAllActions(const vector<Callback> &actions) {
 		vector<Callback>::const_iterator it, end = actions.end();
