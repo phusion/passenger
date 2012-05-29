@@ -26,6 +26,17 @@
 var EventEmitter = require('events').EventEmitter;
 var net = require('net');
 
+/**
+ * Class for reading a stream line-by-line.
+ * Usage:
+ *
+ * reader = new LineReader(stream);
+ * reader.readLine(function(line) {
+ *     ...
+ *     // When done:
+ *     reader.close();
+ * });
+ */
 function LineReader(stream) {
 	var self = this;
 	this.stream = stream;
@@ -96,7 +107,7 @@ LineReader.prototype.close = function() {
 }
 
 LineReader.prototype.lineBufferIsFull = function() {
-	return this.lines.length > 10;
+	return this.lines.length > 0;
 }
 
 LineReader.prototype.readLine = function(callback) {
@@ -182,7 +193,11 @@ function initialize(options) {
 
 	reader.close();
 	reader = undefined;
+	process.stdin.on('data', function() {
+		console.error('##### Stdin data!');
+	});
 	process.stdin.on('end', function() {
+		console.error('##### Stdin end!');
 		if (passenger.listeners('exit').length == 0) {
 			process.exit(0);
 		} else {
