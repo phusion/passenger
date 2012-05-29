@@ -109,6 +109,13 @@ detect_application_type(const ngx_str_t *public_dir) {
     if (file_exists(filename, 1)) {
         return AP_WSGI;
     }
+
+    ngx_memzero(filename, sizeof(filename));
+    ngx_snprintf(filename, sizeof(filename), "%s/%s",
+                 public_dir->data, "../passenger_node.js");
+    if (file_exists(filename, 1)) {
+        return AP_NODE;
+    }
     
     return AP_NONE;
 }
@@ -384,6 +391,10 @@ create_request(ngx_http_request_t *r)
     case AP_WSGI:
         app_type_string = (const u_char *) "wsgi";
         app_type_string_len = sizeof("wsgi");
+        break;
+    case AP_NODE:
+        app_type_string = (const u_char *) "node";
+        app_type_string_len = sizeof("node");
         break;
     default:
         app_type_string = (const u_char *) "rack";

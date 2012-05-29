@@ -512,6 +512,8 @@ public:
 			return ruby + "\1" + resourceLocator.getHelperScriptsDir() + "/rack-loader.rb";
 		} else if (appType == "wsgi") {
 			return "python\1" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";
+		} else if (appType == "node") {
+			return "node\1" + resourceLocator.getHelperScriptsDir() + "/node-loader.js";
 		} else {
 			return startCommand;
 		}
@@ -524,6 +526,8 @@ public:
 			return "config.ru";
 		} else if (appType == "wsgi") {
 			return "passenger_wsgi.py";
+		} else if (appType == "node") {
+			return "passenger_node.js";
 		} else {
 			return startupFile;
 		}
@@ -536,6 +540,8 @@ public:
 			return "Passenger RackApp";
 		} else if (appType == "wsgi") {
 			return "Passenger WsgiApp";
+		} else if (appType == "node") {
+			return "Passenger NodeJsApp";
 		} else {
 			return processTitle;
 		}
