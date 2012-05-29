@@ -52,11 +52,11 @@ namespace tut {
 		}
 	};
 	
-	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_SmartSpawnerTest, 80);
+	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_SmartSpawnerTest, 90);
 	
 	#include "SpawnerTestCases.cpp"
 	
-	TEST_METHOD(70) {
+	TEST_METHOD(80) {
 		// If the preloader has crashed then SmartSpawner will
 		// restart it and try again.
 		Options options = createOptions();
@@ -75,7 +75,7 @@ namespace tut {
 		spawner->spawn(options);
 	}
 	
-	TEST_METHOD(71) {
+	TEST_METHOD(81) {
 		// If the preloader still crashes after the restart then
 		// SmartSpawner will throw an exception.
 		Options options = createOptions();
@@ -92,7 +92,7 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(72) {
+	TEST_METHOD(82) {
 		// If the preloader didn't start within the timeout
 		// then it's killed and an exception is thrown, with
 		// whatever stderr output as error page.
@@ -125,7 +125,7 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(73) {
+	TEST_METHOD(83) {
 		// If the preloader crashed during startup without returning
 		// a proper error response, then its stderr output is used
 		// as error response instead.
@@ -157,7 +157,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(74) {
+	TEST_METHOD(84) {
 		// If the preloader encountered an error, then the resulting SpawnException
 		// takes note of the process's environment variables.
 		Options options = createOptions();
@@ -186,24 +186,7 @@ namespace tut {
 		}
 	}
 
-	struct TemporarilyRedirectStderr {
-		FileDescriptor oldStderr, newStderr;
-
-		TemporarilyRedirectStderr(const string &filename) {
-			oldStderr = FileDescriptor(dup(STDERR_FILENO));
-			newStderr = FileDescriptor(open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600));
-			if (oldStderr == -1 || newStderr == -1) {
-				throw RuntimeException("Cannot dup or open file descriptor");
-			}
-			dup2(newStderr, STDERR_FILENO);
-		}
-
-		~TemporarilyRedirectStderr() {
-			dup2(oldStderr, STDERR_FILENO);
-		}
-	};
-
-	TEST_METHOD(75) {
+	TEST_METHOD(85) {
 		// Test that the spawned process can still write to its stderr
 		// after the SmartSpawner has been destroyed.
 		DeleteFileEventually d("tmp.output");

@@ -28,6 +28,7 @@
 #include <ApplicationPool2/Pool.h>
 #include <ApplicationPool2/SuperGroup.h>
 #include <ApplicationPool2/Group.h>
+#include <ApplicationPool2/PipeWatcher.h>
 #include <Exceptions.h>
 
 namespace Passenger {
@@ -525,30 +526,30 @@ Session::getGupid() const {
 }
 
 
-SmartSpawner::PipeWatcher::PipeWatcher(
+PipeWatcher::PipeWatcher(
 	const SafeLibevPtr &_libev,
 	const FileDescriptor &_fd,
-	bool _forward)
+	int _fdToForwardTo)
 	: libev(_libev),
 	  fd(_fd),
-	  forward(_forward)
+	  fdToForwardTo(_fdToForwardTo)
 {
 	watcher.set(fd, ev::READ);
 	watcher.set<PipeWatcher, &PipeWatcher::onReadable>(this);
 	libev->start(watcher);
 }
 
-SmartSpawner::PipeWatcher::~PipeWatcher() {
+PipeWatcher::~PipeWatcher() {
 	libev->stop(watcher);
 }
 
 void
-SmartSpawner::PipeWatcher::start() {
+PipeWatcher::start() {
 	selfPointer = shared_from_this();
 }
 
 void
-SmartSpawner::PipeWatcher::onReadable(ev::io &io, int revents) {
+PipeWatcher::onReadable(ev::io &io, int revents) {
 	char buf[1024 * 8];
 	ssize_t ret;
 	
@@ -556,8 +557,8 @@ SmartSpawner::PipeWatcher::onReadable(ev::io &io, int revents) {
 	if (ret <= 0) {
 		libev->stop(watcher);
 		selfPointer.reset();
-	} else if (forward) {
-		write(STDERR_FILENO, buf, ret);
+	} else if (fdToForwardTo != -1) {
+		write(fdToForwardTo, buf, ret);
 	}
 }
 

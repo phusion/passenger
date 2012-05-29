@@ -37,6 +37,7 @@
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Socket.h>
 #include <ApplicationPool2/Session.h>
+#include <ApplicationPool2/PipeWatcher.h>
 #include <FileDescriptor.h>
 #include <SafeLibev.h>
 #include <Logging.h>
@@ -124,18 +125,6 @@ private:
 	/** The handle inside the associated Group's process priority queue. */
 	PriorityQueue<Process>::Handle pqHandle;
 	
-	void onErrorPipeReadable(ev::io &io, int revents) {
-		char buf[1024 * 8];
-		ssize_t ret;
-		
-		ret = syscalls::read(errorPipe, buf, sizeof(buf));
-		if (ret <= 0) {
-			errorPipeWatcher.stop();
-		} else if (forwardStderr) {
-			write(STDERR_FILENO, buf, ret);
-		}
-	}
-	
 	void indexSessionSockets() {
 		SocketList::iterator it;
 		concurrency = 0;
@@ -175,13 +164,7 @@ public:
 	string connectPassword;
 	/** Admin socket, see class description. */
 	FileDescriptor adminSocket;
-	/** Pipe on which this process outputs errors. Mapped to the process's STDERR.
-	 * Only Processes spawned by DirectSpawner have this set.
-	 * SmartSpawner-spawned Processes use the same STDERR as their parent preloader processes.
-	 */
-	FileDescriptor errorPipe;
-	/** The libevent watcher that watches for data on errorPipe, if available. */
-	ev::io errorPipeWatcher;
+	PipeWatcherPtr errorPipeWatcher;
 	/** The sockets that this Process listens on for connections. */
 	SocketListPtr sockets;
 	/** Time at which the Spawner that created this process was created.
@@ -192,8 +175,6 @@ public:
 	/** The maximum amount of concurrent sessions this process can handle.
 	 * 0 means unlimited. */
 	int concurrency;
-	/** Whether to automatically forward data from errorPipe to our STDERR. */
-	bool forwardStderr;
 	
 	
 	/*************************************************************
@@ -222,34 +203,37 @@ public:
 	ProcessMetrics metrics;
 	
 	
-	Process(SafeLibev * const _libev,
+	Process(const SafeLibevPtr _libev,
 		pid_t _pid,
 		const string &_gupid,
 		const string &_connectPassword,
 		const FileDescriptor &_adminSocket,
+		/** Pipe on which this process outputs errors. Mapped to the process's STDERR.
+		 * Only Processes spawned by DirectSpawner have this set.
+		 * SmartSpawner-spawned Processes use the same STDERR as their parent preloader processes.
+		 */
 		const FileDescriptor &_errorPipe,
 		const SocketListPtr &_sockets,
 		unsigned long long _spawnerCreationTime,
 		unsigned long long _spawnStartTime,
+		/** Whether to automatically forward data from errorPipe to our STDERR. */
 		bool _forwardStderr = false)
-		: libev(_libev),
+		: libev(_libev.get()),
 		  pid(_pid),
 		  gupid(_gupid),
 		  connectPassword(_connectPassword),
 		  adminSocket(_adminSocket),
-		  errorPipe(_errorPipe),
 		  sockets(_sockets),
 		  spawnerCreationTime(_spawnerCreationTime),
 		  spawnStartTime(_spawnStartTime),
-		  forwardStderr(_forwardStderr),
 		  sessions(0),
 		  processed(0),
 		  enabled(ENABLED)
 	{
-		if (errorPipe != -1) {
-			errorPipeWatcher.set<Process, &Process::onErrorPipeReadable>(this);
-			errorPipeWatcher.set(errorPipe, ev::READ);
-			libev->start(errorPipeWatcher);
+		if (_libev != NULL && _errorPipe != -1) {
+			errorPipeWatcher = make_shared<PipeWatcher>(_libev, _errorPipe,
+				_forwardStderr ? STDERR_FILENO : -1);
+			errorPipeWatcher->start();
 		}
 		
 		if (OXT_LIKELY(sockets != NULL)) {
@@ -270,8 +254,8 @@ public:
 				}
 			}
 		}
-		if (errorPipe != -1) {
-			libev->stop(errorPipeWatcher);
+		if (errorPipeWatcher != NULL) {
+			errorPipeWatcher.reset();
 		}
 	}
 	

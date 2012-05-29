@@ -33,11 +33,11 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_DirectSpawnerTest, 80);
+	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_DirectSpawnerTest, 90);
 	
 	#include "SpawnerTestCases.cpp"
 	
-	TEST_METHOD(70) {
+	TEST_METHOD(80) {
 		// If the application didn't start within the timeout
 		// then whatever was written to stderr is used as the
 		// SpawnException error page.
@@ -61,7 +61,7 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(71) {
+	TEST_METHOD(81) {
 		// If the application crashed during startup without returning
 		// a proper error response, then its stderr output is used
 		// as error response instead.

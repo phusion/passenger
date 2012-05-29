@@ -76,6 +76,7 @@
 #include <dirent.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
+#include <ApplicationPool2/PipeWatcher.h>
 #include <FileDescriptor.h>
 #include <SafeLibev.h>
 #include <Exceptions.h>
@@ -301,7 +302,7 @@ protected:
 	 */
 	struct NegotiationDetails {
 		// Arguments.
-		SafeLibev *libev;
+		SafeLibevPtr libev;
 		BackgroundIOCapturerPtr stderrCapturer;
 		pid_t pid;
 		FileDescriptor adminSocket;
@@ -318,7 +319,6 @@ protected:
 		unsigned long long timeout;
 		
 		NegotiationDetails() {
-			libev = (SafeLibev *) NULL;
 			pid = 0;
 			options = NULL;
 			forwardStderr = false;
@@ -1119,27 +1119,6 @@ private:
 		BufferedIO io;
 	};
 
-	/**
-	 * Handles forwarding any data on the given pipe to our stderr,
-	 * and keeps the pipe alive until it has reached EOF (meaning that all
-	 * processes that refer to the pipe have exited). A PipeWatcher
-	 * destroys itself upon encountering EOF.
-	 */
-	struct PipeWatcher: public enable_shared_from_this<PipeWatcher> {
-		SafeLibevPtr libev;
-		FileDescriptor fd;
-		ev::io watcher;
-		shared_ptr<PipeWatcher> selfPointer;
-		bool forward;
-
-		PipeWatcher(const SafeLibevPtr &_libev,
-			const FileDescriptor &_fd,
-			bool _forward);
-		~PipeWatcher();
-		void start();
-		void onReadable(ev::io &io, int revents);
-	};
-	
 	/** The event loop that created Process objects should use, and that I/O forwarding
 	 * functions should use. For example data on the error pipe is forwarded using this event loop.
 	 */
@@ -1352,7 +1331,7 @@ private:
 			preloaderOutputWatcher.set(adminSocket.second, ev::READ);
 			libev->start(preloaderOutputWatcher);
 			preloaderErrorWatcher = make_shared<PipeWatcher>(libev,
-				errorPipe.first, forwardStderr);
+				errorPipe.first, forwardStderr ? STDERR_FILENO : -1);
 			preloaderErrorWatcher->start();
 			preloaderAnnotations = debugDir->readAll();
 			guard.clear();
@@ -1756,7 +1735,7 @@ private:
 			}
 			
 			NegotiationDetails details;
-			details.libev = libev.get();
+			details.libev = libev;
 			details.pid = result.pid;
 			details.adminSocket = result.adminSocket;
 			details.io = result.io;
@@ -1846,7 +1825,7 @@ public:
 		}
 		
 		NegotiationDetails details;
-		details.libev = libev.get();
+		details.libev = libev;
 		details.pid = result.pid;
 		details.adminSocket = result.adminSocket;
 		details.io = result.io;
@@ -2062,7 +2041,7 @@ public:
 			errorPipe.second.close();
 			
 			NegotiationDetails details;
-			details.libev = libev.get();
+			details.libev = libev;
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
@@ -2117,7 +2096,7 @@ public:
 		
 		lock_guard<boost::mutex> l(lock);
 		count++;
-		return make_shared<Process>((SafeLibev *) NULL,
+		return make_shared<Process>(SafeLibevPtr(),
 			(pid_t) count, "gupid-" + toString(count),
 			toString(count),
 			adminSocket.second, FileDescriptor(), sockets,

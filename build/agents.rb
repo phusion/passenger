@@ -69,6 +69,8 @@ dependencies = [
 	'ext/common/ApplicationPool2/Group.h',
 	'ext/common/ApplicationPool2/Process.h',
 	'ext/common/ApplicationPool2/Session.h',
+	'ext/common/ApplicationPool2/Options.h',
+	'ext/common/ApplicationPool2/PipeWatcher.h',
 	LIBBOOST_OXT,
 	helper_agent_libs.link_objects,
 	:libev,

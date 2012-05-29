@@ -328,7 +328,7 @@ public:
 		}
 		
 		if (OXT_UNLIKELY(newOptions.noop)) {
-			ProcessPtr process = make_shared<Process>((SafeLibev *) NULL,
+			ProcessPtr process = make_shared<Process>(SafeLibevPtr(),
 				0, string(), string(),
 				FileDescriptor(), FileDescriptor(),
 				SocketListPtr(), 0, 0);

@@ -371,6 +371,8 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			ApplicationPool2/SuperGroup.h
 			ApplicationPool2/Group.h
 			ApplicationPool2/Session.h
+			ApplicationPool2/Options.h
+			ApplicationPool2/PipeWatcher.h
 		)
 	define_component 'AccountsDatabase.o',
 		:source   => 'AccountsDatabase.cpp',

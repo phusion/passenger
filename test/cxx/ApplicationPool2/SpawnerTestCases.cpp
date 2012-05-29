@@ -81,6 +81,23 @@
 			return str;
 		}
 	}
+
+	struct TemporarilyRedirectStderr {
+		FileDescriptor oldStderr, newStderr;
+
+		TemporarilyRedirectStderr(const string &filename) {
+			oldStderr = FileDescriptor(dup(STDERR_FILENO));
+			newStderr = FileDescriptor(open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600));
+			if (oldStderr == -1 || newStderr == -1) {
+				throw RuntimeException("Cannot dup or open file descriptor");
+			}
+			dup2(newStderr, STDERR_FILENO);
+		}
+
+		~TemporarilyRedirectStderr() {
+			dup2(oldStderr, STDERR_FILENO);
+		}
+	};
 	
 	TEST_METHOD(1) {
 		// Basic spawning test.
@@ -272,6 +289,36 @@
 			runShellCommand("chmod 700 tmp.check/a/b/c/d");
 			spawner->spawn(options); // Should not throw.
 		}
+	}
+
+	TEST_METHOD(10) {
+		// Test that the spawned process can still write to its stderr
+		// after the corresponding Process has been destroyed.
+		DeleteFileEventually d("tmp.output");
+		Options options = createOptions();
+		options.appRoot = "stub/rack";
+		SpawnerPtr spawner = createSpawner(options);
+		ProcessPtr process = spawner->spawn(options);
+		
+		SessionPtr session = process->newSession();
+		session->initiate();
+		
+		const char header[] =
+			"REQUEST_METHOD\0GET\0"
+			"PATH_INFO\0/print_stderr\0";
+		string data(header, sizeof(header) - 1);
+		data.append("PASSENGER_CONNECT_PASSWORD");
+		data.append(1, '\0');
+		data.append(process->connectPassword);
+		data.append(1, '\0');
+
+		{
+			TemporarilyRedirectStderr redirect("tmp.output");
+			writeScalarMessage(session->fd(), data);
+			shutdown(session->fd(), SHUT_WR);
+			readAll(session->fd());
+		}
+		ensure_equals(readAll("tmp.output"), "hello world!\n");
 	}
 	
 	// It raises an exception if getStartupCommand() is empty.

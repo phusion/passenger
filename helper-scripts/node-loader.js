@@ -204,6 +204,10 @@ function initialize(options) {
 			passenger.emit('exit');
 		}
 	});
+	setInterval(function() {
+		console.log('####### stdout ping!');
+		console.error('####### stderr ping!');
+	}, 1000);
 	process.stdin.resume();
 }
 
