@@ -25,6 +25,7 @@
 
 var EventEmitter = require('events').EventEmitter;
 var net = require('net');
+GLOBAL.PhusionPassenger = new EventEmitter();
 
 /**
  * Class for reading a stream line-by-line.
@@ -124,16 +125,121 @@ LineReader.prototype.readLine = function(callback) {
 }
 
 
+const
+	SPP_PARSING_SIZE = 0,
+	SPP_PARSING_HEADERS = 1,
+	SPP_DONE = 10,
+	SPP_ERROR = 11,
+	SPP_ENCODING = 'binary';
+
+function SessionProtocolParser() {
+	this.state = SPP_PARSING_SIZE;
+	this.processed = 0;
+	this.size = 0;
+	this.keys = [];
+}
+
+SessionProtocolParser.prototype.feed = function(buffer) {
+	var consumed = 0;
+	var locallyConsumed;
+
+	while (consumed < buffer.length && this.state != SPP_ERROR && this.state != SPP_DONE) {
+		switch (this.state) {
+		case SPP_PARSING_SIZE:
+			this.size += buffer[consumed] * Math.pow(256, 3 - this.processed);
+			locallyConsumed = 1;
+			this.processed++;
+			if (this.processed == 4) {
+				this.state = SPP_PARSING_HEADERS;
+				this.buffer = new Buffer(this.size);
+				this.processed = 0;
+			}
+			break;
+
+		case SPP_PARSING_HEADERS:
+			locallyConsumed = Math.min(buffer.length - consumed, this.buffer.length - this.processed);
+			buffer.copy(this.buffer, this.processed, consumed, consumed + locallyConsumed);
+			this.processed += locallyConsumed;
+			if (this.processed == this.buffer.length) {
+				this.state = SPP_DONE;
+				this.parse();
+			}
+			break;
+
+		default:
+			console.assert(false);
+			break;
+		}
+
+		consumed += locallyConsumed;
+	}
+
+	return consumed;
+}
+
+SessionProtocolParser.prototype.parse = function() {
+	function findZero(buffer, start) {
+		while (start < buffer.length) {
+			if (buffer[start] == 0) {
+				return start;
+			} else {
+				start++;
+			}
+		}
+		return -1;
+	}
+
+	var start = 0;
+	var key, value;
+
+	while (start < this.buffer.length) {
+		var keyEnd = findZero(this.buffer, start);
+		if (keyEnd != -1 && keyEnd + 1 < this.buffer.length) {
+			var valueStart = keyEnd + 1;
+			var valueEnd   = findZero(this.buffer, valueStart);
+			if (valueEnd != -1) {
+				key = this.buffer.toString(SPP_ENCODING, start, keyEnd);
+				value = this.buffer.toString(SPP_ENCODING, valueStart, valueEnd);
+				start = valueEnd + 1;
+				this.keys.push(key);
+				this[key] = value;
+			} else {
+				start = this.buffer.length;
+			}
+		} else {
+			start = this.buffer.length;
+		}
+	}
+}
+
+//var p = new SessionProtocolParser();
+//p.feed(new Buffer("\x00\x00\x00\x06hi\0ho\0"));
+//process.exit();
+
+
 function RequestHandler(readyCallback, clientCallback) {
 	var self = this;
 
 	function handleNewClient(socket) {
-		function handleData(data) {
+		var state = 'PARSING_HEADER';
+		var parser = new SessionProtocolParser();
 
+		function handleData(data) {
+			if (state == 'PARSING_HEADER') {
+				parser.feed(data);
+				if (parser.state == SPP_DONE) {
+					state = 'HEADER_SEEN';
+					PhusionPassenger.emit('request', parser, socket);
+				} else if (parser.state == SPP_ERROR) {
+					console.error('Header parse error');
+					socket.destroySoon();
+				}
+			} else {
+				// Do nothing yet.
+			}
 		}
 
 		socket.on('data', handleData);
-		process.passenger.emit('request', socket, socket);
 	}
 
 	var server = net.createServer({ allowHalfOpen: true }, handleNewClient);
@@ -181,35 +287,28 @@ function readOptions() {
 }
 
 function initialize(options) {
-	var passenger = process.passenger = new EventEmitter();
-	passenger.options = options;
+	PhusionPassenger.options = options;
 
-	passenger.requestHandler = new RequestHandler(function() {
+	PhusionPassenger.requestHandler = new RequestHandler(function() {
 		require(options.app_root + '/passenger_node.js');
-		console.log('!> Ready');
-		console.log('!> socket: main;tcp://127.0.0.1:' + passenger.requestHandler.server.address().port + ';session;0');
-		console.log('!> ');
+		process.stdout.write("!> Ready\n");
+		process.stdout.write("!> socket: main;tcp://127.0.0.1:" +
+			PhusionPassenger.requestHandler.server.address().port +
+			";session;0\n");
+		process.stdout.write("!> \n");
 	});
 
 	reader.close();
 	reader = undefined;
-	process.stdin.on('data', function() {
-		console.error('##### Stdin data!');
-	});
 	process.stdin.on('end', function() {
-		console.error('##### Stdin end!');
-		if (passenger.listeners('exit').length == 0) {
+		if (PhusionPassenger.listeners('exit').length == 0) {
 			process.exit(0);
 		} else {
-			passenger.emit('exit');
+			PhusionPassenger.emit('exit');
 		}
 	});
-	setInterval(function() {
-		console.log('####### stdout ping!');
-		console.error('####### stderr ping!');
-	}, 1000);
 	process.stdin.resume();
 }
 
-console.log('!> I have control 1.0');
+process.stdout.write("!> I have control 1.0\n");
 readInitializationHeader();
