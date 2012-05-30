@@ -1710,44 +1710,6 @@ private:
 		guard.clear();
 		return result;
 	}
-
-
-	void realSpawn(const Options *_options, ProcessPtr *processResult, ExceptionPtr *exceptionResult) {
-		try {
-			const Options &options = *_options;
-			{
-				lock_guard<boost::mutex> l(simpleFieldSyncher);
-				m_lastUsed = SystemTime::getUsec();
-			}
-			if (!preloaderStarted()) {
-				startPreloader();
-			}
-			
-			SpawnResult result;
-			try {
-				result = sendSpawnCommand(options);
-			} catch (const SystemException &e) {
-				result = sendSpawnCommandAgain(e, options);
-			} catch (const IOException &e) {
-				result = sendSpawnCommandAgain(e, options);
-			} catch (const SpawnException &e) {
-				result = sendSpawnCommandAgain(e, options);
-			}
-			
-			NegotiationDetails details;
-			details.libev = libev;
-			details.pid = result.pid;
-			details.adminSocket = result.adminSocket;
-			details.io = result.io;
-			details.options = &options;
-			ProcessPtr process = negotiateSpawn(details);
-			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
-				", pid=" << process->pid);
-			*processResult = process;
-		} catch (const tracable_exception &e) {
-			*exceptionResult = copyException(e);
-		}
-	}
 	
 protected:
 	virtual void annotateAppSpawnException(SpawnException &e, NegotiationDetails &details) {
@@ -1830,6 +1792,7 @@ public:
 		details.adminSocket = result.adminSocket;
 		details.io = result.io;
 		details.options = &options;
+		details.forwardStderr = forwardStderr;
 		ProcessPtr process = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
 			", pid=" << process->pid);

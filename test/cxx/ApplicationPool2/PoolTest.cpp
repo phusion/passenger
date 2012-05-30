@@ -41,7 +41,7 @@ namespace tut {
 			// additional code that depend on other fields in this
 			// class.
 			setLogLevel(0);
-			UPDATE_TRACE_POINT();
+			TRACE_POINT();
 			pool->destroy();
 			UPDATE_TRACE_POINT();
 			pool.reset();

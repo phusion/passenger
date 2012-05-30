@@ -82,19 +82,22 @@
 		}
 	}
 
-	struct TemporarilyRedirectStderr {
-		FileDescriptor oldStderr, newStderr;
+	struct TemporarilyRedirectStdio {
+		FileDescriptor oldStdout, oldStderr, newStdio;
 
-		TemporarilyRedirectStderr(const string &filename) {
+		TemporarilyRedirectStdio(const string &filename) {
+			oldStdout = FileDescriptor(dup(STDOUT_FILENO));
 			oldStderr = FileDescriptor(dup(STDERR_FILENO));
-			newStderr = FileDescriptor(open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600));
-			if (oldStderr == -1 || newStderr == -1) {
+			newStdio = FileDescriptor(open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600));
+			if (oldStdout == -1  || oldStderr == -1 || newStdio == -1) {
 				throw RuntimeException("Cannot dup or open file descriptor");
 			}
-			dup2(newStderr, STDERR_FILENO);
+			dup2(newStdio, STDOUT_FILENO);
+			dup2(newStdio, STDERR_FILENO);
 		}
 
-		~TemporarilyRedirectStderr() {
+		~TemporarilyRedirectStdio() {
+			dup2(oldStdout, STDOUT_FILENO);
 			dup2(oldStderr, STDERR_FILENO);
 		}
 	};
@@ -292,11 +295,12 @@
 	}
 
 	TEST_METHOD(10) {
-		// Test that the spawned process can still write to its stderr
-		// after the corresponding Process has been destroyed.
+		// It forwards all stdout and stderr output, even after the corresponding
+		// Process object has been destroyed.
 		DeleteFileEventually d("tmp.output");
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
+		options.appType = "rack";
 		SpawnerPtr spawner = createSpawner(options);
 		ProcessPtr process = spawner->spawn(options);
 		
@@ -305,7 +309,7 @@
 		
 		const char header[] =
 			"REQUEST_METHOD\0GET\0"
-			"PATH_INFO\0/print_stderr\0";
+			"PATH_INFO\0/print_stdout_and_stderr\0";
 		string data(header, sizeof(header) - 1);
 		data.append("PASSENGER_CONNECT_PASSWORD");
 		data.append(1, '\0');
@@ -313,12 +317,13 @@
 		data.append(1, '\0');
 
 		{
-			TemporarilyRedirectStderr redirect("tmp.output");
+			TemporarilyRedirectStdio redirect("tmp.output");
 			writeScalarMessage(session->fd(), data);
 			shutdown(session->fd(), SHUT_WR);
 			readAll(session->fd());
+			usleep(20000); // Give the I/O event loop some time to handle the data.
 		}
-		ensure_equals(readAll("tmp.output"), "hello world!\n");
+		ensure_equals(readAll("tmp.output"), "hello stdout!\nhello stderr!\n");
 	}
 	
 	// It raises an exception if getStartupCommand() is empty.

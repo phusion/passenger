@@ -219,7 +219,7 @@ namespace tut {
 		data.append(1, '\0');
 
 		{
-			TemporarilyRedirectStderr redirect("tmp.output");
+			TemporarilyRedirectStdio redirect("tmp.output");
 			writeScalarMessage(session->fd(), data);
 			shutdown(session->fd(), SHUT_WR);
 			readAll(session->fd());

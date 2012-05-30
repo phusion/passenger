@@ -48,7 +48,7 @@ namespace tut {
 	
 	TEST_METHOD(1) {
 		// Test initial state.
-		ProcessPtr process = make_shared<Process>(bg.safe.get(),
+		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
 		ensure_equals(process->usage(), 0);
@@ -57,7 +57,7 @@ namespace tut {
 	
 	TEST_METHOD(2) {
 		// Test opening and closing sessions.
-		ProcessPtr process = make_shared<Process>(bg.safe.get(),
+		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
 		SessionPtr session = process->newSession();
@@ -72,7 +72,7 @@ namespace tut {
 	TEST_METHOD(3) {
 		// newSession() checks out the socket with the smallest usage number
 		// and sessionClosed() restores the session usage statistics.
-		ProcessPtr process = make_shared<Process>(bg.safe.get(),
+		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
 		
@@ -115,7 +115,7 @@ namespace tut {
 	
 	TEST_METHOD(4) {
 		// If all sockets are at their full capacity then newSession() will fail.
-		ProcessPtr process = make_shared<Process>(bg.safe.get(),
+		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
 		vector<SessionPtr> sessions;

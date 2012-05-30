@@ -164,6 +164,7 @@ public:
 	string connectPassword;
 	/** Admin socket, see class description. */
 	FileDescriptor adminSocket;
+	PipeWatcherPtr adminSocketWatcher;
 	PipeWatcherPtr errorPipeWatcher;
 	/** The sockets that this Process listens on for connections. */
 	SocketListPtr sockets;
@@ -230,6 +231,11 @@ public:
 		  processed(0),
 		  enabled(ENABLED)
 	{
+		if (_libev != NULL) {
+			adminSocketWatcher = make_shared<PipeWatcher>(_libev, _adminSocket,
+				_forwardStderr ? STDOUT_FILENO : -1);
+			adminSocketWatcher->start();
+		}
 		if (_libev != NULL && _errorPipe != -1) {
 			errorPipeWatcher = make_shared<PipeWatcher>(_libev, _errorPipe,
 				_forwardStderr ? STDERR_FILENO : -1);
@@ -254,9 +260,9 @@ public:
 				}
 			}
 		}
-		if (errorPipeWatcher != NULL) {
-			errorPipeWatcher.reset();
-		}
+		// The admin socket stays alive for a while thanks to adminSocketWatcher,
+		// so we shutdown the writable part to close the child's stdin.
+		syscalls::shutdown(adminSocket, SHUT_WR);
 	}
 	
 	// Thread-safe.
