@@ -1,3 +1,10 @@
+Release 3.0.13
+--------------
+
+ * Fixed compilation problems on GCC >= 4.6.
+ * Fixed compilation problems on OpenIndiana and Solaris 11. Fixes issue #742.
+
+
 Release 3.0.12
 --------------
 
