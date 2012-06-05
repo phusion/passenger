@@ -5,6 +5,7 @@ Release 3.0.13
  * Fixed compilation problems on FreeBSD 6.4. Fixes issue #766.
  * Fixed compilation problems on GCC >= 4.6.
  * Fixed compilation problems on OpenIndiana and Solaris 11. Fixes issue #742.
+ * Union Station-related bug fixes.
 
 
 Release 3.0.12
