@@ -370,16 +370,14 @@ private:
 
 	void sendSpawnRequest(NegotiationDetails &details) {
 		try {
-			writeExact(details.adminSocket,
-				"You have control 1.0\n"
+			string data = "You have control 1.0\n"
 				"passenger_root: " + resourceLocator.getRoot() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
 				"generation_dir: " + generation->getPath() + "\n"
 				"gupid: " + details.gupid + "\n"
-				"connect_password: " + details.connectPassword + "\n",
-				&details.timeout);
-			
+				"connect_password: " + details.connectPassword + "\n";
+
 			vector<string> args;
 			vector<string>::const_iterator it, end;
 			details.options->toVector(args, resourceLocator);
@@ -387,10 +385,11 @@ private:
 				const string &key = *it;
 				it++;
 				const string &value = *it;
-				writeExact(details.adminSocket,
-					key + ": " + value + "\n",
-					&details.timeout);
+				data.append(key + ": " + value + "\n");
 			}
+
+			writeExact(details.adminSocket, data, &details.timeout);
+			P_TRACE(2, "Spawn request for " << details.options->appRoot << ":\n" << data);
 			writeExact(details.adminSocket, "\n", &details.timeout);
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE) {

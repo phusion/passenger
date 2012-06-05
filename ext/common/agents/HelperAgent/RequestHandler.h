@@ -1402,6 +1402,9 @@ private:
 		}
 		
 		options.logLevel = getLogLevel();
+		options.loggingAgentAddress = this->options.loggingAgentAddress;
+		options.loggingAgentUsername = "logging";
+		options.loggingAgentPassword = this->options.loggingAgentPassword;
 		fillPoolOption(client, options.appGroupName, "PASSENGER_APP_GROUP_NAME");
 		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
 		fillPoolOption(client, options.environment, "PASSENGER_ENV");
@@ -1733,22 +1736,27 @@ private:
 		RH_TRACE(client, 2, "Sending headers to application");
 
 		char sizeField[sizeof(uint32_t)];
-		StaticString data[] = {
-			StaticString(sizeField, sizeof(uint32_t)),
-			client->scgiParser.getHeaderData(),
+		SmallVector<StaticString, 10> data;
 
-			makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"),
-			makeStaticStringWithNull(client->session->getConnectPassword())
-		};
+		data.push_back(StaticString(sizeField, sizeof(uint32_t)));
+		data.push_back(client->scgiParser.getHeaderData());
+
+		data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
+		data.push_back(makeStaticStringWithNull(client->session->getConnectPassword()));
+
+		if (client->options.analytics) {
+			data.push_back(makeStaticStringWithNull("PASSENGER_TXN_ID"));
+			data.push_back(makeStaticStringWithNull(client->options.logger->getTxnId()));
+		}
 
 		uint32_t dataSize = 0;
-		for (unsigned int i = 1; i < sizeof(data) / sizeof(StaticString); i++) {
+		for (unsigned int i = 1; i < data.size(); i++) {
 			dataSize += (uint32_t) data[i].size();
 		}
 		Uint32Message::generate(sizeField, dataSize);
 
-		ssize_t ret = gatheredWrite(client->session->fd(), data,
-			sizeof(data) / sizeof(StaticString), client->appOutputBuffer);
+		ssize_t ret = gatheredWrite(client->session->fd(), &data[0],
+			data.size(), client->appOutputBuffer);
 		if (ret == -1 && errno != EAGAIN) {
 			disconnectWithAppSocketWriteError(client, errno);
 		} else if (!client->appOutputBuffer.empty()) {

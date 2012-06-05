@@ -98,10 +98,13 @@ private:
 		result.push_back(&postexecChroot);
 		
 		result.push_back(&ruby);
-		result.push_back(&unionStationKey);
+		result.push_back(&loggingAgentAddress);
+		result.push_back(&loggingAgentUsername);
+		result.push_back(&loggingAgentPassword);
 		result.push_back(&groupSecret);
 		result.push_back(&hostName);
 		result.push_back(&uri);
+		result.push_back(&unionStationKey);
 		
 		return result;
 	}
@@ -260,10 +263,13 @@ public:
 	 * actually results in data being logged to Union Station depends on whether
 	 * the 'logger' member is set.
 	 *
-	 * If this is set to true, then 'unionStationKey' must be non-empty.
+	 * If this is set to true, then 'loggingAgentAddress', 'loggingAgentUsername'
+	 * and 'loggingAgentPassword' must be non-empty.
 	 */
 	bool analytics;
-	StaticString unionStationKey;
+	StaticString loggingAgentAddress;
+	StaticString loggingAgentUsername;
+	StaticString loggingAgentPassword;
 
 	/**
 	 * Whether Spawner should raise an internal error when spawning. Used
@@ -297,6 +303,11 @@ public:
 	 * in which case Union Station logging is disabled for this request.
 	 */
 	UnionStation::LoggerPtr logger;
+
+	/**
+	 * The Union Station key to use in case analytics logging is enabled.
+	 */
+	StaticString unionStationKey;
 	
 	/**
 	 * A throttling rate for file stats. When set to a non-zero value N,
@@ -483,7 +494,9 @@ public:
 		appendKeyValue (vec, "preexec_chroot",     preexecChroot);
 		appendKeyValue (vec, "postexec_chroot",    postexecChroot);
 		appendKeyValue (vec, "ruby",               ruby);
-		appendKeyValue3(vec, "rights",             rights);
+		appendKeyValue (vec, "logging_agent_address",  loggingAgentAddress);
+		appendKeyValue (vec, "logging_agent_username", loggingAgentUsername);
+		appendKeyValue (vec, "logging_agent_password", loggingAgentPassword);
 		appendKeyValue4(vec, "debugger",           debugger);
 		appendKeyValue4(vec, "analytics",          analytics);
 		appendKeyValue (vec, "union_station_key",  unionStationKey);

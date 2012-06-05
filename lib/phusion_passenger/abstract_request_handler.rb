@@ -187,6 +187,7 @@ class AbstractRequestHandler
 		@main_loop_generation  = 0
 		@main_loop_thread_lock = Mutex.new
 		@main_loop_thread_cond = ConditionVariable.new
+		@app_group_name        = options["app_group_name"]
 		@memory_limit          = options["memory_limit"] || 0
 		@connect_password      = options["connect_password"]
 		@detach_key            = options["detach_key"]
@@ -644,14 +645,13 @@ private
 	def prepare_request(headers)
 		if @analytics_logger && headers[PASSENGER_TXN_ID]
 			txn_id = headers[PASSENGER_TXN_ID]
-			group_name = headers[PASSENGER_GROUP_NAME]
 			union_station_key = headers[PASSENGER_UNION_STATION_KEY]
-			log = @analytics_logger.continue_transaction(txn_id, group_name,
+			log = @analytics_logger.continue_transaction(txn_id,
+				@app_group_name,
 				:requests, union_station_key)
 			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
 			Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = log
 			Thread.current[PASSENGER_TXN_ID] = txn_id
-			Thread.current[PASSENGER_GROUP_NAME] = group_name
 			Thread.current[PASSENGER_UNION_STATION_KEY] = union_station_key
 			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
 				log.message("Initial objects on heap: #{ObjectSpace.live_objects}")
@@ -722,7 +722,7 @@ private
 	
 	def log_analytics_exception(env, exception)
 		log = @analytics_logger.new_transaction(
-			env[PASSENGER_GROUP_NAME],
+			@app_group_name,
 			:exceptions,
 			env[PASSENGER_UNION_STATION_KEY])
 		begin
