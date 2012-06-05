@@ -3,10 +3,12 @@ Phusion Passenger design & architecture
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-This document describes Phusion Passenger's design and architure in a global way. The purpose of
-this document is to lower the barrier to entry for new contributors, as well
-as to explain (some of the) design choices that we have made. Or it can be a fun read
-for people who just want to know how Phusion Passenger works.
+Last updated: June 5, 2012.
+
+This document describes Phusion Passenger's design and architure in a global way.
+Its purpose is to lower the barrier to entry for new contributors,
+to explain some of the design choices we have made and to educate people
+about how Phusion Passenger works.
 
 
 Introduction to related technologies
