@@ -1,6 +1,7 @@
 Release 3.0.13
 --------------
 
+ * [Nginx] Preferred Nginx version upgraded to 1.2.0.
  * Fixed compilation problems on FreeBSD 6.4. Fixes issue #766.
  * Fixed compilation problems on GCC >= 4.6.
  * Fixed compilation problems on OpenIndiana and Solaris 11. Fixes issue #742.
