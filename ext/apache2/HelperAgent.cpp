@@ -154,6 +154,11 @@ private:
 		if (!readArrayMessage(feedbackFd, args)) {
 			throw IOException("The watchdog unexpectedly closed the connection.");
 		}
+
+		if (args.size() < 2) { 
+			throw IOException("Unexpected input size"); 
+		}
+
 		if (args[0] != "request socket password" && args[0] != "message socket password") {
 			throw IOException("Unexpected input message '" + args[0] + "'");
 		}

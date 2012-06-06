@@ -30,7 +30,8 @@ module AdminTools
 				return ENV[name]
 			end
 		end
-		return "/tmp"
+
+		raise "PASSENGER_TEMP_DIR or PASSENGER_TMPDIR path variable not set" 
 	end
 	
 	def self.process_is_alive?(pid)

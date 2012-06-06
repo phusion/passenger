@@ -698,8 +698,22 @@ public:
 		while (true) {
 			attempts++;
 			sendGetCommand(options, reply);
-			
+		
+			if(reply.size() < 2) 	
+			{
+				UPDATE_TRACE_POINT();
+				throw IOException("The ApplicationPool server returned "
+					"an unknown message: " + toString(reply));
+			}
+	
 			if (reply[0] == "ok") {
+				if(reply.size() < 8)
+				{ 
+					UPDATE_TRACE_POINT();
+					throw IOException("The ApplicationPool server returned "
+						"an unknown message: " + toString(reply));
+				}
+
 				UPDATE_TRACE_POINT();
 				pid_t pid = (pid_t) atol(reply[1]);
 				string socketType = reply[2];
@@ -739,6 +753,12 @@ public:
 					return session;
 				}
 			} else if (reply[0] == "SpawnException") {
+				if(reply.size() < 3)  
+				{ 
+					throw IOException("The ApplicationPool server returned "
+						"an unknown message: " + toString(reply));
+				}
+
 				UPDATE_TRACE_POINT();
 				if (reply[2] == "true") {
 					string errorPage;

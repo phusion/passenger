@@ -236,9 +236,9 @@ appendSignalReason(char *buf, siginfo_t *info) {
 static void
 abortHandler(int signo, siginfo_t *info, void *ctx) {
 	pid_t pid = getpid();
-	char messageBuf[1024];
+	char messageBuf[1024] = {0};
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
-		void *backtraceStore[512];
+		void *backtraceStore[512] = {0};
 		backtraceStore[0] = '\0'; // Don't let gdb print uninitialized contents.
 	#endif
 	
@@ -340,10 +340,15 @@ installAbortHandler() {
 	action.sa_sigaction = abortHandler;
 	action.sa_flags = SA_RESETHAND | SA_SIGINFO;
 	sigemptyset(&action.sa_mask);
-	sigaction(SIGABRT, &action, NULL);
-	sigaction(SIGSEGV, &action, NULL);
-	sigaction(SIGBUS, &action, NULL);
-}
+
+	if( -1 == sigaction(SIGABRT, &action, NULL))
+		fprintf(stderr, "Could not install SIGABRT handler"); 
+
+	if( -1 == sigaction(SIGSEGV, &action, NULL))
+		fprintf(stderr, "Could not install SIGSEGV handler"); 
+
+	if( -1 == sigaction(SIGBUS, &action, NULL))
+		fprintf(stderr, "Could not install SIGBUS handler"); }
 
 bool
 feedbackFdAvailable() {

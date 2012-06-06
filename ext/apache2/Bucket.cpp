@@ -124,6 +124,9 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 		 * will be the first in the bucket list.
 		 */
 		bucket = apr_bucket_heap_make(bucket, buf, *len, apr_bucket_free);
+		if(bucket == NULL) {
+			return APR_ENOMEM;
+		}
 		h = (apr_bucket_heap *) bucket->data;
 		h->alloc_len = APR_BUCKET_BUFF_SIZE; /* note the real buffer size */
 		
@@ -148,6 +151,10 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 		apr_bucket_free(buf);
 		
 		bucket = apr_bucket_immortal_make(bucket, "", 0);
+		if(bucket == NULL)
+		{
+			return APR_ENOMEM; 
+		}
 		*str = (const char *) bucket->data;
 		*len = 0;
 		return APR_SUCCESS;

@@ -1222,7 +1222,7 @@ private:
 			r->connection->keepalive = AP_CONN_CLOSE;
 			apr_brigade_destroy(bb);
 			
-			char buf[150], *errorString, message[1024];
+			char buf[150]={0}, *errorString, message[1024]={0};
 			errorString = apr_strerror(rv, buf, sizeof(buf));
 			if (errorString != NULL) {
 				snprintf(message, sizeof(message),
@@ -1340,7 +1340,7 @@ private:
 	void receiveRequestBody(request_rec *r, const char *contentLength, string &buffer) {
 		TRACE_POINT();
 		unsigned long l_contentLength = 0;
-		char buf[1024 * 32];
+		char buf[1024 * 32]={0};
 		apr_off_t len;
 		
 		buffer.clear();
@@ -1358,12 +1358,12 @@ private:
 		TRACE_POINT();
 		rewind(uploadData->handle);
 		while (!feof(uploadData->handle)) {
-			char buf[1024 * 32];
-			size_t size;
+			char buf[1024 * 32]={0};
+			size_t size=0;
 			
 			size = fread(buf, 1, sizeof(buf), uploadData->handle);
-			
-			session->sendBodyBlock(buf, size);
+			if( size > 0 ) 	
+				session->sendBodyBlock(buf, size);
 		}
 	}
 	
@@ -1747,7 +1747,7 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 		
 		fprintf(stderr, "Output of 'uname -a' follows:\n");
 		fflush(stderr);
-		system("uname -a >&2");
+		system("/bin/uname -a >&2");
 		
 		fprintf(stderr, "\nOutput of 'ulimit -a' follows:\n");
 		fflush(stderr);
