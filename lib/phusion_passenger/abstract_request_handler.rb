@@ -389,7 +389,7 @@ private
 				socket = UNIXServer.new(socket_address)
 				socket.listen(BACKLOG_SIZE)
 				socket.close_on_exec!
-				File.chmod(0666, socket_address)
+				File.chmod(0600, socket_address)
 				return [socket_address, socket]
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
