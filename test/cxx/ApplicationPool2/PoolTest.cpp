@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <ApplicationPool2/Pool.h>
 #include <Utils/IOUtils.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/json.h>
 #include <MessageReadersWriters.h>
 #include <map>
@@ -1135,11 +1136,89 @@ namespace tut {
 			pool->getProcessCount(), 2u);
 	}
 
-	// Process metrics collection.
-	// Persistent connections.
+	TEST_METHOD(64) {
+		// If a process fails to spawn, it sends a SpawnException result to all get waiters.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+		spawnerFactory->forwardStderr = false;
+		pool->setMax(1);
 
-	// If a process fails to spawn, it sends a SpawnException result to all get waiters.
-	// If a process fails to spawn, the existing processes are kept alive and continue to be able to serve requests.
+		writeFile("tmp.wsgi/passenger_wsgi.py",
+			"import os, time, sys\n"
+			"\n"
+			"def file_exists(filename):\n"
+			"	try:\n"
+			"		os.stat(filename)\n"
+			"		return True\n"
+			"	except OSError:\n"
+			"		return False\n"
+			"\n"
+			"f = open('spawned.txt', 'w')\n"
+			"f.write(str(os.getpid()))\n"
+			"f.close()\n"
+			"while not file_exists('continue.txt'):\n"
+			"	time.sleep(0.05)\n"
+			"sys.stderr.write('Something went wrong!')\n"
+			"exit(1)\n");
+
+		retainSessions = true;
+		pool->asyncGet(options, callback);
+		pool->asyncGet(options, callback);
+		pool->asyncGet(options, callback);
+		pool->asyncGet(options, callback);
+
+		EVENTUALLY(5,
+			result = fileExists("tmp.wsgi/spawned.txt");
+		);
+		usleep(20000);
+		writeFile("tmp.wsgi/passenger_wsgi.py", readAll("stub/wsgi/passenger_wsgi.py"));
+		pid_t pid = (pid_t) stringToLL(readAll("tmp.wsgi/spawned.txt"));
+		kill(pid, SIGTERM);
+		EVENTUALLY(5,
+			result = number == 4;
+		);
+		ensure_equals(pool->getProcessCount(), 0u);
+		ensure(sessions.empty());
+	}
+
+	TEST_METHOD(65) {
+		// If a process fails to spawn, the existing processes
+		// are kept alive.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+		options.minProcesses = 2;
+		spawnerFactory->forwardStderr = false;
+
+		// Spawn 2 processes.
+		retainSessions = true;
+		pool->asyncGet(options, callback);
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 2;
+		);
+		ensure_equals(pool->getProcessCount(), 2u);
+
+		// Mess up the application and spawn a new one.
+		writeFile("tmp.wsgi/passenger_wsgi.py",
+			"import sys\n"
+			"sys.stderr.write('Something went wrong!')\n"
+			"exit(1)\n");
+		try {
+			Ticket ticket;
+			currentSession = pool->get(options, &ticket);
+			fail("SpawnException expected");
+		} catch (const SpawnException &) {
+			ensure_equals(pool->getProcessCount(), 2u);
+		}
+	}
+
+	// Persistent connections.
 	// If one closes the session before it has reached EOF, and process's maximum concurrency
 	// has already been reached, then the pool should ping the process so that it can detect
 	// when the session's connection has been released by the app.
