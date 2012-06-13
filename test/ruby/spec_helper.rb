@@ -57,7 +57,7 @@ Spec::Runner.configure do |config|
 	end
 end
 
-module SpawnerSpecHelper
+module LoaderSpecHelper
 	def self.included(klass)
 		klass.before(:each) do
 			@stubs = []
@@ -102,5 +102,19 @@ module SpawnerSpecHelper
 	def register_app(app)
 		@apps << app
 		return app
+	end
+
+	def perform_request(options)
+		socket = @loader.connect_and_send_request(options)
+		headers = {}
+		line = socket.readline
+		while line != "\r\n"
+			key, value = line.strip.split(/ *: */, 2)
+			headers[key] = value
+			line = socket.readline
+		end
+		body = socket.read
+		socket.close
+		return [headers, body]
 	end
 end
