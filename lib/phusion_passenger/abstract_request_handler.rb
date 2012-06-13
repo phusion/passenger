@@ -34,6 +34,7 @@ require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/tmpdir'
 require 'phusion_passenger/utils/unseekable_socket'
 require 'phusion_passenger/native_support'
+require 'phusion_passenger/ruby_core_enhancements'
 
 module PhusionPassenger
 

@@ -12,12 +12,12 @@ describe "Classic Rails 2.3 preloader" do
 		@stub = register_stub(ClassicRailsStub.new("rails2.3"))
 	end
 
-	def start
+	def start(options = {})
 		@preloader = Preloader.new(["ruby", "#{PhusionPassenger.helper_scripts_dir}/classic-rails-preloader.rb"], @stub.app_root)
-		result = @preloader.start
+		result = @preloader.start(options)
 		if result[:status] == "Ready"
-			@loader = @preloader.spawn
-			return @loader.start
+			@loader = @preloader.spawn(options)
+			return @loader.start(options)
 		else
 			return result
 		end

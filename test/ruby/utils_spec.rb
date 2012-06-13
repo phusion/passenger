@@ -5,6 +5,7 @@ require 'stringio'
 require 'etc'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/platform_info/ruby'
+require 'phusion_passenger/loader_shared_helpers'
 require 'phusion_passenger/utils'
 
 module PhusionPassenger
@@ -13,15 +14,15 @@ describe Utils do
 	include Utils
 	
 	specify "#to_boolean works" do
-		to_boolean(nil).should be_false
-		to_boolean(false).should be_false
-		to_boolean(true).should be_true
-		to_boolean(1).should be_true
-		to_boolean(0).should be_true
-		to_boolean("").should be_true
-		to_boolean("true").should be_true
-		to_boolean("false").should be_false
-		to_boolean("bla bla").should be_true
+		LoaderSharedHelpers.to_boolean(nil).should be_false
+		LoaderSharedHelpers.to_boolean(false).should be_false
+		LoaderSharedHelpers.to_boolean(true).should be_true
+		LoaderSharedHelpers.to_boolean(1).should be_true
+		LoaderSharedHelpers.to_boolean(0).should be_true
+		LoaderSharedHelpers.to_boolean("").should be_true
+		LoaderSharedHelpers.to_boolean("true").should be_true
+		LoaderSharedHelpers.to_boolean("false").should be_false
+		LoaderSharedHelpers.to_boolean("bla bla").should be_true
 	end
 	
 	specify "#split_by_null_into_hash works" do
