@@ -110,7 +110,7 @@ module PreloaderSharedHelpers
 		end
 		return nil
 	ensure
-		server.close
+		server.close if server
 		if original_pid == Process.pid
 			File.unlink(socket_filename) rescue nil
 		end
