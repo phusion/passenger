@@ -17,6 +17,7 @@ class Loader
 			input.close
 			output.close
 			Dir.chdir(app_root)
+			ENV['RAILS_ENV'] = ENV['RACK_ENV'] = ENV['PASSENGER_ENV'] = 'production'
 			exec(*command)
 		end
 		a.close
@@ -202,7 +203,9 @@ module LoaderSpecHelper
 
 	def start!(options = {})
 		result = start(options)
-		result[:status].should == "Ready"
+		if result[:status] != "Ready"
+			violated "Loader failed to start; error page:\n#{result[:body]}"
+		end
 	end
 
 	def perform_request(headers)

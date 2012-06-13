@@ -148,10 +148,6 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs successful SQL queries" do
-		File.write("#{@stub.app_root}/config/database.yml",
-			"production:\n" +
-			"  adapter: sqlite3\n" +
-			"  database: db.sqlite3\n")
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
 				def index
@@ -162,7 +158,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 				end
 			end
 		})
-		start!(@options)
+		start!(@options.merge("active_record" => true))
 		send_request_to_app("PATH_INFO" => "/foo")
 		extra_info_regex = Regexp.escape(base64("SQL\nCREATE TABLE foobar (id INT)"))
 		eventually(5) do
@@ -174,10 +170,6 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs failed SQL queries" do
-		File.write("#{@stub.app_root}/config/database.yml",
-			"production:\n" +
-			"  adapter: sqlite3\n" +
-			"  database: db.sqlite3\n")
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
 				def index
@@ -187,7 +179,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 				end
 			end
 		})
-		start!(@options)
+		start!(@options.merge("active_record" => true))
 		send_request_to_app("PATH_INFO" => "/foo")
 		extra_info_regex = Regexp.escape(base64("SQL\nINVALID QUERY"))
 		if rails_version >= '3.0'
