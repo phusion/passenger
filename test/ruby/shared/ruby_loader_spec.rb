@@ -1,11 +1,8 @@
-# encoding: binary
-require 'ruby/shared/loader_spec'
-
 module PhusionPassenger
 
-shared_examples_for "a classic Rails loader" do
+shared_examples_for "a Ruby loader" do
 	it "prints an error page if the startup file fails to load" do
-		File.write(@stub.environment_rb, %q{
+		File.write(@stub.startup_file, %q{
 			raise "oh no!"
 		})
 		result = start
@@ -14,7 +11,7 @@ shared_examples_for "a classic Rails loader" do
 	end
 
 	it "calls the starting_worker_process event after the startup file has been loaded" do
-		File.prepend(@stub.environment_rb, %q{
+		File.prepend(@stub.startup_file, %q{
 			history_file = "history.txt"
 			PhusionPassenger.on_event(:starting_worker_process) do |forked|
 				::File.open(history_file, 'a') do |f|
@@ -33,7 +30,7 @@ shared_examples_for "a classic Rails loader" do
 	end
 
 	it "calls the stopping_worker_process event on exit" do
-		File.prepend(@stub.environment_rb, %q{
+		File.prepend(@stub.startup_file, %q{
 			history_file = "history.txt"
 			PhusionPassenger.on_event(:stopping_worker_process) do
 				::File.open(history_file, 'a') do |f|

@@ -60,11 +60,15 @@ class Loader
 		return process_response
 	end
 
-	def connect_and_send_request(options)
+	def connect_and_send_request(headers)
 		socket = Utils.connect_to_server(sockets["main"][:address])
 		channel = MessageChannel.new(socket)
 		data = ""
-		options.each_pair do |key, value|
+		headers["REQUEST_METHOD"] ||= "GET"
+		headers["REQUEST_URI"] ||= headers["PATH_INFO"]
+		headers["QUERY_STRING"] ||= ""
+		headers["SCRIPT_NAME"] ||= ""
+		headers.each_pair do |key, value|
 			data << "#{key}\0#{value}\0"
 		end
 		channel.write_scalar(data)
@@ -196,8 +200,13 @@ module LoaderSpecHelper
 		return app
 	end
 
-	def perform_request(options)
-		socket = @loader.connect_and_send_request(options)
+	def start!(options = {})
+		result = start(options)
+		result[:status].should == "Ready"
+	end
+
+	def perform_request(headers)
+		socket = @loader.connect_and_send_request(headers)
 		headers = {}
 		line = socket.readline
 		while line != "\r\n"
