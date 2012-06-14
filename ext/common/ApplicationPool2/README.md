@@ -17,10 +17,16 @@ Here's a quick rundown of the available classes:
    further divided into the following classes, each of which contain the core
    code managing its respective domain:
    * SuperGroup
+     A logical collection of different applications. Can contain one or more
+     Groups. In the current version of Phusion Passenger, a SuperGroup only
+     contains exactly 1 Group.
    * Group
+     Represents an application and can contains multiple processes, all
+     belonging to the same application.
    * Process
-     A process may have multiple server sockets on which it listens. This
-     is represented by the `Socket` class:
+     Represents an OS process; an instance of a certain application. A process
+     may have multiple server sockets on which it listens. This is represented
+     by the `Socket` class:
      * Socket
 
  * Spawner
