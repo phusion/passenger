@@ -164,14 +164,15 @@ module PlatformInfo
 			[ENV['rvm_path'], "~/.rvm", "/usr/local/rvm"].each do |path|
 				next if path.nil?
 				path = File.expand_path(path)
-				return path if File.directory?(path)
+				script_path = File.join(path, 'scripts', 'rvm')
+				return path if File.directory?(path) && File.exist?(script_path)
 			end
 			# Failure to locate the RVM path is probably caused by the
 			# user customizing $rvm_path. Older RVM versions don't
 			# export $rvm_path, making us unable to detect its value.
 			STDERR.puts "Unable to locate the RVM path. Your RVM installation " +
 				"is probably too old. Please update it with " +
-				"'rvm update --head && rvm reload && rvm repair all'."
+				"'rvm get head && rvm reload && rvm repair all'."
 			exit 1
 		else
 			return nil
