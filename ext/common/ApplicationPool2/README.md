@@ -31,7 +31,7 @@ Here's a quick rundown of the available classes:
 
  * Spawner
    Encapsulates all low-level process spawning logic. Pool calls Spawner
-   whenever it needs spawn another application process.
+   whenever it needs to spawn another application process.
 
    Spawner is an interface. There are multiple implementations that all
    spawn processes in a different way. These are:
