@@ -628,7 +628,7 @@ For example:
     </Directory>
 
     RackBaseURI /rack                     # <-- These lines have
-    <Directory /websites/phusion/rails>   # <-- been added.
+    <Directory /websites/phusion/rack>    # <-- been added.
         Options -MultiViews               # <--
     </Directory>                          # <--
 </VirtualHost>
