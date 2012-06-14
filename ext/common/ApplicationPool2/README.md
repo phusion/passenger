@@ -19,7 +19,7 @@ Here's a quick rundown of the available classes:
    * SuperGroup
    * Group
    * Process
-     A process may have multiple server sockets on which it listens on. This
+     A process may have multiple server sockets on which it listens. This
      is represented by the `Socket` class:
      * Socket
 
