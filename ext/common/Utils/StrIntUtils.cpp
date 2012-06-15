@@ -81,6 +81,17 @@ split(const StaticString &str, char sep, vector<StaticString> &output) {
 }
 
 string
+replaceString(const string &str, const string &toFind, const string &replaceWith) {
+	string::size_type pos = str.find(toFind);
+	if (pos == string::npos) {
+		return str;
+	} else {
+		string result(str);
+		return result.replace(pos, toFind.size(), replaceWith);
+	}
+}
+
+string
 toString(const vector<string> &vec) {
 	vector<StaticString> vec2;
 	vec2.reserve(vec.size());

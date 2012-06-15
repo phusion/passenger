@@ -71,17 +71,6 @@ writeUntilFull(int fd) {
 	fcntl(fd, F_SETFL, flags);
 }
 
-string
-replaceString(const string &str, const string &toFind, const string &replaceWith) {
-	string::size_type pos = str.find(toFind);
-	if (pos == string::npos) {
-		return str;
-	} else {
-		string result(str);
-		return result.replace(pos, toFind.size(), replaceWith);
-	}
-}
-
 void
 replaceStringInFile(const char *filename, const string &toFind, const string &replaceWith) {
 	string content = readAll(filename);

@@ -245,8 +245,8 @@ class ServerInstance
 		return nil
 	end
 	
-	def status
-		return @client.status
+	def status(*options)
+		return @client.status(*options)
 	end
 	
 	def backtraces

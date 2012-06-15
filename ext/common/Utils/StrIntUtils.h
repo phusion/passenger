@@ -76,6 +76,12 @@ void split(const StaticString &str, char sep, vector<string> &output);
 void split(const StaticString &str, char sep, vector<StaticString> &output);
 
 /**
+ * Look for 'toFind' inside 'str', replace it with 'replaceWith' and return the result.
+ * Only the first occurence of 'toFind' is replaced.
+ */
+string replaceString(const string &str, const string &toFind, const string &replaceWith);
+
+/**
  * Convert anything to a string.
  */
 template<typename T> string

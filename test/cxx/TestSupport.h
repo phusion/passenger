@@ -105,12 +105,6 @@ void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDi
 void writeUntilFull(int fd);
 
 /**
- * Look for 'toFind' inside 'str', replace it with 'replaceWith' and return the result.
- * Only the first occurence of 'toFind' is replaced.
- */
-string replaceString(const string &str, const string &toFind, const string &replaceWith);
-
-/**
  * Look for 'toFind' inside the given file, replace it with 'replaceWith' and write
  * the result back to the file. Only the first occurence of 'toFind' is replaced.
  *

@@ -70,6 +70,7 @@
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
+#include <Utils/VariantMap.h>
 
 using namespace boost;
 using namespace oxt;
@@ -101,10 +102,25 @@ private:
 		//}
 	}
 	
-	void processInspect(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+	bool processInspect(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
-		writeScalarMessage(commonContext.fd, pool->inspect());
+		if ((args.size() - 1) % 2 != 0) {
+			return false;
+		}
+
+		VariantMap map;
+		vector<string>::const_iterator it = args.begin(), end = args.end();
+		it++;
+		while (it != end) {
+			const string &key = *it;
+			it++;
+			const string &value = *it;
+			map.set(key, value);
+			it++;
+		}
+		writeScalarMessage(commonContext.fd, pool->inspect(Pool::InspectOptions(map)));
+		return true;
 	}
 	
 	void processToXml(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
@@ -133,8 +149,8 @@ public:
 		try {
 			if (args[0] == "detach" && args.size() == 2) {
 				processDetach(commonContext, specificContext, args);
-			} else if (args[0] == "inspect" && args.size() == 1) {
-				processInspect(commonContext, specificContext, args);
+			} else if (args[0] == "inspect") {
+				return processInspect(commonContext, specificContext, args);
 			} else if (args[0] == "toXml" && args.size() == 2) {
 				processToXml(commonContext, specificContext, args);
 			} else {

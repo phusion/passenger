@@ -213,6 +213,16 @@ public:
 	void add(const string &name, const string &address, const string &protocol, int concurrency) {
 		push_back(Socket(name, address, protocol, concurrency));
 	}
+
+	const Socket *findSocketWithName(const StaticString &name) const {
+		const_iterator it, end = this->end();
+		for (it = begin(); it != end; it++) {
+			if (it->name == name) {
+				return &(*it);
+			}
+		}
+		return NULL;
+	}
 };
 
 typedef shared_ptr<SocketList> SocketListPtr;

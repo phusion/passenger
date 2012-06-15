@@ -47,10 +47,12 @@
 #include <UnionStation.h>
 #include <Logging.h>
 #include <SafeLibev.h>
+#include <AnsiColorConstants.h>
 #include <Exceptions.h>
 #include <RandomGenerator.h>
 #include <Utils/Lock.h>
 #include <Utils/SystemTime.h>
+#include <Utils/VariantMap.h>
 #include <Utils/ProcessMetricsCollector.h>
 
 namespace Passenger {
@@ -62,6 +64,22 @@ using namespace oxt;
 
 
 class Pool: public enable_shared_from_this<Pool> {
+public:
+	struct InspectOptions {
+		bool colorize;
+		bool verbose;
+
+		InspectOptions()
+			: colorize(true),
+			  verbose(true)
+			{ }
+
+		InspectOptions(const VariantMap &options)
+			: colorize(options.getBool("colorize", false, false)),
+			  verbose(options.getBool("verbose", false, false))
+			{ }
+	};
+
 // Actually private, but marked public so that unit tests can access the fields.
 public:
 	friend class SuperGroup;
@@ -146,6 +164,14 @@ public:
 	
 	static void runAllActionsWithCopy(vector<Callback> actions) {
 		runAllActions(actions);
+	}
+
+	static const char *maybeColorize(const InspectOptions &options, const char *color) {
+		if (options.colorize) {
+			return color;
+		} else {
+			return "";
+		}
 	}
 	
 	void verifyInvariants() const {
@@ -1044,11 +1070,13 @@ public:
 		}
 	}
 
-	string inspect(bool lock = true) const {
+	string inspect(const InspectOptions &options = InspectOptions(), bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
 		stringstream result;
+		const char *headerColor = maybeColorize(options, ANSI_COLOR_YELLOW ANSI_COLOR_BLUE_BG ANSI_COLOR_BOLD);
+		const char *resetColor  = maybeColorize(options, ANSI_COLOR_RESET);
 		
-		result << "----------- General information -----------" << endl;
+		result << headerColor << "----------- General information -----------" << resetColor << endl;
 		result << "Max pool size     : " << max << endl;
 		result << "Processes         : " << getProcessCount(false) << endl;
 		result << "Requests in queue : " << getWaitlist.size() << endl;
@@ -1056,7 +1084,7 @@ public:
 		//result << "inactive = " << inactiveApps.size() << endl;
 		result << endl;
 		
-		result << "----------- Groups -----------" << endl;
+		result << headerColor << "----------- Application groups -----------" << resetColor << endl;
 		SuperGroupMap::const_iterator sg_it, sg_end = superGroups.end();
 		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
 			const SuperGroupPtr &superGroup = sg_it->second;
@@ -1065,6 +1093,7 @@ public:
 			
 			if (group != NULL) {
 				result << group->name << ":" << endl;
+				result << "  App root: " << group->options.appRoot << endl;
 				if (group->spawning()) {
 					result << "  (spawning new process...)" << endl;
 				}
@@ -1074,12 +1103,17 @@ public:
 					char buf[128];
 					
 					snprintf(buf, sizeof(buf),
-							"PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
+							"* PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
 							(unsigned long) process->pid,
 							process->sessions,
 							process->processed,
 							process->uptime().c_str());
 					result << "  " << buf << endl;
+					const Socket *socket;
+					if (options.verbose && (socket = process->sockets->findSocketWithName("http")) != NULL) {
+						result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
+						result << "    Password: " << process->connectPassword << endl;
+					}
 				}
 				result << endl;
 			}
