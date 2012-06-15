@@ -91,8 +91,8 @@ protected
 		if Dependencies.fastthread_required?
 			result << Dependencies::FastThread
 		end
-		if Dependencies.asciidoc_required?
-			result << Dependencies::AsciiDoc
+		if Dependencies.mizuho_required?
+			result << Dependencies::Mizuho
 		end
 		return result
 	end

@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -61,13 +61,13 @@ private
 				require 'daemon_controller'
 				begin
 					require 'daemon_controller/version'
-					too_old = DaemonController::VERSION_STRING < '0.2.5'
+					too_old = DaemonController::VERSION_STRING < '1.0.0'
 				rescue LoadError
 					too_old = true
 				end
 				if too_old
 					error "Your version of daemon_controller is too old. " <<
-					      "You must install 0.2.5 or later. Please upgrade:\n\n" <<
+					      "You must install 1.0.0 or later. Please upgrade:\n\n" <<
 					      
 					      " sudo gem uninstall FooBarWidget-daemon_controller\n" <<
 					      " sudo gem install daemon_controller"
@@ -210,24 +210,21 @@ private
 		end
 	end
 	
-	def ping_nginx
-		require 'socket' unless defined?(UNIXSocket)
-		if @options[:socket_file]
-			UNIXSocket.new(@options[:socket_file])
-		else
-			TCPSocket.new(@options[:address], nginx_ping_port)
-		end
-	end
-	
 	def create_nginx_controller(extra_options = {})
 		require_daemon_controller
+		require 'socket' unless defined?(UNIXSocket)
 		@temp_dir        = "/tmp/passenger-standalone.#{$$}"
 		@config_filename = "#{@temp_dir}/config"
+		if @options[:socket_file]
+			ping_spec = [:unix, @options[:socket_file]]
+		else
+			ping_spec = [:tcp, @options[:address], nginx_ping_port]
+		end
 		opts = {
 			:identifier    => 'Nginx',
 			:before_start  => method(:write_nginx_config_file),
 			:start_command => method(:determine_nginx_start_command),
-			:ping_command  => method(:ping_nginx),
+			:ping_command  => ping_spec,
 			:pid_file      => @options[:pid_file],
 			:log_file      => @options[:log_file],
 			:timeout       => 25

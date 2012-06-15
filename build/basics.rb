@@ -33,7 +33,6 @@ require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/curl'
 require 'phusion_passenger/platform_info/zlib'
 require 'phusion_passenger/platform_info/compiler'
-require 'phusion_passenger/platform_info/documentation_tools'
 
 include PhusionPassenger
 include PhusionPassenger::PlatformInfo

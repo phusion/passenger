@@ -331,14 +331,17 @@ class AbstractRequestHandler
 	# May only be called while the main loop is running. May be called
 	# from any thread.
 	def soft_shutdown
-		@select_timeout = @soft_termination_linger_time
-		@graceful_termination_pipe[1].close rescue nil
-		if @detach_key && @pool_account_username && @pool_account_password
-			client = MessageClient.new(@pool_account_username, @pool_account_password)
-			begin
-				client.detach(@detach_key)
-			ensure
-				client.close
+		unless @soft_terminated
+			@soft_terminated = true
+			@select_timeout = @soft_termination_linger_time
+			@graceful_termination_pipe[1].close rescue nil
+			if @detach_key && @pool_account_username && @pool_account_password
+				client = MessageClient.new(@pool_account_username, @pool_account_password)
+				begin
+					client.detach(@detach_key)
+				ensure
+					client.close
+				end
 			end
 		end
 	end

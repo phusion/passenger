@@ -740,7 +740,7 @@ private:
 				_exit(1);
 			} else if (pid == -1) {
 				// Error
-				P_WARN("Could touch the server instance directory because "
+				P_WARN("Could not touch the server instance directory because "
 					"fork() failed. Retrying in 2 minutes...");
 				this_thread::restore_interruption si(di);
 				this_thread::restore_syscall_interruption rsi(dsi);
@@ -975,7 +975,7 @@ cleanupAgentsInBackground(vector<AgentWatcher *> &watchers) {
 	} else if (pid == -1) {
 		// Error
 		e = errno;
-		throw SystemException("fork() failed", errno);
+		throw SystemException("fork() failed", e);
 		
 	} else {
 		// Parent

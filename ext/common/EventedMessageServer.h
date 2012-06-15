@@ -29,7 +29,7 @@
 #include <ev++.h>
 #include <cstdarg>
 #include <cstdlib>
-#ifdef HAS_ALLOCA_H_
+#ifdef HAS_ALLOCA_H
 	#include <alloca.h>
 #endif
 #include "EventedServer.h"
