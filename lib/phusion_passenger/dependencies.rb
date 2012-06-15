@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -29,7 +29,6 @@ require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/linux'
 require 'phusion_passenger/platform_info/curl'
-require 'phusion_passenger/platform_info/documentation_tools'
 
 module PhusionPassenger
 
@@ -110,9 +109,9 @@ module Dependencies # :nodoc: all
 		return (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
 	end
 	
-	# Returns whether asciidoc is required in order to be able to package all files
+	# Returns whether Mizuho is required in order to be able to package all files
 	# in the packaging list.
-	def self.asciidoc_required?
+	def self.mizuho_required?
 		return Packaging::ASCII_DOCS.any? do |fn|
 			!File.exist?("#{SOURCE_ROOT}/#{fn}")
 		end
@@ -579,7 +578,7 @@ module Dependencies # :nodoc: all
 	end
 	
 	Daemon_Controller = Dependency.new do |dep|
-		dep.name = "daemon_controller >= 0.2.5"
+		dep.name = "daemon_controller >= 1.0.0"
 		dep.install_instructions = "Please install RubyGems first, then run " <<
 			"<b>#{PlatformInfo.gem_command || "gem"} install daemon_controller</b>"
 		dep.define_checker do |result|
@@ -591,7 +590,7 @@ module Dependencies # :nodoc: all
 				require 'daemon_controller'
 				begin
 					require 'daemon_controller/version'
-					too_old = DaemonController::VERSION_STRING < '0.2.5'
+					too_old = DaemonController::VERSION_STRING < '1.0.0'
 				rescue LoadError
 					too_old = true
 				end
@@ -610,23 +609,18 @@ module Dependencies # :nodoc: all
 		end
 	end
 	
-	AsciiDoc = Dependency.new do |dep|
-		dep.name = "Asciidoc"
+	Mizuho = Dependency.new do |dep|
+		dep.name = "Mizuho"
 		dep.define_checker do |result|
-			if PlatformInfo.asciidoc.nil?
+			mizuho = PlatformInfo.find_command('mizuho')
+			if mizuho.nil?
 				result.not_found
 			else
-				result.found(PlatformInfo.asciidoc)
+				result.found(mizuho)
 			end
 		end
-		if RUBY_PLATFORM =~ /darwin/
-			# Installing asciidoc with source-highlight is too much of a pain on OS X,
-			# so recommend Mizuho instead.
-			dep.website = "http://github.com/FooBarWidget/mizuho"
-			dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install mizuho</b>"
-		else
-			dep.website = "http://www.methods.co.nz/asciidoc/"
-		end
+		dep.website = "http://github.com/FooBarWidget/mizuho"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install mizuho</b>"
 	end
 end
 

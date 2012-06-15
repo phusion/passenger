@@ -188,8 +188,12 @@ appendSignalReason(char *buf, siginfo_t *info) {
 		switch (info->si_signo) {
 		case SIGSEGV:
 			switch (info->si_code) {
-			SI_CODE_HANDLER(SEGV_MAPERR);
-			SI_CODE_HANDLER(SEGV_ACCERR);
+			#ifdef SEGV_MAPERR
+				SI_CODE_HANDLER(SEGV_MAPERR);
+			#endif
+			#ifdef SEGV_ACCERR
+				SI_CODE_HANDLER(SEGV_ACCERR);
+			#endif
 			default:
 				handled = false;
 				break;
@@ -197,9 +201,15 @@ appendSignalReason(char *buf, siginfo_t *info) {
 			break;
 		case SIGBUS:
 			switch (info->si_code) {
-			SI_CODE_HANDLER(BUS_ADRALN);
-			SI_CODE_HANDLER(BUS_ADRERR);
-			SI_CODE_HANDLER(BUS_OBJERR);
+			#ifdef BUS_ADRALN
+				SI_CODE_HANDLER(BUS_ADRALN);
+			#endif
+			#ifdef BUS_ADRERR
+				SI_CODE_HANDLER(BUS_ADRERR);
+			#endif
+			#ifdef BUS_OBJERR
+				SI_CODE_HANDLER(BUS_OBJERR);
+			#endif
 			default:
 				handled = false;
 				break;

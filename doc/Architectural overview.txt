@@ -1,21 +1,24 @@
-Passenger architectural overview
-================================
+Phusion Passenger design & architecture
+=======================================
 
-This document describes Passenger's architure in a global way. The purpose of
-this document is to lower the barrier to entry for new contributors, as well
-as to explain (some of the) design choices that we have made.
+image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-Or it can be a fun read for people who just want to know how Passenger works.
+Last updated: June 5, 2012.
+
+This document describes Phusion Passenger's design and architure in a global way.
+Its purpose is to lower the barrier to entry for new contributors,
+to explain some of the design choices we have made and to educate people
+about how Phusion Passenger works.
 
 
-About the involved technologies
--------------------------------
+Introduction to related technologies
+------------------------------------
 
-[[typical_web_applications]]
-=== Typical web applications ===
+[[web_app_models]]
+=== Web application models ===
 
-Before we describe Passenger, it is important to understand how typical web
-applications work, from the point of view of someone who wants to connect the
+Before we describe Phusion Passenger, it is important to understand how typical web
+applications work from the viewpoint of someone who wants to connect the
 application to a web server.
 
 A typical, isolated, web application accepts an HTTP request from some I/O
@@ -28,32 +31,46 @@ representation of an HTTP request.
 image:images/typical_isolated_web_application.png[Architecture of a typical
 web application in isolation]
 
-Few web applications are accessible directly by HTTP clients. Common setups
+Few web applications are accessible directly by HTTP clients. Common models
 are:
 
 1. The web application is contained in an application server. This application
 server may or may not be able to contain multiple web applications. The
-application server is then connected to the web server. The web server
+application server is then connected to the web server through some kind of
+protocol. This protocol may be HTTP, FastCGI, SCGI, AJP or whatever. The web server
 dispatches requests to the application server, which in turn dispatches
 requests to the correct web application, in a format that the web application
 understands. Conversely, HTTP responses outputted by the web application are
 sent to the application server, which in turn sends them to the web server,
 and eventually to the HTTP client.
 +
-A typical example of such a setup is a J2EE application, contained in the
-Tomcat web server, behind the Apache web server.
+Typical examples of such a model:
++
+ * A J2EE application, contained in the Tomcat application server, proxied
+   behind the Apache web server. Tomcat can contain multiple web applications
+   in a single Tomcat instance.
+ * Most Ruby application servers besides Phusion Passenger (Thin, Unicorn,
+   Goliath, etc). These application servers can only contain a single Ruby
+   web application per instance. They load the web application into their
+   own process and are put behind a web server (Apache, Nginx) in a reverse
+   proxy setup.
 
 2. The web application is contained in a web server. In this case, the web
-server acts like an application server. This is the case for PHP applications,
+server acts like an application server. This is the case for PHP applications
 on Apache servers with 'mod_php'. Note that this does not necessarily mean
 that the web application is run inside the same process as the web server:
-it just means that the web server manages applications.
+it just means that the web server manages applications. In case of mod_php
+however PHP does run directly inside the Apache worker processes.
++
+Phusion Passenger for Apache and Phusion Passenger for Nginx implement this model.
 
 3. The web application *is* a web server, and can accept HTTP requests
 directly. This is the case for the Trac bug tracking system, running in its
-standalone server. In many setups, such web applications sit behind a different
-web server, instead of accepting HTTP requests directly. The frontend web
-server acts like a reverse HTTP proxy.
+standalone server. In most setups they are reverse proxied behind a real
+web server such as Apache or Nginx, instead of accepting HTTP requests directly.
++
+Phusion Passenger Standalone implements this model. You can expose Phusion Passenger
+Standalone directly to the Internet because it uses Nginx internally.
 
 4. The web application does not speak HTTP directly, but is connected directly
 to the web server through some communication adapter. CGI, FastCGI and SCGI
@@ -61,13 +78,13 @@ are good examples of this.
 
 These descriptions are true for virtually all web applications, whether they're
 based on PHP, Django, J2EE, ASP.NET, Ruby on Rails, or whatever. Note that all
-of these setups provide the same functionality, i.e. no setup can do something
-that a different setup can't. The critical reader will notice that all of these
-setups are identical to the one described in the first diagram, if the
+of these models provide the same functionality, i.e. no model can do something
+that a different model can't. The critical reader will notice that all of these
+models are identical to the one described in the first diagram, if the
 combination of web servers, application servers, web applications etc. are
 considered to be a single entity; a black box if you will.
 
-It should also be noted that these setups do not enforce any particular
+It should also be noted that these models do not enforce any particular
 I/O processing implementation. The web servers, application servers, web
 applications, etc. could process I/O serially (i.e. one request at a time),
 could multiplex I/O with a single thread (e.g. by using `select(2)` or
@@ -77,24 +94,68 @@ processes.
 Of course, there are many variations possible. For example, load balancers
 could be used. But that is outside the scope of this document.
 
+==== Why reverse proxy? ====
 
-=== Ruby on Rails ===
+As you've seen, it is often necessary to put the web application or its
+application server behind a real web server in a reverse proxy setup even
+when the web app/app server already speaks HTTP. This is because implementing
+HTTP in a proper, secure way involves more than just speaking the protocol.
+The public Internet is a hostile environment where clients can send any
+arbitrary data and can exhibit any arbitrary I/O patterns. Web servers like
+Apache and Nginx have already implemented world-class I/O and connection
+handling code and it would be a waste to reinvent their wheel. In the end,
+putting the application in a reverse proxying setup makes the whole system
+more robust and and more secure.
 
-Every Ruby on Rails application has a 'dispatcher'. This dispatcher is
-responsible for processing HTTP requests. It does not speak HTTP directly.
-Instead, it accepts data structures that contain the information of an
-HTTP request. Thus, the dispatcher is particularly interesting to
-developers who wish to develop software which connects Ruby on Rails to an
-HTTP processing layer (e.g. a web server).
+A typical problem involves dealing with *slow clients*. These clients may send
+HTTP requests slowly and read HTTP responses slowly, perhaps taking many seconds
+to complete their work. A naive single-threaded HTTP server implementation
+that reads an HTTP requests, processes, and sends the HTTP response in a loop
+may end up spending so much time waiting for I/O that spends very little time
+doing actual work. Worse: suppose that the client is malicious, just leaves the
+socket open and never reads the HTTP response, then the server will spend
+forever waiting for the client, not being able to handle any more requests.
 
-The Ruby on Rails dispatcher can only process requests serially, i.e. one
-at a time. It is not possible to process two requests at the same time
-with threads, because parts of Ruby on Rails are not thread-safe. (In
-practice, this isn't as big of a problem as some people imagine. This will
-be elaborated further in <<concurrent_requests,Handling of concurrent
-requests>>.)
+.An example of a naive HTTP server implementation
+-------------------
+while true
+    client = accept_next_client()
+    request = read_http_request(client)
+    response = process_request(request)
+    send_http_response(client, response)
+end
+-------------------
 
-A particularly interesting thing to note, is that a lot of the memory
+There are many ways to solve this problem. One could use one thread per client,
+one could implement I/O timeouts, one could use an evented I/O architecture, one
+could have a dedicated I/O thread or process buffer requests and responses.
+The point is, implementing all this properly is non-trivial. Instead of
+reimplementing these over and over in each application server, it's better to
+let a real web server deal with all the details and let the application server
+and the web application do what they're best at: their own core business logic.
+
+
+=== Ruby Rack and Ruby on Rails ===
+
+The de-facto standard interface for Ruby web applications is link:http://rack.rubyforge.org/[Rack].
+Rack specifies an programming interface for web application developers to implement.
+This interface covers HTTP request and response handling, and is not dependent on
+any particular application server. The idea is that any Rack-compliant application
+server can implement the Rack specification and work with all Rack-compliant web applications.
+
+image:images/rack.png[]
+
+In the distant past, each Ruby web framework had its own interface, so application
+servers needed to explicitly add support for each web framework. Nowadays application
+servers just support Rack.
+
+image:images/many_web_framework_protocols.png[]
+
+Ruby on Rails has been fully Rack compliant since version 3.0. Rails 2.3 was partially
+Rack-compliant while earlier versions were not Rack-compliant at all. Phusion Passenger
+supports Rack as well as all Rails 1.x and 2.x versions.
+
+A particularly interesting thing to note is that a lot of the memory
 occupied by Ruby on Rails applications is spent on storing the program code
 (i.e. the link:http://en.wikipedia.org/wiki/Abstract_syntax_tree[abstract
 syntax tree (AST)]) in memory. This is observed through the use of the
@@ -105,54 +166,69 @@ application is spent on bootstrapping the Rails framework.
 
 === Apache ===
 
-The Apache web server has a pluggable I/O multiprocessing (the ability to
+The Apache web server has a dynamic module system and a pluggable I/O
+multiprocessing (the ability to
 handle more than 1 concurrent HTTP client at the same time) architecture. An
 Apache module which implements a particular multiprocessing strategy, is called
-a Multi-Processing Module (MPM). The
-link:http://httpd.apache.org/docs/2.0/mod/prefork.html[prefork MPM] -- which
-also happens to be the default -- appears to be the most popular one. This MPM
-spawns multiple worker child processes. HTTP requests are first accepted by a
+a Multi-Processing Module (MPM). The single-threaded multi-process
+link:http://httpd.apache.org/docs/2.4/mod/prefork.html[prefork MPM] had been
+the default and the most popular one for a long time, but in recent times the
+hybrid multi-threaded/multi-process link:http://httpd.apache.org/docs/2.4/mod/worker.html[worker MPM]
+is becoming increasingly popular because of its better performance and scalability.
+Furthermore, Apache 2.4 introduced the link:http://httpd.apache.org/docs/2.4/mod/event.html[event MPM]
+which is a hybrid evented/multi-threaded/multi-process MPM and offers even more
+scalability benefits.
+
+The prefork MPM remains in wide use today because it's the only MPM that works well with mod_php.
+
+The prefork MPM spawns multiple worker child processes. HTTP requests are first accepted by a
 so-called control process, and then forwarded to one of the worker processes.
 The next section contains a diagram which shows the prefork MPM's architecture.
 
 
-Passenger architecture
-----------------------
+=== Nginx ===
+
+Nginx is a lightweight web server that is becoming increasingly popular. It is known
+to be smaller, lighter weight and more scalable than Apache thanks to its evented I/O
+architecture. That said, Nginx is less flexible than Apache. For example it has no
+dynamic module system: all modules must be statically compiled into Nginx.
+
+
+Phusion Passenger architecture
+------------------------------
 
 === Overview ===
 
-Passenger's architecture is a lot like setup #2 described in
-<<typical_web_applications,Typical web applications>>. In other words,
-Passenger extends Apache and allows it to act like an application server.
-Passenger's architecture -- assuming Apache 2 with the prefork MPM is used --
-is shown in the following diagram:
+Phusion Passenger's architecture is a lot like model #2 described in
+<<web_app_models,Web application models>>. In other words,
+Phusion Passenger extends Apache/Nginx and allows it to act like an
+application server. This is shown in the following diagram:
 
 image:images/passenger_architecture.png[Passenger's architecture]
 
-Passenger consists of an Apache module, 'mod_passenger'. This is written in
-C++, and can be found in the directory 'ext/apache2'. The module is active in
-the Apache control process and in all the Apache worker processes. When an
-HTTP request comes in, 'mod_passenger' will check whether the request should
-be handled by a Ruby on Rails application. If so, then 'mod_passenger' will
-spawn the corresponding Rails application (if necessary) and forward the
-request to that application.
+Phusion Passenger consists of:
 
-It should be noted that the Ruby on Rails application does *not* run in the
-same address space as Apache. This differentiates Passenger from other
+* an Apache module, 'mod_passenger'. This is written in C++, and can be found in the directory 'ext/apache2'.
+* an Nginx module 'ngx_http_passenger_module'. This is written in C, and can be found in the directory 'ext/nginx'.
+* Common code used by both the Apache and the Nginx module. For example the helper agent is among this code. This code is mostly C++ and can be found in the directory 'ext/common'.
+
+The module is active all Apache/Nginx processes. When an HTTP request comes in, the Phusion Passenger module checks whether the request should be handled by a Phusion Passenger-served application. If so, then the module spawns one or more processes for the corresponding application (if necessary), forwards the request to that application process and forwards its generated response back to the client. This is all done with the assistance of the Phusion Passenger helper agent, which stores state that must be shared among all web server worker processes and handles much of the internal I/O between the web server and the application processes.
+
+It should be noted that applications do *not* run in the same address space as the web server.
+This differentiates Passenger from other
 application-server-inside-web-server software such as mod_php, mod_perl and
-mod_ruby. If the Rails application crashes or leak memory, it will have no
-effect on Apache. In fact, stability is one of our highest goals. Passenger
-is carefully designed and implemented so that Apache shouldn't crash because
-of Passenger.
+mod_ruby. If the application crashes or leak memory, it will have no
+effect on the web server. In fact, stability is one of our highest goals. Phusion Passenger
+is carefully designed and implemented so that the web server shouldn't crash because
+of Phusion Passenger.
 
 === Spawning and caching of code and applications ===
 
-A very naive implementation of Passenger would spawn a Ruby on Rails
-application every time an HTTP request is received, just like CGI would.
-However, spawning Ruby on Rails applications is expensive. It can take 1 or 2
-seconds on a modern PC, and possibly much longer on a heavily loaded server.
-This overhead is particularily unacceptable on shared hosts. A less naive
-implementation would keep spawned Ruby on Rails application instances alive,
+A very naive implementation of an application server would spawn an application
+process every time an HTTP request is received, just like CGI would.
+However, spawning Ruby applications is typically expensive. It can take a few
+seconds on a modern computer, and possibly much longer on a heavily loaded server.
+A less naive implementation would keep spawned application processes alive,
 similar to how Lighttpd's FastCGI implementation works.
 However, this still has several problems:
 

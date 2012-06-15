@@ -13,6 +13,7 @@ The tests need the following software installed:
 * rspec >= 1.1.2
 * mime-types >= 1.15
 * sqlite3-ruby
+* daemon_controller >= 1.0.0
 
 The following software is optional:
 

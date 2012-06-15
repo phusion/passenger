@@ -203,15 +203,7 @@ installation. Furthermore, the 'passenger-x.x.x' folder must be accessible by Ap
 
 ==== Installing via a native Linux package ====
 
-John Leach from Brightbox has kindly provided an Ubuntu Hardy package for Phusion Passenger. The package is available from the link:http://apt.brightbox.net[Brightbox repository].
-
-Please install the native Linux package, e.g.:
-------------------------------------------------------
-sudo sh -c 'echo "deb http://apt.brightbox.net hardy main" > /etc/apt/sources.list.d/brightbox.list'
-sudo sh -c 'wget -q -O - http://apt.brightbox.net/release.asc | apt-key add -'
-sudo apt-get update
-sudo apt-get install libapache2-mod-passenger
-------------------------------------------------------
+John Leach from Brightbox has kindly provided a Ubuntu packages for Phusion Passenger. The package is available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository].
 
 ==== What does the installer do? ====
 
@@ -635,8 +627,8 @@ For example:
         Allow from all
     </Directory>
 
-    RackBaseURI /rails                    # <-- These lines have
-    <Directory /websites/phusion/rails>   # <-- been added.
+    RackBaseURI /rack                     # <-- These lines have
+    <Directory /websites/phusion/rack>    # <-- been added.
         Options -MultiViews               # <--
     </Directory>                          # <--
 </VirtualHost>
