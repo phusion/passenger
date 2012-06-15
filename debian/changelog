@@ -1,3 +1,9 @@
+passenger (3.0.13-1bbox2+ng) precise; urgency=low
+
+  * Removed 01_disable_html5_documentation.patch
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 15 Jun 2012 16:10:50 +0100
+
 passenger (3.0.13-1bbox1+ng) precise; urgency=low
 
   * New upstream release, 3.0.13
