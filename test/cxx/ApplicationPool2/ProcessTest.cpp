@@ -51,7 +51,7 @@ namespace tut {
 		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
-		ensure_equals(process->usage(), 0);
+		ensure_equals(process->utilization(), 0);
 		ensure(!process->atFullCapacity());
 	}
 	
@@ -70,8 +70,8 @@ namespace tut {
 	}
 	
 	TEST_METHOD(3) {
-		// newSession() checks out the socket with the smallest usage number
-		// and sessionClosed() restores the session usage statistics.
+		// newSession() checks out the socket with the smallest utilization number
+		// and sessionClosed() restores the session utilization statistics.
 		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);

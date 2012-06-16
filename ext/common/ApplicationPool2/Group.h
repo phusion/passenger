@@ -171,7 +171,7 @@ private:
 		session->onInitiateFailure = _onSessionInitiateFailure;
 		session->onClose   = _onSessionClose;
 		pqueue.pop();
-		process->pqHandle  = pqueue.push(process, process->usage());
+		process->pqHandle  = pqueue.push(process, process->utilization());
 		return session;
 	}
 	
@@ -245,7 +245,7 @@ public:
 	 * 'disabledProcesses' contains all disabled processes in this group.
 	 * They do not intersect.
 	 *
-	 * 'pqueue' orders all enabled processes according to usage() values, from small to large.
+	 * 'pqueue' orders all enabled processes according to utilization() values, from small to large.
 	 * 'count' indicates the total number of enabled processes in this group.
 	 * 'disablingCount' indicates the number of processes in 'processes' with enabled == DISABLING.
 	 * 'disabledCount' indicates the number of disabled processes.
@@ -393,7 +393,7 @@ public:
 		process->setGroup(shared_from_this());
 		processes.push_back(process);
 		process->it = processes.last_iterator();
-		process->pqHandle = pqueue.push(process.get(), process->usage());
+		process->pqHandle = pqueue.push(process.get(), process->utilization());
 		process->enabled = Process::ENABLED;
 		count++;
 		
@@ -486,7 +486,7 @@ public:
 			disabledProcesses.erase(process->it);
 			processes.push_back(process);
 			process->it = processes.last_iterator();
-			process->pqHandle = pqueue.push(process.get(), process->usage());
+			process->pqHandle = pqueue.push(process.get(), process->utilization());
 			process->enabled = Process::ENABLED;
 			count++;
 			disabledCount--;
@@ -537,7 +537,7 @@ public:
 			POOL_HELPER_THREAD_STACK_SIZE);
 	}
 
-	unsigned int usage() const {
+	unsigned int utilization() const {
 		int result = count;
 		if (spawning()) {
 			result++;
@@ -549,7 +549,7 @@ public:
 		if (now == 0) {
 			now = SystemTime::getUsec();
 		}
-		return usage() == 0
+		return utilization() == 0
 			&& getWaitlist.empty()
 			&& disabledProcesses.empty()
 			&& options.getMaxPreloaderIdleTime() != 0
@@ -609,7 +609,7 @@ public:
 		stream << "<app_type>" << escapeForXml(options.appType) << "</app_type>";
 		stream << "<environment>" << escapeForXml(options.environment) << "</environment>";
 		stream << "<process_count>" << (count + disabledCount) << "</process_count>";
-		stream << "<usage>" << usage() << "</usage>";
+		stream << "<utilization>" << utilization() << "</utilization>";
 		stream << "<get_wait_list_size>" << getWaitlist.size() << "</get_wait_list_size>";
 		stream << "<disable_wait_list_size>" << disableWaitlist.size() << "</disable_wait_list_size>";
 		if (spawning()) {

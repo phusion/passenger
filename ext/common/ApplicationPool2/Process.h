@@ -117,7 +117,7 @@ private:
 	weak_ptr<Group> group;
 	
 	/** A subset of 'sockets': all sockets that speak the
-	 * "session" protocol, sorted by socket.usage(). */
+	 * "session" protocol, sorted by socket.utilization(). */
 	PriorityQueue<Socket> sessionSockets;
 	
 	/** The iterator inside the associated Group's process list. */
@@ -131,7 +131,7 @@ private:
 		for (it = sockets->begin(); it != sockets->end(); it++) {
 			Socket *socket = &(*it);
 			if (socket->protocol == "session") {
-				socket->pqHandle = sessionSockets.push(socket, socket->usage());
+				socket->pqHandle = sessionSockets.push(socket, socket->utilization());
 				if (concurrency != -1) {
 					if (socket->concurrency == 0) {
 						// If one of the sockets has a concurrency of
@@ -282,13 +282,13 @@ public:
 		return getGroup() == NULL;
 	}
 	
-	int usage() const {
+	int utilization() const {
 		/* Different processes within a Group may have different
 		 * 'concurrency' values. We want:
 		 * - Group.pqueue to sort the processes from least used to most used.
 		 * - to give processes with concurrency == 0 more priority over processes
 		 *   with concurrency > 0.
-		 * Therefore, we describe our usage as a percentage of 'concurrency', with
+		 * Therefore, we describe our utilization as a percentage of 'concurrency', with
 		 * the percentage value in [0..INT_MAX] instead of [0..1].
 		 */
 		if (concurrency == 0) {
@@ -324,7 +324,7 @@ public:
 			socket->sessions++;
 			this->sessions++;
 			processed++;
-			socket->pqHandle = sessionSockets.push(socket, socket->usage());
+			socket->pqHandle = sessionSockets.push(socket, socket->utilization());
 			lastUsed = SystemTime::getUsec();
 			return make_shared<Session>(shared_from_this(), socket);
 		}
@@ -338,7 +338,7 @@ public:
 		
 		socket->sessions--;
 		this->sessions--;
-		sessionSockets.decrease(socket->pqHandle, socket->usage());
+		sessionSockets.decrease(socket->pqHandle, socket->utilization());
 		assert(!atFullCapacity());
 	}
 
@@ -373,7 +373,7 @@ public:
 		stream << "<connect_password>" << connectPassword << "</connect_password>";
 		stream << "<concurrency>" << concurrency << "</concurrency>";
 		stream << "<sessions>" << sessions << "</sessions>";
-		stream << "<usage>" << usage() << "</usage>";
+		stream << "<utilization>" << utilization() << "</utilization>";
 		stream << "<processed>" << processed << "</processed>";
 		stream << "<spawner_creation_time>" << spawnerCreationTime << "</spawner_creation_time>";
 		stream << "<spawn_start_time>" << spawnStartTime << "</spawn_start_time>";

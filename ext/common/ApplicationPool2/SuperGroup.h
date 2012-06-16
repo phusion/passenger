@@ -630,12 +630,12 @@ public:
 		return defaultGroup;
 	}
 	
-	unsigned int usage() const {
+	unsigned int utilization() const {
 		vector<GroupPtr>::const_iterator it, end = groups.end();
 		unsigned int result = 0;
 		
 		for (it = groups.begin(); it != end; it++) {
-			result += (*it)->usage();
+			result += (*it)->utilization();
 		}
 		if (state == INITIALIZING || state == RESTARTING) {
 			result++;

@@ -135,7 +135,7 @@ namespace tut {
 			ProcessPtr process = currentSession->getProcess();
 			currentSession.reset();
 			EVENTUALLY(5,
-				result = process->usage() == 0;
+				result = process->utilization() == 0;
 			);
 			return body;
 		}
@@ -187,7 +187,7 @@ namespace tut {
 		// Close the session so that the process is now idle.
 		ProcessPtr process = currentSession->getProcess();
 		currentSession.reset();
-		ensure_equals(process->usage(), 0);
+		ensure_equals(process->utilization(), 0);
 		ensure(!process->atFullCapacity());
 		
 		// Verify test assertion.
@@ -334,7 +334,7 @@ namespace tut {
 	
 	TEST_METHOD(8) {
 		// If multiple matching processes exist, then asyncGet() will use
-		// the one with the smallest usage number.
+		// the one with the smallest utilization number.
 		
 		// Spawn 2 processes, each with a concurrency of 2.
 		Options options = createOptions();

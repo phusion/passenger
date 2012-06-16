@@ -204,7 +204,7 @@ public:
 				ProcessList::const_iterator p_it, p_end = processes.end();
 				for (p_it = processes.begin(); p_it != p_end; p_it++) {
 					const ProcessPtr process = *p_it;
-					if (process->usage() == 0
+					if (process->utilization() == 0
 					     && (oldestIdleProcess == NULL
 					         || process->lastUsed < oldestIdleProcess->lastUsed)
 					) {
@@ -899,20 +899,20 @@ public:
 		libev->run(boost::bind(&Pool::activateNewMaxIdleTime, this));
 	}
 	
-	unsigned int usage(bool lock = true) const {
+	unsigned int utilization(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
 		SuperGroupMap::const_iterator it, end = superGroups.end();
 		int result = 0;
 		for (it = superGroups.begin(); it != end; it++) {
 			const SuperGroupPtr &superGroup = it->second;
-			result += superGroup->usage();
+			result += superGroup->utilization();
 		}
 		return result;
 	}
 	
 	bool atFullCapacity(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
-		return usage(false) >= max;
+		return utilization(false) >= max;
 	}
 
 	vector<ProcessPtr> getProcesses() const {
@@ -1133,7 +1133,7 @@ public:
 		
 		result << "<process_count>" << getProcessCount(false) << "</process_count>";
 		result << "<max>" << max << "</max>";
-		result << "<usage>" << usage(false) << "</usage>";
+		result << "<utilization>" << utilization(false) << "</utilization>";
 		result << "<get_wait_list_size>" << getWaitlist.size() << "</get_wait_list_size>";
 		
 		result << "<supergroups>";
@@ -1143,7 +1143,7 @@ public:
 			result << "<name>" << escapeForXml(superGroup->name) << "</name>";
 			result << "<state>" << superGroup->getStateName() << "</state>";
 			result << "<get_wait_list_size>" << superGroup->getWaitlist.size() << "</get_wait_list_size>";
-			result << "<usage>" << superGroup->usage() << "</usage>";
+			result << "<utilization>" << superGroup->utilization() << "</utilization>";
 			if (includeSecrets) {
 				result << "<secret>" << escapeForXml(superGroup->secret) << "</secret>";
 			}
