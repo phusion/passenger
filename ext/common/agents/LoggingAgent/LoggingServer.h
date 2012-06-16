@@ -48,6 +48,7 @@
 
 #include <EventedMessageServer.h>
 #include <MessageReadersWriters.h>
+#include <RandomGenerator.h>
 #include <StaticString.h>
 #include <Exceptions.h>
 #include <Constants.h>

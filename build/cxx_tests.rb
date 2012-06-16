@@ -91,13 +91,13 @@ TEST_CXX_OBJECTS = {
 		test/cxx/HttpHeaderBuffererTest.cpp
 		ext/common/Utils/HttpHeaderBufferer.h
 		ext/common/Utils/StreamBoyerMooreHorspool.h),
-	'test/cxx/LoggingTest.o' => %w(
-		test/cxx/LoggingTest.cpp
+	'test/cxx/UnionStationTest.o' => %w(
+		test/cxx/UnionStationTest.cpp
 		ext/common/agents/LoggingAgent/LoggingServer.h
 		ext/common/agents/LoggingAgent/RemoteSender.h
 		ext/common/agents/LoggingAgent/DataStoreId.h
 		ext/common/agents/LoggingAgent/FilterSupport.h
-		ext/common/Logging.h
+		ext/common/UnionStation.h
 		ext/common/Utils.h
 		ext/common/EventedServer.h
 		ext/common/EventedClient.h
@@ -123,6 +123,7 @@ TEST_CXX_OBJECTS = {
 		ext/common/agents/HelperAgent/FileBackedPipe.h
 		ext/common/agents/HelperAgent/ScgiRequestParser.h
 		ext/common/agents/HelperAgent/AgentOptions.h
+		ext/common/UnionStation.h
 		ext/common/ApplicationPool2/Pool.h
 		ext/common/ApplicationPool2/SuperGroup.h
 		ext/common/ApplicationPool2/Group.h

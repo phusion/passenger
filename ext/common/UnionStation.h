@@ -645,7 +645,9 @@ private:
 	}
 	
 public:
-	LoggerFactory() { }
+	LoggerFactory() {
+		nullLogger = make_shared<Logger>();
+	}
 	
 	LoggerFactory(const string &_serverAddress, const string &_username,
 	              const string &_password, const string &_nodeName = string())
@@ -668,16 +670,19 @@ public:
 		TRACE_POINT();
 		unique_lock<boost::mutex> l(syncher);
 		if (!connectionPool.empty()) {
+			P_TRACE(3, "Checked out existing connection");
 			ConnectionPtr connection = connectionPool.back();
 			connectionPool.pop_back();
 			return connection;
 
 		} else {
 			if (SystemTime::getUsec() < nextReconnectTime) {
+				P_TRACE(3, "Not yet time to reconnect; returning NULL connection");
 				return ConnectionPtr();
 			}
 
 			l.unlock();
+			P_TRACE(3, "Creating new connection with logging agent");
 			ConnectionPtr connection;
 			try {
 				connection = createNewConnection();
@@ -700,10 +705,6 @@ public:
 				}
 			}
 
-			l.lock();
-			if (connectionPool.size() < CONNECTION_POOL_MAX_SIZE) {
-				connectionPool.push_back(connection);
-			}
 			return connection;
 		}
 	}
@@ -948,7 +949,7 @@ public:
 	const string &getPassword() const {
 		return password;
 	}
-	
+
 	/**
 	 * @post !result.empty()
 	 */

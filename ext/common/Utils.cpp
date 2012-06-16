@@ -41,7 +41,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <signal.h>
- #include <vector>
+#include <vector>
 #include <FileDescriptor.h>
 #include <MessageServer.h>
 #include <ResourceLocator.h>
