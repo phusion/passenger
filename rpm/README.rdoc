@@ -12,10 +12,7 @@ passenger-release package from the {main repository}[http://passenger.stealthymo
 [Fedora Core 14] <code>rpm -Uvh http://{http://passenger.stealthymonkeys.com/fedora/14/passenger-release.noarch.rpm}[link:http://passenger.stealthymonkeys.com/fedora/14/passenger-release.noarch.rpm]</code>
 [Fedora Core 13] <code>rpm -Uvh http://{http://passenger.stealthymonkeys.com/fedora/13/passenger-release.noarch.rpm}[link:http://passenger.stealthymonkeys.com/fedora/13/passenger-release.noarch.rpm]</code>
 [RHEL / CentOS / ScientificLinux 5.x + EPEL] <code>rpm -Uvh http://{http://passenger.stealthymonkeys.com/rhel/5/passenger-release.noarch.rpm}[link:http://passenger.stealthymonkeys.com/rhel/5/passenger-release.noarch.rpm]</code>
-[RHEL / CentOS / ScientificLinux 6.x + EPEL] These packages will be available
-                                             as soon as there is a stable beta
-                                             of either CentOS 6 or SL 6 to use
-                                             as a build platform.
+[RHEL / CentOS / ScientificLinux 6.x + EPEL] <code>rpm -Uvh http://{http://passenger.stealthymonkeys.com/rhel/6/passenger-release.noarch.rpm}[link:http://passenger.stealthymonkeys.com/rhel/6/passenger-release.noarch.rpm]</code>
 
 *NOTE*: The RHEL-based distributions are built upon packages in {EPEL}[http://fedoraproject.org/wiki/EPEL], and require it to be installed.
 
