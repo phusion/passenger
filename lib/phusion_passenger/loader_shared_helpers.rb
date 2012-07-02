@@ -262,9 +262,17 @@ module LoaderSharedHelpers
 	end
 	
 	def advertise_sockets(output, request_handler)
-		sockets = request_handler.server_sockets
-		output.puts "!> socket: main;#{create_socket_address(sockets[:main][1], sockets[:main][0])};session;1"
-		output.puts "!> socket: http;#{create_socket_address(sockets[:http][1], sockets[:http][0])};http;1"
+		request_handler.server_sockets.each_pair do |name, options|
+			protocol = case name
+				when :main
+					"session"
+				when :http
+					"http"
+				else
+					name
+				end
+			output.puts "!> socket: #{name};#{create_socket_address(options[1], options[0])};#{protocol};1"
+		end
 	end
 	
 	# To be called before the request handler main loop is entered, but after the app

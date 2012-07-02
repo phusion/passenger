@@ -26,6 +26,7 @@ require 'fileutils'
 require 'socket'
 require 'ostruct'
 require 'phusion_passenger/admin_tools'
+require 'phusion_passenger/utils'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/message_client'
 
@@ -92,6 +93,7 @@ class ServerInstance
 			if !socket_info
 				raise "This process has no server socket named '#{socket_name}'."
 			end
+			return Utils.connect_to_server(socket_info.address)
 			if socket_info.address_type == 'unix'
 				return UNIXSocket.new(socket_info.address)
 			else
