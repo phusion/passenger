@@ -25,6 +25,7 @@
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -85,6 +86,17 @@ hasEnvOption(const char *name, bool defaultValue = false) {
 	} else {
 		return defaultValue;
 	}
+}
+
+// Async-signal safe way to fork().
+// http://sourceware.org/bugzilla/show_bug.cgi?id=4737
+static pid_t
+asyncFork() {
+	#if defined(__linux__)
+		return (pid_t) syscall(SYS_fork);
+	#else
+		return fork();
+	#endif
 }
 
 // No idea whether strlen() is async signal safe, but let's not risk it
@@ -256,7 +268,7 @@ dumpWithCrashWatch(char *messageBuf) {
 	end = appendULL(end, (unsigned long long) pid);
 	*end = '\0';
 	
-	pid_t child = fork();
+	pid_t child = asyncFork();
 	if (child == 0) {
 		// Sleep for a short while to allow the parent process to raise SIGSTOP.
 		// Strictly speaking usleep() is not async-signal safe so let's hope
@@ -265,7 +277,7 @@ dumpWithCrashWatch(char *messageBuf) {
 
 		resetSignalHandlersAndMask();
 
-		child = fork();
+		child = asyncFork();
 		if (child == 0) {
 			execlp("crash-watch", "crash-watch", "--dump", pidStr, (char * const) 0);
 			if (errno == ENOENT) {
