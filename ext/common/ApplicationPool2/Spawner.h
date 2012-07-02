@@ -477,6 +477,13 @@ private:
 					details);
 			}
 		}
+
+		if (sockets->hasSessionSockets() == 0) {
+			throwAppSpawnException("An error occured while starting the web "
+				"application. It did not advertise any session sockets.",
+				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+				details);
+		}
 		
 		return make_shared<Process>(details.libev, details.pid,
 			details.gupid, details.connectPassword,

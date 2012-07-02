@@ -223,6 +223,16 @@ public:
 		}
 		return NULL;
 	}
+
+	bool hasSessionSockets() const {
+		const_iterator it;
+		for (it = begin(); it != end(); it++) {
+			if (it->protocol == "session") {
+				return true;
+			}
+		}
+		return false;
+	}
 };
 
 typedef shared_ptr<SocketList> SocketListPtr;
