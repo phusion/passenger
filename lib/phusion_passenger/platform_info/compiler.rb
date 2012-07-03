@@ -223,6 +223,24 @@ module PlatformInfo
 			return '-ggdb'
 		end
 	end
+
+	def self.dmalloc_ldflags
+		if !ENV['DMALLOC_LIBS'].to_s.empty?
+			return ENV['DMALLOC_LIBS']
+		end
+		if RUBY_PLATFORM =~ /darwin/
+			['/opt/local', '/usr/local', '/usr'].each do |prefix|
+				filename = "#{prefix}/lib/libdmallocthcxx.a"
+				if File.exist?(filename)
+					return filename
+				end
+			end
+			return nil
+		else
+			return "-ldmallocthcxx"
+		end
+	end
+	memoize :dmalloc_ldflags
 	
 	def self.export_dynamic_flags
 		if RUBY_PLATFORM =~ /linux/
