@@ -22,10 +22,14 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#define _GNU_SOURCE
+
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>
-#include <sys/syscall.h>
+#ifdef __linux__
+	#include <sys/syscall.h>
+#endif
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -53,6 +57,7 @@ static bool _feedbackFdAvailable = false;
 static const char digits[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
 };
+static const char hex_chars[] = "01234567890abcdef";
 
 static bool shouldDumpWithCrashWatch = true;
 
@@ -153,6 +158,46 @@ appendULL(char *buf, unsigned long long value) {
 	
 	reverse(buf, size);
 	return buf + size;
+}
+
+// Must be async signal safe.
+template<typename IntegerType>
+static char *
+appendIntegerAsHex(char *buf, IntegerType value) {
+	IntegerType remainder = value;
+	unsigned int size = 0;
+	
+	do {
+		buf[size] = hex_chars[remainder % 16];
+		remainder = remainder / 16;
+		size++;
+	} while (remainder != 0);
+	
+	reverse(buf, size);
+	return buf + size;
+}
+
+// Must be async signal safe.
+static char *
+appendPointerAsString(char *buf, void *pointer) {
+	// Use wierd union construction to avoid compiler warnings.
+	if (sizeof(void *) == sizeof(unsigned int)) {
+		union {
+			void *pointer;
+			unsigned int value;
+		} u;
+		u.pointer = pointer;
+		return appendIntegerAsHex(appendText(buf, "0x"), u.value);
+	} else if (sizeof(void *) == sizeof(unsigned long long)) {
+		union {
+			void *pointer;
+			unsigned long long value;
+		} u;
+		u.pointer = pointer;
+		return appendIntegerAsHex(appendText(buf, "0x"), u.value);
+	} else {
+		return appendText(buf, "(pointer size unsupported)");
+	}
 }
 
 static char *
@@ -256,6 +301,9 @@ appendSignalReason(char *buf, siginfo_t *info) {
 		buf = appendText(buf, " with UID ");
 		buf = appendULL(buf, (unsigned long long) info->si_uid);
 	}
+
+	buf = appendText(buf, ", si_addr=");
+	buf = appendPointerAsString(buf, info->si_addr);
 	
 	return buf;
 }
