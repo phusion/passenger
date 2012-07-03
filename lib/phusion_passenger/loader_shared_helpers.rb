@@ -288,7 +288,7 @@ module LoaderSharedHelpers
 			srand
 		end
 
-		if forked && options["process_title"] && !options["process_title"].empty?
+		if options["process_title"] && !options["process_title"].empty?
 			$0 = options["process_title"] + ": " + options["app_group_name"]
 		end
 
