@@ -70,6 +70,7 @@ module PreloaderSharedHelpers
 	end
 	
 	def run_main_loop(options)
+		$0 = "Passenger AppPreloader: #{options['app_root']}"
 		client = nil
 		original_pid = Process.pid
 		socket_filename = "#{options['generation_dir']}/backends/preloader.#{Process.pid}"
