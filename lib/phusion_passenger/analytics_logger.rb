@@ -55,7 +55,7 @@ class AnalyticsLogger
 				return if !@connection.connected?
 				begin
 					timestamp_string = AnalyticsLogger.timestamp_string
-					DebugLogging.trace(2, "[Union Station log] #{@txn_id} #{timestamp_string} #{text}")
+					DebugLogging.trace(3, "[Union Station log] #{@txn_id} #{timestamp_string} #{text}")
 					@connection.channel.write("log", @txn_id, timestamp_string)
 					@connection.channel.write_scalar(text)
 				rescue SystemCallError, IOError => e
