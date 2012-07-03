@@ -776,7 +776,7 @@ private:
 				ap_pass_brigade(r->output_filters, bb);
 				
 				if (r->connection->aborted) {
-					P_WARN("Either the vistor clicked on the 'Stop' button in the "
+					P_WARN("Either the visitor clicked on the 'Stop' button in the "
 						"web browser, or the visitor's connection has stalled "
 						"and couldn't receive the data that Apache is sending "
 						"to it. As a result, you will probably see a 'Broken Pipe' "
