@@ -27,16 +27,10 @@ $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/admin_tools/server_instance'
+require 'phusion_passenger/admin_tools/color'
 require 'optparse'
 
 include PhusionPassenger::AdminTools
-
-# ANSI color codes
-RESET    = "\e[0m"
-BOLD     = "\e[1m"
-YELLOW   = "\e[33m"
-BLACK_BG = "\e[40m"
-BLUE_BG  = "\e[44m"
 
 def show_status(server_instance, options = {})
 	server_instance.connect(:passenger_status) do
@@ -51,13 +45,13 @@ def show_status(server_instance, options = {})
 			end
 			
 			# Extract only the 'General information' section and colorize it.
-			general_info.sub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
+			general_info.sub!(/^(----)(.*)$/, Color.yellow + Color.blue_bg + Color.bold + '\1\2' + Color.reset)
 			general_info.sub!(/^----.*/m, '')
 			general_info.strip!
 			puts general_info
 			puts
 			
-			puts "#{YELLOW}#{BLUE_BG}#{BOLD}----------- Application groups -----------#{RESET}"
+			puts "#{Color.yellow}#{Color.blue_bg}#{Color.bold}----------- Application groups -----------#{Color.reset}"
 			server_instance.groups.each do |group|
 				puts "#{group.name}:"
 				if group.name !~ %r{^/} || true
@@ -85,8 +79,8 @@ def show_status(server_instance, options = {})
 			end
 		
 			# Colorize output
-			text.gsub!(/^(Thread .*:)$/, BLACK_BG + YELLOW + '\1' + RESET)
-			text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
+			text.gsub!(/^(Thread .*:)$/, Color.black_bg + Color.yellow + '\1' + Color.reset)
+			text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + Color.bold + '\2' + Color.reset + '(')
 		
 			puts text
 		
