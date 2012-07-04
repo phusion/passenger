@@ -253,6 +253,7 @@ private
 		File.open(filename, 'rb') do |f|
 			IO.popen("tar xzf -", "w") do |io|
 				buffer = ''
+				buffer = buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
 				total_size = File.size(filename)
 				bytes_read = 0
 				yield(bytes_read, total_size)
