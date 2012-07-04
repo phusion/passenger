@@ -1,3 +1,5 @@
+#  encoding: utf-8
+#
 #  Phusion Passenger - http://www.modrails.com/
 #  Copyright (c) 2010 Phusion
 #
