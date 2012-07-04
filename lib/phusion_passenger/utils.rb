@@ -420,6 +420,7 @@ protected
 	def after_handling_requests
 		PhusionPassenger.call_event(:stopping_worker_process)
 		Kernel.passenger_call_at_exit_blocks
+    GC.start
 	end
 	
 	def get_socket_address_type(address)
