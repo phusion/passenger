@@ -366,8 +366,13 @@ protected
 		
 		# Post-install framework extensions. Possibly preceded by a call to
 		# PhusionPassenger.install_framework_extensions!
-		require 'rails/version' if defined?(::Rails) && !defined?(::Rails::VERSION)
-		if defined?(::Rails) && ::Rails::VERSION::MAJOR <= 2
+		if defined?(::Rails) && !defined?(::Rails::VERSION)
+			begin
+				require 'rails/version'
+			rescue LoadError
+			end
+		end
+		if defined?(::Rails::VERSION) && ::Rails::VERSION::MAJOR <= 2
 			require 'phusion_passenger/classic_rails_extensions/init'
 			ClassicRailsExtensions.init!(options)
 			# Rails 3 extensions are installed by
