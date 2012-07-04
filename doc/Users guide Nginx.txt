@@ -914,24 +914,22 @@ In each place, it may be specified at most once. The default value is 'on'.
 
 === Resource control and optimization options ===
 [[PassengerMaxPoolSize]]
-==== passenger_max_pool_size <integer> ====
+==== PassengerMaxPoolSize <integer> ====
 The maximum number of Ruby on Rails or Rack application instances that may
 be simultaneously active. A larger number results in higher memory usage,
 but improved ability to handle concurrent HTTP clients.
 
-The optimal value depends on your system's hardware and the server's average
-load. You should experiment with different values. But generally speaking,
-the value should be at least equal to the number of CPUs (or CPU cores) that
-you have. If your system has 2 GB of RAM, then we recommend a value of '30'.
-If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
-is also running other services such as MySQL, then we recommend a value of '2'.
+The optimal value depends on your system's hardware, the server's average
+load and your application's memory usage. Generally speaking the value 
+should be at least equal to the number of CPUs (or CPU cores) that you have.
 
-If you find that your server is unable to handle the load on your Rails/Rack websites
-(i.e. running out of memory) then you should lower this value. (Though if your
-sites are really that popular, then you should strongly consider upgrading your
-hardware or getting more servers.)
+You should measure your system's memory consumption and experiment with 
+different values. For example, if your application uses 200MB per instance,
+and your system has 2 GB of RAM, you could set a value of '8'. Your instances
+would use 1600MB and 400MB would be left over for other services such as
+MySQL and any background jobs that you are scheduling to run.
 
-This option may only occur once, in the 'http' configuration bock.
+This option may only occur once, in the global server configuration.
 The default value is '6'.
 
 TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
