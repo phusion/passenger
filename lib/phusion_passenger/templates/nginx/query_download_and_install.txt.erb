@@ -13,9 +13,14 @@ Do you want this installer to download, compile and install Nginx for you?
  <yellow><b>2. No: I want to customize my Nginx installation. (for advanced users)</b></yellow>
     Choose this if you want to compile Nginx with more third party modules
     besides Passenger, or if you need to pass additional options to Nginx's
-    'configure' script. This installer will  1) ask you for the location of
-    the Nginx source code,  2) run the 'configure' script according to your
-    instructions, and  3) run 'make install'.
+    'configure' script.
+	
+    This installer will:  
+
+    <b>1.</b> Ask you for the location of the Nginx source code.
+    <b>2.</b> Ask you for the location of the PCRE source code.
+    <b>3.</b> Run the 'configure' script according to your instructions.
+    <b>4.</b> Run 'make install'.
 
 Whichever you choose, if you already have an existing Nginx configuration file,
 then it will be preserved.
