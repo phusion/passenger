@@ -159,7 +159,8 @@ private:
 		char *filenameBeforeModRewrite;
 		apr_filetype_e oldFileType;
 		const char *handlerBeforeModAutoIndex;
-		
+                bool skipBackend;
+
 		RequestNote(const DirectoryMapper &m, DirConfig *c)
 			: mapper(m),
 			  config(c)
@@ -169,8 +170,8 @@ private:
 			filenameBeforeModRewrite  = NULL;
 			oldFileType               = APR_NOFILE;
 			handlerBeforeModAutoIndex = NULL;
+                        skipBackend               = false;
 		}
-		
 		~RequestNote() {
 			delete errorReport;
 		}
@@ -451,6 +452,11 @@ private:
 			FileType fileType = getFileType(filename);
 			if (fileType == FT_REGULAR) {
 				// (C) is true.
+				RequestNote *note = getRequestNote(r);
+				if (note != NULL) {
+					// We were prepared to handle the request, but we should not
+                                        note->skipBackend = true;
+				}
 				return false;
 			}
 			
@@ -527,7 +533,7 @@ private:
 		 */
 		
 		RequestNote *note = getRequestNote(r);
-		if (note == NULL) {
+		if (note == NULL || (note->skipBackend == true)) {
 			return DECLINED;
 		} else if (note->errorReport != NULL) {
 			/* Did an error occur in any of the previous hook methods during
