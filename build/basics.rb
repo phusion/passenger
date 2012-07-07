@@ -70,6 +70,7 @@ CC       = string_option("CC", "gcc")
 CXX      = string_option("CXX", "g++")
 LIBEXT   = PlatformInfo.library_extension
 USE_DMALLOC = boolean_option('USE_DMALLOC')
+USE_MCHECK  = boolean_option('USE_MCHECK')
 if OPTIMIZE
 	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O2 -DBOOST_DISABLE_ASSERTS".strip
 else
@@ -85,7 +86,7 @@ OPTIMIZATION_FLAGS << " -Wno-attributes" if PlatformInfo.compiler_supports_visib
 AGENT_CFLAGS  = ""
 AGENT_LDFLAGS = ""
 AGENT_LDFLAGS << PlatformInfo.dmalloc_ldflags if USE_DMALLOC
-AGENT_LDFLAGS << " -lmcheck" if RUBY_PLATFORM =~ /linux/
+AGENT_LDFLAGS << " -lmcheck" if USE_MCHECK
 # Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
 AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
 # Enable dead symbol elimination on OS X.
