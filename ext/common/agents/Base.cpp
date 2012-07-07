@@ -370,9 +370,7 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 		fd.events = POLLIN | POLLHUP | POLLERR;
 		if (poll(&fd, 1, timeLimit) <= 0) {
 			kill(child, SIGKILL);
-			end = state.messageBuf;
-			end = appendText(end, "Could not dump diagnostics: child process did not exit in time\n");
-			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			safePrintErr("Could not dump diagnostics: child process did not exit in time\n");
 		}
 		close(p[0]);
 		waitpid(child, NULL, 0);
@@ -389,48 +387,20 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 	
 	pid_t child = asyncFork();
 	if (child == 0) {
-		// Sleep for a short while to allow the parent process to raise SIGSTOP.
-		// Strictly speaking usleep() is not async-signal safe so let's hope
-		// it works.
-		usleep(100000);
-
-		resetSignalHandlersAndMask();
-
-		// Double fork because it's not safe to waitpid() from a crashed process.
-		// Instead we wait inside the child.
-		child = asyncFork();
-		if (child == 0) {
-			execlp("crash-watch", "crash-watch", "--dump", pidStr, (char * const) 0);
-			if (errno == ENOENT) {
-				safePrintErr("Crash-watch is not installed. Please install it with 'gem install crash-watch' "
-					"or download it from https://github.com/FooBarWidget/crash-watch.\n");
-			} else {
-				int e = errno;
-				end = messageBuf;
-				end = appendText(end, "crash-watch is installed, but it could not be executed! ");
-				end = appendText(end, "(execlp() returned errno=");
-				end = appendULL(end, e);
-				end = appendText(end, ") Please check your file permissions or something.\n");
-				write(STDERR_FILENO, messageBuf, end - messageBuf);
-			}
-			_exit(1);
-
-		} else if (child == -1) {
+		execlp("crash-watch", "crash-watch", "--dump", pidStr, (char * const) 0);
+		if (errno == ENOENT) {
+			safePrintErr("Crash-watch is not installed. Please install it with 'gem install crash-watch' "
+				"or download it from https://github.com/FooBarWidget/crash-watch.\n");
+		} else {
 			int e = errno;
 			end = messageBuf;
-			end = appendText(end, "Could not execute crash-watch: fork() failed with errno=");
+			end = appendText(end, "crash-watch is installed, but it could not be executed! ");
+			end = appendText(end, "(execlp() returned errno=");
 			end = appendULL(end, e);
-			end = appendText(end, "\n");
+			end = appendText(end, ") Please check your file permissions or something.\n");
 			write(STDERR_FILENO, messageBuf, end - messageBuf);
-			_exit(1);
-
-		} else {
-			waitpid(child, NULL, 0);
-			// Crash-watch may or may not resume the parent process.
-			// We do it ourselves just to be sure.
-			kill(state.pid, SIGCONT);
-			_exit(0);
 		}
+		_exit(1);
 
 	} else if (child == -1) {
 		int e = errno;
@@ -441,8 +411,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 		write(STDERR_FILENO, messageBuf, end - messageBuf);
 
 	} else {
-		raise(SIGSTOP);
-		// Will continue after the child process or crash-watch has done its job.
+		waitpid(child, NULL, 0);
 	}
 }
 
@@ -496,9 +465,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 		runInSubprocessWithTimeLimit(state, dumpBacktrace, NULL, 2000);
 	#endif
 
-	end = messageBuf;
-	end = appendText(end, "--------------------------------------\n");
-	write(STDERR_FILENO, messageBuf, end - messageBuf);
+	safePrintErr("--------------------------------------\n");
 
 	if (customDiagnosticsDumper != NULL) {
 		char *end = messageBuf;
@@ -506,7 +473,9 @@ dumpDiagnostics(AbortHandlerState &state) {
 		end = appendULL(end, (unsigned long long) state.pid);
 		end = appendText(end, " ] Dumping additional diagnostical information...\n");
 		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		safePrintErr("--------------------------------------\n");
 		runInSubprocessWithTimeLimit(state, runCustomDiagnosticsDumper, NULL, 2000);
+		safePrintErr("--------------------------------------\n");
 	}
 
 	if (shouldDumpWithCrashWatch) {
@@ -553,7 +522,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			state.signo = signo;
 			state.info = info;
 			dumpDiagnostics(state);
-			_exit(1);
+			_exit(0);
 
 		} else if (child == -1) {
 			int e = errno;
@@ -567,7 +536,8 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 		} else {
 			waitpid(child, NULL, 0);
-			// Resume parent process.
+			// The child process may or may or may not resume the original process.
+			// We do it ourselves just to be sure.
 			kill(pid, SIGCONT);
 			_exit(0);
 		}
