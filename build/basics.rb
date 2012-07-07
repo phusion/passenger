@@ -85,8 +85,9 @@ OPTIMIZATION_FLAGS << " -Wno-attributes" if PlatformInfo.compiler_supports_visib
 AGENT_CFLAGS  = ""
 AGENT_LDFLAGS = ""
 AGENT_LDFLAGS << PlatformInfo.dmalloc_ldflags if USE_DMALLOC
+AGENT_LDFLAGS << " -lmcheck" if RUBY_PLATFORM =~ /linux/
 # Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
-AGENT_LDFLAGS << PlatformInfo.export_dynamic_flags.to_s
+AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
 # Enable dead symbol elimination on OS X.
 AGENT_LDFLAGS << " -Wl,-dead_strip" if RUBY_PLATFORM =~ /darwin/
 

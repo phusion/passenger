@@ -857,6 +857,11 @@ disableMallocDebugging() {
 	unsetenv("MallocGuardEdges");
 	unsetenv("MallocScribble");
 	unsetenv("MallocPreScribble");
+	unsetenv("MallocCheckHeapStart");
+	unsetenv("MallocCheckHeapEach");
+	unsetenv("MallocCheckHeapAbort");
+	unsetenv("MallocBadFreeAbort");
+	unsetenv("MALLOC_CHECK_");
 
 	const char *libs = getenv("DYLD_INSERT_LIBRARIES");
 	if (libs != NULL && strstr(libs, "/usr/lib/libgmalloc.dylib")) {
