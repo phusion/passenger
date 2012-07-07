@@ -522,6 +522,9 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			state.signo = signo;
 			state.info = info;
 			dumpDiagnostics(state);
+			// The child process may or may or may not resume the original process.
+			// We do it ourselves just to be sure.
+			kill(pid, SIGCONT);
 			_exit(0);
 
 		} else if (child == -1) {
@@ -535,10 +538,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			_exit(1);
 
 		} else {
-			waitpid(child, NULL, 0);
-			// The child process may or may or may not resume the original process.
-			// We do it ourselves just to be sure.
-			kill(pid, SIGCONT);
+			// Exit immediately so that child process is adopted by init process.
 			_exit(0);
 		}
 
