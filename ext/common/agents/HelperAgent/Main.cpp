@@ -299,6 +299,20 @@ private:
 		requestHandler->inspect(cout);
 		cout.flush();
 	}
+
+	void installDiagnosticsDumper() {
+		::installDiagnosticsDumper(dumpDiagnostics, this);
+	}
+
+	void uninstallDiagnosticsDumper() {
+		::installDiagnosticsDumper(NULL, NULL);
+	}
+
+	static void dumpDiagnostics(void *userData) {
+		Server *self = (Server *) userData;
+		self->requestHandler->inspect(cout);
+		cout.flush();
+	}
 	
 public:
 	Server(FileDescriptor feedbackFd, const AgentOptions &_options)
@@ -412,10 +426,13 @@ public:
 		FD_SET(exitEvent.fd(), &fds);
 		largestFd = (feedbackFd > exitEvent.fd()) ? (int) feedbackFd : exitEvent.fd();
 		UPDATE_TRACE_POINT();
+		installDiagnosticsDumper();
 		if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
 			int e = errno;
+			uninstallDiagnosticsDumper();
 			throw SystemException("select() failed", e);
 		}
+		uninstallDiagnosticsDumper();
 		
 		if (FD_ISSET(feedbackFd, &fds)) {
 			/* If the watchdog has been killed then we'll kill all descendant

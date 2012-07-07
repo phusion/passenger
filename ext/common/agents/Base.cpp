@@ -81,6 +81,9 @@ static bool shouldDumpWithCrashWatch = true;
 static char *alternativeStack;
 static unsigned int alternativeStackSize;
 
+static DiagnosticsDumper customDiagnosticsDumper = NULL;
+static void *customDiagnosticsDumperUserData;
+
 
 static void
 ignoreSigpipe() {
@@ -333,7 +336,7 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 	if (pipe(p) == -1) {
 		e = errno;
 		end = state.messageBuf;
-		end = appendText(end, "Could not dump a backtrace: pipe() failed with errno=");
+		end = appendText(end, "Could not dump diagnostics: pipe() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
 		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
@@ -351,7 +354,7 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 		close(p[0]);
 		close(p[1]);
 		end = state.messageBuf;
-		end = appendText(end, "Could not dump a backtrace: fork() failed with errno=");
+		end = appendText(end, "Could not dump diagnostics: fork() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
 		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
@@ -367,6 +370,9 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 		fd.events = POLLIN | POLLHUP | POLLERR;
 		if (poll(&fd, 1, timeLimit) <= 0) {
 			kill(child, SIGKILL);
+			end = state.messageBuf;
+			end = appendText(end, "Could not dump diagnostics: child process did not exit in time\n");
+			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 		}
 		close(p[0]);
 		waitpid(child, NULL, 0);
@@ -458,6 +464,11 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 #endif
 
 static void
+runCustomDiagnosticsDumper(AbortHandlerState &state, void *userData) {
+	customDiagnosticsDumper(customDiagnosticsDumperUserData);
+}
+
+static void
 dumpDiagnostics(AbortHandlerState &state) {
 	char *messageBuf = state.messageBuf;
 
@@ -488,6 +499,15 @@ dumpDiagnostics(AbortHandlerState &state) {
 	end = messageBuf;
 	end = appendText(end, "--------------------------------------\n");
 	write(STDERR_FILENO, messageBuf, end - messageBuf);
+
+	if (customDiagnosticsDumper != NULL) {
+		char *end = messageBuf;
+		end = appendText(end, "[ pid=");
+		end = appendULL(end, (unsigned long long) state.pid);
+		end = appendText(end, " ] Dumping additional diagnostical information...\n");
+		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		runInSubprocessWithTimeLimit(state, runCustomDiagnosticsDumper, NULL, 2000);
+	}
 
 	if (shouldDumpWithCrashWatch) {
 		end = messageBuf;
@@ -572,7 +592,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 void
 installAbortHandler() {
-	alternativeStackSize = MINSIGSTKSZ + 64 * 1024;
+	alternativeStackSize = MINSIGSTKSZ + 128 * 1024;
 	alternativeStack = (char *) malloc(alternativeStackSize);
 	if (alternativeStack == NULL) {
 		fprintf(stderr, "Cannot allocate an alternative with a size of %u bytes!\n",
@@ -601,6 +621,12 @@ installAbortHandler() {
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
 	sigaction(SIGFPE, &action, NULL);
+}
+
+void
+installDiagnosticsDumper(DiagnosticsDumper func, void *userData) {
+	customDiagnosticsDumper = func;
+	customDiagnosticsDumperUserData = userData;
 }
 
 bool
