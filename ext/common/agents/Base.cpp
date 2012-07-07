@@ -29,6 +29,7 @@
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>
+#include <sys/select.h>
 #ifdef __linux__
 	#include <sys/syscall.h>
 #endif
@@ -37,6 +38,7 @@
 #include <cstring>
 #include <cerrno>
 #include <fcntl.h>
+#include <poll.h>
 #include <unistd.h>
 #include <signal.h>
 
@@ -55,6 +57,17 @@
 
 namespace Passenger {
 
+
+struct AbortHandlerState {
+	pid_t pid;
+	int signo;
+	siginfo_t *info;
+	char messageBuf[1024];
+};
+
+typedef void (*Callback)(AbortHandlerState &state, void *userData);
+
+
 static bool _feedbackFdAvailable = false;
 static const char digits[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
@@ -67,6 +80,7 @@ static bool shouldDumpWithCrashWatch = true;
 // the normal stack isn't usable.
 static char *alternativeStack;
 static unsigned int alternativeStackSize;
+
 
 static void
 ignoreSigpipe() {
@@ -311,11 +325,60 @@ appendSignalReason(char *buf, siginfo_t *info) {
 }
 
 static void
-dumpWithCrashWatch(char *messageBuf) {
-	pid_t pid = getpid();
+runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *userData, int timeLimit) {
+	char *end;
+	pid_t child;
+	int p[2], e;
+
+	if (pipe(p) == -1) {
+		e = errno;
+		end = state.messageBuf;
+		end = appendText(end, "Could not dump a backtrace: pipe() failed with errno=");
+		end = appendULL(end, e);
+		end = appendText(end, "\n");
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		return;
+	}
+
+	child = asyncFork();
+	if (child == 0) {
+		close(p[0]);
+		callback(state, userData);
+		_exit(0);
+
+	} else if (child == -1) {
+		e = errno;
+		close(p[0]);
+		close(p[1]);
+		end = state.messageBuf;
+		end = appendText(end, "Could not dump a backtrace: fork() failed with errno=");
+		end = appendULL(end, e);
+		end = appendText(end, "\n");
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+
+	} else {
+		close(p[1]);
+
+		// We give the child process a time limit. If it doesn't succeed in
+		// exiting within the time limit, we assume that it has frozen
+		// and we kill it.
+		struct pollfd fd;
+		fd.fd = p[0];
+		fd.events = POLLIN | POLLHUP | POLLERR;
+		if (poll(&fd, 1, timeLimit) <= 0) {
+			kill(child, SIGKILL);
+		}
+		close(p[0]);
+		waitpid(child, NULL, 0);
+	}
+}
+
+static void
+dumpWithCrashWatch(AbortHandlerState &state) {
+	char *messageBuf = state.messageBuf;
 	const char *pidStr = messageBuf;
 	char *end = messageBuf;
-	end = appendULL(end, (unsigned long long) pid);
+	end = appendULL(end, (unsigned long long) state.pid);
 	*end = '\0';
 	
 	pid_t child = asyncFork();
@@ -327,6 +390,8 @@ dumpWithCrashWatch(char *messageBuf) {
 
 		resetSignalHandlersAndMask();
 
+		// Double fork because it's not safe to waitpid() from a crashed process.
+		// Instead we wait inside the child.
 		child = asyncFork();
 		if (child == 0) {
 			execlp("crash-watch", "crash-watch", "--dump", pidStr, (char * const) 0);
@@ -357,7 +422,7 @@ dumpWithCrashWatch(char *messageBuf) {
 			waitpid(child, NULL, 0);
 			// Crash-watch may or may not resume the parent process.
 			// We do it ourselves just to be sure.
-			kill(pid, SIGCONT);
+			kill(state.pid, SIGCONT);
 			_exit(0);
 		}
 
@@ -375,25 +440,37 @@ dumpWithCrashWatch(char *messageBuf) {
 	}
 }
 
-static void
-abortHandler(int signo, siginfo_t *info, void *ctx) {
-	pid_t pid = getpid();
-	char messageBuf[1024];
-	#ifdef LIBC_HAS_BACKTRACE_FUNC
+#ifdef LIBC_HAS_BACKTRACE_FUNC
+	static void
+	dumpBacktrace(AbortHandlerState &state, void *userData) {
 		void *backtraceStore[512];
-		backtraceStore[0] = '\0'; // Don't let gdb print uninitialized contents.
-	#endif
-	
+		int frames = backtrace(backtraceStore, sizeof(backtraceStore) / sizeof(void *));
+		char *end = state.messageBuf;
+		end = appendText(end, "--------------------------------------\n");
+		end = appendText(end, "[ pid=");
+		end = appendULL(end, (unsigned long long) state.pid);
+		end = appendText(end, " ] Backtrace with ");
+		end = appendULL(end, (unsigned long long) frames);
+		end = appendText(end, " frames:\n");
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
+	}
+#endif
+
+static void
+dumpDiagnostics(AbortHandlerState &state) {
+	char *messageBuf = state.messageBuf;
+
 	char *end = messageBuf;
 	end = appendText(end, "[ pid=");
-	end = appendULL(end, (unsigned long long) pid);
+	end = appendULL(end, (unsigned long long) state.pid);
 	end = appendText(end, ", timestamp=");
 	end = appendULL(end, (unsigned long long) time(NULL));
 	end = appendText(end, " ] Process aborted! signo=");
-	end = appendSignalName(end, signo);
+	end = appendSignalName(end, state.signo);
 	end = appendText(end, ", reason=");
-	end = appendSignalReason(end, info);
-	
+	end = appendSignalReason(end, state.info);
+
 	// It is important that writing the message and the backtrace are two
 	// seperate operations because it's not entirely clear whether the
 	// latter is async signal safe and thus can crash.
@@ -403,44 +480,90 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		end = appendText(end, "\n");
 	#endif
 	write(STDERR_FILENO, messageBuf, end - messageBuf);
-	
-	#ifdef LIBC_HAS_BACKTRACE_FUNC
-		int frames = backtrace(backtraceStore, sizeof(backtraceStore) / sizeof(void *));
-		end = messageBuf;
-		end = appendText(end, "--------------------------------------\n");
-		end = appendText(end, "[ pid=");
-		end = appendULL(end, (unsigned long long) pid);
-		end = appendText(end, " ] Backtrace with ");
-		end = appendULL(end, (unsigned long long) frames);
-		end = appendText(end, " frames:\n");
-		write(STDERR_FILENO, messageBuf, end - messageBuf);
-		backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 
-		end = messageBuf;
-		end = appendText(end, "--------------------------------------\n");
-		end = appendText(end, "[ pid=");
-		end = appendULL(end, (unsigned long long) pid);
-		if (shouldDumpWithCrashWatch) {
-			end = appendText(end, " ] Dumping a more detailed backtrace with crash-watch...\n");
-		} else {
-			end = appendText(end, " ]\n");
-		}
-		write(STDERR_FILENO, messageBuf, end - messageBuf);
-	#else
-		end = messageBuf;
-		end = appendText(end, "--------------------------------------\n");
-		end = appendText(end, "[ pid=");
-		end = appendULL(end, (unsigned long long) pid);
-		if (shouldDumpWithCrashWatch) {
-			end = appendText(end, " ] Dumping a backtrace with crash-watch...\n");
-		} else {
-			end = appendText(end, " ]\n");
-		}
-		write(STDERR_FILENO, messageBuf, end - messageBuf);
+	#ifdef LIBC_HAS_BACKTRACE_FUNC
+		runInSubprocessWithTimeLimit(state, dumpBacktrace, NULL, 2000);
 	#endif
 
+	end = messageBuf;
+	end = appendText(end, "--------------------------------------\n");
+	write(STDERR_FILENO, messageBuf, end - messageBuf);
+
 	if (shouldDumpWithCrashWatch) {
-		dumpWithCrashWatch(messageBuf);
+		end = messageBuf;
+		end = appendText(end, "[ pid=");
+		end = appendULL(end, (unsigned long long) state.pid);
+		#ifdef LIBC_HAS_BACKTRACE_FUNC
+			end = appendText(end, " ] Dumping a more detailed backtrace with crash-watch...\n");
+		#else
+			end = appendText(end, " ] Dumping a backtrace with crash-watch...\n");
+		#endif
+		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		dumpWithCrashWatch(state);
+	} else {
+		write(STDERR_FILENO, "\n", 1);
+	}
+}
+
+static void
+abortHandler(int signo, siginfo_t *info, void *ctx) {
+	pid_t pid = getpid();
+	pid_t child;
+
+	// It isn't safe to call any waiting functions in this signal handler,
+	// not even read() and waitpid() even though they're async signal safe.
+	// So we fork a child process and let it dump as much diagnostics as possible
+	// instead of doing it in this process.
+	child = asyncFork();
+	if (child == 0) {
+		// Sleep for a short while to allow the parent process to raise SIGSTOP.
+		// usleep() and nanosleep() aren't async signal safe so we use select()
+		// instead.
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 100000;
+		select(0, NULL, NULL, NULL, &tv);
+
+		resetSignalHandlersAndMask();
+
+		child = asyncFork();
+		if (child == 0) {
+			AbortHandlerState state;
+			state.pid = pid;
+			state.signo = signo;
+			state.info = info;
+			dumpDiagnostics(state);
+			_exit(1);
+
+		} else if (child == -1) {
+			int e = errno;
+			char messageBuf[1024];
+			char *end = messageBuf;
+			end = appendText(end, "Could fork a child process for dumping diagnostics: fork() failed with errno=");
+			end = appendULL(end, e);
+			end = appendText(end, "\n");
+			write(STDERR_FILENO, messageBuf, end - messageBuf);
+			_exit(1);
+
+		} else {
+			waitpid(child, NULL, 0);
+			// Resume parent process.
+			kill(pid, SIGCONT);
+			_exit(0);
+		}
+
+	} else if (child == -1) {
+		int e = errno;
+		char messageBuf[1024];
+		char *end = messageBuf;
+		end = appendText(end, "Could fork a child process for dumping diagnostics: fork() failed with errno=");
+		end = appendULL(end, e);
+		end = appendText(end, "\n");
+		write(STDERR_FILENO, messageBuf, end - messageBuf);
+
+	} else {
+		raise(SIGSTOP);
+		// Will continue after the child process has done its job.
 	}
 
 	// Run default signal handler.
