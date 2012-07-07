@@ -88,6 +88,7 @@ static EventFd *errorEvent;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
 
+static bool hasEnvOption(const char *name, bool defaultValue = false);
 static void setOomScore(const StaticString &score);
 
 
@@ -590,7 +591,12 @@ protected:
 	}
 	
 	virtual void execProgram() const {
-		execl(helperAgentFilename.c_str(), "PassengerHelperAgent", (char *) 0);
+		if (hasEnvOption("PASSENGER_RUN_HELPER_AGENT_IN_VALGRIND", false)) {
+			execlp("valgrind", "valgrind", "--dsymutil=yes",
+				helperAgentFilename.c_str(), (char *) 0);
+		} else {
+			execl(helperAgentFilename.c_str(), "PassengerHelperAgent", (char *) 0);
+		}
 	}
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
@@ -765,6 +771,24 @@ public:
 	}
 };
 
+
+static bool
+hasEnvOption(const char *name, bool defaultValue) {
+	const char *value = getenv(name);
+	if (value != NULL) {
+		if (*value != '\0') {
+			return strcmp(value, "yes") == 0
+				|| strcmp(value, "y") == 0
+				|| strcmp(value, "1") == 0
+				|| strcmp(value, "on") == 0
+				|| strcmp(value, "true") == 0;
+		} else {
+			return defaultValue;
+		}
+	} else {
+		return defaultValue;
+	}
+}
 
 enum OomFileType {
 	OOM_ADJ,
