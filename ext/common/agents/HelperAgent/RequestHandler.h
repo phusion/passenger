@@ -476,6 +476,8 @@ public:
 	void inspect(Stream &stream) const {
 		const char *indent = "    ";
 
+		stream << indent << "host                        = " << (scgiParser.getHeader("HTTP_HOST").empty() ? "(empty)" : scgiParser.getHeader("HTTP_HOST")) << "\n";
+		stream << indent << "uri                         = " << (scgiParser.getHeader("REQUEST_URI").empty() ? "(empty)" : scgiParser.getHeader("REQUEST_URI")) << "\n";
 		stream << indent << "state                       = " << getStateName() << "\n";
 		if (session == NULL) {
 			stream << indent << "session                     = NULL\n";
