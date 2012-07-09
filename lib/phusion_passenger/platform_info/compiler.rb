@@ -241,6 +241,21 @@ module PlatformInfo
 		end
 	end
 	memoize :dmalloc_ldflags
+
+	def self.electric_fence_ldflags
+		if RUBY_PLATFORM =~ /darwin/
+			['/opt/local', '/usr/local', '/usr'].each do |prefix|
+				filename = "#{prefix}/lib/libefence.a"
+				if File.exist?(filename)
+					return filename
+				end
+			end
+			return nil
+		else
+			return "-lefence"
+		end
+	end
+	memoize :electric_fence_ldflags
 	
 	def self.export_dynamic_flags
 		if RUBY_PLATFORM =~ /linux/
