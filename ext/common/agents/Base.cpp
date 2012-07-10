@@ -81,6 +81,8 @@ static bool shouldDumpWithCrashWatch = true;
 static char *alternativeStack;
 static unsigned int alternativeStackSize;
 
+static char *argv0 = NULL;
+static char *backtraceSanitizerPath = NULL;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
 static void *customDiagnosticsDumperUserData;
 
@@ -428,7 +430,48 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 		end = appendULL(end, (unsigned long long) frames);
 		end = appendText(end, " frames:\n");
 		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
-		backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
+
+		if (backtraceSanitizerPath != NULL) {
+			int p[2];
+			if (pipe(p) == -1) {
+				int e = errno;
+				end = state.messageBuf;
+				end = appendText(end, "Could not dump diagnostics: pipe() failed with errno=");
+				end = appendULL(end, e);
+				end = appendText(end, "\n");
+				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				return;
+			}
+
+			pid_t pid = asyncFork();
+			if (pid == 0) {
+				const char *pidStr = end = state.messageBuf;
+				end = appendULL(end, (unsigned long long) state.pid);
+				*end = '\0';
+
+				close(p[1]);
+				dup2(p[0], STDIN_FILENO);
+				execlp(backtraceSanitizerPath, backtraceSanitizerPath, argv0,
+					pidStr, (const char * const) 0);
+				safePrintErr("ERROR: cannot execute 'backtrace-sanitizer.rb', trying 'cat'...\n");
+				execlp("cat", "cat", (const char * const) 0);
+				safePrintErr("ERROR: cannot execute 'cat'\n");
+				_exit(1);
+
+			} else if (pid == -1) {
+				close(p[0]);
+				close(p[1]);
+
+			} else {
+				close(p[0]);
+				backtrace_symbols_fd(backtraceStore, frames, p[1]);
+				close(p[1]);
+				waitpid(pid, NULL, 0);
+			}
+
+		} else {
+			backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
+		}
 	}
 #endif
 
@@ -646,6 +689,13 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 			options.readFrom((const char **) argv + 1, argc - 1);
 		}
 		
+		#ifdef __linux__
+			if (options.has("passenger_root")) {
+				ResourceLocator locator(options.get("passenger_root", true));
+				backtraceSanitizerPath = strdup((locator.helperScriptsDir() + "/backtrace-sanitizer.rb").c_str());
+			}
+		#endif
+
 		setLogLevel(options.getInt("log_level", false, 0));
 		if (!options.get("debug_log_file", false).empty()) {
 			if (strcmp(processName, "PassengerWatchdog") == 0) {
@@ -676,6 +726,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	}
 	
 	// Change process title.
+	argv0 = strdup(argv[0]);
 	strncpy(argv[0], processName, strlen(argv[0]));
 	for (int i = 1; i < argc; i++) {
 		memset(argv[i], '\0', strlen(argv[i]));
