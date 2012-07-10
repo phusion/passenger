@@ -54,6 +54,9 @@
 #include <Exceptions.h>
 #include <Logging.h>
 #include <Utils.h>
+#ifdef __linux__
+	#include <ResourceLocator.h>
+#endif
 
 namespace Passenger {
 
@@ -692,7 +695,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		#ifdef __linux__
 			if (options.has("passenger_root")) {
 				ResourceLocator locator(options.get("passenger_root", true));
-				backtraceSanitizerPath = strdup((locator.helperScriptsDir() + "/backtrace-sanitizer.rb").c_str());
+				backtraceSanitizerPath = strdup((locator.getHelperScriptsDir() + "/backtrace-sanitizer.rb").c_str());
 			}
 		#endif
 
