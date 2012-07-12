@@ -1039,6 +1039,7 @@ namespace tut {
 			Ticket ticket;
 			Options options = createOptions();
 			options.maxRequests = 5;
+			pool->setMax(1);
 			pool->get(options, &ticket).reset();
 
 			vector<ProcessPtr> processes = pool->getProcesses();
@@ -1054,7 +1055,9 @@ namespace tut {
 
 			pool->get(options, &ticket).reset();
 		}
-		ensure_equals(pool->getProcessCount(), 0u);
+		EVENTUALLY(2,
+			result = pool->getProcessCount() == 0;
+		);
 	}
 
 	TEST_METHOD(62) {
@@ -1071,9 +1074,10 @@ namespace tut {
 		// Trigger spawn loop. The spawn loop itself won't take longer than 3*20=60 msec.
 		pool->findOrCreateGroup(options);
 		ScopedLock l(pool->syncher);
+		setLogLevel(3);
 		pool->asyncGet(options, callback, false);
 		// Wait until spawn loop tries to grab the lock.
-		EVENTUALLY(2,
+		EVENTUALLY(3,
 			LockGuard l2(pool->debugSyncher);
 			result = pool->spawnLoopIteration == 1;
 		);

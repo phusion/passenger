@@ -290,25 +290,25 @@ namespace tut {
 		write("hello");
 
 		write("world");
-		ensure_equals(getDataState(), FileBackedPipe::OPENING_FILE);
-		ensure_equals(getBufferSize(), 10u);
+		ensure_equals("(1)", getDataState(), FileBackedPipe::OPENING_FILE);
+		ensure_equals("(2)", getBufferSize(), 10u);
 		ensure("committing to disk", isCommittingToDisk());
-		ensure_equals(consumeCallbackCount, 1);
-		ensure_equals(receivedData, "hello");
+		ensure_equals("(3)", consumeCallbackCount, 1);
+		ensure_equals("(4)", receivedData, "hello");
 
 		callConsumedCallback(4, false);
-		ensure_equals(getDataState(), FileBackedPipe::OPENING_FILE);
-		ensure_equals(getBufferSize(), 6u);
-		ensure_equals(consumeCallbackCount, 2);
-		ensure_equals(receivedData,
+		ensure_equals("(5)", getDataState(), FileBackedPipe::OPENING_FILE);
+		ensure_equals("(6)", getBufferSize(), 6u);
+		ensure_equals("(7)", consumeCallbackCount, 2);
+		ensure_equals("(8)", receivedData,
 			"hello\n"
 			"oworld");
 		
 		callConsumedCallback(6, false);
-		ensure_equals(getDataState(), FileBackedPipe::OPENING_FILE);
-		ensure_equals(getBufferSize(), 0u);
-		ensure_equals(consumeCallbackCount, 2);
-		ensure_equals(receivedData,
+		ensure_equals("(9)", getDataState(), FileBackedPipe::OPENING_FILE);
+		ensure_equals("(10)", getBufferSize(), 0u);
+		ensure_equals("(11)", consumeCallbackCount, 2);
+		ensure_equals("(12)", receivedData,
 			"hello\n"
 			"oworld");
 	}
