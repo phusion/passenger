@@ -508,7 +508,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 	write(STDERR_FILENO, messageBuf, end - messageBuf);
 
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
-		runInSubprocessWithTimeLimit(state, dumpBacktrace, NULL, 2000);
+		runInSubprocessWithTimeLimit(state, dumpBacktrace, NULL, 4000);
 	#endif
 
 	safePrintErr("--------------------------------------\n");

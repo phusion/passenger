@@ -84,6 +84,9 @@ private:
 	}
 
 	void onReadable(ev::io &watcher, int revents) {
+		// Keep 'this' alive until function exit.
+		shared_ptr< EventedBufferedInput<bufferSize> > self = EventedBufferedInput<bufferSize>::shared_from_this();
+
 		ssize_t ret = syscalls::read(fd, bufferData, bufferSize);
 		if (ret == -1) {
 			if (errno != EAGAIN) {
@@ -97,8 +100,7 @@ private:
 				state = READ_ERROR;
 				paused = true;
 				if (onError != NULL) {
-					onError(EventedBufferedInput<bufferSize>::shared_from_this(),
-						"Cannot read from socket", error);
+					onError(self, "Cannot read from socket", error);
 				}
 			}
 
@@ -111,8 +113,7 @@ private:
 			watcher.stop();
 			state = END_OF_STREAM;
 			paused = true;
-			onData(EventedBufferedInput<bufferSize>::shared_from_this(),
-				StaticString());
+			onData(self, StaticString());
 
 		} else {
 			assert(state == LIVE);
@@ -153,7 +154,6 @@ private:
 		}
 
 		assert(buffer.size() > 0);
-
 		size_t consumed = onData(EventedBufferedInput<bufferSize>::shared_from_this(),
 			buffer);
 		if (state == CLOSED) {
