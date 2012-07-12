@@ -56,7 +56,7 @@ passenger_filter_validate(const char *source, int size) {
 		size = strlen(source);
 	}
 	try {
-		FilterSupport::Filter(StaticString(source, size));
+		(void) FilterSupport::Filter(StaticString(source, size));
 		return NULL;
 	} catch (const SyntaxError &e) {
 		return strdup(e.what());
