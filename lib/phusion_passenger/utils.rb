@@ -340,15 +340,6 @@ protected
 		# If the app is using Bundler then any dependencies required past this
 		# point must be specified in the Gemfile. Like ruby-debug if debugging is on...
 		
-		if options["debugger"]
-			require 'ruby-debug'
-			if !Debugger.respond_to?(:ctrl_port)
-				raise "Your version of ruby-debug is too old. Please upgrade to the latest version."
-			end
-			Debugger.start_remote('127.0.0.1', [0, 0])
-			Debugger.start
-		end
-		
 		PhusionPassenger._spawn_options = options
 	end
 	
