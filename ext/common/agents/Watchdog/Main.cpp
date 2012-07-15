@@ -510,11 +510,8 @@ public:
 			throw RuntimeException("Already started watching.");
 		}
 		
-		/* Don't make the stack any smaller, getpwnam() on OS
-		 * X needs a lot of stack space.
-		 */
 		thr = new oxt::thread(boost::bind(&AgentWatcher::threadMain, this),
-			name(), 64 * 1024);
+			name(), 256 * 1024);
 	}
 	
 	static void stopWatching(vector<AgentWatcher *> &watchers) {
@@ -762,7 +759,7 @@ private:
 
 public:
 	ServerInstanceDirToucher() {
-		thr = new oxt::thread(threadMain, "Server instance dir toucher", 96 * 1024);
+		thr = new oxt::thread(threadMain, "Server instance dir toucher", 256 * 1024);
 	}
 	
 	~ServerInstanceDirToucher() {
