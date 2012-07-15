@@ -216,14 +216,7 @@ module LoaderSharedHelpers
 	end
 	
 	def before_loading_app_code_step2(options)
-		if options["debugger"]
-			require 'ruby-debug'
-			if !Debugger.respond_to?(:ctrl_port)
-				raise "Your version of ruby-debug is too old. Please upgrade to the latest version."
-			end
-			Debugger.start_remote('127.0.0.1', [0, 0])
-			Debugger.start
-		end
+		# Do nothing.
 	end
 	
 	# This method is to be called after loading the application code but
