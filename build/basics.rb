@@ -70,8 +70,8 @@ CC       = string_option("CC", "gcc")
 CXX      = string_option("CXX", "g++")
 LIBEXT   = PlatformInfo.library_extension
 USE_DMALLOC = boolean_option('USE_DMALLOC')
-USE_MCHECK  = boolean_option('USE_MCHECK')
 USE_EFENCE  = boolean_option('USE_EFENCE')
+USE_ASAN    = boolean_option('USE_ASAN')
 if OPTIMIZE
 	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O2 -DBOOST_DISABLE_ASSERTS".strip
 else
@@ -82,17 +82,23 @@ OPTIMIZATION_FLAGS << " -fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED" if
 OPTIMIZATION_FLAGS << " -Wno-attributes" if PlatformInfo.compiler_supports_visibility_flag? &&
 	PlatformInfo.compiler_visibility_flag_generates_warnings? &&
 	PlatformInfo.compiler_supports_wno_attributes_flag?
+OPTIMIZATION_FLAGS << " -fno-omit-frame-pointers" if USE_ASAN
 
-# Agent-specific compiler and linker flags.
+# Agent-specific compiler flags.
 AGENT_CFLAGS  = ""
+AGENT_CFLAGS << " -faddress-sanitizer" if USE_ASAN
+AGENT_CFLAGS.strip!
+
+# Agent-specific linker flags.
 AGENT_LDFLAGS = ""
-AGENT_LDFLAGS << PlatformInfo.dmalloc_ldflags if USE_DMALLOC
-AGENT_LDFLAGS << PlatformInfo.electric_fence_ldflags if USE_EFENCE
-AGENT_LDFLAGS << " -lmcheck" if USE_MCHECK
+AGENT_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
+AGENT_LDFLAGS << " #{PlatformInfo.electric_fence_ldflags}" if USE_EFENCE
+AGENT_LDFLAGS << " -faddress-sanitizer" if USE_ASAN
 # Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
 AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
 # Enable dead symbol elimination on OS X.
 AGENT_LDFLAGS << " -Wl,-dead_strip" if RUBY_PLATFORM =~ /darwin/
+AGENT_LDFLAGS.strip!
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.
 # Should be included last in the command string, even after PlatformInfo.portability_cflags.

@@ -199,8 +199,8 @@ public:
  */
 class Server {
 private:
-	static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 64 * 1024;
-	static const int EVENT_LOOP_THREAD_STACK_SIZE = 128 * 1024;
+	static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 128 * 1024;
+	static const int EVENT_LOOP_THREAD_STACK_SIZE = 256 * 1024;
 	
 	FileDescriptor feedbackFd;
 	const AgentOptions &options;
