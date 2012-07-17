@@ -118,6 +118,7 @@ module App
 			end
 			@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 			
+			LoaderSharedHelpers.before_handling_requests(true, options)
 			if Rails::VERSION::STRING >= '2.3.0'
 				require 'phusion_passenger/rack/request_handler'
 				handler = Rack::RequestHandler.new(STDIN, ActionController::Dispatcher.new, options)
@@ -125,7 +126,6 @@ module App
 				require 'phusion_passenger/classic_rails/request_handler'
 				handler = ClassicRails::RequestHandler.new(STDIN, options)
 			end
-			LoaderSharedHelpers.before_handling_requests(true, options)
 		rescue Exception => e
 			LoaderSharedHelpers.about_to_abort(e)
 			puts "!> Error"

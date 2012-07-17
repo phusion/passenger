@@ -90,8 +90,8 @@ module App
 	handshake_and_read_startup_request
 	init_passenger
 	load_app
-	handler = Rack::RequestHandler.new(STDIN, app, options)
 	LoaderSharedHelpers.before_handling_requests(false, options)
+	handler = Rack::RequestHandler.new(STDIN, app, options)
 	puts "!> Ready"
 	LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
 	puts "!> "

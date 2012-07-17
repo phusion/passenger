@@ -97,8 +97,8 @@ module App
 			end
 			@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 			
-			handler = Rack::RequestHandler.new(STDIN, app, options)
 			LoaderSharedHelpers.before_handling_requests(true, options)
+			handler = Rack::RequestHandler.new(STDIN, app, options)
 		rescue Exception => e
 			LoaderSharedHelpers.about_to_abort(e)
 			puts "!> Error"

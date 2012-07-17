@@ -93,11 +93,14 @@ module App
 
 		if Rails::VERSION::STRING >= '2.3.0'
 			require 'phusion_passenger/rack/request_handler'
-			return Rack::RequestHandler.new(STDIN, ActionController::Dispatcher.new, options)
+			handler = Rack::RequestHandler.new(STDIN, ActionController::Dispatcher.new, options)
 		else
 			require 'phusion_passenger/classic_rails/request_handler'
-			return ClassicRails::RequestHandler.new(STDIN, options)
+			handler = ClassicRails::RequestHandler.new(STDIN, options)
 		end
+
+		LoaderSharedHelpers.before_handling_requests(false, options)
+		return handler
 		
 	rescue Exception => e
 		LoaderSharedHelpers.about_to_abort(e)
@@ -118,7 +121,6 @@ module App
 	handshake_and_read_startup_request
 	init_passenger
 	handler = load_app
-	LoaderSharedHelpers.before_handling_requests(false, options)
 	puts "!> Ready"
 	LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
 	puts "!> "
