@@ -632,7 +632,9 @@ protected:
 				result.erase(0, sizeof("!> ") - 1);
 				return result;
 			} else {
-				details.stderrCapturer->appendToBuffer(result);
+				if (details.stderrCapturer != NULL) {
+					details.stderrCapturer->appendToBuffer(result);
+				}
 				if (details.forwardStderr) {
 					write(STDOUT_FILENO, result.data(), result.size());
 				}
