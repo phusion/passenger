@@ -94,7 +94,7 @@ private
 	end
 
 	def write_start_request(options)
-		write_request_line "passenger_root: #{PhusionPassenger.root}"
+		write_request_line "passenger_root: #{PhusionPassenger.source_root}"
 		write_request_line "ruby_libdir: #{PhusionPassenger.ruby_libdir}"
 		write_request_line "generation_dir: #{Utils.passenger_tmpdir}"
 		write_request_line "log_level: 3" if DEBUG

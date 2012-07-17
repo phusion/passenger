@@ -64,16 +64,15 @@ class Installer < PhusionPassenger::AbstractInstaller
 		# Make sure the configure script finds the correct
 		# passenger-config command.
 		ENV['PATH'] = PhusionPassenger.bin_dir + ":" + ENV['PATH']
+
+		if PhusionPassenger.natively_packaged?
+			not_available_when_natively_packaged
+			exit(2)
+		end
 		
 		show_welcome_screen
 		check_dependencies || exit(1)
-		
-		if PhusionPassenger.originally_packaged?
-			check_whether_we_can_write_to(PhusionPassenger.root) || exit(1)
-		elsif !PhusionPassenger.runtime_libraries_compiled?
-			incorrectly_installed
-			exit(1)
-		end
+		check_whether_we_can_write_to(PhusionPassenger.source_root) || exit(1)
 		
 		download_and_install = should_we_download_and_install_nginx_automatically?
 		if pcre_is_installed?
@@ -130,20 +129,19 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 
 private
+	def not_available_when_natively_packaged
+		render_template 'nginx/not_available_when_natively_packaged'
+	end
+
 	def show_welcome_screen
 		render_template 'nginx/welcome', :version => VERSION_STRING
 		wait
 	end
 	
-	def incorrectly_installed
-		new_screen
-		render_template 'nginx/incorrectly_installed'
-	end
-	
 	def compile_passenger_support_files
 		new_screen
 		puts "<banner>Compiling Passenger support files...</banner>"
-		Dir.chdir(PhusionPassenger.root) do
+		Dir.chdir(PhusionPassenger.source_root) do
 			return sh("#{PlatformInfo.rake_command} nginx:clean nginx RELEASE=yes")
 		end
 	end
@@ -357,7 +355,7 @@ private
 		new_screen
 		render_template 'nginx/config_snippets',
 			:config_file => locate_nginx_config_file(prefix),
-			:passenger_root => PhusionPassenger.root,
+			:passenger_root => PhusionPassenger.source_root,
 			:ruby => PlatformInfo.ruby_command
 		wait
 	end
@@ -393,7 +391,7 @@ private
 		contents = File.read(config_file)
 		contents.sub!(/^http \{/,
 			"http {\n" <<
-			"    passenger_root #{PhusionPassenger.root};\n" <<
+			"    passenger_root #{PhusionPassenger.source_root};\n" <<
 			"    passenger_ruby #{PlatformInfo.ruby_command};\n")
 		File.open(config_file, 'w') do |f|
 			f.write(contents)
@@ -402,7 +400,7 @@ private
 		new_screen
 		render_template 'nginx/config_snippets_inserted',
 			:config_file => config_file,
-			:passenger_root => PhusionPassenger.root,
+			:passenger_root => PhusionPassenger.source_root,
 			:ruby => PlatformInfo.ruby_command
 		wait
 	end
@@ -417,7 +415,7 @@ private
 		elsif !pcre_is_installed?
 			command << "--without-http_rewrite_module "
 		end
-		command << "--add-module='#{PhusionPassenger.nginx_module_source_dir}' #{extra_configure_flags}"
+		command << "--add-module='#{PhusionPassenger.source_root}/ext/nginx' #{extra_configure_flags}"
 		command.strip!
 		return command
 	end

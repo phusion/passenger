@@ -50,8 +50,6 @@ private:
 	string resourcesDir;
 	string docDir;
 	string rubyLibDir;
-	string compilableSourceDir;
-	string headerDir;
 	
 	static string getOption(const string &file, const IniFileSectionPtr &section, const string &key) {
 		if (section->hasKey(key)) {
@@ -73,34 +71,14 @@ public:
 			resourcesDir        = getOption(file, options, "resources");
 			docDir              = getOption(file, options, "doc");
 			rubyLibDir          = getOption(file, options, "rubylib");
-			compilableSourceDir = getOption(file, options, "compilable_source");
-			headerDir           = getOption(file, options, "headers");
 		} else {
 			string root = rootOrFile;
-			bool originallyPackaged = fileExists(root + "/Rakefile")
-				&& fileExists(root + "/DEVELOPERS.TXT");
-			
-			if (originallyPackaged) {
-				binDir              = root + "/bin";
-				agentsDir           = root + "/agents";
-				helperScriptsDir    = root + "/helper-scripts";
-				resourcesDir        = root + "/resources";
-				docDir              = root + "/doc";
-				rubyLibDir          = root + "/lib";
-				compilableSourceDir = root;
-				headerDir           = root + "/ext";
-			} else {
-				string NAMESPACE_DIR = "phusion-passenger";
-				
-				binDir              = "/usr/bin";
-				agentsDir           = "/usr/lib/" + NAMESPACE_DIR + "/agents";
-				helperScriptsDir    = "/usr/share/" + NAMESPACE_DIR + "/helper-scripts";
-				resourcesDir        = "/usr/share/" + NAMESPACE_DIR;
-				docDir              = "/usr/share/doc/" + NAMESPACE_DIR;
-				rubyLibDir          = "";
-				compilableSourceDir = "";
-				headerDir           = "/usr/include/" + NAMESPACE_DIR;
-			}
+			binDir              = root + "/bin";
+			agentsDir           = root + "/agents";
+			helperScriptsDir    = root + "/helper-scripts";
+			resourcesDir        = root + "/resources";
+			docDir              = root + "/doc";
+			rubyLibDir          = root + "/lib";
 		}
 	}
 	
@@ -131,16 +109,6 @@ public:
 	// Can be empty.
 	string getRubyLibDir() const {
 		return rubyLibDir;
-	}
-	
-	// Directory must contain native_support and Nginx module.
-	string getCompilableSourceDir() const {
-		return compilableSourceDir;
-	}
-	
-	// Directory must contain ext/boost, ext/oxt and ext/common headers.
-	string getHeaderDir() const {
-		return headerDir;
 	}
 };
 

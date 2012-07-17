@@ -70,8 +70,8 @@ class Apache2Controller
 		@vhosts = []
 		@extra = []
 		@server_root = File.expand_path('tmp.apache2')
-		@passenger_root = File.expand_path(PhusionPassenger.root)
-		@mod_passenger = File.expand_path(PhusionPassenger.root + "/libout/apache2/mod_passenger.so")
+		@passenger_root = File.expand_path(PhusionPassenger.source_root)
+		@mod_passenger = File.expand_path(PhusionPassenger.source_root + "/libout/apache2/mod_passenger.so")
 	end
 	
 	def set(options)

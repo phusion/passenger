@@ -30,7 +30,7 @@ class ConsoleTextTemplate
 	def initialize(input, options = {})
 		@buffer = ''
 		if input[:file]
-			data = File.read("#{PhusionPassenger.templates_dir}/#{input[:file]}.txt.erb")
+			data = File.read("#{PhusionPassenger.resources_dir}/templates/#{input[:file]}.txt.erb")
 		else
 			data = input[:text]
 		end

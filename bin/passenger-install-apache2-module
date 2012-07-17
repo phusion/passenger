@@ -78,7 +78,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def run_steps
-		if !PhusionPassenger.originally_packaged?
+		if PhusionPassenger.natively_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
 			show_deployment_example
@@ -165,14 +165,14 @@ private
 	def show_apache2_config_snippets(bare = false)
 		if bare
 			puts "LoadModule passenger_module #{PhusionPassenger.apache2_module_path}"
-			puts "PassengerRoot #{PhusionPassenger.root}"
+			puts "PassengerRoot #{PhusionPassenger.source_root}"
 			puts "PassengerRuby #{PlatformInfo.ruby_command}"
 		else
 			puts
 			line
 			render_template 'apache2/config_snippets',
 				:module_location => PhusionPassenger.apache2_module_path,
-				:passenger_root => PhusionPassenger.root,
+				:passenger_root => PhusionPassenger.source_root,
 				:ruby => PlatformInfo.ruby_command
 			if PhusionPassenger.originally_packaged?
 				wait

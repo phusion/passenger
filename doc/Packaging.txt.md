@@ -39,7 +39,7 @@ must be able to compile a new Ruby extension for that Ruby interpreter. This
 configuration does not however allow compiling against a different Apache or Nginx
 version than the packager intended.
 
-In this configuration, files are scattered anywhere throughout the filesystem. This
+In this configuration, files can be scattered anywhere throughout the filesystem. This
 way Phusion Passenger can be packaged in an FHS-compliant way. The exact locations
 of the different types of files can be specified through a
 _location configuration file_. The existance and usage of a location configuration
@@ -92,7 +92,7 @@ The location configuration file is an ini file that looks as follows:
     apache2_module=/usr/lib/apache2/modules/mod_passenger.so
     ruby_extension_source=/usr/share/phusion_passenger/ruby_native_support_source
 
-All keys except fo `natively_packaged specify the locations of assets and asset
+All keys except fo `natively_packaged` specify the locations of assets and asset
 directories. The "Asset types" section provides a description of all asset types.
 
 Thus, if you're packaging Phusion Passenger, then we recommend the following:
@@ -126,7 +126,7 @@ The Phusion Passenger loader scripts try to load the Phusion Passenger Ruby
 extension (`passenger_native_support.so`) from the following places, in the given order:
 
  * If Phusion Passenger is originally packaged, it will look for the Ruby
-   extension in `<SOURCE_ROOT>/ext/ruby/<ARCH>`. Otherwise, this step is skipped.
+   extension in `<SOURCE_ROOT>/libout/ruby/<ARCH>`. Otherwise, this step is skipped.
  * The Ruby library load path.
  * `~/.passenger/native_support/<VERSION>/<ARCH>`
 
@@ -176,9 +176,7 @@ a list of all possible assets and asset directories.
    that should not be directly invoked from the command line. Things like
    rack-loader.rb are located here.
 
-   Value when originally packaged:
-   - Normally: `<SOURCE_ROOT>/agents`
-   - Passenger Standalone: `~/.passenger/standalone/<VERSION>/support-<ARCH>`
+   Value when originally packaged: `<SOURCE_ROOT>/helper-scripts`
 
  * `resources`
 

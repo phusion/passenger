@@ -49,7 +49,7 @@ require 'digest/md5'
 
 include PhusionPassenger
 trap("INT") { exit 1 }
-if File.exist?("#{PhusionPassenger.root}/enterprisey.txt") || File.exist?("/etc/passenger_enterprisey.txt")
+if File.exist?("#{PhusionPassenger.source_root}/enterprisey.txt") || File.exist?("/etc/passenger_enterprisey.txt")
 	puts "Congratulations, your Passenger Enterprise License has already been activated!"
 else
 	puts %{
@@ -70,7 +70,7 @@ else
 		end
 	end
 	if PhusionPassenger.originally_packaged?
-		enterprise_file = "#{PhusionPassenger.root}/enterprisey.txt"
+		enterprise_file = "#{PhusionPassenger.source_root}/enterprisey.txt"
 	else
 		enterprise_file = "/etc/passenger_enterprisey.txt"
 	end

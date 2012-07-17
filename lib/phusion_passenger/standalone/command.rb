@@ -100,7 +100,7 @@ private
 	def parse_options!(command_name, description = nil)
 		help = false
 		
-		global_config_file = File.join(ENV['HOME'], LOCAL_DIR, "standalone", "config")
+		global_config_file = File.join(ENV['HOME'], USER_NAMESPACE_DIRNAME, "standalone", "config")
 		if File.exist?(global_config_file)
 			require 'phusion_passenger/standalone/config_file' unless defined?(ConfigFile)
 			global_options = ConfigFile.new(:global_config, global_config_file).options
@@ -176,6 +176,7 @@ private
 		
 		File.open(@location_config_filename, 'w') do |f|
 			f.puts '[locations]'
+			f.puts "natively_packaged=false"
 			f.puts "bin=#{PhusionPassenger.bin_dir}"
 			if debugging?
 				f.puts "agents=#{PhusionPassenger.agents_dir}"
@@ -185,25 +186,16 @@ private
 			f.puts "helper_scripts=#{PhusionPassenger.helper_scripts_dir}"
 			f.puts "resources=#{PhusionPassenger.resources_dir}"
 			f.puts "doc=#{PhusionPassenger.doc_dir}"
-			if debugging?
-				f.puts "runtimelib=#{PhusionPassenger.runtime_libdir}"
-			else
-				f.puts "runtimelib=#{passenger_support_files_dir}"
-			end
-			f.puts "headers=#{PhusionPassenger.header_dir}"
 			f.puts "rubylib=#{PhusionPassenger.ruby_libdir}"
-			f.puts "ruby_native_support=#{ruby_native_support_dir}"
-			f.puts "apache2_module=/nonexistent"
-			if PhusionPassenger.compilable_source_dir
-				f.puts "compilable_source=#{PhusionPassenger.compilable_source_dir}"
-			end
+			f.puts "apache2_module=#{PhusionPassenger.apache2_module_path}"
+			f.puts "ruby_extension_source=#{PhusionPassenger.ruby_extension_source_dir}"
 		end
 		puts File.read(@location_config_filename) if debugging?
 		
 		File.open(@config_filename, 'w') do |f|
 			f.chmod(0644)
-			template_filename = File.join(PhusionPassenger.templates_dir,
-				"standalone", "config.erb")
+			template_filename = File.join(PhusionPassenger.resources_dir,
+				"templates", "standalone", "config.erb")
 			require_erb
 			erb = ERB.new(File.read(template_filename))
 			

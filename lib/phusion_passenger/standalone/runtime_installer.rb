@@ -469,7 +469,7 @@ private
 	def install_ruby_extension
 		begin_progress_bar
 		yield(0, 1, 0, "Preparing Ruby extension...")
-		Dir.chdir(PhusionPassenger.compilable_source_dir) do
+		Dir.chdir(PhusionPassenger.source_root) do
 			run_rake_task!("native_support CACHING=false ONLY_RUBY=yes RUBY_EXTENSION_OUTPUT_DIR='#{@ruby_dir}'") do |progress, total|
 				yield(progress, total, 1, "Compiling Ruby extension...")
 			end
@@ -481,7 +481,7 @@ private
 	def install_binary_support_files
 		begin_progress_bar
 		yield(0, 1, 0, "Preparing Phusion Passenger...")
-		Dir.chdir(PhusionPassenger.compilable_source_dir) do
+		Dir.chdir(PhusionPassenger.source_root) do
 			args = "nginx_without_native_support" +
 				" CACHING=false" +
 				" OUTPUT_DIR='#{@support_dir}'" +
@@ -526,7 +526,7 @@ private
 			if @targets.include?(:support_binaries)
 				nginx_libs = COMMON_LIBRARY.
 					only(*NGINX_LIBS_SELECTOR).
-					set_output_dir("#{PhusionPassenger.runtime_libdir}/libpassenger_common").
+					set_output_dir("#{PhusionPassenger.source_root}/libout/common/libpassenger_common").
 					link_objects_as_string
 				command << "env PASSENGER_LIBS='#{nginx_libs} #{@support_dir}/libboost_oxt.a' "
 			end
@@ -535,7 +535,7 @@ private
 				"--without-http_fastcgi_module " <<
 				"--without-http_scgi_module " <<
 				"--without-http_uwsgi_module " <<
-				"'--add-module=#{PhusionPassenger.compilable_source_dir}/ext/nginx'"
+				"'--add-module=#{PhusionPassenger.source_root}/ext/nginx'"
 			run_command_with_throbber(command, "Preparing Nginx...") do |status_text|
 				yield(0, 1, status_text)
 			end
