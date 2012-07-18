@@ -1,3 +1,13 @@
+Release 3.0.14
+--------------
+
+ * [Apache] Fixed a long-standing mod_rewrite-related problem.
+   Some mod_rewrite rules would not work, but it depends on the exact
+   mod_rewrite configuration so it would work for some people but not
+   for others. Issue #563. Thanks a lot to cedricmaion for providing
+   information on the nature of the bug.
+
+
 Release 3.0.13
 --------------
 
