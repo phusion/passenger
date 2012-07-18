@@ -7,6 +7,8 @@ Release 3.0.14
    for others. Issue #563. Thanks a lot to cedricmaion for providing
    information on the nature of the bug and to peter.nash55 for
    providing a VM that allowed us to reproduce the problem.
+ * [Nginx] Preferred Nginx version to 1.2.2.
+   The previously preferred version was 1.2.1.
 
 
 Release 3.0.13
