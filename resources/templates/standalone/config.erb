@@ -27,7 +27,7 @@
 master_process on;
 worker_processes 1;
 daemon on;
-error_log '<%= @options[:log_file] %>' info;
+error_log '<%= @options[:log_file] %>' <% if debugging? %>info<% end %>;
 pid '<%= @options[:pid_file] %>';
 <% if @options[:user] %>user <%= @options[:user] %> <%= default_group_for(@options[:user]) %>;<% end %>
 
