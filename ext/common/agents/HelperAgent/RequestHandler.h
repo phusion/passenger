@@ -168,6 +168,7 @@ private:
 		backgroundOperations = 0;
 		requestBodyIsBuffered = false;
 		freeBufferedConnectPassword();
+		connectedAt = 0;
 		contentLength = 0;
 		clientBodyAlreadyRead = 0;
 		checkoutSessionAfterCommit = false;
@@ -251,6 +252,7 @@ public:
 	// Used for enforcing the connection timeout.
 	ev::timer timeoutTimer;
 
+	ev_tstamp connectedAt;
 	long long contentLength;
 	unsigned long long clientBodyAlreadyRead;
 	Options options;
@@ -333,6 +335,7 @@ public:
 		fd = _fd;
 		fdnum = _fd;
 		state = BEGIN_READING_CONNECT_PASSWORD;
+		connectedAt = ev_time();
 
 		clientInput->reset(getSafeLibev().get(), _fd);
 		clientInput->start();
@@ -475,9 +478,17 @@ public:
 	template<typename Stream>
 	void inspect(Stream &stream) const {
 		const char *indent = "    ";
+		time_t the_time;
+		struct tm the_tm;
+		char timestr[60];
+
+		the_time = (time_t) connectedAt;
+		localtime_r(&the_time, &the_tm);
+		strftime(timestr, sizeof(timestr) - 1, "%F %H:%M:%S", &the_tm);
 
 		stream << indent << "host                        = " << (scgiParser.getHeader("HTTP_HOST").empty() ? "(empty)" : scgiParser.getHeader("HTTP_HOST")) << "\n";
 		stream << indent << "uri                         = " << (scgiParser.getHeader("REQUEST_URI").empty() ? "(empty)" : scgiParser.getHeader("REQUEST_URI")) << "\n";
+		stream << indent << "connected at                = " << timestr << " (" << (unsigned long long) (ev_time() - connectedAt) << " sec ago)\n";
 		stream << indent << "state                       = " << getStateName() << "\n";
 		if (session == NULL) {
 			stream << indent << "session                     = NULL\n";

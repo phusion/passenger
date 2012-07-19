@@ -80,7 +80,7 @@ void setDebugFile(const char *logFile = NULL);
 								\
 			the_time = time(NULL);			\
 			localtime_r(&the_time, &the_tm);	\
-			strftime(datetime_buf, sizeof(datetime_buf), "%F %H:%M:%S", &the_tm); \
+			strftime(datetime_buf, sizeof(datetime_buf) - 1, "%F %H:%M:%S", &the_tm); \
 			gettimeofday(&tv, NULL); \
 			sstream << \
 				"[ pid=" << ((unsigned long) getpid()) <<  \
