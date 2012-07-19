@@ -24,6 +24,10 @@
 
 11.1. Application root	=>	application-root-otx6xf
 
+11.2. Idle process	=>	idle-process-potb6g
+
+11.3. Inactive process	=>	inactive-process-16gjv2e
+
 12. Appendix C: Spawning methods explained	=>	appendix-c-spawning-methods-explained-owghi9
 
 12.1. The most straightforward and traditional way: conservative spawning	=>	the-most-straightforward-and-traditional-way-conservative-spawning-1ybbli2
