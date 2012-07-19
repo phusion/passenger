@@ -70,8 +70,8 @@ public:
 		bool verbose;
 
 		InspectOptions()
-			: colorize(true),
-			  verbose(true)
+			: colorize(false),
+			  verbose(false)
 			{ }
 
 		InspectOptions(const VariantMap &options)
