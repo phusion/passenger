@@ -1338,6 +1338,7 @@ private:
 			}
 			preloaderOutputWatcher.set(adminSocket.second, ev::READ);
 			libev->start(preloaderOutputWatcher);
+			setNonBlocking(errorPipe.first);
 			preloaderErrorWatcher = make_shared<PipeWatcher>(libev,
 				errorPipe.first, forwardStderr ? STDERR_FILENO : -1);
 			preloaderErrorWatcher->start();

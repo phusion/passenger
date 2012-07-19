@@ -553,10 +553,12 @@ PipeWatcher::onReadable(ev::io &io, int revents) {
 	char buf[1024 * 8];
 	ssize_t ret;
 	
-	ret = syscalls::read(fd, buf, sizeof(buf));
+	ret = read(fd, buf, sizeof(buf));
 	if (ret <= 0) {
-		libev->stop(watcher);
-		selfPointer.reset();
+		if (ret != -1 || errno != EAGAIN) {
+			libev->stop(watcher);
+			selfPointer.reset();
+		}
 	} else if (fdToForwardTo != -1) {
 		write(fdToForwardTo, buf, ret);
 	}
