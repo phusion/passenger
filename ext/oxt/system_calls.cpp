@@ -199,6 +199,26 @@ syscalls::dup2(int filedes, int filedes2) {
 }
 
 int
+syscalls::mkdir(const char *pathname, mode_t mode) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::mkdir(pathname, mode)
+	);
+	return ret;
+}
+
+int
+syscalls::chown(const char *path, uid_t owner, gid_t group) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::chown(path, owner, group)
+	);
+	return ret;
+}
+
+int
 syscalls::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 	int ret;
 	CHECK_INTERRUPTION(
@@ -384,6 +404,16 @@ syscalls::stat(const char *path, struct stat *buf) {
 	return ret;
 }
 
+int
+syscalls::lstat(const char *path, struct stat *buf) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::lstat(path, buf)
+	);
+	return ret;
+}
+
 time_t
 syscalls::time(time_t *t) {
 	time_t ret;
@@ -443,15 +473,18 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	do {
 		ret = ::nanosleep(&req2, &rem2);
 		e = errno;
-		// nanosleep() on some systems is sometimes buggy. rem2
-		// could end up containing a tv_sec with a value near 2^32-1,
-		// probably because of integer wrapping bugs in the kernel.
-		// So we check for those.
-		if (rem2.tv_sec < req->tv_sec) {
-			req2 = rem2;
-		} else {
-			req2.tv_sec = 0;
-			req2.tv_nsec = 0;
+		if (ret == -1) {
+			/* nanosleep() on some systems is sometimes buggy. rem2
+			 * could end up containing a tv_sec with a value near 2^32-1,
+			 * probably because of integer wrapping bugs in the kernel.
+			 * So we check for those.
+			 */
+			if (rem2.tv_sec < req->tv_sec) {
+				req2 = rem2;
+			} else {
+				req2.tv_sec = 0;
+				req2.tv_nsec = 0;
+			}
 		}
 	} while (ret == -1 && e == EINTR && !this_thread::syscalls_interruptable());
 	if (ret == -1 && e == EINTR && this_thread::syscalls_interruptable()) {

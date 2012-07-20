@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -21,143 +21,12 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+########## Phusion Passenger common library ##########
 
-# Defines tasks for compiling a static library containing code shared between
-# all Phusion Passenger components.
-#
-# namespace: a 'clean' task will be defined in the given namespace.
-# output_dir: directory in which compilation objects should be placed.
-# extra_compiler_flags: extra flags to pass to the compiler when compiling
-#   the library source files.
-# Returns: filename of the static library to be generated. There's a file
-#   target defined for this filename.
-def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil)
-	components = {
-		'Logging.o' => %w(
-			Logging.cpp
-			Logging.h),
-		'Utils/CachedFileStat.o' => %w(
-			Utils/CachedFileStat.cpp
-			Utils/CachedFileStat.h
-			Utils/CachedFileStat.hpp),
-		'Utils/Base64.o' => %w(
-			Utils/Base64.cpp
-			Utils/Base64.h),
-		'Utils/MD5.o' => %w(
-			Utils/MD5.cpp
-			Utils/MD5.h),
-		'Utils/SystemTime.o' => %w(
-			Utils/SystemTime.cpp
-			Utils/SystemTime.h),
-		'Utils/StrIntUtils.o' => %w(
-			Utils/StrIntUtils.cpp
-			Utils/StrIntUtils.h),
-		'Utils/IOUtils.o' => %w(
-			Utils/IOUtils.cpp
-			Utils/IOUtils.h),
-		'Utils.o' => %w(
-			Utils.cpp
-			Utils.h
-			Utils/Base64.h
-			Utils/StrIntUtils.h
-			ResourceLocator.h),
-		'AccountsDatabase.o' => %w(
-			AccountsDatabase.cpp
-			AccountsDatabase.h
-			RandomGenerator.h
-			Constants.h
-			Utils.h),
-		'AgentsStarter.o' => %w(
-			AgentsStarter.cpp
-			AgentsStarter.h
-			AgentsStarter.hpp
-			IniFile.h
-			ResourceLocator.h
-			MessageClient.h
-			MessageChannel.h
-			ServerInstanceDir.h
-			Utils/VariantMap.h),
-		'AgentBase.o' => %w(
-			AgentBase.cpp
-			AgentBase.h
-			Utils/VariantMap.h),
-		'LoggingAgent/FilterSupport.o' => %w(
-			LoggingAgent/FilterSupport.cpp
-			LoggingAgent/FilterSupport.h),
-		#'BCrypt.o' => %w(
-		#	BCrypt.cpp
-		#	BCrypt.h
-		#	Blowfish.h
-		#	Blowfish.c)
-	}
-	
-	static_library = "#{output_dir}.a"
-	
-	# Define compilation targets for the object files in libpassenger_common.
-	flags =  "-Iext -Iext/common #{LIBEV_CFLAGS} #{extra_compiler_flags} "
-	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
-	flags.strip!
-	
-	if boolean_option('RELEASE')
-		sources = []
-		components.each_pair do |object_name, dependencies|
-			sources << "ext/common/#{dependencies[0]}"
-		end
-		sources.sort!
-		
-		aggregate_source = "#{output_dir}/aggregate.cpp"
-		aggregate_object = "#{output_dir}/aggregate.o"
-		object_files     = [aggregate_object]
-		
-		file(aggregate_object => sources) do
-			sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
-			aggregate_content = %Q{
-				#ifndef _GNU_SOURCE
-					#define _GNU_SOURCE
-				#endif
-			}
-			sources.each do |source_file|
-				name = source_file.sub(/^ext\//, '')
-				aggregate_content << "#include \"#{name}\"\n"
-			end
-			File.open(aggregate_source, 'w') do |f|
-				f.write(aggregate_content)
-			end
-			compile_cxx(aggregate_source, "#{flags} -o #{aggregate_object}")
-		end
-	else
-		object_files = []
-		components.each_pair do |object_name, dependencies|
-			source_file = dependencies[0]
-			object_file = "#{output_dir}/#{object_name}"
-			object_files << object_file
-			dependencies = dependencies.map do |dep|
-				"ext/common/#{dep}"
-			end
-		
-			file object_file => dependencies do
-				sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
-				sh "mkdir -p #{output_dir}/Utils" if !File.directory?("#{output_dir}/Utils")
-				sh "mkdir -p #{output_dir}/LoggingAgent" if !File.directory?("#{output_dir}/LoggingAgent")
-				if source_file =~ /\.c$/
-					compile_c("ext/common/#{source_file}", "#{flags} -o #{object_file}")
-				else
-					compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
-				end
-			end
-		end
-	end
-	
-	file(static_library => object_files) do
-		create_static_library(static_library, object_files.join(' '))
-	end
-	
-	task "#{namespace}:clean" do
-		sh "rm -rf #{static_library} #{output_dir}"
-	end
-	
-	return static_library
-end
+require 'phusion_passenger/common_library'
+
+
+########## libboost_oxt ##########
 
 # Defines tasks for compiling a static library containing Boost and OXT.
 def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
@@ -249,8 +118,11 @@ if USE_VENDORED_LIBEV
 		"ext/libev/Makefile.am"
 	]
 	file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
+		# Disable all warnings: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
+		cflags = "#{EXTRA_CXXFLAGS} -w"
 		sh "mkdir -p #{LIBEV_OUTPUT_DIR}" if !File.directory?(LIBEV_OUTPUT_DIR)
-		sh "cd #{LIBEV_OUTPUT_DIR} && sh #{LIBEV_SOURCE_DIR}configure --disable-shared --enable-static"
+		sh "cd #{LIBEV_OUTPUT_DIR} && sh #{LIBEV_SOURCE_DIR}configure " +
+			"--disable-shared --enable-static CFLAGS='#{cflags}' orig_CFLAGS=1"
 	end
 	
 	libev_sources = Dir["ext/libev/{*.c,*.h}"]
@@ -258,12 +130,14 @@ if USE_VENDORED_LIBEV
 		sh "rm -f #{LIBEV_OUTPUT_DIR}/libev.la"
 		sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la"
 	end
-	
-	task :clean do
+
+	task 'libev:clean' do
 		if File.exist?(LIBEV_OUTPUT_DIR + "Makefile")
 			sh "cd #{LIBEV_OUTPUT_DIR} && make maintainer-clean"
 		end
 	end
+	
+	task :clean => 'libev:clean'
 else
 	LIBEV_CFLAGS = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
 	LIBEV_LIBS   = string_option('LIBEV_LIBS', '-lev')
@@ -271,8 +145,51 @@ else
 end
 
 
+########## libeio ##########
+
+if USE_VENDORED_LIBEIO
+	LIBEIO_SOURCE_DIR = File.expand_path("../ext/libeio", File.dirname(__FILE__)) + "/"
+	LIBEIO_CFLAGS = "-Iext/libeio"
+	LIBEIO_LIBS = LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
+	
+	task :libeio => LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
+	
+	dependencies = [
+		"ext/libeio/configure",
+		"ext/libeio/config.h.in",
+		"ext/libeio/Makefile.am"
+	]
+	file LIBEIO_OUTPUT_DIR + "Makefile" => dependencies do
+		# Disable all warnings. The author has a clear standpoint on that:
+		# http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
+		cflags = "#{EXTRA_CXXFLAGS} -w"
+		sh "mkdir -p #{LIBEIO_OUTPUT_DIR}" if !File.directory?(LIBEIO_OUTPUT_DIR)
+		sh "cd #{LIBEIO_OUTPUT_DIR} && sh #{LIBEIO_SOURCE_DIR}configure " +
+			"--disable-shared --enable-static CFLAGS='#{cflags}'"
+	end
+	
+	libeio_sources = Dir["ext/libeio/{*.c,*.h}"]
+	file LIBEIO_OUTPUT_DIR + ".libs/libeio.a" => [LIBEIO_OUTPUT_DIR + "Makefile"] + libeio_sources do
+		sh "rm -f #{LIBEIO_OUTPUT_DIR}/libeio.la"
+		sh "cd #{LIBEIO_OUTPUT_DIR} && make libeio.la"
+	end
+	
+	task :clean do
+		if File.exist?(LIBEIO_OUTPUT_DIR + "Makefile")
+			sh "cd #{LIBEIO_OUTPUT_DIR} && make maintainer-clean"
+		end
+	end
+else
+	LIBEIO_CFLAGS = string_option('LIBEIO_CFLAGS', '-I/usr/include/libeio')
+	LIBEIO_LIBS   = string_option('LIBEIO_LIBS', '-leio')
+	task :libeio  # do nothing
+end
+
+
 ##############################
 
 
-LIBBOOST_OXT = define_libboost_oxt_task("common", COMMON_OUTPUT_DIR + "libboost_oxt")
-LIBCOMMON    = define_common_library_task("common", COMMON_OUTPUT_DIR + "libpassenger_common")
+libboost_oxt_cflags = ""
+libboost_oxt_cflags << " -faddress-sanitizer" if USE_ASAN
+LIBBOOST_OXT = define_libboost_oxt_task("common", COMMON_OUTPUT_DIR + "libboost_oxt", libboost_oxt_cflags)
+COMMON_LIBRARY.define_tasks

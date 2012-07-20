@@ -1,0 +1,103 @@
+body {
+	font-family: Verdana, 'Bitstream Vera Sans', Arial, Sans-Serif;
+	font-size: 10pt;
+	background: white;
+	color: #222222;
+	margin: 0;
+	padding-top: 3em;
+	padding-bottom: 3em;
+	padding-left: 4.5em;
+	padding-right: 4.5em;
+}
+
+h1 {
+	font-size: 17pt;
+	font-weight: medium;
+	color: #533e72;
+	border-bottom: 1px solid #533e72;
+}
+
+h1.title {
+	margin-top: 0;
+}
+
+h1.error_title {
+	color: red;
+	border-bottom: 1px solid red;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+dt {
+	font-weight: bold;
+	color: #280050;
+}
+
+dd {
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+}
+
+.commands {
+	border: 1px solid #b594e7;
+	background: #ddc6ff;
+	padding: 0.5em;
+	margin: 0.5em;
+	font-family: 'Bitstream Vera Sans Mono', 'Courier New', Monospace;
+}
+
+pre {
+	overflow: auto;
+	white-space: pre-wrap;
+	text-align: left;
+}
+
+table.backtrace th {
+	background: #8470a6;
+	color: white;
+}
+
+table.backtrace th,
+table.backtrace td {
+	padding: 0.2em;
+	padding-left: 0.4em;
+	padding-right: 0.4em;
+}
+
+table.backtrace tr td {
+	background: #ecdfff;
+}
+
+table.backtrace tr.even td {
+	background: #f7f2ff;
+}
+
+table.backtrace td.index {
+	font-weight: bold;
+}
+
+#site_footer {
+	border-top: solid 1px black;
+	margin-top: 1em;
+	padding-top: 1em;
+	font-size: small;
+	color: #777777;
+}
+
+#site_footer a {
+	color: #65498e;
+}
+
+#site_footer a:hover {
+	color: #9681d9;
+}
+
+#site_header .corporate_identity {
+	display: none;
+}

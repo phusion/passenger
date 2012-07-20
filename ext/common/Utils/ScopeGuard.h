@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,10 +27,17 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/function.hpp>
+#include <cstdio>
 
 namespace Passenger {
 
 using namespace boost;
+
+
+#ifndef _PASSENGER_SAFELY_CLOSE_DEFINED_
+	#define _PASSENGER_SAFELY_CLOSE_DEFINED_
+	void safelyClose(int fd, bool ignoreErrors = false);
+#endif
 
 
 /**
@@ -63,6 +70,48 @@ public:
 		function<void ()> oldFunc = func;
 		func = function<void()>();
 		oldFunc();
+	}
+};
+
+class StdioGuard: public noncopyable {
+private:
+	FILE *f;
+
+public:
+	StdioGuard()
+		: f(0)
+		{ }
+
+	StdioGuard(FILE *_f)
+		: f(_f)
+		{ }
+	
+	~StdioGuard() {
+		if (f != NULL) {
+			fclose(f);
+		}
+	}
+};
+
+class FdGuard: public noncopyable {
+private:
+	int fd;
+	bool ignoreErrors;
+
+public:
+	FdGuard(int _fd, bool _ignoreErrors = false)
+		: fd(_fd),
+		  ignoreErrors(_ignoreErrors)
+		{ }
+	
+	~FdGuard() {
+		if (fd != -1) {
+			safelyClose(fd, ignoreErrors);
+		}
+	}
+
+	void clear() {
+		fd = -1;
 	}
 };
 

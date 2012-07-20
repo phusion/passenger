@@ -1,3 +1,0 @@
---- 
-BUNDLE_DISABLE_SHARED_GEMS: "1"
-BUNDLE_PATH: /tmp/empty-rails3-app

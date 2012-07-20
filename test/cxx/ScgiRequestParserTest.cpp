@@ -1,5 +1,5 @@
 #include "TestSupport.h"
-#include "ScgiRequestParser.h"
+#include "agents/HelperAgent/ScgiRequestParser.h"
 
 using namespace Passenger;
 using namespace std;
@@ -172,6 +172,19 @@ namespace tut {
 		ensure(parser.getHeader("hello") == "world");
 		ensure(parser.getHeader("foo") == "bar");
 	}
+
+	TEST_METHOD(13) {
+		// It makes an internal copy of the data.
+		char data[] = "20:hello\0world\0foo\0bar\0,";
+		for (unsigned int i = 0; i < sizeof(data) - 1; i++) {
+			ensure_equals(parser.feed(&data[i], 1), 1u);
+		}
+		memset(data, 0, sizeof(data));
+		ensure_equals(parser.getHeaderData(),
+			string("hello\0world\0foo\0bar\0", 20));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("foo") == "bar");
+	}
 	
 	/***** Test parsing invalid SCGI requests in one pass. *****/
 	
@@ -206,28 +219,28 @@ namespace tut {
 	
 	TEST_METHOD(20) {
 		// Only a header name, without even a null terminator.
-		ensure_equals(parser.feed("5:hello,", 8), 7u);
+		ensure_equals(parser.feed("5:hello,", 8), (size_t) 8);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
 	
 	TEST_METHOD(21) {
 		// Only a header name, with a null terminator.
-		ensure_equals(parser.feed("6:hello\0,", 9), 8u);
+		ensure_equals(parser.feed("6:hello\0,", 9), (size_t) 9);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
 	
 	TEST_METHOD(22) {
 		// A header name with its value not having a null terminator.
-		ensure_equals(parser.feed("7:foo\0bar,", 10), 9u);
+		ensure_equals(parser.feed("7:foo\0bar,", 10), (size_t) 10);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
 	
 	TEST_METHOD(23) {
 		// A header name without corresponding value.
-		ensure_equals(parser.feed("10:foo\0bar\0a\0,", 14), 13u);
+		ensure_equals(parser.feed("10:foo\0bar\0a\0,", 14), (size_t) 14);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
@@ -242,7 +255,14 @@ namespace tut {
 	
 	TEST_METHOD(25) {
 		// An empty header name.
-		ensure_equals(parser.feed("5:\0bar\0,", 8), 7u);
+		ensure_equals(parser.feed("5:\0bar\0,", 8), (size_t) 8);
+		ensure_equals("Parser is in the error state.",
+			parser.getState(), ScgiRequestParser::ERROR);
+	}
+	
+	TEST_METHOD(26) {
+		// An empty header.
+		ensure_equals(parser.feed("0:,", 3), (size_t) 2);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
@@ -283,32 +303,32 @@ namespace tut {
 	
 	TEST_METHOD(31) {
 		// Only a header name, without even a null terminator.
-		ensure_equals(parser.feed("5:hell", 6), 6u);
-		ensure_equals(parser.feed("o,", 1), 1u);
+		ensure_equals(parser.feed("5:hell", 6), (size_t) 6);
+		ensure_equals(parser.feed("o,", 2), (size_t) 2);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
 	
 	TEST_METHOD(32) {
 		// Only a header name, with a null terminator.
-		ensure_equals(parser.feed("6:hello", 7), 7u);
-		ensure_equals(parser.feed("\0,", 1), 1u);
+		ensure_equals(parser.feed("6:hello", 7), (size_t) 7);
+		ensure_equals(parser.feed("\0,", 2), (size_t) 2);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
 	
 	TEST_METHOD(33) {
 		// A header name with its value not having a null terminator.
-		ensure_equals(parser.feed("7:foo\0ba", 8), 8u);
-		ensure_equals(parser.feed("r,", 2), 1u);
+		ensure_equals(parser.feed("7:foo\0ba", 8), (size_t) 8);
+		ensure_equals(parser.feed("r,", 2), (size_t) 2);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
 	
 	TEST_METHOD(34) {
 		// A header name without corresponding value.
-		ensure_equals(parser.feed("10:foo\0bar\0a", 12), 12u);
-		ensure_equals(parser.feed("\0,", 2), 1u);
+		ensure_equals(parser.feed("10:foo\0bar\0a", 12), (size_t) 12);
+		ensure_equals(parser.feed("\0,", 2), (size_t) 2);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
@@ -336,8 +356,8 @@ namespace tut {
 	
 	TEST_METHOD(37) {
 		// An empty header name.
-		ensure_equals(parser.feed("5:\0", 3), 3u);
-		ensure_equals(parser.feed("bar\0,", 5), 4u);
+		ensure_equals(parser.feed("5:\0", 3), (size_t) 3);
+		ensure_equals(parser.feed("bar\0,", 5), (size_t) 5);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}

@@ -12,7 +12,11 @@ describe AbstractRequestHandler do
 		@old_passenger_tmpdir = Utils.passenger_tmpdir
 		Utils.passenger_tmpdir = "abstract_request_handler_spec.tmp"
 		@owner_pipe = IO.pipe
-		@request_handler = AbstractRequestHandler.new(@owner_pipe[1], @options || {})
+		@options ||= {}
+		@options = {
+			"app_group_name" => "foobar"
+		}.merge(@options)
+		@request_handler = AbstractRequestHandler.new(@owner_pipe[1], @options)
 		def @request_handler.process_request(*args)
 			# Do nothing.
 		end
@@ -244,8 +248,7 @@ describe AbstractRequestHandler do
 				DebugLogging.log_level = -2
 				send_binary_request(client,
 					"REQUEST_METHOD" => "GET",
-					"PASSENGER_TXN_ID" => "1234-abcd",
-					"PASSENGER_GROUP_NAME" => "foobar")
+					"PASSENGER_TXN_ID" => "1234-abcd")
 			ensure
 				client.close
 			end

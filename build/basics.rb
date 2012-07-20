@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -24,6 +24,7 @@
 require 'rubygems'
 require 'pathname'
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
 require 'phusion_passenger/packaging'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/platform_info/operating_system'
@@ -64,23 +65,74 @@ end
 
 #################################################
 
+OPTIMIZE = boolean_option("OPTIMIZE")
+CC       = string_option("CC", "gcc")
+CXX      = string_option("CXX", "g++")
+LIBEXT   = PlatformInfo.library_extension
+USE_DMALLOC = boolean_option('USE_DMALLOC')
+USE_EFENCE  = boolean_option('USE_EFENCE')
+USE_ASAN    = boolean_option('USE_ASAN')
+if OPTIMIZE
+	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O2 -DBOOST_DISABLE_ASSERTS".strip
+else
+	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS".strip
+end
+OPTIMIZATION_FLAGS << " -fcommon"
+OPTIMIZATION_FLAGS << " -fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED" if PlatformInfo.compiler_supports_visibility_flag?
+OPTIMIZATION_FLAGS << " -Wno-attributes" if PlatformInfo.compiler_supports_visibility_flag? &&
+	PlatformInfo.compiler_visibility_flag_generates_warnings? &&
+	PlatformInfo.compiler_supports_wno_attributes_flag?
+OPTIMIZATION_FLAGS << " -fno-omit-frame-pointers" if USE_ASAN
+
+# Agent-specific compiler flags.
+AGENT_CFLAGS  = ""
+AGENT_CFLAGS << " -faddress-sanitizer" if USE_ASAN
+AGENT_CFLAGS.strip!
+
+# Agent-specific linker flags.
+AGENT_LDFLAGS = ""
+AGENT_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
+AGENT_LDFLAGS << " #{PlatformInfo.electric_fence_ldflags}" if USE_EFENCE
+AGENT_LDFLAGS << " -faddress-sanitizer" if USE_ASAN
+# Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
+AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
+# Enable dead symbol elimination on OS X.
+AGENT_LDFLAGS << " -Wl,-dead_strip" if RUBY_PLATFORM =~ /darwin/
+AGENT_LDFLAGS.strip!
+
+# Extra compiler flags that should always be passed to the C/C++ compiler.
+# Should be included last in the command string, even after PlatformInfo.portability_cflags.
+EXTRA_CXXFLAGS = "-Wall -Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
+EXTRA_CXXFLAGS << " -Wno-missing-field-initializers" if PlatformInfo.compiler_supports_wno_missing_field_initializers_flag?
+EXTRA_CXXFLAGS << " -mno-tls-direct-seg-refs" if PlatformInfo.requires_no_tls_direct_seg_refs? && PlatformInfo.compiler_supports_no_tls_direct_seg_refs_option?
+# Work around Clang warnings in ev++.h.
+EXTRA_CXXFLAGS << " -Wno-ambiguous-member-template" if PlatformInfo.cxx_is_clang?
+EXTRA_CXXFLAGS << " #{OPTIMIZATION_FLAGS}" if !OPTIMIZATION_FLAGS.empty?
+
+# Extra linker flags that should always be passed to the linker.
+# Should be included last in the command string, even after PlatformInfo.portability_ldflags.
+EXTRA_LDFLAGS  = ""
+
+
 if string_option('OUTPUT_DIR')
 	OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
 else
 	OUTPUT_DIR = ""
 end
 AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "agents") + "/"
-COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "ext/common") + "/"
-APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "ext/apache2") + "/"
-LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "ext/libev") + "/"
-ruby_extension_archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
+COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "libout/common") + "/"
+APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "libout/apache2") + "/"
+LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "libout/libev") + "/"
+LIBEIO_OUTPUT_DIR         = string_option('LIBEIO_OUTPUT_DIR', OUTPUT_DIR + "libout/libeio") + "/"
+ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id
 RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
-	OUTPUT_DIR + "ext/ruby/" + ruby_extension_archdir) + "/"
+	OUTPUT_DIR + "libout/ruby/" + ruby_extension_archdir) + "/"
 
-LIBEXT = PlatformInfo.library_extension
 
-# Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
-AGENT_LDFLAGS = PlatformInfo.export_dynamic_flags
+# Whether to use the vendored libev or the system one.
+USE_VENDORED_LIBEV = boolean_option("USE_VENDORED_LIBEV", true)
+# Whether to use the vendored libeio or the system one.
+USE_VENDORED_LIBEIO = boolean_option("USE_VENDORED_LIBEIO", true)
 
 
 verbose true if !boolean_option('REALLY_QUIET')

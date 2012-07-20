@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -21,51 +21,110 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+watchdog_libs = COMMON_LIBRARY.only(:base, 'AgentsBase.o', 'Utils/Base64.o')
 dependencies = [
-	'ext/common/Watchdog.cpp',
+	'ext/common/agents/Watchdog/Main.cpp',
 	'ext/common/ServerInstanceDir.h',
 	'ext/common/ResourceLocator.h',
 	'ext/common/Utils/VariantMap.h',
 	LIBBOOST_OXT,
-	LIBCOMMON
-]
+	watchdog_libs.link_objects
+].flatten
 file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	compile_cxx("ext/common/agents/Watchdog/Main.cpp",
+		"-o #{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
+		"-Iext -Iext/common " <<
+		"#{PlatformInfo.portability_cflags} #{AGENT_CFLAGS} #{EXTRA_CXXFLAGS}")
 	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
-		'ext/common/Watchdog.cpp',
-		"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
-		"#{LIBCOMMON} " <<
+		"#{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
+		"#{watchdog_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
 		"#{EXTRA_LDFLAGS}")
 end
 
+helper_agent_libs = COMMON_LIBRARY.
+	only(:base, :other).
+	exclude('AgentsStarter.o')
 dependencies = [
-	'ext/common/LoggingAgent/Main.cpp',
-	'ext/common/LoggingAgent/LoggingServer.h',
-	'ext/common/LoggingAgent/RemoteSender.h',
-	'ext/common/LoggingAgent/DataStoreId.h',
-	'ext/common/LoggingAgent/FilterSupport.h',
+	'ext/common/agents/HelperAgent/Main.cpp',
+	'ext/common/agents/HelperAgent/RequestHandler.h',
+	'ext/common/agents/HelperAgent/RequestHandler.cpp',
+	'ext/common/agents/HelperAgent/ScgiRequestParser.h',
+	'ext/common/agents/HelperAgent/BacktracesServer.h',
+	'ext/common/StaticString.h',
+	'ext/common/Account.h',
+	'ext/common/AccountsDatabase.h',
+	'ext/common/MessageServer.h',
+	'ext/common/FileDescriptor.h',
+	'ext/common/Logging.h',
+	'ext/common/ResourceLocator.h',
+	'ext/common/Utils/ProcessMetricsCollector.h',
+	'ext/common/Utils/VariantMap.h',
+	'ext/common/ApplicationPool2/Pool.h',
+	'ext/common/ApplicationPool2/Common.h',
+	'ext/common/ApplicationPool2/SuperGroup.h',
+	'ext/common/ApplicationPool2/Group.h',
+	'ext/common/ApplicationPool2/Process.h',
+	'ext/common/ApplicationPool2/Session.h',
+	'ext/common/ApplicationPool2/Options.h',
+	'ext/common/ApplicationPool2/PipeWatcher.h',
+	LIBBOOST_OXT,
+	helper_agent_libs.link_objects,
+	:libev,
+	:libeio
+].flatten
+file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	compile_cxx("ext/common/agents/HelperAgent/Main.cpp",
+		"-o #{AGENT_OUTPUT_DIR}PassengerHelperAgent.o " <<
+		"-Iext -Iext/common " <<
+		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
+		"#{PlatformInfo.portability_cflags} " <<
+		"#{EXTRA_CXXFLAGS}")
+	create_executable("#{AGENT_OUTPUT_DIR}PassengerHelperAgent",
+		"#{AGENT_OUTPUT_DIR}PassengerHelperAgent.o",
+		"#{helper_agent_libs.link_objects_as_string} " <<
+		"#{LIBBOOST_OXT} " <<
+		"#{LIBEV_LIBS} " <<
+		"#{LIBEIO_LIBS} " <<
+		"#{PlatformInfo.portability_ldflags} " <<
+		"#{AGENT_LDFLAGS} " <<
+		"#{EXTRA_LDFLAGS}")
+end
+
+logging_agent_libs = COMMON_LIBRARY.only(:base, :logging_agent, 'AgentsBase.o',
+	'Utils/Base64.o', 'Utils/MD5.o')
+dependencies = [
+	'ext/common/agents/LoggingAgent/Main.cpp',
+	'ext/common/agents/LoggingAgent/LoggingServer.h',
+	'ext/common/agents/LoggingAgent/RemoteSender.h',
+	'ext/common/agents/LoggingAgent/DataStoreId.h',
+	'ext/common/agents/LoggingAgent/FilterSupport.h',
 	'ext/common/ServerInstanceDir.h',
 	'ext/common/Logging.h',
 	'ext/common/EventedServer.h',
 	'ext/common/EventedClient.h',
 	'ext/common/Utils/VariantMap.h',
 	'ext/common/Utils/BlockingQueue.h',
-	LIBCOMMON,
+	logging_agent_libs.link_objects,
 	LIBBOOST_OXT,
 	:libev
-]
+].flatten
 file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-	create_executable(AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
-		'ext/common/LoggingAgent/Main.cpp',
-		"-Iext -Iext/common #{LIBEV_CFLAGS} " <<
+	compile_cxx("ext/common/agents/LoggingAgent/Main.cpp",
+		"-o #{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o " <<
+		"-Iext -Iext/common " <<
+		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} " <<
 		"#{PlatformInfo.curl_flags} " <<
 		"#{PlatformInfo.zlib_flags} " <<
-		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
-		"#{LIBCOMMON} " <<
+		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}")
+	create_executable("#{AGENT_OUTPUT_DIR}PassengerLoggingAgent",
+		"#{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o",
+		"#{logging_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{LIBEV_LIBS} " <<
 		"#{PlatformInfo.curl_libs} " <<
@@ -75,6 +134,33 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{EXTRA_LDFLAGS}")
 end
 
+spawn_preparer_libs = COMMON_LIBRARY.only('Utils/Base64.o')
+dependencies = [
+	'ext/common/agents/SpawnPreparer.cpp',
+	spawn_preparer_libs.link_objects,
+	LIBBOOST_OXT
+].flatten
+file AGENT_OUTPUT_DIR + 'SpawnPreparer' => dependencies do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	create_executable(AGENT_OUTPUT_DIR + 'SpawnPreparer',
+		'ext/common/agents/SpawnPreparer.cpp',
+		"-Iext -Iext/common " <<
+		"#{AGENT_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+		"#{spawn_preparer_libs.link_objects_as_string} " <<
+		"#{LIBBOOST_OXT} " <<
+		"#{PlatformInfo.portability_ldflags} " <<
+		"#{EXTRA_LDFLAGS}")
+end
+
+file AGENT_OUTPUT_DIR + 'EnvPrinter' => 'ext/common/agents/EnvPrinter.c' do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	create_c_executable(AGENT_OUTPUT_DIR + 'EnvPrinter',
+		'ext/common/agents/EnvPrinter.c')
+end
+
 task 'common:clean' do
-	sh "rm -f #{AGENT_OUTPUT_DIR}PassengerWatchdog #{AGENT_OUTPUT_DIR}PassengerLoggingAgent"
+	['PassengerWatchdog', 'PassengerHelperAgent', 'PassengerLoggingAgent', 'SpawnPreparer', 'EnvPrinter'].each do |agent|
+		sh "rm -rf #{AGENT_OUTPUT_DIR}#{agent} #{AGENT_OUTPUT_DIR}#{agent}.o #{AGENT_OUTPUT_DIR}#{agent}.dSYM"
+	end
+	sh "rm -rf agents"
 end

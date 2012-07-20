@@ -133,6 +133,8 @@ namespace oxt {
 		int close(int fd);
 		int pipe(int filedes[2]);
 		int dup2(int filedes, int filedes2);
+		int mkdir(const char *pathname, mode_t mode);
+		int chown(const char *path, uid_t owner, gid_t group);
 		
 		int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 		int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
@@ -155,6 +157,7 @@ namespace oxt {
 		int fclose(FILE *fp);
 		int unlink(const char *pathname);
 		int stat(const char *path, struct stat *buf);
+		int lstat(const char *path, struct stat *buf);
 		
 		time_t time(time_t *t);
 		unsigned int sleep(unsigned int seconds);

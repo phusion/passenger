@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -41,6 +41,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <signal.h>
+#include <vector>
 #include <FileDescriptor.h>
 #include <MessageServer.h>
 #include <ResourceLocator.h>
@@ -236,7 +237,7 @@ canonicalizePath(const string &path) {
 }
 
 string
-resolveSymlink(const string &path) {
+resolveSymlink(const StaticString &path) {
 	char buf[PATH_MAX];
 	ssize_t size;
 	
@@ -247,7 +248,7 @@ resolveSymlink(const string &path) {
 		} else {
 			int e = errno;
 			string message = "Cannot resolve possible symlink '";
-			message.append(path);
+			message.append(path.c_str(), path.size());
 			message.append("'");
 			throw FileSystemException(message, e, path);
 		}
@@ -255,7 +256,7 @@ resolveSymlink(const string &path) {
 		buf[size] = '\0';
 		if (buf[0] == '\0') {
 			string message = "The file '";
-			message.append(path);
+			message.append(path.c_str(), path.size());
 			message.append("' is a symlink, and it refers to an empty filename. This is not allowed.");
 			throw FileSystemException(message, ENOENT, path);
 		} else if (buf[0] == '/') {
@@ -439,6 +440,63 @@ parseModeString(const StaticString &mode) {
 	return modeBits;
 }
 
+string
+absolutizePath(const StaticString &path, const StaticString &workingDir) {
+	vector<string> components;
+	if (!startsWith(path, "/")) {
+		if (workingDir.empty()) {
+			char buffer[PATH_MAX];
+			getcwd(buffer, sizeof(buffer));
+			split(buffer + 1, '/', components);
+		} else {
+			string absoluteWorkingDir = absolutizePath(workingDir);
+			split(StaticString(absoluteWorkingDir.data() + 1, absoluteWorkingDir.size() - 1),
+				'/', components);
+		}
+	}
+
+	const char *begin = path.data();
+	const char *end = path.data() + path.size();
+
+	// Skip leading slashes.
+	while (begin < end && *begin == '/') {
+		begin++;
+	}
+
+	while (begin < end) {
+		const char *next = (const char *) memchr(begin, '/', end - begin);
+		if (next == NULL) {
+			next = end;
+		}
+
+		StaticString component(begin, next - begin);
+		if (component == "..") {
+			if (!components.empty()) {
+				components.pop_back();
+			}
+		} else if (component != ".") {
+			components.push_back(component);
+		}
+
+		// Skip slashes until beginning of next path component.
+		begin = next + 1;
+		while (begin < end && *begin == '/') {
+			begin++;
+		}
+	}
+
+	string result;
+	vector<string>::const_iterator c_it, c_end = components.end();
+	for (c_it = components.begin(); c_it != c_end; c_it++) {
+		result.append("/");
+		result.append(*c_it);
+	}
+	if (result.empty()) {
+		result = "/";
+	}
+	return result;
+}
+
 const char *
 getSystemTempDir() {
 	const char *temp_dir = getenv("PASSENGER_TEMP_DIR");
@@ -528,27 +586,54 @@ makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t gro
 
 void
 removeDirTree(const string &path) {
-	char command[PATH_MAX + 30];
-	int result;
-	
-	snprintf(command, sizeof(command), "chmod -R u+rwx \"%s\" 2>/dev/null", path.c_str());
-	command[sizeof(command) - 1] = '\0';
-	do {
-		result = system(command);
-	} while (result == -1 && errno == EINTR);
-	
-	snprintf(command, sizeof(command), "rm -rf \"%s\"", path.c_str());
-	command[sizeof(command) - 1] = '\0';
-	do {
-		result = system(command);
-	} while (result == -1 && errno == EINTR);
-	if (result == -1) {
-		char message[1024];
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+	const char *c_path = path.c_str();
+	pid_t pid;
+
+	pid = syscalls::fork();
+	if (pid == 0) {
+		resetSignalHandlersAndMask();
+		disableMallocDebugging();
+		int devnull = open("/dev/null", O_RDONLY);
+		if (devnull != -1) {
+			dup2(devnull, 2);
+		}
+		closeAllFileDescriptors(2);
+		execlp("chmod", "chmod", "-R", "u+rwx", c_path, (char * const) 0);
+		perror("Cannot execute chmod");
+		_exit(1);
+
+	} else if (pid == -1) {
 		int e = errno;
-		
-		snprintf(message, sizeof(message) - 1, "Cannot remove directory '%s'", path.c_str());
-		message[sizeof(message) - 1] = '\0';
-		throw FileSystemException(message, e, path);
+		throw SystemException("Cannot fork a new process", e);
+
+	} else {
+		this_thread::restore_interruption ri(di);
+		this_thread::restore_syscall_interruption rsi(dsi);
+		syscalls::waitpid(pid, NULL, 0);
+	}
+
+	pid = syscalls::fork();
+	if (pid == 0) {
+		resetSignalHandlersAndMask();
+		disableMallocDebugging();
+		closeAllFileDescriptors(2);
+		execlp("rm", "rm", "-rf", c_path, (char * const) 0);
+		perror("Cannot execute rm");
+		_exit(1);
+
+	} else if (pid == -1) {
+		int e = errno;
+		throw SystemException("Cannot fork a new process", e);
+
+	} else {
+		this_thread::restore_interruption ri(di);
+		this_thread::restore_syscall_interruption rsi(dsi);
+		int status;
+		if (syscalls::waitpid(pid, &status, 0) == -1 || status != 0) {
+			throw RuntimeException("Cannot remove directory '" + path + "'");
+		}
 	}
 }
 
@@ -763,6 +848,65 @@ resetSignalHandlersAndMask() {
 	#endif
 	sigaction(SIGUSR1, &action, NULL);
 	sigaction(SIGUSR2, &action, NULL);
+}
+
+void
+disableMallocDebugging() {
+	unsetenv("MALLOC_FILL_SPACE");
+	unsetenv("MALLOC_PROTECT_BEFORE");
+	unsetenv("MallocGuardEdges");
+	unsetenv("MallocScribble");
+	unsetenv("MallocPreScribble");
+	unsetenv("MallocCheckHeapStart");
+	unsetenv("MallocCheckHeapEach");
+	unsetenv("MallocCheckHeapAbort");
+	unsetenv("MallocBadFreeAbort");
+	unsetenv("MALLOC_CHECK_");
+
+	const char *libs = getenv("DYLD_INSERT_LIBRARIES");
+	if (libs != NULL && strstr(libs, "/usr/lib/libgmalloc.dylib")) {
+		string newLibs = libs;
+		string::size_type pos = newLibs.find("/usr/lib/libgmalloc.dylib");
+		size_t len = strlen("/usr/lib/libgmalloc.dylib");
+
+		// Erase all leading ':' too.
+		while (pos > 0 && newLibs[pos - 1] == ':') {
+			pos--;
+			len++;
+		}
+		// Erase all trailing ':' too.
+		while (pos + len < newLibs.size() && newLibs[pos + len] == ':') {
+			len++;
+		}
+
+		newLibs.erase(pos, len);
+		if (newLibs.empty()) {
+			unsetenv("DYLD_INSERT_LIBRARIES");
+		} else {
+			setenv("DYLD_INSERT_LIBRARIES", newLibs.c_str(), 1);
+		}
+	}
+}
+
+int
+runShellCommand(const StaticString &command) {
+	pid_t pid = fork();
+	if (pid == 0) {
+		resetSignalHandlersAndMask();
+		disableMallocDebugging();
+		closeAllFileDescriptors(2);
+		execlp("/bin/sh", "/bin/sh", "-c", command.data(), (char * const) 0);
+		_exit(1);
+	} else if (pid == -1) {
+		return -1;
+	} else {
+		int status;
+		if (waitpid(pid, &status, 0) == -1) {
+			return -1;
+		} else {
+			return status;
+		}
+	}
 }
 
 // Async-signal safe way to get the current process's hard file descriptor limit.

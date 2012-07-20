@@ -87,8 +87,8 @@ class MessageClient
 		end
 	end
 	
-	def status
-		write("inspect")
+	def status(options = {})
+		write("inspect", *options.to_a.flatten)
 		check_security_response
 		return read_scalar
 	rescue

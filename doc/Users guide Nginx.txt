@@ -221,15 +221,14 @@ http {
     passenger_root /somewhere/passenger-x.x.x;
     passenger_ruby /usr/bin/ruby;
     passenger_max_pool_size 10;
-    
+
     gzip on;
-    
+
     server {
         server_name www.foo.com;
         listen 80;
         root /webapps/foo/public;
         passenger_enabled on;
-        passenger_use_global_queue on;
     }
 }
 -----------------------------------
@@ -243,9 +242,9 @@ http {
     # passenger_root /somewhere/passenger-x.x.x;
     # passenger_ruby /usr/bin/ruby;
     # passenger_max_pool_size 10;
-    
+
     gzip on;
-    
+
     server {
         server_name www.foo.com;
         listen 80;
@@ -299,14 +298,14 @@ For example:
 -------------------------------------------
 http {
     ...
-    
+
     server {
         listen 80;
         server_name www.mycook.com;
         root /webapps/mycook/public;
         passenger_enabled on;
     }
-    
+
     ...
 }
 -------------------------------------------
@@ -320,13 +319,13 @@ Suppose that you already have a 'server' virtual host entry:
 -------------------------------------------
 http {
     ...
-    
+
     server {
         listen 80;
         server_name www.phusion.nl;
         root /websites/phusion;
     }
-    
+
     ...
 }
 -------------------------------------------
@@ -345,7 +344,7 @@ option to the 'server' block:
 -------------------------------------------
 http {
     ...
-    
+
     server {
         listen 80;
         server_name www.phusion.nl;
@@ -353,7 +352,7 @@ http {
         passenger_enabled on;        # <--- These lines have
         passenger_base_uri /rails;   # <--- been added.
     }
-    
+
     ...
 }
 -------------------------------------------
@@ -515,14 +514,14 @@ Suppose that you already have a virtual host:
 -------------------------------------------
 http {
     ...
-    
+
     server {
         listen 80;
         server_name www.phusion.nl;
         root /websites/phusion;
         passenger_enabled on;
     }
-    
+
     ...
 }
 -------------------------------------------
@@ -541,7 +540,7 @@ option to the 'server' block:
 -------------------------------------------
 http {
     ...
-    
+
     server {
         listen 80;
         server_name www.phusion.nl;
@@ -549,7 +548,7 @@ http {
         passenger_enabled on;        # <--- These lines have
         passenger_base_uri /rack;    # <--- been added.
     }
-    
+
     ...
 }
 -------------------------------------------
@@ -612,8 +611,12 @@ This required option may only occur once, in the 'http' configuration block.
 === passenger_ruby <filename> ===
 This option allows one to specify the Ruby interpreter to use.
 
-This option may only occur once, in the 'http' configuration block.
-The default is 'ruby'.
+* In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
 
 [[PassengerSpawnMethod]]
 === passenger_spawn_method <string> ===
@@ -625,11 +628,11 @@ understand it, as it's mostly a technical detail. You can basically follow this 
 
 ************************************************
 If your application works on Mongrel, but not on Phusion Passenger, then set
-`passenger_spawn_method` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
+`passenger_spawn_method` to 'direct'. Otherwise, leave it at 'smart' (the default).
 ************************************************
 
-However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
-methods bring many benefits.
+However, we do recommend you to try to understand it. The 'smart' spawn
+method brings many benefits.
 =========================================================
 
 include::users_guide_snippets/passenger_spawn_method.txt[]
@@ -641,7 +644,7 @@ This option may occur in the following places:
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-In each place, it may be specified at most once. The default value is 'smart-lv2'.
+In each place, it may be specified at most once. The default value is 'smart'.
 
 === Important deployment options ===
 ==== passenger_enabled <on|off> ====
@@ -674,23 +677,6 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 === Connection handling options ===
-
-[[PassengerUseGlobalQueue]]
-==== passenger_use_global_queue <on|off> ====
-Turns the use of global queuing on or off.
-
-This option may occur in the following places:
-
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
-
-In each place, it may be specified at most once. The default value is 'on'.
-
-'This feature is sponsored by http://www.37signals.com/[37signals].'
-
-include::users_guide_snippets/global_queueing_explained.txt[]
 
 ==== passenger_ignore_client_abort <on|off> ====
 Normally, when the HTTP client aborts the connection (e.g. when the user clicked on "Stop"
@@ -963,7 +949,7 @@ http {
     ...
     passenger_max_pool_size 15;
     passenger_pool_idle_time 10;
-    
+
     server {
         listen 80;
         server_name foobar.com;
@@ -1031,6 +1017,32 @@ applications, each which must be available at all times.
 
 This option may only occur once, in the 'http' configuration block.
 The default value is '300'.
+
+==== passenger_max_preloader_idle_time <integer> ====
+The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
+methods explained>>) has an idle timeout, just like the backend processes spawned by
+Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
+anything for a given period.
+
+This option allows you to set the ApplicationSpawner server's idle timeout, in
+seconds. A value of '0' means that it should never idle timeout.
+
+Setting a higher value will mean that the ApplicationSpawner server is kept around
+longer, which may slightly increase memory usage. But as long as the
+ApplicationSpawner server is running, the time to spawn a Ruby on Rails backend
+process only takes about 10% of the time that is normally needed, assuming that
+you're using the 'smart' or 'smart-lv2' <<RailsSpawnMethod,spawning method>>. So if your
+system has enough memory, is it recommended that you set this option to a high
+value or to '0'.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '300' (5 minutes).
 
 [[PassengerMaxRequests]]
 ==== passenger_max_requests <integer> ====
@@ -1292,58 +1304,6 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 In each place, it may be specified at most once. The default value is 'production'.
-
-==== rails_framework_spawner_idle_time <integer> ====
-The FrameworkSpawner server (explained in <<spawning_methods_explained,Spawning
-methods explained>>) has an idle timeout, just like the backend processes spawned by
-Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
-anything for a given period.
-
-This option allows you to set the FrameworkSpawner server's idle timeout, in
-seconds. A value of '0' means that it should never idle timeout.
-
-Setting a higher value will mean that the FrameworkSpawner server is kept around
-longer, which may slightly increase memory usage. But as long as the
-FrameworkSpawner server is running, the time to spawn a Ruby on Rails backend
-process only takes about 40% of the time that is normally needed, assuming that
-you're using the 'smart' <<RailsSpawnMethod,spawning method>>. So if your
-system has enough memory, is it recommended that you set this option to a high
-value or to '0'.
-
-This option may occur in the following places:
-
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
-
-In each place, it may be specified at most once. The default value is '1800' (30 minutes).
-
-==== rails_app_spawner_idle_time <integer> ====
-The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
-methods explained>>) has an idle timeout, just like the backend processes spawned by
-Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
-anything for a given period.
-
-This option allows you to set the ApplicationSpawner server's idle timeout, in
-seconds. A value of '0' means that it should never idle timeout.
-
-Setting a higher value will mean that the ApplicationSpawner server is kept around
-longer, which may slightly increase memory usage. But as long as the
-ApplicationSpawner server is running, the time to spawn a Ruby on Rails backend
-process only takes about 10% of the time that is normally needed, assuming that
-you're using the 'smart' or 'smart-lv2' <<RailsSpawnMethod,spawning method>>. So if your
-system has enough memory, is it recommended that you set this option to a high
-value or to '0'.
-
-This option may occur in the following places:
-
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
-
-In each place, it may be specified at most once. The default value is '600' (10 minutes).
 
 === Rack-specific options ===
 [[RackEnv]]

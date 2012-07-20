@@ -166,9 +166,11 @@
 
 5.7.4. passenger_pool_idle_time <integer>	=>	passenger-pool-idle-time-integer--xcw65o
 
-5.7.5. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint
+5.7.5. passenger_max_preloader_idle_time <integer>	=>	rails-app-spawner-idle-time-integer--1xjqe4b
 
-5.7.6. passenger_pre_start <url>	=>	passenger-pre-start-url--qeevln
+5.7.6. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint
+
+5.7.7. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
 
 5.8. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
 
@@ -179,10 +181,6 @@
 5.9. Ruby on Rails-specific options	=>	ruby-on-rails-specific-options-12vfokt
 
 5.9.1. rails_env <string>	=>	rails-env-string--jlh7v9
-
-5.9.2. rails_framework_spawner_idle_time <integer>	=>	rails-framework-spawner-idle-time-integer--q5ljd5
-
-5.9.3. rails_app_spawner_idle_time <integer>	=>	rails-app-spawner-idle-time-integer--1xjqe4b
 
 6. Analysis and system maintenance	=>	analysis-and-system-maintenance-1nnlnj8
 
@@ -219,4 +217,3 @@
 8.2. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-13qbmhn
 
 9. Appendix A: About this document	=>	appendix-a-about-this-document-zfvixm
-

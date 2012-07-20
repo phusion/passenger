@@ -25,6 +25,7 @@
 PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/..")
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
 
 # The Apache executable may be located in an 'sbin' folder. We add
 # the 'sbin' folders to $PATH just in case. On some systems
@@ -40,7 +41,6 @@ require 'phusion_passenger/abstract_installer'
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
-	include PhusionPassenger::PlatformInfo
 	
 	def dependencies
 		result = [
@@ -74,10 +74,10 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def users_guide
-		return "#{DOCDIR}/Users guide Apache.html"
+		return "#{PhusionPassenger.doc_dir}/Users guide Apache.html"
 	end
 	
-	def install!
+	def run_steps
 		if PhusionPassenger.natively_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
@@ -151,7 +151,7 @@ private
 	def install_apache2_module
 		puts
 		line
-		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
+		puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
 			puts "#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes"
@@ -164,20 +164,20 @@ private
 	
 	def show_apache2_config_snippets(bare = false)
 		if bare
-			puts "LoadModule passenger_module #{APACHE2_MODULE}"
-			puts "PassengerRoot #{PASSENGER_ROOT}"
+			puts "LoadModule passenger_module #{PhusionPassenger.apache2_module_path}"
+			puts "PassengerRoot #{PhusionPassenger.source_root}"
 			puts "PassengerRuby #{PlatformInfo.ruby_command}"
 		else
 			puts
 			line
 			render_template 'apache2/config_snippets',
-				:module_location => APACHE2_MODULE,
-				:passenger_root => PASSENGER_ROOT,
+				:module_location => PhusionPassenger.apache2_module_path,
+				:passenger_root => PhusionPassenger.source_root,
 				:ruby => PlatformInfo.ruby_command
-			if PhusionPassenger.natively_packaged?
-				wait(10)
-			else
+			if PhusionPassenger.originally_packaged?
 				wait
+			else
+				wait(10)
 			end
 		end
 	end
@@ -233,5 +233,5 @@ installer = Installer.new(options)
 if options[:snippet]
 	installer.send(:show_apache2_config_snippets, true)
 else
-	installer.start
+	installer.run
 end

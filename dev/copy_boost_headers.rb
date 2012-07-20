@@ -33,7 +33,8 @@ ESSENTIALS = [
 	"libs/thread/src/*",
 	"boost/date_time/gregorian/formatters_limited.hpp",
 	"boost/date_time/date_formatting_limited.hpp",
-	"boost/non_type.hpp"
+	"boost/non_type.hpp",
+	"boost/detail/fenv.hpp",
 ]
 EXCLUDE = [
 	"libs/thread/src/win32/*"

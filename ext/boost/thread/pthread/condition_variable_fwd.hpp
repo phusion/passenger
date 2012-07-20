@@ -20,26 +20,35 @@ namespace boost
     class condition_variable
     {
     private:
+        pthread_mutex_t internal_mutex;
         pthread_cond_t cond;
-        
+
         condition_variable(condition_variable&);
         condition_variable& operator=(condition_variable&);
 
     public:
         condition_variable()
         {
-            int const res=pthread_cond_init(&cond,NULL);
+            int const res=pthread_mutex_init(&internal_mutex,NULL);
             if(res)
             {
                 boost::throw_exception(thread_resource_error("Cannot initialize a condition variable", res));
             }
+            int const res2=pthread_cond_init(&cond,NULL);
+            if(res2)
+            {
+                BOOST_VERIFY(!pthread_mutex_destroy(&internal_mutex));
+                boost::throw_exception(thread_resource_error());
+            }
         }
         ~condition_variable()
         {
+            BOOST_VERIFY(!pthread_mutex_destroy(&internal_mutex));
             int ret;
             do {
-                ret = pthread_cond_destroy(&cond);
+              ret = pthread_cond_destroy(&cond);
             } while (ret == EINTR);
+            BOOST_VERIFY(!ret);
         }
 
         void wait(unique_lock<mutex>& m);

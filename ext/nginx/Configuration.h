@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010 Phusion
+ * Copyright (C) 2010, 2011, 2012 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,11 +40,11 @@ typedef struct {
     ngx_array_t *vars_source;
     
     ngx_flag_t   enabled;
-    ngx_flag_t   use_global_queue;
     ngx_flag_t   friendly_error_pages;
     ngx_flag_t   union_station_support;
     ngx_flag_t   debugger;
     ngx_flag_t   show_version_in_header;
+    ngx_str_t    ruby;
     ngx_str_t    environment;
     ngx_str_t    user;
     ngx_str_t    group;
@@ -53,8 +53,7 @@ typedef struct {
     ngx_str_t    app_rights;
     ngx_int_t    min_instances;
     ngx_int_t    max_requests;
-    ngx_int_t    framework_spawner_idle_time;
-    ngx_int_t    app_spawner_idle_time;
+    ngx_int_t    max_preloader_idle_time;
     ngx_str_t    union_station_key;
     ngx_array_t *base_uris;
     ngx_array_t *union_station_filters;
@@ -68,7 +67,6 @@ typedef struct {
 
 typedef struct {
     ngx_str_t    root_dir;
-    ngx_str_t    ruby;
     ngx_int_t    log_level;
     ngx_str_t    debug_log_file;
     ngx_flag_t   abort_on_startup_error;
