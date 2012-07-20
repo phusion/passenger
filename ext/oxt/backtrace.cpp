@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010 Phusion
+ * Copyright (c) 2010, 2011, 2012 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@
 #include <sstream>
 #include <cstring>
 #include "backtrace.hpp"
+#include "macros.hpp"
 
 namespace oxt {
 
@@ -54,31 +55,8 @@ namespace {
 /*
  * boost::thread_specific_storage is pretty expensive. So we use the __thread
  * keyword whenever possible - that's almost free.
- * GCC supports the __thread keyword on x86 since version 3.3, but versions earlier
- * than 4.1.2 have bugs (http://gcc.gnu.org/ml/gcc-bugs/2006-09/msg02275.html).
  */
-
-#ifndef OXT_GCC_VERSION
-	#define OXT_GCC_VERSION (__GNUC__ * 10000 \
-                               + __GNUC_MINOR__ * 100 \
-                               + __GNUC_PATCHLEVEL__)
-#endif
-
-/*
- * FreeBSD 5 supports the __thread keyword, and everything works fine in
- * micro-tests, but in mod_passenger the thread-local variables are initialized
- * to unaligned addresses for some weird reason, thereby causing bus errors.
- *
- * GCC on OpenBSD supports __thread, but any access to such a variable
- * results in a segfault.
- *
- * Solaris does support __thread, but often it's not compiled into default GCC 
- * packages (not to mention it's not available for Sparc). Playing it safe...
- *
- * MacOS X doesn't support __thread at all.
- */
-#if OXT_GCC_VERSION >= 40102 && !defined(__FreeBSD__) && \
-   !defined(__SOLARIS__) && !defined(__OpenBSD__) && !defined(__APPLE__)
+#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
 	static __thread backtrace_data *thread_specific_backtrace_data;
 	
 	void
