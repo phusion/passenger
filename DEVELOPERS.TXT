@@ -5,8 +5,6 @@
 The tests need the following software installed:
 
 * All the usual Phusion Passenger dependencies.
-* Ruby on Rails 1.2.x
-* Ruby on Rails 2.0.x
 * Ruby on Rails 2.2.x
 * Ruby on Rails 2.3.x
 * Ruby on Rails 3.0.x
@@ -27,7 +25,7 @@ The following software is optional:
 
 Run the following command to compile everything:
 
- rake apache
+ rake apache2
  rake nginx
 
 == Directory structure
