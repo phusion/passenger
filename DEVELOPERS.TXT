@@ -27,7 +27,7 @@ The following software is optional:
 
 Run the following command to compile everything:
 
- rake apache
+ rake apache2
  rake nginx
 
 == Directory structure
