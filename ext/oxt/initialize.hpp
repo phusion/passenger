@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010 Phusion
+ * Copyright (c) 2012 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-#include "thread.hpp"
+#ifndef _OXT_INITIALIZE_HPP_
+#define _OXT_INITIALIZE_HPP_
 
 namespace oxt {
-	boost::mutex _next_thread_number_mutex;
-	unsigned int _next_thread_number = 0;
-}
 
+void initialize();
+
+} // namespace oxt
+
+#endif /* _OXT_INITIALIZE_HPP_ */

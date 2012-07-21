@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "system_calls.hpp"
+#include "detail/context.hpp"
 #include <boost/thread.hpp>
 #include <cerrno>
 
@@ -73,12 +74,19 @@ oxt::setup_syscall_interruption_support() {
 
 #define CHECK_INTERRUPTION(error_expression, code) \
 	do { \
+		thread_local_context *ctx = get_thread_local_context(); \
+		if (OXT_UNLIKELY(ctx != NULL)) { \
+			ctx->syscall_interruption_lock.unlock(); \
+		} \
 		int _my_errno; \
 		do { \
 			code; \
 			_my_errno = errno; \
 		} while ((error_expression) && _my_errno == EINTR \
 			&& !this_thread::syscalls_interruptable()); \
+		if (OXT_UNLIKELY(ctx != NULL)) { \
+			ctx->syscall_interruption_lock.lock(); \
+		} \
 		if ((error_expression) && _my_errno == EINTR && this_thread::syscalls_interruptable()) { \
 			throw thread_interrupted(); \
 		} \
@@ -470,6 +478,12 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	struct timespec req2 = *req;
 	struct timespec rem2;
 	int ret, e;
+
+	thread_local_context *ctx = get_thread_local_context();
+	if (OXT_UNLIKELY(ctx != NULL)) {
+		ctx->syscall_interruption_lock.unlock();
+	}
+	
 	do {
 		ret = ::nanosleep(&req2, &rem2);
 		e = errno;
@@ -487,6 +501,11 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 			}
 		}
 	} while (ret == -1 && e == EINTR && !this_thread::syscalls_interruptable());
+	
+	if (OXT_UNLIKELY(ctx != NULL)) {
+		ctx->syscall_interruption_lock.lock();
+	}
+	
 	if (ret == -1 && e == EINTR && this_thread::syscalls_interruptable()) {
 		throw thread_interrupted();
 	}

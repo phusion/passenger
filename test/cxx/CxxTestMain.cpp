@@ -1,6 +1,7 @@
 #include "TestSupport.h"
 #include "../tut/tut_reporter.h"
 #include "../support/valgrind.h"
+#include <oxt/initialize.hpp>
 #include <oxt/system_calls.hpp>
 #include <string>
 #include <signal.h>
@@ -135,6 +136,7 @@ main(int argc, char *argv[]) {
 	setenv("PYTHONDONTWRITEBYTECODE", "1", 1);
 	unsetenv("PASSENGER_TMPDIR");
 	unsetenv("PASSENGER_TEMP_DIR");
+	oxt::initialize();
 	oxt::setup_syscall_interruption_support();
     
 	tut::reporter reporter;

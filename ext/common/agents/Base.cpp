@@ -26,6 +26,7 @@
 	#define _GNU_SOURCE
 #endif
 
+#include <oxt/initialize.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>
@@ -660,6 +661,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
 		installAbortHandler();
 	}
+	oxt::initialize();
 	setup_syscall_interruption_support();
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);

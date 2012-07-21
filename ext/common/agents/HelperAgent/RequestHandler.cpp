@@ -188,6 +188,7 @@ RequestHandler::getClientPointer(const ClientPtr &client) {
 #include <MultiLibeio.cpp>
 #include <iostream>
 #include <agents/Base.h>
+#include <oxt/initialize.hpp>
 
 using namespace std;
 using namespace Passenger;
@@ -228,6 +229,7 @@ ignoreSigpipe() {
 
 int
 main() {
+	oxt::initialize();
 	setup_syscall_interruption_support();
 	ignoreSigpipe();
 	//installAbortHandler();

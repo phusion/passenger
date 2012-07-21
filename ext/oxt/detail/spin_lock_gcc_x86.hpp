@@ -75,6 +75,10 @@ public:
 	void unlock() {
 		__sync_lock_release(&exclusion);
 	}
+
+	bool try_lock() {
+		return !__sync_lock_test_and_set(&exclusion, 1);
+	}
 };
 
 } // namespace oxt
