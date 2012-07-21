@@ -34,6 +34,7 @@
 #include "detail/context.hpp"
 
 #ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+	#include <cassert>
 	#include <sstream>
 	#include <cstring>
 #endif
@@ -99,7 +100,12 @@ static global_context_t *global_context = NULL;
 	thread_local_context *
 	get_thread_local_context() {
 		if (OXT_LIKELY(local_context != NULL)) {
-			return local_context->get()->get();
+			thread_local_context_ptr *pointer = local_context->get();
+			if (OXT_LIKELY(pointer != NULL)) {
+				return pointer->get();
+			} else {
+				return NULL;
+			}
 		} else {
 			return NULL;
 		}
@@ -119,6 +125,8 @@ trace_point::trace_point(const char *_function, const char *_source, unsigned in
 	if (OXT_LIKELY(ctx != NULL)) {
 		spin_lock::scoped_lock l(ctx->backtrace_lock);
 		ctx->backtrace_list.push_back(this);
+	} else {
+		m_detached = true;
 	}
 }
 
@@ -134,6 +142,7 @@ trace_point::~trace_point() {
 		thread_local_context *ctx = get_thread_local_context();
 		if (OXT_LIKELY(ctx != NULL)) {
 			spin_lock::scoped_lock l(ctx->backtrace_lock);
+			assert(!ctx->backtrace_list.empty());
 			ctx->backtrace_list.pop_back();
 		}
 	}
