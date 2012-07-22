@@ -561,11 +561,18 @@ syscalls::waitpid(pid_t pid, int *status, int options) {
  * boost::this_thread
  *************************************/
 
-thread_specific_ptr<bool> this_thread::_syscalls_interruptable;
+#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+	__thread bool this_thread::_syscalls_interruptable = true;
 
+	bool
+	this_thread::syscalls_interruptable() {
+		return _syscalls_interruptable;
+	}
+#else
+	thread_specific_ptr<bool> this_thread::_syscalls_interruptable;
 
-bool
-this_thread::syscalls_interruptable() {
-	return _syscalls_interruptable.get() == NULL || *_syscalls_interruptable;
-}
-
+	bool
+	this_thread::syscalls_interruptable() {
+		return _syscalls_interruptable.get() == NULL || *_syscalls_interruptable;
+	}
+#endif

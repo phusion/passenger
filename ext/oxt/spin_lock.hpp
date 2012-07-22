@@ -27,11 +27,10 @@
 
 #include "macros.hpp"
 
-// At the time of writing (July 22, 2008), these operating systems don't
-// support pthread spin locks:
-// - OpenBSD 4.3
-// - Solaris 9
-// - MacOS X
+// These operating systems don't support pthread spin locks:
+// - OpenBSD 4.3 (last checked: July 22, 2008)
+// - Solaris 9 (last checked: July 22, 2008)
+// - MacOS X (last checked: July 22, 2012)
 #if defined(__OpenBSD__) || defined(__SOLARIS9__) || defined(__APPLE__)
 	#define OXT_NO_PTHREAD_SPINLOCKS
 #endif
