@@ -124,34 +124,30 @@ protected:
 		
 		void capture() {
 			TRACE_POINT();
-			try {
-				while (!this_thread::interruption_requested()) {
-					char buf[1024 * 8];
-					ssize_t ret;
-					
-					UPDATE_TRACE_POINT();
-					ret = syscalls::read(fd, buf, sizeof(buf));
-					int e = errno;
-					this_thread::disable_syscall_interruption dsi;
-					if (ret == 0) {
-						break;
-					} else if (ret == -1) {
-						P_WARN("Background I/O capturer error: " <<
-							strerror(e) << " (errno=" << e << ")");
-						break;
-					} else {
-						{
-							lock_guard<boost::mutex> l(dataSyncher);
-							data.append(buf, ret);
-						}
-						if (target != -1) {
-							UPDATE_TRACE_POINT();
-							writeExact(target, buf, ret);
-						}
+			while (!this_thread::interruption_requested()) {
+				char buf[1024 * 8];
+				ssize_t ret;
+				
+				UPDATE_TRACE_POINT();
+				ret = syscalls::read(fd, buf, sizeof(buf));
+				int e = errno;
+				this_thread::disable_syscall_interruption dsi;
+				if (ret == 0) {
+					break;
+				} else if (ret == -1) {
+					P_WARN("Background I/O capturer error: " <<
+						strerror(e) << " (errno=" << e << ")");
+					break;
+				} else {
+					{
+						lock_guard<boost::mutex> l(dataSyncher);
+						data.append(buf, ret);
+					}
+					if (target != -1) {
+						UPDATE_TRACE_POINT();
+						writeExact(target, buf, ret);
 					}
 				}
-			} catch (const thread_interrupted &) {
-				// Return.
 			}
 		}
 		
@@ -163,6 +159,7 @@ protected:
 			{ }
 		
 		~BackgroundIOCapturer() {
+			TRACE_POINT();
 			if (thr != NULL) {
 				this_thread::disable_interruption di;
 				this_thread::disable_syscall_interruption dsi;
@@ -183,6 +180,7 @@ protected:
 		}
 		
 		string stop() {
+			TRACE_POINT();
 			assert(thr != NULL);
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
@@ -194,6 +192,7 @@ protected:
 		}
 
 		void appendToBuffer(const StaticString &dataToAdd) {
+			TRACE_POINT();
 			lock_guard<boost::mutex> l(dataSyncher);
 			data.append(dataToAdd.data(), dataToAdd.size());
 		}
@@ -369,6 +368,7 @@ private:
 	}
 
 	void sendSpawnRequest(NegotiationDetails &details) {
+		TRACE_POINT();
 		try {
 			string data = "You have control 1.0\n"
 				"passenger_root: " + resourceLocator.getRoot() + "\n"
@@ -404,6 +404,7 @@ private:
 	}
 
 	ProcessPtr handleSpawnResponse(NegotiationDetails &details) {
+		TRACE_POINT();
 		SocketListPtr sockets = make_shared<SocketList>();
 		while (true) {
 			string line;
@@ -523,6 +524,7 @@ protected:
 	}
 	
 	static string fixupSocketAddress(const Options &options, const string &address) {
+		TRACE_POINT();
 		if (!options.preexecChroot.empty() && !options.postexecChroot.empty()) {
 			ServerAddressType type = getSocketAddressType(address);
 			if (type == SAT_UNIX) {
@@ -573,6 +575,7 @@ protected:
 		SpawnException::ErrorKind errorKind,
 		NegotiationDetails &details)
 	{
+		TRACE_POINT();
 		// Stop the stderr capturing thread and get the captured stderr
 		// output so far.
 		string stderrOutput;
@@ -624,6 +627,7 @@ protected:
 
 	template<typename Details>
 	static string readMessageLine(Details &details) {
+		TRACE_POINT();
 		while (true) {
 			string result = details.io.readLine(1024 * 4, &details.timeout);
 			if (result.empty()) {
@@ -643,6 +647,7 @@ protected:
 	}
 	
 	SpawnPreparationInfo prepareSpawn(const Options &options) const {
+		TRACE_POINT();
 		SpawnPreparationInfo info;
 		prepareChroot(info, options);
 		prepareUserSwitching(info, options);
@@ -651,6 +656,7 @@ protected:
 	}
 
 	void prepareChroot(SpawnPreparationInfo &info, const Options &options) const {
+		TRACE_POINT();
 		info.appRoot = absolutizePath(options.appRoot);
 		if (options.preexecChroot.empty()) {
 			info.chrootDir = "/";
@@ -673,6 +679,7 @@ protected:
 	}
 
 	void prepareUserSwitching(SpawnPreparationInfo &info, const Options &options) const {
+		TRACE_POINT();
 		if (geteuid() != 0) {
 			struct passwd *userInfo = getpwuid(geteuid());
 			if (userInfo == NULL) {
@@ -968,6 +975,7 @@ protected:
 	}
 	
 	ProcessPtr negotiateSpawn(NegotiationDetails &details) {
+		TRACE_POINT();
 		details.spawnStartTime = SystemTime::getUsec();
 		details.gupid = integerToHex(SystemTime::get() / 60) + "-" +
 			randomGenerator->generateAsciiString(11);
@@ -991,6 +999,7 @@ protected:
 		}
 		
 		if (result == "I have control 1.0\n") {
+			UPDATE_TRACE_POINT();
 			sendSpawnRequest(details);
 			try {
 				result = readMessageLine(details);
@@ -1014,6 +1023,7 @@ protected:
 				handleInvalidSpawnResponseType(result, details);
 			}
 		} else {
+			UPDATE_TRACE_POINT();
 			if (result == "Error\n") {
 				handleSpawnErrorResponse(details);
 			} else {
@@ -1024,6 +1034,7 @@ protected:
 	}
 	
 	void handleSpawnErrorResponse(NegotiationDetails &details) {
+		TRACE_POINT();
 		map<string, string> attributes;
 		
 		while (true) {
@@ -1212,6 +1223,7 @@ private:
 		BackgroundIOCapturerPtr &stderrCapturer,
 		const DebugDirPtr &debugDir)
 	{
+		TRACE_POINT();
 		// Stop the stderr capturing thread and get the captured stderr
 		// output so far.
 		string stderrOutput;
@@ -1267,6 +1279,7 @@ private:
 	}
 
 	void startPreloader() {
+		TRACE_POINT();
 		assert(!preloaderStarted());
 		checkChrootDirectories(options);
 		
@@ -1348,6 +1361,7 @@ private:
 	}
 	
 	void stopPreloader() {
+		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		
@@ -1380,6 +1394,7 @@ private:
 	}
 	
 	void sendStartupRequest(StartupDetails &details) {
+		TRACE_POINT();
 		try {
 			writeExact(details.adminSocket,
 				"You have control 1.0\n"
@@ -1424,6 +1439,7 @@ private:
 	}
 	
 	string handleStartupResponse(StartupDetails &details) {
+		TRACE_POINT();
 		string socketAddress;
 		
 		while (true) {
@@ -1494,6 +1510,7 @@ private:
 	}
 	
 	void handleErrorResponse(StartupDetails &details) {
+		TRACE_POINT();
 		map<string, string> attributes;
 		
 		while (true) {
@@ -1578,6 +1595,7 @@ private:
 	}
 	
 	string negotiatePreloaderStartup(StartupDetails &details) {
+		TRACE_POINT();
 		string result;
 		try {
 			result = readMessageLine(details);
@@ -1595,6 +1613,7 @@ private:
 		}
 		
 		if (result == "I have control 1.0\n") {
+			UPDATE_TRACE_POINT();
 			sendStartupRequest(details);
 			try {
 				result = readMessageLine(details);
@@ -1618,6 +1637,7 @@ private:
 				handleInvalidResponseType(details, result);
 			}
 		} else {
+			UPDATE_TRACE_POINT();
 			if (result == "Error\n") {
 				handleErrorResponse(details);
 			} else {
@@ -1631,6 +1651,7 @@ private:
 	}
 	
 	SpawnResult sendSpawnCommand(const Options &options) {
+		TRACE_POINT();
 		FileDescriptor fd;
 		try {
 			fd = connectToServer(socketAddress);
@@ -1644,6 +1665,7 @@ private:
 				DebugDirPtr());
 		}
 		
+		UPDATE_TRACE_POINT();
 		BufferedIO io(fd);
 		unsigned long long timeout = options.startTimeout * 1000;
 		string result;
@@ -1662,6 +1684,7 @@ private:
 		
 		result = io.readLine(1024, &timeout);
 		if (result == "OK\n") {
+			UPDATE_TRACE_POINT();
 			pid_t spawnedPid;
 			
 			spawnedPid = atoi(io.readLine(1024, &timeout).c_str());
@@ -1695,12 +1718,14 @@ private:
 			return result;
 			
 		} else if (result == "Error\n") {
+			UPDATE_TRACE_POINT();
 			NegotiationDetails details;
 			details.io = io;
 			details.timeout = timeout;
 			handleSpawnErrorResponse(details);
 			
 		} else {
+			UPDATE_TRACE_POINT();
 			NegotiationDetails details;
 			handleInvalidSpawnResponseType(result, details);
 		}
@@ -1710,6 +1735,7 @@ private:
 	
 	template<typename Exception>
 	SpawnResult sendSpawnCommandAgain(const Exception &e, const Options &options) {
+		TRACE_POINT();
 		P_WARN("An error occurred while spawning a process: " << e.what());
 		P_WARN("The application preloader seems to have crashed, restarting it and trying again...");
 		stopPreloader();
@@ -1781,9 +1807,11 @@ public:
 			m_lastUsed = SystemTime::getUsec();
 		}
 		if (!preloaderStarted()) {
+			UPDATE_TRACE_POINT();
 			startPreloader();
 		}
 		
+		UPDATE_TRACE_POINT();
 		SpawnResult result;
 		try {
 			result = sendSpawnCommand(options);
@@ -1795,6 +1823,7 @@ public:
 			result = sendSpawnCommandAgain(e, options);
 		}
 		
+		UPDATE_TRACE_POINT();
 		NegotiationDetails details;
 		details.libev = libev;
 		details.pid = result.pid;
@@ -1813,6 +1842,7 @@ public:
 	}
 	
 	virtual void cleanup() {
+		TRACE_POINT();
 		{
 			lock_guard<boost::mutex> l(simpleFieldSyncher);
 			m_lastUsed = SystemTime::getUsec();
@@ -2008,6 +2038,7 @@ public:
 			throw SystemException("Cannot fork a new process", e);
 			
 		} else {
+			UPDATE_TRACE_POINT();
 			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
 			adminSocket.first.close();
 			errorPipe.second.close();

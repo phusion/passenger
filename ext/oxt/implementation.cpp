@@ -353,7 +353,7 @@ thread::all_backtraces() throw() {
 			     it++)
 			{
 				thread_local_context_ptr ctx = *it;
-				result << "Thread '" << ctx->thread_name << "':" << endl;
+				result << "Thread '" << ctx->thread_name << "' (" << hex << ctx->thread << "):" << endl;
 				
 				spin_lock::scoped_lock l(ctx->backtrace_lock);
 				result << format_backtrace(ctx->backtrace_list) << endl;

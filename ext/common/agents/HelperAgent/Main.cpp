@@ -296,8 +296,7 @@ private:
 	}
 
 	void onSigquit(ev::sig &signal, int revents) {
-		requestHandler->inspect(cout);
-		cout.flush();
+		dumpDiagnostics(this);
 	}
 
 	void installDiagnosticsDumper() {
@@ -312,7 +311,9 @@ private:
 		Server *self = (Server *) userData;
 		self->requestHandler->inspect(cout);
 		cout.flush();
-		cout << self->pool->inspect();
+		cout << "\n" << self->pool->inspect();
+		cout.flush();
+		cout << "\n" << oxt::thread::all_backtraces();
 		cout.flush();
 	}
 	
