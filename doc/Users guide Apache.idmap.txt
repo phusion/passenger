@@ -167,7 +167,7 @@
 5.13.5. PassengerPoolIdleTime <integer>	=>	passengerpoolidletime-integer--a3gunq
 
 # fuzzy
-5.13.6. PassengerMaxPreloaderIdleTime <integer>	=>	passengermaxrequests
+5.13.6. PassengerMaxPreloaderIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
 
 # fuzzy
 5.13.7. PassengerMaxRequests <integer>	=>	passengermaxrequesttime-seconds--7qnz3x
@@ -195,7 +195,7 @@
 # fuzzy
 5.15.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1tfy4z9
 
-5.16. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	classic-ruby-on-rails-2-x-specific-options-1dibk7x
+5.16. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
 
 # fuzzy
 5.16.1. RailsAutoDetect <on|off>	=>	railsautodetect-on-off--tpigsd
@@ -342,10 +342,3 @@
 9.2. Page caching support	=>	page-caching-support-kwq9b9
 
 9.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-179mp8m
-
-
-### These sections appear to have been removed. Please check.
-
-5.17. Ruby on Rails-specific options	=>	ruby-on-rails-specific-options-1t10wfu
-
-5.17.5. RailsAppSpawnerIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
