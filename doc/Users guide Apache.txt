@@ -1341,8 +1341,8 @@ measure to avoid memory leaks.
 
 The maximum amount of time, in seconds, that an application process may take
 to process a request. If the request takes longer than this amount of time,
-then the application process will be forcefully shut down, and restarted upon
-the next request. A value of 0 means that there is no time limit.
+then the application process will be forcefully shut down, and possibly
+restarted upon the next request. A value of 0 means that there is no time limit.
 
 This option is useful for preventing your application from freezing for an
 indefinite period of time.
@@ -1387,6 +1387,8 @@ measure to avoid freezing applications.
 
 [[PassengerMemoryLimit]]
 ==== PassengerMemoryLimit <integer> ====
+**Available in Phusion Passenger Enterprise since version 3.0.0.**
+
 The maximum amount of memory that an application process may use, in megabytes.
 Once an application process has surpassed its memory limit, it will process
 all the requests currently present in its queue and then shut down.
