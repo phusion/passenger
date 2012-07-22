@@ -970,6 +970,72 @@ The <<PassengerBufferResponse,PassengerBufferResponse>> directive should be turn
 if responses can be huge. Because entire responses are buffered in memory when turned on.
 =====================================================
 
+[[PassengerRollingRestarts]]
+=== PassengerRollingRestarts <on|off> ===
+**Available in Phusion Passenger Enterprise since version 3.0.0.**
+
+Enables or disables support for rolling restarts. Normally when you
+restart an application (by touching restart.txt), Phusion Passenger would
+shut down all application processes and spawn a new one. The spawning
+of a new application process could take a while, and any requests that
+come in during this time will be blocked until this first application
+process has spawned.
+
+But when rolling restarts are enabled, Phusion Passenger Enterprise will:
+
+1. Spawn a new process in the background.
+2. When it's done spawning, Phusion Passenger Enterprise will replace one of the old processes with this newly spawned one.
+3. Step 1 and 2 are repeated until all processes have been replaced.
+
+This way, visitors will not experience any delays when you are restarting your application. This allows you to, for example, upgrade your application often without degrading user experience.
+
+Rolling restarts have a few caveat however that you should be aware of:
+
+- Upgrading an application sometimes involves upgrading the database schema.
+  With rolling restarts, there may be a point in time during which processes
+  belonging to the previous version and processes belonging to the new version
+  both exist at the same time. Any database schema upgrades you perform must
+  therefore be backwards-compatible with the old application version.
+- Because there's no telling which process will serve a request, users may
+  not see changes brought about by the new version until all processes have
+  been restarted. It is for this reason that you should not use rolling
+  restarts in development, only in production.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
+=== PassengerResistDeploymentErrors <on|off> ===
+**Available in Phusion Passenger Enterprise since version 3.0.0.**
+
+Enables or disables resistance against deployment errors.
+
+Suppose you've upgraded your application and you've issues a command to restart it (by touching restart.txt), but the application code contains an error that prevents Phusion Passenger from successfully spawning a process (e.g. a syntax error). Phusion Passenger would normally display an error message in response to this.
+
+By enabling deployment error resistance, Phusion Passenger Enterprise would instead do this:
+
+- It passes the request to one of the existing application processes (that belong to the previous version of the application). The visitor will not see a Phusion Passenger process spawning error message.
+- It logs the error to the global web server error log file.
+- It sets an internal flag so that no processes for this application will be spawned (even when the current traffic would normally result in more processes being spawned) and no processes will be idle cleaned. Processes *could* still be shutdown because of other events, e.g. because their <<PassengerMemoryLimit,memory limit>> have been reached.
+
+This way, visitors will suffer minimally from deployment errors. Phusion Passenger will attempt to restart the application again next time restart.txt is touched.
+
+Enabling deployment error resistance only works if <<PassengerRollingRestarts,rolling restart>> is also enabled.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
 === Security options ===
 
 [[PassengerUserSwitching]]
@@ -1127,6 +1193,36 @@ The PassengerMinInstances option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is '1'.
 
+==== PassengerMaxInstances <integer> ====
+**Available in Phusion Passenger Enterprise since version 3.0.0.**
+
+The maximum number of application processes that may simultaneously exist
+for an application. This helps to make sure that a single application
+will not occupy all available slots in the application pool.
+
+This value must be less than <<PassengerMaxPoolSize,PassengerMaxPoolSize>>. A value of 0
+means that there is no limit placed on the number of processes a single application
+may spawn, i.e. only the global limit of <<PassengerMaxPoolSize,PassengerMaxPoolSize>>
+will be enforced.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is '0'.
+
+.Practical usage example
+[TIP]
+===========================================================================
+Suppose that you're hosting two web applications on your server, a personal
+blog and an e-commerce website. You've set <<PassengerMaxPoolSize,PassengerMaxPoolSize>>
+to 10. The e-commerce website is more important to you. You can then set
+'PassengerMaxInstances' to 3 for your blog, so that it will never spawn more
+than 3 processes, even if it suddenly gets a lot of traffic. Your e-commerce website
+on the other hand will be free to spawn up to 10 processes if it gets a lot of traffic.
+===========================================================================
+
 ==== PassengerMaxInstancesPerApp <integer> ====
 The maximum number of application processes that may simultaneously exist
 for a single application. This helps to make sure that a single application
@@ -1139,6 +1235,40 @@ will be enforced.
 
 This option may only occur once, in the global server configuration.
 The default value is '0'.
+
+.Practical usage example
+[TIP]
+===========================================================================
+Suppose that you're hosting two blogs (blog A and B) on your server, and that
+you've set <<PassengerMaxPoolSize,PassengerMaxPoolSize>> to 10. Under normal
+circumstances, if blog A suddenly gets a lot of traffic, then A will use all 10
+pool slots. If blog B suddenly gets some traffic, then it will only be able to
+use 1 pool slot (forcefully releasing 1 slot from A) until A's traffic has
+settled down and it has released more pool slots.
+
+If you consider both blogs equally important, then you can set
+'PassengerMaxInstancesPerApp' to 5. This way, both blogs will never use more
+than 5 pool slots.
+===========================================================================
+
+.Relation with PassengerMaxInstances
+[NOTE]
+===========================================================================
+Unlike <<PassengerMaxInstances,PassengerMaxInstances>>, this configuration
+option is global and applies to all applications. 'PassengerMaxInstances' on the
+other hand is per-virtual host.
+
+Suppose that you're hosting two web applications on your server, a personal
+blog and an e-commerce website. You've set <<PassengerMaxPoolSize,PassengerMaxPoolSize>>
+to 10. The e-commerce website is more important to you. You can then set
+'PassengerMaxInstances' to 3 for your blog, so that it will never use more than
+3 pool slots, even if it suddenly gets a lot of traffic. Your e-commerce website
+on the other hand will be free to use up all 10 slots if it gets a lot of traffic.
+
+In summary, 'PassengerMaxInstancesPerApp' divides the pool equally among the
+different web applications, while 'PassengerMaxInstances' allows one to divide
+the pool unequally, according to each web application's relative importance.
+===========================================================================
 
 [[PassengerPoolIdleTime]]
 ==== PassengerPoolIdleTime <integer> ====
@@ -1215,6 +1345,112 @@ In each place, it may be specified at most once. The default value is '0'.
 =====================================================
 The <<PassengerMaxRequests,PassengerMaxRequests>> directive should be considered
 as a workaround for misbehaving applications. It is advised that you fix the
+problem in your application rather than relying on these directives as a
+measure to avoid memory leaks.
+=====================================================
+
+[[PassengerMaxRequestTime]]
+==== PassengerMaxRequestTime <seconds> ====
+**Available in Phusion Passenger Enterprise since version 3.0.0.**
+
+The maximum amount of time, in seconds, that an application instance may take
+to process a request. If the request takes longer than this amount of time,
+then the application instance will be forcefully shut down, and restarted upon
+the next request. A value of 0 means that there is no time limit.
+
+This option is useful for preventing your application from freezing for an
+indefinite period of time.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Limits` is on.
+
+In each place, it may be specified at most once. The default value is '0'.
+
+.Example
+Suppose that most of your requests are known to finish within 2 seconds.
+However, there is one URI, '/expensive_computation', which is known to take up
+to 10 seconds. You can then configure Phusion Passenger as follows:
+
+----------------------------------------------
+<VirtualHost *:80>
+    ServerName www.example.com
+    DocumentRoot /webapps/my_app/public
+    
+    PassengerMaxRequestTime 2
+    <Location /expensive_computation>
+        PassengerMaxRequestTime 10
+    </Location>
+</VirtualHost>
+----------------------------------------------
+
+If a request to '/expensive_computation' takes more than 10 seconds,
+or if a request to any other URI takes more than 2 seconds,
+then the corresponding application instance will be forced to shutdown.
+
+[CAUTION]
+=====================================================
+The <<PassengerMaxRequestTime,PassengerMaxRequestTime>> directive should be
+considered as a workaround for misbehaving applications. It is advised that you
+fix the problem in your application rather than relying on these directives as a
+measure to avoid freezing applications.
+=====================================================
+
+[[PassengerMemoryLimit]]
+==== PassengerMemoryLimit <integer> ====
+The maximum amount of memory that an application instance may use, in megabytes.
+Once an application instance has surpassed its memory limit, it will process
+all the requests currently present in its queue and then shut down.
+A value of 0 means that there is no maximum: the application's memory usage
+will not be checked.
+
+This option is useful if your application is leaking memory. By shutting
+it down, all of its memory is guaranteed to be freed by the operating system.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Limits` is on.
+
+In each place, it may be specified at most once. The default value is '200'.
+
+[NOTE]
+.A word about permissions
+=====================================================
+The <<PassengerMemoryLimit,PassengerMemoryLimit>> directive requires that the
+user that the application is running as (see <<PassengerUserSwitching,PassengerUserSwitching>>)
+to have access to the `/proc` file system, or to be able to inspect its status
+with `ps` (which on Linux and FreeBSD systems basically means the same thing, since `ps`
+reads process information from `/proc`). Therefore, on servers running with
+tight permissions on `/proc`, this directive may not work. If you wish to use
+this directive and your `/proc` permissions are too tight, then please consider
+untightening the permissions.
+=====================================================
+
+[TIP]
+.FreeBSD and `/proc`
+=====================================================
+On many FreeBSD systems, `/proc` is not mounted by default. `/proc` *must* be
+mounted in order for <<PassengerMemoryLimit,PassengerMemoryLimit>> to work.
+
+It is also advised that you mount `/proc` with the `linprocfs` filesystem type
+instead of the regular FreeBSD `proc` filesystem type. The `linprocfs` filesystem
+type allows Phusion Passenger to read memory information from `/proc` directly,
+which is very fast. If you mount `/proc` with a different filesystem type, then
+Phusion Passenger must resort to querying memory information from the `ps` command,
+which is a lot slower.
+=====================================================
+
+[CAUTION]
+=====================================================
+The <<PassengerMaxRequests,PassengerMaxRequests>> and
+<<PassengerMemoryLimit,PassengerMemoryLimit>> directives should be considered
+as workarounds for misbehaving applications. It is advised that you fix the
 problem in your application rather than relying on these directives as a
 measure to avoid memory leaks.
 =====================================================
