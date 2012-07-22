@@ -1353,9 +1353,9 @@ measure to avoid memory leaks.
 ==== PassengerMaxRequestTime <seconds> ====
 **Available in Phusion Passenger Enterprise since version 3.0.0.**
 
-The maximum amount of time, in seconds, that an application instance may take
+The maximum amount of time, in seconds, that an application process may take
 to process a request. If the request takes longer than this amount of time,
-then the application instance will be forcefully shut down, and restarted upon
+then the application process will be forcefully shut down, and restarted upon
 the next request. A value of 0 means that there is no time limit.
 
 This option is useful for preventing your application from freezing for an
@@ -1389,7 +1389,7 @@ to 10 seconds. You can then configure Phusion Passenger as follows:
 
 If a request to '/expensive_computation' takes more than 10 seconds,
 or if a request to any other URI takes more than 2 seconds,
-then the corresponding application instance will be forced to shutdown.
+then the corresponding application process will be forced to shutdown.
 
 [CAUTION]
 =====================================================
@@ -1401,8 +1401,8 @@ measure to avoid freezing applications.
 
 [[PassengerMemoryLimit]]
 ==== PassengerMemoryLimit <integer> ====
-The maximum amount of memory that an application instance may use, in megabytes.
-Once an application instance has surpassed its memory limit, it will process
+The maximum amount of memory that an application process may use, in megabytes.
+Once an application process has surpassed its memory limit, it will process
 all the requests currently present in its queue and then shut down.
 A value of 0 means that there is no maximum: the application's memory usage
 will not be checked.
