@@ -385,10 +385,6 @@ create_request(ngx_http_request_t *r)
         app_type_string = (const u_char *) "wsgi";
         app_type_string_len = sizeof("wsgi");
         break;
-    case AP_NODE:
-        app_type_string = (const u_char *) "node";
-        app_type_string_len = sizeof("node");
-        break;
     default:
         app_type_string = (const u_char *) "rack";
         app_type_string_len = sizeof("rack");
