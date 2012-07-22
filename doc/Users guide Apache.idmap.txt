@@ -142,42 +142,30 @@
 
 5.13. Resource control and optimization options	=>	resource-control-and-optimization-options-zu2f7u
 
-# fuzzy
 5.13.1. PassengerMaxPoolSize <integer>	=>	passengermaxpoolsize-integer--am64q8
 
-# fuzzy
 5.13.10. PassengerStatThrottleRate <integer>	=>	passengerstatthrottlerate
 
-# fuzzy
 5.13.11. PassengerPreStart <url>	=>	passengerprestart-url--1dvgku9
 
-# fuzzy
 5.13.12. PassengerHighPerformance <on|off>	=>	passengerhighperformance-on-off--zgc547
 
-# fuzzy
 5.13.2. PassengerMinInstances <integer>	=>	passengermininstances-integer--wegq6b
 
-# fuzzy
 5.13.3. PassengerMaxInstances <integer>	=>	passengermaxinstances
 
-# fuzzy
 5.13.4. PassengerMaxInstancesPerApp <integer>	=>	passengermaxinstancesperapp
 
-# fuzzy
 5.13.5. PassengerPoolIdleTime <integer>	=>	passengerpoolidletime-integer--a3gunq
 
-# fuzzy
 5.13.6. PassengerMaxPreloaderIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
 
-# fuzzy
-5.13.7. PassengerMaxRequests <integer>	=>	passengermaxrequesttime-seconds--7qnz3x
+5.13.7. PassengerMaxRequests <integer>	=>	passengermaxrequests
 
 5.13.8. PassengerMaxRequestTime <seconds>	=>	passengermaxrequesttime-seconds--aj9w45
 
-# fuzzy
 5.13.9. PassengerMemoryLimit <integer>	=>	passengermemorylimit
 
-# fuzzy
 5.14. Compatibility options	=>	compatibility-options-8jve5a
 
 # fuzzy
