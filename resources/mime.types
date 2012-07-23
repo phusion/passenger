@@ -60,7 +60,6 @@ types {
     application/octet-stream              bin exe dll;
     application/octet-stream              deb;
     application/octet-stream              dmg;
-    application/octet-stream              eot;
     application/octet-stream              iso img;
     application/octet-stream              msi msp msm;
     application/octet-stream              gem;
