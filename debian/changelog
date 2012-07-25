@@ -1,3 +1,10 @@
+passenger (1:3.0.14-1bbox1+ng) precise; urgency=low
+
+  * New upstream release, 3.0.14
+  * Bumped epoch to 1 to always prefer over the non-ruby-ng packages
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 25 Jul 2012 18:21:17 +0100
+
 passenger (3.0.13-1bbox2+ng) precise; urgency=low
 
   * Removed 01_disable_html5_documentation.patch
