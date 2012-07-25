@@ -2276,9 +2276,9 @@ disk if the response is larger than a certain threshold. By buffering responses,
 protection is provided against slow HTTP clients that can not read your response
 immediately.</p></div>
 <div class="paragraph"><p>For example, consider an HTTP client that’s on a dial-up modem link, and your
-application instance generates a 2 MB response. If response buffering is turned
-off then your application instance will be blocked until the entire 2 MB has been
-sent out to the HTTP client. This disallows your application instance to do any useful
+application process generates a 2 MB response. If response buffering is turned
+off then your application process will be blocked until the entire 2 MB has been
+sent out to the HTTP client. This disallows your application process to do any useful
 work in the mean time. By enabling response buffering, Phusion Passenger will read
 the application response as quickly as possible and will take care of slow clients.</p></div>
 <div class="paragraph"><p>However, keep in mind that enabling this option will make streaming responses
@@ -2484,13 +2484,13 @@ In an <em>if</em> configuration scope.
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h3 id="_resource_control_and_optimization_options" data-comment-topic="resource-control-and-optimization-options-xd7evs">5.7. Resource control and optimization options</h3>
 <div class="sect3">
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h4 id="PassengerMaxPoolSize" data-comment-topic="passenger-max-pool-size-integer--3jzefs">5.7.1. passenger_max_pool_size &lt;integer&gt;</h4>
-<div class="paragraph"><p>The maximum number of Ruby on Rails or Rack application instances that may
-be simultaneously active. A larger number results in higher memory usage,
+<div class="paragraph"><p>The maximum number of <a href="#application_process">application processes</a> that may
+simultanously exist. A larger number results in higher memory usage,
 but improved ability to handle concurrent HTTP clients.</p></div>
 <div class="paragraph"><p>The optimal value depends on your system’s hardware and the server’s average
 load. You should experiment with different values. But generally speaking,
 the value should be at least equal to the number of CPUs (or CPU cores) that
-you have. If your system has 2 GB of RAM, then we recommend a value of <em>30</em>.
+you have. If your system has 2 GB of RAM, then we recommend a value of <em>15</em>.
 If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
 is also running other services such as MySQL, then we recommend a value of <em>2</em>.</p></div>
 <div class="paragraph"><p>If you find that your server is unable to handle the load on your Rails/Rack websites
@@ -2505,32 +2505,32 @@ The default value is <em>6</em>.</p></div>
 <img src="./images/icons/tip.png" alt="Tip">
 </td>
 <td class="content">We strongly recommend you to <a href="#reducing_memory_usage">use Ruby Enterprise Edition</a>. This allows you to reduce the memory usage of your Ruby on Rails applications
-by about 33%. And it’s not hard to install.</td>
+by about 33%, and it’s not hard to install.</td>
 </tr></table>
 </div>
 </div>
 <div class="sect3">
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h4 id="PassengerMinInstances" data-comment-topic="passenger-min-instances-integer--uclykt">5.7.2. passenger_min_instances &lt;integer&gt;</h4>
-<div class="paragraph"><p>This specifies the minimum number of application instances that must be kept around
-whenever Phusion Passenger cleans up idle instances. You should set this option to a
+<div class="paragraph"><p>This specifies the minimum number of application processes that should exist for a
+given application. You should set this option to a
 non-zero value if you want to avoid potentially long startup times after a website
-has been idle for an extended period.</p></div>
-<div class="paragraph"><p>Please note that this option does <strong>not</strong> pre-start application instances during Nginx
+has been <a href="#idle_process">idle</a> for an extended period.</p></div>
+<div class="paragraph"><p>Please note that this option does <strong>not</strong> pre-start application processes during Nginx
 startup. It just makes sure that when the application is first accessed:</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
-at least the given number of instances will be spawned.
+at least the given number of processes will be spawned.
 </p>
 </li>
 <li>
 <p>
-the given number of processes will be kept around even when instances are being
+the given number of processes will be kept around even when processes are being
    idle cleaned (see <a href="#PassengerPoolIdleTime">passenger_pool_idle_time</a>).
 </p>
 </li>
 </ol></div>
-<div class="paragraph"><p>If you want to pre-start application instances during Nginx startup, then you should use the <a href="#PassengerPreStart">passenger_pre_start</a> directive, possibly in combination with
+<div class="paragraph"><p>If you want to pre-start application processes during Nginx startup, then you should use the <a href="#PassengerPreStart">passenger_pre_start</a> directive, possibly in combination with
 <em>passenger_min_instances</em>. This behavior might seem counter-intuitive at first sight,
 but <a href="#PassengerPreStart">passenger_pre_start</a> explains the rationale behind it.</p></div>
 <div class="paragraph"><p>For example, suppose that you have the following configuration:</p></div>
@@ -2550,15 +2550,15 @@ but <a href="#PassengerPreStart">passenger_pre_start</a> explains the rationale 
 }</pre>
 </div>
 </div>
-<div class="paragraph"><p>When you start Nginx, there are 0 application instances for <em>foobar.com</em>. Things will
+<div class="paragraph"><p>When you start Nginx, there are 0 application processes for <em>foobar.com</em>. Things will
 stay that way until someone visits <em>foobar.com</em>. Suppose that there is only 1 visitor.
-1 application instance will be started immediately to serve the visitor, while 2 will
+1 application process will be started immediately to serve the visitor, while 2 will
 be spawned in the background. After 10 seconds, when the idle timeout has
-been reached, these 3 application instances will not be cleaned up.</p></div>
+been reached, these 3 application processes will not be cleaned up.</p></div>
 <div class="paragraph"><p>Now suppose that there’s a sudden spike of traffic, and 100 users visit <em>foobar.com</em>
-simultanously. Phusion Passenger will start 12 more application instances. After the idle
+simultanously. Phusion Passenger will start 12 more application processes. After the idle
 timeout of 10 seconds have passed, Phusion Passenger will clean up 12 application
-instances, keeping 3 instances around.</p></div>
+processes, keeping 3 processes around.</p></div>
 <div class="paragraph"><p>The passenger_min_instances option may occur in the following places:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2586,11 +2586,11 @@ In an <em>if</em> configuration scope.
 </div>
 <div class="sect3">
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h4 id="_passenger_max_instances_per_app_lt_integer_gt" data-comment-topic="passenger-max-instances-per-app-integer--1p7q3cf">5.7.3. passenger_max_instances_per_app &lt;integer&gt;</h4>
-<div class="paragraph"><p>The maximum number of application instances that may be simultaneously active
+<div class="paragraph"><p>The maximum number of application processes that may simultaneously exist
 for a single application. This helps to make sure that a single application
 will not occupy all available slots in the application pool.</p></div>
 <div class="paragraph"><p>This value must be less than <a href="#PassengerMaxPoolSize">passenger_max_pool_size</a>. A value of 0
-means that there is no limit placed on the number of instances a single application
+means that there is no limit placed on the number of processes a single application
 may use, i.e. only the global limit of <a href="#PassengerMaxPoolSize">passenger_max_pool_size</a>
 will be enforced.</p></div>
 <div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.
@@ -2598,8 +2598,8 @@ The default value is <em>0</em>.</p></div>
 </div>
 <div class="sect3">
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h4 id="PassengerPoolIdleTime" data-comment-topic="passenger-pool-idle-time-integer--xcw65o">5.7.4. passenger_pool_idle_time &lt;integer&gt;</h4>
-<div class="paragraph"><p>The maximum number of seconds that an application instance may be idle. That is,
-if an application instance hasn’t received any traffic after the given number of
+<div class="paragraph"><p>The maximum number of seconds that an application process may be idle. That is,
+if an application process hasn’t received any traffic after the given number of
 seconds, then it will be shutdown in order to conserve memory.</p></div>
 <div class="paragraph"><p>Decreasing this value means that applications will have to be spawned
 more often. Since spawning is a relatively slow operation, some visitors may
@@ -2609,10 +2609,10 @@ free up resources used by applications more quickly.</p></div>
 Rails/Rack web page. We recommend a value of <span class="monospaced">2 * x</span>, where <span class="monospaced">x</span> is the average
 number of seconds that a visitor spends on a single Rails/Rack web page. But your
 mileage may vary.</p></div>
-<div class="paragraph"><p>When this value is set to <em>0</em>, application instances will not be shutdown unless
+<div class="paragraph"><p>When this value is set to <em>0</em>, application processes will not be shutdown unless
 it’s really necessary, i.e. when Phusion Passenger is out of worker processes
-for a given application and one of the inactive application instances needs to
-make place for another application instance. Setting the value to 0 is
+for a given application and one of the <a href="#inactive_process">inactive application processes</a> needs to
+make place for another application process. Setting the value to 0 is
 recommended if you’re on a non-shared host that’s only running a few
 applications, each which must be available at all times.</p></div>
 <div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.
@@ -2620,10 +2620,10 @@ The default value is <em>300</em>.</p></div>
 </div>
 <div class="sect3">
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h4 id="PassengerMaxRequests" data-comment-topic="passenger-max-requests-integer--sgzint">5.7.5. passenger_max_requests &lt;integer&gt;</h4>
-<div class="paragraph"><p>The maximum number of requests an application instance will process. After
-serving that many requests, the application instance will be shut down and
+<div class="paragraph"><p>The maximum number of requests an application process will process. After
+serving that many requests, the application process will be shut down and
 Phusion Passenger will restart it. A value of 0 means that there is no maximum:
-an application instance will thus be shut down when its idle timeout has been
+an application process will thus be shut down when its idle timeout has been
 reached.</p></div>
 <div class="paragraph"><p>This option is useful if your application is leaking memory. By shutting
 it down after a certain number of requests, all of its memory is guaranteed
@@ -2668,11 +2668,11 @@ measure to avoid memory leaks.</p></div>
 </div>
 <div class="sect3">
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h4 id="PassengerPreStart" data-comment-topic="passenger-pre-start-url--qeevln">5.7.6. passenger_pre_start &lt;url&gt;</h4>
-<div class="paragraph"><p>By default, Phusion Passenger does not start any application instances until said
+<div class="paragraph"><p>By default, Phusion Passenger does not start any application processes until said
 web application is first accessed. The result is that the first visitor of said
 web application might experience a small delay as Phusion Passenger is starting
 the web application on demand. If that is undesirable, then this directive can be
-used to pre-started application instances during Nginx startup.</p></div>
+used to pre-started application processes during Nginx startup.</p></div>
 <div class="paragraph"><p>A few things to be careful of:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2705,7 +2705,7 @@ The path part of the URL must point to some URI that the web application
 <li>
 <p>
 You will probably want to combine this option with
-  <a href="#PassengerMinInstances">passenger_min_instances</a> because application instances
+  <a href="#PassengerMinInstances">passenger_min_instances</a> because application processes
   started with <em>passenger_pre_start</em> are subject to the usual idle timeout rules.
   See the example below for an explanation.
 </p>
@@ -2794,10 +2794,10 @@ The following example is wrong and won’t pre-start the store web application:<
 </div>
 <div class="sect4">
 <h5 id="_example_3_combining_with_passenger_min_instances">Example 3: combining with passenger_min_instances</h5>
-<div class="paragraph"><p>Application instances started with passenger_pre_start are
+<div class="paragraph"><p>Application processes started with passenger_pre_start are
 also subject to the idle timeout rules as specified by
 <a href="#PassengerPoolIdleTime">passenger_pool_idle_time</a>! That means that by default,
-the pre-started application instances for foo.com are bar.com are shut down
+the pre-started application processes for foo.com are bar.com are shut down
 after a few minutes of inactivity. If you don’t want that to happen, then
 you should combine passenger_pre_start with
 <a href="#PassengerMinInstances">passenger_min_instances</a>, like this:</p></div>
@@ -3757,6 +3757,14 @@ For example, take the following directory structure:</p></div>
 </div>
 </div>
 </div>
+<div class="sect2">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h3 id="idle_process" data-comment-topic="idle-process-13byfw9">10.2. Idle process</h3>
+<div class="paragraph"><p>An "idle process" refers to a process that hasn’t processed any requests for a while.</p></div>
+</div>
+<div class="sect2">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h3 id="inactive_process" data-comment-topic="inactive-process-1d2h0po">10.3. Inactive process</h3>
+<div class="paragraph"><p>An "inactive process" refers to a process that’s current not processing any requests. An idle process is always inactive, but an inactive process is not always considered idle.</p></div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -4091,7 +4099,7 @@ has no effect.</p></div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2012-06-14 09:44:53 CEST
+Last updated 2012-07-21 20:27:37 CEST
 </div>
 </div>
 <script>/*! jQuery v1.7.1 jquery.com | jquery.org/license */

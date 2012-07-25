@@ -159,6 +159,7 @@ private:
 		char *filenameBeforeModRewrite;
 		apr_filetype_e oldFileType;
 		const char *handlerBeforeModAutoIndex;
+		bool enabled;
 		
 		RequestNote(const DirectoryMapper &m, DirConfig *c)
 			: mapper(m),
@@ -169,6 +170,7 @@ private:
 			filenameBeforeModRewrite  = NULL;
 			oldFileType               = APR_NOFILE;
 			handlerBeforeModAutoIndex = NULL;
+			enabled                   = true;
 		}
 		
 		~RequestNote() {
@@ -239,9 +241,25 @@ private:
 	 * The existance of a request note means that the handler should be run.
 	 */
 	inline RequestNote *getRequestNote(request_rec *r) {
-		void *note = 0;
-		apr_pool_userdata_get(&note, "Phusion Passenger", r->pool);
-		return (RequestNote *) note;
+		void *pointer = 0;
+		apr_pool_userdata_get(&pointer, "Phusion Passenger", r->pool);
+		if (pointer != NULL) {
+			RequestNote *note = (RequestNote *) pointer;
+			if (OXT_LIKELY(note->enabled)) {
+				return note;
+			} else {
+				return 0;
+			}
+		} else {
+			return 0;
+		}
+	}
+
+	void disableRequestNote(request_rec *r) {
+		RequestNote *note = getRequestNote(r);
+		if (note != NULL) {
+			note->enabled = false;
+		}
 	}
 	
 	/**
@@ -418,6 +436,7 @@ private:
 		try {
 			if (mapper.getBaseURI() == NULL) {
 				// (B) is not true.
+				disableRequestNote(r);
 				return false;
 			}
 		} catch (const FileSystemException &e) {
@@ -441,6 +460,7 @@ private:
 					RequestNote::cleanup, r->pool);
 				return true;
 			} else {
+				disableRequestNote(r);
 				return false;
 			}
 		}
@@ -451,6 +471,7 @@ private:
 			FileType fileType = getFileType(filename);
 			if (fileType == FT_REGULAR) {
 				// (C) is true.
+				disableRequestNote(r);
 				return false;
 			}
 			
@@ -511,6 +532,7 @@ private:
 			 * don't let the handler hook run so that Apache can decide how
 			 * to display the error.
 			 */
+			disableRequestNote(r);
 			return false;
 		}
 	}
@@ -776,7 +798,7 @@ private:
 				ap_pass_brigade(r->output_filters, bb);
 				
 				if (r->connection->aborted) {
-					P_WARN("Either the vistor clicked on the 'Stop' button in the "
+					P_WARN("Either the visitor clicked on the 'Stop' button in the "
 						"web browser, or the visitor's connection has stalled "
 						"and couldn't receive the data that Apache is sending "
 						"to it. As a result, you will probably see a 'Broken Pipe' "
