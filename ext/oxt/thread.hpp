@@ -26,23 +26,17 @@
 #define _OXT_THREAD_HPP_
 
 #include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/bind.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include "system_calls.hpp"
-#include "backtrace.hpp"
-#ifdef OXT_BACKTRACE_IS_ENABLED
-	#include <sstream>
-#endif
+#include "detail/context.hpp"
 #include <string>
 #include <list>
 #include <unistd.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 
 namespace oxt {
-
-extern boost::mutex _next_thread_number_mutex;
-extern unsigned int _next_thread_number;
 
 /**
  * Enhanced thread class with support for:
@@ -52,63 +46,10 @@ extern unsigned int _next_thread_number;
  */
 class thread: public boost::thread {
 private:
-	struct thread_data {
-		std::string name;
-		#ifdef OXT_BACKTRACE_IS_ENABLED
-			thread_registration *registration;
-			boost::mutex registration_lock;
-			bool done;
-		#endif
-	};
-	
-	typedef boost::shared_ptr<thread_data> thread_data_ptr;
-	
-	thread_data_ptr data;
+	thread_local_context_ptr context;
 
-	void initialize_data(const std::string &thread_name) {
-		data = thread_data_ptr(new thread_data());
-		if (thread_name.empty()) {
-			boost::mutex::scoped_lock l(_next_thread_number_mutex);
-			std::stringstream str;
-			
-			str << "Thread #" << _next_thread_number;
-			_next_thread_number++;
-			data->name = str.str();
-		} else {
-			data->name = thread_name;
-		}
-		#ifdef OXT_BACKTRACE_IS_ENABLED
-			data->registration = NULL;
-			data->done = false;
-		#endif
-	}
-	
-	static void thread_main(const boost::function<void ()> func, thread_data_ptr data) {
-		#ifdef OXT_BACKTRACE_IS_ENABLED
-			initialize_backtrace_support_for_this_thread i(data->name);
-			data->registration = i.registration;
-		#endif
-		
-		#ifdef OXT_BACKTRACE_IS_ENABLED
-			// Put finalization code in a struct destructor,
-			// for exception safety.
-			struct finalization_routines {
-				thread_data_ptr &data;
-				
-				finalization_routines(thread_data_ptr &data_)
-					: data(data_) {}
-				
-				~finalization_routines() {
-					boost::mutex::scoped_lock l(data->registration_lock);
-					data->registration = NULL;
-					data->done = true;
-				}
-			};
-			finalization_routines f(data);
-		#endif
-		
-		func();
-	}
+	static std::string make_thread_name(const std::string &given_name);
+	static void thread_main(const boost::function<void ()> func, thread_local_context_ptr ctx);
 	
 public:
 	/**
@@ -129,10 +70,10 @@ public:
 	 * @throws boost::thread_resource_error Something went wrong during
 	 *     creation of the thread.
 	 */
-	explicit thread(const boost::function<void ()> func, const std::string &name = "", unsigned int stack_size = 0) {
-		initialize_data(name);
-		
-		set_thread_main_function(boost::bind(thread_main, func, data));
+	explicit thread(const boost::function<void ()> func, const std::string &name = std::string(), unsigned int stack_size = 0) {
+		context = thread_local_context::make_shared_ptr();
+		context->thread_name = make_thread_name(name);
+		set_thread_main_function(boost::bind(thread_main, func, context));
 		
 		unsigned long min_stack_size;
 		bool stack_min_size_defined;
@@ -180,53 +121,18 @@ public:
 	/**
 	 * Return this thread's name. The name was set during construction.
 	 */
-	std::string name() const throw() {
-		return data->name;
-	}
+	std::string name() const throw();
 	
 	/**
 	 * Return the current backtrace of the thread of execution, as a string.
 	 */
-	std::string backtrace() const throw() {
-		#ifdef OXT_BACKTRACE_IS_ENABLED
-			boost::mutex::scoped_lock l(data->registration_lock);
-			if (data->registration == NULL) {
-				if (data->done) {
-					return "     (no backtrace: thread has quit)";
-				} else {
-					return "     (no backtrace: thread hasn't been started yet)";
-				}
-			} else {
-				spin_lock::scoped_lock l2(*data->registration->backtrace_lock);
-				return _format_backtrace(data->registration->backtrace);
-			}
-		#else
-			return "    (backtrace support disabled during compile time)";
-		#endif
-	}
+	std::string backtrace() const throw();
 	
 	/**
 	 * Return the backtraces of all oxt::thread threads, as well as that of the
 	 * main thread, in a nicely formatted string.
 	 */
-	static std::string all_backtraces() throw() {
-		#ifdef OXT_BACKTRACE_IS_ENABLED
-			boost::mutex::scoped_lock l(_thread_registration_mutex);
-			list<thread_registration *>::const_iterator it;
-			std::stringstream result;
-			
-			for (it = _registered_threads.begin(); it != _registered_threads.end(); it++) {
-				thread_registration *r = *it;
-				result << "Thread '" << r->name << "':" << endl;
-				
-				spin_lock::scoped_lock l(*r->backtrace_lock);
-				result << _format_backtrace(r->backtrace) << endl;
-			}
-			return result.str();
-		#else
-			return "(backtrace support disabled during compile time)";
-		#endif
-	}
+	static std::string all_backtraces() throw();
 	
 	/**
 	 * Interrupt the thread. This method behaves just like
@@ -240,17 +146,7 @@ public:
 	 * interrupt_and_join() is a convenience method that implements this
 	 * pattern.
 	 */
-	void interrupt(bool interruptSyscalls = true) {
-		int ret;
-		
-		boost::thread::interrupt();
-		if (interruptSyscalls) {
-			do {
-				ret = pthread_kill(native_handle(),
-					INTERRUPTION_SIGNAL);
-			} while (ret == EINTR);
-		}
-	}
+	void interrupt(bool interruptSyscalls = true);
 	
 	/**
 	 * Keep interrupting the thread until it's done, then join it.

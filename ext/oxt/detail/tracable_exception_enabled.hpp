@@ -24,7 +24,7 @@
  */
 #include <string>
 #include <exception>
-#include <list>
+#include <vector>
 
 namespace oxt {
 
@@ -35,7 +35,7 @@ struct trace_point;
  */
 class tracable_exception: public std::exception {
 private:
-	std::list<trace_point *> backtrace_copy;
+	std::vector<trace_point *> backtrace_copy;
 public:
 	tracable_exception();
 	tracable_exception(const tracable_exception &other);

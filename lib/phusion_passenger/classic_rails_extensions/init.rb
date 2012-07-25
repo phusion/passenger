@@ -39,11 +39,14 @@ end
 module PhusionPassenger
 module ClassicRailsExtensions
 module AnalyticsLogging
-	# Instantiated from prepare_app_process in utils.rb.
+	# Instantiated from prepare_app_process in loader_shared_helpers.rb.
 	@@analytics_logger = nil
+
+	@@app_group_name = nil
 	
 	def self.install!(options)
 		@@analytics_logger = options["analytics_logger"]
+		@@app_group_name = options["app_group_name"]
 		# If the Ruby interpreter supports GC statistics then turn it on
 		# so that the info can be logged.
 		GC.enable_stats if GC.respond_to?(:enable_stats)
@@ -107,9 +110,8 @@ module AnalyticsLogging
 	
 	def self.new_transaction_log(env, category = :requests)
 		if env[PASSENGER_TXN_ID]
-			group_name = env[PASSENGER_GROUP_NAME]
 			union_station_key = env[PASSENGER_UNION_STATION_KEY]
-			log = @@analytics_logger.new_transaction(group_name, category,
+			log = @@analytics_logger.new_transaction(@@app_group_name, category,
 				union_station_key)
 			begin
 				yield log

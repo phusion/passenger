@@ -23,9 +23,6 @@
 
 module PhusionPassenger
 class << self
-	# Set during spawning, and set back to nil when spawning is done.
-	attr_accessor :_spawn_options
-	
 	@@event_starting_worker_process = []
 	@@event_stopping_worker_process = []
 	@@event_credentials = []
@@ -45,7 +42,7 @@ class << self
 		require 'rails/version' if defined?(::Rails) && !defined?(::Rails::VERSION)
 		if defined?(::Rails) && ::Rails::VERSION::MAJOR == 3
 			require 'phusion_passenger/rails3_extensions/init'
-			Rails3Extensions.init!(_spawn_options, *args)
+			Rails3Extensions.init!(PhusionPassenger::App.options, *args)
 		end
 	end
 	

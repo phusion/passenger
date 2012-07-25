@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -34,6 +34,7 @@ require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/tmpdir'
 require 'phusion_passenger/utils/unseekable_socket'
 require 'phusion_passenger/native_support'
+require 'phusion_passenger/ruby_core_enhancements'
 
 module PhusionPassenger
 
@@ -187,6 +188,7 @@ class AbstractRequestHandler
 		@main_loop_generation  = 0
 		@main_loop_thread_lock = Mutex.new
 		@main_loop_thread_cond = ConditionVariable.new
+		@app_group_name        = options["app_group_name"]
 		@memory_limit          = options["memory_limit"] || 0
 		@connect_password      = options["connect_password"]
 		@detach_key            = options["detach_key"]
@@ -199,7 +201,6 @@ class AbstractRequestHandler
 		@processed_requests = 0
 		@soft_termination_linger_time = 3
 		@main_loop_running  = false
-		@passenger_header   = determine_passenger_header
 		
 		@debugger = @options["debugger"]
 		if @debugger
@@ -392,7 +393,7 @@ private
 				socket = UNIXServer.new(socket_address)
 				socket.listen(BACKLOG_SIZE)
 				socket.close_on_exec!
-				File.chmod(0666, socket_address)
+				File.chmod(0600, socket_address)
 				return [socket_address, socket]
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
@@ -520,7 +521,10 @@ private
 				raise
 			ensure
 				finalize_request(headers, has_error)
+				trace(3, "Request done.")
 			end
+		else
+			trace(2, "No headers parsed; disconnecting client.")
 		end
 		return true
 	rescue => e
@@ -642,29 +646,16 @@ private
 		output.write("pong")
 	end
 	
-	def determine_passenger_header
-		header = "Phusion Passenger (mod_rails/mod_rack)"
-		if @options["show_version_in_header"]
-			header << " #{VERSION_STRING}"
-		end
-		if File.exist?("#{SOURCE_ROOT}/enterprisey.txt") ||
-		   File.exist?("/etc/passenger_enterprisey.txt")
-			header << ", Enterprise Edition"
-		end
-		return header
-	end
-	
 	def prepare_request(headers)
 		if @analytics_logger && headers[PASSENGER_TXN_ID]
 			txn_id = headers[PASSENGER_TXN_ID]
-			group_name = headers[PASSENGER_GROUP_NAME]
 			union_station_key = headers[PASSENGER_UNION_STATION_KEY]
-			log = @analytics_logger.continue_transaction(txn_id, group_name,
+			log = @analytics_logger.continue_transaction(txn_id,
+				@app_group_name,
 				:requests, union_station_key)
 			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
 			Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = log
 			Thread.current[PASSENGER_TXN_ID] = txn_id
-			Thread.current[PASSENGER_GROUP_NAME] = group_name
 			Thread.current[PASSENGER_UNION_STATION_KEY] = union_station_key
 			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
 				log.message("Initial objects on heap: #{ObjectSpace.live_objects}")
@@ -735,7 +726,7 @@ private
 	
 	def log_analytics_exception(env, exception)
 		log = @analytics_logger.new_transaction(
-			env[PASSENGER_GROUP_NAME],
+			@app_group_name,
 			:exceptions,
 			env[PASSENGER_UNION_STATION_KEY])
 		begin

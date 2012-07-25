@@ -22,7 +22,7 @@
 #  THE SOFTWARE.
 
 TEST_BOOST_OXT_LIBRARY = LIBBOOST_OXT
-TEST_COMMON_LIBRARY    = LIBCOMMON
+TEST_COMMON_LIBRARY    = COMMON_LIBRARY
 
 TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL " <<
 	"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
@@ -32,7 +32,8 @@ task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
 
 desc "Clean all compiled test files"
 task 'test:clean' do
-	sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/cxx/CxxTestMain test/cxx/*.o")
+	sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/cxx/*.dSYM test/cxx/CxxTestMain")
+	sh("rm -f test/cxx/*.o test/cxx/*/*.o test/cxx/*.gch")
 	sh("rm -f test/support/allocate_memory")
 end
 

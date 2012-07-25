@@ -46,6 +46,16 @@ module PlatformInfo
 	end
 	memoize :gnu_make, true
 	
+	def self.cc_is_clang?
+		`#{cc} --version 2>&1` =~ /clang version/
+	end
+	memoize :cc_is_clang?
+
+	def self.cxx_is_clang?
+		`#{cxx} --version 2>&1` =~ /clang version/
+	end
+	memoize :cxx_is_clang?
+
 	# Checks whether the compiler supports "-arch #{arch}".
 	def self.compiler_supports_architecture?(arch)
 		return try_compile(:c, '', "-arch #{arch}")
@@ -60,7 +70,7 @@ module PlatformInfo
 		return try_compile(:c, '', '-Wno-attributes')
 	end
 	memoize :compiler_supports_wno_attributes_flag?, true
-	
+
 	def self.compiler_supports_wno_missing_field_initializers_flag?
 		return try_compile(:c, '', '-Wno-missing-field-initializers')
 	end
@@ -102,42 +112,56 @@ module PlatformInfo
 	def self.portability_cflags
 		flags = ["-D_REENTRANT -I/usr/local/include"]
 		
-		# Google SparseHash flags.
-		# Figure out header for hash function object and its namespace.
-		# Based on stl_hash.m4 and stl_hash_fun.m4 in the Google SparseHash sources.
-		hash_namespace = nil
-		ok = false
-		['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
-			['ext/hash_map', 'hash_map'].each do |hash_map_header|
+		# There are too many implementations of of the hash map!
+		# Figure out the right one.
+		ok = try_compile(:cxx, %Q{
+			#include <tr1/unordered_map>
+			int
+			main() {
+				std::tr1::unordered_map<int, int> m;
+				return 0;
+			}
+		})
+		if ok
+			flags << "-DHAS_TR1_UNORDERED_MAP"
+		else
+			hash_namespace = nil
+			ok = false
+			['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
+				['hash_map', 'ext/hash_map'].each do |hash_map_header|
+					ok = try_compile(:cxx, %Q{
+						#include <#{hash_map_header}>
+						int
+						main() {
+							#{namespace}::hash_map<int, int> m;
+							return 0;
+						}
+					})
+					if ok
+						hash_namespace = namespace
+						flags << "-DHASH_NAMESPACE=\"#{namespace}\""
+						flags << "-DHASH_MAP_HEADER=\"<#{hash_map_header}>\""
+						flags << "-DHASH_MAP_CLASS=\"hash_map\""
+					end
+					break if ok
+				end
+				break if ok
+			end
+			['ext/hash_fun.h', 'functional', 'tr1/functional',
+			 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
+			 'stl/_hash_fun.h'].each do |hash_function_header|
 				ok = try_compile(:cxx, %Q{
-					#include <#{hash_map_header}>
+					#include <#{hash_function_header}>
 					int
 					main() {
-						#{namespace}::hash_map<int, int> m;
+						#{hash_namespace}::hash<int>()(5);
 						return 0;
 					}
 				})
 				if ok
-					hash_namespace = namespace
-					flags << "-DHASH_NAMESPACE=\"#{namespace}\""
+					flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
+					break
 				end
-			end
-			break if ok
-		end
-		['ext/hash_fun.h', 'functional', 'tr1/functional',
-		 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
-		 'stl/_hash_fun.h'].each do |hash_function_header|
-			ok = try_compile(:cxx, %Q{
-				#include <#{hash_function_header}>
-				int
-				main() {
-					#{hash_namespace}::hash<int>()(5);
-					return 0;
-				}
-			})
-			if ok
-				flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
-				break
 			end
 		end
 		
@@ -188,15 +212,50 @@ module PlatformInfo
 	
 	# C compiler flags that should be passed in order to enable debugging information.
 	def self.debugging_cflags
-		if RUBY_PLATFORM =~ /openbsd/
-			# According to OpenBSD's pthreads man page, pthreads do not work
-			# correctly when an app is compiled with -g. It recommends using
-			# -ggdb instead.
-			return '-ggdb'
-		else
+		# According to OpenBSD's pthreads man page, pthreads do not work
+		# correctly when an app is compiled with -g. It recommends using
+		# -ggdb instead.
+		#
+		# In any case we'll always want to use -ggdb for better GDB debugging.
+		if cc_is_clang? || cxx_is_clang?
 			return '-g'
+		else
+			return '-ggdb'
 		end
 	end
+
+	def self.dmalloc_ldflags
+		if !ENV['DMALLOC_LIBS'].to_s.empty?
+			return ENV['DMALLOC_LIBS']
+		end
+		if RUBY_PLATFORM =~ /darwin/
+			['/opt/local', '/usr/local', '/usr'].each do |prefix|
+				filename = "#{prefix}/lib/libdmallocthcxx.a"
+				if File.exist?(filename)
+					return filename
+				end
+			end
+			return nil
+		else
+			return "-ldmallocthcxx"
+		end
+	end
+	memoize :dmalloc_ldflags
+
+	def self.electric_fence_ldflags
+		if RUBY_PLATFORM =~ /darwin/
+			['/opt/local', '/usr/local', '/usr'].each do |prefix|
+				filename = "#{prefix}/lib/libefence.a"
+				if File.exist?(filename)
+					return filename
+				end
+			end
+			return nil
+		else
+			return "-lefence"
+		end
+	end
+	memoize :electric_fence_ldflags
 	
 	def self.export_dynamic_flags
 		if RUBY_PLATFORM =~ /linux/

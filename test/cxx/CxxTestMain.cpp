@@ -1,13 +1,19 @@
 #include "TestSupport.h"
 #include "../tut/tut_reporter.h"
+#include "../support/valgrind.h"
+#include <oxt/initialize.hpp>
 #include <oxt/system_calls.hpp>
 #include <string>
 #include <signal.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <unistd.h>
 
-#include "Utils.h"
+#include <MultiLibeio.cpp>
+#include <Utils.h>
+#include <Utils/IOUtils.h>
+#include <Utils/json.h>
 
 using namespace std;
 
@@ -84,19 +90,75 @@ parseOptions(int argc, char *argv[]) {
 	}
 }
 
+static int
+doNothing(eio_req *req) {
+	return 0;
+}
+
+static void
+loadConfigFile() {
+	Json::Reader reader;
+	if (!reader.parse(readAll("config.json"), testConfig)) {
+		fprintf(stderr, "Cannot parse config.json: %s\n",
+			reader.getFormattedErrorMessages().c_str());
+		exit(1);
+	}
+}
+
+static void
+abortHandler(int signo, siginfo_t *info, void *ctx) {
+	// Stop itself so that we can attach it to gdb.
+	raise(SIGSTOP);
+	// Run default signal handler.
+	raise(signo);
+}
+
+static void
+installAbortHandler() {
+	const char *stopOnAbort = getenv("STOP_ON_ABORT");
+	if (stopOnAbort != NULL && *stopOnAbort != '\0' && *stopOnAbort != '0') {
+		struct sigaction action;
+		action.sa_sigaction = abortHandler;
+		action.sa_flags = SA_RESETHAND | SA_SIGINFO;
+		sigemptyset(&action.sa_mask);
+		sigaction(SIGABRT, &action, NULL);
+		sigaction(SIGSEGV, &action, NULL);
+		sigaction(SIGBUS, &action, NULL);
+		sigaction(SIGFPE, &action, NULL);
+	}
+}
+
 int
 main(int argc, char *argv[]) {
 	signal(SIGPIPE, SIG_IGN);
 	setenv("RAILS_ENV", "production", 1);
 	setenv("TESTING_PASSENGER", "1", 1);
+	setenv("PYTHONDONTWRITEBYTECODE", "1", 1);
 	unsetenv("PASSENGER_TMPDIR");
 	unsetenv("PASSENGER_TEMP_DIR");
+	oxt::initialize();
 	oxt::setup_syscall_interruption_support();
-	
+    
 	tut::reporter reporter;
 	tut::runner.get().set_callback(&reporter);
 	allGroups = tut::runner.get().list_groups();
 	parseOptions(argc, argv);
+	
+	char path[PATH_MAX + 1];
+	getcwd(path, PATH_MAX);
+	resourceLocator = new ResourceLocator(extractDirName(path));
+
+	Passenger::MultiLibeio::init();
+	eio_set_idle_timeout(9999); // Never timeout.
+	eio_set_min_parallel(1);
+	eio_set_max_parallel(1);
+	if (RUNNING_ON_VALGRIND) {
+		// Start an EIO thread to warm up Valgrind.
+		eio_nop(0, doNothing, NULL);
+	}
+
+	loadConfigFile();
+	installAbortHandler();
 	
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {
@@ -109,6 +171,7 @@ main(int argc, char *argv[]) {
 			all_ok = all_ok && reporter.all_ok();
 		}
 	}
+	Passenger::MultiLibeio::shutdown();
 	if (all_ok) {
 		return 0;
 	} else {

@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -23,98 +23,60 @@
 
 ### C++ components tests ###
 
-TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx " <<
-	"#{LIBEV_CFLAGS} #{PlatformInfo.curl_flags} -Itest/support " <<
+TEST_CXX_CFLAGS = "-Iext -Iext/common " <<
+	"#{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} #{PlatformInfo.curl_flags} -Itest/cxx -Itest/support " <<
 	"#{TEST_COMMON_CFLAGS}"
-TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
+TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
+	"#{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} #{LIBEIO_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
 	"#{PlatformInfo.zlib_libs} " <<
-	"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
+	"#{PlatformInfo.portability_ldflags}"
+TEST_CXX_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
+TEST_CXX_LDFLAGS << " -faddress-sanitizer" if USE_ASAN
+TEST_CXX_LDFLAGS << " #{EXTRA_LDFLAGS}"
+TEST_CXX_LDFLAGS.strip!
 TEST_CXX_OBJECTS = {
 	'test/cxx/CxxTestMain.o' => %w(
 		test/cxx/CxxTestMain.cpp),
 	'test/cxx/TestSupport.o' => %w(
 		test/cxx/TestSupport.cpp
-		test/cxx/TestSupport.h),
-	'test/cxx/MessageChannelTest.o' => %w(
-		test/cxx/MessageChannelTest.cpp
-		ext/common/MessageChannel.h
-		ext/common/Exceptions.h
-		ext/common/Utils.h
-		ext/common/Utils/Timer.h),
+		test/cxx/TestSupport.h
+		ext/common/SafeLibev.h
+		ext/common/BackgroundEventLoop.cpp),
+	'test/cxx/ApplicationPool2/OptionsTest.o' => %w(
+		test/cxx/ApplicationPool2/OptionsTest.cpp
+		ext/common/ApplicationPool2/Options.h),
+	'test/cxx/ApplicationPool2/DirectSpawnerTest.o' => %w(
+		test/cxx/ApplicationPool2/DirectSpawnerTest.cpp
+		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
+		ext/common/ApplicationPool2/Options.h
+		ext/common/ApplicationPool2/Process.h
+		ext/common/ApplicationPool2/Socket.h
+		ext/common/ApplicationPool2/Spawner.h),
+	'test/cxx/ApplicationPool2/SmartSpawnerTest.o' => %w(
+		test/cxx/ApplicationPool2/SmartSpawnerTest.cpp
+		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
+		ext/common/ApplicationPool2/Options.h
+		ext/common/ApplicationPool2/Process.h
+		ext/common/ApplicationPool2/Socket.h
+		ext/common/ApplicationPool2/Spawner.h),
+	'test/cxx/ApplicationPool2/ProcessTest.o' => %w(
+		test/cxx/ApplicationPool2/ProcessTest.cpp
+		ext/common/ApplicationPool2/Process.h
+		ext/common/ApplicationPool2/Socket.h
+		ext/common/ApplicationPool2/Session.h),
+	'test/cxx/ApplicationPool2/PoolTest.o' => %w(
+		test/cxx/ApplicationPool2/PoolTest.cpp
+		ext/common/ApplicationPool2/SuperGroup.h
+		ext/common/ApplicationPool2/Group.h
+		ext/common/ApplicationPool2/Pool.h
+		ext/common/ApplicationPool2/Spawner.h),
 	'test/cxx/MessageReadersWritersTest.o' => %w(
 		test/cxx/MessageReadersWritersTest.cpp
 		ext/common/MessageReadersWriters.h
 		ext/common/Exceptions.h
 		ext/common/StaticString.h
 		ext/common/Utils/MemZeroGuard.h),
-	'test/cxx/SpawnManagerTest.o' => %w(
-		test/cxx/SpawnManagerTest.cpp
-		ext/common/SpawnManager.h
-		ext/common/AbstractSpawnManager.h
-		ext/common/PoolOptions.h
-		ext/common/Logging.h
-		ext/common/StringListCreator.h
-		ext/common/Process.h
-		ext/common/AccountsDatabase.h
-		ext/common/Account.h
-		ext/common/Session.h
-		ext/common/Constants.h
-		ext/common/MessageChannel.h),
-	'test/cxx/ApplicationPool_ServerTest.o' => %w(
-		test/cxx/ApplicationPool_ServerTest.cpp
-		ext/common/ApplicationPool/Interface.h
-		ext/common/ApplicationPool/Server.h
-		ext/common/ApplicationPool/Client.h
-		ext/common/ApplicationPool/Pool.h
-		ext/common/Account.h
-		ext/common/AccountsDatabase.h
-		ext/common/MessageServer.h
-		ext/common/Session.h
-		ext/common/PoolOptions.h
-		ext/common/Logging.h
-		ext/common/StringListCreator.h
-		ext/common/MessageChannel.h
-		ext/common/Utils/ProcessMetricsCollector.h),
-	'test/cxx/ApplicationPool_Server_PoolTest.o' => %w(
-		test/cxx/ApplicationPool_Server_PoolTest.cpp
-		test/cxx/ApplicationPool_PoolTestCases.cpp
-		ext/common/ApplicationPool/Interface.h
-		ext/common/ApplicationPool/Server.h
-		ext/common/ApplicationPool/Client.h
-		ext/common/ApplicationPool/Pool.h
-		ext/common/AbstractSpawnManager.h
-		ext/common/Account.h
-		ext/common/AccountsDatabase.h
-		ext/common/MessageServer.h
-		ext/common/SpawnManager.h
-		ext/common/PoolOptions.h
-		ext/common/Logging.h
-		ext/common/StringListCreator.h
-		ext/common/Process.h
-		ext/common/Session.h
-		ext/common/MessageChannel.h
-		ext/common/Utils/ProcessMetricsCollector.h),
-	'test/cxx/ApplicationPool_PoolTest.o' => %w(
-		test/cxx/ApplicationPool_PoolTest.cpp
-		test/cxx/ApplicationPool_PoolTestCases.cpp
-		ext/common/ApplicationPool/Interface.h
-		ext/common/ApplicationPool/Pool.h
-		ext/common/AbstractSpawnManager.h
-		ext/common/SpawnManager.h
-		ext/common/PoolOptions.h
-		ext/common/Logging.h
-		ext/common/StringListCreator.h
-		ext/common/Utils/FileChangeChecker.h
-		ext/common/Utils/CachedFileStat.hpp
-		ext/common/Process.h
-		ext/common/Session.h),
-	'test/cxx/PoolOptionsTest.o' => %w(
-		test/cxx/PoolOptionsTest.cpp
-		ext/common/PoolOptions.h
-		ext/common/Session.h
-		ext/common/Logging.h
-		ext/common/StringListCreator.h),
 	'test/cxx/StaticStringTest.o' => %w(
 		test/cxx/StaticStringTest.cpp
 		ext/common/StaticString.h),
@@ -124,7 +86,7 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/Base64.cpp),
 	'test/cxx/ScgiRequestParserTest.o' => %w(
 		test/cxx/ScgiRequestParserTest.cpp
-		ext/nginx/ScgiRequestParser.h
+		ext/common/agents/HelperAgent/ScgiRequestParser.h
 		ext/common/StaticString.h),
 	'test/cxx/DechunkerTest.o' => %w(
 		test/cxx/DechunkerTest.cpp
@@ -133,13 +95,13 @@ TEST_CXX_OBJECTS = {
 		test/cxx/HttpHeaderBuffererTest.cpp
 		ext/common/Utils/HttpHeaderBufferer.h
 		ext/common/Utils/StreamBoyerMooreHorspool.h),
-	'test/cxx/LoggingTest.o' => %w(
-		test/cxx/LoggingTest.cpp
-		ext/common/LoggingAgent/LoggingServer.h
-		ext/common/LoggingAgent/RemoteSender.h
-		ext/common/LoggingAgent/DataStoreId.h
-		ext/common/LoggingAgent/FilterSupport.h
-		ext/common/Logging.h
+	'test/cxx/UnionStationTest.o' => %w(
+		test/cxx/UnionStationTest.cpp
+		ext/common/agents/LoggingAgent/LoggingServer.h
+		ext/common/agents/LoggingAgent/RemoteSender.h
+		ext/common/agents/LoggingAgent/DataStoreId.h
+		ext/common/agents/LoggingAgent/FilterSupport.h
+		ext/common/UnionStation.h
 		ext/common/Utils.h
 		ext/common/EventedServer.h
 		ext/common/EventedClient.h
@@ -151,21 +113,29 @@ TEST_CXX_OBJECTS = {
 		ext/common/EventedClient.h),
 	'test/cxx/MessageServerTest.o' => %w(
 		test/cxx/MessageServerTest.cpp
-		ext/common/ApplicationPool/Client.h
-		ext/common/ApplicationPool/Pool.h
-		ext/common/PoolOptions.h
-		ext/common/SpawnManager.h
-		ext/common/Session.h
 		ext/common/Logging.h
 		ext/common/Account.h
 		ext/common/AccountsDatabase.h
-		ext/common/Session.h
-		ext/common/MessageServer.h
-		ext/common/MessageChannel.h),
+		ext/common/MessageServer.h),
 	'test/cxx/ServerInstanceDir.o' => %w(
 		test/cxx/ServerInstanceDirTest.cpp
 		ext/common/ServerInstanceDir.h
 		ext/common/Utils.h),
+	'test/cxx/RequestHandlerTest.o' => %w(
+		test/cxx/RequestHandlerTest.cpp
+		ext/common/agents/HelperAgent/RequestHandler.h
+		ext/common/agents/HelperAgent/FileBackedPipe.h
+		ext/common/agents/HelperAgent/ScgiRequestParser.h
+		ext/common/agents/HelperAgent/AgentOptions.h
+		ext/common/UnionStation.h
+		ext/common/ApplicationPool2/Pool.h
+		ext/common/ApplicationPool2/SuperGroup.h
+		ext/common/ApplicationPool2/Group.h
+		ext/common/ApplicationPool2/Process.h
+		ext/common/ApplicationPool2/Spawner.h),
+	'test/cxx/FileBackedPipeTest.o' => %w(
+		test/cxx/FileBackedPipeTest.cpp
+		ext/common/agents/HelperAgent/FileBackedPipe.h),
 	'test/cxx/FileChangeCheckerTest.o' => %w(
 		test/cxx/FileChangeCheckerTest.cpp
 		ext/common/Utils/FileChangeChecker.h
@@ -179,7 +149,7 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/SystemTime.cpp),
 	'test/cxx/FilterSupportTest.o' => %w(
 		test/cxx/FilterSupportTest.cpp
-		ext/common/LoggingAgent/FilterSupport.h),
+		ext/common/agents/LoggingAgent/FilterSupport.h),
 	'test/cxx/CachedFileStatTest.o' => %w(
 		test/cxx/CachedFileStatTest.cpp
 		ext/common/Utils/CachedFileStat.hpp
@@ -194,7 +164,6 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/IOUtils.h),
 	'test/cxx/VariantMapTest.o' => %w(
 		test/cxx/VariantMapTest.cpp
-		ext/common/MessageChannel.h
 		ext/common/Utils/VariantMap.h),
 	'test/cxx/StringMapTest.o' => %w(
 		test/cxx/StringMapTest.cpp
@@ -207,28 +176,60 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils.h),
 	'test/cxx/IOUtilsTest.o' => %w(
 		test/cxx/IOUtilsTest.cpp
-		ext/common/Utils/IOUtils.h)
+		ext/common/Utils/IOUtils.h),
+	'test/cxx/TemplateTest.o' => %w(
+		test/cxx/TemplateTest.cpp
+		ext/common/Utils/Template.h)
 }
 
+dependencies = [
+	'test/cxx/CxxTestMain',
+	'test/support/allocate_memory',
+	:native_support,
+	AGENT_OUTPUT_DIR + 'SpawnPreparer',
+	AGENT_OUTPUT_DIR + 'EnvPrinter'
+]
 desc "Run unit tests for the Apache 2 and Nginx C++ components"
-task 'test:cxx' => ['test/cxx/CxxTestMain', 'test/support/allocate_memory', :native_support] do
-        if ENV['GROUPS'].to_s.empty?
-	        sh "cd test && ./cxx/CxxTestMain"
-        else
-                args = ENV['GROUPS'].split(",").map{ |name| "-g #{name}" }
-                sh "cd test && ./cxx/CxxTestMain #{args.join(' ')}"
-        end
+task 'test:cxx' => dependencies do
+	args = ENV['GROUPS'].to_s.split(",").map{ |name| "-g #{name}" }
+	command = "./cxx/CxxTestMain #{args.join(' ')}".strip
+	if boolean_option('GDB')
+		command = "gdb --args #{command}"
+	elsif boolean_option('VALGRIND')
+		command = "valgrind --dsymutil=yes --db-attach=yes --child-silent-after-fork=yes #{command}"
+	end
+	sh "cd test && #{command}"
 end
 
-cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys, :libev,
-	TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY]
-file 'test/cxx/CxxTestMain' => cxx_tests_dependencies.flatten do
+dependencies = [
+	TEST_CXX_OBJECTS.keys,
+	:libev,
+	:libeio,
+	TEST_BOOST_OXT_LIBRARY,
+	TEST_COMMON_LIBRARY.link_objects,
+	'ext/common/MultiLibeio.cpp'
+].flatten
+file 'test/cxx/CxxTestMain' => dependencies.flatten do
 	objects = TEST_CXX_OBJECTS.keys.join(' ')
 	create_executable("test/cxx/CxxTestMain", objects, TEST_CXX_LDFLAGS)
 end
 
+deps = [
+	'test/cxx/TestSupport.h',
+	'ext/oxt/thread.hpp',
+	'ext/oxt/tracable_exception.hpp',
+	'ext/common/ServerInstanceDir.h',
+	'ext/common/Exceptions.h',
+	'ext/common/Utils.h',
+	'ext/common/Utils/SystemTime.h'
+]
+file 'test/cxx/TestSupport.h.gch' => deps do
+	compile_cxx 'test/cxx/TestSupport.h', "-x c++-header -o test/cxx/TestSupport.h.gch #{TEST_CXX_CFLAGS}"
+end
+
 TEST_CXX_OBJECTS.each_pair do |target, sources|
-	file(target => sources + ['test/cxx/TestSupport.h']) do
-		compile_cxx sources[0], "-o #{target} #{TEST_CXX_CFLAGS}"
+	file(target => sources + ['test/cxx/TestSupport.h', 'test/cxx/TestSupport.h.gch']) do
+		# To use precompiled headers in Clang, we must -include them on them command line.
+		compile_cxx sources[0], "-o #{target} -include test/cxx/TestSupport.h #{TEST_CXX_CFLAGS}"
 	end
 end

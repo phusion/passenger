@@ -17,7 +17,7 @@ namespace tut {
 		
 		void createGenerationDir(const string &instanceDir, unsigned int number) {
 			string command = "mkdir " + instanceDir + "/generation-" + toString(number);
-			system(command.c_str());
+			runShellCommand(command.c_str());
 		}
 	};
 	

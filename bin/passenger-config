@@ -22,22 +22,52 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-source_root = File.expand_path(File.dirname(__FILE__) + "/..")
+source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
+
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/compiler'
 
 def help
 	puts "Tool for showing Passenger configuration information."
-	puts "Usage: passenger-config <OPTIONS>"
+	puts "Usage: passenger-config <OPTION>"
 	puts
 	puts "Options:"
-	puts "  --root      Show Passenger's root directory."
-	puts "  --version   Show Passenger's version number."
+	puts "  --root                     Show Phusion Passenger's root directory."
+	puts "  --nginx-libs               Show Nginx runtime library flags."
+	puts "  --compiled                 Check whether runtime libraries are compiled."
+	puts "  --version                  Show version number."
+end
+
+def common_library
+	require 'phusion_passenger/common_library'
+	return COMMON_LIBRARY.
+		only(*NGINX_LIBS_SELECTOR).
+		set_output_dir("#{PhusionPassenger.source_root}/libout/common/libpassenger_common")
 end
 
 case ARGV[0]
 when "--root"
-	puts PhusionPassenger::SOURCE_ROOT
+	puts PhusionPassenger.source_root
+when "--nginx-libs"
+	text = "#{common_library.link_objects_as_string} #{PhusionPassenger.source_root}/libout/common/libboost_oxt.a"
+	if PhusionPassenger::PlatformInfo.has_math_library?
+		text << " -lm"
+	end
+	puts text
+when "--compiled"
+	common_library.link_objects.each do |filename|
+		if !File.exist?(filename)
+			exit 1
+		end
+	end
+	if File.exist?("#{PhusionPassenger.source_root}/libout/common/libboost_oxt.a")
+		exit 0
+	else
+		exit 1
+	end
 when "--version"
 	puts PhusionPassenger::VERSION_STRING
 else

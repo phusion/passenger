@@ -199,3 +199,8 @@ through the 'X-Passenger-Connect-Password' HTTP header, like this:
 -------------------------------------------
 bash# curl -H "X-Passenger-Connect-Password: nFfVOX1F8LjZ90HJh28Sd_htJOsgRsNne2QXKf8NIXw" http://127.0.0.1:58122/
 -------------------------------------------
+
+=== Attaching an IRB console to an application process ===
+**Available in Phusion Passenger Enterprise since version 3.0.0.**
+
+You can attach an IRB console to any application process and inspect its state by executing arbitrary Ruby code. Do this by invoking `passenger-irb <PID>` where '<PID>' is the PID of the application process you wish to inspect. Note that the IRB console is currently only available for Ruby apps, not for apps in any other languages.

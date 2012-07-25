@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -40,15 +40,15 @@
 #include <cerrno>
 #include <cassert>
 
-#include "Account.h"
-#include "AccountsDatabase.h"
-#include "Constants.h"
-#include "FileDescriptor.h"
-#include "MessageChannel.h"
-#include "Logging.h"
-#include "Exceptions.h"
-#include "Utils/StrIntUtils.h"
-#include "Utils/IOUtils.h"
+#include <Account.h>
+#include <AccountsDatabase.h>
+#include <Constants.h>
+#include <FileDescriptor.h>
+#include <Logging.h>
+#include <Exceptions.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/IOUtils.h>
+#include <Utils/MessageIO.h>
 
 namespace Passenger {
 
@@ -182,15 +182,12 @@ public:
 		/** The client's socket file descriptor. */
 		FileDescriptor fd;
 		
-		/** The channel that's associated with the client's socket. */
-		MessageChannel channel;
-		
 		/** The account with which the client authenticated. */
 		AccountPtr account;
 		
 		
 		CommonClientContext(FileDescriptor &theFd, AccountPtr &theAccount)
-			: fd(theFd), channel(theFd), account(theAccount)
+			: fd(theFd), account(theAccount)
 		{ }
 		
 		/** Returns a string representation for this client context. */

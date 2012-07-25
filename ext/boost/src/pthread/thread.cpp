@@ -2,7 +2,7 @@
 // William E. Kempf
 // Copyright (C) 2007-8 Anthony Williams
 //
-//  Distributed under the Boost Software License, Version 1.0. (See accompanying 
+//  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/thread/detail/config.hpp>
@@ -14,7 +14,7 @@
 #include <boost/thread/once.hpp>
 #include <boost/thread/tss.hpp>
 #include <boost/throw_exception.hpp>
-#ifdef __linux__
+#ifdef __GLIBC__
 #include <sys/sysinfo.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
 #include <sys/types.h>
@@ -22,7 +22,6 @@
 #elif defined BOOST_HAS_UNISTD_H
 #include <unistd.h>
 #endif
-#include <cassert>
 
 #include "timeconv.inl"
 
@@ -51,7 +50,7 @@ namespace boost
 
             extern "C"
             {
-                void tls_destructor(void* data)
+                static void tls_destructor(void* data)
                 {
                     boost::detail::thread_data_base* thread_info=static_cast<boost::detail::thread_data_base*>(data);
                     if(thread_info)
@@ -87,14 +86,14 @@ namespace boost
                     }
                 }
             }
-    
+
 
             void create_current_thread_tls_key()
             {
                 BOOST_VERIFY(!pthread_key_create(&current_thread_tls_key,&tls_destructor));
             }
         }
-        
+
         boost::detail::thread_data_base* get_current_thread_data()
         {
             boost::call_once(current_thread_tls_init_flag,create_current_thread_tls_key);
@@ -107,12 +106,12 @@ namespace boost
             BOOST_VERIFY(!pthread_setspecific(current_thread_tls_key,new_data));
         }
     }
-    
+
     namespace
     {
         extern "C"
         {
-            void* thread_proxy(void* param)
+            static void* thread_proxy(void* param)
             {
                 boost::detail::thread_data_ptr thread_info = static_cast<boost::detail::thread_data_base*>(param)->self;
                 thread_info->self.reset();
@@ -147,7 +146,7 @@ namespace boost
             {
                 interrupt_enabled=false;
             }
-            
+
             void run()
             {}
 
@@ -222,7 +221,7 @@ namespace boost
         if(local_thread_info)
         {
             bool do_join=false;
-            
+
             {
                 unique_lock<mutex> lock(local_thread_info->data_mutex);
                 while(!local_thread_info->done)
@@ -230,7 +229,7 @@ namespace boost
                     local_thread_info->done_condition.wait(lock);
                 }
                 do_join=!local_thread_info->join_started;
-                
+
                 if(do_join)
                 {
                     local_thread_info->join_started=true;
@@ -251,7 +250,7 @@ namespace boost
                 local_thread_info->joined=true;
                 local_thread_info->done_condition.notify_all();
             }
-            
+
             if(thread_info==local_thread_info)
             {
                 thread_info.reset();
@@ -265,7 +264,7 @@ namespace boost
         if(local_thread_info)
         {
             bool do_join=false;
-            
+
             {
                 unique_lock<mutex> lock(local_thread_info->data_mutex);
                 while(!local_thread_info->done)
@@ -276,7 +275,7 @@ namespace boost
                     }
                 }
                 do_join=!local_thread_info->join_started;
-                
+
                 if(do_join)
                 {
                     local_thread_info->join_started=true;
@@ -297,7 +296,7 @@ namespace boost
                 local_thread_info->joined=true;
                 local_thread_info->done_condition.notify_all();
             }
-            
+
             if(thread_info==local_thread_info)
             {
                 thread_info.reset();
@@ -316,7 +315,7 @@ namespace boost
     {
         detail::thread_data_ptr local_thread_info;
         thread_info.swap(local_thread_info);
-        
+
         if(local_thread_info)
         {
             lock_guard<mutex> lock(local_thread_info->data_mutex);
@@ -331,11 +330,15 @@ namespace boost
 
     namespace this_thread
     {
-        
+
+#ifdef __DECXXX
+        /// Workaround of DECCXX issue of incorrect template substitution
+        template<>
+#endif
         void sleep(const system_time& st)
         {
             detail::thread_data_base* const thread_info=detail::get_current_thread_data();
-        
+
             if(thread_info)
             {
                 unique_lock<mutex> lk(thread_info->sleep_mutex);
@@ -344,7 +347,7 @@ namespace boost
             else
             {
                 xtime const xt=get_xtime(st);
-            
+
                 for (int foo=0; foo < 5; ++foo)
                 {
 #   if defined(BOOST_HAS_PTHREAD_DELAY_NP)
@@ -354,7 +357,7 @@ namespace boost
 #   elif defined(BOOST_HAS_NANOSLEEP)
                     timespec ts;
                     to_timespec_duration(xt, ts);
-                
+
                     //  nanosleep takes a timespec that is an offset, not
                     //  an absolute time.
                     nanosleep(&ts, 0);
@@ -397,7 +400,7 @@ namespace boost
 #elif defined(BOOST_HAS_UNISTD_H) && defined(_SC_NPROCESSORS_ONLN)
         int const count=sysconf(_SC_NPROCESSORS_ONLN);
         return (count>0)?count:0;
-#elif defined(_GNU_SOURCE)
+#elif defined(__GLIBC__)
         return get_nprocs();
 #else
         return 0;
@@ -426,6 +429,7 @@ namespace boost
             local_thread_info->interrupt_requested=true;
             if(local_thread_info->current_cond)
             {
+                boost::pthread::pthread_mutex_scoped_lock internal_lock(local_thread_info->cond_mutex);
                 BOOST_VERIFY(!pthread_cond_broadcast(local_thread_info->current_cond));
             }
         }
@@ -458,8 +462,8 @@ namespace boost
             return pthread_t();
         }
     }
-    
-    
+
+
 
     namespace this_thread
     {
@@ -482,13 +486,13 @@ namespace boost
                 }
             }
         }
-        
+
         bool interruption_enabled()
         {
             boost::detail::thread_data_base* const thread_info=detail::get_current_thread_data();
             return thread_info && thread_info->interrupt_enabled;
         }
-        
+
         bool interruption_requested()
         {
             boost::detail::thread_data_base* const thread_info=detail::get_current_thread_data();
@@ -511,7 +515,7 @@ namespace boost
                 detail::get_current_thread_data()->interrupt_enabled=false;
             }
         }
-        
+
         disable_interruption::~disable_interruption()
         {
             if(detail::get_current_thread_data())
@@ -527,7 +531,7 @@ namespace boost
                 detail::get_current_thread_data()->interrupt_enabled=true;
             }
         }
-        
+
         restore_interruption::~restore_interruption()
         {
             if(detail::get_current_thread_data())
@@ -584,7 +588,7 @@ namespace boost
             detail::thread_data_base* const current_thread_data(get_or_make_current_thread_data());
             current_thread_data->tss_data.erase(key);
         }
-        
+
         void set_tss_data(void const* key,
                           boost::shared_ptr<tss_cleanup_function> func,
                           void* tss_data,bool cleanup_existing)

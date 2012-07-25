@@ -18,10 +18,22 @@
 #include <oxt/tracable_exception.hpp>
 
 #include "../tut/tut.h"
-#include "ServerInstanceDir.h"
-#include "Exceptions.h"
-#include "Utils.h"
-#include "Utils/SystemTime.h"
+#include <ResourceLocator.h>
+#include <ServerInstanceDir.h>
+#include <BackgroundEventLoop.h>
+#include <Exceptions.h>
+#include <Utils.h>
+#include <Utils/SystemTime.h>
+#include <Utils/json-forwards.h>
+
+extern "C" {
+	struct ev_loop;
+	struct ev_async;
+}
+
+namespace Passenger {
+	class SafeLibev;
+}
 
 namespace TestSupport {
 
@@ -40,20 +52,22 @@ using namespace oxt;
 		}                                                     \
 	} while (0)
 
-#define EVENTUALLY(deadline, code)					\
-	do {								\
-		time_t deadlineTime = time(NULL) + deadline;		\
-		bool result = false;					\
-		while (!result && time(NULL) < deadlineTime) {		\
-			code						\
-			if (!result) {					\
-				usleep(10000);				\
-			}						\
-		}							\
-		if (!result) {						\
-			fail("EVENTUALLY(" #code ") failed");		\
-		}							\
+#define EVENTUALLY2(deadlineMsec, sleepTimeMsec, code)					\
+	do {										\
+		unsigned long long deadlineTime = SystemTime::getMsec(true) + deadlineMsec;	\
+		bool result = false;							\
+		while (!result && SystemTime::getMsec(true) < deadlineTime) {		\
+			code								\
+			if (!result) {							\
+				usleep(sleepTimeMsec * 1000);				\
+			}								\
+		}									\
+		if (!result) {								\
+			fail("EVENTUALLY(" #code ") failed");				\
+		}									\
 	} while (0)
+
+#define EVENTUALLY(deadlineSec, code) EVENTUALLY2(deadlineSec * 1000, 10, code)
 
 #define SHOULD_NEVER_HAPPEN(deadline, code)						\
 	do {										\
@@ -71,26 +85,16 @@ using namespace oxt;
 	} while (0)
 
 
+extern ResourceLocator *resourceLocator;
+extern Json::Value testConfig;
+
+
 /**
  * Create a server instance directory and generation with default parameters,
  * suitable for unit testing.
  */
 void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
                                           ServerInstanceDir::GenerationPtr &generation);
-
-/**
- * Read all data from the given file until EOF.
- *
- * @throws SystemException
- */
-string readAll(const string &filename);
-
-/**
- * Read all data from the given file descriptor until EOF.
- *
- * @throws SystemException
- */
-string readAll(int fd);
 
 /**
  * Writes zeroes into the given file descriptor its buffer is full (i.e.
@@ -101,18 +105,17 @@ string readAll(int fd);
 void writeUntilFull(int fd);
 
 /**
- * Look for 'toFind' inside 'str', replace it with 'replaceWith' and return the result.
- * Only the first occurence of 'toFind' is replaced.
- */
-string replaceString(const string &str, const string &toFind, const string &replaceWith);
-
-/**
  * Look for 'toFind' inside the given file, replace it with 'replaceWith' and write
  * the result back to the file. Only the first occurence of 'toFind' is replaced.
  *
  * @throws FileSystemException
  */
 void replaceStringInFile(const char *filename, const string &toFind, const string &replaceWith);
+
+/**
+ * Returns whether 'str' contains the given substring.
+ */
+bool containsSubstring(const StaticString &str, const StaticString &substr);
 
 /**
  * Writes the given data into the given file.
@@ -152,7 +155,7 @@ private:
 public:
 	TempDir(const string &name) {
 		this->name = name;
-		if (mkdir(name.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0) {
+		if (mkdir(name.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 			int e = errno;
 			string message = "Cannot create directory '";
 			message.append(name);
@@ -182,7 +185,19 @@ public:
 		char command[1024];
 		snprintf(command, sizeof(command), "cp -pR \"%s\" \"%s\"",
 			source.c_str(), dest.c_str());
-		system(command);
+		pid_t pid = fork();
+		if (pid == 0) {
+			resetSignalHandlersAndMask();
+			disableMallocDebugging();
+			closeAllFileDescriptors(2);
+			execlp("/bin/sh", "/bin/sh", "-c", command, (char * const) 0);
+			_exit(1);
+		} else if (pid == -1) {
+			int e = errno;
+			throw SystemException("Cannot fork()", e);
+		} else {
+			waitpid(pid, NULL, 0);
+		}
 	}
 	
 	~TempDirCopy() {
@@ -198,8 +213,11 @@ class DeleteFileEventually {
 private:
 	string filename;
 public:
-	DeleteFileEventually(const string &filename) {
+	DeleteFileEventually(const string &filename, bool deleteNow = true) {
 		this->filename = filename;
+		if (deleteNow) {
+			unlink(filename.c_str());
+		}
 	}
 	
 	~DeleteFileEventually() {
@@ -217,7 +235,7 @@ public:
 	oxt::thread thread;
 	
 	TempThread(boost::function<void ()> func)
-		: thread(func)
+		: thread(boost::bind(runAndPrintExceptions, func, true))
 		{ }
 	
 	~TempThread() {
@@ -235,6 +253,14 @@ public:
 		val = 0;
 	}
 	
+	AtomicInt(int value) {
+		val = value;
+	}
+	
+	AtomicInt(const AtomicInt &other) {
+		val = other.val;
+	}
+	
 	int get() const {
 		lock_guard<boost::mutex> l(lock);
 		return val;
@@ -250,10 +276,24 @@ public:
 		return *this;
 	}
 	
+	AtomicInt &operator++() {
+		lock_guard<boost::mutex> l(lock);
+		val++;
+		return *this;
+	}
+	
+	AtomicInt operator++(int) {
+		lock_guard<boost::mutex> l(lock);
+		AtomicInt temp(*this);
+		val++;
+		return temp;
+	}
+	
 	operator int() const {
 		return get();
 	}
 };
+
 
 } // namespace TestSupport
 

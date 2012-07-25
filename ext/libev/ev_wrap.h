@@ -10,7 +10,7 @@
 #define activecnt ((loop)->activecnt)
 #define loop_done ((loop)->loop_done)
 #define backend_fd ((loop)->backend_fd)
-#define backend_fudge ((loop)->backend_fudge)
+#define backend_mintime ((loop)->backend_mintime)
 #define backend_modify ((loop)->backend_modify)
 #define backend_poll ((loop)->backend_poll)
 #define anfds ((loop)->anfds)
@@ -25,6 +25,8 @@
 #define evfd ((loop)->evfd)
 #define evpipe ((loop)->evpipe)
 #define pipe_w ((loop)->pipe_w)
+#define pipe_write_wanted ((loop)->pipe_write_wanted)
+#define pipe_write_skipped ((loop)->pipe_write_skipped)
 #define curpid ((loop)->curpid)
 #define postfork ((loop)->postfork)
 #define vec_ri ((loop)->vec_ri)
@@ -40,6 +42,9 @@
 #define pollidxmax ((loop)->pollidxmax)
 #define epoll_events ((loop)->epoll_events)
 #define epoll_eventmax ((loop)->epoll_eventmax)
+#define epoll_eperms ((loop)->epoll_eperms)
+#define epoll_epermcnt ((loop)->epoll_epermcnt)
+#define epoll_epermmax ((loop)->epoll_epermmax)
 #define kqueue_changes ((loop)->kqueue_changes)
 #define kqueue_changemax ((loop)->kqueue_changemax)
 #define kqueue_changecnt ((loop)->kqueue_changecnt)
@@ -47,6 +52,7 @@
 #define kqueue_eventmax ((loop)->kqueue_eventmax)
 #define port_events ((loop)->port_events)
 #define port_eventmax ((loop)->port_eventmax)
+#define iocp ((loop)->iocp)
 #define fdchanges ((loop)->fdchanges)
 #define fdchangemax ((loop)->fdchangemax)
 #define fdchangecnt ((loop)->fdchangecnt)
@@ -69,6 +75,9 @@
 #define forks ((loop)->forks)
 #define forkmax ((loop)->forkmax)
 #define forkcnt ((loop)->forkcnt)
+#define cleanups ((loop)->cleanups)
+#define cleanupmax ((loop)->cleanupmax)
+#define cleanupcnt ((loop)->cleanupcnt)
 #define async_pending ((loop)->async_pending)
 #define asyncs ((loop)->asyncs)
 #define asyncmax ((loop)->asyncmax)
@@ -81,6 +90,7 @@
 #define sigfd ((loop)->sigfd)
 #define sigfd_w ((loop)->sigfd_w)
 #define sigfd_set ((loop)->sigfd_set)
+#define origflags ((loop)->origflags)
 #define loop_count ((loop)->loop_count)
 #define loop_depth ((loop)->loop_depth)
 #define userdata ((loop)->userdata)
@@ -98,7 +108,7 @@
 #undef activecnt
 #undef loop_done
 #undef backend_fd
-#undef backend_fudge
+#undef backend_mintime
 #undef backend_modify
 #undef backend_poll
 #undef anfds
@@ -113,6 +123,8 @@
 #undef evfd
 #undef evpipe
 #undef pipe_w
+#undef pipe_write_wanted
+#undef pipe_write_skipped
 #undef curpid
 #undef postfork
 #undef vec_ri
@@ -128,6 +140,9 @@
 #undef pollidxmax
 #undef epoll_events
 #undef epoll_eventmax
+#undef epoll_eperms
+#undef epoll_epermcnt
+#undef epoll_epermmax
 #undef kqueue_changes
 #undef kqueue_changemax
 #undef kqueue_changecnt
@@ -135,6 +150,7 @@
 #undef kqueue_eventmax
 #undef port_events
 #undef port_eventmax
+#undef iocp
 #undef fdchanges
 #undef fdchangemax
 #undef fdchangecnt
@@ -157,6 +173,9 @@
 #undef forks
 #undef forkmax
 #undef forkcnt
+#undef cleanups
+#undef cleanupmax
+#undef cleanupcnt
 #undef async_pending
 #undef asyncs
 #undef asyncmax
@@ -169,6 +188,7 @@
 #undef sigfd
 #undef sigfd_w
 #undef sigfd_set
+#undef origflags
 #undef loop_count
 #undef loop_depth
 #undef userdata

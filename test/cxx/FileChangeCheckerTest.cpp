@@ -40,14 +40,14 @@ namespace tut {
 			TempDir d("test.tmp");
 			touchFile("test.tmp/test.txt");
 			
-			system("chmod a= test.tmp");
+			runShellCommand("chmod a= test.tmp");
 			ensure(!checker.changed("test.tmp/test.txt"));
 			
 			// Should still be false.
 			ensure(!checker.changed("test.tmp/test.txt"));
 			
 			// Now make it accessible again...
-			system("chmod u=rwx test.tmp");
+			runShellCommand("chmod u=rwx test.tmp");
 			ensure(checker.changed("test.tmp/test.txt"));
 		}
 	}
@@ -138,11 +138,11 @@ namespace tut {
 			checker.changed("test.tmp/test.txt");
 			
 			touchFile("test.tmp/test.txt", 2);
-			system("chmod a= test.tmp");
+			runShellCommand("chmod a= test.tmp");
 			ensure("First check returns false", !checker.changed("test.tmp/test.txt"));
 			
 			// Now make it accessible again...
-			system("chmod u=rwx test.tmp");
+			runShellCommand("chmod u=rwx test.tmp");
 			ensure("Second check returns true", checker.changed("test.tmp/test.txt"));
 		}
 	}
@@ -205,9 +205,9 @@ namespace tut {
 			
 			checker.changed("test.tmp/test.txt");
 			unlink("test.tmp/test.txt");
-			system("chmod a= test.tmp");
+			runShellCommand("chmod a= test.tmp");
 			ensure(!checker.changed("test.tmp/test.txt"));
-			system("chmod u=rwx test.tmp");
+			runShellCommand("chmod u=rwx test.tmp");
 			ensure(checker.changed("test.tmp/test.txt"));
 		}
 	}

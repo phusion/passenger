@@ -128,7 +128,7 @@ public:
 	 * @throws thread_resource_error Cannot create a thread.
 	 * @post this->num_threads() == old->num_threads() + 1
 	 */
-	void create_thread(boost::function<void ()> &func, const string &name = "", unsigned int stack_size = 0) {
+	void create_thread(const boost::function<void ()> &func, const string &name = "", unsigned int stack_size = 0) {
 		boost::lock_guard<boost::mutex> l(lock);
 		thread_handle_ptr handle(new thread_handle());
 		thread_handles.push_back(handle);
@@ -179,6 +179,32 @@ public:
 		
 		l.unlock();
 		thread::interrupt_and_join_multiple(threads, nthreads_copy);
+	}
+	
+	void join_all() {
+		// See comments from interrupt_and_join_all().
+		boost::unique_lock<boost::mutex> l(lock);
+		list<thread_handle_ptr> thread_handles_copy;
+		list<thread_handle_ptr>::iterator it;
+		thread_handle_ptr handle;
+		unsigned int nthreads_copy = nthreads;
+		thread *threads[nthreads];
+		unsigned int i = 0;
+		
+		// We make a copy so that the handles aren't destroyed prematurely.
+		thread_handles_copy = thread_handles;
+		for (it = thread_handles.begin(); it != thread_handles.end(); it++, i++) {
+			handle = *it;
+			handle->removed_from_list = true;
+			threads[i] = handle->thr;
+		}
+		thread_handles.clear();
+		nthreads = 0;
+		
+		l.unlock();
+		for (i = 0; i < nthreads_copy; i++) {
+			threads[i]->join();
+		}
 	}
 	
 	/**

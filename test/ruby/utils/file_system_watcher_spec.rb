@@ -110,7 +110,15 @@ describe Utils::FileSystemWatcher do
 		specify "a watched file has been truncated" do
 			File.write("#{@tmpdir}/foo", "contents")
 			result = test_block(["#{@tmpdir}/foo"]) do
-				File.open("#{@tmpdir}/foo", "w").close
+				if RUBY_PLATFORM =~ /darwin/
+					# OS X kernel bug in kqueue... sigh...
+					File.open("#{@tmpdir}/foo", "w") do |f|
+						f.write("a")
+						f.truncate(0)
+					end
+				else
+					File.open("#{@tmpdir}/foo", "w").close
+				end
 			end
 		end
 		

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -36,7 +36,7 @@
 
 #include "Configuration.hpp"
 #include "Utils.h"
-#include <LoggingAgent/FilterSupport.h>
+#include <agents/LoggingAgent/FilterSupport.h>
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
  * to learn why.
@@ -188,19 +188,18 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->autoDetectRails = DirConfig::UNSET;
 	config->autoDetectRack = DirConfig::UNSET;
 	config->autoDetectWSGI = DirConfig::UNSET;
+	config->ruby = NULL;
 	config->environment = NULL;
 	config->appRoot = NULL;
 	config->user = NULL;
 	config->group = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
-	config->frameworkSpawnerTimeout = -1;
-	config->appSpawnerTimeout = -1;
+	config->maxPreloaderIdleTime = -1;
 	config->maxRequests = 0;
 	config->maxRequestsSpecified = false;
 	config->minInstances = 1;
 	config->minInstancesSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
-	config->useGlobalQueue = DirConfig::UNSET;
 	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
 	config->allowEncodedSlashes = DirConfig::UNSET;
 	config->statThrottleRate = 0;
@@ -234,18 +233,17 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_THREEWAY_CONFIG(autoDetectRails);
 	MERGE_THREEWAY_CONFIG(autoDetectRack);
 	MERGE_THREEWAY_CONFIG(autoDetectWSGI);
+	MERGE_STR_CONFIG(ruby);
 	MERGE_STR_CONFIG(environment);
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
 	MERGE_STR_CONFIG(user);
 	MERGE_STR_CONFIG(group);
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
-	config->frameworkSpawnerTimeout = (add->frameworkSpawnerTimeout == -1) ? base->frameworkSpawnerTimeout : add->frameworkSpawnerTimeout;
-	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
+	config->maxPreloaderIdleTime = (add->maxPreloaderIdleTime == -1) ? base->maxPreloaderIdleTime : add->maxPreloaderIdleTime;
 	MERGE_INT_CONFIG(maxRequests);
 	MERGE_INT_CONFIG(minInstances);
 	MERGE_THREEWAY_CONFIG(highPerformance);
-	MERGE_THREEWAY_CONFIG(useGlobalQueue);
 	MERGE_INT_CONFIG(statThrottleRate);
 	MERGE_STR_CONFIG(restartDir);
 	MERGE_STR_CONFIG(uploadBufferDir);
@@ -271,7 +269,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
  *************************************************/
 
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_root, root)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int, 0)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_debug_log_file, debugLogFile)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
@@ -298,10 +295,10 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_min_instances, minInstances, unsigned long, 0)
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_use_global_queue, useGlobalQueue)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_max_requests, maxRequests, unsigned long, 0)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformance)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_environment, environment)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
@@ -320,14 +317,12 @@ DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_buffer_response, bufferResponse)
 static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	if (strcmp(arg, "smart") == 0) {
+	if (strcmp(arg, "smart") == 0 || strcmp(arg, "smart-lv2") == 0) {
 		config->spawnMethod = DirConfig::SM_SMART;
-	} else if (strcmp(arg, "smart-lv2") == 0) {
-		config->spawnMethod = DirConfig::SM_SMART_LV2;
-	} else if (strcmp(arg, "conservative") == 0) {
-		config->spawnMethod = DirConfig::SM_CONSERVATIVE;
+	} else if (strcmp(arg, "conservative") == 0 || strcmp(arg, "direct") == 0) {
+		config->spawnMethod = DirConfig::SM_DIRECT;
 	} else {
-		return "PassengerSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
+		return "PassengerSpawnMethod may only be 'smart', 'direct'.";
 	}
 	return NULL;
 }
@@ -372,36 +367,21 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rails_auto_detect, autoDetectRails)
 
-static const char *
-cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for RailsFrameworkSpawnerIdleTime.";
-	} else if (result < 0) {
-		return "Value for RailsFrameworkSpawnerIdleTime must be at least 0.";
-	} else {
-		config->frameworkSpawnerTimeout = result;
-		return NULL;
-	}
-}
+
 
 static const char *
-cmd_rails_app_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_max_preloader_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	char *end;
 	long int result;
 	
 	result = strtol(arg, &end, 10);
 	if (*end != '\0') {
-		return "Invalid number specified for RailsAppSpawnerIdleTime.";
+		return "Invalid number specified for PassengerMaxPreloaderIdleTime.";
 	} else if (result < 0) {
-		return "Value for RailsAppSpawnerIdleTime must be at least 0.";
+		return "Value for PassengerMaxPreloaderIdleTime must be at least 0.";
 	} else {
-		config->appSpawnerTimeout = result;
+		config->maxPreloaderIdleTime = result;
 		return NULL;
 	}
 }
@@ -444,7 +424,7 @@ static const char *
 cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 	fprintf(stderr, "WARNING: The 'RailsSpawnServer' option is obsolete. "
 		"Please specify 'PassengerRoot' instead. The correct value was "
-		"given to you by 'passenger-install-apache2-module'.");
+		"given to you by 'passenger-install-apache2-module'.\n");
 	fflush(stderr);
 	return NULL;
 }
@@ -453,7 +433,24 @@ static const char *
 cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, int arg) {
 	fprintf(stderr, "WARNING: The 'RailsAllowModRewrite' option is obsolete: "
 		"Phusion Passenger now fully supports mod_rewrite. "
-		"Please remove this option from your configuration file.");
+		"Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'RailsFrameworkSpawnerIdleTime' option is obsolete. "
+		"Please use 'PassengerPreloaderMaxIdleTime' instead.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
+	fprintf(stderr, "WARNING: The 'PassengerUseGlobalQueue' option is obsolete: "
+		"global queueing is now always turned on. "
+		"Please remove this option from your configuration file.\n");
 	fflush(stderr);
 	return NULL;
 }
@@ -472,7 +469,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("PassengerRuby",
 		(Take1Func) cmd_passenger_ruby,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The Ruby interpreter to use."),
 	AP_INIT_TAKE1("PassengerLogLevel",
 		(Take1Func) cmd_passenger_log_level,
@@ -504,11 +501,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that an application may be idle before it gets terminated."),
-	AP_INIT_FLAG("PassengerUseGlobalQueue",
-		(FlagFunc) cmd_passenger_use_global_queue,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Enable or disable Passenger's global queuing mode mode."),
 	AP_INIT_FLAG("PassengerUserSwitching",
 		(FlagFunc) cmd_passenger_user_switching,
 		NULL,
@@ -614,6 +606,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
+	AP_INIT_TAKE1("PassengerMaxPreloaderIdleTime",
+		(Take1Func) cmd_passenger_max_preloader_idle_time,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of seconds that a preloader process may be idle before it is shutdown."),
 	AP_INIT_TAKE1("UnionStationGatewayAddress",
 		(Take1Func) cmd_union_station_gateway_address,
 		NULL,
@@ -688,16 +685,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rails app must run."),
-	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime",
-		(Take1Func) cmd_rails_framework_spawner_idle_time,
-		NULL,
-		RSRC_CONF,
-		"The maximum number of seconds that a framework spawner may be idle before it is shutdown."),
-	AP_INIT_TAKE1("RailsAppSpawnerIdleTime",
-		(Take1Func) cmd_rails_app_spawner_idle_time,
-		NULL,
-		RSRC_CONF,
-		"The maximum number of seconds that an application spawner may be idle before it is shutdown."),
 	
 	// Rack-specific settings.
 	AP_INIT_TAKE1("RackBaseURI",
@@ -727,7 +714,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("RailsRuby",
 		(Take1Func) cmd_passenger_ruby,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Deprecated option."),
 	AP_INIT_TAKE1("RailsMaxPoolSize",
 		(Take1Func) cmd_passenger_max_pool_size,
@@ -759,7 +746,12 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Deprecated option."),
-	
+	AP_INIT_TAKE1("RailsAppSpawnerIdleTime",
+		(Take1Func) cmd_passenger_max_preloader_idle_time,
+		NULL,
+		RSRC_CONF,
+		"Deprecated option."),
+
 	// Obsolete options.
 	AP_INIT_TAKE1("RailsSpawnServer",
 		(Take1Func) cmd_rails_spawn_server,
@@ -770,8 +762,18 @@ const command_rec passenger_commands[] = {
 		(FlagFunc) cmd_rails_allow_mod_rewrite,
 		NULL,
 		RSRC_CONF,
-		"Whether custom mod_rewrite rules should be allowed."),
-	
+		"Obsolete option."),
+	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime",
+		(Take1Func) cmd_rails_framework_spawner_idle_time,
+		NULL,
+		RSRC_CONF,
+		"Obsolete option."),
+	AP_INIT_FLAG("PassengerUseGlobalQueue",
+		(FlagFunc) cmd_passenger_use_global_queue,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Obsolete option."),
+
 	{ NULL }
 };
 

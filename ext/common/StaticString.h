@@ -82,10 +82,30 @@ public:
 	/** A hash function object for StaticString. */
 	struct Hash {
 		size_t operator()(const StaticString &str) const {
-			size_t result = 0;
 			const char *data = str.content;
-			const char *end  = data + str.len;
-			while (data != end) {
+			const char *end  = str.content + str.len;
+			size_t result    = 0;
+			
+			#if defined(__i386__) || defined(__x86_64__)
+				/* When on x86 or x86_64, process 4 or 8 bytes
+				 * per iteration by treating the data as an
+				 * array of longs. Luckily for us these
+				 * architectures can read longs even on unaligned
+				 * addresses.
+				 */
+				const char *last_long = str.content +
+					str.len / sizeof(unsigned long) *
+					sizeof(unsigned long);
+				
+				while (data < last_long) {
+					result = result * 33 + *((unsigned long *) data);
+					data += sizeof(unsigned long);
+				}
+				
+				/* Process leftover data byte-by-byte. */
+			#endif
+			
+			while (data < end) {
 				result = result * 33 + *data;
 				data++;
 			}

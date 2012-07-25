@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
@@ -47,12 +48,12 @@
 #include <limits.h>
 #include <grp.h>
 #include <signal.h>
+#include <pthread.h>
 #ifdef HAVE_ALLOCA_H
 	#include <alloca.h>
 #endif
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 	#define HAVE_KQUEUE
-	#include <pthread.h>
 	#include <sys/event.h>
 	#include <sys/time.h>
 #endif
@@ -82,213 +83,6 @@ static VALUE S_ProcessTimes;
 #ifdef HAVE_KQUEUE
 	static VALUE cFileSystemWatcher;
 #endif
-
-/*
- * call-seq: send_fd(socket_fd, fd_to_send)
- *
- * Send a file descriptor over the given Unix socket. You do not have to call
- * this function directly. A convenience wrapper is provided by IO#send_io.
- *
- * - +socket_fd+ (integer): The file descriptor of the socket.
- * - +fd_to_send+ (integer): The file descriptor to send.
- * - Raises +SystemCallError+ if something went wrong.
- */
-static VALUE
-send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
-	struct msghdr msg;
-	struct iovec vec;
-	char dummy[1];
-	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
-		struct {
-			struct cmsghdr header;
-			int fd;
-		} control_data;
-	#else
-		char control_data[CMSG_SPACE(sizeof(int))];
-	#endif
-	struct cmsghdr *control_header;
-	int control_payload;
-	
-	msg.msg_name = NULL;
-	msg.msg_namelen = 0;
-	
-	/* Linux and Solaris require msg_iov to be non-NULL. */
-	dummy[0]       = '\0';
-	vec.iov_base   = dummy;
-	vec.iov_len    = sizeof(dummy);
-	msg.msg_iov    = &vec;
-	msg.msg_iovlen = 1;
-	
-	msg.msg_control    = (caddr_t) &control_data;
-	msg.msg_controllen = sizeof(control_data);
-	msg.msg_flags      = 0;
-	
-	control_header = CMSG_FIRSTHDR(&msg);
-	control_header->cmsg_level = SOL_SOCKET;
-	control_header->cmsg_type  = SCM_RIGHTS;
-	control_payload = NUM2INT(fd_to_send);
-	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
-		control_header->cmsg_len = sizeof(control_data);
-		control_data.fd = control_payload;
-	#else
-		control_header->cmsg_len = CMSG_LEN(sizeof(int));
-		memcpy(CMSG_DATA(control_header), &control_payload, sizeof(int));
-	#endif
-	
-	if (sendmsg(NUM2INT(socket_fd), &msg, 0) == -1) {
-		rb_sys_fail("sendmsg(2)");
-		return Qnil;
-	}
-	
-	return Qnil;
-}
-
-/*
- * call-seq: recv_fd(socket_fd)
- *
- * Receive a file descriptor from the given Unix socket. Returns the received
- * file descriptor as an integer. Raises +SystemCallError+ if something went
- * wrong.
- *
- * You do not have call this method directly. A convenience wrapper is
- * provided by IO#recv_io.
- */
-static VALUE
-recv_fd(VALUE self, VALUE socket_fd) {
-	struct msghdr msg;
-	struct iovec vec;
-	char dummy[1];
-	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
-		// File descriptor passing macros (CMSG_*) seem to be broken
-		// on 64-bit MacOS X. This structure works around the problem.
-		struct {
-			struct cmsghdr header;
-			int fd;
-		} control_data;
-		#define EXPECTED_CMSG_LEN sizeof(control_data)
-	#else
-		char control_data[CMSG_SPACE(sizeof(int))];
-		#define EXPECTED_CMSG_LEN CMSG_LEN(sizeof(int))
-	#endif
-	struct cmsghdr *control_header;
-
-	msg.msg_name    = NULL;
-	msg.msg_namelen = 0;
-	
-	dummy[0]       = '\0';
-	vec.iov_base   = dummy;
-	vec.iov_len    = sizeof(dummy);
-	msg.msg_iov    = &vec;
-	msg.msg_iovlen = 1;
-
-	msg.msg_control    = (caddr_t) &control_data;
-	msg.msg_controllen = sizeof(control_data);
-	msg.msg_flags      = 0;
-	
-	if (recvmsg(NUM2INT(socket_fd), &msg, 0) == -1) {
-		rb_sys_fail("Cannot read file descriptor with recvmsg()");
-		return Qnil;
-	}
-	
-	control_header = CMSG_FIRSTHDR(&msg);
-	if (control_header == NULL) {
-		rb_raise(rb_eIOError, "No valid file descriptor received.");
-		return Qnil;
-	}
-	if (control_header->cmsg_len   != EXPECTED_CMSG_LEN
-	 || control_header->cmsg_level != SOL_SOCKET
-	 || control_header->cmsg_type  != SCM_RIGHTS) {
-		rb_raise(rb_eIOError, "No valid file descriptor received.");
-		return Qnil;
-	}
-	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
-		return INT2NUM(control_data.fd);
-	#else
-		return INT2NUM(*((int *) CMSG_DATA(control_header)));
-	#endif
-}
-
-/*
- * call-seq: create_unix_socket(filename, backlog)
- *
- * Create a SOCK_STREAM server Unix socket. Unlike Ruby's UNIXServer class,
- * this function is also able to create Unix sockets on the abstract namespace
- * by prepending the filename with a null byte.
- *
- * - +filename+ (string): The filename of the Unix socket to create.
- * - +backlog+ (integer): The backlog to use for listening on the socket.
- * - Returns: The file descriptor of the created Unix socket, as an integer.
- * - Raises +SystemCallError+ if something went wrong.
- */
-static VALUE
-create_unix_socket(VALUE self, VALUE filename, VALUE backlog) {
-	int fd, ret;
-	struct sockaddr_un addr;
-	const char *filename_str;
-	long filename_length;
-	
-	filename_str = RSTRING_PTR(filename);
-	filename_length = RSTRING_LEN(filename);
-	
-	fd = socket(PF_UNIX, SOCK_STREAM, 0);
-	if (fd == -1) {
-		rb_sys_fail("Cannot create a Unix socket");
-		return Qnil;
-	}
-	
-	addr.sun_family = AF_UNIX;
-	memcpy(addr.sun_path, filename_str,
-		MIN((long) filename_length, (long) sizeof(addr.sun_path)));
-	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-	
-	ret = bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
-	if (ret == -1) {
-		int e = errno;
-		close(fd);
-		errno = e;
-		rb_sys_fail("Cannot bind Unix socket");
-		return Qnil;
-	}
-	
-	ret = listen(fd, NUM2INT(backlog));
-	if (ret == -1) {
-		int e = errno;
-		close(fd);
-		errno = e;
-		rb_sys_fail("Cannot listen on Unix socket");
-		return Qnil;
-	}
-	return INT2NUM(fd);
-}
-
-/*
- * call-seq: close_all_file_descriptors(exceptions)
- *
- * Close all file descriptors, except those given in the +exceptions+ array.
- * For example, the following would close all file descriptors except standard
- * input (0) and standard output (1).
- *
- *  close_all_file_descriptors([0, 1])
- */
-static VALUE
-close_all_file_descriptors(VALUE self, VALUE exceptions) {
-	long i, j;
-	
-	for (i = sysconf(_SC_OPEN_MAX) - 1; i >= 0; i--) {
-		int is_exception = 0;
-		#ifdef RB_RESERVED_FD_P
-			is_exception = rb_reserved_fd_p((int) i);
-		#endif
-		for (j = 0; j < RARRAY_LEN(exceptions) && !is_exception; j++) {
-			long fd = NUM2INT(rb_ary_entry(exceptions, j));
-			is_exception = i == fd;
-		}
-		if (!is_exception) {
-			close((int) i);
-		}
-	}
-	return Qnil;
-}
 
 /*
  * call-seq: disable_stdio_buffering
@@ -586,29 +380,6 @@ f_writev3(VALUE self, VALUE fd, VALUE components1, VALUE components2, VALUE comp
 	return f_generic_writev(fd, array_of_components, 3);
 }
 
-/**
- * Ruby's implementations of initgroups, setgid and setuid are broken various ways,
- * sigh...
- * Ruby's setgid and setuid can't handle negative UIDs and initgroups is just broken.
- * Work around it by using our own implementation.
- */
-static VALUE
-switch_user(VALUE self, VALUE username, VALUE uid, VALUE gid) {
-	uid_t the_uid = (uid_t) NUM2LL(uid);
-	gid_t the_gid = (gid_t) NUM2LL(gid);
-	
-	if (initgroups(RSTRING_PTR(username), the_gid) == -1) {
-		rb_sys_fail("initgroups");
-	}
-	if (setgid(the_gid) == -1) {
-		rb_sys_fail("setgid");
-	}
-	if (setuid(the_uid) == -1) {
-		rb_sys_fail("setuid");
-	}
-	return Qnil;
-}
-
 static VALUE
 process_times(VALUE self) {
 	struct rusage usage;
@@ -621,6 +392,70 @@ process_times(VALUE self) {
 	utime = (unsigned long long) usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec;
 	stime = (unsigned long long) usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
 	return rb_struct_new(S_ProcessTimes, rb_ull2inum(utime), rb_ull2inum(stime));
+}
+
+static void *
+detach_process_main(void *arg) {
+	pid_t pid = (pid_t) (long) arg;
+	int ret;
+	do {
+		ret = waitpid(pid, NULL, 0);
+	} while (ret == -1 && errno == EINTR);
+	return NULL;
+}
+
+static VALUE
+detach_process(VALUE self, VALUE pid) {
+	pthread_t thr;
+	pthread_attr_t attr;
+	size_t stack_size = 96 * 1024;
+	
+	unsigned long min_stack_size;
+	int stack_min_size_defined;
+	int round_stack_size;
+	
+	#ifdef PTHREAD_STACK_MIN
+		// PTHREAD_STACK_MIN may not be a constant macro so we need
+		// to evaluate it dynamically.
+		min_stack_size = PTHREAD_STACK_MIN;
+		stack_min_size_defined = 1;
+	#else
+		// Assume minimum stack size is 128 KB.
+		min_stack_size = 128 * 1024;
+		stack_min_size_defined = 0;
+	#endif
+	if (stack_size != 0 && stack_size < min_stack_size) {
+		stack_size = min_stack_size;
+		round_stack_size = !stack_min_size_defined;
+	} else {
+		round_stack_size = 1;
+	}
+	
+	if (round_stack_size) {
+		// Round stack size up to page boundary.
+		long page_size;
+		#if defined(_SC_PAGESIZE)
+			page_size = sysconf(_SC_PAGESIZE);
+		#elif defined(_SC_PAGE_SIZE)
+			page_size = sysconf(_SC_PAGE_SIZE);
+		#elif defined(PAGESIZE)
+			page_size = sysconf(PAGESIZE);
+		#elif defined(PAGE_SIZE)
+			page_size = sysconf(PAGE_SIZE);
+		#else
+			page_size = getpagesize();
+		#endif
+		if (stack_size % page_size != 0) {
+			stack_size = stack_size - (stack_size % page_size) + page_size;
+		}
+	}
+	
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, 1);
+	pthread_attr_setstacksize(&attr, stack_size);
+	pthread_create(&thr, &attr, detach_process_main, (void *) NUM2LONG(pid));
+	pthread_attr_destroy(&attr);
+	return Qnil;
 }
 
 #if defined(HAVE_KQUEUE) || defined(IN_DOXYGEN)
@@ -1010,17 +845,13 @@ Init_passenger_native_support() {
 	
 	S_ProcessTimes = rb_struct_define("ProcessTimes", "utime", "stime", NULL);
 	
-	rb_define_singleton_method(mNativeSupport, "send_fd", send_fd, 2);
-	rb_define_singleton_method(mNativeSupport, "recv_fd", recv_fd, 1);
-	rb_define_singleton_method(mNativeSupport, "create_unix_socket", create_unix_socket, 2);
-	rb_define_singleton_method(mNativeSupport, "close_all_file_descriptors", close_all_file_descriptors, 1);
 	rb_define_singleton_method(mNativeSupport, "disable_stdio_buffering", disable_stdio_buffering, 0);
 	rb_define_singleton_method(mNativeSupport, "split_by_null_into_hash", split_by_null_into_hash, 1);
 	rb_define_singleton_method(mNativeSupport, "writev", f_writev, 2);
 	rb_define_singleton_method(mNativeSupport, "writev2", f_writev2, 3);
 	rb_define_singleton_method(mNativeSupport, "writev3", f_writev3, 4);
-	rb_define_singleton_method(mNativeSupport, "switch_user", switch_user, 3);
 	rb_define_singleton_method(mNativeSupport, "process_times", process_times, 0);
+	rb_define_singleton_method(mNativeSupport, "detach_process", detach_process, 1);
 	
 	#ifdef HAVE_KQUEUE
 		cFileSystemWatcher = rb_define_class_under(mNativeSupport,

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -67,13 +67,15 @@ class FileDescriptor {
 private:
 	struct SharedData {
 		int fd;
+		bool autoClose;
 		
-		SharedData(int fd) {
+		SharedData(int fd, bool autoClose) {
 			this->fd = fd;
+			this->autoClose = autoClose;
 		}
 		
 		~SharedData() {
-			if (fd >= 0) {
+			if (fd >= 0 && autoClose) {
 				this_thread::disable_syscall_interruption dsi;
 				syscalls::close(fd);
 			}
@@ -110,7 +112,7 @@ public:
 	 *
 	 * @post *this == fd
 	 */
-	FileDescriptor(int fd) {
+	explicit FileDescriptor(int fd, bool autoClose = true) {
 		if (fd >= 0) {
 			/* Make sure that the 'new' operator doesn't overwrite
 			 * errno so that we can write code like this:
@@ -121,7 +123,7 @@ public:
 			 *    }
 			 */
 			int e = errno;
-			data = make_shared<SharedData>(fd);
+			data = make_shared<SharedData>(fd, autoClose);
 			errno = e;
 		}
 	}
@@ -191,7 +193,7 @@ public:
 		 */
 		int e = errno;
 		if (fd >= 0) {
-			data = make_shared<SharedData>(fd);
+			data = make_shared<SharedData>(fd, true);
 		} else {
 			data.reset();
 		}

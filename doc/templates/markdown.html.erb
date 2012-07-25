@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js" type="text/javascript"></script>
+    <![endif]-->
+    <style type="text/css">
+      <%= css %>
+      
+      h1, h2, h3, h4, h5, h6 {
+        margin-bottom: 9px;
+      }
+
+      ul ul,
+      ul ol,
+      ol ol,
+      ol ul {
+        margin-bottom: 9px;
+      }
+
+      #container {
+        max-width: 767px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      #top-vertical-container-margin {
+        margin-top: 20px;
+      }
+
+      #bottom-vertical-container-margin {
+        margin-bottom: 20px;
+      }
+
+      #logo {
+        text-align: center;
+        margin-bottom: 9px;
+      }
+
+      #title {
+        text-align: center;
+        font-size: 400%;
+        line-height: 1em;
+        padding-bottom: 30px;
+        margin-bottom: 30px;
+        border-bottom: solid 1px #d0d0d0;
+      }
+
+      #toc {
+        margin-bottom: 20px;
+      }
+
+      #toc .level-2 {
+        margin-left: 18px;
+      }
+
+      #toc .level-3 {
+        margin-left: 36px;
+      }
+
+      footer {
+        border-top: solid 1px #d0d0d0;
+        margin-top: 9px;
+        padding-top: 9px;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div id="container">
+      <div id="top-vertical-container-margin"></div>
+      <div id="logo">
+        <a href="http://www.phusion.nl/"><img src="images/phusion_banner_small.png" alt="Phusion docs" width="350" height="59"></a>
+      </div>
+      <div id="title"><%= title %></div>
+
+      <div id="toc" style="display: none">
+        <div class="header"><strong>Table of contents</strong></div>
+      </div>
+
+      <%= content %>
+
+      <footer>
+        <p>&copy; Phusion</p>
+      </footer>
+
+      <div id="bottom-vertical-container-margin"></div>
+    </div>
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script>
+      (function() {
+        var toc = $('#toc');
+        var i = 1;
+
+        $('h1,h2,h3').each(function() {
+          var level = parseInt(this.nodeName.match(/\d+/)[0]);
+          var id = "header_" + i;
+          var item = $('<div><a></a></div>').appendTo(toc);
+          item.addClass("level-" + level);
+          item.find('a').
+            text($(this).text()).
+            prop('href', '#' + id);
+          $(this).prop('id', id);
+          i++;
+        });
+
+        toc.show();
+      })();
+    </script>
+
+  </body>
+</html>

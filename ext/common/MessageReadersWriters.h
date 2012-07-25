@@ -501,6 +501,25 @@ public:
 		output[0] = StaticString(headerBuf, sizeof(uint32_t));
 		output[1] = data;
 	}
+
+	// output must be at least count + 1 in length
+	static void generate(const StaticString data[], unsigned int count,
+		char headerBuf[sizeof(uint32_t)], StaticString *output)
+	{
+		unsigned int i;
+		uint32_t totalSize = 0;
+
+		for (i = 0; i < count; i++) {
+			if (OXT_UNLIKELY(data[i].size() > 0xFFFFFFFF)) {
+				throw ArgumentException("Data size exceeds maximum size for scalar messages.");
+			}
+			totalSize += data[i].size();
+			output[i + 1] = data[i];
+		}
+
+		Uint32Message::generate(headerBuf, totalSize);
+		output[0] = StaticString(headerBuf, sizeof(uint32_t));
+	}
 };
 
 } // namespace Passenger

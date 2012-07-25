@@ -15,8 +15,9 @@ shared_examples_for "analytics logging extensions for Rails" do
 			"analytics" => true,
 			"logging_agent_address" => @socket_address,
 			"logging_agent_username" => "logging",
-			"logging_agent_password_base64" => base64("1234"),
-			"node_name" => "localhost"
+			"logging_agent_password" => "1234",
+			"node_name" => "localhost",
+			"app_group_name" => "foobar"
 		}
 	end
 	
@@ -26,32 +27,11 @@ shared_examples_for "analytics logging extensions for Rails" do
 		Process.waitpid(@agent_pid)
 	end
 	
-	def send_request_to_app(app, env)
-		if app.server_sockets[:main][1] == "unix"
-			@connection = UNIXSocket.new(app.server_sockets[:main][0])
-		else
-			addr, port = app.server_sockets[:main][0].split(/:/)
-			@connection = TCPSocket.new(addr, port.to_i)
-		end
-		channel = MessageChannel.new(@connection)
-		data = ""
-		env = {
-			"REQUEST_METHOD" => "GET",
-			"SCRIPT_NAME"    => "",
-			"PATH_INFO"      => "/",
-			"QUERY_STRING"   => "",
-			"SERVER_NAME"    => "localhost",
-			"SERVER_PORT"    => "80",
-			"PASSENGER_TXN_ID"     => "1234-abcd",
-			"PASSENGER_GROUP_NAME" => "foobar"
-		}.merge(env)
-		env["REQUEST_URI"] ||= env["PATH_INFO"]
-		env.each_pair do |key, value|
-			data << key << "\0"
-			data << value << "\0"
-		end
-		channel.write_scalar(data)
-		return @connection.read
+	def send_request_to_app(headers)
+		headers = {
+			"PASSENGER_TXN_ID"     => "1234-abcd"
+		}.merge(headers)
+		return perform_request(headers)
 	end
 	
 	def read_log(name_suffix)
@@ -69,36 +49,34 @@ shared_examples_for "analytics logging extensions for Rails" do
 	
 	it "doesn't install analytics logging extensions if analytics logging is turned off" do
 		@options.delete("analytics")
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-					def index
-						File.open("out.txt", "w") do |f|
-							f.write(request.env["PASSENGER_ANALYTICS_WEB_LOG"].class.to_s)
-						end
-						render :nothing => true
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+				def index
+					File.open("out.txt", "w") do |f|
+						f.write(request.env["PASSENGER_ANALYTICS_WEB_LOG"].class.to_s)
 					end
+					render :nothing => true
 				end
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+			end
+		})
+		start!(@options)
+		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
-			filename = "#{app.app_root}/out.txt"
+			filename = "#{@stub.app_root}/out.txt"
 			File.exist?(filename) && File.read(filename) == "NilClass"
 		end
 	end
 	
 	it "logs the controller and action name" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-					def index
-						render :nothing => true
-					end
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+				def index
+					render :nothing => true
 				end
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+			end
+		})
+		start!(@options)
+		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
 			log = read_log("requests/**/log.txt")
@@ -107,16 +85,15 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs uncaught exceptions in controller actions" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/app/controllers/crash_controller.rb", %Q{
-				class CrashController < ActionController::Base
-					def index
-						raise "something went wrong"
-					end
+		File.write("#{@stub.app_root}/app/controllers/crash_controller.rb", %Q{
+			class CrashController < ActionController::Base
+				def index
+					raise "something went wrong"
 				end
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/crash")
+			end
+		})
+		start!(@options)
+		send_request_to_app("PATH_INFO" => "/crash")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
 			log = read_log("exceptions/**/log.txt")
@@ -129,20 +106,19 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs ActionController benchmarks" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-					def index
-						# The '::' prefix works around a Dependencies
-						# bug in Rails 1.2
-						::ActionController::Base.benchmark("hello") do
-						end
-						render :nothing => true
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+				def index
+					# The '::' prefix works around a Dependencies
+					# bug in Rails 1.2
+					::ActionController::Base.benchmark("hello") do
 					end
+					render :nothing => true
 				end
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+			end
+		})
+		start!(@options)
+		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
 			log = read_log("requests/**/log.txt")
@@ -152,18 +128,17 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs ActionView benchmarks" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-				end
-			})
-			FileUtils.mkdir_p("#{stub.app_root}/app/views/foo")
-			File.write("#{stub.app_root}/app/views/foo/index.rhtml", %Q{
-				<% benchmark("hello") do %>
-				<% end %>
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+			end
+		})
+		FileUtils.mkdir_p("#{@stub.app_root}/app/views/foo")
+		File.write("#{@stub.app_root}/app/views/foo/index.rhtml", %Q{
+			<% benchmark("hello") do %>
+			<% end %>
+		})
+		start!(@options)
+		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
 			log = read_log("requests/**/log.txt")
@@ -173,23 +148,18 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs successful SQL queries" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/config/database.yml",
-				"production:\n" +
-				"  adapter: sqlite3\n" +
-				"  database: db.sqlite3\n")
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-					def index
-						db = ActiveRecord::Base.connection
-						db.execute("CREATE TABLE foobar (id INT)")
-						db.execute("INSERT INTO foobar VALUES (1)")
-						render :nothing => true
-					end
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+				def index
+					db = ActiveRecord::Base.connection
+					db.execute("CREATE TABLE foobar (id INT)")
+					db.execute("INSERT INTO foobar VALUES (1)")
+					render :nothing => true
 				end
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+			end
+		})
+		start!(@options.merge("active_record" => true))
+		send_request_to_app("PATH_INFO" => "/foo")
 		extra_info_regex = Regexp.escape(base64("SQL\nCREATE TABLE foobar (id INT)"))
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
@@ -200,22 +170,17 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs failed SQL queries" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/config/database.yml",
-				"production:\n" +
-				"  adapter: sqlite3\n" +
-				"  database: db.sqlite3\n")
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-					def index
-						db = ActiveRecord::Base.connection
-						db.execute("INVALID QUERY")
-						render :nothing => true
-					end
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+				def index
+					db = ActiveRecord::Base.connection
+					db.execute("INVALID QUERY")
+					render :nothing => true
 				end
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+			end
+		})
+		start!(@options.merge("active_record" => true))
+		send_request_to_app("PATH_INFO" => "/foo")
 		extra_info_regex = Regexp.escape(base64("SQL\nINVALID QUERY"))
 		if rails_version >= '3.0'
 			pending do
@@ -236,16 +201,15 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs controller processing time of successful actions" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-					def index
-						render :nothing => true
-					end
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+				def index
+					render :nothing => true
 				end
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+			end
+		})
+		start!(@options)
+		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
 			log = read_log("requests/**/log.txt")
@@ -255,16 +219,15 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs controller processing time of failed actions" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-					def index
-						raise "crash"
-					end
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+				def index
+					raise "crash"
 				end
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+			end
+		})
+		start!(@options)
+		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
 			log = read_log("requests/**/log.txt")
@@ -274,19 +237,18 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs view rendering time of successful actions" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-					def index
-					end
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+				def index
 				end
-			})
-			FileUtils.mkdir_p("#{stub.app_root}/app/views/foo")
-			File.write("#{stub.app_root}/app/views/foo/index.rhtml", %Q{
-				hello world
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+			end
+		})
+		FileUtils.mkdir_p("#{@stub.app_root}/app/views/foo")
+		File.write("#{@stub.app_root}/app/views/foo/index.rhtml", %Q{
+			hello world
+		})
+		start!(@options)
+		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
 			log = read_log("requests/**/log.txt")
@@ -297,19 +259,18 @@ shared_examples_for "analytics logging extensions for Rails" do
 	end
 	
 	it "logs view rendering time of failed actions" do
-		app = spawn_some_application(@options) do |stub|
-			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-				class FooController < ActionController::Base
-					def index
-					end
+		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+			class FooController < ActionController::Base
+				def index
 				end
-			})
-			FileUtils.mkdir_p("#{stub.app_root}/app/views/foo")
-			File.write("#{stub.app_root}/app/views/foo/index.rhtml", %Q{
-				<% raise "crash!" %>
-			})
-		end
-		send_request_to_app(app, "PATH_INFO" => "/foo")
+			end
+		})
+		FileUtils.mkdir_p("#{@stub.app_root}/app/views/foo")
+		File.write("#{@stub.app_root}/app/views/foo/index.rhtml", %Q{
+			<% raise "crash!" %>
+		})
+		start!(@options)
+		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
 			log = read_log("requests/**/log.txt")
@@ -320,22 +281,21 @@ shared_examples_for "analytics logging extensions for Rails" do
 	
 	it "logs cache hits" do
 		if rails_version >= '2.1'
-			app = spawn_some_application(@options) do |stub|
-				File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-					class FooController < ActionController::Base
-						def index
-							Rails.cache.write("key1", "foo")
-							Rails.cache.write("key2", "foo")
-							Rails.cache.write("key3", "foo")
-							Rails.cache.read("key1")
-							Rails.cache.fetch("key2")
-							Rails.cache.fetch("key3") { "bar" }
-							render :text => 'ok'
-						end
+			File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+				class FooController < ActionController::Base
+					def index
+						Rails.cache.write("key1", "foo")
+						Rails.cache.write("key2", "foo")
+						Rails.cache.write("key3", "foo")
+						Rails.cache.read("key1")
+						Rails.cache.fetch("key2")
+						Rails.cache.fetch("key3") { "bar" }
+						render :text => 'ok'
 					end
-				})
-			end
-			send_request_to_app(app, "PATH_INFO" => "/foo")
+				end
+			})
+			start!(@options)
+			send_request_to_app("PATH_INFO" => "/foo")
 			eventually(5) do
 				flush_logging_agent(@logging_agent_password, @socket_address)
 				log = read_log("requests/**/log.txt")
@@ -348,19 +308,18 @@ shared_examples_for "analytics logging extensions for Rails" do
 	
 	it "logs cache misses" do
 		if rails_version >= '2.1'
-			app = spawn_some_application(@options) do |stub|
-				File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
-					class FooController < ActionController::Base
-						def index
-							Rails.cache.read("key1")
-							Rails.cache.fetch("key2")
-							Rails.cache.fetch("key3") { "bar" }
-							render :text => 'ok'
-						end
+			File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
+				class FooController < ActionController::Base
+					def index
+						Rails.cache.read("key1")
+						Rails.cache.fetch("key2")
+						Rails.cache.fetch("key3") { "bar" }
+						render :text => 'ok'
 					end
-				})
-			end
-			send_request_to_app(app, "PATH_INFO" => "/foo")
+				end
+			})
+			start!(@options)
+			send_request_to_app("PATH_INFO" => "/foo")
 			eventually(5) do
 				flush_logging_agent(@logging_agent_password, @socket_address)
 				log = read_log("requests/**/log.txt")

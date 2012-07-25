@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -36,63 +36,54 @@ using namespace boost;
 
 
 /**
- * Locates various Phusion Passenger resources on the filesystem.
+ * Locates various Phusion Passenger resources on the filesystem. All Phusion Passenger
+ * files are located through this class. There's similar code in lib/phusion_passenger.rb.
+ * See doc/Packaging.txt.md for an introduction about where Phusion Passenger expects its
+ * files to be located.
  */
 class ResourceLocator {
 private:
+	string root;
+	string binDir;
 	string agentsDir;
 	string helperScriptsDir;
 	string resourcesDir;
 	string docDir;
 	string rubyLibDir;
-	string compilableSourceDir;
-	string apache2Module;
 	
-	string getOption(const string &file, const IniFileSectionPtr &section, const string &key) const {
+	static string getOption(const string &file, const IniFileSectionPtr &section, const string &key) {
 		if (section->hasKey(key)) {
 			return section->get(key);
 		} else {
-			throw RuntimeException("Option '" + key + "' missing in file " + file);
+			throw RuntimeException("Option '" + key + "' missing in file '" + file + "'");
 		}
 	}
 	
 public:
 	ResourceLocator(const string &rootOrFile) {
-		FileType rootOrFileType = getFileType(rootOrFile);
-		if (rootOrFileType == FT_DIRECTORY || rootOrFileType == FT_NONEXISTANT) {
-			string root = rootOrFile;
-			bool nativelyPackaged = !fileExists(root + "/Rakefile") ||
-				!fileExists(root + "/DEVELOPERS.TXT");
-			
-			if (nativelyPackaged) {
-				agentsDir           = "/usr/lib/phusion-passenger/agents";
-				helperScriptsDir    = "/usr/share/phusion-passenger/helper-scripts";
-				resourcesDir        = "/usr/share/phusion-passenger";
-				docDir              = "/usr/share/doc/phusion-passenger";
-				rubyLibDir          = "";
-				compilableSourceDir = "/usr/share/phusion-passenger/compilable-source";
-				apache2Module       = "/usr/lib/apache2/modules/mod_passenger.so";
-			} else {
-				agentsDir           = root + "/agents";
-				helperScriptsDir    = root + "/helper-scripts";
-				resourcesDir        = root + "/resources";
-				docDir              = root + "/doc";
-				rubyLibDir          = root + "/lib";
-				compilableSourceDir = root;
-				apache2Module       = root + "ext/apache2/mod_passenger.so";
-			}
-			
-		} else {
+		root = rootOrFile;
+		if (getFileType(rootOrFile) == FT_REGULAR) {
 			string file = rootOrFile;
 			IniFileSectionPtr options = IniFile(file).section("locations");
+			binDir              = getOption(file, options, "bin");
 			agentsDir           = getOption(file, options, "agents");
 			helperScriptsDir    = getOption(file, options, "helper_scripts");
 			resourcesDir        = getOption(file, options, "resources");
 			docDir              = getOption(file, options, "doc");
 			rubyLibDir          = getOption(file, options, "rubylib");
-			compilableSourceDir = getOption(file, options, "compilable_source");
-			apache2Module       = getOption(file, options, "apache2_module");
+		} else {
+			string root = rootOrFile;
+			binDir              = root + "/bin";
+			agentsDir           = root + "/agents";
+			helperScriptsDir    = root + "/helper-scripts";
+			resourcesDir        = root + "/resources";
+			docDir              = root + "/doc";
+			rubyLibDir          = root + "/lib";
 		}
+	}
+	
+	string getRoot() const {
+		return root;
 	}
 	
 	string getAgentsDir() const {
@@ -118,14 +109,6 @@ public:
 	// Can be empty.
 	string getRubyLibDir() const {
 		return rubyLibDir;
-	}
-	
-	string getCompilableSourceDir() const {
-		return compilableSourceDir;
-	}
-	
-	string getApache2ModuleFilename() const {
-		return apache2Module;
 	}
 };
 

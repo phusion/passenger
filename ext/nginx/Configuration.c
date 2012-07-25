@@ -36,7 +36,7 @@
 #include "Configuration.h"
 #include "ContentHandler.h"
 #include "../common/Constants.h"
-#include "../common/LoggingAgent/FilterSupport.h"
+#include "../common/agents/LoggingAgent/FilterSupport.h"
 
 
 static ngx_str_t headers_to_hide[] = {
@@ -122,11 +122,6 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     
     conf = &passenger_main_conf;
     *conf = *((passenger_main_conf_t *) conf_pointer);
-    
-    if (conf->ruby.len == 0) {
-        conf->ruby.data = (u_char *) "ruby";
-        conf->ruby.len  = sizeof("ruby") - 1;
-    }
     
     if (conf->log_level == (ngx_int_t) NGX_CONF_UNSET) {
         conf->log_level = DEFAULT_LOG_LEVEL;
@@ -285,11 +280,12 @@ passenger_create_loc_conf(ngx_conf_t *cf)
      */
 
     conf->enabled = NGX_CONF_UNSET;
-    conf->use_global_queue = NGX_CONF_UNSET;
     conf->friendly_error_pages = NGX_CONF_UNSET;
     conf->union_station_support = NGX_CONF_UNSET;
     conf->debugger = NGX_CONF_UNSET;
     conf->show_version_in_header = NGX_CONF_UNSET;
+    conf->ruby.data = NULL;
+    conf->ruby.len = 0;
     conf->environment.data = NULL;
     conf->environment.len = 0;
     conf->spawn_method.data = NULL;
@@ -308,8 +304,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->union_station_filters = NGX_CONF_UNSET_PTR;
     conf->min_instances = NGX_CONF_UNSET;
     conf->max_requests = NGX_CONF_UNSET;
-    conf->framework_spawner_idle_time = NGX_CONF_UNSET;
-    conf->app_spawner_idle_time = NGX_CONF_UNSET;
+    conf->max_preloader_idle_time = NGX_CONF_UNSET;
 
     /******************************/
     /******************************/
@@ -398,13 +393,13 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_script_copy_code_t  *copy;
 
     ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
-    ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 1);
     ngx_conf_merge_value(conf->friendly_error_pages, prev->friendly_error_pages, 1);
     ngx_conf_merge_value(conf->union_station_support, prev->union_station_support, 0);
     ngx_conf_merge_value(conf->debugger, prev->debugger, 0);
     ngx_conf_merge_value(conf->show_version_in_header, prev->show_version_in_header, 1);
+    ngx_conf_merge_str_value(conf->ruby, prev->ruby, NULL);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
-    ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
+    ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart");
     ngx_conf_merge_str_value(conf->union_station_key, prev->union_station_key, NULL);
     ngx_conf_merge_str_value(conf->user, prev->user, "");
     ngx_conf_merge_str_value(conf->group, prev->group, "");
@@ -412,8 +407,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->app_rights, prev->app_rights, NULL);
     ngx_conf_merge_value(conf->min_instances, prev->min_instances, (ngx_int_t) -1);
     ngx_conf_merge_value(conf->max_requests, prev->max_requests, (ngx_int_t) -1);
-    ngx_conf_merge_value(conf->framework_spawner_idle_time, prev->framework_spawner_idle_time, (ngx_int_t) -1);
-    ngx_conf_merge_value(conf->app_spawner_idle_time, prev->app_spawner_idle_time, (ngx_int_t) -1);
+    ngx_conf_merge_value(conf->max_preloader_idle_time, prev->max_preloader_idle_time, (ngx_int_t) -1);
     
     if (prev->base_uris != NGX_CONF_UNSET_PTR) {
         if (conf->base_uris == NGX_CONF_UNSET_PTR) {
@@ -487,11 +481,11 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_size_value(conf->upstream_config.buffer_size,
                               prev->upstream_config.buffer_size,
-                              (size_t) ngx_pagesize);
+                              16 * 1024);
 
 
     ngx_conf_merge_bufs_value(conf->upstream_config.bufs, prev->upstream_config.bufs,
-                              8, ngx_pagesize);
+                              8, 16 * 1024);
 
     if (conf->upstream_config.bufs.num < 2) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -996,6 +990,23 @@ union_station_filter(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 static char *
+rails_framework_spawner_idle_time(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_conf_log_error(NGX_LOG_ALERT, cf, 0, "The 'rails_framework_spawner_idle_time' "
+        "directive is deprecated; please set 'passenger_max_preloader_idle_time' instead");
+    return NGX_CONF_OK;
+}
+
+static char *
+passenger_use_global_queue(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_conf_log_error(NGX_LOG_ALERT, cf, 0, "The 'passenger_use_global_queue' "
+        "directive is obsolete and doesn't do anything anymore. Global queuing "
+        "is now always enabled. Please remove this configuration directive.");
+    return NGX_CONF_OK;
+}
+
+static char *
 set_null_terminated_keyval_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     char  *p = conf;
@@ -1058,10 +1069,10 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("passenger_ruby"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, ruby),
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, ruby),
       NULL },
 
     { ngx_string("passenger_log_level"),
@@ -1083,13 +1094,6 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_flag_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, abort_on_startup_error),
-      NULL },
-
-    { ngx_string("passenger_use_global_queue"),
-      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
-      ngx_conf_set_flag_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, use_global_queue),
       NULL },
 
     { ngx_string("passenger_friendly_error_pages"),
@@ -1288,6 +1292,13 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, prestart_uris),
       NULL },
 
+    { ngx_string("passenger_max_preloader_idle_time"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, max_preloader_idle_time),
+      NULL },
+
     { ngx_string("passenger_pass_header"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_array_slot,
@@ -1358,20 +1369,6 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_loc_conf_t, environment),
       NULL },
 
-    { ngx_string("rails_framework_spawner_idle_time"),
-      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_num_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, framework_spawner_idle_time),
-      NULL },
-
-    { ngx_string("rails_app_spawner_idle_time"),
-      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_num_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, app_spawner_idle_time),
-      NULL },
-
     { ngx_string("rack_env"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
@@ -1389,6 +1386,27 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, spawn_method),
+      NULL },
+
+    { ngx_string("rails_framework_spawner_idle_time"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      rails_framework_spawner_idle_time,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
+    { ngx_string("rails_app_spawner_idle_time"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, max_preloader_idle_time),
+      NULL },
+
+    { ngx_string("passenger_use_global_queue"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      passenger_use_global_queue,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
       NULL },
 
       ngx_null_command

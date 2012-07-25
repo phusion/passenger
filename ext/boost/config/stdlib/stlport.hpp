@@ -16,6 +16,16 @@
 #  endif
 #endif
 
+// Apple doesn't seem to reliably defined a *unix* macro
+#if !defined(CYGWIN) && (  defined(__unix__)  \
+                        || defined(__unix)    \
+                        || defined(unix)      \
+                        || defined(__APPLE__) \
+                        || defined(__APPLE)   \
+                        || defined(APPLE))
+#  include <unistd.h>
+#endif
+
 //
 // __STL_STATIC_CONST_INIT_BUG implies BOOST_NO_LIMITS_COMPILE_TIME_CONSTANTS
 // for versions prior to 4.1(beta)
@@ -205,14 +215,10 @@ namespace boost { using std::min; using std::max; }
 #  define BOOST_NO_0X_HDR_ARRAY
 #  define BOOST_NO_0X_HDR_CHRONO
 #  define BOOST_NO_0X_HDR_CODECVT
-#  define BOOST_NO_0X_HDR_CONCEPTS
 #  define BOOST_NO_0X_HDR_CONDITION_VARIABLE
-#  define BOOST_NO_0X_HDR_CONTAINER_CONCEPTS
 #  define BOOST_NO_0X_HDR_FORWARD_LIST
 #  define BOOST_NO_0X_HDR_FUTURE
 #  define BOOST_NO_0X_HDR_INITIALIZER_LIST
-#  define BOOST_NO_0X_HDR_ITERATOR_CONCEPTS
-#  define BOOST_NO_0X_HDR_MEMORY_CONCEPTS
 #  define BOOST_NO_0X_HDR_MUTEX
 #  define BOOST_NO_0X_HDR_RANDOM
 #  define BOOST_NO_0X_HDR_RATIO
@@ -225,6 +231,7 @@ namespace boost { using std::min; using std::max; }
 #  define BOOST_NO_STD_UNORDERED        // deprecated; see following
 #  define BOOST_NO_0X_HDR_UNORDERED_MAP
 #  define BOOST_NO_0X_HDR_UNORDERED_SET
+#  define BOOST_NO_NUMERIC_LIMITS_LOWEST
 
 #define BOOST_STDLIB "STLPort standard library version " BOOST_STRINGIZE(__SGI_STL_PORT)
 
