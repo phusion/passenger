@@ -300,22 +300,30 @@ private
 	def install_runtime
 		require 'phusion_passenger/standalone/runtime_installer'
 		installer = RuntimeInstaller.new(
-			:source_root => SOURCE_ROOT,
+			:targets     => [:nginx, :ruby, :support_binaries],
 			:support_dir => passenger_support_files_dir,
 			:nginx_dir   => nginx_dir,
-			:version     => @options[:nginx_version],
-			:tarball     => @options[:nginx_tarball],
+			:ruby_dir    => ruby_native_support_dir,
+			:nginx_version     => @options[:nginx_version],
+			:nginx_tarball     => @options[:nginx_tarball],
 			:binaries_url_root => @options[:binaries_url_root],
 			:plugin      => @plugin)
-		installer.start
+		installer.run
 	end
 	
 	def passenger_support_files_dir
-		return "#{@runtime_dir}/support"
+		require_platform_info_binary_compatibility
+		return "#{@runtime_dir}/support-#{PlatformInfo.cxx_binary_compatibility_id}"
 	end
 	
 	def nginx_dir
-		return "#{@runtime_dir}/nginx-#{@options[:nginx_version]}"
+		require_platform_info_binary_compatibility
+		return "#{@runtime_dir}/nginx-#{@options[:nginx_version]}-#{PlatformInfo.cxx_binary_compatibility_id}"
+	end
+	
+	def ruby_native_support_dir
+		require_platform_info_binary_compatibility
+		return "#{@runtime_dir}/rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}"
 	end
 	
 	def ensure_nginx_installed
@@ -324,14 +332,14 @@ private
 			exit 1
 		end
 		
-		home           = Etc.getpwuid.dir
-		@runtime_dir   = "#{GLOBAL_STANDALONE_RESOURCE_DIR}/#{runtime_version_string}"
-		if !File.exist?("#{nginx_dir}/sbin/nginx")
+		@runtime_dir = "#{GLOBAL_STANDALONE_RESOURCE_DIR}/#{PhusionPassenger::VERSION_STRING}"
+		if !File.exist?("#{nginx_dir}/nginx")
 			if Process.euid == 0
 				install_runtime
 			else
-				@runtime_dir = "#{home}/#{LOCAL_STANDALONE_RESOURCE_DIR}/#{runtime_version_string}"
-				if !File.exist?("#{nginx_dir}/sbin/nginx")
+				home         = Etc.getpwuid.dir
+				@runtime_dir = "#{home}/#{LOCAL_STANDALONE_RESOURCE_DIR}/#{PhusionPassenger::VERSION_STRING}"
+				if !File.exist?("#{nginx_dir}/nginx")
 					install_runtime
 				end
 			end

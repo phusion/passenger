@@ -156,6 +156,12 @@ class UnseekableSocket
 	rescue => e
 		raise annotate(e)
 	end
+
+	def eof?
+		@socket.eof?
+	rescue => e
+		raise annotate(e)
+	end
 	
 	def closed?
 		@socket.closed?

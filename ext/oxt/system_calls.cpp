@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "system_calls.hpp"
+#include "detail/context.hpp"
 #include <boost/thread.hpp>
 #include <cerrno>
 
@@ -73,12 +74,19 @@ oxt::setup_syscall_interruption_support() {
 
 #define CHECK_INTERRUPTION(error_expression, code) \
 	do { \
+		thread_local_context *ctx = get_thread_local_context(); \
+		if (OXT_UNLIKELY(ctx != NULL)) { \
+			ctx->syscall_interruption_lock.unlock(); \
+		} \
 		int _my_errno; \
 		do { \
 			code; \
 			_my_errno = errno; \
 		} while ((error_expression) && _my_errno == EINTR \
 			&& !this_thread::syscalls_interruptable()); \
+		if (OXT_UNLIKELY(ctx != NULL)) { \
+			ctx->syscall_interruption_lock.lock(); \
+		} \
 		if ((error_expression) && _my_errno == EINTR && this_thread::syscalls_interruptable()) { \
 			throw thread_interrupted(); \
 		} \
@@ -194,6 +202,26 @@ syscalls::dup2(int filedes, int filedes2) {
 	CHECK_INTERRUPTION(
 		ret == -1,
 		ret = ::dup2(filedes, filedes2)
+	);
+	return ret;
+}
+
+int
+syscalls::mkdir(const char *pathname, mode_t mode) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::mkdir(pathname, mode)
+	);
+	return ret;
+}
+
+int
+syscalls::chown(const char *path, uid_t owner, gid_t group) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::chown(path, owner, group)
 	);
 	return ret;
 }
@@ -384,6 +412,16 @@ syscalls::stat(const char *path, struct stat *buf) {
 	return ret;
 }
 
+int
+syscalls::lstat(const char *path, struct stat *buf) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::lstat(path, buf)
+	);
+	return ret;
+}
+
 time_t
 syscalls::time(time_t *t) {
 	time_t ret;
@@ -440,20 +478,34 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	struct timespec req2 = *req;
 	struct timespec rem2;
 	int ret, e;
+
+	thread_local_context *ctx = get_thread_local_context();
+	if (OXT_UNLIKELY(ctx != NULL)) {
+		ctx->syscall_interruption_lock.unlock();
+	}
+	
 	do {
 		ret = ::nanosleep(&req2, &rem2);
 		e = errno;
-		// nanosleep() on some systems is sometimes buggy. rem2
-		// could end up containing a tv_sec with a value near 2^32-1,
-		// probably because of integer wrapping bugs in the kernel.
-		// So we check for those.
-		if (rem2.tv_sec < req->tv_sec) {
-			req2 = rem2;
-		} else {
-			req2.tv_sec = 0;
-			req2.tv_nsec = 0;
+		if (ret == -1) {
+			/* nanosleep() on some systems is sometimes buggy. rem2
+			 * could end up containing a tv_sec with a value near 2^32-1,
+			 * probably because of integer wrapping bugs in the kernel.
+			 * So we check for those.
+			 */
+			if (rem2.tv_sec < req->tv_sec) {
+				req2 = rem2;
+			} else {
+				req2.tv_sec = 0;
+				req2.tv_nsec = 0;
+			}
 		}
 	} while (ret == -1 && e == EINTR && !this_thread::syscalls_interruptable());
+	
+	if (OXT_UNLIKELY(ctx != NULL)) {
+		ctx->syscall_interruption_lock.lock();
+	}
+	
 	if (ret == -1 && e == EINTR && this_thread::syscalls_interruptable()) {
 		throw thread_interrupted();
 	}
@@ -509,11 +561,18 @@ syscalls::waitpid(pid_t pid, int *status, int options) {
  * boost::this_thread
  *************************************/
 
-thread_specific_ptr<bool> this_thread::_syscalls_interruptable;
+#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+	__thread bool this_thread::_syscalls_interruptable = true;
 
+	bool
+	this_thread::syscalls_interruptable() {
+		return _syscalls_interruptable;
+	}
+#else
+	thread_specific_ptr<bool> this_thread::_syscalls_interruptable;
 
-bool
-this_thread::syscalls_interruptable() {
-	return _syscalls_interruptable.get() == NULL || *_syscalls_interruptable;
-}
-
+	bool
+	this_thread::syscalls_interruptable() {
+		return _syscalls_interruptable.get() == NULL || *_syscalls_interruptable;
+	}
+#endif

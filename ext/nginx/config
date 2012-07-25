@@ -1,12 +1,14 @@
-if ! test -f "$ngx_addon_dir/../common/libpassenger_common.a" || \
-   ! test -f "$ngx_addon_dir/../common/libboost_oxt.a"; then
+PATH="$ngx_addon_dir/../../bin:$PATH"
+export PATH
+
+if test "x$PASSENGER_LIBS" = "x" && ! passenger-config --compiled; then
     echo "*** The Phusion Passenger support files are not yet compiled. Compiling them for you... ***"
-    echo "*** Running 'rake nginx RELEASE=yes' in $ngx_addon_dir... ***"
+    echo "*** Running 'rake nginx CACHING=false' in $ngx_addon_dir... ***"
     old_dir=`pwd`
     if ! cd $ngx_addon_dir; then
         exit 1
     fi
-    if ! rake nginx RELEASE=yes; then
+    if ! rake nginx CACHING=false; then
         exit 1
     fi
     cd "$old_dir"
@@ -25,11 +27,13 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/ContentHandler.h \
     ${ngx_addon_dir}/StaticContentHandler.h \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
-    ${ngx_addon_dir}/../common/Constants.h"
-CORE_LIBS="$CORE_LIBS  \
-    ${ngx_addon_dir}/../common/libpassenger_common.a \
-    ${ngx_addon_dir}/../common/libboost_oxt.a \
-    -lstdc++ -lpthread"
+    `passenger-config --root`/ext/common/Constants.h"
+if test "x$PASSENGER_LIBS" = "x"; then
+    CORE_LIBS="$CORE_LIBS `passenger-config --nginx-libs`"
+else
+    CORE_LIBS="$CORE_LIBS $PASSENGER_LIBS"
+fi
+CORE_LIBS="$CORE_LIBS -lstdc++ -lpthread"
 
 ngx_feature="Math library"
 ngx_feature_name=

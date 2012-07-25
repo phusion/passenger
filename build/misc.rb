@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -134,20 +134,38 @@ task :news_as_html do
 	puts "</dl>"
 end
 
-task :compile_app => [LIBCOMMON, LIBBOOST_OXT, :libev] do
+dependencies = [
+	COMMON_LIBRARY.link_objects,
+	LIBBOOST_OXT,
+	:libev,
+	:libeio
+].flatten
+task :compile_app => dependencies do
 	source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
 	if !source
 		STDERR.puts "Please specify the source filename with SOURCE=(...)"
 		exit 1
 	end
-	exe    = source.sub(/\.cpp$/, '')
-	create_executable(exe, source,
-		"-Iext -Iext/common #{LIBEV_CFLAGS} " <<
-		"#{PlatformInfo.portability_cflags} " <<
-		"#{EXTRA_CXXFLAGS} " <<
-		"#{LIBCOMMON} " <<
-		"#{LIBBOOST_OXT} " <<
-		"#{LIBEV_LIBS} " <<
-		"#{PlatformInfo.portability_ldflags} " <<
-		"#{EXTRA_LDFLAGS}")
+	if source =~ /\.h/
+		File.open('_source.cpp', 'w') do |f|
+			f.puts "#include \"#{source}\""
+		end
+		source = '_source.cpp'
+	end
+	exe = source.sub(/\.cpp$/, '')
+	begin
+		create_executable(exe, source,
+			"-DSTANDALONE " <<
+			"-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
+			"#{PlatformInfo.portability_cflags} " <<
+			"#{EXTRA_CXXFLAGS} " <<
+			"#{COMMON_LIBRARY.link_objects_as_string} " <<
+			"#{LIBBOOST_OXT} " <<
+			"#{LIBEV_LIBS} " <<
+			"#{LIBEIO_LIBS} " <<
+			"#{PlatformInfo.portability_ldflags} " <<
+			"#{EXTRA_LDFLAGS}")
+	ensure
+		File.unlink('_source.cpp') rescue nil
+	end
 end

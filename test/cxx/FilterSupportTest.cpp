@@ -1,5 +1,5 @@
 #include "TestSupport.h"
-#include "LoggingAgent/FilterSupport.h"
+#include "agents/LoggingAgent/FilterSupport.h"
 
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -159,13 +159,13 @@ namespace tut {
 	TEST_METHOD(15) {
 		// String begin and end quote characters must match.
 		try {
-			Filter("uri == 'hello world\"");
+			(void) Filter("uri == 'hello world\"");
 			fail("Syntax error expected");
 		} catch (const SyntaxError &) {
 			// Pass.
 		}
 		try {
-			Filter("uri == \"hello world'");
+			(void) Filter("uri == \"hello world'");
 			fail("Syntax error expected");
 		} catch (const SyntaxError &) {
 			// Pass.
@@ -177,13 +177,13 @@ namespace tut {
 		ctx.uri = "hello world";
 		ensure(Filter("uri =~ %r{hello}").run(ctx));
 		try {
-			Filter("uri =~ /hello}");
+			(void) Filter("uri =~ /hello}");
 			fail("Syntax error expected");
 		} catch (const SyntaxError &) {
 			// Pass.
 		}
 		try {
-			Filter("uri =~ %r{hello/");
+			(void) Filter("uri =~ %r{hello/");
 			fail("Syntax error expected");
 		} catch (const SyntaxError &) {
 			// Pass.

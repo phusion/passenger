@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -160,13 +160,16 @@ string canonicalizePath(const string &path);
  * If <em>path</em> doesn't refer to a symlink then this method will return
  * <em>path</em>.
  *
+ * <em>path</em> MUST be null-terminated!
+ *
  * @throws FileSystemException Something went wrong.
  * @ingroup Support
  */
-string resolveSymlink(const string &path);
+string resolveSymlink(const StaticString &path);
 
 /**
  * Given a path, extracts its directory name.
+ * <em>path</em> MUST be null-terminated!
  *
  * @ingroup Support
  */
@@ -174,6 +177,7 @@ string extractDirName(const StaticString &path);
 
 /**
  * Given a path, extracts its base name.
+ * <em>path</em> MUST be null-terminated!
  *
  * @ingroup Support
  */
@@ -215,6 +219,12 @@ string getProcessUsername();
  * @throws InvalidModeStringException The mode string cannot be parsed.
  */
 mode_t parseModeString(const StaticString &mode);
+
+/**
+ * Turns the given path into an absolute path. Unlike realpath(), this function does
+ * not resolve symlinks.
+ */
+string absolutizePath(const StaticString &path, const StaticString &workingDir = "");
 
 /**
  * Return the path name for the directory in which the system stores general
@@ -297,7 +307,7 @@ void makeDirTree(const string &path, const StaticString &mode = "u=rwx,g=,o=",
  * Remove an entire directory tree recursively. If the directory doesn't exist then this
  * function does nothing.
  *
- * @throws FileSystemException Something went wrong.
+ * @throws RuntimeException Something went wrong.
  */
 void removeDirTree(const string &path);
 
@@ -375,6 +385,18 @@ string getSignalName(int sig);
  * This function is async-signal safe.
  */
 void resetSignalHandlersAndMask();
+
+/**
+ * Disables malloc() debugging facilities on OS X.
+ */
+void disableMallocDebugging();
+
+/**
+ * Like system(), but properly resets the signal handler mask,
+ * disables malloc debugging and closes file descriptors > 2.
+ * _command_ must be null-terminated.
+ */
+int runShellCommand(const StaticString &command);
 
 /**
  * Close all file descriptors that are higher than <em>lastToKeepOpen</em>.

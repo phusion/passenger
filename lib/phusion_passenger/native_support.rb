@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -30,9 +30,9 @@ class NativeSupportLoader
 	
 	def start
 		require 'phusion_passenger'
-		load_from_source_dir ||
+		load_from_source_root ||
 		load_from_load_path ||
-		load_from_home ||
+		load_from_home_dir ||
 		compile_and_load
 	end
 
@@ -40,7 +40,7 @@ private
 	def archdir
 		@archdir ||= begin
 			require 'phusion_passenger/platform_info/binary_compatibility'
-			PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
+			PlatformInfo.ruby_extension_binary_compatibility_id
 		end
 	end
 	
@@ -63,13 +63,22 @@ private
 	end
 	
 	def extconf_rb
-		File.join(SOURCE_ROOT, "ext", "ruby", "extconf.rb")
+		File.join(ruby_extension_source_dir, "extconf.rb")
 	end
 	
-	def load_from_source_dir
-		if defined?(NATIVE_SUPPORT_DIR)
+	def native_support_dir_in_source_root
+		if PhusionPassenger.originally_packaged?
+			@native_support_dir_in_source_root ||=
+				File.expand_path("#{PhusionPassenger.source_root}/libout/ruby")
+		else
+			return nil
+		end
+	end
+	
+	def load_from_source_root
+		if PhusionPassenger.originally_packaged?
 			begin
-				require "#{NATIVE_SUPPORT_DIR}/#{archdir}/#{library_name}"
+				require "#{native_support_dir_in_source_root}/#{archdir}/#{library_name}"
 				return true
 			rescue LoadError
 				return false
@@ -86,9 +95,9 @@ private
 		return false
 	end
 	
-	def load_from_home
+	def load_from_home_dir
 		begin
-			require "#{home}/#{LOCAL_DIR}/native_support/#{VERSION_STRING}/#{archdir}/#{library_name}"
+			require "#{home}/#{USER_NAMESPACE_DIRNAME}/native_support/#{VERSION_STRING}/#{archdir}/#{library_name}"
 			return true
 		rescue LoadError
 			return false
@@ -103,10 +112,10 @@ private
 		require 'phusion_passenger/platform_info/ruby'
 		
 		target_dirs = []
-		if defined?(NATIVE_SUPPORT_DIR)
-			target_dirs << "#{NATIVE_SUPPORT_DIR}/#{archdir}"
+		if native_support_dir_in_source_root
+			target_dirs << "#{native_support_dir_in_source_root}/#{archdir}"
 		end
-		target_dirs << "#{home}/#{LOCAL_DIR}/native_support/#{VERSION_STRING}/#{archdir}"
+		target_dirs << "#{home}/#{USER_NAMESPACE_DIRNAME}/native_support/#{VERSION_STRING}/#{archdir}"
 		
 		target_dir = compile(target_dirs)
 		require "#{target_dir}/#{library_name}"
@@ -124,7 +133,7 @@ private
 		command_string = args.join(' ')
 		STDERR.puts "# #{command_string}"
 		if !system(*args)
-			raise "Could not compile #{library_name} ('#{command_string}' failed)"
+			raise "Could not compile #{library_name} (\"#{command_string}\" failed)"
 		end
 	end
 	

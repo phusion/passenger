@@ -64,6 +64,10 @@ public:
 	void unlock() {
 		OSSpinLockUnlock(&spin);
 	}
+
+	bool try_lock() {
+		return OSSpinLockTry(&spin);
+	}
 };
 
 } // namespace oxt

@@ -7,6 +7,7 @@
 
 using namespace oxt;
 using namespace std;
+using namespace boost;
 
 namespace tut {
 	struct syscall_interruption_test {

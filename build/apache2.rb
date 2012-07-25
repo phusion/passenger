@@ -36,7 +36,7 @@ APACHE2_MODULE_INPUT_FILES = {
 		ext/apache2/Configuration.h
 		ext/apache2/Configuration.hpp
 		ext/common/Constants.h
-		ext/common/LoggingAgent/FilterSupport.h),
+		ext/common/agents/LoggingAgent/FilterSupport.h),
 	APACHE2_OUTPUT_DIR + 'Bucket.o' => %w(
 		ext/apache2/Bucket.cpp
 		ext/apache2/Bucket.h),
@@ -48,17 +48,10 @@ APACHE2_MODULE_INPUT_FILES = {
 		ext/apache2/Bucket.h
 		ext/apache2/DirectoryMapper.h
 		ext/common/AgentsStarter.hpp
-		ext/common/ApplicationPool/Client.h
-		ext/common/SpawnManager.h
 		ext/common/Exceptions.h
-		ext/common/Process.h
-		ext/common/Session.h
 		ext/common/Logging.h
 		ext/common/RandomGenerator.h
-		ext/common/MessageChannel.h
 		ext/common/ServerInstanceDir.h
-		ext/common/PoolOptions.h
-		ext/common/StringListCreator.h
 		ext/common/Constants.h
 		ext/common/Utils.h
 		ext/common/Utils/Timer.h)
@@ -68,20 +61,22 @@ APACHE2_MOD_PASSENGER_O = APACHE2_OUTPUT_DIR + "mod_passenger.o"
 
 APACHE2_MODULE_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
 	"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
-APACHE2_HELPER_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 
 APACHE2_MODULE_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
 	APACHE2_OUTPUT_DIR + "module_libboost_oxt",
 	PlatformInfo.apache2_module_cflags)
-APACHE2_MODULE_COMMON_LIBRARY    = define_common_library_task("apache2",
-	APACHE2_OUTPUT_DIR + "module_libpassenger_common",
-	PlatformInfo.apache2_module_cflags)
+APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
+	only(:base, 'Utils/Base64.o').
+	set_namespace("apache2").
+	set_output_dir(APACHE2_OUTPUT_DIR + "module_libpassenger_common").
+	define_tasks(PlatformInfo.apache2_module_cflags).
+	link_objects
 
 
 desc "Build Apache 2 module"
 task :apache2 => [
 	APACHE2_MODULE,
-	AGENT_OUTPUT_DIR + 'apache2/PassengerHelperAgent',
+	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',
 	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
 	:native_support
@@ -99,7 +94,7 @@ end
 
 
 dependencies = [
-	APACHE2_MODULE_COMMON_LIBRARY,
+	APACHE2_MODULE_COMMON_LIBRARIES,
 	APACHE2_MODULE_BOOST_OXT_LIBRARY,
 	APACHE2_MOD_PASSENGER_O,
 	APACHE2_MODULE_OBJECTS
@@ -114,7 +109,7 @@ file APACHE2_MODULE => dependencies do
 		"#{PlatformInfo.apache2_module_cflags} " <<
 		"#{PlatformInfo.portability_cflags} " <<
 		"#{EXTRA_CXXFLAGS} " <<
-		"#{APACHE2_MODULE_COMMON_LIBRARY} " <<
+		"#{APACHE2_MODULE_COMMON_LIBRARIES.join(' ')} " <<
 		"#{APACHE2_MODULE_BOOST_OXT_LIBRARY} " <<
 		"#{PlatformInfo.apache2_module_ldflags} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
@@ -128,42 +123,11 @@ file APACHE2_MOD_PASSENGER_O => ['ext/apache2/mod_passenger.c'] do
 		"#{APACHE2_MODULE_CXXFLAGS} -o #{APACHE2_MOD_PASSENGER_O}")
 end
 
-dependencies = [
-	'ext/apache2/HelperAgent.cpp',
-	'ext/common/ServerInstanceDir.h',
-	'ext/common/MessageServer.h',
-	'ext/common/Logging.h',
-	'ext/common/SpawnManager.h',
-	'ext/common/Account.h',
-	'ext/common/ResourceLocator.h',
-	'ext/common/Utils.h',
-	'ext/common/Utils/Timer.h',
-	'ext/common/Utils/ProcessMetricsCollector.h',
-	'ext/common/ApplicationPool/Interface.h',
-	'ext/common/ApplicationPool/Pool.h',
-	'ext/common/ApplicationPool/Server.h',
-	LIBCOMMON,
-	LIBBOOST_OXT
-]
-file AGENT_OUTPUT_DIR + 'apache2/PassengerHelperAgent' => dependencies do
-	dir = "#{AGENT_OUTPUT_DIR}apache2"
-	sh "mkdir -p #{dir}" if !File.directory?(dir)
-	create_executable("#{dir}/PassengerHelperAgent",
-		'ext/apache2/HelperAgent.cpp',
-		"#{APACHE2_HELPER_CXXFLAGS} " <<
-		"#{LIBCOMMON} " <<
-		"#{LIBBOOST_OXT} " <<
-		"#{PlatformInfo.portability_ldflags} " <<
-		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_LDFLAGS}")
-end
-
 task :clean => 'apache2:clean'
 desc "Clean all compiled Apache 2 files"
 task 'apache2:clean' => 'common:clean' do
 	files = APACHE2_MODULE_OBJECTS.dup
 	files << APACHE2_MOD_PASSENGER_O
 	files << APACHE2_MODULE
-	files << AGENT_OUTPUT_DIR + "PassengerHelperAgent"
 	sh("rm", "-rf", *files)
 end

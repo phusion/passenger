@@ -91,6 +91,20 @@ public:
 			throw boost::thread_resource_error("Cannot unlock spin lock", ret);
 		}
 	}
+
+	void try_lock() {
+		int ret;
+		do {
+			ret = pthread_spin_trylock(&spin);
+		} while (OXT_UNLIKELY(ret == EINTR));
+		if (ret == 0) {
+			return true;
+		} else if (ret == EBUSY) {
+			return false;
+		} else {
+			throw boost::thread_resource_error("Cannot lock spin lock", ret);
+		}
+	}
 };
 
 } // namespace oxt

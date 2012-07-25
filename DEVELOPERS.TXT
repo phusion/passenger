@@ -5,30 +5,27 @@
 The tests need the following software installed:
 
 * All the usual Phusion Passenger dependencies.
-* Ruby on Rails 1.2.x
-* Ruby on Rails 2.0.x
 * Ruby on Rails 2.2.x
 * Ruby on Rails 2.3.x
 * Ruby on Rails 3.0.x
 * rspec >= 1.1.2
 * mime-types >= 1.15
 * sqlite3-ruby
+* json
 * daemon_controller >= 1.0.0
 
 The following software is optional:
 
 * RCov, for code coverage
 * RDoc, for generating HTML Ruby API documentation
-* Doxygen, for generating HTML C++ API documentation
-* dot (part of Graphviz), for generating diagrams in HTML API documentation
-* The font "Bitstream Vera Sans", used in the class diagrams. See http://www.gnome.org/fonts
 * AsciiDoc >= 8.2.5, for converting various doc/*.txt documents to HTML
+* BlueCloth, for convering various doc/*.txt.md documents to HTML
 
 == Compiling Phusion Passenger
 
 Run the following command to compile everything:
 
- rake apache
+ rake apache2
  rake nginx
 
 == Directory structure
@@ -69,7 +66,7 @@ Less important directories:
 [ dev ]
   Tools for Phusion Passenger developers. Not used during production.
 [ resources ]
-  Various resource files, used during production.
+  Various non-executable resource files, used during production.
 [ debian ]
   Debian packaging files.
 [ man ]
@@ -109,6 +106,3 @@ Notes:
 == Documentation
 
 Various developer documents can be found in 'doc/*.html'.
-
-The Ruby part's API reference is located in 'doc/rdoc/'.
-The C++ part's API reference is located in 'doc/cxxapi/'.

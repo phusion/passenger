@@ -113,7 +113,7 @@ module Dependencies # :nodoc: all
 	# in the packaging list.
 	def self.mizuho_required?
 		return Packaging::ASCII_DOCS.any? do |fn|
-			!File.exist?("#{SOURCE_ROOT}/#{fn}")
+			!File.exist?("#{PhusionPassenger.doc_dir}/#{fn}")
 		end
 	end
 
@@ -575,6 +575,36 @@ module Dependencies # :nodoc: all
 			end
 		end
 		dep.website = "http://www.zlib.net/"
+	end
+
+	PCRE_Dev = Dependency.new do |dep|
+		dep.name = "PCRE development headers"
+		dep.define_checker do |result|
+			source_file = "#{PlatformInfo.tmpexedir}/pcre-check.c"
+			object_file = "#{PlatformInfo.tmpexedir}/pcre-check.o"
+			begin
+				File.open(source_file, 'w') do |f|
+					f.write("#include <pcre.h>")
+				end
+				Dir.chdir(File.dirname(source_file)) do
+					if system("(g++ -c pcre-check.c) >/dev/null 2>/dev/null")
+						result.found
+					else
+						result.not_found
+					end
+				end
+			ensure
+				File.unlink(source_file) rescue nil
+				File.unlink(object_file) rescue nil
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
+				dep.install_command = "apt-get install libpcre3-dev"
+			end
+		end
+		dep.website = "http://www.pcre.org/"
 	end
 	
 	Daemon_Controller = Dependency.new do |dep|

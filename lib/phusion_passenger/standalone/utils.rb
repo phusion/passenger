@@ -27,17 +27,17 @@ module Standalone
 module Utils
 private
 	def require_platform_info_binary_compatibility
-		if !defined?(PlatformInfo) || !PlatformInfo.respond_to?(:cpu_architecture)
+		if !defined?(PlatformInfo) || !PlatformInfo.respond_to?(:cxx_binary_compatibility_id)
 			require 'phusion_passenger/platform_info/binary_compatibility'
 		end
 	end
 	
-	def runtime_version_string
-		if PhusionPassenger.natively_packaged?
-			return "natively-packaged"
-		else
+	def runtime_version_string(nginx_version)
+		if PhusionPassenger.originally_packaged? || nginx_version != PhusionPassenger::PREFERRED_NGINX_VERSION
 			require_platform_info_binary_compatibility
 			return "#{VERSION_STRING}-#{PlatformInfo.passenger_binary_compatibility_id}"
+		else
+			return VERSION_STRING
 		end
 	end
 end

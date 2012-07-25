@@ -85,7 +85,7 @@ module TestHelper
 		end
 	end
 	
-	class RailsStub < Stub
+	class ClassicRailsStub < Stub
 		def self.use(name, app_root = nil)
 			stub = new(name, app_root)
 			begin
@@ -103,20 +103,7 @@ module TestHelper
 			return "#{@full_app_root}/config/environment.rb"
 		end
 		
-		def use_vendor_rails(name)
-			FileUtils.mkdir_p("#{@full_app_root}/vendor/rails")
-			FileUtils.cp_r("stub/vendor_rails/#{name}/.", "#{@full_app_root}/vendor/rails")
-		end
-		
-		def dont_use_vendor_rails
-			remove_dir_tree("#{@full_app_root}/vendor/rails")
-		end
-		
 	private
-		def stub_source_dir
-			return "stub/rails_apps/#{@name}"
-		end
-		
 		def copy_stub_contents
 			super
 			FileUtils.mkdir_p("#{@full_app_root}/log")

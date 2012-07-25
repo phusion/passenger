@@ -23,7 +23,7 @@
 #  THE SOFTWARE.
 
 require 'phusion_passenger/abstract_request_handler'
-require 'phusion_passenger/utils/rewindable_input'
+require 'phusion_passenger/utils/tee_input'
 
 module PhusionPassenger
 module Rack
@@ -40,10 +40,6 @@ class RequestHandler < AbstractRequestHandler
 	RACK_RUN_ONCE      = "rack.run_once"       # :nodoc:
 	RACK_URL_SCHEME	   = "rack.url_scheme"     # :nodoc:
 	SCRIPT_NAME        = "SCRIPT_NAME"         # :nodoc:
-	CONTENT_LENGTH      = "CONTENT_LENGTH"       # :nodoc:
-	CONTENT_TYPE        = "CONTENT_TYPE"         # :nodoc:
-	HTTP_CONTENT_LENGTH = "HTTP_CONTENT_LENGTH"  # :nodoc:
-	HTTP_CONTENT_TYPE = "HTTP_CONTENT_TYPE"      # :nodoc:
 	HTTPS          = "HTTPS"  # :nodoc:
 	HTTPS_DOWNCASE = "https"  # :nodoc:
 	HTTP           = "http"   # :nodoc:
@@ -53,7 +49,6 @@ class RequestHandler < AbstractRequestHandler
 	CRLF           = "\r\n"   # :nodoc:
 	NEWLINE        = "\n"     # :nodoc:
 	STATUS         = "Status: "       # :nodoc:
-	X_POWERED_BY   = "X-Powered-By: "   # :nodoc:
 	NAME_VALUE_SEPARATOR = ": "       # :nodoc:
 
 	# +app+ is the Rack application object.
@@ -65,7 +60,7 @@ class RequestHandler < AbstractRequestHandler
 protected
 	# Overrided method.
 	def process_request(env, input, output, full_http_response)
-		rewindable_input = PhusionPassenger::Utils::RewindableInput.new(input)
+		rewindable_input = PhusionPassenger::Utils::TeeInput.new(input, env)
 		begin
 			env[RACK_VERSION]      = RACK_VERSION_VALUE
 			env[RACK_INPUT]        = rewindable_input
@@ -73,20 +68,6 @@ protected
 			env[RACK_MULTITHREAD]  = false
 			env[RACK_MULTIPROCESS] = true
 			env[RACK_RUN_ONCE]     = false
-			
-			if env[HTTP_CONTENT_LENGTH] && env[CONTENT_LENGTH]
-				env.delete(HTTP_CONTENT_LENGTH)
-			elsif env[HTTP_CONTENT_LENGTH] && !env[CONTENT_LENGTH]
-				env[CONTENT_LENGTH] = env[HTTP_CONTENT_LENGTH]
-				env.delete(HTTP_CONTENT_LENGTH)
-			end
-			if env[HTTP_CONTENT_TYPE] && env[CONTENT_TYPE]
-				env.delete(HTTP_CONTENT_TYPE)
-			elsif env[HTTP_CONTENT_TYPE] && !env[CONTENT_TYPE]
-				env[CONTENT_TYPE] = env[HTTP_CONTENT_TYPE]
-				env.delete(HTTP_CONTENT_TYPE)
-			end
-			
 			if env[HTTPS] == YES || env[HTTPS] == ON || env[HTTPS] == ONE
 				env[RACK_URL_SCHEME] = HTTPS_DOWNCASE
 			else
@@ -100,8 +81,7 @@ protected
 					output.write("Connection: close#{CRLF}")
 				end
 				headers_output = [
-					STATUS, status.to_i.to_s, CRLF,
-					X_POWERED_BY, @passenger_header, CRLF
+					STATUS, status.to_i.to_s, CRLF
 				]
 				headers.each do |key, values|
 					if values.is_a?(String)

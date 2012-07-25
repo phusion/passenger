@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010 Phusion
+ * Copyright (c) 2010-2012 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +40,7 @@
 #include <cstdio>
 #include <ctime>
 #include <cassert>
+#include "macros.hpp"
 
 /**
  * Support for interruption of blocking system calls and C library calls
@@ -133,6 +134,8 @@ namespace oxt {
 		int close(int fd);
 		int pipe(int filedes[2]);
 		int dup2(int filedes, int filedes2);
+		int mkdir(const char *pathname, mode_t mode);
+		int chown(const char *path, uid_t owner, gid_t group);
 		
 		int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 		int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
@@ -155,6 +158,7 @@ namespace oxt {
 		int fclose(FILE *fp);
 		int unlink(const char *pathname);
 		int stat(const char *path, struct stat *buf);
+		int lstat(const char *path, struct stat *buf);
 		
 		time_t time(time_t *t);
 		unsigned int sleep(unsigned int seconds);
@@ -175,8 +179,12 @@ namespace this_thread {
 	/**
 	 * @intern
 	 */
-	extern thread_specific_ptr<bool> _syscalls_interruptable;
-	
+	#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+		extern __thread bool _syscalls_interruptable;
+	#else
+		extern thread_specific_ptr<bool> _syscalls_interruptable;
+	#endif
+
 	/**
 	 * Check whether system calls should be interruptable in
 	 * the calling thread.
@@ -194,17 +202,26 @@ namespace this_thread {
 		bool last_value;
 	public:
 		enable_syscall_interruption() {
-			if (_syscalls_interruptable.get() == NULL) {
-				last_value = true;
-				_syscalls_interruptable.reset(new bool(true));
-			} else {
-				last_value = *_syscalls_interruptable;
-				*_syscalls_interruptable = true;
-			}
+			#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+				last_value = _syscalls_interruptable;
+				_syscalls_interruptable = true;
+			#else
+				if (_syscalls_interruptable.get() == NULL) {
+					last_value = true;
+					_syscalls_interruptable.reset(new bool(true));
+				} else {
+					last_value = *_syscalls_interruptable;
+					*_syscalls_interruptable = true;
+				}
+			#endif
 		}
 		
 		~enable_syscall_interruption() {
-			*_syscalls_interruptable = last_value;
+			#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+				_syscalls_interruptable = last_value;
+			#else
+				*_syscalls_interruptable = last_value;
+			#endif
 		}
 	};
 	
@@ -220,17 +237,26 @@ namespace this_thread {
 		bool last_value;
 	public:
 		disable_syscall_interruption() {
-			if (_syscalls_interruptable.get() == NULL) {
-				last_value = true;
-				_syscalls_interruptable.reset(new bool(false));
-			} else {
-				last_value = *_syscalls_interruptable;
-				*_syscalls_interruptable = false;
-			}
+			#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+				last_value = _syscalls_interruptable;
+				_syscalls_interruptable = false;
+			#else
+				if (_syscalls_interruptable.get() == NULL) {
+					last_value = true;
+					_syscalls_interruptable.reset(new bool(false));
+				} else {
+					last_value = *_syscalls_interruptable;
+					*_syscalls_interruptable = false;
+				}
+			#endif
 		}
 		
 		~disable_syscall_interruption() {
-			*_syscalls_interruptable = last_value;
+			#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+				_syscalls_interruptable = last_value;
+			#else
+				*_syscalls_interruptable = last_value;
+			#endif
 		}
 	};
 	
@@ -243,13 +269,22 @@ namespace this_thread {
 		int last_value;
 	public:
 		restore_syscall_interruption(const disable_syscall_interruption &intr) {
-			assert(_syscalls_interruptable.get() != NULL);
-			last_value = *_syscalls_interruptable;
-			*_syscalls_interruptable = intr.last_value;
+			#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+				last_value = _syscalls_interruptable;
+				_syscalls_interruptable = intr.last_value;
+			#else
+				assert(_syscalls_interruptable.get() != NULL);
+				last_value = *_syscalls_interruptable;
+				*_syscalls_interruptable = intr.last_value;
+			#endif
 		}
 		
 		~restore_syscall_interruption() {
-			*_syscalls_interruptable = last_value;
+			#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+				_syscalls_interruptable = last_value;
+			#else
+				*_syscalls_interruptable = last_value;
+			#endif
 		}
 	};
 
