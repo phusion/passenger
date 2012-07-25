@@ -104,7 +104,7 @@ module PhusionPassenger
 			@helper_scripts_dir    = "#{@source_root}/helper-scripts".freeze
 			@resources_dir         = "#{@source_root}/resources".freeze
 			@doc_dir               = "#{@source_root}/doc".freeze
-			@apache2_module_path   = "#{@source_root}/ext/apache2/mod_passenger.so".freeze
+			@apache2_module_path   = "#{@source_root}/libout/apache2/mod_passenger.so".freeze
 			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
 		end
 	end
