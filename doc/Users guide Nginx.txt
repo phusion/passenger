@@ -774,9 +774,9 @@ protection is provided against slow HTTP clients that can not read your response
 immediately.
 
 For example, consider an HTTP client that's on a dial-up modem link, and your
-application instance generates a 2 MB response. If response buffering is turned
-off then your application instance will be blocked until the entire 2 MB has been
-sent out to the HTTP client. This disallows your application instance to do any useful
+application process generates a 2 MB response. If response buffering is turned
+off then your application process will be blocked until the entire 2 MB has been
+sent out to the HTTP client. This disallows your application process to do any useful
 work in the mean time. By enabling response buffering, Phusion Passenger will read
 the application response as quickly as possible and will take care of slow clients.
 
@@ -915,14 +915,14 @@ In each place, it may be specified at most once. The default value is 'on'.
 === Resource control and optimization options ===
 [[PassengerMaxPoolSize]]
 ==== passenger_max_pool_size <integer> ====
-The maximum number of Ruby on Rails or Rack application instances that may
-be simultaneously active. A larger number results in higher memory usage,
+The maximum number of <<application_process,application processes>> that may
+simultanously exist. A larger number results in higher memory usage,
 but improved ability to handle concurrent HTTP clients.
 
 The optimal value depends on your system's hardware and the server's average
 load. You should experiment with different values. But generally speaking,
 the value should be at least equal to the number of CPUs (or CPU cores) that
-you have. If your system has 2 GB of RAM, then we recommend a value of '30'.
+you have. If your system has 2 GB of RAM, then we recommend a value of '15'.
 If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
 is also running other services such as MySQL, then we recommend a value of '2'.
 
@@ -936,23 +936,23 @@ The default value is '6'.
 
 TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
 Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
-by about 33%. And it's not hard to install.
+by about 33%, and it's not hard to install.
 
 [[PassengerMinInstances]]
 ==== passenger_min_instances <integer> ====
-This specifies the minimum number of application instances that must be kept around
-whenever Phusion Passenger cleans up idle instances. You should set this option to a
+This specifies the minimum number of application processes that should exist for a
+given application. You should set this option to a
 non-zero value if you want to avoid potentially long startup times after a website
-has been idle for an extended period.
+has been <<idle_process,idle>> for an extended period.
 
-Please note that this option does *not* pre-start application instances during Nginx
+Please note that this option does *not* pre-start application processes during Nginx
 startup. It just makes sure that when the application is first accessed:
 
-1. at least the given number of instances will be spawned.
-2. the given number of processes will be kept around even when instances are being
+1. at least the given number of processes will be spawned.
+2. the given number of processes will be kept around even when processes are being
    idle cleaned (see <<PassengerPoolIdleTime,passenger_pool_idle_time>>).
 
-If you want to pre-start application instances during Nginx startup, then you should use the <<PassengerPreStart,passenger_pre_start>> directive, possibly in combination with
+If you want to pre-start application processes during Nginx startup, then you should use the <<PassengerPreStart,passenger_pre_start>> directive, possibly in combination with
 'passenger_min_instances'. This behavior might seem counter-intuitive at first sight,
 but <<PassengerPreStart,passenger_pre_start>> explains the rationale behind it.
 
@@ -973,16 +973,16 @@ http {
 }
 ---------------------------------
 
-When you start Nginx, there are 0 application instances for 'foobar.com'. Things will
+When you start Nginx, there are 0 application processes for 'foobar.com'. Things will
 stay that way until someone visits 'foobar.com'. Suppose that there is only 1 visitor.
-1 application instance will be started immediately to serve the visitor, while 2 will
+1 application process will be started immediately to serve the visitor, while 2 will
 be spawned in the background. After 10 seconds, when the idle timeout has
-been reached, these 3 application instances will not be cleaned up.
+been reached, these 3 application processes will not be cleaned up.
 
 Now suppose that there's a sudden spike of traffic, and 100 users visit 'foobar.com'
-simultanously. Phusion Passenger will start 12 more application instances. After the idle
+simultanously. Phusion Passenger will start 12 more application processes. After the idle
 timeout of 10 seconds have passed, Phusion Passenger will clean up 12 application
-instances, keeping 3 instances around.
+processes, keeping 3 processes around.
 
 The passenger_min_instances option may occur in the following places:
 
@@ -994,12 +994,12 @@ The passenger_min_instances option may occur in the following places:
 In each place, it may be specified at most once. The default value is '1'.
 
 ==== passenger_max_instances_per_app <integer> ====
-The maximum number of application instances that may be simultaneously active
+The maximum number of application processes that may simultaneously exist
 for a single application. This helps to make sure that a single application
 will not occupy all available slots in the application pool.
 
 This value must be less than <<PassengerMaxPoolSize,passenger_max_pool_size>>. A value of 0
-means that there is no limit placed on the number of instances a single application
+means that there is no limit placed on the number of processes a single application
 may use, i.e. only the global limit of <<PassengerMaxPoolSize,passenger_max_pool_size>>
 will be enforced.
 
@@ -1008,8 +1008,8 @@ The default value is '0'.
 
 [[PassengerPoolIdleTime]]
 ==== passenger_pool_idle_time <integer> ====
-The maximum number of seconds that an application instance may be idle. That is,
-if an application instance hasn't received any traffic after the given number of
+The maximum number of seconds that an application process may be idle. That is,
+if an application process hasn't received any traffic after the given number of
 seconds, then it will be shutdown in order to conserve memory.
 
 Decreasing this value means that applications will have to be spawned
@@ -1022,10 +1022,10 @@ Rails/Rack web page. We recommend a value of `2 * x`, where `x` is the average
 number of seconds that a visitor spends on a single Rails/Rack web page. But your
 mileage may vary.
 
-When this value is set to '0', application instances will not be shutdown unless 
+When this value is set to '0', application processes will not be shutdown unless 
 it's really necessary, i.e. when Phusion Passenger is out of worker processes
-for a given application and one of the inactive application instances needs to
-make place for another application instance. Setting the value to 0 is
+for a given application and one of the <<inactive_process,inactive application processes>> needs to
+make place for another application process. Setting the value to 0 is
 recommended if you're on a non-shared host that's only running a few
 applications, each which must be available at all times.
 
@@ -1034,10 +1034,10 @@ The default value is '300'.
 
 [[PassengerMaxRequests]]
 ==== passenger_max_requests <integer> ====
-The maximum number of requests an application instance will process. After
-serving that many requests, the application instance will be shut down and
+The maximum number of requests an application process will process. After
+serving that many requests, the application process will be shut down and
 Phusion Passenger will restart it. A value of 0 means that there is no maximum:
-an application instance will thus be shut down when its idle timeout has been
+an application process will thus be shut down when its idle timeout has been
 reached.
 
 This option is useful if your application is leaking memory. By shutting
@@ -1063,11 +1063,11 @@ measure to avoid memory leaks.
 
 [[PassengerPreStart]]
 ==== passenger_pre_start <url> ====
-By default, Phusion Passenger does not start any application instances until said
+By default, Phusion Passenger does not start any application processes until said
 web application is first accessed. The result is that the first visitor of said
 web application might experience a small delay as Phusion Passenger is starting
 the web application on demand. If that is undesirable, then this directive can be
-used to pre-started application instances during Nginx startup.
+used to pre-started application processes during Nginx startup.
 
 A few things to be careful of:
 
@@ -1081,7 +1081,7 @@ A few things to be careful of:
   * The path part of the URL must point to some URI that the web application
     handles.
 - You will probably want to combine this option with
-  <<PassengerMinInstances,passenger_min_instances>> because application instances
+  <<PassengerMinInstances,passenger_min_instances>> because application processes
   started with 'passenger_pre_start' are subject to the usual idle timeout rules.
   See the example below for an explanation.
 
@@ -1167,10 +1167,10 @@ passenger_pre_start http://myblog.com/;    # <----- WRONG! Missing "/store" part
 
 ===== Example 3: combining with passenger_min_instances =====
 
-Application instances started with passenger_pre_start are
+Application processes started with passenger_pre_start are
 also subject to the idle timeout rules as specified by
 <<PassengerPoolIdleTime,passenger_pool_idle_time>>! That means that by default,
-the pre-started application instances for foo.com are bar.com are shut down
+the pre-started application processes for foo.com are bar.com are shut down
 after a few minutes of inactivity. If you don't want that to happen, then
 you should combine passenger_pre_start with
 <<PassengerMinInstances,passenger_min_instances>>, like this:

@@ -61,3 +61,11 @@ In case of Python (WSGI) applications, this is the directory that contains
    |
    +- ...
 -----------------------------------------
+
+[[idle_process]]
+=== Idle process ===
+An "idle process" refers to a process that hasn't processed any requests for a while.
+
+[[inactive_process]]
+=== Inactive process ===
+An "inactive process" refers to a process that's current not processing any requests. An idle process is always inactive, but an inactive process is not always considered idle.

@@ -1,3 +1,18 @@
+Release 3.0.14
+--------------
+
+ * [Apache] Fixed a long-standing mod_rewrite-related problem.
+   Some mod_rewrite rules would not work, but it depends on the exact
+   mod_rewrite configuration so it would work for some people but not
+   for others. Issue #563. Thanks a lot to cedricmaion for providing
+   information on the nature of the bug and to peter.nash55 for
+   providing a VM that allowed us to reproduce the problem.
+ * [Nginx] Preferred Nginx version to 1.2.2.
+   The previously preferred version was 1.2.1.
+ * Cleared some confusing terminology in the documentation.
+ * Fixed some Ruby 1.9 encoding problems.
+
+
 Release 3.0.13
 --------------
 
