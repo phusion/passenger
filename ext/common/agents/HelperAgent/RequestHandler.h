@@ -106,6 +106,7 @@
 #include <Utils/HttpHeaderBufferer.h>
 #include <Utils/Template.h>
 #include <Utils/Timer.h>
+#include <Utils/Dechunker.h>
 #include <agents/HelperAgent/AgentOptions.h>
 #include <agents/HelperAgent/FileBackedPipe.h>
 #include <agents/HelperAgent/ScgiRequestParser.h>
@@ -148,8 +149,9 @@ private:
 	static void onClientOutputPipeCommit(const FileBackedPipePtr &source);
 	
 	void onClientOutputWritable(ev::io &io, int revents);
-	
+
 	static size_t onAppInputData(const EventedBufferedInputPtr &source, const StaticString &data);
+	static void onAppInputChunk(const char *data, size_t size, void *userData);
 	static void onAppInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode);
 	
 	void onAppOutputWritable(ev::io &io, int revents);
@@ -175,6 +177,7 @@ private:
 		sessionCheckedOut = false;
 		sessionCheckoutTry = 0;
 		responseHeaderSeen = false;
+		chunkedResponse = false;
 		appRoot.clear();
 	}
 
@@ -272,7 +275,9 @@ public:
 	bool checkoutSessionAfterCommit;
 
 	bool responseHeaderSeen;
+	bool chunkedResponse;
 	HttpHeaderBufferer responseHeaderBufferer;
+	Dechunker responseDechunker;
 
 
 	Client() {
@@ -309,6 +314,10 @@ public:
 
 
 		timeoutTimer.set<Client, &Client::onTimeout>(this);
+
+
+		responseDechunker.onData = onAppInputChunk;
+		responseDechunker.userData = this;
 		
 
 		bufferedConnectPassword.data = NULL;
@@ -369,6 +378,7 @@ public:
 		scgiParser.reset();
 		session.reset();
 		responseHeaderBufferer.reset();
+		responseDechunker.reset();
 		freeScopeLogs();
 	}
 
@@ -758,38 +768,38 @@ private:
 		return Header();
 	}
 
-	/*
-	 * Given a full header and possibly some rest data, possibly modify the header
-	 * and send both to the clientOutputPipe.
-	 */
-	void processResponseHeader(const ClientPtr &client, const string &currentPacket,
-		const StaticString &headerData, const StaticString &rest)
+	static Header lookupHeader(const StaticString &headerData, const StaticString &name,
+		const StaticString &name2)
 	{
-		/* Note: we don't strip out the Status header because some broken HTTP clients depend on it.
-		 * http://groups.google.com/group/phusion-passenger/browse_thread/thread/03e0381684fbae09
-		 */
-		
-		/* 'newHeader' contains the modified header. If empty, it means
-		 * the header has not been modified, in which case 'headerData' should be used.
-		 * 'prefix' contains data that we want to send before the header
-		 * (before both 'headerData' and 'newHeader'.
-		 */
-		string prefix, newHeaderData;
-
-		Header status = lookupHeader(headerData, "Status");
-		if (status.empty()) {
-			disconnectWithError(client, "application sent malformed response: it didn't send a Status header.");
-			return;
+		Header header = lookupHeader(headerData, name);
+		if (header.empty()) {
+			header = lookupHeader(headerData, name2);
 		}
+		return header;
+	}
 
+	bool addStatusHeaderFromStatusLine(const ClientPtr &client, string &headerData) {
+		string::size_type begin = headerData.find(' ');
+		string::size_type end = headerData.find("\r\n");
+		if (begin != string::npos && end != string::npos) {
+			StaticString status(headerData.data() + begin, end - begin);
+			headerData.append("Status: ");
+			headerData.append(status);
+			headerData.append("\r\n");
+			return true;
+		} else {
+			disconnectWithError(client, "application sent malformed response: the HTTP status line is invalid.");
+			return false;
+		}
+	}
+
+	static bool addReasonPhrase(string &headerData, const Header &status) {
 		if (status.value.find(' ') == string::npos) {
-			// Status header contains no reason phrase; add it.
-
 			int statusCode = stringToInt(status.value);
 			const char *statusCodeAndReasonPhrase = getStatusCodeAndReasonPhrase(statusCode);
 			char newStatus[100];
 			char *pos = newStatus;
-			const char *end = newStatus + 100;
+			const char *end = newStatus + sizeof(newStatus);
 
 			pos = appendData(pos, end, "Status: ");
 			if (statusCodeAndReasonPhrase == NULL) {
@@ -800,60 +810,104 @@ private:
 				pos = appendData(pos, end, "\r\n");
 			}
 
-			newHeaderData = headerData;
-			newHeaderData.replace(status.begin() - headerData.data(), status.size(),
+			headerData.replace(status.begin() - headerData.data(), status.size(),
 				newStatus, pos - newStatus);
-			status = Header();
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	bool removeStatusLine(const ClientPtr &client, string &headerData) {
+		string::size_type end = headerData.find("\r\n");
+		if (end != string::npos) {
+			headerData.erase(0, end + 2);
+			return true;
+		} else {
+			disconnectWithError(client, "application sent malformed response: the HTTP status line is invalid.");
+			return false;
+		}
+	}
+
+	static void addStatusLineFromStatusHeader(string &headerData, const Header &status) {
+		char statusLine[100];
+		char *pos = statusLine;
+		const char *end = statusLine + sizeof(statusLine);
+
+		pos = appendData(pos, end, "HTTP/1.1 ");
+		pos = appendData(pos, end, status.value);
+		pos = appendData(pos, end, "\r\n");
+
+		headerData.insert(0, statusLine, pos - statusLine);
+	}
+
+	static void removeHeader(string &headerData, const Header &header) {
+		headerData.erase(header.begin() - headerData.data(), header.size());
+	}
+
+	/*
+	 * Given a full header, possibly modify the header and send it to the clientOutputPipe.
+	 */
+	bool processResponseHeader(const ClientPtr &client,
+		const StaticString &origHeaderData)
+	{
+		string headerData;
+		headerData.reserve(origHeaderData.size() + 100);
+		// Strip trailing CRLF.
+		headerData.append(origHeaderData.data(), origHeaderData.size() - 2);
+		
+		if (startsWith(headerData, "HTTP/1.")) {
+			Header status = lookupHeader(headerData, "Status", "status");
+			if (status.empty()) {
+				// Add status header if necessary.
+				if (!addStatusHeaderFromStatusLine(client, headerData)) {
+					return false;
+				}
+			} else {
+				// Add reason phrase to existing status header if necessary.
+				addReasonPhrase(headerData, status);
+			}
+			// Remove status line if necesary.
+			if (!getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
+				if (!removeStatusLine(client, headerData)) {
+					return false;
+				}
+			}
+		} else {
+			Header status = lookupHeader(headerData, "Status", "status");
+			if (!status.empty()) {
+				// Add reason phrase to status header if necessary.
+				if (addReasonPhrase(headerData, status)) {
+					status = lookupHeader(headerData, "Status", "status");
+				}
+				// Add status line if necessary.
+				if (getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
+					addStatusLineFromStatusHeader(headerData, status);
+				}
+			} else {
+				disconnectWithError(client, "application sent malformed response: it didn't send an HTTP status line or a Status header.");
+				return false;
+			}
 		}
 
-		if (getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
-			// Prepend HTTP status line.
-
-			if (status.empty()) {
-				assert(!newHeaderData.empty());
-				status = lookupHeader(newHeaderData, "Status");
-			}
-			prefix.reserve(prefix.size() + status.value.size() + sizeof("HTTP/1.1\r\n") - 1);
-			prefix.append("HTTP/1.1 ");
-			prefix.append(status.value);
-			prefix.append("\r\n");
+		// Process chunked transfer encoding.
+		Header transferEncoding = lookupHeader(headerData, "Transfer-Encoding", "transfer-encoding");
+		if (!transferEncoding.empty() && transferEncoding.value == "chunked") {
+			P_TRACE(3, "Response with chunked transfer encoding detected.");
+			client->chunkedResponse = true;
+			removeHeader(headerData, transferEncoding);
 		}
 
 		// Add X-Powered-By.
 		if (getBoolOption(client, "PASSENGER_SHOW_VERSION_IN_HEADER", true)) {
-			prefix.append("X-Powered-By: Phusion Passenger " PASSENGER_VERSION "\r\n");
+			headerData.append("X-Powered-By: Phusion Passenger " PASSENGER_VERSION "\r\n");
 		} else {
-			prefix.append("X-Powered-By: Phusion Passenger\r\n");
+			headerData.append("X-Powered-By: Phusion Passenger\r\n");
 		}
 
-
-		if (prefix.empty() && newHeaderData.empty()) {
-			// Header has not been modified.
-			if (headerData.data() == currentPacket.data()) {
-				/* The header occurs in the first packet that the
-				 * application sent, so send the entire packet.
-				 */
-				writeToClientOutputPipe(client, currentPacket);
-			} else {
-				/* It didn't occur in the first packet that the application
-				 * sent, so send out the full header and whatever rest data
-				 * that we've already received.
-				 */
-				writeToClientOutputPipe(client, headerData);
-				writeToClientOutputPipe(client, rest);
-			}
-		} else {
-			// Header has been modified.
-			if (newHeaderData.empty()) {
-				prefix.reserve(prefix.size() + headerData.size() + rest.size());
-				prefix.append(headerData);
-			} else {
-				prefix.reserve(prefix.size() + newHeaderData.size() + rest.size());
-				prefix.append(newHeaderData);
-			}
-			prefix.append(rest);
-			writeToClientOutputPipe(client, prefix);
-		}
+		headerData.append("\r\n");
+		writeToClientOutputPipe(client, headerData);
+		return true;
 	}
 
 	void writeToClientOutputPipe(const ClientPtr &client, const StaticString &data) {
@@ -887,14 +941,20 @@ private:
 						// Now that we have a full header, do something with it.
 						client->responseHeaderSeen = true;
 						StaticString header = client->responseHeaderBufferer.getData();
-						StaticString rest = data.substr(consumed);
-						processResponseHeader(client, data, header, rest);
+						if (processResponseHeader(client, header)) {
+							return consumed;
+						} else {
+							assert(!client->connected());
+						}
 					}
 				}
+			// The header has already been processed so forward it
+			// directly to clientOutputPipe, possibly through a
+			// dechunker first.
+			} else if (client->chunkedResponse) {
+				client->responseDechunker.feed(data.data(), data.size());
 			} else {
-				// The header has already been processed so forward it
-				// directly to clientOutputPipe.
-				writeToClientOutputPipe(client, data);
+				onAppInputChunk(client, data);
 			}
 			return data.size();
 
@@ -902,6 +962,10 @@ private:
 			onAppInputEof(client);
 			return 0;
 		}
+	}
+
+	void onAppInputChunk(const ClientPtr &client, const StaticString &data) {
+		writeToClientOutputPipe(client, data);
 	}
 
 	void onAppInputEof(const ClientPtr &client) {
@@ -1704,7 +1768,10 @@ private:
 					client->backgroundOperations++;
 				}
 			} else {
-				disconnectWithError(client, "could not initiate a session");
+				string message = "could not initiate a session (";
+				message.append(e2.what());
+				message.append(")");
+				disconnectWithError(client, message);
 			}
 			return;
 		}
