@@ -42,8 +42,7 @@ module Packaging
 	
 	SUPER_USER_EXECUTABLES = [
 		'passenger-status',
-		'passenger-memory-stats',
-		'passenger-make-enterprisey'
+		'passenger-memory-stats'
 	]
 	
 	# A list of globs which match all files that should be packaged
