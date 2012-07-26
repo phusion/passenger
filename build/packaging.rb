@@ -105,14 +105,14 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	# on the packaging machine might be in /usr/local.
 	fake_libdir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}"
 	fake_native_support_dir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
-	fake_agents_dir = "#{fakeroot}#{NATIVELY_PACKAGED_AGENTS_DIR}"
-	fake_helper_scripts_dir = "#{fakeroot}#{NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR}"
+	fake_agents_dir = "#{fakeroot}/usr/lib/phusion-passenger/agents"
+	fake_helper_scripts_dir = "#{fakeroot}/usr/share/phusion-passenger/helper-scripts"
 	fake_resources_dir = "#{fakeroot}/usr/share/phusion-passenger"
-	fake_docdir = "#{fakeroot}#{NATIVELY_PACKAGED_DOCDIR}"
+	fake_docdir = "#{fakeroot}/usr/share/doc/phusion-passenger"
 	fake_bindir = "#{fakeroot}/usr/bin"
 	fake_sbindir = "#{fakeroot}/usr/sbin"
-	fake_source_root = "#{fakeroot}#{NATIVELY_PACKAGED_SOURCE_ROOT}"
-	fake_apache2_module = "#{fakeroot}#{NATIVELY_PACKAGED_APACHE2_MODULE}"
+	fake_source_root = "#{fakeroot}/usr/share/phusion-passenger/source"
+	fake_apache2_module = "#{fakeroot}/usr/lib/apache2/modules/mod_passenger.so"
 	fake_apache2_module_dir = File.dirname(fake_apache2_module)
 	
 	sh "rm -rf #{fakeroot}"
