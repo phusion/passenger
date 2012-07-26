@@ -454,6 +454,10 @@ public:
 		}
 	}
 
+	bool shouldHalfCloseWrite() const {
+		return session->getProtocol() == "session";
+	}
+
 	bool useUnionStation() const {
 		return options.logger != NULL;
 	}
@@ -1815,35 +1819,102 @@ private:
 
 		RH_TRACE(client, 2, "Sending headers to application");
 
-		char sizeField[sizeof(uint32_t)];
-		SmallVector<StaticString, 10> data;
+		if (client->session->getProtocol() == "session") {
+			char sizeField[sizeof(uint32_t)];
+			SmallVector<StaticString, 10> data;
 
-		data.push_back(StaticString(sizeField, sizeof(uint32_t)));
-		data.push_back(client->scgiParser.getHeaderData());
+			data.push_back(StaticString(sizeField, sizeof(uint32_t)));
+			data.push_back(client->scgiParser.getHeaderData());
 
-		data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
-		data.push_back(makeStaticStringWithNull(client->session->getConnectPassword()));
+			data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
+			data.push_back(makeStaticStringWithNull(client->session->getConnectPassword()));
 
-		if (client->options.analytics) {
-			data.push_back(makeStaticStringWithNull("PASSENGER_TXN_ID"));
-			data.push_back(makeStaticStringWithNull(client->options.logger->getTxnId()));
-		}
+			if (client->options.analytics) {
+				data.push_back(makeStaticStringWithNull("PASSENGER_TXN_ID"));
+				data.push_back(makeStaticStringWithNull(client->options.logger->getTxnId()));
+			}
 
-		uint32_t dataSize = 0;
-		for (unsigned int i = 1; i < data.size(); i++) {
-			dataSize += (uint32_t) data[i].size();
-		}
-		Uint32Message::generate(sizeField, dataSize);
+			uint32_t dataSize = 0;
+			for (unsigned int i = 1; i < data.size(); i++) {
+				dataSize += (uint32_t) data[i].size();
+			}
+			Uint32Message::generate(sizeField, dataSize);
 
-		ssize_t ret = gatheredWrite(client->session->fd(), &data[0],
-			data.size(), client->appOutputBuffer);
-		if (ret == -1 && errno != EAGAIN) {
-			disconnectWithAppSocketWriteError(client, errno);
-		} else if (!client->appOutputBuffer.empty()) {
-			client->state = Client::SENDING_HEADER_TO_APP;
-			client->appOutputWatcher.start();
+			ssize_t ret = gatheredWrite(client->session->fd(), &data[0],
+				data.size(), client->appOutputBuffer);
+			if (ret == -1 && errno != EAGAIN) {
+				disconnectWithAppSocketWriteError(client, errno);
+			} else if (!client->appOutputBuffer.empty()) {
+				client->state = Client::SENDING_HEADER_TO_APP;
+				client->appOutputWatcher.start();
+			} else {
+				sendBodyToApp(client);
+			}
 		} else {
-			sendBodyToApp(client);
+			assert(client->session->getProtocol() == "http_session");
+			const ScgiRequestParser &parser = client->scgiParser;
+			ScgiRequestParser::const_iterator it, end = parser.end();
+			string data;
+
+			data.reserve(parser.getHeaderData().size() + 128);
+			data.append(parser.getHeader("REQUEST_METHOD"));
+			data.append(" ");
+			data.append(parser.getHeader("REQUEST_URI"));
+			data.append(" HTTP/1.1\r\n");
+			data.append("Connection: close\r\n");
+
+			for (it = parser.begin(); it != end; it++) {
+				if (startsWith(it->first, "HTTP_")) {
+					string subheader = it->first.substr(sizeof("HTTP_") - 1);
+					string::size_type i;
+					for (i = 0; i < subheader.size(); i++) {
+						if (subheader[i] == '_') {
+							subheader[i] = '-';
+						} else if (i > 0 && subheader[i - 1] != '-') {
+							subheader[i] = tolower(subheader[i]);
+						}
+					}
+
+					data.append(subheader);
+					data.append(": ");
+					data.append(it->second);
+					data.append("\r\n");
+				}
+			}
+
+			StaticString header = parser.getHeader("CONTENT_LENGTH");
+			if (!header.empty()) {
+				data.append("Content-Length: ");
+				data.append(header);
+				data.append("\r\n");
+			}
+
+			header = parser.getHeader("CONTENT_TYPE");
+			if (!header.empty()) {
+				data.append("Content-Type: ");
+				data.append(header);
+				data.append("\r\n");
+			}
+
+			if (client->options.analytics) {
+				data.append("Passenger-Txn-Id: ");
+				data.append(client->options.logger->getTxnId());
+				data.append("\r\n");
+			}
+
+			data.append("\r\n");
+
+			StaticString datas[] = { data };
+			ssize_t ret = gatheredWrite(client->session->fd(), datas,
+				1, client->appOutputBuffer);
+			if (ret == -1 && errno != EAGAIN) {
+				disconnectWithAppSocketWriteError(client, errno);
+			} else if (!client->appOutputBuffer.empty()) {
+				client->state = Client::SENDING_HEADER_TO_APP;
+				client->appOutputWatcher.start();
+			} else {
+				sendBodyToApp(client);
+			}
 		}
 	}
 
@@ -1938,7 +2009,9 @@ private:
 
 		RH_TRACE(client, 2, "End of (unbuffered) client body reached; done sending data to application");
 		client->clientInput->stop();
-		syscalls::shutdown(client->session->fd(), SHUT_WR);
+		if (client->shouldHalfCloseWrite()) {
+			syscalls::shutdown(client->session->fd(), SHUT_WR);
+		}
 	}
 
 	void state_forwardingBodyToApp_onAppOutputWritable(const ClientPtr &client) {
@@ -1989,7 +2062,9 @@ private:
 		assert(client->requestBodyIsBuffered);
 
 		RH_TRACE(client, 2, "End of (buffered) client body reached; done sending data to application");
-		syscalls::shutdown(client->session->fd(), SHUT_WR);
+		if (client->shouldHalfCloseWrite()) {
+			syscalls::shutdown(client->session->fd(), SHUT_WR);
+		}
 	}
 
 
