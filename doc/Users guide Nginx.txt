@@ -1484,6 +1484,30 @@ error messages should be written to instead.
 
 This option may only occur once, in the 'http' configuration block.
 
+==== passenger_debugger <on|off> ====
+**Available in Phusion Passenger Enterprise since version 3.0.0.**
+
+Turns support for application debugging on or off. In case of Ruby applications,
+turning this option on will cause them to load the `ruby-debug` gem (when on Ruby 1.8)
+or the `debugger` gem (when on Ruby 1.9). If you're using Bundler, you should add
+this to your Gemfile:
+
+-------------------------------------------
+gem 'ruby-debug', :platforms => :ruby_18
+gem 'debugger', :platforms => :ruby_19
+-------------------------------------------
+
+Once debugging is turned on, you can use the command `passenger-irb --debug <PID>` to attach an rdebug console to the application process with the given PID. Attaching will succeed once the application process executes a `debugger` command.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
 
 === Ruby on Rails-specific options ===
 [[RailsEnv]]
