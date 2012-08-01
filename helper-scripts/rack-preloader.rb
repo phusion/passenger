@@ -50,11 +50,13 @@ module App
 		require 'phusion_passenger/utils/tmpdir'
 		require 'phusion_passenger/preloader_shared_helpers'
 		require 'phusion_passenger/loader_shared_helpers'
-		require 'phusion_passenger/rack/request_handler'
+		require 'phusion_passenger/request_handler'
+		require 'phusion_passenger/rack/thread_handler_extension'
 		LoaderSharedHelpers.init
 		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
 		NativeSupport.disable_stdio_buffering
+		RequestHandler::ThreadHandler.send(:include, Rack::ThreadHandlerExtension)
 	rescue Exception => e
 		LoaderSharedHelpers.about_to_abort(e) if defined?(LoaderSharedHelpers)
 		puts "!> Error"
@@ -98,7 +100,7 @@ module App
 			@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 			
 			LoaderSharedHelpers.before_handling_requests(true, options)
-			handler = Rack::RequestHandler.new(STDIN, app, options)
+			handler = RequestHandler.new(STDIN, options.merge("app" => app))
 		rescue Exception => e
 			LoaderSharedHelpers.about_to_abort(e)
 			puts "!> Error"

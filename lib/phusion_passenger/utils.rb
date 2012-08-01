@@ -120,6 +120,20 @@ module Utils
 			return true
 		end
 	end
+
+	def require_option(hash, key)
+		if hash.has_key?(key)
+			return hash[key]
+		else
+			raise ArgumentError, "Option #{key.inspect} required"
+		end
+	end
+
+	def install_options_as_ivars(object, options, *keys)
+		keys.each do |key|
+			object.instance_variable_set("@#{key}", options[key])
+		end
+	end
 	
 	# Checks the permissions of all parent directories of +dir+ as
 	# well as +dir+ itself.

@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,14 +22,12 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger/abstract_request_handler'
 require 'phusion_passenger/utils/tee_input'
 
 module PhusionPassenger
 module Rack
 
-# A request handler for Rack applications.
-class RequestHandler < AbstractRequestHandler
+module ThreadHandlerExtension
 	# Constants which exist to relieve Ruby's garbage collector.
 	RACK_VERSION       = "rack.version"        # :nodoc:
 	RACK_VERSION_VALUE = [1, 0]                # :nodoc:
@@ -51,21 +49,13 @@ class RequestHandler < AbstractRequestHandler
 	STATUS         = "Status: "       # :nodoc:
 	NAME_VALUE_SEPARATOR = ": "       # :nodoc:
 
-	# +app+ is the Rack application object.
-	def initialize(owner_pipe, app, options = {})
-		super(owner_pipe, options)
-		@app = app
-	end
-
-protected
-	# Overrided method.
-	def process_request(env, input, output, full_http_response)
-		rewindable_input = PhusionPassenger::Utils::TeeInput.new(input, env)
+	def process_request(env, connection, full_http_response)
+		rewindable_input = PhusionPassenger::Utils::TeeInput.new(connection, env)
 		begin
 			env[RACK_VERSION]      = RACK_VERSION_VALUE
 			env[RACK_INPUT]        = rewindable_input
 			env[RACK_ERRORS]       = STDERR
-			env[RACK_MULTITHREAD]  = false
+			env[RACK_MULTITHREAD]  = @request_handler.concurrency > 1
 			env[RACK_MULTIPROCESS] = true
 			env[RACK_RUN_ONCE]     = false
 			if env[HTTPS] == YES || env[HTTPS] == ON || env[HTTPS] == ONE
@@ -77,8 +67,8 @@ protected
 			status, headers, body = @app.call(env)
 			begin
 				if full_http_response
-					output.write("HTTP/1.1 #{status.to_i.to_s} Whatever#{CRLF}")
-					output.write("Connection: close#{CRLF}")
+					connection.write("HTTP/1.1 #{status.to_i.to_s} Whatever#{CRLF}")
+					connection.write("Connection: close#{CRLF}")
 				end
 				headers_output = [
 					STATUS, status.to_i.to_s, CRLF
@@ -100,15 +90,15 @@ protected
 					# The body may be an ActionController::StringCoercion::UglyBody
 					# object instead of a real Array, even when #is_a? claims so.
 					# Call #to_a just to be sure.
-					output.writev2(headers_output, body.to_a)
+					connection.writev2(headers_output, body.to_a)
 				elsif body.is_a?(String)
 					headers_output << body
-					output.writev(headers_output)
+					connection.writev(headers_output)
 				else
-					output.writev(headers_output)
+					connection.writev(headers_output)
 					if body
 						body.each do |s|
-							output.write(s)
+							connection.write(s)
 						end
 					end
 				end
