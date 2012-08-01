@@ -178,10 +178,22 @@ module Utils
 	# or if that's not supported the backtrace for the current thread.
 	def global_backtrace_report
 		if Kernel.respond_to?(:caller_for_all_threads)
-			output = "========== Process #{Process.pid}: backtrace dump ==========\n"
-			caller_for_all_threads.each_pair do |thread, stack|
+			all_thread_stacks = caller_for_all_threads
+		elsif Thread.respond_to?(:list) && Thread.public_method_defined?(:backtrace)
+			all_thread_stacks = {}
+			Thread.list.each do |thread|
+				all_thread_stacks[thread] = thread.backtrace
+			end
+		end
+
+		output = "========== Process #{Process.pid}: backtrace dump ==========\n"
+		if all_thread_stacks
+			all_thread_stacks.each_pair do |thread, stack|
+				if thread_name = thread[:name]
+					thread_name = "(#{thread_name})"
+				end
 				output << ("-" * 60) << "\n"
-				output << "# Thread: #{thread.inspect}, "
+				output << "# Thread: #{thread.inspect}#{thread_name}, "
 				if thread == Thread.main
 					output << "[main thread], "
 				end
@@ -194,7 +206,6 @@ module Utils
 				output << "\n\n"
 			end
 		else
-			output = "========== Process #{Process.pid}: backtrace dump ==========\n"
 			output << ("-" * 60) << "\n"
 			output << "# Current thread: #{Thread.current.inspect}\n"
 			output << ("-" * 60) << "\n"
