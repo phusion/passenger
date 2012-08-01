@@ -1342,8 +1342,7 @@ private:
 			details.timeout = options.startTimeout * 1000;
 			details.forwardStderr = forwardStderr;
 			
-			this->socketAddress = negotiatePreloaderStartup(details);
-			this->pid = pid;
+			socketAddress = negotiatePreloaderStartup(details);
 			this->adminSocket = adminSocket.second;
 			{
 				lock_guard<boost::mutex> l(simpleFieldSyncher);
@@ -1356,6 +1355,9 @@ private:
 				errorPipe.first, forwardStderr ? STDERR_FILENO : -1);
 			preloaderErrorWatcher->start();
 			preloaderAnnotations = debugDir->readAll();
+			P_DEBUG("Preloader for " << options.appRoot <<
+				" started on PID " << pid <<
+				", listening on " << socketAddress);
 			guard.clear();
 		}
 	}
