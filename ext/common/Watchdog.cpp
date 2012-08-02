@@ -800,7 +800,7 @@ setOomScore(const StaticString &score) {
 	FILE *f;
 	OomFileType type;
 	
-	f = openOomAdjFile("r", type);
+	f = openOomAdjFile("w", type);
 	if (f != NULL) {
 		fwrite(score.data(), 1, score.size(), f);
 		fclose(f);
