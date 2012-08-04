@@ -44,7 +44,7 @@ module PhusionPassenger
 #   installer = ConcereteInstallerClass.new(options...)
 #   installer.run
 class AbstractInstaller
-	PASSENGER_WEBSITE = "http://www.modrails.com/"
+	PASSENGER_WEBSITE = "https://www.phusionpassenger.com"
 	PHUSION_WEBSITE = "www.phusion.nl"
 
 	# Create an AbstractInstaller. All options will be stored as instance
