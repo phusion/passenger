@@ -389,14 +389,14 @@ public:
 			unsigned int ret;
 			try {
 				ret = Passenger::readExact(fd, buf, size, &t);
-				#if defined(__NetBSD__) || defined(__OpenBSD__)
+				#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(_AIX)
 					*timeout = llround((double) t / 1000);
 				#else
 					*timeout = llroundl((long double) t / 1000);
 				#endif
 				return ret == size;
 			} catch (...) {
-				#if defined(__NetBSD__) || defined(__OpenBSD__)
+				#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(_AIX)
 					*timeout = llround((double) t / 1000);
 				#else
 					*timeout = llroundl((long double) t / 1000);
