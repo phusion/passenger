@@ -607,7 +607,7 @@ typedef struct
 typedef struct
 {
   W w;
-  int events; /* the pending event set for the given watcher */
+  int ap_events; /* the pending event set for the given watcher */
 } ANPENDING;
 
 #if EV_USE_INOTIFY
@@ -822,13 +822,13 @@ ev_feed_event (EV_P_ void *w, int revents)
   int pri = ABSPRI (w_);
 
   if (expect_false (w_->pending))
-    pendings [pri][w_->pending - 1].events |= revents;
+    pendings [pri][w_->pending - 1].ap_events |= revents;
   else
     {
       w_->pending = ++pendingcnt [pri];
       array_needsize (ANPENDING, pendings [pri], pendingmax [pri], w_->pending, EMPTY2);
       pendings [pri][w_->pending - 1].w      = w_;
-      pendings [pri][w_->pending - 1].events = revents;
+      pendings [pri][w_->pending - 1].ap_events = revents;
     }
 }
 
@@ -866,7 +866,7 @@ fd_event_nc (EV_P_ int fd, int revents)
 
   for (w = (ev_io *)anfd->head; w; w = (ev_io *)((WL)w)->next)
     {
-      int ev = w->events & revents;
+      int ev = w->ei_events & revents;
 
       if (ev)
         ev_feed_event (EV_A_ (W)w, ev);
@@ -907,7 +907,7 @@ fd_reify (EV_P)
       unsigned char events = 0;
 
       for (w = (ev_io *)anfd->head; w; w = (ev_io *)((WL)w)->next)
-        events |= (unsigned char)w->events;
+        events |= (unsigned char)w->ei_events;
 
 #if EV_SELECT_IS_WINSOCKET
       if (events)
@@ -1994,7 +1994,7 @@ ev_invoke_pending (EV_P)
         /* ^ this is no longer true, as pending_w could be here */
 
         p->w->pending = 0;
-        EV_CB_INVOKE (p->w, p->events);
+        EV_CB_INVOKE (p->w, p->ap_events);
         EV_FREQUENT_CHECK;
       }
 }
@@ -2462,7 +2462,7 @@ ev_clear_pending (EV_P_ void *w)
       ANPENDING *p = pendings [ABSPRI (w_)] + pending - 1;
       p->w = (W)&pending_w;
       w_->pending = 0;
-      return p->events;
+      return p->ap_events;
     }
   else
     return 0;
@@ -2503,7 +2503,7 @@ ev_io_start (EV_P_ ev_io *w)
     return;
 
   assert (("libev: ev_io_start called with negative fd", fd >= 0));
-  assert (("libev: ev_io start called with illegal event mask", !(w->events & ~(EV__IOFDSET | EV_READ | EV_WRITE))));
+  assert (("libev: ev_io start called with illegal event mask", !(w->ei_events & ~(EV__IOFDSET | EV_READ | EV_WRITE))));
 
   EV_FREQUENT_CHECK;
 
@@ -2511,8 +2511,8 @@ ev_io_start (EV_P_ ev_io *w)
   array_needsize (ANFD, anfds, anfdmax, fd + 1, array_init_zero);
   wlist_add (&anfds[fd].head, (WL)w);
 
-  fd_change (EV_A_ fd, w->events & EV__IOFDSET | EV_ANFD_REIFY);
-  w->events &= ~EV__IOFDSET;
+  fd_change (EV_A_ fd, w->ei_events & EV__IOFDSET | EV_ANFD_REIFY);
+  w->ei_events &= ~EV__IOFDSET;
 
   EV_FREQUENT_CHECK;
 }
