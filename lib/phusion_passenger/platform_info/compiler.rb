@@ -52,6 +52,7 @@ module PlatformInfo
 	end
 	
 	def self.compiler_supports_visibility_flag?
+		return false if RUBY_PLATFORM =~ /aix/
 		return try_compile(:c, '', '-fvisibility=hidden')
 	end
 	memoize :compiler_supports_visibility_flag?, true
@@ -156,6 +157,7 @@ module PlatformInfo
 		elsif RUBY_PLATFORM =~ /openbsd/
 			flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
 		elsif RUBY_PLATFORM =~ /aix/
+			flags << '-pthread'
 			flags << '-DOXT_DISABLE_BACKTRACES'
 		elsif RUBY_PLATFORM =~ /(sparc-linux|arm-linux|^arm.*-linux|sh4-linux)/
 			# http://code.google.com/p/phusion-passenger/issues/detail?id=200

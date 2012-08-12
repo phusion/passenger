@@ -780,7 +780,7 @@ private:
 	}
 	
 	bool isDirectory(const string &dir, struct dirent *entry) const {
-		#ifdef __sun__
+		#if defined(__sun__) || defined(_AIX)
 			string path = dir;
 			path.append("/");
 			path.append(entry->d_name);
