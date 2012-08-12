@@ -491,14 +491,14 @@ private:
 					len = strlen(filename);
 					if (len > 0 && filename[len - 1] == '/') {
 						pageCacheFile = apr_pstrcat(r->pool, filename,
-							"index.html", NULL);
+							"index.html", (char *) NULL);
 					} else {
 						pageCacheFile = apr_pstrcat(r->pool, filename,
-							".html", NULL);
+							".html", (char *) NULL);
 					}
 				} else {
 					pageCacheFile = apr_pstrcat(r->pool, filename,
-						".html", NULL);
+						".html", (char *) NULL);
 				}
 				if (!fileExists(pageCacheFile)) {
 					pageCacheFile = NULL;
@@ -948,7 +948,7 @@ private:
 	 * Convert an HTTP header name to a CGI environment name.
 	 */
 	char *httpToEnv(apr_pool_t *p, const char *headerName) {
-		char *result  = apr_pstrcat(p, "HTTP_", headerName, NULL);
+		char *result  = apr_pstrcat(p, "HTTP_", headerName, (char *) NULL);
 		char *current = result + sizeof("HTTP_") - 1;
 		
 		while (*current != '\0') {
@@ -1049,7 +1049,7 @@ private:
 		} else {
 			const char *request_uri;
 			if (r->args != NULL) {
-				request_uri = apr_pstrcat(r->pool, escapedUri, "?", r->args, NULL);
+				request_uri = apr_pstrcat(r->pool, escapedUri, "?", r->args, (char *) NULL);
 			} else {
 				request_uri = escapedUri;
 			}
