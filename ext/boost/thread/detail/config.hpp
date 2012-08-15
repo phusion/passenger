@@ -17,7 +17,7 @@
 #  pragma warn -8066 // Unreachable code
 #endif
 
-#include "platform.hpp"
+#include <boost/thread/detail/platform.hpp>
 
 // provided for backwards compatibility, since this
 // macro was used for several releases by mistake.

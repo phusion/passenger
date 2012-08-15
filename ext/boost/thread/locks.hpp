@@ -164,9 +164,9 @@ namespace boost
     struct adopt_lock_t
     {};
     
-    const defer_lock_t defer_lock={};
-    const try_to_lock_t try_to_lock={};
-    const adopt_lock_t adopt_lock={};
+    BOOST_CONSTEXPR_OR_CONST defer_lock_t defer_lock={};
+    BOOST_CONSTEXPR_OR_CONST try_to_lock_t try_to_lock={};
+    BOOST_CONSTEXPR_OR_CONST adopt_lock_t adopt_lock={};
 
     template<typename Mutex>
     class shared_lock;
