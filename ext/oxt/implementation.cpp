@@ -32,6 +32,9 @@
 #include "thread.hpp"
 #include "spin_lock.hpp"
 #include "detail/context.hpp"
+#ifdef __linux__
+	#include <sys/syscall.h>
+#endif
 
 #ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
 	#include <cassert>
@@ -264,6 +267,9 @@ thread_local_context::thread_local_context()
 	: thread_number(0)
 {
 	thread = pthread_self();
+	#ifdef __linux__
+		tid = syscall(SYS_gettid);
+	#endif
 	syscall_interruption_lock.lock();
 	#ifdef OXT_BACKTRACE_IS_ENABLED
 		backtrace_list.reserve(50);
@@ -353,7 +359,11 @@ thread::all_backtraces() throw() {
 			     it++)
 			{
 				thread_local_context_ptr ctx = *it;
-				result << "Thread '" << ctx->thread_name << "' (" << hex << ctx->thread << "):" << endl;
+				result << "Thread '" << ctx->thread_name << "' (" << hex << ctx->thread;
+				#ifdef __linux__
+					result << ", LWP " << ctx->tid;
+				#endif
+				result << "):" << endl;
 				
 				spin_lock::scoped_lock l(ctx->backtrace_lock);
 				std::string bt = format_backtrace(ctx->backtrace_list);
