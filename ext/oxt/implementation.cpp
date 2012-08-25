@@ -356,7 +356,12 @@ thread::all_backtraces() throw() {
 				result << "Thread '" << ctx->thread_name << "' (" << hex << ctx->thread << "):" << endl;
 				
 				spin_lock::scoped_lock l(ctx->backtrace_lock);
-				result << format_backtrace(ctx->backtrace_list) << endl;
+				std::string bt = format_backtrace(ctx->backtrace_list);
+				result << bt;
+				if (bt.empty() || bt[bt.size() - 1] != '\n') {
+					result << endl;
+				}
+				result << endl;
 			}
 			return result.str();
 		} else {
