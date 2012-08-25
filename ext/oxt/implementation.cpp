@@ -359,7 +359,8 @@ thread::all_backtraces() throw() {
 			     it++)
 			{
 				thread_local_context_ptr ctx = *it;
-				result << "Thread '" << ctx->thread_name << "' (" << hex << ctx->thread;
+				result << "Thread '" << ctx->thread_name <<
+					"' (" << hex << showbase << ctx->thread << dec;
 				#ifdef __linux__
 					result << ", LWP " << ctx->tid;
 				#endif
