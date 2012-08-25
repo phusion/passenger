@@ -232,11 +232,13 @@ public:
 		  enabled(ENABLED)
 	{
 		if (_libev != NULL) {
+			setNonBlocking(_adminSocket);
 			adminSocketWatcher = make_shared<PipeWatcher>(_libev, _adminSocket,
 				_forwardStderr ? STDOUT_FILENO : -1);
 			adminSocketWatcher->start();
 		}
 		if (_libev != NULL && _errorPipe != -1) {
+			setNonBlocking(_errorPipe);
 			errorPipeWatcher = make_shared<PipeWatcher>(_libev, _errorPipe,
 				_forwardStderr ? STDERR_FILENO : -1);
 			errorPipeWatcher->start();
