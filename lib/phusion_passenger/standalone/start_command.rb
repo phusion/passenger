@@ -206,11 +206,6 @@ private
 				          "checked for binaries prior to a local build.")) do |value|
 				@options[:binaries_url_root] = value
 			end
-			opts.on("--nginx-runtime-dir DIRECTORY", String,
-				wrap_desc("If Nginx needs to be installed, then the given DIRECTORY will " +
-				          "be used as installation target (default: #{nginx_runtime_dir}")) do |value|
-				@options[:nginx_runtime_dir] = File.expand_path(value)
-			end
 		end
 		@plugin.call_hook(:done_parsing_options)
 	end
@@ -323,23 +318,24 @@ private
 		return "#{@runtime_dir}/nginx-#{@options[:nginx_version]}"
 	end
 	
-	def nginx_runtime_dir
-		if Process.euid == 0
-			"#{GLOBAL_STANDALONE_RESOURCE_DIR}/#{runtime_version_string}"
-		else
-			home = @options[:nginx_runtime_dir] || Etc.getpwuid.dir
-			"#{home}/#{LOCAL_STANDALONE_RESOURCE_DIR}/#{runtime_version_string}"
-		end
-	end
-
 	def ensure_nginx_installed
 		if @options[:nginx_bin] && !File.exist?(@options[:nginx_bin])
 			error "The given Nginx binary '#{@options[:nginx_bin]}' does not exist."
 			exit 1
 		end
 		
-		@runtime_dir   = nginx_runtime_dir
-		install_runtime if !File.exist?("#{nginx_dir}/sbin/nginx")
+		home           = Etc.getpwuid.dir
+		@runtime_dir   = "#{GLOBAL_STANDALONE_RESOURCE_DIR}/#{runtime_version_string}"
+		if !File.exist?("#{nginx_dir}/sbin/nginx")
+			if Process.euid == 0
+				install_runtime
+			else
+				@runtime_dir = "#{home}/#{LOCAL_STANDALONE_RESOURCE_DIR}/#{runtime_version_string}"
+				if !File.exist?("#{nginx_dir}/sbin/nginx")
+					install_runtime
+				end
+			end
+		end
 	end
 	
 	def ensure_directory_exists(dir)
