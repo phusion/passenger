@@ -103,6 +103,18 @@
 #endif
 
 //
+// constexpr workarounds
+// 
+#if defined(BOOST_NO_CONSTEXPR)
+#define BOOST_CONSTEXPR
+#define BOOST_CONSTEXPR_OR_CONST const
+#else
+#define BOOST_CONSTEXPR constexpr
+#define BOOST_CONSTEXPR_OR_CONST constexpr
+#endif
+#define BOOST_STATIC_CONSTEXPR  static BOOST_CONSTEXPR_OR_CONST
+
+//
 // if there is no __int64 then there is no specialisation
 // for numeric_limits<__int64> either:
 //
