@@ -173,7 +173,7 @@ protected:
 	ifstream iniFileStream;
 
 	char lastAcceptedChar;
-	char upcomingChar;
+	int upcomingChar;
 	bool upcomingTokenPtrIsStale;
 
 	int currentLine;
@@ -182,7 +182,7 @@ protected:
 	TokenPtr upcomingTokenPtr;
 
 	void expect(char ch) {
-		char upcomingChar = (char)iniFileStream.peek();
+		int upcomingChar = iniFileStream.peek();
 	
 		if (ch != upcomingChar) {
 			switch(upcomingChar) {
@@ -200,10 +200,10 @@ protected:
 	}
 
 	void accept() {
-		if ((int) upcomingChar == EOF) return;
+		if (upcomingChar == EOF) return;
 	
 		lastAcceptedChar = (char)iniFileStream.get();
-		upcomingChar     = (char)iniFileStream.peek();
+		upcomingChar     = iniFileStream.peek();
 		currentColumn++;
 	
 		if (lastAcceptedChar == '\n') {
@@ -213,9 +213,9 @@ protected:
 	}
 
 	void ignore() {
-		if ((int) upcomingChar == EOF) return;
+		if (upcomingChar == EOF) return;
 	
-		upcomingChar = (char)iniFileStream.peek();
+		upcomingChar = iniFileStream.peek();
 		currentColumn++;
 	
 		if ((char)iniFileStream.get() == '\n') {
@@ -285,7 +285,7 @@ protected:
 		int column = currentColumn;
 		string result;
 	
-		while (upcomingChar != '\n' && (int) upcomingChar != EOF) {
+		while (upcomingChar != '\n' && upcomingChar != EOF) {
 			result.append(1, upcomingChar);
 			accept();
 		}
@@ -306,7 +306,7 @@ protected:
 		int column = currentColumn;
 		string result;
 	
-		while ((int) upcomingChar != EOF) {
+		while (upcomingChar != EOF) {
 			result.append(1, upcomingChar);
 			accept();
 		}
@@ -356,7 +356,7 @@ public:
 		}
 	
 		while (iniFileStream.good()) {
-			upcomingChar = (char)iniFileStream.peek();
+			upcomingChar = iniFileStream.peek();
 			switch(upcomingChar) {
 				case '[':
 					return tokenizeSection();
