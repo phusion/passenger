@@ -118,6 +118,9 @@ class RequestHandler
 			@pool_account_password = options["pool_account_password_base64"].unpack('m').first
 		end
 
+		#############
+		#############
+
 		@server_sockets = {}
 		if should_use_unix_sockets?
 			@main_socket_address, @main_socket = create_unix_socket_on_filesystem
