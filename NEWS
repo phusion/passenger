@@ -8,6 +8,7 @@ Release 3.0.16
  * Fixed compilation problems on SunOS.
  * Fixed compilation problems on AIX. Contribution by Perry Smith.
  * Fixed various compilation warnings.
+ * Upgraded preferred Nginx version to 1.2.3.
 
 
 Release 3.0.15
