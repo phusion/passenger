@@ -6,6 +6,8 @@ Release 3.0.16
  * Fixed OOM adjustment bugs on Linux.
  * Fixed compilation problems on Fedora 18 and 19.
  * Fixed compilation problems on SunOS.
+ * Fixed compilation problems on AIX. Contribution by Perry Smith.
+ * Fixed various compilation warnings.
 
 
 Release 3.0.15
