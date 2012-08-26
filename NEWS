@@ -5,6 +5,7 @@ Release 3.0.16
    (Phusion Passenger Enterprise)
  * Fixed OOM adjustment bugs on Linux.
  * Fixed compilation problems on Fedora 18 and 19.
+ * Fixed compilation problems on SunOS.
 
 
 Release 3.0.15
