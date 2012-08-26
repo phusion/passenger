@@ -53,6 +53,9 @@
 #if EV_USE_STDEXCEPT
 # include <stdexcept>
 #endif
+#ifdef STAT
+#undef STAT
+#endif
 
 namespace ev {
 

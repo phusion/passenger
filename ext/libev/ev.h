@@ -236,7 +236,7 @@ typedef struct ev_io
   EV_WATCHER_LIST (ev_io)
 
   int fd;     /* ro */
-  int events; /* ro */
+  int ei_events; /* ro */
 } ev_io;
 
 /* invoked after a specific time, repeatable (based on monotonic clock) */
@@ -579,7 +579,7 @@ void ev_resume  (EV_P);
   ev_set_cb ((ev), cb_);			\
 } while (0)
 
-#define ev_io_set(ev,fd_,events_)            do { (ev)->fd = (fd_); (ev)->events = (events_) | EV__IOFDSET; } while (0)
+#define ev_io_set(ev,fd_,events_)            do { (ev)->fd = (fd_); (ev)->ei_events = (events_) | EV__IOFDSET; } while (0)
 #define ev_timer_set(ev,after_,repeat_)      do { ((ev_watcher_time *)(ev))->at = (after_); (ev)->repeat = (repeat_); } while (0)
 #define ev_periodic_set(ev,ofs_,ival_,rcb_)  do { (ev)->offset = (ofs_); (ev)->interval = (ival_); (ev)->reschedule_cb = (rcb_); } while (0)
 #define ev_signal_set(ev,signum_)            do { (ev)->signum = (signum_); } while (0)
