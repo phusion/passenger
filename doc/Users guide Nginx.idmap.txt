@@ -122,7 +122,7 @@
 
 5.11.3. rails_app_spawner_idle_time <integer>	=>	rails-app-spawner-idle-time-integer--1xjqe4b
 
-5.12. Rack-specific options	=>	rack-specific-options-13yvdxs
+5.12. Rack and Rails >= 3 specific options	=>	rack-specific-options-13yvdxs
 
 5.12.1. rack_env <string>	=>	rack-env-string--tqmrt0
 

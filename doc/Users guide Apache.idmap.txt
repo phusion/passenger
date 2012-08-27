@@ -192,7 +192,7 @@
 
 5.17.5. RailsAppSpawnerIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
 
-5.18. Rack-specific options	=>	rack-specific-options-wk9qzt
+5.18. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
 
 5.18.1. RackAutoDetect <on|off>	=>	rackautodetect-on-off--vl1lxy
 

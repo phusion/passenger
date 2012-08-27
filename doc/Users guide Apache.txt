@@ -982,7 +982,8 @@ if responses can be huge. Because entire responses are buffered in memory when t
 
 [[PassengerRollingRestarts]]
 === PassengerRollingRestarts <on|off> ===
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 Enables or disables support for rolling restarts. Normally when you
 restart an application (by touching restart.txt), Phusion Passenger would
@@ -1021,7 +1022,8 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'off'.
 
 === PassengerResistDeploymentErrors <on|off> ===
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 Enables or disables resistance against deployment errors.
 
@@ -1204,7 +1206,8 @@ The PassengerMinInstances option may occur in the following places:
 In each place, it may be specified at most once. The default value is '1'.
 
 ==== PassengerMaxInstances <integer> ====
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 The maximum number of application processes that may simultaneously exist
 for an application. This helps to make sure that a single application
@@ -1337,7 +1340,8 @@ measure to avoid memory leaks.
 
 [[PassengerMaxRequestTime]]
 ==== PassengerMaxRequestTime <seconds> ====
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 The maximum amount of time, in seconds, that an application process may take
 to process a request. If the request takes longer than this amount of time,
@@ -1387,7 +1391,8 @@ measure to avoid freezing applications.
 
 [[PassengerMemoryLimit]]
 ==== PassengerMemoryLimit <integer> ====
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 The maximum amount of memory that an application process may use, in megabytes.
 Once an application process has surpassed its memory limit, it will process
@@ -1844,7 +1849,8 @@ error messages should be written to instead.
 This option may only occur once, in the global server configuration.
 
 ==== PassengerDebugger <on|off> ====
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 Turns support for application debugging on or off. In case of Ruby applications,
 turning this option on will cause them to load the `ruby-debug` gem (when on Ruby 1.8)
@@ -1979,7 +1985,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is '600' (10 minutes).
 
-=== Rack-specific options ===
+=== Rack and Rails >= 3 specific options ===
 
 ==== RackAutoDetect <on|off> ====
 Whether Phusion Passenger should automatically detect whether a virtual host's
