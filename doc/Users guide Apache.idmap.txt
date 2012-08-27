@@ -183,6 +183,8 @@
 # fuzzy
 5.15.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1tfy4z9
 
+5.15.3. PassengerDebugger <on|off>	=>	passengerdebugger-on-off--1qk9j40
+
 5.16. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
 
 # fuzzy
@@ -195,7 +197,7 @@
 5.16.3. RailsEnv <string>	=>	railsenv-string--1b0xxvu
 
 # fuzzy
-5.17. Rack-specific options	=>	rack-specific-options-wk9qzt
+5.17. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
 
 # fuzzy
 5.17.1. RackAutoDetect <on|off>	=>	rackautodetect-on-off--vl1lxy
@@ -330,3 +332,4 @@
 9.2. Page caching support	=>	page-caching-support-kwq9b9
 
 9.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-179mp8m
+
