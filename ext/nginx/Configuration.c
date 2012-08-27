@@ -899,6 +899,15 @@ peers:
     return NGX_CONF_OK;
 }
 
+#ifndef PASSENGER_IS_ENTERPRISE
+static char *
+passenger_enterprise_only(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ": this feature is only available in Phusion Passenger Enterprise. "
+        "You are currently running the open source Phusion Passenger Enterprise. "
+        "Please learn more about and/or buy Phusion Passenger Enterprise at https://www.phusionpassenger.com/enterprise ;";
+}
+#endif
+
 static char *
 passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -1377,6 +1386,56 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     /************************************/
+
+    { ngx_string("passenger_max_instances"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      passenger_enterprise_only,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
+    { ngx_string("passenger_max_request_time"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      passenger_enterprise_only,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
+    { ngx_string("passenger_memory_limit"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      passenger_enterprise_only,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
+    { ngx_string("passenger_concurrency_model"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      passenger_enterprise_only,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
+    { ngx_string("passenger_thread_count"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      passenger_enterprise_only,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
+    { ngx_string("passenger_rolling_restarts"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      passenger_enterprise_only,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
+    { ngx_string("passenger_resist_deployment_errors"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      passenger_enterprise_only,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
     /************************************/
 
     /******** Backward compatibility options ********/
