@@ -174,7 +174,14 @@
 
 5.9.1. passenger_max_pool_size <integer>	=>	passenger-max-pool-size-integer--3jzefs
 
-5.9.10. passenger_pre_start <url>	=>	passenger-pre-start-url--1f2phk7
+# fuzzy
+5.9.10. passenger_max_request_time <seconds>	=>	passenger-pre-start-url--1f2phk7
+
+# fuzzy
+5.9.11. passenger_memory_limit <integer>	=>	passenger-memory-limit-integer--1ry7dwx
+
+# fuzzy
+5.9.12. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
 
 5.9.2. passenger_min_instances <integer>	=>	passenger-min-instances-integer--uclykt
 
@@ -186,11 +193,14 @@
 
 5.9.6. passenger_max_preloader_idle_time <integer>	=>	rails-app-spawner-idle-time-integer--1xjqe4b
 
-5.9.7. passenger_max_requests <integer>	=>	passenger-max-requests
+# fuzzy
+5.9.7. passenger_concurrency_model <process|thread> ===	=>	passenger-max-requests
 
-5.9.8. passenger_max_request_time <seconds>	=>	passenger-max-request-time-seconds--1qod9kg
+# fuzzy
+5.9.8. passenger_thread_count <number> ===	=>	passenger-max-request-time-seconds--1qod9kg
 
-5.9.9. passenger_memory_limit <integer>	=>	passenger-memory-limit-integer--1ry7dwx
+# fuzzy
+5.9.9. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint
 
 6. Analysis and system maintenance	=>	analysis-and-system-maintenance-1nnlnj8
 
@@ -229,11 +239,4 @@
 8.2. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-13qbmhn
 
 9. Appendix A: About this document	=>	appendix-a-about-this-document-zfvixm
-
-
-### These sections appear to have been removed. Please check.
-
-5.7.6. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint
-
-5.7.7. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
 

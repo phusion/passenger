@@ -12,6 +12,7 @@ Release 3.1.0
  * [Apache] Environment variables can now be set with SetEnv. Wrapper scripts are no longer necessary.
  * Apps are now started through bash so that environment variable settings in bashrc are respected.
  * [Standalone] Automatic asset pipeline expiry headers support.
+ * [Enterprise] Multithreading support for apps
 
 
 Release 3.0.17
