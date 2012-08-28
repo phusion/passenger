@@ -708,6 +708,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Whether to turn on debugger support"),
+	AP_INIT_TAKE1("PassengerConcurrencyModel",
+		(Take1Func) cmd_passenger_enterprise_only,
+		NULL,
+		OR_ALL,
+		"The concurrency model that should be used for applications."),
+	AP_INIT_TAKE1("PassengerThreadCount",
+		(Take1Func) cmd_passenger_enterprise_only,
+		NULL,
+		OR_ALL,
+		"The number of threads that Phusion Passenger should spawn per application."),
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",
