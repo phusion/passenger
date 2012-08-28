@@ -1411,20 +1411,6 @@ const ngx_command_t passenger_commands[] = {
       0,
       NULL },
 
-    { ngx_string("passenger_concurrency_model"),
-      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
-      passenger_enterprise_only,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      0,
-      NULL },
-
-    { ngx_string("passenger_thread_count"),
-      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
-      passenger_enterprise_only,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      0,
-      NULL },
-
     { ngx_string("passenger_rolling_restarts"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
       passenger_enterprise_only,
