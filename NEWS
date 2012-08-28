@@ -1,4 +1,4 @@
-Release 3.0.16
+Release 3.0.17
 --------------
 
  * Fixed a Ruby 1.9 encoding-related bug in the memory measurer.
@@ -9,6 +9,8 @@ Release 3.0.16
  * Fixed compilation problems on AIX. Contribution by Perry Smith.
  * Fixed various compilation warnings.
  * Upgraded preferred Nginx version to 1.2.3.
+
+3.0.16 was an unofficial hotfix release, and so its announcement had been skipped.
 
 
 Release 3.0.15
