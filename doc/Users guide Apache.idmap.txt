@@ -74,10 +74,6 @@
 
 2.3. Upgrading or downgrading Phusion Passenger	=>	upgrading-or-downgrading-phusion-passenger-1dl8km6
 
-2.3.1. Via a gem or a source tarball	=>	via-a-gem-or-a-source-tarball-1vgkwhs
-
-2.3.2. Via a native Linux package	=>	via-a-native-linux-package-8dvooa
-
 2.4. Unloading (disabling) Phusion Passenger from Apache without uninstalling it	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
 
 2.5. Uninstalling Phusion Passenger	=>	uninstalling-phusion-passenger-1qb4ssq
@@ -322,3 +318,8 @@
 
 9.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-179mp8m
 
+Obtaining Phusion Passenger files through a tarball	=>	obtaining-phusion-passenger-files-through-a-tarball-evcm0j
+
+Obtaining Phusion Passenger files with RubyGems	=>	obtaining-phusion-passenger-files-with-rubygems-8fz7a8
+
+Upgrading with native Linux packages	=>	upgrading-with-native-linux-packages-jievu8
