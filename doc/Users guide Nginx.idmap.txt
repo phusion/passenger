@@ -118,7 +118,7 @@
 
 5.11.1. rails_env <string>	=>	rails-env-string--jlh7v9
 
-5.12. Rack-specific options	=>	rack-specific-options-13yvdxs
+5.12. Rack and Rails >= 3 specific options	=>	rack-specific-options-13yvdxs
 
 5.12.1. rack_env <string>	=>	rack-env-string--tqmrt0
 

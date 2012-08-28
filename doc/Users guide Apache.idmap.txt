@@ -187,23 +187,19 @@
 
 5.16. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
 
-# fuzzy
 5.16.1. RailsAutoDetect <on|off>	=>	railsautodetect-on-off--tpigsd
 
-# fuzzy
 5.16.2. RailsBaseURI <uri>	=>	railsbaseuri-uri--1txrw3k
 
-# fuzzy
 5.16.3. RailsEnv <string>	=>	railsenv-string--1b0xxvu
 
-# fuzzy
 5.17. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
 
-# fuzzy
 5.17.1. RackAutoDetect <on|off>	=>	rackautodetect-on-off--vl1lxy
 
-# fuzzy
 5.17.2. RackBaseURI <uri>	=>	rackbaseuri-uri--1to24pj
+
+5.18. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
 
 # fuzzy
 5.17.3. RackEnv <string>	=>	rackenv-string--vve9py
@@ -220,10 +216,8 @@
 # fuzzy
 5.18.3. RailsDefaultUser	=>	railsdefaultuser-19j7n3m
 
-# fuzzy
 5.18.4. RailsAllowModRewrite	=>	railsallowmodrewrite-1vkziro
 
-# fuzzy
 5.18.5. RailsSpawnMethod	=>	railsspawnmethod-1aljgpa
 
 5.2. PassengerRuby <filename>	=>	passengerruby-filename--1r3fv73
@@ -232,19 +226,14 @@
 
 5.4. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
 
-# fuzzy
 5.5. PassengerEnabled <on|off>	=>	passengerenabled-on-off--74rzth
 
-# fuzzy
 5.6. PassengerTempDir <directory>	=>	passengertempdir-directory--68h2ng
 
-# fuzzy
 5.7. PassengerUploadBufferDir <directory>	=>	passengeruploadbufferdir-directory--kdr8at
 
-# fuzzy
 5.8. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
 
-# fuzzy
 5.9. PassengerBufferResponse <on|off>	=>	passengerbufferresponse-on-off--1y7ilka
 
 6. Troubleshooting	=>	troubleshooting-2ihihi

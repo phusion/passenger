@@ -36,6 +36,7 @@
 
 #include "Configuration.hpp"
 #include "Utils.h"
+#include "Constants.h"
 #include <agents/LoggingAgent/FilterSupport.h>
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
