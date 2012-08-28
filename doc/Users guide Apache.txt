@@ -237,31 +237,75 @@ about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
 
 === Upgrading or downgrading Phusion Passenger ===
 
-==== Via a gem or a source tarball ====
+Upgrading or downgrading Phusion Passenger for Apache involves several steps.
 
-To upgrade or downgrade Phusion Passenger via the gem or the source tarball, install the newer
-or older version as you normally would; that is, install the gem or unpack the tarball, and
-run `passenger-install-apache2-module`. Eventually `passenger-install-apache2-module` will tell
-you to copy & paste some settings into the Apache configuration file; something that looks along
-the lines of:
+1. First, you have to obtain and install the files associated with the version that you want to upgrade or downgrade to. You can do this in three ways: by using <<upgrade_or_downgrade_with_rubygems,RubyGems>>, by downloading a <<upgrade_or_downgrade_with_tarball,tarball>>, or by installing a <<upgrade_or_downgrade_with_linux_packages,native Linux package>>. If you installed a native Linux package, then skip to the last step. If not, read on.
+2. Then you have to recompile the Phusion Passenger Apache module by invoking
++
+-----------------------------------
+# If you used RubyGems
+sudo passenger-install-apache2-module
 
+# If you used the tarball
+sudo /path-to-passenger/bin/passenger-install-apache2-module
+-----------------------------------
+3. Finally, `passenger-install-apache2-module` will tell you to copy & paste some settings in the configuration file. Something that looks along the lines of:
++
 -----------------------------------
 LoadModule passenger_module ...
 PassengerRoot ...
 PassengerRuby ...
 -----------------------------------
-
++
 Because you already had Phusion Passenger installed, you already had similar settings
 in your Apache configuration file, just with different values. *Replace* the old settings with
 the new ones that the installer outputs. It is important that the old settings are removed,
 otherwise Phusion Passenger may malfunction.
+4. Restart Apache. You're now done.
 
-When you're done, restart Apache.
+[float]
+[[upgrade_or_downgrade_with_rubygems]]
+==== Obtaining Phusion Passenger files with RubyGems ====
 
-==== Via a native Linux package
+.Open source
 
-There are no special instructions required to upgrade or downgrade Phusion Passenger
-via a native Linux package.
+You can obtain the files associated with the latest _open source_ Phusion Passenger release by invoking the following command:
+
+-------------------------
+sudo gem install passenger
+-------------------------
+
+You can also obtain a specific version by specifying the `-v` argument, like this:
+
+---------------------------------
+sudo gem install passenger -v 3.0.0
+---------------------------------
+
+.Enterprise
+
+If you're using link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] then you should obtain the gem from the link:https://www.phusionpassenger.com/orders[Customer Area] instead. Login with your order reference and password. The Customer Area will show you a list of files. Download the gem file for the version you want (`passenger-enterprise-server-x.x.x.gem`) and install it with:
+
+-------------------------------------------------------
+sudo gem install passenger-enterprise-server-x.x.x.gem
+-------------------------------------------------------
+
+[float]
+[[upgrade_or_downgrade_with_tarball]]
+==== Obtaining Phusion Passenger files through a tarball ====
+
+You can obtain the files associated with the latest _open source_ Phusion Passenger release by downloading the tarball linked from link:https://www.phusionpassenger.com/download[the Phusion Passenger download page]. If you want a specific version, please refer to the release archive on link:http://rubyforge.org/frs/?group_id=5873&release_id=46919[RubyForge].
+
+If you're using link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] then you should obtain the tarball from the link:https://www.phusionpassenger.com/orders[Customer Area] instead. Login with your order reference and password. The Customer Area will show you a list of files. Download the tarball for the version you want (`passenger-enterprise-server-x.x.x.tar.gz`).
+
+Once you've obtained the tarball, extract it somewhere:
+
+[float]
+[[upgrade_or_downgrade_with_linux_packages]]
+==== Upgrading with native Linux packages ====
+
+When using native Linux packages, it is only possible to upgrade, not downgrade. Native Linux packages are only available for the open source Phusion Passenger, not for Phusion Passenger Enterprise.
+
+Native Linux packages are contributed by third parties. Although they update pretty quickly, they lag behind gem and tarball releases, perhaps by a few days. Please learn more about native Linux packages link:https://www.phusionpassenger.com/native_packages[at the Phusion Passenger website].
 
 === Unloading (disabling) Phusion Passenger from Apache without uninstalling it ===
 
