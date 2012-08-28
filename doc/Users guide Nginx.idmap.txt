@@ -194,10 +194,10 @@
 5.9.6. passenger_max_preloader_idle_time <integer>	=>	rails-app-spawner-idle-time-integer--1xjqe4b
 
 # fuzzy
-5.9.7. passenger_concurrency_model <process|thread> ===	=>	passenger-max-requests
+5.9.7. passenger_concurrency_model <process|thread>	=>	passenger-max-requests
 
 # fuzzy
-5.9.8. passenger_thread_count <number> ===	=>	passenger-max-request-time-seconds--1qod9kg
+5.9.8. passenger_thread_count <number>	=>	passenger-max-request-time-seconds--1qod9kg
 
 # fuzzy
 5.9.9. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint

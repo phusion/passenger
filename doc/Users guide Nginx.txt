@@ -1146,7 +1146,7 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is '300' (5 minutes).
 
 [[PassengerConcurrencyModel]]
-==== passenger_concurrency_model <process|thread> ===
+==== passenger_concurrency_model <process|thread> ====
 :version: 4.0.0
 include::users_guide_snippets/enterprise_only.txt[]
 
@@ -1165,7 +1165,7 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'process'.
 
 [[PassengerThreadCount]]
-==== passenger_thread_count <number> ===
+==== passenger_thread_count <number> ====
 :version: 4.0.0
 include::users_guide_snippets/enterprise_only.txt[]
 
