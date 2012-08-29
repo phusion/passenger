@@ -112,6 +112,7 @@ class RequestHandler
 			"analytics_logger",
 			"pool_account_username"
 		)
+		@thread_handler = options["thread_handler"] || ThreadHandler
 		@concurrency = 1
 		@memory_limit = options["memory_limit"] || 0
 		if options["pool_account_password_base64"]
@@ -415,16 +416,18 @@ private
 			:server_socket => @http_socket,
 			:socket_name => "HTTP socket",
 			:protocol => :http,
-			:app_group_name => @app_group_name
+			:app_group_name => @app_group_name,
+			:connect_password => @connect_password
 		}
 
+		thread_handler = @thread_handler
 		@threads_mutex.synchronize do
 			@concurrency.times do |i|
 				thread = Thread.new(i) do |number|
 					Thread.current.abort_on_exception = true
 					begin
 						Thread.current[:name] = "Worker #{number + 1}"
-						handler = ThreadHandler.new(self, main_socket_options)
+						handler = thread_handler.new(self, main_socket_options)
 						handler.install
 						handler.main_loop
 					ensure
@@ -438,7 +441,7 @@ private
 				Thread.current.abort_on_exception = true
 				begin
 					Thread.current[:name] = "HTTP helper worker"
-					handler = ThreadHandler.new(self, http_socket_options)
+					handler = thread_handler.new(self, http_socket_options)
 					handler.install
 					handler.main_loop
 				ensure

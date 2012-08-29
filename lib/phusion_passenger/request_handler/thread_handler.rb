@@ -197,7 +197,7 @@ private
 		
 		data = ""
 		while data !~ /\r\n\r\n/ && data.size < MAX_HEADER_SIZE
-			data << socket.readpartial(16 * 1024)
+			data << connection.readpartial(16 * 1024)
 		end
 		if data.size >= MAX_HEADER_SIZE
 			warn("*** Passenger RequestHandler warning: " <<
@@ -220,7 +220,7 @@ private
 				headers["SCRIPT_NAME"]     = ""
 				headers["PATH_INFO"]       = path_info
 				headers["SERVER_NAME"]     = "127.0.0.1"
-				headers["SERVER_PORT"]     = socket.addr[1].to_s
+				headers["SERVER_PORT"]     = connection.addr[1].to_s
 				headers["SERVER_PROTOCOL"] = protocol
 			else
 				header, value = line.split(/\s*:\s*/, 2)
