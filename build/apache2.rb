@@ -79,6 +79,7 @@ task :apache2 => [
 	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',
 	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
+	AGENT_OUTPUT_DIR + 'SpawnPreparer',
 	:native_support
 ]
 

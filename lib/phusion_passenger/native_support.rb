@@ -63,7 +63,7 @@ private
 	end
 	
 	def extconf_rb
-		File.join(ruby_extension_source_dir, "extconf.rb")
+		File.join(PhusionPassenger.ruby_extension_source_dir, "extconf.rb")
 	end
 	
 	def native_support_dir_in_source_root
