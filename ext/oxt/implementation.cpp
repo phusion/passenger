@@ -323,7 +323,7 @@ thread::thread_main(const boost::function<void ()> func, thread_local_context_pt
 	if (OXT_LIKELY(global_context != NULL)) {
 		lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
 		thread_local_context *ctx = get_thread_local_context();
-		if (ctx->thread_number != 0) {
+		if (ctx != 0 && ctx->thread_number != 0) {
 			global_context->registered_threads.erase(ctx->iterator);
 			ctx->thread_number = 0;
 		}
