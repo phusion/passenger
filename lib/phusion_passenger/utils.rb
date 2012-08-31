@@ -42,16 +42,19 @@ module Utils
 	# Generate a long, cryptographically secure random ID string, which
 	# is also a valid filename.
 	def generate_random_id(method)
+		data = File.open("/dev/urandom", "rb") do |f|
+			f.read(64)
+		end
 		case method
 		when :base64
-			data = [File.read("/dev/urandom", 64)].pack('m')
+			data = [data].pack('m')
 			data.gsub!("\n", '')
 			data.gsub!("+", '')
 			data.gsub!("/", '')
 			data.gsub!(/==$/, '')
 			return data
 		when :hex
-			return File.read("/dev/urandom", 64).unpack('H*')[0]
+			return data.unpack('H*')[0]
 		else
 			raise ArgumentError, "Invalid method #{method.inspect}"
 		end
