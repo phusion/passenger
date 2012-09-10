@@ -1217,6 +1217,9 @@ measure to avoid freezing applications.
 
 [[PassengerMemoryLimit]]
 ==== passenger_memory_limit <integer> ====
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
+
 The maximum amount of memory that an application process may use, in megabytes.
 Once an application process has surpassed its memory limit, it will process
 all the requests currently present in its queue and then shut down.
