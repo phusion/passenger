@@ -35,6 +35,7 @@
 #  if defined(_GLIBCXX_HAVE_GTHR_DEFAULT) \
         || defined(_GLIBCXX__PTHREADS) \
         || defined(_GLIBCXX_HAS_GTHREADS) \
+        || defined(_GLIBCXX_PTHREADS) \
         || defined(_WIN32)
       //
       // If the std lib has thread support turned on, then turn it on in Boost
