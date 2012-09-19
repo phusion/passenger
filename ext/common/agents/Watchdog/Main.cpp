@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -982,12 +982,12 @@ cleanupAgentsInBackground(vector<AgentWatcher *> &watchers) {
 			// processes.
 			P_WARN("Some Phusion Passenger agent processes did not exit " <<
 				"in time, forcefully shutting down all.");
-			for (it = watchers.begin(); it != watchers.end(); it++) {
+		} else {
+			P_DEBUG("All Phusion Passenger agent processes have exited. Forcing all subprocesses to shut down.");
+		}
+		for (it = watchers.begin(); it != watchers.end(); it++) {
 				(*it)->forceShutdown();
 			}
-		} else {
-			P_DEBUG("All Phusion Passenger agent processes have exited.");
-		}
 		
 		// Now clean up the server instance directory.
 		delete generation.get();
@@ -1126,10 +1126,11 @@ main(int argc, char *argv[]) {
 			 * the background and exit this watchdog process so that we don't block
 			 * the web server.
 			 */
+			P_DEBUG("Web server exited gracefully; gracefully shutting down all agents...");
 			cleanupAgentsInBackground(watchers);
 			return 0;
 		} else {
-			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all service processes...");
+			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all agents...");
 			forceAllAgentsShutdown(watchers);
 			return 1;
 		}

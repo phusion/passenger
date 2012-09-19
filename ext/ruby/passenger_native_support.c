@@ -458,6 +458,18 @@ detach_process(VALUE self, VALUE pid) {
 	return Qnil;
 }
 
+/**
+ * Freeze the current process forever. On Ruby 1.9 this never unlocks the GIL.
+ * Useful for testing purposes.
+ */
+static VALUE
+freeze_process(VALUE self) {
+	while (1) {
+		usleep(60 * 1000000);
+	}
+	return Qnil;
+}
+
 #if defined(HAVE_KQUEUE) || defined(IN_DOXYGEN)
 typedef struct {
 	VALUE klass;
@@ -852,6 +864,7 @@ Init_passenger_native_support() {
 	rb_define_singleton_method(mNativeSupport, "writev3", f_writev3, 4);
 	rb_define_singleton_method(mNativeSupport, "process_times", process_times, 0);
 	rb_define_singleton_method(mNativeSupport, "detach_process", detach_process, 1);
+	rb_define_singleton_method(mNativeSupport, "freeze_process", freeze_process, 0);
 	
 	#ifdef HAVE_KQUEUE
 		cFileSystemWatcher = rb_define_class_under(mNativeSupport,

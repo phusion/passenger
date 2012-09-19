@@ -14,6 +14,7 @@ Release 3.9.0
  * [Standalone] Automatic asset pipeline expiry headers support.
  * [Enterprise] Multithreading support for apps
  * Deleting restart.txt will no longer trigger a restart.
+ * The watchdog now forces all agents' process groups to exit using SIGKILL, to ensure no garbage processes are left behind.
 
 
 Release 3.0.17
