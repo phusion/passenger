@@ -1074,7 +1074,6 @@ namespace tut {
 		// Trigger spawn loop. The spawn loop itself won't take longer than 3*20=60 msec.
 		pool->findOrCreateGroup(options);
 		ScopedLock l(pool->syncher);
-		setLogLevel(3);
 		pool->asyncGet(options, callback, false);
 		// Wait until spawn loop tries to grab the lock.
 		EVENTUALLY(3,

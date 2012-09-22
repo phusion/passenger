@@ -503,7 +503,7 @@ public:
 	 * If allowReinitialization is true then destroying a SuperGroup that
 	 * has get waiters will make it reinitialize. Otherwise this SuperGroup
 	 * will be forcefully set to the DESTROYING state and getWaitlist will be
-	 * left untouched; in this case it is up to the caller to the empty
+	 * left untouched; in this case it is up to the caller to empty
 	 * the getWaitlist and do something with it, otherwise the invariant
 	 * will be broken.
 	 */
