@@ -283,6 +283,9 @@ public:
 	bool detached() const {
 		return getGroup() == NULL;
 	}
+
+	// Thread-safe
+	SuperGroupPtr getSuperGroup() const;
 	
 	int utilization() const {
 		/* Different processes within a Group may have different

@@ -568,7 +568,7 @@ public:
 	 *       getWaitlist.empty()
 	 */
 	bool garbageCollectable(unsigned long long now = 0) const {
-		if (state == READY) {
+		/* if (state == READY) {
 			vector<GroupPtr>::const_iterator it, end = groups.end();
 			bool result = true;
 			
@@ -580,7 +580,8 @@ public:
 		} else {
 			P_ASSERT(!(state == DESTROYED) || getWaitlist.empty());
 			return state == DESTROYED;
-		}
+		} */
+		return false;
 	}
 	
 	SessionPtr get(const Options &newOptions, const GetCallback &callback) {
@@ -663,6 +664,16 @@ public:
 			state = RESTARTING;
 		}
 		verifyInvariants();
+	}
+
+	unsigned int getProcessCount() const {
+		unsigned int result = 0;
+		vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+		for (g_it = groups.begin(); g_it != g_end; g_it++) {
+			const GroupPtr &group = *g_it;
+			result += group->count;
+		}
+		return result;
 	}
 
 	string inspect() const {
