@@ -47,52 +47,113 @@ using namespace oxt;
 
 
 /**
+ * An abstract container for multiple Groups (applications). It is a support
+ * structure for supporting application sets, multiple applications that can
+ * closely work with each other as if they were a single entity. There's no
+ * support for application sets yet in Phusion Passenger 4, but this class
+ * lays the foundation to make it possible.
+ *
+ * An application set is backed by a directory that contains:
+ *
+ * - The files for the individual applications.
+ * - An application set manifest file that:
+ *   * Describes the containing applications.
+ *   * Describes the application set itself.
+ *   * Describes instructions that must be first
+ *     followed before the application set is usable.
+ *   * Describes instructions that must be followed when the
+ *     application set is to be cleaned up.
+ *
+ * SuperGroup is designed to assume to that loading the manifest file
+ * and following the instructions in them may be a blocking operation
+ * that can take a while. Thus it makes use of background threads to
+ * do most of initialization and destruction work (see `doInitialize()`
+ * and `doDestroy()`). The `state` variable keeps track of things.
+ *
+ * A SuperGroup starts off in the `INITIALIZING` state. When it's done
+ * initializing, it becomes `READY`. If a restart is necessary it will
+ * transition to `RESTARTING` and then eventually back to `READY`.
+ * At any time the SuperGroup may be instructed to destroy itself, in
+ * which case it will first transition to `DESTROYING` and eventually
+ * to `DESTROYED`. Once destroyed, the SuperGroup is reusable so it
+ * can go back to `INITIALIZING` when needed.
+ *
+ *
+ * ## Life time
+ *
+ * A SuperGroup, once created and added to the Pool, is normally not
+ * supposed to be destroyed and removed from the Pool automatically.
+ * This is because a SuperGroup may contain important spawning
+ * parameters such as SuperGroup-specific environment variables.
+ * However the system does not disallow the administrator from
+ * manually removing a SuperGroup from the pool.
+ *
+ *
+ * ## Multiple instances and initialization/destruction
+ *
+ * It is allowed to create multiple SuperGroups backed by the same
+ * application set directory, e.g. to increase concurrency. The system
+ * may destroy a SuperGroup in the background while creating a new
+ * one while that is in progress. This could even happen across processes,
+ * e.g. one process is busy destroying a SuperGroup while another
+ * one is initializing it.
+ *
+ * Furthermore, it is possible for a SuperGroup to receive a get()
+ * command during destruction.
+ *
+ * It is therefore important that `doInitialize()` and `doDestroy()`
+ * do not interfere with other instances of the same code, and can
+ * commit their work atomatically.
+ *
+ *
+ * ## Thread-safety
+ *
  * Except for otherwise documented parts, this class is not thread-safe,
- * so only access within ApplicationPool lock.
+ * so only access it within the ApplicationPool lock.
  */
 class SuperGroup: public enable_shared_from_this<SuperGroup> {
 public:
 	enum State {
-		/** This SuperGroup is being initialized. 'groups' is empty and
-		 * get() actions cannot be immediately satisfied, so they
-		 * are placed in getWaitlist. Once the SuperGroup is done
-		 * loading the state it will transition to READY. Calling destroy()
-		 * will make it transition to DESTROYING. If initialization
-		 * failed it will transition to DESTROYED.
+		/** This SuperGroup is being initialized. `groups` is empty and
+		 * `get()` actions cannot be immediately satisfied, so they
+		 * are placed in `getWaitlist`. Once the SuperGroup is done
+		 * loading the state it will transition to `READY`. Calling `destroy()`
+		 * will make it transition to `DESTROYING`. If initialization
+		 * failed it will transition to `DESTROYED`.
 		 */
 		INITIALIZING,
 		
 		/** This SuperGroup is loaded and is ready for action. From
-		 * here the state can transition to RESTARTING or DESTROYING.
+		 * here the state can transition to `RESTARTING` or `DESTROYING`.
 		 */
 		READY,
 		
 		/** This SuperGroup is being restarted. The SuperGroup
 		 * information is being reloaded from the data source
 		 * and processes are being restarted. In this state
-		 * get() actions can still be statisfied, and the data
+		 * `get()` actions can still be statisfied, and the data
 		 * structures still contain the old information. Once reloading
 		 * is done the data structures will be atomically swapped
 		 * with the newly reloaded ones.
 		 * Once the restart is completed, the state will transition
-		 * to READY.
+		 * to `READY`.
 		 * Re-restarting won't have any effect in this state.
-		 * destroy() will cause the restart to be aborted and will
-		 * cause a transition to DESTROYING.
+		 * `destroy()` will cause the restart to be aborted and will
+		 * cause a transition to `DESTROYING`.
 		 */
 		RESTARTING,
 		
 		/** This SuperGroup is being destroyed. Processes are being shut
 		 * down and other resources are being cleaned up. In this state,
-		 * 'groups' is empty.
-		 * Restarting won't have any effect, but get() will cause a
-		 * transition to INITIALIZING.
+		 * `groups` is empty.
+		 * Restarting won't have any effect, but `get()` will cause a
+		 * transition to `INITIALIZING`.
 		 */
 		DESTROYING,
 		
 		/** This SuperGroup has been destroyed and all resources have been
-		 * freed. Restarting won't have any effect but calling get() will
-		 * make it transition to INITIALIZING.
+		 * freed. Restarting won't have any effect but calling `get()` will
+		 * make it transition to `INITIALIZING`.
 		 */
 		DESTROYED
 	};
@@ -103,7 +164,7 @@ private:
 	
 	Options options;
 	/** A number for concurrency control, incremented every time the state changes.
-	 * Every background thread in SuperGroup spawns knows the generation number
+	 * Every background thread that SuperGroup spawns knows the generation number
 	 * from when the thread was spawned. A thread generally does some work outside
 	 * the lock, then grabs the lock and updates the information in this SuperGroup
 	 * with the results of the work. But before updating happens it first checks
@@ -500,11 +561,11 @@ public:
 	}
 
 	/**
-	 * If allowReinitialization is true then destroying a SuperGroup that
+	 * If `allowReinitialization` is true then destroying a SuperGroup that
 	 * has get waiters will make it reinitialize. Otherwise this SuperGroup
-	 * will be forcefully set to the DESTROYING state and getWaitlist will be
+	 * will be forcefully set to the `DESTROYING` state and `getWaitlist` will be
 	 * left untouched; in this case it is up to the caller to empty
-	 * the getWaitlist and do something with it, otherwise the invariant
+	 * the `getWaitlist` and do something with it, otherwise the invariant
 	 * will be broken.
 	 */
 	void destroy(vector<Callback> &postLockActions, bool allowReinitialization = true) {
