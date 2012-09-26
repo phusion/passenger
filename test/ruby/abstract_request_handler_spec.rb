@@ -139,6 +139,32 @@ describe AbstractRequestHandler do
 		end
 	end
 	
+	it "accepts oobw on the main server socket" do
+		@request_handler.start_main_loop_thread
+		client = connect
+		begin
+			channel = MessageChannel.new(client)
+			channel.write_scalar("REQUEST_METHOD\0OOBW\0")
+			client.read.should == "done"
+		ensure
+			client.close
+		end
+	end
+	
+	it "accepts oobw on the HTTP server socket" do
+		@request_handler.start_main_loop_thread
+		addr, port = @request_handler.server_sockets[:http][0].split(/:/)
+		client = TCPSocket.new(addr, port.to_i)
+		begin
+			client.write("OOBW / HTTP/1.1\r\n")
+			client.write("Host: foo.com\r\n\r\n")
+			client.close_write
+			client.read.should == "done"
+		ensure
+			client.close
+		end
+	end
+	
 	specify "the HTTP socket rejects headers that are too large" do
 		stderr = StringIO.new
 		DebugLogging.log_level = 0

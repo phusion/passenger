@@ -74,6 +74,7 @@ using namespace Passenger;
 
 static StreamBMH_Occ statusFinder_occ;
 static StreamBMH_Occ transferEncodingFinder_occ;
+static StreamBMH_Occ requestOOBWorkFinder_occ;
 
 struct ClientDisconnectedException { };
 
@@ -168,6 +169,10 @@ private:
 		struct StreamBMH ctx;
 		char padding[SBMH_SIZE(sizeof("Transfer-Encoding:") - 1)];
 	} transferEncodingFinder;
+	union {
+		struct StreamBMH ctx;
+		char padding[SBMH_SIZE(sizeof("X-Passenger-Request-OOB-Work:") - 1)];
+	} requestOOBWorkFinder;
 	
 	/** Given a substring containing the start of the header value,
 	 * extracts the substring that contains a single header value.
@@ -419,6 +424,29 @@ private:
 		}
 	}
 	
+	bool detectRequestOOBWorkAndRemoveHeader(const StaticString &header) {
+		size_t accepted;
+		
+		sbmh_reset(&requestOOBWorkFinder.ctx);
+		accepted = sbmh_feed(&requestOOBWorkFinder.ctx,
+			&requestOOBWorkFinder_occ,
+			(const unsigned char *) "X-Passenger-Request-OOB-Work:",
+			sizeof("X-Passenger-Request-OOB-Work:") - 1,
+			(const unsigned char *) header.data(),
+			header.size());
+		if (requestOOBWorkFinder.ctx.found) {
+			
+			
+			// Remove Request OOB Work header.
+			char *tmp = (char *) (header.data() + accepted - 2);
+			*tmp = '_';
+				
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 	/**
 	 * Attempts to accept a connection made by the client.
 	 *
@@ -581,7 +609,7 @@ private:
 	 *                                     before we were able to send back the
 	 *                                     full response.
 	 */
-	void forwardResponse(SessionPtr &session, FileDescriptor &clientFd,
+	void forwardResponse(SessionPtr &session, FileDescriptor &clientFd, bool *oobwork,
 		const AnalyticsLogPtr &log)
 	{
 		TRACE_POINT();
@@ -629,6 +657,7 @@ private:
 			 * dechunk the data before passing to Nginx.
 			 */
 			chunked = detectChunkedTransferEncodingAndRemoveHeader(headerData);
+			*oobwork = detectRequestOOBWorkAndRemoveHeader(headerData);
 			
 			if (!log->isNull()) {
 				UPDATE_TRACE_POINT();
@@ -773,6 +802,17 @@ private:
 		}
 	}
 	
+	char * addPassengerConnectionPassword(char *end, const SessionPtr session) {
+		memcpy(end, "PASSENGER_CONNECT_PASSWORD", sizeof("PASSENGER_CONNECT_PASSWORD"));
+		end += sizeof("PASSENGER_CONNECT_PASSWORD");
+	
+		memcpy(end, session->getConnectPassword().c_str(),
+			session->getConnectPassword().size() + 1);
+		end += session->getConnectPassword().size() + 1;
+		
+		return end;
+	}
+	
 	/**
 	 * Handles an SCGI request from a client whose identity is derived by the given <tt>clientFd</tt>.
 	 *
@@ -847,6 +887,7 @@ private:
 			
 			try {
 				SessionPtr session;
+				bool oobwork = false;
 				
 				{
 					AnalyticsScopeLog scope(log, "get from pool");
@@ -871,12 +912,7 @@ private:
 				memcpy(end, parser.getHeaderData().c_str(), parser.getHeaderData().size());
 				end += parser.getHeaderData().size();
 				
-				memcpy(end, "PASSENGER_CONNECT_PASSWORD", sizeof("PASSENGER_CONNECT_PASSWORD"));
-				end += sizeof("PASSENGER_CONNECT_PASSWORD");
-				
-				memcpy(end, session->getConnectPassword().c_str(),
-					session->getConnectPassword().size() + 1);
-				end += session->getConnectPassword().size() + 1;
+				end = addPassengerConnectionPassword(end, session);
 				
 				if (!log->isNull()) {
 					memcpy(end, "PASSENGER_GROUP_NAME", sizeof("PASSENGER_GROUP_NAME"));
@@ -911,7 +947,34 @@ private:
 					scope.success();
 				}
 				
-				forwardResponse(session, clientFd, log);
+				forwardResponse(session, clientFd, &oobwork, log);
+				clientFd.close();
+				
+				if (oobwork == true) {
+					AnalyticsScopeLog scope(log, "oob work");
+					
+					session->closeStream();
+					session->initiate();
+					end = headers;
+					
+					memcpy(end, "REQUEST_METHOD", sizeof("REQUEST_METHOD"));
+					end += sizeof("REQUEST_METHOD");
+					
+					memcpy(end, "OOBW", sizeof("OOBW"));
+					end += sizeof("OOBW");
+					
+					end = addPassengerConnectionPassword(end, session);
+					
+					session->sendHeaders(headers, end - headers);
+					
+					fd_set readfds;
+					FD_ZERO(&readfds);
+					FD_SET(session->getStream(), &readfds);
+					syscalls::select(session->getStream() + 1, &readfds, NULL, NULL, NULL); 
+					
+					session->closeStream();
+					scope.success();
+				}
 				
 				requestProxyingScope.success();
 			} catch (const SpawnException &e) {
@@ -924,7 +987,6 @@ private:
 			}
 			
 			requestProcessingScope.success();
-			clientFd.close();
 		} catch (const boost::thread_interrupted &) {
 			throw;
 		} catch (const tracable_exception &e) {
@@ -1184,6 +1246,9 @@ public:
 		sbmh_init(NULL, &transferEncodingFinder_occ,
 			(const unsigned char *) "Transfer-Encoding:",
 			strlen("Transfer-Encoding:"));
+		sbmh_init(NULL, &requestOOBWorkFinder_occ,
+			(const unsigned char *) "X-Passenger-Request-OOB-Work:",
+			strlen("X-Passenger-Request-OOB-Work:"));
 		
 		UPDATE_TRACE_POINT();
 		requestSocketPassword = Base64::decode(options.get("request_socket_password"));
