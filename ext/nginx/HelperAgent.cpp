@@ -398,8 +398,9 @@ private:
 		return status;
 	}
 	
-	bool detectChunkedTransferEncodingAndRemoveHeader(const StaticString &header) {
+	StaticString detectChunkedTransferEncodingAndRemoveHeader(StaticString &header, bool &chunked) {
 		size_t accepted;
+		chunked = false;
 		
 		sbmh_reset(&transferEncodingFinder.ctx);
 		accepted = sbmh_feed(&transferEncodingFinder.ctx,
@@ -412,20 +413,17 @@ private:
 			StaticString value = extractHeaderValue(header.data() + accepted,
 				header.size() - accepted);
 			if (value == "chunked") {
-				// Remove Transfer-Encoding header.
-				char *tmp = (char *) (header.data() + accepted - 2);
-				*tmp = '_';
-				return true;
-			} else {
-				return false;
+				chunked = true;
+				header = removeHeaderAt(header, accepted - (sizeof("Transfer-Encoding:") - 1));
 			}
-		} else {
-			return false;
 		}
+		
+		return header;
 	}
 	
-	bool detectRequestOOBWorkAndRemoveHeader(const StaticString &header) {
+	StaticString detectRequestOOBWorkAndRemoveHeader(StaticString &header, bool &oobwork) {
 		size_t accepted;
+		oobwork = false;
 		
 		sbmh_reset(&requestOOBWorkFinder.ctx);
 		accepted = sbmh_feed(&requestOOBWorkFinder.ctx,
@@ -435,16 +433,24 @@ private:
 			(const unsigned char *) header.data(),
 			header.size());
 		if (requestOOBWorkFinder.ctx.found) {
-			
-			
-			// Remove Request OOB Work header.
-			char *tmp = (char *) (header.data() + accepted - 2);
-			*tmp = '_';
-				
-			return true;
-		} else {
-			return false;
+			oobwork = true;
+			header = removeHeaderAt(header, accepted - (sizeof("X-Passenger-Request-OOB-Work:") - 1));
 		}
+		return header;
+	}
+	
+	StaticString removeHeaderAt(StaticString &header, size_t headerStartAt) {
+		size_t headerEndAt = header.find((const char *) "\r\n", headerStartAt, 2);
+		if (headerEndAt == string::npos) {
+			// Can't remove the header as we don't know where it ends
+			return header;
+		}
+		
+		char *headerStart = (char *) header.data() + headerStartAt;
+		char *nextStart   = (char *) header.data() + headerEndAt + 2;
+		
+		memmove(headerStart, nextStart, header.size() - (nextStart - header.data()));
+		return StaticString(header.data(), header.size() - (nextStart - headerStart));
 	}
 	
 	/**
@@ -609,7 +615,7 @@ private:
 	 *                                     before we were able to send back the
 	 *                                     full response.
 	 */
-	void forwardResponse(SessionPtr &session, FileDescriptor &clientFd, bool *oobwork,
+	void forwardResponse(SessionPtr &session, FileDescriptor &clientFd, bool &oobwork,
 		const AnalyticsLogPtr &log)
 	{
 		TRACE_POINT();
@@ -650,14 +656,15 @@ private:
 			StaticString nonHeaderData(buf + accepted, size - accepted);
 			StaticString status;
 			char statusTmp[32];
-			
-			status = extractAndSanitizeHttpStatus(headerData, statusTmp);
+
 			/* Nginx's proxy_module doesn't support HTTP 1.1 chunked
 			 * transfer encoding so we need to strip that header and
 			 * dechunk the data before passing to Nginx.
 			 */
-			chunked = detectChunkedTransferEncodingAndRemoveHeader(headerData);
-			*oobwork = detectRequestOOBWorkAndRemoveHeader(headerData);
+			headerData = detectChunkedTransferEncodingAndRemoveHeader(headerData, chunked);
+			headerData = detectRequestOOBWorkAndRemoveHeader(headerData, oobwork);
+			
+			status = extractAndSanitizeHttpStatus(headerData, statusTmp);
 			
 			if (!log->isNull()) {
 				UPDATE_TRACE_POINT();
@@ -947,7 +954,7 @@ private:
 					scope.success();
 				}
 				
-				forwardResponse(session, clientFd, &oobwork, log);
+				forwardResponse(session, clientFd, oobwork, log);
 				clientFd.close();
 				
 				if (oobwork == true) {
