@@ -55,8 +55,12 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 		end
 		
 		if defined?(ActionDispatch::ShowExceptions)
+			exceptions_middleware = ActionDispatch::ShowExceptions
+			if defined?(ActionDispatch::DebugExceptions)
+				exceptions_middleware = ActionDispatch::DebugExceptions
+			end
 			Rails.application.middleware.insert_after(
-				ActionDispatch::ShowExceptions,
+				exceptions_middleware,
 				ExceptionLogger, analytics_logger)
 		end
 		
