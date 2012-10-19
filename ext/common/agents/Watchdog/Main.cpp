@@ -1047,6 +1047,8 @@ main(int argc, char *argv[]) {
 	poolIdleTime       = agentsOptions.getInt("pool_idle_time");
 	serializedPrestartURLs  = agentsOptions.get("prestart_urls");
 	
+	P_DEBUG("Starting Watchdog...");
+	
 	try {
 		randomGenerator = new RandomGenerator();
 		errorEvent = new EventFd();
@@ -1116,21 +1118,25 @@ main(int argc, char *argv[]) {
 		}
 		
 		writeArrayMessage(FEEDBACK_FD, "All agents started", NULL);
+		P_DEBUG("All Phusion Passenger agents started!");
 		
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		bool exitGracefully = waitForStarterProcessOrWatchers(watchers);
-		AgentWatcher::stopWatching(watchers);
 		if (exitGracefully) {
 			/* Fork a child process which cleans up all the agent processes in
 			 * the background and exit this watchdog process so that we don't block
 			 * the web server.
 			 */
 			P_DEBUG("Web server exited gracefully; gracefully shutting down all agents...");
+		} else {
+			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all agents...");
+		}
+		AgentWatcher::stopWatching(watchers);
+		if (exitGracefully) {
 			cleanupAgentsInBackground(watchers);
 			return 0;
 		} else {
-			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all agents...");
 			forceAllAgentsShutdown(watchers);
 			return 1;
 		}

@@ -60,6 +60,11 @@ static global_context_t *global_context = NULL;
 	static __thread thread_local_context_ptr *local_context = NULL;
 
 	static void
+	init_thread_local_context_support() {
+		/* Do nothing. */
+	}
+	
+	static void
 	set_thread_local_context(const thread_local_context_ptr &ctx) {
 		local_context = new thread_local_context_ptr(ctx);
 	}
@@ -88,16 +93,24 @@ static global_context_t *global_context = NULL;
 	 * this object alive until the OS cleans it up.
 	 */
 	static thread_specific_ptr<thread_local_context_ptr> *local_context = NULL;
+	
+	static void
+	init_thread_local_context_support() {
+		local_context = new thread_specific_ptr<thread_local_context_ptr>();
+	}
 
 	static void
 	set_thread_local_context(const thread_local_context_ptr &ctx) {
-		local_context = new thread_specific_ptr<thread_local_context_ptr>();
-		local_context->reset(new thread_local_context_ptr(ctx));
+		if (local_context != NULL) {
+			local_context->reset(new thread_local_context_ptr(ctx));
+		}
 	}
 
 	static void
 	free_thread_local_context() {
-		local_context->reset();
+		if (local_context != NULL) {
+			local_context->reset();
+		}
 	}
 
 	thread_local_context *
@@ -242,6 +255,7 @@ tracable_exception::what() const throw() {
 
 void initialize() {
 	global_context = new global_context_t();
+	init_thread_local_context_support();
 	// For some reason make_shared() crashes here when compiled with clang 3.2 on OS X.
 	// Clang bug? We use 'new' to work around it.
 	thread_local_context_ptr ctx = thread_local_context::make_shared_ptr();
