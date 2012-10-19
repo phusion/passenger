@@ -309,12 +309,12 @@ private:
 
 	static void dumpDiagnostics(void *userData) {
 		Server *self = (Server *) userData;
-		self->requestHandler->inspect(cout);
-		cout.flush();
-		cout << "\n" << self->pool->inspect();
-		cout.flush();
-		cout << "\n" << oxt::thread::all_backtraces();
-		cout.flush();
+		self->requestHandler->inspect(cerr);
+		cerr.flush();
+		cerr << "\n" << self->pool->inspect();
+		cerr.flush();
+		cerr << "\n" << oxt::thread::all_backtraces();
+		cerr.flush();
 	}
 	
 public:
