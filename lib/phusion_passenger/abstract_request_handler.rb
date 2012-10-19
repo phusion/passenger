@@ -110,6 +110,7 @@ class AbstractRequestHandler
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
 	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
 	PING                = 'PING'                # :nodoc:
+	OOBW                = 'OOBW'                # :nodoc:
 	PASSENGER_CONNECT_PASSWORD  = "PASSENGER_CONNECT_PASSWORD"   # :nodoc:
 	
 	OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS = ObjectSpace.respond_to?(:live_objects)
@@ -512,6 +513,8 @@ private
 			begin
 				if headers[REQUEST_METHOD] == PING
 					process_ping(headers, input_stream, connection)
+				elsif headers[REQUEST_METHOD] == OOBW
+					process_oobw(headers, input_stream, connection)
 				else
 					process_request(headers, input_stream, connection, full_http_response)
 				end
@@ -640,6 +643,11 @@ private
 	
 	def process_ping(env, input, output)
 		output.write("pong")
+	end
+
+	def process_oobw(env, input, output)
+		PhusionPassenger.call_event(:oob_work)
+		output.write("done")
 	end
 	
 	def determine_passenger_header

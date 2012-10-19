@@ -262,6 +262,63 @@ describe "Phusion Passenger for Nginx" do
 		end
 	end
 	
+	describe "oob work" do
+		
+		before :all do
+			@server = "http://passenger.test:#{@nginx.port}"
+			@stub = RackStub.new('rack')
+			@nginx.add_server do |server|
+				server[:server_name]                = "passenger.test"
+				server[:root]                       = "#{@stub.full_app_root}/public"
+				server[:passenger_use_global_queue] = 'on'
+			end
+		end
+		
+		before :each do
+			@stub.reset
+			
+			File.write("#{@stub.app_root}/config.ru", <<-RUBY)
+				PhusionPassenger.on_event(:oob_work) do
+					f = File.open("#{@stub.full_app_root}/oob_work.\#{$$}", 'w')
+					f.close
+					sleep 1
+				end
+				app = lambda do |env|
+					[200, { "Content-Type" => "text/html", "X-Passenger-Request-OOB-Work" => 'true' }, [$$]]
+				end
+				run app
+			RUBY
+		end
+		
+		it "invokes oobw when requested by the app process" do
+			pid = get("/")
+			File.exists?("#{@stub.app_root}/oob_work.#{pid}").should == true
+		end
+		
+		it "removes X-Passenger-Request-OOB-Work header" do
+			response = get_response("/")
+			response.key?('X-Passenger-Request-OOB-Work').should == false
+		end
+		
+		it "does not block client while invoking oob work" do
+			t0 = Time.now
+			get("/")
+			secs = Time.now - t0
+			secs.should <= 0.1
+		end
+		
+		it "does not return app process to pool until after oob work" do
+			pid1 = get("/")
+			sleep 0.75
+			pid2 = get("/") # pid1 should still be sleeping in oob work call and thus unavailable
+			sleep 0.5
+			pid3 = get("/") # pid1 should not be done sleeping and thus available again
+			
+			pid1.should_not == pid2
+			pid1.should == pid3
+		end
+		
+	end
 	
 	##### Helper methods #####
 	
