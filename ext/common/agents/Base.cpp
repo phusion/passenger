@@ -66,6 +66,7 @@ struct AbortHandlerState {
 	pid_t pid;
 	int signo;
 	siginfo_t *info;
+	char messagePrefix[32];
 	char messageBuf[1024];
 };
 
@@ -79,6 +80,8 @@ static const char digits[] = {
 static const char hex_chars[] = "01234567890abcdef";
 
 static bool shouldDumpWithCrashWatch = true;
+static bool beepOnAbort = false;
+static bool sleepOnAbort = false;
 
 // Pre-allocate an alternative stack for use in signal handlers in case
 // the normal stack isn't usable.
@@ -488,23 +491,15 @@ static void
 dumpDiagnostics(AbortHandlerState &state) {
 	char *messageBuf = state.messageBuf;
 
-	char *end = messageBuf;
-	end = appendText(end, "[ pid=");
-	end = appendULL(end, (unsigned long long) state.pid);
-	end = appendText(end, ", timestamp=");
-	end = appendULL(end, (unsigned long long) time(NULL));
-	end = appendText(end, " ] Process aborted! signo=");
-	end = appendSignalName(end, state.signo);
-	end = appendText(end, ", reason=");
-	end = appendSignalReason(end, state.info);
-
 	// It is important that writing the message and the backtrace are two
 	// seperate operations because it's not entirely clear whether the
 	// latter is async signal safe and thus can crash.
+	char *end = messageBuf;
+	end = appendText(end, state.messagePrefix);
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
-		end = appendText(end, ", backtrace available.\n");
+		end = appendText(end, " ] libc backtrace available!\n");
 	#else
-		end = appendText(end, "\n");
+		end = appendText(end, " ] libc backtrace not available.\n");
 	#endif
 	write(STDERR_FILENO, messageBuf, end - messageBuf);
 
@@ -515,9 +510,8 @@ dumpDiagnostics(AbortHandlerState &state) {
 	safePrintErr("--------------------------------------\n");
 
 	if (customDiagnosticsDumper != NULL) {
-		char *end = messageBuf;
-		end = appendText(end, "[ pid=");
-		end = appendULL(end, (unsigned long long) state.pid);
+		end = messageBuf;
+		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] Dumping additional diagnostical information...\n");
 		write(STDERR_FILENO, messageBuf, end - messageBuf);
 		safePrintErr("--------------------------------------\n");
@@ -527,8 +521,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 
 	if (shouldDumpWithCrashWatch) {
 		end = messageBuf;
-		end = appendText(end, "[ pid=");
-		end = appendULL(end, (unsigned long long) state.pid);
+		end = appendText(end, state.messagePrefix);
 		#ifdef LIBC_HAS_BACKTRACE_FUNC
 			end = appendText(end, " ] Dumping a more detailed backtrace with crash-watch...\n");
 		#else
@@ -543,8 +536,63 @@ dumpDiagnostics(AbortHandlerState &state) {
 
 static void
 abortHandler(int signo, siginfo_t *info, void *ctx) {
-	pid_t pid = getpid();
+	AbortHandlerState state;
+	state.pid = getpid();
+	state.signo = signo;
+	state.info = info;
 	pid_t child;
+
+	char *end = state.messagePrefix;
+	end = appendText(end, "[ pid=");
+	end = appendULL(end, (unsigned long long) state.pid);
+	*end = '\0';
+
+	end = state.messageBuf;
+	end = appendText(end, state.messagePrefix);
+	end = appendText(end, ", timestamp=");
+	end = appendULL(end, (unsigned long long) time(NULL));
+	end = appendText(end, " ] Process aborted! signo=");
+	end = appendSignalName(end, state.signo);
+	end = appendText(end, ", reason=");
+	end = appendSignalReason(end, state.info);
+	end = appendText(end, "\n");
+	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+
+	if (beepOnAbort) {
+		end = state.messageBuf;
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] PASSENGER_BEEP_ON_ABORT on, executing beep...\n");
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+
+		child = asyncFork();
+		if (child == 0) {
+			#ifdef __APPLE__
+				execlp("osascript", "osascript", "-e", "beep 2", 0);
+				safePrintErr("Cannot execute 'osascript' command\n");
+			#else
+				execlp("beep", "beep", 0);
+				safePrintErr("Cannot execute 'beep' command\n");
+			#endif
+			_exit(1);
+
+		} else if (child == -1) {
+			int e = errno;
+			end = state.messageBuf;
+			end = appendText(end, state.messagePrefix);
+			end = appendText(end, " ] Could fork a child process for invoking a beep: fork() failed with errno=");
+			end = appendULL(end, e);
+			end = appendText(end, "\n");
+			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		}
+	}
+
+	if (sleepOnAbort) {
+		end = state.messageBuf;
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] PASSENGER_SLEEP_ON_ABORT on, so process stopped. Send SIGCONT when you want to continue.\n");
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		raise(SIGSTOP);
+	}
 
 	// It isn't safe to call any waiting functions in this signal handler,
 	// not even read() and waitpid() even though they're async signal safe.
@@ -564,24 +612,20 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 		child = asyncFork();
 		if (child == 0) {
-			AbortHandlerState state;
-			state.pid = pid;
-			state.signo = signo;
-			state.info = info;
 			dumpDiagnostics(state);
 			// The child process may or may or may not resume the original process.
 			// We do it ourselves just to be sure.
-			kill(pid, SIGCONT);
+			kill(state.pid, SIGCONT);
 			_exit(0);
 
 		} else if (child == -1) {
 			int e = errno;
-			char messageBuf[1024];
-			char *end = messageBuf;
-			end = appendText(end, "Could fork a child process for dumping diagnostics: fork() failed with errno=");
+			end = state.messageBuf;
+			end = appendText(end, state.messagePrefix);
+			end = appendText(end, "] Could fork a child process for dumping diagnostics: fork() failed with errno=");
 			end = appendULL(end, e);
 			end = appendText(end, "\n");
-			write(STDERR_FILENO, messageBuf, end - messageBuf);
+			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 			_exit(1);
 
 		} else {
@@ -591,12 +635,12 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 	} else if (child == -1) {
 		int e = errno;
-		char messageBuf[1024];
-		char *end = messageBuf;
-		end = appendText(end, "Could fork a child process for dumping diagnostics: fork() failed with errno=");
+		end = state.messageBuf;
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] Could fork a child process for dumping diagnostics: fork() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
-		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
 	} else {
 		raise(SIGSTOP);
@@ -658,6 +702,8 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	ignoreSigpipe();
 	shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
+		beepOnAbort  = hasEnvOption("PASSENGER_BEEP_ON_ABORT", false);
+		sleepOnAbort = hasEnvOption("PASSENGER_SLEEP_ON_ABORT", false);
 		installAbortHandler();
 	}
 	oxt::initialize();
