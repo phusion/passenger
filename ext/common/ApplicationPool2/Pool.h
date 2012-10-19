@@ -482,6 +482,14 @@ public:
 	typedef shared_ptr<ProcessAnalyticsLogEntry> ProcessAnalyticsLogEntryPtr;
 
 	void collectAnalytics(ev::timer &timer, int revents) {
+		try {
+			realCollectAnalytics(timer);
+		} catch (const tracable_exception &e) {
+			P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
+		}
+	}
+
+	void realCollectAnalytics(ev::timer &timer) {
 		PoolPtr self = shared_from_this(); // Keep pool object alive.
 		TRACE_POINT();
 		this_thread::disable_interruption di;
