@@ -1021,6 +1021,14 @@ forceAllAgentsShutdown(vector<AgentWatcher *> &watchers) {
 int
 main(int argc, char *argv[]) {
 	/*
+	 * Some Apache installations (like on OS X) redirect stdout to /dev/null,
+	 * so that only stderr is redirected to the log file. We therefore
+	 * forcefully redirect stdout to stderr so that everything ends up in the
+	 * same place.
+	 */
+	dup2(2, 1);
+
+	/*
 	 * Most operating systems overcommit memory. We *know* that this watchdog process
 	 * doesn't use much memory; on OS X it uses about 200 KB of private RSS. If the
 	 * watchdog is killed by the system Out-Of-Memory Killer or then it's all over:
