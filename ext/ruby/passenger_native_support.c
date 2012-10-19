@@ -671,6 +671,7 @@ fs_watcher_new(VALUE klass, VALUE filenames, VALUE termination_pipe) {
 	if (status) {
 		fs_watcher_free(watcher);
 		rb_jump_tag(status);
+		return Qnil;
 	} else {
 		return result;
 	}
