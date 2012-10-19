@@ -498,7 +498,7 @@ private:
 		const char *end = current + data.size();
 		while (current < end) {
 			char c = *current;
-			if ((c < 1 && c > 126) || c == '\n' || c == '\r') {
+			if ((c < 1 || c > 126) || c == '\n' || c == '\r') {
 				return false;
 			}
 			current++;

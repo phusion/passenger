@@ -84,7 +84,7 @@ private
 		socket_file = socket_file.slice(0, unix_path_max - 1)
 		server = UNIXServer.new(socket_file)
 		begin
-			File.chmod(0666, socket_file)
+			File.chmod(0660, socket_file)
 			reader, writer = IO.pipe
 			app_process = AppProcess.new(options["app_root"], Process.pid, writer,
 				:main => [socket_file, 'unix'])

@@ -502,7 +502,7 @@ private:
 			const Process::SocketInfoMap *serverSockets;
 			Process::SocketInfoMap::const_iterator sit;
 			
-			result << "<connect_password>" << process->getConnectPassword() << "</connect_password>";
+			result << "<connect_password>" << excapeForXml(process->getConnectPassword()) << "</connect_password>";
 			result << "<server_sockets>";
 			serverSockets = process->getServerSockets();
 			for (sit = serverSockets->begin(); sit != serverSockets->end(); sit++) {

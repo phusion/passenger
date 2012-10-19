@@ -400,17 +400,21 @@ public:
 	 * @throws SystemException Something went wrong.
 	 */
 	BufferedUpload(const string &dir, const char *identifier = "temp") {
-		char templ[PATH_MAX];
-		int fd;
-		
-		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", dir.c_str(), identifier);
+		char templ[PATH_MAX] = {0};
+		int fd = 0;
+		size = snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", dir.c_str(), identifier);
+		if(size < 0) 
+			throw SystemException("Cannot create templ", -1); 
+
 		templ[sizeof(templ) - 1] = '\0';
 		fd = mkstemp(templ);
 		if (fd == -1) {
-			char message[1024];
+			char message[1024] = {0};
 			int e = errno;
 			
-			snprintf(message, sizeof(message), "Cannot create a temporary file '%s'", templ);
+			size = snprintf(message, sizeof(message), "Cannot create a temporary file '%s'", templ);
+			if(size < 0)
+				throw SystemException("Formating exception failed", -1);  
 			message[sizeof(message) - 1] = '\0';
 			throw SystemException(message, e);
 		}
@@ -421,14 +425,19 @@ public:
 		 * will be able to access this file's contents anymore, except us.
 		 * We now have an anonymous disk-backed buffer.
 		 */
-		fchmod(fd, 0000);
-		unlink(templ);
-		
-		handle = fdopen(fd, "w+");
+		if(fchmod(fd, 0000) == -1) 
+			throw SystemException( "Fchmod failed", -1 ); 
+		if(unlink(templ)    == -1) 
+			throw SystemException( "Unlink failed", -1 );
+ 		
+ 		handle = fdopen(fd, "w+");
+		if(handle == NULL) 
+			throw SystemException( "Fdopen failed", -1 );  
 	}
 	
 	~BufferedUpload() {
 		fclose(handle);
+		handle = NULL;
 	}
 };
 

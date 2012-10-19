@@ -220,7 +220,7 @@ canonicalizePath(const string &path) {
 			return result;
 		}
 	#else
-		char tmp[PATH_MAX];
+		char tmp[PATH_MAX] = {0};
 		if (realpath(path.c_str(), tmp) == NULL) {
 			int e = errno;
 			string message;
@@ -237,8 +237,8 @@ canonicalizePath(const string &path) {
 
 string
 resolveSymlink(const string &path) {
-	char buf[PATH_MAX];
-	ssize_t size;
+	char buf[PATH_MAX] = {0};
+	ssize_t size = 0;
 	
 	size = readlink(path.c_str(), buf, sizeof(buf) - 1);
 	if (size == -1) {
@@ -270,17 +270,24 @@ resolveSymlink(const string &path) {
 string
 extractDirName(const StaticString &path) {
 	char *path_copy = strdup(path.c_str());
-	char *result = dirname(path_copy);
+	if(path_copy == NULL)
+		return NULL; 
+	char *result = NULL; 
+	result = dirname(path_copy);
 	string result_string(result);
 	free(path_copy);
+	path_copy = NULL; 
 	return result_string;
 }
 
 string
 extractBaseName(const StaticString &path) {
 	char *path_copy = strdup(path.c_str());
+	if(path_copy == NULL)
+		return NULL; 	
 	string result_string = basename(path_copy);
 	free(path_copy);
+	path_copy = NULL; 		
 	return result_string;
 }
 
@@ -528,7 +535,7 @@ makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t gro
 
 void
 removeDirTree(const string &path) {
-	char command[PATH_MAX + 30];
+	char command[PATH_MAX + 30] = {0};
 	int result;
 	
 	snprintf(command, sizeof(command), "chmod -R u+rwx \"%s\" 2>/dev/null", path.c_str());

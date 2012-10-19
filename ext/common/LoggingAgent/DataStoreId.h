@@ -59,31 +59,31 @@ public:
 	DataStoreId(const StaticString &groupName, const StaticString &nodeName,
 		const StaticString &category)
 	{
-		assert(groupName.size() <= USHRT_MAX);
-		assert(nodeName.size() <= USHRT_MAX);
-		assert(category.size() <= USHRT_MAX);
-		
+
+		groupNameSize = groupName.size(); 
+		nodeNameSize  = nodeName.size(); 
+		categorySize  = category.size(); 
+
+		if( groupName.size() > USHRT_MAX ) groupNameSize = USHRT_MAX; 
+		if( nodeName.size()  > USHRT_MAX ) nodeNameSize  = USHRT_MAX; 
+		if( category.size()  > USHRT_MAX ) categorySize  = USHRT_MAX; 
+ 			
 		char *end;
-		
-		id = new char[groupName.size() + nodeName.size() +
-			category.size() + 3];
+		id = new char[groupNameSize + nodeNameSize + categorySize + 3];	
 		end = id;
 		
-		memcpy(end, groupName.c_str(), groupName.size());
-		groupNameSize = groupName.size();
-		end += groupName.size();
+		memcpy(end, groupName.c_str(), groupNameSize);
+		end += groupNameSize;
 		*end = '\0';
 		end++;
 		
-		memcpy(end, nodeName.c_str(), nodeName.size());
-		nodeNameSize = nodeName.size();
-		end += nodeName.size();
+		memcpy(end, nodeName.c_str(), nodeNameSize);
+		end += nodeNameSize;
 		*end = '\0';
 		end++;
 		
-		memcpy(end, category.c_str(), category.size());
-		categorySize = category.size();
-		end += category.size();
+		memcpy(end, category.c_str(), categorySize);
+		end += categorySize;
 		*end = '\0';
 	}
 	

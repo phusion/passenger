@@ -317,6 +317,10 @@ split_by_null_into_hash(VALUE self, VALUE data) {
 	VALUE result, key, value;
 	
 	result = rb_hash_new();
+
+	if( cdata + len < cdata ) 
+		return result; 
+
 	while (current < end) {
 		if (*current == '\0') {
 			key   = rb_str_substr(data, begin - cdata, current - begin);

@@ -22,6 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'time'
 require 'socket'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
@@ -175,7 +176,7 @@ class AbstractServer
 				Gem.clear_paths
 				
 				# Reseed pseudo-random number generator for security reasons.
-				srand
+				srand(Time.now.nsec * Time.now.nsec)
 				
 				start_synchronously(@socket_filename, @password, server_socket, b)
 			rescue Interrupt

@@ -82,6 +82,8 @@ namespace Passenger { ServerConfig serverConfig; }
 			                                                                        \
 			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
 				message.size() + 1);                                            \
+			if(messageStr == NULL) 							\
+				return NULL;							\
 			memcpy(messageStr, message.c_str(), message.size() + 1);                \
 			return messageStr;                                                      \
 		} else if (result < minValue) {                                                 \
@@ -91,6 +93,8 @@ namespace Passenger { ServerConfig serverConfig; }
 			                                                                        \
 			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
 				message.size() + 1);                                            \
+			if(messageStr == NULL) 							\
+				return NULL;							\
 			memcpy(messageStr, message.c_str(), message.size() + 1);                \
 			return messageStr;                                                      \
 		} else {                                                                        \
@@ -137,6 +141,8 @@ namespace Passenger { ServerConfig serverConfig; }
 			                                                                        \
 			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
 				message.size() + 1);                                            \
+			if(messageStr == NULL) 							\
+				return NULL;							\
 			memcpy(messageStr, message.c_str(), message.size() + 1);                \
 			return messageStr;                                                      \
 		} else if (result < minValue) {                                                 \
@@ -146,6 +152,8 @@ namespace Passenger { ServerConfig serverConfig; }
 			                                                                        \
 			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
 				message.size() + 1);                                            \
+			if(messageStr == NULL) 							\
+				return NULL;							\
 			memcpy(messageStr, message.c_str(), message.size() + 1);                \
 			return messageStr;                                                      \
 		} else {                                                                        \

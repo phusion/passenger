@@ -219,11 +219,14 @@ public:
 	void setMaxSize(unsigned int maxSize) {
 		boost::unique_lock<boost::mutex> l(lock);
 		if (maxSize != 0) {
-			int toRemove = cache.size() - maxSize;
-			for (int i = 0; i < toRemove; i++) {
-				string filename(entries.back()->filename);
-				entries.pop_back();
-				cache.erase(filename);
+			if( cache.size() < maxSize ) {
+				for (unsigned int i = 0; i < cache.size(); i++) {
+					if(entries.back() != NULL) {
+						string filename(entries.back()->filename);
+						entries.pop_back();
+						cache.erase(filename);
+					}
+				}
 			}
 		}
 		this->maxSize = maxSize;
