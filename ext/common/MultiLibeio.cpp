@@ -107,7 +107,7 @@ executeWrapper(eio_req *req) {
 }
 
 #if PREAD_AND_PWRITE_ARE_NOT_THREADSAFE
-	boost::mutex preadWriteLock;
+	static boost::mutex preadWriteLock;
 
 	static void
 	lockedPread(int fd, void *buf, size_t length, off_t offset, eio_req *req) {
