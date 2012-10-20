@@ -27,6 +27,11 @@
 
 namespace oxt {
 
+/**
+ * OXT must be initialized for a lot of things to work properly.
+ * This does not enable system call interruption. Call setup_syscall_interruption_support()
+ * for that.
+ */
 void initialize();
 
 } // namespace oxt
