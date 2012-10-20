@@ -81,7 +81,7 @@ static const char hex_chars[] = "01234567890abcdef";
 
 static bool shouldDumpWithCrashWatch = true;
 static bool beepOnAbort = false;
-static bool sleepOnAbort = false;
+static bool stopOnAbort = false;
 
 // Pre-allocate an alternative stack for use in signal handlers in case
 // the normal stack isn't usable.
@@ -586,10 +586,10 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		}
 	}
 
-	if (sleepOnAbort) {
+	if (stopOnAbort) {
 		end = state.messageBuf;
 		end = appendText(end, state.messagePrefix);
-		end = appendText(end, " ] PASSENGER_SLEEP_ON_ABORT on, so process stopped. Send SIGCONT when you want to continue.\n");
+		end = appendText(end, " ] PASSENGER_STOP_ON_ABORT on, so process stopped. Send SIGCONT when you want to continue.\n");
 		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 		raise(SIGSTOP);
 	}
@@ -703,10 +703,10 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	srandom((unsigned int) time(NULL));
 	
 	ignoreSigpipe();
-	shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
+		shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
 		beepOnAbort  = hasEnvOption("PASSENGER_BEEP_ON_ABORT", false);
-		sleepOnAbort = hasEnvOption("PASSENGER_SLEEP_ON_ABORT", false);
+		stopOnAbort = hasEnvOption("PASSENGER_STOP_ON_ABORT", false);
 		installAbortHandler();
 	}
 	oxt::initialize();
