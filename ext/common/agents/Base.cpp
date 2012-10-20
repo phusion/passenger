@@ -698,6 +698,9 @@ feedbackFdAvailable() {
 VariantMap
 initializeAgent(int argc, char *argv[], const char *processName) {
 	VariantMap options;
+
+	srand((unsigned int) time(NULL));
+	srandom((unsigned int) time(NULL));
 	
 	ignoreSigpipe();
 	shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
