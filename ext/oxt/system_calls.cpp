@@ -72,7 +72,11 @@ oxt::setup_syscall_interruption_support() {
 
 void
 oxt::setup_random_failure_simulation(const ErrorChance *_errorChances, unsigned int n) {
-	errorChances = _errorChances;
+	ErrorChance *storage = new ErrorChance[n];
+	for (unsigned int i = 0; i < n; i++) {
+		storage[i] = _errorChances[i];
+	}
+	errorChances = storage;
 	nErrorChances = n;
 }
 

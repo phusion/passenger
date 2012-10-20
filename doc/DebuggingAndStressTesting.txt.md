@@ -1,6 +1,9 @@
-# Debugging Phusion Passenger
+# Debugging and Stress Testing Phusion Passenger
 
-This guide tells you how to debug Phusion Passenger in case of any serious problems, e.g. crashes and mysterious connection problems.
+This guide tells you:
+
+ * How to debug Phusion Passenger in case of any serious problems, e.g. crashes and mysterious connection problems.
+ * How to stress test Phusion Passenger.
 
 ## Process output
 
@@ -24,3 +27,5 @@ You can change the crash behavior with the following environment variables:
 ## Behavior logging
 
 ## Debugging with AddressSanitizer
+
+## Simulating system call failures
