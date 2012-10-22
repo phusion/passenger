@@ -21,26 +21,7 @@ using the commandline.
 
 == Support information ==
 
-=== Supported operating systems ===
-
-Phusion Passenger works on any POSIX-compliant operating system. In other
-words: practically any operating system on earth, except Microsoft Windows.
-
-Phusion Passenger is confirmed on a large number of operating systems and Linux
-distributions, including, but not limited to, Ubuntu, Debian, CentOS/Fedora/RHEL,
-Gentoo, Mac OS X, FreeBSD and Solaris. Both 32-bit and 64-bit platforms are supported.
-Please
-link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
-or
-link:http://groups.google.com/group/phusion-passenger[join our discussion forum]
-if it doesn't work on your POSIX-compliant operating system.
-
-=== Where to get support ===
-
-* link:http://code.google.com/p/phusion-passenger/issues/list[Issue tracker] - report
-  bugs here.
-* link:http://groups.google.com/group/phusion-passenger[Discussion forum] - post a
-  message here if you're experiencing problems.
+include::users_guide_snippets/support_information.txt[]
 
 
 == Installing Phusion Passenger ==

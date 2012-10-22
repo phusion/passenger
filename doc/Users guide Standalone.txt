@@ -16,6 +16,10 @@ Here are some of the highlights:
   resource management for you. Crashing application processes are automatically restarted.
 - Can listen on a Unix socket, for use in reverse proxy setups.
 
+== Support information ==
+
+include::users_guide_snippets/support_information.txt[]
+
 == Installation ==
 
 ------------------------------

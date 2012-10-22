@@ -164,19 +164,14 @@
 
 5.14. Compatibility options	=>	compatibility-options-8jve5a
 
-# fuzzy
 5.14.1. PassengerResolveSymlinksInDocumentRoot <on|off>	=>	passengerresolvesymlinksindocumentroot-on-off--1r0qcp8
 
-# fuzzy
 5.14.2. PassengerAllowEncodedSlashes <on|off>	=>	passengerallowencodedslashes-on-off--1y3s1ww
 
-# fuzzy
 5.15. Logging and debugging options	=>	logging-and-debugging-options-el2cuc
 
-# fuzzy
 5.15.1. PassengerLogLevel <integer>	=>	passengerloglevel-integer--1v67p8l
 
-# fuzzy
 5.15.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1tfy4z9
 
 5.15.3. PassengerDebugger <on|off>	=>	passengerdebugger-on-off--1qk9j40
@@ -195,21 +190,14 @@
 
 5.17.2. RackBaseURI <uri>	=>	rackbaseuri-uri--1to24pj
 
-5.18. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
-
-# fuzzy
 5.17.3. RackEnv <string>	=>	rackenv-string--vve9py
 
-# fuzzy
 5.18. Deprecated options	=>	deprecated-options-pm9m57
 
-# fuzzy
 5.18.1. RailsRuby	=>	railsruby-ht09ei
 
-# fuzzy
 5.18.2. RailsUserSwitching	=>	railsuserswitching-1npx8y4
 
-# fuzzy
 5.18.3. RailsDefaultUser	=>	railsdefaultuser-19j7n3m
 
 5.18.4. RailsAllowModRewrite	=>	railsallowmodrewrite-1vkziro
