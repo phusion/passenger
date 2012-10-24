@@ -155,6 +155,10 @@ private
 				wrap_desc("Enable rolling restarts (Enterprise only)")) do
 				@options[:rolling_restarts] = true
 			end
+			opts.on("--resist-deployment-errors",
+				wrap_desc("Enable deployment error resistance (Enterprise only)")) do
+				@options[:resist_deployment_errors] = true
+			end
 			opts.on("--union-station-gateway HOST:PORT", String,
 				wrap_desc("Specify Union Station Gateway host and port")) do |value|
 				host, port = value.split(":", 2)
