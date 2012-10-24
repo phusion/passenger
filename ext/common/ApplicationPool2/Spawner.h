@@ -135,9 +135,11 @@ protected:
 				if (ret == 0) {
 					break;
 				} else if (ret == -1) {
-					P_WARN("Background I/O capturer error: " <<
-						strerror(e) << " (errno=" << e << ")");
-					break;
+					if (e != EAGAIN && e != EWOULDBLOCK) {
+						P_WARN("Background I/O capturer error: " <<
+							strerror(e) << " (errno=" << e << ")");
+						break;
+					}
 				} else {
 					{
 						lock_guard<boost::mutex> l(dataSyncher);
