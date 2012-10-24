@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -142,6 +142,13 @@ private
 		result.strip!
 		return result
 	end
+
+	def ensure_directory_exists(dir)
+		if !File.exist?(dir)
+			require_file_utils
+			FileUtils.mkdir_p(dir)
+		end
+	end
 	
 	def determine_various_resource_locations(create_subdirs = true)
 		require_app_finder
@@ -210,7 +217,7 @@ private
 		if @options[:nginx_bin]
 			nginx_bin = @options[:nginx_bin]
 		else
-			nginx_bin = "#{nginx_dir}/nginx"
+			nginx_bin = "#{@runtime_dirs[:nginx_dir]}/nginx"
 		end
 		return "#{nginx_bin} -c '#{@config_filename}' -p '#{@temp_dir}/'"
 	end

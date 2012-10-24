@@ -130,7 +130,7 @@ private:
 		concurrency = 0;
 		for (it = sockets->begin(); it != sockets->end(); it++) {
 			Socket *socket = &(*it);
-			if (socket->protocol == "session") {
+			if (socket->protocol == "session" || socket->protocol == "http_session") {
 				socket->pqHandle = sessionSockets.push(socket, socket->utilization());
 				if (concurrency != -1) {
 					if (socket->concurrency == 0) {
@@ -232,11 +232,13 @@ public:
 		  enabled(ENABLED)
 	{
 		if (_libev != NULL) {
+			setNonBlocking(_adminSocket);
 			adminSocketWatcher = make_shared<PipeWatcher>(_libev, _adminSocket,
 				_forwardStderr ? STDOUT_FILENO : -1);
 			adminSocketWatcher->start();
 		}
 		if (_libev != NULL && _errorPipe != -1) {
+			setNonBlocking(_errorPipe);
 			errorPipeWatcher = make_shared<PipeWatcher>(_libev, _errorPipe,
 				_forwardStderr ? STDERR_FILENO : -1);
 			errorPipeWatcher->start();
@@ -281,6 +283,9 @@ public:
 	bool detached() const {
 		return getGroup() == NULL;
 	}
+
+	// Thread-safe
+	SuperGroupPtr getSuperGroup() const;
 	
 	int utilization() const {
 		/* Different processes within a Group may have different

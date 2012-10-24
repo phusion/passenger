@@ -36,6 +36,7 @@
 
 #include "Configuration.hpp"
 #include "Utils.h"
+#include "Constants.h"
 #include <agents/LoggingAgent/FilterSupport.h>
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
@@ -313,6 +314,15 @@ DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEnco
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_friendly_error_pages, friendlyErrorPages)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_union_station_support, unionStationSupport)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_buffer_response, bufferResponse)
+
+#ifndef PASSENGER_IS_ENTERPRISE
+static const char *
+cmd_passenger_enterprise_only(cmd_parms *cmd, void *pcfg, const char *arg) {
+	return "this feature is only available in Phusion Passenger Enterprise. "
+		"You are currently running the open source Phusion Passenger Enterprise. "
+		"Please learn more about and/or buy Phusion Passenger Enterprise at https://www.phusionpassenger.com/enterprise";
+}
+#endif
 
 static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -668,6 +678,46 @@ const command_rec passenger_commands[] = {
 		"Whether to enable logging through Union Station."),
 	
 	/*****************************/
+	AP_INIT_TAKE1("PassengerMemoryLimit",
+		(Take1Func) cmd_passenger_enterprise_only,
+		NULL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
+		"The maximum amount of memory in MB that an application instance may use."),
+	AP_INIT_TAKE1("PassengerMaxInstances",
+		(Take1Func) cmd_passenger_enterprise_only,
+		NULL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
+		"The maximum number of instances for the current application that Passenger may spawn."),
+	AP_INIT_TAKE1("PassengerMaxRequestTime",
+		(Take1Func) cmd_passenger_enterprise_only,
+		NULL,
+		OR_ALL,
+		"The maximum time (in seconds) that the current application may spend on a request."),
+	AP_INIT_FLAG("PassengerRollingRestarts",
+		(FlagFunc) cmd_passenger_enterprise_only,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to turn on rolling restarts"),
+	AP_INIT_FLAG("PassengerResistDeploymentErrors",
+		(FlagFunc) cmd_passenger_enterprise_only,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to turn on deployment error resistance"),
+	AP_INIT_FLAG("PassengerDebugger",
+		(FlagFunc) cmd_passenger_enterprise_only,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to turn on debugger support"),
+	AP_INIT_TAKE1("PassengerConcurrencyModel",
+		(Take1Func) cmd_passenger_enterprise_only,
+		NULL,
+		OR_ALL,
+		"The concurrency model that should be used for applications."),
+	AP_INIT_TAKE1("PassengerThreadCount",
+		(Take1Func) cmd_passenger_enterprise_only,
+		NULL,
+		OR_ALL,
+		"The number of threads that Phusion Passenger should spawn per application."),
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",

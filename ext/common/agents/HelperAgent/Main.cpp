@@ -309,12 +309,12 @@ private:
 
 	static void dumpDiagnostics(void *userData) {
 		Server *self = (Server *) userData;
-		self->requestHandler->inspect(cout);
-		cout.flush();
-		cout << "\n" << self->pool->inspect();
-		cout.flush();
-		cout << "\n" << oxt::thread::all_backtraces();
-		cout.flush();
+		self->requestHandler->inspect(cerr);
+		cerr.flush();
+		cerr << "\n" << self->pool->inspect();
+		cerr.flush();
+		cerr << "\n" << oxt::thread::all_backtraces();
+		cerr.flush();
 	}
 	
 public:
@@ -446,6 +446,7 @@ public:
 			 * instance directory will be cleaned up, making this helper agent
 			 * inaccessible.
 			 */
+			P_DEBUG("Watchdog seems to be killed; forcing shutdown of all subprocesses");
 			syscalls::killpg(getpgrp(), SIGKILL);
 			_exit(2); // In case killpg() fails.
 		} else {
@@ -486,11 +487,11 @@ main(int argc, char *argv[]) {
 		UPDATE_TRACE_POINT();
 		server.mainLoop();
 	} catch (const tracable_exception &e) {
-		P_ERROR(e.what() << "\n" << e.backtrace());
+		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		return 1;
 	}
 	
 	MultiLibeio::shutdown();
-	P_TRACE(2, "Helper agent exited.");
+	P_TRACE(2, "Helper agent exiting with code 0.");
 	return 0;
 }

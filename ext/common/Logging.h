@@ -107,6 +107,12 @@ void setDebugFile(const char *logFile = NULL);
 #define P_WARN(expr) P_LOG(0, expr)
 
 /**
+ * Write the given expression, which represents a warning,
+ * to the log stream.
+ */
+#define P_INFO(expr) P_LOG(0, expr)
+
+/**
  * Write the given expression, which represents an error,
  * to the log stream.
  */

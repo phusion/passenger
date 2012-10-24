@@ -40,11 +40,25 @@ class Addr2line
 	end
 end
 
+def passthrough(input, output)
+	while !input.eof?
+		data = input.readline
+		output.write(data)
+		output.flush
+	end
+end
+
 input = STDIN
 output = STDERR
 argv0, pid_or_filename = ARGV
 if pid_or_filename =~ /\A\d+\Z/
-	exe_filename = File.expand_path(File.readlink("/proc/#{pid_or_filename}/exe"))
+	begin
+		exe_filename = File.expand_path(File.readlink("/proc/#{pid_or_filename}/exe"))
+	rescue Errno::ENOENT, Errno::EACCES => e
+		warn "*** backtrace-sanitizer warning: #{e} -> passthrough input"
+		passthrough(input, output)
+		exit
+	end
 else
 	exe_filename = File.expand_path(pid_or_filename)
 end

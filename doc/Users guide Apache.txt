@@ -1,52 +1,26 @@
-Phusion Passenger users guide
-=============================
+Phusion Passenger users guide, Apache version
+=============================================
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-Phusion Passenger is an Apache module, which makes deploying Ruby and Ruby on
-Rails applications on Apache a breeze. It follows the usual Ruby on Rails
-conventions, such as "Don't-Repeat-Yourself" and ease of setup, while at the
-same time providing enough flexibility.
+Phusion Passenger is an application server which can directly integrate into Apache. It is designed to be easy to use, fast, stable and reliable and is used by link:http://trends.builtwith.com/Web-Server/Phusion-Passenger[hundreds of thousands of websites] all over the world.
+
+Phusion Passenger is a so-called polyglot application server because it supports applications written in multiple programming languages. At this time, Ruby and Python are supported.
 
 This users guide will teach you:
 
 - How to install Phusion Passenger.
 - How to configure Phusion Passenger.
-- How to deploy a Ruby on Rails application.
-- How to deploy a link:http://rack.rubyforge.org/[Rack]-based Ruby application.
+- How to deploy Ruby and Python applications.
 - How to solve common problems.
 
 This guide assumes that the reader is somewhat familiar with Apache and with
-using the commandline.
+using the command line.
 
 
 == Support information ==
 
-=== Supported operating systems ===
-
-Phusion Passenger works on any POSIX-compliant operating system. In other
-words: practically any operating system on earth, except Microsoft Windows.
-
-Phusion Passenger is confirmed on a large number of operating systems and Linux
-distributions, including, but not limited to, Ubuntu, Debian, CentOS/Fedora/RHEL,
-Gentoo, Mac OS X, FreeBSD and Solaris. Both 32-bit and 64-bit platforms are supported.
-
-The only POSIX-compliant operating system on which Phusion Passenger for Apache is
-known not to work at this time, is OpenBSD. Please use Phusion Passenger for Nginx
-instead.
-
-Please
-link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
-or
-link:http://groups.google.com/group/phusion-passenger[join our discussion forum]
-if it doesn't work on your POSIX-compliant operating system.
-
-=== Where to get support ===
-
-* link:http://code.google.com/p/phusion-passenger/issues/list[Issue tracker] - report
-  bugs here.
-* link:http://groups.google.com/group/phusion-passenger[Discussion forum] - post a
-  message here if you're experiencing problems.
+include::users_guide_snippets/support_information.txt[]
 
 
 == Installing, upgrading and uninstalling Phusion Passenger ==
@@ -58,8 +32,8 @@ if it doesn't work on your POSIX-compliant operating system.
 
 There are three ways to install Phusion Passenger:
 
-1. By installing the Phusion Passenger gem, as instructed on the
-   link:http://www.modrails.com/install.html[``Install'' page on the Phusion
+1. By installing the Phusion Passenger Ruby gem, as instructed on the
+   link:https://www.phusionpassenger.com/download[``Download'' page on the Phusion
    Passenger website].
 2. By downloading the source tarball from the Phusion Passenger website
    ('passenger-x.x.x.tar.gz').
@@ -219,12 +193,6 @@ Phusion Passenger.
 
 === Operating system-specific instructions and information ===
 
-==== MacOS X ====
-
-Ben Ruebenstein has written an excellent
-link:http://benr75.com/articles/2008/04/12/setup-mod_rails-phusion-mac-os-x-leopard[tutorial
-on installing Phusion Passenger on OS X].
-
 ==== Ubuntu Linux ====
 
 Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurating-passenger-mod_rails-on-slicehost-with-ubuntu-710/[article on installing Phusion Passenger on Ubuntu].
@@ -237,31 +205,75 @@ about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
 
 === Upgrading or downgrading Phusion Passenger ===
 
-==== Via a gem or a source tarball ====
+Upgrading or downgrading Phusion Passenger for Apache involves several steps.
 
-To upgrade or downgrade Phusion Passenger via the gem or the source tarball, install the newer
-or older version as you normally would; that is, install the gem or unpack the tarball, and
-run `passenger-install-apache2-module`. Eventually `passenger-install-apache2-module` will tell
-you to copy & paste some settings into the Apache configuration file; something that looks along
-the lines of:
+1. First, you have to obtain and install the files associated with the version that you want to upgrade or downgrade to. You can do this in three ways: by using <<upgrade_or_downgrade_with_rubygems,RubyGems>>, by downloading a <<upgrade_or_downgrade_with_tarball,tarball>>, or by installing a <<upgrade_or_downgrade_with_linux_packages,native Linux package>>. If you installed a native Linux package, then skip to the last step. If not, read on.
+2. Then you have to recompile the Phusion Passenger Apache module by invoking
++
+-----------------------------------
+# If you used RubyGems
+sudo passenger-install-apache2-module
 
+# If you used the tarball
+sudo /path-to-passenger/bin/passenger-install-apache2-module
+-----------------------------------
+3. Finally, `passenger-install-apache2-module` will tell you to copy & paste some settings in the configuration file. Something that looks along the lines of:
++
 -----------------------------------
 LoadModule passenger_module ...
 PassengerRoot ...
 PassengerRuby ...
 -----------------------------------
-
++
 Because you already had Phusion Passenger installed, you already had similar settings
 in your Apache configuration file, just with different values. *Replace* the old settings with
 the new ones that the installer outputs. It is important that the old settings are removed,
 otherwise Phusion Passenger may malfunction.
+4. Restart Apache. You're now done.
 
-When you're done, restart Apache.
+[float]
+[[upgrade_or_downgrade_with_rubygems]]
+==== Obtaining Phusion Passenger files with RubyGems ====
 
-==== Via a native Linux package
+.Open source
 
-There are no special instructions required to upgrade or downgrade Phusion Passenger
-via a native Linux package.
+You can obtain the files associated with the latest _open source_ Phusion Passenger release by invoking the following command:
+
+-------------------------
+sudo gem install passenger
+-------------------------
+
+You can also obtain a specific version by specifying the `-v` argument, like this:
+
+---------------------------------
+sudo gem install passenger -v 3.0.0
+---------------------------------
+
+.Enterprise
+
+If you're using link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] then you should obtain the gem from the link:https://www.phusionpassenger.com/orders[Customer Area] instead. Login with your order reference and password. The Customer Area will show you a list of files. Download the gem file for the version you want (`passenger-enterprise-server-x.x.x.gem`) and install it with:
+
+-------------------------------------------------------
+sudo gem install passenger-enterprise-server-x.x.x.gem
+-------------------------------------------------------
+
+[float]
+[[upgrade_or_downgrade_with_tarball]]
+==== Obtaining Phusion Passenger files through a tarball ====
+
+You can obtain the files associated with the latest _open source_ Phusion Passenger release by downloading the tarball linked from link:https://www.phusionpassenger.com/download[the Phusion Passenger download page]. If you want a specific version, please refer to the release archive on link:http://rubyforge.org/frs/?group_id=5873&release_id=46919[RubyForge].
+
+If you're using link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] then you should obtain the tarball from the link:https://www.phusionpassenger.com/orders[Customer Area] instead. Login with your order reference and password. The Customer Area will show you a list of files. Download the tarball for the version you want (`passenger-enterprise-server-x.x.x.tar.gz`).
+
+Once you've obtained the tarball, extract it somewhere:
+
+[float]
+[[upgrade_or_downgrade_with_linux_packages]]
+==== Upgrading with native Linux packages ====
+
+When using native Linux packages, it is only possible to upgrade, not downgrade. Native Linux packages are only available for the open source Phusion Passenger, not for Phusion Passenger Enterprise.
+
+Native Linux packages are contributed by third parties. Although they update pretty quickly, they lag behind gem and tarball releases, perhaps by a few days. Please learn more about native Linux packages link:https://www.phusionpassenger.com/native_packages[at the Phusion Passenger website].
 
 === Unloading (disabling) Phusion Passenger from Apache without uninstalling it ===
 
@@ -671,6 +683,114 @@ touch /webapps/rackapp/tmp/restart.txt
 include::users_guide_snippets/rackup_specifications.txt[]
 
 
+== Deploying a WSGI (Python) application
+
+Phusion Passenger supports all WSGI-compliant Python web applications. Suppose that you have a WSGI application in '/webapps/wsgiapp'. Then that folder must contain at least three entries:
+
+- 'passenger_wsgi.py', which Phusion Passenger will use as the main entry point for your application. This file must export a WSGI object called `application`.
+- 'public/', a folder containing public static web assets, like images and stylesheets.
+- 'tmp/', used for 'restart.txt' (our application restart mechanism). This will be explained in a following subsection.
+
+So '/webapps/wsgiapp' must, at minimum, look like this:
+----------------------
+/webapps/wsgiapp
+  |
+  +-- config.ru
+  |
+  +-- public/
+  |
+  +-- tmp/
+----------------------
+
+=== Tutorial/example: writing and deploying a Hello World WSGI application ===
+
+First we create a Phusion Passenger-compliant WSGI directory structure:
+
+-------------------------------------------
+$ mkdir /webapps/wsgi_example
+$ mkdir /webapps/wsgi_example/public
+$ mkdir /webapps/wsgi_example/tmp
+-------------------------------------------
+
+Next, we write a minimal "hello world" WSGI application:
+
+-------------------------------------------
+$ cd /webapps/wsgi_example
+$ some_awesome_editor passenger_wsgi.py
+...type in some source code...
+$ cat passenger_wsgi.py
+def application(environ, start_response):
+  start_response(200, [('Content-Type', 'text/plain')])
+  return ["hello world!\n"]
+-------------------------------------------
+
+Finally, we deploy it by adding the following configuration options to
+the Apache configuration file:
+
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.wsgiexample.com
+    DocumentRoot /webapps/wsgi_example/public
+    <Directory /webapps/wsgi_example/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
+</VirtualHost>
+-------------------------------------------
+
+And we're done! After an Apache restart, the above WSGI application will be available
+under the URL 'http://www.wsgiexample.com/'.
+
+=== Deploying to a virtual host's root ===
+
+Add a virtual host entry to your Apache configuration file. Make sure that the
+following conditions are met:
+
+- The virtual host's document root must point to your WSGI application's
+  'public' folder.
+- The WSGI per-directory permissions must allow access to this folder.
+- MultiViews must be disabled for this folder.
+
+For example:
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.wsgiapp.com
+    DocumentRoot /webapps/wsgiapp/public
+    <Directory /webapps/wsgiapp/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
+</VirtualHost>
+-------------------------------------------
+
+You may also need to tweak your file/folder permissions. Make sure that the
+following folders are readable and executable by Apache:
+
+ * this 'public' folder.
+ * the application's 'config' folder.
+ * all parent folders. That is, /webapps/wsgiapp and /webapps must also be readable and executable by Apache.
+
+Then restart Apache. The application has now been deployed.
+
+=== Redeploying (restarting the WSGI application) ===
+
+Deploying a new version of a WSGI application is as simple as
+re-uploading the application files, and restarting the application.
+
+There are two ways to restart the application:
+
+1. By restarting Apache.
+2. By creating or modifying the file 'tmp/restart.txt' in the WSGI
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
+
+For example, to restart our example application, we type this in the
+command line:
+-------------------------------------------
+touch /webapps/wsgiapp/tmp/restart.txt
+-------------------------------------------
+
+
 == Configuring Phusion Passenger ==
 
 After installation, Phusion Passenger does not need any further configurations.
@@ -972,7 +1092,8 @@ if responses can be huge. Because entire responses are buffered in memory when t
 
 [[PassengerRollingRestarts]]
 === PassengerRollingRestarts <on|off> ===
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 Enables or disables support for rolling restarts. Normally when you
 restart an application (by touching restart.txt), Phusion Passenger would
@@ -1011,7 +1132,8 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'off'.
 
 === PassengerResistDeploymentErrors <on|off> ===
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 Enables or disables resistance against deployment errors.
 
@@ -1194,7 +1316,8 @@ The PassengerMinInstances option may occur in the following places:
 In each place, it may be specified at most once. The default value is '1'.
 
 ==== PassengerMaxInstances <integer> ====
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 The maximum number of application processes that may simultaneously exist
 for an application. This helps to make sure that a single application
@@ -1351,7 +1474,8 @@ measure to avoid memory leaks.
 
 [[PassengerMaxRequestTime]]
 ==== PassengerMaxRequestTime <seconds> ====
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 The maximum amount of time, in seconds, that an application process may take
 to process a request. If the request takes longer than this amount of time,
@@ -1401,7 +1525,8 @@ measure to avoid freezing applications.
 
 [[PassengerMemoryLimit]]
 ==== PassengerMemoryLimit <integer> ====
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 The maximum amount of memory that an application process may use, in megabytes.
 Once an application process has surpassed its memory limit, it will process
@@ -1857,6 +1982,31 @@ error messages should be written to instead.
 
 This option may only occur once, in the global server configuration.
 
+==== PassengerDebugger <on|off> ====
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
+
+Turns support for application debugging on or off. In case of Ruby applications,
+turning this option on will cause them to load the `ruby-debug` gem (when on Ruby 1.8)
+or the `debugger` gem (when on Ruby 1.9). If you're using Bundler, you should add
+this to your Gemfile:
+
+-------------------------------------------
+gem 'ruby-debug', :platforms => :ruby_18
+gem 'debugger', :platforms => :ruby_19
+-------------------------------------------
+
+Once debugging is turned on, you can use the command `passenger-irb --debug <PID>` to attach an rdebug console to the application process with the given PID. Attaching will succeed once the application process executes a `debugger` command.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
 
 === Classic Ruby on Rails (<= 2.x)-specific options ===
 
@@ -1924,7 +2074,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'production'.
 
-=== Rack-specific options ===
+=== Rack and Rails >= 3 specific options ===
 
 ==== RackAutoDetect <on|off> ====
 Whether Phusion Passenger should automatically detect whether a virtual host's

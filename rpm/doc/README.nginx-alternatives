@@ -1,5 +1,0 @@
-This package puts the nginx webserver binary under the control of the
-/etc/alternative system.
-
-This package is meant to be obsoleted by a future nginx package (which
-will provide the same feature)

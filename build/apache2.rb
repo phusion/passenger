@@ -66,7 +66,7 @@ APACHE2_MODULE_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
 	APACHE2_OUTPUT_DIR + "module_libboost_oxt",
 	PlatformInfo.apache2_module_cflags)
 APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
-	only(:base, 'Utils/Base64.o').
+	only(:base, 'Utils/Base64.o', 'Utils/MD5.o').
 	set_namespace("apache2").
 	set_output_dir(APACHE2_OUTPUT_DIR + "module_libpassenger_common").
 	define_tasks(PlatformInfo.apache2_module_cflags).
@@ -79,6 +79,7 @@ task :apache2 => [
 	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',
 	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
+	AGENT_OUTPUT_DIR + 'SpawnPreparer',
 	:native_support
 ]
 

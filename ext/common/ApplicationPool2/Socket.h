@@ -32,6 +32,7 @@
 #include <boost/weak_ptr.hpp>
 #include <climits>
 #include <cassert>
+#include <Logging.h>
 #include <Utils/PriorityQueue.h>
 #include <Utils/IOUtils.h>
 
@@ -81,6 +82,7 @@ private:
 	
 	Connection connect() const {
 		Connection connection;
+		P_TRACE(3, "Connecting to " << address);
 		connection.fd = connectToServer(address);
 		return connection;
 	}
@@ -227,7 +229,7 @@ public:
 	bool hasSessionSockets() const {
 		const_iterator it;
 		for (it = begin(); it != end(); it++) {
-			if (it->protocol == "session") {
+			if (it->protocol == "session" || it->protocol == "http_session") {
 				return true;
 			}
 		}

@@ -1,17 +1,45 @@
-Release 3.1.0
+Release 3.9.1
 -------------
 
- * Rewritten evented request handler.
- * Rewritten application pool.
- * Rewritten spawner.
+This is the first beta of Phusion Passenger 4. The changes are numerous.
+
+ * Support for multiple Ruby versions.
+ * The internals now use evented I/O.
+ * Real-time response buffering.
+ * Improved zero-copy architecture.
+ * Rewritten ApplicationPool and process spawning subsystem.
+ * Multithreading within Ruby apps (Phusion Passenger Enterprise only).
+ * Python WSGI support lifted to "beta" status.
+ * More protection against stuck processes.
+ * Automatically picks up environment variables from your bashrc.
+ * Allows setting environment variables directly in Apache.
+ * Automatic asset pipeline support in Standalone.
+ * Deleting restart.txt no longer triggers a restart.
  * More stable Union Station support.
- * More stable Python WSGI support.
  * Many internal robustness improvements.
  * Better relocatability without wasting space.
- * Support multiple Ruby versions.
- * [Apache] Environment variables can now be set with SetEnv. Wrapper scripts are no longer necessary.
- * Apps are now started through bash so that environment variable settings in bashrc are respected.
- * [Standalone] Automatic asset pipeline expiry headers support.
+
+
+Release 3.0.17
+--------------
+
+ * Fixed a Ruby 1.9 encoding-related bug in the memory measurer.
+   (Phusion Passenger Enterprise)
+ * Fixed OOM adjustment bugs on Linux.
+ * Fixed compilation problems on Fedora 18 and 19.
+ * Fixed compilation problems on SunOS.
+ * Fixed compilation problems on AIX. Contribution by Perry Smith.
+ * Fixed various compilation warnings.
+ * Upgraded preferred Nginx version to 1.2.3.
+
+3.0.16 was an unofficial hotfix release, and so its announcement had been skipped.
+
+
+Release 3.0.15
+--------------
+
+ * Updated documentation.
+ * Updated website links.
 
 
 Release 3.0.14

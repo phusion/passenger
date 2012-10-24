@@ -33,6 +33,7 @@ module LoaderSharedHelpers
 
 	# To be called by the (pre)loader as soon as possible.
 	def init
+		Thread.main[:name] = "Main thread"
 		# We don't dump PATH info because at this point it's
 		# unlikely to be changed.
 		dump_ruby_environment
@@ -256,15 +257,7 @@ module LoaderSharedHelpers
 	
 	def advertise_sockets(output, request_handler)
 		request_handler.server_sockets.each_pair do |name, options|
-			protocol = case name
-				when :main
-					"session"
-				when :http
-					"http"
-				else
-					name
-				end
-			output.puts "!> socket: #{name};#{create_socket_address(options[1], options[0])};#{protocol};1"
+			output.puts "!> socket: #{name};#{options[:address]};#{options[:protocol]};#{options[:concurrency]}"
 		end
 	end
 	

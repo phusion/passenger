@@ -283,6 +283,7 @@ main(int argc, char *argv[]) {
 		
 		P_DEBUG("Logging agent online, listening at " << socketAddress);
 		ev_run(eventLoop, 0);
+		P_DEBUG("Logging agent exiting with code " << exitCode << ".");
 		return exitCode;
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());

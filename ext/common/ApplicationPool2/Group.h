@@ -546,7 +546,7 @@ public:
 	}
 	
 	bool garbageCollectable(unsigned long long now = 0) const {
-		if (now == 0) {
+		/* if (now == 0) {
 			now = SystemTime::getUsec();
 		}
 		return utilization() == 0
@@ -554,7 +554,8 @@ public:
 			&& disabledProcesses.empty()
 			&& options.getMaxPreloaderIdleTime() != 0
 			&& now - spawner->lastUsed() >
-				(unsigned long long) options.getMaxPreloaderIdleTime() * 1000000;
+				(unsigned long long) options.getMaxPreloaderIdleTime() * 1000000; */
+		return false;
 	}
 	
 	/** Whether a new process should be spawned for this group in case

@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -56,6 +56,7 @@ class StartCommand < Command
 		parse_my_options
 		sanity_check_options
 		
+		@runtime_dirs = determine_runtime_dirs
 		ensure_nginx_installed
 		determine_various_resource_locations
 		require_app_finder
@@ -151,6 +152,10 @@ private
 				wrap_desc("The spawn method to use (default: #{@options[:spawn_method]})")) do |value|
 				@options[:spawn_method] = value
 			end
+			opts.on("--rolling-restarts",
+				wrap_desc("Enable rolling restarts (Enterprise only)")) do
+				@options[:rolling_restarts] = true
+			end
 			opts.on("--union-station-gateway HOST:PORT", String,
 				wrap_desc("Specify Union Station Gateway host and port")) do |value|
 				host, port = value.split(":", 2)
@@ -205,6 +210,10 @@ private
 				wrap_desc("If Nginx needs to be installed, then the specified URL will be " +
 				          "checked for binaries prior to a local build.")) do |value|
 				@options[:binaries_url_root] = value
+			end
+			opts.on("--runtime-dir DIRECTORY", String,
+				wrap_desc("Directory to use for Phusion Passenger Standalone runtime files")) do |value|
+				@options[:runtime_dir] = File.expand_path(value)
 			end
 		end
 		@plugin.call_hook(:done_parsing_options)
@@ -297,13 +306,13 @@ private
 		end
 	end
 	
-	def install_runtime
+	def install_runtime(runtime_dirs)
 		require 'phusion_passenger/standalone/runtime_installer'
 		installer = RuntimeInstaller.new(
 			:targets     => [:nginx, :ruby, :support_binaries],
-			:support_dir => passenger_support_files_dir,
-			:nginx_dir   => nginx_dir,
-			:ruby_dir    => ruby_native_support_dir,
+			:support_dir => runtime_dirs[:support_dir],
+			:nginx_dir   => runtime_dirs[:nginx_dir],
+			:ruby_dir    => runtime_dirs[:ruby_dir],
 			:nginx_version     => @options[:nginx_version],
 			:nginx_tarball     => @options[:nginx_tarball],
 			:binaries_url_root => @options[:binaries_url_root],
@@ -311,45 +320,41 @@ private
 		installer.run
 	end
 	
-	def passenger_support_files_dir
+	def determine_runtime_dirs
 		require_platform_info_binary_compatibility
-		return "#{@runtime_dir}/support-#{PlatformInfo.cxx_binary_compatibility_id}"
-	end
-	
-	def nginx_dir
-		require_platform_info_binary_compatibility
-		return "#{@runtime_dir}/nginx-#{@options[:nginx_version]}-#{PlatformInfo.cxx_binary_compatibility_id}"
-	end
-	
-	def ruby_native_support_dir
-		require_platform_info_binary_compatibility
-		return "#{@runtime_dir}/rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}"
-	end
-	
-	def ensure_nginx_installed
-		if @options[:nginx_bin] && !File.exist?(@options[:nginx_bin])
-			error "The given Nginx binary '#{@options[:nginx_bin]}' does not exist."
-			exit 1
-		end
-		
-		@runtime_dir = "#{GLOBAL_STANDALONE_RESOURCE_DIR}/#{PhusionPassenger::VERSION_STRING}"
-		if !File.exist?("#{nginx_dir}/nginx")
-			if Process.euid == 0
-				install_runtime
-			else
-				home         = Etc.getpwuid.dir
-				@runtime_dir = "#{home}/#{LOCAL_STANDALONE_RESOURCE_DIR}/#{PhusionPassenger::VERSION_STRING}"
-				if !File.exist?("#{nginx_dir}/nginx")
-					install_runtime
-				end
+		if root = @options[:runtime_dir]
+			nginx_dir = determine_nginx_runtime_dir(root)
+		else
+			root = "#{GLOBAL_STANDALONE_RESOURCE_DIR}/#{PhusionPassenger::VERSION_STRING}"
+			nginx_dir = determine_nginx_runtime_dir(root)
+			if !File.exist?("#{nginx_dir}/nginx") && Process.euid != 0
+				home      = Etc.getpwuid.dir
+				root      = "#{home}/#{LOCAL_STANDALONE_RESOURCE_DIR}/#{PhusionPassenger::VERSION_STRING}"
+				nginx_dir = determine_nginx_runtime_dir(root)
 			end
 		end
+		nginx_bin = @options[:nginx_bin] || "#{nginx_dir}/nginx"
+		return {
+			:root => root,
+			:support_dir => "#{root}/support-#{PlatformInfo.cxx_binary_compatibility_id}",
+			:nginx_dir => nginx_dir,
+			:ruby_dir => "#{root}/rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}",
+			:nginx_installed => File.exist?(nginx_bin)
+		}
 	end
-	
-	def ensure_directory_exists(dir)
-		if !File.exist?(dir)
-			require_file_utils
-			FileUtils.mkdir_p(dir)
+
+	def determine_nginx_runtime_dir(runtime_dir)
+		return "#{runtime_dir}/nginx-#{@options[:nginx_version]}-#{PlatformInfo.cxx_binary_compatibility_id}"
+	end
+
+	def ensure_nginx_installed
+		if !@runtime_dirs[:nginx_installed]
+			if @options[:nginx_bin]
+				error "The given Nginx binary '#{@options[:nginx_bin]}' does not exist."
+				exit 1
+			else
+				install_runtime(@runtime_dirs)
+			end
 		end
 	end
 	

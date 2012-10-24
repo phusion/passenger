@@ -25,8 +25,12 @@
 #ifndef _EVENTED_BUFFERED_INPUT_H_
 #define _EVENTED_BUFFERED_INPUT_H_
 
+#include <cstdio>
 #include <cstddef>
 #include <cassert>
+
+#include <sstream>
+#include <string>
 
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -38,11 +42,15 @@
 #include <SafeLibev.h>
 #include <FileDescriptor.h>
 #include <StaticString.h>
+#include <Logging.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 
 using namespace boost;
 using namespace oxt;
+
+#define EBI_TRACE(expr) P_TRACE(3, "[EventedBufferedInput " << this << " " << inspect() << "] " << expr)
 
 /**
  * Provides input buffering services for non-blocking sockets in evented I/O systems.
@@ -87,10 +95,12 @@ private:
 		// Keep 'this' alive until function exit.
 		shared_ptr< EventedBufferedInput<bufferSize> > self = EventedBufferedInput<bufferSize>::shared_from_this();
 
+		EBI_TRACE("onReadable");
 		ssize_t ret = syscalls::read(fd, bufferData, bufferSize);
 		if (ret == -1) {
 			if (errno != EAGAIN) {
 				error = errno;
+				EBI_TRACE("read error " << error << " (" << strerror(error) << ")");
 				assert(state == LIVE);
 				assert(!socketPaused);
 				assert(buffer.empty());
@@ -105,6 +115,7 @@ private:
 			}
 
 		} else if (ret == 0) {
+			EBI_TRACE("end of stream");
 			assert(state == LIVE);
 			assert(!socketPaused);
 			assert(buffer.empty());
@@ -116,6 +127,7 @@ private:
 			onData(self, StaticString());
 
 		} else {
+			EBI_TRACE("read " << ret << " bytes");
 			assert(state == LIVE);
 			assert(!socketPaused);
 			assert(buffer.empty());
@@ -145,6 +157,7 @@ private:
 	}
 
 	void processBuffer() {
+		EBI_TRACE("processBuffer");
 		if (state == CLOSED) {
 			return;
 		}
@@ -156,6 +169,7 @@ private:
 		assert(buffer.size() > 0);
 		size_t consumed = onData(EventedBufferedInput<bufferSize>::shared_from_this(),
 			buffer);
+		EBI_TRACE("Consumed " << consumed << " bytes");
 		if (state == CLOSED) {
 			return;
 		}
@@ -173,42 +187,13 @@ private:
 			}
 			if (!paused) {
 				// Consume rest of the data in the next tick.
+				EBI_TRACE("Consume rest in next tick");
 				processBufferInNextTick();
 			}
 		}
 	}
 
-public:
-	typedef size_t (*DataCallback)(const shared_ptr< EventedBufferedInput<bufferSize> > &source, const StaticString &data);
-	typedef void (*ErrorCallback)(const shared_ptr< EventedBufferedInput<bufferSize> > &source, const char *message, int errnoCode);
-
-	DataCallback onData;
-	ErrorCallback onError;
-	void *userData;
-
-	EventedBufferedInput() {
-		resetCallbackFields();
-		reset(NULL, FileDescriptor());
-		watcher.set<EventedBufferedInput<bufferSize>,
-			&EventedBufferedInput<bufferSize>::onReadable>(this);
-	}
-
-	EventedBufferedInput(SafeLibev *libev, const FileDescriptor &fd) {
-		resetCallbackFields();
-		reset(libev, fd);
-		watcher.set<EventedBufferedInput<bufferSize>,
-			&EventedBufferedInput<bufferSize>::onReadable>(this);
-	}
-
-	~EventedBufferedInput() {
-		watcher.stop();
-	}
-
-	bool resetable() const {
-		return !nextTickInstalled;
-	}
-
-	void reset(SafeLibev *libev, const FileDescriptor &fd) {
+	void _reset(SafeLibev *libev, const FileDescriptor &fd) {
 		this->libev = libev;
 		this->fd = fd;
 		buffer = StaticString();
@@ -228,8 +213,47 @@ public:
 		}
 	}
 
+public:
+	typedef size_t (*DataCallback)(const shared_ptr< EventedBufferedInput<bufferSize> > &source, const StaticString &data);
+	typedef void (*ErrorCallback)(const shared_ptr< EventedBufferedInput<bufferSize> > &source, const char *message, int errnoCode);
+
+	DataCallback onData;
+	ErrorCallback onError;
+	void *userData;
+
+	EventedBufferedInput() {
+		resetCallbackFields();
+		_reset(NULL, FileDescriptor());
+		watcher.set<EventedBufferedInput<bufferSize>,
+			&EventedBufferedInput<bufferSize>::onReadable>(this);
+		EBI_TRACE("created");
+	}
+
+	EventedBufferedInput(SafeLibev *libev, const FileDescriptor &fd) {
+		resetCallbackFields();
+		_reset(libev, fd);
+		watcher.set<EventedBufferedInput<bufferSize>,
+			&EventedBufferedInput<bufferSize>::onReadable>(this);
+		EBI_TRACE("created");
+	}
+
+	~EventedBufferedInput() {
+		watcher.stop();
+		EBI_TRACE("destroyed");
+	}
+
+	bool resetable() const {
+		return !nextTickInstalled;
+	}
+
+	void reset(SafeLibev *libev, const FileDescriptor &fd) {
+		EBI_TRACE("reset()");
+		_reset(libev, fd);
+	}
+
 	void stop() {
 		if (state == LIVE && !paused) {
+			EBI_TRACE("stop()");
 			paused = true;
 			if (!socketPaused) {
 				socketPaused = true;
@@ -240,6 +264,7 @@ public:
 
 	void start() {
 		if (state == LIVE && paused) {
+			EBI_TRACE("start()");
 			assert(socketPaused);
 			
 			paused = false;
@@ -262,6 +287,40 @@ public:
 
 	const FileDescriptor &getFd() const {
 		return fd;
+	}
+
+	string inspect() const {
+		stringstream result;
+		const char *stateStr;
+
+		result << "fd=" << fd;
+
+		switch (state) {
+		case LIVE:
+			stateStr = "LIVE";
+			break;
+		case END_OF_STREAM:
+			stateStr = "END_OF_STREAM";
+			break;
+		case READ_ERROR:
+			stateStr = "READ_ERROR";
+			break;
+		case CLOSED:
+			stateStr = "CLOSED";
+			break;
+		default:
+			stateStr = "UNKNOWN";
+			break;
+		}
+		result << ", state=" << stateStr;
+
+		result << ", buffer(" << buffer.size() << ")=\"" << cEscapeString(buffer) << "\"";
+		result << ", paused=" << paused;
+		result << ", socketPaused=" << socketPaused;
+		result << ", nextTickInstalled=" << nextTickInstalled;
+		result << ", error=" << error;
+
+		return result.str();
 	}
 };
 

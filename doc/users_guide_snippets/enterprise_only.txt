@@ -1,0 +1,1 @@
+**This feature is only available in link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise]. It was introduced in version {version}. link:https://www.phusionpassenger.com/download[Buy Phusion Passenger Enterprise here.]**

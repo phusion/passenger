@@ -25,7 +25,7 @@
 	<div id="site_container">
 		<div id="site_header">
 			<ul class="corporate_identity">
-				<li class="logo"><a href="http://www.modrails.com"><span>Phusion Passenger</span></a></li>
+				<li class="logo"><a href="https://www.phusionpassenger.com"><span>Phusion Passenger</span></a></li>
 			</ul>
 		</div>
 		<div id="site_body">
@@ -78,8 +78,8 @@
 			   text. Thank you.
 			-->
 			<div class="container">
-				Powered by <a href="http://www.modrails.com/">Phusion Passenger</a>,
-				<tt>mod_rails</tt> / <tt>mod_rack</tt> for Apache.
+				Powered by <a href="https://www.phusionpassenger.com/">Phusion Passenger</a>,
+				<tt>mod_rails</tt> / <tt>mod_rack</tt> for Apache and Nginx.
 			</div>
 		</div>
 	</div>

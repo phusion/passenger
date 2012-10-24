@@ -42,6 +42,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <signal.h>
+#include <libgen.h>
 
 #if defined(__APPLE__) || defined(__linux__)
 	#define LIBC_HAS_BACKTRACE_FUNC
@@ -50,11 +51,15 @@
 	#include <execinfo.h>
 #endif
 
+#include <string>
+#include <vector>
+
 #include <agents/Base.h>
 #include <Constants.h>
 #include <Exceptions.h>
 #include <Logging.h>
 #include <Utils.h>
+#include <Utils/StrIntUtils.h>
 #ifdef __linux__
 	#include <ResourceLocator.h>
 #endif
@@ -62,10 +67,14 @@
 namespace Passenger {
 
 
+using namespace std;
+
+
 struct AbortHandlerState {
 	pid_t pid;
 	int signo;
 	siginfo_t *info;
+	char messagePrefix[32];
 	char messageBuf[1024];
 };
 
@@ -79,6 +88,8 @@ static const char digits[] = {
 static const char hex_chars[] = "01234567890abcdef";
 
 static bool shouldDumpWithCrashWatch = true;
+static bool beepOnAbort = false;
+static bool stopOnAbort = false;
 
 // Pre-allocate an alternative stack for use in signal handlers in case
 // the normal stack isn't usable.
@@ -488,23 +499,15 @@ static void
 dumpDiagnostics(AbortHandlerState &state) {
 	char *messageBuf = state.messageBuf;
 
-	char *end = messageBuf;
-	end = appendText(end, "[ pid=");
-	end = appendULL(end, (unsigned long long) state.pid);
-	end = appendText(end, ", timestamp=");
-	end = appendULL(end, (unsigned long long) time(NULL));
-	end = appendText(end, " ] Process aborted! signo=");
-	end = appendSignalName(end, state.signo);
-	end = appendText(end, ", reason=");
-	end = appendSignalReason(end, state.info);
-
 	// It is important that writing the message and the backtrace are two
 	// seperate operations because it's not entirely clear whether the
 	// latter is async signal safe and thus can crash.
+	char *end = messageBuf;
+	end = appendText(end, state.messagePrefix);
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
-		end = appendText(end, ", backtrace available.\n");
+		end = appendText(end, " ] libc backtrace available!\n");
 	#else
-		end = appendText(end, "\n");
+		end = appendText(end, " ] libc backtrace not available.\n");
 	#endif
 	write(STDERR_FILENO, messageBuf, end - messageBuf);
 
@@ -515,9 +518,8 @@ dumpDiagnostics(AbortHandlerState &state) {
 	safePrintErr("--------------------------------------\n");
 
 	if (customDiagnosticsDumper != NULL) {
-		char *end = messageBuf;
-		end = appendText(end, "[ pid=");
-		end = appendULL(end, (unsigned long long) state.pid);
+		end = messageBuf;
+		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] Dumping additional diagnostical information...\n");
 		write(STDERR_FILENO, messageBuf, end - messageBuf);
 		safePrintErr("--------------------------------------\n");
@@ -527,8 +529,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 
 	if (shouldDumpWithCrashWatch) {
 		end = messageBuf;
-		end = appendText(end, "[ pid=");
-		end = appendULL(end, (unsigned long long) state.pid);
+		end = appendText(end, state.messagePrefix);
 		#ifdef LIBC_HAS_BACKTRACE_FUNC
 			end = appendText(end, " ] Dumping a more detailed backtrace with crash-watch...\n");
 		#else
@@ -543,8 +544,63 @@ dumpDiagnostics(AbortHandlerState &state) {
 
 static void
 abortHandler(int signo, siginfo_t *info, void *ctx) {
-	pid_t pid = getpid();
+	AbortHandlerState state;
+	state.pid = getpid();
+	state.signo = signo;
+	state.info = info;
 	pid_t child;
+
+	char *end = state.messagePrefix;
+	end = appendText(end, "[ pid=");
+	end = appendULL(end, (unsigned long long) state.pid);
+	*end = '\0';
+
+	end = state.messageBuf;
+	end = appendText(end, state.messagePrefix);
+	end = appendText(end, ", timestamp=");
+	end = appendULL(end, (unsigned long long) time(NULL));
+	end = appendText(end, " ] Process aborted! signo=");
+	end = appendSignalName(end, state.signo);
+	end = appendText(end, ", reason=");
+	end = appendSignalReason(end, state.info);
+	end = appendText(end, "\n");
+	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+
+	if (beepOnAbort) {
+		end = state.messageBuf;
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] PASSENGER_BEEP_ON_ABORT on, executing beep...\n");
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+
+		child = asyncFork();
+		if (child == 0) {
+			#ifdef __APPLE__
+				execlp("osascript", "osascript", "-e", "beep 2", (const char * const) 0);
+				safePrintErr("Cannot execute 'osascript' command\n");
+			#else
+				execlp("beep", "beep", (const char * const) 0);
+				safePrintErr("Cannot execute 'beep' command\n");
+			#endif
+			_exit(1);
+
+		} else if (child == -1) {
+			int e = errno;
+			end = state.messageBuf;
+			end = appendText(end, state.messagePrefix);
+			end = appendText(end, " ] Could fork a child process for invoking a beep: fork() failed with errno=");
+			end = appendULL(end, e);
+			end = appendText(end, "\n");
+			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		}
+	}
+
+	if (stopOnAbort) {
+		end = state.messageBuf;
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] PASSENGER_STOP_ON_ABORT on, so process stopped. Send SIGCONT when you want to continue.\n");
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		raise(SIGSTOP);
+	}
 
 	// It isn't safe to call any waiting functions in this signal handler,
 	// not even read() and waitpid() even though they're async signal safe.
@@ -564,24 +620,20 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 		child = asyncFork();
 		if (child == 0) {
-			AbortHandlerState state;
-			state.pid = pid;
-			state.signo = signo;
-			state.info = info;
 			dumpDiagnostics(state);
 			// The child process may or may or may not resume the original process.
 			// We do it ourselves just to be sure.
-			kill(pid, SIGCONT);
+			kill(state.pid, SIGCONT);
 			_exit(0);
 
 		} else if (child == -1) {
 			int e = errno;
-			char messageBuf[1024];
-			char *end = messageBuf;
-			end = appendText(end, "Could fork a child process for dumping diagnostics: fork() failed with errno=");
+			end = state.messageBuf;
+			end = appendText(end, state.messagePrefix);
+			end = appendText(end, "] Could fork a child process for dumping diagnostics: fork() failed with errno=");
 			end = appendULL(end, e);
 			end = appendText(end, "\n");
-			write(STDERR_FILENO, messageBuf, end - messageBuf);
+			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 			_exit(1);
 
 		} else {
@@ -591,12 +643,12 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 	} else if (child == -1) {
 		int e = errno;
-		char messageBuf[1024];
-		char *end = messageBuf;
-		end = appendText(end, "Could fork a child process for dumping diagnostics: fork() failed with errno=");
+		end = state.messageBuf;
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] Could fork a child process for dumping diagnostics: fork() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
-		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
 	} else {
 		raise(SIGSTOP);
@@ -651,17 +703,348 @@ feedbackFdAvailable() {
 	return _feedbackFdAvailable;
 }
 
+static int
+lookupErrno(const char *name) {
+	struct Entry {
+		int errorCode;
+		const char * const name;
+	};
+	static const Entry entries[] = {
+		{ EPERM, "EPERM" },
+		{ ENOENT, "ENOENT" },
+		{ ESRCH, "ESRCH" },
+		{ EINTR, "EINTR" },
+		{ EBADF, "EBADF" },
+		{ ENOMEM, "ENOMEM" },
+		{ EACCES, "EACCES" },
+		{ EBUSY, "EBUSY" },
+		{ EEXIST, "EEXIST" },
+		{ ENOTDIR, "ENOTDIR" },
+		{ EISDIR, "EISDIR" },
+		{ EINVAL, "EINVAL" },
+		{ ENFILE, "ENFILE" },
+		{ EMFILE, "EMFILE" },
+		{ ENOTTY, "ENOTTY" },
+		{ ETXTBSY, "ETXTBSY" },
+		{ ENOSPC, "ENOSPC" },
+		{ ESPIPE, "ESPIPE" },
+		{ EMLINK, "EMLINK" },
+		{ EPIPE, "EPIPE" },
+		{ EAGAIN, "EAGAIN" },
+		{ EWOULDBLOCK, "EWOULDBLOCK" },
+		{ EINPROGRESS, "EINPROGRESS" },
+		{ EADDRINUSE, "EADDRINUSE" },
+		{ EADDRNOTAVAIL, "EADDRNOTAVAIL" },
+		{ ENETUNREACH, "ENETUNREACH" },
+		{ ECONNABORTED, "ECONNABORTED" },
+		{ ECONNRESET, "ECONNRESET" },
+		{ EISCONN, "EISCONN" },
+		{ ENOTCONN, "ENOTCONN" },
+		{ ETIMEDOUT, "ETIMEDOUT" },
+		{ ECONNREFUSED, "ECONNREFUSED" },
+		{ EHOSTDOWN, "EHOSTDOWN" },
+		{ EHOSTUNREACH, "EHOSTUNREACH" },
+		#ifdef EIO
+			{ EIO, "EIO" },
+		#endif
+		#ifdef ENXIO
+			{ ENXIO, "ENXIO" },
+		#endif
+		#ifdef E2BIG
+			{ E2BIG, "E2BIG" },
+		#endif
+		#ifdef ENOEXEC
+			{ ENOEXEC, "ENOEXEC" },
+		#endif
+		#ifdef ECHILD
+			{ ECHILD, "ECHILD" },
+		#endif
+		#ifdef EDEADLK
+			{ EDEADLK, "EDEADLK" },
+		#endif
+		#ifdef EFAULT
+			{ EFAULT, "EFAULT" },
+		#endif
+		#ifdef ENOTBLK
+			{ ENOTBLK, "ENOTBLK" },
+		#endif
+		#ifdef EXDEV
+			{ EXDEV, "EXDEV" },
+		#endif
+		#ifdef ENODEV
+			{ ENODEV, "ENODEV" },
+		#endif
+		#ifdef EFBIG
+			{ EFBIG, "EFBIG" },
+		#endif
+		#ifdef EROFS
+			{ EROFS, "EROFS" },
+		#endif
+		#ifdef EDOM
+			{ EDOM, "EDOM" },
+		#endif
+		#ifdef ERANGE
+			{ ERANGE, "ERANGE" },
+		#endif
+		#ifdef EALREADY
+			{ EALREADY, "EALREADY" },
+		#endif
+		#ifdef ENOTSOCK
+			{ ENOTSOCK, "ENOTSOCK" },
+		#endif
+		#ifdef EDESTADDRREQ
+			{ EDESTADDRREQ, "EDESTADDRREQ" },
+		#endif
+		#ifdef EMSGSIZE
+			{ EMSGSIZE, "EMSGSIZE" },
+		#endif
+		#ifdef EPROTOTYPE
+			{ EPROTOTYPE, "EPROTOTYPE" },
+		#endif
+		#ifdef ENOPROTOOPT
+			{ ENOPROTOOPT, "ENOPROTOOPT" },
+		#endif
+		#ifdef EPROTONOSUPPORT
+			{ EPROTONOSUPPORT, "EPROTONOSUPPORT" },
+		#endif
+		#ifdef ESOCKTNOSUPPORT
+			{ ESOCKTNOSUPPORT, "ESOCKTNOSUPPORT" },
+		#endif
+		#ifdef ENOTSUP
+			{ ENOTSUP, "ENOTSUP" },
+		#endif
+		#ifdef EOPNOTSUPP
+			{ EOPNOTSUPP, "EOPNOTSUPP" },
+		#endif
+		#ifdef EPFNOSUPPORT
+			{ EPFNOSUPPORT, "EPFNOSUPPORT" },
+		#endif
+		#ifdef EAFNOSUPPORT
+			{ EAFNOSUPPORT, "EAFNOSUPPORT" },
+		#endif
+		#ifdef ENETDOWN
+			{ ENETDOWN, "ENETDOWN" },
+		#endif
+		#ifdef ENETRESET
+			{ ENETRESET, "ENETRESET" },
+		#endif
+		#ifdef ENOBUFS
+			{ ENOBUFS, "ENOBUFS" },
+		#endif
+		#ifdef ESHUTDOWN
+			{ ESHUTDOWN, "ESHUTDOWN" },
+		#endif
+		#ifdef ETOOMANYREFS
+			{ ETOOMANYREFS, "ETOOMANYREFS" },
+		#endif
+		#ifdef ELOOP
+			{ ELOOP, "ELOOP" },
+		#endif
+		#ifdef ENAMETOOLONG
+			{ ENAMETOOLONG, "ENAMETOOLONG" },
+		#endif
+		#ifdef ENOTEMPTY
+			{ ENOTEMPTY, "ENOTEMPTY" },
+		#endif
+		#ifdef EPROCLIM
+			{ EPROCLIM, "EPROCLIM" },
+		#endif
+		#ifdef EUSERS
+			{ EUSERS, "EUSERS" },
+		#endif
+		#ifdef EDQUOT
+			{ EDQUOT, "EDQUOT" },
+		#endif
+		#ifdef ESTALE
+			{ ESTALE, "ESTALE" },
+		#endif
+		#ifdef EREMOTE
+			{ EREMOTE, "EREMOTE" },
+		#endif
+		#ifdef EBADRPC
+			{ EBADRPC, "EBADRPC" },
+		#endif
+		#ifdef ERPCMISMATCH
+			{ ERPCMISMATCH, "ERPCMISMATCH" },
+		#endif
+		#ifdef EPROGUNAVAIL
+			{ EPROGUNAVAIL, "EPROGUNAVAIL" },
+		#endif
+		#ifdef EPROGMISMATCH
+			{ EPROGMISMATCH, "EPROGMISMATCH" },
+		#endif
+		#ifdef EPROCUNAVAIL
+			{ EPROCUNAVAIL, "EPROCUNAVAIL" },
+		#endif
+		#ifdef ENOLCK
+			{ ENOLCK, "ENOLCK" },
+		#endif
+		#ifdef ENOSYS
+			{ ENOSYS, "ENOSYS" },
+		#endif
+		#ifdef EFTYPE
+			{ EFTYPE, "EFTYPE" },
+		#endif
+		#ifdef EAUTH
+			{ EAUTH, "EAUTH" },
+		#endif
+		#ifdef ENEEDAUTH
+			{ ENEEDAUTH, "ENEEDAUTH" },
+		#endif
+		#ifdef EPWROFF
+			{ EPWROFF, "EPWROFF" },
+		#endif
+		#ifdef EDEVERR
+			{ EDEVERR, "EDEVERR" },
+		#endif
+		#ifdef EOVERFLOW
+			{ EOVERFLOW, "EOVERFLOW" },
+		#endif
+		#ifdef EBADEXEC
+			{ EBADEXEC, "EBADEXEC" },
+		#endif
+		#ifdef EBADARCH
+			{ EBADARCH, "EBADARCH" },
+		#endif
+		#ifdef ESHLIBVERS
+			{ ESHLIBVERS, "ESHLIBVERS" },
+		#endif
+		#ifdef EBADMACHO
+			{ EBADMACHO, "EBADMACHO" },
+		#endif
+		#ifdef ECANCELED
+			{ ECANCELED, "ECANCELED" },
+		#endif
+		#ifdef EIDRM
+			{ EIDRM, "EIDRM" },
+		#endif
+		#ifdef ENOMSG
+			{ ENOMSG, "ENOMSG" },
+		#endif
+		#ifdef EILSEQ
+			{ EILSEQ, "EILSEQ" },
+		#endif
+		#ifdef ENOATTR
+			{ ENOATTR, "ENOATTR" },
+		#endif
+		#ifdef EBADMSG
+			{ EBADMSG, "EBADMSG" },
+		#endif
+		#ifdef EMULTIHOP
+			{ EMULTIHOP, "EMULTIHOP" },
+		#endif
+		#ifdef ENODATA
+			{ ENODATA, "ENODATA" },
+		#endif
+		#ifdef ENOLINK
+			{ ENOLINK, "ENOLINK" },
+		#endif
+		#ifdef ENOSR
+			{ ENOSR, "ENOSR" },
+		#endif
+		#ifdef ENOSTR
+			{ ENOSTR, "ENOSTR" },
+		#endif
+		#ifdef EPROTO
+			{ EPROTO, "EPROTO" },
+		#endif
+		#ifdef ETIME
+			{ ETIME, "ETIME" },
+		#endif
+		#ifdef EOPNOTSUPP
+			{ EOPNOTSUPP, "EOPNOTSUPP" },
+		#endif
+		#ifdef ENOPOLICY
+			{ ENOPOLICY, "ENOPOLICY" },
+		#endif
+		#ifdef ENOTRECOVERABLE
+			{ ENOTRECOVERABLE, "ENOTRECOVERABLE" },
+		#endif
+		#ifdef EOWNERDEAD
+			{ EOWNERDEAD, "EOWNERDEAD" },
+		#endif
+	};
+
+	for (unsigned int i = 0; i < sizeof(entries) / sizeof(Entry); i++) {
+		if (strcmp(entries[i].name, name) == 0) {
+			return entries[i].errorCode;
+		}
+	}
+	return -1;
+}
+
+static void
+initializeSyscallFailureSimulation(const char *processName) {
+	// Format:
+	// PassengerWatchdog=EMFILE:0.1,ECONNREFUSED:0.25;PassengerHelperAgent=ESPIPE=0.4
+	const char *spec = getenv("PASSENGER_SIMULATE_SYSCALL_FAILURES");
+	string prefix = string(processName) + "=";
+	vector<string> components;
+	unsigned int i;
+	
+	// Lookup this process in the specification string.
+	split(spec, ';', components);
+	for (i = 0; i < components.size(); i++) {
+		if (startsWith(components[i], prefix)) {
+			// Found!
+			string value = components[i].substr(prefix.size());
+			split(value, ',', components);
+			vector<string> keyAndValue;
+			vector<ErrorChance> chances;
+
+			// Process each errorCode:chance pair.
+			for (i = 0; i < components.size(); i++) {
+				split(components[i], ':', keyAndValue);
+				if (keyAndValue.size() != 2) {
+					fprintf(stderr, "%s: invalid syntax in PASSENGER_SIMULATE_SYSCALL_FAILURES: '%s'\n",
+						processName, components[i].c_str());
+					continue;
+				}
+
+				int e = lookupErrno(keyAndValue[0].c_str());
+				if (e == -1) {
+					fprintf(stderr, "%s: invalid error code in PASSENGER_SIMULATE_SYSCALL_FAILURES: '%s'\n",
+						processName, components[i].c_str());
+					continue;
+				}
+
+				ErrorChance chance;
+				chance.chance = atof(keyAndValue[1].c_str());
+				if (chance.chance < 0 || chance.chance > 1) {
+					fprintf(stderr, "%s: invalid chance PASSENGER_SIMULATE_SYSCALL_FAILURES: '%s' - chance must be between 0 and 1\n",
+						processName, components[i].c_str());
+					continue;
+				}
+				chance.errorCode = e;
+				chances.push_back(chance);
+			}
+
+			// Install the chances.
+			setup_random_failure_simulation(&chances[0], chances.size());
+			return;
+		}
+	}
+}
+
 VariantMap
 initializeAgent(int argc, char *argv[], const char *processName) {
 	VariantMap options;
+
+	srand((unsigned int) time(NULL));
+	srandom((unsigned int) time(NULL));
 	
 	ignoreSigpipe();
-	shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
+		shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
+		beepOnAbort  = hasEnvOption("PASSENGER_BEEP_ON_ABORT", false);
+		stopOnAbort = hasEnvOption("PASSENGER_STOP_ON_ABORT", false);
 		installAbortHandler();
 	}
 	oxt::initialize();
 	setup_syscall_interruption_support();
+	if (getenv("PASSENGER_SIMULATE_SYSCALL_FAILURES")) {
+		initializeSyscallFailureSimulation(processName);
+	}
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
 	

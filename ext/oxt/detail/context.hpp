@@ -31,6 +31,9 @@
 #include <vector>
 #include <string>
 #include <pthread.h>
+#ifdef __linux__
+	#include <sys/types.h>
+#endif
 #include "../spin_lock.hpp"
 
 namespace oxt {
@@ -56,6 +59,9 @@ struct thread_local_context {
 	std::list<thread_local_context_ptr>::iterator iterator;
 
 	pthread_t thread;
+	#ifdef __linux__
+		pid_t tid;
+	#endif
 	unsigned int thread_number;
 	std::string thread_name;
 

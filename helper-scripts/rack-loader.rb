@@ -47,11 +47,13 @@ module App
 		require 'phusion_passenger/ruby_core_enhancements'
 		require 'phusion_passenger/utils/tmpdir'
 		require 'phusion_passenger/loader_shared_helpers'
-		require 'phusion_passenger/rack/request_handler'
+		require 'phusion_passenger/request_handler'
+		require 'phusion_passenger/rack/thread_handler_extension'
 		LoaderSharedHelpers.init
 		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
 		NativeSupport.disable_stdio_buffering
+		RequestHandler::ThreadHandler.send(:include, Rack::ThreadHandlerExtension)
 	rescue Exception => e
 		LoaderSharedHelpers.about_to_abort(e) if defined?(LoaderSharedHelpers)
 		puts "!> Error"
@@ -91,7 +93,7 @@ module App
 	init_passenger
 	load_app
 	LoaderSharedHelpers.before_handling_requests(false, options)
-	handler = Rack::RequestHandler.new(STDIN, app, options)
+	handler = RequestHandler.new(STDIN, options.merge("app" => app))
 	puts "!> Ready"
 	LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
 	puts "!> "

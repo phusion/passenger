@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -823,7 +823,7 @@ setOomScore(const StaticString &score) {
 	FILE *f;
 	OomFileType type;
 	
-	f = openOomAdjFile("r", type);
+	f = openOomAdjFile("w", type);
 	if (f != NULL) {
 		fwrite(score.data(), 1, score.size(), f);
 		fclose(f);
@@ -982,12 +982,12 @@ cleanupAgentsInBackground(vector<AgentWatcher *> &watchers) {
 			// processes.
 			P_WARN("Some Phusion Passenger agent processes did not exit " <<
 				"in time, forcefully shutting down all.");
-			for (it = watchers.begin(); it != watchers.end(); it++) {
+		} else {
+			P_DEBUG("All Phusion Passenger agent processes have exited. Forcing all subprocesses to shut down.");
+		}
+		for (it = watchers.begin(); it != watchers.end(); it++) {
 				(*it)->forceShutdown();
 			}
-		} else {
-			P_DEBUG("All Phusion Passenger agent processes have exited.");
-		}
 		
 		// Now clean up the server instance directory.
 		delete generation.get();
@@ -1021,6 +1021,14 @@ forceAllAgentsShutdown(vector<AgentWatcher *> &watchers) {
 int
 main(int argc, char *argv[]) {
 	/*
+	 * Some Apache installations (like on OS X) redirect stdout to /dev/null,
+	 * so that only stderr is redirected to the log file. We therefore
+	 * forcefully redirect stdout to stderr so that everything ends up in the
+	 * same place.
+	 */
+	dup2(2, 1);
+
+	/*
 	 * Most operating systems overcommit memory. We *know* that this watchdog process
 	 * doesn't use much memory; on OS X it uses about 200 KB of private RSS. If the
 	 * watchdog is killed by the system Out-Of-Memory Killer or then it's all over:
@@ -1046,6 +1054,8 @@ main(int argc, char *argv[]) {
 	maxInstancesPerApp = agentsOptions.getInt("max_instances_per_app");
 	poolIdleTime       = agentsOptions.getInt("pool_idle_time");
 	serializedPrestartURLs  = agentsOptions.get("prestart_urls");
+	
+	P_DEBUG("Starting Watchdog...");
 	
 	try {
 		randomGenerator = new RandomGenerator();
@@ -1116,20 +1126,25 @@ main(int argc, char *argv[]) {
 		}
 		
 		writeArrayMessage(FEEDBACK_FD, "All agents started", NULL);
+		P_DEBUG("All Phusion Passenger agents started!");
 		
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		bool exitGracefully = waitForStarterProcessOrWatchers(watchers);
-		AgentWatcher::stopWatching(watchers);
 		if (exitGracefully) {
 			/* Fork a child process which cleans up all the agent processes in
 			 * the background and exit this watchdog process so that we don't block
 			 * the web server.
 			 */
+			P_DEBUG("Web server exited gracefully; gracefully shutting down all agents...");
+		} else {
+			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all agents...");
+		}
+		AgentWatcher::stopWatching(watchers);
+		if (exitGracefully) {
 			cleanupAgentsInBackground(watchers);
 			return 0;
 		} else {
-			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all service processes...");
 			forceAllAgentsShutdown(watchers);
 			return 1;
 		}

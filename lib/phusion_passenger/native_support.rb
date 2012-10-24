@@ -63,7 +63,7 @@ private
 	end
 	
 	def extconf_rb
-		File.join(ruby_extension_source_dir, "extconf.rb")
+		File.join(PhusionPassenger.ruby_extension_source_dir, "extconf.rb")
 	end
 	
 	def native_support_dir_in_source_root
@@ -107,7 +107,7 @@ private
 	def compile_and_load
 		STDERR.puts "*** Phusion Passenger: no #{library_name} found for " +
 			"the current Ruby interpreter. Compiling one..."
-		
+
 		require 'fileutils'
 		require 'phusion_passenger/platform_info/ruby'
 		
@@ -161,6 +161,18 @@ private
 				else
 					STDERR.puts "Encountered permission error, " +
 						"trying a different directory..."
+					STDERR.puts "-------------------------------"
+				end
+			rescue Errno::ENOTDIR
+				# This can occur when PhusionPassenger.source_root
+				# is a location configuration file, and natively_packaged
+				# is set to false. For example, when we're running
+				# in Phusion Passenger Standalone. In this case
+				# just ignore this directory.
+				if i == target_dirs.size - 1
+					raise
+				else
+					STDERR.puts "Not a valid directory. Trying a different one..."
 					STDERR.puts "-------------------------------"
 				end
 			end

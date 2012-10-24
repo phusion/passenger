@@ -97,11 +97,11 @@ public:
 	void writeArrayMessage(StaticString args[], unsigned int count) {
 		char headerBuf[sizeof(uint16_t)];
 		unsigned int outSize = ArrayMessage::outputSize(count);
-		StaticString *out = (StaticString *)
-			alloca(outSize * sizeof(StaticString));
+		SmallVector<StaticString, 10> out;
+		out.reserve(outSize);
 		
-		ArrayMessage::generate(args, count, headerBuf, out, outSize);
-		write(out, outSize);
+		ArrayMessage::generate(args, count, headerBuf, &out[0], outSize);
+		write(&out[0], outSize);
 	}
 };
 

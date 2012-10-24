@@ -1,7 +1,0 @@
-{
-   wait4() uninitialized bytes on OS X
-   Memcheck:Param
-   wait4(pid)
-   fun:wait4
-   fun:_ZN9Passenger13removeDirTreeERKSs
-}

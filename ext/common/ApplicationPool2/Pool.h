@@ -313,8 +313,12 @@ public:
 	 * Forcefully destroys and detaches the given SuperGroup. After detaching
 	 * the SuperGroup may have a non-empty getWaitlist so be sure to do
 	 * something with it.
+	 *
+	 * 'superGroup' is a non-const non-reference smart pointer so that
+	 * it does not get destroy immediately after the 'superGroups.remove()'
+	 * call.
 	 */
-	void forceDetachSuperGroup(const SuperGroupPtr &superGroup, vector<Callback> &postLockActions) {
+	void forceDetachSuperGroup(SuperGroupPtr superGroup, vector<Callback> &postLockActions) {
 		bool removed = superGroups.remove(superGroup->name);
 		P_ASSERT(removed);
 		(void) removed; // Shut up compiler warning.
@@ -478,6 +482,14 @@ public:
 	typedef shared_ptr<ProcessAnalyticsLogEntry> ProcessAnalyticsLogEntryPtr;
 
 	void collectAnalytics(ev::timer &timer, int revents) {
+		try {
+			realCollectAnalytics(timer);
+		} catch (const tracable_exception &e) {
+			P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
+		}
+	}
+
+	void realCollectAnalytics(ev::timer &timer) {
 		PoolPtr self = shared_from_this(); // Keep pool object alive.
 		TRACE_POINT();
 		this_thread::disable_interruption di;
@@ -944,12 +956,7 @@ public:
 		SuperGroupMap::const_iterator it, end = superGroups.end();
 		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
 			const SuperGroupPtr &superGroup = it->second;
-			vector<GroupPtr> &groups = superGroup->groups;
-			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
-			for (g_it = groups.begin(); g_it != g_end; g_it++) {
-				const GroupPtr &group = *g_it;
-				result += group->count;
-			}
+			result += superGroup->getProcessCount();
 		}
 		return result;
 	}
