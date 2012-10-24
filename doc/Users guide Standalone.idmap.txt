@@ -12,7 +12,15 @@
 # and that Mizuho has found an ID which appears to be associated with that
 # section. You should check whether it is correct, and if not, fix it.
 
-1. Installation	=>	installation-2vrmef
+1. Support information	=>	support-information-1x8e9ee
 
-2. Usage	=>	usage-1eyt33o
+1.1. Supported operating systems	=>	supported-operating-systems-1387080
+
+1.2. Where to get support	=>	where-to-get-support-xkx7rx
+
+# fuzzy
+2. Installation	=>	installation-2vrmef
+
+# fuzzy
+3. Usage	=>	usage-1eyt33o
 
