@@ -575,10 +575,10 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		child = asyncFork();
 		if (child == 0) {
 			#ifdef __APPLE__
-				execlp("osascript", "osascript", "-e", "beep 2", 0);
+				execlp("osascript", "osascript", "-e", "beep 2", (const char * const) 0);
 				safePrintErr("Cannot execute 'osascript' command\n");
 			#else
-				execlp("beep", "beep", 0);
+				execlp("beep", "beep", (const char * const) 0);
 				safePrintErr("Cannot execute 'beep' command\n");
 			#endif
 			_exit(1);
