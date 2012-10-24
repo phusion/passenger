@@ -29,10 +29,10 @@ module PhusionPassenger
 	###### Version numbers ######
 	
 	# Phusion Passenger version number. Don't forget to edit ext/common/Constants.h too.
-	VERSION_STRING = '3.1.0'
+	VERSION_STRING = '3.9.1.beta'
 	
-	PREFERRED_NGINX_VERSION = '1.2.2'
-	PREFERRED_PCRE_VERSION  = '8.30'
+	PREFERRED_NGINX_VERSION = '1.2.4'
+	PREFERRED_PCRE_VERSION  = '8.31'
 	STANDALONE_INTERFACE_VERSION  = 1
 	
 	
@@ -55,6 +55,15 @@ module PhusionPassenger
 	
 	# System-wide directory for storing Phusion Passenger Standalone runtime files.
 	GLOBAL_STANDALONE_RESOURCE_DIR = "/var/lib/#{GLOBAL_STANDALONE_NAMESPACE_DIRNAME}".freeze
+	
+	NATIVELY_PACKAGED_BIN_DIR                = "/usr/bin".freeze
+	NATIVELY_PACKAGED_AGENTS_DIR             = "/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}/agents".freeze
+	NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR     = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/helper-scripts".freeze
+	NATIVELY_PACKAGED_RESOURCES_DIR          = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}".freeze
+	NATIVELY_PACKAGED_DOC_DIR                = "/usr/share/doc/#{GLOBAL_NAMESPACE_DIRNAME}".freeze
+	NATIVELY_PACKAGED_RUNTIME_LIBDIR         = "/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}".freeze
+	NATIVELY_PACKAGED_HEADER_DIR             = "/usr/include/#{GLOBAL_NAMESPACE_DIRNAME}".freeze
+	NATIVELY_PACKAGED_APACHE2_MODULE         = "/usr/lib/apache2/modules/mod_passenger.so".freeze
 	
 	# Follows the logic of ext/common/ResourceLocator.h, so don't forget to modify that too.
 	def self.locate_directories(source_root_or_location_configuration_file = nil)

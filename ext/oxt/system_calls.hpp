@@ -43,18 +43,23 @@
 #include "macros.hpp"
 
 /**
- * Support for interruption of blocking system calls and C library calls
+ * System call and C library call wrappers with extra features
  *
- * This file provides a framework for writing multithreading code that can
- * be interrupted, even when blocked on system calls or C library calls.
+ * This file provides wrappers for many system calls and C library calls
+ * and adds the following features:
  *
- * One must first call oxt::setup_syscall_interruption_support().
+ * - Interruption of blocking system calls and blocking C library calls.
+ * - Simulation of random failures.
+ *
+ * ## About system call interruption
+ *
+ * One must first call `oxt::setup_syscall_interruption_support()`.
  * Then one may use the functions in oxt::syscalls as drop-in replacements
  * for system calls or C library functions. These functions throw
  * boost::thread_interrupted upon interruption, instead of returning an EINTR
  * error.
  *
- * Once setup_syscall_interruption_support() has been called, system call
+ * Once `setup_syscall_interruption_support()` has been called, system call
  * interruption is enabled by default. You can enable or disable system call
  * interruption in the current scope by creating instances of
  * boost::this_thread::enable_syscall_interruption or
@@ -64,7 +69,8 @@
  * boost::thread_interrupted, nor will they return EINTR errors. This is similar
  * to Boost thread interruption.
  *
- * <h2>How to interrupt</h2>
+ * ### How to interrupt
+ *
  * Generally, oxt::thread::interrupt() and oxt::thread::interrupt_and_join()
  * should be used for interrupting threads. These methods will interrupt
  * the thread at all Boost interruption points, as well as system calls that
@@ -90,12 +96,18 @@
  * received. So one must keep sending signals periodically until the
  * thread has quit.
  *
- * @warning
- * After oxt::setup_syscall_interruption_support() is called, sending a signal
+ * **Warning**:
+ *
+ * After `oxt::setup_syscall_interruption_support()` is called, sending a signal
  * will cause system calls to return with an EINTR error. The oxt::syscall
  * functions will automatically take care of this, but if you're calling any
  * system calls without using that namespace, then you should check for and
  * take care of EINTR errors.
+ *
+ * ## About random simulation of failures
+ *
+ * Call `oxt::setup_random_failure_simulation()` to initialize random
+ * failure simulation.
  */
 
 // This is one of the things that Java is good at and C++ sucks at. Sigh...
@@ -103,21 +115,14 @@
 namespace oxt {
 	static const int INTERRUPTION_SIGNAL = SIGUSR1; // SIGUSR2 is reserved by Valgrind...
 	
-	/**
-	 * Setup system call interruption support.
-	 * This function may only be called once. It installs a signal handler
-	 * for INTERRUPTION_SIGNAL, so one should not install a different signal
-	 * handler for that signal after calling this function. It also resets
-	 * the process signal mask.
-	 *
-	 * @warning
-	 * After oxt::setup_syscall_interruption_support() is called, sending a signal
-	 * will cause system calls to return with an EINTR error. The oxt::syscall
-	 * functions will automatically take care of this, but if you're calling any
-	 * system calls without using that namespace, then you should check for and
-	 * take care of EINTR errors.
-	 */
+	struct ErrorChance {
+		double chance;
+		int errorCode;
+	};
+
 	void setup_syscall_interruption_support();
+
+	void setup_random_failure_simulation(const ErrorChance *errorChances, unsigned int n);
 	
 	/**
 	 * System call and C library call wrappers with interruption support.

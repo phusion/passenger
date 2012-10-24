@@ -35,6 +35,9 @@ using namespace oxt;
  * oxt
  *************************************/
 
+static const ErrorChance *errorChances = NULL;
+static unsigned int nErrorChances = 0;
+
 static void
 interruption_signal_handler(int sig) {
 	// Do nothing.
@@ -67,13 +70,53 @@ oxt::setup_syscall_interruption_support() {
 	} while (ret == -1 && errno == EINTR);
 }
 
+void
+oxt::setup_random_failure_simulation(const ErrorChance *_errorChances, unsigned int n) {
+	ErrorChance *storage = new ErrorChance[n];
+	for (unsigned int i = 0; i < n; i++) {
+		storage[i] = _errorChances[i];
+	}
+	errorChances = storage;
+	nErrorChances = n;
+}
+
+static bool
+shouldSimulateFailure() {
+	if (nErrorChances > 0) {
+		double number = random() / (double) RAND_MAX;
+		const ErrorChance *candidates[nErrorChances];
+		unsigned int i, n = 0;
+
+		for (i = 0; i < nErrorChances; i++) {
+			if (number <= errorChances[i].chance) {
+				candidates[n] = &errorChances[i];
+				n++;
+			}
+		}
+
+		if (n > 0) {
+			int choice = random() % n;
+			errno = candidates[choice]->errorCode;
+			return true;
+		} else {
+			return false;
+		}
+	} else {
+		return false;
+	}
+}
+
 
 /*************************************
  * Passenger::syscalls
  *************************************/
 
-#define CHECK_INTERRUPTION(error_expression, code) \
+#define CHECK_INTERRUPTION(error_expression, allowSimulatingFailure, error_assignment, code) \
 	do { \
+		if (allowSimulatingFailure && shouldSimulateFailure()) { \
+			error_assignment; \
+			break; \
+		} \
 		thread_local_context *ctx = get_thread_local_context(); \
 		if (OXT_UNLIKELY(ctx != NULL)) { \
 			ctx->syscall_interruption_lock.unlock(); \
@@ -98,6 +141,8 @@ syscalls::open(const char *path, int oflag) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::open(path, oflag)
 	);
 	return ret;
@@ -108,6 +153,8 @@ syscalls::open(const char *path, int oflag, mode_t mode) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::open(path, oflag, mode)
 	);
 	return ret;
@@ -118,6 +165,8 @@ syscalls::read(int fd, void *buf, size_t count) {
 	ssize_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::read(fd, buf, count)
 	);
 	return ret;
@@ -128,6 +177,8 @@ syscalls::write(int fd, const void *buf, size_t count) {
 	ssize_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::write(fd, buf, count)
 	);
 	return ret;
@@ -138,6 +189,8 @@ syscalls::writev(int fd, const struct iovec *iov, int iovcnt) {
 	ssize_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::writev(fd, iov, iovcnt)
 	);
 	return ret;
@@ -166,10 +219,21 @@ syscalls::close(int fd) {
 		int ret;
 		CHECK_INTERRUPTION(
 			ret == -1,
+			true,
+			ret = -1,
 			ret = ::close(fd)
 		);
 		return ret;
 	#else
+		if (shouldSimulateFailure()) {
+			return -1;
+		}
+		
+		thread_local_context *ctx = get_thread_local_context();
+		if (OXT_UNLIKELY(ctx != NULL)) {
+			ctx->syscall_interruption_lock.unlock();
+		}
+
 		/* TODO: If it's not known whether the OS releases the file
 		 * descriptor on EINTR-on-close(), we should print some kind of
 		 * warning here. This would actually explain why some people get
@@ -178,6 +242,11 @@ syscalls::close(int fd) {
 		 * behaviors.
 		 */
 		int ret = ::close(fd);
+		if (OXT_UNLIKELY(ctx != NULL)) {
+			int e = errno;
+			ctx->syscall_interruption_lock.lock();
+			errno = e;
+		}
 		if (ret == -1 && errno == EINTR && this_thread::syscalls_interruptable()) {
 			throw thread_interrupted();
 		} else {
@@ -191,6 +260,8 @@ syscalls::pipe(int filedes[2]) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::pipe(filedes)
 	);
 	return ret;
@@ -201,6 +272,8 @@ syscalls::dup2(int filedes, int filedes2) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::dup2(filedes, filedes2)
 	);
 	return ret;
@@ -211,6 +284,8 @@ syscalls::mkdir(const char *pathname, mode_t mode) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::mkdir(pathname, mode)
 	);
 	return ret;
@@ -221,6 +296,8 @@ syscalls::chown(const char *path, uid_t owner, gid_t group) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::chown(path, owner, group)
 	);
 	return ret;
@@ -231,6 +308,8 @@ syscalls::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::accept(sockfd, addr, addrlen)
 	);
 	return ret;
@@ -241,6 +320,8 @@ syscalls::bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::bind(sockfd, addr, addrlen)
 	);
 	return ret;
@@ -253,6 +334,8 @@ syscalls::connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrle
 	// http://www.madore.org/~david/computers/connect-intr.html
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::connect(sockfd, serv_addr, addrlen);
 	);
 	return ret;
@@ -263,6 +346,8 @@ syscalls::listen(int sockfd, int backlog) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::listen(sockfd, backlog)
 	);
 	return ret;
@@ -273,6 +358,8 @@ syscalls::socket(int domain, int type, int protocol) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::socket(domain, type, protocol)
 	);
 	return ret;
@@ -283,6 +370,8 @@ syscalls::socketpair(int d, int type, int protocol, int sv[2]) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::socketpair(d, type, protocol, sv)
 	);
 	return ret;
@@ -294,11 +383,15 @@ syscalls::recvmsg(int s, struct msghdr *msg, int flags) {
 	#ifdef _AIX53
 		CHECK_INTERRUPTION(
 			ret == -1,
+			true,
+			ret = -1,
 			ret = ::nrecvmsg(s, msg, flags)
 		);
 	#else
 		CHECK_INTERRUPTION(
 			ret == -1,
+			true,
+			ret = -1,
 			ret = ::recvmsg(s, msg, flags)
 		);
 	#endif
@@ -311,11 +404,15 @@ syscalls::sendmsg(int s, const struct msghdr *msg, int flags) {
 	#ifdef _AIX53
 		CHECK_INTERRUPTION(
 			ret == -1,
+			true,
+			ret = -1,
 			ret = ::nsendmsg(s, msg, flags)
 		);
 	#else
 		CHECK_INTERRUPTION(
 			ret == -1,
+			true,
+			ret = -1,
 			ret = ::sendmsg(s, msg, flags)
 		);
 	#endif
@@ -327,6 +424,8 @@ syscalls::setsockopt(int s, int level, int optname, const void *optval, socklen_
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::setsockopt(s, level, optname, optval, optlen)
 	);
 	return ret;
@@ -337,6 +436,8 @@ syscalls::shutdown(int s, int how) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::shutdown(s, how)
 	);
 	return ret;
@@ -347,6 +448,8 @@ syscalls::select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::select(nfds, readfds, writefds, errorfds, timeout)
 	);
 	return ret;
@@ -357,6 +460,8 @@ syscalls::poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::poll(fds, nfds, timeout)
 	);
 	return ret;
@@ -367,6 +472,8 @@ syscalls::fopen(const char *path, const char *mode) {
 	FILE *ret;
 	CHECK_INTERRUPTION(
 		ret == NULL,
+		true,
+		ret = NULL,
 		ret = ::fopen(path, mode)
 	);
 	return ret;
@@ -377,6 +484,8 @@ syscalls::fread(void *ptr, size_t size, size_t nitems, FILE *stream) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == 0 && ferror(stream),
+		true,
+		ret = 0,
 		ret = ::fread(ptr, size, nitems, stream)
 	);
 	return ret;
@@ -387,6 +496,8 @@ syscalls::fclose(FILE *fp) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == EOF,
+		true,
+		ret = EOF,
 		ret = ::fclose(fp)
 	);
 	return ret;
@@ -397,6 +508,8 @@ syscalls::unlink(const char *pathname) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::unlink(pathname)
 	);
 	return ret;
@@ -407,6 +520,8 @@ syscalls::stat(const char *path, struct stat *buf) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::stat(path, buf)
 	);
 	return ret;
@@ -417,6 +532,8 @@ syscalls::lstat(const char *path, struct stat *buf) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::lstat(path, buf)
 	);
 	return ret;
@@ -427,6 +544,8 @@ syscalls::time(time_t *t) {
 	time_t ret;
 	CHECK_INTERRUPTION(
 		ret == (time_t) -1,
+		false,
+		(void) 0,
 		ret = ::time(t)
 	);
 	return ret;
@@ -479,6 +598,8 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	struct timespec rem2;
 	int ret, e;
 
+	/* We never simulate failure in this function. */
+
 	thread_local_context *ctx = get_thread_local_context();
 	if (OXT_UNLIKELY(ctx != NULL)) {
 		ctx->syscall_interruption_lock.unlock();
@@ -521,6 +642,8 @@ syscalls::fork() {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::fork()
 	);
 	return ret;
@@ -531,6 +654,8 @@ syscalls::kill(pid_t pid, int sig) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::kill(pid, sig)
 	);
 	return ret;
@@ -541,6 +666,8 @@ syscalls::killpg(pid_t pgrp, int sig) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::killpg(pgrp, sig)
 	);
 	return ret;
@@ -551,6 +678,8 @@ syscalls::waitpid(pid_t pid, int *status, int options) {
 	pid_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
+		true,
+		ret = -1,
 		ret = ::waitpid(pid, status, options)
 	);
 	return ret;

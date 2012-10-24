@@ -46,6 +46,7 @@ module App
 		require 'phusion_passenger/utils/tmpdir'
 		require 'phusion_passenger/preloader_shared_helpers'
 		require 'phusion_passenger/loader_shared_helpers'
+		require 'phusion_passenger/request_handler'
 		LoaderSharedHelpers.init
 		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
@@ -120,12 +121,15 @@ module App
 			
 			LoaderSharedHelpers.before_handling_requests(true, options)
 			if Rails::VERSION::STRING >= '2.3.0'
-				require 'phusion_passenger/rack/request_handler'
-				handler = Rack::RequestHandler.new(STDIN, ActionController::Dispatcher.new, options)
+				require 'phusion_passenger/rack/thread_handler_extension'
+				RequestHandler::ThreadHandler.send(:include, Rack::ThreadHandlerExtension)
+				app = ActionController::Dispatcher.new
 			else
-				require 'phusion_passenger/classic_rails/request_handler'
-				handler = ClassicRails::RequestHandler.new(STDIN, options)
+				require 'phusion_passenger/classic_rails/thread_handler_extension'
+				RequestHandler::ThreadHandler.send(:include, ClassicRails::ThreadHandlerExtension)
+				app = nil
 			end
+			handler = RequestHandler.new(STDIN, options.merge("app" => app))
 		rescue Exception => e
 			LoaderSharedHelpers.about_to_abort(e)
 			puts "!> Error"

@@ -90,20 +90,20 @@ namespace tut {
 	}
 	
 	TEST_METHOD(6) {
-		// File is changed if existed but has now been deleted.
+		// File is not changed if existed and has now been deleted.
 		FileChangeChecker checker(10);
 		
 		touchFile("test.txt");
 		checker.changed("test.txt");
 		unlink("test.txt");
-		ensure("test.txt is considered changed if it has been deleted",
-			checker.changed("test.txt"));
+		ensure("test.txt is not considered changed if it has been deleted",
+			!checker.changed("test.txt"));
 		
 		touchFile("test2.txt");
 		checker.changed("test2.txt");
 		unlink("test2.txt");
-		ensure("test2.txt is considered changed if it has been deleted",
-			checker.changed("test2.txt"));
+		ensure("test2.txt is not considered changed if it has been deleted",
+			!checker.changed("test2.txt"));
 	}
 	
 	TEST_METHOD(7) {
@@ -201,14 +201,14 @@ namespace tut {
 			
 			FileChangeChecker checker(10);
 			TempDir d("test.tmp");
-			touchFile("test.tmp/test.txt");
+			touchFile("test.tmp/test.txt", 1);
 			
 			checker.changed("test.tmp/test.txt");
-			unlink("test.tmp/test.txt");
+			touchFile("test.tmp/test.txt", 2);
 			runShellCommand("chmod a= test.tmp");
-			ensure(!checker.changed("test.tmp/test.txt"));
+			ensure("(1)", !checker.changed("test.tmp/test.txt"));
 			runShellCommand("chmod u=rwx test.tmp");
-			ensure(checker.changed("test.tmp/test.txt"));
+			ensure("(2)", checker.changed("test.tmp/test.txt"));
 		}
 	}
 	
@@ -228,9 +228,11 @@ namespace tut {
 		unlink("test.txt");
 		unlink("test2.txt");
 		unlink("test3.txt");
-		ensure("test2.txt is still in the file list", checker.changed("test2.txt"));
-		ensure("test3.txt is still in the file list", checker.changed("test3.txt"));
-		ensure("test.txt is removed from the file list", !checker.changed("test.txt"));
+		ensure("test2.txt is still in the file list", checker.knows("test2.txt"));
+		ensure("test2.txt is not considered changed", !checker.changed("test2.txt"));
+		ensure("test3.txt is still in the file list", checker.knows("test3.txt"));
+		ensure("test3.txt is not considered changed", !checker.changed("test3.txt"));
+		ensure("test.txt is removed from the file list", !checker.knows("test.txt"));
 	}
 	
 	TEST_METHOD(14) {

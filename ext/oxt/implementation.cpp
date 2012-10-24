@@ -32,6 +32,9 @@
 #include "thread.hpp"
 #include "spin_lock.hpp"
 #include "detail/context.hpp"
+#ifdef __linux__
+	#include <sys/syscall.h>
+#endif
 
 #ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
 	#include <cassert>
@@ -56,6 +59,11 @@ static global_context_t *global_context = NULL;
 #ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
 	static __thread thread_local_context_ptr *local_context = NULL;
 
+	static void
+	init_thread_local_context_support() {
+		/* Do nothing. */
+	}
+	
 	static void
 	set_thread_local_context(const thread_local_context_ptr &ctx) {
 		local_context = new thread_local_context_ptr(ctx);
@@ -85,16 +93,24 @@ static global_context_t *global_context = NULL;
 	 * this object alive until the OS cleans it up.
 	 */
 	static thread_specific_ptr<thread_local_context_ptr> *local_context = NULL;
+	
+	static void
+	init_thread_local_context_support() {
+		local_context = new thread_specific_ptr<thread_local_context_ptr>();
+	}
 
 	static void
 	set_thread_local_context(const thread_local_context_ptr &ctx) {
-		local_context = new thread_specific_ptr<thread_local_context_ptr>();
-		local_context->reset(new thread_local_context_ptr(ctx));
+		if (local_context != NULL) {
+			local_context->reset(new thread_local_context_ptr(ctx));
+		}
 	}
 
 	static void
 	free_thread_local_context() {
-		local_context->reset();
+		if (local_context != NULL) {
+			local_context->reset();
+		}
 	}
 
 	thread_local_context *
@@ -239,6 +255,7 @@ tracable_exception::what() const throw() {
 
 void initialize() {
 	global_context = new global_context_t();
+	init_thread_local_context_support();
 	// For some reason make_shared() crashes here when compiled with clang 3.2 on OS X.
 	// Clang bug? We use 'new' to work around it.
 	thread_local_context_ptr ctx = thread_local_context::make_shared_ptr();
@@ -264,6 +281,9 @@ thread_local_context::thread_local_context()
 	: thread_number(0)
 {
 	thread = pthread_self();
+	#ifdef __linux__
+		tid = syscall(SYS_gettid);
+	#endif
 	syscall_interruption_lock.lock();
 	#ifdef OXT_BACKTRACE_IS_ENABLED
 		backtrace_list.reserve(50);
@@ -317,7 +337,7 @@ thread::thread_main(const boost::function<void ()> func, thread_local_context_pt
 	if (OXT_LIKELY(global_context != NULL)) {
 		lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
 		thread_local_context *ctx = get_thread_local_context();
-		if (ctx->thread_number != 0) {
+		if (ctx != 0 && ctx->thread_number != 0) {
 			global_context->registered_threads.erase(ctx->iterator);
 			ctx->thread_number = 0;
 		}
@@ -353,10 +373,20 @@ thread::all_backtraces() throw() {
 			     it++)
 			{
 				thread_local_context_ptr ctx = *it;
-				result << "Thread '" << ctx->thread_name << "' (" << hex << ctx->thread << "):" << endl;
+				result << "Thread '" << ctx->thread_name <<
+					"' (" << hex << showbase << ctx->thread << dec;
+				#ifdef __linux__
+					result << ", LWP " << ctx->tid;
+				#endif
+				result << "):" << endl;
 				
 				spin_lock::scoped_lock l(ctx->backtrace_lock);
-				result << format_backtrace(ctx->backtrace_list) << endl;
+				std::string bt = format_backtrace(ctx->backtrace_list);
+				result << bt;
+				if (bt.empty() || bt[bt.size() - 1] != '\n') {
+					result << endl;
+				}
+				result << endl;
 			}
 			return result.str();
 		} else {

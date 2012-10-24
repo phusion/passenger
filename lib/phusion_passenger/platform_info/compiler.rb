@@ -62,6 +62,7 @@ module PlatformInfo
 	end
 	
 	def self.compiler_supports_visibility_flag?
+		return false if RUBY_PLATFORM =~ /aix/
 		return try_compile(:c, '', '-fvisibility=hidden')
 	end
 	memoize :compiler_supports_visibility_flag?, true
@@ -174,12 +175,12 @@ module PlatformInfo
 				flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
 				flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
 			end
-			flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
 			flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
 			flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
 		elsif RUBY_PLATFORM =~ /openbsd/
 			flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
 		elsif RUBY_PLATFORM =~ /aix/
+			flags << '-pthread'
 			flags << '-DOXT_DISABLE_BACKTRACES'
 		elsif RUBY_PLATFORM =~ /(sparc-linux|arm-linux|^arm.*-linux|sh4-linux)/
 			# http://code.google.com/p/phusion-passenger/issues/detail?id=200

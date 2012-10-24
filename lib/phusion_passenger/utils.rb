@@ -42,16 +42,19 @@ module Utils
 	# Generate a long, cryptographically secure random ID string, which
 	# is also a valid filename.
 	def generate_random_id(method)
+		data = File.open("/dev/urandom", "rb") do |f|
+			f.read(64)
+		end
 		case method
 		when :base64
-			data = [File.read("/dev/urandom", 64)].pack('m')
+			data = [data].pack('m')
 			data.gsub!("\n", '')
 			data.gsub!("+", '')
 			data.gsub!("/", '')
 			data.gsub!(/==$/, '')
 			return data
 		when :hex
-			return File.read("/dev/urandom", 64).unpack('H*')[0]
+			return data.unpack('H*')[0]
 		else
 			raise ArgumentError, "Invalid method #{method.inspect}"
 		end
@@ -120,43 +123,18 @@ module Utils
 			return true
 		end
 	end
-	
-	# Checks the permissions of all parent directories of +dir+ as
-	# well as +dir+ itself.
-	#
-	# +dir+ must be a canonical path.
-	#
-	# If one of the parent directories has wrong permissions, causing
-	# +dir+ to be inaccessible by the current process, then this function
-	# returns [path, true] where +path+ is the path of the top-most
-	# directory with wrong permissions.
-	# 
-	# If +dir+ itself is not executable by the current process then
-	# this function returns [dir, false].
-	#
-	# Otherwise, nil is returned.
-	def check_directory_tree_permissions(dir)
-		components = dir.split("/")
-		components.shift
-		i = 0
-		# We can't use File.readable() and friends here because they
-		# don't always work right with ACLs. Instead of we use 'real'
-		# checks.
-		while i < components.size
-			path = "/" + components[0..i].join("/")
-			begin
-				File.stat(path)
-			rescue Errno::EACCES
-				return [File.dirname(path), true]
-			end
-			i += 1
+
+	def require_option(hash, key)
+		if hash.has_key?(key)
+			return hash[key]
+		else
+			raise ArgumentError, "Option #{key.inspect} required"
 		end
-		begin
-			Dir.chdir(dir) do
-				return nil
-			end
-		rescue Errno::EACCES
-			return [dir, false]
+	end
+
+	def install_options_as_ivars(object, options, *keys)
+		keys.each do |key|
+			object.instance_variable_set("@#{key}", options[key])
 		end
 	end
 	
@@ -164,10 +142,22 @@ module Utils
 	# or if that's not supported the backtrace for the current thread.
 	def global_backtrace_report
 		if Kernel.respond_to?(:caller_for_all_threads)
-			output = "========== Process #{Process.pid}: backtrace dump ==========\n"
-			caller_for_all_threads.each_pair do |thread, stack|
+			all_thread_stacks = caller_for_all_threads
+		elsif Thread.respond_to?(:list) && Thread.public_method_defined?(:backtrace)
+			all_thread_stacks = {}
+			Thread.list.each do |thread|
+				all_thread_stacks[thread] = thread.backtrace
+			end
+		end
+
+		output = "========== Process #{Process.pid}: backtrace dump ==========\n"
+		if all_thread_stacks
+			all_thread_stacks.each_pair do |thread, stack|
+				if thread_name = thread[:name]
+					thread_name = "(#{thread_name})"
+				end
 				output << ("-" * 60) << "\n"
-				output << "# Thread: #{thread.inspect}, "
+				output << "# Thread: #{thread.inspect}#{thread_name}, "
 				if thread == Thread.main
 					output << "[main thread], "
 				end
@@ -180,7 +170,6 @@ module Utils
 				output << "\n\n"
 			end
 		else
-			output = "========== Process #{Process.pid}: backtrace dump ==========\n"
 			output << ("-" * 60) << "\n"
 			output << "# Current thread: #{Thread.current.inspect}\n"
 			output << ("-" * 60) << "\n"

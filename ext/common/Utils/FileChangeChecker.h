@@ -162,7 +162,7 @@ public:
 		} else {
 			// The file's information was already in the file list.
 			if (ret == -1 && errno == ENOENT) {
-				result = entry->lastMtime != 0 || entry->lastCtime != 0;
+				result = false;
 				entry->lastMtime = 0;
 				entry->lastCtime = 0;
 			} else if (ret == -1) {
@@ -175,7 +175,7 @@ public:
 			return result;
 		}
 	}
-	
+
 	/**
 	 * Change the maximum size of the internal file list.
 	 *

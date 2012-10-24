@@ -25,6 +25,7 @@
 #include <MultiLibeio.h>
 #include <oxt/thread.hpp>
 #include <oxt/system_calls.hpp>
+#include <cassert>
 
 #ifndef PREAD_AND_PWRITE_ARE_NOT_THREADSAFE
 	#ifdef __APPLE__
@@ -94,6 +95,7 @@ wantPoll() {
 static int
 dispatch(eio_req *req) {
 	auto_ptr<Data> data((Data *) req->data);
+	assert(data->libev != NULL); // Check for strange bug.
 	data->libev->runLaterTS(boost::bind(data->callback, *req));
 	return 0;
 }
@@ -105,7 +107,7 @@ executeWrapper(eio_req *req) {
 }
 
 #if PREAD_AND_PWRITE_ARE_NOT_THREADSAFE
-	boost::mutex preadWriteLock;
+	static boost::mutex preadWriteLock;
 
 	static void
 	lockedPread(int fd, void *buf, size_t length, off_t offset, eio_req *req) {

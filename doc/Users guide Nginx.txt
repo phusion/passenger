@@ -2,45 +2,24 @@
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-Phusion Passenger is an Nginx module, which makes deploying Ruby and Ruby on
-Rails applications on Nginx a breeze. It follows the usual Ruby on Rails
-conventions, such as "Don't-Repeat-Yourself" and ease of setup, while at the
-same time providing enough flexibility.
+Phusion Passenger is an application server which can directly integrate into Nginx. It is designed to be easy to use, fast, stable and reliable and is used by link:http://trends.builtwith.com/Web-Server/Phusion-Passenger[hundreds of thousands of websites] all over the world.
+
+Phusion Passenger is a so-called polyglot application server because it supports applications written in multiple programming languages. At this time, Ruby and Python are supported.
 
 This users guide will teach you:
 
 - How to install Nginx with Phusion Passenger support.
 - How to configure Phusion Passenger.
-- How to deploy a Ruby on Rails application.
-- How to deploy a link:http://rack.rubyforge.org/[Rack]-based Ruby application.
+- How to deploy Ruby and Python applications.
 - How to solve common problems.
 
 This guide assumes that the reader is somewhat familiar with Nginx and with
-using the commandline.
+using the command line.
 
 
 == Support information ==
 
-=== Supported operating systems ===
-
-Phusion Passenger works on any POSIX-compliant operating system. In other
-words: practically any operating system on earth, except Microsoft Windows.
-
-Phusion Passenger is confirmed on a large number of operating systems and Linux
-distributions, including, but not limited to, Ubuntu, Debian, CentOS/Fedora/RHEL,
-Gentoo, Mac OS X, FreeBSD and Solaris. Both 32-bit and 64-bit platforms are supported.
-Please
-link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
-or
-link:http://groups.google.com/group/phusion-passenger[join our discussion forum]
-if it doesn't work on your POSIX-compliant operating system.
-
-=== Where to get support ===
-
-* link:http://code.google.com/p/phusion-passenger/issues/list[Issue tracker] - report
-  bugs here.
-* link:http://groups.google.com/group/phusion-passenger[Discussion forum] - post a
-  message here if you're experiencing problems.
+include::users_guide_snippets/support_information.txt[]
 
 
 == Installing Phusion Passenger ==
@@ -590,6 +569,106 @@ touch /webapps/rackapp/tmp/restart.txt
 include::users_guide_snippets/rackup_specifications.txt[]
 
 
+== Deploying a WSGI (Python) application
+
+Phusion Passenger supports all WSGI-compliant Python web applications. Suppose that you have a WSGI application in '/webapps/wsgiapp'. Then that folder must contain at least three entries:
+
+- 'passenger_wsgi.py', which Phusion Passenger will use as the main entry point for your application. This file must export a WSGI object called `application`.
+- 'public/', a folder containing public static web assets, like images and stylesheets.
+- 'tmp/', used for 'restart.txt' (our application restart mechanism). This will be explained in a following subsection.
+
+So '/webapps/wsgiapp' must, at minimum, look like this:
+----------------------
+/webapps/wsgiapp
+  |
+  +-- config.ru
+  |
+  +-- public/
+  |
+  +-- tmp/
+----------------------
+
+=== Tutorial/example: writing and deploying a Hello World WSGI application ===
+
+First we create a Phusion Passenger-compliant WSGI directory structure:
+
+-------------------------------------------
+$ mkdir /webapps/wsgi_example
+$ mkdir /webapps/wsgi_example/public
+$ mkdir /webapps/wsgi_example/tmp
+-------------------------------------------
+
+Next, we write a minimal "hello world" WSGI application:
+
+-------------------------------------------
+$ cd /webapps/wsgi_example
+$ some_awesome_editor passenger_wsgi.py
+...type in some source code...
+$ cat passenger_wsgi.py
+def application(environ, start_response):
+  start_response(200, [('Content-Type', 'text/plain')])
+  return ["hello world!\n"]
+-------------------------------------------
+
+Finally, we deploy it by adding the following configuration options to
+the Nginx configuration file:
+
+-------------------------------------------
+http {
+    ...
+    server {
+        listen 80;
+        server_name www.wsgiexample.com;
+        root /webapps/wsgi_example/public;
+        passenger_enabled on;
+    }
+    ...
+}
+-------------------------------------------
+
+And we're done! After an Nginx restart, the above WSGI application will be available
+under the URL 'http://www.wsgiexample.com/'.
+
+=== Deploying to a virtual host's root ===
+
+Add a 'server' virtual host entry to your Nginx configuration file. The virtual host's
+root must point to your WSGI application's 'public' folder. You must also set
+'passenger_enabled on' in the 'server' block.
+
+For example:
+-------------------------------------------
+http {
+    ...
+    server {
+        listen 80;
+        server_name www.wsgiapp.com;
+        root /webapps/wsgiapp/public;
+        passenger_enabled on;
+    }
+    ...
+}
+-------------------------------------------
+Then restart Nginx. The application has now been deployed.
+
+=== Redeploying (restarting the WSGI application) ===
+
+Deploying a new version of a WSGI application is as simple as
+re-uploading the application files, and restarting the application.
+
+There are two ways to restart the application:
+
+1. By restarting Nginx.
+2. By creating or modifying the file 'tmp/restart.txt' in the WSGI
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
+
+For example, to restart our example application, we type this in the
+command line:
+-------------------------------------------
+touch /webapps/wsgiapp/tmp/restart.txt
+-------------------------------------------
+
+
 == Configuring Phusion Passenger ==
 
 After installation, Phusion Passenger does not need any further configurations.
@@ -648,7 +727,8 @@ In each place, it may be specified at most once. The default value is 'smart'.
 
 [[PassengerRollingRestarts]]
 === passenger_rolling_restarts <on|off> ===
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 Enables or disables support for rolling restarts. Normally when you
 restart an application (by touching restart.txt), Phusion Passenger would
@@ -687,7 +767,8 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'off'.
 
 === passenger_resist_deployment_errors <on|off> ===
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 Enables or disables resistance against deployment errors.
 
@@ -1046,7 +1127,8 @@ The passenger_min_instances option may occur in the following places:
 In each place, it may be specified at most once. The default value is '1'.
 
 ==== passenger_max_instances <integer> ====
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 The maximum number of application processes that may simultaneously exist
 for an application. This helps to make sure that a single application
@@ -1142,6 +1224,41 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is '300' (5 minutes).
 
+[[PassengerConcurrencyModel]]
+==== passenger_concurrency_model <process|thread> ====
+:version: 4.0.0
+include::users_guide_snippets/enterprise_only.txt[]
+
+Specifies the I/O concurrency model that should be used for application processes. Phusion Passenger supports two concurrency models:
+
+ * 'process' - single-threaded, multi-processed I/O concurrency. Each application process only has a single thread and can only handle 1 request at a time. This is the concurrency model that Ruby applications traditionally used. It has excellent compatiblity (can work with applications that are not designed to be thread-safe) but is unsuitable workloads in which the application has to wait for a lot of external I/O (e.g. HTTP API calls), and uses more memory because each process has a large memory overhead.
+ * 'thread' - multi-threaded, multi-processed I/O concurrency. Each application process has multiple threads (customizable via <<PassengerThreadCount,passenger_thread_count>>). This model provides much better I/O concurrency and uses less memory because threads share memory with each other within the same process. However, using this model may cause compatibility problems if the application is not designed to be thread-safe.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'process'.
+
+[[PassengerThreadCount]]
+==== passenger_thread_count <number> ====
+:version: 4.0.0
+include::users_guide_snippets/enterprise_only.txt[]
+
+Specifies the number of threads that Phusion Passenger should spawn per application process. This option only has effect if <<PassengerConcurrencyModel,passenger_concurrency_model>> is 'thread'.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '1'.
+
 [[PassengerMaxRequests]]
 ==== passenger_max_requests <integer> ====
 The maximum number of requests an application process will process. After
@@ -1173,7 +1290,8 @@ measure to avoid memory leaks.
 
 [[PassengerMaxRequestTime]]
 ==== passenger_max_request_time <seconds> ====
-**Available in Phusion Passenger Enterprise since version 3.0.0.**
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
 
 The maximum amount of time, in seconds, that an application process may take
 to process a request. If the request takes longer than this amount of time,
@@ -1225,6 +1343,9 @@ measure to avoid freezing applications.
 
 [[PassengerMemoryLimit]]
 ==== passenger_memory_limit <integer> ====
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
+
 The maximum amount of memory that an application process may use, in megabytes.
 Once an application process has surpassed its memory limit, it will process
 all the requests currently present in its queue and then shut down.
@@ -1496,6 +1617,31 @@ error messages should be written to instead.
 
 This option may only occur once, in the 'http' configuration block.
 
+==== passenger_debugger <on|off> ====
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
+
+Turns support for application debugging on or off. In case of Ruby applications,
+turning this option on will cause them to load the `ruby-debug` gem (when on Ruby 1.8)
+or the `debugger` gem (when on Ruby 1.9). If you're using Bundler, you should add
+this to your Gemfile:
+
+-------------------------------------------
+gem 'ruby-debug', :platforms => :ruby_18
+gem 'debugger', :platforms => :ruby_19
+-------------------------------------------
+
+Once debugging is turned on, you can use the command `passenger-irb --debug <PID>` to attach an rdebug console to the application process with the given PID. Attaching will succeed once the application process executes a `debugger` command.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
 
 === Ruby on Rails-specific options ===
 [[RailsEnv]]
@@ -1511,7 +1657,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'production'.
 
-=== Rack-specific options ===
+=== Rack and Rails >= 3 specific options ===
 [[RackEnv]]
 ==== rack_env <string> ====
 This option allows one to specify the default `RACK_ENV` value.

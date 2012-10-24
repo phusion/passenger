@@ -106,6 +106,7 @@
 #include <Utils/HttpHeaderBufferer.h>
 #include <Utils/Template.h>
 #include <Utils/Timer.h>
+#include <Utils/Dechunker.h>
 #include <agents/HelperAgent/AgentOptions.h>
 #include <agents/HelperAgent/FileBackedPipe.h>
 #include <agents/HelperAgent/ScgiRequestParser.h>
@@ -148,8 +149,9 @@ private:
 	static void onClientOutputPipeCommit(const FileBackedPipePtr &source);
 	
 	void onClientOutputWritable(ev::io &io, int revents);
-	
+
 	static size_t onAppInputData(const EventedBufferedInputPtr &source, const StaticString &data);
+	static void onAppInputChunk(const char *data, size_t size, void *userData);
 	static void onAppInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode);
 	
 	void onAppOutputWritable(ev::io &io, int revents);
@@ -175,6 +177,7 @@ private:
 		sessionCheckedOut = false;
 		sessionCheckoutTry = 0;
 		responseHeaderSeen = false;
+		chunkedResponse = false;
 		appRoot.clear();
 	}
 
@@ -272,7 +275,9 @@ public:
 	bool checkoutSessionAfterCommit;
 
 	bool responseHeaderSeen;
+	bool chunkedResponse;
 	HttpHeaderBufferer responseHeaderBufferer;
+	Dechunker responseDechunker;
 
 
 	Client() {
@@ -309,6 +314,10 @@ public:
 
 
 		timeoutTimer.set<Client, &Client::onTimeout>(this);
+
+
+		responseDechunker.onData = onAppInputChunk;
+		responseDechunker.userData = this;
 		
 
 		bufferedConnectPassword.data = NULL;
@@ -369,6 +378,7 @@ public:
 		scgiParser.reset();
 		session.reset();
 		responseHeaderBufferer.reset();
+		responseDechunker.reset();
 		freeScopeLogs();
 	}
 
@@ -444,6 +454,10 @@ public:
 		}
 	}
 
+	bool shouldHalfCloseWrite() const {
+		return session->getProtocol() == "session";
+	}
+
 	bool useUnionStation() const {
 		return options.logger != NULL;
 	}
@@ -501,12 +515,14 @@ public:
 			<< indent << "requestBodyIsBuffered       = " << boolStr(requestBodyIsBuffered) << "\n"
 			<< indent << "contentLength               = " << contentLength << "\n"
 			<< indent << "clientBodyAlreadyRead       = " << clientBodyAlreadyRead << "\n"
+			<< indent << "clientInput                 = " << clientInput.get() <<  " " << clientInput->inspect() << "\n"
 			<< indent << "clientInput started         = " << boolStr(clientInput->isStarted()) << "\n"
 			<< indent << "clientBodyBuffer started    = " << boolStr(clientBodyBuffer->isStarted()) << "\n"
 			<< indent << "clientBodyBuffer reachedEnd = " << boolStr(clientBodyBuffer->reachedEnd()) << "\n"
 			<< indent << "clientOutputPipe started    = " << boolStr(clientOutputPipe->isStarted()) << "\n"
 			<< indent << "clientOutputPipe reachedEnd = " << boolStr(clientOutputPipe->reachedEnd()) << "\n"
 			<< indent << "clientOutputWatcher active  = " << boolStr(clientOutputWatcher.is_active()) << "\n"
+			<< indent << "appInput                    = " << appInput.get() << " " << appInput->inspect() << "\n"
 			<< indent << "appInput started            = " << boolStr(appInput->isStarted()) << "\n"
 			<< indent << "appInput reachedEnd         = " << boolStr(appInput->endReached()) << "\n"
 			<< indent << "responseHeaderSeen          = " << boolStr(responseHeaderSeen) << "\n"
@@ -532,6 +548,7 @@ private:
 	const ResourceLocator resourceLocator;
 	LoggerFactoryPtr loggerFactory;
 	ev::io requestSocketWatcher;
+	ev::timer resumeSocketWatcherTimer;
 	HashMap<int, ClientPtr> clients;
 	Timer inactivityTimer;
 	bool accept4Available;
@@ -563,7 +580,7 @@ private:
 		stringstream message;
 		message << "client socket write error: ";
 		message << strerror(e);
-		message << " (errno " << e << ")";
+		message << " (errno=" << e << ")";
 		disconnectWithError(client, message.str());
 	}
 
@@ -571,7 +588,7 @@ private:
 		stringstream message;
 		message << "app socket write error: ";
 		message << strerror(e);
-		message << " (errno " << e << ")";
+		message << " (errno=" << e << ")";
 		disconnectWithError(client, message.str());
 	}
 
@@ -666,6 +683,7 @@ private:
 		str << "Status: 500 Internal Server Error\r\n";
 		str << "Content-Length: " << data.size() << "\r\n";
 		str << "Content-Type: text/html; charset=UTF-8\r\n";
+		str << "Cache-Control: no-cache, no-store, must-revalidate\r\n";
 		str << "\r\n";
 
 		const string &header = str.str();
@@ -758,38 +776,38 @@ private:
 		return Header();
 	}
 
-	/*
-	 * Given a full header and possibly some rest data, possibly modify the header
-	 * and send both to the clientOutputPipe.
-	 */
-	void processResponseHeader(const ClientPtr &client, const string &currentPacket,
-		const StaticString &headerData, const StaticString &rest)
+	static Header lookupHeader(const StaticString &headerData, const StaticString &name,
+		const StaticString &name2)
 	{
-		/* Note: we don't strip out the Status header because some broken HTTP clients depend on it.
-		 * http://groups.google.com/group/phusion-passenger/browse_thread/thread/03e0381684fbae09
-		 */
-		
-		/* 'newHeader' contains the modified header. If empty, it means
-		 * the header has not been modified, in which case 'headerData' should be used.
-		 * 'prefix' contains data that we want to send before the header
-		 * (before both 'headerData' and 'newHeader'.
-		 */
-		string prefix, newHeaderData;
-
-		Header status = lookupHeader(headerData, "Status");
-		if (status.empty()) {
-			disconnectWithError(client, "application sent malformed response: it didn't send a Status header.");
-			return;
+		Header header = lookupHeader(headerData, name);
+		if (header.empty()) {
+			header = lookupHeader(headerData, name2);
 		}
+		return header;
+	}
 
+	bool addStatusHeaderFromStatusLine(const ClientPtr &client, string &headerData) {
+		string::size_type begin = headerData.find(' ');
+		string::size_type end = headerData.find("\r\n");
+		if (begin != string::npos && end != string::npos) {
+			StaticString status(headerData.data() + begin, end - begin);
+			headerData.append("Status: ");
+			headerData.append(status);
+			headerData.append("\r\n");
+			return true;
+		} else {
+			disconnectWithError(client, "application sent malformed response: the HTTP status line is invalid.");
+			return false;
+		}
+	}
+
+	static bool addReasonPhrase(string &headerData, const Header &status) {
 		if (status.value.find(' ') == string::npos) {
-			// Status header contains no reason phrase; add it.
-
 			int statusCode = stringToInt(status.value);
 			const char *statusCodeAndReasonPhrase = getStatusCodeAndReasonPhrase(statusCode);
 			char newStatus[100];
 			char *pos = newStatus;
-			const char *end = newStatus + 100;
+			const char *end = newStatus + sizeof(newStatus);
 
 			pos = appendData(pos, end, "Status: ");
 			if (statusCodeAndReasonPhrase == NULL) {
@@ -800,60 +818,104 @@ private:
 				pos = appendData(pos, end, "\r\n");
 			}
 
-			newHeaderData = headerData;
-			newHeaderData.replace(status.begin() - headerData.data(), status.size(),
+			headerData.replace(status.begin() - headerData.data(), status.size(),
 				newStatus, pos - newStatus);
-			status = Header();
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	bool removeStatusLine(const ClientPtr &client, string &headerData) {
+		string::size_type end = headerData.find("\r\n");
+		if (end != string::npos) {
+			headerData.erase(0, end + 2);
+			return true;
+		} else {
+			disconnectWithError(client, "application sent malformed response: the HTTP status line is invalid.");
+			return false;
+		}
+	}
+
+	static void addStatusLineFromStatusHeader(string &headerData, const Header &status) {
+		char statusLine[100];
+		char *pos = statusLine;
+		const char *end = statusLine + sizeof(statusLine);
+
+		pos = appendData(pos, end, "HTTP/1.1 ");
+		pos = appendData(pos, end, status.value);
+		pos = appendData(pos, end, "\r\n");
+
+		headerData.insert(0, statusLine, pos - statusLine);
+	}
+
+	static void removeHeader(string &headerData, const Header &header) {
+		headerData.erase(header.begin() - headerData.data(), header.size());
+	}
+
+	/*
+	 * Given a full header, possibly modify the header and send it to the clientOutputPipe.
+	 */
+	bool processResponseHeader(const ClientPtr &client,
+		const StaticString &origHeaderData)
+	{
+		string headerData;
+		headerData.reserve(origHeaderData.size() + 100);
+		// Strip trailing CRLF.
+		headerData.append(origHeaderData.data(), origHeaderData.size() - 2);
+		
+		if (startsWith(headerData, "HTTP/1.")) {
+			Header status = lookupHeader(headerData, "Status", "status");
+			if (status.empty()) {
+				// Add status header if necessary.
+				if (!addStatusHeaderFromStatusLine(client, headerData)) {
+					return false;
+				}
+			} else {
+				// Add reason phrase to existing status header if necessary.
+				addReasonPhrase(headerData, status);
+			}
+			// Remove status line if necesary.
+			if (!getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
+				if (!removeStatusLine(client, headerData)) {
+					return false;
+				}
+			}
+		} else {
+			Header status = lookupHeader(headerData, "Status", "status");
+			if (!status.empty()) {
+				// Add reason phrase to status header if necessary.
+				if (addReasonPhrase(headerData, status)) {
+					status = lookupHeader(headerData, "Status", "status");
+				}
+				// Add status line if necessary.
+				if (getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
+					addStatusLineFromStatusHeader(headerData, status);
+				}
+			} else {
+				disconnectWithError(client, "application sent malformed response: it didn't send an HTTP status line or a Status header.");
+				return false;
+			}
 		}
 
-		if (getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
-			// Prepend HTTP status line.
-
-			if (status.empty()) {
-				assert(!newHeaderData.empty());
-				status = lookupHeader(newHeaderData, "Status");
-			}
-			prefix.reserve(prefix.size() + status.value.size() + sizeof("HTTP/1.1\r\n") - 1);
-			prefix.append("HTTP/1.1 ");
-			prefix.append(status.value);
-			prefix.append("\r\n");
+		// Process chunked transfer encoding.
+		Header transferEncoding = lookupHeader(headerData, "Transfer-Encoding", "transfer-encoding");
+		if (!transferEncoding.empty() && transferEncoding.value == "chunked") {
+			P_TRACE(3, "Response with chunked transfer encoding detected.");
+			client->chunkedResponse = true;
+			removeHeader(headerData, transferEncoding);
 		}
 
 		// Add X-Powered-By.
 		if (getBoolOption(client, "PASSENGER_SHOW_VERSION_IN_HEADER", true)) {
-			prefix.append("X-Powered-By: Phusion Passenger " PASSENGER_VERSION "\r\n");
+			headerData.append("X-Powered-By: Phusion Passenger " PASSENGER_VERSION "\r\n");
 		} else {
-			prefix.append("X-Powered-By: Phusion Passenger\r\n");
+			headerData.append("X-Powered-By: Phusion Passenger\r\n");
 		}
 
-
-		if (prefix.empty() && newHeaderData.empty()) {
-			// Header has not been modified.
-			if (headerData.data() == currentPacket.data()) {
-				/* The header occurs in the first packet that the
-				 * application sent, so send the entire packet.
-				 */
-				writeToClientOutputPipe(client, currentPacket);
-			} else {
-				/* It didn't occur in the first packet that the application
-				 * sent, so send out the full header and whatever rest data
-				 * that we've already received.
-				 */
-				writeToClientOutputPipe(client, headerData);
-				writeToClientOutputPipe(client, rest);
-			}
-		} else {
-			// Header has been modified.
-			if (newHeaderData.empty()) {
-				prefix.reserve(prefix.size() + headerData.size() + rest.size());
-				prefix.append(headerData);
-			} else {
-				prefix.reserve(prefix.size() + newHeaderData.size() + rest.size());
-				prefix.append(newHeaderData);
-			}
-			prefix.append(rest);
-			writeToClientOutputPipe(client, prefix);
-		}
+		headerData.append("\r\n");
+		writeToClientOutputPipe(client, headerData);
+		return true;
 	}
 
 	void writeToClientOutputPipe(const ClientPtr &client, const StaticString &data) {
@@ -887,14 +949,20 @@ private:
 						// Now that we have a full header, do something with it.
 						client->responseHeaderSeen = true;
 						StaticString header = client->responseHeaderBufferer.getData();
-						StaticString rest = data.substr(consumed);
-						processResponseHeader(client, data, header, rest);
+						if (processResponseHeader(client, header)) {
+							return consumed;
+						} else {
+							assert(!client->connected());
+						}
 					}
 				}
+			// The header has already been processed so forward it
+			// directly to clientOutputPipe, possibly through a
+			// dechunker first.
+			} else if (client->chunkedResponse) {
+				client->responseDechunker.feed(data.data(), data.size());
 			} else {
-				// The header has already been processed so forward it
-				// directly to clientOutputPipe.
-				writeToClientOutputPipe(client, data);
+				onAppInputChunk(client, data);
 			}
 			return data.size();
 
@@ -902,6 +970,10 @@ private:
 			onAppInputEof(client);
 			return 0;
 		}
+	}
+
+	void onAppInputChunk(const ClientPtr &client, const StaticString &data) {
+		writeToClientOutputPipe(client, data);
 	}
 
 	void onAppInputEof(const ClientPtr &client) {
@@ -1003,7 +1075,7 @@ private:
 		stringstream message;
 		message << "client output pipe error: ";
 		message << strerror(errorCode);
-		message << " (errno " << errorCode << ")";
+		message << " (errno=" << errorCode << ")";
 		disconnectWithError(client, message.str());
 	}
 
@@ -1057,6 +1129,12 @@ private:
 	}
 
 
+	void onResumeSocketWatcher(ev::timer &timer, int revents) {
+		P_INFO("Resuming listening on server socket.");
+		resumeSocketWatcherTimer.stop();
+		requestSocketWatcher.start();
+	}
+
 	void onAcceptable(ev::io &io, int revents) {
 		bool endReached = false;
 		unsigned int count = 0;
@@ -1064,11 +1142,16 @@ private:
 		while (!endReached && count < 10) {
 			FileDescriptor fd = acceptNonBlockingSocket(requestSocket);
 			if (fd == -1) {
-				if (errno == EAGAIN) {
+				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					endReached = true;
 				} else {
 					int e = errno;
-					throw SystemException("Cannot accept client", e);
+					P_ERROR("Cannot accept client: " << strerror(e) <<
+						" (errno=" << e << "). " <<
+						"Pausing listening on server socket for 3 seconds.");
+					requestSocketWatcher.stop();
+					resumeSocketWatcherTimer.start();
+					endReached = true;
 				}
 			} else {
 				ClientPtr client = make_shared<Client>();
@@ -1165,7 +1248,7 @@ private:
 			stringstream message;
 			message << "client socket read error: ";
 			message << strerror(errnoCode);
-			message << " (errno " << errnoCode << ")";
+			message << " (errno=" << errnoCode << ")";
 			disconnectWithError(client, message.str());
 		}
 	}
@@ -1195,7 +1278,7 @@ private:
 		stringstream message;
 		message << "client body buffer error: ";
 		message << strerror(errorCode);
-		message << " (errno " << errorCode << ")";
+		message << " (errno=" << errorCode << ")";
 		disconnectWithError(client, message.str());
 	}
 
@@ -1704,7 +1787,10 @@ private:
 					client->backgroundOperations++;
 				}
 			} else {
-				disconnectWithError(client, "could not initiate a session");
+				string message = "could not initiate a session (";
+				message.append(e2.what());
+				message.append(")");
+				disconnectWithError(client, message);
 			}
 			return;
 		}
@@ -1748,35 +1834,102 @@ private:
 
 		RH_TRACE(client, 2, "Sending headers to application");
 
-		char sizeField[sizeof(uint32_t)];
-		SmallVector<StaticString, 10> data;
+		if (client->session->getProtocol() == "session") {
+			char sizeField[sizeof(uint32_t)];
+			SmallVector<StaticString, 10> data;
 
-		data.push_back(StaticString(sizeField, sizeof(uint32_t)));
-		data.push_back(client->scgiParser.getHeaderData());
+			data.push_back(StaticString(sizeField, sizeof(uint32_t)));
+			data.push_back(client->scgiParser.getHeaderData());
 
-		data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
-		data.push_back(makeStaticStringWithNull(client->session->getConnectPassword()));
+			data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
+			data.push_back(makeStaticStringWithNull(client->session->getConnectPassword()));
 
-		if (client->options.analytics) {
-			data.push_back(makeStaticStringWithNull("PASSENGER_TXN_ID"));
-			data.push_back(makeStaticStringWithNull(client->options.logger->getTxnId()));
-		}
+			if (client->options.analytics) {
+				data.push_back(makeStaticStringWithNull("PASSENGER_TXN_ID"));
+				data.push_back(makeStaticStringWithNull(client->options.logger->getTxnId()));
+			}
 
-		uint32_t dataSize = 0;
-		for (unsigned int i = 1; i < data.size(); i++) {
-			dataSize += (uint32_t) data[i].size();
-		}
-		Uint32Message::generate(sizeField, dataSize);
+			uint32_t dataSize = 0;
+			for (unsigned int i = 1; i < data.size(); i++) {
+				dataSize += (uint32_t) data[i].size();
+			}
+			Uint32Message::generate(sizeField, dataSize);
 
-		ssize_t ret = gatheredWrite(client->session->fd(), &data[0],
-			data.size(), client->appOutputBuffer);
-		if (ret == -1 && errno != EAGAIN) {
-			disconnectWithAppSocketWriteError(client, errno);
-		} else if (!client->appOutputBuffer.empty()) {
-			client->state = Client::SENDING_HEADER_TO_APP;
-			client->appOutputWatcher.start();
+			ssize_t ret = gatheredWrite(client->session->fd(), &data[0],
+				data.size(), client->appOutputBuffer);
+			if (ret == -1 && errno != EAGAIN) {
+				disconnectWithAppSocketWriteError(client, errno);
+			} else if (!client->appOutputBuffer.empty()) {
+				client->state = Client::SENDING_HEADER_TO_APP;
+				client->appOutputWatcher.start();
+			} else {
+				sendBodyToApp(client);
+			}
 		} else {
-			sendBodyToApp(client);
+			assert(client->session->getProtocol() == "http_session");
+			const ScgiRequestParser &parser = client->scgiParser;
+			ScgiRequestParser::const_iterator it, end = parser.end();
+			string data;
+
+			data.reserve(parser.getHeaderData().size() + 128);
+			data.append(parser.getHeader("REQUEST_METHOD"));
+			data.append(" ");
+			data.append(parser.getHeader("REQUEST_URI"));
+			data.append(" HTTP/1.1\r\n");
+			data.append("Connection: close\r\n");
+
+			for (it = parser.begin(); it != end; it++) {
+				if (startsWith(it->first, "HTTP_")) {
+					string subheader = it->first.substr(sizeof("HTTP_") - 1);
+					string::size_type i;
+					for (i = 0; i < subheader.size(); i++) {
+						if (subheader[i] == '_') {
+							subheader[i] = '-';
+						} else if (i > 0 && subheader[i - 1] != '-') {
+							subheader[i] = tolower(subheader[i]);
+						}
+					}
+
+					data.append(subheader);
+					data.append(": ");
+					data.append(it->second);
+					data.append("\r\n");
+				}
+			}
+
+			StaticString header = parser.getHeader("CONTENT_LENGTH");
+			if (!header.empty()) {
+				data.append("Content-Length: ");
+				data.append(header);
+				data.append("\r\n");
+			}
+
+			header = parser.getHeader("CONTENT_TYPE");
+			if (!header.empty()) {
+				data.append("Content-Type: ");
+				data.append(header);
+				data.append("\r\n");
+			}
+
+			if (client->options.analytics) {
+				data.append("Passenger-Txn-Id: ");
+				data.append(client->options.logger->getTxnId());
+				data.append("\r\n");
+			}
+
+			data.append("\r\n");
+
+			StaticString datas[] = { data };
+			ssize_t ret = gatheredWrite(client->session->fd(), datas,
+				1, client->appOutputBuffer);
+			if (ret == -1 && errno != EAGAIN) {
+				disconnectWithAppSocketWriteError(client, errno);
+			} else if (!client->appOutputBuffer.empty()) {
+				client->state = Client::SENDING_HEADER_TO_APP;
+				client->appOutputWatcher.start();
+			} else {
+				sendBodyToApp(client);
+			}
 		}
 	}
 
@@ -1871,7 +2024,9 @@ private:
 
 		RH_TRACE(client, 2, "End of (unbuffered) client body reached; done sending data to application");
 		client->clientInput->stop();
-		syscalls::shutdown(client->session->fd(), SHUT_WR);
+		if (client->shouldHalfCloseWrite()) {
+			syscalls::shutdown(client->session->fd(), SHUT_WR);
+		}
 	}
 
 	void state_forwardingBodyToApp_onAppOutputWritable(const ClientPtr &client) {
@@ -1922,7 +2077,9 @@ private:
 		assert(client->requestBodyIsBuffered);
 
 		RH_TRACE(client, 2, "End of (buffered) client body reached; done sending data to application");
-		syscalls::shutdown(client->session->fd(), SHUT_WR);
+		if (client->shouldHalfCloseWrite()) {
+			syscalls::shutdown(client->session->fd(), SHUT_WR);
+		}
 	}
 
 
@@ -1948,6 +2105,10 @@ public:
 		requestSocketWatcher.set(_libev->getLoop());
 		requestSocketWatcher.set<RequestHandler, &RequestHandler::onAcceptable>(this);
 		requestSocketWatcher.start();
+
+		resumeSocketWatcherTimer.set<RequestHandler, &RequestHandler::onResumeSocketWatcher>(this);
+		resumeSocketWatcherTimer.set(_libev->getLoop());
+		resumeSocketWatcherTimer.set(3, 3);
 	}
 
 	template<typename Stream>

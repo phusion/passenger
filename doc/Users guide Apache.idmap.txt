@@ -18,35 +18,62 @@
 
 1.2. Where to get support	=>	where-to-get-support-f3pbrb
 
-10. Appendix A: About this document	=>	appendix-a-about-this-document-103toqs
+# fuzzy
+10. Under the hood	=>	under-the-hood-21ue5t
 
-11. Appendix B: Terminology	=>	appendix-b-terminology-h4eaf4
+# fuzzy
+10.1. Static assets serving	=>	static-assets-serving-wo2d9v
 
-11.1. Application root	=>	application-root-otx6xf
+# fuzzy
+10.2. Page caching support	=>	page-caching-support-kwq9b9
 
-11.2. Idle process	=>	idle-process-potb6g
+# fuzzy
+10.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-179mp8m
 
-11.3. Inactive process	=>	inactive-process-16gjv2e
+# fuzzy
+11. Appendix A: About this document	=>	appendix-a-about-this-document-103toqs
 
-12. Appendix C: Spawning methods explained	=>	appendix-c-spawning-methods-explained-owghi9
+# fuzzy
+12. Appendix B: Terminology	=>	appendix-b-terminology-h4eaf4
 
-12.1. The most straightforward and traditional way: direct spawning	=>	the-most-straightforward-and-traditional-way-conservative-spawning-1ybbli2
+# fuzzy
+12.1. Application root	=>	application-root-otx6xf
 
-12.2. The smart spawning method	=>	the-smart-spawning-method-1cvu9dd
+# fuzzy
+12.2. Idle process	=>	idle-process-potb6g
 
-12.2.1. How it works	=>	how-it-works-672zja
+# fuzzy
+12.3. Inactive process	=>	inactive-process-16gjv2e
 
-12.2.2. Summary of benefits	=>	summary-of-benefits-1yrihfb
+# fuzzy
+13. Appendix C: Spawning methods explained	=>	appendix-c-spawning-methods-explained-owghi9
 
-12.3. Smart spawning gotcha #1: unintentional file descriptor sharing	=>	smart-spawning-gotcha-1-unintentional-file-descriptor-sharing-z1y55l
+# fuzzy
+13.1. The most straightforward and traditional way: direct spawning	=>	the-most-straightforward-and-traditional-way-conservative-spawning-1ybbli2
 
-12.3.1. Example 1: Memcached connection sharing (harmful)	=>	example-1-memcached-connection-sharing-harmful--c71wqw
+# fuzzy
+13.2. The smart spawning method	=>	the-smart-spawning-method-1cvu9dd
 
-12.3.2. Example 2: Log file sharing (not harmful)	=>	example-2-log-file-sharing-not-harmful--1p2yuol
+# fuzzy
+13.2.1. How it works	=>	how-it-works-672zja
 
-12.4. Smart spawning gotcha #2: the need to revive threads	=>	smart-spawning-gotcha-2-the-need-to-revive-threads-1k6cj7d
+# fuzzy
+13.2.2. Summary of benefits	=>	summary-of-benefits-1yrihfb
 
-12.5. Smart spawning gotcha #3: code load order	=>	smart-spawning-gotcha-3-code-load-order-nkotiy
+# fuzzy
+13.3. Smart spawning gotcha #1: unintentional file descriptor sharing	=>	smart-spawning-gotcha-1-unintentional-file-descriptor-sharing-z1y55l
+
+# fuzzy
+13.3.1. Example 1: Memcached connection sharing (harmful)	=>	example-1-memcached-connection-sharing-harmful--c71wqw
+
+# fuzzy
+13.3.2. Example 2: Log file sharing (not harmful)	=>	example-2-log-file-sharing-not-harmful--1p2yuol
+
+# fuzzy
+13.4. Smart spawning gotcha #2: the need to revive threads	=>	smart-spawning-gotcha-2-the-need-to-revive-threads-1k6cj7d
+
+# fuzzy
+13.5. Smart spawning gotcha #3: code load order	=>	smart-spawning-gotcha-3-code-load-order-nkotiy
 
 2. Installing, upgrading and uninstalling Phusion Passenger	=>	installing-upgrading-and-uninstalling-phusion-passenger-laryvs
 
@@ -66,17 +93,13 @@
 
 2.2. Operating system-specific instructions and information	=>	operating-system-specific-instructions-and-information-1dfz365
 
-2.2.1. MacOS X	=>	macos-x-1lcpbz2
+# fuzzy
+2.2.1. Ubuntu Linux	=>	ubuntu-linux-1xwc66
 
-2.2.2. Ubuntu Linux	=>	ubuntu-linux-1xwc66
-
-2.2.3. OpenSolaris	=>	opensolaris-1e0dynj
+# fuzzy
+2.2.2. OpenSolaris	=>	opensolaris-1e0dynj
 
 2.3. Upgrading or downgrading Phusion Passenger	=>	upgrading-or-downgrading-phusion-passenger-1dl8km6
-
-2.3.1. Via a gem or a source tarball	=>	via-a-gem-or-a-source-tarball-1vgkwhs
-
-2.3.2. Via a native Linux package	=>	via-a-native-linux-package-8dvooa
 
 2.4. Unloading (disabling) Phusion Passenger from Apache without uninstalling it	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
 
@@ -118,215 +141,298 @@
 
 4.5.6. Sinatra	=>	sinatra-1hubto4
 
-5. Configuring Phusion Passenger	=>	configuring-phusion-passenger-11oztoe
+5. Deploying a WSGI (Python) application	=>	deploying-a-wsgi-python-application-7aygdl
 
-5.1. PassengerRoot <directory>	=>	passengerroot-directory--sere8l
+5.1. Tutorial/example: writing and deploying a Hello World WSGI application	=>	tutorial-example-writing-and-deploying-a-hello-world-wsgi-application-9ziqy8
 
-5.10. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+5.2. Deploying to a virtual host’s root	=>	deploying-to-a-virtual-host-s-root-u9bfax
 
-5.11. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
-
-5.12. Security options	=>	security-options-1pb75ho
-
-5.12.1. PassengerUserSwitching <on|off>	=>	passengeruserswitching
-
-5.12.2. PassengerUser <username>	=>	passengeruser
-
-5.12.3. PassengerGroup <group name>	=>	passengergroup
-
-5.12.4. PassengerDefaultUser <username>	=>	passengerdefaultuser
-
-5.12.5. PassengerDefaultGroup <group name>	=>	passengerdefaultgroup
-
-5.12.6. PassengerFriendlyErrorPages <on|off>	=>	passengerfriendlyerrorpages
-
-5.13. Resource control and optimization options	=>	resource-control-and-optimization-options-zu2f7u
-
-5.13.1. PassengerMaxPoolSize <integer>	=>	passengermaxpoolsize-integer--am64q8
-
-5.13.10. PassengerStatThrottleRate <integer>	=>	passengerstatthrottlerate
-
-5.13.11. PassengerPreStart <url>	=>	passengerprestart-url--1dvgku9
-
-5.13.12. PassengerHighPerformance <on|off>	=>	passengerhighperformance-on-off--zgc547
-
-5.13.2. PassengerMinInstances <integer>	=>	passengermininstances-integer--wegq6b
-
-5.13.3. PassengerMaxInstances <integer>	=>	passengermaxinstances
-
-5.13.4. PassengerMaxInstancesPerApp <integer>	=>	passengermaxinstancesperapp
-
-5.13.5. PassengerPoolIdleTime <integer>	=>	passengerpoolidletime-integer--a3gunq
-
-5.13.6. PassengerMaxPreloaderIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
-
-5.13.7. PassengerMaxRequests <integer>	=>	passengermaxrequests
-
-5.13.8. PassengerMaxRequestTime <seconds>	=>	passengermaxrequesttime-seconds--aj9w45
-
-5.13.9. PassengerMemoryLimit <integer>	=>	passengermemorylimit
-
-5.14. Compatibility options	=>	compatibility-options-8jve5a
+5.3. Redeploying (restarting the WSGI application)	=>	redeploying-restarting-the-wsgi-application--na7pmf
 
 # fuzzy
-5.14.1. PassengerResolveSymlinksInDocumentRoot <on|off>	=>	passengerresolvesymlinksindocumentroot-on-off--1r0qcp8
+6. Configuring Phusion Passenger	=>	configuring-phusion-passenger-11oztoe
 
 # fuzzy
-5.14.2. PassengerAllowEncodedSlashes <on|off>	=>	passengerallowencodedslashes-on-off--1y3s1ww
+6.1. PassengerRoot <directory>	=>	passengerroot-directory--sere8l
 
 # fuzzy
-5.15. Logging and debugging options	=>	logging-and-debugging-options-el2cuc
+6.10. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
 
 # fuzzy
-5.15.1. PassengerLogLevel <integer>	=>	passengerloglevel-integer--1v67p8l
+6.11. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
 
 # fuzzy
-5.15.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1tfy4z9
-
-5.16. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
+6.12. Security options	=>	security-options-1pb75ho
 
 # fuzzy
-5.16.1. RailsAutoDetect <on|off>	=>	railsautodetect-on-off--tpigsd
+6.12.1. PassengerUserSwitching <on|off>	=>	passengeruserswitching
 
 # fuzzy
-5.16.2. RailsBaseURI <uri>	=>	railsbaseuri-uri--1txrw3k
+6.12.2. PassengerUser <username>	=>	passengeruser
 
 # fuzzy
-5.16.3. RailsEnv <string>	=>	railsenv-string--1b0xxvu
+6.12.3. PassengerGroup <group name>	=>	passengergroup
 
 # fuzzy
-5.17. Rack-specific options	=>	rack-specific-options-wk9qzt
+6.12.4. PassengerDefaultUser <username>	=>	passengerdefaultuser
 
 # fuzzy
-5.17.1. RackAutoDetect <on|off>	=>	rackautodetect-on-off--vl1lxy
+6.12.5. PassengerDefaultGroup <group name>	=>	passengerdefaultgroup
 
 # fuzzy
-5.17.2. RackBaseURI <uri>	=>	rackbaseuri-uri--1to24pj
+6.12.6. PassengerFriendlyErrorPages <on|off>	=>	passengerfriendlyerrorpages
 
 # fuzzy
-5.17.3. RackEnv <string>	=>	rackenv-string--vve9py
+6.13. Resource control and optimization options	=>	resource-control-and-optimization-options-zu2f7u
 
 # fuzzy
-5.18. Deprecated options	=>	deprecated-options-pm9m57
+6.13.1. PassengerMaxPoolSize <integer>	=>	passengermaxpoolsize-integer--am64q8
 
 # fuzzy
-5.18.1. RailsRuby	=>	railsruby-ht09ei
+6.13.10. PassengerStatThrottleRate <integer>	=>	passengerstatthrottlerate
 
 # fuzzy
-5.18.2. RailsUserSwitching	=>	railsuserswitching-1npx8y4
+6.13.11. PassengerPreStart <url>	=>	passengerprestart-url--1dvgku9
 
 # fuzzy
-5.18.3. RailsDefaultUser	=>	railsdefaultuser-19j7n3m
+6.13.12. PassengerHighPerformance <on|off>	=>	passengerhighperformance-on-off--zgc547
 
 # fuzzy
-5.18.4. RailsAllowModRewrite	=>	railsallowmodrewrite-1vkziro
+6.13.2. PassengerMinInstances <integer>	=>	passengermininstances-integer--wegq6b
 
 # fuzzy
-5.18.5. RailsSpawnMethod	=>	railsspawnmethod-1aljgpa
-
-5.2. PassengerRuby <filename>	=>	passengerruby-filename--1r3fv73
-
-5.3. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
-
-5.4. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
+6.13.3. PassengerMaxInstances <integer>	=>	passengermaxinstances
 
 # fuzzy
-5.5. PassengerEnabled <on|off>	=>	passengerenabled-on-off--74rzth
+6.13.4. PassengerMaxInstancesPerApp <integer>	=>	passengermaxinstancesperapp
 
 # fuzzy
-5.6. PassengerTempDir <directory>	=>	passengertempdir-directory--68h2ng
+6.13.5. PassengerPoolIdleTime <integer>	=>	passengerpoolidletime-integer--a3gunq
 
 # fuzzy
-5.7. PassengerUploadBufferDir <directory>	=>	passengeruploadbufferdir-directory--kdr8at
+6.13.6. PassengerMaxPreloaderIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
 
 # fuzzy
-5.8. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
+6.13.7. PassengerMaxRequests <integer>	=>	passengermaxrequests
 
 # fuzzy
-5.9. PassengerBufferResponse <on|off>	=>	passengerbufferresponse-on-off--1y7ilka
+6.13.8. PassengerMaxRequestTime <seconds>	=>	passengermaxrequesttime-seconds--aj9w45
 
-6. Troubleshooting	=>	troubleshooting-2ihihi
+# fuzzy
+6.13.9. PassengerMemoryLimit <integer>	=>	passengermemorylimit
 
-6.1. Operating system-specific problems	=>	operating-system-specific-problems-327gbk
+# fuzzy
+6.14. Compatibility options	=>	compatibility-options-8jve5a
 
-6.1.1. MacOS X: The installer cannot locate MAMP’s Apache	=>	macos-x-the-installer-cannot-locate-mamp-s-apache-or908n
+# fuzzy
+6.14.1. PassengerResolveSymlinksInDocumentRoot <on|off>	=>	passengerresolvesymlinksindocumentroot-on-off--1r0qcp8
 
-6.2. Problems during installation	=>	problems-during-installation-q1vlsu
+# fuzzy
+6.14.2. PassengerAllowEncodedSlashes <on|off>	=>	passengerallowencodedslashes-on-off--1y3s1ww
 
-6.2.1. Ruby development headers aren’t installed	=>	ruby-development-headers-aren-t-installed-1yqrom8
+# fuzzy
+6.15. Logging and debugging options	=>	logging-and-debugging-options-el2cuc
 
-6.2.2. Apache development headers aren’t installed	=>	apache-development-headers-aren-t-installed-x2473y
+# fuzzy
+6.15.1. PassengerLogLevel <integer>	=>	passengerloglevel-integer--1v67p8l
 
-6.2.3. APR development headers aren’t installed	=>	apr-development-headers-aren-t-installed-13bk976
+# fuzzy
+6.15.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1tfy4z9
 
-6.2.4. Phusion Passenger is using the wrong Apache during installation	=>	phusion-passenger-is-using-the-wrong-apache-during-installation-82qnt4
+# fuzzy
+6.15.3. PassengerDebugger <on|off>	=>	passengerdebugger-on-off--1qk9j40
 
-6.2.5. Phusion Passenger is using the wrong Ruby during installation	=>	phusion-passenger-is-using-the-wrong-ruby-during-installation-1nh3zml
+# fuzzy
+6.16. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
 
-6.3. Problems after installation	=>	problems-after-installation-fwd23q
+# fuzzy
+6.16.1. RailsAutoDetect <on|off>	=>	railsautodetect-on-off--tpigsd
 
-6.3.1. My Rails application works on Mongrel, but not on Phusion Passenger	=>	my-rails-application-works-on-mongrel-but-not-on-phusion-passenger-1f28drx
+# fuzzy
+6.16.2. RailsBaseURI <uri>	=>	railsbaseuri-uri--1txrw3k
 
-6.3.2. Phusion Passenger has been compiled against the wrong Apache installation	=>	phusion-passenger-has-been-compiled-against-the-wrong-apache-installation-n74ce0
+# fuzzy
+6.16.3. RailsEnv <string>	=>	railsenv-string--1b0xxvu
 
-6.3.3. I get a "403 Forbidden" error	=>	i-get-a-403-forbidden-error-m0rlay
+# fuzzy
+6.17. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
 
-6.3.4. Static assets such as images and stylesheets aren’t being displayed	=>	static-assets-such-as-images-and-stylesheets-aren-t-being-displayed-uaptpi
+# fuzzy
+6.17.1. RackAutoDetect <on|off>	=>	rackautodetect-on-off--vl1lxy
 
-6.3.5. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
+# fuzzy
+6.17.2. RackBaseURI <uri>	=>	rackbaseuri-uri--1to24pj
 
-6.3.6. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
+# fuzzy
+6.17.3. RackEnv <string>	=>	rackenv-string--vve9py
 
-6.3.7. My Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
+# fuzzy
+6.18. Deprecated options	=>	deprecated-options-pm9m57
 
-6.3.8. I’ve deployed my app on SSL, but the app thinks its not on SSL	=>	i-ve-deployed-my-app-on-ssl-but-the-app-thinks-its-not-on-ssl-10rvgnr
+# fuzzy
+6.18.1. RailsRuby	=>	railsruby-ht09ei
 
-6.4. Conflicting Apache modules	=>	conflicting-apache-modules-1uwpixk
+# fuzzy
+6.18.2. RailsUserSwitching	=>	railsuserswitching-1npx8y4
 
-6.4.1. mod_userdir	=>	mod-userdir-x5e2te
+# fuzzy
+6.18.3. RailsDefaultUser	=>	railsdefaultuser-19j7n3m
 
-6.4.2. MultiViews (mod_negotiation)	=>	multiviews-mod-negotiation--zchfg0
+# fuzzy
+6.18.4. RailsAllowModRewrite	=>	railsallowmodrewrite-1vkziro
 
-6.4.3. VirtualDocumentRoot	=>	virtualdocumentroot-14cwd7l
+# fuzzy
+6.18.5. RailsSpawnMethod	=>	railsspawnmethod-1aljgpa
 
-7. Analysis and system maintenance	=>	analysis-and-system-maintenance-qvkwzr
+# fuzzy
+6.2. PassengerRuby <filename>	=>	passengerruby-filename--1r3fv73
 
-7.1. Inspecting memory usage	=>	inspecting-memory-usage-1bkis6i
+# fuzzy
+6.3. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
 
-7.2. Inspecting Phusion Passenger’s internal status	=>	inspecting-phusion-passenger-s-internal-status-ukekf7
+# fuzzy
+6.4. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
 
-7.3. Debugging frozen applications	=>	debugging-frozen-applications-1qsjqq7
+# fuzzy
+6.5. PassengerEnabled <on|off>	=>	passengerenabled-on-off--74rzth
 
-7.4. Accessing individual application processes	=>	accessing-individual-application-processes-1p0j4jb
+# fuzzy
+6.6. PassengerTempDir <directory>	=>	passengertempdir-directory--68h2ng
 
-7.5. Attaching an IRB console to an application process	=>	attaching-an-irb-console-to-an-application-process-1cma32j
+# fuzzy
+6.7. PassengerUploadBufferDir <directory>	=>	passengeruploadbufferdir-directory--kdr8at
 
-8. Tips	=>	tips-19cwwf7
+# fuzzy
+6.8. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
 
-8.1. User switching (security)	=>	user-switching-security--8njx1x
+# fuzzy
+6.9. PassengerBufferResponse <on|off>	=>	passengerbufferresponse-on-off--1y7ilka
 
-8.10. Upload progress	=>	upload-progress-71cyl7
+# fuzzy
+7. Troubleshooting	=>	troubleshooting-2ihihi
 
-8.2. Reducing memory consumption of Ruby on Rails applications by 33%	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1ubxnq0
+# fuzzy
+7.1. Operating system-specific problems	=>	operating-system-specific-problems-327gbk
 
-8.3. Capistrano recipe	=>	capistrano-recipe-syzgo7
+# fuzzy
+7.1.1. MacOS X: The installer cannot locate MAMP’s Apache	=>	macos-x-the-installer-cannot-locate-mamp-s-apache-or908n
 
-8.4. Bundler support	=>	bundler-support-cf72ih
+# fuzzy
+7.2. Problems during installation	=>	problems-during-installation-q1vlsu
 
-8.5. Moving Phusion Passenger to a different directory	=>	moving-phusion-passenger-to-a-different-directory-16fapwo
+# fuzzy
+7.2.1. Ruby development headers aren’t installed	=>	ruby-development-headers-aren-t-installed-1yqrom8
 
-8.6. Installing multiple Ruby on Rails versions	=>	installing-multiple-ruby-on-rails-versions-mi5j14
+# fuzzy
+7.2.2. Apache development headers aren’t installed	=>	apache-development-headers-aren-t-installed-x2473y
 
-8.7. Making the application restart after each request	=>	making-the-application-restart-after-each-request-183bezx
+# fuzzy
+7.2.3. APR development headers aren’t installed	=>	apr-development-headers-aren-t-installed-13bk976
 
-8.8. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-a63b6r
+# fuzzy
+7.2.4. Phusion Passenger is using the wrong Apache during installation	=>	phusion-passenger-is-using-the-wrong-apache-during-installation-82qnt4
 
-8.9. X-Sendfile support	=>	x-sendfile-support-1cgyykw
+# fuzzy
+7.2.5. Phusion Passenger is using the wrong Ruby during installation	=>	phusion-passenger-is-using-the-wrong-ruby-during-installation-1nh3zml
 
-9. Under the hood	=>	under-the-hood-21ue5t
+# fuzzy
+7.3. Problems after installation	=>	problems-after-installation-fwd23q
 
-9.1. Static assets serving	=>	static-assets-serving-wo2d9v
+# fuzzy
+7.3.1. My Rails application works on Mongrel, but not on Phusion Passenger	=>	my-rails-application-works-on-mongrel-but-not-on-phusion-passenger-1f28drx
 
-9.2. Page caching support	=>	page-caching-support-kwq9b9
+# fuzzy
+7.3.2. Phusion Passenger has been compiled against the wrong Apache installation	=>	phusion-passenger-has-been-compiled-against-the-wrong-apache-installation-n74ce0
 
-9.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-179mp8m
+# fuzzy
+7.3.3. I get a "403 Forbidden" error	=>	i-get-a-403-forbidden-error-m0rlay
+
+# fuzzy
+7.3.4. Static assets such as images and stylesheets aren’t being displayed	=>	static-assets-such-as-images-and-stylesheets-aren-t-being-displayed-uaptpi
+
+# fuzzy
+7.3.5. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
+
+# fuzzy
+7.3.6. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
+
+# fuzzy
+7.3.7. My Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
+
+# fuzzy
+7.3.8. I’ve deployed my app on SSL, but the app thinks its not on SSL	=>	i-ve-deployed-my-app-on-ssl-but-the-app-thinks-its-not-on-ssl-10rvgnr
+
+# fuzzy
+7.4. Conflicting Apache modules	=>	conflicting-apache-modules-1uwpixk
+
+# fuzzy
+7.4.1. mod_userdir	=>	mod-userdir-x5e2te
+
+# fuzzy
+7.4.2. MultiViews (mod_negotiation)	=>	multiviews-mod-negotiation--zchfg0
+
+# fuzzy
+7.4.3. VirtualDocumentRoot	=>	virtualdocumentroot-14cwd7l
+
+# fuzzy
+8. Analysis and system maintenance	=>	analysis-and-system-maintenance-qvkwzr
+
+# fuzzy
+8.1. Inspecting memory usage	=>	inspecting-memory-usage-1bkis6i
+
+# fuzzy
+8.2. Inspecting Phusion Passenger’s internal status	=>	inspecting-phusion-passenger-s-internal-status-ukekf7
+
+# fuzzy
+8.3. Debugging frozen applications	=>	debugging-frozen-applications-1qsjqq7
+
+# fuzzy
+8.4. Accessing individual application processes	=>	accessing-individual-application-processes-1p0j4jb
+
+# fuzzy
+8.5. Attaching an IRB console to an application process	=>	attaching-an-irb-console-to-an-application-process-1cma32j
+
+# fuzzy
+9. Tips	=>	tips-19cwwf7
+
+# fuzzy
+9.1. User switching (security)	=>	user-switching-security--8njx1x
+
+# fuzzy
+9.10. Upload progress	=>	upload-progress-71cyl7
+
+# fuzzy
+9.2. Reducing memory consumption of Ruby on Rails applications by 33%	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1ubxnq0
+
+# fuzzy
+9.3. Capistrano recipe	=>	capistrano-recipe-syzgo7
+
+# fuzzy
+9.4. Bundler support	=>	bundler-support-cf72ih
+
+# fuzzy
+9.5. Moving Phusion Passenger to a different directory	=>	moving-phusion-passenger-to-a-different-directory-16fapwo
+
+# fuzzy
+9.6. Installing multiple Ruby on Rails versions	=>	installing-multiple-ruby-on-rails-versions-mi5j14
+
+# fuzzy
+9.7. Making the application restart after each request	=>	making-the-application-restart-after-each-request-183bezx
+
+# fuzzy
+9.8. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-a63b6r
+
+# fuzzy
+9.9. X-Sendfile support	=>	x-sendfile-support-1cgyykw
+
+Obtaining Phusion Passenger files through a tarball	=>	obtaining-phusion-passenger-files-through-a-tarball-evcm0j
+
+Obtaining Phusion Passenger files with RubyGems	=>	obtaining-phusion-passenger-files-with-rubygems-8fz7a8
+
+Upgrading with native Linux packages	=>	upgrading-with-native-linux-packages-jievu8
+
+
+### These sections appear to have been removed. Please check.
+
+2.2.1. MacOS X	=>	macos-x-1lcpbz2
+
