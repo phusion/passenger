@@ -683,6 +683,7 @@ private:
 		str << "Status: 500 Internal Server Error\r\n";
 		str << "Content-Length: " << data.size() << "\r\n";
 		str << "Content-Type: text/html; charset=UTF-8\r\n";
+		str << "Cache-Control: no-cache, no-store, must-revalidate\r\n";
 		str << "\r\n";
 
 		const string &header = str.str();
