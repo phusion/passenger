@@ -151,6 +151,10 @@ private
 				wrap_desc("The spawn method to use (default: #{@options[:spawn_method]})")) do |value|
 				@options[:spawn_method] = value
 			end
+			opts.on("--rolling-restarts",
+				wrap_desc("Enable rolling restarts (Enterprise only)")) do
+				@options[:rolling_restarts] = true
+			end
 			opts.on("--union-station-gateway HOST:PORT", String,
 				wrap_desc("Specify Union Station Gateway host and port")) do |value|
 				host, port = value.split(":", 2)
