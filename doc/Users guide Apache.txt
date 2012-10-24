@@ -195,12 +195,6 @@ Phusion Passenger.
 
 === Operating system-specific instructions and information ===
 
-==== MacOS X ====
-
-Ben Ruebenstein has written an excellent
-link:http://benr75.com/articles/2008/04/12/setup-mod_rails-phusion-mac-os-x-leopard[tutorial
-on installing Phusion Passenger on OS X].
-
 ==== Ubuntu Linux ====
 
 Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurating-passenger-mod_rails-on-slicehost-with-ubuntu-710/[article on installing Phusion Passenger on Ubuntu].
