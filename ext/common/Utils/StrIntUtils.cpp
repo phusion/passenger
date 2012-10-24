@@ -432,4 +432,14 @@ escapeHTML(const StaticString &input) {
 	return result;
 }
 
+StaticString 
+makeStaticStringWithNull(const char *data) {
+	return StaticString(data, strlen(data) + 1);
+}
+
+StaticString 
+makeStaticStringWithNull(const string &data) {
+	return StaticString(data.c_str(), data.size() + 1);
+}
+
 } // namespace Passenger

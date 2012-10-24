@@ -27,6 +27,7 @@ class << self
 	@@event_stopping_worker_process = []
 	@@event_credentials = []
 	@@event_after_installing_signal_handlers = []
+	@@event_oob_work = []
 	
 	def on_event(name, &block)
 		callback_list_for_event(name) << block
@@ -92,6 +93,8 @@ private
 			@@event_credentials
 		when :after_installing_signal_handlers
 			@@event_after_installing_signal_handlers
+		when :oob_work
+			@@event_oob_work
 		else
 			raise ArgumentError, "Unknown event name '#{name}'"
 		end

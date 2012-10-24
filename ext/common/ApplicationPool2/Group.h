@@ -107,6 +107,9 @@ private:
 	static string generateSecret(const SuperGroupPtr &superGroup);
 	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
 	void onSessionClose(const ProcessPtr &process, Session *session);
+	void lockAndAsyncOOBWRequestIfNeeded(GroupPtr self, const ProcessPtr &process);
+	void asyncOOBWRequestIfNeeded(const ProcessPtr &process);
+	void spawnThreadOOBWRequest(GroupPtr self, const ProcessPtr &process);
 	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options);
 	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options);
 	void finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
@@ -588,6 +591,9 @@ public:
 	bool detached() const {
 		return getSuperGroup() == NULL;
 	}
+	
+	// Thread-safe.
+	void requestOOBW(const ProcessPtr &process);
 	
 	/**
 	 * Attaches the given process to this Group and mark it as enabled. This

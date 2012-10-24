@@ -245,6 +245,9 @@ string cEscapeString(const StaticString &input);
  */
 string escapeHTML(const StaticString &input);
 
+StaticString makeStaticStringWithNull(const char *data);
+
+StaticString makeStaticStringWithNull(const string &data);
 
 } // namespace Passenger
 
