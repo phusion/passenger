@@ -1,23 +1,21 @@
-Phusion Passenger users guide
-=============================
+Phusion Passenger users guide, Apache version
+=============================================
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-Phusion Passenger is an Apache module, which makes deploying Ruby and Ruby on
-Rails applications on Apache a breeze. It follows the usual Ruby on Rails
-conventions, such as "Don't-Repeat-Yourself" and ease of setup, while at the
-same time providing enough flexibility.
+Phusion Passenger is an application server which can directly integrate into Apache. It is designed to be easy to use, fast, stable and reliable and is used by link:http://trends.builtwith.com/Web-Server/Phusion-Passenger[hundreds of thousands of websites] all over the world.
+
+Phusion Passenger is a so-called polyglot application server because it supports applications written in multiple programming languages. At this time, Ruby and Python are supported.
 
 This users guide will teach you:
 
 - How to install Phusion Passenger.
 - How to configure Phusion Passenger.
-- How to deploy a Ruby on Rails application.
-- How to deploy a link:http://rack.rubyforge.org/[Rack]-based Ruby application.
+- How to deploy Ruby and Python applications.
 - How to solve common problems.
 
 This guide assumes that the reader is somewhat familiar with Apache and with
-using the commandline.
+using the command line.
 
 
 == Support information ==
@@ -34,8 +32,8 @@ include::users_guide_snippets/support_information.txt[]
 
 There are three ways to install Phusion Passenger:
 
-1. By installing the Phusion Passenger gem, as instructed on the
-   link:http://www.modrails.com/install.html[``Install'' page on the Phusion
+1. By installing the Phusion Passenger Ruby gem, as instructed on the
+   link:https://www.phusionpassenger.com/download[``Download'' page on the Phusion
    Passenger website].
 2. By downloading the source tarball from the Phusion Passenger website
    ('passenger-x.x.x.tar.gz').
@@ -683,6 +681,114 @@ touch /webapps/rackapp/tmp/restart.txt
 
 === Rackup specifications for various web frameworks ===
 include::users_guide_snippets/rackup_specifications.txt[]
+
+
+== Deploying a WSGI (Python) application
+
+Phusion Passenger supports all WSGI-compliant Python web applications. Suppose that you have a WSGI application in '/webapps/wsgiapp'. Then that folder must contain at least three entries:
+
+- 'passenger_wsgi.py', which Phusion Passenger will use as the main entry point for your application. This file must export a WSGI object called `application`.
+- 'public/', a folder containing public static web assets, like images and stylesheets.
+- 'tmp/', used for 'restart.txt' (our application restart mechanism). This will be explained in a following subsection.
+
+So '/webapps/wsgiapp' must, at minimum, look like this:
+----------------------
+/webapps/wsgiapp
+  |
+  +-- config.ru
+  |
+  +-- public/
+  |
+  +-- tmp/
+----------------------
+
+=== Tutorial/example: writing and deploying a Hello World WSGI application ===
+
+First we create a Phusion Passenger-compliant WSGI directory structure:
+
+-------------------------------------------
+$ mkdir /webapps/wsgi_example
+$ mkdir /webapps/wsgi_example/public
+$ mkdir /webapps/wsgi_example/tmp
+-------------------------------------------
+
+Next, we write a minimal "hello world" WSGI application:
+
+-------------------------------------------
+$ cd /webapps/wsgi_example
+$ some_awesome_editor passenger_wsgi.py
+...type in some source code...
+$ cat passenger_wsgi.py
+def application(environ, start_response):
+  start_response(200, [('Content-Type', 'text/plain')])
+  return ["hello world!\n"]
+-------------------------------------------
+
+Finally, we deploy it by adding the following configuration options to
+the Apache configuration file:
+
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.wsgiexample.com
+    DocumentRoot /webapps/wsgi_example/public
+    <Directory /webapps/wsgi_example/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
+</VirtualHost>
+-------------------------------------------
+
+And we're done! After an Apache restart, the above WSGI application will be available
+under the URL 'http://www.wsgiexample.com/'.
+
+=== Deploying to a virtual host's root ===
+
+Add a virtual host entry to your Apache configuration file. Make sure that the
+following conditions are met:
+
+- The virtual host's document root must point to your WSGI application's
+  'public' folder.
+- The WSGI per-directory permissions must allow access to this folder.
+- MultiViews must be disabled for this folder.
+
+For example:
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.wsgiapp.com
+    DocumentRoot /webapps/wsgiapp/public
+    <Directory /webapps/wsgiapp/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
+</VirtualHost>
+-------------------------------------------
+
+You may also need to tweak your file/folder permissions. Make sure that the
+following folders are readable and executable by Apache:
+
+ * this 'public' folder.
+ * the application's 'config' folder.
+ * all parent folders. That is, /webapps/wsgiapp and /webapps must also be readable and executable by Apache.
+
+Then restart Apache. The application has now been deployed.
+
+=== Redeploying (restarting the WSGI application) ===
+
+Deploying a new version of a WSGI application is as simple as
+re-uploading the application files, and restarting the application.
+
+There are two ways to restart the application:
+
+1. By restarting Apache.
+2. By creating or modifying the file 'tmp/restart.txt' in the WSGI
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
+
+For example, to restart our example application, we type this in the
+command line:
+-------------------------------------------
+touch /webapps/wsgiapp/tmp/restart.txt
+-------------------------------------------
 
 
 == Configuring Phusion Passenger ==
