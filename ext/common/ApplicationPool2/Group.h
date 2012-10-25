@@ -241,7 +241,14 @@ public:
 	ComponentInfo componentInfo;
 	
 	/**
-	 * 'processes' contains all enabled processes in this group.
+	 * Processes are categorized as enabled, disabling or disabled. get() requests
+	 * should go to enabled processes, or (if there are no enabled processes) to
+	 * disabling processes. Disabling processes should become disabled as soon as
+	 * the opportunity arises (when `sessions` reaches 0). Disabled processes never
+	 * handle get() requests.
+	 * TODO: right now get() requests go to enabled and disabling processes equally.
+	 *
+	 * 'processes' contains all enabled and disabling processes in this group.
 	 * 'disabledProcesses' contains all disabled processes in this group.
 	 * They do not intersect.
 	 *
@@ -520,6 +527,8 @@ public:
 				pqueue.erase(process->pqHandle);
 				process->it = disabledProcesses.last_iterator();
 				process->enabled = Process::DISABLED;
+				count--;
+				disabledCount++;
 				return true;
 			}
 		} else if (process->enabled == Process::DISABLING) {
