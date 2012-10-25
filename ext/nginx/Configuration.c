@@ -575,6 +575,9 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
+    ngx_conf_merge_bitmask_value(conf->upstream_config.ignore_headers,
+                                 prev->upstream_config.ignore_headers,
+                                 NGX_CONF_BITMASK_SET);
 
     ngx_conf_merge_bitmask_value(conf->upstream_config.next_upstream,
                               prev->upstream_config.next_upstream,
@@ -1307,6 +1310,13 @@ const ngx_command_t passenger_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, max_preloader_idle_time),
       NULL },
+
+    { ngx_string("passenger_ignore_headers"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
+      ngx_conf_set_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, upstream_config.ignore_headers),
+      &ngx_http_upstream_ignore_headers_masks },
 
     { ngx_string("passenger_pass_header"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
