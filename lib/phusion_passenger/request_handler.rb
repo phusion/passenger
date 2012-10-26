@@ -123,26 +123,22 @@ class RequestHandler
 		#############
 
 		@server_sockets = {}
+		
 		if should_use_unix_sockets?
 			@main_socket_address, @main_socket = create_unix_socket_on_filesystem
-			@server_sockets[:main] = {
-				:address     => "unix:#{@main_socket_address}",
-				:socket      => @main_socket,
-				:protocol    => :session,
-				:concurrency => @concurrency
-			}
 		else
 			@main_socket_address, @main_socket = create_tcp_socket
-			@server_sockets[:main] = {
-				:addres      => "tcp://#{@main_socket_address}",
-				:socket      => @main_socket,
-				:protocol    => :session,
-				:concurrency => @concurrency
-			}
 		end
+		@server_sockets[:main] = {
+			:address     => @main_socket_address,
+			:socket      => @main_socket,
+			:protocol    => :session,
+			:concurrency => @concurrency
+		}
+
 		@http_socket_address, @http_socket = create_tcp_socket
 		@server_sockets[:http] = {
-			:address     => "tcp://#{@http_socket_address}",
+			:address     => @http_socket_address,
 			:socket      => @http_socket,
 			:protocol    => :http,
 			:concurrency => 1
@@ -315,15 +311,21 @@ private
 		# with this fake-EOF bug once in a while, but not nearly as often
 		# as with Unix sockets.
 		#
-		# This problem no longer applies today. The client socket is now
-		# created directly in the web server, and the bug is no longer
+		# This problem no longer applies today. The web server now passes
+		# all I/O through the HelperAgent, and the bug is no longer
 		# triggered. Nevertheless, we keep this function intact so that
 		# if something like this ever happens again, we know why, and we
 		# can easily reactivate the workaround. Or maybe if we just need
 		# TCP sockets for some other reason.
 		
 		#return RUBY_PLATFORM !~ /darwin/
-		return true
+
+		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
+		# Unix domain socket implementation on JRuby
+		# is still bugged as of version 1.7.0. They can
+		# cause unexplicable freezes when used in combination
+		# with threading.
+		return ruby_engine != "jruby"
 	end
 
 	def create_unix_socket_on_filesystem
@@ -340,7 +342,7 @@ private
 				socket.listen(BACKLOG_SIZE)
 				socket.close_on_exec!
 				File.chmod(0600, socket_address)
-				return [socket_address, socket]
+				return ["unix:#{socket_address}", socket]
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
 			end
@@ -353,7 +355,7 @@ private
 		socket = TCPServer.new('127.0.0.1', 0)
 		socket.listen(BACKLOG_SIZE)
 		socket.close_on_exec!
-		socket_address = "127.0.0.1:#{socket.addr[1]}"
+		socket_address = "tcp://127.0.0.1:#{socket.addr[1]}"
 		return [socket_address, socket]
 	end
 
@@ -387,12 +389,10 @@ private
 		end if trappable_signals.has_key?(SOFT_TERMINATION_SIGNAL.sub(/^SIG/, ''))
 		
 		trap('ABRT') do
-			raise SignalException, "SIGABRT"
+			print_status_report
 		end if trappable_signals.has_key?('ABRT')
-		
 		trap('QUIT') do
-			warn(global_backtrace_report)
-			warn("Threads: #{@threads.inspect}")
+			print_status_report
 		end if trappable_signals.has_key?('QUIT')
 	end
 	
@@ -400,6 +400,11 @@ private
 		@previous_signal_handlers.each_pair do |signal, handler|
 			trap(signal, handler)
 		end
+	end
+
+	def print_status_report
+		warn(Utils.global_backtrace_report)
+		warn("Threads: #{@threads.inspect}")
 	end
 
 	def start_threads
@@ -459,11 +464,40 @@ private
 	end
 
 	def wait_until_termination
-		ios = select([@owner_pipe, @graceful_termination_pipe[0]])[0]
-		if ios.include?(@owner_pipe)
-			trace(2, "Owner pipe closed")
+		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
+		if ruby_engine == "jruby"
+			# On JRuby, selecting on an input TTY always returns, so
+			# we use threads to do the job.
+			owner_pipe_watcher = IO.pipe
+			owner_pipe_watcher_thread = Thread.new do
+				Thread.current.abort_on_exception = true
+				Thread.current[:name] = "Owner pipe waiter"
+				begin
+					@owner_pipe.read(1)
+				ensure
+					owner_pipe_watcher[1].write('x')
+				end
+			end
+			begin
+				ios = select([owner_pipe_watcher[0], @graceful_termination_pipe[0]])[0]
+				if ios.include?(owner_pipe_watcher[0])
+					trace(2, "Owner pipe closed")
+				else
+					trace(2, "Graceful termination pipe closed")
+				end
+			ensure
+				owner_pipe_watcher_thread.kill
+				owner_pipe_watcher_thread.join
+				owner_pipe_watcher[0].close if !owner_pipe_watcher[0].closed?
+				owner_pipe_watcher[1].close if !owner_pipe_watcher[1].closed?
+			end
 		else
-			trace(2, "Graceful termination pipe closed")
+			ios = select([@owner_pipe, @graceful_termination_pipe[0]])[0]
+			if ios.include?(@owner_pipe)
+				trace(2, "Owner pipe closed")
+			else
+				trace(2, "Graceful termination pipe closed")
+			end
 		end
 	end
 
