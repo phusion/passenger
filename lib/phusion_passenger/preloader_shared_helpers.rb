@@ -30,6 +30,19 @@ module PhusionPassenger
 # Provides shared functions for preloader apps.
 module PreloaderSharedHelpers
 	extend self
+
+	def init
+		if !Kernel.respond_to?(:fork)
+			message = "Smart spawning is not available on this Ruby " +
+				"implementation because it does not support `Kernel.fork`. "
+			if ENV['SERVER_SOFTWARE'].to_s =~ /nginx/i
+				message << "Please set `passenger_spawn_method` to `direct`."
+			else
+				message << "Please set `PassengerSpawnMethod` to `direct`."
+			end
+			raise(message)
+		end
+	end
 	
 	def accept_and_process_next_client(server_socket)
 		original_pid = Process.pid

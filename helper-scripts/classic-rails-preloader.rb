@@ -48,9 +48,12 @@ module App
 		require 'phusion_passenger/loader_shared_helpers'
 		require 'phusion_passenger/request_handler'
 		LoaderSharedHelpers.init
+		PreloaderSharedHelpers.init
 		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
-		NativeSupport.disable_stdio_buffering
+		if defined?(NativeSupport)
+			NativeSupport.disable_stdio_buffering
+		end
 	rescue Exception => e
 		LoaderSharedHelpers.about_to_abort(e) if defined?(LoaderSharedHelpers)
 		puts "!> Error"

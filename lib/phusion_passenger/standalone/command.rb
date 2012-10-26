@@ -34,7 +34,7 @@ class Command
 		:env           => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development',
 		:max_pool_size => 6,
 		:min_instances => 1,
-		:spawn_method  => 'smart',
+		:spawn_method  => Kernel.respond_to?(:fork) ? 'smart' : 'direct',
 		:nginx_version => PREFERRED_NGINX_VERSION
 	}.freeze
 	

@@ -77,6 +77,35 @@ class IO
 			return PhusionPassenger::NativeSupport.writev3(fileno,
 				components, components2, components3)
 		end
+	else
+		def writev(components)
+			return write(components.join(''))
+		end
+
+		def writev2(components, components2)
+			data = ''
+			components.each do |component|
+				data << component
+			end
+			components2.each do |component|
+				data << component
+			end
+			return write(data)
+		end
+
+		def writev3(components, components2, components3)
+			data = ''
+			components.each do |component|
+				data << component
+			end
+			components2.each do |component|
+				data << component
+			end
+			components3.each do |component|
+				data << component
+			end
+			return write(data)
+		end
 	end
 	
 	if IO.method_defined?(:close_on_exec=)
