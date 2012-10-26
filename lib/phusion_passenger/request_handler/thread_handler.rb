@@ -141,7 +141,7 @@ private
 			# Other errors might indicate a problem so we print them, but they're
 			# probably not bad enough to warrant stopping the request handler.
 			if !e.is_a?(Errno::EPIPE)
-				print_exception("Passenger RequestHandler's client socket", e)
+				Utils.print_exception("Passenger RequestHandler's client socket", e)
 			end
 			return true
 		else
