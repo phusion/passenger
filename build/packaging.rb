@@ -42,7 +42,7 @@ spec = Gem::Specification.new do |s|
 	s.require_paths = ["lib"]
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
-	s.add_dependency 'daemon_controller', '>= 1.0.0'
+	s.add_dependency 'daemon_controller', '>= 1.1.0'
 	s.add_dependency 'rack'
 	s.files = FileList[*Packaging::GLOB] - FileList[*Packaging::EXCLUDE_GLOB]
 	s.executables = Packaging::USER_EXECUTABLES + Packaging::SUPER_USER_EXECUTABLES

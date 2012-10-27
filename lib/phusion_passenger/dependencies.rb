@@ -608,7 +608,7 @@ module Dependencies # :nodoc: all
 	end
 	
 	Daemon_Controller = Dependency.new do |dep|
-		dep.name = "daemon_controller >= 1.0.0"
+		dep.name = "daemon_controller >= 1.1.0"
 		dep.install_instructions = "Please install RubyGems first, then run " <<
 			"<b>#{PlatformInfo.gem_command || "gem"} install daemon_controller</b>"
 		dep.define_checker do |result|
@@ -620,7 +620,7 @@ module Dependencies # :nodoc: all
 				require 'daemon_controller'
 				begin
 					require 'daemon_controller/version'
-					too_old = DaemonController::VERSION_STRING < '1.0.0'
+					too_old = DaemonController::VERSION_STRING < '1.1.0'
 				rescue LoadError
 					too_old = true
 				end

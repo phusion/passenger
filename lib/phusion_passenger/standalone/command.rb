@@ -61,13 +61,13 @@ private
 				require 'daemon_controller'
 				begin
 					require 'daemon_controller/version'
-					too_old = DaemonController::VERSION_STRING < '1.0.0'
+					too_old = DaemonController::VERSION_STRING < '1.1.0'
 				rescue LoadError
 					too_old = true
 				end
 				if too_old
 					error "Your version of daemon_controller is too old. " <<
-					      "You must install 1.0.0 or later. Please upgrade:\n\n" <<
+					      "You must install 1.1.0 or later. Please upgrade:\n\n" <<
 					      
 					      " sudo gem uninstall FooBarWidget-daemon_controller\n" <<
 					      " sudo gem install daemon_controller"
