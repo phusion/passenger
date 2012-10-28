@@ -2,3 +2,4 @@ usr/lib/phusion-passenger
 usr/share/phusion-passenger
 usr/sbin
 usr/bin
+../locations.ini usr/lib/phusion-passenger

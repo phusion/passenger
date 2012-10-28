@@ -1,7 +1,6 @@
 #!/usr/bin/make -f
 
 export DH_VERBOSE=1
-export CFLAGS="-g -O0 -burgers"
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/rules/simple-patchsys.mk
 
@@ -9,23 +8,26 @@ DEB_DH_INSTALL_SOURCEDIR := $(DEB_DESTDIR)
 DEB_INSTALL_DOCS_passenger-doc += DEVELOPERS.TXT $(DEB_DESTDIR)/usr/share/doc/phusion-passenger/
 DEB_INSTALL_MANPAGES_passenger-common += man/*
 
-bindir = usr/bin
-sbindir = usr/sbin
 builddir = pkg/fakeroot
 moddir = $(shell apxs2 -q LIBEXECDIR)
-modsavailabledir = etc/apache2/mods-available
 passengermodule = usr/lib/apache2/modules/mod_passenger.so
 
 clean::
 	rake clean
-	rm -f $(CURDIR)/ext/libev/config.*
 
 build/passenger-common build/libapache2-mod-passenger build/passenger-doc::
-	rm -rf $(DEB_DESTDIR)	
+	rm -rf $(DEB_DESTDIR)
 	ruby1.8 -S rake fakeroot APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no RELEASE=yes
+	# Move the common ruby code
+	mkdir -p $(DEB_DESTDIR)/usr/lib/phusion-passenger/rubylib
+	mv $(builddir)/usr/lib/ruby/1.8/phusion_passenger $(DEB_DESTDIR)/usr/lib/phusion-passenger/rubylib/
+	mv $(builddir)/usr/lib/ruby/1.8/phusion_passenger.rb $(DEB_DESTDIR)/usr/lib/phusion-passenger/rubylib/
 	mv $(builddir) $(DEB_DESTDIR)
 	ruby1.9.1 -S rake fakeroot APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no RELEASE=yes
+	# Delete the duplicated common ruby code
+	rm -rf $(builddir)/usr/lib/ruby/1.9.1/phusion_passenger*
 	mv $(builddir)/usr/lib/ruby/1.9.1 $(DEB_DESTDIR)/usr/lib/ruby/
+	mv $(builddir)/usr/share/doc
 
 install/passenger-common::
 	rm -rf $(DEB_DESTDIR)/usr/share/phusion-passenger/source
