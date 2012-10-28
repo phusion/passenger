@@ -1,0 +1,17 @@
+Description: Install in vendor_ruby directory and install common files in non-versioned path
+Author: Laurent Bigonville <bigon@debian.org>
+Date: Thu, 22 Mar 2012 13:55:53 +0100
+
+--- a/build/packaging.rb
++++ b/build/packaging.rb
+@@ -103,8 +103,8 @@
+ 	# We don't use CONFIG['archdir'] and the like because we want
+ 	# the files to be installed to /usr, and the Ruby interpreter
+ 	# on the packaging machine might be in /usr/local.
+-	fake_libdir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}"
+-	fake_native_support_dir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
++	fake_libdir = "#{fakeroot}/usr/lib/ruby/vendor_ruby"
++	fake_native_support_dir = "#{fakeroot}/usr/lib/ruby/vendor_ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
+ 	fake_agents_dir = "#{fakeroot}#{NATIVELY_PACKAGED_AGENTS_DIR}"
+ 	fake_helper_scripts_dir = "#{fakeroot}#{NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR}"
+ 	fake_resources_dir = "#{fakeroot}/usr/share/phusion-passenger"

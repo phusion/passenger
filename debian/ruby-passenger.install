@@ -1,0 +1,6 @@
+usr/lib/phusion-passenger/
+usr/share/phusion-passenger/union_station_gateway.crt
+usr/share/phusion-passenger/mime.types
+usr/share/phusion-passenger/helper-scripts/
+usr/lib/ruby/vendor_ruby/
+usr/sbin/
