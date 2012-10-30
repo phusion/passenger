@@ -720,7 +720,7 @@ $ some_awesome_editor passenger_wsgi.py
 ...type in some source code...
 $ cat passenger_wsgi.py
 def application(environ, start_response):
-  start_response(200, [('Content-Type', 'text/plain')])
+  start_response('200 OK', [('Content-Type', 'text/plain')])
   return ["hello world!\n"]
 -------------------------------------------
 
