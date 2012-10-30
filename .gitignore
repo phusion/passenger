@@ -2,6 +2,7 @@
 
 .cache
 .DS_Store
+.rbx
 autom4te.cache
 *.o
 *.so
