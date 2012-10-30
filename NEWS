@@ -1,3 +1,12 @@
+Release 3.9.2
+-------------
+
+ * JRuby and Rubinius support.
+ * Sending SIGBART to a Ruby process will now trigger the same behavior
+   as SIGQUIT - that is, it will print a backtrace. This is necessary
+   for proper JRuby support because JRuby cannot catch SIGQUIT.
+
+
 Release 3.9.1
 -------------
 
