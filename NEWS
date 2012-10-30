@@ -1,3 +1,12 @@
+Release 3.0.18
+--------------
+
+ * Fixed compilation problems on Fedora 17.
+ * Fixed Union Station compatibility with Rails 3.2.
+ * Phusion Passenger Enterprise Standalone now supports rolling
+   restarts and deployment error resistance.
+
+
 Release 3.0.17
 --------------
 
