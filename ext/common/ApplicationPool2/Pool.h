@@ -405,7 +405,7 @@ public:
 	};
 
 	static void syncDisableProcessCallback(const ProcessPtr &process, DisableResult result,
-		DisableWaitTicket *ticket)
+		shared_ptr<DisableWaitTicket> ticket)
 	{
 		ScopedLock l(ticket->syncher);
 		ticket->done = true;
@@ -894,6 +894,7 @@ public:
 		}
 	}
 	
+	// TODO: 'ticket' should be a shared_ptr for interruption-safety.
 	SessionPtr get(const Options &options, Ticket *ticket) {
 		ticket->session.reset();
 		ticket->exception.reset();
@@ -1140,16 +1141,17 @@ public:
 		ScopedLock l(syncher);
 		ProcessPtr process = findProcessByGupid(gupid, false);
 		GroupPtr group = process->getGroup();
-		DisableWaitTicket ticket;
+		// Must be a shared_ptr to be interruption-safe.
+		shared_ptr<DisableWaitTicket> ticket = make_shared<DisableWaitTicket>();
 		DisableResult result = group->disable(process,
-			boost::bind(syncDisableProcessCallback, _1, _2, &ticket));
+			boost::bind(syncDisableProcessCallback, _1, _2, ticket));
 		if (result == DR_DEFERRED) {
 			l.unlock();
-			ScopedLock l2(ticket.syncher);
-			while (!ticket.done) {
-				ticket.cond.wait(l2);
+			ScopedLock l2(ticket->syncher);
+			while (!ticket->done) {
+				ticket->cond.wait(l2);
 			}
-			return ticket.result;
+			return ticket->result;
 		} else {
 			return result;
 		}

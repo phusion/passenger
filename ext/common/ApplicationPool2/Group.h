@@ -41,6 +41,7 @@
 #include <ApplicationPool2/Spawner.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
+#include <Utils.h>
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/FileChangeChecker.h>
 #include <Utils/SmallVector.h>
@@ -140,6 +141,26 @@ private:
 		assert((int) enabledProcesses.size() == enabledCount);
 		assert((int) disablingProcesses.size() == disablingCount);
 		assert((int) disabledProcesses.size() == disabledCount);
+
+		ProcessList::const_iterator it, end;
+
+		end = enabledProcesses.end();
+		for (it = enabledProcesses.begin(); it != end; it++) {
+			const ProcessPtr &process = *it;
+			assert(process->enabled == Process::ENABLED);
+		}
+
+		end = disablingProcesses.end();
+		for (it = disablingProcesses.begin(); it != end; it++) {
+			const ProcessPtr &process = *it;
+			assert(process->enabled == Process::DISABLING);
+		}
+
+		end = disabledProcesses.end();
+		for (it = disabledProcesses.begin(); it != end; it++) {
+			const ProcessPtr &process = *it;
+			assert(process->enabled == Process::DISABLED);
+		}
 	}
 	
 	void resetOptions(const Options &newOptions) {
@@ -238,6 +259,7 @@ private:
 			process->enabled = Process::DISABLING;
 			disablingCount++;
 		} else if (&destination == &disabledProcesses) {
+			assert(process->sessions == 0);
 			process->enabled = Process::DISABLED;
 			disabledCount++;
 		} else {
@@ -568,8 +590,8 @@ public:
 		process->setGroup(shared_from_this());
 		addProcessToList(process, enabledProcesses);
 
-		/* Now that there are enough resources all process in 'disableWaitlist'
-		 * can be disabled.
+		/* Now that there are enough resources, relevant processes in
+		 * 'disableWaitlist' can be disabled.
 		 */
 		deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
 		postLockActions.reserve(postLockActions.size() + disableWaitlist.size());
@@ -579,7 +601,7 @@ public:
 			// The same process can appear multiple times in disableWaitlist.
 			assert(process2->enabled == Process::DISABLING
 				|| process2->enabled == Process::DISABLED);
-			if (process2->enabled == Process::DISABLING) {
+			if (process2->enabled == Process::DISABLING && process2->sessions == 0) {
 				removeProcessFromList(process2, disablingProcesses);
 				addProcessToList(process2, disabledProcesses);
 			}
@@ -664,8 +686,8 @@ public:
 	DisableResult disable(const ProcessPtr &process, const DisableCallback &callback) {
 		assert(process->getGroup().get() == this);
 		if (process->enabled == Process::ENABLED) {
-			assert(enabledCount > 0);
-			if (enabledCount == 1) {
+			assert(enabledCount >= 0);
+			if (enabledCount <= 1 || process->sessions > 0) {
 				/* All processes are going to be disabled, so in order
 				 * to avoid blocking requests we first spawn a new process
 				 * and disable this process after the other one is done
@@ -675,10 +697,11 @@ public:
 				removeProcessFromList(process, enabledProcesses);
 				addProcessToList(process, disablingProcesses);
 				disableWaitlist.push_back(DisableWaiter(process, callback));
-				spawn();
+				if (enabledCount == 0) {
+					spawn();
+				}
 				return DR_DEFERRED;
 			} else {
-				assert(enabledCount > 1);
 				removeProcessFromList(process, enabledProcesses);
 				addProcessToList(process, disabledProcesses);
 				return DR_SUCCESS;

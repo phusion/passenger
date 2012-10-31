@@ -139,6 +139,24 @@ namespace tut {
 			);
 			return body;
 		}
+
+		Options ensureMinProcesses(unsigned int n) {
+			Options options = createOptions();
+			options.minProcesses = 2;
+			pool->asyncGet(options, callback);
+			EVENTUALLY(5,
+				result = number == 1;
+			);
+			EVENTUALLY(5,
+				result = pool->getProcessCount() == n;
+			);
+			currentSession.reset();
+			return options;
+		}
+
+		void disableProcess(ProcessPtr process, AtomicInt *result) {
+			*result = (int) pool->disableProcess(process->gupid);
+		}
 	};
 	
 	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_PoolTest, 100);
@@ -713,18 +731,9 @@ namespace tut {
 
 	TEST_METHOD(40) {
 		// Disabling a process under idle conditions should succeed immediately.
-		Options options = createOptions();
-		options.minProcesses = 2;
-		pool->asyncGet(options, callback);
-		EVENTUALLY(5,
-			result = number == 1;
-		);
-		EVENTUALLY(5,
-			result = pool->getProcessCount() == 2;
-		);
-
+		ensureMinProcesses(2);
 		vector<ProcessPtr> processes = pool->getProcesses();
-		ensure_equals("Disabling succeeds immediately",
+		ensure_equals("Disabling succeeds",
 			pool->disableProcess(processes[0]->gupid), DR_SUCCESS);
 		
 		LockGuard l(pool->syncher);
@@ -741,7 +750,6 @@ namespace tut {
 	// Disabling the sole process in a group should trigger a new process spawn.
 	// If there are no enabled processes in the group, then disabling should
 	// succeed after the new process has been spawned.
-
 	// Suppose that a previous disable command triggered a new process spawn,
 	// and the spawn fails. Then any disabling processes should become enabled
 	// again, and the callbacks for the previous disable commands should be called.
@@ -760,8 +768,26 @@ namespace tut {
 	// A disabling process becomes disabled as soon as it's done with
 	// all its request.
 
-	// Disabling a process that's already being disabled should result in the
-	// callback being called after disabling is done.
+	TEST_METHOD(41) {
+		// Disabling a process that's already being disabled should result in the
+		// callback being called after disabling is done.
+		ensureMinProcesses(2);
+		Options options = createOptions();
+		Ticket ticket;
+		SessionPtr session = pool->get(options, &ticket);
+
+		AtomicInt code = -1;
+		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+			this, session->getProcess(), &code));
+		SHOULD_NEVER_HAPPEN(100,
+			result = code != -1;
+		);
+		session.reset();
+		EVENTUALLY(1,
+			result = code != -1;
+		);
+		ensure_equals(code, (int) DR_SUCCESS);
+	}
 
 	// Enabling a process that's disabled succeeds immediately.
 	// Enabling a process that's disabling succeeds immediately. The disable
