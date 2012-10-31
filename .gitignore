@@ -49,6 +49,7 @@ ext/*.a
 doc/rdoc
 doc/cxxapi
 doc/*.html
+test/.gdbinit
 test/test.log
 test/apache2.log
 test/config.yml
