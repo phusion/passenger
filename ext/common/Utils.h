@@ -405,6 +405,11 @@ int runShellCommand(const StaticString &command);
  */
 void closeAllFileDescriptors(int lastToKeepOpen);
 
+/**
+ * A no-op, but usually set as a breakpoint in gdb. See CONTRIBUTING.md.
+ */
+void breakpoint();
+
 
 /**
  * Represents a buffered upload file.
