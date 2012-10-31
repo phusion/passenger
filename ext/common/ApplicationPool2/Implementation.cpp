@@ -187,7 +187,7 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	  secret(generateSecret(_superGroup)),
 	  componentInfo(info)
 {
-	count          = 0;
+	enabledCount   = 0;
 	disablingCount = 0;
 	disabledCount  = 0;
 	spawner        = getPool()->spawnerFactory->create(options);
@@ -264,22 +264,27 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	
 	/* Update statistics. */
 	process->sessionClosed(session);
-	pqueue.decrease(process->pqHandle, process->utilization());
+	assert(process->enabled == Process::ENABLED || process->enabled == Process::DISABLING);
+	if (process->enabled == Process::ENABLED) {
+		pqueue.decrease(process->pqHandle, process->utilization());
+	}
 
 	bool maxRequestsReached = options.maxRequests > 0
 		&& process->processed >= options.maxRequests;
 
 	/* This group now has a process that's guaranteed to be not at
-	 * full capacity...
+	 * full utilization...
 	 */
-	assert(!process->atFullCapacity());
+	assert(!process->atFullUtilization());
 	if (!getWaitlist.empty() && !maxRequestsReached) {
 		/* ...so if there are clients waiting for a process to
 		 * become available, call them now.
 		 */
 		UPDATE_TRACE_POINT();
 		assignSessionsToGetWaitersQuickly(lock);
-	} else if (!pool->getWaitlist.empty() || maxRequestsReached) {
+	} else if (process->enabled == Process::ENABLED
+		&& (!pool->getWaitlist.empty() || maxRequestsReached)
+	) {
 		/* Someone might be trying to get() a session for a different
 		 * group that couldn't be spawned because of lack of pool capacity.
 		 * If this group isn't under sufficiently load (as apparent by the
@@ -313,6 +318,23 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		pool->detachProcessUnlocked(process, actions);
 		pool->verifyInvariants();
 		verifyInvariants();
+		lock.unlock();
+		runAllActions(actions);
+	} else if (process->enabled == Process::DISABLING
+		&& process->utilization() == 0
+		&& enabledCount > 0)
+	{
+		vector<Callback> actions;
+		process->enabled = Process::DISABLED;
+		disablingProcesses.erase(process->it);
+		disabledProcesses.push_back(process);
+		process->it = disabledProcesses.last_iterator();
+		disablingCount--;
+		disabledCount++;
+		removeFromDisableWaitlist(process, DR_SUCCESS, actions);
+		pool->verifyInvariants();
+		verifyInvariants();
+		verifyExpensiveInvariants();
 		lock.unlock();
 		runAllActions(actions);
 	}
@@ -380,7 +402,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			}
 			P_DEBUG("Attached process " << process->inspect() <<
 				" to group " << name <<
-				": new process count = " << count <<
+				": new process count = " << enabledCount <<
 				", remaining get waiters = " << getWaitlist.size());
 		} else {
 			// TODO: sure this is the best thing? if there are
@@ -388,6 +410,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			P_DEBUG("Could not spawn process appRoot=" << name <<
 				": " << exception->what());
 			assignExceptionToGetWaiters(exception, actions);
+			enableAllDisablingProcesses(actions);
 			pool->assignSessionsToGetWaiters(actions);
 			done = true;
 		}
@@ -398,7 +421,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		m_spawning = false;
 		
 		done = done
-			|| ((unsigned long) count >= options.minProcesses && getWaitlist.empty())
+			|| ((unsigned long) enabledCount >= options.minProcesses && getWaitlist.empty())
 			|| pool->atFullCapacity(false)
 			|| m_restarting;
 		m_spawning = !done;
@@ -414,6 +437,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		
 		UPDATE_TRACE_POINT();
 		verifyInvariants();
+		verifyExpensiveInvariants();
 		lock.unlock();
 		runAllActions(actions);
 	}
@@ -422,7 +446,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 bool
 Group::shouldSpawn() const {
 	return !spawning()
-		&& (count == 0 || pqueue.top()->atFullCapacity())
+		&& (enabledCount == 0 || pqueue.top()->atFullCapacity())
 		&& !getPool()->atFullCapacity(false);
 }
 
@@ -471,6 +495,7 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 
 	// Run some sanity checks.
 	verifyInvariants();
+	verifyExpensiveInvariants();
 	assert(m_restarting);
 	UPDATE_TRACE_POINT();
 	
@@ -571,6 +596,7 @@ PipeWatcher::onReadable(ev::io &io, int revents) {
 			selfPointer.reset();
 		}
 	} else if (fdToForwardTo != -1) {
+		// Don't care about errors.
 		write(fdToForwardTo, buf, ret);
 	}
 }

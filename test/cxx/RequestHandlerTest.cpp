@@ -289,12 +289,17 @@ namespace tut {
 		);
 		BufferedIO io(connection);
 		ensure_equals(io.readLine(), "HTTP/1.1 200 OK\r\n");
-		ensure_equals(pool->getProcessCount(), 1u);
-		SuperGroupPtr superGroup = pool->superGroups.get(wsgiAppPath);
-		ProcessPtr process = superGroup->defaultGroup->processes.front();
-		ensure_equals(process->sessions, 1);
+		ProcessPtr process;
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(pool->getProcessCount(false), 1u);
+			SuperGroupPtr superGroup = pool->superGroups.get(wsgiAppPath);
+			process = superGroup->defaultGroup->enabledProcesses.front();
+			ensure_equals(process->sessions, 1);
+		}
 		connection.close();
 		EVENTUALLY(5,
+			LockGuard l(pool->syncher);
 			result = process->sessions == 0;
 		);
 	}

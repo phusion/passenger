@@ -617,7 +617,7 @@ namespace tut {
 		pool->detachProcess(currentSession->getProcess());
 		ensure(currentSession->getProcess()->detached());
 		LockGuard l(pool->syncher);
-		ensure_equals(pool->superGroups.get("test")->defaultGroup->count, 1);
+		ensure_equals(pool->superGroups.get("test")->defaultGroup->enabledCount, 1);
 	}
 	
 	TEST_METHOD(31) {
@@ -647,7 +647,7 @@ namespace tut {
 		{
 			LockGuard l(pool->syncher);
 			ensure(pool->superGroups.get("test")->defaultGroup->spawning());
-			ensure_equals(pool->superGroups.get("test")->defaultGroup->count, 0);
+			ensure_equals(pool->superGroups.get("test")->defaultGroup->enabledCount, 0);
 			ensure_equals(pool->superGroups.get("test")->defaultGroup->getWaitlist.size(), 1u);
 		}
 	}
@@ -712,8 +712,8 @@ namespace tut {
 	/*********** Test disabling and enabling processes ***********/
 
 	TEST_METHOD(40) {
-		// Disabling a process under idle conditions should succeed immediately.
 		/*
+		// Disabling a process under idle conditions should succeed immediately.
 		Options options = createOptions();
 		options.minProcesses = 2;
 		options.noop = true;
@@ -725,8 +725,8 @@ namespace tut {
 			result = pool->getProcessCount() == 2;
 		);
 
-		options.minProcesses = 0;
-		options.noop = false;
+//		options.minProcesses = 0;
+//		options.noop = false;
 		vector<ProcessPtr> processes = pool->getProcesses();
 		ensure_equals(processes, );
 		*/
@@ -1033,8 +1033,8 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 2u);
 		SuperGroupPtr superGroup1 = pool->superGroups.get("stub/rack");
 		SuperGroupPtr superGroup2 = pool->superGroups.get("stub/rack");
-		ensure_equals(superGroup1->defaultGroup->count, 1);
-		ensure_equals(superGroup2->defaultGroup->count, 1);
+		ensure_equals(superGroup1->defaultGroup->enabledCount, 1);
+		ensure_equals(superGroup2->defaultGroup->enabledCount, 1);
 	}
 
 	TEST_METHOD(61) {

@@ -309,6 +309,10 @@ public:
 	}
 	
 	bool atFullCapacity() const {
+		return atFullUtilization();
+	}
+
+	bool atFullUtilization() const {
 		return concurrency != 0 && sessions >= concurrency;
 	}
 	

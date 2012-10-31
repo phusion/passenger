@@ -200,7 +200,7 @@ public:
 			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				const GroupPtr &group = *g_it;
-				const ProcessList &processes = group->processes;
+				const ProcessList &processes = group->enabledProcesses;
 				ProcessList::const_iterator p_it, p_end = processes.end();
 				for (p_it = processes.begin(); p_it != p_end; p_it++) {
 					const ProcessPtr process = *p_it;
@@ -227,7 +227,7 @@ public:
 			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				const GroupPtr &group = *g_it;
-				const ProcessList &processes = group->processes;
+				const ProcessList &processes = group->enabledProcesses;
 				ProcessList::const_iterator p_it, p_end = processes.end();
 				for (p_it = processes.begin(); p_it != p_end; p_it++) {
 					const ProcessPtr process = *p_it;
@@ -336,7 +336,7 @@ public:
 			P_ASSERT(superGroup->getWaitlist.empty());
 			
 			group->detach(process, postLockActions);
-			if (group->processes.empty()
+			if (group->enabledProcesses.empty()
 			 && !group->spawning()
 			 && !group->getWaitlist.empty()) {
 				migrateGroupGetWaitlistToPool(group);
@@ -400,7 +400,7 @@ public:
 			
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				GroupPtr group = *g_it;
-				ProcessList &processes = group->processes;
+				ProcessList &processes = group->enabledProcesses;
 				ProcessList::iterator p_it, p_end = processes.end();
 				
 				for (p_it = processes.begin(); p_it != p_end; p_it++) {
@@ -411,7 +411,7 @@ public:
 						process->lastUsed + maxIdleTime;
 					if (process->sessions == 0
 					 && now >= processGcTime
-					 && (unsigned long) group->count > group->options.minProcesses) {
+					 && (unsigned long) group->enabledCount > group->options.minProcesses) {
 						ProcessList::iterator prev = p_it;
 						prev--;
 						P_DEBUG("Garbage collect idle process: " << process->inspect() <<
@@ -515,9 +515,15 @@ public:
 
 				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
 					const GroupPtr &group = *g_it;
-					ProcessList::const_iterator p_it, p_end = group->processes.end();
+					ProcessList::const_iterator p_it, p_end = group->enabledProcesses.end();
 
-					for (p_it = group->processes.begin(); p_it != p_end; p_it++) {
+					for (p_it = group->enabledProcesses.begin(); p_it != p_end; p_it++) {
+						const ProcessPtr &process = *p_it;
+						pids.push_back(process->pid);
+					}
+
+					p_end = group->disablingProcesses.end();
+					for (p_it = group->disablingProcesses.begin(); p_it != p_end; p_it++) {
 						const ProcessPtr &process = *p_it;
 						pids.push_back(process->pid);
 					}
@@ -555,9 +561,19 @@ public:
 
 				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
 					const GroupPtr &group = *g_it;
-					ProcessList::iterator p_it, p_end = group->processes.end();
+					ProcessList::iterator p_it, p_end = group->enabledProcesses.end();
 
-					for (p_it = group->processes.begin(); p_it != p_end; p_it++) {
+					for (p_it = group->enabledProcesses.begin(); p_it != p_end; p_it++) {
+						ProcessPtr &process = *p_it;
+						ProcessMetricMap::const_iterator metrics_it =
+							allMetrics.find(process->pid);
+						if (metrics_it != allMetrics.end()) {
+							process->metrics = metrics_it->second;
+						}
+					}
+
+					p_end = group->disablingProcesses.end();
+					for (p_it = group->disablingProcesses.begin(); p_it != p_end; p_it++) {
 						ProcessPtr &process = *p_it;
 						ProcessMetricMap::const_iterator metrics_it =
 							allMetrics.find(process->pid);
@@ -778,7 +794,7 @@ public:
 					P_ASSERT(group->garbageCollectable());
 					forceDetachSuperGroup(superGroup, actions);
 					P_ASSERT(superGroup->getWaitlist.empty());
-				} else if (group->processes.empty()
+				} else if (group->enabledProcesses.empty()
 				        && !group->spawning()
 				        && !group->getWaitlist.empty())
 				{
@@ -939,7 +955,10 @@ public:
 				const GroupPtr &group = *g_it;
 				ProcessList::const_iterator p_it;
 
-				for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
+				for (p_it = group->enabledProcesses.begin(); p_it != group->enabledProcesses.end(); p_it++) {
+					result.push_back(*p_it);
+				}
+				for (p_it = group->disablingProcesses.begin(); p_it != group->disablingProcesses.end(); p_it++) {
 					result.push_back(*p_it);
 				}
 				for (p_it = group->disabledProcesses.begin(); p_it != group->disabledProcesses.end(); p_it++) {
@@ -982,7 +1001,7 @@ public:
 			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				const GroupPtr &group = *g_it;
-				const ProcessList &processes = group->processes;
+				const ProcessList &processes = group->enabledProcesses;
 				ProcessList::const_iterator p_it, p_end = processes.end();
 				for (p_it = processes.begin(); p_it != p_end; p_it++) {
 					const ProcessPtr &process = *p_it;
@@ -1105,7 +1124,8 @@ public:
 					result << "  (spawning new process...)" << endl;
 				}
 				result << "  Requests in queue: " << group->getWaitlist.size() << endl;
-				for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
+				// TODO: iterate over disabling/disabled processes
+				for (p_it = group->enabledProcesses.begin(); p_it != group->enabledProcesses.end(); p_it++) {
 					const ProcessPtr &process = *p_it;
 					char buf[128];
 					

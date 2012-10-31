@@ -49,6 +49,35 @@ class Group;
 class Process;
 class Session;
 
+/**
+ * The result of a Group::disable() call. Some values are only returned by the function,
+ * some values are only passed to the callback, some values appear in both cases.
+ */
+enum DisableResult {
+	// The process has been successfully disabled.
+	// Returned by Group::disable() and passed to the callback.
+	DR_SUCCESS,
+	
+	// The disabling of the process was canceled before completion.
+	// The process still exists.
+	// Only passed to the callback.
+	DR_CANCELED,
+	
+	// Nothing happened: the requested process does not exist (anymore)
+	// or was already disabled.
+	// Returned by Group::disable() and passed to the callback.
+	DR_NOOP,
+	
+	// The disabling of the process failed: an error occurred.
+	// Only passed to the callback.
+	DR_ERROR,
+
+	// Indicates that the process cannot be disabled immediately
+	// and that the callback will be called later.
+	// Only returned by Group::disable().
+	DR_DEFERRED
+};
+
 typedef shared_ptr<Pool> PoolPtr;
 typedef shared_ptr<SuperGroup> SuperGroupPtr;
 typedef shared_ptr<Group> GroupPtr;
@@ -57,6 +86,7 @@ typedef shared_ptr<Session> SessionPtr;
 typedef shared_ptr<tracable_exception> ExceptionPtr;
 typedef StringMap<SuperGroupPtr> SuperGroupMap;
 typedef function<void (const SessionPtr &session, const ExceptionPtr &e)> GetCallback;
+typedef function<void (const ProcessPtr &process, DisableResult result)> DisableCallback;
 typedef function<void ()> Callback;
 
 struct GetWaiter {
