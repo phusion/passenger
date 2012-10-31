@@ -712,11 +712,9 @@ namespace tut {
 	/*********** Test disabling and enabling processes ***********/
 
 	TEST_METHOD(40) {
-		/*
 		// Disabling a process under idle conditions should succeed immediately.
 		Options options = createOptions();
 		options.minProcesses = 2;
-		options.noop = true;
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = number == 1;
@@ -725,36 +723,54 @@ namespace tut {
 			result = pool->getProcessCount() == 2;
 		);
 
-//		options.minProcesses = 0;
-//		options.noop = false;
 		vector<ProcessPtr> processes = pool->getProcesses();
-		ensure_equals(processes, );
-		*/
+		ensure_equals("Disabling succeeds immediately",
+			pool->disableProcess(processes[0]->gupid), DR_SUCCESS);
+		
+		LockGuard l(pool->syncher);
+		ensure(!processes[0]->detached());
+		ensure_equals("Process is disabled",
+			processes[0]->enabled,
+			Process::DISABLED);
+		ensure("Other processes are not affected",
+			!processes[1]->detached());
+		ensure_equals("Other processes are not affected",
+			processes[1]->enabled, Process::ENABLED);
 	}
 
 	// Disabling the sole process in a group should trigger a new process spawn.
-	// Disabling should succeed after the new process has been spawned.
+	// If there are no enabled processes in the group, then disabling should
+	// succeed after the new process has been spawned.
 
-	// Duppose that a previous disable command triggered a new process spawn,
-	// and the spawn fails. Then the processes which were marked as 'disabled'
-	// should be marked 'enabled' again, and the callbacks for the previous
-	// disable commands should be called.
+	// Suppose that a previous disable command triggered a new process spawn,
+	// and the spawn fails. Then any disabling processes should become enabled
+	// again, and the callbacks for the previous disable commands should be called.
 
-	// asyncGet() should not select a process that's being disabled, unless
-	// it's the only process in the group.
+	// asyncGet() should not select a disabling process if there are enabled processes.
+	// asyncGet() should not select a disabling process when non-rolling restarting.
+	// asyncGet() should select a disabling process if there are no enabled processes
+	// in the group. If this happens then asyncGet() will also spawn a new process.
+	// asyncGet() should not select a disabled process.
+
+	// If there are no enabled processes and all disabling processes are at full
+	// utilization, and the process that was being spawned becomes available
+	// earlier than any of the disabling processes, then the newly spawned process
+	// should handle the request.
+
+	// A disabling process becomes disabled as soon as it's done with
+	// all its request.
 
 	// Disabling a process that's already being disabled should result in the
 	// callback being called after disabling is done.
 
-	// Enabling a process that's being disabled should immediately mark the process
-	// as being enabled and should call all the queued disable command callbacks.
-
-	// Enabling a process that's disabled works.
+	// Enabling a process that's disabled succeeds immediately.
+	// Enabling a process that's disabling succeeds immediately. The disable
+	// callbacks will be called with DR_CANCELED.
 	
 	
 	/*********** Other tests ***********/
 	
-	TEST_METHOD(50) {
+	TEST_METHOD(60) {
 		// The pool is considered to be at full capacity if and only
 		// if all SuperGroups are at full capacity.
 		Options options = createOptions();
@@ -778,7 +794,7 @@ namespace tut {
 		ensure(!pool->atFullCapacity());
 	}
 	
-	TEST_METHOD(51) {
+	TEST_METHOD(61) {
 		// If the pool is at full capacity, then increasing 'max' will cause
 		// new processes to be spawned. Any queued get requests are processed
 		// as those new processes become available or as existing processes
@@ -801,7 +817,7 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 3u);
 	}
 	
-	TEST_METHOD(52) {
+	TEST_METHOD(62) {
 		// Each spawned process has a GUPID, which can be looked up
 		// through findProcessByGupid().
 		Options options = createOptions();
@@ -814,13 +830,13 @@ namespace tut {
 		ensure_equals(currentSession->getProcess(), pool->findProcessByGupid(gupid));
 	}
 	
-	TEST_METHOD(53) {
+	TEST_METHOD(63) {
 		// findProcessByGupid() returns a NULL pointer if there is
 		// no matching process.
 		ensure(pool->findProcessByGupid("none") == NULL);
 	}
 
-	TEST_METHOD(54) {
+	TEST_METHOD(64) {
 		// Test process idle cleaning.
 		Options options = createOptions();
 		retainSessions = true;
@@ -851,7 +867,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(55) {
+	TEST_METHOD(65) {
 		// Test spawner idle cleaning.
 		Options options = createOptions();
 		options.appGroupName = "test1";
@@ -877,7 +893,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(56) {
+	TEST_METHOD(66) {
 		// It should restart the app if restart.txt is created or updated.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
@@ -913,7 +929,7 @@ namespace tut {
 		ensure_equals(sendRequest(options, "/"), "restarted 2");
 	}
 
-	TEST_METHOD(57) {
+	TEST_METHOD(67) {
 		// Test spawn exceptions.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
@@ -936,7 +952,7 @@ namespace tut {
 		ensure_equals(e->getErrorPage(), "Something went wrong!");
 	}
 
-	TEST_METHOD(58) {
+	TEST_METHOD(68) {
 		// If a process fails to spawn, then it stops trying to spawn minProcesses processes.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
@@ -978,7 +994,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(59) {
+	TEST_METHOD(69) {
 		// It removes the process from the pool if session->initiate() fails.
 		Options options = createOptions();
 		options.appRoot = "stub/wsgi";
@@ -1006,7 +1022,7 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 0u);
 	}
 
-	TEST_METHOD(60) {
+	TEST_METHOD(70) {
 		// When a process has become idle, and there are waiters on the pool,
 		// consider detaching it in order to satisfy a waiter.
 		Options options1 = createOptions();
@@ -1037,7 +1053,7 @@ namespace tut {
 		ensure_equals(superGroup2->defaultGroup->enabledCount, 1);
 	}
 
-	TEST_METHOD(61) {
+	TEST_METHOD(71) {
 		// A process is detached after processing maxRequests sessions.
 		{
 			Ticket ticket;
@@ -1064,7 +1080,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(62) {
+	TEST_METHOD(72) {
 		// If we restart while spawning is in progress, then the spawn
 		// loop will exit as soon as it has detected that we're restarting.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
@@ -1110,7 +1126,7 @@ namespace tut {
 		ensure_equals("(2)", pool->getProcessCount(), 1u);
 	}
 
-	TEST_METHOD(63) {
+	TEST_METHOD(73) {
 		// If a get() request comes in while the restart is in progress, then
 		// that get() request will be put into the get waiters list, which will
 		// be processed after spawning is done.
@@ -1143,7 +1159,7 @@ namespace tut {
 			pool->getProcessCount(), 2u);
 	}
 
-	TEST_METHOD(64) {
+	TEST_METHOD(74) {
 		// If a process fails to spawn, it sends a SpawnException result to all get waiters.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
@@ -1191,7 +1207,7 @@ namespace tut {
 		ensure(sessions.empty());
 	}
 
-	TEST_METHOD(65) {
+	TEST_METHOD(75) {
 		// If a process fails to spawn, the existing processes
 		// are kept alive.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");

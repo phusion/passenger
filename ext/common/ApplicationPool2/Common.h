@@ -50,12 +50,13 @@ class Process;
 class Session;
 
 /**
- * The result of a Group::disable() call. Some values are only returned by the function,
- * some values are only passed to the callback, some values appear in both cases.
+ * The result of a Pool::disableProcess/Group::disable() call. Some values are only
+ * returned by the functions, some values are only passed to the Group::disable()
+ * callback, some values appear in all cases.
  */
 enum DisableResult {
 	// The process has been successfully disabled.
-	// Returned by Group::disable() and passed to the callback.
+	// Returned by functions and passed to the callback.
 	DR_SUCCESS,
 	
 	// The disabling of the process was canceled before completion.
@@ -65,7 +66,7 @@ enum DisableResult {
 	
 	// Nothing happened: the requested process does not exist (anymore)
 	// or was already disabled.
-	// Returned by Group::disable() and passed to the callback.
+	// Returned by functions and passed to the callback.
 	DR_NOOP,
 	
 	// The disabling of the process failed: an error occurred.
@@ -74,7 +75,7 @@ enum DisableResult {
 
 	// Indicates that the process cannot be disabled immediately
 	// and that the callback will be called later.
-	// Only returned by Group::disable().
+	// Only returned by functions.
 	DR_DEFERRED
 };
 

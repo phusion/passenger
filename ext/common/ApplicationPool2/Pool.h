@@ -393,6 +393,26 @@ public:
 		}
 	}
 
+	struct DisableWaitTicket {
+		boost::mutex syncher;
+		condition_variable cond;
+		DisableResult result;
+		bool done;
+
+		DisableWaitTicket() {
+			done = false;
+		}
+	};
+
+	static void syncDisableProcessCallback(const ProcessPtr &process, DisableResult result,
+		DisableWaitTicket *ticket)
+	{
+		ScopedLock l(ticket->syncher);
+		ticket->done = true;
+		ticket->result = result;
+		ticket->cond.notify_one();
+	}
+
 	static void syncGetCallback(Ticket *ticket, const SessionPtr &session, const ExceptionPtr &e) {
 		ScopedLock lock(ticket->syncher);
 		if (OXT_LIKELY(session != NULL)) {
@@ -973,8 +993,8 @@ public:
 		return utilization(false) >= max;
 	}
 
-	vector<ProcessPtr> getProcesses() const {
-		LockGuard l(syncher);
+	vector<ProcessPtr> getProcesses(bool lock = true) const {
+		DynamicScopedLock l(syncher, lock);
 		vector<ProcessPtr> result;
 		SuperGroupMap::const_iterator it, end = superGroups.end();
 		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
@@ -1023,22 +1043,12 @@ public:
 	}
 	
 	ProcessPtr findProcessByGupid(const string &gupid, bool lock = true) const {
-		DynamicScopedLock l(syncher, lock);
-		SuperGroupMap::const_iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
-			const SuperGroupPtr &superGroup = it->second;
-			vector<GroupPtr> &groups = superGroup->groups;
-			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
-			for (g_it = groups.begin(); g_it != g_end; g_it++) {
-				const GroupPtr &group = *g_it;
-				const ProcessList &processes = group->enabledProcesses;
-				ProcessList::const_iterator p_it, p_end = processes.end();
-				for (p_it = processes.begin(); p_it != p_end; p_it++) {
-					const ProcessPtr &process = *p_it;
-					if (process->gupid == gupid) {
-						return process;
-					}
-				}
+		vector<ProcessPtr> processes = getProcesses(lock);
+		vector<ProcessPtr>::const_iterator it, end = processes.end();
+		for (it = processes.begin(); it != end; it++) {
+			const ProcessPtr &process = *it;
+			if (process->gupid == gupid) {
+				return process;
 			}
 		}
 		return ProcessPtr();
@@ -1093,15 +1103,6 @@ public:
 		}
 	}
 	
-	bool detachProcess(const ProcessPtr &process) {
-		ScopedLock l(syncher);
-		vector<Callback> actions;
-		bool result = detachProcessUnlocked(process, actions);
-		l.unlock();
-		runAllActions(actions);
-		return result;
-	}
-
 	bool detachSuperGroup(const string &superGroupSecret) {
 		LockGuard l(syncher);
 		SuperGroupPtr superGroup = findSuperGroupBySecret(superGroupSecret, false);
@@ -1112,6 +1113,15 @@ public:
 		}
 	}
 	
+	bool detachProcess(const ProcessPtr &process) {
+		ScopedLock l(syncher);
+		vector<Callback> actions;
+		bool result = detachProcessUnlocked(process, actions);
+		l.unlock();
+		runAllActions(actions);
+		return result;
+	}
+
 	bool detachProcess(const string &gupid) {
 		ScopedLock l(syncher);
 		ProcessPtr process = findProcessByGupid(gupid, false);
@@ -1123,6 +1133,25 @@ public:
 			return result;
 		} else {
 			return false;
+		}
+	}
+
+	DisableResult disableProcess(const string &gupid) {
+		ScopedLock l(syncher);
+		ProcessPtr process = findProcessByGupid(gupid, false);
+		GroupPtr group = process->getGroup();
+		DisableWaitTicket ticket;
+		DisableResult result = group->disable(process,
+			boost::bind(syncDisableProcessCallback, _1, _2, &ticket));
+		if (result == DR_DEFERRED) {
+			l.unlock();
+			ScopedLock l2(ticket.syncher);
+			while (!ticket.done) {
+				ticket.cond.wait(l2);
+			}
+			return ticket.result;
+		} else {
+			return result;
 		}
 	}
 

@@ -196,7 +196,7 @@ public:
 	int sessions;
 	/** Number of sessions opened so far. */
 	unsigned int processed;
-	enum {
+	enum EnabledStatus {
 		ENABLED,
 		DISABLING,
 		DISABLED
