@@ -363,6 +363,36 @@ public:
 		}
 	}
 	
+	void inspectProcessList(const InspectOptions &options, stringstream &result,
+		const ProcessList &processes) const
+	{
+		ProcessList::const_iterator p_it;
+		for (p_it = processes.begin(); p_it != processes.end(); p_it++) {
+			const ProcessPtr &process = *p_it;
+			char buf[128];
+			
+			snprintf(buf, sizeof(buf),
+					"* PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
+					(unsigned long) process->pid,
+					process->sessions,
+					process->processed,
+					process->uptime().c_str());
+			result << "  " << buf << endl;
+
+			if (process->enabled == Process::DISABLING) {
+				result << "    Disabling..." << endl;
+			} else if (process->enabled == Process::DISABLED) {
+				result << "    DISABLED" << endl;
+			}
+
+			const Socket *socket;
+			if (options.verbose && (socket = process->sockets->findSocketWithName("http")) != NULL) {
+				result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
+				result << "    Password: " << process->connectPassword << endl;
+			}
+		}
+	}
+
 	static void syncGetCallback(Ticket *ticket, const SessionPtr &session, const ExceptionPtr &e) {
 		ScopedLock lock(ticket->syncher);
 		if (OXT_LIKELY(session != NULL)) {
@@ -1124,24 +1154,9 @@ public:
 					result << "  (spawning new process...)" << endl;
 				}
 				result << "  Requests in queue: " << group->getWaitlist.size() << endl;
-				// TODO: iterate over disabling/disabled processes
-				for (p_it = group->enabledProcesses.begin(); p_it != group->enabledProcesses.end(); p_it++) {
-					const ProcessPtr &process = *p_it;
-					char buf[128];
-					
-					snprintf(buf, sizeof(buf),
-							"* PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
-							(unsigned long) process->pid,
-							process->sessions,
-							process->processed,
-							process->uptime().c_str());
-					result << "  " << buf << endl;
-					const Socket *socket;
-					if (options.verbose && (socket = process->sockets->findSocketWithName("http")) != NULL) {
-						result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
-						result << "    Password: " << process->connectPassword << endl;
-					}
-				}
+				inspectProcessList(options, result, group->enabledProcesses);
+				inspectProcessList(options, result, group->disablingProcesses);
+				inspectProcessList(options, result, group->disabledProcesses);
 				result << endl;
 			}
 		}
