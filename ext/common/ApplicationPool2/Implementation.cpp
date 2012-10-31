@@ -324,13 +324,13 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		&& process->utilization() == 0
 		&& enabledCount > 0)
 	{
+		/* This is a disabling process that is now idle, and there
+		 * are enabled processes in the group. Now is a good time
+		 * to disable this process.
+		 */
 		vector<Callback> actions;
-		process->enabled = Process::DISABLED;
-		disablingProcesses.erase(process->it);
-		disabledProcesses.push_back(process);
-		process->it = disabledProcesses.last_iterator();
-		disablingCount--;
-		disabledCount++;
+		removeProcessFromList(process, disablingProcesses);
+		addProcessToList(process, enabledProcesses);
 		removeFromDisableWaitlist(process, DR_SUCCESS, actions);
 		pool->verifyInvariants();
 		verifyInvariants();

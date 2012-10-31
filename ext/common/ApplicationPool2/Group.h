@@ -199,6 +199,52 @@ private:
 		return result;
 	}
 
+	/**
+	 * Removes a process to the given list (enabledProcess, disablingProcesses, disabledProcesses).
+	 * This function does not fix getWaitlist invariants or other stuff.
+	 */
+	void removeProcessFromList(const ProcessPtr &process, ProcessList &source) {
+		source.erase(process->it);
+		switch (process->enabled) {
+		case Process::ENABLED:
+			enabledCount--;
+			pqueue.erase(process->pqHandle);
+			break;
+		case Process::DISABLING:
+			disablingCount--;
+			break;
+		case Process::DISABLED:
+			disabledCount--;
+			break;
+		default:
+			abort();
+		}
+	}
+
+	/**
+	 * Adds a process to the given list (enabledProcess, disablingProcesses, disabledProcesses)
+	 * and sets the process->enabled flag accordingly.
+	 * The process must currently not be in any list. This function does not fix
+	 * getWaitlist invariants or other stuff.
+	 */
+	void addProcessToList(const ProcessPtr &process, ProcessList &destination) {
+		destination.push_back(process);
+		process->it = destination.last_iterator();
+		if (&destination == &enabledProcesses) {
+			process->enabled = Process::ENABLED;
+			process->pqHandle = pqueue.push(process.get(), process->utilization());
+			enabledCount++;
+		} else if (&destination == &disablingProcesses) {
+			process->enabled = Process::DISABLING;
+			disablingCount++;
+		} else if (&destination == &disabledProcesses) {
+			process->enabled = Process::DISABLED;
+			disabledCount++;
+		} else {
+			abort();
+		}
+	}
+	
 	template<typename Lock>
 	void assignSessionsToGetWaitersQuickly(Lock &lock) {
 		SmallVector<GetAction, 50> actions;
@@ -283,13 +329,8 @@ private:
 			const DisableWaiter &waiter = *it;
 			const ProcessPtr process = waiter.process;
 			assert(process->enabled == Process::DISABLING);
-			process->enabled = Process::ENABLED;
-			disablingProcesses.erase(process->it);
-			enabledProcesses.push_back(process);
-			process->it = enabledProcesses.last_iterator();
-			process->pqHandle = pqueue.push(process.get(), process->utilization());
-			disablingCount--;
-			enabledCount++;
+			removeProcessFromList(process, disablingProcesses);
+			addProcessToList(process, enabledProcesses);
 		}
 		clearDisableWaitlist(DR_ERROR, postLockActions);
 	}
@@ -525,12 +566,8 @@ public:
 	void attach(const ProcessPtr &process, vector<Callback> &postLockActions) {
 		assert(process->getGroup() == NULL);
 		process->setGroup(shared_from_this());
-		enabledProcesses.push_back(process);
-		process->it = enabledProcesses.last_iterator();
-		process->pqHandle = pqueue.push(process.get(), process->utilization());
-		process->enabled = Process::ENABLED;
-		enabledCount++;
-		
+		addProcessToList(process, enabledProcesses);
+
 		/* Now that there are enough resources all process in 'disableWaitlist'
 		 * can be disabled.
 		 */
@@ -543,12 +580,8 @@ public:
 			assert(process2->enabled == Process::DISABLING
 				|| process2->enabled == Process::DISABLED);
 			if (process2->enabled == Process::DISABLING) {
-				process2->enabled = Process::DISABLED;
-				disablingProcesses.erase(process2->it);
-				disabledProcesses.push_back(process2);
-				process2->it = disabledProcesses.last_iterator();
-				disablingCount--;
-				disabledCount++;
+				removeProcessFromList(process2, disablingProcesses);
+				addProcessToList(process2, disabledProcesses);
 			}
 			postLockActions.push_back(boost::bind(waiter.callback, process2, DR_SUCCESS));
 		}
@@ -562,23 +595,20 @@ public:
 	void detach(const ProcessPtr &process, vector<Callback> &postLockActions) {
 		assert(process->getGroup().get() == this);
 
+		const ProcessPtr p = process; // Keep an extra reference just in case.
 		process->setGroup(GroupPtr());
 
 		if (process->enabled == Process::ENABLED || process->enabled == Process::DISABLING) {
 			assert(enabledCount > 0 || disablingCount > 0);
 			if (process->enabled == Process::ENABLED) {
-				pqueue.erase(process->pqHandle);
-				enabledProcesses.erase(process->it);
-				enabledCount--;
+				removeProcessFromList(process, enabledProcesses);
 			} else {
-				disablingProcesses.erase(process->it);
-				disablingCount--;
+				removeProcessFromList(process, disablingProcesses);
 				removeFromDisableWaitlist(process, DR_NOOP, postLockActions);
 			}
 		} else {
 			assert(!disabledProcesses.empty());
-			disabledProcesses.erase(process->it);
-			disabledCount--;
+			removeProcessFromList(process, disabledProcesses);
 		}
 	}
 	
@@ -617,22 +647,12 @@ public:
 	void enable(const ProcessPtr &process, vector<Callback> &postLockActions) {
 		assert(process->getGroup().get() == this);
 		if (process->enabled == Process::DISABLING) {
-			process->enabled = Process::ENABLED;
-			disablingProcesses.erase(process->it);
-			enabledProcesses.push_back(process);
-			process->it = enabledProcesses.last_iterator();
-			process->pqHandle = pqueue.push(process.get(), process->utilization());
-			disablingCount--;
-			enabledCount++;
+			removeProcessFromList(process, disablingProcesses);
+			addProcessToList(process, enabledProcesses);
 			removeFromDisableWaitlist(process, DR_CANCELED, postLockActions);
 		} else if (process->enabled == Process::DISABLED) {
-			process->enabled = Process::ENABLED;
-			disabledProcesses.erase(process->it);
-			enabledProcesses.push_back(process);
-			process->it = enabledProcesses.last_iterator();
-			process->pqHandle = pqueue.push(process.get(), process->utilization());
-			disabledCount--;
-			enabledCount++;
+			removeProcessFromList(process, disabledProcesses);
+			addProcessToList(process, enabledProcesses);
 		}
 	}
 	
@@ -652,24 +672,15 @@ public:
 				 * spawning. We do this irregardless of resource limits
 				 * because this is an exceptional situation.
 				 */
-				process->enabled = Process::DISABLING;
-				enabledProcesses.erase(process->it);
-				disablingProcesses.push_back(process);
-				process->it = disablingProcesses.last_iterator();
-				disablingCount++;
-				enabledCount--;
+				removeProcessFromList(process, enabledProcesses);
+				addProcessToList(process, disablingProcesses);
 				disableWaitlist.push_back(DisableWaiter(process, callback));
 				spawn();
 				return DR_DEFERRED;
 			} else {
 				assert(enabledCount > 1);
-				enabledProcesses.erase(process->it);
-				disabledProcesses.push_back(process);
-				pqueue.erase(process->pqHandle);
-				process->it = disabledProcesses.last_iterator();
-				process->enabled = Process::DISABLED;
-				enabledCount--;
-				disabledCount++;
+				removeProcessFromList(process, enabledProcesses);
+				addProcessToList(process, disabledProcesses);
 				return DR_SUCCESS;
 			}
 		} else if (process->enabled == Process::DISABLING) {
