@@ -83,16 +83,8 @@ copyException(const tracable_exception &e) {
 	TRY_COPY_EXCEPTION(SecurityException);
 	
 	TRY_COPY_EXCEPTION(SyntaxError);
-	
-	TRY_COPY_EXCEPTION(boost::lock_error);
-	TRY_COPY_EXCEPTION(boost::thread_resource_error);
-	TRY_COPY_EXCEPTION(boost::unsupported_thread_option);
-	TRY_COPY_EXCEPTION(boost::invalid_thread_argument);
-	TRY_COPY_EXCEPTION(boost::thread_permission_error);
 
 	TRY_COPY_EXCEPTION(boost::thread_interrupted);
-	TRY_COPY_EXCEPTION(boost::thread_exception);
-	TRY_COPY_EXCEPTION(boost::condition_error);
 
 	return make_shared<tracable_exception>(e);
 }
