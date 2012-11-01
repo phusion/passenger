@@ -24,7 +24,7 @@
 #include <unistd.h>
 #endif
 
-#include <libs/thread/src/pthread/timeconv.inl>
+#include <boost/libs/thread/src/pthread/timeconv.inl>
 
 namespace boost
 {
