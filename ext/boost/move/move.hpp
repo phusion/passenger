@@ -217,9 +217,9 @@
 #if defined(BOOST_NO_RVALUE_REFERENCES) && !defined(BOOST_MOVE_DOXYGEN_INVOKED)
 
    //Move emulation rv breaks standard aliasing rules so add workarounds for some compilers
-   #ifdef __GNUC__ 
-      #define BOOST_MOVE_ATTRIBUTE_MAY_ALIAS __attribute__((__may_alias__)) 
-   #else 
+   #if defined(__GNUC__) && (__GNUC__ >= 4)
+      #define BOOST_MOVE_ATTRIBUTE_MAY_ALIAS __attribute__((__may_alias__))
+   #else
       #define BOOST_MOVE_ATTRIBUTE_MAY_ALIAS
    #endif
 
@@ -306,10 +306,10 @@
    {};
 
    template <class T>
-   struct has_move_emulation_enabled_aux 
+   struct has_move_emulation_enabled_aux
      : has_move_emulation_enabled<T> {};
-     
-   template <class T> 
+    
+   template <class T>
    struct has_nothrow_move
       : public BOOST_MOVE_BOOST_NS::integral_constant<bool, false>
    {};
@@ -319,7 +319,7 @@
    //                            move()
    //
    //////////////////////////////////////////////////////////////////////////////
-    
+   
    template <class T>
    inline typename BOOST_MOVE_BOOST_NS::disable_if<has_move_emulation_enabled_aux<T>, T&>::type move(T& x)
    {
@@ -350,6 +350,15 @@
       ::boost::rv< TYPE<ARG1, ARG2, ARG3> >& \
    //
 
+   #define BOOST_RV_REF_BEG\
+      ::boost::rv<   \
+   //
+
+   #define BOOST_RV_REF_END\
+      >& \
+   //
+
+
 
    #define BOOST_FWD_REF(TYPE)\
       const TYPE & \
@@ -361,6 +370,14 @@
 
    #define BOOST_COPY_ASSIGN_REF(TYPE)\
       const ::boost::rv< TYPE >& \
+   //
+
+   #define BOOST_COPY_ASSIGN_REF_BEG \
+      const ::boost::rv<  \
+   //
+
+   #define BOOST_COPY_ASSIGN_REF_END \
+      >& \
    //
 
    #define BOOST_MOVE_COPY_ASSIGN_REF_2_TEMPL_ARGS(TYPE, ARG1, ARG2)\
@@ -443,7 +460,7 @@
 
    //! By default this traits returns false. Classes with non-throwing move constructor
    //! and assignment should specialize this trait to obtain some performance improvements.
-   template <class T> 
+   template <class T>
    struct has_nothrow_move
       : public BOOST_MOVE_MPL_NS::integral_constant<bool, false>
    {};
@@ -477,7 +494,7 @@
          //! This function provides a way to convert a reference into a rvalue reference
          //! in compilers with rvalue references. For other compilers converts T & into
          //! <i>::boost::rv<T> &</i> so that move emulation is activated.
-         template <class T> 
+         template <class T>
          rvalue_reference move (input_reference);
 
       #elif defined(BOOST_MOVE_OLD_RVALUE_REF_BINDING_RULES)
@@ -491,7 +508,7 @@
 
          template <class T>
          inline typename remove_reference<T>::type && move(T&& t)
-         { return static_cast<typename remove_reference<T>::type &&>(t); } 
+         { return static_cast<typename remove_reference<T>::type &&>(t); }
 
       #endif   //Old move
 
@@ -568,6 +585,25 @@
    #define BOOST_RV_REF(TYPE)\
       TYPE && \
    //
+
+   //!This macro is used to achieve portable syntax in move
+   //!constructors and assignments for template classes marked as
+   //!BOOST_COPYABLE_AND_MOVABLE or BOOST_MOVABLE_BUT_NOT_COPYABLE.
+   //!As macros have problem with comma-separatd template arguments,
+   //!the template argument must be preceded with BOOST_RV_REF_START
+   //!and ended with BOOST_RV_REF_END
+   #define BOOST_RV_REF_BEG\
+         \
+   //
+
+   //!This macro is used to achieve portable syntax in move
+   //!constructors and assignments for template classes marked as
+   //!BOOST_COPYABLE_AND_MOVABLE or BOOST_MOVABLE_BUT_NOT_COPYABLE.
+   //!As macros have problem with comma-separatd template arguments,
+   //!the template argument must be preceded with BOOST_RV_REF_START
+   //!and ended with BOOST_RV_REF_END
+   #define BOOST_RV_REF_END\
+      && \
 
    //!This macro is used to achieve portable syntax in copy
    //!assignment for classes marked as BOOST_COPYABLE_AND_MOVABLE.
@@ -776,12 +812,17 @@ class back_move_insert_iterator
    C* container_m;
 
    public:
-   typedef C container_type;
+   typedef C                        container_type;
+   typedef typename C::value_type   value_type;
+   typedef typename C::reference    reference;
 
    explicit back_move_insert_iterator(C& x) : container_m(&x) { }
 
-   back_move_insert_iterator& operator=(typename C::reference x)
+   back_move_insert_iterator& operator=(reference x)
    { container_m->push_back(boost::move(x)); return *this; }
+
+   back_move_insert_iterator& operator=(BOOST_RV_REF(value_type) x)
+   {  reference rx = x; return this->operator=(rx);  }
 
    back_move_insert_iterator& operator*()     { return *this; }
    back_move_insert_iterator& operator++()    { return *this; }
@@ -811,12 +852,17 @@ class front_move_insert_iterator
    C* container_m;
 
 public:
-   typedef C container_type;
+   typedef C                        container_type;
+   typedef typename C::value_type   value_type;
+   typedef typename C::reference    reference;
 
    explicit front_move_insert_iterator(C& x) : container_m(&x) { }
 
-   front_move_insert_iterator& operator=(typename C::reference x)
+   front_move_insert_iterator& operator=(reference x)
    { container_m->push_front(boost::move(x)); return *this; }
+
+   front_move_insert_iterator& operator=(BOOST_RV_REF(value_type) x)
+   {  reference rx = x; return this->operator=(rx);  }
 
    front_move_insert_iterator& operator*()     { return *this; }
    front_move_insert_iterator& operator++()    { return *this; }
@@ -844,18 +890,23 @@ class move_insert_iterator
    typename C::iterator pos_;
 
    public:
-   typedef C container_type;
+   typedef C                        container_type;
+   typedef typename C::value_type   value_type;
+   typedef typename C::reference    reference;
 
    explicit move_insert_iterator(C& x, typename C::iterator pos)
       : container_m(&x), pos_(pos)
    {}
 
-   move_insert_iterator& operator=(typename C::reference x)
+   move_insert_iterator& operator=(reference x)
    {
       pos_ = container_m->insert(pos_, ::boost::move(x));
       ++pos_;
       return *this;
    }
+
+   move_insert_iterator& operator=(BOOST_RV_REF(value_type) x)
+   {  reference rx = x; return this->operator=(rx);  }
 
    move_insert_iterator& operator*()     { return *this; }
    move_insert_iterator& operator++()    { return *this; }
@@ -1186,7 +1237,7 @@ template< class T > struct remove_rvalue_reference { typedef T type; };
    template< class T > struct remove_rvalue_reference< const rv<T>& >         { typedef T type; };
    template< class T > struct remove_rvalue_reference< volatile rv<T>& >      { typedef T type; };
    template< class T > struct remove_rvalue_reference< const volatile rv<T>& >{ typedef T type; };
-#endif // #ifndef BOOST_NO_RVALUE_REFERENCES 
+#endif // #ifndef BOOST_NO_RVALUE_REFERENCES
 
 template <typename T>
 typename boost::move_detail::add_rvalue_reference<T>::type declval();
@@ -1194,7 +1245,7 @@ typename boost::move_detail::add_rvalue_reference<T>::type declval();
 }
 // Ideas from Boost.Move review, Jeffrey Lee Hellrung:
 //
-//- TypeTraits metafunctions is_lvalue_reference, add_lvalue_reference, and remove_lvalue_reference ? 
+//- TypeTraits metafunctions is_lvalue_reference, add_lvalue_reference, and remove_lvalue_reference ?
 //  Perhaps add_reference and remove_reference can be modified so that they behave wrt emulated rvalue
 //  references the same as wrt real rvalue references, i.e., add_reference< rv<T>& > -> T& rather than
 //  rv<T>& (since T&& & -> T&).
@@ -1202,7 +1253,7 @@ typename boost::move_detail::add_rvalue_reference<T>::type declval();
 //- Add'l TypeTraits has_[trivial_]move_{constructor,assign}...?
 //
 //- An as_lvalue(T& x) function, which amounts to an identity operation in C++0x, but strips emulated
-//  rvalue references in C++03.  This may be necessary to prevent "accidental moves". 
+//  rvalue references in C++03.  This may be necessary to prevent "accidental moves".
 
 }  //namespace boost {
 

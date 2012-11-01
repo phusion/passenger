@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -24,17 +24,21 @@
 
 ESSENTIALS = [
 	"boost/detail/{limits,endian}.hpp",
-	"boost/config/*",
+	"boost/config",
+	"boost/mpl",
+	"boost/preprocessor/stringize.hpp",
 	"boost/smart_ptr/detail/sp_counted_*",
 	"boost/smart_ptr/detail/atomic_count*",
 	"boost/smart_ptr/detail/spinlock*",
-	"boost/thread/*",
-	"boost/thread/*/*",
-	"libs/thread/src/*",
+	"boost/thread",
+	"libs/thread/src",
+	"libs/system/src",
 	"boost/date_time/gregorian/formatters_limited.hpp",
 	"boost/date_time/date_formatting_limited.hpp",
 	"boost/non_type.hpp",
 	"boost/detail/fenv.hpp",
+	"boost/foreach.hpp",
+	"boost/lambda"
 ]
 EXCLUDE = [
 	"libs/thread/src/win32/*"
@@ -50,6 +54,8 @@ PROGRAM_SOURCE = %q{
 	#include <boost/function.hpp>
 	#include <boost/bind.hpp>
 	#include <boost/date_time/posix_time/posix_time.hpp>
+	#include <boost/foreach.hpp>
+	#include <boost/lambda/lambda.hpp>
 }
 
 require 'fileutils'
@@ -84,7 +90,9 @@ def copy_boost_files(patterns, exclude = nil)
 				copy_boost_files(["#{source}/*"], exclude)
 			else
 				target = source.slice(BOOST_DIR.size + 1 .. source.size - 1)
-				target.sub!(%r{^libs/thread/}, 'boost/')
+				if target =~ /^libs\//
+					target = "boost/#{target}"
+				end
 				if !File.exist?(target)
 					install(source, target)
 				end
@@ -112,6 +120,9 @@ def cleanup
 	FileUtils.rm_rf("boost/src/win32")
 	FileUtils.rm_rf("boost/asio/win32")
 	FileUtils.rm_rf("boost/smart_ptr/detail/spinlock_w32.hpp")
+	FileUtils.rm_rf("boost/smart_ptr/detail/sp_counted_base_w32.hpp")
+	FileUtils.rm_rf("boost/smart_ptr/detail/atomic_count_win32.hpp")
+	FileUtils.rm_rf("boost/config/platform/win32.hpp")
 	File.unlink("test.cpp") rescue nil
 end
 
@@ -119,7 +130,7 @@ end
 def copy_dependencies
 	done = false
 	while !done
-		missing_headers = `g++ test.cpp -c -I. 2>&1`.
+		missing_headers = `g++ -DBOOST_MPL_PREPROCESSING_MODE test.cpp -c -I. 2>&1`.
 		  split("\n").
 		  grep(/error: .*: No such file/).
 		  map do |line|

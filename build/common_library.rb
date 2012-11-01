@@ -34,7 +34,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	
 	if boolean_option('RELEASE')
-		sources = Dir['ext/boost/src/pthread/*.cpp'] + Dir['ext/oxt/*.cpp']
+		sources = Dir['ext/boost/libs/**/*.cpp'] + Dir['ext/oxt/*.cpp']
 		sources.sort!
 		
 		aggregate_source = "#{output_dir}/aggregate.cpp"
@@ -60,7 +60,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	else
 		# Define compilation targets for .cpp files in ext/boost/src/pthread.
 		boost_object_files = []
-		Dir['ext/boost/src/pthread/*.cpp'].each do |source_file|
+		Dir['ext/boost/libs/**/*.cpp'].each do |source_file|
 			object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
 			boost_output_dir  = "#{output_dir}/boost"
 			object_file = "#{boost_output_dir}/#{object_name}"
