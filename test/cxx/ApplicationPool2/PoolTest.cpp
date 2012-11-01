@@ -140,9 +140,10 @@ namespace tut {
 			return body;
 		}
 
+		// Ensure that n processes exist.
 		Options ensureMinProcesses(unsigned int n) {
 			Options options = createOptions();
-			options.minProcesses = 2;
+			options.minProcesses = n;
 			pool->asyncGet(options, callback);
 			EVENTUALLY(5,
 				result = number == 1;
@@ -747,7 +748,33 @@ namespace tut {
 			processes[1]->enabled, Process::ENABLED);
 	}
 
-	// Disabling the sole process in a group should trigger a new process spawn.
+	TEST_METHOD(41) {
+		// Disabling the sole process in a group should trigger a new process spawn.
+		ensureMinProcesses(1);
+		Options options = createOptions();
+		Ticket ticket;
+		SessionPtr session = pool->get(options, &ticket);
+
+		ensure_equals(pool->getProcessCount(), 1u);
+		ensure(!pool->isSpawning());
+
+		GroupPtr group = session->getProcess()->getGroup();
+		dynamic_pointer_cast<DummySpawner>(group->spawner)->spawnTime = 60000;
+		AtomicInt code = -1;
+		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+			this, session->getProcess(), &code));
+		EVENTUALLY2(30, 1,
+			result = pool->isSpawning();
+		);
+		EVENTUALLY(1,
+			result = pool->getProcessCount() == 2u;
+		);
+		session.reset();
+		EVENTUALLY(1,
+			result = code == (int) DR_SUCCESS;
+		);
+	}
+
 	// If there are no enabled processes in the group, then disabling should
 	// succeed after the new process has been spawned.
 	// Suppose that a previous disable command triggered a new process spawn,
@@ -768,7 +795,7 @@ namespace tut {
 	// A disabling process becomes disabled as soon as it's done with
 	// all its request.
 
-	TEST_METHOD(41) {
+	TEST_METHOD(50) {
 		// Disabling a process that's already being disabled should result in the
 		// callback being called after disabling is done.
 		ensureMinProcesses(2);
@@ -968,6 +995,8 @@ namespace tut {
 			"import sys\n"
 			"sys.stderr.write('Something went wrong!')\n"
 			"exit(1)\n");
+
+		setLogLevel(-2);
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = number == 1;
@@ -1005,6 +1034,7 @@ namespace tut {
 			"	sys.stderr.write('Something went wrong!')\n"
 			"	exit(1)\n");
 
+		setLogLevel(-2);
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = number == 1;
@@ -1214,6 +1244,7 @@ namespace tut {
 			"exit(1)\n");
 
 		retainSessions = true;
+		setLogLevel(-2);
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
@@ -1260,6 +1291,7 @@ namespace tut {
 			"exit(1)\n");
 		try {
 			Ticket ticket;
+			setLogLevel(-2);
 			currentSession = pool->get(options, &ticket);
 			fail("SpawnException expected");
 		} catch (const SpawnException &) {

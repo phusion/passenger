@@ -350,9 +350,11 @@ private:
 		for (it = disableWaitlist.begin(); it != end; it++) {
 			const DisableWaiter &waiter = *it;
 			const ProcessPtr process = waiter.process;
-			assert(process->enabled == Process::DISABLING);
-			removeProcessFromList(process, disablingProcesses);
-			addProcessToList(process, enabledProcesses);
+			// A process can appear multiple times in disableWaitlist.
+			if (process->enabled == Process::DISABLING) {
+				removeProcessFromList(process, disablingProcesses);
+				addProcessToList(process, enabledProcesses);
+			}
 		}
 		clearDisableWaitlist(DR_ERROR, postLockActions);
 	}
@@ -588,13 +590,14 @@ public:
 	void attach(const ProcessPtr &process, vector<Callback> &postLockActions) {
 		assert(process->getGroup() == NULL);
 		process->setGroup(shared_from_this());
+		P_DEBUG("Attaching process " << process->inspect());
 		addProcessToList(process, enabledProcesses);
 
 		/* Now that there are enough resources, relevant processes in
 		 * 'disableWaitlist' can be disabled.
 		 */
 		deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
-		postLockActions.reserve(postLockActions.size() + disableWaitlist.size());
+		deque<DisableWaiter> newDisableWaitlist;
 		for (it = disableWaitlist.begin(); it != end; it++) {
 			const DisableWaiter &waiter = *it;
 			const ProcessPtr process2 = waiter.process;
@@ -602,12 +605,16 @@ public:
 			assert(process2->enabled == Process::DISABLING
 				|| process2->enabled == Process::DISABLED);
 			if (process2->enabled == Process::DISABLING && process2->sessions == 0) {
+				P_DEBUG("Disabling DISABLING process " << process2->inspect() <<
+					"; disable command succeeded immediately");
 				removeProcessFromList(process2, disablingProcesses);
 				addProcessToList(process2, disabledProcesses);
+				postLockActions.push_back(boost::bind(waiter.callback, process2, DR_SUCCESS));
+			} else {
+				newDisableWaitlist.push_back(waiter);
 			}
-			postLockActions.push_back(boost::bind(waiter.callback, process2, DR_SUCCESS));
 		}
-		disableWaitlist.clear();
+		disableWaitlist = newDisableWaitlist;
 	}
 
 	/**
@@ -669,12 +676,16 @@ public:
 	void enable(const ProcessPtr &process, vector<Callback> &postLockActions) {
 		assert(process->getGroup().get() == this);
 		if (process->enabled == Process::DISABLING) {
+			P_DEBUG("Enabling DISABLING process " << process->inspect());
 			removeProcessFromList(process, disablingProcesses);
 			addProcessToList(process, enabledProcesses);
 			removeFromDisableWaitlist(process, DR_CANCELED, postLockActions);
 		} else if (process->enabled == Process::DISABLED) {
+			P_DEBUG("Enabling DISABLED process " << process->inspect());
 			removeProcessFromList(process, disabledProcesses);
 			addProcessToList(process, enabledProcesses);
+		} else {
+			P_DEBUG("Enabling ENABLED process " << process->inspect());
 		}
 	}
 	
@@ -686,32 +697,41 @@ public:
 	DisableResult disable(const ProcessPtr &process, const DisableCallback &callback) {
 		assert(process->getGroup().get() == this);
 		if (process->enabled == Process::ENABLED) {
+			P_DEBUG("Disabling ENABLED process " << process->inspect() <<
+				"; enabledCount=" << enabledCount << ", process.sessions=" << process->sessions);
 			assert(enabledCount >= 0);
 			if (enabledCount <= 1 || process->sessions > 0) {
-				/* All processes are going to be disabled, so in order
-				 * to avoid blocking requests we first spawn a new process
-				 * and disable this process after the other one is done
-				 * spawning. We do this irregardless of resource limits
-				 * because this is an exceptional situation.
-				 */
 				removeProcessFromList(process, enabledProcesses);
 				addProcessToList(process, disablingProcesses);
 				disableWaitlist.push_back(DisableWaiter(process, callback));
 				if (enabledCount == 0) {
+					/* All processes are going to be disabled, so in order
+					 * to avoid blocking requests we first spawn a new process
+					 * and disable this process after the other one is done
+					 * spawning. We do this irregardless of resource limits
+					 * because this is an exceptional situation.
+					 */
+					P_DEBUG("Spawning a new process to avoid the disable action from blocking requests");
 					spawn();
 				}
+				P_DEBUG("Deferring disable command completion");
 				return DR_DEFERRED;
 			} else {
 				removeProcessFromList(process, enabledProcesses);
 				addProcessToList(process, disabledProcesses);
+				P_DEBUG("Disable command succeeded immediately");
 				return DR_SUCCESS;
 			}
 		} else if (process->enabled == Process::DISABLING) {
 			assert(disablingCount > 0);
 			disableWaitlist.push_back(DisableWaiter(process, callback));
+			P_DEBUG("Disabling DISABLING process " << process->inspect() <<
+				name << "; command queued, deferring disable command completion");
 			return DR_DEFERRED;
 		} else {
 			assert(disabledCount > 0);
+			P_DEBUG("Disabling DISABLED process " << process->inspect() <<
+				name << "; disable command succeeded immediately");
 			return DR_NOOP;
 		}
 	}

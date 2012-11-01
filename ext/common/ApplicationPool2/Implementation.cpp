@@ -392,17 +392,17 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			} else {
 				assignSessionsToGetWaiters(actions);
 			}
-			P_DEBUG("Attached process " << process->inspect() <<
-				" to group " << name <<
-				": new process count = " << enabledCount <<
+			P_DEBUG("New process count = " << enabledCount <<
 				", remaining get waiters = " << getWaitlist.size());
 		} else {
 			// TODO: sure this is the best thing? if there are
 			// processes currently alive we should just use them.
-			P_DEBUG("Could not spawn process appRoot=" << name <<
+			P_ERROR("Could not spawn process for group " << name <<
 				": " << exception->what());
+			if (enabledCount == 0) {
+				enableAllDisablingProcesses(actions);
+			}
 			assignExceptionToGetWaiters(exception, actions);
-			enableAllDisablingProcesses(actions);
 			pool->assignSessionsToGetWaiters(actions);
 			done = true;
 		}

@@ -35,6 +35,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/function.hpp>
+#include <boost/foreach.hpp>
 #include <oxt/dynamic_thread_group.hpp>
 #include <oxt/backtrace.hpp>
 #include <ApplicationPool2/Common.h>
@@ -1145,6 +1146,8 @@ public:
 		shared_ptr<DisableWaitTicket> ticket = make_shared<DisableWaitTicket>();
 		DisableResult result = group->disable(process,
 			boost::bind(syncDisableProcessCallback, _1, _2, ticket));
+		group->verifyInvariants();
+		group->verifyExpensiveInvariants();
 		if (result == DR_DEFERRED) {
 			l.unlock();
 			ScopedLock l2(ticket->syncher);
@@ -1155,6 +1158,22 @@ public:
 		} else {
 			return result;
 		}
+	}
+
+	/**
+	 * Checks whether at least one process is being spawned.
+	 */
+	bool isSpawning(bool lock = true) const {
+		DynamicScopedLock l(syncher, lock);
+		SuperGroupMap::const_iterator it, end = superGroups.end();
+		for (it = superGroups.begin(); it != end; it++) {
+			foreach (GroupPtr group, it->second->groups) {
+				if (group->spawning()) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	string inspect(const InspectOptions &options = InspectOptions(), bool lock = true) const {
