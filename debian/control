@@ -8,8 +8,8 @@ Build-Depends: debhelper (>= 7.0.50~), gem2deb (>= 0.2.12~), apache2-mpm-worker 
  libcurl4-openssl-dev, libev-dev (>= 1:4.0.0)
 Standards-Version: 3.9.3
 Homepage: http://www.modrails.com/
-Vcs-Git: git://anonscm.debian.org/git/pkg-ruby-extras/ruby-passenger.git
-Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-ruby-extras/ruby-passenger.git;a=summary
+Vcs-Git: git://github.com/johnl/deb-passenger.git
+Vcs-Browser: https://github.com/johnl/deb-passenger
 XS-Ruby-Versions: all
 
 Package: ruby-passenger
