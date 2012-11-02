@@ -224,7 +224,7 @@ Group::onSessionInitiateFailure(const ProcessPtr &process, Session *session) {
 	}
 	unique_lock<boost::mutex> lock(pool->syncher);
 	pool = getPool();
-	if (OXT_UNLIKELY(pool == NULL)) {
+	if (OXT_UNLIKELY(pool == NULL) || process->detached()) {
 		return;
 	}
 
@@ -247,7 +247,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	}
 	unique_lock<boost::mutex> lock(pool->syncher);
 	pool = getPool();
-	if (OXT_UNLIKELY(pool == NULL)) {
+	if (OXT_UNLIKELY(pool == NULL) || process->detached()) {
 		return;
 	}
 	
