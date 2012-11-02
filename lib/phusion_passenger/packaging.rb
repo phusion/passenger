@@ -51,7 +51,7 @@ module Packaging
 		'configure',
 		'Rakefile',
 		'README',
-		'DEVELOPERS.TXT',
+		'CONTRIBUTING.md',
 		'LICENSE',
 		'INSTALL',
 		'NEWS',
