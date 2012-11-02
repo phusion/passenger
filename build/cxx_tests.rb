@@ -26,6 +26,7 @@
 TEST_CXX_CFLAGS = "-Iext -Iext/common " <<
 	"#{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} #{PlatformInfo.curl_flags} -Itest/cxx -Itest/support " <<
 	"#{TEST_COMMON_CFLAGS}"
+TEST_CXX_CFLAGS << " -faddress-sanitizer" if USE_ASAN
 TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
 	"#{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} #{LIBEIO_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
