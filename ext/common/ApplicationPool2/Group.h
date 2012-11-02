@@ -148,18 +148,21 @@ private:
 		for (it = enabledProcesses.begin(); it != end; it++) {
 			const ProcessPtr &process = *it;
 			assert(process->enabled == Process::ENABLED);
+			assert(process->pqHandle != NULL);
 		}
 
 		end = disablingProcesses.end();
 		for (it = disablingProcesses.begin(); it != end; it++) {
 			const ProcessPtr &process = *it;
 			assert(process->enabled == Process::DISABLING);
+			assert(process->pqHandle == NULL);
 		}
 
 		end = disabledProcesses.end();
 		for (it = disabledProcesses.begin(); it != end; it++) {
 			const ProcessPtr &process = *it;
 			assert(process->enabled == Process::DISABLED);
+			assert(process->pqHandle == NULL);
 		}
 	}
 	
@@ -230,6 +233,7 @@ private:
 		case Process::ENABLED:
 			enabledCount--;
 			pqueue.erase(process->pqHandle);
+			process->pqHandle = NULL;
 			break;
 		case Process::DISABLING:
 			disablingCount--;
@@ -438,10 +442,13 @@ public:
 	 *
 	 *    for all process in enabledProcesses:
 	 *       process.enabled == Process::ENABLED
+	 *       process.pqHandle != NULL
 	 *    for all processes in disablingProcesses:
 	 *       process.enabled == Process::DISABLING
+	 *       process.pqHandle == NULL
 	 *    for all process in disabledProcesses:
 	 *       process.enabled == Process::DISABLED
+	 *       process.pqHandle == NULL
 	 */
 	int enabledCount;
 	int disablingCount;

@@ -219,7 +219,8 @@ public:
 		unsigned long long _spawnStartTime,
 		/** Whether to automatically forward data from errorPipe to our STDERR. */
 		bool _forwardStderr = false)
-		: libev(_libev.get()),
+		: pqHandle(NULL),
+		  libev(_libev.get()),
 		  pid(_pid),
 		  gupid(_gupid),
 		  connectPassword(_connectPassword),
