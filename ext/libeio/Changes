@@ -68,5 +68,9 @@ TODO: maybe work around 3.996gb barrier in pread/pwrite as well, maybe readahead
           by implementing a working directory abstraction.
         - make readahead emulation behave more like actual readahead by never failing.
         - added EIO_LSEEK (untested).
+        - added EIO_FALLOC_FL_PUNCH_HOLE.
         - wtf. etp_proc returned 0, and no compiler ever complained.
+        - remove pread/pwrite emulation, as the only system that lacked them
+          (cygwin) provides them for a while now.
+        - provide pread/pwrite implementations for win32.
 

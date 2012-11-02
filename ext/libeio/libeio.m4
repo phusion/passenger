@@ -62,22 +62,6 @@ int main (void)
 ],ac_cv_fdatasync=yes,ac_cv_fdatasync=no)])
 test $ac_cv_fdatasync = yes && AC_DEFINE(HAVE_FDATASYNC, 1, fdatasync(2) is available)
 
-AC_CACHE_CHECK(for pread and pwrite, ac_cv_preadwrite, [AC_LINK_IFELSE([
-#include <unistd.h>
-int main (void)
-{
-   int fd = 0;
-   size_t count = 1;
-   char buf;
-   off_t offset = 1;
-   ssize_t res;
-   res = pread (fd, &buf, count, offset);
-   res = pwrite (fd, &buf, count, offset);
-   return 0;
-}
-],ac_cv_preadwrite=yes,ac_cv_preadwrite=no)])
-test $ac_cv_preadwrite = yes && AC_DEFINE(HAVE_PREADWRITE, 1, pread(2) and pwrite(2) are available)
-
 AC_CACHE_CHECK(for sendfile, ac_cv_sendfile, [AC_LINK_IFELSE([
 # include <sys/types.h>
 #if __linux

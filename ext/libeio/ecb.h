@@ -30,6 +30,9 @@
 #ifndef ECB_H
 #define ECB_H
 
+/* 16 bits major, 16 bits minor */
+#define ECB_VERSION 0x00010002
+
 #ifdef _WIN32
   typedef   signed char   int8_t;
   typedef unsigned char  uint8_t;
@@ -44,8 +47,22 @@
     typedef   signed __int64   int64_t;
     typedef unsigned __int64   uint64_t;
   #endif
+  #ifdef _WIN64
+    #define ECB_PTRSIZE 8
+    typedef uint64_t uintptr_t;
+    typedef  int64_t  intptr_t;
+  #else
+    #define ECB_PTRSIZE 4
+    typedef uint32_t uintptr_t;
+    typedef  int32_t  intptr_t;
+  #endif
 #else
   #include <inttypes.h>
+  #if UINTMAX_MAX > 0xffffffffU
+    #define ECB_PTRSIZE 8
+  #else
+    #define ECB_PTRSIZE 4
+  #endif
 #endif
 
 /* many compilers define _GNUC_ to some versions but then only implement
@@ -63,16 +80,32 @@
   #endif
 #endif
 
+#define ECB_C     (__STDC__+0) /* this assumes that __STDC__ is either empty or a number */
+#define ECB_C99   (__STDC_VERSION__ >= 199901L)
+#define ECB_C11   (__STDC_VERSION__ >= 201112L)
+#define ECB_CPP   (__cplusplus+0)
+#define ECB_CPP11 (__cplusplus >= 201103L)
+
+#if ECB_CPP
+  #define ECB_EXTERN_C extern "C"
+  #define ECB_EXTERN_C_BEG ECB_EXTERN_C {
+  #define ECB_EXTERN_C_END }
+#else
+  #define ECB_EXTERN_C extern
+  #define ECB_EXTERN_C_BEG
+  #define ECB_EXTERN_C_END
+#endif
+
 /*****************************************************************************/
 
 /* ECB_NO_THREADS - ecb is not used by multiple threads, ever */
 /* ECB_NO_SMP     - ecb might be used in multiple threads, but only on a single cpu */
 
 #if ECB_NO_THREADS
-# define ECB_NO_SMP 1
+  #define ECB_NO_SMP 1
 #endif
 
-#if ECB_NO_THREADS || ECB_NO_SMP
+#if ECB_NO_SMP
   #define ECB_MEMORY_FENCE do { } while (0)
 #endif
 
@@ -80,39 +113,55 @@
   #if ECB_GCC_VERSION(2,5) || defined __INTEL_COMPILER || (__llvm__ && __GNUC__) || __SUNPRO_C >= 0x5110 || __SUNPRO_CC >= 0x5110
     #if __i386 || __i386__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("lock; orb $0, -1(%%esp)" : : : "memory")
-      #define ECB_MEMORY_FENCE_ACQUIRE ECB_MEMORY_FENCE /* non-lock xchg might be enough */
-      #define ECB_MEMORY_FENCE_RELEASE do { } while (0) /* unlikely to change in future cpus */
+      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ (""                        : : : "memory")
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("")
     #elif __amd64 || __amd64__ || __x86_64 || __x86_64__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mfence" : : : "memory")
-      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("lfence" : : : "memory")
-      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("sfence") /* play safe - not needed in any current cpu */
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mfence"   : : : "memory")
+      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ (""         : : : "memory")
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("")
     #elif __powerpc__ || __ppc__ || __powerpc64__ || __ppc64__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync" : : : "memory")
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync"     : : : "memory")
     #elif defined __ARM_ARCH_6__  || defined __ARM_ARCH_6J__  \
        || defined __ARM_ARCH_6K__ || defined __ARM_ARCH_6ZK__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mcr p15,0,%0,c7,c10,5" : : "r" (0) : "memory")
     #elif defined __ARM_ARCH_7__  || defined __ARM_ARCH_7A__  \
-       || defined __ARM_ARCH_7M__ || defined __ARM_ARCH_7R__ 
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb" : : : "memory")
+       || defined __ARM_ARCH_7M__ || defined __ARM_ARCH_7R__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb"      : : : "memory")
     #elif __sparc || __sparc__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("membar #LoadStore | #LoadLoad | #StoreStore | #StoreLoad | " : : : "memory")
-      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("membar #LoadStore | #LoadLoad"                               : : : "memory")
-      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("membar #LoadStore |             #StoreStore")
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("membar #LoadStore | #LoadLoad | #StoreStore | #StoreLoad" : : : "memory")
+      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("membar #LoadStore | #LoadLoad"                            : : : "memory")
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("membar #LoadStore             | #StoreStore")
     #elif defined __s390__ || defined __s390x__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("bcr 15,0" : : : "memory")
     #elif defined __mips__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync" : : : "memory")
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync"     : : : "memory")
     #elif defined __alpha__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mb" : : : "memory")
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mb"       : : : "memory")
+    #elif defined __hppa__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ (""         : : : "memory")
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("")
+    #elif defined __ia64__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mf"       : : : "memory")
     #endif
   #endif
 #endif
 
 #ifndef ECB_MEMORY_FENCE
-  #if ECB_GCC_VERSION(4,4) || defined __INTEL_COMPILER || defined __clang__
+  #if ECB_GCC_VERSION(4,7)
+    /* see comment below (stdatomic.h) about the C11 memory model. */
+    #define ECB_MEMORY_FENCE         __atomic_thread_fence (__ATOMIC_SEQ_CST)
+
+  /* The __has_feature syntax from clang is so misdesigned that we cannot use it
+   * without risking compile time errors with other compilers. We *could*
+   * define our own ecb_clang_has_feature, but I just can't be bothered to work
+   * around this shit time and again.
+   * #elif defined __clang && __has_feature (cxx_atomic)
+   *   // see comment below (stdatomic.h) about the C11 memory model.
+   *   #define ECB_MEMORY_FENCE         __c11_atomic_thread_fence (__ATOMIC_SEQ_CST)
+   */
+
+  #elif ECB_GCC_VERSION(4,4) || defined __INTEL_COMPILER || defined __clang__
     #define ECB_MEMORY_FENCE         __sync_synchronize ()
-    /*#define ECB_MEMORY_FENCE_ACQUIRE ({ char dummy = 0; __sync_lock_test_and_set (&dummy, 1); }) */
-    /*#define ECB_MEMORY_FENCE_RELEASE ({ char dummy = 1; __sync_lock_release      (&dummy   ); }) */
   #elif _MSC_VER >= 1400 /* VC++ 2005 */
     #pragma intrinsic(_ReadBarrier,_WriteBarrier,_ReadWriteBarrier)
     #define ECB_MEMORY_FENCE         _ReadWriteBarrier ()
@@ -128,6 +177,21 @@
     #define ECB_MEMORY_FENCE_RELEASE __machine_w_barrier  ()
   #elif __xlC__
     #define ECB_MEMORY_FENCE         __sync ()
+  #endif
+#endif
+
+#ifndef ECB_MEMORY_FENCE
+  #if ECB_C11 && !defined __STDC_NO_ATOMICS__
+    /* we assume that these memory fences work on all variables/all memory accesses, */
+    /* not just C11 atomics and atomic accesses */
+    #include <stdatomic.h>
+    /* Unfortunately, neither gcc 4.7 nor clang 3.1 generate any instructions for */
+    /* any fence other than seq_cst, which isn't very efficient for us. */
+    /* Why that is, we don't know - either the C11 memory model is quite useless */
+    /* for most usages, or gcc and clang have a bug */
+    /* I *currently* lean towards the latter, and inefficiently implement */
+    /* all three of ecb's fences as a seq_cst fence */
+    #define ECB_MEMORY_FENCE         atomic_thread_fence (memory_order_seq_cst)
   #endif
 #endif
 
@@ -158,8 +222,6 @@
 #endif
 
 /*****************************************************************************/
-
-#define ECB_C99 (__STDC_VERSION__ >= 199901L)
 
 #if __cplusplus
   #define ecb_inline static inline
@@ -208,10 +270,15 @@ typedef int ecb_bool;
 #endif
 
 #define ecb_noinline   ecb_attribute ((__noinline__))
-#define ecb_noreturn   ecb_attribute ((__noreturn__))
 #define ecb_unused     ecb_attribute ((__unused__))
 #define ecb_const      ecb_attribute ((__const__))
 #define ecb_pure       ecb_attribute ((__pure__))
+
+#if ECB_C11
+  #define ecb_noreturn   _Noreturn
+#else
+  #define ecb_noreturn   ecb_attribute ((__noreturn__))
+#endif
 
 #if ECB_GCC_VERSION(4,3)
   #define ecb_artificial ecb_attribute ((__artificial__))
@@ -312,6 +379,11 @@ typedef int ecb_bool;
   }
 #endif
 
+ecb_function_ ecb_bool ecb_is_pot32 (uint32_t x) ecb_const;
+ecb_function_ ecb_bool ecb_is_pot32 (uint32_t x) { return !(x & (x - 1)); }
+ecb_function_ ecb_bool ecb_is_pot64 (uint64_t x) ecb_const;
+ecb_function_ ecb_bool ecb_is_pot64 (uint64_t x) { return !(x & (x - 1)); }
+
 ecb_function_ uint8_t  ecb_bitrev8  (uint8_t  x) ecb_const;
 ecb_function_ uint8_t  ecb_bitrev8  (uint8_t  x)
 {
@@ -405,14 +477,32 @@ ecb_inline uint64_t ecb_rotr64 (uint64_t x, unsigned int count) { return (x << (
 #endif
 
 /* try to tell the compiler that some condition is definitely true */
-#define ecb_assume(cond) do { if (!(cond)) ecb_unreachable (); } while (0)
+#define ecb_assume(cond) if (!(cond)) ecb_unreachable (); else 0
 
 ecb_inline unsigned char ecb_byteorder_helper (void) ecb_const;
 ecb_inline unsigned char
 ecb_byteorder_helper (void)
 {
-  const uint32_t u = 0x11223344;
-  return *(unsigned char *)&u;
+  /* the union code still generates code under pressure in gcc, */
+  /* but less than using pointers, and always seems to */
+  /* successfully return a constant. */
+  /* the reason why we have this horrible preprocessor mess */
+  /* is to avoid it in all cases, at least on common architectures */
+  /* or when using a recent enough gcc version (>= 4.6) */
+#if __i386 || __i386__ || _M_X86 || __amd64 || __amd64__ || _M_X64
+  return 0x44;
+#elif __BYTE_ORDER__ && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  return 0x44;
+#elif __BYTE_ORDER__ && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  return 0x11;
+#else
+  union
+  {
+    uint32_t i;
+    uint8_t c;
+  } u = { 0x11223344 };
+  return u.c;
+#endif
 }
 
 ecb_inline ecb_bool ecb_big_endian    (void) ecb_const;
@@ -451,6 +541,173 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
   }
 #else
   #define ecb_array_length(name) (sizeof (name) / sizeof (name [0]))
+#endif
+
+/*******************************************************************************/
+/* floating point stuff, can be disabled by defining ECB_NO_LIBM */
+
+/* basically, everything uses "ieee pure-endian" floating point numbers */
+/* the only noteworthy exception is ancient armle, which uses order 43218765 */
+#if 0 \
+    || __i386 || __i386__ \
+    || __amd64 || __amd64__ || __x86_64 || __x86_64__ \
+    || __powerpc__ || __ppc__ || __powerpc64__ || __ppc64__ \
+    || defined __arm__ && defined __ARM_EABI__ \
+    || defined __s390__ || defined __s390x__ \
+    || defined __mips__ \
+    || defined __alpha__ \
+    || defined __hppa__ \
+    || defined __ia64__ \
+    || defined _M_IX86 || defined _M_AMD64 || defined _M_IA64
+  #define ECB_STDFP 1
+  #include <string.h> /* for memcpy */
+#else
+  #define ECB_STDFP 0
+  #include <math.h> /* for frexp*, ldexp* */
+#endif
+
+#ifndef ECB_NO_LIBM
+
+  /* convert a float to ieee single/binary32 */
+  ecb_function_ uint32_t ecb_float_to_binary32 (float x) ecb_const;
+  ecb_function_ uint32_t
+  ecb_float_to_binary32 (float x)
+  {
+    uint32_t r;
+
+    #if ECB_STDFP
+      memcpy (&r, &x, 4);
+    #else
+      /* slow emulation, works for anything but -0 */
+      uint32_t m;
+      int e;
+
+      if (x == 0e0f                    ) return 0x00000000U;
+      if (x > +3.40282346638528860e+38f) return 0x7f800000U;
+      if (x < -3.40282346638528860e+38f) return 0xff800000U;
+      if (x != x                       ) return 0x7fbfffffU;
+
+      m = frexpf (x, &e) * 0x1000000U;
+
+      r = m & 0x80000000U;
+
+      if (r)
+        m = -m;
+
+      if (e <= -126)
+        {
+          m &= 0xffffffU;
+          m >>= (-125 - e);
+          e = -126;
+        }
+
+      r |= (e + 126) << 23;
+      r |= m & 0x7fffffU;
+    #endif
+
+    return r;
+  }
+
+  /* converts an ieee single/binary32 to a float */
+  ecb_function_ float ecb_binary32_to_float (uint32_t x) ecb_const;
+  ecb_function_ float
+  ecb_binary32_to_float (uint32_t x)
+  {
+    float r;
+
+    #if ECB_STDFP
+      memcpy (&r, &x, 4);
+    #else
+      /* emulation, only works for normals and subnormals and +0 */
+      int neg = x >> 31;
+      int e = (x >> 23) & 0xffU;
+
+      x &= 0x7fffffU;
+
+      if (e)
+        x |= 0x800000U;
+      else
+        e = 1;
+
+      /* we distrust ldexpf a bit and do the 2**-24 scaling by an extra multiply */
+      r = ldexpf (x * (0.5f / 0x800000U), e - 126);
+
+      r = neg ? -r : r;
+    #endif
+
+    return r;
+  }
+
+  /* convert a double to ieee double/binary64 */
+  ecb_function_ uint64_t ecb_double_to_binary64 (double x) ecb_const;
+  ecb_function_ uint64_t
+  ecb_double_to_binary64 (double x)
+  {
+    uint64_t r;
+
+    #if ECB_STDFP
+      memcpy (&r, &x, 8);
+    #else
+      /* slow emulation, works for anything but -0 */
+      uint64_t m;
+      int e;
+
+      if (x == 0e0                     ) return 0x0000000000000000U;
+      if (x > +1.79769313486231470e+308) return 0x7ff0000000000000U;
+      if (x < -1.79769313486231470e+308) return 0xfff0000000000000U;
+      if (x != x                       ) return 0X7ff7ffffffffffffU;
+
+      m = frexp (x, &e) * 0x20000000000000U;
+
+      r = m & 0x8000000000000000;;
+
+      if (r)
+        m = -m;
+
+      if (e <= -1022)
+        {
+          m &= 0x1fffffffffffffU;
+          m >>= (-1021 - e);
+          e = -1022;
+        }
+
+      r |= ((uint64_t)(e + 1022)) << 52;
+      r |= m & 0xfffffffffffffU;
+    #endif
+
+    return r;
+  }
+
+  /* converts an ieee double/binary64 to a double */
+  ecb_function_ double ecb_binary64_to_double (uint64_t x) ecb_const;
+  ecb_function_ double
+  ecb_binary64_to_double (uint64_t x)
+  {
+    double r;
+
+    #if ECB_STDFP
+      memcpy (&r, &x, 8);
+    #else
+      /* emulation, only works for normals and subnormals and +0 */
+      int neg = x >> 63;
+      int e = (x >> 52) & 0x7ffU;
+
+      x &= 0xfffffffffffffU;
+
+      if (e)
+        x |= 0x10000000000000U;
+      else
+        e = 1;
+
+      /* we distrust ldexp a bit and do the 2**-53 scaling by an extra multiply */
+      r = ldexp (x * (0.5 / 0x10000000000000U), e - 1022);
+
+      r = neg ? -r : r;
+    #endif
+
+    return r;
+  }
+
 #endif
 
 #endif
