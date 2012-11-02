@@ -73,7 +73,7 @@ USE_DMALLOC = boolean_option('USE_DMALLOC')
 USE_EFENCE  = boolean_option('USE_EFENCE')
 USE_ASAN    = boolean_option('USE_ASAN')
 if OPTIMIZE
-	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O -DBOOST_DISABLE_ASSERTS".strip
+	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS".strip
 else
 	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS".strip
 end
