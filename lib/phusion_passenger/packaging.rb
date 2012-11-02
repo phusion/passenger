@@ -50,7 +50,7 @@ module Packaging
 	GLOB = [
 		'configure',
 		'Rakefile',
-		'README',
+		'README.md',
 		'CONTRIBUTING.md',
 		'LICENSE',
 		'INSTALL',
