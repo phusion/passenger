@@ -217,6 +217,7 @@ end
 
 deps = [
 	'test/cxx/TestSupport.h',
+	'test/tut/tut.h',
 	'ext/oxt/thread.hpp',
 	'ext/oxt/tracable_exception.hpp',
 	'ext/common/ServerInstanceDir.h',
