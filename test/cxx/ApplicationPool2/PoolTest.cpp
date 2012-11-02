@@ -1043,7 +1043,7 @@ namespace tut {
 			result = pool->getProcessCount() == 2;
 		);
 		EVENTUALLY(2,
-			result = !pool->getSuperGroup("tmp.wsgi")->defaultGroup->spawning();
+			result = !pool->isSpawning();
 		);
 		SHOULD_NEVER_HAPPEN(500,
 			result = pool->getProcessCount() > 2;
