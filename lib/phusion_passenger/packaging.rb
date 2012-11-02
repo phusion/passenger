@@ -53,7 +53,7 @@ module Packaging
 		'README.md',
 		'CONTRIBUTING.md',
 		'LICENSE',
-		'INSTALL',
+		'INSTALL.md',
 		'NEWS',
 		'build/*.rb',
 		'lib/*.rb',
