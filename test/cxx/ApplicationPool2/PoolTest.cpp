@@ -47,11 +47,23 @@ namespace tut {
 			UPDATE_TRACE_POINT();
 			pool.reset();
 			UPDATE_TRACE_POINT();
-			lock_guard<boost::mutex> l(syncher);
-			currentSession.reset();
-			sessions.clear();
+			clearAllSessions();
 		}
 		
+		void clearAllSessions() {
+			SessionPtr myCurrentSession;
+			list<SessionPtr> mySessions;
+			{
+				LockGuard l(syncher);
+				myCurrentSession = currentSession;
+				mySessions = sessions;
+				currentSession.reset();
+				sessions.clear();
+			}
+			myCurrentSession.reset();
+			mySessions.clear();
+		}
+
 		Options createOptions() {
 			Options options;
 			options.spawnMethod = "dummy";
