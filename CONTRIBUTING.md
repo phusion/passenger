@@ -79,6 +79,10 @@ Run only the unit tests for the C++ components:
     rake test:cxx
     rake test:oxt
 
+The `test:cxx` unit test suite contains many different test groups. You can run a specific one by setting the environment variable `GROUPS` to a comma-delimited list of group names, e.g.:
+
+    rake test:cxx GROUPS='ApplicationPool2_PoolTest,UtilsTest'
+
 Run just the unit tests for the Ruby components:
 
     rake test:ruby
