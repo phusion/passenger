@@ -96,8 +96,10 @@ static bool stopOnAbort = false;
 static char *alternativeStack;
 static unsigned int alternativeStackSize;
 
-static char *argv0 = NULL;
-static char *backtraceSanitizerPath = NULL;
+static const char *argv0 = NULL;
+static const char *backtraceSanitizerPath = NULL;
+static bool backtraceSanitizerUseShell = false;
+static bool backtraceSanitizerPassProgramInfo = true;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
 static void *customDiagnosticsDumperUserData;
 
@@ -466,9 +468,33 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 
 				close(p[1]);
 				dup2(p[0], STDIN_FILENO);
-				execlp(backtraceSanitizerPath, backtraceSanitizerPath, argv0,
-					pidStr, (const char * const) 0);
-				safePrintErr("ERROR: cannot execute 'backtrace-sanitizer.rb', trying 'cat'...\n");
+				if (backtraceSanitizerUseShell) {
+					end = state.messageBuf;
+					end = appendText(end, backtraceSanitizerPath);
+					if (backtraceSanitizerPassProgramInfo) {
+						end = appendText(end, " \"");
+						end = appendText(end, argv0);
+						end = appendText(end, "\" ");
+						end = appendText(end, pidStr);
+					}
+					*end = '\0';
+					execlp("/bin/sh", "/bin/sh", "-c",
+						state.messageBuf, (const char * const) 0);
+				} else {
+					if (backtraceSanitizerPassProgramInfo) {
+						execlp(backtraceSanitizerPath, backtraceSanitizerPath, argv0,
+						pidStr, (const char * const) 0);
+					} else {
+						execlp(backtraceSanitizerPath, backtraceSanitizerPath,
+							(const char * const) 0);
+					}
+				}
+
+				end = state.messageBuf;
+				end = appendText(end, "ERROR: cannot execute '");
+				end = appendText(end, backtraceSanitizerPath);
+				end = appendText(end, "' for sanitizing the backtrace, trying 'cat'...\n");
+				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 				execlp("cat", "cat", (const char * const) 0);
 				safePrintErr("ERROR: cannot execute 'cat'\n");
 				_exit(1);
@@ -1083,6 +1109,11 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 				backtraceSanitizerPath = strdup((locator.getHelperScriptsDir() + "/backtrace-sanitizer.rb").c_str());
 			}
 		#endif
+		if (backtraceSanitizerPath == NULL) {
+			backtraceSanitizerPath = "c++filt -n";
+			backtraceSanitizerUseShell = true;
+			backtraceSanitizerPassProgramInfo = false;
+		}
 
 		setLogLevel(options.getInt("log_level", false, 0));
 		if (!options.get("debug_log_file", false).empty()) {
