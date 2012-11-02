@@ -110,7 +110,7 @@ public:
 	pid_t getPid() const;
 	const string &getGupid() const;
 	
-	ProcessPtr getProcess() const {
+	const ProcessPtr &getProcess() const {
 		return process;
 	}
 	

@@ -251,6 +251,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		return;
 	}
 	
+	P_TRACE(2, "Session closed for process " << process->inspect());
 	verifyInvariants();
 	UPDATE_TRACE_POINT();
 	

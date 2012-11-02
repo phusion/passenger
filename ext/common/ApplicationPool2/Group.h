@@ -632,6 +632,7 @@ public:
 		assert(process->getGroup().get() == this);
 
 		const ProcessPtr p = process; // Keep an extra reference just in case.
+		P_DEBUG("Detaching process " << process->inspect());
 		process->setGroup(GroupPtr());
 
 		if (process->enabled == Process::ENABLED || process->enabled == Process::DISABLING) {
