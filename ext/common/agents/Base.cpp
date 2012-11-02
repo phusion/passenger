@@ -685,6 +685,44 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	raise(signo);
 }
 
+#ifdef __APPLE__
+	/* On OS X, raise() and abort() unfortunately send SIGABRT to the main thread,
+	 * causing the original backtrace to be lost in the signal handler.
+	 * We work around this for anything in the same linkage unit by just definin
+	 * our own versions of the assert handler and abort.
+	 */
+	
+	#include <pthread.h>
+
+	static int
+	raise(int sig) {
+		return pthread_kill(pthread_self(), sig);
+	}
+
+	void
+	__assert_rtn(const char *func, const char *file, int line, const char *expr) {
+		if (func) {
+			fprintf(stderr, "Assertion failed: (%s), function %s, file %s, line %d.\n",
+				expr, func, file, line);
+		} else {
+			fprintf(stderr, "Assertion failed: (%s), file %s, line %d.\n",
+				expr, file, line);
+		}
+		abort();
+	}
+
+	void
+	abort() {
+		sigset_t set;
+		sigemptyset(&set);
+		sigaddset(&set, SIGABRT);
+		pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+		raise(SIGABRT);
+		usleep(1000);
+		__builtin_trap();
+	}
+#endif /* __APPLE__ */
+
 void
 installAbortHandler() {
 	alternativeStackSize = MINSIGSTKSZ + 128 * 1024;
