@@ -177,8 +177,8 @@ public:
 	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
-		P_ASSERT(!( !getWaitlist.empty() ) || ( atFullCapacity(false) ));
-		P_ASSERT(!( !atFullCapacity(false) ) || ( getWaitlist.empty() ));
+		assert(!( !getWaitlist.empty() ) || ( atFullCapacity(false) ));
+		assert(!( !atFullCapacity(false) ) || ( getWaitlist.empty() ));
 	}
 	
 	void verifyExpensiveInvariants() const {
@@ -186,7 +186,7 @@ public:
 		vector<GetWaiter>::const_iterator it, end = getWaitlist.end();
 		for (it = getWaitlist.begin(); it != end; it++) {
 			const GetWaiter &waiter = *it;
-			P_ASSERT(superGroups.get(waiter.options.getAppGroupName()) == NULL);
+			assert(superGroups.get(waiter.options.getAppGroupName()) == NULL);
 		}
 		#endif
 	}
@@ -321,7 +321,7 @@ public:
 	 */
 	void forceDetachSuperGroup(SuperGroupPtr superGroup, vector<Callback> &postLockActions) {
 		bool removed = superGroups.remove(superGroup->name);
-		P_ASSERT(removed);
+		assert(removed);
 		(void) removed; // Shut up compiler warning.
 		superGroup->destroy(postLockActions, false);
 		superGroup->setPool(PoolPtr());
@@ -333,8 +333,8 @@ public:
 			verifyInvariants();
 			
 			SuperGroupPtr superGroup = group->getSuperGroup();
-			P_ASSERT(superGroup->state != SuperGroup::INITIALIZING);
-			P_ASSERT(superGroup->getWaitlist.empty());
+			assert(superGroup->state != SuperGroup::INITIALIZING);
+			assert(superGroup->getWaitlist.empty());
 			
 			group->detach(process, postLockActions);
 			if (group->enabledProcesses.empty()
@@ -694,7 +694,7 @@ public:
 		 * unless something has changed and we forgot to update
 		 * some code here...
 		 */
-		P_ASSERT(session == NULL);
+		assert(session == NULL);
 		return superGroup;
 	}
 
@@ -821,7 +821,7 @@ public:
 				}
 			} else {
 				// Check invariant.
-				P_ASSERT(process->getGroup()->getWaitlist.empty());
+				assert(process->getGroup()->getWaitlist.empty());
 			}
 			if (process == NULL) {
 				/* All (super)groups are currently initializing/restarting/spawning/etc
@@ -836,15 +836,15 @@ public:
 				
 				P_TRACE(2, "Freeing process " << process->inspect());
 				group = process->getGroup();
-				P_ASSERT(group != NULL);
+				assert(group != NULL);
 				superGroup = group->getSuperGroup();
-				P_ASSERT(superGroup != NULL);
+				assert(superGroup != NULL);
 				
 				group->detach(process, actions);
 				if (superGroup->garbageCollectable()) {
-					P_ASSERT(group->garbageCollectable());
+					assert(group->garbageCollectable());
 					forceDetachSuperGroup(superGroup, actions);
-					P_ASSERT(superGroup->getWaitlist.empty());
+					assert(superGroup->getWaitlist.empty());
 				} else if (group->enabledProcesses.empty()
 				        && !group->spawning()
 				        && !group->getWaitlist.empty())
@@ -872,11 +872,11 @@ public:
 				 * unless something has changed and we forgot to update
 				 * some code here...
 				 */
-				P_ASSERT(session == NULL);
+				assert(session == NULL);
 				superGroup->verifyInvariants();
 			}
 			
-			P_ASSERT(atFullCapacity(false));
+			assert(atFullCapacity(false));
 			verifyInvariants();
 			verifyExpensiveInvariants();
 			P_TRACE(2, "asyncGet() finished");
@@ -889,7 +889,7 @@ public:
 					// This state is not allowed. If we reach
 					// here then it probably indicates a bug in
 					// the test suite.
-					P_ABORT();
+					abort();
 				}
 			}
 		}
@@ -936,7 +936,7 @@ public:
 	
 	void setMax(unsigned int max) {
 		ScopedLock l(syncher);
-		P_ASSERT(max > 0);
+		assert(max > 0);
 		verifyInvariants();
 		verifyExpensiveInvariants();
 		bool bigger = max > this->max;
@@ -1059,7 +1059,7 @@ public:
 	bool detachSuperGroup(const SuperGroupPtr &superGroup, bool lock = true,
 		vector<Callback> *postLockActions = NULL)
 	{
-		P_ASSERT(lock || postLockActions != NULL);
+		assert(lock || postLockActions != NULL);
 		DynamicScopedLock l(syncher, lock);
 		
 		if (OXT_LIKELY(superGroup->getPool().get() == this)) {

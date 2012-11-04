@@ -124,38 +124,10 @@ void setDebugFile(const char *logFile = NULL);
  */
 #define P_DEBUG(expr) P_TRACE(1, expr)
 
-/**
- * Aborts the current process. At least on OS X, abort() unfortunately sends SIGABRT
- * to a random thread, causing the original backtrace to be lost when gdb has
- * detected SIGABRT. We fix that by sending SIGABRT to the calling thread.
- */
-#define P_ABORT() \
-	do { \
-		P_ERROR("Aborting!"); \
-		sigset_t set; \
-		sigemptyset(&set); \
-		sigaddset(&set, SIGABRT); \
-		pthread_sigmask(SIG_UNBLOCK, &set, NULL); \
-		pthread_kill(pthread_self(), SIGABRT); \
-		abort(); \
-	} while (false)
-
 #ifdef PASSENGER_DEBUG
 	#define P_TRACE(level, expr) P_LOG_TO(level, expr, Passenger::_logStream)
-	
-	/* A version of assert() that works better. We also print the process ID, time
-	 * and other stuff that the P_* logging functions normally print.
-	 */
-	#define P_ASSERT(expr) \
-		do { \
-			if (OXT_UNLIKELY(!(expr))) { \
-				P_ERROR("Assertion failed: " << #expr); \
-				P_ABORT(); \
-			} \
-		} while (false)
 #else
 	#define P_TRACE(level, expr) do { /* nothing */ } while (false)
-	#define P_ASSERT(expr) ((void) 0)
 #endif
 
 

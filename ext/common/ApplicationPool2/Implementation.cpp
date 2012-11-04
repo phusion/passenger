@@ -382,7 +382,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		}
 		
 		verifyInvariants();
-		P_ASSERT(m_spawning || m_restarting);
+		assert(m_spawning || m_restarting);
 		
 		UPDATE_TRACE_POINT();
 		vector<Callback> actions;

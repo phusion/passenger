@@ -189,11 +189,11 @@ private:
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
 		
-		P_ASSERT(groups.empty() ==
+		assert(groups.empty() ==
 			(state == INITIALIZING || state == DESTROYING || state == DESTROYED));
-		P_ASSERT((defaultGroup == NULL) ==
+		assert((defaultGroup == NULL) ==
 			(state == INITIALIZING || state == DESTROYING || state == DESTROYED));
-		P_ASSERT(!( state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED ) ||
+		assert(!( state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED ) ||
 			( getWaitlist.empty() ));
 	}
 	
@@ -324,14 +324,14 @@ private:
 				return;
 			}
 			P_TRACE(2, "Initialization of SuperGroup " << inspect() << " almost done; grabbed lock");
-			P_ASSERT(state == INITIALIZING);
+			assert(state == INITIALIZING);
 			verifyInvariants();
 			
 			if (componentInfos.empty()) {
 				/* Somehow initialization failed. Maybe something has deleted
 				 * the supergroup files while we're working.
 				 */
-				P_ASSERT(exception != NULL);
+				assert(exception != NULL);
 				setState(DESTROYED);
 				
 				actions.reserve(getWaitlist.size());
@@ -384,7 +384,7 @@ private:
 		if (OXT_UNLIKELY(getPool() == NULL || this->generation != generation)) {
 			return;
 		}
-		P_ASSERT(state == RESTARTING);
+		assert(state == RESTARTING);
 		verifyInvariants();
 		
 		vector<GroupPtr> allGroups;
@@ -455,7 +455,7 @@ private:
 		}
 		
 		UPDATE_TRACE_POINT();
-		P_ASSERT(state == DESTROYING);
+		assert(state == DESTROYING);
 		verifyInvariants();
 		state = DESTROYED;
 		verifyInvariants();
@@ -636,10 +636,10 @@ public:
 			for (it = groups.begin(); result && it != end; it++) {
 				result = result && (*it)->garbageCollectable(now);
 			}
-			P_ASSERT(!result || getWaitlist.empty());
+			assert(!result || getWaitlist.empty());
 			return result;
 		} else {
-			P_ASSERT(!(state == DESTROYED) || getWaitlist.empty());
+			assert(!(state == DESTROYED) || getWaitlist.empty());
 			return state == DESTROYED;
 		} */
 		return false;
