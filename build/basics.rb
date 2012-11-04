@@ -72,12 +72,8 @@ LIBEXT   = PlatformInfo.library_extension
 USE_DMALLOC = boolean_option('USE_DMALLOC')
 USE_EFENCE  = boolean_option('USE_EFENCE')
 USE_ASAN    = boolean_option('USE_ASAN')
-if OPTIMIZE
-	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS".strip
-else
-	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS".strip
-end
-OPTIMIZATION_FLAGS << " -fcommon"
+OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -feliminate-unused-debug-symbols -feliminate-unused-debug-types -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS -fcommon".strip
+OPTIMIZATION_FLAGS << " -O" if OPTIMIZE
 OPTIMIZATION_FLAGS << " -fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED" if PlatformInfo.compiler_supports_visibility_flag?
 OPTIMIZATION_FLAGS << " -Wno-attributes" if PlatformInfo.compiler_supports_visibility_flag? &&
 	PlatformInfo.compiler_visibility_flag_generates_warnings? &&
