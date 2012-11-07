@@ -37,8 +37,7 @@ ESSENTIALS = [
 	"boost/date_time/date_formatting_limited.hpp",
 	"boost/non_type.hpp",
 	"boost/detail/fenv.hpp",
-	"boost/foreach.hpp",
-	"boost/lambda"
+	"boost/foreach.hpp"
 ]
 EXCLUDE = [
 	"libs/thread/src/win32/*"
