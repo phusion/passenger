@@ -496,6 +496,8 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 				end = appendText(end, "' for sanitizing the backtrace, trying 'cat'...\n");
 				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 				execlp("cat", "cat", (const char * const) 0);
+				execlp("/bin/cat", "cat", (const char * const) 0);
+				execlp("/usr/bin/cat", "cat", (const char * const) 0);
 				safePrintErr("ERROR: cannot execute 'cat'\n");
 				_exit(1);
 
@@ -524,6 +526,17 @@ runCustomDiagnosticsDumper(AbortHandlerState &state, void *userData) {
 static void
 dumpDiagnostics(AbortHandlerState &state) {
 	char *messageBuf = state.messageBuf;
+
+	// Dump human-readable time string.
+	pid_t pid = asyncFork();
+	if (pid == 0) {
+		execlp("date", "date", (const char * const) 0);
+		_exit(1);
+	} else if (pid == -1) {
+		safePrintErr("ERROR: Could not fork a process to dump the time!\n");
+	} else {
+		waitpid(pid, NULL, 0);
+	}
 
 	// It is important that writing the message and the backtrace are two
 	// seperate operations because it's not entirely clear whether the
@@ -568,6 +581,62 @@ dumpDiagnostics(AbortHandlerState &state) {
 	}
 }
 
+static bool
+createCrashLogFile(char *filename, time_t t) {
+	char *end = filename;
+	end = appendText(end, "/var/tmp/passenger-crash-log.");
+	end = appendULL(end, (unsigned long long) t);
+	*end = '\0';
+
+	int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	if (fd == -1) {
+		end = filename;
+		end = appendText(end, "/tmp/passenger-crash-log.");
+		end = appendULL(end, (unsigned long long) t);
+		*end = '\0';
+		fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	}
+	if (fd == -1) {
+		*filename = '\0';
+		return false;
+	} else {
+		close(fd);
+		return true;
+	}
+}
+
+static void
+forkAndRedirectToTee(char *filename) {
+	pid_t pid;
+	int p[2];
+
+	if (pipe(p) == -1) {
+		// Signal error condition.
+		*filename = '\0';
+		return;
+	}
+
+	pid = asyncFork();
+	if (pid == 0) {
+		close(p[1]);
+		dup2(p[0], STDIN_FILENO);
+		execlp("tee", "tee", filename, (const char * const) 0);
+		execlp("/usr/bin/tee", "tee", filename, (const char * const) 0);
+		execlp("cat", "cat", (const char * const) 0);
+		execlp("/bin/cat", "cat", (const char * const) 0);
+		execlp("/usr/bin/cat", "cat", (const char * const) 0);
+		safePrintErr("ERROR: cannot execute 'tee' or 'cat'; crash log will be lost!\n");
+		_exit(1);
+	} else if (pid == -1) {
+		safePrintErr("ERROR: cannot fork a process for executing 'tee'\n");
+		*filename = '\0';
+	} else {
+		close(p[0]);
+		dup2(p[1], STDOUT_FILENO);
+		dup2(p[1], STDERR_FILENO);
+	}
+}
+
 static void
 abortHandler(int signo, siginfo_t *info, void *ctx) {
 	AbortHandlerState state;
@@ -575,6 +644,15 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	state.signo = signo;
 	state.info = info;
 	pid_t child;
+	time_t t = time(NULL);
+	char crashLogFile[256];
+
+	/* We want to dump the entire crash log to both stderr and a log file.
+	 * We use 'tee' for this.
+	 */
+	if (createCrashLogFile(crashLogFile, t)) {
+		forkAndRedirectToTee(crashLogFile);
+	}
 
 	char *end = state.messagePrefix;
 	end = appendText(end, "[ pid=");
@@ -584,12 +662,24 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	end = state.messageBuf;
 	end = appendText(end, state.messagePrefix);
 	end = appendText(end, ", timestamp=");
-	end = appendULL(end, (unsigned long long) time(NULL));
+	end = appendULL(end, (unsigned long long) t);
 	end = appendText(end, " ] Process aborted! signo=");
 	end = appendSignalName(end, state.signo);
 	end = appendText(end, ", reason=");
 	end = appendSignalReason(end, state.info);
 	end = appendText(end, "\n");
+	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+
+	end = state.messageBuf;
+	if (*crashLogFile != '\0') {
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] Crash log dumped to ");
+		end = appendText(end, crashLogFile);
+		end = appendText(end, "\n");
+	} else {
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] Could not create crash log file, so dumping to stderr only.\n");
+	}
 	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
 	if (beepOnAbort) {
