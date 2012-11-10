@@ -42,6 +42,7 @@ namespace tut {
 			// additional code that depend on other fields in this
 			// class.
 			setLogLevel(0);
+			SystemTime::releaseAll();
 			TRACE_POINT();
 			pool->destroy();
 			UPDATE_TRACE_POINT();
@@ -627,6 +628,54 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 2u);
 		ensure(!superGroup1->detached());
 		ensure_equals(superGroup1->getProcessCount(), 0u);
+	}
+	
+	TEST_METHOD(22) {
+		// Suppose the pool is full, and one tries to asyncGet() from a nonexistant group,
+		// and the process that is selected for killing is the sole process in its group.
+		// If there are waiters in the group then those waiters will be migrated
+		// to the top-level waitlist.
+		Options options = createOptions();
+		Ticket ticket;
+		pool->setMax(2);
+		
+		// Get from /foo and retain its session.
+		options.appRoot = "/foo";
+		SystemTime::force(1);
+		SessionPtr session1 = pool->get(options, &ticket);
+
+		// Get from /bar and retain its session.
+		options.appRoot = "/bar";
+		SystemTime::force(2);
+		SessionPtr session2 = pool->get(options, &ticket);
+
+		// Request another get(). /foo will now have 1 waiter in its waitlist.
+		options.appRoot = "/foo";
+		pool->asyncGet(options, callback);
+		{
+			LockGuard l(pool->syncher);
+			GroupPtr group = session1->getGroup();
+			ensure("(1)", group != NULL);
+			ensure("(1)", !group->detached());
+			ensure("(1)", !group->getWaitlist.empty());
+		}
+
+		// This kill the process for /foo.
+		SystemTime::force(3);
+		options.appRoot = "/baz";
+		SessionPtr session3 = pool->get(options, &ticket);
+		ensure("(4)", session1->getProcess()->detached());
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals("(5)", pool->getWaitlist.size(), 1u);
+		}
+
+		session1.reset();
+		session2.reset();
+		session3.reset();
+		EVENTUALLY(2,
+			result = number == 1;
+		);
 	}
 	
 	

@@ -554,6 +554,11 @@ Session::getGupid() const {
 	return process->gupid;
 }
 
+const GroupPtr
+Session::getGroup() const {
+	return process->getGroup();
+}
+
 
 PipeWatcher::PipeWatcher(
 	const SafeLibevPtr &_libev,

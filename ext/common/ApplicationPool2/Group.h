@@ -136,6 +136,7 @@ private:
 	}
 
 	void verifyExpensiveInvariants() const {
+		#ifndef NDEBUG
 		// !a || b: logical equivalent of a IMPLIES b.
 
 		assert((int) enabledProcesses.size() == enabledCount);
@@ -164,6 +165,7 @@ private:
 			assert(process->enabled == Process::DISABLED);
 			assert(process->pqHandle == NULL);
 		}
+		#endif
 	}
 	
 	void resetOptions(const Options &newOptions) {

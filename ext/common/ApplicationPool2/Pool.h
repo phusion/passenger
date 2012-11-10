@@ -141,10 +141,6 @@ public:
 	 * - The 'max' option has been increased, resulting in free capacity.
 	 *
 	 * Invariant 1:
-	 *    for all options in getWaitlist:
-	 *       options.getAppGroupName() is not in 'superGroups'.
-	 *
-	 * Invariant 2:
 	 *    if getWaitlist is non-empty:
 	 *       atFullCapacity()
 	 * Equivalently:
@@ -182,13 +178,7 @@ public:
 	}
 	
 	void verifyExpensiveInvariants() const {
-		#ifndef NDEBUG
-		vector<GetWaiter>::const_iterator it, end = getWaitlist.end();
-		for (it = getWaitlist.begin(); it != end; it++) {
-			const GetWaiter &waiter = *it;
-			assert(superGroups.get(waiter.options.getAppGroupName()) == NULL);
-		}
-		#endif
+		// Do nothing.
 	}
 	
 	ProcessPtr findOldestIdleProcess() const {
@@ -726,6 +716,13 @@ public:
 		libev->start(analyticsCollectionTimer);
 
 		spawnLoopIteration = 0;
+
+		// The following code only serve to instantiate certain inline methods
+		// so that they can be invoked from gdb.
+		(void) SuperGroupPtr().get();
+		(void) GroupPtr().get();
+		(void) ProcessPtr().get();
+		(void) SessionPtr().get();
 	}
 	
 	~Pool() {
@@ -793,11 +790,11 @@ public:
 			/* The app super group isn't in the pool and we have enough free
 			 * resources to make a new one.
 			 */
-			P_TRACE(2, "Spawning new SuperGroup");
+			P_DEBUG("Spawning new SuperGroup");
 			SuperGroupPtr superGroup = createSuperGroupAndAsyncGetFromIt(options, callback);
 			superGroup->verifyInvariants();
 			verifyInvariants();
-			P_TRACE(2, "asyncGet() finished");
+			P_DEBUG("asyncGet() finished");
 			
 		} else {
 			vector<Callback> actions;
@@ -810,7 +807,7 @@ public:
 			 *
 			 * First, try to trash an idle process that's the oldest.
 			 */
-			P_TRACE(2, "Pool is at full capacity; trying to free a process...");
+			P_DEBUG("Pool is at full capacity; trying to free a process...");
 			ProcessPtr process = findOldestIdleProcess();
 			if (process == NULL) {
 				/* All processes are doing something. We have no choice
@@ -824,17 +821,18 @@ public:
 				assert(process->getGroup()->getWaitlist.empty());
 			}
 			if (process == NULL) {
-				/* All (super)groups are currently initializing/restarting/spawning/etc
-				 * so nothing can be killed. We have no choice but to satisfy this
-				 * get() action later when resources become available.
+				/* No process is eligible for killing. This could happen if, for example,
+				 * all (super)groups are currently initializing/restarting/spawning/etc.
+				 * We have no choice but to satisfy this get() action later when resources
+				 * become available.
 				 */
-				P_TRACE(2, "Could not free a process; putting request to getWaitlist");
+				P_DEBUG("Could not free a process; putting request to top-level getWaitlist");
 				getWaitlist.push_back(GetWaiter(options, callback));
 			} else {
 				GroupPtr group;
 				SuperGroupPtr superGroup;
 				
-				P_TRACE(2, "Freeing process " << process->inspect());
+				P_DEBUG("Freeing process " << process->inspect());
 				group = process->getGroup();
 				assert(group != NULL);
 				superGroup = group->getSuperGroup();
@@ -842,6 +840,7 @@ public:
 				
 				group->detach(process, actions);
 				if (superGroup->garbageCollectable()) {
+					P_DEBUG("Garbage collecting SuperGroup");
 					assert(group->garbageCollectable());
 					forceDetachSuperGroup(superGroup, actions);
 					assert(superGroup->getWaitlist.empty());
@@ -855,6 +854,10 @@ public:
 					 * get wait list. The group's original get waiters
 					 * will get their chances later.
 					 */
+					P_DEBUG("Migrating group getWaitlist (" <<
+						group->getWaitlist.size() << " items) to top-level" <<
+						" getWaitlist (" << getWaitlist.size() <<
+						" items before migration)");
 					migrateGroupGetWaitlistToPool(group);
 				}
 				group->verifyInvariants();
@@ -863,6 +866,7 @@ public:
 				/* Now that a process has been trashed we can create
 				 * the missing SuperGroup.
 				 */
+				P_DEBUG("Creating new SuperGroup");
 				superGroup = make_shared<SuperGroup>(shared_from_this(), options);
 				superGroup->initialize();
 				superGroups.set(options.getAppGroupName(), superGroup);
@@ -1183,11 +1187,16 @@ public:
 		const char *resetColor  = maybeColorize(options, ANSI_COLOR_RESET);
 		
 		result << headerColor << "----------- General information -----------" << resetColor << endl;
-		result << "Max pool size     : " << max << endl;
-		result << "Processes         : " << getProcessCount(false) << endl;
-		result << "Requests in queue : " << getWaitlist.size() << endl;
-		//result << "active   = " << active << endl;
-		//result << "inactive = " << inactiveApps.size() << endl;
+		result << "Max pool size : " << max << endl;
+		result << "Processes     : " << getProcessCount(false) << endl;
+		result << "Requests in top-level queue : " << getWaitlist.size() << endl;
+		if (options.verbose) {
+			unsigned int i = 0;
+			foreach (const GetWaiter &waiter, getWaitlist) {
+				result << "  " << i << ": " << waiter.options.getAppGroupName() << endl;
+				i++;
+			}
+		}
 		result << endl;
 		
 		result << headerColor << "----------- Application groups -----------" << resetColor << endl;
