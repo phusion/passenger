@@ -177,7 +177,6 @@ public:
 	 * 0 means unlimited. */
 	int concurrency;
 	
-	
 	/*************************************************************
 	 * Information used by Pool. Do not write to these from
 	 * outside the Pool. If you read these make sure the Pool
@@ -203,6 +202,9 @@ public:
 	} enabled;
 	ProcessMetrics metrics;
 	
+	/** Marks whether the process requested oobw. We need to wait until all sessions 
+	 *  end and the process has been disabled. */
+	bool oobwRequested;
 	
 	Process(const SafeLibevPtr _libev,
 		pid_t _pid,
@@ -249,8 +251,9 @@ public:
 			indexSessionSockets();
 		}
 		
-		lastUsed     = SystemTime::getUsec();
-		spawnEndTime = lastUsed;
+		lastUsed      = SystemTime::getUsec();
+		spawnEndTime  = lastUsed;
+		oobwRequested = false;
 	}
 	
 	~Process() {

@@ -913,6 +913,16 @@ private:
 			headerData.append("X-Powered-By: Phusion Passenger\r\n");
 		}
 
+		// Detect out of band work request
+		Header oobw = lookupHeader(headerData, "X-Passenger-Request-OOB-Work", "x-passenger-request-oob-work");
+		if (!oobw.empty()) {
+			P_TRACE(3, "Response with oobw detected.");
+			if (client->session != NULL) {
+				client->session->requestOOBW();
+			}
+			removeHeader(headerData, oobw);
+		}
+
 		headerData.append("\r\n");
 		writeToClientOutputPipe(client, headerData);
 		return true;
@@ -1814,14 +1824,6 @@ private:
 
 
 	/******* State: SENDING_HEADER_TO_APP *******/
-
-	static StaticString makeStaticStringWithNull(const char *data) {
-		return StaticString(data, strlen(data) + 1);
-	}
-
-	static StaticString makeStaticStringWithNull(const string &data) {
-		return StaticString(data.c_str(), data.size() + 1);
-	}
 
 	void state_sendingHeaderToApp_verifyInvariants(const ClientPtr &client) {
 		assert(!client->clientInput->isStarted());
