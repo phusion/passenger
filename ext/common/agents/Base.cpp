@@ -754,6 +754,7 @@ installAbortHandler() {
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
 	sigaction(SIGFPE, &action, NULL);
+	sigaction(SIGILL, &action, NULL);
 }
 
 void
