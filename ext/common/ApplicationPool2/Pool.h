@@ -839,14 +839,9 @@ public:
 				assert(superGroup != NULL);
 				
 				group->detach(process, actions);
-				if (superGroup->garbageCollectable()) {
-					P_DEBUG("Garbage collecting SuperGroup");
-					assert(group->garbageCollectable());
-					forceDetachSuperGroup(superGroup, actions);
-					assert(superGroup->getWaitlist.empty());
-				} else if (group->enabledProcesses.empty()
-				        && !group->spawning()
-				        && !group->getWaitlist.empty())
+				if (group->enabledProcesses.empty()
+					&& !group->spawning()
+					&& !group->getWaitlist.empty())
 				{
 					/* This group no longer has any processes - either
 					 * spawning or alive - to satisfy its get waiters.
