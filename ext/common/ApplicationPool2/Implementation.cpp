@@ -329,7 +329,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		 */
 		vector<Callback> actions;
 		removeProcessFromList(process, disablingProcesses);
-		addProcessToList(process, enabledProcesses);
+		addProcessToList(process, disabledProcesses);
 		removeFromDisableWaitlist(process, DR_SUCCESS, actions);
 		pool->verifyInvariants();
 		verifyInvariants();
@@ -348,7 +348,7 @@ Group::requestOOBW(const ProcessPtr &process) {
 	}
 	unique_lock<boost::mutex> lock(pool->syncher);
 	pool = getPool();
-	if (OXT_UNLIKELY(pool == NULL)) {
+	if (OXT_UNLIKELY(pool == NULL || process->detached())) {
 		return;
 	}
 	
@@ -357,8 +357,12 @@ Group::requestOOBW(const ProcessPtr &process) {
 
 // The 'self' parameter is for keeping the current Group object alive
 void
-Group::lockAndAsyncOOBWRequestIfNeeded(GroupPtr self, const ProcessPtr &process) {
+Group::lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult result, GroupPtr self) {
 	TRACE_POINT();
+	
+	if (result != DR_SUCCESS && result != DR_CANCELED) {
+		return;
+	}
 	
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
@@ -367,11 +371,10 @@ Group::lockAndAsyncOOBWRequestIfNeeded(GroupPtr self, const ProcessPtr &process)
 	}
 	unique_lock<boost::mutex> lock(pool->syncher);
 	pool = getPool();
-	if (OXT_UNLIKELY(pool == NULL)) {
+	if (OXT_UNLIKELY(pool == NULL || process->detached())) {
 		return;
 	}
 	
-	assert(process->enabled == Process::DISABLED);
 	asyncOOBWRequestIfNeeded(process);
 }
 
@@ -390,12 +393,12 @@ Group::asyncOOBWRequestIfNeeded(const ProcessPtr &process) {
 		// We want the process to be disabled. However, disabling a process is potentially
 		// asynchronous, so we pass a callback which will re-aquire the lock and call this
 		// method again.
-		disable(process, boost::bind(&Group::lockAndAsyncOOBWRequestIfNeeded, this,
-			shared_from_this(), process));
+		DisableResult result = disable(process, 
+			boost::bind(&Group::lockAndAsyncOOBWRequestIfNeeded, this, _1, _2, shared_from_this()));
+		if (result == DR_DEFERRED) { return; }
 	}
 	
 	if (process->enabled != Process::DISABLED) {
-		// The process is still not disabled (perhaps it is in the process of disabling).
 		return;
 	}
 	
@@ -426,7 +429,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, const ProcessPtr &process) {
 		}
 		unique_lock<boost::mutex> lock(pool->syncher);
 		pool = getPool();
-		if (OXT_UNLIKELY(pool == NULL)) {
+		if (OXT_UNLIKELY(pool == NULL || process->detached())) {
 			return;
 		}
 		
@@ -435,18 +438,19 @@ Group::spawnThreadOOBWRequest(GroupPtr self, const ProcessPtr &process) {
 		assert(process->sessions == 0);
 		assert(process->enabled == Process::DISABLED);
 		socket = process->sessionSockets.top();
-	
-		lock.unlock();
+		assert(socket != NULL);
 	}
 	
 	unsigned long long timeout = 1000 * 1000 * 60; // 1 min
 	try {
+		ScopeGuard guard(boost::bind(&Socket::checkinConnection, socket, connection));
+
 		// Grab a connection. The connection is marked as fail in order to
 		// ensure it is closed / recycled after this request (otherwise we'd
 		// need to completely read the response).
 		connection = socket->checkoutConnection();
 		connection.fail = true;
-		FileDescriptor theFd = FileDescriptor(connection.fd, false);
+		
 		
 		// This is copied from RequestHandler when it is sending data using the 
 		// "session" protocol.
@@ -466,21 +470,16 @@ Group::spawnThreadOOBWRequest(GroupPtr self, const ProcessPtr &process) {
 		}
 		Uint32Message::generate(sizeField, dataSize);
 		
-		gatheredWrite(theFd, &data[0], data.size(), &timeout);
+		gatheredWrite(connection.fd, &data[0], data.size(), &timeout);
 	
 		// We do not care what the actual response is ... just wait for it.
-		waitUntilReadable(theFd, &timeout);
+		waitUntilReadable(connection.fd, &timeout);
 	} catch (const SystemException &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 	} catch (const TimeoutException &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 	}
-
-	// Clean up
-	if (socket != NULL && connection.fd != -1) {
-		socket->checkinConnection(connection);
-	}
-
+	
 	vector<Callback> actions;
 	{
 		// Standard resource management boilerplate stuff...
@@ -503,7 +502,8 @@ Group::spawnThreadOOBWRequest(GroupPtr self, const ProcessPtr &process) {
 		assignSessionsToGetWaiters(actions);
 		
 		verifyInvariants();
-		lock.unlock();
+		verifyExpensiveInvariants();
+		pool->verifyInvariants();
 	}
 	runAllActions(actions);
 }

@@ -790,19 +790,18 @@ namespace tut {
 			"PATH_INFO", "/oobw",
 			NULL);
 		string response = readAll(connection);
-		ensure(containsSubstring(response, "Status: 200 OK\r\n"));
-		ensure(!containsSubstring(response, "X-Passenger-Request-OOB-Work:"));
+		ensure("status is not 200", containsSubstring(response, "Status: 200 OK\r\n"));
+		ensure("contains oowb header", !containsSubstring(response, "X-Passenger-Request-OOB-Work:"));
 		pid_t origPid = atoi(stripHeaders(response));
 		
 		// Get a reference to the orignal process and verify oobw has been requested.
 		ProcessPtr origProcess;
 		{
 			unique_lock<boost::mutex> lock(pool->syncher);
-			origProcess = pool->superGroups.get(wsgiAppPath)->defaultGroup->processes.front();
+			origProcess = pool->superGroups.get(wsgiAppPath)->defaultGroup->disablingProcesses.front();
 			ensure(origProcess->oobwRequested);
-			lock.unlock();
 		}
-		ensure(origPid == origProcess->pid); // just a sanity check
+		ensure("sanity check", origPid == origProcess->pid); // just a sanity check
 		
 		// Issue requests until the new process handles it.
 		pid_t pid;
@@ -815,7 +814,6 @@ namespace tut {
 			string response = readAll(connection);
 			ensure(containsSubstring(response, "Status: 200 OK\r\n"));
 			pid = atoi(stripHeaders(response));
-			
 			result = (pid != origPid);
 		);
 		
@@ -824,17 +822,15 @@ namespace tut {
 			{
 				unique_lock<boost::mutex> lock(pool->syncher);
 				result = (origProcess->oobwRequested == 0);
-				lock.unlock();
 			}
 		);
 		
 		// Final asserts.
 		{
 			unique_lock<boost::mutex> lock(pool->syncher);
-			ensure(pool->superGroups.get(wsgiAppPath)->defaultGroup->processes.size() == 2);
-			ensure(origProcess->oobwRequested == 0);
-			ensure(origProcess->enabled == Process::ENABLED);
-			lock.unlock();
+			ensure("2 enabled processes", pool->superGroups.get(wsgiAppPath)->defaultGroup->enabledProcesses.size() == 2);
+			ensure("oobw is reset", origProcess->oobwRequested == 0);
+			ensure("process is enabled", origProcess->enabled == Process::ENABLED);
 		}
 	}
 

@@ -107,7 +107,7 @@ private:
 	static string generateSecret(const SuperGroupPtr &superGroup);
 	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
 	void onSessionClose(const ProcessPtr &process, Session *session);
-	void lockAndAsyncOOBWRequestIfNeeded(GroupPtr self, const ProcessPtr &process);
+	void lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult result, GroupPtr self);
 	void asyncOOBWRequestIfNeeded(const ProcessPtr &process);
 	void spawnThreadOOBWRequest(GroupPtr self, const ProcessPtr &process);
 	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options);
