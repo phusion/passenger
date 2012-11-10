@@ -296,22 +296,28 @@ private:
 	}
 
 	void onSigquit(ev::sig &signal, int revents) {
-		dumpDiagnostics(this);
+		requestHandler->inspect(cerr);
+		cerr.flush();
+		cerr << "\n" << pool->inspect();
+		cerr.flush();
+		cerr << "\n" << oxt::thread::all_backtraces();
+		cerr.flush();
 	}
 
 	void installDiagnosticsDumper() {
-		::installDiagnosticsDumper(dumpDiagnostics, this);
+		::installDiagnosticsDumper(dumpDiagnosticsOnCrash, this);
 	}
 
 	void uninstallDiagnosticsDumper() {
 		::installDiagnosticsDumper(NULL, NULL);
 	}
 
-	static void dumpDiagnostics(void *userData) {
+	static void dumpDiagnosticsOnCrash(void *userData) {
 		Server *self = (Server *) userData;
 		self->requestHandler->inspect(cerr);
 		cerr.flush();
-		cerr << "\n" << self->pool->inspect();
+		// Do not lock, the crash may occur within the pool.
+		cerr << "\n" << self->pool->inspect(Pool::InspectOptions(), false);
 		cerr.flush();
 		cerr << "\n" << oxt::thread::all_backtraces();
 		cerr.flush();
