@@ -199,7 +199,14 @@ task 'test:cxx' => dependencies do
 	elsif boolean_option('VALGRIND')
 		command = "valgrind --dsymutil=yes --db-attach=yes --child-silent-after-fork=yes #{command}"
 	end
-	sh "cd test && #{command}"
+	if boolean_option('REPEAT')
+		if boolean_option('GDB')
+			abort "You cannot set both REPEAT=1 and GDB=1."
+		end
+		sh "cd test && while #{command}; do echo -------------------------------------------; done"
+	else
+		sh "cd test && #{command}"
+	end
 end
 
 dependencies = [
