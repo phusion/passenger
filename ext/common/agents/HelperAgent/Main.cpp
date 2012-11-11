@@ -317,7 +317,9 @@ private:
 		self->requestHandler->inspect(cerr);
 		cerr.flush();
 		// Do not lock, the crash may occur within the pool.
-		cerr << "\n" << self->pool->inspect(Pool::InspectOptions(), false);
+		Pool::InspectOptions options;
+		options.verbose = true;
+		cerr << "\n" << self->pool->inspect(options, false);
 		cerr.flush();
 		cerr << "\n" << oxt::thread::all_backtraces();
 		cerr.flush();
