@@ -683,7 +683,8 @@ namespace tut {
 	/*********** Test detachProcess() ***********/
 	
 	TEST_METHOD(30) {
-		// detachProcess() detaches the process from the group.
+		// detachProcess() detaches the process from the group. The pool
+		// will restore the minimum number of processes afterwards.
 		Options options = createOptions();
 		options.appGroupName = "test";
 		options.minProcesses = 2;
@@ -697,8 +698,9 @@ namespace tut {
 
 		pool->detachProcess(currentSession->getProcess());
 		ensure(currentSession->getProcess()->detached());
-		LockGuard l(pool->syncher);
-		ensure_equals(pool->superGroups.get("test")->defaultGroup->enabledCount, 1);
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 2;
+		);
 	}
 	
 	TEST_METHOD(31) {
