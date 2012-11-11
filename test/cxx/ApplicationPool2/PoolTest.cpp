@@ -41,14 +41,14 @@ namespace tut {
 			// Explicitly destroy these here because they can run
 			// additional code that depend on other fields in this
 			// class.
-			setLogLevel(0);
-			SystemTime::releaseAll();
 			TRACE_POINT();
 			pool->destroy();
 			UPDATE_TRACE_POINT();
 			pool.reset();
 			UPDATE_TRACE_POINT();
 			clearAllSessions();
+			setLogLevel(0);
+			SystemTime::releaseAll();
 		}
 		
 		void clearAllSessions() {
