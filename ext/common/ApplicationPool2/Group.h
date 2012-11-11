@@ -111,7 +111,9 @@ private:
 	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options);
 	void finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
 		vector<Callback> postLockActions);
-	
+	bool poolAtFullCapacity() const;
+	bool anotherGroupIsWaitingForCapacity() const;
+
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
 		
@@ -125,8 +127,8 @@ private:
 		// Verify getWaitlist invariants.
 		assert(!( !getWaitlist.empty() ) || ( enabledProcesses.empty() || pqueue.top()->atFullCapacity() ));
 		assert(!( !enabledProcesses.empty() && !pqueue.top()->atFullCapacity() ) || ( getWaitlist.empty() ));
-		assert(!( enabledProcesses.empty() && !spawning() && !restarting() ) || ( getWaitlist.empty() ));
-		assert(!( !getWaitlist.empty() ) || ( !enabledProcesses.empty() || spawning() || restarting() ));
+		assert(!( enabledProcesses.empty() && !spawning() && !restarting() && !poolAtFullCapacity() ) || ( getWaitlist.empty() ));
+		assert(!( !getWaitlist.empty() ) || ( !enabledProcesses.empty() || spawning() || restarting() || poolAtFullCapacity() ));
 		
 		// Verify disableWaitlist invariants.
 		assert((int) disableWaitlist.size() >= disablingCount);
@@ -434,6 +436,8 @@ public:
      *
 	 *    enabledProcesses.empty() == (pqueue.top() == NULL)
 	 *
+	 *    if (enabledCount == 0):
+	 *       spawning() || restarting() || poolAtFullCapacity()
 	 *    if (enabledCount == 0) and (disablingCount > 0):
 	 *       spawning()
 	 *    if !spawning():
@@ -467,17 +471,17 @@ public:
 	 *
 	 * Invariant 1:
 	 *    if getWaitlist is non-empty:
-	 *       enabledProcesses.empty() or (all enabled processes are at full capacity)
+	 *       enabledProcesses.empty() || (all enabled processes are at full capacity)
 	 * Equivalently:
-	 *    if !enabledProcesses.empty() and (an enabled process is not at full capacity):
+	 *    if !enabledProcesses.empty() && (an enabled process is not at full capacity):
 	 *        getWaitlist is empty.
 	 *
 	 * Invariant 2:
-	 *    if enabledProcesses.empty() && !spawning() && !restarting():
+	 *    if enabledProcesses.empty() && !spawning() && !restarting() && !poolAtFullCapacity():
 	 *       getWaitlist is empty
 	 * Equivalently:
 	 *    if getWaitlist is non-empty:
-	 *       !enabledProcesses.empty() || spawning() || restarting()
+	 *       !enabledProcesses.empty() || spawning() || restarting() || poolAtFullCapacity()
 	 */
 	queue<GetWaiter> getWaitlist;
 	/**
@@ -512,7 +516,7 @@ public:
 			} else {
 				mergeOptions(newOptions);
 			}
-			if (OXT_UNLIKELY(!newOptions.noop && shouldSpawn())) {
+			if (OXT_UNLIKELY(!newOptions.noop && shouldSpawnForGetAction())) {
 				spawn();
 			}
 		}
@@ -539,7 +543,7 @@ public:
 			 * after a process has been spawned or has failed to spawn, or
 			 * when a disabling process becomes available.
 			 */
-			assert(spawning() || restarting());
+			assert(spawning() || restarting() || poolAtFullCapacity());
 
 			if (disablingCount > 0 && !restarting()) {
 				Process *process = findProcessWithLowestUtilization(
@@ -629,6 +633,8 @@ public:
 	/**
 	 * Detaches the given process from this Group. This function doesn't touch
 	 * getWaitlist so be sure to fix its invariants afterwards if necessary.
+	 * `pool->detachProcessUnlocked()` does that so you should usually use
+	 * that method over this one.
 	 */
 	void detach(const ProcessPtr &process, vector<Callback> &postLockActions) {
 		assert(process->getGroup().get() == this);
@@ -774,10 +780,13 @@ public:
 		return false;
 	}
 	
-	/** Whether a new process should be spawned for this group in case
-	 * another get action is to be performed.
+	/** Whether a new process should be spawned for this group.
 	 */
 	bool shouldSpawn() const;
+	/** Whether a new process should be spawned for this group in the
+	 * specific case that another get action is to be performed.
+	 */
+	bool shouldSpawnForGetAction() const;
 	
 	/** Start spawning a new process in the background, in case this
 	 * isn't already happening and the group isn't being restarted.
@@ -814,6 +823,17 @@ public:
 
 	bool restarting() const {
 		return m_restarting;
+	}
+
+	/**
+	 * Checks whether this group is waiting for capacity on the pool to
+	 * become available before it can continue processing requests.
+	 */
+	bool isWaitingForCapacity() {
+		return enabledProcesses.empty()
+			&& !m_spawning
+			&& !m_restarting
+			&& !getWaitlist.empty();
 	}
 
 	template<typename Stream>

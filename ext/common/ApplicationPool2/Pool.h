@@ -141,6 +141,10 @@ public:
 	 * - The 'max' option has been increased, resulting in free capacity.
 	 *
 	 * Invariant 1:
+	 *    for all options in getWaitlist:
+	 *       options.getAppGroupName() is not in 'superGroups'.
+	 *
+	 * Invariant 2:
 	 *    if getWaitlist is non-empty:
 	 *       atFullCapacity()
 	 * Equivalently:
@@ -178,7 +182,27 @@ public:
 	}
 	
 	void verifyExpensiveInvariants() const {
-		// Do nothing.
+		#ifndef NDEBUG
+		vector<GetWaiter>::const_iterator it, end = getWaitlist.end();
+		for (it = getWaitlist.begin(); it != end; it++) {
+			const GetWaiter &waiter = *it;
+			assert(superGroups.get(waiter.options.getAppGroupName()) == NULL);
+		}
+		#endif
+	}
+
+	void fullVerifyInvariants() const {
+		verifyInvariants();
+		verifyExpensiveInvariants();
+		StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = superGroups.end();
+		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+			pair<StaticString, SuperGroupPtr> p = *sg_it;
+			p.second->verifyInvariants();
+			foreach (GroupPtr group, p.second->groups) {
+				group->verifyInvariants();
+				group->verifyExpensiveInvariants();
+			}
+		}
 	}
 	
 	ProcessPtr findOldestIdleProcess() const {
@@ -269,17 +293,35 @@ public:
 	}
 	
 	void possiblySpawnMoreProcessesForExistingGroups() {
-		SuperGroupMap::iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); it != end; it++) {
-			SuperGroupPtr &superGroup = it->second;
-			vector<GroupPtr> &groups = superGroup->groups;
-			vector<GroupPtr>::iterator g_it, g_end = groups.end();
-			for (g_it = groups.begin(); g_it != g_end; g_it++) {
-				GroupPtr &group = *g_it;
-				if (!group->getWaitlist.empty() && group->shouldSpawn()) {
+		StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = superGroups.end();
+		/* Looks for Groups that are waiting for capacity to become available,
+		 * and spawn processes in those groups.
+		 */
+		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+			pair<StaticString, SuperGroupPtr> p = *sg_it;
+			foreach (GroupPtr group, p.second->groups) {
+				if (group->isWaitingForCapacity()) {
+					P_DEBUG("Group " << group->name << " is waiting for capacity");
 					group->spawn();
+					if (atFullCapacity(false)) {
+						return;
+					}
 				}
-				group->verifyInvariants();
+			}
+		}
+		/* Now look for Groups that haven't maximized their allowed capacity
+		 * yet, and spawn processes in those groups.
+		 */
+		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+			pair<StaticString, SuperGroupPtr> p = *sg_it;
+			foreach (GroupPtr group, p.second->groups) {
+				if (group->shouldSpawn()) {
+					P_DEBUG("Group " << group->name << " requests more processes to be spawned");
+					group->spawn();
+					if (atFullCapacity(false)) {
+						return;
+					}
+				}
 			}
 		}
 	}
@@ -327,24 +369,12 @@ public:
 			assert(superGroup->getWaitlist.empty());
 			
 			group->detach(process, postLockActions);
-			if (group->enabledProcesses.empty()
-			 && !group->spawning()
-			 && !group->getWaitlist.empty()) {
-				migrateGroupGetWaitlistToPool(group);
-			}
+			// 'process' may now be a stale pointer so don't use it anymore.
+			assignSessionsToGetWaiters(postLockActions);
+			possiblySpawnMoreProcessesForExistingGroups();
+
 			group->verifyInvariants();
 			superGroup->verifyInvariants();
-			
-			assignSessionsToGetWaiters(postLockActions);
-			
-			if (superGroup->garbageCollectable()) {
-				// possiblySpawnMoreProcessesForExistingGroups()
-				// already called via detachSuperGroup().
-				detachSuperGroup(superGroup, false, &postLockActions);
-			} else {
-				possiblySpawnMoreProcessesForExistingGroups();
-			}
-			
 			verifyInvariants();
 			verifyExpensiveInvariants();
 			
@@ -839,6 +869,7 @@ public:
 				assert(superGroup != NULL);
 				
 				group->detach(process, actions);
+				#if 0
 				if (group->enabledProcesses.empty()
 					&& !group->spawning()
 					&& !group->getWaitlist.empty())
@@ -855,8 +886,7 @@ public:
 						" items before migration)");
 					migrateGroupGetWaitlistToPool(group);
 				}
-				group->verifyInvariants();
-				superGroup->verifyInvariants();
+				#endif
 				
 				/* Now that a process has been trashed we can create
 				 * the missing SuperGroup.
@@ -872,6 +902,7 @@ public:
 				 * some code here...
 				 */
 				assert(session == NULL);
+				group->verifyInvariants();
 				superGroup->verifyInvariants();
 			}
 			
@@ -936,8 +967,7 @@ public:
 	void setMax(unsigned int max) {
 		ScopedLock l(syncher);
 		assert(max > 0);
-		verifyInvariants();
-		verifyExpensiveInvariants();
+		fullVerifyInvariants();
 		bool bigger = max > this->max;
 		this->max = max;
 		if (bigger) {
@@ -954,13 +984,11 @@ public:
 			assignSessionsToGetWaiters(actions);
 			possiblySpawnMoreProcessesForExistingGroups();
 			
-			verifyInvariants();
-			verifyExpensiveInvariants();
+			fullVerifyInvariants();
 			l.unlock();
 			runAllActions(actions);
 		} else {
-			verifyInvariants();
-			verifyExpensiveInvariants();
+			fullVerifyInvariants();
 		}
 	}
 
@@ -1118,6 +1146,7 @@ public:
 		ScopedLock l(syncher);
 		vector<Callback> actions;
 		bool result = detachProcessUnlocked(process, actions);
+		fullVerifyInvariants();
 		l.unlock();
 		runAllActions(actions);
 		return result;
@@ -1129,6 +1158,7 @@ public:
 		if (process != NULL) {
 			vector<Callback> actions;
 			bool result = detachProcessUnlocked(process, actions);
+			fullVerifyInvariants();
 			l.unlock();
 			runAllActions(actions);
 			return result;

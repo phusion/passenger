@@ -633,8 +633,8 @@ namespace tut {
 	TEST_METHOD(22) {
 		// Suppose the pool is full, and one tries to asyncGet() from a nonexistant group,
 		// and the process that is selected for killing is the sole process in its group.
-		// If there are waiters in the group then those waiters will be migrated
-		// to the top-level waitlist.
+		// If there were waiters in the group then those waiters will be satisfied after
+		// capacity has become free.
 		Options options = createOptions();
 		Ticket ticket;
 		pool->setMax(2);
@@ -643,6 +643,7 @@ namespace tut {
 		options.appRoot = "/foo";
 		SystemTime::force(1);
 		SessionPtr session1 = pool->get(options, &ticket);
+		GroupPtr fooGroup = session1->getGroup();
 
 		// Get from /bar and retain its session.
 		options.appRoot = "/bar";
@@ -654,26 +655,26 @@ namespace tut {
 		pool->asyncGet(options, callback);
 		{
 			LockGuard l(pool->syncher);
-			GroupPtr group = session1->getGroup();
-			ensure("(1)", group != NULL);
-			ensure("(1)", !group->detached());
-			ensure("(1)", !group->getWaitlist.empty());
+			ensure("(1)", !session1->getProcess()->detached());
+			ensure("(2)", !fooGroup->detached());
+			ensure_equals("(3)", fooGroup->getWaitlist.size(), 1u);
 		}
 
 		// This kill the process for /foo.
 		SystemTime::force(3);
 		options.appRoot = "/baz";
 		SessionPtr session3 = pool->get(options, &ticket);
-		ensure("(4)", session1->getProcess()->detached());
 		{
 			LockGuard l(pool->syncher);
-			ensure_equals("(5)", pool->getWaitlist.size(), 1u);
+			ensure("(4)", session1->getProcess()->detached());
+			ensure("(5)", !fooGroup->detached());
+			ensure_equals("(6)", fooGroup->getWaitlist.size(), 1u);
+			ensure_equals("(7)", pool->getWaitlist.size(), 0u);
 		}
 
-		session1.reset();
+		// Make process /bar available for killing.
 		session2.reset();
-		session3.reset();
-		EVENTUALLY(2,
+		EVENTUALLY(5,
 			result = number == 1;
 		);
 	}
@@ -1172,26 +1173,24 @@ namespace tut {
 
 	TEST_METHOD(71) {
 		// A process is detached after processing maxRequests sessions.
-		{
-			Ticket ticket;
-			Options options = createOptions();
-			options.maxRequests = 5;
-			pool->setMax(1);
+		Ticket ticket;
+		Options options = createOptions();
+		options.minProcesses = 0;
+		options.maxRequests = 5;
+		pool->setMax(1);
+
+		SessionPtr session = pool->get(options, &ticket);
+		ensure_equals(pool->getProcessCount(), 1u);
+		pid_t origPid = session->getPid();
+		session.reset();
+
+		for (int i = 0; i < 3; i++) {
 			pool->get(options, &ticket).reset();
-
-			vector<ProcessPtr> processes = pool->getProcesses();
-			ensure_equals(processes.size(), 1u);
-			pid_t origPid = processes[0]->pid;
-
-			for (int i = 0; i < 3; i++) {
-				pool->get(options, &ticket).reset();
-				processes = pool->getProcesses();
-				ensure_equals(processes.size(), 1u);
-				ensure_equals(processes[0]->pid, origPid);
-			}
-
-			pool->get(options, &ticket).reset();
+			ensure_equals(pool->getProcessCount(), 1u);
+			ensure_equals(pool->getProcesses()[0]->pid, origPid);
 		}
+
+		pool->get(options, &ticket).reset();
 		EVENTUALLY(2,
 			result = pool->getProcessCount() == 0;
 		);

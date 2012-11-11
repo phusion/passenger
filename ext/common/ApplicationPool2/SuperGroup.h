@@ -486,7 +486,8 @@ public:
 	/**
 	 * get() requests for this super group that cannot be immediately satisfied
 	 * are put on this wait list, which must be processed as soon as the
-	 * necessary resources have become free.
+	 * necessary resources have become free. Requests must wait when a SuperGroup
+	 * is initializing.
 	 *
 	 * Invariant:
 	 *    if state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED:
