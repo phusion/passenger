@@ -1282,6 +1282,8 @@ private:
 
 	void startPreloader() {
 		TRACE_POINT();
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
 		assert(!preloaderStarted());
 		checkChrootDirectories(options);
 		
@@ -1344,7 +1346,11 @@ private:
 			details.timeout = options.startTimeout * 1000;
 			details.forwardStderr = forwardStderr;
 			
-			socketAddress = negotiatePreloaderStartup(details);
+			{
+				this_thread::restore_interruption ri(di);
+				this_thread::restore_syscall_interruption rsi(dsi);
+				socketAddress = negotiatePreloaderStartup(details);
+			}
 			this->adminSocket = adminSocket.second;
 			{
 				lock_guard<boost::mutex> l(simpleFieldSyncher);
@@ -1997,6 +2003,8 @@ public:
 	
 	virtual ProcessPtr spawn(const Options &options) {
 		TRACE_POINT();
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
 		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
 		possiblyRaiseInternalError(options);
 
@@ -2062,7 +2070,12 @@ public:
 			details.forwardStderr = forwardStderr;
 			details.debugDir = debugDir;
 			
-			ProcessPtr process = negotiateSpawn(details);
+			ProcessPtr process;
+			{
+				this_thread::restore_interruption ri(di);
+				this_thread::restore_syscall_interruption rsi(dsi);
+				process = negotiateSpawn(details);
+			}
 			detachProcess(process->pid);
 			guard.clear();
 			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<

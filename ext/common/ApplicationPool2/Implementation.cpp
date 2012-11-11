@@ -229,9 +229,10 @@ Group::onSessionInitiateFailure(const ProcessPtr &process, Session *session) {
 	}
 
 	UPDATE_TRACE_POINT();
-	if (pool->detachProcessUnlocked(process, actions)) {
-		P_DEBUG("Could not initiate a session with process " <<
-			process->inspect() << ", detached from pool");
+	P_DEBUG("Could not initiate a session with process " <<
+		process->inspect() << ", detaching from pool if possible");
+	if (!pool->detachProcessUnlocked(process, actions)) {
+		P_DEBUG("Process was already detached");
 	}
 	pool->fullVerifyInvariants();
 	lock.unlock();

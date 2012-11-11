@@ -280,3 +280,7 @@ Be careful with event loop callbacks, they are more tricky than one would expect
         }
 
  * Event loop callbacks should catch expected exceptions. Letting an exception pass will crash the program. When system call failure simulation is turned on, the code can throw arbitrary SystemExceptions, so beware of those.
+
+### Thread interruption and RAII destructors
+
+When using thread interruption, make sure that RAII destructors are non-interruptable. If your code is interrupted and then a `thread_interrupted` is thrown, make sure that RAII destructors don't check for the interruption flag and then throw `thread_interrupted` again. This not only fails to clean things up properly, but also confuses the exception system, resulting in strange errors such as "terminate called without an active exception".
