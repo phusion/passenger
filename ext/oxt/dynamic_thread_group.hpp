@@ -152,7 +152,7 @@ public:
 	 *
 	 * @post num_threads() == 0
 	 */
-	void interrupt_and_join_all() {
+	void interrupt_and_join_all(bool interruptSyscalls = true) {
 		/* While interrupting and joining the threads, each thread
 		 * will try to lock the mutex and remove itself from
 		 * 'thread_handles'. We want to avoid deadlocks so we
@@ -178,7 +178,7 @@ public:
 		nthreads = 0;
 		
 		l.unlock();
-		thread::interrupt_and_join_multiple(threads, nthreads_copy);
+		thread::interrupt_and_join_multiple(threads, nthreads_copy, interruptSyscalls);
 	}
 	
 	void join_all() {
