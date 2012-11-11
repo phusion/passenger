@@ -869,24 +869,6 @@ public:
 				assert(superGroup != NULL);
 				
 				group->detach(process, actions);
-				#if 0
-				if (group->enabledProcesses.empty()
-					&& !group->spawning()
-					&& !group->getWaitlist.empty())
-				{
-					/* This group no longer has any processes - either
-					 * spawning or alive - to satisfy its get waiters.
-					 * We migrate the group's get wait list to the pool's
-					 * get wait list. The group's original get waiters
-					 * will get their chances later.
-					 */
-					P_DEBUG("Migrating group getWaitlist (" <<
-						group->getWaitlist.size() << " items) to top-level" <<
-						" getWaitlist (" << getWaitlist.size() <<
-						" items before migration)");
-					migrateGroupGetWaitlistToPool(group);
-				}
-				#endif
 				
 				/* Now that a process has been trashed we can create
 				 * the missing SuperGroup.
