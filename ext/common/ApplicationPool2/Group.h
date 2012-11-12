@@ -485,6 +485,10 @@ public:
 	 */
 	queue<GetWaiter> getWaitlist;
 	/**
+	 * Disable() commands that couldn't finish immediately will put their callbacks
+	 * in this queue. Note that there may be multiple DisableWaiters pointing to the
+	 * same Process.
+	 *
 	 * Invariant:
 	 *    disableWaitlist.size() >= disablingCount
 	 */
