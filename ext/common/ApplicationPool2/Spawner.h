@@ -1786,7 +1786,7 @@ public:
 		forwardStderr = true;
 		
 		generation = _generation;
-		options    = _options.copyAndPersist();
+		options    = _options.copyAndPersist().clearLogger();
 		pid        = -1;
 		m_lastUsed = SystemTime::getUsec();
 		

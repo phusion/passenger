@@ -554,7 +554,7 @@ public:
 				}
 			}
 
-			getWaitlist.push(GetWaiter(newOptions, callback));
+			getWaitlist.push(GetWaiter(newOptions.copyAndPersist().clearLogger(), callback));
 			P_DEBUG("No session checked out yet: group is spawning or restarting");
 			return SessionPtr();
 		} else {
@@ -565,7 +565,7 @@ public:
 				 * Wait until a new one has been spawned or until
 				 * resources have become free.
 				 */
-				getWaitlist.push(GetWaiter(newOptions, callback));
+				getWaitlist.push(GetWaiter(newOptions.copyAndPersist().clearLogger(), callback));
 				P_DEBUG("No session checked out yet: all processes are at full capacity");
 				return SessionPtr();
 			} else {

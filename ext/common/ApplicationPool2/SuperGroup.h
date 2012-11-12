@@ -506,7 +506,7 @@ public:
 	 */
 	SuperGroup(const PoolPtr &pool, const Options &options) {
 		this->pool = pool;
-		this->options = options.copyAndPersist();
+		this->options = options.copyAndPersist().clearLogger();
 		this->name = options.getAppGroupName();
 		secret = generateSecret();
 		state = INITIALIZING;
@@ -677,7 +677,7 @@ public:
 					this,
 					// Keep reference to self to prevent destruction.
 					shared_from_this(),
-					newOptions.copyAndPersist(),
+					newOptions.copyAndPersist().clearLogger(),
 					generation),
 				"SuperGroup initializer: " + name,
 				POOL_HELPER_THREAD_STACK_SIZE);
@@ -719,7 +719,7 @@ public:
 					this,
 					// Keep reference to self to prevent destruction.
 					shared_from_this(),
-					options.copyAndPersist(),
+					options.copyAndPersist().clearLogger(),
 					generation),
 				"SuperGroup restarter: " + name,
 				POOL_HELPER_THREAD_STACK_SIZE);

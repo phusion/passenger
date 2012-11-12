@@ -459,7 +459,8 @@ Group::restart(const Options &options) {
 	m_restarting = true;
 	detachAll(actions);
 	getPool()->nonInterruptableThreads.create_thread(
-		boost::bind(&Group::finalizeRestart, this, shared_from_this(), options.copyAndPersist(),
+		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
+			options.copyAndPersist().clearPerRequestFields(),
 			getPool()->spawnerFactory, actions),
 		"Group restarter: " + name,
 		POOL_HELPER_THREAD_STACK_SIZE

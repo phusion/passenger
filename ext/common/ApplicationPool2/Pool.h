@@ -857,7 +857,9 @@ public:
 				 * become available.
 				 */
 				P_DEBUG("Could not free a process; putting request to top-level getWaitlist");
-				getWaitlist.push_back(GetWaiter(options, callback));
+				getWaitlist.push_back(GetWaiter(
+					options.copyAndPersist().clearLogger(),
+					callback));
 			} else {
 				GroupPtr group;
 				SuperGroupPtr superGroup;

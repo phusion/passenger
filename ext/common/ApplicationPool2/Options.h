@@ -462,8 +462,12 @@ public:
 	Options &clearPerRequestFields() {
 		hostName = string();
 		uri      = string();
-		logger.reset();
 		noop     = false;
+		return clearLogger();
+	}
+
+	Options &clearLogger() {
+		logger.reset();
 		return *this;
 	}
 	
