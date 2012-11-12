@@ -43,6 +43,7 @@
 #include <Logging.h>
 #include <Utils/PriorityQueue.h>
 #include <Utils/SystemTime.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/ProcessMetricsCollector.h>
 
 namespace Passenger {
@@ -356,22 +357,7 @@ public:
 	 * Returns the uptime of this process so far, as a string.
 	 */
 	string uptime() const {
-		unsigned long long seconds = (SystemTime::getUsec() - spawnEndTime) / 1000000;
-		stringstream result;
-		
-		if (seconds >= 60) {
-			unsigned long long minutes = seconds / 60;
-			if (minutes >= 60) {
-				unsigned long long hours = minutes / 60;
-				minutes = minutes % 60;
-				result << hours << "h ";
-			}
-			
-			seconds = seconds % 60;
-			result << minutes << "m ";
-		}
-		result << seconds << "s";
-		return result.str();
+		return distanceOfTimeInWords(spawnEndTime / 1000000);
 	}
 
 	string inspect() const;

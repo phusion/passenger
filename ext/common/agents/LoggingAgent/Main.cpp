@@ -132,8 +132,10 @@ caughtExitSignal(ev::sig &watcher, int revents) {
 
 void
 printInfo(ev::sig &watcher, int revents) {
-	loggingServer->dump(cout);
-	cout.flush();
+	cerr << "---------- Begin LoggingAgent status ----------\n";
+	loggingServer->dump(cerr);
+	cerr.flush();
+	cerr << "---------- End LoggingAgent status   ----------\n";
 }
 
 static string

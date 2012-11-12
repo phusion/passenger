@@ -29,6 +29,7 @@
 #include <vector>
 #include <sstream>
 #include <cstddef>
+#include <ctime>
 #include <StaticString.h>
 
 namespace Passenger {
@@ -223,6 +224,8 @@ IntegerType
 roundUp(IntegerType number, IntegerType multiple) {
 	return (number + multiple - 1) / multiple * multiple;
 }
+
+string distanceOfTimeInWords(time_t fromTime, time_t toTime = 0);
 
 /**
  * Append the given data to the address at 'pos', but do not cross 'end'.

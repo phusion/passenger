@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -108,7 +108,7 @@ private:
 			server = _server;
 			opened = 0;
 			lastUsed = ev_now(server->getLoop());
-			lastFlushed = 0;
+			lastFlushed = lastUsed;
 		}
 		
 		virtual ~LogSink() {
@@ -185,10 +185,10 @@ private:
 		}
 		
 		virtual void dump(ostream &stream) const {
-			stream << "   Log file: file=" << filename << ", "
-				"opened=" << opened << ", "
-				"lastUsed=" << long(ev_now(server->getLoop()) - lastUsed) << "s ago, "
-				"lastFlushed=" << long(ev_now(server->getLoop()) - lastFlushed) << "s ago\n";
+			stream << "   * Log file: " << filename << "\n";
+			stream << "     Opened     : " << opened << "\n";
+			stream << "     LastUsed   : " << distanceOfTimeInWords(lastUsed) << " ago\n";
+			stream << "     LastFlushed: " << distanceOfTimeInWords(lastFlushed) << " ago\n";
 		}
 	};
 	
@@ -266,21 +266,21 @@ private:
 		}
 		
 		virtual void dump(ostream &stream) const {
-			stream << "   Remote sink: "
-				"key=" << unionStationKey << ", "
-				"node=" << nodeName << ", "
-				"category=" << category << ", "
-				"opened=" << opened << ", "
-				"lastUsed=" << long(ev_now(server->getLoop()) - lastUsed) << "s ago, "
-				"lastFlushed=" << long(ev_now(server->getLoop()) - lastFlushed) << "s ago, "
-				"bufferSize=" << bufferSize <<
-				"\n";
+			stream << "   * Remote sink\n";
+			stream << "     Key        : " << unionStationKey << "\n";
+			stream << "     Node       : " << nodeName << "\n";
+			stream << "     Category   : " << category << "\n";
+			stream << "     Opened     : " << opened << "\n";
+			stream << "     LastUsed   : " << distanceOfTimeInWords(lastUsed) << " ago\n";
+			stream << "     LastFlushed: " << distanceOfTimeInWords(lastFlushed) << " ago\n";
+			stream << "     BufferSize : " << bufferSize << "\n";
 		}
 	};
 	
 	struct Transaction {
 		LoggingServer *server;
 		LogSinkPtr logSink;
+		ev_tstamp createdAt;
 		string txnId;
 		DataStoreId dataStoreId;
 		unsigned int writeCount;
@@ -289,8 +289,9 @@ private:
 		string data;
 		string filters;
 		
-		Transaction(LoggingServer *server) {
+		Transaction(LoggingServer *server, ev_tstamp createdAt) {
 			this->server = server;
+			this->createdAt = createdAt;
 			data.reserve(8 * 1024);
 		}
 		
@@ -321,11 +322,12 @@ private:
 		}
 		
 		void dump(ostream &stream) const {
-			stream << "   Transaction " << txnId << ":\n";
-			stream << "      Group   : " << getGroupName() << "\n";
-			stream << "      Node    : " << getNodeName() << "\n";
-			stream << "      Category: " << getCategory() << "\n";
-			stream << "      Refcount: " << refcount << "\n";
+			stream << "   * Transaction " << txnId << "\n";
+			stream << "     Created at: " << distanceOfTimeInWords(createdAt) << " ago\n";
+			stream << "     Group     : " << getGroupName() << "\n";
+			stream << "     Node      : " << getNodeName() << "\n";
+			stream << "     Category  : " << getCategory() << "\n";
+			stream << "     Refcount  : " << refcount << "\n";
 		}
 	
 	private:
@@ -956,7 +958,7 @@ protected:
 					return true;
 				}
 				
-				transaction.reset(new Transaction(this));
+				transaction = make_shared<Transaction>(this, ev_now(getLoop()));
 				if (unionStationKey.empty()) {
 					char tempNodeId[MD5_HEX_SIZE];
 					
@@ -1262,19 +1264,24 @@ public:
 		
 		stream << "Number of clients : " << getClients().size() << "\n";
 		stream << "RemoteSender queue: " << remoteSender.queued() << " items\n";
-		stream << "Open transactions: " << transactions.size() << "\n";
-		for (it = transactions.begin(); it != end; it++) {
-			const TransactionPtr &transaction = it->second;
-			transaction->dump(stream);
-		}
-		
+		stream << "\n";
+
 		LogSinkCache::const_iterator sit;
 		LogSinkCache::const_iterator send = logSinkCache.end();
-		stream << "Log sinks: " << logSinkCache.size() <<
-			" (" << inactiveLogSinksCount << " inactive)\n";
+		stream << "Open log sinks:\n";
+		stream << "   Count: " << logSinkCache.size() <<
+			" (of which " << inactiveLogSinksCount << " inactive)\n";
 		for (sit = logSinkCache.begin(); sit != send; sit++) {
 			const LogSinkPtr &logSink = sit->second;
 			logSink->dump(stream);
+		}
+		stream << "\n";
+
+		stream << "Open transactions:\n";
+		stream << "   Count: " << transactions.size() << "\n";
+		for (it = transactions.begin(); it != end; it++) {
+			const TransactionPtr &transaction = it->second;
+			transaction->dump(stream);
 		}
 	}
 };

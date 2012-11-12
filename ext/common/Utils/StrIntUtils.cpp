@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <Exceptions.h>
 #include <Utils/utf8.h>
+#include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 
 namespace Passenger {
@@ -330,6 +331,34 @@ atoi(const string &s) {
 long
 atol(const string &s) {
 	return ::atol(s.c_str());
+}
+
+string
+distanceOfTimeInWords(time_t fromTime, time_t toTime) {
+	time_t seconds;
+	stringstream result;
+	if (toTime == 0) {
+		toTime = SystemTime::get();
+	}
+	if (fromTime < toTime) {
+		seconds = toTime - fromTime;
+	} else {
+		seconds = fromTime - toTime;
+	}
+	
+	if (seconds >= 60) {
+		time_t minutes = seconds / 60;
+		if (minutes >= 60) {
+			time_t hours = minutes / 60;
+			minutes = minutes % 60;
+			result << hours << "h ";
+		}
+		
+		seconds = seconds % 60;
+		result << minutes << "m ";
+	}
+	result << seconds << "s";
+	return result.str();
 }
 
 char *
