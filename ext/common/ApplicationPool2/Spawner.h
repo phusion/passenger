@@ -786,16 +786,21 @@ protected:
 		info.shell = userInfo->pw_shell;
 		info.uid = userInfo->pw_uid;
 		info.gid = groupInfo->gr_gid;
-		ret = getgrouplist(userInfo->pw_name, groupInfo->gr_gid,
-			groups, &info.ngroups);
-		if (ret == -1) {
-			int e = errno;
-			throw SystemException("getgrouplist() failed", e);
-		}
-		info.gidset = shared_array<gid_t>(new gid_t[info.ngroups]);
-		for (int i = 0; i < info.ngroups; i++) {
-			info.gidset[i] = groups[i];
-		}
+		#if !defined(HAVE_GETGROUPLIST) && (defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__))
+			#define HAVE_GETGROUPLIST
+		#endif
+		#ifdef HAVE_GETGROUPLIST
+			ret = getgrouplist(userInfo->pw_name, groupInfo->gr_gid,
+				groups, &info.ngroups);
+			if (ret == -1) {
+				int e = errno;
+				throw SystemException("getgrouplist() failed", e);
+			}
+			info.gidset = shared_array<gid_t>(new gid_t[info.ngroups]);
+			for (int i = 0; i < info.ngroups; i++) {
+				info.gidset[i] = groups[i];
+			}
+		#endif
 	}
 
 	void prepareSwitchingWorkingDirectory(SpawnPreparationInfo &info, const Options &options) const {
@@ -858,15 +863,27 @@ protected:
 
 	void switchUser(const SpawnPreparationInfo &info) {
 		if (info.switchUser) {
-			if (setgroups(info.ngroups, info.gidset.get()) == -1) {
-				int e = errno;
-				printf("!> Error\n");
-				printf("!> \n");
-				printf("setgroups() failed: %s (errno=%d)\n",
-					strerror(e), e);
-				fflush(stdout);
-				_exit(1);
-			}
+			#ifdef HAVE_GETGROUPLIST
+				if (setgroups(info.ngroups, info.gidset.get()) == -1) {
+					int e = errno;
+					printf("!> Error\n");
+					printf("!> \n");
+					printf("setgroups() failed: %s (errno=%d)\n",
+						strerror(e), e);
+					fflush(stdout);
+					_exit(1);
+				}
+			#else
+				if (initgroups(info.username.c_str(), info.gid) == -1) {
+					int e = errno;
+					printf("!> Error\n");
+					printf("!> \n");
+					printf("initgroups() failed: %s (errno=%d)\n",
+						strerror(e), e);
+					fflush(stdout);
+					_exit(1);
+				}
+			#endif
 			if (setgid(info.gid) == -1) {
 				int e = errno;
 				printf("!> Error\n");
