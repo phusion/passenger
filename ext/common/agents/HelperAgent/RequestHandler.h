@@ -898,6 +898,13 @@ private:
 			}
 		}
 
+		if (client->useUnionStation()) {
+			Header status = lookupHeader(headerData, "Status", "status");
+			string message = "Status: ";
+			message.append(status.value);
+			client->logMessage(message);
+		}
+
 		// Process chunked transfer encoding.
 		Header transferEncoding = lookupHeader(headerData, "Transfer-Encoding", "transfer-encoding");
 		if (!transferEncoding.empty() && transferEncoding.value == "chunked") {
