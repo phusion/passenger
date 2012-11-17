@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -54,11 +54,12 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 			AnalyticsLogging.attach_to(:active_support, subscriber)
 		end
 		
-		if defined?(ActionDispatch::ShowExceptions)
+		if defined?(ActionDispatch::DebugExceptions)
+			exceptions_middleware = ActionDispatch::DebugExceptions
+		elsif defined?(ActionDispatch::ShowExceptions)
 			exceptions_middleware = ActionDispatch::ShowExceptions
-			if defined?(ActionDispatch::DebugExceptions)
-				exceptions_middleware = ActionDispatch::DebugExceptions
-			end
+		end
+		if exceptions_middleware
 			Rails.application.middleware.insert_after(
 				exceptions_middleware,
 				ExceptionLogger, analytics_logger)
