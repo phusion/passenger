@@ -690,6 +690,11 @@ private:
 		client->clientOutputPipe->write(header.data(), header.size());
 		client->clientOutputPipe->write(data.data(), data.size());
 		client->clientOutputPipe->end();
+
+		if (client->useUnionStation()) {
+			client->logMessage("Status: 500 Internal Server Error");
+			// TODO: record error message
+		}
 	}
 
 

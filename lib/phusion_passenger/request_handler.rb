@@ -107,6 +107,7 @@ class RequestHandler
 		require_option(options, "app_group_name")
 		install_options_as_ivars(self, options,
 			"app",
+			"app_group_name",
 			"connect_password",
 			"detach_key",
 			"analytics_logger",
@@ -408,22 +409,22 @@ private
 	end
 
 	def start_threads
-		main_socket_options = {
-			:app => @app,
+		common_options = {
+			:app              => @app,
+			:app_group_name   => @app_group_name,
+			:connect_password => @connect_password,
+			:analytics_logger => @analytics_logger
+		}
+		main_socket_options = common_options.merge(
 			:server_socket => @main_socket,
 			:socket_name => "main socket",
-			:protocol => :session,
-			:app_group_name => @app_group_name,
-			:connect_password => @connect_password
-		}
-		http_socket_options = {
-			:app => @app,
+			:protocol => :session
+		)
+		http_socket_options = common_options.merge(
 			:server_socket => @http_socket,
 			:socket_name => "HTTP socket",
-			:protocol => :http,
-			:app_group_name => @app_group_name,
-			:connect_password => @connect_password
-		}
+			:protocol => :http
+		)
 
 		thread_handler = @thread_handler
 		@threads_mutex.synchronize do

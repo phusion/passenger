@@ -1000,7 +1000,9 @@ protected:
 				transaction = it->second;
 				if (OXT_UNLIKELY( transaction->getGroupName() != groupName )) {
 					sendErrorToClient(client,
-						"Cannot open transaction: transaction already opened with a different group name");
+						"Cannot open transaction: transaction already opened with a "
+						"different group name ('" + transaction->getGroupName() +
+						"' vs '" + groupName + "')");
 					client->disconnect();
 					return true;
 				}
