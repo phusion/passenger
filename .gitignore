@@ -1,5 +1,3 @@
-/test*.rb
-
 .cache
 .DS_Store
 .rbx
