@@ -262,6 +262,54 @@ describe "Phusion Passenger for Nginx" do
 		end
 	end
 	
+	describe "oob work" do
+		
+		before :all do
+			@server = "http://passenger.test:#{@nginx.port}"
+			@stub = RackStub.new('rack')
+			@nginx.add_server do |server|
+				server[:server_name] = "passenger.test"
+				server[:root]        = "#{@stub.full_app_root}/public"
+			end
+		end
+		
+		before :each do
+			@stub.reset
+			
+			File.write("#{@stub.app_root}/config.ru", <<-RUBY)
+				PhusionPassenger.on_event(:oob_work) do
+					f = File.open("#{@stub.full_app_root}/oob_work.\#{$$}", 'w')
+					f.close
+					sleep 1
+				end
+				app = lambda do |env|
+					if env['PATH_INFO'] == '/oobw'
+						[200, { "Content-Type" => "text/html", "X-Passenger-Request-OOB-Work" => 'true' }, [$$]]
+					else
+						[200, { "Content-Type" => "text/html" }, [$$]]
+					end
+				end
+				run app
+			RUBY
+			
+			@nginx.start
+		end
+		
+		it "invokes oobw when requested by the app process" do
+			pid = get("/oobw")
+			sleep 0.5 # wait for oobw callback to be invoked
+			File.exists?("#{@stub.app_root}/oob_work.#{pid}").should == true
+		end
+		
+		it "does not block client while invoking oob work" do
+			get("/") # ensure there are spawned app processes
+			t0 = Time.now
+			get("/oobw")
+			secs = Time.now - t0
+			secs.should <= 0.1
+		end
+		
+	end
 	
 	##### Helper methods #####
 	

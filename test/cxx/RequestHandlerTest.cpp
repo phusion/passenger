@@ -777,6 +777,61 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) 0);
 	}
 
+	TEST_METHOD(46) {
+		// If the application outputs a request oobw header, handler should remove the header, mark
+		// the process as oobw requested. The process should continue to process requests until the
+		// spawner spawns another process (to avoid the group being empty). As soon as the new 
+		// process is spawned, the original process will make the oobw request. Afterwards, the 
+		// original process is re-enabled.
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/oobw",
+			NULL);
+		string response = readAll(connection);
+		ensure("status is not 200", containsSubstring(response, "Status: 200 OK\r\n"));
+		ensure("contains oowb header", !containsSubstring(response, "X-Passenger-Request-OOB-Work:"));
+		pid_t origPid = atoi(stripHeaders(response));
+		
+		// Get a reference to the orignal process and verify oobw has been requested.
+		ProcessPtr origProcess;
+		{
+			unique_lock<boost::mutex> lock(pool->syncher);
+			origProcess = pool->superGroups.get(wsgiAppPath)->defaultGroup->disablingProcesses.front();
+			ensure(origProcess->oobwRequested);
+		}
+		ensure("sanity check", origPid == origProcess->pid); // just a sanity check
+		
+		// Issue requests until the new process handles it.
+		pid_t pid;
+		EVENTUALLY(2,
+			connect();
+			sendHeaders(defaultHeaders,
+				"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+				"PATH_INFO", "/pid",
+				NULL);
+			string response = readAll(connection);
+			ensure(containsSubstring(response, "Status: 200 OK\r\n"));
+			pid = atoi(stripHeaders(response));
+			result = (pid != origPid);
+		);
+		
+		// Wait for the original process to finish oobw request.
+		EVENTUALLY(2,
+			unique_lock<boost::mutex> lock(pool->syncher);
+			result = !origProcess->oobwRequested;
+		);
+		
+		// Final asserts.
+		{
+			unique_lock<boost::mutex> lock(pool->syncher);
+			ensure("2 enabled processes", pool->superGroups.get(wsgiAppPath)->defaultGroup->enabledProcesses.size() == 2);
+			ensure("oobw is reset", !origProcess->oobwRequested);
+			ensure("process is enabled", origProcess->enabled == Process::ENABLED);
+		}
+	}
+
 	// Test small response buffering.
 	// Test large response buffering.
 }

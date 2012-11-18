@@ -30,6 +30,7 @@
 #include <ApplicationPool2/Group.h>
 #include <ApplicationPool2/PipeWatcher.h>
 #include <Exceptions.h>
+#include <MessageReadersWriters.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -316,20 +317,192 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 			removeProcessFromList(process, disablingProcesses);
 			addProcessToList(process, disabledProcesses);
 			removeFromDisableWaitlist(process, DR_SUCCESS, actions);
+			asyncOOBWRequestIfNeeded(process);
 		}
 		
 		pool->fullVerifyInvariants();
 		lock.unlock();
 		runAllActions(actions);
 
-	} else if (!getWaitlist.empty()) {
-		/* If there are clients on this group waiting for a process to
-		 * become available then call them now.
-		 */
-		UPDATE_TRACE_POINT();
-		assignSessionsToGetWaitersQuickly(lock);
-		verifyInvariants();
+	} else {
+		// This could change process->enabled.
+		asyncOOBWRequestIfNeeded(process);
+
+		if (!getWaitlist.empty() && process->enabled == Process::ENABLED) {
+			/* If there are clients on this group waiting for a process to
+			 * become available then call them now.
+			 */
+			UPDATE_TRACE_POINT();
+			assignSessionsToGetWaitersQuickly(lock);
+			verifyInvariants();
+		}
 	}
+}
+
+void
+Group::requestOOBW(const ProcessPtr &process) {
+	// Standard resource management boilerplate stuff...
+	PoolPtr pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL)) {
+		return;
+	}
+	unique_lock<boost::mutex> lock(pool->syncher);
+	pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL || process->detached())) {
+		return;
+	}
+	
+	process->oobwRequested = true;
+}
+
+// The 'self' parameter is for keeping the current Group object alive
+void
+Group::lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult result, GroupPtr self) {
+	TRACE_POINT();
+	
+	if (result != DR_SUCCESS && result != DR_CANCELED) {
+		return;
+	}
+	
+	// Standard resource management boilerplate stuff...
+	PoolPtr pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL)) {
+		return;
+	}
+	unique_lock<boost::mutex> lock(pool->syncher);
+	pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL || process->detached())) {
+		return;
+	}
+	
+	asyncOOBWRequestIfNeeded(process);
+}
+
+void
+Group::asyncOOBWRequestIfNeeded(const ProcessPtr &process) {
+	if (process->detached()) {
+		return;
+	}
+	if (!process->oobwRequested) {
+		// The process has not requested oobw, so nothing to do here.
+		return;
+	}
+	if (process->enabled == Process::ENABLED) {
+		// We want the process to be disabled. However, disabling a process is potentially
+		// asynchronous, so we pass a callback which will re-aquire the lock and call this
+		// method again.
+		DisableResult result = disable(process,
+			boost::bind(&Group::lockAndAsyncOOBWRequestIfNeeded, this,
+				_1, _2, shared_from_this()));
+		if (result == DR_DEFERRED) {
+			return;
+		}
+	} else if (process->enabled == Process::DISABLING) {
+		return;
+	}
+	
+	assert(process->enabled == Process::DISABLED);
+	assert(process->sessions == 0);
+	
+	createInterruptableThread(
+		boost::bind(&Group::spawnThreadOOBWRequest, this, shared_from_this(), process),
+		"OOB request thread for process " + process->inspect(),
+		POOL_HELPER_THREAD_STACK_SIZE);
+}
+
+// The 'self' parameter is for keeping the current Group object alive while this thread is running.
+void
+Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
+	TRACE_POINT();
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+
+	Socket *socket;
+	Connection connection;
+	
+	{
+		// Standard resource management boilerplate stuff...
+		PoolPtr pool = getPool();
+		if (OXT_UNLIKELY(pool == NULL)) {
+			return;
+		}
+		unique_lock<boost::mutex> lock(pool->syncher);
+		pool = getPool();
+		if (OXT_UNLIKELY(pool == NULL || process->detached())) {
+			return;
+		}
+		
+		assert(!process->detached());
+		assert(process->oobwRequested);
+		assert(process->sessions == 0);
+		assert(process->enabled == Process::DISABLED);
+		socket = process->sessionSockets.top();
+		assert(socket != NULL);
+	}
+	
+	unsigned long long timeout = 1000 * 1000 * 60; // 1 min
+	try {
+		ScopeGuard guard(boost::bind(&Socket::checkinConnection, socket, connection));
+		this_thread::restore_interruption ri(di);
+		this_thread::restore_syscall_interruption rsi(dsi);
+
+		// Grab a connection. The connection is marked as fail in order to
+		// ensure it is closed / recycled after this request (otherwise we'd
+		// need to completely read the response).
+		connection = socket->checkoutConnection();
+		connection.fail = true;
+		
+		
+		// This is copied from RequestHandler when it is sending data using the
+		// "session" protocol.
+		char sizeField[sizeof(uint32_t)];
+		SmallVector<StaticString, 10> data;
+
+		data.push_back(StaticString(sizeField, sizeof(uint32_t)));
+		data.push_back(makeStaticStringWithNull("REQUEST_METHOD"));
+		data.push_back(makeStaticStringWithNull("OOBW"));
+
+		data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
+		data.push_back(makeStaticStringWithNull(process->connectPassword));
+
+		uint32_t dataSize = 0;
+		for (unsigned int i = 1; i < data.size(); i++) {
+			dataSize += (uint32_t) data[i].size();
+		}
+		Uint32Message::generate(sizeField, dataSize);
+
+		gatheredWrite(connection.fd, &data[0], data.size(), &timeout);
+
+		// We do not care what the actual response is ... just wait for it.
+		waitUntilReadable(connection.fd, &timeout);
+	} catch (const SystemException &e) {
+		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
+	} catch (const TimeoutException &e) {
+		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
+	}
+	
+	vector<Callback> actions;
+	{
+		// Standard resource management boilerplate stuff...
+		PoolPtr pool = getPool();
+		if (OXT_UNLIKELY(pool == NULL)) {
+			return;
+		}
+		unique_lock<boost::mutex> lock(pool->syncher);
+		pool = getPool();
+		if (OXT_UNLIKELY(pool == NULL || process->detached())) {
+			return;
+		}
+		
+		process->oobwRequested = false;
+		if (process->enabled == Process::DISABLED) {
+			enable(process, actions);
+			assignSessionsToGetWaiters(actions);
+		}
+		
+		pool->fullVerifyInvariants();
+	}
+	runAllActions(actions);
 }
 
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.
@@ -588,6 +761,13 @@ Session::getGroup() const {
 	return process->getGroup();
 }
 
+void
+Session::requestOOBW() {
+	GroupPtr group = process->getGroup();
+	if (OXT_UNLIKELY(group != NULL)) {
+		group->requestOOBW(process);
+	}
+}
 
 PipeWatcher::PipeWatcher(
 	const SafeLibevPtr &_libev,

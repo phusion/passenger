@@ -178,7 +178,6 @@ public:
 	 * 0 means unlimited. */
 	int concurrency;
 	
-	
 	/*************************************************************
 	 * Information used by Pool. Do not write to these from
 	 * outside the Pool. If you read these make sure the Pool
@@ -204,6 +203,10 @@ public:
 	} enabled;
 	ProcessMetrics metrics;
 	
+	/** Marks whether the process requested out-of-band work. If so, we need to
+	 * wait until all sessions have ended and the process has been disabled.
+	 */
+	bool oobwRequested;
 	
 	Process(const SafeLibevPtr _libev,
 		pid_t _pid,
@@ -231,7 +234,8 @@ public:
 		  spawnStartTime(_spawnStartTime),
 		  sessions(0),
 		  processed(0),
-		  enabled(ENABLED)
+		  enabled(ENABLED),
+		  oobwRequested(false)
 	{
 		if (_libev != NULL) {
 			setNonBlocking(_adminSocket);
@@ -250,8 +254,8 @@ public:
 			indexSessionSockets();
 		}
 		
-		lastUsed     = SystemTime::getUsec();
-		spawnEndTime = lastUsed;
+		lastUsed      = SystemTime::getUsec();
+		spawnEndTime  = lastUsed;
 	}
 	
 	~Process() {

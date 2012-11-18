@@ -110,6 +110,7 @@ public:
 	pid_t getPid() const;
 	const string &getGupid() const;
 	const GroupPtr getGroup() const;
+	void requestOOBW();
 	
 	const ProcessPtr &getProcess() const {
 		return process;
