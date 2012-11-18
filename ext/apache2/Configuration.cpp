@@ -284,10 +284,8 @@ DEFINE_SERVER_INT_CONFIG_SETTER(cmd_union_station_gateway_port, unionStationGate
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGatewayCert)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_address, unionStationProxyAddress)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_type, unionStationProxyType)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_dir, analyticsLogDir)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_permissions, analyticsLogPermissions)
 
 static const char *
 cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -646,11 +644,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The type of the proxy that should be used for sending data to Union Station."),
-	AP_INIT_TAKE1("PassengerAnalyticsLogDir",
-		(Take1Func) cmd_passenger_analytics_log_dir,
-		NULL,
-		RSRC_CONF,
-		"Directory in which to store analytics logs."),
 	AP_INIT_TAKE1("PassengerAnalyticsLogUser",
 		(Take1Func) cmd_passenger_analytics_log_user,
 		NULL,
@@ -661,11 +654,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The group of analytics files."),
-	AP_INIT_TAKE1("PassengerAnalyticsLogPermissions",
-		(Take1Func) cmd_passenger_analytics_log_permissions,
-		NULL,
-		RSRC_CONF,
-		"The permissions of analytics files."),
 	AP_INIT_TAKE1("PassengerPreStart",
 		(Take1Func) cmd_passenger_pre_start,
 		NULL,

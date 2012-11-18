@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010 Phusion
+ * Copyright (C) 2010-2012 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -231,10 +231,8 @@ start_helper_server(ngx_cycle_t *cycle) {
     char   *default_user = NULL;
     char   *default_group = NULL;
     char   *passenger_root = NULL;
-    char   *analytics_log_dir;
     char   *analytics_log_user;
     char   *analytics_log_group;
-    char   *analytics_log_permissions;
     char   *union_station_gateway_address;
     char   *union_station_gateway_cert;
     char   *union_station_proxy_address;
@@ -249,10 +247,8 @@ start_helper_server(ngx_cycle_t *cycle) {
     default_user   = ngx_str_null_terminate(&passenger_main_conf.default_user);
     default_group  = ngx_str_null_terminate(&passenger_main_conf.default_group);
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
-    analytics_log_dir = ngx_str_null_terminate(&passenger_main_conf.analytics_log_dir);
     analytics_log_user = ngx_str_null_terminate(&passenger_main_conf.analytics_log_user);
     analytics_log_group = ngx_str_null_terminate(&passenger_main_conf.analytics_log_group);
-    analytics_log_permissions = ngx_str_null_terminate(&passenger_main_conf.analytics_log_permissions);
     union_station_gateway_address = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_address);
     union_station_gateway_cert = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_cert);
     union_station_proxy_address = ngx_str_null_terminate(&passenger_main_conf.union_station_proxy_address);

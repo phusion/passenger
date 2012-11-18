@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -379,8 +379,8 @@ public:
 	           unsigned int maxPoolSize, unsigned int maxInstancesPerApp,
 	           unsigned int poolIdleTime,
 	           const string &analyticsServer,
-	           const string &analyticsLogDir, const string &analyticsLogUser,
-	           const string &analyticsLogGroup, const string &analyticsLogPermissions,
+	           const string &analyticsLogUser,
+	           const string &analyticsLogGroup,
 	           const string &unionStationGatewayAddress,
 	           unsigned short unionStationGatewayPort,
 	           const string &unionStationGatewayCert,
@@ -420,10 +420,8 @@ public:
 			.setInt ("max_instances_per_app",     maxInstancesPerApp)
 			.setInt ("pool_idle_time",            poolIdleTime)
 			.set    ("analytics_server",          analyticsServer)
-			.set    ("analytics_log_dir",         analyticsLogDir)
 			.set    ("analytics_log_user",        analyticsLogUser)
 			.set    ("analytics_log_group",       analyticsLogGroup)
-			.set    ("analytics_log_permissions", analyticsLogPermissions)
 			.set    ("union_station_gateway_address",  unionStationGatewayAddress)
 			.setInt ("union_station_gateway_port", unionStationGatewayPort)
 			.set    ("union_station_gateway_cert", realUnionStationGatewayCert)

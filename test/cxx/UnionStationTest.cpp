@@ -19,11 +19,6 @@ namespace tut {
 		static const unsigned long long YESTERDAY = 1263299017000000ull;  // January 12, 2009, 12:23:37 UTC
 		static const unsigned long long TODAY     = 1263385422000000ull;  // January 13, 2009, 12:23:42 UTC
 		static const unsigned long long TOMORROW  = 1263471822000000ull;  // January 14, 2009, 12:23:42 UTC
-		#define FOOBAR_MD5 "3858f62230ac3c915f300c664312c63f"
-		#define LOCALHOST_MD5 "421aa90e079fa326b6494f812ad13e79"
-		#define REMOTEHOST_MD5 "2c18e486683a3db1e645ad8523223b72"
-		#define FOOBAR_LOCALHOST_PREFIX FOOBAR_MD5 "/" LOCALHOST_MD5
-		#define FOOBAR_REMOTEHOST_PREFIX FOOBAR_MD5 "/" REMOTEHOST_MD5
 		#define TODAY_TXN_ID "cjb8n-abcd"
 		#define TODAY_TIMESTAMP_STR "cftz90m3k0"
 		
@@ -31,7 +26,7 @@ namespace tut {
 		ServerInstanceDir::GenerationPtr generation;
 		string socketFilename;
 		string socketAddress;
-		string loggingDir;
+		string dumpFile;
 		AccountsDatabasePtr accountsDatabase;
 		ev::dynamic_loop eventLoop;
 		FileDescriptor serverFd;
@@ -43,7 +38,7 @@ namespace tut {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			socketFilename = generation->getPath() + "/logging.socket";
 			socketAddress = "unix:" + socketFilename;
-			loggingDir = generation->getPath() + "/logs";
+			dumpFile = generation->getPath() + "/log.txt";
 			accountsDatabase = ptr(new AccountsDatabase());
 			accountsDatabase->add("test", "1234", false);
 			setLogLevel(-1);
@@ -68,7 +63,7 @@ namespace tut {
 		void startLoggingServer(const function<void ()> &initFunc = function<void ()>()) {
 			serverFd = createUnixServer(socketFilename.c_str());
 			server = ptr(new LoggingServer(eventLoop,
-				serverFd, accountsDatabase, loggingDir));
+				serverFd, accountsDatabase, dumpFile));
 			if (initFunc) {
 				initFunc();
 			}
@@ -116,6 +111,10 @@ namespace tut {
 			}
 			return client;
 		}
+
+		string readDumpFile() {
+			return readAll(dumpFile);
+		}
 	};
 	
 	DEFINE_TEST_GROUP(UnionStationTest);
@@ -137,7 +136,7 @@ namespace tut {
 		
 		log.reset();
 		
-		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt");
+		string data = readDumpFile();
 		ensure(data.find("hello\n") != string::npos);
 		ensure(data.find("world\n") != string::npos);
 	}
@@ -158,7 +157,7 @@ namespace tut {
 		log.reset();
 		log2.reset();
 		
-		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt");
+		string data = readDumpFile();
 		ensure("(1)", data.find("message 1\n") != string::npos);
 		ensure("(2)", data.find("message 2\n") != string::npos);
 	}
@@ -186,12 +185,11 @@ namespace tut {
 		log2.reset();
 		log3.reset();
 		
-		string yesterdayData = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt");
-		string tomorrowData = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/14/12/log.txt");
-		ensure("(1)", yesterdayData.find(timestampString(YESTERDAY) + " 1 message 1\n") != string::npos);
-		ensure("(2)", yesterdayData.find(timestampString(TODAY) + " 2 message 2\n") != string::npos);
-		ensure("(3)", yesterdayData.find(timestampString(TOMORROW) + " 4 message 3\n") != string::npos);
-		ensure("(4)", tomorrowData.find(timestampString(TOMORROW) + " 1 message 4\n") != string::npos);
+		string data = readDumpFile();
+		ensure("(1)", data.find(timestampString(YESTERDAY) + " 1 message 1\n") != string::npos);
+		ensure("(2)", data.find(timestampString(TODAY) + " 2 message 2\n") != string::npos);
+		ensure("(3)", data.find(timestampString(TOMORROW) + " 4 message 3\n") != string::npos);
+		ensure("(4)", data.find(timestampString(TOMORROW) + " 1 message 4\n") != string::npos);
 	}
 	
 	TEST_METHOD(4) {
@@ -211,7 +209,7 @@ namespace tut {
 		log->flushToDiskAfterClose(true);
 		log.reset();
 		
-		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt");
+		string data = readDumpFile();
 		ensure("(1)", data.find(timestampString(YESTERDAY) + " 0 ATTACH\n") != string::npos);
 		ensure("(2)", data.find(timestampString(TODAY) + " 1 ATTACH\n") != string::npos);
 		ensure("(3)", data.find(timestampString(TODAY) + " 2 DETACH\n") != string::npos);
@@ -238,7 +236,7 @@ namespace tut {
 		Logger log;
 		ensure(log.isNull());
 		log.message("hello world");
-		ensure_equals(getFileType(loggingDir), FT_NONEXISTANT);
+		ensure_equals(getFileType(dumpFile), FT_NONEXISTANT);
 	}
 	
 	TEST_METHOD(7) {
@@ -249,25 +247,7 @@ namespace tut {
 		LoggerPtr log = factory.newTransaction("foo");
 		ensure(log->isNull());
 		log->message("hello world");
-		ensure_equals(getFileType(loggingDir), FT_NONEXISTANT);
-	}
-	
-	TEST_METHOD(8) {
-		// It creates a file group_name.txt under the group directory.
-		LoggerPtr log = factory->newTransaction("foobar");
-		log->flushToDiskAfterClose(true);
-		log.reset();
-		string data = readAll(loggingDir + "/1/" FOOBAR_MD5 "/group_name.txt");
-		ensure_equals(data, "foobar");
-	}
-	
-	TEST_METHOD(9) {
-		// It creates a file node_name.txt under the node directory.
-		LoggerPtr log = factory->newTransaction("foobar");
-		log->flushToDiskAfterClose(true);
-		log.reset();
-		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/node_name.txt");
-		ensure_equals(data, "localhost");
+		ensure_equals(getFileType(dumpFile), FT_NONEXISTANT);
 	}
 	
 	TEST_METHOD(11) {
@@ -318,7 +298,7 @@ namespace tut {
 		log.reset();
 		log2.reset();
 		
-		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt");
+		string data = readDumpFile();
 		ensure("(5)", data.find("hello\n") != string::npos);
 	}
 	
@@ -352,7 +332,6 @@ namespace tut {
 		MessageClient client2 = createConnection();
 		MessageClient client3 = createConnection();
 		vector<string> args;
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
 		
 		SystemTime::forceAll(TODAY);
 		
@@ -367,13 +346,13 @@ namespace tut {
 		client2.disconnect();
 		
 		SHOULD_NEVER_HAPPEN(100,
-			result = fileExists(filename) && !readAll(filename).empty();
+			result = fileExists(dumpFile) && !readDumpFile().empty();
 		);
 		client1.disconnect();
 		client3.write("flush", NULL);
 		client3.read(args);
 		EVENTUALLY(5,
-			result = fileExists(filename) && !readAll(filename).empty();
+			result = fileExists(dumpFile) && !readDumpFile().empty();
 		);
 	}
 	
@@ -385,7 +364,6 @@ namespace tut {
 		MessageClient client2 = createConnection();
 		MessageClient client3 = createConnection();
 		vector<string> args;
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
 		
 		SystemTime::forceAll(TODAY);
 		
@@ -402,7 +380,7 @@ namespace tut {
 		client3.write("flush", NULL);
 		client3.read(args);
 		SHOULD_NEVER_HAPPEN(500,
-			result = fileExists(filename) && !readAll(filename).empty();
+			result = fileExists(dumpFile) && !readDumpFile().empty();
 		);
 	}
 	
@@ -412,7 +390,6 @@ namespace tut {
 		MessageClient client1 = createConnection();
 		MessageClient client2 = createConnection();
 		vector<string> args;
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
 		
 		SystemTime::forceAll(TODAY);
 		
@@ -427,7 +404,7 @@ namespace tut {
 		
 		stopLoggingServer();
 		EVENTUALLY(5,
-			result = fileExists(filename) && !readAll(filename).empty();
+			result = fileExists(dumpFile) && !readDumpFile().empty();
 		);
 	}
 	
@@ -437,7 +414,6 @@ namespace tut {
 		MessageClient client1 = createConnection();
 		MessageClient client2 = createConnection();
 		vector<string> args;
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
 		
 		SystemTime::forceAll(TODAY);
 		
@@ -452,7 +428,7 @@ namespace tut {
 		
 		stopLoggingServer();
 		SHOULD_NEVER_HAPPEN(200,
-			result = fileExists(filename) && !readAll(filename).empty();
+			result = fileExists(dumpFile) && !readDumpFile().empty();
 		);
 	}
 	
@@ -529,8 +505,6 @@ namespace tut {
 	
 	TEST_METHOD(21) {
 		// The server temporarily buffers data in memory.
-		SystemTime::forceAll(YESTERDAY);
-		
 		LoggerPtr log = factory->newTransaction("foobar");
 		log->message("hello world");
 		log.reset();
@@ -538,24 +512,20 @@ namespace tut {
 		// Give server some time to process these commands.
 		usleep(20000);
 		
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
 		struct stat buf;
-		ensure_equals(stat(filename.c_str(), &buf), 0);
+		ensure_equals(stat(dumpFile.c_str(), &buf), 0);
 		ensure_equals(buf.st_size, (off_t) 0);
 	}
 	
 	TEST_METHOD(22) {
 		// The destructor flushes all data.
-		SystemTime::forceAll(YESTERDAY);
-		
 		LoggerPtr log = factory->newTransaction("foobar");
 		log->message("hello world");
 		log.reset();
 		stopLoggingServer();
 		
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
 		struct stat buf;
-		ensure_equals(stat(filename.c_str(), &buf), 0);
+		ensure_equals(stat(dumpFile.c_str(), &buf), 0);
 		ensure(buf.st_size > 0);
 	}
 	
@@ -574,9 +544,8 @@ namespace tut {
 		ensure_equals(args.size(), 1u);
 		ensure_equals(args[0], "ok");
 		
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
 		struct stat buf;
-		ensure_equals(stat(filename.c_str(), &buf), 0);
+		ensure_equals(stat(dumpFile.c_str(), &buf), 0);
 		ensure(buf.st_size > 0);
 	}
 	
@@ -602,9 +571,8 @@ namespace tut {
 		writeArrayMessage(connection->fd, "flush", NULL);
 		ensure(readArrayMessage(connection->fd, args));
 		
-		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
 		struct stat buf;
-		ensure_equals(stat(filename.c_str(), &buf), 0);
+		ensure_equals(stat(dumpFile.c_str(), &buf), 0);
 		ensure_equals(buf.st_size, (off_t) 0);
 	}
 	
@@ -735,7 +703,6 @@ namespace tut {
 		// One can supply a custom node name per openTransaction command.
 		MessageClient client1 = createConnection();
 		vector<string> args;
-		string filename = loggingDir + "/1/" FOOBAR_REMOTEHOST_PREFIX "/requests/2010/01/13/12/log.txt";
 		
 		SystemTime::forceAll(TODAY);
 		
@@ -747,7 +714,7 @@ namespace tut {
 		client1.read(args);
 		client1.disconnect();
 		
-		ensure(fileExists(filename));
+		ensure(fileExists(dumpFile));
 	}
 	
 	TEST_METHOD(30) {
@@ -773,7 +740,7 @@ namespace tut {
 		log->flushToDiskAfterClose(true);
 		log.reset();
 		
-		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt");
+		string data = readDumpFile();
 		ensure("(1)", data.find("transaction 1\n") != string::npos);
 		ensure("(2)", data.find("transaction 2\n") == string::npos);
 	}
