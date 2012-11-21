@@ -276,8 +276,7 @@ start_helper_server(ngx_cycle_t *cycle) {
         passenger_main_conf.max_instances_per_app,
         passenger_main_conf.pool_idle_time,
         "",
-        analytics_log_dir, analytics_log_user,
-        analytics_log_group, analytics_log_permissions,
+        analytics_log_user, analytics_log_group,
         union_station_gateway_address,
         passenger_main_conf.union_station_gateway_port,
         union_station_gateway_cert,
@@ -332,25 +331,13 @@ start_helper_server(ngx_cycle_t *cycle) {
         goto cleanup;
     }
     
-    last = ngx_snprintf(filename, sizeof(filename) - 1,
-                        "%s/analytics_log_dir.txt",
-                        agents_starter_get_generation_dir(passenger_agents_starter));
-    *last = (u_char) '\0';
-    if (create_file(cycle, filename, passenger_main_conf.analytics_log_dir.data,
-                    passenger_main_conf.analytics_log_dir.len) != NGX_OK) {
-        result = NGX_ERROR;
-        goto cleanup;
-    }
-
 cleanup:
     free(debug_log_file);
     free(default_user);
     free(default_group);
     free(passenger_root);
-    free(analytics_log_dir);
     free(analytics_log_user);
     free(analytics_log_group);
-    free(analytics_log_permissions);
     free(union_station_gateway_address);
     free(union_station_gateway_cert);
     free(union_station_proxy_address);
