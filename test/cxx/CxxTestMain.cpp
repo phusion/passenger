@@ -1,9 +1,11 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include "../tut/tut_reporter.h"
 #include "../support/valgrind.h"
 #include <oxt/initialize.hpp>
 #include <oxt/system_calls.hpp>
 #include <string>
+#include <map>
+#include <vector>
 #include <signal.h>
 #include <cstdio>
 #include <cstdlib>
@@ -13,6 +15,7 @@
 #include <MultiLibeio.cpp>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/json.h>
 
 using namespace std;
@@ -29,8 +32,10 @@ static tut::groupnames allGroups;
 /** Whether the user wants to run all test groups, or only the specified test groups. */
 static enum { RUN_ALL_GROUPS, RUN_SPECIFIED_GROUPS } runMode = RUN_ALL_GROUPS;
 
-/** The test groups the user wants to run. Only meaningful if runMode == RUN_SPECIFIED_GROUPS. */
-static tut::groupnames groupsToRun;
+/** The test groups and test numbers that the user wants to run.
+ * Only meaningful if runMode == RUN_SPECIFIED_GROUPS.
+ */
+static map< string, vector<int> > groupsToRun;
 
 
 static void
@@ -61,6 +66,28 @@ groupExists(const string &name) {
 }
 
 static void
+parseGroupSpec(const char *spec, string &groupName, vector<int> &testNumbers) {
+	testNumbers.clear();
+	if (*spec == '\0') {
+		groupName = "";
+		return;
+	}
+
+	vector<string> components;
+	split(spec, ':', components);
+	groupName = components[0];
+	if (components.size() > 1) {
+		string testNumbersSpec = components[1];
+		components.clear();
+		split(testNumbersSpec, ',', components);
+		vector<string>::const_iterator it;
+		for (it = components.begin(); it != components.end(); it++) {
+			testNumbers.push_back(atoi(*it));
+		}
+	}
+}
+
+static void
 parseOptions(int argc, char *argv[]) {
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
@@ -69,7 +96,13 @@ parseOptions(int argc, char *argv[]) {
 			if (argv[i + 1] == NULL) {
 				fprintf(stderr, "*** ERROR: A -g option must be followed by a test group name.\n");
 				exit(1);
-			} else if (!groupExists(argv[i + 1])) {
+			}
+
+			string groupName;
+			vector<int> testNumbers;
+			parseGroupSpec(argv[i + 1], groupName, testNumbers);
+
+			if (!groupExists(groupName)) {
 				fprintf(stderr,
 					"*** ERROR: Invalid test group '%s'. Available test groups are:\n\n",
 					argv[i + 1]);
@@ -79,7 +112,7 @@ parseOptions(int argc, char *argv[]) {
 				exit(1);
 			} else {
 				runMode = RUN_SPECIFIED_GROUPS;
-				groupsToRun.push_back(argv[i + 1]);
+				groupsToRun[groupName] = testNumbers;
 				i++;
 			}
 		} else {
@@ -163,14 +196,10 @@ main(int argc, char *argv[]) {
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {
 		tut::runner.get().run_tests();
-		all_ok = reporter.all_ok();
 	} else {
-		all_ok = true;
-		for (groupnames_iterator it = groupsToRun.begin(); it != groupsToRun.end(); it++) {
-			tut::runner.get().run_tests(*it);
-			all_ok = all_ok && reporter.all_ok();
-		}
+		tut::runner.get().run_tests(groupsToRun);
 	}
+	all_ok = reporter.all_ok();
 	Passenger::MultiLibeio::shutdown();
 	if (all_ok) {
 		return 0;
