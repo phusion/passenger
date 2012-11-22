@@ -542,17 +542,24 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		if (pool == NULL) {
 			return;
 		}
-		{
-			LockGuard l(pool->debugSyncher);
-			pool->spawnLoopIteration++;
-			P_TRACE(2, "Entering spawn loop iteration " << pool->spawnLoopIteration);
+		
+		Pool::DebugSupportPtr debug = pool->debugSupport;
+		if (debug != NULL) {
+			this_thread::restore_interruption ri(di);
+			this_thread::restore_syscall_interruption rsi(dsi);
+			debug->spawnLoopIteration++;
+			debug->debugger->send("At spawn loop iteration " +
+				toString(debug->spawnLoopIteration));
+			debug->messages->recv("Proceed with spawn loop iteration " +
+				toString(debug->spawnLoopIteration));
 		}
+
 		unique_lock<boost::mutex> lock(pool->syncher);
 		pool = getPool();
 		if (pool == NULL) {
 			return;
 		}
-		
+
 		verifyInvariants();
 		assert(m_spawning || m_restarting);
 		

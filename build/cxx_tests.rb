@@ -163,6 +163,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/MessageIOTest.cpp
 		ext/common/Utils/MessageIO.h
 		ext/common/Utils/IOUtils.h),
+	'test/cxx/MessagePassingTest.o' => %w(
+		test/cxx/MessagePassingTest.cpp
+		ext/common/Utils/MessagePassing.h),
 	'test/cxx/VariantMapTest.o' => %w(
 		test/cxx/VariantMapTest.cpp
 		ext/common/Utils/VariantMap.h),

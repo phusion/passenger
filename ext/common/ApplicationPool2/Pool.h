@@ -53,6 +53,7 @@
 #include <RandomGenerator.h>
 #include <Utils/Lock.h>
 #include <Utils/SystemTime.h>
+#include <Utils/MessagePassing.h>
 #include <Utils/VariantMap.h>
 #include <Utils/ProcessMetricsCollector.h>
 
@@ -88,7 +89,23 @@ public:
 	typedef UnionStation::LoggerFactory LoggerFactory;
 	typedef UnionStation::LoggerFactoryPtr LoggerFactoryPtr;
 	typedef UnionStation::LoggerPtr LoggerPtr;
-	
+
+	struct DebugSupport {
+		MessageBoxPtr debugger;
+		MessageBoxPtr messages;
+
+		// The following fields may only be accessed by Pool.
+		unsigned int spawnLoopIteration;
+
+		DebugSupport() {
+			debugger = make_shared<MessageBox>();
+			messages = make_shared<MessageBox>();
+			spawnLoopIteration = 0;
+		}
+	};
+
+	typedef shared_ptr<DebugSupport> DebugSupportPtr;
+
 	SpawnerFactoryPtr spawnerFactory;
 	LoggerFactoryPtr loggerFactory;
 	RandomGeneratorPtr randomGenerator;
@@ -153,8 +170,7 @@ public:
 	 */
 	vector<GetWaiter> getWaitlist;
 
-	mutable boost::mutex debugSyncher;
-	unsigned short spawnLoopIteration;
+	DebugSupportPtr debugSupport;
 	
 	static void runAllActions(const vector<Callback> &actions) {
 		vector<Callback>::const_iterator it, end = actions.end();
@@ -745,8 +761,6 @@ public:
 		analyticsCollectionTimer.set(3.0, 0.0);
 		libev->start(analyticsCollectionTimer);
 
-		spawnLoopIteration = 0;
-
 		// The following code only serve to instantiate certain inline methods
 		// so that they can be invoked from gdb.
 		(void) SuperGroupPtr().get();
@@ -758,6 +772,11 @@ public:
 	~Pool() {
 		TRACE_POINT();
 		destroy();
+	}
+
+	void initDebugging() {
+		LockGuard l(syncher);
+		debugSupport = make_shared<DebugSupport>();
 	}
 
 	void destroy() {

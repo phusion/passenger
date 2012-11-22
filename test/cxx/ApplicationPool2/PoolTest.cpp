@@ -20,6 +20,7 @@ namespace tut {
 		BackgroundEventLoop bg;
 		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr pool;
+		Pool::DebugSupportPtr debug;
 		GetCallback callback;
 		SessionPtr currentSession;
 		ExceptionPtr currentException;
@@ -49,6 +50,11 @@ namespace tut {
 			clearAllSessions();
 			setLogLevel(0);
 			SystemTime::releaseAll();
+		}
+
+		void initPoolDebugging() {
+			pool->initDebugging();
+			debug = pool->debugSupport;
 		}
 		
 		void clearAllSessions() {
@@ -1204,6 +1210,7 @@ namespace tut {
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		spawnerFactory->dummySpawnTime = 20000;
 		spawnerFactory->dummySpawnerCreationSleepTime = 100000;
+		initPoolDebugging();
 
 		Options options = createOptions();
 		options.appRoot = "tmp.wsgi";
@@ -1211,18 +1218,12 @@ namespace tut {
 
 		// Trigger spawn loop. The spawn loop itself won't take longer than 3*20=60 msec.
 		pool->findOrCreateGroup(options);
-		ScopedLock l(pool->syncher);
-		pool->asyncGet(options, callback, false);
-		// Wait until spawn loop tries to grab the lock.
-		EVENTUALLY(3,
-			LockGuard l2(pool->debugSyncher);
-			result = pool->spawnLoopIteration == 1;
-		);
-		l.unlock();
-
-		// At this point, the spawn loop is about to attach its first spawned
+		pool->asyncGet(options, callback);
+		
+		// The spawn loop will eventually be about to attach its first spawned
 		// process to the group. We wait until it has succeeded doing so.
 		// Remaining maximum time in the spawn loop: 2*20=40 msec.
+		debug->messages->send("Proceed with spawn loop iteration 1");
 		EVENTUALLY2(200, 0,
 			result = pool->getProcessCount() == 1;
 		);
@@ -1237,10 +1238,9 @@ namespace tut {
 		// The spawn loop will succeed at spawning the second process.
 		// Upon attaching it, it should detect the restart the stop,
 		// so that it never spawns the third process.
-		SHOULD_NEVER_HAPPEN(300,
-			LockGuard l2(pool->debugSyncher);
-			result = pool->spawnLoopIteration > 2;
-		);
+		debug->messages->send("Proceed with spawn loop iteration 2");
+		unsigned long long timeout = 300000;
+		ensure_equals(debug->debugger->recv("At spawn loop iteration 3", &timeout), MessagePtr());
 		ensure_equals("(2)", pool->getProcessCount(), 1u);
 	}
 
