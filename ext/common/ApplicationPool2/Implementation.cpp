@@ -534,6 +534,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			this_thread::restore_syscall_interruption rsi(dsi);
 			this_thread::interruption_point();
 			debug->spawnLoopIteration++;
+			P_DEBUG("Begin spawn loop iteration " << debug->spawnLoopIteration);
 			debug->debugger->send("Begin spawn loop iteration " +
 				toString(debug->spawnLoopIteration));
 			debug->messages->recv("Proceed with spawn loop iteration " +
@@ -648,7 +649,7 @@ Group::restart(const Options &options) {
 	m_spawning = false;
 	m_restarting = true;
 	detachAll(actions);
-	getPool()->nonInterruptableThreads.create_thread(
+	getPool()->interruptableThreads.create_thread(
 		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
 			options.copyAndPersist().clearPerRequestFields(),
 			getPool()->spawnerFactory, actions),
@@ -667,6 +668,9 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	Pool::runAllActions(postLockActions);
 	postLockActions.clear();
 
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+
 	// Create a new spawner.
 	SpawnerPtr newSpawner = spawnerFactory->create(options);
 	SpawnerPtr oldSpawner;
@@ -677,6 +681,16 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	if (OXT_UNLIKELY(pool == NULL)) {
 		return;
 	}
+
+	Pool::DebugSupportPtr debug = pool->debugSupport;
+	if (debug != NULL) {
+		this_thread::restore_interruption ri(di);
+		this_thread::restore_syscall_interruption rsi(dsi);
+		this_thread::interruption_point();
+		debug->debugger->send("About to end restarting");
+		debug->messages->recv("Finish restarting");
+	}
+
 	LockGuard l(pool->syncher);
 	pool = getPool();
 	if (OXT_UNLIKELY(pool == NULL)) {

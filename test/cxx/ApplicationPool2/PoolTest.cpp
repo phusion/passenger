@@ -739,6 +739,10 @@ namespace tut {
 			ensure_equals(pool->superGroups.get("test")->defaultGroup->enabledCount, 0);
 			ensure_equals(pool->superGroups.get("test")->defaultGroup->getWaitlist.size(), 1u);
 		}
+
+		EVENTUALLY(5,
+			result = number == 2;
+		);
 	}
 	
 	TEST_METHOD(32) {
@@ -1222,14 +1226,15 @@ namespace tut {
 		pool->asyncGet(options, callback);
 		debug->debugger->recv("Begin spawn loop iteration 1");
 
-		// Trigger restart, then let spawn loop continue.
-		touchFile("tmp.wsgi/tmp/restart.txt");
+		// Trigger restart, freeze the restart procedure, then let spawn loop continue.
+		touchFile("tmp.wsgi/tmp/restart.txt", 1);
 		pool->asyncGet(options, callback);
+		debug->debugger->recv("About to end restarting");
 		debug->messages->send("Proceed with spawn loop iteration 1");
 
 		// The spawn loop will succeed at spawning this process.
-		// After attaching it, it should detect the restart and stop,
-		// so that it never spawns the second and third processes.
+		// After the spawn loop attaches the process, it should detect the
+		// restart and stop, so that it never spawns the second and third processes.
 		debug->debugger->recv("Spawn loop done");
 		ensure_equals(debug->debugger->peek("At spawn loop iteration 2"), MessagePtr());
 		ensure_equals(debug->debugger->peek("At spawn loop iteration 3"), MessagePtr());
