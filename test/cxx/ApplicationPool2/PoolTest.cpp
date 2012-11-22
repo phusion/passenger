@@ -747,6 +747,7 @@ namespace tut {
 		// by the waiters.
 		Options options = createOptions();
 		options.appGroupName = "test";
+		options.minProcesses = 0;
 		pool->setMax(1);
 		pool->spawnerFactory->dummySpawnTime = 30000;
 
@@ -757,6 +758,7 @@ namespace tut {
 		// asyncGet() on another group should now put it on the waiting list.
 		Options options2 = createOptions();
 		options2.appGroupName = "test2";
+		options2.minProcesses = 0;
 		pool->spawnerFactory->dummySpawnTime = 90000;
 		pool->asyncGet(options2, callback);
 		{
@@ -777,6 +779,9 @@ namespace tut {
 			ensure(pool->superGroups.get("test2") != NULL);
 			ensure_equals(pool->getWaitlist.size(), 0u);
 		}
+		EVENTUALLY(5,
+			result = number == 2;
+		);
 	}
 	
 	TEST_METHOD(33) {
@@ -1208,40 +1213,27 @@ namespace tut {
 		// If we restart while spawning is in progress, then the spawn
 		// loop will exit as soon as it has detected that we're restarting.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
-		spawnerFactory->dummySpawnTime = 20000;
-		spawnerFactory->dummySpawnerCreationSleepTime = 100000;
 		initPoolDebugging();
-
 		Options options = createOptions();
 		options.appRoot = "tmp.wsgi";
 		options.minProcesses = 3;
 
-		// Trigger spawn loop. The spawn loop itself won't take longer than 3*20=60 msec.
-		pool->findOrCreateGroup(options);
+		// Trigger spawn loop and freeze it at the point where it's spawning a process.
 		pool->asyncGet(options, callback);
-		
-		// The spawn loop will eventually be about to attach its first spawned
-		// process to the group. We wait until it has succeeded doing so.
-		// Remaining maximum time in the spawn loop: 2*20=40 msec.
-		debug->messages->send("Proceed with spawn loop iteration 1");
-		EVENTUALLY2(200, 0,
-			result = pool->getProcessCount() == 1;
-		);
+		debug->debugger->recv("Begin spawn loop iteration 1");
 
-		// Trigger restart. It will immediately detach the sole process in the pool,
-		// and it will finish after approximately 100 msec,
-		// allowing the spawn loop to detect that the restart flag is true.
+		// Trigger restart, then let spawn loop continue.
 		touchFile("tmp.wsgi/tmp/restart.txt");
 		pool->asyncGet(options, callback);
-		ensure_equals("(1)", pool->getProcessCount(), 0u);
+		debug->messages->send("Proceed with spawn loop iteration 1");
 
-		// The spawn loop will succeed at spawning the second process.
-		// Upon attaching it, it should detect the restart the stop,
-		// so that it never spawns the third process.
-		debug->messages->send("Proceed with spawn loop iteration 2");
-		unsigned long long timeout = 300000;
-		ensure_equals(debug->debugger->recv("At spawn loop iteration 3", &timeout), MessagePtr());
-		ensure_equals("(2)", pool->getProcessCount(), 1u);
+		// The spawn loop will succeed at spawning this process.
+		// After attaching it, it should detect the restart and stop,
+		// so that it never spawns the second and third processes.
+		debug->debugger->recv("Spawn loop done");
+		ensure_equals(debug->debugger->peek("At spawn loop iteration 2"), MessagePtr());
+		ensure_equals(debug->debugger->peek("At spawn loop iteration 3"), MessagePtr());
+		ensure_equals("(1)", pool->getProcessCount(), 1u);
 	}
 
 	TEST_METHOD(73) {

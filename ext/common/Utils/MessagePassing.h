@@ -56,6 +56,9 @@ using namespace boost;
  * This library is designed for convenience and correctness, not speed. Messages
  * are allocated on the heap and are never copied: only their smart pointers are
  * passed around. This way you can pass arbitrary C++ objects.
+ *
+ * You must not modify Message objects after they've been sent. Likewise,
+ * do not modify Message objects returned by peek().
  */
 class MessageBox;
 struct Message;
@@ -134,6 +137,17 @@ class MessageBox: public enable_shared_from_this<MessageBox> {
 		return end;
 	}
 
+	ConstIterator search(const string &name) const {
+		ConstIterator it, end = messages.end();
+		for (it = messages.begin(); it != end; it++) {
+			const MessagePtr &message = *it;
+			if (message->name == name) {
+				return it;
+			}
+		}
+		return end;
+	}
+
 	void substractTimePassed(unsigned long long *timeout, unsigned long long beginTime) {
 		unsigned long long now = SystemTime::getMsec();
 		unsigned long long diff;
@@ -159,6 +173,16 @@ public:
 
 	void send(const string &name) {
 		send(make_shared<Message>(name));
+	}
+
+	const MessagePtr peek(const string &name) const {
+		unique_lock<boost::mutex> l(syncher);
+		ConstIterator it = search(name);
+		if (it == messages.end()) {
+			return MessagePtr();
+		} else {
+			return *it;
+		}
 	}
 
 	MessagePtr recv(const string &name, unsigned long long *timeout = NULL) {

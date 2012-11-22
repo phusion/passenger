@@ -520,9 +520,26 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 	TRACE_POINT();
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
+
+	PoolPtr pool = getPool();
+	if (pool == NULL) {
+		return;
+	}
+	Pool::DebugSupportPtr debug = pool->debugSupport;
 	
 	bool done = false;
 	while (!done) {
+		if (debug != NULL) {
+			this_thread::restore_interruption ri(di);
+			this_thread::restore_syscall_interruption rsi(dsi);
+			this_thread::interruption_point();
+			debug->spawnLoopIteration++;
+			debug->debugger->send("Begin spawn loop iteration " +
+				toString(debug->spawnLoopIteration));
+			debug->messages->recv("Proceed with spawn loop iteration " +
+				toString(debug->spawnLoopIteration));
+		}
+
 		ProcessPtr process;
 		ExceptionPtr exception;
 		try {
@@ -531,33 +548,22 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			this_thread::restore_syscall_interruption rsi(dsi);
 			process = spawner->spawn(options);
 		} catch (const thread_interrupted &) {
-			return;
+			break;
 		} catch (const tracable_exception &e) {
 			exception = copyException(e);
 			// Let other (unexpected) exceptions crash the program so
 			// gdb can generate a backtrace.
 		}
-		UPDATE_TRACE_POINT();
-		PoolPtr pool = getPool();
-		if (pool == NULL) {
-			return;
-		}
-		
-		Pool::DebugSupportPtr debug = pool->debugSupport;
-		if (debug != NULL) {
-			this_thread::restore_interruption ri(di);
-			this_thread::restore_syscall_interruption rsi(dsi);
-			debug->spawnLoopIteration++;
-			debug->debugger->send("At spawn loop iteration " +
-				toString(debug->spawnLoopIteration));
-			debug->messages->recv("Proceed with spawn loop iteration " +
-				toString(debug->spawnLoopIteration));
-		}
 
+		UPDATE_TRACE_POINT();
+		pool = getPool();
+		if (pool == NULL) {
+			break;
+		}
 		unique_lock<boost::mutex> lock(pool->syncher);
 		pool = getPool();
 		if (pool == NULL) {
-			return;
+			break;
 		}
 
 		verifyInvariants();
@@ -586,7 +592,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			pool->assignSessionsToGetWaiters(actions);
 			done = true;
 		}
-		
+
 		// Temporarily mark this Group as 'not spawning' so
 		// that pool->utilization() doesn't take this thread's spawning
 		// state into account.
@@ -611,6 +617,10 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		pool->fullVerifyInvariants();
 		lock.unlock();
 		runAllActions(actions);
+	}
+
+	if (debug != NULL) {
+		debug->debugger->send("Spawn loop done");
 	}
 }
 
