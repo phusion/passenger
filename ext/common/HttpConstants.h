@@ -54,9 +54,9 @@ getStatusCodeAndReasonPhrase(int statusCode) {
 	case 207:
 		return "207 Multi-Status";
 	case 208:
-		return "Already Reported";
+		return "208 Already Reported";
 	case 226:
-		return "IM Used";
+		return "226 IM Used";
 	case 300:
 		return "300 Multiple Choices";
 	case 301:
@@ -116,7 +116,7 @@ getStatusCodeAndReasonPhrase(int statusCode) {
 		return "418 Not A Funny April Fools Joke";
 	case 420:
 		// https://dev.twitter.com/docs/error-codes-responses
-		return "Enhance Your Calm";
+		return "420 Enhance Your Calm";
 	case 422:
 		return "422 Unprocessable Entity";
 	case 423:
@@ -126,11 +126,11 @@ getStatusCodeAndReasonPhrase(int statusCode) {
 	case 426:
 		return "426 Upgrade Required";
 	case 428:
-		return "Precondition Required";
+		return "428 Precondition Required";
 	case 429:
-		return "Too Many Requests";
+		return "429 Too Many Requests";
 	case 431:
-		return "Request Header Fields Too Large";
+		return "431 Request Header Fields Too Large";
 	case 449:
 		return "449 Retry With";
 	case 450:
@@ -156,7 +156,7 @@ getStatusCodeAndReasonPhrase(int statusCode) {
 	case 510:
 		return "510 Not Extended";
 	case 511:
-		return "Network Authentication Required";
+		return "511 Network Authentication Required";
 	default:
 		return (const char *) 0;
 	}
