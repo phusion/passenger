@@ -71,6 +71,7 @@ module LoaderSharedHelpers
 	def dump_all_information
 		dump_ruby_environment
 		dump_envvars
+		dump_system_memory_stats
 	end
 
 	def dump_ruby_environment
@@ -122,6 +123,16 @@ module LoaderSharedHelpers
 				ENV.each_pair do |key, value|
 					f.puts "#{key} = #{value}"
 				end
+			end
+		end
+	rescue SystemCallError
+		# Don't care.
+	end
+
+	def dump_system_memory_stats
+		if dir = ENV['PASSENGER_DEBUG_DIR']
+			File.open("#{dir}/sysmemory", "w") do |f|
+				f.write(`"#{PhusionPassenger.helper_scripts_dir}/system-memory-stats.py"`)
 			end
 		end
 	rescue SystemCallError

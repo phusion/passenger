@@ -53,55 +53,95 @@ setGivenEnvVars(const char *envvarsData) {
 
 static void
 dumpInformation() {
-	const char *dir;
-	if ((dir = getenv("PASSENGER_DEBUG_DIR")) != NULL) {
-		FILE *f;
-
-		f = fopen((string(dir) + "/envvars").c_str(), "w");
-		if (f != NULL) {
-			int i = 0;
-			while (environ[i] != NULL) {
-				fputs(environ[i], f);
-				putc('\n', f);
-				i++;
-			}
-			fclose(f);
-		}
-
-		f = fopen((string(dir) + "/user_info").c_str(), "w");
-		if (f != NULL) {
-			pid_t pid = fork();
-			if (pid == 0) {
-				dup2(fileno(f), 1);
-				execlp("id", "id", (char *) 0);
-				_exit(1);
-			} else if (pid == -1) {
-				int e = errno;
-				fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
-					strerror(e), e);
-			} else {
-				waitpid(pid, NULL, 0);
-			}
-			fclose(f);
-		}
-
-		f = fopen((string(dir) + "/ulimit").c_str(), "w");
-		if (f != NULL) {
-			pid_t pid = fork();
-			if (pid == 0) {
-				dup2(fileno(f), 1);
-				execlp("ulimit", "ulimit", "-a", (char *) 0);
-				_exit(1);
-			} else if (pid == -1) {
-				int e = errno;
-				fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
-					strerror(e), e);
-			} else {
-				waitpid(pid, NULL, 0);
-			}
-			fclose(f);
-		}
+	const char *c_dir;
+	if ((c_dir = getenv("PASSENGER_DEBUG_DIR")) == NULL) {
+		return;
 	}
+
+	FILE *f;
+	string dir = c_dir;
+
+	f = fopen((dir + "/envvars").c_str(), "w");
+	if (f != NULL) {
+		int i = 0;
+		while (environ[i] != NULL) {
+			fputs(environ[i], f);
+			putc('\n', f);
+			i++;
+		}
+		fclose(f);
+	}
+
+	f = fopen((dir + "/user_info").c_str(), "w");
+	if (f != NULL) {
+		pid_t pid = fork();
+		if (pid == 0) {
+			dup2(fileno(f), 1);
+			execlp("id", "id", (char *) 0);
+			_exit(1);
+		} else if (pid == -1) {
+			int e = errno;
+			fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
+				strerror(e), e);
+		} else {
+			waitpid(pid, NULL, 0);
+		}
+		fclose(f);
+	}
+
+	f = fopen((dir + "/ulimit").c_str(), "w");
+	if (f != NULL) {
+		pid_t pid = fork();
+		if (pid == 0) {
+			dup2(fileno(f), 1);
+			execlp("ulimit", "ulimit", "-a", (char *) 0);
+			_exit(1);
+		} else if (pid == -1) {
+			int e = errno;
+			fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
+				strerror(e), e);
+		} else {
+			waitpid(pid, NULL, 0);
+		}
+		fclose(f);
+	}
+
+	f = fopen((dir + "/ulimit").c_str(), "w");
+	if (f != NULL) {
+		pid_t pid = fork();
+		if (pid == 0) {
+			dup2(fileno(f), 1);
+			execlp("ulimit", "ulimit", "-a", (char *) 0);
+			_exit(1);
+		} else if (pid == -1) {
+			int e = errno;
+			fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
+				strerror(e), e);
+		} else {
+			waitpid(pid, NULL, 0);
+		}
+		fclose(f);
+	}
+
+	#ifdef __linux__
+		// TODO: call helper-scripts/system-memory-stats.py
+		f = fopen((dir + "/sysmemory").c_str(), "w");
+		if (f != NULL) {
+			pid_t pid = fork();
+			if (pid == 0) {
+				dup2(fileno(f), 1);
+				execlp("free", "free", "-m", (char *) 0);
+				_exit(1);
+			} else if (pid == -1) {
+				int e = errno;
+				fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
+					strerror(e), e);
+			} else {
+				waitpid(pid, NULL, 0);
+			}
+			fclose(f);
+		}
+	#endif
 }
 
 // Usage: SpawnPreparer <envvars> <executable> <exec args...>
