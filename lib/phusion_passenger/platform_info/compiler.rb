@@ -169,7 +169,7 @@ module PlatformInfo
 		ok = try_compile(:c, %Q{
 			#define _GNU_SOURCE
 			#include <sys/socket.h>
-			static void *foo = accept;
+			static void *foo = accept4;
 		})
 		flags << '-DHAVE_ACCEPT4' if ok
 		
