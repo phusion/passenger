@@ -377,13 +377,16 @@ private
 			end
 		end
 		nginx_bin = @options[:nginx_bin] || "#{nginx_dir}/nginx"
-		return {
+		result = {
 			:root => root,
 			:support_dir => "#{root}/support-#{PlatformInfo.cxx_binary_compatibility_id}",
 			:nginx_dir => nginx_dir,
 			:ruby_dir => "#{root}/rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}",
 			:nginx_installed => File.exist?(nginx_bin)
 		}
+		result[:support_dir_installed] = File.exist?(result[:support_dir] + "/PassengerWatchdog")
+		result[:everything_installed] = result[:nginx_installed] && result[:support_dir_installed]
+		return result
 	end
 
 	def determine_nginx_runtime_dir(runtime_dir)
@@ -391,8 +394,8 @@ private
 	end
 
 	def ensure_nginx_installed
-		if !@runtime_dirs[:nginx_installed]
-			if @options[:nginx_bin]
+		if !@runtime_dirs[:everything_installed]
+			if !@runtime_dirs[:nginx_installed] && @options[:nginx_bin]
 				error "The given Nginx binary '#{@options[:nginx_bin]}' does not exist."
 				exit 1
 			else
