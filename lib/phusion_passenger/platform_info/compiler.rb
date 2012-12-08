@@ -165,6 +165,13 @@ module PlatformInfo
 				end
 			end
 		end
+
+		ok = try_compile(:c, %Q{
+			#define _GNU_SOURCE
+			#include <sys/socket.h>
+			static void *foo = accept;
+		})
+		flags << '-DHAVE_ACCEPT4' if ok
 		
 		if RUBY_PLATFORM =~ /solaris/
 			flags << '-pthreads'
