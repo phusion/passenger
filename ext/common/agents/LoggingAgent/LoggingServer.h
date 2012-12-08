@@ -163,8 +163,8 @@ private:
 		virtual void dump(ostream &stream) const {
 			stream << "   * Log file: " << filename << "\n";
 			stream << "     Opened     : " << opened << "\n";
-			stream << "     LastUsed   : " << distanceOfTimeInWords(lastUsed) << " ago\n";
-			stream << "     LastFlushed: " << distanceOfTimeInWords(lastFlushed) << " ago\n";
+			stream << "     LastUsed   : " << distanceOfTimeInWords((time_t) lastUsed) << " ago\n";
+			stream << "     LastFlushed: " << distanceOfTimeInWords((time_t) lastFlushed) << " ago\n";
 		}
 	};
 	
@@ -247,8 +247,8 @@ private:
 			stream << "     Node       : " << nodeName << "\n";
 			stream << "     Category   : " << category << "\n";
 			stream << "     Opened     : " << opened << "\n";
-			stream << "     LastUsed   : " << distanceOfTimeInWords(lastUsed) << " ago\n";
-			stream << "     LastFlushed: " << distanceOfTimeInWords(lastFlushed) << " ago\n";
+			stream << "     LastUsed   : " << distanceOfTimeInWords((time_t) lastUsed) << " ago\n";
+			stream << "     LastFlushed: " << distanceOfTimeInWords((time_t) lastFlushed) << " ago\n";
 			stream << "     BufferSize : " << bufferSize << "\n";
 		}
 	};
@@ -299,7 +299,7 @@ private:
 		
 		void dump(ostream &stream) const {
 			stream << "   * Transaction " << txnId << "\n";
-			stream << "     Created at: " << distanceOfTimeInWords(createdAt) << " ago\n";
+			stream << "     Created at: " << distanceOfTimeInWords((time_t) createdAt) << " ago\n";
 			stream << "     Group     : " << getGroupName() << "\n";
 			stream << "     Node      : " << getNodeName() << "\n";
 			stream << "     Category  : " << getCategory() << "\n";
