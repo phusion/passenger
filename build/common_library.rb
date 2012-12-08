@@ -33,7 +33,10 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	output_file = "#{output_dir}.a"
 	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	
-	if boolean_option('RELEASE')
+	if false && boolean_option('RELEASE')
+		# Disable RELEASE support. Passenger Standalone wants to link to the
+		# common library but does not know whether it was compiled with RELEASE
+		# or not. See http://code.google.com/p/phusion-passenger/issues/detail?id=808
 		sources = Dir['ext/boost/libs/**/*.cpp'] + Dir['ext/oxt/*.cpp']
 		sources.sort!
 		
