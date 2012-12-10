@@ -304,7 +304,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			end = appendText(end, "crash-watch --dump ");
 			end = appendULL(end, (unsigned long long) getpid());
 			*end = '\0';
-			system(messageBuf);
+			::system(messageBuf);
 			_exit(1);
 		}
 	#endif

@@ -534,13 +534,13 @@ removeDirTree(const string &path) {
 	snprintf(command, sizeof(command), "chmod -R u+rwx \"%s\" 2>/dev/null", path.c_str());
 	command[sizeof(command) - 1] = '\0';
 	do {
-		result = system(command);
+		result = ::system(command);
 	} while (result == -1 && errno == EINTR);
 	
 	snprintf(command, sizeof(command), "rm -rf \"%s\"", path.c_str());
 	command[sizeof(command) - 1] = '\0';
 	do {
-		result = system(command);
+		result = ::system(command);
 	} while (result == -1 && errno == EINTR);
 	if (result == -1) {
 		char message[1024];
