@@ -284,27 +284,29 @@ namespace tut {
 		
 		// Here we test the case in which the existing process becomes
 		// available first.
+		initPoolDebugging();
 		
 		// Spawn a regular process and keep its session open.
 		Options options = createOptions();
-		pool->asyncGet(options, callback);
-		EVENTUALLY(5,
-			result = number == 1;
-		);
-		SessionPtr session1 = currentSession;
-		ProcessPtr process1 = currentSession->getProcess();
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		SessionPtr session1 = pool->get(options, &ticket);
+		ProcessPtr process1 = session1->getProcess();
 		currentSession.reset();
 		
 		// Now spawn a process that never finishes.
-		spawnerConfig->spawnTime = 5000000;
 		pool->asyncGet(options, callback);
 		
 		// Release the session on the first process.
 		session1.reset();
 		
-		ensure_equals("The callback should have been called twice now", number, 2);
+		ensure_equals("The callback should have been called now", number, 1);
 		ensure_equals("The first process handled the second asyncGet() request",
 			currentSession->getProcess(), process1);
+
+		debug->messages->send("Proceed with spawn loop iteration 2");
+		EVENTUALLY(5,
+			result = number == 1;
+		);
 	}
 	
 	TEST_METHOD(6) {
