@@ -48,7 +48,7 @@ namespace tut {
 		options.startTimeout = 300;
 		
 		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);
@@ -71,7 +71,7 @@ namespace tut {
 		options.startupFile  = ".";
 		
 		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);

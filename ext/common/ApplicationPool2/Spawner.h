@@ -103,6 +103,29 @@ using namespace boost;
 using namespace oxt;
 
 
+struct SpawnerConfig {
+	// Used by SmartSpawner and DirectSpawner.
+	/** Whether to forward the preloader process's stdout to our stdout. */
+	bool forwardStdout;
+	/** Whether to forward the preloader process's stderr to our stderr. */
+	bool forwardStderr;
+
+	// Used by DummySpawner and SpawnerFactory.
+	unsigned int concurrency;
+	unsigned int spawnerCreationSleepTime;
+	unsigned int spawnTime;
+
+	SpawnerConfig()
+		: forwardStdout(true),
+		  forwardStderr(true),
+		  concurrency(1),
+		  spawnerCreationSleepTime(0),
+		  spawnTime(0)
+		{ }
+};
+typedef shared_ptr<SpawnerConfig> SpawnerConfigPtr;
+
+
 class Spawner {
 protected:
 	friend struct tut::ApplicationPool2_DirectSpawnerTest;
@@ -499,6 +522,7 @@ protected:
 	ResourceLocator resourceLocator;
 	RandomGeneratorPtr randomGenerator;
 	ServerInstanceDir::GenerationPtr generation;
+	SpawnerConfigPtr config;
 	
 	static void nonInterruptableKillAndWaitpid(pid_t pid) {
 		this_thread::disable_syscall_interruption dsi;
@@ -1145,6 +1169,10 @@ public:
 	virtual unsigned long long lastUsed() const {
 		return 0;
 	}
+
+	SpawnerConfigPtr getConfig() const {
+		return config;
+	}
 };
 typedef shared_ptr<Spawner> SpawnerPtr;
 
@@ -1184,7 +1212,7 @@ private:
 		ret = syscalls::read(adminSocket, buf, sizeof(buf));
 		if (ret <= 0) {
 			preloaderOutputWatcher.stop();
-		} else if (forwardStdout) {
+		} else if (config->forwardStdout) {
 			write(STDOUT_FILENO, buf, ret);
 		}
 	}
@@ -1356,12 +1384,12 @@ private:
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
-					forwardStderr ? STDERR_FILENO : -1);
+					config->forwardStderr ? STDERR_FILENO : -1);
 			details.stderrCapturer->start();
 			details.debugDir = debugDir;
 			details.options = &options;
 			details.timeout = options.startTimeout * 1000;
-			details.forwardStderr = forwardStderr;
+			details.forwardStderr = config->forwardStderr;
 			
 			{
 				this_thread::restore_interruption ri(di);
@@ -1377,7 +1405,7 @@ private:
 			libev->start(preloaderOutputWatcher);
 			setNonBlocking(errorPipe.first);
 			preloaderErrorWatcher = make_shared<PipeWatcher>(libev,
-				errorPipe.first, forwardStderr ? STDERR_FILENO : -1);
+				errorPipe.first, config->forwardStderr ? STDERR_FILENO : -1);
 			preloaderErrorWatcher->start();
 			preloaderAnnotations = debugDir->readAll();
 			P_DEBUG("Preloader for " << options.appRoot <<
@@ -1780,17 +1808,13 @@ protected:
 	}
 
 public:
-	/** Whether to forward the preloader process's stdout to our stdout. True by default. */
-	bool forwardStdout;
-	/** Whether to forward the preloader process's stderr to our stderr. True by default. */
-	bool forwardStderr;
-	
 	SmartSpawner(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const vector<string> &_preloaderCommand,
 		const Options &_options,
-		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
+		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr(),
+		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: Spawner(_resourceLocator),
 		  libev(_libev),
 		  preloaderCommand(_preloaderCommand)
@@ -1798,9 +1822,6 @@ public:
 		if (preloaderCommand.size() < 2) {
 			throw ArgumentException("preloaderCommand must have at least 2 elements");
 		}
-		
-		forwardStdout = true;
-		forwardStderr = true;
 		
 		generation = _generation;
 		options    = _options.copyAndPersist().clearLogger();
@@ -1813,6 +1834,11 @@ public:
 			randomGenerator = make_shared<RandomGenerator>();
 		} else {
 			randomGenerator = _randomGenerator;
+		}
+		if (_config == NULL) {
+			config = make_shared<SpawnerConfig>();
+		} else {
+			config = _config;
 		}
 	}
 	
@@ -1857,7 +1883,7 @@ public:
 		details.adminSocket = result.adminSocket;
 		details.io = result.io;
 		details.options = &options;
-		details.forwardStderr = forwardStderr;
+		details.forwardStderr = config->forwardStderr;
 		ProcessPtr process = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
 			", pid=" << process->pid);
@@ -1999,22 +2025,24 @@ private:
 	}
 	
 public:
-	/** Whether to forward spawned processes' stderr to our stderr. True by default. */
-	bool forwardStderr;
-	
 	DirectSpawner(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
-		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
+		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr(),
+		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: Spawner(_resourceLocator),
 		  libev(_libev)
 	{
-		forwardStderr = true;
 		generation = _generation;
 		if (_randomGenerator == NULL) {
 			randomGenerator = make_shared<RandomGenerator>();
 		} else {
 			randomGenerator = _randomGenerator;
+		}
+		if (_config == NULL) {
+			config = make_shared<SpawnerConfig>();
+		} else {
+			config = _config;
 		}
 	}
 	
@@ -2077,14 +2105,14 @@ public:
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
-					forwardStderr ? STDERR_FILENO : -1);
+					config->forwardStderr ? STDERR_FILENO : -1);
 			details.stderrCapturer->start();
 			details.pid = pid;
 			details.adminSocket = adminSocket.second;
 			details.io = BufferedIO(adminSocket.second);
 			details.errorPipe = errorPipe.first;
 			details.options = &options;
-			details.forwardStderr = forwardStderr;
+			details.forwardStderr = config->forwardStderr;
 			details.debugDir = debugDir;
 			
 			ProcessPtr process;
@@ -2105,20 +2133,18 @@ public:
 
 class DummySpawner: public Spawner {
 private:
+	SpawnerConfigPtr config;
 	boost::mutex lock;
 	unsigned int count;
 	
 public:
-	unsigned int concurrency;
-	unsigned int spawnTime;
 	unsigned int cleanCount;
 	
-	DummySpawner(const ResourceLocator &resourceLocator)
-		: Spawner(resourceLocator)
+	DummySpawner(const ResourceLocator &resourceLocator, const SpawnerConfigPtr &_config)
+		: Spawner(resourceLocator),
+		  config(_config)
 	{
 		count = 0;
-		concurrency = 1;
-		spawnTime = 0;
 		cleanCount = 0;
 	}
 	
@@ -2128,8 +2154,8 @@ public:
 
 		SocketPair adminSocket = createUnixSocketPair();
 		SocketListPtr sockets = make_shared<SocketList>();
-		sockets->add("main", "tcp://127.0.0.1:1234", "session", concurrency);
-		syscalls::usleep(spawnTime);
+		sockets->add("main", "tcp://127.0.0.1:1234", "session", config->concurrency);
+		syscalls::usleep(config->spawnTime);
 		
 		lock_guard<boost::mutex> l(lock);
 		count++;
@@ -2158,6 +2184,9 @@ private:
 	ResourceLocator resourceLocator;
 	ServerInstanceDir::GenerationPtr generation;
 	RandomGeneratorPtr randomGenerator;
+	boost::mutex syncher;
+	SpawnerConfigPtr config;
+	DummySpawnerPtr dummySpawner;
 	
 	SpawnerPtr tryCreateSmartSpawner(const Options &options) {
 		string dir = resourceLocator.getHelperScriptsDir();
@@ -2177,30 +2206,24 @@ private:
 	}
 	
 public:
-	// Properties for DummySpawner
-	unsigned int dummyConcurrency;
-	unsigned int dummySpawnerCreationSleepTime;
-	unsigned int dummySpawnTime;
-
-	// Properties for SmartSpawner and DirectSpawner.
-	bool forwardStderr;
-
 	SpawnerFactory(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
-		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
+		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr(),
+		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: libev(_libev),
 		  resourceLocator(_resourceLocator),
 		  generation(_generation)
 	{
-		dummyConcurrency = 1;
-		dummySpawnerCreationSleepTime = 0;
-		dummySpawnTime   = 0;
-		forwardStderr    = true;
-		if (randomGenerator == NULL) {
+		if (_randomGenerator == NULL) {
 			randomGenerator = make_shared<RandomGenerator>();
 		} else {
 			randomGenerator = _randomGenerator;
+		}
+		if (_config == NULL) {
+			config = make_shared<SpawnerConfig>();
+		} else {
+			config = _config;
 		}
 	}
 	
@@ -2212,26 +2235,39 @@ public:
 			if (spawner == NULL) {
 				spawner = make_shared<DirectSpawner>(libev,
 					resourceLocator, generation,
-					randomGenerator);
-				static_pointer_cast<DirectSpawner>(spawner)->forwardStderr = forwardStderr;
-			} else {
-				static_pointer_cast<SmartSpawner>(spawner)->forwardStderr = forwardStderr;
+					randomGenerator, config);
 			}
 			return spawner;
 		} else if (options.spawnMethod == "direct" || options.spawnMethod == "conservative") {
 			shared_ptr<DirectSpawner> spawner = make_shared<DirectSpawner>(libev, resourceLocator,
-				generation, randomGenerator);
-			spawner->forwardStderr = forwardStderr;
+				generation, randomGenerator, config);
 			return spawner;
 		} else if (options.spawnMethod == "dummy") {
-			syscalls::usleep(dummySpawnerCreationSleepTime);
-			DummySpawnerPtr spawner = make_shared<DummySpawner>(resourceLocator);
-			spawner->concurrency = dummyConcurrency;
-			spawner->spawnTime   = dummySpawnTime;
-			return spawner;
+			syscalls::usleep(config->spawnerCreationSleepTime);
+			return getDummySpawner();
 		} else {
 			throw ArgumentException("Unknown spawn method '" + options.spawnMethod + "'");
 		}
+	}
+
+	/**
+	 * SpawnerFactory always returns the same DummyFactory object upon
+	 * creating a dummy spawner. This allows unit tests to easily
+	 * set debugging options on the spawner.
+	 */
+	DummySpawnerPtr getDummySpawner() {
+		lock_guard<boost::mutex> l(syncher);
+		if (dummySpawner == NULL) {
+			dummySpawner = make_shared<DummySpawner>(resourceLocator, config);
+		}
+		return dummySpawner;
+	}
+
+	/**
+	 * All created Spawner objects share the same SpawnerConfig object.
+	 */
+	SpawnerConfigPtr getConfig() const {
+		return config;
 	}
 };
 

@@ -312,7 +312,7 @@ namespace tut {
 			"STDERR.puts 'I have failed'");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -337,7 +337,7 @@ namespace tut {
 			"STDERR.puts 'I have failed'\n");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -360,7 +360,7 @@ namespace tut {
 		writeFile("tmp.handler/start.rb", "");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -388,7 +388,7 @@ namespace tut {
 			"STDERR.puts 'I have failed'");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -414,7 +414,7 @@ namespace tut {
 			"STDERR.puts 'I have failed'\n");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,

@@ -111,8 +111,8 @@ namespace tut {
 			generation,
 			preloaderCommand,
 			options);
-		spawner.forwardStdout = false;
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStdout = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);
@@ -143,8 +143,8 @@ namespace tut {
 			generation,
 			preloaderCommand,
 			options);
-		spawner.forwardStdout = false;
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStdout = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);
@@ -175,8 +175,8 @@ namespace tut {
 			generation,
 			preloaderCommand,
 			options);
-		spawner.forwardStdout = false;
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStdout = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);

@@ -18,6 +18,7 @@ namespace tut {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		BackgroundEventLoop bg;
+		SpawnerConfigPtr spawnerConfig;
 		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr pool;
 		Pool::DebugSupportPtr debug;
@@ -33,7 +34,9 @@ namespace tut {
 		ApplicationPool2_PoolTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			retainSessions = false;
-			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation);
+			spawnerConfig = make_shared<SpawnerConfig>();
+			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation,
+				RandomGeneratorPtr(), spawnerConfig);
 			pool = make_shared<Pool>(bg.safe.get(), spawnerFactory);
 			bg.start();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);
@@ -293,8 +296,7 @@ namespace tut {
 		currentSession.reset();
 		
 		// Now spawn a process that never finishes.
-		SpawnerPtr spawner = process1->getGroup()->spawner;
-		dynamic_pointer_cast<DummySpawner>(spawner)->spawnTime = 5000000;
+		spawnerConfig->spawnTime = 5000000;
 		pool->asyncGet(options, callback);
 		
 		// Release the session on the first process.
@@ -380,7 +382,7 @@ namespace tut {
 		options.minProcesses = 2;
 		pool->setMax(2);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		dynamic_pointer_cast<DummySpawner>(group->spawner)->concurrency = 2;
+		spawnerConfig->concurrency = 2;
 		{
 			LockGuard l(pool->syncher);
 			group->spawn();
@@ -434,8 +436,7 @@ namespace tut {
 		options.appGroupName = "test";
 		options.minProcesses = 2;
 		pool->setMax(2);
-		GroupPtr group = pool->findOrCreateGroup(options);
-		dynamic_pointer_cast<DummySpawner>(group->spawner)->concurrency = 2;
+		spawnerConfig->concurrency = 2;
 		
 		vector<SessionPtr> sessions;
 		int expectedNumber = 1;
@@ -484,7 +485,7 @@ namespace tut {
 		options.minProcesses = 2;
 		pool->setMax(3);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		dynamic_pointer_cast<DummySpawner>(group->spawner)->concurrency = 2;
+		spawnerConfig->concurrency = 2;
 		
 		vector<SessionPtr> sessions;
 		int expectedNumber = 1;
@@ -503,7 +504,7 @@ namespace tut {
 		
 		// The next asyncGet() should spawn a new process and the action should be queued.
 		ScopedLock l(pool->syncher);
-		dynamic_pointer_cast<DummySpawner>(group->spawner)->spawnTime = 5000000;
+		spawnerConfig->spawnTime = 5000000;
 		pool->asyncGet(options, callback, false);
 		ensure(group->spawning());
 		ensure_equals(group->getWaitlist.size(), 1u);
@@ -526,7 +527,7 @@ namespace tut {
 		options.minProcesses = 2;
 		pool->setMax(3);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		dynamic_pointer_cast<DummySpawner>(group->spawner)->concurrency = 2;
+		spawnerConfig->concurrency = 2;
 		
 		vector<SessionPtr> sessions;
 		int expectedNumber = 1;
@@ -716,7 +717,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appGroupName = "test";
 		pool->setMax(1);
-		pool->spawnerFactory->dummySpawnTime = 1000000;
+		spawnerConfig->spawnTime = 1000000;
 
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
@@ -753,7 +754,7 @@ namespace tut {
 		options.appGroupName = "test";
 		options.minProcesses = 0;
 		pool->setMax(1);
-		pool->spawnerFactory->dummySpawnTime = 30000;
+		spawnerConfig->spawnTime = 30000;
 
 		// Begin spawning a process.
 		pool->asyncGet(options, callback);
@@ -763,7 +764,7 @@ namespace tut {
 		Options options2 = createOptions();
 		options2.appGroupName = "test2";
 		options2.minProcesses = 0;
-		pool->spawnerFactory->dummySpawnTime = 90000;
+		spawnerConfig->spawnTime = 90000;
 		pool->asyncGet(options2, callback);
 		{
 			LockGuard l(pool->syncher);
@@ -836,8 +837,7 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 1u);
 		ensure(!pool->isSpawning());
 
-		GroupPtr group = session->getProcess()->getGroup();
-		dynamic_pointer_cast<DummySpawner>(group->spawner)->spawnTime = 60000;
+		spawnerConfig->spawnTime = 60000;
 		AtomicInt code = -1;
 		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
 			this, session->getProcess(), &code));
@@ -1153,7 +1153,7 @@ namespace tut {
 		options.appRoot = "tmp.wsgi";
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
-		spawnerFactory->forwardStderr = false;
+		spawnerConfig->forwardStderr = false;
 
 		writeFile("tmp.wsgi/passenger_wsgi.py",
 			"import sys\n"
@@ -1179,7 +1179,7 @@ namespace tut {
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
 		options.minProcesses = 4;
-		spawnerFactory->forwardStderr = false;
+		spawnerConfig->forwardStderr = false;
 
 		writeFile("tmp.wsgi/counter", "0");
 		// Our application starts successfully the first two times,
@@ -1341,7 +1341,7 @@ namespace tut {
 		);
 		
 		// Trigger a restart. The creation of the new spawner should take a while.
-		spawnerFactory->dummySpawnerCreationSleepTime = 20000;
+		spawnerConfig->spawnerCreationSleepTime = 20000;
 		touchFile("tmp.wsgi/tmp/restart.txt");
 		pool->asyncGet(options, callback);
 		GroupPtr group = pool->findOrCreateGroup(options);
@@ -1365,7 +1365,7 @@ namespace tut {
 		options.appRoot = "tmp.wsgi";
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
-		spawnerFactory->forwardStderr = false;
+		spawnerConfig->forwardStderr = false;
 		pool->setMax(1);
 
 		writeFile("tmp.wsgi/passenger_wsgi.py",
@@ -1416,7 +1416,7 @@ namespace tut {
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
 		options.minProcesses = 2;
-		spawnerFactory->forwardStderr = false;
+		spawnerConfig->forwardStderr = false;
 
 		// Spawn 2 processes.
 		retainSessions = true;
