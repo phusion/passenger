@@ -643,7 +643,6 @@ namespace tut {
 		// If there were waiters in the group then those waiters will be satisfied after
 		// capacity has become free.
 		Options options = createOptions();
-		Ticket ticket;
 		pool->setMax(2);
 		
 		// Get from /foo and retain its session.
@@ -832,7 +831,6 @@ namespace tut {
 		// Disabling the sole process in a group should trigger a new process spawn.
 		ensureMinProcesses(1);
 		Options options = createOptions();
-		Ticket ticket;
 		SessionPtr session = pool->get(options, &ticket);
 
 		ensure_equals(pool->getProcessCount(), 1u);
@@ -967,7 +965,6 @@ namespace tut {
 		// callback being called after disabling is done.
 		ensureMinProcesses(2);
 		Options options = createOptions();
-		Ticket ticket;
 		SessionPtr session = pool->get(options, &ticket);
 
 		AtomicInt code = -1;
@@ -1278,7 +1275,6 @@ namespace tut {
 
 	TEST_METHOD(71) {
 		// A process is detached after processing maxRequests sessions.
-		Ticket ticket;
 		Options options = createOptions();
 		options.minProcesses = 0;
 		options.maxRequests = 5;
@@ -1437,7 +1433,6 @@ namespace tut {
 			"sys.stderr.write('Something went wrong!')\n"
 			"exit(1)\n");
 		try {
-			Ticket ticket;
 			setLogLevel(-2);
 			currentSession = pool->get(options, &ticket);
 			fail("SpawnException expected");
