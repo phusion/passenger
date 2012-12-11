@@ -362,6 +362,8 @@ private:
 			const DisableWaiter &waiter = *it;
 			const ProcessPtr process = waiter.process;
 			// A process can appear multiple times in disableWaitlist.
+			assert(process->enabled == Process::DISABLING
+				|| process->enabled == Process::ENABLED);
 			if (process->enabled == Process::DISABLING) {
 				removeProcessFromList(process, disablingProcesses);
 				addProcessToList(process, enabledProcesses);
@@ -388,10 +390,12 @@ private:
 	}
 
 	void clearDisableWaitlist(DisableResult result, vector<Callback> &postLockActions) {
+		// This function may be called after processes in the disableWaitlist
+		// have been disabled or enabled, so do not assume any value for
+		// waiter.process->enabled in this function.
 		postLockActions.reserve(postLockActions.size() + disableWaitlist.size());
 		while (!disableWaitlist.empty()) {
 			const DisableWaiter &waiter = disableWaitlist.front();
-			assert(waiter.process->enabled == Process::DISABLING);
 			postLockActions.push_back(boost::bind(waiter.callback, waiter.process, result));
 			disableWaitlist.pop_front();
 		}
@@ -627,11 +631,16 @@ public:
 			// The same process can appear multiple times in disableWaitlist.
 			assert(process2->enabled == Process::DISABLING
 				|| process2->enabled == Process::DISABLED);
-			if (process2->enabled == Process::DISABLING && process2->sessions == 0) {
-				P_DEBUG("Disabling DISABLING process " << process2->inspect() <<
-					"; disable command succeeded immediately");
-				removeProcessFromList(process2, disablingProcesses);
-				addProcessToList(process2, disabledProcesses);
+			if (process2->sessions == 0) {
+				if (process2->enabled == Process::DISABLING) {
+					P_DEBUG("Disabling DISABLING process " << process2->inspect() <<
+						"; disable command succeeded immediately");
+					removeProcessFromList(process2, disablingProcesses);
+					addProcessToList(process2, disabledProcesses);
+				} else {
+					P_DEBUG("Disabling (already disabled) DISABLING process " <<
+						process2->inspect() << "; disable command succeeded immediately");
+				}
 				postLockActions.push_back(boost::bind(waiter.callback, process2, DR_SUCCESS));
 			} else {
 				newDisableWaitlist.push_back(waiter);

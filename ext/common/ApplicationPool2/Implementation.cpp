@@ -529,6 +529,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 	
 	bool done = false;
 	while (!done) {
+		bool shouldFail = false;
 		if (debug != NULL) {
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
@@ -537,8 +538,13 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			P_DEBUG("Begin spawn loop iteration " << debug->spawnLoopIteration);
 			debug->debugger->send("Begin spawn loop iteration " +
 				toString(debug->spawnLoopIteration));
-			debug->messages->recv("Proceed with spawn loop iteration " +
-				toString(debug->spawnLoopIteration));
+			
+			vector<string> cases;
+			string iteration = toString(debug->spawnLoopIteration);
+			cases.push_back("Proceed with spawn loop iteration " + iteration);
+			cases.push_back("Fail spawn loop iteration " + iteration);
+			MessagePtr message = debug->messages->recvAny(cases);
+			shouldFail = message->name == "Fail spawn loop iteration " + iteration;
 		}
 
 		ProcessPtr process;
@@ -547,7 +553,11 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			UPDATE_TRACE_POINT();
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
-			process = spawner->spawn(options);
+			if (shouldFail) {
+				throw SpawnException("Simulated failure");
+			} else {
+				process = spawner->spawn(options);
+			}
 		} catch (const thread_interrupted &) {
 			break;
 		} catch (const tracable_exception &e) {

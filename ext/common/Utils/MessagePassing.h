@@ -148,6 +148,39 @@ class MessageBox: public enable_shared_from_this<MessageBox> {
 		return end;
 	}
 
+	template<typename StringCollection>
+	Iterator searchAny(const StringCollection &names) {
+		Iterator it, end = messages.end();
+		for (it = messages.begin(); it != end; it++) {
+			const MessagePtr &message = *it;
+			typename StringCollection::const_iterator n_it, n_end = names.end();
+			for (n_it = names.begin(); n_it != n_end; n_it++) {
+				if (message->name == *n_it) {
+					return it;
+				}
+			}
+		}
+		return end;
+	}
+
+	bool checkTimeout(unique_lock<boost::mutex> &l, unsigned long long *timeout,
+		unsigned long long beginTime, posix_time::ptime deadline)
+	{
+		posix_time::time_duration diff = deadline -
+			posix_time::microsec_clock::local_time();
+		bool timedOut;
+		if (diff.is_negative() < 0) {
+			timedOut = true;
+		} else {
+			timedOut = !cond.timed_wait(l,
+				posix_time::milliseconds(diff.total_milliseconds()));
+		}
+		if (timedOut) {
+			substractTimePassed(timeout, beginTime);
+		}
+		return timedOut;
+	}
+
 	void substractTimePassed(unsigned long long *timeout, unsigned long long beginTime) {
 		unsigned long long now = SystemTime::getMsec();
 		unsigned long long diff;
@@ -198,17 +231,7 @@ public:
 		Iterator it;
 		while ((it = search(name)) == messages.end()) {
 			if (timeout != NULL) {
-				posix_time::time_duration diff = deadline -
-					posix_time::microsec_clock::local_time();
-				bool timedOut;
-				if (diff.is_negative() < 0) {
-					timedOut = true;
-				} else {
-					timedOut = !cond.timed_wait(l,
-						posix_time::milliseconds(diff.total_milliseconds()));
-				}
-				if (timedOut) {
-					substractTimePassed(timeout, beginTime);
+				if (checkTimeout(l, timeout, beginTime, deadline)) {
 					return MessagePtr();
 				}
 			} else {
@@ -231,6 +254,36 @@ public:
 		} else {
 			throw TimeoutException("Timeout receiving from message box");
 		}
+	}
+
+	template<typename StringCollection>
+	MessagePtr recvAny(const StringCollection &names, unsigned long long *timeout = NULL) {
+		unique_lock<boost::mutex> l(syncher);
+		posix_time::ptime deadline;
+		unsigned long long beginTime;
+		if (timeout != NULL) {
+			beginTime = SystemTime::getUsec();
+			deadline = posix_time::microsec_clock::local_time() +
+				posix_time::microsec(*timeout);
+		}
+
+		Iterator it;
+		while ((it = searchAny<StringCollection>(names)) == messages.end()) {
+			if (timeout != NULL) {
+				if (checkTimeout(l, timeout, beginTime, deadline)) {
+					return MessagePtr();
+				}
+			} else {
+				cond.wait(l);
+			}
+		}
+		if (timeout != NULL) {
+			substractTimePassed(timeout, beginTime);
+		}
+
+		MessagePtr result = *it;
+		messages.erase(it);
+		return result;
 	}
 
 	unsigned int size() const {

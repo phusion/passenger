@@ -21,6 +21,7 @@ namespace tut {
 		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr pool;
 		Pool::DebugSupportPtr debug;
+		Ticket ticket;
 		GetCallback callback;
 		SessionPtr currentSession;
 		ExceptionPtr currentException;
@@ -848,17 +849,104 @@ namespace tut {
 		EVENTUALLY(1,
 			result = pool->getProcessCount() == 2u;
 		);
+		ensure_equals((int) code, -1);
 		session.reset();
 		EVENTUALLY(1,
 			result = code == (int) DR_SUCCESS;
 		);
 	}
 
-	// If there are no enabled processes in the group, then disabling should
-	// succeed after the new process has been spawned.
-	// Suppose that a previous disable command triggered a new process spawn,
-	// and the spawn fails. Then any disabling processes should become enabled
-	// again, and the callbacks for the previous disable commands should be called.
+	TEST_METHOD(42) {
+		// If there are no enabled processes in the group, then disabling should
+		// succeed after the new process has been spawned.
+		initPoolDebugging();
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->messages->send("Proceed with spawn loop iteration 2");
+
+		Options options = createOptions();
+		SessionPtr session1 = pool->get(options, &ticket);
+		SessionPtr session2 = pool->get(options, &ticket);
+		ensure_equals(pool->getProcessCount(), 2u);
+		GroupPtr group = session1->getGroup();
+
+		AtomicInt code1 = -1, code2 = -1;
+		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+			this, session1->getProcess(), &code1));
+		TempThread thr2(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+			this, session2->getProcess(), &code2));
+		EVENTUALLY(2,
+			LockGuard l(pool->syncher);
+			result = group->enabledCount == 0
+				&& group->disablingCount == 2
+				&& group->disabledCount == 0;
+		);
+		session1.reset();
+		session2.reset();
+		SHOULD_NEVER_HAPPEN(20,
+			result = code1 != -1 || code2 != -1;
+		);
+
+		debug->messages->send("Proceed with spawn loop iteration 3");
+		EVENTUALLY(5,
+			result = code1 == DR_SUCCESS;
+		);
+		EVENTUALLY(5,
+			result = code2 == DR_SUCCESS;
+		);
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(group->enabledCount, 1);
+			ensure_equals(group->disablingCount, 0);
+			ensure_equals(group->disabledCount, 2);
+		}
+	}
+
+	TEST_METHOD(43) {
+		// Suppose that a previous disable command triggered a new process spawn,
+		// and the spawn fails. Then any disabling processes should become enabled
+		// again, and the callbacks for the previous disable commands should be called.
+		initPoolDebugging();
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->messages->send("Proceed with spawn loop iteration 2");
+
+		Options options = createOptions();
+		options.minProcesses = 2;
+		SessionPtr session1 = pool->get(options, &ticket);
+		SessionPtr session2 = pool->get(options, &ticket);
+		ensure_equals(pool->getProcessCount(), 2u);
+
+		AtomicInt code1 = -1, code2 = -1;
+		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+			this, session1->getProcess(), &code1));
+		TempThread thr2(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+			this, session2->getProcess(), &code2));
+		EVENTUALLY(2,
+			GroupPtr group = session1->getGroup();
+			LockGuard l(pool->syncher);
+			result = group->enabledCount == 0
+				&& group->disablingCount == 2
+				&& group->disabledCount == 0;
+		);
+		SHOULD_NEVER_HAPPEN(20,
+			result = code1 != -1 || code2 != -1;
+		);
+
+		setLogLevel(-2);
+		debug->messages->send("Fail spawn loop iteration 3");
+		EVENTUALLY(5,
+			result = code1 == DR_ERROR;
+		);
+		EVENTUALLY(5,
+			result = code2 == DR_ERROR;
+		);
+		{
+			GroupPtr group = session1->getGroup();
+			LockGuard l(pool->syncher);
+			ensure_equals(group->enabledCount, 2);
+			ensure_equals(group->disablingCount, 0);
+			ensure_equals(group->disabledCount, 0);
+		}
+	}
 
 	// asyncGet() should not select a disabling process if there are enabled processes.
 	// asyncGet() should not select a disabling process when non-rolling restarting.
