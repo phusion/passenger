@@ -155,7 +155,7 @@ int
 main(int argc, char *argv[]) {
 	VariantMap options        = initializeAgent(argc, argv, "PassengerLoggingAgent");
 	string socketAddress      = options.get("logging_agent_address");
-	string dumpFile           = options.get("analytics_dump_file", false);
+	string dumpFile           = options.get("analytics_dump_file", false, "/dev/null");
 	string password           = options.get("logging_agent_password");
 	string username           = options.get("analytics_log_user",
 		false, myself());

@@ -122,6 +122,7 @@ class AnalyticsLogger
 		
 		def close(flush_to_disk = false)
 			@connection.synchronize do
+				return if !@connection.connected?
 				begin
 					# We need an ACK here. See abstract_request_handler.rb finalize_request.
 					@connection.channel.write("closeTransaction", @txn_id,
