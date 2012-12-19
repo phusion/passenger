@@ -34,6 +34,15 @@ This is the first beta of Phusion Passenger 4. The changes are numerous.
  * Better relocatability without wasting space.
 
 
+Release 3.0.19
+--------------
+
+ * Nginx security fix: do not display Nginx version when
+   server_tokens are off.
+ * Fixed compilation problems on some systems.
+ * Fixed some Union Station-related bugs.
+
+
 Release 3.0.18
 --------------
 
