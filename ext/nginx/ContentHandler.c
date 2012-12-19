@@ -26,6 +26,7 @@
  */
 
 #include <nginx.h>
+#include <ngx_http.h>
 #include "ngx_http_passenger_module.h"
 #include "ContentHandler.h"
 #include "StaticContentHandler.h"
@@ -1196,9 +1197,11 @@ process_header(ngx_http_request_t *r)
     ngx_table_elt_t                *h;
     ngx_http_upstream_header_t     *hh;
     ngx_http_upstream_main_conf_t  *umcf;
+    ngx_http_core_loc_conf_t       *clcf;
     passenger_loc_conf_t           *slcf;
 
     umcf = ngx_http_get_module_main_conf(r, ngx_http_upstream_module);
+    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
 
     for ( ;;  ) {
@@ -1280,9 +1283,17 @@ process_header(ngx_http_request_t *r)
                 h->key.len = sizeof("Server") - 1;
                 h->key.data = (u_char *) "Server";
                 if( slcf->show_version_in_header == 0 ) {
-                    h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger (mod_rails/mod_rack)");
+                    if (clcf->server_tokens) {
+                        h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger");
+                    } else {
+                        h->value.data = (u_char *) ("nginx + Phusion Passenger");
+                    }
                 } else {
-                    h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger " PASSENGER_VERSION " (mod_rails/mod_rack)");
+                    if (clcf->server_tokens) {
+                        h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger " PASSENGER_VERSION);
+                    } else {
+                        h->value.data = (u_char *) ("nginx + Phusion Passenger " PASSENGER_VERSION);
+                    }
                 }
                 h->value.len = ngx_strlen(h->value.data);
                 h->lowcase_key = (u_char *) "server";
