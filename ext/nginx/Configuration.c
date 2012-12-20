@@ -474,13 +474,13 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream_config.ignore_client_abort, 0);
 
     ngx_conf_merge_msec_value(conf->upstream_config.connect_timeout,
-                              prev->upstream_config.connect_timeout, 600000);
+                              prev->upstream_config.connect_timeout, 12000000);
 
     ngx_conf_merge_msec_value(conf->upstream_config.send_timeout,
-                              prev->upstream_config.send_timeout, 600000);
+                              prev->upstream_config.send_timeout, 12000000);
 
     ngx_conf_merge_msec_value(conf->upstream_config.read_timeout,
-                              prev->upstream_config.read_timeout, 600000);
+                              prev->upstream_config.read_timeout, 12000000);
 
     ngx_conf_merge_size_value(conf->upstream_config.send_lowat,
                               prev->upstream_config.send_lowat, 0);
