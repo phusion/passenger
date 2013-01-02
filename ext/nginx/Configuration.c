@@ -110,8 +110,6 @@ char *
 passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
 {
     passenger_main_conf_t *conf;
-    u_char                 filename[NGX_MAX_PATH], *last;
-    ngx_str_t              str;
     struct passwd         *user_entry;
     struct group          *group_entry;
     char buf[128];
