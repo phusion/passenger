@@ -892,8 +892,8 @@ protected:
 					int e = errno;
 					printf("!> Error\n");
 					printf("!> \n");
-					printf("setgroups() failed: %s (errno=%d)\n",
-						strerror(e), e);
+					printf("setgroups(%d, ...) failed: %s (errno=%d)\n",
+						info.ngroups, strerror(e), e);
 					fflush(stdout);
 					_exit(1);
 				}
