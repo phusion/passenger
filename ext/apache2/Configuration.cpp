@@ -449,7 +449,7 @@ cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, int arg) {
 static const char *
 cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 	fprintf(stderr, "WARNING: The 'RailsFrameworkSpawnerIdleTime' option is obsolete. "
-		"Please use 'PassengerPreloaderMaxIdleTime' instead.\n");
+		"Please use 'PassengerMaxPreloaderIdleTime' instead.\n");
 	fflush(stderr);
 	return NULL;
 }
