@@ -23,7 +23,6 @@ describe "Classic Rails 2.3 loader" do
 
 	it_should_behave_like "a loader"
 	it_should_behave_like "a Ruby loader"
-	include_shared_example_group "analytics logging extensions for Rails"
 
 	it "calls the starting_worker_process event with forked=false" do
 		File.prepend(@stub.environment_rb, %q{

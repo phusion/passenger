@@ -248,12 +248,6 @@ module LoaderSharedHelpers
 		if defined?(::Rails) && !defined?(::Rails::VERSION)
 			require 'rails/version'
 		end
-		if defined?(::Rails) && ::Rails::VERSION::MAJOR <= 2
-			require 'phusion_passenger/classic_rails_extensions/init'
-			ClassicRailsExtensions.init!(options)
-			# Rails 3 extensions are installed by
-			# PhusionPassenger.install_framework_extensions!
-		end
 	end
 	
 	def create_socket_address(protocol, address)
