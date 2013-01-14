@@ -534,13 +534,17 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
 			this_thread::interruption_point();
-			debug->spawnLoopIteration++;
-			P_DEBUG("Begin spawn loop iteration " << debug->spawnLoopIteration);
+			string iteration;
+			{
+				LockGuard g(debug->syncher);
+				debug->spawnLoopIteration++;
+				iteration = toString(debug->spawnLoopIteration);
+			}
+			P_DEBUG("Begin spawn loop iteration " << iteration);
 			debug->debugger->send("Begin spawn loop iteration " +
-				toString(debug->spawnLoopIteration));
+				iteration);
 			
 			vector<string> cases;
-			string iteration = toString(debug->spawnLoopIteration);
 			cases.push_back("Proceed with spawn loop iteration " + iteration);
 			cases.push_back("Fail spawn loop iteration " + iteration);
 			MessagePtr message = debug->messages->recvAny(cases);

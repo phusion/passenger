@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -95,6 +95,7 @@ public:
 		MessageBoxPtr messages;
 
 		// The following fields may only be accessed by Pool.
+		boost::mutex syncher;
 		unsigned int spawnLoopIteration;
 
 		DebugSupport() {
