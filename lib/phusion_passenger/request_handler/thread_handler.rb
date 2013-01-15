@@ -151,7 +151,7 @@ private
 			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
 				log_analytics_exception(headers, e)
 			end
-			raise e
+			raise e if should_reraise_error?(e)
 		end
 	ensure
 		# The 'close_write' here prevents forked child
@@ -360,6 +360,11 @@ private
 		ensure
 			log.close
 		end
+	end
+
+	def should_reraise_error?(e)
+		# Stubable by unit tests.
+		return true
 	end
 end
 

@@ -185,9 +185,9 @@ describe RequestHandler do
 				Process.kill('KILL', @agent_pid)
 				Process.waitpid(@agent_pid)
 			end
-			@log_dir = Utils.passenger_tmpdir
+			@dump_file = "#{Utils.passenger_tmpdir}/log.txt"
 			@logging_agent_password = "1234"
-			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@log_dir,
+			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file,
 				@logging_agent_password)
 			
 			@logger = AnalyticsLogger.new(@socket_address, "logging",
@@ -209,7 +209,7 @@ describe RequestHandler do
 		it "makes the analytics log object available through the request env and a thread-local variable" do
 			header_value = nil
 			thread_value = nil
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				header_value = headers[PASSENGER_ANALYTICS_WEB_LOG]
 				thread_value = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
 			end
@@ -230,8 +230,13 @@ describe RequestHandler do
 		end
 		
 		it "logs uncaught exceptions for requests that have a transaction ID" do
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			reraised = false
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				raise "something went wrong"
+			end
+			@thread_handler.any_instance.stub(:should_reraise_error?).and_return do |e|
+				reraised = true
+				e.message != "something went wrong"
 			end
 			@request_handler.start_main_loop_thread
 			client = connect
@@ -245,9 +250,8 @@ describe RequestHandler do
 			end
 			eventually(5) do
 				flush_logging_agent(@logging_agent_password, @socket_address)
-				log_file = Dir["#{@log_dir}/1/*/*/exceptions/**/log.txt"].first
-				if log_file
-					log_data = File.read(log_file)
+				if File.exist?(@dump_file)
+					log_data = File.read(@dump_file)
 				else
 					log_data = ""
 				end
@@ -256,6 +260,7 @@ describe RequestHandler do
 					log_data.include?("Class: RuntimeError") &&
 					log_data.include?("Backtrace: ")
 			end
+			reraised.should be_true
 		end
 	end
 	
@@ -267,11 +272,11 @@ describe RequestHandler do
 		end
 		
 		after :each do
-			@client.close
+			@client.close if @client
 		end
 		
 		it "correctly parses HTTP requests without query string" do
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				headers["REQUEST_METHOD"].should == "POST"
 				headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
 				headers["HTTP_HOST"].should == "foo.com"
@@ -297,7 +302,7 @@ describe RequestHandler do
 		end
 		
 		it "correctly parses HTTP requests with query string" do
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				headers["REQUEST_METHOD"].should == "POST"
 				headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
 				headers["HTTP_HOST"].should == "foo.com"
@@ -323,7 +328,7 @@ describe RequestHandler do
 		end
 		
 		it "correct parses HTTP requests that come in arbitrary chunks" do
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				headers["REQUEST_METHOD"].should == "POST"
 				headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
 				headers["HTTP_HOST"].should == "foo.com"

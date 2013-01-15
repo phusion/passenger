@@ -9,7 +9,8 @@ module PhusionPassenger
 shared_examples_for "analytics logging extensions for Rails" do
 	before :each do
 		@logging_agent_password = "1234"
-		@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(Utils.passenger_tmpdir,
+		@dump_file = "#{Utils.passenger_tmpdir}/log.txt"
+		@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file,
 			@logging_agent_password)
 		@options = {
 			"analytics" => true,
@@ -34,13 +35,8 @@ shared_examples_for "analytics logging extensions for Rails" do
 		return perform_request(headers)
 	end
 	
-	def read_log(name_suffix)
-		filename = Dir["#{Utils.passenger_tmpdir}/1/*/*/#{name_suffix}"].first
-		if filename
-			return File.read(filename)
-		else
-			return ""
-		end
+	def read_log
+		return File.read(@dump_file)
 	end
 	
 	def base64(data)
@@ -79,7 +75,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
-			log = read_log("requests/**/log.txt")
+			log = read_log
 			log.include?("Controller action: FooController#index\n")
 		end
 	end
@@ -96,7 +92,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app("PATH_INFO" => "/crash")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
-			log = read_log("exceptions/**/log.txt")
+			log = read_log
 			log.include?("Request transaction ID: 1234-abcd\n") &&
 				log.include?("Message: " + base64("something went wrong")) &&
 				log.include?("Class: RuntimeError") &&
@@ -121,7 +117,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
-			log = read_log("requests/**/log.txt")
+			log = read_log
 			log.include?('BEGIN: BENCHMARK: hello') &&
 				log.include?('END: BENCHMARK: hello')
 		end
@@ -141,7 +137,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
-			log = read_log("requests/**/log.txt")
+			log = read_log
 			log.include?('BEGIN: BENCHMARK: hello') &&
 				log.include?('END: BENCHMARK: hello')
 		end
@@ -163,7 +159,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		extra_info_regex = Regexp.escape(base64("SQL\nCREATE TABLE foobar (id INT)"))
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
-			log = read_log("requests/**/log.txt")
+			log = read_log
 			log =~ /BEGIN: DB BENCHMARK: .* \(.*\) #{extra_info_regex}$/ &&
 				log =~ /END: DB BENCHMARK: .* \(.*\)$/
 		end
@@ -185,7 +181,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		if rails_version >= '3.0'
 			pending do
 				eventually(5) do
-					log = read_log("requests/**/log.txt")
+					log = read_log
 					log =~ /BEGIN: DB BENCHMARK: .* \(.*\) #{extra_info_regex}$/ &&
 						log =~ /FAIL: DB BENCHMARK: .* \(.*\)$/
 				end
@@ -193,7 +189,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		else
 			eventually(5) do
 				flush_logging_agent(@logging_agent_password, @socket_address)
-				log = read_log("requests/**/log.txt")
+				log = read_log
 				log =~ /BEGIN: DB BENCHMARK: .* \(.*\) #{extra_info_regex}$/ &&
 					log =~ /FAIL: DB BENCHMARK: .* \(.*\)$/
 			end
@@ -212,7 +208,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
-			log = read_log("requests/**/log.txt")
+			log = read_log
 			log.include?("BEGIN: framework request processing") &&
 				log.include?("END: framework request processing")
 		end
@@ -230,7 +226,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
-			log = read_log("requests/**/log.txt")
+			log = read_log
 			log.include?("BEGIN: framework request processing") &&
 				log.include?("FAIL: framework request processing")
 		end
@@ -251,7 +247,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
-			log = read_log("requests/**/log.txt")
+			log = read_log
 			log.include?("BEGIN: view rendering") &&
 				log.include?("END: view rendering") &&
 				log =~ /View rendering time: \d+$/
@@ -273,7 +269,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app("PATH_INFO" => "/foo")
 		eventually(5) do
 			flush_logging_agent(@logging_agent_password, @socket_address)
-			log = read_log("requests/**/log.txt")
+			log = read_log
 			log.include?("BEGIN: view rendering") &&
 				log.include?("FAIL: view rendering")
 		end
@@ -298,7 +294,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 			send_request_to_app("PATH_INFO" => "/foo")
 			eventually(5) do
 				flush_logging_agent(@logging_agent_password, @socket_address)
-				log = read_log("requests/**/log.txt")
+				log = read_log
 				log.include?("Cache hit: key1") &&
 					log.include?("Cache hit: key2") &&
 					log.include?("Cache hit: key3")
@@ -322,7 +318,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 			send_request_to_app("PATH_INFO" => "/foo")
 			eventually(5) do
 				flush_logging_agent(@logging_agent_password, @socket_address)
-				log = read_log("requests/**/log.txt")
+				log = read_log
 				log.include?("Cache miss: key1") &&
 					log.include?("Cache miss: key2") &&
 					log =~ /Cache miss \(\d+\): key3/
