@@ -62,11 +62,12 @@ The tests need the following software installed:
  * Ruby on Rails 2.2.x
  * Ruby on Rails 2.3.x
  * Ruby on Rails 3.0.x
- * rspec >= 1.1.2
+ * rspec >= 2.12.0
  * mime-types >= 1.15
  * sqlite3-ruby
  * json
  * daemon_controller >= 1.1.0
+ * Rake exactly version 0.9.2.2
 
 You also need to setup the file `test/config.json`. You can find an example in `test/config.json.example`.
 
