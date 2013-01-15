@@ -42,3 +42,11 @@ task :clean => 'test:clean'
 file 'test/support/allocate_memory' => 'test/support/allocate_memory.c' do
 	create_c_executable('test/support/allocate_memory', 'test/support/allocate_memory.c')
 end
+
+desc "Install developer dependencies"
+task 'test:install_deps' do
+	gem_install = PlatformInfo.gem_command + " install --no-rdoc --no-ri"
+	sh "#{gem_install} rails -v 2.3.15"
+	sh "#{gem_install} bundler rspec mime-types daemon_controller json"
+	sh "cd test/stub/rails3.0 && bundle install"
+end

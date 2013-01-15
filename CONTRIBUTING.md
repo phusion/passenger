@@ -56,18 +56,9 @@ Run the following command to compile everything:
 
 ### Running the unit tests
 
-The tests need the following software installed:
+The tests depend on all the usual Phusion Passenger dependencies, plus a bunch of additional dependencies that you can install with:
 
- * All the usual Phusion Passenger dependencies.
- * Ruby on Rails 2.2.x
- * Ruby on Rails 2.3.x
- * Ruby on Rails 3.0.x
- * rspec >= 2.12.0
- * mime-types >= 1.15
- * sqlite3-ruby
- * json
- * daemon_controller >= 1.1.0
- * Run `cd test/stub/rails3.0 && bundle install`
+    rake test:install_deps
 
 You also need to setup the file `test/config.json`. You can find an example in `test/config.json.example`.
 
