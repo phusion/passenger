@@ -1,7 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
-require 'ruby/shared/loader_spec'
-require 'ruby/shared/ruby_loader_spec'
-require 'ruby/shared/rails/analytics_logging_extensions_spec'
+require 'ruby/shared/loader_sharedspec'
+require 'ruby/shared/ruby_loader_sharedspec'
+require 'ruby/shared/rails/analytics_logging_extensions_sharedspec'
 
 module PhusionPassenger
 

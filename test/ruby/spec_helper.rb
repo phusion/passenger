@@ -29,6 +29,8 @@ PhusionPassenger.locate_directories
 require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/utils/tmpdir'
 
+include TestHelper
+
 # Seed the pseudo-random number generator here
 # so that it doesn't happen in the child processes.
 srand
@@ -38,8 +40,6 @@ trap "QUIT" do
 end
 
 RSpec.configure do |config|
-	config.include TestHelper
-
 	config.before(:each) do
 		# Suppress warning messages.
 		PhusionPassenger::DebugLogging.log_level = -1

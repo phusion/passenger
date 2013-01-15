@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -29,7 +29,7 @@ task 'test:ruby' => [:native_support, AGENT_OUTPUT_DIR + 'PassengerLoggingAgent'
 		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
 	else
 		Dir.chdir("test") do
-			ruby "#{PlatformInfo.rspec} -c -f s ruby/*_spec.rb ruby/*/*_spec.rb"
+			ruby "#{PlatformInfo.rspec} -c -f s -P 'dont-autoload-anything' ruby/*_spec.rb ruby/*/*_spec.rb"
 		end
 	end
 end

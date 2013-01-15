@@ -83,6 +83,7 @@ module Packaging
 		'ext/ruby/*.{c,rb}',
 		'dev/*',
 		'resources/**/*',
+		'test/.rspec',
 		'test/*.example',
 		'test/support/*.{c,cpp,h,rb}',
 		'test/tut/*',

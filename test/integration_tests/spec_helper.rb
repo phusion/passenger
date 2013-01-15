@@ -19,6 +19,4 @@ require 'phusion_passenger'
 PhusionPassenger.locate_directories
 require 'support/test_helper'
 
-RSpec.configure do |config|
-	config.include TestHelper
-end
+include TestHelper

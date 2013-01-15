@@ -67,7 +67,7 @@ The tests need the following software installed:
  * sqlite3-ruby
  * json
  * daemon_controller >= 1.1.0
- * Rake exactly version 0.9.2.2
+ * Run `cd test/stub/rails3.0 && bundle install`
 
 You also need to setup the file `test/config.json`. You can find an example in `test/config.json.example`.
 

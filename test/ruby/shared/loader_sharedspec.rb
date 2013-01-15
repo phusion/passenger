@@ -204,7 +204,7 @@ module LoaderSpecHelper
 	def start!(options = {})
 		result = start(options)
 		if result[:status] != "Ready"
-			violated "Loader failed to start; error page:\n#{result[:body]}"
+			raise "Loader failed to start; error page:\n#{result[:body]}"
 		end
 	end
 
