@@ -82,10 +82,6 @@ class RequestHandler
 	# for unit test assertions.
 	attr_reader :iterations
 	
-	# Number of requests processed so far. This includes requests that raised
-	# exceptions.
-	attr_reader :processed_requests
-	
 	# If a soft termination signal was received, then the main loop will quit
 	# the given amount of seconds after the last time a connection was accepted.
 	# Defaults to 3 seconds.
@@ -154,7 +150,6 @@ class RequestHandler
 		@threads = []
 		@threads_mutex = Mutex.new
 		@iterations         = 0
-		@processed_requests = 0
 		@soft_termination_linger_time = 3
 		@main_loop_running  = false
 		
@@ -187,7 +182,9 @@ class RequestHandler
 	
 	# Check whether the main loop's currently running.
 	def main_loop_running?
-		return @main_loop_running
+		@main_loop_thread_lock.synchronize do
+			return @main_loop_running
+		end
 	end
 	
 	# Enter the request handler's main loop.
