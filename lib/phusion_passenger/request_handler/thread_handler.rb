@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -88,6 +88,7 @@ class ThreadHandler
 	def install
 		Thread.current[:handler] = self
 		install_robust_interruption
+		PhusionPassenger.call_event(:starting_request_handler_thread)
 	end
 
 	def main_loop

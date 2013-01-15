@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -25,6 +25,7 @@ module PhusionPassenger
 class << self
 	@@event_starting_worker_process = []
 	@@event_stopping_worker_process = []
+	@@event_starting_request_handler_thread = []
 	@@event_credentials = []
 	@@event_after_installing_signal_handlers = []
 	@@event_oob_work = []
@@ -89,6 +90,8 @@ private
 			@@event_starting_worker_process
 		when :stopping_worker_process
 			@@event_stopping_worker_process
+		when :starting_request_handler_thread
+			@@event_starting_request_handler_thread
 		when :credentials
 			@@event_credentials
 		when :after_installing_signal_handlers
