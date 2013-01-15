@@ -1,4 +1,4 @@
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -32,7 +32,7 @@ end
 
 spec = Gem::Specification.new do |s|
 	s.platform = Gem::Platform::RUBY
-	s.homepage = "http://www.modrails.com/"
+	s.homepage = "https://www.phusionpassenger.com/"
 	s.summary = "Easy and robust Ruby web application deployment"
 	s.name = "passenger"
 	s.version = VERSION_STRING

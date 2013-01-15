@@ -1,4 +1,4 @@
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
