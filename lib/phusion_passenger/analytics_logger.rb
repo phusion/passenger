@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -52,6 +52,7 @@ class AnalyticsLogger
 		
 		def message(text)
 			if !@connection
+				timestamp_string = AnalyticsLogger.timestamp_string
 				DebugLogging.trace(3, "[Union Station log to null] #{@txn_id} #{timestamp_string} #{text}")
 				return
 			end
