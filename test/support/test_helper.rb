@@ -250,7 +250,7 @@ module TestHelper
 		end
 	end
 	
-	def eventually(deadline_duration = 1, check_interval = 0.05)
+	def eventually(deadline_duration = 2, check_interval = 0.05)
 		deadline = Time.now + deadline_duration
 		while Time.now < deadline
 			if yield

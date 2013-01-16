@@ -44,7 +44,7 @@ shared_examples_for "a Ruby loader" do
 		result = start
 		result[:status].should == "Ready"
 		@loader.input.close_write
-		eventually do
+		eventually(3) do
 			File.read("#{@stub.app_root}/history.txt") ==
 				"end of startup file\n" +
 				"worker_process_stopped\n"
