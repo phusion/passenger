@@ -7,5 +7,6 @@ rvm:
 before_install:
   - sudo apt-get install apache2-mpm-worker apache2-threaded-dev
   - rake test:install_deps
+  - cp test/config.json.travis test/config.json
 
 script: ./dev/run_travis.sh

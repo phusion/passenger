@@ -86,6 +86,7 @@ module Packaging
 		'resources/**/*',
 		'test/.rspec',
 		'test/*.example',
+		'test/*.travis',
 		'test/support/*.{c,cpp,h,rb}',
 		'test/tut/*',
 		'test/cxx/**/*.{cpp,h}',
