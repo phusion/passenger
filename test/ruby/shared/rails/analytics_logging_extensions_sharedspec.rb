@@ -105,9 +105,12 @@ shared_examples_for "analytics logging extensions for Rails" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
 				def index
-					# The '::' prefix works around a Dependencies
-					# bug in Rails 1.2
-					::ActionController::Base.benchmark("hello") do
+					if respond_to?(:benchmark, true)
+						benchmark("hello") do
+						end
+					else
+						ActionController::Base.benchmark("hello") do
+						end
 					end
 					render :nothing => true
 				end
@@ -129,7 +132,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 			end
 		})
 		FileUtils.mkdir_p("#{@stub.app_root}/app/views/foo")
-		File.write("#{@stub.app_root}/app/views/foo/index.rhtml", %Q{
+		File.write("#{@stub.app_root}/app/views/foo/index.html.erb", %Q{
 			<% benchmark("hello") do %>
 			<% end %>
 		})
@@ -240,7 +243,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 			end
 		})
 		FileUtils.mkdir_p("#{@stub.app_root}/app/views/foo")
-		File.write("#{@stub.app_root}/app/views/foo/index.rhtml", %Q{
+		File.write("#{@stub.app_root}/app/views/foo/index.html.erb", %Q{
 			hello world
 		})
 		start!(@options)
@@ -262,7 +265,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 			end
 		})
 		FileUtils.mkdir_p("#{@stub.app_root}/app/views/foo")
-		File.write("#{@stub.app_root}/app/views/foo/index.rhtml", %Q{
+		File.write("#{@stub.app_root}/app/views/foo/index.html.erb", %Q{
 			<% raise "crash!" %>
 		})
 		start!(@options)

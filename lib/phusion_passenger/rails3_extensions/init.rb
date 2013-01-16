@@ -97,9 +97,8 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 	end
 	
 	def sql(event)
-		log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
-		if log
-			name = event.payload[:name]
+		if log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
+			name = event.payload[:name] || "SQL"
 			sql = event.payload[:sql]
 			digest = Digest::MD5.hexdigest("#{name}\0#{sql}\0#{rand}")
 			log.measured_time_points("DB BENCHMARK: #{digest}",
