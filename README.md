@@ -1,6 +1,6 @@
 # Introduction
 
-[![Build Status](https://travis-ci.org/FooBarWidget/passenger.png?branch=master)](Build Status)
+[![Build Status](https://travis-ci.org/FooBarWidget/passenger.png?branch=master)](https://travis-ci.org/FooBarWidget/passenger)
 
 This is the [Phusion Passenger web application server](https://www.phusionpassenger.com/).
 
