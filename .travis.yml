@@ -5,7 +5,7 @@ rvm:
   - 1.9.3
 
 before_install:
-  - sudo apt-get install apache2-prefork-mpm apache2-threaded-dev
+  - sudo apt-get install apache2-mpm-worker apache2-threaded-dev
   - rake test:install_deps
 
 script: ./dev/run_travis.sh
