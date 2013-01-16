@@ -49,4 +49,5 @@ task 'test:install_deps' do
 	sh "#{gem_install} rails -v 2.3.15"
 	sh "#{gem_install} bundler rspec mime-types daemon_controller json"
 	sh "cd test/stub/rails3.0 && bundle install"
+	sh "cd test/stub/rails3.2 && bundle install"
 end
