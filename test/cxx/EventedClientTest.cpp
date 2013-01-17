@@ -416,7 +416,7 @@ namespace tut {
 		// after what's already in the outbox.
 		EventedClient client(eventLoop, fd2);
 		string header(1024 * 4, 'x');
-		string body(1024 * 128, 'y');
+		string body(1024 * 1024, 'y');
 		char buf[header.size() + body.size() + 1024];
 		
 		client.write(header);
@@ -459,7 +459,7 @@ namespace tut {
 		client.writeErrorAction = EventedClient::DISCONNECT_FULL;
 		client.onSystemError = saveSystemError;
 		
-		string str(1024 * 128, 'x');
+		string str(1024 * 1024, 'x');
 		client.write(str);
 		ensure("(1)", client.pendingWrites() > 0);
 		
@@ -507,7 +507,7 @@ namespace tut {
 		client.onReadable = readAndExitOnEof;
 		client.notifyReads(true);
 		
-		string str(1024 * 128, 'x');
+		string str(1024 * 1024, 'x');
 		client.write(str);
 		ensure("(1)", client.pendingWrites() > 0);
 		
