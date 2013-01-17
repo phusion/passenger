@@ -503,20 +503,6 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(21) {
-		// The server temporarily buffers data in memory.
-		LoggerPtr log = factory->newTransaction("foobar");
-		log->message("hello world");
-		log.reset();
-		
-		// Give server some time to process these commands.
-		usleep(20000);
-		
-		struct stat buf;
-		ensure_equals(stat(dumpFile.c_str(), &buf), 0);
-		ensure_equals(buf.st_size, (off_t) 0);
-	}
-	
 	TEST_METHOD(22) {
 		// The destructor flushes all data.
 		LoggerPtr log = factory->newTransaction("foobar");
