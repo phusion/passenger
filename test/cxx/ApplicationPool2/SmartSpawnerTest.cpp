@@ -62,7 +62,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		shared_ptr<SmartSpawner> spawner = createSpawner(options);
 		spawner->spawn(options);
 		
@@ -81,7 +81,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		setLogLevel(-1);
 		shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
@@ -99,7 +99,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		options.startTimeout = 300;
 		
 		vector<string> preloaderCommand;
@@ -132,7 +132,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");
@@ -163,7 +163,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		
 		vector<string> preloaderCommand;

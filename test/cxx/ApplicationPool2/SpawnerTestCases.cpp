@@ -1,6 +1,6 @@
 // Included in DirectSpawnerTest.cpp and SmartSpawnerTest.cpp.
 
-	#define SETUP_USER_SWITCHING_TEST() \
+	#define SETUP_USER_SWITCHING_TEST(code) \
 		if (geteuid() != 0) { \
 			return; \
 		} \
@@ -17,6 +17,7 @@
 		options.appType = "wsgi"; \
 		options.defaultUser = testConfig["default_user"].asCString(); \
 		options.defaultGroup = testConfig["default_group"].asCString(); \
+		code \
 		spawner = createSpawner(options)
 
 	#define RUN_USER_SWITCHING_TEST() \
@@ -334,51 +335,54 @@
 		// and 'user' is 'root'
 			TEST_METHOD(20) {
 				// It changes the user to the value of 'defaultUser'.
-				SETUP_USER_SWITCHING_TEST();
-				options.user = "root";
+				SETUP_USER_SWITCHING_TEST(
+					options.user = "root";
+				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(userNameForUid(uid), testConfig["default_user"]);
 			}
 
 			TEST_METHOD(21) {
 				// If 'group' is given, it changes group to the given group name.
-				SETUP_USER_SWITCHING_TEST();
-				options.user = "root";
-				options.group = testConfig["normal_group_1"].asCString();
+				SETUP_USER_SWITCHING_TEST(
+					options.user = "root";
+					options.group = testConfig["normal_group_1"].asCString();
+				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(groupNameForGid(gid), testConfig["normal_group_1"]);
+				ensure_equals(groupNameForGid(gid), testConfig["normal_group_1"].asString());
 			}
 
 			TEST_METHOD(22) {
 				// If 'group' is set to the root group, it changes group to defaultGroup.
-				SETUP_USER_SWITCHING_TEST();
 				string rootGroup = groupNameForGid(0);
-				options.user = "root";
-				options.group = rootGroup.c_str();
+				SETUP_USER_SWITCHING_TEST(
+					options.user = "root";
+					options.group = rootGroup.c_str();
+				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(groupNameForGid(gid), testConfig["default_group"]);
+				ensure_equals(groupNameForGid(gid), testConfig["default_group"].asString());
 			}
 
 			// and 'group' is set to '!STARTUP_FILE!'"
 				TEST_METHOD(23) {
 					// It changes the group to the startup file's group.
-					SETUP_USER_SWITCHING_TEST();
-					string rootGroup = groupNameForGid(0);
-					options.user = "root";
-					options.group = "!STARTUP_FILE!";
+					SETUP_USER_SWITCHING_TEST(
+						options.user = "root";
+						options.group = "!STARTUP_FILE!";
+					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
 						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(groupNameForGid(gid), testConfig["normal_group_1"]);
+					ensure_equals(groupNameForGid(gid), testConfig["normal_group_1"].asString());
 				}
 
 				TEST_METHOD(24) {
 					// If the startup file is a symlink, then it uses the symlink's group, not the target's group
-					SETUP_USER_SWITCHING_TEST();
-					string rootGroup = groupNameForGid(0);
-					options.user = "root";
-					options.group = "!STARTUP_FILE!";
+					SETUP_USER_SWITCHING_TEST(
+						options.user = "root";
+						options.group = "!STARTUP_FILE!";
+					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
 						gidFor(testConfig["normal_group_2"].asString()));
@@ -386,13 +390,14 @@
 						(uid_t) -1,
 						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(groupNameForGid(gid), testConfig["normal_group_2"]);
+					ensure_equals(groupNameForGid(gid), testConfig["normal_group_2"].asString());
 				}
 
 			TEST_METHOD(25) {
 				// If 'group' is not given, it changes the group to defaultUser's primary group.
-				SETUP_USER_SWITCHING_TEST();
-				options.user = "root";
+				SETUP_USER_SWITCHING_TEST(
+					options.user = "root";
+				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid),
 					primaryGroupFor(testConfig["default_user"].asString()));
@@ -401,18 +406,20 @@
 		// and 'user' is not 'root'
 			TEST_METHOD(29) {
 				// It changes the user to the given username.
-				SETUP_USER_SWITCHING_TEST();
-				options.user = testConfig["normal_user_1"].asCString();
+				SETUP_USER_SWITCHING_TEST(
+					options.user = testConfig["normal_user_1"].asCString();
+				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(userNameForUid(uid), testConfig["normal_user_1"]);
+				ensure_equals(userNameForUid(uid), testConfig["normal_user_1"].asString());
 			}
 
 			TEST_METHOD(30) {
 				// If 'group' is given, it changes group to the given group name.
 				// It changes the user to the given username.
-				SETUP_USER_SWITCHING_TEST();
-				options.user = testConfig["normal_user_1"].asCString();
-				options.group = testConfig["normal_group_1"].asCString();
+				SETUP_USER_SWITCHING_TEST(
+					options.user = testConfig["normal_user_1"].asCString();
+					options.group = testConfig["normal_group_1"].asCString();
+				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["normal_group_1"].asString());
 			}
@@ -420,10 +427,11 @@
 			TEST_METHOD(31) {
 				// If 'group' is set to the root group, it changes group to defaultGroup.
 				// It changes the user to the given username.
-				SETUP_USER_SWITCHING_TEST();
 				string rootGroup = groupNameForGid(0);
-				options.user = testConfig["normal_user_1"].asCString();
-				options.group = rootGroup.c_str();
+				SETUP_USER_SWITCHING_TEST(
+					options.user = testConfig["normal_user_1"].asCString();
+					options.group = rootGroup.c_str();
+				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["default_group"].asString());
 			}
@@ -431,9 +439,10 @@
 			// and 'group' is set to '!STARTUP_FILE!'
 				TEST_METHOD(32) {
 					// It changes the group to the startup file's group.
-					SETUP_USER_SWITCHING_TEST();
-					options.user = testConfig["normal_user_1"].asCString();
-					options.group = "!STARTUP_FILE!";
+					SETUP_USER_SWITCHING_TEST(
+						options.user = testConfig["normal_user_1"].asCString();
+						options.group = "!STARTUP_FILE!";
+					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
 						gidFor(testConfig["normal_group_1"].asString()));
@@ -445,9 +454,10 @@
 				TEST_METHOD(33) {
 					// If the startup file is a symlink, then it uses the
 					// symlink's group, not the target's group.
-					SETUP_USER_SWITCHING_TEST();
-					options.user = testConfig["normal_user_1"].asCString();
-					options.group = "!STARTUP_FILE!";
+					SETUP_USER_SWITCHING_TEST(
+						options.user = testConfig["normal_user_1"].asCString();
+						options.group = "!STARTUP_FILE!";
+					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
 						gidFor(testConfig["normal_group_2"].asString()));
@@ -461,8 +471,9 @@
 
 			TEST_METHOD(34) {
 				// If 'group' is not given, it changes the group to the user's primary group.
-				SETUP_USER_SWITCHING_TEST();
-				options.user = testConfig["normal_user_1"].asCString();
+				SETUP_USER_SWITCHING_TEST(
+					options.user = testConfig["normal_user_1"].asCString();
+				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid),
 					primaryGroupFor(testConfig["normal_user_1"].asString()));
@@ -471,27 +482,30 @@
 		// and the given username does not exist
 			TEST_METHOD(38) {
 				// It changes the user to the value of defaultUser.
-				SETUP_USER_SWITCHING_TEST();
-				options.user = testConfig["nonexistant_user"].asCString();
+				SETUP_USER_SWITCHING_TEST(
+					options.user = testConfig["nonexistant_user"].asCString();
+				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(userNameForUid(uid), testConfig["default_user"].asString());
 			}
 
 			TEST_METHOD(39) {
 				// If 'group' is given, it changes group to the given group name.
-				SETUP_USER_SWITCHING_TEST();
-				options.user = testConfig["nonexistant_user"].asCString();
-				options.group = testConfig["normal_group_1"].asCString();
+				SETUP_USER_SWITCHING_TEST(
+					options.user = testConfig["nonexistant_user"].asCString();
+					options.group = testConfig["normal_group_1"].asCString();
+				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["normal_group_1"].asString());
 			}
 
 			TEST_METHOD(40) {
 				// If 'group' is set to the root group, it changes group to defaultGroup.
-				SETUP_USER_SWITCHING_TEST();
 				string rootGroup = groupNameForGid(0);
-				options.user = testConfig["nonexistant_user"].asCString();
-				options.group = rootGroup;
+				SETUP_USER_SWITCHING_TEST(
+					options.user = testConfig["nonexistant_user"].asCString();
+					options.group = rootGroup;
+				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["default_group"].asString());
 			}
@@ -499,9 +513,10 @@
 			// and 'group' is set to '!STARTUP_FILE!'
 				TEST_METHOD(41) {
 					// It changes the group to the startup file's group.
-					SETUP_USER_SWITCHING_TEST();
-					options.user = testConfig["nonexistant_user"].asCString();
-					options.group = "!STARTUP_FILE!";
+					SETUP_USER_SWITCHING_TEST(
+						options.user = testConfig["nonexistant_user"].asCString();
+						options.group = "!STARTUP_FILE!";
+					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
 						gidFor(testConfig["normal_group_1"].asString()));
@@ -512,9 +527,10 @@
 				TEST_METHOD(42) {
 					// If the startup file is a symlink, then it uses the
 					// symlink's group, not the target's group.
-					SETUP_USER_SWITCHING_TEST();
-					options.user = testConfig["nonexistant_user"].asCString();
-					options.group = "!STARTUP_FILE!";
+					SETUP_USER_SWITCHING_TEST(
+						options.user = testConfig["nonexistant_user"].asCString();
+						options.group = "!STARTUP_FILE!";
+					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
 						gidFor(testConfig["normal_group_2"].asString()));
@@ -527,8 +543,9 @@
 
 			TEST_METHOD(43) {
 				// If 'group' is not given, it changes the group to defaultUser's primary group.
-				SETUP_USER_SWITCHING_TEST();
-				options.user = testConfig["nonexistant_user"].asCString();
+				SETUP_USER_SWITCHING_TEST(
+					options.user = testConfig["nonexistant_user"].asCString();
+				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid),
 					primaryGroupFor(testConfig["default_user"].asString()));
@@ -538,7 +555,9 @@
 		// and the startup file's owner exists
 			TEST_METHOD(47) {
 				// It changes the user to the owner of the startup file.
-				SETUP_USER_SWITCHING_TEST();
+				SETUP_USER_SWITCHING_TEST(
+					(void) 0;
+				);
 				lchown("tmp.wsgi/passenger_wsgi.py",
 					uidFor(testConfig["normal_user_1"].asString()),
 					(gid_t) -1);
@@ -548,7 +567,9 @@
 
 			TEST_METHOD(48) {
 				// If the startup file is a symlink, then it uses the symlink's owner, not the target's owner.
-				SETUP_USER_SWITCHING_TEST();
+				SETUP_USER_SWITCHING_TEST(
+					(void) 0;
+				);
 				lchown("tmp.wsgi/passenger_wsgi.py",
 					uidFor(testConfig["normal_user_2"].asString()),
 					(gid_t) -1);
@@ -561,23 +582,25 @@
 
 			TEST_METHOD(49) {
 				// If 'group' is given, it changes group to the given group name.
-				SETUP_USER_SWITCHING_TEST();
+				SETUP_USER_SWITCHING_TEST(
+					options.group = testConfig["normal_group_1"].asCString();
+				);
 				lchown("tmp.wsgi/passenger_wsgi.py",
 					uidFor(testConfig["normal_user_1"].asString()),
 					(gid_t) -1);
-				options.group = testConfig["normal_group_1"].asCString();
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["normal_group_1"].asString());
 			}
 
 			TEST_METHOD(50) {
 				// If 'group' is set to the root group, it changes group to defaultGroup.
-				SETUP_USER_SWITCHING_TEST();
+				string rootGroup = groupNameForGid(0);
+				SETUP_USER_SWITCHING_TEST(
+					options.group = rootGroup;
+				);
 				lchown("tmp.wsgi/passenger_wsgi.py",
 					uidFor(testConfig["normal_user_1"].asString()),
 					(gid_t) -1);
-				string rootGroup = groupNameForGid(0);
-				options.group = rootGroup;
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["default_group"].asString());
 			}
@@ -585,8 +608,9 @@
 			// and 'group' is set to '!STARTUP_FILE!'
 				TEST_METHOD(51) {
 					// It changes the group to the startup file's group.
-					SETUP_USER_SWITCHING_TEST();
-					options.group = "!STARTUP_FILE!";
+					SETUP_USER_SWITCHING_TEST(
+						options.group = "!STARTUP_FILE!";
+					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
 						gidFor(testConfig["normal_group_1"].asString()));
@@ -597,8 +621,9 @@
 				TEST_METHOD(52) {
 					// If the startup file is a symlink, then it uses the symlink's
 					// group, not the target's group.
-					SETUP_USER_SWITCHING_TEST();
-					options.group = "!STARTUP_FILE!";
+					SETUP_USER_SWITCHING_TEST(
+						options.group = "!STARTUP_FILE!";
+					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
 						gidFor(testConfig["normal_group_2"].asString()));
@@ -611,7 +636,9 @@
 
 			TEST_METHOD(53) {
 				// If 'group' is not given, it changes the group to the startup file's owner's primary group.
-				SETUP_USER_SWITCHING_TEST();
+				SETUP_USER_SWITCHING_TEST(
+					(void) 0;
+				);
 				lchown("tmp.wsgi/passenger_wsgi.py",
 					uidFor(testConfig["normal_user_1"].asString()),
 					(gid_t) -1);
@@ -623,7 +650,9 @@
 		// and the startup file's owner doesn't exist
 			TEST_METHOD(57) {
 				// It changes the user to the value of defaultUser.
-				SETUP_USER_SWITCHING_TEST();
+				SETUP_USER_SWITCHING_TEST(
+					(void) 0;
+				);
 				lchown("tmp.wsgi/passenger_wsgi.py",
 					(uid_t) testConfig["nonexistant_uid"].asInt64(),
 					(gid_t) -1);
@@ -633,23 +662,25 @@
 
 			TEST_METHOD(58) {
 				// If 'group' is given, it changes group to the given group name.
-				SETUP_USER_SWITCHING_TEST();
+				SETUP_USER_SWITCHING_TEST(
+					options.group = testConfig["normal_group_1"].asCString();
+				);
 				lchown("tmp.wsgi/passenger_wsgi.py",
 					(uid_t) testConfig["nonexistant_uid"].asInt64(),
 					(gid_t) -1);
-				options.group = testConfig["normal_group_1"].asCString();
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["normal_group_1"].asString());
 			}
 
 			TEST_METHOD(59) {
 				// If 'group' is set to the root group, it changes group to defaultGroup.
-				SETUP_USER_SWITCHING_TEST();
+				string rootGroup = groupNameForGid(0);
+				SETUP_USER_SWITCHING_TEST(
+					options.group = rootGroup;
+				);
 				lchown("tmp.wsgi/passenger_wsgi.py",
 					(uid_t) testConfig["nonexistant_uid"].asInt64(),
 					(gid_t) -1);
-				string rootGroup = groupNameForGid(0);
-				options.group = rootGroup;
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["default_group"].asString());
 			}
@@ -658,11 +689,12 @@
 				// and the startup file's group doesn't exist
 					TEST_METHOD(60) {
 						// It changes the group to the value given by defaultGroup.
-						SETUP_USER_SWITCHING_TEST();
+						SETUP_USER_SWITCHING_TEST(
+							options.group = "!STARTUP_FILE!";
+						);
 						lchown("tmp.wsgi/passenger_wsgi.py",
 							(uid_t) testConfig["nonexistant_uid"].asInt64(),
 							(gid_t) testConfig["nonexistant_gid"].asInt64());
-						options.group = "!STARTUP_FILE!";
 						RUN_USER_SWITCHING_TEST();
 						ensure_equals(groupNameForGid(gid), testConfig["default_group"].asString());
 					}
@@ -670,32 +702,36 @@
 				// and the startup file's group exists
 					TEST_METHOD(61) {
 						// It changes the group to the startup file's group.
-						SETUP_USER_SWITCHING_TEST();
+						SETUP_USER_SWITCHING_TEST(
+							options.group = "!STARTUP_FILE!";
+						);
 						lchown("tmp.wsgi/passenger_wsgi.py",
 							(uid_t) testConfig["nonexistant_uid"].asInt64(),
 							gidFor(testConfig["normal_group_1"].asString()));
-						options.group = "!STARTUP_FILE!";
 						RUN_USER_SWITCHING_TEST();
 						ensure_equals(groupNameForGid(gid), testConfig["normal_group_1"].asString());
 					}
 
 					TEST_METHOD(62) {
 						// If the startup file is a symlink, then it uses the symlink's group, not the target's group.
-						SETUP_USER_SWITCHING_TEST();
+						SETUP_USER_SWITCHING_TEST(
+							options.group = "!STARTUP_FILE!";
+						);
 						lchown("tmp.wsgi/passenger_wsgi.py",
 							(uid_t) testConfig["nonexistant_uid"].asInt64(),
 							gidFor(testConfig["normal_group_2"].asString()));
 						chown("tmp.wsgi/passenger_wsgi.py.real",
 							(uid_t) -1,
 							gidFor(testConfig["normal_group_1"].asString()));
-						options.group = "!STARTUP_FILE!";
 						RUN_USER_SWITCHING_TEST();
 						ensure_equals(groupNameForGid(gid), testConfig["normal_group_2"].asString());
 					}
 
 			TEST_METHOD(63) {
 				// If 'group' is not given, it changes the group to defaultUser's primary group.
-				SETUP_USER_SWITCHING_TEST();
+				SETUP_USER_SWITCHING_TEST(
+					(void) 0;
+				);
 				lchown("tmp.wsgi/passenger_wsgi.py",
 					(uid_t) testConfig["nonexistant_uid"].asInt64(),
 					(gid_t) -1);
@@ -706,9 +742,10 @@
 	TEST_METHOD(67) {
 		// It raises an error if it tries to lower to 'defaultUser',
 		// but that user doesn't exist.
-		SETUP_USER_SWITCHING_TEST();
-		options.user = "root";
-		options.defaultUser = testConfig["nonexistant_user"].asCString();
+		SETUP_USER_SWITCHING_TEST(
+			options.user = "root";
+			options.defaultUser = testConfig["nonexistant_user"].asCString();
+		);
 		try {
 			RUN_USER_SWITCHING_TEST();
 			fail();
@@ -720,10 +757,11 @@
 	TEST_METHOD(68) {
 		// It raises an error if it tries to lower to 'default_group',
 		// but that group doesn't exist.
-		SETUP_USER_SWITCHING_TEST();
-		options.user = testConfig["normal_user_1"].asCString();
-		options.group = groupNameForGid(0);
-		options.defaultGroup = testConfig["nonexistant_group"].asCString();
+		SETUP_USER_SWITCHING_TEST(
+			options.user = testConfig["normal_user_1"].asCString();
+			options.group = groupNameForGid(0);
+			options.defaultGroup = testConfig["nonexistant_group"].asCString();
+		);
 		try {
 			RUN_USER_SWITCHING_TEST();
 			fail();
@@ -734,8 +772,9 @@
 
 	TEST_METHOD(69) {
 		// Changes supplementary groups to the owner's default supplementary groups.
-		SETUP_USER_SWITCHING_TEST();
-		options.user = testConfig["normal_user_1"].asCString();
+		SETUP_USER_SWITCHING_TEST(
+			options.user = testConfig["normal_user_1"].asCString();
+		);
 		RUN_USER_SWITCHING_TEST();
 		runShellCommand(("groups " + testConfig["normal_user_1"].asString() + " > /tmp/info2.txt").c_str());
 		string defaultGroups = strip(readAll("/tmp/info2.txt"));
