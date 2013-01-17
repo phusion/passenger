@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -73,9 +73,9 @@ dependencies = [
 	'ext/common/ApplicationPool2/PipeWatcher.h',
 	LIBBOOST_OXT,
 	helper_agent_libs.link_objects,
-	:libev,
-	:libeio
-].flatten
+	LIBEV_TARGET,
+	LIBEIO_TARGET
+].flatten.compact
 file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	compile_cxx("ext/common/agents/HelperAgent/Main.cpp",
@@ -111,8 +111,8 @@ dependencies = [
 	'ext/common/Utils/BlockingQueue.h',
 	logging_agent_libs.link_objects,
 	LIBBOOST_OXT,
-	:libev
-].flatten
+	LIBEV_TARGET
+].flatten.compact
 file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	compile_cxx("ext/common/agents/LoggingAgent/Main.cpp",

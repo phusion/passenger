@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -214,12 +214,12 @@ end
 
 dependencies = [
 	TEST_CXX_OBJECTS.keys,
-	:libev,
-	:libeio,
+	LIBEV_TARGET,
+	LIBEIO_TARGET,
 	TEST_BOOST_OXT_LIBRARY,
 	TEST_COMMON_LIBRARY.link_objects,
 	'ext/common/MultiLibeio.cpp'
-].flatten
+].flatten.compact
 file 'test/cxx/CxxTestMain' => dependencies.flatten do
 	objects = TEST_CXX_OBJECTS.keys.join(' ')
 	create_executable("test/cxx/CxxTestMain", objects, TEST_CXX_LDFLAGS)

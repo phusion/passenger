@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -137,9 +137,9 @@ end
 dependencies = [
 	COMMON_LIBRARY.link_objects,
 	LIBBOOST_OXT,
-	:libev,
-	:libeio
-].flatten
+	LIBEV_TARGET,
+	LIBEIO_TARGET
+].flatten.compact
 task :compile_app => dependencies do
 	source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
 	if !source

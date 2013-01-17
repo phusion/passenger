@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -112,8 +112,9 @@ if USE_VENDORED_LIBEV
 	LIBEV_SOURCE_DIR = File.expand_path("../ext/libev", File.dirname(__FILE__)) + "/"
 	LIBEV_CFLAGS = "-Iext/libev"
 	LIBEV_LIBS = LIBEV_OUTPUT_DIR + ".libs/libev.a"
+	LIBEV_TARGET = LIBEV_LIBS
 	
-	task :libev => LIBEV_OUTPUT_DIR + ".libs/libev.a"
+	task :libev => LIBEV_TARGET
 	
 	dependencies = [
 		"ext/libev/configure",
@@ -144,6 +145,7 @@ if USE_VENDORED_LIBEV
 else
 	LIBEV_CFLAGS = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
 	LIBEV_LIBS   = string_option('LIBEV_LIBS', '-lev')
+	LIBEV_TARGET = nil
 	task :libev  # do nothing
 end
 
@@ -154,8 +156,9 @@ if USE_VENDORED_LIBEIO
 	LIBEIO_SOURCE_DIR = File.expand_path("../ext/libeio", File.dirname(__FILE__)) + "/"
 	LIBEIO_CFLAGS = "-Iext/libeio"
 	LIBEIO_LIBS = LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
+	LIBEIO_TARGET = LIBEIO_LIBS
 	
-	task :libeio => LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
+	task :libeio => LIBEIO_TARGET
 	
 	dependencies = [
 		"ext/libeio/configure",
@@ -185,6 +188,7 @@ if USE_VENDORED_LIBEIO
 else
 	LIBEIO_CFLAGS = string_option('LIBEIO_CFLAGS', '-I/usr/include/libeio')
 	LIBEIO_LIBS   = string_option('LIBEIO_LIBS', '-leio')
+	LIBEIO_TARGET = nil
 	task :libeio  # do nothing
 end
 
