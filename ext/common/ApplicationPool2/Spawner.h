@@ -887,27 +887,30 @@ protected:
 
 	void switchUser(const SpawnPreparationInfo &info) {
 		if (info.switchUser) {
+			bool setgroupsCalled = false;
 			#ifdef HAVE_GETGROUPLIST
-				if (setgroups(info.ngroups, info.gidset.get()) == -1) {
-					int e = errno;
-					printf("!> Error\n");
-					printf("!> \n");
-					printf("setgroups(%d, ...) failed: %s (errno=%d)\n",
-						info.ngroups, strerror(e), e);
-					fflush(stdout);
-					_exit(1);
-				}
-			#else
-				if (initgroups(info.username.c_str(), info.gid) == -1) {
-					int e = errno;
-					printf("!> Error\n");
-					printf("!> \n");
-					printf("initgroups() failed: %s (errno=%d)\n",
-						strerror(e), e);
-					fflush(stdout);
-					_exit(1);
+				if (info.ngroups <= NGROUPS_MAX) {
+					setgroupsCalled = true;
+					if (setgroups(info.ngroups, info.gidset.get()) == -1) {
+						int e = errno;
+						printf("!> Error\n");
+						printf("!> \n");
+						printf("setgroups(%d, ...) failed: %s (errno=%d)\n",
+							info.ngroups, strerror(e), e);
+						fflush(stdout);
+						_exit(1);
+					}
 				}
 			#endif
+			if (!setgroupsCalled && initgroups(info.username.c_str(), info.gid) == -1) {
+				int e = errno;
+				printf("!> Error\n");
+				printf("!> \n");
+				printf("initgroups() failed: %s (errno=%d)\n",
+					strerror(e), e);
+				fflush(stdout);
+				_exit(1);
+			}
 			if (setgid(info.gid) == -1) {
 				int e = errno;
 				printf("!> Error\n");
