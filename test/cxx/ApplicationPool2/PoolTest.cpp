@@ -1184,6 +1184,7 @@ namespace tut {
 		spawnerConfig->forwardStderr = false;
 
 		writeFile("tmp.wsgi/counter", "0");
+		chmod("tmp.wsgi/counter", 0666);
 		// Our application starts successfully the first two times,
 		// and fails all the other times.
 		writeFile("tmp.wsgi/passenger_wsgi.py",
@@ -1363,6 +1364,7 @@ namespace tut {
 	TEST_METHOD(74) {
 		// If a process fails to spawn, it sends a SpawnException result to all get waiters.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		chmod("tmp.wsgi", 0777);
 		Options options = createOptions();
 		options.appRoot = "tmp.wsgi";
 		options.appType = "wsgi";
