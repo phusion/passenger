@@ -1,7 +1,7 @@
-#include "TestSupport.h"
-#include "EventedClient.h"
-#include "Utils/ScopeGuard.h"
-#include "Utils/IOUtils.h"
+#include <TestSupport.h>
+#include <EventedClient.h>
+#include <Utils/ScopeGuard.h>
+#include <Utils/IOUtils.h>
 
 #include <oxt/thread.hpp>
 
@@ -421,10 +421,10 @@ namespace tut {
 		
 		client.write(header);
 		client.write(body);
-		ensure(client.pendingWrites() > 0);
+		ensure("(1)", client.pendingWrites() > 0);
 		
-		ensure_equals(readExact(fd1, buf, header.size()), (unsigned int) header.size());
-		ensure_equals(StaticString(buf, header.size()), header);
+		ensure_equals("(2)", readExact(fd1, buf, header.size()), (unsigned int) header.size());
+		ensure_equals("(3)", StaticString(buf, header.size()), header);
 		
 		client.write("hello world");
 		
@@ -432,8 +432,8 @@ namespace tut {
 		EVENT_LOOP_GUARD;
 		
 		unsigned int len = body.size() + strlen("hello world");
-		ensure_equals(readExact(fd1, buf, len), len);
-		ensure_equals(StaticString(buf, len), body + "hello world");
+		ensure_equals("(4)", readExact(fd1, buf, len), len);
+		ensure_equals("(5)", StaticString(buf, len), body + "hello world");
 	}
 	
 	TEST_METHOD(18) {
@@ -461,15 +461,15 @@ namespace tut {
 		
 		string str(1024 * 128, 'x');
 		client.write(str);
-		ensure(client.pendingWrites() > 0);
+		ensure("(1)", client.pendingWrites() > 0);
 		
 		fd1.close();
 		client.onDisconnect = exitEventLoop;
 		startEventLoop();
 		waitUntilEventLoopExits();
 		
-		ensure_equals(lastErrorCode, EPIPE);
-		ensure_equals(client.fd, -1);
+		ensure_equals("(2)", lastErrorCode, EPIPE);
+		ensure_equals("(3)", client.fd, -1);
 	}
 	
 	TEST_METHOD(20) {
@@ -509,7 +509,7 @@ namespace tut {
 		
 		string str(1024 * 128, 'x');
 		client.write(str);
-		ensure(client.pendingWrites() > 0);
+		ensure("(1)", client.pendingWrites() > 0);
 		
 		writeExact(fd1, "world", 5);
 		fd1.close();
@@ -517,7 +517,7 @@ namespace tut {
 		startEventLoop();
 		waitUntilEventLoopExits();
 		
-		ensure(client.fd != -1);
-		ensure_equals(data, "world");
+		ensure("(2)", client.fd != -1);
+		ensure_equals("(3)", data, "world");
 	}
 }
