@@ -275,7 +275,7 @@ namespace tut {
 	}
 	
 	TEST_METHOD(5) {
-		// If one matching process already exists but it's at full capacity,
+		// If one matching process already exists but it's at full utilization,
 		// and the limits and pool capacity allow spawning of a new process,
 		// then get() will put the get action on the group's wait
 		// queue while spawning a process in the background.
@@ -291,7 +291,6 @@ namespace tut {
 		debug->messages->send("Proceed with spawn loop iteration 1");
 		SessionPtr session1 = pool->get(options, &ticket);
 		ProcessPtr process1 = session1->getProcess();
-		currentSession.reset();
 		
 		// Now spawn a process that never finishes.
 		pool->asyncGet(options, callback);
@@ -299,7 +298,9 @@ namespace tut {
 		// Release the session on the first process.
 		session1.reset();
 		
-		ensure_equals("The callback should have been called now", number, 1);
+		EVENTUALLY(1,
+			result = number == 1;
+		);
 		ensure_equals("The first process handled the second asyncGet() request",
 			currentSession->getProcess(), process1);
 
