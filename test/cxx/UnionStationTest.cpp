@@ -298,8 +298,9 @@ namespace tut {
 		log.reset();
 		log2.reset();
 		
-		string data = readDumpFile();
-		ensure("(5)", data.find("hello\n") != string::npos);
+		EVENTUALLY(3,
+			result = readDumpFile().find("hello\n") != string::npos;
+		);
 	}
 	
 	TEST_METHOD(13) {
@@ -327,7 +328,7 @@ namespace tut {
 	TEST_METHOD(14) {
 		// If a client disconnects from the logging server then all its
 		// transactions that are no longer referenced and have crash protection enabled
-		// will be closed and written to to the sink.
+		// will be closed and written to the sink.
 		MessageClient client1 = createConnection();
 		MessageClient client2 = createConnection();
 		MessageClient client3 = createConnection();
@@ -337,22 +338,26 @@ namespace tut {
 		
 		client1.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
-			"", "true", NULL);
+			"", "true", "true", NULL);
+		client1.read(args);
 		client2.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "true", NULL);
+		client2.write("log", TODAY_TXN_ID, "1000", NULL);
+		client2.writeScalar("hello world");
 		client2.write("flush", NULL);
 		client2.read(args);
 		client2.disconnect();
-		
 		SHOULD_NEVER_HAPPEN(100,
-			result = fileExists(dumpFile) && !readDumpFile().empty();
+			// Transaction still has references open, so should not yet be written to sink.
+			result = readDumpFile().find("hello world") != string::npos;
 		);
+
 		client1.disconnect();
 		client3.write("flush", NULL);
 		client3.read(args);
 		EVENTUALLY(5,
-			result = fileExists(dumpFile) && !readDumpFile().empty();
+			result = readDumpFile().find("hello world") != string::npos;
 		);
 	}
 	
@@ -369,7 +374,8 @@ namespace tut {
 		
 		client1.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
-			"", "false", NULL);
+			"", "false", "true", NULL);
+		client1.read(args);
 		client2.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "false", NULL);
@@ -395,7 +401,8 @@ namespace tut {
 		
 		client1.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
-			"", "true", NULL);
+			"", "true", "true", NULL);
+		client1.read(args);
 		client2.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "true", NULL);
@@ -419,7 +426,8 @@ namespace tut {
 		
 		client1.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
-			"", "false", NULL);
+			"", "false", "true", NULL);
+		client1.read(args);
 		client2.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "false", NULL);
