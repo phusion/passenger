@@ -40,6 +40,7 @@
 #include <exception>
 #include <stdexcept>
 #include <iomanip>
+#include <ios>
 #include <ostream>
 #include <sstream>
 #include <cstdio>
@@ -83,11 +84,11 @@ void setDebugFile(const char *logFile = NULL);
 			strftime(datetime_buf, sizeof(datetime_buf) - 1, "%F %H:%M:%S", &the_tm); \
 			gettimeofday(&tv, NULL); \
 			sstream << \
-				"[ pid=" << ((unsigned long) getpid()) <<  \
-				" thr=" << pthread_self() << \
-				" file=" << __FILE__ << ":" << (unsigned long) __LINE__ << \
+				"[ pid=" << std::dec << getpid() <<  \
+				" thr=" << std::hex << pthread_self() << std::dec << \
 				" time=" << datetime_buf << "." << std::setfill('0') << std::setw(4) << \
 					(unsigned long) (tv.tv_usec / 100) << \
+				" file=" << __FILE__ << ":" << (unsigned long) __LINE__ << \
 				" ]: " << \
 				expr << std::endl;	\
 			*stream << sstream.str();		\
