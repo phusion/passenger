@@ -490,7 +490,8 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure("30 msec have passed", elapsed >= 29000 && elapsed <= 45000);
+			ensure("At least 29 msec have passed", elapsed >= 29000);
+			ensure("At most 95 msec have passed", elapsed <= 95000);
 			ensure(timeout <= 2000);
 		}
 	}
@@ -600,7 +601,7 @@ namespace tut {
 	TEST_METHOD(58) {
 		// readExact() deducts the amount of time spent on waiting from the timeout variable.
 		Pipe p = createPipe();
-		unsigned long long timeout = 60000;
+		unsigned long long timeout = 100000;
 		char buf[3];
 		
 		// Spawn a thread that writes 100 bytes per second, i.e. each byte takes 10 msec.
@@ -608,8 +609,13 @@ namespace tut {
 		
 		// We read 3 bytes.
 		ensure_equals(readExact(p.first, &buf, sizeof(buf), &timeout), 3u);
-		ensure("Should have taken at least 20 msec", timeout <= 60000 - 20000);
-		ensure("Should have taken at most 40 msec", timeout >= 60000 - 40000);
+		ensure("Should have taken at least 20 msec", timeout <= 100000 - 20000);
+		#ifdef __FreeBSD__
+			// Stupid timer resolution on FreeBSD...
+			ensure("Should have taken at most 95 msec", timeout >= 100000 - 95000);
+		#else
+			ensure("Should have taken at most 50 msec", timeout >= 100000 - 40000);
+		#endif
 	}
 	
 	TEST_METHOD(59) {
@@ -741,7 +747,7 @@ namespace tut {
 	TEST_METHOD(68) {
 		// readExact() deducts the amount of time spent on waiting from the timeout variable.
 		Pipe p = createNonBlockingPipe();
-		unsigned long long timeout = 60000;
+		unsigned long long timeout = 100000;
 		
 		// Spawn a thread that reads 200000 bytes in 35 msec.
 		TempThread thr(boost::bind(&readDataSlowly, p.first, 5714286, 5714286));
@@ -749,8 +755,8 @@ namespace tut {
 		// We write 200000 bytes.
 		char buf[200000];
 		writeExact(p.second, &buf, sizeof(buf), &timeout);
-		ensure("Should have taken at least 20 msec", timeout <= 60000 - 20000);
-		ensure("Should have taken at most 40 msec", timeout >= 60000 - 40000);
+		ensure("Should have taken at least 20 msec", timeout <= 100000 - 20000);
+		ensure("Should have taken at most 95 msec", timeout >= 100000 - 95000);
 	}
 	
 	TEST_METHOD(69) {
@@ -831,8 +837,10 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure("readFileDescriptor() timed out after 30 msec",
-				elapsed >= 29000 && elapsed <= 45000);
+			ensure("readFileDescriptor() timed out after at least 29 msec",
+				elapsed >= 29000);
+			ensure("readFileDescriptor() timed out after at most 95 msec",
+				elapsed <= 95000);
 			ensure(timeout <= 2000);
 		}
 		
@@ -846,7 +854,7 @@ namespace tut {
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
 			ensure("writeFileDescriptor() timed out after 30 msec",
-				elapsed >= 29000 && elapsed <= 45000);
+				elapsed >= 29000 && elapsed <= 95000);
 			ensure(timeout <= 2000);
 		}
 	}

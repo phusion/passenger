@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
 #include <Utils/SystemTime.h>
@@ -66,7 +66,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure("About 30 ms elapsed (1)", elapsed >= 29000 && elapsed <= 50000);
+			ensure("About 30 ms elapsed (1)", elapsed >= 29000 && elapsed <= 95000);
 			ensure("Time is correctly deducted from 'timeout' (1)", timeout <= 2000);
 		}
 		
@@ -79,7 +79,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure("About 30 ms elapsed (3)", elapsed >= 29000 && elapsed <= 50000);
+			ensure("About 30 ms elapsed (3)", elapsed >= 29000 && elapsed <= 95000);
 			ensure("Time is correctly deducted from 'timeout' (4)", timeout <= 2000);
 		}
 	}
@@ -134,7 +134,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure(elapsed >= 29000 && elapsed <= 50000);
+			ensure(elapsed >= 29000 && elapsed <= 90000);
 			ensure(timeout <= 2000);
 		}
 		
@@ -147,7 +147,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure(elapsed >= 29000 && elapsed <= 50000);
+			ensure(elapsed >= 29000 && elapsed <= 90000);
 			ensure(timeout <= 2000);
 		}
 	}
@@ -260,7 +260,7 @@ namespace tut {
 			fail("TimeoutException expected (1)");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure(elapsed >= 29000 && elapsed <= 50000);
+			ensure(elapsed >= 29000 && elapsed <= 90000);
 			ensure(timeout <= 2000);
 		}
 		
@@ -273,7 +273,7 @@ namespace tut {
 			fail("TimeoutException expected (2)");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure(elapsed >= 29000 && elapsed <= 50000);
+			ensure(elapsed >= 29000 && elapsed <= 90000);
 			ensure(timeout <= 2000);
 		}
 	}
@@ -340,7 +340,7 @@ namespace tut {
 			fail("TimeoutException expected (1)");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure(elapsed >= 29000 && elapsed <= 50000);
+			ensure(elapsed >= 29000 && elapsed <= 90000);
 			ensure(timeout <= 2000);
 		}
 		
@@ -353,7 +353,7 @@ namespace tut {
 			fail("TimeoutException expected (2)");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = SystemTime::getUsec() - startTime;
-			ensure(elapsed >= 29000 && elapsed <= 50000);
+			ensure(elapsed >= 29000 && elapsed <= 90000);
 			ensure(timeout <= 2000);
 		}
 	}
