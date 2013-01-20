@@ -7,7 +7,18 @@ This guide tells you:
 
 ## Process output
 
-All Phusion Passenger agent processes (PassengerWatchdog, PassengerHelperAgent, PassengerLoggingAgent) as well as all spawned application processes have their stdout and stderr redirected to the global web server error log. This is usually '/var/log/apache2/error.log' or '/var/log/nginx/error.log'.
+All Phusion Passenger agent processes (PassengerWatchdog, PassengerHelperAgent, PassengerLoggingAgent) as well as all spawned application processes have their stdout and stderr redirected to the _global web server error log_ (that is, _not_ the per-virtual host error log). This is usually '/var/log/apache2/error.log' or '/var/log/nginx/error.log'.
+
+Note that in case of Nginx, Phusion Passenger prints to the error log specified in the server context, not the "http" context. If the server context does not contain an `error_log` directive then the default error log location will be used. The default location depends on how Nginx is configured during compilation, but it is usually either '$PREFIX/logs/error.log' or '/var/log/nginx/error.log'. For example, if your Nginx configuration looks like this:
+
+    worker_processes 2;
+
+    http {
+        error_log /home/nginx/error.log;
+        ...
+    }
+
+then Phusion Passenger will print to the default error log location, *not* '/home/nginx/error.log'!
 
 ## Crash behavior
 

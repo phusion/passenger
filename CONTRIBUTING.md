@@ -43,7 +43,10 @@ You can contribute by answering support questions on the [community discussion f
 
 Phusion Passenger is mostly written in C++, but the build system and various small helper scripts are in Ruby. The loaders for each supported language is written in the respective language.
 
-The source code is filled with inline comments, so look there if you want to understand how things work. We also have dedicated documents on some topics and for some subsystems. For example, you should read ext/common/ApplicationPool2/README.md if you're interesting in working on the ApplicationPool and Spawner subsystems.
+The source code is filled with inline comments, so look there if you want to understand how things work. We also have dedicated documents on some topics and for some subsystems. Some interesting documents are:
+
+ * ext/common/ApplicationPool2/README.md - If you're interesting in the ApplicationPool and Spawner subsystems.
+ * doc/DebuggingAndStressTesting.md
 
 ### Compilation and build system
 
