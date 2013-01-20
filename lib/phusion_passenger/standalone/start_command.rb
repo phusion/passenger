@@ -305,6 +305,12 @@ private
 						begin
 							socket.connect_nonblock(sockaddr)
 						rescue Errno::EISCONN
+						rescue Errno::EINVAL
+							if RUBY_PLATFORM =~ /freebsd/i
+								raise Errno::ECONNREFUSED
+							else
+								raise
+							end
 						end
 					else
 						raise Errno::ECONNREFUSED
