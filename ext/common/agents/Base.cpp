@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -96,6 +96,7 @@ static bool stopOnAbort = false;
 static char *alternativeStack;
 static unsigned int alternativeStackSize;
 
+static unsigned int randomSeed;
 static const char *argv0 = NULL;
 static const char *backtraceSanitizerPath = NULL;
 static bool backtraceSanitizerUseShell = false;
@@ -667,6 +668,8 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	end = appendSignalName(end, state.signo);
 	end = appendText(end, ", reason=");
 	end = appendSignalReason(end, state.info);
+	end = appendText(end, ", randomSeed=");
+	end = appendULL(end, (unsigned long long) randomSeed);
 	end = appendText(end, "\n");
 	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
@@ -1184,9 +1187,16 @@ initializeSyscallFailureSimulation(const char *processName) {
 VariantMap
 initializeAgent(int argc, char *argv[], const char *processName) {
 	VariantMap options;
+	const char *seedStr;
 
-	srand((unsigned int) time(NULL));
-	srandom((unsigned int) time(NULL));
+	seedStr = getenv("PASSENGER_RANDOM_SEED");
+	if (seedStr == NULL || *seedStr == '\0') {
+		randomSeed = (unsigned int) time(NULL);
+	} else {
+		randomSeed = (unsigned int) atoll(seedStr);
+	}
+	srand(randomSeed);
+	srandom(randomSeed);
 	
 	ignoreSigpipe();
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
@@ -1279,6 +1289,8 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	for (int i = 1; i < argc; i++) {
 		memset(argv[i], '\0', strlen(argv[i]));
 	}
+
+	P_DEBUG("Random seed: " << randomSeed);
 	
 	return options;
 }
