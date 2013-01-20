@@ -844,7 +844,7 @@ namespace tut {
 		AtomicInt code = -1;
 		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
 			this, session->getProcess(), &code));
-		EVENTUALLY2(30, 1,
+		EVENTUALLY2(100, 1,
 			result = pool->isSpawning();
 		);
 		EVENTUALLY(1,
