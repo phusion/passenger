@@ -7,6 +7,8 @@ if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	rvm use $TEST_RUBY_VERSION
 	echo "$ gem --version"
 	gem --version
+	echo "$ rake test:install_deps"
+	rake test:install_deps
 fi
 
 if [[ "$TEST_FULL_COMPILE" = 1 ]]; then
