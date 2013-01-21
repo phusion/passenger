@@ -41,7 +41,7 @@ using namespace oxt;
 
 
 template<typename T>
-bool
+static bool
 exceptionIsInstanceOf(const tracable_exception &e) {
 	try {
 		(void) dynamic_cast<T>(e);
