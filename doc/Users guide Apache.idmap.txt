@@ -18,33 +18,25 @@
 
 1.2. Where to get support	=>	where-to-get-support-f3pbrb
 
-2. Installing, upgrading and uninstalling Phusion Passenger	=>	installing-upgrading-and-uninstalling-phusion-passenger-laryvs
+2. Installation	=>	installing-upgrading-and-uninstalling-phusion-passenger-laryvs
 
-2.1. Generic installation instructions	=>	generic-installation-instructions-17jo43j
+2.1. Generic installation, upgrade and downgrade method: via RubyGems	=>	installing-via-the-gem-39jw1u
 
-2.1.1. Overview of installation methods	=>	overview-of-installation-methods-12vnjyb
+2.2. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
 
-2.1.2. Preparation (gem and source tarball only)	=>	preparation-gem-and-source-tarball-only--1sxhbgg
+2.3. Installing or upgrading on Ubuntu	=>	installing-or-upgrading-on-ubuntu-1xg22xs
 
-2.1.3. Installing via the gem	=>	installing-via-the-gem-39jw1u
+2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
 
-2.1.4. Installing via the source tarball	=>	installing-via-the-source-tarball-1cgxrqc
+2.5. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
 
-2.1.5. Installing via a native Linux package	=>	installing-via-a-native-linux-package-i1tmhg
+2.6. Locating the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
 
-2.1.6. What does the installer do?	=>	what-does-the-installer-do--3a7z1w
+2.7. Disabling without uninstalling	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
 
-2.2. Operating system-specific instructions and information	=>	operating-system-specific-instructions-and-information-1dfz365
+2.8. Uninstalling	=>	uninstalling-phusion-passenger-1qb4ssq
 
-2.2.1. Ubuntu Linux	=>	ubuntu-linux-1xwc66
-
-2.2.2. OpenSolaris	=>	opensolaris-1e0dynj
-
-2.3. Upgrading or downgrading Phusion Passenger	=>	upgrading-or-downgrading-phusion-passenger-1dl8km6
-
-2.4. Unloading (disabling) Phusion Passenger from Apache without uninstalling it	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
-
-2.5. Uninstalling Phusion Passenger	=>	uninstalling-phusion-passenger-1qb4ssq
+2.9. Moving to a different directory	=>	moving-to-a-different-directory-1n0gkwh
 
 3. Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3.x) application	=>	deploying-a-ruby-on-rails-1-x-or-2-x-but-not-rails-3-x-application-9r92hi
 
@@ -311,10 +303,4 @@
 13.4. Smart spawning gotcha #2: the need to revive threads	=>	smart-spawning-gotcha-2-the-need-to-revive-threads-1k6cj7d
 
 13.5. Smart spawning gotcha #3: code load order	=>	smart-spawning-gotcha-3-code-load-order-nkotiy
-
-Obtaining Phusion Passenger files through a tarball	=>	obtaining-phusion-passenger-files-through-a-tarball-evcm0j
-
-Obtaining Phusion Passenger files with RubyGems	=>	obtaining-phusion-passenger-files-with-rubygems-8fz7a8
-
-Upgrading with native Linux packages	=>	upgrading-with-native-linux-packages-jievu8
 

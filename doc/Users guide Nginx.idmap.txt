@@ -18,25 +18,25 @@
 
 1.2. Where to get support	=>	where-to-get-support-2s9na5
 
-2. Installing Phusion Passenger	=>	installing-phusion-passenger-hn03ac
+2. Installation	=>	installing-phusion-passenger-hn03ac
 
-2.1. Overview	=>	overview-kvhzi4
+2.1. Generic installation, upgrade and downgrade method: via RubyGems	=>	generic-installation-upgrade-and-downgrade-method-via-rubygems-76uol7
 
-2.2. Specifying the correct Ruby installation	=>	specifying-the-correct-ruby-installation-jvqdv6
+2.2. Generic installation, upgrade and downgrade method: via tarball	=>	generic-installation-upgrade-and-downgrade-method-via-tarball-2gkx43
 
-2.3. Installing Phusion Passenger for Nginx through the installer	=>	installing-phusion-passenger-for-nginx-through-the-installer-1lqxes1
+2.3. Installing or upgrading on Ubuntu	=>	installing-or-upgrading-on-ubuntu-fw5fvp
 
-2.3.1. Obtaining the Phusion Passenger files and running the installer	=>	obtaining-the-phusion-passenger-files-and-running-the-installer-6l6ula
+2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1
 
-2.3.2. Non-interactive/automatic installation	=>	non-interactive-automatic-installation-1u97717
+2.5. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-834ymv
 
-2.4. Installing Phusion Passenger for Nginx manually	=>	installing-phusion-passenger-for-nginx-manually-1qg1e2x
+2.6. Installing as a normal Nginx module without using the installer	=>	installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5
 
-2.5. Upgrading or downgrading Phusion Passenger or Nginx itself	=>	upgrading-or-downgrading-phusion-passenger-or-nginx-itself-8dulxz
+2.7. Disabling without uninstalling	=>	disabling-without-uninstalling-1t5tqan
 
-2.6. Unloading (disabling) Phusion Passenger from Nginx without uninstalling it	=>	unloading-disabling-phusion-passenger-from-nginx-without-uninstalling-it-v447e0
+2.8. Uninstalling	=>	uninstalling-phusion-passenger-wuycvb
 
-2.7. Uninstalling Phusion Passenger	=>	uninstalling-phusion-passenger-wuycvb
+2.9. Moving to a different directory	=>	moving-to-a-different-directory-gif3wo
 
 3. Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3) application	=>	deploying-a-ruby-on-rails-1-x-or-2-x-but-not-rails-3-application-b69gqa
 
