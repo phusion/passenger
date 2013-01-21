@@ -22,14 +22,16 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#include <iostream>
-#include <fstream>
-#include "Logging.h"
+#include <iomanip>
+#include <cstdlib>
+#include <fcntl.h>
+#include <unistd.h>
+#include <Logging.h>
 
 namespace Passenger {
 
 int _logLevel = 0;
-ostream *_logStream = &cerr;
+int _logOutput = STDERR_FILENO;
 
 int
 getLogLevel() {
@@ -41,23 +43,46 @@ setLogLevel(int value) {
 	_logLevel = value;
 }
 
-void
+bool
 setDebugFile(const char *logFile) {
-	#ifdef PASSENGER_DEBUG
-		if (logFile != NULL) {
-			ostream *stream = new ofstream(logFile, ios_base::out | ios_base::app);
-			if (stream->fail()) {
-				delete stream;
-			} else {
-				if (_logStream != NULL && _logStream != &cerr) {
-					delete _logStream;
-				}
-				_logStream = stream;
-			}
-		} else {
-			_logStream = &cerr;
+	int fd = open(logFile, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd != -1) {
+		_logOutput = fd;
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void
+_prepareLogEntry(std::stringstream &sstream) {
+	time_t the_time;
+	struct tm the_tm;
+	char datetime_buf[60];
+	struct timeval tv;
+	
+	the_time = time(NULL);
+	localtime_r(&the_time, &the_tm);
+	strftime(datetime_buf, sizeof(datetime_buf) - 1, "%F %H:%M:%S", &the_tm);
+	gettimeofday(&tv, NULL);
+	sstream <<
+		"[ pid=" << std::dec << getpid() <<
+		" thr=" << std::hex << pthread_self() << std::dec <<
+		" time=" << datetime_buf << "." << std::setfill('0') << std::setw(4) <<
+			(unsigned long) (tv.tv_usec / 100) <<
+		" file=" << __FILE__ << ":" << (unsigned long) __LINE__ <<
+		" ]: ";
+}
+
+void
+_writeLogEntry(const std::string &str) {
+	size_t written = 0;
+	do {
+		ssize_t ret = write(_logOutput, str.data() + written, str.size() - written);
+		if (ret != -1) {
+			written += ret;
 		}
-	#endif
+	} while (written < str.size());
 }
 
 } // namespace Passenger
