@@ -1,17 +1,17 @@
 #!/bin/bash
 set -e
 
-if [[ "$RUBY_VERSION" != "" ]]; then
-	echo "$ rvm use $RUBY_VERSION"
+if [[ "$TEST_RUBY_VERSION" != "" ]]; then
+	echo "$ rvm use $TEST_RUBY_VERSION"
 	source ~/.rvm/scripts/rvm
-	rvm use $RUBY_VERSION
+	rvm use $TEST_RUBY_VERSION
 	echo "$ gem --version"
 	gem --version
 fi
 
 if [[ "$TEST_FULL_COMPILE" = 1 ]]; then
-	echo "$ rake apache2"
-	rake apache2
+	echo "$ ./bin/passenger-install-apache2-module --auto"
+	./bin/passenger-install-apache2-module --auto
 	echo "$ rake nginx"
 	rake nginx
 	echo "$ rake test/cxx/CxxTestMain"
