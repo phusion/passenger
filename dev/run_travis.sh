@@ -11,7 +11,7 @@ fi
 
 if [[ "$TEST_FULL_COMPILE" = 1 ]]; then
 	echo "$ gem install rack --no-rdoc --no-ri"
-	echo "gem install rack --no-rdoc --no-ri"
+	gem install rack --no-rdoc --no-ri
 	echo "$ ./bin/passenger-install-apache2-module --auto"
 	./bin/passenger-install-apache2-module --auto
 	echo "$ rake nginx"
