@@ -23,6 +23,8 @@ if [[ "$TEST_FULL_COMPILE" = 1 ]]; then
 fi
 
 if [[ "$TEST_CXX" = 1 ]]; then
+	echo "$ rake test:install_deps RAILS_BUNDLES=no"
+	rake test:install_deps
 	echo "$ rake test:cxx"
 	rake test:cxx
 	echo "$ rake test:oxt"
