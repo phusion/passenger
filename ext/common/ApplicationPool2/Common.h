@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -108,6 +108,35 @@ struct Ticket {
 	SessionPtr session;
 	ExceptionPtr exception;
 };
+
+struct SpawnerConfig {
+	// Used by SmartSpawner and DirectSpawner.
+	/** Whether to forward the preloader process's stdout to our stdout. */
+	bool forwardStdout;
+	/** Whether to forward the preloader process's stderr to our stderr. */
+	bool forwardStderr;
+	/** Where to forward the preloader process's stdout to. */
+	int forwardStdoutTo;
+	/** Where to forward the preloader process's stderr to. */
+	int forwardStderrTo;
+
+	// Used by DummySpawner and SpawnerFactory.
+	unsigned int concurrency;
+	unsigned int spawnerCreationSleepTime;
+	unsigned int spawnTime;
+
+	SpawnerConfig()
+		: forwardStdout(true),
+		  forwardStderr(true),
+		  forwardStdoutTo(STDOUT_FILENO),
+		  forwardStderrTo(STDERR_FILENO),
+		  concurrency(1),
+		  spawnerCreationSleepTime(0),
+		  spawnTime(0)
+		{ }
+};
+
+typedef shared_ptr<SpawnerConfig> SpawnerConfigPtr;
 
 ExceptionPtr copyException(const tracable_exception &e);
 void rethrowException(const ExceptionPtr &e);

@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <climits>
 #include <signal.h>
+#include <fcntl.h>
 
 using namespace std;
 using namespace Passenger;
@@ -190,6 +191,7 @@ namespace tut {
 		// Test that the spawned process can still write to its stderr
 		// after the SmartSpawner has been destroyed.
 		DeleteFileEventually d("tmp.output");
+		FileDescriptor output(open("tmp.output", O_WRONLY | O_CREAT | O_TRUNC, 0600));
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		
@@ -203,6 +205,8 @@ namespace tut {
 				generation,
 				preloaderCommand,
 				options);
+			spawner.getConfig()->forwardStdoutTo = output;
+			spawner.getConfig()->forwardStderrTo = output;
 			process = spawner.spawn(options);
 		}
 		
@@ -218,12 +222,11 @@ namespace tut {
 		data.append(process->connectPassword);
 		data.append(1, '\0');
 
-		{
-			TemporarilyRedirectStdio redirect("tmp.output");
-			writeScalarMessage(session->fd(), data);
-			shutdown(session->fd(), SHUT_WR);
-			readAll(session->fd());
-		}
-		ensure_equals(readAll("tmp.output"), "hello world!\n");
+		writeScalarMessage(session->fd(), data);
+		shutdown(session->fd(), SHUT_WR);
+		readAll(session->fd());
+		EVENTUALLY(2,
+			result = readAll("tmp.output").find("hello world!\n") != string::npos;
+		);
 	}
 }

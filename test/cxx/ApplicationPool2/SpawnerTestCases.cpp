@@ -83,26 +83,6 @@
 		}
 	}
 
-	struct TemporarilyRedirectStdio {
-		FileDescriptor oldStdout, oldStderr, newStdio;
-
-		TemporarilyRedirectStdio(const string &filename) {
-			oldStdout = FileDescriptor(dup(STDOUT_FILENO));
-			oldStderr = FileDescriptor(dup(STDERR_FILENO));
-			newStdio = FileDescriptor(open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600));
-			if (oldStdout == -1  || oldStderr == -1 || newStdio == -1) {
-				throw RuntimeException("Cannot dup or open file descriptor");
-			}
-			dup2(newStdio, STDOUT_FILENO);
-			dup2(newStdio, STDERR_FILENO);
-		}
-
-		~TemporarilyRedirectStdio() {
-			dup2(oldStdout, STDOUT_FILENO);
-			dup2(oldStderr, STDERR_FILENO);
-		}
-	};
-	
 	TEST_METHOD(1) {
 		// Basic spawning test.
 		Options options = createOptions();
@@ -299,10 +279,14 @@
 		// It forwards all stdout and stderr output, even after the corresponding
 		// Process object has been destroyed.
 		DeleteFileEventually d("tmp.output");
+		FileDescriptor output(open("tmp.output", O_WRONLY | O_CREAT | O_TRUNC, 0600));
+
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		options.appType = "rack";
 		SpawnerPtr spawner = createSpawner(options);
+		spawner->getConfig()->forwardStdoutTo = output;
+		spawner->getConfig()->forwardStderrTo = output;
 		ProcessPtr process = spawner->spawn(options);
 		
 		SessionPtr session = process->newSession();
@@ -317,14 +301,14 @@
 		data.append(process->connectPassword);
 		data.append(1, '\0');
 
-		{
-			TemporarilyRedirectStdio redirect("tmp.output");
-			writeScalarMessage(session->fd(), data);
-			shutdown(session->fd(), SHUT_WR);
-			readAll(session->fd());
-			usleep(20000); // Give the I/O event loop some time to handle the data.
-		}
-		ensure_equals(readAll("tmp.output"), "hello stdout!\nhello stderr!\n");
+		writeScalarMessage(session->fd(), data);
+		shutdown(session->fd(), SHUT_WR);
+		readAll(session->fd());
+		EVENTUALLY(2,
+			string data = readAll("tmp.output");
+			result = data.find("hello stdout!\n") != string::npos
+				&& data.find("hello stderr!\n") != string::npos;
+		);
 	}
 	
 	// It raises an exception if getStartupCommand() is empty.

@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <ApplicationPool2/Spawner.h>
 #include <Utils/json.h>
+#include <fcntl.h>
 
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;

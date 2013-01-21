@@ -221,8 +221,7 @@ public:
 		const SocketListPtr &_sockets,
 		unsigned long long _spawnerCreationTime,
 		unsigned long long _spawnStartTime,
-		/** Whether to automatically forward data from errorPipe to our STDERR. */
-		bool _forwardStderr = false)
+		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: pqHandle(NULL),
 		  libev(_libev.get()),
 		  pid(_pid),
@@ -237,16 +236,23 @@ public:
 		  enabled(ENABLED),
 		  oobwRequested(false)
 	{
+		SpawnerConfigPtr config;
+		if (_config == NULL) {
+			config = make_shared<SpawnerConfig>();
+		} else {
+			config = _config;
+		}
+
 		if (_libev != NULL) {
 			setNonBlocking(_adminSocket);
 			adminSocketWatcher = make_shared<PipeWatcher>(_libev, _adminSocket,
-				_forwardStderr ? STDOUT_FILENO : -1);
+				config->forwardStdout ? config->forwardStdoutTo : -1);
 			adminSocketWatcher->start();
 		}
 		if (_libev != NULL && _errorPipe != -1) {
 			setNonBlocking(_errorPipe);
 			errorPipeWatcher = make_shared<PipeWatcher>(_libev, _errorPipe,
-				_forwardStderr ? STDERR_FILENO : -1);
+				config->forwardStderr ? config->forwardStderrTo : -1);
 			errorPipeWatcher->start();
 		}
 		
