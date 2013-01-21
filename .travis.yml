@@ -1,8 +1,10 @@
 language: ruby
 
-rvm:
-  - 1.8.7
-  - 1.9.3
+env:
+  - TEST_FULL_COMPILE=1
+  - TEST_CXX=1
+  - TEST_RUBY=1 RUBY_VERSION=1.8.7
+  - TEST_RUBY=1 RUBY_VERSION=1.9.3
 
 before_install:
   - sudo apt-get install apache2-mpm-worker apache2-threaded-dev
