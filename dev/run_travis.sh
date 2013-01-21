@@ -7,11 +7,11 @@ if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	rvm use $TEST_RUBY_VERSION
 	echo "$ gem --version"
 	gem --version
-	echo "$ rake test:install_deps"
-	rake test:install_deps
 fi
 
 if [[ "$TEST_FULL_COMPILE" = 1 ]]; then
+	echo "$ gem install rack --no-rdoc --no-ri"
+	echo "gem install rack --no-rdoc --no-ri"
 	echo "$ ./bin/passenger-install-apache2-module --auto"
 	./bin/passenger-install-apache2-module --auto
 	echo "$ rake nginx"
@@ -30,6 +30,8 @@ if [[ "$TEST_CXX" = 1 ]]; then
 fi
 
 if [[ "$TEST_RUBY" = 1 ]]; then
+	echo "$ rake test:install_deps"
+	rake test:install_deps
 	echo "$ rake test:ruby"
 	rake test:ruby
 fi
