@@ -8,9 +8,9 @@ distributions, including, but not limited to, Ubuntu, Debian, CentOS/Fedora/RHEL
 Gentoo, Mac OS X, FreeBSD and Solaris. Both 32-bit and 64-bit platforms are supported.
 
 ifdef::apache[]
-  The only POSIX-compliant operating system on which Phusion Passenger for Apache is
-  known not to work at this time, is OpenBSD. Please use Phusion Passenger for Nginx
-  or Phusion Passenger Standalone instead.
+The only POSIX-compliant operating system on which Phusion Passenger for Apache is
+known not to work at this time, is OpenBSD. Please use Phusion Passenger for Nginx
+or Phusion Passenger Standalone instead.
 endif::[]
 
 Please
@@ -24,7 +24,8 @@ if it doesn't work on your POSIX-compliant operating system.
 * link:http://code.google.com/p/phusion-passenger/issues/list[Issue tracker] - report
   bugs here.
 * link:http://groups.google.com/group/phusion-passenger[Discussion forum] - post a
-  message here if you're experiencing problems.
+  message here if you're experiencing problems. Support on this forum is provided by the community on a best-effort basis, so a (timely) response is not guaranteed.
+* Email support@phusion.nl if you are a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customer. Please mention your order reference. If you are not an Enterprise customer, we kindly redirect you to the community discussion forum instead.
 * link:https://www.phusionpassenger.com/commercial_support[Commercial support contracts] are also available.
 
 Please consult link:https://www.phusionpassenger.com/support[the Phusion Passenger website] for a full list of support resources.
