@@ -4,6 +4,7 @@ require 'net/http'
 require 'uri'
 require 'support/multipart'
 require 'phusion_passenger'
+require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/platform_info/ruby'
 
 # Module containing helper methods, to be included in unit tests.
@@ -358,6 +359,7 @@ module TestHelper
 		passenger_tmpdir = PhusionPassenger::Utils.passenger_tmpdir
 		socket_filename = "#{passenger_tmpdir}/logging.socket"
 		pid = spawn_process("#{AGENTS_DIR}/PassengerLoggingAgent",
+			"log_level", PhusionPassenger::DebugLogging.log_level,
 			"analytics_dump_file", dump_file,
 			"analytics_log_user",  CONFIG['normal_user_1'],
 			"analytics_log_group", CONFIG['normal_group_1'],
