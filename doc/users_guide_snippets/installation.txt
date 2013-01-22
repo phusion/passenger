@@ -17,10 +17,10 @@ The steps for upgrading or downgrading Phusion Passenger is almost the same as t
 [float]
 ==== Step 1: figuring out whether your Ruby is installed the home directory or system-wide
 
-Ruby may either be installed in the home directory, or system-wide. If it's installed system-wide, you need to switch to a root prompt first. To find out which case applies, run the following command to find out where the `gem` command is:
+Ruby may either be installed in the home directory, or system-wide. If it's installed system-wide, you need to switch to a root prompt first. To find out which case applies, run the following command to find out where the `ruby` command is:
 
 --------------
-which gem
+which ruby
 --------------
 
 Do you see a filename that references '/home' or '/Users'? If so then your Ruby interpreter is installed in your home directory and you can proceed to step 2. Otherwise, you need to switch to a root prompt by running one of the following commands:
@@ -541,7 +541,7 @@ done this, you need to remove the Phusion Passenger files.
   You <<is_ruby_home_or_system_wide_installed,might have to run this as root>>.
 - If you installed Phusion Passenger via a source tarball, then remove the directory
   in which you placed the extracted Phusion Passenger files. This directory is the
-  same as the one pointed to the by 'PassengerRoot'/'passenger_root' configuration directive.
+  same as the one pointed to the by `PassengerRoot`/`passenger_root` configuration directive.
 - If you installed Phusion Passenger through APT or YUM, then use them to uninstall Phusion Passenger.
 
 ifdef::nginx[]
@@ -552,7 +552,7 @@ endif::[]
 [[moving_phusion_passenger]]
 === Moving to a different directory
 
-If you installed Phusion Passenger through a tarball then you can move the Phusion Passenger directory to another location. This is not possible if you used any other installation methods.
+If you installed Phusion Passenger through a tarball then you can move the Phusion Passenger directory to another location. This is not possible if you used any of the other installation methods.
 
 First, move the directory to whereever you like:
 
