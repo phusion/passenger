@@ -1,6 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/request_handler'
 require 'phusion_passenger/request_handler/thread_handler'
+require 'phusion_passenger/rack/thread_handler_extension'
 require 'phusion_passenger/analytics_logger'
 require 'phusion_passenger/utils'
 
@@ -30,11 +31,18 @@ describe RequestHandler do
 	end
 	
 	after :each do
-		@request_handler.cleanup
-		@owner_pipe[0].close rescue nil
+		stop_request_handler
 		Utils.passenger_tmpdir = @old_passenger_tmpdir
 		FileUtils.chmod_R(0777, "request_handler_spec.tmp")
 		FileUtils.rm_rf("request_handler_spec.tmp")
+	end
+
+	def stop_request_handler
+		if @request_handler
+			@request_handler.cleanup
+			@owner_pipe[0].close rescue nil
+			@request_handler = nil
+		end
 	end
 	
 	def connect(socket_name = :main)
@@ -177,6 +185,84 @@ describe RequestHandler do
 		ensure
 			client.close rescue nil
 		end
+	end
+
+	it "allows the application to take over the socket completely through the full hijack API" do
+		@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+			include Rack::ThreadHandlerExtension
+		end
+
+		lambda_called = false
+
+		@options["app"] = lambda do |env|
+			lambda_called = true
+			env['rack.hijack?'].should be_true
+			env['rack.hijack_io'].should be_nil
+			env['rack.hijack'].call
+			Thread.new do
+				Thread.current.abort_on_exception = true
+				sleep 0.1
+				env['rack.hijack_io'].write("Hijacked response!")
+				env['rack.hijack_io'].close
+			end
+		end
+
+		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
+		@request_handler.start_main_loop_thread
+		client = connect
+		begin
+			send_binary_request(client,
+				"REQUEST_METHOD" => "GET",
+				"PATH_INFO" => "/")
+			stop_request_handler
+			client.read.should == "Hijacked response!"
+		ensure
+			client.close
+		end
+
+		lambda_called.should == true
+	end
+
+	it "allows the application to take over the socket after sending headers through the partial hijack API" do
+		@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+			include Rack::ThreadHandlerExtension
+		end
+
+		lambda_called = false
+		hijack_callback_called = false
+
+		@options["app"] = lambda do |env|
+			lambda_called = true
+			env['rack.hijack?'].should be_true
+			env['rack.hijack_io'].should be_nil
+			hijack_callback = lambda do |socket|
+				hijack_callback_called = true
+				env['rack.hijack_io'].should_not be_nil
+				env['rack.hijack_io'].should == socket
+				socket.write("Hijacked partial response!")
+				socket.close
+			end
+			[200, { 'Content-Type' => 'text/html', 'rack.hijack' => hijack_callback }]
+		end
+
+		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
+		@request_handler.start_main_loop_thread
+		client = connect
+		begin
+			send_binary_request(client,
+				"REQUEST_METHOD" => "GET",
+				"PATH_INFO" => "/")
+			client.read.should ==
+				"Status: 200\r\n" +
+				"Content-Type: text/html\r\n" +
+				"\r\n" +
+				"Hijacked partial response!"
+		ensure
+			client.close
+		end
+
+		lambda_called.should == true
+		hijack_callback_called.should == true
 	end
 	
 	describe "if analytics logger is given" do

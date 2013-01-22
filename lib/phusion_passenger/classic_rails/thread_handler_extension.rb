@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -32,6 +32,7 @@ module ThreadHandlerExtension
 		::Dispatcher.dispatch(cgi,
 			::ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
 			cgi.stdoutput)
+		return false # Socket hijacking not supported.
 	end
 end
 
