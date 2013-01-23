@@ -429,7 +429,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream_config.store_access, 0600);
 
     ngx_conf_merge_value(conf->upstream_config.buffering,
-                              prev->upstream_config.buffering, 1);
+                              prev->upstream_config.buffering, 0);
 
     ngx_conf_merge_value(conf->upstream_config.ignore_client_abort,
                               prev->upstream_config.ignore_client_abort, 0);

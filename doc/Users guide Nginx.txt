@@ -674,19 +674,30 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 ==== passenger_buffer_response <on|off> ====
-When turned on, application-generated responses are buffered in memory and also on
-disk if the response is larger than a certain threshold. By buffering responses,
-protection is provided against slow HTTP clients that can not read your response
-immediately.
+When turned on, application-generated responses are buffered by Nginx. Buffering will
+happen in memory and also on disk if the response is larger than a certain threshold.
 
-For example, consider an HTTP client that's on a dial-up modem link, and your
-application process generates a 2 MB response. If response buffering is turned
-off then your application process will be blocked until the entire 2 MB has been
+Before we proceed with explaining this configuration option, we want to state the following to avoid confusion. If you use Phusion Passenger for Nginx, there are in fact two response buffering systems active:
+
+1. The Nginx response buffering system. `passenger_buffer_response` turns this on or off.
+2. The Phusion Passenger response buffering system, a.k.a. 'real-time disk-backed response buffering'. This buffering system is always on, regardless of the value of `passenger_buffer_response`.
+
+Response buffering is useful because it protects against slow HTTP clients that do not read responses immediately or quickly enough. Buffering prevents such slow clients from blocking web applications that have limited concurrency. Because Phusion Passenger's response buffering is always turned on, you are always protected. Therefore, `passenger_buffer_response` is off by default, and you never should have to turn it on.
+
+If for whatever reason you want to turn Nginx-level response buffering on, you can do so with this option.
+
+Nginx's response buffering works differently from Phusion Passenger's. Nginx's buffering system buffers the entire response before attempting to send it to the client, while Phusion Passenger's attempts to send the data to the client immediately. Therefore, if you turn on `passenger_buffer_response`, you may interfere with applications that want to stream responses to the client.
+
+How does response buffering - whether it's done by Nginx or by Phusion Passenger - exactly protect against slow clients?
+Consider an HTTP client that's on a dial-up modem link, and your
+application process generates a 2 MB response. If the response is buffered
+then your application process will be blocked until the entire 2 MB has been
 sent out to the HTTP client. This disallows your application process to do any useful
-work in the mean time. By enabling response buffering, Phusion Passenger will read
-the application response as quickly as possible and will take care of slow clients.
+work in the mean time. By buffering responses, Phusion Passenger or Nginx will read
+the application response as quickly as possible and will take care of forwarding the data
+to slow clients.
 
-However, keep in mind that enabling this option will make streaming responses
+So keep in mind that enabling `passenger_buffering_response` will make streaming responses
 impossible. Consider for example this piece of Rails code:
 
 --------------------------------
@@ -716,11 +727,11 @@ app = lambda do |env|
 end
 --------------------------------
 
-When response buffering is turned on, Phusion Passenger will wait until
+When `passenger_buffer_response` is turned on, Nginx will wait until
 the application is done sending the entire response before forwarding it
 to the client. The client will not receive anything for 10 seconds,
 after which it receives the entire response at once.
-When response buffering is turned off, it works as expected: the client
+When `passenger_buffer_response` is turned off, it works as expected: the client
 receives an "entry X" message every second for 10 seconds.
 
 This option may occur in the following places:
@@ -730,7 +741,7 @@ This option may occur in the following places:
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-In each place, it may be specified at most once. The default value is 'on'.
+In each place, it may be specified at most once. The default value is 'off'.
 
 ==== passenger_buffer_size ====
 ==== passenger_buffers ====
