@@ -144,13 +144,13 @@
 
 6.9.6. passenger_max_preloader_idle_time <integer>	=>	rails-app-spawner-idle-time-integer--1xjqe4b
 
-6.9.7. passenger_concurrency_model <process|thread>	=>	passenger-max-requests
+6.9.7. passenger_concurrency_model <process|thread>	=>	passenger-concurrency-model-process-thread--brcvkk
 
-6.9.8. passenger_thread_count <number>	=>	passenger-max-request-time-seconds--1qod9kg
+6.9.8. passenger_thread_count <number>	=>	passenger-thread-count-number--1kd6ffy
 
 6.9.9. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint
 
-6.9.10. passenger_max_request_time <seconds>	=>	passenger-pre-start-url--1f2phk7
+6.9.10. passenger_max_request_time <seconds>	=>	passenger-max-request-time-seconds--1htog2g
 
 6.9.11. passenger_memory_limit <integer>	=>	passenger-memory-limit-integer--1ry7dwx
 

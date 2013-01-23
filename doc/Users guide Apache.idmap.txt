@@ -134,17 +134,21 @@
 
 6.13.6. PassengerMaxPreloaderIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
 
-6.13.7. PassengerMaxRequests <integer>	=>	passengermaxrequests
+6.13.7. PassengerConcurrencyModel <process|thread>	=>	passengerconcurrencymodel-process-thread--1eipofj
 
-6.13.8. PassengerMaxRequestTime <seconds>	=>	passengermaxrequesttime-seconds--aj9w45
+6.13.8. PassengerThreadCount <number>	=>	passengerthreadcount-number--10jl64a
 
-6.13.9. PassengerMemoryLimit <integer>	=>	passengermemorylimit
+6.13.9. PassengerMaxRequests <integer>	=>	passengermaxrequests-integer--17qkw9n
 
-6.13.10. PassengerStatThrottleRate <integer>	=>	passengerstatthrottlerate
+6.13.10. PassengerMaxRequestTime <seconds>	=>	passengermaxrequesttime-seconds--127v1i2
 
-6.13.11. PassengerPreStart <url>	=>	passengerprestart-url--1dvgku9
+6.13.11. PassengerMemoryLimit <integer>	=>	passengermemorylimit-integer--18irza1
 
-6.13.12. PassengerHighPerformance <on|off>	=>	passengerhighperformance-on-off--zgc547
+6.13.12. PassengerStatThrottleRate <integer>	=>	passengerstatthrottlerate-integer--1dcfda3
+
+6.13.13. PassengerPreStart <url>	=>	passengerprestart-url--1utb57k
+
+6.13.14. PassengerHighPerformance <on|off>	=>	passengerhighperformance-on-off--nvfa86
 
 6.14. Compatibility options	=>	compatibility-options-8jve5a
 
@@ -154,11 +158,11 @@
 
 6.15. Logging and debugging options	=>	logging-and-debugging-options-el2cuc
 
-6.15.1. PassengerLogLevel <integer>	=>	passengerloglevel-integer--1v67p8l
+6.15.1. PassengerLogLevel <integer>	=>	passengerloglevel-integer--s3kbil
 
-6.15.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1tfy4z9
+6.15.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1wjm2j1
 
-6.15.3. PassengerDebugger <on|off>	=>	passengerdebugger-on-off--1qk9j40
+6.15.3. PassengerDebugger <on|off>	=>	passengerdebugger-on-off--19you7e
 
 6.16. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
 
