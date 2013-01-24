@@ -23,7 +23,6 @@
 #  THE SOFTWARE.
 
 import sys, os, re, imp, traceback, socket, select, struct, logging, errno
-from socket import _fileobject
 
 options = {}
 
@@ -76,9 +75,21 @@ def advertise_sockets(socket_filename):
 if sys.version_info[0] >= 3:
 	def reraise_exception(exc_info):
 		raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
+
+	def bytes_to_str(b):
+		return b.decode()
+
+	def str_to_bytes(s):
+		return s.encode('latin-1')
 else:
 	def reraise_exception(exc_info):
 		exec("raise exc_info[0], exc_info[1], exc_info[2]")
+
+	def bytes_to_str(b):
+		return b
+
+	def str_to_bytes(s):
+		return s
 
 
 class RequestHandler:
@@ -127,7 +138,7 @@ class RequestHandler:
 			return (None, None)
 	
 	def parse_request(self, client):
-		buf = ''
+		buf = b''
 		while len(buf) < 4:
 			tmp = client.recv(4 - len(buf))
 			if len(tmp) == 0:
@@ -135,23 +146,30 @@ class RequestHandler:
 			buf += tmp
 		header_size = struct.unpack('>I', buf)[0]
 		
-		buf = ''
+		buf = b''
 		while len(buf) < header_size:
 			tmp = client.recv(header_size - len(buf))
 			if len(tmp) == 0:
 				return (None, None)
 			buf += tmp
 		
-		headers = buf.split("\0")
+		headers = buf.split(b"\0")
 		headers.pop() # Remove trailing "\0"
 		env = {}
 		i = 0
 		while i < len(headers):
-			env[headers[i]] = headers[i + 1]
+			env[bytes_to_str(headers[i])] = bytes_to_str(headers[i + 1])
 			i += 2
-		
+
 		return (env, client)
 	
+	if hasattr(socket, '_fileobject'):
+		def wrap_input_socket(self, sock):
+			return socket._fileobject(sock, 'r', 512)
+	else:
+		def wrap_input_socket(self, sock):
+			return socket.socket.makefile(sock, 'r', 512)
+
 	def process_request(self, env, input_stream, output_stream):
 		# The WSGI speculation says that the input parameter object passed needs to
 		# implement a few file-like methods. This is the reason why we "wrap" the socket._socket
@@ -160,10 +178,10 @@ class RequestHandler:
 		# Otherwise, the POST data won't be correctly retrieved by Django.
 		#
 		# See: http://www.python.org/dev/peps/pep-0333/#input-and-error-streams
-		env['wsgi.input']		 = _fileobject(input_stream, 'r', 512)
-		env['wsgi.errors']		 = sys.stderr
-		env['wsgi.version']		 = (1, 0)
-		env['wsgi.multithread']	 = False
+		env['wsgi.input']        = self.wrap_input_socket(input_stream)
+		env['wsgi.errors']       = sys.stderr
+		env['wsgi.version']      = (1, 0)
+		env['wsgi.multithread']  = False
 		env['wsgi.multiprocess'] = True
 		env['wsgi.run_once']	 = True
 		if env.get('HTTPS','off') in ('on', '1', 'true', 'yes'):
@@ -181,10 +199,10 @@ class RequestHandler:
 				elif not headers_sent:
 					# Before the first output, send the stored headers.
 					status, response_headers = headers_sent[:] = headers_set
-					output_stream.sendall('Status: %s\r\n' % status)
+					output_stream.sendall(str_to_bytes('Status: %s\r\n' % status))
 					for header in response_headers:
-						output_stream.sendall('%s: %s\r\n' % header)
-					output_stream.sendall('\r\n')
+						output_stream.sendall(str_to_bytes('%s: %s\r\n' % header))
+					output_stream.sendall(b'\r\n')
 				output_stream.sendall(data)
 			except IOError:
 				# Mark this exception as coming from the Phusion Passenger
@@ -216,13 +234,13 @@ class RequestHandler:
 					write(data)
 			if not headers_sent:
 				# Send headers now if body was empty.
-				write('')
+				write(b'')
 		finally:
 			if hasattr(result, 'close'):
 				result.close()
 	
 	def process_ping(self, env, input_stream, output_stream):
-		output_stream.sendall("pong")
+		output_stream.sendall(b"pong")
 
 
 if __name__ == "__main__":
