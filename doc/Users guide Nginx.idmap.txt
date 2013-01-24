@@ -130,7 +130,9 @@
 
 6.8.5. Passenger_default_group <group name>	=>	passenger-default-group-group-name--1qxn2qa
 
-6.8.6. passenger_friendly_error_pages <on|off>	=>	passenger-friendly-error-pages-on-off--1ti1a0e
+6.8.6. passenger_show_version_in_header <on|off>	=>	passenger-show-version-in-header-on-off--2h49av
+
+6.8.7. passenger_friendly_error_pages <on|off>	=>	passenger-friendly-error-pages-on-off--1ti1a0e
 
 6.9. Resource control and optimization options	=>	resource-control-and-optimization-options-xd7evs
 

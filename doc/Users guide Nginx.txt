@@ -811,6 +811,30 @@ This option may only occur once, in the 'http' configuration block.
 The default value is the primary group of the user specifified by
 <<PassengerDefaultUser,passenger_default_user>>.
 
+==== passenger_show_version_in_header <on|off> ====
+When turned on, Phusion Passenger will output its version number in the `Server` and `X-Powered-By` header in all Phusion Passenger-served requests:
+
+----------------------------------------------------
+Server: nginx/1.3.11 + Phusion Passenger 4.0.0
+X-Powered-By: Phusion Passenger 4.0.0
+----------------------------------------------------
+
+When turned off, the version number will be hidden:
+
+----------------------------------------------------
+Server: nginx/1.3.11 + Phusion Passenger
+X-Powered-By: Phusion Passenger
+----------------------------------------------------
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
 ==== passenger_friendly_error_pages <on|off> ====
 Phusion Passenger can display friendly error pages whenever an application fails
 to start. This friendly error page presents the startup error message, some
