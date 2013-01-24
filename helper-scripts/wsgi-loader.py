@@ -98,10 +98,11 @@ class RequestHandler:
 								self.process_request(env, input_stream, client)
 					except KeyboardInterrupt:
 						done = True
-					except IOError, e:
+					except IOError:
+						e = sys.exc_info()[1]
 						if not getattr(e, 'passenger', False) or e.errno != errno.EPIPE:
 							logging.exception("WSGI application raised an I/O exception!")
-					except Exception, e:
+					except Exception:
 						logging.exception("WSGI application raised an exception!")
 				finally:
 					try:
@@ -178,9 +179,10 @@ class RequestHandler:
 						output_stream.sendall('%s: %s\r\n' % header)
 					output_stream.sendall('\r\n')
 				output_stream.sendall(data)
-			except IOError, e:
+			except IOError:
 				# Mark this exception as coming from the Phusion Passenger
 				# socket and not some other socket.
+				e = sys.exc_info()[1]
 				setattr(e, 'passenger', True)
 				raise e
 		
