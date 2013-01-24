@@ -208,6 +208,8 @@
 
 8.8. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-11mzwt6
 
+8.9. Out-of-Band Garbage Work and Out-of-Band Garbage Collection	=>	out-of-band-garbage-work-and-out-of-band-garbage-collection-v89lu2
+
 9. Under the hood	=>	under-the-hood-8uney
 
 9.1. Page caching support	=>	page-caching-support-nafhf6

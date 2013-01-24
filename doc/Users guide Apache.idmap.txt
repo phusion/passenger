@@ -268,9 +268,11 @@
 
 9.8. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-a63b6r
 
-9.9. X-Sendfile support	=>	x-sendfile-support-1cgyykw
+9.9. Out-of-Band Garbage Work and Out-of-Band Garbage Collection	=>	out-of-band-garbage-work-and-out-of-band-garbage-collection-kav2p8
 
-9.10. Upload progress	=>	upload-progress-71cyl7
+9.10. X-Sendfile support	=>	x-sendfile-support-1cgyykw
+
+9.11. Upload progress	=>	upload-progress-71cyl7
 
 10. Under the hood	=>	under-the-hood-21ue5t
 

@@ -205,3 +205,56 @@ These helper methods are more valuable than you may think. For example they also
 append a timestamp to the URI to better facilitate HTTP caching. For more information,
 please refer to
 link:http://api.rubyonrails.org/classes/ActionView/Helpers/AssetTagHelper.html[the Rails API docs].
+
+=== Out-of-Band Garbage Work and Out-of-Band Garbage Collection
+
+**Available since Phusion Passenger 4.0.0.**
+
+**At this time, this feature is only available on Ruby.**
+
+The Out-of-Band Work feature allows you to run arbitrary long-running tasks outside normal request cycles. This works by letting current requests to the process finish, then telling the process to perform the out-of-band work, then resuming passing requests to the process after said work is finished.
+
+A specific (and perhaps primary) use case of of Out-of-Band Work is *Out-of-Band Garbage Collection*. The garbage collector is run outside normal request cycles so that garbage collection runs inside normal request cycles can finish a lot faster. This can potentially save tens to hundreds of milliseconds of latency in requests.
+
+Because Out-of-Band Work is implemented at the Phusion Passenger inter-process request routing level, and not by, say, spawning a thread inside the application process, Out-of-Band Work has the following useful properties:
+
+- It works well even with tasks that can pause all threads. The MRI Ruby garbage collector is a stop-the-world mark-and-sweep garbage collector.
+- Phusion Passenger can spawn more processes as necessary, in order to prevent situations in which all application processes are busy performing out-of-band work. Phusion Passenger guarantees that there's at least one process that's ready to process requests.
+
+Applications can use Out-of-Band Work as follows:
+
+1. Request out-of-band work by outputting the `X-Passenger-Request-OOB-Work` header during a request. It does not matter what the value is. At this time, it is not possible to request out-of-band work from outside requests.
+2. You can actually perform out-of-band work when you receive a `:oob_work` Phusion Passenger event.
+
+Note that even though you can request out-of-band work, there's no guarantee that Phusion Passenger will send an `oob_work` event in a timely manner, if at all. It is also possible that Phusion Passenger sends an `oob_work` event without you ever having requested one. This latter could for example happen if the OOB work is administrator-initiated. Do not make any assumptions in your code.
+
+Here's an example which implements out-of-band garbage collection using the Out-of-Band framework:
+
+[source, ruby]
+-------------------------------------------------
+# Somewhere in a controller method:
+# Tell Phusion Passenger we want to perform OOB work.
+response.headers["X-Passenger-Request-OOB-Work"] = "true"
+
+# Somewhere during application initialization:
+PhusionPassenger.on_event(:oob_work) do
+  # Phusion Passenger has told us that we're ready to perform OOB work.
+  t0 = Time.now
+  GC.start
+  Rails.logger.info "Out-Of-Bound GC finished in #{Time.now - t0} sec"
+end
+-------------------------------------------------
+
+For your convenience, Phusion Passenger provides a Rack middleware for out-of-band garbage collection. Add this to your `config.ru`:
+
+[source, ruby]
+----------------------------------------------------
+require 'phusion_passenger/rack/out_of_band_gc'
+
+# Trigger out-of-band GC every 5 requests.
+use PhusionPassenger::Rack::OutOfBandGc, 5
+----------------------------------------------------
+
+References:
+
+- link:http://blog.phusion.nl/2013/01/22/phusion-passenger-4-technology-preview-out-of-band-work/[The Phusion Blog article which first introduced this feature.]
