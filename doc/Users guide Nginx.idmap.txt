@@ -28,15 +28,17 @@
 
 2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1
 
-2.5. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-834ymv
+2.5. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-1a58c2b
 
-2.6. Installing as a normal Nginx module without using the installer	=>	installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5
+2.6. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-834ymv
 
-2.7. Disabling without uninstalling	=>	disabling-without-uninstalling-1t5tqan
+2.7. Installing as a normal Nginx module without using the installer	=>	installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5
 
-2.8. Uninstalling	=>	uninstalling-phusion-passenger-wuycvb
+2.8. Disabling without uninstalling	=>	disabling-without-uninstalling-1t5tqan
 
-2.9. Moving to a different directory	=>	moving-to-a-different-directory-gif3wo
+2.9. Uninstalling	=>	uninstalling-phusion-passenger-wuycvb
+
+2.10. Moving to a different directory	=>	moving-to-a-different-directory-gif3wo
 
 3. Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3) application	=>	deploying-a-ruby-on-rails-1-x-or-2-x-but-not-rails-3-application-b69gqa
 

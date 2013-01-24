@@ -17,7 +17,9 @@ The steps for upgrading or downgrading Phusion Passenger is almost the same as t
 [float]
 ==== Step 1: figuring out whether your Ruby is installed the home directory or system-wide
 
-Ruby may either be installed in the home directory, or system-wide. If it's installed system-wide, you need to switch to a root prompt first. To find out which case applies, run the following command to find out where the `ruby` command is:
+Ruby may either be installed in the home directory, or system-wide. If it's installed system-wide then we will want to install gems system-wide as well, so you need to switch to a root prompt first. If Ruby is installed in the home directory then we will want to install gems to the home directory as well, as a normal user.
+
+To find out which case applies, run the following command to find out where the `ruby` command is:
 
 --------------
 which ruby
@@ -62,7 +64,11 @@ gem install passenger --version 3.9.1.beta --pre
 
 .Enterprise
 
-The `gem install` command only installs the open source version of Phusion Passenger. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should obtain the gem from the link:https://www.phusionpassenger.com/orders[Customer Area] instead. Login with your order reference and password. The Customer Area will show you a list of files. Download the gem file for the version you want (`passenger-enterprise-server-x.x.x.gem`) and install it with:
+The `gem install` command only installs the open source version of Phusion Passenger. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should obtain the gem from the link:https://www.phusionpassenger.com/orders[Customer Area] instead. Login with your order reference and password. The Customer Area will show you a list of files.
+
+First, download the *license key* and save it as '/etc/passenger-enterprise-license'.
+
+Next, download the *gem file* for the version you want (`passenger-enterprise-server-x.x.x.gem`) and install it with:
 
 -------------------------------------------------------
 gem install passenger-enterprise-server-x.x.x.gem
@@ -178,7 +184,7 @@ If the output is not as expected, then please refer to the <<troubleshooting,Tro
 
 Download the open source Phusion Passenger tarball from link:https://www.phusionpassenger.com/download#open_source[the Phusion Passenger website]. If you want a specific version, please refer to the release archive on link:http://rubyforge.org/frs/?group_id=5873&release_id=46919[RubyForge].
 
-If you a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customer, download the Phusion Passenger Enterprise tarball from the link:https://www.phusionpassenger.com/orders[Customer Area].
+If you a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customer, download the Phusion Passenger Enterprise tarball from the link:https://www.phusionpassenger.com/orders[Customer Area]. Also be sure to download the *license key* and save it as '/etc/passenger-enterprise-license'.
 
 Once you have downloaded the tarball, pick a location to extract it to. You can pick any location. A good location is '/opt/passenger'. Let's call this location `$PREFIX`. Create this directory and extract the tarball as follows:
 
@@ -207,7 +213,9 @@ chmod o+x /opt
 [float]
 ==== Step 3: installing Ruby and Rake
 
-Phusion Passenger supports multiple languages, but its installer and administration tools are written in Ruby, so you must install that.
+Phusion Passenger supports multiple languages and its core is written in C++, but its installer and administration tools are written in Ruby, so you must install that.
+
+Even though Ruby is required, Ruby will not be loaded during normal operation unless you deploy a Ruby web application on Phusion Passenger.
 
 Run `ruby --version` and `rake --version` to find out whether both commands are already installed and recent enough. Phusion Passenger requires Ruby >= 1.8.6. Any Rake version will do.
 
@@ -265,7 +273,11 @@ sudo apt-get update
 
 .Other operating systems
 
-Please refer to link:http://www.ruby-lang.org/[the Ruby website].
+Please install Ruby from link:http://www.ruby-lang.org/[the Ruby website]. Once Ruby is installed, run the following command (<<is_ruby_home_or_system_wide_installed,possibly as root>>) to install Rake:
+
+-----------------------
+gem install rake
+-----------------------
 
 [float]
 ==== Step 4: figuring out whether your Ruby is installed the home directory or system-wide
@@ -277,10 +289,10 @@ Depending on whether you installed Ruby system-wide, you need to enter a root pr
 
 Please refer to <<run_passenger_installer,this section>>.
 ifdef::apache[]
-Note that the 'passenger-install-apache2-module' command is inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-install-apache2-module'.
+Note that the `passenger-install-apache2-module` command is inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-install-apache2-module'.
 endif::[]
 ifdef::nginx[]
-Note that the 'passenger-install-nginx-module' command is inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-install-nginx-module'.
+Note that the `passenger-install-nginx-module` command is inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-install-nginx-module'.
 endif::[]
 
 [float]
@@ -374,13 +386,25 @@ yum install passenger-standalone
 There are instructions for building your own packages and Yum repositories in the link:https://github.com/FooBarWidget/passenger/tree/master/rpm#readme[rpm directory ReadMe] within the link:https://github.com/FooBarWidget/passenger[GitHub repository].
 
 
+=== Upgrading from open source to Enterprise
+
+Phusion Passenger comes in two variants: an open source version, as well as an link:https://www.phusionpassenger.com/enterprise[Enterprise version] which introduces a myriad of useful features that can improve stability and performance and efficiency.
+
+Customers who have bought Phusion Passenger Enterprise can upgrade their open source installation to Enterprise as follows:
+
+1. <<uninstalling,Uninstall the open source Phusion Passenger>>.
+2. Install the Enterprise version by following one of the installation guides in this section (e.g. <<rubygems_generic_install,RubyGems generic installation>> or <<tarball_generic_install,tarball generic installation>>).
+
+The uninstallation is necessary because the Enterprise Ruby gem has a different gem name ('passenger-enterprise-server' instead of 'passenger'), but the same administration command names (e.g. `passenger-status`). Uninstalling the open source version avoids any conflicts.
+
+
 === Non-interactive, automatic, headless installs or upgrades
 
 ifdef::apache[]
-By default, the installer ('passenger-install-apache2-module') is interactive. If you want to automate installation then you can do so by passing '--auto' to the installer. See also 'passenger-install-apache2-module --help' for more options.
+By default, the installer (`passenger-install-apache2-module`) is interactive. If you want to automate installation then you can do so by passing `--auto` to the installer. See also `passenger-install-apache2-module --help` for more options.
 endif::[]
 ifdef::nginx[]
-By default, the installer ('passenger-install-nginx-module') is interactive. If you want to automate installation then you can do so by passing various answers to the installer through command line options. Please run the installer with `--help` for a list of available command line options.
+By default, the installer (`passenger-install-nginx-module`) is interactive. If you want to automate installation then you can do so by passing various answers to the installer through command line options. Please run the installer with `--help` for a list of available command line options.
 endif::[]
 
 
@@ -531,13 +555,14 @@ endif::[]
 
 After you've done this, save the configuration file and restart the web server.
 
+[[uninstalling]]
 === Uninstalling
 
 To uninstall Phusion Passenger, please first remove all Phusion Passenger
 configuration directives from your web server configuration file(s). After you've
 done this, you need to remove the Phusion Passenger files.
 
-- If you installed Phusion Passenger via a gem, then run `gem uninstall passenger`.
+- If you installed Phusion Passenger via a Ruby gem, then run `gem uninstall passenger` (or, if you're an link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] user, `gem uninstall passenger-enterprise-server`).
   You <<is_ruby_home_or_system_wide_installed,might have to run this as root>>.
 - If you installed Phusion Passenger via a source tarball, then remove the directory
   in which you placed the extracted Phusion Passenger files. This directory is the
