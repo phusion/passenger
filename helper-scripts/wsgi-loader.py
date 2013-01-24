@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -72,6 +72,13 @@ def create_server_socket():
 def advertise_sockets(socket_filename):
 	print("!> socket: main;unix:%s;session;1" % socket_filename)
 	print("!> ")
+
+if sys.version_info[0] >= 3:
+	def reraise_exception(exc_info):
+		raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
+else:
+	def reraise_exception(exc_info):
+		exec("raise exc_info[0], exc_info[1], exc_info[2]")
 
 
 class RequestHandler:
@@ -146,7 +153,7 @@ class RequestHandler:
 		return (env, client)
 	
 	def process_request(self, env, input_stream, output_stream):
-		# The WSGI speculation says that the input paramter object passed needs to
+		# The WSGI speculation says that the input parameter object passed needs to
 		# implement a few file-like methods. This is the reason why we "wrap" the socket._socket
 		# into the _fileobject to solve this.
 		#
@@ -191,7 +198,7 @@ class RequestHandler:
 				try:
 					if headers_sent:
 						# Re-raise original exception if headers sent.
-						raise exc_info[0], exc_info[1], exc_info[2]
+						reraise_exception(exc_info)
 				finally:
 					# Avoid dangling circular ref.
 					exc_info = None
