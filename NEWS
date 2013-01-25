@@ -1,14 +1,16 @@
 Release 3.9.2
 -------------
 
- * JRuby and Rubinius support.
+ * New feature: JRuby and Rubinius support.
+ * New feature: Out of Band Work.
  * Sending SIGBART to a Ruby process will now trigger the same behavior
    as SIGQUIT - that is, it will print a backtrace. This is necessary
    for proper JRuby support because JRuby cannot catch SIGQUIT.
  * Rolling restarts and depoyment error resistance are now also available
    in Phusion Passenger Standalone in the Enterprise version.
- * New feature: out of band work.
+ * System call failure simulation framework.
  * Improved crash reporting.
+ * Many documentation improvements.
  * Many bug fixes.
 
 
