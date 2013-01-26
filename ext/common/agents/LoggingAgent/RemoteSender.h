@@ -446,7 +446,7 @@ public:
 		thr = new oxt::thread(
 			boost::bind(&RemoteSender::threadMain, this),
 			"RemoteSender thread",
-			1024 * 64
+			1024 * 512
 		);
 	}
 	
