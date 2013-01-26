@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010, 2011, 2012 Phusion
+ * Copyright (C) 2010-2013 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,7 +82,6 @@ typedef struct {
     ngx_uint_t   union_station_gateway_port;
     ngx_str_t    union_station_gateway_cert;
     ngx_str_t    union_station_proxy_address;
-    ngx_str_t    union_station_proxy_type;
     ngx_array_t *prestart_uris;
 } passenger_main_conf_t;
 

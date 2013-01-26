@@ -1273,7 +1273,6 @@ public:
 			serverConfig.unionStationGatewayPort,
 			serverConfig.unionStationGatewayCert,
 			serverConfig.unionStationProxyAddress,
-			serverConfig.unionStationProxyType,
 			serverConfig.prestartURLs);
 		
 		// Store some relevant information in the generation directory.

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010-2012 Phusion
+ * Copyright (C) 2010-2013 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -236,7 +236,6 @@ start_helper_server(ngx_cycle_t *cycle) {
     char   *union_station_gateway_address;
     char   *union_station_gateway_cert;
     char   *union_station_proxy_address;
-    char   *union_station_proxy_type;
     char   *error_message = NULL;
     
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
@@ -252,7 +251,6 @@ start_helper_server(ngx_cycle_t *cycle) {
     union_station_gateway_address = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_address);
     union_station_gateway_cert = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_cert);
     union_station_proxy_address = ngx_str_null_terminate(&passenger_main_conf.union_station_proxy_address);
-    union_station_proxy_type = ngx_str_null_terminate(&passenger_main_conf.union_station_proxy_type);
     
     prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
     prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
@@ -281,7 +279,6 @@ start_helper_server(ngx_cycle_t *cycle) {
         passenger_main_conf.union_station_gateway_port,
         union_station_gateway_cert,
         union_station_proxy_address,
-        union_station_proxy_type,
         (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts,
         starting_helper_server_after_fork,
         cycle,
@@ -341,7 +338,6 @@ cleanup:
     free(union_station_gateway_address);
     free(union_station_gateway_cert);
     free(union_station_proxy_address);
-    free(union_station_proxy_type);
     free(error_message);
     if (prestart_uris_ary != NULL) {
         for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {

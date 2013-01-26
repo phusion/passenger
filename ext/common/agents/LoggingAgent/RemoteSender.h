@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -43,6 +43,7 @@
 #include <Utils/SystemTime.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/Base64.h>
+#include <Utils/Curl.h>
 
 namespace Passenger {
 
@@ -72,8 +73,7 @@ private:
 		string ip;
 		unsigned short port;
 		string certificate;
-		string proxyAddress;
-		string proxyType;
+		const CurlProxyInfo *proxyInfo;
 		
 		CURL *curl;
 		struct curl_slist *headers;
@@ -105,16 +105,6 @@ private:
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlDataReceived);
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
-			if (!proxyAddress.empty()) {
-				curl_easy_setopt(curl, CURLOPT_PROXY, proxyAddress.c_str());
-				if (proxyType.empty() || proxyType == "http") {
-					curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
-				} else if (proxyType == "socks5") {
-					curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
-				} else {
-					throw RuntimeException("Only 'http' and 'socks5' proxies are supported.");
-				}
-			}
 			if (certificate.empty()) {
 				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
 			} else {
@@ -126,6 +116,7 @@ private:
 			 * certificate then it doesn't matter.
 			 */
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+			setCurlProxy(curl, *proxyInfo);
 			responseBody.clear();
 		}
 		
@@ -142,13 +133,12 @@ private:
 		
 	public:
 		Server(const string &ip, const string &hostName, unsigned short port, const string &cert,
-			const string &proxyAddress, const string &proxyType)
+			const CurlProxyInfo *proxyInfo)
 		{
 			this->ip = ip;
 			this->port = port;
 			certificate = cert;
-			this->proxyAddress = proxyAddress;
-			this->proxyType = proxyType;
+			this->proxyInfo = proxyInfo;
 			
 			hostHeader = "Host: " + hostName;
 			headers = NULL;
@@ -264,8 +254,7 @@ private:
 	string gatewayAddress;
 	unsigned short gatewayPort;
 	string certificate;
-	string proxyAddress;
-	string proxyType;
+	CurlProxyInfo proxyInfo;
 	BlockingQueue<Item> queue;
 	oxt::thread *thr;
 	
@@ -320,7 +309,7 @@ private:
 		servers.clear();
 		for (it = ips.begin(); it != ips.end(); it++) {
 			ServerPtr server = make_shared<Server>(*it, gatewayAddress, gatewayPort,
-				certificate, proxyAddress, proxyType);
+				certificate, &proxyInfo);
 			if (server->ping()) {
 				servers.push_back(server);
 			} else {
@@ -441,14 +430,19 @@ private:
 	
 public:
 	RemoteSender(const string &gatewayAddress, unsigned short gatewayPort, const string &certificate,
-		const string &proxyAddress, const string &proxyType)
+		const string &proxyAddress)
 		: queue(1024)
 	{
+		TRACE_POINT();
 		this->gatewayAddress = gatewayAddress;
 		this->gatewayPort = gatewayPort;
 		this->certificate = certificate;
-		this->proxyAddress = proxyAddress;
-		this->proxyType = proxyType;
+		try {
+			this->proxyInfo = prepareCurlProxy(proxyAddress);
+		} catch (const ArgumentException &e) {
+			throw RuntimeException("Invalid Union Station proxy address \"" +
+				proxyAddress + "\": " + e.what());
+		}
 		thr = new oxt::thread(
 			boost::bind(&RemoteSender::threadMain, this),
 			"RemoteSender thread",

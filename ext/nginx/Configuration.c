@@ -95,8 +95,6 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->union_station_gateway_cert.len = 0;
     conf->union_station_proxy_address.data = NULL;
     conf->union_station_proxy_address.len = 0;
-    conf->union_station_proxy_type.data = NULL;
-    conf->union_station_proxy_type.len = 0;
     
     conf->prestart_uris = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
     if (conf->prestart_uris == NULL) {
@@ -207,14 +205,6 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     
     if (conf->union_station_proxy_address.len == 0) {
         conf->union_station_proxy_address.data = (u_char *) "";
-    }
-    
-    if (conf->union_station_proxy_type.len == 0) {
-        conf->union_station_proxy_type.data = (u_char *) "";
-        
-    } else if (!ngx_str_equals(&conf->union_station_proxy_type, "http")
-            && !ngx_str_equals(&conf->union_station_proxy_type, "socks5")) {
-        return "union_station_proxy_type may only be 'http' or 'socks5'.";
     }
     
     return NGX_CONF_OK;
@@ -1220,13 +1210,6 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, union_station_proxy_address),
-      NULL },
-
-    { ngx_string("union_station_proxy_type"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, union_station_proxy_type),
       NULL },
 
     { ngx_string("union_station_filter"),
