@@ -104,10 +104,11 @@ EXTRA_CXXFLAGS << " -mno-tls-direct-seg-refs" if PlatformInfo.requires_no_tls_di
 # Work around Clang warnings in ev++.h.
 EXTRA_CXXFLAGS << " -Wno-ambiguous-member-template" if PlatformInfo.cxx_is_clang?
 EXTRA_CXXFLAGS << " #{OPTIMIZATION_FLAGS}" if !OPTIMIZATION_FLAGS.empty?
+EXTRA_CXXFLAGS << " " << string_option('EXTRA_CXXFLAGS').gsub("\n", " ") if string_option('EXTRA_CXXFLAGS')
 
 # Extra linker flags that should always be passed to the linker.
 # Should be included last in the command string, even after PlatformInfo.portability_ldflags.
-EXTRA_LDFLAGS  = ""
+EXTRA_LDFLAGS  = string_option('EXTRA_LDFLAGS', '').gsub("\n", " ")
 
 
 if string_option('OUTPUT_DIR')
