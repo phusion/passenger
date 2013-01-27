@@ -237,7 +237,7 @@ private:
 			CURLcode code = curl_easy_perform(curl);
 			curl_formfree(post);
 			
-			if (code == 0) {
+			if (code == CURLE_OK) {
 				guard.clear();
 				// TODO: check response
 				return true;
