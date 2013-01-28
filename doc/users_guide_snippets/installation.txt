@@ -365,13 +365,13 @@ From there you can use link:http://prefetch.net/articles/yum.html[YUM] to instal
 Phusion Passenger for Apache:
 
 ---------------------------------------------
-yum install nginx-passenger
+yum install mod_passenger
 ---------------------------------------------
 
 Phusion Passenger for Nginx:
 
 ---------------------------------------------
-yum install mod_passenger
+yum install nginx-passenger
 ---------------------------------------------
 
 Phusion Passenger Standalone:
