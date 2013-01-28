@@ -189,10 +189,10 @@ TEST_CXX_OBJECTS = {
 dependencies = [
 	'test/cxx/CxxTestMain',
 	'test/support/allocate_memory',
-	:native_support,
+	NATIVE_SUPPORT_TARGET,
 	AGENT_OUTPUT_DIR + 'SpawnPreparer',
 	AGENT_OUTPUT_DIR + 'EnvPrinter'
-]
+].compact
 desc "Run unit tests for the Apache 2 and Nginx C++ components"
 task 'test:cxx' => dependencies do
 	args = ENV['GROUPS'].to_s.split(",").map{ |name| "-g #{name}" }
