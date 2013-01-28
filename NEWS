@@ -1,5 +1,13 @@
-Release 3.9.2
--------------
+Release 3.9.3 (4.0.0 release candidate 1)
+-----------------------------------------
+
+ * Fixed Python 3 compatibility.
+ * The build system can now be invoked using JRuby.
+ * Many documentation and bug fixes.
+
+
+Release 3.9.2 (4.0.0 beta 2)
+----------------------------
 
  * New feature: JRuby and Rubinius support.
  * New feature: Out of Band Work.
@@ -14,8 +22,8 @@ Release 3.9.2
  * Many bug fixes.
 
 
-Release 3.9.1
--------------
+Release 3.9.1 (4.0.0 beta 1)
+----------------------------
 
 This is the first beta of Phusion Passenger 4. The changes are numerous.
 
