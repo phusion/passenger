@@ -305,6 +305,8 @@ Please refer to <<verify_passenger_running,this section>>. Note that all Phusion
 
 John Leach from Brightbox has kindly provided a Ubuntu packages for Phusion Passenger. The packages are available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
 
+If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need. You also don't need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.
+
 Add the following line to the Third Party Software Sources:
 
 ---------------------------------------------
@@ -331,6 +333,8 @@ Please also visit link:http://wiki.brightbox.co.uk/docs:phusion-passenger[the pa
 === Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux
 
 YUM repositories with RPMs are maintained by link:https://github.com/erikogan/passenger[Erik Ogan] and link:http://stealthymonkeys.com/[Stealthy Monkeys Consulting]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
+
+If you use YUM to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. The YUM packages contain all the binaries that you need. You also don't need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.
 
 [float]
 ==== Step 1: Install the release package
