@@ -462,7 +462,7 @@ Use 'mods-enabled'/'mods-available' to store Phusion Passenger configuration if 
 
 If the 'mods-enabled' mechanism is not available then you can paste configuration snippets into 'httpd.conf' or 'apache2.conf' directly.
 
-On OS X Server >= 10.8 Mountain Lion with Web Services the location of the Apache configuration file depends on whether you use Web Services or not. If you do, then the configuration file is in '/Library/Server/Web/Config/apache2/httpd_server_app.conf'. If you do not, then the configuration file is in '/etc/apache2/httpd.conf'.
+On OS X Server >= 10.8 Mountain Lion the location of the Apache configuration file depends on whether you use Web Services or not. If you do, then the configuration file is in '/Library/Server/Web/Config/apache2/httpd_server_app.conf'. If you do not, then the configuration file is in '/etc/apache2/httpd.conf'.
 endif::[]
 
 
