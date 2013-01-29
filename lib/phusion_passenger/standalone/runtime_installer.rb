@@ -81,7 +81,7 @@ module Standalone
 # and +support_dir+ before starting this installer.
 class RuntimeInstaller < AbstractInstaller
 	include Utils
-	
+
 protected
 	def dependencies
 		result = [
@@ -104,21 +104,21 @@ protected
 		end
 		return result
 	end
-	
+
 	def users_guide
 		return "#{PhusionPassenger.doc_dir}/Users guide Standalone.html"
 	end
-	
+
 	def run_steps
 		if @support_dir && @nginx_dir
 			show_welcome_screen
 		end
 		check_dependencies(false) || exit(1)
 		puts
-		
+
 		phase = 1
 		total_phases = 0
-		
+
 		if binary_support_files_should_be_installed?
 			check_whether_we_can_write_to(@support_dir) || exit(1)
 			total_phases += 4
@@ -131,7 +131,7 @@ protected
 			check_whether_we_can_write_to(@nginx_dir) || exit(1)
 			total_phases += 4
 		end
-		
+
 		if binary_support_files_should_be_installed? && should_download_binaries?
 			download_and_extract_binary_support_files(@support_dir) do |progress, total|
 				show_progress(progress, total, 1, 1, "Extracting Passenger binaries...")
@@ -153,7 +153,7 @@ protected
 			puts
 			puts
 		end
-		
+
 		if nginx_needs_to_be_installed?
 			nginx_source_dir = download_and_extract_nginx_sources do |progress, total|
 				show_progress(progress, total, phase, total_phases, "Extracting...")
@@ -186,12 +186,12 @@ protected
 			end
 			phase += 3
 		end
-		
+
 		puts
 		puts "<green><b>All done!</b></green>"
 		puts
 	end
-	
+
 	def before_install
 		super
 		@plugin.call_hook(:runtime_installer_start, self) if @plugin
@@ -213,30 +213,30 @@ private
 		return @targets.include?(:nginx) &&
 			!File.exist?("#{@nginx_dir}/sbin/nginx")
 	end
-	
+
 	def ruby_extension_should_be_installed?
 		return @targets.include?(:ruby) &&
 			!File.exist?("#{@ruby_dir}/#{PlatformInfo.ruby_extension_binary_compatibility_id}")
 	end
-	
+
 	def binary_support_files_should_be_installed?
 		return @targets.include?(:support_binaries) && (
 			!File.exist?("#{@support_dir}/agents/PassengerHelperAgent") ||
 			!File.exist?("#{@support_dir}/libout/common/libpassenger_common.a")
 		)
 	end
-	
+
 	def should_download_binaries?
 		return @download_binaries && @binaries_url_root
 	end
-	
+
 	def show_welcome_screen
 		render_template 'standalone/welcome',
 			:version => @nginx_version,
 			:dir => @nginx_dir
 		puts
 	end
-	
+
 	def check_whether_we_can_write_to(dir)
 		FileUtils.mkdir_p(dir)
 		File.new("#{dir}/__test__.txt", "w").close
@@ -252,14 +252,14 @@ private
 	ensure
 		File.unlink("#{dir}/__test__.txt") rescue nil
 	end
-	
+
 	def show_progress(progress, total, phase, total_phases, status_text = "")
 		if !phase.is_a?(Range)
 			phase = phase..phase
 		end
 		total_progress = (phase.first - 1).to_f / total_phases
 		total_progress += (progress.to_f / total) * ((phase.last - phase.first + 1).to_f / total_phases)
-		
+
 		max_width = 79
 		progress_bar_width = 45
 		text = sprintf("[%-#{progress_bar_width}s] %s",
@@ -271,27 +271,27 @@ private
 		STDOUT.flush
 		@plugin.call_hook(:runtime_installer_progress, total_progress, status_text) if @plugin
 	end
-	
+
 	def myself
 		return `whoami`.strip
 	end
-	
+
 	def begin_progress_bar
 		if !@begun
 			@begun = true
 			puts "<banner>Installing Phusion Passenger Standalone...</banner>"
 		end
 	end
-	
+
 	def show_possible_solutions_for_download_and_extraction_problems
 		new_screen
 		render_template "standalone/possible_solutions_for_download_and_extraction_problems"
 		puts
 	end
-	
+
 	def extract_tarball(filename)
 		File.open(filename, 'rb') do |f|
-			IO.popen("tar xzf -", "w") do |io|
+			IO.popen("tar xzf -", "wb") do |io|
 				buffer = ''
 				buffer = buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
 				total_size = File.size(filename)
@@ -322,7 +322,7 @@ private
 		end
 		return true
 	end
-	
+
 	def run_command_with_throbber(command, status_text)
 		backlog = ""
 		IO.popen("#{command} 2>&1", "r") do |io|
@@ -341,7 +341,7 @@ private
 			exit 1
 		end
 	end
-	
+
 	def copy_files(files, target)
 		FileUtils.mkdir_p(target)
 		files.each_with_index do |filename, i|
@@ -354,15 +354,15 @@ private
 			yield(i + 1, files.size)
 		end
 	end
-	
+
 	def rake
 		return PlatformInfo.rake_command
 	end
-	
+
 	def run_rake_task!(target)
 		total_lines = `#{rake} #{target} --dry-run STDERR_TO_STDOUT=1`.split("\n").size - 1
 		backlog = ""
-		
+
 		IO.popen("#{rake} #{target} --trace STDERR_TO_STDOUT=1", "r") do |io|
 			progress = 1
 			while !io.eof?
@@ -383,7 +383,7 @@ private
 			exit 1
 		end
 	end
-	
+
 	def download_and_extract_binary_support_files(target, &block)
 		puts "<banner>Downloading Passenger support binaries for your platform, if available...</banner>"
 		basename = "support-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
@@ -394,7 +394,7 @@ private
 				"necessary binaries will be compiled from source instead.</b>"
 			return nil
 		end
-		
+
 		FileUtils.mkdir_p(target)
 		Dir.chdir(target) do
 			return extract_tarball(tarball, &block)
@@ -402,7 +402,7 @@ private
 	rescue Interrupt
 		exit 2
 	end
-	
+
 	def download_and_extract_ruby_extension(target, &block)
 		puts "<banner>Downloading Ruby extension for your Ruby and platform, if available...</banner>"
 		basename = "rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}.tar.gz"
@@ -413,7 +413,7 @@ private
 				"necessary binaries will be compiled from source instead.</b>"
 			return nil
 		end
-		
+
 		FileUtils.mkdir_p(target)
 		Dir.chdir(target) do
 			return extract_tarball(tarball, &block)
@@ -421,7 +421,7 @@ private
 	rescue Interrupt
 		exit 2
 	end
-	
+
 	def download_and_extract_nginx_binaries(target, &block)
 		puts "<banner>Downloading Nginx binaries for your platform, if available...</banner>"
 		basename = "nginx-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
@@ -440,7 +440,7 @@ private
 	rescue Interrupt
 		exit 2
 	end
-	
+
 	def download_and_extract_nginx_sources(&block)
 		if @nginx_tarball
 			tarball  = @nginx_tarball
@@ -453,7 +453,7 @@ private
 			end
 		end
 		nginx_sources_name = "nginx-#{@nginx_version}"
-		
+
 		Dir.chdir(@working_dir) do
 			begin_progress_bar
 			if extract_tarball(tarball, &block)
@@ -465,7 +465,7 @@ private
 	rescue Interrupt
 		exit 2
 	end
-	
+
 	def install_ruby_extension
 		begin_progress_bar
 		yield(0, 1, 0, "Preparing Ruby extension...")
@@ -477,7 +477,7 @@ private
 		end
 		return 2
 	end
-	
+
 	def install_binary_support_files
 		begin_progress_bar
 		yield(0, 1, 0, "Preparing Phusion Passenger...")
@@ -495,7 +495,7 @@ private
 
 			system "rm -rf '#{@support_dir}'/{*.o,*.dSYM,libboost_oxt}"
 			system "rm -rf '#{@support_dir}'/*/{*.o,*.lo,*.h,*.log,Makefile,libtool,stamp-h1,config.status,.deps}"
-			
+
 			# Retain only the object files that are needed for linking the Phusion Passenger module into Nginx.
 			nginx_libs = COMMON_LIBRARY.
 				only(*NGINX_LIBS_SELECTOR).
@@ -509,7 +509,7 @@ private
 		end
 		return 2
 	end
-	
+
 	def install_nginx_from_source(source_dir)
 		require 'phusion_passenger/platform_info/compiler'
 		Dir.chdir(source_dir) do
@@ -540,7 +540,7 @@ private
 			run_command_with_throbber(command, "Preparing Nginx...") do |status_text|
 				yield(0, 1, status_text)
 			end
-			
+
 			backlog = ""
 			total_lines = `#{PlatformInfo.gnu_make} --dry-run`.split("\n").size
 			IO.popen("#{PlatformInfo.gnu_make} 2>&1", "r") do |io|
@@ -558,7 +558,7 @@ private
 				STDERR.puts backlog
 				exit 1
 			end
-			
+
 			yield(1, 1, 'Copying files...')
 			if !system("cp -pR objs/nginx '#{@nginx_dir}/'")
 				STDERR.puts
