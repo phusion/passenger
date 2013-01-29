@@ -291,7 +291,7 @@ private
 	
 	def extract_tarball(filename)
 		File.open(filename, 'rb') do |f|
-			IO.popen("tar xzf -", "w") do |io|
+			IO.popen("tar xzf -", "wb") do |io|
 				buffer = ''
 				buffer = buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
 				total_size = File.size(filename)
