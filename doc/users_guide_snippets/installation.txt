@@ -1,9 +1,11 @@
+=== Synopsis
+
 The Phusion Passenger installation process consists of two steps:
 
 1. The *obtainment step*, where you download the Phusion Passenger files puts them somewhere on your system. This can be done through downloading the source tarball, installing the Ruby gem or installing a native OS package via APT or YUM.
 2. The *integration step*, where you configure Phusion Passenger so that it works properly with other system components such as Apache, Nginx, Ruby, Python, etc.
 
-Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, both steps can be done in multiple ways. Most users will be satisfied with the generic installation instructions which covers both steps, but some users may prefer OS-specific installation instructions in order to integrate better.
+Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, both steps can be done in multiple ways. Most users -- especially first-time users -- will be satisfied with the _generic installation instructions_ which covers both steps. However some users may prefer _OS-specific installation instructions_, which allow Phusion Passenger to better integrate into the operating system. Better integration is characterized by following OS-specific conventions.
 
 If you are not familiar with system administration and do not understand all the choices, then we recommend you to go with the <<rubygems_generic_install,RubyGems generic installation method>> (if you're a Ruby user) or the <<tarball_generic_install,tarball generic installation method>> (if you're not a Ruby user).
 
