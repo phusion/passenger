@@ -303,22 +303,32 @@ endif::[]
 Please refer to <<verify_passenger_running,this section>>. Note that all Phusion Passenger administration scripts are located inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-memory-stats'.
 
 
-=== Installing or upgrading on Ubuntu
+=== Installing or upgrading on Debian 6 and Ubuntu
 
-John Leach from Brightbox has kindly provided a Ubuntu packages for Phusion Passenger. The packages are available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
+John Leach from Brightbox has kindly provided Ubuntu packages for Phusion Passenger. The Ubuntu Lucid packages are compatible with Debian 6. The packages are available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
 
 If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need.
 
 .Apache
 
-Register the Brightbox Apache PPA:
+On Ubuntu versions newer than 8.04 Hardy, register the Brightbox Apache PPA as follows:
 
 -----------------------------
 sudo apt-add-repository ppa:brightbox/passenger
 sudo apt-get update
 -----------------------------
 
-If you're on the older Ubuntu 8.04 Hardy release, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand:
+On Ubuntu 8.04 Hardy and on Debian, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand.
+
+Debian 6:
+
+-----------------------------
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu lucid main" > /etc/apt/sources.list.d/brightbox-passenger.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update
+-----------------------------
+
+Ubuntu 8.04 Hardy:
 
 -----------------------------
 sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" > /etc/apt/sources.list.d/brightbox-passenger.list'
@@ -336,10 +346,28 @@ The Apache package provides configuration snippets for you, so you don't need to
 
 .Nginx
 
-Register the Brightbox Nginx PPA:
+On Ubuntu versions newer than 8.04 Hardy, register the Brightbox Apache PPA as follows:
 
 -----------------------------
 sudo apt-add-repository ppa:brightbox/passenger-nginx
+sudo apt-get update
+-----------------------------
+
+On Ubuntu 8.04 Hardy and on Debian, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand.
+
+Debian 6:
+
+-----------------------------
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger-nginx/ubuntu lucid main" > /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update
+-----------------------------
+
+Ubuntu 8.04 Hardy:
+
+-----------------------------
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" > /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
 sudo apt-get update
 -----------------------------
 
@@ -352,12 +380,14 @@ sudo apt-get install nginx-full
 You'll then need to enable the Phusion Passenger module in Nginx by creating the following configuration file:
 
 -----------------------------------------------
-cat <<EOF > /etc/nginx/conf.d/passenger.conf
-passenger_root /usr/lib/phusion-passenger;
-EOF
+sudo sh -c 'echo "passenger_root /usr/lib/phusion-passenger;" > /etc/nginx/conf.d/passenger.conf'
 -----------------------------------------------
 
-Restart Nginx, and you're finished.
+Then restart Nginx to apply the changes:
+
+----------------------------------------
+sudo /etc/init.d/nginx restart
+----------------------------------------
 
 .Standalone
 
