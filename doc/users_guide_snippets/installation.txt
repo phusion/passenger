@@ -174,6 +174,9 @@ passenger-memory-stats
 ---------------------------
 
 You should see the web server processes as well as a number of Phusion Passenger processes (e.g. PassengerWatchdog, PassengerHelperAgent). Congratulations, Phusion Passenger is now installed and running!
+ifdef::nginx[]
+At this point you may be interested in <<nginx_init_script,creating an Nginx init script>>.
+endif::[]
 
 If the output is not as expected, then please refer to the <<troubleshooting,Troubleshooting>> section.
 
@@ -523,6 +526,18 @@ passenger_root /path-to-passenger-root;
 ------------------------------------------
 
 After having done so, restart Nginx.
+
+[[nginx_init_script]]
+=== Creating an Nginx init script
+
+If you installed Nginx with one of the generic installation methods then you won't have an init script to start, stop and restart Nginx with. A bare Nginx installation works with signals: you start it by invoking it from the command line, you stop it by sending SIGTERM to it and you gracefully restart it by sending SIGHUP to it.
+
+If you prefer to use an init script then please refer to the following resources:
+
+- link:http://wiki.nginx.org/Nginx-init-ubuntu[Init script for Ubuntu]
+- link:http://wiki.nginx.org/RedHatNginxInitScript[Init script for Red Hat, Fedora and CentOS]
+
+When using one of those init scripts, please make sure that the paths inside the init script are correct. In particular, the paths to the Nginx binary, to the PID file and to the configuration file must match the actual locations of your Nginx installation.
 endif::[]
 
 
