@@ -26,7 +26,7 @@
 
 2.3. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
 
-2.4. Installing or upgrading on Debian 6 and Ubuntu	=>	installing-or-upgrading-on-ubuntu-1xg22xs
+2.4. Installing or upgrading on Debian 6 or Ubuntu	=>	installing-or-upgrading-on-ubuntu-1xg22xs
 
 2.5. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
 
