@@ -60,6 +60,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/bind.hpp>
+#include <boost/foreach.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>
@@ -409,7 +410,9 @@ private:
 		}
 	}
 
-	ProcessPtr handleSpawnResponse(NegotiationDetails &details) {
+	ProcessPtr handleSpawnResponse(const SpawnPreparationInfo &preparation,
+		NegotiationDetails &details)
+	{
 		TRACE_POINT();
 		SocketListPtr sockets = make_shared<SocketList>();
 		while (true) {
@@ -465,6 +468,13 @@ private:
 				vector<string> args;
 				split(value, ';', args);
 				if (args.size() == 4) {
+					string error = validateSocketAddress(preparation, details, args[1]);
+					if (!error.empty()) {
+						throwAppSpawnException(
+							"An error occurred while starting the web application. " + error,
+							SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+							details);
+					}
 					sockets->add(args[0],
 						fixupSocketAddress(*details.options, args[1]),
 						args[2],
@@ -553,6 +563,76 @@ protected:
 		} else {
 			return address;
 		}
+	}
+
+	bool isAbsolutePath(const StaticString &path) const {
+		if (path.empty() || path[0] != '/') {
+			return false;
+		} else {
+			vector<string> components;
+			string component;
+
+			split(path, '/', components);
+			components.erase(components.begin());
+			foreach (component, components) {
+				if (component.empty() || component == "." || component == "..") {
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+
+	/**
+	 * Given a 'socket:' information string obtained from the spawned process,
+	 * validates whether it is correct.
+	 */
+	string validateSocketAddress(const SpawnPreparationInfo &preparation,
+		NegotiationDetails &details,
+		const string &_address) const
+	{
+		string address = _address;
+		stringstream error;
+
+		switch (getSocketAddressType(address)) {
+		case SAT_UNIX: {
+			address = fixupSocketAddress(*details.options, address);
+			string filename = parseUnixSocketAddress(address);
+
+			// Verify that the socket filename is absolute.
+			if (!isAbsolutePath(filename)) {
+				error << "It reported a non-absolute socket filename: \"" <<
+					cEscapeString(filename) << "\"";
+				break;
+			}
+
+			// Verify that the process owns the socket.
+			struct stat buf;
+			if (lstat(filename.c_str(), &buf) == -1) {
+				int e = errno;
+				error << "It reported an inaccessible socket filename: \"" <<
+					cEscapeString(filename) << "\" (lstat() failed with errno " <<
+					e << ": " << strerror(e) << ")";
+				break;
+			}
+			if (buf.st_uid != preparation.uid) {
+				error << "It advertised a Unix domain socket that has a different " <<
+					"owner than expected (should be UID " << preparation.uid <<
+					", but actual UID was " << buf.st_uid << ")";
+				break;
+			}
+			break;
+		}
+		case SAT_TCP:
+			// TODO: validate that the socket is localhost.
+			break;
+		default:
+			error << "It reported an unsupported socket address type: \"" <<
+				cEscapeString(address) << "\"";
+			break;
+		}
+
+		return error.str();
 	}
 
 	static void checkChrootDirectories(const Options &options) {
@@ -1001,7 +1081,7 @@ protected:
 		}
 	}
 	
-	ProcessPtr negotiateSpawn(NegotiationDetails &details) {
+	ProcessPtr negotiateSpawn(const SpawnPreparationInfo &preparation, NegotiationDetails &details) {
 		TRACE_POINT();
 		details.spawnStartTime = SystemTime::getUsec();
 		details.gupid = integerToHex(SystemTime::get() / 60) + "-" +
@@ -1043,7 +1123,7 @@ protected:
 					details);
 			}
 			if (result == "Ready\n") {
-				return handleSpawnResponse(details);
+				return handleSpawnResponse(preparation, details);
 			} else if (result == "Error\n") {
 				handleSpawnErrorResponse(details);
 			} else {
@@ -1184,10 +1264,14 @@ private:
 	// Protects everything else.
 	mutable boost::mutex syncher;
 
+	// Preloader information.
 	pid_t pid;
 	FileDescriptor adminSocket;
 	string socketAddress;
 	unsigned long long m_lastUsed;
+	// Upon starting the preloader, its preparation info is stored here
+	// for future reference.
+	SpawnPreparationInfo preparation;
 	
 	void onPreloaderOutputReadable(ev::io &io, int revents) {
 		char buf[1024 * 8];
@@ -1318,7 +1402,7 @@ private:
 		
 		shared_array<const char *> args;
 		vector<string> command = createRealPreloaderCommand(options, args);
-		SpawnPreparationInfo preparation = prepareSpawn(options);
+		preparation = prepareSpawn(options);
 		SocketPair adminSocket = createUnixSocketPair();
 		Pipe errorPipe = createPipe();
 		DebugDirPtr debugDir = make_shared<DebugDir>(preparation.uid, preparation.gid);
@@ -1432,6 +1516,7 @@ private:
 			pid = -1;
 		}
 		socketAddress.clear();
+		preparation = SpawnPreparationInfo();
 	}
 	
 	void sendStartupRequest(StartupDetails &details) {
@@ -1529,6 +1614,7 @@ private:
 			string key = line.substr(0, pos);
 			string value = line.substr(pos + 2, line.size() - pos - 3);
 			if (key == "socket") {
+				// TODO: validate socket address here
 				socketAddress = fixupSocketAddress(options, value);
 			} else {
 				throwPreloaderSpawnException("An error occurred while starting up "
@@ -1871,7 +1957,7 @@ public:
 		details.options = &options;
 		details.forwardStderr = config->forwardStderr;
 		details.forwardStderrTo = config->forwardStderrTo;
-		ProcessPtr process = negotiateSpawn(details);
+		ProcessPtr process = negotiateSpawn(preparation, details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
 			", pid=" << process->pid);
 		return process;
@@ -2107,7 +2193,7 @@ public:
 			{
 				this_thread::restore_interruption ri(di);
 				this_thread::restore_syscall_interruption rsi(dsi);
-				process = negotiateSpawn(details);
+				process = negotiateSpawn(preparation, details);
 			}
 			detachProcess(process->pid);
 			guard.clear();
