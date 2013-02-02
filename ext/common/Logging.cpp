@@ -55,7 +55,7 @@ setDebugFile(const char *logFile) {
 }
 
 void
-_prepareLogEntry(std::stringstream &sstream) {
+_prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line) {
 	time_t the_time;
 	struct tm the_tm;
 	char datetime_buf[60];
@@ -70,7 +70,7 @@ _prepareLogEntry(std::stringstream &sstream) {
 		" thr=" << std::hex << pthread_self() << std::dec <<
 		" time=" << datetime_buf << "." << std::setfill('0') << std::setw(4) <<
 			(unsigned long) (tv.tv_usec / 100) <<
-		" file=" << __FILE__ << ":" << (unsigned long) __LINE__ <<
+		" file=" << file << ":" << line <<
 		" ]: ";
 }
 

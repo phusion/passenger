@@ -62,7 +62,7 @@ extern int _logOutput;
 int getLogLevel();
 void setLogLevel(int value);
 bool setDebugFile(const char *logFile = NULL);
-void _prepareLogEntry(std::stringstream &sstream);
+void _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line);
 void _writeLogEntry(const std::string &str);
 
 
@@ -73,7 +73,7 @@ void _writeLogEntry(const std::string &str);
 	do { \
 		if (Passenger::_logLevel >= level) { \
 			std::stringstream sstream; \
-			Passenger::_prepareLogEntry(sstream); \
+			Passenger::_prepareLogEntry(sstream, __FILE__, __LINE__); \
 			sstream << expr << "\n"; \
 			Passenger::_writeLogEntry(sstream.str()); \
 		} \
