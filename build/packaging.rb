@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -86,12 +86,10 @@ task 'package:filelist' do
 	puts spec.files
 end
 
-Rake::Task['package'].prerequisites.unshift(:doc)
-Rake::Task['package'].prerequisites.unshift('package:check')
-Rake::Task['package:gem'].prerequisites.unshift(:doc)
-Rake::Task['package:gem'].prerequisites.unshift('package:check')
-Rake::Task['package:force'].prerequisites.unshift(:doc)
-task :clobber => :'package:clean'
+Rake::Task['package'].prerequisites.unshift(:doc, 'package:check')
+Rake::Task['package:gem'].prerequisites.unshift(:doc, 'package:check')
+Rake::Task['package:force'].prerequisites.unshift(:doc, 'package:check')
+task :clobber => 'package:clean'
 
 desc "Create a fakeroot, useful for building native packages"
 task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
@@ -174,4 +172,59 @@ task 'package:debian' => 'package:check' do
 	end
 	
 	sh "debuild"
+end
+
+desc "Sign all packaged files"
+task 'package:sign' => 'package:check' do
+	require 'phusion_passenger'
+	begin
+		require 'highline'
+	rescue LoadError
+		abort "Please run `gem install highline` first."
+	end
+	h = HighLine.new
+	password = h.ask("Password for software-signing@phusion.nl GPG key: ") { |q| q.echo = false }
+	begin
+		File.open(".gpg-password", "w", 0600) do |f|
+			f.write(password)
+		end
+		version = PhusionPassenger::VERSION_STRING
+		["passenger-#{version}.gem",
+		 "passenger-#{version}.tar.gz",
+		 "passenger-enterprise-server-#{version}.gem",
+		 "passenger-enterprise-server-#{version}.tar.gz"].each do |name|
+			if File.exist?("pkg/#{name}")
+				sh "gpg --sign --detach-sign --passphrase-file .gpg-password --local-user software-signing@phusion.nl --armor pkg/#{name}"
+			end
+		end
+	ensure
+		File.unlink('.gpg-password') if File.exist?('.gpg-password')
+	end
+end
+
+desc "Upload packages and signatures"
+task 'package:upload' => ['package', 'package:sign'] do
+	require 'phusion_passenger'
+	version = PhusionPassenger::VERSION_STRING
+
+	signatures = []
+	["passenger-#{version}.gem.asc",
+	 "passenger-#{version}.tar.gz.asc",
+	 "passenger-enterprise-server-#{version}.gem.asc",
+	 "passenger-enterprise-server-#{version}.tar.gz.asc"].each do |name|
+		if File.exist?("pkg/#{name}")
+			signatures << "pkg/#{name}"
+		end
+	end
+	sh "scp #{signatures.join(' ')} app@shell.phusion.nl:/u/apps/signatures/phusion-passenger/"
+
+	if File.exist?("pkg/passenger-#{version}.gem")
+		#sh "gem push pkg/passenger-#{version}.gem"
+	end
+
+	if File.exist?("pkg/passenger-#{version}.tar.gz")
+		puts "--------------"
+		puts "All done. Please upload pkg/passenger-#{version}.tar.gz " +
+			"to RubyForge and update the version number in the Phusion Passenger website."
+	end
 end
