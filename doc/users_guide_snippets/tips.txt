@@ -109,30 +109,6 @@ you can override Phusion Passenger's Bundler support code by creating a file
 the application startup file. In this file you can do whatever you need to setup Bundler
 or a similar system.
 
-
-[[moving_phusion_passenger]]
-=== Moving Phusion Passenger to a different directory ===
-
-It is possible to relocate the Phusion Passenger files to a different directory. It
-involves two steps:
-
-1. Moving the directory.
-2. Updating the ``PassengerRoot'' configuration option in Apache.
-
-For example, if Phusion Passenger is located in '/opt/passenger/', and you'd like to
-move it to '/usr/local/passenger/', then do this:
-
-1. Run the following command:
-+
-------------------------------------
-mv /opt/passenger /usr/local/passenger
-------------------------------------
-2. Edit your Apache configuration file, and set:
-+
-------------------------------------
-PassengerRoot /usr/local/passenger
-------------------------------------
-
 === Installing multiple Ruby on Rails versions ===
 
 Each Ruby on Rails applications that are going to be deployed may require a
