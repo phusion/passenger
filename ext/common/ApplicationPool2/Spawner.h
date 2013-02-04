@@ -863,7 +863,6 @@ protected:
 			gid_t groups[1024];
 			info.ngroups = sizeof(groups) / sizeof(gid_t);
 		#endif
-		int ret;
 		info.switchUser = true;
 		info.username = userInfo->pw_name;
 		info.groupname = groupInfo->gr_name;
@@ -875,7 +874,7 @@ protected:
 			#define HAVE_GETGROUPLIST
 		#endif
 		#ifdef HAVE_GETGROUPLIST
-			ret = getgrouplist(userInfo->pw_name, groupInfo->gr_gid,
+			int ret = getgrouplist(userInfo->pw_name, groupInfo->gr_gid,
 				groups, &info.ngroups);
 			if (ret == -1) {
 				int e = errno;
