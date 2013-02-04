@@ -872,7 +872,7 @@ If you find that your server is unable to handle the load on your Rails/Rack web
 sites are really that popular, then you should strongly consider upgrading your
 hardware or getting more servers.)
 
-This option may only occur once, in the 'http' configuration bock.
+This option may only occur once, in the 'http' configuration block.
 The default value is '6'.
 
 TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
