@@ -57,11 +57,6 @@ static ngx_path_init_t  ngx_http_proxy_temp_path = {
 };
 
 
-static int
-ngx_str_equals(ngx_str_t *str, const char *value) {
-    return ngx_memn2cmp(str->data, (u_char *) value, str->len, strlen(value)) == 0;
-}
-
 void *
 passenger_create_main_conf(ngx_conf_t *cf)
 {
