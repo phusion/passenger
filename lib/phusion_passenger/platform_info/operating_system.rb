@@ -97,8 +97,9 @@ module PlatformInfo
 		else
 			arch = `uname -p`.strip
 			# On some systems 'uname -p' returns something like
-			# 'Intel(R) Pentium(R) M processor 1400MHz'.
-			if arch == "unknown" || arch =~ / /
+			# 'Intel(R) Pentium(R) M processor 1400MHz' or
+			# 'Intel(R)_Xeon(R)_CPU___________X7460__@_2.66GHz'.
+			if arch == "unknown" || arch =~ / / || arch =~ /Hz$/
 				arch = `uname -m`.strip
 			end
 			if arch =~ /^i.86$/
