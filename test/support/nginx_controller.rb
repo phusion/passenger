@@ -66,6 +66,10 @@ class NginxController
 		@servers << server
 	end
 
+	def clear_servers
+		@servers.clear
+	end
+
 private
 	class Server
 		attr_accessor :values

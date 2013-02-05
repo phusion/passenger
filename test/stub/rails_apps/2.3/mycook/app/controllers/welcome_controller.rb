@@ -18,7 +18,7 @@ class WelcomeController < ApplicationController
 	end
 	
 	def in_passenger
-		render :text => !!defined?(IN_PHUSION_PASSENGER)
+		render :text => !!defined?(PhusionPassenger)
 	end
 	
 	def rails_env

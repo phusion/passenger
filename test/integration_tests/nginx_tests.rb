@@ -36,15 +36,15 @@ describe "Phusion Passenger for Nginx" do
 		File.open("test.log", "a") do |f|
 			# Make sure that all Nginx log output is prepended by the test description
 			# so that we know which messages are associated with which tests.
-			f.puts "\n#### #{self.class.description} : #{description}"
+			f.puts "\n#### #{example.full_description}"
 		end
 	end
-	
+
 	describe "MyCook(tm) beta running a root URI" do
 		before :all do
 			@server = "http://1.passenger.test:#{@nginx.port}"
 			@base_uri = ""
-			@stub = RailsStub.new('2.3/mycook')
+			@stub = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			@nginx.add_server do |server|
 				server[:server_name] = "1.passenger.test"
 				server[:root]        = "#{@stub.full_app_root}/public"
@@ -54,6 +54,7 @@ describe "Phusion Passenger for Nginx" do
 		
 		after :all do
 			@stub.destroy
+			@nginx.clear_servers
 		end
 		
 		before :each do
@@ -61,13 +62,13 @@ describe "Phusion Passenger for Nginx" do
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
-		include_shared_example_group "CGI environment variables compliance"
+		include_examples "CGI environment variables compliance"
 	end
 	
 	describe "MyCook(tm) beta running in a sub-URI" do
 		before :all do
 			@base_uri = "/mycook"
-			@stub = RailsStub.new('2.3/mycook')
+			@stub = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			FileUtils.cp_r('stub/zsfa/.', 'tmp.webdir')
@@ -82,6 +83,7 @@ describe "Phusion Passenger for Nginx" do
 		end
 		
 		after :all do
+			@nginx.clear_servers
 			FileUtils.rm_rf('tmp.webdir')
 			@stub.destroy
 		end
@@ -90,9 +92,9 @@ describe "Phusion Passenger for Nginx" do
 			@server = "http://1.passenger.test:#{@nginx.port}/mycook"
 			@stub.reset
 		end
-		
+
 		it_should_behave_like "MyCook(tm) beta"
-		include_shared_example_group "CGI environment variables compliance"
+		include_examples "CGI environment variables compliance"
 		
 		it "does not interfere with the root website" do
 			@server = "http://1.passenger.test:#{@nginx.port}"
@@ -113,6 +115,7 @@ describe "Phusion Passenger for Nginx" do
 		end
 		
 		after :all do
+			@nginx.clear_servers
 			@stub.destroy
 		end
 		
@@ -139,6 +142,7 @@ describe "Phusion Passenger for Nginx" do
 		end
 		
 		after :all do
+			@nginx.clear_servers
 			@stub.destroy
 			FileUtils.rm_rf('tmp.webdir')
 		end
@@ -153,7 +157,7 @@ describe "Phusion Passenger for Nginx" do
 	describe "Rack application running within Rails directory structure" do
 		before :all do
 			@server = "http://passenger.test:#{@nginx.port}"
-			@stub = RailsStub.new('2.3/mycook')
+			@stub = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			FileUtils.cp_r("stub/rack/.", @stub.app_root)
 			@nginx.add_server do |server|
 			server[:server_name] = "passenger.test"
@@ -163,6 +167,7 @@ describe "Phusion Passenger for Nginx" do
 		end
 		
 		after :all do
+			@nginx.clear_servers
 			@stub.destroy
 		end
 		
@@ -202,6 +207,7 @@ describe "Phusion Passenger for Nginx" do
 		end
 		
 		after :all do
+			@nginx.clear_servers
 			@stub.destroy
 		end
 		
@@ -263,7 +269,6 @@ describe "Phusion Passenger for Nginx" do
 	end
 	
 	describe "oob work" do
-		
 		before :all do
 			@server = "http://passenger.test:#{@nginx.port}"
 			@stub = RackStub.new('rack')
@@ -271,6 +276,10 @@ describe "Phusion Passenger for Nginx" do
 				server[:server_name] = "passenger.test"
 				server[:root]        = "#{@stub.full_app_root}/public"
 			end
+		end
+
+		after :all do
+			@nginx.clear_servers
 		end
 		
 		before :each do
@@ -308,7 +317,6 @@ describe "Phusion Passenger for Nginx" do
 			secs = Time.now - t0
 			secs.should <= 0.1
 		end
-		
 	end
 	
 	##### Helper methods #####
