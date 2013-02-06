@@ -22,13 +22,6 @@ if [[ "$TEST_FULL_COMPILE" = 1 ]]; then
 	rake test/oxt/oxt_test_main
 fi
 
-if [[ "$TEST_COMPILE_NGINX" = 1 ]]; then
-	echo "$ gem install rack daemon_controller --no-rdoc --no-ri"
-	gem install rack daemon_controller --no-rdoc --no-ri
-	echo "$ ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download"
-	./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download
-fi
-
 if [[ "$TEST_CXX" = 1 ]]; then
 	echo "$ rake test:install_deps RAILS_BUNDLES=no"
 	rake test:install_deps
@@ -43,4 +36,13 @@ if [[ "$TEST_RUBY" = 1 ]]; then
 	rake test:install_deps
 	echo "$ rake test:ruby"
 	rake test:ruby
+fi
+
+if [[ "$TEST_NGINX" = 1 ]]; then
+	echo "$ gem install rack daemon_controller --no-rdoc --no-ri"
+	gem install rack daemon_controller --no-rdoc --no-ri
+	echo "$ ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download"
+	./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download
+	echo "$ rake test:integration:nginx"
+	rake test:integration:nginx
 fi
