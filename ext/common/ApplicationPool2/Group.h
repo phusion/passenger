@@ -110,8 +110,10 @@ private:
 	void lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult result, GroupPtr self);
 	void asyncOOBWRequestIfNeeded(const ProcessPtr &process);
 	void spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process);
-	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options);
-	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options);
+	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options,
+		unsigned int restartsInitiated);
+	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options,
+		unsigned int restartsInitiated);
 	void finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
 		vector<Callback> postLockActions);
 	bool poolAtFullCapacity() const;
@@ -502,14 +504,19 @@ public:
 	deque<DisableWaiter> disableWaitlist;
 	
 	SpawnerPtr spawner;
+	/** Number of times a restart has been initiated so far. This is incremented immediately
+	 * in Group::restart(), and is used to abort the restarter thread that was active at the
+	 * time the restart was initiated. It's safe for the value to wrap around.
+	 */
+	unsigned int restartsInitiated;
 	/**
 	 * Whether process(es) are being spawned right now.
 	 */
 	bool m_spawning;
-	/** Whether a non-rolling restart is in progress. While it is in progress,
-	 * it is not possible to signal the desire to spawn new process. If spawning
-	 * was already in progress when the restart was initiated, then the spawning
-	 * will abort as soon as possible.
+	/** Whether a non-rolling restart is in progress (i.e. whether spawnThreadRealMain()
+	 * is at work). While it is in progress, it is not possible to signal the desire to
+	 * spawn new process. If spawning was already in progress when the restart was initiated,
+	 * then the spawning will abort as soon as possible.
 	 *
 	 * When rolling restarting is in progress, this flag is false.
 	 *
@@ -817,7 +824,8 @@ public:
 			createInterruptableThread(
 				boost::bind(&Group::spawnThreadMain,
 					this, shared_from_this(), spawner,
-					options.copyAndPersist().clearPerRequestFields()),
+					options.copyAndPersist().clearPerRequestFields(),
+					restartsInitiated),
 				"Group process spawner: " + name,
 				POOL_HELPER_THREAD_STACK_SIZE);
 			m_spawning = true;

@@ -949,19 +949,19 @@ namespace tut {
 		}
 	}
 
-	// asyncGet() should not select a disabling process if there are enabled processes.
-	// asyncGet() should not select a disabling process when non-rolling restarting.
-	// asyncGet() should select a disabling process if there are no enabled processes
-	// in the group. If this happens then asyncGet() will also spawn a new process.
-	// asyncGet() should not select a disabled process.
+	// TODO: asyncGet() should not select a disabling process if there are enabled processes.
+	// TODO: asyncGet() should not select a disabling process when non-rolling restarting.
+	// TODO: asyncGet() should select a disabling process if there are no enabled processes
+	//       in the group. If this happens then asyncGet() will also spawn a new process.
+	// TODO: asyncGet() should not select a disabled process.
 
-	// If there are no enabled processes and all disabling processes are at full
-	// utilization, and the process that was being spawned becomes available
-	// earlier than any of the disabling processes, then the newly spawned process
-	// should handle the request.
+	// TODO: If there are no enabled processes and all disabling processes are at full
+	//       utilization, and the process that was being spawned becomes available
+	//       earlier than any of the disabling processes, then the newly spawned process
+	//       should handle the request.
 
-	// A disabling process becomes disabled as soon as it's done with
-	// all its request.
+	// TODO: A disabling process becomes disabled as soon as it's done with
+	//       all its request.
 
 	TEST_METHOD(50) {
 		// Disabling a process that's already being disabled should result in the
@@ -983,9 +983,9 @@ namespace tut {
 		ensure_equals(code, (int) DR_SUCCESS);
 	}
 
-	// Enabling a process that's disabled succeeds immediately.
-	// Enabling a process that's disabling succeeds immediately. The disable
-	// callbacks will be called with DR_CANCELED.
+	// TODO: Enabling a process that's disabled succeeds immediately.
+	// TODO: Enabling a process that's disabling succeeds immediately. The disable
+	//       callbacks will be called with DR_CANCELED.
 	
 	
 	/*********** Other tests ***********/
@@ -1302,31 +1302,48 @@ namespace tut {
 	}
 
 	TEST_METHOD(72) {
-		// If we restart while spawning is in progress, then the spawn
-		// loop will exit as soon as it has detected that we're restarting.
+		// If we restart while spawning is in progress, and the restart
+		// finishes before the process is done spawning, then that
+		// process will not be attached and the original spawn loop will
+		// abort. A new spawn loop will start to ensure that resource
+		// constraints are met.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		initPoolDebugging();
 		Options options = createOptions();
 		options.appRoot = "tmp.wsgi";
 		options.minProcesses = 3;
 
-		// Trigger spawn loop and freeze it at the point where it's spawning a process.
+		// Trigger spawn loop and freeze it at the point where it's spawning
+		// the second process.
 		pool->asyncGet(options, callback);
 		debug->debugger->recv("Begin spawn loop iteration 1");
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->debugger->recv("Begin spawn loop iteration 2");
+		ensure_equals("(1)", pool->getProcessCount(), 1u);
 
-		// Trigger restart, freeze the restart procedure, then let spawn loop continue.
+		// Trigger restart, wait until it's finished.
 		touchFile("tmp.wsgi/tmp/restart.txt", 1);
 		pool->asyncGet(options, callback);
-		debug->debugger->recv("About to end restarting");
-		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->messages->send("Finish restarting");
+		debug->debugger->recv("Restarting done");
+		ensure_equals("(2)", pool->getProcessCount(), 0u);
 
-		// The spawn loop will succeed at spawning this process.
-		// After the spawn loop attaches the process, it should detect the
-		// restart and stop, so that it never spawns the second and third processes.
+		// The restarter should have created a new spawn loop and
+		// instructed the old one to stop.
+		debug->debugger->recv("Begin spawn loop iteration 3");
+
+		// We let the old spawn loop continue, which should drop
+		// the second process and abort.
+		debug->messages->send("Proceed with spawn loop iteration 2");
 		debug->debugger->recv("Spawn loop done");
-		ensure_equals(debug->debugger->peek("At spawn loop iteration 2"), MessagePtr());
-		ensure_equals(debug->debugger->peek("At spawn loop iteration 3"), MessagePtr());
-		ensure_equals("(1)", pool->getProcessCount(), 1u);
+		ensure_equals("(3)", pool->getProcessCount(), 0u);
+
+		// We let the new spawn loop continue.
+		debug->messages->send("Proceed with spawn loop iteration 3");
+		debug->messages->send("Proceed with spawn loop iteration 4");
+		debug->messages->send("Proceed with spawn loop iteration 5");
+		debug->debugger->recv("Spawn loop done");
+		ensure_equals("(4)", pool->getProcessCount(), 3u);
 	}
 
 	TEST_METHOD(73) {
@@ -1446,10 +1463,30 @@ namespace tut {
 		}
 	}
 
-	// Persistent connections.
-	// If one closes the session before it has reached EOF, and process's maximum concurrency
-	// has already been reached, then the pool should ping the process so that it can detect
-	// when the session's connection has been released by the app.
+	// TODO: Persistent connections.
+	// TODO: If one closes the session before it has reached EOF, and process's maximum concurrency
+	//       has already been reached, then the pool should ping the process so that it can detect
+	//       when the session's connection has been released by the app.
+
+	
+	/*********** Test previously discovered bugs ***********/
+	
+	TEST_METHOD(76) {
+		// Test detaching, then restarting. This should not violate any invariants.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+
+		SessionPtr session = pool->get(options, &ticket);
+		string gupid = session->getProcess()->gupid;
+		session.reset();
+		pool->detachProcess(gupid);
+		touchFile("tmp.wsgi/tmp/restart.txt", 1);
+		pool->get(options, &ticket).reset();
+	}
+
 
 	/*****************************/
 }

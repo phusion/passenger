@@ -184,6 +184,7 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	disablingCount = 0;
 	disabledCount  = 0;
 	spawner        = getPool()->spawnerFactory->create(options);
+	restartsInitiated = 0;
 	m_spawning     = false;
 	m_restarting   = false;
 	if (options.restartDir.empty()) {
@@ -507,16 +508,16 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.
 void
-Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options) {
+Group::spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options, unsigned int restartsInitiated) {
 	try {
-		spawnThreadRealMain(spawner, options);
+		spawnThreadRealMain(spawner, options, restartsInitiated);
 	} catch (const thread_interrupted &) {
 		// Return.
 	}
 }
 
 void
-Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
+Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, unsigned int restartsInitiated) {
 	TRACE_POINT();
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
@@ -582,9 +583,23 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			break;
 		}
 
+		if (restartsInitiated != this->restartsInitiated) {
+			if (process != NULL) {
+				P_DEBUG("A restart was issued for the group, so dropping process " <<
+					process->inspect() << " which we just spawned and exiting spawn loop");
+			} else {
+				P_DEBUG("A restart was issued for the group. A process failed "
+					"to be spawned anyway, so ignoring this error and exiting "
+					"spawn loop");
+			}
+			// We stop immediately because any previously assumed invariants
+			// may have been violated.
+			break;
+		}
+
 		verifyInvariants();
-		assert(m_spawning || m_restarting);
-		
+		assert(m_spawning);
+
 		UPDATE_TRACE_POINT();
 		vector<Callback> actions;
 		if (process != NULL) {
@@ -616,15 +631,10 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		
 		done = done
 			|| ((unsigned long) enabledCount >= options.minProcesses && getWaitlist.empty())
-			|| pool->atFullCapacity(false)
-			|| m_restarting;
+			|| pool->atFullCapacity(false);
 		m_spawning = !done;
 		if (done) {
-			if (m_restarting) {
-				P_DEBUG("Spawn loop aborted because the group is being restarted");
-			} else {
-				P_DEBUG("Spawn loop done");
-			}
+			P_DEBUG("Spawn loop done");
 		} else {
 			P_DEBUG("Continue spawning");
 		}
@@ -663,6 +673,8 @@ Group::restart(const Options &options) {
 
 	assert(!m_restarting);
 	P_DEBUG("Restarting group " << name);
+	// Tell the restarter thread to exit as soon as possible.
+	restartsInitiated++;
 	m_spawning = false;
 	m_restarting = true;
 	detachAll(actions);
@@ -708,7 +720,7 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 		debug->messages->recv("Finish restarting");
 	}
 
-	LockGuard l(pool->syncher);
+	ScopedLock l(pool->syncher);
 	pool = getPool();
 	if (OXT_UNLIKELY(pool == NULL)) {
 		return;
@@ -728,9 +740,14 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	if (!getWaitlist.empty()) {
 		spawn();
 	}
-	P_DEBUG("Restart of group " << name << " done");
 	verifyInvariants();
-	// oldSpawner will now be destroyed, outside the lock.
+
+	l.unlock();
+	oldSpawner.reset();
+	P_DEBUG("Restart of group " << name << " done");
+	if (debug != NULL) {
+		debug->debugger->send("Restarting done");
+	}
 }
 
 bool
