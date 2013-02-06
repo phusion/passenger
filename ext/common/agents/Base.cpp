@@ -96,7 +96,7 @@ static bool stopOnAbort = false;
 static char *alternativeStack;
 static unsigned int alternativeStackSize;
 
-static volatile bool inAbortHandler = false;
+static volatile unsigned int abortHandlerCalled = 0;
 static unsigned int randomSeed = 0;
 static const char *argv0 = NULL;
 static const char *backtraceSanitizerPath = NULL;
@@ -254,6 +254,9 @@ appendSignalName(char *buf, int signo) {
 		break;
 	case SIGFPE:
 		buf = appendText(buf, "SIGFPE");
+		break;
+	case SIGILL:
+		buf = appendText(buf, "SIGILL");
 		break;
 	default:
 		return appendULL(buf, (unsigned long long) signo);
@@ -649,7 +652,8 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	time_t t = time(NULL);
 	char crashLogFile[256];
 
-	if (inAbortHandler) {
+	abortHandlerCalled++;
+	if (abortHandlerCalled > 1) {
 		// The abort handler itself crashed!
 		char *end = state.messageBuf;
 		end = appendText(end, "[ origpid=");
@@ -658,15 +662,28 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		end = appendULL(end, (unsigned long long) getpid());
 		end = appendText(end, ", timestamp=");
 		end = appendULL(end, (unsigned long long) t);
-		end = appendText(end, " ] Abort handler crashed! signo=");
-		end = appendSignalName(end, state.signo);
-		end = appendText(end, ", reason=");
-		end = appendSignalReason(end, state.info);
-		end = appendText(end, "\n");
-		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		if (abortHandlerCalled == 2) {
+			// This is the first time it crashed.
+			end = appendText(end, " ] Abort handler crashed! signo=");
+			end = appendSignalName(end, state.signo);
+			end = appendText(end, ", reason=");
+			end = appendSignalReason(end, state.info);
+			end = appendText(end, "\n");
+			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			// Run default signal handler.
+			raise(signo);
+		} else {
+			// This is the second time it crashed, meaning it failed to
+			// invoke the default signal handler to abort the process!
+			end = appendText(end, " ] Abort handler crashed again! Force exiting this time. signo=");
+			end = appendSignalName(end, state.signo);
+			end = appendText(end, ", reason=");
+			end = appendSignalReason(end, state.info);
+			end = appendText(end, "\n");
+			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			_exit(1);
+		}
 		return;
-	} else {
-		inAbortHandler = true;
 	}
 
 	/* We want to dump the entire crash log to both stderr and a log file.
