@@ -27,7 +27,7 @@ class NginxController
 		@controller  = DaemonController.new(
 		      :identifier    => 'Nginx',
 		      :start_command => "#{CONFIG['nginx']} -c '#{@config_file}'",
-		      :ping_command  => lambda { TCPSocket.new('localhost', PORT) },
+		      :ping_command  => [:tcp, '127.0.0.1', PORT],
 		      :pid_file      => @pid_file,
 		      :log_file      => @log_file,
 		      :timeout       => 25,
@@ -35,6 +35,7 @@ class NginxController
 		)
 		
 		@servers = []
+		@max_pool_size = 1
 	end
 	
 	def set(options)
@@ -64,10 +65,6 @@ class NginxController
 		server = Server.new
 		yield server
 		@servers << server
-	end
-
-	def clear_servers
-		@servers.clear
 	end
 
 private
