@@ -24,7 +24,7 @@ fi
 
 if [[ "$TEST_CXX" = 1 ]]; then
 	echo "$ rake test:install_deps RAILS_BUNDLES=no"
-	rake test:install_deps
+	rake test:install_deps RAILS_BUNDLES=no
 	echo "$ rake test:cxx"
 	rake test:cxx
 	echo "$ rake test:oxt"
@@ -39,6 +39,8 @@ if [[ "$TEST_RUBY" = 1 ]]; then
 fi
 
 if [[ "$TEST_NGINX" = 1 ]]; then
+	echo "$ rake test:install_deps RAILS_BUNDLES=no"
+	rake test:install_deps RAILS_BUNDLES=no
 	echo "$ gem install rack daemon_controller --no-rdoc --no-ri"
 	gem install rack daemon_controller --no-rdoc --no-ri
 	echo "$ ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download"
