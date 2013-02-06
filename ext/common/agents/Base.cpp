@@ -96,7 +96,8 @@ static bool stopOnAbort = false;
 static char *alternativeStack;
 static unsigned int alternativeStackSize;
 
-static unsigned int randomSeed;
+static volatile bool inAbortHandler = false;
+static unsigned int randomSeed = 0;
 static const char *argv0 = NULL;
 static const char *backtraceSanitizerPath = NULL;
 static bool backtraceSanitizerUseShell = false;
@@ -647,6 +648,26 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	pid_t child;
 	time_t t = time(NULL);
 	char crashLogFile[256];
+
+	if (inAbortHandler) {
+		// The abort handler itself crashed!
+		char *end = state.messageBuf;
+		end = appendText(end, "[ origpid=");
+		end = appendULL(end, (unsigned long long) state.pid);
+		end = appendText(end, ", pid=");
+		end = appendULL(end, (unsigned long long) getpid());
+		end = appendText(end, ", timestamp=");
+		end = appendULL(end, (unsigned long long) t);
+		end = appendText(end, " ] Abort handler crashed! signo=");
+		end = appendSignalName(end, state.signo);
+		end = appendText(end, ", reason=");
+		end = appendSignalReason(end, state.info);
+		end = appendText(end, "\n");
+		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		return;
+	} else {
+		inAbortHandler = true;
+	}
 
 	/* We want to dump the entire crash log to both stderr and a log file.
 	 * We use 'tee' for this.
