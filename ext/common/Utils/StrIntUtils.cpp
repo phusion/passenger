@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -331,6 +331,28 @@ atoi(const string &s) {
 long
 atol(const string &s) {
 	return ::atol(s.c_str());
+}
+
+bool
+constantTimeCompare(const StaticString &a, const StaticString &b) {
+	// http://blog.jasonmooberry.com/2010/10/constant-time-string-comparison/
+	// See also ActiveSupport::MessageVerifier#secure_compare.
+	if (a.size() != b.size()) {
+		return false;
+	} else {
+		const char *x = a.data();
+		const char *y = b.data();
+		const char *end = a.data() + a.size();
+		int result = 0;
+
+		while (x < end) {
+			result |= *x ^ *y;
+			x++;
+			y++;
+		}
+
+		return result == 0;
+	}
 }
 
 string

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -1384,7 +1384,7 @@ private:
 
 	void checkConnectPassword(const ClientPtr &client, const char *data, unsigned int len) {
 		RH_TRACE(client, 3, "Given connect password: \"" << cEscapeString(StaticString(data, len)) << "\"");
-		if (StaticString(data, len) == options.requestSocketPassword) {
+		if (constantTimeCompare(StaticString(data, len), options.requestSocketPassword)) {
 			RH_TRACE(client, 3, "Connect password is correct; reading header");
 			client->state = Client::READING_HEADER;
 			client->freeBufferedConnectPassword();

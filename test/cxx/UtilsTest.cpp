@@ -1,7 +1,7 @@
-#include "TestSupport.h"
-#include "Utils.h"
-#include "Utils/StrIntUtils.h"
-#include "Utils/MemZeroGuard.h"
+#include <TestSupport.h>
+#include <Utils.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/MemZeroGuard.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -584,5 +584,26 @@ namespace tut {
 		ensure_equals(absolutizePath("../..", "/usr/local/bin"), "/usr");
 		ensure_equals(absolutizePath("../../foo", "/usr/local/bin"), "/usr/foo");
 		ensure_equals(absolutizePath("../.././foo/bar", "/usr/local/bin"), "/usr/foo/bar");
+	}
+
+	/***** Test constantTimeCompare() *****/
+
+	TEST_METHOD(54) {
+		ensure("(1)", constantTimeCompare("", ""));
+		ensure("(2)", constantTimeCompare("a", "a"));
+		ensure("(3)", constantTimeCompare("aa", "aa"));
+		ensure("(4)", constantTimeCompare("abc", "abc"));
+
+		ensure("(5)", !constantTimeCompare("", "a"));
+		ensure("(6)", !constantTimeCompare("", "abcd"));
+		ensure("(7)", !constantTimeCompare("ab", "cd"));
+		ensure("(8)", !constantTimeCompare("ab", "abc"));
+		ensure("(9)", !constantTimeCompare("ab", "abcd"));
+		
+		ensure("(10)", !constantTimeCompare("a", ""));
+		ensure("(11)", !constantTimeCompare("abcd", ""));
+		ensure("(12)", !constantTimeCompare("cd", "ab"));
+		ensure("(13)", !constantTimeCompare("abc", "ab"));
+		ensure("(14)", !constantTimeCompare("abcd", "ab"));
 	}
 }
