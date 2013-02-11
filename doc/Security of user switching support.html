@@ -795,11 +795,13 @@ install: function(toclevels) {
 }
 
 }
-asciidoc.install(3);
+asciidoc.install();
 /*]]>*/
 </script><style type="text/css">
 body {
-	margin: 1em 10% 1em 10%;
+	margin: 1em auto 1em auto;
+	padding: 0 1em 0 1em;
+	max-width: 800px;
 }
 
 a.image {
@@ -876,6 +878,10 @@ a.image {
 
 #comments_lightbox_contents > .shell {
 	margin: 2em;
+}
+
+pre {
+	overflow: auto;
 }
 
 @media print {
@@ -1038,6 +1044,15 @@ a.image {
 	border-bottom-right-radius: 0;
 }
 
+/* http://nicolasgallagher.com/jump-links-and-viewport-positioning/ */
+.anchor_helper {
+	position: relative;
+	display: block;
+	top: -50px;
+	width: 1px;
+	height: 1px;
+}
+
 </style>
 </head>
 <body class="article">
@@ -1050,13 +1065,22 @@ a.image {
 <div id="header">
 <h1>Security of user switching support in Passenger</h1>
 <div id="toc">
-  <div id="toctitle">Table of Contents</div>
-  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+<div id="toctitle">Table of Contents</div>
+<div class="foo toclevel2"><a href="#_problem_description">1. Problem description</a></div>
+<div class="foo toclevel2"><a href="#_analysis_of_possible_solutions">2. Analysis of possible solutions</a></div>
+<div class="foo toclevel3"><a href="#apache_root">2.1. Apache must already be running as root</a></div>
+<div class="foo toclevel3"><a href="#_using_apache_8217_s_suexec">2.2. Using Apache’s suEXEC</a></div>
+<div class="foo toclevel3"><a href="#_using_a_setuid_root_wrapper_application">2.3. Using a setuid root wrapper application</a></div>
+<div class="foo toclevel3"><a href="#setuid_root">2.4. Using a setuid $X wrapper application</a></div>
+<div class="foo toclevel3"><a href="#_using_em_su_em">2.5. Using su</a></div>
+<div class="foo toclevel3"><a href="#_using_em_sudo_em">2.6. Using sudo</a></div>
+<div class="foo toclevel3"><a href="#_common_security_issues">2.7. Common security issues</a></div>
+<div class="foo toclevel2"><a href="#_chosen_solution">3. Chosen solution</a></div>
 </div>
 </div>
 <div id="content">
 <div class="sect1">
-<h2 id="_problem_description">1. Problem description</h2>
+<span class="anchor_helper" id="_problem_description"></span><h2 data-anchor="_problem_description">1. Problem description</h2>
 <div class="sectionbody">
 <div class="admonitionblock">
 <table><tr>
@@ -1080,7 +1104,7 @@ Passenger’s security may be peer reviewed.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_analysis_of_possible_solutions">2. Analysis of possible solutions</h2>
+<span class="anchor_helper" id="_analysis_of_possible_solutions"></span><h2 data-anchor="_analysis_of_possible_solutions">2. Analysis of possible solutions</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>It seems that the only way to solve this problem on Unix, is to run each Rails
 application server as its owner’s user and group. Passenger can make use of
@@ -1121,7 +1145,7 @@ Using <em>sudo</em>.
 </ol></div>
 <div class="paragraph"><p>Let us take a look at each method in detail.</p></div>
 <div class="sect2">
-<h3 id="apache_root">2.1. Apache must already be running as root</h3>
+<span class="anchor_helper" id="apache_root"></span><h3 data-anchor="apache_root">2.1. Apache must already be running as root</h3>
 <div class="paragraph"><p>First, let us take a look at the typical Apache setup, in which Apache is bound
 to port 80, and uses the prefork MPM. Binding to any port lower than 1024
 requires root privileges, so Apache is typically run as root. This poses an
@@ -1149,7 +1173,7 @@ this method in automated unit tests will require running the unit test suit as
 root.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_using_apache_8217_s_suexec">2.2. Using Apache’s suEXEC</h3>
+<span class="anchor_helper" id="_using_apache_8217_s_suexec"></span><h3 data-anchor="_using_apache_8217_s_suexec">2.2. Using Apache’s suEXEC</h3>
 <div class="paragraph"><p>Apache’s <a href="http://httpd.apache.org/docs/2.0/suexec.html">suEXEC</a> allows one to
 run CGI processes as different users. But it seems that suEXEC can only be
 used for CGI, and is not a general-purpose mechanism. The
@@ -1159,7 +1183,7 @@ to use suEXEC, then it is likely that we’ll have to patch suEXEC. The suEXEC
 website strongly discourages patching.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_using_a_setuid_root_wrapper_application">2.3. Using a setuid root wrapper application</h3>
+<span class="anchor_helper" id="_using_a_setuid_root_wrapper_application"></span><h3 data-anchor="_using_a_setuid_root_wrapper_application">2.3. Using a setuid root wrapper application</h3>
 <div class="paragraph"><p>If we use this method, we must be extremely careful. It must not be possible
 for arbitrary processes to gain root privileges. We want Passenger, and only
 Passenger, to be able to gain root privileges.</p></div>
@@ -1202,7 +1226,7 @@ process’s user is in the whitelist.</p></div>
 run as root, in contrast to the run-Apache-as-root method.</p></div>
 </div>
 <div class="sect2">
-<h3 id="setuid_root">2.4. Using a setuid $X wrapper application</h3>
+<span class="anchor_helper" id="setuid_root"></span><h3 data-anchor="setuid_root">2.4. Using a setuid $X wrapper application</h3>
 <div class="paragraph"><p>A setuid $X wrapper will work in a fashion similar to the setuid root wrapper,
 i.e. it will use a password file for authorization.</p></div>
 <div class="paragraph"><p>Passenger does not spawn Rails applications itself, but does so via the spawn
@@ -1220,13 +1244,13 @@ methods.</p></div>
 wrapper for each user, and to install it.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_using_em_su_em">2.5. Using <em>su</em>
+<span class="anchor_helper" id="_using_em_su_em"></span><h3 data-anchor="_using_em_su_em">2.5. Using <em>su</em>
 </h3>
 <div class="paragraph"><p>The standard Unix <em>su</em> tool asks for the root password. It’s a bad idea for
 Apache to know the root password, so using <em>su</em> is not a viable alternative.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_using_em_sudo_em">2.6. Using <em>sudo</em>
+<span class="anchor_helper" id="_using_em_sudo_em"></span><h3 data-anchor="_using_em_sudo_em">2.6. Using <em>sudo</em>
 </h3>
 <div class="paragraph"><p>It might be possible to use the <em>sudo</em> utility. sudo can be configured in
 such a way that the user Apache runs as can use sudo without having to enter a
@@ -1242,7 +1266,7 @@ or (on Linux) by reading the file <span class="monospaced">/proc/$PID/cmdline</s
 <div class="paragraph"><p>So it seems <em>sudo</em> is not a viable alternative.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_common_security_issues">2.7. Common security issues</h3>
+<span class="anchor_helper" id="_common_security_issues"></span><h3 data-anchor="_common_security_issues">2.7. Common security issues</h3>
 <div class="paragraph"><p>Whatever method Passenger will use, the following security principles must be
 honored:</p></div>
 <div class="ulist"><ul>
@@ -1266,7 +1290,7 @@ Is there a need for a user whitelist/blacklist? That is, is there a need for
 </div>
 </div>
 <div class="sect1">
-<h2 id="_chosen_solution">3. Chosen solution</h2>
+<span class="anchor_helper" id="_chosen_solution"></span><h2 data-anchor="_chosen_solution">3. Chosen solution</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Running Apache as root and writing a setuid root wrapper are the main
 contestants. The former is preferred, because it’s easier to implement.</p></div>
@@ -1293,7 +1317,7 @@ feel free to discuss it with us.</p></div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2010-09-25 20:09:08 CEST
+Last updated 2013-01-08 23:58:13 CET
 </div>
 </div>
 <script>/*! jQuery v1.7.1 jquery.com | jquery.org/license */
@@ -1631,6 +1655,7 @@ Mizuho.initializeTopBar = $.proxy(function() {
 	var isMobileDevice = this.isMobileDevice();
 	var timerId;
 	
+	// Create the floating table of contents used in the top bar.
 	var $floattoc = $('<div id="floattoc"></div>').html($('#toc').html());
 	$floattoc.find('#toctitle').remove();
 	$floattoc.find('.comments').remove();
@@ -1649,6 +1674,8 @@ Mizuho.initializeTopBar = $.proxy(function() {
 		self.internalLinkClicked(this, event);
 	});
 	
+	// Callback for when the user clicks on the Table of Contents
+	// button on the top bar.
 	function showFloatingToc() {
 		var scrollUpdateTimerId;
 		
@@ -1741,6 +1768,9 @@ Mizuho.initializeTopBar = $.proxy(function() {
 		$window.bind('scroll', onScroll);
 	}
 	
+	// Called whenever the user scrolls. Updates the title of the
+	// Table of Contents button in the top bar to the section that
+	// the user is currently reading.
 	function update() {
 		if ($title.offset().top + $title.height() < $document.scrollTop()) {
 			if (!$topbar.is(':visible')) {
@@ -1783,6 +1813,7 @@ Mizuho.initializeTopBar = $.proxy(function() {
 			update();
 		}, 100);
 	}
+	
 	
 	if (isMobileDevice) {
 		// Mobile devices don't support position fixed.

@@ -1,5 +1,5 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
+ *  Phusion Passenger - https://www.phusionpassenger.com/
  *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -29,6 +29,7 @@
 #include <vector>
 #include <sstream>
 #include <cstddef>
+#include <ctime>
 #include <StaticString.h>
 
 namespace Passenger {
@@ -224,6 +225,8 @@ roundUp(IntegerType number, IntegerType multiple) {
 	return (number + multiple - 1) / multiple * multiple;
 }
 
+string distanceOfTimeInWords(time_t fromTime, time_t toTime = 0);
+
 /**
  * Append the given data to the address at 'pos', but do not cross 'end'.
  * Returns the end of the appended string.
@@ -245,6 +248,9 @@ string cEscapeString(const StaticString &input);
  */
 string escapeHTML(const StaticString &input);
 
+StaticString makeStaticStringWithNull(const char *data);
+
+StaticString makeStaticStringWithNull(const string &data);
 
 } // namespace Passenger
 

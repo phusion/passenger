@@ -1,5 +1,5 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
+ *  Phusion Passenger - https://www.phusionpassenger.com/
  *  Copyright (c) 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -30,6 +30,7 @@
 #include <ApplicationPool2/Group.h>
 #include <ApplicationPool2/PipeWatcher.h>
 #include <Exceptions.h>
+#include <MessageReadersWriters.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -40,7 +41,7 @@ using namespace oxt;
 
 
 template<typename T>
-bool
+static bool
 exceptionIsInstanceOf(const tracable_exception &e) {
 	try {
 		(void) dynamic_cast<T>(e);
@@ -83,16 +84,8 @@ copyException(const tracable_exception &e) {
 	TRY_COPY_EXCEPTION(SecurityException);
 	
 	TRY_COPY_EXCEPTION(SyntaxError);
-	
-	TRY_COPY_EXCEPTION(boost::lock_error);
-	TRY_COPY_EXCEPTION(boost::thread_resource_error);
-	TRY_COPY_EXCEPTION(boost::unsupported_thread_option);
-	TRY_COPY_EXCEPTION(boost::invalid_thread_argument);
-	TRY_COPY_EXCEPTION(boost::thread_permission_error);
 
 	TRY_COPY_EXCEPTION(boost::thread_interrupted);
-	TRY_COPY_EXCEPTION(boost::thread_exception);
-	TRY_COPY_EXCEPTION(boost::condition_error);
 
 	return make_shared<tracable_exception>(e);
 }
@@ -187,7 +180,7 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	  secret(generateSecret(_superGroup)),
 	  componentInfo(info)
 {
-	count          = 0;
+	enabledCount   = 0;
 	disablingCount = 0;
 	disabledCount  = 0;
 	spawner        = getPool()->spawnerFactory->create(options);
@@ -232,15 +225,17 @@ Group::onSessionInitiateFailure(const ProcessPtr &process, Session *session) {
 	}
 	unique_lock<boost::mutex> lock(pool->syncher);
 	pool = getPool();
-	if (OXT_UNLIKELY(pool == NULL)) {
+	if (OXT_UNLIKELY(pool == NULL) || process->detached()) {
 		return;
 	}
 
 	UPDATE_TRACE_POINT();
-	if (pool->detachProcessUnlocked(process, actions)) {
-		P_DEBUG("Could not initiate a session with process " <<
-			process->inspect() << ", detached from pool");
+	P_DEBUG("Could not initiate a session with process " <<
+		process->inspect() << ", detaching from pool if possible");
+	if (!pool->detachProcessUnlocked(process, actions)) {
+		P_DEBUG("Process was already detached");
 	}
+	pool->fullVerifyInvariants();
 	lock.unlock();
 	runAllActions(actions);
 }
@@ -255,67 +250,259 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	}
 	unique_lock<boost::mutex> lock(pool->syncher);
 	pool = getPool();
-	if (OXT_UNLIKELY(pool == NULL)) {
+	if (OXT_UNLIKELY(pool == NULL) || process->detached()) {
 		return;
 	}
 	
+	P_TRACE(2, "Session closed for process " << process->inspect());
 	verifyInvariants();
 	UPDATE_TRACE_POINT();
 	
 	/* Update statistics. */
 	process->sessionClosed(session);
-	pqueue.decrease(process->pqHandle, process->utilization());
-
-	bool maxRequestsReached = options.maxRequests > 0
-		&& process->processed >= options.maxRequests;
+	assert(process->enabled == Process::ENABLED || process->enabled == Process::DISABLING);
+	if (process->enabled == Process::ENABLED) {
+		pqueue.decrease(process->pqHandle, process->utilization());
+	}
 
 	/* This group now has a process that's guaranteed to be not at
-	 * full capacity...
+	 * full utilization.
 	 */
-	assert(!process->atFullCapacity());
-	if (!getWaitlist.empty() && !maxRequestsReached) {
-		/* ...so if there are clients waiting for a process to
-		 * become available, call them now.
-		 */
-		UPDATE_TRACE_POINT();
-		assignSessionsToGetWaitersQuickly(lock);
-	} else if (!pool->getWaitlist.empty() || maxRequestsReached) {
-		/* Someone might be trying to get() a session for a different
-		 * group that couldn't be spawned because of lack of pool capacity.
-		 * If this group isn't under sufficiently load (as apparent by the
-		 * emptiness of the get wait list) then now's a good time to detach
-		 * this process or group in order to free capacity.
-		 *
-		 * TODO: this strategy can cause starvation if all groups are
-		 * continuously busy. Yeah if the system is under that much load
-		 * it is probably fsck'ed anyway but it may be a good idea in the
-		 * future to detach this group even if the wait list is non-empty
-		 * in case there's a waiter on the pool's get wait list that's older
-		 * than X seconds.
-		 *
-		 * ---- OR ----
-		 *
-		 * This process has processed its maximum number of requests,
-		 * so we detach it.
-		 */
-		UPDATE_TRACE_POINT();
-		if (!pool->getWaitlist.empty()) {
-			P_DEBUG("Process " << process->inspect() << " is no longer at "
-				"full capacity; detaching it in order to make room in the pool");
-		} else {
-			P_DEBUG("Process " << process->inspect() <<
-				" has reached its maximum number of requests (" <<
-				options.maxRequests << "); detaching it");
-		}
+	assert(!process->atFullUtilization());
 
+	bool detachingBecauseOfMaxRequests = false;
+	bool detachingBecauseCapacityNeeded = false;
+	bool shouldDetach =
+		( detachingBecauseOfMaxRequests = (
+			options.maxRequests > 0
+			&& process->processed >= options.maxRequests
+		)) || (
+			detachingBecauseCapacityNeeded = (
+				process->sessions == 0
+				&& getWaitlist.empty()
+				&& (
+					!pool->getWaitlist.empty()
+					|| anotherGroupIsWaitingForCapacity()
+				)
+			)
+		);
+	bool shouldDisable =
+		process->enabled == Process::DISABLING
+		&& process->sessions == 0
+		&& enabledCount > 0;
+
+	if (shouldDetach || shouldDisable) {
 		vector<Callback> actions;
-		// Will take care of processing pool->getWaitlist.
-		pool->detachProcessUnlocked(process, actions);
-		pool->verifyInvariants();
-		verifyInvariants();
+
+		if (shouldDetach) {
+			if (detachingBecauseCapacityNeeded) {
+				/* Someone might be trying to get() a session for a different
+				 * group that couldn't be spawned because of lack of pool capacity.
+				 * If this group isn't under sufficiently load (as apparent by the
+				 * checked conditions) then now's a good time to detach
+				 * this process or group in order to free capacity.
+				 */
+				P_DEBUG("Process " << process->inspect() << " is no longer at "
+					"full utilization; detaching it in order to make room in the pool");
+			} else {
+				/* This process has processed its maximum number of requests,
+				 * so we detach it.
+				 */
+				P_DEBUG("Process " << process->inspect() <<
+					" has reached its maximum number of requests (" <<
+					options.maxRequests << "); detaching it");
+			}
+			pool->detachProcessUnlocked(process, actions);
+		} else {
+			removeProcessFromList(process, disablingProcesses);
+			addProcessToList(process, disabledProcesses);
+			removeFromDisableWaitlist(process, DR_SUCCESS, actions);
+			asyncOOBWRequestIfNeeded(process);
+		}
+		
+		pool->fullVerifyInvariants();
 		lock.unlock();
 		runAllActions(actions);
+
+	} else {
+		// This could change process->enabled.
+		asyncOOBWRequestIfNeeded(process);
+
+		if (!getWaitlist.empty() && process->enabled == Process::ENABLED) {
+			/* If there are clients on this group waiting for a process to
+			 * become available then call them now.
+			 */
+			UPDATE_TRACE_POINT();
+			assignSessionsToGetWaitersQuickly(lock);
+			verifyInvariants();
+		}
 	}
+}
+
+void
+Group::requestOOBW(const ProcessPtr &process) {
+	// Standard resource management boilerplate stuff...
+	PoolPtr pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL)) {
+		return;
+	}
+	unique_lock<boost::mutex> lock(pool->syncher);
+	pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL || process->detached())) {
+		return;
+	}
+	
+	process->oobwRequested = true;
+}
+
+// The 'self' parameter is for keeping the current Group object alive
+void
+Group::lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult result, GroupPtr self) {
+	TRACE_POINT();
+	
+	if (result != DR_SUCCESS && result != DR_CANCELED) {
+		return;
+	}
+	
+	// Standard resource management boilerplate stuff...
+	PoolPtr pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL)) {
+		return;
+	}
+	unique_lock<boost::mutex> lock(pool->syncher);
+	pool = getPool();
+	if (OXT_UNLIKELY(pool == NULL || process->detached())) {
+		return;
+	}
+	
+	asyncOOBWRequestIfNeeded(process);
+}
+
+void
+Group::asyncOOBWRequestIfNeeded(const ProcessPtr &process) {
+	if (process->detached()) {
+		return;
+	}
+	if (!process->oobwRequested) {
+		// The process has not requested oobw, so nothing to do here.
+		return;
+	}
+	if (process->enabled == Process::ENABLED) {
+		// We want the process to be disabled. However, disabling a process is potentially
+		// asynchronous, so we pass a callback which will re-aquire the lock and call this
+		// method again.
+		DisableResult result = disable(process,
+			boost::bind(&Group::lockAndAsyncOOBWRequestIfNeeded, this,
+				_1, _2, shared_from_this()));
+		if (result == DR_DEFERRED) {
+			return;
+		}
+	} else if (process->enabled == Process::DISABLING) {
+		return;
+	}
+	
+	assert(process->enabled == Process::DISABLED);
+	assert(process->sessions == 0);
+	
+	createInterruptableThread(
+		boost::bind(&Group::spawnThreadOOBWRequest, this, shared_from_this(), process),
+		"OOB request thread for process " + process->inspect(),
+		POOL_HELPER_THREAD_STACK_SIZE);
+}
+
+// The 'self' parameter is for keeping the current Group object alive while this thread is running.
+void
+Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
+	TRACE_POINT();
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+
+	Socket *socket;
+	Connection connection;
+	
+	{
+		// Standard resource management boilerplate stuff...
+		PoolPtr pool = getPool();
+		if (OXT_UNLIKELY(pool == NULL)) {
+			return;
+		}
+		unique_lock<boost::mutex> lock(pool->syncher);
+		pool = getPool();
+		if (OXT_UNLIKELY(pool == NULL || process->detached())) {
+			return;
+		}
+		
+		assert(!process->detached());
+		assert(process->oobwRequested);
+		assert(process->sessions == 0);
+		assert(process->enabled == Process::DISABLED);
+		socket = process->sessionSockets.top();
+		assert(socket != NULL);
+	}
+	
+	unsigned long long timeout = 1000 * 1000 * 60; // 1 min
+	try {
+		ScopeGuard guard(boost::bind(&Socket::checkinConnection, socket, connection));
+		this_thread::restore_interruption ri(di);
+		this_thread::restore_syscall_interruption rsi(dsi);
+
+		// Grab a connection. The connection is marked as fail in order to
+		// ensure it is closed / recycled after this request (otherwise we'd
+		// need to completely read the response).
+		connection = socket->checkoutConnection();
+		connection.fail = true;
+		
+		
+		// This is copied from RequestHandler when it is sending data using the
+		// "session" protocol.
+		char sizeField[sizeof(uint32_t)];
+		SmallVector<StaticString, 10> data;
+
+		data.push_back(StaticString(sizeField, sizeof(uint32_t)));
+		data.push_back(makeStaticStringWithNull("REQUEST_METHOD"));
+		data.push_back(makeStaticStringWithNull("OOBW"));
+
+		data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
+		data.push_back(makeStaticStringWithNull(process->connectPassword));
+
+		uint32_t dataSize = 0;
+		for (unsigned int i = 1; i < data.size(); i++) {
+			dataSize += (uint32_t) data[i].size();
+		}
+		Uint32Message::generate(sizeField, dataSize);
+
+		gatheredWrite(connection.fd, &data[0], data.size(), &timeout);
+
+		// We do not care what the actual response is ... just wait for it.
+		waitUntilReadable(connection.fd, &timeout);
+	} catch (const SystemException &e) {
+		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
+	} catch (const TimeoutException &e) {
+		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
+	}
+	
+	vector<Callback> actions;
+	{
+		// Standard resource management boilerplate stuff...
+		PoolPtr pool = getPool();
+		if (OXT_UNLIKELY(pool == NULL)) {
+			return;
+		}
+		unique_lock<boost::mutex> lock(pool->syncher);
+		pool = getPool();
+		if (OXT_UNLIKELY(pool == NULL || process->detached())) {
+			return;
+		}
+		
+		process->oobwRequested = false;
+		if (process->enabled == Process::DISABLED) {
+			enable(process, actions);
+			assignSessionsToGetWaiters(actions);
+		}
+		
+		pool->fullVerifyInvariants();
+	}
+	runAllActions(actions);
 }
 
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.
@@ -333,41 +520,70 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 	TRACE_POINT();
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
+
+	PoolPtr pool = getPool();
+	if (pool == NULL) {
+		return;
+	}
+	Pool::DebugSupportPtr debug = pool->debugSupport;
 	
 	bool done = false;
 	while (!done) {
+		bool shouldFail = false;
+		if (debug != NULL) {
+			UPDATE_TRACE_POINT();
+			this_thread::restore_interruption ri(di);
+			this_thread::restore_syscall_interruption rsi(dsi);
+			this_thread::interruption_point();
+			string iteration;
+			{
+				LockGuard g(debug->syncher);
+				debug->spawnLoopIteration++;
+				iteration = toString(debug->spawnLoopIteration);
+			}
+			P_DEBUG("Begin spawn loop iteration " << iteration);
+			debug->debugger->send("Begin spawn loop iteration " +
+				iteration);
+			
+			vector<string> cases;
+			cases.push_back("Proceed with spawn loop iteration " + iteration);
+			cases.push_back("Fail spawn loop iteration " + iteration);
+			MessagePtr message = debug->messages->recvAny(cases);
+			shouldFail = message->name == "Fail spawn loop iteration " + iteration;
+		}
+
 		ProcessPtr process;
 		ExceptionPtr exception;
 		try {
 			UPDATE_TRACE_POINT();
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
-			process = spawner->spawn(options);
+			if (shouldFail) {
+				throw SpawnException("Simulated failure");
+			} else {
+				process = spawner->spawn(options);
+			}
 		} catch (const thread_interrupted &) {
-			return;
+			break;
 		} catch (const tracable_exception &e) {
 			exception = copyException(e);
 			// Let other (unexpected) exceptions crash the program so
 			// gdb can generate a backtrace.
 		}
+
 		UPDATE_TRACE_POINT();
-		PoolPtr pool = getPool();
+		pool = getPool();
 		if (pool == NULL) {
-			return;
-		}
-		{
-			LockGuard l(pool->debugSyncher);
-			pool->spawnLoopIteration++;
-			P_TRACE(2, "Entering spawn loop iteration " << pool->spawnLoopIteration);
+			break;
 		}
 		unique_lock<boost::mutex> lock(pool->syncher);
 		pool = getPool();
 		if (pool == NULL) {
-			return;
+			break;
 		}
-		
+
 		verifyInvariants();
-		P_ASSERT(m_spawning || m_restarting);
+		assert(m_spawning || m_restarting);
 		
 		UPDATE_TRACE_POINT();
 		vector<Callback> actions;
@@ -378,27 +594,28 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 			} else {
 				assignSessionsToGetWaiters(actions);
 			}
-			P_DEBUG("Attached process " << process->inspect() <<
-				" to group " << name <<
-				": new process count = " << count <<
+			P_DEBUG("New process count = " << enabledCount <<
 				", remaining get waiters = " << getWaitlist.size());
 		} else {
 			// TODO: sure this is the best thing? if there are
 			// processes currently alive we should just use them.
-			P_DEBUG("Could not spawn process appRoot=" << name <<
+			P_ERROR("Could not spawn process for group " << name <<
 				": " << exception->what());
+			if (enabledCount == 0) {
+				enableAllDisablingProcesses(actions);
+			}
 			assignExceptionToGetWaiters(exception, actions);
 			pool->assignSessionsToGetWaiters(actions);
 			done = true;
 		}
-		
+
 		// Temporarily mark this Group as 'not spawning' so
 		// that pool->utilization() doesn't take this thread's spawning
 		// state into account.
 		m_spawning = false;
 		
 		done = done
-			|| ((unsigned long) count >= options.minProcesses && getWaitlist.empty())
+			|| ((unsigned long) enabledCount >= options.minProcesses && getWaitlist.empty())
 			|| pool->atFullCapacity(false)
 			|| m_restarting;
 		m_spawning = !done;
@@ -413,17 +630,31 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options) {
 		}
 		
 		UPDATE_TRACE_POINT();
-		verifyInvariants();
+		pool->fullVerifyInvariants();
 		lock.unlock();
+		UPDATE_TRACE_POINT();
 		runAllActions(actions);
+		UPDATE_TRACE_POINT();
+	}
+
+	if (debug != NULL) {
+		debug->debugger->send("Spawn loop done");
 	}
 }
 
 bool
 Group::shouldSpawn() const {
-	return !spawning()
-		&& (count == 0 || pqueue.top()->atFullCapacity())
-		&& !getPool()->atFullCapacity(false);
+	return !m_spawning
+		&& (
+			(unsigned long) enabledCount < options.minProcesses
+			|| (enabledCount > 0 && pqueue.top()->atFullCapacity())
+		)
+		&& !poolAtFullCapacity();
+}
+
+bool
+Group::shouldSpawnForGetAction() const {
+	return enabledCount == 0 || shouldSpawn();
 }
 
 void
@@ -435,8 +666,9 @@ Group::restart(const Options &options) {
 	m_spawning = false;
 	m_restarting = true;
 	detachAll(actions);
-	getPool()->nonInterruptableThreads.create_thread(
-		boost::bind(&Group::finalizeRestart, this, shared_from_this(), options.copyAndPersist(),
+	getPool()->interruptableThreads.create_thread(
+		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
+			options.copyAndPersist().clearPerRequestFields(),
 			getPool()->spawnerFactory, actions),
 		"Group restarter: " + name,
 		POOL_HELPER_THREAD_STACK_SIZE
@@ -453,6 +685,9 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	Pool::runAllActions(postLockActions);
 	postLockActions.clear();
 
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+
 	// Create a new spawner.
 	SpawnerPtr newSpawner = spawnerFactory->create(options);
 	SpawnerPtr oldSpawner;
@@ -463,6 +698,16 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	if (OXT_UNLIKELY(pool == NULL)) {
 		return;
 	}
+
+	Pool::DebugSupportPtr debug = pool->debugSupport;
+	if (debug != NULL) {
+		this_thread::restore_interruption ri(di);
+		this_thread::restore_syscall_interruption rsi(dsi);
+		this_thread::interruption_point();
+		debug->debugger->send("About to end restarting");
+		debug->messages->recv("Finish restarting");
+	}
+
 	LockGuard l(pool->syncher);
 	pool = getPool();
 	if (OXT_UNLIKELY(pool == NULL)) {
@@ -470,7 +715,7 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	}
 
 	// Run some sanity checks.
-	verifyInvariants();
+	pool->fullVerifyInvariants();
 	assert(m_restarting);
 	UPDATE_TRACE_POINT();
 	
@@ -485,8 +730,31 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	}
 	P_DEBUG("Restart of group " << name << " done");
 	verifyInvariants();
-	Pool::runAllActions(postLockActions);
 	// oldSpawner will now be destroyed, outside the lock.
+}
+
+bool
+Group::poolAtFullCapacity() const {
+	return getPool()->atFullCapacity(false);
+}
+
+bool
+Group::anotherGroupIsWaitingForCapacity() const {
+	PoolPtr pool = getPool();
+	StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = pool->superGroups.end();
+	for (sg_it = pool->superGroups.begin(); sg_it != sg_end; sg_it++) {
+		pair<StaticString, SuperGroupPtr> p = *sg_it;
+		foreach (GroupPtr group, p.second->groups) {
+			if (group.get() != this
+			 && group->enabledProcesses.empty()
+			 && !group->spawning()
+			 && !group->getWaitlist.empty())
+			{
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 string
@@ -536,6 +804,18 @@ Session::getGupid() const {
 	return process->gupid;
 }
 
+const GroupPtr
+Session::getGroup() const {
+	return process->getGroup();
+}
+
+void
+Session::requestOOBW() {
+	GroupPtr group = process->getGroup();
+	if (OXT_UNLIKELY(group != NULL)) {
+		group->requestOOBW(process);
+	}
+}
 
 PipeWatcher::PipeWatcher(
 	const SafeLibevPtr &_libev,
@@ -571,6 +851,7 @@ PipeWatcher::onReadable(ev::io &io, int revents) {
 			selfPointer.reset();
 		}
 	} else if (fdToForwardTo != -1) {
+		// Don't care about errors.
 		write(fdToForwardTo, buf, ret);
 	}
 }

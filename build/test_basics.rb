@@ -1,5 +1,5 @@
-#  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010 Phusion
+#  Phusion Passenger - https://www.phusionpassenger.com/
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -41,4 +41,17 @@ task :clean => 'test:clean'
 
 file 'test/support/allocate_memory' => 'test/support/allocate_memory.c' do
 	create_c_executable('test/support/allocate_memory', 'test/support/allocate_memory.c')
+end
+
+desc "Install developer dependencies"
+task 'test:install_deps' do
+	gem_install = PlatformInfo.gem_command + " install --no-rdoc --no-ri"
+	gem_install = "sudo #{gem_install}" if boolean_option('SUDO')
+	sh "#{gem_install} rails -v 2.3.15"
+	sh "#{gem_install} bundler rspec mime-types daemon_controller json"
+	if boolean_option('RAILS_BUNDLES', true)
+		sh "cd test/stub/rails3.0 && bundle install"
+		sh "cd test/stub/rails3.1 && bundle install"
+		sh "cd test/stub/rails3.2 && bundle install"
+	end
 end

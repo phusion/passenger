@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <climits>
 #include <signal.h>
+#include <fcntl.h>
 
 using namespace std;
 using namespace Passenger;
@@ -62,7 +63,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		shared_ptr<SmartSpawner> spawner = createSpawner(options);
 		spawner->spawn(options);
 		
@@ -81,7 +82,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		setLogLevel(-1);
 		shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
@@ -99,7 +100,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		options.startTimeout = 300;
 		
 		vector<string> preloaderCommand;
@@ -111,8 +112,8 @@ namespace tut {
 			generation,
 			preloaderCommand,
 			options);
-		spawner.forwardStdout = false;
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStdout = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);
@@ -132,7 +133,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");
@@ -143,8 +144,8 @@ namespace tut {
 			generation,
 			preloaderCommand,
 			options);
-		spawner.forwardStdout = false;
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStdout = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);
@@ -163,7 +164,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\1" "start.rb";
-		options.startupFile  = "stub/rack/start.rb";
+		options.startupFile  = "start.rb";
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		
 		vector<string> preloaderCommand;
@@ -175,8 +176,8 @@ namespace tut {
 			generation,
 			preloaderCommand,
 			options);
-		spawner.forwardStdout = false;
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStdout = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);
@@ -190,6 +191,7 @@ namespace tut {
 		// Test that the spawned process can still write to its stderr
 		// after the SmartSpawner has been destroyed.
 		DeleteFileEventually d("tmp.output");
+		FileDescriptor output(open("tmp.output", O_WRONLY | O_CREAT | O_TRUNC, 0600));
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		
@@ -203,6 +205,8 @@ namespace tut {
 				generation,
 				preloaderCommand,
 				options);
+			spawner.getConfig()->forwardStdoutTo = output;
+			spawner.getConfig()->forwardStderrTo = output;
 			process = spawner.spawn(options);
 		}
 		
@@ -218,12 +222,11 @@ namespace tut {
 		data.append(process->connectPassword);
 		data.append(1, '\0');
 
-		{
-			TemporarilyRedirectStdio redirect("tmp.output");
-			writeScalarMessage(session->fd(), data);
-			shutdown(session->fd(), SHUT_WR);
-			readAll(session->fd());
-		}
-		ensure_equals(readAll("tmp.output"), "hello world!\n");
+		writeScalarMessage(session->fd(), data);
+		shutdown(session->fd(), SHUT_WR);
+		readAll(session->fd());
+		EVENTUALLY(2,
+			result = readAll("tmp.output").find("hello world!\n") != string::npos;
+		);
 	}
 }

@@ -1,5 +1,5 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
+ *  Phusion Passenger - https://www.phusionpassenger.com/
  *  Copyright (c) 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -109,8 +109,10 @@ public:
 	const string &getConnectPassword() const;
 	pid_t getPid() const;
 	const string &getGupid() const;
+	const GroupPtr getGroup() const;
+	void requestOOBW();
 	
-	ProcessPtr getProcess() const {
+	const ProcessPtr &getProcess() const {
 		return process;
 	}
 	

@@ -70,11 +70,15 @@ public:
 	 * @throws boost::thread_resource_error Something went wrong during
 	 *     creation of the thread.
 	 */
-	explicit thread(const boost::function<void ()> func, const std::string &name = std::string(), unsigned int stack_size = 0) {
+	explicit thread(const boost::function<void ()> func,
+		const std::string &name = std::string(),
+		unsigned int stack_size = 0)
+		: boost::thread()
+	{
 		context = thread_local_context::make_shared_ptr();
 		context->thread_name = make_thread_name(name);
-		set_thread_main_function(boost::bind(thread_main, func, context));
-		
+		thread_info = make_thread_info(boost::bind(thread_main, func, context));
+
 		unsigned long min_stack_size;
 		bool stack_min_size_defined;
 		bool round_stack_size;
@@ -114,8 +118,10 @@ public:
 				stack_size = stack_size - (stack_size % page_size) + page_size;
 			}
 		}
-		
-		start_thread(stack_size);
+
+		attributes attrs;
+		attrs.set_stack_size(stack_size);
+		start_thread(attrs);
 	}
 	
 	/**

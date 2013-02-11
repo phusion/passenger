@@ -8,15 +8,21 @@ def file_exist(filename):
 		return False
 
 def application(env, start_response):
-	path   = env['PATH_INFO']
 	status = '200 OK'
 	body   = None
-
+	
+	method = env.get('REQUEST_METHOD')
+	if method == 'OOBW':
+		time.sleep(1)
+		start_response(status, [('Content-Type', 'text/html')])
+		return [str('oobw ok')]
+	
 	filename = env.get('HTTP_X_WAIT_FOR_FILE')
 	if filename is not None:
 		while not file_exist(filename):
 			time.sleep(0.01)
-
+	
+	path = env['PATH_INFO']
 	if path == '/pid':
 		body = os.getpid()
 	elif path == '/env':
@@ -64,6 +70,9 @@ def application(env, start_response):
 				written += len(data)
 		start_response(status, [('Content-Type', 'text/plain')])
 		return body()
+	elif path == '/oobw':
+		start_response(status, [('Content-Type', 'text/plain'), ('X-Passenger-Request-OOB-Work', 'true')])
+		return [str(os.getpid())]
 	else:
 		body = 'hello <b>world</b>'
 	

@@ -1,5 +1,5 @@
 # encoding: binary
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -71,6 +71,7 @@ module LoaderSharedHelpers
 	def dump_all_information
 		dump_ruby_environment
 		dump_envvars
+		dump_system_memory_stats
 	end
 
 	def dump_ruby_environment
@@ -122,6 +123,16 @@ module LoaderSharedHelpers
 				ENV.each_pair do |key, value|
 					f.puts "#{key} = #{value}"
 				end
+			end
+		end
+	rescue SystemCallError
+		# Don't care.
+	end
+
+	def dump_system_memory_stats
+		if dir = ENV['PASSENGER_DEBUG_DIR']
+			File.open("#{dir}/sysmemory", "w") do |f|
+				f.write(`"#{PhusionPassenger.helper_scripts_dir}/system-memory-stats.py"`)
 			end
 		end
 	rescue SystemCallError
@@ -236,12 +247,6 @@ module LoaderSharedHelpers
 		# PhusionPassenger.install_framework_extensions!
 		if defined?(::Rails) && !defined?(::Rails::VERSION)
 			require 'rails/version'
-		end
-		if defined?(::Rails) && ::Rails::VERSION::MAJOR <= 2
-			require 'phusion_passenger/classic_rails_extensions/init'
-			ClassicRailsExtensions.init!(options)
-			# Rails 3 extensions are installed by
-			# PhusionPassenger.install_framework_extensions!
 		end
 	end
 	

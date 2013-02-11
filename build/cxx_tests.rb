@@ -1,5 +1,5 @@
-#  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Phusion Passenger - https://www.phusionpassenger.com/
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -26,6 +26,7 @@
 TEST_CXX_CFLAGS = "-Iext -Iext/common " <<
 	"#{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} #{PlatformInfo.curl_flags} -Itest/cxx -Itest/support " <<
 	"#{TEST_COMMON_CFLAGS}"
+TEST_CXX_CFLAGS << " -faddress-sanitizer" if USE_ASAN
 TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
 	"#{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} #{LIBEIO_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
@@ -162,6 +163,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/MessageIOTest.cpp
 		ext/common/Utils/MessageIO.h
 		ext/common/Utils/IOUtils.h),
+	'test/cxx/MessagePassingTest.o' => %w(
+		test/cxx/MessagePassingTest.cpp
+		ext/common/Utils/MessagePassing.h),
 	'test/cxx/VariantMapTest.o' => %w(
 		test/cxx/VariantMapTest.cpp
 		ext/common/Utils/VariantMap.h),
@@ -198,17 +202,24 @@ task 'test:cxx' => dependencies do
 	elsif boolean_option('VALGRIND')
 		command = "valgrind --dsymutil=yes --db-attach=yes --child-silent-after-fork=yes #{command}"
 	end
-	sh "cd test && #{command}"
+	if boolean_option('REPEAT')
+		if boolean_option('GDB')
+			abort "You cannot set both REPEAT=1 and GDB=1."
+		end
+		sh "cd test && while #{command}; do echo -------------------------------------------; done"
+	else
+		sh "cd test && #{command}"
+	end
 end
 
 dependencies = [
 	TEST_CXX_OBJECTS.keys,
-	:libev,
-	:libeio,
+	LIBEV_TARGET,
+	LIBEIO_TARGET,
 	TEST_BOOST_OXT_LIBRARY,
 	TEST_COMMON_LIBRARY.link_objects,
 	'ext/common/MultiLibeio.cpp'
-].flatten
+].flatten.compact
 file 'test/cxx/CxxTestMain' => dependencies.flatten do
 	objects = TEST_CXX_OBJECTS.keys.join(' ')
 	create_executable("test/cxx/CxxTestMain", objects, TEST_CXX_LDFLAGS)
@@ -216,6 +227,7 @@ end
 
 deps = [
 	'test/cxx/TestSupport.h',
+	'test/tut/tut.h',
 	'ext/oxt/thread.hpp',
 	'ext/oxt/tracable_exception.hpp',
 	'ext/common/ServerInstanceDir.h',

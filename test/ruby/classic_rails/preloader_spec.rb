@@ -1,7 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
-require 'ruby/shared/loader_spec'
-require 'ruby/shared/ruby_loader_spec'
-require 'ruby/shared/rails/analytics_logging_extensions_spec'
+require 'ruby/shared/loader_sharedspec'
+require 'ruby/shared/ruby_loader_sharedspec'
+require 'ruby/shared/rails/analytics_logging_extensions_sharedspec'
 
 module PhusionPassenger
 
@@ -29,7 +29,6 @@ describe "Classic Rails 2.3 preloader" do
 
 	it_should_behave_like "a loader"
 	it_should_behave_like "a Ruby loader"
-	include_shared_example_group "analytics logging extensions for Rails"
 
 	it "calls the starting_worker_process event with forked=true" do
 		File.prepend(@stub.environment_rb, %q{

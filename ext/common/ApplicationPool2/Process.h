@@ -1,5 +1,5 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
+ *  Phusion Passenger - https://www.phusionpassenger.com/
  *  Copyright (c) 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -43,6 +43,7 @@
 #include <Logging.h>
 #include <Utils/PriorityQueue.h>
 #include <Utils/SystemTime.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/ProcessMetricsCollector.h>
 
 namespace Passenger {
@@ -177,7 +178,6 @@ public:
 	 * 0 means unlimited. */
 	int concurrency;
 	
-	
 	/*************************************************************
 	 * Information used by Pool. Do not write to these from
 	 * outside the Pool. If you read these make sure the Pool
@@ -196,13 +196,17 @@ public:
 	int sessions;
 	/** Number of sessions opened so far. */
 	unsigned int processed;
-	enum {
+	enum EnabledStatus {
 		ENABLED,
 		DISABLING,
 		DISABLED
 	} enabled;
 	ProcessMetrics metrics;
 	
+	/** Marks whether the process requested out-of-band work. If so, we need to
+	 * wait until all sessions have ended and the process has been disabled.
+	 */
+	bool oobwRequested;
 	
 	Process(const SafeLibevPtr _libev,
 		pid_t _pid,
@@ -217,9 +221,9 @@ public:
 		const SocketListPtr &_sockets,
 		unsigned long long _spawnerCreationTime,
 		unsigned long long _spawnStartTime,
-		/** Whether to automatically forward data from errorPipe to our STDERR. */
-		bool _forwardStderr = false)
-		: libev(_libev.get()),
+		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
+		: pqHandle(NULL),
+		  libev(_libev.get()),
 		  pid(_pid),
 		  gupid(_gupid),
 		  connectPassword(_connectPassword),
@@ -229,18 +233,26 @@ public:
 		  spawnStartTime(_spawnStartTime),
 		  sessions(0),
 		  processed(0),
-		  enabled(ENABLED)
+		  enabled(ENABLED),
+		  oobwRequested(false)
 	{
+		SpawnerConfigPtr config;
+		if (_config == NULL) {
+			config = make_shared<SpawnerConfig>();
+		} else {
+			config = _config;
+		}
+
 		if (_libev != NULL) {
 			setNonBlocking(_adminSocket);
 			adminSocketWatcher = make_shared<PipeWatcher>(_libev, _adminSocket,
-				_forwardStderr ? STDOUT_FILENO : -1);
+				config->forwardStdout ? config->forwardStdoutTo : -1);
 			adminSocketWatcher->start();
 		}
 		if (_libev != NULL && _errorPipe != -1) {
 			setNonBlocking(_errorPipe);
 			errorPipeWatcher = make_shared<PipeWatcher>(_libev, _errorPipe,
-				_forwardStderr ? STDERR_FILENO : -1);
+				config->forwardStderr ? config->forwardStderrTo : -1);
 			errorPipeWatcher->start();
 		}
 		
@@ -248,8 +260,8 @@ public:
 			indexSessionSockets();
 		}
 		
-		lastUsed     = SystemTime::getUsec();
-		spawnEndTime = lastUsed;
+		lastUsed      = SystemTime::getUsec();
+		spawnEndTime  = lastUsed;
 	}
 	
 	~Process() {
@@ -309,6 +321,10 @@ public:
 	}
 	
 	bool atFullCapacity() const {
+		return atFullUtilization();
+	}
+
+	bool atFullUtilization() const {
 		return concurrency != 0 && sessions >= concurrency;
 	}
 	
@@ -351,22 +367,7 @@ public:
 	 * Returns the uptime of this process so far, as a string.
 	 */
 	string uptime() const {
-		unsigned long long seconds = (SystemTime::getUsec() - spawnEndTime) / 1000000;
-		stringstream result;
-		
-		if (seconds >= 60) {
-			unsigned long long minutes = seconds / 60;
-			if (minutes >= 60) {
-				unsigned long long hours = minutes / 60;
-				minutes = minutes % 60;
-				result << hours << "h ";
-			}
-			
-			seconds = seconds % 60;
-			result << minutes << "m ";
-		}
-		result << seconds << "s";
-		return result.str();
+		return distanceOfTimeInWords(spawnEndTime / 1000000);
 	}
 
 	string inspect() const;

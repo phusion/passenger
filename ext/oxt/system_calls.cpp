@@ -122,15 +122,22 @@ shouldSimulateFailure() {
 			ctx->syscall_interruption_lock.unlock(); \
 		} \
 		int _my_errno; \
+		bool _intr_requested; \
 		do { \
 			code; \
 			_my_errno = errno; \
-		} while ((error_expression) && _my_errno == EINTR \
-			&& !this_thread::syscalls_interruptable()); \
+		} while ((error_expression) \
+			&& _my_errno == EINTR \
+			&& (!this_thread::syscalls_interruptable() \
+			    || !(_intr_requested = this_thread::interruption_requested())) \
+		); \
 		if (OXT_UNLIKELY(ctx != NULL)) { \
 			ctx->syscall_interruption_lock.lock(); \
 		} \
-		if ((error_expression) && _my_errno == EINTR && this_thread::syscalls_interruptable()) { \
+		if ((error_expression) \
+		 && _my_errno == EINTR \
+		 && this_thread::syscalls_interruptable() \
+		 && _intr_requested) { \
 			throw thread_interrupted(); \
 		} \
 		errno = _my_errno; \
@@ -247,7 +254,10 @@ syscalls::close(int fd) {
 			ctx->syscall_interruption_lock.lock();
 			errno = e;
 		}
-		if (ret == -1 && errno == EINTR && this_thread::syscalls_interruptable()) {
+		if (ret == -1
+		 && errno == EINTR
+		 && this_thread::syscalls_interruptable()
+		 && this_thread::interruption_requested()) {
 			throw thread_interrupted();
 		} else {
 			return ret;
@@ -597,6 +607,7 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	struct timespec req2 = *req;
 	struct timespec rem2;
 	int ret, e;
+	bool intr_requested;
 
 	/* We never simulate failure in this function. */
 
@@ -621,13 +632,20 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 				req2.tv_nsec = 0;
 			}
 		}
-	} while (ret == -1 && e == EINTR && !this_thread::syscalls_interruptable());
+	} while (ret == -1
+		&& e == EINTR
+		&& (!this_thread::syscalls_interruptable()
+		    || !(intr_requested = this_thread::interruption_requested()))
+	);
 	
 	if (OXT_UNLIKELY(ctx != NULL)) {
 		ctx->syscall_interruption_lock.lock();
 	}
 	
-	if (ret == -1 && e == EINTR && this_thread::syscalls_interruptable()) {
+	if (ret == -1
+	 && e == EINTR
+	 && this_thread::syscalls_interruptable()
+	 && intr_requested) {
 		throw thread_interrupted();
 	}
 	errno = e;
@@ -639,13 +657,18 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 
 pid_t
 syscalls::fork() {
-	int ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		true,
-		ret = -1,
-		ret = ::fork()
-	);
+	/* We don't do anything with the syscall_interruption_lock here
+	 * because that can cause an infinite loop. Suppose that we unlock
+	 * syscall_interruption_lock, then another thread calls interrupt()
+	 * on this thread (which in turn locks syscall_interruption_lock),
+	 * and then we context switch back to this thread anf the fork()
+	 * proceeds. In the subprocess, syscall_interruption_lock will never
+	 * be unlocked and so we're stuck forever trying to obtain the lock.
+	 */
+	pid_t ret;
+	do {
+		ret = ::fork();
+	} while (ret == -1 && errno == EINTR);
 	return ret;
 }
 

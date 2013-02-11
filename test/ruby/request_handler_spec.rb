@@ -1,6 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/request_handler'
 require 'phusion_passenger/request_handler/thread_handler'
+require 'phusion_passenger/rack/thread_handler_extension'
 require 'phusion_passenger/analytics_logger'
 require 'phusion_passenger/utils'
 
@@ -30,11 +31,18 @@ describe RequestHandler do
 	end
 	
 	after :each do
-		@request_handler.cleanup
-		@owner_pipe[0].close rescue nil
+		stop_request_handler
 		Utils.passenger_tmpdir = @old_passenger_tmpdir
 		FileUtils.chmod_R(0777, "request_handler_spec.tmp")
 		FileUtils.rm_rf("request_handler_spec.tmp")
+	end
+
+	def stop_request_handler
+		if @request_handler
+			@request_handler.cleanup
+			@owner_pipe[0].close rescue nil
+			@request_handler = nil
+		end
 	end
 	
 	def connect(socket_name = :main)
@@ -178,6 +186,84 @@ describe RequestHandler do
 			client.close rescue nil
 		end
 	end
+
+	it "allows the application to take over the socket completely through the full hijack API" do
+		@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+			include Rack::ThreadHandlerExtension
+		end
+
+		lambda_called = false
+
+		@options["app"] = lambda do |env|
+			lambda_called = true
+			env['rack.hijack?'].should be_true
+			env['rack.hijack_io'].should be_nil
+			env['rack.hijack'].call
+			Thread.new do
+				Thread.current.abort_on_exception = true
+				sleep 0.1
+				env['rack.hijack_io'].write("Hijacked response!")
+				env['rack.hijack_io'].close
+			end
+		end
+
+		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
+		@request_handler.start_main_loop_thread
+		client = connect
+		begin
+			send_binary_request(client,
+				"REQUEST_METHOD" => "GET",
+				"PATH_INFO" => "/")
+			stop_request_handler
+			client.read.should == "Hijacked response!"
+		ensure
+			client.close
+		end
+
+		lambda_called.should == true
+	end
+
+	it "allows the application to take over the socket after sending headers through the partial hijack API" do
+		@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+			include Rack::ThreadHandlerExtension
+		end
+
+		lambda_called = false
+		hijack_callback_called = false
+
+		@options["app"] = lambda do |env|
+			lambda_called = true
+			env['rack.hijack?'].should be_true
+			env['rack.hijack_io'].should be_nil
+			hijack_callback = lambda do |socket|
+				hijack_callback_called = true
+				env['rack.hijack_io'].should_not be_nil
+				env['rack.hijack_io'].should == socket
+				socket.write("Hijacked partial response!")
+				socket.close
+			end
+			[200, { 'Content-Type' => 'text/html', 'rack.hijack' => hijack_callback }]
+		end
+
+		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
+		@request_handler.start_main_loop_thread
+		client = connect
+		begin
+			send_binary_request(client,
+				"REQUEST_METHOD" => "GET",
+				"PATH_INFO" => "/")
+			client.read.should ==
+				"Status: 200\r\n" +
+				"Content-Type: text/html\r\n" +
+				"\r\n" +
+				"Hijacked partial response!"
+		ensure
+			client.close
+		end
+
+		lambda_called.should == true
+		hijack_callback_called.should == true
+	end
 	
 	describe "if analytics logger is given" do
 		def preinitialize
@@ -185,9 +271,9 @@ describe RequestHandler do
 				Process.kill('KILL', @agent_pid)
 				Process.waitpid(@agent_pid)
 			end
-			@log_dir = Utils.passenger_tmpdir
+			@dump_file = "#{Utils.passenger_tmpdir}/log.txt"
 			@logging_agent_password = "1234"
-			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@log_dir,
+			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file,
 				@logging_agent_password)
 			
 			@logger = AnalyticsLogger.new(@socket_address, "logging",
@@ -209,7 +295,7 @@ describe RequestHandler do
 		it "makes the analytics log object available through the request env and a thread-local variable" do
 			header_value = nil
 			thread_value = nil
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				header_value = headers[PASSENGER_ANALYTICS_WEB_LOG]
 				thread_value = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
 			end
@@ -230,8 +316,13 @@ describe RequestHandler do
 		end
 		
 		it "logs uncaught exceptions for requests that have a transaction ID" do
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			reraised = false
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				raise "something went wrong"
+			end
+			@thread_handler.any_instance.stub(:should_reraise_error?).and_return do |e|
+				reraised = true
+				e.message != "something went wrong"
 			end
 			@request_handler.start_main_loop_thread
 			client = connect
@@ -245,9 +336,8 @@ describe RequestHandler do
 			end
 			eventually(5) do
 				flush_logging_agent(@logging_agent_password, @socket_address)
-				log_file = Dir["#{@log_dir}/1/*/*/exceptions/**/log.txt"].first
-				if log_file
-					log_data = File.read(log_file)
+				if File.exist?(@dump_file)
+					log_data = File.read(@dump_file)
 				else
 					log_data = ""
 				end
@@ -256,6 +346,7 @@ describe RequestHandler do
 					log_data.include?("Class: RuntimeError") &&
 					log_data.include?("Backtrace: ")
 			end
+			reraised.should be_true
 		end
 	end
 	
@@ -267,11 +358,11 @@ describe RequestHandler do
 		end
 		
 		after :each do
-			@client.close
+			@client.close if @client
 		end
 		
 		it "correctly parses HTTP requests without query string" do
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				headers["REQUEST_METHOD"].should == "POST"
 				headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
 				headers["HTTP_HOST"].should == "foo.com"
@@ -297,7 +388,7 @@ describe RequestHandler do
 		end
 		
 		it "correctly parses HTTP requests with query string" do
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				headers["REQUEST_METHOD"].should == "POST"
 				headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
 				headers["HTTP_HOST"].should == "foo.com"
@@ -323,7 +414,7 @@ describe RequestHandler do
 		end
 		
 		it "correct parses HTTP requests that come in arbitrary chunks" do
-			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				headers["REQUEST_METHOD"].should == "POST"
 				headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
 				headers["HTTP_HOST"].should == "foo.com"

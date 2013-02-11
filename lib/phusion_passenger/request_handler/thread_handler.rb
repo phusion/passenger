@@ -1,5 +1,5 @@
-#  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010-2012 Phusion
+#  Phusion Passenger - https://www.phusionpassenger.com/
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -39,6 +39,7 @@ class ThreadHandler
 
 	REQUEST_METHOD = 'REQUEST_METHOD'.freeze
 	PING           = 'PING'.freeze
+	OOBW           = 'OOBW'.freeze
 	PASSENGER_CONNECT_PASSWORD  = 'PASSENGER_CONNECT_PASSWORD'.freeze
 
 	MAX_HEADER_SIZE = 128 * 1024
@@ -87,17 +88,20 @@ class ThreadHandler
 	def install
 		Thread.current[:handler] = self
 		install_robust_interruption
+		PhusionPassenger.call_event(:starting_request_handler_thread)
 	end
 
 	def main_loop
 		socket_wrapper = Utils::UnseekableSocket.new
 		channel        = MessageChannel.new
 		buffer         = ''
+		buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
 		
 		begin
 			disable_interruptions do
 				while !Utils::RobustInterruption.interrupted?
-					accept_and_process_next_request(socket_wrapper, channel, buffer)
+					hijacked = accept_and_process_next_request(socket_wrapper, channel, buffer)
+					socket_wrapper = Utils::UnseekableSocket.new if hijacked
 				end
 			end
 		rescue Utils::RobustInterruption::Interrupted
@@ -111,6 +115,7 @@ class ThreadHandler
 	end
 
 private
+	# Returns true if the socket has been hijacked, false otherwise.
 	def accept_and_process_next_request(socket_wrapper, channel, buffer)
 		@stats_mutex.synchronize { @iterations += 1 }
 		connection = enable_interruptions { socket_wrapper.wrap(@server_socket.accept) }
@@ -122,6 +127,8 @@ private
 			begin
 				if headers[REQUEST_METHOD] == PING
 					process_ping(headers, connection)
+				elsif headers[REQUEST_METHOD] == OOBW
+					process_oobw(headers, connection)
 				else
 					process_request(headers, connection, @protocol == :http)
 				end
@@ -129,6 +136,11 @@ private
 				has_error = true
 				raise
 			ensure
+				if headers[RACK_HIJACK_IO]
+					socket_wrapper = nil
+					connection = nil
+					channel = nil
+				end
 				finalize_request(headers, has_error)
 				trace(3, "Request done.")
 			end
@@ -136,19 +148,18 @@ private
 			trace(2, "No headers parsed; disconnecting client.")
 		end
 	rescue => e
-		if socket_wrapper.source_of_exception?(e)
+		if socket_wrapper && socket_wrapper.source_of_exception?(e)
 			# EPIPE is harmless, it just means that the client closed the connection.
 			# Other errors might indicate a problem so we print them, but they're
 			# probably not bad enough to warrant stopping the request handler.
 			if !e.is_a?(Errno::EPIPE)
-				print_exception("Passenger RequestHandler's client socket", e)
+				Utils.print_exception("Passenger RequestHandler's client socket", e)
 			end
-			return true
 		else
 			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
 				log_analytics_exception(headers, e)
 			end
-			raise e
+			raise e if should_reraise_error?(e)
 		end
 	ensure
 		# The 'close_write' here prevents forked child
@@ -247,6 +258,11 @@ private
 
 	def process_ping(env, connection)
 		connection.write("pong")
+	end
+
+	def process_oobw(env, connection)
+		PhusionPassenger.call_event(:oob_work)
+		connection.write("oobw done")
 	end
 
 #	def process_request(env, connection, full_http_response)
@@ -352,6 +368,11 @@ private
 		ensure
 			log.close
 		end
+	end
+
+	def should_reraise_error?(e)
+		# Stubable by unit tests.
+		return true
 	end
 end
 

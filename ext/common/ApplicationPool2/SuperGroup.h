@@ -1,5 +1,5 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
+ *  Phusion Passenger - https://www.phusionpassenger.com/
  *  Copyright (c) 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -189,11 +189,11 @@ private:
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
 		
-		P_ASSERT(groups.empty() ==
+		assert(groups.empty() ==
 			(state == INITIALIZING || state == DESTROYING || state == DESTROYED));
-		P_ASSERT((defaultGroup == NULL) ==
+		assert((defaultGroup == NULL) ==
 			(state == INITIALIZING || state == DESTROYING || state == DESTROYED));
-		P_ASSERT(!( state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED ) ||
+		assert(!( state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED ) ||
 			( getWaitlist.empty() ));
 	}
 	
@@ -324,14 +324,14 @@ private:
 				return;
 			}
 			P_TRACE(2, "Initialization of SuperGroup " << inspect() << " almost done; grabbed lock");
-			P_ASSERT(state == INITIALIZING);
+			assert(state == INITIALIZING);
 			verifyInvariants();
 			
 			if (componentInfos.empty()) {
 				/* Somehow initialization failed. Maybe something has deleted
 				 * the supergroup files while we're working.
 				 */
-				P_ASSERT(exception != NULL);
+				assert(exception != NULL);
 				setState(DESTROYED);
 				
 				actions.reserve(getWaitlist.size());
@@ -384,7 +384,7 @@ private:
 		if (OXT_UNLIKELY(getPool() == NULL || this->generation != generation)) {
 			return;
 		}
-		P_ASSERT(state == RESTARTING);
+		assert(state == RESTARTING);
 		verifyInvariants();
 		
 		vector<GroupPtr> allGroups;
@@ -455,7 +455,7 @@ private:
 		}
 		
 		UPDATE_TRACE_POINT();
-		P_ASSERT(state == DESTROYING);
+		assert(state == DESTROYING);
 		verifyInvariants();
 		state = DESTROYED;
 		verifyInvariants();
@@ -486,7 +486,8 @@ public:
 	/**
 	 * get() requests for this super group that cannot be immediately satisfied
 	 * are put on this wait list, which must be processed as soon as the
-	 * necessary resources have become free.
+	 * necessary resources have become free. Requests must wait when a SuperGroup
+	 * is initializing.
 	 *
 	 * Invariant:
 	 *    if state == READY || state == RESTARTING || state == DESTROYING || state == DESTROYED:
@@ -505,7 +506,7 @@ public:
 	 */
 	SuperGroup(const PoolPtr &pool, const Options &options) {
 		this->pool = pool;
-		this->options = options.copyAndPersist();
+		this->options = options.copyAndPersist().clearLogger();
 		this->name = options.getAppGroupName();
 		secret = generateSecret();
 		state = INITIALIZING;
@@ -636,10 +637,10 @@ public:
 			for (it = groups.begin(); result && it != end; it++) {
 				result = result && (*it)->garbageCollectable(now);
 			}
-			P_ASSERT(!result || getWaitlist.empty());
+			assert(!result || getWaitlist.empty());
 			return result;
 		} else {
-			P_ASSERT(!(state == DESTROYED) || getWaitlist.empty());
+			assert(!(state == DESTROYED) || getWaitlist.empty());
 			return state == DESTROYED;
 		} */
 		return false;
@@ -676,7 +677,7 @@ public:
 					this,
 					// Keep reference to self to prevent destruction.
 					shared_from_this(),
-					newOptions.copyAndPersist(),
+					newOptions.copyAndPersist().clearLogger(),
 					generation),
 				"SuperGroup initializer: " + name,
 				POOL_HELPER_THREAD_STACK_SIZE);
@@ -718,7 +719,7 @@ public:
 					this,
 					// Keep reference to self to prevent destruction.
 					shared_from_this(),
-					options.copyAndPersist(),
+					options.copyAndPersist().clearLogger(),
 					generation),
 				"SuperGroup restarter: " + name,
 				POOL_HELPER_THREAD_STACK_SIZE);
@@ -732,7 +733,7 @@ public:
 		vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
 		for (g_it = groups.begin(); g_it != g_end; g_it++) {
 			const GroupPtr &group = *g_it;
-			result += group->count;
+			result += group->enabledCount + group->disablingCount + group->disabledCount;
 		}
 		return result;
 	}

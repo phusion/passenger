@@ -92,7 +92,7 @@ public:
 		}
 	}
 
-	void try_lock() {
+	bool try_lock() {
 		int ret;
 		do {
 			ret = pthread_spin_trylock(&spin);

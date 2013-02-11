@@ -57,7 +57,9 @@ using namespace oxt;
 		unsigned long long deadlineTime = SystemTime::getMsec(true) + deadlineMsec;	\
 		bool result = false;							\
 		while (!result && SystemTime::getMsec(true) < deadlineTime) {		\
-			code								\
+			{										\
+				code								\
+			}										\
 			if (!result) {							\
 				usleep(sleepTimeMsec * 1000);				\
 			}								\

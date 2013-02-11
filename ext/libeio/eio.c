@@ -134,6 +134,41 @@ static void eio_destroy (eio_req *req);
   #define statvfs(path,buf)    EIO_ENOSYS ()
   #define fstatvfs(fd,buf)     EIO_ENOSYS ()
 
+  #define pread(fd,buf,count,offset)  eio__pread  (fd, buf, count, offset)
+  #define pwrite(fd,buf,count,offset) eio__pwrite (fd, buf, count, offset)
+
+  #if __GNUC__
+    typedef long long eio_off_t; /* signed for compatibility to msvc */
+  #else
+    typedef __int64   eio_off_t; /* unsigned not supported by msvc */
+  #endif
+
+  static eio_ssize_t
+  eio__pread (int fd, void *buf, eio_ssize_t count, eio_off_t offset)
+  {
+    OVERLAPPED o = { 0 };
+    DWORD got;
+
+    o.Offset     = offset;
+    o.OffsetHigh = offset >> 32;
+
+    return ReadFile ((HANDLE)EIO_FD_TO_WIN32_HANDLE (fd), buf, count, &got, &o)
+         ? got : -1;
+  }
+
+  static eio_ssize_t
+  eio__pwrite (int fd, void *buf, eio_ssize_t count, eio_off_t offset)
+  {
+    OVERLAPPED o = { 0 };
+    DWORD got;
+
+    o.Offset     = offset;
+    o.OffsetHigh = offset >> 32;
+
+    return WriteFile ((HANDLE)EIO_FD_TO_WIN32_HANDLE (fd), buf, count, &got, &o)
+         ? got : -1;
+  }
+
   /* rename() uses MoveFile, which fails to overwrite */
   #define rename(old,neu)      eio__rename (old, neu)
 
@@ -381,15 +416,6 @@ static xmutex_t reslock;
 static xmutex_t reqlock;
 static xcond_t  reqwait;
 
-#if !HAVE_PREADWRITE
-/*
- * make our pread/pwrite emulation safe against themselves, but not against
- * normal read/write by using a mutex. slows down execution a lot,
- * but that's your problem, not mine.
- */
-static xmutex_t preadwritelock;
-#endif
-
 typedef struct etp_worker
 {
   struct tmpbuf tmpbuf;
@@ -578,7 +604,7 @@ etp_start_thread (void)
 
   X_LOCK (wrklock);
 
-  if (thread_create (&wrk->tid, etp_proc, (void *)wrk))
+  if (xthread_create (&wrk->tid, etp_proc, (void *)wrk))
     {
       wrk->prev = &wrk_first;
       wrk->next = wrk_first.next;
@@ -944,45 +970,6 @@ int eio_poll (void)
 
 /*****************************************************************************/
 /* work around various missing functions */
-
-#if !HAVE_PREADWRITE
-# undef pread
-# undef pwrite
-# define pread  eio__pread
-# define pwrite eio__pwrite
-
-static eio_ssize_t
-eio__pread (int fd, void *buf, size_t count, off_t offset)
-{
-  eio_ssize_t res;
-  off_t ooffset;
-
-  X_LOCK (preadwritelock);
-  ooffset = lseek (fd, 0, SEEK_CUR);
-  lseek (fd, offset, SEEK_SET);
-  res = read (fd, buf, count);
-  lseek (fd, ooffset, SEEK_SET);
-  X_UNLOCK (preadwritelock);
-
-  return res;
-}
-
-static eio_ssize_t
-eio__pwrite (int fd, void *buf, size_t count, off_t offset)
-{
-  eio_ssize_t res;
-  off_t ooffset;
-
-  X_LOCK (preadwritelock);
-  ooffset = lseek (fd, 0, SEEK_CUR);
-  lseek (fd, offset, SEEK_SET);
-  res = write (fd, buf, count);
-  lseek (fd, ooffset, SEEK_SET);
-  X_UNLOCK (preadwritelock);
-
-  return res;
-}
-#endif
 
 #ifndef HAVE_UTIMES
 
@@ -1933,31 +1920,31 @@ eio__scandir (eio_req *req, etp_worker *self)
                   #endif
                   #ifdef DT_CHR
                     case DT_CHR:  ent->type = EIO_DT_CHR;  break;
-                  #endif          
+                  #endif
                   #ifdef DT_MPC
                     case DT_MPC:  ent->type = EIO_DT_MPC;  break;
-                  #endif          
+                  #endif
                   #ifdef DT_DIR
                     case DT_DIR:  ent->type = EIO_DT_DIR;  break;
-                  #endif          
+                  #endif
                   #ifdef DT_NAM
                     case DT_NAM:  ent->type = EIO_DT_NAM;  break;
-                  #endif          
+                  #endif
                   #ifdef DT_BLK
                     case DT_BLK:  ent->type = EIO_DT_BLK;  break;
-                  #endif          
+                  #endif
                   #ifdef DT_MPB
                     case DT_MPB:  ent->type = EIO_DT_MPB;  break;
-                  #endif          
+                  #endif
                   #ifdef DT_REG
                     case DT_REG:  ent->type = EIO_DT_REG;  break;
-                  #endif          
+                  #endif
                   #ifdef DT_NWK
                     case DT_NWK:  ent->type = EIO_DT_NWK;  break;
-                  #endif          
+                  #endif
                   #ifdef DT_CMP
                     case DT_CMP:  ent->type = EIO_DT_CMP;  break;
-                  #endif          
+                  #endif
                   #ifdef DT_LNK
                     case DT_LNK:  ent->type = EIO_DT_LNK;  break;
                   #endif
@@ -2242,6 +2229,8 @@ quit:
   X_LOCK (wrklock);
   etp_worker_free (self);
   X_UNLOCK (wrklock);
+
+  return 0;
 }
 
 /*****************************************************************************/
@@ -2249,10 +2238,6 @@ quit:
 int ecb_cold
 eio_init (void (*want_poll)(void), void (*done_poll)(void))
 {
-#if !HAVE_PREADWRITE
-  X_MUTEX_CREATE (preadwritelock);
-#endif
-
   return etp_init (want_poll, done_poll);
 }
 
@@ -2262,7 +2247,7 @@ eio_api_destroy (eio_req *req)
   free (req);
 }
 
-#define REQ(rtype)                                            	\
+#define REQ(rtype)						\
   eio_req *req;                                                 \
                                                                 \
   req = (eio_req *)calloc (1, sizeof *req);                     \

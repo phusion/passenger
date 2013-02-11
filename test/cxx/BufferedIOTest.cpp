@@ -123,14 +123,14 @@ namespace tut {
 		ensure_equals(io.readUntil(a_twoBytesRead), 2u);
 		ensure_equals(readData, "aa");
 		ensure("At least 18 msec elapsed", timer1.elapsed() >= 18);
-		ensure("At most 40 msec elapsed", timer1.elapsed() <= 40);
+		ensure("At most 90 msec elapsed", timer1.elapsed() <= 90);
 		
 		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer timer2;
 		ensure_equals(io.readUntil(a_twoBytesRead), 0u);
 		ensure_equals(readData, "aa");
 		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
-		ensure("At most 40 msec elapsed", timer2.elapsed() <= 40);
+		ensure("At most 90 msec elapsed", timer2.elapsed() <= 90);
 	}
 	
 	TEST_METHOD(6) {
@@ -145,7 +145,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			ensure("At least 45 msec elapsed", timer.elapsed() >= 45);
-			ensure("At most 65 msec elapsed", timer.elapsed() < 65);
+			ensure("At most 90 msec elapsed", timer.elapsed() < 90);
 			ensure("It deducts the waited time from the timeout", timeout < 5000);
 			ensure_equals(readData, "hello");
 			ensure_equals(io.getBuffer(), "");
@@ -213,14 +213,14 @@ namespace tut {
 		ensure_equals(io.read(buf, 2), 2u);
 		ensure_equals(StaticString(buf), "aa");
 		ensure("At least 18 msec elapsed", timer1.elapsed() >= 18);
-		ensure("At most 40 msec elapsed", timer1.elapsed() <= 40);
+		ensure("At most 90 msec elapsed", timer1.elapsed() <= 90);
 		
 		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer timer2;
 		ensure_equals(io.read(buf, sizeof(buf)), 0u);
 		ensure_equals(StaticString(buf), "aa");
 		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
-		ensure("At most 40 msec elapsed", timer2.elapsed() <= 40);
+		ensure("At most 90 msec elapsed", timer2.elapsed() <= 90);
 	}
 	
 	TEST_METHOD(16) {
@@ -235,7 +235,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			ensure("At least 45 msec elapsed", timer.elapsed() >= 45);
-			ensure("At most 65 msec elapsed", timer.elapsed() < 65);
+			ensure("At most 95 msec elapsed", timer.elapsed() < 95);
 			ensure("It deducts the waited time from the timeout", timeout < 5000);
 			ensure_equals(io.getBuffer(), "");
 		}
@@ -251,7 +251,7 @@ namespace tut {
 		ensure_equals(io.readAll(), "aa");
 		ensure_equals(io.getBuffer(), "");
 		ensure("At least 38 msec elapsed", timer.elapsed() >= 38);
-		ensure("At most 60 msec elapsed", timer.elapsed() <= 60);
+		ensure("At most 95 msec elapsed", timer.elapsed() <= 95);
 	}
 	
 	TEST_METHOD(21) {
@@ -266,7 +266,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			ensure("At least 45 msec elapsed", timer.elapsed() >= 45);
-			ensure("At most 65 msec elapsed", timer.elapsed() < 65);
+			ensure("At most 95 msec elapsed", timer.elapsed() < 95);
 			ensure("It deducts the waited time from the timeout", timeout < 5000);
 			ensure_equals(io.getBuffer(), "");
 		}
@@ -332,7 +332,7 @@ namespace tut {
 		ensure_equals(io.readLine(), "hello\n");
 		ensure_equals(io.getBuffer(), "world\n.");
 		ensure("At least 33 msec elapsed", timer1.elapsed() >= 33);
-		ensure("At most 60 msec elapsed", timer1.elapsed() <= 60);
+		ensure("At most 95 msec elapsed", timer1.elapsed() <= 90);
 		
 		TempThread thr3(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer timer2;
@@ -341,7 +341,7 @@ namespace tut {
 		ensure_equals(io.readLine(), ".");
 		ensure_equals(io.getBuffer(), "");
 		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
-		ensure("At most 60 msec elapsed", timer2.elapsed() <= 60);
+		ensure("At most 95 msec elapsed", timer2.elapsed() <= 95);
 	}
 	
 	TEST_METHOD(31) {
@@ -356,7 +356,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			ensure("At least 25 msec elapsed", timer.elapsed() >= 25);
-			ensure("At most 40 msec elapsed", timer.elapsed() < 40);
+			ensure("At most 90 msec elapsed", timer.elapsed() < 90);
 			ensure("It deducts the waited time from the timeout", timeout < 5000);
 			ensure_equals(io.getBuffer(), "");
 		}

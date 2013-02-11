@@ -795,11 +795,13 @@ install: function(toclevels) {
 }
 
 }
-asciidoc.install(3);
+asciidoc.install();
 /*]]>*/
 </script><style type="text/css">
 body {
-	margin: 1em 10% 1em 10%;
+	margin: 1em auto 1em auto;
+	padding: 0 1em 0 1em;
+	max-width: 800px;
 }
 
 a.image {
@@ -876,6 +878,10 @@ a.image {
 
 #comments_lightbox_contents > .shell {
 	margin: 2em;
+}
+
+pre {
+	overflow: auto;
 }
 
 @media print {
@@ -1038,6 +1044,15 @@ a.image {
 	border-bottom-right-radius: 0;
 }
 
+/* http://nicolasgallagher.com/jump-links-and-viewport-positioning/ */
+.anchor_helper {
+	position: relative;
+	display: block;
+	top: -50px;
+	width: 1px;
+	height: 1px;
+}
+
 </style>
 </head>
 <body class="article">
@@ -1088,17 +1103,21 @@ Can listen on a Unix socket, for use in reverse proxy setups.
 </div>
 </div>
 <div id="toc">
-  <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><div id="toctitle">Table of Contents</div>
-  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><div id="toctitle">Table of Contents</div>
+<div class="foo toclevel2"><a href="#_support_information">1. Support information</a></div>
+<div class="foo toclevel3"><a href="#_supported_operating_systems">1.1. Supported operating systems</a></div>
+<div class="foo toclevel3"><a href="#_where_to_get_support">1.2. Where to get support</a></div>
+<div class="foo toclevel2"><a href="#_installation">2. Installation</a></div>
+<div class="foo toclevel2"><a href="#_usage">3. Usage</a></div>
 </div>
 </div>
 <div id="content">
 
 <div class="sect1">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h2 id="_support_information" data-comment-topic="support-information-1x8e9ee">1. Support information</h2>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_support_information"></span><h2 data-comment-topic="support-information-1x8e9ee" data-anchor="_support_information">1. Support information</h2>
 <div class="sectionbody">
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h3 id="_supported_operating_systems" data-comment-topic="supported-operating-systems-1387080">1.1. Supported operating systems</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_supported_operating_systems"></span><h3 data-comment-topic="supported-operating-systems-1387080" data-anchor="_supported_operating_systems">1.1. Supported operating systems</h3>
 <div class="paragraph"><p>Phusion Passenger works on any POSIX-compliant operating system. In other
 words: practically any operating system on earth, except Microsoft Windows.</p></div>
 <div class="paragraph"><p>Phusion Passenger is confirmed on a large number of operating systems and Linux
@@ -1111,7 +1130,7 @@ or
 if it doesn’t work on your POSIX-compliant operating system.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h3 id="_where_to_get_support" data-comment-topic="where-to-get-support-xkx7rx">1.2. Where to get support</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_where_to_get_support"></span><h3 data-comment-topic="where-to-get-support-xkx7rx" data-anchor="_where_to_get_support">1.2. Where to get support</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1122,7 +1141,12 @@ if it doesn’t work on your POSIX-compliant operating system.</p></div>
 <li>
 <p>
 <a href="http://groups.google.com/group/phusion-passenger">Discussion forum</a> - post a
-  message here if you’re experiencing problems.
+  message here if you’re experiencing problems. Support on this forum is provided by the community on a best-effort basis, so a (timely) response is not guaranteed.
+</p>
+</li>
+<li>
+<p>
+Email <a href="mailto:support@phusion.nl">support@phusion.nl</a> if you are a <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a> customer. Please mention your order reference. If you are not an Enterprise customer, we kindly redirect you to the community discussion forum instead.
 </p>
 </li>
 <li>
@@ -1136,7 +1160,7 @@ if it doesn’t work on your POSIX-compliant operating system.</p></div>
 </div>
 </div>
 <div class="sect1">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h2 id="_installation" data-comment-topic="installation-2vrmef">2. Installation</h2>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installation"></span><h2 data-comment-topic="installation-2vrmef" data-anchor="_installation">2. Installation</h2>
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content monospaced">
@@ -1146,7 +1170,7 @@ if it doesn’t work on your POSIX-compliant operating system.</p></div>
 </div>
 </div>
 <div class="sect1">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><h2 id="_usage" data-comment-topic="usage-1eyt33o">3. Usage</h2>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_usage"></span><h2 data-comment-topic="usage-1eyt33o" data-anchor="_usage">3. Usage</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Go to your application’s root directory, and run:</p></div>
 <div class="listingblock">
@@ -1168,7 +1192,7 @@ use the <span class="monospaced">-p</span> option, e.g.:</p></div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2012-10-24 16:27:54 CEST
+Last updated 2013-01-23 15:31:31 CET
 </div>
 </div>
 <script>/*! jQuery v1.7.1 jquery.com | jquery.org/license */
@@ -1506,6 +1530,7 @@ Mizuho.initializeTopBar = $.proxy(function() {
 	var isMobileDevice = this.isMobileDevice();
 	var timerId;
 	
+	// Create the floating table of contents used in the top bar.
 	var $floattoc = $('<div id="floattoc"></div>').html($('#toc').html());
 	$floattoc.find('#toctitle').remove();
 	$floattoc.find('.comments').remove();
@@ -1524,6 +1549,8 @@ Mizuho.initializeTopBar = $.proxy(function() {
 		self.internalLinkClicked(this, event);
 	});
 	
+	// Callback for when the user clicks on the Table of Contents
+	// button on the top bar.
 	function showFloatingToc() {
 		var scrollUpdateTimerId;
 		
@@ -1616,6 +1643,9 @@ Mizuho.initializeTopBar = $.proxy(function() {
 		$window.bind('scroll', onScroll);
 	}
 	
+	// Called whenever the user scrolls. Updates the title of the
+	// Table of Contents button in the top bar to the section that
+	// the user is currently reading.
 	function update() {
 		if ($title.offset().top + $title.height() < $document.scrollTop()) {
 			if (!$topbar.is(':visible')) {
@@ -1658,6 +1688,7 @@ Mizuho.initializeTopBar = $.proxy(function() {
 			update();
 		}, 100);
 	}
+	
 	
 	if (isMobileDevice) {
 		// Mobile devices don't support position fixed.

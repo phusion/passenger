@@ -1,5 +1,5 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
+ *  Phusion Passenger - https://www.phusionpassenger.com/
  *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -241,6 +241,9 @@ private:
 			
 			curl_easy_setopt(curl, CURLOPT_HTTPGET, 0);
 			curl_easy_setopt(curl, CURLOPT_HTTPPOST, post);
+			P_DEBUG("Sending Union Station packet: key=" << item.unionStationKey <<
+				", node=" << item.nodeName << ", category=" << item.category <<
+				", compressedDataSize=" << item.data.size());
 			CURLcode code = curl_easy_perform(curl);
 			curl_formfree(post);
 			
@@ -471,7 +474,7 @@ public:
 		unsigned int count)
 	{
 		Item item;
-		
+
 		item.unionStationKey = unionStationKey;
 		item.nodeName = nodeName;
 		item.category = category;
@@ -491,6 +494,10 @@ public:
 			}
 		}
 		
+		P_DEBUG("Scheduling Union Station packet: key=" << unionStationKey <<
+			", node=" << nodeName << ", category=" << category <<
+			", compressedDataSize=" << item.data.size());
+
 		if (!queue.tryAdd(item)) {
 			P_WARN("The Union Station gateway isn't responding quickly enough; dropping packet.");
 		}

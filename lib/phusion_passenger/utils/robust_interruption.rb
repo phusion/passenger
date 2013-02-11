@@ -61,13 +61,17 @@ module RobustInterruption
 	def self.raise(thread, exception = Interrupted)
 		RobustInterruption.disable_interruptions do
 			data = thread[:robust_interruption]
-			data.interrupted = true
-			if data.try_lock
-				begin
-					thread.raise(exception)
-				ensure
-					data.unlock
+			if data
+				data.interrupted = true
+				if data.try_lock
+					begin
+						thread.raise(exception)
+					ensure
+						data.unlock
+					end
 				end
+			else
+				thread.raise(exception)
 			end
 		end
 	end

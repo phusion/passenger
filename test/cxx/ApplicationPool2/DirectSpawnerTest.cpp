@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <ApplicationPool2/Spawner.h>
 #include <Utils/json.h>
+#include <fcntl.h>
 
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
@@ -48,7 +49,7 @@ namespace tut {
 		options.startTimeout = 300;
 		
 		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);
@@ -71,7 +72,7 @@ namespace tut {
 		options.startupFile  = ".";
 		
 		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
-		spawner.forwardStderr = false;
+		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			spawner.spawn(options);

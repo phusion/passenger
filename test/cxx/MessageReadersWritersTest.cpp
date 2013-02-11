@@ -1,7 +1,6 @@
 #include <TestSupport.h>
 #include <MessageReadersWriters.h>
 #include <cstdlib>
-#include <alloca.h>
 
 using namespace Passenger;
 using namespace std;
@@ -384,10 +383,10 @@ namespace tut {
 	TEST_METHOD(34) {
 		// generate() works.
 		StaticString args[] = { "ab", "cde" };
-		StaticString *out = (StaticString *)
-			alloca(ArrayMessage::outputSize(2) * sizeof(StaticString));
+		vector<StaticString> out;
+		out.resize(ArrayMessage::outputSize(2));
 		char buf[sizeof(uint16_t)];
-		ArrayMessage::generate(args, 2, buf, out, ArrayMessage::outputSize(2));
+		ArrayMessage::generate(args, 2, buf, &out[0], ArrayMessage::outputSize(2));
 		
 		string concat;
 		for (unsigned int i = 0; i < ArrayMessage::outputSize(2); i++) {

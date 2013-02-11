@@ -52,7 +52,9 @@ module App
 		LoaderSharedHelpers.init
 		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
-		NativeSupport.disable_stdio_buffering
+		if defined?(NativeSupport)
+			NativeSupport.disable_stdio_buffering
+		end
 		RequestHandler::ThreadHandler.send(:include, Rack::ThreadHandlerExtension)
 	rescue Exception => e
 		LoaderSharedHelpers.about_to_abort(e) if defined?(LoaderSharedHelpers)

@@ -1,4 +1,4 @@
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -156,6 +156,10 @@ private
 				wrap_desc("Enable rolling restarts (Enterprise only)")) do
 				@options[:rolling_restarts] = true
 			end
+			opts.on("--resist-deployment-errors",
+				wrap_desc("Enable deployment error resistance (Enterprise only)")) do
+				@options[:resist_deployment_errors] = true
+			end
 			opts.on("--union-station-gateway HOST:PORT", String,
 				wrap_desc("Specify Union Station Gateway host and port")) do |value|
 				host, port = value.split(":", 2)
@@ -252,27 +256,72 @@ private
 		end
 	end
 
-	def check_port(address, port)
-		begin
-			socket = Socket.new(Socket::Constants::AF_INET, Socket::Constants::SOCK_STREAM, 0)
-			sockaddr = Socket.pack_sockaddr_in(port, address)
+	if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+		require 'java'
+		
+		def check_port(host_name, port)
+			channel = java.nio.channels.SocketChannel.open
 			begin
-				socket.connect_nonblock(sockaddr)
-			rescue Errno::ENOENT, Errno::EINPROGRESS, Errno::EAGAIN, Errno::EWOULDBLOCK
-				if select(nil, [socket], nil, 0.1)
-					begin
-						socket.connect_nonblock(sockaddr)
-					rescue Errno::EISCONN
-					end
-				else
-					raise Errno::ECONNREFUSED
+				address = java.net.InetSocketAddress.new(host_name, port)
+				channel.configure_blocking(false)
+				if channel.connect(address)
+					return true
 				end
+
+				deadline = Time.now.to_f + 0.1
+				done = false
+				while true
+					begin
+						if channel.finish_connect
+							return true
+						end
+					rescue java.net.ConnectException => e
+						if e.message =~ /Connection refused/i
+							return false
+						else
+							throw e
+						end
+					end
+					
+					# Not done connecting and no error.
+					sleep 0.01
+					if Time.now.to_f >= deadline
+						return false
+					end
+				end
+			ensure
+				channel.close
 			end
-			return true
-		rescue Errno::ECONNREFUSED
-			return false
-		ensure
-			socket.close if socket
+		end
+	else
+		def check_port(address, port)
+			begin
+				socket = Socket.new(Socket::Constants::AF_INET, Socket::Constants::SOCK_STREAM, 0)
+				sockaddr = Socket.pack_sockaddr_in(port, address)
+				begin
+					socket.connect_nonblock(sockaddr)
+				rescue Errno::ENOENT, Errno::EINPROGRESS, Errno::EAGAIN, Errno::EWOULDBLOCK
+					if select(nil, [socket], nil, 0.1)
+						begin
+							socket.connect_nonblock(sockaddr)
+						rescue Errno::EISCONN
+						rescue Errno::EINVAL
+							if RUBY_PLATFORM =~ /freebsd/i
+								raise Errno::ECONNREFUSED
+							else
+								raise
+							end
+						end
+					else
+						raise Errno::ECONNREFUSED
+					end
+				end
+				return true
+			rescue Errno::ECONNREFUSED
+				return false
+			ensure
+				socket.close if socket && !socket.closed?
+			end
 		end
 	end
 	
@@ -334,13 +383,16 @@ private
 			end
 		end
 		nginx_bin = @options[:nginx_bin] || "#{nginx_dir}/nginx"
-		return {
+		result = {
 			:root => root,
 			:support_dir => "#{root}/support-#{PlatformInfo.cxx_binary_compatibility_id}",
 			:nginx_dir => nginx_dir,
 			:ruby_dir => "#{root}/rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}",
 			:nginx_installed => File.exist?(nginx_bin)
 		}
+		result[:support_dir_installed] = File.exist?(result[:support_dir] + "/PassengerWatchdog")
+		result[:everything_installed] = result[:nginx_installed] && result[:support_dir_installed]
+		return result
 	end
 
 	def determine_nginx_runtime_dir(runtime_dir)
@@ -348,8 +400,8 @@ private
 	end
 
 	def ensure_nginx_installed
-		if !@runtime_dirs[:nginx_installed]
-			if @options[:nginx_bin]
+		if !@runtime_dirs[:everything_installed]
+			if !@runtime_dirs[:nginx_installed] && @options[:nginx_bin]
 				error "The given Nginx binary '#{@options[:nginx_bin]}' does not exist."
 				exit 1
 			else
@@ -446,7 +498,7 @@ private
 					end
 				end
 			ensure
-				Process.kill('TERM', f.pid)
+				Process.kill('TERM', f.pid) rescue nil
 			end
 		end
 	end

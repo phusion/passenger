@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010, 2011, 2012 Phusion
+ * Copyright (C) 2010-2013 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -84,14 +84,10 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->default_user.len  = 0;
     conf->default_group.data = NULL;
     conf->default_group.len  = 0;
-    conf->analytics_log_dir.data = NULL;
-    conf->analytics_log_dir.len  = 0;
     conf->analytics_log_user.data = NULL;
     conf->analytics_log_user.len  = 0;
     conf->analytics_log_group.data = NULL;
     conf->analytics_log_group.len  = 0;
-    conf->analytics_log_permissions.data = NULL;
-    conf->analytics_log_permissions.len  = 0;
     conf->union_station_gateway_address.data = NULL;
     conf->union_station_gateway_address.len = 0;
     conf->union_station_gateway_port = (ngx_uint_t) NGX_CONF_UNSET;
@@ -114,8 +110,6 @@ char *
 passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
 {
     passenger_main_conf_t *conf;
-    u_char                 filename[NGX_MAX_PATH], *last;
-    ngx_str_t              str;
     struct passwd         *user_entry;
     struct group          *group_entry;
     char buf[128];
@@ -188,28 +182,6 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         }
     }
     
-    if (conf->analytics_log_dir.len == 0) {
-        if (geteuid() == 0) {
-            conf->analytics_log_dir.data = (u_char *) "/var/log/passenger-analytics";
-            conf->analytics_log_dir.len  = sizeof("/var/log/passenger-analytics") - 1;
-        } else {
-            user_entry = getpwuid(geteuid());
-            if (user_entry == NULL) {
-                last = ngx_snprintf(filename, sizeof(filename),
-                                    "/tmp/passenger-analytics-logs.user-%L",
-                                    (int64_t) geteuid());
-            } else {
-                last = ngx_snprintf(filename, sizeof(filename),
-                                    "/tmp/passenger-analytics-logs.%s",
-                                    user_entry->pw_name);
-            }
-            str.data = filename;
-            str.len  = last - filename;
-            conf->analytics_log_dir.data = ngx_pstrdup(cf->pool, &str);
-            conf->analytics_log_dir.len  = str.len;
-        }
-    }
-    
     if (conf->analytics_log_user.len == 0) {
         conf->analytics_log_user.len  = sizeof(DEFAULT_ANALYTICS_LOG_USER) - 1;
         conf->analytics_log_user.data = (u_char *) DEFAULT_ANALYTICS_LOG_USER;
@@ -218,11 +190,6 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     if (conf->analytics_log_group.len == 0) {
         conf->analytics_log_group.len  = sizeof(DEFAULT_ANALYTICS_LOG_GROUP) - 1;
         conf->analytics_log_group.data = (u_char *) DEFAULT_ANALYTICS_LOG_GROUP;
-    }
-    
-    if (conf->analytics_log_permissions.len == 0) {
-        conf->analytics_log_permissions.len  = sizeof(DEFAULT_ANALYTICS_LOG_PERMISSIONS) - 1;
-        conf->analytics_log_permissions.data = (u_char *) DEFAULT_ANALYTICS_LOG_PERMISSIONS;
     }
     
     if (conf->union_station_gateway_address.len == 0) {
@@ -462,19 +429,19 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream_config.store_access, 0600);
 
     ngx_conf_merge_value(conf->upstream_config.buffering,
-                              prev->upstream_config.buffering, 1);
+                              prev->upstream_config.buffering, 0);
 
     ngx_conf_merge_value(conf->upstream_config.ignore_client_abort,
                               prev->upstream_config.ignore_client_abort, 0);
 
     ngx_conf_merge_msec_value(conf->upstream_config.connect_timeout,
-                              prev->upstream_config.connect_timeout, 600000);
+                              prev->upstream_config.connect_timeout, 12000000);
 
     ngx_conf_merge_msec_value(conf->upstream_config.send_timeout,
-                              prev->upstream_config.send_timeout, 600000);
+                              prev->upstream_config.send_timeout, 12000000);
 
     ngx_conf_merge_msec_value(conf->upstream_config.read_timeout,
-                              prev->upstream_config.read_timeout, 600000);
+                              prev->upstream_config.read_timeout, 12000000);
 
     ngx_conf_merge_size_value(conf->upstream_config.send_lowat,
                               prev->upstream_config.send_lowat, 0);
@@ -575,6 +542,9 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
+    ngx_conf_merge_bitmask_value(conf->upstream_config.ignore_headers,
+                                 prev->upstream_config.ignore_headers,
+                                 NGX_CONF_BITMASK_SET);
 
     ngx_conf_merge_bitmask_value(conf->upstream_config.next_upstream,
                               prev->upstream_config.next_upstream,
@@ -1210,13 +1180,6 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_loc_conf_t, union_station_support),
       NULL },
 
-    { ngx_string("passenger_analytics_log_dir"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, analytics_log_dir),
-      NULL },
-
     { ngx_string("passenger_analytics_log_user"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
@@ -1229,13 +1192,6 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, analytics_log_group),
-      NULL },
-
-    { ngx_string("passenger_analytics_log_permissions"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, analytics_log_permissions),
       NULL },
 
     { ngx_string("union_station_gateway_address"),
@@ -1307,6 +1263,13 @@ const ngx_command_t passenger_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, max_preloader_idle_time),
       NULL },
+
+    { ngx_string("passenger_ignore_headers"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
+      ngx_conf_set_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, upstream_config.ignore_headers),
+      &ngx_http_upstream_ignore_headers_masks },
 
     { ngx_string("passenger_pass_header"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,

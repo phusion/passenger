@@ -1,6 +1,6 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -135,9 +135,11 @@ protected:
 				if (ret == 0) {
 					break;
 				} else if (ret == -1) {
-					P_WARN("Background I/O capturer error: " <<
-						strerror(e) << " (errno=" << e << ")");
-					break;
+					if (e != EAGAIN && e != EWOULDBLOCK) {
+						P_WARN("Background I/O capturer error: " <<
+							strerror(e) << " (errno=" << e << ")");
+						break;
+					}
 				} else {
 					{
 						lock_guard<boost::mutex> l(dataSyncher);
@@ -308,6 +310,7 @@ protected:
 		FileDescriptor errorPipe;
 		const Options *options;
 		bool forwardStderr;
+		int forwardStderrTo;
 		DebugDirPtr debugDir;
 		
 		// Working state.
@@ -321,6 +324,7 @@ protected:
 			pid = 0;
 			options = NULL;
 			forwardStderr = false;
+			forwardStderrTo = STDERR_FILENO;
 			spawnStartTime = 0;
 			timeout = 0;
 		}
@@ -338,6 +342,7 @@ protected:
 		DebugDirPtr debugDir;
 		const Options *options;
 		bool forwardStderr;
+		int forwardStderrTo;
 
 		// Working state.
 		unsigned long long timeout;
@@ -345,6 +350,7 @@ protected:
 		StartupDetails() {
 			options = NULL;
 			forwardStderr = false;
+			forwardStderrTo = STDERR_FILENO;
 			timeout = 0;
 		}
 	};
@@ -490,13 +496,14 @@ private:
 			details.gupid, details.connectPassword,
 			details.adminSocket, details.errorPipe,
 			sockets, creationTime, details.spawnStartTime,
-			details.forwardStderr);
+			config);
 	}
 	
 protected:
 	ResourceLocator resourceLocator;
 	RandomGeneratorPtr randomGenerator;
 	ServerInstanceDir::GenerationPtr generation;
+	SpawnerConfigPtr config;
 	
 	static void nonInterruptableKillAndWaitpid(pid_t pid) {
 		this_thread::disable_syscall_interruption dsi;
@@ -640,7 +647,7 @@ protected:
 					details.stderrCapturer->appendToBuffer(result);
 				}
 				if (details.forwardStderr) {
-					write(STDOUT_FILENO, result.data(), result.size());
+					write(details.forwardStderrTo, result.data(), result.size());
 				}
 			}
 		}
@@ -784,16 +791,21 @@ protected:
 		info.shell = userInfo->pw_shell;
 		info.uid = userInfo->pw_uid;
 		info.gid = groupInfo->gr_gid;
-		ret = getgrouplist(userInfo->pw_name, groupInfo->gr_gid,
-			groups, &info.ngroups);
-		if (ret == -1) {
-			int e = errno;
-			throw SystemException("getgrouplist() failed", e);
-		}
-		info.gidset = shared_array<gid_t>(new gid_t[info.ngroups]);
-		for (int i = 0; i < info.ngroups; i++) {
-			info.gidset[i] = groups[i];
-		}
+		#if !defined(HAVE_GETGROUPLIST) && (defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__))
+			#define HAVE_GETGROUPLIST
+		#endif
+		#ifdef HAVE_GETGROUPLIST
+			ret = getgrouplist(userInfo->pw_name, groupInfo->gr_gid,
+				groups, &info.ngroups);
+			if (ret == -1) {
+				int e = errno;
+				throw SystemException("getgrouplist() failed", e);
+			}
+			info.gidset = shared_array<gid_t>(new gid_t[info.ngroups]);
+			for (int i = 0; i < info.ngroups; i++) {
+				info.gidset[i] = groups[i];
+			}
+		#endif
 	}
 
 	void prepareSwitchingWorkingDirectory(SpawnPreparationInfo &info, const Options &options) const {
@@ -856,11 +868,26 @@ protected:
 
 	void switchUser(const SpawnPreparationInfo &info) {
 		if (info.switchUser) {
-			if (setgroups(info.ngroups, info.gidset.get()) == -1) {
+			bool setgroupsCalled = false;
+			#ifdef HAVE_GETGROUPLIST
+				if (info.ngroups <= NGROUPS_MAX) {
+					setgroupsCalled = true;
+					if (setgroups(info.ngroups, info.gidset.get()) == -1) {
+						int e = errno;
+						printf("!> Error\n");
+						printf("!> \n");
+						printf("setgroups(%d, ...) failed: %s (errno=%d)\n",
+							info.ngroups, strerror(e), e);
+						fflush(stdout);
+						_exit(1);
+					}
+				}
+			#endif
+			if (!setgroupsCalled && initgroups(info.username.c_str(), info.gid) == -1) {
 				int e = errno;
 				printf("!> Error\n");
 				printf("!> \n");
-				printf("setgroups() failed: %s (errno=%d)\n",
+				printf("initgroups() failed: %s (errno=%d)\n",
 					strerror(e), e);
 				fflush(stdout);
 				_exit(1);
@@ -1126,6 +1153,10 @@ public:
 	virtual unsigned long long lastUsed() const {
 		return 0;
 	}
+
+	SpawnerConfigPtr getConfig() const {
+		return config;
+	}
 };
 typedef shared_ptr<Spawner> SpawnerPtr;
 
@@ -1165,8 +1196,8 @@ private:
 		ret = syscalls::read(adminSocket, buf, sizeof(buf));
 		if (ret <= 0) {
 			preloaderOutputWatcher.stop();
-		} else if (forwardStdout) {
-			write(STDOUT_FILENO, buf, ret);
+		} else if (config->forwardStdout) {
+			write(config->forwardStdoutTo, buf, ret);
 		}
 	}
 
@@ -1280,6 +1311,8 @@ private:
 
 	void startPreloader() {
 		TRACE_POINT();
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
 		assert(!preloaderStarted());
 		checkChrootDirectories(options);
 		
@@ -1335,14 +1368,19 @@ private:
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
-					forwardStderr ? STDERR_FILENO : -1);
+					config->forwardStderr ? config->forwardStderrTo : -1);
 			details.stderrCapturer->start();
 			details.debugDir = debugDir;
 			details.options = &options;
 			details.timeout = options.startTimeout * 1000;
-			details.forwardStderr = forwardStderr;
+			details.forwardStderr = config->forwardStderr;
+			details.forwardStderrTo = config->forwardStderrTo;
 			
-			socketAddress = negotiatePreloaderStartup(details);
+			{
+				this_thread::restore_interruption ri(di);
+				this_thread::restore_syscall_interruption rsi(dsi);
+				socketAddress = negotiatePreloaderStartup(details);
+			}
 			this->adminSocket = adminSocket.second;
 			{
 				lock_guard<boost::mutex> l(simpleFieldSyncher);
@@ -1352,7 +1390,8 @@ private:
 			libev->start(preloaderOutputWatcher);
 			setNonBlocking(errorPipe.first);
 			preloaderErrorWatcher = make_shared<PipeWatcher>(libev,
-				errorPipe.first, forwardStderr ? STDERR_FILENO : -1);
+				errorPipe.first,
+				config->forwardStderr ? config->forwardStderrTo : -1);
 			preloaderErrorWatcher->start();
 			preloaderAnnotations = debugDir->readAll();
 			P_DEBUG("Preloader for " << options.appRoot <<
@@ -1755,17 +1794,13 @@ protected:
 	}
 
 public:
-	/** Whether to forward the preloader process's stdout to our stdout. True by default. */
-	bool forwardStdout;
-	/** Whether to forward the preloader process's stderr to our stderr. True by default. */
-	bool forwardStderr;
-	
 	SmartSpawner(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const vector<string> &_preloaderCommand,
 		const Options &_options,
-		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
+		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr(),
+		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: Spawner(_resourceLocator),
 		  libev(_libev),
 		  preloaderCommand(_preloaderCommand)
@@ -1774,11 +1809,8 @@ public:
 			throw ArgumentException("preloaderCommand must have at least 2 elements");
 		}
 		
-		forwardStdout = true;
-		forwardStderr = true;
-		
 		generation = _generation;
-		options    = _options.copyAndPersist();
+		options    = _options.copyAndPersist().clearLogger();
 		pid        = -1;
 		m_lastUsed = SystemTime::getUsec();
 		
@@ -1788,6 +1820,11 @@ public:
 			randomGenerator = make_shared<RandomGenerator>();
 		} else {
 			randomGenerator = _randomGenerator;
+		}
+		if (_config == NULL) {
+			config = make_shared<SpawnerConfig>();
+		} else {
+			config = _config;
 		}
 	}
 	
@@ -1832,7 +1869,8 @@ public:
 		details.adminSocket = result.adminSocket;
 		details.io = result.io;
 		details.options = &options;
-		details.forwardStderr = forwardStderr;
+		details.forwardStderr = config->forwardStderr;
+		details.forwardStderrTo = config->forwardStderrTo;
 		ProcessPtr process = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
 			", pid=" << process->pid);
@@ -1974,27 +2012,31 @@ private:
 	}
 	
 public:
-	/** Whether to forward spawned processes' stderr to our stderr. True by default. */
-	bool forwardStderr;
-	
 	DirectSpawner(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
-		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
+		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr(),
+		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: Spawner(_resourceLocator),
 		  libev(_libev)
 	{
-		forwardStderr = true;
 		generation = _generation;
 		if (_randomGenerator == NULL) {
 			randomGenerator = make_shared<RandomGenerator>();
 		} else {
 			randomGenerator = _randomGenerator;
 		}
+		if (_config == NULL) {
+			config = make_shared<SpawnerConfig>();
+		} else {
+			config = _config;
+		}
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
 		TRACE_POINT();
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
 		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
 		possiblyRaiseInternalError(options);
 
@@ -2050,17 +2092,23 @@ public:
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
-					forwardStderr ? STDERR_FILENO : -1);
+					config->forwardStderr ? config->forwardStderrTo : -1);
 			details.stderrCapturer->start();
 			details.pid = pid;
 			details.adminSocket = adminSocket.second;
 			details.io = BufferedIO(adminSocket.second);
 			details.errorPipe = errorPipe.first;
 			details.options = &options;
-			details.forwardStderr = forwardStderr;
+			details.forwardStderr = config->forwardStderr;
+			details.forwardStderrTo = config->forwardStderrTo;
 			details.debugDir = debugDir;
 			
-			ProcessPtr process = negotiateSpawn(details);
+			ProcessPtr process;
+			{
+				this_thread::restore_interruption ri(di);
+				this_thread::restore_syscall_interruption rsi(dsi);
+				process = negotiateSpawn(details);
+			}
 			detachProcess(process->pid);
 			guard.clear();
 			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
@@ -2073,20 +2121,18 @@ public:
 
 class DummySpawner: public Spawner {
 private:
+	SpawnerConfigPtr config;
 	boost::mutex lock;
 	unsigned int count;
 	
 public:
-	unsigned int concurrency;
-	unsigned int spawnTime;
 	unsigned int cleanCount;
 	
-	DummySpawner(const ResourceLocator &resourceLocator)
-		: Spawner(resourceLocator)
+	DummySpawner(const ResourceLocator &resourceLocator, const SpawnerConfigPtr &_config)
+		: Spawner(resourceLocator),
+		  config(_config)
 	{
 		count = 0;
-		concurrency = 1;
-		spawnTime = 0;
 		cleanCount = 0;
 	}
 	
@@ -2096,8 +2142,8 @@ public:
 
 		SocketPair adminSocket = createUnixSocketPair();
 		SocketListPtr sockets = make_shared<SocketList>();
-		sockets->add("main", "tcp://127.0.0.1:1234", "session", concurrency);
-		syscalls::usleep(spawnTime);
+		sockets->add("main", "tcp://127.0.0.1:1234", "session", config->concurrency);
+		syscalls::usleep(config->spawnTime);
 		
 		lock_guard<boost::mutex> l(lock);
 		count++;
@@ -2126,6 +2172,9 @@ private:
 	ResourceLocator resourceLocator;
 	ServerInstanceDir::GenerationPtr generation;
 	RandomGeneratorPtr randomGenerator;
+	boost::mutex syncher;
+	SpawnerConfigPtr config;
+	DummySpawnerPtr dummySpawner;
 	
 	SpawnerPtr tryCreateSmartSpawner(const Options &options) {
 		string dir = resourceLocator.getHelperScriptsDir();
@@ -2145,30 +2194,24 @@ private:
 	}
 	
 public:
-	// Properties for DummySpawner
-	unsigned int dummyConcurrency;
-	unsigned int dummySpawnerCreationSleepTime;
-	unsigned int dummySpawnTime;
-
-	// Properties for SmartSpawner and DirectSpawner.
-	bool forwardStderr;
-
 	SpawnerFactory(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
-		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr())
+		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr(),
+		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: libev(_libev),
 		  resourceLocator(_resourceLocator),
 		  generation(_generation)
 	{
-		dummyConcurrency = 1;
-		dummySpawnerCreationSleepTime = 0;
-		dummySpawnTime   = 0;
-		forwardStderr    = true;
-		if (randomGenerator == NULL) {
+		if (_randomGenerator == NULL) {
 			randomGenerator = make_shared<RandomGenerator>();
 		} else {
 			randomGenerator = _randomGenerator;
+		}
+		if (_config == NULL) {
+			config = make_shared<SpawnerConfig>();
+		} else {
+			config = _config;
 		}
 	}
 	
@@ -2180,26 +2223,39 @@ public:
 			if (spawner == NULL) {
 				spawner = make_shared<DirectSpawner>(libev,
 					resourceLocator, generation,
-					randomGenerator);
-				static_pointer_cast<DirectSpawner>(spawner)->forwardStderr = forwardStderr;
-			} else {
-				static_pointer_cast<SmartSpawner>(spawner)->forwardStderr = forwardStderr;
+					randomGenerator, config);
 			}
 			return spawner;
 		} else if (options.spawnMethod == "direct" || options.spawnMethod == "conservative") {
 			shared_ptr<DirectSpawner> spawner = make_shared<DirectSpawner>(libev, resourceLocator,
-				generation, randomGenerator);
-			spawner->forwardStderr = forwardStderr;
+				generation, randomGenerator, config);
 			return spawner;
 		} else if (options.spawnMethod == "dummy") {
-			syscalls::usleep(dummySpawnerCreationSleepTime);
-			DummySpawnerPtr spawner = make_shared<DummySpawner>(resourceLocator);
-			spawner->concurrency = dummyConcurrency;
-			spawner->spawnTime   = dummySpawnTime;
-			return spawner;
+			syscalls::usleep(config->spawnerCreationSleepTime);
+			return getDummySpawner();
 		} else {
 			throw ArgumentException("Unknown spawn method '" + options.spawnMethod + "'");
 		}
+	}
+
+	/**
+	 * SpawnerFactory always returns the same DummyFactory object upon
+	 * creating a dummy spawner. This allows unit tests to easily
+	 * set debugging options on the spawner.
+	 */
+	DummySpawnerPtr getDummySpawner() {
+		lock_guard<boost::mutex> l(syncher);
+		if (dummySpawner == NULL) {
+			dummySpawner = make_shared<DummySpawner>(resourceLocator, config);
+		}
+		return dummySpawner;
+	}
+
+	/**
+	 * All created Spawner objects share the same SpawnerConfig object.
+	 */
+	SpawnerConfigPtr getConfig() const {
+		return config;
 	}
 };
 

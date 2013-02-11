@@ -1,6 +1,6 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -310,7 +310,7 @@ struct DirConfig {
 	}
 
 	bool getBufferResponse() const {
-		return bufferResponse != DISABLED;
+		return bufferResponse == ENABLED;
 	}
 	
 	string getUnionStationFilterString() const {
@@ -380,10 +380,8 @@ struct ServerConfig {
 	string unionStationProxyType;
 	
 	/** Directory in which analytics logs should be saved. */
-	string analyticsLogDir;
 	string analyticsLogUser;
 	string analyticsLogGroup;
-	string analyticsLogPermissions;
 	
 	set<string> prestartURLs;
 	
@@ -404,7 +402,6 @@ struct ServerConfig {
 		unionStationProxyType      = string();
 		analyticsLogUser   = DEFAULT_ANALYTICS_LOG_USER;
 		analyticsLogGroup  = DEFAULT_ANALYTICS_LOG_GROUP;
-		analyticsLogPermissions = DEFAULT_ANALYTICS_LOG_PERMISSIONS;
 	}
 	
 	/** Called after the configuration files have been loaded, inside
@@ -429,22 +426,6 @@ struct ServerConfig {
 			}
 			
 			defaultGroup = groupEntry->gr_name;
-		}
-		
-		if (analyticsLogDir.empty() && geteuid() == 0) {
-			analyticsLogDir = "/var/log/passenger-analytics";
-		} else if (analyticsLogDir.empty()) {
-			struct passwd *user = getpwuid(geteuid());
-			string username;
-			
-			if (user == NULL) {
-				username = user->pw_name;
-			} else {
-				username = "user-" + toString(geteuid());
-			}
-			analyticsLogDir = string(getSystemTempDir()) +
-				"/passenger-analytics-logs." +
-				username;
 		}
 		
 		if (unionStationProxyType != ""
