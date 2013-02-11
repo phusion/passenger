@@ -795,11 +795,13 @@ install: function(toclevels) {
 }
 
 }
-asciidoc.install(3);
+asciidoc.install();
 /*]]>*/
 </script><style type="text/css">
 body {
-	margin: 1em 10% 1em 10%;
+	margin: 1em auto 1em auto;
+	padding: 0 1em 0 1em;
+	max-width: 800px;
 }
 
 a.image {
@@ -876,6 +878,10 @@ a.image {
 
 #comments_lightbox_contents > .shell {
 	margin: 2em;
+}
+
+pre {
+	overflow: auto;
 }
 
 @media print {
@@ -1038,6 +1044,15 @@ a.image {
 	border-bottom-right-radius: 0;
 }
 
+/* http://nicolasgallagher.com/jump-links-and-viewport-positioning/ */
+.anchor_helper {
+	position: relative;
+	display: block;
+	top: -50px;
+	width: 1px;
+	height: 1px;
+}
+
 </style>
 </head>
 <body class="article">
@@ -1063,17 +1078,29 @@ about how Phusion Passenger works.</p></div>
 </div>
 </div>
 <div id="toc">
-  <div id="toctitle">Table of Contents</div>
-  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+<div id="toctitle">Table of Contents</div>
+<div class="foo toclevel2"><a href="#_introduction_to_related_technologies">1. Introduction to related technologies</a></div>
+<div class="foo toclevel3"><a href="#web_app_models">1.1. Web application models</a></div>
+<div class="foo toclevel4"><a href="#_why_reverse_proxy">1.1.1. Why reverse proxy?</a></div>
+<div class="foo toclevel3"><a href="#_ruby_rack_and_ruby_on_rails">1.2. Ruby Rack and Ruby on Rails</a></div>
+<div class="foo toclevel3"><a href="#_apache">1.3. Apache</a></div>
+<div class="foo toclevel3"><a href="#_nginx">1.4. Nginx</a></div>
+<div class="foo toclevel2"><a href="#_phusion_passenger_architecture">2. Phusion Passenger architecture</a></div>
+<div class="foo toclevel3"><a href="#_overview">2.1. Overview</a></div>
+<div class="foo toclevel3"><a href="#_spawning_and_caching_of_code_and_applications">2.2. Spawning and caching of code and applications</a></div>
+<div class="foo toclevel3"><a href="#spawn_server">2.3. The spawn server</a></div>
+<div class="foo toclevel4"><a href="#_memory_sharing">2.3.1. Memory sharing</a></div>
+<div class="foo toclevel3"><a href="#concurrent_requests">2.4. Handling of concurrent requests</a></div>
+<div class="foo toclevel2"><a href="#_appendix_a_about_this_document">3. Appendix A: About this document</a></div>
 </div>
 </div>
 <div id="content">
 
 <div class="sect1">
-<h2 id="_introduction_to_related_technologies">1. Introduction to related technologies</h2>
+<span class="anchor_helper" id="_introduction_to_related_technologies"></span><h2 data-anchor="_introduction_to_related_technologies">1. Introduction to related technologies</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="web_app_models">1.1. Web application models</h3>
+<span class="anchor_helper" id="web_app_models"></span><h3 data-anchor="web_app_models">1.1. Web application models</h3>
 <div class="paragraph"><p>Before we describe Phusion Passenger, it is important to understand how typical web
 applications work from the viewpoint of someone who wants to connect the
 application to a web server.</p></div>
@@ -1165,7 +1192,7 @@ processes.</p></div>
 <div class="paragraph"><p>Of course, there are many variations possible. For example, load balancers
 could be used. But that is outside the scope of this document.</p></div>
 <div class="sect3">
-<h4 id="_why_reverse_proxy">1.1.1. Why reverse proxy?</h4>
+<span class="anchor_helper" id="_why_reverse_proxy"></span><h4 data-anchor="_why_reverse_proxy">1.1.1. Why reverse proxy?</h4>
 <div class="paragraph"><p>As you’ve seen, it is often necessary to put the web application or its
 application server behind a real web server in a reverse proxy setup even
 when the web app/app server already speaks HTTP. This is because implementing
@@ -1205,7 +1232,7 @@ and the web application do what they’re best at: their own core business logic
 </div>
 </div>
 <div class="sect2">
-<h3 id="_ruby_rack_and_ruby_on_rails">1.2. Ruby Rack and Ruby on Rails</h3>
+<span class="anchor_helper" id="_ruby_rack_and_ruby_on_rails"></span><h3 data-anchor="_ruby_rack_and_ruby_on_rails">1.2. Ruby Rack and Ruby on Rails</h3>
 <div class="paragraph"><p>The de-facto standard interface for Ruby web applications is <a href="http://rack.rubyforge.org/">Rack</a>.
 Rack specifies an programming interface for web application developers to implement.
 This interface covers HTTP request and response handling, and is not dependent on
@@ -1230,7 +1257,7 @@ Enterprise Edition</a>. Also, a lot of the startup time of a Ruby on Rails
 application is spent on bootstrapping the Rails framework.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_apache">1.3. Apache</h3>
+<span class="anchor_helper" id="_apache"></span><h3 data-anchor="_apache">1.3. Apache</h3>
 <div class="paragraph"><p>The Apache web server has a dynamic module system and a pluggable I/O
 multiprocessing (the ability to
 handle more than 1 concurrent HTTP client at the same time) architecture. An
@@ -1249,7 +1276,7 @@ so-called control process, and then forwarded to one of the worker processes.
 The next section contains a diagram which shows the prefork MPM’s architecture.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_nginx">1.4. Nginx</h3>
+<span class="anchor_helper" id="_nginx"></span><h3 data-anchor="_nginx">1.4. Nginx</h3>
 <div class="paragraph"><p>Nginx is a lightweight web server that is becoming increasingly popular. It is known
 to be smaller, lighter weight and more scalable than Apache thanks to its evented I/O
 architecture. That said, Nginx is less flexible than Apache. For example it has no
@@ -1258,10 +1285,10 @@ dynamic module system: all modules must be statically compiled into Nginx.</p></
 </div>
 </div>
 <div class="sect1">
-<h2 id="_phusion_passenger_architecture">2. Phusion Passenger architecture</h2>
+<span class="anchor_helper" id="_phusion_passenger_architecture"></span><h2 data-anchor="_phusion_passenger_architecture">2. Phusion Passenger architecture</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_overview">2.1. Overview</h3>
+<span class="anchor_helper" id="_overview"></span><h3 data-anchor="_overview">2.1. Overview</h3>
 <div class="paragraph"><p>Phusion Passenger’s architecture is a lot like model #2 described in
 <a href="#web_app_models">Web application models</a>. In other words,
 Phusion Passenger extends Apache/Nginx and allows it to act like an
@@ -1296,7 +1323,7 @@ is carefully designed and implemented so that the web server shouldn’t crash b
 of Phusion Passenger.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_spawning_and_caching_of_code_and_applications">2.2. Spawning and caching of code and applications</h3>
+<span class="anchor_helper" id="_spawning_and_caching_of_code_and_applications"></span><h3 data-anchor="_spawning_and_caching_of_code_and_applications">2.2. Spawning and caching of code and applications</h3>
 <div class="paragraph"><p>A very naive implementation of an application server would spawn an application
 process every time an HTTP request is received, just like CGI would.
 However, spawning Ruby applications is typically expensive. It can take a few
@@ -1365,7 +1392,7 @@ spawned applications' handles, and cleaning up applications which have been
 idle for an extended period of time.</p></div>
 </div>
 <div class="sect2">
-<h3 id="spawn_server">2.3. The spawn server</h3>
+<span class="anchor_helper" id="spawn_server"></span><h3 data-anchor="spawn_server">2.3. The spawn server</h3>
 <div class="paragraph"><p>The spawn server is written in Ruby, and its code can be found in the directory
 <em>lib/passenger</em>. Its main executable is <em>bin/passenger-spawn-server</em>.
 <a href="rdoc/index.html">The spawn server’s RDoc documentation</a> documents the
@@ -1419,7 +1446,7 @@ application instance’s life time (through the application pool).</p></div>
 single Ruby process can only load a single Ruby on Rails framework and a
 single application.</p></div>
 <div class="sect3">
-<h4 id="_memory_sharing">2.3.1. Memory sharing</h4>
+<span class="anchor_helper" id="_memory_sharing"></span><h4 data-anchor="_memory_sharing">2.3.1. Memory sharing</h4>
 <div class="paragraph"><p>On most modern Unix operating systems, when a child process is created, it will
 share most of its memory with the parent process. Processes are not supposed to
 be able to access each others' memory, so the operating system makes a copy of
@@ -1452,7 +1479,7 @@ copy-on-write friendly.</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="concurrent_requests">2.4. Handling of concurrent requests</h3>
+<span class="anchor_helper" id="concurrent_requests"></span><h3 data-anchor="concurrent_requests">2.4. Handling of concurrent requests</h3>
 <div class="paragraph"><p>As explained earlier, a single Rails application instance can only handle a
 single request at the same time. This is obviously undesirable. But before we
 dive into the solution, let us take a look how the “competition” solves this
@@ -1489,7 +1516,7 @@ algorithm, which is non-trivial. The algorithm is documented in detail in
 </div>
 </div>
 <div class="sect1">
-<h2 id="_appendix_a_about_this_document">3. Appendix A: About this document</h2>
+<span class="anchor_helper" id="_appendix_a_about_this_document"></span><h2 data-anchor="_appendix_a_about_this_document">3. Appendix A: About this document</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The text of this document is licensed under the
 <a href="http://creativecommons.org/licenses/by-sa/3.0/">Creative Commons
@@ -1504,7 +1531,7 @@ Attribution-Share Alike 3.0 Unported License</a>.</p></div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2012-10-23 21:45:15 CEST
+Last updated 2013-01-08 23:58:13 CET
 </div>
 </div>
 <script>/*! jQuery v1.7.1 jquery.com | jquery.org/license */
@@ -1842,6 +1869,7 @@ Mizuho.initializeTopBar = $.proxy(function() {
 	var isMobileDevice = this.isMobileDevice();
 	var timerId;
 	
+	// Create the floating table of contents used in the top bar.
 	var $floattoc = $('<div id="floattoc"></div>').html($('#toc').html());
 	$floattoc.find('#toctitle').remove();
 	$floattoc.find('.comments').remove();
@@ -1860,6 +1888,8 @@ Mizuho.initializeTopBar = $.proxy(function() {
 		self.internalLinkClicked(this, event);
 	});
 	
+	// Callback for when the user clicks on the Table of Contents
+	// button on the top bar.
 	function showFloatingToc() {
 		var scrollUpdateTimerId;
 		
@@ -1952,6 +1982,9 @@ Mizuho.initializeTopBar = $.proxy(function() {
 		$window.bind('scroll', onScroll);
 	}
 	
+	// Called whenever the user scrolls. Updates the title of the
+	// Table of Contents button in the top bar to the section that
+	// the user is currently reading.
 	function update() {
 		if ($title.offset().top + $title.height() < $document.scrollTop()) {
 			if (!$topbar.is(':visible')) {
@@ -1994,6 +2027,7 @@ Mizuho.initializeTopBar = $.proxy(function() {
 			update();
 		}, 100);
 	}
+	
 	
 	if (isMobileDevice) {
 		// Mobile devices don't support position fixed.

@@ -1,4 +1,4 @@
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (C) 2010  Phusion
 #
 #  This program is free software; you can redistribute it and/or modify

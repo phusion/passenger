@@ -1,3 +1,17 @@
+Release 3.9.2
+-------------
+
+ * JRuby and Rubinius support.
+ * Sending SIGBART to a Ruby process will now trigger the same behavior
+   as SIGQUIT - that is, it will print a backtrace. This is necessary
+   for proper JRuby support because JRuby cannot catch SIGQUIT.
+ * Rolling restarts and depoyment error resistance are now also available
+   in Phusion Passenger Standalone in the Enterprise version.
+ * New feature: out of band work.
+ * Improved crash reporting.
+ * Many bug fixes.
+
+
 Release 3.9.1
 -------------
 
@@ -18,6 +32,24 @@ This is the first beta of Phusion Passenger 4. The changes are numerous.
  * More stable Union Station support.
  * Many internal robustness improvements.
  * Better relocatability without wasting space.
+
+
+Release 3.0.19
+--------------
+
+ * Nginx security fix: do not display Nginx version when
+   server_tokens are off.
+ * Fixed compilation problems on some systems.
+ * Fixed some Union Station-related bugs.
+
+
+Release 3.0.18
+--------------
+
+ * Fixed compilation problems on Fedora 17.
+ * Fixed Union Station compatibility with Rails 3.2.
+ * Phusion Passenger Enterprise Standalone now supports rolling
+   restarts and deployment error resistance.
 
 
 Release 3.0.17

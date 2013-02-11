@@ -1,6 +1,6 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -96,8 +96,11 @@ static bool stopOnAbort = false;
 static char *alternativeStack;
 static unsigned int alternativeStackSize;
 
-static char *argv0 = NULL;
-static char *backtraceSanitizerPath = NULL;
+static unsigned int randomSeed;
+static const char *argv0 = NULL;
+static const char *backtraceSanitizerPath = NULL;
+static bool backtraceSanitizerUseShell = false;
+static bool backtraceSanitizerPassProgramInfo = true;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
 static void *customDiagnosticsDumperUserData;
 
@@ -466,10 +469,36 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 
 				close(p[1]);
 				dup2(p[0], STDIN_FILENO);
-				execlp(backtraceSanitizerPath, backtraceSanitizerPath, argv0,
-					pidStr, (const char * const) 0);
-				safePrintErr("ERROR: cannot execute 'backtrace-sanitizer.rb', trying 'cat'...\n");
+				if (backtraceSanitizerUseShell) {
+					end = state.messageBuf;
+					end = appendText(end, backtraceSanitizerPath);
+					if (backtraceSanitizerPassProgramInfo) {
+						end = appendText(end, " \"");
+						end = appendText(end, argv0);
+						end = appendText(end, "\" ");
+						end = appendText(end, pidStr);
+					}
+					*end = '\0';
+					execlp("/bin/sh", "/bin/sh", "-c",
+						state.messageBuf, (const char * const) 0);
+				} else {
+					if (backtraceSanitizerPassProgramInfo) {
+						execlp(backtraceSanitizerPath, backtraceSanitizerPath, argv0,
+						pidStr, (const char * const) 0);
+					} else {
+						execlp(backtraceSanitizerPath, backtraceSanitizerPath,
+							(const char * const) 0);
+					}
+				}
+
+				end = state.messageBuf;
+				end = appendText(end, "ERROR: cannot execute '");
+				end = appendText(end, backtraceSanitizerPath);
+				end = appendText(end, "' for sanitizing the backtrace, trying 'cat'...\n");
+				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 				execlp("cat", "cat", (const char * const) 0);
+				execlp("/bin/cat", "cat", (const char * const) 0);
+				execlp("/usr/bin/cat", "cat", (const char * const) 0);
 				safePrintErr("ERROR: cannot execute 'cat'\n");
 				_exit(1);
 
@@ -498,6 +527,17 @@ runCustomDiagnosticsDumper(AbortHandlerState &state, void *userData) {
 static void
 dumpDiagnostics(AbortHandlerState &state) {
 	char *messageBuf = state.messageBuf;
+
+	// Dump human-readable time string.
+	pid_t pid = asyncFork();
+	if (pid == 0) {
+		execlp("date", "date", (const char * const) 0);
+		_exit(1);
+	} else if (pid == -1) {
+		safePrintErr("ERROR: Could not fork a process to dump the time!\n");
+	} else {
+		waitpid(pid, NULL, 0);
+	}
 
 	// It is important that writing the message and the backtrace are two
 	// seperate operations because it's not entirely clear whether the
@@ -542,6 +582,62 @@ dumpDiagnostics(AbortHandlerState &state) {
 	}
 }
 
+static bool
+createCrashLogFile(char *filename, time_t t) {
+	char *end = filename;
+	end = appendText(end, "/var/tmp/passenger-crash-log.");
+	end = appendULL(end, (unsigned long long) t);
+	*end = '\0';
+
+	int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	if (fd == -1) {
+		end = filename;
+		end = appendText(end, "/tmp/passenger-crash-log.");
+		end = appendULL(end, (unsigned long long) t);
+		*end = '\0';
+		fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	}
+	if (fd == -1) {
+		*filename = '\0';
+		return false;
+	} else {
+		close(fd);
+		return true;
+	}
+}
+
+static void
+forkAndRedirectToTee(char *filename) {
+	pid_t pid;
+	int p[2];
+
+	if (pipe(p) == -1) {
+		// Signal error condition.
+		*filename = '\0';
+		return;
+	}
+
+	pid = asyncFork();
+	if (pid == 0) {
+		close(p[1]);
+		dup2(p[0], STDIN_FILENO);
+		execlp("tee", "tee", filename, (const char * const) 0);
+		execlp("/usr/bin/tee", "tee", filename, (const char * const) 0);
+		execlp("cat", "cat", (const char * const) 0);
+		execlp("/bin/cat", "cat", (const char * const) 0);
+		execlp("/usr/bin/cat", "cat", (const char * const) 0);
+		safePrintErr("ERROR: cannot execute 'tee' or 'cat'; crash log will be lost!\n");
+		_exit(1);
+	} else if (pid == -1) {
+		safePrintErr("ERROR: cannot fork a process for executing 'tee'\n");
+		*filename = '\0';
+	} else {
+		close(p[0]);
+		dup2(p[1], STDOUT_FILENO);
+		dup2(p[1], STDERR_FILENO);
+	}
+}
+
 static void
 abortHandler(int signo, siginfo_t *info, void *ctx) {
 	AbortHandlerState state;
@@ -549,6 +645,15 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	state.signo = signo;
 	state.info = info;
 	pid_t child;
+	time_t t = time(NULL);
+	char crashLogFile[256];
+
+	/* We want to dump the entire crash log to both stderr and a log file.
+	 * We use 'tee' for this.
+	 */
+	if (createCrashLogFile(crashLogFile, t)) {
+		forkAndRedirectToTee(crashLogFile);
+	}
 
 	char *end = state.messagePrefix;
 	end = appendText(end, "[ pid=");
@@ -558,12 +663,26 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	end = state.messageBuf;
 	end = appendText(end, state.messagePrefix);
 	end = appendText(end, ", timestamp=");
-	end = appendULL(end, (unsigned long long) time(NULL));
+	end = appendULL(end, (unsigned long long) t);
 	end = appendText(end, " ] Process aborted! signo=");
 	end = appendSignalName(end, state.signo);
 	end = appendText(end, ", reason=");
 	end = appendSignalReason(end, state.info);
+	end = appendText(end, ", randomSeed=");
+	end = appendULL(end, (unsigned long long) randomSeed);
 	end = appendText(end, "\n");
+	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+
+	end = state.messageBuf;
+	if (*crashLogFile != '\0') {
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] Crash log dumped to ");
+		end = appendText(end, crashLogFile);
+		end = appendText(end, "\n");
+	} else {
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] Could not create crash log file, so dumping to stderr only.\n");
+	}
 	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
 	if (beepOnAbort) {
@@ -659,6 +778,44 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	raise(signo);
 }
 
+#ifdef __APPLE__
+	/* On OS X, raise() and abort() unfortunately send SIGABRT to the main thread,
+	 * causing the original backtrace to be lost in the signal handler.
+	 * We work around this for anything in the same linkage unit by just definin
+	 * our own versions of the assert handler and abort.
+	 */
+	
+	#include <pthread.h>
+
+	static int
+	raise(int sig) {
+		return pthread_kill(pthread_self(), sig);
+	}
+
+	void
+	__assert_rtn(const char *func, const char *file, int line, const char *expr) {
+		if (func) {
+			fprintf(stderr, "Assertion failed: (%s), function %s, file %s, line %d.\n",
+				expr, func, file, line);
+		} else {
+			fprintf(stderr, "Assertion failed: (%s), file %s, line %d.\n",
+				expr, file, line);
+		}
+		abort();
+	}
+
+	void
+	abort() {
+		sigset_t set;
+		sigemptyset(&set);
+		sigaddset(&set, SIGABRT);
+		pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+		raise(SIGABRT);
+		usleep(1000);
+		__builtin_trap();
+	}
+#endif /* __APPLE__ */
+
 void
 installAbortHandler() {
 	alternativeStackSize = MINSIGSTKSZ + 128 * 1024;
@@ -690,6 +847,7 @@ installAbortHandler() {
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
 	sigaction(SIGFPE, &action, NULL);
+	sigaction(SIGILL, &action, NULL);
 }
 
 void
@@ -1029,9 +1187,16 @@ initializeSyscallFailureSimulation(const char *processName) {
 VariantMap
 initializeAgent(int argc, char *argv[], const char *processName) {
 	VariantMap options;
+	const char *seedStr;
 
-	srand((unsigned int) time(NULL));
-	srandom((unsigned int) time(NULL));
+	seedStr = getenv("PASSENGER_RANDOM_SEED");
+	if (seedStr == NULL || *seedStr == '\0') {
+		randomSeed = (unsigned int) time(NULL);
+	} else {
+		randomSeed = (unsigned int) atoll(seedStr);
+	}
+	srand(randomSeed);
+	srandom(randomSeed);
 	
 	ignoreSigpipe();
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
@@ -1083,6 +1248,11 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 				backtraceSanitizerPath = strdup((locator.getHelperScriptsDir() + "/backtrace-sanitizer.rb").c_str());
 			}
 		#endif
+		if (backtraceSanitizerPath == NULL) {
+			backtraceSanitizerPath = "c++filt -n";
+			backtraceSanitizerUseShell = true;
+			backtraceSanitizerPassProgramInfo = false;
+		}
 
 		setLogLevel(options.getInt("log_level", false, 0));
 		if (!options.get("debug_log_file", false).empty()) {
@@ -1119,6 +1289,8 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	for (int i = 1; i < argc; i++) {
 		memset(argv[i], '\0', strlen(argv[i]));
 	}
+
+	P_DEBUG("Random seed: " << randomSeed);
 	
 	return options;
 }

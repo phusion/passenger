@@ -1,5 +1,5 @@
-#  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Phusion Passenger - https://www.phusionpassenger.com/
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -33,8 +33,11 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	output_file = "#{output_dir}.a"
 	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	
-	if boolean_option('RELEASE')
-		sources = Dir['ext/boost/src/pthread/*.cpp'] + Dir['ext/oxt/*.cpp']
+	if false && boolean_option('RELEASE')
+		# Disable RELEASE support. Passenger Standalone wants to link to the
+		# common library but does not know whether it was compiled with RELEASE
+		# or not. See http://code.google.com/p/phusion-passenger/issues/detail?id=808
+		sources = Dir['ext/boost/libs/**/*.cpp'] + Dir['ext/oxt/*.cpp']
 		sources.sort!
 		
 		aggregate_source = "#{output_dir}/aggregate.cpp"
@@ -60,7 +63,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	else
 		# Define compilation targets for .cpp files in ext/boost/src/pthread.
 		boost_object_files = []
-		Dir['ext/boost/src/pthread/*.cpp'].each do |source_file|
+		Dir['ext/boost/libs/**/*.cpp'].each do |source_file|
 			object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
 			boost_output_dir  = "#{output_dir}/boost"
 			object_file = "#{boost_output_dir}/#{object_name}"
@@ -109,8 +112,9 @@ if USE_VENDORED_LIBEV
 	LIBEV_SOURCE_DIR = File.expand_path("../ext/libev", File.dirname(__FILE__)) + "/"
 	LIBEV_CFLAGS = "-Iext/libev"
 	LIBEV_LIBS = LIBEV_OUTPUT_DIR + ".libs/libev.a"
+	LIBEV_TARGET = LIBEV_LIBS
 	
-	task :libev => LIBEV_OUTPUT_DIR + ".libs/libev.a"
+	task :libev => LIBEV_TARGET
 	
 	dependencies = [
 		"ext/libev/configure",
@@ -141,6 +145,7 @@ if USE_VENDORED_LIBEV
 else
 	LIBEV_CFLAGS = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
 	LIBEV_LIBS   = string_option('LIBEV_LIBS', '-lev')
+	LIBEV_TARGET = nil
 	task :libev  # do nothing
 end
 
@@ -151,8 +156,9 @@ if USE_VENDORED_LIBEIO
 	LIBEIO_SOURCE_DIR = File.expand_path("../ext/libeio", File.dirname(__FILE__)) + "/"
 	LIBEIO_CFLAGS = "-Iext/libeio"
 	LIBEIO_LIBS = LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
+	LIBEIO_TARGET = LIBEIO_LIBS
 	
-	task :libeio => LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
+	task :libeio => LIBEIO_TARGET
 	
 	dependencies = [
 		"ext/libeio/configure",
@@ -182,6 +188,7 @@ if USE_VENDORED_LIBEIO
 else
 	LIBEIO_CFLAGS = string_option('LIBEIO_CFLAGS', '-I/usr/include/libeio')
 	LIBEIO_LIBS   = string_option('LIBEIO_LIBS', '-leio')
+	LIBEIO_TARGET = nil
 	task :libeio  # do nothing
 end
 

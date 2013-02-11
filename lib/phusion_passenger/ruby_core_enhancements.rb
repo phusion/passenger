@@ -1,5 +1,5 @@
 # encoding: binary
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -77,6 +77,35 @@ class IO
 			return PhusionPassenger::NativeSupport.writev3(fileno,
 				components, components2, components3)
 		end
+	else
+		def writev(components)
+			return write(components.join(''))
+		end
+
+		def writev2(components, components2)
+			data = ''
+			components.each do |component|
+				data << component
+			end
+			components2.each do |component|
+				data << component
+			end
+			return write(data)
+		end
+
+		def writev3(components, components2, components3)
+			data = ''
+			components.each do |component|
+				data << component
+			end
+			components2.each do |component|
+				data << component
+			end
+			components3.each do |component|
+				data << component
+			end
+			return write(data)
+		end
 	end
 	
 	if IO.method_defined?(:close_on_exec=)
@@ -102,10 +131,6 @@ module Signal
 	def self.list_trappable
 		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
 		case ruby_engine
-		when "ruby"
-			result = Signal.list
-			result.delete("ALRM")
-			result.delete("VTALRM")
 		when "jruby"
 			result = Signal.list
 			result.delete("QUIT")
@@ -114,8 +139,12 @@ module Signal
 			result.delete("KILL")
 			result.delete("SEGV")
 			result.delete("USR1")
+			result.delete("IOT")
+			result.delete("EXIT")
 		else
 			result = Signal.list
+			result.delete("ALRM")
+			result.delete("VTALRM")
 		end
 		
 		# Don't touch SIGCHLD no matter what! On OS X waitpid() will

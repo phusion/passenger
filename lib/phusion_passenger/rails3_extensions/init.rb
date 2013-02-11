@@ -1,5 +1,5 @@
-#  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Phusion Passenger - https://www.phusionpassenger.com/
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -54,12 +54,19 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 			ActiveSupport::Cache::Store.instrument = true
 			AnalyticsLogging.attach_to(:active_support, subscriber)
 		end
-		
-		if defined?(ActionDispatch::ShowExceptions)
-			exceptions_middleware = ActionDispatch::ShowExceptions
-			if defined?(ActionDispatch::DebugExceptions)
-				exceptions_middleware = ActionDispatch::DebugExceptions
+		PhusionPassenger.on_event(:starting_request_handler_thread) do
+			if defined?(ActiveSupport::Cache::Store)
+				# This flag is thread-local.
+				ActiveSupport::Cache::Store.instrument = true
 			end
+		end
+		
+		if defined?(ActionDispatch::DebugExceptions)
+			exceptions_middleware = ActionDispatch::DebugExceptions
+		elsif defined?(ActionDispatch::ShowExceptions)
+			exceptions_middleware = ActionDispatch::ShowExceptions
+		end
+		if exceptions_middleware
 			Rails.application.middleware.insert_after(
 				exceptions_middleware,
 				ExceptionLogger, analytics_logger, app_group_name)
@@ -90,9 +97,8 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 	end
 	
 	def sql(event)
-		log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
-		if log
-			name = event.payload[:name]
+		if log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
+			name = event.payload[:name] || "SQL"
 			sql = event.payload[:sql]
 			digest = Digest::MD5.hexdigest("#{name}\0#{sql}\0#{rand}")
 			log.measured_time_points("DB BENCHMARK: #{digest}",

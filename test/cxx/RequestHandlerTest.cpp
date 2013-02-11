@@ -289,12 +289,17 @@ namespace tut {
 		);
 		BufferedIO io(connection);
 		ensure_equals(io.readLine(), "HTTP/1.1 200 OK\r\n");
-		ensure_equals(pool->getProcessCount(), 1u);
-		SuperGroupPtr superGroup = pool->superGroups.get(wsgiAppPath);
-		ProcessPtr process = superGroup->defaultGroup->processes.front();
-		ensure_equals(process->sessions, 1);
+		ProcessPtr process;
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(pool->getProcessCount(false), 1u);
+			SuperGroupPtr superGroup = pool->superGroups.get(wsgiAppPath);
+			process = superGroup->defaultGroup->enabledProcesses.front();
+			ensure_equals(process->sessions, 1);
+		}
 		connection.close();
 		EVENTUALLY(5,
+			LockGuard l(pool->syncher);
 			result = process->sessions == 0;
 		);
 	}
@@ -307,7 +312,7 @@ namespace tut {
 			"STDERR.puts 'I have failed'");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -332,7 +337,7 @@ namespace tut {
 			"STDERR.puts 'I have failed'\n");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -355,7 +360,7 @@ namespace tut {
 		writeFile("tmp.handler/start.rb", "");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -383,7 +388,7 @@ namespace tut {
 			"STDERR.puts 'I have failed'");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -409,7 +414,7 @@ namespace tut {
 			"STDERR.puts 'I have failed'\n");
 
 		setLogLevel(-2);
-		spawnerFactory->forwardStderr = false;
+		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -770,6 +775,61 @@ namespace tut {
 		struct stat buf;
 		ensure(stat("/tmp/output.txt", &buf) == 0);
 		ensure_equals(buf.st_size, (off_t) 0);
+	}
+
+	TEST_METHOD(46) {
+		// If the application outputs a request oobw header, handler should remove the header, mark
+		// the process as oobw requested. The process should continue to process requests until the
+		// spawner spawns another process (to avoid the group being empty). As soon as the new 
+		// process is spawned, the original process will make the oobw request. Afterwards, the 
+		// original process is re-enabled.
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/oobw",
+			NULL);
+		string response = readAll(connection);
+		ensure("status is not 200", containsSubstring(response, "Status: 200 OK\r\n"));
+		ensure("contains oowb header", !containsSubstring(response, "X-Passenger-Request-OOB-Work:"));
+		pid_t origPid = atoi(stripHeaders(response));
+		
+		// Get a reference to the orignal process and verify oobw has been requested.
+		ProcessPtr origProcess;
+		{
+			unique_lock<boost::mutex> lock(pool->syncher);
+			origProcess = pool->superGroups.get(wsgiAppPath)->defaultGroup->disablingProcesses.front();
+			ensure(origProcess->oobwRequested);
+		}
+		ensure("sanity check", origPid == origProcess->pid); // just a sanity check
+		
+		// Issue requests until the new process handles it.
+		pid_t pid;
+		EVENTUALLY(2,
+			connect();
+			sendHeaders(defaultHeaders,
+				"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+				"PATH_INFO", "/pid",
+				NULL);
+			string response = readAll(connection);
+			ensure(containsSubstring(response, "Status: 200 OK\r\n"));
+			pid = atoi(stripHeaders(response));
+			result = (pid != origPid);
+		);
+		
+		// Wait for the original process to finish oobw request.
+		EVENTUALLY(2,
+			unique_lock<boost::mutex> lock(pool->syncher);
+			result = !origProcess->oobwRequested;
+		);
+		
+		// Final asserts.
+		{
+			unique_lock<boost::mutex> lock(pool->syncher);
+			ensure("2 enabled processes", pool->superGroups.get(wsgiAppPath)->defaultGroup->enabledProcesses.size() == 2);
+			ensure("oobw is reset", !origProcess->oobwRequested);
+			ensure("process is enabled", origProcess->enabled == Process::ENABLED);
+		}
 	}
 
 	// Test small response buffering.

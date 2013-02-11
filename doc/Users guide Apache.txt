@@ -18,335 +18,13 @@ This guide assumes that the reader is somewhat familiar with Apache and with
 using the command line.
 
 
-== Support information ==
+== Support information
 
 include::users_guide_snippets/support_information.txt[]
 
+== Installation
 
-== Installing, upgrading and uninstalling Phusion Passenger ==
-
-=== Generic installation instructions ===
-
-[[install_passenger]]
-==== Overview of installation methods ====
-
-There are three ways to install Phusion Passenger:
-
-1. By installing the Phusion Passenger Ruby gem, as instructed on the
-   link:https://www.phusionpassenger.com/download[``Download'' page on the Phusion
-   Passenger website].
-2. By downloading the source tarball from the Phusion Passenger website
-   ('passenger-x.x.x.tar.gz').
-3. By installing a native Linux package (e.g. Debian package).
-
-The following sections will explain each installation method. Please read the
-section for the installation method that you prefer. In our opinion, installing
-the gem or the native package is easiest. For these two installation methods,
-Phusion Passenger provides an easy-to-use installer.
-
-==== Preparation (gem and source tarball only)
-If you want to install Phusion Passenger via the gem or the source tarball,
-then some preparations might be required. You can skip this subsection if
-you're installing Phusion Passenger via a native Linux package, because no
-compilation is necessary.
-
-===== Switching to a root command prompt =====
-
-Before installing, you will probably need to switch to the `root` user first.
-When you install Phusion Passenger via a gem or a source tarball, some Phusion
-Passenger files have to be compiled, which requires write access to the
-directory in which the Phusion Passenger files are located. On Unix systems,
-the root user is the user who has write access to the entire system. So unless
-you know that your normal user account has write access to the Phusion Passenger
-directory, you should switch to root before installing Phusion Passenger.
-
-You can switch to root by typing the following command:
-
--------------------------
-sudo -s
--------------------------
-
-This will open a command prompt as the root user, from which you can proceed
-with installing Phusion Passenger.
-
-If your system does not have 'sudo' installed, please type the following command instead, which should do the same thing:
-
--------------------------
-su
--------------------------
-
-[[specifying_correct_apache_install]]
-===== Specifying the correct Apache installation =====
-
-The Phusion Passenger installer will attempt to automatically detect Apache,
-and compile Phusion Passenger against that Apache version. It does this by
-looking for the `apxs` or `apxs2` command in the PATH environment variable.
-Apxs is an integral part of any Apache installation.
-
-However, some systems have multiple Apache installations. This is likely
-the case on MacOS X: the OS ships with Apache, but users tend to install
-another Apache version seperately, e.g. via MacPorts. If your system has
-multiple Apache installations, then you will need to tell the Phusion Passenger
-installer which one to use. It is very important that you specify the
-correct Apache installation, because if you load Phusion Passenger in an
-Apache installation that it wasn't compiled against, then it will likely
-crash.
-
-On yet other systems, Apache is installed in a non-standard location,
-preventing the Phusion Passenger installer from detecting Apache. This
-is most likely the case on systems on which Apache was installed by hand
-from source, i.e. as opposed to installed through the system's native
-package manager. If this is the case, then you will also have to tell
-the installer where it can find Apache.
-
-To do so, set the `APXS2` environment variable to the full path of the
-correct `apxs` or `apxs2` command. Suppose that you want to use the Apache
-installation in '/opt/apache2'. Then, assuming that the corresponding
-`apxs` program's path is '/opt/apache2/bin/apxs', type:
-
-----------------------------------
-export APXS2=/opt/apache2/bin/apxs
-----------------------------------
-
-NOTE: On some systems, the `apxs` program might be called `apxs2`, and it might
-be located in the `sbin` folder instead of the `bin` folder.
-
-.Environment variables and 'sudo'
-NOTE: By default, the 'sudo' command will erase any environment variables that it
-doesn't recognize, prior to executing the given command. So if you set APXS2 as a
-normal user, then run `sudo passenger-install-apache2-module` (which is the command
-for the Phusion Passenger installer), then the installer will not receive the
-environment variable value that you set. To solve this problem, please become root
-prior to setting any environment variables, as described in the previous subsection.
-
-[[specifying_ruby_installation]]
-===== Specifying the correct Ruby installation =====
-
-If your system has multiple Ruby installations -- which is likely the case on
-MacOS X, or if you've also installed
-link:http://www.rubyenterpriseedition.com[Ruby Enterprise Edition] -- then you
-will need to tell the operating system which Ruby installation to use, prior to
-running the Phusion Passenger installer. If you only have one Ruby installation
-(the case on most Linux systems), then you can skip this section because Phusion
-Passenger will automatically detect it.
-
-To specify a Ruby installation, prepend your Ruby installation's `bin`
-directory to the `PATH` environment variable. For example, if you have the
-following Ruby installations:
-
-- /usr/bin/ruby
-- /opt/myruby/bin/ruby
-
-and you want to use the latter, then type:
-
-----------------------------------
-export PATH=/opt/myruby/bin:$PATH
-----------------------------------
-
-
-==== Installing via the gem ====
-
-Please install the gem and then run the Phusion Passenger installer, by typing the
-following commands:
-------------------------------------------------------
-gem install passenger-x.x.x.gem
-passenger-install-apache2-module
-------------------------------------------------------
-Please follow the instructions given by the installer.
-
-
-==== Installing via the source tarball ====
-
-Extract the tarball to whatever location you prefer. *The Phusion Passenger files
-are to reside in that location permanently.* For example, if you would like
-Phusion Passenger to reside in `/opt/passenger-x.x.x`:
-------------------------------------------------------
-cd /opt
-tar xzvf ~/YourDownloadsFolder/passenger-x.x.x.tar.gz
-------------------------------------------------------
-
-Next, run the included installer:
-------------------------------------------------------
-/opt/passenger-x.x.x/bin/passenger-install-apache2-module
-------------------------------------------------------
-Please follow the instructions given by the installer.
-
-IMPORTANT: Please do not remove the 'passenger-x.x.x' folder after
-installation. Furthermore, the 'passenger-x.x.x' folder must be accessible by Apache.
-
-
-==== Installing via a native Linux package ====
-
-John Leach from Brightbox has kindly provided a Ubuntu packages for Phusion Passenger. The package is available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository].
-
-==== What does the installer do? ====
-
-Although we call it an ``installer'', it doesn't actually install anything.
-The installer checks whether all required dependencies are installed,
-compiles Phusion Passenger for you, and tells you how to modify the Apache
-configuration file, but it doesn't copy any files around.
-
-`passenger-install-apache2-module` is actually just a user-friendly frontend
-around the command `rake apache2`, which performs the actual compilation of
-Phusion Passenger.
-
-
-=== Operating system-specific instructions and information ===
-
-==== Ubuntu Linux ====
-
-Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurating-passenger-mod_rails-on-slicehost-with-ubuntu-710/[article on installing Phusion Passenger on Ubuntu].
-
-==== OpenSolaris ====
-
-J Aaron Farr has written a link:http://cubiclemuses.com/cm/articles/2009/04/09/rails-passenger-open-solaris-ec2/[guide]
-about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
-
-
-=== Upgrading or downgrading Phusion Passenger ===
-
-Upgrading or downgrading Phusion Passenger for Apache involves several steps.
-
-1. First, you have to obtain and install the files associated with the version that you want to upgrade or downgrade to. You can do this in three ways: by using <<upgrade_or_downgrade_with_rubygems,RubyGems>>, by downloading a <<upgrade_or_downgrade_with_tarball,tarball>>, or by installing a <<upgrade_or_downgrade_with_linux_packages,native Linux package>>. If you installed a native Linux package, then skip to the last step. If not, read on.
-2. Then you have to recompile the Phusion Passenger Apache module by invoking
-+
------------------------------------
-# If you used RubyGems
-sudo passenger-install-apache2-module
-
-# If you used the tarball
-sudo /path-to-passenger/bin/passenger-install-apache2-module
------------------------------------
-3. Finally, `passenger-install-apache2-module` will tell you to copy & paste some settings in the configuration file. Something that looks along the lines of:
-+
------------------------------------
-LoadModule passenger_module ...
-PassengerRoot ...
-PassengerRuby ...
------------------------------------
-+
-Because you already had Phusion Passenger installed, you already had similar settings
-in your Apache configuration file, just with different values. *Replace* the old settings with
-the new ones that the installer outputs. It is important that the old settings are removed,
-otherwise Phusion Passenger may malfunction.
-4. Restart Apache. You're now done.
-
-[float]
-[[upgrade_or_downgrade_with_rubygems]]
-==== Obtaining Phusion Passenger files with RubyGems ====
-
-.Open source
-
-You can obtain the files associated with the latest _open source_ Phusion Passenger release by invoking the following command:
-
--------------------------
-sudo gem install passenger
--------------------------
-
-You can also obtain a specific version by specifying the `-v` argument, like this:
-
----------------------------------
-sudo gem install passenger -v 3.0.0
----------------------------------
-
-.Enterprise
-
-If you're using link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] then you should obtain the gem from the link:https://www.phusionpassenger.com/orders[Customer Area] instead. Login with your order reference and password. The Customer Area will show you a list of files. Download the gem file for the version you want (`passenger-enterprise-server-x.x.x.gem`) and install it with:
-
--------------------------------------------------------
-sudo gem install passenger-enterprise-server-x.x.x.gem
--------------------------------------------------------
-
-[float]
-[[upgrade_or_downgrade_with_tarball]]
-==== Obtaining Phusion Passenger files through a tarball ====
-
-You can obtain the files associated with the latest _open source_ Phusion Passenger release by downloading the tarball linked from link:https://www.phusionpassenger.com/download[the Phusion Passenger download page]. If you want a specific version, please refer to the release archive on link:http://rubyforge.org/frs/?group_id=5873&release_id=46919[RubyForge].
-
-If you're using link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] then you should obtain the tarball from the link:https://www.phusionpassenger.com/orders[Customer Area] instead. Login with your order reference and password. The Customer Area will show you a list of files. Download the tarball for the version you want (`passenger-enterprise-server-x.x.x.tar.gz`).
-
-Once you've obtained the tarball, extract it somewhere:
-
-[float]
-[[upgrade_or_downgrade_with_linux_packages]]
-==== Upgrading with native Linux packages ====
-
-When using native Linux packages, it is only possible to upgrade, not downgrade. Native Linux packages are only available for the open source Phusion Passenger, not for Phusion Passenger Enterprise.
-
-Native Linux packages are contributed by third parties. Although they update pretty quickly, they lag behind gem and tarball releases, perhaps by a few days. Please learn more about native Linux packages link:https://www.phusionpassenger.com/native_packages[at the Phusion Passenger website].
-
-=== Unloading (disabling) Phusion Passenger from Apache without uninstalling it ===
-
-You can temporarily unload (disable) Phusion Passenger from Apache, without
-uninstalling the Phusion Passenger files, so that Apache behaves as if Phusion
-Passenger was never installed in the first place. This might be useful to you if,
-for example, you seem to be experiencing a problem caused by Phusion Passenger,
-but you want to make sure whether that's actually the case, without having
-to through the hassle of uninstalling Phusion Passenger completely. When disabled,
-Phusion Passenger will not occupy any memory or CPU or otherwise interfere with
-Apache.
-
-To unload Phusion Passenger from Apache, edit your Apache configuration file(s)
-and comment out:
-
-- all Phusion Passenger configuration directives.
-- the 'LoadModule passenger_module' directive.
-
-For example, if your configuration file looks like this...
-
------------------------------------
-Listen *:80
-NameVirtualHosts *:80
-....
-
-LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
-
-PassengerRuby /usr/bin/ruby
-PassengerRoot /somewhere/passenger/x.x.x
-PassengerMaxPoolSize 10
-
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /webapps/foo/public
-    RailsBaseURI /rails
-</VirtualHost>
------------------------------------
-
-...then comment out the relevant directives, so that it looks like this:
-
------------------------------------
-Listen *:80
-NameVirtualHosts *:80
-....
-
-# LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
-
-# PassengerRuby /usr/bin/ruby
-# PassengerRoot /somewhere/passenger/x.x.x
-# PassengerMaxPoolSize 10
-
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /webapps/foo/public
-    # RailsBaseURI /rails
-</VirtualHost>
------------------------------------
-
-After you've done this, save the file and restart Apache.
-
-=== Uninstalling Phusion Passenger ===
-
-To uninstall Phusion Passenger, please first remove all Phusion Passenger
-configuration directives from your Apache configuration file(s). After you've
-done this, you need to remove the Phusion Passenger files.
-
-- If you installed Phusion Passenger via a gem, then type `gem uninstall passenger`.
-  You might have to run this as root.
-- If you installed Phusion Passenger via a source tarball, then remove the directory
-  in which you placed the extracted Phusion Passenger files. This directory is the
-  same as the one pointed to the by 'PassengerRoot' configuration directive.
-- If you installed Phusion Passenger via a Debian package, then remove type
-  `sudo apt-get remove libapache2-mod-passenger`.
+include::users_guide_snippets/installation.txt[]
 
 
 == Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3.x) application ==
@@ -720,7 +398,7 @@ $ some_awesome_editor passenger_wsgi.py
 ...type in some source code...
 $ cat passenger_wsgi.py
 def application(environ, start_response):
-  start_response(200, [('Content-Type', 'text/plain')])
+  start_response('200 OK', [('Content-Type', 'text/plain')])
   return ["hello world!\n"]
 -------------------------------------------
 
@@ -1027,18 +705,31 @@ directory that's readable by Apache, but only writable by administrators.
 
 [[PassengerBufferResponse]]
 === PassengerBufferResponse <on|off> ===
-When turned on, application-generated responses are buffered in memory. By buffering
-responses, protection is provided against slow HTTP clients that can not read your
-response immediately.
+When turned on, application-generated responses are buffered by Apache. Buffering will
+happen in memory.
 
-For example, consider an HTTP client that's on a dial-up modem link, and your
-application process generates a 2 MB response. If response buffering is turned
-off then your application process will be blocked until the entire 2 MB has been
+Before we proceed with explaining this configuration option, we want to state the following to avoid confusion. If you use Phusion Passenger for Apache, there are in fact two response buffering systems active:
+
+1. The Apache response buffering system. `PassengerBufferResponse` turns this on or off.
+2. The Phusion Passenger response buffering system, a.k.a. 'real-time disk-backed response buffering'. This buffering system is always on, regardless of the value of `PassengerBufferResponse`.
+
+Response buffering is useful because it protects against slow HTTP clients that do not read responses immediately or quickly enough. Buffering prevents such slow clients from blocking web applications that have limited concurrency. Because Phusion Passenger's response buffering is always turned on, you are always protected. Therefore, `PassengerBufferResponse` is off by default, and you never should have to turn it on.
+
+If for whatever reason you want to turn Apache-level response buffering on, you can do so with this option.
+
+Apache's response buffering works differently from Phusion Passenger's. Apache's buffering system buffers the entire response before attempting to send it to the client, while Phusion Passenger's attempts to send the data to the client immediately. Therefore, if you turn on `PassengerBufferResponse`, you may interfere with applications that want to stream responses to the client.
+Apache's version also buffers to memory only, making it problematic for large responses. Phusion Passenger's version buffers to disk when the response exceeds a certain threshold.
+
+How does response buffering - whether it's done by Apache or by Phusion Passenger - exactly protect against slow clients?
+Consider an HTTP client that's on a dial-up modem link, and your
+application process generates a 2 MB response. If the response is buffered
+then your application process will be blocked until the entire 2 MB has been
 sent out to the HTTP client. This disallows your application process to do any useful
-work in the mean time. By enabling response buffering, Phusion Passenger will read
-the application response as quickly as possible and will take care of slow clients.
+work in the mean time. By buffering responses, Phusion Passenger or Apache will read
+the application response as quickly as possible and will take care of forwarding the data
+to slow clients.
 
-However, keep in mind that enabling this option will make streaming responses
+So keep in mind that enabling `passenger_buffering_response` will make streaming responses
 impossible. Consider for example this piece of Rails code:
 
 --------------------------------
@@ -1068,11 +759,11 @@ app = lambda do |env|
 end
 --------------------------------
 
-When response buffering is turned on, Phusion Passenger will wait until
+When `PassengerBufferResponse` is turned on, Apache will wait until
 the application is done sending the entire response before forwarding it
 to the client. The client will not receive anything for 10 seconds,
 after which it receives the entire response at once.
-When response buffering is turned off, it works as expected: the client
+When `PassengerBufferResponse` is turned off, it works as expected: the client
 receives an "entry X" message every second for 10 seconds.
 
 This option may occur in the following places:
@@ -1082,7 +773,7 @@ This option may occur in the following places:
  * In a `<Directory>` or `<Location>` block.
  * In '.htaccess'.
 
-In each place, it may be specified at most once. The default value is 'on'.
+In each place, it may be specified at most once. The default value is 'off'.
 
 [NOTE]
 =====================================================
@@ -1442,6 +1133,41 @@ This option may occur in the following places:
  * In a virtual host configuration block.
 
 In each place, it may be specified at most once. The default value is '300' (5 minutes).
+
+[[PassengerConcurrencyModel]]
+==== PassengerConcurrencyModel <process|thread> ====
+:version: 4.0.0
+include::users_guide_snippets/enterprise_only.txt[]
+
+Specifies the I/O concurrency model that should be used for application processes. Phusion Passenger supports two concurrency models:
+
+ * 'process' - single-threaded, multi-processed I/O concurrency. Each application process only has a single thread and can only handle 1 request at a time. This is the concurrency model that Ruby applications traditionally used. It has excellent compatiblity (can work with applications that are not designed to be thread-safe) but is unsuitable workloads in which the application has to wait for a lot of external I/O (e.g. HTTP API calls), and uses more memory because each process has a large memory overhead.
+ * 'thread' - multi-threaded, multi-processed I/O concurrency. Each application process has multiple threads (customizable via <<PassengerThreadCount,PassengerThreadCount>>). This model provides much better I/O concurrency and uses less memory because threads share memory with each other within the same process. However, using this model may cause compatibility problems if the application is not designed to be thread-safe.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'process'.
+
+[[PassengerThreadCount]]
+==== PassengerThreadCount <number> ====
+:version: 4.0.0
+include::users_guide_snippets/enterprise_only.txt[]
+
+Specifies the number of threads that Phusion Passenger should spawn per application process. This option only has effect if <<PassengerConcurrencyModel,PassengerConcurrencyModel>> is 'thread'.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is '1'.
 
 [[PassengerMaxRequests]]
 ==== PassengerMaxRequests <integer> ====
@@ -2160,6 +1886,7 @@ This option doesn't do anything anymore in recent versions of Phusion Passenger.
 Deprecated in favor of <<PassengerSpawnMethod,PassengerSpawnMethod>>.
 
 
+[[troubleshooting]]
 == Troubleshooting ==
 
 === Operating system-specific problems ===

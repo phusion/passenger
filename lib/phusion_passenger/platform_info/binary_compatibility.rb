@@ -1,4 +1,4 @@
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -63,10 +63,19 @@ module PlatformInfo
 			if RUBY_PLATFORM =~ /universal/
 				ruby_arch = "universal"
 			else
-				# Something like:
-				# "/opt/ruby-enterprise/bin/ruby: Mach-O 64-bit executable x86_64"
-				ruby_arch = `file -L "#{ruby_executable}"`.strip
-				ruby_arch.sub!(/.* /, '')
+				# OS X <  10.8: something like:
+				#   "/opt/ruby-enterprise/bin/ruby: Mach-O 64-bit executable x86_64"
+				output = `file -L "#{ruby_executable}"`.strip
+				ruby_arch = output.sub(/.* /, '')
+				if ruby_arch == "executable"
+					# OS X >= 10.8: something like:
+					#   "/opt/ruby-enterprise/bin/ruby: Mach-O 64-bit executable"
+					if output =~ /Mach-O 64-bit/
+						ruby_arch = "x86_64"
+					else
+						raise "Cannot autodetect the Ruby interpreter's architecture"
+					end
+				end
 			end
 		elsif RUBY_PLATFORM == "java"
 			ruby_arch = "java"

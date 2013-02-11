@@ -1,5 +1,5 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
+ *  Phusion Passenger - https://www.phusionpassenger.com/
  *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -296,22 +296,30 @@ private:
 	}
 
 	void onSigquit(ev::sig &signal, int revents) {
-		dumpDiagnostics(this);
+		requestHandler->inspect(cerr);
+		cerr.flush();
+		cerr << "\n" << pool->inspect();
+		cerr.flush();
+		cerr << "\n" << oxt::thread::all_backtraces();
+		cerr.flush();
 	}
 
 	void installDiagnosticsDumper() {
-		::installDiagnosticsDumper(dumpDiagnostics, this);
+		::installDiagnosticsDumper(dumpDiagnosticsOnCrash, this);
 	}
 
 	void uninstallDiagnosticsDumper() {
 		::installDiagnosticsDumper(NULL, NULL);
 	}
 
-	static void dumpDiagnostics(void *userData) {
+	static void dumpDiagnosticsOnCrash(void *userData) {
 		Server *self = (Server *) userData;
 		self->requestHandler->inspect(cerr);
 		cerr.flush();
-		cerr << "\n" << self->pool->inspect();
+		// Do not lock, the crash may occur within the pool.
+		Pool::InspectOptions options;
+		options.verbose = true;
+		cerr << "\n" << self->pool->inspect(options, false);
 		cerr.flush();
 		cerr << "\n" << oxt::thread::all_backtraces();
 		cerr.flush();

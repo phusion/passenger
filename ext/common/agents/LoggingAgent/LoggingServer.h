@@ -1,6 +1,6 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2010-2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -108,7 +108,7 @@ private:
 			server = _server;
 			opened = 0;
 			lastUsed = ev_now(server->getLoop());
-			lastFlushed = 0;
+			lastFlushed = lastUsed;
 		}
 		
 		virtual ~LogSink() {
@@ -126,73 +126,49 @@ private:
 		virtual void dump(ostream &stream) const { }
 	};
 	
-	struct LogFile: public LogSink {
-		static const unsigned int BUFFER_CAPACITY = 8 * 1024;
-		
+	struct LogFileSink: public LogSink {
 		string filename;
 		FileDescriptor fd;
-		char buffer[BUFFER_CAPACITY];
-		unsigned int bufferSize;
 		
-		LogFile(LoggingServer *server, const string &filename, mode_t filePermissions)
+		LogFileSink(LoggingServer *server, const string &filename)
 			: LogSink(server)
 		{
-			int ret;
-			
-			bufferSize = 0;
-			
-			this->filename = filename;
+			if (filename.empty()) {
+				this->filename = "/dev/null";
+			} else {
+				this->filename = filename;
+			}
 			fd = syscalls::open(filename.c_str(),
 				O_CREAT | O_WRONLY | O_APPEND,
-				filePermissions);
+				0600);
 			if (fd == -1) {
 				int e = errno;
 				throw FileSystemException("Cannnot open file", e, filename);
 			}
-			do {
-				ret = fchmod(fd, filePermissions);
-			} while (ret == -1 && errno == EINTR);
 		}
 		
-		virtual ~LogFile() {
+		virtual ~LogFileSink() {
 			flush();
 		}
 		
 		virtual void append(const DataStoreId &dataStoreId, const StaticString &data) {
-			if (bufferSize + data.size() > BUFFER_CAPACITY) {
-				StaticString data2[2];
-				data2[0] = StaticString(buffer, bufferSize);
-				data2[1] = data;
-				
-				gatheredWrite(fd, data2, 2);
-				lastFlushed = ev_now(server->getLoop());
-				bufferSize = 0;
-			} else {
-				memcpy(buffer + bufferSize, data.data(), data.size());
-				bufferSize += data.size();
-			}
+			syscalls::write(fd, data.data(), data.size());
 		}
 		
 		virtual bool flush() {
-			if (bufferSize > 0) {
-				lastFlushed = ev_now(server->getLoop());
-				writeExact(fd, buffer, bufferSize);
-				bufferSize = 0;
-				return true;
-			} else {
-				return false;
-			}
+			lastFlushed = ev_now(server->getLoop());
+			return true;
 		}
 		
 		virtual void dump(ostream &stream) const {
-			stream << "   Log file: file=" << filename << ", "
-				"opened=" << opened << ", "
-				"lastUsed=" << long(ev_now(server->getLoop()) - lastUsed) << "s ago, "
-				"lastFlushed=" << long(ev_now(server->getLoop()) - lastFlushed) << "s ago\n";
+			stream << "   * Log file: " << filename << "\n";
+			stream << "     Opened     : " << opened << "\n";
+			stream << "     LastUsed   : " << distanceOfTimeInWords((time_t) lastUsed) << " ago\n";
+			stream << "     LastFlushed: " << distanceOfTimeInWords((time_t) lastFlushed) << " ago\n";
 		}
 	};
 	
-	typedef shared_ptr<LogFile> LogFilePtr;
+	typedef shared_ptr<LogFileSink> LogFileSinkPtr;
 	
 	struct RemoteSink: public LogSink {
 		/* RemoteSender compresses the data with zlib before sending it
@@ -266,21 +242,21 @@ private:
 		}
 		
 		virtual void dump(ostream &stream) const {
-			stream << "   Remote sink: "
-				"key=" << unionStationKey << ", "
-				"node=" << nodeName << ", "
-				"category=" << category << ", "
-				"opened=" << opened << ", "
-				"lastUsed=" << long(ev_now(server->getLoop()) - lastUsed) << "s ago, "
-				"lastFlushed=" << long(ev_now(server->getLoop()) - lastFlushed) << "s ago, "
-				"bufferSize=" << bufferSize <<
-				"\n";
+			stream << "   * Remote sink\n";
+			stream << "     Key        : " << unionStationKey << "\n";
+			stream << "     Node       : " << nodeName << "\n";
+			stream << "     Category   : " << category << "\n";
+			stream << "     Opened     : " << opened << "\n";
+			stream << "     LastUsed   : " << distanceOfTimeInWords((time_t) lastUsed) << " ago\n";
+			stream << "     LastFlushed: " << distanceOfTimeInWords((time_t) lastFlushed) << " ago\n";
+			stream << "     BufferSize : " << bufferSize << "\n";
 		}
 	};
 	
 	struct Transaction {
 		LoggingServer *server;
 		LogSinkPtr logSink;
+		ev_tstamp createdAt;
 		string txnId;
 		DataStoreId dataStoreId;
 		unsigned int writeCount;
@@ -289,8 +265,9 @@ private:
 		string data;
 		string filters;
 		
-		Transaction(LoggingServer *server) {
+		Transaction(LoggingServer *server, ev_tstamp createdAt) {
 			this->server = server;
+			this->createdAt = createdAt;
 			data.reserve(8 * 1024);
 		}
 		
@@ -321,11 +298,12 @@ private:
 		}
 		
 		void dump(ostream &stream) const {
-			stream << "   Transaction " << txnId << ":\n";
-			stream << "      Group   : " << getGroupName() << "\n";
-			stream << "      Node    : " << getNodeName() << "\n";
-			stream << "      Category: " << getCategory() << "\n";
-			stream << "      Refcount: " << refcount << "\n";
+			stream << "   * Transaction " << txnId << "\n";
+			stream << "     Created at: " << distanceOfTimeInWords((time_t) createdAt) << " ago\n";
+			stream << "     Group     : " << getGroupName() << "\n";
+			stream << "     Node      : " << getNodeName() << "\n";
+			stream << "     Category  : " << getCategory() << "\n";
+			stream << "     Refcount  : " << refcount << "\n";
 		}
 	
 	private:
@@ -391,10 +369,7 @@ private:
 	
 	typedef shared_ptr<FilterSupport::Filter> FilterPtr;
 	
-	string dir;
-	gid_t gid;
-	string dirPermissions;
-	mode_t filePermissions;
+	string dumpFile;
 	RemoteSender remoteSender;
 	ev::timer garbageCollectionTimer;
 	ev::timer sinkFlushingTimer;
@@ -490,8 +465,8 @@ private:
 	}
 	
 	bool validUnionStationKey(const StaticString &key) const {
-		// must be hexadecimal
-		// must not be too large
+		// TODO: must be hexadecimal
+		// TODO: must not be too large
 		return !key.empty();
 	}
 	
@@ -509,8 +484,8 @@ private:
 	}
 	
 	bool validTimestamp(const StaticString &timestamp) const {
-		// must be hexadecimal
-		// must not be too large
+		// TODO: must be hexadecimal
+		// TODO: must not be too large
 		return true;
 	}
 	
@@ -518,130 +493,30 @@ private:
 		return category == "requests" || category == "processes" || category == "exceptions";
 	}
 	
-	time_t extractTimestamp(const StaticString &txnId) const {
-		const char *timestampEnd = (const char *) memchr(txnId.c_str(), '-', txnId.size());
-		if (timestampEnd == NULL) {
-			return 0;
-		} else {
-			time_t timestamp = hexatriToULL(
-				StaticString(txnId.c_str(), timestampEnd - txnId.c_str())
-			);
-			return timestamp * 60;
-		}
-	}
-	
-	void appendVersionAndGroupId(string &output, const StaticString &groupName) const {
-		md5_state_t state;
-		md5_byte_t  digest[MD5_SIZE];
-		char        checksum[MD5_HEX_SIZE];
-		
-		output.append("/1/", 3);
-		
-		md5_init(&state);
-		md5_append(&state, (const md5_byte_t *) groupName.data(), groupName.size());
-		md5_finish(&state, digest);
-		toHex(StaticString((const char *) digest, MD5_SIZE), checksum);
-		output.append(checksum, MD5_HEX_SIZE);
-	}
-	
-	string determineFilename(const StaticString &groupName, const char *nodeId,
-		const StaticString &category, const StaticString &txnId = "") const
-	{
-		time_t timestamp;
-		struct tm tm;
-		char time_str[14];
-		
-		if (!txnId.empty()) {
-			timestamp = extractTimestamp(txnId);
-			gmtime_r(&timestamp, &tm);
-			strftime(time_str, sizeof(time_str), "%Y/%m/%d/%H", &tm);
-		}
-		
-		string filename;
-		filename.reserve(dir.size()
-			+ (3 + MD5_HEX_SIZE) // version and group ID
-			+ 1                  // "/"
-			+ MD5_HEX_SIZE       // node ID
-			+ 1                  // "/"
-			+ category.size()
-			+ 1                  // "/"
-			+ sizeof(time_str)   // including null terminator, which we use as space for "/"
-			+ sizeof("log.txt")
-		);
-		filename.append(dir);
-		appendVersionAndGroupId(filename, groupName);
-		filename.append(1, '/');
-		filename.append(nodeId, MD5_HEX_SIZE);
-		filename.append(1, '/');
-		filename.append(category.c_str(), category.size());
-		if (!txnId.empty()) {
-			filename.append(1, '/');
-			filename.append(time_str);
-			filename.append("/log.txt");
-		}
-		return filename;
-	}
-	
-	void setupGroupAndNodeDir(const StaticString &groupName, const StaticString &nodeName,
-		const char *nodeId)
-	{
-		string filename, groupDir, nodeDir;
-		
-		filename.append(dir);
-		appendVersionAndGroupId(filename, groupName);
-		groupDir = filename;
-		
-		filename.append("/");
-		filename.append(nodeId, MD5_HEX_SIZE);
-		nodeDir = filename;
-		
-		createFile(groupDir + "/group_name.txt", groupName,
-			filePermissions, USER_NOT_GIVEN, GROUP_NOT_GIVEN,
-			false);
-		if (getFileType(groupDir + "/uuid.txt") == FT_NONEXISTANT) {
-			createFile(groupDir + "/uuid.txt",
-				randomGenerator.generateAsciiString(24),
-				filePermissions, USER_NOT_GIVEN, GROUP_NOT_GIVEN,
-				false);
-		}
-		
-		createFile(nodeDir + "/node_name.txt", nodeName,
-			filePermissions, USER_NOT_GIVEN, GROUP_NOT_GIVEN,
-			false);
-		if (getFileType(nodeDir + "/uuid.txt") == FT_NONEXISTANT) {
-			createFile(nodeDir + "/uuid.txt",
-				randomGenerator.generateAsciiString(24),
-				filePermissions, USER_NOT_GIVEN, GROUP_NOT_GIVEN,
-				false);
-		}
-	}
-	
-	bool openLogFileWithCache(const string &filename, LogSinkPtr &theLogSink) {
-		string cacheKey = "file:" + filename;
+	LogSinkPtr openLogFile() {
+		string cacheKey = "file:" + dumpFile;
+		LogSinkPtr result;
 		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
 		if (it == logSinkCache.end()) {
 			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE - 1);
-			makeDirTree(extractDirName(filename), dirPermissions,
-				USER_NOT_GIVEN, gid);
-			theLogSink.reset(new LogFile(this, filename, filePermissions));
+			result = make_shared<LogFileSink>(this, dumpFile);
 			pair<LogSinkCache::iterator, bool> p =
-				logSinkCache.insert(make_pair(cacheKey, theLogSink));
-			theLogSink->cacheIterator = p.first;
-			theLogSink->opened = 1;
-			return false;
+				logSinkCache.insert(make_pair(cacheKey, result));
+			result->cacheIterator = p.first;
+			result->opened = 1;
 		} else {
-			theLogSink = it->second;
-			theLogSink->opened++;
-			if (theLogSink->opened == 1) {
-				inactiveLogSinks.erase(theLogSink->inactiveLogSinksIterator);
+			result = it->second;
+			result->opened++;
+			if (result->opened == 1) {
+				inactiveLogSinks.erase(result->inactiveLogSinksIterator);
 				inactiveLogSinksCount--;
 			}
-			return true;
 		}
+		return result;
 	}
 	
-	void openRemoteSink(const StaticString &unionStationKey, const string &nodeName,
-		const string &category, LogSinkPtr &theLogSink)
+	LogSinkPtr openRemoteSink(const StaticString &unionStationKey, const string &nodeName,
+		const string &category)
 	{
 		string cacheKey = "remote:";
 		cacheKey.append(unionStationKey.c_str(), unionStationKey.size());
@@ -650,23 +525,25 @@ private:
 		cacheKey.append(1, '\0');
 		cacheKey.append(category);
 		
+		LogSinkPtr result;
 		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
 		if (it == logSinkCache.end()) {
 			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE - 1);
-			theLogSink.reset(new RemoteSink(this, unionStationKey,
-				nodeName, category));
+			result = make_shared<RemoteSink>(this, unionStationKey,
+				nodeName, category);
 			pair<LogSinkCache::iterator, bool> p =
-				logSinkCache.insert(make_pair(cacheKey, theLogSink));
-			theLogSink->cacheIterator = p.first;
-			theLogSink->opened = 1;
+				logSinkCache.insert(make_pair(cacheKey, result));
+			result->cacheIterator = p.first;
+			result->opened = 1;
 		} else {
-			theLogSink = it->second;
-			theLogSink->opened++;
-			if (theLogSink->opened == 1) {
-				inactiveLogSinks.erase(theLogSink->inactiveLogSinksIterator);
+			result = it->second;
+			result->opened++;
+			if (result->opened == 1) {
+				inactiveLogSinks.erase(result->inactiveLogSinksIterator);
 				inactiveLogSinksCount--;
 			}
 		}
+		return result;
 	}
 	
 	/**
@@ -956,7 +833,7 @@ protected:
 					return true;
 				}
 				
-				transaction.reset(new Transaction(this));
+				transaction = make_shared<Transaction>(this, ev_now(getLoop()));
 				if (unionStationKey.empty()) {
 					char tempNodeId[MD5_HEX_SIZE];
 					
@@ -974,14 +851,10 @@ protected:
 						nodeId = tempNodeId;
 					}
 					
-					string filename = determineFilename(groupName, nodeId,
-						category, txnId);
-					if (!openLogFileWithCache(filename, transaction->logSink)) {
-						setupGroupAndNodeDir(groupName, nodeName, nodeId);
-					}
+					transaction->logSink = openLogFile();
 				} else {
-					openRemoteSink(unionStationKey, client->nodeName,
-						category, transaction->logSink);
+					transaction->logSink = openRemoteSink(unionStationKey,
+						client->nodeName, category);
 				}
 				transaction->txnId        = txnId;
 				transaction->dataStoreId  = DataStoreId(groupName,
@@ -998,7 +871,9 @@ protected:
 				transaction = it->second;
 				if (OXT_UNLIKELY( transaction->getGroupName() != groupName )) {
 					sendErrorToClient(client,
-						"Cannot open transaction: transaction already opened with a different group name");
+						"Cannot open transaction: transaction already opened with a "
+						"different group name ('" + transaction->getGroupName() +
+						"' vs '" + groupName + "')");
 					client->disconnect();
 					return true;
 				}
@@ -1205,9 +1080,7 @@ public:
 	LoggingServer(struct ev_loop *loop,
 		FileDescriptor fd,
 		const AccountsDatabasePtr &accountsDatabase,
-		const string &dir,
-		const string &permissions = DEFAULT_ANALYTICS_LOG_PERMISSIONS,
-		gid_t gid = GROUP_NOT_GIVEN,
+		const string &dumpFile,
 		const string &unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
 		unsigned short unionStationGatewayPort = DEFAULT_UNION_STATION_GATEWAY_PORT,
 		const string &unionStationGatewayCert = "",
@@ -1223,10 +1096,7 @@ public:
 		  sinkFlushingTimer(loop),
 		  exitTimer(loop)
 	{
-		this->dir = dir;
-		this->gid = gid;
-		dirPermissions = permissions;
-		filePermissions = parseModeString(permissions) & ~(S_IXUSR | S_IXGRP | S_IXOTH);
+		this->dumpFile = dumpFile;
 		garbageCollectionTimer.set<LoggingServer, &LoggingServer::garbageCollect>(this);
 		garbageCollectionTimer.start(GARBAGE_COLLECTION_TIMEOUT, GARBAGE_COLLECTION_TIMEOUT);
 		sinkFlushingTimer.set<LoggingServer, &LoggingServer::sinkFlushTimeout>(this);
@@ -1262,19 +1132,24 @@ public:
 		
 		stream << "Number of clients : " << getClients().size() << "\n";
 		stream << "RemoteSender queue: " << remoteSender.queued() << " items\n";
-		stream << "Open transactions: " << transactions.size() << "\n";
-		for (it = transactions.begin(); it != end; it++) {
-			const TransactionPtr &transaction = it->second;
-			transaction->dump(stream);
-		}
-		
+		stream << "\n";
+
 		LogSinkCache::const_iterator sit;
 		LogSinkCache::const_iterator send = logSinkCache.end();
-		stream << "Log sinks: " << logSinkCache.size() <<
-			" (" << inactiveLogSinksCount << " inactive)\n";
+		stream << "Open log sinks:\n";
+		stream << "   Count: " << logSinkCache.size() <<
+			" (of which " << inactiveLogSinksCount << " inactive)\n";
 		for (sit = logSinkCache.begin(); sit != send; sit++) {
 			const LogSinkPtr &logSink = sit->second;
 			logSink->dump(stream);
+		}
+		stream << "\n";
+
+		stream << "Open transactions:\n";
+		stream << "   Count: " << transactions.size() << "\n";
+		for (it = transactions.begin(); it != end; it++) {
+			const TransactionPtr &transaction = it->second;
+			transaction->dump(stream);
 		}
 	}
 };

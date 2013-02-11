@@ -18,9 +18,7 @@
 
 1.2. Where to get support	=>	where-to-get-support-xkx7rx
 
-# fuzzy
 2. Installation	=>	installation-2vrmef
 
-# fuzzy
 3. Usage	=>	usage-1eyt33o
 

@@ -1,5 +1,5 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
+ *  Phusion Passenger - https://www.phusionpassenger.com/
  *  Copyright (c) 2010, 2011, 2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <Exceptions.h>
 #include <Utils/utf8.h>
+#include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 
 namespace Passenger {
@@ -332,6 +333,34 @@ atol(const string &s) {
 	return ::atol(s.c_str());
 }
 
+string
+distanceOfTimeInWords(time_t fromTime, time_t toTime) {
+	time_t seconds;
+	stringstream result;
+	if (toTime == 0) {
+		toTime = SystemTime::get();
+	}
+	if (fromTime < toTime) {
+		seconds = toTime - fromTime;
+	} else {
+		seconds = fromTime - toTime;
+	}
+	
+	if (seconds >= 60) {
+		time_t minutes = seconds / 60;
+		if (minutes >= 60) {
+			time_t hours = minutes / 60;
+			minutes = minutes % 60;
+			result << hours << "h ";
+		}
+		
+		seconds = seconds % 60;
+		result << minutes << "m ";
+	}
+	result << seconds << "s";
+	return result.str();
+}
+
 char *
 appendData(char *pos, const char *end, const char *data, size_t size) {
 	size_t maxToCopy = std::min<size_t>(end - pos, size);
@@ -430,6 +459,16 @@ escapeHTML(const StaticString &input) {
 		}
 	}
 	return result;
+}
+
+StaticString
+makeStaticStringWithNull(const char *data) {
+	return StaticString(data, strlen(data) + 1);
+}
+
+StaticString
+makeStaticStringWithNull(const string &data) {
+	return StaticString(data.c_str(), data.size() + 1);
 }
 
 } // namespace Passenger

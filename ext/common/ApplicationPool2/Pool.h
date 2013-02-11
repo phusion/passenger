@@ -1,6 +1,6 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -35,6 +35,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/function.hpp>
+#include <boost/foreach.hpp>
 #include <oxt/dynamic_thread_group.hpp>
 #include <oxt/backtrace.hpp>
 #include <ApplicationPool2/Common.h>
@@ -52,6 +53,7 @@
 #include <RandomGenerator.h>
 #include <Utils/Lock.h>
 #include <Utils/SystemTime.h>
+#include <Utils/MessagePassing.h>
 #include <Utils/VariantMap.h>
 #include <Utils/ProcessMetricsCollector.h>
 
@@ -87,7 +89,24 @@ public:
 	typedef UnionStation::LoggerFactory LoggerFactory;
 	typedef UnionStation::LoggerFactoryPtr LoggerFactoryPtr;
 	typedef UnionStation::LoggerPtr LoggerPtr;
-	
+
+	struct DebugSupport {
+		MessageBoxPtr debugger;
+		MessageBoxPtr messages;
+
+		// The following fields may only be accessed by Pool.
+		boost::mutex syncher;
+		unsigned int spawnLoopIteration;
+
+		DebugSupport() {
+			debugger = make_shared<MessageBox>();
+			messages = make_shared<MessageBox>();
+			spawnLoopIteration = 0;
+		}
+	};
+
+	typedef shared_ptr<DebugSupport> DebugSupportPtr;
+
 	SpawnerFactoryPtr spawnerFactory;
 	LoggerFactoryPtr loggerFactory;
 	RandomGeneratorPtr randomGenerator;
@@ -152,8 +171,7 @@ public:
 	 */
 	vector<GetWaiter> getWaitlist;
 
-	mutable boost::mutex debugSyncher;
-	unsigned short spawnLoopIteration;
+	DebugSupportPtr debugSupport;
 	
 	static void runAllActions(const vector<Callback> &actions) {
 		vector<Callback>::const_iterator it, end = actions.end();
@@ -176,8 +194,8 @@ public:
 	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
-		P_ASSERT(!( !getWaitlist.empty() ) || ( atFullCapacity(false) ));
-		P_ASSERT(!( !atFullCapacity(false) ) || ( getWaitlist.empty() ));
+		assert(!( !getWaitlist.empty() ) || ( atFullCapacity(false) ));
+		assert(!( !atFullCapacity(false) ) || ( getWaitlist.empty() ));
 	}
 	
 	void verifyExpensiveInvariants() const {
@@ -185,9 +203,23 @@ public:
 		vector<GetWaiter>::const_iterator it, end = getWaitlist.end();
 		for (it = getWaitlist.begin(); it != end; it++) {
 			const GetWaiter &waiter = *it;
-			P_ASSERT(superGroups.get(waiter.options.getAppGroupName()) == NULL);
+			assert(superGroups.get(waiter.options.getAppGroupName()) == NULL);
 		}
 		#endif
+	}
+
+	void fullVerifyInvariants() const {
+		verifyInvariants();
+		verifyExpensiveInvariants();
+		StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = superGroups.end();
+		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+			pair<StaticString, SuperGroupPtr> p = *sg_it;
+			p.second->verifyInvariants();
+			foreach (GroupPtr group, p.second->groups) {
+				group->verifyInvariants();
+				group->verifyExpensiveInvariants();
+			}
+		}
 	}
 	
 	ProcessPtr findOldestIdleProcess() const {
@@ -200,7 +232,7 @@ public:
 			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				const GroupPtr &group = *g_it;
-				const ProcessList &processes = group->processes;
+				const ProcessList &processes = group->enabledProcesses;
 				ProcessList::const_iterator p_it, p_end = processes.end();
 				for (p_it = processes.begin(); p_it != p_end; p_it++) {
 					const ProcessPtr process = *p_it;
@@ -227,7 +259,7 @@ public:
 			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				const GroupPtr &group = *g_it;
-				const ProcessList &processes = group->processes;
+				const ProcessList &processes = group->enabledProcesses;
 				ProcessList::const_iterator p_it, p_end = processes.end();
 				for (p_it = processes.begin(); p_it != p_end; p_it++) {
 					const ProcessPtr process = *p_it;
@@ -278,17 +310,35 @@ public:
 	}
 	
 	void possiblySpawnMoreProcessesForExistingGroups() {
-		SuperGroupMap::iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); it != end; it++) {
-			SuperGroupPtr &superGroup = it->second;
-			vector<GroupPtr> &groups = superGroup->groups;
-			vector<GroupPtr>::iterator g_it, g_end = groups.end();
-			for (g_it = groups.begin(); g_it != g_end; g_it++) {
-				GroupPtr &group = *g_it;
-				if (!group->getWaitlist.empty() && group->shouldSpawn()) {
+		StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = superGroups.end();
+		/* Looks for Groups that are waiting for capacity to become available,
+		 * and spawn processes in those groups.
+		 */
+		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+			pair<StaticString, SuperGroupPtr> p = *sg_it;
+			foreach (GroupPtr group, p.second->groups) {
+				if (group->isWaitingForCapacity()) {
+					P_DEBUG("Group " << group->name << " is waiting for capacity");
 					group->spawn();
+					if (atFullCapacity(false)) {
+						return;
+					}
 				}
-				group->verifyInvariants();
+			}
+		}
+		/* Now look for Groups that haven't maximized their allowed capacity
+		 * yet, and spawn processes in those groups.
+		 */
+		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+			pair<StaticString, SuperGroupPtr> p = *sg_it;
+			foreach (GroupPtr group, p.second->groups) {
+				if (group->shouldSpawn()) {
+					P_DEBUG("Group " << group->name << " requests more processes to be spawned");
+					group->spawn();
+					if (atFullCapacity(false)) {
+						return;
+					}
+				}
 			}
 		}
 	}
@@ -320,7 +370,7 @@ public:
 	 */
 	void forceDetachSuperGroup(SuperGroupPtr superGroup, vector<Callback> &postLockActions) {
 		bool removed = superGroups.remove(superGroup->name);
-		P_ASSERT(removed);
+		assert(removed);
 		(void) removed; // Shut up compiler warning.
 		superGroup->destroy(postLockActions, false);
 		superGroup->setPool(PoolPtr());
@@ -332,28 +382,16 @@ public:
 			verifyInvariants();
 			
 			SuperGroupPtr superGroup = group->getSuperGroup();
-			P_ASSERT(superGroup->state != SuperGroup::INITIALIZING);
-			P_ASSERT(superGroup->getWaitlist.empty());
+			assert(superGroup->state != SuperGroup::INITIALIZING);
+			assert(superGroup->getWaitlist.empty());
 			
 			group->detach(process, postLockActions);
-			if (group->processes.empty()
-			 && !group->spawning()
-			 && !group->getWaitlist.empty()) {
-				migrateGroupGetWaitlistToPool(group);
-			}
+			// 'process' may now be a stale pointer so don't use it anymore.
+			assignSessionsToGetWaiters(postLockActions);
+			possiblySpawnMoreProcessesForExistingGroups();
+
 			group->verifyInvariants();
 			superGroup->verifyInvariants();
-			
-			assignSessionsToGetWaiters(postLockActions);
-			
-			if (superGroup->garbageCollectable()) {
-				// possiblySpawnMoreProcessesForExistingGroups()
-				// already called via detachSuperGroup().
-				detachSuperGroup(superGroup, false, &postLockActions);
-			} else {
-				possiblySpawnMoreProcessesForExistingGroups();
-			}
-			
 			verifyInvariants();
 			verifyExpensiveInvariants();
 			
@@ -363,6 +401,56 @@ public:
 		}
 	}
 	
+	void inspectProcessList(const InspectOptions &options, stringstream &result,
+		const ProcessList &processes) const
+	{
+		ProcessList::const_iterator p_it;
+		for (p_it = processes.begin(); p_it != processes.end(); p_it++) {
+			const ProcessPtr &process = *p_it;
+			char buf[128];
+			
+			snprintf(buf, sizeof(buf),
+					"* PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
+					(unsigned long) process->pid,
+					process->sessions,
+					process->processed,
+					process->uptime().c_str());
+			result << "  " << buf << endl;
+
+			if (process->enabled == Process::DISABLING) {
+				result << "    Disabling..." << endl;
+			} else if (process->enabled == Process::DISABLED) {
+				result << "    DISABLED" << endl;
+			}
+
+			const Socket *socket;
+			if (options.verbose && (socket = process->sockets->findSocketWithName("http")) != NULL) {
+				result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
+				result << "    Password: " << process->connectPassword << endl;
+			}
+		}
+	}
+
+	struct DisableWaitTicket {
+		boost::mutex syncher;
+		condition_variable cond;
+		DisableResult result;
+		bool done;
+
+		DisableWaitTicket() {
+			done = false;
+		}
+	};
+
+	static void syncDisableProcessCallback(const ProcessPtr &process, DisableResult result,
+		shared_ptr<DisableWaitTicket> ticket)
+	{
+		ScopedLock l(ticket->syncher);
+		ticket->done = true;
+		ticket->result = result;
+		ticket->cond.notify_one();
+	}
+
 	static void syncGetCallback(Ticket *ticket, const SessionPtr &session, const ExceptionPtr &e) {
 		ScopedLock lock(ticket->syncher);
 		if (OXT_LIKELY(session != NULL)) {
@@ -400,7 +488,7 @@ public:
 			
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				GroupPtr group = *g_it;
-				ProcessList &processes = group->processes;
+				ProcessList &processes = group->enabledProcesses;
 				ProcessList::iterator p_it, p_end = processes.end();
 				
 				for (p_it = processes.begin(); p_it != p_end; p_it++) {
@@ -411,7 +499,7 @@ public:
 						process->lastUsed + maxIdleTime;
 					if (process->sessions == 0
 					 && now >= processGcTime
-					 && (unsigned long) group->count > group->options.minProcesses) {
+					 && (unsigned long) group->enabledCount > group->options.minProcesses) {
 						ProcessList::iterator prev = p_it;
 						prev--;
 						P_DEBUG("Garbage collect idle process: " << process->inspect() <<
@@ -515,9 +603,15 @@ public:
 
 				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
 					const GroupPtr &group = *g_it;
-					ProcessList::const_iterator p_it, p_end = group->processes.end();
+					ProcessList::const_iterator p_it, p_end = group->enabledProcesses.end();
 
-					for (p_it = group->processes.begin(); p_it != p_end; p_it++) {
+					for (p_it = group->enabledProcesses.begin(); p_it != p_end; p_it++) {
+						const ProcessPtr &process = *p_it;
+						pids.push_back(process->pid);
+					}
+
+					p_end = group->disablingProcesses.end();
+					for (p_it = group->disablingProcesses.begin(); p_it != p_end; p_it++) {
 						const ProcessPtr &process = *p_it;
 						pids.push_back(process->pid);
 					}
@@ -555,9 +649,19 @@ public:
 
 				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
 					const GroupPtr &group = *g_it;
-					ProcessList::iterator p_it, p_end = group->processes.end();
+					ProcessList::iterator p_it, p_end = group->enabledProcesses.end();
 
-					for (p_it = group->processes.begin(); p_it != p_end; p_it++) {
+					for (p_it = group->enabledProcesses.begin(); p_it != p_end; p_it++) {
+						ProcessPtr &process = *p_it;
+						ProcessMetricMap::const_iterator metrics_it =
+							allMetrics.find(process->pid);
+						if (metrics_it != allMetrics.end()) {
+							process->metrics = metrics_it->second;
+						}
+					}
+
+					p_end = group->disablingProcesses.end();
+					for (p_it = group->disablingProcesses.begin(); p_it != p_end; p_it++) {
 						ProcessPtr &process = *p_it;
 						ProcessMetricMap::const_iterator metrics_it =
 							allMetrics.find(process->pid);
@@ -627,7 +731,7 @@ public:
 		 * unless something has changed and we forgot to update
 		 * some code here...
 		 */
-		P_ASSERT(session == NULL);
+		assert(session == NULL);
 		return superGroup;
 	}
 
@@ -658,12 +762,22 @@ public:
 		analyticsCollectionTimer.set(3.0, 0.0);
 		libev->start(analyticsCollectionTimer);
 
-		spawnLoopIteration = 0;
+		// The following code only serve to instantiate certain inline methods
+		// so that they can be invoked from gdb.
+		(void) SuperGroupPtr().get();
+		(void) GroupPtr().get();
+		(void) ProcessPtr().get();
+		(void) SessionPtr().get();
 	}
 	
 	~Pool() {
 		TRACE_POINT();
 		destroy();
+	}
+
+	void initDebugging() {
+		LockGuard l(syncher);
+		debugSupport = make_shared<DebugSupport>();
 	}
 
 	void destroy() {
@@ -726,11 +840,11 @@ public:
 			/* The app super group isn't in the pool and we have enough free
 			 * resources to make a new one.
 			 */
-			P_TRACE(2, "Spawning new SuperGroup");
+			P_DEBUG("Spawning new SuperGroup");
 			SuperGroupPtr superGroup = createSuperGroupAndAsyncGetFromIt(options, callback);
 			superGroup->verifyInvariants();
 			verifyInvariants();
-			P_TRACE(2, "asyncGet() finished");
+			P_DEBUG("asyncGet() finished");
 			
 		} else {
 			vector<Callback> actions;
@@ -743,7 +857,7 @@ public:
 			 *
 			 * First, try to trash an idle process that's the oldest.
 			 */
-			P_TRACE(2, "Pool is at full capacity; trying to free a process...");
+			P_DEBUG("Pool is at full capacity; trying to free a process...");
 			ProcessPtr process = findOldestIdleProcess();
 			if (process == NULL) {
 				/* All processes are doing something. We have no choice
@@ -754,48 +868,34 @@ public:
 				}
 			} else {
 				// Check invariant.
-				P_ASSERT(process->getGroup()->getWaitlist.empty());
+				assert(process->getGroup()->getWaitlist.empty());
 			}
 			if (process == NULL) {
-				/* All (super)groups are currently initializing/restarting/spawning/etc
-				 * so nothing can be killed. We have no choice but to satisfy this
-				 * get() action later when resources become available.
+				/* No process is eligible for killing. This could happen if, for example,
+				 * all (super)groups are currently initializing/restarting/spawning/etc.
+				 * We have no choice but to satisfy this get() action later when resources
+				 * become available.
 				 */
-				P_TRACE(2, "Could not free a process; putting request to getWaitlist");
-				getWaitlist.push_back(GetWaiter(options, callback));
+				P_DEBUG("Could not free a process; putting request to top-level getWaitlist");
+				getWaitlist.push_back(GetWaiter(
+					options.copyAndPersist().clearLogger(),
+					callback));
 			} else {
 				GroupPtr group;
 				SuperGroupPtr superGroup;
 				
-				P_TRACE(2, "Freeing process " << process->inspect());
+				P_DEBUG("Freeing process " << process->inspect());
 				group = process->getGroup();
-				P_ASSERT(group != NULL);
+				assert(group != NULL);
 				superGroup = group->getSuperGroup();
-				P_ASSERT(superGroup != NULL);
+				assert(superGroup != NULL);
 				
 				group->detach(process, actions);
-				if (superGroup->garbageCollectable()) {
-					P_ASSERT(group->garbageCollectable());
-					forceDetachSuperGroup(superGroup, actions);
-					P_ASSERT(superGroup->getWaitlist.empty());
-				} else if (group->processes.empty()
-				        && !group->spawning()
-				        && !group->getWaitlist.empty())
-				{
-					/* This group no longer has any processes - either
-					 * spawning or alive - to satisfy its get waiters.
-					 * We migrate the group's get wait list to the pool's
-					 * get wait list. The group's original get waiters
-					 * will get their chances later.
-					 */
-					migrateGroupGetWaitlistToPool(group);
-				}
-				group->verifyInvariants();
-				superGroup->verifyInvariants();
 				
 				/* Now that a process has been trashed we can create
 				 * the missing SuperGroup.
 				 */
+				P_DEBUG("Creating new SuperGroup");
 				superGroup = make_shared<SuperGroup>(shared_from_this(), options);
 				superGroup->initialize();
 				superGroups.set(options.getAppGroupName(), superGroup);
@@ -805,11 +905,12 @@ public:
 				 * unless something has changed and we forgot to update
 				 * some code here...
 				 */
-				P_ASSERT(session == NULL);
+				assert(session == NULL);
+				group->verifyInvariants();
 				superGroup->verifyInvariants();
 			}
 			
-			P_ASSERT(atFullCapacity(false));
+			assert(atFullCapacity(false));
 			verifyInvariants();
 			verifyExpensiveInvariants();
 			P_TRACE(2, "asyncGet() finished");
@@ -822,12 +923,13 @@ public:
 					// This state is not allowed. If we reach
 					// here then it probably indicates a bug in
 					// the test suite.
-					P_ABORT();
+					abort();
 				}
 			}
 		}
 	}
 	
+	// TODO: 'ticket' should be a shared_ptr for interruption-safety.
 	SessionPtr get(const Options &options, Ticket *ticket) {
 		ticket->session.reset();
 		ticket->exception.reset();
@@ -868,9 +970,8 @@ public:
 	
 	void setMax(unsigned int max) {
 		ScopedLock l(syncher);
-		P_ASSERT(max > 0);
-		verifyInvariants();
-		verifyExpensiveInvariants();
+		assert(max > 0);
+		fullVerifyInvariants();
 		bool bigger = max > this->max;
 		this->max = max;
 		if (bigger) {
@@ -887,13 +988,11 @@ public:
 			assignSessionsToGetWaiters(actions);
 			possiblySpawnMoreProcessesForExistingGroups();
 			
-			verifyInvariants();
-			verifyExpensiveInvariants();
+			fullVerifyInvariants();
 			l.unlock();
 			runAllActions(actions);
 		} else {
-			verifyInvariants();
-			verifyExpensiveInvariants();
+			fullVerifyInvariants();
 		}
 	}
 
@@ -927,8 +1026,8 @@ public:
 		return utilization(false) >= max;
 	}
 
-	vector<ProcessPtr> getProcesses() const {
-		LockGuard l(syncher);
+	vector<ProcessPtr> getProcesses(bool lock = true) const {
+		DynamicScopedLock l(syncher, lock);
 		vector<ProcessPtr> result;
 		SuperGroupMap::const_iterator it, end = superGroups.end();
 		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
@@ -939,7 +1038,10 @@ public:
 				const GroupPtr &group = *g_it;
 				ProcessList::const_iterator p_it;
 
-				for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
+				for (p_it = group->enabledProcesses.begin(); p_it != group->enabledProcesses.end(); p_it++) {
+					result.push_back(*p_it);
+				}
+				for (p_it = group->disablingProcesses.begin(); p_it != group->disablingProcesses.end(); p_it++) {
 					result.push_back(*p_it);
 				}
 				for (p_it = group->disabledProcesses.begin(); p_it != group->disabledProcesses.end(); p_it++) {
@@ -974,22 +1076,12 @@ public:
 	}
 	
 	ProcessPtr findProcessByGupid(const string &gupid, bool lock = true) const {
-		DynamicScopedLock l(syncher, lock);
-		SuperGroupMap::const_iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
-			const SuperGroupPtr &superGroup = it->second;
-			vector<GroupPtr> &groups = superGroup->groups;
-			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
-			for (g_it = groups.begin(); g_it != g_end; g_it++) {
-				const GroupPtr &group = *g_it;
-				const ProcessList &processes = group->processes;
-				ProcessList::const_iterator p_it, p_end = processes.end();
-				for (p_it = processes.begin(); p_it != p_end; p_it++) {
-					const ProcessPtr &process = *p_it;
-					if (process->gupid == gupid) {
-						return process;
-					}
-				}
+		vector<ProcessPtr> processes = getProcesses(lock);
+		vector<ProcessPtr>::const_iterator it, end = processes.end();
+		for (it = processes.begin(); it != end; it++) {
+			const ProcessPtr &process = *it;
+			if (process->gupid == gupid) {
+				return process;
 			}
 		}
 		return ProcessPtr();
@@ -998,7 +1090,7 @@ public:
 	bool detachSuperGroup(const SuperGroupPtr &superGroup, bool lock = true,
 		vector<Callback> *postLockActions = NULL)
 	{
-		P_ASSERT(lock || postLockActions != NULL);
+		assert(lock || postLockActions != NULL);
 		DynamicScopedLock l(syncher, lock);
 		
 		if (OXT_LIKELY(superGroup->getPool().get() == this)) {
@@ -1044,15 +1136,6 @@ public:
 		}
 	}
 	
-	bool detachProcess(const ProcessPtr &process) {
-		ScopedLock l(syncher);
-		vector<Callback> actions;
-		bool result = detachProcessUnlocked(process, actions);
-		l.unlock();
-		runAllActions(actions);
-		return result;
-	}
-
 	bool detachSuperGroup(const string &superGroupSecret) {
 		LockGuard l(syncher);
 		SuperGroupPtr superGroup = findSuperGroupBySecret(superGroupSecret, false);
@@ -1063,18 +1146,67 @@ public:
 		}
 	}
 	
+	bool detachProcess(const ProcessPtr &process) {
+		ScopedLock l(syncher);
+		vector<Callback> actions;
+		bool result = detachProcessUnlocked(process, actions);
+		fullVerifyInvariants();
+		l.unlock();
+		runAllActions(actions);
+		return result;
+	}
+
 	bool detachProcess(const string &gupid) {
 		ScopedLock l(syncher);
 		ProcessPtr process = findProcessByGupid(gupid, false);
 		if (process != NULL) {
 			vector<Callback> actions;
 			bool result = detachProcessUnlocked(process, actions);
+			fullVerifyInvariants();
 			l.unlock();
 			runAllActions(actions);
 			return result;
 		} else {
 			return false;
 		}
+	}
+
+	DisableResult disableProcess(const string &gupid) {
+		ScopedLock l(syncher);
+		ProcessPtr process = findProcessByGupid(gupid, false);
+		GroupPtr group = process->getGroup();
+		// Must be a shared_ptr to be interruption-safe.
+		shared_ptr<DisableWaitTicket> ticket = make_shared<DisableWaitTicket>();
+		DisableResult result = group->disable(process,
+			boost::bind(syncDisableProcessCallback, _1, _2, ticket));
+		group->verifyInvariants();
+		group->verifyExpensiveInvariants();
+		if (result == DR_DEFERRED) {
+			l.unlock();
+			ScopedLock l2(ticket->syncher);
+			while (!ticket->done) {
+				ticket->cond.wait(l2);
+			}
+			return ticket->result;
+		} else {
+			return result;
+		}
+	}
+
+	/**
+	 * Checks whether at least one process is being spawned.
+	 */
+	bool isSpawning(bool lock = true) const {
+		DynamicScopedLock l(syncher, lock);
+		SuperGroupMap::const_iterator it, end = superGroups.end();
+		for (it = superGroups.begin(); it != end; it++) {
+			foreach (GroupPtr group, it->second->groups) {
+				if (group->spawning()) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	string inspect(const InspectOptions &options = InspectOptions(), bool lock = true) const {
@@ -1084,11 +1216,16 @@ public:
 		const char *resetColor  = maybeColorize(options, ANSI_COLOR_RESET);
 		
 		result << headerColor << "----------- General information -----------" << resetColor << endl;
-		result << "Max pool size     : " << max << endl;
-		result << "Processes         : " << getProcessCount(false) << endl;
-		result << "Requests in queue : " << getWaitlist.size() << endl;
-		//result << "active   = " << active << endl;
-		//result << "inactive = " << inactiveApps.size() << endl;
+		result << "Max pool size : " << max << endl;
+		result << "Processes     : " << getProcessCount(false) << endl;
+		result << "Requests in top-level queue : " << getWaitlist.size() << endl;
+		if (options.verbose) {
+			unsigned int i = 0;
+			foreach (const GetWaiter &waiter, getWaitlist) {
+				result << "  " << i << ": " << waiter.options.getAppGroupName() << endl;
+				i++;
+			}
+		}
 		result << endl;
 		
 		result << headerColor << "----------- Application groups -----------" << resetColor << endl;
@@ -1105,23 +1242,9 @@ public:
 					result << "  (spawning new process...)" << endl;
 				}
 				result << "  Requests in queue: " << group->getWaitlist.size() << endl;
-				for (p_it = group->processes.begin(); p_it != group->processes.end(); p_it++) {
-					const ProcessPtr &process = *p_it;
-					char buf[128];
-					
-					snprintf(buf, sizeof(buf),
-							"* PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
-							(unsigned long) process->pid,
-							process->sessions,
-							process->processed,
-							process->uptime().c_str());
-					result << "  " << buf << endl;
-					const Socket *socket;
-					if (options.verbose && (socket = process->sockets->findSocketWithName("http")) != NULL) {
-						result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
-						result << "    Password: " << process->connectPassword << endl;
-					}
-				}
+				inspectProcessList(options, result, group->enabledProcesses);
+				inspectProcessList(options, result, group->disablingProcesses);
+				inspectProcessList(options, result, group->disabledProcesses);
 				result << endl;
 			}
 		}

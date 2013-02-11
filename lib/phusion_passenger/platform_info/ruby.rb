@@ -1,4 +1,4 @@
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -146,7 +146,7 @@ module PlatformInfo
 	# belongs to the current Ruby interpreter. Returns nil if it
 	# doesn't exist.
 	def self.rspec
-		return locate_ruby_tool('spec')
+		return locate_ruby_tool('rspec')
 	end
 	memoize :rspec
 	

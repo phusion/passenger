@@ -39,8 +39,8 @@ trap "QUIT" do
 	puts caller
 end
 
-Spec::Runner.configure do |config|
-	config.append_before do
+RSpec.configure do |config|
+	config.before(:each) do
 		# Suppress warning messages.
 		PhusionPassenger::DebugLogging.log_level = -1
 		PhusionPassenger::DebugLogging.log_file = nil
@@ -50,7 +50,7 @@ Spec::Runner.configure do |config|
 		PhusionPassenger::Utils.passenger_tmpdir
 	end
 	
-	config.append_after do
+	config.after(:each) do
 		tmpdir = PhusionPassenger::Utils.passenger_tmpdir(false)
 		if File.exist?(tmpdir)
 			remove_dir_tree(tmpdir)

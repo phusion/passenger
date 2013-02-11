@@ -4,6 +4,7 @@ require 'net/http'
 require 'uri'
 require 'support/multipart'
 require 'phusion_passenger'
+require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/platform_info/ruby'
 
 # Module containing helper methods, to be included in unit tests.
@@ -250,7 +251,7 @@ module TestHelper
 		end
 	end
 	
-	def eventually(deadline_duration = 1, check_interval = 0.05)
+	def eventually(deadline_duration = 2, check_interval = 0.05)
 		deadline = Time.now + deadline_duration
 		while Time.now < deadline
 			if yield
@@ -354,11 +355,12 @@ module TestHelper
 		end
 	end
 	
-	def spawn_logging_agent(log_dir, password)
+	def spawn_logging_agent(dump_file, password)
 		passenger_tmpdir = PhusionPassenger::Utils.passenger_tmpdir
 		socket_filename = "#{passenger_tmpdir}/logging.socket"
 		pid = spawn_process("#{AGENTS_DIR}/PassengerLoggingAgent",
-			"analytics_log_dir",   log_dir,
+			"log_level", PhusionPassenger::DebugLogging.log_level,
+			"analytics_dump_file", dump_file,
 			"analytics_log_user",  CONFIG['normal_user_1'],
 			"analytics_log_group", CONFIG['normal_group_1'],
 			"analytics_log_permissions", "u=rwx,g=rwx,o=rwx",

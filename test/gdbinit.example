@@ -1,0 +1,31 @@
+# This is a sample .gdbinit file that can aid you in debugging
+# Phusion Passenger with GDB. Modify it to your liking and copy
+# it to test/.gdbinit. See also CONTRIBUTING.md.
+
+# Ignore some signals.
+handle SIGUSR1 noprint pass
+handle SIGPIPE noprint pass
+
+# Convenience command.
+define rake
+	shell rake $arg0
+end
+
+# Break on breakpoint() function.
+break Passenger::breakpoint
+
+# Linux-only. Comment out when not on Linux.
+set print thread-events off
+
+# On OS X, you may sometimes want to enable memory debugger libraries.
+#set env DYLD_INSERT_LIBRARIES /usr/lib/libgmalloc.dylib
+#set env MALLOC_FILL_SPACE YES
+#set env MALLOC_PROTECT_BEFORE YES
+#set env MallocStackLogging YES
+#set env MallocGuardEdges YES
+#set env MallocScribble YES
+#set env MallocPreScribble YES
+#set env MallocCheckHeapStart 10
+#set env MallocCheckHeapEach 1
+#set env MallocCheckHeapAbort YES
+#set env MallocBadFreeAbort YES

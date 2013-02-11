@@ -1,4 +1,4 @@
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010, 2011, 2012 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -165,6 +165,13 @@ module PlatformInfo
 				end
 			end
 		end
+
+		ok = try_compile(:c, %Q{
+			#define _GNU_SOURCE
+			#include <sys/socket.h>
+			static void *foo = accept4;
+		})
+		flags << '-DHAVE_ACCEPT4' if ok
 		
 		if RUBY_PLATFORM =~ /solaris/
 			flags << '-pthreads'

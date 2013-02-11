@@ -1,6 +1,6 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2010-2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -180,7 +180,7 @@ setNonBlocking(int fd) {
 
 int
 callAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int options) {
-	#if defined(__NR_accept4) || defined(SYS_ACCEPT4)
+	#if defined(HAVE_ACCEPT4)
 		int ret;
 		do {
 			ret = ::accept4(sock, addr, addr_len, options);

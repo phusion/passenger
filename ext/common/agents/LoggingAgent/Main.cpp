@@ -1,6 +1,6 @@
 /*
- *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2010 Phusion
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2010-2012 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -132,8 +132,10 @@ caughtExitSignal(ev::sig &watcher, int revents) {
 
 void
 printInfo(ev::sig &watcher, int revents) {
-	loggingServer->dump(cout);
-	cout.flush();
+	cerr << "---------- Begin LoggingAgent status ----------\n";
+	loggingServer->dump(cerr);
+	cerr.flush();
+	cerr << "---------- End LoggingAgent status   ----------\n";
 }
 
 static string
@@ -153,13 +155,11 @@ int
 main(int argc, char *argv[]) {
 	VariantMap options        = initializeAgent(argc, argv, "PassengerLoggingAgent");
 	string socketAddress      = options.get("logging_agent_address");
-	string loggingDir         = options.get("analytics_log_dir");
+	string dumpFile           = options.get("analytics_dump_file", false, "/dev/null");
 	string password           = options.get("logging_agent_password");
 	string username           = options.get("analytics_log_user",
 		false, myself());
 	string groupname          = options.get("analytics_log_group", false);
-	string permissions        = options.get("analytics_log_permissions",
-		false, DEFAULT_ANALYTICS_LOG_PERMISSIONS);
 	string unionStationGatewayAddress = options.get("union_station_gateway_address",
 		false, DEFAULT_UNION_STATION_GATEWAY_ADDRESS);
 	int    unionStationGatewayPort = options.getInt("union_station_gateway_port",
@@ -234,15 +234,6 @@ main(int argc, char *argv[]) {
 			}
 		}
 		
-		/* Create the logging directory if necessary. */
-		if (getFileType(loggingDir) == FT_NONEXISTANT) {
-			if (geteuid() == 0) {
-				makeDirTree(loggingDir, permissions, user->pw_uid, group->gr_gid);
-			} else {
-				makeDirTree(loggingDir, permissions);
-			}
-		}
-		
 		/* Now's a good time to lower the privilege. */
 		if (geteuid() == 0) {
 			lowerPrivilege(username, user, group);
@@ -251,8 +242,7 @@ main(int argc, char *argv[]) {
 		/* Now setup the actual logging server. */
 		accountsDatabase->add("logging", password, false);
 		LoggingServer server(eventLoop, serverSocketFd,
-			accountsDatabase, loggingDir,
-			"u=rwx,g=rx,o=rx", GROUP_NOT_GIVEN,
+			accountsDatabase, dumpFile,
 			unionStationGatewayAddress,
 			unionStationGatewayPort,
 			unionStationGatewayCert,
@@ -281,7 +271,7 @@ main(int argc, char *argv[]) {
 		
 		/********** Initialized! Enter main loop... **********/
 		
-		P_DEBUG("Logging agent online, listening at " << socketAddress);
+		P_WARN("Logging agent online, listening at " << socketAddress);
 		ev_run(eventLoop, 0);
 		P_DEBUG("Logging agent exiting with code " << exitCode << ".");
 		return exitCode;

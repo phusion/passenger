@@ -1,5 +1,5 @@
-#  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Phusion Passenger - https://www.phusionpassenger.com/
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -51,6 +51,11 @@ class AnalyticsLogger
 		end
 		
 		def message(text)
+			if !@connection
+				timestamp_string = AnalyticsLogger.timestamp_string
+				DebugLogging.trace(3, "[Union Station log to null] #{@txn_id} #{timestamp_string} #{text}")
+				return
+			end
 			@connection.synchronize do
 				return if !@connection.connected?
 				begin
@@ -65,7 +70,7 @@ class AnalyticsLogger
 					@connection.disconnect
 					raise e
 				end
-			end if @connection
+			end
 		end
 		
 		def begin_measure(name, extra_info = nil)
@@ -118,6 +123,7 @@ class AnalyticsLogger
 		
 		def close(flush_to_disk = false)
 			@connection.synchronize do
+				return if !@connection.connected?
 				begin
 					# We need an ACK here. See abstract_request_handler.rb finalize_request.
 					@connection.channel.write("closeTransaction", @txn_id,
