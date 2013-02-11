@@ -41,7 +41,6 @@ spec = Gem::Specification.new do |s|
 	s.email = "info@phusion.nl"
 	s.require_paths = ["lib"]
 	s.add_dependency 'rake', '>= 0.8.1'
-	s.add_dependency 'fastthread', '>= 1.0.1'
 	s.add_dependency 'daemon_controller', '>= 1.1.0'
 	s.add_dependency 'rack'
 	s.files = FileList[*Packaging::GLOB] - FileList[*Packaging::EXCLUDE_GLOB]
