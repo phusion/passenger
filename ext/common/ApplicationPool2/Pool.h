@@ -1238,6 +1238,9 @@ public:
 			if (group != NULL) {
 				result << group->name << ":" << endl;
 				result << "  App root: " << group->options.appRoot << endl;
+				if (group->restarting()) {
+					result << "  (restarting...)" << endl;
+				}
 				if (group->spawning()) {
 					result << "  (spawning new process...)" << endl;
 				}

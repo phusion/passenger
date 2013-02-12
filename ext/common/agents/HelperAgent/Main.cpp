@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -314,14 +314,27 @@ private:
 
 	static void dumpDiagnosticsOnCrash(void *userData) {
 		Server *self = (Server *) userData;
+
+		cerr << "### Request handler state\n";
 		self->requestHandler->inspect(cerr);
+		cerr << "\n";
 		cerr.flush();
+		
+		cerr << "### Pool state (simple)\n";
 		// Do not lock, the crash may occur within the pool.
 		Pool::InspectOptions options;
 		options.verbose = true;
-		cerr << "\n" << self->pool->inspect(options, false);
+		cerr << self->pool->inspect(options, false);
+		cerr << "\n";
 		cerr.flush();
-		cerr << "\n" << oxt::thread::all_backtraces();
+
+		cerr << "### Pool state (XML)\n";
+		cerr << self->pool->toXml(true);
+		cerr << "\n\n";
+		cerr.flush();
+
+		cerr << "### Backtraces\n";
+		cerr << oxt::thread::all_backtraces();
 		cerr.flush();
 	}
 	
