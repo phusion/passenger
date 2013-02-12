@@ -16,10 +16,12 @@ override_dh_auto_install:
 	mkdir debian/tmp/
 	cp -a pkg/fakeroot1.8/* debian/tmp/
 	cp -a pkg/fakeroot1.9.1/* debian/tmp/
+	mv debian/tmp/usr/share/doc/phusion-passenger debian/tmp/usr/share/doc/ruby-passenger-doc
 	rm -f debian/tmp/usr/share/doc/phusion-passenger/images/._phusion_banner.png
 
 override_dh_auto_clean:
 	dh_auto_clean -O--buildsystem=ruby
+	/usr/bin/ruby1.8 /usr/bin/rake clean
 	rm -rf pkg/fakeroot1.8
 	rm -rf pkg/fakeroot1.9.1
 
