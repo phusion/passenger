@@ -1268,6 +1268,19 @@ public:
 		result << "<max>" << max << "</max>";
 		result << "<utilization>" << utilization(false) << "</utilization>";
 		result << "<get_wait_list_size>" << getWaitlist.size() << "</get_wait_list_size>";
+
+		if (includeSecrets) {
+			vector<GetWaiter>::const_iterator w_it, w_end = getWaitlist.end();
+
+			result << "<get_wait_list>";
+			for (w_it = getWaitlist.begin(); w_it != w_end; w_it++) {
+				const GetWaiter &waiter = *w_it;
+				result << "<item>";
+				result << "<app_group_name>" << escapeForXml(waiter.options.getAppGroupName()) << "</app_group_name>";
+				result << "</item>";
+			}
+			result << "</get_wait_list>";
+		}
 		
 		result << "<supergroups>";
 		for (sg_it = superGroups.begin(); sg_it != superGroups.end(); sg_it++) {
