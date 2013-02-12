@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cat <<EOF
+sudo sh -c 'cat >> /etc/hosts' <<EOF
 127.0.0.1 passenger.test
 127.0.0.1 mycook.passenger.test
 127.0.0.1 zsfa.passenger.test
@@ -9,7 +9,7 @@ cat <<EOF
 127.0.0.1 1.passenger.test 2.passenger.test 3.passenger.test
 127.0.0.1 4.passenger.test 5.passenger.test 6.passenger.test
 127.0.0.1 7.passenger.test 8.passenger.test 9.passenger.test
-EOF | sudo sh -c 'cat >> /etc/hosts'
+EOF
 
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
