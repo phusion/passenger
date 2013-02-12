@@ -25,7 +25,7 @@
 require 'rubygems'
 require 'socket'
 require 'thread'
-if true || (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
+if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
 	begin
 		require 'fastthread'
 	rescue LoadError
