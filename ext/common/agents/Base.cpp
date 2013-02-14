@@ -849,12 +849,12 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	
 	#include <pthread.h>
 
-	static int
+	extern "C" int
 	raise(int sig) {
 		return pthread_kill(pthread_self(), sig);
 	}
 
-	void
+	extern "C" void
 	__assert_rtn(const char *func, const char *file, int line, const char *expr) {
 		if (func) {
 			fprintf(stderr, "Assertion failed: (%s), function %s, file %s, line %d.\n",
@@ -863,10 +863,11 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			fprintf(stderr, "Assertion failed: (%s), file %s, line %d.\n",
 				expr, file, line);
 		}
+		fflush(stderr);
 		abort();
 	}
 
-	void
+	extern "C" void
 	abort() {
 		sigset_t set;
 		sigemptyset(&set);
