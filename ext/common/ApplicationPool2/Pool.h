@@ -209,8 +209,11 @@ public:
 	}
 
 	void fullVerifyInvariants() const {
+		TRACE_POINT();
 		verifyInvariants();
+		UPDATE_TRACE_POINT();
 		verifyExpensiveInvariants();
+		UPDATE_TRACE_POINT();
 		StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = superGroups.end();
 		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
 			pair<StaticString, SuperGroupPtr> p = *sg_it;

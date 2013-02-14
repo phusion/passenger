@@ -458,10 +458,12 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 			if (pipe(p) == -1) {
 				int e = errno;
 				end = state.messageBuf;
-				end = appendText(end, "Could not dump diagnostics: pipe() failed with errno=");
+				end = appendText(end, "Could not dump diagnostics through backtrace sanitizer: pipe() failed with errno=");
 				end = appendULL(end, e);
 				end = appendText(end, "\n");
+				end = appendText(end, "Falling back to writing to stderr directly...\n");
 				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 				return;
 			}
 
@@ -509,12 +511,29 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 			} else if (pid == -1) {
 				close(p[0]);
 				close(p[1]);
+				int e = errno;
+				end = state.messageBuf;
+				end = appendText(end, "Could not dump diagnostics through backtrace sanitizer: fork() failed with errno=");
+				end = appendULL(end, e);
+				end = appendText(end, "\n");
+				end = appendText(end, "Falling back to writing to stderr directly...\n");
+				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 
 			} else {
+				int status = -1;
+
 				close(p[0]);
 				backtrace_symbols_fd(backtraceStore, frames, p[1]);
 				close(p[1]);
-				waitpid(pid, NULL, 0);
+				if (waitpid(pid, &status, 0) == -1 || status != 0) {
+					end = state.messageBuf;
+					end = appendText(end, "ERROR: cannot execute '");
+					end = appendText(end, backtraceSanitizerPath);
+					end = appendText(end, "' for sanitizing the backtrace, writing to stderr directly...\n");
+					write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+					backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
+				}
 			}
 
 		} else {
@@ -777,6 +796,11 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 		child = asyncFork();
 		if (child == 0) {
+			// OS X: for some reason the SIGPIPE handler may be reset to default after forking.
+			// Later in this program we're going to pipe backtrace_symbols_fd() into the backtrace
+			// sanitizer, which may fail, and we don't want the diagnostics process to crash
+			// with SIGPIPE as a result, so we ignore SIGPIPE again.
+			ignoreSigpipe();
 			dumpDiagnostics(state);
 			// The child process may or may or may not resume the original process.
 			// We do it ourselves just to be sure.
