@@ -33,11 +33,13 @@
 #include <sys/select.h>
 #ifdef __linux__
 	#include <sys/syscall.h>
+	#include <features.h>
 #endif
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
+#include <cassert>
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
@@ -104,6 +106,14 @@ static bool backtraceSanitizerUseShell = false;
 static bool backtraceSanitizerPassProgramInfo = true;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
 static void *customDiagnosticsDumperUserData;
+
+// If assert() failed, its information is stored here.
+static struct {
+	const char *filename;
+	const char *function; // May be NULL.
+	const char *expression;
+	unsigned int line;
+} lastAssertionFailure;
 
 
 static void
@@ -550,6 +560,7 @@ runCustomDiagnosticsDumper(AbortHandlerState &state, void *userData) {
 static void
 dumpDiagnostics(AbortHandlerState &state) {
 	char *messageBuf = state.messageBuf;
+	char *end;
 
 	// Dump human-readable time string.
 	pid_t pid = asyncFork();
@@ -562,10 +573,28 @@ dumpDiagnostics(AbortHandlerState &state) {
 		waitpid(pid, NULL, 0);
 	}
 
+	if (lastAssertionFailure.filename != NULL) {
+		end = messageBuf;
+		end = appendText(end, "Last assertion failure: (");
+		end = appendText(end, lastAssertionFailure.expression);
+		end = appendText(end, "), ");
+		if (lastAssertionFailure.function != NULL) {
+			end = appendText(end, "function ");
+			end = appendText(end, lastAssertionFailure.function);
+			end = appendText(end, ", ");
+		}
+		end = appendText(end, "file ");
+		end = appendText(end, lastAssertionFailure.filename);
+		end = appendText(end, ", line ");
+		end = appendULL(end, lastAssertionFailure.line);
+		end = appendText(end, ".\n");
+		write(STDERR_FILENO, messageBuf, end - messageBuf);
+	}
+
 	// It is important that writing the message and the backtrace are two
 	// seperate operations because it's not entirely clear whether the
 	// latter is async signal safe and thus can crash.
-	char *end = messageBuf;
+	end = messageBuf;
 	end = appendText(end, state.messagePrefix);
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
 		end = appendText(end, " ] libc backtrace available!\n");
@@ -840,7 +869,27 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	raise(signo);
 }
 
-#ifdef __APPLE__
+/*
+ * Override assert() to add more features and to fix bugs. We save the information
+ * of the last assertion failure in a global variable so that we can print it
+ * to the crash diagnostics report.
+ */
+#if defined(__GLIBC__)
+	extern "C" __attribute__ ((__noreturn__))
+	void
+	__assert_fail(__const char *__assertion, __const char *__file,
+		unsigned int __line, __const char *__function)
+	{
+		lastAssertionFailure.filename = __file;
+		lastAssertionFailure.line = __line;
+		lastAssertionFailure.function = __function;
+		lastAssertionFailure.expression = __assertion;
+		fprintf(stderr, "Assertion failed! %s:%u: %s: %s\n", __file, __line, __function, __assertion);
+		fflush(stderr);
+		abort();
+	}
+
+#elif defined(__APPLE__)
 	/* On OS X, raise() and abort() unfortunately send SIGABRT to the main thread,
 	 * causing the original backtrace to be lost in the signal handler.
 	 * We work around this for anything in the same linkage unit by just definin
@@ -856,6 +905,10 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 	extern "C" void
 	__assert_rtn(const char *func, const char *file, int line, const char *expr) {
+		lastAssertionFailure.filename = file;
+		lastAssertionFailure.line = line;
+		lastAssertionFailure.function = func;
+		lastAssertionFailure.expression = expr;
 		if (func) {
 			fprintf(stderr, "Assertion failed: (%s), function %s, file %s, line %d.\n",
 				expr, func, file, line);
