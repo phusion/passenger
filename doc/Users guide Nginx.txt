@@ -1170,33 +1170,17 @@ This option may occur in the following places:
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-In each place, it may be specified at most once. The default value is '200'.
+In each place, it may be specified at most once. The default value is '0'.
 
 [NOTE]
 .A word about permissions
 =====================================================
-The <<PassengerMemoryLimit,passenger_memory_limit>> directive requires that the
-user that the application is running as (see <<PassengerUserSwitching,passenger_user_switching>>)
-to have access to the `/proc` file system, or to be able to inspect its status
-with `ps` (which on Linux and FreeBSD systems basically means the same thing, since `ps`
-reads process information from `/proc`). Therefore, on servers running with
-tight permissions on `/proc`, this directive may not work. If you wish to use
-this directive and your `/proc` permissions are too tight, then please consider
-untightening the permissions.
-=====================================================
-
-[TIP]
-.FreeBSD and `/proc`
-=====================================================
-On many FreeBSD systems, `/proc` is not mounted by default. `/proc` *must* be
-mounted in order for <<PassengerMemoryLimit,passenger_memory_limit>> to work.
-
-It is also advised that you mount `/proc` with the `linprocfs` filesystem type
-instead of the regular FreeBSD `proc` filesystem type. The `linprocfs` filesystem
-type allows Phusion Passenger to read memory information from `/proc` directly,
-which is very fast. If you mount `/proc` with a different filesystem type, then
-Phusion Passenger must resort to querying memory information from the `ps` command,
-which is a lot slower.
+The <<PassengerMemoryLimit,passenger_memory_limit>> directive uses the
+`ps` command to query memory usage information. On Linux, it further
+queries `/proc` to obtain additional memory usage information that's
+not obtainable through `ps`. You should ensure that the `ps` works
+correctly and that the `/proc` filesystem is accessible by the
+`PassengerHelperAgent` process.
 =====================================================
 
 [CAUTION]
