@@ -58,3 +58,14 @@ if [[ "$TEST_NGINX" = 1 ]]; then
 	echo "$ rake test:integration:nginx"
 	rake test:integration:nginx
 fi
+
+if [[ "$TEST_APACHE2" = 1 ]]; then
+	echo "$ rake test:install_deps RAILS_BUNDLES=no"
+	rake test:install_deps RAILS_BUNDLES=no
+	echo "$ gem install rack --no-rdoc --no-ri"
+	gem install rack --no-rdoc --no-ri
+	echo "$ rake apache2"
+	rake apache2
+	echo "$ rake test:integration:apache2"
+	rake test:integration:apache2
+fi

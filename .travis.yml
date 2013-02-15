@@ -6,6 +6,7 @@ env:
   - TEST_RUBY=1 TEST_RUBY_VERSION=1.8.7
   - TEST_RUBY=1 TEST_RUBY_VERSION=1.9.3
   - TEST_NGINX=1
+  - TEST_APACHE2=1
 
 before_install:
   - sudo apt-get install apache2-mpm-worker apache2-threaded-dev
