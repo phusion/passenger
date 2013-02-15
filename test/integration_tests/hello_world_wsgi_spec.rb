@@ -8,11 +8,11 @@ shared_examples_for "HelloWorld WSGI application" do
 	end
 	
 	it "is possible to GET a regular WSGI page" do
-		get('/').should =~ /Hello World/
+		get('/').should include("hello <b>world</b>")
 	end
 	
 	it "supports restarting via restart.txt" do
-		get('/').should =~ /Hello World/
+		get('/').should include("hello <b>world</b>")
 		
 		code = %q{
 			def application(env, start_response):

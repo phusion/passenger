@@ -11,16 +11,33 @@ require 'integration_tests/cgi_environment_spec'
 require 'integration_tests/hello_world_rack_spec'
 require 'integration_tests/hello_world_wsgi_spec'
 
-# TODO: test the 'RailsUserSwitching' and 'RailsDefaultUser' option.
+# TODO: test the 'PassengerUserSwitching' and 'PassengerDefaultUser' option.
 # TODO: test custom page caching directory
 
 describe "Apache 2 module" do
 	before :all do
 		check_hosts_configuration
-		@apache2 = Apache2Controller.new
 		@passenger_temp_dir = "/tmp/passenger-test.#{$$}"
 		Dir.mkdir(@passenger_temp_dir)
 		ENV['PASSENGER_TEMP_DIR'] = @passenger_temp_dir
+	end
+	
+	after :all do
+		@apache2.stop if @apache2
+		FileUtils.chmod_R(0777, @passenger_temp_dir)
+		FileUtils.rm_rf(@passenger_temp_dir)
+	end
+	
+	before :each do
+		File.open("test.log", "a") do |f|
+			# Make sure that all Apache log output is prepended by the test description
+			# so that we know which messages are associated with which tests.
+			f.puts "\n#### #{Time.now}: #{example.full_description}"
+		end
+	end
+
+	def create_apache2_controller
+		@apache2 = Apache2Controller.new
 		@apache2.set(:passenger_temp_dir => @passenger_temp_dir)
 		if Process.uid == 0
 			@apache2.set(
@@ -30,33 +47,21 @@ describe "Apache 2 module" do
 		end
 	end
 	
-	after :all do
-		@apache2.stop
-		FileUtils.chmod_R(0777, @passenger_temp_dir)
-		FileUtils.rm_rf(@passenger_temp_dir)
-	end
-	
-	before :each do
-		File.open("test.log", "a") do |f|
-			# Make sure that all Apache log output is prepended by the test description
-			# so that we know which messages are associated with which tests.
-			f.puts "\n#### #{self.class.description} : #{description}"
-		end
-	end
-	
 	describe ": MyCook(tm) beta running on root URI" do
 		before :all do
+			create_apache2_controller
 			@web_server_supports_chunked_transfer_encoding = true
 			@base_uri = ""
 			@server = "http://passenger.test:#{@apache2.port}"
 			@apache2 << "RailsMaxPoolSize 1"
-			@stub = RailsStub.new('2.3/mycook')
+			@stub = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			@apache2.set_vhost("passenger.test", "#{@stub.full_app_root}/public")
 			@apache2.start
 		end
 		
 		after :all do
 			@stub.destroy
+			@apache2.stop if @apache2
 		end
 		
 		before :each do
@@ -64,7 +69,7 @@ describe "Apache 2 module" do
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
-		include_shared_example_group "CGI environment variables compliance"
+		include_examples "CGI environment variables compliance"
 		
 		it "doesn't block Rails while an upload is in progress" do
 			get('/') # Force spawning so that the timeout below is enough.
@@ -123,9 +128,10 @@ describe "Apache 2 module" do
 	
 	describe ": MyCook(tm) beta running in a sub-URI" do
 		before :all do
+			create_apache2_controller
 			@web_server_supports_chunked_transfer_encoding = true
 			@base_uri = "/mycook"
-			@stub = RailsStub.new('2.3/mycook')
+			@stub = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			FileUtils.cp_r('stub/zsfa/.', 'tmp.webdir')
@@ -140,6 +146,7 @@ describe "Apache 2 module" do
 		after :all do
 			FileUtils.rm_rf('tmp.webdir')
 			@stub.destroy
+			@apache2.stop if @apache2
 		end
 		
 		before :each do
@@ -148,7 +155,7 @@ describe "Apache 2 module" do
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
-		include_shared_example_group "CGI environment variables compliance"
+		include_examples "CGI environment variables compliance"
 		
 		it "does not interfere with the root website" do
 			@server = "http://passenger.test:#{@apache2.port}"
@@ -158,9 +165,10 @@ describe "Apache 2 module" do
 	
 	describe "compatibility with other modules" do
 		before :all do
+			create_apache2_controller
 			@apache2 << "RailsMaxPoolSize 1"
 			
-			@mycook = RailsStub.new('2.3/mycook')
+			@mycook = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			@mycook_url_root = "http://1.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost("1.passenger.test", "#{@mycook.full_app_root}/public") do |vhost|
 				vhost << "RewriteEngine on"
@@ -172,6 +180,7 @@ describe "Apache 2 module" do
 		
 		after :all do
 			@mycook.destroy
+			@apache2.stop if @apache2
 		end
 		
 		before :each do
@@ -208,9 +217,10 @@ describe "Apache 2 module" do
 	
 	describe "configuration options" do
 		before :all do
+			create_apache2_controller
 			@apache2 << "PassengerMaxPoolSize 3"
 			
-			@mycook = RailsStub.new('2.3/mycook')
+			@mycook = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			@mycook_url_root = "http://1.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost('1.passenger.test', "#{@mycook.full_app_root}/public") do |vhost|
 				vhost << "AllowEncodedSlashes on"
@@ -219,7 +229,7 @@ describe "Apache 2 module" do
 				vhost << "RailsAutoDetect off"
 			end
 			
-			@foobar = RailsStub.new('2.3/foobar')
+			@foobar = ClassicRailsStub.new('rails2.3')
 			@foobar_url_root = "http://3.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost('3.passenger.test', "#{@foobar.full_app_root}/public") do |vhost|
 				vhost << "RailsEnv development"
@@ -227,24 +237,10 @@ describe "Apache 2 module" do
 				vhost << "PassengerRestartDir #{@foobar.full_app_root}/public"
 			end
 			
-			@mycook2 = RailsStub.new('2.3/mycook')
+			@mycook2 = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			@mycook2_url_root = "http://4.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost('4.passenger.test', "#{@mycook2.full_app_root}/sites/some.site/public") do |vhost|
 				vhost << "PassengerAppRoot #{@mycook2.full_app_root}"
-			end
-			
-			# These are used by global queueing tests.
-			@mycook3 = RailsStub.new('2.3/mycook')
-			@mycook3_url_root = "http://5.passenger.test:#{@apache2.port}"
-			@apache2.set_vhost('5.passenger.test', "#{@mycook3.full_app_root}/sites/some.site/public") do |vhost|
-				vhost << "PassengerAppRoot #{@mycook3.full_app_root}"
-				vhost << "PassengerMinInstances 3"
-			end
-			@mycook4 = RailsStub.new('2.3/mycook')
-			@mycook4_url_root = "http://6.passenger.test:#{@apache2.port}"
-			@apache2.set_vhost('6.passenger.test', "#{@mycook4.full_app_root}/public") do |vhost|
-				vhost << "PassengerUseGlobalQueue on"
-				vhost << "PassengerMinInstances 3"
 			end
 			
 			@apache2.start
@@ -254,16 +250,13 @@ describe "Apache 2 module" do
 			@mycook.destroy
 			@foobar.destroy
 			@mycook2.destroy
-			@mycook3.destroy
-			@mycook4.destroy
+			@apache2.stop if @apache2
 		end
 		
 		before :each do
 			@mycook.reset
 			@foobar.reset
 			@mycook2.reset
-			@mycook3.reset
-			@mycook4.reset
 		end
 		
 		it "ignores the Rails application if RailsAutoDetect is off" do
@@ -282,18 +275,6 @@ describe "Apache 2 module" do
 			
 			@server = @foobar_url_root
 			get('/foo/rails_env').should == "development"
-		end
-		
-		it "supports conservative spawning" do
-			@server = @foobar_url_root
-			# TODO: I think this assertion is no longer valid now that
-			# smart-lv2 is the default spawn method...
-			get('/foo/backtrace').should_not =~ /framework_spawner/
-		end
-		
-		specify "PassengerSpawnMethod spawning is per-virtual host" do
-			@server = @mycook_url_root
-			get('/welcome/backtrace').should =~ /application_spawner/
 		end
 		
 		it "looks for restart.txt in the directory specified by PassengerRestartDir" do
@@ -323,88 +304,6 @@ describe "Apache 2 module" do
 			
 			File.touch(restart_file, now - 10)
 			get('/bar').should == "oh hai"
-		end
-		
-		describe "PassengerUseGlobalQueue" do
-			before :each do
-				
-			end
-			
-			after :each do
-				# Restart Apache in order to reset the application pool's state.
-				@apache2.stop
-			end
-			
-			it "works and is per-virtual host" do
-				@server = @mycook4_url_root
-				
-				# Spawn 3 application processes.
-				get('/')
-				eventually do
-					inspect_server(:processes).size == 3
-				end
-				
-				# Reserve all application pool slots.
-				threads = []
-				3.times do |i|
-					thread = Thread.new do
-						File.unlink("#{@mycook4.app_root}/#{i}.txt") rescue nil
-						get("/welcome/sleep_until_exists?name=#{i}.txt")
-					end
-					threads << thread
-				end
-				
-				# Wait until all application instances are waiting
-				# for the quit file.
-				eventually(5) do
-					File.exist?("#{@mycook4.app_root}/waiting_0.txt") &&
-					File.exist?("#{@mycook4.app_root}/waiting_1.txt") &&
-					File.exist?("#{@mycook4.app_root}/waiting_2.txt")
-				end
-				processes = inspect_server(:processes)
-				processes.should have(3).items
-				processes.each do |process|
-					process.sessions.should == 1
-				end
-				inspect_server(:global_queue_size).should == 0
-				
-				# While all slots are reserved, make two more requests.
-				first_request_done = false
-				second_request_done = false
-				thread = Thread.new do
-					get("/")
-					first_request_done = true
-				end
-				threads << thread
-				thread = Thread.new do
-					get("/")
-					second_request_done = true
-				end
-				threads << thread
-				
-				# These requests should both be waiting on the global queue.
-				sleep 1
-				processes = inspect_server(:processes)
-				processes.should have(3).items
-				processes.each do |process|
-					process.sessions.should == 1
-				end
-				inspect_server(:global_queue_size).should == 2
-				
-				# Both requests should be processed if one application instance frees up.
-				File.touch("#{@mycook4.app_root}/2.txt")
-				eventually(5) do
-					first_request_done && second_request_done
-				end
-				inspect_server(:global_queue_size).should == 0
-				
-				File.touch("#{@mycook4.app_root}/0.txt")
-				File.touch("#{@mycook4.app_root}/1.txt")
-				File.touch("#{@mycook4.app_root}/2.txt")
-				threads.each do |thread|
-					thread.join
-				end
-			end
 		end
 		
 		describe "PassengerAppRoot" do
@@ -454,16 +353,16 @@ describe "Apache 2 module" do
 	
 	describe "error handling" do
 		before :all do
+			create_apache2_controller
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			@webdir = File.expand_path('tmp.webdir')
 			@apache2.set_vhost('1.passenger.test', @webdir) do |vhost|
 				vhost << "RailsBaseURI /app-with-nonexistant-rails-version/public"
 				vhost << "RailsBaseURI /app-that-crashes-during-startup/public"
-				vhost << "RailsBaseURI /app-with-crashing-vendor-rails/public"
 			end
 			
-			@mycook = RailsStub.new('2.3/mycook')
+			@mycook = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			@mycook_url_root = "http://2.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost('2.passenger.test', "#{@mycook.full_app_root}/public")
 			
@@ -473,6 +372,7 @@ describe "Apache 2 module" do
 		after :all do
 			FileUtils.rm_rf('tmp.webdir')
 			@mycook.destroy
+			@apache2.stop if @apache2
 		end
 		
 		before :each do
@@ -482,7 +382,7 @@ describe "Apache 2 module" do
 		end
 		
 		it "displays an error page if the Rails application requires a nonexistant Rails version" do
-			RailsStub.use('2.3/foobar', "#{@webdir}/app-with-nonexistant-rails-version") do |stub|
+			ClassicRailsStub.use('rails2.3', "#{@webdir}/app-with-nonexistant-rails-version") do |stub|
 				File.write(stub.environment_rb) do |content|
 					content.sub(/^RAILS_GEM_VERSION = .*$/, "RAILS_GEM_VERSION = '1.9.1234'")
 				end
@@ -491,22 +391,11 @@ describe "Apache 2 module" do
 		end
 		
 		it "displays an error page if the Rails application crashes during startup" do
-			RailsStub.use('2.3/foobar', "#{@webdir}/app-that-crashes-during-startup") do |stub|
+			ClassicRailsStub.use('rails2.3', "#{@webdir}/app-that-crashes-during-startup") do |stub|
 				File.prepend(stub.environment_rb, "raise 'app crash'")
 				result = get("/app-that-crashes-during-startup/public")
 				result.should =~ @error_page_signature
 				result.should =~ /app crash/
-			end
-		end
-		
-		it "displays an error page if the Rails application's vendor'ed Rails crashes" do
-			RailsStub.use('2.3/foobar', "#{@webdir}/app-with-crashing-vendor-rails") do |stub|
-				stub.use_vendor_rails('minimal')
-				File.append("#{stub.app_root}/vendor/rails/railties/lib/initializer.rb",
-					"raise 'vendor crash'")
-				result = get("/app-with-crashing-vendor-rails/public")
-				result.should =~ @error_page_signature
-				result.should =~ /vendor crash/
 			end
 		end
 		
@@ -522,7 +411,7 @@ describe "Apache 2 module" do
 		end
 		
 		it "doesn't display a Ruby spawn error page if PassengerFriendlyErrorPages is off" do
-			RailsStub.use('2.3/foobar', "#{@webdir}/app-that-crashes-during-startup") do |stub|
+			ClassicRailsStub.use('rails2.3', "#{@webdir}/app-that-crashes-during-startup") do |stub|
 				File.write("#{stub.app_root}/public/.htaccess", "PassengerFriendlyErrorPages off")
 				File.prepend(stub.environment_rb, "raise 'app crash'")
 				result = get("/app-that-crashes-during-startup/public")
@@ -536,7 +425,8 @@ describe "Apache 2 module" do
 		AdminTools = PhusionPassenger::AdminTools
 		
 		before :all do
-			@mycook = RailsStub.new('2.3/mycook')
+			create_apache2_controller
+			@mycook = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			@mycook_url_root = "http://1.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost('1.passenger.test', "#{@mycook.full_app_root}/public")
 			@apache2.start
@@ -545,6 +435,7 @@ describe "Apache 2 module" do
 		
 		after :all do
 			@mycook.destroy
+			@apache2.stop if @apache2
 		end
 		
 		before :each do
@@ -584,13 +475,14 @@ describe "Apache 2 module" do
 				instance.processes
 			end
 			processes.should have(1).item
-			processes[0].group.name.should == @mycook.full_app_root
+			processes[0].group.name.should == @mycook.full_app_root + "#default"
 			processes[0].processed.should == 1
 		end
 	end
 	
 	describe "Rack application running in root URI" do
 		before :all do
+			create_apache2_controller
 			@stub = RackStub.new('rack')
 			@apache2.set_vhost('passenger.test', @stub.full_app_root + "/public")
 			@apache2.start
@@ -599,6 +491,7 @@ describe "Apache 2 module" do
 		
 		after :all do
 			@stub.destroy
+			@apache2.stop if @apache2
 		end
 		
 		it_should_behave_like "HelloWorld Rack application"
@@ -606,6 +499,7 @@ describe "Apache 2 module" do
 	
 	describe "Rack application running in sub-URI" do
 		before :all do
+			create_apache2_controller
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			@stub = RackStub.new('rack')
@@ -620,6 +514,7 @@ describe "Apache 2 module" do
 		after :all do
 			@stub.destroy
 			FileUtils.rm_rf('tmp.webdir')
+			@apache2.stop if @apache2
 		end
 		
 		it_should_behave_like "HelloWorld Rack application"
@@ -627,7 +522,8 @@ describe "Apache 2 module" do
 	
 	describe "Rack application running within Rails directory structure" do
 		before :all do
-			@stub = RailsStub.new('2.3/mycook')
+			create_apache2_controller
+			@stub = ClassicRailsStub.new('rails_apps/2.3/mycook')
 			FileUtils.cp_r("stub/rack/.", @stub.app_root)
 			@apache2.set_vhost('passenger.test', @stub.full_app_root + "/public")
 			@apache2.start
@@ -636,6 +532,7 @@ describe "Apache 2 module" do
 
 		after :all do
 			@stub.destroy
+			@apache2.stop if @apache2
 		end
 
 		it_should_behave_like "HelloWorld Rack application"
@@ -643,6 +540,7 @@ describe "Apache 2 module" do
 
 	describe "WSGI application running in root URI" do
 		before :all do
+			create_apache2_controller
 			@stub = Stub.new('wsgi')
 			@apache2.set_vhost('passenger.test', @stub.full_app_root + "/public")
 			@apache2.start
@@ -651,6 +549,7 @@ describe "Apache 2 module" do
 		
 		after :all do
 			@stub.destroy
+			@apache2.stop if @apache2
 		end
 		
 		it_should_behave_like "HelloWorld WSGI application"
