@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -23,7 +23,7 @@
 require 'mkmf'
 $LIBS = ""
 $CFLAGS << " -g"
-$LIBS << " -lpthread" if RUBY_PLATFORM =~ /openbsd/
+$LIBS << " -lpthread"
 
 if RUBY_PLATFORM =~ /solaris/
 	have_library('xnet')
