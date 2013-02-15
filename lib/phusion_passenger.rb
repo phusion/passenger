@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -29,7 +29,7 @@ module PhusionPassenger
 	###### Version numbers ######
 	
 	# Phusion Passenger version number. Don't forget to edit ext/common/Constants.h too.
-	VERSION_STRING = '3.9.2.beta'
+	VERSION_STRING = '3.9.3.rc1'
 	
 	PREFERRED_NGINX_VERSION = '1.2.6'
 	PREFERRED_PCRE_VERSION  = '8.31'
