@@ -926,13 +926,13 @@ protected:
 		if (!options.baseURI.empty() && options.baseURI != "/") {
 			appendNullTerminatedKeyValue(result,
 				"RAILS_RELATIVE_URL_ROOT",
-				options.environment);
+				options.baseURI);
 			appendNullTerminatedKeyValue(result,
 				"RACK_BASE_URI",
-				options.environment);
+				options.baseURI);
 			appendNullTerminatedKeyValue(result,
 				"PASSENGER_BASE_URI",
-				options.environment);
+				options.baseURI);
 		}
 		
 		it  = options.environmentVariables.begin();
