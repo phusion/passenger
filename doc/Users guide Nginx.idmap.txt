@@ -206,15 +206,13 @@
 
 8.4. Bundler support	=>	bundler-support-19v1h43
 
-8.5. Moving Phusion Passenger to a different directory	=>	moving-phusion-passenger-to-a-different-directory-1hel5cp
+8.5. Installing multiple Ruby on Rails versions	=>	installing-multiple-ruby-on-rails-versions-1bp1fff
 
-8.6. Installing multiple Ruby on Rails versions	=>	installing-multiple-ruby-on-rails-versions-1bp1fff
+8.6. Making the application restart after each request	=>	making-the-application-restart-after-each-request-vimy48
 
-8.7. Making the application restart after each request	=>	making-the-application-restart-after-each-request-vimy48
+8.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-11mzwt6
 
-8.8. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-11mzwt6
-
-8.9. Out-of-Band Garbage Work and Out-of-Band Garbage Collection	=>	out-of-band-garbage-work-and-out-of-band-garbage-collection-v89lu2
+8.8. Out-of-Band Garbage Work and Out-of-Band Garbage Collection	=>	out-of-band-garbage-work-and-out-of-band-garbage-collection-v89lu2
 
 9. Under the hood	=>	under-the-hood-8uney
 
