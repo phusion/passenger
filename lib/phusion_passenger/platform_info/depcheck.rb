@@ -183,17 +183,17 @@ module Depcheck
 		def check_for_ruby_library(name)
 			begin
 				require(name)
-				[true]
+				{ :found => true }
 			rescue LoadError
 				if defined?(Gem)
-					[false]
+					false
 				else
 					begin
 						require 'rubygems'
 						require(name)
-						[true]
+						{ :found => true }
 					rescue LoadError
-						[false]
+						false
 					end
 				end
 			end
