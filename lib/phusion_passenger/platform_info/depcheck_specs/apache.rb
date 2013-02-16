@@ -1,9 +1,17 @@
-define 'apache' do
+define 'apache2' do
 	name 'Apache 2'
 	website 'http://httpd.apache.org/'
 	define_checker do
 		require 'phusion_passenger/platform_info/apache'
-		check_for_command(PlatformInfo.httpd)
+		if check_for_command(PlatformInfo.httpd)
+			{
+				:found => true,
+				"Location of httpd" => PlatformInfo.httpd,
+				"Apache version"    => PlatformInfo.httpd_version
+			}
+		else
+			false
+		end
 	end
 
 	on :debian do
@@ -20,17 +28,19 @@ define 'apache' do
 	end
 end
 
-define 'apache-dev' do
+define 'apache2-dev' do
 	name "Apache 2 development headers"
 	website = "http://httpd.apache.org/"
 	define_checker do
 		require 'phusion_passenger/platform_info/apache'
-		{
-			:found => PlatformInfo.apxs2 && PlatformInfo.httpd,
-			"Location of apxs2" => PlatformInfo.apxs2 || "not found",
-			"Location of httpd" => PlatformInfo.httpd || "not found"
-			"Apache version"    => PlatformInfo.httpd_version || "-"
-		}
+		if PlatformInfo.apxs2
+			{
+				:found => true,
+				"Location of apxs2" => PlatformInfo.apxs2
+			}
+		else
+			false
+		end
 	end
 
 	on :debian do
@@ -51,7 +61,16 @@ define 'apr-dev' do
 	name "Apache Portable Runtime (APR) development headers"
 	website "http://httpd.apache.org/"
 	define_checker do
-		check_for_command(PlatformInfo.apr_config)
+		require 'phusion_passenger/platform_info/apache'
+		if PlatformInfo.apr_config
+			{
+				:found     => true,
+				"Location" => PlatformInfo.apr_config,
+				"Version"  => `#{PlatformInfo.apr_config} --version`.strip
+			}
+		else
+			false
+		end
 	end
 
 	on :debian do
@@ -73,7 +92,15 @@ define 'apu-dev' do
 	website "http://httpd.apache.org/"
 	define_checker do
 		require 'phusion_passenger/platform_info/apache'
-		check_for_command(PlatformInfo.apu_config)
+		if PlatformInfo.apu_config
+			{
+				:found     => true,
+				"Location" => PlatformInfo.apu_config,
+				"Version"  => `#{PlatformInfo.apu_config} --version`.strip
+			}
+		else
+			false
+		end
 	end
 
 	on :debian do
