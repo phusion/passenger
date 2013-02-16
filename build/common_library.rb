@@ -21,6 +21,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger/platform_info/cxx_portability'
+
 ########## Phusion Passenger common library ##########
 
 require 'phusion_passenger/common_library'

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,30 +22,63 @@
 #  THE SOFTWARE.
 
 require 'phusion_passenger/platform_info'
-require 'phusion_passenger/platform_info/operating_system'
 
 module PhusionPassenger
 
 module PlatformInfo
-	def self.gnu_make
-		gmake = find_command('gmake')
-		if !gmake
-			gmake = find_command('make')
-			if gmake
-				if `#{gmake} --version 2>&1` =~ /GNU/
-					return gmake
-				else
-					return nil
-				end
-			else
-				return nil
-			end
+private
+	def self.select_compiler_and_add_extra_flags(language, flags)
+		case language
+		when :c
+			result = [cc, flags, ENV['EXTRA_CFLAGS']]
+		when :cxx
+			result = [cxx, flags, ENV['EXTRA_CXXFLAGS']]
 		else
-			return gmake
+			raise ArgumentError, "Unsupported language #{language.inspect}"
+		end
+		return result.compact.join(" ").strip
+	end
+	private_class_method :select_compiler_and_add_extra_flags
+
+	def self.run_compiler(description, command, source_file, source)
+		if verbose?
+			message = "#{description}\n" <<
+				"Running: #{command}\n"
+			if source.strip.empty?
+				message << "Source file is empty."
+			else
+				message << "Source file contains:\n" <<
+					"-------------------------\n" <<
+					unindent(source) <<
+					"\n-------------------------"
+			end
+			log(message)
+			result = system(command)
+		else
+			result = system("(#{command}) >/dev/null 2>/dev/null")
+		end
+		if result.nil?
+			log("Command could not be executed!")
+			return false
+		elsif result
+			log("Command suceeded!")
+			return true
+		else
+			log("Command failed! Exit status #{$?.exitstatus}")
+			return false
 		end
 	end
-	memoize :gnu_make, true
+	private_class_method :run_compiler
+
+public
+	def self.cc
+		return ENV['CC'] || "gcc"
+	end
 	
+	def self.cxx
+		return ENV['CXX'] || "g++"
+	end
+
 	def self.cc_is_clang?
 		`#{cc} --version 2>&1` =~ /clang version/
 	end
@@ -56,29 +89,94 @@ module PlatformInfo
 	end
 	memoize :cxx_is_clang?
 
+
+	def self.try_compile(description, language, source, flags = nil)
+		compiler = select_compiler_and_add_extra_flags(language, flags)
+		filename = File.join("#{tmpexedir}/passenger-compile-check-#{Process.pid}.c")
+		File.open(filename, "w") do |f|
+			f.puts(source)
+		end
+		begin
+			command = "#{compiler} -c '#{filename}' -o '#{filename}.o'"
+			return run_compiler(description, command, filename, source)
+		ensure
+			File.unlink(filename) rescue nil
+			File.unlink("#{filename}.o") rescue nil
+		end
+	end
+	
+	def self.try_link(description, language, source, flags = nil)
+		compiler = select_compiler_and_add_extra_flags(language, flags)
+		filename = File.join("#{tmpexedir}/passenger-link-check-#{Process.pid}.c")
+		File.open(filename, "w") do |f|
+			f.puts(source)
+		end
+		begin
+			command = "#{compiler} '#{filename}' -o '#{filename}.out' #{ENV['EXTRA_LDFLAGS']}".strip
+			return run_compiler(description, command, filename, source)
+		ensure
+			File.unlink(filename) rescue nil
+			File.unlink("#{filename}.out") rescue nil
+		end
+	end
+	
+	def self.try_compile_and_run(description, language, source, flags = nil)
+		compiler = select_compiler_and_add_extra_flags(language, flags)
+		filename = File.join("#{tmpexedir}/passenger-compile-check-#{Process.pid}.c")
+		File.open(filename, "w") do |f|
+			f.puts(source)
+		end
+		begin
+			command = "#{compiler} '#{filename}' -o '#{filename}.out'"
+			if run_compiler(description, command, filename, source)
+				log("Running #{filename.out}")
+				begin
+					output = `'#{filename}.out' 2>&1`
+				rescue SystemCallError => e
+					log("Command failed: #{e}")
+					return false
+				end
+				status = $?.exitstatus
+				log("Command exited with status #{status}. Output:\n--------------\n#{output}\n--------------")
+				return status == 0
+			else
+				return false
+			end
+		ensure
+			File.unlink(filename) rescue nil
+			File.unlink("#{filename}.out") rescue nil
+		end
+	end
+
+
 	# Checks whether the compiler supports "-arch #{arch}".
 	def self.compiler_supports_architecture?(arch)
-		return try_compile(:c, '', "-arch #{arch}")
+		return try_compile("Checking for C compiler '-arch' support",
+			:c, '', "-arch #{arch}")
 	end
 	
 	def self.compiler_supports_visibility_flag?
 		return false if RUBY_PLATFORM =~ /aix/
-		return try_compile(:c, '', '-fvisibility=hidden')
+		return try_compile("Checking for C compiler '-fvisibility' support",
+			:c, '', '-fvisibility=hidden')
 	end
 	memoize :compiler_supports_visibility_flag?, true
 	
 	def self.compiler_supports_wno_attributes_flag?
-		return try_compile(:c, '', '-Wno-attributes')
+		return try_compile("Checking for C compiler '-Wno-attributes' support",
+			:c, '', '-Wno-attributes')
 	end
 	memoize :compiler_supports_wno_attributes_flag?, true
 
 	def self.compiler_supports_wno_missing_field_initializers_flag?
-		return try_compile(:c, '', '-Wno-missing-field-initializers')
+		return try_compile("Checking for C compiler '-Wno-missing-field-initializers' support",
+			:c, '', '-Wno-missing-field-initializers')
 	end
 	memoize :compiler_supports_wno_missing_field_initializers_flag?
 	
 	def self.compiler_supports_no_tls_direct_seg_refs_option?
-		return try_compile(:c, '', '-mno-tls-direct-seg-refs')
+		return try_compile("Checking for C compiler '-mno-tls-direct-seg-refs' support",
+			:c, '', '-mno-tls-direct-seg-refs')
 	end
 	memoize :compiler_supports_no_tls_direct_seg_refs_option?, true
 	
@@ -98,125 +196,16 @@ module PlatformInfo
 	memoize :compiler_visibility_flag_generates_warnings?, true
 	
 	def self.has_math_library?
-		return try_link(:c, "int main() { return 0; }\n", '-lmath')
+		return try_link("Checking for -lmath support",
+			:c, "int main() { return 0; }\n", '-lmath')
 	end
 	memoize :has_math_library?, true
 	
 	def self.has_alloca_h?
-		return try_compile(:c, '#include <alloca.h>')
+		return try_compile("Checking for alloca.h",
+			:c, '#include <alloca.h>')
 	end
 	memoize :has_alloca_h?, true
-
-	# Compiler flags that should be used for compiling every C/C++ program,
-	# for portability reasons. These flags should be specified as last
-	# when invoking the compiler.
-	def self.portability_cflags
-		flags = ["-D_REENTRANT -I/usr/local/include"]
-		
-		# There are too many implementations of of the hash map!
-		# Figure out the right one.
-		ok = try_compile(:cxx, %Q{
-			#include <tr1/unordered_map>
-			int
-			main() {
-				std::tr1::unordered_map<int, int> m;
-				return 0;
-			}
-		})
-		if ok
-			flags << "-DHAS_TR1_UNORDERED_MAP"
-		else
-			hash_namespace = nil
-			ok = false
-			['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
-				['hash_map', 'ext/hash_map'].each do |hash_map_header|
-					ok = try_compile(:cxx, %Q{
-						#include <#{hash_map_header}>
-						int
-						main() {
-							#{namespace}::hash_map<int, int> m;
-							return 0;
-						}
-					})
-					if ok
-						hash_namespace = namespace
-						flags << "-DHASH_NAMESPACE=\"#{namespace}\""
-						flags << "-DHASH_MAP_HEADER=\"<#{hash_map_header}>\""
-						flags << "-DHASH_MAP_CLASS=\"hash_map\""
-					end
-					break if ok
-				end
-				break if ok
-			end
-			['ext/hash_fun.h', 'functional', 'tr1/functional',
-			 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
-			 'stl/_hash_fun.h'].each do |hash_function_header|
-				ok = try_compile(:cxx, %Q{
-					#include <#{hash_function_header}>
-					int
-					main() {
-						#{hash_namespace}::hash<int>()(5);
-						return 0;
-					}
-				})
-				if ok
-					flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
-					break
-				end
-			end
-		end
-
-		ok = try_compile(:c, %Q{
-			#define _GNU_SOURCE
-			#include <sys/socket.h>
-			static void *foo = accept4;
-		})
-		flags << '-DHAVE_ACCEPT4' if ok
-		
-		if RUBY_PLATFORM =~ /solaris/
-			flags << '-pthreads'
-			if RUBY_PLATFORM =~ /solaris2.11/
-				# skip the _XOPEN_SOURCE and _XPG4_2 definitions in later versions of Solaris / OpenIndiana
-				flags << '-D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
-			else
-				flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
-				flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
-			end
-			flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
-			flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
-		elsif RUBY_PLATFORM =~ /openbsd/
-			flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
-		elsif RUBY_PLATFORM =~ /aix/
-			flags << '-pthread'
-			flags << '-DOXT_DISABLE_BACKTRACES'
-		elsif RUBY_PLATFORM =~ /(sparc-linux|arm-linux|^arm.*-linux|sh4-linux)/
-			# http://code.google.com/p/phusion-passenger/issues/detail?id=200
-			# http://groups.google.com/group/phusion-passenger/t/6b904a962ee28e5c
-			# http://groups.google.com/group/phusion-passenger/browse_thread/thread/aad4bd9d8d200561
-			flags << '-DBOOST_SP_USE_PTHREADS'
-		end
-		
-		flags << '-DHAS_ALLOCA_H' if has_alloca_h?
-		flags << '-DHAS_SFENCE' if supports_sfence_instruction?
-		flags << '-DHAS_LFENCE' if supports_lfence_instruction?
-		
-		return flags.compact.join(" ").strip
-	end
-	memoize :portability_cflags, true
-	
-	# Linker flags that should be used for linking every C/C++ program,
-	# for portability reasons. These flags should be specified as last
-	# when invoking the linker.
-	def self.portability_ldflags
-		if RUBY_PLATFORM =~ /solaris/
-			result = '-lxnet -lrt -lsocket -lnsl -lpthread'
-		else
-			result = '-lpthread'
-		end
-		flags << ' -lmath' if has_math_library?
-		return result
-	end
-	memoize :portability_ldflags
 	
 	# C compiler flags that should be passed in order to enable debugging information.
 	def self.debugging_cflags
@@ -272,6 +261,26 @@ module PlatformInfo
 			return nil
 		end
 	end
+
+
+	def self.gnu_make
+		gmake = find_command('gmake')
+		if !gmake
+			gmake = find_command('make')
+			if gmake
+				if `#{gmake} --version 2>&1` =~ /GNU/
+					return gmake
+				else
+					return nil
+				end
+			else
+				return nil
+			end
+		else
+			return gmake
+		end
+	end
+	memoize :gnu_make, true
 end
 
 end # module PhusionPassenger
