@@ -27,18 +27,20 @@ module PhusionPassenger
 
 module PlatformInfo
 private
-	def self.select_compiler_and_add_extra_flags(language, flags)
+	def self.detect_compiler_options(language, flags)
 		case language
 		when :c
-			result = [cc, flags, ENV['EXTRA_CFLAGS']]
+			compiler  = [cc, flags, ENV['EXTRA_CFLAGS']]
+			extension = "c"
 		when :cxx
-			result = [cxx, flags, ENV['EXTRA_CXXFLAGS']]
+			compiler  = [cxx, flags, ENV['EXTRA_CXXFLAGS']]
+			extension = "cpp"
 		else
 			raise ArgumentError, "Unsupported language #{language.inspect}"
 		end
-		return result.compact.join(" ").strip
+		return [compiler.compact.join(" ").strip, extension]
 	end
-	private_class_method :select_compiler_and_add_extra_flags
+	private_class_method :detect_compiler_options
 
 	def self.run_compiler(description, command, source_file, source)
 		if verbose?
@@ -61,10 +63,10 @@ private
 			log("Command could not be executed!")
 			return false
 		elsif result
-			log("Command suceeded!")
+			log("Check suceeded")
 			return true
 		else
-			log("Command failed! Exit status #{$?.exitstatus}")
+			log("Check failed with exit status #{$?.exitstatus}")
 			return false
 		end
 	end
@@ -72,11 +74,11 @@ private
 
 public
 	def self.cc
-		return ENV['CC'] || "gcc"
+		return string_env('CC', 'gcc')
 	end
 	
 	def self.cxx
-		return ENV['CXX'] || "g++"
+		return string_env('CXX', 'g++')
 	end
 
 	def self.cc_is_clang?
@@ -91,60 +93,57 @@ public
 
 
 	def self.try_compile(description, language, source, flags = nil)
-		compiler = select_compiler_and_add_extra_flags(language, flags)
-		filename = File.join("#{tmpexedir}/passenger-compile-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
+		compiler, extension = detect_compiler_options(language, flags)
+		create_temp_file("passenger-compile-check.#{extension}") do |filename, f|
 			f.puts(source)
-		end
-		begin
-			command = "#{compiler} -c '#{filename}' -o '#{filename}.o'"
-			return run_compiler(description, command, filename, source)
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.o") rescue nil
+			f.close
+			begin
+				command = "#{compiler} -c '#{filename}' -o '#{filename}.o'"
+				return run_compiler(description, command, filename, source)
+			ensure
+				File.unlink("#{filename}.o") rescue nil
+			end
 		end
 	end
 	
 	def self.try_link(description, language, source, flags = nil)
-		compiler = select_compiler_and_add_extra_flags(language, flags)
-		filename = File.join("#{tmpexedir}/passenger-link-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
+		compiler, extension = detect_compiler_options(language, flags)
+		create_temp_file("passenger-link-check.#{extension}") do |filename, f|
 			f.puts(source)
-		end
-		begin
-			command = "#{compiler} '#{filename}' -o '#{filename}.out' #{ENV['EXTRA_LDFLAGS']}".strip
-			return run_compiler(description, command, filename, source)
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.out") rescue nil
+			f.close
+			begin
+				command = "#{compiler} '#{filename}' -o '#{filename}.out' #{ENV['EXTRA_LDFLAGS']}".strip
+				return run_compiler(description, command, filename, source)
+			ensure
+				File.unlink("#{filename}.out") rescue nil
+			end
 		end
 	end
 	
 	def self.try_compile_and_run(description, language, source, flags = nil)
-		compiler = select_compiler_and_add_extra_flags(language, flags)
-		filename = File.join("#{tmpexedir}/passenger-compile-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
+		compiler, extension = detect_compiler_options(language, flags)
+		create_temp_file("passenger-run-check.#{extension}") do |filename, f|
 			f.puts(source)
-		end
-		begin
-			command = "#{compiler} '#{filename}' -o '#{filename}.out'"
-			if run_compiler(description, command, filename, source)
-				log("Running #{filename.out}")
-				begin
-					output = `'#{filename}.out' 2>&1`
-				rescue SystemCallError => e
-					log("Command failed: #{e}")
+			f.close
+			begin
+				command = "#{compiler} '#{filename}' -o '#{filename}.out'"
+				if run_compiler(description, command, filename, source)
+					log("Running #{filename.out}")
+					begin
+						output = `'#{filename}.out' 2>&1`
+					rescue SystemCallError => e
+						log("Command failed: #{e}")
+						return false
+					end
+					status = $?.exitstatus
+					log("Command exited with status #{status}. Output:\n--------------\n#{output}\n--------------")
+					return status == 0
+				else
 					return false
 				end
-				status = $?.exitstatus
-				log("Command exited with status #{status}. Output:\n--------------\n#{output}\n--------------")
-				return status == 0
-			else
-				return false
+			ensure
+				File.unlink("#{filename}.out") rescue nil
 			end
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.out") rescue nil
 		end
 	end
 
@@ -263,21 +262,30 @@ public
 	end
 
 
+	def self.make
+		return string_env('MAKE', find_command('make'))
+	end
+	memoize :make, true
+
 	def self.gnu_make
-		gmake = find_command('gmake')
-		if !gmake
-			gmake = find_command('make')
-			if gmake
-				if `#{gmake} --version 2>&1` =~ /GNU/
-					return gmake
+		if result = string_env('GMAKE')
+			return result
+		else
+			result = find_command('gmake')
+			if !result
+				result = find_command('make')
+				if result
+					if `#{result} --version 2>&1` =~ /GNU/
+						return result
+					else
+						return nil
+					end
 				else
 					return nil
 				end
 			else
-				return nil
+				return result
 			end
-		else
-			return gmake
 		end
 	end
 	memoize :gnu_make, true

@@ -203,6 +203,15 @@ public
 	def self.env_defined?(name)
 		return !ENV[name].nil? && !ENV[name].empty?
 	end
+
+	def self.string_env(name, default_value = nil)
+		value = ENV[name]
+		if value.nil? || value.empty?
+			return default_value
+		else
+			return value
+		end
+	end
 	
 	def self.tmpdir
 		result = ENV['TMPDIR']
@@ -306,13 +315,21 @@ public
 	# correctly, for some weird reason.
 	def self.find_command(name)
 		name = name.to_s
-		ENV['PATH'].to_s.split(File::PATH_SEPARATOR).detect do |directory|
-			path = File.join(directory, name)
-			if File.file?(path) && File.executable?(path)
-				return path
+		if name =~ /^\//
+			if File.executable?(name)
+				return name
+			else
+				return nil
 			end
+		else
+			ENV['PATH'].to_s.split(File::PATH_SEPARATOR).detect do |directory|
+				path = File.join(directory, name)
+				if File.file?(path) && File.executable?(path)
+					return path
+				end
+			end
+			return nil
 		end
-		return nil
 	end
 end
 
