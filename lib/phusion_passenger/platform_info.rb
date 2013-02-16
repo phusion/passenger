@@ -150,6 +150,25 @@ private
 	end
 	private_class_method :reindent
 
+	def self.create_temp_file(name, dir = tmpdir)
+		tag = "#{Process.pid}.#{Thread.current.object_id.to_s(16)}"
+		if name =~ /\./
+			ext = File.extname(name)
+			name = File.basename(name, ext) + "-#{tag}#{ext}"
+		else
+			name = "#{name}-#{tag}"
+		end
+		filename = "#{dir}/#{name}"
+		f = File.open(filename, "w")
+		begin
+			yield(filename, f)
+		ensure
+			f.close if !f.closed?
+			File.unlink(filename) if File.exist?(filename)
+		end
+	end
+	private_class_method :create_temp_file
+
 	def self.log(message)
 		if verbose?
 			message = reindent(message, 3)
@@ -166,6 +185,10 @@ public
 
 	def self.cache_dir=(value)
 		@@cache_dir = value
+	end
+
+	def self.cache_dir
+		return @@cache_dir
 	end
 
 	def self.verbose=(val)

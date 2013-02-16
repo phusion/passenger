@@ -172,7 +172,7 @@ public
 		return try_compile("Checking for C compiler '-Wno-missing-field-initializers' support",
 			:c, '', '-Wno-missing-field-initializers')
 	end
-	memoize :compiler_supports_wno_missing_field_initializers_flag?
+	memoize :compiler_supports_wno_missing_field_initializers_flag?, true
 	
 	def self.compiler_supports_no_tls_direct_seg_refs_option?
 		return try_compile("Checking for C compiler '-mno-tls-direct-seg-refs' support",

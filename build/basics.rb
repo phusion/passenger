@@ -66,6 +66,33 @@ end
 
 #################################################
 
+if string_option('OUTPUT_DIR')
+	OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
+else
+	OUTPUT_DIR = ""
+end
+
+verbose true if !boolean_option('REALLY_QUIET')
+if boolean_option('STDERR_TO_STDOUT')
+	# Just redirecting the file descriptor isn't enough because
+	# data written to STDERR might arrive in an unexpected order
+	# compared to STDOUT.
+	STDERR.reopen(STDOUT)
+	Object.send(:remove_const, :STDERR)
+	STDERR = STDOUT
+	$stderr = $stdout
+end
+
+if boolean_option('CACHING', true) && !boolean_option('RELEASE')
+	if OUTPUT_DIR.empty?
+		PlatformInfo.cache_dir = File.expand_path("cache", File.dirname(__FILE__))
+	else
+		PlatformInfo.cache_dir = OUTPUT_DIR + "cache"
+	end
+end
+
+#################################################
+
 OPTIMIZE = boolean_option("OPTIMIZE")
 CC       = string_option("CC", "gcc")
 CXX      = string_option("CXX", "g++")
@@ -112,11 +139,6 @@ EXTRA_CXXFLAGS << " " << string_option('EXTRA_CXXFLAGS').gsub("\n", " ") if stri
 EXTRA_LDFLAGS  = string_option('EXTRA_LDFLAGS', '').gsub("\n", " ")
 
 
-if string_option('OUTPUT_DIR')
-	OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
-else
-	OUTPUT_DIR = ""
-end
 AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "agents") + "/"
 COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "libout/common") + "/"
 APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "libout/apache2") + "/"
@@ -131,23 +153,3 @@ RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
 USE_VENDORED_LIBEV = boolean_option("USE_VENDORED_LIBEV", true)
 # Whether to use the vendored libeio or the system one.
 USE_VENDORED_LIBEIO = boolean_option("USE_VENDORED_LIBEIO", true)
-
-
-verbose true if !boolean_option('REALLY_QUIET')
-if boolean_option('STDERR_TO_STDOUT')
-	# Just redirecting the file descriptor isn't enough because
-	# data written to STDERR might arrive in an unexpected order
-	# compared to STDOUT.
-	STDERR.reopen(STDOUT)
-	Object.send(:remove_const, :STDERR)
-	STDERR = STDOUT
-	$stderr = $stdout
-end
-
-if boolean_option('CACHING', true) && !boolean_option('RELEASE')
-	if OUTPUT_DIR.empty?
-		PlatformInfo.cache_dir = File.expand_path("cache", File.dirname(__FILE__))
-	else
-		PlatformInfo.cache_dir = OUTPUT_DIR + "cache"
-	end
-end
