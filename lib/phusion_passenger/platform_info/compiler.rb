@@ -128,7 +128,7 @@ public
 			begin
 				command = "#{compiler} '#{filename}' -o '#{filename}.out'"
 				if run_compiler(description, command, filename, source)
-					log("Running #{filename.out}")
+					log("Running #{filename}.out")
 					begin
 						output = `'#{filename}.out' 2>&1`
 					rescue SystemCallError => e
