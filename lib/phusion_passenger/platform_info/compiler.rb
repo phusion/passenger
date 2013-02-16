@@ -42,7 +42,7 @@ private
 	end
 	private_class_method :detect_compiler_options
 
-	def self.run_compiler(description, command, source_file, source)
+	def self.run_compiler(description, command, source_file, source, capture_output = false)
 		if verbose?
 			message = "#{description}\n" <<
 				"Running: #{command}\n"
@@ -55,16 +55,32 @@ private
 					"\n-------------------------"
 			end
 			log(message)
-			result = system(command)
+		end
+		if capture_output
+			begin
+				output = `#{command} 2>&1`
+				result = $?.exitstatus == 0
+			rescue SystemCallError => e
+				result = false
+				exec_error_reason = e.message
+			end
+			log("Output:\n" <<
+				"-------------------------\n" <<
+				output <<
+				"\n-------------------------")
 		else
 			result = system("(#{command}) >/dev/null 2>/dev/null")
 		end
 		if result.nil?
-			log("Command could not be executed!")
+			log("Command could not be executed! #{exec_error_reason}".strip)
 			return false
 		elsif result
 			log("Check suceeded")
-			return true
+			if capture_output
+				return { :output => output }
+			else
+				return true
+			end
 		else
 			log("Check failed with exit status #{$?.exitstatus}")
 			return false
@@ -91,6 +107,39 @@ public
 	end
 	memoize :cxx_is_clang?
 
+
+	# Looks for the given C or C++ header. This works by invoking the compiler and
+	# searching in the compiler's header search path. Returns its full filename,
+	# or true if this function knows that the header exists but can't find it (e.g.
+	# because the compiler cannot tell us what its header search path is).
+	# Returns nil if the header cannot be found.
+	def self.find_header(header_name, language, flags = nil)
+		compiler, extension = detect_compiler_options(language, flags)
+		create_temp_file("passenger-compile-check.#{extension}") do |filename, f|
+			source = %Q{
+				#include <#{header_name}>
+			}
+			f.puts(source)
+			f.close
+			begin
+				command = "#{compiler} -v -c '#{filename}' -o '#{filename}.o'"
+				if result = run_compiler("Checking for #{header_name}", command, filename, source, true)
+					result[:output] =~ /^#include <...> search starts here:$(.+?)^End of search list\.$/m
+					search_paths = $1.to_s.strip.split("\n").map{ |line| line.strip }
+					search_paths.each do |dir|
+						if File.file?("#{dir}/#{header_name}")
+							return "#{dir}/#{header_name}"
+						end
+					end
+					return true
+				else
+					return nil
+				end
+			ensure
+				File.unlink("#{filename}.o") rescue nil
+			end
+		end
+	end
 
 	def self.try_compile(description, language, source, flags = nil)
 		compiler, extension = detect_compiler_options(language, flags)

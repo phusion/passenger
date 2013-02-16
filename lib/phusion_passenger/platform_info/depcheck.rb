@@ -1,6 +1,7 @@
 # encoding: utf-8
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/linux'
+require 'phusion_passenger/platform_info/compiler'
 require 'phusion_passenger/platform_info/operating_system'
 
 module PhusionPassenger
@@ -134,12 +135,13 @@ module Depcheck
 			end
 		end
 
-		def check_for_header(name, language = :c, cflags = nil, linkflags = nil)
-			source = %Q{
-				#include <#{name}>
-				int main() { return 0; }
-			}
-			check_by_compiling(source, language, clfags, linkflags)
+		def check_for_header(header_name, language = :c, flags = nil)
+			if result = PlatformInfo.find_header(header_name, language, flags)
+				{ :found => true,
+				  "Location" => result }
+			else
+				false
+			end
 		end
 
 		def check_for_library(name)
