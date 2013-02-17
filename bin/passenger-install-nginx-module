@@ -30,7 +30,6 @@ PhusionPassenger.locate_directories
 require 'optparse'
 require 'fileutils'
 require 'phusion_passenger/platform_info/ruby'
-require 'phusion_passenger/dependencies'
 require 'phusion_passenger/abstract_installer'
 
 class Installer < PhusionPassenger::AbstractInstaller
