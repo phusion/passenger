@@ -27,13 +27,17 @@ module PhusionPassenger
 
 module PlatformInfo
 private
-	def self.detect_compiler_options(language, flags)
+	def self.detect_compiler_options(language, flags, link = false)
 		case language
 		when :c
-			compiler  = [cc, flags, ENV['EXTRA_CFLAGS']]
+			compiler  = [cc, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
+				ENV['EXTRA_PRE_CFLAGS'], flags, ENV['EXTRA_CFLAGS'],
+				ENV['EXTRA_LDFLAGS']]
 			extension = "c"
 		when :cxx
-			compiler  = [cxx, flags, ENV['EXTRA_CXXFLAGS']]
+			compiler  = [cxx, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
+				ENV['EXTRA_PRE_CXXFLAGS'], flags, ENV['EXTRA_CXXFLAGS'],
+				ENV['EXTRA_LDFLAGS']]
 			extension = "cpp"
 		else
 			raise ArgumentError, "Unsupported language #{language.inspect}"
@@ -158,12 +162,12 @@ public
 	end
 	
 	def self.try_link(description, language, source, flags = nil)
-		compiler, extension = detect_compiler_options(language, flags)
+		compiler, extension = detect_compiler_options(language, flags, true)
 		create_temp_file("passenger-link-check.#{extension}") do |filename, f|
 			f.puts(source)
 			f.close
 			begin
-				command = "#{compiler} '#{filename}' -o '#{filename}.out' #{ENV['EXTRA_LDFLAGS']}".strip
+				command = "#{compiler} '#{filename}' -o '#{filename}.out'".strip
 				return run_compiler(description, command, filename, source)
 			ensure
 				File.unlink("#{filename}.out") rescue nil

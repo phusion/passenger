@@ -34,12 +34,14 @@ file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	compile_cxx("ext/common/agents/Watchdog/Main.cpp",
 		"-o #{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
+		"#{EXTRA_PRE_CXXFLAGS} " <<
 		"-Iext -Iext/common " <<
 		"#{PlatformInfo.portability_cflags} #{AGENT_CFLAGS} #{EXTRA_CXXFLAGS}")
 	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 		"#{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
 		"#{watchdog_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
+		"#{EXTRA_PRE_LDFLAGS} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
 		"#{EXTRA_LDFLAGS}")
@@ -80,6 +82,7 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	compile_cxx("ext/common/agents/HelperAgent/Main.cpp",
 		"-o #{AGENT_OUTPUT_DIR}PassengerHelperAgent.o " <<
+		"#{EXTRA_PRE_CXXFLAGS} " <<
 		"-Iext -Iext/common " <<
 		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
 		"#{PlatformInfo.portability_cflags} " <<
@@ -88,6 +91,7 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 		"#{AGENT_OUTPUT_DIR}PassengerHelperAgent.o",
 		"#{helper_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
+		"#{EXTRA_PRE_LDFLAGS} " <<
 		"#{LIBEV_LIBS} " <<
 		"#{LIBEIO_LIBS} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
@@ -117,6 +121,7 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	compile_cxx("ext/common/agents/LoggingAgent/Main.cpp",
 		"-o #{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o " <<
+		"#{EXTRA_PRE_CXXFLAGS} " <<
 		"-Iext -Iext/common " <<
 		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} " <<
 		"#{PlatformInfo.curl_flags} " <<
@@ -126,6 +131,7 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o",
 		"#{logging_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
+		"#{EXTRA_PRE_LDFLAGS} " <<
 		"#{LIBEV_LIBS} " <<
 		"#{PlatformInfo.curl_libs} " <<
 		"#{PlatformInfo.zlib_libs} " <<
@@ -144,6 +150,7 @@ file AGENT_OUTPUT_DIR + 'SpawnPreparer' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'SpawnPreparer',
 		'ext/common/agents/SpawnPreparer.cpp',
+		"#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} " <<
 		"-Iext -Iext/common " <<
 		"#{AGENT_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 		"#{spawn_preparer_libs.link_objects_as_string} " <<
