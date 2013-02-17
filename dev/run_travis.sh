@@ -2,6 +2,7 @@
 set -e
 
 export VERBOSE=1
+export TRACE=1
 
 sudo sh -c 'cat >> /etc/hosts' <<EOF
 127.0.0.1 passenger.test

@@ -8,8 +8,14 @@ if test "x$PASSENGER_LIBS" = "x" && ! passenger-config --compiled; then
     if ! cd $ngx_addon_dir; then
         exit 1
     fi
-    if ! rake nginx CACHING=false; then
-        exit 1
+    if test "x$TRACE" = 1; then
+        if ! rake --trace nginx CACHING=false; then
+            exit 1
+        fi
+    else
+        if ! rake nginx CACHING=false; then
+            exit 1
+        fi
     fi
     cd "$old_dir"
     echo "*** Phusion Passenger support files have been successfully compiled. ***"
