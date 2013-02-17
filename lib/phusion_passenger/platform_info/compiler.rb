@@ -68,6 +68,8 @@ private
 				"-------------------------\n" <<
 				output <<
 				"\n-------------------------")
+		elsif verbose?
+			result = system(command)
 		else
 			result = system("(#{command}) >/dev/null 2>/dev/null")
 		end

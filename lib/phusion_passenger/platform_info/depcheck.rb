@@ -307,8 +307,12 @@ module Depcheck
 				if result[:found] && !result[:error]
 					puts_detail "Found: <green>yes</green>"
 				else
-					puts_detail "Found: #{result[:found] ? "<green>yes</green>" : "<red>no</red>"}"
-					puts_detail "Error: <red>#{result[:error]}</red>" if result[:error]
+					if result[:error]
+						puts_detail "Found: #{result[:found] ? "<yellow>yes, but there was an error</yellow>" : "<red>no</red>"}"
+						puts_detail "Error: <red>#{result[:error]}</red>"
+					else
+						puts_detail "Found: #{result[:found] ? "<green>yes</green>" : "<red>no</red>"}"
+					end
 					@missing_dependencies << dep
 				end
 
