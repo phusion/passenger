@@ -29,6 +29,11 @@ module PlatformInfo
 private
 	@@cache_dir = nil
 	@@verbose   = ['1', 'true', 'on', 'yes'].include?(ENV['VERBOSE'])
+	@@log_implementation = lambda do |message|
+		message = reindent(message, 3)
+		message.sub!(/^   /, '')
+		STDERR.puts " * #{message}"
+	end
 	
 	def self.private_class_method(name)
 		metaclass = class << self; self; end
@@ -171,9 +176,7 @@ private
 
 	def self.log(message)
 		if verbose?
-			message = reindent(message, 3)
-			message.sub!(/^   /, '')
-			STDERR.puts " * #{message}"
+			@@log_implementation.call(message)
 		end
 	end
 	private_class_method :log
@@ -197,6 +200,14 @@ public
 
 	def self.verbose?
 		return @@verbose
+	end
+
+	def self.log_implementation=(impl)
+		@@log_implementation = impl
+	end
+
+	def self.log_implementation
+		return @@log_implementation
 	end
 
 
