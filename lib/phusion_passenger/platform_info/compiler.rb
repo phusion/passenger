@@ -27,24 +27,34 @@ module PhusionPassenger
 
 module PlatformInfo
 private
-	def self.detect_compiler_options(language, flags, link = false)
+	def self.detect_language_extension(language)
 		case language
 		when :c
-			compiler  = [cc, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
-				ENV['EXTRA_PRE_CFLAGS'], flags, ENV['EXTRA_CFLAGS'],
-				ENV['EXTRA_LDFLAGS']]
-			extension = "c"
+			return "c"
 		when :cxx
-			compiler  = [cxx, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
-				ENV['EXTRA_PRE_CXXFLAGS'], flags, ENV['EXTRA_CXXFLAGS'],
-				ENV['EXTRA_LDFLAGS']]
-			extension = "cpp"
+			return "cpp"
 		else
 			raise ArgumentError, "Unsupported language #{language.inspect}"
 		end
-		return [compiler.compact.join(" ").strip, extension]
 	end
-	private_class_method :detect_compiler_options
+	private_class_method :detect_language_extension
+
+	def self.create_compiler_command(language, flags1, flags2, link = false)
+		case language
+		when :c
+			result  = [cc, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
+				ENV['EXTRA_PRE_CFLAGS'], flags1, flags2, ENV['EXTRA_CFLAGS'],
+				ENV['EXTRA_LDFLAGS']]
+		when :cxx
+			result  = [cxx, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
+				ENV['EXTRA_PRE_CXXFLAGS'], flags1, flags2, ENV['EXTRA_CXXFLAGS'],
+				ENV['EXTRA_LDFLAGS']]
+		else
+			raise ArgumentError, "Unsupported language #{language.inspect}"
+		end
+		return result.compact.join(" ").strip
+	end
+	private_class_method :create_compiler_command
 
 	def self.run_compiler(description, command, source_file, source, capture_output = false)
 		if verbose?
@@ -120,7 +130,7 @@ public
 	# because the compiler cannot tell us what its header search path is).
 	# Returns nil if the header cannot be found.
 	def self.find_header(header_name, language, flags = nil)
-		compiler, extension = detect_compiler_options(language, flags)
+		extension = detect_language_extension(language)
 		create_temp_file("passenger-compile-check.#{extension}") do |filename, f|
 			source = %Q{
 				#include <#{header_name}>
@@ -128,7 +138,9 @@ public
 			f.puts(source)
 			f.close
 			begin
-				command = "#{compiler} -v -c '#{filename}' -o '#{filename}.o'"
+				command = create_compiler_command(language,
+					"-v -c '#{filename}' -o '#{filename}.o'",
+					flags)
 				if result = run_compiler("Checking for #{header_name}", command, filename, source, true)
 					result[:output] =~ /^#include <...> search starts here:$(.+?)^End of search list\.$/m
 					search_paths = $1.to_s.strip.split("\n").map{ |line| line.strip }
@@ -148,12 +160,14 @@ public
 	end
 
 	def self.try_compile(description, language, source, flags = nil)
-		compiler, extension = detect_compiler_options(language, flags)
+		extension = detect_language_extension(language)
 		create_temp_file("passenger-compile-check.#{extension}") do |filename, f|
 			f.puts(source)
 			f.close
 			begin
-				command = "#{compiler} -c '#{filename}' -o '#{filename}.o'"
+				command = create_compiler_command(language,
+					"-c '#{filename}' -o '#{filename}.o'",
+					flags)
 				return run_compiler(description, command, filename, source)
 			ensure
 				File.unlink("#{filename}.o") rescue nil
@@ -162,12 +176,14 @@ public
 	end
 	
 	def self.try_link(description, language, source, flags = nil)
-		compiler, extension = detect_compiler_options(language, flags, true)
+		extension = detect_language_extension(language)
 		create_temp_file("passenger-link-check.#{extension}") do |filename, f|
 			f.puts(source)
 			f.close
 			begin
-				command = "#{compiler} '#{filename}' -o '#{filename}.out'".strip
+				command = create_compiler_command(language,
+					"'#{filename}' -o '#{filename}.out'",
+					flags, true)
 				return run_compiler(description, command, filename, source)
 			ensure
 				File.unlink("#{filename}.out") rescue nil
@@ -176,12 +192,14 @@ public
 	end
 	
 	def self.try_compile_and_run(description, language, source, flags = nil)
-		compiler, extension = detect_compiler_options(language, flags)
+		extension = detect_language_extension(language)
 		create_temp_file("passenger-run-check.#{extension}") do |filename, f|
 			f.puts(source)
 			f.close
 			begin
-				command = "#{compiler} '#{filename}' -o '#{filename}.out'"
+				command = create_compiler_command(language,
+					"'#{filename}' -o '#{filename}.out'",
+					flags, true)
 				if run_compiler(description, command, filename, source)
 					log("Running #{filename}.out")
 					begin
