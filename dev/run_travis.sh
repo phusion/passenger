@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export VERBOSE=1
+
 sudo sh -c 'cat >> /etc/hosts' <<EOF
 127.0.0.1 passenger.test
 127.0.0.1 mycook.passenger.test
