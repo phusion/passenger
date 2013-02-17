@@ -34,7 +34,13 @@
 
 2.7. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
 
-2.8. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-wzu0ey
+2.8. Customizing the compilation process	=>	customizing-the-compilation-process-1sds3od
+
+2.8.1. Setting the compiler	=>	setting-the-compiler-1symq7h
+
+2.8.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-wzu0ey
+
+2.8.3. Forcing location of certain command line tools	=>	forcing-location-of-certain-command-line-tools-1hym30u
 
 2.9. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
 

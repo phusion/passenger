@@ -34,7 +34,13 @@
 
 2.7. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-834ymv
 
-2.8. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-1jehjon
+2.8. Customizing the compilation process	=>	customizing-the-compilation-process-u4cdcf
+
+2.8.1. Setting the compiler	=>	setting-the-compiler-1l6dpe1
+
+2.8.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-1jehjon
+
+2.8.3. Forcing location of certain command line tools	=>	forcing-location-of-certain-command-line-tools-1j93cki
 
 2.9. Installing as a normal Nginx module without using the installer	=>	installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5
 
