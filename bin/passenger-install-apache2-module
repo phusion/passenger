@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -36,29 +36,33 @@ ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 require 'optparse'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/apache'
-require 'phusion_passenger/dependencies'
 require 'phusion_passenger/abstract_installer'
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
 	
 	def dependencies
-		result = [
-			Dependencies::GCC,
-			Dependencies::Curl_Dev,
-			Dependencies::OpenSSL_Dev,
-			Dependencies::Zlib_Dev,
-			Dependencies::Ruby_DevHeaders,
-			Dependencies::Ruby_OpenSSL,
-			Dependencies::RubyGems,
-			Dependencies::Rake,
-			Dependencies::Rack,
-			Dependencies::Apache2,
-			Dependencies::Apache2_DevHeaders
+		specs = [
+			'depcheck_specs/compiler_toolchain',
+			'depcheck_specs/ruby',
+			'depcheck_specs/gems',
+			'depcheck_specs/libs',
+			'depcheck_specs/apache2'
 		]
-		if Dependencies.fastthread_required?
-			result << Dependencies::FastThread
-		end
+		ids = [
+			'gcc',
+			'g++',
+			'libcurl-dev',
+			'openssl-dev',
+			'zlib-dev',
+			'ruby-dev',
+			'ruby-openssl',
+			'rubygems',
+			'rake',
+			'rack',
+			'apache2',
+			'apache2-dev'
+		]
 		# Some broken servers don't have apr-config or apu-config installed.
 		# Nevertheless, it is possible to compile Apache modules if Apache
 		# was configured with --included-apr. So here we check whether
@@ -67,10 +71,10 @@ class Installer < PhusionPassenger::AbstractInstaller
 		# module can be compiled without their presence.
 		if (PlatformInfo.apr_config && PlatformInfo.apu_config) ||
 		   PlatformInfo.apr_config_needed_for_building_apache_modules?
-			result << Dependencies::APR_DevHeaders
-			result << Dependencies::APU_DevHeaders
+			ids << 'apr-dev'
+			ids << 'apu-dev'
 		end
-		return result
+		return [specs, ids]
 	end
 	
 	def users_guide

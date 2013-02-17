@@ -30,7 +30,7 @@ end
 
 define 'apache2-dev' do
 	name "Apache 2 development headers"
-	website = "http://httpd.apache.org/"
+	website "http://httpd.apache.org/"
 	define_checker do
 		require 'phusion_passenger/platform_info/apache'
 		if PlatformInfo.apxs2
@@ -54,6 +54,9 @@ define 'apache2-dev' do
 	end
 	on :gentoo do
 		emerge "apache"
+	end
+	on :macosx do
+		xcode_install "Command Line Tools"
 	end
 end
 
@@ -85,6 +88,9 @@ define 'apr-dev' do
 	on :gentoo do
 		emerge "apr"
 	end
+	on :macosx do
+		xcode_install "Command Line Tools"
+	end
 end
 
 define 'apu-dev' do
@@ -113,6 +119,6 @@ define 'apu-dev' do
 		yum_install "apr-util-devel"
 	end
 	on :macosx do
-		xcode_install "Command line tools"
+		xcode_install "Command Line Tools"
 	end
 end

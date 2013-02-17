@@ -19,7 +19,7 @@ define 'gcc' do
     emerge "gcc"
   end
   on :macosx do
-    xcode_install "Command line tools"
+    xcode_install "Command Line Tools"
   end
 end
 
@@ -44,7 +44,7 @@ define 'g++' do
     emerge "gcc"
   end
   on :macosx do
-    xcode_install "Command line tools"
+    xcode_install "Command Line Tools"
   end
 end
 
@@ -65,7 +65,7 @@ define 'make' do
     yum_install "make"
   end
   on :macosx do
-    xcode_install "Command line tools"
+    xcode_install "Command Line Tools"
   end
   on :other_platforms do
     website "http://www.gnu.org/software/make/"
@@ -89,7 +89,7 @@ define 'gmake' do
     yum_install "make"
   end
   on :macosx do
-    xcode_install "Command line tools"
+    xcode_install "Command Line Tools"
   end
   on :other_platforms do
     website "http://www.gnu.org/software/make/"

@@ -1,7 +1,7 @@
 #  encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -26,7 +26,6 @@ require 'fileutils'
 require 'phusion_passenger'
 require 'phusion_passenger/abstract_installer'
 require 'phusion_passenger/packaging'
-require 'phusion_passenger/dependencies'
 require 'phusion_passenger/common_library'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/binary_compatibility'
@@ -84,25 +83,30 @@ class RuntimeInstaller < AbstractInstaller
 	
 protected
 	def dependencies
-		result = [
-			Dependencies::GCC,
-			Dependencies::GnuMake,
-			Dependencies::DownloadTool,
-			Dependencies::Ruby_DevHeaders,
-			Dependencies::Ruby_OpenSSL,
-			Dependencies::RubyGems,
-			Dependencies::Rake,
-			Dependencies::Rack,
-			Dependencies::Curl_Dev,
-			Dependencies::OpenSSL_Dev,
-			Dependencies::Zlib_Dev,
-			Dependencies::PCRE_Dev,
-			Dependencies::Daemon_Controller,
+		specs = [
+			'depcheck_specs/compiler_toolchain',
+			'depcheck_specs/ruby',
+			'depcheck_specs/gems',
+			'depcheck_specs/libs',
+			'depcheck_specs/utilities'
 		]
-		if Dependencies.fastthread_required?
-			result << Dependencies::FastThread
-		end
-		return result
+		ids = [
+			'gcc',
+			'g++',
+			'gmake',
+			'download-tool',
+			'ruby-dev',
+			'ruby-openssl',
+			'rubygems',
+			'rake',
+			'rack',
+			'libcurl-dev',
+			'openssl-dev',
+			'zlib-dev',
+			'pcre-dev',
+			'daemon_controller >= 1.1.0'
+		]
+		return [specs, ids]
 	end
 	
 	def users_guide

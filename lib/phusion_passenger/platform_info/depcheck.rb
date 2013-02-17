@@ -3,6 +3,7 @@ require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/linux'
 require 'phusion_passenger/platform_info/compiler'
 require 'phusion_passenger/platform_info/operating_system'
+require 'phusion_passenger/utils/ansi_colors'
 
 module PhusionPassenger
 module PlatformInfo
@@ -30,18 +31,20 @@ module PlatformInfo
 # just check for the existance of a command, library, header, etc and either
 # report "found" or "not found". In our experience the world is unfortunately
 # not that simple. Users can have multiple versions of a dependency installed,
-# where some dependencies are suitable while others are not. Therefore the
-# Depcheck framework will ensure that the user is notified of all the specs'
-# internal thoughts so that he can override the decision if necessary.
+# where some dependencies are suitable while others are not. Therefore specs
+# should print as many details about the dependency as possible (location, version,
+# etc) so that the user can override any decisions if necessary.
 module Depcheck
+	THIS_DIR   = File.expand_path(File.dirname(__FILE__))
 	@@loaded   = {}
 	@@database = {}
 
-	def self.load(filename)
-		if !@@loaded[filename]
+	def self.load(partial_filename)
+		if !@@loaded[partial_filename]
+			filename = "#{THIS_DIR}/#{partial_filename}.rb"
 			content = File.read(filename)
 			instance_eval(content, filename)
-			@@loaded[filename] = true
+			@@loaded[partial_filename] = true
 		end
 	end
 
@@ -70,6 +73,7 @@ module Depcheck
 		end
 
 		def check
+			@install_comments = nil
 			@check_result ||= @checker.call
 		end
 
@@ -96,10 +100,15 @@ module Depcheck
 				elsif @website
 					result = "Please download it from <b>#{@website}</b>"
 					result << "\n(#{@website_comments})" if @website_comments
+					result
 				else
 					"Search Google for '#{@name}'."
 				end
 			end
+		end
+
+		def install_comments(value = nil)
+			value ? @install_comments = value : @install_comments
 		end
 
 	private
@@ -144,43 +153,43 @@ module Depcheck
 			end
 		end
 
-		def check_for_library(name)
-			check_by_compiling("int main() { return 0; }", :cxx, nil, "-l#{name}")
-		end
+		# def check_for_library(name)
+		# 	check_by_compiling("int main() { return 0; }", :cxx, nil, "-l#{name}")
+		# end
 
-		def check_by_compiling(source, language = :c, cflags = nil, linkflags = nil)
-			case language
-			when :c
-				source_file		= "#{PlatformInfo.tmpexedir}/depcheck-#{Process.pid}-#{Thread.current.object_id}.c"
-				compiler			 = "gcc"
-				compiler_flags = ENV['CFLAGS']
-			when :cxx
-				source_file		= "#{PlatformInfo.tmpexedir}/depcheck-#{Process.pid}-#{Thread.current.object_id}.cpp"
-				compiler			 = "g++"
-				compiler_flags = "#{ENV['CFLAGS']} #{ENV['CXXFLAGS']}".strip
-			else
-				raise ArgumentError, "Unknown language '#{language}"
-			end
+		# def check_by_compiling(source, language = :c, cflags = nil, linkflags = nil)
+		# 	case language
+		# 	when :c
+		# 		source_file		= "#{PlatformInfo.tmpexedir}/depcheck-#{Process.pid}-#{Thread.current.object_id}.c"
+		# 		compiler			 = "gcc"
+		# 		compiler_flags = ENV['CFLAGS']
+		# 	when :cxx
+		# 		source_file		= "#{PlatformInfo.tmpexedir}/depcheck-#{Process.pid}-#{Thread.current.object_id}.cpp"
+		# 		compiler			 = "g++"
+		# 		compiler_flags = "#{ENV['CFLAGS']} #{ENV['CXXFLAGS']}".strip
+		# 	else
+		# 		raise ArgumentError, "Unknown language '#{language}"
+		# 	end
 		
-			output_file = "#{PlatformInfo.tmpexedir}/depcheck-#{Process.pid}-#{Thread.current.object_id}"
+		# 	output_file = "#{PlatformInfo.tmpexedir}/depcheck-#{Process.pid}-#{Thread.current.object_id}"
 		
-			begin
-				File.open(source_file, 'w') do |f|
-					f.puts(source)
-				end
+		# 	begin
+		# 		File.open(source_file, 'w') do |f|
+		# 			f.puts(source)
+		# 		end
 			
-				if find_command(compiler)
-					command = "#{compiler} #{compiler_flags} #{cflags} " +
-						"#{source_file} -o #{output_file} #{linkflags}"
-					[!!system(command)]
-				else
-					[:unknown, "Cannot check: compiler '#{compiler}' not found."]
-				end
-			ensure
-				File.unlink(source_file) rescue nil
-				File.unlink(output_file) rescue nil
-			end
-		end
+		# 		if find_command(compiler)
+		# 			command = "#{compiler} #{compiler_flags} #{cflags} " +
+		# 				"#{source_file} -o #{output_file} #{linkflags}"
+		# 			[!!system(command)]
+		# 		else
+		# 			[:unknown, "Cannot check: compiler '#{compiler}' not found."]
+		# 		end
+		# 	ensure
+		# 		File.unlink(source_file) rescue nil
+		# 		File.unlink(output_file) rescue nil
+		# 	end
+		# end
 
 		def check_for_ruby_library(name)
 			begin
@@ -203,23 +212,27 @@ module Depcheck
 
 		def on(platform)
 			return if @on_invoked
+			invoke = false
 			if (linux_distro_tags || []).include?(platform)
-				yield
+				invoke = true
 			else
 				case platform
 				when :linux
-					yield if PlatformInfo.os_name =~ /linux/
+					invoke = true if PlatformInfo.os_name =~ /linux/
 				when :freebsd
-					yield if PlatformInfo.os_name =~ /freebsd/
+					invoke = true if PlatformInfo.os_name =~ /freebsd/
 				when :macosx
-					yield if PlatformInfo.os_name == "macosx"
+					invoke = true if PlatformInfo.os_name == "macosx"
 				when :solaris
-					yield if PlatformInfo.os_name =~ /solaris/
+					invoke = true if PlatformInfo.os_name =~ /solaris/
 				when :other_platforms
-					yield
+					invoke = true
 				end
 			end
-			@on_invoked = true
+			if invoke
+				yield
+				@on_invoked = true
+			end
 		end
 
 		def apt_get_install(package_name)
@@ -244,7 +257,8 @@ module Depcheck
 		end
 
 		def xcode_install(component)
-			install_instructions("Please install the Apple Development Tools: http://developer.apple.com/tools/")
+			install_instructions("Please install <b>Xcode</b>, then in Xcode go to " +
+				"<b>Preferences -> Downloads -> Components</b> and install <b>#{component}</b>")
 		end
 
 
@@ -268,6 +282,75 @@ module Depcheck
 			PlatformInfo.locate_ruby_tool(name)
 		end
 	end # class Dependency
+
+	class ConsoleRunner
+		attr_reader :missing_dependencies
+
+		def initialize
+			@stdout = STDOUT
+			@dep_identifiers = []
+		end
+
+		def add(identifier)
+			@dep_identifiers << identifier
+		end
+
+		def check_all
+			@missing_dependencies = []
+			@dep_identifiers.each do |identifier|
+				dep = Depcheck.find(identifier)
+				raise "Cannot find depcheck spec #{identifier.inspect}" if !dep
+				puts_header "Checking for #{dep.name}..."
+				result = dep.check
+				result = { :found => false } if !result
+
+				if result[:found] && !result[:error]
+					puts_detail "Found: <green>yes</green>"
+				else
+					puts_detail "Found: #{result[:found] ? "<green>yes</green>" : "<red>no</red>"}"
+					puts_detail "Error: <red>#{result[:error]}</red>" if result[:error]
+					@missing_dependencies << dep
+				end
+
+				result.each_pair do |key, value|
+					if key.is_a?(String)
+						puts_detail "#{key}: #{value}"
+					end
+				end
+			end
+
+			return @missing_dependencies.empty?
+		end
+
+		def print_installation_instructions_for_missing_dependencies
+			@missing_dependencies.each do |dep|
+				puts " * To install <yellow>#{dep.name}</yellow>:"
+				puts "   #{dep.install_instructions}"
+				if dep.install_comments
+					puts "   #{dep.install_comments}"
+				end
+				puts
+			end
+		end
+
+	private
+		def puts(text = nil)
+			if text
+				@stdout.puts(Utils::AnsiColors.ansi_colorize(text))
+			else
+				@stdout.puts
+			end
+			@stdout.flush
+		end
+
+		def puts_header(text)
+			puts " <b>* #{text}</b>"
+		end
+
+		def puts_detail(text)
+			puts "      #{text}"
+		end
+	end
 end # module Depcheck
 
 end # module PlatformInfo

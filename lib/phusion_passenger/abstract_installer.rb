@@ -106,30 +106,26 @@ protected
 	end
 	
 	def dependencies
-		return []
+		return [[], []]
 	end
 	
 	def check_dependencies(show_new_screen = true)
 		new_screen if show_new_screen
-		missing_dependencies = []
 		puts "<banner>Checking for required software...</banner>"
 		puts
-		dependencies.each do |dep|
-			print " * #{dep.name}... "
-			result = dep.check
-			if result.found?
-				if result.found_at
-					puts "<green>found at #{result.found_at}</green>"
-				else
-					puts "<green>found</green>"
-				end
-			else
-				puts "<red>not found</red>"
-				missing_dependencies << dep
-			end
-		end
 		
-		if missing_dependencies.empty?
+		require 'phusion_passenger/platform_info/depcheck'
+		specs, ids = dependencies
+		runner = PlatformInfo::Depcheck::ConsoleRunner.new
+
+		specs.each do |spec|
+			PlatformInfo::Depcheck.load(spec)
+		end
+		ids.each do |id|
+			runner.add(id)
+		end
+
+		if runner.check_all
 			return true
 		else
 			puts
@@ -141,13 +137,14 @@ protected
 			else
 				wait(10)
 			end
-			
+
 			line
 			puts
 			puts "<banner>Installation instructions for required software</banner>"
 			puts
-			missing_dependencies.each do |dep|
-				print_dependency_installation_instructions(dep)
+			runner.missing_dependencies.each do |dep|
+				puts " * To install <yellow>#{dep.name}</yellow>:"
+				puts "   #{dep.install_instructions}"
 				puts
 			end
 			if respond_to?(:users_guide)
@@ -308,26 +305,6 @@ protected
 			return sh("wget", "-O", output, url)
 		else
 			return sh("curl", url, "-f", "-L", "-o", output)
-		end
-	end
-
-private
-	def print_dependency_installation_instructions(dep)
-		puts " * To install <yellow>#{dep.name}</yellow>:"
-		if dep.install_comments
-			puts "   " << dep.install_comments
-		end
-		if !dep.install_command.nil?
-			puts "   Please run <b>#{dep.install_command}</b> as root."
-		elsif !dep.install_instructions.nil?
-			puts "   " << dep.install_instructions
-		elsif !dep.website.nil?
-			puts "   Please download it from <b>#{dep.website}</b>"
-			if !dep.website_comments.nil?
-				puts "   (#{dep.website_comments})"
-			end
-		else
-			puts "   Search Google."
 		end
 	end
 end
