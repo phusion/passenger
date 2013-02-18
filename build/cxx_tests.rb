@@ -171,7 +171,8 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/VariantMap.h),
 	'test/cxx/StringMapTest.o' => %w(
 		test/cxx/StringMapTest.cpp
-		ext/common/Utils/StringMap.h),
+		ext/common/Utils/StringMap.h
+		ext/common/Utils/HashMap.h),
 	'test/cxx/ProcessMetricsCollectorTest.o' => %w(
 		test/cxx/ProcessMetricsCollectorTest.cpp
 		ext/common/Utils/ProcessMetricsCollector.h),
