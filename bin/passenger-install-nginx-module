@@ -473,11 +473,10 @@ parser = OptionParser.new do |opts|
 	end
 	opts.on("--extra-configure-flags=STRING", String, "Pass these extra flags to Nginx's\n" <<
 	        "#{' ' * 37}'configure' script, instead of asking for\n" <<
-	        "#{' ' * 37}it interactively. Only applicable if\n" <<
-	        "#{' ' * 37}--nginx-source-dir is given. Specify\n" <<
-	        "#{' ' * 37}'none' if you do not want to pass\n" <<
-	        "#{' ' * 37}additional flags but do not want this\n" <<
-	        "#{' ' * 37}installer to ask interactively either.") do |flags|
+	        "#{' ' * 37}it interactively. Specify 'none' if you\n" <<
+	        "#{' ' * 37}do not want to pass additional flags but do\n" <<
+	        "#{' ' * 37}not want this installer to ask\n" <<
+	        "#{' ' * 37}interactively either.") do |flags|
 		options[:extra_configure_flags] = flags
 	end
 end
