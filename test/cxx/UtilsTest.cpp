@@ -167,11 +167,30 @@ namespace tut {
 		ensure_equals("Test 8", extractDirName(".."), ".");
 		ensure_equals("Test 9", extractDirName("./foo"), ".");
 		ensure_equals("Test 10", extractDirName("../foo"), "..");
+		ensure_equals("Test 11", extractDirName(""), ".");
+		ensure_equals("Test 12", extractDirName(".///"), ".");
+		ensure_equals("Test 13", extractDirName("foo//bar"), "foo");
+	}
+
+	TEST_METHOD(27) {
+		ensure_equals("Test 1", extractDirNameStatic("/usr/lib"), "/usr");
+		ensure_equals("Test 2", extractDirNameStatic("/usr/lib/"), "/usr");
+		ensure_equals("Test 3", extractDirNameStatic("/usr/"), "/");
+		ensure_equals("Test 4", extractDirNameStatic("usr"), ".");
+		ensure_equals("Test 5", extractDirNameStatic("/"), "/");
+		ensure_equals("Test 6", extractDirNameStatic("///"), "/");
+		ensure_equals("Test 7", extractDirNameStatic("."), ".");
+		ensure_equals("Test 8", extractDirNameStatic(".."), ".");
+		ensure_equals("Test 9", extractDirNameStatic("./foo"), ".");
+		ensure_equals("Test 10", extractDirNameStatic("../foo"), "..");
+		ensure_equals("Test 11", extractDirNameStatic(""), ".");
+		ensure_equals("Test 12", extractDirNameStatic(".///"), ".");
+		ensure_equals("Test 13", extractDirNameStatic("foo//bar"), "foo");
 	}
 	
 	/***** Test resolveSymlink() *****/
 	
-	TEST_METHOD(27) {
+	TEST_METHOD(28) {
 		TempDir d("tmp.symlinks");
 		runShellCommand("touch tmp.symlinks/foo.txt");
 		runShellCommand("ln -s /usr/bin tmp.symlinks/absolute_symlink");

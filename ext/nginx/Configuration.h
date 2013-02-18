@@ -50,6 +50,7 @@ typedef struct {
     ngx_str_t    group;
     ngx_str_t    spawn_method;
     ngx_str_t    app_group_name;
+    ngx_str_t    app_root;
     ngx_str_t    app_rights;
     ngx_int_t    min_instances;
     ngx_int_t    max_requests;

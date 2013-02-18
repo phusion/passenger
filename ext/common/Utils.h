@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -177,6 +177,14 @@ string resolveSymlink(const StaticString &path);
  * @ingroup Support
  */
 string extractDirName(const StaticString &path);
+
+/**
+ * Given a path, extracts its directory name. This version does not use
+ * any dynamically allocated storage and does not require `path` to be
+ * NULL-terminated. It returns a StaticString that points either to static
+ * storage, or to a substring of `path`.
+ */
+StaticString extractDirNameStatic(const StaticString &path);
 
 /**
  * Given a path, extracts its base name.

@@ -98,6 +98,12 @@ void _writeLogEntry(const std::string &str);
 #define P_ERROR(expr) P_LOG(-1, expr)
 
 /**
+ * Write the given expression, which represents a critical non-recoverable error,
+ * to the log stream.
+ */
+#define P_CRITICAL(expr) P_LOG(-2, expr)
+
+/**
  * Write the given expression, which represents a debugging message,
  * to the log stream.
  */

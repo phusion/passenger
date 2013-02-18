@@ -53,6 +53,7 @@ static int               first_start = 1;
 ngx_str_t                passenger_schema_string;
 ngx_str_t                passenger_placeholder_upstream_address;
 PassengerCachedFileStat *passenger_stat_cache;
+PassengerAppTypeDetector *passenger_app_type_detector;
 AgentsStarter           *passenger_agents_starter = NULL;
 ngx_cycle_t             *passenger_current_cycle;
 
@@ -383,6 +384,7 @@ pre_config_init(ngx_conf_t *cf)
     passenger_placeholder_upstream_address.data = (u_char *) "unix:/passenger_helper_server";
     passenger_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
     passenger_stat_cache = cached_file_stat_new(1024);
+    passenger_app_type_detector = passenger_app_type_detector_new();
     passenger_agents_starter = agents_starter_new(AS_NGINX, &error_message);
     
     if (passenger_agents_starter == NULL) {

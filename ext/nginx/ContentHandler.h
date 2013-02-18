@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010 Phusion
+ * Copyright (C) 2010-2013 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +30,8 @@
 
 #include <ngx_core.h>
 #include <ngx_http.h>
+#include "../common/ApplicationPool2/AppTypes.h"
 
-
-typedef enum {
-    AP_CLASSIC_RAILS,
-    AP_RACK,
-    AP_WSGI,
-    AP_NONE
-} passenger_app_type_t;
 
 typedef struct {
     /** Proxy state. */
@@ -46,14 +40,14 @@ typedef struct {
     u_char     *status_start;
     u_char     *status_end;
     
-    /** The backend application's 'public' directory. */
+    /** The application's 'public' directory. */
     ngx_str_t   public_dir;
     
     /** The application's base URI. Points to an empty string if none. */
     ngx_str_t   base_uri;
     
-    /** The backend application's type. */
-    passenger_app_type_t app_type;
+    /** The application's type. */
+    PassengerAppType app_type;
 } passenger_context_t;
 
 

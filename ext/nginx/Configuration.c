@@ -250,6 +250,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->group.len = 0;
     conf->app_group_name.data = NULL;
     conf->app_group_name.len = 0;
+    conf->app_root.data = NULL;
+    conf->app_root.len = 0;
     conf->app_rights.data = NULL;
     conf->app_rights.len = 0;
     conf->base_uris = NGX_CONF_UNSET_PTR;
@@ -356,6 +358,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->user, prev->user, "");
     ngx_conf_merge_str_value(conf->group, prev->group, "");
     ngx_conf_merge_str_value(conf->app_group_name, prev->app_group_name, NULL);
+    ngx_conf_merge_str_value(conf->app_root, prev->app_root, NULL);
     ngx_conf_merge_str_value(conf->app_rights, prev->app_rights, NULL);
     ngx_conf_merge_value(conf->min_instances, prev->min_instances, (ngx_int_t) -1);
     ngx_conf_merge_value(conf->max_requests, prev->max_requests, (ngx_int_t) -1);
@@ -1149,6 +1152,12 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, app_group_name),
+      NULL },
+    { ngx_string("passenger_app_root"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, app_root),
       NULL },
 
     { ngx_string("passenger_app_rights"),

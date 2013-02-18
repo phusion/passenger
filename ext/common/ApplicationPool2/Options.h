@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -29,6 +29,7 @@
 #include <vector>
 #include <utility>
 #include <boost/shared_array.hpp>
+#include <ApplicationPool2/AppTypes.h>
 #include <Account.h>
 #include <UnionStation.h>
 #include <Constants.h>
@@ -163,10 +164,10 @@ public:
 	
 	/** The application's type, used for determining the command to invoke to
 	 * spawn an application process as well as determining the startup file's
-	 * filename. Either "classic-rails", "rack", "wsgi" or the empty string (default).
-	 * In case of the latter, 'startCommand' and 'startupFile' (which MUST
-	 * be set) will dictate the startup command and the startup file's
-	 * filename. */
+	 * filename. It can be one of the app type names in AppType.cpp, or the
+	 * empty string (default). In case of the latter, 'startCommand' and
+	 * 'startupFile' (which MUST be set) will dictate the startup command
+	 * and the startup file's filename. */
 	StaticString appType;
 	
 	/** The command for spawning the application process. This is a list of
@@ -537,30 +538,20 @@ public:
 	}
 	
 	StaticString getStartupFile() const {
-		if (appType == "classic-rails") {
-			return "config/environment.rb";
-		} else if (appType == "rack") {
-			return "config.ru";
-		} else if (appType == "wsgi") {
-			return "passenger_wsgi.py";
-		} else if (appType == "node") {
-			return "passenger_node.js";
-		} else {
+		const char *result = getAppTypeStartupFile(getAppType(appType));
+		if (result == NULL) {
 			return startupFile;
+		} else {
+			return result;
 		}
 	}
 	
 	StaticString getProcessTitle() const {
-		if (appType == "classic-rails") {
-			return "Passenger RailsApp";
-		} else if (appType == "rack") {
-			return "Passenger RackApp";
-		} else if (appType == "wsgi") {
-			return "Passenger WsgiApp";
-		} else if (appType == "node") {
-			return "Passenger NodeJsApp";
-		} else {
+		const char *result = getAppTypeProcessTitle(getAppType(appType));
+		if (result == NULL) {
 			return processTitle;
+		} else {
+			return result;
 		}
 	}
 	
