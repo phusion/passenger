@@ -161,6 +161,15 @@ public:
 			return it->second.thePair.second;
 		}
 	}
+
+	T get(const StaticString &key, const T &defaultValue) const {
+		InternalConstIterator it = store.find(key);
+		if (it == store.end()) {
+			return defaultValue;
+		} else {
+			return it->second.thePair.second;
+		}
+	}
 	
 	bool set(const StaticString &key, const T &value) {
 		pair<InternalIterator, bool> result = store.insert(make_pair(key, Entry()));

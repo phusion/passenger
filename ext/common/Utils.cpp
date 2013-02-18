@@ -113,7 +113,7 @@ getFileType(const StaticString &filename, CachedFileStat *cstat, unsigned int th
 	int ret;
 	
 	if (cstat != NULL) {
-		ret = cstat->stat(filename.toString(), &buf, throttleRate);
+		ret = cstat->stat(filename, &buf, throttleRate);
 	} else {
 		ret = stat(filename.c_str(), &buf);
 	}
