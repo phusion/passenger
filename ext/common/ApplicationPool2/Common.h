@@ -111,29 +111,31 @@ struct Ticket {
 
 struct SpawnerConfig {
 	// Used by SmartSpawner and DirectSpawner.
-	/** Whether to forward the preloader process's stdout to our stdout. */
+	/** Whether to print the preloader's and application's stdout. */
 	bool forwardStdout;
-	/** Whether to forward the preloader process's stderr to our stderr. */
+	/** Whether to print the preloader's and application's stderr. */
 	bool forwardStderr;
-	/** Where to forward the preloader process's stdout to. */
-	int forwardStdoutTo;
-	/** Where to forward the preloader process's stderr to. */
-	int forwardStderrTo;
+	/** A random generator to use. */
+	RandomGeneratorPtr randomGenerator;
 
 	// Used by DummySpawner and SpawnerFactory.
 	unsigned int concurrency;
 	unsigned int spawnerCreationSleepTime;
 	unsigned int spawnTime;
 
-	SpawnerConfig()
+	SpawnerConfig(const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr())
 		: forwardStdout(true),
 		  forwardStderr(true),
-		  forwardStdoutTo(STDOUT_FILENO),
-		  forwardStderrTo(STDERR_FILENO),
 		  concurrency(1),
 		  spawnerCreationSleepTime(0),
 		  spawnTime(0)
-		{ }
+	{
+		if (randomGenerator != NULL) {
+			this->randomGenerator = randomGenerator;
+		} else {
+			this->randomGenerator = make_shared<RandomGenerator>();
+		}
+	}
 };
 
 typedef shared_ptr<SpawnerConfig> SpawnerConfigPtr;

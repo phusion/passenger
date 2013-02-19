@@ -35,8 +35,8 @@ namespace tut {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			retainSessions = false;
 			spawnerConfig = make_shared<SpawnerConfig>();
-			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation,
-				RandomGeneratorPtr(), spawnerConfig);
+			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator,
+				generation, spawnerConfig);
 			pool = make_shared<Pool>(bg.safe.get(), spawnerFactory);
 			pool->initialize();
 			bg.start();

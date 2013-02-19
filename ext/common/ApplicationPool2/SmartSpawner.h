@@ -76,8 +76,6 @@ private:
 	const vector<string> preloaderCommand;
 	map<string, string> preloaderAnnotations;
 	Options options;
-	ev::io preloaderOutputWatcher;
-	shared_ptr<PipeWatcher> preloaderErrorWatcher;
 	
 	// Protects m_lastUsed and pid.
 	mutable boost::mutex simpleFieldSyncher;
@@ -93,18 +91,6 @@ private:
 	// for future reference.
 	SpawnPreparationInfo preparation;
 	
-	void onPreloaderOutputReadable(ev::io &io, int revents) {
-		char buf[1024 * 8];
-		ssize_t ret;
-		
-		ret = syscalls::read(adminSocket, buf, sizeof(buf));
-		if (ret <= 0) {
-			preloaderOutputWatcher.stop();
-		} else if (config->forwardStdout) {
-			write(config->forwardStdoutTo, buf, ret);
-		}
-	}
-
 	string getPreloaderCommandString() const {
 		string result;
 		unsigned int i;
@@ -275,14 +261,13 @@ private:
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
-					string("[") + toString(pid) + " stderr] ",
-					config->forwardStderr ? config->forwardStderrTo : -1);
+					string("[App ") + toString(pid) + " stderr] ",
+					config->forwardStderr);
 			details.stderrCapturer->start();
 			details.debugDir = debugDir;
 			details.options = &options;
 			details.timeout = options.startTimeout * 1000;
 			details.forwardStderr = config->forwardStderr;
-			details.forwardStderrTo = config->forwardStderrTo;
 			
 			{
 				this_thread::restore_interruption ri(di);
@@ -294,15 +279,21 @@ private:
 				lock_guard<boost::mutex> l(simpleFieldSyncher);
 				this->pid = pid;
 			}
-			preloaderOutputWatcher.set(adminSocket.second, ev::READ);
-			libev->start(preloaderOutputWatcher);
-			setNonBlocking(errorPipe.first);
-			preloaderErrorWatcher = make_shared<PipeWatcher>(libev,
-				errorPipe.first,
-				config->forwardStderr ? config->forwardStderrTo : -1);
-			preloaderErrorWatcher->start();
+			
+			PipeWatcherPtr watcher;
+
+			watcher = make_shared<PipeWatcher>(adminSocket.second,
+				"stdout", pid, config->forwardStdout);
+			watcher->initialize();
+			watcher->start();
+
+			watcher = make_shared<PipeWatcher>(errorPipe.first,
+				"stderr", pid, config->forwardStderr);
+			watcher->initialize();
+			watcher->start();
+			
 			preloaderAnnotations = debugDir->readAll();
-			P_DEBUG("Preloader for " << options.appRoot <<
+			P_INFO("Preloader for " << options.appRoot <<
 				" started on PID " << pid <<
 				", listening on " << socketAddress);
 			guard.clear();
@@ -317,20 +308,14 @@ private:
 		if (!preloaderStarted()) {
 			return;
 		}
-		adminSocket.close();
+		syscalls::shutdown(adminSocket, SHUT_WR);
 		if (timedWaitpid(pid, NULL, 5000) == 0) {
 			P_TRACE(2, "Spawn server did not exit in time, killing it...");
 			syscalls::kill(pid, SIGKILL);
 			syscalls::waitpid(pid, NULL, 0);
 		}
-		libev->stop(preloaderOutputWatcher);
-		// Detach the error pipe; it will truly be closed after the error
-		// pipe has reached EOF.
-		preloaderErrorWatcher.reset();
 		// Delete socket after the process has exited so that it
 		// doesn't crash upon deleting a nonexistant file.
-		// TODO: in Passenger 4 we must check whether the file really was
-		// owned by the preloader, otherwise this is a potential security flaw.
 		if (getSocketAddressType(socketAddress) == SAT_UNIX) {
 			string filename = parseUnixSocketAddress(socketAddress);
 			syscalls::unlink(filename.c_str());
@@ -709,7 +694,6 @@ public:
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const vector<string> &_preloaderCommand,
 		const Options &_options,
-		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr(),
 		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: Spawner(_resourceLocator),
 		  libev(_libev),
@@ -723,14 +707,7 @@ public:
 		options    = _options.copyAndPersist().clearLogger();
 		pid        = -1;
 		m_lastUsed = SystemTime::getUsec();
-		
-		preloaderOutputWatcher.set<SmartSpawner, &SmartSpawner::onPreloaderOutputReadable>(this);
 
-		if (_randomGenerator == NULL) {
-			randomGenerator = make_shared<RandomGenerator>();
-		} else {
-			randomGenerator = _randomGenerator;
-		}
 		if (_config == NULL) {
 			config = make_shared<SpawnerConfig>();
 		} else {
@@ -781,7 +758,6 @@ public:
 		details.io = result.io;
 		details.options = &options;
 		details.forwardStderr = config->forwardStderr;
-		details.forwardStderrTo = config->forwardStderrTo;
 		ProcessPtr process = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
 			", pid=" << process->pid);

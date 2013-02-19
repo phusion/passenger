@@ -49,12 +49,18 @@ namespace tut {
 
 	TEST_METHOD(1) {
 		split("", ':', output);
-		ensure_equals(output.size(), 1u);
-		ensure_equals(output[0], "");
+		ensure_equals(output.size(), 0u);
+
+		splitIncludeSep("", ':', output);
+		ensure_equals(output.size(), 0u);
 	}
 	
 	TEST_METHOD(2) {
 		split("hello world", ':', output);
+		ensure_equals(output.size(), 1u);
+		ensure_equals(output[0], "hello world");
+
+		splitIncludeSep("hello world", ':', output);
 		ensure_equals(output.size(), 1u);
 		ensure_equals(output[0], "hello world");
 	}
@@ -64,19 +70,33 @@ namespace tut {
 		ensure_equals(output.size(), 2u);
 		ensure_equals(output[0], "hello world");
 		ensure_equals(output[1], "foo bar");
+
+		splitIncludeSep("hello world:foo bar", ':', output);
+		ensure_equals(output.size(), 2u);
+		ensure_equals(output[0], "hello world:");
+		ensure_equals(output[1], "foo bar");
 	}
 	
 	TEST_METHOD(4) {
 		split("hello world:", ':', output);
-		ensure_equals(output.size(), 2u);
-		ensure_equals(output[0], "hello world");
-		ensure_equals(output[1], "");
+		ensure_equals("(1)", output.size(), 2u);
+		ensure_equals("(2)", output[0], "hello world");
+		ensure_equals("(3)", output[1], "");
+
+		splitIncludeSep("hello world:", ':', output);
+		ensure_equals("(4)", output.size(), 1u);
+		ensure_equals("(5)", output[0], "hello world:");
 	}
 	
 	TEST_METHOD(5) {
 		split(":hello world", ':', output);
 		ensure_equals(output.size(), 2u);
 		ensure_equals(output[0], "");
+		ensure_equals(output[1], "hello world");
+
+		splitIncludeSep(":hello world", ':', output);
+		ensure_equals(output.size(), 2u);
+		ensure_equals(output[0], ":");
 		ensure_equals(output[1], "hello world");
 	}
 	
@@ -87,6 +107,13 @@ namespace tut {
 		ensure_equals(output[1], "def");
 		ensure_equals(output[2], "");
 		ensure_equals(output[3], "ghi");
+
+		splitIncludeSep("abc:def::ghi", ':', output);
+		ensure_equals(output.size(), 4u);
+		ensure_equals(output[0], "abc:");
+		ensure_equals(output[1], "def:");
+		ensure_equals(output[2], ":");
+		ensure_equals(output[3], "ghi");
 	}
 	
 	TEST_METHOD(7) {
@@ -95,6 +122,13 @@ namespace tut {
 		ensure_equals(output[0], "abc");
 		ensure_equals(output[1], "");
 		ensure_equals(output[2], "");
+		ensure_equals(output[3], "def");
+
+		splitIncludeSep("abc:::def", ':', output);
+		ensure_equals(output.size(), 4u);
+		ensure_equals(output[0], "abc:");
+		ensure_equals(output[1], ":");
+		ensure_equals(output[2], ":");
 		ensure_equals(output[3], "def");
 	}
 	

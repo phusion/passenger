@@ -67,7 +67,8 @@ string fillInMiddle(unsigned int max, const string &prefix, const string &middle
 bool startsWith(const StaticString &str, const StaticString &substr);
 
 /**
- * Split the given string using the given separator.
+ * Split the given string using the given separator. Excludes the
+ * separator from the output.
  *
  * @param str The string to split.
  * @param sep The separator to use.
@@ -75,6 +76,17 @@ bool startsWith(const StaticString &str, const StaticString &substr);
  */
 void split(const StaticString &str, char sep, vector<string> &output);
 void split(const StaticString &str, char sep, vector<StaticString> &output);
+
+/**
+ * Split the given string using the given separator. Includes the
+ * separator in the output, at the end of an item.
+ *
+ * @param str The string to split.
+ * @param sep The separator to use.
+ * @param output The vector to write the output to.
+ */
+void splitIncludeSep(const StaticString &str, char sep, vector<string> &output);
+void splitIncludeSep(const StaticString &str, char sep, vector<StaticString> &output);
 
 /**
  * Look for 'toFind' inside 'str', replace it with 'replaceWith' and return the result.

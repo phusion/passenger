@@ -59,16 +59,18 @@ startsWith(const StaticString &str, const StaticString &substr) {
 }
 
 template<typename OutputString>
-void
+static void
 _split(const StaticString &str, char sep, vector<OutputString> &output) {
-	string::size_type start, pos;
-	start = 0;
 	output.clear();
-	while ((pos = str.find(sep, start)) != string::npos) {
-		output.push_back(str.substr(start, pos - start));
-		start = pos + 1;
+	if (!str.empty()) {
+		string::size_type start, pos;
+		start = 0;
+		while ((pos = str.find(sep, start)) != string::npos) {
+			output.push_back(str.substr(start, pos - start));
+			start = pos + 1;
+		}
+		output.push_back(str.substr(start));
 	}
-	output.push_back(str.substr(start));
 }
 
 void
@@ -79,6 +81,33 @@ split(const StaticString &str, char sep, vector<string> &output) {
 void
 split(const StaticString &str, char sep, vector<StaticString> &output) {
 	_split(str, sep, output);
+}
+
+template<typename OutputString>
+static void
+_splitIncludeSep(const StaticString &str, char sep, vector<OutputString> &output) {
+	output.clear();
+	if (!str.empty()) {
+		string::size_type start, pos;
+		start = 0;
+		while ((pos = str.find(sep, start)) != string::npos) {
+			output.push_back(str.substr(start, pos - start + 1));
+			start = pos + 1;
+		}
+		if (start != str.size()) {
+			output.push_back(str.substr(start));
+		}
+	}
+}
+
+void
+splitIncludeSep(const StaticString &str, char sep, vector<string> &output) {
+	_splitIncludeSep(str, sep, output);
+}
+
+void
+splitIncludeSep(const StaticString &str, char sep, vector<StaticString> &output) {
+	_splitIncludeSep(str, sep, output);
 }
 
 string

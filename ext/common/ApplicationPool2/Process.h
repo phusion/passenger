@@ -101,7 +101,7 @@ public:
  * Except for the otherwise documented parts, this class is not thread-safe,
  * so only use within the Pool lock.
  *
- * == Normal usage
+ * ## Normal usage
  *
  *  1. Create a session with newSession().
  *  2. Initiate the session by calling initiate() on it.
@@ -145,7 +145,7 @@ private:
 	ProcessList::iterator it;
 	/** The handle inside the associated Group's process priority queue. */
 	PriorityQueue<Process>::Handle pqHandle;
-	
+
 	void indexSessionSockets() {
 		SocketList::iterator it;
 		concurrency = 0;
@@ -185,8 +185,6 @@ public:
 	string connectPassword;
 	/** Admin socket, see class description. */
 	FileDescriptor adminSocket;
-	PipeWatcherPtr adminSocketWatcher;
-	PipeWatcherPtr errorPipeWatcher;
 	/** The sockets that this Process listens on for connections. */
 	SocketListPtr sockets;
 	/** Time at which the Spawner that created this process was created.
@@ -303,17 +301,17 @@ public:
 			config = _config;
 		}
 
-		if (_libev != NULL) {
-			setNonBlocking(_adminSocket);
-			adminSocketWatcher = make_shared<PipeWatcher>(_libev, _adminSocket,
-				config->forwardStdout ? config->forwardStdoutTo : -1);
-			adminSocketWatcher->start();
+		if (_adminSocket != -1) {
+			PipeWatcherPtr watcher = make_shared<PipeWatcher>(_adminSocket,
+				"stdout", pid, config->forwardStdout);
+			watcher->initialize();
+			watcher->start();
 		}
-		if (_libev != NULL && _errorPipe != -1) {
-			setNonBlocking(_errorPipe);
-			errorPipeWatcher = make_shared<PipeWatcher>(_libev, _errorPipe,
-				config->forwardStderr ? config->forwardStderrTo : -1);
-			errorPipeWatcher->start();
+		if (_errorPipe != -1) {
+			PipeWatcherPtr watcher = make_shared<PipeWatcher>(_errorPipe,
+				"stderr", pid, config->forwardStderr);
+			watcher->initialize();
+			watcher->start();
 		}
 		
 		if (OXT_LIKELY(sockets != NULL)) {

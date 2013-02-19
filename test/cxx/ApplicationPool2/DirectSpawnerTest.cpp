@@ -12,15 +12,22 @@ namespace tut {
 		ServerInstanceDir::GenerationPtr generation;
 		BackgroundEventLoop bg;
 		ProcessPtr process;
+		PipeWatcher::DataCallback gatherOutput;
+		string gatheredOutput;
+		boost::mutex gatheredOutputSyncher;
 		
 		ApplicationPool2_DirectSpawnerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			bg.start();
+			PipeWatcher::onData = PipeWatcher::DataCallback();
+			gatherOutput = boost::bind(&ApplicationPool2_DirectSpawnerTest::_gatherOutput, this, _1, _2);
 		}
 
 		~ApplicationPool2_DirectSpawnerTest() {
+			setLogLevel(0);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
 			Process::maybeShutdown(process);
+			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
 		
 		shared_ptr<DirectSpawner> createSpawner(const Options &options) {
@@ -33,6 +40,11 @@ namespace tut {
 			options.spawnMethod = "direct";
 			options.loadShellEnvvars = false;
 			return options;
+		}
+
+		void _gatherOutput(const char *data, unsigned int size) {
+			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			gatheredOutput.append(data, size);
 		}
 	};
 

@@ -368,7 +368,7 @@ public:
 			"logging", options.loggingAgentPassword);
 		randomGenerator = make_shared<RandomGenerator>();
 		spawnerFactory = make_shared<SpawnerFactory>(poolLoop.safe,
-			resourceLocator, generation, randomGenerator);
+			resourceLocator, generation, make_shared<SpawnerConfig>(randomGenerator));
 		pool = make_shared<Pool>(poolLoop.safe.get(), spawnerFactory, loggerFactory,
 			randomGenerator);
 		pool->initialize();

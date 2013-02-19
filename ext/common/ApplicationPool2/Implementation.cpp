@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -1032,42 +1032,87 @@ Session::requestOOBW() {
 }
 
 
-PipeWatcher::PipeWatcher(
-	const SafeLibevPtr &_libev,
-	const FileDescriptor &_fd,
-	int _fdToForwardTo)
-	: libev(_libev),
-	  fd(_fd),
-	  fdToForwardTo(_fdToForwardTo)
+PipeWatcher::DataCallback PipeWatcher::onData;
+
+PipeWatcher::PipeWatcher(const FileDescriptor &_fd, const char *_name, pid_t _pid, bool _print)
+	: fd(_fd),
+	  name(_name),
+	  pid(_pid),
+	  print(_print)
 {
-	watcher.set(fd, ev::READ);
-	watcher.set<PipeWatcher, &PipeWatcher::onReadable>(this);
+	started = false;
 }
 
-PipeWatcher::~PipeWatcher() {
-	libev->stop(watcher);
+void
+PipeWatcher::initialize() {
+	oxt::thread(boost::bind(threadMain, shared_from_this()),
+		"PipeWatcher: PID " + toString(pid) + " " + name + ", fd " + toString(fd),
+		POOL_HELPER_THREAD_STACK_SIZE);
 }
 
 void
 PipeWatcher::start() {
-	selfPointer = shared_from_this();
-	libev->start(watcher);
+	lock_guard<boost::mutex> lock(startSyncher);
+	started = true;
+	startCond.notify_all();
 }
 
 void
-PipeWatcher::onReadable(ev::io &io, int revents) {
-	char buf[1024 * 8];
-	ssize_t ret;
-	
-	ret = read(fd, buf, sizeof(buf));
-	if (ret <= 0) {
-		if (ret != -1 || errno != EAGAIN) {
-			libev->stop(watcher);
-			selfPointer.reset();
+PipeWatcher::threadMain(shared_ptr<PipeWatcher> self) {
+	TRACE_POINT();
+	self->threadMain();
+}
+
+void
+PipeWatcher::threadMain() {
+	TRACE_POINT();
+	{
+		unique_lock<boost::mutex> lock(startSyncher);
+		while (!started) {
+			startCond.wait(lock);
 		}
-	} else if (fdToForwardTo != -1) {
-		// Don't care about errors.
-		write(fdToForwardTo, buf, ret);
+	}
+
+	UPDATE_TRACE_POINT();
+	while (!this_thread::interruption_requested()) {
+		char buf[1024 * 8];
+		ssize_t ret;
+		
+		UPDATE_TRACE_POINT();
+		ret = syscalls::read(fd, buf, sizeof(buf));
+		if (ret == 0) {
+			break;
+		} else if (ret == -1) {
+			UPDATE_TRACE_POINT();
+			if (errno == ECONNRESET) {
+				break;
+			} else if (errno != EAGAIN) {
+				int e = errno;
+				P_WARN("Cannot read from process " << pid << " " << name <<
+					": " << strerror(e) << " (errno=" << e << ")");
+				break;
+			}
+		} else if (ret == 1 && buf[0] == '\n') {
+			UPDATE_TRACE_POINT();
+			P_LOG(print ? LVL_INFO : LVL_DEBUG,
+				"[App " << pid << " " << name << "] ");
+		} else {
+			UPDATE_TRACE_POINT();
+			vector<StaticString> lines;
+			ssize_t ret2 = ret;
+			if (ret2 > 0 && buf[ret2 - 1] == '\n') {
+				ret2--;
+			}
+			split(StaticString(buf, ret2), '\n', lines);
+			foreach (const StaticString line, lines) {
+				P_LOG(print ? LVL_INFO : LVL_DEBUG,
+					"[App " << pid << " " << name << "] " << line);
+			}
+		}
+
+		if (onData != NULL) {
+			onData(buf, ret);
+		}
 	}
 }
 

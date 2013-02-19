@@ -17,16 +17,23 @@ namespace tut {
 		ServerInstanceDir::GenerationPtr generation;
 		BackgroundEventLoop bg;
 		ProcessPtr process;
+		PipeWatcher::DataCallback gatherOutput;
+		string gatheredOutput;
+		boost::mutex gatheredOutputSyncher;
 		
 		ApplicationPool2_SmartSpawnerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			bg.start();
+			PipeWatcher::onData = PipeWatcher::DataCallback();
+			gatherOutput = boost::bind(&ApplicationPool2_SmartSpawnerTest::_gatherOutput, this, _1, _2);
+			setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
 		}
 		
 		~ApplicationPool2_SmartSpawnerTest() {
 			setLogLevel(0);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
 			Process::maybeShutdown(process);
+			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
 		
 		shared_ptr<SmartSpawner> createSpawner(const Options &options, bool exitImmediately = false) {
@@ -52,6 +59,11 @@ namespace tut {
 			options.spawnMethod = "smart";
 			options.loadShellEnvvars = false;
 			return options;
+		}
+
+		void _gatherOutput(const char *data, unsigned int size) {
+			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			gatheredOutput.append(data, size);
 		}
 	};
 	
@@ -193,7 +205,7 @@ namespace tut {
 		// Test that the spawned process can still write to its stderr
 		// after the SmartSpawner has been destroyed.
 		DeleteFileEventually d("tmp.output");
-		FileDescriptor output(open("tmp.output", O_WRONLY | O_CREAT | O_TRUNC, 0600));
+		PipeWatcher::onData = gatherOutput;
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		
@@ -206,8 +218,6 @@ namespace tut {
 				generation,
 				preloaderCommand,
 				options);
-			spawner.getConfig()->forwardStdoutTo = output;
-			spawner.getConfig()->forwardStderrTo = output;
 			process = spawner.spawn(options);
 			process->requiresShutdown = false;
 		}
@@ -228,7 +238,8 @@ namespace tut {
 		shutdown(session->fd(), SHUT_WR);
 		readAll(session->fd());
 		EVENTUALLY(2,
-			result = readAll("tmp.output").find("hello world!\n") != string::npos;
+			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			result = gatheredOutput.find("hello world!\n") != string::npos;
 		);
 	}
 }

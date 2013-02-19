@@ -61,25 +61,18 @@ private:
 			return SpawnerPtr();
 		}
 		return make_shared<SmartSpawner>(libev, resourceLocator,
-			generation, preloaderCommand, options,
-			randomGenerator);
+			generation, preloaderCommand, options, config);
 	}
 	
 public:
 	SpawnerFactory(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
-		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr(),
 		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: libev(_libev),
 		  resourceLocator(_resourceLocator),
 		  generation(_generation)
 	{
-		if (_randomGenerator == NULL) {
-			randomGenerator = make_shared<RandomGenerator>();
-		} else {
-			randomGenerator = _randomGenerator;
-		}
 		if (_config == NULL) {
 			config = make_shared<SpawnerConfig>();
 		} else {
@@ -94,13 +87,12 @@ public:
 			SpawnerPtr spawner = tryCreateSmartSpawner(options);
 			if (spawner == NULL) {
 				spawner = make_shared<DirectSpawner>(libev,
-					resourceLocator, generation,
-					randomGenerator, config);
+					resourceLocator, generation, config);
 			}
 			return spawner;
 		} else if (options.spawnMethod == "direct" || options.spawnMethod == "conservative") {
-			shared_ptr<DirectSpawner> spawner = make_shared<DirectSpawner>(libev, resourceLocator,
-				generation, randomGenerator, config);
+			shared_ptr<DirectSpawner> spawner = make_shared<DirectSpawner>(libev,
+				resourceLocator, generation, config);
 			return spawner;
 		} else if (options.spawnMethod == "dummy") {
 			syscalls::usleep(config->spawnerCreationSleepTime);

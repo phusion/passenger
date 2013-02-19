@@ -43,7 +43,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/TestSupport.cpp
 		test/cxx/TestSupport.h
 		ext/common/SafeLibev.h
-		ext/common/BackgroundEventLoop.cpp),
+		ext/common/BackgroundEventLoop.cpp
+		ext/common/Exceptions.h
+		ext/common/Utils.h),
 	'test/cxx/ApplicationPool2/OptionsTest.o' => %w(
 		test/cxx/ApplicationPool2/OptionsTest.cpp
 		ext/common/ApplicationPool2/Options.h),

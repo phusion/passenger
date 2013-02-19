@@ -118,7 +118,7 @@ protected:
 	private:
 		FileDescriptor fd;
 		string prefix;
-		int target;
+		bool print;
 		boost::mutex dataSyncher;
 		string data;
 		oxt::thread *thr;
@@ -146,21 +146,28 @@ protected:
 						lock_guard<boost::mutex> l(dataSyncher);
 						data.append(buf, ret);
 					}
-					if (target != -1) {
-						UPDATE_TRACE_POINT();
-						P_DEBUG(prefix << "\"" <<
-							cEscapeString(StaticString(buf, ret)) <<
-							"\"");
+					UPDATE_TRACE_POINT();
+					if (print && ret == 1 && buf[0] == '\n') {
+						P_INFO(prefix);
+					} else if (print) {
+						vector<StaticString> lines;
+						if (ret > 0 && buf[ret - 1] == '\n') {
+							ret--;
+						}
+						split(StaticString(buf, ret), '\n', lines);
+						foreach (const StaticString line, lines) {
+							P_INFO(prefix << line);
+						}
 					}
 				}
 			}
 		}
 		
 	public:
-		BackgroundIOCapturer(const FileDescriptor &_fd, const string &_prefix, int _target)
+		BackgroundIOCapturer(const FileDescriptor &_fd, const string &_prefix, bool _print)
 			: fd(_fd),
 			  prefix(_prefix),
-			  target(_target),
+			  print(_print),
 			  thr(NULL)
 			{ }
 		
@@ -392,11 +399,10 @@ private:
 				data.append(key + ": " + value + "\n");
 			}
 
-			vector<string> lines;
+			vector<StaticString> lines;
 			split(data, '\n', lines);
-			foreach (string line, lines) {
-				line.append("\n");
-				P_DEBUG("[" << details.pid << " stdin >>] \"" << cEscapeString(line) << "\"");
+			foreach (const StaticString line, lines) {
+				P_DEBUG("[App " << details.pid << " stdin >>] " << line);
 			}
 			writeExact(details.adminSocket, data, &details.timeout);
 			writeExact(details.adminSocket, "\n", &details.timeout);
@@ -511,7 +517,6 @@ private:
 	
 protected:
 	ResourceLocator resourceLocator;
-	RandomGeneratorPtr randomGenerator;
 	ServerInstanceDir::GenerationPtr generation;
 	SpawnerConfigPtr config;
 	
@@ -710,24 +715,28 @@ protected:
 	}
 
 	template<typename Details>
-	static string readMessageLine(Details &details) {
+	string readMessageLine(Details &details) {
 		TRACE_POINT();
 		while (true) {
 			string result = details.io.readLine(1024 * 4, &details.timeout);
-			P_DEBUG("[" << details.pid << " stdout] \"" <<
-				cEscapeString(result) << "\"");
+			string line = result;
+			if (!line.empty() && line[line.size() - 1] == '\n') {
+				line.erase(line.size() - 1, 1);
+			}
+			
 			if (result.empty()) {
+				// EOF
 				return result;
 			} else if (startsWith(result, "!> ")) {
+				P_DEBUG("[App " << details.pid << " stdout] " << line);
 				result.erase(0, sizeof("!> ") - 1);
 				return result;
 			} else {
 				if (details.stderrCapturer != NULL) {
 					details.stderrCapturer->appendToBuffer(result);
 				}
-				if (details.forwardStderr) {
-					write(details.forwardStderrTo, result.data(), result.size());
-				}
+				P_LOG(config->forwardStdout ? LVL_INFO : LVL_DEBUG,
+					"[App " << details.pid << " stdout] " << line);
 			}
 		}
 	}
@@ -1086,8 +1095,8 @@ protected:
 		TRACE_POINT();
 		details.spawnStartTime = SystemTime::getUsec();
 		details.gupid = integerToHex(SystemTime::get() / 60) + "-" +
-			randomGenerator->generateAsciiString(11);
-		details.connectPassword = randomGenerator->generateAsciiString(43);
+			config->randomGenerator->generateAsciiString(11);
+		details.connectPassword = config->randomGenerator->generateAsciiString(43);
 		details.timeout = details.options->startTimeout * 1000;
 		
 		string result;

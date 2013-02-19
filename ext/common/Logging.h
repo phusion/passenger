@@ -66,12 +66,21 @@ void _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int
 void _writeLogEntry(const std::string &str);
 
 
+enum PassengerLogLevel {
+	LVL_CRIT   = -2,
+	LVL_ERROR  = -1,
+	LVL_INFO   = 0,
+	LVL_WARN   = 0,
+	LVL_DEBUG  = 1,
+	LVL_DEBUG2 = 2
+};
+
 /**
  * Write the given expression to the log stream.
  */
 #define P_LOG(level, expr) \
 	do { \
-		if (Passenger::_logLevel >= level) { \
+		if (Passenger::_logLevel >= (level)) { \
 			std::stringstream sstream; \
 			Passenger::_prepareLogEntry(sstream, __FILE__, __LINE__); \
 			sstream << expr << "\n"; \
@@ -83,31 +92,31 @@ void _writeLogEntry(const std::string &str);
  * Write the given expression, which represents a warning,
  * to the log stream.
  */
-#define P_WARN(expr) P_LOG(0, expr)
+#define P_WARN(expr) P_LOG(LVL_WARN, expr)
 
 /**
  * Write the given expression, which represents a warning,
  * to the log stream.
  */
-#define P_INFO(expr) P_LOG(0, expr)
+#define P_INFO(expr) P_LOG(LVL_INFO, expr)
 
 /**
  * Write the given expression, which represents an error,
  * to the log stream.
  */
-#define P_ERROR(expr) P_LOG(-1, expr)
+#define P_ERROR(expr) P_LOG(LVL_ERROR, expr)
 
 /**
  * Write the given expression, which represents a critical non-recoverable error,
  * to the log stream.
  */
-#define P_CRITICAL(expr) P_LOG(-2, expr)
+#define P_CRITICAL(expr) P_LOG(LVL_CRIT, expr)
 
 /**
  * Write the given expression, which represents a debugging message,
  * to the log stream.
  */
-#define P_DEBUG(expr) P_TRACE(1, expr)
+#define P_DEBUG(expr) P_TRACE(LVL_DEBUG, expr)
 
 #ifdef PASSENGER_DEBUG
 	#define P_TRACE(level, expr) P_LOG(level, expr)

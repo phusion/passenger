@@ -279,20 +279,19 @@
 		// It forwards all stdout and stderr output, even after the corresponding
 		// Process object has been destroyed.
 		DeleteFileEventually d("tmp.output");
-		FileDescriptor output(open("tmp.output", O_WRONLY | O_CREAT | O_TRUNC, 0600));
+		PipeWatcher::onData = gatherOutput;
 
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		options.appType = "rack";
 		SpawnerPtr spawner = createSpawner(options);
-		spawner->getConfig()->forwardStdoutTo = output;
-		spawner->getConfig()->forwardStderrTo = output;
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
 		
 		SessionPtr session = process->newSession();
 		session->initiate();
 		
+		setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
 		const char header[] =
 			"REQUEST_METHOD\0GET\0"
 			"PATH_INFO\0/print_stdout_and_stderr\0";
@@ -305,10 +304,14 @@
 		writeScalarMessage(session->fd(), data);
 		shutdown(session->fd(), SHUT_WR);
 		readAll(session->fd());
+		session->close(true);
+		session.reset();
+		process.reset();
+
 		EVENTUALLY(2,
-			string data = readAll("tmp.output");
-			result = data.find("hello stdout!\n") != string::npos
-				&& data.find("hello stderr!\n") != string::npos;
+			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			result = gatheredOutput.find("hello stdout!\n") != string::npos
+				&& gatheredOutput.find("hello stderr!\n") != string::npos;
 		);
 	}
 	

@@ -150,17 +150,11 @@ public:
 	DirectSpawner(const SafeLibevPtr &_libev,
 		const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
-		const RandomGeneratorPtr &_randomGenerator = RandomGeneratorPtr(),
 		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: Spawner(_resourceLocator),
 		  libev(_libev)
 	{
 		generation = _generation;
-		if (_randomGenerator == NULL) {
-			randomGenerator = make_shared<RandomGenerator>();
-		} else {
-			randomGenerator = _randomGenerator;
-		}
 		if (_config == NULL) {
 			config = make_shared<SpawnerConfig>();
 		} else {
@@ -229,8 +223,8 @@ public:
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
-					string("[") + toString(pid) + " stderr] ",
-					config->forwardStderr ? config->forwardStderrTo : -1);
+					string("[App ") + toString(pid) + " stderr] ",
+					config->forwardStderr);
 			details.stderrCapturer->start();
 			details.pid = pid;
 			details.adminSocket = adminSocket.second;
@@ -238,7 +232,6 @@ public:
 			details.errorPipe = errorPipe.first;
 			details.options = &options;
 			details.forwardStderr = config->forwardStderr;
-			details.forwardStderrTo = config->forwardStderrTo;
 			details.debugDir = debugDir;
 			
 			ProcessPtr process;
