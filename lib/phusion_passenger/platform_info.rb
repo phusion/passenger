@@ -131,13 +131,6 @@ private
 	end
 	private_class_method :select_executable
 
-	def self.read_file(filename)
-		return File.read(filename)
-	rescue
-		return ""
-	end
-	private_class_method :read_file
-
 	def self.unindent(str)
 		str = str.dup
 		str.gsub!(/\A([\s\t]*\n)+/, '')
@@ -222,6 +215,12 @@ public
 		else
 			return value
 		end
+	end
+
+	def self.read_file(filename)
+		return File.read(filename)
+	rescue
+		return ""
 	end
 	
 	def self.tmpdir
