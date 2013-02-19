@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -54,7 +54,6 @@ public:
 	typedef void (*Callback)(Session *session);
 
 private:
-	/** For keeping the OS process alive until all of a Process's sessions are closed. */
 	ProcessPtr process;
 	/** Socket to use for this session. Guaranteed to be alive thanks to the 'process' reference. */
 	Socket *socket;
@@ -87,13 +86,13 @@ public:
 	Callback onInitiateFailure;
 	Callback onClose;
 	
-	Session(const ProcessPtr &process, Socket *socket) {
-		this->process   = process;
-		this->socket    = socket;
-		closed          = false;
-		onInitiateFailure = NULL;
-		onClose         = NULL;
-	}
+	Session(const ProcessPtr &_process, Socket *_socket)
+		: process(_process),
+		  socket(_socket),
+		  closed(false),
+		  onInitiateFailure(NULL),
+		  onClose(NULL)
+		{ }
 	
 	~Session() {
 		TRACE_POINT();
@@ -105,14 +104,23 @@ public:
 			callOnClose();
 		}
 	}
-	
+
 	const string &getConnectPassword() const;
 	pid_t getPid() const;
 	const string &getGupid() const;
 	const GroupPtr getGroup() const;
 	void requestOOBW();
 	
+	bool isClosed() const {
+		return closed;
+	}
+
+	/**
+	 * @pre !isClosed()
+	 * @post result != NULL
+	 */
 	const ProcessPtr &getProcess() const {
+		assert(!closed);
 		return process;
 	}
 	
@@ -141,6 +149,9 @@ public:
 		return theFd;
 	}
 	
+	/**
+	 * This Session object becomes fully unsable after closing.
+	 */
 	void close(bool success) {
 		if (OXT_LIKELY(initiated())) {
 			deinitiate(success);

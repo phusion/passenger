@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -31,10 +31,13 @@
 #include <deque>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
+#include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
+#include <oxt/dynamic_thread_group.hpp>
+#include <ev++.h>
 #include <cassert>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/ComponentInfo.h>
@@ -78,32 +81,92 @@ private:
 			{ }
 	};
 	
-	mutable boost::mutex backrefSyncher;
+	/**
+	 * Protects `m_shuttingDown`.
+	 */
+	mutable boost::mutex lifetimeSyncher;
+	/**
+	 * A back reference to the containing SuperGroup. Should never
+	 * be NULL because a SuperGroup should outlive all its containing
+	 * Groups.
+	 * Read-only; only set during initialization.
+	 */
 	weak_ptr<SuperGroup> superGroup;
 	CachedFileStat cstat;
 	FileChangeChecker fileChangeChecker;
 	string restartFile;
 	string alwaysRestartFile;
+
+	/** Number of times a restart has been initiated so far. This is incremented immediately
+	 * in Group::restart(), and is used to abort the restarter thread that was active at the
+	 * time the restart was initiated. It's safe for the value to wrap around.
+	 */
+	unsigned int restartsInitiated;
+	/**
+	 * Whether process(es) are being spawned right now.
+	 */
+	bool m_spawning;
+	/** Whether a non-rolling restart is in progress (i.e. whether spawnThreadRealMain()
+	 * is at work). While it is in progress, it is not possible to signal the desire to
+	 * spawn new process. If spawning was already in progress when the restart was initiated,
+	 * then the spawning will abort as soon as possible.
+	 *
+	 * When rolling restarting is in progress, this flag is false.
+	 *
+	 * Invariant:
+	 *    if m_restarting: !m_spawning
+	 */
+	bool m_restarting;
+	/**
+	 * Do not access directly, always use `isAlive()`/`getLifeStatus()` or
+	 * through `lifetimeSyncher`.
+	 * 
+	 * Invariant:
+	 *    if lifeStatus != ALIVE:
+	 *       enabledCount == 0
+	 *       disablingCount == 0
+	 *       disabledCount == 0
+	 */
+	enum LifeStatus {
+		/** Up and operational. */
+		ALIVE,
+		/** Being shut down. The containing SuperGroup has issued the shutdown()
+		 * command, and this Group is now waiting for all detached processes to
+		 * exit. You cannot call `get()`, `restart()` and other mutating methods
+		 * anymore, and all threads created by this Group will exit as soon
+		 * as possible.
+		 */
+		SHUTTING_DOWN,
+		/**
+		 * Shut down. Object no longer usable. No Processes are referenced from
+		 * this Group anymore.
+		 */
+		SHUT_DOWN
+	} lifeStatus;
+
+	dynamic_thread_group interruptableThreads;
+
+	/** This timer scans `detachedProcesses` periodically to see
+	 * whether any of the Processes can be shut down.
+	 */
+	ev::timer detachedProcessesChecker;
+	bool detachedProcessesCheckerActive;
+	Callback shutdownCallback;
+	GroupPtr selfPointer;
 	
 	
 	static void _onSessionInitiateFailure(Session *session) {
-		const ProcessPtr &process = session->getProcess();
-		GroupPtr group = process->getGroup();
-		if (OXT_LIKELY(group != NULL)) {
-			group->onSessionInitiateFailure(process, session);
-		}
+		ProcessPtr process = session->getProcess();
+		assert(process != NULL);
+		process->getGroup()->onSessionInitiateFailure(process, session);
 	}
 
 	static void _onSessionClose(Session *session) {
-		const ProcessPtr &process = session->getProcess();
-		GroupPtr group = process->getGroup();
-		if (OXT_LIKELY(group != NULL)) {
-			group->onSessionClose(process, session);
-		}
+		ProcessPtr process = session->getProcess();
+		assert(process != NULL);
+		process->getGroup()->onSessionClose(process, session);
 	}
 	
-	void createInterruptableThread(const function<void ()> &func, const string &name,
-		unsigned int stackSize);
 	static string generateSecret(const SuperGroupPtr &superGroup);
 	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
 	void onSessionClose(const ProcessPtr &process, Session *session);
@@ -116,6 +179,8 @@ private:
 		unsigned int restartsInitiated);
 	void finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
 		vector<Callback> postLockActions);
+	void startCheckingDetachedProcesses();
+	void onDetachedProcessesCheck(ev::timer &timer, int revents);
 	bool poolAtFullCapacity() const;
 	bool anotherGroupIsWaitingForCapacity() const;
 
@@ -129,6 +194,8 @@ private:
 		assert(!( enabledCount == 0 && disablingCount > 0 ) || spawning());
 		assert(!( !spawning() ) || ( enabledCount > 0 || disablingCount == 0 ));
 
+		assert((lifeStatus == ALIVE) == (spawner != NULL));
+
 		// Verify getWaitlist invariants.
 		assert(!( !getWaitlist.empty() ) || ( enabledProcesses.empty() || pqueue.top()->atFullCapacity() ));
 		assert(!( !enabledProcesses.empty() && !pqueue.top()->atFullCapacity() ) || ( getWaitlist.empty() ));
@@ -140,6 +207,12 @@ private:
 
 		// Verify m_spawning and m_restarting.
 		assert(!( m_restarting ) || !m_spawning);
+
+		// Verify lifeStatus.
+		LifeStatus lifeStatus = getLifeStatus();
+		assert(!( lifeStatus != ALIVE ) || ( enabledCount == 0 ));
+		assert(!( lifeStatus != ALIVE ) || ( disablingCount == 0 ));
+		assert(!( lifeStatus != ALIVE ) || ( disabledCount == 0 ));
 	}
 
 	void verifyExpensiveInvariants() const {
@@ -157,6 +230,7 @@ private:
 			const ProcessPtr &process = *it;
 			assert(process->enabled == Process::ENABLED);
 			assert(process->pqHandle != NULL);
+			assert(process->isAlive());
 		}
 
 		end = disablingProcesses.end();
@@ -164,6 +238,7 @@ private:
 			const ProcessPtr &process = *it;
 			assert(process->enabled == Process::DISABLING);
 			assert(process->pqHandle == NULL);
+			assert(process->isAlive());
 		}
 
 		end = disabledProcesses.end();
@@ -171,10 +246,19 @@ private:
 			const ProcessPtr &process = *it;
 			assert(process->enabled == Process::DISABLED);
 			assert(process->pqHandle == NULL);
+			assert(process->isAlive());
+		}
+
+		foreach (const ProcessPtr &process, detachedProcesses) {
+			assert(process->getLifeStatus() == Process::SHUTTING_DOWN);
+			assert(process->pqHandle == NULL);
 		}
 		#endif
 	}
 	
+	/**
+	 * Sets options for this Group. Called at creation time and at restart time.
+	 */
 	void resetOptions(const Options &newOptions) {
 		options = newOptions;
 		options.persist(newOptions);
@@ -182,6 +266,9 @@ private:
 		options.groupSecret = secret;
 	}
 	
+	/**
+	 * Merges some of the new options from the latest get() request into this Group.
+	 */
 	void mergeOptions(const Options &other) {
 		options.maxRequests      = other.maxRequests;
 		options.minProcesses     = other.minProcesses;
@@ -196,12 +283,8 @@ private:
 		}
 	}
 
-	static void cleanupSpawner(SpawnerPtr spawner) {
-		try {
-			spawner->cleanup();
-		} catch (const thread_interrupted &) {
-			// Return.
-		}
+	static void doCleanupSpawner(SpawnerPtr spawner) {
+		spawner->cleanup();
 	}
 	
 	SessionPtr newSession(Process *process = NULL) {
@@ -237,21 +320,26 @@ private:
 	 * This function does not fix getWaitlist invariants or other stuff.
 	 */
 	void removeProcessFromList(const ProcessPtr &process, ProcessList &source) {
+		ProcessPtr p = process; // Keep an extra reference count just in case.
 		source.erase(process->it);
-		switch (process->enabled) {
-		case Process::ENABLED:
-			enabledCount--;
-			pqueue.erase(process->pqHandle);
-			process->pqHandle = NULL;
-			break;
-		case Process::DISABLING:
-			disablingCount--;
-			break;
-		case Process::DISABLED:
-			disabledCount--;
-			break;
-		default:
-			abort();
+		if (process->isAlive()) {
+			switch (process->enabled) {
+			case Process::ENABLED:
+				enabledCount--;
+				pqueue.erase(process->pqHandle);
+				process->pqHandle = NULL;
+				break;
+			case Process::DISABLING:
+				disablingCount--;
+				break;
+			case Process::DISABLED:
+				disabledCount--;
+				break;
+			default:
+				P_BUG("Unknown 'enabled' state " << (int) process->enabled);
+			}
+		} else {
+			assert(&source == &detachedProcesses);
 		}
 	}
 
@@ -275,8 +363,10 @@ private:
 			assert(process->sessions == 0);
 			process->enabled = Process::DISABLED;
 			disabledCount++;
+		} else if (&destination == &detachedProcesses) {
+			assert(process->isAlive());
 		} else {
-			abort();
+			P_BUG("Unknown destination list");
 		}
 	}
 	
@@ -402,6 +492,46 @@ private:
 			disableWaitlist.pop_front();
 		}
 	}
+
+	void shutdownAndRemoveProcess(const ProcessPtr &process) {
+		TRACE_POINT();
+		const ProcessPtr p = process;
+		assert(process->canBeShutDown());
+		removeProcessFromList(process, detachedProcesses);
+		process->shutdown();
+	}
+
+	bool shutdownCanFinish() const {
+		return getLifeStatus() == SHUTTING_DOWN
+			&& enabledCount == 0
+			&& disablingCount == 0
+	 		&& disabledCount == 0
+	 		&& detachedProcesses.empty();
+	}
+
+	static void interruptAndJoinAllThreads(GroupPtr self) {
+		self->interruptableThreads.interrupt_and_join_all();
+	}
+
+	/** One of the post lock actions can potentially perform a long-running
+	 * operation, so running them in a thread is advised.
+	 */
+	void finishShutdown(vector<Callback> &postLockActions) {
+		TRACE_POINT();
+		assert(getLifeStatus() == SHUTTING_DOWN);
+		P_DEBUG("Finishing shutdown of group " << name);
+		if (shutdownCallback) {
+			postLockActions.push_back(shutdownCallback);
+			shutdownCallback = Callback();
+		}
+		postLockActions.push_back(boost::bind(interruptAndJoinAllThreads,
+			shared_from_this()));
+		{
+			lock_guard<boost::mutex> l(lifetimeSyncher);
+			lifeStatus = SHUT_DOWN;
+		}
+		selfPointer.reset();
+	}
 	
 public:
 	Options options;
@@ -458,12 +588,15 @@ public:
 	 *    for all process in enabledProcesses:
 	 *       process.enabled == Process::ENABLED
 	 *       process.pqHandle != NULL
+	 *       process.isAlive()
 	 *    for all processes in disablingProcesses:
 	 *       process.enabled == Process::DISABLING
 	 *       process.pqHandle == NULL
+	 *       process.isAlive()
 	 *    for all process in disabledProcesses:
 	 *       process.enabled == Process::DISABLED
 	 *       process.pqHandle == NULL
+	 *       process.isAlive()
 	 */
 	int enabledCount;
 	int disablingCount;
@@ -472,6 +605,16 @@ public:
 	ProcessList enabledProcesses;
 	ProcessList disablingProcesses;
 	ProcessList disabledProcesses;
+
+	/**
+	 * When a process is detached, it is stored here until we've confirmed
+	 * that it can be shut down.
+	 *
+	 * for all process in detachedProcesses:
+	 *    process.getLifeStatus() == Process::SHUTTING_DOWN
+	 *    process.pqHandle == NULL
+	 */
+	ProcessList detachedProcesses;
 	
 	/**
 	 * get() requests for this group that cannot be immediately satisfied are
@@ -507,31 +650,49 @@ public:
 	 */
 	deque<DisableWaiter> disableWaitlist;
 	
-	SpawnerPtr spawner;
-	/** Number of times a restart has been initiated so far. This is incremented immediately
-	 * in Group::restart(), and is used to abort the restarter thread that was active at the
-	 * time the restart was initiated. It's safe for the value to wrap around.
-	 */
-	unsigned int restartsInitiated;
 	/**
-	 * Whether process(es) are being spawned right now.
-	 */
-	bool m_spawning;
-	/** Whether a non-rolling restart is in progress (i.e. whether spawnThreadRealMain()
-	 * is at work). While it is in progress, it is not possible to signal the desire to
-	 * spawn new process. If spawning was already in progress when the restart was initiated,
-	 * then the spawning will abort as soon as possible.
-	 *
-	 * When rolling restarting is in progress, this flag is false.
-	 *
 	 * Invariant:
-	 *    if m_restarting: !m_spawning
+	 *    (lifeStatus == ALIVE) == (spawner != NULL)
 	 */
-	bool m_restarting;
+	SpawnerPtr spawner;
 	
 	Group(const SuperGroupPtr &superGroup, const Options &options, const ComponentInfo &info);
-	
+	~Group();
+
+	/**
+	 * Must be called before destroying a Group. You can optionally provide a
+	 * callback so that you are notified when shutdown has finished.
+	 *
+	 * The caller is responsible for migrating waiters on the getWaitlist.
+	 *
+	 * One of the post lock actions can potentially perform a long-running
+	 * operation, so running them in a thread is advised.
+	 */
+	void shutdown(const Callback &callback, vector<Callback> &postLockActions) {
+		assert(isAlive());
+
+		P_DEBUG("Shutting down group " << name);
+		shutdownCallback = callback;
+		detachAll(postLockActions);
+		interruptableThreads.interrupt_all();
+		postLockActions.push_back(boost::bind(doCleanupSpawner, spawner));
+		spawner.reset();
+		selfPointer = shared_from_this();
+		assert(disableWaitlist.empty());
+		{
+			lock_guard<boost::mutex> l(lifetimeSyncher);
+			lifeStatus = SHUTTING_DOWN;
+		}
+		if (shutdownCanFinish()) {
+			finishShutdown(postLockActions);
+		} else {
+			P_DEBUG("Shutdown finalization of group " << name << " has been deferred");
+		}
+	}
+
 	SessionPtr get(const Options &newOptions, const GetCallback &callback) {
+		assert(isAlive());
+
 		if (OXT_LIKELY(!restarting())) {
 			if (OXT_UNLIKELY(needsRestart(newOptions))) {
 				restart(newOptions);
@@ -548,6 +709,8 @@ public:
 				0, string(), string(),
 				FileDescriptor(), FileDescriptor(),
 				SocketListPtr(), 0, 0);
+			process->dummy = true;
+			process->requiresShutdown = false;
 			process->setGroup(shared_from_this());
 			return make_shared<Session>(process, (Socket *) NULL);
 		}
@@ -597,27 +760,40 @@ public:
 		}
 	}
 	
-	// Thread-safe.
+	/**
+	 * Thread-safe.
+	 * @pre getLifeState() != SHUT_DOWN
+	 * @post result != NULL
+	 */
 	SuperGroupPtr getSuperGroup() const {
-		lock_guard<boost::mutex> lock(backrefSyncher);
 		return superGroup.lock();
 	}
 	
-	// Thread-safe.
 	void setSuperGroup(const SuperGroupPtr &superGroup) {
-		lock_guard<boost::mutex> lock(backrefSyncher);
+		assert(this->superGroup.lock() == NULL);
 		this->superGroup = superGroup;
 	}
 	
-	// Thread-safe.
+	/**
+	 * Thread-safe.
+	 * @pre getLifeState() != SHUT_DOWN
+	 * @post result != NULL
+	 */
 	PoolPtr getPool() const;
 	
 	// Thread-safe.
-	bool detached() const {
-		return getSuperGroup() == NULL;
+	bool isAlive() const {
+		lock_guard<boost::mutex> lock(lifetimeSyncher);
+		return lifeStatus == ALIVE;
+	}
+
+	// Thread-safe.
+	LifeStatus getLifeStatus() const {
+		lock_guard<boost::mutex> lock(lifetimeSyncher);
+		return lifeStatus;
 	}
 	
-	// Thread-safe.
+	// Thread-safe, but only call outside the pool lock!
 	void requestOOBW(const ProcessPtr &process);
 	
 	/**
@@ -626,7 +802,10 @@ public:
 	 * afterwards if necessary.
 	 */
 	void attach(const ProcessPtr &process, vector<Callback> &postLockActions) {
-		assert(process->getGroup() == NULL);
+		assert(process->getGroup() == NULL || process->getGroup().get() == this);
+		assert(process->isAlive());
+		assert(isAlive());
+
 		process->setGroup(shared_from_this());
 		P_DEBUG("Attaching process " << process->inspect());
 		addProcessToList(process, enabledProcesses);
@@ -668,10 +847,11 @@ public:
 	 */
 	void detach(const ProcessPtr &process, vector<Callback> &postLockActions) {
 		assert(process->getGroup().get() == this);
+		assert(process->isAlive());
+		assert(isAlive());
 
 		const ProcessPtr p = process; // Keep an extra reference just in case.
 		P_DEBUG("Detaching process " << process->inspect());
-		process->setGroup(GroupPtr());
 
 		if (process->enabled == Process::ENABLED || process->enabled == Process::DISABLING) {
 			assert(enabledCount > 0 || disablingCount > 0);
@@ -685,6 +865,14 @@ public:
 			assert(!disabledProcesses.empty());
 			removeProcessFromList(process, disabledProcesses);
 		}
+
+		addProcessToList(process, detachedProcesses);
+		process->setShuttingDown();
+		if (process->canBeShutDown()) {
+			shutdownAndRemoveProcess(process);
+		} else {
+			startCheckingDetachedProcesses();
+		}
 	}
 	
 	/**
@@ -692,17 +880,21 @@ public:
 	 * getWaitlist so be sure to fix its invariants afterwards if necessary.
 	 */
 	void detachAll(vector<Callback> &postLockActions) {
-		ProcessList::iterator it, end = enabledProcesses.end();
-		for (it = enabledProcesses.begin(); it != end; it++) {
-			(*it)->setGroup(GroupPtr());
+		assert(isAlive());
+		P_DEBUG("Detaching all processes in group " << name);
+
+		foreach (ProcessPtr process, enabledProcesses) {
+			addProcessToList(process, detachedProcesses);
+			process->pqHandle = NULL;
+			process->setShuttingDown();
 		}
-		end = disablingProcesses.end();
-		for (it = disablingProcesses.begin(); it != end; it++) {
-			(*it)->setGroup(GroupPtr());
+		foreach (ProcessPtr process, disablingProcesses) {
+			addProcessToList(process, detachedProcesses);
+			process->setShuttingDown();
 		}
-		end = disabledProcesses.end();
-		for (it = disabledProcesses.begin(); it != end; it++) {
-			(*it)->setGroup(GroupPtr());
+		foreach (ProcessPtr process, disabledProcesses) {
+			addProcessToList(process, detachedProcesses);
+			process->setShuttingDown();
 		}
 		
 		enabledProcesses.clear();
@@ -713,6 +905,7 @@ public:
 		disablingCount = 0;
 		disabledCount = 0;
 		clearDisableWaitlist(DR_NOOP, postLockActions);
+		startCheckingDetachedProcesses();
 	}
 	
 	/**
@@ -721,6 +914,9 @@ public:
 	 */
 	void enable(const ProcessPtr &process, vector<Callback> &postLockActions) {
 		assert(process->getGroup().get() == this);
+		assert(process->isAlive());
+		assert(isAlive());
+
 		if (process->enabled == Process::DISABLING) {
 			P_DEBUG("Enabling DISABLING process " << process->inspect());
 			removeProcessFromList(process, disablingProcesses);
@@ -742,6 +938,9 @@ public:
 	 */
 	DisableResult disable(const ProcessPtr &process, const DisableCallback &callback) {
 		assert(process->getGroup().get() == this);
+		assert(process->isAlive());
+		assert(isAlive());
+
 		if (process->enabled == Process::ENABLED) {
 			P_DEBUG("Disabling ENABLED process " << process->inspect() <<
 				"; enabledCount=" << enabledCount << ", process.sessions=" << process->sessions);
@@ -782,11 +981,9 @@ public:
 		}
 	}
 
-	void asyncCleanupSpawner() {
-		createInterruptableThread(
-			boost::bind(cleanupSpawner, spawner),
-			"Group spawner cleanup: " + name,
-			POOL_HELPER_THREAD_STACK_SIZE);
+	void cleanupSpawner(vector<Callback> &postLockActions) {
+		assert(isAlive());
+		postLockActions.push_back(boost::bind(doCleanupSpawner, spawner));
 	}
 
 	unsigned int utilization() const {
@@ -810,8 +1007,7 @@ public:
 		return false;
 	}
 	
-	/** Whether a new process should be spawned for this group.
-	 */
+	/** Whether a new process should be spawned for this group. */
 	bool shouldSpawn() const;
 	/** Whether a new process should be spawned for this group in the
 	 * specific case that another get action is to be performed.
@@ -823,9 +1019,10 @@ public:
 	 * Will ensure that at least options.minProcesses processes are spawned.
 	 */
 	void spawn() {
+		assert(isAlive());
 		if (!spawning() && !restarting()) {
 			P_DEBUG("Requested spawning of new process for group " << name);
-			createInterruptableThread(
+			interruptableThreads.create_thread(
 				boost::bind(&Group::spawnThreadMain,
 					this, shared_from_this(), spawner,
 					options.copyAndPersist().clearPerRequestFields(),
@@ -860,7 +1057,7 @@ public:
 	 * Checks whether this group is waiting for capacity on the pool to
 	 * become available before it can continue processing requests.
 	 */
-	bool isWaitingForCapacity() {
+	bool isWaitingForCapacity() const {
 		return enabledProcesses.empty()
 			&& !m_spawning
 			&& !m_restarting
@@ -891,6 +1088,19 @@ public:
 		if (includeSecrets) {
 			stream << "<secret>" << escapeForXml(secret) << "</secret>";
 		}
+		switch (lifeStatus) {
+		case ALIVE:
+			stream << "<life_status>alive</life_status>";
+			break;
+		case SHUTTING_DOWN:
+			stream << "<life_status>shutting_down</life_status>";
+			break;
+		case SHUT_DOWN:
+			stream << "<life_status>shut_down</life_status>";
+			break;
+		default:
+			P_BUG("Unknown 'lifeStatus' state " << (int) lifeStatus);
+		}
 
 		stream << "<processes>";
 		
@@ -905,6 +1115,11 @@ public:
 			stream << "</process>";
 		}
 		for (it = disabledProcesses.begin(); it != disabledProcesses.end(); it++) {
+			stream << "<process>";
+			(*it)->inspectXml(stream, includeSecrets);
+			stream << "</process>";
+		}
+		for (it = detachedProcesses.begin(); it != detachedProcesses.end(); it++) {
 			stream << "<process>";
 			(*it)->inspectXml(stream, includeSecrets);
 			stream << "</process>";

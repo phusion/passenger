@@ -63,11 +63,13 @@ public:
 		
 		lock_guard<boost::mutex> l(lock);
 		count++;
-		return make_shared<Process>(SafeLibevPtr(),
+		ProcessPtr process = make_shared<Process>(SafeLibevPtr(),
 			(pid_t) count, "gupid-" + toString(count),
 			toString(count),
 			adminSocket.second, FileDescriptor(), sockets,
 			SystemTime::getUsec(), SystemTime::getUsec());
+		process->dummy = true;
+		return process;
 	}
 
 	virtual bool cleanable() const {

@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010 Phusion
+ * Copyright (c) 2010-2013 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -144,6 +144,14 @@ public:
 		} catch (...) {
 			thread_handles.erase(handle->iterator);
 			throw;
+		}
+	}
+
+	void interrupt_all() {
+		boost::unique_lock<boost::mutex> l(lock);
+		list<thread_handle_ptr>::iterator it;
+		for (it = thread_handles.begin(); it != thread_handles.end(); it++) {
+			(*it)->thr->interrupt();
 		}
 	}
 	

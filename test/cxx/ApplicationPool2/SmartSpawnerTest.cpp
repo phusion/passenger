@@ -16,6 +16,7 @@ namespace tut {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		BackgroundEventLoop bg;
+		ProcessPtr process;
 		
 		ApplicationPool2_SmartSpawnerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
@@ -25,6 +26,7 @@ namespace tut {
 		~ApplicationPool2_SmartSpawnerTest() {
 			setLogLevel(0);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
+			Process::maybeShutdown(process);
 		}
 		
 		shared_ptr<SmartSpawner> createSpawner(const Options &options, bool exitImmediately = false) {
@@ -65,7 +67,7 @@ namespace tut {
 		options.startCommand = "ruby\1" "start.rb";
 		options.startupFile  = "start.rb";
 		shared_ptr<SmartSpawner> spawner = createSpawner(options);
-		spawner->spawn(options);
+		spawner->spawn(options)->shutdown();
 		
 		kill(spawner->getPreloaderPid(), SIGTERM);
 		// Give it some time to exit.
@@ -73,7 +75,7 @@ namespace tut {
 		
 		// No exception at next spawn.
 		setLogLevel(-1);
-		spawner->spawn(options);
+		spawner->spawn(options)->shutdown();
 	}
 	
 	TEST_METHOD(81) {
@@ -86,7 +88,7 @@ namespace tut {
 		setLogLevel(-1);
 		shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
-			spawner->spawn(options);
+			spawner->spawn(options)->shutdown();
 			fail("SpawnException expected");
 		} catch (const SpawnException &) {
 			// Pass.
@@ -116,7 +118,7 @@ namespace tut {
 		spawner.getConfig()->forwardStderr = false;
 		
 		try {
-			spawner.spawn(options);
+			spawner.spawn(options)->shutdown();
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -148,7 +150,7 @@ namespace tut {
 		spawner.getConfig()->forwardStderr = false;
 		
 		try {
-			spawner.spawn(options);
+			spawner.spawn(options)->shutdown();
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -180,7 +182,7 @@ namespace tut {
 		spawner.getConfig()->forwardStderr = false;
 		
 		try {
-			spawner.spawn(options);
+			spawner.spawn(options)->shutdown();
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
@@ -195,7 +197,6 @@ namespace tut {
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		
-		ProcessPtr process;
 		{
 			vector<string> preloaderCommand;
 			preloaderCommand.push_back("ruby");
@@ -208,6 +209,7 @@ namespace tut {
 			spawner.getConfig()->forwardStdoutTo = output;
 			spawner.getConfig()->forwardStderrTo = output;
 			process = spawner.spawn(options);
+			process->requiresShutdown = false;
 		}
 		
 		SessionPtr session = process->newSession();

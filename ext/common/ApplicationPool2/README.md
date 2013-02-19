@@ -76,7 +76,7 @@ carefully.
   exceptions are Spawner methods which are explicitly documented as not
   depending on the event loop.
 
-  Pool must only calls Spawner methods from background threads. There's still a
+  Pool must only call Spawner methods from background threads. There's still a
   caveat though: Pool's destructor waits for all background threads to finish.
   Therefore one must not destroy Pool from the event loop. Instead, I recommend
   running the event loop in a separate thread, destroy Pool from the main

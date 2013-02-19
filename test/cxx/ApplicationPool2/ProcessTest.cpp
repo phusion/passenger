@@ -51,6 +51,8 @@ namespace tut {
 		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
+		process->dummy = true;
+		process->requiresShutdown = false;
 		ensure_equals(process->utilization(), 0);
 		ensure(!process->atFullCapacity());
 	}
@@ -60,6 +62,8 @@ namespace tut {
 		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
+		process->dummy = true;
+		process->requiresShutdown = false;
 		SessionPtr session = process->newSession();
 		SessionPtr session2 = process->newSession();
 		ensure_equals(process->sessions, 2);
@@ -75,6 +79,8 @@ namespace tut {
 		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
+		process->dummy = true;
+		process->requiresShutdown = false;
 		
 		// The first 3 newSession() commands check out an idle socket.
 		SessionPtr session1 = process->newSession();
@@ -118,6 +124,8 @@ namespace tut {
 		ProcessPtr process = make_shared<Process>(bg.safe,
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
+		process->dummy = true;
+		process->requiresShutdown = false;
 		vector<SessionPtr> sessions;
 		for (int i = 0; i < 9; i++) {
 			ensure(!process->atFullCapacity());

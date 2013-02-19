@@ -11,6 +11,7 @@ namespace tut {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		BackgroundEventLoop bg;
+		ProcessPtr process;
 		
 		ApplicationPool2_DirectSpawnerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
@@ -19,6 +20,7 @@ namespace tut {
 
 		~ApplicationPool2_DirectSpawnerTest() {
 			unlink("stub/wsgi/passenger_wsgi.pyc");
+			Process::maybeShutdown(process);
 		}
 		
 		shared_ptr<DirectSpawner> createSpawner(const Options &options) {

@@ -47,11 +47,11 @@ namespace tut {
 			// additional code that depend on other fields in this
 			// class.
 			TRACE_POINT();
+			clearAllSessions();
+			UPDATE_TRACE_POINT();
 			pool->destroy();
 			UPDATE_TRACE_POINT();
 			pool.reset();
-			UPDATE_TRACE_POINT();
-			clearAllSessions();
 			setLogLevel(0);
 			SystemTime::releaseAll();
 		}
@@ -598,7 +598,6 @@ namespace tut {
 		);
 		
 		ensure_equals(pool->getProcessCount(), 2u);
-		ensure(!superGroup1->detached());
 		ensure_equals(superGroup1->getProcessCount(), 0u);
 	}
 	
@@ -637,7 +636,6 @@ namespace tut {
 		);
 		
 		ensure_equals(pool->getProcessCount(), 2u);
-		ensure(!superGroup1->detached());
 		ensure_equals(superGroup1->getProcessCount(), 0u);
 	}
 	
@@ -665,8 +663,7 @@ namespace tut {
 		pool->asyncGet(options, callback);
 		{
 			LockGuard l(pool->syncher);
-			ensure("(1)", !session1->getProcess()->detached());
-			ensure("(2)", !fooGroup->detached());
+			ensure("(1)", session1->getProcess()->isAlive());
 			ensure_equals("(3)", fooGroup->getWaitlist.size(), 1u);
 		}
 
@@ -676,8 +673,7 @@ namespace tut {
 		SessionPtr session3 = pool->get(options, &ticket);
 		{
 			LockGuard l(pool->syncher);
-			ensure("(4)", session1->getProcess()->detached());
-			ensure("(5)", !fooGroup->detached());
+			ensure("(4)", !session1->getProcess()->isAlive());
 			ensure_equals("(6)", fooGroup->getWaitlist.size(), 1u);
 			ensure_equals("(7)", pool->getWaitlist.size(), 0u);
 		}
@@ -706,8 +702,9 @@ namespace tut {
 			result = number == 1;
 		);
 
+		ProcessPtr process = currentSession->getProcess();
 		pool->detachProcess(currentSession->getProcess());
-		ensure(currentSession->getProcess()->detached());
+		ensure(!process->isAlive());
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 2;
 		);
@@ -806,7 +803,7 @@ namespace tut {
 		pool->detachProcess(process);
 		LockGuard l(pool->syncher);
 		ensure_equals(pool->superGroups.size(), 1u);
-		ensure(!superGroup->detached());
+		ensure(superGroup->isAlive());
 		ensure(!superGroup->garbageCollectable());
 	}
 
@@ -821,12 +818,12 @@ namespace tut {
 			pool->disableProcess(processes[0]->gupid), DR_SUCCESS);
 		
 		LockGuard l(pool->syncher);
-		ensure(!processes[0]->detached());
+		ensure(processes[0]->isAlive());
 		ensure_equals("Process is disabled",
 			processes[0]->enabled,
 			Process::DISABLED);
 		ensure("Other processes are not affected",
-			!processes[1]->detached());
+			processes[1]->isAlive());
 		ensure_equals("Other processes are not affected",
 			processes[1]->enabled, Process::ENABLED);
 	}
@@ -1010,7 +1007,8 @@ namespace tut {
 
 		ensure_equals(pool->getProcessCount(), 2u);
 		ensure(pool->atFullCapacity());
-		pool->detachSuperGroup(pool->getSuperGroup("test"));
+		clearAllSessions();
+		pool->detachSuperGroupByName("test");
 		ensure(!pool->atFullCapacity());
 	}
 	
@@ -1120,7 +1118,6 @@ namespace tut {
 		options.appRoot = "tmp.wsgi";
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
-		ProcessPtr process;
 		pool->setMax(1);
 
 		// Send normal request.
@@ -1210,7 +1207,7 @@ namespace tut {
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 2;
 		);
-		EVENTUALLY(2,
+		EVENTUALLY(5,
 			result = !pool->isSpawning();
 		);
 		SHOULD_NEVER_HAPPEN(500,
@@ -1444,7 +1441,7 @@ namespace tut {
 		retainSessions = true;
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
-		EVENTUALLY(5,
+		EVENTUALLY(10,
 			result = number == 2;
 		);
 		ensure_equals(pool->getProcessCount(), 2u);

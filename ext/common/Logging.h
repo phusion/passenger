@@ -116,6 +116,21 @@ void _writeLogEntry(const std::string &str);
 #endif
 
 
+#define P_BUG(expr) \
+	do { \
+		TRACE_POINT(); \
+		P_CRITICAL("[BUG] " << expr); \
+		abort(); \
+	} while (false)
+
+#define P_BUG_UTP(expr) \
+	do { \
+		UPDATE_TRACE_POINT(); \
+		P_CRITICAL("[BUG] " << expr); \
+		abort(); \
+	} while (false)
+
+
 class NotExpectingExceptions {
 private:
 	this_thread::disable_interruption di;

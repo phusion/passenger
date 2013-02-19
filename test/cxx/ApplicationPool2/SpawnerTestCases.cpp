@@ -90,7 +90,7 @@
 		options.startCommand = "ruby\1" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		ProcessPtr process = spawner->spawn(options);
+		process = spawner->spawn(options);
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();
@@ -178,7 +178,7 @@
 		options.startCommand = "ruby\1" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		ProcessPtr process = spawner->spawn(options);
+		process = spawner->spawn(options);
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();
@@ -196,7 +196,7 @@
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		options.environmentVariables.push_back(make_pair("PASSENGER_BAR", "bar"));
 		SpawnerPtr spawner = createSpawner(options);
-		ProcessPtr process = spawner->spawn(options);
+		process = spawner->spawn(options);
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();
@@ -245,7 +245,7 @@
 			runShellCommand("chmod 600 tmp.check/a");
 
 			try {
-				spawner->spawn(options);
+				process = spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(1)", containsSubstring(e.getErrorPage(),
@@ -254,7 +254,7 @@
 
 			runShellCommand("chmod 700 tmp.check/a");
 			try {
-				spawner->spawn(options);
+				process = spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(2)", containsSubstring(e.getErrorPage(),
@@ -263,7 +263,7 @@
 
 			runShellCommand("chmod 700 tmp.check/a/b/c");
 			try {
-				spawner->spawn(options);
+				process = spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(3)", containsSubstring(e.getErrorPage(),
@@ -271,7 +271,7 @@
 			}
 
 			runShellCommand("chmod 700 tmp.check/a/b/c/d");
-			spawner->spawn(options); // Should not throw.
+			process = spawner->spawn(options); // Should not throw.
 		}
 	}
 
@@ -287,7 +287,8 @@
 		SpawnerPtr spawner = createSpawner(options);
 		spawner->getConfig()->forwardStdoutTo = output;
 		spawner->getConfig()->forwardStderrTo = output;
-		ProcessPtr process = spawner->spawn(options);
+		process = spawner->spawn(options);
+		process->requiresShutdown = false;
 		
 		SessionPtr session = process->newSession();
 		session->initiate();
