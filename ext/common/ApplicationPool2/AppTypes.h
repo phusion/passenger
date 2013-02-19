@@ -78,7 +78,9 @@ extern const AppTypeDefinition const appTypeDefinitions[];
 
 class AppTypeDetector {
 private:
-	CachedFileStat cstat;
+	CachedFileStat *cstat;
+	unsigned int throttleRate;
+	bool ownsCstat;
 
 	bool check(char *buf, const char *end, const StaticString &appRoot, const char *name) {
 		char *pos = buf;
@@ -90,10 +92,28 @@ private:
 			P_CRITICAL("BUG: buffer overflow");
 			abort();
 		}
-		return fileExists(StaticString(buf, pos - buf), &cstat, 1);
+		return fileExists(StaticString(buf, pos - buf), cstat, throttleRate);
 	}
 
 public:
+	AppTypeDetector() {
+		cstat = new CachedFileStat();
+		ownsCstat = true;
+		throttleRate = 1;
+	}
+
+	AppTypeDetector(CachedFileStat *_cstat, unsigned int _throttleRate) {
+		cstat = _cstat;
+		ownsCstat = false;
+		throttleRate = _throttleRate;
+	}
+
+	~AppTypeDetector() {
+		if (ownsCstat) {
+			delete cstat;
+		}
+	}
+
 	PassengerAppType checkDocumentRoot(const StaticString &documentRoot, bool resolveSymlinks = false) {
 		if (OXT_UNLIKELY(resolveSymlinks)) {
 			char ntDocRoot[documentRoot.size() + 1];

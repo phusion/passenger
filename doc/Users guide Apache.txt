@@ -553,6 +553,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'smart-lv2'.
 
+[[PassengerEnabled]]
 === PassengerEnabled <on|off> ===
 You can set this option to 'off' to completely disable Phusion Passenger for
 a certain location. This is useful if, for example, you want to integrate a PHP
@@ -1723,39 +1724,6 @@ In each place, it may be specified at most once. The default value is 'off'.
 These options only have effect on classic Ruby on Rails 1.x and 2.x applications.
 Ruby on Rails >= 3.x applications are considered Rack applications.
 
-==== RailsAutoDetect <on|off> ====
-Whether Phusion Passenger should automatically detect whether a virtual host's
-document root is a Ruby on Rails application. The default is 'on'.
-
-This option may occur in the global server configuration or in a virtual host
-configuration block.
-
-For example, consider the following configuration:
-
------------------------------
-RailsAutoDetect off
-<VirtualHost *:80>
-    ServerName www.mycook.com
-    DocumentRoot /webapps/mycook/public
-</VirtualHost>
------------------------------
-
-If one goes to 'http://www.mycook.com/', the visitor will see the contents of
-the '/webapps/mycook/public' folder, instead of the output of the Ruby on Rails
-application.
-
-It is possible to explicitly specify that the host is a Ruby on Rails
-application by using the <<RailsBaseURI,RailsBaseURI>> configuration option:
-
------------------------------
-RailsAutoDetect off
-<VirtualHost *:80>
-    ServerName www.mycook.com
-    DocumentRoot /webapps/mycook/public
-    RailsBaseURI /           # This line has been added.
-</VirtualHost>
------------------------------
-
 [[RailsBaseURI]]
 ==== RailsBaseURI <uri> ====
 Used to specify that the given URI is a Rails application. See
@@ -1785,39 +1753,6 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'production'.
 
 === Rack and Rails >= 3 specific options ===
-
-==== RackAutoDetect <on|off> ====
-Whether Phusion Passenger should automatically detect whether a virtual host's
-document root is a Rack application. The default is 'on'.
-
-This option may occur in the global server configuration or in a virtual host
-configuration block.
-
-For example, consider the following configuration:
-
------------------------------
-RackAutoDetect off
-<VirtualHost *:80>
-    ServerName www.rackapp.com
-    DocumentRoot /webapps/my_rack_app/public
-</VirtualHost>
------------------------------
-
-If one goes to 'http://www.rackapp.com/', the visitor will see the contents of
-the '/webapps/my_rack_app/public' folder, instead of the output of the Rack
-application.
-
-It is possible to explicitly specify that the host is a Rack
-application by using the <<RackBaseURI,RackBaseURI>> configuration option:
-
------------------------------
-RackAutoDetect off
-<VirtualHost *:80>
-    ServerName www.rackapp.com
-    DocumentRoot /webapps/my_rack_app/public
-    RackBaseURI /       # This line was added
-</VirtualHost>
------------------------------
 
 [[RackBaseURI]]
 ==== RackBaseURI <uri> ====
@@ -1849,7 +1784,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'production'.
 
-=== Deprecated options ===
+=== Deprecated or removed options ===
 
 The following options have been deprecated, but are still supported for backwards
 compatibility reasons.
@@ -1868,6 +1803,9 @@ This option doesn't do anything anymore in recent versions of Phusion Passenger.
 
 ==== RailsSpawnMethod ====
 Deprecated in favor of <<PassengerSpawnMethod,PassengerSpawnMethod>>.
+
+==== RailsAutoDetect, RackAutoDetect and WsgiAutoDetect ====
+These options have been removed in version 4.0.0 as part of an optimization. You should use <<PassengerEnabled,PassengerEnabled>> instead.
 
 
 [[troubleshooting]]

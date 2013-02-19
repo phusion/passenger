@@ -68,15 +68,6 @@ struct DirConfig {
 	std::set<std::string> railsBaseURIs;
 	std::set<std::string> rackBaseURIs;
 	
-	/** Whether to autodetect Rails applications. */
-	Threeway autoDetectRails;
-	
-	/** Whether to autodetect Rack applications. */
-	Threeway autoDetectRack;
-	
-	/** Whether to autodetect WSGI applications. */
-	Threeway autoDetectWSGI;
-
 	/** The Ruby interpreter to use. */
 	const char *ruby;
 	

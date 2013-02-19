@@ -225,9 +225,6 @@ describe "Apache 2 module" do
 			@apache2.set_vhost('1.passenger.test', "#{@mycook.full_app_root}/public") do |vhost|
 				vhost << "AllowEncodedSlashes on"
 			end
-			@apache2.set_vhost('2.passenger.test', "#{@mycook.full_app_root}/public") do |vhost|
-				vhost << "RailsAutoDetect off"
-			end
 			
 			@foobar = ClassicRailsStub.new('rails2.3')
 			@foobar_url_root = "http://3.passenger.test:#{@apache2.port}"
@@ -257,16 +254,6 @@ describe "Apache 2 module" do
 			@mycook.reset
 			@foobar.reset
 			@mycook2.reset
-		end
-		
-		it "ignores the Rails application if RailsAutoDetect is off" do
-			@server = "http://2.passenger.test:#{@apache2.port}"
-			get('/').should_not =~ /MyCook/
-		end
-		
-		specify "setting RailsAutoDetect for one virtual host should not interfere with others" do
-			@server = @mycook_url_root
-			get('/').should =~ /MyCook/
 		end
 		
 		specify "RailsEnv is per-virtual host" do

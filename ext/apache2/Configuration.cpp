@@ -186,9 +186,6 @@ void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
 	config->enabled = DirConfig::UNSET;
-	config->autoDetectRails = DirConfig::UNSET;
-	config->autoDetectRack = DirConfig::UNSET;
-	config->autoDetectWSGI = DirConfig::UNSET;
 	config->ruby = NULL;
 	config->environment = NULL;
 	config->appRoot = NULL;
@@ -231,9 +228,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 		config->rackBaseURIs.insert(*it);
 	}
 	
-	MERGE_THREEWAY_CONFIG(autoDetectRails);
-	MERGE_THREEWAY_CONFIG(autoDetectRack);
-	MERGE_THREEWAY_CONFIG(autoDetectWSGI);
 	MERGE_STR_CONFIG(ruby);
 	MERGE_STR_CONFIG(environment);
 	MERGE_STR_CONFIG(appRoot);
@@ -372,8 +366,6 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rails_auto_detect, autoDetectRails)
-
 
 
 static const char *
@@ -413,14 +405,12 @@ cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rack_auto_detect, autoDetectRack)
-
 
 /*************************************************
  * WSGI-specific settings
  *************************************************/
 
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_wsgi_auto_detect, autoDetectWSGI)
+// none
 
 
 /*************************************************
@@ -707,11 +697,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rails application."),
-	AP_INIT_FLAG("RailsAutoDetect",
-		(FlagFunc) cmd_rails_auto_detect,
-		NULL,
-		RSRC_CONF,
-		"Whether auto-detection of Ruby on Rails applications should be enabled."),
 	AP_INIT_TAKE1("RailsEnv",
 		(Take1Func) cmd_environment,
 		NULL,
@@ -724,11 +709,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rack application."),
-	AP_INIT_FLAG("RackAutoDetect",
-		(FlagFunc) cmd_rack_auto_detect,
-		NULL,
-		RSRC_CONF,
-		"Whether auto-detection of Rack applications should be enabled."),
 	AP_INIT_TAKE1("RackEnv",
 		(Take1Func) cmd_environment,
 		NULL,
@@ -736,11 +716,7 @@ const command_rec passenger_commands[] = {
 		"The environment under which a Rack app must run."),
 	
 	// WSGI-specific settings.
-	AP_INIT_FLAG("PassengerWSGIAutoDetect",
-		(FlagFunc) cmd_wsgi_auto_detect,
-		NULL,
-		RSRC_CONF,
-		"Whether auto-detection of WSGI applications should be enabled."),
+	// none
 	
 	// Backwards compatibility options.
 	AP_INIT_TAKE1("RailsRuby",
