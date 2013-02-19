@@ -374,6 +374,11 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			ApplicationPool2/Options.h
 			ApplicationPool2/PipeWatcher.h
 			ApplicationPool2/AppTypes.h
+			ApplicationPool2/Spawner.h
+			ApplicationPool2/SpawnerFactory.h
+			ApplicationPool2/SmartSpawner.h
+			ApplicationPool2/DirectSpawner.h
+			ApplicationPool2/DummySpawner.h
 		)
 	define_component 'ApplicationPool2/AppTypes.o',
 		:source   => 'ApplicationPool2/AppTypes.cpp',

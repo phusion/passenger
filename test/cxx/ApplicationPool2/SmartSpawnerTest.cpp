@@ -1,5 +1,5 @@
 #include <TestSupport.h>
-#include <ApplicationPool2/Spawner.h>
+#include <ApplicationPool2/SmartSpawner.h>
 #include <Logging.h>
 #include <Utils/json.h>
 #include <unistd.h>

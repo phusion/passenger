@@ -43,7 +43,7 @@
 #include <ApplicationPool2/Group.h>
 #include <ApplicationPool2/SuperGroup.h>
 #include <ApplicationPool2/Session.h>
-#include <ApplicationPool2/Spawner.h>
+#include <ApplicationPool2/SpawnerFactory.h>
 #include <ApplicationPool2/Options.h>
 #include <UnionStation.h>
 #include <Logging.h>

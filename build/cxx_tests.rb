@@ -53,14 +53,16 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/Options.h
 		ext/common/ApplicationPool2/Process.h
 		ext/common/ApplicationPool2/Socket.h
-		ext/common/ApplicationPool2/Spawner.h),
+		ext/common/ApplicationPool2/Spawner.h
+		ext/common/ApplicationPool2/DirectSpawner.h),
 	'test/cxx/ApplicationPool2/SmartSpawnerTest.o' => %w(
 		test/cxx/ApplicationPool2/SmartSpawnerTest.cpp
 		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
 		ext/common/ApplicationPool2/Options.h
 		ext/common/ApplicationPool2/Process.h
 		ext/common/ApplicationPool2/Socket.h
-		ext/common/ApplicationPool2/Spawner.h),
+		ext/common/ApplicationPool2/Spawner.h
+		ext/common/ApplicationPool2/SmartSpawner.h),
 	'test/cxx/ApplicationPool2/ProcessTest.o' => %w(
 		test/cxx/ApplicationPool2/ProcessTest.cpp
 		ext/common/ApplicationPool2/Process.h
@@ -71,7 +73,14 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/SuperGroup.h
 		ext/common/ApplicationPool2/Group.h
 		ext/common/ApplicationPool2/Pool.h
-		ext/common/ApplicationPool2/Spawner.h),
+		ext/common/ApplicationPool2/Process.h
+		ext/common/ApplicationPool2/Socket.h
+		ext/common/ApplicationPool2/Options.h
+		ext/common/ApplicationPool2/Spawner.h
+		ext/common/ApplicationPool2/SpawnerFactory.h
+		ext/common/ApplicationPool2/SmartSpawner.h
+		ext/common/ApplicationPool2/DirectSpawner.h
+		ext/common/ApplicationPool2/DummySpawner.h),
 	'test/cxx/MessageReadersWritersTest.o' => %w(
 		test/cxx/MessageReadersWritersTest.cpp
 		ext/common/MessageReadersWriters.h
@@ -133,7 +142,12 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/SuperGroup.h
 		ext/common/ApplicationPool2/Group.h
 		ext/common/ApplicationPool2/Process.h
-		ext/common/ApplicationPool2/Spawner.h),
+		ext/common/ApplicationPool2/Options.h
+		ext/common/ApplicationPool2/Spawner.h
+		ext/common/ApplicationPool2/SpawnerFactory.h
+		ext/common/ApplicationPool2/SmartSpawner.h
+		ext/common/ApplicationPool2/DirectSpawner.h
+		ext/common/ApplicationPool2/DummySpawner.h),
 	'test/cxx/FileBackedPipeTest.o' => %w(
 		test/cxx/FileBackedPipeTest.cpp
 		ext/common/agents/HelperAgent/FileBackedPipe.h),
