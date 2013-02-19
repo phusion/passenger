@@ -499,7 +499,7 @@ public:
 	 *    if !getWaitlist.empty():
 	 *       state == INITIALIZING
 	 */
-	queue<GetWaiter> getWaitlist;
+	std::queue<GetWaiter> getWaitlist;
 	
 	/** One MUST call initialize() after construction because shared_from_this()
 	 * is not available in the constructor.

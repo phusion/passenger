@@ -477,6 +477,10 @@ public:
 	 * get() requests for this group that cannot be immediately satisfied are
 	 * put on this wait list, which must be processed as soon as the necessary
 	 * resources have become free.
+	 * 
+	 * 'std::' is required because Solaris in its infinite wisdom has a C
+	 * struct in its system headers called 'queue'.
+	 * http://code.google.com/p/phusion-passenger/issues/detail?id=840
 	 *
 	 * Invariant 1:
 	 *    if getWaitlist is non-empty:
@@ -492,7 +496,7 @@ public:
 	 *    if getWaitlist is non-empty:
 	 *       !enabledProcesses.empty() || spawning() || restarting() || poolAtFullCapacity()
 	 */
-	queue<GetWaiter> getWaitlist;
+	std::queue<GetWaiter> getWaitlist;
 	/**
 	 * Disable() commands that couldn't finish immediately will put their callbacks
 	 * in this queue. Note that there may be multiple DisableWaiters pointing to the
