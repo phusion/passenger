@@ -26,9 +26,9 @@
 #define _PASSENGER_RESOURCE_LOCATOR_H_
 
 #include <string>
-#include <IniFile.h>
 #include <Exceptions.h>
 #include <Utils.h>
+#include <Utils/IniFile.h>
 
 namespace Passenger {
 

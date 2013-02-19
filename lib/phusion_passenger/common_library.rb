@@ -389,10 +389,10 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:deps     => %w(
 			AgentsStarter.h
 			AgentsStarter.hpp
-			IniFile.h
 			ResourceLocator.h
 			MessageClient.h
 			ServerInstanceDir.h
+			Utils/IniFile.h
 			Utils/VariantMap.h
 		)
 	define_component 'AgentsBase.o',

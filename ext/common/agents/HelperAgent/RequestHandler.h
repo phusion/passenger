@@ -98,12 +98,12 @@
 #include <EventedBufferedInput.h>
 #include <MessageReadersWriters.h>
 #include <Constants.h>
-#include <HttpConstants.h>
 #include <UnionStation.h>
 #include <ApplicationPool2/Pool.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/HttpHeaderBufferer.h>
+#include <Utils/HttpConstants.h>
 #include <Utils/Template.h>
 #include <Utils/Timer.h>
 #include <Utils/Dechunker.h>
