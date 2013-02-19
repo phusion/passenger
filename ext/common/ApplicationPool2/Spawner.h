@@ -82,6 +82,7 @@
 #include <ResourceLocator.h>
 #include <StaticString.h>
 #include <ServerInstanceDir.h>
+#include <Utils.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/Timer.h>
@@ -116,6 +117,7 @@ protected:
 	class BackgroundIOCapturer {
 	private:
 		FileDescriptor fd;
+		string prefix;
 		int target;
 		boost::mutex dataSyncher;
 		string data;
@@ -146,15 +148,18 @@ protected:
 					}
 					if (target != -1) {
 						UPDATE_TRACE_POINT();
-						writeExact(target, buf, ret);
+						P_DEBUG(prefix << "\"" <<
+							cEscapeString(StaticString(buf, ret)) <<
+							"\"");
 					}
 				}
 			}
 		}
 		
 	public:
-		BackgroundIOCapturer(const FileDescriptor &_fd, int _target)
+		BackgroundIOCapturer(const FileDescriptor &_fd, const string &_prefix, int _target)
 			: fd(_fd),
+			  prefix(_prefix),
 			  target(_target),
 			  thr(NULL)
 			{ }
@@ -256,6 +261,12 @@ protected:
 
 	typedef shared_ptr<DebugDir> DebugDirPtr;
 
+	/**
+	 * Contains information that will be used after fork()ing but before exec()ing,
+	 * such as the intended app root, the UID it should switch to, the
+	 * groups it should assume, etc. This structure is allocated before forking
+	 * because after forking and before exec() it may not be safe to allocate memory.
+	 */
 	struct SpawnPreparationInfo {
 		// General
 
@@ -301,9 +312,21 @@ protected:
 	 * the spawning protocol.
 	 */
 	struct NegotiationDetails {
-		// Arguments.
+		/****** Arguments ******/
+
+		/** The preparation info of the process we're negotiating with. It's used
+		 * by security validators to check whether the information sent back by the
+		 * process make any sense. */
+		SpawnPreparationInfo *preparation;
+		/** The SafeLibev that the returned Process should be initialized with. */
 		SafeLibevPtr libev;
+		/** This object captures the process's stderr while negotiation is in progress.
+		 * (Recall that negotiation is performed over the process's stdout while stderr
+		 * is used purely for outputting messages.)
+		 * If the negotiation protocol fails, then any output captured by this object
+		 * will be stored into the resulting SpawnException's error page. */
 		BackgroundIOCapturerPtr stderrCapturer;
+		/** The PID of the process we're negotiating with. */
 		pid_t pid;
 		FileDescriptor adminSocket;
 		FileDescriptor errorPipe;
@@ -312,7 +335,7 @@ protected:
 		int forwardStderrTo;
 		DebugDirPtr debugDir;
 		
-		// Working state.
+		/****** Working state ******/
 		BufferedIO io;
 		string gupid;
 		string connectPassword;
@@ -320,36 +343,12 @@ protected:
 		unsigned long long timeout;
 		
 		NegotiationDetails() {
+			preparation = NULL;
 			pid = 0;
 			options = NULL;
 			forwardStderr = false;
 			forwardStderrTo = STDERR_FILENO;
 			spawnStartTime = 0;
-			timeout = 0;
-		}
-	};
-
-	/**
-	 * Structure containing arguments and working state for negotiating
-	 * the preloader startup protocol.
-	 */
-	struct StartupDetails {
-		// Arguments.
-		FileDescriptor adminSocket;
-		BufferedIO io;
-		BackgroundIOCapturerPtr stderrCapturer;
-		DebugDirPtr debugDir;
-		const Options *options;
-		bool forwardStderr;
-		int forwardStderrTo;
-
-		// Working state.
-		unsigned long long timeout;
-
-		StartupDetails() {
-			options = NULL;
-			forwardStderr = false;
-			forwardStderrTo = STDERR_FILENO;
 			timeout = 0;
 		}
 	};
@@ -393,8 +392,13 @@ private:
 				data.append(key + ": " + value + "\n");
 			}
 
+			vector<string> lines;
+			split(data, '\n', lines);
+			foreach (string line, lines) {
+				line.append("\n");
+				P_DEBUG("[" << details.pid << " stdin >>] \"" << cEscapeString(line) << "\"");
+			}
 			writeExact(details.adminSocket, data, &details.timeout);
-			P_TRACE(2, "Spawn request for " << details.options->appRoot << ":\n" << data);
 			writeExact(details.adminSocket, "\n", &details.timeout);
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE) {
@@ -408,9 +412,7 @@ private:
 		}
 	}
 
-	ProcessPtr handleSpawnResponse(const SpawnPreparationInfo &preparation,
-		NegotiationDetails &details)
-	{
+	ProcessPtr handleSpawnResponse(NegotiationDetails &details) {
 		TRACE_POINT();
 		SocketListPtr sockets = make_shared<SocketList>();
 		while (true) {
@@ -466,7 +468,7 @@ private:
 				vector<string> args;
 				split(value, ';', args);
 				if (args.size() == 4) {
-					string error = validateSocketAddress(preparation, details, args[1]);
+					string error = validateSocketAddress(details, args[1]);
 					if (!error.empty()) {
 						throwAppSpawnException(
 							"An error occurred while starting the web application. " + error,
@@ -585,10 +587,7 @@ protected:
 	 * Given a 'socket:' information string obtained from the spawned process,
 	 * validates whether it is correct.
 	 */
-	string validateSocketAddress(const SpawnPreparationInfo &preparation,
-		NegotiationDetails &details,
-		const string &_address) const
-	{
+	string validateSocketAddress(NegotiationDetails &details, const string &_address) const {
 		string address = _address;
 		stringstream error;
 
@@ -613,9 +612,9 @@ protected:
 					e << ": " << strerror(e) << ")";
 				break;
 			}
-			if (buf.st_uid != preparation.uid) {
+			if (buf.st_uid != details.preparation->uid) {
 				error << "It advertised a Unix domain socket that has a different " <<
-					"owner than expected (should be UID " << preparation.uid <<
+					"owner than expected (should be UID " << details.preparation->uid <<
 					", but actual UID was " << buf.st_uid << ")";
 				break;
 			}
@@ -715,6 +714,8 @@ protected:
 		TRACE_POINT();
 		while (true) {
 			string result = details.io.readLine(1024 * 4, &details.timeout);
+			P_DEBUG("[" << details.pid << " stdout] \"" <<
+				cEscapeString(result) << "\"");
 			if (result.empty()) {
 				return result;
 			} else if (startsWith(result, "!> ")) {
@@ -1078,7 +1079,10 @@ protected:
 		}
 	}
 	
-	ProcessPtr negotiateSpawn(const SpawnPreparationInfo &preparation, NegotiationDetails &details) {
+	/**
+	 * Execute the process spawning negotiation protocol.
+	 */
+	ProcessPtr negotiateSpawn(NegotiationDetails &details) {
 		TRACE_POINT();
 		details.spawnStartTime = SystemTime::getUsec();
 		details.gupid = integerToHex(SystemTime::get() / 60) + "-" +
@@ -1120,7 +1124,7 @@ protected:
 					details);
 			}
 			if (result == "Ready\n") {
-				return handleSpawnResponse(preparation, details);
+				return handleSpawnResponse(details);
 			} else if (result == "Error\n") {
 				handleSpawnErrorResponse(details);
 			} else {

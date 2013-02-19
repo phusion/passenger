@@ -219,14 +219,17 @@ public:
 		} else {
 			UPDATE_TRACE_POINT();
 			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
+			P_DEBUG("Process forked for appRoot=" << options.appRoot << ": PID " << pid);
 			adminSocket.first.close();
 			errorPipe.second.close();
 			
 			NegotiationDetails details;
+			details.preparation = &preparation;
 			details.libev = libev;
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
+					string("[") + toString(pid) + " stderr] ",
 					config->forwardStderr ? config->forwardStderrTo : -1);
 			details.stderrCapturer->start();
 			details.pid = pid;
@@ -242,7 +245,7 @@ public:
 			{
 				this_thread::restore_interruption ri(di);
 				this_thread::restore_syscall_interruption rsi(dsi);
-				process = negotiateSpawn(preparation, details);
+				process = negotiateSpawn(details);
 			}
 			detachProcess(process->pid);
 			guard.clear();

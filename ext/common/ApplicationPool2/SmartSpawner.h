@@ -37,6 +37,32 @@ using namespace oxt;
 
 class SmartSpawner: public Spawner, public enable_shared_from_this<SmartSpawner> {
 private:
+	/**
+	 * Structure containing arguments and working state for negotiating
+	 * the preloader startup protocol.
+	 */
+	struct StartupDetails {
+		/****** Arguments ******/
+		pid_t pid;
+		FileDescriptor adminSocket;
+		BufferedIO io;
+		BackgroundIOCapturerPtr stderrCapturer;
+		DebugDirPtr debugDir;
+		const Options *options;
+		bool forwardStderr;
+		int forwardStderrTo;
+
+		/****** Working state ******/
+		unsigned long long timeout;
+
+		StartupDetails() {
+			options = NULL;
+			forwardStderr = false;
+			forwardStderrTo = STDERR_FILENO;
+			timeout = 0;
+		}
+	};
+
 	struct SpawnResult {
 		pid_t pid;
 		FileDescriptor adminSocket;
@@ -192,6 +218,7 @@ private:
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		assert(!preloaderStarted());
+		P_DEBUG("Spawning new preloader: appRoot=" << options.appRoot);
 		checkChrootDirectories(options);
 		
 		shared_array<const char *> args;
@@ -237,15 +264,18 @@ private:
 			
 		} else {
 			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
+			P_DEBUG("Preloader process forked for appRoot=" << options.appRoot << ": PID " << pid);
 			adminSocket.first.close();
 			errorPipe.second.close();
 			
 			StartupDetails details;
+			details.pid = pid;
 			details.adminSocket = adminSocket.second;
 			details.io = BufferedIO(adminSocket.second);
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
+					string("[") + toString(pid) + " stderr] ",
 					config->forwardStderr ? config->forwardStderrTo : -1);
 			details.stderrCapturer->start();
 			details.debugDir = debugDir;
@@ -744,6 +774,7 @@ public:
 		
 		UPDATE_TRACE_POINT();
 		NegotiationDetails details;
+		details.preparation = &preparation;
 		details.libev = libev;
 		details.pid = result.pid;
 		details.adminSocket = result.adminSocket;
@@ -751,7 +782,7 @@ public:
 		details.options = &options;
 		details.forwardStderr = config->forwardStderr;
 		details.forwardStderrTo = config->forwardStderrTo;
-		ProcessPtr process = negotiateSpawn(preparation, details);
+		ProcessPtr process = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
 			", pid=" << process->pid);
 		return process;
