@@ -530,8 +530,6 @@ public:
 			return ruby + "\1" + resourceLocator.getHelperScriptsDir() + "/rack-loader.rb";
 		} else if (appType == "wsgi") {
 			return "python\1" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";
-		} else if (appType == "node") {
-			return "node\1" + resourceLocator.getHelperScriptsDir() + "/node-loader.js";
 		} else {
 			return startCommand;
 		}
