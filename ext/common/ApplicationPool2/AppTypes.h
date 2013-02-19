@@ -73,7 +73,7 @@ struct AppTypeDefinition {
 	const char * const processTitle;
 };
 
-extern const AppTypeDefinition const appTypeDefinitions[];
+extern const AppTypeDefinition appTypeDefinitions[];
 
 
 class AppTypeDetector {

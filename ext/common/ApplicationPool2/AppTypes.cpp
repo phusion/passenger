@@ -28,7 +28,7 @@ namespace Passenger {
 namespace ApplicationPool2 {
 
 // Don't forget to update ApplicationPool2::Options::getStartCommand() too.
-const AppTypeDefinition const appTypeDefinitions[] = {
+const AppTypeDefinition appTypeDefinitions[] = {
 	{ PAT_RACK, "rack", "config.ru", "Passenger RackApp" },
 	{ PAT_WSGI, "wsgi", "passenger_wsgi.py", "Passenger WsgiApp" },
 	{ PAT_CLASSIC_RAILS, "classic-rails", "config/environment.rb", "Passenger ClassicRailsApp" },
