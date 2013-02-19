@@ -9,6 +9,8 @@ Release 3.9.3 (4.0.0 release candidate 1)
    whether something has been wrongly detected.
  * Performance optimizations.
  * Many documentation fixes and bug fixes.
+ * PassengerMemoryLimit now works on non-Ruby apps as well.
+ * Phusion Passenger will now automatically detect processes that have been killed without needing to send a request to it first.
  * [Standalone] HTTP client body limit has been raised from 50 MB to 1 GB.
 
 
