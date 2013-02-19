@@ -54,10 +54,10 @@ passenger_app_type_detector_free(PassengerAppTypeDetector *detector) {
 
 PassengerAppType
 passenger_app_type_detector_check_document_root(PassengerAppTypeDetector *_detector,
-	const char *documentRoot, unsigned int len, int resolveSymlinks)
+	const char *documentRoot, unsigned int len, int resolveFirstSymlink)
 {
 	AppTypeDetector *detector = (AppTypeDetector *) _detector;
-	return detector->checkDocumentRoot(StaticString(documentRoot, len), resolveSymlinks);
+	return detector->checkDocumentRoot(StaticString(documentRoot, len), resolveFirstSymlink);
 }
 
 PassengerAppType

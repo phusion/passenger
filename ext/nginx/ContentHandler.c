@@ -1356,7 +1356,7 @@ passenger_content_handler(ngx_http_request_t *r)
         context->app_type = passenger_app_type_detector_check_document_root(
             passenger_app_type_detector,
             (const char *) context->public_dir.data, context->public_dir.len,
-            0);
+            context->base_uri.len != 0);
     } else {
         context->app_type = passenger_app_type_detector_check_app_root(
             passenger_app_type_detector,

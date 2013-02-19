@@ -41,7 +41,7 @@ typedef void PassengerAppTypeDetector;
 PassengerAppTypeDetector *passenger_app_type_detector_new();
 void passenger_app_type_detector_free(PassengerAppTypeDetector *detector);
 PassengerAppType passenger_app_type_detector_check_document_root(PassengerAppTypeDetector *detector,
-	const char *documentRoot, unsigned int len, int resolveSymlinks);
+	const char *documentRoot, unsigned int len, int resolveFirstSymlink);
 PassengerAppType passenger_app_type_detector_check_app_root(PassengerAppTypeDetector *detector,
 	const char *appRoot, unsigned int len);
 
@@ -114,8 +114,8 @@ public:
 		}
 	}
 
-	PassengerAppType checkDocumentRoot(const StaticString &documentRoot, bool resolveSymlinks = false) {
-		if (OXT_UNLIKELY(resolveSymlinks)) {
+	PassengerAppType checkDocumentRoot(const StaticString &documentRoot, bool resolveFirstSymlink = false) {
+		if (!resolveFirstSymlink) {
 			char ntDocRoot[documentRoot.size() + 1];
 			memcpy(ntDocRoot, documentRoot.data(), documentRoot.size());
 			ntDocRoot[documentRoot.size()] = '\0';
