@@ -2,8 +2,14 @@ Release 3.9.3 (4.0.0 release candidate 1)
 -----------------------------------------
 
  * Fixed Python 3 compatibility.
+ * [Nginx] Support passenger_app_root config option
  * The build system can now be invoked using JRuby.
- * Many documentation and bug fixes.
+ * The installers now print a lot more information about
+   detected system settings so that the user can see
+   whether something has been wrongly detected.
+ * Performance optimizations.
+ * Many documentation fixes and bug fixes.
+ * [Standalone] HTTP client body limit has been raised from 50 MB to 1 GB.
 
 
 Release 3.9.2 (4.0.0 beta 2)
