@@ -74,6 +74,7 @@ copyException(const tracable_exception &e) {
 	TRY_COPY_EXCEPTION(ConfigurationException);
 	
 	TRY_COPY_EXCEPTION(SpawnException);
+	TRY_COPY_EXCEPTION(GetAbortedException);
 	
 	TRY_COPY_EXCEPTION(InvalidModeStringException);
 	TRY_COPY_EXCEPTION(ArgumentException);
@@ -113,6 +114,7 @@ rethrowException(const ExceptionPtr &e) {
 	TRY_RETHROW_EXCEPTION(ConfigurationException);
 	
 	TRY_RETHROW_EXCEPTION(SpawnException);
+	TRY_RETHROW_EXCEPTION(GetAbortedException);
 	
 	TRY_RETHROW_EXCEPTION(InvalidModeStringException);
 	TRY_RETHROW_EXCEPTION(ArgumentException);
@@ -170,10 +172,153 @@ SuperGroup::createInterruptableThread(const function<void ()> &func, const strin
 }
 
 void
-SuperGroup::createNonInterruptableThread(const function<void ()> &func, const string &name,
-	unsigned int stackSize)
-{
-	getPool()->nonInterruptableThreads.create_thread(func, name, stackSize);
+SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
+	vector<ComponentInfo> componentInfos;
+	vector<ComponentInfo>::const_iterator it;
+	ExceptionPtr exception;
+	
+	P_TRACE(2, "Initializing SuperGroup " << inspect() << " in the background...");
+	try {
+		componentInfos = loadComponentInfos(options);
+	} catch (const tracable_exception &e) {
+		exception = copyException(e);
+	}
+	if (componentInfos.empty() && exception == NULL) {
+		string message = "The directory " +
+			options.appRoot +
+			" does not seem to contain a web application.";
+		exception = make_shared<SpawnException>(
+			message, message, false);
+	}
+	
+	PoolPtr pool = getPool();
+	Pool::DebugSupportPtr debug = pool->debugSupport;
+	
+	vector<Callback> actions;
+	{
+		if (debug != NULL && debug->superGroup) {
+			debug->debugger->send("About to finish SuperGroup initialization");
+			debug->messages->recv("Proceed with initializing SuperGroup");
+		}
+
+		unique_lock<boost::mutex> lock(getPoolSyncher(pool));
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
+		NOT_EXPECTING_EXCEPTIONS();
+		if (OXT_UNLIKELY(getPool() == NULL || generation != this->generation)) {
+			return;
+		}
+		P_TRACE(2, "Initialization of SuperGroup " << inspect() << " almost done; grabbed lock");
+		assert(state == INITIALIZING);
+		verifyInvariants();
+		
+		if (componentInfos.empty()) {
+			/* Somehow initialization failed. Maybe something has deleted
+			 * the supergroup files while we're working.
+			 */
+			assert(exception != NULL);
+			setState(DESTROYED);
+			
+			actions.reserve(getWaitlist.size());
+			while (!getWaitlist.empty()) {
+				const GetWaiter &waiter = getWaitlist.front();
+				actions.push_back(boost::bind(waiter.callback,
+					SessionPtr(), exception));
+				getWaitlist.pop();
+			}
+		} else {
+			for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
+				const ComponentInfo &info = *it;
+				GroupPtr group = make_shared<Group>(shared_from_this(),
+					options, info);
+				groups.push_back(group);
+				if (info.isDefault) {
+					defaultGroup = group.get();
+				}
+			}
+
+			setState(READY);
+			assignGetWaitlistToGroups(actions);
+		}
+		
+		verifyInvariants();
+		P_TRACE(2, "Done initializing SuperGroup " << inspect());
+	}
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+	runAllActions(actions);
+}
+
+void
+SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
+	TRACE_POINT();
+	vector<ComponentInfo> componentInfos = loadComponentInfos(options);
+	vector<ComponentInfo>::const_iterator it;
+	
+	PoolPtr pool = getPool();
+	Pool::DebugSupportPtr debug = pool->debugSupport;
+	if (debug != NULL && debug->superGroup) {
+		debug->debugger->send("About to finish SuperGroup restart");
+		debug->messages->recv("Proceed with restarting SuperGroup");
+	}
+	
+	unique_lock<boost::mutex> lock(getPoolSyncher(pool));
+	if (OXT_UNLIKELY(this->generation != generation)) {
+		return;
+	}
+
+	assert(state == RESTARTING);
+	verifyInvariants();
+	
+	vector<GroupPtr> allGroups;
+	vector<GroupPtr> updatedGroups;
+	vector<GroupPtr> newGroups;
+	vector<GroupPtr>::const_iterator g_it;
+	vector<Callback> actions;
+	this->options = options;
+	
+	// Update the component information for existing groups.
+	UPDATE_TRACE_POINT();
+	for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
+		const ComponentInfo &info = *it;
+		pair<GroupPtr, unsigned int> result =
+			findGroupCorrespondingToComponent(groups, info);
+		GroupPtr group = result.first;
+		if (group != NULL) {
+			unsigned int index = result.second;
+			group->componentInfo = info;
+			updatedGroups.push_back(group);
+			groups[index].reset();
+		} else {
+			// This is not an existing group but a new one,
+			// so create it.
+			group = make_shared<Group>(shared_from_this(),
+				options, info);
+			newGroups.push_back(group);
+		}
+		// allGroups must be in the same order as componentInfos.
+		allGroups.push_back(group);
+	}
+	
+	// Some components might have been deleted, so delete the
+	// corresponding groups.
+	detachAllGroups(groups, actions);
+	
+	// Tell all previous existing groups to restart.
+	for (g_it = updatedGroups.begin(); g_it != updatedGroups.end(); g_it++) {
+		GroupPtr group = *g_it;
+		group->restart(options);
+	}
+	
+	groups = allGroups;
+	defaultGroup = findDefaultGroup(allGroups);
+	setState(READY);
+	assignGetWaitlistToGroups(actions);
+	
+	UPDATE_TRACE_POINT();
+	verifyInvariants();
+	lock.unlock();
+	runAllActions(actions);
 }
 
 
@@ -505,7 +650,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 	bool done = false;
 	while (!done) {
 		bool shouldFail = false;
-		if (debug != NULL) {
+		if (debug != NULL && debug->spawning) {
 			UPDATE_TRACE_POINT();
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
@@ -600,7 +745,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 			if (enabledCount == 0) {
 				enableAllDisablingProcesses(actions);
 			}
-			assignExceptionToGetWaiters(exception, actions);
+			Pool::assignExceptionToGetWaiters(getWaitlist, exception, actions);
 			pool->assignSessionsToGetWaiters(actions);
 			done = true;
 		}
@@ -628,7 +773,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 		UPDATE_TRACE_POINT();
 	}
 
-	if (debug != NULL) {
+	if (debug != NULL && debug->spawning) {
 		debug->debugger->send("Spawn loop done");
 	}
 }
@@ -691,7 +836,7 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	PoolPtr pool = getPool();
 
 	Pool::DebugSupportPtr debug = pool->debugSupport;
-	if (debug != NULL) {
+	if (debug != NULL && debug->restarting) {
 		this_thread::restore_interruption ri(di);
 		this_thread::restore_syscall_interruption rsi(dsi);
 		this_thread::interruption_point();
@@ -724,7 +869,7 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	l.unlock();
 	oldSpawner.reset();
 	P_DEBUG("Restart of group " << name << " done");
-	if (debug != NULL) {
+	if (debug != NULL && debug->restarting) {
 		debug->debugger->send("Restarting done");
 	}
 }

@@ -195,8 +195,6 @@ private:
 	
 	void createInterruptableThread(const function<void ()> &func, const string &name,
 		unsigned int stackSize);
-	void createNonInterruptableThread(const function<void ()> &func, const string &name,
-		unsigned int stackSize);
 	
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
@@ -309,150 +307,16 @@ private:
 		// No-op.
 	}
 
-	void doInitialize(SuperGroupPtr self, Options options, unsigned int generation) {
-		realDoInitialize(options, generation);
+	static void doInitialize(SuperGroupPtr self, Options options, unsigned int generation) {
+		self->realDoInitialize(options, generation);
 	}
 
-	void realDoInitialize(const Options &options, unsigned int generation) {
-		vector<ComponentInfo> componentInfos;
-		vector<ComponentInfo>::const_iterator it;
-		ExceptionPtr exception;
-		
-		P_TRACE(2, "Initializing SuperGroup " << inspect() << " in the background...");
-		try {
-			componentInfos = loadComponentInfos(options);
-		} catch (const tracable_exception &e) {
-			exception = copyException(e);
-		}
-		if (componentInfos.empty() && exception == NULL) {
-			string message = "The directory " +
-				options.appRoot +
-				" does not seem to contain a web application.";
-			exception = make_shared<SpawnException>(
-				message, message, false);
-		}
-		
-		PoolPtr pool = getPool();
-		if (OXT_UNLIKELY(pool == NULL)) {
-			return;
-		}
-		
-		vector<Callback> actions;
-		{
-			unique_lock<boost::mutex> lock(getPoolSyncher(pool));
-			this_thread::disable_interruption di;
-			this_thread::disable_syscall_interruption dsi;
-			NOT_EXPECTING_EXCEPTIONS();
-			if (OXT_UNLIKELY(getPool() == NULL || generation != this->generation)) {
-				return;
-			}
-			P_TRACE(2, "Initialization of SuperGroup " << inspect() << " almost done; grabbed lock");
-			assert(state == INITIALIZING);
-			verifyInvariants();
-			
-			if (componentInfos.empty()) {
-				/* Somehow initialization failed. Maybe something has deleted
-				 * the supergroup files while we're working.
-				 */
-				assert(exception != NULL);
-				setState(DESTROYED);
-				
-				actions.reserve(getWaitlist.size());
-				while (!getWaitlist.empty()) {
-					const GetWaiter &waiter = getWaitlist.front();
-					actions.push_back(boost::bind(waiter.callback,
-						SessionPtr(), exception));
-					getWaitlist.pop();
-				}
-			} else {
-				for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
-					const ComponentInfo &info = *it;
-					GroupPtr group = make_shared<Group>(shared_from_this(),
-						options, info);
-					groups.push_back(group);
-					if (info.isDefault) {
-						defaultGroup = group.get();
-					}
-				}
-
-				setState(READY);
-				assignGetWaitlistToGroups(actions);
-			}
-			
-			verifyInvariants();
-			P_TRACE(2, "Done initializing SuperGroup " << inspect());
-		}
-		runAllActions(actions);
-	}
-	
 	static void doRestart(SuperGroupPtr self, Options options, unsigned int generation) {
 		self->realDoRestart(options, generation);
 	}
 
-	void realDoRestart(const Options &options, unsigned int generation) {
-		TRACE_POINT();
-		vector<ComponentInfo> componentInfos = loadComponentInfos(options);
-		vector<ComponentInfo>::const_iterator it;
-		
-		PoolPtr pool = getPool();
-		unique_lock<boost::mutex> lock(getPoolSyncher(pool));
-		if (OXT_UNLIKELY(this->generation != generation)) {
-			return;
-		}
-
-		assert(state == RESTARTING);
-		verifyInvariants();
-		
-		vector<GroupPtr> allGroups;
-		vector<GroupPtr> updatedGroups;
-		vector<GroupPtr> newGroups;
-		vector<GroupPtr>::const_iterator g_it;
-		vector<Callback> actions;
-		this->options = options;
-		
-		// Update the component information for existing groups.
-		UPDATE_TRACE_POINT();
-		for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
-			const ComponentInfo &info = *it;
-			pair<GroupPtr, unsigned int> result =
-				findGroupCorrespondingToComponent(groups, info);
-			GroupPtr group = result.first;
-			if (group != NULL) {
-				unsigned int index = result.second;
-				group->componentInfo = info;
-				updatedGroups.push_back(group);
-				groups[index].reset();
-			} else {
-				// This is not an existing group but a new one,
-				// so create it.
-				group = make_shared<Group>(shared_from_this(),
-					options, info);
-				newGroups.push_back(group);
-			}
-			// allGroups must be in the same order as componentInfos.
-			allGroups.push_back(group);
-		}
-		
-		// Some components might have been deleted, so delete the
-		// corresponding groups.
-		detachAllGroups(groups, actions);
-		
-		// Tell all previous existing groups to restart.
-		for (g_it = updatedGroups.begin(); g_it != updatedGroups.end(); g_it++) {
-			GroupPtr group = *g_it;
-			group->restart(options);
-		}
-		
-		groups = allGroups;
-		defaultGroup = findDefaultGroup(allGroups);
-		setState(READY);
-		assignGetWaitlistToGroups(actions);
-		
-		UPDATE_TRACE_POINT();
-		verifyInvariants();
-		lock.unlock();
-		runAllActions(actions);
-	}
+	void realDoInitialize(const Options &options, unsigned int generation);
+	void realDoRestart(const Options &options, unsigned int generation);
 	
 	void doDestroy(SuperGroupPtr self, unsigned int generation, ShutdownCallback callback) {
 		TRACE_POINT();
@@ -465,6 +329,7 @@ private:
 		UPDATE_TRACE_POINT();
 		PoolPtr pool = getPool();
 		unique_lock<boost::mutex> lock(getPoolSyncher(pool));
+		verifyInvariants();
 		while (true) {
 			if (OXT_UNLIKELY(this->generation != generation)) {
 				UPDATE_TRACE_POINT();
@@ -480,12 +345,12 @@ private:
 				lock.unlock();
 				syscalls::usleep(10000);
 				lock.lock();
+				verifyInvariants();
 			}
 		}
 		
 		UPDATE_TRACE_POINT();
 		assert(state == DESTROYING);
-		verifyInvariants();
 		state = DESTROYED;
 		verifyInvariants();
 
@@ -570,11 +435,9 @@ public:
 	}
 
 	void initialize() {
-		createNonInterruptableThread(
+		createInterruptableThread(
 			boost::bind(
-				&SuperGroup::doInitialize,
-				this,
-				// Keep reference to self to prevent destruction.
+				doInitialize,
 				shared_from_this(),
 				options.copyAndPersist(),
 				generation),
@@ -639,7 +502,7 @@ public:
 			defaultGroup = NULL;
 			if (getWaitlist.empty() || !allowReinitialization) {
 				setState(DESTROYING);
-				createNonInterruptableThread(
+				createInterruptableThread(
 					boost::bind(
 						&SuperGroup::doDestroy,
 						this,
@@ -652,7 +515,7 @@ public:
 			} else {
 				// Spawning this thread before setState() so that
 				// it doesn't change the state when done.
-				createNonInterruptableThread(
+				createInterruptableThread(
 					boost::bind(
 						&SuperGroup::doDestroy,
 						this,
@@ -663,11 +526,9 @@ public:
 					"SuperGroup destroyer: " + name,
 					POOL_HELPER_THREAD_STACK_SIZE + 1024 * 256);
 				setState(INITIALIZING);
-				createNonInterruptableThread(
+				createInterruptableThread(
 					boost::bind(
-						&SuperGroup::doInitialize,
-						this,
-						// Keep reference to self to prevent destruction.
+						doInitialize,
 						shared_from_this(),
 						options.copyAndPersist(),
 						generation),
@@ -736,11 +597,9 @@ public:
 		case DESTROYED:
 			getWaitlist.push(GetWaiter(newOptions, callback));
 			setState(INITIALIZING);
-			createNonInterruptableThread(
+			createInterruptableThread(
 				boost::bind(
-					&SuperGroup::doInitialize,
-					this,
-					// Keep reference to self to prevent destruction.
+					doInitialize,
 					shared_from_this(),
 					newOptions.copyAndPersist().clearLogger(),
 					generation),

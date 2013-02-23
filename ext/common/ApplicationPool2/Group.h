@@ -436,17 +436,6 @@ private:
 			}
 		}
 	}
-	
-	void assignExceptionToGetWaiters(const ExceptionPtr &exception,
-		vector<Callback> &postLockActions)
-	{
-		while (!getWaitlist.empty()) {
-			postLockActions.push_back(boost::bind(
-				getWaitlist.front().callback, SessionPtr(),
-				exception));
-			getWaitlist.pop();
-		}
-	}
 
 	void enableAllDisablingProcesses(vector<Callback> &postLockActions) {
 		deque<DisableWaiter>::iterator it, end = disableWaitlist.end();

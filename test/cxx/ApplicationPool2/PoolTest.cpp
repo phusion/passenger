@@ -560,6 +560,63 @@ namespace tut {
 		ensure_equals(currentSession->getProcess()->pid, 3);
 		ensure_equals(group->getWaitlist.size(), 0u);
 	}
+
+	TEST_METHOD(12) {
+		// Test shutting down.
+		ensureMinProcesses(2);
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
+
+	TEST_METHOD(13) {
+		// Test shutting down while Group is restarting.
+		initPoolDebugging();
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		ensureMinProcesses(1);
+
+		ensure_equals(pool->restartGroupsByAppRoot("stub/rack"), 1u);
+		debug->debugger->recv("About to end restarting");
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
+
+	TEST_METHOD(14) {
+		// Test shutting down while Group is spawning.
+		initPoolDebugging();
+		Options options = createOptions();
+		
+		pool->asyncGet(options, callback);
+		debug->debugger->recv("Begin spawn loop iteration 1");
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
+
+	TEST_METHOD(15) {
+		// Test shutting down while SuperGroup is initializing.
+		initPoolDebugging();
+		debug->spawning = false;
+		debug->superGroup = true;
+		Options options = createOptions();
+
+		pool->asyncGet(options, callback);
+		debug->debugger->recv("About to finish SuperGroup initialization");
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
+
+	TEST_METHOD(16) {
+		// Test shutting down while SuperGroup is restarting.
+		initPoolDebugging();
+		debug->spawning = false;
+		debug->superGroup = true;
+		debug->messages->send("Proceed with initializing SuperGroup");
+		ensureMinProcesses(1);
+
+		ensure_equals(pool->restartSuperGroupsByAppRoot("stub/rack"), 1u);
+		debug->debugger->recv("About to finish SuperGroup restart");
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
 	
 	
 	/*********** Test asyncGet() behavior on multiple SuperGroups,

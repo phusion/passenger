@@ -95,6 +95,11 @@ public:
 		MessageBoxPtr debugger;
 		MessageBoxPtr messages;
 
+		// Choose aspects to debug.
+		bool restarting;
+		bool spawning;
+		bool superGroup;
+
 		// The following fields may only be accessed by Pool.
 		boost::mutex syncher;
 		unsigned int spawnLoopIteration;
@@ -102,6 +107,9 @@ public:
 		DebugSupport() {
 			debugger = make_shared<MessageBox>();
 			messages = make_shared<MessageBox>();
+			restarting = true;
+			spawning   = true;
+			superGroup = false;
 			spawnLoopIteration = 0;
 		}
 	};
@@ -317,6 +325,19 @@ public:
 		
 		getWaitlist = newWaitlist;
 	}
+
+	template<typename Queue>
+	static void assignExceptionToGetWaiters(Queue &getWaitlist,
+		const ExceptionPtr &exception,
+		vector<Callback> &postLockActions)
+	{
+		while (!getWaitlist.empty()) {
+			postLockActions.push_back(boost::bind(
+				getWaitlist.front().callback, SessionPtr(),
+				exception));
+			getWaitlist.pop();
+		}
+	}
 	
 	void possiblySpawnMoreProcessesForExistingGroups() {
 		StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = superGroups.end();
@@ -349,14 +370,6 @@ public:
 					}
 				}
 			}
-		}
-	}
-	
-	void migrateGroupGetWaitlistToPool(const GroupPtr &group) {
-		getWaitlist.reserve(getWaitlist.size() + group->getWaitlist.size());
-		while (!group->getWaitlist.empty()) {
-			getWaitlist.push_back(group->getWaitlist.front());
-			group->getWaitlist.pop();
 		}
 	}
 	
@@ -1119,6 +1132,11 @@ public:
 		}
 		return result;
 	}
+
+	unsigned int getSuperGroupCount() const {
+		LockGuard l(syncher);
+		return superGroups.size();
+	}
 	
 	SuperGroupPtr findSuperGroupBySecret(const string &secret, bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
@@ -1158,9 +1176,14 @@ public:
 				vector<Callback> actions;
 				shared_ptr<DetachSuperGroupWaitTicket> ticket =
 					make_shared<DetachSuperGroupWaitTicket>();
+				ExceptionPtr exception = copyException(
+					GetAbortedException("The containg SuperGroup was detached."));
 
 				forceDetachSuperGroup(superGroup, actions,
 					boost::bind(syncDetachSuperGroupCallback, _1, ticket));
+				assignExceptionToGetWaiters(superGroup->getWaitlist,
+					exception, actions);
+				#if 0
 				/* If this SuperGroup had get waiters, either
 				 * on itself or in one of its groups, then we must
 				 * reprocess them immediately. Detaching such a
@@ -1170,6 +1193,7 @@ public:
 				
 				UPDATE_TRACE_POINT();
 				assignSessionsToGetWaiters(actions);
+				#endif
 				possiblySpawnMoreProcessesForExistingGroups();
 				
 				verifyInvariants();
@@ -1256,6 +1280,42 @@ public:
 		} else {
 			return DR_NOOP;
 		}
+	}
+
+	unsigned int restartGroupsByAppRoot(const string &appRoot) {
+		ScopedLock l(syncher);
+		SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
+		unsigned int result = 0;
+
+		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+			const SuperGroupPtr &superGroup = sg_it->second;
+			foreach (const GroupPtr &group, superGroup->groups) {
+				if (group->options.appRoot == appRoot) {
+					result++;
+					if (!group->restarting()) {
+						group->restart(group->options);
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+
+	unsigned int restartSuperGroupsByAppRoot(const string &appRoot) {
+		ScopedLock l(syncher);
+		SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
+		unsigned int result = 0;
+
+		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
+			const SuperGroupPtr &superGroup = sg_it->second;
+			if (superGroup->options.appRoot == appRoot) {
+				result++;
+				superGroup->restart(superGroup->options);
+			}
+		}
+
+		return result;
 	}
 
 	/**
