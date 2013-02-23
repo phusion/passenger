@@ -25,6 +25,7 @@
 #include <typeinfo>
 #include <algorithm>
 #include <boost/make_shared.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/backtrace.hpp>
 #include <ApplicationPool2/Pool.h>
 #include <ApplicationPool2/SuperGroup.h>
@@ -199,9 +200,6 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	}
 	resetOptions(options);
 
-	detachedProcessesChecker.set(_superGroup->getPool()->libev->getLoop());
-	detachedProcessesChecker.set(0.01, 0.01);
-	detachedProcessesChecker.set<Group, &Group::onDetachedProcessesCheck>(this);
 	detachedProcessesCheckerActive = false;
 }
 
@@ -732,73 +730,81 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 }
 
 void
-Group::startCheckingDetachedProcesses() {
-	if (!detachedProcesses.empty() && !detachedProcessesCheckerActive) {
+Group::startCheckingDetachedProcesses(bool immediately) {
+	if (!detachedProcessesCheckerActive && !detachedProcesses.empty()) {
 		P_DEBUG("Starting detached processes checker");
-		getPool()->libev->start(detachedProcessesChecker);
+		getPool()->nonInterruptableThreads.create_thread(
+			boost::bind(&Group::detachedProcessesCheckerMain, this, shared_from_this()),
+			"Detached processes checker: " + name,
+			POOL_HELPER_THREAD_STACK_SIZE
+		);
 		detachedProcessesCheckerActive = true;
+	} else if (detachedProcessesCheckerActive && immediately) {
+		detachedProcessesCheckerCond.notify_all();
 	}
 }
 
 void
-Group::onDetachedProcessesCheck(ev::timer &timer, int revents) {
+Group::detachedProcessesCheckerMain(GroupPtr self) {
 	TRACE_POINT();
-	GroupPtr self = shared_from_this();
-	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
-	unique_lock<boost::mutex> lock(pool->syncher);
-	if (getLifeStatus() == SHUT_DOWN) {
-		P_DEBUG("Stopping detached processes checker");
-		timer.stop();
-		detachedProcessesCheckerActive = false;
-		return;
-	}
 
-	UPDATE_TRACE_POINT();
-	assert(detachedProcessesCheckerActive);
-	if (!detachedProcesses.empty()) {
-		P_TRACE(2, "Checking whether any detached processes have exited...");
-		ProcessList::iterator it = detachedProcesses.begin();
-		ProcessList::iterator end = detachedProcesses.end();
-		while (it != end) {
-			const ProcessPtr process = *it;
-			if (process->canBeShutDown()) {
-				it++;
-				P_DEBUG("Detached process " << process->inspect() << " has exited.");
-				shutdownAndRemoveProcess(process);
-			} else {
-				P_DEBUG("Detached process " << process->inspect() << " not yet exited. "
-					"sessions = " << process->sessions);
-				it++;
+	while (!this_thread::interruption_requested()) {
+		unique_lock<boost::mutex> lock(pool->syncher);
+		assert(detachedProcessesCheckerActive);
+
+		if (getLifeStatus() == SHUT_DOWN) {
+			P_DEBUG("Stopping detached processes checker");
+			detachedProcessesCheckerActive = false;
+			break;
+		}
+
+		UPDATE_TRACE_POINT();
+		if (!detachedProcesses.empty()) {
+			P_TRACE(2, "Checking whether any detached processes have exited...");
+			ProcessList::iterator it = detachedProcesses.begin();
+			ProcessList::iterator end = detachedProcesses.end();
+			while (it != end) {
+				const ProcessPtr process = *it;
+				if (process->canBeShutDown()) {
+					it++;
+					P_DEBUG("Detached process " << process->inspect() << " has exited.");
+					shutdownAndRemoveProcess(process);
+				} else {
+					P_DEBUG("Detached process " << process->inspect() << " not yet exited. "
+						"sessions = " << process->sessions);
+					it++;
+				}
 			}
 		}
-	}
 
-	if (detachedProcesses.empty()) {
 		UPDATE_TRACE_POINT();
-		P_DEBUG("Stopping detached processes checker");
-		timer.stop();
-		detachedProcessesCheckerActive = false;
-		if (shutdownCanFinish()) {
+		if (detachedProcesses.empty()) {
 			UPDATE_TRACE_POINT();
+			P_DEBUG("Stopping detached processes checker");
+			detachedProcessesCheckerActive = false;
+
 			vector<Callback> actions;
-			finishShutdown(actions);
+			if (shutdownCanFinish()) {
+				UPDATE_TRACE_POINT();
+				finishShutdown(actions);
+			}
+
 			verifyInvariants();
 			verifyExpensiveInvariants();
 			lock.unlock();
 			UPDATE_TRACE_POINT();
-			// One of the post lock actions given by finishShutdown()
-			// can be long-running, so to avoid blocking the event loop we
-			// run them in a thread.
-			pool->nonInterruptableThreads.create_thread(
-				boost::bind(Pool::runAllActionsWithCopy, actions),
-				"Group shutdown: " + name,
-				POOL_HELPER_THREAD_STACK_SIZE);
+			runAllActions(actions);
+			break;
 		} else {
 			UPDATE_TRACE_POINT();
 			verifyInvariants();
 			verifyExpensiveInvariants();
 		}
+
+		UPDATE_TRACE_POINT();
+		detachedProcessesCheckerCond.timed_wait(lock,
+			posix_time::milliseconds(10));
 	}
 }
 

@@ -37,7 +37,6 @@
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/dynamic_thread_group.hpp>
-#include <ev++.h>
 #include <cassert>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/ComponentInfo.h>
@@ -144,13 +143,14 @@ private:
 		SHUT_DOWN
 	} lifeStatus;
 
+	/** Contains the spawn loop thread and the restarter thread. */
 	dynamic_thread_group interruptableThreads;
 
 	/** This timer scans `detachedProcesses` periodically to see
 	 * whether any of the Processes can be shut down.
 	 */
-	ev::timer detachedProcessesChecker;
 	bool detachedProcessesCheckerActive;
+	condition_variable detachedProcessesCheckerCond;
 	Callback shutdownCallback;
 	GroupPtr selfPointer;
 	
@@ -179,8 +179,8 @@ private:
 		unsigned int restartsInitiated);
 	void finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
 		vector<Callback> postLockActions);
-	void startCheckingDetachedProcesses();
-	void onDetachedProcessesCheck(ev::timer &timer, int revents);
+	void startCheckingDetachedProcesses(bool immediately);
+	void detachedProcessesCheckerMain(GroupPtr self);
 	bool poolAtFullCapacity() const;
 	bool anotherGroupIsWaitingForCapacity() const;
 
@@ -276,7 +276,7 @@ private:
 		options.maxPreloaderIdleTime = other.maxPreloaderIdleTime;
 	}
 	
-	void runAllActions(const vector<Callback> &actions) {
+	static void runAllActions(const vector<Callback> &actions) {
 		vector<Callback>::const_iterator it, end = actions.end();
 		for (it = actions.begin(); it != end; it++) {
 			(*it)();
@@ -674,6 +674,7 @@ public:
 		P_DEBUG("Shutting down group " << name);
 		shutdownCallback = callback;
 		detachAll(postLockActions);
+		startCheckingDetachedProcesses(true);
 		interruptableThreads.interrupt_all();
 		postLockActions.push_back(boost::bind(doCleanupSpawner, spawner));
 		spawner.reset();
@@ -871,7 +872,7 @@ public:
 		if (process->canBeShutDown()) {
 			shutdownAndRemoveProcess(process);
 		} else {
-			startCheckingDetachedProcesses();
+			startCheckingDetachedProcesses(false);
 		}
 	}
 	
@@ -905,7 +906,7 @@ public:
 		disablingCount = 0;
 		disabledCount = 0;
 		clearDisableWaitlist(DR_NOOP, postLockActions);
-		startCheckingDetachedProcesses();
+		startCheckingDetachedProcesses(false);
 	}
 	
 	/**
