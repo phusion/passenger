@@ -36,6 +36,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/dynamic_thread_group.hpp>
 #include <oxt/backtrace.hpp>
 #include <ApplicationPool2/Common.h>
@@ -116,7 +117,7 @@ public:
 	unsigned int max;
 	unsigned long long maxIdleTime;
 	
-	ev::timer garbageCollectionTimer;
+	condition_variable garbageCollectionCond;
 	
 	/**
 	 * Code can register background threads in one of these dynamic thread groups
@@ -502,8 +503,23 @@ public:
 		return superGroups.get(options.getAppGroupName()).get();
 	}
 
-	void garbageCollect(ev::timer &timer, int revents) {
-		PoolPtr self = shared_from_this(); // Keep pool object alive.
+	static void garbageCollect(PoolPtr self) {
+		TRACE_POINT();
+		syscalls::usleep(5000000);
+		while (!this_thread::interruption_requested()) {
+			try {
+				UPDATE_TRACE_POINT();
+				unsigned long long sleepTime = self->realGarbageCollect();
+				ScopedLock lock(self->syncher);
+				self->garbageCollectionCond.timed_wait(lock,
+					posix_time::microseconds(sleepTime));
+			} catch (const tracable_exception &e) {
+				P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
+			}
+		}
+	}
+
+	unsigned long long realGarbageCollect() {
 		TRACE_POINT();
 		ScopedLock lock(syncher);
 		SuperGroupMap::iterator it, end = superGroups.end();
@@ -572,20 +588,20 @@ public:
 		lock.unlock();
 
 		// Schedule next garbage collection run.
-		ev_tstamp tstamp;
+		unsigned long long sleepTime;
 		if (nextGcRunTime == 0 || nextGcRunTime <= now) {
-			tstamp = maxIdleTime / 1000000.0;
+			sleepTime = maxIdleTime;
 		} else {
-			tstamp = (nextGcRunTime - now) / 1000000.0;
+			sleepTime = nextGcRunTime - now;
 		}
 		P_DEBUG("Garbage collection done; next garbage collect in " <<
-			std::fixed << std::setprecision(3) << tstamp << " sec");
+			std::fixed << std::setprecision(3) << (sleepTime / 1000000.0) << " sec");
 
 		UPDATE_TRACE_POINT();
 		runAllActions(actions);
 		UPDATE_TRACE_POINT();
 		actions.clear();
-		timer.start(tstamp, 0.0);
+		return sleepTime;
 	}
 
 	struct ProcessAnalyticsLogEntry {
@@ -791,10 +807,6 @@ public:
 		max         = 6;
 		maxIdleTime = 60 * 1000000;
 		
-		garbageCollectionTimer.set<Pool, &Pool::garbageCollect>(this);
-		garbageCollectionTimer.set(maxIdleTime / 1000000.0, 0.0);
-		libev->start(garbageCollectionTimer);
-
 		// The following code only serve to instantiate certain inline methods
 		// so that they can be invoked from gdb.
 		(void) SuperGroupPtr().get();
@@ -816,6 +828,11 @@ public:
 			"Pool analytics collector",
 			POOL_HELPER_THREAD_STACK_SIZE
 		);
+		interruptableThreads.create_thread(
+			boost::bind(garbageCollect, shared_from_this()),
+			"Pool garbage collector",
+			POOL_HELPER_THREAD_STACK_SIZE
+		);
 	}
 
 	void initDebugging() {
@@ -830,10 +847,6 @@ public:
 
 		lifeStatus = SHUTTING_DOWN;
 
-		lock.unlock();
-		libev->stop(garbageCollectionTimer);
-		lock.lock();
-		
 		while (!superGroups.empty()) {
 			string name = superGroups.begin()->second->name;
 			lock.unlock();
@@ -1039,18 +1052,10 @@ public:
 		}
 	}
 
-	void activateNewMaxIdleTime() {
-		LockGuard l(syncher);
-		garbageCollectionTimer.stop();
-		garbageCollectionTimer.start(maxIdleTime / 1000000.0, 0.0);
-	}
-
 	void setMaxIdleTime(unsigned long long value) {
-		{
-			LockGuard l(syncher);
-			maxIdleTime = value;
-		}
-		libev->run(boost::bind(&Pool::activateNewMaxIdleTime, this));
+		LockGuard l(syncher);
+		maxIdleTime = value;
+		garbageCollectionCond.notify_all();
 	}
 	
 	unsigned int utilization(bool lock = true) const {
