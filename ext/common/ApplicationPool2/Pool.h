@@ -117,7 +117,6 @@ public:
 	unsigned long long maxIdleTime;
 	
 	ev::timer garbageCollectionTimer;
-	ev::timer analyticsCollectionTimer;
 	
 	/**
 	 * Code can register background threads in one of these dynamic thread groups
@@ -597,11 +596,17 @@ public:
 
 	typedef shared_ptr<ProcessAnalyticsLogEntry> ProcessAnalyticsLogEntryPtr;
 
-	void collectAnalytics(ev::timer &timer, int revents) {
-		try {
-			realCollectAnalytics(timer);
-		} catch (const tracable_exception &e) {
-			P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
+	static void collectAnalytics(PoolPtr self) {
+		TRACE_POINT();
+		syscalls::usleep(3000000);
+		while (!this_thread::interruption_requested()) {
+			try {
+				UPDATE_TRACE_POINT();
+				unsigned long long sleepTime = self->realCollectAnalytics();
+				syscalls::usleep(sleepTime);
+			} catch (const tracable_exception &e) {
+				P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
+			}
 		}
 	}
 
@@ -630,14 +635,14 @@ public:
 		}
 	}
 
-	void realCollectAnalytics(ev::timer &timer) {
-		PoolPtr self = shared_from_this(); // Keep pool object alive.
+	unsigned long long realCollectAnalytics() {
 		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		vector<pid_t> pids;
 		unsigned int max;
 		
+		P_DEBUG("Collecting analytics");
 		// Collect all the PIDs.
 		{
 			UPDATE_TRACE_POINT();
@@ -735,11 +740,13 @@ public:
 		end:
 		// Sleep for about 4 seconds, aligned to seconds boundary
 		// for saving power on laptops.
-		ev_now_update(libev->getLoop());
 		unsigned long long currentTime = SystemTime::getUsec();
 		unsigned long long deadline =
 			roundUp<unsigned long long>(currentTime, 1000000) + 4000000;
-		timer.start((deadline - currentTime) / 1000000.0, 0.0);
+		P_DEBUG("Analytics collection done; next analytics collection in " <<
+			std::fixed << std::setprecision(3) << ((deadline - currentTime) / 1000000.0) <<
+			" sec");
+		return deadline - currentTime;
 	}
 	
 	SuperGroupPtr createSuperGroup(const Options &options) {
@@ -787,9 +794,6 @@ public:
 		garbageCollectionTimer.set<Pool, &Pool::garbageCollect>(this);
 		garbageCollectionTimer.set(maxIdleTime / 1000000.0, 0.0);
 		libev->start(garbageCollectionTimer);
-		analyticsCollectionTimer.set<Pool, &Pool::collectAnalytics>(this);
-		analyticsCollectionTimer.set(3.0, 0.0);
-		libev->start(analyticsCollectionTimer);
 
 		// The following code only serve to instantiate certain inline methods
 		// so that they can be invoked from gdb.
@@ -803,6 +807,15 @@ public:
 		if (lifeStatus != SHUT_DOWN) {
 			P_BUG("You must call Pool::destroy() before actually destroying the Pool object!");
 		}
+	}
+
+	void initialize() {
+		LockGuard l(syncher);
+		interruptableThreads.create_thread(
+			boost::bind(collectAnalytics, shared_from_this()),
+			"Pool analytics collector",
+			POOL_HELPER_THREAD_STACK_SIZE
+		);
 	}
 
 	void initDebugging() {
@@ -819,7 +832,6 @@ public:
 
 		lock.unlock();
 		libev->stop(garbageCollectionTimer);
-		libev->stop(analyticsCollectionTimer);
 		lock.lock();
 		
 		while (!superGroups.empty()) {

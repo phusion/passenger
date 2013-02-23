@@ -41,6 +41,7 @@ namespace tut {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation);
 			pool = make_shared<Pool>(bg.safe.get(), spawnerFactory);
+			pool->initialize();
 			serverFilename = generation->getPath() + "/server";
 			requestSocket = createUnixServer(serverFilename);
 			setNonBlocking(requestSocket);

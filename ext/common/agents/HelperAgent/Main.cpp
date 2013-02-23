@@ -371,6 +371,7 @@ public:
 			resourceLocator, generation, randomGenerator);
 		pool = make_shared<Pool>(poolLoop.safe.get(), spawnerFactory, loggerFactory,
 			randomGenerator);
+		pool->initialize();
 		pool->setMax(options.maxPoolSize);
 		//pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(options.poolIdleTime * 1000000);
