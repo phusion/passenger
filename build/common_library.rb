@@ -200,5 +200,6 @@ end
 
 libboost_oxt_cflags = ""
 libboost_oxt_cflags << " -faddress-sanitizer" if USE_ASAN
+libboost_oxt_cflags.strip!
 LIBBOOST_OXT = define_libboost_oxt_task("common", COMMON_OUTPUT_DIR + "libboost_oxt", libboost_oxt_cflags)
-COMMON_LIBRARY.define_tasks
+COMMON_LIBRARY.define_tasks(libboost_oxt_cflags)
