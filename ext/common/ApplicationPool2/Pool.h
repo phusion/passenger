@@ -505,7 +505,11 @@ public:
 
 	static void garbageCollect(PoolPtr self) {
 		TRACE_POINT();
-		syscalls::usleep(5000000);
+		{
+			ScopedLock lock(self->syncher);
+			self->garbageCollectionCond.timed_wait(lock,
+				posix_time::seconds(5));
+		}
 		while (!this_thread::interruption_requested()) {
 			try {
 				UPDATE_TRACE_POINT();
@@ -513,6 +517,8 @@ public:
 				ScopedLock lock(self->syncher);
 				self->garbageCollectionCond.timed_wait(lock,
 					posix_time::microseconds(sleepTime));
+			} catch (const thread_interrupted &) {
+				break;
 			} catch (const tracable_exception &e) {
 				P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
 			}
@@ -620,6 +626,8 @@ public:
 				UPDATE_TRACE_POINT();
 				unsigned long long sleepTime = self->realCollectAnalytics();
 				syscalls::usleep(sleepTime);
+			} catch (const thread_interrupted &) {
+				break;
 			} catch (const tracable_exception &e) {
 				P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
 			}
@@ -644,8 +652,9 @@ public:
 			// If the process is missing from 'allMetrics' then either 'ps'
 			// failed or the process really is gone. We double check by sending
 			// it a signal.
-			} else if (!process->osProcessExists()) {
-				P_WARN("Process " << process->inspect() << " no longer exists! Detaching it from the pool.");
+			} else if (!process->dummy && !process->osProcessExists()) {
+				P_WARN("Process " << process->inspect() << " no longer exists! "
+					"Detaching it from the pool.");
 				processesToDetach.push_back(process);
 			}
 		}
