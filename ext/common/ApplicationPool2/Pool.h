@@ -1379,8 +1379,8 @@ public:
 		return result.str();
 	}
 
-	string toXml(bool includeSecrets = true) const {
-		LockGuard l(syncher);
+	string toXml(bool includeSecrets = true, bool lock = true) const {
+		DynamicScopedLock l(syncher, lock);
 		stringstream result;
 		SuperGroupMap::const_iterator sg_it;
 		vector<GroupPtr>::const_iterator g_it;
