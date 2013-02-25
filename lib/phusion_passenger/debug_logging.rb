@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -98,10 +98,17 @@ module DebugLogging
 			now = Time.now
 			time_str = now.strftime("%Y-%m-%d %H:%M:%S.")
 			time_str << sprintf("%04d", now.usec / 100)
-			if thread_name = Thread.current[:name]
+
+			current_thread = Thread.current
+			if !(thread_id = current_thread[:id])
+				current_thread.to_s =~ /:(0x[0-9a-f]+)/i
+				thread_id = current_thread[:id] = $1 || '?'
+			end
+			if thread_name = current_thread[:name]
 				thread_name = "(#{thread_name})"
 			end
-			output.write("[ pid=#{$$} thr=0x#{Thread.current.object_id.to_s(16)}#{thread_name} file=#{location} time=#{time_str} ]: #{message}\n")
+
+			output.write("[ #{$$}/#{thread_id}#{thread_name} #{time_str} #{location} ]: #{message}\n")
 			output.flush
 		end
 	end
