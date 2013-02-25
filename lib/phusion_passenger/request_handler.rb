@@ -434,6 +434,8 @@ private
 
 		# Actually start all the threads.
 		thread_handler = @thread_handler
+		expected_nthreads = 0
+
 		@threads_mutex.synchronize do
 			@concurrency.times do |i|
 				thread = Thread.new(i) do |number|
@@ -448,14 +450,17 @@ private
 						end
 						handler.main_loop
 					ensure
-						initialization_state_mutex.synchronize do
-							initialization_state[Thread.current] = false
-							initialization_state_cond.signal
+						RobustInterruption.disable_interruptions do
+							initialization_state_mutex.synchronize do
+								initialization_state[Thread.current] = false
+								initialization_state_cond.signal
+							end
+							unregister_current_thread
 						end
-						unregister_current_thread
 					end
 				end
 				@threads << thread
+				expected_nthreads += 1
 			end
 
 			thread = Thread.new do
@@ -463,18 +468,29 @@ private
 				begin
 					Thread.current[:name] = "HTTP helper worker"
 					handler = thread_handler.new(self, http_socket_options)
+					initialization_state_mutex.synchronize do
+						initialization_state[Thread.current] = true
+						initialization_state_cond.signal
+					end
 					handler.install
 					handler.main_loop
 				ensure
-					unregister_current_thread
+					RobustInterruption.disable_interruptions do
+						initialization_state_mutex.synchronize do
+							initialization_state[Thread.current] = false
+							initialization_state_cond.signal
+						end
+						unregister_current_thread
+					end
 				end
 			end
 			@threads << thread
+			expected_nthreads += 1
 		end
 
 		# Wait until all threads have finished starting.
 		initialization_state_mutex.synchronize do
-			while initialization_state.size != @concurrency
+			while initialization_state.size != expected_nthreads
 				initialization_state_cond.wait(initialization_state_mutex)
 			end
 		end
