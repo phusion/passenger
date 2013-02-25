@@ -468,11 +468,11 @@ private
 				begin
 					Thread.current[:name] = "HTTP helper worker"
 					handler = thread_handler.new(self, http_socket_options)
+					handler.install
 					initialization_state_mutex.synchronize do
 						initialization_state[Thread.current] = true
 						initialization_state_cond.signal
 					end
-					handler.install
 					handler.main_loop
 				ensure
 					RobustInterruption.disable_interruptions do
