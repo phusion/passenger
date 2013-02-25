@@ -178,21 +178,17 @@
 
 6.16. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
 
-6.16.1. RailsAutoDetect <on|off>	=>	railsautodetect-on-off--tpigsd
+6.16.1. RailsBaseURI <uri>	=>	railsbaseuri-uri--1txrw3k
 
-6.16.2. RailsBaseURI <uri>	=>	railsbaseuri-uri--1txrw3k
-
-6.16.3. RailsEnv <string>	=>	railsenv-string--1b0xxvu
+6.16.2. RailsEnv <string>	=>	railsenv-string--1b0xxvu
 
 6.17. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
 
-6.17.1. RackAutoDetect <on|off>	=>	rackautodetect-on-off--vl1lxy
+6.17.1. RackBaseURI <uri>	=>	rackbaseuri-uri--1to24pj
 
-6.17.2. RackBaseURI <uri>	=>	rackbaseuri-uri--1to24pj
+6.17.2. RackEnv <string>	=>	rackenv-string--vve9py
 
-6.17.3. RackEnv <string>	=>	rackenv-string--vve9py
-
-6.18. Deprecated options	=>	deprecated-options-pm9m57
+6.18. Deprecated or removed options	=>	deprecated-options-pm9m57
 
 6.18.1. RailsRuby	=>	railsruby-ht09ei
 
@@ -203,6 +199,8 @@
 6.18.4. RailsAllowModRewrite	=>	railsallowmodrewrite-1vkziro
 
 6.18.5. RailsSpawnMethod	=>	railsspawnmethod-1aljgpa
+
+6.18.6. RailsAutoDetect, RackAutoDetect and WsgiAutoDetect	=>	railsautodetect-rackautodetect-and-wsgiautodetect-1qgakzs
 
 7. Troubleshooting	=>	troubleshooting-2ihihi
 
