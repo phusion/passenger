@@ -39,8 +39,6 @@ require 'phusion_passenger/platform_info/cxx_portability'
 include PhusionPassenger
 include PhusionPassenger::PlatformInfo
 
-require 'build/packagetask'
-require 'build/gempackagetask'
 require 'build/rake_extensions'
 require 'build/cplusplus_support'
 

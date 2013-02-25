@@ -21,6 +21,11 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+task :clobber => 'package:clean'
+
+desc "Build the gem and tarball"
+task 'package' => ['package:gem', 'package:tarball']
+
 task 'package:check' do
 	require 'phusion_passenger'
 	
@@ -30,65 +35,46 @@ task 'package:check' do
 	end
 end
 
-spec = Gem::Specification.new do |s|
-	s.platform = Gem::Platform::RUBY
-	s.homepage = "https://www.phusionpassenger.com/"
-	s.summary = "Easy and robust Ruby web application deployment"
-	s.name = "passenger"
-	s.version = VERSION_STRING
-	s.rubyforge_project = "passenger"
-	s.author = "Phusion - http://www.phusion.nl/"
-	s.email = "info@phusion.nl"
-	s.require_paths = ["lib"]
-	s.add_dependency 'rake', '>= 0.8.1'
-	s.add_dependency 'daemon_controller', '>= 1.1.0'
-	s.add_dependency 'rack'
-	s.files = FileList[*Packaging::GLOB] - FileList[*Packaging::EXCLUDE_GLOB]
-	s.executables = Packaging::USER_EXECUTABLES + Packaging::SUPER_USER_EXECUTABLES
-	s.description = "Easy and robust Ruby web application deployment."
+desc "Build the gem"
+task 'package:gem' => [:doc, 'package:check'] do
+	require 'phusion_passenger'
+	sh "gem build passenger.gemspec"
+	sh "mkdir -p pkg"
+	sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem pkg/"
 end
 
-Rake::GemPackageTask.new(spec) do |pkg|
-	pkg.need_tar_gz = true
-end
+desc "Build the tarball"
+task 'package:tarball' => [:doc, 'package:check'] do
+	require 'phusion_passenger'
+	require 'fileutils'
 
-task 'package:filelist' do
-	# The package:filelist task is used by Phusion Passenger Lite
-	# to obtain a list of files that it must copy to a temporary
-	# directory in order to compile Nginx and to compile Phusion
-	# Passenger. The original Phusion Passenger sources might not
-	# be writiable, e.g. when installed via a gem as root, hence
-	# the reason for copying.
-	#
-	# The Asciidoc HTML files are in the packaging list, but
-	# they're auto-generated and aren't included in the source
-	# repository, so here we ensure that they exist. This is
-	# generally only for people who are developing Phusion
-	# Passenger itself; users who installed Phusion Passenger
-	# via a gem, tarball or native package already have the
-	# HTML files.
-	#
-	# The reason why we don't just specify Packaging::ASCII_DOCS
-	# as a task dependency is because we only want to generate
-	# the HTML files if they don't already exist; we don't want
-	# to regenerate if they exist but their source .txt files
-	# are modified. When the user installs Phusion Passenger
-	# via a gem/tarball/package, all file timestamps are set
-	# to the current clock time, which could lead Rake into
-	# thinking that the source .txt files are modified. Since
-	# the user probably has no write permission to the original
-	# Phusion Passenger sources we want to avoid trying to
-	# regenerate the HTML files.
-	Packaging::ASCII_DOCS.each do |ascii_doc|
-		Rake::Task[ascii_doc].invoke if !File.exist?(ascii_doc)
+	basename = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
+	sh "rm -rf pkg/#{basename}"
+	sh "mkdir -p pkg/#{basename}"
+	files = Dir[*PhusionPassenger::Packaging::GLOB] -
+		Dir[*PhusionPassenger::Packaging::EXCLUDE_GLOB]
+	files.each_with_index do |filename, i|
+		dir = File.dirname(filename)
+		if !File.exist?("pkg/#{basename}/#{dir}")
+			FileUtils.mkdir_p("pkg/#{basename}/#{dir}")
+		end
+		if !File.directory?(filename)
+			FileUtils.install(filename, "pkg/#{basename}/#{filename}")
+		end
+		printf "\r[%5d/%5d] [%3.0f%%] Copying files...", i, files.size, i * 100.0 / files.size
+		STDOUT.flush
 	end
-	puts spec.files
+	puts
+	sh "cd pkg && tar -c #{basename} | gzip --best > #{basename}.tar.gz"
+	sh "rm -rf pkg/#{basename}"
 end
 
-Rake::Task['package'].prerequisites.unshift(:doc, 'package:check')
-Rake::Task['package:gem'].prerequisites.unshift(:doc, 'package:check')
-Rake::Task['package:force'].prerequisites.unshift(:doc, 'package:check')
-task :clobber => 'package:clean'
+desc "Remove gem and tarball"
+task 'package:clean' do
+	require 'phusion_passenger'
+	sh "rm -f #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem"
+	sh "rm -f #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.tar.gz"
+end
 
 desc "Create a fakeroot, useful for building native packages"
 task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do

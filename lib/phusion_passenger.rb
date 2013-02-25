@@ -28,6 +28,8 @@ module PhusionPassenger
 	
 	###### Version numbers ######
 	
+	PACKAGE_NAME = 'passenger'
+	
 	# Phusion Passenger version number. Don't forget to edit ext/common/Constants.h too.
 	VERSION_STRING = '3.9.3.rc1'
 	
