@@ -22,11 +22,14 @@ AGENTS_DIR = "#{source_root}/agents"
 $LOAD_PATH.unshift("#{source_root}/lib")
 $LOAD_PATH.unshift("#{source_root}/test")
 
+require 'thread'
+require 'timeout'
 require 'fileutils'
 require 'support/test_helper'
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 require 'phusion_passenger/debug_logging'
+require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/tmpdir'
 
 include TestHelper
@@ -36,8 +39,53 @@ include TestHelper
 srand
 
 trap "QUIT" do
-	puts caller
+	STDERR.puts PhusionPassenger::Utils.global_backtrace_report
 end
+
+class DeadlineTimer
+	def initialize(main_thread, deadline)
+		@mutex = Mutex.new
+		@cond  = ConditionVariable.new
+		@iteration = 0
+		@pipe  = IO.pipe
+
+		@thread = Thread.new do
+			Thread.current.abort_on_exception = true
+			expected_iteration = 1
+			ios = [@pipe[0]]
+			while true
+				@mutex.synchronize do
+					while @iteration != expected_iteration
+						@cond.wait(@mutex)
+					end
+				end
+				if !select(ios, nil, nil, deadline)
+					STDERR.puts "*** Test timed out (#{deadline} seconds)"
+					STDERR.puts PhusionPassenger::Utils.global_backtrace_report
+					main_thread.raise(Timeout::Error, "Test timed out")
+					expected_iteration += 1
+				elsif @pipe[0].read(1).nil?
+					break
+				else
+					expected_iteration += 1
+				end
+			end
+		end
+	end
+
+	def start
+		@mutex.synchronize do
+			@iteration += 1
+			@cond.signal
+		end
+	end
+
+	def stop
+		@pipe[1].write('x')
+	end
+end
+
+DEADLINE_TIMER = DeadlineTimer.new(Thread.current, 30)
 
 RSpec.configure do |config|
 	config.before(:each) do
@@ -48,6 +96,8 @@ RSpec.configure do |config|
 		
 		# Create the temp directory.
 		PhusionPassenger::Utils.passenger_tmpdir
+
+		DEADLINE_TIMER.start
 	end
 	
 	config.after(:each) do
@@ -55,5 +105,6 @@ RSpec.configure do |config|
 		if File.exist?(tmpdir)
 			remove_dir_tree(tmpdir)
 		end
+		DEADLINE_TIMER.stop
 	end
 end
