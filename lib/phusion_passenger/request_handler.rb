@@ -431,6 +431,15 @@ private
 		initialization_state_mutex = Mutex.new
 		initialization_state_cond = ConditionVariable.new
 		initialization_state = {}
+		set_initialization_state = lambda do |value|
+			initialization_state_mutex.synchronize do
+				initialization_state[Thread.current] = value
+				initialization_state_cond.signal
+			end
+		end
+		set_initialization_state_to_true = lambda do
+			set_initialization_state.call(true)
+		end
 
 		# Actually start all the threads.
 		thread_handler = @thread_handler
@@ -444,17 +453,10 @@ private
 						Thread.current[:name] = "Worker #{number + 1}"
 						handler = thread_handler.new(self, main_socket_options)
 						handler.install
-						initialization_state_mutex.synchronize do
-							initialization_state[Thread.current] = true
-							initialization_state_cond.signal
-						end
-						handler.main_loop
+						handler.main_loop(set_initialization_state_to_true)
 					ensure
 						RobustInterruption.disable_interruptions do
-							initialization_state_mutex.synchronize do
-								initialization_state[Thread.current] = false
-								initialization_state_cond.signal
-							end
+							set_initialization_state.call(false)
 							unregister_current_thread
 						end
 					end
@@ -469,17 +471,10 @@ private
 					Thread.current[:name] = "HTTP helper worker"
 					handler = thread_handler.new(self, http_socket_options)
 					handler.install
-					initialization_state_mutex.synchronize do
-						initialization_state[Thread.current] = true
-						initialization_state_cond.signal
-					end
-					handler.main_loop
+					handler.main_loop(set_initialization_state_to_true)
 				ensure
 					RobustInterruption.disable_interruptions do
-						initialization_state_mutex.synchronize do
-							initialization_state[Thread.current] = false
-							initialization_state_cond.signal
-						end
+						set_initialization_state.call(false)
 						unregister_current_thread
 					end
 				end
