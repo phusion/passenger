@@ -38,7 +38,7 @@ end
 desc "Build the gem"
 task 'package:gem' => [:doc, 'package:check'] do
 	require 'phusion_passenger'
-	sh "gem build passenger.gemspec"
+	sh "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec"
 	sh "mkdir -p pkg"
 	sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem pkg/"
 end
