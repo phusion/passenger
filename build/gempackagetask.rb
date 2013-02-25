@@ -9,7 +9,12 @@ require 'rubygems'
 require 'rake'
 require 'build/packagetask'
 require 'rubygems/user_interaction'
-require 'rubygems/builder'
+
+if /^2\./ =~ RUBY_VERSION
+  require 'rubygems/package'
+else
+  require 'rubygems/builder'
+end
 
 module Rake
 
@@ -79,7 +84,11 @@ module Rake
       task 'package:gem' => ["#{package_dir}/#{gem_file}"]
       file "#{package_dir}/#{gem_file}" => [package_dir] + @gem_spec.files do
         when_writing("Creating GEM") {
-          Gem::Builder.new(gem_spec).build
+          if /^2\./ =~ RUBY_VERSION
+            Gem::Package.build(gem_spec)
+          else
+            Gem::Builder.new(gem_spec).build
+          end
           verbose(true) {
             mv gem_file, "#{package_dir}/#{gem_file}"
           }
