@@ -214,6 +214,7 @@ describe RequestHandler do
 			send_binary_request(client,
 				"REQUEST_METHOD" => "GET",
 				"PATH_INFO" => "/")
+			sleep 0.1 # Give it some time to handle the request.
 			stop_request_handler
 			client.read.should == "Hijacked response!"
 		ensure
