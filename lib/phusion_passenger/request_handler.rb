@@ -449,13 +449,14 @@ private
 			@concurrency.times do |i|
 				thread = Thread.new(i) do |number|
 					Thread.current.abort_on_exception = true
-					begin
-						Thread.current[:name] = "Worker #{number + 1}"
-						handler = thread_handler.new(self, main_socket_options)
-						handler.install
-						handler.main_loop(set_initialization_state_to_true)
-					ensure
-						RobustInterruption.disable_interruptions do
+					RobustInterruption.install
+					RobustInterruption.disable_interruptions do
+						begin
+							Thread.current[:name] = "Worker #{number + 1}"
+							handler = thread_handler.new(self, main_socket_options)
+							handler.install
+							handler.main_loop(set_initialization_state_to_true)
+						ensure
 							set_initialization_state.call(false)
 							unregister_current_thread
 						end
@@ -467,13 +468,14 @@ private
 
 			thread = Thread.new do
 				Thread.current.abort_on_exception = true
-				begin
-					Thread.current[:name] = "HTTP helper worker"
-					handler = thread_handler.new(self, http_socket_options)
-					handler.install
-					handler.main_loop(set_initialization_state_to_true)
-				ensure
-					RobustInterruption.disable_interruptions do
+				RobustInterruption.install
+				RobustInterruption.disable_interruptions do
+					begin
+						Thread.current[:name] = "HTTP helper worker"
+						handler = thread_handler.new(self, http_socket_options)
+						handler.install
+						handler.main_loop(set_initialization_state_to_true)
+					ensure
 						set_initialization_state.call(false)
 						unregister_current_thread
 					end

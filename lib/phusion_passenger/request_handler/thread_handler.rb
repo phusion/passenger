@@ -98,12 +98,10 @@ class ThreadHandler
 		buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
 		
 		begin
-			disable_interruptions do
-				finish_callback.call
-				while !Utils::RobustInterruption.interrupted?
-					hijacked = accept_and_process_next_request(socket_wrapper, channel, buffer)
-					socket_wrapper = Utils::UnseekableSocket.new if hijacked
-				end
+			finish_callback.call
+			while !Utils::RobustInterruption.interrupted?
+				hijacked = accept_and_process_next_request(socket_wrapper, channel, buffer)
+				socket_wrapper = Utils::UnseekableSocket.new if hijacked
 			end
 		rescue Utils::RobustInterruption::Interrupted
 			# Do nothing.
