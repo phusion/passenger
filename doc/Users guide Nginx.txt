@@ -463,15 +463,23 @@ This required option may only occur once, in the 'http' configuration block.
 === passenger_ruby <filename> ===
 This option allows one to specify the Ruby interpreter to use.
 
+Since version 4.0.0, this option may occur in the following places:
+
  * In the 'http' configuration block.
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-In each place, it may be specified at most once. The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
+If you want to use a different Ruby interpreter for two different applications then you should define different `passenger_ruby` directives in different 'http' blocks.
+
+In versions prior to 4.0.0, only a single Ruby version is supported for the entire Nginx instance, so `passenger_ruby` may only occur in the 'http' configuration block.
+
+The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
 
 [[PassengerAppRoot]]
 === passenger_app_root <path/to/root> ===
+:version: 4.0.0
+include::users_guide_snippets/since_version.txt[]
 By default, Phusion Passenger assumes that the application's root directory
 is the parent directory of the 'public' directory. This option allows one to
 specify the application's root independently from the Nginx 'root', which
