@@ -535,6 +535,14 @@ typedef shared_ptr<Client> ClientPtr;
 
 
 class RequestHandler {
+public:
+	enum BenchmarkPoint {
+		BP_NONE,
+		BP_AFTER_CHECK_CONNECT_PASSWORD,
+		BP_AFTER_PARSING_HEADER,
+		BP_BEFORE_CHECKOUT_SESSION
+	};
+
 private:
 	friend class Client;
 	typedef UnionStation::LoggerFactory LoggerFactory;
@@ -628,6 +636,31 @@ private:
 		}
 	}
 
+	void writeSimpleResponse(const ClientPtr &client, const StaticString &data) {
+		char header[256];
+		char *pos = header;
+		const char *end = header + sizeof(header) - 1;
+
+		if (getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
+			pos = appendData(pos, end, "HTTP/1.1 200 OK\r\n");
+		}
+		pos += snprintf(pos, end - pos,
+			"Status: 200 OK\r\n"
+			"Content-Length: %lu\r\n"
+			"Content-Type: text/html; charset=UTF-8\r\n"
+			"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+			"\r\n",
+			(unsigned long) data.size());
+
+		client->clientOutputPipe->write(header, pos - header);
+		client->clientOutputPipe->write(data.data(), data.size());
+		client->clientOutputPipe->end();
+
+		if (client->useUnionStation()) {
+			client->logMessage("Status: 200 OK");
+		}
+	}
+
 	void writeErrorResponse(const ClientPtr &client, const StaticString &message, const SpawnException *e = NULL) {
 		assert(client->state < Client::FORWARDING_BODY_TO_APP);
 		client->state = Client::WRITING_SIMPLE_RESPONSE;
@@ -694,6 +727,22 @@ private:
 		if (client->useUnionStation()) {
 			client->logMessage("Status: 500 Internal Server Error");
 			// TODO: record error message
+		}
+	}
+
+	static BenchmarkPoint getDefaultBenchmarkPoint() {
+		const char *val = getenv("PASSENGER_REQUEST_HANDLER_BENCHMARK_POINT");
+		if (val == NULL || *val == '\0') {
+			return BP_NONE;
+		} else if (strcmp(val, "after_check_connect_password") == 0) {
+			return BP_AFTER_CHECK_CONNECT_PASSWORD;
+		} else if (strcmp(val, "after_parsing_header") == 0) {
+			return BP_AFTER_PARSING_HEADER;
+		} else if (strcmp(val, "before_checkout_session") == 0) {
+			return BP_BEFORE_CHECKOUT_SESSION;
+		} else {
+			P_WARN("Invalid RequestHandler benchmark point requested: " << val);
+			return BP_NONE;
 		}
 	}
 
@@ -1410,6 +1459,10 @@ private:
 			client->state = Client::READING_HEADER;
 			client->freeBufferedConnectPassword();
 			client->timeoutTimer.stop();
+
+			if (benchmarkPoint == BP_AFTER_CHECK_CONNECT_PASSWORD) {
+				writeSimpleResponse(client, "Benchmark point: after_check_connect_password\n");
+			}
 		} else {
 			disconnectWithError(client, "wrong connect password");
 		}
@@ -1623,6 +1676,11 @@ private:
 				return consumed;
 			}
 
+			if (benchmarkPoint == BP_AFTER_PARSING_HEADER) {
+				writeSimpleResponse(client, "Benchmark point: after_parsing_header\n");
+				return consumed;
+			}
+
 			bool modified = modifyClientHeaders(client);
 			/* TODO: in case the headers are not modified, we only need to rebuild the header data
 			 * right now because the scgiParser buffer is invalidated as soon as onClientData exits.
@@ -1735,13 +1793,17 @@ private:
 	}
 
 	void checkoutSession(const ClientPtr &client) {
-		RH_TRACE(client, 2, "Checking out session: appRoot=" << client->options.appRoot);
-		client->state = Client::CHECKING_OUT_SESSION;
-		client->beginScopeLog(&client->scopeLogs.getFromPool, "get from pool");
-		pool->asyncGet(client->options, boost::bind(&RequestHandler::sessionCheckedOut,
-			this, client, _1, _2));
-		if (!client->sessionCheckedOut) {
-			client->backgroundOperations++;
+		if (benchmarkPoint != BP_BEFORE_CHECKOUT_SESSION) {
+			RH_TRACE(client, 2, "Checking out session: appRoot=" << client->options.appRoot);
+			client->state = Client::CHECKING_OUT_SESSION;
+			client->beginScopeLog(&client->scopeLogs.getFromPool, "get from pool");
+			pool->asyncGet(client->options, boost::bind(&RequestHandler::sessionCheckedOut,
+				this, client, _1, _2));
+			if (!client->sessionCheckedOut) {
+				client->backgroundOperations++;
+			}
+		} else {
+			writeSimpleResponse(client, "Benchmark point: before_checkout_session\n");
 		}
 	}
 
@@ -2125,6 +2187,8 @@ public:
 	// For unit testing purposes.
 	unsigned int connectPasswordTimeout; // milliseconds
 
+	BenchmarkPoint benchmarkPoint;
+
 	RequestHandler(const SafeLibevPtr &_libev,
 		const FileDescriptor &_requestSocket,
 		const PoolPtr &_pool,
@@ -2133,7 +2197,8 @@ public:
 		  requestSocket(_requestSocket),
 		  pool(_pool),
 		  options(_options),
-		  resourceLocator(_options.passengerRoot)
+		  resourceLocator(_options.passengerRoot),
+		  benchmarkPoint(getDefaultBenchmarkPoint())
 	{
 		accept4Available = true;
 		connectPasswordTimeout = 15000;
