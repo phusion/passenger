@@ -1,17 +1,17 @@
 Release 3.9.3 (4.0.0 release candidate 1)
 -----------------------------------------
 
- * Fixed Python 3 compatibility.
- * [Nginx] Support passenger_app_root config option
- * The build system can now be invoked using JRuby.
- * The installers now print a lot more information about
-   detected system settings so that the user can see
-   whether something has been wrongly detected.
- * Performance optimizations.
- * Many documentation fixes and bug fixes.
- * PassengerMemoryLimit now works on non-Ruby apps as well.
- * Phusion Passenger will now automatically detect processes that have been killed without needing to send a request to it first.
- * [Standalone] HTTP client body limit has been raised from 50 MB to 1 GB.
+ * The Nginx version now supports the `passenger_app_root` configuration option.
+ * The Enterprise memory limiting feature has been extended to work with non-Ruby applications as well.
+ * Application processes that have been killed are now automatically detected within 5 seconds. Previously Phusion Passenger needed to send a request to the process before detecting that it's gone. This change means that when you kill a process by sending it a signal, Phusion Passenger will automatically respawn it within 5 seconds (provided that the process limit settings allow respawning).
+ * Phusion Passenger Standalone's HTTP client body limit has been raised from 50 MB to 1 GB.
+ * Python 3 support has been added.
+ * The build system has been made compatible with JRuby and Ruby 2.0.
+ * The installers now print a lot more information about detected system settings so that the user can see  whether something has been wrongly detected.
+ * Some performance optimizations. These involve further extending the zero-copy architecture, and the use of hash table maps instead of binary tree maps.
+ * Many potential crasher and freezer bugs have been fixed.
+ * Error diagnostics have been further improved.
+ * Many documentation improvements.
 
 
 Release 3.9.2 (4.0.0 beta 2)
