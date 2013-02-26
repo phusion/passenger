@@ -686,7 +686,7 @@ private:
 		str << "Cache-Control: no-cache, no-store, must-revalidate\r\n";
 		str << "\r\n";
 
-		const string &header = str.str();
+		const string header = str.str();
 		client->clientOutputPipe->write(header.data(), header.size());
 		client->clientOutputPipe->write(data.data(), data.size());
 		client->clientOutputPipe->end();
