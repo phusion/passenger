@@ -193,7 +193,7 @@ public
 	
 	def self.try_compile_and_run(description, language, source, flags = nil)
 		extension = detect_language_extension(language)
-		create_temp_file("passenger-run-check.#{extension}") do |filename, f|
+		create_temp_file("passenger-run-check.#{extension}", tmpexedir) do |filename, f|
 			f.puts(source)
 			f.close
 			begin
