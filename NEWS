@@ -1,3 +1,9 @@
+Release 3.9.5 (4.0.0 release candidate 3)
+-----------------------------------------
+
+ * Fixed Rake autodetection.
+
+
 Release 3.9.4 (4.0.0 release candidate 2)
 -----------------------------------------
 
