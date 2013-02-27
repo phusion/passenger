@@ -557,13 +557,15 @@ runCustomDiagnosticsDumper(AbortHandlerState &state, void *userData) {
 	customDiagnosticsDumper(customDiagnosticsDumperUserData);
 }
 
+// This function is performed in a child process.
 static void
 dumpDiagnostics(AbortHandlerState &state) {
 	char *messageBuf = state.messageBuf;
 	char *end;
+	pid_t pid;
 
-	// Dump human-readable time string.
-	pid_t pid = asyncFork();
+	// Dump human-readable time string and string.
+	pid = asyncFork();
 	if (pid == 0) {
 		execlp("date", "date", (const char * const) 0);
 		_exit(1);
@@ -573,9 +575,26 @@ dumpDiagnostics(AbortHandlerState &state) {
 		waitpid(pid, NULL, 0);
 	}
 
+	// Dump system uname.
+	pid = asyncFork();
+	if (pid == 0) {
+		execlp("uname", "uname", "-mprsv", (const char * const) 0);
+		_exit(1);
+	} else if (pid == -1) {
+		safePrintErr("ERROR: Could not fork a process to dump the uname!\n");
+	} else {
+		waitpid(pid, NULL, 0);
+	}
+
+	end = messageBuf;
+	end = appendText(end, state.messagePrefix);
+	end = appendText(end, " ] Phusion Passenger version: " PASSENGER_VERSION "\n");
+	write(STDERR_FILENO, messageBuf, end - messageBuf);
+
 	if (lastAssertionFailure.filename != NULL) {
 		end = messageBuf;
-		end = appendText(end, "Last assertion failure: (");
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] Last assertion failure: (");
 		end = appendText(end, lastAssertionFailure.expression);
 		end = appendText(end, "), ");
 		if (lastAssertionFailure.function != NULL) {
