@@ -21,7 +21,7 @@
 		spawner = createSpawner(options)
 
 	#define RUN_USER_SWITCHING_TEST() \
-		spawner->spawn(options); \
+		process = spawner->spawn(options); \
 		BufferedIO io(FileDescriptor(open("/tmp/info.txt", O_RDONLY))); \
 		uid_t uid = (uid_t) atol(io.readLine().c_str()); \
 		gid_t gid = (gid_t) atol(io.readLine().c_str()); \
