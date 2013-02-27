@@ -219,6 +219,9 @@ task 'test:cxx' => dependencies do
 	elsif boolean_option('VALGRIND')
 		command = "valgrind --dsymutil=yes --db-attach=yes --child-silent-after-fork=yes #{command}"
 	end
+	if boolean_option('SUDO')
+		command = "sudo #{command}"
+	end
 	if boolean_option('REPEAT')
 		if boolean_option('GDB')
 			abort "You cannot set both REPEAT=1 and GDB=1."
