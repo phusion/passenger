@@ -110,7 +110,12 @@ define 'rake' do
   website "http://rake.rubyforge.org/"
   define_checker do
     require 'phusion_passenger/platform_info/ruby'
-    check_for_command(PlatformInfo.rake_command)
+    if result = PlatformInfo.rake_command
+      { :found => true,
+        "Location" => result }
+    else
+      false
+    end
   end
   
   if ruby_command =~ %r(^/usr/bin/ruby)
