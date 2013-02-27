@@ -1411,6 +1411,7 @@ public:
 		for (sg_it = superGroups.begin(); sg_it != superGroups.end(); sg_it++) {
 			const SuperGroupPtr &superGroup = sg_it->second;
 
+			result << "<supergroup>";
 			result << "<name>" << escapeForXml(superGroup->name) << "</name>";
 			result << "<state>" << superGroup->getStateName() << "</state>";
 			result << "<get_wait_list_size>" << superGroup->getWaitlist.size() << "</get_wait_list_size>";
@@ -1430,6 +1431,7 @@ public:
 				group->inspectXml(result, includeSecrets);
 				result << "</group>";
 			}
+			result << "</supergroup>";
 		}
 		result << "</supergroups>";
 
