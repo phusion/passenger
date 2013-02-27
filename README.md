@@ -22,18 +22,10 @@ For troubleshooting, configuration and tips, please read the corresponding Users
 
 These files are included in the source tarball, and may also be viewed online on [our website](https://www.phusionpassenger.com/support).
 
-## Installing via a gem
+## Installing as a gem
 
-You may also generate a .gem file, and then install that. First, make sure that you have the following software installed:
-
- * All usual Phusion Passenger dependencies.
- * [Mizuho](https://github.com/FooBarWidget/mizuho).
-
-Next, run:
-
-    rake package
-
-The gem will be available under the `pkg` folder.
+    gem build passenger.gemspec
+    gem install passenger-x.x.x.gem
 
 ## Further reading
 
