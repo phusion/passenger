@@ -287,14 +287,6 @@ private:
 		}
 	}
 	
-	void resetWorkerThreadInactivityTimers() {
-		requestHandler->resetInactivityTimer();
-	}
-	
-	unsigned long long minWorkerThreadInactivityTime() const {
-		return requestHandler->inactivityTime();
-	}
-
 	void onSigquit(ev::sig &signal, int revents) {
 		requestHandler->inspect(cerr);
 		cerr.flush();
@@ -473,12 +465,16 @@ public:
 			_exit(2); // In case killpg() fails.
 		} else {
 			/* We received an exit command. We want to exit 5 seconds after
-			 * all worker threads have become inactive.
+			 * all clients have disconnected have become inactive.
 			 */
-			resetWorkerThreadInactivityTimers();
-			while (minWorkerThreadInactivityTime() < 5000) {
+			P_DEBUG("Received request from Watchdog to exit gracefully. "
+				"Waiting until 5 seconds after all clients have disconnected...");
+			requestHandler->resetInactivityTimer();
+			while (requestHandler->inactivityTime() < 5000) {
 				syscalls::usleep(250000);
 			}
+			P_DEBUG("It's now 5 seconds after all clients have disconnected. "
+				"Proceeding with graceful exit.");
 		}
 	}
 

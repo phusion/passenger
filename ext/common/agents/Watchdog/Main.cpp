@@ -522,6 +522,10 @@ public:
 		}
 		
 		oxt::thread::interrupt_and_join_multiple(threads, watchers.size());
+		for (it = watchers.begin(); it != watchers.end(); it++, i++) {
+			delete (*it)->thr;
+			(*it)->thr = NULL;
+		}
 	}
 	
 	/**
@@ -941,7 +945,9 @@ cleanupAgentsInBackground(vector<AgentWatcherPtr> &watchers) {
 		int max, agentProcessesDone;
 		unsigned long long deadline = 30000; // miliseconds
 		
-		// Wait until all agent processes have exited.
+		// Wait until all agent processes have exited. The starter
+		// process is responsible for telling the individual agents
+		// to exit.
 		
 		max = 0;
 		FD_ZERO(&fds);
