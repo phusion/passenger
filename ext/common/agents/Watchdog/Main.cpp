@@ -65,7 +65,6 @@ using namespace Passenger;
 
 /** The options that were passed to AgentsStarter. */
 static VariantMap     agentsOptions;
-static unsigned int   logLevel;
 static pid_t   webServerPid;
 static string  tempDir;
 static bool    userSwitching;
@@ -1024,6 +1023,27 @@ forceAllAgentsShutdown(vector<AgentWatcherPtr> &watchers) {
 	}
 }
 
+static string
+inferDefaultGroup(const string &defaultUser) {
+	struct passwd *userEntry = getpwnam(defaultUser.c_str());
+	if (userEntry == NULL) {
+		throw ConfigurationException(
+			string("The user that PassengerDefaultUser refers to, '") +
+			defaultUser + "', does not exist.");
+	}
+	
+	struct group *groupEntry = getgrgid(userEntry->pw_gid);
+	if (groupEntry == NULL) {
+		throw ConfigurationException(
+			string("The option PassengerDefaultUser is set to '" +
+			defaultUser + "', but its primary group doesn't exist. "
+			"In other words, your system's user account database "
+			"is broken. Please fix it."));
+	}
+	
+	return groupEntry->gr_name;
+}
+
 int
 main(int argc, char *argv[]) {
 	/*
@@ -1048,6 +1068,8 @@ main(int argc, char *argv[]) {
 	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");
 	agentsOptions
 		.setDefaultInt ("log_level", DEFAULT_LOG_LEVEL)
+		.setDefault    ("temp_dir", getSystemTempDir())
+
 		.setDefaultBool("user_switching", true)
 		.setDefault    ("default_user", DEFAULT_WEB_APP_USER)
 		.setDefaultUid ("web_server_worker_uid", getuid())
@@ -1064,15 +1086,17 @@ main(int argc, char *argv[]) {
 		TRACE_POINT();
 		// Required options
 		passengerRoot = agentsOptions.get("passenger_root");
-		tempDir       = agentsOptions.get("temp_dir");
 		webServerPid  = agentsOptions.getPid("web_server_pid");
 
 		// Optional options
 		UPDATE_TRACE_POINT();
-		logLevel      = agentsOptions.getInt("log_level");
+		tempDir       = agentsOptions.get("temp_dir");
 		userSwitching = agentsOptions.getBool("user_switching");
 		defaultUser   = agentsOptions.get("default_user");
-		defaultGroup  = agentsOptions.get("default_group");
+		if (!agentsOptions.has("default_group")) {
+			agentsOptions.set("default_group", inferDefaultGroup(defaultUser));
+		}
+		defaultGroup       = agentsOptions.get("default_group");
 		webServerWorkerUid = agentsOptions.getUid("web_server_worker_uid");
 		webServerWorkerGid = agentsOptions.getGid("web_server_worker_gid");
 

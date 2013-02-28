@@ -58,6 +58,7 @@ struct AgentOptions {
 	AgentOptions(const VariantMap &options) {
 		// Required options for which a default is already set by the Watchdog.
 		passengerRoot = options.get("passenger_root");
+		tempDir               = options.get("temp_dir");
 		userSwitching = options.getBool("user_switching");
 		rubyCommand   = options.get("ruby");
 		defaultUser   = options.get("default_user");
@@ -67,7 +68,6 @@ struct AgentOptions {
 		poolIdleTime       = options.getInt("pool_idle_time");
 
 		// Required options only set by the Watchdog.
-		tempDir               = options.get("temp_dir");
 		webServerPid          = options.getPid("web_server_pid");
 		generationNumber      = options.getInt("generation_number");
 		requestSocketPassword = Base64::decode(options.get("request_socket_password"));
