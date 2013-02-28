@@ -331,13 +331,11 @@ private:
 	void sendStartupRequest(StartupDetails &details) {
 		TRACE_POINT();
 		try {
-			writeExact(details.adminSocket,
-				"You have control 1.0\n"
+			string data = "You have control 1.0\n"
 				"passenger_root: " + resourceLocator.getRoot() + "\n"
 				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
-				"generation_dir: " + generation->getPath() + "\n",
-				&details.timeout);
+				"generation_dir: " + generation->getPath() + "\n";
 
 			vector<string> args;
 			vector<string>::const_iterator it, end;
@@ -346,10 +344,15 @@ private:
 				const string &key = *it;
 				it++;
 				const string &value = *it;
-				writeExact(details.adminSocket,
-					key + ": " + value + "\n",
-					&details.timeout);
+				data.append(key + ": " + value + "\n");
 			}
+
+			vector<StaticString> lines;
+			split(data, '\n', lines);
+			foreach (const StaticString line, lines) {
+				P_DEBUG("[App " << details.pid << " stdin >>] " << line);
+			}
+			writeExact(details.adminSocket, data, &details.timeout);
 			writeExact(details.adminSocket, "\n", &details.timeout);
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE) {
