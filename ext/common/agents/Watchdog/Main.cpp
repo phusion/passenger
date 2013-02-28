@@ -1054,8 +1054,8 @@ main(int argc, char *argv[]) {
 		.setDefaultGid ("web_server_worker_gid", getgid())
 		.setDefault    ("ruby", DEFAULT_RUBY)
 		.setDefault    ("python", DEFAULT_PYTHON)
-		.setDefaultInt ("max_pool_size", DEFAULT_MAX_POOL_SIZE).
-		.setDefaultInt ("max_instances_per_app", DEFAULT_MAX_INSTANCES_PER_APP).
+		.setDefaultInt ("max_pool_size", DEFAULT_MAX_POOL_SIZE)
+		.setDefaultInt ("max_instances_per_app", DEFAULT_MAX_INSTANCES_PER_APP)
 		.setDefaultInt ("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 
 	P_DEBUG("Starting Watchdog...");
