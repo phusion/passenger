@@ -1389,7 +1389,8 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 			backtraceSanitizerPassProgramInfo = false;
 		}
 
-		setLogLevel(options.getInt("log_level", false, 0));
+		options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
+		setLogLevel(options.getInt("log_level"));
 		if (!options.get("debug_log_file", false).empty()) {
 			if (strcmp(processName, "PassengerWatchdog") == 0) {
 				/* Have the watchdog set STDOUT and STDERR to the debug

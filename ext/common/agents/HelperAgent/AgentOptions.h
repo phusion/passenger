@@ -56,22 +56,27 @@ struct AgentOptions {
 	AgentOptions() { }
 
 	AgentOptions(const VariantMap &options) {
-		webServerPid  = options.getPid("web_server_pid");
-		tempDir       = options.get("temp_dir");
+		// Required options for which a default is already set by the Watchdog.
+		passengerRoot = options.get("passenger_root");
 		userSwitching = options.getBool("user_switching");
+		rubyCommand   = options.get("ruby");
 		defaultUser   = options.get("default_user");
 		defaultGroup  = options.get("default_group");
-		passengerRoot = options.get("passenger_root");
-		rubyCommand   = options.get("ruby");
-		generationNumber   = options.getInt("generation_number");
 		maxPoolSize        = options.getInt("max_pool_size");
 		maxInstancesPerApp = options.getInt("max_instances_per_app");
 		poolIdleTime       = options.getInt("pool_idle_time");
+
+		// Required options only set by the Watchdog.
+		tempDir               = options.get("temp_dir");
+		webServerPid          = options.getPid("web_server_pid");
+		generationNumber      = options.getInt("generation_number");
 		requestSocketPassword = Base64::decode(options.get("request_socket_password"));
 		messageSocketPassword = Base64::decode(options.get("message_socket_password"));
 		loggingAgentAddress   = options.get("logging_agent_address");
 		loggingAgentPassword  = options.get("logging_agent_password");
-		prestartUrls          = options.get("prestart_urls");
+		
+		// Optional options.
+		prestartUrls          = options.get("prestart_urls", false, "");
 	}
 };
 

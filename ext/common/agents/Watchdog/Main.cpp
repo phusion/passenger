@@ -74,10 +74,6 @@ static string  defaultGroup;
 static uid_t   webServerWorkerUid;
 static gid_t   webServerWorkerGid;
 static string  passengerRoot;
-static string  rubyCommand;
-static unsigned int maxPoolSize;
-static unsigned int maxInstancesPerApp;
-static unsigned int poolIdleTime;
 static string  serializedPrestartURLs;
 
 static string oldOomScore;
@@ -1044,25 +1040,35 @@ main(int argc, char *argv[]) {
 	oldOomScore = setOomScoreNeverKill();
 	
 	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");
-	logLevel      = agentsOptions.getInt("log_level");
-	webServerPid  = agentsOptions.getPid("web_server_pid");
-	tempDir       = agentsOptions.get("temp_dir");
-	userSwitching = agentsOptions.getBool("user_switching");
-	defaultUser   = agentsOptions.get("default_user");
-	defaultGroup  = agentsOptions.get("default_group");
-	webServerWorkerUid = agentsOptions.getUid("web_server_worker_uid");
-	webServerWorkerGid = agentsOptions.getGid("web_server_worker_gid");
-	passengerRoot = agentsOptions.get("passenger_root");
-	rubyCommand   = agentsOptions.get("ruby");
-	maxPoolSize        = agentsOptions.getInt("max_pool_size");
-	maxInstancesPerApp = agentsOptions.getInt("max_instances_per_app");
-	poolIdleTime       = agentsOptions.getInt("pool_idle_time");
-	serializedPrestartURLs  = agentsOptions.get("prestart_urls");
-	
+	agentsOptions
+		.setDefaultInt ("log_level", DEFAULT_LOG_LEVEL)
+		.setDefaultBool("user_switching", true)
+		.setDefault    ("default_user", DEFAULT_WEB_APP_USER)
+		.setDefaultUid ("web_server_worker_uid", getuid())
+		.setDefaultGid ("web_server_worker_gid", getgid())
+		.setDefault    ("ruby", DEFAULT_RUBY)
+		.setDefault    ("python", DEFAULT_PYTHON)
+		.setDefaultInt ("max_pool_size", DEFAULT_MAX_POOL_SIZE);
+
 	P_DEBUG("Starting Watchdog...");
 	
 	try {
 		TRACE_POINT();
+		// Required options
+		passengerRoot = agentsOptions.get("passenger_root");
+		tempDir       = agentsOptions.get("temp_dir");
+		webServerPid  = agentsOptions.getPid("web_server_pid");
+
+		// Optional options
+		UPDATE_TRACE_POINT();
+		logLevel      = agentsOptions.getInt("log_level");
+		userSwitching = agentsOptions.getBool("user_switching");
+		defaultUser   = agentsOptions.get("default_user");
+		defaultGroup  = agentsOptions.get("default_group");
+		webServerWorkerUid = agentsOptions.getUid("web_server_worker_uid");
+		webServerWorkerGid = agentsOptions.getGid("web_server_worker_gid");
+
+		UPDATE_TRACE_POINT();
 		randomGenerator = new RandomGenerator();
 		errorEvent = new EventFd();
 		
