@@ -235,7 +235,7 @@ private:
 		this_thread::disable_syscall_interruption dsi;
 		requestSocket = createUnixServer(getRequestSocketFilename().c_str());
 		
-		int ret;
+		int ret, e;
 		do {
 			ret = chmod(getRequestSocketFilename().c_str(), S_ISVTX |
 				S_IRUSR | S_IWUSR | S_IXUSR |
@@ -244,6 +244,44 @@ private:
 		} while (ret == -1 && errno == EINTR);
 
 		setNonBlocking(requestSocket);
+
+		if (!options.requestSocketLink.empty()) {
+			struct stat buf;
+
+			// If this is a symlink then we'll want to check the file the symlink
+			// points to, so we use stat() instead of lstat().
+			ret = syscalls::stat(options.requestSocketLink.c_str(), &buf);
+			if (ret == 0 || (ret == -1 && errno == ENOENT)) {
+				if (ret == -1 || buf.st_mode & S_IFSOCK) {
+					if (syscalls::unlink(options.requestSocketLink.c_str()) == -1) {
+						e = errno;
+						throw FileSystemException("Cannot delete existing socket file '" +
+							options.requestSocketLink + "'", e, options.requestSocketLink);
+					}
+				} else {
+					throw RuntimeException("File '" + options.requestSocketLink +
+						"' already exists and is not a Unix domain socket");
+				}
+			} else if (ret == -1 && errno != ENOENT) {
+				e = errno;
+				throw FileSystemException("Cannot stat() file '" + options.requestSocketLink + "'",
+					e,
+					options.requestSocketLink);
+			}
+
+			do {
+				ret = symlink(getRequestSocketFilename().c_str(),
+					options.requestSocketLink.c_str());
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				e = errno;
+				throw FileSystemException("Cannot create a symlink '" +
+					options.requestSocketLink +
+					"' to '" + getRequestSocketFilename() + "'",
+					e,
+					options.requestSocketLink);
+			}
+		}
 	}
 	
 	/**
@@ -413,6 +451,10 @@ public:
 		requestHandler.reset();
 		poolLoop.stop();
 		requestLoop.stop();
+
+		if (!options.requestSocketLink.empty()) {
+			syscalls::unlink(options.requestSocketLink.c_str());
+		}
 		
 		P_TRACE(2, "All threads have been shut down.");
 	}
