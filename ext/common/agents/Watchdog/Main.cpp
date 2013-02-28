@@ -26,6 +26,8 @@
 #include <oxt/system_calls.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <string>
 
 #include <sys/select.h>
@@ -95,12 +97,12 @@ static void setOomScore(const StaticString &score);
 /**
  * Abstract base class for watching agent processes.
  */
-class AgentWatcher {
+class AgentWatcher: public enable_shared_from_this<AgentWatcher> {
 private:
 	/** The watcher thread. */
 	oxt::thread *thr;
 	
-	void threadMain() {
+	void threadMain(shared_ptr<AgentWatcher> self) {
 		try {
 			pid_t pid, ret;
 			int status, e;
@@ -510,12 +512,12 @@ public:
 			throw RuntimeException("Already started watching.");
 		}
 		
-		thr = new oxt::thread(boost::bind(&AgentWatcher::threadMain, this),
+		thr = new oxt::thread(boost::bind(&AgentWatcher::threadMain, this, shared_from_this()),
 			name(), 256 * 1024);
 	}
 	
-	static void stopWatching(vector<AgentWatcher *> &watchers) {
-		vector<AgentWatcher *>::const_iterator it;
+	static void stopWatching(vector< shared_ptr<AgentWatcher> > &watchers) {
+		vector< shared_ptr<AgentWatcher> >::const_iterator it;
 		oxt::thread *threads[watchers.size()];
 		unsigned int i = 0;
 		
@@ -569,6 +571,8 @@ public:
 		return feedbackFd;
 	}
 };
+
+typedef shared_ptr<AgentWatcher> AgentWatcherPtr;
 
 
 class HelperAgentWatcher: public AgentWatcher {
@@ -880,7 +884,7 @@ setOomScoreNeverKill() {
  * an error.
  */
 static bool
-waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
+waitForStarterProcessOrWatchers(vector<AgentWatcherPtr> &watchers) {
 	fd_set fds;
 	int max, ret;
 	char x;
@@ -903,7 +907,7 @@ waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
 	}
 	
 	if (FD_ISSET(errorEvent->fd(), &fds)) {
-		vector<AgentWatcher *>::const_iterator it;
+		vector<AgentWatcherPtr>::const_iterator it;
 		string message, backtrace, watcherName;
 		
 		for (it = watchers.begin(); it != watchers.end() && message.empty(); it++) {
@@ -926,7 +930,7 @@ waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
 }
 
 static void
-cleanupAgentsInBackground(vector<AgentWatcher *> &watchers) {
+cleanupAgentsInBackground(vector<AgentWatcherPtr> &watchers) {
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
 	pid_t pid;
@@ -935,7 +939,7 @@ cleanupAgentsInBackground(vector<AgentWatcher *> &watchers) {
 	pid = fork();
 	if (pid == 0) {
 		// Child
-		vector<AgentWatcher *>::const_iterator it;
+		vector<AgentWatcherPtr>::const_iterator it;
 		Timer timer(false);
 		fd_set fds, fds2;
 		int max, agentProcessesDone;
@@ -1010,8 +1014,8 @@ cleanupAgentsInBackground(vector<AgentWatcher *> &watchers) {
 }
 
 static void
-forceAllAgentsShutdown(vector<AgentWatcher *> &watchers) {
-	vector<AgentWatcher *>::iterator it;
+forceAllAgentsShutdown(vector<AgentWatcherPtr> &watchers) {
+	vector<AgentWatcherPtr>::iterator it;
 	
 	for (it = watchers.begin(); it != watchers.end(); it++) {
 		(*it)->forceShutdown();
@@ -1058,15 +1062,18 @@ main(int argc, char *argv[]) {
 	P_DEBUG("Starting Watchdog...");
 	
 	try {
+		TRACE_POINT();
 		randomGenerator = new RandomGenerator();
 		errorEvent = new EventFd();
 		
+		UPDATE_TRACE_POINT();
 		serverInstanceDir.reset(new ServerInstanceDir(webServerPid, tempDir));
 		generation = serverInstanceDir->newGeneration(userSwitching, defaultUser,
 			defaultGroup, webServerWorkerUid, webServerWorkerGid);
 		agentsOptions.set("server_instance_dir", serverInstanceDir->getPath());
 		agentsOptions.setInt("generation_number", generation->getNumber());
 		
+		UPDATE_TRACE_POINT();
 		ServerInstanceDirToucher serverInstanceDirToucher;
 		ResourceLocator resourceLocator(passengerRoot);
 		if (agentsOptions.get("analytics_server", false).empty()) {
@@ -1078,16 +1085,21 @@ main(int argc, char *argv[]) {
 			loggingAgentAddress = agentsOptions.get("analytics_server");
 		}
 		
-		HelperAgentWatcher helperAgentWatcher(resourceLocator);
-		LoggingAgentWatcher loggingAgentWatcher(resourceLocator);
+		UPDATE_TRACE_POINT();
+		shared_ptr<HelperAgentWatcher> helperAgentWatcher =
+			make_shared<HelperAgentWatcher>(resourceLocator);
+		shared_ptr<LoggingAgentWatcher> loggingAgentWatcher =
+			make_shared<LoggingAgentWatcher>(resourceLocator);
 		
-		vector<AgentWatcher *> watchers;
-		vector<AgentWatcher *>::iterator it;
-		watchers.push_back(&helperAgentWatcher);
+		UPDATE_TRACE_POINT();
+		vector<AgentWatcherPtr> watchers;
+		vector<AgentWatcherPtr>::iterator it;
+		watchers.push_back(helperAgentWatcher);
 		if (agentsOptions.get("analytics_server", false).empty()) {
-			watchers.push_back(&loggingAgentWatcher);
+			watchers.push_back(loggingAgentWatcher);
 		}
 		
+		UPDATE_TRACE_POINT();
 		for (it = watchers.begin(); it != watchers.end(); it++) {
 			try {
 				(*it)->start();
@@ -1101,6 +1113,7 @@ main(int argc, char *argv[]) {
 			}
 			// Allow other exceptions to propagate and crash the watchdog.
 		}
+		UPDATE_TRACE_POINT();
 		for (it = watchers.begin(); it != watchers.end(); it++) {
 			try {
 				(*it)->startWatching();
@@ -1115,21 +1128,25 @@ main(int argc, char *argv[]) {
 			// Allow other exceptions to propagate and crash the watchdog.
 		}
 		
+		UPDATE_TRACE_POINT();
 		writeArrayMessage(FEEDBACK_FD,
 			"Basic startup info",
 			serverInstanceDir->getPath().c_str(),
 			toString(generation->getNumber()).c_str(),
 			NULL);
 		
+		UPDATE_TRACE_POINT();
 		for (it = watchers.begin(); it != watchers.end(); it++) {
 			(*it)->sendStartupInfo(FEEDBACK_FD);
 		}
 		
+		UPDATE_TRACE_POINT();
 		writeArrayMessage(FEEDBACK_FD, "All agents started", NULL);
 		P_DEBUG("All Phusion Passenger agents started!");
 		
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
+		UPDATE_TRACE_POINT();
 		bool exitGracefully = waitForStarterProcessOrWatchers(watchers);
 		if (exitGracefully) {
 			/* Fork a child process which cleans up all the agent processes in
@@ -1140,11 +1157,14 @@ main(int argc, char *argv[]) {
 		} else {
 			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all agents...");
 		}
+		UPDATE_TRACE_POINT();
 		AgentWatcher::stopWatching(watchers);
 		if (exitGracefully) {
+			UPDATE_TRACE_POINT();
 			cleanupAgentsInBackground(watchers);
 			return 0;
 		} else {
+			UPDATE_TRACE_POINT();
 			forceAllAgentsShutdown(watchers);
 			return 1;
 		}
