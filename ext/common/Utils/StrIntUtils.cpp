@@ -122,6 +122,19 @@ replaceString(const string &str, const string &toFind, const string &replaceWith
 }
 
 string
+strip(const StaticString &str) {
+	const char *data = str.data();
+	const char *end = str.data() + str.size();
+	while (data < end && (*data == ' ' || *data == '\n' || *data == '\t')) {
+		data++;
+	}
+	while (end > data && (end[-1] == ' ' || end[-1] == '\n' || end[-1] == '\t')) {
+		end--;
+	}
+	return string(data, end - data);
+}
+
+string
 toString(const vector<string> &vec) {
 	vector<StaticString> vec2;
 	vec2.reserve(vec.size());

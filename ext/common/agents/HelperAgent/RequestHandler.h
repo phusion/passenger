@@ -1745,7 +1745,7 @@ private:
 			client->endScopeLog(&client->scopeLogs.getFromPool, false);
 			shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
 			if (e2 != NULL) {
-				if (e2->getErrorPage().empty()) {
+				if (strip(e2->getErrorPage()).empty()) {
 					RH_WARN(client, "Cannot checkout session. " << e2->what());
 					writeErrorResponse(client, e2->what());
 				} else {

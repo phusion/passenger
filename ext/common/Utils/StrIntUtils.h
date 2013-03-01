@@ -95,6 +95,11 @@ void splitIncludeSep(const StaticString &str, char sep, vector<StaticString> &ou
 string replaceString(const string &str, const string &toFind, const string &replaceWith);
 
 /**
+ * Strips leading and trailing whitespaces.
+ */
+string strip(const StaticString &str);
+
+/**
  * Convert anything to a string.
  */
 template<typename T> string
