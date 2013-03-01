@@ -390,9 +390,8 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
 	unique_lock<boost::mutex> lock(pool->syncher);
-	Process::LifeStatus lifeStatus = process->getLifeStatus();
 	assert(!process->isShutDown());
-	assert(lifeStatus == ALIVE || lifeStatus == SHUTTING_DOWN);
+	assert(isAlive() || getLifeStatus() == SHUTTING_DOWN);
 
 	P_TRACE(2, "Session closed for process " << process->inspect());
 	verifyInvariants();
@@ -400,6 +399,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	
 	/* Update statistics. */
 	process->sessionClosed(session);
+	Process::LifeStatus lifeStatus = process->getLifeStatus();
 	assert(process->enabled == Process::ENABLED || process->enabled == Process::DISABLING);
 	if (process->enabled == Process::ENABLED && lifeStatus == Process::ALIVE) {
 		pqueue.decrease(process->pqHandle, process->utilization());
