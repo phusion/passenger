@@ -124,6 +124,12 @@ class RequestHandler:
 						logging.exception("WSGI application raised an exception!")
 				finally:
 					try:
+						# Shutdown the socket like this just in case the app
+						# spawned a child process that keeps it open.
+						client.shutdown(socket.SHUT_WR)
+					except:
+						pass
+					try:
 						client.close()
 					except:
 						pass
