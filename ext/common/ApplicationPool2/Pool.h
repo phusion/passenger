@@ -546,7 +546,7 @@ public:
 		unsigned long long now = SystemTime::getUsec();
 		unsigned long long nextGcRunTime = 0;
 		
-		P_DEBUG("Garbage collection time");
+		P_DEBUG("Garbage collection time...");
 		verifyInvariants();
 		
 		// For all supergroups and groups...
@@ -680,7 +680,7 @@ public:
 		vector<pid_t> pids;
 		unsigned int max;
 		
-		P_DEBUG("Collecting analytics");
+		P_DEBUG("Analytics collection time...");
 		// Collect all the PIDs.
 		{
 			UPDATE_TRACE_POINT();

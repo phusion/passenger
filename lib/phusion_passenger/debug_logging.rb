@@ -108,7 +108,7 @@ module DebugLogging
 				thread_name = "(#{thread_name})"
 			end
 
-			output.write("[ #{$$}/#{thread_id}#{thread_name} #{time_str} #{location} ]: #{message}\n")
+			output.write("[ #{time_str} #{$$}/#{thread_id}#{thread_name} #{location} ]: #{message}\n")
 			output.flush
 		end
 	end

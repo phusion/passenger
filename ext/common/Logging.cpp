@@ -77,10 +77,10 @@ _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line
 	strftime(datetime_buf, sizeof(datetime_buf) - 1, "%F %H:%M:%S", &the_tm);
 	gettimeofday(&tv, NULL);
 	sstream <<
-		"[ " << std::dec << getpid() <<
-		"/" << std::hex << pthread_self() << std::dec <<
-		" " << datetime_buf << "." << std::setfill('0') << std::setw(4) <<
+		"[ " << datetime_buf << "." << std::setfill('0') << std::setw(4) <<
 			(unsigned long) (tv.tv_usec / 100) <<
+		" " << std::dec << getpid() << "/" <<
+			std::hex << pthread_self() << std::dec <<
 		" " << file << ":" << line <<
 		" ]: ";
 }
