@@ -73,16 +73,6 @@
 		return getgrgid(gid)->gr_name;
 	}
 
-	static string strip(const string &str) {
-		if (!str.empty() && str[str.size() - 1] == '\n') {
-			string result = str;
-			result.erase(str.size() - 1,  1);
-			return result;
-		} else {
-			return str;
-		}
-	}
-
 	TEST_METHOD(1) {
 		// Basic spawning test.
 		Options options = createOptions();

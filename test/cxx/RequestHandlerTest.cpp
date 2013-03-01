@@ -45,6 +45,7 @@ namespace tut {
 			serverFilename = generation->getPath() + "/server";
 			requestSocket = createUnixServer(serverFilename);
 			setNonBlocking(requestSocket);
+			setLogLevel(LVL_ERROR); // TODO: set to LVL_WARN
 
 			agentOptions.passengerRoot = resourceLocator->getRoot();
 			root = resourceLocator->getRoot();
@@ -57,7 +58,7 @@ namespace tut {
 		}
 		
 		~RequestHandlerTest() {
-			setLogLevel(0);
+			setLogLevel(DEFAULT_LOG_LEVEL);
 			unlink(serverFilename.c_str());
 			handler.reset();
 			pool->destroy();
