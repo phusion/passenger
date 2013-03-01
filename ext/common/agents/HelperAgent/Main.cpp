@@ -446,11 +446,13 @@ public:
 		}
 		
 		messageServer.reset();
+		P_DEBUG("Destroying application pool...");
 		pool->destroy();
+		uninstallDiagnosticsDumper();
 		pool.reset();
-		requestHandler.reset();
 		poolLoop.stop();
 		requestLoop.stop();
+		requestHandler.reset();
 
 		if (!options.requestSocketLink.empty()) {
 			syscalls::unlink(options.requestSocketLink.c_str());
@@ -491,7 +493,6 @@ public:
 			uninstallDiagnosticsDumper();
 			throw SystemException("select() failed", e);
 		}
-		uninstallDiagnosticsDumper();
 		
 		if (FD_ISSET(feedbackFd, &fds)) {
 			/* If the watchdog has been killed then we'll kill all descendant
@@ -509,7 +510,7 @@ public:
 			/* We received an exit command. We want to exit 5 seconds after
 			 * all clients have disconnected have become inactive.
 			 */
-			P_DEBUG("Received request from Watchdog to exit gracefully. "
+			P_DEBUG("Received command to exit gracefully. "
 				"Waiting until 5 seconds after all clients have disconnected...");
 			requestHandler->resetInactivityTimer();
 			while (requestHandler->inactivityTime() < 5000) {
