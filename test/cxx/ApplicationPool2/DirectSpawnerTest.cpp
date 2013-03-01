@@ -97,4 +97,23 @@ namespace tut {
 			ensure(e.getErrorPage().find("hello world\n") != string::npos);
 		}
 	}
+
+	TEST_METHOD(82) {
+		SHOW_EXCEPTION_BACKTRACE(
+		// Test that everything works correctly if the app re-execs() itself.
+		// https://code.google.com/p/phusion-passenger/issues/detail?id=842#c19
+		Options options = createOptions();
+		options.appRoot      = "stub/rack";
+		options.startCommand = "ruby\1" "start.rb\1" "--execself";
+		options.startupFile  = "start.rb";
+		SpawnerPtr spawner = createSpawner(options);
+		process = spawner->spawn(options);
+		ensure_equals(process->sockets->size(), 1u);
+		
+		Connection conn = process->sockets->front().checkoutConnection();
+		ScopeGuard guard(boost::bind(checkin, process, &conn));
+		writeExact(conn.fd, "ping\n");
+		ensure_equals(readAll(conn.fd), "pong\n");
+		);
+	}
 }
