@@ -70,6 +70,9 @@ struct DirConfig {
 	
 	/** The Ruby interpreter to use. */
 	const char *ruby;
+
+	/** The Python interpreter to use. */
+	const char *python;
 	
 	/** The environment (RAILS_ENV/RACK_ENV/WSGI_ENV) under which
 	 * applications should operate. */

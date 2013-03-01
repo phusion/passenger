@@ -99,6 +99,7 @@ private:
 		result.push_back(&postexecChroot);
 		
 		result.push_back(&ruby);
+		result.push_back(&python);
 		result.push_back(&loggingAgentAddress);
 		result.push_back(&loggingAgentUsername);
 		result.push_back(&loggingAgentPassword);
@@ -237,6 +238,12 @@ public:
 	 * is a Ruby app.
 	 */
 	StaticString ruby;
+
+	/**
+	 * Path to the Python interpreter to use, in case the application to spawn
+	 * is a Python app.
+	 */
+	StaticString python;
 	
 	/**
 	 * Any rights that the spawned application process may have. The SpawnManager
@@ -363,6 +370,7 @@ public:
 		spawnMethod             = "smart";
 		defaultUser             = "nobody";
 		ruby                    = "ruby";
+		python                  = "python";
 		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
 		debugger                = false;
 		loadShellEnvvars        = true;
@@ -499,6 +507,7 @@ public:
 		appendKeyValue (vec, "preexec_chroot",     preexecChroot);
 		appendKeyValue (vec, "postexec_chroot",    postexecChroot);
 		appendKeyValue (vec, "ruby",               ruby);
+		appendKeyValue (vec, "python",             python);
 		appendKeyValue (vec, "logging_agent_address",  loggingAgentAddress);
 		appendKeyValue (vec, "logging_agent_username", loggingAgentUsername);
 		appendKeyValue (vec, "logging_agent_password", loggingAgentPassword);
@@ -529,7 +538,7 @@ public:
 		} else if (appType == "rack") {
 			return ruby + "\1" + resourceLocator.getHelperScriptsDir() + "/rack-loader.rb";
 		} else if (appType == "wsgi") {
-			return "python\1" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";
+			return python + "\1" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";
 		} else {
 			return startCommand;
 		}

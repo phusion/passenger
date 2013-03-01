@@ -187,6 +187,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
 	config->enabled = DirConfig::UNSET;
 	config->ruby = NULL;
+	config->python = NULL;
 	config->environment = NULL;
 	config->appRoot = NULL;
 	config->user = NULL;
@@ -229,6 +230,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	}
 	
 	MERGE_STR_CONFIG(ruby);
+	MERGE_STR_CONFIG(python);
 	MERGE_STR_CONFIG(environment);
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
@@ -291,6 +293,7 @@ DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_max_requests, maxRequests, unsigned l
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformance)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_python, python)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_environment, environment)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
@@ -468,6 +471,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The Ruby interpreter to use."),
+	AP_INIT_TAKE1("PassengerPython",
+		(Take1Func) cmd_passenger_python,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The Python interpreter to use."),
 	AP_INIT_TAKE1("PassengerLogLevel",
 		(Take1Func) cmd_passenger_log_level,
 		NULL,

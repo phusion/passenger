@@ -45,6 +45,7 @@ typedef struct {
     ngx_flag_t   debugger;
     ngx_flag_t   show_version_in_header;
     ngx_str_t    ruby;
+    ngx_str_t    python;
     ngx_str_t    environment;
     ngx_str_t    user;
     ngx_str_t    group;

@@ -10,6 +10,10 @@ Release 3.9.6 (4.0.0 release candidate 4)
    reported in issue #842.
  * The Python WSGI loader now correctly shuts down client sockets
    even when there are child processes that keep the socket open.
+ * A new configuration option PassengerPython (Apache) and
+   passenger_python (Nginx) has been added so that users can
+   customize the Python interpreter on a per-application basis.
+   Fixes issue #852.
 
 
 Release 3.9.5 (4.0.0 release candidate 3)

@@ -428,6 +428,7 @@ create_request(ngx_http_request_t *r)
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_SHOW_VERSION_IN_HEADER",
                                   slcf, show_version_in_header);
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_RUBY", slcf, ruby);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_PYTHON", slcf, python);
     len += sizeof("PASSENGER_ENV") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
@@ -643,6 +644,8 @@ create_request(ngx_http_request_t *r)
     
     SERIALIZE_STR_CONFIG_DATA("PASSENGER_RUBY",
                               slcf, ruby);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_PYTHON",
+                              slcf, python);
 
     b->last = ngx_copy(b->last, "PASSENGER_ENV",
                        sizeof("PASSENGER_ENV"));
