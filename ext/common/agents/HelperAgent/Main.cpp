@@ -512,7 +512,6 @@ public:
 			 */
 			P_DEBUG("Received command to exit gracefully. "
 				"Waiting until 5 seconds after all clients have disconnected...");
-			requestHandler->resetInactivityTimer();
 			while (requestHandler->inactivityTime() < 5000) {
 				syscalls::usleep(250000);
 			}

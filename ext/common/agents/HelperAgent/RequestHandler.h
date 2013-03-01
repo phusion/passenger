@@ -2136,10 +2136,6 @@ public:
 		}
 	}
 
-	void resetInactivityTimer() {
-		libev->run(boost::bind(&Timer::start, &inactivityTimer));
-	}
-
 	unsigned long long inactivityTime() const {
 		unsigned long long result;
 		libev->run(boost::bind(&RequestHandler::getInactivityTime, this, &result));
