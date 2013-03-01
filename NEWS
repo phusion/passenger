@@ -1,3 +1,17 @@
+Release 3.9.6 (4.0.0 release candidate 4)
+-----------------------------------------
+
+ * Fixed compilation on systems where /tmp is mounted noexec.
+ * Fixed some memory corruption bugs.
+ * Improved debugging messages.
+ * Phusion Passenger Standalone now sets underscores_in_headers.
+   Fixes issue #708.
+ * Fixed some process spawning compatibility problems, as
+   reported in issue #842.
+ * The Python WSGI loader now correctly shuts down client sockets
+   even when there are child processes that keep the socket open.
+
+
 Release 3.9.5 (4.0.0 release candidate 3)
 -----------------------------------------
 
