@@ -1064,8 +1064,9 @@ private:
 				RH_TRACE(client, 3, "Waiting until the client socket is writable again.");
 				client->clientOutputWatcher.start();
 				consumed(0, true);
-			} else if (e == EPIPE) {
+			} else if (e == EPIPE || e == ECONNRESET) {
 				// If the client closed the connection then disconnect quietly.
+				RH_TRACE(client, 3, "Client stopped reading prematurely");
 				if (client->useUnionStation()) {
 					client->logMessage("Disconnecting: client stopped reading prematurely");
 				}
@@ -1939,6 +1940,7 @@ private:
 				1, client->appOutputBuffer);
 			if (ret == -1 && errno != EAGAIN) {
 				disconnectWithAppSocketWriteError(client, errno);
+				// TODO: what about other errors?
 			} else if (!client->appOutputBuffer.empty()) {
 				client->state = Client::SENDING_HEADER_TO_APP;
 				client->appOutputWatcher.start();
@@ -1953,9 +1955,10 @@ private:
 
 		ssize_t ret = gatheredWrite(client->session->fd(), NULL, 0, client->appOutputBuffer);
 		if (ret == -1) {
-			if (errno != EAGAIN && errno != EPIPE) {
+			if (errno != EAGAIN && errno != EPIPE && errno != ECONNRESET) {
 				disconnectWithAppSocketWriteError(client, errno);
 			}
+			// TODO: what about other errors?
 		} else if (client->appOutputBuffer.empty()) {
 			client->appOutputWatcher.stop();
 			sendBodyToApp(client);
@@ -2010,7 +2013,7 @@ private:
 				RH_TRACE(client, 3, "Waiting until the application socket is writable again.");
 				client->clientInput->stop();
 				client->appOutputWatcher.start();
-			} else if (e == EPIPE) {
+			} else if (e == EPIPE || e == ECONNRESET) {
 				// Client will be disconnected after response forwarding is done.
 				client->clientInput->stop();
 				syscalls::shutdown(client->fd, SHUT_RD);
@@ -2074,7 +2077,7 @@ private:
 				RH_TRACE(client, 3, "Waiting until the application socket is writable again.");
 				client->appOutputWatcher.start();
 				consumed(0, true);
-			} else if (e == EPIPE) {
+			} else if (e == EPIPE || e == ECONNRESET) {
 				// Client will be disconnected after response forwarding is done.
 				syscalls::shutdown(client->fd, SHUT_RD);
 				consumed(0, true);
