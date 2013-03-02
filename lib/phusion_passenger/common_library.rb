@@ -361,6 +361,12 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			Utils/CachedFileStat.h
 			Utils/CachedFileStat.hpp
 		)
+	define_component 'Utils/LargeFiles.o',
+		:source   => 'Utils/LargeFiles.cpp',
+		:category => :other,
+		:deps     => %w(
+			Utils/LargeFiles.h
+		)
 	define_component 'ApplicationPool2/Implementation.o',
 		:source   => 'ApplicationPool2/Implementation.cpp',
 		:category => :other,

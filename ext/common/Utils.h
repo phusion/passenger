@@ -39,8 +39,9 @@
 #include <cstring>
 #include <errno.h>
 #include <unistd.h>
-#include "StaticString.h"
-#include "Exceptions.h"
+#include <StaticString.h>
+#include <Exceptions.h>
+#include <Utils/LargeFiles.h>
 
 namespace Passenger {
 
@@ -443,7 +444,7 @@ public:
 		
 		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", dir.c_str(), identifier);
 		templ[sizeof(templ) - 1] = '\0';
-		fd = mkstemp(templ);
+		fd = lfs_mkstemp(templ);
 		if (fd == -1) {
 			char message[1024];
 			int e = errno;

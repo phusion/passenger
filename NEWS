@@ -14,6 +14,8 @@ Release 3.9.6 (4.0.0 release candidate 4)
    passenger_python (Nginx) has been added so that users can
    customize the Python interpreter on a per-application basis.
    Fixes issue #852.
+ * The Apache module now supports file uploads larger than 2 GB
+   when on 32-bit systems. Fixes issue #838.
 
 
 Release 3.9.5 (4.0.0 release candidate 3)
