@@ -618,6 +618,35 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'off'.
 
+[[PassengerTempDir]]
+=== passenger_temp_dir <directory> ===
+Specifies the directory that Phusion Passenger should use for storing temporary
+files. This includes things such as Unix socket files.
+
+This option may only be specified in the 'http' configuration block. The
+default temp directory that Phusion Passenger uses is '/tmp'.
+
+This option is especially useful if Nginx is not allowed to write to /tmp
+(which is the case on some systems with strict SELinux policies) or if the
+partition that /tmp lives on doesn't have enough disk space.
+
+.Command line tools
+Some Phusion Passenger command line administration tools, such as
+`passenger-status`, must know what Phusion Passenger's temp directory is
+in order to function properly. You can pass the directory through the
+`PASSENGER_TMPDIR` environment variable, or the `TMPDIR` environment variable
+(the former will be used if both are specified).
+
+For example, if you set 'passenger_temp_dir' to '/my_temp_dir', then invoke
+`passenger-status` after you've set the `PASSENGER_TMPDIR` or `TMPDIR`
+environment variable, like this:
+
+----------------------------------------------------------
+export PASSENGER_TMPDIR=/my_temp-dir
+sudo -E passenger-status
+# The -E option tells 'sudo' to preserve environment variables.
+----------------------------------------------------------
+
 === Important deployment options ===
 ==== passenger_enabled <on|off> ====
 This option may be specified in the 'http' configuration block, a

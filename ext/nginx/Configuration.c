@@ -1066,6 +1066,13 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, debug_log_file),
       NULL },
 
+    { ngx_string("passenger_temp_dir"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, temp_dir),
+      NULL },
+
     { ngx_string("passenger_abort_on_startup_error"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
