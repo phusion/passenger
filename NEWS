@@ -17,6 +17,9 @@ Release 3.9.6 (4.0.0 release candidate 4)
  * The Apache module now supports file uploads larger than 2 GB
    when on 32-bit systems. Fixes issue #838.
  * The Nginx version now supports the `passenger_temp_dir` option.
+ * Environment variables set in the Nginx configuration file
+   (through the `env` config option) are now correctly passed to
+   all application processes. Fixes issue #371.
 
 
 Release 3.9.5 (4.0.0 release candidate 3)

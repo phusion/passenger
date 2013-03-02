@@ -144,6 +144,10 @@ starting_helper_server_after_fork(void *arg) {
     ngx_cycle_t *cycle = (void *) arg;
     char        *log_filename;
     FILE        *log_file;
+    ngx_core_conf_t *ccf;
+    ngx_uint_t   i;
+    ngx_str_t   *envs;
+    const char  *env;
     
     /* At this point, stdout and stderr may still point to the console.
      * Make sure that they're both redirected to the log file.
@@ -178,6 +182,16 @@ starting_helper_server_after_fork(void *arg) {
         dup2(fileno(log_file), 1);
         dup2(fileno(log_file), 2);
         fclose(log_file);
+    }
+
+    /* Set environment variables in Nginx config file. */
+    ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
+    envs = ccf->env.elts;
+    for (i = 0; i < ccf->env.nelts; i++) {
+        env = (const char *) envs[i].data;
+        if (strchr(env, '=') != NULL) {
+            putenv(strdup(env));
+        }
     }
     
     /* Set SERVER_SOFTWARE so that application processes know what web
