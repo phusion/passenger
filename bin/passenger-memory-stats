@@ -29,6 +29,7 @@ PhusionPassenger.locate_directories
 
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/admin_tools/memory_stats'
+require 'optparse'
 
 include PhusionPassenger
 
@@ -110,6 +111,36 @@ class App
 	end
 	
 	def start
+		options = {:kill => 0, :noop => false}
+		parser = OptionParser.new do |opts|
+			opts.banner = "Usage: passenger-memory-status [options]"
+			opts.separator ""
+			opts.separator "Tool for inspecting Phusion Passenger's memory usage."
+			opts.separator ""
+			opts.separator "Options:"
+			opts.on("--kill=memory_in_kilobytes", Integer,
+					"Send SIGABRT signal to any passenger which VMSize is more than\n" <<
+					"#{' ' * 37}the memory specified in kilobytes.") do |what|
+				if what < 1
+					STDERR.puts "Invalid argument for --kill."
+					exit 1
+				else
+					options[:kill] = what
+				end
+			end
+			opts.on("--noop", "-n", "Perform a dry run") do
+					options[:noop] = true
+			end
+		end
+		begin
+			parser.parse!
+		rescue OptionParser::ParseError => e
+			puts e
+			puts
+			puts "Please see '--help' for valid options."
+			exit 1
+		end
+
 		if @stats.apache_processes
 			print_process_list("Apache processes", @stats.apache_processes)
 		else
@@ -132,6 +163,27 @@ class App
 			puts
 			puts "*** WARNING: Please run this tool as root. Otherwise the " <<
 				"private dirty RSS of processes cannot be determined."
+		end
+
+		if options[:kill] > 0
+			puts
+			puts "#{BLUE_BG}#{BOLD}#{YELLOW}----- Sending SIGABRT to passenger instances -----#{RESET}\n"
+			puts
+			printf "Sending SIGABRT signal to any passengerinstance which VMSize is more than: %.2f MB\n", options[:kill] / 1024.0
+			total_memory_freed = 0
+			total_processes_killed = 0
+			@stats.passenger_processes.each do |process|
+				if !process.name.include?('ApplicationSpawner') && process.vm_size > options[:kill]
+					total_memory_freed += process.vm_size
+					total_processes_killed += 1
+					STDERR.puts "*** Signalling: #{process.pid} - #{process.name}\n"
+					Process.kill(6, process.pid) unless options[:noop]
+				end
+			end
+
+			puts   "### Processes killed: #{total_processes_killed}\n"
+			printf "### Total memory freed: %.2f MB\n", total_memory_freed / 1024.0
+			puts
 		end
 	end
 	
