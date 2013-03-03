@@ -24,6 +24,8 @@ Release 3.9.6 (4.0.0 release candidate 4)
  * Phusion Passenger now outputs the Date HTTP header in case the
    application didn't already do that (and was violating the HTTP spec).
    Fixes issue #485.
+ * Phusion Passenger now checks whether /dev/urandom isn't broken.
+   Fixes issue #516.
 
 
 Release 3.9.5 (4.0.0 release candidate 3)

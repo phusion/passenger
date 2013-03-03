@@ -392,11 +392,19 @@ public:
 		if (geteuid() == 0 && !options.userSwitching) {
 			lowerPrivilege(options.defaultUser, options.defaultGroup);
 		}
+
+		UPDATE_TRACE_POINT();
+		randomGenerator = make_shared<RandomGenerator>();
+		// Check whether /dev/urandom is actually random.
+		// https://code.google.com/p/phusion-passenger/issues/detail?id=516
+		if (randomGenerator->generateByteString(16) == randomGenerator->generateByteString(16)) {
+			throw RuntimeException("Your random number device, /dev/urandom, appears to be broken. "
+				"It doesn't seem to be returning random data. Please fix this.");
+		}
 		
 		UPDATE_TRACE_POINT();
 		loggerFactory = make_shared<UnionStation::LoggerFactory>(options.loggingAgentAddress,
 			"logging", options.loggingAgentPassword);
-		randomGenerator = make_shared<RandomGenerator>();
 		spawnerFactory = make_shared<SpawnerFactory>(poolLoop.safe,
 			resourceLocator, generation, make_shared<SpawnerConfig>(randomGenerator));
 		pool = make_shared<Pool>(poolLoop.safe.get(), spawnerFactory, loggerFactory,
