@@ -925,6 +925,21 @@ private:
 			headerData.append("X-Powered-By: Phusion Passenger\r\n");
 		}
 
+		// Add Date header. https://code.google.com/p/phusion-passenger/issues/detail?id=485
+		if (lookupHeader(headerData, "Date", "date").empty()) {
+			char dateStr[60];
+			char *pos = dateStr;
+			const char *end = dateStr + sizeof(dateStr) - 1;
+			time_t the_time = time(NULL);
+			struct tm the_tm;
+
+			pos = appendData(pos, end, "Date: ");
+			localtime_r(&the_time, &the_tm);
+			pos += strftime(pos, end - pos, "%a, %d %b %G %H:%M:%S %Z", &the_tm);
+			pos = appendData(pos, end, "\r\n");
+			headerData.append(dateStr, pos - dateStr);
+		}
+
 		// Detect out of band work request
 		Header oobw = lookupHeader(headerData, "X-Passenger-Request-OOB-Work", "x-passenger-request-oob-work");
 		if (!oobw.empty()) {

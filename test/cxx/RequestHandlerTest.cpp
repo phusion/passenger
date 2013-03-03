@@ -834,6 +834,20 @@ namespace tut {
 		}
 	}
 
+	TEST_METHOD(47) {
+		set_test_name("The RequestHandler should append a Date header if the app doesn't output one.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/pid",
+			NULL);
+
+		string result = readAll(connection);
+		ensure(result.find("Date: ") != string::npos);
+	}
+
 	// Test small response buffering.
 	// Test large response buffering.
 }

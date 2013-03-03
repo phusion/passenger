@@ -21,6 +21,9 @@ Release 3.9.6 (4.0.0 release candidate 4)
    (through the `env` config option) are now correctly passed to
    all application processes. Fixes issue #371.
  * Fixed support for RVM mixed mode installations. Fixes issue #828.
+ * Phusion Passenger now outputs the Date HTTP header in case the
+   application didn't already do that (and was violating the HTTP spec).
+   Fixes issue #485.
 
 
 Release 3.9.5 (4.0.0 release candidate 3)
