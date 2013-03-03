@@ -1,3 +1,9 @@
+Release 3.0.20
+--------------
+
+ * Fixed support for RVM mixed mode installations. Fixes issue #828.
+
+
 Release 3.0.19
 --------------
 
