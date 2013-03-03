@@ -20,6 +20,7 @@ Release 3.9.6 (4.0.0 release candidate 4)
  * Environment variables set in the Nginx configuration file
    (through the `env` config option) are now correctly passed to
    all application processes. Fixes issue #371.
+ * Fixed support for RVM mixed mode installations. Fixes issue #828.
 
 
 Release 3.9.5 (4.0.0 release candidate 3)
