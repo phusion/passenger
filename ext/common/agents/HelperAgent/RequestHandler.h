@@ -795,10 +795,15 @@ private:
 		string::size_type begin = headerData.find(' ');
 		string::size_type end = headerData.find("\r\n");
 		if (begin != string::npos && end != string::npos) {
-			StaticString status(headerData.data() + begin, end - begin);
-			headerData.append("Status: ");
-			headerData.append(status);
-			headerData.append("\r\n");
+			StaticString statusValue(headerData.data() + begin, end - begin);
+			char header[statusValue.size() + 20];
+			char *pos = header;
+			const char *end = header + statusValue.size() + 20;
+
+			pos = appendData(pos, end, "Status: ");
+			pos = appendData(pos, end, statusValue);
+			pos = appendData(pos, end, "\r\n");
+			headerData.append(header);
 			return true;
 		} else {
 			disconnectWithError(client, "application sent malformed response: the HTTP status line is invalid.");
