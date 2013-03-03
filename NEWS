@@ -91,6 +91,14 @@ This is the first beta of Phusion Passenger 4. The changes are numerous.
  * Better relocatability without wasting space.
 
 
+Release 3.0.20
+--------------
+
+ * Rebootstrapped the libev configure to fix compilation problems on Solaris 11.
+ * Fixed support for RVM mixed mode installations. Fixes issue #828.
+ * Fixed encoding problems in Phusion Passenger Standalone.
+
+
 Release 3.0.19
 --------------
 
