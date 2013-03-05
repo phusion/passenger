@@ -204,7 +204,7 @@ task 'package:upload' => ['package', 'package:sign'] do
 	sh "scp #{signatures.join(' ')} app@shell.phusion.nl:/u/apps/signatures/phusion-passenger/"
 
 	if File.exist?("pkg/passenger-#{version}.gem")
-		#sh "gem push pkg/passenger-#{version}.gem"
+		sh "gem push pkg/passenger-#{version}.gem"
 	end
 
 	if File.exist?("pkg/passenger-#{version}.tar.gz")

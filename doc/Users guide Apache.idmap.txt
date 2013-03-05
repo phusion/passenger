@@ -26,29 +26,31 @@
 
 2.3. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
 
-2.4. Installing or upgrading on Debian 6 or Ubuntu	=>	installing-or-upgrading-on-ubuntu-1xg22xs
+2.4. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-ed3r9v
 
-2.5. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
+2.5. Installing or upgrading on Debian 6 or Ubuntu	=>	installing-or-upgrading-on-ubuntu-1xg22xs
 
-2.6. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-b17h8g
+2.6. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
 
-2.7. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
+2.7. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-b17h8g
 
-2.8. Customizing the compilation process	=>	customizing-the-compilation-process-1sds3od
+2.8. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
 
-2.8.1. Setting the compiler	=>	setting-the-compiler-1symq7h
+2.9. Customizing the compilation process	=>	customizing-the-compilation-process-1sds3od
 
-2.8.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-wzu0ey
+2.9.1. Setting the compiler	=>	setting-the-compiler-1symq7h
 
-2.8.3. Forcing location of certain command line tools	=>	forcing-location-of-certain-command-line-tools-1hym30u
+2.9.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-wzu0ey
 
-2.9. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
+2.9.3. Forcing location of certain command line tools	=>	forcing-location-of-certain-command-line-tools-1hym30u
 
-2.10. Disabling without uninstalling	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
+2.10. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
 
-2.11. Uninstalling	=>	uninstalling-phusion-passenger-1qb4ssq
+2.11. Disabling without uninstalling	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
 
-2.12. Moving to a different directory	=>	moving-to-a-different-directory-1n0gkwh
+2.12. Uninstalling	=>	uninstalling-phusion-passenger-1qb4ssq
+
+2.13. Moving to a different directory	=>	moving-to-a-different-directory-1n0gkwh
 
 3. Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3.x) application	=>	deploying-a-ruby-on-rails-1-x-or-2-x-but-not-rails-3-x-application-9r92hi
 

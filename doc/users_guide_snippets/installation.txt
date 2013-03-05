@@ -308,6 +308,28 @@ endif::[]
 Please refer to <<verify_passenger_running,this section>>. Note that all Phusion Passenger administration scripts are located inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-memory-stats'.
 
 
+=== Cryptographic verification of installation files
+
+When using the generic installation methods, you can check whether the gem or the tarball are legit (i.e. whether they came from Phusion) by checking them against their GPG digital signatures. Starting from the open source version 4.0.0 RC 4, or the Enterprise version 4.0.0 RC 1, both the gem and tarball are signed with Phusion's GPG key:
+
+  Phusion Software Signing (software-signing@phusion.nl)
+  Key ID: 0x0A212A8C
+
+This key is stored at link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with this command:
+
+-------------------------------------------------------------------------
+gpg --keyserver keyserver.ubuntu.com --search-keys 0x2AC745A50A212A8C
+-------------------------------------------------------------------------
+
+You can find the open source version's GPG signatures at https://www.phusionpassenger.com/signatures/, or the Enterprise version's GPG signatures in the link:https://www.phusionpassenger.com/orders[Customer Area]. You can verify the validity of a file against its signature as follows:
+
+-------------------------------------------------------------------------
+gpg --verify filename.asc filename
+-------------------------------------------------------------------------
+
+The DEB and RPM packages are signed with the signatures of the respective packagers. Phusion does not provide signatures for them.
+
+
 === Installing or upgrading on Debian 6 or Ubuntu
 
 John Leach from Brightbox has kindly provided Ubuntu packages for Phusion Passenger. The Ubuntu Lucid packages are compatible with Debian 6. The packages are available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
