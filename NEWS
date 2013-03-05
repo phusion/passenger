@@ -1,5 +1,5 @@
-Release 3.9.6 (4.0.0 release candidate 4)
------------------------------------------
+Release 4.0.0 release candidate 4
+---------------------------------
 
  * Fixed compilation on systems where /tmp is mounted noexec.
  * Fixed some memory corruption bugs.
