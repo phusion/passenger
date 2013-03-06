@@ -373,6 +373,11 @@ private
 		# Stubable by unit tests.
 		return true
 	end
+
+	def should_reraise_app_error?(e)
+		# Stubable by unit tests.
+		return false
+	end
 end
 
 

@@ -68,7 +68,21 @@ module ThreadHandlerExtension
 			env[RACK_HIJACK_P] = true
 			env[RACK_HIJACK] = lambda { env[RACK_HIJACK_IO] ||= connection }
 			
-			status, headers, body = @app.call(env)
+			begin
+				status, headers, body = @app.call(env)
+			rescue => e
+				if should_reraise_app_error?(e)
+					raise e
+				else
+					# It's a good idea to catch application exceptions here because
+					# otherwise maliciously crafted responses can crash the app,
+					# forcing it to be respawned, and thereby effectively DoSing it.
+					error("*** Application exception caught in Phusion Passenger request handler: " <<
+						"#{e.message || e.to_s} (#{e.class})\n" <<
+						"    " << e.backtrace.join("\n    "))
+					return false
+				end
+			end
 
 			# Application requested a full socket hijack.
 			return true if env[RACK_HIJACK_IO]
