@@ -489,35 +489,65 @@ This required option may only occur once, in the global server configuration.
 
 [[PassengerRuby]]
 === PassengerRuby <filename> ===
-This option allows one to specify the Ruby interpreter to use.
+The `PassengerRuby` option allows one to specify the Ruby interpreter to use. Similarly, the `PassengerPython` option is for specifying the Python interpreter.
 
-Since version 4.0.0, this option may occur in the following places:
+In versions prior to 4.0.0, only a single Ruby version was supported for the entire Apache instance, so `PassengerRuby` may only occur in the global server configuration. Also, the `PassengerPython` option was not supported.
+
+Since version 4.0.0, the `PassengerPython` option was added. Also, Phusion Passenger supports multiple Ruby or Python interpreters in the same Apache instance. And so, since version 4.0.0, this option may occur in the following places:
 
  * In the global server configuration.
  * In a virtual host configuration block.
  * In a `<Directory>` or `<Location>` block.
  * In '.htaccess', if `AllowOverride Options` is on.
 
-If you want to use a different Ruby interpreter for two different applications then you should define different `PassengerRuby` directives in different virtual host blocks.
+The `PassengerRuby` in the global server configuration - that is, the one that `passenger-install-apache2-module` outputs, or the one in the RPM/DEB package's 'passenger.load' config file - is used for invoking certain Phusion Passenger tools that are written in Ruby, e.g. the internal helper script used by <<PassengerPreStart,PassengerPreStart>>. It is also used as the default Ruby interpreter for Ruby web apps. You don't *have* to specify a `PassengerRuby` in the global configuration though, because the default is to use the first `ruby` command found in `$PATH`.
 
-In versions prior to 4.0.0, only a single Ruby version is supported for the entire Apache instance, so `PassengerRuby` may only occur in the global server configuration.
+The `PassengerPython` option works in a similar manner, but applies to Python instead.
 
-The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
+You can also override `PassengerRuby` or `PassengerPython` in specific contexts if you want to use a different Ruby/Python interpreter for that web app. For example:
+
+------------------------------
+# Use Ruby 1.8.7 by default.
+PassengerRuby /usr/bin/ruby1.8
+# Use Python 2.6 by default.
+PassengerPython /usr/bin/python2.6
+
+<VirtualHost *:80>
+    # This Rails web app will use Ruby 1.8.7
+    ServerName www.foo.com
+    DocumentRoot /webapps/foo/public
+</VirtualHost>
+
+<VirtualHost *:80>
+    # This Rails web app will use Ruby 1.9.3, as installed by RVM
+    PassengerRuby /usr/local/rvm/wrappers/ruby-1.9.3/ruby
+    ServerName www.bar.com
+    DocumentRoot /webapps/bar/public
+
+    # If you have a web app deployed in a sub-URI, customize
+    # PassengerRuby/PassengerPython inside a <Location> block.
+    # The web app under www.bar.com/blog will use JRuby 1.7.1
+    RackBaseURI /blog
+    <Location /blog>
+        PassengerRuby /usr/local/rvm/wrappers/jruby-1.7.1/ruby
+    </Location>
+</VirtualHost>
+
+<VirtualHost *:80>
+    # This Flask web app will use Python 3.0
+    PassengerPython /usr/bin/python3.0
+    ServerName www.baz.com
+    DocumentRoot /webapps/baz/public
+</VirtualHost>
+------------------------------
+
+include::users_guide_snippets/rvm_helper_tool.txt[]
 
 === PassengerPython <filename> ===
 :version: 4.0.0
 include::users_guide_snippets/since_version.txt[]
 
-This option allows one to specify the Python interpreter to use. It may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-If you want to use a different Python interpreter for two different applications then you should define different `PassengerPython` directives in different virtual host blocks.
-
-The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
+This option allows one to specify the Python interpreter to use. See <<PassengerRuby,PassengerRuby>> for more information. The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
 
 [[PassengerAppRoot]]
 === PassengerAppRoot <path/to/root> ===
