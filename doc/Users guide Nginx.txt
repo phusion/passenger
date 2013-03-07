@@ -380,7 +380,7 @@ $ some_awesome_editor passenger_wsgi.py
 $ cat passenger_wsgi.py
 def application(environ, start_response):
   start_response('200 OK', [('Content-Type', 'text/plain')])
-  return ["hello world!\n"]
+  return [b"hello world!\n"]
 -------------------------------------------
 
 Finally, we deploy it by adding the following configuration options to
