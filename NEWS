@@ -9,6 +9,7 @@ Release 4.0.0 release candidate 5
    which helps the user with figuring out the correct Ruby command to use
    in case s/he wants to use multiple Ruby interpreters. The manual has
    also been updated to mention this tool.
+ * Worked around an OS X Unix domain socket bug. Fixes issue #854.
 
 
 Release 4.0.0 release candidate 4
