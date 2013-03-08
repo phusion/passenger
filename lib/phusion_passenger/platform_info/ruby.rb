@@ -68,9 +68,12 @@ module PlatformInfo
 						return filename
 					end
 				end
-				STDERR.puts "Your RVM wrapper scripts are too old. Please " +
-							"update them first by running 'rvm get head && " +
-							"rvm reload && rvm repair all'."
+				STDERR.puts "Your RVM wrapper scripts are too old, or some " +
+					"wrapper scripts are missing. Please update/regenerate " +
+					"them first by running:\n\n" +
+					"  rvm get stable && rvm reload && rvm repair all\n\n" +
+					"If that doesn't seem to work, please run:\n\n" +
+					"  rvm wrapper #{rvm_ruby_string} --no-prefix --all"
 				exit 1
 			else
 				# Something's wrong with the user's RVM installation.
