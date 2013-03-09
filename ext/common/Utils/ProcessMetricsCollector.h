@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -68,9 +68,9 @@ struct ProcessMetrics {
 	pid_t   ppid;
 	uint8_t cpu;
 	/** Resident Set Size, amount of memory in RAM. Does not include swap.
-	 * 0 if completely swapped out.
+	 * -1 if not yet known, 0 if completely swapped out.
 	 */
-	size_t  rss;
+	ssize_t  rss;
 	/** Proportional Set Size, see measureRealMemory(). Does not include swap.
 	 * -1 if unknown, 0 if completely swapped out.
 	 */
@@ -90,9 +90,11 @@ struct ProcessMetrics {
 	
 	ProcessMetrics() {
 		pid = (pid_t) -1;
+		rss = -1;
 		pss = -1;
 		privateDirty = -1;
 		swap = -1;
+		vmsize = -1;
 	}
 	
 	bool isValid() const {
@@ -114,8 +116,10 @@ struct ProcessMetrics {
 		}
 		if (privateDirty != -1) {
 			return privateDirty + swap;
-		} else {
+		} else if (rss != -1) {
 			return rss + swap;
+		} else {
+			return 0;
 		}
 	}
 };
