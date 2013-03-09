@@ -437,7 +437,7 @@ public:
 			snprintf(membuf, sizeof(membuf), "%ldM",
 				(unsigned long) (process->metrics.realMemory() / 1024));
 			snprintf(buf, sizeof(buf),
-					"  * PID   : %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s\n"
+					"  * PID   : %-5lu   Sessions : %-2u   Processed: %-5u   Uptime: %s\n"
 					"    Memory: %-5s   Last used: %s ago",
 					(unsigned long) process->pid,
 					process->sessions,
