@@ -446,6 +446,9 @@ public:
 			} else if (process->enabled == Process::DISABLED) {
 				result << "    DISABLED" << endl;
 			}
+			if (process->getLifeStatus() == Process::SHUTTING_DOWN) {
+				result << "    Shutting down...";
+			}
 
 			const Socket *socket;
 			if (options.verbose && (socket = process->sockets->findSocketWithName("http")) != NULL) {
@@ -1373,6 +1376,7 @@ public:
 				inspectProcessList(options, result, group->enabledProcesses);
 				inspectProcessList(options, result, group->disablingProcesses);
 				inspectProcessList(options, result, group->disabledProcesses);
+				inspectProcessList(options, result, group->detachedProcesses);
 				result << endl;
 			}
 		}
