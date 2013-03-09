@@ -12,6 +12,7 @@ Release 4.0.0 release candidate 5
  * Worked around an OS X Unix domain socket bug. Fixes issue #854.
  * Out-of-Band Garbage Collection now works properly when the application
    has disabled garbage collection. Fixes issue #859.
+ * Worked around some RVM bugs.
 
 
 Release 4.0.0 release candidate 4
