@@ -432,14 +432,20 @@ public:
 		for (p_it = processes.begin(); p_it != processes.end(); p_it++) {
 			const ProcessPtr &process = *p_it;
 			char buf[128];
+			char membuf[10];
 			
+			snprintf(membuf, sizeof(membuf), "%ldM",
+				(unsigned long) (process->metrics.realMemory() / 1024));
 			snprintf(buf, sizeof(buf),
-					"* PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
+					"  * PID   : %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s\n"
+					"    Memory: %-5s   Last used: %s ago",
 					(unsigned long) process->pid,
 					process->sessions,
 					process->processed,
-					process->uptime().c_str());
-			result << "  " << buf << endl;
+					process->uptime().c_str(),
+					membuf,
+					distanceOfTimeInWords(process->lastUsed / 1000000).c_str());
+			result << buf << endl;
 
 			if (process->enabled == Process::DISABLING) {
 				result << "    Disabling..." << endl;

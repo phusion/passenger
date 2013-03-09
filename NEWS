@@ -3,6 +3,8 @@ Release 4.0.0 release candidate 5
 
  * We now provide GPG digital signatures for all file releases by Phusion.
    More information can be found in the manual.
+ * `passenger-status` now displays process memory usage and time when it
+   was last used. The latter fixes issue #853.
  * Exceptions in Rack application objects are now caught to prevent
    application processes from exiting.
  * The `passenger-config` tool now supports the `--ruby-command` argument,
