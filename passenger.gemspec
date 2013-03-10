@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
 	s.version = PhusionPassenger::VERSION_STRING
 	s.rubyforge_project = "passenger"
 	s.author = "Phusion - http://www.phusion.nl/"
-	s.email = "info@phusion.nl"
+	s.email = "software-signing@phusion.nl"
 	s.require_paths = ["lib"]
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'daemon_controller', '>= 1.1.0'
