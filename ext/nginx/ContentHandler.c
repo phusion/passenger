@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010, 2011, 2012 Phusion
+ * Copyright (C) 2010-2013 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -84,34 +84,6 @@ get_file_type(const u_char *filename, unsigned int throttle_rate) {
 static int
 file_exists(const u_char *filename, unsigned int throttle_rate) {
     return get_file_type(filename, throttle_rate) == FT_FILE;
-}
-
-static passenger_app_type_t
-detect_application_type(const ngx_str_t *public_dir) {
-    u_char filename[NGX_MAX_PATH];
-    
-    ngx_memzero(filename, sizeof(filename));
-    ngx_snprintf(filename, sizeof(filename), "%s/%s",
-                 public_dir->data, "../config.ru");
-    if (file_exists(filename, 1)) {
-        return AP_RACK;
-    }
-    
-    ngx_memzero(filename, sizeof(filename));
-    ngx_snprintf(filename, sizeof(filename), "%s/%s",
-                 public_dir->data, "../config/environment.rb");
-    if (file_exists(filename, 1)) {
-        return AP_CLASSIC_RAILS;
-    }
-        
-    ngx_memzero(filename, sizeof(filename));
-    ngx_snprintf(filename, sizeof(filename), "%s/%s",
-                 public_dir->data, "../passenger_wsgi.py");
-    if (file_exists(filename, 1)) {
-        return AP_WSGI;
-    }
-    
-    return AP_NONE;
 }
 
 /**
@@ -197,11 +169,11 @@ find_base_uri(ngx_http_request_t *r, const passenger_loc_conf_t *loc,
         return 0;
     } else {
         base_uris = (ngx_str_t *) loc->base_uris->elts;
+        uri       = &r->uri;
         for (i = 0; i < loc->base_uris->nelts; i++) {
             base_uri = &base_uris[i];
-            uri      = &r->uri;
             
-            if (uri->len == 1 && uri->data[0] == '/') {
+            if (base_uri->len == 1 && base_uri->data[0] == '/') {
                 /* Ignore 'passenger_base_uri /' options. Users usually
                  * specify this out of ignorance.
                  */
@@ -213,7 +185,7 @@ find_base_uri(ngx_http_request_t *r, const passenger_loc_conf_t *loc,
              || (    uri->len >  base_uri->len
                   && ngx_strncmp(uri->data, base_uri->data, base_uri->len) == 0
                   && uri->data[base_uri->len] == (u_char) '/' )) {
-                *found_base_uri = base_uris[i];
+                *found_base_uri = *base_uri;
                 return 1;
             }
         }
@@ -373,24 +345,8 @@ create_request(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
-    switch (context->app_type) {
-    case AP_CLASSIC_RAILS:
-        app_type_string = (const u_char *) "classic-rails";
-        app_type_string_len = sizeof("classic-rails");
-        break;
-    case AP_RACK:
-        app_type_string = (const u_char *) "rack";
-        app_type_string_len = sizeof("rack");
-        break;
-    case AP_WSGI:
-        app_type_string = (const u_char *) "wsgi";
-        app_type_string_len = sizeof("wsgi");
-        break;
-    default:
-        app_type_string = (const u_char *) "rack";
-        app_type_string_len = sizeof("rack");
-        break;
-    }
+    app_type_string = (const u_char *) passenger_get_app_type_name(context->app_type);
+    app_type_string_len = strlen((const char *) app_type_string) + 1; /* include null terminator */
     
     
     /*
@@ -472,10 +428,12 @@ create_request(ngx_http_request_t *r)
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_SHOW_VERSION_IN_HEADER",
                                   slcf, show_version_in_header);
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_RUBY", slcf, ruby);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_PYTHON", slcf, python);
     len += sizeof("PASSENGER_ENV") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_GROUP_NAME", slcf, app_group_name);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_ROOT", slcf, app_root);
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_RIGHTS", slcf, app_rights);
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_USER", slcf, user);
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_GROUP", slcf, group);
@@ -686,6 +644,8 @@ create_request(ngx_http_request_t *r)
     
     SERIALIZE_STR_CONFIG_DATA("PASSENGER_RUBY",
                               slcf, ruby);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_PYTHON",
+                              slcf, python);
 
     b->last = ngx_copy(b->last, "PASSENGER_ENV",
                        sizeof("PASSENGER_ENV"));
@@ -699,6 +659,8 @@ create_request(ngx_http_request_t *r)
 
     SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_GROUP_NAME",
                               slcf, app_group_name);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_ROOT",
+                              slcf, app_root);
     SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_RIGHTS",
                               slcf, app_rights);
     SERIALIZE_STR_CONFIG_DATA("PASSENGER_USER",
@@ -1393,8 +1355,17 @@ passenger_content_handler(ngx_http_request_t *r)
         return passenger_static_content_handler(r, &page_cache_file);
     }
     
-    context->app_type = detect_application_type(&context->public_dir);
-    if (context->app_type == AP_NONE) {
+    if (slcf->app_root.data == NULL) {
+        context->app_type = passenger_app_type_detector_check_document_root(
+            passenger_app_type_detector,
+            (const char *) context->public_dir.data, context->public_dir.len,
+            context->base_uri.len != 0);
+    } else {
+        context->app_type = passenger_app_type_detector_check_app_root(
+            passenger_app_type_detector,
+            (const char *) slcf->app_root.data, slcf->app_root.len);
+    }
+    if (context->app_type == PAT_NONE) {
         return NGX_DECLINED;
     }
     

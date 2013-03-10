@@ -39,7 +39,7 @@ module RobustInterruption
 		end
 
 		def pop_interruption_flag
-			raise "BUG - cannot pop interruption flag in this state" if @interruption_flags.size <= 1
+			Kernel.raise "BUG - cannot pop interruption flag in this state" if @interruption_flags.size <= 1
 			@interruption_flags.pop
 		end
 	end
@@ -52,27 +52,43 @@ module RobustInterruption
 		RobustInterruption.install
 	end
 
+	def installed?(thread = Thread.current)
+		return !!thread[:robust_interruption]
+	end
+	module_function :installed?
+
 	def interrupted?(thread = Thread.current)
-		data = thread[:robust_interruption]
-		return data && data.interrupted?
+		if data = thread[:robust_interruption]
+			return data.interrupted?
+		else
+			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
+		end
 	end
 	module_function :interrupted?
 
 	def self.raise(thread, exception = Interrupted)
-		RobustInterruption.disable_interruptions do
-			data = thread[:robust_interruption]
-			if data
-				data.interrupted = true
-				if data.try_lock
-					begin
-						thread.raise(exception)
-					ensure
-						data.unlock
-					end
-				end
-			else
-				thread.raise(exception)
+		if installed?
+			RobustInterruption.disable_interruptions(Thread.current) do
+				_raise(thread, exception)
 			end
+		else
+			_raise(thread, exception)
+		end
+	end
+
+	def self._raise(thread, exception)
+		data = thread[:robust_interruption]
+		if data
+			data.interrupted = true
+			if data.try_lock
+				begin
+					thread.raise(exception)
+				ensure
+					data.unlock
+				end
+			end
+		else
+			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
 		end
 	end
 
@@ -89,7 +105,7 @@ module RobustInterruption
 				data.unlock if was_interruptable
 			end
 		else
-			yield
+			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
 		end
 	end
 	module_function :disable_interruptions
@@ -107,7 +123,7 @@ module RobustInterruption
 				data.pop_interruption_flag
 			end
 		else
-			yield
+			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
 		end
 	end
 	module_function :enable_interruptions
@@ -128,7 +144,7 @@ module RobustInterruption
 				end
 			end
 		else
-			yield
+			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
 		end
 	end
 	module_function :restore_interruptions

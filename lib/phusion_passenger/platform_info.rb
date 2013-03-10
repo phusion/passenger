@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -28,9 +28,11 @@ module PhusionPassenger
 module PlatformInfo
 private
 	@@cache_dir = nil
-	
-	def self.cache_dir=(value)
-		@@cache_dir = value
+	@@verbose   = ['1', 'true', 'on', 'yes'].include?(ENV['VERBOSE'])
+	@@log_implementation = lambda do |message|
+		message = reindent(message, 3)
+		message.sub!(/^   /, '')
+		STDERR.puts " * #{message}"
 	end
 	
 	def self.private_class_method(name)
@@ -128,36 +130,97 @@ private
 		return nil
 	end
 	private_class_method :select_executable
-	
-	def self.read_file(filename)
-		return File.read(filename)
-	rescue
-		return ""
+
+	def self.unindent(str)
+		str = str.dup
+		str.gsub!(/\A([\s\t]*\n)+/, '')
+		str.gsub!(/[\s\t\n]+\Z/, '')
+		indent = str.split("\n").select{ |line| !line.strip.empty? }.map{ |line| line.index(/[^\s]/) }.compact.min || 0
+		str.gsub!(/^[[:blank:]]{#{indent}}/, '')
+		return str
 	end
-	private_class_method :read_file
+	private_class_method :unindent
+
+	def self.reindent(str, level)
+		str = unindent(str)
+		str.gsub!(/^/, ' ' * level)
+		return str
+	end
+	private_class_method :reindent
+
+	def self.create_temp_file(name, dir = tmpdir)
+		tag = "#{Process.pid}.#{Thread.current.object_id.to_s(16)}"
+		if name =~ /\./
+			ext = File.extname(name)
+			name = File.basename(name, ext) + "-#{tag}#{ext}"
+		else
+			name = "#{name}-#{tag}"
+		end
+		filename = "#{dir}/#{name}"
+		f = File.open(filename, "w")
+		begin
+			yield(filename, f)
+		ensure
+			f.close if !f.closed?
+			File.unlink(filename) if File.exist?(filename)
+		end
+	end
+	private_class_method :create_temp_file
+
+	def self.log(message)
+		if verbose?
+			@@log_implementation.call(message)
+		end
+	end
+	private_class_method :log
 
 public
 	class RuntimeError < ::RuntimeError
 	end
-	
-	# Check whether the specified command is in $PATH, and return its
-	# absolute filename. Returns nil if the command is not found.
-	#
-	# This function exists because system('which') doesn't always behave
-	# correctly, for some weird reason.
-	def self.find_command(name)
-		name = name.to_s
-		ENV['PATH'].to_s.split(File::PATH_SEPARATOR).detect do |directory|
-			path = File.join(directory, name)
-			if File.file?(path) && File.executable?(path)
-				return path
-			end
-		end
-		return nil
+
+
+	def self.cache_dir=(value)
+		@@cache_dir = value
 	end
-	
+
+	def self.cache_dir
+		return @@cache_dir
+	end
+
+	def self.verbose=(val)
+		@@verbose = val
+	end
+
+	def self.verbose?
+		return @@verbose
+	end
+
+	def self.log_implementation=(impl)
+		@@log_implementation = impl
+	end
+
+	def self.log_implementation
+		return @@log_implementation
+	end
+
+
 	def self.env_defined?(name)
 		return !ENV[name].nil? && !ENV[name].empty?
+	end
+
+	def self.string_env(name, default_value = nil)
+		value = ENV[name]
+		if value.nil? || value.empty?
+			return default_value
+		else
+			return value
+		end
+	end
+
+	def self.read_file(filename)
+		return File.read(filename)
+	rescue
+		return ""
 	end
 	
 	def self.tmpdir
@@ -246,94 +309,6 @@ public
 		raise RuntimeError, message
 	end
 	memoize :tmpexedir
-	
-	def self.cc
-		return ENV['CC'] || "gcc"
-	end
-	
-	def self.cxx
-		return ENV['CXX'] || "g++"
-	end
-	
-	def self.try_compile(language, source, flags = nil)
-		if language == :c
-			compiler = cc
-		elsif language == :cxx
-			compiler = cxx
-		else
-			raise ArgumentError,"Unsupported language '#{language}'"
-		end
-		filename = File.join("#{tmpexedir}/passenger-compile-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
-			f.puts(source)
-		end
-		begin
-			return system("(#{compiler} #{flags} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.o") rescue nil
-		end
-	end
-	private_class_method :try_compile
-	
-	def self.try_link(language, source, flags = nil)
-		if language == :c
-			compiler = cc
-		elsif language == :cxx
-			compiler = cxx
-		else
-			raise ArgumentError,"Unsupported language '#{language}'"
-		end
-		filename = File.join("#{tmpexedir}/passenger-link-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
-			f.puts(source)
-		end
-		begin
-			return system("(#{compiler} #{flags} '#{filename}' -o '#{filename}.out') >/dev/null 2>/dev/null")
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.out") rescue nil
-		end
-	end
-	private_class_method :try_link
-	
-	def self.try_compile_and_run(language, source, flags = nil)
-		if language == :c
-			compiler = cc
-		elsif language == :cxx
-			compiler = cxx
-		else
-			raise ArgumentError,"Unsupported language '#{language}'"
-		end
-		filename = File.join("#{tmpexedir}/passenger-compile-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
-			f.puts(source)
-		end
-		begin
-			if system("(#{compiler} #{flags} '#{filename}' -o '#{filename}.out') >/dev/null 2>/dev/null")
-				if Process.respond_to?(:spawn)
-					pid = Process.spawn("#{filename}.out",
-						:out => ["/dev/null", "w"],
-						:err => ["/dev/null", "w"])
-					
-				else
-					pid = fork do
-						STDOUT.reopen("/dev/null", "w")
-						STDERR.reopen("/dev/null", "w")
-						exec("#{filename}.out")
-					end
-				end
-				pid = Process.waitpid(pid) rescue nil
-				return pid && $?.exitstatus == 0
-			else
-				return false
-			end
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.out") rescue nil
-		end
-	end
-	private_class_method :try_compile_and_run
 
 	def self.rb_config
 		if defined?(::RbConfig)
@@ -342,7 +317,30 @@ public
 			return ::Config::CONFIG
 		end
 	end
-	private_class_method :rb_config
+
+	# Check whether the specified command is in $PATH, and return its
+	# absolute filename. Returns nil if the command is not found.
+	#
+	# This function exists because system('which') doesn't always behave
+	# correctly, for some weird reason.
+	def self.find_command(name)
+		name = name.to_s
+		if name =~ /^\//
+			if File.executable?(name)
+				return name
+			else
+				return nil
+			end
+		else
+			ENV['PATH'].to_s.split(File::PATH_SEPARATOR).detect do |directory|
+				path = File.join(directory, name)
+				if File.file?(path) && File.executable?(path)
+					return path
+				end
+			end
+			return nil
+		end
+	end
 end
 
 end # module PhusionPassenger

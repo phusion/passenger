@@ -1148,8 +1148,12 @@ readAll(int fd) {
 		if (ret == 0) {
 			break;
 		} else if (ret == -1) {
-			int e = errno;
-			throw SystemException("Cannot read from file descriptor", e);
+			if (errno == ECONNRESET) {
+				break;
+			} else {
+				int e = errno;
+				throw SystemException("Cannot read from file descriptor", e);
+			}
 		} else {
 			result.append(buf, ret);
 		}

@@ -32,8 +32,9 @@
 #include <oxt/backtrace.hpp>
 
 #include "Configuration.hpp"
-#include "Utils.h"
-#include "Utils/CachedFileStat.hpp"
+#include <ApplicationPool2/AppTypes.h>
+#include <Utils.h>
+#include <Utils/CachedFileStat.hpp>
 
 // The Apache/APR headers *must* come after the Boost headers, otherwise
 // compilation will fail on OpenBSD.
@@ -44,6 +45,7 @@ namespace Passenger {
 
 using namespace std;
 using namespace oxt;
+using namespace Passenger::ApplicationPool2;
 
 /**
  * Utility class for determining URI-to-application directory mappings.
@@ -55,14 +57,6 @@ using namespace oxt;
  * @ingroup Core
  */
 class DirectoryMapper {
-public:
-	enum ApplicationType {
-		NONE,
-		CLASSIC_RAILS,
-		RACK,
-		WSGI
-	};
-
 private:
 	DirConfig *config;
 	request_rec *r;
@@ -70,22 +64,7 @@ private:
 	unsigned int throttleRate;
 	bool baseURIKnown;
 	const char *baseURI;
-	ApplicationType appType;
-	
-	inline bool shouldAutoDetectClassicRails() {
-		return config->autoDetectRails == DirConfig::ENABLED ||
-			config->autoDetectRails == DirConfig::UNSET;
-	}
-	
-	inline bool shouldAutoDetectRack() {
-		return config->autoDetectRack == DirConfig::ENABLED ||
-			config->autoDetectRack == DirConfig::UNSET;
-	}
-	
-	inline bool shouldAutoDetectWSGI() {
-		return config->autoDetectWSGI == DirConfig::ENABLED ||
-			config->autoDetectWSGI == DirConfig::UNSET;
-	}
+	PassengerAppType appType;
 	
 public:
 	/**
@@ -102,7 +81,7 @@ public:
 		this->config = config;
 		this->cstat = cstat;
 		this->throttleRate = throttleRate;
-		appType = NONE;
+		appType = PAT_NONE;
 		baseURIKnown = false;
 		baseURI = NULL;
 	}
@@ -112,9 +91,8 @@ public:
 	 * RailsBaseURIs or RackBaseURIs. If yes, then the first matching base URI will
 	 * be returned.
 	 *
-	 * If Rails/Rack autodetection was enabled in the configuration, and the document
-	 * root seems to be a valid Rails/Rack 'public' folder, then this method will
-	 * return "/".
+	 * If the document root seems to be a valid application 'public' folder, then this
+	 * method will return "/".
 	 *
 	 * Otherwise, NULL will be returned.
 	 *
@@ -149,7 +127,7 @@ public:
 			) {
 				baseURIKnown = true;
 				baseURI = base.c_str();
-				appType = CLASSIC_RAILS;
+				appType = PAT_CLASSIC_RAILS;
 				return baseURI;
 			}
 		}
@@ -164,40 +142,21 @@ public:
 			) {
 				baseURIKnown = true;
 				baseURI = base.c_str();
-				appType = RACK;
+				appType = PAT_RACK;
 				return baseURI;
 			}
 		}
 		
 		UPDATE_TRACE_POINT();
-		if (shouldAutoDetectRack()
-		 && verifyRackDir(config->getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
-			baseURIKnown = true;
-			baseURI = "/";
-			appType = RACK;
-			return baseURI;
-		}
-		
-		UPDATE_TRACE_POINT();
-		if (shouldAutoDetectClassicRails()
-		 && verifyRailsDir(config->getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
-			baseURIKnown = true;
-			baseURI = "/";
-			appType = CLASSIC_RAILS;
-			return baseURI;
-		}
-		
-		UPDATE_TRACE_POINT();
-		if (shouldAutoDetectWSGI()
-		 && verifyWSGIDir(config->getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
-			baseURIKnown = true;
-			baseURI = "/";
-			appType = WSGI;
-			return baseURI;
-		}
-		
 		baseURIKnown = true;
-		return NULL;
+		AppTypeDetector detector(cstat, throttleRate);
+		appType = detector.checkAppRoot(config->getAppRoot(ap_document_root(r)));
+		if (appType != PAT_NONE) {
+			baseURI = "/";
+		} else {
+			baseURI = NULL;
+		}
+		return baseURI;
 	}
 	
 	/**
@@ -244,7 +203,7 @@ public:
 	 *
 	 * @throws FileSystemException An error occured while examening the filesystem.
 	 */
-	ApplicationType getApplicationType() {
+	PassengerAppType getApplicationType() {
 		if (!baseURIKnown) {
 			getBaseURI();
 		}
@@ -257,20 +216,11 @@ public:
 	 *
 	 * @throws FileSystemException An error occured while examening the filesystem.
 	 */
-	const char *getApplicationTypeString() {
+	const char *getApplicationTypeName() {
 		if (!baseURIKnown) {
 			getBaseURI();
 		}
-		switch (appType) {
-		case CLASSIC_RAILS:
-			return "classic-rails";
-		case RACK:
-			return "rack";
-		case WSGI:
-			return "wsgi";
-		default:
-			return NULL;
-		};
+		return getAppTypeName(appType);
 	}
 };
 

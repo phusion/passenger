@@ -91,18 +91,17 @@ class ThreadHandler
 		PhusionPassenger.call_event(:starting_request_handler_thread)
 	end
 
-	def main_loop
+	def main_loop(finish_callback)
 		socket_wrapper = Utils::UnseekableSocket.new
 		channel        = MessageChannel.new
 		buffer         = ''
 		buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
 		
 		begin
-			disable_interruptions do
-				while !Utils::RobustInterruption.interrupted?
-					hijacked = accept_and_process_next_request(socket_wrapper, channel, buffer)
-					socket_wrapper = Utils::UnseekableSocket.new if hijacked
-				end
+			finish_callback.call
+			while !Utils::RobustInterruption.interrupted?
+				hijacked = accept_and_process_next_request(socket_wrapper, channel, buffer)
+				socket_wrapper = Utils::UnseekableSocket.new if hijacked
 			end
 		rescue Utils::RobustInterruption::Interrupted
 			# Do nothing.

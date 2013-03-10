@@ -50,6 +50,8 @@ end
 
 input = STDIN
 output = STDERR
+output.sync = true
+output.puts "Using backtrace sanitizer."
 argv0, pid_or_filename = ARGV
 if pid_or_filename =~ /\A\d+\Z/
 	begin

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -97,8 +97,9 @@ module PlatformInfo
 		else
 			arch = `uname -p`.strip
 			# On some systems 'uname -p' returns something like
-			# 'Intel(R) Pentium(R) M processor 1400MHz'.
-			if arch == "unknown" || arch =~ / /
+			# 'Intel(R) Pentium(R) M processor 1400MHz' or
+			# 'Intel(R)_Xeon(R)_CPU___________X7460__@_2.66GHz'.
+			if arch == "unknown" || arch =~ / / || arch =~ /Hz$/
 				arch = `uname -m`.strip
 			end
 			if arch =~ /^i.86$/
@@ -129,7 +130,7 @@ module PlatformInfo
 	def self.supports_sfence_instruction?
 		arch = cpu_architectures[0]
 		return arch == "x86_64" || (arch == "x86" &&
-			try_compile_and_run(:c, %Q{
+			try_compile_and_run("Checking for sfence instruction support", :c, %Q{
 				int
 				main() {
 					__asm__ __volatile__ ("sfence" ::: "memory");
@@ -144,7 +145,7 @@ module PlatformInfo
 	def self.supports_lfence_instruction?
 		arch = cpu_architectures[0]
 		return arch == "x86_64" || (arch == "x86" &&
-			try_compile_and_run(:c, %Q{
+			try_compile_and_run("Checking for lfence instruction support", :c, %Q{
 				int
 				main() {
 					__asm__ __volatile__ ("lfence" ::: "memory");

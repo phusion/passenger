@@ -1,7 +1,7 @@
 #  encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -26,7 +26,6 @@ require 'fileutils'
 require 'phusion_passenger'
 require 'phusion_passenger/abstract_installer'
 require 'phusion_passenger/packaging'
-require 'phusion_passenger/dependencies'
 require 'phusion_passenger/common_library'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/binary_compatibility'
@@ -50,7 +49,7 @@ module Standalone
 #
 # If 'targets' contains :nginx, then you must also specify these options:
 # - nginx_dir: Nginx will be installed into this directory.
-# - support_dir: See below.
+# - support_dir: Path to the Phusion Passenger support binary files.
 # - nginx_version (optional): The Nginx version to download. If not given then a
 #   hardcoded version number will be used.
 # - nginx_tarball (optional): The location to the Nginx tarball. This tarball *must*
@@ -84,25 +83,30 @@ class RuntimeInstaller < AbstractInstaller
 	
 protected
 	def dependencies
-		result = [
-			Dependencies::GCC,
-			Dependencies::GnuMake,
-			Dependencies::DownloadTool,
-			Dependencies::Ruby_DevHeaders,
-			Dependencies::Ruby_OpenSSL,
-			Dependencies::RubyGems,
-			Dependencies::Rake,
-			Dependencies::Rack,
-			Dependencies::Curl_Dev,
-			Dependencies::OpenSSL_Dev,
-			Dependencies::Zlib_Dev,
-			Dependencies::PCRE_Dev,
-			Dependencies::Daemon_Controller,
+		specs = [
+			'depcheck_specs/compiler_toolchain',
+			'depcheck_specs/ruby',
+			'depcheck_specs/gems',
+			'depcheck_specs/libs',
+			'depcheck_specs/utilities'
 		]
-		if Dependencies.fastthread_required?
-			result << Dependencies::FastThread
-		end
-		return result
+		ids = [
+			'gcc',
+			'g++',
+			'gmake',
+			'download-tool',
+			'ruby-dev',
+			'ruby-openssl',
+			'rubygems',
+			'rake',
+			'rack',
+			'libcurl-dev',
+			'openssl-dev',
+			'zlib-dev',
+			'pcre-dev',
+			'daemon_controller >= 1.1.0'
+		]
+		return [specs, ids]
 	end
 	
 	def users_guide
@@ -291,7 +295,7 @@ private
 	
 	def extract_tarball(filename)
 		File.open(filename, 'rb') do |f|
-			IO.popen("tar xzf -", "w") do |io|
+			IO.popen("tar xzf -", "wb") do |io|
 				buffer = ''
 				buffer = buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
 				total_size = File.size(filename)
@@ -494,15 +498,16 @@ private
 			end
 
 			system "rm -rf '#{@support_dir}'/{*.o,*.dSYM,libboost_oxt}"
-			system "rm -rf '#{@support_dir}'/*/{*.o,*.lo,*.h,*.log,Makefile,libtool,stamp-h1,config.status,.deps}"
+			system "rm -rf '#{@support_dir}'/*/{*.lo,*.h,*.log,Makefile,libtool,stamp-h1,config.status,.deps}"
+			system "rm -rf '#{@support_dir}'/{libeio,libev}/*.o"
 			
 			# Retain only the object files that are needed for linking the Phusion Passenger module into Nginx.
 			nginx_libs = COMMON_LIBRARY.
 				only(*NGINX_LIBS_SELECTOR).
 				set_output_dir("#{@support_dir}/libpassenger_common").
 				link_objects
-			(Dir["#{@support_dir}/libpassenger_common/**/*"] - nginx_libs).each do |filename|
-				if File.file?(filename)
+			Dir["#{@support_dir}/libpassenger_common/**/*"].each do |filename|
+				if !nginx_libs.include?(filename) && File.file?(filename)
 					File.unlink(filename)
 				end
 			end
@@ -513,6 +518,19 @@ private
 	def install_nginx_from_source(source_dir)
 		require 'phusion_passenger/platform_info/compiler'
 		Dir.chdir(source_dir) do
+			shell = PlatformInfo.find_command('bash') || "sh"
+			command = ""
+			if @targets.include?(:support_binaries)
+				if ENV['PASSENGER_DEBUG'] && !ENV['PASSENGER_DEBUG'].empty?
+					output_dir = "#{PhusionPassenger.source_root}/libout/common/libpassenger_common"
+				else
+					output_dir = "#{@support_dir}/libpassenger_common"
+				end
+				nginx_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
+					set_output_dir(output_dir).
+					link_objects_as_string
+				command << "env PASSENGER_LIBS='#{nginx_libs} #{output_dir}/../libboost_oxt.a' "
+			end
 			# RPM thinks it's being smart by scanning binaries for
 			# paths and refusing to create package if it detects any
 			# hardcoded thats that point to /usr or other important
@@ -521,15 +539,6 @@ private
 			# we pass it its resource locations during runtime, so
 			# work around the problem by configure Nginx with prefix
 			# /tmp.
-			shell = PlatformInfo.find_command('bash') || "sh"
-			command = ""
-			if @targets.include?(:support_binaries)
-				nginx_libs = COMMON_LIBRARY.
-					only(*NGINX_LIBS_SELECTOR).
-					set_output_dir("#{PhusionPassenger.source_root}/libout/common/libpassenger_common").
-					link_objects_as_string
-				command << "env PASSENGER_LIBS='#{nginx_libs} #{@support_dir}/libboost_oxt.a' "
-			end
 			command << "#{shell} ./configure --prefix=/tmp " <<
 				"--with-cc-opt='-Wno-error' " <<
 				"--without-http_fastcgi_module " <<

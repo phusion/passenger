@@ -56,9 +56,10 @@ http {
     <% end %>
     
     default_type application/octet-stream;
-    client_max_body_size 50m;
+    client_max_body_size 1024m;
     access_log off;
     keepalive_timeout 60;
+    underscores_in_headers on;
     gzip on;
     gzip_comp_level 3;
     gzip_min_length 150;
@@ -85,6 +86,7 @@ http {
         listen <%= nginx_listen_address(app) %>;
         server_name <%= app[:server_names].join(' ') %>;
         root '<%= app[:root] %>/public';
+        passenger_app_root '<%= app[:root] %>';
         passenger_enabled on;
         rails_env <%= app[:env] %>;
         passenger_spawn_method <%= app[:spawn_method] %>;

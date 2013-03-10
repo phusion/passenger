@@ -68,17 +68,11 @@ struct DirConfig {
 	std::set<std::string> railsBaseURIs;
 	std::set<std::string> rackBaseURIs;
 	
-	/** Whether to autodetect Rails applications. */
-	Threeway autoDetectRails;
-	
-	/** Whether to autodetect Rack applications. */
-	Threeway autoDetectRack;
-	
-	/** Whether to autodetect WSGI applications. */
-	Threeway autoDetectWSGI;
-
 	/** The Ruby interpreter to use. */
 	const char *ruby;
+
+	/** The Python interpreter to use. */
+	const char *python;
 	
 	/** The environment (RAILS_ENV/RACK_ENV/WSGI_ENV) under which
 	 * applications should operate. */
@@ -377,7 +371,6 @@ struct ServerConfig {
 	int unionStationGatewayPort;
 	string unionStationGatewayCert;
 	string unionStationProxyAddress;
-	string unionStationProxyType;
 	
 	/** Directory in which analytics logs should be saved. */
 	string analyticsLogUser;
@@ -399,7 +392,6 @@ struct ServerConfig {
 		unionStationGatewayPort    = DEFAULT_UNION_STATION_GATEWAY_PORT;
 		unionStationGatewayCert    = string();
 		unionStationProxyAddress   = string();
-		unionStationProxyType      = string();
 		analyticsLogUser   = DEFAULT_ANALYTICS_LOG_USER;
 		analyticsLogGroup  = DEFAULT_ANALYTICS_LOG_GROUP;
 	}
@@ -426,13 +418,6 @@ struct ServerConfig {
 			}
 			
 			defaultGroup = groupEntry->gr_name;
-		}
-		
-		if (unionStationProxyType != ""
-		 && unionStationProxyType != "http"
-		 && unionStationProxyType != "socks5") {
-			throw ConfigurationException(string("The option 'UnionStationProxyType' ") +
-				"may only be set to 'http' or 'socks5'.");
 		}
 	}
 };

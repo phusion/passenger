@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -39,8 +39,9 @@
 #include <cstring>
 #include <errno.h>
 #include <unistd.h>
-#include "StaticString.h"
-#include "Exceptions.h"
+#include <StaticString.h>
+#include <Exceptions.h>
+#include <Utils/LargeFiles.h>
 
 namespace Passenger {
 
@@ -177,6 +178,14 @@ string resolveSymlink(const StaticString &path);
  * @ingroup Support
  */
 string extractDirName(const StaticString &path);
+
+/**
+ * Given a path, extracts its directory name. This version does not use
+ * any dynamically allocated storage and does not require `path` to be
+ * NULL-terminated. It returns a StaticString that points either to static
+ * storage, or to a substring of `path`.
+ */
+StaticString extractDirNameStatic(const StaticString &path);
 
 /**
  * Given a path, extracts its base name.
@@ -435,7 +444,7 @@ public:
 		
 		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", dir.c_str(), identifier);
 		templ[sizeof(templ) - 1] = '\0';
-		fd = mkstemp(templ);
+		fd = lfs_mkstemp(templ);
 		if (fd == -1) {
 			char message[1024];
 			int e = errno;

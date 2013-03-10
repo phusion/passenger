@@ -1,7 +1,7 @@
-#include "TestSupport.h"
-#include "Utils.h"
-#include "Utils/StrIntUtils.h"
-#include "Utils/MemZeroGuard.h"
+#include <TestSupport.h>
+#include <Utils.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/MemZeroGuard.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -49,12 +49,18 @@ namespace tut {
 
 	TEST_METHOD(1) {
 		split("", ':', output);
-		ensure_equals(output.size(), 1u);
-		ensure_equals(output[0], "");
+		ensure_equals(output.size(), 0u);
+
+		splitIncludeSep("", ':', output);
+		ensure_equals(output.size(), 0u);
 	}
 	
 	TEST_METHOD(2) {
 		split("hello world", ':', output);
+		ensure_equals(output.size(), 1u);
+		ensure_equals(output[0], "hello world");
+
+		splitIncludeSep("hello world", ':', output);
 		ensure_equals(output.size(), 1u);
 		ensure_equals(output[0], "hello world");
 	}
@@ -64,19 +70,33 @@ namespace tut {
 		ensure_equals(output.size(), 2u);
 		ensure_equals(output[0], "hello world");
 		ensure_equals(output[1], "foo bar");
+
+		splitIncludeSep("hello world:foo bar", ':', output);
+		ensure_equals(output.size(), 2u);
+		ensure_equals(output[0], "hello world:");
+		ensure_equals(output[1], "foo bar");
 	}
 	
 	TEST_METHOD(4) {
 		split("hello world:", ':', output);
-		ensure_equals(output.size(), 2u);
-		ensure_equals(output[0], "hello world");
-		ensure_equals(output[1], "");
+		ensure_equals("(1)", output.size(), 2u);
+		ensure_equals("(2)", output[0], "hello world");
+		ensure_equals("(3)", output[1], "");
+
+		splitIncludeSep("hello world:", ':', output);
+		ensure_equals("(4)", output.size(), 1u);
+		ensure_equals("(5)", output[0], "hello world:");
 	}
 	
 	TEST_METHOD(5) {
 		split(":hello world", ':', output);
 		ensure_equals(output.size(), 2u);
 		ensure_equals(output[0], "");
+		ensure_equals(output[1], "hello world");
+
+		splitIncludeSep(":hello world", ':', output);
+		ensure_equals(output.size(), 2u);
+		ensure_equals(output[0], ":");
 		ensure_equals(output[1], "hello world");
 	}
 	
@@ -87,6 +107,13 @@ namespace tut {
 		ensure_equals(output[1], "def");
 		ensure_equals(output[2], "");
 		ensure_equals(output[3], "ghi");
+
+		splitIncludeSep("abc:def::ghi", ':', output);
+		ensure_equals(output.size(), 4u);
+		ensure_equals(output[0], "abc:");
+		ensure_equals(output[1], "def:");
+		ensure_equals(output[2], ":");
+		ensure_equals(output[3], "ghi");
 	}
 	
 	TEST_METHOD(7) {
@@ -95,6 +122,13 @@ namespace tut {
 		ensure_equals(output[0], "abc");
 		ensure_equals(output[1], "");
 		ensure_equals(output[2], "");
+		ensure_equals(output[3], "def");
+
+		splitIncludeSep("abc:::def", ':', output);
+		ensure_equals(output.size(), 4u);
+		ensure_equals(output[0], "abc:");
+		ensure_equals(output[1], ":");
+		ensure_equals(output[2], ":");
 		ensure_equals(output[3], "def");
 	}
 	
@@ -167,11 +201,30 @@ namespace tut {
 		ensure_equals("Test 8", extractDirName(".."), ".");
 		ensure_equals("Test 9", extractDirName("./foo"), ".");
 		ensure_equals("Test 10", extractDirName("../foo"), "..");
+		ensure_equals("Test 11", extractDirName(""), ".");
+		ensure_equals("Test 12", extractDirName(".///"), ".");
+		ensure_equals("Test 13", extractDirName("foo//bar"), "foo");
+	}
+
+	TEST_METHOD(27) {
+		ensure_equals("Test 1", extractDirNameStatic("/usr/lib"), "/usr");
+		ensure_equals("Test 2", extractDirNameStatic("/usr/lib/"), "/usr");
+		ensure_equals("Test 3", extractDirNameStatic("/usr/"), "/");
+		ensure_equals("Test 4", extractDirNameStatic("usr"), ".");
+		ensure_equals("Test 5", extractDirNameStatic("/"), "/");
+		ensure_equals("Test 6", extractDirNameStatic("///"), "/");
+		ensure_equals("Test 7", extractDirNameStatic("."), ".");
+		ensure_equals("Test 8", extractDirNameStatic(".."), ".");
+		ensure_equals("Test 9", extractDirNameStatic("./foo"), ".");
+		ensure_equals("Test 10", extractDirNameStatic("../foo"), "..");
+		ensure_equals("Test 11", extractDirNameStatic(""), ".");
+		ensure_equals("Test 12", extractDirNameStatic(".///"), ".");
+		ensure_equals("Test 13", extractDirNameStatic("foo//bar"), "foo");
 	}
 	
 	/***** Test resolveSymlink() *****/
 	
-	TEST_METHOD(27) {
+	TEST_METHOD(28) {
 		TempDir d("tmp.symlinks");
 		runShellCommand("touch tmp.symlinks/foo.txt");
 		runShellCommand("ln -s /usr/bin tmp.symlinks/absolute_symlink");
@@ -584,5 +637,26 @@ namespace tut {
 		ensure_equals(absolutizePath("../..", "/usr/local/bin"), "/usr");
 		ensure_equals(absolutizePath("../../foo", "/usr/local/bin"), "/usr/foo");
 		ensure_equals(absolutizePath("../.././foo/bar", "/usr/local/bin"), "/usr/foo/bar");
+	}
+
+	/***** Test constantTimeCompare() *****/
+
+	TEST_METHOD(54) {
+		ensure("(1)", constantTimeCompare("", ""));
+		ensure("(2)", constantTimeCompare("a", "a"));
+		ensure("(3)", constantTimeCompare("aa", "aa"));
+		ensure("(4)", constantTimeCompare("abc", "abc"));
+
+		ensure("(5)", !constantTimeCompare("", "a"));
+		ensure("(6)", !constantTimeCompare("", "abcd"));
+		ensure("(7)", !constantTimeCompare("ab", "cd"));
+		ensure("(8)", !constantTimeCompare("ab", "abc"));
+		ensure("(9)", !constantTimeCompare("ab", "abcd"));
+		
+		ensure("(10)", !constantTimeCompare("a", ""));
+		ensure("(11)", !constantTimeCompare("abcd", ""));
+		ensure("(12)", !constantTimeCompare("cd", "ab"));
+		ensure("(13)", !constantTimeCompare("abc", "ab"));
+		ensure("(14)", !constantTimeCompare("abcd", "ab"));
 	}
 }

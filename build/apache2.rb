@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -59,14 +59,17 @@ APACHE2_MODULE_INPUT_FILES = {
 APACHE2_MODULE_OBJECTS = APACHE2_MODULE_INPUT_FILES.keys
 APACHE2_MOD_PASSENGER_O = APACHE2_OUTPUT_DIR + "mod_passenger.o"
 
-APACHE2_MODULE_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
+APACHE2_MODULE_CXXFLAGS =
+	"#{EXTRA_PRE_CXXFLAGS} " <<
+	"-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
 	"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 
 APACHE2_MODULE_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
 	APACHE2_OUTPUT_DIR + "module_libboost_oxt",
 	PlatformInfo.apache2_module_cflags)
 APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
-	only(:base, 'Utils/Base64.o', 'Utils/MD5.o').
+	only(:base, 'ApplicationPool2/AppTypes.o', 'Utils/Base64.o',
+		'Utils/MD5.o', 'Utils/LargeFiles.o').
 	set_namespace("apache2").
 	set_output_dir(APACHE2_OUTPUT_DIR + "module_libpassenger_common").
 	define_tasks(PlatformInfo.apache2_module_cflags).
@@ -80,8 +83,8 @@ task :apache2 => [
 	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
 	AGENT_OUTPUT_DIR + 'SpawnPreparer',
-	:native_support
-]
+	NATIVE_SUPPORT_TARGET
+].compact
 
 
 # Define rules for the individual Apache 2 module source files.
@@ -107,6 +110,7 @@ file APACHE2_MODULE => dependencies do
 	
 	sources = (APACHE2_MODULE_OBJECTS + [APACHE2_MOD_PASSENGER_O]).join(' ')
 	linkflags =
+		"#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} " <<
 		"#{PlatformInfo.apache2_module_cflags} " <<
 		"#{PlatformInfo.portability_cflags} " <<
 		"#{EXTRA_CXXFLAGS} " <<

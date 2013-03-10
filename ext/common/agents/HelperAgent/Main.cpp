@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -235,7 +235,7 @@ private:
 		this_thread::disable_syscall_interruption dsi;
 		requestSocket = createUnixServer(getRequestSocketFilename().c_str());
 		
-		int ret;
+		int ret, e;
 		do {
 			ret = chmod(getRequestSocketFilename().c_str(), S_ISVTX |
 				S_IRUSR | S_IWUSR | S_IXUSR |
@@ -244,6 +244,44 @@ private:
 		} while (ret == -1 && errno == EINTR);
 
 		setNonBlocking(requestSocket);
+
+		if (!options.requestSocketLink.empty()) {
+			struct stat buf;
+
+			// If this is a symlink then we'll want to check the file the symlink
+			// points to, so we use stat() instead of lstat().
+			ret = syscalls::stat(options.requestSocketLink.c_str(), &buf);
+			if (ret == 0 || (ret == -1 && errno == ENOENT)) {
+				if (ret == -1 || buf.st_mode & S_IFSOCK) {
+					if (syscalls::unlink(options.requestSocketLink.c_str()) == -1) {
+						e = errno;
+						throw FileSystemException("Cannot delete existing socket file '" +
+							options.requestSocketLink + "'", e, options.requestSocketLink);
+					}
+				} else {
+					throw RuntimeException("File '" + options.requestSocketLink +
+						"' already exists and is not a Unix domain socket");
+				}
+			} else if (ret == -1 && errno != ENOENT) {
+				e = errno;
+				throw FileSystemException("Cannot stat() file '" + options.requestSocketLink + "'",
+					e,
+					options.requestSocketLink);
+			}
+
+			do {
+				ret = symlink(getRequestSocketFilename().c_str(),
+					options.requestSocketLink.c_str());
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				e = errno;
+				throw FileSystemException("Cannot create a symlink '" +
+					options.requestSocketLink +
+					"' to '" + getRequestSocketFilename() + "'",
+					e,
+					options.requestSocketLink);
+			}
+		}
 	}
 	
 	/**
@@ -287,14 +325,6 @@ private:
 		}
 	}
 	
-	void resetWorkerThreadInactivityTimers() {
-		requestHandler->resetInactivityTimer();
-	}
-	
-	unsigned long long minWorkerThreadInactivityTime() const {
-		return requestHandler->inactivityTime();
-	}
-
 	void onSigquit(ev::sig &signal, int revents) {
 		requestHandler->inspect(cerr);
 		cerr.flush();
@@ -314,14 +344,27 @@ private:
 
 	static void dumpDiagnosticsOnCrash(void *userData) {
 		Server *self = (Server *) userData;
+
+		cerr << "### Request handler state\n";
 		self->requestHandler->inspect(cerr);
+		cerr << "\n";
 		cerr.flush();
+		
+		cerr << "### Pool state (simple)\n";
 		// Do not lock, the crash may occur within the pool.
 		Pool::InspectOptions options;
 		options.verbose = true;
-		cerr << "\n" << self->pool->inspect(options, false);
+		cerr << self->pool->inspect(options, false);
+		cerr << "\n";
 		cerr.flush();
-		cerr << "\n" << oxt::thread::all_backtraces();
+
+		cerr << "### Pool state (XML)\n";
+		cerr << self->pool->toXml(true, false);
+		cerr << "\n\n";
+		cerr.flush();
+
+		cerr << "### Backtraces\n";
+		cerr << oxt::thread::all_backtraces();
 		cerr.flush();
 	}
 	
@@ -349,15 +392,24 @@ public:
 		if (geteuid() == 0 && !options.userSwitching) {
 			lowerPrivilege(options.defaultUser, options.defaultGroup);
 		}
+
+		UPDATE_TRACE_POINT();
+		randomGenerator = make_shared<RandomGenerator>();
+		// Check whether /dev/urandom is actually random.
+		// https://code.google.com/p/phusion-passenger/issues/detail?id=516
+		if (randomGenerator->generateByteString(16) == randomGenerator->generateByteString(16)) {
+			throw RuntimeException("Your random number device, /dev/urandom, appears to be broken. "
+				"It doesn't seem to be returning random data. Please fix this.");
+		}
 		
 		UPDATE_TRACE_POINT();
 		loggerFactory = make_shared<UnionStation::LoggerFactory>(options.loggingAgentAddress,
 			"logging", options.loggingAgentPassword);
-		randomGenerator = make_shared<RandomGenerator>();
 		spawnerFactory = make_shared<SpawnerFactory>(poolLoop.safe,
-			resourceLocator, generation, randomGenerator);
+			resourceLocator, generation, make_shared<SpawnerConfig>(randomGenerator));
 		pool = make_shared<Pool>(poolLoop.safe.get(), spawnerFactory, loggerFactory,
 			randomGenerator);
+		pool->initialize();
 		pool->setMax(options.maxPoolSize);
 		//pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(options.poolIdleTime * 1000000);
@@ -402,11 +454,17 @@ public:
 		}
 		
 		messageServer.reset();
+		P_DEBUG("Destroying application pool...");
 		pool->destroy();
+		uninstallDiagnosticsDumper();
 		pool.reset();
-		requestHandler.reset();
 		poolLoop.stop();
 		requestLoop.stop();
+		requestHandler.reset();
+
+		if (!options.requestSocketLink.empty()) {
+			syscalls::unlink(options.requestSocketLink.c_str());
+		}
 		
 		P_TRACE(2, "All threads have been shut down.");
 	}
@@ -443,7 +501,6 @@ public:
 			uninstallDiagnosticsDumper();
 			throw SystemException("select() failed", e);
 		}
-		uninstallDiagnosticsDumper();
 		
 		if (FD_ISSET(feedbackFd, &fds)) {
 			/* If the watchdog has been killed then we'll kill all descendant
@@ -459,12 +516,15 @@ public:
 			_exit(2); // In case killpg() fails.
 		} else {
 			/* We received an exit command. We want to exit 5 seconds after
-			 * all worker threads have become inactive.
+			 * all clients have disconnected have become inactive.
 			 */
-			resetWorkerThreadInactivityTimers();
-			while (minWorkerThreadInactivityTime() < 5000) {
+			P_DEBUG("Received command to exit gracefully. "
+				"Waiting until 5 seconds after all clients have disconnected...");
+			while (requestHandler->inactivityTime() < 5000) {
 				syscalls::usleep(250000);
 			}
+			P_DEBUG("It's now 5 seconds after all clients have disconnected. "
+				"Proceeding with graceful exit.");
 		}
 	}
 

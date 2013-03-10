@@ -21,7 +21,7 @@
 		spawner = createSpawner(options)
 
 	#define RUN_USER_SWITCHING_TEST() \
-		spawner->spawn(options); \
+		process = spawner->spawn(options); \
 		BufferedIO io(FileDescriptor(open("/tmp/info.txt", O_RDONLY))); \
 		uid_t uid = (uid_t) atol(io.readLine().c_str()); \
 		gid_t gid = (gid_t) atol(io.readLine().c_str()); \
@@ -73,16 +73,6 @@
 		return getgrgid(gid)->gr_name;
 	}
 
-	static string strip(const string &str) {
-		if (!str.empty() && str[str.size() - 1] == '\n') {
-			string result = str;
-			result.erase(str.size() - 1,  1);
-			return result;
-		} else {
-			return str;
-		}
-	}
-
 	TEST_METHOD(1) {
 		// Basic spawning test.
 		Options options = createOptions();
@@ -90,7 +80,7 @@
 		options.startCommand = "ruby\1" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		ProcessPtr process = spawner->spawn(options);
+		process = spawner->spawn(options);
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();
@@ -178,7 +168,7 @@
 		options.startCommand = "ruby\1" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		ProcessPtr process = spawner->spawn(options);
+		process = spawner->spawn(options);
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();
@@ -196,7 +186,7 @@
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		options.environmentVariables.push_back(make_pair("PASSENGER_BAR", "bar"));
 		SpawnerPtr spawner = createSpawner(options);
-		ProcessPtr process = spawner->spawn(options);
+		process = spawner->spawn(options);
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();
@@ -245,7 +235,7 @@
 			runShellCommand("chmod 600 tmp.check/a");
 
 			try {
-				spawner->spawn(options);
+				process = spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(1)", containsSubstring(e.getErrorPage(),
@@ -254,7 +244,7 @@
 
 			runShellCommand("chmod 700 tmp.check/a");
 			try {
-				spawner->spawn(options);
+				process = spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(2)", containsSubstring(e.getErrorPage(),
@@ -263,7 +253,7 @@
 
 			runShellCommand("chmod 700 tmp.check/a/b/c");
 			try {
-				spawner->spawn(options);
+				process = spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(3)", containsSubstring(e.getErrorPage(),
@@ -271,7 +261,7 @@
 			}
 
 			runShellCommand("chmod 700 tmp.check/a/b/c/d");
-			spawner->spawn(options); // Should not throw.
+			process = spawner->spawn(options); // Should not throw.
 		}
 	}
 
@@ -279,19 +269,19 @@
 		// It forwards all stdout and stderr output, even after the corresponding
 		// Process object has been destroyed.
 		DeleteFileEventually d("tmp.output");
-		FileDescriptor output(open("tmp.output", O_WRONLY | O_CREAT | O_TRUNC, 0600));
+		PipeWatcher::onData = gatherOutput;
 
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		options.appType = "rack";
 		SpawnerPtr spawner = createSpawner(options);
-		spawner->getConfig()->forwardStdoutTo = output;
-		spawner->getConfig()->forwardStderrTo = output;
-		ProcessPtr process = spawner->spawn(options);
+		process = spawner->spawn(options);
+		process->requiresShutdown = false;
 		
 		SessionPtr session = process->newSession();
 		session->initiate();
 		
+		setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
 		const char header[] =
 			"REQUEST_METHOD\0GET\0"
 			"PATH_INFO\0/print_stdout_and_stderr\0";
@@ -304,10 +294,14 @@
 		writeScalarMessage(session->fd(), data);
 		shutdown(session->fd(), SHUT_WR);
 		readAll(session->fd());
+		session->close(true);
+		session.reset();
+		process.reset();
+
 		EVENTUALLY(2,
-			string data = readAll("tmp.output");
-			result = data.find("hello stdout!\n") != string::npos
-				&& data.find("hello stderr!\n") != string::npos;
+			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			result = gatheredOutput.find("hello stdout!\n") != string::npos
+				&& gatheredOutput.find("hello stderr!\n") != string::npos;
 		);
 	}
 	
@@ -762,6 +756,17 @@
 		RUN_USER_SWITCHING_TEST();
 		runShellCommand(("groups " + testConfig["normal_user_1"].asString() + " > /tmp/info2.txt").c_str());
 		string defaultGroups = strip(readAll("/tmp/info2.txt"));
-		// default_groups.gsub!(/.*: */, '')
+
+		// On Linux, the 'groups' output is prepended by the group name so
+		// get rid of that.
+		string::size_type pos = defaultGroups.find(':');
+		if (pos != string::npos) {
+			pos++;
+			while (pos < defaultGroups.size() && defaultGroups[pos] == ' ') {
+				pos++;
+			}
+			defaultGroups.erase(0, pos);
+		}
+		
 		ensure_equals(groups, defaultGroups);
 	}

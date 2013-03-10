@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -59,16 +59,18 @@ startsWith(const StaticString &str, const StaticString &substr) {
 }
 
 template<typename OutputString>
-void
+static void
 _split(const StaticString &str, char sep, vector<OutputString> &output) {
-	string::size_type start, pos;
-	start = 0;
 	output.clear();
-	while ((pos = str.find(sep, start)) != string::npos) {
-		output.push_back(str.substr(start, pos - start));
-		start = pos + 1;
+	if (!str.empty()) {
+		string::size_type start, pos;
+		start = 0;
+		while ((pos = str.find(sep, start)) != string::npos) {
+			output.push_back(str.substr(start, pos - start));
+			start = pos + 1;
+		}
+		output.push_back(str.substr(start));
 	}
-	output.push_back(str.substr(start));
 }
 
 void
@@ -81,6 +83,33 @@ split(const StaticString &str, char sep, vector<StaticString> &output) {
 	_split(str, sep, output);
 }
 
+template<typename OutputString>
+static void
+_splitIncludeSep(const StaticString &str, char sep, vector<OutputString> &output) {
+	output.clear();
+	if (!str.empty()) {
+		string::size_type start, pos;
+		start = 0;
+		while ((pos = str.find(sep, start)) != string::npos) {
+			output.push_back(str.substr(start, pos - start + 1));
+			start = pos + 1;
+		}
+		if (start != str.size()) {
+			output.push_back(str.substr(start));
+		}
+	}
+}
+
+void
+splitIncludeSep(const StaticString &str, char sep, vector<string> &output) {
+	_splitIncludeSep(str, sep, output);
+}
+
+void
+splitIncludeSep(const StaticString &str, char sep, vector<StaticString> &output) {
+	_splitIncludeSep(str, sep, output);
+}
+
 string
 replaceString(const string &str, const string &toFind, const string &replaceWith) {
 	string::size_type pos = str.find(toFind);
@@ -90,6 +119,19 @@ replaceString(const string &str, const string &toFind, const string &replaceWith
 		string result(str);
 		return result.replace(pos, toFind.size(), replaceWith);
 	}
+}
+
+string
+strip(const StaticString &str) {
+	const char *data = str.data();
+	const char *end = str.data() + str.size();
+	while (data < end && (*data == ' ' || *data == '\n' || *data == '\t')) {
+		data++;
+	}
+	while (end > data && (end[-1] == ' ' || end[-1] == '\n' || end[-1] == '\t')) {
+		end--;
+	}
+	return string(data, end - data);
 }
 
 string
@@ -331,6 +373,28 @@ atoi(const string &s) {
 long
 atol(const string &s) {
 	return ::atol(s.c_str());
+}
+
+bool
+constantTimeCompare(const StaticString &a, const StaticString &b) {
+	// http://blog.jasonmooberry.com/2010/10/constant-time-string-comparison/
+	// See also ActiveSupport::MessageVerifier#secure_compare.
+	if (a.size() != b.size()) {
+		return false;
+	} else {
+		const char *x = a.data();
+		const char *y = b.data();
+		const char *end = a.data() + a.size();
+		int result = 0;
+
+		while (x < end) {
+			result |= *x ^ *y;
+			x++;
+			y++;
+		}
+
+		return result == 0;
+	}
 }
 
 string

@@ -43,7 +43,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/TestSupport.cpp
 		test/cxx/TestSupport.h
 		ext/common/SafeLibev.h
-		ext/common/BackgroundEventLoop.cpp),
+		ext/common/BackgroundEventLoop.cpp
+		ext/common/Exceptions.h
+		ext/common/Utils.h),
 	'test/cxx/ApplicationPool2/OptionsTest.o' => %w(
 		test/cxx/ApplicationPool2/OptionsTest.cpp
 		ext/common/ApplicationPool2/Options.h),
@@ -53,14 +55,16 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/Options.h
 		ext/common/ApplicationPool2/Process.h
 		ext/common/ApplicationPool2/Socket.h
-		ext/common/ApplicationPool2/Spawner.h),
+		ext/common/ApplicationPool2/Spawner.h
+		ext/common/ApplicationPool2/DirectSpawner.h),
 	'test/cxx/ApplicationPool2/SmartSpawnerTest.o' => %w(
 		test/cxx/ApplicationPool2/SmartSpawnerTest.cpp
 		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
 		ext/common/ApplicationPool2/Options.h
 		ext/common/ApplicationPool2/Process.h
 		ext/common/ApplicationPool2/Socket.h
-		ext/common/ApplicationPool2/Spawner.h),
+		ext/common/ApplicationPool2/Spawner.h
+		ext/common/ApplicationPool2/SmartSpawner.h),
 	'test/cxx/ApplicationPool2/ProcessTest.o' => %w(
 		test/cxx/ApplicationPool2/ProcessTest.cpp
 		ext/common/ApplicationPool2/Process.h
@@ -71,7 +75,14 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/SuperGroup.h
 		ext/common/ApplicationPool2/Group.h
 		ext/common/ApplicationPool2/Pool.h
-		ext/common/ApplicationPool2/Spawner.h),
+		ext/common/ApplicationPool2/Process.h
+		ext/common/ApplicationPool2/Socket.h
+		ext/common/ApplicationPool2/Options.h
+		ext/common/ApplicationPool2/Spawner.h
+		ext/common/ApplicationPool2/SpawnerFactory.h
+		ext/common/ApplicationPool2/SmartSpawner.h
+		ext/common/ApplicationPool2/DirectSpawner.h
+		ext/common/ApplicationPool2/DummySpawner.h),
 	'test/cxx/MessageReadersWritersTest.o' => %w(
 		test/cxx/MessageReadersWritersTest.cpp
 		ext/common/MessageReadersWriters.h
@@ -133,7 +144,12 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/SuperGroup.h
 		ext/common/ApplicationPool2/Group.h
 		ext/common/ApplicationPool2/Process.h
-		ext/common/ApplicationPool2/Spawner.h),
+		ext/common/ApplicationPool2/Options.h
+		ext/common/ApplicationPool2/Spawner.h
+		ext/common/ApplicationPool2/SpawnerFactory.h
+		ext/common/ApplicationPool2/SmartSpawner.h
+		ext/common/ApplicationPool2/DirectSpawner.h
+		ext/common/ApplicationPool2/DummySpawner.h),
 	'test/cxx/FileBackedPipeTest.o' => %w(
 		test/cxx/FileBackedPipeTest.cpp
 		ext/common/agents/HelperAgent/FileBackedPipe.h),
@@ -171,7 +187,8 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/VariantMap.h),
 	'test/cxx/StringMapTest.o' => %w(
 		test/cxx/StringMapTest.cpp
-		ext/common/Utils/StringMap.h),
+		ext/common/Utils/StringMap.h
+		ext/common/Utils/HashMap.h),
 	'test/cxx/ProcessMetricsCollectorTest.o' => %w(
 		test/cxx/ProcessMetricsCollectorTest.cpp
 		ext/common/Utils/ProcessMetricsCollector.h),
@@ -189,10 +206,10 @@ TEST_CXX_OBJECTS = {
 dependencies = [
 	'test/cxx/CxxTestMain',
 	'test/support/allocate_memory',
-	:native_support,
+	NATIVE_SUPPORT_TARGET,
 	AGENT_OUTPUT_DIR + 'SpawnPreparer',
 	AGENT_OUTPUT_DIR + 'EnvPrinter'
-]
+].compact
 desc "Run unit tests for the Apache 2 and Nginx C++ components"
 task 'test:cxx' => dependencies do
 	args = ENV['GROUPS'].to_s.split(",").map{ |name| "-g #{name}" }
@@ -201,6 +218,9 @@ task 'test:cxx' => dependencies do
 		command = "gdb --args #{command}"
 	elsif boolean_option('VALGRIND')
 		command = "valgrind --dsymutil=yes --db-attach=yes --child-silent-after-fork=yes #{command}"
+	end
+	if boolean_option('SUDO')
+		command = "sudo #{command}"
 	end
 	if boolean_option('REPEAT')
 		if boolean_option('GDB')

@@ -463,12 +463,64 @@ This required option may only occur once, in the 'http' configuration block.
 === passenger_ruby <filename> ===
 This option allows one to specify the Ruby interpreter to use.
 
-* In the 'http' configuration block.
+Since version 4.0.0, this option may occur in the following places:
+
+ * In the 'http' configuration block.
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-In each place, it may be specified at most once. The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
+If you want to use a different Ruby interpreter for two different applications then you should define different `passenger_ruby` directives in different 'http' blocks.
+
+In versions prior to 4.0.0, only a single Ruby version is supported for the entire Nginx instance, so `passenger_ruby` may only occur in the 'http' configuration block.
+
+The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
+
+=== passenger_python <filename> ===
+:version: 4.0.0
+include::users_guide_snippets/since_version.txt[]
+
+This option allows one to specify the Python interpreter to use. It may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+If you want to use a different Python interpreter for two different applications then you should define different `passenger_python` directives in different 'http' blocks.
+
+The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
+
+[[PassengerAppRoot]]
+=== passenger_app_root <path/to/root> ===
+:version: 4.0.0
+include::users_guide_snippets/since_version.txt[]
+By default, Phusion Passenger assumes that the application's root directory
+is the parent directory of the 'public' directory. This option allows one to
+specify the application's root independently from the Nginx 'root', which
+is useful if the 'public' directory lives in a non-standard place.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once.
+
+Example:
+
+-----------------------------
+server {
+    server_name test.host;
+    root /var/rails/zena/sites/example.com/public;
+    # normally Phusion Passenger would
+    # have assumed that the application
+    # root is "/var/rails/zena/sites/example.com"
+    passenger_app_root /var/rails/zena;
+}
+-----------------------------
 
 [[PassengerSpawnMethod]]
 === passenger_spawn_method <string> ===
@@ -565,6 +617,35 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 In each place, it may be specified at most once. The default value is 'off'.
+
+[[PassengerTempDir]]
+=== passenger_temp_dir <directory> ===
+Specifies the directory that Phusion Passenger should use for storing temporary
+files. This includes things such as Unix socket files.
+
+This option may only be specified in the 'http' configuration block. The
+default temp directory that Phusion Passenger uses is '/tmp'.
+
+This option is especially useful if Nginx is not allowed to write to /tmp
+(which is the case on some systems with strict SELinux policies) or if the
+partition that /tmp lives on doesn't have enough disk space.
+
+.Command line tools
+Some Phusion Passenger command line administration tools, such as
+`passenger-status`, must know what Phusion Passenger's temp directory is
+in order to function properly. You can pass the directory through the
+`PASSENGER_TMPDIR` environment variable, or the `TMPDIR` environment variable
+(the former will be used if both are specified).
+
+For example, if you set 'passenger_temp_dir' to '/my_temp_dir', then invoke
+`passenger-status` after you've set the `PASSENGER_TMPDIR` or `TMPDIR`
+environment variable, like this:
+
+----------------------------------------------------------
+export PASSENGER_TMPDIR=/my_temp-dir
+sudo -E passenger-status
+# The -E option tells 'sudo' to preserve environment variables.
+----------------------------------------------------------
 
 === Important deployment options ===
 ==== passenger_enabled <on|off> ====
@@ -811,6 +892,30 @@ This option may only occur once, in the 'http' configuration block.
 The default value is the primary group of the user specifified by
 <<PassengerDefaultUser,passenger_default_user>>.
 
+==== passenger_show_version_in_header <on|off> ====
+When turned on, Phusion Passenger will output its version number in the `Server` and `X-Powered-By` header in all Phusion Passenger-served requests:
+
+----------------------------------------------------
+Server: nginx/1.3.11 + Phusion Passenger 4.0.0
+X-Powered-By: Phusion Passenger 4.0.0
+----------------------------------------------------
+
+When turned off, the version number will be hidden:
+
+----------------------------------------------------
+Server: nginx/1.3.11 + Phusion Passenger
+X-Powered-By: Phusion Passenger
+----------------------------------------------------
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
 ==== passenger_friendly_error_pages <on|off> ====
 Phusion Passenger can display friendly error pages whenever an application fails
 to start. This friendly error page presents the startup error message, some
@@ -848,7 +953,7 @@ If you find that your server is unable to handle the load on your Rails/Rack web
 sites are really that popular, then you should strongly consider upgrading your
 hardware or getting more servers.)
 
-This option may only occur once, in the 'http' configuration bock.
+This option may only occur once, in the 'http' configuration block.
 The default value is '6'.
 
 TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
@@ -1146,33 +1251,17 @@ This option may occur in the following places:
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-In each place, it may be specified at most once. The default value is '200'.
+In each place, it may be specified at most once. The default value is '0'.
 
 [NOTE]
 .A word about permissions
 =====================================================
-The <<PassengerMemoryLimit,passenger_memory_limit>> directive requires that the
-user that the application is running as (see <<PassengerUserSwitching,passenger_user_switching>>)
-to have access to the `/proc` file system, or to be able to inspect its status
-with `ps` (which on Linux and FreeBSD systems basically means the same thing, since `ps`
-reads process information from `/proc`). Therefore, on servers running with
-tight permissions on `/proc`, this directive may not work. If you wish to use
-this directive and your `/proc` permissions are too tight, then please consider
-untightening the permissions.
-=====================================================
-
-[TIP]
-.FreeBSD and `/proc`
-=====================================================
-On many FreeBSD systems, `/proc` is not mounted by default. `/proc` *must* be
-mounted in order for <<PassengerMemoryLimit,passenger_memory_limit>> to work.
-
-It is also advised that you mount `/proc` with the `linprocfs` filesystem type
-instead of the regular FreeBSD `proc` filesystem type. The `linprocfs` filesystem
-type allows Phusion Passenger to read memory information from `/proc` directly,
-which is very fast. If you mount `/proc` with a different filesystem type, then
-Phusion Passenger must resort to querying memory information from the `ps` command,
-which is a lot slower.
+The <<PassengerMemoryLimit,passenger_memory_limit>> directive uses the
+`ps` command to query memory usage information. On Linux, it further
+queries `/proc` to obtain additional memory usage information that's
+not obtainable through `ps`. You should ensure that the `ps` works
+correctly and that the `/proc` filesystem is accessible by the
+`PassengerHelperAgent` process.
 =====================================================
 
 [CAUTION]

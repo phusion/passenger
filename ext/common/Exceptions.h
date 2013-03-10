@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -298,6 +298,28 @@ public:
 		} else {
 			return it->second;
 		}
+	}
+};
+
+/**
+ * Indicates that a Pool::get() or Pool::asyncGet() request was denied.
+ * The request never reached a process. This could be because, before the
+ * request could reach a process, the administrator detached the containing
+ * SuperGroup. Or maybe the request sat in the queue for too long.
+ */
+class GetAbortedException: public oxt::tracable_exception {
+private:
+	string msg;
+
+public:
+	GetAbortedException(const string &message)
+		: msg(message)
+		{ }
+	
+	virtual ~GetAbortedException() throw() {}
+	
+	virtual const char *what() const throw() {
+		return msg.c_str();
 	}
 };
 

@@ -1,5 +1,5 @@
 #include <TestSupport.h>
-#include <ApplicationPool2/Spawner.h>
+#include <ApplicationPool2/DirectSpawner.h>
 #include <Utils/json.h>
 #include <fcntl.h>
 
@@ -11,14 +11,24 @@ namespace tut {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		BackgroundEventLoop bg;
+		ProcessPtr process;
+		PipeWatcher::DataCallback gatherOutput;
+		string gatheredOutput;
+		boost::mutex gatheredOutputSyncher;
 		
 		ApplicationPool2_DirectSpawnerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			bg.start();
+			PipeWatcher::onData = PipeWatcher::DataCallback();
+			gatherOutput = boost::bind(&ApplicationPool2_DirectSpawnerTest::_gatherOutput, this, _1, _2);
+			setLogLevel(LVL_ERROR); // TODO: change to LVL_WARN
 		}
 
 		~ApplicationPool2_DirectSpawnerTest() {
+			setLogLevel(DEFAULT_LOG_LEVEL);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
+			Process::maybeShutdown(process);
+			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
 		
 		shared_ptr<DirectSpawner> createSpawner(const Options &options) {
@@ -31,6 +41,11 @@ namespace tut {
 			options.spawnMethod = "direct";
 			options.loadShellEnvvars = false;
 			return options;
+		}
+
+		void _gatherOutput(const char *data, unsigned int size) {
+			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			gatheredOutput.append(data, size);
 		}
 	};
 
@@ -57,8 +72,7 @@ namespace tut {
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
 				SpawnException::APP_STARTUP_TIMEOUT);
-			ensure_equals(e.getErrorPage(),
-				"hello world\n");
+			ensure(e.getErrorPage().find("hello world\n") != string::npos);
 		}
 	}
 	
@@ -80,8 +94,26 @@ namespace tut {
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
 				SpawnException::APP_STARTUP_PROTOCOL_ERROR);
-			ensure_equals(e.getErrorPage(),
-				"hello world\n");
+			ensure(e.getErrorPage().find("hello world\n") != string::npos);
 		}
+	}
+
+	TEST_METHOD(82) {
+		SHOW_EXCEPTION_BACKTRACE(
+		// Test that everything works correctly if the app re-execs() itself.
+		// https://code.google.com/p/phusion-passenger/issues/detail?id=842#c19
+		Options options = createOptions();
+		options.appRoot      = "stub/rack";
+		options.startCommand = "ruby\1" "start.rb\1" "--execself";
+		options.startupFile  = "start.rb";
+		SpawnerPtr spawner = createSpawner(options);
+		process = spawner->spawn(options);
+		ensure_equals(process->sockets->size(), 1u);
+		
+		Connection conn = process->sockets->front().checkoutConnection();
+		ScopeGuard guard(boost::bind(checkin, process, &conn));
+		writeExact(conn.fd, "ping\n");
+		ensure_equals(readAll(conn.fd), "pong\n");
+		);
 	}
 }

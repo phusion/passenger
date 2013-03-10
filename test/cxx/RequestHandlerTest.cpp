@@ -41,9 +41,11 @@ namespace tut {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation);
 			pool = make_shared<Pool>(bg.safe.get(), spawnerFactory);
+			pool->initialize();
 			serverFilename = generation->getPath() + "/server";
 			requestSocket = createUnixServer(serverFilename);
 			setNonBlocking(requestSocket);
+			setLogLevel(LVL_ERROR); // TODO: set to LVL_WARN
 
 			agentOptions.passengerRoot = resourceLocator->getRoot();
 			root = resourceLocator->getRoot();
@@ -56,7 +58,7 @@ namespace tut {
 		}
 		
 		~RequestHandlerTest() {
-			setLogLevel(0);
+			setLogLevel(DEFAULT_LOG_LEVEL);
 			unlink(serverFilename.c_str());
 			handler.reset();
 			pool->destroy();
@@ -830,6 +832,20 @@ namespace tut {
 			ensure("oobw is reset", !origProcess->oobwRequested);
 			ensure("process is enabled", origProcess->enabled == Process::ENABLED);
 		}
+	}
+
+	TEST_METHOD(47) {
+		set_test_name("The RequestHandler should append a Date header if the app doesn't output one.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/pid",
+			NULL);
+
+		string result = readAll(connection);
+		ensure(result.find("Date: ") != string::npos);
 	}
 
 	// Test small response buffering.

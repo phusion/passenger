@@ -159,6 +159,13 @@ main(int argc, char *argv[]) {
 	setGivenEnvVars(envvars);
 	dumpInformation();
 	
+	// Print a newline just in case whatever executed us printed data
+	// without a newline. Otherwise the next process's "!> I have control"
+	// command will not be properly recognized.
+	// https://code.google.com/p/phusion-passenger/issues/detail?id=842#c16
+	printf("\n");
+	fflush(stdout);
+
 	execvp(executable, (char * const *) execArgs);
 	int e = errno;
 	fprintf(stderr, "*** ERROR ***: Cannot execute %s: %s (%d)\n",

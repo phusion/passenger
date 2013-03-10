@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010-2012 Phusion
+ * Copyright (C) 2010-2013 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,6 +53,7 @@ static int               first_start = 1;
 ngx_str_t                passenger_schema_string;
 ngx_str_t                passenger_placeholder_upstream_address;
 PassengerCachedFileStat *passenger_stat_cache;
+PassengerAppTypeDetector *passenger_app_type_detector;
 AgentsStarter           *passenger_agents_starter = NULL;
 ngx_cycle_t             *passenger_current_cycle;
 
@@ -143,6 +144,10 @@ starting_helper_server_after_fork(void *arg) {
     ngx_cycle_t *cycle = (void *) arg;
     char        *log_filename;
     FILE        *log_file;
+    ngx_core_conf_t *ccf;
+    ngx_uint_t   i;
+    ngx_str_t   *envs;
+    const char  *env;
     
     /* At this point, stdout and stderr may still point to the console.
      * Make sure that they're both redirected to the log file.
@@ -177,6 +182,16 @@ starting_helper_server_after_fork(void *arg) {
         dup2(fileno(log_file), 1);
         dup2(fileno(log_file), 2);
         fclose(log_file);
+    }
+
+    /* Set environment variables in Nginx config file. */
+    ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
+    envs = ccf->env.elts;
+    for (i = 0; i < ccf->env.nelts; i++) {
+        env = (const char *) envs[i].data;
+        if (strchr(env, '=') != NULL) {
+            putenv(strdup(env));
+        }
     }
     
     /* Set SERVER_SOFTWARE so that application processes know what web
@@ -231,12 +246,12 @@ start_helper_server(ngx_cycle_t *cycle) {
     char   *default_user = NULL;
     char   *default_group = NULL;
     char   *passenger_root = NULL;
+    char   *temp_dir = NULL;
     char   *analytics_log_user;
     char   *analytics_log_group;
     char   *union_station_gateway_address;
     char   *union_station_gateway_cert;
     char   *union_station_proxy_address;
-    char   *union_station_proxy_type;
     char   *error_message = NULL;
     
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
@@ -247,12 +262,12 @@ start_helper_server(ngx_cycle_t *cycle) {
     default_user   = ngx_str_null_terminate(&passenger_main_conf.default_user);
     default_group  = ngx_str_null_terminate(&passenger_main_conf.default_group);
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
+    temp_dir       = ngx_str_null_terminate(&passenger_main_conf.temp_dir);
     analytics_log_user = ngx_str_null_terminate(&passenger_main_conf.analytics_log_user);
     analytics_log_group = ngx_str_null_terminate(&passenger_main_conf.analytics_log_group);
     union_station_gateway_address = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_address);
     union_station_gateway_cert = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_cert);
     union_station_proxy_address = ngx_str_null_terminate(&passenger_main_conf.union_station_proxy_address);
-    union_station_proxy_type = ngx_str_null_terminate(&passenger_main_conf.union_station_proxy_type);
     
     prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
     prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
@@ -269,7 +284,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     
     ret = agents_starter_start(passenger_agents_starter,
         passenger_main_conf.log_level, debug_log_file, getpid(),
-        "", passenger_main_conf.user_switching,
+        temp_dir, passenger_main_conf.user_switching,
         default_user, default_group,
         core_conf->user, core_conf->group,
         passenger_root, "ruby", passenger_main_conf.max_pool_size,
@@ -281,7 +296,6 @@ start_helper_server(ngx_cycle_t *cycle) {
         passenger_main_conf.union_station_gateway_port,
         union_station_gateway_cert,
         union_station_proxy_address,
-        union_station_proxy_type,
         (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts,
         starting_helper_server_after_fork,
         cycle,
@@ -336,12 +350,12 @@ cleanup:
     free(default_user);
     free(default_group);
     free(passenger_root);
+    free(temp_dir);
     free(analytics_log_user);
     free(analytics_log_group);
     free(union_station_gateway_address);
     free(union_station_gateway_cert);
     free(union_station_proxy_address);
-    free(union_station_proxy_type);
     free(error_message);
     if (prestart_uris_ary != NULL) {
         for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
@@ -387,6 +401,7 @@ pre_config_init(ngx_conf_t *cf)
     passenger_placeholder_upstream_address.data = (u_char *) "unix:/passenger_helper_server";
     passenger_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
     passenger_stat_cache = cached_file_stat_new(1024);
+    passenger_app_type_detector = passenger_app_type_detector_new();
     passenger_agents_starter = agents_starter_new(AS_NGINX, &error_message);
     
     if (passenger_agents_starter == NULL) {

@@ -431,50 +431,63 @@ private
 		initialization_state_mutex = Mutex.new
 		initialization_state_cond = ConditionVariable.new
 		initialization_state = {}
+		set_initialization_state = lambda do |value|
+			initialization_state_mutex.synchronize do
+				initialization_state[Thread.current] = value
+				initialization_state_cond.signal
+			end
+		end
+		set_initialization_state_to_true = lambda do
+			set_initialization_state.call(true)
+		end
 
 		# Actually start all the threads.
 		thread_handler = @thread_handler
+		expected_nthreads = 0
+
 		@threads_mutex.synchronize do
 			@concurrency.times do |i|
 				thread = Thread.new(i) do |number|
 					Thread.current.abort_on_exception = true
-					begin
-						Thread.current[:name] = "Worker #{number + 1}"
-						handler = thread_handler.new(self, main_socket_options)
-						handler.install
-						initialization_state_mutex.synchronize do
-							initialization_state[Thread.current] = true
-							initialization_state_cond.signal
+					RobustInterruption.install
+					RobustInterruption.disable_interruptions do
+						begin
+							Thread.current[:name] = "Worker #{number + 1}"
+							handler = thread_handler.new(self, main_socket_options)
+							handler.install
+							handler.main_loop(set_initialization_state_to_true)
+						ensure
+							set_initialization_state.call(false)
+							unregister_current_thread
 						end
-						handler.main_loop
-					ensure
-						initialization_state_mutex.synchronize do
-							initialization_state[Thread.current] = false
-							initialization_state_cond.signal
-						end
-						unregister_current_thread
 					end
 				end
 				@threads << thread
+				expected_nthreads += 1
 			end
 
 			thread = Thread.new do
 				Thread.current.abort_on_exception = true
-				begin
-					Thread.current[:name] = "HTTP helper worker"
-					handler = thread_handler.new(self, http_socket_options)
-					handler.install
-					handler.main_loop
-				ensure
-					unregister_current_thread
+				RobustInterruption.install
+				RobustInterruption.disable_interruptions do
+					begin
+						Thread.current[:name] = "HTTP helper worker"
+						handler = thread_handler.new(self, http_socket_options)
+						handler.install
+						handler.main_loop(set_initialization_state_to_true)
+					ensure
+						set_initialization_state.call(false)
+						unregister_current_thread
+					end
 				end
 			end
 			@threads << thread
+			expected_nthreads += 1
 		end
 
 		# Wait until all threads have finished starting.
 		initialization_state_mutex.synchronize do
-			while initialization_state.size != @concurrency
+			while initialization_state.size != expected_nthreads
 				initialization_state_cond.wait(initialization_state_mutex)
 			end
 		end

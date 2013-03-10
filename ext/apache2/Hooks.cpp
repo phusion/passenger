@@ -956,11 +956,12 @@ private:
 		addHeader(output, "PASSENGER_APP_ROOT", appRoot);
 		addHeader(output, "PASSENGER_APP_GROUP_NAME", config->getAppGroupName(appRoot));
 		addHeader(output, "PASSENGER_RUBY", config->ruby);
+		addHeader(output, "PASSENGER_PYTHON", config->python);
 		addHeader(output, "PASSENGER_ENV", config->getEnvironment());
 		addHeader(output, "PASSENGER_SPAWN_METHOD", config->getSpawnMethodString());
 		addHeader(output, "PASSENGER_USER", config->getUser());
 		addHeader(output, "PASSENGER_GROUP", config->getGroup());
-		addHeader(output, "PASSENGER_APP_TYPE", mapper.getApplicationTypeString());
+		addHeader(output, "PASSENGER_APP_TYPE", mapper.getApplicationTypeName());
 		addHeader(output, "PASSENGER_MIN_INSTANCES",
 			apr_psprintf(r->pool, "%ld", config->getMinInstances()));
 		addHeader(output, "PASSENGER_MAX_PRELOADER_IDLE_TIME",
@@ -1273,7 +1274,6 @@ public:
 			serverConfig.unionStationGatewayPort,
 			serverConfig.unionStationGatewayCert,
 			serverConfig.unionStationProxyAddress,
-			serverConfig.unionStationProxyType,
 			serverConfig.prestartURLs);
 		
 		// Store some relevant information in the generation directory.

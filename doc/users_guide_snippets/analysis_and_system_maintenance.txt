@@ -116,13 +116,7 @@ sessions compared to the others, then there might be a problem:
                                +---- "spike"
 --------------------------------
 
-Possible reasons why spikes can occur:
-
-. Your application is busy processing a request that takes a very long time.
-  If this is the case, then you might want to turn
-  <<PassengerUseGlobalQueue,global queuing>> on.
-. Your application is frozen, i.e. has stopped responding. See
-  <<debugging_frozen,Debugging frozen applications>> for tips.
+The most likely reason why a spike occurs is because your application is frozen, i.e. it has stopped responding. See <<debugging_frozen,Debugging frozen applications>> for tips.
 
 
 [[debugging_frozen]]

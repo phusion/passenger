@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -166,7 +166,6 @@ main(int argc, char *argv[]) {
 		false, DEFAULT_UNION_STATION_GATEWAY_PORT);
 	string unionStationGatewayCert  = options.get("union_station_gateway_cert", false);
 	string unionStationProxyAddress = options.get("union_station_proxy_address", false);
-	string unionStationProxyType    = options.get("union_station_proxy_type", false);
 	
 	curl_global_init(CURL_GLOBAL_ALL);
 	
@@ -246,8 +245,7 @@ main(int argc, char *argv[]) {
 			unionStationGatewayAddress,
 			unionStationGatewayPort,
 			unionStationGatewayCert,
-			unionStationProxyAddress,
-			unionStationProxyType);
+			unionStationProxyAddress);
 		loggingServer = &server;
 		
 		

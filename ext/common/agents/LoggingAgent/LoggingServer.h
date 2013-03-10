@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -1084,14 +1084,12 @@ public:
 		const string &unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
 		unsigned short unionStationGatewayPort = DEFAULT_UNION_STATION_GATEWAY_PORT,
 		const string &unionStationGatewayCert = "",
-		const string &unionStationProxyAddress = "",
-		const string &unionStationProxyPort = "")
+		const string &unionStationProxyAddress = "")
 		: EventedMessageServer(loop, fd, accountsDatabase),
 		  remoteSender(unionStationGatewayAddress,
 		               unionStationGatewayPort,
 		               unionStationGatewayCert,
-		               unionStationProxyAddress,
-		               unionStationProxyPort),
+		               unionStationProxyAddress),
 		  garbageCollectionTimer(loop),
 		  sinkFlushingTimer(loop),
 		  exitTimer(loop)
