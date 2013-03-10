@@ -1,3 +1,9 @@
+ruby-passenger (1:3.9.4+4.0.0rc4-bbox1~precise1) precise; urgency=low
+
+  * New upstream pre-release, 4.0.0 rc4
+
+ -- John Leach <john@brightbox.co.uk>  Sun, 10 Mar 2013 17:28:11 +0000
+
 ruby-passenger (1:3.9.2+4.0.0b2-bbox2~lucid1) lucid; urgency=low
 
   * New upstream pre-release, 4.0.0 beta2
