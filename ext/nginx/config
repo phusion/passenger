@@ -8,8 +8,14 @@ if test "x$PASSENGER_LIBS" = "x" && ! passenger-config --compiled; then
     if ! cd $ngx_addon_dir; then
         exit 1
     fi
-    if ! rake nginx CACHING=false; then
-        exit 1
+    if test "x$TRACE" = 1; then
+        if ! rake --trace nginx CACHING=false; then
+            exit 1
+        fi
+    else
+        if ! rake nginx CACHING=false; then
+            exit 1
+        fi
     fi
     cd "$old_dir"
     echo "*** Phusion Passenger support files have been successfully compiled. ***"
@@ -27,7 +33,8 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/ContentHandler.h \
     ${ngx_addon_dir}/StaticContentHandler.h \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
-    `passenger-config --root`/ext/common/Constants.h"
+    `passenger-config --root`/ext/common/Constants.h \
+    `passenger-config --root`/ext/common/ApplicationPool2/AppTypes.h"
 if test "x$PASSENGER_LIBS" = "x"; then
     CORE_LIBS="$CORE_LIBS `passenger-config --nginx-libs`"
 else

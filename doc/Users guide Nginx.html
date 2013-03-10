@@ -1105,16 +1105,22 @@ using the command line.</p></div>
 <div class="foo toclevel3"><a href="#_supported_operating_systems">1.1. Supported operating systems</a></div>
 <div class="foo toclevel3"><a href="#_where_to_get_support">1.2. Where to get support</a></div>
 <div class="foo toclevel2"><a href="#_installation">2. Installation</a></div>
-<div class="foo toclevel3"><a href="#rubygems_generic_install">2.1. Generic installation, upgrade and downgrade method: via RubyGems</a></div>
-<div class="foo toclevel3"><a href="#tarball_generic_install">2.2. Generic installation, upgrade and downgrade method: via tarball</a></div>
-<div class="foo toclevel3"><a href="#_installing_or_upgrading_on_ubuntu">2.3. Installing or upgrading on Ubuntu</a></div>
-<div class="foo toclevel3"><a href="#_installing_or_upgrading_on_red_hat_fedora_centos_or_scientificlinux">2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux</a></div>
-<div class="foo toclevel3"><a href="#_upgrading_from_open_source_to_enterprise">2.5. Upgrading from open source to Enterprise</a></div>
-<div class="foo toclevel3"><a href="#_non_interactive_automatic_headless_installs_or_upgrades">2.6. Non-interactive, automatic, headless installs or upgrades</a></div>
-<div class="foo toclevel3"><a href="#_installing_as_a_normal_nginx_module_without_using_the_installer">2.7. Installing as a normal Nginx module without using the installer</a></div>
-<div class="foo toclevel3"><a href="#_disabling_without_uninstalling">2.8. Disabling without uninstalling</a></div>
-<div class="foo toclevel3"><a href="#uninstalling">2.9. Uninstalling</a></div>
-<div class="foo toclevel3"><a href="#moving_phusion_passenger">2.10. Moving to a different directory</a></div>
+<div class="foo toclevel3"><a href="#_synopsis">2.1. Synopsis</a></div>
+<div class="foo toclevel3"><a href="#rubygems_generic_install">2.2. Generic installation, upgrade and downgrade method: via RubyGems</a></div>
+<div class="foo toclevel3"><a href="#tarball_generic_install">2.3. Generic installation, upgrade and downgrade method: via tarball</a></div>
+<div class="foo toclevel3"><a href="#_installing_or_upgrading_on_debian_6_or_ubuntu">2.4. Installing or upgrading on Debian 6 or Ubuntu</a></div>
+<div class="foo toclevel3"><a href="#_installing_or_upgrading_on_red_hat_fedora_centos_or_scientificlinux">2.5. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux</a></div>
+<div class="foo toclevel3"><a href="#_upgrading_from_open_source_to_enterprise">2.6. Upgrading from open source to Enterprise</a></div>
+<div class="foo toclevel3"><a href="#_non_interactive_automatic_headless_installs_or_upgrades">2.7. Non-interactive, automatic, headless installs or upgrades</a></div>
+<div class="foo toclevel3"><a href="#_customizing_the_compilation_process">2.8. Customizing the compilation process</a></div>
+<div class="foo toclevel4"><a href="#_setting_the_compiler">2.8.1. Setting the compiler</a></div>
+<div class="foo toclevel4"><a href="#_adding_additional_compiler_or_linker_flags">2.8.2. Adding additional compiler or linker flags</a></div>
+<div class="foo toclevel4"><a href="#_forcing_location_of_certain_command_line_tools">2.8.3. Forcing location of certain command line tools</a></div>
+<div class="foo toclevel3"><a href="#_installing_as_a_normal_nginx_module_without_using_the_installer">2.9. Installing as a normal Nginx module without using the installer</a></div>
+<div class="foo toclevel3"><a href="#nginx_init_script">2.10. Creating an Nginx init script</a></div>
+<div class="foo toclevel3"><a href="#_disabling_without_uninstalling">2.11. Disabling without uninstalling</a></div>
+<div class="foo toclevel3"><a href="#uninstalling">2.12. Uninstalling</a></div>
+<div class="foo toclevel3"><a href="#moving_phusion_passenger">2.13. Moving to a different directory</a></div>
 <div class="foo toclevel2"><a href="#deploying_a_ror_app">3. Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails &gt;= 3) application</a></div>
 <div class="foo toclevel3"><a href="#_deploying_to_a_virtual_host_8217_s_root">3.1. Deploying to a virtual host’s root</a></div>
 <div class="foo toclevel3"><a href="#deploying_rails_to_sub_uri">3.2. Deploying to a sub URI</a></div>
@@ -1140,50 +1146,54 @@ using the command line.</p></div>
 <div class="foo toclevel2"><a href="#_configuring_phusion_passenger">6. Configuring Phusion Passenger</a></div>
 <div class="foo toclevel3"><a href="#_passenger_root_lt_directory_gt">6.1. passenger_root &lt;directory&gt;</a></div>
 <div class="foo toclevel3"><a href="#_passenger_ruby_lt_filename_gt">6.2. passenger_ruby &lt;filename&gt;</a></div>
-<div class="foo toclevel3"><a href="#PassengerSpawnMethod">6.3. passenger_spawn_method &lt;string&gt;</a></div>
-<div class="foo toclevel3"><a href="#PassengerRollingRestarts">6.4. passenger_rolling_restarts &lt;on|off&gt;</a></div>
-<div class="foo toclevel3"><a href="#_passenger_resist_deployment_errors_lt_on_off_gt">6.5. passenger_resist_deployment_errors &lt;on|off&gt;</a></div>
-<div class="foo toclevel3"><a href="#_important_deployment_options">6.6. Important deployment options</a></div>
-<div class="foo toclevel4"><a href="#_passenger_enabled_lt_on_off_gt">6.6.1. passenger_enabled &lt;on|off&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerBaseURI">6.6.2. passenger_base_uri &lt;uri&gt;</a></div>
-<div class="foo toclevel3"><a href="#_connection_handling_options">6.7. Connection handling options</a></div>
-<div class="foo toclevel4"><a href="#_passenger_ignore_client_abort_lt_on_off_gt">6.7.1. passenger_ignore_client_abort &lt;on|off&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_set_cgi_param_lt_cgi_environment_name_gt_lt_value_gt">6.7.2. passenger_set_cgi_param &lt;CGI environment name&gt; &lt;value&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_pass_header_lt_header_name_gt">6.7.3. passenger_pass_header &lt;header name&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_buffer_response_lt_on_off_gt">6.7.4. passenger_buffer_response &lt;on|off&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_buffer_size">6.7.5. passenger_buffer_size</a></div>
-<div class="foo toclevel4"><a href="#_passenger_buffers">6.7.6. passenger_buffers</a></div>
-<div class="foo toclevel4"><a href="#_passenger_busy_buffer_size">6.7.7. passenger_busy_buffer_size</a></div>
-<div class="foo toclevel3"><a href="#_security_options">6.8. Security options</a></div>
-<div class="foo toclevel4"><a href="#PassengerUserSwitching">6.8.1. passenger_user_switching &lt;on|off&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_user_lt_username_gt">6.8.2. passenger_user &lt;username&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_group_lt_group_name_gt">6.8.3. passenger_group &lt;group name&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerDefaultUser">6.8.4. passenger_default_user &lt;username&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerDefaultGroup">6.8.5. Passenger_default_group &lt;group name&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_friendly_error_pages_lt_on_off_gt">6.8.6. passenger_friendly_error_pages &lt;on|off&gt;</a></div>
-<div class="foo toclevel3"><a href="#_resource_control_and_optimization_options">6.9. Resource control and optimization options</a></div>
-<div class="foo toclevel4"><a href="#PassengerMaxPoolSize">6.9.1. passenger_max_pool_size &lt;integer&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerMinInstances">6.9.2. passenger_min_instances &lt;integer&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_max_instances_lt_integer_gt">6.9.3. passenger_max_instances &lt;integer&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_max_instances_per_app_lt_integer_gt">6.9.4. passenger_max_instances_per_app &lt;integer&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerPoolIdleTime">6.9.5. passenger_pool_idle_time &lt;integer&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_max_preloader_idle_time_lt_integer_gt">6.9.6. passenger_max_preloader_idle_time &lt;integer&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerConcurrencyModel">6.9.7. passenger_concurrency_model &lt;process|thread&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerThreadCount">6.9.8. passenger_thread_count &lt;number&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerMaxRequests">6.9.9. passenger_max_requests &lt;integer&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerMaxRequestTime">6.9.10. passenger_max_request_time &lt;seconds&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerMemoryLimit">6.9.11. passenger_memory_limit &lt;integer&gt;</a></div>
-<div class="foo toclevel4"><a href="#PassengerPreStart">6.9.12. passenger_pre_start &lt;url&gt;</a></div>
-<div class="foo toclevel3"><a href="#_logging_and_debugging_options">6.10. Logging and debugging options</a></div>
-<div class="foo toclevel4"><a href="#_passenger_log_level_lt_integer_gt">6.10.1. passenger_log_level &lt;integer&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_debug_log_file_lt_filename_gt">6.10.2. passenger_debug_log_file &lt;filename&gt;</a></div>
-<div class="foo toclevel4"><a href="#_passenger_debugger_lt_on_off_gt">6.10.3. passenger_debugger &lt;on|off&gt;</a></div>
-<div class="foo toclevel3"><a href="#_ruby_on_rails_specific_options">6.11. Ruby on Rails-specific options</a></div>
-<div class="foo toclevel4"><a href="#RailsEnv">6.11.1. rails_env &lt;string&gt;</a></div>
-<div class="foo toclevel3"><a href="#_rack_and_rails_gt_3_specific_options">6.12. Rack and Rails &gt;= 3 specific options</a></div>
-<div class="foo toclevel4"><a href="#RackEnv">6.12.1. rack_env &lt;string&gt;</a></div>
-<div class="foo toclevel3"><a href="#_deprecated_options">6.13. Deprecated options</a></div>
-<div class="foo toclevel4"><a href="#_rails_spawn_method">6.13.1. rails_spawn_method</a></div>
+<div class="foo toclevel3"><a href="#_passenger_python_lt_filename_gt">6.3. passenger_python &lt;filename&gt;</a></div>
+<div class="foo toclevel3"><a href="#PassengerAppRoot">6.4. passenger_app_root &lt;path/to/root&gt;</a></div>
+<div class="foo toclevel3"><a href="#PassengerSpawnMethod">6.5. passenger_spawn_method &lt;string&gt;</a></div>
+<div class="foo toclevel3"><a href="#PassengerRollingRestarts">6.6. passenger_rolling_restarts &lt;on|off&gt;</a></div>
+<div class="foo toclevel3"><a href="#_passenger_resist_deployment_errors_lt_on_off_gt">6.7. passenger_resist_deployment_errors &lt;on|off&gt;</a></div>
+<div class="foo toclevel3"><a href="#PassengerTempDir">6.8. passenger_temp_dir &lt;directory&gt;</a></div>
+<div class="foo toclevel3"><a href="#_important_deployment_options">6.9. Important deployment options</a></div>
+<div class="foo toclevel4"><a href="#_passenger_enabled_lt_on_off_gt">6.9.1. passenger_enabled &lt;on|off&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerBaseURI">6.9.2. passenger_base_uri &lt;uri&gt;</a></div>
+<div class="foo toclevel3"><a href="#_connection_handling_options">6.10. Connection handling options</a></div>
+<div class="foo toclevel4"><a href="#_passenger_ignore_client_abort_lt_on_off_gt">6.10.1. passenger_ignore_client_abort &lt;on|off&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_set_cgi_param_lt_cgi_environment_name_gt_lt_value_gt">6.10.2. passenger_set_cgi_param &lt;CGI environment name&gt; &lt;value&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_pass_header_lt_header_name_gt">6.10.3. passenger_pass_header &lt;header name&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_buffer_response_lt_on_off_gt">6.10.4. passenger_buffer_response &lt;on|off&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_buffer_size">6.10.5. passenger_buffer_size</a></div>
+<div class="foo toclevel4"><a href="#_passenger_buffers">6.10.6. passenger_buffers</a></div>
+<div class="foo toclevel4"><a href="#_passenger_busy_buffer_size">6.10.7. passenger_busy_buffer_size</a></div>
+<div class="foo toclevel3"><a href="#_security_options">6.11. Security options</a></div>
+<div class="foo toclevel4"><a href="#PassengerUserSwitching">6.11.1. passenger_user_switching &lt;on|off&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_user_lt_username_gt">6.11.2. passenger_user &lt;username&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_group_lt_group_name_gt">6.11.3. passenger_group &lt;group name&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerDefaultUser">6.11.4. passenger_default_user &lt;username&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerDefaultGroup">6.11.5. Passenger_default_group &lt;group name&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_show_version_in_header_lt_on_off_gt">6.11.6. passenger_show_version_in_header &lt;on|off&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_friendly_error_pages_lt_on_off_gt">6.11.7. passenger_friendly_error_pages &lt;on|off&gt;</a></div>
+<div class="foo toclevel3"><a href="#_resource_control_and_optimization_options">6.12. Resource control and optimization options</a></div>
+<div class="foo toclevel4"><a href="#PassengerMaxPoolSize">6.12.1. passenger_max_pool_size &lt;integer&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerMinInstances">6.12.2. passenger_min_instances &lt;integer&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_max_instances_lt_integer_gt">6.12.3. passenger_max_instances &lt;integer&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_max_instances_per_app_lt_integer_gt">6.12.4. passenger_max_instances_per_app &lt;integer&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerPoolIdleTime">6.12.5. passenger_pool_idle_time &lt;integer&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_max_preloader_idle_time_lt_integer_gt">6.12.6. passenger_max_preloader_idle_time &lt;integer&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerConcurrencyModel">6.12.7. passenger_concurrency_model &lt;process|thread&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerThreadCount">6.12.8. passenger_thread_count &lt;number&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerMaxRequests">6.12.9. passenger_max_requests &lt;integer&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerMaxRequestTime">6.12.10. passenger_max_request_time &lt;seconds&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerMemoryLimit">6.12.11. passenger_memory_limit &lt;integer&gt;</a></div>
+<div class="foo toclevel4"><a href="#PassengerPreStart">6.12.12. passenger_pre_start &lt;url&gt;</a></div>
+<div class="foo toclevel3"><a href="#_logging_and_debugging_options">6.13. Logging and debugging options</a></div>
+<div class="foo toclevel4"><a href="#_passenger_log_level_lt_integer_gt">6.13.1. passenger_log_level &lt;integer&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_debug_log_file_lt_filename_gt">6.13.2. passenger_debug_log_file &lt;filename&gt;</a></div>
+<div class="foo toclevel4"><a href="#_passenger_debugger_lt_on_off_gt">6.13.3. passenger_debugger &lt;on|off&gt;</a></div>
+<div class="foo toclevel3"><a href="#_ruby_on_rails_specific_options">6.14. Ruby on Rails-specific options</a></div>
+<div class="foo toclevel4"><a href="#RailsEnv">6.14.1. rails_env &lt;string&gt;</a></div>
+<div class="foo toclevel3"><a href="#_rack_and_rails_gt_3_specific_options">6.15. Rack and Rails &gt;= 3 specific options</a></div>
+<div class="foo toclevel4"><a href="#RackEnv">6.15.1. rack_env &lt;string&gt;</a></div>
+<div class="foo toclevel3"><a href="#_deprecated_options">6.16. Deprecated options</a></div>
+<div class="foo toclevel4"><a href="#_rails_spawn_method">6.16.1. rails_spawn_method</a></div>
 <div class="foo toclevel2"><a href="#_analysis_and_system_maintenance">7. Analysis and system maintenance</a></div>
 <div class="foo toclevel3"><a href="#_inspecting_memory_usage">7.1. Inspecting memory usage</a></div>
 <div class="foo toclevel3"><a href="#_inspecting_phusion_passenger_8217_s_internal_status">7.2. Inspecting Phusion Passenger’s internal status</a></div>
@@ -1195,11 +1205,10 @@ using the command line.</p></div>
 <div class="foo toclevel3"><a href="#reducing_memory_usage">8.2. Reducing memory consumption of Ruby on Rails applications by 33%</a></div>
 <div class="foo toclevel3"><a href="#capistrano">8.3. Capistrano recipe</a></div>
 <div class="foo toclevel3"><a href="#bundler_support">8.4. Bundler support</a></div>
-<div class="foo toclevel3"><a href="#moving_phusion_passenger">8.5. Moving Phusion Passenger to a different directory</a></div>
-<div class="foo toclevel3"><a href="#_installing_multiple_ruby_on_rails_versions">8.6. Installing multiple Ruby on Rails versions</a></div>
-<div class="foo toclevel3"><a href="#_making_the_application_restart_after_each_request">8.7. Making the application restart after each request</a></div>
-<div class="foo toclevel3"><a href="#sub_uri_deployment_uri_fix">8.8. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments</a></div>
-<div class="foo toclevel3"><a href="#_out_of_band_garbage_work_and_out_of_band_garbage_collection">8.9. Out-of-Band Garbage Work and Out-of-Band Garbage Collection</a></div>
+<div class="foo toclevel3"><a href="#_installing_multiple_ruby_on_rails_versions">8.5. Installing multiple Ruby on Rails versions</a></div>
+<div class="foo toclevel3"><a href="#_making_the_application_restart_after_each_request">8.6. Making the application restart after each request</a></div>
+<div class="foo toclevel3"><a href="#sub_uri_deployment_uri_fix">8.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments</a></div>
+<div class="foo toclevel3"><a href="#_out_of_band_garbage_work_and_out_of_band_garbage_collection">8.8. Out-of-Band Garbage Work and Out-of-Band Garbage Collection</a></div>
 <div class="foo toclevel2"><a href="#_under_the_hood">9. Under the hood</a></div>
 <div class="foo toclevel3"><a href="#_page_caching_support">9.1. Page caching support</a></div>
 <div class="foo toclevel3"><a href="#application_detection">9.2. How Phusion Passenger detects whether a virtual host is a web application</a></div>
@@ -1231,7 +1240,8 @@ using the command line.</p></div>
 words: practically any operating system on earth, except Microsoft Windows.</p></div>
 <div class="paragraph"><p>Phusion Passenger is confirmed on a large number of operating systems and Linux
 distributions, including, but not limited to, Ubuntu, Debian, CentOS/Fedora/RHEL,
-Gentoo, Mac OS X, FreeBSD and Solaris. Both 32-bit and 64-bit platforms are supported.</p></div>
+Gentoo, Mac OS X, FreeBSD and Solaris. OpenBSD is supported since version 5.2.
+Both 32-bit and 64-bit platforms are supported.</p></div>
 <div class="paragraph"><p>Please
 <a href="http://code.google.com/p/phusion-passenger/issues/list">report a bug</a>
 or
@@ -1263,6 +1273,11 @@ Email <a href="mailto:support@phusion.nl">support@phusion.nl</a> if you are a <a
 <a href="https://www.phusionpassenger.com/commercial_support">Commercial support contracts</a> are also available.
 </p>
 </li>
+<li>
+<p>
+Report security vulnerabilities to <a href="mailto:support@phusion.nl">support@phusion.nl</a>. We will do our best to respond to you as quickly as we can, so please do not disclose the vulnerability until then.
+</p>
+</li>
 </ul></div>
 <div class="paragraph"><p>Please consult <a href="https://www.phusionpassenger.com/support">the Phusion Passenger website</a> for a full list of support resources.</p></div>
 </div>
@@ -1271,6 +1286,8 @@ Email <a href="mailto:support@phusion.nl">support@phusion.nl</a> if you are a <a
 <div class="sect1">
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installation"></span><h2 data-comment-topic="installing-phusion-passenger-hn03ac" data-anchor="_installation">2. Installation</h2>
 <div class="sectionbody">
+<div class="sect2">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_synopsis"></span><h3 data-comment-topic="synopsis-1uu3sqp" data-anchor="_synopsis">2.1. Synopsis</h3>
 <div class="paragraph"><p>The Phusion Passenger installation process consists of two steps:</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -1284,11 +1301,13 @@ The <strong>integration step</strong>, where you configure Phusion Passenger so 
 </p>
 </li>
 </ol></div>
-<div class="paragraph"><p>Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, both steps can be done in multiple ways. Most users will be satisfied with the generic installation instructions which covers both steps, but some users may prefer OS-specific installation instructions in order to integrate better.</p></div>
+<div class="paragraph"><p>Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, both steps can be done in multiple ways. Most users — especially first-time users — will be satisfied with the <em>generic installation instructions</em> which covers both steps. However some users may prefer <em>OS-specific installation instructions</em>, which allow Phusion Passenger to better integrate into the operating system. Better integration is characterized by following OS-specific conventions.</p></div>
 <div class="paragraph"><p>If you are not familiar with system administration and do not understand all the choices, then we recommend you to go with the <a href="#rubygems_generic_install">RubyGems generic installation method</a> (if you’re a Ruby user) or the <a href="#tarball_generic_install">tarball generic installation method</a> (if you’re not a Ruby user).</p></div>
 <div class="paragraph"><p>The steps for upgrading or downgrading Phusion Passenger is almost the same as the steps for installing. All the installation guides in this section will also teach you how to upgrade and downgrade.</p></div>
+</div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="rubygems_generic_install"></span><h3 data-comment-topic="generic-installation-upgrade-and-downgrade-method-via-rubygems-76uol7" data-anchor="rubygems_generic_install">2.1. Generic installation, upgrade and downgrade method: via RubyGems</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="rubygems_generic_install"></span><h3 data-comment-topic="generic-installation-upgrade-and-downgrade-method-via-rubygems-76uol7" data-anchor="rubygems_generic_install">2.2. Generic installation, upgrade and downgrade method: via RubyGems</h3>
+<div class="paragraph"><p>RubyGems is only used as a method to obtain the Phusion Passenger files, so in case you have multiple Ruby versions it does not matter which Ruby’s RubyGems you use for installation. Once installed, Phusion Passenger can work with all other Ruby versions on your system.</p></div>
 <span class="anchor_helper" id="is_ruby_home_or_system_wide_installed"></span><h4 class="float" data-anchor="is_ruby_home_or_system_wide_installed">Step 1: figuring out whether your Ruby is installed the home directory or system-wide</h4>
 <div class="paragraph"><p>Ruby may either be installed in the home directory, or system-wide. If it’s installed system-wide then we will want to install gems system-wide as well, so you need to switch to a root prompt first. If Ruby is installed in the home directory then we will want to install gems to the home directory as well, as a normal user.</p></div>
 <div class="paragraph"><p>To find out which case applies, run the following command to find out where the <span class="monospaced">ruby</span> command is:</p></div>
@@ -1356,7 +1375,7 @@ Is <em>sudo</em> not installed on your system? Run <span class="monospaced">su -
 </div>
 </div>
 <span class="anchor_helper" id="add_rubygems_bin_dir_to_path"></span><h4 class="float" data-anchor="add_rubygems_bin_dir_to_path">Step 3: add the RubyGems bin directory to your $PATH</h4>
-<div class="paragraph"><p>If you all the following are applicable to you:</p></div>
+<div class="paragraph"><p>If you all of the following are applicable to you:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1431,11 +1450,12 @@ If you installed the existing Nginx through YUM, run <span class="monospaced">yu
 <pre>passenger-memory-stats</pre>
 </div>
 </div>
-<div class="paragraph"><p>You should see the web server processes as well as a number of Phusion Passenger processes (e.g. PassengerWatchdog, PassengerHelperAgent). Congratulations, Phusion Passenger is now installed and running!</p></div>
+<div class="paragraph"><p>You should see the web server processes as well as a number of Phusion Passenger processes (e.g. PassengerWatchdog, PassengerHelperAgent). Congratulations, Phusion Passenger is now installed and running!
+At this point you may be interested in <a href="#nginx_init_script">creating an Nginx init script</a>.</p></div>
 <div class="paragraph"><p>If the output is not as expected, then please refer to the <a href="#troubleshooting">Troubleshooting</a> section.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="tarball_generic_install"></span><h3 data-comment-topic="generic-installation-upgrade-and-downgrade-method-via-tarball-2gkx43" data-anchor="tarball_generic_install">2.2. Generic installation, upgrade and downgrade method: via tarball</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="tarball_generic_install"></span><h3 data-comment-topic="generic-installation-upgrade-and-downgrade-method-via-tarball-2gkx43" data-anchor="tarball_generic_install">2.3. Generic installation, upgrade and downgrade method: via tarball</h3>
 <span class="anchor_helper" id="_step_1_download_and_extract_the_tarball"></span><h4 class="float" data-anchor="_step_1_download_and_extract_the_tarball">Step 1: download and extract the tarball</h4>
 <div class="paragraph"><p>Download the open source Phusion Passenger tarball from <a href="https://www.phusionpassenger.com/download#open_source">the Phusion Passenger website</a>. If you want a specific version, please refer to the release archive on <a href="http://rubyforge.org/frs/?group_id=5873&amp;release_id=46919">RubyForge</a>.</p></div>
 <div class="paragraph"><p>If you a <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a> customer, download the Phusion Passenger Enterprise tarball from the <a href="https://www.phusionpassenger.com/orders">Customer Area</a>. Also be sure to download the <strong>license key</strong> and save it as <em>/etc/passenger-enterprise-license</em>.</p></div>
@@ -1508,7 +1528,7 @@ sudo apt-get install ruby rake</pre>
 sudo apt-get update</pre>
 </div>
 </div>
-<div class="paragraph"><p>If you’re on the older Ubuntu 8.04 Hardy release, the <em>apt-add-repository</em> command isn’t available so you have to install the repository and the key by hand:</p></div>
+<div class="paragraph"><p>If you’re on the older Ubuntu 8.04 Hardy release, the <span class="monospaced">apt-add-repository</span> command isn’t available so you have to install the repository and the key by hand:</p></div>
 <div class="listingblock">
 <div class="content monospaced">
 <pre>sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" &gt; /etc/apt/sources.list.d/brightbox-passenger.list'
@@ -1534,32 +1554,97 @@ Note that the <span class="monospaced">passenger-install-nginx-module</span> com
 <div class="paragraph"><p>Please refer to <a href="#verify_passenger_running">this section</a>. Note that all Phusion Passenger administration scripts are located inside the <em>bin</em> subdirectory of the Phusion Passenger source directory, so you would have to run something like <em>/opt/passenger/passenger-x.x.x/bin/passenger-memory-stats</em>.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installing_or_upgrading_on_ubuntu"></span><h3 data-comment-topic="installing-or-upgrading-on-ubuntu-fw5fvp" data-anchor="_installing_or_upgrading_on_ubuntu">2.3. Installing or upgrading on Ubuntu</h3>
-<div class="paragraph"><p>John Leach from Brightbox has kindly provided a Ubuntu packages for Phusion Passenger. The packages are available from the <a href="http://wiki.brightbox.co.uk/docs:phusion-passenger">Brightbox repository</a>. Only packages for the open source version of Phusion Passenger are provided. <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a> customers should use the <a href="#rubygems_generic_install">generic RubyGems installation method</a> or <a href="#tarball_generic_install">the generic tarball installation method</a> instead.</p></div>
-<div class="paragraph"><p>Add the following line to the Third Party Software Sources:</p></div>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installing_or_upgrading_on_debian_6_or_ubuntu"></span><h3 data-comment-topic="installing-or-upgrading-on-ubuntu-fw5fvp" data-anchor="_installing_or_upgrading_on_debian_6_or_ubuntu">2.4. Installing or upgrading on Debian 6 or Ubuntu</h3>
+<div class="paragraph"><p>John Leach from Brightbox has kindly provided Ubuntu packages for Phusion Passenger. The Ubuntu Lucid packages are compatible with Debian 6. The packages are available from the <a href="http://wiki.brightbox.co.uk/docs:phusion-passenger">Brightbox repository</a>. Only packages for the open source version of Phusion Passenger are provided. <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a> customers should use the <a href="#rubygems_generic_install">generic RubyGems installation method</a> or <a href="#tarball_generic_install">the generic tarball installation method</a> instead.</p></div>
+<div class="paragraph"><p>If you use these packages to install Phusion Passenger then you do not need to run <span class="monospaced">passenger-install-apache2-module</span> or <span class="monospaced">passenger-install-nginx-module</span>. These packages contain all the binaries that you need.</p></div>
+<div class="paragraph">
+<div class="title">Apache</div>
+<p>On Ubuntu versions newer than 8.04 Hardy, register the Brightbox Apache PPA as follows:</p>
+</div>
 <div class="listingblock">
 <div class="content monospaced">
-<pre>deb http://apt.brightbox.net hardy main</pre>
+<pre>sudo apt-add-repository ppa:brightbox/passenger
+sudo apt-get update</pre>
 </div>
 </div>
-<div class="paragraph"><p>The simplest way to do that is to create a file in <em>/etc/apt/sources.list.d</em> containing the deb instruction, and then run <span class="monospaced">sudo apt-get update</span>.</p></div>
-<div class="paragraph"><p>Once you’ve done that, you can proceed with installing Phusion Passenger by running:</p></div>
+<div class="paragraph"><p>On Ubuntu 8.04 Hardy and on Debian, the <span class="monospaced">apt-add-repository</span> command isn’t available so you have to install the repository and the key by hand.</p></div>
+<div class="paragraph"><p>Debian 6:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu lucid main" &gt; /etc/apt/sources.list.d/brightbox-passenger.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update</pre>
+</div>
+</div>
+<div class="paragraph"><p>Ubuntu 8.04 Hardy:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" &gt; /etc/apt/sources.list.d/brightbox-passenger.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update</pre>
+</div>
+</div>
+<div class="paragraph"><p>You can proceed with installing Phusion Passenger by running:</p></div>
 <div class="listingblock">
 <div class="content monospaced">
 <pre>sudo apt-get install libapache2-mod-passenger</pre>
 </div>
 </div>
-<div class="paragraph"><p>or, for the Nginx version:</p></div>
+<div class="paragraph"><p>The Apache package provides configuration snippets for you, so you don’t need to modify any Apache configuration to get it to load Phusion Passenger.</p></div>
+<div class="paragraph">
+<div class="title">Nginx</div>
+<p>On Ubuntu versions newer than 8.04 Hardy, register the Brightbox Apache PPA as follows:</p>
+</div>
 <div class="listingblock">
 <div class="content monospaced">
-<pre>sudo apt-get install nginx-brightbox</pre>
+<pre>sudo apt-add-repository ppa:brightbox/passenger-nginx
+sudo apt-get update</pre>
 </div>
 </div>
-<div class="paragraph"><p>Please also visit <a href="http://wiki.brightbox.co.uk/docs:phusion-passenger">the package’s wiki page</a> for more documentation about this package.</p></div>
+<div class="paragraph"><p>On Ubuntu 8.04 Hardy and on Debian, the <span class="monospaced">apt-add-repository</span> command isn’t available so you have to install the repository and the key by hand.</p></div>
+<div class="paragraph"><p>Debian 6:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger-nginx/ubuntu lucid main" &gt; /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update</pre>
+</div>
+</div>
+<div class="paragraph"><p>Ubuntu 8.04 Hardy:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" &gt; /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update</pre>
+</div>
+</div>
+<div class="paragraph"><p>Then:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>sudo apt-get install nginx-full</pre>
+</div>
+</div>
+<div class="paragraph"><p>You’ll then need to enable the Phusion Passenger module in Nginx by creating the following configuration file:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>sudo sh -c 'echo "passenger_root /usr/lib/phusion-passenger;" &gt; /etc/nginx/conf.d/passenger.conf'</pre>
+</div>
+</div>
+<div class="paragraph"><p>Then restart Nginx to apply the changes:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>sudo /etc/init.d/nginx restart</pre>
+</div>
+</div>
+<div class="paragraph">
+<div class="title">Standalone</div>
+<p>Unfortunately, no packages are provided for Phusion Passenger Standalone.</p>
+</div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installing_or_upgrading_on_red_hat_fedora_centos_or_scientificlinux"></span><h3 data-comment-topic="installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1" data-anchor="_installing_or_upgrading_on_red_hat_fedora_centos_or_scientificlinux">2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installing_or_upgrading_on_red_hat_fedora_centos_or_scientificlinux"></span><h3 data-comment-topic="installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1" data-anchor="_installing_or_upgrading_on_red_hat_fedora_centos_or_scientificlinux">2.5. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux</h3>
 <div class="paragraph"><p>YUM repositories with RPMs are maintained by <a href="https://github.com/erikogan/passenger">Erik Ogan</a> and <a href="http://stealthymonkeys.com/">Stealthy Monkeys Consulting</a>. Only packages for the open source version of Phusion Passenger are provided. <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a> customers should use the <a href="#rubygems_generic_install">generic RubyGems installation method</a> or <a href="#tarball_generic_install">the generic tarball installation method</a> instead.</p></div>
+<div class="paragraph"><p>If you use YUM to install Phusion Passenger then you do not need to run <span class="monospaced">passenger-install-apache2-module</span> or <span class="monospaced">passenger-install-nginx-module</span>. The YUM packages contain all the binaries that you need. You also don’t need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.</p></div>
 <span class="anchor_helper" id="_step_1_install_the_release_package"></span><h4 class="float" data-anchor="_step_1_install_the_release_package">Step 1: Install the release package</h4>
 <div class="paragraph"><p>The easiest way to install Phusion Passenger and keep it up to date is to install the passenger-release package from the <a href="http://passenger.stealthymonkeys.com/">main repository</a>.</p></div>
 <div class="paragraph"><p>Fedora Core 15:</p></div>
@@ -1591,13 +1676,13 @@ Note that the <span class="monospaced">passenger-install-nginx-module</span> com
 <div class="paragraph"><p>Phusion Passenger for Apache:</p></div>
 <div class="listingblock">
 <div class="content monospaced">
-<pre>yum install nginx-passenger</pre>
+<pre>yum install mod_passenger</pre>
 </div>
 </div>
 <div class="paragraph"><p>Phusion Passenger for Nginx:</p></div>
 <div class="listingblock">
 <div class="content monospaced">
-<pre>yum install mod_passenger</pre>
+<pre>yum install nginx-passenger</pre>
 </div>
 </div>
 <div class="paragraph"><p>Phusion Passenger Standalone:</p></div>
@@ -1610,7 +1695,7 @@ Note that the <span class="monospaced">passenger-install-nginx-module</span> com
 <div class="paragraph"><p>There are instructions for building your own packages and Yum repositories in the <a href="https://github.com/FooBarWidget/passenger/tree/master/rpm#readme">rpm directory ReadMe</a> within the <a href="https://github.com/FooBarWidget/passenger">GitHub repository</a>.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_upgrading_from_open_source_to_enterprise"></span><h3 data-comment-topic="upgrading-from-open-source-to-enterprise-1a58c2b" data-anchor="_upgrading_from_open_source_to_enterprise">2.5. Upgrading from open source to Enterprise</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_upgrading_from_open_source_to_enterprise"></span><h3 data-comment-topic="upgrading-from-open-source-to-enterprise-1a58c2b" data-anchor="_upgrading_from_open_source_to_enterprise">2.6. Upgrading from open source to Enterprise</h3>
 <div class="paragraph"><p>Phusion Passenger comes in two variants: an open source version, as well as an <a href="https://www.phusionpassenger.com/enterprise">Enterprise version</a> which introduces a myriad of useful features that can improve stability and performance and efficiency.</p></div>
 <div class="paragraph"><p>Customers who have bought Phusion Passenger Enterprise can upgrade their open source installation to Enterprise as follows:</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -1628,11 +1713,134 @@ Install the Enterprise version by following one of the installation guides in th
 <div class="paragraph"><p>The uninstallation is necessary because the Enterprise Ruby gem has a different gem name (<em>passenger-enterprise-server</em> instead of <em>passenger</em>), but the same administration command names (e.g. <span class="monospaced">passenger-status</span>). Uninstalling the open source version avoids any conflicts.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_non_interactive_automatic_headless_installs_or_upgrades"></span><h3 data-comment-topic="non-interactive-automatic-headless-installs-or-upgrades-834ymv" data-anchor="_non_interactive_automatic_headless_installs_or_upgrades">2.6. Non-interactive, automatic, headless installs or upgrades</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_non_interactive_automatic_headless_installs_or_upgrades"></span><h3 data-comment-topic="non-interactive-automatic-headless-installs-or-upgrades-834ymv" data-anchor="_non_interactive_automatic_headless_installs_or_upgrades">2.7. Non-interactive, automatic, headless installs or upgrades</h3>
 <div class="paragraph"><p>By default, the installer (<span class="monospaced">passenger-install-nginx-module</span>) is interactive. If you want to automate installation then you can do so by passing various answers to the installer through command line options. Please run the installer with <span class="monospaced">--help</span> for a list of available command line options.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installing_as_a_normal_nginx_module_without_using_the_installer"></span><h3 data-comment-topic="installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5" data-anchor="_installing_as_a_normal_nginx_module_without_using_the_installer">2.7. Installing as a normal Nginx module without using the installer</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_customizing_the_compilation_process"></span><h3 data-comment-topic="customizing-the-compilation-process-u4cdcf" data-anchor="_customizing_the_compilation_process">2.8. Customizing the compilation process</h3>
+<div class="sect3">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_setting_the_compiler"></span><h4 data-comment-topic="setting-the-compiler-1l6dpe1" data-anchor="_setting_the_compiler">2.8.1. Setting the compiler</h4>
+<div class="paragraph"><p>You can force the Phusion Passenger build system to use a specific C or C++ compiler by setting the <span class="monospaced">CC</span> and <span class="monospaced">CXX</span> environment variables. These may be set to any arbitrary shell commands.</p></div>
+<div class="paragraph"><p>For example, contributors who want to hack on Phusion Passenger may want to use Clang for faster compilation and <a href="http://ccache.samba.org/">ccache</a> for faster recompilation, and may want to enable more error-catching compilation flags:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>export CC='ccache clang -fcolor-diagnostics -Qunused-arguments -fcatch-undefined-behavior -ftrapv'
+export CXX='ccache clang++ -fcolor-diagnostics -Qunused-arguments -fcatch-undefined-behavior -ftrapv'</pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_adding_additional_compiler_or_linker_flags"></span><h4 data-comment-topic="adding-additional-compiler-or-linker-flags-1jehjon" data-anchor="_adding_additional_compiler_or_linker_flags">2.8.2. Adding additional compiler or linker flags</h4>
+<div class="paragraph"><p>On some systems, C/C++ libraries and headers that Phusion Passenger requires may be located in a non-standard directory. You can force the Phusion Passenger build system to look in those locations by injecting compiler and linker flags using the following environment variables:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<span class="monospaced">EXTRA_PRE_CFLAGS</span>
+</dt>
+<dd>
+<p>
+        These flags are injected into all C compiler invocations that involve compiling C or C++ source files. This includes compiler invocations that compile <strong>and</strong> link. The flags are injected at the beginning of the command string, even before <span class="monospaced">EXTRA_PRE_LDFLAGS</span>.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">EXTRA_CFLAGS</span>
+</dt>
+<dd>
+<p>
+        Similar to <span class="monospaced">EXTRA_PRE_CFLAGS</span>, but injected at the end of the command string, before <span class="monospaced">EXTRA_LDFLAGS</span>.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">EXTRA_PRE_CXXFLAGS</span>
+</dt>
+<dd>
+<p>
+        Similar to <span class="monospaced">EXTRA_PRE_CFLAGS</span>, but for C++ compiler invocations.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">EXTRA_CXXFLAGS</span>
+</dt>
+<dd>
+<p>
+        Similar to <span class="monospaced">EXTRA_CFLAGS</span>, but for C++ compiler invocations.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">EXTRA_PRE_LDFLAGS</span>
+</dt>
+<dd>
+<p>
+        These flags are injected into all C/C++ compiler invocations that involve linking. This includes compiler invocations that compile <strong>and</strong> link. The flags are injected at the beginning of the command string, but after <span class="monospaced">EXTRA_PRE_CFLAGS</span> and <span class="monospaced">EXTRA_PRE_CXXFLAGS</span>.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">EXTRA_LDFLAGS</span>
+</dt>
+<dd>
+<p>
+        Similar to <span class="monospaced">EXTRA_PRE_LDFLAGS</span>, but injected at the very end of the command string, even after <span class="monospaced">EXTRA_CFLAGS</span> and <span class="monospaced">EXTRA_CXXFLAGS</span>.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_forcing_location_of_certain_command_line_tools"></span><h4 data-comment-topic="forcing-location-of-certain-command-line-tools-1j93cki" data-anchor="_forcing_location_of_certain_command_line_tools">2.8.3. Forcing location of certain command line tools</h4>
+<div class="paragraph"><p>The Phusion Passenger build system attempts to autodetect many things by locating relevant helper tools. For example, to find out which compiler flags it should use for compiling Apache modules, it locates the <span class="monospaced">apxs2</span> command and queries it. To find out which compiler flags it should use for libcurl, it queries the <span class="monospaced">curl-config</span> command. These commands may not be in <span class="monospaced">$PATH</span>, or even when they are you may want to use a different one.</p></div>
+<div class="paragraph"><p>You can often force the build to find certain command line tools at certain locations by using the following environment variables:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<span class="monospaced">HTTPD</span>
+</dt>
+<dd>
+<p>
+        The location of the <span class="monospaced">httpd</span> executable (the Apache server executable).
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">APXS2</span>
+</dt>
+<dd>
+<p>
+        The location of the <span class="monospaced">apxs2</span> executable (the Apache module developer tool).
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">APR_CONFIG</span>
+</dt>
+<dd>
+<p>
+        The location of the <span class="monospaced">apr-config</span> executable (the Apache Portable Runtime developer tool).
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">APU_CONFIG</span>
+</dt>
+<dd>
+<p>
+        The location of the <span class="monospaced">apu-config</span> executable (the Apache Portable Runtime Utility developer tool).
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">MAKE</span>
+</dt>
+<dd>
+<p>
+        The location of a <span class="monospaced">make</span> tool. It does not matter which implementation of <span class="monospaced">make</span> this is.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">GMAKE</span>
+</dt>
+<dd>
+<p>
+        The location of the GNU-compatible <span class="monospaced">make</span> tool.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+<div class="sect2">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installing_as_a_normal_nginx_module_without_using_the_installer"></span><h3 data-comment-topic="installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5" data-anchor="_installing_as_a_normal_nginx_module_without_using_the_installer">2.9. Installing as a normal Nginx module without using the installer</h3>
 <div class="paragraph"><p>You can also install Phusion Passenger the way you install any other Nginx module, e.g. with <span class="monospaced">--add-module</span>. Run Nginx’s configure script with <span class="monospaced">--add-module=/path-to-passenger-root/ext/nginx</span>.</p></div>
 <div class="paragraph"><p>If you installed Phusion Passenger via the gem, then <em>path-to-passenger-root</em> can be obtained with the command:</p></div>
 <div class="listingblock">
@@ -1656,7 +1864,25 @@ line into your Nginx configuration file:</p></div>
 <div class="paragraph"><p>After having done so, restart Nginx.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_disabling_without_uninstalling"></span><h3 data-comment-topic="disabling-without-uninstalling-1t5tqan" data-anchor="_disabling_without_uninstalling">2.8. Disabling without uninstalling</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="nginx_init_script"></span><h3 data-comment-topic="creating-an-nginx-init-script-1kd8zg5" data-anchor="nginx_init_script">2.10. Creating an Nginx init script</h3>
+<div class="paragraph"><p>If you installed Nginx with one of the generic installation methods then you won’t have an init script to start, stop and restart Nginx with. A bare Nginx installation works with signals: you start it by invoking it from the command line, you stop it by sending SIGTERM to it and you gracefully restart it by sending SIGHUP to it.</p></div>
+<div class="paragraph"><p>If you prefer to use an init script then please refer to the following resources:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<a href="http://wiki.nginx.org/Nginx-init-ubuntu">Init script for Ubuntu</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://wiki.nginx.org/RedHatNginxInitScript">Init script for Red Hat, Fedora and CentOS</a>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>When using one of those init scripts, please make sure that the paths inside the init script are correct. In particular, the paths to the Nginx binary, to the PID file and to the configuration file must match the actual locations of your Nginx installation.</p></div>
+</div>
+<div class="sect2">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_disabling_without_uninstalling"></span><h3 data-comment-topic="disabling-without-uninstalling-1t5tqan" data-anchor="_disabling_without_uninstalling">2.11. Disabling without uninstalling</h3>
 <div class="paragraph"><p>You can temporarily unload (disable) Phusion Passenger from the web server, without
 uninstalling the Phusion Passenger files, so that the web server behaves as if Phusion
 Passenger was never installed in the first place. This might be useful to you if -
@@ -1712,7 +1938,7 @@ http {
 <div class="paragraph"><p>After you’ve done this, save the configuration file and restart the web server.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="uninstalling"></span><h3 data-comment-topic="uninstalling-phusion-passenger-wuycvb" data-anchor="uninstalling">2.9. Uninstalling</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="uninstalling"></span><h3 data-comment-topic="uninstalling-phusion-passenger-wuycvb" data-anchor="uninstalling">2.12. Uninstalling</h3>
 <div class="paragraph"><p>To uninstall Phusion Passenger, please first remove all Phusion Passenger
 configuration directives from your web server configuration file(s). After you’ve
 done this, you need to remove the Phusion Passenger files.</p></div>
@@ -1739,7 +1965,7 @@ If you installed Phusion Passenger through APT or YUM, then use them to uninstal
 <div class="paragraph"><p>Nginx does not have to be recompiled. Altough it contains Phusion Passenger code, it will not do anything when Phusion Passenger is disabled.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="moving_phusion_passenger"></span><h3 data-comment-topic="moving-to-a-different-directory-gif3wo" data-anchor="moving_phusion_passenger">2.10. Moving to a different directory</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="moving_phusion_passenger"></span><h3 data-comment-topic="moving-to-a-different-directory-gif3wo" data-anchor="moving_phusion_passenger">2.13. Moving to a different directory</h3>
 <div class="paragraph"><p>If you installed Phusion Passenger through a tarball then you can move the Phusion Passenger directory to another location. This is not possible if you used any of the other installation methods.</p></div>
 <div class="paragraph"><p>First, move the directory to whereever you like:</p></div>
 <div class="listingblock">
@@ -2211,6 +2437,10 @@ run Ramaze::Adapter::Base</pre>
 <div class="content monospaced">
 <pre>require 'rubygems'
 require 'sinatra'
+
+set :environment, ENV['RACK_ENV'].to_sym
+disable :run, :reload
+
 require 'app.rb'
 
 run Sinatra::Application</pre>
@@ -2365,6 +2595,7 @@ this option as well. Please read
 <div class="sect2">
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_ruby_lt_filename_gt"></span><h3 data-comment-topic="passenger-ruby-filename--1gnok5k" data-anchor="_passenger_ruby_lt_filename_gt">6.2. passenger_ruby &lt;filename&gt;</h3>
 <div class="paragraph"><p>This option allows one to specify the Ruby interpreter to use.</p></div>
+<div class="paragraph"><p>Since version 4.0.0, this option may occur in the following places:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2387,10 +2618,86 @@ In an <em>if</em> configuration scope.
 </p>
 </li>
 </ul></div>
-<div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>ruby</em>, meaning that the Ruby interpreter will be looked up according to the <span class="monospaced">PATH</span> environment variable.</p></div>
+<div class="paragraph"><p>If you want to use a different Ruby interpreter for two different applications then you should define different <span class="monospaced">passenger_ruby</span> directives in different <em>http</em> blocks.</p></div>
+<div class="paragraph"><p>In versions prior to 4.0.0, only a single Ruby version is supported for the entire Nginx instance, so <span class="monospaced">passenger_ruby</span> may only occur in the <em>http</em> configuration block.</p></div>
+<div class="paragraph"><p>The default value is <em>ruby</em>, meaning that the Ruby interpreter will be looked up according to the <span class="monospaced">PATH</span> environment variable.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerSpawnMethod"></span><h3 data-comment-topic="passenger-spawn-method-string--1sc6njl" data-anchor="PassengerSpawnMethod">6.3. passenger_spawn_method &lt;string&gt;</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_python_lt_filename_gt"></span><h3 data-comment-topic="passenger-python-filename--14p554" data-anchor="_passenger_python_lt_filename_gt">6.3. passenger_python &lt;filename&gt;</h3>
+<div class="paragraph"><p><strong>Introduced in version 4.0.0.</strong></p></div>
+<div class="paragraph"><p>This option allows one to specify the Python interpreter to use. It may occur in the following places:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+In the <em>http</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In a <em>server</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In a <em>location</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In an <em>if</em> configuration scope.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>If you want to use a different Python interpreter for two different applications then you should define different <span class="monospaced">passenger_python</span> directives in different <em>http</em> blocks.</p></div>
+<div class="paragraph"><p>The default value is <em>python</em>, meaning that the Python interpreter will be looked up according to the <span class="monospaced">PATH</span> environment variable.</p></div>
+</div>
+<div class="sect2">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerAppRoot"></span><h3 data-comment-topic="passenger-app-root-path-to-root--1dbudc6" data-anchor="PassengerAppRoot">6.4. passenger_app_root &lt;path/to/root&gt;</h3>
+<div class="paragraph"><p><strong>Introduced in version 4.0.0.</strong>
+By default, Phusion Passenger assumes that the application’s root directory
+is the parent directory of the <em>public</em> directory. This option allows one to
+specify the application’s root independently from the Nginx <em>root</em>, which
+is useful if the <em>public</em> directory lives in a non-standard place.</p></div>
+<div class="paragraph"><p>This option may occur in the following places:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+In the <em>http</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In a <em>server</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In a <em>location</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In an <em>if</em> configuration scope.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>In each place, it may be specified at most once.</p></div>
+<div class="paragraph"><p>Example:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>server {
+    server_name test.host;
+    root /var/rails/zena/sites/example.com/public;
+    # normally Phusion Passenger would
+    # have assumed that the application
+    # root is "/var/rails/zena/sites/example.com"
+    passenger_app_root /var/rails/zena;
+}</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerSpawnMethod"></span><h3 data-comment-topic="passenger-spawn-method-string--1sc6njl" data-anchor="PassengerSpawnMethod">6.5. passenger_spawn_method &lt;string&gt;</h3>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -2483,7 +2790,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>smart</em>.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerRollingRestarts"></span><h3 data-comment-topic="passenger-rolling-restarts" data-anchor="PassengerRollingRestarts">6.4. passenger_rolling_restarts &lt;on|off&gt;</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerRollingRestarts"></span><h3 data-comment-topic="passenger-rolling-restarts" data-anchor="PassengerRollingRestarts">6.6. passenger_rolling_restarts &lt;on|off&gt;</h3>
 <div class="paragraph"><p><strong>This feature is only available in <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a>. It was introduced in version 3.0.0. <a href="https://www.phusionpassenger.com/download">Buy Phusion Passenger Enterprise here.</a></strong></p></div>
 <div class="paragraph"><p>Enables or disables support for rolling restarts. Normally when you
 restart an application (by touching restart.txt), Phusion Passenger would
@@ -2556,7 +2863,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>off</em>.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_resist_deployment_errors_lt_on_off_gt"></span><h3 data-comment-topic="passenger-resist-deployment-errors-on-off--k9yf1" data-anchor="_passenger_resist_deployment_errors_lt_on_off_gt">6.5. passenger_resist_deployment_errors &lt;on|off&gt;</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_resist_deployment_errors_lt_on_off_gt"></span><h3 data-comment-topic="passenger-resist-deployment-errors-on-off--k9yf1" data-anchor="_passenger_resist_deployment_errors_lt_on_off_gt">6.7. passenger_resist_deployment_errors &lt;on|off&gt;</h3>
 <div class="paragraph"><p><strong>This feature is only available in <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a>. It was introduced in version 3.0.0. <a href="https://www.phusionpassenger.com/download">Buy Phusion Passenger Enterprise here.</a></strong></p></div>
 <div class="paragraph"><p>Enables or disables resistance against deployment errors.</p></div>
 <div class="paragraph"><p>Suppose you’ve upgraded your application and you’ve issues a command to restart it (by touching restart.txt), but the application code contains an error that prevents Phusion Passenger from successfully spawning a process (e.g. a syntax error). Phusion Passenger would normally display an error message in response to this.</p></div>
@@ -2606,9 +2913,37 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>off</em>.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_important_deployment_options"></span><h3 data-comment-topic="important-deployment-options-av567" data-anchor="_important_deployment_options">6.6. Important deployment options</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerTempDir"></span><h3 data-comment-topic="passenger-temp-dir-directory--1t3opri" data-anchor="PassengerTempDir">6.8. passenger_temp_dir &lt;directory&gt;</h3>
+<div class="paragraph"><p>Specifies the directory that Phusion Passenger should use for storing temporary
+files. This includes things such as Unix socket files.</p></div>
+<div class="paragraph"><p>This option may only be specified in the <em>http</em> configuration block. The
+default temp directory that Phusion Passenger uses is <em>/tmp</em>.</p></div>
+<div class="paragraph"><p>This option is especially useful if Nginx is not allowed to write to /tmp
+(which is the case on some systems with strict SELinux policies) or if the
+partition that /tmp lives on doesn’t have enough disk space.</p></div>
+<div class="paragraph">
+<div class="title">Command line tools</div>
+<p>Some Phusion Passenger command line administration tools, such as
+<span class="monospaced">passenger-status</span>, must know what Phusion Passenger’s temp directory is
+in order to function properly. You can pass the directory through the
+<span class="monospaced">PASSENGER_TMPDIR</span> environment variable, or the <span class="monospaced">TMPDIR</span> environment variable
+(the former will be used if both are specified).</p>
+</div>
+<div class="paragraph"><p>For example, if you set <em>passenger_temp_dir</em> to <em>/my_temp_dir</em>, then invoke
+<span class="monospaced">passenger-status</span> after you’ve set the <span class="monospaced">PASSENGER_TMPDIR</span> or <span class="monospaced">TMPDIR</span>
+environment variable, like this:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>export PASSENGER_TMPDIR=/my_temp-dir
+sudo -E passenger-status
+# The -E option tells 'sudo' to preserve environment variables.</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_important_deployment_options"></span><h3 data-comment-topic="important-deployment-options-av567" data-anchor="_important_deployment_options">6.9. Important deployment options</h3>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_enabled_lt_on_off_gt"></span><h4 data-comment-topic="passenger-enabled-on-off--1rpb2t7" data-anchor="_passenger_enabled_lt_on_off_gt">6.6.1. passenger_enabled &lt;on|off&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_enabled_lt_on_off_gt"></span><h4 data-comment-topic="passenger-enabled-on-off--1rpb2t7" data-anchor="_passenger_enabled_lt_on_off_gt">6.9.1. passenger_enabled &lt;on|off&gt;</h4>
 <div class="paragraph"><p>This option may be specified in the <em>http</em> configuration block, a
 <em>server</em> configuration block, a <em>location</em> configuration block or
 an <em>if</em> configuration scope, to enable or disable Phusion Passenger
@@ -2620,7 +2955,7 @@ and <a href="#deploying_a_rack_app">Deploying a Rack-based Ruby application</a>
 for examples.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerBaseURI"></span><h4 data-comment-topic="passenger-base-uri-uri--1xtuo50" data-anchor="PassengerBaseURI">6.6.2. passenger_base_uri &lt;uri&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerBaseURI"></span><h4 data-comment-topic="passenger-base-uri-uri--1xtuo50" data-anchor="PassengerBaseURI">6.9.2. passenger_base_uri &lt;uri&gt;</h4>
 <div class="paragraph"><p>Used to specify that the given URI is an distinct application that should
 be served by Phusion Passenger. This option can be used for both Rails and
 Rack applications. See <a href="#deploying_rails_to_sub_uri">Deploying Rails to a sub URI</a>
@@ -2653,9 +2988,9 @@ In an <em>if</em> configuration scope.
 </div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_connection_handling_options"></span><h3 data-comment-topic="connection-handling-options-8jgq90" data-anchor="_connection_handling_options">6.7. Connection handling options</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_connection_handling_options"></span><h3 data-comment-topic="connection-handling-options-8jgq90" data-anchor="_connection_handling_options">6.10. Connection handling options</h3>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_ignore_client_abort_lt_on_off_gt"></span><h4 data-comment-topic="passenger-ignore-client-abort" data-anchor="_passenger_ignore_client_abort_lt_on_off_gt">6.7.1. passenger_ignore_client_abort &lt;on|off&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_ignore_client_abort_lt_on_off_gt"></span><h4 data-comment-topic="passenger-ignore-client-abort" data-anchor="_passenger_ignore_client_abort_lt_on_off_gt">6.10.1. passenger_ignore_client_abort &lt;on|off&gt;</h4>
 <div class="paragraph"><p>Normally, when the HTTP client aborts the connection (e.g. when the user clicked on "Stop"
 in the browser), the connection with the application process will be closed too. If the
 application process continues to send its response, then that will result in EPIPE errors
@@ -2691,7 +3026,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>off</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_set_cgi_param_lt_cgi_environment_name_gt_lt_value_gt"></span><h4 data-comment-topic="passenger-set-cgi-param-cgi-environment-name-value--rx9gc0" data-anchor="_passenger_set_cgi_param_lt_cgi_environment_name_gt_lt_value_gt">6.7.2. passenger_set_cgi_param &lt;CGI environment name&gt; &lt;value&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_set_cgi_param_lt_cgi_environment_name_gt_lt_value_gt"></span><h4 data-comment-topic="passenger-set-cgi-param-cgi-environment-name-value--rx9gc0" data-anchor="_passenger_set_cgi_param_lt_cgi_environment_name_gt_lt_value_gt">6.10.2. passenger_set_cgi_param &lt;CGI environment name&gt; &lt;value&gt;</h4>
 <div class="paragraph"><p>Allows one to define additional CGI environment variables to pass to the backend
 application. This is equivalent to ngx_http_fastcgi_module’s <em>fastcgi_param</em>
 directive, and is comparable to ngx_http_proxy_module’s <em>proxy_set_header</em> option.
@@ -2742,7 +3077,7 @@ In an <em>if</em> configuration scope.
 </ul></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_pass_header_lt_header_name_gt"></span><h4 data-comment-topic="passenger-pass-header-header-name--1cg31je" data-anchor="_passenger_pass_header_lt_header_name_gt">6.7.3. passenger_pass_header &lt;header name&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_pass_header_lt_header_name_gt"></span><h4 data-comment-topic="passenger-pass-header-header-name--1cg31je" data-anchor="_passenger_pass_header_lt_header_name_gt">6.10.3. passenger_pass_header &lt;header name&gt;</h4>
 <div class="paragraph"><p>Some headers generated by backend applications are not forwarded to the HTTP client,
 e.g. <em>X-Accel-Redirect</em> which is directly processed by Nginx and then discarded from
 the final response. This directive allows one to force Nginx to pass those headers
@@ -2780,7 +3115,7 @@ In an <em>if</em> configuration scope.
 </ul></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_buffer_response_lt_on_off_gt"></span><h4 data-comment-topic="passenger-buffer-response" data-anchor="_passenger_buffer_response_lt_on_off_gt">6.7.4. passenger_buffer_response &lt;on|off&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_buffer_response_lt_on_off_gt"></span><h4 data-comment-topic="passenger-buffer-response" data-anchor="_passenger_buffer_response_lt_on_off_gt">6.10.4. passenger_buffer_response &lt;on|off&gt;</h4>
 <div class="paragraph"><p>When turned on, application-generated responses are buffered by Nginx. Buffering will
 happen in memory and also on disk if the response is larger than a certain threshold.</p></div>
 <div class="paragraph"><p>Before we proceed with explaining this configuration option, we want to state the following to avoid confusion. If you use Phusion Passenger for Nginx, there are in fact two response buffering systems active:</p></div>
@@ -2869,27 +3204,27 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>off</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_buffer_size"></span><h4 data-comment-topic="passenger-buffer-size-1jfkq87" data-anchor="_passenger_buffer_size">6.7.5. passenger_buffer_size</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_buffer_size"></span><h4 data-comment-topic="passenger-buffer-size-1jfkq87" data-anchor="_passenger_buffer_size">6.10.5. passenger_buffer_size</h4>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_buffers"></span><h4 data-comment-topic="passenger-busy-buffers" data-anchor="_passenger_buffers">6.7.6. passenger_buffers</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_buffers"></span><h4 data-comment-topic="passenger-busy-buffers" data-anchor="_passenger_buffers">6.10.6. passenger_buffers</h4>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_busy_buffer_size"></span><h4 data-comment-topic="passenger-busy-buffer-size-124sj61" data-anchor="_passenger_busy_buffer_size">6.7.7. passenger_busy_buffer_size</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_busy_buffer_size"></span><h4 data-comment-topic="passenger-busy-buffer-size-124sj61" data-anchor="_passenger_busy_buffer_size">6.10.7. passenger_busy_buffer_size</h4>
 <div class="paragraph"><p>These options have the same effect as proxy_module’s similarly named options.
 They can be used to modify the maximum allowed HTTP header size.</p></div>
 </div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_security_options"></span><h3 data-comment-topic="security-options-1bv93g4" data-anchor="_security_options">6.8. Security options</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_security_options"></span><h3 data-comment-topic="security-options-1bv93g4" data-anchor="_security_options">6.11. Security options</h3>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerUserSwitching"></span><h4 data-comment-topic="passenger-user-switching-on-off--1p37u3l" data-anchor="PassengerUserSwitching">6.8.1. passenger_user_switching &lt;on|off&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerUserSwitching"></span><h4 data-comment-topic="passenger-user-switching-on-off--1p37u3l" data-anchor="PassengerUserSwitching">6.11.1. passenger_user_switching &lt;on|off&gt;</h4>
 <div class="paragraph"><p>Whether to enable <a href="#user_switching">user switching support</a>.</p></div>
 <div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.
 The default value is <em>on</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_user_lt_username_gt"></span><h4 data-comment-topic="passenger-user-username--b06ur7" data-anchor="_passenger_user_lt_username_gt">6.8.2. passenger_user &lt;username&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_user_lt_username_gt"></span><h4 data-comment-topic="passenger-user-username--b06ur7" data-anchor="_passenger_user_lt_username_gt">6.11.2. passenger_user &lt;username&gt;</h4>
 <div class="paragraph"><p>If <a href="#user_switching">user switching support</a> is enabled, then Phusion Passenger will
 by default run the web application as the owner of the file <em>config/environment.rb</em>
 (for Rails apps) or <em>config.ru</em> (for Rack apps). This option allows you to override
@@ -2921,7 +3256,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_group_lt_group_name_gt"></span><h4 data-comment-topic="passenger-user-group-name--1fco4j7" data-anchor="_passenger_group_lt_group_name_gt">6.8.3. passenger_group &lt;group name&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_group_lt_group_name_gt"></span><h4 data-comment-topic="passenger-user-group-name--1fco4j7" data-anchor="_passenger_group_lt_group_name_gt">6.11.3. passenger_group &lt;group name&gt;</h4>
 <div class="paragraph"><p>If <a href="#user_switching">user switching support</a> is enabled, then Phusion Passenger will
 by default run the web application as the primary group of the owner of the file
 <em>config/environment.rb</em> (for Rails apps) or <em>config.ru</em> (for Rack apps). This option
@@ -2955,7 +3290,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerDefaultUser"></span><h4 data-comment-topic="passenger-default-user-username--1h6cdmf" data-anchor="PassengerDefaultUser">6.8.4. passenger_default_user &lt;username&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerDefaultUser"></span><h4 data-comment-topic="passenger-default-user-username--1h6cdmf" data-anchor="PassengerDefaultUser">6.11.4. passenger_default_user &lt;username&gt;</h4>
 <div class="paragraph"><p>Phusion Passenger enables <a href="#user_switching">user switching support</a> by default.
 This configuration option allows one to specify the user that applications must
 run as, if user switching fails or is disabled.</p></div>
@@ -2963,7 +3298,7 @@ run as, if user switching fails or is disabled.</p></div>
 The default value is <em>nobody</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerDefaultGroup"></span><h4 data-comment-topic="passenger-default-group-group-name--1qxn2qa" data-anchor="PassengerDefaultGroup">6.8.5. Passenger_default_group &lt;group name&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerDefaultGroup"></span><h4 data-comment-topic="passenger-default-group-group-name--1qxn2qa" data-anchor="PassengerDefaultGroup">6.11.5. Passenger_default_group &lt;group name&gt;</h4>
 <div class="paragraph"><p>Phusion Passenger enables <a href="#user_switching">user switching support</a> by default.
 This configuration option allows one to specify the group that applications must
 run as, if user switching fails or is disabled.</p></div>
@@ -2972,7 +3307,48 @@ The default value is the primary group of the user specifified by
 <a href="#PassengerDefaultUser">passenger_default_user</a>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_friendly_error_pages_lt_on_off_gt"></span><h4 data-comment-topic="passenger-friendly-error-pages-on-off--1ti1a0e" data-anchor="_passenger_friendly_error_pages_lt_on_off_gt">6.8.6. passenger_friendly_error_pages &lt;on|off&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_show_version_in_header_lt_on_off_gt"></span><h4 data-comment-topic="passenger-show-version-in-header-on-off--2h49av" data-anchor="_passenger_show_version_in_header_lt_on_off_gt">6.11.6. passenger_show_version_in_header &lt;on|off&gt;</h4>
+<div class="paragraph"><p>When turned on, Phusion Passenger will output its version number in the <span class="monospaced">Server</span> and <span class="monospaced">X-Powered-By</span> header in all Phusion Passenger-served requests:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>Server: nginx/1.3.11 + Phusion Passenger 4.0.0
+X-Powered-By: Phusion Passenger 4.0.0</pre>
+</div>
+</div>
+<div class="paragraph"><p>When turned off, the version number will be hidden:</p></div>
+<div class="listingblock">
+<div class="content monospaced">
+<pre>Server: nginx/1.3.11 + Phusion Passenger
+X-Powered-By: Phusion Passenger</pre>
+</div>
+</div>
+<div class="paragraph"><p>This option may occur in the following places:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+In the <em>http</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In a <em>server</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In a <em>location</em> configuration block.
+</p>
+</li>
+<li>
+<p>
+In an <em>if</em> configuration scope.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>on</em>.</p></div>
+</div>
+<div class="sect3">
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_friendly_error_pages_lt_on_off_gt"></span><h4 data-comment-topic="passenger-friendly-error-pages-on-off--1ti1a0e" data-anchor="_passenger_friendly_error_pages_lt_on_off_gt">6.11.7. passenger_friendly_error_pages &lt;on|off&gt;</h4>
 <div class="paragraph"><p>Phusion Passenger can display friendly error pages whenever an application fails
 to start. This friendly error page presents the startup error message, some
 suggestions for solving the problem, and a backtrace. This feature is very useful
@@ -3007,9 +3383,9 @@ In an <em>if</em> configuration scope.
 </div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_resource_control_and_optimization_options"></span><h3 data-comment-topic="resource-control-and-optimization-options-xd7evs" data-anchor="_resource_control_and_optimization_options">6.9. Resource control and optimization options</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_resource_control_and_optimization_options"></span><h3 data-comment-topic="resource-control-and-optimization-options-xd7evs" data-anchor="_resource_control_and_optimization_options">6.12. Resource control and optimization options</h3>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMaxPoolSize"></span><h4 data-comment-topic="passenger-max-pool-size-integer--3jzefs" data-anchor="PassengerMaxPoolSize">6.9.1. passenger_max_pool_size &lt;integer&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMaxPoolSize"></span><h4 data-comment-topic="passenger-max-pool-size-integer--3jzefs" data-anchor="PassengerMaxPoolSize">6.12.1. passenger_max_pool_size &lt;integer&gt;</h4>
 <div class="paragraph"><p>The maximum number of <a href="#application_process">application processes</a> that may
 simultanously exist. A larger number results in higher memory usage,
 but improved ability to handle concurrent HTTP clients.</p></div>
@@ -3023,7 +3399,7 @@ is also running other services such as MySQL, then we recommend a value of <em>2
 (i.e. running out of memory) then you should lower this value. (Though if your
 sites are really that popular, then you should strongly consider upgrading your
 hardware or getting more servers.)</p></div>
-<div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration bock.
+<div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.
 The default value is <em>6</em>.</p></div>
 <div class="admonitionblock">
 <table><tr>
@@ -3036,7 +3412,7 @@ by about 33%, and it’s not hard to install.</td>
 </div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMinInstances"></span><h4 data-comment-topic="passenger-min-instances-integer--uclykt" data-anchor="PassengerMinInstances">6.9.2. passenger_min_instances &lt;integer&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMinInstances"></span><h4 data-comment-topic="passenger-min-instances-integer--uclykt" data-anchor="PassengerMinInstances">6.12.2. passenger_min_instances &lt;integer&gt;</h4>
 <div class="paragraph"><p>This specifies the minimum number of application processes that should exist for a
 given application. You should set this option to a
 non-zero value if you want to avoid potentially long startup times after a website
@@ -3111,7 +3487,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>1</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_max_instances_lt_integer_gt"></span><h4 data-comment-topic="passenger-max-instances" data-anchor="_passenger_max_instances_lt_integer_gt">6.9.3. passenger_max_instances &lt;integer&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_max_instances_lt_integer_gt"></span><h4 data-comment-topic="passenger-max-instances" data-anchor="_passenger_max_instances_lt_integer_gt">6.12.3. passenger_max_instances &lt;integer&gt;</h4>
 <div class="paragraph"><p><strong>This feature is only available in <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a>. It was introduced in version 3.0.0. <a href="https://www.phusionpassenger.com/download">Buy Phusion Passenger Enterprise here.</a></strong></p></div>
 <div class="paragraph"><p>The maximum number of application processes that may simultaneously exist
 for an application. This helps to make sure that a single application
@@ -3162,7 +3538,7 @@ on the other hand will be free to spawn up to 10 processes if it gets a lot of t
 </div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_max_instances_per_app_lt_integer_gt"></span><h4 data-comment-topic="passenger-max-instances-per-app-integer--1xhbbne" data-anchor="_passenger_max_instances_per_app_lt_integer_gt">6.9.4. passenger_max_instances_per_app &lt;integer&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_max_instances_per_app_lt_integer_gt"></span><h4 data-comment-topic="passenger-max-instances-per-app-integer--1xhbbne" data-anchor="_passenger_max_instances_per_app_lt_integer_gt">6.12.4. passenger_max_instances_per_app &lt;integer&gt;</h4>
 <div class="paragraph"><p>The maximum number of application processes that may simultaneously exist
 for a single application. This helps to make sure that a single application
 will not occupy all available slots in the application pool.</p></div>
@@ -3174,7 +3550,7 @@ will be enforced.</p></div>
 The default value is <em>0</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerPoolIdleTime"></span><h4 data-comment-topic="passenger-pool-idle-time-integer--xcw65o" data-anchor="PassengerPoolIdleTime">6.9.5. passenger_pool_idle_time &lt;integer&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerPoolIdleTime"></span><h4 data-comment-topic="passenger-pool-idle-time-integer--xcw65o" data-anchor="PassengerPoolIdleTime">6.12.5. passenger_pool_idle_time &lt;integer&gt;</h4>
 <div class="paragraph"><p>The maximum number of seconds that an application process may be idle. That is,
 if an application process hasn’t received any traffic after the given number of
 seconds, then it will be shutdown in order to conserve memory.</p></div>
@@ -3196,7 +3572,7 @@ applications, each which must be available at all times.</p></div>
 The default value is <em>300</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_max_preloader_idle_time_lt_integer_gt"></span><h4 data-comment-topic="rails-app-spawner-idle-time-integer--1xjqe4b" data-anchor="_passenger_max_preloader_idle_time_lt_integer_gt">6.9.6. passenger_max_preloader_idle_time &lt;integer&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_max_preloader_idle_time_lt_integer_gt"></span><h4 data-comment-topic="rails-app-spawner-idle-time-integer--1xjqe4b" data-anchor="_passenger_max_preloader_idle_time_lt_integer_gt">6.12.6. passenger_max_preloader_idle_time &lt;integer&gt;</h4>
 <div class="paragraph"><p>The ApplicationSpawner server (explained in <a href="#spawning_methods_explained">Spawning methods explained</a>) has an idle timeout, just like the backend processes spawned by
 Phusion Passenger do. That is, it will automatically shutdown if it hasn’t done
 anything for a given period.</p></div>
@@ -3235,7 +3611,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>300</em> (5 minutes).</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerConcurrencyModel"></span><h4 data-comment-topic="passenger-concurrency-model-process-thread--brcvkk" data-anchor="PassengerConcurrencyModel">6.9.7. passenger_concurrency_model &lt;process|thread&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerConcurrencyModel"></span><h4 data-comment-topic="passenger-concurrency-model-process-thread--brcvkk" data-anchor="PassengerConcurrencyModel">6.12.7. passenger_concurrency_model &lt;process|thread&gt;</h4>
 <div class="paragraph"><p><strong>This feature is only available in <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a>. It was introduced in version 4.0.0. <a href="https://www.phusionpassenger.com/download">Buy Phusion Passenger Enterprise here.</a></strong></p></div>
 <div class="paragraph"><p>Specifies the I/O concurrency model that should be used for application processes. Phusion Passenger supports two concurrency models:</p></div>
 <div class="ulist"><ul>
@@ -3276,7 +3652,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>process</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerThreadCount"></span><h4 data-comment-topic="passenger-thread-count-number--1kd6ffy" data-anchor="PassengerThreadCount">6.9.8. passenger_thread_count &lt;number&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerThreadCount"></span><h4 data-comment-topic="passenger-thread-count-number--1kd6ffy" data-anchor="PassengerThreadCount">6.12.8. passenger_thread_count &lt;number&gt;</h4>
 <div class="paragraph"><p><strong>This feature is only available in <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a>. It was introduced in version 4.0.0. <a href="https://www.phusionpassenger.com/download">Buy Phusion Passenger Enterprise here.</a></strong></p></div>
 <div class="paragraph"><p>Specifies the number of threads that Phusion Passenger should spawn per application process. This option only has effect if <a href="#PassengerConcurrencyModel">passenger_concurrency_model</a> is <em>thread</em>.</p></div>
 <div class="paragraph"><p>This option may occur in the following places:</p></div>
@@ -3305,7 +3681,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>1</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMaxRequests"></span><h4 data-comment-topic="passenger-max-requests-integer--sgzint" data-anchor="PassengerMaxRequests">6.9.9. passenger_max_requests &lt;integer&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMaxRequests"></span><h4 data-comment-topic="passenger-max-requests-integer--sgzint" data-anchor="PassengerMaxRequests">6.12.9. passenger_max_requests &lt;integer&gt;</h4>
 <div class="paragraph"><p>The maximum number of requests an application process will process. After
 serving that many requests, the application process will be shut down and
 Phusion Passenger will restart it. A value of 0 means that there is no maximum:
@@ -3353,7 +3729,7 @@ measure to avoid memory leaks.</p></div>
 </div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMaxRequestTime"></span><h4 data-comment-topic="passenger-max-request-time-seconds--1htog2g" data-anchor="PassengerMaxRequestTime">6.9.10. passenger_max_request_time &lt;seconds&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMaxRequestTime"></span><h4 data-comment-topic="passenger-max-request-time-seconds--1htog2g" data-anchor="PassengerMaxRequestTime">6.12.10. passenger_max_request_time &lt;seconds&gt;</h4>
 <div class="paragraph"><p><strong>This feature is only available in <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a>. It was introduced in version 3.0.0. <a href="https://www.phusionpassenger.com/download">Buy Phusion Passenger Enterprise here.</a></strong></p></div>
 <div class="paragraph"><p>The maximum amount of time, in seconds, that an application process may take
 to process a request. If the request takes longer than this amount of time,
@@ -3424,7 +3800,7 @@ measure to avoid freezing applications.</p></div>
 </div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMemoryLimit"></span><h4 data-comment-topic="passenger-memory-limit-integer--1ry7dwx" data-anchor="PassengerMemoryLimit">6.9.11. passenger_memory_limit &lt;integer&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerMemoryLimit"></span><h4 data-comment-topic="passenger-memory-limit-integer--1ry7dwx" data-anchor="PassengerMemoryLimit">6.12.11. passenger_memory_limit &lt;integer&gt;</h4>
 <div class="paragraph"><p><strong>This feature is only available in <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a>. It was introduced in version 3.0.0. <a href="https://www.phusionpassenger.com/download">Buy Phusion Passenger Enterprise here.</a></strong></p></div>
 <div class="paragraph"><p>The maximum amount of memory that an application process may use, in megabytes.
 Once an application process has surpassed its memory limit, it will process
@@ -3456,7 +3832,7 @@ In an <em>if</em> configuration scope.
 </p>
 </li>
 </ul></div>
-<div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>200</em>.</p></div>
+<div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>0</em>.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -3464,33 +3840,12 @@ In an <em>if</em> configuration scope.
 </td>
 <td class="content">
 <div class="title">A word about permissions</div>
-<div class="paragraph"><p>The <a href="#PassengerMemoryLimit">passenger_memory_limit</a> directive requires that the
-user that the application is running as (see <a href="#PassengerUserSwitching">passenger_user_switching</a>)
-to have access to the <span class="monospaced">/proc</span> file system, or to be able to inspect its status
-with <span class="monospaced">ps</span> (which on Linux and FreeBSD systems basically means the same thing, since <span class="monospaced">ps</span>
-reads process information from <span class="monospaced">/proc</span>). Therefore, on servers running with
-tight permissions on <span class="monospaced">/proc</span>, this directive may not work. If you wish to use
-this directive and your <span class="monospaced">/proc</span> permissions are too tight, then please consider
-untightening the permissions.</p></div>
-</td>
-</tr></table>
-</div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<img src="./images/icons/tip.png" alt="Tip">
-</td>
-<td class="content">
-<div class="title">FreeBSD and <span class="monospaced">/proc</span>
-</div>
-<div class="paragraph"><p>On many FreeBSD systems, <span class="monospaced">/proc</span> is not mounted by default. <span class="monospaced">/proc</span> <strong>must</strong> be
-mounted in order for <a href="#PassengerMemoryLimit">passenger_memory_limit</a> to work.</p></div>
-<div class="paragraph"><p>It is also advised that you mount <span class="monospaced">/proc</span> with the <span class="monospaced">linprocfs</span> filesystem type
-instead of the regular FreeBSD <span class="monospaced">proc</span> filesystem type. The <span class="monospaced">linprocfs</span> filesystem
-type allows Phusion Passenger to read memory information from <span class="monospaced">/proc</span> directly,
-which is very fast. If you mount <span class="monospaced">/proc</span> with a different filesystem type, then
-Phusion Passenger must resort to querying memory information from the <span class="monospaced">ps</span> command,
-which is a lot slower.</p></div>
+<div class="paragraph"><p>The <a href="#PassengerMemoryLimit">passenger_memory_limit</a> directive uses the
+<span class="monospaced">ps</span> command to query memory usage information. On Linux, it further
+queries <span class="monospaced">/proc</span> to obtain additional memory usage information that’s
+not obtainable through <span class="monospaced">ps</span>. You should ensure that the <span class="monospaced">ps</span> works
+correctly and that the <span class="monospaced">/proc</span> filesystem is accessible by the
+<span class="monospaced">PassengerHelperAgent</span> process.</p></div>
 </td>
 </tr></table>
 </div>
@@ -3510,7 +3865,7 @@ measure to avoid memory leaks.</p></div>
 </div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerPreStart"></span><h4 data-comment-topic="passenger-pre-start-url--npldeb" data-anchor="PassengerPreStart">6.9.12. passenger_pre_start &lt;url&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="PassengerPreStart"></span><h4 data-comment-topic="passenger-pre-start-url--npldeb" data-anchor="PassengerPreStart">6.12.12. passenger_pre_start &lt;url&gt;</h4>
 <div class="paragraph"><p>By default, Phusion Passenger does not start any application processes until said
 web application is first accessed. The result is that the first visitor of said
 web application might experience a small delay as Phusion Passenger is starting
@@ -3725,9 +4080,9 @@ the request ending up at a different web server in the cluster.</p></div>
 </div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_logging_and_debugging_options"></span><h3 data-comment-topic="logging-and-debugging-options-14e91ni" data-anchor="_logging_and_debugging_options">6.10. Logging and debugging options</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_logging_and_debugging_options"></span><h3 data-comment-topic="logging-and-debugging-options-14e91ni" data-anchor="_logging_and_debugging_options">6.13. Logging and debugging options</h3>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_log_level_lt_integer_gt"></span><h4 data-comment-topic="passenger-log-level-integer--17snhon" data-anchor="_passenger_log_level_lt_integer_gt">6.10.1. passenger_log_level &lt;integer&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_log_level_lt_integer_gt"></span><h4 data-comment-topic="passenger-log-level-integer--17snhon" data-anchor="_passenger_log_level_lt_integer_gt">6.13.1. passenger_log_level &lt;integer&gt;</h4>
 <div class="paragraph"><p>This option allows one to specify how much information Phusion Passenger should
 write to the Nginx error log file. A higher log level value means that more
 information will be logged.</p></div>
@@ -3760,14 +4115,14 @@ information will be logged.</p></div>
 The default is <em>0</em>.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_debug_log_file_lt_filename_gt"></span><h4 data-comment-topic="passenger-debug-log-file-filename--21ubaj" data-anchor="_passenger_debug_log_file_lt_filename_gt">6.10.2. passenger_debug_log_file &lt;filename&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_debug_log_file_lt_filename_gt"></span><h4 data-comment-topic="passenger-debug-log-file-filename--21ubaj" data-anchor="_passenger_debug_log_file_lt_filename_gt">6.13.2. passenger_debug_log_file &lt;filename&gt;</h4>
 <div class="paragraph"><p>By default Phusion Passenger debugging and error messages are written to the global
 web server error log. This option allows one to specify the file that debugging and
 error messages should be written to instead.</p></div>
 <div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.</p></div>
 </div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_debugger_lt_on_off_gt"></span><h4 data-comment-topic="passenger-debugger-on-off--1wkuq85" data-anchor="_passenger_debugger_lt_on_off_gt">6.10.3. passenger_debugger &lt;on|off&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_passenger_debugger_lt_on_off_gt"></span><h4 data-comment-topic="passenger-debugger-on-off--1wkuq85" data-anchor="_passenger_debugger_lt_on_off_gt">6.13.3. passenger_debugger &lt;on|off&gt;</h4>
 <div class="paragraph"><p><strong>This feature is only available in <a href="https://www.phusionpassenger.com/enterprise">Phusion Passenger Enterprise</a>. It was introduced in version 3.0.0. <a href="https://www.phusionpassenger.com/download">Buy Phusion Passenger Enterprise here.</a></strong></p></div>
 <div class="paragraph"><p>Turns support for application debugging on or off. In case of Ruby applications,
 turning this option on will cause them to load the <span class="monospaced">ruby-debug</span> gem (when on Ruby 1.8)
@@ -3807,9 +4162,9 @@ In an <em>if</em> configuration scope.
 </div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_ruby_on_rails_specific_options"></span><h3 data-comment-topic="ruby-on-rails-specific-options-12vfokt" data-anchor="_ruby_on_rails_specific_options">6.11. Ruby on Rails-specific options</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_ruby_on_rails_specific_options"></span><h3 data-comment-topic="ruby-on-rails-specific-options-12vfokt" data-anchor="_ruby_on_rails_specific_options">6.14. Ruby on Rails-specific options</h3>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="RailsEnv"></span><h4 data-comment-topic="rails-env-string--jlh7v9" data-anchor="RailsEnv">6.11.1. rails_env &lt;string&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="RailsEnv"></span><h4 data-comment-topic="rails-env-string--jlh7v9" data-anchor="RailsEnv">6.14.1. rails_env &lt;string&gt;</h4>
 <div class="paragraph"><p>This option allows one to specify the default <span class="monospaced">RAILS_ENV</span> value.</p></div>
 <div class="paragraph"><p>This option may occur in the following places:</p></div>
 <div class="ulist"><ul>
@@ -3838,9 +4193,9 @@ In an <em>if</em> configuration scope.
 </div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_rack_and_rails_gt_3_specific_options"></span><h3 data-comment-topic="rack-specific-options-13yvdxs" data-anchor="_rack_and_rails_gt_3_specific_options">6.12. Rack and Rails &gt;= 3 specific options</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_rack_and_rails_gt_3_specific_options"></span><h3 data-comment-topic="rack-specific-options-13yvdxs" data-anchor="_rack_and_rails_gt_3_specific_options">6.15. Rack and Rails &gt;= 3 specific options</h3>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="RackEnv"></span><h4 data-comment-topic="rack-env-string--tqmrt0" data-anchor="RackEnv">6.12.1. rack_env &lt;string&gt;</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="RackEnv"></span><h4 data-comment-topic="rack-env-string--tqmrt0" data-anchor="RackEnv">6.15.1. rack_env &lt;string&gt;</h4>
 <div class="paragraph"><p>This option allows one to specify the default <span class="monospaced">RACK_ENV</span> value.</p></div>
 <div class="paragraph"><p>This option may occur in the following places:</p></div>
 <div class="ulist"><ul>
@@ -3869,11 +4224,11 @@ In an <em>if</em> configuration scope.
 </div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_deprecated_options"></span><h3 data-comment-topic="deprecated-options-1dtzo0g" data-anchor="_deprecated_options">6.13. Deprecated options</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_deprecated_options"></span><h3 data-comment-topic="deprecated-options-1dtzo0g" data-anchor="_deprecated_options">6.16. Deprecated options</h3>
 <div class="paragraph"><p>The following options have been deprecated, but are still supported for backwards
 compatibility reasons.</p></div>
 <div class="sect3">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_rails_spawn_method"></span><h4 data-comment-topic="rails-spawn-method-17vdnpt" data-anchor="_rails_spawn_method">6.13.1. rails_spawn_method</h4>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_rails_spawn_method"></span><h4 data-comment-topic="rails-spawn-method-17vdnpt" data-anchor="_rails_spawn_method">6.16.1. rails_spawn_method</h4>
 <div class="paragraph"><p>Deprecated in favor of <a href="#PassengerSpawnMethod">passenger_spawn_method</a>.</p></div>
 </div>
 </div>
@@ -4052,22 +4407,7 @@ sessions compared to the others, then there might be a problem:</p></div>
                                +---- "spike"</pre>
 </div>
 </div>
-<div class="paragraph"><p>Possible reasons why spikes can occur:</p></div>
-<div class="olist arabic"><ol class="arabic">
-<li>
-<p>
-Your application is busy processing a request that takes a very long time.
-  If this is the case, then you might want to turn
-  <a href="#PassengerUseGlobalQueue">global queuing</a> on.
-</p>
-</li>
-<li>
-<p>
-Your application is frozen, i.e. has stopped responding. See
-  <a href="#debugging_frozen">Debugging frozen applications</a> for tips.
-</p>
-</li>
-</ol></div>
+<div class="paragraph"><p>The most likely reason why a spike occurs is because your application is frozen, i.e. it has stopped responding. See <a href="#debugging_frozen">Debugging frozen applications</a> for tips.</p></div>
 </div>
 <div class="sect2">
 <a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="debugging_frozen"></span><h3 data-comment-topic="debugging-frozen-applications-qoctl8" data-anchor="debugging_frozen">7.3. Debugging frozen applications</h3>
@@ -4283,48 +4623,7 @@ the application startup file. In this file you can do whatever you need to setup
 or a similar system.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="moving_phusion_passenger"></span><h3 data-comment-topic="moving-phusion-passenger-to-a-different-directory-1hel5cp" data-anchor="moving_phusion_passenger">8.5. Moving Phusion Passenger to a different directory</h3>
-<div class="paragraph"><p>It is possible to relocate the Phusion Passenger files to a different directory. It
-involves two steps:</p></div>
-<div class="olist arabic"><ol class="arabic">
-<li>
-<p>
-Moving the directory.
-</p>
-</li>
-<li>
-<p>
-Updating the “PassengerRoot” configuration option in Apache.
-</p>
-</li>
-</ol></div>
-<div class="paragraph"><p>For example, if Phusion Passenger is located in <em>/opt/passenger/</em>, and you’d like to
-move it to <em>/usr/local/passenger/</em>, then do this:</p></div>
-<div class="olist arabic"><ol class="arabic">
-<li>
-<p>
-Run the following command:
-</p>
-<div class="listingblock">
-<div class="content monospaced">
-<pre>mv /opt/passenger /usr/local/passenger</pre>
-</div>
-</div>
-</li>
-<li>
-<p>
-Edit your Apache configuration file, and set:
-</p>
-<div class="listingblock">
-<div class="content monospaced">
-<pre>PassengerRoot /usr/local/passenger</pre>
-</div>
-</div>
-</li>
-</ol></div>
-</div>
-<div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installing_multiple_ruby_on_rails_versions"></span><h3 data-comment-topic="installing-multiple-ruby-on-rails-versions-1bp1fff" data-anchor="_installing_multiple_ruby_on_rails_versions">8.6. Installing multiple Ruby on Rails versions</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_installing_multiple_ruby_on_rails_versions"></span><h3 data-comment-topic="installing-multiple-ruby-on-rails-versions-1bp1fff" data-anchor="_installing_multiple_ruby_on_rails_versions">8.5. Installing multiple Ruby on Rails versions</h3>
 <div class="paragraph"><p>Each Ruby on Rails applications that are going to be deployed may require a
 specific Ruby on Rails version. You can install a specific version with
 this command:</p></div>
@@ -4338,7 +4637,7 @@ this command:</p></div>
 other. Phusion Passenger will automatically make use of the correct version.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_making_the_application_restart_after_each_request"></span><h3 data-comment-topic="making-the-application-restart-after-each-request-vimy48" data-anchor="_making_the_application_restart_after_each_request">8.7. Making the application restart after each request</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_making_the_application_restart_after_each_request"></span><h3 data-comment-topic="making-the-application-restart-after-each-request-vimy48" data-anchor="_making_the_application_restart_after_each_request">8.6. Making the application restart after each request</h3>
 <div class="paragraph"><p>In some situations it might be desirable to restart the web application after
 each request, for example when developing a non-Rails application that doesn’t
 support code reloading, or when developing a web framework.</p></div>
@@ -4361,7 +4660,7 @@ does not support code reloading.</td>
 </div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="sub_uri_deployment_uri_fix"></span><h3 data-comment-topic="how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-11mzwt6" data-anchor="sub_uri_deployment_uri_fix">8.8. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="sub_uri_deployment_uri_fix"></span><h3 data-comment-topic="how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-11mzwt6" data-anchor="sub_uri_deployment_uri_fix">8.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments</h3>
 <div class="paragraph"><p>Some people experience broken images and other broken static assets when they
 deploy their application to a sub-URI (i.e. <em>http://mysite.com/railsapp/</em>).
 The reason for this usually is that you used a
@@ -4399,7 +4698,7 @@ please refer to
 <a href="http://api.rubyonrails.org/classes/ActionView/Helpers/AssetTagHelper.html">the Rails API docs</a>.</p></div>
 </div>
 <div class="sect2">
-<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_out_of_band_garbage_work_and_out_of_band_garbage_collection"></span><h3 data-comment-topic="out-of-band-garbage-work-and-out-of-band-garbage-collection-v89lu2" data-anchor="_out_of_band_garbage_work_and_out_of_band_garbage_collection">8.9. Out-of-Band Garbage Work and Out-of-Band Garbage Collection</h3>
+<a href="javascript:void(0)" class="comments empty" title="Add a comment"><span class="count"></span></a><span class="anchor_helper" id="_out_of_band_garbage_work_and_out_of_band_garbage_collection"></span><h3 data-comment-topic="out-of-band-garbage-work-and-out-of-band-garbage-collection-v89lu2" data-anchor="_out_of_band_garbage_work_and_out_of_band_garbage_collection">8.8. Out-of-Band Garbage Work and Out-of-Band Garbage Collection</h3>
 <div class="paragraph"><p><strong>Available since Phusion Passenger 4.0.0.</strong></p></div>
 <div class="paragraph"><p><strong>At this time, this feature is only available on Ruby.</strong></p></div>
 <div class="paragraph"><p>The Out-of-Band Work feature allows you to run arbitrary long-running tasks outside normal request cycles. This works by letting current requests to the process finish, then telling the process to perform the out-of-band work, then resuming passing requests to the process after said work is finished.</p></div>
@@ -4953,7 +5252,7 @@ has no effect.</p></div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2013-01-23 15:31:31 CET
+Last updated 2013-03-03 11:14:55 CET
 </div>
 </div>
 <script>/*! jQuery v1.7.1 jquery.com | jquery.org/license */

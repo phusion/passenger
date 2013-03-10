@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <Logging.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 
@@ -55,22 +56,32 @@ setDebugFile(const char *logFile) {
 }
 
 void
-_prepareLogEntry(std::stringstream &sstream) {
+_prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line) {
 	time_t the_time;
 	struct tm the_tm;
 	char datetime_buf[60];
 	struct timeval tv;
+
+	if (startsWith(file, "ext/")) {
+		file += sizeof("ext/") - 1;
+		if (startsWith(file, "common/")) {
+			file += sizeof("common/") - 1;
+			if (startsWith(file, "ApplicationPool2/")) {
+				file += sizeof("Application") - 1;
+			}
+		}
+	}
 	
 	the_time = time(NULL);
 	localtime_r(&the_time, &the_tm);
 	strftime(datetime_buf, sizeof(datetime_buf) - 1, "%F %H:%M:%S", &the_tm);
 	gettimeofday(&tv, NULL);
 	sstream <<
-		"[ pid=" << std::dec << getpid() <<
-		" thr=" << std::hex << pthread_self() << std::dec <<
-		" time=" << datetime_buf << "." << std::setfill('0') << std::setw(4) <<
+		"[ " << datetime_buf << "." << std::setfill('0') << std::setw(4) <<
 			(unsigned long) (tv.tv_usec / 100) <<
-		" file=" << __FILE__ << ":" << (unsigned long) __LINE__ <<
+		" " << std::dec << getpid() << "/" <<
+			std::hex << pthread_self() << std::dec <<
+		" " << file << ":" << line <<
 		" ]: ";
 }
 

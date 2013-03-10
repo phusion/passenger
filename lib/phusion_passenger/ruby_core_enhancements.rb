@@ -26,7 +26,13 @@ require 'rubygems'
 require 'socket'
 require 'thread'
 if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
-	require 'fastthread'
+	begin
+		require 'fastthread'
+	rescue LoadError
+		abort "You are using a very old Ruby version. You must install " +
+			"the 'fastthread' gem to fix some bugs in the Ruby threading system: " +
+			"gem install fastthread"
+	end
 end
 require 'phusion_passenger/native_support'
 

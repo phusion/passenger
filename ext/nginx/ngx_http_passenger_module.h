@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010 Phusion
+ * Copyright (C) 2010-2013 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include "../common/AgentsStarter.h"
+#include "../common/ApplicationPool2/AppTypes.h"
 #include "../common/Utils/CachedFileStat.h"
 
 /**
@@ -55,6 +56,8 @@ extern ngx_str_t                passenger_placeholder_upstream_address;
  * A CachedFileStat object used for caching stat() calls.
  */
 extern PassengerCachedFileStat *passenger_stat_cache;
+
+extern PassengerAppTypeDetector *passenger_app_type_detector;
 
 extern AgentsStarter           *passenger_agents_starter;
 

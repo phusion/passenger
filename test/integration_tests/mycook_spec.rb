@@ -148,7 +148,7 @@ shared_examples_for "MyCook(tm) beta" do
 	
 	it "sets the 'Status' header" do
 		response = get_response('/nonexistant')
-		response["Status"].should == "404"
+		response["Status"].should == "404 Not Found"
 	end
 	
 	if Process.uid == 0

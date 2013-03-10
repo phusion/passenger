@@ -361,6 +361,12 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			Utils/CachedFileStat.h
 			Utils/CachedFileStat.hpp
 		)
+	define_component 'Utils/LargeFiles.o',
+		:source   => 'Utils/LargeFiles.cpp',
+		:category => :other,
+		:deps     => %w(
+			Utils/LargeFiles.h
+		)
 	define_component 'ApplicationPool2/Implementation.o',
 		:source   => 'ApplicationPool2/Implementation.cpp',
 		:category => :other,
@@ -373,6 +379,20 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			ApplicationPool2/Session.h
 			ApplicationPool2/Options.h
 			ApplicationPool2/PipeWatcher.h
+			ApplicationPool2/AppTypes.h
+			ApplicationPool2/Spawner.h
+			ApplicationPool2/SpawnerFactory.h
+			ApplicationPool2/SmartSpawner.h
+			ApplicationPool2/DirectSpawner.h
+			ApplicationPool2/DummySpawner.h
+		)
+	define_component 'ApplicationPool2/AppTypes.o',
+		:source   => 'ApplicationPool2/AppTypes.cpp',
+		:category => :other,
+		:deps     => %w(
+			ApplicationPool2/AppTypes.h
+			Utils/StrIntUtils.h
+			Utils/CachedFileStat.h
 		)
 	define_component 'AccountsDatabase.o',
 		:source   => 'AccountsDatabase.cpp',
@@ -389,10 +409,10 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:deps     => %w(
 			AgentsStarter.h
 			AgentsStarter.hpp
-			IniFile.h
 			ResourceLocator.h
 			MessageClient.h
 			ServerInstanceDir.h
+			Utils/IniFile.h
 			Utils/VariantMap.h
 		)
 	define_component 'AgentsBase.o',
@@ -437,5 +457,5 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 end
 
 # Objects that must be linked into the Nginx binary.
-NGINX_LIBS_SELECTOR = [:base, 'AgentsStarter.o', 'Utils/CachedFileStat.o',
-	'Utils/Base64.o', 'agents/LoggingAgent/FilterSupport.o']
+NGINX_LIBS_SELECTOR = [:base, 'AgentsStarter.o', 'ApplicationPool2/AppTypes.o',
+	'Utils/CachedFileStat.o', 'Utils/Base64.o', 'agents/LoggingAgent/FilterSupport.o']

@@ -46,7 +46,7 @@ end
 desc "Install developer dependencies"
 task 'test:install_deps' do
 	gem_install = PlatformInfo.gem_command + " install --no-rdoc --no-ri"
-	gem_install = "sudo #{gem_install}" if boolean_option('SUDO')
+	gem_install = "#{PlatformInfo.ruby_sudo_command} #{gem_install}" if boolean_option('SUDO')
 	sh "#{gem_install} rails -v 2.3.15"
 	sh "#{gem_install} bundler rspec mime-types daemon_controller json"
 	if boolean_option('RAILS_BUNDLES', true)

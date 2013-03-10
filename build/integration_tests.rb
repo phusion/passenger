@@ -27,8 +27,9 @@ desc "Run all integration tests"
 task 'test:integration' => ['test:integration:apache2', 'test:integration:nginx'] do
 end
 
+dependencies = [:apache2, NATIVE_SUPPORT_TARGET].compact
 desc "Run Apache 2 integration tests"
-task 'test:integration:apache2' => [:apache2, :native_support] do
+task 'test:integration:apache2' => dependencies do
 	if PlatformInfo.rspec.nil?
 		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
 	else
@@ -38,8 +39,9 @@ task 'test:integration:apache2' => [:apache2, :native_support] do
 	end
 end
 
+dependencies = [:nginx, NATIVE_SUPPORT_TARGET].compact
 desc "Run Nginx integration tests"
-task 'test:integration:nginx' => :nginx do
+task 'test:integration:nginx' => dependencies do
 	if PlatformInfo.rspec.nil?
 		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
 	else
@@ -49,8 +51,9 @@ task 'test:integration:nginx' => :nginx do
 	end
 end
 
+dependencies = [:apache2, NATIVE_SUPPORT_TARGET].compact
 desc "Run the 'restart' integration test infinitely, and abort if/when it fails"
-task 'test:restart' => [:apache2, :native_support] do
+task 'test:restart' => dependencies do
 	Dir.chdir("test") do
 		color_code_start = "\e[33m\e[44m\e[1m"
 		color_code_end = "\e[0m"

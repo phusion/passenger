@@ -1,9 +1,11 @@
+=== Synopsis
+
 The Phusion Passenger installation process consists of two steps:
 
 1. The *obtainment step*, where you download the Phusion Passenger files puts them somewhere on your system. This can be done through downloading the source tarball, installing the Ruby gem or installing a native OS package via APT or YUM.
 2. The *integration step*, where you configure Phusion Passenger so that it works properly with other system components such as Apache, Nginx, Ruby, Python, etc.
 
-Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, both steps can be done in multiple ways. Most users will be satisfied with the generic installation instructions which covers both steps, but some users may prefer OS-specific installation instructions in order to integrate better.
+Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, both steps can be done in multiple ways. Most users -- especially first-time users -- will be satisfied with the _generic installation instructions_ which covers both steps. However some users may prefer _OS-specific installation instructions_, which allow Phusion Passenger to better integrate into the operating system. Better integration is characterized by following OS-specific conventions.
 
 If you are not familiar with system administration and do not understand all the choices, then we recommend you to go with the <<rubygems_generic_install,RubyGems generic installation method>> (if you're a Ruby user) or the <<tarball_generic_install,tarball generic installation method>> (if you're not a Ruby user).
 
@@ -12,6 +14,8 @@ The steps for upgrading or downgrading Phusion Passenger is almost the same as t
 
 [[rubygems_generic_install]]
 === Generic installation, upgrade and downgrade method: via RubyGems
+
+RubyGems is only used as a method to obtain the Phusion Passenger files, so in case you have multiple Ruby versions it does not matter which Ruby's RubyGems you use for installation. Once installed, Phusion Passenger can work with all other Ruby versions on your system.
 
 [[is_ruby_home_or_system_wide_installed]]
 [float]
@@ -78,7 +82,7 @@ gem install passenger-enterprise-server-x.x.x.gem
 [float]
 ==== Step 3: add the RubyGems bin directory to your $PATH
 
-If you all the following are applicable to you:
+If you all of the following are applicable to you:
 
 - You are on Debian or Ubuntu,
 - and you installed RubyGems through APT,
@@ -129,7 +133,7 @@ passenger-install-apache2-module
 
 At the end of the installation process, you will be asked to copy and paste a configuration snippet (containing `LoadModule`, `PassengerRoot`, etc.) into your Apache configuration file. If you're upgrading, then you already had a similar configuration snippet. Be sure to remove the old one before pasting the new one.
 
-If you have trouble finding the Apache configuration file, see <<locating_apache_conf,Locating the Apache configuration file>>. If you're on OS X Server >= 10.8 (Mountain Lion) and you're running Web Services, then you should definitely read that section because the configuration file may not be where you think it is.
+Different operating systems and Apache installations have different conventions with regard to where the Apache configuration file is and how it is organized. Please read <<working_with_apache_conf,Working with the Apache configuration file>> if you're not familiar with it. That section is especially of interest for OS X Server >= 10.8 users because the configuration file may not be at a surprising location.
 
 If compilation doesn't succeed, then please consult the <<troubleshooting,Troubleshooting>> section.
 
@@ -172,6 +176,9 @@ passenger-memory-stats
 ---------------------------
 
 You should see the web server processes as well as a number of Phusion Passenger processes (e.g. PassengerWatchdog, PassengerHelperAgent). Congratulations, Phusion Passenger is now installed and running!
+ifdef::nginx[]
+At this point you may be interested in <<nginx_init_script,creating an Nginx init script>>.
+endif::[]
 
 If the output is not as expected, then please refer to the <<troubleshooting,Troubleshooting>> section.
 
@@ -263,7 +270,7 @@ sudo apt-add-repository ppa:brightbox/passenger
 sudo apt-get update
 -----------------------------
 
-If you're on the older Ubuntu 8.04 Hardy release, the 'apt-add-repository' command isn't available so you have to install the repository and the key by hand:
+If you're on the older Ubuntu 8.04 Hardy release, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand:
 
 -----------------------------
 sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" > /etc/apt/sources.list.d/brightbox-passenger.list'
@@ -301,36 +308,102 @@ endif::[]
 Please refer to <<verify_passenger_running,this section>>. Note that all Phusion Passenger administration scripts are located inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-memory-stats'.
 
 
-=== Installing or upgrading on Ubuntu
+=== Installing or upgrading on Debian 6 or Ubuntu
 
-John Leach from Brightbox has kindly provided a Ubuntu packages for Phusion Passenger. The packages are available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
+John Leach from Brightbox has kindly provided Ubuntu packages for Phusion Passenger. The Ubuntu Lucid packages are compatible with Debian 6. The packages are available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
 
-Add the following line to the Third Party Software Sources:
+If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need.
 
----------------------------------------------
-deb http://apt.brightbox.net hardy main
----------------------------------------------
+.Apache
 
-The simplest way to do that is to create a file in '/etc/apt/sources.list.d' containing the deb instruction, and then run `sudo apt-get update`.
+On Ubuntu versions newer than 8.04 Hardy, register the Brightbox Apache PPA as follows:
 
-Once you've done that, you can proceed with installing Phusion Passenger by running:
+-----------------------------
+sudo apt-add-repository ppa:brightbox/passenger
+sudo apt-get update
+-----------------------------
+
+On Ubuntu 8.04 Hardy and on Debian, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand.
+
+Debian 6:
+
+-----------------------------
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu lucid main" > /etc/apt/sources.list.d/brightbox-passenger.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update
+-----------------------------
+
+Ubuntu 8.04 Hardy:
+
+-----------------------------
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" > /etc/apt/sources.list.d/brightbox-passenger.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update
+-----------------------------
+
+You can proceed with installing Phusion Passenger by running:
 
 ---------------------------------------------
 sudo apt-get install libapache2-mod-passenger
 ---------------------------------------------
 
-or, for the Nginx version:
+The Apache package provides configuration snippets for you, so you don't need to modify any Apache configuration to get it to load Phusion Passenger.
+
+.Nginx
+
+On Ubuntu versions newer than 8.04 Hardy, register the Brightbox Apache PPA as follows:
+
+-----------------------------
+sudo apt-add-repository ppa:brightbox/passenger-nginx
+sudo apt-get update
+-----------------------------
+
+On Ubuntu 8.04 Hardy and on Debian, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand.
+
+Debian 6:
+
+-----------------------------
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger-nginx/ubuntu lucid main" > /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update
+-----------------------------
+
+Ubuntu 8.04 Hardy:
+
+-----------------------------
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" > /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update
+-----------------------------
+
+Then:
 
 ---------------------------------------------
-sudo apt-get install nginx-brightbox
+sudo apt-get install nginx-full
 ---------------------------------------------
 
-Please also visit link:http://wiki.brightbox.co.uk/docs:phusion-passenger[the package's wiki page] for more documentation about this package.
+You'll then need to enable the Phusion Passenger module in Nginx by creating the following configuration file:
+
+-----------------------------------------------
+sudo sh -c 'echo "passenger_root /usr/lib/phusion-passenger;" > /etc/nginx/conf.d/passenger.conf'
+-----------------------------------------------
+
+Then restart Nginx to apply the changes:
+
+----------------------------------------
+sudo /etc/init.d/nginx restart
+----------------------------------------
+
+.Standalone
+
+Unfortunately, no packages are provided for Phusion Passenger Standalone.
 
 
 === Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux
 
 YUM repositories with RPMs are maintained by link:https://github.com/erikogan/passenger[Erik Ogan] and link:http://stealthymonkeys.com/[Stealthy Monkeys Consulting]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
+
+If you use YUM to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. The YUM packages contain all the binaries that you need. You also don't need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.
 
 [float]
 ==== Step 1: Install the release package
@@ -365,13 +438,13 @@ From there you can use link:http://prefetch.net/articles/yum.html[YUM] to instal
 Phusion Passenger for Apache:
 
 ---------------------------------------------
-yum install nginx-passenger
+yum install mod_passenger
 ---------------------------------------------
 
 Phusion Passenger for Nginx:
 
 ---------------------------------------------
-yum install mod_passenger
+yum install nginx-passenger
 ---------------------------------------------
 
 Phusion Passenger Standalone:
@@ -408,13 +481,73 @@ By default, the installer (`passenger-install-nginx-module`) is interactive. If 
 endif::[]
 
 
+=== Customizing the compilation process
+
+==== Setting the compiler
+
+You can force the Phusion Passenger build system to use a specific C or C++ compiler by setting the `CC` and `CXX` environment variables. These may be set to any arbitrary shell commands.
+
+For example, contributors who want to hack on Phusion Passenger may want to use Clang for faster compilation and link:http://ccache.samba.org/[ccache] for faster recompilation, and may want to enable more error-catching compilation flags:
+
+----------------------
+export CC='ccache clang -fcolor-diagnostics -Qunused-arguments -fcatch-undefined-behavior -ftrapv'
+export CXX='ccache clang++ -fcolor-diagnostics -Qunused-arguments -fcatch-undefined-behavior -ftrapv'
+----------------------
+
+==== Adding additional compiler or linker flags
+
+On some systems, C/C++ libraries and headers that Phusion Passenger requires may be located in a non-standard directory. You can force the Phusion Passenger build system to look in those locations by injecting compiler and linker flags using the following environment variables:
+
+`EXTRA_PRE_CFLAGS`::
+	These flags are injected into all C compiler invocations that involve compiling C or C++ source files. This includes compiler invocations that compile *and* link. The flags are injected at the beginning of the command string, even before `EXTRA_PRE_LDFLAGS`.
+`EXTRA_CFLAGS`::
+	Similar to `EXTRA_PRE_CFLAGS`, but injected at the end of the command string, before `EXTRA_LDFLAGS`.
+`EXTRA_PRE_CXXFLAGS`::
+	Similar to `EXTRA_PRE_CFLAGS`, but for C++ compiler invocations.
+`EXTRA_CXXFLAGS`::
+	Similar to `EXTRA_CFLAGS`, but for C++ compiler invocations.
+`EXTRA_PRE_LDFLAGS`::
+	These flags are injected into all C/C++ compiler invocations that involve linking. This includes compiler invocations that compile *and* link. The flags are injected at the beginning of the command string, but after `EXTRA_PRE_CFLAGS` and `EXTRA_PRE_CXXFLAGS`.
+`EXTRA_LDFLAGS`::
+	Similar to `EXTRA_PRE_LDFLAGS`, but injected at the very end of the command string, even after `EXTRA_CFLAGS` and `EXTRA_CXXFLAGS`.
+
+==== Forcing location of certain command line tools
+
+The Phusion Passenger build system attempts to autodetect many things by locating relevant helper tools. For example, to find out which compiler flags it should use for compiling Apache modules, it locates the `apxs2` command and queries it. To find out which compiler flags it should use for libcurl, it queries the `curl-config` command. These commands may not be in `$PATH`, or even when they are you may want to use a different one.
+
+You can often force the build to find certain command line tools at certain locations by using the following environment variables:
+
+`HTTPD`::
+	The location of the `httpd` executable (the Apache server executable).
+`APXS2`::
+	The location of the `apxs2` executable (the Apache module developer tool).
+`APR_CONFIG`::
+	The location of the `apr-config` executable (the Apache Portable Runtime developer tool).
+`APU_CONFIG`::
+	The location of the `apu-config` executable (the Apache Portable Runtime Utility developer tool).
+`MAKE`::
+	The location of a `make` tool. It does not matter which implementation of `make` this is.
+`GMAKE`::
+	The location of the GNU-compatible `make` tool.
+
+
 ifdef::apache[]
-[[locating_apache_conf]]
-=== Locating the Apache configuration file
+[[working_with_apache_conf]]
+=== Working with the Apache configuration file
 
-On most systems, the Apache configuration file is located in either '/etc/apache2/httpd.conf' or '/etc/apache2/apache2.conf'.
+On most systems the Apache configuration file is located in either '/etc/apache2/httpd.conf' or '/etc/apache2/apache2.conf'. However, to allow better organization, many operating systems and Apache distributions also read configuration files in the 'conf.d', 'mods-enabled' and 'sites-enabled' subdirectories.
 
-Not so on OS X Server >= 10.8 Mountain Lion with Web Services. If you do not use Web Services then the configuration file *is* in '/etc', but if you do use Web Services then the configuration file is in '/Library/Server/Web/Config/apache2/httpd_server_app.conf'.
+'mods-enabled' contains symlinks to files in 'mods-available'. This latter subdirectory contains config files for all available modules, while 'mods-enabled' contains only a subset, namely the modules that should actually be enabled. The symlinks are created using the `a2enmod` tool. '*.load' files contain `LoadModule` directives, while '*.conf' files contain all other configuration directives.
+
+Use 'mods-enabled'/'mods-available' to store Phusion Passenger configuration if you can:
+
+- Create '/etc/apache2/mods-available/passenger.load' and paste the `LoadModule ...` directive that `passenger-install-apache2-module` outputs.
+- Create '/etc/apache2/mods-available/passenger.conf' and paste the `PassengerRoot` and other Phusion Passenger options.
+- Enable by running `sudo a2enmod passenger`.
+
+If the 'mods-enabled' mechanism is not available then you can paste configuration snippets into 'httpd.conf' or 'apache2.conf' directly.
+
+On OS X Server >= 10.8 Mountain Lion the location of the Apache configuration file depends on whether you use Web Services or not. If you do, then the configuration file is in '/Library/Server/Web/Config/apache2/httpd_server_app.conf'. If you do not, then the configuration file is in '/etc/apache2/httpd.conf'.
 endif::[]
 
 
@@ -445,6 +578,18 @@ passenger_root /path-to-passenger-root;
 ------------------------------------------
 
 After having done so, restart Nginx.
+
+[[nginx_init_script]]
+=== Creating an Nginx init script
+
+If you installed Nginx with one of the generic installation methods then you won't have an init script to start, stop and restart Nginx with. A bare Nginx installation works with signals: you start it by invoking it from the command line, you stop it by sending SIGTERM to it and you gracefully restart it by sending SIGHUP to it.
+
+If you prefer to use an init script then please refer to the following resources:
+
+- link:http://wiki.nginx.org/Nginx-init-ubuntu[Init script for Ubuntu]
+- link:http://wiki.nginx.org/RedHatNginxInitScript[Init script for Red Hat, Fedora and CentOS]
+
+When using one of those init scripts, please make sure that the paths inside the init script are correct. In particular, the paths to the Nginx binary, to the PID file and to the configuration file must match the actual locations of your Nginx installation.
 endif::[]
 
 
@@ -587,7 +732,7 @@ mv /opt/passenger/passenger-4.0.0 /usr/local/passenger-4.0.0
 
 Next you must tell your web server that Phusion Passenger has moved.
 ifdef::apache[]
-Open your <<locating_apache_conf,Apache configuration file>> and set the 'PassengerRoot' directive to the new location:
+Open your <<working_with_apache_conf,Apache configuration file>> and set the 'PassengerRoot' directive to the new location:
 
 ---------------------------------------------
 PassengerRoot /usr/local/passenger-4.0.0

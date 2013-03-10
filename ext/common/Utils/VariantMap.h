@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -168,9 +168,23 @@ public:
 		store[name] = value;
 		return *this;
 	}
+
+	VariantMap &setDefault(const string &name, const string &value) {
+		if (store.find(name) == store.end()) {
+			store[name] = value;
+		}
+		return *this;
+	}
 	
 	VariantMap &setInt(const string &name, int value) {
 		store[name] = toString(value);
+		return *this;
+	}
+
+	VariantMap &setDefaultInt(const string &name, int value) {
+		if (store.find(name) == store.end()) {
+			store[name] = toString(value);
+		}
 		return *this;
 	}
 	
@@ -178,9 +192,23 @@ public:
 		store[name] = toString(value);
 		return *this;
 	}
+
+	VariantMap &setDefaultULL(const string &name, unsigned long long value) {
+		if (store.find(name) == store.end()) {
+			store[name] = toString(value);
+		}
+		return *this;
+	}
 	
 	VariantMap &setPid(const string &name, pid_t value) {
 		store[name] = toString((unsigned long long) value);
+		return *this;
+	}
+
+	VariantMap &setDefaultPid(const string &name, pid_t value) {
+		if (store.find(name) == store.end()) {
+			store[name] = toString((unsigned long long) value);
+		}
 		return *this;
 	}
 	
@@ -188,9 +216,23 @@ public:
 		store[name] = toString((long long) value);
 		return *this;
 	}
+
+	VariantMap &setDefaultUid(const string &name, uid_t value) {
+		if (store.find(name) == store.end()) {
+			store[name] = toString((unsigned long long) value);
+		}
+		return *this;
+	}
 	
 	VariantMap &setGid(const string &name, gid_t value) {
 		store[name] = toString((long long) value);
+		return *this;
+	}
+
+	VariantMap &setDefaultGid(const string &name, gid_t value) {
+		if (store.find(name) == store.end()) {
+			store[name] = toString((unsigned long long) value);
+		}
 		return *this;
 	}
 	
@@ -198,7 +240,14 @@ public:
 		store[name] = value ? "true" : "false";
 		return *this;
 	}
-	
+
+	VariantMap &setDefaultBool(const string &name, bool value) {
+		if (store.find(name) == store.end()) {
+			store[name] = value ? "true" : "false";
+		}
+		return *this;
+	}
+
 	const string &get(const string &name, bool required = true) const {
 		map<string, string>::const_iterator it = store.find(name);
 		if (it == store.end()) {

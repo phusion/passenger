@@ -12,6 +12,11 @@ while (line = STDIN.readline) != "\n"
 	options[name] = value
 end
 
+if ARGV[0] == "--execself"
+	# Used for testing https://code.google.com/p/phusion-passenger/issues/detail?id=842#c19
+	exec("ruby", $0)
+end
+
 server = TCPServer.new('127.0.0.1', 0)
 puts "!> Ready"
 puts "!> socket: main;tcp://127.0.0.1:#{server.addr[1]};session;1"

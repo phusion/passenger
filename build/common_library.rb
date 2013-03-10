@@ -21,6 +21,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger/platform_info/cxx_portability'
+
 ########## Phusion Passenger common library ##########
 
 require 'phusion_passenger/common_library'
@@ -198,5 +200,6 @@ end
 
 libboost_oxt_cflags = ""
 libboost_oxt_cflags << " -faddress-sanitizer" if USE_ASAN
+libboost_oxt_cflags.strip!
 LIBBOOST_OXT = define_libboost_oxt_task("common", COMMON_OUTPUT_DIR + "libboost_oxt", libboost_oxt_cflags)
-COMMON_LIBRARY.define_tasks
+COMMON_LIBRARY.define_tasks(libboost_oxt_cflags)

@@ -34,12 +34,11 @@ require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/curl'
 require 'phusion_passenger/platform_info/zlib'
 require 'phusion_passenger/platform_info/compiler'
+require 'phusion_passenger/platform_info/cxx_portability'
 
 include PhusionPassenger
 include PhusionPassenger::PlatformInfo
 
-require 'build/packagetask'
-require 'build/gempackagetask'
 require 'build/rake_extensions'
 require 'build/cplusplus_support'
 
@@ -60,6 +59,33 @@ def boolean_option(name, default_value = false)
 		return default_value
 	else
 		return value == "yes" || value == "on" || value == "true" || value == "1"
+	end
+end
+
+#################################################
+
+if string_option('OUTPUT_DIR')
+	OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
+else
+	OUTPUT_DIR = ""
+end
+
+verbose true if !boolean_option('REALLY_QUIET')
+if boolean_option('STDERR_TO_STDOUT')
+	# Just redirecting the file descriptor isn't enough because
+	# data written to STDERR might arrive in an unexpected order
+	# compared to STDOUT.
+	STDERR.reopen(STDOUT)
+	Object.send(:remove_const, :STDERR)
+	STDERR = STDOUT
+	$stderr = $stdout
+end
+
+if boolean_option('CACHING', true) && !boolean_option('RELEASE')
+	if OUTPUT_DIR.empty?
+		PlatformInfo.cache_dir = File.expand_path("cache", File.dirname(__FILE__))
+	else
+		PlatformInfo.cache_dir = OUTPUT_DIR + "cache"
 	end
 end
 
@@ -97,24 +123,25 @@ AGENT_LDFLAGS << " -Wl,-dead_strip" if RUBY_PLATFORM =~ /darwin/
 AGENT_LDFLAGS.strip!
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.
-# Should be included last in the command string, even after PlatformInfo.portability_cflags.
+# These should be included first in the command string, before anything else.
+EXTRA_PRE_CFLAGS = string_option('EXTRA_PRE_CFLAGS', '').gsub("\n", " ")
+EXTRA_PRE_CXXFLAGS = string_option('EXTRA_PRE_CXXFLAGS', '').gsub("\n", " ")
+# These should be included last in the command string, even after PlatformInfo.portability_cflags.
 EXTRA_CXXFLAGS = "-Wall -Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
 EXTRA_CXXFLAGS << " -Wno-missing-field-initializers" if PlatformInfo.compiler_supports_wno_missing_field_initializers_flag?
 EXTRA_CXXFLAGS << " -mno-tls-direct-seg-refs" if PlatformInfo.requires_no_tls_direct_seg_refs? && PlatformInfo.compiler_supports_no_tls_direct_seg_refs_option?
 # Work around Clang warnings in ev++.h.
 EXTRA_CXXFLAGS << " -Wno-ambiguous-member-template" if PlatformInfo.cxx_is_clang?
 EXTRA_CXXFLAGS << " #{OPTIMIZATION_FLAGS}" if !OPTIMIZATION_FLAGS.empty?
+EXTRA_CXXFLAGS << " " << string_option('EXTRA_CXXFLAGS').gsub("\n", " ") if string_option('EXTRA_CXXFLAGS')
 
 # Extra linker flags that should always be passed to the linker.
-# Should be included last in the command string, even after PlatformInfo.portability_ldflags.
-EXTRA_LDFLAGS  = ""
+# These should be included first in the command string, before anything else.
+EXTRA_PRE_LDFLAGS  = string_option('EXTRA_PRE_LDFLAGS', '').gsub("\n", " ")
+# These should be included last in the command string, even after PlatformInfo.portability_ldflags.
+EXTRA_LDFLAGS  = string_option('EXTRA_LDFLAGS', '').gsub("\n", " ")
 
 
-if string_option('OUTPUT_DIR')
-	OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
-else
-	OUTPUT_DIR = ""
-end
 AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "agents") + "/"
 COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "libout/common") + "/"
 APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "libout/apache2") + "/"
@@ -129,23 +156,3 @@ RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
 USE_VENDORED_LIBEV = boolean_option("USE_VENDORED_LIBEV", true)
 # Whether to use the vendored libeio or the system one.
 USE_VENDORED_LIBEIO = boolean_option("USE_VENDORED_LIBEIO", true)
-
-
-verbose true if !boolean_option('REALLY_QUIET')
-if boolean_option('STDERR_TO_STDOUT')
-	# Just redirecting the file descriptor isn't enough because
-	# data written to STDERR might arrive in an unexpected order
-	# compared to STDOUT.
-	STDERR.reopen(STDOUT)
-	Object.send(:remove_const, :STDERR)
-	STDERR = STDOUT
-	$stderr = $stdout
-end
-
-if boolean_option('CACHING', true) && !boolean_option('RELEASE')
-	if OUTPUT_DIR.empty?
-		PlatformInfo.cache_dir = File.expand_path("cache", File.dirname(__FILE__))
-	else
-		PlatformInfo.cache_dir = OUTPUT_DIR + "cache"
-	end
-end

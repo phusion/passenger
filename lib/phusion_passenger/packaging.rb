@@ -56,6 +56,7 @@ module Packaging
 		'LICENSE',
 		'INSTALL.md',
 		'NEWS',
+		'passenger.gemspec',
 		'build/*.rb',
 		'lib/*.rb',
 		'lib/**/*.rb',

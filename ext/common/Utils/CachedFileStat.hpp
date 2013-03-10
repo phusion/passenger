@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -34,11 +34,12 @@
 #include <cassert>
 #include <string>
 #include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <oxt/system_calls.hpp>
 
-#include "SystemTime.h"
-#include "StaticString.h"
-#include "Utils/HashMap.h"
+#include <StaticString.h>
+ #include <Utils/SystemTime.h>
+#include <Utils/StringMap.h>
 
 namespace Passenger {
 
@@ -72,13 +73,13 @@ public:
 		time_t last_time;
 		
 		/**
-		 * Checks whether <em>interval</em> seconds have elapsed since <em>begin</em>
-		 * The current time is returned via the <tt>currentTime</tt> argument,
+		 * Checks whether `interval` seconds have elapsed since `begin`.
+		 * The current time is returned via the `currentTime` argument,
 		 * so that the caller doesn't have to call time() again if it needs the current
 		 * time.
 		 *
 		 * @pre begin <= time(NULL)
-		 * @return Whether <tt>interval</tt> seconds have elapsed since <tt>begin</tt>.
+		 * @return Whether `interval` seconds have elapsed since `begin`.
 		 * @throws TimeRetrievalException Something went wrong while retrieving the time.
 		 * @throws boost::thread_interrupted
 		 */
@@ -100,9 +101,10 @@ public:
 		 *
 		 * @param filename The file to stat.
 		 */
-		Entry(const string &filename) {
+		Entry(const string &_filename)
+			: filename(_filename)
+		{
 			memset(&info, 0, sizeof(struct stat));
-			this->filename = filename;
 			last_result = -1;
 			last_errno = 0;
 			last_time = 0;
@@ -141,7 +143,7 @@ public:
 	
 	typedef shared_ptr<Entry> EntryPtr;
 	typedef list<EntryPtr> EntryList;
-	typedef HashMap<string, EntryList::iterator, StaticString::Hash> EntryMap;
+	typedef StringMap<EntryList::iterator> EntryMap;
 	
 	unsigned int maxSize;
 	EntryList entries;
@@ -158,7 +160,7 @@ public:
 	}
 	
 	/**
-	 * Stats the given file. If <tt>throttleRate</tt> seconds have passed since
+	 * Stats the given file. If `throttleRate` seconds have passed since
 	 * the last time stat() was called on this file, then the file will be
 	 * re-stat()ted, otherwise the cached stat information will be returned.
 	 *
@@ -175,35 +177,35 @@ public:
 	 *         SystemException being thrown.
 	 * @throws boost::thread_interrupted
 	 */
-	int stat(const string &filename, struct stat *buf, unsigned int throttleRate = 0) {
+	int stat(const StaticString &filename, struct stat *buf, unsigned int throttleRate = 0) {
 		boost::unique_lock<boost::mutex> l(lock);
-		EntryMap::iterator it(cache.find(filename));
+		EntryList::iterator it(cache.get(filename, entries.end()));
 		EntryPtr entry;
 		int ret;
 		
-		if (it == cache.end()) {
+		if (it == entries.end()) {
 			// Filename not in cache.
 			// If cache is full, remove the least recently used
 			// cache entry.
 			if (maxSize != 0 && cache.size() == maxSize) {
 				EntryList::iterator listEnd(entries.end());
 				listEnd--;
-				string filename((*listEnd)->filename);
+				string filename2((*listEnd)->filename);
 				entries.pop_back();
-				cache.erase(filename);
+				cache.remove(filename2);
 			}
 			
 			// Add to cache as most recently used.
-			entry = EntryPtr(new Entry(filename));
+			entry = make_shared<Entry>(filename);
 			entries.push_front(entry);
-			cache[filename] = entries.begin();
+			cache.set(filename, entries.begin());
 		} else {
 			// Cache hit.
-			entry = *it->second;
+			entry = *it;
 			
 			// Mark this cache item as most recently used.
-			entries.splice(entries.begin(), entries, it->second);
-			cache[filename] = entries.begin();
+			entries.splice(entries.begin(), entries, it);
+			cache.set(filename, entries.begin());
 		}
 		ret = entry->refresh(throttleRate);
 		*buf = entry->info;
@@ -224,18 +226,18 @@ public:
 			for (int i = 0; i < toRemove; i++) {
 				string filename(entries.back()->filename);
 				entries.pop_back();
-				cache.erase(filename);
+				cache.remove(filename);
 			}
 		}
 		this->maxSize = maxSize;
 	}
 	
 	/**
-	 * Returns whether <tt>filename</tt> is in the cache.
+	 * Returns whether `filename` is in the cache.
 	 */
-	bool knows(const string &filename) const {
+	bool knows(const StaticString &filename) const {
 		boost::unique_lock<boost::mutex> l(lock);
-		return cache.find(filename) != cache.end();
+		return cache.get(filename) != EntryList::iterator();
 	}
 };
 

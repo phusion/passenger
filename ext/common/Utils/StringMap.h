@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011 Phusion
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -30,6 +30,7 @@
 #include <utility>
 
 #include <StaticString.h>
+#include <Utils/HashMap.h>
 
 namespace Passenger {
 
@@ -53,7 +54,7 @@ private:
 		pair<StaticString, T> thePair;
 	};
 	
-	typedef map<StaticString, Entry> InternalMap;
+	typedef HashMap<StaticString, Entry, StaticString::Hash> InternalMap;
 	typedef typename InternalMap::iterator InternalIterator;
 	typedef typename InternalMap::const_iterator InternalConstIterator;
 	typedef typename InternalMap::value_type ValueType;
@@ -156,6 +157,15 @@ public:
 		InternalConstIterator it = store.find(key);
 		if (it == store.end()) {
 			return T();
+		} else {
+			return it->second.thePair.second;
+		}
+	}
+
+	T get(const StaticString &key, const T &defaultValue) const {
+		InternalConstIterator it = store.find(key);
+		if (it == store.end()) {
+			return defaultValue;
 		} else {
 			return it->second.thePair.second;
 		}

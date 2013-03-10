@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -186,10 +186,8 @@ void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
 	config->enabled = DirConfig::UNSET;
-	config->autoDetectRails = DirConfig::UNSET;
-	config->autoDetectRack = DirConfig::UNSET;
-	config->autoDetectWSGI = DirConfig::UNSET;
 	config->ruby = NULL;
+	config->python = NULL;
 	config->environment = NULL;
 	config->appRoot = NULL;
 	config->user = NULL;
@@ -231,10 +229,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 		config->rackBaseURIs.insert(*it);
 	}
 	
-	MERGE_THREEWAY_CONFIG(autoDetectRails);
-	MERGE_THREEWAY_CONFIG(autoDetectRack);
-	MERGE_THREEWAY_CONFIG(autoDetectWSGI);
 	MERGE_STR_CONFIG(ruby);
+	MERGE_STR_CONFIG(python);
 	MERGE_STR_CONFIG(environment);
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
@@ -283,7 +279,6 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_address, unionStationG
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_union_station_gateway_port, unionStationGatewayPort, int, 1)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGatewayCert)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_address, unionStationProxyAddress)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_type, unionStationProxyType)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
 
@@ -298,6 +293,7 @@ DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_max_requests, maxRequests, unsigned l
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformance)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_python, python)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_environment, environment)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
@@ -373,8 +369,6 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rails_auto_detect, autoDetectRails)
-
 
 
 static const char *
@@ -414,14 +408,12 @@ cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rack_auto_detect, autoDetectRack)
-
 
 /*************************************************
  * WSGI-specific settings
  *************************************************/
 
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_wsgi_auto_detect, autoDetectWSGI)
+// none
 
 
 /*************************************************
@@ -479,6 +471,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The Ruby interpreter to use."),
+	AP_INIT_TAKE1("PassengerPython",
+		(Take1Func) cmd_passenger_python,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The Python interpreter to use."),
 	AP_INIT_TAKE1("PassengerLogLevel",
 		(Take1Func) cmd_passenger_log_level,
 		NULL,
@@ -639,11 +636,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The address of the proxy that should be used for sending data to Union Station."),
-	AP_INIT_TAKE1("UnionStationProxyType",
-		(Take1Func) cmd_union_station_proxy_type,
-		NULL,
-		RSRC_CONF,
-		"The type of the proxy that should be used for sending data to Union Station."),
 	AP_INIT_TAKE1("PassengerAnalyticsLogUser",
 		(Take1Func) cmd_passenger_analytics_log_user,
 		NULL,
@@ -713,11 +705,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rails application."),
-	AP_INIT_FLAG("RailsAutoDetect",
-		(FlagFunc) cmd_rails_auto_detect,
-		NULL,
-		RSRC_CONF,
-		"Whether auto-detection of Ruby on Rails applications should be enabled."),
 	AP_INIT_TAKE1("RailsEnv",
 		(Take1Func) cmd_environment,
 		NULL,
@@ -730,11 +717,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rack application."),
-	AP_INIT_FLAG("RackAutoDetect",
-		(FlagFunc) cmd_rack_auto_detect,
-		NULL,
-		RSRC_CONF,
-		"Whether auto-detection of Rack applications should be enabled."),
 	AP_INIT_TAKE1("RackEnv",
 		(Take1Func) cmd_environment,
 		NULL,
@@ -742,11 +724,7 @@ const command_rec passenger_commands[] = {
 		"The environment under which a Rack app must run."),
 	
 	// WSGI-specific settings.
-	AP_INIT_FLAG("PassengerWSGIAutoDetect",
-		(FlagFunc) cmd_wsgi_auto_detect,
-		NULL,
-		RSRC_CONF,
-		"Whether auto-detection of WSGI applications should be enabled."),
+	// none
 	
 	// Backwards compatibility options.
 	AP_INIT_TAKE1("RailsRuby",

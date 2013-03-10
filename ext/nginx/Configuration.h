@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010, 2011, 2012 Phusion
+ * Copyright (C) 2010-2013 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,11 +45,13 @@ typedef struct {
     ngx_flag_t   debugger;
     ngx_flag_t   show_version_in_header;
     ngx_str_t    ruby;
+    ngx_str_t    python;
     ngx_str_t    environment;
     ngx_str_t    user;
     ngx_str_t    group;
     ngx_str_t    spawn_method;
     ngx_str_t    app_group_name;
+    ngx_str_t    app_root;
     ngx_str_t    app_rights;
     ngx_int_t    min_instances;
     ngx_int_t    max_requests;
@@ -69,6 +71,7 @@ typedef struct {
     ngx_str_t    root_dir;
     ngx_int_t    log_level;
     ngx_str_t    debug_log_file;
+    ngx_str_t    temp_dir;
     ngx_flag_t   abort_on_startup_error;
     ngx_uint_t   max_pool_size;
     ngx_uint_t   max_instances_per_app;
@@ -82,7 +85,6 @@ typedef struct {
     ngx_uint_t   union_station_gateway_port;
     ngx_str_t    union_station_gateway_cert;
     ngx_str_t    union_station_proxy_address;
-    ngx_str_t    union_station_proxy_type;
     ngx_array_t *prestart_uris;
 } passenger_main_conf_t;
 

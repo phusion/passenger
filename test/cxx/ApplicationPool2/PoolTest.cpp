@@ -35,11 +35,13 @@ namespace tut {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			retainSessions = false;
 			spawnerConfig = make_shared<SpawnerConfig>();
-			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation,
-				RandomGeneratorPtr(), spawnerConfig);
+			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator,
+				generation, spawnerConfig);
 			pool = make_shared<Pool>(bg.safe.get(), spawnerFactory);
+			pool->initialize();
 			bg.start();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);
+			setLogLevel(LVL_ERROR); // TODO: change to LVL_WARN
 		}
 		
 		~ApplicationPool2_PoolTest() {
@@ -47,12 +49,12 @@ namespace tut {
 			// additional code that depend on other fields in this
 			// class.
 			TRACE_POINT();
+			clearAllSessions();
+			UPDATE_TRACE_POINT();
 			pool->destroy();
 			UPDATE_TRACE_POINT();
 			pool.reset();
-			UPDATE_TRACE_POINT();
-			clearAllSessions();
-			setLogLevel(0);
+			setLogLevel(DEFAULT_LOG_LEVEL);
 			SystemTime::releaseAll();
 		}
 
@@ -559,6 +561,63 @@ namespace tut {
 		ensure_equals(currentSession->getProcess()->pid, 3);
 		ensure_equals(group->getWaitlist.size(), 0u);
 	}
+
+	TEST_METHOD(12) {
+		// Test shutting down.
+		ensureMinProcesses(2);
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
+
+	TEST_METHOD(13) {
+		// Test shutting down while Group is restarting.
+		initPoolDebugging();
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		ensureMinProcesses(1);
+
+		ensure_equals(pool->restartGroupsByAppRoot("stub/rack"), 1u);
+		debug->debugger->recv("About to end restarting");
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
+
+	TEST_METHOD(14) {
+		// Test shutting down while Group is spawning.
+		initPoolDebugging();
+		Options options = createOptions();
+		
+		pool->asyncGet(options, callback);
+		debug->debugger->recv("Begin spawn loop iteration 1");
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
+
+	TEST_METHOD(15) {
+		// Test shutting down while SuperGroup is initializing.
+		initPoolDebugging();
+		debug->spawning = false;
+		debug->superGroup = true;
+		Options options = createOptions();
+
+		pool->asyncGet(options, callback);
+		debug->debugger->recv("About to finish SuperGroup initialization");
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
+
+	TEST_METHOD(16) {
+		// Test shutting down while SuperGroup is restarting.
+		initPoolDebugging();
+		debug->spawning = false;
+		debug->superGroup = true;
+		debug->messages->send("Proceed with initializing SuperGroup");
+		ensureMinProcesses(1);
+
+		ensure_equals(pool->restartSuperGroupsByAppRoot("stub/rack"), 1u);
+		debug->debugger->recv("About to finish SuperGroup restart");
+		ensure(pool->detachSuperGroupByName("stub/rack"));
+		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
 	
 	
 	/*********** Test asyncGet() behavior on multiple SuperGroups,
@@ -598,7 +657,6 @@ namespace tut {
 		);
 		
 		ensure_equals(pool->getProcessCount(), 2u);
-		ensure(!superGroup1->detached());
 		ensure_equals(superGroup1->getProcessCount(), 0u);
 	}
 	
@@ -637,7 +695,6 @@ namespace tut {
 		);
 		
 		ensure_equals(pool->getProcessCount(), 2u);
-		ensure(!superGroup1->detached());
 		ensure_equals(superGroup1->getProcessCount(), 0u);
 	}
 	
@@ -665,8 +722,7 @@ namespace tut {
 		pool->asyncGet(options, callback);
 		{
 			LockGuard l(pool->syncher);
-			ensure("(1)", !session1->getProcess()->detached());
-			ensure("(2)", !fooGroup->detached());
+			ensure("(1)", session1->getProcess()->isAlive());
 			ensure_equals("(3)", fooGroup->getWaitlist.size(), 1u);
 		}
 
@@ -676,8 +732,7 @@ namespace tut {
 		SessionPtr session3 = pool->get(options, &ticket);
 		{
 			LockGuard l(pool->syncher);
-			ensure("(4)", session1->getProcess()->detached());
-			ensure("(5)", !fooGroup->detached());
+			ensure("(4)", !session1->getProcess()->isAlive());
 			ensure_equals("(6)", fooGroup->getWaitlist.size(), 1u);
 			ensure_equals("(7)", pool->getWaitlist.size(), 0u);
 		}
@@ -706,8 +761,9 @@ namespace tut {
 			result = number == 1;
 		);
 
+		ProcessPtr process = currentSession->getProcess();
 		pool->detachProcess(currentSession->getProcess());
-		ensure(currentSession->getProcess()->detached());
+		ensure(!process->isAlive());
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 2;
 		);
@@ -806,7 +862,7 @@ namespace tut {
 		pool->detachProcess(process);
 		LockGuard l(pool->syncher);
 		ensure_equals(pool->superGroups.size(), 1u);
-		ensure(!superGroup->detached());
+		ensure(superGroup->isAlive());
 		ensure(!superGroup->garbageCollectable());
 	}
 
@@ -821,12 +877,12 @@ namespace tut {
 			pool->disableProcess(processes[0]->gupid), DR_SUCCESS);
 		
 		LockGuard l(pool->syncher);
-		ensure(!processes[0]->detached());
+		ensure(processes[0]->isAlive());
 		ensure_equals("Process is disabled",
 			processes[0]->enabled,
 			Process::DISABLED);
 		ensure("Other processes are not affected",
-			!processes[1]->detached());
+			processes[1]->isAlive());
 		ensure_equals("Other processes are not affected",
 			processes[1]->enabled, Process::ENABLED);
 	}
@@ -949,19 +1005,19 @@ namespace tut {
 		}
 	}
 
-	// asyncGet() should not select a disabling process if there are enabled processes.
-	// asyncGet() should not select a disabling process when non-rolling restarting.
-	// asyncGet() should select a disabling process if there are no enabled processes
-	// in the group. If this happens then asyncGet() will also spawn a new process.
-	// asyncGet() should not select a disabled process.
+	// TODO: asyncGet() should not select a disabling process if there are enabled processes.
+	// TODO: asyncGet() should not select a disabling process when non-rolling restarting.
+	// TODO: asyncGet() should select a disabling process if there are no enabled processes
+	//       in the group. If this happens then asyncGet() will also spawn a new process.
+	// TODO: asyncGet() should not select a disabled process.
 
-	// If there are no enabled processes and all disabling processes are at full
-	// utilization, and the process that was being spawned becomes available
-	// earlier than any of the disabling processes, then the newly spawned process
-	// should handle the request.
+	// TODO: If there are no enabled processes and all disabling processes are at full
+	//       utilization, and the process that was being spawned becomes available
+	//       earlier than any of the disabling processes, then the newly spawned process
+	//       should handle the request.
 
-	// A disabling process becomes disabled as soon as it's done with
-	// all its request.
+	// TODO: A disabling process becomes disabled as soon as it's done with
+	//       all its request.
 
 	TEST_METHOD(50) {
 		// Disabling a process that's already being disabled should result in the
@@ -983,9 +1039,9 @@ namespace tut {
 		ensure_equals(code, (int) DR_SUCCESS);
 	}
 
-	// Enabling a process that's disabled succeeds immediately.
-	// Enabling a process that's disabling succeeds immediately. The disable
-	// callbacks will be called with DR_CANCELED.
+	// TODO: Enabling a process that's disabled succeeds immediately.
+	// TODO: Enabling a process that's disabling succeeds immediately. The disable
+	//       callbacks will be called with DR_CANCELED.
 	
 	
 	/*********** Other tests ***********/
@@ -1010,7 +1066,8 @@ namespace tut {
 
 		ensure_equals(pool->getProcessCount(), 2u);
 		ensure(pool->atFullCapacity());
-		pool->detachSuperGroup(pool->getSuperGroup("test"));
+		clearAllSessions();
+		pool->detachSuperGroupByName("test");
 		ensure(!pool->atFullCapacity());
 	}
 	
@@ -1120,7 +1177,6 @@ namespace tut {
 		options.appRoot = "tmp.wsgi";
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
-		ProcessPtr process;
 		pool->setMax(1);
 
 		// Send normal request.
@@ -1171,7 +1227,7 @@ namespace tut {
 
 		ensure(currentException != NULL);
 		shared_ptr<SpawnException> e = dynamic_pointer_cast<SpawnException>(currentException);
-		ensure_equals(e->getErrorPage(), "Something went wrong!");
+		ensure(e->getErrorPage().find("Something went wrong!") != string::npos);
 	}
 
 	TEST_METHOD(68) {
@@ -1210,7 +1266,7 @@ namespace tut {
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 2;
 		);
-		EVENTUALLY(2,
+		EVENTUALLY(5,
 			result = !pool->isSpawning();
 		);
 		SHOULD_NEVER_HAPPEN(500,
@@ -1302,31 +1358,48 @@ namespace tut {
 	}
 
 	TEST_METHOD(72) {
-		// If we restart while spawning is in progress, then the spawn
-		// loop will exit as soon as it has detected that we're restarting.
+		// If we restart while spawning is in progress, and the restart
+		// finishes before the process is done spawning, then that
+		// process will not be attached and the original spawn loop will
+		// abort. A new spawn loop will start to ensure that resource
+		// constraints are met.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		initPoolDebugging();
 		Options options = createOptions();
 		options.appRoot = "tmp.wsgi";
 		options.minProcesses = 3;
 
-		// Trigger spawn loop and freeze it at the point where it's spawning a process.
+		// Trigger spawn loop and freeze it at the point where it's spawning
+		// the second process.
 		pool->asyncGet(options, callback);
 		debug->debugger->recv("Begin spawn loop iteration 1");
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->debugger->recv("Begin spawn loop iteration 2");
+		ensure_equals("(1)", pool->getProcessCount(), 1u);
 
-		// Trigger restart, freeze the restart procedure, then let spawn loop continue.
+		// Trigger restart, wait until it's finished.
 		touchFile("tmp.wsgi/tmp/restart.txt", 1);
 		pool->asyncGet(options, callback);
-		debug->debugger->recv("About to end restarting");
-		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->messages->send("Finish restarting");
+		debug->debugger->recv("Restarting done");
+		ensure_equals("(2)", pool->getProcessCount(), 0u);
 
-		// The spawn loop will succeed at spawning this process.
-		// After the spawn loop attaches the process, it should detect the
-		// restart and stop, so that it never spawns the second and third processes.
+		// The restarter should have created a new spawn loop and
+		// instructed the old one to stop.
+		debug->debugger->recv("Begin spawn loop iteration 3");
+
+		// We let the old spawn loop continue, which should drop
+		// the second process and abort.
+		debug->messages->send("Proceed with spawn loop iteration 2");
 		debug->debugger->recv("Spawn loop done");
-		ensure_equals(debug->debugger->peek("At spawn loop iteration 2"), MessagePtr());
-		ensure_equals(debug->debugger->peek("At spawn loop iteration 3"), MessagePtr());
-		ensure_equals("(1)", pool->getProcessCount(), 1u);
+		ensure_equals("(3)", pool->getProcessCount(), 0u);
+
+		// We let the new spawn loop continue.
+		debug->messages->send("Proceed with spawn loop iteration 3");
+		debug->messages->send("Proceed with spawn loop iteration 4");
+		debug->messages->send("Proceed with spawn loop iteration 5");
+		debug->debugger->recv("Spawn loop done");
+		ensure_equals("(4)", pool->getProcessCount(), 3u);
 	}
 
 	TEST_METHOD(73) {
@@ -1427,7 +1500,7 @@ namespace tut {
 		retainSessions = true;
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
-		EVENTUALLY(5,
+		EVENTUALLY(10,
 			result = number == 2;
 		);
 		ensure_equals(pool->getProcessCount(), 2u);
@@ -1446,10 +1519,30 @@ namespace tut {
 		}
 	}
 
-	// Persistent connections.
-	// If one closes the session before it has reached EOF, and process's maximum concurrency
-	// has already been reached, then the pool should ping the process so that it can detect
-	// when the session's connection has been released by the app.
+	// TODO: Persistent connections.
+	// TODO: If one closes the session before it has reached EOF, and process's maximum concurrency
+	//       has already been reached, then the pool should ping the process so that it can detect
+	//       when the session's connection has been released by the app.
+
+	
+	/*********** Test previously discovered bugs ***********/
+	
+	TEST_METHOD(76) {
+		// Test detaching, then restarting. This should not violate any invariants.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+
+		SessionPtr session = pool->get(options, &ticket);
+		string gupid = session->getProcess()->gupid;
+		session.reset();
+		pool->detachProcess(gupid);
+		touchFile("tmp.wsgi/tmp/restart.txt", 1);
+		pool->get(options, &ticket).reset();
+	}
+
 
 	/*****************************/
 }

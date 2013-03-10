@@ -33,11 +33,13 @@
 #include <sys/select.h>
 #ifdef __linux__
 	#include <sys/syscall.h>
+	#include <features.h>
 #endif
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
+#include <cassert>
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
@@ -96,13 +98,22 @@ static bool stopOnAbort = false;
 static char *alternativeStack;
 static unsigned int alternativeStackSize;
 
-static unsigned int randomSeed;
+static volatile unsigned int abortHandlerCalled = 0;
+static unsigned int randomSeed = 0;
 static const char *argv0 = NULL;
 static const char *backtraceSanitizerPath = NULL;
 static bool backtraceSanitizerUseShell = false;
 static bool backtraceSanitizerPassProgramInfo = true;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
 static void *customDiagnosticsDumperUserData;
+
+// If assert() failed, its information is stored here.
+static struct {
+	const char *filename;
+	const char *function; // May be NULL.
+	const char *expression;
+	unsigned int line;
+} lastAssertionFailure;
 
 
 static void
@@ -253,6 +264,9 @@ appendSignalName(char *buf, int signo) {
 		break;
 	case SIGFPE:
 		buf = appendText(buf, "SIGFPE");
+		break;
+	case SIGILL:
+		buf = appendText(buf, "SIGILL");
 		break;
 	default:
 		return appendULL(buf, (unsigned long long) signo);
@@ -454,10 +468,12 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 			if (pipe(p) == -1) {
 				int e = errno;
 				end = state.messageBuf;
-				end = appendText(end, "Could not dump diagnostics: pipe() failed with errno=");
+				end = appendText(end, "Could not dump diagnostics through backtrace sanitizer: pipe() failed with errno=");
 				end = appendULL(end, e);
 				end = appendText(end, "\n");
+				end = appendText(end, "Falling back to writing to stderr directly...\n");
 				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 				return;
 			}
 
@@ -505,12 +521,29 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 			} else if (pid == -1) {
 				close(p[0]);
 				close(p[1]);
+				int e = errno;
+				end = state.messageBuf;
+				end = appendText(end, "Could not dump diagnostics through backtrace sanitizer: fork() failed with errno=");
+				end = appendULL(end, e);
+				end = appendText(end, "\n");
+				end = appendText(end, "Falling back to writing to stderr directly...\n");
+				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 
 			} else {
+				int status = -1;
+
 				close(p[0]);
 				backtrace_symbols_fd(backtraceStore, frames, p[1]);
 				close(p[1]);
-				waitpid(pid, NULL, 0);
+				if (waitpid(pid, &status, 0) == -1 || status != 0) {
+					end = state.messageBuf;
+					end = appendText(end, "ERROR: cannot execute '");
+					end = appendText(end, backtraceSanitizerPath);
+					end = appendText(end, "' for sanitizing the backtrace, writing to stderr directly...\n");
+					write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+					backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
+				}
 			}
 
 		} else {
@@ -524,12 +557,15 @@ runCustomDiagnosticsDumper(AbortHandlerState &state, void *userData) {
 	customDiagnosticsDumper(customDiagnosticsDumperUserData);
 }
 
+// This function is performed in a child process.
 static void
 dumpDiagnostics(AbortHandlerState &state) {
 	char *messageBuf = state.messageBuf;
+	char *end;
+	pid_t pid;
 
-	// Dump human-readable time string.
-	pid_t pid = asyncFork();
+	// Dump human-readable time string and string.
+	pid = asyncFork();
 	if (pid == 0) {
 		execlp("date", "date", (const char * const) 0);
 		_exit(1);
@@ -539,10 +575,45 @@ dumpDiagnostics(AbortHandlerState &state) {
 		waitpid(pid, NULL, 0);
 	}
 
+	// Dump system uname.
+	pid = asyncFork();
+	if (pid == 0) {
+		execlp("uname", "uname", "-mprsv", (const char * const) 0);
+		_exit(1);
+	} else if (pid == -1) {
+		safePrintErr("ERROR: Could not fork a process to dump the uname!\n");
+	} else {
+		waitpid(pid, NULL, 0);
+	}
+
+	end = messageBuf;
+	end = appendText(end, state.messagePrefix);
+	end = appendText(end, " ] Phusion Passenger version: " PASSENGER_VERSION "\n");
+	write(STDERR_FILENO, messageBuf, end - messageBuf);
+
+	if (lastAssertionFailure.filename != NULL) {
+		end = messageBuf;
+		end = appendText(end, state.messagePrefix);
+		end = appendText(end, " ] Last assertion failure: (");
+		end = appendText(end, lastAssertionFailure.expression);
+		end = appendText(end, "), ");
+		if (lastAssertionFailure.function != NULL) {
+			end = appendText(end, "function ");
+			end = appendText(end, lastAssertionFailure.function);
+			end = appendText(end, ", ");
+		}
+		end = appendText(end, "file ");
+		end = appendText(end, lastAssertionFailure.filename);
+		end = appendText(end, ", line ");
+		end = appendULL(end, lastAssertionFailure.line);
+		end = appendText(end, ".\n");
+		write(STDERR_FILENO, messageBuf, end - messageBuf);
+	}
+
 	// It is important that writing the message and the backtrace are two
 	// seperate operations because it's not entirely clear whether the
 	// latter is async signal safe and thus can crash.
-	char *end = messageBuf;
+	end = messageBuf;
 	end = appendText(end, state.messagePrefix);
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
 		end = appendText(end, " ] libc backtrace available!\n");
@@ -648,6 +719,40 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	time_t t = time(NULL);
 	char crashLogFile[256];
 
+	abortHandlerCalled++;
+	if (abortHandlerCalled > 1) {
+		// The abort handler itself crashed!
+		char *end = state.messageBuf;
+		end = appendText(end, "[ origpid=");
+		end = appendULL(end, (unsigned long long) state.pid);
+		end = appendText(end, ", pid=");
+		end = appendULL(end, (unsigned long long) getpid());
+		end = appendText(end, ", timestamp=");
+		end = appendULL(end, (unsigned long long) t);
+		if (abortHandlerCalled == 2) {
+			// This is the first time it crashed.
+			end = appendText(end, " ] Abort handler crashed! signo=");
+			end = appendSignalName(end, state.signo);
+			end = appendText(end, ", reason=");
+			end = appendSignalReason(end, state.info);
+			end = appendText(end, "\n");
+			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			// Run default signal handler.
+			raise(signo);
+		} else {
+			// This is the second time it crashed, meaning it failed to
+			// invoke the default signal handler to abort the process!
+			end = appendText(end, " ] Abort handler crashed again! Force exiting this time. signo=");
+			end = appendSignalName(end, state.signo);
+			end = appendText(end, ", reason=");
+			end = appendSignalReason(end, state.info);
+			end = appendText(end, "\n");
+			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			_exit(1);
+		}
+		return;
+	}
+
 	/* We want to dump the entire crash log to both stderr and a log file.
 	 * We use 'tee' for this.
 	 */
@@ -739,6 +844,11 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 		child = asyncFork();
 		if (child == 0) {
+			// OS X: for some reason the SIGPIPE handler may be reset to default after forking.
+			// Later in this program we're going to pipe backtrace_symbols_fd() into the backtrace
+			// sanitizer, which may fail, and we don't want the diagnostics process to crash
+			// with SIGPIPE as a result, so we ignore SIGPIPE again.
+			ignoreSigpipe();
 			dumpDiagnostics(state);
 			// The child process may or may or may not resume the original process.
 			// We do it ourselves just to be sure.
@@ -778,7 +888,27 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	raise(signo);
 }
 
-#ifdef __APPLE__
+/*
+ * Override assert() to add more features and to fix bugs. We save the information
+ * of the last assertion failure in a global variable so that we can print it
+ * to the crash diagnostics report.
+ */
+#if defined(__GLIBC__)
+	extern "C" __attribute__ ((__noreturn__))
+	void
+	__assert_fail(__const char *__assertion, __const char *__file,
+		unsigned int __line, __const char *__function)
+	{
+		lastAssertionFailure.filename = __file;
+		lastAssertionFailure.line = __line;
+		lastAssertionFailure.function = __function;
+		lastAssertionFailure.expression = __assertion;
+		fprintf(stderr, "Assertion failed! %s:%u: %s: %s\n", __file, __line, __function, __assertion);
+		fflush(stderr);
+		abort();
+	}
+
+#elif defined(__APPLE__)
 	/* On OS X, raise() and abort() unfortunately send SIGABRT to the main thread,
 	 * causing the original backtrace to be lost in the signal handler.
 	 * We work around this for anything in the same linkage unit by just definin
@@ -787,13 +917,17 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	
 	#include <pthread.h>
 
-	static int
+	extern "C" int
 	raise(int sig) {
 		return pthread_kill(pthread_self(), sig);
 	}
 
-	void
+	extern "C" void
 	__assert_rtn(const char *func, const char *file, int line, const char *expr) {
+		lastAssertionFailure.filename = file;
+		lastAssertionFailure.line = line;
+		lastAssertionFailure.function = func;
+		lastAssertionFailure.expression = expr;
 		if (func) {
 			fprintf(stderr, "Assertion failed: (%s), function %s, file %s, line %d.\n",
 				expr, func, file, line);
@@ -801,10 +935,11 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			fprintf(stderr, "Assertion failed: (%s), file %s, line %d.\n",
 				expr, file, line);
 		}
+		fflush(stderr);
 		abort();
 	}
 
-	void
+	extern "C" void
 	abort() {
 		sigset_t set;
 		sigemptyset(&set);
@@ -1254,7 +1389,8 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 			backtraceSanitizerPassProgramInfo = false;
 		}
 
-		setLogLevel(options.getInt("log_level", false, 0));
+		options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
+		setLogLevel(options.getInt("log_level"));
 		if (!options.get("debug_log_file", false).empty()) {
 			if (strcmp(processName, "PassengerWatchdog") == 0) {
 				/* Have the watchdog set STDOUT and STDERR to the debug

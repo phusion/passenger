@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -87,7 +87,7 @@ class MemoryStats
 	# Phusion Passenger is not running.
 	def passenger_processes
 		@passenger_processes ||= list_processes(:match =>
-			/((^| )Passenger |(^| )Rails:|(^| )Rack:|PassengerHelperAgent|PassengerWatchdog|PassengerLoggingAgent)/)
+			/((^| )Passenger |(^| )Rails:|(^| )Rack:|PassengerHelperAgent|PassengerWatchdog|PassengerLoggingAgent|wsgi-loader.py)/)
 	end
 	
 	# Returns the sum of the memory usages of all given processes.

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -26,11 +26,13 @@
 #define _PASSENGER_CONSTANTS_H_
 
 /* Don't forget to update lib/phusion_passenger.rb too. */
-#define PASSENGER_VERSION "3.9.2.beta"
+#define PASSENGER_VERSION "4.0.0.rc4"
 
 #define FEEDBACK_FD 3
 
 #define DEFAULT_LOG_LEVEL 0
+#define DEFAULT_RUBY "ruby"
+#define DEFAULT_PYTHON "python"
 #define DEFAULT_MAX_POOL_SIZE 6
 #define DEFAULT_POOL_IDLE_TIME 300
 #define DEFAULT_MAX_INSTANCES_PER_APP 0

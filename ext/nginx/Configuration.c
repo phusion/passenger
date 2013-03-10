@@ -57,11 +57,6 @@ static ngx_path_init_t  ngx_http_proxy_temp_path = {
 };
 
 
-static int
-ngx_str_equals(ngx_str_t *str, const char *value) {
-    return ngx_memn2cmp(str->data, (u_char *) value, str->len, strlen(value)) == 0;
-}
-
 void *
 passenger_create_main_conf(ngx_conf_t *cf)
 {
@@ -95,8 +90,6 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->union_station_gateway_cert.len = 0;
     conf->union_station_proxy_address.data = NULL;
     conf->union_station_proxy_address.len = 0;
-    conf->union_station_proxy_type.data = NULL;
-    conf->union_station_proxy_type.len = 0;
     
     conf->prestart_uris = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
     if (conf->prestart_uris == NULL) {
@@ -209,14 +202,6 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         conf->union_station_proxy_address.data = (u_char *) "";
     }
     
-    if (conf->union_station_proxy_type.len == 0) {
-        conf->union_station_proxy_type.data = (u_char *) "";
-        
-    } else if (!ngx_str_equals(&conf->union_station_proxy_type, "http")
-            && !ngx_str_equals(&conf->union_station_proxy_type, "socks5")) {
-        return "union_station_proxy_type may only be 'http' or 'socks5'.";
-    }
-    
     return NGX_CONF_OK;
 }
 
@@ -253,6 +238,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->show_version_in_header = NGX_CONF_UNSET;
     conf->ruby.data = NULL;
     conf->ruby.len = 0;
+    conf->python.data = NULL;
+    conf->python.len = 0;
     conf->environment.data = NULL;
     conf->environment.len = 0;
     conf->spawn_method.data = NULL;
@@ -265,6 +252,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->group.len = 0;
     conf->app_group_name.data = NULL;
     conf->app_group_name.len = 0;
+    conf->app_root.data = NULL;
+    conf->app_root.len = 0;
     conf->app_rights.data = NULL;
     conf->app_rights.len = 0;
     conf->base_uris = NGX_CONF_UNSET_PTR;
@@ -365,12 +354,14 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->debugger, prev->debugger, 0);
     ngx_conf_merge_value(conf->show_version_in_header, prev->show_version_in_header, 1);
     ngx_conf_merge_str_value(conf->ruby, prev->ruby, NULL);
+    ngx_conf_merge_str_value(conf->python, prev->python, NULL);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
     ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart");
     ngx_conf_merge_str_value(conf->union_station_key, prev->union_station_key, NULL);
     ngx_conf_merge_str_value(conf->user, prev->user, "");
     ngx_conf_merge_str_value(conf->group, prev->group, "");
     ngx_conf_merge_str_value(conf->app_group_name, prev->app_group_name, NULL);
+    ngx_conf_merge_str_value(conf->app_root, prev->app_root, NULL);
     ngx_conf_merge_str_value(conf->app_rights, prev->app_rights, NULL);
     ngx_conf_merge_value(conf->min_instances, prev->min_instances, (ngx_int_t) -1);
     ngx_conf_merge_value(conf->max_requests, prev->max_requests, (ngx_int_t) -1);
@@ -1054,6 +1045,13 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_loc_conf_t, ruby),
       NULL },
 
+    { ngx_string("passenger_python"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, python),
+      NULL },
+
     { ngx_string("passenger_log_level"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
@@ -1066,6 +1064,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, debug_log_file),
+      NULL },
+
+    { ngx_string("passenger_temp_dir"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, temp_dir),
       NULL },
 
     { ngx_string("passenger_abort_on_startup_error"),
@@ -1165,6 +1170,12 @@ const ngx_command_t passenger_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, app_group_name),
       NULL },
+    { ngx_string("passenger_app_root"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, app_root),
+      NULL },
 
     { ngx_string("passenger_app_rights"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
@@ -1220,13 +1231,6 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, union_station_proxy_address),
-      NULL },
-
-    { ngx_string("union_station_proxy_type"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, union_station_proxy_type),
       NULL },
 
     { ngx_string("union_station_filter"),

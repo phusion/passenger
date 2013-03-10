@@ -131,6 +131,9 @@ getStatusCodeAndReasonPhrase(int statusCode) {
 		return "429 Too Many Requests";
 	case 431:
 		return "431 Request Header Fields Too Large";
+	case 444:
+		// Nginx specific, used for timeouts.
+		return "444 No Response";
 	case 449:
 		return "449 Retry With";
 	case 450:
