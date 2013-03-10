@@ -315,9 +315,11 @@ When using the generic installation methods, you can check whether the gem or th
   Phusion Software Signing (software-signing@phusion.nl)
   Key ID: 0x0A212A8C
 
-This key is stored at link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with this command:
+This key is stored at link:http://pool.sks-keyservers.net/pks/lookup?op=get&search=0x2AC745A50A212A8C[http://pool.sks-keyservers.net/] and link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with one of these command:
 
 -------------------------------------------------------------------------
+gpg --keyserver pool.sks-keyservers.net --search-keys 0x2AC745A50A212A8C
+# -OR-
 gpg --keyserver keyserver.ubuntu.com --search-keys 0x2AC745A50A212A8C
 -------------------------------------------------------------------------
 
