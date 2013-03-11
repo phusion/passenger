@@ -484,7 +484,7 @@ Phusion's GPG key is as follows:
   Phusion Software Signing (software-signing@phusion.nl)
   Short key ID: 0x0A212A8C
   Long key ID: 0x2AC745A50A212A8C
-  Fingerprint: D5F0 8514 2693 9232 F437 AB72 2AC7 45A5 0A21 2A8C
+  Fingerprint: D5F0 8514 2693 9232 F437  AB72 2AC7 45A5 0A21 2A8C
 
 This key is stored at link:http://pool.sks-keyservers.net/pks/lookup?op=get&search=0x2AC745A50A212A8C[sks-keyservers.net] and link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with one of these command:
 
@@ -505,12 +505,12 @@ The Phusion Software Signing key is also *signed by the Phusion founders*. Their
   Hongli Lai (hongli@phusion.nl)
   Short key ID: 4B6F4332
   Long key ID: 06A131094B6F4332
-  Fingerprint: 64E8 0420 FC6A 499F 9E1F 81FA 06A1 3109 4B6F 4332
+  Fingerprint: 64E8 0420 FC6A 499F 9E1F  81FA 06A1 3109 4B6F 4332
 
   Ninh Bui (ninh@phusion.nl)
   Short key ID: 6FAF3782
   Long key ID: BA8DA3F46FAF3782
-  Fingerprint: 64E8 0420 FC6A 499F 9E1F 81FA 06A1 3109 4B6F 4332
+  Fingerprint: 353A 398C 49AF 5CD5 74A0  656C BA8D A3F4 6FAF 3782
 
 Both keys are stored at both sks-servers.net and keyserver.ubuntu.com. Import them with:
 
