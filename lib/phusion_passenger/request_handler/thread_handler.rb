@@ -35,6 +35,7 @@ class RequestHandler
 # This class encapsulates the logic of a single RequestHandler thread.
 class ThreadHandler
 	include DebugLogging
+	include Utils
 	include Utils::RobustInterruption
 
 	REQUEST_METHOD = 'REQUEST_METHOD'.freeze
@@ -129,7 +130,7 @@ private
 				elsif headers[REQUEST_METHOD] == OOBW
 					process_oobw(headers, connection)
 				else
-					process_request(headers, connection, @protocol == :http)
+					process_request(headers, connection, socket_wrapper, @protocol == :http)
 				end
 			rescue Exception
 				has_error = true
@@ -152,7 +153,7 @@ private
 			# Other errors might indicate a problem so we print them, but they're
 			# probably not bad enough to warrant stopping the request handler.
 			if !e.is_a?(Errno::EPIPE)
-				Utils.print_exception("Passenger RequestHandler's client socket", e)
+				print_exception("Passenger RequestHandler's client socket", e)
 			end
 		else
 			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
@@ -264,7 +265,7 @@ private
 		connection.write("oobw done")
 	end
 
-#	def process_request(env, connection, full_http_response)
+#	def process_request(env, connection, socket_wrapper, full_http_response)
 #		raise NotImplementedError, "Override with your own implementation!"
 #	end
 
@@ -374,9 +375,12 @@ private
 		return true
 	end
 
-	def should_reraise_app_error?(e)
-		# Stubable by unit tests.
+	def should_reraise_app_error?(e, socket_wrapper)
 		return false
+	end
+
+	def should_swallow_app_error?(e, socket_wrapper)
+		return socket_wrapper && socket_wrapper.source_of_exception?(e) && e.is_a?(Errno::EPIPE)
 	end
 end
 

@@ -51,7 +51,7 @@ module ThreadHandlerExtension
 	STATUS         = "Status: "       # :nodoc:
 	NAME_VALUE_SEPARATOR = ": "       # :nodoc:
 
-	def process_request(env, connection, full_http_response)
+	def process_request(env, connection, socket_wrapper, full_http_response)
 		rewindable_input = PhusionPassenger::Utils::TeeInput.new(connection, env)
 		begin
 			env[RACK_VERSION]      = RACK_VERSION_VALUE
@@ -71,17 +71,15 @@ module ThreadHandlerExtension
 			begin
 				status, headers, body = @app.call(env)
 			rescue => e
-				if should_reraise_app_error?(e)
+				if should_reraise_app_error?(e, socket_wrapper)
 					raise e
-				else
+				elsif !should_swallow_app_error?(e, socket_wrapper)
 					# It's a good idea to catch application exceptions here because
 					# otherwise maliciously crafted responses can crash the app,
 					# forcing it to be respawned, and thereby effectively DoSing it.
-					error("*** Application exception caught in Phusion Passenger request handler: " <<
-						"#{e.message || e.to_s} (#{e.class})\n" <<
-						"    " << e.backtrace.join("\n    "))
-					return false
+					print_exception("Rack application object", e)
 				end
+				return false
 			end
 
 			# Application requested a full socket hijack.
@@ -133,8 +131,18 @@ module ThreadHandlerExtension
 				else
 					connection.writev(headers_output)
 					if body
-						body.each do |s|
-							connection.write(s)
+						begin
+							body.each do |s|
+								connection.write(s)
+							end
+						rescue => e
+							if should_reraise_app_error?(e, socket_wrapper)
+								raise e
+							elsif !should_swallow_app_error?(e, socket_wrapper)
+								# Body objects can raise exceptions in #each.
+								print_exception("Rack body object #each method", e)
+							end
+							return false
 						end
 					end
 					return false
