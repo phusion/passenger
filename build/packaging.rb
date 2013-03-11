@@ -30,7 +30,7 @@ task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
 	version    = PhusionPassenger::VERSION_STRING
 	tag_prefix = (basename !~ /enterprise/) ? 'release' : 'enterprise'
 
-	sh "git tag -s #{tag_prefix}-#{version}"
+	sh "git tag -s #{tag_prefix}-#{version} -u 0A212A8C"
 
 	puts "Proceed with pushing tag to Github and uploading the gem and signatures? [y/n]"
 	if STDIN.readline == "y\n"
