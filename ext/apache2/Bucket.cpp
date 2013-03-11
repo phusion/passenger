@@ -83,7 +83,7 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 		 * non-blocking read request, we can prevent ap_content_length_filter
 		 * from buffering all data.
 		 */
-		//return APR_EAGAIN;
+		return APR_EAGAIN;
 	}
 	
 	buf = (char *) apr_bucket_alloc(APR_BUCKET_BUFF_SIZE, bucket->list);
