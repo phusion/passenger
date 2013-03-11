@@ -23,8 +23,34 @@
 
 task :clobber => 'package:clean'
 
-desc "Build the gem and tarball"
-task 'package' => ['package:gem', 'package:tarball']
+desc "Build, sign & upload gem & tarball"
+task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
+	require 'phusion_passenger'
+	basename   = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
+	version    = PhusionPassenger::VERSION_STRING
+	tag_prefix = (basename !~ /enterprise/) ? 'release' : 'enterprise'
+
+	sh "git tag -s #{tag_prefix}-#{version}"
+
+	puts "Proceed with pushing tag to Github and uploading the gem and signatures? [y/n]"
+	if STDIN.readline == "y\n"
+		sh "git push origin #{tag_prefix}-#{version}"
+		if basename !~ /enterprise/
+			sh "scp pkg/#{basename}.{gem.asc,tar.gz.asc} app@shell.phusion.nl:/u/apps/signatures/phusion-passenger/"
+			sh "gem push pkg/passenger-#{version}.gem"
+			puts "--------------"
+			puts "All done. Please upload pkg/passenger-#{version}.tar.gz " +
+				"to RubyForge and update the version number in the Phusion Passenger website."
+		else
+			dir = "/u/apps/passenger_website/shared"
+			subdir = string_option('NAME', version)
+			sh "scp pkg/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
+			sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
+		end
+	else
+		puts "Did not upload anything."
+	end
+end
 
 task 'package:check' do
 	require 'phusion_passenger'
@@ -35,16 +61,14 @@ task 'package:check' do
 	end
 end
 
-desc "Build the gem"
-task 'package:gem' => [:doc, 'package:check'] do
+task 'package:gem' => Packaging::ASCII_DOCS + ['package:check'] do
 	require 'phusion_passenger'
-	sh "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec"
+	sh "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec --sign --key 0x0A212A8C"
 	sh "mkdir -p pkg"
 	sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem pkg/"
 end
 
-desc "Build the tarball"
-task 'package:tarball' => [:doc, 'package:check'] do
+task 'package:tarball' => Packaging::ASCII_DOCS + ['package:check'] do
 	require 'phusion_passenger'
 	require 'fileutils'
 
@@ -69,11 +93,47 @@ task 'package:tarball' => [:doc, 'package:check'] do
 	sh "rm -rf pkg/#{basename}"
 end
 
-desc "Remove gem and tarball"
+task 'package:sign' do
+	require 'phusion_passenger'
+
+	if File.exist?(File.expand_path("~/.gnupg/gpg-agent.conf")) || ENV['GPG_AGENT_INFO']
+		puts "It looks like you're using gpg-agent, so skipping automatically password caching."
+	else
+		begin
+			require 'highline'
+		rescue LoadError
+			abort "Please run `gem install highline` first."
+		end
+		h = HighLine.new
+		password = h.ask("Password for software-signing@phusion.nl GPG key: ") { |q| q.echo = false }
+		passphrase_opt = "--passphrase-file .gpg-password"
+	end
+	
+	begin
+		if password
+			File.open(".gpg-password", "w", 0600) do |f|
+				f.write(password)
+			end
+		end
+		version = PhusionPassenger::VERSION_STRING
+		["passenger-#{version}.gem",
+		 "passenger-#{version}.tar.gz",
+		 "passenger-enterprise-server-#{version}.gem",
+		 "passenger-enterprise-server-#{version}.tar.gz"].each do |name|
+			if File.exist?("pkg/#{name}")
+				sh "gpg --sign --detach-sign #{passphrase_opt} --local-user software-signing@phusion.nl --armor pkg/#{name}"
+			end
+		end
+	ensure
+		File.unlink('.gpg-password') if File.exist?('.gpg-password')
+	end
+end
+
+desc "Remove gem, tarball and signatures"
 task 'package:clean' do
 	require 'phusion_passenger'
-	sh "rm -f #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem"
-	sh "rm -f #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.tar.gz"
+	basename = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
+	sh "rm -f pkg/#{basename}.{gem,gem.asc,tar.gz,tar.gz.asc}"
 end
 
 desc "Create a fakeroot, useful for building native packages"
@@ -157,59 +217,4 @@ task 'package:debian' => 'package:check' do
 	end
 	
 	sh "debuild"
-end
-
-desc "Sign all packaged files"
-task 'package:sign' => 'package:check' do
-	require 'phusion_passenger'
-	begin
-		require 'highline'
-	rescue LoadError
-		abort "Please run `gem install highline` first."
-	end
-	h = HighLine.new
-	password = h.ask("Password for software-signing@phusion.nl GPG key: ") { |q| q.echo = false }
-	begin
-		File.open(".gpg-password", "w", 0600) do |f|
-			f.write(password)
-		end
-		version = PhusionPassenger::VERSION_STRING
-		["passenger-#{version}.gem",
-		 "passenger-#{version}.tar.gz",
-		 "passenger-enterprise-server-#{version}.gem",
-		 "passenger-enterprise-server-#{version}.tar.gz"].each do |name|
-			if File.exist?("pkg/#{name}")
-				sh "gpg --sign --detach-sign --passphrase-file .gpg-password --local-user software-signing@phusion.nl --armor pkg/#{name}"
-			end
-		end
-	ensure
-		File.unlink('.gpg-password') if File.exist?('.gpg-password')
-	end
-end
-
-desc "Upload packages and signatures"
-task 'package:upload' => ['package', 'package:sign'] do
-	require 'phusion_passenger'
-	version = PhusionPassenger::VERSION_STRING
-
-	signatures = []
-	["passenger-#{version}.gem.asc",
-	 "passenger-#{version}.tar.gz.asc",
-	 "passenger-enterprise-server-#{version}.gem.asc",
-	 "passenger-enterprise-server-#{version}.tar.gz.asc"].each do |name|
-		if File.exist?("pkg/#{name}")
-			signatures << "pkg/#{name}"
-		end
-	end
-	sh "scp #{signatures.join(' ')} app@shell.phusion.nl:/u/apps/signatures/phusion-passenger/"
-
-	if File.exist?("pkg/passenger-#{version}.gem")
-		sh "gem push pkg/passenger-#{version}.gem"
-	end
-
-	if File.exist?("pkg/passenger-#{version}.tar.gz")
-		puts "--------------"
-		puts "All done. Please upload pkg/passenger-#{version}.tar.gz " +
-			"to RubyForge and update the version number in the Phusion Passenger website."
-	end
 end
