@@ -308,31 +308,6 @@ endif::[]
 Please refer to <<verify_passenger_running,this section>>. Note that all Phusion Passenger administration scripts are located inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-memory-stats'.
 
 
-=== Cryptographic verification of installation files
-
-When using the generic installation methods, you can check whether the gem or the tarball are legit (i.e. whether they came from Phusion) by checking them against their GPG digital signatures. Starting from the open source version 4.0.0 RC 4, or the Enterprise version 4.0.0 RC 1, both the gem and tarball are signed with Phusion's GPG key:
-
-  Phusion Software Signing (software-signing@phusion.nl)
-  Short key ID: 0x0A212A8C
-  Fingerprint: D5F0 8514 2693 9232 F437 AB72 2AC7 45A5 0A21 2A8C
-
-This key is stored at link:http://pool.sks-keyservers.net/pks/lookup?op=get&search=0x2AC745A50A212A8C[http://pool.sks-keyservers.net/] and link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with one of these command:
-
--------------------------------------------------------------------------
-gpg --keyserver pool.sks-keyservers.net --search-keys 0x2AC745A50A212A8C
-# -OR-
-gpg --keyserver keyserver.ubuntu.com --search-keys 0x2AC745A50A212A8C
--------------------------------------------------------------------------
-
-You can find the open source version's GPG signatures at https://www.phusionpassenger.com/signatures/, or the Enterprise version's GPG signatures in the link:https://www.phusionpassenger.com/orders[Customer Area]. You can verify the validity of a file against its signature as follows:
-
--------------------------------------------------------------------------
-gpg --verify filename.asc filename
--------------------------------------------------------------------------
-
-The DEB and RPM packages are signed with the signatures of the respective packagers. Phusion does not provide signatures for them.
-
-
 === Installing or upgrading on Debian 6 or Ubuntu
 
 John Leach from Brightbox has kindly provided Ubuntu packages for Phusion Passenger. The Ubuntu Lucid packages are compatible with Debian 6. The packages are available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
@@ -494,6 +469,98 @@ Customers who have bought Phusion Passenger Enterprise can upgrade their open so
 2. Install the Enterprise version by following one of the installation guides in this section (e.g. <<rubygems_generic_install,RubyGems generic installation>> or <<tarball_generic_install,tarball generic installation>>).
 
 The uninstallation is necessary because the Enterprise Ruby gem has a different gem name ('passenger-enterprise-server' instead of 'passenger'), but the same administration command names (e.g. `passenger-status`). Uninstalling the open source version avoids any conflicts.
+
+
+=== Cryptographic verification of installation files
+
+==== Synopsis
+
+We digitally sign various files with our GPG key so that you can check whether they're legit, i.e. whether they really came from Phusion and haven't been tampered with by a third party. We apply signing since the open source version 4.0.0 RC 4, or the Enterprise version 4.0.0 RC 1.
+
+==== Importing the Phusion Software Signing key
+
+Phusion's GPG key is as follows:
+
+  Phusion Software Signing (software-signing@phusion.nl)
+  Short key ID: 0x0A212A8C
+  Long key ID: 0x2AC745A50A212A8C
+  Fingerprint: D5F0 8514 2693 9232 F437 AB72 2AC7 45A5 0A21 2A8C
+
+This key is stored at link:http://pool.sks-keyservers.net/pks/lookup?op=get&search=0x2AC745A50A212A8C[sks-keyservers.net] and link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with one of these command:
+
+-------------------------------------------------------------------------
+gpg --keyserver pool.sks-keyservers.net --search-keys 0x2AC745A50A212A8C
+# -OR-
+gpg --keyserver keyserver.ubuntu.com --search-keys 0x2AC745A50A212A8C
+-------------------------------------------------------------------------
+
+The Phusion Software Signing key is only used for signing software. It's never used for signing emails or for encrypting files, so please be suspicious if you encounter usage of this key outside the context of signing software, and alert us at support@phusion.nl.
+
+The email address software-signing@phusion.nl redirects to info@phusion.nl so it's safe to send email there.
+
+==== Verifying the Phusion Software Signing key
+
+The Phusion Software Signing key is also *signed by the Phusion founders*. Their keys are as follows:
+
+  Hongli Lai (hongli@phusion.nl)
+  Short key ID: 4B6F4332
+  Long key ID: 06A131094B6F4332
+  Fingerprint: 64E8 0420 FC6A 499F 9E1F 81FA 06A1 3109 4B6F 4332
+
+  Ninh Bui (ninh@phusion.nl)
+  Short key ID: 6FAF3782
+  Long key ID: BA8DA3F46FAF3782
+  Fingerprint: 64E8 0420 FC6A 499F 9E1F 81FA 06A1 3109 4B6F 4332
+
+Both keys are stored at both sks-servers.net and keyserver.ubuntu.com. Import them with:
+
+------------------------------------------
+gpg --keyserver pool.sks-servers.net --search-keys 0x06A131094B6F4332
+gpg --keyserver pool.sks-servers.net --search-keys 0xBA8DA3F46FAF3782
+# -OR-
+gpg --keyserver keyserver.ubuntu.com --search-keys 0x06A131094B6F4332
+gpg --keyserver keyserver.ubuntu.com --search-keys 0xBA8DA3F46FAF3782
+------------------------------------------
+
+==== Verifying the gem and tarball
+
+You can find the open source version's gem and tarball GPG signatures at https://www.phusionpassenger.com/signatures/. The Enterprise version's GPG signatures can be found in the link:https://www.phusionpassenger.com/orders[Customer Area]. All signatures have the '.asc' extension. Once you have imported our key, you can verify the validity of a file against its signature as follows:
+
+-----------------------------------------
+$ gpg --verify passenger-x.x.x.tar.gz.asc passenger-x.x.x.tar.gz
+gpg: Signature made Mon Mar 11 09:45:46 2013 CET using RSA key ID 0A212A8C
+gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>"
+-----------------------------------------
+
+==== Verifying Git signatures
+
+Tags in the link:https://github.com/FooBarWidget/passenger[Git repository for the open source version] are also tagged. You can verify a Git tag as follows:
+
+-------------------------------------------------------
+$ git tag --verify release-x.x.x
+object d886f34b5705e4314feccaf0d77b9a38416e15e0
+type commit
+tag release-4.0.0.rc5
+tagger Hongli Lai (Phusion) <hongli@phusion.nl> 1362993117 +0100
+
+This is a tag message.
+gpg: Signature made Mon Mar 11 10:12:02 2013 CET using RSA key ID 0A212A8C
+gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>"
+-------------------------------------------------------
+
+==== Verifying DEB and RPM packages
+
+The DEB and RPM packages are signed with the signatures of the respective packagers. Phusion does not provide signatures for them.
+
+==== Revocation
+
+In the event our key is compromised, we will revoke the key and upload the revocation information to sks-servers.net and keyserver.ubuntu.com. However your system will not know about the revocation until you update the keys from the keyservers. You should update your keys regularly (e.g. once a week) by invoking:
+
+-------------------------------------------------------
+gpg --refresh-keys --keyserver pool.sks-servers.net
+# -OR-
+gpg --refresh-keys --keyserver keyserver.ubuntu.com
+-------------------------------------------------------
 
 
 === Non-interactive, automatic, headless installs or upgrades

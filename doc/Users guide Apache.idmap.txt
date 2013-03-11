@@ -26,13 +26,27 @@
 
 2.3. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
 
-2.4. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-ed3r9v
+2.4. Installing or upgrading on Debian 6 or Ubuntu	=>	installing-or-upgrading-on-ubuntu-1xg22xs
 
-2.5. Installing or upgrading on Debian 6 or Ubuntu	=>	installing-or-upgrading-on-ubuntu-1xg22xs
+2.5. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
 
-2.6. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
+2.6. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-b17h8g
 
-2.7. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-b17h8g
+2.7. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-ed3r9v
+
+2.7.1. Synopsis	=>	synopsis-uwnz2o
+
+2.7.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1x0rhv
+
+2.7.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-10430lg
+
+2.7.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-1nf0uov
+
+2.7.5. Verifying Git signatures	=>	verifying-git-signatures-oaafwd
+
+2.7.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-vgtv04
+
+2.7.7. Revocation	=>	revocation-4o01n2
 
 2.8. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
 
