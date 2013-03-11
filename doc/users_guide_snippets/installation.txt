@@ -313,7 +313,8 @@ Please refer to <<verify_passenger_running,this section>>. Note that all Phusion
 When using the generic installation methods, you can check whether the gem or the tarball are legit (i.e. whether they came from Phusion) by checking them against their GPG digital signatures. Starting from the open source version 4.0.0 RC 4, or the Enterprise version 4.0.0 RC 1, both the gem and tarball are signed with Phusion's GPG key:
 
   Phusion Software Signing (software-signing@phusion.nl)
-  Key ID: 0x0A212A8C
+  Short key ID: 0x0A212A8C
+  Fingerprint: D5F0 8514 2693 9232 F437 AB72 2AC7 45A5 0A21 2A8C
 
 This key is stored at link:http://pool.sks-keyservers.net/pks/lookup?op=get&search=0x2AC745A50A212A8C[http://pool.sks-keyservers.net/] and link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with one of these command:
 
