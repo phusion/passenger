@@ -479,14 +479,14 @@ We digitally sign various files with our GPG key so that you can check whether t
 
 ==== Importing the Phusion Software Signing key
 
-Phusion's GPG key is as follows:
+Phusion's GPG key for signing software is as follows:
 
   Phusion Software Signing (software-signing@phusion.nl)
   Short key ID: 0x0A212A8C
   Long key ID: 0x2AC745A50A212A8C
   Fingerprint: D5F0 8514 2693 9232 F437  AB72 2AC7 45A5 0A21 2A8C
 
-This key is stored at link:http://pool.sks-keyservers.net/pks/lookup?op=get&search=0x2AC745A50A212A8C[sks-keyservers.net] and link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with one of these command:
+This key is stored at link:http://www.phusion.nl/about/gpg[the Phusion website] and at the key servers link:http://pool.sks-keyservers.net/pks/lookup?op=get&search=0x2AC745A50A212A8C[sks-keyservers.net] and link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with one of these command:
 
 -------------------------------------------------------------------------
 gpg --keyserver pool.sks-keyservers.net --search-keys 0x2AC745A50A212A8C
@@ -494,7 +494,7 @@ gpg --keyserver pool.sks-keyservers.net --search-keys 0x2AC745A50A212A8C
 gpg --keyserver keyserver.ubuntu.com --search-keys 0x2AC745A50A212A8C
 -------------------------------------------------------------------------
 
-The Phusion Software Signing key is only used for signing software. It's never used for signing emails or for encrypting files, so please be suspicious if you encounter usage of this key outside the context of signing software, and alert us at support@phusion.nl.
+The Phusion Software Signing key is only used for signing software. It's never used for signing emails or for encrypting files, so please be suspicious if you encounter usage of this key outside the context of signing software, and alert us at support@phusion.nl. Include "notspam" in the message to bypass our spam filter.
 
 The email address software-signing@phusion.nl redirects to info@phusion.nl so it's safe to send email there.
 
