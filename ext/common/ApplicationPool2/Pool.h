@@ -801,6 +801,7 @@ public:
 			options);
 		superGroup->initialize();
 		superGroups.set(options.getAppGroupName(), superGroup);
+		garbageCollectionCond.notify_all();
 		return superGroup;
 	}
 	
@@ -986,6 +987,7 @@ public:
 				superGroup = make_shared<SuperGroup>(shared_from_this(), options);
 				superGroup->initialize();
 				superGroups.set(options.getAppGroupName(), superGroup);
+				garbageCollectionCond.notify_all();
 				SessionPtr session = superGroup->get(options, callback);
 				/* The SuperGroup is still initializing so the callback
 				 * should now have been put on the wait list,

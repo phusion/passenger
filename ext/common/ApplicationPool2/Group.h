@@ -181,6 +181,7 @@ private:
 		vector<Callback> postLockActions);
 	void startCheckingDetachedProcesses(bool immediately);
 	void detachedProcessesCheckerMain(GroupPtr self);
+	void wakeUpGarbageCollector();
 	bool poolAtFullCapacity() const;
 	bool anotherGroupIsWaitingForCapacity() const;
 
@@ -827,6 +828,8 @@ public:
 			}
 		}
 		disableWaitlist = newDisableWaitlist;
+
+		wakeUpGarbageCollector();
 	}
 
 	/**

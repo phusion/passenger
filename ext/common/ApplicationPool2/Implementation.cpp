@@ -953,6 +953,11 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 	}
 }
 
+void
+Group::wakeUpGarbageCollector() {
+	getPool()->garbageCollectionCond.notify_all();
+}
+
 bool
 Group::poolAtFullCapacity() const {
 	return getPool()->atFullCapacity(false);
