@@ -618,7 +618,7 @@ public:
 		// Schedule next garbage collection run.
 		unsigned long long sleepTime;
 		if (nextGcRunTime == 0 || nextGcRunTime <= now) {
-			sleepTime = maxIdleTime;
+			sleepTime = std::max<unsigned long long>(maxIdleTime, 10 * 60 * 1000000);
 		} else {
 			sleepTime = nextGcRunTime - now;
 		}

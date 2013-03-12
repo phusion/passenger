@@ -16,6 +16,8 @@ Release 4.0.0 release candidate 5
  * Out-of-Band Garbage Collection now works properly when the application
    has disabled garbage collection. Fixes issue #859.
  * Fixed support for /usr/bin/python on OS X. Fixes issue #855.
+ * Fixed looping-without-sleeping in the ApplicationPool garbage collector
+   if PassengerPoolIdleTime is set to 0. Fixes issue #858.
  * Fixed some process memory usage measurement bugs.
  * Fixed process memory usage measurement on NetBSD. Fixes issue #736.
  * Worked around some RVM bugs.
