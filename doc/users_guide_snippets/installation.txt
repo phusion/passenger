@@ -807,7 +807,7 @@ done this, you need to remove the Phusion Passenger files.
 - If you installed Phusion Passenger through APT or YUM, then use them to uninstall Phusion Passenger.
 
 ifdef::nginx[]
-Nginx does not have to be recompiled. Altough it contains Phusion Passenger code, it will not do anything when Phusion Passenger is disabled.
+Nginx does not have to be recompiled. Altough it contains Phusion Passenger code, it will not do anything when all Phusion Passenger configuration directives are removed.
 endif::[]
 
 
