@@ -70,6 +70,13 @@ module PlatformInfo
 				end
 
 				# Correctness of these commands are confirmed by mpapis.
+				# If we ever encounter a case for which this logic is not sufficient,
+				# try mpapis' pseudo code:
+				# 
+				#   rvm_update_prefix  = write_to rvm_path ? "" : "rvmsudo"
+				#   rvm_gemhome_prefix  = write_to GEM_HOME ? "" : "rvmsudo"
+				#   repair_command  = "#{rvm_update_prefix} rvm get stable && rvm reload && #{rvm_gemhome_prefix} rvm repair all"
+				#   wrapper_command = "#{rvm_gemhome_prefix} rvm wrapper #{rvm_ruby_string} --no-prefix --all"
 				case rvm_installation_mode
 				when :single
 					repair_command  = "rvm get stable && rvm reload && rvm repair all"
