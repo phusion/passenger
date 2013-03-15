@@ -483,8 +483,8 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 			 * become available then call them now.
 			 */
 			UPDATE_TRACE_POINT();
+			// Already calls verifyInvariants().
 			assignSessionsToGetWaitersQuickly(lock);
-			verifyInvariants();
 		}
 	}
 }
