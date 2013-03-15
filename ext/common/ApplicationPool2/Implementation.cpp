@@ -562,6 +562,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	Pool::DebugSupportPtr debug = pool->debugSupport;
 
 	UPDATE_TRACE_POINT();
+	P_DEBUG("Performing OOBW request for process " << process->inspect());
 	if (debug != NULL && debug->oobw) {
 		debug->debugger->send("OOBW request about to start");
 		debug->messages->recv("Proceed with OOBW request");
@@ -585,7 +586,6 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	UPDATE_TRACE_POINT();
 	unsigned long long timeout = 1000 * 1000 * 60; // 1 min
 	try {
-		ScopeGuard guard(boost::bind(&Socket::checkinConnection, socket, connection));
 		this_thread::restore_interruption ri(di);
 		this_thread::restore_syscall_interruption rsi(dsi);
 
@@ -594,7 +594,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		// need to completely read the response).
 		connection = socket->checkoutConnection();
 		connection.fail = true;
-		
+		ScopeGuard guard(boost::bind(&Socket::checkinConnection, socket, connection));
 		
 		// This is copied from RequestHandler when it is sending data using the
 		// "session" protocol.
@@ -648,6 +648,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	actions.clear();
 
 	UPDATE_TRACE_POINT();
+	P_DEBUG("Finished OOBW request for process " << process->inspect());
 	if (debug != NULL && debug->oobw) {
 		debug->debugger->send("OOBW request finished");
 	}
