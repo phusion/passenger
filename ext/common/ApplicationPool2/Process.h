@@ -252,10 +252,17 @@ public:
 		 */
 		DISABLED
 	} enabled;
-	/** Marks whether the process requested out-of-band work. If so, we need to
-	 * wait until all sessions have ended and the process has been disabled.
-	 */
-	bool oobwRequested;
+	enum OobwStatus {
+		/** Process is not using out-of-band work. */
+		OOBW_NOT_ACTIVE,
+		/** The process has requested out-of-band work. At some point, the code
+		 * will see this and set the status to OOBW_IN_PROGRESS. */
+		OOBW_REQUESTED,
+		/** An out-of-band work is in progress. We need to wait until all
+		 * sessions have ended and the process has been disabled before the
+		 * out-of-band work can be performed. */
+		OOBW_IN_PROGRESS,
+	} oobwStatus;
 	/** Caches whether or not the OS process still exists. */
 	mutable bool m_osProcessExists;
 	/** Collected by Pool::collectAnalytics(). */
@@ -291,7 +298,7 @@ public:
 		  processed(0),
 		  lifeStatus(ALIVE),
 		  enabled(ENABLED),
-		  oobwRequested(false),
+		  oobwStatus(OOBW_NOT_ACTIVE),
 		  m_osProcessExists(true)
 	{
 		SpawnerConfigPtr config;

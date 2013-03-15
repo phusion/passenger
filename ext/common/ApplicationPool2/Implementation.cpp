@@ -494,9 +494,9 @@ Group::requestOOBW(const ProcessPtr &process) {
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
 	unique_lock<boost::mutex> lock(pool->syncher);
-	assert(isAlive());
-
-	process->oobwRequested = true;
+	if (isAlive() && process->isAlive() && process->oobwStatus == Process::OOBW_NOT_ACTIVE) {
+		process->oobwStatus = Process::OOBW_REQUESTED;
+	}
 }
 
 // The 'self' parameter is for keeping the current Group object alive
@@ -521,7 +521,7 @@ Group::lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult 
 
 void
 Group::asyncOOBWRequestIfNeeded(const ProcessPtr &process) {
-	if (!process->oobwRequested || !process->isAlive()) {
+	if (process->oobwStatus != Process::OOBW_REQUESTED || !process->isAlive()) {
 		return;
 	}
 	if (process->enabled == Process::ENABLED) {
@@ -576,7 +576,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 			return;
 		}
 		
-		assert(process->oobwRequested);
+		assert(process->oobwStatus = Process::OOBW_IN_PROGRESS);
 		assert(process->sessions == 0);
 		assert(process->enabled == Process::DISABLED);
 		socket = process->sessionSockets.top();
@@ -635,7 +635,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 			return;
 		}
 		
-		process->oobwRequested = false;
+		process->oobwStatus = Process::OOBW_NOT_ACTIVE;
 		if (process->enabled == Process::DISABLED) {
 			enable(process, actions);
 			assignSessionsToGetWaiters(actions);
