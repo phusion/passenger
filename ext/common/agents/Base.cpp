@@ -367,7 +367,7 @@ appendSignalReason(char *buf, siginfo_t *info) {
 	return buf;
 }
 
-static void
+static int
 runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *userData, int timeLimit) {
 	char *end;
 	pid_t child;
@@ -376,11 +376,11 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 	if (pipe(p) == -1) {
 		e = errno;
 		end = state.messageBuf;
-		end = appendText(end, "Could not dump diagnostics: pipe() failed with errno=");
+		end = appendText(end, "Could not create subprocess: pipe() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
 		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
-		return;
+		return -1;
 	}
 
 	child = asyncFork();
@@ -388,18 +388,21 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 		close(p[0]);
 		callback(state, userData);
 		_exit(0);
+		return -1;
 
 	} else if (child == -1) {
 		e = errno;
 		close(p[0]);
 		close(p[1]);
 		end = state.messageBuf;
-		end = appendText(end, "Could not dump diagnostics: fork() failed with errno=");
+		end = appendText(end, "Could not create subprocess: fork() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
 		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		return -1;
 
 	} else {
+		int status;
 		close(p[1]);
 
 		// We give the child process a time limit. If it doesn't succeed in
@@ -410,10 +413,91 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 		fd.events = POLLIN | POLLHUP | POLLERR;
 		if (poll(&fd, 1, timeLimit) <= 0) {
 			kill(child, SIGKILL);
-			safePrintErr("Could not dump diagnostics: child process did not exit in time\n");
+			safePrintErr("Could not run child process: it did not exit in time\n");
 		}
 		close(p[0]);
-		waitpid(child, NULL, 0);
+		if (waitpid(child, &status, 0) == child) {
+			return status;
+		} else {
+			return -1;
+		}
+	}
+}
+
+static void
+dumpFileDescriptorInfoWithLsof(AbortHandlerState &state, void *userData) {
+	char *end;
+
+	end = state.messageBuf;
+	end = appendULL(end, state.pid);
+	*end = '\0';
+
+	closeAllFileDescriptors(2);
+
+	execlp("lsof", "lsof", "-p", state.messageBuf, "-nP", (const char * const) 0);
+
+	end = state.messageBuf;
+	end = appendText(end, "ERROR: cannot execute command 'lsof': errno=");
+	end = appendULL(end, errno);
+	end = appendText(end, "\n");
+	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+	_exit(1);
+}
+
+static void
+dumpFileDescriptorInfoWithLs(AbortHandlerState &state, char *end) {
+	pid_t pid;
+	int status;
+
+	pid = asyncFork();
+	if (pid == 0) {
+		closeAllFileDescriptors(2);
+		// The '-v' is for natural sorting on Linux. On BSD -v means something else but it's harmless.
+		execlp("ls", "ls", "-lv", state.messageBuf, (const char * const) 0);
+		_exit(1);
+	} else if (pid == -1) {
+		safePrintErr("ERROR: Could not fork a process to dump file descriptor information!\n");
+	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
+		safePrintErr("ERROR: Could not run 'ls' to dump file descriptor information!\n");
+	}
+}
+
+static void
+dumpFileDescriptorInfo(AbortHandlerState &state) {
+	char *messageBuf = state.messageBuf;
+	char *end;
+	struct stat buf;
+	int status;
+
+	end = messageBuf;
+	end = appendText(end, state.messagePrefix);
+	end = appendText(end, " ] Open files and file descriptors:\n");
+	write(STDERR_FILENO, messageBuf, end - messageBuf);
+
+	status = runInSubprocessWithTimeLimit(state, dumpFileDescriptorInfoWithLsof, NULL, 4000);
+
+	if (status != 0) {
+		safePrintErr("Falling back to another mechanism for dumping file descriptors.\n");
+
+		end = messageBuf;
+		end = appendText(end, "/proc/");
+		end = appendULL(end, state.pid);
+		end = appendText(end, "/fd");
+		*end = '\0';
+		if (stat(messageBuf, &buf) == 0) {
+			dumpFileDescriptorInfoWithLs(state, end + 1);
+		} else {
+			end = messageBuf;
+			end = appendText(end, "/dev/fd");
+			*end = '\0';
+			if (stat(messageBuf, &buf) == 0) {
+				dumpFileDescriptorInfoWithLs(state, end + 1);
+			} else {
+				end = messageBuf;
+				end = appendText(end, "ERROR: No other file descriptor dumping mechanism on current platform detected.\n");
+				write(STDERR_FILENO, messageBuf, end - messageBuf);
+			}
+		}
 	}
 }
 
@@ -427,6 +511,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 	
 	pid_t child = asyncFork();
 	if (child == 0) {
+		closeAllFileDescriptors(2);
 		execlp("crash-watch", "crash-watch", "--dump", pidStr, (char * const) 0);
 		if (errno == ENOENT) {
 			safePrintErr("Crash-watch is not installed. Please install it with 'gem install crash-watch' "
@@ -492,6 +577,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 
 				close(p[1]);
 				dup2(p[0], STDIN_FILENO);
+				closeAllFileDescriptors(2);
 				
 				char *command = end;
 				end = appendText(end, "exec ");
@@ -562,38 +648,49 @@ dumpDiagnostics(AbortHandlerState &state) {
 	char *messageBuf = state.messageBuf;
 	char *end;
 	pid_t pid;
+	int status;
+
+	end = messageBuf;
+	end = appendText(end, state.messagePrefix);
+	end = appendText(end, " ] Date, uname and ulimits:\n");
+	write(STDERR_FILENO, messageBuf, end - messageBuf);
 
 	// Dump human-readable time string and string.
 	pid = asyncFork();
 	if (pid == 0) {
+		closeAllFileDescriptors(2);
 		execlp("date", "date", (const char * const) 0);
 		_exit(1);
 	} else if (pid == -1) {
 		safePrintErr("ERROR: Could not fork a process to dump the time!\n");
-	} else {
-		waitpid(pid, NULL, 0);
+	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
+		safePrintErr("ERROR: Could not run 'date'!\n");
 	}
 
 	// Dump system uname.
 	pid = asyncFork();
 	if (pid == 0) {
+		closeAllFileDescriptors(2);
 		execlp("uname", "uname", "-mprsv", (const char * const) 0);
 		_exit(1);
 	} else if (pid == -1) {
 		safePrintErr("ERROR: Could not fork a process to dump the uname!\n");
-	} else {
-		waitpid(pid, NULL, 0);
+	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
+		safePrintErr("ERROR: Could not run 'uname -mprsv'!\n");
 	}
 
 	// Dump ulimit.
 	pid = asyncFork();
 	if (pid == 0) {
+		closeAllFileDescriptors(2);
 		execlp("ulimit", "ulimit", "-a", (const char * const) 0);
+		// On Linux 'ulimit' is a shell builtin, not a command.
+		execlp("/bin/sh", "/bin/sh", "-c", "ulimit -a", (const char * const) 0);
 		_exit(1);
 	} else if (pid == -1) {
 		safePrintErr("ERROR: Could not fork a process to dump the ulimit!\n");
-	} else {
-		waitpid(pid, NULL, 0);
+	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
+		safePrintErr("ERROR: Could not run 'ulimit -a'!\n");
 	}
 
 	end = messageBuf;
@@ -647,6 +744,9 @@ dumpDiagnostics(AbortHandlerState &state) {
 		runInSubprocessWithTimeLimit(state, runCustomDiagnosticsDumper, NULL, 2000);
 		safePrintErr("--------------------------------------\n");
 	}
+
+	dumpFileDescriptorInfo(state);
+	safePrintErr("--------------------------------------\n");
 
 	if (shouldDumpWithCrashWatch) {
 		end = messageBuf;
@@ -815,6 +915,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 		child = asyncFork();
 		if (child == 0) {
+			closeAllFileDescriptors(2);
 			#ifdef __APPLE__
 				execlp("osascript", "osascript", "-e", "beep 2", (const char * const) 0);
 				safePrintErr("Cannot execute 'osascript' command\n");
