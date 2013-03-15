@@ -80,7 +80,7 @@ private:
 public:
 	HttpHeaderBufferer() {
 		sbmh_init(&u.terminatorFinder,
-			&staticData.occ,
+			NULL,
 			(const unsigned char *) "\r\n\r\n",
 			4);
 		max = 1024 * 128;

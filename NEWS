@@ -21,6 +21,7 @@ Release 4.0.0 release candidate 5
  * Fixed some process memory usage measurement bugs.
  * Fixed process memory usage measurement on NetBSD. Fixes issue #736.
  * Worked around some RVM bugs.
+ * Performance optimizations.
 
 
 Release 4.0.0 release candidate 4
