@@ -102,7 +102,7 @@ static unsigned int alternativeStackSize;
 static volatile unsigned int abortHandlerCalled = 0;
 static unsigned int randomSeed = 0;
 static const char *argv0 = NULL;
-static const char *backtraceSanitizerPath = NULL;
+static const char *backtraceSanitizerCommand = NULL;
 static bool backtraceSanitizerPassProgramInfo = true;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
 static void *customDiagnosticsDumperUserData;
@@ -463,7 +463,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 		end = appendText(end, " frames:\n");
 		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
-		if (backtraceSanitizerPath != NULL) {
+		if (backtraceSanitizerCommand != NULL) {
 			int p[2];
 			if (pipe(p) == -1) {
 				int e = errno;
@@ -482,11 +482,14 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 				const char *pidStr = end = state.messageBuf;
 				end = appendULL(end, (unsigned long long) state.pid);
 				*end = '\0';
+				end++;
 
 				close(p[1]);
 				dup2(p[0], STDIN_FILENO);
-				end = state.messageBuf;
-				end = appendText(end, backtraceSanitizerPath);
+				
+				char *command = end;
+				end = appendText(end, "exec ");
+				end = appendText(end, backtraceSanitizerCommand);
 				if (backtraceSanitizerPassProgramInfo) {
 					end = appendText(end, " \"");
 					end = appendText(end, argv0);
@@ -494,12 +497,12 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 					end = appendText(end, pidStr);
 				}
 				*end = '\0';
-				execlp("/bin/sh", "/bin/sh", "-c",
-					state.messageBuf, (const char * const) 0);
+				end++;
+				execlp("/bin/sh", "/bin/sh", "-c", command, (const char * const) 0);
 
 				end = state.messageBuf;
 				end = appendText(end, "ERROR: cannot execute '");
-				end = appendText(end, backtraceSanitizerPath);
+				end = appendText(end, backtraceSanitizerCommand);
 				end = appendText(end, "' for sanitizing the backtrace, trying 'cat'...\n");
 				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 				execlp("cat", "cat", (const char * const) 0);
@@ -529,7 +532,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 				if (waitpid(pid, &status, 0) == -1 || status != 0) {
 					end = state.messageBuf;
 					end = appendText(end, "ERROR: cannot execute '");
-					end = appendText(end, backtraceSanitizerPath);
+					end = appendText(end, backtraceSanitizerCommand);
 					end = appendText(end, "' for sanitizing the backtrace, writing to stderr directly...\n");
 					write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 					backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
@@ -1370,14 +1373,14 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		#ifdef __linux__
 			if (options.has("passenger_root")) {
 				ResourceLocator locator(options.get("passenger_root", true));
-				string ruby = strdup(options.get("passenger_ruby", false, DEFAULT_RUBY).c_str());
+				string ruby = options.get("ruby", false, DEFAULT_RUBY);
 				string path = ruby + " \"" + locator.getHelperScriptsDir() +
 					"/backtrace-sanitizer.rb\"";
-				backtraceSanitizerPath = strdup(path.c_str());
+				backtraceSanitizerCommand = strdup(path.c_str());
 			}
 		#endif
-		if (backtraceSanitizerPath == NULL) {
-			backtraceSanitizerPath = "c++filt -n";
+		if (backtraceSanitizerCommand == NULL) {
+			backtraceSanitizerCommand = "c++filt -n";
 			backtraceSanitizerPassProgramInfo = false;
 		}
 
