@@ -198,8 +198,8 @@ private:
 		assert((lifeStatus == ALIVE) == (spawner != NULL));
 
 		// Verify getWaitlist invariants.
-		assert(!( !getWaitlist.empty() ) || ( enabledProcesses.empty() || pqueue.top()->atFullCapacity() ));
-		assert(!( !enabledProcesses.empty() && !pqueue.top()->atFullCapacity() ) || ( getWaitlist.empty() ));
+		assert(!( !getWaitlist.empty() ) || ( enabledProcesses.empty() || pqueue.top()->atFullUtilization() ));
+		assert(!( !enabledProcesses.empty() && !pqueue.top()->atFullUtilization() ) || ( getWaitlist.empty() ));
 		assert(!( enabledProcesses.empty() && !spawning() && !restarting() && !poolAtFullCapacity() ) || ( getWaitlist.empty() ));
 		assert(!( !getWaitlist.empty() ) || ( !enabledProcesses.empty() || spawning() || restarting() || poolAtFullCapacity() ));
 		
@@ -379,7 +379,7 @@ private:
 		// Checkout sessions from enabled processes, or if there are none,
 		// from disabling processes.
 		if (enabledCount > 0) {
-			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
+			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullUtilization()) {
 				GetAction action;
 				action.callback = getWaitlist.front().callback;
 				action.session  = newSession();
@@ -414,7 +414,7 @@ private:
 	
 	void assignSessionsToGetWaiters(vector<Callback> &postLockActions) {
 		if (enabledCount > 0) {
-			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullCapacity()) {
+			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullUtilization()) {
 				postLockActions.push_back(boost::bind(
 					getWaitlist.front().callback, newSession(),
 					ExceptionPtr()));
@@ -439,6 +439,7 @@ private:
 	}
 
 	void enableAllDisablingProcesses(vector<Callback> &postLockActions) {
+		P_DEBUG("Enabling all DISABLING processes with result DR_ERROR");
 		deque<DisableWaiter>::iterator it, end = disableWaitlist.end();
 		for (it = disableWaitlist.begin(); it != end; it++) {
 			const DisableWaiter &waiter = *it;
@@ -449,6 +450,7 @@ private:
 			if (process->enabled == Process::DISABLING) {
 				removeProcessFromList(process, disablingProcesses);
 				addProcessToList(process, enabledProcesses);
+				P_DEBUG("Enabled process " << process->inspect());
 			}
 		}
 		clearDisableWaitlist(DR_ERROR, postLockActions);
@@ -572,8 +574,8 @@ public:
 	 *    if !spawning():
 	 *       (enabledCount > 0) or (disablingCount == 0)
 	 *
-	 *    if pqueue.top().atFullCapacity():
-	 *       All enabled processes are at full capacity.
+	 *    if pqueue.top().atFullUtilization():
+	 *       All enabled processes are at full utilization.
 	 *
 	 *    for all process in enabledProcesses:
 	 *       process.enabled == Process::ENABLED
@@ -736,8 +738,8 @@ public:
 		} else {
 			Process *process = pqueue.top();
 			assert(process != NULL);
-			if (process->atFullCapacity()) {
-				/* Looks like all processes are at full capacity.
+			if (process->atFullUtilization()) {
+				/* Looks like all processes are at full utilization.
 				 * Wait until a new one has been spawned or until
 				 * resources have become free.
 				 */
@@ -829,6 +831,7 @@ public:
 		}
 		disableWaitlist = newDisableWaitlist;
 
+		// Update GC sleep timer.
 		wakeUpGarbageCollector();
 	}
 

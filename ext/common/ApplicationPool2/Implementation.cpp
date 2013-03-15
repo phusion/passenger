@@ -515,6 +515,7 @@ Group::lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult 
 		return;
 	}
 	
+	P_DEBUG("Process " << process->inspect() << " disabled; proceeding with OOBW");
 	asyncOOBWRequestIfNeeded(process);
 }
 
@@ -527,6 +528,7 @@ Group::asyncOOBWRequestIfNeeded(const ProcessPtr &process) {
 		// We want the process to be disabled. However, disabling a process is potentially
 		// asynchronous, so we pass a callback which will re-aquire the lock and call this
 		// method again.
+		P_DEBUG("Disabling process " << process->inspect() << " in preparation for OOBW");
 		DisableResult result = disable(process,
 			boost::bind(&Group::lockAndAsyncOOBWRequestIfNeeded, this,
 				_1, _2, shared_from_this()));
@@ -540,6 +542,7 @@ Group::asyncOOBWRequestIfNeeded(const ProcessPtr &process) {
 	assert(process->enabled == Process::DISABLED);
 	assert(process->sessions == 0);
 	
+	P_DEBUG("Initiating OOBW request for process " << process->inspect());
 	interruptableThreads.create_thread(
 		boost::bind(&Group::spawnThreadOOBWRequest, this, shared_from_this(), process),
 		"OOB request thread for process " + process->inspect(),
@@ -555,10 +558,18 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 
 	Socket *socket;
 	Connection connection;
+	PoolPtr pool = getPool();
+	Pool::DebugSupportPtr debug = pool->debugSupport;
+
+	UPDATE_TRACE_POINT();
+	if (debug != NULL && debug->oobw) {
+		debug->debugger->send("OOBW request about to start");
+		debug->messages->recv("Proceed with OOBW request");
+	}
 	
+	UPDATE_TRACE_POINT();
 	{
 		// Standard resource management boilerplate stuff...
-		PoolPtr pool = getPool();
 		unique_lock<boost::mutex> lock(pool->syncher);
 		if (OXT_UNLIKELY(!process->isAlive() || !isAlive())) {
 			return;
@@ -571,6 +582,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		assert(socket != NULL);
 	}
 	
+	UPDATE_TRACE_POINT();
 	unsigned long long timeout = 1000 * 1000 * 60; // 1 min
 	try {
 		ScopeGuard guard(boost::bind(&Socket::checkinConnection, socket, connection));
@@ -605,6 +617,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		gatheredWrite(connection.fd, &data[0], data.size(), &timeout);
 
 		// We do not care what the actual response is ... just wait for it.
+		UPDATE_TRACE_POINT();
 		waitUntilReadable(connection.fd, &timeout);
 	} catch (const SystemException &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
@@ -612,6 +625,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 	}
 	
+	UPDATE_TRACE_POINT();
 	vector<Callback> actions;
 	{
 		// Standard resource management boilerplate stuff...
@@ -629,7 +643,14 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		
 		pool->fullVerifyInvariants();
 	}
+	UPDATE_TRACE_POINT();
 	runAllActions(actions);
+	actions.clear();
+
+	UPDATE_TRACE_POINT();
+	if (debug != NULL && debug->oobw) {
+		debug->debugger->send("OOBW request finished");
+	}
 }
 
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.

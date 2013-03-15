@@ -99,6 +99,7 @@ public:
 		bool restarting;
 		bool spawning;
 		bool superGroup;
+		bool oobw;
 
 		// The following fields may only be accessed by Pool.
 		boost::mutex syncher;
@@ -110,6 +111,7 @@ public:
 			restarting = true;
 			spawning   = true;
 			superGroup = false;
+			oobw       = false;
 			spawnLoopIteration = 0;
 		}
 	};
