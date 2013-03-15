@@ -67,7 +67,9 @@ passenger_create_main_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
     
-    conf->log_level     = (ngx_int_t) NGX_CONF_UNSET;
+    conf->ruby.data = NULL;
+    conf->ruby.len = 0;
+    conf->log_level = (ngx_int_t) NGX_CONF_UNSET;
     conf->debug_log_file.data = NULL;
     conf->debug_log_file.len = 0;
     conf->abort_on_startup_error = NGX_CONF_UNSET;
@@ -110,6 +112,11 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     conf = &passenger_main_conf;
     *conf = *((passenger_main_conf_t *) conf_pointer);
     
+    if (conf->ruby.len == 0) {
+        conf->ruby.data = (u_char *) DEFAULT_RUBY;
+        conf->ruby.len = strlen(DEFAULT_RUBY);
+    }
+
     if (conf->log_level == (ngx_int_t) NGX_CONF_UNSET) {
         conf->log_level = DEFAULT_LOG_LEVEL;
     }
@@ -1039,7 +1046,14 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("passenger_ruby"),
-      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, ruby),
+      NULL },
+
+    { ngx_string("passenger_ruby"),
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, ruby),

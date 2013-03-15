@@ -246,6 +246,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     char   *default_user = NULL;
     char   *default_group = NULL;
     char   *passenger_root = NULL;
+    char   *ruby = NULL;
     char   *temp_dir = NULL;
     char   *analytics_log_user;
     char   *analytics_log_group;
@@ -262,6 +263,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     default_user   = ngx_str_null_terminate(&passenger_main_conf.default_user);
     default_group  = ngx_str_null_terminate(&passenger_main_conf.default_group);
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
+    ruby           = ngx_str_null_terminate(&passenger_main_conf.ruby);
     temp_dir       = ngx_str_null_terminate(&passenger_main_conf.temp_dir);
     analytics_log_user = ngx_str_null_terminate(&passenger_main_conf.analytics_log_user);
     analytics_log_group = ngx_str_null_terminate(&passenger_main_conf.analytics_log_group);
@@ -287,7 +289,7 @@ start_helper_server(ngx_cycle_t *cycle) {
         temp_dir, passenger_main_conf.user_switching,
         default_user, default_group,
         core_conf->user, core_conf->group,
-        passenger_root, "ruby", passenger_main_conf.max_pool_size,
+        passenger_root, ruby, passenger_main_conf.max_pool_size,
         passenger_main_conf.max_instances_per_app,
         passenger_main_conf.pool_idle_time,
         "",
@@ -350,6 +352,7 @@ cleanup:
     free(default_user);
     free(default_group);
     free(passenger_root);
+    free(ruby);
     free(temp_dir);
     free(analytics_log_user);
     free(analytics_log_group);
