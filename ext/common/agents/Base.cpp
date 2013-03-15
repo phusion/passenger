@@ -149,17 +149,6 @@ hasEnvOption(const char *name, bool defaultValue = false) {
 	}
 }
 
-// Async-signal safe way to fork().
-// http://sourceware.org/bugzilla/show_bug.cgi?id=4737
-static pid_t
-asyncFork() {
-	#if defined(__linux__)
-		return (pid_t) syscall(SYS_fork);
-	#else
-		return fork();
-	#endif
-}
-
 // No idea whether strlen() is async signal safe, but let's not risk it
 // and write our own version instead that's guaranteed to be safe.
 static size_t

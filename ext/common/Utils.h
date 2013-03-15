@@ -412,6 +412,12 @@ void disableMallocDebugging();
 int runShellCommand(const StaticString &command);
 
 /**
+ * Async-signal safe way to fork().
+ * http://sourceware.org/bugzilla/show_bug.cgi?id=4737
+ */
+pid_t asyncFork();
+
+/**
  * Close all file descriptors that are higher than <em>lastToKeepOpen</em>.
  * This function is async-signal safe. But make sure there are no other
  * threads running that might open file descriptors!
