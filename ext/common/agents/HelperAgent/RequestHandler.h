@@ -1251,6 +1251,7 @@ private:
 	void onAcceptable(ev::io &io, int revents) {
 		bool endReached = false;
 		unsigned int count = 0;
+		ClientPtr acceptedClients[10];
 
 		while (!endReached && count < 10) {
 			FileDescriptor fd = acceptNonBlockingSocket(requestSocket);
@@ -1279,9 +1280,14 @@ private:
 				ClientPtr client = make_shared<Client>();
 				client->associate(this, fd);
 				clients.insert(make_pair<int, ClientPtr>(fd, client));
+				acceptedClients[count] = client;
 				count++;
 				RH_DEBUG(client, "New client accepted; new client count = " << clients.size());
 			}
+		}
+
+		for (unsigned int i = 0; i < count; i++) {
+			acceptedClients[i]->clientInput->readNow();
 		}
 
 		if (OXT_LIKELY(!clients.empty())) {
