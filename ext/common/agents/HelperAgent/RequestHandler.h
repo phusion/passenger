@@ -538,6 +538,7 @@ class RequestHandler {
 public:
 	enum BenchmarkPoint {
 		BP_NONE,
+		BP_AFTER_ACCEPT,
 		BP_AFTER_CHECK_CONNECT_PASSWORD,
 		BP_AFTER_PARSING_HEADER,
 		BP_BEFORE_CHECKOUT_SESSION
@@ -746,6 +747,8 @@ private:
 		const char *val = getenv("PASSENGER_REQUEST_HANDLER_BENCHMARK_POINT");
 		if (val == NULL || *val == '\0') {
 			return BP_NONE;
+		} else if (strcmp(val, "after_accept") == 0) {
+			return BP_AFTER_ACCEPT;
 		} else if (strcmp(val, "after_check_connect_password") == 0) {
 			return BP_AFTER_CHECK_CONNECT_PASSWORD;
 		} else if (strcmp(val, "after_parsing_header") == 0) {
@@ -1264,6 +1267,14 @@ private:
 					resumeSocketWatcherTimer.start();
 					endReached = true;
 				}
+			} else if (benchmarkPoint == BP_AFTER_ACCEPT) {
+				writeExact(fd,
+					"HTTP/1.1 200 OK\r\n"
+					"Status: 200 OK\r\n"
+					"Content-Type: text/html\r\n"
+					"Connection: close\r\n"
+					"\r\n"
+					"Benchmark point: after_accept\n");
 			} else {
 				ClientPtr client = make_shared<Client>();
 				client->associate(this, fd);
