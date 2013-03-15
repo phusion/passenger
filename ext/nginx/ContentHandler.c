@@ -1175,7 +1175,6 @@ process_header(ngx_http_request_t *r)
 {
     ngx_str_t                      *status_line;
     ngx_int_t                       rc, status;
-    ngx_uint_t                      i;
     ngx_table_elt_t                *h;
     ngx_http_upstream_t            *u;
     ngx_http_upstream_header_t     *hh;
