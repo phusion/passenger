@@ -221,7 +221,7 @@ public:
 	MessagePtr recv(const string &name, unsigned long long *timeout = NULL) {
 		unique_lock<boost::mutex> l(syncher);
 		posix_time::ptime deadline;
-		unsigned long long beginTime;
+		unsigned long long beginTime = 0; // Shut up compiler warning.
 		if (timeout != NULL) {
 			beginTime = SystemTime::getUsec();
 			deadline = posix_time::microsec_clock::local_time() +
@@ -260,7 +260,7 @@ public:
 	MessagePtr recvAny(const StringCollection &names, unsigned long long *timeout = NULL) {
 		unique_lock<boost::mutex> l(syncher);
 		posix_time::ptime deadline;
-		unsigned long long beginTime;
+		unsigned long long beginTime = 0; // Shut up compiler warning.
 		if (timeout != NULL) {
 			beginTime = SystemTime::getUsec();
 			deadline = posix_time::microsec_clock::local_time() +
