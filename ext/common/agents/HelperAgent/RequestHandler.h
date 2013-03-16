@@ -606,6 +606,17 @@ private:
 		disconnect(client);
 	}
 
+	template<typename Number>
+	static Number clamp(Number n, Number min, Number max) {
+		if (n < min) {
+			return min;
+		} else if (n > max) {
+			return max;
+		} else {
+			return n;
+		}
+	}
+
 	// GDB helper function, implemented in .cpp file to prevent inlining.
 	Client *getClientPointer(const ClientPtr &client);
 
@@ -1251,9 +1262,10 @@ private:
 	void onAcceptable(ev::io &io, int revents) {
 		bool endReached = false;
 		unsigned int count = 0;
+		unsigned int maxAcceptTries = clamp<unsigned int>(clients.size(), 1, 10);
 		ClientPtr acceptedClients[10];
 
-		while (!endReached && count < 10) {
+		while (!endReached && count < maxAcceptTries) {
 			FileDescriptor fd = acceptNonBlockingSocket(requestSocket);
 			if (fd == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
