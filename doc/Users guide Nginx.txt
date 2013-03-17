@@ -979,26 +979,14 @@ In each place, it may be specified at most once. The default value is 'on'.
 ==== passenger_max_pool_size <integer> ====
 The maximum number of <<application_process,application processes>> that may
 simultanously exist. A larger number results in higher memory usage,
-but improved ability to handle concurrent HTTP clients.
+but improves the ability to handle concurrent HTTP requests.
 
-The optimal value depends on your system's hardware and the server's average
-load. You should experiment with different values. But generally speaking,
-the value should be at least equal to the number of CPUs (or CPU cores) that
-you have. If your system has 2 GB of RAM, then we recommend a value of '15'.
-If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
-is also running other services such as MySQL, then we recommend a value of '2'.
+The optimal value depends on your system's hardware and your workload. You can learn more at the Phusion article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's conurrency settings].
 
-If you find that your server is unable to handle the load on your Rails/Rack websites
-(i.e. running out of memory) then you should lower this value. (Though if your
-sites are really that popular, then you should strongly consider upgrading your
-hardware or getting more servers.)
+If you find that your server is running out of memory then you should lower this value.
 
 This option may only occur once, in the 'http' configuration block.
 The default value is '6'.
-
-TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
-Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
-by about 33%, and it's not hard to install.
 
 [[PassengerMinInstances]]
 ==== passenger_min_instances <integer> ====
