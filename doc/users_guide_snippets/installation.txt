@@ -678,7 +678,8 @@ If you installed Nginx with one of the generic installation methods then you won
 
 If you prefer to use an init script then please refer to the following resources:
 
-- link:http://wiki.nginx.org/Nginx-init-ubuntu[Init script for Ubuntu]
+- link:http://wiki.nginx.org/Nginx-init-ubuntu[Init script for Ubuntu 8.04-9.10]
+- link:http://library.linode.com/web-servers/nginx/installation/ubuntu-12.04-precise-pangolin#sph_create-an-init-script-to-manage-nginx[Init script for Ubuntu 12.04]
 - link:http://wiki.nginx.org/RedHatNginxInitScript[Init script for Red Hat, Fedora and CentOS]
 
 When using one of those init scripts, please make sure that the paths inside the init script are correct. In particular, the paths to the Nginx binary, to the PID file and to the configuration file must match the actual locations of your Nginx installation.

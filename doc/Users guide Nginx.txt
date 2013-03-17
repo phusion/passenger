@@ -481,12 +481,12 @@ You can also override `passenger_ruby` or `passenger_python` in specific context
 
 ------------------------------
 http {
-    passenger_root ...
+    passenger_root ...;
     
     # Use Ruby 1.8.7 by default.
-    passenger_ruby /usr/bin/ruby1.8
+    passenger_ruby /usr/bin/ruby1.8;
     # Use Python 2.6 by default.
-    passenger_python /usr/bin/python2.6
+    passenger_python /usr/bin/python2.6;
 
     server {
         # This Rails web app will use Ruby 1.8.7
