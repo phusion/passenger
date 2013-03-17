@@ -406,9 +406,26 @@ YUM repositories with RPMs are maintained by link:https://github.com/erikogan/pa
 If you use YUM to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. The YUM packages contain all the binaries that you need. You also don't need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.
 
 [float]
-==== Step 1: Install the release package
+==== Step 1: Import the Stealthy Monkeys Consulting's GPG key
 
-The easiest way to install Phusion Passenger and keep it up to date is to install the passenger-release package from the link:http://passenger.stealthymonkeys.com/[main repository].
+---------------------------------------------
+rpm --import http://passenger.stealthymonkeys.com/RPM-GPG-KEY-stealthymonkeys.asc
+---------------------------------------------
+
+[float]
+==== Step 2: Install the release package
+
+Install the passenger-release package from the link:http://passenger.stealthymonkeys.com/[main repository].
+
+Fedora Core 17:
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/fedora/17/passenger-release.noarch.rpm
+---------------------------------------------
+
+Fedora Core 16:
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/fedora/16/passenger-release.noarch.rpm
+---------------------------------------------
 
 Fedora Core 15:
 ---------------------------------------------
@@ -420,18 +437,18 @@ Fedora Core 14:
 yum install http://passenger.stealthymonkeys.com/fedora/14/passenger-release.noarch.rpm
 ---------------------------------------------
 
+RHEL 6 / CentOS 6 / ScientificLinux 6: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/rhel/6/passenger-release.noarch.rpm
+---------------------------------------------
+
 RHEL 5 / CentOS 5 / ScientificLinux 5: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
 ---------------------------------------------
 rpm -Uvh http://passenger.stealthymonkeys.com/rhel/5/passenger-release.noarch.rpm
 ---------------------------------------------
 
-RHEL 6 / CentOS 6 / ScientificLinux 6:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/rhel/6/passenger-release.noarch.rpm
----------------------------------------------
-
 [float]
-==== Step 2: Use YUM
+==== Step 3: Install the right Phusion Passenger package
 
 From there you can use link:http://prefetch.net/articles/yum.html[YUM] to install packages. For example, try one of these:
 
