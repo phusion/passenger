@@ -235,6 +235,11 @@ private
 		require_daemon_controller
 		require 'socket' unless defined?(UNIXSocket)
 		@temp_dir        = "/tmp/passenger-standalone.#{$$}"
+                # use PASSENGER_TMPDIR if exist
+                if ENV.has_key?("PASSENGER_TMPDIR") && !ENV["PASSENGER_TMPDIR"].empty?
+                  @temp_dir = File.join(ENV["PASSENGER_TMPDIR"], "passenger-standalone.#{$$}")
+                  puts "NGINX server use PASSENGER_TMPDIR: #{@temp_dir}"
+                end   		
 		@config_filename = "#{@temp_dir}/config"
 		@location_config_filename = "#{@temp_dir}/locations.ini"
 		if @options[:socket_file]
