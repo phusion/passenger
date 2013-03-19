@@ -545,6 +545,7 @@ private
 				"--without-http_scgi_module " <<
 				"--without-http_uwsgi_module " <<
 				"--with-http_gzip_static_module " <<
+				"--with-http_stub_status_module " <<
 				"'--add-module=#{PhusionPassenger.source_root}/ext/nginx'"
 			run_command_with_throbber(command, "Preparing Nginx...") do |status_text|
 				yield(0, 1, status_text)
