@@ -539,13 +539,13 @@ public:
 		}
 		switch (enabled) {
 		case ENABLED:
-			stream << "<enabled>enabled</enabled>";
+			stream << "<enabled>ENABLED</enabled>";
 			break;
 		case DISABLING:
-			stream << "<enabled>disabling</enabled>";
+			stream << "<enabled>DISABLING</enabled>";
 			break;
 		case DISABLED:
-			stream << "<enabled>disabled</enabled>";
+			stream << "<enabled>DISABLED</enabled>";
 			break;
 		default:
 			P_BUG("Unknown 'enabled' state " << (int) enabled);
