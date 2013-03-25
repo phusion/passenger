@@ -756,6 +756,7 @@ public:
 						xml << "Group: <group>";
 						group->inspectXml(xml, false);
 						xml << "</group>";
+						logEntries.push_back(entry);
 					}
 				}
 			}
