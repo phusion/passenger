@@ -526,13 +526,13 @@ public:
 		stream << "<uptime>" << uptime() << "</uptime>";
 		switch (lifeStatus) {
 		case ALIVE:
-			stream << "<life_status>alive</life_status>";
+			stream << "<life_status>ALIVE</life_status>";
 			break;
 		case SHUTTING_DOWN:
-			stream << "<life_status>shutting_down</life_status>";
+			stream << "<life_status>SHUTTING_DOWN</life_status>";
 			break;
 		case SHUT_DOWN:
-			stream << "<life_status>shut_down</life_status>";
+			stream << "<life_status>SHUT_DOWN</life_status>";
 			break;
 		default:
 			P_BUG("Unknown 'lifeStatus' state " << (int) lifeStatus);
