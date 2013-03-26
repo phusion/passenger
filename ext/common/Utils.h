@@ -365,7 +365,8 @@ bool verifyRackDir(const string &dir, CachedFileStat *cstat = 0,
 bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
 
-void prestartWebApps(const ResourceLocator &locator, const string &serializedprestartURLs);
+void prestartWebApps(const ResourceLocator &locator, const string &ruby,
+	const string &serializedprestartURLs);
 
 /**
  * Runs the given function and catches any tracable_exceptions. Upon catching such an exception,

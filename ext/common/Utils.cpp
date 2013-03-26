@@ -707,7 +707,9 @@ verifyWSGIDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRat
 }
 
 void
-prestartWebApps(const ResourceLocator &locator, const string &serializedprestartURLs) {
+prestartWebApps(const ResourceLocator &locator, const string &ruby,
+	const string &serializedprestartURLs)
+{
 	/* Apache calls the initialization routines twice during startup, and
 	 * as a result it starts two helper servers, where the first one exits
 	 * after a short idle period. We want any prespawning requests to reach
@@ -743,7 +745,8 @@ prestartWebApps(const ResourceLocator &locator, const string &serializedprestart
 				syscalls::close(i);
 			}
 			
-			execlp(prespawnScript.c_str(),
+			execlp(ruby.c_str(),
+				ruby.c_str(),
 				prespawnScript.c_str(),
 				it->c_str(),
 				(char *) 0);
