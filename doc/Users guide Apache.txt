@@ -503,7 +503,7 @@ The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby inter
 The relationship between `PassengerDefaultRuby` and `PassengerRuby` is as follows:
 
  * `PassengerDefaultRuby` may only occur in the global server configuration.
- * In contrast, `PassengerRuby` may only occur in `<Directory>`, `<Location>`, and in '.htaccess' if `AllowOverride Options` is on.
+ * `PassengerRuby` may occur everywhere: in the global server configuration, in `<VirtualHost>`, in `<Directory>`, in `<Location>`, and in '.htaccess' if `AllowOverride Options` is on.
  * You don't *have* to specify `PassengerRuby`. In this case `PassengerDefaultRuby` is used as the Ruby interpreter. But if you do specify `PassengerRuby` then it will override `PassengerDefaultRuby` in that context. This allows you to use `PassengerRuby` to specify a different Ruby interpreter on a per-application basis.
 
 Phusion Passenger not only uses Ruby to run web apps, but also for running certain helper tools that are written in Ruby, e.g. the internal helper script used by <<PassengerPreStart,PassengerPreStart>>. These tools are always run using `PassengerDefaultRuby`, never by `PassengerRuby`. `PassengerRuby` is only used for running web apps.
