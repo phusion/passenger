@@ -579,6 +579,17 @@ dumpDiagnostics(AbortHandlerState &state) {
 		waitpid(pid, NULL, 0);
 	}
 
+	// Dump ulimit.
+	pid = asyncFork();
+	if (pid == 0) {
+		execlp("ulimit", "ulimit", "-a", (const char * const) 0);
+		_exit(1);
+	} else if (pid == -1) {
+		safePrintErr("ERROR: Could not fork a process to dump the ulimit!\n");
+	} else {
+		waitpid(pid, NULL, 0);
+	}
+
 	end = messageBuf;
 	end = appendText(end, state.messagePrefix);
 	end = appendText(end, " ] Phusion Passenger version: " PASSENGER_VERSION "\n");
