@@ -107,6 +107,12 @@ static bool backtraceSanitizerPassProgramInfo = true;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
 static void *customDiagnosticsDumperUserData;
 
+// We preallocate a few pipes during startup which we will close in the
+// crash handler. This way we can be sure that when the crash handler
+// calls pipe() it won't fail with "Too many files".
+static int emergencyPipe1[2] = { -1, -1 };
+static int emergencyPipe2[2] = { -1, -1 };
+
 // If assert() failed, its information is stored here.
 static struct {
 	const char *filename;
@@ -757,6 +763,13 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		return;
 	}
 
+	close(emergencyPipe1[0]);
+	close(emergencyPipe1[1]);
+	close(emergencyPipe2[0]);
+	close(emergencyPipe2[1]);
+	emergencyPipe1[0] = emergencyPipe1[1] = -1;
+	emergencyPipe2[0] = emergencyPipe2[1] = -1;
+
 	/* We want to dump the entire crash log to both stderr and a log file.
 	 * We use 'tee' for this.
 	 */
@@ -1342,6 +1355,8 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
 		beepOnAbort  = hasEnvOption("PASSENGER_BEEP_ON_ABORT", false);
 		stopOnAbort = hasEnvOption("PASSENGER_STOP_ON_ABORT", false);
+		pipe(emergencyPipe1);
+		pipe(emergencyPipe2);
 		installAbortHandler();
 	}
 	oxt::initialize();
