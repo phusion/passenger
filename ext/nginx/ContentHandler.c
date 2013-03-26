@@ -427,7 +427,11 @@ create_request(ngx_http_request_t *r)
                                   slcf, debugger);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_SHOW_VERSION_IN_HEADER",
                                   slcf, show_version_in_header);
-    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_RUBY", slcf, ruby);
+    if (slcf->ruby.data != NULL) {
+        ANALYZE_STR_CONFIG_LENGTH("PASSENGER_RUBY", slcf, ruby);
+    } else {
+        len += sizeof("PASSENGER_RUBY") + passenger_main_conf.default_ruby.len + 1;
+    }
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_PYTHON", slcf, python);
     len += sizeof("PASSENGER_ENV") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
@@ -642,8 +646,15 @@ create_request(ngx_http_request_t *r)
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_SHOW_VERSION_IN_HEADER",
                                   slcf, show_version_in_header);
     
-    SERIALIZE_STR_CONFIG_DATA("PASSENGER_RUBY",
-                              slcf, ruby);
+    if (slcf->ruby.data != NULL) {
+        SERIALIZE_STR_CONFIG_DATA("PASSENGER_RUBY",
+                                  slcf, ruby);
+    } else {
+        b->last = ngx_copy(b->last, "PASSENGER_RUBY",
+                           sizeof("PASSENGER_RUBY"));
+        b->last = ngx_copy(b->last, passenger_main_conf.default_ruby.data,
+                           passenger_main_conf.default_ruby.len + 1);
+    }
     SERIALIZE_STR_CONFIG_DATA("PASSENGER_PYTHON",
                               slcf, python);
 

@@ -487,28 +487,36 @@ this option as well. Please read
 
 This required option may only occur once, in the global server configuration.
 
+[[PassengerDefaultRuby]]
+=== PassengerDefaultRuby and PassengerRuby ===
+:version: 4.0.0
+include::users_guide_snippets/since_version.txt[]
+
+This option specifies the default Ruby interpreter to use for web apps as well as for all sorts of internal Phusion Passenger helper scripts, e.g. the one used by <<PassengerPreStart,PassengerPreStart>>. Please see <<PassengerRuby,PassengerRuby>> for more information, as well as how it relates to <<PassengerRuby,PassengerRuby>>.
+
+This option may occur in the global server configuration. The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
+
 [[PassengerRuby]]
 === PassengerRuby <filename> ===
-The `PassengerRuby` option allows one to specify the Ruby interpreter to use. Similarly, the `PassengerPython` option is for specifying the Python interpreter.
+The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby interpreter to use. Similarly, the `PassengerPython` directive is for specifying the Python interpreter.
 
-In versions prior to 4.0.0, only a single Ruby version was supported for the entire Apache instance, so `PassengerRuby` may only occur in the global server configuration. Also, the `PassengerPython` option was not supported.
+The relationship between `PassengerDefaultRuby` and `PassengerRuby` is as follows:
 
-Since version 4.0.0, the `PassengerPython` option was added. Also, Phusion Passenger supports multiple Ruby or Python interpreters in the same Apache instance. And so, since version 4.0.0, this option may occur in the following places:
+ * `PassengerDefaultRuby` may only occur in the global server configuration.
+ * In contrast, `PassengerRuby` may only occur in `<Directory>`, `<Location>`, and in '.htaccess' if `AllowOverride Options` is on.
+ * You don't *have* to specify `PassengerRuby`. In this case `PassengerDefaultRuby` is used as the Ruby interpreter. But if you do specify `PassengerRuby` then it will override `PassengerDefaultRuby` in that context. This allows you to use `PassengerRuby` to specify a different Ruby interpreter on a per-application basis.
 
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
+Phusion Passenger not only uses Ruby to run web apps, but also for running certain helper tools that are written in Ruby, e.g. the internal helper script used by <<PassengerPreStart,PassengerPreStart>>. These tools are always run using `PassengerDefaultRuby`, never by `PassengerRuby`. `PassengerRuby` is only used for running web apps.
 
-The `PassengerRuby` in the global server configuration - that is, the one that `passenger-install-apache2-module` outputs, or the one in the RPM/DEB package's 'passenger.load' config file - is used for invoking certain Phusion Passenger tools that are written in Ruby, e.g. the internal helper script used by <<PassengerPreStart,PassengerPreStart>>. It is also used as the default Ruby interpreter for Ruby web apps. You don't *have* to specify a `PassengerRuby` in the global configuration though, because the default is to use the first `ruby` command found in `$PATH`.
+The reason why `PassengerDefaultRuby` exists at all is because limitations in the Apache API prevents us from implementing the same behavior using only the `PassengerRuby` directive.
 
-The `PassengerPython` option works in a similar manner, but applies to Python instead.
+There is no `PassengerDefaultPython` because there are no Phusion Passenger tools written in Python. As such, having `PassengerPython` is enough.
 
-You can also override `PassengerRuby` or `PassengerPython` in specific contexts if you want to use a different Ruby/Python interpreter for that web app. For example:
+The following example illustrates how it works and how you can use these options to specify different Ruby/Python interpreters for different web apps.
 
 ------------------------------
 # Use Ruby 1.8.7 by default.
-PassengerRuby /usr/bin/ruby1.8
+PassengerDefaultRuby /usr/bin/ruby1.8
 # Use Python 2.6 by default.
 PassengerPython /usr/bin/python2.6
 

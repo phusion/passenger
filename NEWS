@@ -1,6 +1,11 @@
 Release 4.0.0 release candidate 5
 ---------------------------------
 
+ * The default config snippet for Apache has changed! It must now contain a
+   `PassengerDefaultRuby` option. The installer has been updated to output
+   this option. The `PassengerRuby` option still exists, but it's only used
+   for configuring different Ruby interpreters in different contexts. Please
+   refer to the manual for more information.
  * We now provide GPG digital signatures for all file releases by Phusion.
    More information can be found in the manual.
  * `passenger-status` now displays process memory usage and time when it

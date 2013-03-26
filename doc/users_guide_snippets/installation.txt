@@ -730,8 +730,8 @@ NameVirtualHosts *:80
 
 LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
 
-PassengerRuby /usr/bin/ruby
 PassengerRoot /somewhere/passenger/x.x.x
+PassengerDefaultRuby /usr/bin/ruby
 PassengerMaxPoolSize 10
 
 <VirtualHost *:80>
@@ -750,8 +750,8 @@ NameVirtualHosts *:80
 
 # LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
 
-# PassengerRuby /usr/bin/ruby
 # PassengerRoot /somewhere/passenger/x.x.x
+# PassengerDefaultRuby /usr/bin/ruby
 # PassengerMaxPoolSize 10
 
 <VirtualHost *:80>

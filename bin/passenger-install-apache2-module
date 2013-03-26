@@ -170,7 +170,7 @@ private
 		if bare
 			puts "LoadModule passenger_module #{PhusionPassenger.apache2_module_path}"
 			puts "PassengerRoot #{PhusionPassenger.source_root}"
-			puts "PassengerRuby #{PlatformInfo.ruby_command}"
+			puts "PassengerDefaultRuby #{PlatformInfo.ruby_command}"
 		else
 			puts
 			line

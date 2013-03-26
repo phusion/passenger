@@ -266,6 +266,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
  *************************************************/
 
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_root, root)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_ruby, defaultRuby)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int, 0)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_debug_log_file, debugLogFile)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
@@ -466,10 +467,15 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Passenger root folder."),
+	AP_INIT_TAKE1("PassengerDefaultRuby",
+		(Take1Func) cmd_passenger_default_ruby,
+		NULL,
+		RSRC_CONF,
+		"The default Ruby interpreter to use."),
 	AP_INIT_TAKE1("PassengerRuby",
 		(Take1Func) cmd_passenger_ruby,
 		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF,
 		"The Ruby interpreter to use."),
 	AP_INIT_TAKE1("PassengerPython",
 		(Take1Func) cmd_passenger_python,

@@ -1373,7 +1373,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		#ifdef __linux__
 			if (options.has("passenger_root")) {
 				ResourceLocator locator(options.get("passenger_root", true));
-				string ruby = options.get("ruby", false, DEFAULT_RUBY);
+				string ruby = options.get("default_ruby", false, DEFAULT_RUBY);
 				string path = ruby + " \"" + locator.getHelperScriptsDir() +
 					"/backtrace-sanitizer.rb\"";
 				backtraceSanitizerCommand = strdup(path.c_str());
