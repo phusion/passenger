@@ -550,6 +550,18 @@ public:
 		default:
 			P_BUG("Unknown 'enabled' state " << (int) enabled);
 		}
+		if (metrics.isValid()) {
+			stream << "<has_metrics>true</has_metrics>";
+			stream << "<cpu>" << (int) metrics.cpu << "</cpu>";
+			stream << "<rss>" << metrics.rss << "</rss>";
+			stream << "<pss>" << metrics.pss << "</pss>";
+			stream << "<private_dirty>" << metrics.privateDirty << "</private_dirty>";
+			stream << "<swap>" << metrics.swap << "</swap>";
+			stream << "<real_memory>" << metrics.realMemory() << "</real_memory>";
+			stream << "<vmsize>" << metrics.vmsize << "</vmsize>";
+			stream << "<process_group_id>" << metrics.processGroupId << "</process_group_id>";
+			stream << "<command>" << escapeForXml(metrics.command) << "</command>";
+		}
 		if (includeSockets) {
 			SocketList::const_iterator it;
 
