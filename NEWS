@@ -25,6 +25,9 @@ Release 4.0.0 release candidate 5
    if PassengerPoolIdleTime is set to 0. Fixes issue #858.
  * Fixed some process memory usage measurement bugs.
  * Fixed process memory usage measurement on NetBSD. Fixes issue #736.
+ * The PassengerPreStart helper script now uses the default Ruby
+   interpreter specified in the web server configuration, and no longer
+   requires a `ruby` command to be in `$PATH`.
  * Worked around some RVM bugs.
  * The ngx_http_stub_status_module is now enabled by default.
  * Performance optimizations.
