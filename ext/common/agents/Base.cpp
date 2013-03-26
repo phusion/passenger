@@ -60,6 +60,7 @@
 #include <Constants.h>
 #include <Exceptions.h>
 #include <Logging.h>
+#include <ResourceLocator.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #ifdef __linux__
@@ -102,7 +103,6 @@ static volatile unsigned int abortHandlerCalled = 0;
 static unsigned int randomSeed = 0;
 static const char *argv0 = NULL;
 static const char *backtraceSanitizerPath = NULL;
-static bool backtraceSanitizerUseShell = false;
 static bool backtraceSanitizerPassProgramInfo = true;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
 static void *customDiagnosticsDumperUserData;
@@ -485,27 +485,17 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 
 				close(p[1]);
 				dup2(p[0], STDIN_FILENO);
-				if (backtraceSanitizerUseShell) {
-					end = state.messageBuf;
-					end = appendText(end, backtraceSanitizerPath);
-					if (backtraceSanitizerPassProgramInfo) {
-						end = appendText(end, " \"");
-						end = appendText(end, argv0);
-						end = appendText(end, "\" ");
-						end = appendText(end, pidStr);
-					}
-					*end = '\0';
-					execlp("/bin/sh", "/bin/sh", "-c",
-						state.messageBuf, (const char * const) 0);
-				} else {
-					if (backtraceSanitizerPassProgramInfo) {
-						execlp(backtraceSanitizerPath, backtraceSanitizerPath, argv0,
-						pidStr, (const char * const) 0);
-					} else {
-						execlp(backtraceSanitizerPath, backtraceSanitizerPath,
-							(const char * const) 0);
-					}
+				end = state.messageBuf;
+				end = appendText(end, backtraceSanitizerPath);
+				if (backtraceSanitizerPassProgramInfo) {
+					end = appendText(end, " \"");
+					end = appendText(end, argv0);
+					end = appendText(end, "\" ");
+					end = appendText(end, pidStr);
 				}
+				*end = '\0';
+				execlp("/bin/sh", "/bin/sh", "-c",
+					state.messageBuf, (const char * const) 0);
 
 				end = state.messageBuf;
 				end = appendText(end, "ERROR: cannot execute '");
@@ -1380,12 +1370,14 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		#ifdef __linux__
 			if (options.has("passenger_root")) {
 				ResourceLocator locator(options.get("passenger_root", true));
-				backtraceSanitizerPath = strdup((locator.getHelperScriptsDir() + "/backtrace-sanitizer.rb").c_str());
+				string ruby = strdup(options.get("passenger_ruby", false, DEFAULT_RUBY).c_str());
+				string path = ruby + " \"" + locator.getHelperScriptsDir() +
+					"/backtrace-sanitizer.rb\"";
+				backtraceSanitizerPath = strdup(path.c_str());
 			}
 		#endif
 		if (backtraceSanitizerPath == NULL) {
 			backtraceSanitizerPath = "c++filt -n";
-			backtraceSanitizerUseShell = true;
 			backtraceSanitizerPassProgramInfo = false;
 		}
 
