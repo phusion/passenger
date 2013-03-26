@@ -741,7 +741,8 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 			// TODO: sure this is the best thing? if there are
 			// processes currently alive we should just use them.
 			P_ERROR("Could not spawn process for group " << name <<
-				": " << exception->what());
+				": " << exception->what() << "\n" <<
+				exception->backtrace());
 			if (enabledCount == 0) {
 				enableAllDisablingProcesses(actions);
 			}

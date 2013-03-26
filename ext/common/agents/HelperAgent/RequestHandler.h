@@ -669,44 +669,56 @@ private:
 		string data;
 
 		if (getBoolOption(client, "PASSENGER_FRIENDLY_ERROR_PAGES", true)) {
-			string cssFile = templatesDir + "/error_layout.css";
-			string errorLayoutFile = templatesDir + "/error_layout.html.template";
-			string generalErrorFile =
-				(e != NULL && e->isHTML())
-				? templatesDir + "/general_error_with_html.html.template"
-				: templatesDir + "/general_error.html.template";
-			string css = readAll(cssFile);
-			StringMap<StaticString> params;
+			try {
+				string cssFile = templatesDir + "/error_layout.css";
+				string errorLayoutFile = templatesDir + "/error_layout.html.template";
+				string generalErrorFile =
+					(e != NULL && e->isHTML())
+					? templatesDir + "/general_error_with_html.html.template"
+					: templatesDir + "/general_error.html.template";
+				string css = readAll(cssFile);
+				StringMap<StaticString> params;
 
-			params.set("CSS", css);
-			params.set("APP_ROOT", client->options.appRoot);
-			params.set("RUBY", client->options.ruby);
-			params.set("ENVIRONMENT", client->options.environment);
-			params.set("MESSAGE", message);
-			params.set("IS_RUBY_APP",
-				(client->options.appType == "classic-rails" || client->options.appType == "rack")
-				? "true" : "false");
-			if (e != NULL) {
-				params.set("TITLE", "Web application could not be started");
-				// Store all SpawnException annotations into 'params',
-				// but convert its name to uppercase.
-				const map<string, string> &annotations = e->getAnnotations();
-				map<string, string>::const_iterator it, end = annotations.end();
-				for (it = annotations.begin(); it != end; it++) {
-					string name = it->first;
-					for (string::size_type i = 0; i < name.size(); i++) {
-						name[i] = toupper(name[i]);
+				params.set("CSS", css);
+				params.set("APP_ROOT", client->options.appRoot);
+				params.set("RUBY", client->options.ruby);
+				params.set("ENVIRONMENT", client->options.environment);
+				params.set("MESSAGE", message);
+				params.set("IS_RUBY_APP",
+					(client->options.appType == "classic-rails" || client->options.appType == "rack")
+					? "true" : "false");
+				if (e != NULL) {
+					params.set("TITLE", "Web application could not be started");
+					// Store all SpawnException annotations into 'params',
+					// but convert its name to uppercase.
+					const map<string, string> &annotations = e->getAnnotations();
+					map<string, string>::const_iterator it, end = annotations.end();
+					for (it = annotations.begin(); it != end; it++) {
+						string name = it->first;
+						for (string::size_type i = 0; i < name.size(); i++) {
+							name[i] = toupper(name[i]);
+						}
+						params.set(name, it->second);
 					}
-					params.set(name, it->second);
+				} else {
+					params.set("TITLE", "Internal server error");
 				}
-			} else {
-				params.set("TITLE", "Internal server error");
+				string content = Template::apply(readAll(generalErrorFile), params);
+				params.set("CONTENT", content);
+				data = Template::apply(readAll(errorLayoutFile), params);
+			} catch (const SystemException &e2) {
+				P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
+					e2.backtrace());
+				data = message;
 			}
-			string content = Template::apply(readAll(generalErrorFile), params);
-			params.set("CONTENT", content);
-			data = Template::apply(readAll(errorLayoutFile), params);
 		} else {
-			data = readAll(templatesDir + "/undisclosed_error.html.template");
+			try {
+				data = readAll(templatesDir + "/undisclosed_error.html.template");
+			} catch (const SystemException &e2) {
+				P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
+					e2.backtrace());
+				data = "Internal Server Error";
+			}
 		}
 
 		stringstream str;
@@ -1240,7 +1252,8 @@ private:
 					int e = errno;
 					P_ERROR("Cannot accept client: " << strerror(e) <<
 						" (errno=" << e << "). " <<
-						"Pausing listening on server socket for 3 seconds.");
+						"Pausing listening on server socket for 3 seconds. " <<
+						"Current client count: " << clients.size());
 					requestSocketWatcher.stop();
 					resumeSocketWatcherTimer.start();
 					endReached = true;
