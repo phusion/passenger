@@ -121,6 +121,7 @@ private
 
 		if status == "Error\n"
 			body = @output.read
+			STDERR.puts "<--- #{body}" if DEBUG
 		end
 
 		return { :status => status.strip, :headers => headers, :body => body }
