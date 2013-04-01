@@ -29,6 +29,7 @@ Release 4.0.0 release candidate 5
  * The PassengerPreStart helper script now uses the default Ruby
    interpreter specified in the web server configuration, and no longer
    requires a `ruby` command to be in `$PATH`.
+ * Updated preferred PCRE version to 8.32.
  * Worked around some RVM bugs.
  * The ngx_http_stub_status_module is now enabled by default.
  * Performance optimizations.
