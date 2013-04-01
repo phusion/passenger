@@ -18,6 +18,15 @@ if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
 	source ~/.rvm/scripts/rvm
 	rvm use $TEST_RUBY_VERSION
+	if [[ "$TEST_RUBYGEMS_VERSION" = "" ]]; then
+		echo "$ gem --version"
+		gem --version
+	fi
+fi
+
+if [[ "$TEST_RUBYGEMS_VERSION" != "" ]]; then
+	echo "$ rvm install rubygems $TEST_RUBYGEMS_VERSION"
+	rvm install rubygems $TEST_RUBYGEMS_VERSION
 	echo "$ gem --version"
 	gem --version
 fi
