@@ -220,7 +220,7 @@ task 'test:cxx' => dependencies do
 		command = "valgrind --dsymutil=yes --db-attach=yes --child-silent-after-fork=yes #{command}"
 	end
 	if boolean_option('SUDO')
-		command = "sudo #{command}"
+		command = "#{PlatformInfo.ruby_sudo_command} #{command}"
 	end
 	if boolean_option('REPEAT')
 		if boolean_option('GDB')
