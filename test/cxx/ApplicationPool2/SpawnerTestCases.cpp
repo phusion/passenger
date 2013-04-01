@@ -269,13 +269,21 @@
 		// It forwards all stdout and stderr output, even after the corresponding
 		// Process object has been destroyed.
 		DeleteFileEventually d("tmp.output");
-		PipeWatcher::onData = gatherOutput;
 
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		options.appType = "rack";
 		SpawnerPtr spawner = createSpawner(options);
-		process = spawner->spawn(options);
+		try {
+			setLogLevel(LVL_DEBUG);
+			process = spawner->spawn(options);
+			PipeWatcher::onData = gatherOutput;
+		} catch (const SpawnException &e) {
+			P_ERROR("SpawnException: " << e.what() << "\n" <<
+				e.getErrorPage() << "\n" <<
+				e.backtrace());
+			fail("Got SpawnException");
+		}
 		process->requiresShutdown = false;
 		
 		SessionPtr session = process->newSession();
