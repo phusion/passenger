@@ -299,6 +299,10 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.cache_bypass = NGX_CONF_UNSET_PTR;
     conf->upstream_config.no_cache = NGX_CONF_UNSET_PTR;
     conf->upstream_config.cache_valid = NGX_CONF_UNSET_PTR;
+    #if NGINX_VERSION_NUM >= 1002000
+        conf->upstream_config.cache_lock = NGX_CONF_UNSET;
+        conf->upstream_config.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
+    #endif
 #endif
 
     conf->upstream_config.intercept_errors = NGX_CONF_UNSET;
