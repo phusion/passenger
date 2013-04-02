@@ -937,7 +937,7 @@ private:
 		const StaticString &origHeaderData)
 	{
 		string headerData;
-		headerData.reserve(origHeaderData.size() + 100);
+		headerData.reserve(origHeaderData.size() + 150);
 		// Strip trailing CRLF.
 		headerData.append(origHeaderData.data(), origHeaderData.size() - 2);
 		
