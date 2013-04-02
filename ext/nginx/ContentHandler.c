@@ -895,6 +895,7 @@ reinit_request(ngx_http_request_t *r)
     context->status_end = NULL;
 
     r->upstream->process_header = process_status_line;
+    r->state = 0;
 
     return NGX_OK;
 }
@@ -1499,6 +1500,7 @@ passenger_content_handler(ngx_http_request_t *r)
     u->process_header   = process_status_line;
     u->abort_request    = abort_request;
     u->finalize_request = finalize_request;
+    r->state = 0;
 
     u->buffering = slcf->upstream_config.buffering;
     
