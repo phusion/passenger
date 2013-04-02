@@ -251,6 +251,12 @@ public
 			:c, '', '-mno-tls-direct-seg-refs')
 	end
 	memoize :compiler_supports_no_tls_direct_seg_refs_option?, true
+
+	def self.compiler_supports_wno_ambiguous_member_template?
+		return try_compile("Checking for C compiler '-Wno-ambiguous-member-template' support",
+			:c, '', '-Wno-ambiguous-member-template')
+	end
+	memoize :compiler_supports_wno_ambiguous_member_template?, true
 	
 	# Returns whether compiling C++ with -fvisibility=hidden might result
 	# in tons of useless warnings, like this:
