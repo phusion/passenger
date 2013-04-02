@@ -1,3 +1,10 @@
+Release 4.0.0 release candidate 6
+---------------------------------
+
+ * WebSocket support on Nginx.
+ * Various bug fixes.
+
+
 Release 4.0.0 release candidate 5
 ---------------------------------
 
