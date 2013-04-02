@@ -279,6 +279,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.buffering = NGX_CONF_UNSET;
     conf->upstream_config.ignore_client_abort = NGX_CONF_UNSET;
 
+    conf->upstream_config.local = NGX_CONF_UNSET_PTR;
+
     conf->upstream_config.connect_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream_config.send_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream_config.read_timeout = NGX_CONF_UNSET_MSEC;
@@ -431,10 +433,13 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream_config.store_access, 0600);
 
     ngx_conf_merge_value(conf->upstream_config.buffering,
-                              prev->upstream_config.buffering, 0);
+                         prev->upstream_config.buffering, 0);
 
     ngx_conf_merge_value(conf->upstream_config.ignore_client_abort,
-                              prev->upstream_config.ignore_client_abort, 0);
+                         prev->upstream_config.ignore_client_abort, 0);
+
+    ngx_conf_merge_ptr_value(conf->upstream_config.local,
+                             prev->upstream_config.local, NULL);
 
     ngx_conf_merge_msec_value(conf->upstream_config.connect_timeout,
                               prev->upstream_config.connect_timeout, 12000000);
