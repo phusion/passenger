@@ -1182,7 +1182,7 @@ process_header(ngx_http_request_t *r)
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
 
-    for ( ;;  ) {
+    for ( ;; ) {
 
         rc = ngx_http_parse_header_line(r, &r->upstream->buffer, 1);
 
@@ -1192,7 +1192,7 @@ process_header(ngx_http_request_t *r)
 
             h = ngx_list_push(&r->upstream->headers_in.headers);
             if (h == NULL) {
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                return NGX_ERROR;
             }
 
             h->hash = r->header_hash;
@@ -1200,10 +1200,11 @@ process_header(ngx_http_request_t *r)
             h->key.len = r->header_name_end - r->header_name_start;
             h->value.len = r->header_end - r->header_start;
 
-            h->key.data = ngx_palloc(r->pool,
-                               h->key.len + 1 + h->value.len + 1 + h->key.len);
+            h->key.data = ngx_pnalloc(r->pool,
+                                      h->key.len + 1 + h->value.len + 1
+                                      + h->key.len);
             if (h->key.data == NULL) {
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                return NGX_ERROR;
             }
 
             h->value.data = h->key.data + h->key.len + 1;
@@ -1218,21 +1219,18 @@ process_header(ngx_http_request_t *r)
                 ngx_memcpy(h->lowcase_key, r->lowcase_header, h->key.len);
 
             } else {
-                for (i = 0; i < h->key.len; i++) {
-                    h->lowcase_key[i] = ngx_tolower(h->key.data[i]);
-                }
+                ngx_strlow(h->lowcase_key, h->key.data, h->key.len);
             }
 
             hh = ngx_hash_find(&umcf->headers_in_hash, h->hash,
                                h->lowcase_key, h->key.len);
 
             if (hh && hh->handler(r, h, hh->offset) != NGX_OK) {
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                return NGX_ERROR;
             }
 
             ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                           "http scgi header: \"%V: %V\"",
-                           &h->key, &h->value);
+                           "http scgi header: \"%V: %V\"", &h->key, &h->value);
 
             continue;
         }
