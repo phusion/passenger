@@ -853,10 +853,16 @@ private:
 	}
 
 	bool addStatusHeaderFromStatusLine(const ClientPtr &client, string &headerData) {
-		string::size_type begin = headerData.find(' ');
-		string::size_type end = headerData.find("\r\n");
+		string::size_type begin, end;
+
+		begin = headerData.find(' ');
+		if (begin != string::npos) {
+			end = headerData.find("\r\n", begin + 1);
+		} else {
+			end = string::npos;
+		}
 		if (begin != string::npos && end != string::npos) {
-			StaticString statusValue(headerData.data() + begin, end - begin);
+			StaticString statusValue(headerData.data() + begin + 1, end - begin);
 			char header[statusValue.size() + 20];
 			char *pos = header;
 			const char *end = header + statusValue.size() + 20;
