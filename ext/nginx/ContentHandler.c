@@ -222,6 +222,57 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
     }
 }
 
+/**
+ * If the helper agent socket cannot be connected to then we want Nginx to print
+ * the proper socket filename in the error message. The socket filename is stored
+ * in one of the upstream peer data structures. This name is initialized during
+ * the first ngx_http_read_client_request_body() call so there's no way to fix the
+ * name before the first request, which is why we do it after the fact.
+ */
+static void
+fix_peer_address(ngx_http_request_t *r) {
+    ngx_http_upstream_rr_peer_data_t *rrp;
+    ngx_http_upstream_rr_peers_t     *peers;
+    ngx_http_upstream_rr_peer_t      *peer;
+    unsigned int                      peer_index;
+    const char                       *request_socket_filename;
+    unsigned int                      request_socket_filename_len;
+
+    if (r->upstream->peer.get != ngx_http_upstream_get_round_robin_peer) {
+        /* This function only supports the round-robin upstream method. */
+        return;
+    }
+
+    rrp        = r->upstream->peer.data;
+    peers      = rrp->peers;
+    request_socket_filename =
+        agents_starter_get_request_socket_filename(passenger_agents_starter,
+                                                   &request_socket_filename_len);
+
+    while (peers != NULL) {
+        if (peers->name) {
+            if (peers->name->data == (u_char *) request_socket_filename) {
+                /* Peer names already fixed. */
+                return;
+            }
+            peers->name->data = (u_char *) request_socket_filename;
+            peers->name->len  = request_socket_filename_len;
+        }
+        peer_index = 0;
+        while (1) {
+            peer = &peers->peer[peer_index];
+            peer->name.data = (u_char *) request_socket_filename;
+            peer->name.len  = request_socket_filename_len;
+            if (peer->down) {
+                peer_index++;
+            } else {
+                break;
+            }
+        }
+        peers = peers->next;
+    }
+}
+
 
 /* Convenience macros for building the SCGI header in create_request(). */
 
@@ -1413,6 +1464,8 @@ passenger_content_handler(ngx_http_request_t *r)
     u->pipe->input_ctx = r;
 
     rc = ngx_http_read_client_request_body(r, ngx_http_upstream_init);
+
+    fix_peer_address(r);
 
     if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
         return rc;
