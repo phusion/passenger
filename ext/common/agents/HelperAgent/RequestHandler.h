@@ -1544,6 +1544,16 @@ private:
 			modified = true;
 		}
 
+		/* If "Connection: Upgrade" then turn off input buffering. */
+
+		if ((it = map.find("HTTP_CONNECTION")) != end) {
+			if (it->second == "Upgrade" || it->second == "upgrade") {
+				RH_TRACE(client, 2, "HTTP 'Connection: Upgrade' detected; disabling input buffering.");
+				map["PASSENGER_BUFFERING"] = "false";
+				modified = true;
+			}
+		}
+
 		return modified;
 	}
 
