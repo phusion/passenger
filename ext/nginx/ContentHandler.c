@@ -1170,9 +1170,11 @@ done:
 static ngx_int_t
 process_header(ngx_http_request_t *r)
 {
-    ngx_int_t                       rc;
+    ngx_str_t                      *status_line;
+    ngx_int_t                       rc, status;
     ngx_uint_t                      i;
     ngx_table_elt_t                *h;
+    ngx_http_upstream_t            *u;
     ngx_http_upstream_header_t     *hh;
     ngx_http_upstream_main_conf_t  *umcf;
     ngx_http_core_loc_conf_t       *clcf;
@@ -1289,6 +1291,53 @@ process_header(ngx_http_request_t *r)
                 h->value.data = NULL;
                 h->lowcase_key = (u_char *) "date";
             }
+
+            /* Process "Status" header. */
+
+            u = r->upstream;
+
+            if (u->headers_in.status_n) {
+                goto done;
+            }
+
+            if (u->headers_in.status) {
+                status_line = &u->headers_in.status->value;
+
+                status = ngx_atoi(status_line->data, 3);
+                if (status == NGX_ERROR) {
+                    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                                  "upstream sent invalid status \"%V\"",
+                                  status_line);
+                    return NGX_HTTP_UPSTREAM_INVALID_HEADER;
+                }
+
+                u->headers_in.status_n = status;
+                u->headers_in.status_line = *status_line;
+
+            } else if (u->headers_in.location) {
+                u->headers_in.status_n = 302;
+                ngx_str_set(&u->headers_in.status_line,
+                            "302 Moved Temporarily");
+
+            } else {
+                u->headers_in.status_n = 200;
+                ngx_str_set(&u->headers_in.status_line, "200 OK");
+            }
+
+            if (u->state) {
+                u->state->status = u->headers_in.status_n;
+            }
+
+        done:
+
+            /* Supported since Nginx 1.3.15. */
+            #ifdef NGX_HTTP_SWITCHING_PROTOCOLS
+                if (u->headers_in.status_n == NGX_HTTP_SWITCHING_PROTOCOLS
+                    && r->headers_in.upgrade)
+                {
+                    u->upgrade = 1;
+                }
+            #endif
 
             return NGX_OK;
         }
