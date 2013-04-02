@@ -870,7 +870,7 @@ private:
 			pos = appendData(pos, end, "Status: ");
 			pos = appendData(pos, end, statusValue);
 			pos = appendData(pos, end, "\r\n");
-			headerData.append(header);
+			headerData.append(StaticString(header, pos - header));
 			return true;
 		} else {
 			disconnectWithError(client, "application sent malformed response: the HTTP status line is invalid.");
