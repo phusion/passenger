@@ -621,7 +621,7 @@ private:
 		}
 	}
 
-	static long long getLongLongOption(const ClientPtr &client, const StaticString &name, long long defaultValue = -1) {
+	static long long getULongLongOption(const ClientPtr &client, const StaticString &name, long long defaultValue = -1) {
 		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
 		if (it != client->scgiParser.end()) {
 			long long result = stringToULL(it->second);
@@ -1354,6 +1354,7 @@ private:
 		if (errnoCode == ECONNRESET) {
 			// We might as well treat ECONNRESET like an EOF.
 			// http://stackoverflow.com/questions/2974021/what-does-econnreset-mean-in-the-context-of-an-af-local-socket
+			RH_TRACE(client, 3, "Client socket ECONNRESET error; treating it as EOF");
 			onClientEof(client);
 		} else {
 			stringstream message;
@@ -1707,7 +1708,7 @@ private:
 			 * onClientData exits.
 			 */
 			parser.rebuildData(modified);
-			client->contentLength = getLongLongOption(client, "CONTENT_LENGTH");
+			client->contentLength = getULongLongOption(client, "CONTENT_LENGTH");
 			fillPoolOptions(client);
 			if (!client->connected()) {
 				return consumed;

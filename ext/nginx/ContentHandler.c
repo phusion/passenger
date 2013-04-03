@@ -53,10 +53,11 @@ static void abort_request(ngx_http_request_t *r);
 static void finalize_request(ngx_http_request_t *r, ngx_int_t rc);
 
 
-static void
+static unsigned int
 uint_to_str(ngx_uint_t i, u_char *str, ngx_uint_t size) {
-    ngx_memzero(str, size);
-    ngx_snprintf(str, size, "%ui", i);
+    unsigned int len = ngx_snprintf(str, size - 1, "%ui", i) - str;
+    str[len] = '\0';
+    return len;
 }
 
 static FileType
@@ -362,8 +363,8 @@ create_request(ngx_http_request_t *r)
     u_char                         ch;
     const char *                   helper_agent_request_socket_password_data;
     unsigned int                   helper_agent_request_socket_password_len;
-    u_char                         buf[sizeof("4294967296")];
-    size_t                         len, size, key_len, val_len, content_length;
+    u_char                         buf[sizeof("4294967296") + 1];
+    size_t                         len, size, key_len, val_len;
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
     int                            server_name_len;
@@ -417,15 +418,15 @@ create_request(ngx_http_request_t *r)
      * Determine the request header length.
      **************************************************/
     
-    /* Length of the Content-Length header. */
-    if (r->headers_in.content_length_n < 0) {
-        content_length = 0;
-    } else {
-        content_length = r->headers_in.content_length_n;
+    len = 0;
+
+    /* Length of the Content-Length header. A value of -1 means that the content
+     * length is unspecified, which is the case for e.g. WebSocket requests. */
+    if (r->headers_in.content_length_n >= 0) {
+        len += sizeof("CONTENT_LENGTH") +
+            uint_to_str(r->headers_in.content_length_n, buf, sizeof(buf)) +
+            1; /* +1 for trailing null */
     }
-    uint_to_str(content_length, buf, sizeof(buf));
-    /* +1 for trailing null */
-    len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
     
     /* DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT, PATH_INFO and REQUEST_URI. */
     len += sizeof("DOCUMENT_ROOT") + context->public_dir.len + 1;
@@ -615,12 +616,13 @@ create_request(ngx_http_request_t *r)
     b->last = ngx_snprintf(b->last, 10, "%ui", len);
     *b->last++ = (u_char) ':';
 
-    /* Build CONTENT_LENGTH header. This must always be sent, even if 0. */
-    b->last = ngx_copy(b->last, "CONTENT_LENGTH",
-                       sizeof("CONTENT_LENGTH"));
+    if (r->headers_in.content_length_n >= 0) {
+        b->last = ngx_copy(b->last, "CONTENT_LENGTH",
+                           sizeof("CONTENT_LENGTH"));
 
-    b->last = ngx_snprintf(b->last, 10, "%ui", content_length);
-    *b->last++ = (u_char) 0;
+        b->last = ngx_snprintf(b->last, 10, "%ui", r->headers_in.content_length_n);
+        *b->last++ = (u_char) 0;
+    }
     
     /* Build DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT, PATH_INFO and REQUEST_URI. */
     b->last = ngx_copy(b->last, "DOCUMENT_ROOT", sizeof("DOCUMENT_ROOT"));
