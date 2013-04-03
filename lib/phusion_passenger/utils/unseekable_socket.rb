@@ -88,7 +88,12 @@ class UnseekableSocket
 	end
 	
 	def to_io
-		self
+		# This makes select() work.
+		@socket
+	end
+
+	def fileno
+		@socket.fileno
 	end
 	
 	def addr
