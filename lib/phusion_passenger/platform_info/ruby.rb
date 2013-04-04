@@ -235,8 +235,12 @@ module PlatformInfo
 			# try various strategies...
 			
 			# $GEM_HOME usually contains the gem set name.
-			if GEM_HOME && GEM_HOME.include?("rvm/gems/")
-				return File.basename(GEM_HOME)
+			# It may be something like:
+			#   /Users/hongli/.rvm/gems/ruby-1.9.3-p392
+			# But also:
+			#   /home/bitnami/.rvm/gems/ruby-1.9.3-p385-perf@njist325/ruby/1.9.1
+			if GEM_HOME && GEM_HOME =~ %r{rvm/gems/(.+)}
+				return $1.sub(/\/.*/, '')
 			end
 			
 			# User somehow managed to nuke $GEM_HOME. Extract info
