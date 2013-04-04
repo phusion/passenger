@@ -236,7 +236,9 @@ module PlatformInfo
 			
 			# $GEM_HOME usually contains the gem set name.
 			if GEM_HOME && GEM_HOME.include?("rvm/gems/")
-				return File.basename(GEM_HOME)
+				# Matches 'ruby-1.9.3-anythinguptoatsign', '1.9.1', 'ruby-1.8.7' etc.
+                                matches =GEM_HOME.match(/((ruby[^\/])?\d\D\d\D\d[^@\/\\]*)/)
+                                return matches[0] if not matches[0].nil?
 			end
 			
 			# User somehow managed to nuke $GEM_HOME. Extract info
