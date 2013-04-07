@@ -306,7 +306,9 @@ private
 	end
 	
 	def finalize_request(connection, headers, has_error)
-		connection.stop_simulating_eof!
+		if connection
+			connection.stop_simulating_eof!
+		end
 
 		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
 		if log && !log.closed?
