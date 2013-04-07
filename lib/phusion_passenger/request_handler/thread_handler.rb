@@ -143,7 +143,7 @@ private
 					connection = nil
 					channel = nil
 				end
-				finalize_request(headers, has_error)
+				finalize_request(connection, headers, has_error)
 				trace(3, "Request done.")
 			end
 		else
@@ -305,7 +305,9 @@ private
 		#################
 	end
 	
-	def finalize_request(headers, has_error)
+	def finalize_request(connection, headers, has_error)
+		connection.stop_simulating_eof!
+
 		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
 		if log && !log.closed?
 			exception_occurred = false
