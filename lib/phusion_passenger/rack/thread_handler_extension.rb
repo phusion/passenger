@@ -66,7 +66,12 @@ module ThreadHandlerExtension
 				env[RACK_URL_SCHEME] = HTTP
 			end
 			env[RACK_HIJACK_P] = true
-			env[RACK_HIJACK] = lambda { env[RACK_HIJACK_IO] ||= connection }
+			env[RACK_HIJACK] = lambda do
+				env[RACK_HIJACK_IO] ||= begin
+					connection.stop_simulating_eof!
+					connection
+				end
+			end
 			
 			begin
 				status, headers, body = @app.call(env)
