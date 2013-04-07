@@ -1116,18 +1116,13 @@ namespace tut {
 	TEST_METHOD(64) {
 		// Test process idle cleaning.
 		Options options = createOptions();
-		retainSessions = true;
 		pool->setMaxIdleTime(50000);
-		pool->asyncGet(options, callback);
-		pool->asyncGet(options, callback);
-		EVENTUALLY(2,
-			result = number == 2;
-		);
+		SessionPtr session1 = pool->get(options, &ticket);
+		SessionPtr session2 = pool->get(options, &ticket);
 		ensure_equals(pool->getProcessCount(), 2u);
-		
-		currentSession.reset();
-		sessions.pop_back();
 
+		session2.reset();
+		
 		// One of the processes still has a session open and should
 		// not be idle cleaned.
 		EVENTUALLY(2,
