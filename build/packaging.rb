@@ -28,19 +28,21 @@ task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
 	require 'phusion_passenger'
 	basename   = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
 	version    = PhusionPassenger::VERSION_STRING
-	tag_prefix = (basename !~ /enterprise/) ? 'release' : 'enterprise'
+	is_enterprise  = basename =~ /enterprise/
+	is_open_source = !is_enterprise
+	tag_prefix     = is_open_source ? 'release' : 'enterprise'
 
-	sh "git tag -s #{tag_prefix}-#{version} -u 0A212A8C"
+	sh "git tag -s #{tag_prefix}-#{version} -u 0A212A8C -m 'Release #{version}'"
 
-	puts "Proceed with pushing tag to Github and uploading the gem and signatures? [y/n]"
+	puts "Proceed with pushing tag to remote Git repo and uploading the gem and signatures? [y/n]"
 	if STDIN.readline == "y\n"
 		sh "git push origin #{tag_prefix}-#{version}"
-		if basename !~ /enterprise/
+		if is_open_source
 			sh "scp pkg/#{basename}.{gem.asc,tar.gz.asc} app@shell.phusion.nl:/u/apps/signatures/phusion-passenger/"
+			sh "./dev/googlecode_upload.py -p phusion-passenger -s 'Phusion Passenger #{version}' pkg/passenger-#{version}.tar.gz"
 			sh "gem push pkg/passenger-#{version}.gem"
 			puts "--------------"
-			puts "All done. Please upload pkg/passenger-#{version}.tar.gz " +
-				"to RubyForge and update the version number in the Phusion Passenger website."
+			puts "All done. Please update the version number in the Phusion Passenger website."
 		else
 			dir = "/u/apps/passenger_website/shared"
 			subdir = string_option('NAME', version)
