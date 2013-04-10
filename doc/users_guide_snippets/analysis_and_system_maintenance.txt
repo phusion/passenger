@@ -31,9 +31,9 @@ PID    PPID  Threads  VMSize   Private  Name
 ### Processes: 8
 ### Total private dirty RSS: 3.50 MB
 
------------ Nginx processes ------------
+----------- Nginx processes ------------.
 PID    PPID   VMSize     Resident  Name
-----------------------------------------
+----------------------------------------.
 51766  51764  82.7 MB    3.9 MB    nginx: master process ./objs/nginx
 51773  51766  82.9 MB    0.9 MB    nginx: worker process
 
