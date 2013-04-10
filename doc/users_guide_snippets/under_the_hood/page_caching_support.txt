@@ -9,10 +9,10 @@ For example, suppose that the browser requests '/foo/bar'.
 
 1. Phusion Passenger will first check whether this URI maps to a static file, i.e.
    whether the file 'foo/bar' exists in the web application's 'public' directory.
-   If it does then Phusion Passenger will serve this file through Apache immediately.
+   If it does then Phusion Passenger will serve this file through the web server immediately.
 2. If that doesn't exist, then Phusion Passenger will check whether the file
    'foo/bar.html' exists. If it does then Phusion Passenger will serve this file
-   through Apache immediately.
+   through the web server immediately.
 3. If 'foo/bar.html' doesn't exist either, then Phusion Passenger will forward the
    request to the underlying web application.
 
