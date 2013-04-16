@@ -477,11 +477,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF,
 		"The Ruby interpreter to use."),
-	AP_INIT_TAKE1("PassengerPython",
-		(Take1Func) cmd_passenger_python,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The Python interpreter to use."),
 	AP_INIT_TAKE1("PassengerLogLevel",
 		(Take1Func) cmd_passenger_log_level,
 		NULL,
@@ -730,7 +725,11 @@ const command_rec passenger_commands[] = {
 		"The environment under which a Rack app must run."),
 	
 	// WSGI-specific settings.
-	// none
+	AP_INIT_TAKE1("PassengerPython",
+		(Take1Func) cmd_passenger_python,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The Python interpreter to use."),
 	
 	// Backwards compatibility options.
 	AP_INIT_TAKE1("RailsRuby",
