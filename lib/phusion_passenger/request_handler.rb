@@ -213,6 +213,7 @@ class RequestHandler
 			end
 			
 			install_useful_signal_handlers
+			RobustInterruption.install
 			start_threads
 			wait_until_termination
 			terminate_threads
