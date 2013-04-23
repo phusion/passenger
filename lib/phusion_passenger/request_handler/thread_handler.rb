@@ -26,7 +26,6 @@ require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/unseekable_socket'
-require 'phusion_passenger/utils/robust_interruption'
 
 module PhusionPassenger
 class RequestHandler
@@ -36,7 +35,9 @@ class RequestHandler
 class ThreadHandler
 	include DebugLogging
 	include Utils
-	include Utils::RobustInterruption
+
+	class Interrupted < StandardError
+	end
 
 	REQUEST_METHOD = 'REQUEST_METHOD'.freeze
 	PING           = 'PING'.freeze
@@ -89,8 +90,7 @@ class ThreadHandler
 	end
 
 	def install
-		Thread.current[:handler] = self
-		install_robust_interruption
+		Thread.current[:passenger_thread_handler] = self
 		PhusionPassenger.call_event(:starting_request_handler_thread)
 	end
 
@@ -102,14 +102,18 @@ class ThreadHandler
 		
 		begin
 			finish_callback.call
-			while !Utils::RobustInterruption.interrupted?
+			while !stats_mutex.synchronize { @interrupted }
 				hijacked = accept_and_process_next_request(socket_wrapper, channel, buffer)
 				socket_wrapper = Utils::UnseekableSocket.new if hijacked
 			end
-		rescue Utils::RobustInterruption::Interrupted
+		rescue Interrupted
 			# Do nothing.
 		end
 		debug("Thread handler main loop exited normally")
+	end
+
+	def set_interrupted!
+		@stats_mutex.synchronize { @interrupted = true }
 	end
 
 	def idle?
@@ -120,8 +124,11 @@ private
 	# Returns true if the socket has been hijacked, false otherwise.
 	def accept_and_process_next_request(socket_wrapper, channel, buffer)
 		@stats_mutex.synchronize { @iterations += 1 }
-		connection = enable_interruptions { socket_wrapper.wrap(@server_socket.accept) }
-		@stats_mutex.synchronize { @processing = true }
+		connection = socket_wrapper.wrap(@server_socket.accept)
+		@stats_mutex.synchronize do
+			raise Interrupted if @interrupted
+			@processing = true
+		end
 		trace(3, "Accepted new request on socket #{@socket_name}")
 		channel.io = connection
 		if headers = parse_request(connection, channel, buffer)
