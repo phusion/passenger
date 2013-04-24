@@ -428,7 +428,7 @@ public:
 	}
 	
 	void inspectProcessList(const InspectOptions &options, stringstream &result,
-		const ProcessList &processes) const
+		const Group *group, const ProcessList &processes) const
 	{
 		ProcessList::const_iterator p_it;
 		for (p_it = processes.begin(); p_it != processes.end(); p_it++) {
@@ -453,8 +453,7 @@ public:
 				result << "    Disabling..." << endl;
 			} else if (process->enabled == Process::DISABLED) {
 				result << "    DISABLED" << endl;
-			}
-			if (process->getLifeStatus() == Process::SHUTTING_DOWN) {
+			} else if (process->enabled == Process::DETACHED) {
 				result << "    Shutting down...";
 			}
 
@@ -1388,10 +1387,10 @@ public:
 					result << "  (spawning new process...)" << endl;
 				}
 				result << "  Requests in queue: " << group->getWaitlist.size() << endl;
-				inspectProcessList(options, result, group->enabledProcesses);
-				inspectProcessList(options, result, group->disablingProcesses);
-				inspectProcessList(options, result, group->disabledProcesses);
-				inspectProcessList(options, result, group->detachedProcesses);
+				inspectProcessList(options, result, group, group->enabledProcesses);
+				inspectProcessList(options, result, group, group->disablingProcesses);
+				inspectProcessList(options, result, group, group->disabledProcesses);
+				inspectProcessList(options, result, group, group->detachedProcesses);
 				result << endl;
 			}
 		}

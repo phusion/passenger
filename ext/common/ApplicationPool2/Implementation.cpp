@@ -370,7 +370,7 @@ Group::onSessionInitiateFailure(const ProcessPtr &process, Session *session) {
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
 	unique_lock<boost::mutex> lock(pool->syncher);
-	assert(!process->isShutDown());
+	assert(process->isAlive());
 	assert(isAlive() || getLifeStatus() == SHUTTING_DOWN);
 
 	UPDATE_TRACE_POINT();
@@ -390,7 +390,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
 	unique_lock<boost::mutex> lock(pool->syncher);
-	assert(!process->isShutDown());
+	assert(process->isAlive());
 	assert(isAlive() || getLifeStatus() == SHUTTING_DOWN);
 
 	P_TRACE(2, "Session closed for process " << process->inspect());
@@ -399,9 +399,11 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	
 	/* Update statistics. */
 	process->sessionClosed(session);
-	Process::LifeStatus lifeStatus = process->getLifeStatus();
-	assert(process->enabled == Process::ENABLED || process->enabled == Process::DISABLING);
-	if (process->enabled == Process::ENABLED && lifeStatus == Process::ALIVE) {
+	assert(process->getLifeStatus() == Process::ALIVE);
+	assert(process->enabled == Process::ENABLED
+		|| process->enabled == Process::DISABLING
+		|| process->enabled == Process::DETACHED);
+	if (process->enabled == Process::ENABLED) {
 		pqueue.decrease(process->pqHandle, process->utilization());
 	}
 
@@ -409,16 +411,6 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	 * full utilization.
 	 */
 	assert(!process->atFullUtilization());
-
-	if (lifeStatus == Process::SHUTTING_DOWN) {
-		UPDATE_TRACE_POINT();
-		if (process->canBeShutDown()) {
-			shutdownAndRemoveProcess(process);
-		}
-		verifyInvariants();
-		verifyExpensiveInvariants();
-		return;
-	}
 
 	bool detachingBecauseOfMaxRequests = false;
 	bool detachingBecauseCapacityNeeded = false;
@@ -521,7 +513,10 @@ Group::lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult 
 
 void
 Group::asyncOOBWRequestIfNeeded(const ProcessPtr &process) {
-	if (process->oobwStatus != Process::OOBW_REQUESTED || !process->isAlive()) {
+	if (process->oobwStatus != Process::OOBW_REQUESTED
+		|| process->enabled == Process::DETACHED
+		|| !process->isAlive())
+	{
 		return;
 	}
 	if (process->enabled == Process::ENABLED) {
@@ -715,7 +710,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 		}
 
 		UPDATE_TRACE_POINT();
-		ScopeGuard guard(boost::bind(Process::maybeShutdown, process));
+		ScopeGuard guard(boost::bind(Process::forceTriggerShutdownAndCleanup, process));
 		unique_lock<boost::mutex> lock(pool->syncher);
 
 		if (!isAlive()) {
@@ -897,9 +892,14 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	}
 }
 
+/**
+ * The `immediately` parameter only has effect if the detached processes checker
+ * thread is active. It means that, if the thread is currently sleeping, it should
+ * wake up immediately and perform work.
+ */
 void
 Group::startCheckingDetachedProcesses(bool immediately) {
-	if (!detachedProcessesCheckerActive && !detachedProcesses.empty()) {
+	if (!detachedProcessesCheckerActive) {
 		P_DEBUG("Starting detached processes checker");
 		getPool()->nonInterruptableThreads.create_thread(
 			boost::bind(&Group::detachedProcessesCheckerMain, this, shared_from_this()),
@@ -916,12 +916,13 @@ void
 Group::detachedProcessesCheckerMain(GroupPtr self) {
 	TRACE_POINT();
 	PoolPtr pool = getPool();
+	unique_lock<boost::mutex> lock(pool->syncher);
 
-	while (!this_thread::interruption_requested()) {
-		unique_lock<boost::mutex> lock(pool->syncher);
+	while (true) {
 		assert(detachedProcessesCheckerActive);
 
-		if (getLifeStatus() == SHUT_DOWN) {
+		if (getLifeStatus() == SHUT_DOWN || this_thread::interruption_requested()) {
+			UPDATE_TRACE_POINT();
 			P_DEBUG("Stopping detached processes checker");
 			detachedProcessesCheckerActive = false;
 			break;
@@ -929,19 +930,35 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 
 		UPDATE_TRACE_POINT();
 		if (!detachedProcesses.empty()) {
-			P_TRACE(2, "Checking whether any detached processes have exited...");
+			P_TRACE(2, "Checking whether any of the " << detachedProcesses.size() <<
+				" detached processes have exited...");
 			ProcessList::iterator it = detachedProcesses.begin();
 			ProcessList::iterator end = detachedProcesses.end();
 			while (it != end) {
 				const ProcessPtr process = *it;
-				if (process->canBeShutDown()) {
+				switch (process->getLifeStatus()) {
+				case Process::ALIVE:
+					if (process->canTriggerShutdown()) {
+						P_DEBUG("Detached process " << process->inspect() <<
+							" has 0 active sessions now. Triggering shutdown.");
+						process->triggerShutdown();
+						assert(process->getLifeStatus() == Process::SHUTDOWN_TRIGGERED);
+					}
 					it++;
-					P_DEBUG("Detached process " << process->inspect() << " has exited.");
-					shutdownAndRemoveProcess(process);
-				} else {
-					P_DEBUG("Detached process " << process->inspect() << " not yet exited. "
-						"sessions = " << process->sessions);
-					it++;
+					break;
+				case Process::SHUTDOWN_TRIGGERED:
+					if (process->canCleanup()) {
+						P_DEBUG("Detached process " << process->inspect() << " has shut down. Cleaning up associated resources.");
+						process->cleanup();
+						assert(process->getLifeStatus() == Process::DEAD);
+						it++;
+						removeProcessFromList(process, detachedProcesses);
+					} else {
+						it++;
+					}
+					break;
+				default:
+					P_BUG("Unknown 'lifeStatus' state " << (int) process->getLifeStatus());
 				}
 			}
 		}
@@ -970,6 +987,8 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 			verifyExpensiveInvariants();
 		}
 
+		// Not all processes can be shut down yet. Sleep for a while unless
+		// someone wakes us up.
 		UPDATE_TRACE_POINT();
 		detachedProcessesCheckerCond.timed_wait(lock,
 			posix_time::milliseconds(10));
@@ -1013,13 +1032,13 @@ Group::generateSecret(const SuperGroupPtr &superGroup) {
 
 SuperGroupPtr
 Process::getSuperGroup() const {
-	assert(getLifeStatus() != SHUT_DOWN);
+	assert(getLifeStatus() != DEAD);
 	return getGroup()->getSuperGroup();
 }
 
 string
 Process::inspect() const {
-	assert(getLifeStatus() != SHUT_DOWN);
+	assert(getLifeStatus() != DEAD);
 	stringstream result;
 	result << "(pid=" << pid;
 	GroupPtr group = getGroup();
@@ -1055,7 +1074,7 @@ Session::getGroup() const {
 void
 Session::requestOOBW() {
 	ProcessPtr process = getProcess();
-	assert(!process->isShutDown());
+	assert(process->isAlive());
 	process->getGroup()->requestOOBW(process);
 }
 
