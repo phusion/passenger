@@ -6,6 +6,7 @@ Release 4.0.1
  * Fixed a bug which could cause application processes to exit before
    they've finished their request.
  * Fixed some small file descriptor leaks.
+ * Bumped the preferred Nginx version to 1.4.0.
  * Improved documentation.
 
 
