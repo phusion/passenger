@@ -26,7 +26,7 @@
 #define _PASSENGER_CONSTANTS_H_
 
 /* Don't forget to update lib/phusion_passenger.rb too. */
-#define PASSENGER_VERSION "4.0.0.rc6"
+#define PASSENGER_VERSION "4.0.0.rc7"
 
 #define FEEDBACK_FD 3
 
