@@ -3,6 +3,7 @@
 #include <agents/HelperAgent/RequestHandler.cpp>
 #include <agents/HelperAgent/AgentOptions.h>
 #include <ApplicationPool2/Pool.h>
+#include <Utils/json.h>
 #include <Utils/IOUtils.h>
 #include <Utils/Timer.h>
 
@@ -48,6 +49,8 @@ namespace tut {
 			setLogLevel(LVL_ERROR); // TODO: set to LVL_WARN
 
 			agentOptions.passengerRoot = resourceLocator->getRoot();
+			agentOptions.defaultUser   = testConfig["default_user"].asString();
+			agentOptions.defaultGroup  = testConfig["default_group"].asString();
 			root = resourceLocator->getRoot();
 			rackAppPath = root + "/test/stub/rack";
 			wsgiAppPath = root + "/test/stub/wsgi";
