@@ -15,6 +15,13 @@ sudo sh -c 'cat >> /etc/hosts' <<EOF
 127.0.0.1 7.passenger.test 8.passenger.test 9.passenger.test
 EOF
 
+echo "$ cat /etc/passwd"
+cat /etc/passwd
+echo "$ id"
+id
+echo "$ rvmsudo id"
+rvmsudo id
+
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
 	source ~/.rvm/scripts/rvm
