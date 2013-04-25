@@ -1,7 +1,12 @@
 Release 4.0.1
 -------------
 
- * Fixed PassengerDefaultUser and PassengerDefaultGroup.
+ * Fixed a crasher bug in the Deployment Error Resistance feature.
+ * Fixed a bug in PassengerDefaultUser and PassengerDefaultGroup.
+ * Fixed a bug which could cause application processes to exit before
+   they've finished their request.
+ * Fixed some small file descriptor leaks.
+ * Improved documentation.
 
 
 Release 4.0.0 release candidate 6
