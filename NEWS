@@ -7,6 +7,8 @@ Release 4.0.1
    they've finished their request.
  * Fixed some small file descriptor leaks.
  * Bumped the preferred Nginx version to 1.4.0.
+ * Editing the Phusion Passenger Standalone Nginx config template
+   is no longer discouraged.
  * Improved documentation.
 
 
