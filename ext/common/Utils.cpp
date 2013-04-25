@@ -391,7 +391,7 @@ getProcessUsername() {
 		result = (struct passwd *) NULL;
 	}
 	
-	if (result == (struct passwd *) NULL) {
+	if (result == (struct passwd *) NULL || result->pw_name == NULL || result->pw_name[0] == '\0') {
 		snprintf(strings, sizeof(strings), "UID %lld", (long long) getuid());
 		strings[sizeof(strings) - 1] = '\0';
 		return strings;
