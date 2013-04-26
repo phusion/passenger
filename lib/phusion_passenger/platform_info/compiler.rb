@@ -257,6 +257,22 @@ public
 			:c, '', '-Wno-ambiguous-member-template')
 	end
 	memoize :compiler_supports_wno_ambiguous_member_template?, true
+
+	def self.compiler_supports_feliminate_unused_debug?
+		create_temp_file("passenger-compile-check.c") do |filename, f|
+			f.close
+			begin
+				command = create_compiler_command(:c,
+					"-c '#{filename}' -o '#{filename}.o'",
+					'-feliminate-unused-debug-symbols -feliminate-unused-debug-types')
+				result = run_compiler("Checking for C compiler '--feliminate-unused-debug-{symbols,types}' support",
+					command, filename, '', true)
+				return result && result[:output].empty?
+			ensure
+				File.unlink("#{filename}.o") rescue nil
+			end
+		end
+	end
 	
 	# Returns whether compiling C++ with -fvisibility=hidden might result
 	# in tons of useless warnings, like this:
