@@ -37,6 +37,10 @@ class Loader
 	end
 
 	def close
+		@input.close_write
+		# Wait at most 100 msec for process to exit.
+		select([@output], nil, nil, 0.1)
+
 		@input.close if !@input.closed?
 		@output.close if !@output.closed?
 		if @pid
