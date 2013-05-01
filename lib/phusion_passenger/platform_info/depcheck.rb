@@ -304,28 +304,30 @@ module Depcheck
 					STDOUT.puts "       -> #{message}"
 				end
 				@missing_dependencies = []
-				@dep_identifiers.each do |identifier|
-					dep = Depcheck.find(identifier)
-					raise "Cannot find depcheck spec #{identifier.inspect}" if !dep
-					puts_header "Checking for #{dep.name}..."
-					result = dep.check
-					result = { :found => false } if !result
+				if(RUBY_PLATFORM != "java")
+					@dep_identifiers.each do |identifier|
+						dep = Depcheck.find(identifier)
+						raise "Cannot find depcheck spec #{identifier.inspect}" if !dep
+						puts_header "Checking for #{dep.name}..."
+						result = dep.check
+						result = { :found => false } if !result
 
-					if result[:found] && !result[:error]
-						puts_detail "Found: <green>yes</green>"
-					else
-						if result[:error]
-							puts_detail "Found: #{result[:found] ? "<yellow>yes, but there was an error</yellow>" : "<red>no</red>"}"
-							puts_detail "Error: <red>#{result[:error]}</red>"
+						if result[:found] && !result[:error]
+							puts_detail "Found: <green>yes</green>"
 						else
-							puts_detail "Found: #{result[:found] ? "<green>yes</green>" : "<red>no</red>"}"
+							if result[:error]
+								puts_detail "Found: #{result[:found] ? "<yellow>yes, but there was an error</yellow>" : "<red>no</red>"}"
+								puts_detail "Error: <red>#{result[:error]}</red>"
+							else
+								puts_detail "Found: #{result[:found] ? "<green>yes</green>" : "<red>no</red>"}"
+							end
+							@missing_dependencies << dep
 						end
-						@missing_dependencies << dep
-					end
 
-					result.each_pair do |key, value|
-						if key.is_a?(String)
-							puts_detail "#{key}: #{value}"
+						result.each_pair do |key, value|
+							if key.is_a?(String)
+								puts_detail "#{key}: #{value}"
+							end
 						end
 					end
 				end
