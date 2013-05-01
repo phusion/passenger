@@ -1156,6 +1156,7 @@ applications, each which must be available at all times.
 This option may only occur once, in the global server configuration.
 The default value is '300'.
 
+[[PassengerMaxPreloaderIdleTime]]
 ==== PassengerMaxPreloaderIdleTime <integer> ====
 The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
 methods explained>>) has an idle timeout, just like the backend processes spawned by
@@ -1851,6 +1852,13 @@ Deprecated in favor of <<PassengerSpawnMethod,PassengerSpawnMethod>>.
 
 ==== RailsAutoDetect, RackAutoDetect and WsgiAutoDetect ====
 These options have been removed in version 4.0.0 as part of an optimization. You should use <<PassengerEnabled,PassengerEnabled>> instead.
+
+==== RailsAppSpawnerIdleTime ====
+This option has been removed in version 4.0.0, and replaced with <<PassengerMaxPreloaderIdleTime,PassengerMaxPreloaderIdleTime>>.
+
+==== RailsFrameworkSpawnerIdleTime ====
+This option is no longer available in version 4.0.0. There is no alternative because framework spawning has been removed altogether. You should use smart spawning instead.
+
 
 
 [[troubleshooting]]
