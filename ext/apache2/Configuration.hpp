@@ -85,10 +85,6 @@ struct DirConfig {
 	 */
 	const char *appRoot;
 	
-	/** The environment (i.e. value for RACK_ENV) under which
-	 * Rack applications should operate. */
-	const char *rackEnv;
-	
 	string appGroupName;
 	
 	/** The spawn method to use. */
