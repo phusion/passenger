@@ -26,17 +26,31 @@ task :clobber => 'package:clean'
 desc "Build, sign & upload gem & tarball"
 task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
 	require 'phusion_passenger'
+	require 'yaml'
+	require 'uri'
+	require 'net/http'
+	require 'net/https'
 	basename   = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
 	version    = PhusionPassenger::VERSION_STRING
 	is_enterprise  = basename =~ /enterprise/
 	is_open_source = !is_enterprise
+	is_beta        = !!version.split('.')[3]
 	tag_prefix     = is_open_source ? 'release' : 'enterprise'
+	
+	begin
+		website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
+	rescue Errno::ENOENT
+		abort "*** ERROR: Please put the Phusion Passenger website admin " +
+			"password in ~/.passenger_website.yml:\n" +
+			"admin_password: ..."
+	end
 
 	sh "git tag -s #{tag_prefix}-#{version} -u 0A212A8C -m 'Release #{version}'"
 
 	puts "Proceed with pushing tag to remote Git repo and uploading the gem and signatures? [y/n]"
 	if STDIN.readline == "y\n"
 		sh "git push origin #{tag_prefix}-#{version}"
+		
 		if is_open_source
 			sh "scp pkg/#{basename}.{gem.asc,tar.gz.asc} app@shell.phusion.nl:/u/apps/signatures/phusion-passenger/"
 			sh "./dev/googlecode_upload.py -p phusion-passenger -s 'Phusion Passenger #{version}' pkg/passenger-#{version}.tar.gz"
@@ -48,6 +62,25 @@ task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
 			subdir = string_option('NAME', version)
 			sh "scp pkg/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
 			sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
+		end
+
+		puts "Updating version number on website..."
+		if is_beta
+			uri = URI.parse("https://www.phusionpassenger.com/latest_beta_version")
+		else
+			uri = URI.parse("https://www.phusionpassenger.com/latest_stable_version")
+		end
+		http = Net::HTTP.new(uri.host, uri.port)
+		http.use_ssl = true
+		http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+		request = Net::HTTP::Post.new(uri.request_uri)
+		request.basic_auth("admin", website_config["admin_password"])
+		request.set_form_data("version" => version)
+		response = http.request(request)
+		if response.code != 200 && response.body != "ok"
+			abort "*** ERROR: Cannot update version number on www.phusionpassenger.com:\n" +
+				"Status: #{response.code}\n\n" +
+				response.body
 		end
 	else
 		puts "Did not upload anything."
