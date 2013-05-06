@@ -801,6 +801,7 @@ protected:
 			return;
 		}
 		
+		UPDATE_TRACE_POINT();
 		string defaultGroup;
 		string startupFile = absolutizePath(options.getStartupFile(), info.appRoot);
 		struct passwd *userInfo = NULL;
@@ -823,6 +824,7 @@ protected:
 			defaultGroup = options.defaultGroup;
 		}
 		
+		UPDATE_TRACE_POINT();
 		if (!options.user.empty()) {
 			userInfo = getpwnam(options.user.c_str());
 		} else {
@@ -838,6 +840,7 @@ protected:
 			userInfo = getpwnam(options.defaultUser.c_str());
 		}
 		
+		UPDATE_TRACE_POINT();
 		if (!options.group.empty()) {
 			if (options.group == "!STARTUP_FILE!") {
 				struct stat buf;
@@ -857,6 +860,7 @@ protected:
 			groupInfo = getgrnam(defaultGroup.c_str());
 		}
 		
+		UPDATE_TRACE_POINT();
 		if (userInfo == NULL) {
 			throw RuntimeException("Cannot determine a user to lower privilege to");
 		}
@@ -864,6 +868,7 @@ protected:
 			throw RuntimeException("Cannot determine a group to lower privilege to");
 		}
 		
+		UPDATE_TRACE_POINT();
 		#ifdef __APPLE__
 			int groups[1024];
 			info.ngroups = sizeof(groups) / sizeof(int);

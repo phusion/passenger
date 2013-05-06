@@ -16,7 +16,17 @@ rescue Errno::ENOENT
 	exit 1
 end
 
-DEBUG      = ['1', 'y', 'yes'].include?(ENV['DEBUG'].to_s.downcase)
+def boolean_option(name, default_value = false)
+	value = ENV[name]
+	if value.nil? || value.empty?
+		return default_value
+	else
+		return value == "yes" || value == "on" || value == "true" || value == "1"
+	end
+end
+
+DEBUG = boolean_option('DEBUG')
+TEST_CLASSIC_RAILS = boolean_option('TEST_CLASSIC_RAILS', true)
 AGENTS_DIR = "#{source_root}/agents"
 
 $LOAD_PATH.unshift("#{source_root}/lib")

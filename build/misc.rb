@@ -49,8 +49,7 @@ task :sloccount do
 	end
 end
 
-desc "Convert the NEWS items for the latest release to HTML"
-task :news_as_html do
+def extract_latest_news_contents_and_items
 	# The text is in the following format:
 	#
 	#   Release x.x.x
@@ -58,21 +57,31 @@ task :news_as_html do
 	#
 	#    * Text.
 	#    * More text.
-	# * A header.
+	#    * A header.
 	#      With yet more text.
 	#   
 	#   Release y.y.y
 	#   -------------
 	#   .....
-	require 'cgi'
 	contents = File.read("NEWS")
 	
 	# We're only interested in the latest release, so extract the text for that.
 	contents =~ /\A(Release.*?)^(Release|Older releases)/m
+	contents = $1
+	contents.sub!(/\A.*?\n-+\n+/m, '')
+	contents.sub!(/\n+\Z/, '')
 	
 	# Now split the text into individual items.
-	items = $1.split(/^ \*/)
-	items.shift  # Delete the 'Release x.x.x' header.
+	items = contents.split(/^ \* /)
+	items.shift while items.first == ""
+
+	return [contents, items]
+end
+
+desc "Convert the NEWS items for the latest release to HTML"
+task :news_as_html do
+	require 'cgi'
+	contents, items = extract_latest_news_contents_and_items
 	
 	puts "<dl>"
 	items.each do |item|
@@ -132,6 +141,19 @@ task :news_as_html do
 		end
 	end
 	puts "</dl>"
+end
+
+desc "Convert the NEWS items for the latest release to Markdown"
+task :news_as_markdown do
+	contents, items = extract_latest_news_contents_and_items
+
+	# Auto-link to issue tracker.
+	contents.gsub!(/(bug|issue) #(\d+)/i) do
+		url = "http://code.google.com/p/phusion-passenger/issues/detail?id=#{$2}"
+		%Q([#{$1} ##{$2}](#{url}))
+	end
+
+	puts contents
 end
 
 dependencies = [

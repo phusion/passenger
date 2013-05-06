@@ -232,18 +232,18 @@ before compiling:
 Note that we require at least libev 4.11 and libeio 1.0.
 
 
-# Misc notes
+# Generating gem and tarball
 
-## Generating gem and tarball
-
-Use the following command to generate a gem and tarball, in which Phusion
+Use the following commands to generate a gem and tarball, in which Phusion
 Passenger is originally packaged and without any binaries:
 
-    rake package
+    rake package:gem
+    rake package:tarball
 
 The files will be stored in `pkg/`.
 
-## Fakeroot
+
+# Fakeroot
 
 You can generate a fakeroot with the command `rake fakeroot`. This will
 generate an FHS-compliant directory tree in `pkg/fakeroot`, which you can

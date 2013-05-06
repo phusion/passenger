@@ -36,7 +36,7 @@ Listen 127.0.0.1:<%= @port %>
 LoadModule passenger_module "<%= @mod_passenger %>"
 
 PassengerRoot "<%= @passenger_root %>"
-PassengerRuby "<%= PlatformInfo.ruby_command %>"
+PassengerDefaultRuby "<%= PlatformInfo.ruby_command %>"
 PassengerDefaultUser <%= CONFIG['default_user'] %>
 PassengerDefaultGroup <%= CONFIG['default_group'] %>
 PassengerTempDir "<%= @passenger_temp_dir %>"

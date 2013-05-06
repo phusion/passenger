@@ -38,5 +38,5 @@
   // If you want to run the Nginx integration tests, then set the following
   // config option to the full path of the Nginx binary. This Nginx binary *must*
   // be compiled with Phusion Passenger support!
-  // nginx: /usr/local/sbin/nginx
+  "nginx": "/usr/local/sbin/nginx"
 }

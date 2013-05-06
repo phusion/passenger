@@ -5,6 +5,26 @@ module Utils
 
 module RobustInterruption
 	class Interrupted < StandardError
+		def initialize
+			@origin_thread = Thread.current
+			@origin = caller
+		end
+
+		def set_backtrace(bt)
+			@origin.reverse.each do |line|
+				if bt.last == line
+					bt.pop
+				else
+					break
+				end
+			end
+			bt << "interruption initiator thread: #{RobustInterruption._get_thread_display_name @origin_thread}"
+			bt.concat(@origin)
+			super(bt)
+		end
+	end
+
+	class NotInstalled < StandardError
 	end
 
 	class Data
@@ -52,43 +72,29 @@ module RobustInterruption
 		RobustInterruption.install
 	end
 
-	def installed?(thread = Thread.current)
-		return !!thread[:robust_interruption]
-	end
-	module_function :installed?
-
 	def interrupted?(thread = Thread.current)
 		if data = thread[:robust_interruption]
 			return data.interrupted?
 		else
-			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
+			Kernel.raise NotInstalled, "RobustThreadInterruption not installed for #{_get_thread_display_name thread}"
 		end
 	end
 	module_function :interrupted?
 
 	def self.raise(thread, exception = Interrupted)
-		if installed?
+		if data = thread[:robust_interruption]
 			RobustInterruption.disable_interruptions(Thread.current) do
-				_raise(thread, exception)
-			end
-		else
-			_raise(thread, exception)
-		end
-	end
-
-	def self._raise(thread, exception)
-		data = thread[:robust_interruption]
-		if data
-			data.interrupted = true
-			if data.try_lock
-				begin
-					thread.raise(exception)
-				ensure
-					data.unlock
+				data.interrupted = true
+				if data.try_lock
+					begin
+						thread.raise(exception)
+					ensure
+						data.unlock
+					end
 				end
 			end
 		else
-			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
+			Kernel.raise NotInstalled, "RobustThreadInterruption not installed for #{_get_thread_display_name thread}"
 		end
 	end
 
@@ -105,7 +111,7 @@ module RobustInterruption
 				data.unlock if was_interruptable
 			end
 		else
-			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
+			Kernel.raise NotInstalled, "RobustThreadInterruption not installed for #{_get_thread_display_name thread}"
 		end
 	end
 	module_function :disable_interruptions
@@ -123,7 +129,7 @@ module RobustInterruption
 				data.pop_interruption_flag
 			end
 		else
-			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
+			Kernel.raise NotInstalled, "RobustThreadInterruption not installed for #{_get_thread_display_name thread}"
 		end
 	end
 	module_function :enable_interruptions
@@ -132,7 +138,7 @@ module RobustInterruption
 		data = thread[:robust_interruption]
 		if data
 			if data.interruption_flags.size < 2
-				Kernel.raise "Cannot restore interruptions state to previous value - no previous value exists"
+				Kernel.raise NotInstalled, "Cannot restore interruptions state to previous value - no previous value exists"
 			end
 			if data.interruption_flags[-2]
 				enable_interruptions do
@@ -144,10 +150,23 @@ module RobustInterruption
 				end
 			end
 		else
-			Kernel.raise "RobustThreadInterruption not installed for #{thread}"
+			Kernel.raise NotInstalled, "RobustThreadInterruption not installed for #{_get_thread_display_name thread}"
 		end
 	end
 	module_function :restore_interruptions
+
+private
+	def _get_thread_display_name(thread)
+		if !(thread_id = thread[:id])
+			thread.to_s =~ /:(0x[0-9a-f]+)/i
+			thread_id = $1 || '?'
+		end
+		if thread_name = thread[:name]
+			thread_name = "(#{thread_name})"
+		end
+		return "#{thread_id}#{thread_name}"
+	end
+	module_function :_get_thread_display_name
 end
 
 end # module Utils

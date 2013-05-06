@@ -10,15 +10,15 @@ Phusion Passenger solves this problem by implementing 'user switching'. A Rails
 application is started as the owner of the file 'config/environment.rb',
 and a Rack application is started as the owner of the file 'config.ru'.
 So if '/home/webapps/foo/config/environment.rb' is owned by 'joe', then Phusion
-Passenger will launch the corresponding Rails application as 'joe' as well.
+Passenger will launch the corresponding application as 'joe' as well.
 
 This behavior is the default, and you don't need to configure anything. But
 there are things that you should keep in mind:
 
 - The owner of 'environment.rb'/'config.ru' must have read access to the application's
   root directory, and read/write access to the application's 'logs' directory.
-- This feature is only available if Apache is started by 'root'. This is the
-  case on most Apache installations.
+- This feature is only available if the web server is started by 'root'. This is the
+  case on most installations.
 - Under no circumstances will applications be run as 'root'. If
   'environment.rb'/'config.ru' is owned as root or by an unknown user, then the
   Rails/Rack application will run as the user specified by
@@ -134,11 +134,14 @@ check for this file's timestamp: Phusion Passenger will always restart the
 application, as long as 'always_restart.txt' exists.
 
 NOTE: If you're just developing a Rails application then you probably don't need
-this feature. If you set 'RailsEnv development' in your Apache configuration,
+this feature. If you set
+ifdef::apache['RailsEnv development']
+ifdef::nginx['rails_env development']
+in your web server configuration,
 then Rails will automatically reload your application code after each request.
-'always_restart.txt' is only useful if you're working on Ruby on Rails itself,
-or when you're not developing a Rails application and your web framework
-does not support code reloading.
+'always_restart.txt' is mostly useful when you're using a web framework that
+doesn't support code reloading by itself, of when you're working on a web framework
+yourself.
 
 [[sub_uri_deployment_uri_fix]]
 === How to fix broken images/CSS/JavaScript URIs in sub-URI deployments

@@ -1129,7 +1129,10 @@ public:
 		TransactionMap::const_iterator end = transactions.end();
 		
 		stream << "Number of clients : " << getClients().size() << "\n";
-		stream << "RemoteSender queue: " << remoteSender.queued() << " items\n";
+		stream << "\n";
+
+		stream << "RemoteSender:\n";
+		remoteSender.inspect(stream);
 		stream << "\n";
 
 		LogSinkCache::const_iterator sit;

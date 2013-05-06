@@ -85,10 +85,6 @@ struct DirConfig {
 	 */
 	const char *appRoot;
 	
-	/** The environment (i.e. value for RACK_ENV) under which
-	 * Rack applications should operate. */
-	const char *rackEnv;
-	
 	string appGroupName;
 	
 	/** The spawn method to use. */
@@ -337,6 +333,9 @@ struct DirConfig {
 struct ServerConfig {
 	/** The Passenger root folder. */
 	const char *root;
+
+	/** The default Ruby interpreter to use. */
+	const char *defaultRuby;
 	
 	/** The log verbosity. */
 	int logLevel;
@@ -380,6 +379,7 @@ struct ServerConfig {
 	
 	ServerConfig() {
 		root               = NULL;
+		defaultRuby        = DEFAULT_RUBY;
 		logLevel           = DEFAULT_LOG_LEVEL;
 		debugLogFile       = NULL;
 		maxPoolSize        = DEFAULT_MAX_POOL_SIZE;

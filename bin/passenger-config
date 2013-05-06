@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -38,6 +38,7 @@ def help
 	puts "  --root                     Show Phusion Passenger's root directory."
 	puts "  --nginx-libs               Show Nginx runtime library flags."
 	puts "  --compiled                 Check whether runtime libraries are compiled."
+	puts "  --ruby-command             Print the correct command for invoking the Ruby interpreter."
 	puts "  --version                  Show version number."
 end
 
@@ -68,6 +69,35 @@ when "--compiled"
 	else
 		exit 1
 	end
+when "--ruby-command"
+	require 'phusion_passenger/platform_info/ruby'
+	ruby = PhusionPassenger::PlatformInfo.ruby_command
+	puts "passenger-config was invoked through the following Ruby interpreter:"
+	puts "  Command: #{ruby}"
+	STDOUT.write "  Version: "
+	STDOUT.flush
+	system("/bin/sh -c '#{ruby} -v'")
+	puts "  To use in Apache: PassengerRuby #{ruby}"
+	puts "  To use in Nginx : passenger_ruby #{ruby}"
+	puts "  To use with Standalone: #{ruby} #{PhusionPassenger.bin_dir}/passenger start"
+	puts
+
+	ruby = PhusionPassenger::PlatformInfo.find_command('ruby')
+	if ruby
+		puts "The following Ruby interpreter was found first in $PATH:"
+		puts "  Command: #{ruby}"
+		STDOUT.write "  Version: "
+		STDOUT.flush
+		system("/bin/sh -c '#{ruby} -v'")
+		puts "  To use in Apache: PassengerRuby #{ruby}"
+		puts "  To use in Nginx : passenger_ruby #{ruby}"
+		puts "  To use with Standalone: #{ruby} #{PhusionPassenger.bin_dir}/passenger start"
+	else
+		puts "No Ruby interpreter found in $PATH."
+	end
+	puts
+	puts "## Notes for RVM users"
+	puts "Do you want to know which command to use for a different Ruby interpreter? 'rvm use' that Ruby interpreter, then re-run 'passenger-config --ruby-command'."
 when "--version"
 	puts PhusionPassenger::VERSION_STRING
 else

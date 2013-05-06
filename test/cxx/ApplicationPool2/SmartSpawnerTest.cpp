@@ -32,7 +32,6 @@ namespace tut {
 		~ApplicationPool2_SmartSpawnerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
-			Process::maybeShutdown(process);
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
 		
@@ -79,7 +78,8 @@ namespace tut {
 		options.startCommand = "ruby\1" "start.rb";
 		options.startupFile  = "start.rb";
 		shared_ptr<SmartSpawner> spawner = createSpawner(options);
-		spawner->spawn(options)->shutdown();
+		process = spawner->spawn(options);
+		process->requiresShutdown = false;
 		
 		kill(spawner->getPreloaderPid(), SIGTERM);
 		// Give it some time to exit.
@@ -87,7 +87,8 @@ namespace tut {
 		
 		// No exception at next spawn.
 		setLogLevel(-1);
-		spawner->spawn(options)->shutdown();
+		process = spawner->spawn(options);
+		process->requiresShutdown = false;
 	}
 	
 	TEST_METHOD(81) {
@@ -100,7 +101,8 @@ namespace tut {
 		setLogLevel(-1);
 		shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
-			spawner->spawn(options)->shutdown();
+			process = spawner->spawn(options);
+			process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &) {
 			// Pass.
@@ -130,7 +132,8 @@ namespace tut {
 		spawner.getConfig()->forwardStderr = false;
 		
 		try {
-			spawner.spawn(options)->shutdown();
+			process = spawner.spawn(options);
+			process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -161,7 +164,8 @@ namespace tut {
 		spawner.getConfig()->forwardStderr = false;
 		
 		try {
-			spawner.spawn(options)->shutdown();
+			process = spawner.spawn(options);
+			process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -192,7 +196,8 @@ namespace tut {
 		spawner.getConfig()->forwardStderr = false;
 		
 		try {
-			spawner.spawn(options)->shutdown();
+			process = spawner.spawn(options);
+			process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));

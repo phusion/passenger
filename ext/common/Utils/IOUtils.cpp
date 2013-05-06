@@ -744,7 +744,8 @@ writeExact(int fd, const void *data, unsigned int size, unsigned long long *time
 
 void
 writeExact(int fd, const StaticString &data, unsigned long long *timeout) {
-	writeExact(fd, data.c_str(), data.size(), timeout);
+	const char * restrict data_ptr = data.data();
+	writeExact(fd, data_ptr, data.size(), timeout);
 }
 
 /**
@@ -792,7 +793,7 @@ staticStringArrayToIoVec(const StaticString ary[], size_t count, struct iovec *v
  */
 static void
 findDataPositionIndexAndOffset(struct iovec data[], size_t count,
-	size_t position, size_t *index, size_t *offset)
+	size_t position, size_t * restrict index, size_t * restrict offset)
 {
 	size_t i;
 	size_t begin = 0;
@@ -817,7 +818,7 @@ findDataPositionIndexAndOffset(struct iovec data[], size_t count,
 }
 
 ssize_t
-gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, string &restBuffer) {
+gatheredWrite(int fd, const StaticString *data, unsigned int dataCount, string &restBuffer) {
 	size_t totalSize, iovCount, i;
 	ssize_t ret;
 	
@@ -961,7 +962,7 @@ eraseBeginningOfIoVec(struct iovec *iov, size_t count, size_t index, size_t offs
 }
 
 void
-gatheredWrite(int fd, const StaticString data[], unsigned int count, unsigned long long *timeout) {
+gatheredWrite(int fd, const StaticString *data, unsigned int count, unsigned long long *timeout) {
 	struct iovec iov[count];
 	size_t total, iovCount;
 	size_t written = 0;

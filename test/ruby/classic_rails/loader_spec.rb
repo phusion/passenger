@@ -42,6 +42,6 @@ describe "Classic Rails 2.3 loader" do
 			"end of startup file\n" +
 			"worker_process_started: forked=false\n"
 	end
-end
+end if TEST_CLASSIC_RAILS
 
 end # module PhusionPassenger

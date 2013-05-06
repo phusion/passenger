@@ -22,6 +22,7 @@
 
 	#define RUN_USER_SWITCHING_TEST() \
 		process = spawner->spawn(options); \
+		process->requiresShutdown = false; \
 		BufferedIO io(FileDescriptor(open("/tmp/info.txt", O_RDONLY))); \
 		uid_t uid = (uid_t) atol(io.readLine().c_str()); \
 		gid_t gid = (gid_t) atol(io.readLine().c_str()); \
@@ -81,6 +82,7 @@
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);
+		process->requiresShutdown = false;
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();
@@ -98,7 +100,8 @@
 		options.startTimeout = 300;
 		SpawnerPtr spawner = createSpawner(options);
 		try {
-			spawner->spawn(options);
+			process = spawner->spawn(options);
+			process->requiresShutdown = false;
 			fail("Timeout expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -115,7 +118,8 @@
 		options.startupFile  = ".";
 		SpawnerPtr spawner = createSpawner(options);
 		try {
-			spawner->spawn(options);
+			process = spawner->spawn(options);
+			process->requiresShutdown = false;
 			fail("Exception expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -132,7 +136,8 @@
 		options.startupFile  = "start_error.pl";
 		SpawnerPtr spawner = createSpawner(options);
 		try {
-			spawner->spawn(options);
+			process = spawner->spawn(options);
+			process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -153,7 +158,8 @@
 		options.startTimeout = 300;
 		SpawnerPtr spawner = createSpawner(options);
 		try {
-			spawner->spawn(options);
+			process = spawner->spawn(options);
+			process->requiresShutdown = false;
 			fail("Timeout expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -169,6 +175,7 @@
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);
+		process->requiresShutdown = false;
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();
@@ -187,6 +194,7 @@
 		options.environmentVariables.push_back(make_pair("PASSENGER_BAR", "bar"));
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);
+		process->requiresShutdown = false;
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();
@@ -206,7 +214,8 @@
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		SpawnerPtr spawner = createSpawner(options);
 		try {
-			spawner->spawn(options);
+			process = spawner->spawn(options);
+			process->requiresShutdown = false;
 			fail("Exception expected");
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
@@ -236,6 +245,7 @@
 
 			try {
 				process = spawner->spawn(options);
+				process->requiresShutdown = false;
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(1)", containsSubstring(e.getErrorPage(),
@@ -245,6 +255,7 @@
 			runShellCommand("chmod 700 tmp.check/a");
 			try {
 				process = spawner->spawn(options);
+				process->requiresShutdown = false;
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(2)", containsSubstring(e.getErrorPage(),
@@ -254,6 +265,7 @@
 			runShellCommand("chmod 700 tmp.check/a/b/c");
 			try {
 				process = spawner->spawn(options);
+				process->requiresShutdown = false;
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(3)", containsSubstring(e.getErrorPage(),
@@ -262,6 +274,7 @@
 
 			runShellCommand("chmod 700 tmp.check/a/b/c/d");
 			process = spawner->spawn(options); // Should not throw.
+			process->requiresShutdown = false;
 		}
 	}
 

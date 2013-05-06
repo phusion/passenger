@@ -535,6 +535,15 @@ typedef shared_ptr<Client> ClientPtr;
 
 
 class RequestHandler {
+public:
+	enum BenchmarkPoint {
+		BP_NONE,
+		BP_AFTER_ACCEPT,
+		BP_AFTER_CHECK_CONNECT_PASSWORD,
+		BP_AFTER_PARSING_HEADER,
+		BP_BEFORE_CHECKOUT_SESSION
+	};
+
 private:
 	friend class Client;
 	typedef UnionStation::LoggerFactory LoggerFactory;
@@ -597,6 +606,17 @@ private:
 		disconnect(client);
 	}
 
+	template<typename Number>
+	static Number clamp(Number n, Number min, Number max) {
+		if (n < min) {
+			return min;
+		} else if (n > max) {
+			return max;
+		} else {
+			return n;
+		}
+	}
+
 	// GDB helper function, implemented in .cpp file to prevent inlining.
 	Client *getClientPointer(const ClientPtr &client);
 
@@ -613,7 +633,7 @@ private:
 		}
 	}
 
-	static long long getLongLongOption(const ClientPtr &client, const StaticString &name, long long defaultValue = -1) {
+	static long long getULongLongOption(const ClientPtr &client, const StaticString &name, long long defaultValue = -1) {
 		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
 		if (it != client->scgiParser.end()) {
 			long long result = stringToULL(it->second);
@@ -628,6 +648,31 @@ private:
 		}
 	}
 
+	void writeSimpleResponse(const ClientPtr &client, const StaticString &data) {
+		char header[256];
+		char *pos = header;
+		const char *end = header + sizeof(header) - 1;
+
+		if (getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
+			pos = appendData(pos, end, "HTTP/1.1 200 OK\r\n");
+		}
+		pos += snprintf(pos, end - pos,
+			"Status: 200 OK\r\n"
+			"Content-Length: %lu\r\n"
+			"Content-Type: text/html; charset=UTF-8\r\n"
+			"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+			"\r\n",
+			(unsigned long) data.size());
+
+		client->clientOutputPipe->write(header, pos - header);
+		client->clientOutputPipe->write(data.data(), data.size());
+		client->clientOutputPipe->end();
+
+		if (client->useUnionStation()) {
+			client->logMessage("Status: 200 OK");
+		}
+	}
+
 	void writeErrorResponse(const ClientPtr &client, const StaticString &message, const SpawnException *e = NULL) {
 		assert(client->state < Client::FORWARDING_BODY_TO_APP);
 		client->state = Client::WRITING_SIMPLE_RESPONSE;
@@ -636,44 +681,56 @@ private:
 		string data;
 
 		if (getBoolOption(client, "PASSENGER_FRIENDLY_ERROR_PAGES", true)) {
-			string cssFile = templatesDir + "/error_layout.css";
-			string errorLayoutFile = templatesDir + "/error_layout.html.template";
-			string generalErrorFile =
-				(e != NULL && e->isHTML())
-				? templatesDir + "/general_error_with_html.html.template"
-				: templatesDir + "/general_error.html.template";
-			string css = readAll(cssFile);
-			StringMap<StaticString> params;
+			try {
+				string cssFile = templatesDir + "/error_layout.css";
+				string errorLayoutFile = templatesDir + "/error_layout.html.template";
+				string generalErrorFile =
+					(e != NULL && e->isHTML())
+					? templatesDir + "/general_error_with_html.html.template"
+					: templatesDir + "/general_error.html.template";
+				string css = readAll(cssFile);
+				StringMap<StaticString> params;
 
-			params.set("CSS", css);
-			params.set("APP_ROOT", client->options.appRoot);
-			params.set("RUBY", client->options.ruby);
-			params.set("ENVIRONMENT", client->options.environment);
-			params.set("MESSAGE", message);
-			params.set("IS_RUBY_APP",
-				(client->options.appType == "classic-rails" || client->options.appType == "rack")
-				? "true" : "false");
-			if (e != NULL) {
-				params.set("TITLE", "Web application could not be started");
-				// Store all SpawnException annotations into 'params',
-				// but convert its name to uppercase.
-				const map<string, string> &annotations = e->getAnnotations();
-				map<string, string>::const_iterator it, end = annotations.end();
-				for (it = annotations.begin(); it != end; it++) {
-					string name = it->first;
-					for (string::size_type i = 0; i < name.size(); i++) {
-						name[i] = toupper(name[i]);
+				params.set("CSS", css);
+				params.set("APP_ROOT", client->options.appRoot);
+				params.set("RUBY", client->options.ruby);
+				params.set("ENVIRONMENT", client->options.environment);
+				params.set("MESSAGE", message);
+				params.set("IS_RUBY_APP",
+					(client->options.appType == "classic-rails" || client->options.appType == "rack")
+					? "true" : "false");
+				if (e != NULL) {
+					params.set("TITLE", "Web application could not be started");
+					// Store all SpawnException annotations into 'params',
+					// but convert its name to uppercase.
+					const map<string, string> &annotations = e->getAnnotations();
+					map<string, string>::const_iterator it, end = annotations.end();
+					for (it = annotations.begin(); it != end; it++) {
+						string name = it->first;
+						for (string::size_type i = 0; i < name.size(); i++) {
+							name[i] = toupper(name[i]);
+						}
+						params.set(name, it->second);
 					}
-					params.set(name, it->second);
+				} else {
+					params.set("TITLE", "Internal server error");
 				}
-			} else {
-				params.set("TITLE", "Internal server error");
+				string content = Template::apply(readAll(generalErrorFile), params);
+				params.set("CONTENT", content);
+				data = Template::apply(readAll(errorLayoutFile), params);
+			} catch (const SystemException &e2) {
+				P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
+					e2.backtrace());
+				data = message;
 			}
-			string content = Template::apply(readAll(generalErrorFile), params);
-			params.set("CONTENT", content);
-			data = Template::apply(readAll(errorLayoutFile), params);
 		} else {
-			data = readAll(templatesDir + "/undisclosed_error.html.template");
+			try {
+				data = readAll(templatesDir + "/undisclosed_error.html.template");
+			} catch (const SystemException &e2) {
+				P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
+					e2.backtrace());
+				data = "Internal Server Error";
+			}
 		}
 
 		stringstream str;
@@ -686,7 +743,7 @@ private:
 		str << "Cache-Control: no-cache, no-store, must-revalidate\r\n";
 		str << "\r\n";
 
-		const string &header = str.str();
+		const string header = str.str();
 		client->clientOutputPipe->write(header.data(), header.size());
 		client->clientOutputPipe->write(data.data(), data.size());
 		client->clientOutputPipe->end();
@@ -694,6 +751,24 @@ private:
 		if (client->useUnionStation()) {
 			client->logMessage("Status: 500 Internal Server Error");
 			// TODO: record error message
+		}
+	}
+
+	static BenchmarkPoint getDefaultBenchmarkPoint() {
+		const char *val = getenv("PASSENGER_REQUEST_HANDLER_BENCHMARK_POINT");
+		if (val == NULL || *val == '\0') {
+			return BP_NONE;
+		} else if (strcmp(val, "after_accept") == 0) {
+			return BP_AFTER_ACCEPT;
+		} else if (strcmp(val, "after_check_connect_password") == 0) {
+			return BP_AFTER_CHECK_CONNECT_PASSWORD;
+		} else if (strcmp(val, "after_parsing_header") == 0) {
+			return BP_AFTER_PARSING_HEADER;
+		} else if (strcmp(val, "before_checkout_session") == 0) {
+			return BP_BEFORE_CHECKOUT_SESSION;
+		} else {
+			P_WARN("Invalid RequestHandler benchmark point requested: " << val);
+			return BP_NONE;
 		}
 	}
 
@@ -792,10 +867,16 @@ private:
 	}
 
 	bool addStatusHeaderFromStatusLine(const ClientPtr &client, string &headerData) {
-		string::size_type begin = headerData.find(' ');
-		string::size_type end = headerData.find("\r\n");
+		string::size_type begin, end;
+
+		begin = headerData.find(' ');
+		if (begin != string::npos) {
+			end = headerData.find("\r\n", begin + 1);
+		} else {
+			end = string::npos;
+		}
 		if (begin != string::npos && end != string::npos) {
-			StaticString statusValue(headerData.data() + begin, end - begin);
+			StaticString statusValue(headerData.data() + begin + 1, end - begin);
 			char header[statusValue.size() + 20];
 			char *pos = header;
 			const char *end = header + statusValue.size() + 20;
@@ -803,7 +884,7 @@ private:
 			pos = appendData(pos, end, "Status: ");
 			pos = appendData(pos, end, statusValue);
 			pos = appendData(pos, end, "\r\n");
-			headerData.append(header);
+			headerData.append(StaticString(header, pos - header));
 			return true;
 		} else {
 			disconnectWithError(client, "application sent malformed response: the HTTP status line is invalid.");
@@ -870,7 +951,7 @@ private:
 		const StaticString &origHeaderData)
 	{
 		string headerData;
-		headerData.reserve(origHeaderData.size() + 100);
+		headerData.reserve(origHeaderData.size() + 150);
 		// Strip trailing CRLF.
 		headerData.append(origHeaderData.data(), origHeaderData.size() - 2);
 		
@@ -1181,8 +1262,10 @@ private:
 	void onAcceptable(ev::io &io, int revents) {
 		bool endReached = false;
 		unsigned int count = 0;
+		unsigned int maxAcceptTries = clamp<unsigned int>(clients.size(), 1, 10);
+		ClientPtr acceptedClients[10];
 
-		while (!endReached && count < 10) {
+		while (!endReached && count < maxAcceptTries) {
 			FileDescriptor fd = acceptNonBlockingSocket(requestSocket);
 			if (fd == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -1191,18 +1274,32 @@ private:
 					int e = errno;
 					P_ERROR("Cannot accept client: " << strerror(e) <<
 						" (errno=" << e << "). " <<
-						"Pausing listening on server socket for 3 seconds.");
+						"Pausing listening on server socket for 3 seconds. " <<
+						"Current client count: " << clients.size());
 					requestSocketWatcher.stop();
 					resumeSocketWatcherTimer.start();
 					endReached = true;
 				}
+			} else if (benchmarkPoint == BP_AFTER_ACCEPT) {
+				writeExact(fd,
+					"HTTP/1.1 200 OK\r\n"
+					"Status: 200 OK\r\n"
+					"Content-Type: text/html\r\n"
+					"Connection: close\r\n"
+					"\r\n"
+					"Benchmark point: after_accept\n");
 			} else {
 				ClientPtr client = make_shared<Client>();
 				client->associate(this, fd);
 				clients.insert(make_pair<int, ClientPtr>(fd, client));
+				acceptedClients[count] = client;
 				count++;
 				RH_DEBUG(client, "New client accepted; new client count = " << clients.size());
 			}
+		}
+
+		for (unsigned int i = 0; i < count; i++) {
+			acceptedClients[i]->clientInput->readNow();
 		}
 
 		if (OXT_LIKELY(!clients.empty())) {
@@ -1286,6 +1383,7 @@ private:
 		if (errnoCode == ECONNRESET) {
 			// We might as well treat ECONNRESET like an EOF.
 			// http://stackoverflow.com/questions/2974021/what-does-econnreset-mean-in-the-context-of-an-af-local-socket
+			RH_TRACE(client, 3, "Client socket ECONNRESET error; treating it as EOF");
 			onClientEof(client);
 		} else {
 			stringstream message;
@@ -1410,6 +1508,10 @@ private:
 			client->state = Client::READING_HEADER;
 			client->freeBufferedConnectPassword();
 			client->timeoutTimer.stop();
+
+			if (benchmarkPoint == BP_AFTER_CHECK_CONNECT_PASSWORD) {
+				writeSimpleResponse(client, "Benchmark point: after_check_connect_password\n");
+			}
 		} else {
 			disconnectWithError(client, "wrong connect password");
 		}
@@ -1544,6 +1646,8 @@ private:
 		options.loggingAgentAddress = this->options.loggingAgentAddress;
 		options.loggingAgentUsername = "logging";
 		options.loggingAgentPassword = this->options.loggingAgentPassword;
+		options.defaultUser = this->options.defaultUser;
+		options.defaultGroup = this->options.defaultGroup;
 		fillPoolOption(client, options.appGroupName, "PASSENGER_APP_GROUP_NAME");
 		fillPoolOption(client, options.appType, "PASSENGER_APP_TYPE");
 		fillPoolOption(client, options.environment, "PASSENGER_ENV");
@@ -1623,6 +1727,11 @@ private:
 				return consumed;
 			}
 
+			if (benchmarkPoint == BP_AFTER_PARSING_HEADER) {
+				writeSimpleResponse(client, "Benchmark point: after_parsing_header\n");
+				return consumed;
+			}
+
 			bool modified = modifyClientHeaders(client);
 			/* TODO: in case the headers are not modified, we only need to rebuild the header data
 			 * right now because the scgiParser buffer is invalidated as soon as onClientData exits.
@@ -1630,7 +1739,7 @@ private:
 			 * onClientData exits.
 			 */
 			parser.rebuildData(modified);
-			client->contentLength = getLongLongOption(client, "CONTENT_LENGTH");
+			client->contentLength = getULongLongOption(client, "CONTENT_LENGTH");
 			fillPoolOptions(client);
 			if (!client->connected()) {
 				return consumed;
@@ -1735,13 +1844,17 @@ private:
 	}
 
 	void checkoutSession(const ClientPtr &client) {
-		RH_TRACE(client, 2, "Checking out session: appRoot=" << client->options.appRoot);
-		client->state = Client::CHECKING_OUT_SESSION;
-		client->beginScopeLog(&client->scopeLogs.getFromPool, "get from pool");
-		pool->asyncGet(client->options, boost::bind(&RequestHandler::sessionCheckedOut,
-			this, client, _1, _2));
-		if (!client->sessionCheckedOut) {
-			client->backgroundOperations++;
+		if (benchmarkPoint != BP_BEFORE_CHECKOUT_SESSION) {
+			RH_TRACE(client, 2, "Checking out session: appRoot=" << client->options.appRoot);
+			client->state = Client::CHECKING_OUT_SESSION;
+			client->beginScopeLog(&client->scopeLogs.getFromPool, "get from pool");
+			pool->asyncGet(client->options, boost::bind(&RequestHandler::sessionCheckedOut,
+				this, client, _1, _2));
+			if (!client->sessionCheckedOut) {
+				client->backgroundOperations++;
+			}
+		} else {
+			writeSimpleResponse(client, "Benchmark point: before_checkout_session\n");
 		}
 	}
 
@@ -2125,6 +2238,8 @@ public:
 	// For unit testing purposes.
 	unsigned int connectPasswordTimeout; // milliseconds
 
+	BenchmarkPoint benchmarkPoint;
+
 	RequestHandler(const SafeLibevPtr &_libev,
 		const FileDescriptor &_requestSocket,
 		const PoolPtr &_pool,
@@ -2133,7 +2248,8 @@ public:
 		  requestSocket(_requestSocket),
 		  pool(_pool),
 		  options(_options),
-		  resourceLocator(_options.passengerRoot)
+		  resourceLocator(_options.passengerRoot),
+		  benchmarkPoint(getDefaultBenchmarkPoint())
 	{
 		accept4Available = true;
 		connectPasswordTimeout = 15000;

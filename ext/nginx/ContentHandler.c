@@ -53,10 +53,11 @@ static void abort_request(ngx_http_request_t *r);
 static void finalize_request(ngx_http_request_t *r, ngx_int_t rc);
 
 
-static void
+static unsigned int
 uint_to_str(ngx_uint_t i, u_char *str, ngx_uint_t size) {
-    ngx_memzero(str, size);
-    ngx_snprintf(str, size, "%ui", i);
+    unsigned int len = ngx_snprintf(str, size - 1, "%ui", i) - str;
+    str[len] = '\0';
+    return len;
 }
 
 static FileType
@@ -222,6 +223,57 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
     }
 }
 
+/**
+ * If the helper agent socket cannot be connected to then we want Nginx to print
+ * the proper socket filename in the error message. The socket filename is stored
+ * in one of the upstream peer data structures. This name is initialized during
+ * the first ngx_http_read_client_request_body() call so there's no way to fix the
+ * name before the first request, which is why we do it after the fact.
+ */
+static void
+fix_peer_address(ngx_http_request_t *r) {
+    ngx_http_upstream_rr_peer_data_t *rrp;
+    ngx_http_upstream_rr_peers_t     *peers;
+    ngx_http_upstream_rr_peer_t      *peer;
+    unsigned int                      peer_index;
+    const char                       *request_socket_filename;
+    unsigned int                      request_socket_filename_len;
+
+    if (r->upstream->peer.get != ngx_http_upstream_get_round_robin_peer) {
+        /* This function only supports the round-robin upstream method. */
+        return;
+    }
+
+    rrp        = r->upstream->peer.data;
+    peers      = rrp->peers;
+    request_socket_filename =
+        agents_starter_get_request_socket_filename(passenger_agents_starter,
+                                                   &request_socket_filename_len);
+
+    while (peers != NULL) {
+        if (peers->name) {
+            if (peers->name->data == (u_char *) request_socket_filename) {
+                /* Peer names already fixed. */
+                return;
+            }
+            peers->name->data = (u_char *) request_socket_filename;
+            peers->name->len  = request_socket_filename_len;
+        }
+        peer_index = 0;
+        while (1) {
+            peer = &peers->peer[peer_index];
+            peer->name.data = (u_char *) request_socket_filename;
+            peer->name.len  = request_socket_filename_len;
+            if (peer->down) {
+                peer_index++;
+            } else {
+                break;
+            }
+        }
+        peers = peers->next;
+    }
+}
+
 
 /* Convenience macros for building the SCGI header in create_request(). */
 
@@ -311,8 +363,8 @@ create_request(ngx_http_request_t *r)
     u_char                         ch;
     const char *                   helper_agent_request_socket_password_data;
     unsigned int                   helper_agent_request_socket_password_len;
-    u_char                         buf[sizeof("4294967296")];
-    size_t                         len, size, key_len, val_len, content_length;
+    u_char                         buf[sizeof("4294967296") + 1];
+    size_t                         len, size, key_len, val_len;
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
     int                            server_name_len;
@@ -366,15 +418,15 @@ create_request(ngx_http_request_t *r)
      * Determine the request header length.
      **************************************************/
     
-    /* Length of the Content-Length header. */
-    if (r->headers_in.content_length_n < 0) {
-        content_length = 0;
-    } else {
-        content_length = r->headers_in.content_length_n;
+    len = 0;
+
+    /* Length of the Content-Length header. A value of -1 means that the content
+     * length is unspecified, which is the case for e.g. WebSocket requests. */
+    if (r->headers_in.content_length_n >= 0) {
+        len += sizeof("CONTENT_LENGTH") +
+            uint_to_str(r->headers_in.content_length_n, buf, sizeof(buf)) +
+            1; /* +1 for trailing null */
     }
-    uint_to_str(content_length, buf, sizeof(buf));
-    /* +1 for trailing null */
-    len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
     
     /* DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT, PATH_INFO and REQUEST_URI. */
     len += sizeof("DOCUMENT_ROOT") + context->public_dir.len + 1;
@@ -427,7 +479,11 @@ create_request(ngx_http_request_t *r)
                                   slcf, debugger);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_SHOW_VERSION_IN_HEADER",
                                   slcf, show_version_in_header);
-    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_RUBY", slcf, ruby);
+    if (slcf->ruby.data != NULL) {
+        ANALYZE_STR_CONFIG_LENGTH("PASSENGER_RUBY", slcf, ruby);
+    } else {
+        len += sizeof("PASSENGER_RUBY") + passenger_main_conf.default_ruby.len + 1;
+    }
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_PYTHON", slcf, python);
     len += sizeof("PASSENGER_ENV") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
@@ -560,12 +616,13 @@ create_request(ngx_http_request_t *r)
     b->last = ngx_snprintf(b->last, 10, "%ui", len);
     *b->last++ = (u_char) ':';
 
-    /* Build CONTENT_LENGTH header. This must always be sent, even if 0. */
-    b->last = ngx_copy(b->last, "CONTENT_LENGTH",
-                       sizeof("CONTENT_LENGTH"));
+    if (r->headers_in.content_length_n >= 0) {
+        b->last = ngx_copy(b->last, "CONTENT_LENGTH",
+                           sizeof("CONTENT_LENGTH"));
 
-    b->last = ngx_snprintf(b->last, 10, "%ui", content_length);
-    *b->last++ = (u_char) 0;
+        b->last = ngx_snprintf(b->last, 10, "%ui", r->headers_in.content_length_n);
+        *b->last++ = (u_char) 0;
+    }
     
     /* Build DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT, PATH_INFO and REQUEST_URI. */
     b->last = ngx_copy(b->last, "DOCUMENT_ROOT", sizeof("DOCUMENT_ROOT"));
@@ -642,8 +699,15 @@ create_request(ngx_http_request_t *r)
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_SHOW_VERSION_IN_HEADER",
                                   slcf, show_version_in_header);
     
-    SERIALIZE_STR_CONFIG_DATA("PASSENGER_RUBY",
-                              slcf, ruby);
+    if (slcf->ruby.data != NULL) {
+        SERIALIZE_STR_CONFIG_DATA("PASSENGER_RUBY",
+                                  slcf, ruby);
+    } else {
+        b->last = ngx_copy(b->last, "PASSENGER_RUBY",
+                           sizeof("PASSENGER_RUBY"));
+        b->last = ngx_copy(b->last, passenger_main_conf.default_ruby.data,
+                           passenger_main_conf.default_ruby.len + 1);
+    }
     SERIALIZE_STR_CONFIG_DATA("PASSENGER_PYTHON",
                               slcf, python);
 
@@ -833,6 +897,7 @@ reinit_request(ngx_http_request_t *r)
     context->status_end = NULL;
 
     r->upstream->process_header = process_status_line;
+    r->state = 0;
 
     return NGX_OK;
 }
@@ -1108,9 +1173,10 @@ done:
 static ngx_int_t
 process_header(ngx_http_request_t *r)
 {
-    ngx_int_t                       rc;
-    ngx_uint_t                      i;
+    ngx_str_t                      *status_line;
+    ngx_int_t                       rc, status;
     ngx_table_elt_t                *h;
+    ngx_http_upstream_t            *u;
     ngx_http_upstream_header_t     *hh;
     ngx_http_upstream_main_conf_t  *umcf;
     ngx_http_core_loc_conf_t       *clcf;
@@ -1120,7 +1186,7 @@ process_header(ngx_http_request_t *r)
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
 
-    for ( ;;  ) {
+    for ( ;; ) {
 
         rc = ngx_http_parse_header_line(r, &r->upstream->buffer, 1);
 
@@ -1130,7 +1196,7 @@ process_header(ngx_http_request_t *r)
 
             h = ngx_list_push(&r->upstream->headers_in.headers);
             if (h == NULL) {
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                return NGX_ERROR;
             }
 
             h->hash = r->header_hash;
@@ -1138,10 +1204,11 @@ process_header(ngx_http_request_t *r)
             h->key.len = r->header_name_end - r->header_name_start;
             h->value.len = r->header_end - r->header_start;
 
-            h->key.data = ngx_palloc(r->pool,
-                               h->key.len + 1 + h->value.len + 1 + h->key.len);
+            h->key.data = ngx_pnalloc(r->pool,
+                                      h->key.len + 1 + h->value.len + 1
+                                      + h->key.len);
             if (h->key.data == NULL) {
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                return NGX_ERROR;
             }
 
             h->value.data = h->key.data + h->key.len + 1;
@@ -1156,21 +1223,18 @@ process_header(ngx_http_request_t *r)
                 ngx_memcpy(h->lowcase_key, r->lowcase_header, h->key.len);
 
             } else {
-                for (i = 0; i < h->key.len; i++) {
-                    h->lowcase_key[i] = ngx_tolower(h->key.data[i]);
-                }
+                ngx_strlow(h->lowcase_key, h->key.data, h->key.len);
             }
 
             hh = ngx_hash_find(&umcf->headers_in_hash, h->hash,
                                h->lowcase_key, h->key.len);
 
             if (hh && hh->handler(r, h, hh->offset) != NGX_OK) {
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                return NGX_ERROR;
             }
 
             ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                           "http scgi header: \"%V: %V\"",
-                           &h->key, &h->value);
+                           "http scgi header: \"%V: %V\"", &h->key, &h->value);
 
             continue;
         }
@@ -1229,6 +1293,53 @@ process_header(ngx_http_request_t *r)
                 h->value.data = NULL;
                 h->lowcase_key = (u_char *) "date";
             }
+
+            /* Process "Status" header. */
+
+            u = r->upstream;
+
+            if (u->headers_in.status_n) {
+                goto done;
+            }
+
+            if (u->headers_in.status) {
+                status_line = &u->headers_in.status->value;
+
+                status = ngx_atoi(status_line->data, 3);
+                if (status == NGX_ERROR) {
+                    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                                  "upstream sent invalid status \"%V\"",
+                                  status_line);
+                    return NGX_HTTP_UPSTREAM_INVALID_HEADER;
+                }
+
+                u->headers_in.status_n = status;
+                u->headers_in.status_line = *status_line;
+
+            } else if (u->headers_in.location) {
+                u->headers_in.status_n = 302;
+                ngx_str_set(&u->headers_in.status_line,
+                            "302 Moved Temporarily");
+
+            } else {
+                u->headers_in.status_n = 200;
+                ngx_str_set(&u->headers_in.status_line, "200 OK");
+            }
+
+            if (u->state) {
+                u->state->status = u->headers_in.status_n;
+            }
+
+        done:
+
+            /* Supported since Nginx 1.3.15. */
+            #ifdef NGX_HTTP_SWITCHING_PROTOCOLS
+                if (u->headers_in.status_n == NGX_HTTP_SWITCHING_PROTOCOLS
+                    && r->headers_in.upgrade)
+                {
+                    u->upgrade = 1;
+                }
+            #endif
 
             return NGX_OK;
         }
@@ -1390,6 +1501,7 @@ passenger_content_handler(ngx_http_request_t *r)
     u->process_header   = process_status_line;
     u->abort_request    = abort_request;
     u->finalize_request = finalize_request;
+    r->state = 0;
 
     u->buffering = slcf->upstream_config.buffering;
     
@@ -1402,6 +1514,8 @@ passenger_content_handler(ngx_http_request_t *r)
     u->pipe->input_ctx = r;
 
     rc = ngx_http_read_client_request_body(r, ngx_http_upstream_init);
+
+    fix_peer_address(r);
 
     if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
         return rc;

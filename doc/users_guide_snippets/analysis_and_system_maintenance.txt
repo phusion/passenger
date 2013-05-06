@@ -13,7 +13,7 @@ the scope of this Users Guide. We kindly refer the interested reader to
 operating systems literature about 'virtual memory' and 'copy-on-write'.
 
 The tool `passenger-memory-stats` allows one to easily analyze Phusion Passenger's
-and Apache's real memory usage. For example:
+and the web server's real memory usage. For example:
 
 -------------------------------------------------------
 [bash@localhost root]# passenger-memory-stats
@@ -31,6 +31,12 @@ PID    PPID  Threads  VMSize   Private  Name
 ### Processes: 8
 ### Total private dirty RSS: 3.50 MB
 
+----------- Nginx processes ------------.
+PID    PPID   VMSize     Resident  Name
+----------------------------------------.
+51766  51764  82.7 MB    3.9 MB    nginx: master process ./objs/nginx
+51773  51766  82.9 MB    0.9 MB    nginx: worker process
+
 --------- Passenger processes ---------.
 PID    Threads  VMSize   Private  Name
 ---------------------------------------.
@@ -43,8 +49,8 @@ PID    Threads  VMSize   Private  Name
 -------------------------------------------------------
 
 The 'Private' or 'private dirty RSS' field shows the *real* memory usage of processes. Here,
-we see that all the Apache worker processes only take less than 1 MB memory each.
-This is a lot less than the 50 MB-ish memory usage as shown in the 'VMSize' column
+we see that all the Apache and Nginx worker processes only take less than 1 MB memory each.
+This is a lot less than the 50-80 MB-ish memory usage as shown in the 'VMSize' column
 (which is what a lot of people think is the real memory usage, but is actually not).
 
 NOTE: Private dirty RSS reporting only works on Linux. Unfortunately other operating systems
@@ -126,13 +132,13 @@ If one of your application instances is frozen (stopped responding), then you
 can figure out where it is frozen by killing it with 'SIGABRT'. This will cause the
 application to raise an exception, with a backtrace.
 
-The exception (with full backtrace information) is normally logged into the Apache
+The exception (with full backtrace information) is normally logged into the web server
 error log. But if your application or if its web framework has its own exception logging
 routines, then exceptions might be logged into the application's log files instead.
 This is the case with Ruby on Rails. So if you kill a Ruby on Rails application with
 'SIGABRT', please check the application's 'production.log' first (assuming that you're
 running it in a 'production' environment). If you don't see a backtrace there, check
-the Apache error log.
+the web server error log.
 
 NOTE: It is safe to kill application instances, even in live environments. Phusion Passenger
 will restart killed application instances, as if nothing bad happened.

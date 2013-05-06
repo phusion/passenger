@@ -3,6 +3,7 @@
 #include <agents/HelperAgent/RequestHandler.cpp>
 #include <agents/HelperAgent/AgentOptions.h>
 #include <ApplicationPool2/Pool.h>
+#include <Utils/json.h>
 #include <Utils/IOUtils.h>
 #include <Utils/Timer.h>
 
@@ -48,6 +49,8 @@ namespace tut {
 			setLogLevel(LVL_ERROR); // TODO: set to LVL_WARN
 
 			agentOptions.passengerRoot = resourceLocator->getRoot();
+			agentOptions.defaultUser   = testConfig["default_user"].asString();
+			agentOptions.defaultGroup  = testConfig["default_group"].asString();
 			root = resourceLocator->getRoot();
 			rackAppPath = root + "/test/stub/rack";
 			wsgiAppPath = root + "/test/stub/wsgi";
@@ -801,7 +804,7 @@ namespace tut {
 		{
 			unique_lock<boost::mutex> lock(pool->syncher);
 			origProcess = pool->superGroups.get(wsgiAppPath)->defaultGroup->disablingProcesses.front();
-			ensure(origProcess->oobwRequested);
+			ensure(origProcess->oobwStatus == Process::OOBW_REQUESTED);
 		}
 		ensure("sanity check", origPid == origProcess->pid); // just a sanity check
 		
@@ -822,15 +825,15 @@ namespace tut {
 		// Wait for the original process to finish oobw request.
 		EVENTUALLY(2,
 			unique_lock<boost::mutex> lock(pool->syncher);
-			result = !origProcess->oobwRequested;
+			result = origProcess->oobwStatus == Process::OOBW_NOT_ACTIVE;
 		);
 		
 		// Final asserts.
 		{
 			unique_lock<boost::mutex> lock(pool->syncher);
-			ensure("2 enabled processes", pool->superGroups.get(wsgiAppPath)->defaultGroup->enabledProcesses.size() == 2);
-			ensure("oobw is reset", !origProcess->oobwRequested);
-			ensure("process is enabled", origProcess->enabled == Process::ENABLED);
+			ensure_equals("2 enabled processes", pool->superGroups.get(wsgiAppPath)->defaultGroup->enabledProcesses.size(), 2u);
+			ensure_equals("oobw is reset", origProcess->oobwStatus, Process::OOBW_NOT_ACTIVE);
+			ensure_equals("process is enabled", origProcess->enabled, Process::ENABLED);
 		}
 	}
 

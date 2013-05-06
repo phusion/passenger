@@ -1,3 +1,63 @@
+Release 4.0.1
+-------------
+
+ * Fixed a crasher bug in the Deployment Error Resistance feature.
+ * Fixed a bug in PassengerDefaultUser and PassengerDefaultGroup.
+ * Fixed a bug which could cause application processes to exit before
+   they've finished their request.
+ * Fixed some small file descriptor leaks.
+ * Bumped the preferred Nginx version to 1.4.0.
+ * Editing the Phusion Passenger Standalone Nginx config template
+   is no longer discouraged.
+ * Improved documentation.
+
+
+Release 4.0.0 release candidate 6
+---------------------------------
+
+ * WebSocket support on Nginx. Requires Nginx >= 1.3.15.
+ * Improved RVM support.
+ * Performance optimizations.
+ * Various bug fixes.
+
+
+Release 4.0.0 release candidate 5
+---------------------------------
+
+ * The default config snippet for Apache has changed! It must now contain a
+   `PassengerDefaultRuby` option. The installer has been updated to output
+   this option. The `PassengerRuby` option still exists, but it's only used
+   for configuring different Ruby interpreters in different contexts. Please
+   refer to the manual for more information.
+ * We now provide GPG digital signatures for all file releases by Phusion.
+   More information can be found in the manual.
+ * `passenger-status` now displays process memory usage and time when it
+   was last used. The latter fixes issue #853.
+ * Exceptions in Rack application objects are now caught to prevent
+   application processes from exiting.
+ * The `passenger-config` tool now supports the `--ruby-command` argument,
+   which helps the user with figuring out the correct Ruby command to use
+   in case s/he wants to use multiple Ruby interpreters. The manual has
+   also been updated to mention this tool.
+ * Fixed streaming responses on Apache.
+ * Worked around an OS X Unix domain socket bug. Fixes issue #854.
+ * Out-of-Band Garbage Collection now works properly when the application
+   has disabled garbage collection. Fixes issue #859.
+ * Fixed support for /usr/bin/python on OS X. Fixes issue #855.
+ * Fixed looping-without-sleeping in the ApplicationPool garbage collector
+   if PassengerPoolIdleTime is set to 0. Fixes issue #858.
+ * Fixed some process memory usage measurement bugs.
+ * Fixed process memory usage measurement on NetBSD. Fixes issue #736.
+ * Fixed a file descriptor leak in the Out-of-Band Work feature. Fixes issue #864.
+ * The PassengerPreStart helper script now uses the default Ruby
+   interpreter specified in the web server configuration, and no longer
+   requires a `ruby` command to be in `$PATH`.
+ * Updated preferred PCRE version to 8.32.
+ * Worked around some RVM bugs.
+ * The ngx_http_stub_status_module is now enabled by default.
+ * Performance optimizations.
+
+
 Release 4.0.0 release candidate 4
 ---------------------------------
 

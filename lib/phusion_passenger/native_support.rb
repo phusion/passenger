@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -30,6 +30,7 @@ class NativeSupportLoader
 	
 	def start
 		require 'phusion_passenger'
+		load_from_native_support_output_dir ||
 		load_from_source_root ||
 		load_from_load_path ||
 		load_from_home_dir ||
@@ -74,6 +75,20 @@ private
 			return nil
 		end
 	end
+
+	def load_from_native_support_output_dir
+		output_dir = ENV['PASSENGER_NATIVE_SUPPORT_OUTPUT_DIR']
+		if output_dir && !output_dir.empty?
+			begin
+				require "#{output_dir}/#{VERSION_STRING}/#{archdir}/#{library_name}"
+				return true
+			rescue LoadError
+				return false
+			end
+		else
+			return false
+		end
+	end
 	
 	def load_from_source_root
 		if PhusionPassenger.originally_packaged?
@@ -112,6 +127,9 @@ private
 		require 'phusion_passenger/platform_info/ruby'
 		
 		target_dirs = []
+		if (output_dir = ENV['PASSENGER_NATIVE_SUPPORT_OUTPUT_DIR']) && !output_dir.empty?
+			target_dirs << "#{output_dir}/#{VERSION_STRING}/#{archdir}"
+		end
 		if native_support_dir_in_source_root
 			target_dirs << "#{native_support_dir_in_source_root}/#{archdir}"
 		end

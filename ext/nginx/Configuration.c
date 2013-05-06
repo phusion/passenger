@@ -67,7 +67,9 @@ passenger_create_main_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
     
-    conf->log_level     = (ngx_int_t) NGX_CONF_UNSET;
+    conf->default_ruby.data = NULL;
+    conf->default_ruby.len = 0;
+    conf->log_level = (ngx_int_t) NGX_CONF_UNSET;
     conf->debug_log_file.data = NULL;
     conf->debug_log_file.len = 0;
     conf->abort_on_startup_error = NGX_CONF_UNSET;
@@ -110,6 +112,11 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     conf = &passenger_main_conf;
     *conf = *((passenger_main_conf_t *) conf_pointer);
     
+    if (conf->default_ruby.len == 0) {
+        conf->default_ruby.data = (u_char *) DEFAULT_RUBY;
+        conf->default_ruby.len = strlen(DEFAULT_RUBY);
+    }
+
     if (conf->log_level == (ngx_int_t) NGX_CONF_UNSET) {
         conf->log_level = DEFAULT_LOG_LEVEL;
     }
@@ -272,6 +279,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.buffering = NGX_CONF_UNSET;
     conf->upstream_config.ignore_client_abort = NGX_CONF_UNSET;
 
+    conf->upstream_config.local = NGX_CONF_UNSET_PTR;
+
     conf->upstream_config.connect_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream_config.send_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream_config.read_timeout = NGX_CONF_UNSET_MSEC;
@@ -292,6 +301,10 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.cache_bypass = NGX_CONF_UNSET_PTR;
     conf->upstream_config.no_cache = NGX_CONF_UNSET_PTR;
     conf->upstream_config.cache_valid = NGX_CONF_UNSET_PTR;
+    #if NGINX_VERSION_NUM >= 1002000
+        conf->upstream_config.cache_lock = NGX_CONF_UNSET;
+        conf->upstream_config.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
+    #endif
 #endif
 
     conf->upstream_config.intercept_errors = NGX_CONF_UNSET;
@@ -420,10 +433,13 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream_config.store_access, 0600);
 
     ngx_conf_merge_value(conf->upstream_config.buffering,
-                              prev->upstream_config.buffering, 0);
+                         prev->upstream_config.buffering, 0);
 
     ngx_conf_merge_value(conf->upstream_config.ignore_client_abort,
-                              prev->upstream_config.ignore_client_abort, 0);
+                         prev->upstream_config.ignore_client_abort, 0);
+
+    ngx_conf_merge_ptr_value(conf->upstream_config.local,
+                             prev->upstream_config.local, NULL);
 
     ngx_conf_merge_msec_value(conf->upstream_config.connect_timeout,
                               prev->upstream_config.connect_timeout, 12000000);
@@ -581,6 +597,10 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if (conf->upstream_config.cache_use_stale & NGX_HTTP_UPSTREAM_FT_OFF) {
         conf->upstream_config.cache_use_stale = NGX_CONF_BITMASK_SET
                                                 | NGX_HTTP_UPSTREAM_FT_OFF;
+    }
+
+    if (conf->upstream_config.cache_use_stale & NGX_HTTP_UPSTREAM_FT_ERROR) {
+        conf->upstream_config.cache_use_stale |= NGX_HTTP_UPSTREAM_FT_NOLIVE;
     }
 
     if (conf->upstream_config.cache_methods == 0) {
@@ -1039,7 +1059,14 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("passenger_ruby"),
-      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, default_ruby),
+      NULL },
+
+    { ngx_string("passenger_ruby"),
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, ruby),

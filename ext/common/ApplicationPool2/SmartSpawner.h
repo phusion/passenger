@@ -122,7 +122,9 @@ private:
 		command.push_back(agentsDir + "/SpawnPreparer");
 		command.push_back(serializeEnvvarsFromPoolOptions(options));
 		command.push_back(preloaderCommand[0]);
-		command.push_back("Passenger AppPreloader: " + options.appRoot);
+		// Note: do not try to set a process title here.
+		// https://code.google.com/p/phusion-passenger/issues/detail?id=855
+		command.push_back(preloaderCommand[0]);
 		for (unsigned int i = 1; i < preloaderCommand.size(); i++) {
 			command.push_back(preloaderCommand[i]);
 		}

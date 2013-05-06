@@ -61,7 +61,7 @@ public:
 			ret = pthread_spin_init(&spin, PTHREAD_PROCESS_PRIVATE);
 		} while (ret == EINTR);
 		if (ret != 0) {
-			throw boost::thread_resource_error("Cannot initialize a spin lock", ret);
+			throw boost::thread_resource_error(ret, "Cannot initialize a spin lock");
 		}
 	}
 	
@@ -78,7 +78,7 @@ public:
 			ret = pthread_spin_lock(&spin);
 		} while (OXT_UNLIKELY(ret == EINTR));
 		if (OXT_UNLIKELY(ret != 0)) {
-			throw boost::thread_resource_error("Cannot lock spin lock", ret);
+			throw boost::thread_resource_error(ret, "Cannot lock spin lock");
 		}
 	}
 
@@ -88,7 +88,7 @@ public:
 			ret = pthread_spin_unlock(&spin);
 		} while (OXT_UNLIKELY(ret == EINTR));
 		if (OXT_UNLIKELY(ret != 0)) {
-			throw boost::thread_resource_error("Cannot unlock spin lock", ret);
+			throw boost::thread_resource_error(ret, "Cannot unlock spin lock");
 		}
 	}
 
@@ -102,7 +102,7 @@ public:
 		} else if (ret == EBUSY) {
 			return false;
 		} else {
-			throw boost::thread_resource_error("Cannot lock spin lock", ret);
+			throw boost::thread_resource_error(ret, "Cannot lock spin lock");
 		}
 	}
 };

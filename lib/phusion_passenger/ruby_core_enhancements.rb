@@ -43,8 +43,16 @@ class Exception
 		else
 			location = "in #{current_location} "
 		end
+		current_thread = Thread.current
+		if !(thread_id = current_thread[:id])
+			current_thread.to_s =~ /:(0x[0-9a-f]+)/i
+			thread_id = $1 || '?'
+		end
+		if thread_name = current_thread[:name]
+			thread_name = "(#{thread_name})"
+		end
 		return "*** Exception #{self.class} #{location}" <<
-			"(#{self}) (process #{$$}, thread #{Thread.current}):\n" <<
+			"(#{self}) (process #{$$}, thread #{thread_id}#{thread_name}):\n" <<
 			"\tfrom " << backtrace.join("\n\tfrom ")
 	end
 end

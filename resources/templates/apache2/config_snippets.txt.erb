@@ -4,7 +4,7 @@ Please edit your Apache configuration file, and add these lines:
 
    <b>LoadModule passenger_module <%= @module_location %></b>
    <b>PassengerRoot <%= @passenger_root %></b>
-   <b>PassengerRuby <%= @ruby %></b>
+   <b>PassengerDefaultRuby <%= @ruby %></b>
 
 After you restart Apache, you are ready to deploy any number of Ruby on Rails
 applications on Apache, without any further Ruby on Rails-specific
