@@ -285,6 +285,10 @@ public:
 		return state == END_OF_STREAM;
 	}
 
+	void readNow() {
+		onReadable(watcher, 0);
+	}
+
 	const FileDescriptor &getFd() const {
 		return fd;
 	}

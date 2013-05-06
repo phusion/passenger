@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -23,12 +23,33 @@
 
 # Rake functions for compiling/linking C++ stuff.
 
+def run_compiler(*command)
+	require 'phusion_passenger/utils/ansi_colors' if !defined?(PhusionPassenger::Utils::AnsiColors)
+	show_command = command.join(' ')
+	puts show_command
+	if !system(*command)
+		if $? && $?.exitstatus == 4
+			# This probably means the compiler ran out of memory.
+			msg = "<b>" +
+			      "-----------------------------------------------\n" +
+			      "Your compiler failed with the exit status 4. This " +
+			      "probably means that it ran out of memory. To solve " +
+			      "this problem, try increasing your swap space: " +
+			      "https://www.digitalocean.com/community/articles/how-to-add-swap-on-ubuntu-12-04" +
+			      "</b>"
+			fail(PhusionPassenger::Utils::AnsiColors.ansi_colorize(msg))
+		else
+			fail "Command failed with status (#{$? ? $?.exitstatus : 1}): [#{show_command}]"
+		end
+	end
+end
+
 def compile_c(source, flags = "#{EXTRA_PRE_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}")
-	sh "#{CC} #{flags} -c #{source}"
+	run_compiler "#{CC} #{flags} -c #{source}"
 end
 
 def compile_cxx(source, flags = "#{EXTRA_PRE_CXXFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}")
-	sh "#{CXX} #{flags} -c #{source}"
+	run_compiler "#{CXX} #{flags} -c #{source}"
 end
 
 def create_static_library(target, sources)
@@ -44,11 +65,11 @@ def create_static_library(target, sources)
 end
 
 def create_executable(target, sources, linkflags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
-	sh "#{CXX} #{sources} -o #{target} #{linkflags}"
+	run_compiler "#{CXX} #{sources} -o #{target} #{linkflags}"
 end
 
 def create_c_executable(target, sources, linkflags = "#{EXTRA_PRE_CFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
-	sh "#{CC} #{sources} -o #{target} #{linkflags}"
+	run_compiler "#{CC} #{sources} -o #{target} #{linkflags}"
 end
 
 def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
@@ -57,5 +78,5 @@ def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTR
 	else
 		shlib_flag = "-shared"
 	end
-	sh "#{CXX} #{shlib_flag} #{sources} -fPIC -o #{target} #{flags}"
+	run_compiler "#{CXX} #{shlib_flag} #{sources} -fPIC -o #{target} #{flags}"
 end

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -42,7 +42,7 @@ struct AgentOptions {
 	string  defaultUser;
 	string  defaultGroup;
 	string  passengerRoot;
-	string  rubyCommand;
+	string  defaultRubyCommand;
 	unsigned int generationNumber;
 	unsigned int maxPoolSize;
 	unsigned int maxInstancesPerApp;
@@ -62,7 +62,7 @@ struct AgentOptions {
 		passengerRoot = options.get("passenger_root");
 		tempDir               = options.get("temp_dir");
 		userSwitching = options.getBool("user_switching");
-		rubyCommand   = options.get("ruby");
+		defaultRubyCommand   = options.get("default_ruby");
 		defaultUser   = options.get("default_user");
 		defaultGroup  = options.get("default_group");
 		maxPoolSize        = options.getInt("max_pool_size");

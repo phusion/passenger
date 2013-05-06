@@ -732,7 +732,7 @@ namespace tut {
 		SessionPtr session3 = pool->get(options, &ticket);
 		{
 			LockGuard l(pool->syncher);
-			ensure("(4)", !session1->getProcess()->isAlive());
+			ensure("(4)", session1->getProcess()->enabled == Process::DETACHED);
 			ensure_equals("(6)", fooGroup->getWaitlist.size(), 1u);
 			ensure_equals("(7)", pool->getWaitlist.size(), 0u);
 		}
@@ -763,9 +763,16 @@ namespace tut {
 
 		ProcessPtr process = currentSession->getProcess();
 		pool->detachProcess(currentSession->getProcess());
-		ensure(!process->isAlive());
+		{
+			LockGuard l(pool->syncher);
+			ensure(process->enabled == Process::DETACHED);
+		}
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 2;
+		);
+		currentSession.reset();
+		EVENTUALLY(5,
+			result = process->isDead();
 		);
 	}
 	
@@ -864,6 +871,72 @@ namespace tut {
 		ensure_equals(pool->superGroups.size(), 1u);
 		ensure(superGroup->isAlive());
 		ensure(!superGroup->garbageCollectable());
+	}
+
+	TEST_METHOD(34) {
+		// When detaching a process, it waits until all sessions have
+		// finished before telling the process to shut down.
+		Options options = createOptions();
+		options.spawnMethod = "direct";
+		options.minProcesses = 0;
+		SessionPtr session = pool->get(options, &ticket);
+		ProcessPtr process = session->getProcess();
+
+		ensure(pool->detachProcess(process));
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(process->enabled, Process::DETACHED);
+		}
+		SHOULD_NEVER_HAPPEN(100,
+			LockGuard l(pool->syncher);
+			result = !process->isAlive()
+				|| !process->osProcessExists();
+		);
+
+		session.reset();
+		EVENTUALLY(1,
+			LockGuard l(pool->syncher);
+			result = process->enabled == Process::DETACHED
+				&& !process->osProcessExists()
+				&& process->isDead();
+		);
+	}
+
+	TEST_METHOD(35) {
+		// When detaching a process, it waits until the OS processes
+		// have exited before cleaning up the in-memory data structures.
+		Options options = createOptions();
+		options.spawnMethod = "direct";
+		options.minProcesses = 0;
+		ProcessPtr process = pool->get(options, &ticket)->getProcess();
+
+		ScopeGuard g(boost::bind(::kill, process->pid, SIGCONT));
+		kill(process->pid, SIGSTOP);
+
+		ensure(pool->detachProcess(process));
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(process->enabled, Process::DETACHED);
+		}
+		EVENTUALLY(1,
+			result = process->getLifeStatus() == Process::SHUTDOWN_TRIGGERED;
+		);
+
+		SHOULD_NEVER_HAPPEN(100,
+			LockGuard l(pool->syncher);
+			result = process->isDead()
+				|| !process->osProcessExists();
+		);
+
+		kill(process->pid, SIGCONT);
+		g.clear();
+
+		EVENTUALLY(1,
+			LockGuard l(pool->syncher);
+			result = process->enabled == Process::DETACHED
+				&& !process->osProcessExists()
+				&& process->isDead();
+		);
 	}
 
 	
@@ -1116,18 +1189,13 @@ namespace tut {
 	TEST_METHOD(64) {
 		// Test process idle cleaning.
 		Options options = createOptions();
-		retainSessions = true;
 		pool->setMaxIdleTime(50000);
-		pool->asyncGet(options, callback);
-		pool->asyncGet(options, callback);
-		EVENTUALLY(2,
-			result = number == 2;
-		);
+		SessionPtr session1 = pool->get(options, &ticket);
+		SessionPtr session2 = pool->get(options, &ticket);
 		ensure_equals(pool->getProcessCount(), 2u);
-		
-		currentSession.reset();
-		sessions.pop_back();
 
+		session2.reset();
+		
 		// One of the processes still has a session open and should
 		// not be idle cleaned.
 		EVENTUALLY(2,

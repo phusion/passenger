@@ -380,7 +380,7 @@ $ some_awesome_editor passenger_wsgi.py
 $ cat passenger_wsgi.py
 def application(environ, start_response):
   start_response('200 OK', [('Content-Type', 'text/plain')])
-  return ["hello world!\n"]
+  return [b"hello world!\n"]
 -------------------------------------------
 
 Finally, we deploy it by adding the following configuration options to
@@ -460,36 +460,76 @@ this option as well. Please read
 
 This required option may only occur once, in the 'http' configuration block.
 
+[[PassengerRuby]]
 === passenger_ruby <filename> ===
-This option allows one to specify the Ruby interpreter to use.
+The `passenger_ruby` option allows one to specify the Ruby interpreter to use. Similarly, the `passenger_python` option is for specifying the Python interpreter.
 
-Since version 4.0.0, this option may occur in the following places:
+In versions prior to 4.0.0, only a single Ruby version was supported for the entire Nginx instance, so `passenger_ruby` may only occur in the global server configuration. Also, the `passenger_python` option was not supported.
+
+Since version 4.0.0, the `passenger_python` option was added. Also, Phusion Passenger supports multiple Ruby or Python interpreters in the same Nginx instance. And so, since version 4.0.0, this option may occur in the following places:
 
  * In the 'http' configuration block.
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-If you want to use a different Ruby interpreter for two different applications then you should define different `passenger_ruby` directives in different 'http' blocks.
+The `passenger_ruby` in the `http` block - that is, the one that `passenger-install-nginx-module` outputs - is used for invoking certain Phusion Passenger tools that are written in Ruby, e.g. the internal helper script used by <<PassengerPreStart,passenger_pre_start>>. It is also used as the default Ruby interpreter for Ruby web apps. You don't *have* to specify a `passenger_ruby` in the `http` block though, because the default is to use the first `ruby` command found in `$PATH`.
 
-In versions prior to 4.0.0, only a single Ruby version is supported for the entire Nginx instance, so `passenger_ruby` may only occur in the 'http' configuration block.
+The `passenger_python` option works in a similar manner, but applies to Python instead.
 
-The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
+You can also override `passenger_ruby` or `passenger_python` in specific contexts if you want to use a different Ruby/Python interpreter for that web app. For example:
+
+------------------------------
+http {
+    passenger_root ...;
+    
+    # Use Ruby 1.8.7 by default.
+    passenger_ruby /usr/bin/ruby1.8;
+    # Use Python 2.6 by default.
+    passenger_python /usr/bin/python2.6;
+
+    server {
+        # This Rails web app will use Ruby 1.8.7
+        listen 80;
+        server_name www.foo.com;
+        root /webapps/foo/public;
+    }
+
+    server {
+        # This Rails web app will use Ruby 1.9.3, as installed by RVM
+        passenger_ruby /usr/local/rvm/wrappers/ruby-1.9.3/ruby;
+
+        listen 80;
+        server_name www.bar.com;
+        root /webapps/bar/public;
+
+        # If you have a web app deployed in a sub-URI, customize
+        # passenger_ruby/passenger_python inside a `location` block.
+        # The web app under www.bar.com/blog will use JRuby 1.7.1
+        passenger_base_uri /blog;
+        location /blog {
+            passenger_ruby /usr/local/rvm/wrappers/jruby-1.7.1/ruby;
+        }
+    }
+
+    server {
+        # This Flask web app will use Python 3.0
+        passenger_python /usr/bin/python3.0;
+
+        listen 80;
+        server_name www.baz.com;
+        root /webapps/baz/public;
+    }
+}
+------------------------------
+
+include::users_guide_snippets/rvm_helper_tool.txt[]
 
 === passenger_python <filename> ===
 :version: 4.0.0
 include::users_guide_snippets/since_version.txt[]
 
-This option allows one to specify the Python interpreter to use. It may occur in the following places:
-
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
-
-If you want to use a different Python interpreter for two different applications then you should define different `passenger_python` directives in different 'http' blocks.
-
-The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
+This option allows one to specify the Python interpreter to use. See <<PassengerRuby,passenger_ruby>> for more information. The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
 
 [[PassengerAppRoot]]
 === passenger_app_root <path/to/root> ===
@@ -939,26 +979,14 @@ In each place, it may be specified at most once. The default value is 'on'.
 ==== passenger_max_pool_size <integer> ====
 The maximum number of <<application_process,application processes>> that may
 simultanously exist. A larger number results in higher memory usage,
-but improved ability to handle concurrent HTTP clients.
+but improves the ability to handle concurrent HTTP requests.
 
-The optimal value depends on your system's hardware and the server's average
-load. You should experiment with different values. But generally speaking,
-the value should be at least equal to the number of CPUs (or CPU cores) that
-you have. If your system has 2 GB of RAM, then we recommend a value of '15'.
-If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
-is also running other services such as MySQL, then we recommend a value of '2'.
+The optimal value depends on your system's hardware and your workload. You can learn more at the Phusion article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's conurrency settings].
 
-If you find that your server is unable to handle the load on your Rails/Rack websites
-(i.e. running out of memory) then you should lower this value. (Though if your
-sites are really that popular, then you should strongly consider upgrading your
-hardware or getting more servers.)
+If you find that your server is running out of memory then you should lower this value.
 
 This option may only occur once, in the 'http' configuration block.
 The default value is '6'.
-
-TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
-Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
-by about 33%, and it's not hard to install.
 
 [[PassengerMinInstances]]
 ==== passenger_min_instances <integer> ====

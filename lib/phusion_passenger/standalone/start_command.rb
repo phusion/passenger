@@ -109,10 +109,6 @@ private
 		require 'fileutils' unless defined?(FileUtils)
 	end
 	
-	def require_app_finder
-		require 'phusion_passenger/standalone/app_finder' unless defined?(AppFinder)
-	end
-	
 	def parse_my_options
 		description = "Starts Phusion Passenger Standalone and serve one or more Ruby web applications."
 		parse_options!("start [directory]", description) do |opts|

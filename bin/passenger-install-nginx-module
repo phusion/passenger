@@ -412,6 +412,7 @@ private
 		command = "sh ./configure --prefix='#{prefix}' "
 		command << "--with-http_ssl_module "
 		command << "--with-http_gzip_static_module "
+		command << "--with-http_stub_status_module "
 		command << "--with-cc-opt='-Wno-error' "
 		if @pcre_source_dir
 			command << "--with-pcre='#{@pcre_source_dir}' "

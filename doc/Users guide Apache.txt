@@ -399,7 +399,7 @@ $ some_awesome_editor passenger_wsgi.py
 $ cat passenger_wsgi.py
 def application(environ, start_response):
   start_response('200 OK', [('Content-Type', 'text/plain')])
-  return ["hello world!\n"]
+  return [b"hello world!\n"]
 -------------------------------------------
 
 Finally, we deploy it by adding the following configuration options to
@@ -487,37 +487,75 @@ this option as well. Please read
 
 This required option may only occur once, in the global server configuration.
 
+[[PassengerDefaultRuby]]
+=== PassengerDefaultRuby and PassengerRuby ===
+:version: 4.0.0
+include::users_guide_snippets/since_version.txt[]
+
+This option specifies the default Ruby interpreter to use for web apps as well as for all sorts of internal Phusion Passenger helper scripts, e.g. the one used by <<PassengerPreStart,PassengerPreStart>>. Please see <<PassengerRuby,PassengerRuby>> for more information, as well as how it relates to <<PassengerRuby,PassengerRuby>>.
+
+This option may occur in the global server configuration. The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
+
 [[PassengerRuby]]
 === PassengerRuby <filename> ===
-This option allows one to specify the Ruby interpreter to use.
+The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby interpreter to use. Similarly, the `PassengerPython` directive is for specifying the Python interpreter.
 
-Since version 4.0.0, this option may occur in the following places:
+The relationship between `PassengerDefaultRuby` and `PassengerRuby` is as follows:
 
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
+ * `PassengerDefaultRuby` may only occur in the global server configuration.
+ * `PassengerRuby` may occur everywhere: in the global server configuration, in `<VirtualHost>`, in `<Directory>`, in `<Location>`, and in '.htaccess' if `AllowOverride Options` is on.
+ * You don't *have* to specify `PassengerRuby`. In this case `PassengerDefaultRuby` is used as the Ruby interpreter. But if you do specify `PassengerRuby` then it will override `PassengerDefaultRuby` in that context. This allows you to use `PassengerRuby` to specify a different Ruby interpreter on a per-application basis.
 
-If you want to use a different Ruby interpreter for two different applications then you should define different `PassengerRuby` directives in different virtual host blocks.
+Phusion Passenger not only uses Ruby to run web apps, but also for running certain helper tools that are written in Ruby, e.g. the internal helper script used by <<PassengerPreStart,PassengerPreStart>>. These tools are always run using `PassengerDefaultRuby`, never by `PassengerRuby`. `PassengerRuby` is only used for running web apps.
 
-In versions prior to 4.0.0, only a single Ruby version is supported for the entire Apache instance, so `PassengerRuby` may only occur in the global server configuration.
+The reason why `PassengerDefaultRuby` exists at all is because limitations in the Apache API prevents us from implementing the same behavior using only the `PassengerRuby` directive.
 
-The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
+There is no `PassengerDefaultPython` because there are no Phusion Passenger tools written in Python. As such, having `PassengerPython` is enough.
+
+The following example illustrates how it works and how you can use these options to specify different Ruby/Python interpreters for different web apps.
+
+------------------------------
+# Use Ruby 1.8.7 by default.
+PassengerDefaultRuby /usr/bin/ruby1.8
+# Use Python 2.6 by default.
+PassengerPython /usr/bin/python2.6
+
+<VirtualHost *:80>
+    # This Rails web app will use Ruby 1.8.7
+    ServerName www.foo.com
+    DocumentRoot /webapps/foo/public
+</VirtualHost>
+
+<VirtualHost *:80>
+    # This Rails web app will use Ruby 1.9.3, as installed by RVM
+    PassengerRuby /usr/local/rvm/wrappers/ruby-1.9.3/ruby
+    ServerName www.bar.com
+    DocumentRoot /webapps/bar/public
+
+    # If you have a web app deployed in a sub-URI, customize
+    # PassengerRuby/PassengerPython inside a <Location> block.
+    # The web app under www.bar.com/blog will use JRuby 1.7.1
+    RackBaseURI /blog
+    <Location /blog>
+        PassengerRuby /usr/local/rvm/wrappers/jruby-1.7.1/ruby
+    </Location>
+</VirtualHost>
+
+<VirtualHost *:80>
+    # This Flask web app will use Python 3.0
+    PassengerPython /usr/bin/python3.0
+    ServerName www.baz.com
+    DocumentRoot /webapps/baz/public
+</VirtualHost>
+------------------------------
+
+include::users_guide_snippets/rvm_helper_tool.txt[]
 
 === PassengerPython <filename> ===
 :version: 4.0.0
 include::users_guide_snippets/since_version.txt[]
 
-This option allows one to specify the Python interpreter to use. It may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-If you want to use a different Python interpreter for two different applications then you should define different `PassengerPython` directives in different virtual host blocks.
-
-The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
+This option allows one to specify the Python interpreter to use. See <<PassengerRuby,PassengerRuby>> for more information. The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
 
 [[PassengerAppRoot]]
 === PassengerAppRoot <path/to/root> ===
@@ -954,26 +992,14 @@ In each place, it may be specified at most once. The default value is 'on'.
 ==== PassengerMaxPoolSize <integer> ====
 The maximum number of <<application_process,application processes>> that may
 simultaneously exist. A larger number results in higher memory usage,
-but improved ability to handle concurrent HTTP clients.
+but improves the ability to handle concurrent HTTP requests.
 
-The optimal value depends on your system's hardware and the server's average
-load. You should experiment with different values. But generally speaking,
-the value should be at least equal to the number of CPUs (or CPU cores) that
-you have. If your system has 2 GB of RAM, then we recommend a value of '15'.
-If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
-is also running other services such as MySQL, then we recommend a value of '2'.
+The optimal value depends on your system's hardware and your workload. You can learn more at the Phusion article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's conurrency settings].
 
-If you find that your server is unable to handle the load on your Rails/Rack websites
-(i.e. running out of memory) then you should lower this value. (Though if your
-sites are really that popular, then you should strongly consider upgrading your
-hardware or getting more servers.)
+If you find that your server is running out of memory then you should lower this value.
 
 This option may only occur once, in the global server configuration.
 The default value is '6'.
-
-TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
-Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
-by about 33%, and it's not hard to install.
 
 [[PassengerMinInstances]]
 ==== PassengerMinInstances <integer> ====
@@ -1130,6 +1156,7 @@ applications, each which must be available at all times.
 This option may only occur once, in the global server configuration.
 The default value is '300'.
 
+[[PassengerMaxPreloaderIdleTime]]
 ==== PassengerMaxPreloaderIdleTime <integer> ====
 The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
 methods explained>>) has an idle timeout, just like the backend processes spawned by
@@ -1825,6 +1852,13 @@ Deprecated in favor of <<PassengerSpawnMethod,PassengerSpawnMethod>>.
 
 ==== RailsAutoDetect, RackAutoDetect and WsgiAutoDetect ====
 These options have been removed in version 4.0.0 as part of an optimization. You should use <<PassengerEnabled,PassengerEnabled>> instead.
+
+==== RailsAppSpawnerIdleTime ====
+This option has been removed in version 4.0.0, and replaced with <<PassengerMaxPreloaderIdleTime,PassengerMaxPreloaderIdleTime>>.
+
+==== RailsFrameworkSpawnerIdleTime ====
+This option is no longer available in version 4.0.0. There is no alternative because framework spawning has been removed altogether. You should use smart spawning instead.
+
 
 
 [[troubleshooting]]

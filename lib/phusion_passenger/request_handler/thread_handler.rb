@@ -35,12 +35,15 @@ class RequestHandler
 # This class encapsulates the logic of a single RequestHandler thread.
 class ThreadHandler
 	include DebugLogging
+	include Utils
 	include Utils::RobustInterruption
 
 	REQUEST_METHOD = 'REQUEST_METHOD'.freeze
 	PING           = 'PING'.freeze
 	OOBW           = 'OOBW'.freeze
 	PASSENGER_CONNECT_PASSWORD  = 'PASSENGER_CONNECT_PASSWORD'.freeze
+	CONTENT_LENGTH = 'CONTENT_LENGTH'.freeze
+	TRANSFER_ENCODING = 'TRANSFER_ENCODING'.freeze
 
 	MAX_HEADER_SIZE = 128 * 1024
 
@@ -122,14 +125,14 @@ private
 		trace(3, "Accepted new request on socket #{@socket_name}")
 		channel.io = connection
 		if headers = parse_request(connection, channel, buffer)
-			prepare_request(headers)
+			prepare_request(connection, headers)
 			begin
 				if headers[REQUEST_METHOD] == PING
 					process_ping(headers, connection)
 				elsif headers[REQUEST_METHOD] == OOBW
 					process_oobw(headers, connection)
 				else
-					process_request(headers, connection, @protocol == :http)
+					process_request(headers, connection, socket_wrapper, @protocol == :http)
 				end
 			rescue Exception
 				has_error = true
@@ -140,7 +143,7 @@ private
 					connection = nil
 					channel = nil
 				end
-				finalize_request(headers, has_error)
+				finalize_request(connection, headers, has_error)
 				trace(3, "Request done.")
 			end
 		else
@@ -152,7 +155,7 @@ private
 			# Other errors might indicate a problem so we print them, but they're
 			# probably not bad enough to warrant stopping the request handler.
 			if !e.is_a?(Errno::EPIPE)
-				Utils.print_exception("Passenger RequestHandler's client socket", e)
+				print_exception("Passenger RequestHandler's client socket", e)
 			end
 		else
 			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
@@ -236,7 +239,7 @@ private
 				header, value = line.split(/\s*:\s*/, 2)
 				header.upcase!            # "Foo-Bar" => "FOO-BAR"
 				header.gsub!("-", "_")    #           => "FOO_BAR"
-				if header == "CONTENT_LENGTH" || header == "CONTENT_TYPE"
+				if header == CONTENT_LENGTH || header == "CONTENT_TYPE"
 					headers[header] = value
 				else
 					headers["HTTP_#{header}"] = value
@@ -264,11 +267,16 @@ private
 		connection.write("oobw done")
 	end
 
-#	def process_request(env, connection, full_http_response)
+#	def process_request(env, connection, socket_wrapper, full_http_response)
 #		raise NotImplementedError, "Override with your own implementation!"
 #	end
 
-	def prepare_request(headers)
+	def prepare_request(connection, headers)
+		if (!headers.has_key?(CONTENT_LENGTH) && !headers.has_key?(TRANSFER_ENCODING)) ||
+		  headers[CONTENT_LENGTH] == 0
+			connection.simulate_eof!
+		end
+
 		if @analytics_logger && headers[PASSENGER_TXN_ID]
 			txn_id = headers[PASSENGER_TXN_ID]
 			union_station_key = headers[PASSENGER_UNION_STATION_KEY]
@@ -297,7 +305,11 @@ private
 		#################
 	end
 	
-	def finalize_request(headers, has_error)
+	def finalize_request(connection, headers, has_error)
+		if connection
+			connection.stop_simulating_eof!
+		end
+
 		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
 		if log && !log.closed?
 			exception_occurred = false
@@ -372,6 +384,14 @@ private
 	def should_reraise_error?(e)
 		# Stubable by unit tests.
 		return true
+	end
+
+	def should_reraise_app_error?(e, socket_wrapper)
+		return false
+	end
+
+	def should_swallow_app_error?(e, socket_wrapper)
+		return socket_wrapper && socket_wrapper.source_of_exception?(e) && e.is_a?(Errno::EPIPE)
 	end
 end
 

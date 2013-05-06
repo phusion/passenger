@@ -375,7 +375,7 @@ public:
 	           pid_t webServerPid, const string &tempDir,
 	           bool userSwitching, const string &defaultUser, const string &defaultGroup,
 	           uid_t webServerWorkerUid, gid_t webServerWorkerGid,
-	           const string &passengerRoot, const string &rubyCommand,
+	           const string &passengerRoot, const string &defaultRubyCommand,
 	           unsigned int maxPoolSize, unsigned int maxInstancesPerApp,
 	           unsigned int poolIdleTime,
 	           const string &analyticsServer,
@@ -414,7 +414,7 @@ public:
 			.setUid ("web_server_worker_uid", webServerWorkerUid)
 			.setGid ("web_server_worker_gid", webServerWorkerGid)
 			.set    ("passenger_root",  passengerRoot)
-			.set    ("ruby",            rubyCommand)
+			.set    ("default_ruby",    defaultRubyCommand)
 			.setInt ("max_pool_size",   maxPoolSize)
 			.setInt ("max_instances_per_app",     maxInstancesPerApp)
 			.setInt ("pool_idle_time",            poolIdleTime)

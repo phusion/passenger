@@ -79,7 +79,14 @@ module PreloaderSharedHelpers
 		end
 		return nil
 	ensure
-		client.close if client && Process.pid == original_pid
+		if client && Process.pid == original_pid
+			begin
+				client.close
+			rescue Errno::EINVAL
+				# Work around OS X bug.
+				# https://code.google.com/p/phusion-passenger/issues/detail?id=854
+			end
+		end
 	end
 	
 	def run_main_loop(options)

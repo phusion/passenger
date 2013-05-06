@@ -435,6 +435,7 @@ public:
 		
 		function<void ()> func = boost::bind(prestartWebApps,
 			resourceLocator,
+			options.defaultRubyCommand,
 			options.prestartUrls
 		);
 		prestarterThread = ptr(new oxt::thread(

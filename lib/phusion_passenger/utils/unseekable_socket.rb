@@ -26,14 +26,14 @@ require 'phusion_passenger/utils'   # So that we can know whether #writev is sup
 module PhusionPassenger
 module Utils
 
-# Some frameworks (e.g. Merb) call _seek_ and _rewind_ on the input stream
+# Some frameworks (e.g. Merb) call `seek` and `rewind` on the input stream
 # if it responds to these methods. In case of Phusion Passenger, the input
-# stream is a socket, and altough socket objects respond to _seek_ and
-# _rewind_, calling these methods will raise an exception. We don't want
+# stream is a socket, and altough socket objects respond to `seek` and
+# `rewind`, calling these methods will raise an exception. We don't want
 # this to happen so in AbstractRequestHandler we wrap the client socket
 # into an UnseekableSocket wrapper, which doesn't respond to these methods.
 #
-# We used to dynamically undef _seek_ and _rewind_ on sockets, but this
+# We used to dynamically undef `seek` and `rewind` on sockets, but this
 # blows the Ruby interpreter's method cache and made things slower.
 # Wrapping a socket is faster despite extra method calls.
 #
@@ -87,8 +87,21 @@ class UnseekableSocket
 	def binmode
 	end
 	
+	# This makes select() work.
 	def to_io
-		self
+		@socket
+	end
+
+	def simulate_eof!
+		@simulate_eof = true
+	end
+
+	def stop_simulating_eof!
+		@simulate_eof = false
+	end
+
+	def fileno
+		@socket.fileno
 	end
 	
 	def addr
@@ -128,36 +141,54 @@ class UnseekableSocket
 	end
 	
 	def gets
+		return nil if @simulate_eof
 		@socket.gets
 	rescue => e
 		raise annotate(e)
 	end
 	
 	def read(*args)
+		if @simulate_eof
+			length, buffer = args
+			if buffer
+				buffer.replace(binary_string(""))
+			else
+				buffer = binary_string("")
+			end
+			if length
+				return nil
+			else
+				return buffer
+			end
+		end
 		@socket.read(*args)
 	rescue => e
 		raise annotate(e)
 	end
 	
 	def readpartial(*args)
+		raise EOFError, "end of file reached" if @simulate_eof
 		@socket.readpartial(*args)
 	rescue => e
 		raise annotate(e)
 	end
 	
 	def readline
+		raise EOFError, "end of file reached" if @simulate_eof
 		@socket.readline
 	rescue => e
 		raise annotate(e)
 	end
 	
 	def each(&block)
+		return if @simulate_eof
 		@socket.each(&block)
 	rescue => e
 		raise annotate(e)
 	end
 
 	def eof?
+		return true if @simulate_eof
 		@socket.eof?
 	rescue => e
 		raise annotate(e)
@@ -195,6 +226,20 @@ private
 	def annotate(exception)
 		exception.instance_variable_set(:"@from_unseekable_socket", @socket.object_id)
 		return exception
+	end
+
+	def raise_error_because_activity_disallowed!
+		raise IOError, "It is not possible to read or write from the client socket because the current."
+	end
+
+	if ''.respond_to?(:force_encoding)
+		def binary_string(str)
+			return ''.force_encoding('binary')
+		end
+	else
+		def binary_string(str)
+			return ''
+		end
 	end
 end
 

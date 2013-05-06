@@ -21,6 +21,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger/platform_info/compiler'
 require 'phusion_passenger/platform_info/cxx_portability'
 
 ########## Phusion Passenger common library ##########
@@ -150,6 +151,9 @@ else
 	LIBEV_TARGET = nil
 	task :libev  # do nothing
 end
+
+# Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
+LIBEV_CFLAGS << " -Wno-ambiguous-member-template" if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
 
 
 ########## libeio ##########

@@ -34,6 +34,7 @@
 #include <netdb.h>
 #include <string>
 #include <vector>
+#include <oxt/macros.hpp>
 #include <StaticString.h>
 #include <FileDescriptor.h>
 
@@ -81,7 +82,9 @@ string parseUnixSocketAddress(const StaticString &address);
  *
  * @throw ArgumentException <tt>address</tt> is not a valid TCP socket address.
  */
-void parseTcpSocketAddress(const StaticString &address, string &host, unsigned short &port);
+void parseTcpSocketAddress(const StaticString & restrict_ref address,
+	string & restrict_ref host,
+	unsigned short & restrict_ref port);
 
 /**
  * Returns whether the given socket address (as accepted by getSocketAddressType())
@@ -103,7 +106,10 @@ void setNonBlocking(int fd);
  * Try to call the Linux accept4() system call. If the system call is
  * not available, then -1 is returned and errno is set to ENOSYS.
  */
-int callAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int options);
+int callAccept4(int sock,
+	struct sockaddr * restrict addr,
+	socklen_t * restrict addr_len,
+	int options);
 
 /**
  * Resolves the given host name and returns a list of IP addresses.
@@ -116,7 +122,9 @@ int callAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int option
  * IP addresses, then these addresses will be shuffled before they are
  * returned in order to improve load balancing.
  */
-vector<string> resolveHostname(const string &hostname, unsigned int port = 0, bool shuffle = true);
+vector<string> resolveHostname(const string &hostname,
+	unsigned int port = 0,
+	bool shuffle = true);
 
 /**
  * Create a new Unix or TCP server socket, depending on the address type.
@@ -134,7 +142,9 @@ vector<string> resolveHostname(const string &hostname, unsigned int port = 0, bo
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int createServer(const StaticString &address, unsigned int backlogSize = 0, bool autoDelete = true);
+int createServer(const StaticString &address,
+	unsigned int backlogSize = 0,
+	bool autoDelete = true);
 
 /**
  * Create a new Unix server socket which is bounded to <tt>filename</tt>.
@@ -149,7 +159,9 @@ int createServer(const StaticString &address, unsigned int backlogSize = 0, bool
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int createUnixServer(const StaticString &filename, unsigned int backlogSize = 0, bool autoDelete = true);
+int createUnixServer(const StaticString &filename,
+	unsigned int backlogSize = 0,
+	bool autoDelete = true);
 
 /**
  * Create a new TCP server socket which is bounded to the given address and port.
@@ -166,7 +178,9 @@ int createUnixServer(const StaticString &filename, unsigned int backlogSize = 0,
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int createTcpServer(const char *address = "0.0.0.0", unsigned short port = 0, unsigned int backlogSize = 0);
+int createTcpServer(const char *address = "0.0.0.0",
+	unsigned short port = 0,
+	unsigned int backlogSize = 0);
 
 /**
  * Connect to a server at the given address in a blocking manner.
@@ -223,7 +237,8 @@ struct NUnix_State {
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-void setupNonBlockingUnixSocket(NUnix_State &state, const StaticString &filename);
+void setupNonBlockingUnixSocket(NUnix_State & restrict_ref state,
+	const StaticString & restrict_ref filename);
 
 /**
  * Connect a Unix domain socket in non-blocking mode.
@@ -270,7 +285,9 @@ struct NTCP_State {
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-void setupNonBlockingTcpSocket(NTCP_State &state, const StaticString &hostname, int port);
+void setupNonBlockingTcpSocket(NTCP_State & restrict_ref state,
+	const StaticString & restrict_ref hostname,
+	int port);
 
 /**
  * Connect a TCP socket in non-blocking mode.
@@ -302,7 +319,8 @@ struct NConnect_State {
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-void setupNonBlockingSocket(NConnect_State &state, const StaticString &address);
+void setupNonBlockingSocket(NConnect_State & restrict_ref state,
+	const StaticString & restrict_ref address);
 
 /**
  * Connect a socket in non-blocking mode.
@@ -387,7 +405,7 @@ bool waitUntilWritable(int fd, unsigned long long *timeout);
  *                          <tt>timeout</tt> microseconds.
  * @throws boost::thread_interrupted
  */
-unsigned int readExact(int fd, void *buf, unsigned int size, unsigned long long *timeout = NULL);
+unsigned int readExact(int fd, void * restrict buf, unsigned int size, unsigned long long * restrict timeout = NULL);
 
 /**
  * Writes a block of data to the given file descriptor and blocks until everything
@@ -415,8 +433,8 @@ unsigned int readExact(int fd, void *buf, unsigned int size, unsigned long long 
  *                          <tt>timeout</tt> microseconds.
  * @throws boost::thread_interrupted
  */
-void writeExact(int fd, const void *data, unsigned int size, unsigned long long *timeout = NULL);
-void writeExact(int fd, const StaticString &data, unsigned long long *timeout = NULL);
+void writeExact(int fd, const void * restrict data, unsigned int size, unsigned long long * restrict timeout = NULL);
+void writeExact(int fd, const StaticString & restrict_ref data, unsigned long long * restrict timeout = NULL);
 
 /**
  * Writes a bunch of data to the given file descriptor using a gathering I/O interface.
@@ -446,7 +464,7 @@ void writeExact(int fd, const StaticString &data, unsigned long long *timeout = 
  *         isn't related to non-blocking writes.
  * @throws boost::thread_interrupted
  */
-ssize_t gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, string &restBuffer);
+ssize_t gatheredWrite(int fd, const StaticString * restrict data, unsigned int dataCount, string & restrict_ref restBuffer);
 
 /**
  * Writes a bunch of data to the given file descriptor using a gathering I/O interface.
@@ -474,7 +492,7 @@ ssize_t gatheredWrite(int fd, const StaticString data[], unsigned int dataCount,
  *                          <tt>timeout</tt> microseconds.
  * @throws boost::thread_interrupted
  */
-void    gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, unsigned long long *timeout = NULL);
+void    gatheredWrite(int fd, const StaticString * restrict data, unsigned int dataCount, unsigned long long * restrict timeout = NULL);
 
 /**
  * Sets a writev-emulating function that gatheredWrite() should call instead of the real writev().

@@ -99,6 +99,7 @@ public:
 		bool restarting;
 		bool spawning;
 		bool superGroup;
+		bool oobw;
 
 		// The following fields may only be accessed by Pool.
 		boost::mutex syncher;
@@ -110,6 +111,7 @@ public:
 			restarting = true;
 			spawning   = true;
 			superGroup = false;
+			oobw       = false;
 			spawnLoopIteration = 0;
 		}
 	};
@@ -426,25 +428,33 @@ public:
 	}
 	
 	void inspectProcessList(const InspectOptions &options, stringstream &result,
-		const ProcessList &processes) const
+		const Group *group, const ProcessList &processes) const
 	{
 		ProcessList::const_iterator p_it;
 		for (p_it = processes.begin(); p_it != processes.end(); p_it++) {
 			const ProcessPtr &process = *p_it;
 			char buf[128];
+			char membuf[10];
 			
+			snprintf(membuf, sizeof(membuf), "%ldM",
+				(unsigned long) (process->metrics.realMemory() / 1024));
 			snprintf(buf, sizeof(buf),
-					"* PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
+					"  * PID   : %-5lu   Sessions : %-2u   Processed: %-5u   Uptime: %s\n"
+					"    Memory: %-5s   Last used: %s ago",
 					(unsigned long) process->pid,
 					process->sessions,
 					process->processed,
-					process->uptime().c_str());
-			result << "  " << buf << endl;
+					process->uptime().c_str(),
+					membuf,
+					distanceOfTimeInWords(process->lastUsed / 1000000).c_str());
+			result << buf << endl;
 
 			if (process->enabled == Process::DISABLING) {
 				result << "    Disabling..." << endl;
 			} else if (process->enabled == Process::DISABLED) {
 				result << "    DISABLED" << endl;
+			} else if (process->enabled == Process::DETACHED) {
+				result << "    Shutting down...";
 			}
 
 			const Socket *socket;
@@ -609,7 +619,11 @@ public:
 		// Schedule next garbage collection run.
 		unsigned long long sleepTime;
 		if (nextGcRunTime == 0 || nextGcRunTime <= now) {
-			sleepTime = maxIdleTime;
+			if (maxIdleTime == 0) {
+				sleepTime = 10 * 60 * 1000000;
+			} else {
+				sleepTime = maxIdleTime;
+			}
 		} else {
 			sleepTime = nextGcRunTime - now;
 		}
@@ -747,6 +761,7 @@ public:
 						xml << "Group: <group>";
 						group->inspectXml(xml, false);
 						xml << "</group>";
+						logEntries.push_back(entry);
 					}
 				}
 			}
@@ -792,6 +807,7 @@ public:
 			options);
 		superGroup->initialize();
 		superGroups.set(options.getAppGroupName(), superGroup);
+		garbageCollectionCond.notify_all();
 		return superGroup;
 	}
 	
@@ -977,6 +993,7 @@ public:
 				superGroup = make_shared<SuperGroup>(shared_from_this(), options);
 				superGroup->initialize();
 				superGroups.set(options.getAppGroupName(), superGroup);
+				garbageCollectionCond.notify_all();
 				SessionPtr session = superGroup->get(options, callback);
 				/* The SuperGroup is still initializing so the callback
 				 * should now have been put on the wait list,
@@ -1370,9 +1387,10 @@ public:
 					result << "  (spawning new process...)" << endl;
 				}
 				result << "  Requests in queue: " << group->getWaitlist.size() << endl;
-				inspectProcessList(options, result, group->enabledProcesses);
-				inspectProcessList(options, result, group->disablingProcesses);
-				inspectProcessList(options, result, group->disabledProcesses);
+				inspectProcessList(options, result, group, group->enabledProcesses);
+				inspectProcessList(options, result, group, group->disablingProcesses);
+				inspectProcessList(options, result, group, group->disabledProcesses);
+				inspectProcessList(options, result, group, group->detachedProcesses);
 				result << endl;
 			}
 		}

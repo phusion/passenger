@@ -48,6 +48,6 @@ describe "Classic Rails 2.3 preloader" do
 			"end of startup file\n" +
 			"worker_process_started: forked=true\n"
 	end
-end
+end if TEST_CLASSIC_RAILS
 
 end # module PhusionPassenger

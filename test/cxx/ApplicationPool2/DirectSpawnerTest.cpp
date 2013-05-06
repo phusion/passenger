@@ -27,7 +27,6 @@ namespace tut {
 		~ApplicationPool2_DirectSpawnerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
-			Process::maybeShutdown(process);
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
 		
@@ -67,7 +66,8 @@ namespace tut {
 		spawner.getConfig()->forwardStderr = false;
 		
 		try {
-			spawner.spawn(options);
+			process = spawner.spawn(options);
+			process->requiresShutdown = false;
 			fail("Timeout expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -89,7 +89,8 @@ namespace tut {
 		spawner.getConfig()->forwardStderr = false;
 		
 		try {
-			spawner.spawn(options);
+			process = spawner.spawn(options);
+			process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -108,6 +109,7 @@ namespace tut {
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);
+		process->requiresShutdown = false;
 		ensure_equals(process->sockets->size(), 1u);
 		
 		Connection conn = process->sockets->front().checkoutConnection();

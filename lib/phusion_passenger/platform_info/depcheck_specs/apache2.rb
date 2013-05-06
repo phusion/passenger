@@ -44,7 +44,7 @@ define 'apache2-dev' do
 	end
 
 	on :debian do
-		apt_get_install "apache2-worker-dev"
+		apt_get_install "apache2-threaded-dev"
 	end
 	on :mandriva do
 		urpmi "apache-devel"

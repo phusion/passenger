@@ -269,7 +269,7 @@ main(int argc, char *argv[]) {
 		
 		/********** Initialized! Enter main loop... **********/
 		
-		P_WARN("Logging agent online, listening at " << socketAddress);
+		P_WARN("PassengerLoggingAgent online, listening at " << socketAddress);
 		ev_run(eventLoop, 0);
 		P_DEBUG("Logging agent exiting with code " << exitCode << ".");
 		return exitCode;

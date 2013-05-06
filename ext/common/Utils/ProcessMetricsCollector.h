@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -39,6 +39,12 @@
 	#include <mach/mach_vm.h>
 	#include <mach/mach_port.h>
 #endif
+#ifndef __NetBSD__
+	// NetBSD does not support -p with multiple PIDs.
+	// https://code.google.com/p/phusion-passenger/issues/detail?id=736
+	#define PS_SUPPORTS_MULTIPLE_PIDS
+	#include <set>
+#endif
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -68,9 +74,9 @@ struct ProcessMetrics {
 	pid_t   ppid;
 	uint8_t cpu;
 	/** Resident Set Size, amount of memory in RAM. Does not include swap.
-	 * 0 if completely swapped out.
+	 * -1 if not yet known, 0 if completely swapped out.
 	 */
-	size_t  rss;
+	ssize_t  rss;
 	/** Proportional Set Size, see measureRealMemory(). Does not include swap.
 	 * -1 if unknown, 0 if completely swapped out.
 	 */
@@ -90,9 +96,11 @@ struct ProcessMetrics {
 	
 	ProcessMetrics() {
 		pid = (pid_t) -1;
+		rss = -1;
 		pss = -1;
 		privateDirty = -1;
 		swap = -1;
+		vmsize = -1;
 	}
 	
 	bool isValid() const {
@@ -114,8 +122,10 @@ struct ProcessMetrics {
 		}
 		if (privateDirty != -1) {
 			return privateDirty + swap;
-		} else {
+		} else if (rss != -1) {
 			return rss + swap;
+		} else {
+			return 0;
 		}
 	}
 };
@@ -321,7 +331,8 @@ private:
 		return string(data, endOfLine - data);
 	}
 	
-	ProcessMetricMap parsePsOutput(const string &output) const {
+	template<typename Collection, typename ConstIterator>
+	ProcessMetricMap parsePsOutput(const string &output, const Collection &allowedPids) const {
 		ProcessMetricMap result;
 		// Ignore first line, it contains the column names.
 		const char *start = strchr(output.c_str(), '\n');
@@ -332,6 +343,14 @@ private:
 				start = NULL;
 			}
 		}
+
+		#ifndef PS_SUPPORTS_MULTIPLE_PIDS
+			set<pid_t> pids;
+			ConstIterator it, end = allowedPids.end();
+			for (it = allowedPids.begin(); it != allowedPids.end(); it++) {
+				pids.insert(*it);
+			}
+		#endif
 		
 		// Parse each line.
 		while (start != NULL) {
@@ -344,14 +363,24 @@ private:
 			metrics.vmsize  = (size_t) readNextWordAsLongLong(&start);
 			metrics.processGroupId = (pid_t) readNextWordAsLongLong(&start);
 			metrics.command = readRestOfLine(start);
-			result[metrics.pid] = metrics;
-			
-			start = strchr(start, '\n');
-			if (start != NULL) {
-				// Skip to beginning of next line.
-				start++;
-				if (*start == '\0') {
-					start = NULL;
+
+			bool pidAllowed;
+			#ifdef PS_SUPPORTS_MULTIPLE_PIDS
+				pidAllowed = true;
+			#else
+				pidAllowed = pids.find(metrics.pid) != pids.end();
+			#endif
+
+			if (pidAllowed) {
+				result[metrics.pid] = metrics;
+				
+				start = strchr(start, '\n');
+				if (start != NULL) {
+					// Skip to beginning of next line.
+					start++;
+					if (*start == '\0') {
+						start = NULL;
+					}
 				}
 			}
 		}
@@ -406,7 +435,10 @@ public:
 			#else
 				"pid,ppid,%cpu,rss,vsize,pgid,command",
 			#endif
-			"-p", pidsArg.c_str(), NULL
+			#ifdef PS_SUPPORTS_MULTIPLE_PIDS
+				"-p", pidsArg.c_str(),
+			#endif
+			NULL
 		};
 		
 		string psOutput = this->psOutput;
@@ -414,7 +446,7 @@ public:
 			psOutput = runCommandAndCaptureOutput(command);
 		}
 		pidsArg.resize(0);
-		ProcessMetricMap result = parsePsOutput(psOutput);
+		ProcessMetricMap result = parsePsOutput<Collection, ConstIterator>(psOutput, pids);
 		psOutput.resize(0);
 		if (canMeasureRealMemory) {
 			ProcessMetricMap::iterator it;

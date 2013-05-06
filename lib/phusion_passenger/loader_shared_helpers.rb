@@ -81,12 +81,12 @@ module LoaderSharedHelpers
 				f.puts "RUBY_PLATFORM = #{RUBY_PLATFORM}"
 				f.puts "RUBY_ENGINE = #{defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'nil'}"
 			end
-			File.open("#{dir}/load_path", "w") do |f|
+			File.open("#{dir}/load_path", "wb") do |f|
 				$LOAD_PATH.each do |path|
 					f.puts path
 				end
 			end
-			File.open("#{dir}/loaded_libs", "w") do |f|
+			File.open("#{dir}/loaded_libs", "wb") do |f|
 				$LOADED_FEATURES.each do |filename|
 					f.puts filename
 				end
@@ -94,7 +94,7 @@ module LoaderSharedHelpers
 
 			# We write to these files last because the 'require' calls can fail.
 			require 'rbconfig' if !defined?(RbConfig::CONFIG)
-			File.open("#{dir}/rbconfig", "w") do |f|
+			File.open("#{dir}/rbconfig", "wb") do |f|
 				RbConfig::CONFIG.each_pair do |key, value|
 					f.puts "#{key} = #{value}"
 				end
@@ -103,7 +103,7 @@ module LoaderSharedHelpers
 			File.open("#{dir}/ruby_info", "a") do |f|
 				f.puts "RubyGems version = #{Gem::VERSION}"
 			end
-			File.open("#{dir}/activated_gems", "w") do |f|
+			File.open("#{dir}/activated_gems", "wb") do |f|
 				if Gem.respond_to?(:loaded_specs)
 					Gem.loaded_specs.each_pair do |name, spec|
 						f.puts "#{name} => #{spec.version}"
@@ -119,7 +119,7 @@ module LoaderSharedHelpers
 
 	def dump_envvars
 		if dir = ENV['PASSENGER_DEBUG_DIR']
-			File.open("#{dir}/envvars", "w") do |f|
+			File.open("#{dir}/envvars", "wb") do |f|
 				ENV.each_pair do |key, value|
 					f.puts "#{key} = #{value}"
 				end
@@ -131,7 +131,7 @@ module LoaderSharedHelpers
 
 	def dump_system_memory_stats
 		if dir = ENV['PASSENGER_DEBUG_DIR']
-			File.open("#{dir}/sysmemory", "w") do |f|
+			File.open("#{dir}/sysmemory", "wb") do |f|
 				f.write(`"#{PhusionPassenger.helper_scripts_dir}/system-memory-stats.py"`)
 			end
 		end

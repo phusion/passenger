@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2012 Phusion
+#  Copyright (c) 2012-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -36,7 +36,9 @@ class OutOfBandGc
     
     ::PhusionPassenger.on_event(:oob_work) do
       t0 = Time.now
+      disabled = GC.enable
       GC.start
+      GC.disable if disabled
       logger.info "Out Of Band GC finished in #{Time.now - t0} sec" if logger
     end
   end

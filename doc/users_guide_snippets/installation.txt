@@ -189,7 +189,11 @@ If the output is not as expected, then please refer to the <<troubleshooting,Tro
 [float]
 ==== Step 1: download and extract the tarball
 
-Download the open source Phusion Passenger tarball from link:https://www.phusionpassenger.com/download#open_source[the Phusion Passenger website]. If you want a specific version, please refer to the release archive on link:http://rubyforge.org/frs/?group_id=5873&release_id=46919[RubyForge].
+Download the open source Phusion Passenger tarball from link:https://www.phusionpassenger.com/download#open_source[the Phusion Passenger website]. Specific older versions are not found on the Phusion Passenger website, but are found in the following places:
+
+ * All versions starting from 4.0.0 can be found on link:https://code.google.com/p/phusion-passenger/downloads/list[Google Code].
+ * All versions prior to 4.0.0, except for beta releases and Release Candidates, can be found on link:http://rubyforge.org/frs/?group_id=5873&release_id=46919[RubyForge].
+ * All beta releases and Release Candidates prior to 4.0.0 beta 1 can be found on link:https://code.google.com/p/phusion-passenger/downloads/list[Google Code].
 
 If you a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customer, download the Phusion Passenger Enterprise tarball from the link:https://www.phusionpassenger.com/orders[Customer Area]. Also be sure to download the *license key* and save it as '/etc/passenger-enterprise-license'.
 
@@ -406,9 +410,26 @@ YUM repositories with RPMs are maintained by link:https://github.com/erikogan/pa
 If you use YUM to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. The YUM packages contain all the binaries that you need. You also don't need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.
 
 [float]
-==== Step 1: Install the release package
+==== Step 1: Import the Stealthy Monkeys Consulting's GPG key
 
-The easiest way to install Phusion Passenger and keep it up to date is to install the passenger-release package from the link:http://passenger.stealthymonkeys.com/[main repository].
+---------------------------------------------
+rpm --import http://passenger.stealthymonkeys.com/RPM-GPG-KEY-stealthymonkeys.asc
+---------------------------------------------
+
+[float]
+==== Step 2: Install the release package
+
+Install the passenger-release package from the link:http://passenger.stealthymonkeys.com/[main repository].
+
+Fedora Core 17:
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/fedora/17/passenger-release.noarch.rpm
+---------------------------------------------
+
+Fedora Core 16:
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/fedora/16/passenger-release.noarch.rpm
+---------------------------------------------
 
 Fedora Core 15:
 ---------------------------------------------
@@ -420,18 +441,18 @@ Fedora Core 14:
 yum install http://passenger.stealthymonkeys.com/fedora/14/passenger-release.noarch.rpm
 ---------------------------------------------
 
+RHEL 6 / CentOS 6 / ScientificLinux 6: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/rhel/6/passenger-release.noarch.rpm
+---------------------------------------------
+
 RHEL 5 / CentOS 5 / ScientificLinux 5: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
 ---------------------------------------------
 rpm -Uvh http://passenger.stealthymonkeys.com/rhel/5/passenger-release.noarch.rpm
 ---------------------------------------------
 
-RHEL 6 / CentOS 6 / ScientificLinux 6:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/rhel/6/passenger-release.noarch.rpm
----------------------------------------------
-
 [float]
-==== Step 2: Use YUM
+==== Step 3: Install the right Phusion Passenger package
 
 From there you can use link:http://prefetch.net/articles/yum.html[YUM] to install packages. For example, try one of these:
 
@@ -469,6 +490,98 @@ Customers who have bought Phusion Passenger Enterprise can upgrade their open so
 2. Install the Enterprise version by following one of the installation guides in this section (e.g. <<rubygems_generic_install,RubyGems generic installation>> or <<tarball_generic_install,tarball generic installation>>).
 
 The uninstallation is necessary because the Enterprise Ruby gem has a different gem name ('passenger-enterprise-server' instead of 'passenger'), but the same administration command names (e.g. `passenger-status`). Uninstalling the open source version avoids any conflicts.
+
+
+=== Cryptographic verification of installation files
+
+==== Synopsis
+
+We digitally sign various files with our GPG key so that you can check whether they're legit, i.e. whether they really came from Phusion and haven't been tampered with by a third party. We apply signing since the open source version 4.0.0 RC 4, or the Enterprise version 4.0.0 RC 1.
+
+==== Importing the Phusion Software Signing key
+
+Phusion's GPG key for signing software is as follows:
+
+  Phusion Software Signing (software-signing@phusion.nl)
+  Short key ID: 0x0A212A8C
+  Long key ID: 0x2AC745A50A212A8C
+  Fingerprint: D5F0 8514 2693 9232 F437  AB72 2AC7 45A5 0A21 2A8C
+
+This key is stored at link:http://www.phusion.nl/about/gpg[the Phusion website] and at the key servers link:http://pool.sks-keyservers.net/pks/lookup?op=get&search=0x2AC745A50A212A8C[sks-keyservers.net] and link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with one of these command:
+
+-------------------------------------------------------------------------
+gpg --keyserver pool.sks-keyservers.net --search-keys 0x2AC745A50A212A8C
+# -OR-
+gpg --keyserver keyserver.ubuntu.com --search-keys 0x2AC745A50A212A8C
+-------------------------------------------------------------------------
+
+The Phusion Software Signing key is only used for signing software. It's never used for signing emails or for encrypting files, so please be suspicious if you encounter usage of this key outside the context of signing software, and alert us at support@phusion.nl. Include "notspam" in the message to bypass our spam filter.
+
+The email address software-signing@phusion.nl redirects to info@phusion.nl so it's safe to send email there.
+
+==== Verifying the Phusion Software Signing key
+
+The Phusion Software Signing key is also *signed by the Phusion founders*. Their keys are as follows:
+
+  Hongli Lai (hongli@phusion.nl)
+  Short key ID: 4B6F4332
+  Long key ID: 06A131094B6F4332
+  Fingerprint: 64E8 0420 FC6A 499F 9E1F  81FA 06A1 3109 4B6F 4332
+
+  Ninh Bui (ninh@phusion.nl)
+  Short key ID: 6FAF3782
+  Long key ID: BA8DA3F46FAF3782
+  Fingerprint: 353A 398C 49AF 5CD5 74A0  656C BA8D A3F4 6FAF 3782
+
+Both keys are stored at both sks-servers.net and keyserver.ubuntu.com. Import them with:
+
+------------------------------------------
+gpg --keyserver pool.sks-servers.net --search-keys 0x06A131094B6F4332
+gpg --keyserver pool.sks-servers.net --search-keys 0xBA8DA3F46FAF3782
+# -OR-
+gpg --keyserver keyserver.ubuntu.com --search-keys 0x06A131094B6F4332
+gpg --keyserver keyserver.ubuntu.com --search-keys 0xBA8DA3F46FAF3782
+------------------------------------------
+
+==== Verifying the gem and tarball
+
+You can find the open source version's gem and tarball GPG signatures at https://www.phusionpassenger.com/signatures/. The Enterprise version's GPG signatures can be found in the link:https://www.phusionpassenger.com/orders[Customer Area]. All signatures have the '.asc' extension. Once you have imported our key, you can verify the validity of a file against its signature as follows:
+
+-----------------------------------------
+$ gpg --verify passenger-x.x.x.tar.gz.asc passenger-x.x.x.tar.gz
+gpg: Signature made Mon Mar 11 09:45:46 2013 CET using RSA key ID 0A212A8C
+gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>"
+-----------------------------------------
+
+==== Verifying Git signatures
+
+Tags in the link:https://github.com/FooBarWidget/passenger[Git repository for the open source version] are also tagged. You can verify a Git tag as follows:
+
+-------------------------------------------------------
+$ git tag --verify release-x.x.x
+object d886f34b5705e4314feccaf0d77b9a38416e15e0
+type commit
+tag release-4.0.0.rc5
+tagger Hongli Lai (Phusion) <hongli@phusion.nl> 1362993117 +0100
+
+This is a tag message.
+gpg: Signature made Mon Mar 11 10:12:02 2013 CET using RSA key ID 0A212A8C
+gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>"
+-------------------------------------------------------
+
+==== Verifying DEB and RPM packages
+
+The DEB and RPM packages are signed with the signatures of the respective packagers. Phusion does not provide signatures for them.
+
+==== Revocation
+
+In the event our key is compromised, we will revoke the key and upload the revocation information to sks-servers.net and keyserver.ubuntu.com. However your system will not know about the revocation until you update the keys from the keyservers. You should update your keys regularly (e.g. once a week) by invoking:
+
+-------------------------------------------------------
+gpg --refresh-keys --keyserver pool.sks-servers.net
+# -OR-
+gpg --refresh-keys --keyserver keyserver.ubuntu.com
+-------------------------------------------------------
 
 
 === Non-interactive, automatic, headless installs or upgrades
@@ -586,7 +699,8 @@ If you installed Nginx with one of the generic installation methods then you won
 
 If you prefer to use an init script then please refer to the following resources:
 
-- link:http://wiki.nginx.org/Nginx-init-ubuntu[Init script for Ubuntu]
+- link:http://wiki.nginx.org/Nginx-init-ubuntu[Init script for Ubuntu 8.04-9.10]
+- link:http://library.linode.com/web-servers/nginx/installation/ubuntu-12.04-precise-pangolin#sph_create-an-init-script-to-manage-nginx[Init script for Ubuntu 12.04]
 - link:http://wiki.nginx.org/RedHatNginxInitScript[Init script for Red Hat, Fedora and CentOS]
 
 When using one of those init scripts, please make sure that the paths inside the init script are correct. In particular, the paths to the Nginx binary, to the PID file and to the configuration file must match the actual locations of your Nginx installation.
@@ -620,8 +734,8 @@ NameVirtualHosts *:80
 
 LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
 
-PassengerRuby /usr/bin/ruby
 PassengerRoot /somewhere/passenger/x.x.x
+PassengerDefaultRuby /usr/bin/ruby
 PassengerMaxPoolSize 10
 
 <VirtualHost *:80>
@@ -640,8 +754,8 @@ NameVirtualHosts *:80
 
 # LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
 
-# PassengerRuby /usr/bin/ruby
 # PassengerRoot /somewhere/passenger/x.x.x
+# PassengerDefaultRuby /usr/bin/ruby
 # PassengerMaxPoolSize 10
 
 <VirtualHost *:80>
@@ -715,7 +829,7 @@ done this, you need to remove the Phusion Passenger files.
 - If you installed Phusion Passenger through APT or YUM, then use them to uninstall Phusion Passenger.
 
 ifdef::nginx[]
-Nginx does not have to be recompiled. Altough it contains Phusion Passenger code, it will not do anything when Phusion Passenger is disabled.
+Nginx does not have to be recompiled. Altough it contains Phusion Passenger code, it will not do anything when all Phusion Passenger configuration directives are removed.
 endif::[]
 
 
