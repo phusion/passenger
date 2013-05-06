@@ -25,6 +25,19 @@ Description: Rails and Rack support for Apache2 and Nginx
  deployment of Ruby web applications, such as those built on the
  revolutionary Ruby on Rails web framework, a breeze.
 
+Package: ruby-passenger-dev
+Architecture: any
+XB-Ruby-Versions: ${ruby:Versions}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter, rubygems (>= 1.2), ruby-rack
+Suggests: python
+Replaces: passenger-dev
+Description: Rails and Rack support for Apache2 and Nginx
+ Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
+ deployment of Ruby web applications, such as those built on the
+ revolutionary Ruby on Rails web framework, a breeze.
+ .
+ This package provides the development dependencies, for building the NGINX module
+
 Package: libapache2-mod-passenger
 Architecture: any
 Section: web
