@@ -50,9 +50,14 @@
 #ifndef _PASSENGER_MD5_H_
 #define _PASSENGER_MD5_H_
 
-#include <string>
-#include <boost/cstdint.hpp>
-#include "../StaticString.h"
+#ifdef __cplusplus
+    #include "../../boost/cstdint.hpp"
+    #include <string>
+    #include <StaticString.h>
+    namespace Passenger {
+#else
+    #include <stdint.h>
+#endif
 
 /*
  * This package supports both compile-time and run-time determination of CPU
@@ -63,8 +68,6 @@
  * run on either big- or little-endian CPUs, but will run slightly less
  * efficiently on either one than if ARCH_IS_BIG_ENDIAN is defined.
  */
-
-namespace Passenger {
 
 typedef uint8_t md5_byte_t; /* 8-bit byte */
 typedef uint32_t md5_word_t; /* 32-bit word */
@@ -90,9 +93,11 @@ void md5_append(md5_state_t *pms, const md5_byte_t *data, int nbytes);
 /* Finish the message and return the digest. */
 void md5_finish(md5_state_t *pms, md5_byte_t digest[MD5_SIZE]);
 
-/* Convenience method for directly converting data into a hexadecimal MD5 string. */
-std::string md5_hex(const StaticString &input);
+#ifdef __cplusplus
+  /* Convenience method for directly converting data into a hexadecimal MD5 string. */
+  std::string md5_hex(const StaticString &input);
 
-} // namespace Passenger
+  } // namespace Passenger
+#endif
 
 #endif /* _PASSENGER_MD5_H_ */
