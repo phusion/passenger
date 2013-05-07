@@ -102,7 +102,8 @@ module Packaging
 	] + ASCII_DOCS
 	
 	EXCLUDE_GLOB = [
-		'test/stub/rails_apps/3.0/empty/help/**/*'
+		'test/stub/rails_apps/3.0/empty/help/**/*',
+		'test/stub/*.dSYM'
 	]
 end
 
