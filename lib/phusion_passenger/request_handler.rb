@@ -70,14 +70,6 @@ class RequestHandler
 
 	attr_reader :concurrency
 	
-	# Specifies the maximum allowed memory usage, in MB. If after having processed
-	# a request AbstractRequestHandler detects that memory usage has risen above
-	# this limit, then it will gracefully exit (that is, exit after having processed
-	# all pending requests).
-	#
-	# A value of 0 (the default) indicates that there's no limit.
-	attr_accessor :memory_limit
-	
 	# The number of times the main loop has iterated so far. Mostly useful
 	# for unit test assertions.
 	attr_reader :iterations
@@ -94,7 +86,6 @@ class RequestHandler
 	# +owner_pipe+ must be the readable part of a pipe IO object.
 	#
 	# Additionally, the following options may be given:
-	# - memory_limit: Used to set the +memory_limit+ attribute.
 	# - detach_key
 	# - connect_password
 	# - pool_account_username
@@ -111,7 +102,6 @@ class RequestHandler
 		)
 		@thread_handler = options["thread_handler"] || ThreadHandler
 		@concurrency = 1
-		@memory_limit = options["memory_limit"] || 0
 		if options["pool_account_password_base64"]
 			@pool_account_password = options["pool_account_password_base64"].unpack('m').first
 		end
