@@ -222,6 +222,10 @@
 
 6.20.6. RailsAutoDetect, RackAutoDetect and WsgiAutoDetect	=>	railsautodetect-rackautodetect-and-wsgiautodetect-1qgakzs
 
+6.20.7. RailsAppSpawnerIdleTime	=>	railsappspawneridletime-heh41r
+
+6.20.8. RailsFrameworkSpawnerIdleTime	=>	railsframeworkspawneridletime-adcf9k
+
 7. Troubleshooting	=>	troubleshooting-2ihihi
 
 7.1. Operating system-specific problems	=>	operating-system-specific-problems-327gbk
