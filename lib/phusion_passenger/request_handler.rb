@@ -30,7 +30,6 @@ require 'phusion_passenger/public_api'
 require 'phusion_passenger/message_client'
 require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/utils'
-require 'phusion_passenger/utils/robust_interruption'
 require 'phusion_passenger/utils/tmpdir'
 require 'phusion_passenger/ruby_core_enhancements'
 require 'phusion_passenger/request_handler/thread_handler'
@@ -203,7 +202,6 @@ class RequestHandler
 			end
 			
 			install_useful_signal_handlers
-			RobustInterruption.install
 			start_threads
 			wait_until_termination
 			terminate_threads
@@ -440,17 +438,14 @@ private
 			@concurrency.times do |i|
 				thread = Thread.new(i) do |number|
 					Thread.current.abort_on_exception = true
-					RobustInterruption.install
-					RobustInterruption.disable_interruptions do
-						begin
-							Thread.current[:name] = "Worker #{number + 1}"
-							handler = thread_handler.new(self, main_socket_options)
-							handler.install
-							handler.main_loop(set_initialization_state_to_true)
-						ensure
-							set_initialization_state.call(false)
-							unregister_current_thread
-						end
+					begin
+						Thread.current[:name] = "Worker #{number + 1}"
+						handler = thread_handler.new(self, main_socket_options)
+						handler.install
+						handler.main_loop(set_initialization_state_to_true)
+					ensure
+						set_initialization_state.call(false)
+						unregister_current_thread
 					end
 				end
 				@threads << thread
@@ -459,17 +454,14 @@ private
 
 			thread = Thread.new do
 				Thread.current.abort_on_exception = true
-				RobustInterruption.install
-				RobustInterruption.disable_interruptions do
-					begin
-						Thread.current[:name] = "HTTP helper worker"
-						handler = thread_handler.new(self, http_socket_options)
-						handler.install
-						handler.main_loop(set_initialization_state_to_true)
-					ensure
-						set_initialization_state.call(false)
-						unregister_current_thread
-					end
+				begin
+					Thread.current[:name] = "HTTP helper worker"
+					handler = thread_handler.new(self, http_socket_options)
+					handler.install
+					handler.main_loop(set_initialization_state_to_true)
+				ensure
+					set_initialization_state.call(false)
+					unregister_current_thread
 				end
 			end
 			@threads << thread
@@ -530,12 +522,34 @@ private
 
 	def terminate_threads
 		debug("Stopping all threads")
+
+		# Mark all threads as interrupted.
+		@threads_mutex.synchronize do
+			@threads.each do |thread|
+				thread[:passenger_thread_handler].set_interrupted!
+			end
+		end
+
+		# Wake up all threads by connecting to the sockets.
+		@concurrency.times do
+			Thread.new(@server_sockets[:main][:address]) do |address|
+				begin
+					connect_to_server(address).close
+				rescue SystemCalLError, IOError
+				end
+			end
+		end
+		Thread.new(@server_sockets[:http][:address]) do |address|
+			begin
+				connect_to_server(address).close
+			rescue SystemCalLError, IOError
+			end
+		end
+
+		# Wait until threads have unregistered themselves.
 		done = false
 		while !done
 			@threads_mutex.synchronize do
-				@threads.each do |thread|
-					Utils::RobustInterruption.raise(thread)
-				end
 				done = @threads.empty?
 			end
 			sleep 0.02 if !done
@@ -549,7 +563,7 @@ private
 		while !done
 			@threads_mutex.synchronize do
 				done = @threads.all? do |thread|
-					thread[:handler].idle?
+					thread[:passenger_thread_handler].idle?
 				end
 			end
 			sleep 0.02 if !done
