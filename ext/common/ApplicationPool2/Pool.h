@@ -454,7 +454,7 @@ public:
 			} else if (process->enabled == Process::DISABLED) {
 				result << "    DISABLED" << endl;
 			} else if (process->enabled == Process::DETACHED) {
-				result << "    Shutting down...";
+				result << "    Shutting down..." << endl;
 			}
 
 			const Socket *socket;
