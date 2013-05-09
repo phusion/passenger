@@ -109,7 +109,9 @@ private:
 		startBackgroundThread(detachProcessMain, (void *) (long) pid);
 	}
 	
-	vector<string> createCommand(const Options &options, shared_array<const char *> &args) const {
+	vector<string> createCommand(const Options &options, const SpawnPreparationInfo &preparation,
+		shared_array<const char *> &args) const
+	{
 		vector<string> startCommandArgs;
 		string agentsDir = resourceLocator.getAgentsDir();
 		vector<string> command;
@@ -129,6 +131,7 @@ private:
 			command.push_back(agentsDir + "/SpawnPreparer");
 		}
 		command.push_back(agentsDir + "/SpawnPreparer");
+		command.push_back(preparation.appRoot);
 		command.push_back(serializeEnvvarsFromPoolOptions(options));
 		command.push_back(startCommandArgs[0]);
 		// Note: do not try to set a process title here.
@@ -166,8 +169,8 @@ public:
 		possiblyRaiseInternalError(options);
 
 		shared_array<const char *> args;
-		vector<string> command = createCommand(options, args);
 		SpawnPreparationInfo preparation = prepareSpawn(options);
+		vector<string> command = createCommand(options, preparation, args);
 		SocketPair adminSocket = createUnixSocketPair();
 		Pipe errorPipe = createPipe();
 		DebugDirPtr debugDir = make_shared<DebugDir>(preparation.uid, preparation.gid);

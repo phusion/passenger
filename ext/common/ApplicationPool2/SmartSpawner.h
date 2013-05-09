@@ -120,6 +120,7 @@ private:
 			command.push_back(agentsDir + "/SpawnPreparer");
 		}
 		command.push_back(agentsDir + "/SpawnPreparer");
+		command.push_back(preparation.appRoot);
 		command.push_back(serializeEnvvarsFromPoolOptions(options));
 		command.push_back(preloaderCommand[0]);
 		// Note: do not try to set a process title here.
@@ -210,8 +211,8 @@ private:
 		checkChrootDirectories(options);
 		
 		shared_array<const char *> args;
-		vector<string> command = createRealPreloaderCommand(options, args);
 		preparation = prepareSpawn(options);
+		vector<string> command = createRealPreloaderCommand(options, args);
 		SocketPair adminSocket = createUnixSocketPair();
 		Pipe errorPipe = createPipe();
 		DebugDirPtr debugDir = make_shared<DebugDir>(preparation.uid, preparation.gid);
