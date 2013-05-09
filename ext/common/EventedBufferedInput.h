@@ -96,7 +96,7 @@ private:
 		shared_ptr< EventedBufferedInput<bufferSize> > self = EventedBufferedInput<bufferSize>::shared_from_this();
 
 		EBI_TRACE("onReadable");
-		ssize_t ret = syscalls::read(fd, bufferData, bufferSize);
+		ssize_t ret = readSocket(bufferData, bufferSize);
 		if (ret == -1) {
 			if (errno != EAGAIN) {
 				error = errno;
@@ -191,6 +191,8 @@ private:
 				processBufferInNextTick();
 			}
 		}
+
+		afterProcessingBuffer();
 	}
 
 	void _reset(SafeLibev *libev, const FileDescriptor &fd) {
@@ -211,6 +213,15 @@ private:
 		if (fd != -1) {
 			watcher.set(fd, ev::READ);
 		}
+	}
+
+protected:
+	virtual ssize_t readSocket(void *buf, size_t n) {
+		return syscalls::read(fd, buf, n);
+	}
+
+	virtual void afterProcessingBuffer() {
+		// Do nothing. To be overridden in unit tests.
 	}
 
 public:
@@ -237,7 +248,7 @@ public:
 		EBI_TRACE("created");
 	}
 
-	~EventedBufferedInput() {
+	virtual ~EventedBufferedInput() {
 		watcher.stop();
 		EBI_TRACE("destroyed");
 	}
@@ -279,6 +290,10 @@ public:
 
 	bool isStarted() const {
 		return !paused;
+	}
+
+	bool isSocketStarted() const {
+		return !socketPaused;
 	}
 
 	bool endReached() const {
