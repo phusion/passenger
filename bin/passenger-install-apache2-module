@@ -74,6 +74,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 			ids << 'apr-dev'
 			ids << 'apu-dev'
 		end
+		ids.delete('ruby-dev') if(RUBY_PLATFORM == "java")
 		return [specs, ids]
 	end
 	
