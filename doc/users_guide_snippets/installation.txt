@@ -145,11 +145,13 @@ configuration file. However, it doesn't copy any files to outside the Phusion Pa
 `passenger-install-apache2-module` is actually just a user-friendly frontend around the command `rake apache2`, which performs the actual compilation of Phusion Passenger.
 endif::[]
 ifdef::nginx[]
-Nginx is a different from other web servers in that it does not support loadable modules. The only way to extend Nginx is to recompile it entirely from source. That's what we will do in this step. The good news is that Phusion Passenger provides a tool to make this easy for you.
+Nginx is a different from other web servers in that it does not support loadable modules. The only way to extend Nginx is to recompile it entirely from source. Since Phusion Passenger consists of some external executables plus an Nginx module, you must recompile Nginx when first installing Phusion Passenger, but also when upgrading Nginx itself or when upgrading the Phusion Passenger version.
+
+Recompiling Nginx and the Phusion Passenger executables is what we will do in this step. The good news is that Phusion Passenger provides a tool to make this easy for you.
 
 If you've already installed Nginx before, but without Phusion Passenger support, then you *should* uninstall it first. You don't have to, because you can also install another Nginx with Phusion Passenger support, in parallel to the existing Nginx. We merely recommend uninstalling the existing in order to avoid user confusion, but the choice is yours.
 
-If you had previously installed Nginx with Phusion Passenger support, and you are upgrading, then you don't have to uninstall your existing Nginx first. Instead we'll overwrite it this step.
+If you had previously installed Nginx with Phusion Passenger support, and you are upgrading, then you don't have to uninstall your existing Nginx first. Instead we'll overwrite it this step. But it is important that you recompile Nginx with the configure parameters that you used last time.
 
 Here's how you can uninstall the original Nginx:
 
@@ -162,7 +164,7 @@ To proceed with installing or upgrading Phusion Passenger, run the Phusion Passe
 passenger-install-nginx-module
 ----------------------------------
 
-At some point it will ask you which prefix to install Nginx to. If you're upgrading, then specify the same prefix that you used last time.
+At some point it will ask you which prefix to install Nginx to. If you're upgrading, then specify the same prefix that you used last time, as well as the same configuration parameters that you used last time.
 endif::[]
 
 [[verify_passenger_running]]
