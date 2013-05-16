@@ -58,23 +58,10 @@ private:
 			{ }
 	};
 
-	struct Timer {
-		ev_timer realTimer;
-		SafeLibev *self;
-		Callback callback;
-		list<Timer *>::iterator it;
-
-		Timer(SafeLibev *_self, const Callback &_callback)
-			: self(_self),
-			  callback(_callback)
-			{ }
-	};
-	
 	struct ev_loop *loop;
 	pthread_t loopThread;
 	ev_async async;
 	ev_idle idle;
-	list<Timer *> timers;
 	
 	boost::mutex syncher;
 	condition_variable cond;
@@ -91,12 +78,9 @@ private:
 		self->runCommands();
 	}
 
-	static void timeoutHandler(EV_P_ ev_timer *t, int revents) {
-		auto_ptr<Timer> timer((Timer *) ((const char *) t));
-		SafeLibev *self = timer->self;
-		self->timers.erase(timer->it);
-		ev_timer_stop(self->loop, &timer->realTimer);
-		timer->callback();
+	static void timeoutHandler(int revents, void *arg) {
+		auto_ptr<Callback> callback((Callback *) arg);
+		(*callback)();
 	}
 
 	void runCommands() {
@@ -167,14 +151,6 @@ public:
 	void destroy() {
 		ev_async_stop(loop, &async);
 		ev_idle_stop(loop, &idle);
-
-		list<Timer *>::iterator it, end = timers.end();
-		for (it = timers.begin(); it != end; it++) {
-			Timer *timer = *it;
-			ev_timer_stop(loop, &timer->realTimer);
-			delete timer;
-		}
-		timers.clear();
 	}
 	
 	struct ev_loop *getLoop() const {
@@ -253,16 +229,23 @@ public:
 		runLaterTS(callback);
 	}
 
-	// TODO: make it possible to call this from a thread
+	/** Run a callback after a certain timeout. */
 	void runAfter(unsigned int timeout, const Callback &callback) {
 		assert(callback != NULL);
-		Timer *timer = new Timer(this, callback);
-		ev_timer_init(&timer->realTimer, timeoutHandler, timeout / 1000.0, 0);
-		timers.push_front(timer);
-		timer->it = timers.begin();
-		ev_timer_start(loop, &timer->realTimer);
+		ev_once(loop, -1, 0, timeout / 1000.0, timeoutHandler, new Callback(callback));
 	}
 
+	/** Thread-safe version of runAfter(). */
+	void runAfterTS(unsigned int timeout, const Callback &callback) {
+		assert(callback != NULL);
+		if (pthread_equal(pthread_self(), loopThread)) {
+			runAfter(timeout, callback);
+		} else {
+			runLaterTS(boost::bind(&SafeLibev::runAfter, this, timeout, callback));
+		}
+	}
+
+	/** Run a callback on the next event loop iteration. */
 	unsigned int runLater(const Callback &callback) {
 		assert(callback != NULL);
 		unsigned int result;
@@ -278,6 +261,7 @@ public:
 		return result;
 	}
 	
+	/** Thread-safe version of runlater(). */
 	unsigned int runLaterTS(const Callback &callback) {
 		assert(callback != NULL);
 		unsigned int result;
