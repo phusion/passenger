@@ -136,10 +136,27 @@ namespace tut {
 		static size_t name(const EventedBufferedInputPtr &input, const StaticString &data) { \
 			EventedBufferedInputTest *self = (EventedBufferedInputTest *) input->userData; \
 			boost::mutex &syncher = self->syncher; \
-			(void) syncher; /* Shut up compiler warning */ \
+			string &log = self->log; \
+			shared_ptr<MyEventedBufferedInput> &ebi = self->ebi; \
+			/* Shut up compiler warning */  \
+			(void) syncher; \
+			(void) log; \
+			(void) ebi; \
 			code \
 		}
 	
+	#define DEFINE_FINISH_METHOD(name, code) \
+		static void name(EventedBufferedInputTest *self) { \
+			boost::mutex &syncher = self->syncher; \
+			string &log = self->log; \
+			shared_ptr<MyEventedBufferedInput> &ebi = self->ebi; \
+			/* Shut up compiler warning */ \
+			(void) syncher; \
+			(void) log; \
+			(void) ebi; \
+			code \
+		}
+
 	DEFINE_TEST_GROUP(EventedBufferedInputTest);
 
 	TEST_METHOD(1) {
@@ -429,11 +446,11 @@ namespace tut {
 			}
 		}
 
-		static void finish_20(EventedBufferedInputTest *self) {
-			lock_guard<boost::mutex> l(self->syncher);
-			self->log.append("Finished; isSocketStarted: " +
-				toString(self->ebi->isSocketStarted()) + "\n");
-		}
+		DEFINE_FINISH_METHOD(finish_20,
+			LOCK();
+			log.append("Finished; isSocketStarted: " +
+				toString(ebi->isSocketStarted()) + "\n");
+		);
 
 		TEST_METHOD(20) {
 			set_test_name("It pauses the socket, re-emits the remaining data in the next tick, "
@@ -507,11 +524,11 @@ namespace tut {
 				}
 			}
 
-			static void finish_22(EventedBufferedInputTest *self) {
-				lock_guard<boost::mutex> l(self->syncher);
-				self->log.append("Done; isSocketStarted: " +
-					toString(self->ebi->isStarted()) + "\n");
-			}
+			DEFINE_FINISH_METHOD(finish_22,
+				LOCK();
+				log.append("Done; isSocketStarted: " +
+					toString(ebi->isStarted()) + "\n");
+			);
 
 			TEST_METHOD(22) {
 				set_test_name("It resumes the socket and re-emits remaining "
@@ -566,11 +583,11 @@ namespace tut {
 				}
 			}
 
-			static void finish_23(EventedBufferedInputTest *self) {
-				lock_guard<boost::mutex> l(self->syncher);
-				self->log.append("Timeout; isSocketStarted: " +
-					toString(self->ebi->isStarted()) + "\n");
-			}
+			DEFINE_FINISH_METHOD(finish_23,
+				LOCK();
+				log.append("Timeout; isSocketStarted: " +
+					toString(ebi->isStarted()) + "\n");
+			);
 
 			TEST_METHOD(23) {
 				set_test_name("It doesn't re-emit remaining data if start() "
@@ -607,11 +624,11 @@ namespace tut {
 				return 1;
 			)
 
-			static void finish_24(EventedBufferedInputTest *self) {
-				lock_guard<boost::mutex> l(self->syncher);
-				self->log.append("Timeout; isSocketStarted: " +
-					toString(self->ebi->isStarted()) + "\n");
-			}
+			DEFINE_FINISH_METHOD(finish_24,
+				LOCK();
+				log.append("Timeout; isSocketStarted: " +
+					toString(ebi->isSocketStarted()) + "\n");
+			);
 
 			TEST_METHOD(24) {
 				set_test_name("It pauses the socket and doesn't re-emit remaining data");
@@ -628,4 +645,112 @@ namespace tut {
 					"Data: aaabbb\n"
 					"Timeout; isSocketStarted: 0\n");
 			}
+
+			DEFINE_ON_DATA_METHOD(on_data_25,
+				{
+					LOCK();
+					self->counter++;
+					self->log.append("Data: " + cEscapeString(data) + "\n");
+				}
+				if (self->getCounter() == 1) {
+					input->stop();
+					input->start();
+				}
+				return 3;
+			)
+
+			static void on_after_processing_buffer_25(EventedBufferedInputTest *self) {
+				lock_guard<boost::mutex> l(self->syncher);
+				if (self->counter == 1) {
+					self->log.append("Handler done; isSocketStarted: " +
+						toString(self->ebi->isSocketStarted()) + "\n");
+				}
+			}
+
+			DEFINE_FINISH_METHOD(finish_25,
+				LOCK();
+				log.append("Timeout; isSocketStarted: " +
+					toString(ebi->isStarted()) + "\n");
+			);
+
+			TEST_METHOD(25) {
+				set_test_name("It re-emits remaining data one tick after start() is called");
+				ebi->onData = on_data_25;
+				ebi->onAfterProcessingBuffer = boost::bind(on_after_processing_buffer_25, this);
+				startEbi();
+				writeExact(p.second, "aaabbb");
+				bg.safe->runAfterTS(10, boost::bind(finish_25, this));
+				EVENTUALLY(5,
+					LOCK();
+					result = log.find("Timeout") != string::npos;
+				);
+				LOCK();
+				ensure_equals(log,
+					"Data: aaabbb\n"
+					"Handler done; isSocketStarted: 0\n"
+					"Data: bbb\n"
+					"Timeout; isSocketStarted: 1\n");
+			}
+
+			DEFINE_ON_DATA_METHOD(on_data_26,
+				{
+					LOCK();
+					self->counter++;
+					self->log.append("Data: " + cEscapeString(data) + "\n");
+				}
+				if (self->getCounter() == 1) {
+					input->stop();
+					input->start();
+					input->stop();
+				}
+				return 3;
+			)
+
+			static void on_after_processing_buffer_26(EventedBufferedInputTest *self) {
+				lock_guard<boost::mutex> l(self->syncher);
+				if (self->counter == 1) {
+					self->log.append("Handler done; isSocketStarted: " +
+						toString(self->ebi->isSocketStarted()) + "\n");
+				}
+			}
+
+			DEFINE_FINISH_METHOD(finish_26,
+				LOCK();
+				log.append("Timeout; isSocketStarted: " +
+					toString(ebi->isSocketStarted()) + "\n");
+			);
+
+			TEST_METHOD(26) {
+				set_test_name("It doesn't re-emit remaining data if start() is called, then stop() again");
+				ebi->onData = on_data_26;
+				ebi->onAfterProcessingBuffer = boost::bind(on_after_processing_buffer_26, this);
+				startEbi();
+				writeExact(p.second, "aaabbb");
+				bg.safe->runAfterTS(10, boost::bind(finish_26, this));
+				EVENTUALLY(5,
+					LOCK();
+					result = log.find("Timeout") != string::npos;
+				);
+				LOCK();
+				ensure_equals(log,
+					"Data: aaabbb\n"
+					"Handler done; isSocketStarted: 0\n"
+					"Timeout; isSocketStarted: 0\n");
+			}
+
+		/*** If the socket was disconnected ***/
+
+			TEST_METHOD(27) {
+				set_test_name("It doesn't re-emit the remaining data");
+				// TODO
+			}
+
+	TEST_METHOD(30) {
+		set_test_name("It pauses the underlying socket");
+	}
+
+	TEST_METHOD(31) {
+		set_test_name("It doesn't emit data events if it's paused, but re-emits "
+			"previously unemitted data events after resume");
+	}
 }
