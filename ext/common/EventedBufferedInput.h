@@ -69,7 +69,17 @@ class EventedBufferedInput: public enable_shared_from_this< EventedBufferedInput
 private:
 	enum State {
 		LIVE,
+		/**
+		 * @invariant
+		 *    paused
+		 *    socketPaused
+		 */
 		END_OF_STREAM,
+		/**
+		 * @invariant
+		 *    paused
+		 *    socketPaused
+		 */
 		READ_ERROR,
 		CLOSED
 	};
@@ -79,11 +89,28 @@ private:
 	ev::io watcher;
 	StaticString buffer;
 	State state;
+	/**
+	 * @invariant
+	 *    if paused:
+	 *       socketPaused
+	 */
 	bool paused;
 	bool socketPaused;
 	bool nextTickInstalled;
 	int error;
 	char bufferData[bufferSize];
+
+	void verifyInvariants() {
+		// !a || b: logical equivalent of a IMPLIES b.
+		
+		assert(!( state == END_OF_STREAM ) || ( paused ));
+		assert(!( state == END_OF_STREAM ) || ( socketPaused ));
+		
+		assert(!( state == READ_ERROR ) || ( paused ));
+		assert(!( state == READ_ERROR ) || ( socketPaused ));
+		
+		assert(!( paused ) || ( socketPaused ));
+	}
 
 	void resetCallbackFields() {
 		onData = NULL;
@@ -96,6 +123,7 @@ private:
 		shared_ptr< EventedBufferedInput<bufferSize> > self = EventedBufferedInput<bufferSize>::shared_from_this();
 
 		EBI_TRACE("onReadable");
+		verifyInvariants();
 		ssize_t ret = readSocket(bufferData, bufferSize);
 		if (ret == -1) {
 			if (errno != EAGAIN) {
@@ -109,8 +137,11 @@ private:
 				watcher.stop();
 				state = READ_ERROR;
 				paused = true;
+				socketPaused = true;
+				verifyInvariants();
 				if (onError != NULL) {
 					onError(self, "Cannot read from socket", error);
+					verifyInvariants();
 				}
 			}
 
@@ -124,7 +155,10 @@ private:
 			watcher.stop();
 			state = END_OF_STREAM;
 			paused = true;
+			socketPaused = true;
+			verifyInvariants();
 			onData(self, StaticString());
+			verifyInvariants();
 
 		} else {
 			EBI_TRACE("read " << ret << " bytes");
@@ -135,6 +169,7 @@ private:
 
 			buffer = StaticString(bufferData, ret);
 			processBuffer();
+			verifyInvariants();
 		}
 	}
 
@@ -152,7 +187,9 @@ private:
 		shared_ptr< EventedBufferedInput<bufferSize> > self = wself.lock();
 		if (self != NULL) {
 			self->nextTickInstalled = false;
+			self->verifyInvariants();
 			self->processBuffer();
+			self->verifyInvariants();
 		}
 	}
 
@@ -196,6 +233,7 @@ private:
 	}
 
 	void _reset(SafeLibev *libev, const FileDescriptor &fd) {
+		verifyInvariants();
 		this->libev = libev;
 		this->fd = fd;
 		buffer = StaticString();
@@ -213,6 +251,7 @@ private:
 		if (fd != -1) {
 			watcher.set(fd, ev::READ);
 		}
+		verifyInvariants();
 	}
 
 protected:
@@ -238,6 +277,7 @@ public:
 		watcher.set<EventedBufferedInput<bufferSize>,
 			&EventedBufferedInput<bufferSize>::onReadable>(this);
 		EBI_TRACE("created");
+		verifyInvariants();
 	}
 
 	EventedBufferedInput(SafeLibev *libev, const FileDescriptor &fd) {
@@ -246,6 +286,7 @@ public:
 		watcher.set<EventedBufferedInput<bufferSize>,
 			&EventedBufferedInput<bufferSize>::onReadable>(this);
 		EBI_TRACE("created");
+		verifyInvariants();
 	}
 
 	virtual ~EventedBufferedInput() {
@@ -265,17 +306,20 @@ public:
 	void stop() {
 		if (state == LIVE && !paused) {
 			EBI_TRACE("stop()");
+			verifyInvariants();
 			paused = true;
 			if (!socketPaused) {
 				socketPaused = true;
 				watcher.stop();
 			}
+			verifyInvariants();
 		}
 	}
 
 	void start() {
 		if (state == LIVE && paused) {
 			EBI_TRACE("start()");
+			verifyInvariants();
 			assert(socketPaused);
 			
 			paused = false;
@@ -285,6 +329,7 @@ public:
 				socketPaused = false;
 				watcher.start();
 			}
+			verifyInvariants();
 		}
 	}
 
