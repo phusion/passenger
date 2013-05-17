@@ -61,7 +61,6 @@ private:
 	struct ev_loop *loop;
 	pthread_t loopThread;
 	ev_async async;
-	ev_idle idle;
 	
 	boost::mutex syncher;
 	condition_variable cond;
@@ -70,11 +69,6 @@ private:
 	
 	static void asyncHandler(EV_P_ ev_async *w, int revents) {
 		SafeLibev *self = (SafeLibev *) w->data;
-		self->runCommands();
-	}
-
-	static void idleHandler(EV_P_ ev_idle *idle, int revents) {
-		SafeLibev *self = (SafeLibev *) idle->data;
 		self->runCommands();
 	}
 
@@ -135,12 +129,9 @@ public:
 		nextCommandId = 0;
 		
 		ev_async_init(&async, asyncHandler);
+		ev_set_priority(&async, EV_MAXPRI);
 		async.data = this;
 		ev_async_start(loop, &async);
-
-		ev_idle_init(&idle, idleHandler);
-		ev_set_priority(&idle, EV_MAXPRI);
-		idle.data = this;
 	}
 	
 	~SafeLibev() {
@@ -150,7 +141,6 @@ public:
 
 	void destroy() {
 		ev_async_stop(loop, &async);
-		ev_idle_stop(loop, &idle);
 	}
 	
 	struct ev_loop *getLoop() const {
@@ -225,10 +215,6 @@ public:
 		}
 	}
 
-	void runAsync(const Callback &callback) {
-		runLaterTS(callback);
-	}
-
 	/** Run a callback after a certain timeout. */
 	void runAfter(unsigned int timeout, const Callback &callback) {
 		assert(callback != NULL);
@@ -241,28 +227,11 @@ public:
 		if (pthread_equal(pthread_self(), loopThread)) {
 			runAfter(timeout, callback);
 		} else {
-			runLaterTS(boost::bind(&SafeLibev::runAfter, this, timeout, callback));
+			runLater(boost::bind(&SafeLibev::runAfter, this, timeout, callback));
 		}
 	}
 
-	/** Run a callback on the next event loop iteration. */
 	unsigned int runLater(const Callback &callback) {
-		assert(callback != NULL);
-		unsigned int result;
-		{
-			unique_lock<boost::mutex> l(syncher);
-			commands.push_back(Command(nextCommandId, callback));
-			result = nextCommandId;
-			incNextCommandId();
-		}
-		if (!ev_is_active(&idle)) {
-			ev_idle_start(loop, &idle);
-		}
-		return result;
-	}
-	
-	/** Thread-safe version of runlater(). */
-	unsigned int runLaterTS(const Callback &callback) {
 		assert(callback != NULL);
 		unsigned int result;
 		{
@@ -276,7 +245,7 @@ public:
 	}
 
 	/**
-	 * Cancels a callback that was scheduled to be run by runLater() and runLaterTS().
+	 * Cancels a callback that was scheduled to be run by runLater().
 	 * Returns whether the command has been successfully cancelled or not.
 	 * That is, a return value of true guarantees that the callback will not be called
 	 * in the future, while a return value of false means that the callback has already

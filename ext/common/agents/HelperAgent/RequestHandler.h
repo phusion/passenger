@@ -1860,7 +1860,7 @@ private:
 
 	void sessionCheckedOut(ClientPtr client, const SessionPtr &session, const ExceptionPtr &e) {
 		if (!pthread_equal(pthread_self(), libev->getCurrentThread())) {
-			libev->runLaterTS(boost::bind(&RequestHandler::sessionCheckedOut_real, this,
+			libev->runLater(boost::bind(&RequestHandler::sessionCheckedOut_real, this,
 				client, session, e));
 		} else {
 			sessionCheckedOut_real(client, session, e);

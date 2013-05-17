@@ -747,10 +747,12 @@ namespace tut {
 
 	TEST_METHOD(30) {
 		set_test_name("It pauses the underlying socket");
+		// TODO
 	}
 
 	TEST_METHOD(31) {
 		set_test_name("It doesn't emit data events if it's paused, but re-emits "
 			"previously unemitted data events after resume");
+		// TODO
 	}
 }

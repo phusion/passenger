@@ -127,6 +127,7 @@ private:
 
 		EBI_TRACE("onReadable");
 		verifyInvariants();
+
 		ssize_t ret = readSocket(bufferData, bufferSize);
 		if (ret == -1) {
 			if (errno != EAGAIN) {
@@ -179,7 +180,7 @@ private:
 	void processBufferInNextTick() {
 		if (!nextTickInstalled) {
 			nextTickInstalled = true;
-			libev->runAsync(boost::bind(
+			libev->runLater(boost::bind(
 				realProcessBufferInNextTick,
 				weak_ptr< EventedBufferedInput<bufferSize> >(this->shared_from_this())
 			));
