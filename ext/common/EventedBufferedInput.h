@@ -60,9 +60,6 @@ using namespace oxt;
  * the number of bytes that it has actually consumed. If not everything has been
  * consumed, then the handler will be called with the remaining data in the next
  * tick.
- *
- * TODO: this code is directly ported from Zangetsu's socket_input_wrapper.js. We
- * should port over the unit tests too.
  */
 template<size_t bufferSize = 1024 * 8>
 class EventedBufferedInput: public enable_shared_from_this< EventedBufferedInput<bufferSize> > {
@@ -91,14 +88,35 @@ private:
 
 	State state: 2;
 	/**
+	 * Whether this EventedBufferedInput is paused (not started). If it's
+	 * paused it should not emit data events.
+	 * 
 	 * @invariant
 	 *    if paused:
 	 *       socketPaused
 	 */
 	bool paused: 1;
+	/**
+	 * Whether the underlying socket is also paused. This does not
+	 * necessarily mean the EventedBufferedInput is also paused because
+	 * it may be emitting data events from its internal buffer.
+	 */
 	bool socketPaused: 1;
+	/**
+	 * Whether the code is inside a processingBuffer() call.
+	 */
 	bool processingBuffer: 1;
+	/**
+	 * Whether processBuffer() is scheduled to be called in the next
+	 * event loop iteration.
+	 */
 	bool nextTickInstalled: 1;
+	/**
+	 * Increment this number to ensure that previously scheduled
+	 * processBuffer() calls will do nothing, effectively canceling
+	 * its scheduled calls.
+	 */
+	unsigned int generation;
 	int error;
 
 	char bufferData[bufferSize];
@@ -182,14 +200,17 @@ private:
 			nextTickInstalled = true;
 			libev->runLater(boost::bind(
 				realProcessBufferInNextTick,
-				weak_ptr< EventedBufferedInput<bufferSize> >(this->shared_from_this())
+				weak_ptr< EventedBufferedInput<bufferSize> >(this->shared_from_this()),
+				generation
 			));
 		}
 	}
 
-	static void realProcessBufferInNextTick(weak_ptr< EventedBufferedInput<bufferSize> > wself) {
+	static void realProcessBufferInNextTick(weak_ptr< EventedBufferedInput<bufferSize> > wself,
+		unsigned int generation)
+	{
 		shared_ptr< EventedBufferedInput<bufferSize> > self = wself.lock();
-		if (self != NULL) {
+		if (self != NULL && generation == self->generation) {
 			self->verifyInvariants();
 			self->nextTickInstalled = false;
 			self->processBuffer();
@@ -213,7 +234,7 @@ private:
 		EBI_TRACE("processBuffer");
 		assert(!processingBuffer);
 		processingBuffer = true;
-		SetProcessingBufferToFalse guard(this);
+		SetProcessingBufferToFalse flagGuard(this);
 
 		if (state == CLOSED) {
 			return;
@@ -236,6 +257,7 @@ private:
 				socketPaused = false;
 				watcher.start();
 			}
+			cancelScheduledProcessBufferCall();
 		} else {
 			buffer = buffer.substr(consumed);
 			if (!socketPaused) {
@@ -246,14 +268,27 @@ private:
 				// Consume rest of the data in the next tick.
 				EBI_TRACE("Consume rest in next tick");
 				processBufferInNextTick();
+			} else {
+				cancelScheduledProcessBufferCall();
 			}
 		}
 
 		afterProcessingBuffer();
 	}
 
-	void _reset(SafeLibev *libev, const FileDescriptor &fd) {
-		verifyInvariants();
+	void cancelScheduledProcessBufferCall() {
+		if (nextTickInstalled) {
+			nextTickInstalled = false;
+			generation++;
+		}
+	}
+
+	void _reset(SafeLibev *libev, const FileDescriptor &fd, bool firstTime = false) {
+		if (firstTime) {
+			generation = 0;
+		} else {
+			verifyInvariants();
+		}
 		this->libev = libev;
 		this->fd = fd;
 		buffer = StaticString();
@@ -262,6 +297,7 @@ private:
 		socketPaused = true;
 		processingBuffer = false;
 		nextTickInstalled = false;
+		generation++;
 		error = 0;
 		if (watcher.is_active()) {
 			watcher.stop();
@@ -294,7 +330,7 @@ public:
 
 	EventedBufferedInput() {
 		resetCallbackFields();
-		_reset(NULL, FileDescriptor());
+		_reset(NULL, FileDescriptor(), true);
 		watcher.set<EventedBufferedInput<bufferSize>,
 			&EventedBufferedInput<bufferSize>::onReadable>(this);
 		EBI_TRACE("created");
@@ -303,7 +339,7 @@ public:
 
 	EventedBufferedInput(SafeLibev *libev, const FileDescriptor &fd) {
 		resetCallbackFields();
-		_reset(libev, fd);
+		_reset(libev, fd, true);
 		watcher.set<EventedBufferedInput<bufferSize>,
 			&EventedBufferedInput<bufferSize>::onReadable>(this);
 		EBI_TRACE("created");
@@ -311,6 +347,7 @@ public:
 	}
 
 	virtual ~EventedBufferedInput() {
+		cancelScheduledProcessBufferCall();
 		watcher.stop();
 		EBI_TRACE("destroyed");
 	}
@@ -333,6 +370,7 @@ public:
 				socketPaused = true;
 				watcher.stop();
 			}
+			cancelScheduledProcessBufferCall();
 			verifyInvariants();
 		}
 	}
@@ -349,6 +387,7 @@ public:
 			} else {
 				socketPaused = false;
 				watcher.start();
+				cancelScheduledProcessBufferCall();
 			}
 			verifyInvariants();
 		}
@@ -403,6 +442,7 @@ public:
 		result << ", paused=" << paused;
 		result << ", socketPaused=" << socketPaused;
 		result << ", nextTickInstalled=" << nextTickInstalled;
+		result << ", generation=" << generation;
 		result << ", error=" << error;
 
 		return result.str();
