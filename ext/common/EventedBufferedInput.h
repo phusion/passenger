@@ -88,16 +88,19 @@ private:
 	FileDescriptor fd;
 	ev::io watcher;
 	StaticString buffer;
-	State state;
+
+	State state: 2;
 	/**
 	 * @invariant
 	 *    if paused:
 	 *       socketPaused
 	 */
-	bool paused;
-	bool socketPaused;
-	bool nextTickInstalled;
+	bool paused: 1;
+	bool socketPaused: 1;
+	bool processingBuffer: 1;
+	bool nextTickInstalled: 1;
 	int error;
+
 	char bufferData[bufferSize];
 
 	void verifyInvariants() {
@@ -186,15 +189,31 @@ private:
 	static void realProcessBufferInNextTick(weak_ptr< EventedBufferedInput<bufferSize> > wself) {
 		shared_ptr< EventedBufferedInput<bufferSize> > self = wself.lock();
 		if (self != NULL) {
-			self->nextTickInstalled = false;
 			self->verifyInvariants();
+			self->nextTickInstalled = false;
 			self->processBuffer();
 			self->verifyInvariants();
 		}
 	}
 
+	struct SetProcessingBufferToFalse {
+		EventedBufferedInput<bufferSize> *self;
+
+		SetProcessingBufferToFalse(EventedBufferedInput<bufferSize> *_self) {
+			self = _self;
+		}
+
+		~SetProcessingBufferToFalse() {
+			self->processingBuffer = false;
+		}
+	};
+
 	void processBuffer() {
 		EBI_TRACE("processBuffer");
+		assert(!processingBuffer);
+		processingBuffer = true;
+		SetProcessingBufferToFalse guard(this);
+
 		if (state == CLOSED) {
 			return;
 		}
@@ -240,6 +259,7 @@ private:
 		state = LIVE;
 		paused = true;
 		socketPaused = true;
+		processingBuffer = false;
 		nextTickInstalled = false;
 		error = 0;
 		if (watcher.is_active()) {
