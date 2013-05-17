@@ -145,6 +145,7 @@ private:
 
 		EBI_TRACE("onReadable");
 		verifyInvariants();
+		assert(!nextTickInstalled);
 
 		ssize_t ret = readSocket(bufferData, bufferSize);
 		if (ret == -1) {
@@ -406,6 +407,7 @@ public:
 	}
 
 	void readNow() {
+		assert(!nextTickInstalled);
 		onReadable(watcher, 0);
 	}
 
