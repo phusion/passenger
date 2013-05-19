@@ -130,13 +130,13 @@ public:
 	}
 	
 	/**
-	 * Populates a VariantMap from the data in <em>fd</em>. MessageIO
+	 * Populates a VariantMap from the data in `fd`. MessageIO
 	 * is used to read from the file descriptor.
 	 *
 	 * @throws SystemException
 	 * @throws IOException
 	 */
-	void readFrom(int fd) {
+	void readFrom(int fd, const StaticString &messageName = "VariantMap") {
 		TRACE_POINT();
 		vector<string> args;
 		
@@ -146,7 +146,7 @@ public:
 		if (args.size() == 0) {
 			throw IOException("Unexpected empty message received from channel");
 		}
-		if (args[0] != "VariantMap") {
+		if (args[0] != messageName) {
 			throw IOException("Unexpected message '" + args[0] + "' received from channel");
 		}
 		if (args.size() % 2 != 1) {
@@ -351,13 +351,13 @@ public:
 	 *
 	 * @throws SystemException
 	 */
-	void writeToFd(int fd) const {
+	void writeToFd(int fd, const StaticString &messageName = "VariantMap") const {
 		map<string, string>::const_iterator it;
 		map<string, string>::const_iterator end = store.end();
 		vector<string> args;
 		
 		args.reserve(1 + 2 * store.size());
-		args.push_back("VariantMap");
+		args.push_back(messageName);
 		for (it = store.begin(); it != end; it++) {
 			args.push_back(it->first);
 			args.push_back(it->second);

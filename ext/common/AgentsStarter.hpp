@@ -42,6 +42,7 @@
 #include <ServerInstanceDir.h>
 #include <Exceptions.h>
 #include <ResourceLocator.h>
+#include <Logging.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
@@ -482,10 +483,8 @@ public:
 			UPDATE_TRACE_POINT();
 			FileDescriptor feedbackFd = fds[0];
 			vector<string> args;
-			bool result, allAgentsStarted;
+			bool result;
 			
-			ServerInstanceDirPtr serverInstanceDir;
-			ServerInstanceDir::GenerationPtr generation;
 			ScopeGuard guard(boost::bind(&AgentsStarter::killProcessGroupAndWait, &pid, 0));
 			fds[1].close();
 			
@@ -506,7 +505,7 @@ public:
 			}
 			
 			
-			/****** Read basic startup information ******/
+			/****** Read agents information report ******/
 			
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
@@ -521,7 +520,7 @@ public:
 					killProcessGroupAndWait(&pid, 5000);
 					guard.clear();
 					throw SystemException("Unable to start the Phusion Passenger watchdog: "
-						"unable to read its startup information",
+						"unable to read its startup information report",
 						ex.code());
 				}
 			}
@@ -530,15 +529,31 @@ public:
 				inspectWatchdogCrashReason(pid);
 			}
 			
-			UPDATE_TRACE_POINT();
-			if (args[0] == "Basic startup info") {
-				if (args.size() == 3) {
-					serverInstanceDir.reset(new ServerInstanceDir(args[1], false));
-					generation = serverInstanceDir->getGeneration(atoi(args[2]));
-				} else {
-					throw IOException("Unable to start the Phusion Passenger watchdog: "
-						"it returned an invalid basic startup information message");
+			if (args[0] == "Agents information") {
+				if ((args.size() - 1) % 2 != 0) {
+					throw RuntimeException("Unable to start the Phusion Passenger watchdog "
+						"because it sent an invalid startup information report (the number "
+						"of items is not an even number)");
 				}
+
+				VariantMap info;
+				for (unsigned i = 1; i < args.size(); i += 2) {
+					const string &key = args[i];
+					const string &value = args[i + 1];
+					info.set(key, value);
+				}
+
+				this->pid        = pid;
+				this->feedbackFd = feedbackFd;
+				requestSocketFilename   = info.get("request_socket_filename");
+				requestSocketPassword   = info.get("request_socket_password");
+				messageSocketFilename   = info.get("message_socket_filename");
+				messageSocketPassword   = info.get("message_socket_password");
+				serverInstanceDir = make_shared<ServerInstanceDir>(info.get("server_instance_dir"), false);
+				generation        = serverInstanceDir->getGeneration(info.getInt("generation"));
+				loggingAgentRunningLocally = true;
+				loggingSocketAddress  = info.get("logging_socket_address");
+				loggingSocketPassword = info.get("logging_socket_password");
 			} else if (args[0] == "Watchdog startup error") {
 				killProcessGroupAndWait(&pid, 5000);
 				guard.clear();
@@ -571,67 +586,11 @@ public:
 					throw SystemException("Unable to start the Phusion Passenger watchdog (" +
 						watchdogFilename + ")", e);
 				}
-			}
-			
-			
-			/****** Read agents startup information ******/
-			
-			UPDATE_TRACE_POINT();
-			allAgentsStarted = false;
-			
-			while (!allAgentsStarted) {
-				try {
-					UPDATE_TRACE_POINT();
-					result = readArrayMessage(feedbackFd, args);
-				} catch (const SystemException &ex) {
-					killProcessGroupAndWait(&pid, 5000);
-					guard.clear();
-					throw SystemException("Unable to start the Phusion Passenger watchdog: "
-						"unable to read all agent startup information",
-						ex.code());
-				}
-				if (!result) {
-					UPDATE_TRACE_POINT();
-					inspectWatchdogCrashReason(pid);
-				}
-				
-				if (args[0] == "HelperAgent info") {
-					UPDATE_TRACE_POINT();
-					if (args.size() == 5) {
-						this->pid = pid;
-						this->feedbackFd = feedbackFd;
-						requestSocketFilename   = args[1];
-						requestSocketPassword   = Base64::decode(args[2]);
-						messageSocketFilename   = args[3];
-						messageSocketPassword   = Base64::decode(args[4]);
-						this->serverInstanceDir = serverInstanceDir;
-						this->generation        = generation;
-					} else {
-						killProcessGroupAndWait(&pid, 5000);
-						guard.clear();
-						throw IOException("Unable to start the Phusion Passenger watchdog: "
-							"it returned an invalid initialization feedback message");
-					}
-				} else if (args[0] == "LoggingServer info") {
-					UPDATE_TRACE_POINT();
-					if (args.size() == 3) {
-						loggingAgentRunningLocally = true;
-						loggingSocketAddress  = args[1];
-						loggingSocketPassword = args[2];
-					} else {
-						killProcessGroupAndWait(&pid, 5000);
-						guard.clear();
-						throw IOException("Unable to start the Phusion Passenger watchdog: "
-							"it returned an invalid initialization feedback message");
-					}
-				} else if (args[0] == "All agents started") {
-					allAgentsStarted = true;
-				} else {
-					UPDATE_TRACE_POINT();
-					killProcessGroupAndWait(&pid, 5000);
-					guard.clear();
-					throw RuntimeException("One of the Passenger agents sent an unknown feedback message '" + args[0] + "'");
-				}
+			} else {
+				UPDATE_TRACE_POINT();
+				killProcessGroupAndWait(&pid, 5000);
+				guard.clear();
+				throw RuntimeException("One of the Passenger agents sent an unknown feedback message '" + args[0] + "'");
 			}
 			
 			guard.clear();
