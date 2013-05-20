@@ -34,6 +34,7 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/StaticContentHandler.h \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
     `passenger-config --root`/ext/common/Constants.h \
+    `passenger-config --root`/ext/common/AgentsStarter.h \
     `passenger-config --root`/ext/common/ApplicationPool2/AppTypes.h"
 if test "x$PASSENGER_LIBS" = "x"; then
     CORE_LIBS="$CORE_LIBS `passenger-config --nginx-libs`"

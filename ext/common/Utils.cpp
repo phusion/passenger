@@ -712,7 +712,7 @@ verifyWSGIDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRat
 
 void
 prestartWebApps(const ResourceLocator &locator, const string &ruby,
-	const string &serializedprestartURLs)
+	const vector<string> &prestartURLs)
 {
 	/* Apache calls the initialization routines twice during startup, and
 	 * as a result it starts two helper servers, where the first one exits
@@ -724,11 +724,9 @@ prestartWebApps(const ResourceLocator &locator, const string &ruby,
 	
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
-	vector<string> prestartURLs;
 	vector<string>::const_iterator it;
 	string prespawnScript = locator.getHelperScriptsDir() + "/prespawn";
 	
-	split(Base64::decode(serializedprestartURLs), '\0', prestartURLs);
 	it = prestartURLs.begin();
 	while (it != prestartURLs.end() && !this_thread::interruption_requested()) {
 		if (it->empty()) {

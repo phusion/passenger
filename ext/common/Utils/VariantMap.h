@@ -29,9 +29,12 @@
 #include <oxt/macros.hpp>
 #include <sys/types.h>
 #include <map>
+#include <set>
+#include <vector>
 #include <string>
 #include <Exceptions.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/Base64.h>
 #include <Utils/MessageIO.h>
 
 namespace Passenger {
@@ -254,6 +257,18 @@ public:
 		return *this;
 	}
 
+	VariantMap &setStrSet(const string &name, const std::set<string> &value) {
+		std::set<string>::const_iterator it;
+		string result;
+
+		for (it = value.begin(); it != value.end(); it++) {
+			result.append(*it);
+			result.append(1, '\0');
+		}
+		store[name] = Base64::encode(result);
+		return *this;
+	}
+
 	const string &get(const string &name, bool required = true) const {
 		map<string, string>::const_iterator it = store.find(name);
 		if (it == store.end()) {
@@ -335,6 +350,18 @@ public:
 		}
 		return result;
 	}
+
+	vector<string> getStrSet(const string &name, bool required = true,
+		const vector<string> &defaultValue = vector<string>()) const
+	{
+		vector<string> result = defaultValue;
+		const string *str;
+		if (lookup(name, required, &str)) {
+			result.clear();
+			split(Base64::decode(*str), '\0', result);
+		}
+		return result;
+	}
 	
 	bool erase(const string &name) {
 		return store.erase(name) != 0;
@@ -350,7 +377,7 @@ public:
 		return store.size();
 	}
 
-	void addTo(VariantMap &other) {
+	void addTo(VariantMap &other) const {
 		map<string, string>::const_iterator it;
 		map<string, string>::const_iterator end = store.end();
 

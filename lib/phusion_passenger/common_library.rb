@@ -408,7 +408,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:category => :other,
 		:deps     => %w(
 			AgentsStarter.h
-			AgentsStarter.hpp
 			ResourceLocator.h
 			MessageClient.h
 			ServerInstanceDir.h

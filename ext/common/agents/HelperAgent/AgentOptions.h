@@ -28,7 +28,6 @@
 #include <sys/types.h>
 #include <string>
 #include <Utils/VariantMap.h>
-#include <Utils/Base64.h>
 
 namespace Passenger {
 
@@ -53,7 +52,7 @@ struct AgentOptions {
 	string exitPassword;
 	string loggingAgentAddress;
 	string loggingAgentPassword;
-	string prestartUrls;
+	vector<string> prestartUrls;
 
 	string requestSocketLink;
 
@@ -61,12 +60,12 @@ struct AgentOptions {
 
 	AgentOptions(const VariantMap &options) {
 		// Required options for which a default is already set by the Watchdog.
-		passengerRoot = options.get("passenger_root");
-		tempDir               = options.get("temp_dir");
-		userSwitching = options.getBool("user_switching");
-		defaultRubyCommand   = options.get("default_ruby");
-		defaultUser   = options.get("default_user");
-		defaultGroup  = options.get("default_group");
+		passengerRoot      = options.get("passenger_root");
+		tempDir            = options.get("temp_dir");
+		userSwitching      = options.getBool("user_switching");
+		defaultRubyCommand = options.get("default_ruby");
+		defaultUser        = options.get("default_user");
+		defaultGroup       = options.get("default_group");
 		maxPoolSize        = options.getInt("max_pool_size");
 		maxInstancesPerApp = options.getInt("max_instances_per_app");
 		poolIdleTime       = options.getInt("pool_idle_time");
@@ -82,7 +81,7 @@ struct AgentOptions {
 		loggingAgentPassword  = options.get("logging_agent_password");
 		
 		// Optional options.
-		prestartUrls          = options.get("prestart_urls", false, "");
+		prestartUrls          = options.getStrSet("prestart_urls", false);
 		requestSocketLink     = options.get("request_socket_link", false);
 	}
 };
