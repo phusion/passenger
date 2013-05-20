@@ -67,8 +67,8 @@ passenger_create_main_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
     
-    conf->global_ctl = ngx_array_create(cf->pool, 1, sizeof(ngx_keyval_t));
-    if (conf->global_ctl == NULL) {
+    conf->ctl = ngx_array_create(cf->pool, 1, sizeof(ngx_keyval_t));
+    if (conf->ctl == NULL) {
         return NGX_CONF_ERROR;
     }
     conf->default_ruby.data = NULL;
@@ -1057,11 +1057,11 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, root_dir),
       NULL },
 
-    { ngx_string("passenger_global_ctl"),
+    { ngx_string("passenger_ctl"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE2,
       set_null_terminated_keyval_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, global_ctl),
+      offsetof(passenger_main_conf_t, ctl),
       NULL },
 
     { ngx_string("passenger_ruby"),
