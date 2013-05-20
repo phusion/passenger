@@ -47,8 +47,10 @@ struct AgentOptions {
 	unsigned int maxPoolSize;
 	unsigned int maxInstancesPerApp;
 	unsigned int poolIdleTime;
+	string requestSocketFilename;
 	string requestSocketPassword;
-	string messageSocketPassword;
+	string adminSocketAddress;
+	string exitPassword;
 	string loggingAgentAddress;
 	string loggingAgentPassword;
 	string prestartUrls;
@@ -72,8 +74,10 @@ struct AgentOptions {
 		// Required options only set by the Watchdog.
 		webServerPid          = options.getPid("web_server_pid");
 		generationNumber      = options.getInt("generation_number");
-		requestSocketPassword = Base64::decode(options.get("request_socket_password"));
-		messageSocketPassword = Base64::decode(options.get("message_socket_password"));
+		requestSocketFilename = options.get("request_socket_filename");
+		requestSocketPassword = options.get("request_socket_password");
+		adminSocketAddress    = options.get("helper_agent_admin_socket_address");
+		exitPassword          = options.get("helper_agent_exit_password");
 		loggingAgentAddress   = options.get("logging_agent_address");
 		loggingAgentPassword  = options.get("logging_agent_password");
 		

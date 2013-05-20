@@ -343,6 +343,15 @@ public:
 	unsigned int size() const {
 		return store.size();
 	}
+
+	void addTo(VariantMap &other) {
+		map<string, string>::const_iterator it;
+		map<string, string>::const_iterator end = store.end();
+
+		for (it = store.begin(); it != end; it++) {
+			other.set(it->first, it->second);
+		}
+	}
 	
 	/**
 	 * Writes a representation of the contents in this VariantMap to

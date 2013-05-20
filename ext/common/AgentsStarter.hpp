@@ -68,55 +68,36 @@ public:
 	};
 	
 private:
+	Type type;
+
 	/** The watchdog's PID. Equals 0 if the watchdog hasn't been started yet
 	 * or if detach() is called. */
 	pid_t pid;
+
+	/******* Information about the started services. Only valid when pid != 0. *******/
 	
-	Type type;
-	
-	/** The watchdog's feedback file descriptor. Only valid if pid != 0. */
+	 /** The watchdog's feedback file descriptor. */
 	FileDescriptor feedbackFd;
 	
-	/**
-	 * The helper agent's request socket filename. This socket only exists
-	 * for the Nginx helper agent, and it's for serving SCGI requests.
-	 *
-	 * Only valid if pid != 0.
-	 */
+	/** The helper agent's request socket filename and its password. This socket
+	 * is for serving SCGI requests. */
 	string requestSocketFilename;
-	
-	/**
-	 * A password for connecting to the request socket. Only valid if pid != 0.
-	 */
 	string requestSocketPassword;
 	
-	/**
-	 * The helper agent's message server socket filename, on which e.g. the
-	 * application pool server is listening. Only valid if pid != 0.
-	 *
-	 * The application pool server is available through the account "_web_server".
+	/** The socket on which the helper agent listens for administration commands,
+	 * and the corresponding password for the "web_server" account, which has the
+	 * authorization to shutdown the helper agent.
 	 */
-	string messageSocketFilename;
-	
-	/**
-	 * A password for the message server socket. The associated username is "_web_server".
-	 *
-	 * Only valid if pid != 0.
-	 */
-	string messageSocketPassword;
-	
-	bool loggingAgentRunningLocally;
+	string helperAgentAdminSocketAddress;
+	string helperAgentExitPassword;
+
+	/** The logging agent's socket address and its password. */
 	string loggingSocketAddress;
 	string loggingSocketPassword;
 	
-	/**
-	 * The server instance dir of the agents. Only valid if pid != 0.
-	 */
+	/** The server instance dir and generation dir of the agents. */
 	ServerInstanceDirPtr serverInstanceDir;
-	
-	/**
-	 * The generation dir of the agents. Only valid if pid != 0.
-	 */
+	/** The generation dir of the agents. */
 	ServerInstanceDir::GenerationPtr generation;
 	
 	/**
@@ -145,7 +126,7 @@ private:
 	 * Call this if the watchdog seems to have crashed. This function will try
 	 * to determine whether the watchdog is still running, whether it crashed
 	 * with a signal, etc. If it has detected that the watchdog is no longer running
-	 * then it will set <em>pid</em> to -1.
+	 * then it will set `pid` to -1.
 	 */
 	void inspectWatchdogCrashReason(pid_t &pid) {
 		this_thread::disable_interruption di;
@@ -195,8 +176,8 @@ private:
 	}
 	
 	/**
-	 * Behaves like <tt>waitpid(pid, status, WNOHANG)</tt>, but waits at most
-	 * <em>timeout</em> miliseconds for the process to exit.
+	 * Behaves like `waitpid(pid, status, WNOHANG)`, but waits at most
+	 * `timeout` miliseconds for the process to exit.
 	 */
 	static int timedWaitPid(pid_t pid, int *status, unsigned long long timeout) {
 		Timer timer;
@@ -218,14 +199,14 @@ private:
 	 * Returns whether the agent has successfully processed the exit command.
 	 * Any exceptions are caught and will cause false to be returned.
 	 */
-	bool gracefullyShutdownAgent(const string &socketFilename, const string &username,
-	                             const string &password
-	) {
+	bool gracefullyShutdownAgent(const string &address, const string &username,
+		const string &password)
+	{
 		try {
 			MessageClient client;
 			vector<string> args;
 			
-			client.connect("unix:" + socketFilename, username, password);
+			client.connect(address, username, password);
 			client.write("exit", NULL);
 			return client.read(args) && args[0] == "Passed security" &&
 			       client.read(args) && args[0] == "exit command received";
@@ -234,6 +215,18 @@ private:
 		} catch (const SecurityException &) {
 		}
 		return false;
+	}
+
+	string findUnionStationGatewayCert(const ResourceLocator &locator,
+		const StaticString &unionStationGatewayCert) const
+	{
+		if (unionStationGatewayCert.empty()) {
+			return locator.getResourcesDir() + "/union_station_gateway.crt";
+		} else if (unionStationGatewayCert != "-") {
+			return unionStationGatewayCert;
+		} else {
+			return "-";
+		}
 	}
 	
 	string serializePrestartURLs(const set<string> &prestartURLs) const {
@@ -256,21 +249,17 @@ public:
 	 */
 	AgentsStarter(Type type) {
 		pid = 0;
-		loggingAgentRunningLocally = false;
 		this->type = type;
 	}
 	
 	~AgentsStarter() {
 		if (pid != 0) {
 			this_thread::disable_syscall_interruption dsi;
-			bool cleanShutdown = gracefullyShutdownAgent(messageSocketFilename,
-				"_web_server", messageSocketPassword);
-			if (loggingAgentRunningLocally) {
-				string filename = parseUnixSocketAddress(loggingSocketAddress);
-				cleanShutdown = cleanShutdown &&
-					gracefullyShutdownAgent(filename,
-						"logging", loggingSocketPassword);
-			}
+			bool cleanShutdown = gracefullyShutdownAgent(helperAgentAdminSocketAddress,
+				"_web_server", helperAgentExitPassword);
+			cleanShutdown = cleanShutdown &&
+				gracefullyShutdownAgent(loggingSocketAddress,
+					"logging", loggingSocketPassword);
 			
 			/* Send a message down the feedback fd to tell the watchdog
 			 * Whether this is a clean shutdown. Closing the fd without
@@ -311,31 +300,20 @@ public:
 		return pid;
 	}
 	
-	/**
-	 * The helper agent's request socket filename, on which it's listening
-	 * for SCGI requests.
-	 *
-	 * @pre getPid() != 0 && getType() == NGINX
-	 */
 	string getRequestSocketFilename() const {
 		return requestSocketFilename;
 	}
 	
-	/**
-	 * Returns the password for connecting to the request socket.
-	 *
-	 * @pre getPid() != 0 && getType() == NGINX
-	 */
 	string getRequestSocketPassword() const {
 		return requestSocketPassword;
 	}
 	
-	string getMessageSocketFilename() const {
-		return messageSocketFilename;
+	string getHelperAgentAdminSocketFilename() const {
+		return parseUnixSocketAddress(helperAgentAdminSocketAddress);
 	}
 	
-	string getMessageSocketPassword() const {
-		return messageSocketPassword;
+	string getHelperAgentExitPassword() const {
+		return helperAgentExitPassword;
 	}
 	
 	string getLoggingSocketAddress() const {
@@ -346,20 +324,10 @@ public:
 		return loggingSocketPassword;
 	}
 	
-	/**
-	 * Returns the server instance dir of the agents.
-	 *
-	 * @pre getPid() != 0
-	 */
 	ServerInstanceDirPtr getServerInstanceDir() const {
 		return serverInstanceDir;
 	}
 	
-	/**
-	 * Returns the generation dir of the agents.
-	 *
-	 * @pre getPid() != 0
-	 */
 	ServerInstanceDir::GenerationPtr getGeneration() const {
 		return generation;
 	}
@@ -393,13 +361,7 @@ public:
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		ResourceLocator locator(passengerRoot);
-		
-		string realUnionStationGatewayCert;
-		if (unionStationGatewayCert.empty()) {
-			realUnionStationGatewayCert = locator.getResourcesDir() + "/union_station_gateway.crt";
-		} else if (unionStationGatewayCert != "-") {
-			realUnionStationGatewayCert = unionStationGatewayCert;
-		}
+		string realUnionStationGatewayCert = findUnionStationGatewayCert(locator, unionStationGatewayCert);
 		string watchdogFilename = locator.getAgentsDir() + "/PassengerWatchdog";
 		
 		VariantMap watchdogArgs;
@@ -547,13 +509,13 @@ public:
 				this->feedbackFd = feedbackFd;
 				requestSocketFilename   = info.get("request_socket_filename");
 				requestSocketPassword   = info.get("request_socket_password");
-				messageSocketFilename   = info.get("message_socket_filename");
-				messageSocketPassword   = info.get("message_socket_password");
+				helperAgentAdminSocketAddress = info.get("helper_agent_admin_socket_address");
+				helperAgentExitPassword       = info.get("helper_agent_exit_password");
 				serverInstanceDir = make_shared<ServerInstanceDir>(info.get("server_instance_dir"), false);
 				generation        = serverInstanceDir->getGeneration(info.getInt("generation"));
-				loggingAgentRunningLocally = true;
 				loggingSocketAddress  = info.get("logging_socket_address");
 				loggingSocketPassword = info.get("logging_socket_password");
+				guard.clear();
 			} else if (args[0] == "Watchdog startup error") {
 				killProcessGroupAndWait(&pid, 5000);
 				guard.clear();
@@ -592,8 +554,6 @@ public:
 				guard.clear();
 				throw RuntimeException("One of the Passenger agents sent an unknown feedback message '" + args[0] + "'");
 			}
-			
-			guard.clear();
 		}
 	}
 	

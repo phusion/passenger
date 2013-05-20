@@ -459,7 +459,7 @@ initializeWorkingObjects() {
 	serverInstanceDirToucher = new ServerInstanceDirToucher();
 
 	UPDATE_TRACE_POINT();
-	loggingAgentAddress  = "unix:" + generation->getPath() + "/logging.socket";
+	loggingAgentAddress  = "unix:" + generation->getPath() + "/logging";
 	loggingAgentPassword = randomGenerator->generateAsciiString(64);
 }
 

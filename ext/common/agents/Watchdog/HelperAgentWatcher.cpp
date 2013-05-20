@@ -25,11 +25,10 @@
 
 class HelperAgentWatcher: public AgentWatcher {
 protected:
+	string helperAgentFilename;
+	VariantMap params, report;
 	string requestSocketFilename;
 	string messageSocketFilename;
-	string helperAgentFilename;
-	string requestSocketPassword;
-	string messageSocketPassword;
 	
 	virtual const char *name() const {
 		return "Phusion Passenger helper agent";
@@ -50,10 +49,7 @@ protected:
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = agentsOptions;
-		options.set("request_socket_password", Base64::encode(requestSocketPassword)).
-			set("message_socket_password", Base64::encode(messageSocketPassword)).
-			set("logging_agent_address", loggingAgentAddress).
-			set("logging_agent_password", loggingAgentPassword);
+		params.addTo(options);
 		options.writeToFd(fd);
 	}
 	
@@ -70,15 +66,28 @@ protected:
 public:
 	HelperAgentWatcher(const ResourceLocator &resourceLocator) {
 		helperAgentFilename = resourceLocator.getAgentsDir() + "/PassengerHelperAgent";
-		requestSocketPassword = randomGenerator->generateAsciiString(REQUEST_SOCKET_PASSWORD_SIZE);
-		messageSocketPassword = randomGenerator->generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
+
+		report
+			.set("request_socket_filename",
+				agentsOptions.get("request_socket_filename", false,
+					generation->getPath() + "/request"))
+			.set("request_socket_password",
+				agentsOptions.get("request_socket_password", false,
+					randomGenerator->generateAsciiString(REQUEST_SOCKET_PASSWORD_SIZE)))
+			.set("helper_agent_admin_socket_address",
+				agentsOptions.get("helper_agent_admin_socket_address", false,
+					"unix:" + generation->getPath() + "/socket"))
+			.set("helper_agent_exit_password",
+				agentsOptions.get("helper_agent_exit_password", false,
+					randomGenerator->generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE)));
+
+		params = report;
+		params
+			.set("logging_agent_address", loggingAgentAddress)
+			.set("logging_agent_password", loggingAgentPassword);
 	}
 	
 	virtual void reportAgentsInformation(VariantMap &report) {
-		report
-			.set("request_socket_filename", requestSocketFilename)
-			.set("request_socket_password", requestSocketPassword)
-			.set("message_socket_filename", messageSocketFilename)
-			.set("message_socket_password", messageSocketPassword);
+		this->report.addTo(report);
 	}
 };
