@@ -259,7 +259,7 @@ waitForStarterProcessOrWatchers(vector<AgentWatcherPtr> &watchers) {
 }
 
 static void
-cleanupAgentsInBackground(vector<AgentWatcherPtr> &watchers) {
+cleanupAgentsInBackground(vector<AgentWatcherPtr> &watchers, char *argv[]) {
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
 	pid_t pid;
@@ -273,6 +273,11 @@ cleanupAgentsInBackground(vector<AgentWatcherPtr> &watchers) {
 		fd_set fds, fds2;
 		int max, agentProcessesDone;
 		unsigned long long deadline = 30000; // miliseconds
+
+		#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(sun)
+			// Change process title.
+			strcpy(argv[0], "PassengerWatchdog (cleaning up...)");
+		#endif
 		
 		// Wait until all agent processes have exited. The starter
 		// process is responsible for telling the individual agents
@@ -559,7 +564,7 @@ main(int argc, char *argv[]) {
 		AgentWatcher::stopWatching(watchers);
 		if (exitGracefully) {
 			UPDATE_TRACE_POINT();
-			cleanupAgentsInBackground(watchers);
+			cleanupAgentsInBackground(watchers, argv);
 			return 0;
 		} else {
 			UPDATE_TRACE_POINT();
