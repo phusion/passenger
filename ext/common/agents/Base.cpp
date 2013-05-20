@@ -30,6 +30,7 @@
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/select.h>
 #ifdef __linux__
 	#include <sys/syscall.h>
@@ -1426,6 +1427,37 @@ initializeSyscallFailureSimulation(const char *processName) {
 	}
 }
 
+enum FdIsSocketResult {
+	FISR_YES,
+	FISR_NO,
+	FISR_ERROR
+};
+
+static FdIsSocketResult fdIsSocket(int fd) {
+	int ret = fcntl(fd, F_GETFL);
+	if (ret == -1) {
+		if (errno == EBADF) {
+			return FISR_NO;
+		} else {
+			return FISR_ERROR;
+		}
+	} else {
+		struct stat buf;
+		ret = fstat(fd, &buf);
+		if (ret == -1) {
+			// I think some platforms return this for anonymous
+			// Unix socket pairs.
+			return FISR_YES;
+		} else {
+			if (buf.st_mode & S_IFSOCK) {
+				return FISR_YES;
+			} else {
+				return FISR_NO;
+			}
+		}
+	}
+}
+
 VariantMap
 initializeAgent(int argc, char *argv[], const char *processName) {
 	VariantMap options;
@@ -1460,27 +1492,30 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	TRACE_POINT();
 	try {
 		if (argc == 1) {
-			int ret = fcntl(FEEDBACK_FD, F_GETFL);
-			if (ret == -1) {
-				if (errno == EBADF) {
-					fprintf(stderr,
-						"You're not supposed to start this program from the command line. "
-						"It's used internally by Phusion Passenger.\n");
-					exit(1);
-				} else {
-					int e = errno;
-					fprintf(stderr,
-						"Encountered an error in feedback file descriptor 3: %s (%d)\n",
-							strerror(e), e);
-					exit(1);
-				}
-			} else {
+			int e;
+
+			switch (fdIsSocket(FEEDBACK_FD)) {
+			case FISR_YES:
 				_feedbackFdAvailable = true;
 				options.readFrom(FEEDBACK_FD);
 				if (options.getBool("fire_and_forget", false)) {
 					_feedbackFdAvailable = false;
 					close(FEEDBACK_FD);
 				}
+				break;
+			case FISR_NO:
+				fprintf(stderr,
+					"You're not supposed to start this program from the command line. "
+					"It's used internally by Phusion Passenger.\n");
+				exit(1);
+				break;
+			case FISR_ERROR:
+				e = errno;
+				fprintf(stderr,
+					"Encountered an error in feedback file descriptor 3: %s (%d)\n",
+						strerror(e), e);
+				exit(1);
+				break;
 			}
 		} else {
 			options.readFrom((const char **) argv + 1, argc - 1);
