@@ -49,6 +49,17 @@ psg_variant_map_set(PSG_VariantMap *m,
 }
 
 void
+psg_variant_map_set2(PSG_VariantMap *m,
+	const char *name,
+	unsigned int name_len,
+	const char *value,
+	unsigned int value_len)
+{
+	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
+	vm->set(string(name, name_len), string(value, value_len));
+}
+
+void
 psg_variant_map_set_int(PSG_VariantMap *m,
 	const char *name,
 	int value)

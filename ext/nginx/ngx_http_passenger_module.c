@@ -249,6 +249,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     ngx_uint_t       i;
     ngx_str_t       *prestart_uris;
     char           **prestart_uris_ary = NULL;
+    ngx_keyval_t    *global_ctl = NULL;
     PSG_VariantMap  *params = NULL;
     u_char  filename[NGX_MAX_PATH], *last;
     char   *passenger_root = NULL;
@@ -290,6 +291,13 @@ start_helper_server(ngx_cycle_t *cycle) {
     psg_variant_map_set_ngx_str(params, "union_station_gateway_cert", &passenger_main_conf.union_station_gateway_cert);
     psg_variant_map_set_ngx_str(params, "union_station_proxy_address", &passenger_main_conf.union_station_proxy_address);
     psg_variant_map_set_strset (params, "prestart_urls", (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts);
+
+    global_ctl = (ngx_keyval_t *) passenger_main_conf.global_ctl->elts;
+    for (i = 0; i < passenger_main_conf.global_ctl->nelts; i++) {
+        psg_variant_map_set2(params,
+            (const char *) global_ctl[i].key.data, global_ctl[i].key.len - 1,
+            (const char *) global_ctl[i].value.data, global_ctl[i].value.len - 1);
+    }
     
     ret = psg_agents_starter_start(passenger_agents_starter,
         passenger_root,

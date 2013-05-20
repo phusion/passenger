@@ -436,6 +436,8 @@ initializeOptions() {
 	defaultGroup       = agentsOptions.get("default_group");
 	webServerWorkerUid = agentsOptions.getUid("web_server_worker_uid");
 	webServerWorkerGid = agentsOptions.getGid("web_server_worker_gid");
+
+	P_INFO("Options: " << agentsOptions.inspect());
 }
 
 static void
