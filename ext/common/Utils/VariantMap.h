@@ -124,7 +124,13 @@ public:
 		}
 		unsigned int i = 0;
 		while (i < argc) {
-			store[argv[i]] = argv[i + 1];
+			string name = argv[i];
+			if (startsWith(name, "--")) {
+				name.erase(0, 2);
+			}
+			name = replaceAll(name, "-", "_");
+
+			store[name] = replaceAll(argv[i + 1], "-", "_");
 			i += 2;
 		}
 	}

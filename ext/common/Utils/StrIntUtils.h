@@ -104,6 +104,11 @@ void splitIncludeSep(const StaticString & restrict_ref str,
 string replaceString(const string &str, const string &toFind, const string &replaceWith);
 
 /**
+ * Like replaceString(), but replace all occurrences of `toFind`.
+ */
+string replaceAll(const string &str, const string &toFind, const string &replaceWith);
+
+/**
  * Strips leading and trailing whitespaces.
  */
 string strip(const StaticString &str);
