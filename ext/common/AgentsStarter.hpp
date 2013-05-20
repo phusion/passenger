@@ -300,11 +300,13 @@ public:
 		return pid;
 	}
 	
-	string getRequestSocketFilename() const {
+	// The 'const string &' here is on purpose. The C getter functions
+	// return the string pointer directly.
+	const string &getRequestSocketFilename() const {
 		return requestSocketFilename;
 	}
 	
-	string getRequestSocketPassword() const {
+	const string &getRequestSocketPassword() const {
 		return requestSocketPassword;
 	}
 	

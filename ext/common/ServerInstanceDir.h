@@ -179,7 +179,9 @@ public:
 			return number;
 		}
 		
-		string getPath() const {
+		// The 'const strng &' here is on purpose. The AgentsStarter C
+		// functions return the string pointer directly.
+		const string &getPath() const {
 			return path;
 		}
 		
@@ -280,7 +282,9 @@ public:
 		}
 	}
 	
-	string getPath() const {
+	// The 'const strng &' here is on purpose. The AgentsStarter C
+	// functions return the string pointer directly.
+	const string &getPath() const {
 		return path;
 	}
 	
