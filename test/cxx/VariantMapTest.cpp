@@ -21,18 +21,15 @@ namespace tut {
 		// Test setting and getting string values.
 		map.set("hello", "world");
 		map.set("abcd", "efgh");
-		map.set("foo", "");
 		map.set("", "bar");
-		ensure_equals(map.get("hello"), "world");
-		ensure_equals(map.get("abcd"), "efgh");
-		ensure_equals(map.get("foo"), "");
-		ensure_equals(map.get(""), "bar");
-		ensure_equals(map.size(), 4u);
-		ensure(map.has("hello"));
-		ensure(map.has("abcd"));
-		ensure(map.has("foo"));
-		ensure(map.has(""));
-		ensure(!map.has("xyz"));
+		ensure_equals("(1)", map.get("hello"), "world");
+		ensure_equals("(2)", map.get("abcd"), "efgh");
+		ensure_equals("(3)", map.get(""), "bar");
+		ensure_equals("(4)", map.size(), 3u);
+		ensure("(5)", map.has("hello"));
+		ensure("(6)", map.has("abcd"));
+		ensure("(7)", map.has(""));
+		ensure("(8)", !map.has("xyz"));
 	}
 	
 	TEST_METHOD(3) {
@@ -175,5 +172,20 @@ namespace tut {
 		map.readFrom(ary, 4);
 		ensure_equals(map.get("foo"), "1234");
 		ensure_equals(map.get("bar"), "5678");
+	}
+
+	TEST_METHOD(7) {
+		// Setting an empty value result in the deletion of the key.
+		map.set("a", "a");
+		map.set("b", "b");
+		map.set("b", "");
+		try {
+			map.get("b");
+			fail("MissingKeyException expected");
+		} catch (const VariantMap::MissingKeyException &e) {
+			// Pass.
+		}
+		ensure(!map.has("foo"));
+		ensure_equals(map.size(), 1u);
 	}
 }
