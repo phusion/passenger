@@ -450,7 +450,7 @@ initializeWorkingObjects() {
 	UPDATE_TRACE_POINT();
 	// Must not used make_shared() here because Watchdog.cpp
 	// deletes the raw pointer in cleanupAgentsInBackground().
-	if (agentsOptions.get("server_instance_dir").empty()) {
+	if (agentsOptions.get("server_instance_dir", false).empty()) {
 		serverInstanceDir.reset(new ServerInstanceDir(
 			agentsOptions.getPid("web_server_pid"), tempDir));
 	} else {
