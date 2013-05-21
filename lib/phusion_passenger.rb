@@ -62,15 +62,6 @@ module PhusionPassenger
 	# System-wide directory for storing Phusion Passenger Standalone runtime files.
 	GLOBAL_STANDALONE_RESOURCE_DIR = "/var/lib/#{GLOBAL_STANDALONE_NAMESPACE_DIRNAME}".freeze
 	
-	NATIVELY_PACKAGED_BIN_DIR                = "/usr/bin".freeze
-	NATIVELY_PACKAGED_AGENTS_DIR             = "/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}/agents".freeze
-	NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR     = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/helper-scripts".freeze
-	NATIVELY_PACKAGED_RESOURCES_DIR          = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}".freeze
-	NATIVELY_PACKAGED_DOC_DIR                = "/usr/share/doc/#{GLOBAL_NAMESPACE_DIRNAME}".freeze
-	NATIVELY_PACKAGED_RUNTIME_LIBDIR         = "/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}".freeze
-	NATIVELY_PACKAGED_HEADER_DIR             = "/usr/include/#{GLOBAL_NAMESPACE_DIRNAME}".freeze
-	NATIVELY_PACKAGED_APACHE2_MODULE         = "/usr/lib/apache2/modules/mod_passenger.so".freeze
-	
 	# Follows the logic of ext/common/ResourceLocator.h, so don't forget to modify that too.
 	def self.locate_directories(source_root_or_location_configuration_file = nil)
 		source_root_or_location_configuration_file ||= find_location_configuration_file
@@ -97,6 +88,7 @@ module PhusionPassenger
 			@natively_packaged     = get_bool_option(filename, options, 'natively_packaged')
 			@bin_dir               = get_option(filename, options, 'bin').freeze
 			@agents_dir            = get_option(filename, options, 'agents').freeze
+			@lib_dir               = get_option(filename, options, 'libdir').freeze
 			@helper_scripts_dir    = get_option(filename, options, 'helper_scripts').freeze
 			@resources_dir         = get_option(filename, options, 'resources').freeze
 			@doc_dir               = get_option(filename, options, 'doc').freeze
@@ -107,6 +99,7 @@ module PhusionPassenger
 			@natively_packaged     = false
 			@bin_dir               = "#{@source_root}/bin".freeze
 			@agents_dir            = "#{@source_root}/agents".freeze
+			@lib_dir               = "#{@source_root}/libout".freeze
 			@helper_scripts_dir    = "#{@source_root}/helper-scripts".freeze
 			@resources_dir         = "#{@source_root}/resources".freeze
 			@doc_dir               = "#{@source_root}/doc".freeze
@@ -137,6 +130,10 @@ module PhusionPassenger
 	
 	def self.agents_dir
 		return @agents_dir
+	end
+
+	def self.lib_dir
+		return @lib_dir
 	end
 	
 	def self.helper_scripts_dir
