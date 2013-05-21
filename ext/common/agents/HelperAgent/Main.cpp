@@ -372,7 +372,7 @@ public:
 	Server(FileDescriptor feedbackFd, const AgentOptions &_options)
 		: options(_options),
 		  requestLoop(true),
-		  serverInstanceDir(options.webServerPid, options.tempDir, false),
+		  serverInstanceDir(_options.serverInstanceDir, false),
 		  resourceLocator(options.passengerRoot)
 	{
 		TRACE_POINT();

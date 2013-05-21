@@ -36,6 +36,7 @@ using namespace std;
 
 struct AgentOptions {
 	pid_t   webServerPid;
+	string  serverInstanceDir;
 	string  tempDir;
 	bool    userSwitching;
 	string  defaultUser;
@@ -72,6 +73,7 @@ struct AgentOptions {
 
 		// Required options only set by the Watchdog.
 		webServerPid          = options.getPid("web_server_pid");
+		serverInstanceDir     = options.get("server_instance_dir");
 		generationNumber      = options.getInt("generation_number");
 		requestSocketFilename = options.get("request_socket_filename");
 		requestSocketPassword = options.get("request_socket_password");
