@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -1282,6 +1282,8 @@ public:
 			.set    ("union_station_proxy_address", serverConfig.unionStationProxyAddress)
 			.setStrSet("prestart_urls", serverConfig.prestartURLs);
 		
+		serverConfig.ctl.addTo(params);
+
 		agentsStarter.start(serverConfig.root, params);
 		
 		// Store some relevant information in the generation directory.

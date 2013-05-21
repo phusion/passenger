@@ -284,6 +284,12 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUs
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
 
 static const char *
+cmd_passenger_ctl(cmd_parms *cmd, void *dummy, const char *name, const char *value) {
+	serverConfig.ctl.set(name, value);
+	return NULL;
+}
+
+static const char *
 cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.prestartURLs.insert(arg);
 	return NULL;
@@ -458,6 +464,7 @@ cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
 
 
 typedef const char * (*Take1Func)();
+typedef const char * (*Take2Func)();
 typedef const char * (*FlagFunc)();
 
 const command_rec passenger_commands[] = {
@@ -467,6 +474,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Passenger root folder."),
+	AP_INIT_TAKE2("PassengerCtl",
+		(Take2Func) cmd_passenger_ctl,
+		NULL,
+		RSRC_CONF,
+		"Set advanced options."),
 	AP_INIT_TAKE1("PassengerDefaultRuby",
 		(Take1Func) cmd_passenger_default_ruby,
 		NULL,
