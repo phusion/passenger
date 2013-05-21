@@ -77,6 +77,9 @@ struct AgentOptions {
 		generationNumber      = options.getInt("generation_number");
 		requestSocketFilename = options.get("request_socket_filename");
 		requestSocketPassword = options.get("request_socket_password");
+		if (requestSocketPassword == "-") {
+			requestSocketPassword = "";
+		}
 		adminSocketAddress    = options.get("helper_agent_admin_socket_address");
 		exitPassword          = options.get("helper_agent_exit_password");
 		loggingAgentAddress   = options.get("logging_agent_address");
