@@ -1,6 +1,8 @@
 Release 4.0.3
 -------------
 
+ * Fixed a crash in the HelperAgent which results in frequent process
+   restarts in some traffic patterns. Fixes issue #862.
  * passenger-status now also displays CPU usage.
  * The installer now checks for checksums when automatically downloading
    PCRE and Nginx. Contributed by Joshua Lund.
