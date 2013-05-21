@@ -2,6 +2,8 @@ Release 4.0.3
 -------------
 
  * passenger-status now also displays CPU usage.
+ * The installer now checks for checksums when automatically downloading
+   PCRE and Nginx. Contributed by Joshua Lund.
  * Various minor bug fixes.
 
 
