@@ -76,7 +76,7 @@ public:
 					randomGenerator->generateAsciiString(REQUEST_SOCKET_PASSWORD_SIZE)))
 			.set("helper_agent_admin_socket_address",
 				agentsOptions.get("helper_agent_admin_socket_address", false,
-					"unix:" + generation->getPath() + "/socket"))
+					"unix:" + generation->getPath() + "/helper_admin"))
 			.set("helper_agent_exit_password",
 				agentsOptions.get("helper_agent_exit_password", false,
 					randomGenerator->generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE)));

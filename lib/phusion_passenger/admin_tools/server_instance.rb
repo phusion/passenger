@@ -214,7 +214,7 @@ class ServerInstance
 			username = role_or_username
 		end
 		
-		@client = MessageClient.new(username, password, "unix:#{@generation_path}/socket")
+		@client = MessageClient.new(username, password, "unix:#{@generation_path}/helper_admin")
 		begin
 			yield self
 		ensure
