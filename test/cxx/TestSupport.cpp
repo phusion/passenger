@@ -19,7 +19,8 @@ Json::Value testConfig;
 void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
                                           ServerInstanceDir::GenerationPtr &generation)
 {
-	serverInstanceDir.reset(new ServerInstanceDir(getpid()));
+	string path = "/tmp/passenger-test." + toString(getpid());
+	serverInstanceDir.reset(new ServerInstanceDir(path));
 	generation = serverInstanceDir->newGeneration(geteuid() == 0,
 		"nobody", getPrimaryGroupName("nobody"),
 		geteuid(), getegid());

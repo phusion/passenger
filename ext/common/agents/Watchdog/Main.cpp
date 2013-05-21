@@ -451,8 +451,17 @@ initializeWorkingObjects() {
 	// Must not used make_shared() here because Watchdog.cpp
 	// deletes the raw pointer in cleanupAgentsInBackground().
 	if (agentsOptions.get("server_instance_dir", false).empty()) {
-		serverInstanceDir.reset(new ServerInstanceDir(
-			agentsOptions.getPid("web_server_pid"), tempDir));
+		/* We embed the super structure version in the server instance directory name
+		 * because it's possible to upgrade Phusion Passenger without changing the
+		 * web server's PID. This way each incompatible upgrade will use its own
+		 * server instance directory.
+		 */
+		string path = tempDir +
+			"/passenger." +
+			toString(ServerInstanceDir::DIR_STRUCTURE_MAJOR_VERSION) + "." +
+			toString(ServerInstanceDir::DIR_STRUCTURE_MINOR_VERSION) + "." +
+			toString<unsigned long long>(agentsOptions.getPid("web_server_pid"));
+		serverInstanceDir.reset(new ServerInstanceDir(path));
 	} else {
 		serverInstanceDir.reset(new ServerInstanceDir(agentsOptions.get("server_instance_dir")));
 		agentsOptions.set("server_instance_dir", serverInstanceDir->getPath());

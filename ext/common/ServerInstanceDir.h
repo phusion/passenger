@@ -238,28 +238,6 @@ private:
 	}
 	
 public:
-	ServerInstanceDir(pid_t webServerPid, const string &parentDir = "", bool owner = true) {
-		string theParentDir;
-		
-		if (parentDir.empty()) {
-			theParentDir = getSystemTempDir();
-		} else {
-			theParentDir = parentDir;
-		}
-		
-		/* We embed the super structure version in the server instance directory name
-		 * because it's possible to upgrade Phusion Passenger without changing the
-		 * web server's PID. This way each incompatible upgrade will use its own
-		 * server instance directory.
-		 */
-		initialize(theParentDir + "/passenger." +
-			toString(DIR_STRUCTURE_MAJOR_VERSION) + "." +
-			toString(DIR_STRUCTURE_MINOR_VERSION) + "." +
-			toString<unsigned long long>(webServerPid),
-			owner);
-		
-	}
-	
 	ServerInstanceDir(const string &path, bool owner = true) {
 		initialize(path, owner);
 	}

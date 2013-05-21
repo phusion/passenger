@@ -23,26 +23,11 @@ namespace tut {
 	
 	DEFINE_TEST_GROUP(ServerInstanceDirTest);
 	
-	TEST_METHOD(1) {
-		// The (pid_t, string) constructor creates a server instance directory
-		// in the given parent directory, and this server instance directory
-		// name contains the major and minor structure versions and the given PID.
-		ServerInstanceDir dir(1234, parentDir);
-		vector<string> contents = listDir(parentDir);
-		ensure_equals(contents.size(), 1u);
-		ensure_equals(contents[0],
-			"passenger." +
-			toString(ServerInstanceDir::DIR_STRUCTURE_MAJOR_VERSION) +
-			"." +
-			toString(ServerInstanceDir::DIR_STRUCTURE_MINOR_VERSION) +
-			".1234");
-	}
-	
 	TEST_METHOD(2) {
 		// The (string) constructor creates a ServerInstanceDir object that's
 		// associated with the given directory, and creates the directory
 		// if it doesn't exist.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ServerInstanceDir dir2(dir.getPath());
 		ServerInstanceDir dir3(parentDir + "/foo");
 		ensure_equals(dir2.getPath(), dir.getPath());
@@ -54,12 +39,12 @@ namespace tut {
 		// A ServerInstanceDir object removes the server instance directory
 		// upon destruction, but only if there are no more generations in it.
 		{
-			ServerInstanceDir dir(1234, parentDir);
+			ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		}
 		ensure_equals(listDir(parentDir).size(), 0u);
 		
 		{
-			ServerInstanceDir dir(1234, parentDir);
+			ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 			createGenerationDir(dir.getPath(), 1);
 		}
 		ensure_equals(listDir(parentDir).size(), 1u);
@@ -68,7 +53,7 @@ namespace tut {
 	TEST_METHOD(4) {
 		// The destructor does not throw any exceptions if the server instance
 		// directory doesn't exist anymore.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		removeDirTree(dir.getPath());
 	}
 	
@@ -77,8 +62,8 @@ namespace tut {
 		// wasn't created with the ownership flag or if it's been detached.
 		string path, path2;
 		{
-			ServerInstanceDir dir(1234, parentDir, false);
-			ServerInstanceDir dir2(5678, parentDir);
+			ServerInstanceDir dir(parentDir + "/passenger-test.1234", false);
+			ServerInstanceDir dir2(parentDir + "/passenger-test.5678", false);
 			dir2.detach();
 			path = dir.getPath();
 			path2 = dir2.getPath();
@@ -90,7 +75,7 @@ namespace tut {
 	TEST_METHOD(6) {
 		// If there are no existing generations, newGeneration() creates a new
 		// generation directory with number 0.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		unsigned int ncontents = listDir(dir.getPath()).size();
 		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true,
 			"nobody", nobodyGroup, 0, 0);
@@ -103,7 +88,7 @@ namespace tut {
 	TEST_METHOD(7) {
 		// A Generation object returned by newGeneration() deletes the associated
 		// generation directory upon destruction.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true,
 			"nobody", nobodyGroup, 0, 0);
 		string path = generation->getPath();
@@ -113,7 +98,7 @@ namespace tut {
 	
 	TEST_METHOD(8) {
 		// getNewestGeneration() returns the newest generation.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		ServerInstanceDir::GenerationPtr generation1 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		ServerInstanceDir::GenerationPtr generation2 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
@@ -127,14 +112,14 @@ namespace tut {
 	
 	TEST_METHOD(9) {
 		// getNewestGeneration returns null if there are no generations.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ensure(dir.getNewestGeneration() == NULL);
 	}
 	
 	TEST_METHOD(10) {
 		// A Generation object returned by getNewestGeneration() doesn't delete
 		// the associated generation directory upon destruction.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		ServerInstanceDir::GenerationPtr newestGeneration = dir.getNewestGeneration();
 		newestGeneration.reset();
@@ -143,7 +128,7 @@ namespace tut {
 	
 	TEST_METHOD(11) {
 		// getGeneration() returns the given generation.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		ServerInstanceDir::GenerationPtr generation1 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		ServerInstanceDir::GenerationPtr generation2 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
@@ -156,7 +141,7 @@ namespace tut {
 	TEST_METHOD(12) {
 		// A Generation object returned by getGeneration() doesn't delete the
 		// associated generation directory upon destruction.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		ServerInstanceDir::GenerationPtr generation1 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		
@@ -169,7 +154,7 @@ namespace tut {
 	TEST_METHOD(13) {
 		// A detached Generation doesn't delete the associated generation
 		// directory upon destruction.
-		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		string path = generation->getPath();
 		generation->detach();
@@ -180,7 +165,7 @@ namespace tut {
 	TEST_METHOD(14) {
 		// It's possible to have two ServerInstanceDir objects constructed
 		// with the same (pid_t, string) constructor arguments.
-		ServerInstanceDir dir1(1234, parentDir);
-		ServerInstanceDir dir2(1234, parentDir);
+		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
+		ServerInstanceDir dir2(parentDir + "/passenger-test.1234");
 	}
 }
