@@ -797,7 +797,8 @@ install: function(toclevels) {
 }
 asciidoc.install();
 /*]]>*/
-</script><style type="text/css">
+</script>
+<style type="text/css">
 body {
 	margin: 1em auto 1em auto;
 	padding: 0 1em 0 1em;
@@ -1058,7 +1059,8 @@ pre {
 <body class="article">
 <div id="topbar" style="display: none">
 	<div class="title">
-		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAKCAYAAAEV95QVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9sGCRMSACDxkZwAAAAidEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVAgb24gYSBNYWOHqHdDAAAAZUlEQVQY032PSxbAIAjEIlfygL6ePF3UUvpzNjgSYWwqAMEhUQnANnsC7TQPeJpsVWzMuh2sog4vDTUbqP081zECrW4dtdaQGSIKlWluPyjK+VXxAz5XfcKufCzA130AfQHWB30HZxlPaP080xsAAAAASUVORK5CYII=" width="11" height="10" alt=""><a href="javascript:void(Mizuho.smoothlyScrollToToc())">Phusion Passenger design &amp; architecture</a>
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAKCAYAAAEV95QVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9sGCRMSACDxkZwAAAAidEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVAgb24gYSBNYWOHqHdDAAAAZUlEQVQY032PSxbAIAjEIlfygL6ePF3UUvpzNjgSYWwqAMEhUQnANnsC7TQPeJpsVWzMuh2sog4vDTUbqP081zECrW4dtdaQGSIKlWluPyjK+VXxAz5XfcKufCzA130AfQHWB30HZxlPaP080xsAAAAASUVORK5CYII=" width="11" height="10" alt="">
+		<a href="javascript:void(Mizuho.smoothlyScrollToToc())">Phusion Passenger design &amp; architecture</a>
 	</div>
 	<a href="javascript:void(0)" id="current_section"></a>
 </div>
@@ -1068,7 +1070,8 @@ pre {
 <div class="sectionbody">
 <div class="paragraph"><p><span class="image">
 <a class="image" href="http://www.phusion.nl/">
-<img src="images/phusion_banner.png" alt="images/phusion_banner.png"></a>
+<img src="images/phusion_banner.png" alt="images/phusion_banner.png">
+</a>
 </span></p></div>
 <div class="paragraph"><p>Last updated: June 5, 2012.</p></div>
 <div class="paragraph"><p>This document describes Phusion Passenger’s design and architure in a global way.
@@ -1111,7 +1114,8 @@ to exit. This does not necessarily mean that the web application speaks HTTP
 directly: it just means that the web application accepts some kind of
 representation of an HTTP request.</p></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/typical_isolated_web_application.png" alt="Architecture of a typical web application in isolation"></span></p></div>
+<img src="images/typical_isolated_web_application.png" alt="Architecture of a typical web application in isolation">
+</span></p></div>
 <div class="paragraph"><p>Few web applications are accessible directly by HTTP clients. Common models
 are:</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -1239,12 +1243,14 @@ This interface covers HTTP request and response handling, and is not dependent o
 any particular application server. The idea is that any Rack-compliant application
 server can implement the Rack specification and work with all Rack-compliant web applications.</p></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/rack.png" alt="images/rack.png"></span></p></div>
+<img src="images/rack.png" alt="images/rack.png">
+</span></p></div>
 <div class="paragraph"><p>In the distant past, each Ruby web framework had its own interface, so application
 servers needed to explicitly add support for each web framework. Nowadays application
 servers just support Rack.</p></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/many_web_framework_protocols.png" alt="images/many_web_framework_protocols.png"></span></p></div>
+<img src="images/many_web_framework_protocols.png" alt="images/many_web_framework_protocols.png">
+</span></p></div>
 <div class="paragraph"><p>Ruby on Rails has been fully Rack compliant since version 3.0. Rails 2.3 was partially
 Rack-compliant while earlier versions were not Rack-compliant at all. Phusion Passenger
 supports Rack as well as all Rails 1.x and 2.x versions.</p></div>
@@ -1294,7 +1300,8 @@ dynamic module system: all modules must be statically compiled into Nginx.</p></
 Phusion Passenger extends Apache/Nginx and allows it to act like an
 application server. This is shown in the following diagram:</p></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/passenger_architecture.png" alt="Passenger’s architecture"></span></p></div>
+<img src="images/passenger_architecture.png" alt="Passenger’s architecture">
+</span></p></div>
 <div class="paragraph"><p>Phusion Passenger consists of:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -1428,7 +1435,8 @@ implementation in detail.</p></div>
 </li>
 </ol></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/spawn_server_architecture.png" alt="The spawn server’s architecture"></span></p></div>
+<img src="images/spawn_server_architecture.png" alt="The spawn server’s architecture">
+</span></p></div>
 <div class="paragraph"><p>As you can see, we have two layers of code caching: when the spawn server
 receives a request to spawn a new application instance, it will forward the
 request to the correct framework spawner server (and will spawn that framework
@@ -1523,7 +1531,8 @@ algorithm, which is non-trivial. The algorithm is documented in detail in
 Attribution-Share Alike 3.0 Unported License</a>.</p></div>
 <div class="paragraph"><p><span class="image">
 <a class="image" href="link:http://creativecommons.org/licenses/by-sa/3.0/">
-<img src="images/by_sa.png" alt="images/by_sa.png"></a>
+<img src="images/by_sa.png" alt="images/by_sa.png">
+</a>
 </span></p></div>
 </div>
 </div>

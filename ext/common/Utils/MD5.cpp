@@ -52,11 +52,12 @@
  */
 
 #include "MD5.h"
-#include <string.h>
-#include <boost/detail/endian.hpp>
-#include "StrIntUtils.h"
-
-namespace Passenger {
+#include "../../boost/detail/endian.hpp" /* File is C compatible. */
+#ifdef __cplusplus
+    #include <string.h>
+    #include "StrIntUtils.h"
+    namespace Passenger {
+#endif
 
 #if defined(BOOST_BIG_ENDIAN)
 #  define ARCH_IS_BIG_ENDIAN 1
@@ -390,17 +391,19 @@ md5_finish(md5_state_t *pms, md5_byte_t digest[16])
 	digest[i] = (md5_byte_t)(pms->abcd[i >> 2] >> ((i & 3) << 3));
 }
 
-std::string
-md5_hex(const StaticString &input)
-{
-    md5_state_t pms;
-    md5_byte_t digest[16];
+#ifdef __cplusplus
+    std::string
+    md5_hex(const StaticString &input)
+    {
+        md5_state_t pms;
+        md5_byte_t digest[16];
 
-    md5_init(&pms);
-    md5_append(&pms, (const md5_byte_t *) input.data(), input.size());
-    md5_finish(&pms, digest);
+        md5_init(&pms);
+        md5_append(&pms, (const md5_byte_t *) input.data(), input.size());
+        md5_finish(&pms, digest);
 
-    return toHex(StaticString((const char *) digest, 16));
-}
+        return toHex(StaticString((const char *) digest, 16));
+    }
 
-} // namespace Passenger
+    } // namespace Passenger
+#endif

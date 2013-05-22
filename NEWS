@@ -1,3 +1,11 @@
+Release 4.0.2
+-------------
+
+ * Bumped the preferred Nginx version to 1.4.1 because of a critical
+   Nginx security vulnerability, CVE-2013-2028. Users are advised to
+   upgrade immediately.
+
+
 Release 4.0.1
 -------------
 
