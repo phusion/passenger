@@ -7,5 +7,4 @@ usr/lib/ruby/vendor_ruby/
 debian/locations.ini usr/lib/phusion-passenger/
 debian/locations.ini usr/lib/ruby/vendor_ruby/phusion_passenger/
 usr/sbin/
-usr/bin/passenger
 usr/bin/passenger-config
