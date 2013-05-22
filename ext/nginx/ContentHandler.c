@@ -31,7 +31,7 @@
 #include "ContentHandler.h"
 #include "StaticContentHandler.h"
 #include "Configuration.h"
-#include "../common/Constants.h"
+#include "common/Constants.h"
 
 
 #define NGX_HTTP_SCGI_PARSE_NO_HEADER  20

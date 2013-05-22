@@ -187,6 +187,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	fake_agents_dir = "#{fakeroot}/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}/agents"
 	fake_helper_scripts_dir = "#{fakeroot}/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/helper-scripts"
 	fake_resources_dir = "#{fakeroot}/usr/share/phusion-passenger"
+	fake_include_dir = "#{fakeroot}/usr/share/phusion-passenger/include"
 	fake_docdir = "#{fakeroot}/usr/share/doc/#{GLOBAL_NAMESPACE_DIRNAME}"
 	fake_bindir = "#{fakeroot}/usr/bin"
 	fake_sbindir = "#{fakeroot}/usr/sbin"
@@ -221,6 +222,23 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	
 	sh "mkdir -p #{fake_resources_dir}"
 	sh "cp -R resources/* #{fake_resources_dir}/"
+
+	sh "mkdir -p #{fake_include_dir}"
+	# Infer headers that the Nginx module needs
+	headers = []
+	Dir["ext/nginx/*.[ch]"].each do |filename|
+		File.read(filename).split("\n").grep(%r{#include "common/(.+)"}) do |match|
+			headers << ["ext/common/#{$1}", $1]
+		end
+	end
+	headers.each do |header|
+		target = "#{fake_include_dir}/#{header[1]}"
+		dir = File.dirname(target)
+		if !File.directory?(dir)
+			sh "mkdir -p #{dir}"
+		end
+		sh "cp #{header[0]} #{target}"
+	end
 	
 	sh "mkdir -p #{fake_docdir}"
 	Packaging::ASCII_DOCS.each do |docfile|
@@ -252,6 +270,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 		f.puts "libdir=/usr/lib/phusion-passenger"
 		f.puts "helper_scripts=/usr/share/phusion-passenger/helper-scripts"
 		f.puts "resources=/usr/share/phusion-passenger"
+		f.puts "includedir=/usr/share/phusion-passenger/include"
 		f.puts "doc=/usr/share/doc/phusion-passenger"
 		f.puts "rubylibdir=/usr/lib/ruby/vendor_ruby"
 		f.puts "apache2_module=/usr/lib/apache2/modules/mod_passenger.so"

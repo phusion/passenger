@@ -36,6 +36,7 @@ def help
 	puts
 	puts "Options:"
 	puts "  --root                     Show Phusion Passenger's root directory."
+	puts "  --includedir               Show the Nginx runtime library headers directory."
 	puts "  --nginx-libs               Show Nginx runtime library flags."
 	puts "  --compiled                 Check whether runtime libraries are compiled."
 	puts "  --ruby-command             Print the correct command for invoking the Ruby interpreter."
@@ -52,6 +53,8 @@ end
 case ARGV[0]
 when "--root"
 	puts PhusionPassenger.source_root
+when "--includedir"
+	puts PhusionPassenger.include_dir
 when "--nginx-libs"
 	text = "#{common_library.link_objects_as_string} #{PhusionPassenger.lib_dir}/common/libboost_oxt.a"
 	if PhusionPassenger::PlatformInfo.has_math_library?

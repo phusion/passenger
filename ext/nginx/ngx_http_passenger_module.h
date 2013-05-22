@@ -30,9 +30,9 @@
 
 #include <ngx_config.h>
 #include <ngx_core.h>
-#include "../common/AgentsStarter.h"
-#include "../common/ApplicationPool2/AppTypes.h"
-#include "../common/Utils/CachedFileStat.h"
+#include "common/AgentsStarter.h"
+#include "common/ApplicationPool2/AppTypes.h"
+#include "common/Utils/CachedFileStat.h"
 
 /**
  * The Nginx version number as an integer.

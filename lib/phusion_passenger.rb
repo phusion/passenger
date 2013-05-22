@@ -91,6 +91,7 @@ module PhusionPassenger
 			@lib_dir               = get_option(filename, options, 'libdir').freeze
 			@helper_scripts_dir    = get_option(filename, options, 'helper_scripts').freeze
 			@resources_dir         = get_option(filename, options, 'resources').freeze
+			@include_dir           = get_option(filename, options, 'includedir').freeze
 			@doc_dir               = get_option(filename, options, 'doc').freeze
 			@apache2_module_path   = get_option(filename, options, 'apache2_module').freeze
 			@ruby_extension_source_dir = get_option(filename, options, 'ruby_extension_source').freeze
@@ -102,6 +103,7 @@ module PhusionPassenger
 			@lib_dir               = "#{@source_root}/libout".freeze
 			@helper_scripts_dir    = "#{@source_root}/helper-scripts".freeze
 			@resources_dir         = "#{@source_root}/resources".freeze
+			@include_dir           = "#{@source_root}/ext".freeze
 			@doc_dir               = "#{@source_root}/doc".freeze
 			@apache2_module_path   = "#{@source_root}/libout/apache2/mod_passenger.so".freeze
 			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
@@ -142,6 +144,10 @@ module PhusionPassenger
 	
 	def self.resources_dir
 		return @resources_dir
+	end
+
+	def self.include_dir
+		return @include_dir
 	end
 	
 	def self.doc_dir

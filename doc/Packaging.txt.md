@@ -88,6 +88,7 @@ The location configuration file is an ini file that looks as follows:
     libdir=/usr/lib/phusion-passenger
     helper_scripts=/usr/share/phusion-passenger/helper-scripts
     resources=/usr/share/phusion-passenger
+    includedir=/usr/share/phusion-passenger/include
     doc=/usr/share/doc/phusion-passenger
     rubylibdir=/usr/lib/ruby/vendor_ruby
     apache2_module=/usr/lib/apache2/modules/mod_passenger.so
@@ -192,6 +193,13 @@ a list of all possible assets and asset directories.
    A directory that contains documentation.
 
    Value when originally packaged: `<SOURCE_ROOT>/doc`.
+
+ * `includedir`
+
+   A directory that contains the Phusion Passenger header files that are
+   necessary for compiling Nginx.
+
+   Value when originally packaged: `<SOURCE_ROOT>/ext`
 
  * `libdir`
 

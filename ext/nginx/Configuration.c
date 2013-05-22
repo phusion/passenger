@@ -35,8 +35,8 @@
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
 #include "ContentHandler.h"
-#include "../common/Constants.h"
-#include "../common/agents/LoggingAgent/FilterSupport.h"
+#include "common/Constants.h"
+#include "common/agents/LoggingAgent/FilterSupport.h"
 
 
 static ngx_str_t headers_to_hide[] = {

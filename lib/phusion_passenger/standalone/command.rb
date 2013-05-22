@@ -190,6 +190,7 @@ private
 			else
 				f.puts "agents=#{@runtime_dirs[:support_dir]}"
 			end
+			f.puts "libdir=#{PhusionPassenger.lib_dir}"
 			f.puts "helper_scripts=#{PhusionPassenger.helper_scripts_dir}"
 			f.puts "resources=#{PhusionPassenger.resources_dir}"
 			f.puts "doc=#{PhusionPassenger.doc_dir}"
