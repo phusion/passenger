@@ -1,2 +1,2 @@
-fix_install_path.patch
 fix_native_packaging_issues.patch
+fix_nginx_include_headers.patch
