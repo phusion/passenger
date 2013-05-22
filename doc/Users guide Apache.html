@@ -797,7 +797,8 @@ install: function(toclevels) {
 }
 asciidoc.install();
 /*]]>*/
-</script><style type="text/css">
+</script>
+<style type="text/css">
 body {
 	margin: 1em auto 1em auto;
 	padding: 0 1em 0 1em;
@@ -1058,7 +1059,8 @@ pre {
 <body class="article">
 <div id="topbar" style="display: none">
 	<div class="title">
-		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAKCAYAAAEV95QVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9sGCRMSACDxkZwAAAAidEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVAgb24gYSBNYWOHqHdDAAAAZUlEQVQY032PSxbAIAjEIlfygL6ePF3UUvpzNjgSYWwqAMEhUQnANnsC7TQPeJpsVWzMuh2sog4vDTUbqP081zECrW4dtdaQGSIKlWluPyjK+VXxAz5XfcKufCzA130AfQHWB30HZxlPaP080xsAAAAASUVORK5CYII=" width="11" height="10" alt=""><a href="javascript:void(Mizuho.smoothlyScrollToToc())">Phusion Passenger users guide, Apache version</a>
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAKCAYAAAEV95QVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9sGCRMSACDxkZwAAAAidEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVAgb24gYSBNYWOHqHdDAAAAZUlEQVQY032PSxbAIAjEIlfygL6ePF3UUvpzNjgSYWwqAMEhUQnANnsC7TQPeJpsVWzMuh2sog4vDTUbqP081zECrW4dtdaQGSIKlWluPyjK+VXxAz5XfcKufCzA130AfQHWB30HZxlPaP080xsAAAAASUVORK5CYII=" width="11" height="10" alt="">
+		<a href="javascript:void(Mizuho.smoothlyScrollToToc())">Phusion Passenger users guide, Apache version</a>
 	</div>
 	<a href="javascript:void(0)" id="current_section"></a>
 </div>
@@ -1068,7 +1070,8 @@ pre {
 <div class="sectionbody">
 <div class="paragraph"><p><span class="image">
 <a class="image" href="http://www.phusion.nl/">
-<img src="images/phusion_banner.png" alt="images/phusion_banner.png"></a>
+<img src="images/phusion_banner.png" alt="images/phusion_banner.png">
+</a>
 </span></p></div>
 <div class="paragraph"><p>Phusion Passenger is an application server which can directly integrate into Apache. It is designed to be easy to use, fast, stable and reliable and is used by <a href="http://trends.builtwith.com/Web-Server/Phusion-Passenger">hundreds of thousands of websites</a> all over the world.</p></div>
 <div class="paragraph"><p>Phusion Passenger is a so-called polyglot application server because it supports applications written in multiple programming languages. At this time, Ruby and Python are supported.</p></div>
@@ -6065,12 +6068,14 @@ Phusion Passenger will look for <em>config.ru</em> instead of <em>config/environ
 Attribution-Share Alike 3.0 Unported License</a>.</p></div>
 <div class="paragraph"><p><span class="image">
 <a class="image" href="http://creativecommons.org/licenses/by-sa/3.0/">
-<img src="images/by_sa.png" alt="images/by_sa.png"></a>
+<img src="images/by_sa.png" alt="images/by_sa.png">
+</a>
 </span></p></div>
 <div class="paragraph"><p>Phusion Passenger is brought to you by <a href="http://www.phusion.nl/">Phusion</a>.</p></div>
 <div class="paragraph"><p><span class="image">
 <a class="image" href="http://www.phusion.nl/">
-<img src="images/phusion_banner.png" alt="images/phusion_banner.png"></a>
+<img src="images/phusion_banner.png" alt="images/phusion_banner.png">
+</a>
 </span></p></div>
 <div class="paragraph"><p>Phusion Passenger is a trademark of Hongli Lai &amp; Ninh Bui.</p></div>
 </div>
@@ -6191,7 +6196,9 @@ programmers jargon, Phusion Passenger calls fork(), but not exec().</p></div>
 because each worker process has its own private copy of the Rails application
 as well as the Rails framework. This wastes memory as well as startup time.</p></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/direct_spawning.png" alt="Worker processes and direct spawning"></span><br><em>Figure: Worker processes and direct spawning. Each worker process has its
+<img src="images/direct_spawning.png" alt="Worker processes and direct spawning">
+</span><br>
+<em>Figure: Worker processes and direct spawning. Each worker process has its
 own private copy of the application code and Rails framework code.</em></p></div>
 <div class="paragraph"><p>It is possible to make the different worker processes share the memory occupied
 by application and Rails framework code, by utilizing so-called
@@ -6215,7 +6222,9 @@ processes will share as much common
 memory as possible. That is, they will all share the same application and Rails
 framework code.</p></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/smart.png" alt="images/smart.png"></span><br><em>Figure: Worker processes and the smart spawn method. All worker processes,
+<img src="images/smart.png" alt="images/smart.png">
+</span><br>
+<em>Figure: Worker processes and the smart spawn method. All worker processes,
 as well as the ApplicationSpawner, share the same application code and Rails
 framework code.</em></p></div>
 <div class="paragraph"><p>The <em>smart</em> method allows different worker processes that belong to the same
