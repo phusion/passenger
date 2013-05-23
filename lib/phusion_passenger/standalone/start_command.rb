@@ -72,11 +72,11 @@ class StartCommand < Command
 			start_nginx
 			show_intro_message
 			if @options[:daemonize]
-			  if PlatformInfo.ruby_supports_fork?
-			    daemonize
-              else
-			    daemonize_without_fork
-			  end
+				if PlatformInfo.ruby_supports_fork?
+					daemonize
+				else
+					daemonize_without_fork
+				end
 			end
 			Thread.abort_on_exception = true
 			@plugin.call_hook(:nginx_started, @nginx)
@@ -451,8 +451,9 @@ private
 	end
 
 	def daemonize_without_fork
-        STDERR.puts 'Cannot daemonize without forking'
-        exit 1
+		STDERR.puts "Unable to daemonize using the current Ruby interpreter " +
+			"(#{PlatformInfo.ruby_command}) because it does not support forking."
+		exit 1
 	end
 
 	def daemonize
