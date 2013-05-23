@@ -233,10 +233,10 @@ public:
 		/** This process has been detached, and the detached processes checker has
 		 * verified that there are no active sessions left and has told the process
 		 * to shut down. In this state we're supposed to wait until the process
-		 * has actually shutdown, after which clean() must be called. */
+		 * has actually shutdown, after which cleanup() must be called. */
 		SHUTDOWN_TRIGGERED,
 		/**
-		 * The process has exited and clean() has been called. In this state,
+		 * The process has exited and cleanup() has been called. In this state,
 		 * this object is no longer usable.
 		 */
 		DEAD
