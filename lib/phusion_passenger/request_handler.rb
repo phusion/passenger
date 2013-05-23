@@ -520,6 +520,27 @@ private
 		end
 	end
 
+	def wakeup_all_threads
+		threads = []
+		@concurrency.times do
+			Thread.abort_on_exception = true
+			thread << Thread.new(@server_sockets[:main][:address]) do |address|
+				begin
+					connect_to_server(address).close
+				rescue SystemCalLError, IOError
+				end
+			end
+		end
+		threads << Thread.new(@server_sockets[:http][:address]) do |address|
+			Thread.abort_on_exception = true
+			begin
+				connect_to_server(address).close
+			rescue SystemCalLError, IOError
+			end
+		end
+		return threads
+	end
+
 	def terminate_threads
 		debug("Stopping all threads")
 
@@ -530,25 +551,14 @@ private
 			end
 		end
 
-		# Wake up all threads by connecting to the sockets.
-		@concurrency.times do
-			Thread.new(@server_sockets[:main][:address]) do |address|
-				begin
-					connect_to_server(address).close
-				rescue SystemCalLError, IOError
-				end
-			end
-		end
-		Thread.new(@server_sockets[:http][:address]) do |address|
-			begin
-				connect_to_server(address).close
-			rescue SystemCalLError, IOError
-			end
-		end
+		# Wake up all threads by connecting to the sockets. This has proven to be somewhat
+		# unreliable, so we keep repeating this in a loop until all the threads are gone.
+		waker_threads = wakeup_all_threads
 
 		# Wait until threads have unregistered themselves.
 		done = false
 		while !done
+			waker_threads = wakeup_all_threads if waker_threads.all? { |t| !t.alive? }
 			@threads_mutex.synchronize do
 				done = @threads.empty?
 			end
