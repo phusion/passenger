@@ -124,8 +124,8 @@ module Depcheck
 			@checker = block
 		end
 
-		def check_for_command(name)
-			result = find_command(name)
+		def check_for_command(name, *args)
+			result = find_command(name, *args)
 			if result
 				{ :found => true,
 				  "Location" => result }
@@ -270,8 +270,8 @@ module Depcheck
 			PlatformInfo.gem_command
 		end
 
-		def find_command(command)
-			PlatformInfo.find_command(command)
+		def find_command(command, *args)
+			PlatformInfo.find_command(command, *args)
 		end
 
 		def linux_distro_tags
