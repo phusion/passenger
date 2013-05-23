@@ -524,7 +524,7 @@ private
 		threads = []
 		@concurrency.times do
 			Thread.abort_on_exception = true
-			thread << Thread.new(@server_sockets[:main][:address]) do |address|
+			threads << Thread.new(@server_sockets[:main][:address]) do |address|
 				begin
 					connect_to_server(address).close
 				rescue SystemCalLError, IOError
