@@ -953,6 +953,11 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 						assert(process->getLifeStatus() == Process::DEAD);
 						it++;
 						removeProcessFromList(process, detachedProcesses);
+					} else if (process->shutdownTimeoutExpired()) {
+						P_WARN("Detached process " << process->inspect() <<
+							" didn't shut down within " PROCESS_SHUTDOWN_TIMEOUT_DISPLAY
+							". Forcefully killing it with SIGKILL.");
+						kill(process->pid, SIGKILL);
 					} else {
 						it++;
 					}
