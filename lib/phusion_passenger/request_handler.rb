@@ -522,12 +522,25 @@ private
 
 	def wakeup_all_threads
 		threads = []
-		@concurrency.times do
-			Thread.abort_on_exception = true
-			threads << Thread.new(@server_sockets[:main][:address]) do |address|
-				begin
-					connect_to_server(address).close
-				rescue SystemCallError, IOError
+		if get_socket_address_type(@server_sockets[:main][:address]) == :unix &&
+		   !File.exist?(@server_sockets[:main][:address].sub(/^unix:/, ''))
+			# It looks like someone deleted the Unix domain socket we listen on.
+			# This makes it impossible to wake up the worker threads gracefully,
+			# so we hard kill them.
+			warn("Unix domain socket gone; force aborting all threads")
+			@threads_mutex.synchronize do
+				@threads.each do |thread|
+					thread.raise(RuntimeError.new("Force abort"))
+				end
+			end
+		else
+			@concurrency.times do
+				Thread.abort_on_exception = true
+				threads << Thread.new(@server_sockets[:main][:address]) do |address|
+					begin
+						connect_to_server(address).close
+					rescue SystemCallError, IOError
+					end
 				end
 			end
 		end
@@ -551,8 +564,9 @@ private
 			end
 		end
 
-		# Wake up all threads by connecting to the sockets. This has proven to be somewhat
-		# unreliable, so we keep repeating this in a loop until all the threads are gone.
+		# Wake up all threads by connecting to the sockets. This has proven to
+		# be somewhat unreliable, so we keep repeating this in a loop until all
+		# the threads are gone.
 		waker_threads = wakeup_all_threads
 
 		# Wait until threads have unregistered themselves.
