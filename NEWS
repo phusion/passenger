@@ -6,7 +6,10 @@ Release 4.0.3
  * passenger-status now also displays CPU usage.
  * The installer now checks for checksums when automatically downloading
    PCRE and Nginx. Contributed by Joshua Lund.
- * Various minor bug fixes.
+ * An error is now printed when trying to daemonize Phusion Passenger
+   Standalone on Ruby implementations that don't support forking.
+   Contributed by Benjamin Fleischer.
+ * Various other minor bug fixes.
 
 
 Release 4.0.2
