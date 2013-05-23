@@ -95,7 +95,7 @@ protected
 			'g++',
 			'gmake',
 			'download-tool',
-			'ruby-dev',
+			PlatformInfo.passenger_needs_ruby_dev_header? ? 'ruby-dev' : nil,
 			'ruby-openssl',
 			'rubygems',
 			'rake',
@@ -105,7 +105,7 @@ protected
 			'zlib-dev',
 			'pcre-dev',
 			'daemon_controller >= 1.1.0'
-		]
+		].compact
 		return [specs, ids]
 	end
 	

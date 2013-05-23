@@ -73,7 +73,7 @@ def create_c_executable(target, sources, linkflags = "#{EXTRA_PRE_CFLAGS} #{EXTR
 end
 
 def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
-	if RUBY_PLATFORM =~ /darwin/
+	if PlatformInfo.os_name == "macosx"
 		shlib_flag = "-flat_namespace -bundle -undefined dynamic_lookup"
 	else
 		shlib_flag = "-shared"

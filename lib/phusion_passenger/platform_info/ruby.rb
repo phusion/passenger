@@ -130,6 +130,13 @@ module PlatformInfo
 			RUBY_ENGINE != "macruby" &&
 			rb_config['target_os'] !~ /mswin|windows|mingw/
 	end
+
+	# Returns whether Phusion Passenger needs Ruby development headers to
+	# be available for the current Ruby implementation.
+	def self.passenger_needs_ruby_dev_header?
+		# Too much of a trouble for JRuby. We can do without it.
+		return RUBY_ENGINE != "jruby"
+	end
 	
 	# Returns the correct 'gem' command for this Ruby interpreter.
 	def self.gem_command

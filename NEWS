@@ -9,6 +9,8 @@ Release 4.0.3
  * An error is now printed when trying to daemonize Phusion Passenger
    Standalone on Ruby implementations that don't support forking.
    Contributed by Benjamin Fleischer.
+ * Although Phusion Passenger already supported JRuby, *installing*
+   Phusion Passenger with JRuby was not possible. This has been fixed.
  * Various other minor bug fixes.
 
 

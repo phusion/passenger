@@ -21,7 +21,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-if RUBY_PLATFORM =~ /java/
+if !PlatformInfo.passenger_needs_ruby_dev_header?
 	NATIVE_SUPPORT_TARGET = nil
 
 	task :native_support do
