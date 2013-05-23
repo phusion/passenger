@@ -527,7 +527,7 @@ private
 			threads << Thread.new(@server_sockets[:main][:address]) do |address|
 				begin
 					connect_to_server(address).close
-				rescue SystemCalLError, IOError
+				rescue SystemCallError, IOError
 				end
 			end
 		end
@@ -535,7 +535,7 @@ private
 			Thread.abort_on_exception = true
 			begin
 				connect_to_server(address).close
-			rescue SystemCalLError, IOError
+			rescue SystemCallError, IOError
 			end
 		end
 		return threads
@@ -558,11 +558,13 @@ private
 		# Wait until threads have unregistered themselves.
 		done = false
 		while !done
-			waker_threads = wakeup_all_threads if waker_threads.all? { |t| !t.alive? }
 			@threads_mutex.synchronize do
 				done = @threads.empty?
 			end
-			sleep 0.02 if !done
+			if !done
+				waker_threads = wakeup_all_threads if waker_threads.all? { |t| !t.alive? }
+				sleep 0.02
+			end
 		end
 		debug("All threads stopped")
 	end
