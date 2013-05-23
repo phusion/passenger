@@ -54,7 +54,9 @@ struct Data {
 	Data(const SafeLibevPtr &_libev, const MultiLibeio::Callback &_callback)
 		: libev(_libev),
 		  callback(_callback)
-		{ }
+	{
+		assert(_libev != NULL);
+	}
 };
 
 struct CustomData: public Data {
