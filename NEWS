@@ -6,7 +6,10 @@ Release 4.0.3
    Phusion Passenger already forcefully shuts down all processes during
    web server shutdown. In addition to this, 4.0.3 now also forcefully
    shuts down processes that take more than 1 minute to shut down, even
-   outside the context of web server shutdowns.
+   outside the context of web server shutdowns. This feature does not,
+   however, protect against requests that take too long. Use
+   PassengerMaxRequestTime (Apache) or passenger_max_request_time (Nginx)
+   for that.
  * Fixed a crash in the HelperAgent which results in frequent process
    restarts in some traffic patterns. Fixes issue #862.
  * passenger-status now also displays CPU usage.
