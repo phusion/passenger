@@ -12,6 +12,8 @@ Release 4.0.3
    for that.
  * Fixed a crash in the HelperAgent which results in frequent process
    restarts in some traffic patterns. Fixes issue #862.
+ * Fixed a problem that prevents processes from being spawned correctly
+   if the user's bashrc changes working directory. Fixes issue #851.
  * passenger-status now also displays CPU usage.
  * The installer now checks for checksums when automatically downloading
    PCRE and Nginx. Contributed by Joshua Lund.
