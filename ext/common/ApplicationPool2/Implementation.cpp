@@ -958,6 +958,7 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 							" didn't shut down within " PROCESS_SHUTDOWN_TIMEOUT_DISPLAY
 							". Forcefully killing it with SIGKILL.");
 						kill(process->pid, SIGKILL);
+						it++;
 					} else {
 						it++;
 					}
