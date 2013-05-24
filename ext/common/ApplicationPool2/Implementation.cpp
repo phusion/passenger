@@ -996,7 +996,7 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 		// someone wakes us up.
 		UPDATE_TRACE_POINT();
 		detachedProcessesCheckerCond.timed_wait(lock,
-			posix_time::milliseconds(50));
+			posix_time::milliseconds(100));
 	}
 }
 

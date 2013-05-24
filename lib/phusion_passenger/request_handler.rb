@@ -577,7 +577,7 @@ private
 			end
 			if !done
 				waker_threads = wakeup_all_threads if waker_threads.all? { |t| !t.alive? }
-				sleep 0.02
+				sleep 0.05
 			end
 		end
 		debug("All threads stopped")
