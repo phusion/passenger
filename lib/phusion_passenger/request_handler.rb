@@ -69,10 +69,6 @@ class RequestHandler
 
 	attr_reader :concurrency
 	
-	# The number of times the main loop has iterated so far. Mostly useful
-	# for unit test assertions.
-	attr_reader :iterations
-	
 	# If a soft termination signal was received, then the main loop will quit
 	# the given amount of seconds after the last time a connection was accepted.
 	# Defaults to 3 seconds.
@@ -138,7 +134,6 @@ class RequestHandler
 		@main_loop_thread_cond = ConditionVariable.new
 		@threads = []
 		@threads_mutex = Mutex.new
-		@iterations         = 0
 		@soft_termination_linger_time = 3
 		@main_loop_running  = false
 		
@@ -203,7 +198,8 @@ class RequestHandler
 			
 			install_useful_signal_handlers
 			start_threads
-			wait_until_termination
+			wait_until_termination_requested
+			wait_until_all_threads_are_idle
 			terminate_threads
 			debug("Request handler main loop exited normally")
 
@@ -482,7 +478,7 @@ private
 		end
 	end
 
-	def wait_until_termination
+	def wait_until_termination_requested
 		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
 		if ruby_engine == "jruby"
 			# On JRuby, selecting on an input TTY always returns, so
@@ -540,6 +536,8 @@ private
 					begin
 						debug("Shutting down worker thread by connecting to #{address}")
 						connect_to_server(address).close
+					rescue Errno::ECONNREFUSED
+						debug("Worker thread listening on #{address} already exited")
 					rescue SystemCallError, IOError => e
 						debug("Error shutting down worker thread (#{address}): #{e} (#{e.class})")
 					end
@@ -551,6 +549,8 @@ private
 			begin
 				debug("Shutting down HTTP thread by connecting to #{address}")
 				connect_to_server(address).close
+			rescue Errno::ECONNREFUSED
+				debug("Worker thread listening on #{address} already exited")
 			rescue SystemCallError, IOError => e
 				debug("Error shutting down HTTP thread (#{address}): #{e} (#{e.class})")
 			end
@@ -560,44 +560,77 @@ private
 
 	def terminate_threads
 		debug("Stopping all threads")
-
-		# Mark all threads as interrupted.
-		@threads_mutex.synchronize do
-			@threads.each do |thread|
-				thread[:passenger_thread_handler].set_interrupted!
-			end
+		threads = @threads_mutex.synchronize do
+			@threads.dup
 		end
-
-		# Wake up all threads by connecting to the sockets. This has proven to
-		# be somewhat unreliable, so we keep repeating this in a loop until all
-		# the threads are gone.
-		waker_threads = wakeup_all_threads
-
-		# Wait until threads have unregistered themselves.
-		done = false
-		while !done
-			@threads_mutex.synchronize do
-				done = @threads.empty?
-			end
-			if !done
-				waker_threads = wakeup_all_threads if waker_threads.all? { |t| !t.alive? }
-				sleep 0.05
-			end
+		threads.each do |thr|
+			thr.raise(ThreadHandler::Interrupted.new)
+		end
+		threads.each do |thr|
+			thr.join
 		end
 		debug("All threads stopped")
 	end
 	
 	def wait_until_all_threads_are_idle
 		debug("Waiting until all threads have become idle...")
+
+		# We wait until 100 ms have passed since all handlers have become
+		# interruptable and remained in the same iterations.
+		
 		done = false
+
 		while !done
-			@threads_mutex.synchronize do
-				done = @threads.all? do |thread|
-					thread[:passenger_thread_handler].idle?
+			handlers = @threads_mutex.synchronize do
+				@threads.map do |thr|
+					thr[:passenger_thread_handler]
 				end
 			end
-			sleep 0.02 if !done
+			debug("There are currently #{handlers.size} threads")
+			if handlers.empty?
+				# There are no threads, so we're done.
+				done = true
+				break
+			end
+
+			# Record initial state.
+			handlers.each { |h| h.stats_mutex.lock }
+			iterations = handlers.map { |h| h.iteration }
+			handlers.each { |h| h.stats_mutex.unlock }
+
+			start_time = Time.now
+			sleep 0.01
+			
+			while true
+				if handlers.size != @threads_mutex.synchronize { @threads.size }
+					debug("The number of threads changed. Restarting waiting algorithm")
+					break
+				end
+
+				# Record current state.
+				handlers.each { |h| h.stats_mutex.lock }
+				all_interruptable = handlers.all? { |h| h.interruptable }
+				new_iterations    = handlers.map  { |h| h.iteration }
+
+				# Are all threads interruptable and has there been no activity
+				# since last time we checked?
+				if all_interruptable && new_iterations == iterations
+					# Yes. If enough time has passed then we're done.
+					handlers.each { |h| h.stats_mutex.unlock }
+					if Time.now >= start_time + 0.1
+						done = true
+						break
+					end
+				else
+					# No. We reset the timer and check again later.
+					handlers.each { |h| h.stats_mutex.unlock }
+					iterations = new_iterations
+					start_time = Time.now
+					sleep 0.01
+				end
+			end
 		end
+
 		debug("All threads are now idle")
 	end
 end
