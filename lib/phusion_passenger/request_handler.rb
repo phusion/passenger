@@ -538,8 +538,10 @@ private
 				Thread.abort_on_exception = true
 				threads << Thread.new(@server_sockets[:main][:address]) do |address|
 					begin
+						debug("Shutting down worker thread by connecting to #{address}")
 						connect_to_server(address).close
-					rescue SystemCallError, IOError
+					rescue SystemCallError, IOError => e
+						debug("Error shutting down worker thread (#{address}): #{e} (#{e.class})")
 					end
 				end
 			end
@@ -547,8 +549,10 @@ private
 		threads << Thread.new(@server_sockets[:http][:address]) do |address|
 			Thread.abort_on_exception = true
 			begin
+				debug("Shutting down HTTP thread by connecting to #{address}")
 				connect_to_server(address).close
-			rescue SystemCallError, IOError
+			rescue SystemCallError, IOError => e
+				debug("Error shutting down HTTP thread (#{address}): #{e} (#{e.class})")
 			end
 		end
 		return threads
