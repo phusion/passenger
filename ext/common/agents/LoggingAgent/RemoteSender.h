@@ -543,8 +543,8 @@ public:
 		}
 		stream << "\n";
 		stream << "  Items in queue: " << queue.size() << "\n";
-		stream << "  Packet sent out so far: " << packetsSent << "\n";
-		stream << "  Packet dropped out so far: " << packetsDropped << "\n";
+		stream << "  Packets sent out so far: " << packetsSent << "\n";
+		stream << "  Packets dropped out so far: " << packetsDropped << "\n";
 		stream << "  Next server checkup time: ";
 		if (nextCheckupTime == 0) {
 			stream << "not yet scheduled, waiting for first packet\n";

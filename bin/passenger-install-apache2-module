@@ -55,14 +55,14 @@ class Installer < PhusionPassenger::AbstractInstaller
 			'libcurl-dev',
 			'openssl-dev',
 			'zlib-dev',
-			'ruby-dev',
+			PlatformInfo.passenger_needs_ruby_dev_header? ? 'ruby-dev' : nil,
 			'ruby-openssl',
 			'rubygems',
 			'rake',
 			'rack',
 			'apache2',
 			'apache2-dev'
-		]
+		].compact
 		# Some broken servers don't have apr-config or apu-config installed.
 		# Nevertheless, it is possible to compile Apache modules if Apache
 		# was configured with --included-apr. So here we check whether

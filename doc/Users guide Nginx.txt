@@ -981,7 +981,7 @@ The maximum number of <<application_process,application processes>> that may
 simultanously exist. A larger number results in higher memory usage,
 but improves the ability to handle concurrent HTTP requests.
 
-The optimal value depends on your system's hardware and your workload. You can learn more at the Phusion article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's conurrency settings].
+The optimal value depends on your system's hardware and your workload. You can learn more at the Phusion article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's concurrency settings].
 
 If you find that your server is running out of memory then you should lower this value.
 

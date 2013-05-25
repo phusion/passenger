@@ -434,17 +434,20 @@ public:
 		for (p_it = processes.begin(); p_it != processes.end(); p_it++) {
 			const ProcessPtr &process = *p_it;
 			char buf[128];
+			char cpubuf[10];
 			char membuf[10];
 			
+			snprintf(cpubuf, sizeof(cpubuf), "%d%%", (int) process->metrics.cpu);
 			snprintf(membuf, sizeof(membuf), "%ldM",
 				(unsigned long) (process->metrics.realMemory() / 1024));
 			snprintf(buf, sizeof(buf),
-					"  * PID   : %-5lu   Sessions : %-2u   Processed: %-5u   Uptime: %s\n"
-					"    Memory: %-5s   Last used: %s ago",
+					"  * PID: %-5lu   Sessions: %-2u      Processed: %-5u   Uptime: %s\n"
+					"    CPU: %-5s   Memory  : %-5s   Last used: %s ago",
 					(unsigned long) process->pid,
 					process->sessions,
 					process->processed,
 					process->uptime().c_str(),
+					cpubuf,
 					membuf,
 					distanceOfTimeInWords(process->lastUsed / 1000000).c_str());
 			result << buf << endl;
@@ -454,7 +457,7 @@ public:
 			} else if (process->enabled == Process::DISABLED) {
 				result << "    DISABLED" << endl;
 			} else if (process->enabled == Process::DETACHED) {
-				result << "    Shutting down...";
+				result << "    Shutting down..." << endl;
 			}
 
 			const Socket *socket;

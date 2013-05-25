@@ -69,6 +69,7 @@ typedef struct {
 
 typedef struct {
     ngx_str_t    root_dir;
+    ngx_array_t *ctl;
     ngx_str_t    default_ruby;
     ngx_int_t    log_level;
     ngx_str_t    debug_log_file;

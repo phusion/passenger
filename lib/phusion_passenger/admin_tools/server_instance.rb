@@ -39,7 +39,7 @@ class ServerInstance
 	
 	DIR_STRUCTURE_MAJOR_VERSION = 1
 	DIR_STRUCTURE_MINOR_VERSION = 0
-	GENERATION_STRUCTURE_MAJOR_VERSION = 1
+	GENERATION_STRUCTURE_MAJOR_VERSION = 2
 	GENERATION_STRUCTURE_MINOR_VERSION = 0
 	
 	STALE_TIME_THRESHOLD = 60
@@ -214,7 +214,7 @@ class ServerInstance
 			username = role_or_username
 		end
 		
-		@client = MessageClient.new(username, password, "unix:#{@generation_path}/socket")
+		@client = MessageClient.new(username, password, "unix:#{@generation_path}/helper_admin")
 		begin
 			yield self
 		ensure

@@ -31,7 +31,7 @@
 #include "ContentHandler.h"
 #include "StaticContentHandler.h"
 #include "Configuration.h"
-#include "../common/Constants.h"
+#include "common/Constants.h"
 
 
 #define NGX_HTTP_SCGI_PARSE_NO_HEADER  20
@@ -213,8 +213,8 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
     if (address->name.data == passenger_placeholder_upstream_address.data) {
         sockaddr = (struct sockaddr_un *) address->sockaddr;
         request_socket_filename =
-            agents_starter_get_request_socket_filename(passenger_agents_starter,
-                                                       &request_socket_filename_len);
+            psg_agents_starter_get_request_socket_filename(passenger_agents_starter,
+                                                           &request_socket_filename_len);
         
         address->name.data = (u_char *) request_socket_filename;
         address->name.len  = request_socket_filename_len;
@@ -247,8 +247,8 @@ fix_peer_address(ngx_http_request_t *r) {
     rrp        = r->upstream->peer.data;
     peers      = rrp->peers;
     request_socket_filename =
-        agents_starter_get_request_socket_filename(passenger_agents_starter,
-                                                   &request_socket_filename_len);
+        psg_agents_starter_get_request_socket_filename(passenger_agents_starter,
+                                                       &request_socket_filename_len);
 
     while (peers != NULL) {
         if (peers->name) {
@@ -590,7 +590,7 @@ create_request(ngx_http_request_t *r)
      **************************************************/
     
     helper_agent_request_socket_password_data =
-        agents_starter_get_request_socket_password(passenger_agents_starter,
+        psg_agents_starter_get_request_socket_password(passenger_agents_starter,
             &helper_agent_request_socket_password_len);
     size = helper_agent_request_socket_password_len +
         /* netstring length + ":" + trailing "," */

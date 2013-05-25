@@ -58,23 +58,9 @@ private:
 			{ }
 	};
 
-	struct Timer {
-		ev_timer realTimer;
-		SafeLibev *self;
-		Callback callback;
-		list<Timer *>::iterator it;
-
-		Timer(SafeLibev *_self, const Callback &_callback)
-			: self(_self),
-			  callback(_callback)
-			{ }
-	};
-	
 	struct ev_loop *loop;
 	pthread_t loopThread;
 	ev_async async;
-	ev_idle idle;
-	list<Timer *> timers;
 	
 	boost::mutex syncher;
 	condition_variable cond;
@@ -86,17 +72,9 @@ private:
 		self->runCommands();
 	}
 
-	static void idleHandler(EV_P_ ev_idle *idle, int revents) {
-		SafeLibev *self = (SafeLibev *) idle->data;
-		self->runCommands();
-	}
-
-	static void timeoutHandler(EV_P_ ev_timer *t, int revents) {
-		auto_ptr<Timer> timer((Timer *) ((const char *) t));
-		SafeLibev *self = timer->self;
-		self->timers.erase(timer->it);
-		ev_timer_stop(self->loop, &timer->realTimer);
-		timer->callback();
+	static void timeoutHandler(int revents, void *arg) {
+		auto_ptr<Callback> callback((Callback *) arg);
+		(*callback)();
 	}
 
 	void runCommands() {
@@ -151,12 +129,9 @@ public:
 		nextCommandId = 0;
 		
 		ev_async_init(&async, asyncHandler);
+		ev_set_priority(&async, EV_MAXPRI);
 		async.data = this;
 		ev_async_start(loop, &async);
-
-		ev_idle_init(&idle, idleHandler);
-		ev_set_priority(&idle, EV_MAXPRI);
-		idle.data = this;
 	}
 	
 	~SafeLibev() {
@@ -166,15 +141,6 @@ public:
 
 	void destroy() {
 		ev_async_stop(loop, &async);
-		ev_idle_stop(loop, &idle);
-
-		list<Timer *>::iterator it, end = timers.end();
-		for (it = timers.begin(); it != end; it++) {
-			Timer *timer = *it;
-			ev_timer_stop(loop, &timer->realTimer);
-			delete timer;
-		}
-		timers.clear();
 	}
 	
 	struct ev_loop *getLoop() const {
@@ -249,36 +215,23 @@ public:
 		}
 	}
 
-	void runAsync(const Callback &callback) {
-		runLaterTS(callback);
-	}
-
-	// TODO: make it possible to call this from a thread
+	/** Run a callback after a certain timeout. */
 	void runAfter(unsigned int timeout, const Callback &callback) {
 		assert(callback != NULL);
-		Timer *timer = new Timer(this, callback);
-		ev_timer_init(&timer->realTimer, timeoutHandler, timeout / 1000.0, 0);
-		timers.push_front(timer);
-		timer->it = timers.begin();
-		ev_timer_start(loop, &timer->realTimer);
+		ev_once(loop, -1, 0, timeout / 1000.0, timeoutHandler, new Callback(callback));
+	}
+
+	/** Thread-safe version of runAfter(). */
+	void runAfterTS(unsigned int timeout, const Callback &callback) {
+		assert(callback != NULL);
+		if (pthread_equal(pthread_self(), loopThread)) {
+			runAfter(timeout, callback);
+		} else {
+			runLater(boost::bind(&SafeLibev::runAfter, this, timeout, callback));
+		}
 	}
 
 	unsigned int runLater(const Callback &callback) {
-		assert(callback != NULL);
-		unsigned int result;
-		{
-			unique_lock<boost::mutex> l(syncher);
-			commands.push_back(Command(nextCommandId, callback));
-			result = nextCommandId;
-			incNextCommandId();
-		}
-		if (!ev_is_active(&idle)) {
-			ev_idle_start(loop, &idle);
-		}
-		return result;
-	}
-	
-	unsigned int runLaterTS(const Callback &callback) {
 		assert(callback != NULL);
 		unsigned int result;
 		{
@@ -292,7 +245,7 @@ public:
 	}
 
 	/**
-	 * Cancels a callback that was scheduled to be run by runLater() and runLaterTS().
+	 * Cancels a callback that was scheduled to be run by runLater().
 	 * Returns whether the command has been successfully cancelled or not.
 	 * That is, a return value of true guarantees that the callback will not be called
 	 * in the future, while a return value of false means that the callback has already

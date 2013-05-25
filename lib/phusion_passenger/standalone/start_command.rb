@@ -42,7 +42,7 @@ class StartCommand < Command
 	def self.description
 		return "Start Phusion Passenger Standalone."
 	end
-	
+
 	def initialize(args)
 		super(args)
 		@console_mutex = Mutex.new
@@ -51,11 +51,11 @@ class StartCommand < Command
 		@interruptable_threads = []
 		@plugin = PhusionPassenger::Plugin.new('standalone/start_command', self, @options)
 	end
-	
+
 	def run
 		parse_my_options
 		sanity_check_options
-		
+
 		@runtime_dirs = determine_runtime_dirs
 		ensure_nginx_installed
 		determine_various_resource_locations
@@ -63,15 +63,21 @@ class StartCommand < Command
 		@app_finder = AppFinder.new(@args, @options)
 		@apps = @app_finder.scan
 		@plugin.call_hook(:found_apps, @apps)
-		
+
 		extra_controller_options = {}
 		@plugin.call_hook(:before_creating_nginx_controller, extra_controller_options)
 		create_nginx_controller(extra_controller_options)
-		
+
 		begin
 			start_nginx
 			show_intro_message
-			daemonize if @options[:daemonize]
+			if @options[:daemonize]
+				if PlatformInfo.ruby_supports_fork?
+					daemonize
+				else
+					daemonize_without_fork
+				end
+			end
 			Thread.abort_on_exception = true
 			@plugin.call_hook(:nginx_started, @nginx)
 			########################
@@ -108,7 +114,7 @@ private
 	def require_file_utils
 		require 'fileutils' unless defined?(FileUtils)
 	end
-	
+
 	def parse_my_options
 		description = "Starts Phusion Passenger Standalone and serve one or more Ruby web applications."
 		parse_options!("start [directory]", description) do |opts|
@@ -126,7 +132,7 @@ private
 				wrap_desc("Bind to Unix domain socket instead of TCP socket")) do |value|
 				@options[:socket_file] = value
 			end
-			
+
 			opts.separator ""
 			opts.on("-e", "--environment ENV", String,
 				wrap_desc("Framework environment (default: #{@options[:env]})")) do |value|
@@ -168,14 +174,14 @@ private
 				wrap_desc("Specify Union Station key")) do |value|
 				@options[:union_station_key] = value
 			end
-			
+
 			opts.separator ""
 			opts.on("--ping-port NUMBER", Integer,
 				wrap_desc("Use the given port number for checking whether Nginx is alive (default: same as the normal port)")) do |value|
 				@options[:ping_port] = value
 			end
 			@plugin.call_hook(:parse_options, opts)
-			
+
 			opts.separator ""
 			opts.on("-d", "--daemonize",
 				wrap_desc("Daemonize into the background")) do
@@ -218,7 +224,7 @@ private
 		end
 		@plugin.call_hook(:done_parsing_options)
 	end
-	
+
 	def sanity_check_options
 		if @options[:tcp_explicitly_given] && @options[:socket_file]
 			error "You cannot specify both --address/--port and --socket. Please choose either one."
@@ -227,7 +233,7 @@ private
 		check_port_bind_permission_and_display_sudo_suggestion
 		check_port_availability
 	end
-	
+
 	# Most platforms don't allow non-root processes to bind to a port lower than 1024.
 	# Check whether this is the case for the current platform and if so, tell the user
 	# that it must re-run Phusion Passenger Standalone with sudo.
@@ -241,9 +247,9 @@ private
 				error "Only the 'root' user can run this program on port #{@options[:port]}. " <<
 				      "You are currently running as '#{myself}'. Please re-run this program " <<
 				      "with root privileges with the following command:\n\n" <<
-				      
+
 				      "  #{PlatformInfo.ruby_sudo_command} passenger start #{@original_args.join(' ')} --user=#{myself}\n\n" <<
-				      
+
 				      "Don't forget the '--user' part! That will make Phusion Passenger Standalone " <<
 				      "drop root privileges and switch to '#{myself}' after it has obtained " <<
 				      "port #{@options[:port]}."
@@ -254,7 +260,7 @@ private
 
 	if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
 		require 'java'
-		
+
 		def check_port(host_name, port)
 			channel = java.nio.channels.SocketChannel.open
 			begin
@@ -278,7 +284,7 @@ private
 							throw e
 						end
 					end
-					
+
 					# Not done connecting and no error.
 					sleep 0.01
 					if Time.now.to_f >= deadline
@@ -320,7 +326,7 @@ private
 			end
 		end
 	end
-	
+
 	def check_port_availability
 		if !@options[:socket_file] && check_port(@options[:address], @options[:port])
 			error "The address #{@options[:address]}:#{@options[:port]} is already " <<
@@ -332,11 +338,11 @@ private
 			exit 1
 		end
 	end
-	
+
 	def should_watch_logs?
 		return !@options[:daemonize] && @options[:log_file] != "/dev/null"
 	end
-	
+
 	# Returns the URL that Nginx will be listening on.
 	def listen_url
 		if @options[:socket_file]
@@ -350,7 +356,7 @@ private
 			return result
 		end
 	end
-	
+
 	def install_runtime(runtime_dirs)
 		require 'phusion_passenger/standalone/runtime_installer'
 		installer = RuntimeInstaller.new(
@@ -364,7 +370,7 @@ private
 			:plugin      => @plugin)
 		installer.run
 	end
-	
+
 	def determine_runtime_dirs
 		require_platform_info_binary_compatibility
 		if root = @options[:runtime_dir]
@@ -405,7 +411,7 @@ private
 			end
 		end
 	end
-	
+
 	def start_nginx
 		begin
 			@nginx.start
@@ -426,15 +432,15 @@ private
 			exit 1
 		end
 	end
-	
+
 	def show_intro_message
 		puts "=============== Phusion Passenger Standalone web server started ==============="
 		puts "PID file: #{@options[:pid_file]}"
 		puts "Log file: #{@options[:log_file]}"
 		puts "Environment: #{@options[:env]}"
-		
+
 		puts "Accessible via: #{listen_url}"
-		
+
 		puts
 		if @options[:daemonize]
 			puts "Serving in the background as a daemon."
@@ -443,7 +449,13 @@ private
 		end
 		puts "==============================================================================="
 	end
-	
+
+	def daemonize_without_fork
+		STDERR.puts "Unable to daemonize using the current Ruby interpreter " +
+			"(#{PlatformInfo.ruby_command}) because it does not support forking."
+		exit 1
+	end
+
 	def daemonize
 		pid = fork
 		if pid
@@ -460,7 +472,7 @@ private
 			Process.setsid
 		end
 	end
-	
+
 	# Wait until the termination pipe becomes readable (a hint for threads
 	# to shut down), or until the timeout has been reached. Returns true if
 	# the termination pipe became readable, false if the timeout has been reached.
@@ -468,7 +480,7 @@ private
 		ios = select([@termination_pipe[0]], nil, nil, timeout)
 		return !ios.nil?
 	end
-	
+
 	def watch_log_file(log_file)
 		if File.exist?(log_file)
 			backward = 0
@@ -479,7 +491,7 @@ private
 			end
 			backward = 10
 		end
-		
+
 		IO.popen("tail -f -n #{backward} \"#{log_file}\"", "rb") do |f|
 			begin
 				while true
@@ -498,7 +510,7 @@ private
 			end
 		end
 	end
-	
+
 	def watch_log_files_in_background
 		@apps.each do |app|
 			thread = Thread.new do
@@ -513,7 +525,7 @@ private
 		@threads << thread
 		@interruptable_threads << thread
 	end
-	
+
 	def wait_until_nginx_has_exited
 		# Since Nginx is not our child process (it daemonizes or we daemonize)
 		# we cannot use Process.waitpid to wait for it. A busy-sleep-loop with
@@ -535,7 +547,7 @@ private
 		end
 	rescue Errno::ECONNREFUSED, Errno::ECONNRESET
 	end
-	
+
 	def stop_nginx
 		@console_mutex.synchronize do
 			STDOUT.write("Stopping web server...")
@@ -545,7 +557,7 @@ private
 			STDOUT.flush
 		end
 	end
-	
+
 	def stop_threads
 		if !@termination_pipe[1].closed?
 			@termination_pipe[1].write("x")
@@ -560,9 +572,9 @@ private
 		end
 		@threads = []
 	end
-	
+
 	#### Config file template helpers ####
-	
+
 	def nginx_listen_address(options = @options, for_ping_port = false)
 		if options[:socket_file]
 			return "unix:" + File.expand_path(options[:socket_file])
@@ -575,13 +587,13 @@ private
 			return "#{options[:address]}:#{port}"
 		end
 	end
-	
+
 	def default_group_for(username)
 		user = Etc.getpwnam(username)
 		group = Etc.getgrgid(user.gid)
 		return group.name
 	end
-	
+
 	#################
 end
 

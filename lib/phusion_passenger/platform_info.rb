@@ -323,8 +323,17 @@ public
 	#
 	# This function exists because system('which') doesn't always behave
 	# correctly, for some weird reason.
-	def self.find_command(name)
+	#
+	# When `is_executable` is true, this function checks whether
+	# there is an executable named `name` in $PATH. When false, it
+	# assumes that `name` is not an executable name but a command string
+	# (e.g. "ccache gcc"). It then infers the executable name ("ccache")
+	# from the command string, and checks for that instead.
+	def self.find_command(name, is_executable = true)
 		name = name.to_s
+		if !is_executable && name =~ / /
+			name = name.sub(/ .*/, '')
+		end
 		if name =~ /^\//
 			if File.executable?(name)
 				return name

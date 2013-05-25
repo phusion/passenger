@@ -22,34 +22,47 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_CONSTANTS_H_
-#define _PASSENGER_CONSTANTS_H_
 
-/* Don't forget to update lib/phusion_passenger.rb too. */
-#define PASSENGER_VERSION "4.0.3"
-
-#define FEEDBACK_FD 3
-
-#define DEFAULT_LOG_LEVEL 0
-#define DEFAULT_RUBY "ruby"
-#define DEFAULT_PYTHON "python"
-#define DEFAULT_MAX_POOL_SIZE 6
-#define DEFAULT_POOL_IDLE_TIME 300
-#define DEFAULT_MAX_INSTANCES_PER_APP 0
-#define DEFAULT_WEB_APP_USER "nobody"
-#define DEFAULT_ANALYTICS_LOG_USER DEFAULT_WEB_APP_USER
-#define DEFAULT_ANALYTICS_LOG_GROUP ""
-#define DEFAULT_ANALYTICS_LOG_PERMISSIONS "u=rwx,g=rx,o=rx"
-#define DEFAULT_UNION_STATION_GATEWAY_ADDRESS "gateway.unionstationapp.com"
-#define DEFAULT_UNION_STATION_GATEWAY_PORT 443
-
-#define MESSAGE_SERVER_MAX_USERNAME_SIZE 100
-#define MESSAGE_SERVER_MAX_PASSWORD_SIZE 100
-#define DEFAULT_BACKEND_ACCOUNT_RIGHTS Account::DETACH
-
-#define POOL_HELPER_THREAD_STACK_SIZE (1024 * 256)
-
-#define PROCESS_SHUTDOWN_TIMEOUT 60 /* seconds */
-#define PROCESS_SHUTDOWN_TIMEOUT_DISPLAY "1 minute"
-
-#endif /* _PASSENGER_CONSTANTS_H */
+class LoggingAgentWatcher: public AgentWatcher {
+protected:
+	string agentFilename;
+	string socketAddress;
+	
+	virtual const char *name() const {
+		return "Phusion Passenger logging agent";
+	}
+	
+	virtual string getExeFilename() const {
+		return agentFilename;
+	}
+	
+	virtual void execProgram() const {
+		execl(agentFilename.c_str(), "PassengerLoggingAgent", (char *) 0);
+	}
+	
+	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
+		VariantMap options = agentsOptions;
+		options.set("logging_agent_address", loggingAgentAddress);
+		options.set("logging_agent_password", loggingAgentPassword);
+		options.writeToFd(fd);
+	}
+	
+	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
+		if (args[0] == "initialized") {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+public:
+	LoggingAgentWatcher(const ResourceLocator &resourceLocator) {
+		agentFilename = resourceLocator.getAgentsDir() + "/PassengerLoggingAgent";
+	}
+	
+	virtual void reportAgentsInformation(VariantMap &report) {
+		report
+			.set("logging_socket_address", loggingAgentAddress)
+			.set("logging_socket_password", loggingAgentPassword);
+	}
+};

@@ -49,13 +49,13 @@
 #define HELPER_SERVER_PASSWORD_SIZE     64
 
 
-static int               first_start = 1;
-ngx_str_t                passenger_schema_string;
-ngx_str_t                passenger_placeholder_upstream_address;
-PassengerCachedFileStat *passenger_stat_cache;
+static int                first_start = 1;
+ngx_str_t                 passenger_schema_string;
+ngx_str_t                 passenger_placeholder_upstream_address;
+PassengerCachedFileStat  *passenger_stat_cache;
 PassengerAppTypeDetector *passenger_app_type_detector;
-AgentsStarter           *passenger_agents_starter = NULL;
-ngx_cycle_t             *passenger_current_cycle;
+PSG_AgentsStarter        *passenger_agents_starter = NULL;
+ngx_cycle_t              *passenger_current_cycle;
 
 
 /*
@@ -104,6 +104,14 @@ ngx_str_null_terminate(ngx_str_t *str) {
     return result;
 }
 
+static void
+psg_variant_map_set_ngx_str(PSG_VariantMap *m,
+    const char *name,
+    ngx_str_t *value)
+{
+    psg_variant_map_set(m, name, (const char *) value->data, value->len);
+}
+
 /**
  * Save the Nginx master process's PID into a file under the server instance directory.
  *
@@ -121,7 +129,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     FILE *f;
     
     last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/control_process.pid",
-        agents_starter_get_server_instance_dir(passenger_agents_starter));
+        psg_agents_starter_get_server_instance_dir(passenger_agents_starter));
     *last = (u_char) '\0';
     
     f = fopen((const char *) filename, "w");
@@ -241,35 +249,16 @@ start_helper_server(ngx_cycle_t *cycle) {
     ngx_uint_t       i;
     ngx_str_t       *prestart_uris;
     char           **prestart_uris_ary = NULL;
+    ngx_keyval_t    *ctl = NULL;
+    PSG_VariantMap  *params = NULL;
     u_char  filename[NGX_MAX_PATH], *last;
-    char   *debug_log_file = NULL;
-    char   *default_user = NULL;
-    char   *default_group = NULL;
     char   *passenger_root = NULL;
-    char   *default_ruby = NULL;
-    char   *temp_dir = NULL;
-    char   *analytics_log_user;
-    char   *analytics_log_group;
-    char   *union_station_gateway_address;
-    char   *union_station_gateway_cert;
-    char   *union_station_proxy_address;
     char   *error_message = NULL;
     
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
-    
-    /* Create null-terminated versions of some strings. */
-    debug_log_file = ngx_str_null_terminate(&passenger_main_conf.debug_log_file);
-    default_user   = ngx_str_null_terminate(&passenger_main_conf.default_user);
-    default_group  = ngx_str_null_terminate(&passenger_main_conf.default_group);
+    params    = psg_variant_map_new();
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
-    default_ruby   = ngx_str_null_terminate(&passenger_main_conf.default_ruby);
-    temp_dir       = ngx_str_null_terminate(&passenger_main_conf.temp_dir);
-    analytics_log_user = ngx_str_null_terminate(&passenger_main_conf.analytics_log_user);
-    analytics_log_group = ngx_str_null_terminate(&passenger_main_conf.analytics_log_group);
-    union_station_gateway_address = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_address);
-    union_station_gateway_cert = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_cert);
-    union_station_proxy_address = ngx_str_null_terminate(&passenger_main_conf.union_station_proxy_address);
     
     prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
     prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
@@ -283,22 +272,36 @@ start_helper_server(ngx_cycle_t *cycle) {
         memcpy(prestart_uris_ary[i], prestart_uris[i].data, prestart_uris[i].len);
         prestart_uris_ary[i][prestart_uris[i].len] = '\0';
     }
+
+    psg_variant_map_set_int    (params, "web_server_pid", getpid());
+    psg_variant_map_set_int    (params, "web_server_worker_uid", core_conf->user);
+    psg_variant_map_set_int    (params, "web_server_worker_gid", core_conf->group);
+    psg_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);
+    psg_variant_map_set_ngx_str(params, "debug_log_file", &passenger_main_conf.debug_log_file);
+    psg_variant_map_set_ngx_str(params, "temp_dir", &passenger_main_conf.temp_dir);
+    psg_variant_map_set_bool   (params, "user_switching", passenger_main_conf.user_switching);
+    psg_variant_map_set_ngx_str(params, "default_user", &passenger_main_conf.default_user);
+    psg_variant_map_set_ngx_str(params, "default_group", &passenger_main_conf.default_group);
+    psg_variant_map_set_ngx_str(params, "default_ruby", &passenger_main_conf.default_ruby);
+    psg_variant_map_set_int    (params, "max_pool_size", passenger_main_conf.max_pool_size);
+    psg_variant_map_set_int    (params, "pool_idle_time", passenger_main_conf.pool_idle_time);
+    psg_variant_map_set_ngx_str(params, "analytics_log_user", &passenger_main_conf.analytics_log_user);
+    psg_variant_map_set_ngx_str(params, "analytics_log_group", &passenger_main_conf.analytics_log_group);
+    psg_variant_map_set_ngx_str(params, "union_station_gateway_address", &passenger_main_conf.union_station_gateway_address);
+    psg_variant_map_set_ngx_str(params, "union_station_gateway_cert", &passenger_main_conf.union_station_gateway_cert);
+    psg_variant_map_set_ngx_str(params, "union_station_proxy_address", &passenger_main_conf.union_station_proxy_address);
+    psg_variant_map_set_strset (params, "prestart_urls", (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts);
+
+    ctl = (ngx_keyval_t *) passenger_main_conf.ctl->elts;
+    for (i = 0; i < passenger_main_conf.ctl->nelts; i++) {
+        psg_variant_map_set2(params,
+            (const char *) ctl[i].key.data, ctl[i].key.len - 1,
+            (const char *) ctl[i].value.data, ctl[i].value.len - 1);
+    }
     
-    ret = agents_starter_start(passenger_agents_starter,
-        passenger_main_conf.log_level, debug_log_file, getpid(),
-        temp_dir, passenger_main_conf.user_switching,
-        default_user, default_group,
-        core_conf->user, core_conf->group,
-        passenger_root, default_ruby, passenger_main_conf.max_pool_size,
-        passenger_main_conf.max_instances_per_app,
-        passenger_main_conf.pool_idle_time,
-        "",
-        analytics_log_user, analytics_log_group,
-        union_station_gateway_address,
-        passenger_main_conf.union_station_gateway_port,
-        union_station_gateway_cert,
-        union_station_proxy_address,
-        (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts,
+    ret = psg_agents_starter_start(passenger_agents_starter,
+        passenger_root,
+        params,
         starting_helper_server_after_fork,
         cycle,
         &error_message);
@@ -314,7 +317,7 @@ start_helper_server(ngx_cycle_t *cycle) {
      */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/control_process.pid",
-                        agents_starter_get_server_instance_dir(passenger_agents_starter));
+                        psg_agents_starter_get_server_instance_dir(passenger_agents_starter));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
         result = NGX_ERROR;
@@ -331,7 +334,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     /* Create various other info files. */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/web_server.txt",
-                        agents_starter_get_generation_dir(passenger_agents_starter));
+                        psg_agents_starter_get_generation_dir(passenger_agents_starter));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) NGINX_VER, strlen(NGINX_VER)) != NGX_OK) {
         result = NGX_ERROR;
@@ -340,7 +343,7 @@ start_helper_server(ngx_cycle_t *cycle) {
 
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/config_files.txt",
-                        agents_starter_get_generation_dir(passenger_agents_starter));
+                        psg_agents_starter_get_generation_dir(passenger_agents_starter));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, cycle->conf_file.data, cycle->conf_file.len) != NGX_OK) {
         result = NGX_ERROR;
@@ -348,17 +351,8 @@ start_helper_server(ngx_cycle_t *cycle) {
     }
     
 cleanup:
-    free(debug_log_file);
-    free(default_user);
-    free(default_group);
+    psg_variant_map_free(params);
     free(passenger_root);
-    free(default_ruby);
-    free(temp_dir);
-    free(analytics_log_user);
-    free(analytics_log_group);
-    free(union_station_gateway_address);
-    free(union_station_gateway_cert);
-    free(union_station_proxy_address);
     free(error_message);
     if (prestart_uris_ary != NULL) {
         for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
@@ -380,7 +374,7 @@ cleanup:
 static void
 shutdown_helper_server() {
     if (passenger_agents_starter != NULL) {
-        agents_starter_free(passenger_agents_starter);
+        psg_agents_starter_free(passenger_agents_starter);
         passenger_agents_starter = NULL;
     }
 }
@@ -405,7 +399,7 @@ pre_config_init(ngx_conf_t *cf)
     passenger_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
     passenger_stat_cache = cached_file_stat_new(1024);
     passenger_app_type_detector = passenger_app_type_detector_new();
-    passenger_agents_starter = agents_starter_new(AS_NGINX, &error_message);
+    passenger_agents_starter = psg_agents_starter_new(AS_NGINX, &error_message);
     
     if (passenger_agents_starter == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno, "%s", error_message);
@@ -458,7 +452,7 @@ init_worker_process(ngx_cycle_t *cycle) {
         
         core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
         if (core_conf->master) {
-            agents_starter_detach(passenger_agents_starter);
+            psg_agents_starter_detach(passenger_agents_starter);
         }
     }
     return NGX_OK;
