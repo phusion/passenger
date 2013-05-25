@@ -1,3 +1,9 @@
+Release 4.0.4
+-------------
+
+ * Fixed detection of noexec /tmp.
+
+
 Release 4.0.3
 -------------
 

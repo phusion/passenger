@@ -245,9 +245,11 @@ public
 		dir = tmpdir
 		filename = "#{dir}/#{basename}"
 		begin
-			File.open(filename, 'w').close
+			File.open(filename, 'w') do |f|
+				f.puts("#!/bin/sh")
+			end
 			File.chmod(0700, filename)
-			if File.executable?(filename)
+			if system(filename)
 				return dir
 			else
 				attempts << { :dir => dir,
@@ -266,9 +268,11 @@ public
 		dir = Dir.pwd
 		filename = "#{dir}/#{basename}"
 		begin
-			File.open(filename, 'w').close
+			File.open(filename, 'w') do |f|
+				f.puts("#!/bin/sh")
+			end
 			File.chmod(0700, filename)
-			if File.executable?(filename)
+			if system(filename)
 				return dir
 			else
 				attempts << { :dir => dir,
@@ -284,7 +288,8 @@ public
 			File.unlink(filename) rescue nil
 		end
 		
-		message = "In order to run certain tests, this program " +
+		message = "ERROR: Cannot find suitable temporary directory\n" +
+			"In order to run certain tests, this program " +
 			"must be able to write temporary\n" +
 			"executable files to some directory. However no such " +
 			"directory can be found. \n" +
@@ -294,7 +299,7 @@ public
 			message << "   #{attempt[:error]}\n"
 		end
 		message << "\nYou can solve this problem by telling this program what directory to write\n" <<
-			"temporary executable files to.\n" <<
+			"temporary executable files to, as follows:\n" <<
 			"\n" <<
 			"  Set the $TMPDIR environment variable to the desired directory's filename and\n" <<
 			"  re-run this program.\n" <<
