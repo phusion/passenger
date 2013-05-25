@@ -1433,7 +1433,7 @@ passenger_content_handler(ngx_http_request_t *r)
     
     /* Find the base URI for this web application, if any. */
     if (find_base_uri(r, slcf, &base_uri)) {
-        /* Store the found base URI in context->public_dir. We infer that the 'public'
+        /* Store the found base URI into context->public_dir. We infer that the 'public'
          * directory of the web application is document root + base URI.
          */
         len = root_path.len + base_uri.len + 1;

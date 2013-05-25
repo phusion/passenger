@@ -149,6 +149,24 @@ private:
 			return OK;
 		}
 	};
+
+	class ReportDocumentRootDeterminationError: public ErrorReport {
+	private:
+		DocumentRootDeterminationError e;
+	
+	public:
+		ReportDocumentRootDeterminationError(const DocumentRootDeterminationError &ex): e(ex) { }
+		
+		int report(request_rec *r) {
+			r->status = 500;
+			ap_set_content_type(r, "text/html; charset=UTF-8");
+			ap_rputs("<h1>Passenger error #1</h1>\n", r);
+			ap_rputs("Cannot determine the document root for the current request.", r);
+			P_ERROR("Cannot determine the document root for the current request.\n" <<
+				"  Backtrace:\n" << e.backtrace());
+			return OK;
+		}
+	};
 	
 	struct RequestNote {
 		DirectoryMapper mapper;
@@ -313,13 +331,6 @@ private:
 		return m_hasModXsendfile == YES;
 	}
 	
-	int reportDocumentRootDeterminationError(request_rec *r) {
-		ap_set_content_type(r, "text/html; charset=UTF-8");
-		ap_rputs("<h1>Passenger error #1</h1>\n", r);
-		ap_rputs("Cannot determine the document root for the current request.", r);
-		return OK;
-	}
-	
 	int reportBusyException(request_rec *r) {
 		ap_custom_response(r, HTTP_SERVICE_UNAVAILABLE,
 			"This website is too busy right now.  Please try again later.");
@@ -352,11 +363,17 @@ private:
 		
 		DirectoryMapper mapper(r, config, &cstat, config->getStatThrottleRate());
 		try {
-			if (mapper.getBaseURI() == NULL) {
+			if (mapper.getApplicationType() == PAT_NONE) {
 				// (B) is not true.
 				disableRequestNote(r);
 				return false;
 			}
+		} catch (const DocumentRootDeterminationError &e) {
+			auto_ptr<RequestNote> note(new RequestNote(mapper, config));
+			note->errorReport = new ReportDocumentRootDeterminationError(e);
+			apr_pool_userdata_set(note.release(), "Phusion Passenger",
+				RequestNote::cleanup, r->pool);
+			return true;
 		} catch (const FileSystemException &e) {
 			/* DirectoryMapper tried to examine the filesystem in order
 			 * to autodetect the application type (e.g. by checking whether
@@ -482,14 +499,11 @@ private:
 		TRACE_POINT();
 		DirConfig *config = note->config;
 		DirectoryMapper &mapper = note->mapper;
-		string publicDirectory, appRoot;
 		
 		try {
-			publicDirectory = mapper.getPublicDirectory();
-			if (publicDirectory.empty()) {
-				return reportDocumentRootDeterminationError(r);
-			}
-			appRoot = config->getAppRoot(publicDirectory.c_str());
+			mapper.getPublicDirectory();
+		} catch (const DocumentRootDeterminationError &e) {
+			return ReportDocumentRootDeterminationError(e).report(r);
 		} catch (const FileSystemException &e) {
 			/* The application root cannot be determined. This could
 			 * happen if, for example, the user specified 'RailsBaseURI /foo'
@@ -570,7 +584,7 @@ private:
 			requestData.reserve(3);
 			headerData.reserve(1024 * 2);
 			requestData.push_back(StaticString());
-			size = constructHeaders(r, config, requestData, mapper, appRoot, headerData);
+			size = constructHeaders(r, config, requestData, mapper, headerData);
 			requestData.push_back(",");
 			
 			ret = snprintf(sizeString, sizeof(sizeString) - 1, "%u:", size);
@@ -857,7 +871,7 @@ private:
 	}
 	
 	unsigned int constructHeaders(request_rec *r, DirConfig *config,
-		vector<StaticString> &requestData, DirectoryMapper &mapper, const string &appRoot,
+		vector<StaticString> &requestData, DirectoryMapper &mapper,
 		string &output)
 	{
 		const char *baseURI = mapper.getBaseURI();
@@ -920,7 +934,7 @@ private:
 			addHeader(output, "REQUEST_URI", request_uri);
 		}
 		
-		if (strcmp(baseURI, "/") == 0) {
+		if (baseURI == NULL) {
 			addHeader(output, "SCRIPT_NAME", "");
 			addHeader(output, "PATH_INFO", escapedUri);
 		} else {
@@ -953,8 +967,8 @@ private:
 		
 		// Phusion Passenger options.
 		addHeader(output, "PASSENGER_STATUS_LINE", "false");
-		addHeader(output, "PASSENGER_APP_ROOT", appRoot);
-		addHeader(output, "PASSENGER_APP_GROUP_NAME", config->getAppGroupName(appRoot));
+		addHeader(output, "PASSENGER_APP_ROOT", mapper.getAppRoot());
+		addHeader(output, "PASSENGER_APP_GROUP_NAME", config->getAppGroupName(mapper.getAppRoot()));
 		addHeader(output, "PASSENGER_RUBY", config->ruby ? config->ruby : serverConfig.defaultRuby);
 		addHeader(output, "PASSENGER_PYTHON", config->python);
 		addHeader(output, "PASSENGER_ENV", config->getEnvironment());

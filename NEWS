@@ -4,6 +4,14 @@ Release 4.0.4
  * Fixed autodetection of noexec-mount /tmp directory. Issue #850.
  * Fixed a WSGI bug. wsgi.input was a file object opened in text mode,
    but should be opened in binary mode. Fixes issue #881.
+ * [Apache] The RailsBaseURI and RackBaseURI directives have been unified.
+   For a long time, RailsBaseURI told Phusion Passenger that the given
+   sub-URI belongs to a **Rails 2** application. Attempt to use this
+   directive with Rails 3 or with Rack applications would result in an
+   error. Because this confused users, RailsBaseURI and RackBaseURI
+   have now been unified and can now be used interchangably. Phusion
+   Passenger will automatically detect what kind of application it is.
+   The Nginx version already worked like this. Fixes issue #882.
 
 
 Release 4.0.3
