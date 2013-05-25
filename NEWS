@@ -1,7 +1,8 @@
 Release 4.0.4
 -------------
 
- * Fixed autodetection of noexec-mount /tmp directory. Issue #850.
+ * Fixed autodetection of noexec-mount /tmp directory. Fixes issue #850
+   and issue #625.
  * Fixed a WSGI bug. wsgi.input was a file object opened in text mode,
    but should be opened in binary mode. Fixes issue #881.
  * [Apache] The RailsBaseURI and RackBaseURI directives have been unified.
