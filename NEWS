@@ -14,13 +14,16 @@ Release 4.0.4
    have now been unified and can now be used interchangably. Phusion
    Passenger will automatically detect what kind of application it is.
    The Nginx version already worked like this. Fixes issue #882.
- * The Passenger Standalone temp directory and PassengerWatchdog server
-   instance directory have been unified. PassengerWatchdog already
-   automatically updates the timestamps of all files in its server
-   instance directory every 6 hours to prevent /tmp cleaners from
-   deleting the directory. Therefore this unification prevents the
-   Passenger Standalone temp directory to be deleted by /tmp cleaners
-   as well. Fixes issue #654.
+ * [Standalone] The Passenger Standalone temp directory and
+   PassengerWatchdog server instance directory have been unified.
+   PassengerWatchdog already automatically updates the timestamps of
+   all files in its server instance directory every 6 hours to prevent
+   /tmp cleaners from deleting the directory. Therefore this
+   unification prevents the Passenger Standalone temp directory to be
+   deleted by /tmp cleaners as well. Fixes issue #654.
+ * [Standalone] types_hash_max_size has been increased from 1024 to
+   2048. This solves a problem that causes Nginx not to start on some
+   platforms. Contributed by Jan-Willem Koelewijn.
 
 
 Release 4.0.3
