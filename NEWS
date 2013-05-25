@@ -1,7 +1,7 @@
 Release 4.0.4
 -------------
 
- * Fixed detection of noexec /tmp.
+ * Fixed autodetection of noexec-mount /tmp directory. Issue #850.
 
 
 Release 4.0.3
