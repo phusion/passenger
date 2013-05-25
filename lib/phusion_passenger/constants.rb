@@ -26,4 +26,11 @@ module PhusionPassenger
 	PASSENGER_TXN_ID            = "PASSENGER_TXN_ID".freeze
 	PASSENGER_UNION_STATION_KEY = "PASSENGER_UNION_STATION_KEY".freeze
 	RACK_HIJACK_IO              = "rack.hijack_io".freeze
+
+	# If you change the structure version then don't forget to change
+	# ext/common/ServerInstanceDir.h too.
+	DIR_STRUCTURE_MAJOR_VERSION = 1
+	DIR_STRUCTURE_MINOR_VERSION = 0
+	GENERATION_STRUCTURE_MAJOR_VERSION = 2
+	GENERATION_STRUCTURE_MINOR_VERSION = 0
 end

@@ -26,6 +26,7 @@ require 'fileutils'
 require 'socket'
 require 'ostruct'
 require 'phusion_passenger/admin_tools'
+require 'phusion_passenger/constants'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/message_client'
@@ -34,14 +35,6 @@ module PhusionPassenger
 module AdminTools
 
 class ServerInstance
-	# If you change the structure version then don't forget to change
-	# ext/common/ServerInstanceDir.h too.
-	
-	DIR_STRUCTURE_MAJOR_VERSION = 1
-	DIR_STRUCTURE_MINOR_VERSION = 0
-	GENERATION_STRUCTURE_MAJOR_VERSION = 2
-	GENERATION_STRUCTURE_MINOR_VERSION = 0
-	
 	STALE_TIME_THRESHOLD = 60
 	
 	class StaleDirectoryError < StandardError

@@ -49,7 +49,7 @@ using namespace boost;
 
 class ServerInstanceDir: public noncopyable {
 public:
-	// Don't forget to update lib/phusion_passenger/admin_tools/server_instance.rb too.
+	// Don't forget to update lib/phusion_passenger/constants.rb too.
 	static const int DIR_STRUCTURE_MAJOR_VERSION = 1;
 	static const int DIR_STRUCTURE_MINOR_VERSION = 0;
 	static const int GENERATION_STRUCTURE_MAJOR_VERSION = 2;
