@@ -1,5 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'fileutils'
+require 'phusion_passenger/constants'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/admin_tools'
 require 'phusion_passenger/admin_tools/server_instance'
@@ -16,11 +17,6 @@ end
 
 describe AdminTools::ServerInstance do
 	include Utils
-	
-	DIR_STRUCTURE_MAJOR_VERSION = AdminTools::ServerInstance::DIR_STRUCTURE_MAJOR_VERSION
-	DIR_STRUCTURE_MINOR_VERSION = AdminTools::ServerInstance::DIR_STRUCTURE_MINOR_VERSION
-	GENERATION_STRUCTURE_MAJOR_VERSION = AdminTools::ServerInstance::GENERATION_STRUCTURE_MAJOR_VERSION
-	GENERATION_STRUCTURE_MINOR_VERSION = AdminTools::ServerInstance::GENERATION_STRUCTURE_MINOR_VERSION
 	
 	before :each do
 		File.chmod(0700, passenger_tmpdir)
