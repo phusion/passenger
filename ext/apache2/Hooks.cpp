@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -53,7 +53,7 @@
 #include "Utils/IOUtils.h"
 #include "Utils/Timer.h"
 #include "Logging.h"
-#include "AgentsStarter.hpp"
+#include "AgentsStarter.h"
 #include "DirectoryMapper.h"
 #include "Constants.h"
 
@@ -1237,7 +1237,7 @@ private:
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 	    : cstat(1024),
-	      agentsStarter(AgentsStarter::NGINX)
+	      agentsStarter(AS_APACHE)
 	{
 		serverConfig.finalize();
 		Passenger::setLogLevel(serverConfig.logLevel);
@@ -1258,23 +1258,33 @@ public:
 				"TIP: The correct value for this option was given to you by "
 				"'passenger-install-apache2-module'.");
 		}
+
+		VariantMap params;
+		params
+			.setPid ("web_server_pid", getpid())
+			.setUid ("web_server_worker_uid", unixd_config.user_id)
+			.setGid ("web_server_worker_gid", unixd_config.group_id)
+			.setInt ("log_level", serverConfig.logLevel)
+			.set    ("debug_log_file", (serverConfig.debugLogFile == NULL) ? "" : serverConfig.debugLogFile)
+			.set    ("temp_dir", serverConfig.tempDir)
+			.setBool("user_switching", serverConfig.userSwitching)
+			.set    ("default_user", serverConfig.defaultUser)
+			.set    ("default_group", serverConfig.defaultGroup)
+			.set    ("default_ruby", serverConfig.defaultRuby)
+			.setInt ("max_pool_size", serverConfig.maxPoolSize)
+			.setInt ("pool_idle_time", serverConfig.poolIdleTime)
+			.setInt ("max_instances_per_app", serverConfig.maxInstancesPerApp)
+			.set    ("analytics_log_user", serverConfig.analyticsLogUser)
+			.set    ("analytics_log_group", serverConfig.analyticsLogGroup)
+			.set    ("union_station_gateway_address", serverConfig.unionStationGatewayAddress)
+			.setInt ("union_station_gateway_port", serverConfig.unionStationGatewayPort)
+			.set    ("union_station_gateway_cert", serverConfig.unionStationGatewayCert)
+			.set    ("union_station_proxy_address", serverConfig.unionStationProxyAddress)
+			.setStrSet("prestart_urls", serverConfig.prestartURLs);
 		
-		agentsStarter.start(serverConfig.logLevel,
-			(serverConfig.debugLogFile == NULL) ? "" : serverConfig.debugLogFile,
-			getpid(), serverConfig.tempDir,
-			serverConfig.userSwitching,
-			serverConfig.defaultUser, serverConfig.defaultGroup,
-			unixd_config.user_id, unixd_config.group_id,
-			serverConfig.root, serverConfig.defaultRuby, serverConfig.maxPoolSize,
-			serverConfig.maxInstancesPerApp, serverConfig.poolIdleTime,
-			"",
-			serverConfig.analyticsLogUser,
-			serverConfig.analyticsLogGroup,
-			serverConfig.unionStationGatewayAddress,
-			serverConfig.unionStationGatewayPort,
-			serverConfig.unionStationGatewayCert,
-			serverConfig.unionStationProxyAddress,
-			serverConfig.prestartURLs);
+		serverConfig.ctl.addTo(params);
+
+		agentsStarter.start(serverConfig.root, params);
 		
 		// Store some relevant information in the generation directory.
 		string generationPath = agentsStarter.getGeneration()->getPath();

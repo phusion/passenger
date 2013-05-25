@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2012 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -23,76 +23,104 @@
  *  THE SOFTWARE.
  */
 #include <oxt/thread.hpp>
-#include "AgentsStarter.h"
-#include "AgentsStarter.hpp"
+#include <set>
 #include <cerrno>
 #include <cstring>
+#include <AgentsStarter.h>
 
 using namespace std;
 using namespace boost;
 using namespace oxt;
 
 
-AgentsStarter *
-agents_starter_new(AgentsStarterType type, char **error_message) {
-	Passenger::AgentsStarter::Type theType;
-	if (type == AS_APACHE) {
-		theType = Passenger::AgentsStarter::APACHE;
-	} else {
-		theType = Passenger::AgentsStarter::NGINX;
+PSG_VariantMap *
+psg_variant_map_new() {
+	return (PSG_VariantMap *) new Passenger::VariantMap();
+}
+
+void
+psg_variant_map_set(PSG_VariantMap *m,
+	const char *name,
+	const char *value,
+	unsigned int value_len)
+{
+	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
+	vm->set(name, string(value, value_len));
+}
+
+void
+psg_variant_map_set2(PSG_VariantMap *m,
+	const char *name,
+	unsigned int name_len,
+	const char *value,
+	unsigned int value_len)
+{
+	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
+	vm->set(string(name, name_len), string(value, value_len));
+}
+
+void
+psg_variant_map_set_int(PSG_VariantMap *m,
+	const char *name,
+	int value)
+{
+	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
+	vm->setInt(name, value);
+}
+
+void
+psg_variant_map_set_bool(PSG_VariantMap *m,
+	const char *name,
+	int value)
+{
+	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
+	vm->setBool(name, value);
+}
+
+void
+psg_variant_map_set_strset(PSG_VariantMap *m,
+	const char *name,
+	const char **strs,
+	unsigned int count)
+{
+	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
+	std::set<string> the_set;
+	
+	for (unsigned int i = 0; i < count; i++) {
+		the_set.insert(strs[i]);
 	}
-	return (AgentsStarter *) new Passenger::AgentsStarter(theType);
+	vm->setStrSet(name, the_set);
+}
+
+void
+psg_variant_map_free(PSG_VariantMap *m) {
+	delete (Passenger::VariantMap *) m;
+}
+
+
+PSG_AgentsStarter *
+psg_agents_starter_new(PSG_AgentsStarterType type, char **error_message) {
+	return (PSG_AgentsStarter *) new Passenger::AgentsStarter(type);
 }
 
 int
-agents_starter_start(AgentsStarter *as,
-                     int logLevel, const char *debugLogFile,
-                     pid_t webServerPid,
-                     const char *tempDir, int userSwitching,
-                     const char *defaultUser, const char *defaultGroup,
-                     uid_t webServerWorkerUid, gid_t webServerWorkerGid,
-                     const char *passengerRoot,
-                     const char *defaultRubyCommand, unsigned int maxPoolSize,
-                     unsigned int maxInstancesPerApp,
-                     unsigned int poolIdleTime,
-                     const char *analyticsServer,
-                     const char *analyticsLogUser,
-                     const char *analyticsLogGroup,
-                     const char *unionStationGatewayAddress,
-                     unsigned short unionStationGatewayPort,
-                     const char *unionStationGatewayCert,
-                     const char *unionStationProxyAddress,
-                     const char **prestartURLs, unsigned int prestartURLsCount,
-                     const AfterForkCallback afterFork,
-                     void *callbackArgument,
-                     char **errorMessage)
+psg_agents_starter_start(PSG_AgentsStarter *as,
+	const char *passengerRoot,
+	PSG_VariantMap *extraParams,
+	const PSG_AfterForkCallback afterFork,
+	void *callbackArgument,
+	char **errorMessage)
 {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	this_thread::disable_syscall_interruption dsi;
 	try {
 		function<void ()> afterForkFunctionObject;
-		set<string> setOfprestartURLs;
-		unsigned int i;
 		
 		if (afterFork != NULL) {
 			afterForkFunctionObject = boost::bind(afterFork, callbackArgument);
 		}
-		for (i = 0; i < prestartURLsCount; i++) {
-			setOfprestartURLs.insert(prestartURLs[i]);
-		}
-		agentsStarter->start(logLevel, debugLogFile,
-			webServerPid, tempDir, userSwitching,
-			defaultUser, defaultGroup,
-			webServerWorkerUid, webServerWorkerGid,
-			passengerRoot, defaultRubyCommand,
-			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			analyticsServer,
-			analyticsLogUser, analyticsLogGroup,
-			unionStationGatewayAddress,
-			unionStationGatewayPort,
-			unionStationGatewayCert,
-			unionStationProxyAddress,
-			setOfprestartURLs,
+		agentsStarter->start(passengerRoot,
+			*((Passenger::VariantMap *) extraParams),
 			afterForkFunctionObject);
 		return 1;
 	} catch (const Passenger::SystemException &e) {
@@ -107,7 +135,7 @@ agents_starter_start(AgentsStarter *as,
 }
 
 const char *
-agents_starter_get_request_socket_filename(AgentsStarter *as, unsigned int *size) {
+psg_agents_starter_get_request_socket_filename(PSG_AgentsStarter *as, unsigned int *size) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	if (size != NULL) {
 		*size = agentsStarter->getRequestSocketFilename().size();
@@ -116,7 +144,7 @@ agents_starter_get_request_socket_filename(AgentsStarter *as, unsigned int *size
 }
 
 const char *
-agents_starter_get_request_socket_password(AgentsStarter *as, unsigned int *size) {
+psg_agents_starter_get_request_socket_password(PSG_AgentsStarter *as, unsigned int *size) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	if (size != NULL) {
 		*size = agentsStarter->getRequestSocketPassword().size();
@@ -125,31 +153,31 @@ agents_starter_get_request_socket_password(AgentsStarter *as, unsigned int *size
 }
 
 const char *
-agents_starter_get_server_instance_dir(AgentsStarter *as) {
+psg_agents_starter_get_server_instance_dir(PSG_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	return agentsStarter->getServerInstanceDir()->getPath().c_str();
 }
 
 const char *
-agents_starter_get_generation_dir(AgentsStarter *as) {
+psg_agents_starter_get_generation_dir(PSG_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	return agentsStarter->getGeneration()->getPath().c_str();
 }
 
 pid_t
-agents_starter_get_pid(AgentsStarter *as) {
+psg_agents_starter_get_pid(PSG_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	return agentsStarter->getPid();
 }
 
 void
-agents_starter_detach(AgentsStarter *as) {
+psg_agents_starter_detach(PSG_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	agentsStarter->detach();
 }
 
 void
-agents_starter_free(AgentsStarter *as) {
+psg_agents_starter_free(PSG_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	delete agentsStarter;
 }

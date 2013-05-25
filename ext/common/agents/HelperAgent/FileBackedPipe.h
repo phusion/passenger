@@ -422,7 +422,7 @@ private:
 		if (pthread_equal(pthread_self(), getLibev()->getCurrentThread())) {
 			real_dataConsumed(consumed, done, oldGeneration);
 		} else {
-			getLibev()->runAsync(boost::bind(
+			getLibev()->runLater(boost::bind(
 				&FileBackedPipe::real_dataConsumed, this,
 				consumed, done, oldGeneration));
 		}

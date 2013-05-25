@@ -25,6 +25,22 @@ extern "C" {
 }
 
 static void
+changeWorkingDir(const char *dir) {
+	int ret = chdir(dir);
+	if (ret == 0) {
+		setenv("PWD", dir, 1);
+	} else {
+		int e = errno;
+		printf("!> Error\n");
+		printf("!> \n");
+		printf("Unable to change working directory to '%s': %s (errno=%d)\n",
+			dir, strerror(e), e);
+		fflush(stdout);
+		exit(1);
+	}
+}
+
+static void
 setGivenEnvVars(const char *envvarsData) {
 	string envvars = Base64::decode(envvarsData);
 	const char *key = envvars.data();
@@ -144,18 +160,20 @@ dumpInformation() {
 	#endif
 }
 
-// Usage: SpawnPreparer <envvars> <executable> <exec args...>
+// Usage: SpawnPreparer <working directory> <envvars> <executable> <exec args...>
 int
 main(int argc, char *argv[]) {
-	if (argc < 4) {
+	if (argc < 5) {
 		fprintf(stderr, "Too few arguments.\n");
 		exit(1);
 	}
 	
-	const char *envvars = argv[1];
-	const char *executable = argv[2];
-	char **execArgs = &argv[3];
+	const char *workingDir = argv[1];
+	const char *envvars = argv[2];
+	const char *executable = argv[3];
+	char **execArgs = &argv[4];
 	
+	changeWorkingDir(workingDir);
 	setGivenEnvVars(envvars);
 	dumpInformation();
 	

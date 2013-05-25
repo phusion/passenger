@@ -1,3 +1,30 @@
+Release 4.0.3
+-------------
+
+ * Better protection is now provided against application processes that
+   are stuck and refuse to shut down cleanly. Since version 4.0.0,
+   Phusion Passenger already forcefully shuts down all processes during
+   web server shutdown. In addition to this, 4.0.3 now also forcefully
+   shuts down processes that take more than 1 minute to shut down, even
+   outside the context of web server shutdowns. This feature does not,
+   however, protect against requests that take too long. Use
+   PassengerMaxRequestTime (Apache) or passenger_max_request_time (Nginx)
+   for that.
+ * Fixed a crash in the HelperAgent which results in frequent process
+   restarts in some traffic patterns. Fixes issue #862.
+ * Fixed a problem that prevents processes from being spawned correctly
+   if the user's bashrc changes working directory. Fixes issue #851.
+ * passenger-status now also displays CPU usage.
+ * The installer now checks for checksums when automatically downloading
+   PCRE and Nginx. Contributed by Joshua Lund.
+ * An error is now printed when trying to daemonize Phusion Passenger
+   Standalone on Ruby implementations that don't support forking.
+   Contributed by Benjamin Fleischer.
+ * Although Phusion Passenger already supported JRuby, *installing*
+   Phusion Passenger with JRuby was not possible. This has been fixed.
+ * Various other minor bug fixes.
+
+
 Release 4.0.2
 -------------
 

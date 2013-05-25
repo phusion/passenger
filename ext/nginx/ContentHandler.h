@@ -30,7 +30,7 @@
 
 #include <ngx_core.h>
 #include <ngx_http.h>
-#include "../common/ApplicationPool2/AppTypes.h"
+#include "common/ApplicationPool2/AppTypes.h"
 
 
 typedef struct {

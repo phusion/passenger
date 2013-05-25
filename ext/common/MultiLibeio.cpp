@@ -54,7 +54,9 @@ struct Data {
 	Data(const SafeLibevPtr &_libev, const MultiLibeio::Callback &_callback)
 		: libev(_libev),
 		  callback(_callback)
-		{ }
+	{
+		assert(_libev != NULL);
+	}
 };
 
 struct CustomData: public Data {
@@ -96,7 +98,7 @@ static int
 dispatch(eio_req *req) {
 	auto_ptr<Data> data((Data *) req->data);
 	assert(data->libev != NULL); // Check for strange bug.
-	data->libev->runLaterTS(boost::bind(data->callback, *req));
+	data->libev->runLater(boost::bind(data->callback, *req));
 	return 0;
 }
 

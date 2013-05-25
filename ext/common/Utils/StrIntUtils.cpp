@@ -122,6 +122,15 @@ replaceString(const string &str, const string &toFind, const string &replaceWith
 }
 
 string
+replaceAll(const string &str, const string &toFind, const string &replaceWith) {
+	string result = str;
+	while (result.find(toFind) != string::npos) {
+		result = replaceString(result, toFind, replaceWith);
+	}
+	return result;
+}
+
+string
 strip(const StaticString &str) {
 	const char *data = str.data();
 	const char *end = str.data() + str.size();

@@ -3,7 +3,7 @@ define 'gcc' do
   website "http://gcc.gnu.org/"
   define_checker do
     require 'phusion_passenger/platform_info/compiler'
-    check_for_command(PlatformInfo.cc)
+    check_for_command(PlatformInfo.cc, false)
   end
   
   on :debian do
@@ -28,7 +28,7 @@ define 'g++' do
   website "http://gcc.gnu.org/"
   define_checker do
     require 'phusion_passenger/platform_info/compiler'
-    check_for_command(PlatformInfo.cxx)
+    check_for_command(PlatformInfo.cxx, false)
   end
   
   on :debian do

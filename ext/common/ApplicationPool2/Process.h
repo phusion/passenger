@@ -39,6 +39,7 @@
 #include <ApplicationPool2/Socket.h>
 #include <ApplicationPool2/Session.h>
 #include <ApplicationPool2/PipeWatcher.h>
+#include <Constants.h>
 #include <FileDescriptor.h>
 #include <SafeLibev.h>
 #include <Logging.h>
@@ -233,10 +234,10 @@ public:
 		/** This process has been detached, and the detached processes checker has
 		 * verified that there are no active sessions left and has told the process
 		 * to shut down. In this state we're supposed to wait until the process
-		 * has actually shutdown, after which clean() must be called. */
+		 * has actually shutdown, after which cleanup() must be called. */
 		SHUTDOWN_TRIGGERED,
 		/**
-		 * The process has exited and clean() has been called. In this state,
+		 * The process has exited and cleanup() has been called. In this state,
 		 * this object is no longer usable.
 		 */
 		DEAD
@@ -275,6 +276,8 @@ public:
 	} oobwStatus;
 	/** Caches whether or not the OS process still exists. */
 	mutable bool m_osProcessExists;
+	/** Time at which shutdown began. */
+	time_t shutdownStartTime;
 	/** Collected by Pool::collectAnalytics(). */
 	ProcessMetrics metrics;
 	
@@ -309,7 +312,8 @@ public:
 		  lifeStatus(ALIVE),
 		  enabled(ENABLED),
 		  oobwStatus(OOBW_NOT_ACTIVE),
-		  m_osProcessExists(true)
+		  m_osProcessExists(true),
+		  shutdownStartTime(0)
 	{
 		SpawnerConfigPtr config;
 		if (_config == NULL) {
@@ -412,10 +416,15 @@ public:
 			lock_guard<boost::mutex> lock(lifetimeSyncher);
 			assert(lifeStatus == ALIVE);
 			lifeStatus = SHUTDOWN_TRIGGERED;
+			shutdownStartTime = SystemTime::get();
 		}
 		if (!dummy) {
 			syscalls::shutdown(adminSocket, SHUT_WR);
 		}
+	}
+
+	bool shutdownTimeoutExpired() const {
+		return SystemTime::get() >= shutdownStartTime + PROCESS_SHUTDOWN_TIMEOUT;
 	}
 
 	bool canCleanup() const {

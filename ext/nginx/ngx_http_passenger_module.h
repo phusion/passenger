@@ -30,9 +30,9 @@
 
 #include <ngx_config.h>
 #include <ngx_core.h>
-#include "../common/AgentsStarter.h"
-#include "../common/ApplicationPool2/AppTypes.h"
-#include "../common/Utils/CachedFileStat.h"
+#include "common/AgentsStarter.h"
+#include "common/ApplicationPool2/AppTypes.h"
+#include "common/Utils/CachedFileStat.h"
 
 /**
  * The Nginx version number as an integer.
@@ -55,13 +55,13 @@ extern ngx_str_t                passenger_placeholder_upstream_address;
 /**
  * A CachedFileStat object used for caching stat() calls.
  */
-extern PassengerCachedFileStat *passenger_stat_cache;
+extern PassengerCachedFileStat  *passenger_stat_cache;
 
 extern PassengerAppTypeDetector *passenger_app_type_detector;
 
-extern AgentsStarter           *passenger_agents_starter;
+extern PSG_AgentsStarter        *passenger_agents_starter;
 
-extern ngx_cycle_t             *passenger_current_cycle;
+extern ngx_cycle_t              *passenger_current_cycle;
 
 #endif /* _PASSENGER_NGINX_MODULE_H_ */
 

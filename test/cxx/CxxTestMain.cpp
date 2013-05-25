@@ -141,6 +141,8 @@ loadConfigFile() {
 static void
 abortHandler(int signo, siginfo_t *info, void *ctx) {
 	// Stop itself so that we can attach it to gdb.
+	static const char message[] = "Crash handler called!\n";
+	write(STDERR_FILENO, message, sizeof(message) - 1);
 	raise(SIGSTOP);
 	// Run default signal handler.
 	raise(signo);

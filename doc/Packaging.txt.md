@@ -84,13 +84,15 @@ The location configuration file is an ini file that looks as follows:
     [locations]
     natively_packaged=true
     bin=/usr/bin
-    agents=/usr/lib/phusion-passenger
+    agents=/usr/lib/phusion-passenger/agents
+    libdir=/usr/lib/phusion-passenger
     helper_scripts=/usr/share/phusion-passenger/helper-scripts
     resources=/usr/share/phusion-passenger
-    doc=/usr/share/doc
-    rubylibdir=/usr/lib/ruby/1.9.0
+    includedir=/usr/share/phusion-passenger/include
+    doc=/usr/share/doc/phusion-passenger
+    rubylibdir=/usr/lib/ruby/vendor_ruby
     apache2_module=/usr/lib/apache2/modules/mod_passenger.so
-    ruby_extension_source=/usr/share/phusion_passenger/ruby_native_support_source
+    ruby_extension_source=/usr/share/phusion-passenger/ruby_extension_source
 
 All keys except fo `natively_packaged` specify the locations of assets and asset
 directories. The "Asset types" section provides a description of all asset types.
@@ -192,6 +194,20 @@ a list of all possible assets and asset directories.
 
    Value when originally packaged: `<SOURCE_ROOT>/doc`.
 
+ * `includedir`
+
+   A directory that contains the Phusion Passenger header files that are
+   necessary for compiling Nginx.
+
+   Value when originally packaged: `<SOURCE_ROOT>/ext`
+
+ * `libdir`
+
+   A directory that contains the Phusion Passenger library files, e.g.
+   libboost_oxt.a and various .o files.
+
+   Value when originally packaged: `<SOURCE_ROOT>/libout`
+
  * `rubylibdir`
 
    A directory that contains the Phusion Passenger Ruby library files. Note that
@@ -249,6 +265,3 @@ You can generate a fakeroot with the command `rake fakeroot`. This will
 generate an FHS-compliant directory tree in `pkg/fakeroot`, which you can
 directly package or with minor modifications. The fakeroot even contains
 a location configuration file.
-
-If the default fakeroot structure is not sufficient, please consider
-sending a patch.

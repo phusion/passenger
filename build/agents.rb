@@ -24,6 +24,10 @@
 watchdog_libs = COMMON_LIBRARY.only(:base, 'AgentsBase.o', 'Utils/Base64.o')
 dependencies = [
 	'ext/common/agents/Watchdog/Main.cpp',
+	'ext/common/agents/Watchdog/AgentWatcher.cpp',
+	'ext/common/agents/Watchdog/HelperAgentWatcher.cpp',
+	'ext/common/agents/Watchdog/LoggingAgentWatcher.cpp',
+	'ext/common/agents/Watchdog/ServerInstanceDirToucher.cpp',
 	'ext/common/ServerInstanceDir.h',
 	'ext/common/ResourceLocator.h',
 	'ext/common/Utils/VariantMap.h',

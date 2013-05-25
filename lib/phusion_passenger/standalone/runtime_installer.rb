@@ -95,7 +95,7 @@ protected
 			'g++',
 			'gmake',
 			'download-tool',
-			'ruby-dev',
+			PlatformInfo.passenger_needs_ruby_dev_header? ? 'ruby-dev' : nil,
 			'ruby-openssl',
 			'rubygems',
 			'rake',
@@ -105,7 +105,7 @@ protected
 			'zlib-dev',
 			'pcre-dev',
 			'daemon_controller >= 1.1.0'
-		]
+		].compact
 		return [specs, ids]
 	end
 	
@@ -529,7 +529,8 @@ private
 				nginx_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
 					set_output_dir(output_dir).
 					link_objects_as_string
-				command << "env PASSENGER_LIBS='#{nginx_libs} #{output_dir}/../libboost_oxt.a' "
+				command << "env PASSENGER_INCLUDEDIR='#{PhusionPassenger.include_dir}'" <<
+					" PASSENGER_LIBS='#{nginx_libs} #{output_dir}/../libboost_oxt.a' "
 			end
 			# RPM thinks it's being smart by scanning binaries for
 			# paths and refusing to create package if it detects any
