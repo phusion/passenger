@@ -171,10 +171,10 @@ class RequestHandler:
 	
 	if hasattr(socket, '_fileobject'):
 		def wrap_input_socket(self, sock):
-			return socket._fileobject(sock, 'r', 512)
+			return socket._fileobject(sock, 'rb', 512)
 	else:
 		def wrap_input_socket(self, sock):
-			return socket.socket.makefile(sock, 'r', 512)
+			return socket.socket.makefile(sock, 'rb', 512)
 
 	def process_request(self, env, input_stream, output_stream):
 		# The WSGI speculation says that the input parameter object passed needs to

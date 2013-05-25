@@ -2,6 +2,8 @@ Release 4.0.4
 -------------
 
  * Fixed autodetection of noexec-mount /tmp directory. Issue #850.
+ * Fixed a WSGI bug. wsgi.input was a file object opened in text mode,
+   but should be opened in binary mode. Fixes issue #881.
 
 
 Release 4.0.3
