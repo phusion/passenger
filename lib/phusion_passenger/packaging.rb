@@ -66,7 +66,7 @@ module Packaging
 		'man/*',
 		'debian/*',
 		'helper-scripts/*',
-		'ext/common/**/*.{cpp,c,h,hpp,md}',
+		'ext/common/**/*.{cpp,c,h,hpp,md,erb}',
 		'ext/apache2/*.{cpp,h,hpp,c}',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',

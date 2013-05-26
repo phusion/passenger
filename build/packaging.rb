@@ -86,23 +86,14 @@ task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
 	end
 end
 
-task 'package:check' do
-	require 'phusion_passenger'
-	
-	File.read("ext/common/Constants.h") =~ /PASSENGER_VERSION \"(.+)\"/
-	if $1 != PhusionPassenger::VERSION_STRING
-		abort "Version number in ext/common/Constants.h doesn't match."
-	end
-end
-
-task 'package:gem' => Packaging::ASCII_DOCS + ['package:check'] do
+task 'package:gem' => Packaging::ASCII_DOCS do
 	require 'phusion_passenger'
 	sh "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec --sign --key 0x0A212A8C"
 	sh "mkdir -p pkg"
 	sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem pkg/"
 end
 
-task 'package:tarball' => Packaging::ASCII_DOCS + ['package:check'] do
+task 'package:tarball' => Packaging::ASCII_DOCS do
 	require 'phusion_passenger'
 	require 'fileutils'
 
@@ -280,7 +271,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 end
 
 desc "Create a Debian package"
-task 'package:debian' => 'package:check' do
+task 'package:debian' do
 	checkbuilddeps = PlatformInfo.find_command("dpkg-checkbuilddeps")
 	debuild = PlatformInfo.find_command("debuild")
 	if !checkbuilddeps || !debuild

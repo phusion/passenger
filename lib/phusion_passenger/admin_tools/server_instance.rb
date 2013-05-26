@@ -111,9 +111,9 @@ class ServerInstance
 		instances = []
 		
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
-			next if File.basename(dir) !~ /passenger\.#{DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
+			next if File.basename(dir) !~ /passenger\.#{SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
 			minor = $1
-			next if minor.to_i > DIR_STRUCTURE_MINOR_VERSION
+			next if minor.to_i > SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION
 			
 			begin
 				instances << ServerInstance.new(dir)

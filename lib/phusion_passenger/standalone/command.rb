@@ -238,7 +238,7 @@ private
 	def create_nginx_controller(extra_options = {})
 		require_daemon_controller
 		require 'socket' unless defined?(UNIXSocket)
-		@temp_dir        = "/tmp/passenger.#{DIR_STRUCTURE_MAJOR_VERSION}.#{DIR_STRUCTURE_MINOR_VERSION}.#{$$}"
+		@temp_dir        = "/tmp/passenger.#{SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION}.#{SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION}.#{$$}"
 		@config_filename = "#{@temp_dir}/config"
 		@location_config_filename = "#{@temp_dir}/locations.ini"
 		if @options[:socket_file]

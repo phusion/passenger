@@ -199,6 +199,23 @@ else
 end
 
 
+########## Shared definitions ##########
+# Shared definition files should be in source control so that they don't
+# have to be built by users. Users may not have write access to the source
+# root, for example as is the case with Passenger Standalone.
+
+file 'ext/common/Constants.h' => ['ext/common/Constants.h.erb', 'lib/phusion_passenger/constants.rb'] do
+	puts "Creating ext/common/Constants.h"
+	require 'phusion_passenger/constants'
+	require 'erb'
+	template = ERB.new(File.read("ext/common/Constants.h.erb"))
+	result = template.result(binding)
+	File.open('ext/common/Constants.h', 'w') do |f|
+		f.write(result)
+	end
+end
+
+
 ##############################
 
 

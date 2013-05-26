@@ -458,8 +458,8 @@ initializeWorkingObjects() {
 		 */
 		string path = tempDir +
 			"/passenger." +
-			toString(ServerInstanceDir::DIR_STRUCTURE_MAJOR_VERSION) + "." +
-			toString(ServerInstanceDir::DIR_STRUCTURE_MINOR_VERSION) + "." +
+			toString(SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION) + "." +
+			toString(SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION) + "." +
 			toString<unsigned long long>(agentsOptions.getPid("web_server_pid"));
 		serverInstanceDir.reset(new ServerInstanceDir(path));
 	} else {
