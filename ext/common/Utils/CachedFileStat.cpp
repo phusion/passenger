@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,21 +27,22 @@
 
 extern "C" {
 
-PassengerCachedFileStat *
-cached_file_stat_new(unsigned int max_size) {
-	return (PassengerCachedFileStat *) new Passenger::CachedFileStat(max_size);
+PP_CachedFileStat *
+pp_cached_file_stat_new(unsigned int max_size) {
+	return (PP_CachedFileStat *) new Passenger::CachedFileStat(max_size);
 }
 
 void
-cached_file_stat_free(PassengerCachedFileStat *cstat) {
+pp_cached_file_stat_free(PP_CachedFileStat *cstat) {
 	delete (Passenger::CachedFileStat *) cstat;
 }
 
 int
-cached_file_stat_perform(PassengerCachedFileStat *cstat,
-                         const char *filename,
-                         struct stat *buf,
-                         unsigned int throttle_rate) {
+pp_cached_file_stat_perform(PP_CachedFileStat *cstat,
+                            const char *filename,
+                            struct stat *buf,
+                            unsigned int throttle_rate)
+{
 	try {
 		return ((Passenger::CachedFileStat *) cstat)->stat(filename, buf, throttle_rate);
 	} catch (const Passenger::TimeRetrievalException &e) {

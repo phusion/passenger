@@ -45,16 +45,16 @@ typedef enum {
 	PAT_NONE
 } PassengerAppType;
 
-typedef void PassengerAppTypeDetector;
+typedef void PP_AppTypeDetector;
 
-PassengerAppTypeDetector *passenger_app_type_detector_new();
-void passenger_app_type_detector_free(PassengerAppTypeDetector *detector);
-PassengerAppType passenger_app_type_detector_check_document_root(PassengerAppTypeDetector *detector,
+PP_AppTypeDetector *pp_app_type_detector_new();
+void pp_app_type_detector_free(PP_AppTypeDetector *detector);
+PassengerAppType pp_app_type_detector_check_document_root(PP_AppTypeDetector *detector,
 	const char *documentRoot, unsigned int len, int resolveFirstSymlink);
-PassengerAppType passenger_app_type_detector_check_app_root(PassengerAppTypeDetector *detector,
+PassengerAppType pp_app_type_detector_check_app_root(PP_AppTypeDetector *detector,
 	const char *appRoot, unsigned int len);
 
-const char *passenger_get_app_type_name(PassengerAppType type);
+const char *pp_get_app_type_name(PassengerAppType type);
 
 #ifdef __cplusplus
 }

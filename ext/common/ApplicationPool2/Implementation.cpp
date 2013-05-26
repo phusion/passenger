@@ -567,7 +567,10 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	{
 		// Standard resource management boilerplate stuff...
 		unique_lock<boost::mutex> lock(pool->syncher);
-		if (OXT_UNLIKELY(!process->isAlive() || !isAlive())) {
+		if (OXT_UNLIKELY(!process->isAlive()
+			|| process->enabled == Process::DETACHED
+			|| !isAlive()))
+		{
 			return;
 		}
 

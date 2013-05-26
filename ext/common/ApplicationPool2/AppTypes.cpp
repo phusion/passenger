@@ -42,18 +42,18 @@ const AppTypeDefinition appTypeDefinitions[] = {
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
 
-PassengerAppTypeDetector *
-passenger_app_type_detector_new() {
+PP_AppTypeDetector *
+pp_app_type_detector_new() {
 	return new AppTypeDetector();
 }
 
 void
-passenger_app_type_detector_free(PassengerAppTypeDetector *detector) {
+pp_app_type_detector_free(PP_AppTypeDetector *detector) {
 	delete (AppTypeDetector *) detector;
 }
 
 PassengerAppType
-passenger_app_type_detector_check_document_root(PassengerAppTypeDetector *_detector,
+pp_app_type_detector_check_document_root(PP_AppTypeDetector *_detector,
 	const char *documentRoot, unsigned int len, int resolveFirstSymlink)
 {
 	AppTypeDetector *detector = (AppTypeDetector *) _detector;
@@ -61,7 +61,7 @@ passenger_app_type_detector_check_document_root(PassengerAppTypeDetector *_detec
 }
 
 PassengerAppType
-passenger_app_type_detector_check_app_root(PassengerAppTypeDetector *_detector,
+pp_app_type_detector_check_app_root(PP_AppTypeDetector *_detector,
 	const char *appRoot, unsigned int len)
 {
 	AppTypeDetector *detector = (AppTypeDetector *) _detector;
@@ -69,6 +69,6 @@ passenger_app_type_detector_check_app_root(PassengerAppTypeDetector *_detector,
 }
 
 const char *
-passenger_get_app_type_name(PassengerAppType type) {
+pp_get_app_type_name(PassengerAppType type) {
 	return getAppTypeName(type);
 }
