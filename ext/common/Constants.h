@@ -25,7 +25,7 @@
 #ifndef _PASSENGER_CONSTANTS_H_
 #define _PASSENGER_CONSTANTS_H_
 
-/* Constants.h is automatically generated from Constants.h.template by the build system.
+/* Constants.h is automatically generated from Constants.h.erb by the build system.
  * Most constants are derived from lib/phusion_passenger/constants.rb.
  */
 
