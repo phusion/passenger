@@ -203,6 +203,9 @@ end
 # Shared definition files should be in source control so that they don't
 # have to be built by users. Users may not have write access to the source
 # root, for example as is the case with Passenger Standalone.
+#
+# If you add a new shared definition file, don't forget to update
+# lib/phusion_passenger/packaging.rb!
 
 file 'ext/common/Constants.h' => ['ext/common/Constants.h.erb', 'lib/phusion_passenger/constants.rb'] do
 	puts "Creating ext/common/Constants.h"

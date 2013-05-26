@@ -86,14 +86,14 @@ task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
 	end
 end
 
-task 'package:gem' => Packaging::ASCII_DOCS do
+task 'package:gem' => Packaging::PREGENERATED_FILES do
 	require 'phusion_passenger'
 	sh "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec --sign --key 0x0A212A8C"
 	sh "mkdir -p pkg"
 	sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem pkg/"
 end
 
-task 'package:tarball' => Packaging::ASCII_DOCS do
+task 'package:tarball' => Packaging::PREGENERATED_FILES do
 	require 'phusion_passenger'
 	require 'fileutils'
 
