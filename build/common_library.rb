@@ -208,14 +208,9 @@ end
 # lib/phusion_passenger/packaging.rb!
 
 file 'ext/common/Constants.h' => ['ext/common/Constants.h.erb', 'lib/phusion_passenger/constants.rb'] do
-	puts "Creating ext/common/Constants.h"
 	require 'phusion_passenger/constants'
-	require 'erb'
-	template = ERB.new(File.read("ext/common/Constants.h.erb"))
-	result = template.result(binding)
-	File.open('ext/common/Constants.h', 'w') do |f|
-		f.write(result)
-	end
+	template = TemplateRenderer.new('ext/common/Constants.h.erb')
+	template.render_to('ext/common/Constants.h')
 end
 
 
