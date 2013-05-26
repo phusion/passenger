@@ -111,9 +111,9 @@ class ServerInstance
 		instances = []
 		
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
-			next if File.basename(dir) !~ /passenger\.#{SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
+			next if File.basename(dir) !~ /passenger\.#{PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
 			minor = $1
-			next if minor.to_i > SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION
+			next if minor.to_i > PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION
 			
 			begin
 				instances << ServerInstance.new(dir)
@@ -171,7 +171,8 @@ class ServerInstance
 		end
 		major = major.to_i
 		minor = minor.to_i
-		if major != GENERATION_STRUCTURE_MAJOR_VERSION || minor > GENERATION_STRUCTURE_MINOR_VERSION
+		if major != PhusionPassenger::SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION ||
+		   minor > PhusionPassenger::SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION
 			raise UnsupportedGenerationStructureVersionError, "Unsupported generation directory structure version."
 		end
 		
