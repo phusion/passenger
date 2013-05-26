@@ -1,0 +1,140 @@
+/*
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2010-2013 Phusion
+ *
+ *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+
+/*
+ * CacheLocationConfig.c is automatically generated from CacheLocationConfig.c.erb,
+ * using definitions from lib/phusion_passenger/nginx/config_options.rb.
+ * Edits to MergeLocationConfig.c will be lost.
+ *
+ * To update CacheLocationConfig.c:
+ *   rake nginx
+ *
+ * To force regeneration of CacheLocationConfig.c:
+ *   rm -f ext/nginx/CacheLocationConfig.c
+ *   rake ext/nginx/CacheLocationConfig.c
+ */
+
+<%
+require 'phusion_passenger/nginx/config_options'
+
+def filter_eligible_options(options)
+	return options.reject do |option|
+		option[:alias_for] ||
+			option.fetch(:field, true).nil? ||
+			option[:field].to_s =~ /\./ ||
+			!option.fetch(:header, true)
+	end
+end
+
+def struct_field_for(option)
+	if option.has_key?(:field)
+		return option[:field]
+	else
+		return option[:name].sub(/^passenger_/, '')
+	end
+end
+
+def header_name_for(option)
+	return option[:header] || option[:name].upcase
+end
+%>
+
+size_t len = 0;
+u_char int_buf[32], *end, *buf, *pos;
+
+/* Calculate lengths */
+<% for option in filter_eligible_options(LOCATION_CONFIGURATION_OPTIONS) %>
+	<% if option[:type] == :string %>
+		if (conf-><%= struct_field_for(option) %>.data != NULL) {
+			len += <%= header_name_for(option).size + 1 %>;
+			len += conf-><%= struct_field_for(option) %>.len + 1;
+		}
+	<% elsif option[:type] == :integer %>
+		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET) {
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf-><%= struct_field_for(option) %>);
+			len += <%= header_name_for(option).size + 1 %>;
+			len += end - int_buf + 1;
+		}
+	<% elsif option[:type] == :flag %>
+		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET) {
+			len += <%= header_name_for(option).size + 1 %>;
+			len += conf-><%= struct_field_for(option) %> ? sizeof("true") : sizeof("false");
+		}
+	<% else %>
+		<% raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}" %>
+	<% end %>
+<% end %>
+
+/* Create string */
+buf = pos = ngx_pnalloc(cf->pool, len);
+
+<% for option in filter_eligible_options(LOCATION_CONFIGURATION_OPTIONS) %>
+	<% if option[:type] == :string %>
+		if (conf-><%= struct_field_for(option) %>.data != NULL) {
+			pos = ngx_copy(pos,
+				"<%= header_name_for(option) %>",
+				<%= header_name_for(option).size + 1 %>);
+			pos = ngx_copy(pos,
+				conf-><%= struct_field_for(option) %>.data,
+				conf-><%= struct_field_for(option) %>.len);
+			*pos = '\0';
+			pos++;
+		}
+	<% elsif option[:type] == :integer %>
+		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET) {
+			pos = ngx_copy(pos,
+				"<%= header_name_for(option) %>",
+				<%= header_name_for(option).size + 1 %>);
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf-><%= struct_field_for(option) %>);
+			pos = ngx_copy(pos,
+				int_buf,
+				end - int_buf);
+			*pos = '\0';
+			pos++;
+		}
+	<% elsif option[:type] == :flag %>
+		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET) {
+			pos = ngx_copy(pos,
+				"<%= header_name_for(option) %>",
+				<%= header_name_for(option).size + 1 %>);
+			if (conf-><%= struct_field_for(option) %>) {
+				pos = ngx_copy(pos, "true", sizeof("true"));
+			} else {
+				pos = ngx_copy(pos, "false", sizeof("false"));
+			}
+		}
+	<% else %>
+		<% raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}" %>
+	<% end %>
+<% end %>
+
+conf->options_cache.data = buf;
+conf->options_cache.len = pos - buf;

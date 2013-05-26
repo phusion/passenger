@@ -370,8 +370,8 @@ public:
 		baseURI                 = "/";
 		spawnMethod             = "smart";
 		defaultUser             = "nobody";
-		ruby                    = "ruby";
-		python                  = "python";
+		ruby                    = DEFAULT_RUBY;
+		python                  = DEFAULT_PYTHON;
 		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
 		debugger                = false;
 		loadShellEnvvars        = true;

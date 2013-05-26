@@ -36,28 +36,10 @@ typedef struct {
     ngx_array_t *flushes;
     ngx_array_t *vars_len;
     ngx_array_t *vars;
-    ngx_array_t *vars_source;
+    /** Raw SCGI header data for this location is cached here. */
+    ngx_str_t    options_cache;
     
-    ngx_flag_t   enabled;
-    ngx_flag_t   friendly_error_pages;
-    ngx_flag_t   union_station_support;
-    ngx_flag_t   debugger;
-    ngx_flag_t   show_version_in_header;
-    ngx_str_t    ruby;
-    ngx_str_t    python;
-    ngx_str_t    environment;
-    ngx_str_t    user;
-    ngx_str_t    group;
-    ngx_str_t    spawn_method;
-    ngx_str_t    app_group_name;
-    ngx_str_t    app_root;
-    ngx_str_t    app_rights;
-    ngx_int_t    min_instances;
-    ngx_int_t    max_requests;
-    ngx_int_t    max_preloader_idle_time;
-    ngx_str_t    union_station_key;
-    ngx_array_t *base_uris;
-    ngx_array_t *union_station_filters;
+    #include "ConfigurationFields.h"
 
 #if (NGX_HTTP_CACHE)
     ngx_http_complex_value_t cache_key;

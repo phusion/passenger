@@ -34,6 +34,10 @@ NGX_ADDON_SRCS="$NGX_ADDON_SRCS \
     ${ngx_addon_dir}/StaticContentHandler.c"
 NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/Configuration.h \
+    ${ngx_addon_dir}/ConfigurationCommands.c \
+    ${ngx_addon_dir}/CreateLocationConfig.c \
+    ${ngx_addon_dir}/MergeLocationConfig.c \
+    ${ngx_addon_dir}/CacheLocationConfig.c \
     ${ngx_addon_dir}/ContentHandler.h \
     ${ngx_addon_dir}/StaticContentHandler.h \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \

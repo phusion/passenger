@@ -275,63 +275,6 @@ fix_peer_address(ngx_http_request_t *r) {
 }
 
 
-/* Convenience macros for building the SCGI header in create_request(). */
-
-#define ANALYZE_BOOLEAN_CONFIG_LENGTH(name, container, config_field)    \
-    do {                                                                \
-        if (container->config_field) {                                  \
-            len += sizeof(name) + sizeof("true");                       \
-        } else {                                                        \
-            len += sizeof(name) + sizeof("false");                      \
-        }                                                               \
-    } while (0)
-
-#define SERIALIZE_BOOLEAN_CONFIG_DATA(name, container, config_field)    \
-    do {                                                                \
-        b->last = ngx_copy(b->last, name, sizeof(name));                \
-        if (container->config_field) {                                  \
-            b->last = ngx_copy(b->last, "true", sizeof("true"));        \
-        } else {                                                        \
-            b->last = ngx_copy(b->last, "false", sizeof("false"));      \
-        }                                                               \
-    } while (0)
-
-#define PREPARE_INT_CONFIG_DATA(name, container, config_field)      \
-    do {                                                            \
-        end = ngx_snprintf(config_field ## _string,                 \
-                           sizeof(config_field ## _string) - 1,     \
-                           "%d",                                    \
-                           container->config_field);                \
-        *end = '\0';                                                \
-        len += sizeof(name) + (end - config_field ## _string) + 1;  \
-    } while (0)
-
-#define SERIALIZE_INT_CONFIG_DATA(name, container, config_field)        \
-    do {                                                                \
-        b->last = ngx_copy(b->last, name, sizeof(name));                \
-        b->last = ngx_copy(b->last, config_field ## _string,            \
-                           ngx_strlen(config_field ## _string) + 1);    \
-    } while (0)
-
-#define ANALYZE_STR_CONFIG_LENGTH(name, container, config_field)        \
-    do {                                                                \
-        if (container->config_field.data != NULL) {                     \
-            len += sizeof(name) + (container->config_field.len) + 1;    \
-        }                                                               \
-    } while (0)
-
-#define SERIALIZE_STR_CONFIG_DATA(name, container, config_field)        \
-    do {                                                                \
-        if (container->config_field.data != NULL) {                     \
-            b->last = ngx_copy(b->last, name, sizeof(name));            \
-            b->last = ngx_copy(b->last, container->config_field.data,   \
-                               container->config_field.len);            \
-            *b->last = '\0';                                            \
-            b->last++;                                                  \
-        }                                                               \
-    } while (0)
-
-
 #if (NGX_HTTP_CACHE)
 
 static ngx_int_t
@@ -370,9 +313,6 @@ create_request(ngx_http_request_t *r)
     int                            server_name_len;
     ngx_str_t                      escaped_uri;
     ngx_str_t                     *union_station_filters = NULL;
-    u_char                         min_instances_string[12];
-    u_char                         max_requests_string[12];
-    u_char                         max_preloader_idle_time_string[12];
     u_char                        *end;
     void                          *tmp;
     ngx_uint_t                     i, n;
@@ -471,55 +411,10 @@ create_request(ngx_http_request_t *r)
     #endif
     
     /* Lengths of Passenger application pool options. */
-    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_FRIENDLY_ERROR_PAGES",
-                                  slcf, friendly_error_pages);
-    ANALYZE_BOOLEAN_CONFIG_LENGTH("UNION_STATION_SUPPORT",
-                                  slcf, union_station_support);
-    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_DEBUGGER",
-                                  slcf, debugger);
-    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_SHOW_VERSION_IN_HEADER",
-                                  slcf, show_version_in_header);
-    if (slcf->ruby.data != NULL) {
-        ANALYZE_STR_CONFIG_LENGTH("PASSENGER_RUBY", slcf, ruby);
-    } else {
-        len += sizeof("PASSENGER_RUBY") + passenger_main_conf.default_ruby.len + 1;
-    }
-    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_PYTHON", slcf, python);
-    len += sizeof("PASSENGER_ENV") + slcf->environment.len + 1;
-    len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
-    len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
-    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_GROUP_NAME", slcf, app_group_name);
-    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_ROOT", slcf, app_root);
-    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_RIGHTS", slcf, app_rights);
-    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_USER", slcf, user);
-    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_GROUP", slcf, group);
-    ANALYZE_STR_CONFIG_LENGTH("UNION_STATION_KEY", slcf, union_station_key);
-    
-    end = ngx_snprintf(min_instances_string,
-                       sizeof(min_instances_string) - 1,
-                       "%d",
-                       (slcf->min_instances == (ngx_int_t) -1) ? 1 : slcf->min_instances);
-    *end = '\0';
-    len += sizeof("PASSENGER_MIN_INSTANCES") +
-           ngx_strlen(min_instances_string) + 1;
+    len += slcf->options_cache.len;
 
-    end = ngx_snprintf(max_requests_string,
-                       sizeof(max_requests_string) - 1,
-                       "%d",
-                       (slcf->max_requests == (ngx_int_t) -1) ? 0 : slcf->max_requests);
-    *end = '\0';
-    len += sizeof("PASSENGER_MAX_REQUESTS") +
-           ngx_strlen(max_requests_string) + 1;
-    
-    end = ngx_snprintf(max_preloader_idle_time_string,
-                       sizeof(max_preloader_idle_time_string) - 1,
-                       "%d",
-                       (slcf->max_preloader_idle_time == (ngx_int_t) -1) ?
-                           -1 : slcf->max_preloader_idle_time);
-    *end = '\0';
-    len += sizeof("PASSENGER_MAX_PRELOADER_IDLE_TIME") +
-           ngx_strlen(max_preloader_idle_time_string) + 1;
-    
+    len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
+
     if (slcf->union_station_filters != NGX_CONF_UNSET_PTR && slcf->union_station_filters->nelts > 0) {
         len += sizeof("UNION_STATION_FILTERS");
         
@@ -690,68 +585,11 @@ create_request(ngx_http_request_t *r)
     
 
     /* Build Passenger application pool option headers. */
-    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_FRIENDLY_ERROR_PAGES",
-                                  slcf, friendly_error_pages);
-    SERIALIZE_BOOLEAN_CONFIG_DATA("UNION_STATION_SUPPORT",
-                                  slcf, union_station_support);
-    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_DEBUGGER",
-                                  slcf, debugger);
-    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_SHOW_VERSION_IN_HEADER",
-                                  slcf, show_version_in_header);
-    
-    if (slcf->ruby.data != NULL) {
-        SERIALIZE_STR_CONFIG_DATA("PASSENGER_RUBY",
-                                  slcf, ruby);
-    } else {
-        b->last = ngx_copy(b->last, "PASSENGER_RUBY",
-                           sizeof("PASSENGER_RUBY"));
-        b->last = ngx_copy(b->last, passenger_main_conf.default_ruby.data,
-                           passenger_main_conf.default_ruby.len + 1);
-    }
-    SERIALIZE_STR_CONFIG_DATA("PASSENGER_PYTHON",
-                              slcf, python);
-
-    b->last = ngx_copy(b->last, "PASSENGER_ENV",
-                       sizeof("PASSENGER_ENV"));
-    b->last = ngx_copy(b->last, slcf->environment.data,
-                       slcf->environment.len + 1);
-
-    b->last = ngx_copy(b->last, "PASSENGER_SPAWN_METHOD",
-                       sizeof("PASSENGER_SPAWN_METHOD"));
-    b->last = ngx_copy(b->last, slcf->spawn_method.data,
-                       slcf->spawn_method.len + 1);
-
-    SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_GROUP_NAME",
-                              slcf, app_group_name);
-    SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_ROOT",
-                              slcf, app_root);
-    SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_RIGHTS",
-                              slcf, app_rights);
-    SERIALIZE_STR_CONFIG_DATA("PASSENGER_USER",
-                              slcf, user);
-    SERIALIZE_STR_CONFIG_DATA("PASSENGER_GROUP",
-                              slcf, group);
-    SERIALIZE_STR_CONFIG_DATA("UNION_STATION_KEY",
-                              slcf, union_station_key);
+    b->last = ngx_copy(b->last, slcf->options_cache.data, slcf->options_cache.len);
 
     b->last = ngx_copy(b->last, "PASSENGER_APP_TYPE",
                        sizeof("PASSENGER_APP_TYPE"));
     b->last = ngx_copy(b->last, app_type_string, app_type_string_len);
-
-    b->last = ngx_copy(b->last, "PASSENGER_MIN_INSTANCES",
-                       sizeof("PASSENGER_MIN_INSTANCES"));
-    b->last = ngx_copy(b->last, min_instances_string,
-                       ngx_strlen(min_instances_string) + 1);
-
-    b->last = ngx_copy(b->last, "PASSENGER_MAX_REQUESTS",
-                       sizeof("PASSENGER_MAX_REQUESTS"));
-    b->last = ngx_copy(b->last, max_requests_string,
-                       ngx_strlen(max_requests_string) + 1);
-
-    b->last = ngx_copy(b->last, "PASSENGER_MAX_PRELOADER_IDLE_TIME",
-                       sizeof("PASSENGER_MAX_PRELOADER_IDLE_TIME"));
-    b->last = ngx_copy(b->last, max_preloader_idle_time_string,
-                       ngx_strlen(max_preloader_idle_time_string) + 1);
 
     if (slcf->union_station_filters != NGX_CONF_UNSET_PTR && slcf->union_station_filters->nelts > 0) {
         b->last = ngx_copy(b->last, "UNION_STATION_FILTERS",
