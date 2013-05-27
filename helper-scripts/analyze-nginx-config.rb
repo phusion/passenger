@@ -2,8 +2,8 @@
 # Parses an Nginx config file, infers a list of web apps from it,
 # and print a representation of that in JSON to an output file.
 
-if ARGV.size != 4
-	STDERR.puts "Usage: analyze-nginx-config.rb <RUBY_LIBDIR> <PASSENGER_ROOT> <NGINX_CONFIG_FILE> <OUTPUT>.json"
+if ARGV.size != 3 && ARGV.size != 4
+	STDERR.puts "Usage: analyze-nginx-config.rb <RUBY_LIBDIR> <PASSENGER_ROOT> <NGINX_CONFIG_FILE> [OUTPUT]"
 	exit 1
 end
 
@@ -79,9 +79,13 @@ case result
 when :ok
 	data = aux
 	data = SimpleJsonGenerator.generate(AppListInferer.new(data).start)
-	File.open(output_file, "w") do |f|
-		f.write(data)
-	end
+  if !output_file || output_file == '-'
+    f = STDOUT
+  else
+    f = File.open(output_file, "w")
+  end
+  f.write(data)
+  f.flush
 when :parse_error
 	abort aux.failure_reason
 when :load_error
