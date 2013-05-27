@@ -6,6 +6,8 @@ Release 4.0.4
  * Fixed a WSGI bug. wsgi.input was a file object opened in text mode,
    but should be opened in binary mode. Fixes issue #881.
  * Fixed a potential crash in Out-of-Band Work. Fixes issue #894.
+ * Fixed a potential crash in rolling restarting, which only occurs if a
+   process was also being spawned at the same time. Fixes issue #896.
  * [Apache] The RailsBaseURI and RackBaseURI directives have been unified.
    For a long time, RailsBaseURI told Phusion Passenger that the given
    sub-URI belongs to a **Rails 2** application. Attempt to use this
