@@ -21,6 +21,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger/utils/tmpio'
+
 module PhusionPassenger
 
 # This module autodetects various platform-specific information, and
@@ -149,20 +151,18 @@ private
 	private_class_method :reindent
 
 	def self.create_temp_file(name, dir = tmpdir)
-		tag = "#{Process.pid}.#{Thread.current.object_id.to_s(16)}"
-		if name =~ /\./
-			ext = File.extname(name)
-			name = File.basename(name, ext) + "-#{tag}#{ext}"
-		else
-			name = "#{name}-#{tag}"
-		end
-		filename = "#{dir}/#{name}"
-		f = File.open(filename, "w")
-		begin
-			yield(filename, f)
-		ensure
-			f.close if !f.closed?
-			File.unlink(filename) if File.exist?(filename)
+		# This function is mostly used for compiling C programs to autodetect
+		# system properties. We create a secure temp subdirectory to prevent
+		# TOCTU attacks, especially because we don't know how the compiler
+		# handles this.
+		PhusionPassenger::Utils.mktmpdir("passenger.", dir) do |subdir|
+			filename = "#{subdir}/#{name}"
+			f = File.open(filename, "w")
+			begin
+				yield(filename, f)
+			ensure
+				f.close if !f.closed?
+			end
 		end
 	end
 	private_class_method :create_temp_file

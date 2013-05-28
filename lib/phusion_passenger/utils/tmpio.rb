@@ -29,5 +29,40 @@ class TmpIO < File
   end unless File.method_defined?(:size)
 end
 
+# Like Dir.mktmpdir, but creates shorter filenames.
+def self.mktmpdir(prefix_suffix=nil, tmpdir=nil)
+  case prefix_suffix
+  when nil
+    prefix = "d"
+    suffix = ""
+  when String
+    prefix = prefix_suffix
+    suffix = ""
+  when Array
+    prefix = prefix_suffix[0]
+    suffix = prefix_suffix[1]
+  else
+    raise ArgumentError, "unexpected prefix_suffix: #{prefix_suffix.inspect}"
+  end
+  tmpdir ||= Dir.tmpdir
+  begin
+    path = "#{tmpdir}/#{prefix}#{rand(0x100000000).to_s(36)}"
+    path << suffix
+    Dir.mkdir(path, 0700)
+  rescue Errno::EEXIST
+    retry
+  end
+
+  if block_given?
+    begin
+      yield path
+    ensure
+      FileUtils.remove_entry_secure path
+    end
+  else
+    path
+  end
+end
+
 end # module Utils
 end # module PhusionPassenger
