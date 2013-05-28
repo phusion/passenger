@@ -199,7 +199,7 @@ protected
 	def before_install
 		super
 		@plugin.call_hook(:runtime_installer_start, self) if @plugin
-		@working_dir = "/tmp/#{myself}-passenger-standalone-#{Process.pid}"
+		@working_dir = "#{PlatformInfo.tmpexedir}/#{myself}-passenger-standalone-#{Process.pid}"
 		FileUtils.rm_rf(@working_dir)
 		FileUtils.mkdir_p(@working_dir)
 		@download_binaries = true if !defined?(@download_binaries)

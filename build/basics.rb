@@ -44,6 +44,26 @@ require 'build/cplusplus_support'
 
 #################################################
 
+class TemplateRenderer
+	def initialize(filename)
+		require 'erb' if !defined?(ERB)
+		@erb = ERB.new(File.read(filename))
+		@erb.filename = filename
+	end
+
+	def render
+		return @erb.result(binding)
+	end
+
+	def render_to(filename)
+		puts "Creating #{filename}"
+		text = render
+		File.open(filename, 'w') do |f|
+			f.write(text)
+		end
+	end
+end
+
 def string_option(name, default_value = nil)
 	value = ENV[name]
 	if value.nil? || value.empty?

@@ -36,49 +36,49 @@
 typedef enum {
 	AS_APACHE,
 	AS_NGINX
-} PSG_AgentsStarterType;
+} PP_AgentsStarterType;
 
-typedef void PSG_AgentsStarter;
-typedef void PSG_VariantMap;
-typedef void (*PSG_AfterForkCallback)(void *);
+typedef void PP_AgentsStarter;
+typedef void PP_VariantMap;
+typedef void (*PP_AfterForkCallback)(void *);
 
-PSG_VariantMap *psg_variant_map_new();
-void psg_variant_map_set(PSG_VariantMap *m,
+PP_VariantMap *pp_variant_map_new();
+void pp_variant_map_set(PP_VariantMap *m,
 	const char *name,
 	const char *value,
 	unsigned int value_len);
-void psg_variant_map_set2(PSG_VariantMap *m,
+void pp_variant_map_set2(PP_VariantMap *m,
 	const char *name,
 	unsigned int name_len,
 	const char *value,
 	unsigned int value_len);
-void psg_variant_map_set_int(PSG_VariantMap *m,
+void pp_variant_map_set_int(PP_VariantMap *m,
 	const char *name,
 	int value);
-void psg_variant_map_set_bool(PSG_VariantMap *m,
+void pp_variant_map_set_bool(PP_VariantMap *m,
 	const char *name,
 	int value);
-void psg_variant_map_set_strset(PSG_VariantMap *m,
+void pp_variant_map_set_strset(PP_VariantMap *m,
 	const char *name,
 	const char **strs,
 	unsigned int count);
-void psg_variant_map_free(PSG_VariantMap *m);
+void pp_variant_map_free(PP_VariantMap *m);
 
-PSG_AgentsStarter *psg_agents_starter_new(PSG_AgentsStarterType type,
+PP_AgentsStarter *pp_agents_starter_new(PP_AgentsStarterType type,
 	char **error_message);
-int psg_agents_starter_start(PSG_AgentsStarter *as,
+int pp_agents_starter_start(PP_AgentsStarter *as,
 	const char *passengerRoot,
-	PSG_VariantMap *params,
-	const PSG_AfterForkCallback afterFork,
+	PP_VariantMap *params,
+	const PP_AfterForkCallback afterFork,
 	void *callbackArgument,
 	char **errorMessage);
-const char *psg_agents_starter_get_request_socket_filename(PSG_AgentsStarter *as, unsigned int *size);
-const char *psg_agents_starter_get_request_socket_password(PSG_AgentsStarter *as, unsigned int *size);
-const char *psg_agents_starter_get_server_instance_dir(PSG_AgentsStarter *as);
-const char *psg_agents_starter_get_generation_dir(PSG_AgentsStarter *as);
-pid_t       psg_agents_starter_get_pid(PSG_AgentsStarter *as);
-void        psg_agents_starter_detach(PSG_AgentsStarter *as);
-void        psg_agents_starter_free(PSG_AgentsStarter *as);
+const char *pp_agents_starter_get_request_socket_filename(PP_AgentsStarter *as, unsigned int *size);
+const char *pp_agents_starter_get_request_socket_password(PP_AgentsStarter *as, unsigned int *size);
+const char *pp_agents_starter_get_server_instance_dir(PP_AgentsStarter *as);
+const char *pp_agents_starter_get_generation_dir(PP_AgentsStarter *as);
+pid_t       pp_agents_starter_get_pid(PP_AgentsStarter *as);
+void        pp_agents_starter_detach(PP_AgentsStarter *as);
+void        pp_agents_starter_free(PP_AgentsStarter *as);
 
 #ifdef __cplusplus
 	} /* extern "C" */
@@ -121,7 +121,7 @@ using namespace oxt;
  */
 class AgentsStarter {
 private:
-	PSG_AgentsStarterType type;
+	PP_AgentsStarterType type;
 
 	/** The watchdog's PID. Equals 0 if the watchdog hasn't been started yet
 	 * or if detach() is called. */
@@ -288,7 +288,7 @@ public:
 	 *
 	 * @param type Whether one wants to start the Apache or the Nginx helper agent.
 	 */
-	AgentsStarter(PSG_AgentsStarterType type) {
+	AgentsStarter(PP_AgentsStarterType type) {
 		this->type = type;
 		pid = 0;
 	}
@@ -329,7 +329,7 @@ public:
 	/**
 	 * Returns the type as was passed to the constructor.
 	 */
-	PSG_AgentsStarterType getType() const {
+	PP_AgentsStarterType getType() const {
 		return type;
 	}
 	

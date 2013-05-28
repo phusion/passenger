@@ -26,6 +26,7 @@ require 'fileutils'
 require 'socket'
 require 'ostruct'
 require 'phusion_passenger/admin_tools'
+require 'phusion_passenger/constants'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/message_client'
@@ -34,14 +35,6 @@ module PhusionPassenger
 module AdminTools
 
 class ServerInstance
-	# If you change the structure version then don't forget to change
-	# ext/common/ServerInstanceDir.h too.
-	
-	DIR_STRUCTURE_MAJOR_VERSION = 1
-	DIR_STRUCTURE_MINOR_VERSION = 0
-	GENERATION_STRUCTURE_MAJOR_VERSION = 2
-	GENERATION_STRUCTURE_MINOR_VERSION = 0
-	
 	STALE_TIME_THRESHOLD = 60
 	
 	class StaleDirectoryError < StandardError
@@ -118,9 +111,9 @@ class ServerInstance
 		instances = []
 		
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
-			next if File.basename(dir) !~ /passenger\.#{DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
+			next if File.basename(dir) !~ /passenger\.#{PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
 			minor = $1
-			next if minor.to_i > DIR_STRUCTURE_MINOR_VERSION
+			next if minor.to_i > PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION
 			
 			begin
 				instances << ServerInstance.new(dir)
@@ -178,7 +171,8 @@ class ServerInstance
 		end
 		major = major.to_i
 		minor = minor.to_i
-		if major != GENERATION_STRUCTURE_MAJOR_VERSION || minor > GENERATION_STRUCTURE_MINOR_VERSION
+		if major != PhusionPassenger::SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION ||
+		   minor > PhusionPassenger::SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION
 			raise UnsupportedGenerationStructureVersionError, "Unsupported generation directory structure version."
 		end
 		

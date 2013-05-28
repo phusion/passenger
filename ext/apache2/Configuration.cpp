@@ -220,13 +220,9 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	
 	config->enabled = (add->enabled == DirConfig::UNSET) ? base->enabled : add->enabled;
 	
-	config->railsBaseURIs = base->railsBaseURIs;
-	for (set<string>::const_iterator it(add->railsBaseURIs.begin()); it != add->railsBaseURIs.end(); it++) {
-		config->railsBaseURIs.insert(*it);
-	}
-	config->rackBaseURIs = base->rackBaseURIs;
-	for (set<string>::const_iterator it(add->rackBaseURIs.begin()); it != add->rackBaseURIs.end(); it++) {
-		config->rackBaseURIs.insert(*it);
+	config->baseURIs = base->baseURIs;
+	for (set<string>::const_iterator it(add->baseURIs.begin()); it != add->baseURIs.end(); it++) {
+		config->baseURIs.insert(*it);
 	}
 	
 	MERGE_STR_CONFIG(ruby);
@@ -339,6 +335,21 @@ cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	if (strlen(arg) == 0) {
+		return "PassengerBaseURI may not be set to the empty string";
+	} else if (arg[0] != '/') {
+		return "PassengerBaseURI must start with a slash (/)";
+	} else if (strlen(arg) > 1 && arg[strlen(arg) - 1] == '/') {
+		return "PassengerBaseURI must not end with a slash (/)";
+	} else {
+		config->baseURIs.insert(arg);
+		return NULL;
+	}
+}
+
+static const char *
 cmd_union_station_filter(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	if (strlen(arg) == 0) {
@@ -358,25 +369,8 @@ cmd_union_station_filter(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 
 /*************************************************
- * Rails-specific settings
+ * Rack-specific settings
  *************************************************/
-
-static const char *
-cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (strlen(arg) == 0) {
-		return "RailsBaseURI may not be set to the empty string";
-	} else if (arg[0] != '/') {
-		return "RailsBaseURI must start with a slash (/)";
-	} else if (strlen(arg) > 1 && arg[strlen(arg) - 1] == '/') {
-		return "RailsBaseURI must not end with a slash (/)";
-	} else {
-		config->railsBaseURIs.insert(arg);
-		return NULL;
-	}
-}
-
-
 
 static const char *
 cmd_passenger_max_preloader_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -394,33 +388,6 @@ cmd_passenger_max_preloader_idle_time(cmd_parms *cmd, void *pcfg, const char *ar
 		return NULL;
 	}
 }
-
-
-/*************************************************
- * Rack-specific settings
- *************************************************/
-
-static const char *
-cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (strlen(arg) == 0) {
-		return "RackBaseURI may not be set to the empty string";
-	} else if (arg[0] != '/') {
-		return "RackBaseURI must start with a slash (/)";
-	} else if (strlen(arg) > 1 && arg[strlen(arg) - 1] == '/') {
-		return "RackBaseURI must not end with a slash (/)";
-	} else {
-		config->rackBaseURIs.insert(arg);
-		return NULL;
-	}
-}
-
-
-/*************************************************
- * WSGI-specific settings
- *************************************************/
-
-// none
 
 
 /*************************************************
@@ -624,6 +591,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
+	AP_INIT_TAKE1("PassengerBaseURI",
+		(Take1Func) cmd_passenger_base_uri,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Declare the given base URI as belonging to an application."),
 	AP_INIT_TAKE1("PassengerMaxPreloaderIdleTime",
 		(Take1Func) cmd_passenger_max_preloader_idle_time,
 		NULL,
@@ -713,11 +685,6 @@ const command_rec passenger_commands[] = {
 		"The number of threads that Phusion Passenger should spawn per application."),
 
 	// Rails-specific settings.
-	AP_INIT_TAKE1("RailsBaseURI",
-		(Take1Func) cmd_rails_base_uri,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Reserve the given URI to a Rails application."),
 	AP_INIT_TAKE1("RailsEnv",
 		(Take1Func) cmd_environment,
 		NULL,
@@ -725,11 +692,6 @@ const command_rec passenger_commands[] = {
 		"The environment under which a Rails app must run."),
 	
 	// Rack-specific settings.
-	AP_INIT_TAKE1("RackBaseURI",
-		(Take1Func) cmd_rack_base_uri,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Reserve the given URI to a Rack application."),
 	AP_INIT_TAKE1("RackEnv",
 		(Take1Func) cmd_environment,
 		NULL,
@@ -783,6 +745,16 @@ const command_rec passenger_commands[] = {
 		(Take1Func) cmd_passenger_max_preloader_idle_time,
 		NULL,
 		RSRC_CONF,
+		"Deprecated option."),
+	AP_INIT_TAKE1("RailsBaseURI",
+		(Take1Func) cmd_passenger_base_uri,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Deprecated option."),
+	AP_INIT_TAKE1("RackBaseURI",
+		(Take1Func) cmd_passenger_base_uri,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Deprecated option."),
 
 	// Obsolete options.

@@ -50,12 +50,12 @@
 
 
 static int                first_start = 1;
-ngx_str_t                 passenger_schema_string;
-ngx_str_t                 passenger_placeholder_upstream_address;
-PassengerCachedFileStat  *passenger_stat_cache;
-PassengerAppTypeDetector *passenger_app_type_detector;
-PSG_AgentsStarter        *passenger_agents_starter = NULL;
-ngx_cycle_t              *passenger_current_cycle;
+ngx_str_t                 pp_schema_string;
+ngx_str_t                 pp_placeholder_upstream_address;
+PP_CachedFileStat        *pp_stat_cache;
+PP_AppTypeDetector       *pp_app_type_detector;
+PP_AgentsStarter         *pp_agents_starter = NULL;
+ngx_cycle_t              *pp_current_cycle;
 
 
 /*
@@ -105,11 +105,11 @@ ngx_str_null_terminate(ngx_str_t *str) {
 }
 
 static void
-psg_variant_map_set_ngx_str(PSG_VariantMap *m,
+pp_variant_map_set_ngx_str(PP_VariantMap *m,
     const char *name,
     ngx_str_t *value)
 {
-    psg_variant_map_set(m, name, (const char *) value->data, value->len);
+    pp_variant_map_set(m, name, (const char *) value->data, value->len);
 }
 
 /**
@@ -129,7 +129,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     FILE *f;
     
     last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/control_process.pid",
-        psg_agents_starter_get_server_instance_dir(passenger_agents_starter));
+                        pp_agents_starter_get_server_instance_dir(pp_agents_starter));
     *last = (u_char) '\0';
     
     f = fopen((const char *) filename, "w");
@@ -250,14 +250,14 @@ start_helper_server(ngx_cycle_t *cycle) {
     ngx_str_t       *prestart_uris;
     char           **prestart_uris_ary = NULL;
     ngx_keyval_t    *ctl = NULL;
-    PSG_VariantMap  *params = NULL;
+    PP_VariantMap  *params = NULL;
     u_char  filename[NGX_MAX_PATH], *last;
     char   *passenger_root = NULL;
     char   *error_message = NULL;
     
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
-    params    = psg_variant_map_new();
+    params    = pp_variant_map_new();
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     
     prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
@@ -273,33 +273,33 @@ start_helper_server(ngx_cycle_t *cycle) {
         prestart_uris_ary[i][prestart_uris[i].len] = '\0';
     }
 
-    psg_variant_map_set_int    (params, "web_server_pid", getpid());
-    psg_variant_map_set_int    (params, "web_server_worker_uid", core_conf->user);
-    psg_variant_map_set_int    (params, "web_server_worker_gid", core_conf->group);
-    psg_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);
-    psg_variant_map_set_ngx_str(params, "debug_log_file", &passenger_main_conf.debug_log_file);
-    psg_variant_map_set_ngx_str(params, "temp_dir", &passenger_main_conf.temp_dir);
-    psg_variant_map_set_bool   (params, "user_switching", passenger_main_conf.user_switching);
-    psg_variant_map_set_ngx_str(params, "default_user", &passenger_main_conf.default_user);
-    psg_variant_map_set_ngx_str(params, "default_group", &passenger_main_conf.default_group);
-    psg_variant_map_set_ngx_str(params, "default_ruby", &passenger_main_conf.default_ruby);
-    psg_variant_map_set_int    (params, "max_pool_size", passenger_main_conf.max_pool_size);
-    psg_variant_map_set_int    (params, "pool_idle_time", passenger_main_conf.pool_idle_time);
-    psg_variant_map_set_ngx_str(params, "analytics_log_user", &passenger_main_conf.analytics_log_user);
-    psg_variant_map_set_ngx_str(params, "analytics_log_group", &passenger_main_conf.analytics_log_group);
-    psg_variant_map_set_ngx_str(params, "union_station_gateway_address", &passenger_main_conf.union_station_gateway_address);
-    psg_variant_map_set_ngx_str(params, "union_station_gateway_cert", &passenger_main_conf.union_station_gateway_cert);
-    psg_variant_map_set_ngx_str(params, "union_station_proxy_address", &passenger_main_conf.union_station_proxy_address);
-    psg_variant_map_set_strset (params, "prestart_urls", (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts);
+    pp_variant_map_set_int    (params, "web_server_pid", getpid());
+    pp_variant_map_set_int    (params, "web_server_worker_uid", core_conf->user);
+    pp_variant_map_set_int    (params, "web_server_worker_gid", core_conf->group);
+    pp_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);
+    pp_variant_map_set_ngx_str(params, "debug_log_file", &passenger_main_conf.debug_log_file);
+    pp_variant_map_set_ngx_str(params, "temp_dir", &passenger_main_conf.temp_dir);
+    pp_variant_map_set_bool   (params, "user_switching", passenger_main_conf.user_switching);
+    pp_variant_map_set_ngx_str(params, "default_user", &passenger_main_conf.default_user);
+    pp_variant_map_set_ngx_str(params, "default_group", &passenger_main_conf.default_group);
+    pp_variant_map_set_ngx_str(params, "default_ruby", &passenger_main_conf.default_ruby);
+    pp_variant_map_set_int    (params, "max_pool_size", passenger_main_conf.max_pool_size);
+    pp_variant_map_set_int    (params, "pool_idle_time", passenger_main_conf.pool_idle_time);
+    pp_variant_map_set_ngx_str(params, "analytics_log_user", &passenger_main_conf.analytics_log_user);
+    pp_variant_map_set_ngx_str(params, "analytics_log_group", &passenger_main_conf.analytics_log_group);
+    pp_variant_map_set_ngx_str(params, "union_station_gateway_address", &passenger_main_conf.union_station_gateway_address);
+    pp_variant_map_set_ngx_str(params, "union_station_gateway_cert", &passenger_main_conf.union_station_gateway_cert);
+    pp_variant_map_set_ngx_str(params, "union_station_proxy_address", &passenger_main_conf.union_station_proxy_address);
+    pp_variant_map_set_strset (params, "prestart_urls", (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts);
 
     ctl = (ngx_keyval_t *) passenger_main_conf.ctl->elts;
     for (i = 0; i < passenger_main_conf.ctl->nelts; i++) {
-        psg_variant_map_set2(params,
+        pp_variant_map_set2(params,
             (const char *) ctl[i].key.data, ctl[i].key.len - 1,
             (const char *) ctl[i].value.data, ctl[i].value.len - 1);
     }
     
-    ret = psg_agents_starter_start(passenger_agents_starter,
+    ret = pp_agents_starter_start(pp_agents_starter,
         passenger_root,
         params,
         starting_helper_server_after_fork,
@@ -317,7 +317,7 @@ start_helper_server(ngx_cycle_t *cycle) {
      */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/control_process.pid",
-                        psg_agents_starter_get_server_instance_dir(passenger_agents_starter));
+                        pp_agents_starter_get_server_instance_dir(pp_agents_starter));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
         result = NGX_ERROR;
@@ -334,7 +334,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     /* Create various other info files. */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/web_server.txt",
-                        psg_agents_starter_get_generation_dir(passenger_agents_starter));
+                        pp_agents_starter_get_generation_dir(pp_agents_starter));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) NGINX_VER, strlen(NGINX_VER)) != NGX_OK) {
         result = NGX_ERROR;
@@ -343,7 +343,7 @@ start_helper_server(ngx_cycle_t *cycle) {
 
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/config_files.txt",
-                        psg_agents_starter_get_generation_dir(passenger_agents_starter));
+                        pp_agents_starter_get_generation_dir(pp_agents_starter));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, cycle->conf_file.data, cycle->conf_file.len) != NGX_OK) {
         result = NGX_ERROR;
@@ -351,7 +351,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     }
     
 cleanup:
-    psg_variant_map_free(params);
+    pp_variant_map_free(params);
     free(passenger_root);
     free(error_message);
     if (prestart_uris_ary != NULL) {
@@ -373,9 +373,9 @@ cleanup:
  */
 static void
 shutdown_helper_server() {
-    if (passenger_agents_starter != NULL) {
-        psg_agents_starter_free(passenger_agents_starter);
-        passenger_agents_starter = NULL;
+    if (pp_agents_starter != NULL) {
+        pp_agents_starter_free(pp_agents_starter);
+        pp_agents_starter = NULL;
     }
 }
 
@@ -393,15 +393,15 @@ pre_config_init(ngx_conf_t *cf)
     shutdown_helper_server();
     
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
-    passenger_schema_string.data = (u_char *) "passenger:";
-    passenger_schema_string.len  = sizeof("passenger:") - 1;
-    passenger_placeholder_upstream_address.data = (u_char *) "unix:/passenger_helper_server";
-    passenger_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
-    passenger_stat_cache = cached_file_stat_new(1024);
-    passenger_app_type_detector = passenger_app_type_detector_new();
-    passenger_agents_starter = psg_agents_starter_new(AS_NGINX, &error_message);
+    pp_schema_string.data = (u_char *) "passenger:";
+    pp_schema_string.len  = sizeof("passenger:") - 1;
+    pp_placeholder_upstream_address.data = (u_char *) "unix:/passenger_helper_server";
+    pp_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
+    pp_stat_cache = pp_cached_file_stat_new(1024);
+    pp_app_type_detector = pp_app_type_detector_new();
+    pp_agents_starter = pp_agents_starter_new(AS_NGINX, &error_message);
     
-    if (passenger_agents_starter == NULL) {
+    if (pp_agents_starter == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno, "%s", error_message);
         free(error_message);
         return NGX_ERROR;
@@ -430,7 +430,7 @@ init_module(ngx_cycle_t *cycle) {
             passenger_main_conf.root_dir.len = 0;
             return NGX_OK;
         }
-        passenger_current_cycle = cycle;
+        pp_current_cycle = cycle;
     }
     return NGX_OK;
 }
@@ -452,7 +452,7 @@ init_worker_process(ngx_cycle_t *cycle) {
         
         core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
         if (core_conf->master) {
-            psg_agents_starter_detach(passenger_agents_starter);
+            pp_agents_starter_detach(pp_agents_starter);
         }
     }
     return NGX_OK;

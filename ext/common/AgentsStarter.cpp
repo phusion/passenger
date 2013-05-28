@@ -33,13 +33,13 @@ using namespace boost;
 using namespace oxt;
 
 
-PSG_VariantMap *
-psg_variant_map_new() {
-	return (PSG_VariantMap *) new Passenger::VariantMap();
+PP_VariantMap *
+pp_variant_map_new() {
+	return (PP_VariantMap *) new Passenger::VariantMap();
 }
 
 void
-psg_variant_map_set(PSG_VariantMap *m,
+pp_variant_map_set(PP_VariantMap *m,
 	const char *name,
 	const char *value,
 	unsigned int value_len)
@@ -49,7 +49,7 @@ psg_variant_map_set(PSG_VariantMap *m,
 }
 
 void
-psg_variant_map_set2(PSG_VariantMap *m,
+pp_variant_map_set2(PP_VariantMap *m,
 	const char *name,
 	unsigned int name_len,
 	const char *value,
@@ -60,7 +60,7 @@ psg_variant_map_set2(PSG_VariantMap *m,
 }
 
 void
-psg_variant_map_set_int(PSG_VariantMap *m,
+pp_variant_map_set_int(PP_VariantMap *m,
 	const char *name,
 	int value)
 {
@@ -69,7 +69,7 @@ psg_variant_map_set_int(PSG_VariantMap *m,
 }
 
 void
-psg_variant_map_set_bool(PSG_VariantMap *m,
+pp_variant_map_set_bool(PP_VariantMap *m,
 	const char *name,
 	int value)
 {
@@ -78,7 +78,7 @@ psg_variant_map_set_bool(PSG_VariantMap *m,
 }
 
 void
-psg_variant_map_set_strset(PSG_VariantMap *m,
+pp_variant_map_set_strset(PP_VariantMap *m,
 	const char *name,
 	const char **strs,
 	unsigned int count)
@@ -93,21 +93,21 @@ psg_variant_map_set_strset(PSG_VariantMap *m,
 }
 
 void
-psg_variant_map_free(PSG_VariantMap *m) {
+pp_variant_map_free(PP_VariantMap *m) {
 	delete (Passenger::VariantMap *) m;
 }
 
 
-PSG_AgentsStarter *
-psg_agents_starter_new(PSG_AgentsStarterType type, char **error_message) {
-	return (PSG_AgentsStarter *) new Passenger::AgentsStarter(type);
+PP_AgentsStarter *
+pp_agents_starter_new(PP_AgentsStarterType type, char **error_message) {
+	return (PP_AgentsStarter *) new Passenger::AgentsStarter(type);
 }
 
 int
-psg_agents_starter_start(PSG_AgentsStarter *as,
+pp_agents_starter_start(PP_AgentsStarter *as,
 	const char *passengerRoot,
-	PSG_VariantMap *extraParams,
-	const PSG_AfterForkCallback afterFork,
+	PP_VariantMap *extraParams,
+	const PP_AfterForkCallback afterFork,
 	void *callbackArgument,
 	char **errorMessage)
 {
@@ -135,7 +135,7 @@ psg_agents_starter_start(PSG_AgentsStarter *as,
 }
 
 const char *
-psg_agents_starter_get_request_socket_filename(PSG_AgentsStarter *as, unsigned int *size) {
+pp_agents_starter_get_request_socket_filename(PP_AgentsStarter *as, unsigned int *size) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	if (size != NULL) {
 		*size = agentsStarter->getRequestSocketFilename().size();
@@ -144,7 +144,7 @@ psg_agents_starter_get_request_socket_filename(PSG_AgentsStarter *as, unsigned i
 }
 
 const char *
-psg_agents_starter_get_request_socket_password(PSG_AgentsStarter *as, unsigned int *size) {
+pp_agents_starter_get_request_socket_password(PP_AgentsStarter *as, unsigned int *size) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	if (size != NULL) {
 		*size = agentsStarter->getRequestSocketPassword().size();
@@ -153,31 +153,31 @@ psg_agents_starter_get_request_socket_password(PSG_AgentsStarter *as, unsigned i
 }
 
 const char *
-psg_agents_starter_get_server_instance_dir(PSG_AgentsStarter *as) {
+pp_agents_starter_get_server_instance_dir(PP_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	return agentsStarter->getServerInstanceDir()->getPath().c_str();
 }
 
 const char *
-psg_agents_starter_get_generation_dir(PSG_AgentsStarter *as) {
+pp_agents_starter_get_generation_dir(PP_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	return agentsStarter->getGeneration()->getPath().c_str();
 }
 
 pid_t
-psg_agents_starter_get_pid(PSG_AgentsStarter *as) {
+pp_agents_starter_get_pid(PP_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	return agentsStarter->getPid();
 }
 
 void
-psg_agents_starter_detach(PSG_AgentsStarter *as) {
+pp_agents_starter_detach(PP_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	agentsStarter->detach();
 }
 
 void
-psg_agents_starter_free(PSG_AgentsStarter *as) {
+pp_agents_starter_free(PP_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	delete agentsStarter;
 }

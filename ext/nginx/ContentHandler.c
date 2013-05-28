@@ -65,10 +65,10 @@ get_file_type(const u_char *filename, unsigned int throttle_rate) {
     struct stat buf;
     int ret;
     
-    ret = cached_file_stat_perform(passenger_stat_cache,
-                                   (const char *) filename,
-                                   &buf,
-                                   throttle_rate);
+    ret = pp_cached_file_stat_perform(pp_stat_cache,
+                                      (const char *) filename,
+                                      &buf,
+                                      throttle_rate);
     if (ret == 0) {
         if (S_ISREG(buf.st_mode)) {
             return FT_FILE;
@@ -210,10 +210,10 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
      * we substitute the placeholder filename with the real helper agent request
      * socket filename.
      */
-    if (address->name.data == passenger_placeholder_upstream_address.data) {
+    if (address->name.data == pp_placeholder_upstream_address.data) {
         sockaddr = (struct sockaddr_un *) address->sockaddr;
         request_socket_filename =
-            psg_agents_starter_get_request_socket_filename(passenger_agents_starter,
+            pp_agents_starter_get_request_socket_filename(pp_agents_starter,
                                                            &request_socket_filename_len);
         
         address->name.data = (u_char *) request_socket_filename;
@@ -247,7 +247,7 @@ fix_peer_address(ngx_http_request_t *r) {
     rrp        = r->upstream->peer.data;
     peers      = rrp->peers;
     request_socket_filename =
-        psg_agents_starter_get_request_socket_filename(passenger_agents_starter,
+        pp_agents_starter_get_request_socket_filename(pp_agents_starter,
                                                        &request_socket_filename_len);
 
     while (peers != NULL) {
@@ -397,7 +397,7 @@ create_request(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
-    app_type_string = (const u_char *) passenger_get_app_type_name(context->app_type);
+    app_type_string = (const u_char *) pp_get_app_type_name(context->app_type);
     app_type_string_len = strlen((const char *) app_type_string) + 1; /* include null terminator */
     
     
@@ -590,7 +590,7 @@ create_request(ngx_http_request_t *r)
      **************************************************/
     
     helper_agent_request_socket_password_data =
-        psg_agents_starter_get_request_socket_password(passenger_agents_starter,
+        pp_agents_starter_get_request_socket_password(pp_agents_starter,
             &helper_agent_request_socket_password_len);
     size = helper_agent_request_socket_password_len +
         /* netstring length + ":" + trailing "," */
@@ -1433,7 +1433,7 @@ passenger_content_handler(ngx_http_request_t *r)
     
     /* Find the base URI for this web application, if any. */
     if (find_base_uri(r, slcf, &base_uri)) {
-        /* Store the found base URI in context->public_dir. We infer that the 'public'
+        /* Store the found base URI into context->public_dir. We infer that the 'public'
          * directory of the web application is document root + base URI.
          */
         len = root_path.len + base_uri.len + 1;
@@ -1467,13 +1467,13 @@ passenger_content_handler(ngx_http_request_t *r)
     }
     
     if (slcf->app_root.data == NULL) {
-        context->app_type = passenger_app_type_detector_check_document_root(
-            passenger_app_type_detector,
+        context->app_type = pp_app_type_detector_check_document_root(
+            pp_app_type_detector,
             (const char *) context->public_dir.data, context->public_dir.len,
             context->base_uri.len != 0);
     } else {
-        context->app_type = passenger_app_type_detector_check_app_root(
-            passenger_app_type_detector,
+        context->app_type = pp_app_type_detector_check_app_root(
+            pp_app_type_detector,
             (const char *) slcf->app_root.data, slcf->app_root.len);
     }
     if (context->app_type == PAT_NONE) {
@@ -1488,7 +1488,7 @@ passenger_content_handler(ngx_http_request_t *r)
     }
     u = r->upstream;
     
-    u->schema = passenger_schema_string;
+    u->schema = pp_schema_string;
     u->output.tag = (ngx_buf_tag_t) &ngx_http_passenger_module;
     set_upstream_server_address(u, &slcf->upstream_config);
     u->conf = &slcf->upstream_config;

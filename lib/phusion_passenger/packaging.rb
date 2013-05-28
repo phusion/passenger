@@ -32,6 +32,12 @@ module Packaging
 		'doc/Security of user switching support.html',
 		'doc/Architectural overview.html'
 	]
+
+	# Files that must be generated before packaging.
+	PREGENERATED_FILES = [
+		'ext/common/Constants.h',
+		'doc/Packaging.html'
+	] + ASCII_DOCS
 	
 	USER_EXECUTABLES = [
 		'passenger',
@@ -66,7 +72,7 @@ module Packaging
 		'man/*',
 		'debian/*',
 		'helper-scripts/*',
-		'ext/common/**/*.{cpp,c,h,hpp,md}',
+		'ext/common/**/*.{cpp,c,h,hpp,md,erb}',
 		'ext/apache2/*.{cpp,h,hpp,c}',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',
@@ -95,11 +101,7 @@ module Packaging
 		'test/ruby/**/*',
 		'test/integration_tests/**/*',
 		'test/stub/**/*'
-	
-	# If you're running 'rake package' for the first time, then ASCII_DOCS
-	# files don't exist yet, and so won't be matched by the glob.
-	# So we add these filenames manually.
-	] + ASCII_DOCS
+	]
 	
 	EXCLUDE_GLOB = [
 		'test/stub/rails_apps/3.0/empty/help/**/*',

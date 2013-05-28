@@ -55,55 +55,45 @@ task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
 			sh "scp pkg/#{basename}.{gem.asc,tar.gz.asc} app@shell.phusion.nl:/u/apps/signatures/phusion-passenger/"
 			sh "./dev/googlecode_upload.py -p phusion-passenger -s 'Phusion Passenger #{version}' pkg/passenger-#{version}.tar.gz"
 			sh "gem push pkg/passenger-#{version}.gem"
+			puts "Updating version number on website..."
+			if is_beta
+				uri = URI.parse("https://www.phusionpassenger.com/latest_beta_version")
+			else
+				uri = URI.parse("https://www.phusionpassenger.com/latest_stable_version")
+			end
+			http = Net::HTTP.new(uri.host, uri.port)
+			http.use_ssl = true
+			http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+			request = Net::HTTP::Post.new(uri.request_uri)
+			request.basic_auth("admin", website_config["admin_password"])
+			request.set_form_data("version" => version)
+			response = http.request(request)
+			if response.code != 200 && response.body != "ok"
+				abort "*** ERROR: Cannot update version number on www.phusionpassenger.com:\n" +
+					"Status: #{response.code}\n\n" +
+					response.body
+			end
 			puts "--------------"
-			puts "All done. Please update the version number in the Phusion Passenger website."
+			puts "All done."
 		else
 			dir = "/u/apps/passenger_website/shared"
 			subdir = string_option('NAME', version)
 			sh "scp pkg/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
 			sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
 		end
-
-		puts "Updating version number on website..."
-		if is_beta
-			uri = URI.parse("https://www.phusionpassenger.com/latest_beta_version")
-		else
-			uri = URI.parse("https://www.phusionpassenger.com/latest_stable_version")
-		end
-		http = Net::HTTP.new(uri.host, uri.port)
-		http.use_ssl = true
-		http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-		request = Net::HTTP::Post.new(uri.request_uri)
-		request.basic_auth("admin", website_config["admin_password"])
-		request.set_form_data("version" => version)
-		response = http.request(request)
-		if response.code != 200 && response.body != "ok"
-			abort "*** ERROR: Cannot update version number on www.phusionpassenger.com:\n" +
-				"Status: #{response.code}\n\n" +
-				response.body
-		end
 	else
 		puts "Did not upload anything."
 	end
 end
 
-task 'package:check' do
-	require 'phusion_passenger'
-	
-	File.read("ext/common/Constants.h") =~ /PASSENGER_VERSION \"(.+)\"/
-	if $1 != PhusionPassenger::VERSION_STRING
-		abort "Version number in ext/common/Constants.h doesn't match."
-	end
-end
-
-task 'package:gem' => Packaging::ASCII_DOCS + ['package:check'] do
+task 'package:gem' => Packaging::PREGENERATED_FILES do
 	require 'phusion_passenger'
 	sh "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec --sign --key 0x0A212A8C"
 	sh "mkdir -p pkg"
 	sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem pkg/"
 end
 
-task 'package:tarball' => Packaging::ASCII_DOCS + ['package:check'] do
+task 'package:tarball' => Packaging::PREGENERATED_FILES do
 	require 'phusion_passenger'
 	require 'fileutils'
 
@@ -281,7 +271,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 end
 
 desc "Create a Debian package"
-task 'package:debian' => 'package:check' do
+task 'package:debian' do
 	checkbuilddeps = PlatformInfo.find_command("dpkg-checkbuilddeps")
 	debuild = PlatformInfo.find_command("debuild")
 	if !checkbuilddeps || !debuild

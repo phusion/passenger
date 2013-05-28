@@ -22,36 +22,21 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#include "CachedFileStat.h"
-#include "CachedFileStat.hpp"
+#ifndef _PASSENGER_CONSTANTS_H_
+#define _PASSENGER_CONSTANTS_H_
 
-extern "C" {
+/* Constants.h is automatically generated from Constants.h.erb by the build system.
+ * Most constants are derived from lib/phusion_passenger/constants.rb.
+ *
+ * To force regenerating this file:
+ *   rm -f ext/common/Constants.h
+ *   rake ext/common/Constants.h
+ */
 
-PP_CachedFileStat *
-pp_cached_file_stat_new(unsigned int max_size) {
-	return (PP_CachedFileStat *) new Passenger::CachedFileStat(max_size);
-}
+#define DEFAULT_BACKEND_ACCOUNT_RIGHTS Account::DETACH
 
-void
-pp_cached_file_stat_free(PP_CachedFileStat *cstat) {
-	delete (Passenger::CachedFileStat *) cstat;
-}
+<% for constant_name in PhusionPassenger::SharedConstants.constants %>
+	#define <%= constant_name %> <%=PhusionPassenger::SharedConstants.const_get(constant_name).inspect %>
+<% end %>
 
-int
-pp_cached_file_stat_perform(PP_CachedFileStat *cstat,
-                            const char *filename,
-                            struct stat *buf,
-                            unsigned int throttle_rate)
-{
-	try {
-		return ((Passenger::CachedFileStat *) cstat)->stat(filename, buf, throttle_rate);
-	} catch (const Passenger::TimeRetrievalException &e) {
-		errno = e.code();
-		return -1;
-	} catch (const boost::thread_interrupted &) {
-		errno = EINTR;
-		return -1;
-	}
-}
-
-} // extern "C"
+#endif /* _PASSENGER_CONSTANTS_H */

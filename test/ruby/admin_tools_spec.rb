@@ -1,5 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'fileutils'
+require 'phusion_passenger/constants'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/admin_tools'
 require 'phusion_passenger/admin_tools/server_instance'
@@ -16,11 +17,6 @@ end
 
 describe AdminTools::ServerInstance do
 	include Utils
-	
-	DIR_STRUCTURE_MAJOR_VERSION = AdminTools::ServerInstance::DIR_STRUCTURE_MAJOR_VERSION
-	DIR_STRUCTURE_MINOR_VERSION = AdminTools::ServerInstance::DIR_STRUCTURE_MINOR_VERSION
-	GENERATION_STRUCTURE_MAJOR_VERSION = AdminTools::ServerInstance::GENERATION_STRUCTURE_MAJOR_VERSION
-	GENERATION_STRUCTURE_MINOR_VERSION = AdminTools::ServerInstance::GENERATION_STRUCTURE_MINOR_VERSION
 	
 	before :each do
 		File.chmod(0700, passenger_tmpdir)
@@ -45,13 +41,13 @@ describe AdminTools::ServerInstance do
 		IO.popen("sleep 999")
 	end
 	
-	def create_instance_dir(pid, major = DIR_STRUCTURE_MAJOR_VERSION, minor = DIR_STRUCTURE_MINOR_VERSION)
+	def create_instance_dir(pid, major = PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION, minor = PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION)
 		dir = "#{passenger_tmpdir}/passenger.#{major}.#{minor}.#{pid}"
 		Dir.mkdir(dir)
 		return dir
 	end
 	
-	def create_generation(dir, number = 0, major = GENERATION_STRUCTURE_MAJOR_VERSION, minor = GENERATION_STRUCTURE_MINOR_VERSION)
+	def create_generation(dir, number = 0, major = PhusionPassenger::SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION, minor = PhusionPassenger::SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION)
 		dir = "#{dir}/generation-#{number}"
 		Dir.mkdir(dir)
 		File.write("#{dir}/structure_version.txt", "#{major}.#{minor}")
@@ -113,7 +109,8 @@ describe AdminTools::ServerInstance do
 			@process1 = spawn_process
 			@process2 = spawn_process
 			
-			dir1 = create_instance_dir(@process1.pid, DIR_STRUCTURE_MAJOR_VERSION, DIR_STRUCTURE_MINOR_VERSION + 1)
+			dir1 = create_instance_dir(@process1.pid, SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION,
+				SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION + 1)
 			create_generation(dir1)
 			dir2 = create_instance_dir(@process2.pid)
 			create_generation(dir2)
@@ -133,8 +130,8 @@ describe AdminTools::ServerInstance do
 			@process1 = spawn_process
 			@process2 = spawn_process
 			dir1 = create_instance_dir(@process1.pid)
-			create_generation(dir1, 0, GENERATION_STRUCTURE_MAJOR_VERSION)
-			create_generation(dir1, 1, GENERATION_STRUCTURE_MAJOR_VERSION + 1)
+			create_generation(dir1, 0, SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION)
+			create_generation(dir1, 1, SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION + 1)
 			dir2 = create_instance_dir(@process2.pid)
 			create_generation(dir2)
 			
@@ -147,8 +144,9 @@ describe AdminTools::ServerInstance do
 			@process1 = spawn_process
 			@process2 = spawn_process
 			dir1 = create_instance_dir(@process1.pid)
-			create_generation(dir1, 0, GENERATION_STRUCTURE_MAJOR_VERSION)
-			create_generation(dir1, 1, GENERATION_STRUCTURE_MAJOR_VERSION + 1, GENERATION_STRUCTURE_MINOR_VERSION + 1)
+			create_generation(dir1, 0, SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION)
+			create_generation(dir1, 1, SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION + 1,
+				SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION + 1)
 			dir2 = create_instance_dir(@process2.pid)
 			create_generation(dir2)
 			
@@ -187,7 +185,7 @@ describe AdminTools::ServerInstance do
 		
 		it "doesn't clean up server instance directories for which the major structure version is different" do
 			process1 = spawn_process
-			dir1 = create_instance_dir(process1.pid, DIR_STRUCTURE_MAJOR_VERSION + 1)
+			dir1 = create_instance_dir(process1.pid, SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION + 1)
 			create_generation(dir1)
 			Process.kill('KILL', process1.pid) rescue nil
 			process1.close
@@ -200,7 +198,7 @@ describe AdminTools::ServerInstance do
 		
 		it "doesn't clean up server instance directories for which the major structure version is the same but the minor structure version is larger" do
 			process1 = spawn_process
-			dir1 = create_instance_dir(process1.pid, DIR_STRUCTURE_MAJOR_VERSION, DIR_STRUCTURE_MINOR_VERSION + 1)
+			dir1 = create_instance_dir(process1.pid, SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION, SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION + 1)
 			create_generation(dir1)
 			Process.kill('KILL', process1.pid) rescue nil
 			process1.close
@@ -214,7 +212,7 @@ describe AdminTools::ServerInstance do
 		it "doesn't clean up server instance directories for which the latest generation has a different major version" do
 			process1 = spawn_process
 			dir1 = create_instance_dir(process1.pid)
-			create_generation(dir1, 0, GENERATION_STRUCTURE_MAJOR_VERSION + 1)
+			create_generation(dir1, 0, SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION + 1)
 			Process.kill('KILL', process1.pid) rescue nil
 			process1.close
 			
@@ -227,7 +225,7 @@ describe AdminTools::ServerInstance do
 		it "doesn't clean up server instance directories for which the latest generation has the same major version but a larger minor version" do
 			process1 = spawn_process
 			dir1 = create_instance_dir(process1.pid)
-			create_generation(dir1, 0, GENERATION_STRUCTURE_MAJOR_VERSION, GENERATION_STRUCTURE_MINOR_VERSION + 1)
+			create_generation(dir1, 0, SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION, SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION + 1)
 			Process.kill('KILL', process1.pid) rescue nil
 			process1.close
 			
