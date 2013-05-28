@@ -4,6 +4,7 @@ Release 3.0.20
  * Rebootstrapped the libev configure to fix compilation problems on Solaris 11.
  * Fixed support for RVM mixed mode installations. Fixes issue #828.
  * Fixed encoding problems in Phusion Passenger Standalone.
+ * Changed preferred Nginx version to 1.2.9.
 
 
 Release 3.0.19
