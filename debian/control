@@ -17,7 +17,8 @@ Architecture: any
 XB-Ruby-Versions: ${ruby:Versions}
 Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter, rubygems (>= 1.2), ruby-rack
 Suggests: python, rails, ruby-passenger-doc
-Breaks: libapache2-mod-passenger (<< 1:3.9.1)
+Breaks: libapache2-mod-passenger (<< 1:3.9.1), passenger-common,
+ passenger-common1.8, passenger-common1.9.1
 Replaces: libapache2-mod-passenger (<< 1:3.9.1),
  passenger-common, passenger-common1.8, passenger-common1.9.1
 Description: Rails and Rack support for Apache2 and Nginx
@@ -28,9 +29,11 @@ Description: Rails and Rack support for Apache2 and Nginx
 Package: ruby-passenger-dev
 Architecture: any
 XB-Ruby-Versions: ${ruby:Versions}
-Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter, rubygems (>= 1.2), ruby-rack
+Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter,
+ ruby-passenger (= ${binary:Version})
 Suggests: python
 Replaces: passenger-dev
+Breaks: passenger-dev
 Description: Rails and Rack support for Apache2 and Nginx
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
  deployment of Ruby web applications, such as those built on the

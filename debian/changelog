@@ -1,4 +1,12 @@
-ruby-passenger (1:4.0.2-bbox1~precise1) precise; urgency=low
+ruby-passenger (1:4.0.3-bbox1~lucid1) lucid; urgency=low
+
+  * New upstream release, 4.0.3
+  * Remove packaging fix patches now applied upstream
+  * Set Breaks field to remove old passenger packages
+
+ -- John Leach <john@brightbox.co.uk>  Sat, 25 May 2013 11:50:16 +0100
+
+ruby-passenger (1:4.0.2-bbox2~lucid1) lucid; urgency=low
 
   * New upstream release, 4.0.2
 
