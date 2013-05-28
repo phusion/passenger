@@ -172,8 +172,11 @@ private
 	
 	def write_nginx_config_file
 		require 'phusion_passenger/platform_info/ruby'
-		ensure_directory_exists(@temp_dir)
-		
+		require 'tmpdir'
+		@temp_dir        = Dir.mktmpdir("passenger.", "/tmp")
+		@config_filename = "#{@temp_dir}/config"
+		File.chmod(0755, @temp_dir)
+
 		File.open(@config_filename, 'w') do |f|
 			f.chmod(0644)
 			template_filename = File.join(TEMPLATES_DIR, "standalone", "config.erb")
@@ -213,8 +216,6 @@ private
 	def create_nginx_controller(extra_options = {})
 		require_daemon_controller
 		require 'socket' unless defined?(UNIXSocket)
-		@temp_dir        = "/tmp/passenger-standalone.#{$$}"
-		@config_filename = "#{@temp_dir}/config"
 		if @options[:socket_file]
 			ping_spec = [:unix, @options[:socket_file]]
 		else

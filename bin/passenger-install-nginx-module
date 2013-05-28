@@ -27,6 +27,7 @@ $LOAD_PATH.unshift("#{passenger_root}/lib")
 require 'phusion_passenger'
 require 'optparse'
 require 'fileutils'
+require 'tmpdir'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/dependencies'
 require 'phusion_passenger/abstract_installer'
@@ -108,14 +109,12 @@ class Installer < PhusionPassenger::AbstractInstaller
 	def before_install
 		super
 		myself = `whoami`.strip
-		@working_dir = "/tmp/#{myself}-passenger-#{Process.pid}"
-		FileUtils.rm_rf(@working_dir)
-		FileUtils.mkdir_p(@working_dir)
+		@working_dir = Dir.mktmpdir("passenger.")
 	end
 	
 	def after_install
 		super
-		FileUtils.rm_rf(@working_dir)
+		FileUtils.remove_entry_secure(@working_dir) if @working_dir
 	end
 
 private
