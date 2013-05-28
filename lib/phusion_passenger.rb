@@ -25,7 +25,7 @@ module PhusionPassenger
 	###### Version numbers ######
 	
 	# Phusion Passenger version number. Don't forget to edit ext/common/Constants.h too.
-	VERSION_STRING = '3.0.19'
+	VERSION_STRING = '3.0.20'
 	
 	PREFERRED_NGINX_VERSION = '1.2.9'
 	PREFERRED_PCRE_VERSION  = '8.31'
