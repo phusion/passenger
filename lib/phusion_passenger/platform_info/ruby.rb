@@ -1,4 +1,4 @@
-#  Phusion Passenger - http://www.modrails.com/
+#  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
@@ -68,9 +68,33 @@ module PlatformInfo
 						return filename
 					end
 				end
-				STDERR.puts "Your RVM wrapper scripts are too old. Please " +
-							"update them first by running 'rvm get head && " +
-							"rvm reload && rvm repair all'."
+
+				# Correctness of these commands are confirmed by mpapis.
+				# If we ever encounter a case for which this logic is not sufficient,
+				# try mpapis' pseudo code:
+				# 
+				#   rvm_update_prefix  = write_to rvm_path ? "" : "rvmsudo"
+				#   rvm_gemhome_prefix  = write_to GEM_HOME ? "" : "rvmsudo"
+				#   repair_command  = "#{rvm_update_prefix} rvm get stable && rvm reload && #{rvm_gemhome_prefix} rvm repair all"
+				#   wrapper_command = "#{rvm_gemhome_prefix} rvm wrapper #{rvm_ruby_string} --no-prefix --all"
+				case rvm_installation_mode
+				when :single
+					repair_command  = "rvm get stable && rvm reload && rvm repair all"
+					wrapper_command = "rvm wrapper #{rvm_ruby_string} --no-prefix --all"
+				when :multi
+					repair_command  = "rvmsudo rvm get stable && rvm reload && rvmsudo rvm repair all"
+					wrapper_command = "rvmsudo rvm wrapper #{rvm_ruby_string} --no-prefix --all"
+				when :mixed
+					repair_command  = "rvmsudo rvm get stable && rvm reload && rvm repair all"
+					wrapper_command = "rvm wrapper #{rvm_ruby_string} --no-prefix --all"
+				end
+
+				STDERR.puts "Your RVM wrapper scripts are too old, or some " +
+					"wrapper scripts are missing. Please update/regenerate " +
+					"them first by running:\n\n" +
+					"  #{repair_command}\n\n" +
+					"If that doesn't seem to work, please run:\n\n" +
+					"  #{wrapper_command}"
 				exit 1
 			else
 				# Something's wrong with the user's RVM installation.
@@ -106,7 +130,7 @@ module PlatformInfo
 			RUBY_ENGINE != "macruby" &&
 			rb_config['target_os'] !~ /mswin|windows|mingw/
 	end
-	
+
 	# Returns the correct 'gem' command for this Ruby interpreter.
 	def self.gem_command
 		return locate_ruby_tool('gem')
@@ -211,8 +235,12 @@ module PlatformInfo
 			# try various strategies...
 			
 			# $GEM_HOME usually contains the gem set name.
-			if GEM_HOME && GEM_HOME.include?("rvm/gems/")
-				return File.basename(GEM_HOME)
+			# It may be something like:
+			#   /Users/hongli/.rvm/gems/ruby-1.9.3-p392
+			# But also:
+			#   /home/bitnami/.rvm/gems/ruby-1.9.3-p385-perf@njist325/ruby/1.9.1
+			if GEM_HOME && GEM_HOME =~ %r{rvm/gems/(.+)}
+				return $1.sub(/\/.*/, '')
 			end
 			
 			# User somehow managed to nuke $GEM_HOME. Extract info
@@ -238,6 +266,27 @@ module PlatformInfo
 		return nil
 	end
 	memoize :rvm_ruby_string
+
+	# Returns the RVM installation mode:
+	# :single - RVM is installed in single-user mode.
+	# :multi  - RVM is installed in multi-user mode.
+	# :mixed  - RVM is in a mixed-mode installation.
+	# nil     - The current Ruby interpreter is not using RVM.
+	def self.rvm_installation_mode
+		if in_rvm?
+			if ENV['rvm_path'] =~ /\.rvm/
+				return :single
+			else
+				if GEM_HOME =~ /\.rvm/
+					return :mixed
+				else
+					return :multi
+				end
+			end
+		else
+			return nil
+		end
+	end
 	
 	# Returns either 'sudo' or 'rvmsudo' depending on whether the current
 	# Ruby interpreter is managed by RVM.
