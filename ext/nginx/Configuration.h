@@ -33,7 +33,6 @@
 
 typedef struct {
     ngx_http_upstream_conf_t upstream_config;
-    ngx_str_t    index;
     ngx_array_t *flushes;
     ngx_array_t *vars_len;
     ngx_array_t *vars;

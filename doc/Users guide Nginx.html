@@ -4181,7 +4181,7 @@ passenger_pre_start http://bar.com:3500/;      # &lt;--- added</pre>
     listen 80;
     server_name myblog.com;
     root /webapps/wordpress;
-    rails_base_uri /store;
+    passenger_base_uri /store;
 }</pre>
 </div>
 </div>
@@ -4192,7 +4192,7 @@ passenger_pre_start http://bar.com:3500/;      # &lt;--- added</pre>
     listen 80;
     server_name myblog.com;
     root /webapps/wordpress;
-    rails_base_uri /store;
+    passenger_base_uri /store;
 }
 
 passenger_pre_start http://myblog.com/store;    # &lt;----- added</pre>

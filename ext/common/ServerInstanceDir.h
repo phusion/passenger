@@ -38,9 +38,10 @@
 #include <cstring>
 #include <string>
 
-#include "Exceptions.h"
-#include "Utils.h"
-#include "Utils/StrIntUtils.h"
+#include <Constants.h>
+#include <Exceptions.h>
+#include <Utils.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 
@@ -49,12 +50,6 @@ using namespace boost;
 
 class ServerInstanceDir: public noncopyable {
 public:
-	// Don't forget to update lib/phusion_passenger/admin_tools/server_instance.rb too.
-	static const int DIR_STRUCTURE_MAJOR_VERSION = 1;
-	static const int DIR_STRUCTURE_MINOR_VERSION = 0;
-	static const int GENERATION_STRUCTURE_MAJOR_VERSION = 2;
-	static const int GENERATION_STRUCTURE_MINOR_VERSION = 0;
-	
 	class Generation: public noncopyable {
 	private:
 		friend class ServerInstanceDir;
@@ -102,8 +97,8 @@ public:
 			/* Write structure version file. */
 			string structureVersionFile = path + "/structure_version.txt";
 			createFile(structureVersionFile,
-				toString(GENERATION_STRUCTURE_MAJOR_VERSION) + "." +
-				toString(GENERATION_STRUCTURE_MINOR_VERSION),
+				toString(SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION) + "." +
+				toString(SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION),
 				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 			
 			

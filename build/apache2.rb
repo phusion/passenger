@@ -35,7 +35,6 @@ APACHE2_MODULE_INPUT_FILES = {
 		ext/apache2/Configuration.cpp
 		ext/apache2/Configuration.h
 		ext/apache2/Configuration.hpp
-		ext/common/Constants.h
 		ext/common/agents/LoggingAgent/FilterSupport.h),
 	APACHE2_OUTPUT_DIR + 'Bucket.o' => %w(
 		ext/apache2/Bucket.cpp
@@ -52,7 +51,6 @@ APACHE2_MODULE_INPUT_FILES = {
 		ext/common/Logging.h
 		ext/common/RandomGenerator.h
 		ext/common/ServerInstanceDir.h
-		ext/common/Constants.h
 		ext/common/Utils.h
 		ext/common/Utils/Timer.h)
 }
@@ -89,7 +87,8 @@ task :apache2 => [
 
 # Define rules for the individual Apache 2 module source files.
 APACHE2_MODULE_INPUT_FILES.each_pair do |target, sources|
-	file(target => sources) do
+	extra_deps = ['ext/common/Constants.h']
+	file(target => sources + extra_deps) do
 		object_basename = File.basename(target)
 		object_filename = APACHE2_OUTPUT_DIR + object_basename
 		compile_cxx(sources[0], "#{APACHE2_MODULE_CXXFLAGS} -o #{object_filename}")
