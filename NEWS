@@ -1,4 +1,4 @@
-Release 3.0.20
+Release 3.0.21
 --------------
 
  * Rebootstrapped the libev configure to fix compilation problems on Solaris 11.
@@ -6,7 +6,8 @@ Release 3.0.20
  * Fixed encoding problems in Phusion Passenger Standalone.
  * Changed preferred Nginx version to 1.2.9.
  * Catch exceptions raised by Rack application objects.
- * Fix for CVE-2013-2119. Details will be published later.
+ * Fix for CVE-2013-2119. Details can be found in the announcement for version 4.0.5.
+ * Version 3.0.20 was pulled because its fixes were incomplete.
 
 
 Release 3.0.19
