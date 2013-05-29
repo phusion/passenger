@@ -21,6 +21,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'tmpdir'
+
 module PhusionPassenger
 
 # This module autodetects various platform-specific information, and
@@ -263,15 +265,12 @@ public
 		else
 			raise ArgumentError,"Unsupported language '#{language}'"
 		end
-		filename = File.join("#{tmpexedir}/passenger-compile-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
-			f.puts(source)
-		end
-		begin
+		Dir.mktmpdir("passenger.", tmpexedir) do |dir|
+			filename = File.join(dir, "check.c")
+			File.open(filename, "w") do |f|
+				f.puts(source)
+			end
 			return system("(#{compiler} #{flags} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.o") rescue nil
 		end
 	end
 	private_class_method :try_compile
@@ -284,15 +283,12 @@ public
 		else
 			raise ArgumentError,"Unsupported language '#{language}'"
 		end
-		filename = File.join("#{tmpexedir}/passenger-link-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
-			f.puts(source)
-		end
-		begin
+		Dir.mktmpdir("passenger.", tmpexedir) do |dir|
+			filename = File.join(dir, "check.c")
+			File.open(filename, "w") do |f|
+				f.puts(source)
+			end
 			return system("(#{compiler} #{flags} '#{filename}' -o '#{filename}.out') >/dev/null 2>/dev/null")
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.out") rescue nil
 		end
 	end
 	private_class_method :try_link
@@ -305,17 +301,16 @@ public
 		else
 			raise ArgumentError,"Unsupported language '#{language}'"
 		end
-		filename = File.join("#{tmpexedir}/passenger-compile-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
-			f.puts(source)
-		end
-		begin
+		Dir.mktmpdir("passenger.", tmpexedir) do |dir|
+			filename = File.join(dir, "check.c")
+			File.open(filename, "w") do |f|
+				f.puts(source)
+			end
 			if system("(#{compiler} #{flags} '#{filename}' -o '#{filename}.out') >/dev/null 2>/dev/null")
 				if Process.respond_to?(:spawn)
 					pid = Process.spawn("#{filename}.out",
 						:out => ["/dev/null", "w"],
 						:err => ["/dev/null", "w"])
-					
 				else
 					pid = fork do
 						STDOUT.reopen("/dev/null", "w")
@@ -328,9 +323,6 @@ public
 			else
 				return false
 			end
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.out") rescue nil
 		end
 	end
 	private_class_method :try_compile_and_run

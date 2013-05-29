@@ -285,16 +285,7 @@ module PlatformInfo
 	# headers are placed into the same directory as the Apache headers,
 	# and so 'apr-config' and 'apu-config' won't be necessary in that case.
 	def self.apr_config_needed_for_building_apache_modules?
-		filename = File.join("#{tmpexedir}/passenger-platform-check-#{Process.pid}.c")
-		File.open(filename, "w") do |f|
-			f.puts("#include <apr.h>")
-		end
-		begin
-			return !system("(gcc #{apache2_module_cflags(false)} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
-		ensure
-			File.unlink(filename) rescue nil
-			File.unlink("#{filename}.o") rescue nil
-		end
+		return !try_compile(:c, "#include <apr.h>", apache2_module_cflags(false))
 	end
 	memoize :apr_config_needed_for_building_apache_modules?
 
