@@ -1,3 +1,32 @@
+Release 4.0.5
+-------------
+
+ * [Standalone] Fixed a regression that prevented Passenger Standalone
+   from starting. Fixes issue #899.
+ * Fixed security vulnerability CVE-2013-2119.
+
+   Urgency: low
+   Scope: local exploit
+   Summary: denial of service and arbitrary code execution by hijacking temp files
+   Affected versions: all versions
+   Fixed versions: 3.0.21 and 4.0.5
+
+   Description:
+   Phusion Passenger's code did not always create temporary files and directories in a secure manner. Temporary files and directories were sometimes created with a predictable filename. A local attacker can pre-create temporary files, resulting in a denial of service. In addition, this vulnerability allows a local attacker to run arbitrary code as another user, by hijacking temporary files.
+
+   By pre-creating certain temporary files with certain permissions, attackers can prevent Passenger Standalone from starting (denial of service).
+
+   By pre-creating certain temporary files with certain other permissions, attackers can trick `passenger start` and the build system (which is invoked by `passenger-install-apache2-module`/`passenger-install-nginx-module`) to run arbitrary code. The user that the code is run as, is equal to the user that ran `passenger start` or the build system. Attacks of this nature have to be timed exactly right. The attacker must overwrite the file contents right after Phusion Passenger has created the file contents, but right before the file is used. In the context of `passenger start`, the vulnerable window begins right after Passenger Standalone has created the Nginx config file, and ends when Nginx has read the config file. Once Nginx has started and initialized, the system is no longer vulnerable. `passenger stop` and other Passenger Standalone commands besides `start` are not vulnerable. In the context of the build system, the vulnerable window begins when `passenger-install-apache2-module`/`passenger-install-nginx-module` prints its first dependency checking message, and ends when it prints the first compiler command.
+
+   Only the `passenger start` command, the `passenger-install-apache2-module` command and the `passenger-install-nginx-module` commands are vulnerable. Phusion Passenger for Apache and Phusion Passenger for Nginx (once they are installed) are not vulnerable.
+
+   Fixed versions:
+   3.0.21 and 4.0.5 have been released to address this issue.
+
+   Workaround:
+   You can use this workaround if you are unable to upgrade. Before invoking any Phusion Passenger command, set the `TMPDIR` environment variable to a directory that is not world-writable. Special care must be taken when you use sudo: sudo resets all environment variables, so you should either invoke sudo with `-E`, or you must set the environment variable after gaining root privileges with sudo.
+
+
 Release 4.0.4
 -------------
 
@@ -221,12 +250,16 @@ This is the first beta of Phusion Passenger 4. The changes are numerous.
  * Better relocatability without wasting space.
 
 
-Release 3.0.20
+Release 3.0.21
 --------------
 
  * Rebootstrapped the libev configure to fix compilation problems on Solaris 11.
  * Fixed support for RVM mixed mode installations. Fixes issue #828.
  * Fixed encoding problems in Phusion Passenger Standalone.
+ * Changed preferred Nginx version to 1.2.9.
+ * Catch exceptions raised by Rack application objects.
+ * Fix for CVE-2013-2119. Details can be found in the announcement for version 4.0.5.
+ * Version 3.0.20 was pulled because its fixes were incomplete.
 
 
 Release 3.0.19
