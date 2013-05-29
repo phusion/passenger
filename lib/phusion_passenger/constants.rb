@@ -67,5 +67,7 @@ module PhusionPassenger
 		FEEDBACK_FD = 3
 	end
 
-	include SharedConstants
+	SharedConstants.constants.each do |name|
+		const_set(name, SharedConstants.const_get(name)) unless const_defined? name
+	end
 end

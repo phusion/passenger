@@ -105,7 +105,7 @@ class StartCommand < Command
 		end
 	ensure
 		if @temp_dir
-			FileUtils.rm_rf(@temp_dir) rescue nil
+			FileUtils.remove_entry_secure(@temp_dir) rescue nil
 		end
 		@plugin.call_hook(:cleanup)
 	end

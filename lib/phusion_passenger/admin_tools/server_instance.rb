@@ -111,7 +111,7 @@ class ServerInstance
 		instances = []
 		
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
-			next if File.basename(dir) !~ /passenger\.#{PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
+			next if File.basename(dir) !~ /passenger\.#{PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(.+)\Z/
 			minor = $1
 			next if minor.to_i > PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION
 			
