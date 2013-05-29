@@ -1,3 +1,9 @@
+ruby-passenger (1:4.0.5-1bbox1~precise1) precise; urgency=high
+
+  * New upstream release, 4.0.5. Fixes CVE-2013-2119
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 29 May 2013 16:02:35 +0100
+
 ruby-passenger (1:4.0.4-1bbox1~precise1) precise; urgency=low
 
   * New upstream release, 4.0.4
