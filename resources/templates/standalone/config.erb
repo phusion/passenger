@@ -10,10 +10,12 @@ worker_processes 1;
 daemon on;
 error_log '<%= @options[:log_file] %>' <% if debugging? %>info<% end %>;
 pid '<%= @options[:pid_file] %>';
-<% if @options[:user] %>
-    user <%= @options[:user] %> <%= default_group_for(@options[:user]) %>;
-<% else %>
-    user <%= current_user %> <%= default_group_for(current_user) %>;
+<% if Process.euid == 0 %>
+    <% if @options[:user] %>
+        user <%= @options[:user] %> <%= default_group_for(@options[:user]) %>;
+    <% else %>
+        user <%= current_user %> <%= default_group_for(current_user) %>;
+    <% end %>
 <% end %>
 
 events {
@@ -24,7 +26,7 @@ http {
     log_format debug '[$time_local] $msec  "$request" $status conn=$connection sent=$bytes_sent body_sent=$body_bytes_sent';
     include '<%= PhusionPassenger.resources_dir %>/mime.types';
     passenger_ruby <%= PlatformInfo.ruby_command %>;
-    passenger_root '<%= @location_config_filename %>';
+    passenger_root '<%= location_config_filename %>';
     passenger_ctl server_instance_dir '<%= @temp_dir %>';
     passenger_abort_on_startup_error on;
     passenger_user_switching off;

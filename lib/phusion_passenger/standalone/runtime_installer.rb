@@ -30,6 +30,7 @@ require 'phusion_passenger/common_library'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/binary_compatibility'
 require 'phusion_passenger/standalone/utils'
+require 'phusion_passenger/utils/tmpio'
 
 module PhusionPassenger
 module Standalone
@@ -199,16 +200,14 @@ protected
 	def before_install
 		super
 		@plugin.call_hook(:runtime_installer_start, self) if @plugin
-		@working_dir = "#{PlatformInfo.tmpexedir}/#{myself}-passenger-standalone-#{Process.pid}"
-		FileUtils.rm_rf(@working_dir)
-		FileUtils.mkdir_p(@working_dir)
+		@working_dir = PhusionPassenger::Utils.mktmpdir("passenger.", PlatformInfo.tmpexedir)
 		@download_binaries = true if !defined?(@download_binaries)
 		@binaries_url_root ||= STANDALONE_BINARIES_URL_ROOT
 	end
 
 	def after_install
 		super
-		FileUtils.rm_rf(@working_dir)
+		FileUtils.remove_entry_secure(@working_dir) if @working_dir
 		@plugin.call_hook(:runtime_installer_cleanup) if @plugin
 	end
 

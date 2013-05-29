@@ -207,7 +207,8 @@ end
 # If you add a new shared definition file, don't forget to update
 # lib/phusion_passenger/packaging.rb!
 
-file 'ext/common/Constants.h' => ['ext/common/Constants.h.erb', 'lib/phusion_passenger/constants.rb'] do
+dependencies = ['ext/common/Constants.h.erb', 'lib/phusion_passenger.rb', 'lib/phusion_passenger/constants.rb']
+file 'ext/common/Constants.h' => dependencies do
 	require 'phusion_passenger/constants'
 	template = TemplateRenderer.new('ext/common/Constants.h.erb')
 	template.render_to('ext/common/Constants.h')
