@@ -93,7 +93,21 @@ protected
 				env[RACK_URL_SCHEME] = HTTP
 			end
 			
-			status, headers, body = @app.call(env)
+			begin
+				status, headers, body = @app.call(env)
+			rescue => e
+				socket_wrapper = output
+				if socket_wrapper.source_of_exception?(e)
+					# Handled by AbstractRequestHandler
+					raise e
+				else
+					# It's a good idea to catch application exceptions here because
+					# otherwise maliciously crafted responses can crash the app,
+					# forcing it to be respawned, and thereby effectively DoSing it.
+					print_exception("Rack application object", e)
+					raise AbstractRequestHandler::IgnoreException.new
+				end
+			end
 			begin
 				if full_http_response
 					output.write("HTTP/1.1 #{status.to_i.to_s} Whatever#{CRLF}")
@@ -138,6 +152,11 @@ protected
 		ensure
 			rewindable_input.close
 		end
+	end
+
+private
+	def should_swallow_app_error?(e, socket_wrapper)
+		return socket_wrapper && socket_wrapper.source_of_exception?(e) && e.is_a?(Errno::EPIPE)
 	end
 end
 

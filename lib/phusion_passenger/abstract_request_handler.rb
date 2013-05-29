@@ -453,6 +453,9 @@ private
 			trap(signal, handler)
 		end
 	end
+
+	class IgnoreException < StandardError
+	end
 	
 	def accept_and_process_next_request(socket_wrapper, channel, buffer)
 		select_result = select(@selectable_sockets, nil, nil, @select_timeout)
@@ -509,17 +512,20 @@ private
 		
 		if headers
 			prepare_request(headers)
+			ignore = false
 			begin
 				if headers[REQUEST_METHOD] == PING
 					process_ping(headers, input_stream, connection)
 				else
 					process_request(headers, input_stream, connection, full_http_response)
 				end
+			rescue IgnoreException
+				ignore = true
 			rescue Exception
 				has_error = true
 				raise
 			ensure
-				finalize_request(headers, has_error)
+				finalize_request(headers, has_error) if !ignore
 			end
 		end
 		return true
