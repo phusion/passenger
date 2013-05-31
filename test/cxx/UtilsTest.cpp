@@ -333,6 +333,8 @@ namespace tut {
 			(mode_t) (S_IRUSR | S_IXUSR | S_IWGRP | S_IXOTH));
 		ensure_equals("(7)", parseModeString("u=rs,g=ws"),
 			(mode_t) (S_IRUSR | S_ISUID | S_IWGRP | S_ISGID));
+		ensure_equals("(7)", parseModeString("u=rwx,g=rwx,+t"),
+			(mode_t) (S_IRWXU | S_IRWXG | S_ISVTX));
 	}
 	
 	TEST_METHOD(38) {

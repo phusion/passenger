@@ -92,7 +92,7 @@ public:
 			 * anybody except the owner. The individual files and subdirectories
 			 * decide for themselves whether they're readable by anybody.
 			 */
-			makeDirTree(path, "u=rwxs,g=x,o=x");
+			makeDirTree(path, "u=rwx,g=x,o=x");
 			
 			/* Write structure version file. */
 			string structureVersionFile = path + "/structure_version.txt";
@@ -107,10 +107,10 @@ public:
 			 * directory.
 			 */
 			if (runningAsRoot) {
-				makeDirTree(path + "/buffered_uploads", "u=rwxs,g=,o=",
+				makeDirTree(path + "/buffered_uploads", "u=rwx,g=,o=",
 					webServerWorkerUid, webServerWorkerGid);
 			} else {
-				makeDirTree(path + "/buffered_uploads", "u=rwxs,g=,o=");
+				makeDirTree(path + "/buffered_uploads", "u=rwx,g=,o=");
 			}
 			
 			/* The web server must be able to directly connect to a backend. */
@@ -121,7 +121,7 @@ public:
 					 * However we don't want everybody to be able to know the
 					 * sockets' filenames, so the directory is not readable.
 					 */
-					makeDirTree(path + "/backends", "u=rwxs,g=wx,o=wx");
+					makeDirTree(path + "/backends", "u=rwx,g=wx,o=wx,+t");
 				} else {
 					/* All backend processes are running as defaultUser/defaultGroup,
 					 * so make defaultUser/defaultGroup the owner and group of the
@@ -131,13 +131,13 @@ public:
 					 * nobody should be able to know the sockets' filenames without
 					 * having access to the application pool.
 					 */
-					makeDirTree(path + "/backends", "u=rwxs,g=x,o=x", defaultUid, defaultGid);
+					makeDirTree(path + "/backends", "u=rwx,g=x,o=x", defaultUid, defaultGid);
 				}
 			} else {
 				/* All backend processes are running as the same user as the web server,
 				 * so only allow access for this user.
 				 */
-				makeDirTree(path + "/backends", "u=rwxs,g=,o=");
+				makeDirTree(path + "/backends", "u=rwx,g=,o=");
 			}
 			
 			/* The helper server (containing the application pool) must be able to access
@@ -148,16 +148,16 @@ public:
 					/* Both the helper server and the spawn server are
 					 * running as root.
 					 */
-					makeDirTree(path + "/spawn-server", "u=rwxs,g=,o=");
+					makeDirTree(path + "/spawn-server", "u=rwx,g=,o=");
 				} else {
 					/* Both the helper server and the spawn server are
 					 * running as defaultUser/defaultGroup.
 					 */
-					makeDirTree(path + "/spawn-server", "u=rwxs,g=,o=",
+					makeDirTree(path + "/spawn-server", "u=rwx,g=,o=",
 						defaultUid, defaultGid);
 				}
 			} else {
-				makeDirTree(path + "/spawn-server", "u=rwxs,g=,o=");
+				makeDirTree(path + "/spawn-server", "u=rwx,g=,o=");
 			}
 			
 			owner = true;
@@ -214,7 +214,7 @@ private:
 		 * rights though, because we want admin tools to be able to list the available
 		 * generations no matter what user they're running as.
 		 */
-		makeDirTree(path, "u=rwxs,g=rx,o=rx");
+		makeDirTree(path, "u=rwx,g=rx,o=rx");
 	}
 	
 	bool isDirectory(const string &dir, struct dirent *entry) const {
