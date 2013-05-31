@@ -1,27 +1,50 @@
 [[user_switching]]
-=== User switching (security) ===
+=== User Switching (security feature) ===
 
+Phusion Passenger supports automatic 'user switching': by default, it attempts to run applications as the "right" user, instead of running all applications as the same user.
+
+To better understand the problem, let us consider the situation with PHP.
 There is a problem that plagues most PHP web hosts, namely the fact that all PHP
 applications are run in the same user context as the web server. So for
 example, Joe's PHP application will be able to read Jane's PHP application's
 passwords. This is obviously undesirable on many servers.
 
-Phusion Passenger solves this problem by implementing 'user switching'. A Rails
-application is started as the owner of the file 'config/environment.rb',
-and a Rack application is started as the owner of the file 'config.ru'.
-So if '/home/webapps/foo/config/environment.rb' is owned by 'joe', then Phusion
-Passenger will launch the corresponding application as 'joe' as well.
+Phusion Passenger's 'user switching' feature solves this problem. Applications are
+run as the owner of their "startup file". For Ruby apps, the startup file is
+`config.ru` (Rack and Rails >= 3) or `config/environment.rb` (Rails 1 and 2). For
+Python apps, the startup file is `passenger_wsgi.py`. So suppose that `config.ru`
+is owned by user 'joe', then Phusion Passenger will spawn the corresponding
+application as 'joe' as well. The exact rules are a little bit more complicated,
+and they're explained further down in this section.
 
-This behavior is the default, and you don't need to configure anything. But
-there are things that you should keep in mind:
+==== Requirements
 
-- The owner of 'environment.rb'/'config.ru' must have read access to the application's
-  root directory, and read/write access to the application's 'logs' directory.
-- This feature is only available if the web server is started by 'root'. This is the
-  case on most installations.
-- Under no circumstances will applications be run as 'root'. If
-  'environment.rb'/'config.ru' is owned as root or by an unknown user, then the
-  Rails/Rack application will run as the user specified by
+User switching is only enabled when all of the following conditions are met:
+
+- The
+ifdef::apache[]
+  <<PassengerUserSwitching,PassengerUserSwitching>>
+endif::[]
+ifdef::nginx[]
+  <<PassengerUserSwitching,passenger_user_switching>>
+endif::[]
+option must be enabled.
+- The web server's control process must have root privileges. This is the case on most installations.
+
+==== Effects
+
+The following table illustrates the effect for different combinations of the requirements.
+
+|==========================================================
+ifdef::apache[]
+|                                   | **PassengerUserSwitching on**   | **PassengerUserSwitching off**
+endif::[]
+ifdef::nginx[]
+|                                   | **passenger_user_switching on** | **passenger_user_switching off**
+endif::[]
+| **Web server has root privileges**
+  | User switching enabled.
+  | User switching disabled. Apps are run as
 ifdef::apache[]
   <<PassengerDefaultUser,PassengerDefaultUser>> and
   <<PassengerDefaultGroup,PassengerDefaultGroup>>.
@@ -30,21 +53,100 @@ ifdef::nginx[]
   <<PassengerDefaultUser,passenger_default_user>> and
   <<PassengerDefaultGroup,passenger_default_group>>.
 endif::[]
+| **Web server has no root privileges**
+  | User switching disabled. Apps are run as the web server's user.
+  | User switching disabled. Apps are run as the web server's user.
+|==========================================================
 
-User switching can be disabled with the
-ifdef::apache[<<PassengerUserSwitching,PassengerUserSwitching>>]
-ifdef::nginx[<<PassengerUserSwitching,passenger_user_switching>>]
-option.
+When user switching is enabled, the following rules are followed to determine what user an application should be run as. The first matching rule is the rule that will be followed.
+
+1. If
+ifdef::apache[]
+  <<PassengerUser,PassengerUser>> or
+  <<PassengerGroup,PassengerGroup>>
+endif::[]
+ifdef::nginx[]
+  <<PassengerUser,passenger_user>> or
+  <<PassengerGroup,passenger_group>>
+endif::[]
+are set, then the application will be run as the specified user/group. Thus, these options are a good way to override user switching settings.
+2. If the startup file is owned by root or an unknown user, then the application will run as the user specified by
+ifdef::apache[]
+  <<PassengerDefaultUser,PassengerDefaultUser>> and
+  <<PassengerDefaultGroup,PassengerDefaultGroup>>.
+endif::[]
+ifdef::nginx[]
+  <<PassengerDefaultUser,passenger_default_user>> and
+  <<PassengerDefaultGroup,passenger_default_group>>.
+endif::[]
+3. Otherwise, the application is run as the owner of the startup file.
+
+==== Caveats & troubleshooting
+
+If your application regularly encounters permission errors or fails to find certain files, then this is an indication that your application is started as a user that you did not intent it to be run as. Other symptoms include:
+
+- The application fails to start because Bundler complains that it cannot find gems. This probably indicates that Bundler does not have read access to the directory that contains Bundler-installed gems.
+- The application fails to start and its error message mentions the path '/nonexistent'. This probably indicates that your application is started as the 'nobody' user. This is because on many systems, the 'nobody' user's home directory is '/nonexistent'.
+
+To check whether it is indeed the case that your application is started as a different user than you intended to, see <<finding_out_app_user,Finding out what user an application is running as>>.
+
+The most likely reason why your application is started as 'nobody' is probably because your startup file is owned by 'root', by 'nobody' or by an unknown user. To fix this, change the owner of the startup file to the owner that you want to run the application as.
+
+Whatever user your application runs as, it must have read access to the <<application_root,application root>>, and read/write access to the application's 'logs' directory.
+
+[[finding_out_app_user]]
+==== Finding out what user an application is running as
+
+To find our what user an application is started as, first access its URL in your browser so that Phusion Passenger starts the application. For example:
+
+----------------------------------
+http://www.example.local/
+----------------------------------
+
+The application will now either successfully start or fail to start. If it fails to start then you will see an error page that tells you what user the application was being started as. If you do not see the error page in the browser then set
+ifdef::apache[]
+  <<PassengerFriendlyErrorPages,PassengerFriendlyErrorPages>>
+endif::[]
+ifdef::nginx[]
+  <<PassengerFriendlyErrorPages,passenger_friendly_error_pages>>
+endif::[]
+on.
+
+If the application successfully started, then run `passenger-status` to find the process's PID:
+
+------------------------------------------------
+.---------- General information -----------
+Max pool size : 6
+Processes     : 1
+Requests in top-level queue : 0
+
+.---------- Application groups -----------
+/webapps/example.local#default:
+  App root: /webapps/example.local
+  Requests in queue: 0
+  * PID: 16915   Sessions: 0       Processed: 1       Uptime: 2s
+    CPU: 0%      Memory  : 9M      Last used: 2s ago
+------------------------------------------------
+
+In the above example we see that the PID is 16915. Next, use 'ps' to find out the user that it is running as:
+
+--------------------------------------------------
+# ps -o pid,user,comm -p 16915
+  PID USER    COMM
+16915 phusion Passenger RackApp: /webapps/example.local
+--------------------------------------------------
+
+As you can see, the application in this example is being run as user 'phusion'.
 
 
 [[reducing_memory_usage]]
-=== Reducing memory consumption of Ruby on Rails applications by 33% ===
+=== Copy-on-write memory support (reducing memory consumption of Ruby applications) ===
 
-Is it possible to reduce memory consumption of your Rails applications by 33% on average,
-by using http://www.rubyenterpriseedition.com/[Ruby Enterprise Edition].
-Please visit the website for details.
+Phusion Passenger automatically leverages operating system virtual memory copy-on-write features in order to reduce the memory usage of Ruby applications. Experience has shown that this reduces memory usage by 33% on average. For this mechanism to work, a Ruby interpreter with a copy-on-write friendly garbage collector is required. The following Ruby interpreters have copy-on-write friendly garbage collectors:
 
-Note that this feature does not apply to Rack applications.
+- MRI Ruby >= 2.0. Versions prior to 2.0 did not have a copy-on-write friendly garbage collector.
+- http://www.rubyenterpriseedition.com/[Ruby Enterprise Edition], which was Phusion's branch of MRI Ruby 1.8 with a copy-on-write friendly garbage collector and other enhancement. It has reached End-Of-Life as of 2012, but remains available for legacy systems.
+
 
 [[capistrano]]
 === Capistrano recipe ===
@@ -86,7 +188,10 @@ end
 === Bundler support ===
 
 Phusion Passenger has automatic support for link:http://gembundler.com/git.html[Bundler].
-It works as follows:
+The support consists of loading your application under the environment defined by your
+Gemfile. In other words, Phusion Passenger loads your application as if 'bundle exec' was used.
+
+The Bundler support works as follows:
 
 - If you have a '.bundle/environment.rb' in your application root, then Phusion
   Passenger will require that file before loading your application.
@@ -104,10 +209,24 @@ have any negative effects.
 Phusion Passenger assumes that you're using Bundler >= 0.9.5. If you don't want Phusion
 Passenger to run its Bundler support code, e.g. because you need to use an older version
 of Bundler with an incompatible API or because you use a system other than Bundler, then
-you can override Phusion Passenger's Bundler support code by creating a file
+you can override Phusion Passenger's Bundler support code by creating an empty file
 'config/setup_load_paths.rb'. If this file exists then it will be required before loading
 the application startup file. In this file you can do whatever you need to setup Bundler
 or a similar system.
+
+[[add_passenger_to_gemfile]]
+==== Does Phusion Passenger itself need to be added to the Gemfile?
+
+It is never necessary to add Phusion Passenger to the application's Gemfile. In case of Phusion Passenger Standalone, it is not necessary to execute the `passenger` command through `bundle exec`. The reason for this is because Phusion Passenger automatically loads the Gemfile environment. Most other Ruby application servers do not automatically load the Gemfile environment, which is why they must be added to the Gemfile and be executed with `bundle exec`.
+
+Even when your application uses any of the Phusion Passenger APIs, you still do not need to add Phusion Passenger to the Gemfile. The only thing you need to do is to put Phusion Passenger API calls inside `if` blocks that check whether Phusion Passenger is active, by checking whether the `PhusionPassenger` namespace is defined:
+
+[code,ruby]
+------------------------------------
+if defined?(PhusionPassenger)
+    ...
+end
+------------------------------------
 
 === Installing multiple Ruby on Rails versions ===
 
@@ -207,7 +326,7 @@ Applications can use Out-of-Band Work as follows:
 
 Note that even though you can request out-of-band work, there's no guarantee that Phusion Passenger will send an `oob_work` event in a timely manner, if at all. It is also possible that Phusion Passenger sends an `oob_work` event without you ever having requested one. This latter could for example happen if the OOB work is administrator-initiated. Do not make any assumptions in your code.
 
-Here's an example which implements out-of-band garbage collection using the Out-of-Band framework:
+Here's an example which implements out-of-band garbage collection using the Out-of-Band framework. This example code doesn't do anything when the code is not being run in Phusion Passenger, thanks to the `if` block.
 
 [source, ruby]
 -------------------------------------------------
@@ -216,23 +335,29 @@ Here's an example which implements out-of-band garbage collection using the Out-
 response.headers["X-Passenger-Request-OOB-Work"] = "true"
 
 # Somewhere during application initialization:
-PhusionPassenger.on_event(:oob_work) do
-  # Phusion Passenger has told us that we're ready to perform OOB work.
-  t0 = Time.now
-  GC.start
-  Rails.logger.info "Out-Of-Bound GC finished in #{Time.now - t0} sec"
+if defined?(PhusionPassenger)
+    PhusionPassenger.on_event(:oob_work) do
+        # Phusion Passenger has told us that we're ready to perform OOB work.
+        t0 = Time.now
+        GC.start
+        Rails.logger.info "Out-Of-Bound GC finished in #{Time.now - t0} sec"
+    end
 end
 -------------------------------------------------
 
-For your convenience, Phusion Passenger provides a Rack middleware for out-of-band garbage collection. Add this to your `config.ru`:
+For your convenience, Phusion Passenger provides a Rack middleware for out-of-band garbage collection. Add the following to your `config.ru`. Likewise, this example code doesn't do anything when the code is not being run in Phusion Passenger, thanks to the `if` block.
 
 [source, ruby]
 ----------------------------------------------------
-require 'phusion_passenger/rack/out_of_band_gc'
-
-# Trigger out-of-band GC every 5 requests.
-use PhusionPassenger::Rack::OutOfBandGc, 5
+if defined?(PhusionPassenger)
+    require 'phusion_passenger/rack/out_of_band_gc'
+    
+    # Trigger out-of-band GC every 5 requests.
+    use PhusionPassenger::Rack::OutOfBandGc, 5
+end
 ----------------------------------------------------
+
+It should be noted that, although the application uses the Phusion Passenger API, it is <<add_passenger_to_gemfile,*not* necessary to add Phusion Passenger to the Gemfile>>.
 
 References:
 

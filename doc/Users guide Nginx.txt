@@ -878,6 +878,7 @@ Whether to enable <<user_switching,user switching support>>.
 This option may only occur once, in the 'http' configuration block.
 The default value is 'on'.
 
+[[PassengerUser]]
 ==== passenger_user <username> ====
 If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
 by default run the web application as the owner of the file 'config/environment.rb'
@@ -894,6 +895,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once.
 
+[[PassengerGroup]]
 ==== passenger_group <group name> ====
 If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
 by default run the web application as the primary group of the owner of the file
@@ -956,6 +958,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'on'.
 
+[[PassengerFriendlyErrorPages]]
 ==== passenger_friendly_error_pages <on|off> ====
 Phusion Passenger can display friendly error pages whenever an application fails
 to start. This friendly error page presents the startup error message, some

@@ -228,13 +228,23 @@
 
 8. Tips	=>	tips-n4c22d
 
-8.1. User switching (security)	=>	user-switching-security--zmsy9o
+8.1. User Switching (security feature)	=>	user-switching-security--zmsy9o
 
-8.2. Reducing memory consumption of Ruby on Rails applications by 33%	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1o3z66q
+8.1.1. Requirements	=>	requirements-15ozqdj
+
+8.1.2. Effects	=>	effects-nd2m44
+
+8.1.3. Caveats & troubleshooting	=>	caveats-troubleshooting-mbw582
+
+8.1.4. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-1ni7zk6
+
+8.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1o3z66q
 
 8.3. Capistrano recipe	=>	capistrano-recipe-pfn4qu
 
 8.4. Bundler support	=>	bundler-support-19v1h43
+
+8.4.1. Does Phusion Passenger itself need to be added to the Gemfile?	=>	does-phusion-passenger-itself-need-to-be-added-to-the-gemfile--xn1a11
 
 8.5. Installing multiple Ruby on Rails versions	=>	installing-multiple-ruby-on-rails-versions-1bp1fff
 
