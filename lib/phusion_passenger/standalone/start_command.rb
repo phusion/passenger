@@ -162,6 +162,10 @@ private
 				wrap_desc("Enable deployment error resistance (Enterprise only)")) do
 				@options[:resist_deployment_errors] = true
 			end
+			opts.on("--no-friendly-error-pages",
+				wrap_desc("Disable passenger_friendly_error_pages")) do
+				@options[:friendly_error_pages] = false
+			end
 			opts.on("--union-station-gateway HOST:PORT", String,
 				wrap_desc("Specify Union Station Gateway host and port")) do |value|
 				host, port = value.split(":", 2)
