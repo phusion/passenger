@@ -37,9 +37,15 @@ task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
 	is_beta        = !!version.split('.')[3]
 	tag_prefix     = is_open_source ? 'release' : 'enterprise'
 	
+	if !`git status --porcelain | grep -Ev '^\\?\\? '`.empty?
+		STDERR.puts "-------------------"
+		abort "*** ERROR: There are uncommitted files. See 'git status'"
+	end
+exit
 	begin
 		website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
 	rescue Errno::ENOENT
+		STDERR.puts "-------------------"
 		abort "*** ERROR: Please put the Phusion Passenger website admin " +
 			"password in ~/.passenger_website.yml:\n" +
 			"admin_password: ..."
