@@ -36,6 +36,8 @@ include PhusionPassenger::AdminTools
 include PhusionPassenger::Utils::AnsiColors
 
 def show_status(server_instance, options = {})
+	puts "Version: #{PhusionPassenger::VERSION_STRING}"
+	puts "Date   : #{Time.now}"
 	server_instance.connect(:passenger_status) do
 		case options[:show]
 		when 'pool'

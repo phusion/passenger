@@ -110,6 +110,8 @@ class App
 	end
 	
 	def start
+		puts "Version: #{PhusionPassenger::VERSION_STRING}"
+		puts "Date   : #{Time.now}"
 		if @stats.apache_processes
 			print_process_list("Apache processes", @stats.apache_processes)
 		else
