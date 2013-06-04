@@ -835,7 +835,7 @@ To uninstall Phusion Passenger, please first remove all Phusion Passenger
 configuration directives from your web server configuration file(s). After you've
 done this, you need to remove the Phusion Passenger files.
 
-- If you installed Phusion Passenger via a Ruby gem, then run `gem uninstall passenger` (or, if you're an link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] user, `gem uninstall passenger-enterprise-server`).
+- If you installed Phusion Passenger via a Ruby gem, then run `gem uninstall passenger` (or, if you're a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] user, `gem uninstall passenger-enterprise-server`).
   You <<is_ruby_home_or_system_wide_installed,might have to run this as root>>.
 - If you installed Phusion Passenger via a source tarball, then remove the directory
   in which you placed the extracted Phusion Passenger files. This directory is the
