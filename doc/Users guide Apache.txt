@@ -2326,3 +2326,5 @@ include::users_guide_snippets/appendix_a_about.txt[]
 include::users_guide_snippets/appendix_b_terminology.txt[]
 
 include::users_guide_snippets/appendix_c_spawning_methods.txt[]
+
+include::users_guide_snippets/environment_variables.txt[]

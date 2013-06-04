@@ -314,6 +314,7 @@ endif::[]
 Please refer to <<verify_passenger_running,this section>>. Note that all Phusion Passenger administration scripts are located inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-memory-stats'.
 
 
+[[install_on_debian_ubuntu]]
 === Installing or upgrading on Debian 6 or Ubuntu
 
 John Leach from Brightbox has kindly provided Ubuntu packages for Phusion Passenger. The Ubuntu Lucid packages are compatible with Debian 6. The packages are available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
@@ -598,16 +599,21 @@ endif::[]
 
 === Customizing the compilation process
 
+The Phusion Passenger compilation process can be customized with environment variables. You can learn more about environment variables in <<about_environment_variables,About environment variables>>.
+
 ==== Setting the compiler
 
 You can force the Phusion Passenger build system to use a specific C or C++ compiler by setting the `CC` and `CXX` environment variables. These may be set to any arbitrary shell commands.
 
 For example, contributors who want to hack on Phusion Passenger may want to use Clang for faster compilation and link:http://ccache.samba.org/[ccache] for faster recompilation, and may want to enable more error-catching compilation flags:
 
+[source,sh]
 ----------------------
 export CC='ccache clang -fcolor-diagnostics -Qunused-arguments -fcatch-undefined-behavior -ftrapv'
 export CXX='ccache clang++ -fcolor-diagnostics -Qunused-arguments -fcatch-undefined-behavior -ftrapv'
 ----------------------
+
+NOTE: if you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
 
 ==== Adding additional compiler or linker flags
 
@@ -626,16 +632,20 @@ On some systems, C/C++ libraries and headers that Phusion Passenger requires may
 `EXTRA_LDFLAGS`::
 	Similar to `EXTRA_PRE_LDFLAGS`, but injected at the very end of the command string, even after `EXTRA_CFLAGS` and `EXTRA_CXXFLAGS`.
 
+NOTE: if you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
+
 ==== Forcing location of certain command line tools
 
 The Phusion Passenger build system attempts to autodetect many things by locating relevant helper tools. For example, to find out which compiler flags it should use for compiling Apache modules, it locates the `apxs2` command and queries it. To find out which compiler flags it should use for libcurl, it queries the `curl-config` command. These commands may not be in `$PATH`, or even when they are you may want to use a different one.
 
-You can often force the build to find certain command line tools at certain locations by using the following environment variables:
+You can force.
+
+You can force the build to find certain command line tools at certain locations by using the following environment variables:
 
 `HTTPD`::
 	The location of the `httpd` executable (the Apache server executable).
 `APXS2`::
-	The location of the `apxs2` executable (the Apache module developer tool).
+	The location of the `apxs2` executable (the Apache module developer tool). Only used by `passenger-install-apache2-module`.
 `APR_CONFIG`::
 	The location of the `apr-config` executable (the Apache Portable Runtime developer tool).
 `APU_CONFIG`::
@@ -644,6 +654,8 @@ You can often force the build to find certain command line tools at certain loca
 	The location of a `make` tool. It does not matter which implementation of `make` this is.
 `GMAKE`::
 	The location of the GNU-compatible `make` tool.
+
+NOTE: if you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
 
 
 ifdef::apache[]

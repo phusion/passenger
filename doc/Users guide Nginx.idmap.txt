@@ -290,3 +290,23 @@
 
 12.5. Smart spawning gotcha #3: code load order	=>	smart-spawning-gotcha-3-code-load-order-12ydsn8
 
+13. Appendix D: About environment variables	=>	appendix-d-about-environment-variables-1t2cuff
+
+13.1. Working with environment variables	=>	working-with-environment-variables-1kmvq8w
+
+13.2. The PATH environment variable	=>	the-path-environment-variable-vlp05e
+
+13.3. Making environment variables permanent	=>	making-environment-variables-permanent-1wjyhzt
+
+13.3.1. bash	=>	bash-19xsxec
+
+13.3.2. Apache	=>	apache-9hqtyj
+
+13.3.3. Nginx	=>	nginx-157dpwy
+
+13.3.4. cron	=>	cron-1nuc9cz
+
+13.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-uiewl5
+
+13.4. Environment variables and sudo	=>	environment-variables-and-sudo-10lphxn
+
