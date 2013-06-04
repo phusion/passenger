@@ -613,7 +613,7 @@ export CC='ccache clang -fcolor-diagnostics -Qunused-arguments -fcatch-undefined
 export CXX='ccache clang++ -fcolor-diagnostics -Qunused-arguments -fcatch-undefined-behavior -ftrapv'
 ----------------------
 
-NOTE: if you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
+NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
 
 ==== Adding additional compiler or linker flags
 
@@ -632,7 +632,7 @@ On some systems, C/C++ libraries and headers that Phusion Passenger requires may
 `EXTRA_LDFLAGS`::
 	Similar to `EXTRA_PRE_LDFLAGS`, but injected at the very end of the command string, even after `EXTRA_CFLAGS` and `EXTRA_CXXFLAGS`.
 
-NOTE: if you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
+NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
 
 ==== Forcing location of certain command line tools
 
@@ -655,7 +655,7 @@ You can force the build to find certain command line tools at certain locations 
 `GMAKE`::
 	The location of the GNU-compatible `make` tool.
 
-NOTE: if you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
+NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
 
 
 ifdef::apache[]
