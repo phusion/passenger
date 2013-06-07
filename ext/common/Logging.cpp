@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <Logging.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/IOUtils.h>
 
 namespace Passenger {
 
@@ -87,13 +88,17 @@ _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line
 
 void
 _writeLogEntry(const std::string &str) {
-	size_t written = 0;
-	do {
-		ssize_t ret = write(_logOutput, str.data() + written, str.size() - written);
-		if (ret != -1) {
-			written += ret;
-		}
-	} while (written < str.size());
+	try {
+		writeExact(_logOutput, str.data(), str.size());
+	} catch (const SystemException &) {
+		/* The most likely reason why this fails is when the user has setup
+		 * Apache to log to a pipe (e.g. to a log rotation script). Upon
+		 * restarting the web server, the process that reads from the pipe
+		 * shuts down, so we can't write to it anymore. That's why we
+		 * just ignore write errors. It doesn't make sense to abort for
+		 * something like this.
+		 */
+	}
 }
 
 } // namespace Passenger
