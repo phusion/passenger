@@ -33,7 +33,7 @@ module PlatformInfo
 		if rb_config['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
 			return "macosx"
 		else
-			return RUBY_PLATFORM.sub(/.*?-/, '')
+			return rb_config['target_os']
 		end
 	end
 	memoize :os_name
