@@ -229,6 +229,8 @@ protected
 			end
 		end
 		return result
+	rescue Interrupt
+		raise Abort
 	end
 	
 	def prompt_confirmation(message)
@@ -241,6 +243,8 @@ protected
 			end
 		end
 		return result.downcase == 'y'
+	rescue Interrupt
+		raise Abort
 	end
 
 	def wait(timeout = nil)
