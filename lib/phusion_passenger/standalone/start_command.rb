@@ -372,7 +372,7 @@ private
 			:nginx_tarball     => @options[:nginx_tarball],
 			:binaries_url_root => @options[:binaries_url_root],
 			:plugin      => @plugin)
-		installer.run
+		return installer.run
 	end
 
 	def determine_runtime_dirs
@@ -410,8 +410,8 @@ private
 			if !@runtime_dirs[:nginx_installed] && @options[:nginx_bin]
 				error "The given Nginx binary '#{@options[:nginx_bin]}' does not exist."
 				exit 1
-			else
-				install_runtime(@runtime_dirs)
+			elsif !install_runtime(@runtime_dirs)
+				exit 1
 			end
 		end
 	end
