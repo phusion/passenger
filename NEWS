@@ -1,7 +1,26 @@
 Release 4.0.6
 -------------
 
+ * Fixed a potential 100% CPU lock up in the crash handler, which only occurs
+   on OS X.
+ * [Apache] Fixed compatibility with Apache pipe logging. Previously this
+   would cause Phusion Passenger to lock up with 100% CPU during Apache
+   restart.
+ * [Nginx] The Nginx configure script now checks whether 'ruby' is in $PATH.
+   Previously, if 'ruby' is not in $PATH, then the compilation process fails
+   with an obscure error.
  * [Enterprise] Added pretty printing helpers to the Live IRB Console.
+ * Fixed permissions on a subdirectory in the server instance directory. The
+   server instance directory is a temporary directory that Phusion Passenger
+   uses to store working files, and is deleted after Phusion Passenger exits.
+   A subdirectory inside it is world-writable (but not world-readable) and is
+   used for storing Unix domain sockets created by different apps, which may
+   run as different users. These sockets had long random filenames to prevent
+   them from being guessed. However because of a typo, this subdirectory was
+   created with the setuid bit, when it should have sticky bit (to prevent
+   existing files from being deleted or renamed by a user that doesn't own the
+   file). This has now been fixed.
+ * Improved documentation.
 
 
 Release 4.0.5
