@@ -413,7 +413,14 @@ int runShellCommand(const StaticString &command);
 
 /**
  * Async-signal safe way to fork().
+ *
+ * On Linux, the fork() glibc wrapper grabs a ptmalloc lock, so
+ * if malloc causes a segfault then we can't fork.
  * http://sourceware.org/bugzilla/show_bug.cgi?id=4737
+ *
+ * OS X apparently does something similar, except they use a
+ * spinlock so it results in 100% CPU. See _cthread_fork_prepare()
+ * at http://www.opensource.apple.com/source/Libc/Libc-166/threads.subproj/cthreads.c
  */
 pid_t asyncFork();
 

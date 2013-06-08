@@ -976,12 +976,20 @@ runShellCommand(const StaticString &command) {
 	}
 }
 
-// Async-signal safe way to fork().
-// http://sourceware.org/bugzilla/show_bug.cgi?id=4737
+#ifdef __APPLE__
+	// http://www.opensource.apple.com/source/Libc/Libc-825.26/sys/fork.c
+	// This bypasses atfork handlers.
+	extern "C" {
+		extern pid_t __fork(void);
+	}
+#endif
+
 pid_t
 asyncFork() {
 	#if defined(__linux__)
 		return (pid_t) syscall(SYS_fork);
+	#elif defined(__APPLE__)
+		return __fork();
 	#else
 		return fork();
 	#endif
