@@ -25,6 +25,7 @@ require 'phusion_passenger'
 require 'phusion_passenger/constants'
 require 'phusion_passenger/console_text_template'
 require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/operating_system'
 require 'phusion_passenger/utils/ansi_colors'
 
 # IMPORTANT: do not directly or indirectly require native_support; we can't compile
@@ -154,6 +155,14 @@ protected
 				puts "  <yellow>#{users_guide}</yellow>"
 			end
 			return false
+		end
+	end
+
+	def check_whether_os_is_broken
+		if PlatformInfo.os_name == "freebsd9" && `uname -r` =~ /^9\.1-/
+			new_screen
+			render_template 'installer_common/freebsd9_broken_cxx_runtime'
+			wait
 		end
 	end
 

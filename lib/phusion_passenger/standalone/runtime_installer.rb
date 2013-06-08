@@ -119,6 +119,7 @@ protected
 			show_welcome_screen
 		end
 		check_dependencies(false) || exit(1)
+		check_whether_os_is_broken
 		check_whether_system_has_enough_ram
 		puts
 		

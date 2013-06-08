@@ -78,6 +78,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		show_welcome_screen
 		check_dependencies || exit(1)
 		check_whether_we_can_write_to(PhusionPassenger.source_root) || exit(1)
+		check_whether_os_is_broken
 		check_whether_system_has_enough_ram
 		
 		download_and_install = should_we_download_and_install_nginx_automatically?
