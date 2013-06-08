@@ -156,6 +156,34 @@ protected
 			return false
 		end
 	end
+
+	def check_whether_system_has_enough_ram(required = 1024)
+		begin
+			meminfo = File.read("/proc/meminfo")
+			if meminfo =~ /^MemTotal: *(\d+) kB$/
+				ram_mb = $1.to_i / 1024
+				if meminfo =~ /^SwapTotal: *(\d+) kB$/
+					swap_mb = $1.to_i / 1024
+				else
+					swap_mb = 0
+				end
+			end
+		rescue Errno::ENOENT, Errno::EACCES
+			# Don't do anything on systems without memory information.
+			ram_mb = nil
+			swap_mb = nil
+		end
+		if ram_mb && swap_mb && ram_mb + swap_mb < required
+			new_screen
+			render_template 'installer_common/low_amount_of_memory_warning',
+				:required => required,
+				:current => ram_mb + swap_mb,
+				:ram => ram_mb,
+				:swap => swap_mb,
+				:doc => users_guide
+			wait
+		end
+	end
 	
 	
 	def use_stderr

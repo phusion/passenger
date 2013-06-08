@@ -93,6 +93,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		show_welcome_screen
 		check_dependencies || exit(1)
 		check_whether_apache_uses_compatible_mpm
+		check_whether_system_has_enough_ram
 		check_write_permission_to_passenger_root || exit(1)
 		if install_apache2_module
 			show_apache2_config_snippets
