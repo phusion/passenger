@@ -42,6 +42,7 @@
 #include <AccountsDatabase.h>
 #include <Account.h>
 #include <Exceptions.h>
+#include <ResourceLocator.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
@@ -150,9 +151,23 @@ myself() {
 	}
 }
 
+static string
+findUnionStationGatewayCert(const ResourceLocator &locator,
+	const string &cert)
+{
+	if (cert.empty()) {
+		return locator.getResourcesDir() + "/union_station_gateway.crt";
+	} else if (cert != "-") {
+		return cert;
+	} else {
+		return "";
+	}
+}
+
 int
 main(int argc, char *argv[]) {
 	VariantMap options        = initializeAgent(argc, argv, "PassengerLoggingAgent");
+	string passengerRoot      = options.get("passenger_root");
 	string socketAddress      = options.get("logging_agent_address");
 	string dumpFile           = options.get("analytics_dump_file", false, "/dev/null");
 	string password           = options.get("logging_agent_password");
@@ -172,6 +187,7 @@ main(int argc, char *argv[]) {
 		/********** Now begins the real initialization **********/
 		
 		/* Create all the necessary objects and sockets... */
+		ResourceLocator      resourceLocator(passengerRoot);
 		AccountsDatabasePtr  accountsDatabase;
 		FileDescriptor       serverSocketFd;
 		struct passwd       *user;
@@ -243,7 +259,7 @@ main(int argc, char *argv[]) {
 			accountsDatabase, dumpFile,
 			unionStationGatewayAddress,
 			unionStationGatewayPort,
-			unionStationGatewayCert,
+			findUnionStationGatewayCert(resourceLocator, unionStationGatewayCert),
 			unionStationProxyAddress);
 		loggingServer = &server;
 		

@@ -269,19 +269,6 @@ private:
 		}
 		return false;
 	}
-
-	string findUnionStationGatewayCert(const ResourceLocator &locator,
-		const VariantMap &params) const
-	{
-		string value = params.get("union_station_gateway_cert", false);
-		if (value.empty()) {
-			return locator.getResourcesDir() + "/union_station_gateway.crt";
-		} else if (value != "-") {
-			return value;
-		} else {
-			return "";
-		}
-	}
 	
 public:
 	/**
@@ -393,7 +380,6 @@ public:
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		ResourceLocator locator(passengerRoot);
-		string realUnionStationGatewayCert = findUnionStationGatewayCert(locator, extraParams);
 		string watchdogFilename = locator.getAgentsDir() + "/PassengerWatchdog";
 		SocketPair fds;
 		int e;
