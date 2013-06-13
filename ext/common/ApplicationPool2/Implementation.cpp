@@ -339,9 +339,12 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	if (options.restartDir.empty()) {
 		restartFile = options.appRoot + "/tmp/restart.txt";
 		alwaysRestartFile = options.appRoot + "/always_restart.txt";
-	} else {
+	} else if (options.restartDir[0] == '/') {
 		restartFile = options.restartDir + "/restart.txt";
 		alwaysRestartFile = options.restartDir + "/always_restart.txt";
+	} else {
+		restartFile = options.appRoot + "/" + options.restartDir + "/restart.txt";
+		alwaysRestartFile = options.appRoot + "/" + options.restartDir + "/always_restart.txt";
 	}
 	resetOptions(options);
 
