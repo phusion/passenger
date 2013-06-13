@@ -276,8 +276,10 @@ private:
 		string value = params.get("union_station_gateway_cert", false);
 		if (value.empty()) {
 			return locator.getResourcesDir() + "/union_station_gateway.crt";
-		} else {
+		} else if (value != "-") {
 			return value;
+		} else {
+			return "";
 		}
 	}
 	
