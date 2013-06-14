@@ -105,18 +105,23 @@ The most important directories are:
 
  * `lib/phusion_passenger` <br>
    The source code for Ruby parts of Phusion Passenger.
- * `ext/phusion_passenger` <br>
-   Native extensions for Ruby, used by the spawn server.
+ * `ext/ruby` <br>
+   Native extension for Ruby. Phusion Passenger uses the functions in this extension for optimizing certain operations, but Phusion Passenger can also function without this extension.
  * `ext/apache2` <br>
    Apache 2-specific source code.
  * `ext/nginx` <br>
    Nginx-specific source code.
  * `ext/common` <br>
    Source code shared by the Apache and Nginx modules.
+ * `ext/common/agents` <br>
+   Source code of the Phusion agent executables, i.e. PassengerWatchdog, PassengerHelperAgent and PassengerLoggingAgent.
+   * PassengerWatchdog is is the main Phusion Passenger control process, starts PassengerHelperAgent and PassengerLoggingAgent, and restarts them when they crash. It also cleans everything up upon shut down.
+   * PassengerHelperAgent performs most of the heavy lifting. It parses requests, spawns application processes, forwards requests to the correct process and forwards application responses back to the web server.
+   * PassengerLoggingAgent processes Union Station data and sends them to the Union Station server.
  * `bin` <br>
    User executables.
  * `helper-scripts` <br>
-   Scripts used during runtime, but not directly executed by the user.
+   Scripts used during runtime, but not directly executed by the user. All the loaders - applications which are responsible for loading an application written in a certain language and hooking it up to Phusion Passenger - are in this directory.
  * `doc` <br>
    Various documentation.
  * `test` <br>
