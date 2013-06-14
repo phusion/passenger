@@ -460,6 +460,8 @@ this option as well. Please read
 
 This required option may only occur once, in the 'http' configuration block.
 
+NOTE: This option has no effect when you are using <<flying_passenger,Flying Passenger>>.
+
 [[PassengerRuby]]
 === passenger_ruby <filename> ===
 The `passenger_ruby` option allows one to specify the Ruby interpreter to use. Similarly, the `passenger_python` option is for specifying the Python interpreter.
@@ -687,6 +689,17 @@ sudo -E passenger-status
 # The -E option tells 'sudo' to preserve environment variables.
 ----------------------------------------------------------
 
+:option: `--temp-dir`
+include::users_guide_snippets/alternative_for_flying_passenger.txt[]
+
+=== passenger_fly_with <socket filename>
+:version: 4.1.0
+include::users_guide_snippets/enterprise_only.txt[]
+
+Enables <<flying_passenger,Flying Passenger>> mode, and configures Nginx to connect to the Flying Passenger daemon that's listening on the given socket filename.
+
+This option may only occur once, in the 'http' configuration block. When not set, Flying Passenger is not enabled.
+
 === Important deployment options ===
 ==== passenger_enabled <on|off> ====
 This option may be specified in the 'http' configuration block, a
@@ -878,6 +891,8 @@ Whether to enable <<user_switching,user switching support>>.
 This option may only occur once, in the 'http' configuration block.
 The default value is 'on'.
 
+NOTE: This option has no effect when you are using <<flying_passenger,Flying Passenger>>. You can disable user switching for Flying Passenger by starting the Flying Passenger daemon as a non-root user.
+
 [[PassengerUser]]
 ==== passenger_user <username> ====
 If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
@@ -924,6 +939,8 @@ run as, if user switching fails or is disabled.
 This option may only occur once, in the 'http' configuration block.
 The default value is 'nobody'.
 
+NOTE: This option has no effect when you are using <<flying_passenger,Flying Passenger>>. There is currently no way to set this option when using Flying Passenger, but if you want to disable user switching for Flying Passenger then you can do so by starting the Flying Passenger daemon as a non-root user.
+
 [[PassengerDefaultGroup]]
 ==== Passenger_default_group <group name> ====
 Phusion Passenger enables <<user_switching,user switching support>> by default.
@@ -933,6 +950,8 @@ run as, if user switching fails or is disabled.
 This option may only occur once, in the 'http' configuration block.
 The default value is the primary group of the user specifified by
 <<PassengerDefaultUser,passenger_default_user>>.
+
+NOTE: This option has no effect when you are using <<flying_passenger,Flying Passenger>>. There is currently no way to set this option when using Flying Passenger, but if you want to disable user switching for Flying Passenger then you can do so by starting the Flying Passenger daemon as a non-root user.
 
 ==== passenger_show_version_in_header <on|off> ====
 When turned on, Phusion Passenger will output its version number in the `Server` and `X-Powered-By` header in all Phusion Passenger-served requests:
@@ -990,6 +1009,9 @@ If you find that your server is running out of memory then you should lower this
 
 This option may only occur once, in the 'http' configuration block.
 The default value is '6'.
+
+:option: `--max-pool-size`
+include::users_guide_snippets/alternative_for_flying_passenger.txt[]
 
 [[PassengerMinInstances]]
 ==== passenger_min_instances <integer> ====
@@ -1118,6 +1140,9 @@ applications, each which must be available at all times.
 This option may only occur once, in the 'http' configuration block.
 The default value is '300'.
 
+:option: `--pool-idle-time`
+include::users_guide_snippets/alternative_for_flying_passenger.txt[]
+
 ==== passenger_max_preloader_idle_time <integer> ====
 The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
 methods explained>>) has an idle timeout, just like the backend processes spawned by
@@ -1143,6 +1168,9 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 In each place, it may be specified at most once. The default value is '300' (5 minutes).
+
+:option: `--max-preloader-idle-time`
+include::users_guide_snippets/alternative_for_flying_passenger.txt[]
 
 [[PassengerConcurrencyModel]]
 ==== passenger_concurrency_model <process|thread> ====
@@ -1330,6 +1358,8 @@ A few things to be careful of:
 
 This option may only occur in the 'http' configuration block. It may be specified
 any number of times.
+
+NOTE: This option is currently not available when using <<flying_passenger,Flying Passenger>>.
 
 ===== Example 1: basic usage =====
 
@@ -1521,6 +1551,9 @@ web server error log. This option allows one to specify the file that debugging 
 error messages should be written to instead.
 
 This option may only occur once, in the 'http' configuration block.
+
+:option: `--log-file`
+include::users_guide_snippets/alternative_for_flying_passenger.txt[]
 
 ==== passenger_debugger <on|off> ====
 :version: 3.0.0
