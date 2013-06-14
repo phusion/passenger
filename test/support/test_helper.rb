@@ -359,6 +359,7 @@ module TestHelper
 		passenger_tmpdir = PhusionPassenger::Utils.passenger_tmpdir
 		socket_filename = "#{passenger_tmpdir}/logging.socket"
 		pid = spawn_process("#{AGENTS_DIR}/PassengerLoggingAgent",
+			"passenger_root", PhusionPassenger.source_root,
 			"log_level", PhusionPassenger::DebugLogging.log_level,
 			"analytics_dump_file", dump_file,
 			"analytics_log_user",  CONFIG['normal_user_1'],
