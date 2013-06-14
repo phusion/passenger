@@ -441,6 +441,21 @@ initializeOptions() {
 }
 
 static void
+maybeSetsid() {
+	/* Become the session leader so that Apache can't kill the
+	 * watchdog with killpg() during shutdown, so that a
+	 * Ctrl-C only affects the web server, and so that
+	 * we can kill all of our subprocesses in a single killpg().
+	 *
+	 * AgentsStarter.h already calls setsid() before exec()ing
+	 * the Watchdog, but FlyingPassenger does not.
+	 */
+	if (agentsOptions.getBool("setsid", false)) {
+		setsid();
+	}
+}
+
+static void
 initializeWorkingObjects() {
 	TRACE_POINT();
 	randomGenerator = new RandomGenerator();
@@ -545,6 +560,7 @@ main(int argc, char *argv[]) {
 	try {
 		TRACE_POINT();
 		initializeOptions();
+		maybeSetsid();
 		initializeWorkingObjects();
 		initializeAgentWatchers();
 	} catch (const std::exception &e) {
