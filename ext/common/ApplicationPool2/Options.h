@@ -35,6 +35,7 @@
 #include <Constants.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
+#include <Utils.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -172,7 +173,7 @@ public:
 	StaticString appType;
 	
 	/** The command for spawning the application process. This is a list of
-	 * arguments, separated by '\1', e.g. "ruby\1foo.rb". Only used
+	 * arguments, separated by '\t', e.g. "ruby\tfoo.rb". Only used
 	 * during spawning and only if appType.empty(). */
 	StaticString startCommand;
 	
@@ -479,45 +480,72 @@ public:
 		logger.reset();
 		return *this;
 	}
+
+	enum FieldSet {
+		SPAWN_OPTIONS = 1 << 0,
+		PER_GROUP_POOL_OPTIONS = 1 << 1,
+		ALL_OPTIONS = ~0
+	};
 	
 	/**
-	 * Append any spawning-relevant information in this Options object
-	 * to the given string vector, except for environmentVariables.
+	 * Append information in this Options object to the given string vector, except
+	 * for environmentVariables. You can customize what information you want through
+	 * the `elements` argument.
 	 */
-	void toVector(vector<string> &vec, const ResourceLocator &resourceLocator) const {
-		if (vec.capacity() < vec.size() + 40) {
-			vec.reserve(vec.size() + 40);
+	void toVector(vector<string> &vec, const ResourceLocator &resourceLocator,
+		int fields = ALL_OPTIONS) const
+	{
+		if (fields & SPAWN_OPTIONS) {
+			appendKeyValue (vec, "app_root",           appRoot);
+			appendKeyValue (vec, "app_group_name",     getAppGroupName());
+			appendKeyValue (vec, "app_type",           appType);
+			appendKeyValue (vec, "start_command",      getStartCommand(resourceLocator));
+			appendKeyValue (vec, "startup_file",       getStartupFile());
+			appendKeyValue (vec, "process_title",      getProcessTitle());
+			appendKeyValue2(vec, "log_level",          logLevel);
+			appendKeyValue3(vec, "start_timeout",      startTimeout);
+			appendKeyValue (vec, "environment",        environment);
+			appendKeyValue (vec, "base_uri",           baseURI);
+			appendKeyValue (vec, "spawn_method",       spawnMethod);
+			appendKeyValue (vec, "user",               user);
+			appendKeyValue (vec, "group",              group);
+			appendKeyValue (vec, "default_user",       defaultUser);
+			appendKeyValue (vec, "default_group",      defaultGroup);
+			appendKeyValue (vec, "restart_dir",        restartDir);
+			appendKeyValue (vec, "preexec_chroot",     preexecChroot);
+			appendKeyValue (vec, "postexec_chroot",    postexecChroot);
+			appendKeyValue (vec, "ruby",               ruby);
+			appendKeyValue (vec, "python",             python);
+			appendKeyValue (vec, "logging_agent_address",  loggingAgentAddress);
+			appendKeyValue (vec, "logging_agent_username", loggingAgentUsername);
+			appendKeyValue (vec, "logging_agent_password", loggingAgentPassword);
+			appendKeyValue4(vec, "debugger",           debugger);
+			appendKeyValue4(vec, "analytics",          analytics);
+			appendKeyValue (vec, "union_station_key",  unionStationKey);
+
+			appendKeyValue (vec, "group_secret",       groupSecret);
+		}
+		if (fields & PER_GROUP_POOL_OPTIONS) {
+			appendKeyValue3(vec, "min_processes",       minProcesses);
+			appendKeyValue2(vec, "max_preloader_idle_time", maxPreloaderIdleTime);
 		}
 		
-		appendKeyValue (vec, "app_root",           appRoot);
-		appendKeyValue (vec, "app_group_name",     getAppGroupName());
-		appendKeyValue (vec, "app_type",           appType);
-		appendKeyValue (vec, "start_command",      getStartCommand(resourceLocator));
-		appendKeyValue (vec, "process_title",      getProcessTitle());
-		appendKeyValue2(vec, "log_level",          logLevel);
-		appendKeyValue3(vec, "start_timeout",      startTimeout);
-		appendKeyValue (vec, "environment",        environment);
-		appendKeyValue (vec, "base_uri",           baseURI);
-		appendKeyValue (vec, "spawn_method",       spawnMethod);
-		appendKeyValue (vec, "user",               user);
-		appendKeyValue (vec, "group",              group);
-		appendKeyValue (vec, "default_user",       defaultUser);
-		appendKeyValue (vec, "default_group",      defaultGroup);
-		appendKeyValue (vec, "restart_dir",        restartDir);
-		appendKeyValue (vec, "preexec_chroot",     preexecChroot);
-		appendKeyValue (vec, "postexec_chroot",    postexecChroot);
-		appendKeyValue (vec, "ruby",               ruby);
-		appendKeyValue (vec, "python",             python);
-		appendKeyValue (vec, "logging_agent_address",  loggingAgentAddress);
-		appendKeyValue (vec, "logging_agent_username", loggingAgentUsername);
-		appendKeyValue (vec, "logging_agent_password", loggingAgentPassword);
-		appendKeyValue4(vec, "debugger",           debugger);
-		appendKeyValue4(vec, "analytics",          analytics);
-		appendKeyValue (vec, "union_station_key",  unionStationKey);
-		
-		appendKeyValue (vec, "group_secret",       groupSecret);
-		
 		/*********************************/
+	}
+
+	template<typename Stream>
+	void toXml(Stream &stream, const ResourceLocator &resourceLocator,
+		int fields = ALL_OPTIONS) const
+	{
+		vector<string> args;
+		unsigned int i;
+		
+		toVector(args, resourceLocator, fields);
+		for (i = 0; i < args.size(); i += 2) {
+			stream << "<" << args[i] << ">";
+			stream << escapeForXml(args[i + 1]);
+			stream << "</" << args[i] << ">";
+		}
 	}
 	
 	/**
@@ -534,11 +562,11 @@ public:
 	
 	string getStartCommand(const ResourceLocator &resourceLocator) const {
 		if (appType == "classic-rails") {
-			return ruby + "\1" + resourceLocator.getHelperScriptsDir() + "/classic-rails-loader.rb";
+			return ruby + "\t" + resourceLocator.getHelperScriptsDir() + "/classic-rails-loader.rb";
 		} else if (appType == "rack") {
-			return ruby + "\1" + resourceLocator.getHelperScriptsDir() + "/rack-loader.rb";
+			return ruby + "\t" + resourceLocator.getHelperScriptsDir() + "/rack-loader.rb";
 		} else if (appType == "wsgi") {
-			return python + "\1" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";
+			return python + "\t" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";
 		} else {
 			return startCommand;
 		}

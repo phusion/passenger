@@ -391,7 +391,7 @@ private:
 
 			vector<string> args;
 			vector<string>::const_iterator it, end;
-			details.options->toVector(args, resourceLocator);
+			details.options->toVector(args, resourceLocator, Options::SPAWN_OPTIONS);
 			for (it = args.begin(); it != args.end(); it++) {
 				const string &key = *it;
 				it++;

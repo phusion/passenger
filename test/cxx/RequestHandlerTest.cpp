@@ -323,7 +323,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
-			"PASSENGER_START_COMMAND", ("ruby\1" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_START_COMMAND", ("ruby\t" + root + "/test/tmp.handler/start.rb").c_str(),
 			"PATH_INFO", "/",
 			NULL);
 		string response = readAll(connection);
@@ -348,7 +348,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
-			"PASSENGER_START_COMMAND", ("ruby\1" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_START_COMMAND", ("ruby\t" + root + "/test/tmp.handler/start.rb").c_str(),
 			"PATH_INFO", "/",
 			NULL);
 		string response = readAll(connection);
@@ -371,7 +371,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
-			"PASSENGER_START_COMMAND", ("ruby\1" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_START_COMMAND", ("ruby\t" + root + "/test/tmp.handler/start.rb").c_str(),
 			"PASSENGER_RAISE_INTERNAL_ERROR", "true",
 			"PATH_INFO", "/",
 			NULL);
@@ -399,7 +399,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
-			"PASSENGER_START_COMMAND", ("ruby\1" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_START_COMMAND", ("ruby\t" + root + "/test/tmp.handler/start.rb").c_str(),
 			"PASSENGER_STATUS_LINE", "false",
 			"PATH_INFO", "/",
 			NULL);
@@ -425,7 +425,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
-			"PASSENGER_START_COMMAND", ("ruby\1" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_START_COMMAND", ("ruby\t" + root + "/test/tmp.handler/start.rb").c_str(),
 			"PASSENGER_FRIENDLY_ERROR_PAGES", "false",
 			"PATH_INFO", "/",
 			NULL);

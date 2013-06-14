@@ -1042,6 +1042,11 @@ Group::anotherGroupIsWaitingForCapacity() const {
 	return false;
 }
 
+const ResourceLocator &
+Group::getResourceLocator() const {
+	return getPool()->spawnerFactory->getResourceLocator();
+}
+
 string
 Group::generateSecret(const SuperGroupPtr &superGroup) {
 	return superGroup->getPool()->randomGenerator->generateAsciiString(43);

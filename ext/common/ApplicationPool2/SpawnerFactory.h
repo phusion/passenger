@@ -121,6 +121,14 @@ public:
 	SpawnerConfigPtr getConfig() const {
 		return config;
 	}
+
+	RandomGeneratorPtr getRandomGenerator() const {
+		return randomGenerator;
+	}
+
+	const ResourceLocator &getResourceLocator() const {
+		return resourceLocator;
+	}
 };
 
 typedef shared_ptr<SpawnerFactory> SpawnerFactoryPtr;

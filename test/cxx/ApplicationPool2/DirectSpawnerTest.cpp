@@ -58,7 +58,7 @@ namespace tut {
 		// SpawnException error page.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "perl\1" "-e\1" "print STDERR \"hello world\\n\"; sleep(60)";
+		options.startCommand = "perl\t" "-e\t" "print STDERR \"hello world\\n\"; sleep(60)";
 		options.startupFile  = ".";
 		options.startTimeout = 300;
 		
@@ -82,7 +82,7 @@ namespace tut {
 		// as error response instead.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "perl\1" "-e\1" "print STDERR \"hello world\\n\"";
+		options.startCommand = "perl\t" "-e\t" "print STDERR \"hello world\\n\"";
 		options.startupFile  = ".";
 		
 		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
@@ -105,7 +105,7 @@ namespace tut {
 		// https://code.google.com/p/phusion-passenger/issues/detail?id=842#c19
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\1" "start.rb\1" "--execself";
+		options.startCommand = "ruby\t" "start.rb\t" "--execself";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);

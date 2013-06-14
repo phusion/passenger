@@ -342,7 +342,7 @@ private:
 
 			vector<string> args;
 			vector<string>::const_iterator it, end;
-			details.options->toVector(args, resourceLocator);
+			details.options->toVector(args, resourceLocator, Options::SPAWN_OPTIONS);
 			for (it = args.begin(); it != args.end(); it++) {
 				const string &key = *it;
 				it++;
@@ -615,7 +615,7 @@ private:
 		vector<string>::const_iterator it;
 		
 		writeExact(fd, "spawn\n", &timeout);
-		options.toVector(args, resourceLocator);
+		options.toVector(args, resourceLocator, Options::SPAWN_OPTIONS);
 		for (it = args.begin(); it != args.end(); it++) {
 			const string &key = *it;
 			it++;

@@ -116,7 +116,7 @@ private:
 		string agentsDir = resourceLocator.getAgentsDir();
 		vector<string> command;
 		
-		split(options.getStartCommand(resourceLocator), '\1', startCommandArgs);
+		split(options.getStartCommand(resourceLocator), '\t', startCommandArgs);
 		if (startCommandArgs.empty()) {
 			throw RuntimeException("No startCommand given");
 		}

@@ -78,7 +78,7 @@
 		// Basic spawning test.
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\1" "start.rb";
+		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);
@@ -95,7 +95,7 @@
 		// It enforces the given start timeout.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "sleep\1" "60";
+		options.startCommand = "sleep\t" "60";
 		options.startupFile  = ".";
 		options.startTimeout = 300;
 		SpawnerPtr spawner = createSpawner(options);
@@ -114,7 +114,7 @@
 		// in exceptions.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "echo\1" "!> hello world";
+		options.startCommand = "echo\t" "!> hello world";
 		options.startupFile  = ".";
 		SpawnerPtr spawner = createSpawner(options);
 		try {
@@ -132,7 +132,7 @@
 		// which will result in a SpawnException with the content.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "perl\1" "start_error.pl";
+		options.startCommand = "perl\t" "start_error.pl";
 		options.startupFile  = "start_error.pl";
 		SpawnerPtr spawner = createSpawner(options);
 		try {
@@ -153,7 +153,7 @@
 		// response.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "perl\1" "start_error.pl\1" "freeze";
+		options.startCommand = "perl\t" "start_error.pl\t" "freeze";
 		options.startupFile  = "start_error.pl";
 		options.startTimeout = 300;
 		SpawnerPtr spawner = createSpawner(options);
@@ -171,7 +171,7 @@
 		// The reported PID is correct.
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\1" "start.rb";
+		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);
@@ -188,7 +188,7 @@
 		// Custom environment variables can be passed.
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
-		options.startCommand = "ruby\1" "start.rb";
+		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		options.environmentVariables.push_back(make_pair("PASSENGER_BAR", "bar"));
@@ -209,7 +209,7 @@
 		// Any raised SpawnExceptions take note of the process's environment variables.
 		Options options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "echo\1" "!> hello world";
+		options.startCommand = "echo\t" "!> hello world";
 		options.startupFile  = ".";
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		SpawnerPtr spawner = createSpawner(options);

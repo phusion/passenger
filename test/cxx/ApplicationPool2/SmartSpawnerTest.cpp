@@ -75,7 +75,7 @@ namespace tut {
 		// restart it and try again.
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\1" "start.rb";
+		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		shared_ptr<SmartSpawner> spawner = createSpawner(options);
 		process = spawner->spawn(options);
@@ -96,7 +96,7 @@ namespace tut {
 		// SmartSpawner will throw an exception.
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\1" "start.rb";
+		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		setLogLevel(-1);
 		shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
@@ -115,7 +115,7 @@ namespace tut {
 		// whatever stderr output as error page.
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\1" "start.rb";
+		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		options.startTimeout = 300;
 		
@@ -148,7 +148,7 @@ namespace tut {
 		// as error response instead.
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\1" "start.rb";
+		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		
 		vector<string> preloaderCommand;
@@ -179,7 +179,7 @@ namespace tut {
 		// takes note of the process's environment variables.
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\1" "start.rb";
+		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		

@@ -33,7 +33,7 @@ def process_client_command(server, client, command)
 			options[name] = value
 		end
 		
-		command = options["start_command"].split("\1")
+		command = options["start_command"].split("\t")
 		process_title = options["process_title"]
 		process_title = command[0] if !process_title || process_title.empty?
 		command[0] = [command[0], process_title]
