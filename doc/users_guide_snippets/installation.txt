@@ -167,9 +167,25 @@ passenger-install-nginx-module
 At some point it will ask you which prefix to install Nginx to. If you're upgrading, then specify the same prefix that you used last time, as well as the same configuration parameters that you used last time.
 endif::[]
 
+[float]
+==== Step 6: Restarting the Flying Passenger daemon
+
+If you are using <<flying_passenger,Flying Passenger>> then you must restart the Flying Passenger daemon by sending it the SIGTERM signal:
+
+-------------------------------
+kill `cat /path-to/flying-passenger.pid`
+-------------------------------
+
+Or, if Flying Passenger is not running with a PID file, look up its PID us `ps` and then send it SIGTERM:
+
+-------------------------------
+ps auxw | grep flying-passenger
+kill PID_OF_FLYING_PASSENGER
+-------------------------------
+
 [[verify_passenger_running]]
 [float]
-==== Step 6: Verifying that Phusion Passenger is running
+==== Step 7: Verifying that Phusion Passenger is running
 
 Restart your web server and run:
 
@@ -309,7 +325,23 @@ Note that the `passenger-install-nginx-module` command is inside the 'bin' subdi
 endif::[]
 
 [float]
-==== Step 6: Verifying that Phusion Passenger is running
+==== Step 6: Restarting the Flying Passenger daemon
+
+If you are using <<flying_passenger,Flying Passenger>> then you must restart the Flying Passenger daemon by sending it the SIGTERM signal:
+
+-------------------------------
+kill `cat /path-to/flying-passenger.pid`
+-------------------------------
+
+Or, if Flying Passenger is not running with a PID file, look up its PID us `ps` and then send it SIGTERM:
+
+-------------------------------
+ps auxw | grep flying-passenger
+kill PID_OF_FLYING_PASSENGER
+-------------------------------
+
+[float]
+==== Step 7: Verifying that Phusion Passenger is running
 
 Please refer to <<verify_passenger_running,this section>>. Note that all Phusion Passenger administration scripts are located inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-memory-stats'.
 

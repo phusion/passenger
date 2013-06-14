@@ -21,7 +21,8 @@ and they're explained further down in this section.
 
 User switching is only enabled when all of the following conditions are met:
 
-- The
+- When not using <<flying_passenger,Flying Passenger>> (this is probably the case):
+  * The
 ifdef::apache[]
   <<PassengerUserSwitching,PassengerUserSwitching>>
 endif::[]
@@ -29,11 +30,13 @@ ifdef::nginx[]
   <<PassengerUserSwitching,passenger_user_switching>>
 endif::[]
 option must be enabled.
-- The web server's control process must have root privileges. This is the case on most installations.
+  * The web server's control process must have root privileges. This is the case on most installations.
+- When using <<flying_passenger,Flying Passenger>>:
+  * The Flying Passenger daemon must be run with root privileges.
 
 ==== Effects
 
-The following table illustrates the effect for different combinations of the requirements.
+When not using Flying Passenger, the following table illustrates the effect for different combinations of the requirements.
 
 |==========================================================
 ifdef::apache[]
@@ -56,6 +59,13 @@ endif::[]
 | **Web server has no root privileges**
   | User switching disabled. Apps are run as the web server's user.
   | User switching disabled. Apps are run as the web server's user.
+|==========================================================
+
+When using Flying Passenger, the effect is as follows:
+
+|==========================================================
+| **Daemon run with root privileges** | User switching enabled.
+| **Daemon run without root privileges** | User switching disabled. Apps are run as the daemon's user.
 |==========================================================
 
 When user switching is enabled, the following rules are followed to determine what user an application should be run as. The first matching rule is the rule that will be followed.
@@ -362,3 +372,178 @@ It should be noted that, although the application uses the Phusion Passenger API
 References:
 
 - link:http://blog.phusion.nl/2013/01/22/phusion-passenger-4-technology-preview-out-of-band-work/[The Phusion Blog article which first introduced this feature.]
+
+[[flying_passenger]]
+=== Flying Passenger
+:version: 4.1.0
+include::enterprise_only.txt[]
+
+Flying Passenger allows one to decouple Phusion Passenger's life time from the web server's life time, so that the web server can be independently restarted from Phusion Passenger, and from any of the application processes served by Phusion Passenger.
+
+Normally, Phusion Passenger starts together with the web server, and shuts down together with the web server. The advantages of this default behavior is that it makes Phusion Passenger easy to administer: one only has to deal with the web server process and can expect all relevant processes to be cleaned up after a web server shut down. However this also brings about a disadvantage: every time one restarts the web server (e.g. to make a minor configuration change), Phusion Passenger and all its application processes also get restarted.
+
+This problem is solved by 'Flying Passenger', which is an advanced mode of operation in Phusion Passenger that allows the web server to be indepedently restarted from Phusion Passenger. When this mode is enabled:
+
+- One must start Phusion Passenger separately from the web server, namely by starting the Flying Passenger daemon. This daemon must be separately configured and managed from the web server.
+- The web server must be configured to forward requests to the Flying Passenger daemon.
+- You should beware of the <<flying_passenger_caveats,caveats and limitations>>.
+
+==== Requirements
+
+At this time, this feature is **only available in the Enterprise version of Phusion Passenger for Nginx**. You must have Phusion Passenger for Nginx properly installed.
+
+==== Basic usage
+
+Start the Flying Passenger daemon by invoking the `flying-passenger` command. The only required option is `--socket-file`. Depending on whether you wish to enable <<user_switching,User Switching>>, you have to start `flying-passenger` with root privileges or not.
+
+-------------------
+$ sudo flying-passenger --socket-file=/var/run/flying-passenger.sock
+I, [2013-06-14T09:10:13.095339 #77179]  INFO -- : Welcome to Flying Passenger 4.1.0
+I, [2013-06-14T09:10:13.095339 #77179]  INFO -- : Starting PassengerWatchdog...
+I, [2013-06-14T09:10:13.097036 #77179]  INFO -- : PassengerWatchdog started on PID 77181
+...
+I, [2013-06-14T09:10:13.129017 #77179]  INFO -- : PassengerWatchdog initialized properly
+I, [2013-06-14T09:10:13.129127 #77179]  INFO -- : Flying Passenger up and listening on /var/run/flying-passenger.sock!
+-------------------
+
+Now configure Phusion Passenger for Nginx to make use of the Flying Passenger daemon, by setting the `passenger_fly_with` option to the socket filename:
+
+-------------------
+http {
+    ...
+    passenger_fly_with /var/run/flying-passenger.sock;
+    ...
+}
+-------------------
+
+After (re)starting Nginx, Nginx + Flying Passenger is fully operational:
+
+-------------------
+$ sudo /path-to/nginx
+-------------------
+
+You can test it by adding a virtual host for a web app:
+
+-------------------
+http {
+    ...
+
+    server {
+        listen 80;
+        server_name www.foo.local;
+        root /webapps/foo/public;
+        passenger_enabled on;
+    }
+}
+-------------------
+
+Verify that it works by making an HTTP request to it:
+
+---------------------------------
+$ curl http://www.foo.local/
+---------------------------------
+
+Now let's verify that restarting the web server does not restart the just-spawned application process. Run `passenger-status` to obtain the PID of the application process:
+
+---------------------------------
+$ sudo passenger-status
+Version: 4.1.0
+Date   : 2013-06-14 09:21:51 -0400
+.---------- General information -----------
+Max pool size : 6
+Processes     : 1
+Requests in top-level queue : 0
+
+.---------- Application groups -----------
+/webapps/foo#default:
+  App root: /webapps/foo
+  Requests in queue: 0
+  * PID: 77283   Sessions: 0       Processed: 1       Uptime: 2s
+    CPU: 1%      Memory  : 8M      Last used: 2s ago
+---------------------------------
+
+As you can see, the PID of the application process is **77283**. Now let's see what happens if we restart Nginx:
+
+------------------------
+$ sudo /path-to/nginx -s stop
+$ sudo /path-to/nginx
+$ sudo passenger-status
+------------------------
+
+The application process should remain there, unchanged:
+
+---------------------------------
+$ sudo passenger-status
+Version: 4.1.0
+Date   : 2013-06-14 09:21:51 -0400
+.---------- General information -----------
+Max pool size : 6
+Processes     : 1
+Requests in top-level queue : 0
+
+.---------- Application groups -----------
+/webapps/foo#default:
+  App root: /webapps/foo
+  Requests in queue: 0
+  * PID: 77283   Sessions: 0       Processed: 1       Uptime: 18s
+    CPU: 1%      Memory  : 8M      Last used: 18s ago
+---------------------------------
+
+[[configuring_flying_passenger]]
+==== Configuring Flying Passenger
+
+Flying Passenger gets *some* configuration from the web server, but not all. In particular, most web server directives that are only valid in the `http` context, e.g. <<PassengerLogLevel,passenger_log_level>>, have no effect when using Flying Passenger. Instead, you are supposed to pass these configuration directives through command line options to the Flying Passenger daemon. Configuration directives that have no effect on Flying Passenger are documented as such. You can assume that configuration directives that are not documented as such, work fine on Flying Passenger.
+
+For example, to achieve the same effect as setting passenger_log_level to 2, run the Flying Passenger daemon as follows:
+
+----------------------------------
+$ sudo flying-passenger --socket-file=/var/run/flying-passenger.sock --log-level=2
+----------------------------------
+
+Currently, not all configuration directives have a Flying Passenger equivalent. Run the following command to see an overview of available options:
+
+----------------------------
+$ flying-passenger --help
+----------------------------
+
+==== Managing the Flying Passenger daemon
+
+The Flying Passenger daemon runs in the foreground by default. This is undesirable on server environments. You can make it go into the background by passing `--daemonize`, `--log-file` and `--pid-file`:
+
+--------------------------------------------------------------------------------
+$ sudo flying-passenger --socket-file=/var/run/flying-passenger.sock \
+    --daemonize --log-file=/var/log/flying-passenger.log \
+    --pid-file=/var/run/flying-passenger.pid
+--------------------------------------------------------------------------------
+
+You can shut down a Flying Passenger daemon by sending SIGINT or SIGTERM to it:
+
+--------------------------------------------------------------------------------
+$ kill `cat /var/run/flying-passenger.pid`
+--------------------------------------------------------------------------------
+
+We recommend using link:http://cr.yp.to/daemontools.html[daemontools] or link:http://smarden.org/runit/[runit] for managing the Flying Passenger daemon. These tools will allow automatically starting the Flying Passenger daemon at boot, and will automatically restart the daemon if it crashes. You can create and enable a daemontools/runit service as folows:
+
+--------------------------------
+$ sudo mkdir /etc/service/flying-passenger
+$ sudo nano /etc/service/flying-passenger/run
+#!/bin/sh
+exec /path-to/flying-passenger \
+    --socket-file=/var/run/flying-passenger.sock \
+    --log-file=/var/log/flying-passenger.log \
+    --pid-file=/var/run/flying-passenger.pid
+--------------------------------
+
+Immediately after creating the `run` file, daemontools/runit automatically runs it to start the daemon. Note that the location (`/etc/service`) depends on the OS or Linux distros. Sometimes it's `/service`. Also note that we start the Flying Passenger daemon without `--daemonize`.
+
+To shut down a daemontools/runit-managed daemon, you need to use `svc -d` instead of sending a signal to the process.
+
+[[flying_passenger_caveats]]
+==== Caveats and limitations
+
+Beware of the following caveats and limitations when using Flying Passenger:
+
+- The Nginx executable **must** be compiled with the same version of Phusion Passenger as the Flying Passenger daemon. Failing to meet this requirement may result in cryptic errors, or may result in certain features not working, until you've fixed the situation. When upgrading Phusion Passenger, you must restart both Nginx and the Flying Passenger daemon.
+- The <<PassengerRoot,passenger_root>> directive has no effect.
+- When you add a new application to the web server configuration, Flying Passenger will automatically pick up the application's settings and spawn this new application upon the first request to it. However it is not capable of automatically starting the new app before a request has been sent to it (i.e. <<PassengerPreStart,passenger_pre_start>>-like behavior is not available in this case).
+- When you remove an application from the web server configuration, Flying Passenger will not detect the removal and will not shut down the associated application processes. Killing them will also not help, because Flying Passenger will restart them per the (now-removed, but still in the Flying Passenger daemon's memory) <<PassengerMinInstances,passenger_min_instances>> settings. At the moment, the only way to get rid of those processes is to restart the Flying Passenger daemon.

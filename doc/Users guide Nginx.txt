@@ -1497,6 +1497,7 @@ Yes. And it does not perform any certificate validation.
 
 === Logging and debugging options ===
 
+[[PassengerLogLevel]]
 ==== passenger_log_level <integer> ====
 This option allows one to specify how much information Phusion Passenger should
 write to the Nginx error log file. A higher log level value means that more

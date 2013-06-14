@@ -254,6 +254,18 @@
 
 8.8. Out-of-Band Garbage Work and Out-of-Band Garbage Collection	=>	out-of-band-garbage-work-and-out-of-band-garbage-collection-v89lu2
 
+8.9. Flying Passenger	=>	flying-passenger-137qg5e
+
+8.9.1. Requirements	=>	requirements-194ysj6
+
+8.9.2. Basic usage	=>	basic-usage-1qtgvwx
+
+8.9.3. Configuring Flying Passenger	=>	configuring-flying-passenger-n558np
+
+8.9.4. Managing the Flying Passenger daemon	=>	managing-the-flying-passenger-daemon-vjmzdh
+
+8.9.5. Caveats and limitations	=>	caveats-and-limitations-15wakf
+
 9. Under the hood	=>	under-the-hood-8uney
 
 9.1. Page caching support	=>	page-caching-support-nafhf6

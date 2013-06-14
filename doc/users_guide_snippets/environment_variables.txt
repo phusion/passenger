@@ -152,6 +152,8 @@ ifdef::nginx[]
 endif::nginx[]
 then you should edit that script to define the environment variables. Those init scripts are regular shell scripts, so use the `export FOO=bar` syntax. Just make sure your set your environment variables before the script starts Nginx.
 
+NOTE: Setting environment variables on Nginx has no effect on the <<flying_passenger,Flying Passenger daemon>> because the daemon is started seperately. You should set the environment variables in the shell right before starting the daemon.
+
 ==== cron
 
 To make environment variables permanent for cron jobs, add those variables to the relevant crontab. But note that inside crontabs you cannot refer to existing environment variables with the `$` syntax because crontabs are not shell scripts. You have to specify the entire value.

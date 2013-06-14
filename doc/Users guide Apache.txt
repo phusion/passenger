@@ -1718,6 +1718,7 @@ displaying maintenance.html will work fine even for URLs starting with "/users".
 
 === Logging and debugging options ===
 
+[[PassengerLogLevel]]
 ==== PassengerLogLevel <integer> ====
 This option allows one to specify how much information Phusion Passenger should
 write to the Apache error log file. A higher log level value means that more
