@@ -90,7 +90,7 @@ The location configuration file is an ini file that looks as follows:
     resources=/usr/share/phusion-passenger
     includedir=/usr/share/phusion-passenger/include
     doc=/usr/share/doc/phusion-passenger
-    rubylibdir=/usr/lib/ruby/vendor_ruby
+    rubylib=/usr/lib/ruby/vendor_ruby
     apache2_module=/usr/lib/apache2/modules/mod_passenger.so
     ruby_extension_source=/usr/share/phusion-passenger/ruby_extension_source
 
@@ -208,7 +208,7 @@ a list of all possible assets and asset directories.
 
    Value when originally packaged: `<SOURCE_ROOT>/libout`
 
- * `rubylibdir`
+ * `rubylib`
 
    A directory that contains the Phusion Passenger Ruby library files. Note that
    the Phusion Passenger administration tools still locate phusion_passenger.rb
