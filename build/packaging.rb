@@ -260,6 +260,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 
 	puts "Creating #{fake_rubylibdir}/phusion_passenger/locations.ini"
 	File.open("#{fake_rubylibdir}/phusion_passenger/locations.ini", "w") do |f|
+		f.puts "[locations]"
 		f.puts "natively_packaged=true"
 		f.puts "bin=/usr/bin"
 		f.puts "agents=/usr/lib/phusion-passenger/agents"
@@ -268,7 +269,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 		f.puts "resources=/usr/share/phusion-passenger"
 		f.puts "includedir=/usr/share/phusion-passenger/include"
 		f.puts "doc=/usr/share/doc/phusion-passenger"
-		f.puts "rubylibdir=/usr/lib/ruby/vendor_ruby"
+		f.puts "rubylib=/usr/lib/ruby/vendor_ruby"
 		f.puts "apache2_module=/usr/lib/apache2/modules/mod_passenger.so"
 		f.puts "ruby_extension_source=/usr/share/phusion-passenger/ruby_extension_source"
 	end
