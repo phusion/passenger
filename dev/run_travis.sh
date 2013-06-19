@@ -17,7 +17,11 @@ EOF
 
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
-	source ~/.rvm/scripts/rvm
+	if [[ -f ~/.rvm/scripts/rvm ]]; then
+		source ~/.rvm/scripts/rvm
+	else
+		source /usr/local/rvm/scripts/rvm
+	fi
 	rvm use $TEST_RUBY_VERSION
 	if [[ "$TEST_RUBYGEMS_VERSION" = "" ]]; then
 		echo "$ gem --version"
