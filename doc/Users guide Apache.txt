@@ -488,7 +488,7 @@ this option as well. Please read
 This required option may only occur once, in the global server configuration.
 
 [[PassengerDefaultRuby]]
-=== PassengerDefaultRuby and PassengerRuby ===
+=== PassengerDefaultRuby <filename> ===
 :version: 4.0.0
 include::users_guide_snippets/since_version.txt[]
 
