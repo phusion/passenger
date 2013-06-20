@@ -13,11 +13,19 @@ We require contributors to sign our [contributor agreement](http://www.phusion.n
 
 Please submit patches in the form of a Github pull request or as a patch on the [bug tracker](http://code.google.com/p/phusion-passenger/issues/list). Pull requests are preferred and generally get more attention because Github has better email notifications and better discussion capabilities.
 
+You should also install required developer tools. The following command will install everything you need:
+
+    rake test:install_deps
+
+If your system requires gems to be installed with root privileges, run:
+
+    rake test:install_deps SUDO=1
+
 ## Contributing documentation
 
 All good software should have good documentation, and we take this very seriously. However writing and maintaing quality documentation is not an easy task. If you are not skilled in C++ or programming, then writing documentation is the easiest way to contribute.
 
-Most documentation can be located in the `doc` directory, and are either written in Markdown or in Asciidoc format. They can be compiled to HTML with `rake doc`. You need [Mizuho](https://github.com/FooBarWidget/mizuho) to compile Asciidoc and [BlueCloth](http://deveiate.org/projects/BlueCloth) to compile Markdown.
+Most documentation can be located in the `doc` directory, and are either written in Markdown or in Asciidoc format. They can be compiled to HTML with `rake doc`. You need [Mizuho](https://github.com/FooBarWidget/mizuho) to compile Asciidoc and [BlueCloth](http://deveiate.org/projects/BlueCloth) to compile Markdown. Both gems are automatically installed as part of the Phusion Passenger developer tools.
 
 ## Contributing by bug triaging
 
@@ -59,7 +67,7 @@ Run the following command to compile everything:
 
 ### Running the unit tests
 
-The tests depend on all the usual Phusion Passenger dependencies, plus a bunch of additional dependencies that you can install with:
+The tests depend on the Phusion Passenger developer tools. Make sure they're installed:
 
     rake test:install_deps
 

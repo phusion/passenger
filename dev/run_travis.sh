@@ -3,6 +3,7 @@ set -e
 
 export VERBOSE=1
 export TRACE=1
+export DOCTOOLS=no
 export rvmsudo_secure_path=1
 
 sudo sh -c 'cat >> /etc/hosts' <<EOF

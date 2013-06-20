@@ -49,6 +49,7 @@ task 'test:install_deps' do
 	gem_install = "#{PlatformInfo.ruby_sudo_command} #{gem_install}" if boolean_option('SUDO')
 	sh "#{gem_install} rails -v 2.3.15"
 	sh "#{gem_install} bundler rspec mime-types daemon_controller json rack"
+	sh "#{gem_install} mizuho bluecloth" if boolean_option('DOCTOOLS', true)
 	if boolean_option('RAILS_BUNDLES', true)
 		sh "cd test/stub/rails3.0 && bundle install"
 		sh "cd test/stub/rails3.1 && bundle install"
