@@ -987,7 +987,11 @@ runShellCommand(const StaticString &command) {
 pid_t
 asyncFork() {
 	#if defined(__linux__)
-		return (pid_t) syscall(SYS_fork);
+		#if defined(SYS_fork)
+			return (pid_t) syscall(SYS_fork);
+		#else
+			return syscall(SYS_clone, SIGCHLD, 0, 0, 0, 0);
+		#endif
 	#elif defined(__APPLE__)
 		return __fork();
 	#else
