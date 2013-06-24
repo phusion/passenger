@@ -22,6 +22,7 @@ Release 4.0.6
    file). This has now been fixed.
  * The installer now checks whether the system has enough virtual memory, and
    prints a helpful warning if it doesn't.
+ * Linux/AArch64 compatibility fixes. Patch contributed by Dirk Mueller.
  * Improved documentation.
 
 
