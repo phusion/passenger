@@ -1,10 +1,14 @@
 #!/usr/bin/make -f
 #export DH_VERBOSE=1
+#export USE_CCACHE=1
 
 export USE_VENDORED_LIBEV=false
 
 %:
-	dh $@ --buildsystem=ruby --with ruby
+	dh $@
+
+override_dh_auto_configure:
+	# Do nothing
 
 override_dh_auto_build:
 	/usr/bin/ruby1.8 /usr/bin/rake fakeroot
@@ -14,16 +18,15 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	mkdir debian/tmp/
+	# Merge Ruby 1.8 and 1.9 files into a single directory.
 	cp -a pkg/fakeroot1.8/* debian/tmp/
 	cp -a pkg/fakeroot1.9.1/* debian/tmp/
+	# Do not package Passenger Standalone.
 	rm -rf debian/tmp/usr/bin/passenger
-	mv debian/tmp/usr/share/doc/phusion-passenger debian/tmp/usr/share/doc/ruby-passenger-doc
 
 override_dh_auto_clean:
-	dh_auto_clean -O--buildsystem=ruby
-	/usr/bin/ruby1.8 /usr/bin/rake clean
+	/usr/bin/rake clean CLEAN_DOCS=false
 	rm -rf pkg/fakeroot1.8
 	rm -rf pkg/fakeroot1.9.1
-
-override_dh_install:
-	dh_install --list-missing -O--buildsystem=ruby
+	# Hack to prevent HTML files from being renegerated
+	touch doc/*.html

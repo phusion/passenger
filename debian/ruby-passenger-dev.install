@@ -1,8 +1,0 @@
-../../ext/apache2 usr/lib/phusion-passenger/ext/
-../../ext/boost usr/lib/phusion-passenger/ext/
-../../ext/common usr/lib/phusion-passenger/ext/
-../../ext/libeio usr/lib/phusion-passenger/ext/
-../../ext/libev usr/lib/phusion-passenger/ext/
-../../ext/nginx usr/lib/phusion-passenger/ext/
-../../ext/oxt usr/lib/phusion-passenger/ext/
-../../ext/ruby usr/lib/phusion-passenger/ext/

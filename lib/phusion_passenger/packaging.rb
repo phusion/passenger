@@ -71,7 +71,7 @@ module Packaging
 		'bin/*',
 		'doc/**/*',
 		'man/*',
-		'debian/*',
+		'debian.template/**/*',
 		'helper-scripts/*',
 		'ext/common/**/*.{cpp,c,h,hpp,md,erb}',
 		'ext/apache2/*.{cpp,h,hpp,c}',
