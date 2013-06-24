@@ -3,8 +3,8 @@ Section: ruby
 Priority: optional
 Maintainer: John Leach <john@brightbox.co.uk>
 Build-Depends: debhelper (>= 7.0.50~), gem2deb (>= 0.2.12~), apache2-mpm-worker | apache2-mpm,
- apache2-threaded-dev, libapr1-dev, doxygen, asciidoc (>= 8.2),
- rake, source-highlight, libcurl4-openssl-dev, libev-dev (>= 1:4.0.0)
+ apache2-threaded-dev, libapr1-dev, asciidoc (>= 8.2), rake,
+ source-highlight, libcurl4-openssl-dev, libev-dev (>= 1:4.0.0)
 Standards-Version: 3.9.3
 Homepage: http://www.modrails.com/
 Vcs-Git: git://github.com/johnl/deb-passenger.git
