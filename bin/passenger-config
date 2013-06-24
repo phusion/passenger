@@ -37,8 +37,10 @@ def help
 	puts "Options:"
 	puts "  --root                     Show Phusion Passenger's root directory."
 	puts "  --includedir               Show the Nginx runtime library headers directory."
+	puts "  --nginx-addon-dir          Show the Phusion Passenger Nginx addon directory."
 	puts "  --nginx-libs               Show Nginx runtime library flags."
 	puts "  --compiled                 Check whether runtime libraries are compiled."
+	puts "  --natively-packaged        Check whether Phusion Passenger is natively packged."
 	puts "  --ruby-command             Print the correct command for invoking the Ruby interpreter."
 	puts "  --version                  Show version number."
 end
@@ -55,6 +57,12 @@ when "--root"
 	puts PhusionPassenger.source_root
 when "--includedir"
 	puts PhusionPassenger.include_dir
+when "--nginx-addon-dir"
+	if PhusionPassenger.natively_packaged?
+		puts "#{PhusionPassenger.resources_dir}/ngx_http_passenger_module"
+	else
+		puts "#{PhusionPassenger.source_root}/ext/nginx"
+	end
 when "--nginx-libs"
 	text = "#{common_library.link_objects_as_string} #{PhusionPassenger.lib_dir}/common/libboost_oxt.a"
 	if PhusionPassenger::PlatformInfo.has_math_library?
@@ -68,6 +76,12 @@ when "--compiled"
 		end
 	end
 	if File.exist?("#{PhusionPassenger.lib_dir}/common/libboost_oxt.a")
+		exit 0
+	else
+		exit 1
+	end
+when "--natively-packaged"
+	if PhusionPassenger.natively_packaged?
 		exit 0
 	else
 		exit 1

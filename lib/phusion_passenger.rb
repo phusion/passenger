@@ -42,7 +42,7 @@ module PhusionPassenger
 	
 	###### Directories ######
 	
-	GLOBAL_NAMESPACE_DIRNAME            = "phusion-passenger"
+	GLOBAL_NAMESPACE_DIRNAME            = "passenger"
 	GLOBAL_STANDALONE_NAMESPACE_DIRNAME = "passenger-standalone"
 	# Subdirectory under $HOME to use for storing stuff.
 	USER_NAMESPACE_DIRNAME              = ".passenger"

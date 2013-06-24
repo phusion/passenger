@@ -53,7 +53,9 @@ Packaging::ASCII_DOCS.each do |target|
 	end
 	
 	task :clean do
-		sh "rm -f '#{target}'"
+		if boolean_option('CLEAN_DOCS', true)
+			sh "rm -f '#{target}'"
+		end
 	end
 end
 
@@ -84,7 +86,9 @@ def create_markdown_compilation_task(target)
 	end
 
 	task :clean do
-		sh "rm -f #{target}"
+		if boolean_option('CLEAN_DOCS', true)
+			sh "rm -f #{target}"
+		end
 	end
 end
 

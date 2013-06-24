@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -108,6 +108,19 @@ module Packaging
 		'test/stub/rails_apps/3.0/empty/help/**/*',
 		'test/stub/*.dSYM'
 	]
+
+	# Files that should be excluded from the Debian tarball.
+	DEBIAN_EXCLUDE_GLOB = [
+		"debian.template/**/*",
+	]
+
+	def self.files
+		return Dir[*GLOB] - Dir[*EXCLUDE_GLOB]
+	end
+
+	def self.debian_orig_tarball_files
+		return files - Dir[*DEBIAN_EXCLUDE_GLOB]
+	end
 end
 
 end # module PhusionPassenger

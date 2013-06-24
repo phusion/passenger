@@ -203,7 +203,7 @@ private
 			f.puts "resources=#{PhusionPassenger.resources_dir}"
 			f.puts "includedir=#{PhusionPassenger.include_dir}"
 			f.puts "doc=#{PhusionPassenger.doc_dir}"
-			f.puts "rubylib=#{PhusionPassenger.ruby_libdir}"
+			f.puts "rubylibdir=#{PhusionPassenger.ruby_libdir}"
 			f.puts "apache2_module=#{PhusionPassenger.apache2_module_path}"
 			f.puts "ruby_extension_source=#{PhusionPassenger.ruby_extension_source_dir}"
 		end

@@ -111,6 +111,12 @@ end
 
 #################################################
 
+PACKAGE_NAME    = PhusionPassenger::PACKAGE_NAME
+PACKAGE_VERSION = PhusionPassenger::VERSION_STRING
+PACKAGE_SIGNING_KEY = "0x0A212A8C"
+MAINTAINER_NAME  = "Phusion"
+MAINTAINER_EMAIL = "info@phusion.nl"
+
 OPTIMIZE = boolean_option("OPTIMIZE")
 CC       = string_option("CC", "gcc")
 CXX      = string_option("CXX", "g++")
@@ -171,6 +177,7 @@ LIBEIO_OUTPUT_DIR         = string_option('LIBEIO_OUTPUT_DIR', OUTPUT_DIR + "lib
 ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id
 RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
 	OUTPUT_DIR + "libout/ruby/" + ruby_extension_archdir) + "/"
+PKG_DIR                   = string_option('PKG_DIR', "pkg")
 
 
 # Whether to use the vendored libev or the system one.
