@@ -10,7 +10,6 @@ env:
   - TEST_APACHE2=1 TEST_RUBYGEMS_VERSION=1.8.25
 
 before_install:
-  - sudo apt-get install apache2-mpm-worker apache2-threaded-dev
   - cp test/config.json.travis test/config.json
 
 script: ./dev/run_travis.sh
