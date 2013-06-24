@@ -114,7 +114,7 @@
 
 6.1. PassengerRoot <directory>	=>	passengerroot-directory--sere8l
 
-6.2. PassengerDefaultRuby and PassengerRuby	=>	passengerdefaultruby-and-passengerruby-7zblp8
+6.2. PassengerDefaultRuby <filename>	=>	passengerdefaultruby-and-passengerruby-7zblp8
 
 6.3. PassengerRuby <filename>	=>	passengerruby-filename--1r3fv73
 
