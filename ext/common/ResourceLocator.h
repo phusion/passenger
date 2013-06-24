@@ -70,7 +70,7 @@ public:
 			helperScriptsDir    = getOption(file, options, "helper_scripts");
 			resourcesDir        = getOption(file, options, "resources");
 			docDir              = getOption(file, options, "doc");
-			rubyLibDir          = getOption(file, options, "rubylib");
+			rubyLibDir          = getOption(file, options, "rubylibdir");
 		} else {
 			string root = rootOrFile;
 			binDir              = root + "/bin";
