@@ -82,6 +82,14 @@ def boolean_option(name, default_value = false)
 	end
 end
 
+def maybe_wrap_in_ccache(command)
+	if boolean_option('USE_CCACHE', false)
+		return "ccache #{command}"
+	else
+		return command
+	end
+end
+
 #################################################
 
 if string_option('OUTPUT_DIR')
@@ -118,8 +126,8 @@ MAINTAINER_NAME  = "Phusion"
 MAINTAINER_EMAIL = "info@phusion.nl"
 
 OPTIMIZE = boolean_option("OPTIMIZE")
-CC       = string_option("CC", "gcc")
-CXX      = string_option("CXX", "g++")
+CC       = maybe_wrap_in_ccache(string_option("CC", "gcc"))
+CXX      = maybe_wrap_in_ccache(string_option("CXX", "g++"))
 LIBEXT   = PlatformInfo.library_extension
 USE_DMALLOC = boolean_option('USE_DMALLOC')
 USE_EFENCE  = boolean_option('USE_EFENCE')
