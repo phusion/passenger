@@ -1,3 +1,4 @@
+# encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2013 Phusion
 #
@@ -154,6 +155,21 @@ task :news_as_markdown do
 	end
 
 	puts contents
+end
+
+desc "Update CONTRIBUTORS file"
+task :contributors do
+	entries = `git log --format='%aN' | sort -u`.split("\n")
+	entries.delete "Hongli Lai"
+	entries.delete "Hongli Lai (Phusion"
+	entries.delete "Ninh Bui"
+	entries.push "Ninh Bui (Phusion)"
+	entries.delete "Tinco Andringa"
+	entries.push "Tinco Andringa (Phusion)"
+	File.open("CONTRIBUTORS", "w") do |f|
+		f.puts(entries.sort{ |a, b| a.downcase <=> b.downcase }.join("\n"))
+	end
+	puts "Updated CONTRIBUTORS"
 end
 
 dependencies = [

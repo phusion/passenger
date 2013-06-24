@@ -58,6 +58,7 @@ module Packaging
 		'configure',
 		'Rakefile',
 		'README.md',
+		'CONTRIBUTORS',
 		'CONTRIBUTING.md',
 		'LICENSE',
 		'INSTALL.md',
