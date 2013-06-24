@@ -69,12 +69,23 @@ end
 
 desc "Build Debian source packages to be uploaded to repositories"
 task 'debian:production' => 'debian:orig_tarball' do
+	if filename = string_option('GPG_PASSPHRASE_FILE')
+		filename = File.expand_path(filename)
+		if !File.exist?(filename)
+			abort "GPG passphrase file #{filename} does not exist!"
+		end
+		if File.stat(filename).mode != 0100600
+			abort "The GPG passphrase file #{filename} must be chmodded 0600!"
+		end
+		gpg_options = "-p'gpg --passphrase-file #{filename} --no-use-agent'"
+	end
+
 	ALL_DISTRIBUTIONS.each do |distribution|
 		create_debian_package_dir(distribution)
 		sh "cd #{PKG_DIR}/#{distribution} && dpkg-checkbuilddeps"
 	end
 	ALL_DISTRIBUTIONS.each do |distribution|
-		sh "cd #{PKG_DIR}/#{distribution} && debuild -S -sa -k#{PACKAGE_SIGNING_KEY}"
+		sh "cd #{PKG_DIR}/#{distribution} && debuild -S -sa #{gpg_options} -k#{PACKAGE_SIGNING_KEY}"
 	end
 end
 
