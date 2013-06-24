@@ -34,7 +34,9 @@ end
 
 task 'debian:orig_tarball' do
 	if File.exist?("#{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz")
-		puts "Debian orig tarball #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz already exists."
+		puts "WARNING: Debian orig tarball #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz already exists. " +
+			"It will not be regenerated. If you are sure that the orig tarball is outdated, please delete it " +
+			"and rerun this task."
 	else
 		sh "rm -rf #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"
 		sh "mkdir -p #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"
@@ -85,21 +87,4 @@ task 'debian:clean' do
 		sh "rm -rf #{PKG_DIR}/#{distribution}"
 	end
 	sh "rm -rf #{PKG_DIR}/*.debian.tar.gz"
-end
-
-desc "Create a Debian package"
-task 'package:debian' do
-	checkbuilddeps = PlatformInfo.find_command("dpkg-checkbuilddeps")
-	debuild = PlatformInfo.find_command("debuild")
-	if !checkbuilddeps || !debuild
-		# devscripts requires dpkg-dev which contains dpkg-checkbuilddeps.
-		abort "Please run `apt-get install devscripts` first."
-	end
-	
-	if !system(checkbuilddeps)
-		STDERR.puts
-		abort "Please install aforementioned build dependencies first."
-	end
-	
-	sh "debuild"
 end
