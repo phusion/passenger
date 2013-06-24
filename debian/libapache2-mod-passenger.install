@@ -1,1 +1,3 @@
-../passenger.{conf,load} etc/apache2/mods-available
+usr/lib/apache2/modules/
+../passenger.conf etc/apache2/mods-available
+../passenger.load etc/apache2/mods-available

@@ -1,46 +1,68 @@
-Source: passenger
-Section: web
+Source: ruby-passenger
+Section: ruby
 Priority: optional
 Maintainer: John Leach <john@brightbox.co.uk>
-Build-Depends: apache2-threaded-dev, apache2-mpm-worker | apache2-mpm-prefork,
- libapr1-dev, ruby, rubygems, debhelper (>= 5.0.44), ruby1.8-dev, doxygen,
- asciidoc (>= 8.2), graphviz, rake, cdbs, source-highlight, libev-dev,
- libcurl4-openssl-dev
-Standards-Version: 3.8.0
+Build-Depends: debhelper (>= 7.0.50~), gem2deb (>= 0.2.12~), apache2-mpm-worker | apache2-mpm,
+ apache2-threaded-dev, libapr1-dev, doxygen, asciidoc (>= 8.2),
+ graphviz, rake, source-highlight, libjs-scriptaculous,
+ libcurl4-openssl-dev, libev-dev (>= 1:4.0.0)
+Standards-Version: 3.9.3
 Homepage: http://www.modrails.com/
-XS-Vcs-git: git://github.com/FooBarWidget/passenger.git
-XS-Vcs-browser: https://github.com/FooBarWidget/passenger
+Vcs-Git: git://github.com/johnl/deb-passenger.git
+Vcs-Browser: https://github.com/johnl/deb-passenger
+XS-Ruby-Versions: all
 
-Package: passenger-common
+Package: ruby-passenger
 Architecture: any
-Depends: ${shlibs:Depends}, ruby, librack-ruby1.8 (>= 1.0.0)
-Conflicts: libapache2-mod-passenger (< 2.2.1-1bbox1)
-Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
-Description: Rails and Rack support for Apache2
+XB-Ruby-Versions: ${ruby:Versions}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter, rubygems (>= 1.2), ruby-rack
+Suggests: python, rails, ruby-passenger-doc
+Breaks: libapache2-mod-passenger (<< 1:3.9.1), passenger-common,
+ passenger-common1.8, passenger-common1.9.1
+Replaces: libapache2-mod-passenger (<< 1:3.9.1),
+ passenger-common, passenger-common1.8, passenger-common1.9.1
+Description: Rails and Rack support for Apache2 and Nginx
+ Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
+ deployment of Ruby web applications, such as those built on the
+ revolutionary Ruby on Rails web framework, a breeze.
+
+Package: ruby-passenger-dev
+Architecture: any
+XB-Ruby-Versions: ${ruby:Versions}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter,
+ ruby-passenger (= ${binary:Version})
+Suggests: python
+Replaces: passenger-dev
+Breaks: passenger-dev
+Description: Rails and Rack support for Apache2 and Nginx
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
  deployment of Ruby web applications, such as those built on the
  revolutionary Ruby on Rails web framework, a breeze.
  .
- This package provides the bits of Passenger common to both its Apache 
- and NGINX support.
+ This package provides the development dependencies, for building the NGINX module
 
 Package: libapache2-mod-passenger
 Architecture: any
-Depends: ${shlibs:Depends}, apache2.2-common, 
- passenger-common (= ${binary:Version})
-Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
+Section: web
+Depends: ${shlibs:Depends}, ${misc:Depends}, apache2-mpm-worker (>= 2.2.9-9) |
+ apache2-mpm-prefork (>= 2.2.9-9) | apache2-mpm-itk (>= 2.2.9-9) | apache2-mpm-event (>= 2.2.9-9),
+ ruby-passenger (= ${binary:Version})
 Description: Rails and Rack support for Apache2
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
  deployment of Ruby web applications, such as those built on the
  revolutionary Ruby on Rails web framework, a breeze.
  .
- This package provides the Phusion Passenger loadable Apache module
+ This package contains the Apache 2 module required by Phusion Passenger.
 
-Package: passenger-doc
+Package: ruby-passenger-doc
 Section: doc
 Architecture: all
-Suggests: www-browse
-Description: Rails and Rac support for Apache2 - Documentation
+Depends: ${misc:Depends}
+Suggests: www-browser
+Provides: passenger-doc
+Conflicts: passenger-doc
+Replaces: passenger-doc
+Description: Rails and Rack support for Apache2 - Documentation
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
  deployment of Ruby web applications, such as those built on the
  revolutionary Ruby on Rails web framework, a breeze.

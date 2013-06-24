@@ -1,37 +1,29 @@
 #!/usr/bin/make -f
+#export DH_VERBOSE=1
 
-export DH_VERBOSE=1
-export CFLAGS="-g -O0 -burgers"
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/rules/simple-patchsys.mk
+export USE_VENDORED_LIBEV=false
 
-DEB_DH_INSTALL_SOURCEDIR := $(DEB_DESTDIR)
-DEB_INSTALL_DOCS_passenger-doc += DEVELOPERS.TXT $(DEB_DESTDIR)/usr/share/doc/phusion-passenger/
-DEB_INSTALL_MANPAGES_passenger-common += man/*
+%:
+	dh $@ --buildsystem=ruby --with ruby
 
+override_dh_auto_build:
+	/usr/bin/ruby1.8 /usr/bin/rake fakeroot
+	mv pkg/fakeroot pkg/fakeroot1.8
+	/usr/bin/ruby1.9.1 /usr/bin/rake fakeroot
+	mv pkg/fakeroot pkg/fakeroot1.9.1
 
-bindir = usr/bin
-sbindir = usr/sbin
-builddir = pkg/fakeroot
-moddir = $(shell apxs2 -q LIBEXECDIR)
-modsavailabledir = etc/apache2/mods-available
-passengermodule = usr/lib/apache2/modules/mod_passenger.so
+override_dh_auto_install:
+	mkdir debian/tmp/
+	cp -a pkg/fakeroot1.8/* debian/tmp/
+	cp -a pkg/fakeroot1.9.1/* debian/tmp/
+	rm -rf debian/tmp/usr/bin/passenger
+	mv debian/tmp/usr/share/doc/phusion-passenger debian/tmp/usr/share/doc/ruby-passenger-doc
 
-clean::
-	rake clean
+override_dh_auto_clean:
+	dh_auto_clean -O--buildsystem=ruby
+	/usr/bin/ruby1.8 /usr/bin/rake clean
+	rm -rf pkg/fakeroot1.8
+	rm -rf pkg/fakeroot1.9.1
 
-build/passenger-common build/libapache2-mod-passenger build/passenger-doc::
-	rake fakeroot APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no RELEASE=yes
-	rm -rf $(DEB_DESTDIR)
-	mv $(builddir) $(DEB_DESTDIR)
-
-install/passenger-common::
-	rm -rf $(DEB_DESTDIR)/usr/share/phusion-passenger/source
-	rm $(DEB_DESTDIR)/usr/bin/passenger-install-*
-
-install/libapache2-mod-passenger::
-	mkdir -p $(CURDIR)/debian/$(cdbs_curpkg)/$(moddir)
-	mv $(DEB_DESTDIR)/$(passengermodule) $(CURDIR)/debian/$(cdbs_curpkg)/$(moddir)
-
-get-orig-source:
-	uscan --verbose --force-download
+override_dh_install:
+	dh_install --list-missing -O--buildsystem=ruby
