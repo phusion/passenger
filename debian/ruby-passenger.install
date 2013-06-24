@@ -1,0 +1,10 @@
+usr/lib/phusion-passenger/
+usr/share/phusion-passenger/union_station_gateway.crt
+usr/share/phusion-passenger/mime.types
+usr/share/phusion-passenger/helper-scripts/
+usr/share/phusion-passenger/templates/
+usr/lib/ruby/
+debian/locations.ini usr/lib/phusion-passenger/
+debian/locations.ini usr/lib/ruby/vendor_ruby/phusion_passenger/
+usr/sbin/
+usr/bin/passenger-config
