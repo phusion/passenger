@@ -229,7 +229,9 @@ a list of all possible assets and asset directories.
  * `ruby_extension_source`
 
    The directory that contains the source code for the Phusion Passenger Ruby
-   extension.
+   extension. Phusion Passenger uses these sources to build a Ruby extension,
+   when it detects that the user is using a new Ruby interpeter for which
+   no Ruby extension has been compiled.
 
    Value when originally packaged: `<SOURCE_ROOT>/ext/ruby`.
 

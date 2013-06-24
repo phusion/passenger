@@ -74,3 +74,13 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 	run rake apache2
 	run rake test:integration:apache2
 fi
+
+if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
+	run sudo apt-get install -y devscripts gdebi-core
+	run gem install rspec --no-rdoc --no-ri
+	run rake debian:dev
+	run sudo dpkg -i pkg/ruby-passenger_*.deb pkg/ruby-passenger-dev_*.deb \
+		pkg/ruby-passenger-doc_*.deb pkg/libapache2-mod-passenger_*.deb
+	export LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini
+	run rvmsudo rspec -f s -c test/integration_tests/native_packaging_spec.rb
+fi

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -51,8 +51,19 @@ task 'test:integration:nginx' => dependencies do
 	end
 end
 
+desc "Run native packaging tests"
+task 'test:integration:native_packaging' do
+	if PlatformInfo.rspec.nil?
+		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
+	else
+		Dir.chdir("test") do
+			ruby "#{PlatformInfo.rspec} -c -f s integration_tests/native_packaging_spec.rb"
+		end
+	end
+end
+
 dependencies = [:apache2, NATIVE_SUPPORT_TARGET].compact
-desc "Run the 'restart' integration test infinitely, and abort if/when it fails"
+desc "Run the 'apache2' integration test infinitely, and abort if/when it fails"
 task 'test:restart' => dependencies do
 	Dir.chdir("test") do
 		color_code_start = "\e[33m\e[44m\e[1m"
