@@ -31,11 +31,6 @@ fi
 rm -vfr $UP_BASE/test/support/valgrind.h
 rm -vfr $UP_BASE/debian
 
-# remove embedded prototype.js (#555273)
-rm -vfr $UP_BASE/test/stub/rails_apps/2.3/mycook/public/javascripts/*
-ln -s /usr/share/javascript/scriptaculous/* $UP_BASE/test/stub/rails_apps/2.3/mycook/public/javascripts
-## End
-
 mv "$UP_BASE" "$DIR/$REPACK_DIR"
 
 # Using a pipe hides tar errors!
