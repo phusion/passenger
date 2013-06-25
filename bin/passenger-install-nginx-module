@@ -131,10 +131,6 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 
 private
-	def not_available_when_natively_packaged
-		render_template 'nginx/not_available_when_natively_packaged'
-	end
-
 	def show_welcome_screen
 		render_template 'nginx/welcome', :version => VERSION_STRING
 		wait
