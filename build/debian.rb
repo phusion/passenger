@@ -56,7 +56,7 @@ def create_debian_package_dir(distribution)
 	end
 end
 
-task 'debian:orig_tarball' do
+task 'debian:orig_tarball' => Packaging::PREGENERATED_FILES do
 	if File.exist?("#{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz")
 		puts "WARNING: Debian orig tarball #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz already exists. " +
 			"It will not be regenerated. If you are sure that the orig tarball is outdated, please delete it " +
