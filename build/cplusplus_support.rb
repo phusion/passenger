@@ -38,6 +38,15 @@ def run_compiler(*command)
 			      "https://www.digitalocean.com/community/articles/how-to-add-swap-on-ubuntu-12-04" +
 			      "</b>"
 			fail(PhusionPassenger::Utils::AnsiColors.ansi_colorize(msg))
+		elsif $? && $?.termsig == 9
+			msg = "<b>" +
+			      "-----------------------------------------------\n" +
+			      "Your compiler was killed by the operating system. This " +
+			      "probably means that it ran out of memory. To solve " +
+			      "this problem, try increasing your swap space: " +
+			      "https://www.digitalocean.com/community/articles/how-to-add-swap-on-ubuntu-12-04" +
+			      "</b>"
+			fail(PhusionPassenger::Utils::AnsiColors.ansi_colorize(msg))
 		else
 			fail "Command failed with status (#{$? ? $?.exitstatus : 1}): [#{show_command}]"
 		end
