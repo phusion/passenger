@@ -207,11 +207,7 @@ If the output is not as expected, then please refer to the <<troubleshooting,Tro
 [float]
 ==== Step 1: download and extract the tarball
 
-Download the open source Phusion Passenger tarball from link:https://www.phusionpassenger.com/download#open_source[the Phusion Passenger website]. Specific older versions are not found on the Phusion Passenger website, but are found in the following places:
-
- * All versions starting from 4.0.0 can be found on link:https://code.google.com/p/phusion-passenger/downloads/list[Google Code].
- * All versions prior to 4.0.0, except for beta releases and Release Candidates, can be found on link:http://rubyforge.org/frs/?group_id=5873&release_id=46919[RubyForge].
- * All beta releases and Release Candidates prior to 4.0.0 beta 1 can be found on link:https://code.google.com/p/phusion-passenger/downloads/list[Google Code].
+Download the open source Phusion Passenger tarball from link:https://www.phusionpassenger.com/download#open_source[the Phusion Passenger website]. Older versions can be found on link:https://www.phusionpassenger.com/file_releases[the release archive].
 
 If you a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customer, download the Phusion Passenger Enterprise tarball from the link:https://www.phusionpassenger.com/orders[Customer Area]. Also be sure to download the *license key* and save it as '/etc/passenger-enterprise-license'.
 

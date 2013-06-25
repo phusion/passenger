@@ -84,8 +84,7 @@ exit
 		sh "git push origin #{tag_prefix}-#{version}"
 		
 		if is_open_source
-			sh "scp pkg/#{basename}.{gem.asc,tar.gz.asc} app@shell.phusion.nl:/u/apps/signatures/phusion-passenger/"
-			sh "./dev/googlecode_upload.py -p phusion-passenger -s 'Phusion Passenger #{version}' pkg/passenger-#{version}.tar.gz"
+			sh "s3cmd -P put pkg/passenger-#{version}.{gem,tar.gz,gem.asc,tar.gz.asc} s3://phusion-passenger/releases/"
 			sh "gem push pkg/passenger-#{version}.gem"
 			puts "Updating version number on website..."
 			if is_beta
