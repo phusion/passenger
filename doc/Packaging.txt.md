@@ -1,33 +1,40 @@
 # Introduction
 
+This document describes how packagers can package Phusion Passenger binaries
+for their operating system.
+
 Phusion Passenger can be configured in 2 ways, the "originally packaged"
-configuration and the "natively packaged" configuration. Depending on the
-configuration, Phusion Passenger locates its files (also called _assets_)
-in a different manner.
+configuration where everything is in the same directory, and the
+"natively packaged" configuration where files are scattered across the
+filesystem, e.g. in a FHS-compliant configuration. This document describes
+how you can configure Phusion Passenger to locate its own files when they're
+scattered across the filesystem.
+
+Phusion Passenger files are also called _assets_ in this document.
 
 ## Originally packaged
 
 This is the configuration you get when you checkout Phusion Passenger from git,
-when you install Phusion Passenger from a gem or when you extract it from a tarball.
-All the original files are stored in a single directory tree, which we call the
-_source root_.
+when you install Phusion Passenger from a gem or when you extract it from a
+tarball. All the original files are stored in a single directory tree, which we
+call the _source root_.
 
-This configuration does not come with any binaries; they have to be compiled by the
-user. Binaries may either be located in the source root, or located in a different
-location. The following rules apply when it comes to looking for binaries and
-determining where to store compiled binaries:
+The git repository, gems and tarballs do not come with any binaries; they have
+to be compiled by the user. Phusion Passenger looks for binaries in, and (if
+the user initiates the compilation process) stores binaries in, the following
+directories:
 
- * It will normally look for binaries in a subdirectory under the source root, and
-   it will store compiled binaries in a subdirectory under the source root.
- * Phusion Passenger Standalone does things a little differently. It looks for
-   its binaries in one of these places, whichever first exists:
+ * Normally, binaries are to be located in the `agents` and `libout`
+   subdirectories under the source root.
+ * Phusion Passenger Standalone does things a little differently. Binaries are
+   to be located in one of the following directories, whichever it finds first:
 
     - `~/.passenger/standalone/<VERSION>/<TYPE-AND-ARCH>` (a)
     - `/var/lib/passenger-standalone/<VERSION-AND-ARCH>` (b)
 
-   If neither directories exist, then Passenger Standalone compiles the binaries and
-   stores them in (b) (when running as root) or in (a). It still looks for everything
-   else (like the .rb files) in the source root.
+   If neither directories exist, then Passenger Standalone compiles the
+   binaries and stores them in (b) (when running as root) or in (a). It still
+   looks for everything else (like the .rb files) in the source root.
 
 ## Natively packaged
 
