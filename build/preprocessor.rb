@@ -239,7 +239,15 @@ private
 		if line =~ /^([\s\t]*)#(.+)/
 			indentation_str = $1
 			command = $2
+
+			# Declare tabs as equivalent to 4 spaces. This is necessary for
+			# Makefiles in which the use of tabs is required.
+			indentation_str.gsub!("\t", "    ")
+
 			name = command.scan(/^\w+/).first
+			# Ignore shebangs and comments.
+			return if name.nil?
+
 			args_string = command.sub(/^#{Regexp.escape(name)}[\s\t]*/, '')
 			return [name, args_string, indentation_str.to_s.size]
 		else
@@ -273,9 +281,24 @@ private
 
 	def unindent(line)
 		line =~ /^([\s\t]*)/
-		found = $1.to_s.size
+		# Declare tabs as equivalent to 4 spaces. This is necessary for
+		# Makefiles in which the use of tabs is required.
+		found = $1.to_s.gsub("\t", "    ").size
+		
 		if found >= @indentation
-			return line[@indentation .. -1]
+			# Tab-friendly way to remove indentation.
+			remaining = @indentation
+			line = line.dup
+			while remaining > 0
+				if line[0..0] == " "
+					remaining -= 1
+				else
+					# This is a tab.
+					remaining -= 4
+				end
+				line.slice!(0, 1)
+			end
+			return line
 		else
 			terminate "wrong indentation: found #{found} characters, should be at least #{@indentation}"
 		end

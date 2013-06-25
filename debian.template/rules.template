@@ -1,8 +1,11 @@
 #!/usr/bin/make -f
-#export DH_VERBOSE=1
-export USE_CCACHE=1
+# export DH_VERBOSE=1
 
 export USE_VENDORED_LIBEV=false
+
+#if ['1', 'true', 'on', 'yes'].include?(ENV['USE_CCACHE'])
+	export USE_CCACHE=1
+#endif
 
 %:
 	dh $@

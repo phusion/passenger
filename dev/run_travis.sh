@@ -77,7 +77,7 @@ fi
 
 if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	run sudo apt-get install -y devscripts ruby1.9.1 apache2-mpm-worker apache2-threaded-dev rake libev-dev
-	run gem install rspec --no-rdoc --no-ri
+	run gem install rspec mizuho bluecloth --no-rdoc --no-ri
 	run rake debian:dev
 	run sudo dpkg -i pkg/ruby-passenger_*.deb pkg/ruby-passenger-dev_*.deb \
 		pkg/ruby-passenger-doc_*.deb pkg/libapache2-mod-passenger_*.deb
