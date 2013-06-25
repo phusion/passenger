@@ -72,7 +72,7 @@ describe "A natively packaged Phusion Passenger" do
 
 	specify "the Nginx runtime library headers exist" do
 		File.directory?(INCLUDEDIR).should be_true
-		Dir["#{INCLUDEDIR}/*.h"].should_not be_empty
+		Dir["#{INCLUDEDIR}/common/*.h"].should_not be_empty
 	end
 
 	specify "the Nginx addon directory exists" do

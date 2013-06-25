@@ -9,6 +9,10 @@ Release 4.0.6
  * [Nginx] The Nginx configure script now checks whether 'ruby' is in $PATH.
    Previously, if 'ruby' is not in $PATH, then the compilation process fails
    with an obscure error.
+ * [Nginx] passenger-install-nginx-module now works properly even when Phusion
+   Passenger is installed through the Debian packages. Before, the installer
+   would tell you to install Phusion Passenger through the gem or tarball
+   instead.
  * [Enterprise] Added pretty printing helpers to the Live IRB Console.
  * Fixed permissions on a subdirectory in the server instance directory. The
    server instance directory is a temporary directory that Phusion Passenger

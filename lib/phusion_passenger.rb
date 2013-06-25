@@ -163,6 +163,14 @@ module PhusionPassenger
 	def self.ruby_extension_source_dir
 		return @ruby_extension_source_dir
 	end
+
+	def self.nginx_addon_dir
+		if PhusionPassenger.natively_packaged?
+			return "#{resources_dir}/ngx_http_passenger_module"
+		else
+			return "#{source_root}/ext/nginx"
+		end
+	end
 	
 	
 	###### Other resource locations ######

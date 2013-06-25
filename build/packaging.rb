@@ -247,7 +247,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 		end
 	end
 	headers.each do |header|
-		target = "#{fake_include_dir}/#{header[1]}"
+		target = "#{fake_include_dir}/common/#{header[1]}"
 		dir = File.dirname(target)
 		if !File.directory?(dir)
 			sh "mkdir -p #{dir}"

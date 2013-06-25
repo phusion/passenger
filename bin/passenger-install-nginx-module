@@ -69,15 +69,12 @@ class Installer < PhusionPassenger::AbstractInstaller
 		# Make sure the configure script finds the correct
 		# passenger-config command.
 		ENV['PATH'] = PhusionPassenger.bin_dir + ":" + ENV['PATH']
-
-		if PhusionPassenger.natively_packaged?
-			not_available_when_natively_packaged
-			exit(2)
-		end
 		
 		show_welcome_screen
 		check_dependencies || exit(1)
-		check_whether_we_can_write_to(PhusionPassenger.source_root) || exit(1)
+		if needs_compiling_support_files?
+			check_whether_we_can_write_to(PhusionPassenger.source_root) || exit(1)
+		end
 		check_whether_os_is_broken
 		check_whether_system_has_enough_ram
 		
@@ -106,7 +103,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		end
 		check_whether_we_can_write_to(nginx_prefix) || exit(1)
 		nginx_config_already_exists_before_installing = nginx_config_exists?(nginx_prefix)
-		if PhusionPassenger.originally_packaged?
+		if needs_compiling_support_files?
 			compile_passenger_support_files || exit(1)
 		end
 		if install_nginx(nginx_source_dir, nginx_prefix, extra_nginx_configure_flags)
@@ -141,6 +138,10 @@ private
 	def show_welcome_screen
 		render_template 'nginx/welcome', :version => VERSION_STRING
 		wait
+	end
+
+	def needs_compiling_support_files?
+		return PhusionPassenger.originally_packaged?
 	end
 	
 	def compile_passenger_support_files
@@ -434,7 +435,7 @@ private
 		elsif !pcre_is_installed?
 			command << "--without-http_rewrite_module "
 		end
-		command << "--add-module='#{PhusionPassenger.source_root}/ext/nginx' #{extra_configure_flags}"
+		command << "--add-module='#{PhusionPassenger.nginx_addon_dir}' #{extra_configure_flags}"
 		command.strip!
 		return command
 	end
