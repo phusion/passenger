@@ -77,11 +77,13 @@ fi
 
 if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	run sudo apt-get install -y devscripts rake apache2-mpm-worker apache2-threaded-dev \
-		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev libev-dev
+		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev libev-dev gdebi-core
 	run gem install rspec mizuho bluecloth --no-rdoc --no-ri
 	run rake debian:dev
-	run sudo dpkg -i pkg/ruby-passenger_*.deb pkg/ruby-passenger-dev_*.deb \
-		pkg/ruby-passenger-doc_*.deb pkg/libapache2-mod-passenger_*.deb
+	run sudo gdebi -n pkg/ruby-passenger_*.deb
+	run sudo gdebi -n pkg/ruby-passenger-dev_*.deb
+	run sudo gdebi -n pkg/ruby-passenger-doc_*.deb
+	run sudo gdebi -n pkg/libapache2-mod-passenger_*.deb
 	export LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini
 	run rvmsudo rspec -f s -c test/integration_tests/native_packaging_spec.rb
 fi
