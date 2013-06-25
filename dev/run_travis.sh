@@ -3,7 +3,6 @@ set -e
 
 export VERBOSE=1
 export TRACE=1
-export DOCTOOLS=no
 export rvmsudo_secure_path=1
 
 sudo sh -c 'cat >> /etc/hosts' <<EOF
@@ -41,18 +40,18 @@ if [[ "$TEST_RUBYGEMS_VERSION" != "" ]]; then
 fi
 
 if [[ "$TEST_CXX" = 1 ]]; then
-	run rake test:install_deps RAILS_BUNDLES=no
+	run rake test:install_deps RAILS_BUNDLES=no DOCTOOLS=no
 	run rake test:cxx
 	run rake test:oxt
 fi
 
 if [[ "$TEST_RUBY" = 1 ]]; then
-	run rake test:install_deps
+	run rake test:install_deps DOCTOOLS=no
 	run rake test:ruby
 fi
 
 if [[ "$TEST_NGINX" = 1 ]]; then
-	run rake test:install_deps RAILS_BUNDLES=no
+	run rake test:install_deps RAILS_BUNDLES=no DOCTOOLS=no
 	run gem install rack daemon_controller --no-rdoc --no-ri
 	run ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download
 	run rake test:integration:nginx
@@ -60,7 +59,7 @@ fi
 
 if [[ "$TEST_APACHE2" = 1 ]]; then
 	run sudo apt-get install -y apache2-mpm-worker apache2-threaded-dev
-	run rake test:install_deps RAILS_BUNDLES=no
+	run rake test:install_deps RAILS_BUNDLES=no DOCTOOLS=no
 	run gem install rack --no-rdoc --no-ri
 	run ./bin/passenger-install-apache2-module --auto
 	run rake test:integration:apache2
@@ -69,7 +68,7 @@ fi
 if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	run sudo apt-get install -y devscripts rake apache2-mpm-worker apache2-threaded-dev \
 		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev libev-dev gdebi-core
-	run rake test:install_deps RAILS_BUNDLES=no DOCTOOLS=yes
+	run rake test:install_deps RAILS_BUNDLES=no
 	run rake debian:dev
 	run sudo gdebi -n pkg/ruby-passenger_*.deb
 	run sudo gdebi -n pkg/ruby-passenger-dev_*.deb

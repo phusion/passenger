@@ -1,7 +1,7 @@
 language: ruby
 
 env:
-  - TEST_DEBIAN_PACKAGING=1
+  - TEST_DEBIAN_PACKAGING=1 TEST_RUBYGEMS_VERSION=1.8.25
 
 before_install:
   - cp test/config.json.travis test/config.json
