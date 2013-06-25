@@ -40,15 +40,6 @@ if [[ "$TEST_RUBYGEMS_VERSION" != "" ]]; then
 	run gem --version
 fi
 
-if [[ "$TEST_FULL_COMPILE" = 1 ]]; then
-	run sudo apt-get install -y apache2-mpm-worker apache2-threaded-dev
-	run gem install rack --no-rdoc --no-ri
-	run ./bin/passenger-install-apache2-module --auto
-	run rake nginx
-	run rake test/cxx/CxxTestMain
-	run rake test/oxt/oxt_test_main
-fi
-
 if [[ "$TEST_CXX" = 1 ]]; then
 	run rake test:install_deps RAILS_BUNDLES=no
 	run rake test:cxx
@@ -71,7 +62,7 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 	run sudo apt-get install -y apache2-mpm-worker apache2-threaded-dev
 	run rake test:install_deps RAILS_BUNDLES=no
 	run gem install rack --no-rdoc --no-ri
-	run rake apache2
+	run ./bin/passenger-install-apache2-module --auto
 	run rake test:integration:apache2
 fi
 
