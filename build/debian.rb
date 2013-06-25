@@ -93,6 +93,10 @@ end
 
 desc "Build Debian source packages to be uploaded to repositories"
 task 'debian:production' => 'debian:orig_tarball' do
+	if boolean_option('USE_CCACHE', false)
+		# The resulting Debian rules file must not set USE_CCACHE.
+		abort "USE_CCACHE must be returned off when running the debian:production task."
+	end
 	if filename = string_option('GPG_PASSPHRASE_FILE')
 		filename = File.expand_path(filename)
 		if !File.exist?(filename)
