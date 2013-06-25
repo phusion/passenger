@@ -35,6 +35,7 @@ DOCDIR = "/usr/share/doc/ruby-passenger"
 RESOURCESDIR = "/usr/share/passenger"
 RUBY_EXTENSION_SOURCE_DIR = "/usr/share/passenger/ruby_extension_source"
 AGENTS_DIR = "/usr/lib/passenger/agents"
+APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
 
 describe "A natively packaged Phusion Passenger" do
 	def capture_output(command)
@@ -59,10 +60,6 @@ describe "A natively packaged Phusion Passenger" do
 				end
 			end
 		end
-	end
-
-	specify "passenger-install-apache2-module is in #{BINDIR}" do
-		which("passenger-install-apache2-module").should == "#{BINDIR}/passenger-install-apache2-module"
 	end
 
 	specify "passenger-install-nginx-module is in #{BINDIR}" do
@@ -102,6 +99,10 @@ describe "A natively packaged Phusion Passenger" do
 		File.directory?(AGENTS_DIR).should be_true
 		File.file?("#{AGENTS_DIR}/PassengerWatchdog").should be_true
 		File.executable?("#{AGENTS_DIR}/PassengerWatchdog").should be_true
+	end
+
+	specify "the Apache 2 module exists" do
+		File.file?(APACHE2_MODULE_PATH).should be_true
 	end
 
 	describe "passenger-config" do
@@ -145,6 +146,25 @@ describe "A natively packaged Phusion Passenger" do
 
 		it "works" do
 			capture_output("passenger-memory-stats").should =~ /Passenger processes/
+		end
+	end
+
+	describe "passenger-install-apache2-module" do
+		it "is in #{BINDIR}" do
+			which("passenger-install-apache2-module").should == "#{BINDIR}/passenger-install-apache2-module"
+		end
+
+		it "prints the configuration snippet and exits" do
+			output = capture_output("passenger-install-apache2-module --auto")
+			output.should =~ /Please edit your Apache configuration file/
+			output.should_not include("Compiling and installing Apache 2 module")
+			output.should_not include("rake apache2")
+		end
+
+		it "produces a correct configuration snippet" do
+			output = capture_output("passenger-install-apache2-module --auto")
+			output.should include("LoadModule passenger_module #{APACHE2_MODULE_PATH}")
+			output.should include("PassengerRoot #{LOCATIONS_INI}")
 		end
 	end
 end
