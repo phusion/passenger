@@ -77,4 +77,6 @@ if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	run sudo gdebi -n pkg/libapache2-mod-passenger_*.deb
 	run rvmsudo env LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
 		rspec -f s -c test/integration_tests/native_packaging_spec.rb
+	run env PASSENGER_LOCATION_CONFIGURATION_FILE=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
+		rake test:integration:apache2
 fi
