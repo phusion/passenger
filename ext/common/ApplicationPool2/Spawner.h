@@ -740,7 +740,7 @@ protected:
 			}
 		}
 	}
-	
+
 	SpawnPreparationInfo prepareSpawn(const Options &options) const {
 		TRACE_POINT();
 		SpawnPreparationInfo info;
@@ -924,6 +924,15 @@ protected:
 		}
 
 		assert(info.appRootPathsInsideChroot.back() == info.appRootInsideChroot);
+	}
+
+	bool shouldLoadShellEnvvars(const Options &options, const SpawnPreparationInfo &preparation) const {
+		if (options.loadShellEnvvars) {
+			string shellName = extractBaseName(preparation.shell);
+			return shellName == "bash" || shellName == "zsh" || shellName == "ksh";
+		} else {
+			return false;
+		}
 	}
 	
 	string serializeEnvvarsFromPoolOptions(const Options &options) const {

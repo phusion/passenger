@@ -110,9 +110,9 @@ private:
 		string agentsDir = resourceLocator.getAgentsDir();
 		vector<string> command;
 		
-		if (options.loadShellEnvvars) {
-			command.push_back("bash");
-			command.push_back("bash");
+		if (shouldLoadShellEnvvars(options, preparation)) {
+			command.push_back(preparation.shell);
+			command.push_back(preparation.shell);
 			command.push_back("-lc");
 			command.push_back("exec \"$@\"");
 			command.push_back("SpawnPreparerShell");
