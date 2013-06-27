@@ -1,3 +1,4 @@
+# encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010 Phusion
 #
@@ -20,7 +21,6 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
-require 'phusion_passenger/standalone/command'
 
 module PhusionPassenger
 module Standalone
@@ -29,9 +29,13 @@ class PackageRuntimeCommand < Command
 	def self.description
 		return "Package the Phusion Passenger Standalone runtime."
 	end
+
+	def self.require_libs
+		require 'platform_info/binary_compatibility'
+		require 'phusion_passenger/standalone/runtime_installer'
+	end
 	
 	def run
-		require_platform_info_binary_compatibility
 		destdir = File.expand_path("passenger-standalone")
 		description =
 			"Package the Phusion Passenger Standalone runtime into the specified directory.\n" <<
@@ -56,7 +60,6 @@ class PackageRuntimeCommand < Command
 		sh "rm", "-rf", support_dir
 		sh "rm", "-rf", nginx_dir
 		
-		require 'phusion_passenger/standalone/runtime_installer'
 		installer = RuntimeInstaller.new(
 			:targets     => [:nginx, :ruby, :support_binaries],
 			:support_dir => support_dir,

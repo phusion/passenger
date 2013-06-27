@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -82,18 +82,33 @@ class Main
 
 private
 	def command_exists?(name)
-		return COMMANDS.any? do |element|
-			element[0] == name
-		end
+		return !!find_command_spec(name)
 	end
 	
 	def run_command(name, args = [])
-		Main.each_command do |command_name, command_class|
-			if command_name == name
-				return command_class.new(args).run
+		if spec = find_command_spec(name)
+			klass = get_command_class(spec)
+			klass.require_libs if klass.respond_to?(:require_libs)
+			klass.new(args).run
+		else
+			raise ArgumentError, "Command '#{name}' doesn't exist"
+		end
+	end
+
+	def find_command_spec(name)
+		COMMANDS.each do |spec|
+			if spec[0] == name
+				return spec
 			end
 		end
-		raise ArgumentError, "Command '#{name}' doesn't exist"
+		return nil
+	end
+
+	def get_command_class(spec)
+		command_name, class_name = spec
+		filename = command_name.sub(/-/, '_') + "_command"
+		require "phusion_passenger/standalone/#{filename}"
+		return Standalone.const_get(class_name)
 	end
 end
 
