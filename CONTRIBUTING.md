@@ -65,6 +65,8 @@ Run the following command to compile everything:
     rake apache2
     rake nginx
 
+It is recommended that you install ccache and set the `USE_CCACHE=1` environment variable. The build system will then automatically wrap all compiler calls in ccache, significantly improving recompilation times.
+
 ### Running the unit tests
 
 The tests depend on the Phusion Passenger developer tools. Make sure they're installed:
