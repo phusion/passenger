@@ -21,8 +21,7 @@ autom4te.cache
 *.mode2v3
 xcuserdata
 /config.rb
-/agents
-/libout
+/buildout
 build/cache
 ext/common/libboost_oxt
 ext/common/libpassenger_common

@@ -70,7 +70,7 @@ private
 	def native_support_dir_in_source_root
 		if PhusionPassenger.originally_packaged?
 			@native_support_dir_in_source_root ||=
-				File.expand_path("#{PhusionPassenger.source_root}/libout/ruby")
+				File.expand_path("#{PhusionPassenger.source_root}/buildout/ruby")
 		else
 			return nil
 		end

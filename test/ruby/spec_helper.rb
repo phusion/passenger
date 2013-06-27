@@ -27,7 +27,6 @@ end
 
 DEBUG = boolean_option('DEBUG')
 TEST_CLASSIC_RAILS = boolean_option('TEST_CLASSIC_RAILS', true)
-AGENTS_DIR = "#{source_root}/agents"
 
 $LOAD_PATH.unshift("#{source_root}/lib")
 $LOAD_PATH.unshift("#{source_root}/test")

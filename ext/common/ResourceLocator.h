@@ -74,7 +74,7 @@ public:
 		} else {
 			string root = rootOrFile;
 			binDir              = root + "/bin";
-			agentsDir           = root + "/agents";
+			agentsDir           = root + "/buildout/agents";
 			helperScriptsDir    = root + "/helper-scripts";
 			resourcesDir        = root + "/resources";
 			docDir              = root + "/doc";
@@ -92,10 +92,6 @@ public:
 	
 	string getHelperScriptsDir() const {
 		return helperScriptsDir;
-	}
-	
-	string getSpawnServerFilename() const {
-		return getHelperScriptsDir() + "/passenger-spawn-server";
 	}
 	
 	string getResourcesDir() const {

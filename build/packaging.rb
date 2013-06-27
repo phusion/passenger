@@ -220,7 +220,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	sh "mkdir -p #{fake_native_support_dir}"
 	native_support_archdir = PlatformInfo.ruby_extension_binary_compatibility_id
 	sh "mkdir -p #{fake_native_support_dir}"
-	sh "cp -R libout/ruby/#{native_support_archdir}/*.#{LIBEXT} #{fake_native_support_dir}/"
+	sh "cp -R buildout/ruby/#{native_support_archdir}/*.#{LIBEXT} #{fake_native_support_dir}/"
 	
 	# Agents
 	sh "mkdir -p #{fake_agents_dir}"

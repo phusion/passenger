@@ -226,8 +226,8 @@ private
 	
 	def binary_support_files_should_be_installed?
 		return @targets.include?(:support_binaries) && (
-			!File.exist?("#{@support_dir}/agents/PassengerHelperAgent") ||
-			!File.exist?("#{@support_dir}/libout/common/libpassenger_common.a")
+			!File.exist?("#{@support_dir}/buildout/agents/PassengerHelperAgent") ||
+			!File.exist?("#{@support_dir}/buildout/common/libpassenger_common.a")
 		)
 	end
 	
@@ -523,7 +523,7 @@ private
 			command = ""
 			if @targets.include?(:support_binaries)
 				if ENV['PASSENGER_DEBUG'] && !ENV['PASSENGER_DEBUG'].empty?
-					output_dir = "#{PhusionPassenger.source_root}/libout/common/libpassenger_common"
+					output_dir = "#{PhusionPassenger.source_root}/buildout/common/libpassenger_common"
 				else
 					output_dir = "#{@support_dir}/libpassenger_common"
 				end
