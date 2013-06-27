@@ -30,6 +30,7 @@
 #include <oxt/backtrace.hpp>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <pwd.h>
@@ -214,7 +215,33 @@ private:
 		 * rights though, because we want admin tools to be able to list the available
 		 * generations no matter what user they're running as.
 		 */
-		makeDirTree(path, "u=rwx,g=rx,o=rx");
+		if (owner) {
+			switch (getFileType(path)) {
+			case FT_NONEXISTANT:
+				createDirectory(path);
+				break;
+			case FT_DIRECTORY:
+				removeDirTree(path);
+				createDirectory(path);
+				break;
+			default:
+				throw RuntimeException("'" + path + "' already exists, and is not a directory");
+			}
+		} else if (getFileType(path) != FT_DIRECTORY) {
+			throw RuntimeException("Server instance directory '" + path +
+				"' does not exist");
+		}
+	}
+
+	void createDirectory(const string &path) const {
+		// We do not use makeDirTree() here. If an attacker creates a directory
+		// just before we do, then we want to abort because we want the directory
+		// to have specific permissions.
+		if (mkdir(path.c_str(), parseModeString("u=rwx,g=rx,o=rx")) == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot create server instance directory '" +
+				path + "'", e, path);
+		}
 	}
 	
 	bool isDirectory(const string &dir, struct dirent *entry) const {

@@ -34,6 +34,10 @@ Release 4.0.6
    created with the setuid bit, when it should have sticky bit (to prevent
    existing files from being deleted or renamed by a user that doesn't own the
    file). This has now been fixed.
+ * If the server instance directory already exists, it will now be removed
+   first in order get correct directory permissions. If the directory still
+   exists after removal, Phusion Passenger aborts to avoid writing to a
+   directory with unexpected permissions. Fixes issue #910.
  * The installer now checks whether the system has enough virtual memory, and
    prints a helpful warning if it doesn't.
  * Linux/AArch64 compatibility fixes. Patch contributed by Dirk Mueller.
