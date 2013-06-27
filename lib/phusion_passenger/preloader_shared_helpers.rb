@@ -71,8 +71,10 @@ module PreloaderSharedHelpers
 				client.flush
 				client.sync = true
 				return [:forked, client]
-			else
+			elsif defined?(NativeSupport)
 				NativeSupport.detach_process(pid)
+			else
+				Process.detach(pid)
 			end
 		else
 			STDERR.puts "Unknown command '#{command.inspect}'"
