@@ -529,6 +529,12 @@ public:
 		return superGroups.get(options.getAppGroupName()).get();
 	}
 
+	struct GarbageCollectorState {
+		unsigned long long now;
+		unsigned long long nextGcRunTime;
+		vector<Callback> actions;
+	};
+
 	static void garbageCollect(PoolPtr self) {
 		TRACE_POINT();
 		{
@@ -551,13 +557,53 @@ public:
 		}
 	}
 
+	void maybeUpdateNextGcRuntime(GarbageCollectorState &state, unsigned long candidate) {
+		if (state.nextGcRunTime == 0 || candidate < state.nextGcRunTime) {
+			state.nextGcRunTime = candidate;
+		}
+	}
+
+	void maybeDetachIdleProcess(GarbageCollectorState &state, const GroupPtr &group,
+		const ProcessPtr &process, ProcessList::iterator &p_it)
+	{
+		assert(maxIdleTime > 0);
+		unsigned long long processGcTime =
+			process->lastUsed + maxIdleTime;
+		if (process->sessions == 0
+		 && state.now >= processGcTime
+		 && (unsigned long) group->enabledCount > group->options.minProcesses) {
+			ProcessList::iterator prev = p_it;
+			prev--;
+			P_DEBUG("Garbage collect idle process: " << process->inspect() <<
+				", group=" << group->name);
+			group->detach(process, state.actions);
+			p_it = prev;
+		} else {
+			maybeUpdateNextGcRuntime(state, processGcTime);
+		}
+	}
+
+	void maybeCleanPreloader(GarbageCollectorState &state, const GroupPtr &group) {
+		if (group->spawner->cleanable() && group->options.getMaxPreloaderIdleTime() != 0) {
+			unsigned long long spawnerGcTime =
+				group->spawner->lastUsed() +
+				group->options.getMaxPreloaderIdleTime() * 1000000;
+			if (state.now >= spawnerGcTime) {
+				P_DEBUG("Garbage collect idle spawner: group=" << group->name);
+				group->cleanupSpawner(state.actions);
+			} else {
+				maybeUpdateNextGcRuntime(state, spawnerGcTime);
+			}
+		}
+	}
+
 	unsigned long long realGarbageCollect() {
 		TRACE_POINT();
 		ScopedLock lock(syncher);
 		SuperGroupMap::iterator it, end = superGroups.end();
-		vector<Callback> actions;
-		unsigned long long now = SystemTime::getUsec();
-		unsigned long long nextGcRunTime = 0;
+		GarbageCollectorState state;
+		state.now = SystemTime::getUsec();
+		state.nextGcRunTime = 0;
 		
 		P_DEBUG("Garbage collection time...");
 		verifyInvariants();
@@ -572,45 +618,22 @@ public:
 			
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				GroupPtr group = *g_it;
-				ProcessList &processes = group->enabledProcesses;
-				ProcessList::iterator p_it, p_end = processes.end();
-				
-				for (p_it = processes.begin(); p_it != p_end; p_it++) {
-					ProcessPtr process = *p_it;
-					
-					// ...detach processes that have been idle for more than maxIdleTime.
-					unsigned long long processGcTime =
-						process->lastUsed + maxIdleTime;
-					if (process->sessions == 0
-					 && now >= processGcTime
-					 && (unsigned long) group->enabledCount > group->options.minProcesses) {
-						ProcessList::iterator prev = p_it;
-						prev--;
-						P_DEBUG("Garbage collect idle process: " << process->inspect() <<
-							", group=" << group->name);
-						group->detach(process, actions);
-						p_it = prev;
-					} else if (nextGcRunTime == 0
-					        || processGcTime < nextGcRunTime) {
-						nextGcRunTime = processGcTime;
+
+				if (maxIdleTime > 0) {
+					ProcessList &processes = group->enabledProcesses;
+					ProcessList::iterator p_it, p_end = processes.end();
+
+					for (p_it = processes.begin(); p_it != p_end; p_it++) {
+						ProcessPtr process = *p_it;
+						// ...detach processes that have been idle for more than maxIdleTime.
+						maybeDetachIdleProcess(state, group, process, p_it);
 					}
 				}
 				
 				group->verifyInvariants();
-				
+			
 				// ...cleanup the spawner if it's been idle for more than preloaderIdleTime.
-				if (group->spawner->cleanable()) {
-					unsigned long long spawnerGcTime =
-						group->spawner->lastUsed() +
-						group->options.getMaxPreloaderIdleTime() * 1000000;
-					if (now >= spawnerGcTime) {
-						P_DEBUG("Garbage collect idle spawner: group=" << group->name);
-						group->cleanupSpawner(actions);
-					} else if (nextGcRunTime == 0
-					        || spawnerGcTime < nextGcRunTime) {
-						nextGcRunTime = spawnerGcTime;
-					}
-				}
+				maybeCleanPreloader(state, group);
 			}
 			
 			superGroup->verifyInvariants();
@@ -621,22 +644,22 @@ public:
 
 		// Schedule next garbage collection run.
 		unsigned long long sleepTime;
-		if (nextGcRunTime == 0 || nextGcRunTime <= now) {
+		if (state.nextGcRunTime == 0 || state.nextGcRunTime <= state.now) {
 			if (maxIdleTime == 0) {
 				sleepTime = 10 * 60 * 1000000;
 			} else {
 				sleepTime = maxIdleTime;
 			}
 		} else {
-			sleepTime = nextGcRunTime - now;
+			sleepTime = state.nextGcRunTime - state.now;
 		}
 		P_DEBUG("Garbage collection done; next garbage collect in " <<
 			std::fixed << std::setprecision(3) << (sleepTime / 1000000.0) << " sec");
 
 		UPDATE_TRACE_POINT();
-		runAllActions(actions);
+		runAllActions(state.actions);
 		UPDATE_TRACE_POINT();
-		actions.clear();
+		state.actions.clear();
 		return sleepTime;
 	}
 
