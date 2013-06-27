@@ -141,7 +141,7 @@ private
 		if target_dir
 			require "#{target_dir}/#{library_name}"
 		else
-			STDERR.puts "native_support not loaded."
+			STDERR.puts "Ruby native_support extension not loaded. Continuing without native_support."
 		end
 	end
 	
@@ -154,11 +154,15 @@ private
 	end
 	
 	def sh(*args)
-		command_string = args.join(' ')
-		STDERR.puts "# #{command_string}"
-		if !system(*args)
+		if !sh_nonfatal(*args)
 			raise "Could not compile #{library_name} (\"#{command_string}\" failed)"
 		end
+	end
+
+	def sh_nonfatal(*args)
+		command_string = args.join(' ')
+		STDERR.puts "# #{command_string}"
+		return system(*args)
 	end
 	
 	def compile(target_dirs)
@@ -170,10 +174,19 @@ private
 				File.unlink("#{target_dir}/.permission_test")
 				STDERR.puts "# cd #{target_dir}"
 				Dir.chdir(target_dir) do
-					sh("#{PlatformInfo.ruby_command} '#{extconf_rb}'")
-					sh("make")
+					result =
+						sh_nonfatal("#{PlatformInfo.ruby_command} '#{extconf_rb}'") &&
+						sh_nonfatal("make")
+					if result
+						STDERR.puts "Compilation succesful."
+						STDERR.puts "-------------------------------"
+						return target_dir
+					else
+						STDERR.puts "Compilation failed."
+						STDERR.puts "-------------------------------"
+						return nil
+					end
 				end
-				return target_dir
 			rescue Errno::EACCES
 				# If we encountered a permission error, then try
 				# the next target directory. If we get a permission
