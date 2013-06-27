@@ -25,7 +25,7 @@ namespace tut {
 		virtual ssize_t readSocket(void *buf, size_t n) {
 			int readError;
 			{
-				lock_guard<boost::mutex> l(syncher);
+				boost::lock_guard<boost::mutex> l(syncher);
 				readError = this->readError;
 			}
 			if (readError == 0) {
@@ -37,14 +37,14 @@ namespace tut {
 		}
 
 		void setReadError(int code) {
-			lock_guard<boost::mutex> l(syncher);
+			boost::lock_guard<boost::mutex> l(syncher);
 			readError = code;
 		}
 
 		virtual void afterProcessingBuffer() {
 			function<void ()> onAfterProcessingBuffer;
 			{
-				lock_guard<boost::mutex> l(syncher);
+				boost::lock_guard<boost::mutex> l(syncher);
 				onAfterProcessingBuffer = this->onAfterProcessingBuffer;
 			}
 			if (onAfterProcessingBuffer) {
@@ -80,7 +80,7 @@ namespace tut {
 
 		static size_t onData(const EventedBufferedInputPtr &input, const StaticString &data) {
 			EventedBufferedInputTest *self = (EventedBufferedInputTest *) input->userData;
-			lock_guard<boost::mutex> l(self->syncher);
+			boost::lock_guard<boost::mutex> l(self->syncher);
 			self->counter++;
 			if (data.empty()) {
 				self->log.append("EOF\n");
@@ -96,12 +96,12 @@ namespace tut {
 
 		static void onError(const EventedBufferedInputPtr &input, const char *message, int code) {
 			EventedBufferedInputTest *self = (EventedBufferedInputTest *) input->userData;
-			lock_guard<boost::mutex> l(self->syncher);
+			boost::lock_guard<boost::mutex> l(self->syncher);
 			self->log.append("Error: " + toString(code) + "\n");
 		}
 
 		unsigned int getCounter() {
-			lock_guard<boost::mutex> l(syncher);
+			boost::lock_guard<boost::mutex> l(syncher);
 			return counter;
 		}
 
@@ -124,13 +124,13 @@ namespace tut {
 		}
 
 		void logEbiIsStarted() {
-			lock_guard<boost::mutex> l(syncher);
+			boost::lock_guard<boost::mutex> l(syncher);
 			log.append("isStarted: " + toString(ebi->isStarted()) + "\n");
 			log.append("isSocketStarted: " + toString(ebi->isSocketStarted()) + "\n");
 		}
 	};
 
-	#define LOCK() lock_guard<boost::mutex> l(syncher)
+	#define LOCK() boost::lock_guard<boost::mutex> l(syncher)
 
 	#define DEFINE_ON_DATA_METHOD(name, code) \
 		static size_t name(const EventedBufferedInputPtr &input, const StaticString &data) { \
@@ -439,7 +439,7 @@ namespace tut {
 		)
 
 		static void on_after_processing_buffer_20(EventedBufferedInputTest *self) {
-			lock_guard<boost::mutex> l(self->syncher);
+			boost::lock_guard<boost::mutex> l(self->syncher);
 			if (self->counter == 1) {
 				self->log.append("Finished first onData; isSocketStarted: " +
 					toString(self->ebi->isSocketStarted()) + "\n");
@@ -485,7 +485,7 @@ namespace tut {
 			static void on_after_processing_buffer_21(EventedBufferedInputTest *self) {
 				if (self->getCounter() == 1) {
 					self->ebi->stop();
-					lock_guard<boost::mutex> l(self->syncher);
+					boost::lock_guard<boost::mutex> l(self->syncher);
 					self->log.append("isSocketStarted: " +
 						toString(self->ebi->isSocketStarted()) + "\n");
 				}
@@ -511,13 +511,13 @@ namespace tut {
 				if (self->getCounter() == 1) {
 					self->ebi->stop();
 					{
-						lock_guard<boost::mutex> l(self->syncher);
+						boost::lock_guard<boost::mutex> l(self->syncher);
 						self->log.append("Paused; isSocketStarted: " +
 							toString(self->ebi->isSocketStarted()) + "\n");
 					}
 					self->ebi->start();
 					{
-						lock_guard<boost::mutex> l(self->syncher);
+						boost::lock_guard<boost::mutex> l(self->syncher);
 						self->log.append("Resumed; isSocketStarted: " +
 							toString(self->ebi->isSocketStarted()) + "\n");
 					}
@@ -564,19 +564,19 @@ namespace tut {
 				if (self->getCounter() == 1) {
 					self->ebi->stop();
 					{
-						lock_guard<boost::mutex> l(self->syncher);
+						boost::lock_guard<boost::mutex> l(self->syncher);
 						self->log.append("Paused; isSocketStarted: " +
 							toString(self->ebi->isSocketStarted()) + "\n");
 					}
 					self->ebi->start();
 					{
-						lock_guard<boost::mutex> l(self->syncher);
+						boost::lock_guard<boost::mutex> l(self->syncher);
 						self->log.append("Resumed; isSocketStarted: " +
 							toString(self->ebi->isSocketStarted()) + "\n");
 					}
 					self->ebi->stop();
 					{
-						lock_guard<boost::mutex> l(self->syncher);
+						boost::lock_guard<boost::mutex> l(self->syncher);
 						self->log.append("Paused again; isSocketStarted: " +
 							toString(self->ebi->isSocketStarted()) + "\n");
 					}
@@ -660,7 +660,7 @@ namespace tut {
 			)
 
 			static void on_after_processing_buffer_25(EventedBufferedInputTest *self) {
-				lock_guard<boost::mutex> l(self->syncher);
+				boost::lock_guard<boost::mutex> l(self->syncher);
 				if (self->counter == 1) {
 					self->log.append("Handler done; isSocketStarted: " +
 						toString(self->ebi->isSocketStarted()) + "\n");
@@ -707,7 +707,7 @@ namespace tut {
 			)
 
 			static void on_after_processing_buffer_26(EventedBufferedInputTest *self) {
-				lock_guard<boost::mutex> l(self->syncher);
+				boost::lock_guard<boost::mutex> l(self->syncher);
 				if (self->counter == 1) {
 					self->log.append("Handler done; isSocketStarted: " +
 						toString(self->ebi->isSocketStarted()) + "\n");

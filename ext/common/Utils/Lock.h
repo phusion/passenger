@@ -8,8 +8,8 @@ namespace Passenger {
 using namespace boost;
 
 /** Shortcut typedefs. */
-typedef lock_guard<boost::mutex> LockGuard;
-typedef unique_lock<boost::mutex> ScopedLock;
+typedef boost::lock_guard<boost::mutex> LockGuard;
+typedef boost::unique_lock<boost::mutex> ScopedLock;
 
 /** Nicer syntax for conditionally locking the mutex during construction. */
 class DynamicScopedLock: public unique_lock<boost::mutex> {

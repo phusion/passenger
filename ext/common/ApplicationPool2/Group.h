@@ -515,7 +515,7 @@ private:
 		postLockActions.push_back(boost::bind(interruptAndJoinAllThreads,
 			shared_from_this()));
 		{
-			lock_guard<boost::mutex> l(lifetimeSyncher);
+			boost::lock_guard<boost::mutex> l(lifetimeSyncher);
 			lifeStatus = SHUT_DOWN;
 		}
 		selfPointer.reset();
@@ -669,7 +669,7 @@ public:
 		selfPointer = shared_from_this();
 		assert(disableWaitlist.empty());
 		{
-			lock_guard<boost::mutex> l(lifetimeSyncher);
+			boost::lock_guard<boost::mutex> l(lifetimeSyncher);
 			lifeStatus = SHUTTING_DOWN;
 		}
 	}
@@ -767,13 +767,13 @@ public:
 	
 	// Thread-safe.
 	bool isAlive() const {
-		lock_guard<boost::mutex> lock(lifetimeSyncher);
+		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
 		return lifeStatus == ALIVE;
 	}
 
 	// Thread-safe.
 	LifeStatus getLifeStatus() const {
-		lock_guard<boost::mutex> lock(lifetimeSyncher);
+		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
 		return lifeStatus;
 	}
 	

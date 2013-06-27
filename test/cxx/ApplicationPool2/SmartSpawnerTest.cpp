@@ -61,7 +61,7 @@ namespace tut {
 		}
 
 		void _gatherOutput(const char *data, unsigned int size) {
-			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
 			gatheredOutput.append(data, size);
 		}
 	};
@@ -241,7 +241,7 @@ namespace tut {
 		shutdown(session->fd(), SHUT_WR);
 		readAll(session->fd());
 		EVENTUALLY(2,
-			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
 			result = gatheredOutput.find("hello world!\n") != string::npos;
 		);
 	}

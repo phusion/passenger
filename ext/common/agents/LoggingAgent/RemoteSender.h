@@ -299,7 +299,7 @@ private:
 	}
 	
 	bool firstStarted() const {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		return nextCheckupTime == 0;
 	}
 	
@@ -334,12 +334,12 @@ private:
 			scheduleNextCheckup(3 * 60 * 60);
 		}
 
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		this->servers = servers;
 	}
 	
 	void freeThreadData() {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		servers.clear(); // Invoke destructors inside this thread.
 	}
 	
@@ -357,7 +357,7 @@ private:
 	}
 	
 	unsigned int msecUntilNextCheckup() const {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		time_t now = SystemTime::get();
 		if (now >= nextCheckupTime) {
 			return 0;
@@ -367,7 +367,7 @@ private:
 	}
 	
 	bool timeForCheckup() const {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		return SystemTime::get() >= nextCheckupTime;
 	}
 	
@@ -525,7 +525,7 @@ public:
 
 		if (!queue.tryAdd(item)) {
 			P_WARN("The Union Station gateway isn't responding quickly enough; dropping packet.");
-			lock_guard<boost::mutex> l(syncher);
+			boost::lock_guard<boost::mutex> l(syncher);
 			packetsDropped++;
 		}
 	}
@@ -536,7 +536,7 @@ public:
 
 	template<typename Stream>
 	void inspect(Stream &stream) const {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		stream << "  Available servers (" << servers.size() << "): ";
 		foreach (const ServerPtr server, servers) {
 			stream << server->name() << " ";

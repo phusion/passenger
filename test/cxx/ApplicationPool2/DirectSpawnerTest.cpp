@@ -43,7 +43,7 @@ namespace tut {
 		}
 
 		void _gatherOutput(const char *data, unsigned int size) {
-			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
 			gatheredOutput.append(data, size);
 		}
 	};

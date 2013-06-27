@@ -198,7 +198,7 @@ class MessageBox: public enable_shared_from_this<MessageBox> {
 
 public:
 	void send(const MessagePtr &message) {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		message->setFrom(shared_from_this());
 		messages.push_back(message);
 		cond.notify_all();
@@ -287,7 +287,7 @@ public:
 	}
 
 	unsigned int size() const {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		return messages.size();
 	}
 };

@@ -108,7 +108,7 @@ public:
 	 * set debugging options on the spawner.
 	 */
 	DummySpawnerPtr getDummySpawner() {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		if (dummySpawner == NULL) {
 			dummySpawner = make_shared<DummySpawner>(resourceLocator, config);
 		}

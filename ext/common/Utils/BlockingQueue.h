@@ -53,7 +53,7 @@ public:
 	}
 	
 	unsigned int size() const {
-		lock_guard<timed_mutex> l(lock);
+		boost::lock_guard<timed_mutex> l(lock);
 		return queue.size();
 	}
 	
@@ -70,7 +70,7 @@ public:
 	}
 	
 	bool tryAdd(const T &item) {
-		lock_guard<timed_mutex> l(lock);
+		boost::lock_guard<timed_mutex> l(lock);
 		if (!atMaxCapacity()) {
 			queue.push(item);
 			added.notify_one();

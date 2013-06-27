@@ -61,7 +61,7 @@ public:
 		sockets->add("main", "tcp://127.0.0.1:1234", "session", config->concurrency);
 		syscalls::usleep(config->spawnTime);
 		
-		lock_guard<boost::mutex> l(lock);
+		boost::lock_guard<boost::mutex> l(lock);
 		count++;
 		ProcessPtr process = make_shared<Process>(SafeLibevPtr(),
 			(pid_t) count, "gupid-" + toString(count),

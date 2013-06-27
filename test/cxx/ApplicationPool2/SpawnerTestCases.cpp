@@ -312,7 +312,7 @@
 		process.reset();
 
 		EVENTUALLY(2,
-			lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
 			result = gatheredOutput.find("hello stdout!\n") != string::npos
 				&& gatheredOutput.find("hello stderr!\n") != string::npos;
 		);

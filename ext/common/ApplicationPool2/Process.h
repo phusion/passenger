@@ -384,25 +384,25 @@ public:
 
 	// Thread-safe.
 	bool isAlive() const {
-		lock_guard<boost::mutex> lock(lifetimeSyncher);
+		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
 		return lifeStatus == ALIVE;
 	}
 
 	// Thread-safe.
 	bool hasTriggeredShutdown() const {
-		lock_guard<boost::mutex> lock(lifetimeSyncher);
+		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
 		return lifeStatus == SHUTDOWN_TRIGGERED;
 	}
 
 	// Thread-safe.
 	bool isDead() const {
-		lock_guard<boost::mutex> lock(lifetimeSyncher);
+		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
 		return lifeStatus == DEAD;
 	}
 
 	// Thread-safe.
 	LifeStatus getLifeStatus() const {
-		lock_guard<boost::mutex> lock(lifetimeSyncher);
+		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
 		return lifeStatus;
 	}
 
@@ -413,7 +413,7 @@ public:
 	void triggerShutdown() {
 		assert(canTriggerShutdown());
 		{
-			lock_guard<boost::mutex> lock(lifetimeSyncher);
+			boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
 			assert(lifeStatus == ALIVE);
 			lifeStatus = SHUTDOWN_TRIGGERED;
 			shutdownStartTime = SystemTime::get();
@@ -447,7 +447,7 @@ public:
 			}
 		}
 
-		lock_guard<boost::mutex> lock(lifetimeSyncher);
+		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
 		lifeStatus = DEAD;
 	}
 

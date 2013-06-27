@@ -1122,7 +1122,7 @@ PipeWatcher::initialize() {
 
 void
 PipeWatcher::start() {
-	lock_guard<boost::mutex> lock(startSyncher);
+	boost::lock_guard<boost::mutex> lock(startSyncher);
 	started = true;
 	startCond.notify_all();
 }

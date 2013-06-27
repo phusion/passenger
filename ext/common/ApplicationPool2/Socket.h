@@ -145,7 +145,7 @@ public:
 	 * Failure to do so will result in a resource leak.
 	 */
 	Connection checkoutConnection() {
-		lock_guard<boost::mutex> l(connectionPoolLock);
+		boost::lock_guard<boost::mutex> l(connectionPoolLock);
 		
 		if (!idleConnections.empty()) {
 			Connection connection = idleConnections.back();

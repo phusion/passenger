@@ -143,7 +143,7 @@ protected:
 					}
 				} else {
 					{
-						lock_guard<boost::mutex> l(dataSyncher);
+						boost::lock_guard<boost::mutex> l(dataSyncher);
 						data.append(buf, ret);
 					}
 					UPDATE_TRACE_POINT();
@@ -200,13 +200,13 @@ protected:
 			thr->interrupt_and_join();
 			delete thr;
 			thr = NULL;
-			lock_guard<boost::mutex> l(dataSyncher);
+			boost::lock_guard<boost::mutex> l(dataSyncher);
 			return data;
 		}
 
 		void appendToBuffer(const StaticString &dataToAdd) {
 			TRACE_POINT();
-			lock_guard<boost::mutex> l(dataSyncher);
+			boost::lock_guard<boost::mutex> l(dataSyncher);
 			data.append(dataToAdd.data(), dataToAdd.size());
 		}
 	};

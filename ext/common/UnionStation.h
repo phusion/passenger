@@ -710,7 +710,7 @@ public:
 	}
 
 	void checkinConnection(const ConnectionPtr &connection) {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		if (connectionPool.size() < CONNECTION_POOL_MAX_SIZE) {
 			connectionPool.push_back(connection);
 		} else {
@@ -786,7 +786,7 @@ public:
 			
 			vector<string> args;
 			if (!readArrayMessage(connection->fd, args, &timeout)) {
-				lock_guard<boost::mutex> l(syncher);
+				boost::lock_guard<boost::mutex> l(syncher);
 				P_WARN("The logging agent at " << serverAddress <<
 					" closed the connection (no error message given);" <<
 					" will reconnect in " << reconnectTimeout / 1000000 <<
@@ -794,7 +794,7 @@ public:
 				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 				return createNullLogger();
 			} else if (args.size() == 2 && args[0] == "error") {
-				lock_guard<boost::mutex> l(syncher);
+				boost::lock_guard<boost::mutex> l(syncher);
 				P_WARN("The logging agent at " << serverAddress <<
 					" closed the connection (error message: " << args[1] <<
 					"); will reconnect in " << reconnectTimeout / 1000000 <<
@@ -802,7 +802,7 @@ public:
 				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 				return createNullLogger();
 			} else if (args.empty() || args[0] != "ok") {
-				lock_guard<boost::mutex> l(syncher);
+				boost::lock_guard<boost::mutex> l(syncher);
 				P_WARN("The logging agent at " << serverAddress <<
 					" sent an unexpected reply;" <<
 					" will reconnect in " << reconnectTimeout / 1000000 <<
@@ -819,7 +819,7 @@ public:
 				unionStationKey);
 			
 		} catch (const TimeoutException &) {
-			lock_guard<boost::mutex> l(syncher);
+			boost::lock_guard<boost::mutex> l(syncher);
 			P_WARN("Timeout trying to communicate with the logging agent at " << serverAddress << "; " <<
 				"will reconnect in " << reconnectTimeout / 1000000 << " second(s).");
 			nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
@@ -832,7 +832,7 @@ public:
 				
 				guard.clear();
 				gotErrorResponse = connection->disconnect(errorResponse);
-				lock_guard<boost::mutex> l(syncher);
+				boost::lock_guard<boost::mutex> l(syncher);
 				if (gotErrorResponse) {
 					P_WARN("The logging agent at " << serverAddress <<
 						" closed the connection (error message: " << errorResponse <<
@@ -891,7 +891,7 @@ public:
 				unionStationKey);
 			
 		} catch (const TimeoutException &) {
-			lock_guard<boost::mutex> l(syncher);
+			boost::lock_guard<boost::mutex> l(syncher);
 			P_WARN("Timeout trying to communicate with the logging agent at " << serverAddress << "; " <<
 				"will reconnect in " << reconnectTimeout / 1000000 << " second(s).");
 			nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
@@ -904,7 +904,7 @@ public:
 				
 				guard.clear();
 				gotErrorResponse = connection->disconnect(errorResponse);
-				lock_guard<boost::mutex> l(syncher);
+				boost::lock_guard<boost::mutex> l(syncher);
 				if (gotErrorResponse) {
 					P_WARN("The logging agent at " << serverAddress <<
 						" closed the connection (error message: " << errorResponse <<
@@ -925,12 +925,12 @@ public:
 	}
 	
 	void setMaxConnectTries(unsigned int value) {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		maxConnectTries = value;
 	}
 	
 	void setReconnectTimeout(unsigned long long usec) {
-		lock_guard<boost::mutex> l(syncher);
+		boost::lock_guard<boost::mutex> l(syncher);
 		reconnectTimeout = usec;
 	}
 	

@@ -264,12 +264,12 @@ public:
 	}
 	
 	int get() const {
-		lock_guard<boost::mutex> l(lock);
+		boost::lock_guard<boost::mutex> l(lock);
 		return val;
 	}
 	
 	void set(int value) {
-		lock_guard<boost::mutex> l(lock);
+		boost::lock_guard<boost::mutex> l(lock);
 		val = value;
 	}
 	
@@ -279,13 +279,13 @@ public:
 	}
 	
 	AtomicInt &operator++() {
-		lock_guard<boost::mutex> l(lock);
+		boost::lock_guard<boost::mutex> l(lock);
 		val++;
 		return *this;
 	}
 	
 	AtomicInt operator++(int) {
-		lock_guard<boost::mutex> l(lock);
+		boost::lock_guard<boost::mutex> l(lock);
 		AtomicInt temp(*this);
 		val++;
 		return temp;

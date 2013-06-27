@@ -298,7 +298,7 @@ thread::make_thread_name(const string &given_name) {
 			stringstream str;
 			str << "Thread #";
 			{
-				lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
+				boost::lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
 				str << global_context->next_thread_number;
 			}
 			return str.str();
@@ -315,7 +315,7 @@ thread::thread_main(const boost::function<void ()> func, thread_local_context_pt
 	set_thread_local_context(ctx);
 
 	if (OXT_LIKELY(global_context != NULL)) {
-		lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
+		boost::lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
 
 		ctx->thread = pthread_self();
 		global_context->next_thread_number++;
@@ -335,7 +335,7 @@ thread::thread_main(const boost::function<void ()> func, thread_local_context_pt
 	// We don't care about other exceptions because they'll crash the process anyway.
 
 	if (OXT_LIKELY(global_context != NULL)) {
-		lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
+		boost::lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
 		thread_local_context *ctx = get_thread_local_context();
 		if (ctx != 0 && ctx->thread_number != 0) {
 			global_context->registered_threads.erase(ctx->iterator);
@@ -364,7 +364,7 @@ string
 thread::all_backtraces() throw() {
 	#ifdef OXT_BACKTRACE_IS_ENABLED
 		if (OXT_LIKELY(global_context != NULL)) {
-			lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
+			boost::lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
 			list<thread_local_context_ptr>::const_iterator it;
 			std::stringstream result;
 			

@@ -89,7 +89,7 @@ threadMain() {
 
 static void
 wantPoll() {
-	lock_guard<boost::mutex> l(syncher);
+	boost::lock_guard<boost::mutex> l(syncher);
 	shouldPoll = true;
 	cond.notify_one();
 }
@@ -113,13 +113,13 @@ executeWrapper(eio_req *req) {
 
 	static void
 	lockedPread(int fd, void *buf, size_t length, off_t offset, eio_req *req) {
-		lock_guard<boost::mutex> l(preadWriteLock);
+		boost::lock_guard<boost::mutex> l(preadWriteLock);
 		req->result = pread(fd, buf, length, offset);
 	}
 
 	static void
 	lockedPwrite(int fd, void *buf, size_t length, off_t offset, eio_req *req) {
-		lock_guard<boost::mutex> l(preadWriteLock);
+		boost::lock_guard<boost::mutex> l(preadWriteLock);
 		req->result = pwrite(fd, buf, length, offset);
 	}
 #endif

@@ -251,7 +251,7 @@ private:
 		// This function is either called from the pool event loop or directly from
 		// the detachAllGroups post lock actions. In both cases getPool() is never NULL.
 		PoolPtr pool = self->getPool();
-		lock_guard<boost::mutex> lock(self->getPoolSyncher(pool));
+		boost::lock_guard<boost::mutex> lock(self->getPoolSyncher(pool));
 
 		vector<GroupPtr>::iterator it, end = self->detachedGroups.end();
 		for (it = self->detachedGroups.begin(); it != end; it++) {
