@@ -398,6 +398,8 @@ public:
 		timeoutTimer.stop();
 
 		freeScopeLogs();
+
+		requestHandler = NULL;
 	}
 
 	bool reassociateable() const {

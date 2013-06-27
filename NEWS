@@ -3,6 +3,8 @@ Release 4.0.6
 
  * Fixed a potential 100% CPU lock up in the crash handler, which only occurs
    on OS X. Fixes issue #908.
+ * Fixed a crash in request handling, when certain events are trigger after
+   the client has already disconnected. Fixes issue #889.
  * [Apache] Fixed compatibility with Apache pipe logging. Previously this
    would cause Phusion Passenger to lock up with 100% CPU during Apache
    restart.

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011 Phusion
+ *  Copyright (c) 2011-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -97,7 +97,7 @@ wantPoll() {
 static int
 dispatch(eio_req *req) {
 	auto_ptr<Data> data((Data *) req->data);
-	assert(data->libev != NULL); // Check for strange bug.
+	assert(data->libev != NULL);
 	data->libev->runLater(boost::bind(data->callback, *req));
 	return 0;
 }
