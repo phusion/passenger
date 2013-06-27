@@ -31,10 +31,10 @@ class PackageRuntimeCommand < Command
 	end
 
 	def self.require_libs
-		require 'platform_info/binary_compatibility'
+		require 'phusion_passenger/platform_info/binary_compatibility'
 		require 'phusion_passenger/standalone/runtime_installer'
 	end
-	
+
 	def run
 		destdir = File.expand_path("passenger-standalone")
 		description =
@@ -46,7 +46,8 @@ class PackageRuntimeCommand < Command
 				@options[:nginx_version] = value
 			end
 			opts.on("--nginx-tarball FILENAME", String,
-				wrap_desc("Use the given tarball instead of downloading from the Internet")) do |value|
+				wrap_desc("Use the given tarball instead of downloading from the Internet. " +
+					"This tarball *must* match the version specified by --nginx-version!")) do |value|
 				@options[:nginx_tarball] = value
 			end
 		end
