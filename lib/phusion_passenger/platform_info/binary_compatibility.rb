@@ -29,13 +29,13 @@ require 'phusion_passenger/platform_info/operating_system'
 module PhusionPassenger
 
 module PlatformInfo
-	# Returns an array of identifiers that describe the current Ruby
+	# Returns a string that describes the current Ruby
 	# interpreter's extension binary compatibility. A Ruby extension
 	# compiled for a certain Ruby interpreter can also be loaded on
 	# a different Ruby interpreter with the same binary compatibility
-	# identifiers.
+	# identifier.
 	#
-	# The identifiers depend on the following factors:
+	# The result depends on the following factors:
 	# - Ruby engine name.
 	# - Ruby extension version.
 	#   This is not the same as the Ruby language version, which
@@ -89,7 +89,7 @@ module PlatformInfo
 	# Returns an identifier string that describes the current
 	# platform's binary compatibility with regard to C/C++
 	# binaries. Two systems with the same binary compatibility
-	# identifiers are able to run the same C/C++ binaries.
+	# identifiers should be able to run the same C/C++ binaries.
 	#
 	# The the string depends on the following factors:
 	# - The operating system name.
@@ -128,35 +128,10 @@ module PlatformInfo
 			end
 		else
 			os_arch = cpu_architectures[0]
-			
-			cpp = find_command('cpp')
-			if cpp
-				macros = `#{cpp} -dM < /dev/null`
-				
-				# Can be something like "4.3.2"
-				# or "4.2.1 20070719 (FreeBSD)"
-				macros =~ /__VERSION__ "(.+)"/
-				compiler_version = $1
-				compiler_version.gsub!(/ .*/, '') if compiler_version
-				
-				macros =~ /__GXX_ABI_VERSION (.+)$/
-				cxx_abi_version = $1
-			else
-				compiler_version = nil
-				cxx_abi_version = nil
-			end
-			
-			if compiler_version && cxx_abi_version
-				os_runtime = "gcc#{compiler_version}-#{cxx_abi_version}"
-			else
-				os_runtime = [compiler_version, cxx_abi_version].compact.join("-")
-				if os_runtime.empty?
-					os_runtime = `uname -r`.strip
-				end
-			end
+			os_runtime = nil
 		end
 		
-		return "#{os_arch}-#{os_name}-#{os_runtime}"
+		return [os_arch, os_name, os_runtime].compact.join("-")
 	end
 	memoize :cxx_binary_compatibility_id
 end

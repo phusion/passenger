@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: John Leach <john@brightbox.co.uk>
 Uploaders: Phusion <info@phusion.nl>, Hongli Lai <hongli@phusion.nl>
 Build-Depends: debhelper (>= 7.0.50~), rake,
- ruby1.8, ruby1.8-dev, ruby1.9.1, ruby1.9.1-dev,
+ ruby1.8, ruby1.8-dev, rubygems, ruby1.9.1, ruby1.9.1-dev,
  apache2-mpm-worker | apache2-mpm, apache2-threaded-dev,
  libapr1-dev, libcurl4-openssl-dev, libev-dev (>= 1:4.0.0)
 Standards-Version: 3.9.3

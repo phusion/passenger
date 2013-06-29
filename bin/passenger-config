@@ -42,6 +42,8 @@ def help
 	puts "  --compiled                 Check whether runtime libraries are compiled."
 	puts "  --natively-packaged        Check whether Phusion Passenger is natively packged."
 	puts "  --ruby-command             Print the correct command for invoking the Ruby interpreter."
+	puts "  --rubyext-compat-id        Print the Ruby extension binary compatibility ID."
+	puts "  --cxx-compat-id            Print the C++ binary compatibility ID."
 	puts "  --version                  Show version number."
 end
 
@@ -111,6 +113,12 @@ when "--ruby-command"
 	puts
 	puts "## Notes for RVM users"
 	puts "Do you want to know which command to use for a different Ruby interpreter? 'rvm use' that Ruby interpreter, then re-run 'passenger-config --ruby-command'."
+when "--rubyext-compat-id"
+	require 'phusion_passenger/platform_info/binary_compatibility'
+	puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_id
+when "--cxx-compat-id"
+	require 'phusion_passenger/platform_info/binary_compatibility'
+	puts PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id
 when "--version"
 	puts PhusionPassenger::VERSION_STRING
 else

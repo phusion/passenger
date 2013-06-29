@@ -68,8 +68,9 @@ fi
 
 if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	run sudo apt-get install -y --no-install-recommends \
-		devscripts rake apache2-mpm-worker apache2-threaded-dev \
-		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev libev-dev gdebi-core
+		devscripts debhelper rake apache2-mpm-worker apache2-threaded-dev \
+		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev libev-dev gdebi-core \
+		source-highlight
 	run rake test:install_deps RAILS_BUNDLES=no
 	run rake debian:dev
 	run sudo gdebi -n pkg/ruby-passenger_*.deb
