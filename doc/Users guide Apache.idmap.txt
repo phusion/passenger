@@ -56,7 +56,7 @@
 
 2.9.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-wzu0ey
 
-2.9.3. Forcing location of certain command line tools	=>	forcing-location-of-certain-command-line-tools-1hym30u
+2.9.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1hym30u
 
 2.10. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
 

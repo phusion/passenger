@@ -56,7 +56,7 @@
 
 2.9.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-1jehjon
 
-2.9.3. Forcing location of certain command line tools	=>	forcing-location-of-certain-command-line-tools-1j93cki
+2.9.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1j93cki
 
 2.10. Installing as a normal Nginx module without using the installer	=>	installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5
 

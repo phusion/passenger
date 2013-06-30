@@ -662,11 +662,9 @@ On some systems, C/C++ libraries and headers that Phusion Passenger requires may
 
 NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
 
-==== Forcing location of certain command line tools
+==== Forcing location of command line tools and dependencies
 
 The Phusion Passenger build system attempts to autodetect many things by locating relevant helper tools. For example, to find out which compiler flags it should use for compiling Apache modules, it locates the `apxs2` command and queries it. To find out which compiler flags it should use for libcurl, it queries the `curl-config` command. These commands may not be in `$PATH`, or even when they are you may want to use a different one.
-
-You can force.
 
 You can force the build to find certain command line tools at certain locations by using the following environment variables:
 
@@ -674,6 +672,17 @@ You can force the build to find certain command line tools at certain locations 
 	The location of the `httpd` executable (the Apache server executable).
 `APXS2`::
 	The location of the `apxs2` executable (the Apache module developer tool). Only used by `passenger-install-apache2-module`.
++
+This environment variable, together with `HTTPD`, are what you need to customize if you have multiple Apache installations on your system, or if your Apache is located in a non-standard location which Phusion Passenger cannot detect. By setting `APXS2` and `HTTP` to the right paths, you can force Phusion Passenger to be compiled against that specific Apache installation.
++
+For example, if your Apache installation is located in `/opt/lamp/apache2`, then you can run the installer as follows:
++
+---------------------------------------
+$ sudo bash
+# export HTTPD=/opt/lampp/apache2/bin/apache
+# export APXS2=/opt/lampp/apache2/bin/apxs
+# passenger-install-apache2-module
+---------------------------------------
 `APR_CONFIG`::
 	The location of the `apr-config` executable (the Apache Portable Runtime developer tool).
 `APU_CONFIG`::
