@@ -95,7 +95,7 @@ end
 if string_option('OUTPUT_DIR')
 	OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
 else
-	OUTPUT_DIR = ""
+	OUTPUT_DIR = "buildout/"
 end
 
 verbose true if !boolean_option('REALLY_QUIET')
@@ -177,14 +177,14 @@ EXTRA_PRE_LDFLAGS  = string_option('EXTRA_PRE_LDFLAGS', '').gsub("\n", " ")
 EXTRA_LDFLAGS  = string_option('EXTRA_LDFLAGS', '').gsub("\n", " ")
 
 
-AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "buildout/agents") + "/"
-COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "buildout/common") + "/"
-APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "buildout/apache2") + "/"
-LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "buildout/libev") + "/"
-LIBEIO_OUTPUT_DIR         = string_option('LIBEIO_OUTPUT_DIR', OUTPUT_DIR + "buildout/libeio") + "/"
+AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "agents") + "/"
+COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "common") + "/"
+APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "apache2") + "/"
+LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "libev") + "/"
+LIBEIO_OUTPUT_DIR         = string_option('LIBEIO_OUTPUT_DIR', OUTPUT_DIR + "libeio") + "/"
 ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id
 RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
-	OUTPUT_DIR + "buildout/ruby/" + ruby_extension_archdir) + "/"
+	OUTPUT_DIR + "ruby/" + ruby_extension_archdir) + "/"
 PKG_DIR                   = string_option('PKG_DIR', "pkg")
 
 

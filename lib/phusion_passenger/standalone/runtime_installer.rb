@@ -489,16 +489,13 @@ private
 		Dir.chdir(PhusionPassenger.source_root) do
 			args = "nginx_without_native_support" +
 				" CACHING=false" +
-				" OUTPUT_DIR='#{@support_dir}'" +
-				" AGENT_OUTPUT_DIR='#{@support_dir}'" +
-				" COMMON_OUTPUT_DIR='#{@support_dir}'" +
-				" LIBEV_OUTPUT_DIR='#{@support_dir}/libev'" +
-				" LIBEIO_OUTPUT_DIR='#{@support_dir}/libeio'"
+				" OUTPUT_DIR='#{@support_dir}'"
 			run_rake_task!(args) do |progress, total|
 				yield(progress, total, 1, "Compiling Phusion Passenger...")
 			end
 
-			system "rm -rf '#{@support_dir}'/{*.o,*.dSYM,libboost_oxt}"
+			system "rm -rf '#{@support_dir}'/agents/{*.o,*.dSYM}"
+			system "rm -rf '#{@support_dir}'/common/libboost_oxt"
 			system "rm -rf '#{@support_dir}'/*/{*.lo,*.h,*.log,Makefile,libtool,stamp-h1,config.status,.deps}"
 			system "rm -rf '#{@support_dir}'/{libeio,libev}/*.o"
 			
@@ -525,7 +522,7 @@ private
 				if ENV['PASSENGER_DEBUG'] && !ENV['PASSENGER_DEBUG'].empty?
 					output_dir = "#{PhusionPassenger.source_root}/buildout/common/libpassenger_common"
 				else
-					output_dir = "#{@support_dir}/libpassenger_common"
+					output_dir = "#{@support_dir}/common/libpassenger_common"
 				end
 				nginx_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
 					set_output_dir(output_dir).
