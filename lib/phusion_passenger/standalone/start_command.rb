@@ -82,6 +82,7 @@ class StartCommand < Command
 			@plugin.call_hook(:nginx_started, @nginx)
 			########################
 			########################
+			touch_temp_dir_in_background
 			watch_log_files_in_background if should_watch_logs?
 			wait_until_nginx_has_exited
 		rescue Interrupt
@@ -528,6 +529,17 @@ private
 		end
 		@threads << thread
 		@interruptable_threads << thread
+	end
+
+	def touch_temp_dir_in_background
+		@interruptable_threads << Thread.new do
+			while true
+				# Touch the temp dir every 30 minutes to prevent
+				# /tmp cleaners from removing it.
+				sleep 60 * 30
+				system("find '#{@temp_dir}' | xargs touch")
+			end
+		end
 	end
 
 	def wait_until_nginx_has_exited

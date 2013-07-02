@@ -182,9 +182,8 @@ private
 	def write_nginx_config_file
 		require 'phusion_passenger/platform_info/ruby'
 		require 'phusion_passenger/utils/tmpio'
-		@temp_dir        = PhusionPassenger::Utils.mktmpdir(
-			"passenger.#{SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION}.#{SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION}.",
-			"/tmp")
+		@temp_dir = PhusionPassenger::Utils.mktmpdir(
+			"passenger-standalone.")
 		@config_filename = "#{@temp_dir}/config"
 		location_config_filename = "#{@temp_dir}/locations.ini"
 		File.chmod(0755, @temp_dir)

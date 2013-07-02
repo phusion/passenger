@@ -27,7 +27,6 @@ http {
     include '<%= PhusionPassenger.resources_dir %>/mime.types';
     passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_root '<%= location_config_filename %>';
-    passenger_ctl server_instance_dir '<%= @temp_dir %>';
     passenger_abort_on_startup_error on;
     passenger_user_switching off;
     passenger_max_pool_size <%= @options[:max_pool_size] %>;
