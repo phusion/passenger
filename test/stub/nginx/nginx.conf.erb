@@ -12,6 +12,7 @@ http {
     default_type       application/octet-stream;
     sendfile           on;
     keepalive_timeout  65;
+    server_names_hash_bucket_size 64;
     
     log_format  main  '$remote_addr - $remote_user [$time_local] $request '
                       '"$status" $body_bytes_sent "$http_referer" '
