@@ -23,6 +23,7 @@
 
 require 'rubygems'
 require 'pathname'
+require 'fileutils'
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 require 'phusion_passenger/packaging'
@@ -110,11 +111,8 @@ if boolean_option('STDERR_TO_STDOUT')
 end
 
 if boolean_option('CACHING', true) && !boolean_option('RELEASE')
-	if OUTPUT_DIR.empty?
-		PlatformInfo.cache_dir = File.expand_path("cache", File.dirname(__FILE__))
-	else
-		PlatformInfo.cache_dir = OUTPUT_DIR + "cache"
-	end
+	PlatformInfo.cache_dir = OUTPUT_DIR + "cache"
+	FileUtils.mkdir_p(PlatformInfo.cache_dir)
 end
 
 #################################################

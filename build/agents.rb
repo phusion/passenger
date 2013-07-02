@@ -177,8 +177,5 @@ file AGENT_OUTPUT_DIR + 'EnvPrinter' => 'ext/common/agents/EnvPrinter.c' do
 end
 
 task 'common:clean' do
-	['PassengerWatchdog', 'PassengerHelperAgent', 'PassengerLoggingAgent', 'SpawnPreparer', 'EnvPrinter'].each do |agent|
-		sh "rm -rf #{AGENT_OUTPUT_DIR}#{agent} #{AGENT_OUTPUT_DIR}#{agent}.o #{AGENT_OUTPUT_DIR}#{agent}.dSYM"
-	end
-	sh "rm -rf agents"
+	sh "rm -rf #{AGENT_OUTPUT_DIR}"
 end
