@@ -56,6 +56,7 @@
 #include <Utils/MD5.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
+#include <Utils/VariantMap.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/StringMap.h>
 
@@ -119,10 +120,20 @@ private:
 		virtual bool isRemote() const {
 			return false;
 		}
+
+		// Default interval at which this sink should be flushed.
+		virtual unsigned int defaultFlushInterval() const {
+			return 15;
+		}
 		
 		virtual void append(const DataStoreId &dataStoreId,
 			const StaticString &data) = 0;
-		virtual bool flush() { return true; }
+		
+		virtual bool flush() {
+			lastFlushed = ev_now(server->getLoop());
+			return true;
+		}
+		
 		virtual void dump(ostream &stream) const { }
 	};
 	
@@ -154,12 +165,7 @@ private:
 		virtual void append(const DataStoreId &dataStoreId, const StaticString &data) {
 			syscalls::write(fd, data.data(), data.size());
 		}
-		
-		virtual bool flush() {
-			lastFlushed = ev_now(server->getLoop());
-			return true;
-		}
-		
+
 		virtual void dump(ostream &stream) const {
 			stream << "   * Log file: " << filename << "\n";
 			stream << "     Opened     : " << opened << "\n";
@@ -211,6 +217,10 @@ private:
 		virtual bool isRemote() const {
 			return true;
 		}
+
+		virtual unsigned int defaultFlushInterval() const {
+			return 60;
+		}
 		
 		virtual void append(const DataStoreId &dataStoreId, const StaticString &data) {
 			if (bufferSize + data.size() > BUFFER_CAPACITY) {
@@ -235,10 +245,16 @@ private:
 				server->remoteSender.schedule(unionStationKey, nodeName,
 					category, &data, 1);
 				bufferSize = 0;
+				P_DEBUG("Flushed remote sink " << inspect() << ": " << bufferSize << " bytes");
 				return true;
 			} else {
+				P_DEBUG("Flushed remote sink " << inspect() << ": 0 bytes");
 				return false;
 			}
+		}
+
+		string inspect() const {
+			return "(key=" + unionStationKey + ", node=" + nodeName + ", category=" + category + ")";
 		}
 		
 		virtual void dump(ostream &stream) const {
@@ -369,7 +385,6 @@ private:
 	
 	typedef shared_ptr<FilterSupport::Filter> FilterPtr;
 	
-	string dumpFile;
 	RemoteSender remoteSender;
 	ev::timer garbageCollectionTimer;
 	ev::timer sinkFlushingTimer;
@@ -390,6 +405,8 @@ private:
 	bool refuseNewConnections;
 	bool exitRequested;
 	unsigned long long exitBeginTime;
+	int sinkFlushInterval;
+	string dumpFile;
 	
 	void sendErrorToClient(Client *client, const string &message) {
 		client->writeArrayMessage("error", message.c_str(), NULL);
@@ -703,23 +720,24 @@ private:
 		P_DEBUG("Garbage collection time");
 		releaseInactiveLogSinks(ev_now(getLoop()));
 	}
+
+	ev_tstamp getFlushInterval(const LogSink *sink) const {
+		if (sinkFlushInterval == 0) {
+			return sink->defaultFlushInterval();
+		} else {
+			return sinkFlushInterval;
+		}
+	}
 	
 	void sinkFlushTimeout(ev::timer &timer, int revents) {
-		P_TRACE(2, "Flushing all sinks (periodic action)");
+		P_DEBUG("Flushing all sinks");
 		LogSinkCache::iterator it;
 		LogSinkCache::iterator end = logSinkCache.end();
 		ev_tstamp now = ev_now(getLoop());
 		
 		for (it = logSinkCache.begin(); it != end; it++) {
 			LogSink *sink = it->second.get();
-			
-			// Flush log file sinks every 15 seconds,
-			// remote sinks every 60 seconds.
-			if (sink->isRemote()) {
-				if (now - sink->lastFlushed >= 60) {
-					sink->flush();
-				}
-			} else {
+			if (now - sink->lastFlushed >= getFlushInterval(sink)) {
 				sink->flush();
 			}
 		}
@@ -1080,25 +1098,24 @@ public:
 	LoggingServer(struct ev_loop *loop,
 		FileDescriptor fd,
 		const AccountsDatabasePtr &accountsDatabase,
-		const string &dumpFile,
-		const string &unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
-		unsigned short unionStationGatewayPort = DEFAULT_UNION_STATION_GATEWAY_PORT,
-		const string &unionStationGatewayCert = "",
-		const string &unionStationProxyAddress = "")
+		const VariantMap &options = VariantMap()/**/)
 		: EventedMessageServer(loop, fd, accountsDatabase),
-		  remoteSender(unionStationGatewayAddress,
-		               unionStationGatewayPort,
-		               unionStationGatewayCert,
-		               unionStationProxyAddress),
+		  remoteSender(
+		      options.get("union_station_gateway_address", false, DEFAULT_UNION_STATION_GATEWAY_ADDRESS),
+		      options.getInt("union_station_gateway_port", false, DEFAULT_UNION_STATION_GATEWAY_PORT),
+		      options.get("union_station_gateway_cert", false, ""),
+		      options.get("union_station_proxy_address", false)),
 		  garbageCollectionTimer(loop),
 		  sinkFlushingTimer(loop),
-		  exitTimer(loop)
+		  exitTimer(loop),
+		  dumpFile(options.get("analytics_dump_file", false, "/dev/null"))
 	{
-		this->dumpFile = dumpFile;
+		int sinkFlushTimerInterval = options.getInt("analytics_sink_flush_timer_interval", false, 15);
+		sinkFlushInterval = options.getInt("analytics_sink_flush_interval", false, 0);
 		garbageCollectionTimer.set<LoggingServer, &LoggingServer::garbageCollect>(this);
 		garbageCollectionTimer.start(GARBAGE_COLLECTION_TIMEOUT, GARBAGE_COLLECTION_TIMEOUT);
 		sinkFlushingTimer.set<LoggingServer, &LoggingServer::sinkFlushTimeout>(this);
-		sinkFlushingTimer.start(15, 15);
+		sinkFlushingTimer.start(sinkFlushTimerInterval, sinkFlushTimerInterval);
 		exitTimer.set<LoggingServer, &LoggingServer::exitTimerTimeout>(this);
 		exitTimer.set(0.05, 0.05);
 		refuseNewConnections = false;

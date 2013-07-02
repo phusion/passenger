@@ -61,9 +61,11 @@ namespace tut {
 		}
 		
 		void startLoggingServer(const function<void ()> &initFunc = function<void ()>()) {
+			VariantMap options;
+			options.set("analytics_dump_file", dumpFile);
 			serverFd = createUnixServer(socketFilename.c_str());
 			server = ptr(new LoggingServer(eventLoop,
-				serverFd, accountsDatabase, dumpFile));
+				serverFd, accountsDatabase, options));
 			if (initFunc) {
 				initFunc();
 			}

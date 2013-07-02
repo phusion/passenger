@@ -169,17 +169,10 @@ main(int argc, char *argv[]) {
 	VariantMap options        = initializeAgent(argc, argv, "PassengerLoggingAgent");
 	string passengerRoot      = options.get("passenger_root");
 	string socketAddress      = options.get("logging_agent_address");
-	string dumpFile           = options.get("analytics_dump_file", false, "/dev/null");
 	string password           = options.get("logging_agent_password");
 	string username           = options.get("analytics_log_user",
 		false, myself());
 	string groupname          = options.get("analytics_log_group", false);
-	string unionStationGatewayAddress = options.get("union_station_gateway_address",
-		false, DEFAULT_UNION_STATION_GATEWAY_ADDRESS);
-	int    unionStationGatewayPort = options.getInt("union_station_gateway_port",
-		false, DEFAULT_UNION_STATION_GATEWAY_PORT);
-	string unionStationGatewayCert  = options.get("union_station_gateway_cert", false);
-	string unionStationProxyAddress = options.get("union_station_proxy_address", false);
 	
 	curl_global_init(CURL_GLOBAL_ALL);
 	
@@ -193,6 +186,9 @@ main(int argc, char *argv[]) {
 		struct passwd       *user;
 		struct group        *group;
 		int                  ret;
+
+		options.set("union_station_gateway_cert", findUnionStationGatewayCert(
+			resourceLocator, options.get("union_station_gateway_cert", false)));
 		
 		eventLoop = createEventLoop();
 		accountsDatabase = ptr(new AccountsDatabase());
@@ -256,11 +252,7 @@ main(int argc, char *argv[]) {
 		/* Now setup the actual logging server. */
 		accountsDatabase->add("logging", password, false);
 		LoggingServer server(eventLoop, serverSocketFd,
-			accountsDatabase, dumpFile,
-			unionStationGatewayAddress,
-			unionStationGatewayPort,
-			findUnionStationGatewayCert(resourceLocator, unionStationGatewayCert),
-			unionStationProxyAddress);
+			accountsDatabase, options);
 		loggingServer = &server;
 		
 		
