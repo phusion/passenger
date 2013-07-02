@@ -196,7 +196,7 @@ private
 			if debugging?
 				f.puts "agents=#{PhusionPassenger.agents_dir}"
 			else
-				f.puts "agents=#{@runtime_dirs[:support_dir]}"
+				f.puts "agents=#{@runtime_dirs[:support_dir]}/agents"
 			end
 			f.puts "libdir=#{PhusionPassenger.lib_dir}"
 			f.puts "helper_scripts=#{PhusionPassenger.helper_scripts_dir}"

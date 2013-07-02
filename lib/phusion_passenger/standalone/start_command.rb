@@ -396,7 +396,7 @@ private
 			:ruby_dir => "#{root}/rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}",
 			:nginx_installed => File.exist?(nginx_bin)
 		}
-		result[:support_dir_installed] = File.exist?(result[:support_dir] + "/PassengerWatchdog")
+		result[:support_dir_installed] = File.exist?(result[:support_dir] + "/agents/PassengerWatchdog")
 		result[:everything_installed] = result[:nginx_installed] && result[:support_dir_installed]
 		return result
 	end
