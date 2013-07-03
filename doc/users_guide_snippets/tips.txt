@@ -384,7 +384,7 @@ Normally, Phusion Passenger starts together with the web server, and shuts down 
 
 This problem is solved by 'Flying Passenger', which is an advanced mode of operation in Phusion Passenger that allows the web server to be indepedently restarted from Phusion Passenger. When this mode is enabled:
 
-- One must start Phusion Passenger separately from the web server, namely by starting the Flying Passenger daemon. This daemon must be separately configured and managed from the web server.
+- One must start Phusion Passenger separately from the web server, namely by starting the Flying Passenger daemon. This daemon must - to an extend - be separately configured and managed from the web server.
 - The web server must be configured to forward requests to the Flying Passenger daemon.
 - You should beware of the <<flying_passenger_caveats,caveats and limitations>>.
 
@@ -544,8 +544,8 @@ To shut down a daemontools/runit-managed daemon, you need to use `svc -d` instea
 Beware of the following caveats and limitations when using Flying Passenger:
 
 - The Nginx executable **must** be compiled with the same version of Phusion Passenger as the Flying Passenger daemon. Failing to meet this requirement may result in cryptic errors, or may result in certain features not working, until you've fixed the situation. When upgrading Phusion Passenger, you must restart both Nginx and the Flying Passenger daemon.
-- The <<PassengerRoot,passenger_root>> directive has no effect.
-- When you add a new application to the web server configuration, Flying Passenger will automatically pick up the application's settings and spawn this new application upon the first request to it. However it is not capable of automatically starting the new app before a request has been sent to it (i.e. <<PassengerPreStart,passenger_pre_start>>-like behavior is not available in this case).
+- The <<PassengerRoot,passenger_root>> directive has no effect. When using Flying Passenger, you are not supposed to set `passenger_root`.
+- When you add a new application to the web server configuration, Flying Passenger will automatically pick up the application's settings and spawn this new application upon the first request to it. However it is not capable of automatically starting the new app before a request has been sent to it (i.e. <<PassengerPreStart,passenger_pre_start>>-like behavior is not available in this case). As a workaround, you can send an HTTP request to your application after starting the daemon, which forces it to spawn application processes.
 - When you remove an application from the web server configuration, Flying Passenger will not detect the removal and will not shut down the associated application processes. Killing them will also not help, because Flying Passenger will restart them per the (now-removed, but still in the Flying Passenger daemon's memory) <<PassengerMinInstances,passenger_min_instances>> settings. At the moment, there are two ways to get rid of those processes:
   * Before removing the application from the web server configuration, explicitly set its `passenger_min_instances` to 0. Next, send a request to it, which will cause the Flying Passenger daemon to take over the new `passenger_min_instances 0` option. Finally, kill the PIDs associated to those application processes and remove the application configuration.
   * Restart the Flying Passenger daemon.
