@@ -458,8 +458,8 @@ describe "Apache 2 module" do
 			# Wait until the server has processed the session close event.
 			sleep 0.1
 			
-			processes = instance.connect(:passenger_status) do
-				instance.processes
+			processes = instance.connect(:role => :passenger_status) do |client|
+				instance.processes(client)
 			end
 			processes.should have(1).item
 			processes[0].group.name.should == @mycook.full_app_root + "#default"

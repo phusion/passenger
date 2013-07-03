@@ -254,8 +254,8 @@ class ServerInstance
 	end
 	
 	# FIXME: probably broken
-	def groups
-		doc = REXML::Document.new(xml)
+	def groups(client)
+		doc = REXML::Document.new(client.pool_xml)
 		
 		groups = []
 		doc.elements.each("info/supergroups/supergroup/group") do |group_xml|
@@ -298,8 +298,8 @@ class ServerInstance
 	end
 	
 	# FIXME: probably broken
-	def processes
-		return groups.map do |group|
+	def processes(client)
+		return groups(client).map do |group|
 			group.processes
 		end.flatten
 	end

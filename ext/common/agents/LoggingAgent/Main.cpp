@@ -176,8 +176,7 @@ main(int argc, char *argv[]) {
 	string socketAddress      = options.get("logging_agent_address");
 	string adminSocketAddress = options.get("logging_agent_admin_address");
 	string password           = options.get("logging_agent_password");
-	string username           = options.get("analytics_log_user",
-		false, myself());
+	string username           = options.get("analytics_log_user", false, myself());
 	string groupname          = options.get("analytics_log_group", false);
 	string adminToolStatusPassword = options.get("admin_tool_status_password");
 	
