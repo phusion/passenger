@@ -222,19 +222,18 @@ protected:
 		string path;
 
 		DebugDir(uid_t uid, gid_t gid) {
-			path = "/tmp/passenger.spawn-debug.";
-			path.append(toString(getpid()));
-			path.append("-");
-			path.append(pointerToIntString(this));
-
-			if (syscalls::mkdir(path.c_str(), 0700) == -1) {
+			char buf[PATH_MAX] = "/tmp/passenger.spawn-debug.XXXXXXXXXX";
+			const char *result = mkdtemp(buf);
+			if (result == NULL) {
 				int e = errno;
-				throw FileSystemException("Cannot create directory '" +
-					path + "'", e, path);
+				throw SystemException("Cannot create a temporary directory "
+					"in the format of '/tmp/passenger-spawn-debug.XXX'", e);
+			} else {
+				path = result;
+				this_thread::disable_interruption di;
+				this_thread::disable_syscall_interruption dsi;
+				syscalls::chown(result, uid, gid);
 			}
-			this_thread::disable_interruption di;
-			this_thread::disable_syscall_interruption dsi;
-			syscalls::chown(path.c_str(), uid, gid);
 		}
 
 		~DebugDir() {
