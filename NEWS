@@ -13,6 +13,8 @@ Release 4.0.6
  * Removed dependency on bash, so that Phusion Passenger works out of the box
    on BSD platforms without installing/configuring bash. Fixes issue #911.
  * Fix 'PassengerPoolIdleTime 0' not being respected correctly. Issue #904.
+ * Admin tools improvement: it is now possible to see all currently running
+   requests by invoking `passenger-status --show=requests`.
  * [Apache] Fixed compatibility with Apache pipe logging. Previously this
    would cause Phusion Passenger to lock up with 100% CPU during Apache
    restart.

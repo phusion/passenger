@@ -51,7 +51,6 @@
 
 #include <agents/HelperAgent/RequestHandler.h>
 #include <agents/HelperAgent/RequestHandler.cpp>
-#include <agents/HelperAgent/BacktracesServer.h>
 #include <agents/HelperAgent/AgentOptions.h>
 
 #include <agents/Base.h>
@@ -85,6 +84,7 @@ private:
 	
 	typedef MessageServer::CommonClientContext CommonClientContext;
 	
+	shared_ptr<RequestHandler> requestHandler;
 	PoolPtr pool;
 	
 	
@@ -131,9 +131,24 @@ private:
 			args[1] == "true";
 		writeScalarMessage(commonContext.fd, pool->toXml(includeSensitiveInfo));
 	}
+
+	void processBacktraces(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+		TRACE_POINT();
+		commonContext.requireRights(Account::INSPECT_BACKTRACES);
+		writeScalarMessage(commonContext.fd, oxt::thread::all_backtraces());
+	}
+
+	void processRequests(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+		TRACE_POINT();
+		stringstream stream;
+		commonContext.requireRights(Account::INSPECT_REQUESTS);
+		requestHandler->inspect(stream);
+		writeScalarMessage(commonContext.fd, stream.str());
+	}
 	
 public:
-	RemoteController(const PoolPtr &pool) {
+	RemoteController(const shared_ptr<RequestHandler> &requestHandler, const PoolPtr &pool) {
+		this->requestHandler = requestHandler;
 		this->pool = pool;
 	}
 	
@@ -153,6 +168,10 @@ public:
 				return processInspect(commonContext, specificContext, args);
 			} else if (args[0] == "toXml" && args.size() == 2) {
 				processToXml(commonContext, specificContext, args);
+			} else if (args[0] == "backtraces") {
+				processBacktraces(commonContext, specificContext, args);
+			} else if (args[0] == "requests") {
+				processRequests(commonContext, specificContext, args);
 			} else {
 				return false;
 			}
@@ -384,7 +403,7 @@ public:
 		accountsDatabase = make_shared<AccountsDatabase>();
 		accountsDatabase->add("_passenger-status", options.adminToolStatusPassword, false,
 			Account::INSPECT_BASIC_INFO | Account::INSPECT_SENSITIVE_INFO |
-			Account::INSPECT_BACKTRACES);
+			Account::INSPECT_BACKTRACES | Account::INSPECT_REQUESTS);
 		accountsDatabase->add("_web_server", options.exitPassword, false, Account::EXIT);
 		messageServer = make_shared<MessageServer>(
 			parseUnixSocketAddress(options.adminSocketAddress), accountsDatabase);
@@ -417,12 +436,11 @@ public:
 		//pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(options.poolIdleTime * 1000000);
 		
-		messageServer->addHandler(make_shared<RemoteController>(pool));
-		messageServer->addHandler(make_shared<BacktracesServer>());
-		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
-
 		requestHandler = make_shared<RequestHandler>(requestLoop.safe,
 			requestSocket, pool, options);
+
+		messageServer->addHandler(make_shared<RemoteController>(requestHandler, pool));
+		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
 
 		sigquitWatcher.set(requestLoop.loop);
 		sigquitWatcher.set(SIGQUIT);

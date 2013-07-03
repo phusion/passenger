@@ -60,7 +60,6 @@ dependencies = [
 	'ext/common/agents/HelperAgent/RequestHandler.h',
 	'ext/common/agents/HelperAgent/RequestHandler.cpp',
 	'ext/common/agents/HelperAgent/ScgiRequestParser.h',
-	'ext/common/agents/HelperAgent/BacktracesServer.h',
 	'ext/common/Constants.h',
 	'ext/common/StaticString.h',
 	'ext/common/Account.h',

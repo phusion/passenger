@@ -91,6 +91,16 @@ def show_status(server_instance, options)
 			exit 2
 		end
 
+	when 'requests'
+		client = server_instance.connect(:role => :passenger_status)
+		begin
+			puts client.helper_agent_requests
+		rescue SystemCallError => e
+			STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{server_instance.pid}:"
+			STDERR.puts e.to_s
+			exit 2
+		end
+
 	when 'backtraces'
 		client = server_instance.connect(:role => :passenger_status)
 		begin
@@ -200,11 +210,12 @@ def create_option_parser(options)
 		opts.separator ""
 
 		opts.separator "Options:"
-		opts.on("--show=pool|backtraces|xml|union_station", String,
-		        "Whether to show the pool's contents, \n" <<
+		opts.on("--show=pool|requests|backtraces|xml|union_station", String,
+		        "Whether to show the pool's contents,\n" <<
+		        "#{' ' * 37}the currently running requests,\n" <<
 		        "#{' ' * 37}the backtraces of all threads or an XML\n" <<
 		        "#{' ' * 37}description of the pool.") do |what|
-			if what !~ /\A(pool|backtraces|xml|union_station)\Z/
+			if what !~ /\A(pool|requests|backtraces|xml|union_station)\Z/
 				STDERR.puts "Invalid argument for --show."
 				exit 1
 			else

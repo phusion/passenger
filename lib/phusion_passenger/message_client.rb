@@ -102,6 +102,14 @@ class MessageClient
 		return read_scalar
 	end
 	
+	### HelperAgent methods ###
+	
+	def helper_agent_requests
+		write("requests")
+		check_security_response
+		return read_scalar
+	end
+
 	### HelperAgent BacktracesServer methods ###
 	
 	def helper_agent_backtraces

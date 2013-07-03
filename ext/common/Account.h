@@ -73,8 +73,9 @@ public:
 		//INSPECT_BACKEND_ADDRESSES = 1 << 6,
 		//INSPECT_DETACH_KEYS       = 1 << 7,
 		
-		// BacktracesServer rights.
-		INSPECT_BACKTRACES        = 1 << 8,
+		// HelperAgent admin rights.
+		INSPECT_REQUESTS          = 1 << 8,
+		INSPECT_BACKTRACES        = 1 << 9,
 		
 		// Other rights.
 		EXIT                      = 1 << 31
