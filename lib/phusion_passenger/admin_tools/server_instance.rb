@@ -1,3 +1,4 @@
+# encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2013 Phusion
 #
@@ -188,34 +189,30 @@ class ServerInstance
 	# - +RoleDeniedError+: The user that the current process is as is not authorized to utilize the given role.
 	# - +EOFError+: The server unexpectedly closed the connection during authentication.
 	# - +SecurityError+: The server denied our authentication credentials.
-	def connect(role_or_username, password = nil)
-		if role_or_username.is_a?(Symbol)
-			case role_or_username
-			when :passenger_status
-				username = "_passenger-status"
-				begin
-					filename = "#{@generation_path}/passenger-status-password.txt"
-					password = File.open(filename, "rb") do |f|
-						f.read
-					end
-				rescue Errno::EACCES
-					raise RoleDeniedError
-				end
-			else
-				raise ArgumentError, "Unsupported role #{role_or_username}"
-			end
+	def connect(options)
+		if options[:role]
+			username, password, default_socket_name = infer_connection_info_from_role(options[:role])
+			socket_name = options[:socket_name] || default_socket_name
 		else
-			username = role_or_username
+			username = options[:username]
+			password = options[:password]
+			socket_name = options[:socket_name] || "helper_admin"
+			raise ArgumentError, "Either the :role or :username must be set" if !username
+			raise ArgumentError, ":password must be set" if !password
 		end
 		
-		@client = MessageClient.new(username, password, "unix:#{@generation_path}/helper_admin")
-		begin
-			yield self
-		ensure
-			@client.close
+		client = MessageClient.new(username, password, "unix:#{@generation_path}/#{socket_name}")
+		if block_given?
+			begin
+				yield client
+			ensure
+				client.close
+			end
+		else
+			return client
 		end
 	end
-	
+
 	def web_server_description
 		return File.read("#{@generation_path}/web_server.txt")
 	end
@@ -241,18 +238,7 @@ class ServerInstance
 		return nil
 	end
 	
-	def status(*options)
-		return @client.status(*options)
-	end
-	
-	def backtraces
-		return @client.backtraces
-	end
-	
-	def xml
-		return @client.xml
-	end
-	
+	# FIXME: probably broken
 	def stats
 		doc = REXML::Document.new(xml)
 		stats = Stats.new
@@ -262,10 +248,12 @@ class ServerInstance
 		return stats
 	end
 	
+	# FIXME: probably broken
 	def get_wait_list_size
 		return stats.get_wait_list_size
 	end
 	
+	# FIXME: probably broken
 	def groups
 		doc = REXML::Document.new(xml)
 		
@@ -309,6 +297,7 @@ class ServerInstance
 		return groups
 	end
 	
+	# FIXME: probably broken
 	def processes
 		return groups.map do |group|
 			group.processes
@@ -322,6 +311,26 @@ private
 	
 	def self.current_time
 		Time.now
+	end
+
+	def infer_connection_info_from_role(role)
+		case role
+		when :passenger_status
+			username = "_passenger-status"
+			begin
+				filename = "#{@generation_path}/passenger-status-password.txt"
+				password = File.open(filename, "rb") do |f|
+					f.read
+				end
+			rescue Errno::EACCES
+				raise RoleDeniedError
+			rescue Errno::ENOENT
+				raise CorruptedDirectoryError
+			end
+			return [username, password, "helper_admin"]
+		else
+			raise ArgumentError, "Unsupported role #{role}"
+		end
 	end
 	
 	class << self;

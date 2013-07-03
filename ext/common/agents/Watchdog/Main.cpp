@@ -94,8 +94,13 @@ static ResourceLocator *resourceLocator;
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
 static ServerInstanceDirToucher *serverInstanceDirToucher;
+static uid_t defaultUid;
+static gid_t defaultGid;
 static string loggingAgentAddress;
 static string loggingAgentPassword;
+static string loggingAgentAdminAddress;
+static string adminToolStatusPassword;
+static string adminToolManipulationPassword;
 
 #include "AgentWatcher.cpp"
 #include "HelperAgentWatcher.cpp"
@@ -456,6 +461,26 @@ maybeSetsid() {
 }
 
 static void
+lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
+	struct passwd *userEntry;
+	struct group  *groupEntry;
+	
+	userEntry = getpwnam(defaultUser.c_str());
+	if (userEntry == NULL) {
+		throw NonExistentUserException("Default user '" + defaultUser +
+			"' does not exist.");
+	}
+	uid = userEntry->pw_uid;
+
+	groupEntry = getgrnam(defaultGroup.c_str());
+	if (groupEntry == NULL) {
+		throw NonExistentGroupException("Default group '" + defaultGroup +
+			"' does not exist.");
+	}
+	gid = groupEntry->gr_gid;
+}
+
+static void
 initializeWorkingObjects() {
 	TRACE_POINT();
 	randomGenerator = new RandomGenerator();
@@ -490,8 +515,29 @@ initializeWorkingObjects() {
 	serverInstanceDirToucher = new ServerInstanceDirToucher();
 
 	UPDATE_TRACE_POINT();
+	lookupDefaultUidGid(defaultUid, defaultGid);
+
+	UPDATE_TRACE_POINT();
 	loggingAgentAddress  = "unix:" + generation->getPath() + "/logging";
 	loggingAgentPassword = randomGenerator->generateAsciiString(64);
+	loggingAgentAdminAddress  = "unix:" + generation->getPath() + "/logging_admin";
+
+	UPDATE_TRACE_POINT();
+	adminToolStatusPassword = randomGenerator->generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
+	adminToolManipulationPassword = randomGenerator->generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
+	agentsOptions.set("admin_tool_status_password", adminToolStatusPassword);
+	agentsOptions.set("admin_tool_manipulation_password", adminToolManipulationPassword);
+	if (geteuid() == 0 && !userSwitching) {
+		createFile(generation->getPath() + "/passenger-status-password.txt",
+			adminToolStatusPassword, S_IRUSR, defaultUid, defaultGid);
+		createFile(generation->getPath() + "/admin-manipulation-password.txt",
+			adminToolManipulationPassword, S_IRUSR, defaultUid, defaultGid);
+	} else {
+		createFile(generation->getPath() + "/passenger-status-password.txt",
+			adminToolStatusPassword, S_IRUSR | S_IWUSR);
+		createFile(generation->getPath() + "/admin-manipulation-password.txt",
+			adminToolManipulationPassword, S_IRUSR | S_IWUSR);
+	}
 }
 
 static void

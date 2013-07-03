@@ -262,7 +262,7 @@ class RequestHandler
 			if @detach_key && @pool_account_username && @pool_account_password
 				client = MessageClient.new(@pool_account_username, @pool_account_password)
 				begin
-					client.detach(@detach_key)
+					client.pool_detach(@detach_key)
 				ensure
 					client.close
 				end

@@ -127,7 +127,7 @@ using namespace oxt;
  *       };
  *       
  *       MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &commonContext) {
- *           return MessageServer::ClientContextPtr(new MyContext());
+ *           return make_shared<MyContext>();
  *       }
  *       
  *       bool processMessage(MessageServer::CommonClientContext &commonContext,
@@ -157,13 +157,7 @@ using namespace oxt;
  */
 class MessageServer {
 public:
-	static const unsigned int CLIENT_THREAD_STACK_SIZE =
-		#ifdef __FreeBSD__
-			// localtime() on FreeBSD needs some more stack space.
-			1024 * 96;
-		#else
-			1024 * 64;
-		#endif
+	static const unsigned int CLIENT_THREAD_STACK_SIZE = 1024 * 128;
 	
 	/** Interface for client context objects. */
 	class ClientContext {
@@ -186,9 +180,10 @@ public:
 		AccountPtr account;
 		
 		
-		CommonClientContext(FileDescriptor &theFd, AccountPtr &theAccount)
-			: fd(theFd), account(theAccount)
-		{ }
+		CommonClientContext(FileDescriptor &_fd, AccountPtr &_account)
+			: fd(_fd),
+			  account(_account)
+			{ }
 		
 		/** Returns a string representation for this client context. */
 		string name() {
@@ -196,7 +191,7 @@ public:
 		}
 		
 		/**
-		 * Checks whether this client has all of the rights in <tt>rights</tt>. The
+		 * Checks whether this client has all of the rights in `rights`. The
 		 * client will be notified about the result of this check, by sending it a
 		 * message.
 		 *

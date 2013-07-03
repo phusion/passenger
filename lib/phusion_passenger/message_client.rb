@@ -74,9 +74,9 @@ class MessageClient
 		return !!@channel
 	end
 	
-	### ApplicationPool::Server methods ###
+	### ApplicationPool2::Server methods ###
 	
-	def detach(detach_key)
+	def pool_detach(detach_key)
 		write("detach", detach_key)
 		check_security_response
 		result = read
@@ -87,7 +87,7 @@ class MessageClient
 		end
 	end
 	
-	def status(options = {})
+	def pool_status(options = {})
 		write("inspect", *options.to_a.flatten)
 		check_security_response
 		return read_scalar
@@ -96,17 +96,24 @@ class MessageClient
 		raise
 	end
 	
-	def xml
+	def pool_xml
 		write("toXml", true)
 		check_security_response
 		return read_scalar
 	end
 	
-	### BacktracesServer methods ###
+	### HelperAgent BacktracesServer methods ###
 	
-	def backtraces
+	def helper_agent_backtraces
 		write("backtraces")
 		check_security_response
+		return read_scalar
+	end
+
+	### LoggingAgent AdminServer methods ###
+	
+	def logging_agent_status
+		write("status")
 		return read_scalar
 	end
 	

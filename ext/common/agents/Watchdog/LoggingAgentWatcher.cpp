@@ -44,6 +44,7 @@ protected:
 		VariantMap options = agentsOptions;
 		options.set("logging_agent_address", loggingAgentAddress);
 		options.set("logging_agent_password", loggingAgentPassword);
+		options.set("logging_agent_admin_address", loggingAgentAdminAddress);
 		options.writeToFd(fd);
 	}
 	
@@ -63,6 +64,7 @@ public:
 	virtual void reportAgentsInformation(VariantMap &report) {
 		report
 			.set("logging_socket_address", loggingAgentAddress)
-			.set("logging_socket_password", loggingAgentPassword);
+			.set("logging_socket_password", loggingAgentPassword)
+			.set("logging_socket_admin_address", loggingAgentAdminAddress);
 	}
 };

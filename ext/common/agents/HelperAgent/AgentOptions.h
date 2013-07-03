@@ -53,6 +53,7 @@ struct AgentOptions {
 	string exitPassword;
 	string loggingAgentAddress;
 	string loggingAgentPassword;
+	string adminToolStatusPassword;
 	vector<string> prestartUrls;
 
 	string requestSocketLink;
@@ -84,6 +85,7 @@ struct AgentOptions {
 		exitPassword          = options.get("helper_agent_exit_password");
 		loggingAgentAddress   = options.get("logging_agent_address");
 		loggingAgentPassword  = options.get("logging_agent_password");
+		adminToolStatusPassword = options.get("admin_tool_status_password");
 		
 		// Optional options.
 		prestartUrls          = options.getStrSet("prestart_urls", false);

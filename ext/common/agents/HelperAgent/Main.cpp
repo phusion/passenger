@@ -381,8 +381,10 @@ public:
 		UPDATE_TRACE_POINT();
 		generation = serverInstanceDir.getGeneration(options.generationNumber);
 		startListening();
-		accountsDatabase = AccountsDatabase::createDefault(generation,
-			options.userSwitching, options.defaultUser, options.defaultGroup);
+		accountsDatabase = make_shared<AccountsDatabase>();
+		accountsDatabase->add("_passenger-status", options.adminToolStatusPassword, false,
+			Account::INSPECT_BASIC_INFO | Account::INSPECT_SENSITIVE_INFO |
+			Account::INSPECT_BACKTRACES);
 		accountsDatabase->add("_web_server", options.exitPassword, false, Account::EXIT);
 		messageServer = make_shared<MessageServer>(
 			parseUnixSocketAddress(options.adminSocketAddress), accountsDatabase);

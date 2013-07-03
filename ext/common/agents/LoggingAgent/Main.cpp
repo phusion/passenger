@@ -38,11 +38,13 @@
 
 #include <agents/Base.h>
 #include <agents/LoggingAgent/LoggingServer.h>
+#include <agents/LoggingAgent/AdminController.h>
 
 #include <AccountsDatabase.h>
 #include <Account.h>
 #include <Exceptions.h>
 #include <ResourceLocator.h>
+#include <MessageServer.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
@@ -56,6 +58,9 @@ using namespace Passenger;
 static struct ev_loop *eventLoop;
 static LoggingServer *loggingServer;
 static int exitCode = 0;
+
+static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 128 * 1024;
+
 
 static struct ev_loop *
 createEventLoop() {
@@ -169,10 +174,12 @@ main(int argc, char *argv[]) {
 	VariantMap options        = initializeAgent(argc, argv, "PassengerLoggingAgent");
 	string passengerRoot      = options.get("passenger_root");
 	string socketAddress      = options.get("logging_agent_address");
+	string adminSocketAddress = options.get("logging_agent_admin_address");
 	string password           = options.get("logging_agent_password");
 	string username           = options.get("analytics_log_user",
 		false, myself());
 	string groupname          = options.get("analytics_log_group", false);
+	string adminToolStatusPassword = options.get("admin_tool_status_password");
 	
 	curl_global_init(CURL_GLOBAL_ALL);
 	
@@ -181,7 +188,7 @@ main(int argc, char *argv[]) {
 		
 		/* Create all the necessary objects and sockets... */
 		ResourceLocator      resourceLocator(passengerRoot);
-		AccountsDatabasePtr  accountsDatabase;
+		AccountsDatabasePtr  accountsDatabase, adminAccountsDatabase;
 		FileDescriptor       serverSocketFd;
 		struct passwd       *user;
 		struct group        *group;
@@ -191,7 +198,8 @@ main(int argc, char *argv[]) {
 			resourceLocator, options.get("union_station_gateway_cert", false)));
 		
 		eventLoop = createEventLoop();
-		accountsDatabase = ptr(new AccountsDatabase());
+		accountsDatabase = make_shared<AccountsDatabase>();
+		adminAccountsDatabase = make_shared<AccountsDatabase>();
 		serverSocketFd = createServer(socketAddress.c_str());
 		if (getSocketAddressType(socketAddress) == SAT_UNIX) {
 			do {
@@ -254,6 +262,17 @@ main(int argc, char *argv[]) {
 		LoggingServer server(eventLoop, serverSocketFd,
 			accountsDatabase, options);
 		loggingServer = &server;
+
+		/* Setup the admin server. */
+		adminAccountsDatabase->add("_passenger-status", adminToolStatusPassword, false);
+		MessageServer adminServer(parseUnixSocketAddress(adminSocketAddress),
+			adminAccountsDatabase);
+		adminServer.addHandler(make_shared<AdminController>(&server));
+		function<void ()> adminServerFunc = boost::bind(&MessageServer::mainLoop, &adminServer);
+		oxt::thread adminServerThread(
+			boost::bind(runAndPrintExceptions, adminServerFunc, true),
+			"AdminServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
+		);
 		
 		
 		ev::io feedbackFdWatcher(eventLoop);
@@ -278,6 +297,7 @@ main(int argc, char *argv[]) {
 		
 		P_WARN("PassengerLoggingAgent online, listening at " << socketAddress);
 		ev_run(eventLoop, 0);
+		adminServerThread.interrupt_and_join();
 		P_DEBUG("Logging agent exiting with code " << exitCode << ".");
 		return exitCode;
 	} catch (const tracable_exception &e) {
