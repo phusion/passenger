@@ -509,7 +509,8 @@ public:
 		if (session == NULL) {
 			stream << indent << "session                     = NULL\n";
 		} else {
-			stream << indent << "session pid                 = " << session->getPid() << "\n";
+			stream << indent << "session pid                 = " << session->getPid() << " (" <<
+				session->getGroup()->name << ")\n";
 			stream << indent << "session gupid               = " << session->getGupid() << "\n";
 			stream << indent << "session initiated           = " << boolStr(session->initiated()) << "\n";
 		}
