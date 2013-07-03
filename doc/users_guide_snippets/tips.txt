@@ -375,7 +375,7 @@ References:
 
 [[flying_passenger]]
 === Flying Passenger
-:version: 4.1.0
+:version: 4.0.6
 include::enterprise_only.txt[]
 
 Flying Passenger allows one to decouple Phusion Passenger's life time from the web server's life time, so that the web server can be independently restarted from Phusion Passenger, and from any of the application processes served by Phusion Passenger.
