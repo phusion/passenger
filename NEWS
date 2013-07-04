@@ -15,6 +15,11 @@ Release 4.0.6
  * Fix 'PassengerPoolIdleTime 0' not being respected correctly. Issue #904.
  * Admin tools improvement: it is now possible to see all currently running
    requests by invoking `passenger-status --show=requests`.
+ * A new feature called Flying Passenger allows you to decouple the life time
+   of Phusion Passenger from the web server, so that both can be restarted
+   indepedently from each other. Please refer to
+   http://blog.phusion.nl/2013/07/03/technology-preview-introducing-flying-passenger/
+   for an introduction.
  * [Apache] Fixed compatibility with Apache pipe logging. Previously this
    would cause Phusion Passenger to lock up with 100% CPU during Apache
    restart.
