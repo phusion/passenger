@@ -1299,6 +1299,12 @@ fix the problem in your application rather than relying on these directives as a
 measure to avoid freezing applications.
 =====================================================
 
+[NOTE]
+=====================================================
+This option is currently only available for Ruby apps. It is not yet available
+for Python and Node.js.
+=====================================================
+
 [[PassengerMemoryLimit]]
 ==== PassengerMemoryLimit <integer> ====
 :version: 3.0.0
