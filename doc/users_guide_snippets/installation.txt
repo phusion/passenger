@@ -354,7 +354,7 @@ If you use these packages to install Phusion Passenger then you do not need to r
 On Ubuntu versions newer than 8.04 Hardy, register the Brightbox Apache PPA as follows:
 
 -----------------------------
-sudo apt-add-repository ppa:brightbox/passenger
+sudo apt-add-repository ppa:brightbox/passenger-experimental
 sudo apt-get update
 -----------------------------
 
@@ -363,7 +363,7 @@ On Ubuntu 8.04 Hardy and on Debian, the `apt-add-repository` command isn't avail
 Debian 6:
 
 -----------------------------
-sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu lucid main" > /etc/apt/sources.list.d/brightbox-passenger.list'
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger-experimental/ubuntu lucid main" > /etc/apt/sources.list.d/brightbox-passenger.list'
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
 sudo apt-get update
 -----------------------------
@@ -371,7 +371,7 @@ sudo apt-get update
 Ubuntu 8.04 Hardy:
 
 -----------------------------
-sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" > /etc/apt/sources.list.d/brightbox-passenger.list'
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger-experimental/ubuntu hardy main" > /etc/apt/sources.list.d/brightbox-passenger.list'
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
 sudo apt-get update
 -----------------------------
@@ -389,7 +389,7 @@ The Apache package provides configuration snippets for you, so you don't need to
 On Ubuntu versions newer than 8.04 Hardy, register the Brightbox Apache PPA as follows:
 
 -----------------------------
-sudo apt-add-repository ppa:brightbox/passenger-nginx
+sudo apt-add-repository ppa:brightbox/passenger-experimental
 sudo apt-get update
 -----------------------------
 
@@ -398,7 +398,7 @@ On Ubuntu 8.04 Hardy and on Debian, the `apt-add-repository` command isn't avail
 Debian 6:
 
 -----------------------------
-sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger-nginx/ubuntu lucid main" > /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger-experimental/ubuntu lucid main" > /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
 sudo apt-get update
 -----------------------------
@@ -406,7 +406,7 @@ sudo apt-get update
 Ubuntu 8.04 Hardy:
 
 -----------------------------
-sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger/ubuntu hardy main" > /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
+sudo sh -c 'echo "deb http://ppa.launchpad.net/brightbox/passenger-experimental/ubuntu hardy main" > /etc/apt/sources.list.d/brightbox-passenger-nginx.list'
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
 sudo apt-get update
 -----------------------------
