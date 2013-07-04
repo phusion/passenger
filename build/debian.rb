@@ -24,7 +24,7 @@
 
 require 'build/preprocessor'
 
-ALL_DISTRIBUTIONS  = ["raring", "precise", "lucid"]
+ALL_DISTRIBUTIONS  = ["raring", "quantal", "precise", "lucid"]
 DEBIAN_NAME        = "ruby-passenger"
 DEBIAN_EPOCH       = 1
 DEBIAN_ORIG_TARBALL_FILES = lambda { PhusionPassenger::Packaging.debian_orig_tarball_files }
