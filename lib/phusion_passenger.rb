@@ -29,7 +29,8 @@ module PhusionPassenger
 	###### Version numbers ######
 	
 	PACKAGE_NAME = 'passenger'
-	VERSION_STRING = '4.0.5'
+	# Run 'rake ext/common/Constants.h' after changing this number.
+	VERSION_STRING = '4.0.6'
 	
 	PREFERRED_NGINX_VERSION = '1.4.1'
 	NGINX_SHA256_CHECKSUM = 'bca5d1e89751ba29406185e1736c390412603a7e6b604f5b4575281f6565d119'
