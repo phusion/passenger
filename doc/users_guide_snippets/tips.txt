@@ -384,7 +384,7 @@ Normally, Phusion Passenger starts together with the web server, and shuts down 
 
 This problem is solved by 'Flying Passenger', which is an advanced mode of operation in Phusion Passenger that allows the web server to be indepedently restarted from Phusion Passenger. When this mode is enabled:
 
-- One must start Phusion Passenger separately from the web server, namely by starting the Flying Passenger daemon. This daemon must - to an extend - be separately configured and managed from the web server.
+- One must start Phusion Passenger separately from the web server, namely by starting the Flying Passenger daemon. This daemon must - to an extent - be separately configured and managed from the web server.
 - The web server must be configured to forward requests to the Flying Passenger daemon.
 - You should beware of the <<flying_passenger_caveats,caveats and limitations>>.
 
