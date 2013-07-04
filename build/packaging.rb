@@ -67,7 +67,7 @@ task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
 		STDERR.puts "-------------------"
 		abort "*** ERROR: There are uncommitted files. See 'git status'"
 	end
-exit
+
 	begin
 		website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
 	rescue Errno::ENOENT
