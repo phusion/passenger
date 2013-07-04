@@ -78,8 +78,9 @@ def find_server_instance_on_pid(pid)
 end
 
 def show_status(server_instance, options)
-	puts "Version: #{PhusionPassenger::VERSION_STRING}"
-	puts "Date   : #{Time.now}"
+	puts "Version : #{PhusionPassenger::VERSION_STRING}"
+	puts "Date    : #{Time.now}"
+	puts "Instance: #{server_instance.pid}"
 	case options[:show]
 	when 'pool'
 		client = server_instance.connect(:role => :passenger_status)

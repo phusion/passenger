@@ -74,10 +74,21 @@ class MessageClient
 		return !!@channel
 	end
 	
-	### ApplicationPool2::Server methods ###
+	### HelperAgent methods ###
 	
-	def pool_detach(detach_key)
-		write("detach", detach_key)
+	def pool_detach_process(pid)
+		write("detach_process", pid)
+		check_security_response
+		result = read
+		if result.nil?
+			raise EOFError
+		else
+			return result.first == "true"
+		end
+	end
+
+	def pool_detach_process_by_key(detach_key)
+		write("detach_process_by_key", detach_key)
 		check_security_response
 		result = read
 		if result.nil?
@@ -101,8 +112,6 @@ class MessageClient
 		check_security_response
 		return read_scalar
 	end
-	
-	### HelperAgent methods ###
 	
 	def helper_agent_requests
 		write("requests")

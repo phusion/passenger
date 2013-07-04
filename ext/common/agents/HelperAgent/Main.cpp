@@ -92,17 +92,30 @@ private:
 	 * Message handler methods
 	 *********************************************/
 	
-	void processDetach(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+	void processDetachProcess(CommonClientContext &commonContext, SpecificContext *specificContext,
+		const vector<string> &args)
+	{
 		TRACE_POINT();
 		commonContext.requireRights(Account::DETACH);
-		/* if (pool->detach(args[1])) {
+		if (pool->detachProcess((pid_t) atoi(args[1]))) {
 			writeArrayMessage(commonContext.fd, "true", NULL);
-		} else { */
+		} else {
 			writeArrayMessage(commonContext.fd, "false", NULL);
-		//}
+		}
+	}
+
+	void processDetachProcessByKey(CommonClientContext &commonContext, SpecificContext *specificContext,
+		const vector<string> &args)
+	{
+		TRACE_POINT();
+		commonContext.requireRights(Account::DETACH);
+		// TODO: implement this
+		writeArrayMessage(commonContext.fd, "false", NULL);
 	}
 	
-	bool processInspect(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+	bool processInspect(CommonClientContext &commonContext, SpecificContext *specificContext,
+		const vector<string> &args)
+	{
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
 		if ((args.size() - 1) % 2 != 0) {
@@ -123,7 +136,9 @@ private:
 		return true;
 	}
 	
-	void processToXml(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+	void processToXml(CommonClientContext &commonContext, SpecificContext *specificContext,
+		const vector<string> &args)
+	{
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
 		bool includeSensitiveInfo =
@@ -132,13 +147,17 @@ private:
 		writeScalarMessage(commonContext.fd, pool->toXml(includeSensitiveInfo));
 	}
 
-	void processBacktraces(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+	void processBacktraces(CommonClientContext &commonContext, SpecificContext *specificContext,
+		const vector<string> &args)
+	{
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BACKTRACES);
 		writeScalarMessage(commonContext.fd, oxt::thread::all_backtraces());
 	}
 
-	void processRequests(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+	void processRequests(CommonClientContext &commonContext, SpecificContext *specificContext,
+		const vector<string> &args)
+	{
 		TRACE_POINT();
 		stringstream stream;
 		commonContext.requireRights(Account::INSPECT_REQUESTS);
@@ -162,8 +181,10 @@ public:
 	{
 		SpecificContext *specificContext = (SpecificContext *) _specificContext.get();
 		try {
-			if (args[0] == "detach" && args.size() == 2) {
-				processDetach(commonContext, specificContext, args);
+			if (args[0] == "detach_process" && args.size() == 2) {
+				processDetachProcess(commonContext, specificContext, args);
+			} else if (args[0] == "detach_process_by_key" && args.size() == 2) {
+				processDetachProcessByKey(commonContext, specificContext, args);
 			} else if (args[0] == "inspect") {
 				return processInspect(commonContext, specificContext, args);
 			} else if (args[0] == "toXml" && args.size() == 2) {

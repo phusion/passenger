@@ -1205,6 +1205,18 @@ public:
 		return ProcessPtr();
 	}
 
+	ProcessPtr findProcessByPid(pid_t pid, bool lock = true) const {
+		vector<ProcessPtr> processes = getProcesses(lock);
+		vector<ProcessPtr>::const_iterator it, end = processes.end();
+		for (it = processes.begin(); it != end; it++) {
+			const ProcessPtr &process = *it;
+			if (process->pid == pid) {
+				return process;
+			}
+		}
+		return ProcessPtr();
+	}
+
 	bool detachSuperGroupByName(const string &name) {
 		TRACE_POINT();
 		ScopedLock l(syncher);
@@ -1282,6 +1294,21 @@ public:
 		l.unlock();
 		runAllActions(actions);
 		return result;
+	}
+
+	bool detachProcess(pid_t pid) {
+		ScopedLock l(syncher);
+		ProcessPtr process = findProcessByPid(pid, false);
+		if (process != NULL) {
+			vector<Callback> actions;
+			bool result = detachProcessUnlocked(process, actions);
+			fullVerifyInvariants();
+			l.unlock();
+			runAllActions(actions);
+			return result;
+		} else {
+			return false;
+		}
 	}
 
 	bool detachProcess(const string &gupid) {
