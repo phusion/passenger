@@ -111,7 +111,7 @@ module PreloaderSharedHelpers
 			# We call ::select just in case someone overwrites the global select()
 			# function by including ActionView::Helpers in the wrong place.
 			# https://code.google.com/p/phusion-passenger/issues/detail?id=915
-			ios = ::select([server, STDIN])[0]
+			ios = Kernel.select([server, STDIN])[0]
 			if ios.include?(server)
 				result, client = accept_and_process_next_client(server)
 				if result == :forked
