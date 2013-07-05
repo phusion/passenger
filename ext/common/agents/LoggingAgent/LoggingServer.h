@@ -1098,7 +1098,7 @@ public:
 	LoggingServer(struct ev_loop *loop,
 		FileDescriptor fd,
 		const AccountsDatabasePtr &accountsDatabase,
-		const VariantMap &options = VariantMap()/**/)
+		const VariantMap &options = VariantMap())
 		: EventedMessageServer(loop, fd, accountsDatabase),
 		  remoteSender(
 		      options.get("union_station_gateway_address", false, DEFAULT_UNION_STATION_GATEWAY_ADDRESS),

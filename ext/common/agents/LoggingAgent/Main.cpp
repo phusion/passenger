@@ -55,31 +55,126 @@ using namespace oxt;
 using namespace Passenger;
 
 
-static struct ev_loop *eventLoop;
-static LoggingServer *loggingServer;
-static int exitCode = 0;
+/***** Agent options *****/
+
+static VariantMap agentsOptions;
+static string passengerRoot;
+static string socketAddress;
+static string adminSocketAddress;
+static string password;
+static string username;
+static string groupname;
+static string adminToolStatusPassword;
+
+/***** Constants and working objects *****/
 
 static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 128 * 1024;
 
+struct WorkingObjects {
+	ResourceLocatorPtr resourceLocator;
+	FileDescriptor serverSocketFd;
+	AccountsDatabasePtr adminAccountsDatabase;
+	MessageServerPtr adminServer;
+	shared_ptr<oxt::thread> adminServerThread;
+	AccountsDatabasePtr accountsDatabase;
+	LoggingServerPtr loggingServer;
 
-static struct ev_loop *
-createEventLoop() {
-	struct ev_loop *loop;
-	
-	// libev doesn't like choosing epoll and kqueue because the author thinks they're broken,
-	// so let's try to force it.
-	loop = ev_default_loop(EVBACKEND_EPOLL);
-	if (loop == NULL) {
-		loop = ev_default_loop(EVBACKEND_KQUEUE);
+	~WorkingObjects() {
+		// Stop thread before destroying anything else.
+		if (adminServerThread != NULL) {
+			adminServerThread->interrupt_and_join();
+		}
 	}
-	if (loop == NULL) {
-		loop = ev_default_loop(0);
-	}
-	if (loop == NULL) {
-		throw RuntimeException("Cannot create an event loop");
+};
+
+static struct ev_loop *eventLoop = NULL;
+static LoggingServer *loggingServer = NULL;
+static int exitCode = 0;
+
+
+/***** Functions *****/
+
+void
+feedbackFdBecameReadable(ev::io &watcher, int revents) {
+	/* This event indicates that the watchdog has been killed.
+	 * In this case we'll kill all descendant
+	 * processes and exit. There's no point in keeping this agent
+	 * running because we can't detect when the web server exits,
+	 * and because this agent doesn't own the server instance
+	 * directory. As soon as passenger-status is run, the server
+	 * instance directory will be cleaned up, making this agent's
+	 * services inaccessible.
+	 */
+	syscalls::killpg(getpgrp(), SIGKILL);
+	_exit(2); // In case killpg() fails.
+}
+
+static string
+myself() {
+	struct passwd *entry = getpwuid(geteuid());
+	if (entry != NULL) {
+		return entry->pw_name;
 	} else {
-		return loop;
+		throw NonExistentUserException(string("The current user, UID ") +
+			toString(geteuid()) + ", doesn't have a corresponding " +
+			"entry in the system's user database. Please fix your " +
+			"system's user database first.");
 	}
+}
+
+static void
+initializeBareEssentials(int argc, char *argv[]) {
+	agentsOptions = initializeAgent(argc, argv, "PassengerLoggingAgent");
+	curl_global_init(CURL_GLOBAL_ALL);
+}
+
+static string
+findUnionStationGatewayCert(const ResourceLocator &locator,
+	const string &cert)
+{
+	if (cert.empty()) {
+		return locator.getResourcesDir() + "/union_station_gateway.crt";
+	} else if (cert != "-") {
+		return cert;
+	} else {
+		return "";
+	}
+}
+
+static void
+initializeOptions(WorkingObjects &wo) {
+	passengerRoot      = agentsOptions.get("passenger_root");
+	socketAddress      = agentsOptions.get("logging_agent_address");
+	adminSocketAddress = agentsOptions.get("logging_agent_admin_address");
+	password           = agentsOptions.get("logging_agent_password");
+	username           = agentsOptions.get("analytics_log_user", false, myself());
+	groupname          = agentsOptions.get("analytics_log_group", false);
+	adminToolStatusPassword = agentsOptions.get("admin_tool_status_password");
+
+	wo.resourceLocator = make_shared<ResourceLocator>(passengerRoot);
+	agentsOptions.set("union_station_gateway_cert", findUnionStationGatewayCert(
+		*wo.resourceLocator, agentsOptions.get("union_station_gateway_cert", false)));
+}
+
+static void
+initializePrivilegedWorkingObjects(WorkingObjects &wo) {
+	wo.serverSocketFd = createServer(socketAddress.c_str());
+	if (getSocketAddressType(socketAddress) == SAT_UNIX) {
+		int ret;
+
+		do {
+			ret = chmod(parseUnixSocketAddress(socketAddress).c_str(),
+				S_ISVTX |
+				S_IRUSR | S_IWUSR | S_IXUSR |
+				S_IRGRP | S_IWGRP | S_IXGRP |
+				S_IROTH | S_IWOTH | S_IXOTH);
+		} while (ret == -1 && errno == EINTR);
+	}
+
+	wo.adminAccountsDatabase = make_shared<AccountsDatabase>();	
+	wo.adminAccountsDatabase->add("_passenger-status", adminToolStatusPassword, false);
+	wo.adminServer = make_shared<MessageServer>(parseUnixSocketAddress(adminSocketAddress),
+		wo.adminAccountsDatabase);
 }
 
 static void
@@ -108,24 +203,99 @@ lowerPrivilege(const string &username, const struct passwd *user, const struct g
 	}
 }
 
-void
-feedbackFdBecameReadable(ev::io &watcher, int revents) {
-	/* This event indicates that the watchdog has been killed.
-	 * In this case we'll kill all descendant
-	 * processes and exit. There's no point in keeping this agent
-	 * running because we can't detect when the web server exits,
-	 * and because this agent doesn't own the server instance
-	 * directory. As soon as passenger-status is run, the server
-	 * instance directory will be cleaned up, making this agent's
-	 * services inaccessible.
-	 */
-	syscalls::killpg(getpgrp(), SIGKILL);
-	_exit(2); // In case killpg() fails.
+static void
+maybeLowerPrivilege() {
+	struct passwd *user;
+	struct group  *group;
+
+	/* Sanity check user accounts. */
+		
+	user = getpwnam(username.c_str());
+	if (user == NULL) {
+		throw NonExistentUserException(string("The configuration option ") +
+			"'PassengerAnalyticsLogUser' (Apache) or " +
+			"'passenger_analytics_log_user' (Nginx) was set to '" +
+			username + "', but this user doesn't exist. Please fix " +
+			"the configuration option.");
+	}
+	
+	if (groupname.empty()) {
+		group = getgrgid(user->pw_gid);
+		if (group == NULL) {
+			throw NonExistentGroupException(string("The configuration option ") +
+				"'PassengerAnalyticsLogGroup' (Apache) or " +
+				"'passenger_analytics_log_group' (Nginx) wasn't set, " +
+				"so PassengerLoggingAgent tried to use the default group " +
+				"for user '" + username + "' - which is GID #" +
+				toString(user->pw_gid) + " - as the group for the analytics " +
+				"log dir, but this GID doesn't exist. " +
+				"You can solve this problem by explicitly " +
+				"setting PassengerAnalyticsLogGroup (Apache) or " +
+				"passenger_analytics_log_group (Nginx) to a group that " +
+				"does exist. In any case, it looks like your system's user " +
+				"database is broken; Phusion Passenger can work fine even " +
+				"with this broken user database, but you should still fix it.");
+		} else {
+			groupname = group->gr_name;
+		}
+	} else {
+		group = getgrnam(groupname.c_str());
+		if (group == NULL) {
+			throw NonExistentGroupException(string("The configuration option ") +
+				"'PassengerAnalyticsLogGroup' (Apache) or " +
+				"'passenger_analytics_log_group' (Nginx) was set to '" +
+				groupname + "', but this group doesn't exist. Please fix " +
+				"the configuration option.");
+		}
+	}
+
+	/* Now's a good time to lower the privilege. */
+	if (geteuid() == 0) {
+		lowerPrivilege(username, user, group);
+	}
+}
+
+static struct ev_loop *
+createEventLoop() {
+	struct ev_loop *loop;
+	
+	// libev doesn't like choosing epoll and kqueue because the author thinks they're broken,
+	// so let's try to force it.
+	loop = ev_default_loop(EVBACKEND_EPOLL);
+	if (loop == NULL) {
+		loop = ev_default_loop(EVBACKEND_KQUEUE);
+	}
+	if (loop == NULL) {
+		loop = ev_default_loop(0);
+	}
+	if (loop == NULL) {
+		throw RuntimeException("Cannot create an event loop");
+	} else {
+		return loop;
+	}
+}
+
+static void
+initializeUnprivilegedWorkingObjects(WorkingObjects &wo) {
+	eventLoop = createEventLoop();
+	wo.accountsDatabase = make_shared<AccountsDatabase>();
+	wo.accountsDatabase->add("logging", password, false);
+
+	wo.loggingServer = make_shared<LoggingServer>(eventLoop, wo.serverSocketFd,
+		wo.accountsDatabase, agentsOptions);
+	loggingServer = wo.loggingServer.get();
+
+	wo.adminServer->addHandler(make_shared<AdminController>(wo.loggingServer));
+	function<void ()> adminServerFunc = boost::bind(&MessageServer::mainLoop, wo.adminServer.get());
+	wo.adminServerThread = make_shared<oxt::thread>(
+		boost::bind(runAndPrintExceptions, adminServerFunc, true),
+		"AdminServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
+	);
 }
 
 void
 caughtExitSignal(ev::sig &watcher, int revents) {
-	P_DEBUG("Caught signal, exiting...");
+	P_INFO("Caught signal, exiting...");
 	ev_break(eventLoop, EVBREAK_ONE);
 	/* We only consider the "exit" command to be a graceful way to shut down
 	 * the logging agent, so upon receiving an exit signal we want to return
@@ -143,162 +313,43 @@ printInfo(ev::sig &watcher, int revents) {
 	cerr << "---------- End LoggingAgent status   ----------\n";
 }
 
-static string
-myself() {
-	struct passwd *entry = getpwuid(geteuid());
-	if (entry != NULL) {
-		return entry->pw_name;
-	} else {
-		throw NonExistentUserException(string("The current user, UID ") +
-			toString(geteuid()) + ", doesn't have a corresponding " +
-			"entry in the system's user database. Please fix your " +
-			"system's user database first.");
+static void
+runMainLoop(WorkingObjects &wo) {
+	ev::io feedbackFdWatcher(eventLoop);
+	ev::sig sigintWatcher(eventLoop);
+	ev::sig sigtermWatcher(eventLoop);
+	ev::sig sigquitWatcher(eventLoop);
+	
+	if (feedbackFdAvailable()) {
+		feedbackFdWatcher.set<&feedbackFdBecameReadable>();
+		feedbackFdWatcher.start(FEEDBACK_FD, ev::READ);
+		writeArrayMessage(FEEDBACK_FD, "initialized", NULL);
 	}
-}
-
-static string
-findUnionStationGatewayCert(const ResourceLocator &locator,
-	const string &cert)
-{
-	if (cert.empty()) {
-		return locator.getResourcesDir() + "/union_station_gateway.crt";
-	} else if (cert != "-") {
-		return cert;
-	} else {
-		return "";
-	}
+	sigintWatcher.set<&caughtExitSignal>();
+	sigintWatcher.start(SIGINT);
+	sigtermWatcher.set<&caughtExitSignal>();
+	sigtermWatcher.start(SIGTERM);
+	sigquitWatcher.set<&printInfo>();
+	sigquitWatcher.start(SIGQUIT);
+	
+	P_WARN("PassengerLoggingAgent online, listening at " << socketAddress);
+	ev_run(eventLoop, 0);
 }
 
 int
 main(int argc, char *argv[]) {
-	VariantMap options        = initializeAgent(argc, argv, "PassengerLoggingAgent");
-	string passengerRoot      = options.get("passenger_root");
-	string socketAddress      = options.get("logging_agent_address");
-	string adminSocketAddress = options.get("logging_agent_admin_address");
-	string password           = options.get("logging_agent_password");
-	string username           = options.get("analytics_log_user", false, myself());
-	string groupname          = options.get("analytics_log_group", false);
-	string adminToolStatusPassword = options.get("admin_tool_status_password");
-	
-	curl_global_init(CURL_GLOBAL_ALL);
-	
+	initializeBareEssentials(argc, argv);
+	P_DEBUG("Starting PassengerLoggingAgent...");
+
 	try {
-		/********** Now begins the real initialization **********/
-		
-		/* Create all the necessary objects and sockets... */
-		ResourceLocator      resourceLocator(passengerRoot);
-		AccountsDatabasePtr  accountsDatabase, adminAccountsDatabase;
-		FileDescriptor       serverSocketFd;
-		struct passwd       *user;
-		struct group        *group;
-		int                  ret;
+		TRACE_POINT();
+		WorkingObjects wo;
 
-		options.set("union_station_gateway_cert", findUnionStationGatewayCert(
-			resourceLocator, options.get("union_station_gateway_cert", false)));
-		
-		eventLoop = createEventLoop();
-		accountsDatabase = make_shared<AccountsDatabase>();
-		adminAccountsDatabase = make_shared<AccountsDatabase>();
-		serverSocketFd = createServer(socketAddress.c_str());
-		if (getSocketAddressType(socketAddress) == SAT_UNIX) {
-			do {
-				ret = chmod(parseUnixSocketAddress(socketAddress).c_str(),
-					S_ISVTX |
-					S_IRUSR | S_IWUSR | S_IXUSR |
-					S_IRGRP | S_IWGRP | S_IXGRP |
-					S_IROTH | S_IWOTH | S_IXOTH);
-			} while (ret == -1 && errno == EINTR);
-		}
-		
-		/* Sanity check user accounts. */
-		
-		user = getpwnam(username.c_str());
-		if (user == NULL) {
-			throw NonExistentUserException(string("The configuration option ") +
-				"'PassengerAnalyticsLogUser' (Apache) or " +
-				"'passenger_analytics_log_user' (Nginx) was set to '" +
-				username + "', but this user doesn't exist. Please fix " +
-				"the configuration option.");
-		}
-		
-		if (groupname.empty()) {
-			group = getgrgid(user->pw_gid);
-			if (group == NULL) {
-				throw NonExistentGroupException(string("The configuration option ") +
-					"'PassengerAnalyticsLogGroup' (Apache) or " +
-					"'passenger_analytics_log_group' (Nginx) wasn't set, " +
-					"so PassengerLoggingAgent tried to use the default group " +
-					"for user '" + username + "' - which is GID #" +
-					toString(user->pw_gid) + " - as the group for the analytics " +
-					"log dir, but this GID doesn't exist. " +
-					"You can solve this problem by explicitly " +
-					"setting PassengerAnalyticsLogGroup (Apache) or " +
-					"passenger_analytics_log_group (Nginx) to a group that " +
-					"does exist. In any case, it looks like your system's user " +
-					"database is broken; Phusion Passenger can work fine even " +
-					"with this broken user database, but you should still fix it.");
-			} else {
-				groupname = group->gr_name;
-			}
-		} else {
-			group = getgrnam(groupname.c_str());
-			if (group == NULL) {
-				throw NonExistentGroupException(string("The configuration option ") +
-					"'PassengerAnalyticsLogGroup' (Apache) or " +
-					"'passenger_analytics_log_group' (Nginx) was set to '" +
-					groupname + "', but this group doesn't exist. Please fix " +
-					"the configuration option.");
-			}
-		}
-
-		/* Setup the admin server right before lowering privilege. */
-		adminAccountsDatabase->add("_passenger-status", adminToolStatusPassword, false);
-		MessageServer adminServer(parseUnixSocketAddress(adminSocketAddress),
-			adminAccountsDatabase);
-		
-		/* Now's a good time to lower the privilege. */
-		if (geteuid() == 0) {
-			lowerPrivilege(username, user, group);
-		}
-		
-		/* Now setup the actual logging server. */
-		accountsDatabase->add("logging", password, false);
-		LoggingServer server(eventLoop, serverSocketFd,
-			accountsDatabase, options);
-		loggingServer = &server;
-
-		/* Continue setting up the admin server. */
-		adminServer.addHandler(make_shared<AdminController>(&server));
-		function<void ()> adminServerFunc = boost::bind(&MessageServer::mainLoop, &adminServer);
-		oxt::thread adminServerThread(
-			boost::bind(runAndPrintExceptions, adminServerFunc, true),
-			"AdminServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
-		);
-		
-		
-		ev::io feedbackFdWatcher(eventLoop);
-		ev::sig sigintWatcher(eventLoop);
-		ev::sig sigtermWatcher(eventLoop);
-		ev::sig sigquitWatcher(eventLoop);
-		
-		if (feedbackFdAvailable()) {
-			feedbackFdWatcher.set<&feedbackFdBecameReadable>();
-			feedbackFdWatcher.start(FEEDBACK_FD, ev::READ);
-			writeArrayMessage(FEEDBACK_FD, "initialized", NULL);
-		}
-		sigintWatcher.set<&caughtExitSignal>();
-		sigintWatcher.start(SIGINT);
-		sigtermWatcher.set<&caughtExitSignal>();
-		sigtermWatcher.start(SIGTERM);
-		sigquitWatcher.set<&printInfo>();
-		sigquitWatcher.start(SIGQUIT);
-		
-		
-		/********** Initialized! Enter main loop... **********/
-		
-		P_WARN("PassengerLoggingAgent online, listening at " << socketAddress);
-		ev_run(eventLoop, 0);
-		adminServerThread.interrupt_and_join();
+		initializeOptions(wo);
+		initializePrivilegedWorkingObjects(wo);
+		maybeLowerPrivilege();
+		initializeUnprivilegedWorkingObjects(wo);
+		runMainLoop(wo);
 		P_DEBUG("Logging agent exiting with code " << exitCode << ".");
 		return exitCode;
 	} catch (const tracable_exception &e) {

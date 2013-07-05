@@ -44,7 +44,7 @@ private:
 	
 	typedef MessageServer::CommonClientContext CommonClientContext;
 	
-	const LoggingServer *server;
+	LoggingServerPtr server;
 	
 	
 	/*********************************************
@@ -63,7 +63,7 @@ private:
 	}
 	
 public:
-	AdminController(const LoggingServer *server) {
+	AdminController(const LoggingServerPtr &server) {
 		this->server = server;
 	}
 	
