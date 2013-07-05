@@ -250,6 +250,11 @@ main(int argc, char *argv[]) {
 					"the configuration option.");
 			}
 		}
+
+		/* Setup the admin server right before lowering privilege. */
+		adminAccountsDatabase->add("_passenger-status", adminToolStatusPassword, false);
+		MessageServer adminServer(parseUnixSocketAddress(adminSocketAddress),
+			adminAccountsDatabase);
 		
 		/* Now's a good time to lower the privilege. */
 		if (geteuid() == 0) {
@@ -262,10 +267,7 @@ main(int argc, char *argv[]) {
 			accountsDatabase, options);
 		loggingServer = &server;
 
-		/* Setup the admin server. */
-		adminAccountsDatabase->add("_passenger-status", adminToolStatusPassword, false);
-		MessageServer adminServer(parseUnixSocketAddress(adminSocketAddress),
-			adminAccountsDatabase);
+		/* Continue setting up the admin server. */
 		adminServer.addHandler(make_shared<AdminController>(&server));
 		function<void ()> adminServerFunc = boost::bind(&MessageServer::mainLoop, &adminServer);
 		oxt::thread adminServerThread(
