@@ -51,15 +51,14 @@ private:
 	 * Message handler methods
 	 *********************************************/
 	
-	void processStatus(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+	void processStatus(CommonClientContext &commonContext, SpecificContext *specificContext,
+		const vector<string> &args)
+	{
 		TRACE_POINT();
+		commonContext.passSecurity();
 		stringstream stream;
 		server->dump(stream);
 		writeScalarMessage(commonContext.fd, stream.str());
-	}
-	
-	bool isCommand(const vector<string> &args, const string &command, unsigned int nargs = 0) const {
-		return args.size() == nargs + 1 && args[0] == command;
 	}
 	
 public:
@@ -76,10 +75,16 @@ public:
 	                            const vector<string> &args)
 	{
 		SpecificContext *specificContext = (SpecificContext *) _specificContext.get();
-		if (isCommand(args, "status", 0)) {
-			processStatus(commonContext, specificContext, args);
-		} else {
-			return false;
+		try {
+			if (isCommand(args, "status", 0)) {
+				processStatus(commonContext, specificContext, args);
+			} else {
+				return false;
+			}
+		} catch (const SecurityException &) {
+			/* Client does not have enough rights to perform a certain action.
+			 * It has already been notified of this; ignore exception and move on.
+			 */
 		}
 		return true;
 	}

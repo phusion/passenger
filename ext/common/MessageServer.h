@@ -205,8 +205,17 @@ public:
 				writeArrayMessage(fd, "SecurityException", "Insufficient rights to execute this command.", NULL);
 				throw SecurityException("Insufficient rights to execute this command.");
 			} else {
-				writeArrayMessage(fd, "Passed security", NULL);
+				passSecurity();
 			}
+		}
+
+		/** Announce to the client that it has passed the security checks.
+		 *
+		 * @throws SystemException Something went wrong while communicating with the client.
+		 * @throws boost::thread_interrupted
+		 */
+		void passSecurity() {
+			writeArrayMessage(fd, "Passed security", NULL);
 		}
 	};
 	
@@ -218,6 +227,26 @@ public:
 	 * client is closed.
 	 */
 	class Handler {
+	protected:
+		/** Utility function for checking whether the command name equals `command`,
+		 * and whether it has exactly `nargs` arguments (excluding command name).
+		 */
+		bool isCommand(const vector<string> &args, const string &command,
+			unsigned int nargs = 0) const
+		{
+			return args.size() == nargs + 1 && args[0] == command;
+		}
+
+		/** Utility function for checking whether the command name equals `command`,
+		 * and whether it has at least `minargs` and at most `maxargs` arguments
+		 * (excluding command name), inclusive.
+		 */
+		bool isCommand(const vector<string> &args, const string &command,
+			unsigned int minargs, unsigned int maxargs) const
+		{
+			return args.size() >= minargs + 1 && args.size() <= maxargs + 1 && args[0] == command;
+		}
+
 	public:
 		virtual ~Handler() { }
 		

@@ -112,6 +112,7 @@ logging_agent_libs = COMMON_LIBRARY.only(:base, :logging_agent, 'AgentsBase.o',
 	'Utils/Base64.o', 'Utils/MD5.o')
 dependencies = [
 	'ext/common/agents/LoggingAgent/Main.cpp',
+	'ext/common/agents/LoggingAgent/AdminController.h',
 	'ext/common/agents/LoggingAgent/LoggingServer.h',
 	'ext/common/agents/LoggingAgent/RemoteSender.h',
 	'ext/common/agents/LoggingAgent/DataStoreId.h',

@@ -181,17 +181,17 @@ public:
 	{
 		SpecificContext *specificContext = (SpecificContext *) _specificContext.get();
 		try {
-			if (args[0] == "detach_process" && args.size() == 2) {
+			if (isCommand(args, "detach_process", 1)) {
 				processDetachProcess(commonContext, specificContext, args);
-			} else if (args[0] == "detach_process_by_key" && args.size() == 2) {
+			} else if (isCommand(args, "detach_process_by_key", 1)) {
 				processDetachProcessByKey(commonContext, specificContext, args);
 			} else if (args[0] == "inspect") {
 				return processInspect(commonContext, specificContext, args);
-			} else if (args[0] == "toXml" && args.size() == 2) {
+			} else if (isCommand(args, "toXml", 1)) {
 				processToXml(commonContext, specificContext, args);
-			} else if (args[0] == "backtraces") {
+			} else if (isCommand(args, "backtraces", 0)) {
 				processBacktraces(commonContext, specificContext, args);
-			} else if (args[0] == "requests") {
+			} else if (isCommand(args, "requests", 0)) {
 				processRequests(commonContext, specificContext, args);
 			} else {
 				return false;

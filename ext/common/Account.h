@@ -62,16 +62,12 @@ public:
 		ALL                       = ~0,
 		NONE                      = 0,
 		
-		// ApplicationPool2::Server rights.
-		GET                       = 1 << 0,
-		CLEAR                     = 1 << 1,
-		DETACH                    = 1 << 2,
-		GET_PARAMETERS            = 1 << 3,
-		SET_PARAMETERS            = 1 << 4,
-		INSPECT_BASIC_INFO        = 1 << 5,
-		INSPECT_SENSITIVE_INFO    = 1 << 6,
-		//INSPECT_BACKEND_ADDRESSES = 1 << 6,
-		//INSPECT_DETACH_KEYS       = 1 << 7,
+		// HelperAgent ApplicationPool rights.
+		CLEAR                     = 1 << 0,
+		DETACH                    = 1 << 1,
+		SET_PARAMETERS            = 1 << 2,
+		INSPECT_BASIC_INFO        = 1 << 3,
+		INSPECT_SENSITIVE_INFO    = 1 << 4,
 		
 		// HelperAgent admin rights.
 		INSPECT_REQUESTS          = 1 << 8,
@@ -103,14 +99,10 @@ public:
 			} else if (*it == "none") {
 				result = NONE;
 			
-			} else if (*it == "get") {
-				result |= GET;
 			} else if (*it == "clear") {
 				result |= CLEAR;
 			} else if (*it == "detach") {
 				result |= DETACH;
-			} else if (*it == "get_parameters") {
-				result |= GET_PARAMETERS;
 			} else if (*it == "set_parameters") {
 				result |= SET_PARAMETERS;
 			} else if (*it == "inspect_basic_info") {
@@ -118,6 +110,8 @@ public:
 			} else if (*it == "inspect_sensitive_info") {
 				result |= INSPECT_SENSITIVE_INFO;
 			
+			} else if (*it == "inspect_requests") {
+				result |= INSPECT_REQUESTS;
 			} else if (*it == "inspect_backtraces") {
 				result |= INSPECT_BACKTRACES;
 				

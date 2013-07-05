@@ -51,10 +51,6 @@ private:
 	unsigned int uniqueNumber;
 	
 public:
-	static AccountsDatabasePtr createDefault(const ServerInstanceDir::GenerationPtr &generation,
-	                                         bool userSwitching, const string &defaultUser,
-	                                         const string &defaultGroup);
-	
 	AccountsDatabase() {
 		uniqueNumber = 0;
 	}

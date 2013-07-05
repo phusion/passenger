@@ -394,15 +394,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			Utils/StrIntUtils.h
 			Utils/CachedFileStat.h
 		)
-	define_component 'AccountsDatabase.o',
-		:source   => 'AccountsDatabase.cpp',
-		:category => :other,
-		:deps     => %w(
-			AccountsDatabase.h
-			RandomGenerator.h
-			Constants.h
-			Utils.h
-		)
 	define_component 'AgentsStarter.o',
 		:source   => 'AgentsStarter.cpp',
 		:category => :other,

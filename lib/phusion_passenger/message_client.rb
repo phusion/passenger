@@ -131,6 +131,7 @@ class MessageClient
 	
 	def logging_agent_status
 		write("status")
+		check_security_response
 		return read_scalar
 	end
 	
