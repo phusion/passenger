@@ -1,3 +1,10 @@
+Release 4.0.8
+-------------
+
+ * Fixed a problem with graceful web server restarts. This problem
+   was introduced in 4.0.6 during the attempt to fix issue #910.
+
+
 Release 4.0.7
 -------------
 

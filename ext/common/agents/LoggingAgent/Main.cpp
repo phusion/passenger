@@ -320,11 +320,6 @@ runMainLoop(WorkingObjects &wo) {
 	ev::sig sigtermWatcher(eventLoop);
 	ev::sig sigquitWatcher(eventLoop);
 	
-	if (feedbackFdAvailable()) {
-		feedbackFdWatcher.set<&feedbackFdBecameReadable>();
-		feedbackFdWatcher.start(FEEDBACK_FD, ev::READ);
-		writeArrayMessage(FEEDBACK_FD, "initialized", NULL);
-	}
 	sigintWatcher.set<&caughtExitSignal>();
 	sigintWatcher.start(SIGINT);
 	sigtermWatcher.set<&caughtExitSignal>();
@@ -333,6 +328,11 @@ runMainLoop(WorkingObjects &wo) {
 	sigquitWatcher.start(SIGQUIT);
 	
 	P_WARN("PassengerLoggingAgent online, listening at " << socketAddress);
+	if (feedbackFdAvailable()) {
+		feedbackFdWatcher.set<&feedbackFdBecameReadable>();
+		feedbackFdWatcher.start(FEEDBACK_FD, ev::READ);
+		writeArrayMessage(FEEDBACK_FD, "initialized", NULL);
+	}
 	ev_run(eventLoop, 0);
 }
 

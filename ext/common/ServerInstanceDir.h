@@ -40,6 +40,7 @@
 #include <string>
 
 #include <Constants.h>
+#include <Logging.h>
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
@@ -48,6 +49,15 @@ namespace Passenger {
 
 using namespace std;
 using namespace boost;
+
+/* TODO: I think we should move away from generation dirs in the future.
+ * That way we can become immune to existing-directory-in-tmp denial of
+ * service attacks. To achieve the same functionality as we do now, each
+ * server instance directory is tagged with the control process's PID
+ * and a creation timestamp. passenger-status should treat the server instance
+ * directory with the most recent creation timestamp as the one to query.
+ * For now, the current code does not lead to an exploit.
+ */
 
 class ServerInstanceDir: public noncopyable {
 public:
@@ -221,8 +231,7 @@ private:
 				createDirectory(path);
 				break;
 			case FT_DIRECTORY:
-				removeDirTree(path);
-				createDirectory(path);
+				verifyDirectoryPermissions(path);
 				break;
 			default:
 				throw RuntimeException("'" + path + "' already exists, and is not a directory");
@@ -241,6 +250,43 @@ private:
 			int e = errno;
 			throw FileSystemException("Cannot create server instance directory '" +
 				path + "'", e, path);
+		}
+		// verifyDirectoryPermissions() checks for the owner/group so we must make
+		// sure the server instance directory has that owner/group, even when the
+		// parent directory has setgid on.
+		if (chown(path.c_str(), geteuid(), getegid()) == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot change the permissions of the server "
+				"instance directory '" + path + "'", e, path);
+		}
+	}
+
+	/**
+	 * When reusing an existing server instance directory, check permissions
+	 * so that an attacker cannot pre-create a directory with too liberal
+	 * permissions.
+	 */
+	void verifyDirectoryPermissions(const string &path) {
+		TRACE_POINT();
+		struct stat buf;
+
+		if (stat(path.c_str(), &buf) == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot stat() " + path, e, path);
+		} else if (buf.st_mode != (S_IFDIR | parseModeString("u=rwx,g=rx,o=rx"))) {
+			throw RuntimeException("Tried to reuse existing server instance directory " +
+				path + ", but it has wrong permissions");
+		} else if (buf.st_uid != geteuid() || buf.st_gid != getegid()) {
+			/* The server instance directory is always created by the Watchdog. Its UID/GID never
+			 * changes because:
+			 * 1. Disabling user switching only lowers the privilege of the HelperAgent.
+			 * 2. For the UID/GID to change, the web server must be completely restarted
+			 *    (not just graceful reload) so that the control process can change its UID/GID.
+			 *    This causes the PID to change, so that an entirely new server instance
+			 *    directory is created.
+			 */
+			throw RuntimeException("Tried to reuse existing server instance directory " +
+				path + ", but it has wrong owner and group");
 		}
 	}
 	
