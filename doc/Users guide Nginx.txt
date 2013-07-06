@@ -510,6 +510,7 @@ http {
         # The web app under www.bar.com/blog will use JRuby 1.7.1
         passenger_base_uri /blog;
         location /blog {
+            passenger_enabled on;
             passenger_ruby /usr/local/rvm/wrappers/jruby-1.7.1/ruby;
         }
     }
