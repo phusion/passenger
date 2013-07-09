@@ -64,27 +64,29 @@ protected:
 	}
 	
 public:
-	HelperAgentWatcher(const ResourceLocator &resourceLocator) {
-		helperAgentFilename = resourceLocator.getAgentsDir() + "/PassengerHelperAgent";
+	HelperAgentWatcher(const WorkingObjectsPtr &wo)
+		: AgentWatcher(wo)
+	{
+		helperAgentFilename = wo->resourceLocator->getAgentsDir() + "/PassengerHelperAgent";
 
 		report
 			.set("request_socket_filename",
 				agentsOptions.get("request_socket_filename", false,
-					generation->getPath() + "/request"))
+					wo->generation->getPath() + "/request"))
 			.set("request_socket_password",
 				agentsOptions.get("request_socket_password", false,
-					randomGenerator->generateAsciiString(REQUEST_SOCKET_PASSWORD_SIZE)))
+					wo->randomGenerator.generateAsciiString(REQUEST_SOCKET_PASSWORD_SIZE)))
 			.set("helper_agent_admin_socket_address",
 				agentsOptions.get("helper_agent_admin_socket_address", false,
-					"unix:" + generation->getPath() + "/helper_admin"))
+					"unix:" + wo->generation->getPath() + "/helper_admin"))
 			.set("helper_agent_exit_password",
 				agentsOptions.get("helper_agent_exit_password", false,
-					randomGenerator->generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE)));
+					wo->randomGenerator.generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE)));
 
 		params = report;
 		params
-			.set("logging_agent_address", loggingAgentAddress)
-			.set("logging_agent_password", loggingAgentPassword);
+			.set("logging_agent_address", wo->loggingAgentAddress)
+			.set("logging_agent_password", wo->loggingAgentPassword);
 	}
 	
 	virtual void reportAgentsInformation(VariantMap &report) {

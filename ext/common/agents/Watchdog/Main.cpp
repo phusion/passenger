@@ -72,11 +72,13 @@ enum OomFileType {
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
 
 class ServerInstanceDirToucher;
+class AgentWatcher;
 static bool hasEnvOption(const char *name, bool defaultValue = false);
 static void setOomScore(const StaticString &score);
 
 
-/** The options that were passed to AgentsStarter. */
+/***** Agent options *****/
+
 static VariantMap agentsOptions;
 static string  tempDir;
 static bool    userSwitching;
@@ -84,30 +86,35 @@ static string  defaultUser;
 static string  defaultGroup;
 static uid_t   webServerWorkerUid;
 static gid_t   webServerWorkerGid;
-static string  serializedPrestartURLs;
 
 /***** Working objects *****/
+
+struct WorkingObjects {
+	RandomGenerator randomGenerator;
+	EventFd errorEvent;
+	ResourceLocatorPtr resourceLocator;
+	ServerInstanceDirPtr serverInstanceDir;
+	ServerInstanceDir::GenerationPtr generation;
+	uid_t defaultUid;
+	gid_t defaultGid;
+	string loggingAgentAddress;
+	string loggingAgentPassword;
+	string loggingAgentAdminAddress;
+	string adminToolStatusPassword;
+	string adminToolManipulationPassword;
+};
+
+typedef shared_ptr<WorkingObjects> WorkingObjectsPtr;
+
 static string oldOomScore;
-static RandomGenerator *randomGenerator;
-static EventFd *errorEvent;
-static ResourceLocator *resourceLocator;
-static ServerInstanceDirPtr serverInstanceDir;
-static ServerInstanceDir::GenerationPtr generation;
-static ServerInstanceDirToucher *serverInstanceDirToucher;
-static uid_t defaultUid;
-static gid_t defaultGid;
-static string loggingAgentAddress;
-static string loggingAgentPassword;
-static string loggingAgentAdminAddress;
-static string adminToolStatusPassword;
-static string adminToolManipulationPassword;
 
 #include "AgentWatcher.cpp"
+#include "ServerInstanceDirToucher.cpp"
 #include "HelperAgentWatcher.cpp"
 #include "LoggingAgentWatcher.cpp"
-#include "ServerInstanceDirToucher.cpp"
-static vector<AgentWatcherPtr> watchers;
 
+
+/***** Functions *****/
 
 static bool
 hasEnvOption(const char *name, bool defaultValue) {
@@ -218,19 +225,19 @@ setOomScoreNeverKill() {
  * an error.
  */
 static bool
-waitForStarterProcessOrWatchers(vector<AgentWatcherPtr> &watchers) {
+waitForStarterProcessOrWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	fd_set fds;
 	int max, ret;
 	char x;
 	
 	FD_ZERO(&fds);
 	FD_SET(FEEDBACK_FD, &fds);
-	FD_SET(errorEvent->fd(), &fds);
+	FD_SET(wo->errorEvent.fd(), &fds);
 	
-	if (FEEDBACK_FD > errorEvent->fd()) {
+	if (FEEDBACK_FD > wo->errorEvent.fd()) {
 		max = FEEDBACK_FD;
 	} else {
-		max = errorEvent->fd();
+		max = wo->errorEvent.fd();
 	}
 	
 	ret = syscalls::select(max + 1, &fds, NULL, NULL, NULL);
@@ -240,7 +247,7 @@ waitForStarterProcessOrWatchers(vector<AgentWatcherPtr> &watchers) {
 		return false;
 	}
 	
-	if (FD_ISSET(errorEvent->fd(), &fds)) {
+	if (FD_ISSET(wo->errorEvent.fd(), &fds)) {
 		vector<AgentWatcherPtr>::const_iterator it;
 		string message, backtrace, watcherName;
 		
@@ -264,7 +271,7 @@ waitForStarterProcessOrWatchers(vector<AgentWatcherPtr> &watchers) {
 }
 
 static void
-cleanupAgentsInBackground(vector<AgentWatcherPtr> &watchers, char *argv[]) {
+cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers, char *argv[]) {
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
 	pid_t pid;
@@ -335,8 +342,8 @@ cleanupAgentsInBackground(vector<AgentWatcherPtr> &watchers, char *argv[]) {
 		}
 		
 		// Now clean up the server instance directory.
-		delete generation.get();
-		delete serverInstanceDir.get();
+		delete wo->generation.get();
+		delete wo->serverInstanceDir.get();
 		
 		_exit(0);
 		
@@ -349,8 +356,8 @@ cleanupAgentsInBackground(vector<AgentWatcherPtr> &watchers, char *argv[]) {
 		// Parent
 		
 		// Let child process handle cleanup.
-		serverInstanceDir->detach();
-		generation->detach();
+		wo->serverInstanceDir->detach();
+		wo->generation->detach();
 	}
 }
 
@@ -481,11 +488,10 @@ lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 }
 
 static void
-initializeWorkingObjects() {
+initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &serverInstanceDirToucher) {
 	TRACE_POINT();
-	randomGenerator = new RandomGenerator();
-	errorEvent = new EventFd();
-	resourceLocator = new ResourceLocator(agentsOptions.get("passenger_root"));
+	wo = make_shared<WorkingObjects>();
+	wo->resourceLocator = make_shared<ResourceLocator>(agentsOptions.get("passenger_root"));
 
 	UPDATE_TRACE_POINT();
 	// Must not used make_shared() here because Watchdog.cpp
@@ -501,54 +507,54 @@ initializeWorkingObjects() {
 			toString(SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION) + "." +
 			toString(SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION) + "." +
 			toString<unsigned long long>(agentsOptions.getPid("web_server_pid"));
-		serverInstanceDir.reset(new ServerInstanceDir(path));
+		wo->serverInstanceDir.reset(new ServerInstanceDir(path));
 	} else {
-		serverInstanceDir.reset(new ServerInstanceDir(agentsOptions.get("server_instance_dir")));
-		agentsOptions.set("server_instance_dir", serverInstanceDir->getPath());
+		wo->serverInstanceDir.reset(new ServerInstanceDir(agentsOptions.get("server_instance_dir")));
+		agentsOptions.set("server_instance_dir", wo->serverInstanceDir->getPath());
 	}
-	generation = serverInstanceDir->newGeneration(userSwitching, defaultUser,
+	wo->generation = wo->serverInstanceDir->newGeneration(userSwitching, defaultUser,
 		defaultGroup, webServerWorkerUid, webServerWorkerGid);
-	agentsOptions.set("server_instance_dir", serverInstanceDir->getPath());
-	agentsOptions.setInt("generation_number", generation->getNumber());
+	agentsOptions.set("server_instance_dir", wo->serverInstanceDir->getPath());
+	agentsOptions.setInt("generation_number", wo->generation->getNumber());
 
 	UPDATE_TRACE_POINT();
-	serverInstanceDirToucher = new ServerInstanceDirToucher();
+	serverInstanceDirToucher = make_shared<ServerInstanceDirToucher>(wo);
 
 	UPDATE_TRACE_POINT();
-	lookupDefaultUidGid(defaultUid, defaultGid);
+	lookupDefaultUidGid(wo->defaultUid, wo->defaultGid);
 
 	UPDATE_TRACE_POINT();
-	loggingAgentAddress  = "unix:" + generation->getPath() + "/logging";
-	loggingAgentPassword = randomGenerator->generateAsciiString(64);
-	loggingAgentAdminAddress  = "unix:" + generation->getPath() + "/logging_admin";
+	wo->loggingAgentAddress  = "unix:" + wo->generation->getPath() + "/logging";
+	wo->loggingAgentPassword = wo->randomGenerator.generateAsciiString(64);
+	wo->loggingAgentAdminAddress  = "unix:" + wo->generation->getPath() + "/logging_admin";
 
 	UPDATE_TRACE_POINT();
-	adminToolStatusPassword = randomGenerator->generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
-	adminToolManipulationPassword = randomGenerator->generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
-	agentsOptions.set("admin_tool_status_password", adminToolStatusPassword);
-	agentsOptions.set("admin_tool_manipulation_password", adminToolManipulationPassword);
+	wo->adminToolStatusPassword = wo->randomGenerator.generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
+	wo->adminToolManipulationPassword = wo->randomGenerator.generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
+	agentsOptions.set("admin_tool_status_password", wo->adminToolStatusPassword);
+	agentsOptions.set("admin_tool_manipulation_password", wo->adminToolManipulationPassword);
 	if (geteuid() == 0 && !userSwitching) {
-		createFile(generation->getPath() + "/passenger-status-password.txt",
-			adminToolStatusPassword, S_IRUSR, defaultUid, defaultGid);
-		createFile(generation->getPath() + "/admin-manipulation-password.txt",
-			adminToolManipulationPassword, S_IRUSR, defaultUid, defaultGid);
+		createFile(wo->generation->getPath() + "/passenger-status-password.txt",
+			wo->adminToolStatusPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
+		createFile(wo->generation->getPath() + "/admin-manipulation-password.txt",
+			wo->adminToolManipulationPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
 	} else {
-		createFile(generation->getPath() + "/passenger-status-password.txt",
-			adminToolStatusPassword, S_IRUSR | S_IWUSR);
-		createFile(generation->getPath() + "/admin-manipulation-password.txt",
-			adminToolManipulationPassword, S_IRUSR | S_IWUSR);
+		createFile(wo->generation->getPath() + "/passenger-status-password.txt",
+			wo->adminToolStatusPassword, S_IRUSR | S_IWUSR);
+		createFile(wo->generation->getPath() + "/admin-manipulation-password.txt",
+			wo->adminToolManipulationPassword, S_IRUSR | S_IWUSR);
 	}
 }
 
 static void
-initializeAgentWatchers() {
+initializeAgentWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	TRACE_POINT();
-	watchers.push_back(make_shared<HelperAgentWatcher>(*resourceLocator));
-	watchers.push_back(make_shared<LoggingAgentWatcher>(*resourceLocator));
+	watchers.push_back(make_shared<HelperAgentWatcher>(wo));
+	watchers.push_back(make_shared<LoggingAgentWatcher>(wo));
 }
 
 static void
-startAgents() {
+startAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	TRACE_POINT();
 	foreach (AgentWatcherPtr watcher, watchers) {
 		try {
@@ -566,10 +572,10 @@ startAgents() {
 }
 
 static void
-startWatchingAgents() {
+beginWatchingAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	foreach (AgentWatcherPtr watcher, watchers) {
 		try {
-			watcher->startWatching();
+			watcher->beginWatching();
 		} catch (const std::exception &e) {
 			writeArrayMessage(FEEDBACK_FD,
 				"Watchdog startup error",
@@ -583,13 +589,13 @@ startWatchingAgents() {
 }
 
 static void
-reportAgentsInformation() {
+reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPtr> &watchers) {
 	TRACE_POINT();
 	VariantMap report;
 
 	report
-		.set("server_instance_dir", serverInstanceDir->getPath())
-		.setInt("generation", generation->getNumber());
+		.set("server_instance_dir", wo->serverInstanceDir->getPath())
+		.setInt("generation", wo->generation->getNumber());
 
 	foreach (AgentWatcherPtr watcher, watchers) {
 		watcher->reportAgentsInformation(report);
@@ -602,13 +608,16 @@ int
 main(int argc, char *argv[]) {
 	initializeBareEssentials(argc, argv);
 	P_DEBUG("Starting Watchdog...");
+	WorkingObjectsPtr wo;
+	ServerInstanceDirToucherPtr serverInstanceDirToucher;
+	vector<AgentWatcherPtr> watchers;
 	
 	try {
 		TRACE_POINT();
 		initializeOptions();
 		maybeSetsid();
-		initializeWorkingObjects();
-		initializeAgentWatchers();
+		initializeWorkingObjects(wo, serverInstanceDirToucher);
+		initializeAgentWatchers(wo, watchers);
 	} catch (const std::exception &e) {
 		writeArrayMessage(FEEDBACK_FD,
 			"Watchdog startup error",
@@ -620,15 +629,15 @@ main(int argc, char *argv[]) {
 
 	try {
 		TRACE_POINT();
-		startAgents();
-		startWatchingAgents();
-		reportAgentsInformation();
+		startAgents(wo, watchers);
+		beginWatchingAgents(wo, watchers);
+		reportAgentsInformation(wo, watchers);
 		P_INFO("All Phusion Passenger agents started!");
 		
 		UPDATE_TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
-		bool exitGracefully = waitForStarterProcessOrWatchers(watchers);
+		bool exitGracefully = waitForStarterProcessOrWatchers(wo, watchers);
 		if (exitGracefully) {
 			/* Fork a child process which cleans up all the agent processes in
 			 * the background and exit this watchdog process so that we don't block
@@ -642,7 +651,7 @@ main(int argc, char *argv[]) {
 		AgentWatcher::stopWatching(watchers);
 		if (exitGracefully) {
 			UPDATE_TRACE_POINT();
-			cleanupAgentsInBackground(watchers, argv);
+			cleanupAgentsInBackground(wo, watchers, argv);
 			return 0;
 		} else {
 			UPDATE_TRACE_POINT();

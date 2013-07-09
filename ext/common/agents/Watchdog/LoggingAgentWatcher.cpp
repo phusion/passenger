@@ -42,9 +42,9 @@ protected:
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = agentsOptions;
-		options.set("logging_agent_address", loggingAgentAddress);
-		options.set("logging_agent_password", loggingAgentPassword);
-		options.set("logging_agent_admin_address", loggingAgentAdminAddress);
+		options.set("logging_agent_address", wo->loggingAgentAddress);
+		options.set("logging_agent_password", wo->loggingAgentPassword);
+		options.set("logging_agent_admin_address", wo->loggingAgentAdminAddress);
 		options.writeToFd(fd);
 	}
 	
@@ -57,14 +57,16 @@ protected:
 	}
 	
 public:
-	LoggingAgentWatcher(const ResourceLocator &resourceLocator) {
-		agentFilename = resourceLocator.getAgentsDir() + "/PassengerLoggingAgent";
+	LoggingAgentWatcher(const WorkingObjectsPtr &wo)
+		: AgentWatcher(wo)
+	{
+		agentFilename = wo->resourceLocator->getAgentsDir() + "/PassengerLoggingAgent";
 	}
 	
 	virtual void reportAgentsInformation(VariantMap &report) {
 		report
-			.set("logging_socket_address", loggingAgentAddress)
-			.set("logging_socket_password", loggingAgentPassword)
-			.set("logging_socket_admin_address", loggingAgentAdminAddress);
+			.set("logging_socket_address", wo->loggingAgentAddress)
+			.set("logging_socket_password", wo->loggingAgentPassword)
+			.set("logging_socket_admin_address", wo->loggingAgentAdminAddress);
 	}
 };

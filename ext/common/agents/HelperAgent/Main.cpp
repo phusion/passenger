@@ -587,6 +587,7 @@ int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
 	AgentOptions options(initializeAgent(argc, argv, "PassengerHelperAgent"));
+	P_DEBUG("Starting PassengerHelperAgent...");
 	MultiLibeio::init();
 	
 	try {
