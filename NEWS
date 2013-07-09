@@ -1,12 +1,16 @@
 Release 4.0.8
 -------------
 
- * Fixed a problem with graceful web server restarts. This problem
+ * Fixed a problem with graceful web server restarts. When you gracefully
+   restart the web server, it would cause Phusion Passenger internal sockets
+   to be deleted, thus causing Phusion Passenger to go down. This problem
    was introduced in 4.0.6 during the attempt to fix issue #910.
  * The PassengerRestartDir/passenger_restart_dir now accepts relative
    filenames again, just like in Phusion Passenger 3.x. Patch
    contributed by Ryan Schwartz.
  * Documentation updates contributed by Gokulnath Manakkattil.
+ * [Enterprise] Fixed a license key checking issue on some operating systems,
+   such as CentOS 6.
 
 
 Release 4.0.7
