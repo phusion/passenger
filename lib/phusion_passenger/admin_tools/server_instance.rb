@@ -238,9 +238,8 @@ class ServerInstance
 		return nil
 	end
 	
-	# FIXME: probably broken
-	def stats
-		doc = REXML::Document.new(xml)
+	def stats(client)
+		doc = REXML::Document.new(client.pool_xml)
 		stats = Stats.new
 		stats.max = doc.elements["info/max"].text.to_i
 		stats.usage = doc.elements["info/usage"].text.to_i
@@ -248,12 +247,10 @@ class ServerInstance
 		return stats
 	end
 	
-	# FIXME: probably broken
-	def get_wait_list_size
-		return stats.get_wait_list_size
+	def get_wait_list_size(client)
+		return stats(client).get_wait_list_size
 	end
 	
-	# FIXME: probably broken
 	def groups(client)
 		doc = REXML::Document.new(client.pool_xml)
 		
@@ -297,7 +294,6 @@ class ServerInstance
 		return groups
 	end
 	
-	# FIXME: probably broken
 	def processes(client)
 		return groups(client).map do |group|
 			group.processes
