@@ -21,6 +21,10 @@ function run()
 	"$@"
 }
 
+run uname -a
+run lsb_release -a
+sudo tee /etc/dpkg/dpkg.cfg.d/02apt-speedup >/dev/null <<<"force-unsafe-io"
+
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
 	if [[ -f ~/.rvm/scripts/rvm ]]; then
@@ -58,6 +62,7 @@ if [[ "$TEST_NGINX" = 1 ]]; then
 fi
 
 if [[ "$TEST_APACHE2" = 1 ]]; then
+	run sudo apt-get update
 	run sudo apt-get install -y --no-install-recommends \
 		apache2-mpm-worker apache2-threaded-dev
 	run rake test:install_deps RAILS_BUNDLES=no DOCTOOLS=no
@@ -67,6 +72,7 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 fi
 
 if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
+	run sudo apt-get update
 	run sudo apt-get install -y --no-install-recommends \
 		devscripts debhelper rake apache2-mpm-worker apache2-threaded-dev \
 		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev libev-dev gdebi-core \
