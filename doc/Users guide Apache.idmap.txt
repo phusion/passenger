@@ -370,6 +370,8 @@
 
 14.2. The PATH environment variable	=>	the-path-environment-variable-p8e32r
 
+14.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-xwppud
+
 14.3. Making environment variables permanent	=>	making-environment-variables-permanent-13x0l4h
 
 14.3.1. bash	=>	bash-1pktn63

@@ -310,6 +310,8 @@
 
 13.2. The PATH environment variable	=>	the-path-environment-variable-vlp05e
 
+13.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-1flz2tu
+
 13.3. Making environment variables permanent	=>	making-environment-variables-permanent-1wjyhzt
 
 13.3.1. bash	=>	bash-19xsxec

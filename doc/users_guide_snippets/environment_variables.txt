@@ -107,6 +107,53 @@ user@localhost bash$ frobnicator
 # => success!
 ----------------------
 
+==== Adding Phusion Passenger's administration tools to PATH
+
+If you get a "command not found" error when invoking one of the Phusion Passenger administration tools (e.g. `passenger-status` or `passenger-memory-stats` then that means the tools are not in `PATH`, so you need to add them.
+
+ * If you <<rubygems_generic_install,installed Phusion Passenger with RubyGems>>, then the tools are in your RubyGems executable path. You can view the gem path using the command `gem env`:
++
+------------------------------
+$ gem env
+RubyGems Environment:
+  - RUBYGEMS VERSION: 1.8.15
+  - RUBY VERSION: 1.8.7 (2011-12-28 patchlevel 357) [i686-darwin10.8.0]
+  - INSTALLATION DIRECTORY: /opt/ruby-enterprise-1.8.7-2010.01/lib/ruby/gems/1.8
+  - RUBY EXECUTABLE: /opt/ruby-enterprise-1.8.7-2010.01/bin/ruby
+  - EXECUTABLE DIRECTORY: /opt/ruby-enterprise-1.8.7-2010.01/bin    <--------- !!
+  - RUBYGEMS PLATFORMS:
+    - ruby
+    - x86-darwin-10
+  - GEM PATHS:
+     - /opt/ruby-enterprise-1.8.7-2010.01/lib/ruby/gems/1.8
+     - /Users/hongli/.gem/ruby/1.8
+  - GEM CONFIGURATION:
+     - :update_sources => true
+     - :verbose => true
+     - :benchmark => false
+     - :backtrace => false
+     - :bulk_threshold => 1000
+     - "gem" => "--no-ri --no-rdoc"
+  - REMOTE SOURCES:
+     - http://rubygems.org/
+------------------------------
++
+As you can see, the RubyGems executable path in the example happens to be `/opt/ruby-enterprise-1.8.7-2010.01/bin`. So that directory must be added to `PATH`.
+
+ * If you <<tarball_generic_install,installed Phusion Passenger using the tarball>>, then the tools are in the `bin` subdirectory of the Phusion Passenger tarball directory that you extracted. For example, if you extracted `passenger-4.9.0.tar.gz` inside `/opt`, then the tools are located in `/opt/passenger-4.0.9/bin`. In that case, you need to add `/opt/passenger-4.0.9/bin` to your `PATH`.
+ * If you installed Phusion Passenger using native OS packages, then some Phusion Passenger administration tools are in `/usr/bin`, while others are in `/usr/sbin`. If you are not logged in as root, then `/usr/sbin` may not be in `PATH`, which would explain why you get a "command not found" when trying to invoke some of the tools. You should `/usr/sbin` to `PATH`.
+ * If you are unsure where your Phusion Passenger directory is then you can use the `find` command to look them up. Go to the root directory and invoke `find` with `sudo`:
++
+--------------------------------
+$ cd /
+$ sudo find . -name passenger-status
+/usr/local/passenger/bin/passenger-status
+--------------------------------
++
+In this example, the administration tools happen to be in `/usr/local/passenger/bin`, so you must add that to `PATH`.
+
+NOTE: You may still get a "command not found" when invoking the tools through sudo, even after you've added the relevant directory to `PATH`. Please read <<env_vars_and_sudo,Environment variables and sudo>> to learn more.
+
 === Making environment variables permanent
 
 When you exit your shell, the evironment variable changes are lost. There is no standard method to set environment variables system-wide, so you have to set them in different configuration files for different services.
