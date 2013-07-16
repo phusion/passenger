@@ -7,7 +7,7 @@ require 'phusion_passenger/packaging'
 Gem::Specification.new do |s|
 	s.platform = Gem::Platform::RUBY
 	s.homepage = "https://www.phusionpassenger.com/"
-	s.summary = "Easy and robust Ruby web application deployment"
+	s.summary = "A fast and robust web server and application server for Ruby, Python and Node.js"
 	s.name = PhusionPassenger::PACKAGE_NAME
 	s.version = PhusionPassenger::VERSION_STRING
 	s.rubyforge_project = "passenger"
@@ -21,5 +21,6 @@ Gem::Specification.new do |s|
 		Dir[*PhusionPassenger::Packaging::EXCLUDE_GLOB]
 	s.executables = PhusionPassenger::Packaging::USER_EXECUTABLES +
 		PhusionPassenger::Packaging::SUPER_USER_EXECUTABLES
-	s.description = "Easy and robust Ruby web application deployment."
+	s.description = "A modern web server and application server for Ruby, Python and Node.js, " +
+		"optimized for performance, low memory usage and ease of use."
 end
