@@ -1,3 +1,17 @@
+Release 4.0.10
+--------------
+
+ * Fixed a crash in PassengerWatchdog which occurs on some OS X systems.
+ * Fixed exception reporting to Union Station.
+ * Improved documentation.
+
+
+Release 4.0.9
+-------------
+
+ * [Enterprise] Fixed a problem with passenger-irb.
+
+
 Release 4.0.8
 -------------
 
