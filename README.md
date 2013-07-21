@@ -2,8 +2,6 @@
 
 [Phusion Passenger](https://www.phusionpassenger.com/) is a web server and application server, designed to be fast, robust and lightweight. It runs your web apps with the least amount of hassle by taking care of almost all administrative heavy lifting for you. Advanced administration tools allow you to gain deep insight into your web applications' operations and to keep your servers healthy. Phusion Passenger is polyglot by design, and currently supports Ruby (Rack), Python (WSGI) and Node.js.
 
-This is the [Phusion Passenger web application server](https://www.phusionpassenger.com/).
-
 ## Regular installation
 
 You can install either Phusion Passenger for Apache or for Nginx. Run either of
