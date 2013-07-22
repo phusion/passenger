@@ -1,3 +1,15 @@
+Release 4.0.11
+--------------
+
+ * Introduced a tool, `passenger-config --detect-apache2`, which autodetects
+   all Apache installations on the system along with their parameters (which
+   apachectl command to run, which log file to read, which config file to edit).
+   The tool advises users about how to use that specific Apache installation.
+   Useful if the user has multiple Apache installations but don't know about
+   it, or when the user doesn't know how to work with multiple Apache
+   installations.
+
+
 Release 4.0.10
 --------------
 

@@ -41,6 +41,7 @@ def help
 	puts "  --nginx-libs               Show Nginx runtime library flags."
 	puts "  --compiled                 Check whether runtime libraries are compiled."
 	puts "  --natively-packaged        Check whether Phusion Passenger is natively packged."
+	puts "  --detect-apache2           Autodetect Apache installations."
 	puts "  --ruby-command             Print the correct command for invoking the Ruby interpreter."
 	puts "  --rubyext-compat-id        Print the Ruby extension binary compatibility ID."
 	puts "  --cxx-compat-id            Print the C++ binary compatibility ID."
@@ -83,6 +84,15 @@ when "--natively-packaged"
 		exit 0
 	else
 		exit 1
+	end
+when "--detect-apache2"
+	require 'phusion_passenger/platform_info/apache_detector'
+	detector = PhusionPassenger::PlatformInfo::ApacheDetector.new(STDOUT)
+	begin
+		detector.detect_all
+		detector.report
+	ensure
+		detector.finish
 	end
 when "--ruby-command"
 	require 'phusion_passenger/platform_info/ruby'

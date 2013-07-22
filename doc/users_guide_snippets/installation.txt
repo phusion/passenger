@@ -692,6 +692,7 @@ $ sudo bash
 `GMAKE`::
 	The location of the GNU-compatible `make` tool.
 
+TIP: If you do not know what environment variables are, or how to use them, then please read <<env_vars_and_sudo,Environment variables and sudo>>.
 NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
 
 

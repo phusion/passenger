@@ -346,7 +346,8 @@ public
 				return nil
 			end
 		else
-			ENV['PATH'].to_s.split(File::PATH_SEPARATOR).detect do |directory|
+			ENV['PATH'].to_s.split(File::PATH_SEPARATOR).each do |directory|
+				next if directory.empty?
 				path = File.join(directory, name)
 				if File.file?(path) && File.executable?(path)
 					return path
@@ -354,6 +355,32 @@ public
 			end
 			return nil
 		end
+	end
+
+	def self.find_all_commands(name)
+		search_dirs = ENV['PATH'].to_s.split(File::PATH_SEPARATOR)
+		search_dirs.concat(%w(/bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin))
+		["/opt/*/bin", "/usr/local/*/bin"].each do |glob|
+			search_dirs.concat(Dir[glob])
+		end
+		search_dirs.delete("")
+		search_dirs.uniq!
+
+		result = []
+		search_dirs.each do |directory|
+			path = File.join(directory, name)
+			if !File.exist?(path)
+				log "Looking for #{path}: not found"
+			elsif !File.file?(path)
+				log "Looking for #{path}: found, but is not a file"
+			elsif !File.executable?(path)
+				log "Looking for #{path}: found, but is not executable"
+			else
+				log "Looking for #{path}: found"
+				result << path
+			end
+		end
+		return result
 	end
 end
 
