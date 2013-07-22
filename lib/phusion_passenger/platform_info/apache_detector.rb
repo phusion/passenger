@@ -143,7 +143,7 @@ class ApacheDetector
 				end
 			end
 			if result.httpd
-				if PlatformInfo.httpd_supports_a2enmod?
+				if PlatformInfo.httpd_supports_a2enmod?(:httpd => result.httpd)
 					log "This Apache installation does not support a2enmod."
 				else
 					log "Detecting a2enmod and a2dismod..."

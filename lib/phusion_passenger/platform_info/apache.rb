@@ -100,13 +100,8 @@ module PlatformInfo
 
 	# The Apache root directory.
 	def self.httpd_root(options = nil)
-		if options
-			httpd = options[:httpd] || self.httpd(options)
-		else
-			httpd = self.httpd
-		end
-		if httpd
-			`#{httpd} -V` =~ / -D HTTPD_ROOT="(.+)"$/
+		if info = httpd_V(options)
+			info =~ / -D HTTPD_ROOT="(.+)"$/
 			return $1
 		else
 			return nil
@@ -116,13 +111,7 @@ module PlatformInfo
 
 	# The default Apache configuration file, or nil if Apache is not found.
 	def self.httpd_default_config_file(options = nil)
-		if options
-			httpd = options[:httpd] || self.httpd(options)
-		else
-			httpd = self.httpd
-		end
-		if httpd
-			info = `#{httpd} -V`
+		if info = httpd_V(options)
 			info =~ /-D SERVER_CONFIG_FILE="(.+)"$/
 			filename = $1
 			if filename =~ /\A\//
@@ -148,13 +137,7 @@ module PlatformInfo
 	# Returns nil if Apache is not detected, or if the default error log filename
 	# cannot be detected.
 	def self.httpd_default_error_log(options = nil)
-		if options
-			httpd = options[:httpd] || self.httpd(options)
-		else
-			httpd = self.httpd
-		end
-		if httpd
-			info = `#{httpd} -V`
+		if info = httpd_V(options)
 			info =~ /-D DEFAULT_ERRORLOG="(.+)"$/
 			filename = $1
 			if filename =~ /\A\//
@@ -217,17 +200,37 @@ module PlatformInfo
 	end
 	memoize :httpd_actual_error_log
 
+	# The location of the Apache envvars file, which exists on some systems such as Ubuntu.
+	# Returns nil if Apache is not found or if the envvars file is not found.
+	def self.httpd_envvars_file(options = nil)
+		if options
+			httpd = options[:httpd] || self.httpd(options)
+		else
+			httpd = self.httpd
+		end
+		
+		httpd_dir = File.dirname(httpd)
+		if httpd_dir == "/usr/bin" || httpd_dir == "/usr/sbin"
+			if File.exist?("/etc/apache2/envvars")
+				return "/etc/apache2/envvars"
+			elsif File.exist?("/etc/httpd/envvars")
+				return "/etc/httpd/envvars"
+			end
+		end
+		
+		conf_dir = File.expand_path(File.dirname(httpd) + "/../conf")
+		if File.exist?("#{conf_dir}/envvars")
+			return "#{conf_dir}/envvars"
+		end
+
+		return nil
+	end
+
 	def self.httpd_infer_envvar(varname, options = nil)
-		if config_file = httpd_default_config_file(options)
-			config_dir = File.dirname(config_file)
-			envfile = "#{config_dir}/envvars"
-			if File.exist?(envfile) && find_command("bash")
-				result = `bash -c 'source "$1"; echo $#{varname}' bash '#{envfile}'`.strip
-				if $? && $?.exitstatus == 0
-					return result
-				else
-					return nil
-				end
+		if envfile = httpd_envvars_file(options)
+			result = `. '#{envfile}' && echo $#{varname}`.strip
+			if $? && $?.exitstatus == 0
+				return result
 			else
 				return nil
 			end
@@ -531,6 +534,26 @@ private
 	end
 	memoize :determine_apu_info
 	private_class_method :determine_apu_info
+
+	# Run `httpd -V` and return its output. On some systems, such as Ubuntu 13.10,
+	# `httpd -V` fails without the environment variables defined in various scripts.
+	# Here we take care of evaluating those scripts before running `httpd -V`.
+	def self.httpd_V(options = nil)
+		if options
+			httpd = options[:httpd] || self.httpd(options)
+		else
+			httpd = self.httpd
+		end
+		if httpd
+			command = "#{httpd} -V"
+			if envvars_file = httpd_envvars_file(options)
+				command = ". '#{envvars_file}' && #{command}"
+			end
+			return `#{command}`
+		else
+			return nil
+		end
+	end
 end
 
 end
