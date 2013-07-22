@@ -166,7 +166,7 @@ module PlatformInfo
 				if filename.include?("${")
 					log "Error log seems to be located in \"#{filename}\", " +
 						"but value contains environment variables. " +
-						"Attempting to substitue them..."
+						"Attempting to substitute them..."
 				end
 				# The Apache config file supports environment variable
 				# substitution. Ubuntu uses this extensively.
