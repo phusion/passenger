@@ -108,7 +108,9 @@ when "--ruby-command"
 	puts
 
 	ruby = PhusionPassenger::PlatformInfo.find_command('ruby')
-	if ruby
+	if ruby && !ruby.include?("rvm/rubies/")
+		# If this is an RVM Ruby executable then we don't show it. We want people to
+		# use the RVM wrapper scripts only.
 		puts "The following Ruby interpreter was found first in $PATH:"
 		puts "  Command: #{ruby}"
 		STDOUT.write "  Version: "
@@ -117,7 +119,7 @@ when "--ruby-command"
 		puts "  To use in Apache: PassengerRuby #{ruby}"
 		puts "  To use in Nginx : passenger_ruby #{ruby}"
 		puts "  To use with Standalone: #{ruby} #{PhusionPassenger.bin_dir}/passenger start"
-	else
+	elsif !ruby.include?("rvm/rubies/")
 		puts "No Ruby interpreter found in $PATH."
 	end
 	puts
