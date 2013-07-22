@@ -141,6 +141,12 @@ module PlatformInfo
 	end
 	memoize :httpd_default_config_file
 
+	# The default Apache error log's filename, as it is compiled into the Apache
+	# main executable. This may not be the actual error log that is used. The actual
+	# error log depends on the configuration file.
+	# 
+	# Returns nil if Apache is not detected, or if the default error log filename
+	# cannot be detected.
 	def self.httpd_default_error_log(options = nil)
 		if options
 			httpd = options[:httpd] || self.httpd(options)
@@ -173,7 +179,29 @@ module PlatformInfo
 			# We don't want to match comments
 			contents.gsub!(/^[ \t]*#.*/, '')
 			if contents =~ /^ErrorLog (.+)$/
-				return $1.strip.sub(/^"/, '').sub(/"$/, '')
+				filename = $1.strip.sub(/^"/, '').sub(/"$/, '')
+				if filename.include?("${")
+					log "Error log seems to be located in \"#{filename}\", " +
+						"but value contains environment variables. " +
+						"Attempting to substitue them..."
+				end
+				# The Apache config file supports environment variable
+				# substitution. Ubuntu uses this extensively.
+				filename.gsub!(/\${(.+?)}/) do |varname|
+					if value = httpd_infer_envvar($1, options)
+						log "Substituted \"#{varname}\" -> \"#{value}\""
+						value
+					else
+						log "Cannot substituted \"#{varname}\""
+						varname
+					end
+				end
+				if filename.include?("${")
+					# We couldn't substitute everything.
+					return nil
+				else
+					return filename
+				end
 			elsif contents =~ /ErrorLog/
 				# The user apparently has ErrorLog set somewhere but
 				# we can't parse it. The default error log location,
@@ -184,10 +212,29 @@ module PlatformInfo
 				return httpd_default_error_log(options)
 			end
 		else
-			return httpd_default_config_file(options)
+			return nil
 		end
 	end
 	memoize :httpd_actual_error_log
+
+	def self.httpd_infer_envvar(varname, options = nil)
+		if config_file = httpd_default_config_file(options)
+			config_dir = File.dirname(config_file)
+			envfile = "#{config_dir}/envvars"
+			if File.exist?(envfile) && find_command("bash")
+				result = `bash -c 'source "$1"; echo $#{varname}' bash '#{envfile}'`.strip
+				if $? && $?.exitstatus == 0
+					return result
+				else
+					return nil
+				end
+			else
+				return nil
+			end
+		else
+			return nil
+		end
+	end
 
 	# Whether Apache appears to support a2enmod and a2dismod.
 	def self.httpd_supports_a2enmod?(options = nil)
