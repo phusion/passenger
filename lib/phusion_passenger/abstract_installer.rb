@@ -343,7 +343,7 @@ protected
 	
 	def download(url, output)
 		if PlatformInfo.find_command("wget")
-			return sh("wget", "-O", output, url)
+			return sh("wget", "--tries=3", "-O", output, url)
 		else
 			return sh("curl", url, "-f", "-L", "-o", output)
 		end
