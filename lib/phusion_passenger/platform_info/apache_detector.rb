@@ -98,6 +98,7 @@ class ApacheDetector
 		log "<banner>Looking for possible Apache installations...</banner>"
 		apxses = PlatformInfo.find_all_commands("apxs2") +
 			PlatformInfo.find_all_commands("apxs")
+		apxses = remove_symlink_duplications(apxses)
 		log ""
 		apxses.each do |apxs2|
 			detect_one(apxs2)
@@ -193,6 +194,32 @@ class ApacheDetector
 private
 	def log(message)
 		@output.puts(Utils::AnsiColors.ansi_colorize(message))
+	end
+
+	# On Ubuntu, /usr/bin/apxs2 is a symlink to /usr/bin/apxs. We're only
+	# supposed to detect one Apache in that case so we need to resolve symlinks.
+	def remove_symlink_duplications(filenames)
+		result = []
+		symlink_files = []
+
+		filenames.each do |filename|
+			if File.symlink?(filename)
+				symlink_files << filename
+			else
+				result << filename
+			end
+		end
+
+		symlink_files.each do |filename|
+			full_filename = File.expand_path(File.readlink(filename), File.dirname(filename))
+			if result.include?(full_filename)
+				log "#{filename} is a symlink to #{full_filename}. Ignoring it."
+			else
+				result << full_filename
+			end
+		end
+
+		return result
 	end
 
 	def add_result
