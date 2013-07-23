@@ -42,22 +42,11 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
-
-template<typename T>
-static bool
-exceptionIsInstanceOf(const tracable_exception &e) {
-	try {
-		(void) dynamic_cast<T>(e);
-		return true;
-	} catch (const bad_cast &) {
-		return false;
-	}
-}
-
 #define TRY_COPY_EXCEPTION(klass) \
 	do { \
-		if (exceptionIsInstanceOf<const klass &>(e)) { \
-			return make_shared<klass>( (const klass &) e ); \
+		const klass * ep = dynamic_cast<const klass *>(&e); \
+		if (ep != NULL) { \
+			return make_shared<klass>(*ep); \
 		} \
 	} while (false)
 
@@ -96,8 +85,9 @@ copyException(const tracable_exception &e) {
 
 #define TRY_RETHROW_EXCEPTION(klass) \
 	do { \
-		if (exceptionIsInstanceOf<const klass &>(*e)) { \
-			throw klass((const klass &) *e); \
+		const klass * ep = dynamic_cast<const klass *>(&*e); \
+		if (ep != NULL) { \
+			throw klass(*ep); \
 		} \
 	} while (false)
 
