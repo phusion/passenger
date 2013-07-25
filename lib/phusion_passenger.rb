@@ -95,7 +95,6 @@ module PhusionPassenger
 			@apache2_module_path   = get_option(filename, options, 'apache2_module').freeze
 			@ruby_extension_source_dir = get_option(filename, options, 'ruby_extension_source').freeze
 		else
-			@source_root           = File.dirname(File.dirname(FILE_LOCATION))
 			@natively_packaged     = false
 			@bin_dir               = "#{@source_root}/bin".freeze
 			@agents_dir            = "#{@source_root}/buildout/agents".freeze
@@ -107,6 +106,7 @@ module PhusionPassenger
 			@apache2_module_path   = "#{@source_root}/buildout/apache2/mod_passenger.so".freeze
 			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
 		end
+		@source_root           = File.dirname(File.dirname(FILE_LOCATION))
 	end
 	
 	# Returns whether this Phusion Passenger installation is in the 'originally packaged'
