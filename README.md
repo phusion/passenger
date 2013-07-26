@@ -4,8 +4,7 @@
 
 ## Regular installation
 
-You can install either Phusion Passenger for Apache or for Nginx. Run either of
-the following programs as root:
+You can install either Phusion Passenger for Apache or for Nginx. Basically, installation involves running one of these commands:
 
     ./bin/passenger-install-apache2-module
 
@@ -13,14 +12,12 @@ the following programs as root:
 
     ./bin/passenger-install-nginx-module
 
-That's it. :)
+That's it. :) However on some systems installation may require some more steps. You may have to run `sudo` or `rvmsudo`, and you may have to relax permissions on some directories, etc. Detailed fool-proof installation instructions can be found in the documentation:
 
-For troubleshooting, configuration and tips, please read the corresponding Users Guide:
+ * [Apache version](http://www.modrails.com/documentation/Users%20guide%20Apache.html#tarball_generic_install)
+ * [Nginx version](http://www.modrails.com/documentation/Users%20guide%20Nginx.html#tarball_generic_install)
 
- * doc/Users guide Apache.html
- * doc/Users guide Nginx.html
-
-These files are included in the source tarball, and may also be viewed online on [our website](https://www.phusionpassenger.com/support).
+For troubleshooting, configuration and tips, please also refer to the above documentation. For further support, please refer to [the Phusion Passenger support page](https://www.phusionpassenger.com/support).
 
 ## Installing as a gem
 
