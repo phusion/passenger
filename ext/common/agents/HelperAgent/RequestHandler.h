@@ -1600,6 +1600,13 @@ private:
 		}
 	}
 
+	static void fillPoolOption(const ClientPtr &client, unsigned int &field, const StaticString &name) {
+		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
+		if (it != client->scgiParser.end()) {
+			field = stringToUint(it->second);
+		}
+	}
+
 	static void fillPoolOption(const ClientPtr &client, unsigned long &field, const StaticString &name) {
 		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
 		if (it != client->scgiParser.end()) {
@@ -1663,6 +1670,7 @@ private:
 		fillPoolOption(client, options.maxRequests, "PASSENGER_MAX_REQUESTS");
 		fillPoolOption(client, options.spawnMethod, "PASSENGER_SPAWN_METHOD");
 		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
+		fillPoolOption(client, options.startTimeout, "PASSENGER_START_TIMEOUT");
 		fillPoolOption(client, options.maxPreloaderIdleTime, "PASSENGER_MAX_PRELOADER_IDLE_TIME");
 		fillPoolOption(client, options.statThrottleRate, "PASSENGER_STAT_THROTTLE_RATE");
 		fillPoolOption(client, options.restartDir, "PASSENGER_RESTART_DIR");
