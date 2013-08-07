@@ -159,11 +159,7 @@ protected
 	end
 
 	def check_whether_os_is_broken
-		if PlatformInfo.os_name == "freebsd9" && `uname -r` =~ /^9\.1-/
-			new_screen
-			render_template 'installer_common/freebsd9_broken_cxx_runtime'
-			wait
-		end
+		# No known broken OSes at the moment.
 	end
 
 	def check_whether_system_has_enough_ram(required = 1024)
