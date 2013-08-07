@@ -43,7 +43,7 @@ describe "A natively packaged Phusion Passenger" do
 		if $?.exitstatus == 0
 			return output
 		else
-			abort "Command #{command.join(' ')} exited with status #{$?.exitstatus}"
+			abort "Command #{command} exited with status #{$?.exitstatus}"
 		end
 	end
 

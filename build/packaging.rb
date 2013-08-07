@@ -299,7 +299,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 		f.puts "rubylibdir=/usr/lib/ruby/vendor_ruby"
 		f.puts "apache2_module=/usr/lib/apache2/modules/mod_passenger.so"
 		f.puts "ruby_extension_source=/usr/share/passenger/ruby_extension_source"
-		f.puts "ruby_extension_source=/usr/share/passenger/ngx_http_passenger_module"
+		f.puts "nginx_module_source=/usr/share/passenger/ngx_http_passenger_module"
 	end
 
 	sh "find #{fakeroot} -name .DS_Store -print0 | xargs -0 rm -f"
