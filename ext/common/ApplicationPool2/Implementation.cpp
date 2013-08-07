@@ -44,7 +44,7 @@ using namespace oxt;
 
 #define TRY_COPY_EXCEPTION(klass) \
 	do { \
-		const klass * ep = dynamic_cast<const klass *>(&e); \
+		const klass *ep = dynamic_cast<const klass *>(&e); \
 		if (ep != NULL) { \
 			return make_shared<klass>(*ep); \
 		} \
@@ -85,7 +85,7 @@ copyException(const tracable_exception &e) {
 
 #define TRY_RETHROW_EXCEPTION(klass) \
 	do { \
-		const klass * ep = dynamic_cast<const klass *>(&*e); \
+		const klass *ep = dynamic_cast<const klass *>(&*e); \
 		if (ep != NULL) { \
 			throw klass(*ep); \
 		} \
