@@ -420,7 +420,7 @@ sudo apt-get install nginx-full
 You'll then need to enable the Phusion Passenger module in Nginx by creating the following configuration file:
 
 -----------------------------------------------
-sudo sh -c 'echo "passenger_root /usr/lib/phusion-passenger;" > /etc/nginx/conf.d/passenger.conf'
+sudo sh -c 'echo "passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;" > /etc/nginx/conf.d/passenger.conf'
 -----------------------------------------------
 
 Then restart Nginx to apply the changes:
