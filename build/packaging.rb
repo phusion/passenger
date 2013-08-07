@@ -202,6 +202,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	fake_apache2_module_dir = "#{fakeroot}/usr/lib/apache2/modules"
 	fake_apache2_module = "#{fake_apache2_module_dir}/mod_passenger.so"
 	fake_ruby_extension_source_dir = "#{fakeroot}/usr/share/passenger/ruby_extension_source"
+	fake_nginx_module_source_dir = "#{fakeroot}/usr/share/passenger/ngx_http_passenger_module"
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
@@ -256,8 +257,8 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	end
 
 	# Nginx module sources
-	sh "mkdir -p #{fake_resources_dir}/ngx_http_passenger_module"
-	sh "cp ext/nginx/* #{fake_resources_dir}/ngx_http_passenger_module/"
+	sh "mkdir -p #{fake_nginx_module_source_dir}"
+	sh "cp ext/nginx/* #{fake_nginx_module_source_dir}/"
 	
 	# Documentation
 	sh "mkdir -p #{fake_docdir}"
@@ -298,6 +299,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 		f.puts "rubylibdir=/usr/lib/ruby/vendor_ruby"
 		f.puts "apache2_module=/usr/lib/apache2/modules/mod_passenger.so"
 		f.puts "ruby_extension_source=/usr/share/passenger/ruby_extension_source"
+		f.puts "ruby_extension_source=/usr/share/passenger/ngx_http_passenger_module"
 	end
 
 	sh "find #{fakeroot} -name .DS_Store -print0 | xargs -0 rm -f"

@@ -2,7 +2,7 @@ PATH="$ngx_addon_dir/../../bin:$PATH"
 export PATH
 
 if ! ruby -v >/dev/null 2>/dev/null; then
-    echo '*** ERROR: Cannot find the "ruby" command in $PATH. Please fix your $PATH. You can learn more about $PATH at: http://www.modrails.com/documentation/Users%20guide%20Apache.html#_the_path_environment_variable'
+    echo '*** ERROR: Cannot find the "ruby" command in $PATH. Please fix your $PATH. You can learn more about $PATH at: http://www.modrails.com/documentation/Users%20guide%20Nginx.html#_the_path_environment_variable'
 fi
 
 if test "x$PASSENGER_LIBS" = "x" && ! passenger-config --compiled; then

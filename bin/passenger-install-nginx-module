@@ -431,7 +431,7 @@ private
 		elsif !pcre_is_installed?
 			command << "--without-http_rewrite_module "
 		end
-		command << "--add-module='#{PhusionPassenger.nginx_addon_dir}' #{extra_configure_flags}"
+		command << "--add-module='#{PhusionPassenger.nginx_module_source_dir}' #{extra_configure_flags}"
 		command.strip!
 		return command
 	end

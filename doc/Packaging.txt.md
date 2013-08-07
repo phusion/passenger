@@ -100,6 +100,7 @@ The location configuration file is an ini file that looks as follows:
     rubylibdir=/usr/lib/ruby/vendor_ruby
     apache2_module=/usr/lib/apache2/modules/mod_passenger.so
     ruby_extension_source=/usr/share/phusion-passenger/ruby_extension_source
+    nginx_module_source=/usr/share/phusion-passenger/ngx_http_passenger_module
 
 All keys except fo `natively_packaged` specify the locations of assets and asset
 directories. The "Asset types" section provides a description of all asset types.
@@ -176,7 +177,7 @@ a list of all possible assets and asset directories.
    PassengerHelperAgent are located here.
 
    Value when originally packaged:
-   - Normally: `<SOURCE_ROOT>/agents`
+   - Normally: `<SOURCE_ROOT>/buildout/agents`
    - Passenger Standalone: `~/.passenger/standalone/<VERSION>/support-<ARCH>`
 
  * `helper_scripts`
@@ -213,7 +214,7 @@ a list of all possible assets and asset directories.
    A directory that contains the Phusion Passenger library files, e.g.
    libboost_oxt.a and various .o files.
 
-   Value when originally packaged: `<SOURCE_ROOT>/libout`
+   Value when originally packaged: `<SOURCE_ROOT>/buildout`
 
  * `rubylibdir`
 
@@ -231,7 +232,7 @@ a list of all possible assets and asset directories.
    will be stored after it's compiled. Used by `passenger-install-module` to
    print an example configuration snippet.
 
-   Value when originally packaged: `<SOURCE_ROOT>/ext/apache2/mod_passenger.so`.
+   Value when originally packaged: `<SOURCE_ROOT>/buildout/apache2/mod_passenger.so`.
 
  * `ruby_extension_source`
 
@@ -241,6 +242,14 @@ a list of all possible assets and asset directories.
    no Ruby extension has been compiled.
 
    Value when originally packaged: `<SOURCE_ROOT>/ext/ruby`.
+
+ * `nginx_module_source`
+
+   The directory that contains the source code for the Phusion Passenger Nginx
+   module. passenger-install-nginx-module uses these sources to build Nginx
+   with Phusion Passenger support.
+
+   Value when originally packaged: `<SOURCE_ROOT>/ext/nginx`.
 
 
 # Vendoring of libraries

@@ -94,6 +94,7 @@ module PhusionPassenger
 			@doc_dir               = get_option(filename, options, 'doc').freeze
 			@apache2_module_path   = get_option(filename, options, 'apache2_module').freeze
 			@ruby_extension_source_dir = get_option(filename, options, 'ruby_extension_source').freeze
+			@nginx_module_source_dir = get_option(filename, options, 'nginx_module_source').freeze
 		else
 			@source_root           = File.dirname(File.dirname(FILE_LOCATION))
 			@natively_packaged     = false
@@ -106,6 +107,7 @@ module PhusionPassenger
 			@doc_dir               = "#{@source_root}/doc".freeze
 			@apache2_module_path   = "#{@source_root}/buildout/apache2/mod_passenger.so".freeze
 			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
+			@nginx_module_source_dir   = "#{@source_root}/ext/nginx"
 		end
 	end
 	
@@ -165,12 +167,8 @@ module PhusionPassenger
 		return @ruby_extension_source_dir
 	end
 
-	def self.nginx_addon_dir
-		if PhusionPassenger.natively_packaged?
-			return "#{resources_dir}/ngx_http_passenger_module"
-		else
-			return "#{source_root}/ext/nginx"
-		end
+	def self.nginx_module_source_dir
+		return @nginx_module_source_dir
 	end
 	
 	

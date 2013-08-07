@@ -61,7 +61,7 @@ when "--root"
 when "--includedir"
 	puts PhusionPassenger.include_dir
 when "--nginx-addon-dir"
-	puts PhusionPassenger.nginx_addon_dir
+	puts PhusionPassenger.nginx_module_source_dir
 when "--nginx-libs"
 	text = "#{common_library.link_objects_as_string} #{PhusionPassenger.lib_dir}/common/libboost_oxt.a"
 	if PhusionPassenger::PlatformInfo.has_math_library?
