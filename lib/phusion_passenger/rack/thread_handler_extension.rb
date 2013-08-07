@@ -106,6 +106,9 @@ module ThreadHandlerExtension
 						# iteration as an optimization.
 						next
 					end
+					if values.nil?
+						next
+					end
 					values.each do |value|
 						headers_output << key
 						headers_output << NAME_VALUE_SEPARATOR
