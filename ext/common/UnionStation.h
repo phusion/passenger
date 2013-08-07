@@ -269,15 +269,16 @@ private:
 		switch (exceptionHandlingMode) {
 		case THROW:
 			throw e;
-		case PRINT:
-			try {
-				const tracable_exception &te =
-					dynamic_cast<const tracable_exception &>(e);
-				P_WARN(te.what() << "\n" << te.backtrace());
-			} catch (const bad_cast &) {
-				P_WARN(e.what());
+		case PRINT: {
+				const tracable_exception *te =
+					dynamic_cast<const tracable_exception *>(&e);
+				if (te != NULL) {
+					P_WARN(te->what() << "\n" << te->backtrace());
+				} else {
+					P_WARN(e.what());
+				}
+				break;
 			}
-			break;
 		default:
 			break;
 		}
@@ -587,12 +588,7 @@ private:
 
 	template<typename T>
 	static bool instanceof(const std::exception &e) {
-		try {
-			(void) dynamic_cast<const T &>(e);
-			return true;
-		} catch (const bad_cast &) {
-			return false;
-		}
+		return dynamic_cast<const T *>(&e) != NULL;
 	}
 	
 	ConnectionPtr createNewConnection() {
