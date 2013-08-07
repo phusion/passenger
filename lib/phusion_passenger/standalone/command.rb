@@ -205,6 +205,7 @@ private
 			f.puts "rubylibdir=#{PhusionPassenger.ruby_libdir}"
 			f.puts "apache2_module=#{PhusionPassenger.apache2_module_path}"
 			f.puts "ruby_extension_source=#{PhusionPassenger.ruby_extension_source_dir}"
+			f.puts "nginx_module_source=#{PhusionPassenger.nginx_module_source_dir}"
 		end
 		puts File.read(location_config_filename) if debugging?
 		
