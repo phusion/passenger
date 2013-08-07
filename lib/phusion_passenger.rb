@@ -96,7 +96,6 @@ module PhusionPassenger
 			@ruby_extension_source_dir = get_option(filename, options, 'ruby_extension_source').freeze
 			@nginx_module_source_dir = get_option(filename, options, 'nginx_module_source').freeze
 		else
-			@source_root           = File.dirname(File.dirname(FILE_LOCATION))
 			@natively_packaged     = false
 			@bin_dir               = "#{@source_root}/bin".freeze
 			@agents_dir            = "#{@source_root}/buildout/agents".freeze
@@ -109,6 +108,7 @@ module PhusionPassenger
 			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
 			@nginx_module_source_dir   = "#{@source_root}/ext/nginx"
 		end
+		@source_root           = File.dirname(File.dirname(FILE_LOCATION))
 	end
 	
 	# Returns whether this Phusion Passenger installation is in the 'originally packaged'
