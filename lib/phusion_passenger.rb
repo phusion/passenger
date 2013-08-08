@@ -60,6 +60,25 @@ module PhusionPassenger
 	
 	# System-wide directory for storing Phusion Passenger Standalone runtime files.
 	GLOBAL_STANDALONE_RESOURCE_DIR = "/var/lib/#{GLOBAL_STANDALONE_NAMESPACE_DIRNAME}".freeze
+
+	REQUIRED_LOCATIONS_INI_FIELDS = [
+		:bin_dir,
+		:agents_dir,
+		:lib_dir,
+		:helper_scripts_dir,
+		:resources_dir,
+		:include_dir,
+		:doc_dir,
+		:ruby_libdir,
+		:apache2_module_path,
+		:ruby_extension_source_dir,
+		:nginx_module_source_dir
+	].freeze
+	OPTIONAL_LOCATIONS_INI_FIELDS = [
+		# Directory in which downloaded Phusion Passenger binaries are stored.
+		# Only available when originally packaged.
+		:download_cache_dir
+	].freeze
 	
 	# Follows the logic of ext/common/ResourceLocator.h, so don't forget to modify that too.
 	def self.locate_directories(source_root_or_location_configuration_file = nil)
@@ -68,34 +87,15 @@ module PhusionPassenger
 		
 		if root_or_file && File.file?(root_or_file)
 			filename = root_or_file
-			options  = {}
-			in_locations_section = false
-			File.open(filename, 'r') do |f|
-				while !f.eof?
-					line = f.readline
-					line.strip!
-					next if line.empty?
-					if line =~ /\A\[(.+)\]\Z/
-						in_locations_section = $1 == 'locations'
-					elsif in_locations_section && line =~ /=/
-						key, value = line.split(/ *= */, 2)
-						options[key.freeze] = value.freeze
-					end
-				end
-			end
+			options  = parse_ini_file(filename)
 			
 			@natively_packaged     = get_bool_option(filename, options, 'natively_packaged')
-			@bin_dir               = get_option(filename, options, 'bin').freeze
-			@agents_dir            = get_option(filename, options, 'agents').freeze
-			@lib_dir               = get_option(filename, options, 'libdir').freeze
-			@helper_scripts_dir    = get_option(filename, options, 'helper_scripts').freeze
-			@resources_dir         = get_option(filename, options, 'resources').freeze
-			@include_dir           = get_option(filename, options, 'includedir').freeze
-			@doc_dir               = get_option(filename, options, 'doc').freeze
-			@apache2_module_path   = get_option(filename, options, 'apache2_module').freeze
-			@ruby_extension_source_dir = get_option(filename, options, 'ruby_extension_source').freeze
-			@nginx_module_source_dir = get_option(filename, options, 'nginx_module_source').freeze
-			@download_cache_dir    = get_option(filename, options, 'download_cache_dir', false).freeze
+			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
+				instance_variable_set("@#{field}", get_option(filename, options, field.to_s).freeze)
+			end
+			OPTIONAL_LOCATIONS_INI_FIELDS.each do |field|
+				instance_variable_set("@#{field}", get_option(filename, options, field.to_s, false).freeze)
+			end
 		else
 			@source_root           = File.dirname(File.dirname(FILE_LOCATION))
 			@natively_packaged     = false
@@ -106,10 +106,16 @@ module PhusionPassenger
 			@resources_dir         = "#{@source_root}/resources".freeze
 			@include_dir           = "#{@source_root}/ext".freeze
 			@doc_dir               = "#{@source_root}/doc".freeze
+			@ruby_libdir           = File.dirname(FILE_LOCATION)
 			@apache2_module_path   = "#{@source_root}/buildout/apache2/mod_passenger.so".freeze
 			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
 			@nginx_module_source_dir   = "#{@source_root}/ext/nginx"
 			@download_cache_dir    = "#{@source_root}/download_cache"
+			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
+				if instance_variable_get("@#{field}").nil?
+					raise "BUG: @#{field} not set"
+				end
+			end
 		end
 	end
 	
@@ -128,56 +134,18 @@ module PhusionPassenger
 	def self.source_root
 		return @source_root
 	end
-	
-	def self.bin_dir
-		return @bin_dir
-	end
-	
-	def self.agents_dir
-		return @agents_dir
-	end
 
-	def self.lib_dir
-		return @lib_dir
+	# Generate getters for the directory types in locations.ini.
+	getters_code = ""
+	@ruby_libdir = File.dirname(FILE_LOCATION)
+	(REQUIRED_LOCATIONS_INI_FIELDS + OPTIONAL_LOCATIONS_INI_FIELDS).each do |field|
+		getters_code << %Q{
+			def self.#{field}
+				return @#{field}
+			end
+		}
 	end
-	
-	def self.helper_scripts_dir
-		return @helper_scripts_dir
-	end
-	
-	def self.resources_dir
-		return @resources_dir
-	end
-
-	def self.include_dir
-		return @include_dir
-	end
-	
-	def self.doc_dir
-		return @doc_dir
-	end
-	
-	def self.ruby_libdir
-		@libdir ||= File.dirname(FILE_LOCATION)
-	end
-	
-	def self.apache2_module_path
-		return @apache2_module_path
-	end
-
-	def self.ruby_extension_source_dir
-		return @ruby_extension_source_dir
-	end
-
-	def self.nginx_module_source_dir
-		return @nginx_module_source_dir
-	end
-
-	# Directory in which downloaded Phusion Passenger binaries are stored.
-	# Only available when originally packaged.
-	def self.download_cache_dir
-		return @download_cache_dir
-	end
+	eval(getters_code, binding, __FILE__, __LINE__)
 	
 	
 	###### Other resource locations ######
@@ -219,6 +187,25 @@ private
 		return filename if File.exist?(filename)
 
 		return nil
+	end
+
+	def self.parse_ini_file(filename)
+		options  = {}
+		in_locations_section = false
+		File.open(filename, 'r') do |f|
+			while !f.eof?
+				line = f.readline
+				line.strip!
+				next if line.empty?
+				if line =~ /\A\[(.+)\]\Z/
+					in_locations_section = $1 == 'locations'
+				elsif in_locations_section && line =~ /=/
+					key, value = line.split(/ *= */, 2)
+					options[key.freeze] = value.freeze
+				end
+			end
+		end
+		return options
 	end
 
 	def self.get_option(filename, options, key, required = true)

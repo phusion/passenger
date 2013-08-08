@@ -90,17 +90,17 @@ The location configuration file is an ini file that looks as follows:
 
     [locations]
     natively_packaged=true
-    bin=/usr/bin
-    agents=/usr/lib/phusion-passenger/agents
-    libdir=/usr/lib/phusion-passenger
-    helper_scripts=/usr/share/phusion-passenger/helper-scripts
-    resources=/usr/share/phusion-passenger
-    includedir=/usr/share/phusion-passenger/include
-    doc=/usr/share/doc/phusion-passenger
-    rubylibdir=/usr/lib/ruby/vendor_ruby
-    apache2_module=/usr/lib/apache2/modules/mod_passenger.so
-    ruby_extension_source=/usr/share/phusion-passenger/ruby_extension_source
-    nginx_module_source=/usr/share/phusion-passenger/ngx_http_passenger_module
+    bin_dir=/usr/bin
+    agents_dir=/usr/lib/phusion-passenger/agents
+    lib_dir=/usr/lib/phusion-passenger
+    helper_scripts_dir=/usr/share/phusion-passenger/helper-scripts
+    resources_dir=/usr/share/phusion-passenger
+    include_dir=/usr/share/phusion-passenger/include
+    doc_dir=/usr/share/doc/phusion-passenger
+    ruby_libdir=/usr/lib/ruby/vendor_ruby
+    apache2_module_path=/usr/lib/apache2/modules/mod_passenger.so
+    ruby_extension_source_dir=/usr/share/phusion-passenger/ruby_extension_source
+    nginx_module_source_dir=/usr/share/phusion-passenger/ngx_http_passenger_module
 
 All keys except fo `natively_packaged` specify the locations of assets and asset
 directories. The "Asset types" section provides a description of all asset types.
@@ -163,14 +163,14 @@ a list of all possible assets and asset directories.
    that contains the entire Phusion passenger source tree. Not available when
    natively packaged.
 
- * `bin`
+ * `bin_dir`
 
    A directory containing administration binaries and scripts and like
    `passenger-status`; tools that the user may directly invoke on the command line.
 
    Value when originally packaged: `<SOURCE_ROOT>/bin`
 
- * `agents`
+ * `agents_dir`
 
    A directory that contains (platform-dependent) binaries that Phusion Passenger
    uses, but that should not be directly invoked from the command line. Things like
@@ -180,7 +180,7 @@ a list of all possible assets and asset directories.
    - Normally: `<SOURCE_ROOT>/buildout/agents`
    - Passenger Standalone: `~/.passenger/standalone/<VERSION>/support-<ARCH>`
 
- * `helper_scripts`
+ * `helper_scripts_dir`
 
    A directory that contains non-binary scripts that Phusion Passenger uses, but
    that should not be directly invoked from the command line. Things like
@@ -188,7 +188,7 @@ a list of all possible assets and asset directories.
 
    Value when originally packaged: `<SOURCE_ROOT>/helper-scripts`
 
- * `resources`
+ * `resources_dir`
 
    A directory that contains non-executable, platform-independent resource files
    that the user should not directly access, like error page templates and
@@ -196,27 +196,27 @@ a list of all possible assets and asset directories.
 
    Value when originally packaged: `<SOURCE_ROOT>/resources`.
 
- * `doc`
+ * `doc_dir`
 
    A directory that contains documentation.
 
    Value when originally packaged: `<SOURCE_ROOT>/doc`.
 
- * `includedir`
+ * `include_dir`
 
    A directory that contains the Phusion Passenger header files that are
    necessary for compiling Nginx.
 
    Value when originally packaged: `<SOURCE_ROOT>/ext`
 
- * `libdir`
+ * `lib_dir`
 
    A directory that contains the Phusion Passenger library files, e.g.
    libboost_oxt.a and various .o files.
 
    Value when originally packaged: `<SOURCE_ROOT>/buildout`
 
- * `rubylibdir`
+ * `ruby_libdir`
 
    A directory that contains the Phusion Passenger Ruby library files. Note that
    the Phusion Passenger administration tools still locate phusion_passenger.rb
@@ -226,7 +226,7 @@ a list of all possible assets and asset directories.
 
    Value when originally packaged: `<SOURCE_ROOT>/lib`.
 
- * `apache2_module`
+ * `apache2_module_path`
 
    The filename of the Apache 2 module, or the filename that the Apache 2 module
    will be stored after it's compiled. Used by `passenger-install-module` to
@@ -234,7 +234,7 @@ a list of all possible assets and asset directories.
 
    Value when originally packaged: `<SOURCE_ROOT>/buildout/apache2/mod_passenger.so`.
 
- * `ruby_extension_source`
+ * `ruby_extension_source_dir`
 
    The directory that contains the source code for the Phusion Passenger Ruby
    extension. Phusion Passenger uses these sources to build a Ruby extension,
@@ -243,7 +243,7 @@ a list of all possible assets and asset directories.
 
    Value when originally packaged: `<SOURCE_ROOT>/ext/ruby`.
 
- * `nginx_module_source`
+ * `nginx_module_source_dir`
 
    The directory that contains the source code for the Phusion Passenger Nginx
    module. passenger-install-nginx-module uses these sources to build Nginx

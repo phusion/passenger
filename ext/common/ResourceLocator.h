@@ -67,12 +67,12 @@ public:
 		if (getFileType(rootOrFile) == FT_REGULAR) {
 			string file = rootOrFile;
 			IniFileSectionPtr options = IniFile(file).section("locations");
-			binDir              = getOption(file, options, "bin");
-			agentsDir           = getOption(file, options, "agents");
-			helperScriptsDir    = getOption(file, options, "helper_scripts");
-			resourcesDir        = getOption(file, options, "resources");
-			docDir              = getOption(file, options, "doc");
-			rubyLibDir          = getOption(file, options, "rubylibdir");
+			binDir              = getOption(file, options, "bin_dir");
+			agentsDir           = getOption(file, options, "agents_dir");
+			helperScriptsDir    = getOption(file, options, "helper_scripts_dir");
+			resourcesDir        = getOption(file, options, "resources_dir");
+			docDir              = getOption(file, options, "doc_dir");
+			rubyLibDir          = getOption(file, options, "ruby_libdir");
 		} else {
 			string root = rootOrFile;
 			binDir              = root + "/bin";

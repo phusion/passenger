@@ -187,26 +187,23 @@ private
 		@config_filename = "#{@temp_dir}/config"
 		location_config_filename = "#{@temp_dir}/locations.ini"
 		File.chmod(0755, @temp_dir)
+
+		locations_ini_fields =
+			PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS +
+			PhusionPassenger::OPTIONAL_LOCATIONS_INI_FIELDS -
+			[:agents_dir]
 		
 		File.open(location_config_filename, 'w') do |f|
 			f.puts '[locations]'
 			f.puts "natively_packaged=false"
-			f.puts "bin=#{PhusionPassenger.bin_dir}"
 			if debugging?
-				f.puts "agents=#{PhusionPassenger.agents_dir}"
+				f.puts "agents_dir=#{PhusionPassenger.agents_dir}"
 			else
-				f.puts "agents=#{@runtime_dirs[:support_dir]}/agents"
+				f.puts "agents_dir=#{@runtime_dirs[:support_dir]}/agents"
 			end
-			f.puts "libdir=#{PhusionPassenger.lib_dir}"
-			f.puts "helper_scripts=#{PhusionPassenger.helper_scripts_dir}"
-			f.puts "resources=#{PhusionPassenger.resources_dir}"
-			f.puts "includedir=#{PhusionPassenger.include_dir}"
-			f.puts "doc=#{PhusionPassenger.doc_dir}"
-			f.puts "rubylibdir=#{PhusionPassenger.ruby_libdir}"
-			f.puts "apache2_module=#{PhusionPassenger.apache2_module_path}"
-			f.puts "ruby_extension_source=#{PhusionPassenger.ruby_extension_source_dir}"
-			f.puts "nginx_module_source=#{PhusionPassenger.nginx_module_source_dir}"
-			f.puts "download_cache_dir=#{PhusionPassenger.download_cache_dir}"
+			locations_ini_fields.each do |field|
+				f.puts "#{field}=#{PhusionPassenger.send(field)}"
+			end
 		end
 		puts File.read(location_config_filename) if debugging?
 		
