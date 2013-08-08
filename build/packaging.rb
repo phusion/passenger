@@ -49,8 +49,12 @@ end
 
 task :clobber => 'package:clean'
 
+task 'package:set_official' do
+	ENV['OFFICIAL_RELEASE'] = '1'
+end
+
 desc "Build, sign & upload gem & tarball"
-task 'package:release' => ['package:gem', 'package:tarball', 'package:sign'] do
+task 'package:release' => ['package:set_official', 'package:gem', 'package:tarball', 'package:sign'] do
 	require 'phusion_passenger'
 	require 'yaml'
 	require 'uri'
@@ -119,7 +123,20 @@ end
 
 task 'package:gem' => Packaging::PREGENERATED_FILES do
 	require 'phusion_passenger'
-	sh "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec --sign --key 0x0A212A8C"
+	if ENV['OFFICIAL_RELEASE']
+		release_file = "#{PhusionPassenger.resources_dir}/release.txt"
+		File.unlink(release_file) rescue nil
+	end
+	begin
+		if release_file
+			File.open(release_file, "w").close
+		end
+		sh "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec --sign --key 0x0A212A8C"
+	ensure
+		if release_file
+			File.unlink(release_file) rescue nil
+		end
+	end
 	sh "mkdir -p pkg"
 	sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem pkg/"
 end
@@ -132,6 +149,9 @@ task 'package:tarball' => Packaging::PREGENERATED_FILES do
 	sh "rm -rf pkg/#{basename}"
 	sh "mkdir -p pkg/#{basename}"
 	recursive_copy_files(ORIG_TARBALL_FILES.call, "pkg/#{basename}")
+	if ENV['OFFICIAL_RELEASE']
+		File.open("pkg/#{basename}/resources/release.txt", "w").close
+	end
 	sh "cd pkg && tar -c #{basename} | gzip --best > #{basename}.tar.gz"
 	sh "rm -rf pkg/#{basename}"
 end

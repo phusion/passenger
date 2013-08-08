@@ -26,6 +26,7 @@ override_dh_auto_install:
 	cp -a pkg/fakeroot1.9.1/* debian/tmp/
 	# Do not package Passenger Standalone.
 	rm -rf debian/tmp/usr/bin/passenger
+	touch debian/tmp/usr/share/passenger/release.txt
 
 override_dh_auto_clean:
 	/usr/bin/rake clean CLEAN_DOCS=false

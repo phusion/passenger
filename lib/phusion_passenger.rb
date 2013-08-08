@@ -129,6 +129,14 @@ module PhusionPassenger
 		return @natively_packaged
 	end
 
+	# Whether the current Phusion Passenger installation is installed
+	# from a release package, e.g. an official gem or official tarball.
+	# Retruns false if e.g. the gem was built by the user, or if this
+	# install is from a git repository.
+	def self.installed_from_release_package?
+		File.exist?("#{resources_dir}/release.txt")
+	end
+
 	# When originally packaged, returns the source root.
 	# When natively packaged, returns the location of the location configuration file.
 	def self.source_root

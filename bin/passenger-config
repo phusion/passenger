@@ -41,6 +41,7 @@ def help
 	puts "  --nginx-libs               Show Nginx runtime library flags."
 	puts "  --compiled                 Check whether runtime libraries are compiled."
 	puts "  --natively-packaged        Check whether Phusion Passenger is natively packged."
+	puts "  --installed-from-release-package  Check whether this installation came from an official release package."
 	puts "  --detect-apache2           Autodetect Apache installations."
 	puts "  --ruby-command             Print the correct command for invoking the Ruby interpreter."
 	puts "  --rubyext-compat-id        Print the Ruby extension binary compatibility ID."
@@ -81,6 +82,12 @@ when "--compiled"
 	end
 when "--natively-packaged"
 	if PhusionPassenger.natively_packaged?
+		exit 0
+	else
+		exit 1
+	end
+when "--installed-from-release-package"
+	if PhusionPassenger.installed_from_release_package?
 		exit 0
 	else
 		exit 1

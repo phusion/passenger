@@ -122,6 +122,10 @@ describe "A natively packaged Phusion Passenger" do
 			system("passenger-config --natively-packaged").should be_true
 		end
 
+		it "recognizes the install as coming from an official package" do
+			system("passenger-config --installed-from-release-package").should be_true
+		end
+
 		it "shows the directory to the runtime library headers" do
 			capture_output("passenger-config --includedir").should == INCLUDEDIR
 		end

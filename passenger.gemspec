@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
 	s.description = "A modern web server and application server for Ruby, Python and Node.js, " +
 		"optimized for performance, low memory usage and ease of use."
 
-	if ENV['WITH_DOWNLOADER']
+	if ENV['OFFICIAL_RELEASE']
 		s.extensions = ["helper-scripts/download_binaries/extconf.rb"]
 	end
 end
