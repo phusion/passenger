@@ -42,7 +42,7 @@ if PhusionPassenger.natively_packaged?
 	puts "Binary downloading is only available when originally packaged. Stopping."
 	exit 0
 end
-if PhusionPassenger.installed_from_release_package?
+if !PhusionPassenger.installed_from_release_package?
 	puts "This Phusion Passenger is not installed from an official release package. Stopping."
 	exit 0
 end
