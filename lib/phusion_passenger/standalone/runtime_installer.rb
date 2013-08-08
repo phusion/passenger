@@ -233,7 +233,9 @@ private
 	end
 	
 	def should_download_binaries?
-		return @download_binaries && @binaries_url_root
+		return PhusionPassenger.installed_from_release_package? &&
+			@download_binaries &&
+			@binaries_url_root
 	end
 	
 	def show_welcome_screen
