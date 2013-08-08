@@ -397,7 +397,7 @@ private
 		basename = "support-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
 		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
-		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path)
+		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
 			puts "<b>Looks like it's not. But don't worry, the " +
 				"necessary binaries will be compiled from source instead.</b>"
 			return nil
@@ -416,7 +416,7 @@ private
 		basename = "rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}.tar.gz"
 		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
-		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path)
+		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
 			puts "<b>Looks like it's not. But don't worry, the " +
 				"necessary binaries will be compiled from source instead.</b>"
 			return nil
@@ -435,7 +435,7 @@ private
 		basename = "nginx-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
 		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
-		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path)
+		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
 			puts "<b>Looks like it's not. But don't worry, the " +
 				"necessary binaries will be compiled from source instead.</b>"
 			return nil
