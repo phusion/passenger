@@ -337,11 +337,18 @@ protected
 		sh!("#{PlatformInfo.rake_command} #{args.join(' ')}")
 	end
 	
-	def download(url, output)
+	def download(url, output, options = {})
+		args = []
 		if PlatformInfo.find_command("wget")
-			return sh("wget", "--tries=3", "-O", output, url)
+			if options[:cacert]
+				args << "--ca-certificate=#{options[:cacert]}"
+			end
+			return sh("wget", "--tries=3", "-O", output, url, *args)
 		else
-			return sh("curl", url, "-f", "-L", "-o", output)
+			if options[:cacert]
+				args << "--cacert=#{options[:cacert]}"
+			end
+			return sh("curl", url, "-f", "-L", "-o", output, *args)
 		end
 	end
 end

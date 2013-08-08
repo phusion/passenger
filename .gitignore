@@ -46,6 +46,7 @@ ext/*.a
 doc/rdoc
 doc/cxxapi
 doc/*.html
+helper-scripts/download_binaries/Makefile
 test/.gdbinit
 test/test.log
 test/apache2.log

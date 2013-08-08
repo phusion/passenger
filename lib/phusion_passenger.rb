@@ -95,6 +95,7 @@ module PhusionPassenger
 			@apache2_module_path   = get_option(filename, options, 'apache2_module').freeze
 			@ruby_extension_source_dir = get_option(filename, options, 'ruby_extension_source').freeze
 			@nginx_module_source_dir = get_option(filename, options, 'nginx_module_source').freeze
+			@download_cache_dir    = get_option(filename, options, 'download_cache_dir', false).freeze
 		else
 			@source_root           = File.dirname(File.dirname(FILE_LOCATION))
 			@natively_packaged     = false
@@ -108,6 +109,7 @@ module PhusionPassenger
 			@apache2_module_path   = "#{@source_root}/buildout/apache2/mod_passenger.so".freeze
 			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
 			@nginx_module_source_dir   = "#{@source_root}/ext/nginx"
+			@download_cache_dir    = "#{@source_root}/download_cache"
 		end
 	end
 	
@@ -170,11 +172,21 @@ module PhusionPassenger
 	def self.nginx_module_source_dir
 		return @nginx_module_source_dir
 	end
+
+	# Directory in which downloaded Phusion Passenger binaries are stored.
+	# Only available when originally packaged.
+	def self.download_cache_dir
+		return @download_cache_dir
+	end
 	
 	
 	###### Other resource locations ######
 	
-	STANDALONE_BINARIES_URL_ROOT  = "http://standalone-binaries.modrails.com"
+	BINARIES_URL_ROOT  = "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release/"
+
+	def self.binaries_ca_cert_path
+		return "#{resources_dir}/oss-binaries.phusionpassenger.com.crt"
+	end
 	
 	
 	if !$LOAD_PATH.include?(ruby_libdir)

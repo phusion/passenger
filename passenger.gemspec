@@ -23,4 +23,8 @@ Gem::Specification.new do |s|
 		PhusionPassenger::Packaging::SUPER_USER_EXECUTABLES
 	s.description = "A modern web server and application server for Ruby, Python and Node.js, " +
 		"optimized for performance, low memory usage and ease of use."
+
+	if ENV['WITH_DOWNLOADER']
+		s.extensions = ["helper-scripts/download_binaries/extconf.rb"]
+	end
 end
