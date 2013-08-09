@@ -313,7 +313,6 @@ create_request(ngx_http_request_t *r)
     int                            server_name_len;
     ngx_str_t                      escaped_uri;
     ngx_str_t                     *union_station_filters = NULL;
-    u_char                        *end;
     void                          *tmp;
     ngx_uint_t                     i, n;
     ngx_buf_t                     *b;
