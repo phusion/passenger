@@ -1,14 +1,9 @@
-Release 4.0.12
+Release 4.0.13
 --------------
 
  * Worked around the fact that FreeBSD 9.1 has a broken C++ runtime. Patch
    contributed by David Keller.
  * Fixed compatibility problems with Ruby 1.8.6 (issue #924).
-
-
-Release 4.0.11
---------------
-
  * Introduced a tool, `passenger-config --detect-apache2`, which autodetects
    all Apache installations on the system along with their parameters (which
    apachectl command to run, which log file to read, which config file to edit).
