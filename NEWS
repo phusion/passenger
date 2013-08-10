@@ -13,6 +13,7 @@ Release 4.0.13
    installations.
  * Added a hidden configuration option for customizing the application start
    timeout. A proper configuration option will be introduced in the future.
+ * Added autodetection support for Amazon Linux.
 
 
 Release 4.0.10

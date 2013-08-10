@@ -62,6 +62,13 @@ module PlatformInfo
 				# "Red Hat Enterprise Linux Server release 5.1 (Tikanga)"
 				return [:rhel, :redhat]
 			end
+		elsif File.exist?("/etc/system-release")
+			system_release = read_file("/etc/system-release")
+			if system_release =~ /Amazon Linux/
+				return [:amazon, :redhat]
+			else
+				return [:unknown]
+			end
 		elsif File.exist?("/etc/suse-release")
 			return [:suse]
 		elsif File.exist?("/etc/gentoo-release")
