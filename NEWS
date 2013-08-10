@@ -1,6 +1,7 @@
 Release 4.0.13
 --------------
 
+ * Updated preferred Nginx version to 1.4.2.
  * Worked around the fact that FreeBSD 9.1 has a broken C++ runtime. Patch
    contributed by David Keller.
  * Fixed compatibility problems with Ruby 1.8.6 (issue #924).
