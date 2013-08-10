@@ -170,7 +170,7 @@ module PlatformInfo
 				end
 				# The Apache config file supports environment variable
 				# substitution. Ubuntu uses this extensively.
-				filename.gsub!(/\${(.+?)}/) do |varname|
+				filename.gsub!(/\$\{(.+?)\}/) do |varname|
 					if value = httpd_infer_envvar($1, options)
 						log "Substituted \"#{varname}\" -> \"#{value}\""
 						value
