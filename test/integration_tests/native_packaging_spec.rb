@@ -22,6 +22,13 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+# To run the native packaging tests:
+#     rake debian:dev
+#     sudo apt-get remove ruby-passenger ruby-passenger-dev ruby-passenger-doc libapache2-mod-passenger
+#     sudo gdebi pkg/ruby-passenger_*.deb pkg/libapache2-mod-passenger_*.deb
+#     rvmsudo env LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
+#         rspec -f s -c test/integration_tests/native_packaging_spec.rb
+
 # Ensure that the natively installed tools are in PATH.
 ENV['PATH'] = "/usr/bin:#{ENV['PATH']}"
 LOCATIONS_INI = ENV['LOCATIONS_INI']
@@ -129,13 +136,12 @@ describe "A natively packaged Phusion Passenger" do
 		it "recognizes the system's Apache" do
 			output = capture_output("passenger-config --detect-apache2")
 			output.gsub!(/.*Final autodetection results\n/m, '')
-			output.scan(/\* Found Apache \(.*\)\!/).size.should == 1
-			output.should include(%Q{
-      apxs2          : /usr/sbin/apxs
-      Main executable: /usr/sbin/apache2
-      Control command: /usr/sbin/apache2ctl
-      Config file    : /etc/apache2/apache2.conf
-      Error log file : /var/log/apache2/error.log})
+			output.scan(/\* Found Apache .*\!/).size.should == 1
+			output.should include("apxs2          : /usr/bin/apxs2\n")
+			output.should include("Main executable: /usr/sbin/apache2\n")
+			output.should include("Control command: /usr/sbin/apache2ctl\n")
+			output.should include("Config file    : /etc/apache2/apache2.conf\n")
+			output.should include("Error log file : /var/log/apache2/error.log\n")
 			output.should include(%Q{
    To start, stop or restart this specific Apache version:
       /usr/sbin/apache2ctl start
