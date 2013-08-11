@@ -36,10 +36,6 @@ Listen 127.0.0.1:<%= @port %>
 	<% end %>
 <% end %>
 
-<% if !has_builtin_module?('mod_env.c') %>
-	LoadModule env_module "<%= modules_dir %>/mod_env.so"
-<% end %>
-
 <% if !has_builtin_module?('prefork.c') &&
       !has_builtin_module?('worker.c') &&
       !has_builtin_module?('event.c') %>  
