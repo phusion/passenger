@@ -25,6 +25,9 @@ ORIG_TARBALL_FILES = lambda { PhusionPassenger::Packaging.files }
 
 def recursive_copy_files(files, destination_dir, preprocess = false, variables = {})
 	require 'fileutils' if !defined?(FileUtils)
+	if !STDOUT.tty?
+		puts "Copying files..."
+	end
 	files.each_with_index do |filename, i|
 		dir = File.dirname(filename)
 		if !File.exist?("#{destination_dir}/#{dir}")
@@ -40,10 +43,14 @@ def recursive_copy_files(files, destination_dir, preprocess = false, variables =
 				FileUtils.install(filename, "#{destination_dir}/#{filename}", :preserve => true)
 			end
 		end
-		printf "\r[%5d/%5d] [%3.0f%%] Copying files...", i + 1, files.size, i * 100.0 / files.size
-		STDOUT.flush
+		if STDOUT.tty?
+			printf "\r[%5d/%5d] [%3.0f%%] Copying files...", i + 1, files.size, i * 100.0 / files.size
+			STDOUT.flush
+		end
 	end
-	printf "\r[%5d/%5d] [%3.0f%%] Copying files...\n", files.size, files.size, 100
+	if STDOUT.tty?
+		printf "\r[%5d/%5d] [%3.0f%%] Copying files...\n", files.size, files.size, 100
+	end
 end
 
 
