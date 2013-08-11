@@ -408,7 +408,7 @@ describe "Apache 2 module" do
 		end
 	end
 	
-	describe "HelperServer" do
+	describe "HelperAgent" do
 		AdminTools = PhusionPassenger::AdminTools
 		
 		before :all do
