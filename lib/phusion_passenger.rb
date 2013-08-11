@@ -187,7 +187,7 @@ private
 			home_dir = ENV['HOME']
 		end
 		if home_dir && !home_dir.empty?
-			filename = "#{home_dir}/.passenger/locations.ini"
+			filename = "#{home_dir}/#{USER_NAMESPACE_DIRNAME}/locations.ini"
 			return filename if File.exist?(filename)
 		end
 

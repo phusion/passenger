@@ -1,0 +1,12 @@
+usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/agents/
+usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/helper-scripts/
+usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/templates/
+usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/standalone_default_root/
+usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/ruby_extension_source/
+usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/*.types
+usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/*.crt
+usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/*.txt
+usr/lib/ruby/
+debian/locations.ini usr/lib/ruby/vendor_ruby/phusion_passenger/
+usr/sbin/
+usr/bin/

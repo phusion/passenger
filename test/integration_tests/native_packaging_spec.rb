@@ -32,14 +32,18 @@ ENV['PATH'] = "/usr/bin:#{ENV['PATH']}"
 LOCATIONS_INI = ENV['LOCATIONS_INI']
 abort "Please set the LOCATIONS_INI environment variable to the right locations.ini" if !LOCATIONS_INI
 
+source_root = File.expand_path("../..", File.dirname(__FILE__))
+$LOAD_PATH.unshift("#{source_root}/lib")
+require 'phusion_passenger'
+
 BINDIR = "/usr/bin"
 SBINDIR = "/usr/sbin"
-INCLUDEDIR = "/usr/share/passenger/include"
-NGINX_ADDON_DIR = "/usr/share/passenger/ngx_http_passenger_module"
+INCLUDEDIR = "/usr/share/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}/include"
+NGINX_ADDON_DIR = "/usr/share/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}/ngx_http_passenger_module"
 DOCDIR = "/usr/share/doc/ruby-passenger"
-RESOURCESDIR = "/usr/share/passenger"
-RUBY_EXTENSION_SOURCE_DIR = "/usr/share/passenger/ruby_extension_source"
-AGENTS_DIR = "/usr/lib/passenger/agents"
+RESOURCESDIR = "/usr/share/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}"
+RUBY_EXTENSION_SOURCE_DIR = "/usr/share/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
+AGENTS_DIR = "/usr/lib/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}/agents"
 APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
 
 describe "A natively packaged Phusion Passenger" do

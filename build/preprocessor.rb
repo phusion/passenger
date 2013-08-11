@@ -22,7 +22,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-# Implements a simple preprocessor language:
+# Implements a simple preprocessor language which combines elements in the C
+# preprocessor with ERB:
 # 
 #     Today
 #     #if @today == :fine
@@ -33,6 +34,7 @@
 #         is a sad day.
 #     #endif
 #     Let's go walking.
+#     Today is <%= Time.now %>.
 # 
 # When run with...
 # 
@@ -43,6 +45,7 @@
 #     Today
 #     is a fine day.
 #     Let's go walking.
+#     Today is 2013-08-11 22:37:06 +0200.
 # 
 # Highlights:
 # 
@@ -50,8 +53,10 @@
 #  * Expressions are Ruby expressions, evaluated within the binding of a
 #    Preprocessor::Evaluator object.
 #  * Text inside #if/#elif/#else are automatically unindented.
+#  * ERB compatible.
 class Preprocessor
 	def initialize
+		require 'erb' if !defined?(ERB)
 		@indentation_size = 4
 		@debug = boolean_option('DEBUG')
 	end
@@ -223,15 +228,13 @@ private
 	end
 
 	def each_line(filename)
-		File.open(filename, 'r') do |f|
-			while true
-				begin
-					line = f.readline.chomp
-				rescue EOFError
-					break
-				end
-				yield line
-			end
+		data = File.open(filename, 'r') do |f|
+			erb = ERB.new(f.read, nil, "-")
+			erb.filename = filename
+			erb.result(binding)
+		end
+		data.each_line do |line|
+			yield line.chomp
 		end
 	end
 	

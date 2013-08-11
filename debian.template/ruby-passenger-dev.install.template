@@ -1,0 +1,3 @@
+usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/ngx_http_passenger_module
+usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/include/
+usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/common/
