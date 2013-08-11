@@ -42,6 +42,7 @@ def help
 	puts "  --compiled                 Check whether runtime libraries are compiled."
 	puts "  --natively-packaged        Check whether Phusion Passenger is natively packged."
 	puts "  --installed-from-release-package  Check whether this installation came from an official release package."
+	puts "  --make-locations-ini       Generate a locations.ini based on the current install paths."
 	puts "  --detect-apache2           Autodetect Apache installations."
 	puts "  --ruby-command             Print the correct command for invoking the Ruby interpreter."
 	puts "  --rubyext-compat-id        Print the Ruby extension binary compatibility ID."
@@ -91,6 +92,12 @@ when "--installed-from-release-package"
 		exit 0
 	else
 		exit 1
+	end
+when "--make-locations-ini"
+	puts "[locations]"
+	puts "natively_packaged=true"
+	PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
+		puts "#{field}=#{PhusionPassenger.send(field)}"
 	end
 when "--detect-apache2"
 	require 'phusion_passenger/platform_info/apache_detector'
