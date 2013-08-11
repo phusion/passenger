@@ -91,6 +91,28 @@ task 'debian:dev' do
 	end
 end
 
+desc "(Re)install the Debian binary packages built for local testing"
+task 'debian:dev:reinstall' do
+	package_names = ["ruby-passenger", "ruby-passenger-dev",
+		"ruby-passenger-doc", "libapache2-mod-passenger"]
+	package_names.each do |name|
+		if Dir["#{PKG_DIR}/#{name}_*.deb"].size > 1
+			abort "Please ensure that #{PKG_DIR} only has 1 version of the Phusion Passenger packages."
+		end
+	end
+	package_names.each do |name|
+		if !system "sudo apt-get remove -y #{name}"
+			if !$? || $?.exitstatus != 100
+				abort
+			end
+		end
+	end
+	package_names.each do |name|
+		filename = Dir["#{PKG_DIR}/#{name}_*.deb"].first
+		sh "sudo gdebi -n #{filename}"
+	end
+end
+
 desc "Build Debian source packages to be uploaded to repositories"
 task 'debian:production' => 'debian:orig_tarball' do
 	if boolean_option('USE_CCACHE', false)

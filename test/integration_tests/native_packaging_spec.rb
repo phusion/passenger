@@ -23,9 +23,7 @@
 #  THE SOFTWARE.
 
 # To run the native packaging tests:
-#     rake debian:dev
-#     sudo apt-get remove ruby-passenger ruby-passenger-dev ruby-passenger-doc libapache2-mod-passenger
-#     sudo gdebi pkg/ruby-passenger_*.deb pkg/libapache2-mod-passenger_*.deb
+#     rake debian:dev debian:dev:reinstall
 #     rvmsudo env LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
 #         rspec -f s -c test/integration_tests/native_packaging_spec.rb
 
