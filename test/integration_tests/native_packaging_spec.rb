@@ -126,6 +126,26 @@ describe "A natively packaged Phusion Passenger" do
 			system("passenger-config --installed-from-release-package").should be_true
 		end
 
+		it "recognizes the system's Apache" do
+			output = capture_output("passenger-config --detect-apache2")
+			output.gsub!(/.*Final autodetection results\n/m, '')
+			output.scan(/\* Found Apache \(.*\)\!/).size.should == 1
+			output.should include(%Q{
+      apxs2          : /usr/sbin/apxs
+      Main executable: /usr/sbin/apache2
+      Control command: /usr/sbin/apache2ctl
+      Config file    : /etc/apache2/apache2.conf
+      Error log file : /var/log/apache2/error.log})
+			output.should include(%Q{
+   To start, stop or restart this specific Apache version:
+      /usr/sbin/apache2ctl start
+      /usr/sbin/apache2ctl stop
+      /usr/sbin/apache2ctl restart})
+			output.should include(%Q{
+   To troubleshoot, please read the logs in this file:
+      /var/log/apache2/error.log})
+		end
+
 		it "shows the directory to the runtime library headers" do
 			capture_output("passenger-config --includedir").should == INCLUDEDIR
 		end
