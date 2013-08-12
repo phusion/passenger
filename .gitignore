@@ -40,6 +40,8 @@ ext/libeio/Makefile
 ext/libeio/config.h
 ext/libeio/config.log
 ext/libeio/config.status
+ext/libeio/eio.3
+ext/libeio/eio.pod
 ext/ruby/*/Makefile
 ext/ruby/*/mkmf.log
 ext/*.a
