@@ -32,6 +32,11 @@ require 'yaml'
 
 PACKAGE_NAME = PhusionPassenger::PACKAGE_NAME
 VERSION      = PhusionPassenger::VERSION_STRING
+if RUBY_PLATFORM =~ /linux/
+	TAR = "tar --warning=none"
+else
+	TAR = "tar"
+end
 
 def sh(*command)
 	if !system(*command)
@@ -95,11 +100,11 @@ describe "A user-generated gem" do
 			sh "mv #{PACKAGE_NAME}-#{VERSION}.gem #{@temp_dir}/"
 		end
 		Dir.chdir(@temp_dir) do
-			sh "tar xzf #{basename}.gem"
+			sh "#{TAR} -xf #{basename}.gem"
 			sh "mkdir #{basename}"
 			sh "gunzip metadata.gz"
 			Dir.chdir(basename) do
-				sh "tar xzf ../data.tar.gz"
+				sh "#{TAR} -xzf ../data.tar.gz"
 			end
 		end
 	end
@@ -109,8 +114,8 @@ describe "A user-generated gem" do
 		FileUtils.remove_entry_secure(@temp_dir)
 	end
 
-	it_should_behave_like "a proper package"
-	it_should_behave_like "a user-generated package"
+	it_behaves_like "a proper package"
+	it_behaves_like "a user-generated package"
 
 	it "doesn't invoke the binaries downloader upon gem installation" do
 		spec = YAML.load_file("#{@temp_dir}/metadata")
@@ -125,7 +130,7 @@ describe "A user-generated tarball" do
 		@pkg_contents_dir = "#{@temp_dir}/#{basename}"
 		sh "rake package:tarball"
 		Dir.chdir(@temp_dir) do
-			sh "tar xzf #{basename}.tar.gz"
+			sh "#{TAR} -xzf #{basename}.tar.gz"
 		end
 	end
 
@@ -134,8 +139,8 @@ describe "A user-generated tarball" do
 		FileUtils.remove_entry_secure(@temp_dir)
 	end
 
-	it_should_behave_like "a proper package"
-	it_should_behave_like "a user-generated package"
+	it_behaves_like "a proper package"
+	it_behaves_like "a user-generated package"
 end
 
 describe "An officially-generated gem" do
@@ -147,11 +152,11 @@ describe "An officially-generated gem" do
 			sh "rake package:set_official package:gem SKIP_SIGNING=1"
 		end
 		Dir.chdir(@temp_dir) do
-			sh "tar xzf #{basename}.gem"
+			sh "#{TAR} -xf #{basename}.gem"
 			sh "mkdir #{basename}"
 			sh "gunzip metadata.gz"
 			Dir.chdir(basename) do
-				sh "tar xzf ../data.tar.gz"
+				sh "#{TAR} -xzf ../data.tar.gz"
 			end
 		end
 	end
@@ -161,8 +166,8 @@ describe "An officially-generated gem" do
 		FileUtils.remove_entry_secure(@temp_dir)
 	end
 
-	it_should_behave_like "a proper package"
-	it_should_behave_like "an official package"
+	it_behaves_like "a proper package"
+	it_behaves_like "an official package"
 
 	it "invokes the binaries downloader upon gem installation" do
 		spec = YAML.load_file("#{@temp_dir}/metadata")
@@ -177,7 +182,7 @@ describe "An officially-generated tarball" do
 		@pkg_contents_dir = "#{@temp_dir}/#{basename}"
 		sh "rake package:set_official package:tarball"
 		Dir.chdir(@temp_dir) do
-			sh "tar xzf #{basename}.tar.gz"
+			sh "#{TAR} -xzf #{basename}.tar.gz"
 		end
 	end
 
@@ -186,6 +191,6 @@ describe "An officially-generated tarball" do
 		FileUtils.remove_entry_secure(@temp_dir)
 	end
 
-	it_should_behave_like "a proper package"
-	it_should_behave_like "an official package"
+	it_behaves_like "a proper package"
+	it_behaves_like "an official package"
 end
