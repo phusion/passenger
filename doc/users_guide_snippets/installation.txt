@@ -82,7 +82,7 @@ gem install passenger-enterprise-server-x.x.x.gem
 [float]
 ==== Step 3: add the RubyGems bin directory to your $PATH
 
-If you all of the following are applicable to you:
+If all of the following are applicable to you:
 
 - You are on Debian or Ubuntu,
 - and you installed RubyGems through APT,
