@@ -138,14 +138,18 @@ task 'package:gem' => Packaging::PREGENERATED_FILES do
 		if release_file
 			File.open(release_file, "w").close
 		end
-		sh "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec --sign --key 0x0A212A8C"
+		command = "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec"
+		if !boolean_option('SKIP_SIGNING')
+			command << " --sign --key 0x0A212A8C"
+		end
+		sh(command)
 	ensure
 		if release_file
 			File.unlink(release_file) rescue nil
 		end
 	end
-	sh "mkdir -p pkg"
-	sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem pkg/"
+	sh "mkdir -p #{PKG_DIR}"
+	sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem #{PKG_DIR}/"
 end
 
 task 'package:tarball' => Packaging::PREGENERATED_FILES do
@@ -153,14 +157,14 @@ task 'package:tarball' => Packaging::PREGENERATED_FILES do
 	require 'fileutils'
 
 	basename = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
-	sh "rm -rf pkg/#{basename}"
-	sh "mkdir -p pkg/#{basename}"
-	recursive_copy_files(ORIG_TARBALL_FILES.call, "pkg/#{basename}")
+	sh "rm -rf #{PKG_DIR}/#{basename}"
+	sh "mkdir -p #{PKG_DIR}/#{basename}"
+	recursive_copy_files(ORIG_TARBALL_FILES.call, "#{PKG_DIR}/#{basename}")
 	if ENV['OFFICIAL_RELEASE']
-		File.open("pkg/#{basename}/resources/release.txt", "w").close
+		File.open("#{PKG_DIR}/#{basename}/resources/release.txt", "w").close
 	end
-	sh "cd pkg && tar -c #{basename} | gzip --best > #{basename}.tar.gz"
-	sh "rm -rf pkg/#{basename}"
+	sh "cd #{PKG_DIR} && tar -c #{basename} | gzip --best > #{basename}.tar.gz"
+	sh "rm -rf #{PKG_DIR}/#{basename}"
 end
 
 task 'package:sign' do
