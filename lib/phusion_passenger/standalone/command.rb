@@ -196,11 +196,7 @@ private
 		File.open(location_config_filename, 'w') do |f|
 			f.puts '[locations]'
 			f.puts "natively_packaged=false"
-			if debugging?
-				f.puts "agents_dir=#{PhusionPassenger.agents_dir}"
-			else
-				f.puts "agents_dir=#{@runtime_dirs[:support_dir]}/agents"
-			end
+			f.puts "agents_dir=#{@runtime_locator.find_support_dir}/agents"
 			locations_ini_fields.each do |field|
 				f.puts "#{field}=#{PhusionPassenger.send(field)}"
 			end

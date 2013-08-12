@@ -28,6 +28,8 @@ end
 DEBUG = boolean_option('DEBUG')
 TEST_CLASSIC_RAILS = boolean_option('TEST_CLASSIC_RAILS', true)
 
+ENV.delete('PASSENGER_DEBUG')
+
 $LOAD_PATH.unshift("#{source_root}/lib")
 $LOAD_PATH.unshift("#{source_root}/test")
 
