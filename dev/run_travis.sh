@@ -78,11 +78,7 @@ if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev rubygems libev-dev gdebi-core \
 		source-highlight
 	run rake test:install_deps RAILS_BUNDLES=no
-	run rake debian:dev
-	run sudo gdebi -n pkg/ruby-passenger_*.deb
-	run sudo gdebi -n pkg/ruby-passenger-dev_*.deb
-	run sudo gdebi -n pkg/ruby-passenger-doc_*.deb
-	run sudo gdebi -n pkg/libapache2-mod-passenger_*.deb
+	run rake debian:dev debian:dev:reinstall
 	run rvmsudo env LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
 		rspec -f s -c test/integration_tests/native_packaging_spec.rb
 	run env PASSENGER_LOCATION_CONFIGURATION_FILE=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
