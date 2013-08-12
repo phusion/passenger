@@ -30,4 +30,5 @@ PhusionPassenger.locate_directories
 require 'rubygems' rescue nil
 require 'phusion_passenger/standalone/main'
 
+STDOUT.sync = STDERR.sync = true
 PhusionPassenger::Standalone::Main.run!(ARGV)

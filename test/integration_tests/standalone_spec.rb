@@ -2,6 +2,11 @@ source_root = File.expand_path("../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
+require 'phusion_passenger/platform_info/binary_compatibility'
+require 'tmpdir'
+require 'fileutils'
+require 'webrick'
+require 'thread'
 
 ENV['PATH'] = "#{PhusionPassenger.bin_dir}:#{ENV['PATH']}"
 # This environment variable changes Passenger Standalone's behavior,
@@ -9,12 +14,37 @@ ENV['PATH'] = "#{PhusionPassenger.bin_dir}:#{ENV['PATH']}"
 ENV.delete('PASSENGER_DEBUG')
 
 describe "Passenger Standalone" do
+	def sh(*command)
+		if !system(*command)
+			abort "Command failed: #{command.join(' ')}"
+		end
+	end
+
 	def capture_output(command)
-		output = `#{command}`.strip
+		output = `#{command} 2>&1`.strip
 		if $?.exitstatus == 0
 			return output
 		else
 			abort "Command #{command} exited with status #{$?.exitstatus}"
+		end
+	end
+
+	def start_server(document_root)
+		server = WEBrick::HTTPServer.new(:BindAddress => '127.0.0.1',
+			:Port => 0,
+			:DocumentRoot => document_root,
+			:Logger => WEBrick::Log.new("/dev/null"),
+			:AccessLog => [])
+		Thread.new do
+			Thread.current.abort_on_exception = true
+			server.start
+		end
+		[server, "http://127.0.0.1:#{server.config[:Port]}"]
+	end
+
+	def write_file(filename, contents)
+		File.open(filename, "wb") do |f|
+			f.write(contents)
 		end
 	end
 
@@ -36,13 +66,67 @@ describe "Passenger Standalone" do
 	describe "start command" do
 		context "if the runtime is not installed" do
 			context "when originally packaged" do
-				it "downloads the runtime from the Internet"
-				it "builds the runtime downloading fails"
+				before :all do
+					@runtime_dir = Dir.mktmpdir
+					@webroot = Dir.mktmpdir
+					@server, @base_url = start_server(@webroot)
+
+					version = PhusionPassenger::VERSION_STRING
+					nginx_version = PhusionPassenger::PREFERRED_NGINX_VERSION
+					compat_id = PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id
+					ruby_compat_id = PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_id
+					Dir.mkdir("#{@webroot}/#{version}")
+
+					Dir.chdir("#{@webroot}/#{version}") do
+						write_file("nginx", "")
+						File.chmod(0755, "nginx")
+						sh "tar -cf nginx-#{nginx_version}-#{compat_id}.tar.gz nginx"
+						File.unlink("nginx")
+
+						FileUtils.mkdir_p("agents")
+						FileUtils.mkdir_p("common/libpassenger_common/ApplicationPool2")
+						write_file("agents/PassengerWatchdog", "")
+						write_file("common/libboost_oxt.a", "")
+						write_file("common/libpassenger_common/ApplicationPool2/Implementation.o", "")
+						File.chmod(0755, "agents/PassengerWatchdog")
+						sh "tar -cf support-#{compat_id}.tar.gz agents common"
+						FileUtils.rm_rf("agents")
+						FileUtils.rm_rf("common")
+
+						write_file("passenger_native_support.so", "")
+						File.chmod(0755, "passenger_native_support.so")
+						sh "tar -cf rubyext-#{ruby_compat_id}.tar.gz passenger_native_support.so"
+						File.unlink("passenger_native_support.so")
+					end
+
+					write_file("#{PhusionPassenger.resources_dir}/release.txt", "")
+				end
+
+				after :all do
+					@server.stop
+					File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
+					FileUtils.remove_entry_secure(@runtime_dir)
+					FileUtils.remove_entry_secure(@webroot)
+				end
+
+				it "downloads binaries from the Internet" do
+					@output = capture_output("passenger start " +
+						"--runtime-dir '#{@runtime_dir}' " +
+						"--runtime-check-only " +
+						"--binaries-url-root '#{@base_url}'")
+					@output.should include("Downloading Passenger support binaries for your platform, if available")
+					@output.should include("Downloading Ruby extension for your Ruby and platform, if available")
+					@output.should include("Downloading Nginx binaries for your platform, if available")
+					@output.should_not include("Downloading Nginx...")
+					@output.should_not include("Installing Phusion Passenger Standalone")
+				end
+
+				it "builds the runtime if downloading fails"
 				it "aborts if runtime building fails"
 			end
 
 			context "when natively packaged" do
-				it "doesn't download the runtime from the Internet"
+				it "doesn't download binaries from the Internet"
 				it "doesn't build the runtime"
 				it "aborts with an error"
 			end

@@ -221,12 +221,12 @@ private
 	
 	def ruby_extension_should_be_installed?
 		return @targets.include?(:ruby) &&
-			!File.exist?("#{@ruby_dir}/#{PlatformInfo.ruby_extension_binary_compatibility_id}")
+			!File.exist?("#{@ruby_dir}/passenger_native_support.so")
 	end
 	
 	def binary_support_files_should_be_installed?
 		return @targets.include?(:support_binaries) && (
-			!File.exist?("#{@support_dir}/agents/PassengerHelperAgent") ||
+			!File.exist?("#{@support_dir}/agents/PassengerWatchdog") ||
 			!File.exist?("#{@support_dir}/common/libboost_oxt.a") ||
 			!File.exist?("#{@support_dir}/common/libpassenger_common/ApplicationPool2/Implementation.o")
 		)
@@ -275,8 +275,17 @@ private
 			status_text)
 		text = text.ljust(max_width)
 		text = text[0 .. max_width - 1]
-		STDOUT.write("#{text}\r")
-		STDOUT.flush
+		if STDOUT.tty?
+			STDOUT.write("#{text}\r")
+			STDOUT.flush
+		else
+			if @last_status_text != status_text
+				@last_status_text = status_text
+				STDOUT.write("[#{status_text.sub(/\.*$/, '')}]")
+			end
+			STDOUT.write(".")
+			STDOUT.flush
+		end
 		@plugin.call_hook(:runtime_installer_progress, total_progress, status_text) if @plugin
 	end
 	

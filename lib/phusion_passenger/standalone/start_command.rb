@@ -58,6 +58,7 @@ class StartCommand < Command
 
 		@runtime_dirs = determine_runtime_dirs
 		ensure_nginx_installed
+		exit if @options[:runtime_check_only]
 		determine_various_resource_locations
 		require_app_finder
 		@app_finder = AppFinder.new(@args, @options)
@@ -225,6 +226,10 @@ private
 			opts.on("--runtime-dir DIRECTORY", String,
 				wrap_desc("Directory to use for Phusion Passenger Standalone runtime files")) do |value|
 				@options[:runtime_dir] = File.expand_path(value)
+			end
+			opts.on("--runtime-check-only",
+				wrap_desc("Quit after checking whether the Phusion Passenger Standalone runtime files are installed")) do
+				@options[:runtime_check_only] = true
 			end
 		end
 		@plugin.call_hook(:done_parsing_options)
