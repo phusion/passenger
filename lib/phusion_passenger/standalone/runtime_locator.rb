@@ -91,6 +91,14 @@ class RuntimeLocator
 		return @nginx_binary
 	end
 
+	def find_agents_dir
+		return "#{find_support_dir}/agents"
+	end
+
+	def find_lib_dir
+		return find_support_dir
+	end
+
 	def everything_installed?
 		return find_support_dir && find_nginx_binary
 	end

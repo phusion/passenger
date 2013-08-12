@@ -191,12 +191,13 @@ private
 		locations_ini_fields =
 			PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS +
 			PhusionPassenger::OPTIONAL_LOCATIONS_INI_FIELDS -
-			[:agents_dir]
+			[:agents_dir, :lib_dir]
 		
 		File.open(location_config_filename, 'w') do |f|
 			f.puts '[locations]'
 			f.puts "natively_packaged=false"
-			f.puts "agents_dir=#{@runtime_locator.find_support_dir}/agents"
+			f.puts "lib_dir=#{@runtime_locator.find_lib_dir}"
+			f.puts "agents_dir=#{@runtime_locator.find_agents_dir}"
 			locations_ini_fields.each do |field|
 				f.puts "#{field}=#{PhusionPassenger.send(field)}"
 			end
