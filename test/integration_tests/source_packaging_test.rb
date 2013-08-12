@@ -25,6 +25,7 @@ SOURCE_ROOT = File.expand_path("../..", File.dirname(__FILE__))
 Dir.chdir(SOURCE_ROOT)
 $LOAD_PATH.unshift("#{SOURCE_ROOT}/lib")
 require 'phusion_passenger'
+require 'phusion_passenger/packaging'
 require 'rubygems'
 require 'tmpdir'
 require 'fileutils'
@@ -96,6 +97,7 @@ describe "A user-generated gem" do
 		basename = "#{PACKAGE_NAME}-#{VERSION}"
 		@pkg_contents_dir = "#{@temp_dir}/#{basename}"
 		Dir.chdir(SOURCE_ROOT) do
+			sh "rake", *PhusionPassenger::Packaging::PREGENERATED_FILES
 			sh "gem build #{PACKAGE_NAME}.gemspec"
 			sh "mv #{PACKAGE_NAME}-#{VERSION}.gem #{@temp_dir}/"
 		end
