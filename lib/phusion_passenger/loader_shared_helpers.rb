@@ -262,7 +262,8 @@ module LoaderSharedHelpers
 	
 	def advertise_sockets(output, request_handler)
 		request_handler.server_sockets.each_pair do |name, options|
-			output.puts "!> socket: #{name};#{options[:address]};#{options[:protocol]};#{options[:concurrency]}"
+			concurrency = PhusionPassenger.advertised_concurrency_level || options[:concurrency]
+			output.puts "!> socket: #{name};#{options[:address]};#{options[:protocol]};#{concurrency}"
 		end
 	end
 	

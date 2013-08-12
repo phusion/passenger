@@ -12,6 +12,7 @@ Release 4.0.13
    Useful if the user has multiple Apache installations but don't know about
    it, or when the user doesn't know how to work with multiple Apache
    installations.
+ * Added an API for better Rack socket hijacking support.
  * Added a hidden configuration option for customizing the application start
    timeout. A proper configuration option will be introduced in the future.
  * Added autodetection support for Amazon Linux.

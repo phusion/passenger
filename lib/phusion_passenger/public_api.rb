@@ -29,7 +29,8 @@ class << self
 	@@event_credentials = []
 	@@event_after_installing_signal_handlers = []
 	@@event_oob_work = []
-	
+	@@advertised_concurrency_level = nil
+
 	def on_event(name, &block)
 		callback_list_for_event(name) << block
 	end
@@ -46,6 +47,14 @@ class << self
 			require 'phusion_passenger/rails3_extensions/init'
 			Rails3Extensions.init!(PhusionPassenger::App.options, *args)
 		end
+	end
+
+	def advertised_concurrency_level
+		@@advertised_concurrency_level
+	end
+
+	def advertised_concurrency_level=(value)
+		@@advertised_concurrency_level = value
 	end
 	
 	def benchmark(env = nil, title = "Benchmarking")
