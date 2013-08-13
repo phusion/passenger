@@ -43,7 +43,7 @@ class << self
 	
 	def install_framework_extensions!(*args)
 		require 'rails/version' if defined?(::Rails) && !defined?(::Rails::VERSION)
-		if defined?(::Rails) && ::Rails::VERSION::MAJOR == 3
+		if defined?(::Rails) && ::Rails::VERSION::MAJOR >= 3
 			require 'phusion_passenger/rails3_extensions/init'
 			Rails3Extensions.init!(PhusionPassenger::App.options, *args)
 		end
