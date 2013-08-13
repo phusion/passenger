@@ -199,7 +199,8 @@ private
 			f.puts "lib_dir=#{@runtime_locator.find_lib_dir}"
 			f.puts "agents_dir=#{@runtime_locator.find_agents_dir}"
 			locations_ini_fields.each do |field|
-				f.puts "#{field}=#{PhusionPassenger.send(field)}"
+				value = PhusionPassenger.send(field)
+				f.puts "#{field}=#{value}" if value
 			end
 		end
 		puts File.read(location_config_filename) if debugging?

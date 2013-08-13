@@ -7,6 +7,7 @@ require 'tmpdir'
 require 'fileutils'
 require 'webrick'
 require 'thread'
+require 'open-uri'
 
 ENV['PATH'] = "#{PhusionPassenger.bin_dir}:#{ENV['PATH']}"
 # This environment variable changes Passenger Standalone's behavior,
@@ -14,9 +15,17 @@ ENV['PATH'] = "#{PhusionPassenger.bin_dir}:#{ENV['PATH']}"
 ENV.delete('PASSENGER_DEBUG')
 
 describe "Passenger Standalone" do
+	after :each do
+		ENV.delete('PASSENGER_DEBUG')
+	end
+
 	let(:version) { PhusionPassenger::VERSION_STRING }
 	let(:nginx_version) { PhusionPassenger::PREFERRED_NGINX_VERSION }
 	let(:compat_id) { PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id }
+
+	def use_binaries_from_source_root!
+		ENV['PASSENGER_DEBUG'] = '1'
+	end
 
 	def sh(*command)
 		if !system(*command)
@@ -89,6 +98,29 @@ describe "Passenger Standalone" do
 		NGINX_SOURCE_DOWNLOAD_MESSAGE = "Downloading Nginx..."
 		COMPILING_MESSAGE = "Installing Phusion Passenger Standalone"
 
+		def test_serving_application(passenger_command)
+			Dir.chdir(@runtime_dir) do
+				File.open("config.ru", "w") do |f|
+					f.write(%Q{
+						app = lambda do |env|
+							[200, { "Content-Type" => "text/plain" }, ["ok"]]
+						end
+						run app
+					})
+				end
+				Dir.mkdir("public")
+				Dir.mkdir("tmp")
+				sh("#{passenger_command} -p 4000 -d >/dev/null")
+				begin
+					open("http://127.0.0.1:4000/") do |f|
+						f.read.should == "ok"
+					end
+				ensure
+					sh("passenger stop -p 4000")
+				end
+			end
+		end
+
 		context "if the runtime is not installed" do
 			before :each do
 				@runtime_dir = Dir.mktmpdir
@@ -135,14 +167,23 @@ describe "Passenger Standalone" do
 
 				it "builds the runtime if downloading fails" do
 					# Yes, we're testing the entire build system here.
-					@output = capture_output("passenger start " +
+					command = "passenger start " +
 						"--runtime-dir '#{@runtime_dir}' " +
-						"--runtime-check-only " +
-						"--binaries-url-root '#{@base_url}/wrong'")
+						"--binaries-url-root '#{@base_url}/wrong'"
+					@output = capture_output("#{command} --runtime-check-only")
 					@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
 					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
 					@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
 					@output.should include(COMPILING_MESSAGE)
+
+					test_serving_application(command)
+				end
+
+				it "starts a server which serves the application" do
+					# The last test already tests this. This empty test here
+					# is merely to show the intent of the tests, and to
+					# speed up the test suite by preventing an unnecessary
+					# compilation.
 				end
 			end
 
@@ -172,17 +213,26 @@ describe "Passenger Standalone" do
 					@output.should_not include(COMPILING_MESSAGE)
 				end
 
-				it "builds only Nginx if downloading fails" do
+				it "only builds Nginx if downloading fails" do
 					# Yes, we're testing the build system here.
-					@output = capture_output("passenger start " +
+					command = "passenger start " +
 						"--runtime-dir '#{@runtime_dir}' " +
-						"--runtime-check-only " +
 						"--binaries-url-root '#{@base_url}' " +
-						"--nginx-version 1.0.0")
+						"--nginx-version 1.4.1"
+					@output = capture_output("#{command} --runtime-check-only")
 					@output.should_not include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
 					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
 					@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
 					@output.should include(COMPILING_MESSAGE)
+
+					test_serving_application(command)
+				end
+
+				it "starts a server which serves the application" do
+					# The last test already tests this. This empty test here
+					# is merely to show the intent of the tests, and to
+					# speed up the test suite by preventing an unnecessary
+					# compilation.
 				end
 			end
 		end
@@ -192,16 +242,12 @@ describe "Passenger Standalone" do
 			it "doesn't build the runtime"
 		end
 
-		it "starts a server which serves the application"
-		it "daemonizes if -d is given"
-	end
-
-	describe "stop command" do
-		# TODO
-	end
-
-	describe "status command" do
-		# TODO
+		it "daemonizes if -d is given" do
+			# Earlier tests already test this. This empty test here
+			# is merely to show the intent of the tests, and to
+			# speed up the test suite by preventing an unnecessary
+			# compilation.
+		end
 	end
 
 	describe "help command" do
