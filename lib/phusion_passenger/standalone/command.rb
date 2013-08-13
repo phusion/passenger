@@ -224,7 +224,7 @@ private
 		if @options[:nginx_bin]
 			nginx_bin = @options[:nginx_bin]
 		else
-			nginx_bin = "#{@runtime_dirs[:nginx_dir]}/nginx"
+			nginx_bin = @runtime_locator.find_nginx_binary
 		end
 		return "#{nginx_bin} -c '#{@config_filename}' -p '#{@temp_dir}/'"
 	end
