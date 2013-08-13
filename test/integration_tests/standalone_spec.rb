@@ -66,7 +66,7 @@ describe "Passenger Standalone" do
 	describe "start command" do
 		context "if the runtime is not installed" do
 			context "when originally packaged" do
-				before :all do
+				before :each do
 					@runtime_dir = Dir.mktmpdir
 					@webroot = Dir.mktmpdir
 					@server, @base_url = start_server(@webroot)
@@ -96,7 +96,7 @@ describe "Passenger Standalone" do
 					write_file("#{PhusionPassenger.resources_dir}/release.txt", "")
 				end
 
-				after :all do
+				after :each do
 					@server.stop
 					File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
 					FileUtils.remove_entry_secure(@runtime_dir)
@@ -109,19 +109,26 @@ describe "Passenger Standalone" do
 						"--runtime-check-only " +
 						"--binaries-url-root '#{@base_url}'")
 					@output.should include("Downloading Passenger support binaries for your platform, if available")
-					@output.should include("Downloading Nginx binaries for your platform, if available")
+					@output.should include("Downloading Nginx binary for your platform, if available")
 					@output.should_not include("Downloading Nginx...")
 					@output.should_not include("Installing Phusion Passenger Standalone")
 				end
 
-				it "builds the runtime if downloading fails"
-				it "aborts if runtime building fails"
+				it "builds the runtime if downloading fails" do
+					@output = capture_output("passenger start " +
+						"--runtime-dir '#{@runtime_dir}' " +
+						"--runtime-check-only " +
+						"--binaries-url-root '#{@base_url}/wrong'")
+					@output.should include("Downloading Passenger support binaries for your platform, if available")
+					@output.should include("Downloading Nginx binary for your platform, if available")
+					@output.should include("Downloading Nginx...")
+					@output.should include("Installing Phusion Passenger Standalone")
+				end
 			end
 
 			context "when natively packaged" do
-				it "doesn't download binaries from the Internet"
-				it "doesn't build the runtime"
-				it "aborts with an error"
+				it "downloads only the Nginx binary from the Internet"
+				it "builds only Nginx if downloading fails"
 			end
 		end
 

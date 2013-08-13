@@ -371,6 +371,7 @@ private
 			:targets     => runtime_locator.install_targets,
 			:support_dir => runtime_locator.support_dir_install_destination,
 			:nginx_dir   => runtime_locator.nginx_binary_install_destination,
+			:lib_dir     => runtime_locator.find_lib_dir || runtime_locator.support_dir_install_destination,
 			:nginx_version     => @options[:nginx_version],
 			:nginx_tarball     => @options[:nginx_tarball],
 			:binaries_url_root => @options[:binaries_url_root],
@@ -385,6 +386,12 @@ private
 				exit 1
 			end
 		else
+			if !@runtime_locator.find_support_dir && PhusionPassenger.natively_packaged?
+				error "Your Phusion Passenger Standalone installation is broken: the support " +
+					"files could not be found. Please reinstall Phusion Passenger Standalone. " +
+					"If this problem persists, please contact your packager."
+				exit 1
+			end
 			install_runtime(@runtime_locator) || exit(1)
 		end
 	end

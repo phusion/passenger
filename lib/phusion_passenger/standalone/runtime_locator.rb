@@ -114,7 +114,11 @@ class RuntimeLocator
 	# in case the RuntimeInstaller is to be invoked.
 	def support_dir_install_destination
 		if PhusionPassenger.originally_packaged?
-			return "#{@runtime_dir}/#{version}/support-#{cxx_compat_id}"
+			if debugging?
+				return "#{PhusionPassenger.lib_dir}/common/libpassenger_common"
+			else
+				return "#{@runtime_dir}/#{version}/support-#{cxx_compat_id}"
+			end
 		else
 			return nil
 		end

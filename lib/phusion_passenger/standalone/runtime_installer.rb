@@ -35,22 +35,25 @@ require 'phusion_passenger/utils/tmpio'
 module PhusionPassenger
 module Standalone
 
-# Installs the Phusion Passenger Standalone runtime by downloading and compiling
-# Nginx, compiling the Phusion Passenger support binaries, and storing the
-# results in the designated directories. This installer is entirely
-# non-interactive.
+# Installs the Phusion Passenger Standalone runtime by downloading or compiling
+# the Phusion Passenger support binaries and Nginx, and then storing them
+# in the designated directories. This installer is entirely non-interactive.
 #
 # The following option must be given:
 # - targets: An array containing at least one of:
-#   * :nginx - to indicate that you want to compile and install Nginx.
-#   * :support_binaries - to indicate that you want to compile and install the
+#   * :support_binaries - to indicate that you want to install the
 #                         Phusion Passenger support binary files.
-#   * :ruby - to indicate that you want to compile and install the Ruby
-#             extension files.
+#   * :nginx - to indicate that you want to install Nginx.
 #
-# If 'targets' contains :nginx, then you must also specify these options:
+# If `targets` contains `:support_binaries`, then you must also specify this
+# options:
+# - support_dir: The support binary files will be installed here.
+#
+# If `targets` contains `:nginx`, then you must also specify these options:
 # - nginx_dir: Nginx will be installed into this directory.
-# - support_dir: Path to the Phusion Passenger support binary files.
+# - lib_dir: Path to the Phusion Passenger libraries, which Nginx will link to.
+#            This may be the same path as `support_dir`; Nginx will be compiled
+#            after the support binary files are installed.
 # - nginx_version (optional): The Nginx version to download. If not given then a
 #   hardcoded version number will be used.
 # - nginx_tarball (optional): The location to the Nginx tarball. This tarball *must*
@@ -58,29 +61,32 @@ module Standalone
 #   then Nginx will not be downloaded; it will be extracted from this tarball
 #   instead.
 #
-# If targets contains ':support_binaries', then you must also specify this
-# options:
-# - support_dir: The support binary files will be installed here.
-#
-# If targets contains ':ruby', then you must also specify this option:
-# - ruby_dir: The support binary files will be installed here.
-#
 # Other optional options:
 # - download_binaries: If true then RuntimeInstaller will attempt to download
-#   precompiled Nginx binaries and precompiled Phusion Passenger support binary
-#   files from the network, if they exist for the current platform. The default is
-#   false.
+#   a precompiled Nginx binary and precompiled Phusion Passenger support binaries
+#   from the network, if they exist for the current platform. The default is
+#   true. Note that binary downloading only happens when Phusion Passenger is
+#   installed from an official release package.
 # - binaries_url_root: The URL on which to look for the aforementioned binaries.
 #   The default points to the Phusion website.
-#
-# Please note that RuntimeInstaller will try to avoid compiling/installing things
-# that don't need to be compiled/installed. This is done by checking whether some
-# key files exist, and concluding that something doesn't need to be
-# compiled/installed if they do. This quick check is of course not perfect; if you
-# want to force a recompilation/reinstall then you should remove +nginx_dir+
-# and +support_dir+ before starting this installer.
 class RuntimeInstaller < AbstractInstaller
 	include Utils
+
+	def initialize(*args)
+		super(*args)
+		raise ArgumentError, "At least one target must be given" if @targets.nil? || @targets.empty?
+		if @targets.include?(:support_binaries)
+			if PhusionPassenger.natively_packaged?
+				raise ArgumentError, "You cannot specify :support_binaries as a " +
+					"target when natively packaged"
+			end
+			raise ArgumentError, ":support_dir must be given" if !@support_dir
+		end
+		if @targets.include?(:nginx)
+			raise ArgumentError, ":nginx_dir must be given" if !@nginx_dir
+			raise ArgumentError, ":lib_dir must be given" if !@lib_dir
+		end
+	end
 	
 protected
 	def dependencies
@@ -95,8 +101,6 @@ protected
 			'gcc',
 			'g++',
 			'gmake',
-			'download-tool',
-			PlatformInfo.passenger_needs_ruby_dev_header? ? 'ruby-dev' : nil,
 			'ruby-openssl',
 			'rubygems',
 			'rake',
@@ -113,96 +117,22 @@ protected
 	def users_guide
 		return "#{PhusionPassenger.doc_dir}/Users guide Standalone.html"
 	end
-	
+
 	def run_steps
-		if @support_dir && @nginx_dir
-			show_welcome_screen
-		end
-		check_dependencies(false) || exit(1)
+		show_welcome_screen if @nginx_dir
 		check_whether_os_is_broken
-		check_whether_system_has_enough_ram
-		puts
-		
-		phase = 1
-		total_phases = 0
-		
-		if binary_support_files_should_be_installed?
-			check_whether_we_can_write_to(@support_dir) || exit(1)
-			total_phases += 4
-		end
-		if ruby_extension_should_be_installed?
-			check_whether_we_can_write_to(@ruby_dir) || exit(1)
-			total_phases += 2
-		end
-		if nginx_needs_to_be_installed?
-			check_whether_we_can_write_to(@nginx_dir) || exit(1)
-			total_phases += 4
-		end
-		
-		if binary_support_files_should_be_installed? && should_download_binaries?
-			download_and_extract_binary_support_files(@support_dir) do |progress, total|
-				show_progress(progress, total, 1, 1, "Extracting Passenger binaries...")
-			end
-			puts
-			puts
-		end
-		if ruby_extension_should_be_installed? && should_download_binaries?
-			download_and_extract_ruby_extension(@ruby_dir) do |progress, total|
-				show_progress(progress, total, 1, 1, "Extracting Ruby extension...")
-			end
-			puts
-			puts
-		end
-		if nginx_needs_to_be_installed? && should_download_binaries?
-			download_and_extract_nginx_binaries(@nginx_dir) do |progress, total|
-				show_progress(progress, total, 1, 1, "Extracting Nginx binaries...")
-			end
-			puts
-			puts
-		end
-		
-		if nginx_needs_to_be_installed?
-			nginx_source_dir = download_and_extract_nginx_sources do |progress, total|
-				show_progress(progress, total, phase, total_phases, "Extracting...")
-			end
-			phase += 1
-			if nginx_source_dir.nil?
-				puts
-				show_possible_solutions_for_download_and_extraction_problems
-				exit(1)
-			end
-		end
-		if ruby_extension_should_be_installed?
-			phase += install_ruby_extension do |progress, total, subphase, status_text|
-				show_progress(progress, total, phase + subphase, total_phases, status_text)
-			end
-		end
-		if binary_support_files_should_be_installed?
-			install_binary_support_files do |progress, total, subphase, status_text|
-				if subphase == 0
-					show_progress(progress, total, phase, total_phases, status_text)
-				else
-					show_progress(progress, total, phase + 1 .. phase + 3, total_phases, status_text)
-				end
-			end
-			phase += 4
-		end
-		if nginx_needs_to_be_installed?
-			install_nginx_from_source(nginx_source_dir) do |progress, total, status_text|
-				show_progress(progress, total, phase .. phase + 2, total_phases, status_text)
-			end
-			phase += 3
-		end
-		
+		check_for_download_tool
+		download_or_compile_binaries
 		puts
 		puts "<green><b>All done!</b></green>"
 		puts
 	end
-	
+
 	def before_install
 		super
 		@plugin.call_hook(:runtime_installer_start, self) if @plugin
 		@working_dir = PhusionPassenger::Utils.mktmpdir("passenger.", PlatformInfo.tmpexedir)
+		@nginx_version ||= PREFERRED_NGINX_VERSION
 		@download_binaries = true if !defined?(@download_binaries)
 		@binaries_url_root ||= BINARIES_URL_ROOT
 	end
@@ -214,35 +144,185 @@ protected
 	end
 
 private
-	def nginx_needs_to_be_installed?
-		return @targets.include?(:nginx) &&
-			!File.exist?("#{@nginx_dir}/nginx")
-	end
-	
-	def ruby_extension_should_be_installed?
-		return @targets.include?(:ruby) &&
-			!File.exist?("#{@ruby_dir}/passenger_native_support.so")
-	end
-	
-	def binary_support_files_should_be_installed?
-		return @targets.include?(:support_binaries) && (
-			!File.exist?("#{@support_dir}/agents/PassengerWatchdog") ||
-			!File.exist?("#{@support_dir}/common/libboost_oxt.a") ||
-			!File.exist?("#{@support_dir}/common/libpassenger_common/ApplicationPool2/Implementation.o")
-		)
-	end
-	
-	def should_download_binaries?
-		return PhusionPassenger.installed_from_release_package? &&
-			@download_binaries &&
-			@binaries_url_root
-	end
-	
 	def show_welcome_screen
 		render_template 'standalone/welcome',
 			:version => @nginx_version,
 			:dir => @nginx_dir
 		puts
+	end
+
+	def check_for_download_tool
+		# TODO
+	end
+
+	def download_or_compile_binaries
+		if should_install_support_binaries?
+			support_binaries_path = download_support_binaries
+		end
+		if should_install_nginx?
+			nginx_binary_path = download_nginx_binary
+		end
+		
+		should_compile_support_binaries = should_install_support_binaries? &&
+			!support_binaries_path
+		should_compile_nginx = should_install_nginx? && !nginx_binary_path
+
+		if should_compile_support_binaries || should_compile_nginx
+			check_dependencies(false) || exit(1)
+			puts
+			if should_compile_support_binaries
+				check_whether_we_can_write_to(@support_dir) || exit(1)
+			end
+			if should_compile_nginx
+				check_whether_we_can_write_to(@nginx_dir) || exit(1)
+			end
+		end
+
+		if should_compile_nginx
+			nginx_source_dir = download_and_extract_nginx_sources
+		end
+		if should_compile_support_binaries
+			compile_support_binaries
+		end
+		if should_compile_nginx
+			compile_nginx(nginx_source_dir)
+		end
+	end
+
+	# If this method returns true, then PhusionPassenger.originally_packaged? is also true.
+	def should_install_support_binaries?
+		return @targets.include?(:support_binaries)
+	end
+
+	def should_install_nginx?
+		return @targets.include?(:nginx)
+	end
+
+	def should_download_binaries?
+		return PhusionPassenger.installed_from_release_package? &&
+			@download_binaries &&
+			@binaries_url_root
+	end
+
+	def download_support_binaries
+		return nil if !should_download_binaries?
+
+		puts "<banner>Downloading Passenger support binaries for your platform, if available...</banner>"
+		basename = "support-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
+		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
+		tarball  = "#{@working_dir}/#{basename}"
+		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
+			puts "<b>No binaries are available for your platform. But don't worry, the " +
+				"necessary binaries will be compiled from source instead.</b>"
+			puts
+			return nil
+		end
+		
+		FileUtils.mkdir_p(@support_dir)
+		Dir.chdir(@support_dir) do
+			puts "Extracting tarball..."
+			return extract_tarball(tarball)
+		end
+	rescue Interrupt
+		exit 2
+	end
+
+	def download_nginx_binary
+		return false if !should_download_binaries?
+
+		puts "<banner>Downloading Nginx binary for your platform, if available...</banner>"
+		basename = "nginx-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
+		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
+		tarball  = "#{@working_dir}/#{basename}"
+		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
+			puts "<b>No binary available for your platform. But don't worry, the " +
+				"necessary binary will be compiled from source instead.</b>"
+			puts
+			return nil
+		end
+
+		FileUtils.mkdir_p(@nginx_dir)
+		Dir.chdir(@nginx_dir) do
+			puts "Extracting tarball..."
+			return extract_tarball(tarball)
+		end
+	rescue Interrupt
+		exit 2
+	end
+
+	def download_and_extract_nginx_sources
+		begin_progress_bar
+		puts "Downloading Nginx..."
+		if @nginx_tarball
+			tarball  = @nginx_tarball
+		else
+			basename = "nginx-#{@nginx_version}.tar.gz"
+			tarball  = "#{@working_dir}/#{basename}"
+			if !download("http://nginx.org/download/#{basename}", tarball)
+				return nil
+			end
+		end
+		nginx_sources_name = "nginx-#{@nginx_version}"
+		
+		Dir.chdir(@working_dir) do
+			begin_progress_bar
+			begin
+				result = extract_tarball(tarball) do |progress, total|
+					show_progress(progress / total * 0.1, 1.0, 1, 1, "Extracting Nginx sources...")
+				end
+			rescue Exception
+				puts
+				raise
+			end
+			if result
+				return "#{@working_dir}/#{nginx_sources_name}"
+			else
+				puts
+				show_possible_solutions_for_download_and_extraction_problems
+				exit(1)
+			end
+		end
+	rescue Interrupt
+		exit 2
+	end
+
+	def compile_support_binaries
+		begin_progress_bar
+		show_progress(0, 1, 1, 1, "Preparing Phusion Passenger...")
+		Dir.chdir(PhusionPassenger.source_root) do
+			args = "nginx_without_native_support" +
+				" CACHING=false" +
+				" OUTPUT_DIR='#{@support_dir}'"
+			begin
+				run_rake_task!(args) do |progress, total|
+					show_progress(progress, total, 1, 1, "Compiling Phusion Passenger...")
+				end
+			ensure
+				puts
+			end
+
+			system "rm -rf '#{@support_dir}'/agents/{*.o,*.dSYM}"
+			system "rm -rf '#{@support_dir}'/common/libboost_oxt"
+			system "rm -rf '#{@support_dir}'/*/{*.lo,*.h,*.log,Makefile,libtool,stamp-h1,config.status,.deps}"
+			system "rm -rf '#{@support_dir}'/{libeio,libev}/*.o"
+			
+			# Retain only the object files that are needed for linking the Phusion Passenger module into Nginx.
+			nginx_libs = COMMON_LIBRARY.
+				only(*NGINX_LIBS_SELECTOR).
+				set_output_dir("#{@support_dir}/libpassenger_common").
+				link_objects
+			Dir["#{@support_dir}/libpassenger_common/**/*"].each do |filename|
+				if !nginx_libs.include?(filename) && File.file?(filename)
+					File.unlink(filename)
+				end
+			end
+		end
+	end
+
+	def compile_nginx(nginx_source_dir)
+		install_nginx_from_source(nginx_source_dir) do |progress, total, status_text|
+			show_progress(0.1 + progress / total.to_f * 0.9, 1.0, 1, 1, status_text)
+		end
 	end
 	
 	def check_whether_we_can_write_to(dir)
@@ -275,16 +355,16 @@ private
 			status_text)
 		text = text.ljust(max_width)
 		text = text[0 .. max_width - 1]
-		if STDOUT.tty?
-			STDOUT.write("#{text}\r")
-			STDOUT.flush
+		if @stdout.tty?
+			@stdout.write("#{text}\r")
+			@stdout.flush
 		else
 			if @last_status_text != status_text
 				@last_status_text = status_text
-				STDOUT.write("[#{status_text.sub(/\.*$/, '')}]")
+				@stdout.write("[#{status_text.sub(/\.*$/, '')}]")
 			end
-			STDOUT.write(".")
-			STDOUT.flush
+			@stdout.write(".")
+			@stdout.flush
 		end
 		@plugin.call_hook(:runtime_installer_progress, total_progress, status_text) if @plugin
 	end
@@ -313,7 +393,7 @@ private
 				buffer = buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
 				total_size = File.size(filename)
 				bytes_read = 0
-				yield(bytes_read, total_size)
+				yield(bytes_read, total_size) if block_given?
 				begin
 					doing_our_io = true
 					while !f.eof?
@@ -322,7 +402,7 @@ private
 						io.flush
 						bytes_read += buffer.size
 						doing_our_io = false
-						yield(bytes_read, total_size)
+						yield(bytes_read, total_size) if block_given?
 						doing_our_io = true
 					end
 				rescue Errno::EPIPE
@@ -352,9 +432,9 @@ private
 			end
 		end
 		if $?.exitstatus != 0
-			STDERR.puts
-			STDERR.puts backlog
-			STDERR.puts "*** ERROR: command failed: #{command}"
+			@stderr.puts
+			@stderr.puts backlog
+			@stderr.puts "*** ERROR: command failed: #{command}"
 			exit 1
 		end
 	end
@@ -394,135 +474,11 @@ private
 			end
 		end
 		if $?.exitstatus != 0
-			STDERR.puts
-			STDERR.puts "*** ERROR: the following command failed:"
-			STDERR.puts(backlog)
+			@stderr.puts
+			@stderr.puts "*** ERROR: the following command failed:"
+			@stderr.puts(backlog)
 			exit 1
 		end
-	end
-	
-	def download_and_extract_binary_support_files(target, &block)
-		puts "<banner>Downloading Passenger support binaries for your platform, if available...</banner>"
-		basename = "support-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
-		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
-		tarball  = "#{@working_dir}/#{basename}"
-		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
-			puts "<b>Looks like it's not. But don't worry, the " +
-				"necessary binaries will be compiled from source instead.</b>"
-			return nil
-		end
-		
-		FileUtils.mkdir_p(target)
-		Dir.chdir(target) do
-			return extract_tarball(tarball, &block)
-		end
-	rescue Interrupt
-		exit 2
-	end
-	
-	def download_and_extract_ruby_extension(target, &block)
-		puts "<banner>Downloading Ruby extension for your Ruby and platform, if available...</banner>"
-		basename = "rubyext-#{PlatformInfo.ruby_extension_binary_compatibility_id}.tar.gz"
-		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
-		tarball  = "#{@working_dir}/#{basename}"
-		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
-			puts "<b>Looks like it's not. But don't worry, the " +
-				"necessary binaries will be compiled from source instead.</b>"
-			return nil
-		end
-		
-		FileUtils.mkdir_p(target)
-		Dir.chdir(target) do
-			return extract_tarball(tarball, &block)
-		end
-	rescue Interrupt
-		exit 2
-	end
-	
-	def download_and_extract_nginx_binaries(target, &block)
-		puts "<banner>Downloading Nginx binaries for your platform, if available...</banner>"
-		basename = "nginx-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
-		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
-		tarball  = "#{@working_dir}/#{basename}"
-		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
-			puts "<b>Looks like it's not. But don't worry, the " +
-				"necessary binaries will be compiled from source instead.</b>"
-			return nil
-		end
-
-		FileUtils.mkdir_p(target)
-		Dir.chdir(target) do
-			return extract_tarball(tarball, &block)
-		end
-	rescue Interrupt
-		exit 2
-	end
-	
-	def download_and_extract_nginx_sources(&block)
-		if @nginx_tarball
-			tarball  = @nginx_tarball
-		else
-			puts "<banner>Downloading Nginx...</banner>"
-			basename = "nginx-#{@nginx_version}.tar.gz"
-			tarball  = "#{@working_dir}/#{basename}"
-			if !download("http://nginx.org/download/#{basename}", tarball)
-				return nil
-			end
-		end
-		nginx_sources_name = "nginx-#{@nginx_version}"
-		
-		Dir.chdir(@working_dir) do
-			begin_progress_bar
-			if extract_tarball(tarball, &block)
-				return "#{@working_dir}/#{nginx_sources_name}"
-			else
-				return nil
-			end
-		end
-	rescue Interrupt
-		exit 2
-	end
-	
-	def install_ruby_extension
-		begin_progress_bar
-		yield(0, 1, 0, "Preparing Ruby extension...")
-		Dir.chdir(PhusionPassenger.source_root) do
-			run_rake_task!("native_support CACHING=false ONLY_RUBY=yes RUBY_EXTENSION_OUTPUT_DIR='#{@ruby_dir}'") do |progress, total|
-				yield(progress, total, 1, "Compiling Ruby extension...")
-			end
-			system "rm -rf '#{@ruby_dir}'/{*.log,*.o,Makefile}"
-		end
-		return 2
-	end
-	
-	def install_binary_support_files
-		begin_progress_bar
-		yield(0, 1, 0, "Preparing Phusion Passenger...")
-		Dir.chdir(PhusionPassenger.source_root) do
-			args = "nginx_without_native_support" +
-				" CACHING=false" +
-				" OUTPUT_DIR='#{@support_dir}'"
-			run_rake_task!(args) do |progress, total|
-				yield(progress, total, 1, "Compiling Phusion Passenger...")
-			end
-
-			system "rm -rf '#{@support_dir}'/agents/{*.o,*.dSYM}"
-			system "rm -rf '#{@support_dir}'/common/libboost_oxt"
-			system "rm -rf '#{@support_dir}'/*/{*.lo,*.h,*.log,Makefile,libtool,stamp-h1,config.status,.deps}"
-			system "rm -rf '#{@support_dir}'/{libeio,libev}/*.o"
-			
-			# Retain only the object files that are needed for linking the Phusion Passenger module into Nginx.
-			nginx_libs = COMMON_LIBRARY.
-				only(*NGINX_LIBS_SELECTOR).
-				set_output_dir("#{@support_dir}/libpassenger_common").
-				link_objects
-			Dir["#{@support_dir}/libpassenger_common/**/*"].each do |filename|
-				if !nginx_libs.include?(filename) && File.file?(filename)
-					File.unlink(filename)
-				end
-			end
-		end
-		return 2
 	end
 	
 	def install_nginx_from_source(source_dir)
@@ -531,11 +487,7 @@ private
 			shell = PlatformInfo.find_command('bash') || "sh"
 			command = ""
 			if @targets.include?(:support_binaries)
-				if ENV['PASSENGER_DEBUG'] && !ENV['PASSENGER_DEBUG'].empty?
-					output_dir = "#{PhusionPassenger.source_root}/buildout/common/libpassenger_common"
-				else
-					output_dir = "#{@support_dir}/common/libpassenger_common"
-				end
+				output_dir = "#{@support_dir}/common/libpassenger_common"
 				nginx_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
 					set_output_dir(output_dir).
 					link_objects_as_string
@@ -574,24 +526,28 @@ private
 				end
 			end
 			if $?.exitstatus != 0
-				STDERR.puts
-				STDERR.puts "*** ERROR: unable to compile Nginx."
-				STDERR.puts backlog
+				@stderr.puts
+				@stderr.puts "*** ERROR: unable to compile Nginx."
+				@stderr.puts backlog
 				exit 1
 			end
 			
 			yield(1, 1, 'Copying files...')
 			if !system("cp -pR objs/nginx '#{@nginx_dir}/'")
-				STDERR.puts
-				STDERR.puts "*** ERROR: unable to copy Nginx binaries."
+				@stderr.puts
+				@stderr.puts "*** ERROR: unable to copy Nginx binary."
 				exit 1
 			end
-			if !system("strip '#{@nginx_dir}/nginx'")
-				STDERR.puts
-				STDERR.puts "*** ERROR: unable to strip debugging symbols from the Nginx binary."
+			if !strip_binary("#{@nginx_dir}/nginx")
+				@stderr.puts
+				@stderr.puts "*** ERROR: unable to strip debugging symbols from the Nginx binary."
 				exit 1
 			end
 		end
+	end
+
+	def strip_binary(filename)
+		return system("strip", filename)
 	end
 end
 
