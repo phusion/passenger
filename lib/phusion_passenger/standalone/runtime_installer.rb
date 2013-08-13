@@ -259,7 +259,9 @@ private
 			basename = "nginx-#{@nginx_version}.tar.gz"
 			tarball  = "#{@working_dir}/#{basename}"
 			if !download("http://nginx.org/download/#{basename}", tarball)
-				return nil
+				puts
+				show_possible_solutions_for_download_and_extraction_problems
+				exit(1)
 			end
 		end
 		nginx_sources_name = "nginx-#{@nginx_version}"
@@ -509,7 +511,7 @@ private
 				"--without-http_uwsgi_module " <<
 				"--with-http_gzip_static_module " <<
 				"--with-http_stub_status_module " <<
-				"'--add-module=#{PhusionPassenger.source_root}/ext/nginx'"
+				"'--add-module=#{PhusionPassenger.nginx_module_source_dir}'"
 			run_command_with_throbber(command, "Preparing Nginx...") do |status_text|
 				yield(0, 1, status_text)
 			end

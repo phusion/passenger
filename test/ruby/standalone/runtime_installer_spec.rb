@@ -95,7 +95,9 @@ describe RuntimeInstaller do
 				elsif url == nginx_source_url
 					create_tarball(output) do
 						Dir.mkdir("nginx-#{nginx_version}")
-						create_file("nginx-#{nginx_version}/configure")
+						File.open("nginx-#{nginx_version}/configure", "w") do |f|
+							f.puts %Q{echo "$@" > '#{@temp_dir}/configure.txt'}
+						end
 						File.chmod(0700, "nginx-#{nginx_version}/configure")
 						File.open("nginx-#{nginx_version}/Makefile", "w") do |f|
 							f.puts("all:")
@@ -117,6 +119,8 @@ describe RuntimeInstaller do
 			@installer.run
 
 			File.read("#{@temp_dir}/nginx/nginx").should == "ok\n"
+			File.read("#{@temp_dir}/configure.txt").should include(
+				"--add-module=#{PhusionPassenger.nginx_module_source_dir}")
 	end
 
 	context "when originally packaged" do
@@ -230,40 +234,11 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			lambda { @installer.run }.should raise_error("Rake failed")
 		end
-
-		it "aborts if the Nginx binary cannot be built" do
-			create_installer(:targets => [:nginx],
-				:nginx_dir => "#{@temp_dir}/nginx",
-				:lib_dir   => PhusionPassenger.lib_dir)
-
-			@installer.should_receive(:download).twice.and_return do |url, output, options|
-				if url == nginx_binary_url
-					false
-				elsif url == nginx_source_url
-					create_tarball(output) do
-						Dir.mkdir("nginx-#{nginx_version}")
-						File.open("nginx-#{nginx_version}/configure", "w") do |f|
-							f.puts("#!/bin/bash")
-							f.puts("echo error")
-							f.puts("exit 1")
-						end
-						File.chmod(0700, "nginx-#{nginx_version}/configure")
-					end
-					true
-				else
-					raise "Unexpected download URL: #{url}"
-				end
-			end
-
-			@installer.should_receive(:check_dependencies).and_return(true)
-			@installer.should_not_receive(:compile_support_binaries)
-			lambda { @installer.run }.should raise_error(SystemExit)
-			@logs.string.should =~ %r{command failed:.*./configure}
-		end
 	end
 
 	context "when natively packaged" do
 		before :each do
+			PhusionPassenger.stub(:source_root).and_return("/locations.ini")
 			PhusionPassenger.stub(:originally_packaged?).and_return(false)
 			PhusionPassenger.stub(:natively_packaged?).and_return(true)
 		end
@@ -283,6 +258,60 @@ describe RuntimeInstaller do
 		it "builds the Nginx binary if it cannot be downloaded" do
 			test_building_nginx_binary
 		end
+	end
+
+	it "aborts if the Nginx source tarball cannot be extracted" do
+		create_installer(:targets => [:nginx],
+			:nginx_dir => "#{@temp_dir}/nginx",
+			:lib_dir   => PhusionPassenger.lib_dir)
+
+		@installer.should_receive(:download).twice.and_return do |url, output, options|
+			if url == nginx_binary_url
+				false
+			elsif url == nginx_source_url
+				File.open(output, "w") do |f|
+					f.write("garbage")
+				end
+				true
+			else
+				raise "Unexpected download URL: #{url}"
+			end
+		end
+
+		@installer.should_receive(:check_dependencies).and_return(true)
+		@installer.should_not_receive(:compile_support_binaries)
+		lambda { @installer.run }.should raise_error(SystemExit)
+		@logs.string.should =~ %r{Unable to download or extract Nginx source tarball}
+	end
+	
+	it "aborts if the Nginx binary cannot be built" do
+		create_installer(:targets => [:nginx],
+			:nginx_dir => "#{@temp_dir}/nginx",
+			:lib_dir   => PhusionPassenger.lib_dir)
+
+		@installer.should_receive(:download).twice.and_return do |url, output, options|
+			if url == nginx_binary_url
+				false
+			elsif url == nginx_source_url
+				create_tarball(output) do
+					Dir.mkdir("nginx-#{nginx_version}")
+					File.open("nginx-#{nginx_version}/configure", "w") do |f|
+						f.puts("#!/bin/bash")
+						f.puts("echo error")
+						f.puts("exit 1")
+					end
+					File.chmod(0700, "nginx-#{nginx_version}/configure")
+				end
+				true
+			else
+				raise "Unexpected download URL: #{url}"
+			end
+		end
+
+		@installer.should_receive(:check_dependencies).and_return(true)
+		@installer.should_not_receive(:compile_support_binaries)
+		lambda { @installer.run }.should raise_error(SystemExit)
+		@logs.string.should =~ %r{command failed:.*./configure}
 	end
 end
 

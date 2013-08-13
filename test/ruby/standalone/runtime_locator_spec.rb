@@ -125,6 +125,7 @@ describe RuntimeLocator do
 
 	context "when natively packaged" do
 		before :each do
+			PhusionPassenger.stub(:source_root).and_return("/locations.ini")
 			PhusionPassenger.stub(:originally_packaged?).and_return(false)
 			PhusionPassenger.stub(:natively_packaged?).and_return(true)
 		end

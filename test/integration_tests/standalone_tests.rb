@@ -14,6 +14,10 @@ ENV['PATH'] = "#{PhusionPassenger.bin_dir}:#{ENV['PATH']}"
 ENV.delete('PASSENGER_DEBUG')
 
 describe "Passenger Standalone" do
+	let(:version) { PhusionPassenger::VERSION_STRING }
+	let(:nginx_version) { PhusionPassenger::PREFERRED_NGINX_VERSION }
+	let(:compat_id) { PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id }
+
 	def sh(*command)
 		if !system(*command)
 			abort "Command failed: #{command.join(' ')}"
@@ -42,9 +46,25 @@ describe "Passenger Standalone" do
 		[server, "http://127.0.0.1:#{server.config[:Port]}"]
 	end
 
-	def write_file(filename, contents)
+	def create_tarball(filename, contents = nil)
+		filename = File.expand_path(filename)
+		Dir.mktmpdir("tarball-") do |tarball_dir|
+			Dir.chdir(tarball_dir) do
+				if block_given?
+					yield
+				else
+					contents.each do |content_name|
+						create_file(content_name)
+					end
+				end
+				sh "tar", "-czf", filename, "."
+			end
+		end
+	end
+
+	def create_file(filename, contents = nil)
 		File.open(filename, "wb") do |f|
-			f.write(contents)
+			f.write(contents) if contents
 		end
 	end
 
@@ -64,77 +84,106 @@ describe "Passenger Standalone" do
 	end
 
 	describe "start command" do
+		SUPPORT_BINARIES_DOWNLOAD_MESSAGE = "Downloading Passenger support binaries for your platform, if available"
+		NGINX_BINARY_DOWNLOAD_MESSAGE = "Downloading Nginx binary for your platform, if available"
+		NGINX_SOURCE_DOWNLOAD_MESSAGE = "Downloading Nginx..."
+		COMPILING_MESSAGE = "Installing Phusion Passenger Standalone"
+
 		context "if the runtime is not installed" do
 			before :each do
 				@runtime_dir = Dir.mktmpdir
+				@webroot = Dir.mktmpdir
+				@server, @base_url = start_server(@webroot)
+
+				Dir.mkdir("#{@webroot}/#{version}")
+				Dir.chdir("#{@webroot}/#{version}") do
+					create_tarball("nginx-#{nginx_version}-#{compat_id}.tar.gz") do
+						create_file("nginx")
+						File.chmod(0755, "nginx")
+					end
+					create_tarball("support-#{compat_id}.tar.gz") do
+						FileUtils.mkdir_p("agents")
+						FileUtils.mkdir_p("common/libpassenger_common/ApplicationPool2")
+						create_file("agents/PassengerWatchdog")
+						create_file("common/libboost_oxt.a")
+						create_file("common/libpassenger_common/ApplicationPool2/Implementation.o")
+						File.chmod(0755, "agents/PassengerWatchdog")
+					end
+				end
+
+				create_file("#{PhusionPassenger.resources_dir}/release.txt")
 			end
 
 			after :each do
+				@server.stop
+				File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
+				FileUtils.remove_entry_secure(@webroot)
 				FileUtils.remove_entry_secure(@runtime_dir)
 			end
 
 			context "when originally packaged" do
-				before :each do
-					@webroot = Dir.mktmpdir
-					@server, @base_url = start_server(@webroot)
-
-					version = PhusionPassenger::VERSION_STRING
-					nginx_version = PhusionPassenger::PREFERRED_NGINX_VERSION
-					compat_id = PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id
-					Dir.mkdir("#{@webroot}/#{version}")
-
-					Dir.chdir("#{@webroot}/#{version}") do
-						write_file("nginx", "")
-						File.chmod(0755, "nginx")
-						sh "tar -czf nginx-#{nginx_version}-#{compat_id}.tar.gz nginx"
-						File.unlink("nginx")
-
-						FileUtils.mkdir_p("agents")
-						FileUtils.mkdir_p("common/libpassenger_common/ApplicationPool2")
-						write_file("agents/PassengerWatchdog", "")
-						write_file("common/libboost_oxt.a", "")
-						write_file("common/libpassenger_common/ApplicationPool2/Implementation.o", "")
-						File.chmod(0755, "agents/PassengerWatchdog")
-						sh "tar -czf support-#{compat_id}.tar.gz agents common"
-						FileUtils.rm_rf("agents")
-						FileUtils.rm_rf("common")
-					end
-
-					write_file("#{PhusionPassenger.resources_dir}/release.txt", "")
-				end
-
-				after :each do
-					@server.stop
-					File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
-					FileUtils.remove_entry_secure(@webroot)
-				end
-
 				it "downloads binaries from the Internet" do
 					@output = capture_output("passenger start " +
 						"--runtime-dir '#{@runtime_dir}' " +
 						"--runtime-check-only " +
 						"--binaries-url-root '#{@base_url}'")
-					@output.should include("Downloading Passenger support binaries for your platform, if available")
-					@output.should include("Downloading Nginx binary for your platform, if available")
-					@output.should_not include("Downloading Nginx...")
-					@output.should_not include("Installing Phusion Passenger Standalone")
+					@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+					@output.should_not include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+					@output.should_not include(COMPILING_MESSAGE)
 				end
 
 				it "builds the runtime if downloading fails" do
+					# Yes, we're testing the entire build system here.
 					@output = capture_output("passenger start " +
 						"--runtime-dir '#{@runtime_dir}' " +
 						"--runtime-check-only " +
 						"--binaries-url-root '#{@base_url}/wrong'")
-					@output.should include("Downloading Passenger support binaries for your platform, if available")
-					@output.should include("Downloading Nginx binary for your platform, if available")
-					@output.should include("Downloading Nginx...")
-					@output.should include("Installing Phusion Passenger Standalone")
+					@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+					@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+					@output.should include(COMPILING_MESSAGE)
 				end
 			end
 
 			context "when natively packaged" do
-				it "downloads only the Nginx binary from the Internet"
-				it "builds only Nginx if downloading fails"
+				before :each do
+					sh "passenger-config --make-locations-ini > '#{@runtime_dir}/locations.ini'"
+					ENV['PASSENGER_LOCATION_CONFIGURATION_FILE'] = "#{@runtime_dir}/locations.ini"
+					create_file("#{PhusionPassenger.lib_dir}/nginx")
+				end
+
+				after :each do
+					ENV.delete('PASSENGER_LOCATION_CONFIGURATION_FILE')
+					File.unlink("#{PhusionPassenger.lib_dir}/nginx")
+				end
+
+				it "downloads only the Nginx binary from the Internet" do
+					File.rename("#{@webroot}/#{version}/nginx-#{nginx_version}-#{compat_id}.tar.gz",
+						"#{@webroot}/#{version}/nginx-0.0.1-#{compat_id}.tar.gz")
+					@output = capture_output("passenger start " +
+						"--runtime-dir '#{@runtime_dir}' " +
+						"--runtime-check-only " +
+						"--binaries-url-root '#{@base_url}' " +
+						"--nginx-version 0.0.1")
+					@output.should_not include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+					@output.should_not include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+					@output.should_not include(COMPILING_MESSAGE)
+				end
+
+				it "builds only Nginx if downloading fails" do
+					# Yes, we're testing the build system here.
+					@output = capture_output("passenger start " +
+						"--runtime-dir '#{@runtime_dir}' " +
+						"--runtime-check-only " +
+						"--binaries-url-root '#{@base_url}' " +
+						"--nginx-version 1.0.0")
+					@output.should_not include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+					@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+					@output.should include(COMPILING_MESSAGE)
+				end
 			end
 		end
 
