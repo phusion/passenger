@@ -58,9 +58,11 @@ task 'test:integration:native_packaging' do
 	if PlatformInfo.rspec.nil?
 		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
 	else
-		Dir.chdir("test") do
-			ruby "#{PlatformInfo.rspec} -c -f s integration_tests/native_packaging_spec.rb"
+		command = "#{PlatformInfo.rspec} -c -f s integration_tests/native_packaging_spec.rb"
+		if boolean_option('SUDO')
+			command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 		end
+		sh "cd test && #{command}"
 	end
 end
 

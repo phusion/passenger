@@ -36,9 +36,18 @@ function install_test_deps_without_rails_bundles()
 	fi
 }
 
+function install_test_deps_without_rails_bundles_without_doctools()
+{
+	if [[ "$install_test_deps_without_rails_bundles_without_doctools" = "" ]]; then
+		install_test_deps_without_rails_bundles_without_doctools=1
+		rake test:install_deps RAILS_BUNDLES=no DOCTOOLS=no
+	fi
+}
+
 run uname -a
 run lsb_release -a
 sudo tee /etc/dpkg/dpkg.cfg.d/02apt-speedup >/dev/null <<<"force-unsafe-io"
+cp test/config.json.travis test/config.json
 
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
@@ -71,7 +80,6 @@ fi
 
 if [[ "$TEST_NGINX" = 1 ]]; then
 	run rake test:install_deps RAILS_BUNDLES=no DOCTOOLS=no
-	run gem install rack daemon_controller --no-rdoc --no-ri
 	run ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download
 	run rake test:integration:nginx
 fi
@@ -80,11 +88,16 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 	apt_get_update
 	run sudo apt-get install -y --no-install-recommends \
 		apache2-mpm-worker apache2-threaded-dev
-	run rake test:install_deps RAILS_BUNDLES=no DOCTOOLS=no
-	run gem install rack --no-rdoc --no-ri
+	install_test_deps_without_rails_bundles_without_doctools
 	run ./bin/passenger-install-apache2-module --auto
 	run rake test:integration:apache2
-	run rspec -f s -c test/integration_tests/standalone_spec.rb
+	run rake test:integration:standalone
+fi
+
+if [[ "$TEST_STANDALONE" = 1 ]]; then
+	apt_get_update
+	install_test_deps_without_rails_bundles_without_doctools
+	run rake test:integration:standalone
 fi
 
 if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
@@ -95,8 +108,9 @@ if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 		source-highlight
 	install_test_deps_without_rails_bundles
 	run rake debian:dev debian:dev:reinstall
-	run rvmsudo env LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
-		rspec -f s -c test/integration_tests/native_packaging_spec.rb
+	run rake test:integration:native_packaging \
+		LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
+		SUDO=1
 	run env PASSENGER_LOCATION_CONFIGURATION_FILE=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
 		rake test:integration:apache2 SUDO=1
 fi
