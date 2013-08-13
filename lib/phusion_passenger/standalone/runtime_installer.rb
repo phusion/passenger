@@ -168,6 +168,11 @@ private
 		should_compile_nginx = should_install_nginx? && !nginx_binary_path
 
 		if should_compile_support_binaries || should_compile_nginx
+			if @dont_compile_runtime
+				@stderr.puts "*** ERROR: Refusing to compile the Phusion Passenger Standalone runtime " +
+					"because --dont-compile-runtime is given."
+				exit(1)
+			end
 			check_dependencies(false) || exit(1)
 			puts
 			if should_compile_support_binaries

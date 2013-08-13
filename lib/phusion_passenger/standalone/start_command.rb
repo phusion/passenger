@@ -229,6 +229,10 @@ private
 				wrap_desc("Quit after checking whether the Phusion Passenger Standalone runtime files are installed")) do
 				@options[:runtime_check_only] = true
 			end
+			opts.on("--dont-compile-runtime",
+				wrap_desc("Abort if runtime must be compiled")) do
+				@options[:dont_compile_runtime] = true
+			end
 		end
 		@plugin.call_hook(:done_parsing_options)
 	end
@@ -375,6 +379,7 @@ private
 			:nginx_version     => @options[:nginx_version],
 			:nginx_tarball     => @options[:nginx_tarball],
 			:binaries_url_root => @options[:binaries_url_root],
+			:dont_compile_runtime => @options[:dont_compile_runtime],
 			:plugin      => @plugin)
 		return installer.run
 	end
@@ -393,6 +398,7 @@ private
 				exit 1
 			end
 			install_runtime(@runtime_locator) || exit(1)
+			@runtime_locator.reload
 		end
 	end
 

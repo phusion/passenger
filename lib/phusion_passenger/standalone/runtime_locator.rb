@@ -44,10 +44,14 @@ class RuntimeLocator
 			File.exist?("#{dir}/common/libpassenger_common/ApplicationPool2/Implementation.o")
 	end
 
+	def reload
+		@has_support_dir = @has_nginx_binary = false
+	end
+
 	# Returns the directory in which Passenger Standalone
 	# support binaries are stored, or nil if not installed.
 	def find_support_dir
-		return @support_dir if defined?(@support_dir)
+		return @support_dir if @has_support_dir
 
 		if PhusionPassenger.originally_packaged?
 			if debugging?
@@ -63,13 +67,14 @@ class RuntimeLocator
 		else
 			@support_dir = PhusionPassenger.lib_dir
 		end
+		@has_support_dir = true
 		return @support_dir
 	end
 
 	# Returns the path to the Nginx binary that Passenger Standalone
 	# may use, or nil if not installed.
 	def find_nginx_binary
-		return @nginx_binary if defined?(@nginx_binary)
+		return @nginx_binary if @has_nginx_binary
 
 		if File.exist?(config_filename)
 			config = PhusionPassenger::Utils::JSON.parse(File.read(config_filename))
@@ -88,6 +93,7 @@ class RuntimeLocator
 				@nginx_binary = nil
 			end
 		end
+		@has_nginx_binary = true
 		return @nginx_binary
 	end
 
