@@ -89,7 +89,7 @@ describe RuntimeInstaller do
 				:nginx_dir => "#{@temp_dir}/nginx",
 				:lib_dir   => PhusionPassenger.lib_dir)
 
-			@installer.should_receive(:download).twice.and_return do |url, output, options = {}|
+			@installer.should_receive(:download).twice.and_return do |url, output|
 				if url == nginx_binary_url
 					false
 				elsif url == nginx_source_url
