@@ -54,5 +54,11 @@ task 'test:install_deps' do
 		sh "cd test/stub/rails3.0 && bundle install"
 		sh "cd test/stub/rails3.1 && bundle install"
 		sh "cd test/stub/rails3.2 && bundle install"
+
+		ruby_version_int = RUBY_VERSION.split('.')[0..2].join.to_i
+
+		if ruby_version_int >= 190
+		    sh "cd test/stub/rails4.0 && bundle install"
+                end
 	end
 end

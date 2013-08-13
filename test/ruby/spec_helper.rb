@@ -2,6 +2,8 @@ if GC.respond_to?(:copy_on_write_friendly?) && !GC.copy_on_write_friendly?
 	GC.copy_on_write_friendly = true
 end
 
+RUBY_VERSION_INT = RUBY_VERSION.split('.')[0..2].join.to_i
+
 source_root = File.expand_path(File.dirname(__FILE__) + "/../..")
 Dir.chdir("#{source_root}/test")
 
