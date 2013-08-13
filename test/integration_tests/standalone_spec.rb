@@ -25,7 +25,7 @@ describe "Passenger Standalone" do
 		if $?.exitstatus == 0
 			return output
 		else
-			abort "Command #{command} exited with status #{$?.exitstatus}"
+			abort "Command #{command} exited with status #{$?.exitstatus}; output:\n#{output}"
 		end
 	end
 
@@ -74,7 +74,6 @@ describe "Passenger Standalone" do
 					version = PhusionPassenger::VERSION_STRING
 					nginx_version = PhusionPassenger::PREFERRED_NGINX_VERSION
 					compat_id = PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id
-					ruby_compat_id = PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_id
 					Dir.mkdir("#{@webroot}/#{version}")
 
 					Dir.chdir("#{@webroot}/#{version}") do
@@ -92,11 +91,6 @@ describe "Passenger Standalone" do
 						sh "tar -cf support-#{compat_id}.tar.gz agents common"
 						FileUtils.rm_rf("agents")
 						FileUtils.rm_rf("common")
-
-						write_file("passenger_native_support.so", "")
-						File.chmod(0755, "passenger_native_support.so")
-						sh "tar -cf rubyext-#{ruby_compat_id}.tar.gz passenger_native_support.so"
-						File.unlink("passenger_native_support.so")
 					end
 
 					write_file("#{PhusionPassenger.resources_dir}/release.txt", "")
@@ -115,7 +109,6 @@ describe "Passenger Standalone" do
 						"--runtime-check-only " +
 						"--binaries-url-root '#{@base_url}'")
 					@output.should include("Downloading Passenger support binaries for your platform, if available")
-					@output.should include("Downloading Ruby extension for your Ruby and platform, if available")
 					@output.should include("Downloading Nginx binaries for your platform, if available")
 					@output.should_not include("Downloading Nginx...")
 					@output.should_not include("Installing Phusion Passenger Standalone")

@@ -30,10 +30,6 @@ require 'phusion_passenger/standalone/command'
 # We lazy load as many libraries as possible not only to improve startup performance,
 # but also to ensure that we don't require libraries before we've passed the dependency
 # checking stage of the runtime installer.
-#
-# IMPORTANT: do not directly or indirectly require native_support; we can't compile
-# it yet until we have a compiler, and the runtime installer is supposed to check whether
-# a compiler is installed.
 
 module PhusionPassenger
 module Standalone
@@ -59,7 +55,7 @@ class StartCommand < Command
 		require 'phusion_passenger/standalone/runtime_locator'
 		@runtime_locator = RuntimeLocator.new(@options[:runtime_dir],
 			@options[:nginx_version])
-		ensure_nginx_installed
+		ensure_runtime_installed
 		exit if @options[:runtime_check_only]
 		determine_various_resource_locations
 		require_app_finder
@@ -372,10 +368,9 @@ private
 	def install_runtime(runtime_locator)
 		require 'phusion_passenger/standalone/runtime_installer'
 		installer = RuntimeInstaller.new(
-			:targets     => [:nginx, :ruby, :support_binaries],
-			:support_dir => runtime_locator.support_dir_install_target,
-			:nginx_dir   => runtime_locator.nginx_binary_install_target,
-			:ruby_dir    => ruby_extension_install_target,
+			:targets     => runtime_locator.install_targets,
+			:support_dir => runtime_locator.support_dir_install_destination,
+			:nginx_dir   => runtime_locator.nginx_binary_install_destination,
 			:nginx_version     => @options[:nginx_version],
 			:nginx_tarball     => @options[:nginx_tarball],
 			:binaries_url_root => @options[:binaries_url_root],
@@ -383,14 +378,7 @@ private
 		return installer.run
 	end
 
-	def ruby_extension_install_target
-		home = Etc.getpwuid.dir
-		version = PhusionPassenger::VERSION_STRING
-		dot_passenger = "#{home}/#{PhusionPassenger::USER_NAMESPACE_DIRNAME}"
-		return "#{dot_passenger}/native_support/#{version}/#{PlatformInfo.ruby_extension_binary_compatibility_id}"
-	end
-
-	def ensure_nginx_installed
+	def ensure_runtime_installed
 		if @runtime_locator.everything_installed?
 			if !File.exist?(@runtime_locator.find_nginx_binary)
 				error "The Nginx binary '#{@runtime_locator.find_nginx_binary}' does not exist."

@@ -103,9 +103,16 @@ class RuntimeLocator
 		return find_support_dir && find_nginx_binary
 	end
 
+	def install_targets
+		result = []
+		result << :nginx if find_nginx_binary.nil?
+		result << :support_binaries if find_support_dir.nil?
+		return result
+	end
+
 	# Returns the directory to which support binaries may be installed,
 	# in case the RuntimeInstaller is to be invoked.
-	def support_dir_install_target
+	def support_dir_install_destination
 		if PhusionPassenger.originally_packaged?
 			return "#{@runtime_dir}/#{version}/support-#{cxx_compat_id}"
 		else
@@ -115,7 +122,7 @@ class RuntimeLocator
 
 	# Returns the directory to which the Nginx binary may be installed,
 	# in case the RuntimeInstaller is to be invoked.
-	def nginx_binary_install_target
+	def nginx_binary_install_destination
 		return "#{@runtime_dir}/#{version}/nginx-#{@nginx_version}-#{cxx_compat_id}"
 	end
 

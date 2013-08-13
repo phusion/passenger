@@ -24,17 +24,24 @@
 module PhusionPassenger
 
 class NativeSupportLoader
-	def supported?
+	def self.supported?
 		return !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby" || RUBY_ENGINE == "rbx"
+	end
+
+	def try_load
+		if defined?(NativeSupport)
+			return true
+		else
+			require 'phusion_passenger'
+			load_from_native_support_output_dir ||
+			load_from_source_root ||
+			load_from_load_path ||
+			load_from_home_dir
+		end
 	end
 	
 	def start
-		require 'phusion_passenger'
-		load_from_native_support_output_dir ||
-		load_from_source_root ||
-		load_from_load_path ||
-		load_from_home_dir ||
-		compile_and_load
+		try_load || download_binary_and_load || compile_and_load
 	end
 
 private
@@ -119,6 +126,11 @@ private
 		rescue LoadError
 			return false
 		end
+	end
+
+	def download_binary_and_load
+		# TODO
+		return false
 	end
 	
 	def compile_and_load
@@ -224,5 +236,6 @@ end
 
 end
 
-loader = PhusionPassenger::NativeSupportLoader.new
-loader.start if loader.supported?
+if PhusionPassenger::NativeSupportLoader.supported?
+	PhusionPassenger::NativeSupportLoader.new.start
+end

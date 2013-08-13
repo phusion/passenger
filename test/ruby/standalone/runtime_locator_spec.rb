@@ -110,15 +110,15 @@ describe RuntimeLocator do
 			end
 		end
 
-		describe "#support_dir_install_target" do
+		describe "#support_dir_install_destination" do
 			it "returns a directory under the home dir" do
-				@locator.support_dir_install_target.start_with?("#{@temp_dir}/").should be_true
+				@locator.support_dir_install_destination.start_with?("#{@temp_dir}/").should be_true
 			end
 		end
 
-		describe "#nginx_binary_install_target" do
+		describe "#nginx_binary_install_destionation" do
 			it "returns a directory under the home dir" do
-				@locator.nginx_binary_install_target.start_with?("#{@temp_dir}/").should be_true
+				@locator.nginx_binary_install_destination.start_with?("#{@temp_dir}/").should be_true
 			end
 		end
 	end
@@ -195,15 +195,15 @@ describe RuntimeLocator do
 			end
 		end
 
-		describe "#support_dir_install_target" do
+		describe "#support_dir_install_destination" do
 			it "returns nil" do
-				@locator.support_dir_install_target.should be_nil
+				@locator.support_dir_install_destination.should be_nil
 			end
 		end
 
-		describe "#nginx_binary_install_target" do
+		describe "#nginx_binary_install_destionation" do
 			it "returns a directory under the home dir" do
-				@locator.nginx_binary_install_target.start_with?("#{@temp_dir}/").should be_true
+				@locator.nginx_binary_install_destination.start_with?("#{@temp_dir}/").should be_true
 			end
 		end
 	end
