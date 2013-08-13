@@ -84,6 +84,7 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 	run gem install rack --no-rdoc --no-ri
 	run ./bin/passenger-install-apache2-module --auto
 	run rake test:integration:apache2
+	run rspec -f s -c test/integration_tests/standalone_spec.rb
 fi
 
 if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
