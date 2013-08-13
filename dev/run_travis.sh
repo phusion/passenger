@@ -91,7 +91,6 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 	install_test_deps_without_rails_bundles_without_doctools
 	run ./bin/passenger-install-apache2-module --auto
 	run rake test:integration:apache2
-	run rake test:integration:standalone
 fi
 
 if [[ "$TEST_STANDALONE" = 1 ]]; then
