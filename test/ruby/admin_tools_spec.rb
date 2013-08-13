@@ -57,7 +57,7 @@ describe AdminTools::ServerInstance do
 	describe ".list" do
 		before :each do
 			AdminTools.should_receive(:tmpdir).and_return(passenger_tmpdir)
-			AdminTools::ServerInstance.stub!(:current_time).
+			AdminTools::ServerInstance.stub(:current_time).
 				and_return(Time.now + AdminTools::ServerInstance::STALE_TIME_THRESHOLD + 1)
 		end
 		
