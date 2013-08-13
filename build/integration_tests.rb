@@ -53,6 +53,18 @@ task 'test:integration:nginx' => dependencies do
 	end
 end
 
+dependencies = [:nginx, NATIVE_SUPPORT_TARGET].compact
+desc "Run Passenger Standalone integration tests"
+task 'test:integration:standalone' => dependencies do
+	if PlatformInfo.rspec.nil?
+		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
+	else
+		Dir.chdir("test") do
+			ruby "#{PlatformInfo.rspec} -c -f s integration_tests/standalone_tests.rb"
+		end
+	end
+end
+
 desc "Run native packaging tests"
 task 'test:integration:native_packaging' do
 	if PlatformInfo.rspec.nil?

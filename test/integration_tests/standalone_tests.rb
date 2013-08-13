@@ -65,9 +65,16 @@ describe "Passenger Standalone" do
 
 	describe "start command" do
 		context "if the runtime is not installed" do
+			before :each do
+				@runtime_dir = Dir.mktmpdir
+			end
+
+			after :each do
+				FileUtils.remove_entry_secure(@runtime_dir)
+			end
+
 			context "when originally packaged" do
 				before :each do
-					@runtime_dir = Dir.mktmpdir
 					@webroot = Dir.mktmpdir
 					@server, @base_url = start_server(@webroot)
 
@@ -99,7 +106,6 @@ describe "Passenger Standalone" do
 				after :each do
 					@server.stop
 					File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
-					FileUtils.remove_entry_secure(@runtime_dir)
 					FileUtils.remove_entry_secure(@webroot)
 				end
 
