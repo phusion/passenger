@@ -66,7 +66,7 @@ def download(name)
 		if PhusionPassenger::PlatformInfo.find_command("wget")
 			result = system("wget", "--tries=3", "-O", "#{name}.tmp", "--ca-certificate=#{cert}", url)
 		else
-			result = system("curl", url, "-f", "-L", "-o", "#{name}.tmp", "--cacert=#{cert}")
+			result = system("curl", url, "-f", "-L", "-o", "#{name}.tmp", "--cacert", cert)
 		end
 		if result
 			File.rename("#{name}.tmp", name)

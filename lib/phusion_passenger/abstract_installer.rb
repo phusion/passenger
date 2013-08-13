@@ -356,7 +356,8 @@ protected
 			return sh("wget", "--tries=3", "-O", output, url, *args)
 		else
 			if options[:cacert]
-				args << "--cacert=#{options[:cacert]}"
+				args << "--cacert"
+				args << options[:cacert]
 			end
 			return sh("curl", url, "-f", "-L", "-o", output, *args)
 		end
