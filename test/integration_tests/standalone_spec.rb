@@ -79,7 +79,7 @@ describe "Passenger Standalone" do
 					Dir.chdir("#{@webroot}/#{version}") do
 						write_file("nginx", "")
 						File.chmod(0755, "nginx")
-						sh "tar -cf nginx-#{nginx_version}-#{compat_id}.tar.gz nginx"
+						sh "tar -czf nginx-#{nginx_version}-#{compat_id}.tar.gz nginx"
 						File.unlink("nginx")
 
 						FileUtils.mkdir_p("agents")
@@ -88,7 +88,7 @@ describe "Passenger Standalone" do
 						write_file("common/libboost_oxt.a", "")
 						write_file("common/libpassenger_common/ApplicationPool2/Implementation.o", "")
 						File.chmod(0755, "agents/PassengerWatchdog")
-						sh "tar -cf support-#{compat_id}.tar.gz agents common"
+						sh "tar -czf support-#{compat_id}.tar.gz agents common"
 						FileUtils.rm_rf("agents")
 						FileUtils.rm_rf("common")
 					end

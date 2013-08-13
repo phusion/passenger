@@ -47,7 +47,7 @@ describe RuntimeInstaller do
 						File.open(content_name, "w").close
 					end
 				end
-				sh "tar", "-cf", filename, "."
+				sh "tar", "-czf", filename, "."
 			end
 		end
 	end
