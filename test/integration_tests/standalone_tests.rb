@@ -71,6 +71,25 @@ describe "Passenger Standalone" do
 		end
 	end
 
+	def create_dummy_support_binaries
+		Dir.mkdir("agents") if !File.exist?("agents")
+		["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
+			File.open("agents/#{exe}", "w") do |f|
+				f.puts "#!/bin/bash"
+				f.puts "echo PASS"
+			end
+			File.chmod(0755, "agents/#{exe}")
+		end
+	end
+
+	def create_dummy_nginx_binary
+		File.open("nginx", "w") do |f|
+			f.puts "#!/bin/bash"
+			f.puts "echo nginx version: 1.0.0"
+		end
+		File.chmod(0755, "nginx")
+	end
+
 	def create_file(filename, contents = nil)
 		File.open(filename, "wb") do |f|
 			f.write(contents) if contents
@@ -130,16 +149,14 @@ describe "Passenger Standalone" do
 				Dir.mkdir("#{@webroot}/#{version}")
 				Dir.chdir("#{@webroot}/#{version}") do
 					create_tarball("nginx-#{nginx_version}-#{compat_id}.tar.gz") do
-						create_file("nginx")
-						File.chmod(0755, "nginx")
+						create_dummy_nginx_binary
 					end
 					create_tarball("support-#{compat_id}.tar.gz") do
 						FileUtils.mkdir_p("agents")
 						FileUtils.mkdir_p("common/libpassenger_common/ApplicationPool2")
-						create_file("agents/PassengerWatchdog")
 						create_file("common/libboost_oxt.a")
 						create_file("common/libpassenger_common/ApplicationPool2/Implementation.o")
-						File.chmod(0755, "agents/PassengerWatchdog")
+						create_dummy_support_binaries
 					end
 				end
 

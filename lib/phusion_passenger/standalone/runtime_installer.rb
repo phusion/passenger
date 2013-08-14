@@ -174,15 +174,15 @@ private
 
 	def download_or_compile_binaries
 		if should_install_support_binaries?
-			support_binaries_path = download_support_binaries
+			support_binaries_downloaded = download_support_binaries
 		end
 		if should_install_nginx?
-			nginx_binary_path = download_nginx_binary
+			nginx_binary_downloaded = download_nginx_binary
 		end
 		
 		should_compile_support_binaries = should_install_support_binaries? &&
-			!support_binaries_path
-		should_compile_nginx = should_install_nginx? && !nginx_binary_path
+			!support_binaries_downloaded
+		should_compile_nginx = should_install_nginx? && !nginx_binary_downloaded
 
 		if should_compile_support_binaries || should_compile_nginx
 			if @dont_compile_runtime
@@ -227,7 +227,7 @@ private
 	end
 
 	def download_support_binaries
-		return nil if !should_download_binaries?
+		return false if !should_download_binaries?
 
 		puts "<banner>Downloading Passenger support binaries for your platform, if available...</banner>"
 		basename = "support-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
@@ -237,25 +237,31 @@ private
 			puts "<b>No binaries are available for your platform. But don't worry, the " +
 				"necessary binaries will be compiled from source instead.</b>"
 			puts
-			return nil
+			return false
 		end
 		
 		FileUtils.mkdir_p(@support_dir)
-		Dir.chdir(@support_dir) do
+		Dir.mkdir("#{@working_dir}/support")
+		Dir.chdir("#{@working_dir}/support") do
 			puts "Extracting tarball..."
-			result = extract_tarball(tarball)
-			return nil if !result
+			return false if !extract_tarball(tarball)
 
 			["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
 				puts "Checking whether the downloaded #{exe} binary is usable..."
 				output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} --test-binary 1`
 				if !$? || $?.exitstatus != 0 || output != "PASS\n"
-					puts "Binary #{exe} is not usable."
+					@stderr.puts "Binary #{exe} is not usable."
 					return nil
 				end
 			end
 			puts "Binaries are usable."
-			return result
+		end
+
+		if system("mv '#{@working_dir}/support'/* '#{@support_dir}'/")
+			return true
+		else
+			@stderr.puts "Error: could not move extracted files to the support directory"
+			return false
 		end
 	rescue Interrupt
 		exit 2
@@ -272,23 +278,28 @@ private
 			puts "<b>No binary available for your platform. But don't worry, the " +
 				"necessary binary will be compiled from source instead.</b>"
 			puts
-			return nil
+			return false
 		end
 
 		FileUtils.mkdir_p(@nginx_dir)
-		Dir.chdir(@nginx_dir) do
+		Dir.mkdir("#{@working_dir}/nginx")
+		Dir.chdir("#{@working_dir}/nginx") do
 			puts "Extracting tarball..."
 			result = extract_tarball(tarball)
-			return nil if !result
+			return false if !result
 
 			puts "Checking whether the downloaded binary is usable..."
 			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./nginx -v 2>&1`
 			if $? && $?.exitstatus == 0 && output =~ /nginx version:/
 				puts "Binary is usable."
-				return result
+				if system("mv '#{@working_dir}/nginx'/* '#{@nginx_dir}'/")
+					return true
+				else
+					return false
+				end
 			else
 				puts "Binary is not usable."
-				return nil
+				return false
 			end
 		end
 	rescue Interrupt
