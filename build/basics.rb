@@ -59,8 +59,14 @@ class TemplateRenderer
 	def render_to(filename)
 		puts "Creating #{filename}"
 		text = render
-		File.open(filename, 'w') do |f|
-			f.write(text)
+		# When packaging, some timestamps may be modified. The user may not
+		# have write access to the source root (for example, when Passenger
+		# Standalone is compiling its runtime), so we only write to the file
+		# when necessary.
+		if File.writable?(filename) || File.read(filename) != text
+			File.open(filename, 'w') do |f|
+				f.write(text)
+			end
 		end
 	end
 end
