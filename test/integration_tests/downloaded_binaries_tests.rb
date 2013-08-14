@@ -52,7 +52,7 @@ describe "Downloaded Phusion Passenger binaries" do
 			sh("passenger start " +
 				"-p 4000 " +
 				"-d " +
-				"--dont-compile " +
+				"--no-compile-runtime " +
 				"--binaries-url-root http://127.0.0.1:4001 " +
 				"--runtime-dir '#{@temp_dir}' >/dev/null")
 			begin
