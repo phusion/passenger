@@ -48,6 +48,7 @@ describe "Downloaded Phusion Passenger binaries" do
 			end
 			Dir.mkdir("public")
 			Dir.mkdir("tmp")
+			Dir.mkdir("log")
 
 			begin
 				sh("passenger start " +
