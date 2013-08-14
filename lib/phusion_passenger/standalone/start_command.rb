@@ -203,6 +203,8 @@ private
 				wrap_desc("Where to store the PID file")) do |value|
 				@options[:pid_file] = value
 			end
+
+			opts.separator ""
 			opts.on("--nginx-bin FILENAME", String,
 				wrap_desc("Nginx binary to use as core")) do |value|
 				@options[:nginx_bin] = value
@@ -221,6 +223,10 @@ private
 				          "checked for binaries prior to a local build.")) do |value|
 				@options[:binaries_url_root] = value
 			end
+			opts.on("--no-download-binaries",
+				wrap_desc("Never download binaries")) do
+				@options[:download_binaries] = false
+			end
 			opts.on("--runtime-dir DIRECTORY", String,
 				wrap_desc("Directory to use for Phusion Passenger Standalone runtime files")) do |value|
 				@options[:runtime_dir] = File.expand_path(value)
@@ -229,7 +235,7 @@ private
 				wrap_desc("Quit after checking whether the Phusion Passenger Standalone runtime files are installed")) do
 				@options[:runtime_check_only] = true
 			end
-			opts.on("--dont-compile-runtime",
+			opts.on("--no-compile-runtime",
 				wrap_desc("Abort if runtime must be compiled")) do
 				@options[:dont_compile_runtime] = true
 			end
@@ -379,6 +385,7 @@ private
 			:nginx_version     => @options[:nginx_version],
 			:nginx_tarball     => @options[:nginx_tarball],
 			:binaries_url_root => @options[:binaries_url_root],
+			:download_binaries => @options.fetch(:download_binaries, true),
 			:dont_compile_runtime => @options[:dont_compile_runtime],
 			:plugin      => @plugin)
 		return installer.run
