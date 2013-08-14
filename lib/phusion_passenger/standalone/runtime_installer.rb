@@ -187,7 +187,7 @@ private
 		if should_compile_support_binaries || should_compile_nginx
 			if @dont_compile_runtime
 				@stderr.puts "*** ERROR: Refusing to compile the Phusion Passenger Standalone runtime " +
-					"because --dont-compile-runtime is given."
+					"because --no-compile-runtime is given."
 				exit(1)
 			end
 			check_dependencies(false) || exit(1)
@@ -246,8 +246,8 @@ private
 			result = extract_tarball(tarball)
 			return nil if !result
 
-			puts "Checking whether the downloaded binary is usable..."
 			["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
+				puts "Checking whether the downloaded #{exe} binary is usable..."
 				output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} --test-binary 1`
 				if !$? || $?.exitstatus != 0 || output != "PASS\n"
 					puts "Binary #{exe} is not usable."

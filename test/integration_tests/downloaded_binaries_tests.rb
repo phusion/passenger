@@ -49,18 +49,23 @@ describe "Downloaded Phusion Passenger binaries" do
 			Dir.mkdir("public")
 			Dir.mkdir("tmp")
 
-			sh("passenger start " +
-				"-p 4000 " +
-				"-d " +
-				"--no-compile-runtime " +
-				"--binaries-url-root http://127.0.0.1:4001 " +
-				"--runtime-dir '#{@temp_dir}' >/dev/null")
+			begin
+				sh("passenger start " +
+					"-p 4000 " +
+					"-d " +
+					"--no-compile-runtime " +
+					"--binaries-url-root http://127.0.0.1:4001 " +
+					"--runtime-dir '#{@temp_dir}' >log/start.log")
+			rescue Exception
+				system("cat log/start.log")
+				raise
+			end
 			begin
 				open("http://127.0.0.1:4000/") do |f|
 					f.read.should == "ok"
 				end
 			rescue
-				system("cat log/*")
+				system("cat log/passenger.4000.log")
 				raise
 			ensure
 				sh "passenger stop -p 4000"
