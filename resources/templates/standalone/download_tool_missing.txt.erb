@@ -1,0 +1,18 @@
+<yellow>No download tool found</yellow>
+
+Phusion Passenger Standalone requires some binaries, such as the Nginx core. It
+can download these binaries from the Phusion server (faster) or it can build
+these from source (slower, requires additional dependencies). But to download
+binaries, a download tool is required.
+
+ * <b>Option 1 (recommended):</b> If you want the binaries to be downloaded, please
+   press <b>Ctrl-C</b>, install a download tool as instructed below, and re-run
+   Phusion Passenger Standalone.
+
+<% @runner.missing_dependencies.each do |dep| -%>
+    - <%= dep.install_instructions %>
+<% end -%>
+
+ * <b>Option 2:</b> If you want the binaries to be compiled from source, press <b>Enter</b>.
+
+Awaiting your choice...

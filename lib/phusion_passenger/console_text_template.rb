@@ -35,7 +35,7 @@ class ConsoleTextTemplate
 			data = input[:text]
 		end
 		@template = ERB.new(Utils::AnsiColors.ansi_colorize(data),
-			nil, nil, '@buffer')
+			nil, '-', '@buffer')
 		options.each_pair do |name, value|
 			self[name] = value
 		end

@@ -27,6 +27,7 @@ require 'phusion_passenger'
 require 'phusion_passenger/abstract_installer'
 require 'phusion_passenger/packaging'
 require 'phusion_passenger/common_library'
+require 'phusion_passenger/platform_info'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/binary_compatibility'
 require 'phusion_passenger/standalone/utils'
@@ -152,7 +153,23 @@ private
 	end
 
 	def check_for_download_tool
-		# TODO
+		puts "<banner>Checking for basic prerequities...</banner>"
+		puts
+
+		require 'phusion_passenger/platform_info/depcheck'
+		PlatformInfo::Depcheck.load('depcheck_specs/utilities')
+		runner = PlatformInfo::Depcheck::ConsoleRunner.new
+		runner.add('download-tool')
+
+		if !runner.check_all
+			@download_binaries = false
+			puts
+			line
+			puts
+			render_template 'standalone/download_tool_missing',
+				:runner => runner
+			wait
+		end
 	end
 
 	def download_or_compile_binaries

@@ -75,6 +75,7 @@ describe RuntimeInstaller do
 					true
 				end
 
+			@installer.should_receive(:check_for_download_tool)
 			@installer.should_not_receive(:check_depdendencies)
 			@installer.should_not_receive(:compile_support_binaries)
 			@installer.should_not_receive(:download_and_extract_nginx_sources)
@@ -111,6 +112,7 @@ describe RuntimeInstaller do
 				end
 			end
 
+			@installer.should_receive(:check_for_download_tool)
 			@installer.should_receive(:check_dependencies).and_return(true)
 			@installer.should_not_receive(:compile_support_binaries)
 			@installer.should_receive(:strip_binary).
@@ -141,6 +143,7 @@ describe RuntimeInstaller do
 					true
 				end
 			
+			@installer.should_receive(:check_for_download_tool)
 			@installer.should_not_receive(:check_depdendencies)
 			@installer.should_not_receive(:compile_support_binaries)
 			@installer.should_not_receive(:download_and_extract_nginx_sources)
@@ -174,6 +177,7 @@ describe RuntimeInstaller do
 					true
 				end
 
+			@installer.should_receive(:check_for_download_tool)
 			@installer.should_not_receive(:check_depdendencies)
 			@installer.should_not_receive(:compile_support_binaries)
 			@installer.should_not_receive(:download_and_extract_nginx_sources)
@@ -208,6 +212,7 @@ describe RuntimeInstaller do
 					built_files = `find '#{@temp_dir}/support'`
 				end
 
+			@installer.should_receive(:check_for_download_tool)
 			@installer.should_receive(:download).and_return(false)
 			@installer.should_receive(:check_dependencies).and_return(true)
 			@installer.should_not_receive(:download_and_extract_nginx_sources)
@@ -228,6 +233,7 @@ describe RuntimeInstaller do
 				"nginx_without_native_support CACHING=false OUTPUT_DIR='#{@temp_dir}/support'").
 				and_raise(RuntimeError, "Rake failed")
 
+			@installer.should_receive(:check_for_download_tool)
 			@installer.should_receive(:download).and_return(false)
 			@installer.should_receive(:check_dependencies).and_return(true)
 			@installer.should_not_receive(:download_and_extract_nginx_sources)
@@ -278,6 +284,7 @@ describe RuntimeInstaller do
 			end
 		end
 
+		@installer.should_receive(:check_for_download_tool)
 		@installer.should_receive(:check_dependencies).and_return(true)
 		@installer.should_not_receive(:compile_support_binaries)
 		lambda { @installer.run }.should raise_error(SystemExit)
@@ -308,6 +315,7 @@ describe RuntimeInstaller do
 			end
 		end
 
+		@installer.should_receive(:check_for_download_tool)
 		@installer.should_receive(:check_dependencies).and_return(true)
 		@installer.should_not_receive(:compile_support_binaries)
 		lambda { @installer.run }.should raise_error(SystemExit)
