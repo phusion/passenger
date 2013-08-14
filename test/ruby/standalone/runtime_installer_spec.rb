@@ -71,6 +71,19 @@ describe RuntimeInstaller do
 		File.chmod(0755, "nginx")
 	end
 
+	def create_dummy_nginx_source
+		Dir.mkdir("nginx-#{nginx_version}")
+		File.open("nginx-#{nginx_version}/configure", "w") do |f|
+			f.puts %Q{echo "$@" > '#{@temp_dir}/configure.txt'}
+		end
+		File.chmod(0700, "nginx-#{nginx_version}/configure")
+		File.open("nginx-#{nginx_version}/Makefile", "w") do |f|
+			f.puts("all:")
+			f.puts("	mkdir objs")
+			f.puts("	echo ok > objs/nginx")
+		end
+	end
+
 	def create_file(filename)
 		File.open(filename, "w").close
 	end
@@ -116,16 +129,7 @@ describe RuntimeInstaller do
 					false
 				elsif url == nginx_source_url
 					create_tarball(output) do
-						Dir.mkdir("nginx-#{nginx_version}")
-						File.open("nginx-#{nginx_version}/configure", "w") do |f|
-							f.puts %Q{echo "$@" > '#{@temp_dir}/configure.txt'}
-						end
-						File.chmod(0700, "nginx-#{nginx_version}/configure")
-						File.open("nginx-#{nginx_version}/Makefile", "w") do |f|
-							f.puts("all:")
-							f.puts("	mkdir objs")
-							f.puts("	echo ok > objs/nginx")
-						end
+						create_dummy_nginx_source
 					end
 					true
 				else
@@ -291,6 +295,47 @@ describe RuntimeInstaller do
 		it "builds the Nginx binary if it cannot be downloaded" do
 			test_building_nginx_binary
 		end
+	end
+
+	it "commits downloaded binaries after checking whether they're usable" do
+		create_installer(:targets => [:support_binaries, :nginx],
+				:support_dir => "#{@temp_dir}/support",
+				:nginx_dir => "#{@temp_dir}/nginx",
+				:lib_dir => PhusionPassenger.lib_dir)
+
+			@installer.should_receive(:download).
+				exactly(3).times.
+				and_return do |url, output, options|
+					if url == support_binaries_url
+						options[:use_cache].should be_true
+						create_tarball(output) do
+							create_dummy_support_binaries
+						end
+					elsif url == nginx_binary_url
+						options[:use_cache].should be_true
+						create_tarball(output) do
+							create_dummy_nginx_binary
+						end
+					elsif url == nginx_source_url
+						create_tarball(output) do
+							create_dummy_nginx_source
+						end
+					else
+						raise "Unexpected download URL: #{url}"
+					end
+					true
+				end
+
+			@installer.should_receive(:check_for_download_tool)
+			@installer.should_receive(:check_support_binaries).and_return(false)
+			@installer.should_receive(:check_nginx_binary).and_return(false)
+			@installer.should_receive(:check_dependencies).and_return(true)
+			@installer.should_receive(:compile_support_binaries)
+			@installer.should_receive(:compile_nginx)
+			@installer.run
+
+			Dir["#{@temp_dir}/nginx/*"].should be_empty
+			Dir["#{@temp_dir}/support/*"].should be_empty
 	end
 
 	it "aborts if the Nginx source tarball cannot be extracted" do

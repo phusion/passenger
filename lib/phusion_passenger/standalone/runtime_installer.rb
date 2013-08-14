@@ -245,16 +245,7 @@ private
 		Dir.chdir("#{@working_dir}/support") do
 			puts "Extracting tarball..."
 			return false if !extract_tarball(tarball)
-
-			["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
-				puts "Checking whether the downloaded #{exe} binary is usable..."
-				output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} --test-binary 1`
-				if !$? || $?.exitstatus != 0 || output != "PASS\n"
-					@stderr.puts "Binary #{exe} is not usable."
-					return nil
-				end
-			end
-			puts "Binaries are usable."
+			return false if !check_support_binaries
 		end
 
 		if system("mv '#{@working_dir}/support'/* '#{@support_dir}'/")
@@ -265,6 +256,19 @@ private
 		end
 	rescue Interrupt
 		exit 2
+	end
+
+	def check_support_binaries
+		["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
+			puts "Checking whether the downloaded #{exe} binary is usable..."
+			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} --test-binary 1`
+			if !$? || $?.exitstatus != 0 || output != "PASS\n"
+				@stderr.puts "Binary #{exe} is not usable."
+				return false
+			end
+		end
+		puts "Binaries are usable."
+		return true
 	end
 
 	def download_nginx_binary
@@ -287,23 +291,31 @@ private
 			puts "Extracting tarball..."
 			result = extract_tarball(tarball)
 			return false if !result
-
-			puts "Checking whether the downloaded binary is usable..."
-			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./nginx -v 2>&1`
-			if $? && $?.exitstatus == 0 && output =~ /nginx version:/
-				puts "Binary is usable."
+			if check_nginx_binary
 				if system("mv '#{@working_dir}/nginx'/* '#{@nginx_dir}'/")
 					return true
 				else
+					@stderr.puts "Error: could not move extracted Nginx binary to the right directory"
 					return false
 				end
 			else
-				puts "Binary is not usable."
 				return false
 			end
 		end
 	rescue Interrupt
 		exit 2
+	end
+
+	def check_nginx_binary
+		puts "Checking whether the downloaded binary is usable..."
+		output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./nginx -v 2>&1`
+		if $? && $?.exitstatus == 0 && output =~ /nginx version:/
+			puts "Binary is usable."
+			return true
+		else
+			@stderr.puts "Binary is not usable."
+			return false
+		end
 	end
 
 	def download_and_extract_nginx_sources
