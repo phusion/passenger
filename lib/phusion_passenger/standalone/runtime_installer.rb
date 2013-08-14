@@ -248,7 +248,7 @@ private
 
 			puts "Checking whether the downloaded binary is usable..."
 			["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
-				output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} --binary-test 1`
+				output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} --test-binary 1`
 				if !$? || $?.exitstatus != 0 || output != "PASS\n"
 					puts "Binary #{exe} is not usable."
 					return nil
@@ -282,7 +282,7 @@ private
 			return nil if !result
 
 			puts "Checking whether the downloaded binary is usable..."
-			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./nginx -h`
+			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./nginx -v 2>&1`
 			if $? && $?.exitstatus == 0 && output =~ /nginx version:/
 				puts "Binary is usable."
 				return result
