@@ -52,6 +52,25 @@ describe RuntimeInstaller do
 		end
 	end
 
+	def create_dummy_support_binaries
+		Dir.mkdir("agents")
+		["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
+			File.open("agents/#{exe}", "w") do |f|
+				f.puts "#!/bin/bash"
+				f.puts "echo PASS"
+			end
+			File.chmod(0755, "agents/#{exe}")
+		end
+	end
+
+	def create_dummy_nginx_binary
+		File.open("nginx", "w") do |f|
+			f.puts "#!/bin/bash"
+			f.puts "echo nginx version: 1.0.0"
+		end
+		File.chmod(0755, "nginx")
+	end
+
 	def create_file(filename)
 		File.open(filename, "w").close
 	end
@@ -71,7 +90,9 @@ describe RuntimeInstaller do
 				and_return do |url, output, options|
 					url.should == nginx_binary_url
 					options[:use_cache].should be_true
-					create_tarball(output, ["nginx.txt"])
+					create_tarball(output) do
+						create_dummy_nginx_binary
+					end
 					true
 				end
 
@@ -82,7 +103,7 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			@installer.run
 
-			File.exist?("#{@temp_dir}/nginx/nginx.txt").should be_true
+			File.exist?("#{@temp_dir}/nginx/nginx").should be_true
 	end
 
 	def test_building_nginx_binary
@@ -139,7 +160,9 @@ describe RuntimeInstaller do
 				and_return do |url, output, options|
 					url.should == "#{binaries_url_root}/#{version}/support-#{cxx_compat_id}.tar.gz"
 					options[:use_cache].should be_true
-					create_tarball(output, ["support.txt"])
+					create_tarball(output) do
+						create_dummy_support_binaries
+					end
 					true
 				end
 			
@@ -150,7 +173,7 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			@installer.run
 
-			File.exist?("#{@temp_dir}/support/support.txt").should be_true
+			File.exist?("#{@temp_dir}/support/agents/PassengerWatchdog").should be_true
 		end
 
 		it "downloads the Nginx binary from the Internet if :nginx is specified as target" do
@@ -167,9 +190,13 @@ describe RuntimeInstaller do
 				twice.
 				and_return do |url, output, options|
 					if url == support_binaries_url
-						create_tarball(output, ["support.txt"])
+						create_tarball(output) do
+							create_dummy_support_binaries
+						end
 					elsif url == nginx_binary_url
-						create_tarball(output, ["nginx.txt"])
+						create_tarball(output) do
+							create_dummy_nginx_binary
+						end
 					else
 						raise "Unexpected download URL: #{url}"
 					end
@@ -184,8 +211,8 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			@installer.run
 
-			File.exist?("#{@temp_dir}/support/support.txt").should be_true
-			File.exist?("#{@temp_dir}/nginx/nginx.txt").should be_true
+			File.exist?("#{@temp_dir}/support/agents/PassengerWatchdog").should be_true
+			File.exist?("#{@temp_dir}/nginx/nginx").should be_true
 		end
 
 		it "builds the support binaries if it cannot be downloaded" do

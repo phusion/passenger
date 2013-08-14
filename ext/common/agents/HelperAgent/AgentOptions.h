@@ -56,11 +56,17 @@ struct AgentOptions {
 	string adminToolStatusPassword;
 	vector<string> prestartUrls;
 
+	bool testBinary;
 	string requestSocketLink;
 
 	AgentOptions() { }
 
 	AgentOptions(const VariantMap &options) {
+		testBinary = options.get("test_binary", false) == "1";
+		if (testBinary) {
+			return;
+		}
+
 		// Required options for which a default is already set by the Watchdog.
 		passengerRoot      = options.get("passenger_root");
 		tempDir            = options.get("temp_dir");

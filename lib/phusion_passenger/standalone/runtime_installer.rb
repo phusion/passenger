@@ -243,7 +243,19 @@ private
 		FileUtils.mkdir_p(@support_dir)
 		Dir.chdir(@support_dir) do
 			puts "Extracting tarball..."
-			return extract_tarball(tarball)
+			result = extract_tarball(tarball)
+			return nil if !result
+
+			puts "Checking whether the downloaded binary is usable..."
+			["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
+				output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} --binary-test 1`
+				if !$? || $?.exitstatus != 0 || output != "PASS\n"
+					puts "Binary #{exe} is not usable."
+					return nil
+				end
+			end
+			puts "Binary is usable."
+			return result
 		end
 	rescue Interrupt
 		exit 2
@@ -266,7 +278,18 @@ private
 		FileUtils.mkdir_p(@nginx_dir)
 		Dir.chdir(@nginx_dir) do
 			puts "Extracting tarball..."
-			return extract_tarball(tarball)
+			result = extract_tarball(tarball)
+			return nil if !result
+
+			puts "Checking whether the downloaded binary is usable..."
+			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./nginx -h`
+			if $? && $?.exitstatus == 0 && output =~ /nginx version:/
+				puts "Binary is usable."
+				return result
+			else
+				puts "Binary is not usable."
+				return nil
+			end
 		end
 	rescue Interrupt
 		exit 2

@@ -413,6 +413,11 @@ initializeBareEssentials(int argc, char *argv[]) {
 	oldOomScore = setOomScoreNeverKill();
 	
 	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");
+
+	if (agentsOptions.get("test_binary", false) == "1") {
+		printf("PASS\n");
+		exit(0);
+	}
 }
 
 static void
