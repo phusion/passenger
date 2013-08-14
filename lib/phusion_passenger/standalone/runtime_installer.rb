@@ -254,7 +254,7 @@ private
 					return nil
 				end
 			end
-			puts "Binary is usable."
+			puts "Binaries are usable."
 			return result
 		end
 	rescue Interrupt
