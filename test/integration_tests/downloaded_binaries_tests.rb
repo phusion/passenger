@@ -59,6 +59,9 @@ describe "Downloaded Phusion Passenger binaries" do
 				open("http://127.0.0.1:4000/") do |f|
 					f.read.should == "ok"
 				end
+			rescue
+				system("cat log/*")
+				raise
 			ensure
 				sh "passenger stop -p 4000"
 			end
