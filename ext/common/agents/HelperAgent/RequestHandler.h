@@ -1023,7 +1023,7 @@ private:
 			struct tm the_tm;
 
 			pos = appendData(pos, end, "Date: ");
-			localtime_r(&the_time, &the_tm);
+			gmtime_r(&the_time, &the_tm);
 			pos += strftime(pos, end - pos, "%a, %d %b %G %H:%M:%S %Z", &the_tm);
 			pos = appendData(pos, end, "\r\n");
 			headerData.append(dateStr, pos - dateStr);
