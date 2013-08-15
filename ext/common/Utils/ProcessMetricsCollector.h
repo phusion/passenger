@@ -39,9 +39,10 @@
 	#include <mach/mach_vm.h>
 	#include <mach/mach_port.h>
 #endif
-#ifndef __NetBSD__
+#if !defined(__NetBSD__) && !defined(__OpenBSD__)
 	// NetBSD does not support -p with multiple PIDs.
 	// https://code.google.com/p/phusion-passenger/issues/detail?id=736
+	// OpenBSD 5.2 doesn't support it either
 	#define PS_SUPPORTS_MULTIPLE_PIDS
 	#include <set>
 #endif
@@ -418,13 +419,15 @@ public:
 		}
 		
 		ConstIterator it;
-		string pidsArg;
+		// The list of PIDs must follow -p without a space.
+		// https://groups.google.com/forum/#!topic/phusion-passenger/WKXy61nJBMA
+		string pidsArg = "-p";
 		
 		for (it = pids.begin(); it != pids.end(); it++) {
 			pidsArg.append(toString(*it));
 			pidsArg.append(",");
 		}
-		if (!pidsArg.empty() && pidsArg[pidsArg.size() - 1] == ',') {
+		if (pidsArg[pidsArg.size() - 1] == ',') {
 			pidsArg.resize(pidsArg.size() - 1);
 		}
 		
@@ -436,7 +439,7 @@ public:
 				"pid,ppid,%cpu,rss,vsize,pgid,command",
 			#endif
 			#ifdef PS_SUPPORTS_MULTIPLE_PIDS
-				"-p", pidsArg.c_str(),
+				pidsArg.c_str(),
 			#endif
 			NULL
 		};

@@ -16,6 +16,8 @@ Release 4.0.13
  * Added a hidden configuration option for customizing the application start
    timeout. A proper configuration option will be introduced in the future.
  * Added autodetection support for Amazon Linux.
+ * Fixed process metrics collection on some operating systems. Some systems'
+   'ps' command expect no space between -p and the list of PIDs.
 
 
 Release 4.0.10
