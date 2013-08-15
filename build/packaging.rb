@@ -88,7 +88,8 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			"admin_password: ..."
 	end
 
-	sh "git tag -s #{tag_prefix}-#{version} -u 0A212A8C -m 'Release #{version}'"
+	tag = "#{tag_prefix}-#{version}"
+	sh "git tag -s #{tag} -u 0A212A8C -m 'Release #{version}'"
 
 	puts "Proceed with pushing tag to remote Git repo and uploading the gem and signatures? [y/n]"
 	if STDIN.readline == "y\n"
@@ -115,6 +116,9 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 					"Status: #{response.code}\n\n" +
 					response.body
 			end
+			sh "cd ../passenger_autobuilder && " +
+				"git pull && " +
+				"./autobuild-osx https://github.com/phusion/passenger.git passenger psg_autobuilder_chroot@juvia-helper.phusion.nl --tag=#{tag}"
 			puts "--------------"
 			puts "All done."
 		else
@@ -122,6 +126,9 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			subdir = string_option('NAME', version)
 			sh "scp pkg/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
 			sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
+			sh "cd ../passenger_autobuilder && " +
+				"git pull && " +
+				"./autobuild-osx TODO passenger-enterprise psg_autobuilder_chroot@juvia-helper.phusion.nl --tag=#{tag}"
 		end
 	else
 		puts "Did not upload anything."
