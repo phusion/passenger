@@ -556,14 +556,12 @@ private
 		Dir.chdir(source_dir) do
 			shell = PlatformInfo.find_command('bash') || "sh"
 			command = ""
-			if @targets.include?(:support_binaries)
-				output_dir = "#{@support_dir}/common/libpassenger_common"
-				nginx_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
-					set_output_dir(output_dir).
-					link_objects_as_string
-				command << "env PASSENGER_INCLUDEDIR='#{PhusionPassenger.include_dir}'" <<
-					" PASSENGER_LIBS='#{nginx_libs} #{output_dir}/../libboost_oxt.a' "
-			end
+			lib_dir = "#{@lib_dir}/common/libpassenger_common"
+			nginx_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
+				set_output_dir(lib_dir).
+				link_objects_as_string
+			command << "env PASSENGER_INCLUDEDIR='#{PhusionPassenger.include_dir}' " <<
+				"PASSENGER_LIBS='#{nginx_libs} #{lib_dir}/../libboost_oxt.a' "
 			# RPM thinks it's being smart by scanning binaries for
 			# paths and refusing to create package if it detects any
 			# hardcoded thats that point to /usr or other important
