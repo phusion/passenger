@@ -161,9 +161,10 @@ private
 		runner = PlatformInfo::Depcheck::ConsoleRunner.new
 		runner.add('download-tool')
 
-		if !runner.check_all
+		result = runner.check_all
+		puts
+		if !result
 			@download_binaries = false
-			puts
 			line
 			puts
 			render_template 'standalone/download_tool_missing',
@@ -267,7 +268,7 @@ private
 				return false
 			end
 		end
-		puts "Binaries are usable."
+		puts "All support binaries are usable."
 		return true
 	end
 
@@ -310,10 +311,10 @@ private
 		puts "Checking whether the downloaded binary is usable..."
 		output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./nginx -v 2>&1`
 		if $? && $?.exitstatus == 0 && output =~ /nginx version:/
-			puts "Binary is usable."
+			puts "Nginx binary is usable."
 			return true
 		else
-			@stderr.puts "Binary is not usable."
+			@stderr.puts "Nginx binary is not usable."
 			return false
 		end
 	end
