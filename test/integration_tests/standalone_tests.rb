@@ -196,6 +196,50 @@ describe "Passenger Standalone" do
 					test_serving_application(command)
 				end
 
+				specify "if the downloaded support binaries work but the download Nginx binary doesn't, " +
+					"and Nginx compilation doesn't succeed the first time, then Nginx compilation " +
+					"succeeds the second time" do
+					Dir.chdir("#{@webroot}/#{version}") do
+						create_tarball("support-#{compat_id}.tar.gz") do
+							FileUtils.cp_r(Dir["#{PhusionPassenger.source_root}/buildout/*"],
+								".")
+						end
+						create_tarball("nginx-#{nginx_version}-#{compat_id}.tar.gz") do
+							create_file("nginx",
+								"#!/bin/sh\n" +
+								"exit 1\n")
+						end
+					end
+
+					# Temporarily make Passenger Standalone think our runtime is
+					# not compiled.
+					File.rename("#{PhusionPassenger.source_root}/buildout",
+						"#{PhusionPassenger.source_root}/buildout.renamed")
+					begin
+						command = "passenger start " +
+							"--runtime-dir '#{@runtime_dir}' " +
+							"--binaries-url-root '#{@base_url}'"
+						
+						@output = `#{command} --runtime-check-only --no-compile-runtime 2>&1`
+						$?.exitstatus.should_not == 0
+						@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+						@output.should include("All support binaries are usable.")
+						@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+						@output.should include("Nginx binary is not usable.")
+						@output.should include("Refusing to compile the Phusion Passenger Standalone")
+
+						@output = capture_output("#{command} --runtime-check-only")
+						@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+						@output.should include(COMPILING_MESSAGE)
+						File.exist?("#{PhusionPassenger.source_root}/buildout").should be_false
+						
+						test_serving_application("#{command} --no-compile-runtime")
+					ensure
+						File.rename("#{PhusionPassenger.source_root}/buildout.renamed",
+							"#{PhusionPassenger.source_root}/buildout")
+					end
+				end
+
 				it "starts a server which serves the application" do
 					# The last test already tests this. This empty test here
 					# is merely to show the intent of the tests, and to
