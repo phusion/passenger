@@ -5,6 +5,7 @@ Release 4.0.14
    case when the downloaded Nginx binary doesn't work, and compilation
    of the Nginx binary did not succeed the first time (e.g. because of
    missing dependencies).
+ * Precompiled Ruby native extensions are now automatically downloaded.
 
 
 Release 4.0.13
