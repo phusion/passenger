@@ -129,6 +129,9 @@ private
 	end
 
 	def download_binary_and_load
+		if !PhusionPassenger.installed_from_release_package?
+			return
+		end
 		if ENV['PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY'] == '0'
 			STDERR.puts "*** Phusion Passenger: PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY set, " +
 				"not downloading precompiled binary"
