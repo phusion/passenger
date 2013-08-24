@@ -27,8 +27,8 @@ require 'digest/md5'
 module PhusionPassenger
 
 module Rails3Extensions
-	def self.init!(options)
-		if !AnalyticsLogging.install!(options)
+	def self.init!(options, user_options)
+		if !AnalyticsLogging.install!(options, user_options)
 			# Remove code to save memory.
 			PhusionPassenger::Rails3Extensions.send(:remove_const, :AnalyticsLogging)
 			PhusionPassenger.send(:remove_const, :Rails3Extensions)
@@ -38,7 +38,7 @@ end
 
 module Rails3Extensions
 class AnalyticsLogging < ActiveSupport::LogSubscriber
-	def self.install!(options)
+	def self.install!(options, user_options)
 		analytics_logger = options["analytics_logger"]
 		app_group_name = options["app_group_name"]
 		return false if !analytics_logger || !options["analytics"]
@@ -47,7 +47,7 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 		# so that the info can be logged.
 		GC.enable_stats if GC.respond_to?(:enable_stats)
 		
-		subscriber = self.new
+		subscriber = self.new(user_options)
 		AnalyticsLogging.attach_to(:action_controller, subscriber)
 		AnalyticsLogging.attach_to(:active_record, subscriber)
 		if defined?(ActiveSupport::Cache::Store)
@@ -86,6 +86,10 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 		end
 		
 		return true
+	end
+
+	def initialize(options)
+		install_event_preprocessor(options[:event_preprocessor]) if options[:event_preprocessor]
 	end
 	
 	def process_action(event)
@@ -213,6 +217,17 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 					yield
 				end
 			end
+		end
+	end
+
+	private
+	def install_event_preprocessor(event_preprocessor)
+		public_methods(false).each do |name|
+			singleton = class << self; self end
+			singleton.send(:define_method, name, lambda do |event|
+				event_preprocessor.call(event)
+				super(event)
+			end)
 		end
 	end
 end # class AnalyticsLogging
