@@ -520,8 +520,16 @@ Group::asyncOOBWRequestIfNeeded(const ProcessPtr &process) {
 		DisableResult result = disable(process,
 			boost::bind(&Group::lockAndAsyncOOBWRequestIfNeeded, this,
 				_1, _2, shared_from_this()));
-		if (result == DR_DEFERRED) {
+		switch (result) {
+		case DR_SUCCESS:
+			// Continue code flow.
+			break;
+		case DR_DEFERRED:
+		case DR_ERROR:
+		case DR_NOOP:
 			return;
+		default:
+			P_BUG("Unexpected disable() result " << result);
 		}
 	} else if (process->enabled == Process::DISABLING) {
 		return;
@@ -779,7 +787,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 		m_spawning = false;
 		
 		done = done
-			|| ((unsigned long) enabledCount >= options.minProcesses && getWaitlist.empty())
+			|| ((unsigned long) getProcessCount() >= options.minProcesses && getWaitlist.empty())
 			|| pool->atFullCapacity(false);
 		m_spawning = !done;
 		if (done) {
@@ -804,17 +812,21 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 bool
 Group::shouldSpawn() const {
 	return !m_spawning
+		&& allowSpawn()
 		&& (
-			(unsigned long) enabledCount < options.minProcesses
+			(unsigned long) getProcessCount() < options.minProcesses
 			|| (enabledCount > 0 && pqueue.top()->atFullCapacity())
-		)
-		&& isAlive()
-		&& !poolAtFullCapacity();
+		);
 }
 
 bool
 Group::shouldSpawnForGetAction() const {
-	return enabledCount == 0 || shouldSpawn();
+	return !m_spawning && (enabledCount == 0 || shouldSpawn());
+}
+
+bool
+Group::allowSpawn() const {
+	return isAlive() && !poolAtFullCapacity();
 }
 
 void

@@ -802,9 +802,9 @@ namespace tut {
 		// Get a reference to the orignal process and verify oobw has been requested.
 		ProcessPtr origProcess;
 		{
-			unique_lock<boost::mutex> lock(pool->syncher);
+			LockGuard l(pool->syncher);
 			origProcess = pool->superGroups.get(wsgiAppPath)->defaultGroup->disablingProcesses.front();
-			ensure(origProcess->oobwStatus == Process::OOBW_REQUESTED);
+			ensure("OOBW requested", origProcess->oobwStatus == Process::OOBW_REQUESTED);
 		}
 		ensure("sanity check", origPid == origProcess->pid); // just a sanity check
 		
@@ -817,7 +817,7 @@ namespace tut {
 				"PATH_INFO", "/pid",
 				NULL);
 			string response = readAll(connection);
-			ensure(containsSubstring(response, "Status: 200 OK\r\n"));
+			ensure("status is 200", containsSubstring(response, "Status: 200 OK\r\n"));
 			pid = atoi(stripHeaders(response));
 			result = (pid != origPid);
 		);

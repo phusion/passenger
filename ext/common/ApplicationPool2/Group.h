@@ -924,7 +924,12 @@ public:
 			P_DEBUG("Disabling ENABLED process " << process->inspect() <<
 				"; enabledCount=" << enabledCount << ", process.sessions=" << process->sessions);
 			assert(enabledCount >= 0);
-			if (enabledCount <= 1 || process->sessions > 0) {
+			if (enabledCount == 1 && !allowSpawn()) {
+				P_WARN("Cannot disable sole enabled process in group " << name <<
+					" because spawning is not allowed according to the current" <<
+					" configuration options");
+				return DR_ERROR;
+			} else if (enabledCount <= 1 || process->sessions > 0) {
 				removeProcessFromList(process, enabledProcesses);
 				addProcessToList(process, disablingProcesses);
 				disableWaitlist.push_back(DisableWaiter(process, callback));
@@ -992,13 +997,15 @@ public:
 	 * specific case that another get action is to be performed.
 	 */
 	bool shouldSpawnForGetAction() const;
+	/** Whether a new process is allowed to be spawned for this group. */
+	bool allowSpawn() const;
 	
 	/** Start spawning a new process in the background, in case this
 	 * isn't already happening and the group isn't being restarted.
 	 * Will ensure that at least options.minProcesses processes are spawned.
 	 */
 	void spawn() {
-		assert(isAlive());
+		assert(allowSpawn());
 		if (!spawning() && !restarting()) {
 			P_DEBUG("Requested spawning of new process for group " << name);
 			interruptableThreads.create_thread(
@@ -1030,6 +1037,14 @@ public:
 
 	bool restarting() const {
 		return m_restarting;
+	}
+
+	/**
+	 * Returns the number of processes in this group that should be part for the
+	 * MaxPoolSize constraint calculation.
+	 */
+	unsigned int getProcessCount() const {
+		return enabledCount + disablingCount + disabledCount;
 	}
 
 	/**

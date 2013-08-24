@@ -656,7 +656,7 @@ public:
 		vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
 		for (g_it = groups.begin(); g_it != g_end; g_it++) {
 			const GroupPtr &group = *g_it;
-			result += group->enabledCount + group->disablingCount + group->disabledCount;
+			result += group->getProcessCount();
 		}
 		return result;
 	}

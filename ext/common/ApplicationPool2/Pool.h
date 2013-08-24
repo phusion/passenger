@@ -571,7 +571,8 @@ public:
 			process->lastUsed + maxIdleTime;
 		if (process->sessions == 0
 		 && state.now >= processGcTime
-		 && (unsigned long) group->enabledCount > group->options.minProcesses) {
+		 && (unsigned long) group->getProcessCount() > group->options.minProcesses)
+		{
 			ProcessList::iterator prev = p_it;
 			prev--;
 			P_DEBUG("Garbage collect idle process: " << process->inspect() <<
@@ -1165,6 +1166,10 @@ public:
 		return result;
 	}
 	
+	/**
+	 * Returns the total number of processes in the pool, including all disabling and
+	 * disabled processes, but excluding processes that are shutting down.
+	 */
 	unsigned int getProcessCount(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
 		unsigned int result = 0;
