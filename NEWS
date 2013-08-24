@@ -1,3 +1,10 @@
+Release 4.0.15
+--------------
+
+ * Fix a crash when multiple passenger_pass_header directives are set.
+   Fixes issue #934.
+
+
 Release 4.0.14
 --------------
 

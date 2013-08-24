@@ -276,7 +276,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     /******************************/
     /******************************/
 
-    conf->upstream_config.pass_headers = ngx_array_create(cf->pool, 1, sizeof(ngx_keyval_t));
+    conf->upstream_config.pass_headers = NGX_CONF_UNSET_PTR;
+    conf->upstream_config.hide_headers = NGX_CONF_UNSET_PTR;
 
     conf->upstream_config.store = NGX_CONF_UNSET;
     conf->upstream_config.store_access = NGX_CONF_UNSET_UINT;
@@ -645,108 +646,16 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                          prev->upstream_config.intercept_errors, 0);
 
 
+    hash.max_size = 512;
+    hash.bucket_size = ngx_align(64, ngx_cacheline_size);
+    hash.name = "passenger_hide_headers_hash";
 
-    if (conf->upstream_config.hide_headers == NULL
-        && conf->upstream_config.pass_headers == NULL)
-    {
-        conf->upstream_config.hide_headers = prev->upstream_config.hide_headers;
-        conf->upstream_config.pass_headers = prev->upstream_config.pass_headers;
-        conf->upstream_config.hide_headers_hash = prev->upstream_config.hide_headers_hash;
-
-        if (conf->upstream_config.hide_headers_hash.buckets) {
-            goto peers;
-        }
-
-    } else {
-        if (conf->upstream_config.hide_headers == NULL) {
-            conf->upstream_config.hide_headers = prev->upstream_config.hide_headers;
-        }
-
-        if (conf->upstream_config.pass_headers == NULL) {
-            conf->upstream_config.pass_headers = prev->upstream_config.pass_headers;
-        }
-    }
-
-    if (ngx_array_init(&hide_headers, cf->temp_pool, 4, sizeof(ngx_hash_key_t))
+    if (ngx_http_upstream_hide_headers_hash(cf, &conf->upstream_config,
+            &prev->upstream_config, headers_to_hide, &hash)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
     }
-
-    for (header = headers_to_hide; header->len; header++) {
-        hk = ngx_array_push(&hide_headers);
-        if (hk == NULL) {
-            return NGX_CONF_ERROR;
-        }
-
-        hk->key = *header;
-        hk->key_hash = ngx_hash_key_lc(header->data, header->len);
-        hk->value = (void *) 1;
-    }
-
-    if (conf->upstream_config.hide_headers) {
-
-        header = conf->upstream_config.hide_headers->elts;
-
-        for (i = 0; i < conf->upstream_config.hide_headers->nelts; i++) {
-
-            hk = hide_headers.elts;
-
-            for (j = 0; j < hide_headers.nelts; j++) {
-                if (ngx_strcasecmp(header[i].data, hk[j].key.data) == 0) {
-                    goto exist;
-                }
-            }
-
-            hk = ngx_array_push(&hide_headers);
-            if (hk == NULL) {
-                return NGX_CONF_ERROR;
-            }
-
-            hk->key = header[i];
-            hk->key_hash = ngx_hash_key_lc(header[i].data, header[i].len);
-            hk->value = (void *) 1;
-
-        exist:
-
-            continue;
-        }
-    }
-
-    if (conf->upstream_config.pass_headers) {
-
-        hk = hide_headers.elts;
-        header = conf->upstream_config.pass_headers->elts;
-
-        for (i = 0; i < conf->upstream_config.pass_headers->nelts; i++) {
-
-            for (j = 0; j < hide_headers.nelts; j++) {
-
-                if (hk[j].key.data == NULL) {
-                    continue;
-                }
-
-                if (ngx_strcasecmp(header[i].data, hk[j].key.data) == 0) {
-                    hk[j].key.data = NULL;
-                    break;
-                }
-            }
-        }
-    }
-
-    hash.hash = &conf->upstream_config.hide_headers_hash;
-    hash.key = ngx_hash_key_lc;
-    hash.max_size = 512;
-    hash.bucket_size = ngx_align(64, ngx_cacheline_size);
-    hash.name = "passenger_hide_headers_hash";
-    hash.pool = cf->pool;
-    hash.temp_pool = NULL;
-
-    if (ngx_hash_init(&hash, hide_headers.elts, hide_headers.nelts) != NGX_OK) {
-        return NGX_CONF_ERROR;
-    }
-
-peers:
 
     if (conf->upstream_config.upstream == NULL) {
         conf->upstream_config.upstream = prev->upstream_config.upstream;
