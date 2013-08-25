@@ -182,6 +182,14 @@ module PlatformInfo
 				if filename.include?("${")
 					# We couldn't substitute everything.
 					return nil
+				end
+				if filename !~ /\A\//
+					# Not an absolute path. Infer from root.
+					if root = httpd_root(options)
+						return "#{root}/#{filename}"
+					else
+						return nil
+					end
 				else
 					return filename
 				end
