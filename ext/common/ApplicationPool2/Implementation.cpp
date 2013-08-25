@@ -519,16 +519,24 @@ Group::lockAndMaybeInitiateOobw(const ProcessPtr &process, DisableResult result,
 	assert(process->oobwStatus == Process::OOBW_IN_PROGRESS);
 
 	if (result == DR_SUCCESS) {
-		P_DEBUG("Process " << process->inspect() << " disabled; proceeding " <<
-			"with out-of-band work");
-		process->oobwStatus = Process::OOBW_REQUESTED;
-		if (shouldInitiateOobw(process)) {
-			initiateOobw(process);
+		if (process->enabled == Process::DISABLED) {
+			P_DEBUG("Process " << process->inspect() << " disabled; proceeding " <<
+				"with out-of-band work");
+			process->oobwStatus = Process::OOBW_REQUESTED;
+			if (shouldInitiateOobw(process)) {
+				initiateOobw(process);
+			} else {
+				// We do not re-enable the process because it's likely that the
+				// administrator has explicitly changed the state.
+				P_DEBUG("Out-of-band work for process " << process->inspect() << " aborted "
+					"because the process no longer requests out-of-band work");
+				process->oobwStatus = Process::OOBW_NOT_ACTIVE;
+			}
 		} else {
 			// We do not re-enable the process because it's likely that the
 			// administrator has explicitly changed the state.
 			P_DEBUG("Out-of-band work for process " << process->inspect() << " aborted "
-				"because the process no longer requests out-of-band work");
+				"because the process was reenabled after disabling");
 			process->oobwStatus = Process::OOBW_NOT_ACTIVE;
 		}
 	} else {
