@@ -57,6 +57,8 @@
 #               inferred to be `ngx_conf_set_str_slot`.
 #               If you set this to a string then you are responsible for defining
 #               said function in Configuration.c.
+#  * struct - The type of the struct that the field is contained in. Something like
+#             "NGX_HTTP_LOC_CONF_OFFSET" (which is also the default).
 #  * field - The name that should be used for the auto-generated field in
 #            the location configuration structure. Defaults to the configuration
 #            name without the 'passenger_' prefix. Set this to nil if you do not
@@ -224,6 +226,14 @@ LOCATION_CONFIGURATION_OPTIONS = [
 	},
 
 	###### Enterprise features ######
+	{
+		:context  => [:main],
+		:name     => 'passenger_fly_with',
+		:type     => :string,
+		:struct   => "NGX_HTTP_MAIN_CONF_OFFSET",
+		:function => 'passenger_enterprise_only',
+		:field    => nil
+	},
 	{
 		:name     => 'passenger_max_instances',
 		:type     => :integer,

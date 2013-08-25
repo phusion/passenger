@@ -94,6 +94,10 @@ def setter_function_for(option)
 	end
 end
 
+def struct_for(option)
+	option[:struct] || "NGX_HTTP_LOC_CONF_OFFSET"
+end
+
 def struct_field_for(option)
 	if option.has_key?(:field)
 		if field = option[:field]
@@ -114,7 +118,7 @@ end
 	ngx_string(<%= name_for(option) %>),
 	<%= context_for(option) %> | <%= take_type_for(option) %>,
 	<%= setter_function_for(option) %>,
-	NGX_HTTP_LOC_CONF_OFFSET,
+	<%= struct_for(option) %>,
 	<%= struct_field_for(option) %>,
 	NULL
 },
