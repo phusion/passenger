@@ -171,7 +171,9 @@ private:
 	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
 	void onSessionClose(const ProcessPtr &process, Session *session);
 
+	/** Returns whether it is allowed to perform a new OOBW in this group. */
 	bool oobwAllowed() const;
+	/** Returns whether a new OOBW should be initiated for this process. */
 	bool shouldInitiateOobw(const ProcessPtr &process) const;
 	void maybeInitiateOobw(const ProcessPtr &process);
 	void lockAndMaybeInitiateOobw(const ProcessPtr &process, DisableResult result, GroupPtr self);

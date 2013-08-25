@@ -804,7 +804,7 @@ namespace tut {
 		{
 			LockGuard l(pool->syncher);
 			origProcess = pool->superGroups.get(wsgiAppPath)->defaultGroup->disablingProcesses.front();
-			ensure("OOBW requested", origProcess->oobwStatus == Process::OOBW_REQUESTED);
+			ensure("OOBW requested", origProcess->oobwStatus == Process::OOBW_IN_PROGRESS);
 		}
 		ensure("sanity check", origPid == origProcess->pid); // just a sanity check
 		

@@ -70,7 +70,7 @@ enum DisableResult {
 	DR_NOOP,
 	
 	// The disabling of the process failed: an error occurred.
-	// Only passed to the callback.
+	// Returned by functions and passed to the callback.
 	DR_ERROR,
 
 	// Indicates that the process cannot be disabled immediately

@@ -509,26 +509,43 @@ void
 Group::lockAndMaybeInitiateOobw(const ProcessPtr &process, DisableResult result, GroupPtr self) {
 	TRACE_POINT();
 	
-	if (result != DR_SUCCESS && result != DR_CANCELED) {
-		return;
-	}
-	
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
 	unique_lock<boost::mutex> lock(pool->syncher);
 	if (OXT_UNLIKELY(!process->isAlive() || !isAlive())) {
 		return;
 	}
-	
-	P_DEBUG("Process " << process->inspect() << " disabled; proceeding with OOBW");
-	maybeInitiateOobw(process);
+
+	assert(process->oobwStatus == Process::OOBW_IN_PROGRESS);
+
+	if (result == DR_SUCCESS) {
+		P_DEBUG("Process " << process->inspect() << " disabled; proceeding " <<
+			"with out-of-band work");
+		process->oobwStatus = Process::OOBW_REQUESTED;
+		if (shouldInitiateOobw(process)) {
+			initiateOobw(process);
+		} else {
+			// We do not re-enable the process because it's likely that the
+			// administrator has explicitly changed the state.
+			P_DEBUG("Out-of-band work for process " << process->inspect() << " aborted "
+				"because the process no longer requests out-of-band work");
+			process->oobwStatus = Process::OOBW_NOT_ACTIVE;
+		}
+	} else {
+		P_DEBUG("Out-of-band work for process " << process->inspect() << " aborted "
+			"because the process could not be disabled");
+		process->oobwStatus = Process::OOBW_NOT_ACTIVE;
+	}
 }
 
 void
 Group::initiateOobw(const ProcessPtr &process) {
 	assert(process->oobwStatus == Process::OOBW_REQUESTED);
 
-	if (process->enabled == Process::ENABLED) {
+	process->oobwStatus = Process::OOBW_IN_PROGRESS;
+
+	if (process->enabled == Process::ENABLED
+	 || process->enabled == Process::DISABLING) {
 		// We want the process to be disabled. However, disabling a process is potentially
 		// asynchronous, so we pass a callback which will re-aquire the lock and call this
 		// method again.
@@ -541,14 +558,17 @@ Group::initiateOobw(const ProcessPtr &process) {
 			// Continue code flow.
 			break;
 		case DR_DEFERRED:
+			// lockAndMaybeInitateOobw() will eventually be called.
+			return;
 		case DR_ERROR:
 		case DR_NOOP:
+			P_DEBUG("Out-of-band work for process " << process->inspect() << " aborted "
+				"because the process could not be disabled");
+			process->oobwStatus = Process::OOBW_NOT_ACTIVE;
 			return;
 		default:
 			P_BUG("Unexpected disable() result " << result);
 		}
-	} else if (process->enabled == Process::DISABLING) {
-		return;
 	}
 	
 	assert(process->enabled == Process::DISABLED);
@@ -601,7 +621,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 			return;
 		}
 		
-		assert(process->oobwStatus = Process::OOBW_IN_PROGRESS);
+		assert(process->oobwStatus == Process::OOBW_IN_PROGRESS);
 		assert(process->sessions == 0);
 		socket = process->sessionSockets.top();
 		assert(socket != NULL);
