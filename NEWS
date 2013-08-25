@@ -6,6 +6,7 @@ Release 4.0.15
  * Permissions on the server instance directory are now explicitly set
    with chmod, so that permissions are correct on systems with a non-default
    umask. Fixes issue #928.
+ * Fix permission problems when running 'passenger start' with '--user'.
 
 
 Release 4.0.14

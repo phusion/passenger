@@ -138,8 +138,15 @@ class RuntimeLocator
 
 private
 	def default_runtime_dir
-		home = Etc.getpwuid.dir
-		return "#{home}/#{USER_NAMESPACE_DIRNAME}/standalone"
+		if Process.uid == 0
+			# It is important that the default runtime dir for the root user
+			# is a publicly accessible directory, because when --user is given,
+			# the agents are run as non-root users.
+			return "/var/lib/#{GLOBAL_NAMESPACE_DIRNAME}/standalone"
+		else
+			home = Etc.getpwuid.dir
+			return "#{home}/#{USER_NAMESPACE_DIRNAME}/standalone"
+		end
 	end
 
 	def debugging?

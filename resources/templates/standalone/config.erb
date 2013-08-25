@@ -10,13 +10,6 @@ worker_processes 1;
 daemon on;
 error_log '<%= @options[:log_file] %>' <% if debugging? %>info<% end %>;
 pid '<%= @options[:pid_file] %>';
-<% if Process.euid == 0 %>
-    <% if @options[:user] %>
-        user <%= @options[:user] %> <%= default_group_for(@options[:user]) %>;
-    <% else %>
-        user <%= current_user %> <%= default_group_for(current_user) %>;
-    <% end %>
-<% end %>
 
 events {
     worker_connections 1024;
@@ -34,9 +27,11 @@ http {
     <% if @options[:user] %>
         passenger_user <%= @options[:user] %>;
         passenger_default_user <%= @options[:user] %>;
+        passenger_analytics_log_user <%= @options[:user] %>;
     <% else %>
         passenger_user <%= current_user %>;
         passenger_default_user <%= current_user %>;
+        passenger_analytics_log_user <%= current_user %>;
     <% end %>
     <% if debugging? %>passenger_log_level 2;<% end %>
     <% if @options[:rolling_restarts] %>passenger_rolling_restarts on;<% end %>
