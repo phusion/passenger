@@ -452,7 +452,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 			removeProcessFromList(process, disablingProcesses);
 			addProcessToList(process, disabledProcesses);
 			removeFromDisableWaitlist(process, DR_SUCCESS, actions);
-			asyncOOBWRequestIfNeeded(process);
+			maybeInitiateOobw(process);
 		}
 		
 		pool->fullVerifyInvariants();
@@ -461,7 +461,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 
 	} else {
 		// This could change process->enabled.
-		asyncOOBWRequestIfNeeded(process);
+		maybeInitiateOobw(process);
 
 		if (!getWaitlist.empty() && process->enabled == Process::ENABLED) {
 			/* If there are clients on this group waiting for a process to
@@ -484,9 +484,29 @@ Group::requestOOBW(const ProcessPtr &process) {
 	}
 }
 
+bool
+Group::oobwAllowed() const {
+	return true;
+}
+
+bool
+Group::shouldInitiateOobw(const ProcessPtr &process) const {
+	return process->oobwStatus == Process::OOBW_REQUESTED
+		&& process->enabled != Process::DETACHED
+		&& process->isAlive()
+		&& oobwAllowed();
+}
+
+void
+Group::maybeInitiateOobw(const ProcessPtr &process) {
+	if (shouldInitiateOobw(process)) {
+		initiateOobw(process);
+	}
+}
+
 // The 'self' parameter is for keeping the current Group object alive
 void
-Group::lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult result, GroupPtr self) {
+Group::lockAndMaybeInitiateOobw(const ProcessPtr &process, DisableResult result, GroupPtr self) {
 	TRACE_POINT();
 	
 	if (result != DR_SUCCESS && result != DR_CANCELED) {
@@ -501,24 +521,20 @@ Group::lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult 
 	}
 	
 	P_DEBUG("Process " << process->inspect() << " disabled; proceeding with OOBW");
-	asyncOOBWRequestIfNeeded(process);
+	maybeInitiateOobw(process);
 }
 
 void
-Group::asyncOOBWRequestIfNeeded(const ProcessPtr &process) {
-	if (process->oobwStatus != Process::OOBW_REQUESTED
-		|| process->enabled == Process::DETACHED
-		|| !process->isAlive())
-	{
-		return;
-	}
+Group::initiateOobw(const ProcessPtr &process) {
+	assert(process->oobwStatus == Process::OOBW_REQUESTED);
+
 	if (process->enabled == Process::ENABLED) {
 		// We want the process to be disabled. However, disabling a process is potentially
 		// asynchronous, so we pass a callback which will re-aquire the lock and call this
 		// method again.
 		P_DEBUG("Disabling process " << process->inspect() << " in preparation for OOBW");
 		DisableResult result = disable(process,
-			boost::bind(&Group::lockAndAsyncOOBWRequestIfNeeded, this,
+			boost::bind(&Group::lockAndMaybeInitiateOobw, this,
 				_1, _2, shared_from_this()));
 		switch (result) {
 		case DR_SUCCESS:

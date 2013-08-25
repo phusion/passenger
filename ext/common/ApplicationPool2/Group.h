@@ -170,8 +170,13 @@ private:
 	static string generateSecret(const SuperGroupPtr &superGroup);
 	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
 	void onSessionClose(const ProcessPtr &process, Session *session);
-	void lockAndAsyncOOBWRequestIfNeeded(const ProcessPtr &process, DisableResult result, GroupPtr self);
-	void asyncOOBWRequestIfNeeded(const ProcessPtr &process);
+
+	bool oobwAllowed() const;
+	bool shouldInitiateOobw(const ProcessPtr &process) const;
+	void maybeInitiateOobw(const ProcessPtr &process);
+	void lockAndMaybeInitiateOobw(const ProcessPtr &process, DisableResult result, GroupPtr self);
+	void initiateOobw(const ProcessPtr &process);
+	
 	void spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process);
 	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options,
 		unsigned int restartsInitiated);
