@@ -1623,6 +1623,52 @@ namespace tut {
 		}
 	}
 
+	TEST_METHOD(76) {
+		// No more than maxOutOfBandWorkInstances process will be performing
+		// out-of-band work at the same time.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+		options.maxOutOfBandWorkInstances = 2;
+		initPoolDebugging();
+		debug->restarting = false;
+		debug->spawning = false;
+		debug->oobw = true;
+
+		// Spawn 3 processes and initiate 2 OOBW requests.
+		SessionPtr session1 = pool->get(options, &ticket);
+		SessionPtr session2 = pool->get(options, &ticket);
+		SessionPtr session3 = pool->get(options, &ticket);
+		session1->requestOOBW();
+		session1.reset();
+		session2->requestOOBW();
+		session2.reset();
+
+		// 2 OOBW requests eventually start.
+		debug->debugger->recv("OOBW request about to start");
+		debug->debugger->recv("OOBW request about to start");
+
+		// Request another OOBW, but this one is not initiated.
+		session3->requestOOBW();
+		session3.reset();
+		SHOULD_NEVER_HAPPEN(100,
+			result = debug->debugger->peek("OOBW request about to start") != NULL;
+		);
+
+		// Let one OOBW request finish. The third one should eventually
+		// start.
+		debug->messages->send("Proceed with OOBW request");
+		debug->debugger->recv("OOBW request about to start");
+
+		debug->messages->send("Proceed with OOBW request");
+		debug->messages->send("Proceed with OOBW request");
+		debug->debugger->recv("OOBW request finished");
+		debug->debugger->recv("OOBW request finished");
+		debug->debugger->recv("OOBW request finished");
+	}
+
 	// TODO: Persistent connections.
 	// TODO: If one closes the session before it has reached EOF, and process's maximum concurrency
 	//       has already been reached, then the pool should ping the process so that it can detect
@@ -1631,7 +1677,7 @@ namespace tut {
 	
 	/*********** Test previously discovered bugs ***********/
 	
-	TEST_METHOD(76) {
+	TEST_METHOD(77) {
 		// Test detaching, then restarting. This should not violate any invariants.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();

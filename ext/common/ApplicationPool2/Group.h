@@ -178,8 +178,9 @@ private:
 	void maybeInitiateOobw(const ProcessPtr &process);
 	void lockAndMaybeInitiateOobw(const ProcessPtr &process, DisableResult result, GroupPtr self);
 	void initiateOobw(const ProcessPtr &process);
-	
 	void spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process);
+	void initiateNextOobwRequest();
+
 	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options,
 		unsigned int restartsInitiated);
 	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options,
@@ -240,6 +241,8 @@ private:
 			assert(process->enabled == Process::ENABLED);
 			assert(process->pqHandle != NULL);
 			assert(process->isAlive());
+			assert(process->oobwStatus == Process::OOBW_NOT_ACTIVE
+				|| process->oobwStatus == Process::OOBW_REQUESTED);
 		}
 
 		end = disablingProcesses.end();
@@ -248,6 +251,8 @@ private:
 			assert(process->enabled == Process::DISABLING);
 			assert(process->pqHandle == NULL);
 			assert(process->isAlive());
+			assert(process->oobwStatus == Process::OOBW_NOT_ACTIVE
+				|| process->oobwStatus == Process::OOBW_IN_PROGRESS);
 		}
 
 		end = disabledProcesses.end();
@@ -256,6 +261,8 @@ private:
 			assert(process->enabled == Process::DISABLED);
 			assert(process->pqHandle == NULL);
 			assert(process->isAlive());
+			assert(process->oobwStatus == Process::OOBW_NOT_ACTIVE
+				|| process->oobwStatus == Process::OOBW_IN_PROGRESS);
 		}
 
 		foreach (const ProcessPtr &process, detachedProcesses) {
@@ -584,14 +591,17 @@ public:
 	 *       process.enabled == Process::ENABLED
 	 *       process.pqHandle != NULL
 	 *       process.isAlive()
+	 *       process.oobwStatus == Process::OOBW_NOT_ACTIVE || process.oobwStatus == Process::OOBW_REQUESTED
 	 *    for all processes in disablingProcesses:
 	 *       process.enabled == Process::DISABLING
 	 *       process.pqHandle == NULL
 	 *       process.isAlive()
+	 *       process.oobwStatus == Process::OOBW_NOT_ACTIVE || process.oobwStatus == Process::OOBW_IN_PROGRESS
 	 *    for all process in disabledProcesses:
 	 *       process.enabled == Process::DISABLED
 	 *       process.pqHandle == NULL
 	 *       process.isAlive()
+	 *       process.oobwStatus == Process::OOBW_NOT_ACTIVE || process.oobwStatus == Process::OOBW_IN_PROGRESS
 	 */
 	int enabledCount;
 	int disablingCount;
