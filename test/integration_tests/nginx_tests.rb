@@ -281,6 +281,7 @@ describe "Phusion Passenger for Nginx" do
 			create_nginx_controller
 			@server = "http://passenger.test:#{@nginx.port}"
 			@stub = RackStub.new('rack')
+			@nginx.set(:max_pool_size => 2)
 			@nginx.add_server do |server|
 				server[:server_name] = "passenger.test"
 				server[:root]        = "#{@stub.full_app_root}/public"

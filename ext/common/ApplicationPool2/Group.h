@@ -1005,7 +1005,7 @@ public:
 	 * Will ensure that at least options.minProcesses processes are spawned.
 	 */
 	void spawn() {
-		assert(allowSpawn());
+		assert(isAlive());
 		if (!spawning() && !restarting()) {
 			P_DEBUG("Requested spawning of new process for group " << name);
 			interruptableThreads.create_thread(

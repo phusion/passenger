@@ -811,8 +811,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 
 bool
 Group::shouldSpawn() const {
-	return !m_spawning
-		&& allowSpawn()
+	return allowSpawn()
 		&& (
 			(unsigned long) getProcessCount() < options.minProcesses
 			|| (enabledCount > 0 && pqueue.top()->atFullCapacity())
@@ -821,7 +820,7 @@ Group::shouldSpawn() const {
 
 bool
 Group::shouldSpawnForGetAction() const {
-	return !m_spawning && (enabledCount == 0 || shouldSpawn());
+	return enabledCount == 0 || shouldSpawn();
 }
 
 bool
