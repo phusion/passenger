@@ -24,8 +24,11 @@ Release 4.0.15
    to reproduce the problem on any other systems running Ubuntu 12.04 32-bit.
    Note that this flag has no effect on non-Phusion Passenger code. Fixes
    issue #937.
- * Fix a problem with the `passenger stop` command on Ruby 1.8.7. The 'thread'
-   library was not properly required, causing a crash.
+ * [Standalone] Fix a problem with the `passenger stop` command on Ruby 1.8.7.
+   The 'thread' library was not properly required, causing a crash.
+ * [Standalone] Memory usage optimization: when `passenger start` is run with
+   `--daemonize`, the frontend exits after starting the Nginx core. This saves
+   ~20 MB of memory per `passenger start` instance.
 
 
 Release 4.0.14

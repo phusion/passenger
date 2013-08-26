@@ -83,7 +83,7 @@ class StartCommand < Command
 			########################
 			touch_temp_dir_in_background
 			watch_log_files_in_background if should_watch_logs?
-			wait_until_nginx_has_exited
+			wait_until_nginx_has_exited if should_wait_until_nginx_has_exited?
 		rescue Interrupt
 			stop_threads
 			stop_nginx
@@ -101,6 +101,7 @@ class StartCommand < Command
 			stop_nginx
 			raise
 		ensure
+			stop_touching_temp_dir_in_background if should_wait_until_nginx_has_exited?
 			stop_threads
 		end
 	ensure
@@ -361,6 +362,10 @@ private
 		return !@options[:daemonize] && @options[:log_file] != "/dev/null"
 	end
 
+	def should_wait_until_nginx_has_exited?
+		return !@options[:daemonize]
+	end
+
 	# Returns the URL that Nginx will be listening on.
 	def listen_url
 		if @options[:socket_file]
@@ -524,14 +529,18 @@ private
 	end
 
 	def touch_temp_dir_in_background
-		@interruptable_threads << Thread.new do
-			while true
-				# Touch the temp dir every 30 minutes to prevent
-				# /tmp cleaners from removing it.
-				sleep 60 * 30
-				system("find '#{@temp_dir}' | xargs touch")
-			end
+		require 'shellwords'
+		script = Shellwords.escape("#{PhusionPassenger.helper_scripts_dir}/touch-dir.sh")
+		dir    = Shellwords.escape(@temp_dir)
+		@toucher = IO.popen("sh #{script} #{dir}", "r")
+	end
+
+	def stop_touching_temp_dir_in_background
+		begin
+			Process.kill('TERM', @toucher.pid)
+		rescue Errno::ESRCH, Errno::ECHILD
 		end
+		@toucher.close
 	end
 
 	def wait_until_nginx_has_exited
