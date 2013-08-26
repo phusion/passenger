@@ -992,6 +992,7 @@ In each place, it may be specified at most once. The default value is 'on'.
 
 === Resource control and optimization options ===
 
+[[PassengerMaxPoolSize]]
 ==== PassengerMaxPoolSize <integer> ====
 The maximum number of <<application_process,application processes>> that may
 simultaneously exist. A larger number results in higher memory usage,
@@ -1055,6 +1056,7 @@ The PassengerMinInstances option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is '1'.
 
+[[PassengerMaxInstances]]
 ==== PassengerMaxInstances <integer> ====
 :version: 3.0.0
 include::users_guide_snippets/enterprise_only.txt[]

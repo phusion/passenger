@@ -1069,6 +1069,7 @@ The passenger_min_instances option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is '1'.
 
+[[PassengerMaxInstances]]
 ==== passenger_max_instances <integer> ====
 :version: 3.0.0
 include::users_guide_snippets/enterprise_only.txt[]

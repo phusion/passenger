@@ -328,11 +328,24 @@ Because Out-of-Band Work is implemented at the Phusion Passenger inter-process r
 
 - It works well even with tasks that can pause all threads. The MRI Ruby garbage collector is a stop-the-world mark-and-sweep garbage collector.
 - Phusion Passenger can spawn more processes as necessary, in order to prevent situations in which all application processes are busy performing out-of-band work. Phusion Passenger guarantees that there's at least one process that's ready to process requests.
+- Phusion Passenger guarantees that no more than 1 process is performing out-of-band work at the same time.
 
 Applications can use Out-of-Band Work as follows:
 
-1. Request out-of-band work by outputting the `X-Passenger-Request-OOB-Work` header during a request. It does not matter what the value is. At this time, it is not possible to request out-of-band work from outside requests.
-2. You can actually perform out-of-band work when you receive a `:oob_work` Phusion Passenger event.
+1. Ensure that
+ifdef::apache[]
+<<PassengerMaxPoolSize,PassengerMaxPoolSize>>
+and
+<<PassengerMaxInstances,PassengerMaxInstances>>
+endif::[]
+ifdef::nginx[]
+<<PassengerMaxPoolSize,passenger_max_pool_size>>
+and
+<<PassengerMaxInstances,passenger_max_instances>>
+endif::[]
+are both larger than 1. Out-of-band work only works if there are at least 2 application processes.
+2. Request out-of-band work by outputting the `X-Passenger-Request-OOB-Work` header during a request. It does not matter what the value is. At this time, it is not possible to request out-of-band work from outside requests.
+3. You can actually perform out-of-band work when you receive a `:oob_work` Phusion Passenger event.
 
 Note that even though you can request out-of-band work, there's no guarantee that Phusion Passenger will send an `oob_work` event in a timely manner, if at all. It is also possible that Phusion Passenger sends an `oob_work` event without you ever having requested one. This latter could for example happen if the OOB work is administrator-initiated. Do not make any assumptions in your code.
 
