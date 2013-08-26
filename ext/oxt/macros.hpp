@@ -98,13 +98,15 @@
  * On MacOS X, neither gcc nor llvm-gcc support the __thread keyword, but Clang
  * does. It works on at least clang >= 3.0.
  */
-#if defined(__APPLE__)
-	#if defined(__clang__) && __clang_major__ >= 3
-		#define OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
-	#endif
-#elif defined(__GNUC__) && OXT_GCC_VERSION >= 40102
-	#if !defined(__SOLARIS__) && !defined(__OpenBSD__)
-		#define OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+#ifndef PASSENGER_DISABLE_THREAD_LOCAL_STORAGE
+	#if defined(__APPLE__)
+		#if defined(__clang__) && __clang_major__ >= 3
+			#define OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+		#endif
+	#elif defined(__GNUC__) && OXT_GCC_VERSION >= 40102
+		#if !defined(__SOLARIS__) && !defined(__OpenBSD__)
+			#define OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+		#endif
 	#endif
 #endif
 

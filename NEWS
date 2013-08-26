@@ -14,6 +14,16 @@ Release 4.0.15
  * Fix permission problems when running `passenger start` with `--user`.
  * `passenger-config --detect-apache2` now correctly detects the eror log
    filename on Amazon Linux. Fixes issue #933.
+ * An environment variable `PASSENGER_THREAD_LOCAL_STORAGE` has been added
+   to the build system for forcefully disabling the use of thread-local
+   storage within the Phusion Passenger codebase. This flag useful on systems
+   that have broken support for thread-local storage, despite passing our build
+   system's check for proper thread-local storage support. At the time of
+   writing, one user has reported that Ubuntu 12.04 32-bit has broken
+   thread-local storage report although neither the reporter nor us were able
+   to reproduce the problem on any other systems running Ubuntu 12.04 32-bit.
+   Note that this flag has no effect on non-Phusion Passenger code. Fixes
+   issue #937.
 
 
 Release 4.0.14

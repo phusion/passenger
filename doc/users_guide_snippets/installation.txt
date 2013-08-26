@@ -634,6 +634,8 @@ On some systems, C/C++ libraries and headers that Phusion Passenger requires may
 	These flags are injected into all C/C++ compiler invocations that involve linking. This includes compiler invocations that compile *and* link. The flags are injected at the beginning of the command string, but after `EXTRA_PRE_CFLAGS` and `EXTRA_PRE_CXXFLAGS`.
 `EXTRA_LDFLAGS`::
 	Similar to `EXTRA_PRE_LDFLAGS`, but injected at the very end of the command string, even after `EXTRA_CFLAGS` and `EXTRA_CXXFLAGS`.
+`PASSENGER_THREAD_LOCAL_STORAGE`::
+	Setting this to 1 will enable the `PASSENGER_THREAD_LOCAL_STORAGE` macro, which forcefully disables the use of thread-local storage inside the Phusion Passenger codebase. Setting this environment variable is useful on systems that have broken support for thread-local storage, despite passing our build system's check for proper thread-local storage support. At the time of writing, one user has reported that Ubuntu 12.04 32-bit has broken thread-local storage report although neither the reporter nor us were able to reproduce the problem on any other systems running Ubuntu 12.04 32-bit. Note that this flag has no effect on non-Phusion Passenger code.
 
 NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
 
