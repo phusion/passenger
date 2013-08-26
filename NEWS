@@ -1,6 +1,11 @@
 Release 4.0.15
 --------------
 
+ * Out-of-band work has been much improved. The number of processes which
+   may perform out-of-band work concurrently has been limited to 1.
+   Furthermore, processes which are performing out-of-band work are now
+   included in the max pool size constraint calculation. Partially fixes
+   issue #892.
  * Fix a crash when multiple passenger_pass_header directives are set.
    Fixes issue #934.
  * Permissions on the server instance directory are now explicitly set
