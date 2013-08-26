@@ -320,7 +320,9 @@
 
 9.9.4. Managing the Flying Passenger daemon	=>	managing-the-flying-passenger-daemon-1bng2bu
 
-9.9.5. Caveats and limitations	=>	caveats-and-limitations-lz3rbb
+9.9.5. Using Flying Passenger with MRI 1.8 or JRuby	=>	using-flying-passenger-with-mri-1-8-or-jruby-f5tbvs
+
+9.9.6. Caveats and limitations	=>	caveats-and-limitations-lz3rbb
 
 9.10. X-Sendfile support	=>	x-sendfile-support-1cgyykw
 
@@ -328,11 +330,13 @@
 
 10. Under the hood	=>	under-the-hood-21ue5t
 
-10.1. Static assets serving	=>	static-assets-serving-wo2d9v
+10.1. Page caching support	=>	page-caching-support-kwq9b9
 
-10.2. Page caching support	=>	page-caching-support-kwq9b9
+10.2. Phusion Passenger and its relationship with Ruby	=>	phusion-passenger-and-its-relationship-with-ruby-1eq08ff
 
-10.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-179mp8m
+10.3. Static assets serving	=>	static-assets-serving-wo2d9v
+
+10.4. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-179mp8m
 
 11. Appendix A: About this document	=>	appendix-a-about-this-document-103toqs
 

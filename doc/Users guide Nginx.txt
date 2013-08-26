@@ -1641,8 +1641,8 @@ Phusion Passenger hides a lot of complexity for the end user (i.e. the web serve
 system administrator), but sometimes it is desirable to know what is going on.
 This section describes a few things that Phusion Passenger does under the hood.
 
-=== Page caching support ===
 include::users_guide_snippets/under_the_hood/page_caching_support.txt[]
+include::users_guide_snippets/under_the_hood/relationship_with_ruby.txt[]
 
 [[application_detection]]
 === How Phusion Passenger detects whether a virtual host is a web application ===

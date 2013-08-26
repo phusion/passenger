@@ -538,6 +538,59 @@ Immediately after creating the `run` file, daemontools/runit automatically runs 
 
 To shut down a daemontools/runit-managed daemon, you need to use `svc -d /etc/service/flying-passenger` (daemontools) or `sv stop /etc/service/flying-passenger` (runit) instead of sending a signal to the process.
 
+[[using_flying_passenger_with_mri_18_or_jruby]]
+==== Using Flying Passenger with MRI 1.8 or JRuby
+
+Using Flying Passenger in combination with MRI Ruby 1.8 or with JRuby requires special attention. This is because the Flying Passenger daemon is written in Ruby, and requires proper `Process.spawn` support, which neither MRI 1.8 nor JRuby support.
+
+It is however possible to use Flying Passenger with MRI Ruby 1.8 and JRuby. You can't run the Flying Passenger daemon in MRI 1.8 or JRuby, but you can still run the web applications - hosted under Flying Passenger - in MRI 1.8 or JRuby.
+
+First, edit your Nginx configuration file and specify a Ruby interpreter for your web applications. For example:
+
+--------------------
+# Connect to the Flying Passenger daemon on the following socket
+passenger_fly_with /var/run/flying-passenger.sock;
+...
+
+server {
+    listen 80;
+    server_name www.foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+    # Use JRuby for this web application
+    passenger_ruby /opt/jruby/bin/jruby;
+}
+--------------------
+
+Then you need to install a Ruby 1.9-compatible Ruby interpeter with POSIX spawn support, alongside JRuby/MRI 1.8. Ruby interpreters which can be used for running the Flying Passenger daemon include:
+
+ * MRI Ruby >= 1.9.
+ * Rubinius.
+
+The following example demonstrates how you can install MRI Ruby 1.9 in parallel with your MRI Ruby 1.8 or JRuby installation.
+
+Example for Debian/Ubuntu users:
+
+[source,sh]
+--------------------------------
+# Install Ruby 1.9
+sudo apt-get install ruby1.9.3
+# Run the Flying Passenger daemon in Ruby 1.9
+ruby1.9 -S flying-passenger --socket-file=/var/run/flying-passenger.sock
+--------------------------------
+
+Example for RVM users:
+
+[source,sh]
+--------------------------------
+# Install Ruby 1.9
+rvm install 1.9.3
+# Run the Flying Passenger daemon in Ruby 1.9
+$ rvm-exec 1.9.3 ruby -S flying-passenger --socket-file=/var/run/flying-passenger.sock
+--------------------------------
+
+The Flying Passenger daemon will now be run on Ruby 1.9, while the web application 'www.foo.com' will be run on JRuby.
+
 [[flying_passenger_caveats]]
 ==== Caveats and limitations
 
@@ -545,6 +598,7 @@ Beware of the following caveats and limitations when using Flying Passenger:
 
 - The Nginx executable **must** be compiled with the same version of Phusion Passenger as the Flying Passenger daemon. Failing to meet this requirement may result in cryptic errors, or may result in certain features not working, until you've fixed the situation. When upgrading Phusion Passenger, you must restart both Nginx and the Flying Passenger daemon.
 - The <<PassengerRoot,passenger_root>> directive has no effect. When using Flying Passenger, you are not supposed to set `passenger_root`.
+- The Flying Passenger daemon is written in Ruby. It requires a Ruby interpreter with proper `Process#spawn` support. At the time of writing, all Ruby interpreters in existance satisfy this requirement, except for MRI Ruby 1.8 and JRuby. See <<using_flying_passenger_with_mri_18_or_jruby,Using Flying Passenger with MRI 1.8 or JRuby>> for more information.
 - When you add a new application to the web server configuration, Flying Passenger will automatically pick up the application's settings and spawn this new application upon the first request to it. However it is not capable of automatically starting the new app before a request has been sent to it (i.e. <<PassengerPreStart,passenger_pre_start>>-like behavior is not available in this case). As a workaround, you can send an HTTP request to your application after starting the daemon, which forces it to spawn application processes.
 - When you remove an application from the web server configuration, Flying Passenger will not detect the removal and will not shut down the associated application processes. Killing the application processes will also not help, because Flying Passenger will restart them per the (now-removed, but still in the Flying Passenger daemon's memory) <<PassengerMinInstances,passenger_min_instances>> settings. At the moment, there are two ways to get rid of those processes:
   * Before removing the application from the web server configuration, explicitly set its `passenger_min_instances` to 0. Next, send a request to it, which will cause the Flying Passenger daemon to take over the new `passenger_min_instances 0` option. You can then proceed with removing the application from the web server configuration, and restarting the web server. Finally, kill the PIDs associated to those application processes and remove the application configuration.

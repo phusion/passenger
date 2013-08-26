@@ -1,3 +1,5 @@
+=== Page caching support
+
 For each HTTP request, Phusion Passenger will automatically look for a corresponding
 page cache file, and serve that if it exists. It does this by appending ".html" to
 the filename that the URI normally maps to, and checking whether that file exists.

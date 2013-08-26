@@ -2260,6 +2260,9 @@ Phusion Passenger hides a lot of complexity for the end user (i.e. the web serve
 system administrator), but sometimes it is desirable to know what is going on.
 This section describes a few things that Phusion Passenger does under the hood.
 
+include::users_guide_snippets/under_the_hood/page_caching_support.txt[]
+include::users_guide_snippets/under_the_hood/relationship_with_ruby.txt[]
+
 === Static assets serving ===
 Phusion Passenger accelerates serving of static files. This means that, if an URI
 maps to a file that exists, then Phusion Passenger will let Apache serve that file
@@ -2279,9 +2282,6 @@ RewriteRule ^(.*)$ balancer://mongrel%{REQUEST_URI} [P,QSA,L]
 
 These kind of mod_rewrite rules are no longer required, and you can safely remove
 them.
-
-=== Page caching support ===
-include::users_guide_snippets/under_the_hood/page_caching_support.txt[]
 
 [[application_detection]]
 === How Phusion Passenger detects whether a virtual host is a web application ===

@@ -240,7 +240,7 @@ chmod o+x /opt
 
 Phusion Passenger supports multiple languages and its core is written in C++, but its installer and administration tools are written in Ruby, so you must install that.
 
-Even though Ruby is required, Ruby will not be loaded during normal operation unless you deploy a Ruby web application on Phusion Passenger.
+Even though Ruby is required, Ruby will normally not be loaded during normal operation unless you deploy a Ruby web application on Phusion Passenger. Phusion Passenger's dependency on Ruby is very minimal. See <<relationship_with_ruby,Phusion Passenger and its relationship with Ruby>> for details.
 
 Run `ruby --version` and `rake --version` to find out whether both commands are already installed and recent enough. Phusion Passenger requires Ruby >= 1.8.6. Any Rake version will do.
 
