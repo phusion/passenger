@@ -241,6 +241,7 @@ private
 	def create_nginx_controller(extra_options = {})
 		require_daemon_controller
 		require 'socket' unless defined?(UNIXSocket)
+		require 'thread' unless defined?(Mutex)
 		if @options[:socket_file]
 			ping_spec = [:unix, @options[:socket_file]]
 		else
