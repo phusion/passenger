@@ -332,13 +332,10 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     u_char                       *p;
     size_t                        size;
     uintptr_t                    *code;
-    ngx_str_t                    *header;
-    ngx_uint_t                    i, j;
-    ngx_array_t                   hide_headers;
+    ngx_uint_t                    i;
     ngx_str_t                    *prev_base_uris, *base_uri;
     ngx_str_t                    *prev_union_station_filters, *union_station_filter;
     ngx_keyval_t                 *src;
-    ngx_hash_key_t               *hk;
     ngx_hash_init_t               hash;
     ngx_http_script_compile_t     sc;
     ngx_http_script_copy_code_t  *copy;
