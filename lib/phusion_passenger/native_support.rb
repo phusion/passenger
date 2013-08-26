@@ -185,8 +185,15 @@ private
 	end
 
 	def compile_and_load
+		if ENV['PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY'] == '0'
+			STDERR.puts "*** Phusion Passenger: PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY set, " +
+				"not compiling native_support"
+			return false
+		end
+
 		STDERR.puts "*** Phusion Passenger: no #{library_name} found for " +
-			"the current Ruby interpreter. Compiling one..."
+			"the current Ruby interpreter. Compiling one (set " +
+			"PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY=0 to disable)..."
 
 		require 'fileutils'
 		require 'phusion_passenger/platform_info/ruby'
@@ -196,6 +203,7 @@ private
 			require "#{target_dir}/#{library_name}"
 		else
 			STDERR.puts "Ruby native_support extension not loaded. Continuing without native_support."
+			return false
 		end
 	end
 

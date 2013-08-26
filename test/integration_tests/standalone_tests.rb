@@ -13,6 +13,8 @@ ENV['PATH'] = "#{PhusionPassenger.bin_dir}:#{ENV['PATH']}"
 # This environment variable changes Passenger Standalone's behavior,
 # so ensure that it's not set.
 ENV.delete('PASSENGER_DEBUG')
+ENV['PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY'] = '0'
+ENV['PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY']  = '0'
 
 describe "Passenger Standalone" do
 	after :each do
@@ -234,7 +236,9 @@ describe "Passenger Standalone" do
 						File.exist?("#{PhusionPassenger.source_root}/buildout").should be_false
 						
 						test_serving_application("#{command} --no-compile-runtime")
+						File.exist?("#{PhusionPassenger.source_root}/buildout").should be_false
 					ensure
+						FileUtils.rm_rf("#{PhusionPassenger.source_root}/buildout")
 						File.rename("#{PhusionPassenger.source_root}/buildout.renamed",
 							"#{PhusionPassenger.source_root}/buildout")
 					end
