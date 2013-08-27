@@ -66,6 +66,13 @@ module PhusionPassenger
 
 		# Misc
 		FEEDBACK_FD = 3
+		STANDALONE_NGINX_CONFIGURE_OPTIONS =
+			"--with-cc-opt='-Wno-error' " <<
+			"--without-http_fastcgi_module " <<
+			"--without-http_scgi_module " <<
+			"--without-http_uwsgi_module " <<
+			"--with-http_gzip_static_module " <<
+			"--with-http_stub_status_module"
 	end
 
 	SharedConstants.constants.each do |name|

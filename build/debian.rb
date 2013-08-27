@@ -39,7 +39,9 @@ def create_debian_package_dir(distribution)
 	root = "#{PKG_DIR}/#{distribution}"
 	sh "rm -rf #{root}"
 	sh "mkdir -p #{root}"
-	recursive_copy_files(DEBIAN_ORIG_TARBALL_FILES.call, root)
+	sh "cd #{root} && tar xzvf #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz"
+	sh "bash -c 'shopt -s dotglob && mv #{root}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}/* #{root}'"
+	sh "rmdir #{root}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"
 	recursive_copy_files(Dir["debian.template/**/*"], root,
 		true, variables)
 	sh "mv #{root}/debian.template #{root}/debian"
@@ -62,9 +64,18 @@ task 'debian:orig_tarball' => Packaging::PREGENERATED_FILES do
 			"It will not be regenerated. If you are sure that the orig tarball is outdated, please delete it " +
 			"and rerun this task."
 	else
+		require 'phusion_passenger/constants'
+		nginx_version = PhusionPassenger::PREFERRED_NGINX_VERSION
+		local_nginx_tarball = "#{PKG_DIR}/nginx-#{nginx_version}.tar.gz"
+		if File.exist?(local_nginx_tarball)
+			puts "#{local_nginx_tarball} already exists"
+		else
+			sh "curl -L -o #{local_nginx_tarball} http://nginx.org/download/nginx-#{nginx_version}.tar.gz"
+		end
 		sh "rm -rf #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"
 		sh "mkdir -p #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"
 		recursive_copy_files(DEBIAN_ORIG_TARBALL_FILES.call, "#{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}")
+		sh "cd #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION} && tar xzf #{local_nginx_tarball}"
 		sh "cd #{PKG_DIR} && tar -c #{DEBIAN_NAME}_#{PACKAGE_VERSION} | gzip --best > #{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz"
 	end
 end

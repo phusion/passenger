@@ -1,4 +1,5 @@
 usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/agents/
+nginx-<%= PhusionPassenger::PREFERRED_NGINX_VERSION %>/objs/nginx usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/
 usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/helper-scripts/
 usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/templates/
 usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/standalone_default_root/

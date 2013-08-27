@@ -18,19 +18,23 @@ override_dh_auto_build:
 	mv pkg/fakeroot pkg/fakeroot1.8
 	/usr/bin/ruby1.9.1 /usr/bin/rake fakeroot
 	mv pkg/fakeroot pkg/fakeroot1.9.1
+	cd nginx-<%= PhusionPassenger::PREFERRED_NGINX_VERSION %> && \
+		./configure --prefix=/tmp \
+		<%= STANDALONE_NGINX_CONFIGURE_OPTIONS %> \
+		--add-module=`pwd`/../ext/nginx && \
+		make
 
 override_dh_auto_install:
 	mkdir debian/tmp/
 	# Merge Ruby 1.8 and 1.9 files into a single directory.
 	cp -a pkg/fakeroot1.8/* debian/tmp/
 	cp -a pkg/fakeroot1.9.1/* debian/tmp/
-	# Do not package Passenger Standalone.
-	rm -rf debian/tmp/usr/bin/passenger
 	touch debian/tmp/usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/release.txt
 
 override_dh_auto_clean:
 	/usr/bin/rake clean CLEAN_DOCS=false
 	rm -rf pkg/fakeroot1.8
 	rm -rf pkg/fakeroot1.9.1
+	cd nginx-<%= PhusionPassenger::PREFERRED_NGINX_VERSION %> && if test -f Makefile; then make clean; fi
 	# Hack to prevent HTML files from being renegerated
 	touch doc/*.html
