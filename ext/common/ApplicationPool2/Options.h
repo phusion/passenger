@@ -303,6 +303,8 @@ public:
 	 * out-of-band work at the same time.
 	 */
 	unsigned int maxOutOfBandWorkInstances;
+
+	/*-----------------*/
 	
 	
 	/*********** Per-request options that should be set manually and that only matter to Pool ***********/
