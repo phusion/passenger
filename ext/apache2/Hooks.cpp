@@ -985,6 +985,8 @@ private:
 		addHeader(output, "PASSENGER_SHOW_VERSION_IN_HEADER", "true");
 		addHeader(output, "PASSENGER_MAX_REQUESTS",
 			apr_psprintf(r->pool, "%ld", config->getMaxRequests()));
+		addHeader(output, "PASSENGER_START_TIMEOUT",
+			apr_psprintf(r->pool, "%ld", config->getStartTimeout()));
 		addHeader(output, "PASSENGER_STAT_THROTTLE_RATE",
 			apr_psprintf(r->pool, "%ld", config->getStatThrottleRate()));
 		addHeader(output, "PASSENGER_RESTART_DIR", config->getRestartDir());

@@ -82,6 +82,12 @@
 	
 
 	
+		ngx_conf_merge_value(conf->start_timeout,
+			prev->start_timeout,
+			NGX_CONF_UNSET);
+	
+
+	
 		ngx_conf_merge_str_value(conf->user,
 			prev->user,
 			NULL);

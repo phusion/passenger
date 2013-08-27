@@ -1186,6 +1186,21 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is '300' (5 minutes).
 
+==== PassengerStartTimeout <seconds> ====
+:version: 4.0.15
+include::users_guide_snippets/since_version.txt[]
+
+Specifies a timeout for the startup of application processes. If an application process fails to start within the timeout period then it will be forcefully killed with SIGKILL, and the error will be logged.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Limits` is on.
+
+In each place, it may be specified at most once. The default value is '90'.
+
 [[PassengerConcurrencyModel]]
 ==== PassengerConcurrencyModel <process|thread> ====
 :version: 4.0.0

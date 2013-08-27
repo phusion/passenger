@@ -194,10 +194,12 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->group = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
 	config->maxPreloaderIdleTime = -1;
-	config->maxRequests = 0;
-	config->maxRequestsSpecified = false;
 	config->minInstances = 1;
 	config->minInstancesSpecified = false;
+	config->maxRequests = 0;
+	config->maxRequestsSpecified = false;
+	config->startTimeout = DEFAULT_START_TIMEOUT / 1000;
+	config->startTimeoutSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
 	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
 	config->allowEncodedSlashes = DirConfig::UNSET;
@@ -234,8 +236,9 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_STR_CONFIG(group);
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	config->maxPreloaderIdleTime = (add->maxPreloaderIdleTime == -1) ? base->maxPreloaderIdleTime : add->maxPreloaderIdleTime;
-	MERGE_INT_CONFIG(maxRequests);
 	MERGE_INT_CONFIG(minInstances);
+	MERGE_INT_CONFIG(maxRequests);
+	MERGE_INT_CONFIG(startTimeout);
 	MERGE_THREEWAY_CONFIG(highPerformance);
 	MERGE_INT_CONFIG(statThrottleRate);
 	MERGE_STR_CONFIG(restartDir);
@@ -293,6 +296,7 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_min_instances, minInstances, unsigned long, 0)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_max_requests, maxRequests, unsigned long, 0)
+DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_start_timeout, startTimeout, unsigned long, 0)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformance)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
@@ -567,6 +571,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
 		"The maximum number of requests that an application instance may process."),
+	AP_INIT_TAKE1("PassengerStartTimeout",
+		(Take1Func) cmd_passenger_start_timeout,
+		NULL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
+		"A timeout for application startup."),
 	AP_INIT_FLAG("PassengerHighPerformance",
 		(FlagFunc) cmd_passenger_high_performance,
 		NULL,
@@ -642,7 +651,7 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Whether to enable logging through Union Station."),
-	
+
 	/*****************************/
 	AP_INIT_TAKE1("PassengerMemoryLimit",
 		(Take1Func) cmd_passenger_enterprise_only,

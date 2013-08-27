@@ -1174,6 +1174,21 @@ In each place, it may be specified at most once. The default value is '300' (5 m
 :option: `--max-preloader-idle-time`
 include::users_guide_snippets/alternative_for_flying_passenger.txt[]
 
+==== passenger_start_timeout <seconds> ====
+:version: 4.0.15
+include::users_guide_snippets/since_version.txt[]
+
+Specifies a timeout for the startup of application processes. If an application process fails to start within the timeout period then it will be forcefully killed with SIGKILL, and the error will be logged.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '90'.
+
 [[PassengerConcurrencyModel]]
 ==== passenger_concurrency_model <process|thread> ====
 :version: 4.0.0

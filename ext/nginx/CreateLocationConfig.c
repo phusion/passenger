@@ -71,6 +71,10 @@
 	
 
 	
+		conf->start_timeout = NGX_CONF_UNSET;
+	
+
+	
 		conf->base_uris = NGX_CONF_UNSET_PTR;
 	
 

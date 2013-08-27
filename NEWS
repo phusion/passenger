@@ -8,6 +8,14 @@ Release 4.0.15
    means that in order to use out-of-band work, you need to have at least
    2 application processes running. Out-of-band work will never be triggered
    if you just have 1 process. Partially fixes issue #892.
+ * A new configuration option, `PassengerStartTimeout` (Apache) and
+   `passenger_start_timeout` (Nginx), has been added. This option allows you
+   to specify a timeout for application startup. The startup timeout has exited
+   since version 4.0.0, but before version 4.0.15 it was hardcoded at a value
+   of 90 seconds. Now it is customizable.
+ * [Standalone] Memory usage optimization: when `passenger start` is run with
+   `--daemonize`, the frontend exits after starting the Nginx core. This saves
+   ~20 MB of memory per `passenger start` instance.
  * Fix a crash when multiple passenger_pass_header directives are set.
    Fixes issue #934.
  * Permissions on the server instance directory are now explicitly set
@@ -28,9 +36,6 @@ Release 4.0.15
    issue #937.
  * [Standalone] Fix a problem with the `passenger stop` command on Ruby 1.8.7.
    The 'thread' library was not properly required, causing a crash.
- * [Standalone] Memory usage optimization: when `passenger start` is run with
-   `--daemonize`, the frontend exits after starting the Nginx core. This saves
-   ~20 MB of memory per `passenger start` instance.
 
 
 Release 4.0.14

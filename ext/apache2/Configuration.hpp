@@ -102,17 +102,7 @@ struct DirConfig {
 	 * and the default value should be used).
 	 */
 	long maxPreloaderIdleTime;
-	
-	/**
-	 * The maximum number of requests that the spawned application may process
-	 * before exiting. A value of 0 means unlimited.
-	 */
-	unsigned long maxRequests;
-	
-	/** Indicates whether the maxRequests option was explicitly specified
-	 * in the directory configuration. */
-	bool maxRequestsSpecified;
-	
+
 	/**
 	 * The minimum number of processes for a group that should be kept in
 	 * the pool when cleaning idle processes. Defaults to 0.
@@ -123,6 +113,25 @@ struct DirConfig {
 	 * Indicates whether the minInstances option was explicitly specified
 	 * in the directory configuration. */
 	bool minInstancesSpecified;
+	
+	/**
+	 * The maximum number of requests that the spawned application may process
+	 * before exiting. A value of 0 means unlimited.
+	 */
+	unsigned long maxRequests;
+	
+	/** Indicates whether the maxRequests option was explicitly specified
+	 * in the directory configuration. */
+	bool maxRequestsSpecified;
+
+	/**
+	 * A timeout for application startup.
+	 */
+	unsigned long startTimeout;
+	
+	/** Indicates whether the startTimeout option was explicitly specified
+	 * in the directory configuration. */
+	bool startTimeoutSpecified;
 	
 	/** Whether symlinks in the document root path should be resolved.
 	 * The implication of this is documented in the users guide, section
@@ -231,6 +240,14 @@ struct DirConfig {
 		}
 	}
 	
+	unsigned long getMinInstances() const {
+		if (minInstancesSpecified) {
+			return minInstances;
+		} else {
+			return 1;
+		}
+	}
+
 	unsigned long getMaxRequests() const {
 		if (maxRequestsSpecified) {
 			return maxRequests;
@@ -238,12 +255,12 @@ struct DirConfig {
 			return 0;
 		}
 	}
-	
-	unsigned long getMinInstances() const {
-		if (minInstancesSpecified) {
-			return minInstances;
+
+	unsigned long getStartTimeout() const {
+		if (startTimeoutSpecified) {
+			return startTimeout;
 		} else {
-			return 1;
+			return DEFAULT_START_TIMEOUT / 1000;
 		}
 	}
 	

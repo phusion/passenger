@@ -119,6 +119,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:type  => :integer
 	},
 	{
+		:name  => 'passenger_start_timeout',
+		:type  => :integer
+	},
+	{
 		:name   => 'passenger_base_uri',
 		:type   => :string_array,
 		:field  => 'base_uris',
