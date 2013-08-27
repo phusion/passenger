@@ -147,7 +147,12 @@ private
 		if Process.uid == 0
 			render_template 'apache2/no_write_permission_to_passenger_root'
 		else
-			render_template 'apache2/run_installer_as_root'
+			render_template 'installer_common/run_installer_as_root',
+				:dir  => PhusionPassenger.source_root,
+				:sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
+				:sudo_e => "#{PhusionPassenger::PlatformInfo.ruby_sudo_command} -E",
+				:ruby => PhusionPassenger::PlatformInfo.ruby_command,
+				:installer => "#{PhusionPassenger.bin_dir}/passenger-install-apache2-module #{ORIG_ARGV.join(' ')}"
 		end
 		return false
 	ensure
@@ -205,6 +210,7 @@ private
 	end
 end
 
+ORIG_ARGV = ARGV.dup
 options = {}
 parser = OptionParser.new do |opts|
 	opts.banner = "Usage: passenger-install-apache2-module [options]"

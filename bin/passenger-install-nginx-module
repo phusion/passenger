@@ -342,7 +342,12 @@ private
 		if Process.uid == 0
 			render_template 'nginx/cannot_write_to_dir', :dir => dir
 		else
-			render_template 'nginx/run_installer_as_root', :dir => dir
+			render_template 'installer_common/run_installer_as_root',
+				:dir  => dir,
+				:sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
+				:sudo_e => "#{PhusionPassenger::PlatformInfo.ruby_sudo_command} -E",
+				:ruby => PhusionPassenger::PlatformInfo.ruby_command,
+				:installer => "#{PhusionPassenger.bin_dir}/passenger-install-nginx-module #{ORIG_ARGV.join(' ')}"
 		end
 		return false
 	ensure
@@ -457,6 +462,7 @@ private
 	end
 end
 
+ORIG_ARGV = ARGV.dup
 options = {}
 parser = OptionParser.new do |opts|
 	opts.banner = "Usage: passenger-install-nginx-module [options]"
