@@ -110,6 +110,7 @@ public:
 	const string &getGupid() const;
 	const GroupPtr getGroup() const;
 	void requestOOBW();
+	int kill(int signo);
 	
 	bool isClosed() const {
 		return closed;

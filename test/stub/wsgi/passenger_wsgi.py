@@ -60,6 +60,11 @@ def application(env, start_response):
 				i += 1
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
 		return body()
+	elif path == '/sleep':
+		sleep_time = float(env.get('HTTP_X_SLEEP', 5))
+		time.sleep(sleep_time)
+		status = 200
+		body = 'ok'
 	elif path == '/blob':
 		size = int(env.get('HTTP_X_SIZE', 1024 * 1024 * 10))
 		def body():

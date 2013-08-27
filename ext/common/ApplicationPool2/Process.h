@@ -465,6 +465,15 @@ public:
 			return false;
 		}
 	}
+
+	/** Kill the OS process with the given signal. */
+	int kill(int signo) {
+		if (osProcessExists()) {
+			return syscalls::kill(pid, signo);
+		} else {
+			return 0;
+		}
+	}
 	
 	int utilization() const {
 		/* Different processes within a Group may have different

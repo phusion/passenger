@@ -120,6 +120,7 @@ using namespace ApplicationPool2;
 
 class RequestHandler;
 
+#define RH_ERROR(client, x) P_ERROR("[Client " << client->name() << "] " << x)
 #define RH_WARN(client, x) P_WARN("[Client " << client->name() << "] " << x)
 #define RH_DEBUG(client, x) P_DEBUG("[Client " << client->name() << "] " << x)
 #define RH_TRACE(client, level, x) P_TRACE(level, "[Client " << client->name() << "] " << x)

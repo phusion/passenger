@@ -1177,6 +1177,11 @@ Session::requestOOBW() {
 	process->getGroup()->requestOOBW(process);
 }
 
+int
+Session::kill(int signo) {
+	return getProcess()->kill(signo);
+}
+
 
 PipeWatcher::DataCallback PipeWatcher::onData;
 
