@@ -294,6 +294,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:name      => 'rack_env',
 		:alias_for => 'passenger_app_env'
 	},
+	{
+		:name      => 'rails_app_spawner_idle_time',
+		:alias_for => 'passenger_max_preloader_idle_time'
+	},
 
 	###### Obsolete options ######
 	{
