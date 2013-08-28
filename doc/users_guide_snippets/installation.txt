@@ -486,6 +486,37 @@ yum install passenger-standalone
 There are instructions for building your own packages and Yum repositories in the link:https://github.com/phusion/passenger/tree/master/rpm#readme[rpm directory ReadMe] within the link:https://github.com/phusion/passenger[GitHub repository].
 
 
+=== Installing or upgrading on Mac OS X with Homebrew
+
+.Open source
+
+Every time we release a new Phusion Passenger version, we make it available through Homebrew. Please note that the Homebrew maintainers have to merge our pull requests manually, so it may take a day or two before a new version shows up in the official Homebrew repository.
+
+ 1. Update the Homebrew recipes:
++
+---------------------------
+brew update
+---------------------------
+ 2. Run the following command and follow the instructions. This will give you access to link:Users%20guide%20Apache.html[Phusion Passenger for Apache] and link:Users%20guide%20Standalone.html[Phusion Passenger Standalone].
++
+---------------------------
+brew install passenger
+-OR-
+brew upgrade passenger
+---------------------------
+ 3. (Optional) If you want to use link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx], run:
++
+---------------------------
+brew install nginx --with-passenger
+-OR-
+brew upgrade nginx --wtih-passenger
+---------------------------
+
+.Enterprise
+
+link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] is currently not available through Homebrew. Please try one of the other installation methods insteads.
+
+
 === Upgrading from open source to Enterprise
 
 Phusion Passenger comes in two variants: an open source version, as well as an link:https://www.phusionpassenger.com/enterprise[Enterprise version] which introduces a myriad of useful features that can improve stability and performance and efficiency.
@@ -856,6 +887,7 @@ done this, you need to remove the Phusion Passenger files.
   in which you placed the extracted Phusion Passenger files. This directory is the
   same as the one pointed to the by `PassengerRoot`/`passenger_root` configuration directive.
 - If you installed Phusion Passenger through APT or YUM, then use them to uninstall Phusion Passenger.
+- If you installed Phusion Passenger through Homebrew, then run `brew uninstall passenger`.
 
 ifdef::nginx[]
 Nginx does not have to be recompiled. Altough it contains Phusion Passenger code, it will not do anything when all Phusion Passenger configuration directives are removed.
