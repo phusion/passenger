@@ -21,12 +21,6 @@ passenger-config was invoked through the following Ruby interpreter:
   To use in Nginx : passenger_ruby /usr/local/rvm/wrappers/ruby-1.8.7-p358/ruby
   To use with Standalone: /usr/local/rvm/wrappers/ruby-1.8.7-p358/ruby /opt/passenger/bin/passenger start
 
-The following Ruby interpreter was found first in $PATH:
-  Command: /usr/local/rvm/wrappers/ruby-1.8.7-p358/ruby
-  Version: ruby 1.8.7 (2012-02-08 patchlevel 358) [universal-darwin12.0]
-  To use in Apache: PassengerRuby /usr/local/rvm/wrappers/ruby-1.8.7-p358/ruby
-  To use in Nginx : passenger_ruby /usr/local/rvm/wrappers/ruby-1.8.7-p358/ruby
-  To use with Standalone: /usr/local/rvm/wrappers/ruby-1.8.7-p358/ruby /opt/passenger/bin/passenger start
 
 ## Notes for RVM users
 Do you want to know which command to use for a different Ruby interpreter? 'rvm use' that Ruby interpreter, then re-run 'passenger-config --ruby-command'.
@@ -44,12 +38,6 @@ passenger-config was invoked through the following Ruby interpreter:
   To use in Nginx : passenger_ruby /usr/local/rvm/wrappers/ruby-1.9.3-p392/ruby
   To use with Standalone: /usr/local/rvm/wrappers/ruby-1.9.3-p392/ruby /opt/passenger/bin/passenger start
 
-The following Ruby interpreter was found first in $PATH:
-  Command: /usr/local/rvm/wrappers/ruby-1.9.3-p392/ruby
-  Version: ruby 1.9.3p392 (2013-02-22 revision 39386) [x86_64-darwin12.2.1]
-  To use in Apache: PassengerRuby /usr/local/rvm/wrappers/ruby-1.9.3-p392/ruby
-  To use in Nginx : passenger_ruby /usr/local/rvm/wrappers/ruby-1.9.3-p392/ruby
-  To use with Standalone: /usr/local/rvm/wrappers/ruby-1.9.3-p392/ruby /opt/passenger/bin/passenger start
 
 ## Notes for RVM users
 Do you want to know which command to use for a different Ruby interpreter? 'rvm use' that Ruby interpreter, then re-run 'passenger-config --ruby-command'.
