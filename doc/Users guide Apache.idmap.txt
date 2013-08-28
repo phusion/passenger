@@ -336,6 +336,10 @@
 
 10.2. Phusion Passenger and its relationship with Ruby	=>	phusion-passenger-and-its-relationship-with-ruby-1eq08ff
 
+10.2.1. How Ruby is used	=>	how-ruby-is-used-14r83nr
+
+10.2.2. When the system has multiple Ruby interpreters	=>	when-the-system-has-multiple-ruby-interpreters-10tm1fq
+
 10.3. Static assets serving	=>	static-assets-serving-wo2d9v
 
 10.4. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-179mp8m

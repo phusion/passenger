@@ -15,7 +15,7 @@ The steps for upgrading or downgrading Phusion Passenger is almost the same as t
 [[rubygems_generic_install]]
 === Generic installation, upgrade and downgrade method: via RubyGems
 
-RubyGems is only used as a method to obtain the Phusion Passenger files, so in case you have multiple Ruby versions it does not matter which Ruby's RubyGems you use for installation. Once installed, Phusion Passenger can work with all other Ruby versions on your system.
+RubyGems is only used as a method to obtain the Phusion Passenger files, so in case you have multiple Ruby versions it does not matter which Ruby's RubyGems you use for installation. Once installed, Phusion Passenger can work with all other Ruby versions on your system. This is explained in <<relationship_with_ruby,Phusion Passenger and its relationship with Ruby>>.
 
 [[is_ruby_home_or_system_wide_installed]]
 [float]

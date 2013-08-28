@@ -1,6 +1,8 @@
 [[relationship_with_ruby]]
 === Phusion Passenger and its relationship with Ruby
 
+==== How Ruby is used
+
 Phusion Passenger's core is written in C++ for performance and memory efficiency. It supports web applications written in any language. Phusion Passenger requires Ruby, its usage of Ruby is minimal in order to maximize performance and to minimize memory usage.
 
  * Phusion Passenger's installer, build system and administration tools are written in Ruby.
@@ -17,3 +19,96 @@ are written in Ruby as well.
  * If you use link:Users%20guide%20Standalone.html[Phusion Passenger Standalone], then the frontend (the `passenger` command) is written in Ruby. The frontend is small (less than 1500 lines of code) and offloads most tasks to the C++ core.
 
 Other than the aforementioned aspects, Phusion Passenger does not use Ruby during normal operation. For example, if you run Python WSGI web applications on Phusion Passenger, then there will be (almost) no Ruby code running on the system.
+
+==== When the system has multiple Ruby interpreters
+
+Phusion Passenger may be installed with any Ruby interpreter. Once installed, you can run Phusion Passenger's Ruby parts under any Ruby interpreter you want, even if that Ruby interpreter was not the one you originally installed Phusion Passenger with.
+
+The reason for this is that Phusion Passenger does not dynamically link to Ruby: Phusion Passenger uses Ruby entirely out-of-process. Thus you can switch to any Ruby interpreter you want during runtime, without recompiling Phusion Passenger, and without worrying about what Ruby you used to install Phusion Passenger.
+
+Phusion Passenger is also capable of running Ruby web applications under any Ruby interpreter you want. So it is not important which Ruby you use to install Phusion Passenger: it will work regardless. Please refer to the documentation for the
+ifdef::apache[]
+<<PassengerRuby,PassengerRuby>>
+endif::[]
+ifdef::nginx[]
+<<PassengerRuby,passenger_ruby>>
+endif::[]
+directive to learn how run different web applications under different Ruby interpreters.
+
+.Caveat: RVM and RVM gemsets
+
+There is however one caveat if you happen to be using RVM or RVM gemsets. When you `gem install` Phusion Passenger using RVM, then RVM will install Phusion Passenger into the *currently active RVM Ruby and gemset*. This means that Phusion Passenger commands - such as `passenger`, `passenger-install-xxx-module` and `passenger-status` - are available in that same RVM Ruby and gemset only. When you switch Ruby interpreter, or when you switch gemset, the Phusion Passenger commands will no longer be available, and you will get a `command not found` error. Here's an example which demonstrates the problem.
+
+."Command not found" problem demonstration
+[source,sh]
+------------------------
+## Install Phusion Passenger (open source edition) using Ruby 1.9.3
+## and the 'business' gemset
+$ rvm use 1.9.3
+Using /home/phusion/.rvm/gems/ruby-1.9.3-p429
+$ rvm gemset create business
+$ rvm gemset use business
+Using ruby-1.9.3-p429 with gemset business
+$ curl -O https://s3.amazonaws.com/phusion-passenger/releases/gem_bootstrap.sh
+$ eval "`sh gem_bootstrap.sh`"
+$ gem install passenger
+
+## Verify that passenger works
+$ passenger --version
+Phusion Passenger version 4.0.14
+
+## Switch to a different RVM gemset. You will get a `command not found`
+$ rvm gemset use default
+Using ruby-1.9.3-p429 with gemset default
+$ passenger --version
+bash: passenger: command not found
+
+## Switch to a different Ruby interpreter. You will also get
+## a `command not found`
+$ rvm use 2.0.0
+Using /home/phusion/.rvm/gems/ruby-2.0.0-p195
+$ passenger --version
+bash: passenger: command not found
+
+## Switch back to the Ruby and gemset that you installed Phusion
+## Passenger with, and verify that it works again
+$ rvm use 1.9.3
+Using /home/phusion/.rvm/gems/ruby-2.0.0-p195
+$ rvm gemset use business
+Using ruby-1.9.3-p429 with gemset business
+$ passenger --version
+Phusion Passenger version 4.0.14
+------------------------
+
+.Solutions
+There are several ways to solve this problem:
+
+ 1. Permanently add Phusion Passenger's command directory to your PATH, so that your shell can always find them even when you switch RVM Ruby or gemset. If you don't know what PATH means, please read <<about_environment_variable,About environment variables>> first.
++
+The drawback is that you have to redo this every time you upgrade Phusion Passenger, because the Phusion Passenger directory filename is dependent on the version number.
++
+First, identify the location of the Phusion Passenger command directory, like this:
++
+------------------------------------------------------------------
+$ echo `passenger-config --root`/bin
+/home/phusion/.rvm/gems/ruby-1.9.3-p429/gems/passenger-4.0.15/bin
+------------------------------------------------------------------
++
+Next, add the directory that you've found to your current shell's PATH:
++
+------------------------------------------------------------------
+$ export PATH=/home/phusion/.rvm/gems/ruby-1.9.3-p429/gems/passenger-4.0.15/bin:$PATH
+------------------------------------------------------------------
++
+Finally, make the change permanent by appending the above command to your bash startup file:
++
+------------------------------------------------------------------
+$ echo 'export PATH=/home/phusion/.rvm/gems/ruby-1.9.3-p429/gems/passenger-4.0.15/bin:$PATH' >> ~/.bashrc
+------------------------------------------------------------------
+ 2. Switch back to the RVM Ruby and gemset that you installed Phusion Passenger with, before running any Phusion Passenger command.
+ 3. Prepend any Phusion Passenger command with `rvm-exec RUBY_NAME@GEMSET_NAME ruby -S`. If the relevant Phusion Passenger command also needs root privileges, then prepend `rvmsudo` before that. For example:
++
+------------------------------------------------------------------
+rvm-exec 1.9.3@business ruby -S passenger --version
+rvmsudo rvm-exec 1.9.3@business ruby -S passenger-install-apache2-module
+------------------------------------------------------------------

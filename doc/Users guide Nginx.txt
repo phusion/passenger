@@ -475,7 +475,9 @@ Since version 4.0.0, the `passenger_python` option was added. Also, Phusion Pass
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-The `passenger_ruby` in the `http` block - that is, the one that `passenger-install-nginx-module` outputs - is used for invoking certain Phusion Passenger tools that are written in Ruby, e.g. the internal helper script used by <<PassengerPreStart,passenger_pre_start>>. It is also used as the default Ruby interpreter for Ruby web apps. You don't *have* to specify a `passenger_ruby` in the `http` block though, because the default is to use the first `ruby` command found in `$PATH`.
+The `passenger_ruby` in the `http` block - that is, the one that `passenger-install-nginx-module` outputs - is used for invoking certain Phusion Passenger tools that are written in Ruby, e.g. the internal helper script used by <<PassengerPreStart,passenger_pre_start>>. It is okay if the value refers to a different Ruby interpreter than the one you originally installed Phusion Passenger with. You can learn more about all this in <<relationship_with_ruby,Phusion Passenger and its relationship with Ruby>>.
+
+The `passenger_ruby` directive in the `http` block is also used as the default Ruby interpreter for Ruby web apps. You don't *have* to specify a `passenger_ruby` in the `http` block though, because the default is to use the first `ruby` command found in `$PATH`.
 
 The `passenger_python` option works in a similar manner, but applies to Python instead.
 

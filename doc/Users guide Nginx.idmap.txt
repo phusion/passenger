@@ -278,6 +278,10 @@
 
 9.2. Phusion Passenger and its relationship with Ruby	=>	phusion-passenger-and-its-relationship-with-ruby-1hub1pa
 
+9.2.1. How Ruby is used	=>	how-ruby-is-used-j7g2a4
+
+9.2.2. When the system has multiple Ruby interpreters	=>	when-the-system-has-multiple-ruby-interpreters-fwn3t
+
 9.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-13qbmhn
 
 10. Appendix A: About this document	=>	appendix-a-about-this-document-zfvixm
