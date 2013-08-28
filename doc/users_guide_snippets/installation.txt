@@ -483,7 +483,7 @@ yum install passenger-standalone
 [float]
 ==== Building your own packages
 
-There are instructions for building your own packages and Yum repositories in the link:https://github.com/FooBarWidget/passenger/tree/master/rpm#readme[rpm directory ReadMe] within the link:https://github.com/FooBarWidget/passenger[GitHub repository].
+There are instructions for building your own packages and Yum repositories in the link:https://github.com/phusion/passenger/tree/master/rpm#readme[rpm directory ReadMe] within the link:https://github.com/phusion/passenger[GitHub repository].
 
 
 === Upgrading from open source to Enterprise
