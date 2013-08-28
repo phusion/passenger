@@ -576,7 +576,7 @@ This subsection attempts to describe spawn methods, but it's okay if you don't (
 understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
 
 ************************************************
-If your application works on Mongrel, but not on Phusion Passenger, then set
+If your application works on Mongrel or Thin, but not on Phusion Passenger, then set
 `passenger_spawn_method` to 'direct'. Otherwise, leave it at 'smart' (the default).
 ************************************************
 

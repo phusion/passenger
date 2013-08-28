@@ -595,12 +595,12 @@ This subsection attempts to describe spawn methods, but it's okay if you don't (
 understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
 
 ************************************************
-If your application works on Mongrel, but not on Phusion Passenger, then set
-`PassengerSpawnMethod` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
+If your application works on Mongrel or Thin, but not on Phusion Passenger, then set
+`PassengerSpawnMethod` to 'direct'. Otherwise, leave it at 'smart' (the default).
 ************************************************
 
-However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
-methods bring many benefits.
+However, we do recommend you to try to understand it. The 'smart' spawn
+method bring many benefits.
 =========================================================
 
 include::users_guide_snippets/passenger_spawn_method.txt[]
@@ -610,7 +610,7 @@ This option may occur in the following places:
  * In the global server configuration.
  * In a virtual host configuration block.
 
-In each place, it may be specified at most once. The default value is 'smart-lv2'.
+In each place, it may be specified at most once. The default value is 'smart'.
 
 [[PassengerEnabled]]
 === PassengerEnabled <on|off> ===
