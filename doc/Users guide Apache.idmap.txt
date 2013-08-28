@@ -312,7 +312,7 @@
 
 9.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-a63b6r
 
-9.8. Out-of-Band Garbage Work and Out-of-Band Garbage Collection	=>	out-of-band-garbage-work-and-out-of-band-garbage-collection-kav2p8
+9.8. Out-of-Band Work and Out-of-Band Garbage Collection	=>	out-of-band-work-and-out-of-band-garbage-collection-kav2p8
 
 9.9. Flying Passenger	=>	flying-passenger-q916f7
 

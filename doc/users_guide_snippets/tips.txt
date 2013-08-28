@@ -314,7 +314,7 @@ append a timestamp to the URI to better facilitate HTTP caching. For more inform
 please refer to
 link:http://api.rubyonrails.org/classes/ActionView/Helpers/AssetTagHelper.html[the Rails API docs].
 
-=== Out-of-Band Garbage Work and Out-of-Band Garbage Collection
+=== Out-of-Band Work and Out-of-Band Garbage Collection
 
 **Available since Phusion Passenger 4.0.0.**
 
