@@ -388,7 +388,33 @@ sudo /etc/init.d/nginx restart
 
 .Standalone
 
-Unfortunately, no packages are provided for Phusion Passenger Standalone right now. We're working on this.
+First register the Brightbox Apache PPA. Run this on Ubuntu:
+
+-----------------------------
+sudo apt-add-repository ppa:brightbox/passenger-experimental
+sudo apt-get update
+-----------------------------
+
+On Debian, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand:
+
+-----------------------------
+echo deb http://ppa.launchpad.net/brightbox/passenger-experimental/ubuntu lucid main | sudo tee /etc/apt/sources.list.d/brightbox-passenger.list
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
+sudo apt-get update
+-----------------------------
+
+Once the PPA is added, you can proceed with installing Phusion Passenger for Apache by running:
+
+---------------------------------------------
+sudo apt-get install ruby-passenger
+---------------------------------------------
+
+You can then proceed with starting Phusion Passenger Standalone:
+
+---------------------------------------------
+cd /path-to-your-app
+passenger start
+---------------------------------------------
 
 
 === Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux

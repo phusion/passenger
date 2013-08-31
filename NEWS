@@ -16,6 +16,8 @@ Release 4.0.15
  * [Standalone] Memory usage optimization: when `passenger start` is run with
    `--daemonize`, the frontend exits after starting the Nginx core. This saves
    ~20 MB of memory per `passenger start` instance.
+ * [Standalone] Phusion Passenger Standalone is now also packaged in the
+   Debian packages.
  * Fix a crash when multiple passenger_pass_header directives are set.
    Fixes issue #934.
  * Permissions on the server instance directory are now explicitly set
