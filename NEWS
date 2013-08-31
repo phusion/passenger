@@ -18,6 +18,7 @@ Release 4.0.15
    ~20 MB of memory per `passenger start` instance.
  * [Standalone] Phusion Passenger Standalone is now also packaged in the
    Debian packages.
+ * [Standalone] There is now builtin support for SSL.
  * Fix a crash when multiple passenger_pass_header directives are set.
    Fixes issue #934.
  * Permissions on the server instance directory are now explicitly set

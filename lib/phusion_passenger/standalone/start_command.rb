@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2012 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -167,6 +167,18 @@ private
 				wrap_desc("Disable passenger_friendly_error_pages")) do
 				@options[:friendly_error_pages] = false
 			end
+			opts.on("--ssl",
+				wrap_desc("Enable SSL support")) do
+				@options[:ssl] = true
+			end
+			opts.on("--ssl-certificate PATH", String,
+				wrap_desc("Specify the SSL certificate path")) do |val|
+				@options[:ssl_certificate] = File.expand_path(val)
+			end
+			opts.on("--ssl-certificate-key PATH", String,
+				wrap_desc("Specify the SSL key path")) do |val|
+				@options[:ssl_certificate_key] = File.expand_path(val)
+			end
 			opts.on("--union-station-gateway HOST:PORT", String,
 				wrap_desc("Specify Union Station Gateway host and port")) do |value|
 				host, port = value.split(":", 2)
@@ -247,6 +259,14 @@ private
 	def sanity_check_options
 		if @options[:tcp_explicitly_given] && @options[:socket_file]
 			error "You cannot specify both --address/--port and --socket. Please choose either one."
+			exit 1
+		end
+		if @options[:ssl] && !@options[:ssl_certificate]
+			error "You specified --ssl. Please specify --ssl-certificate as well."
+			exit 1
+		end
+		if @options[:ssl] && !@options[:ssl_certificate_key]
+			error "You specified --ssl. Please specify --ssl-certificate-key as well."
 			exit 1
 		end
 		check_port_bind_permission_and_display_sudo_suggestion
@@ -371,7 +391,12 @@ private
 		if @options[:socket_file]
 			return @options[:socket_file]
 		else
-			result = "http://#{@options[:address]}"
+			if @options[:ssl]
+				scheme = "https"
+			else
+				scheme = "http"
+			end
+			result = "#{scheme}://#{@options[:address]}"
 			if @options[:port] != 80
 				result << ":#{@options[:port]}"
 			end
@@ -536,11 +561,13 @@ private
 	end
 
 	def stop_touching_temp_dir_in_background
-		begin
-			Process.kill('TERM', @toucher.pid)
-		rescue Errno::ESRCH, Errno::ECHILD
+		if @toucher
+			begin
+				Process.kill('TERM', @toucher.pid)
+			rescue Errno::ESRCH, Errno::ECHILD
+			end
+			@toucher.close
 		end
-		@toucher.close
 	end
 
 	def wait_until_nginx_has_exited

@@ -74,7 +74,7 @@ http {
     
     <% for app in @apps %>
     server {
-        listen <%= nginx_listen_address(app) %>;
+        listen <%= nginx_listen_address(app) %> <%= "ssl" if app[:ssl] %>;
         server_name <%= app[:server_names].join(' ') %>;
         root '<%= app[:root] %>/public';
         passenger_app_root '<%= app[:root] %>';
@@ -85,6 +85,11 @@ http {
         <% if app[:union_station_key] %>
             union_station_support on;
             union_station_key <%= app[:union_station_key] %>;
+        <% end %>
+        <% if app[:ssl] %>
+            ssl on;
+            ssl_certificate <%= app[:ssl_certificate] %>;
+            ssl_certificate_key <%= app[:ssl_certificate_key] %>;
         <% end %>
 
         # Rails asset pipeline support.
