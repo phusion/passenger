@@ -35,6 +35,9 @@ abort "Please set the LOCATIONS_INI environment variable to the right locations.
 source_root = File.expand_path("../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
+require 'tmpdir'
+require 'fileutils'
+require 'open-uri'
 
 BINDIR = "/usr/bin"
 SBINDIR = "/usr/sbin"
@@ -58,6 +61,12 @@ describe "A natively packaged Phusion Passenger" do
 
 	def which(command)
 		return capture_output("which #{command}")
+	end
+
+	def sh(*command)
+		if !system(*command)
+			abort "Command failed: #{command.join(' ')}"
+		end
 	end
 
 	specify "locations.ini only refers to existent filesystem locations" do
@@ -197,6 +206,38 @@ describe "A natively packaged Phusion Passenger" do
 			output = capture_output("passenger-install-apache2-module --auto")
 			output.should include("LoadModule passenger_module #{APACHE2_MODULE_PATH}")
 			output.should include("PassengerRoot #{LOCATIONS_INI}")
+		end
+	end
+
+	describe "Passenger Standalone" do
+		it "is in #{BINDIR}" do
+			which("passenger").should == "#{BINDIR}/passenger"
+		end
+
+		it "works" do
+			Dir.mktmpdir do |dir|
+				File.chmod(0755, dir)
+				Dir.chdir(dir) do
+					File.open("config.ru", "w") do |f|
+						f.write(%Q{
+							app = lambda do |env|
+								[200, { "Content-Type" => "text/plain" }, ["ok"]]
+							end
+							run app
+						})
+					end
+					Dir.mkdir("public")
+					Dir.mkdir("tmp")
+					sh("passenger start --no-compile-runtime -p 4000 -d >/dev/null")
+					begin
+						open("http://127.0.0.1:4000/") do |f|
+							f.read.should == "ok"
+						end
+					ensure
+						sh("passenger stop -p 4000")
+					end
+				end
+			end
 		end
 	end
 end
