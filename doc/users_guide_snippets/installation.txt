@@ -78,26 +78,8 @@ Next, download the *gem file* for the version you want (`passenger-enterprise-se
 gem install passenger-enterprise-server-x.x.x.gem
 -------------------------------------------------------
 
-[[add_rubygems_bin_dir_to_path]]
 [float]
-==== Step 3: add the RubyGems bin directory to your $PATH
-
-If all of the following are applicable to you:
-
-- You are on Debian or Ubuntu,
-- and you installed RubyGems through APT,
-- and your Ruby interpreter is installed system-wide,
-
-...then you must ensure that the RubyGems bin directory is in your $PATH, which is the environment variable that dictates where your command prompt will look for commands. If any of the above conditions do not apply to you, then you can skip this step.
-
-Open '/etc/bash.bashrc' or '/etc/bashrc' (whichever is available) and add the following to the end of the file. Also run this command in your terminal.
-
------------------------------------------------------------------
-export PATH=$PATH:/var/lib/gems/1.8/bin:/var/lib/gems/1.9/bin
------------------------------------------------------------------
-
-[float]
-==== Step 4: loosen permissions
+==== Step 3: loosen permissions
 
 If in step 1 you determined that your Ruby interpreter is installed in your home directory, then you need to make sure that the Phusion Passenger gem directory is accessible by your web server. To do that, you must ensure that the Phusion Passenger gem directory, as well as all parent directories, have the world-executable permission.
 
@@ -120,7 +102,7 @@ chmod o+x /home/phusion
 
 [[run_passenger_installer]]
 [float]
-==== Step 5: run the Phusion Passenger installer
+==== Step 4: run the Phusion Passenger installer
 
 ifdef::apache[]
 The Phusion Passenger gem only contains source files. In this step we will use the installer to compile the Phusion Passenger binaries, which include the various Phusion Passenger agent executables and the Phusion Passenger Apache module.
@@ -168,7 +150,7 @@ At some point it will ask you which prefix to install Nginx to. If you're upgrad
 endif::[]
 
 [float]
-==== Step 6: Restarting the Flying Passenger daemon
+==== Step 5: Restarting the Flying Passenger daemon
 
 If you are using <<flying_passenger,Flying Passenger>> then you must restart the Flying Passenger daemon by sending it the SIGTERM signal:
 
@@ -185,7 +167,7 @@ kill PID_OF_FLYING_PASSENGER
 
 [[verify_passenger_running]]
 [float]
-==== Step 7: Verifying that Phusion Passenger is running
+==== Step 6: Verifying that Phusion Passenger is running
 
 Restart your web server and run:
 
