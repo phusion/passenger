@@ -166,21 +166,23 @@
 
 6.15.6. PassengerMaxPreloaderIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
 
-6.15.7. PassengerConcurrencyModel <process|thread>	=>	passengerconcurrencymodel-process-thread--1eipofj
+6.15.7. PassengerStartTimeout <seconds>	=>	passengerstarttimeout-seconds--ihnfku
 
-6.15.8. PassengerThreadCount <number>	=>	passengerthreadcount-number--10jl64a
+6.15.8. PassengerConcurrencyModel <process|thread>	=>	passengerconcurrencymodel-process-thread--1eipofj
 
-6.15.9. PassengerMaxRequests <integer>	=>	passengermaxrequests-integer--17qkw9n
+6.15.9. PassengerThreadCount <number>	=>	passengerthreadcount-number--10jl64a
 
-6.15.10. PassengerMaxRequestTime <seconds>	=>	passengermaxrequesttime-seconds--127v1i2
+6.15.10. PassengerMaxRequests <integer>	=>	passengermaxrequests-integer--17qkw9n
 
-6.15.11. PassengerMemoryLimit <integer>	=>	passengermemorylimit-integer--18irza1
+6.15.11. PassengerMaxRequestTime <seconds>	=>	passengermaxrequesttime-seconds--127v1i2
 
-6.15.12. PassengerStatThrottleRate <integer>	=>	passengerstatthrottlerate-integer--1dcfda3
+6.15.12. PassengerMemoryLimit <integer>	=>	passengermemorylimit-integer--18irza1
 
-6.15.13. PassengerPreStart <url>	=>	passengerprestart-url--1utb57k
+6.15.13. PassengerStatThrottleRate <integer>	=>	passengerstatthrottlerate-integer--1dcfda3
 
-6.15.14. PassengerHighPerformance <on|off>	=>	passengerhighperformance-on-off--nvfa86
+6.15.14. PassengerPreStart <url>	=>	passengerprestart-url--1utb57k
+
+6.15.15. PassengerHighPerformance <on|off>	=>	passengerhighperformance-on-off--nvfa86
 
 6.16. Compatibility options	=>	compatibility-options-8jve5a
 

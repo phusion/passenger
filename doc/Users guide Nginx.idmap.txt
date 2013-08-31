@@ -184,17 +184,19 @@
 
 6.13.6. passenger_max_preloader_idle_time <integer>	=>	rails-app-spawner-idle-time-integer--1xjqe4b
 
-6.13.7. passenger_concurrency_model <process|thread>	=>	passenger-concurrency-model-process-thread--brcvkk
+6.13.7. passenger_start_timeout <seconds>	=>	passenger-start-timeout-seconds--8xn504
 
-6.13.8. passenger_thread_count <number>	=>	passenger-thread-count-number--1kd6ffy
+6.13.8. passenger_concurrency_model <process|thread>	=>	passenger-concurrency-model-process-thread--brcvkk
 
-6.13.9. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint
+6.13.9. passenger_thread_count <number>	=>	passenger-thread-count-number--1kd6ffy
 
-6.13.10. passenger_max_request_time <seconds>	=>	passenger-max-request-time-seconds--1htog2g
+6.13.10. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint
 
-6.13.11. passenger_memory_limit <integer>	=>	passenger-memory-limit-integer--1ry7dwx
+6.13.11. passenger_max_request_time <seconds>	=>	passenger-max-request-time-seconds--1htog2g
 
-6.13.12. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
+6.13.12. passenger_memory_limit <integer>	=>	passenger-memory-limit-integer--1ry7dwx
+
+6.13.13. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
 
 6.14. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
 
