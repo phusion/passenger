@@ -39,7 +39,7 @@ def create_debian_package_dir(distribution)
 	root = "#{PKG_DIR}/#{distribution}"
 	sh "rm -rf #{root}"
 	sh "mkdir -p #{root}"
-	sh "cd #{root} && tar xzvf #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz"
+	sh "cd #{root} && tar xzf ../#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz"
 	sh "bash -c 'shopt -s dotglob && mv #{root}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}/* #{root}'"
 	sh "rmdir #{root}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"
 	recursive_copy_files(Dir["debian.template/**/*"], root,
