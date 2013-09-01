@@ -65,6 +65,7 @@ task 'debian:orig_tarball' => Packaging::PREGENERATED_FILES do
 			"and rerun this task."
 	else
 		require 'phusion_passenger/constants'
+		sh "mkdir -p #{PKG_DIR}"
 		nginx_version = PhusionPassenger::PREFERRED_NGINX_VERSION
 		local_nginx_tarball = "#{PKG_DIR}/nginx-#{nginx_version}.tar.gz"
 		if File.exist?(local_nginx_tarball)
