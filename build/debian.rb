@@ -67,7 +67,7 @@ task 'debian:orig_tarball' => Packaging::PREGENERATED_FILES do
 		require 'phusion_passenger/constants'
 		sh "mkdir -p #{PKG_DIR}"
 		nginx_version = PhusionPassenger::PREFERRED_NGINX_VERSION
-		local_nginx_tarball = "#{PKG_DIR}/nginx-#{nginx_version}.tar.gz"
+		local_nginx_tarball = File.expand_path("#{PKG_DIR}/nginx-#{nginx_version}.tar.gz")
 		if File.exist?(local_nginx_tarball)
 			puts "#{local_nginx_tarball} already exists"
 		else
