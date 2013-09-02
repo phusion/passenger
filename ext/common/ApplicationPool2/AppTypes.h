@@ -42,6 +42,8 @@ typedef enum {
 	PAT_RACK,
 	PAT_WSGI,
 	PAT_CLASSIC_RAILS,
+	PAT_NODE,
+	PAT_METEOR,
 	PAT_NONE
 } PassengerAppType;
 

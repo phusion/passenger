@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -33,7 +33,8 @@ class AppFinder
 	def self.looks_like_app_directory?(dir)
 		return File.exist?("#{dir}/config.ru") ||
 			File.exist?("#{dir}/config/environment.rb") ||
-			File.exist?("#{dir}/passenger_wsgi.py")
+			File.exist?("#{dir}/passenger_wsgi.py") ||
+			File.exist?("#{dir}/passenger_node.js")
 	end
 	
 	def initialize(dirs, options = {})

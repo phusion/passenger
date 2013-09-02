@@ -577,6 +577,10 @@ public:
 			return ruby + "\t" + resourceLocator.getHelperScriptsDir() + "/rack-loader.rb";
 		} else if (appType == "wsgi") {
 			return python + "\t" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";
+		} else if (appType == "node") {
+			return "node\t" + resourceLocator.getHelperScriptsDir() + "/node-loader.js";
+		} else if (appType == "meteor") {
+			return ruby + "\t" + resourceLocator.getHelperScriptsDir() + "/meteor-loader.rb";
 		} else {
 			return startCommand;
 		}
