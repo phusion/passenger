@@ -26,7 +26,7 @@
 /*
  * ConfigurationFields.h is automatically generated from ConfigurationFields.h.erb,
  * using definitions from lib/phusion_passenger/nginx/config_options.rb.
- * Edits to MergeLocationConfig.c will be lost.
+ * Edits to ConfigurationFields.h will be lost.
  *
  * To update ConfigurationFields.h:
  *   rake nginx
@@ -72,7 +72,7 @@ end
 
 eligible_options = filter_eligible_options(LOCATION_CONFIGURATION_OPTIONS)
 definitions = eligible_options.map { |o| definition_for(o) }
-# Sort the definitions by size in order to make the struct smaller as possible.
+# Sort the definitions by size in order to make the struct smaller.
 # It's possible to make it even smaller with a smarter algorithm but for now
 # I don't bother.
 definitions.sort! do |d1, d2|
