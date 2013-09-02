@@ -4,9 +4,13 @@ Priority: optional
 Maintainer: John Leach <john@brightbox.co.uk>
 Uploaders: Phusion <info@phusion.nl>, Hongli Lai <hongli@phusion.nl>
 Build-Depends: debhelper (>= 7.0.50~), rake,
- ruby1.8, ruby1.8-dev, rubygems, ruby1.9.1, ruby1.9.1-dev,
+ ruby1.8, ruby1.8-dev, rubygems1.8,
+ ruby1.9.1, ruby1.9.1-dev, rubygems1.9,
  apache2-mpm-worker | apache2-mpm, apache2-threaded-dev,
- libapr1-dev, libcurl4-openssl-dev, libev-dev (>= 1:4.0.0)
+#if is_distribution?('>= precise')
+     libev-dev (>= 1:4.0.0),
+#endif
+ libapr1-dev, libcurl4-openssl-dev
 Standards-Version: 3.9.3
 Homepage: https://www.phusionpassenger.com/
 Vcs-Git: git://github.com/johnl/deb-passenger.git

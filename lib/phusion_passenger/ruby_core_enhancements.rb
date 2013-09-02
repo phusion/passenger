@@ -22,7 +22,10 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'rubygems'
+begin
+	require 'rubygems'
+rescue LoadError
+end
 require 'socket'
 require 'thread'
 if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"

@@ -1,7 +1,9 @@
 #!/usr/bin/make -f
 # export DH_VERBOSE=1
 
-export USE_VENDORED_LIBEV=false
+#if is_distribution?('>= precise')
+    export USE_VENDORED_LIBEV=false
+#endif
 
 #if ['1', 'true', 'on', 'yes'].include?(ENV['USE_CCACHE'])
 	export USE_CCACHE=1
@@ -20,7 +22,7 @@ override_dh_auto_build:
 	mv pkg/fakeroot pkg/fakeroot1.9.1
 	cd nginx-<%= PhusionPassenger::PREFERRED_NGINX_VERSION %> && \
 		./configure --prefix=/tmp \
-		<%= STANDALONE_NGINX_CONFIGURE_OPTIONS %> \
+		<%= PhusionPassenger::STANDALONE_NGINX_CONFIGURE_OPTIONS %> \
 		--add-module=`pwd`/../ext/nginx && \
 		make
 

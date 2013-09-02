@@ -21,7 +21,10 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'rubygems'
+begin
+	require 'rubygems'
+rescue LoadError
+end
 require 'pathname'
 require 'fileutils'
 require 'phusion_passenger'

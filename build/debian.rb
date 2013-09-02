@@ -22,24 +22,28 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger/constants'
 require 'build/preprocessor'
 
 ALL_DISTRIBUTIONS  = ["raring", "quantal", "precise", "lucid"]
 DEBIAN_NAME        = "ruby-passenger"
 DEBIAN_EPOCH       = 1
+DEBIAN_ARCHITECTURES = ["i386", "amd64"]
 DEBIAN_ORIG_TARBALL_FILES = lambda { PhusionPassenger::Packaging.debian_orig_tarball_files }
 
-def create_debian_package_dir(distribution)
+def create_debian_package_dir(distribution, output_dir = PKG_DIR)
 	require 'time'
 
 	variables = {
 		:distribution => distribution
 	}
 
-	root = "#{PKG_DIR}/#{distribution}"
+	root = "#{output_dir}/#{distribution}"
+	orig_tarball = File.expand_path("#{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz")
+
 	sh "rm -rf #{root}"
 	sh "mkdir -p #{root}"
-	sh "cd #{root} && tar xzf ../#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz"
+	sh "cd #{root} && tar xzf #{orig_tarball}"
 	sh "bash -c 'shopt -s dotglob && mv #{root}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}/* #{root}'"
 	sh "rmdir #{root}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"
 	recursive_copy_files(Dir["debian.template/**/*"], root,
@@ -125,12 +129,13 @@ task 'debian:dev:reinstall' do
 	end
 end
 
-desc "Build Debian source packages to be uploaded to repositories"
-task 'debian:production' => 'debian:orig_tarball' do
+desc "Build official Debian source packages"
+task 'debian:source_packages' => 'debian:orig_tarball' do
 	if boolean_option('USE_CCACHE', false)
 		# The resulting Debian rules file must not set USE_CCACHE.
-		abort "USE_CCACHE must be returned off when running the debian:production task."
+		abort "USE_CCACHE must be returned off when running the debian:source_packages task."
 	end
+
 	if filename = string_option('GPG_PASSPHRASE_FILE')
 		filename = File.expand_path(filename)
 		if !File.exist?(filename)
@@ -142,12 +147,35 @@ task 'debian:production' => 'debian:orig_tarball' do
 		gpg_options = "-p'gpg --passphrase-file #{filename} --no-use-agent'"
 	end
 
+	pkg_dir = "#{PKG_DIR}/official"
+	if File.exist?(pkg_dir)
+		abort "#{pkg_dir} must not already exist when running the debian:source_packages task."
+	end
+	sh "mkdir #{pkg_dir}"
+	sh "cd #{pkg_dir} && ln -s ../#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz ."
+
 	ALL_DISTRIBUTIONS.each do |distribution|
-		create_debian_package_dir(distribution)
-		sh "cd #{PKG_DIR}/#{distribution} && dpkg-checkbuilddeps"
+		create_debian_package_dir(distribution, pkg_dir)
+		#sh "cd #{PKG_DIR}/#{distribution} && dpkg-checkbuilddeps"
 	end
 	ALL_DISTRIBUTIONS.each do |distribution|
-		sh "cd #{PKG_DIR}/#{distribution} && debuild -S -sa #{gpg_options} -k#{PACKAGE_SIGNING_KEY}"
+		sh "cd #{pkg_dir}/#{distribution} && debuild -S -sa #{gpg_options} -k#{PACKAGE_SIGNING_KEY}"
+	end
+end
+
+desc "Build official Debian binary packages"
+task 'debian:binary_packages' do
+	pkg_dir = "#{PKG_DIR}/official"
+	if File.exist?(pkg_dir)
+		all_distributions = [string_option('DISTRO') || ALL_DISTRIBUTIONS].flatten
+		all_distributions.each do |distribution|
+			base_name = "#{DEBIAN_NAME}_#{PACKAGE_VERSION}-1~#{distribution}1"
+			DEBIAN_ARCHITECTURES.each do |arch|
+				sh "cd #{pkg_dir} && pbuilder-dist #{distribution} #{arch} build #{base_name}.dsc"
+			end
+		end
+	else
+		abort "Please run rake debian:source_packages first."
 	end
 end
 
