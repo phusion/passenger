@@ -25,10 +25,10 @@
 require 'phusion_passenger/constants'
 require 'build/preprocessor'
 
-ALL_DISTRIBUTIONS  = ["raring", "quantal", "precise", "lucid"]
+ALL_DISTRIBUTIONS  = string_option("DEBIAN_DISTROS", "raring,quantal,precise,lucid").split(",")
 DEBIAN_NAME        = "ruby-passenger"
 DEBIAN_EPOCH       = 1
-DEBIAN_ARCHITECTURES = ["i386", "amd64"]
+DEBIAN_ARCHS       = string_option("DEBIAN_ARCHS", "i386,amd64").split(",")
 DEBIAN_ORIG_TARBALL_FILES = lambda { PhusionPassenger::Packaging.debian_orig_tarball_files }
 
 def create_debian_package_dir(distribution, output_dir = PKG_DIR)
@@ -90,13 +90,10 @@ task 'debian:dev' do
 	sh "rm -f #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz"
 	Rake::Task["debian:clean"].invoke
 	Rake::Task["debian:orig_tarball"].invoke
-	case distro = string_option('DISTRO', 'current')
-	when 'current'
+	if string_option('DISTRO').nil?
 		distributions = [File.read("/etc/lsb-release").scan(/^DISTRIB_CODENAME=(.+)/).first.first]
-	when 'all'
-		distributions = ALL_DISTRIBUTIONS
 	else
-		distributions = distro.split(',')
+		distributions = ALL_DISTRIBUTIONS
 	end
 	distributions.each do |distribution|
 		create_debian_package_dir(distribution)
@@ -156,26 +153,45 @@ task 'debian:source_packages' => 'debian:orig_tarball' do
 
 	ALL_DISTRIBUTIONS.each do |distribution|
 		create_debian_package_dir(distribution, pkg_dir)
-		#sh "cd #{PKG_DIR}/#{distribution} && dpkg-checkbuilddeps"
 	end
 	ALL_DISTRIBUTIONS.each do |distribution|
 		sh "cd #{pkg_dir}/#{distribution} && debuild -S -sa #{gpg_options} -k#{PACKAGE_SIGNING_KEY}"
 	end
 end
 
+def pbuilder_base_name(distribution, arch)
+	if arch == "amd64"
+		return distribution
+	else
+		return "#{distribution}-#{arch}"
+	end
+end
+
 desc "Build official Debian binary packages"
 task 'debian:binary_packages' do
 	pkg_dir = "#{PKG_DIR}/official"
-	if File.exist?(pkg_dir)
-		all_distributions = [string_option('DISTRO') || ALL_DISTRIBUTIONS].flatten
-		all_distributions.each do |distribution|
-			base_name = "#{DEBIAN_NAME}_#{PACKAGE_VERSION}-1~#{distribution}1"
-			DEBIAN_ARCHITECTURES.each do |arch|
-				sh "cd #{pkg_dir} && pbuilder-dist #{distribution} #{arch} build #{base_name}.dsc"
+	if !File.exist?(pkg_dir)
+		abort "Please run rake debian:source_packages first."
+	end
+
+	all_distributions = [string_option('DISTRO') || ALL_DISTRIBUTIONS].flatten
+	pbuilder_dir = File.expand_path("~/pbuilder")
+
+	all_distributions.each do |distribution|
+		DEBIAN_ARCHS.each do |arch|
+			pbase_name = pbuilder_base_name(distribution, arch) + "-base.tgz"
+			if !File.exist?("#{pbuilder_dir}/#{pbase_name}")
+				abort "Missing pbuilder environment for #{distribution}-#{arch}. " +
+					"Please run this first: pbuilder-dist #{distribution} #{arch} create"
 			end
 		end
-	else
-		abort "Please run rake debian:source_packages first."
+	end
+
+	all_distributions.each do |distribution|
+		base_name = "#{DEBIAN_NAME}_#{PACKAGE_VERSION}-1~#{distribution}1"
+		DEBIAN_ARCHS.each do |arch|
+			sh "cd #{pkg_dir} && pbuilder-dist #{distribution} #{arch} build #{base_name}.dsc"
+		end
 	end
 end
 
@@ -183,7 +199,7 @@ desc "Clean Debian packaging products, except for orig tarball"
 task 'debian:clean' do
 	files = Dir["#{PKG_DIR}/*.{changes,build,deb,dsc,upload}"]
 	sh "rm -f #{files.join(' ')}"
-	sh "rm -rf #{PKG_DIR}/dev"
+	sh "rm -rf #{PKG_DIR}/official"
 	ALL_DISTRIBUTIONS.each do |distribution|
 		sh "rm -rf #{PKG_DIR}/#{distribution}"
 	end
