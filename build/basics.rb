@@ -63,7 +63,7 @@ class TemplateRenderer
 		# have write access to the source root (for example, when Passenger
 		# Standalone is compiling its runtime), so we only write to the file
 		# when necessary.
-		if File.writable?(filename) || File.read(filename) != text
+		if !File.exist?(filename) || File.writable?(filename) || File.read(filename) != text
 			File.open(filename, 'w') do |f|
 				f.write(text)
 			end
