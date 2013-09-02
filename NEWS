@@ -18,8 +18,10 @@ Release 4.0.15
    ~20 MB of memory per `passenger start` instance.
  * [Standalone] Phusion Passenger Standalone is now also packaged in the
    Debian packages.
+ * [Standalone] Fix a problem with the `passenger stop` command on Ruby 1.8.7.
+   The 'thread' library was not properly required, causing a crash.
  * [Standalone] There is now builtin support for SSL.
- * Fix a crash when multiple passenger_pass_header directives are set.
+ * Fix a crash when multiple `passenger_pass_header` directives are set.
    Fixes issue #934.
  * Permissions on the server instance directory are now explicitly set
    with chmod, so that permissions are correct on systems with a non-default
@@ -37,8 +39,9 @@ Release 4.0.15
    to reproduce the problem on any other systems running Ubuntu 12.04 32-bit.
    Note that this flag has no effect on non-Phusion Passenger code. Fixes
    issue #937.
- * [Standalone] Fix a problem with the `passenger stop` command on Ruby 1.8.7.
-   The 'thread' library was not properly required, causing a crash.
+ * [Enterprise] The `PassengerMaxRequestTime` (Apache) /
+   `passenger_max_request_time` (Nginx) feature is no longer Ruby-only. It is
+   now also supported on Python and Node.js.
 
 
 Release 4.0.14
