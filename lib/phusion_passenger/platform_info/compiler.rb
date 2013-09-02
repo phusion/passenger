@@ -75,12 +75,12 @@ private
 				output = `#{command} 2>&1`
 				result = $?.exitstatus == 0
 			rescue SystemCallError => e
-				result = false
+				result = nil
 				exec_error_reason = e.message
 			end
 			log("Output:\n" <<
 				"-------------------------\n" <<
-				output <<
+				output.to_s <<
 				"\n-------------------------")
 		elsif verbose?
 			result = system(command)
