@@ -1,0 +1,91 @@
+/*
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2010-2013 Phusion
+ *
+ *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+
+/*
+ * ConfigurationCommands.cpp is automatically generated from ConfigurationCommands.cpp.erb,
+ * using definitions from lib/phusion_passenger/apache2/config_options.rb.
+ * Edits to ConfigurationCommands.cpp will be lost.
+ *
+ * To update ConfigurationCommands.cpp:
+ *   rake apache2
+ *
+ * To force regeneration of ConfigurationCommands.c:
+ *   rm -f ext/apache2/ConfigurationCommands.cpp
+ *   rake ext/apache2/ConfigurationCommands.cpp
+ */
+
+<%
+require 'phusion_passenger/apache2/config_options'
+
+def macro_for(option)
+	case option[:type]
+	when :string, :integer
+		return "AP_INIT_TAKE1"
+	when :flag
+		return "AP_INIT_FLAG"
+	else
+		raise "Unknown type #{option[:type].inspect} for option #{option[:name].inspect}"
+	end
+end
+
+def name_for(option)
+	return (option[:aliased_for] || option[:name]).inspect
+end
+
+def function_type_for(option)
+	case option[:type]
+	when :string, :integer
+		return "Take1Func"
+	when :flag
+		return "FlagFunc"
+	else
+		raise "Unknown type #{option[:type].inspect}"
+	end
+end
+
+def function_for(option)
+	function_name = option[:name].gsub(/[A-Z]/) do |letter|
+		"_" + letter[0].downcase
+	end
+	return "cmd#{function_name}"
+end
+
+def context_for(option)
+	context = option[:context] || ["OR_OPTIONS", "ACCESS_CONF", "RSRC_CONF"]
+	return context.join(" | ")
+end
+
+def description_for(option)
+	return option[:desc].inspect
+end
+%>
+
+<% for option in APACHE2_DIRECTORY_CONFIGURATION_OPTIONS %>
+	<%= macro_for(option) %>(<%= name_for(option) %>,
+		(<%= function_type_for(option) %>) <%= function_for(option) %>,
+		NULL,
+		<%= context_for(option) %>,
+		<%= description_for(option) %>),
+<% end %>

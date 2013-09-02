@@ -73,6 +73,14 @@ APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
 	define_tasks(PlatformInfo.apache2_module_cflags).
 	link_objects
 
+auto_generated_sources = [
+	'ext/apache2/ConfigurationCommands.cpp',
+	'ext/apache2/ConfigurationFields.hpp',
+	'ext/apache2/CreateDirConfig.cpp',
+	'ext/apache2/MergeDirConfig.cpp',
+	'ext/apache2/ConfigurationSetters.cpp'
+]
+
 
 desc "Build Apache 2 module"
 task :apache2 => [
@@ -87,7 +95,7 @@ task :apache2 => [
 
 # Define rules for the individual Apache 2 module source files.
 APACHE2_MODULE_INPUT_FILES.each_pair do |target, sources|
-	extra_deps = ['ext/common/Constants.h']
+	extra_deps = ['ext/common/Constants.h'] + auto_generated_sources
 	file(target => sources + extra_deps) do
 		object_basename = File.basename(target)
 		object_filename = APACHE2_OUTPUT_DIR + object_basename
@@ -97,6 +105,7 @@ end
 
 
 dependencies = [
+	auto_generated_sources,
 	APACHE2_MODULE_COMMON_LIBRARIES,
 	APACHE2_MODULE_BOOST_OXT_LIBRARY,
 	APACHE2_MOD_PASSENGER_O,
@@ -134,4 +143,19 @@ task 'apache2:clean' => 'common:clean' do
 	files << APACHE2_MOD_PASSENGER_O
 	files << APACHE2_MODULE
 	sh("rm", "-rf", *files)
+end
+
+def create_apache2_auto_generated_source_task(source)
+	dependencies = [
+		"#{source}.erb",
+		'lib/phusion_passenger/apache2/config_options.rb'
+	]
+	file(source => dependencies) do
+		template = TemplateRenderer.new("#{source}.erb")
+		template.render_to(source)
+	end
+end
+
+auto_generated_sources.each do |source|
+	create_apache2_auto_generated_source_task(source)
 end

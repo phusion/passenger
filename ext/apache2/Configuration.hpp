@@ -53,6 +53,8 @@ namespace Passenger {
 
 using namespace std;
 
+#define UNSET_INT_VALUE INT_MIN
+
 	
 /**
  * Per-directory configuration information.
@@ -64,13 +66,10 @@ struct DirConfig {
 	enum Threeway { ENABLED, DISABLED, UNSET };
 	enum SpawnMethod { SM_UNSET, SM_SMART, SM_DIRECT };
 	
-	Threeway enabled;
-	
+	#include "ConfigurationFields.hpp"
+
 	std::set<std::string> baseURIs;
 	
-	/** The Ruby interpreter to use. */
-	const char *ruby;
-
 	/** The Python interpreter to use. */
 	const char *python;
 	
@@ -90,11 +89,6 @@ struct DirConfig {
 	/** The spawn method to use. */
 	SpawnMethod spawnMethod;
 	
-	/** See PoolOptions for more info. */
-	const char *user;
-	/** See PoolOptions for more info. */
-	const char *group;
-	
 	/**
 	 * The idle timeout, in seconds, of preloader processes.
 	 * May also be 0 (which indicates that the application spawner should
@@ -103,44 +97,11 @@ struct DirConfig {
 	 */
 	long maxPreloaderIdleTime;
 
-	/**
-	 * The minimum number of processes for a group that should be kept in
-	 * the pool when cleaning idle processes. Defaults to 0.
-	 */
-	unsigned long minInstances;
-	
-	/**
-	 * Indicates whether the minInstances option was explicitly specified
-	 * in the directory configuration. */
-	bool minInstancesSpecified;
-	
-	/**
-	 * The maximum number of requests that the spawned application may process
-	 * before exiting. A value of 0 means unlimited.
-	 */
-	unsigned long maxRequests;
-	
-	/** Indicates whether the maxRequests option was explicitly specified
-	 * in the directory configuration. */
-	bool maxRequestsSpecified;
-
-	/**
-	 * A timeout for application startup.
-	 */
-	unsigned long startTimeout;
-	
-	/** Indicates whether the startTimeout option was explicitly specified
-	 * in the directory configuration. */
-	bool startTimeoutSpecified;
-	
 	/** Whether symlinks in the document root path should be resolved.
 	 * The implication of this is documented in the users guide, section
 	 * "How Phusion Passenger detects whether a virtual host is a web application".
 	 */
 	Threeway resolveSymlinksInDocRoot;
-	
-	/** Whether high performance mode should be turned on. */
-	Threeway highPerformance;
 	
 	/**
 	 * Whether encoded slashes in URLs should be supported. This however conflicts
@@ -241,7 +202,7 @@ struct DirConfig {
 	}
 	
 	unsigned long getMinInstances() const {
-		if (minInstancesSpecified) {
+		if (minInstances != UNSET_INT_VALUE) {
 			return minInstances;
 		} else {
 			return 1;
@@ -249,7 +210,7 @@ struct DirConfig {
 	}
 
 	unsigned long getMaxRequests() const {
-		if (maxRequestsSpecified) {
+		if (maxRequests != UNSET_INT_VALUE) {
 			return maxRequests;
 		} else {
 			return 0;
@@ -257,7 +218,7 @@ struct DirConfig {
 	}
 
 	unsigned long getStartTimeout() const {
-		if (startTimeoutSpecified) {
+		if (startTimeout != UNSET_INT_VALUE) {
 			return startTimeout;
 		} else {
 			return DEFAULT_START_TIMEOUT / 1000;

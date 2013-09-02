@@ -48,7 +48,7 @@ require 'build/cplusplus_support'
 class TemplateRenderer
 	def initialize(filename)
 		require 'erb' if !defined?(ERB)
-		@erb = ERB.new(File.read(filename))
+		@erb = ERB.new(File.read(filename), nil, "-")
 		@erb.filename = filename
 	end
 

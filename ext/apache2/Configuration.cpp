@@ -24,6 +24,7 @@
  */
 #include <algorithm>
 #include <cstdlib>
+#include <climits>
 
 /* ap_config.h checks whether the compiler has support for C99's designated
  * initializers, and defines AP_HAVE_DESIGNATED_INITIALIZER if it does. However,
@@ -185,22 +186,14 @@ create_dir_config_struct(apr_pool_t *pool) {
 void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
-	config->enabled = DirConfig::UNSET;
-	config->ruby = NULL;
+	
+	#include "CreateDirConfig.cpp"
+
 	config->python = NULL;
 	config->environment = NULL;
 	config->appRoot = NULL;
-	config->user = NULL;
-	config->group = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
 	config->maxPreloaderIdleTime = -1;
-	config->minInstances = 1;
-	config->minInstancesSpecified = false;
-	config->maxRequests = 0;
-	config->maxRequestsSpecified = false;
-	config->startTimeout = DEFAULT_START_TIMEOUT / 1000;
-	config->startTimeoutSpecified = false;
-	config->highPerformance = DirConfig::UNSET;
 	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
 	config->allowEncodedSlashes = DirConfig::UNSET;
 	config->statThrottleRate = 0;
@@ -220,26 +213,19 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	DirConfig *base = (DirConfig *) basev;
 	DirConfig *add = (DirConfig *) addv;
 	
-	config->enabled = (add->enabled == DirConfig::UNSET) ? base->enabled : add->enabled;
+	#include "MergeDirConfig.cpp"
 	
 	config->baseURIs = base->baseURIs;
 	for (set<string>::const_iterator it(add->baseURIs.begin()); it != add->baseURIs.end(); it++) {
 		config->baseURIs.insert(*it);
 	}
 	
-	MERGE_STR_CONFIG(ruby);
 	MERGE_STR_CONFIG(python);
 	MERGE_STR_CONFIG(environment);
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
-	MERGE_STR_CONFIG(user);
-	MERGE_STR_CONFIG(group);
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	config->maxPreloaderIdleTime = (add->maxPreloaderIdleTime == -1) ? base->maxPreloaderIdleTime : add->maxPreloaderIdleTime;
-	MERGE_INT_CONFIG(minInstances);
-	MERGE_INT_CONFIG(maxRequests);
-	MERGE_INT_CONFIG(startTimeout);
-	MERGE_THREEWAY_CONFIG(highPerformance);
 	MERGE_INT_CONFIG(statThrottleRate);
 	MERGE_STR_CONFIG(restartDir);
 	MERGE_STR_CONFIG(uploadBufferDir);
@@ -294,19 +280,13 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
-DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_min_instances, minInstances, unsigned long, 0)
-DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_max_requests, maxRequests, unsigned long, 0)
-DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_start_timeout, startTimeout, unsigned long, 0)
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformance)
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
+#include "ConfigurationSetters.cpp"
+
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_python, python)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_environment, environment)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_group_name, appGroupName)
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_user, user)
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_group, group)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_restart_dir, restartDir)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_upload_buffer_dir, uploadBufferDir)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_union_station_key, unionStationKey)
@@ -546,46 +526,8 @@ const command_rec passenger_commands[] = {
 		RSRC_CONF,
 		"The spawn method to use."),
 	
-	AP_INIT_TAKE1("PassengerRuby",
-		(Take1Func) cmd_passenger_ruby,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF,
-		"The Ruby interpreter to use."),
-	AP_INIT_TAKE1("PassengerMinInstances",
-		(Take1Func) cmd_passenger_min_instances,
-		NULL,
-		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
-		"The minimum number of application instances to keep when cleaning idle instances."),
-	AP_INIT_TAKE1("PassengerUser",
-		(Take1Func) cmd_passenger_user,
-		NULL,
-		ACCESS_CONF | RSRC_CONF,
-		"The user that Ruby applications must run as."),
-	AP_INIT_TAKE1("PassengerGroup",
-		(Take1Func) cmd_passenger_group,
-		NULL,
-		ACCESS_CONF | RSRC_CONF,
-		"The group that Ruby applications must run as."),
-	AP_INIT_TAKE1("PassengerMaxRequests",
-		(Take1Func) cmd_passenger_max_requests,
-		NULL,
-		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
-		"The maximum number of requests that an application instance may process."),
-	AP_INIT_TAKE1("PassengerStartTimeout",
-		(Take1Func) cmd_passenger_start_timeout,
-		NULL,
-		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
-		"A timeout for application startup."),
-	AP_INIT_FLAG("PassengerHighPerformance",
-		(FlagFunc) cmd_passenger_high_performance,
-		NULL,
-		OR_ALL,
-		"Enable or disable Passenger's high performance mode."),
-	AP_INIT_FLAG("PassengerEnabled",
-		(FlagFunc) cmd_passenger_enabled,
-		NULL,
-		OR_ALL,
-		"Enable or disable Phusion Passenger."),
+	#include "ConfigurationCommands.cpp"
+	
 	AP_INIT_TAKE1("PassengerAppGroupName",
 		(Take1Func) cmd_passenger_app_group_name,
 		NULL,
