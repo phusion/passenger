@@ -903,7 +903,10 @@ In each place, it may be specified at most once. The default value is 'off'.
 These options have the same effect as proxy_module's similarly named options.
 They can be used to modify the maximum allowed HTTP header size.
 
-==== passenger_intercept_errors ====
+[[passenger_intercept_errors]]
+==== passenger_intercept_errors <on|off> ====
+:version: 4.0.15
+include::users_guide_snippets/since_version.txt[]
 
 Decides if Nginx will intercept responses with HTTP status codes of 400 and higher.
 
@@ -917,6 +920,47 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 In each place, it may be specified at most once. The default value is 'off'.
+
+[[passenger_max_request_queue_size]]
+==== passenger_max_request_queue_size <number> ====
+:version: 4.0.15
+include::users_guide_snippets/since_version.txt[]
+
+When all application processes are already handling their maximum number of concurrent requests, Phusion Passenger will queue all incoming requests. This option specifies the maximum size for that queue. If the queue is already at this specified limit, then Phusion Passenger will immediately send a "503 Service Unavailable" error to any incoming requests. You may use <<passenger_request_queue_overflow_status_code,passenger_request_queue_overflow_status_code>> to customize the response status.
+
+A value of 0 means that the queue is unbounded.
+
+You may combine this with <<passenger_intercept_errors,passenger_intercept_errors>> and `error_page` to set a custom error page whenever the queue is full. In the following example, Nginx will serve /error503.html whenever the queue is full:
+
+---------------------------------
+passenger_intercept_errors on;
+error_page 503 /error503.html;
+---------------------------------
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '100'.
+
+[[passenger_request_queue_overflow_status_code]]
+==== passenger_request_queue_overflow_status_code <code> ====
+:version: 4.0.15
+include::users_guide_snippets/since_version.txt[]
+
+This option allows you to customize the HTTP status code that is sent back when the request queue is full. See <<passenger_max_request_queue_size,passenger_max_request_queue_size>> for more information.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '503'.
 
 === Security options ===
 [[PassengerUserSwitching]]

@@ -136,3 +136,11 @@
 		conf->union_station_key.data = NULL;
 		conf->union_station_key.len  = 0;
 	
+
+	
+		conf->max_request_queue_size = NGX_CONF_UNSET;
+	
+
+	
+		conf->request_queue_overflow_status_code = NGX_CONF_UNSET;
+	

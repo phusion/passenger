@@ -156,7 +156,11 @@
 
 6.11.7. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
 
-6.11.8. passenger_intercept_errors	=>	passenger-intercept-errors-1uvcb9x
+6.11.8. passenger_intercept_errors <on|off>	=>	passenger-intercept-errors-1uvcb9x
+
+6.11.9. passenger_max_request_queue_size <number>	=>	passenger-max-request-queue-size-number--i0te1b
+
+6.11.10. passenger_request_queue_overflow_status_code <code>	=>	passenger-request-queue-overflow-status-code-code--1wcwuxl
 
 6.12. Security options	=>	security-options-1bv93g4
 

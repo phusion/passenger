@@ -233,6 +233,14 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:name  => 'union_station_key',
 		:type  => :string
 	},
+	{
+		:name  => 'passenger_max_request_queue_size',
+		:type  => :integer
+	},
+	{
+		:name  => 'passenger_request_queue_overflow_status_code',
+		:type  => :integer
+	},
 
 	###### Enterprise features ######
 	{

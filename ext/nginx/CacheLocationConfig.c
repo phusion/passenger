@@ -185,6 +185,28 @@ u_char int_buf[32], *end, *buf, *pos;
 		}
 	
 
+	
+		if (conf->max_request_queue_size != NGX_CONF_UNSET) {
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf->max_request_queue_size);
+			len += 33;
+			len += end - int_buf + 1;
+		}
+	
+
+	
+		if (conf->request_queue_overflow_status_code != NGX_CONF_UNSET) {
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf->request_queue_overflow_status_code);
+			len += 45;
+			len += end - int_buf + 1;
+		}
+	
+
 
 /* Create string */
 buf = pos = ngx_pnalloc(cf->pool, len);
@@ -435,6 +457,40 @@ buf = pos = ngx_pnalloc(cf->pool, len);
 			pos = ngx_copy(pos,
 				conf->union_station_key.data,
 				conf->union_station_key.len);
+			*pos = '\0';
+			pos++;
+		}
+	
+
+	
+		if (conf->max_request_queue_size != NGX_CONF_UNSET) {
+			pos = ngx_copy(pos,
+				"PASSENGER_MAX_REQUEST_QUEUE_SIZE",
+				33);
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf->max_request_queue_size);
+			pos = ngx_copy(pos,
+				int_buf,
+				end - int_buf);
+			*pos = '\0';
+			pos++;
+		}
+	
+
+	
+		if (conf->request_queue_overflow_status_code != NGX_CONF_UNSET) {
+			pos = ngx_copy(pos,
+				"PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE",
+				45);
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf->request_queue_overflow_status_code);
+			pos = ngx_copy(pos,
+				int_buf,
+				end - int_buf);
 			*pos = '\0';
 			pos++;
 		}
