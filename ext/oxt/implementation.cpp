@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008-2012 Phusion
+ * Copyright (c) 2008-2013 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -202,6 +202,12 @@ tracable_exception::tracable_exception(const tracable_exception &other)
 			true);
 		backtrace_copy.push_back(p);
 	}
+}
+
+tracable_exception::tracable_exception(const no_backtrace &tag)
+	: std::exception()
+{
+	// Do nothing.
 }
 
 tracable_exception::~tracable_exception() throw() {
