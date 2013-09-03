@@ -652,28 +652,38 @@ private:
 		}
 	}
 
-	void writeSimpleResponse(const ClientPtr &client, const StaticString &data) {
-		char header[256];
+	void writeSimpleResponse(const ClientPtr &client, const StaticString &data, int code = 200) {
+		char header[256], statusBuffer[50];
 		char *pos = header;
 		const char *end = header + sizeof(header) - 1;
+		const char *status;
+
+		status = getStatusCodeAndReasonPhrase(code);
+		if (status == NULL) {
+			snprintf(statusBuffer, sizeof(statusBuffer), "%d Unknown Reason-Phrase", code);
+			status = statusBuffer;
+		}
 
 		if (getBoolOption(client, "PASSENGER_STATUS_LINE", true)) {
-			pos = appendData(pos, end, "HTTP/1.1 200 OK\r\n");
+			pos += snprintf(pos, end - pos, "HTTP/1.1 %s\r\n",
+				status);
 		}
 		pos += snprintf(pos, end - pos,
-			"Status: 200 OK\r\n"
+			"Status: %s\r\n"
 			"Content-Length: %lu\r\n"
 			"Content-Type: text/html; charset=UTF-8\r\n"
 			"Cache-Control: no-cache, no-store, must-revalidate\r\n"
 			"\r\n",
-			(unsigned long) data.size());
+			status, (unsigned long) data.size());
 
 		client->clientOutputPipe->write(header, pos - header);
 		client->clientOutputPipe->write(data.data(), data.size());
 		client->clientOutputPipe->end();
 
 		if (client->useUnionStation()) {
-			client->logMessage("Status: 200 OK");
+			snprintf(header, end - header, "Status: %d %s",
+				code, status);
+			client->logMessage(header);
 		}
 	}
 
@@ -1680,6 +1690,7 @@ private:
 		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");
 		fillPoolOptionSecToMsec(client, options.startTimeout, "PASSENGER_START_TIMEOUT");
 		fillPoolOption(client, options.maxPreloaderIdleTime, "PASSENGER_MAX_PRELOADER_IDLE_TIME");
+		fillPoolOption(client, options.maxRequestQueueSize, "PASSENGER_MAX_REQUEST_QUEUE_SIZE");
 		fillPoolOption(client, options.statThrottleRate, "PASSENGER_STAT_THROTTLE_RATE");
 		fillPoolOption(client, options.restartDir, "PASSENGER_RESTART_DIR");
 		fillPoolOption(client, options.loadShellEnvvars, "PASSENGER_LOAD_SHELL_ENVVARS");
@@ -1898,53 +1909,83 @@ private:
 
 		if (e != NULL) {
 			client->endScopeLog(&client->scopeLogs.getFromPool, false);
-			shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
-			if (e2 != NULL) {
-				if (strip(e2->getErrorPage()).empty()) {
-					RH_WARN(client, "Cannot checkout session. " << e2->what());
-					writeErrorResponse(client, e2->what());
-				} else {
-					RH_WARN(client, "Cannot checkout session. " << e2->what() <<
-						"\nError page:\n" << e2->getErrorPage());
-					writeErrorResponse(client, e2->getErrorPage(), e2.get());
+			{
+				shared_ptr<RequestQueueFullException> e2 = dynamic_pointer_cast<RequestQueueFullException>(e);
+				if (e2 != NULL) {
+					writeRequestQueueFullExceptionErrorResponse(client);
+					return;
 				}
-			} else {
-				string typeName;
-				#ifdef CXX_ABI_API_AVAILABLE
-					int status;
-					char *tmp = abi::__cxa_demangle(typeid(*e).name(), 0, 0, &status);
-					if (tmp != NULL) {
-						typeName = tmp;
-						free(tmp);
-					} else {
-						typeName = typeid(*e).name();
-					}
-				#else
-					typeName = typeid(*e).name();
-				#endif
-
-				RH_WARN(client, "Cannot checkout session (exception type " <<
-					typeName << "): " << e->what());
-				
-				string response = "An internal error occurred while trying to spawn the application.\n";
-				response.append("Exception type: ");
-				response.append(typeName);
-				response.append("\nError message: ");
-				response.append(e->what());
-				shared_ptr<tracable_exception> e3 = dynamic_pointer_cast<tracable_exception>(e);
-				if (e3 != NULL) {
-					response.append("\nBacktrace:\n");
-					response.append(e3->backtrace());
-				}
-
-				writeErrorResponse(client, response);
 			}
+			{
+				shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
+				if (e2 != NULL) {
+					writeSpawnExceptionErrorResponse(client, e2);
+					return;
+				}
+			}
+			writeOtherExceptionErrorResponse(client, e);
 		} else {
 			RH_DEBUG(client, "Session checked out: pid=" << session->getPid() <<
 				", gupid=" << session->getGupid());
 			client->session = session;
 			initiateSession(client);
 		}
+	}
+
+	void writeRequestQueueFullExceptionErrorResponse(const ClientPtr &client) {
+		StaticString value = client->scgiParser.getHeader("PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE");
+		int requestQueueOverflowStatusCode = 503;
+		if (!value.empty()) {
+			requestQueueOverflowStatusCode = atoi(value.data());
+		}
+		writeSimpleResponse(client,
+			"<h1>This website is under heavy load</h1>"
+			"<p>We're sorry, too many people are accessing this website at the same "
+			"time. We're working on this problem. Please try again later.</p>",
+			requestQueueOverflowStatusCode);
+	}
+
+	void writeSpawnExceptionErrorResponse(const ClientPtr &client, const shared_ptr<SpawnException> &e) {
+		if (strip(e->getErrorPage()).empty()) {
+			RH_WARN(client, "Cannot checkout session. " << e->what());
+			writeErrorResponse(client, e->what());
+		} else {
+			RH_WARN(client, "Cannot checkout session. " << e->what() <<
+				"\nError page:\n" << e->getErrorPage());
+			writeErrorResponse(client, e->getErrorPage(), e.get());
+		}
+	}
+
+	void writeOtherExceptionErrorResponse(const ClientPtr &client, const ExceptionPtr &e) {
+		string typeName;
+		#ifdef CXX_ABI_API_AVAILABLE
+			int status;
+			char *tmp = abi::__cxa_demangle(typeid(*e).name(), 0, 0, &status);
+			if (tmp != NULL) {
+				typeName = tmp;
+				free(tmp);
+			} else {
+				typeName = typeid(*e).name();
+			}
+		#else
+			typeName = typeid(*e).name();
+		#endif
+
+		RH_WARN(client, "Cannot checkout session (exception type " <<
+			typeName << "): " << e->what());
+		
+		string response = "An internal error occurred while trying to spawn the application.\n";
+		response.append("Exception type: ");
+		response.append(typeName);
+		response.append("\nError message: ");
+		response.append(e->what());
+		shared_ptr<tracable_exception> e3 = dynamic_pointer_cast<tracable_exception>(e);
+		if (e3 != NULL) {
+			response.append("\nBacktrace:\n");
+			response.append(e3->backtrace());
+		}
+
+		writeErrorResponse(client, response);
 	}
 
 	void initiateSession(const ClientPtr &client) {

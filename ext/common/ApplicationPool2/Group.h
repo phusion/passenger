@@ -192,6 +192,7 @@ private:
 	void wakeUpGarbageCollector();
 	bool poolAtFullCapacity() const;
 	bool anotherGroupIsWaitingForCapacity() const;
+	bool testOverflowRequestQueue() const;
 	const ResourceLocator &getResourceLocator() const;
 
 	void verifyInvariants() const {
@@ -317,6 +318,20 @@ private:
 			process->pqHandle = pqueue.push(process, process->utilization());
 		}
 		return session;
+	}
+
+	bool pushGetWaiter(const Options &newOptions, const GetCallback &callback) {
+		if (OXT_LIKELY(!testOverflowRequestQueue()
+			&& (newOptions.maxRequestQueueSize == 0
+			    || getWaitlist.size() < newOptions.maxRequestQueueSize)))
+		{
+			getWaitlist.push(GetWaiter(newOptions.copyAndPersist().clearLogger(), callback));
+			return true;
+		} else {
+			P_WARN("Request queue is full. Returning an error");
+			callback(SessionPtr(), make_shared<RequestQueueFullException>());
+			return false;
+		}
 	}
 
 	Process *findProcessWithLowestUtilization(const ProcessList &processes) const {
@@ -740,8 +755,9 @@ public:
 				}
 			}
 
-			getWaitlist.push(GetWaiter(newOptions.copyAndPersist().clearLogger(), callback));
-			P_DEBUG("No session checked out yet: group is spawning or restarting");
+			if (pushGetWaiter(newOptions, callback)) {
+				P_DEBUG("No session checked out yet: group is spawning or restarting");
+			}
 			return SessionPtr();
 		} else {
 			Process *process = pqueue.top();
@@ -751,8 +767,9 @@ public:
 				 * Wait until a new one has been spawned or until
 				 * resources have become free.
 				 */
-				getWaitlist.push(GetWaiter(newOptions.copyAndPersist().clearLogger(), callback));
-				P_DEBUG("No session checked out yet: all processes are at full capacity");
+				if (pushGetWaiter(newOptions, callback)) {
+					P_DEBUG("No session checked out yet: all processes are at full capacity");
+				}
 				return SessionPtr();
 			} else {
 				P_DEBUG("Session checked out from process " << process->inspect());

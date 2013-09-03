@@ -316,10 +316,29 @@ public:
 		: msg(message)
 		{ }
 	
+	GetAbortedException(const oxt::tracable_exception::no_backtrace &tag)
+		: oxt::tracable_exception(tag)
+		{ }
+
 	virtual ~GetAbortedException() throw() {}
 	
 	virtual const char *what() const throw() {
 		return msg.c_str();
+	}
+};
+
+/**
+ * Indicates that a Pool::get() or Pool::asyncGet() request was denied because
+ * the getWaitlist queue was full.
+ */
+class RequestQueueFullException: public GetAbortedException {
+public:
+	RequestQueueFullException()
+		: GetAbortedException(oxt::tracable_exception::no_backtrace())
+		{ }
+	
+	virtual const char *what() const throw() {
+		return "Request queue is full";
 	}
 };
 

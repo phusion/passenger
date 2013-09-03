@@ -62,8 +62,9 @@ copyException(const tracable_exception &e) {
 	
 	TRY_COPY_EXCEPTION(ConfigurationException);
 	
-	TRY_COPY_EXCEPTION(SpawnException);
+	TRY_COPY_EXCEPTION(RequestQueueFullException);
 	TRY_COPY_EXCEPTION(GetAbortedException);
+	TRY_COPY_EXCEPTION(SpawnException);
 	
 	TRY_COPY_EXCEPTION(InvalidModeStringException);
 	TRY_COPY_EXCEPTION(ArgumentException);
@@ -104,6 +105,7 @@ rethrowException(const ExceptionPtr &e) {
 	TRY_RETHROW_EXCEPTION(ConfigurationException);
 	
 	TRY_RETHROW_EXCEPTION(SpawnException);
+	TRY_RETHROW_EXCEPTION(RequestQueueFullException);
 	TRY_RETHROW_EXCEPTION(GetAbortedException);
 	
 	TRY_RETHROW_EXCEPTION(InvalidModeStringException);
@@ -1116,6 +1118,18 @@ Group::anotherGroupIsWaitingForCapacity() const {
 		}
 	}
 	return false;
+}
+
+bool
+Group::testOverflowRequestQueue() const {
+	// This has a performance penalty, although I'm not sure whether the penalty is
+	// any greater than a hash table lookup if I were to implement it in Options.
+	Pool::DebugSupportPtr debug = getPool()->debugSupport;
+	if (debug) {
+		return debug->testOverflowRequestQueue;
+	} else {
+		return false;
+	}
 }
 
 const ResourceLocator &

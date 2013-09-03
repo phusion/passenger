@@ -31,6 +31,7 @@ namespace tut {
 		BackgroundEventLoop bg;
 		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr pool;
+		Pool::DebugSupportPtr debug;
 		shared_ptr<RequestHandler> handler;
 		FileDescriptor connection;
 		map<string, string> defaultHeaders;
@@ -71,6 +72,11 @@ namespace tut {
 		void init() {
 			handler = make_shared<RequestHandler>(bg.safe, requestSocket, pool, agentOptions);
 			bg.start();
+		}
+
+		void initPoolDebugging() {
+			pool->initDebugging();
+			debug = pool->debugSupport;
 		}
 
 		FileDescriptor &connect() {
@@ -849,6 +855,63 @@ namespace tut {
 
 		string result = readAll(connection);
 		ensure(result.find("Date: ") != string::npos);
+	}
+
+	TEST_METHOD(48) {
+		set_test_name("It should write an appropriate response if the request queue is overflown");
+
+		initPoolDebugging();
+		debug->restarting = false;
+		debug->spawning = false;
+		debug->testOverflowRequestQueue = true;
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			NULL);
+		string response = readAll(connection);
+		ensure(response.find("Status: 503 Service Unavailable") != string::npos);
+		ensure(response.find("This website is under heavy load") != string::npos);
+	}
+
+	TEST_METHOD(49) {
+		set_test_name("It should use the status code dictated by PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE "
+			"if the request queue is overflown");
+
+		initPoolDebugging();
+		debug->restarting = false;
+		debug->spawning = false;
+		debug->testOverflowRequestQueue = true;
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			"PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE", "504",
+			NULL);
+		string response = readAll(connection);
+		ensure(response.find("Status: 504 Gateway Timeout") != string::npos);
+		ensure(response.find("This website is under heavy load") != string::npos);
+	}
+
+	TEST_METHOD(50) {
+		set_test_name("PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE should work even if it is an unknown code");
+
+		initPoolDebugging();
+		debug->restarting = false;
+		debug->spawning = false;
+		debug->testOverflowRequestQueue = true;
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			"PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE", "604",
+			NULL);
+		string response = readAll(connection);
+		ensure(response.find("Status: 604 Unknown Reason-Phrase") != string::npos);
+		ensure(response.find("This website is under heavy load") != string::npos);
 	}
 
 	// Test small response buffering.

@@ -100,6 +100,7 @@ public:
 		bool spawning;
 		bool superGroup;
 		bool oobw;
+		bool testOverflowRequestQueue;
 
 		// The following fields may only be accessed by Pool.
 		boost::mutex syncher;
@@ -112,6 +113,7 @@ public:
 			spawning   = true;
 			superGroup = false;
 			oobw       = false;
+			testOverflowRequestQueue = false;
 			spawnLoopIteration = 0;
 		}
 	};

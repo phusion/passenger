@@ -1669,6 +1669,41 @@ namespace tut {
 		debug->debugger->recv("OOBW request finished");
 	}
 
+	TEST_METHOD(77) {
+		// If the getWaitlist already has maxRequestQueueSize items,
+		// then an exception is returned.
+		Options options = createOptions();
+		options.appGroupName = "test1";
+		options.maxRequestQueueSize = 3;
+		GroupPtr group = pool->findOrCreateGroup(options);
+		spawnerConfig->concurrency = 3;
+		initPoolDebugging();
+		pool->setMax(1);
+
+		for (int i = 0; i < 3; i++) {
+			pool->asyncGet(options, callback);
+		}
+		ensure_equals(number, 0);
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(group->getWaitlist.size(),
+				3u);
+		}
+
+		try {
+			pool->get(options, &ticket);
+			fail("Expected RequestQueueFullException");
+		} catch (const RequestQueueFullException &e) {
+			// OK
+		}
+
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->messages->send("Spawn loop done");
+		EVENTUALLY(5,
+			result = number == 3;
+		);
+	}
+
 	// TODO: Persistent connections.
 	// TODO: If one closes the session before it has reached EOF, and process's maximum concurrency
 	//       has already been reached, then the pool should ping the process so that it can detect
@@ -1677,7 +1712,7 @@ namespace tut {
 	
 	/*********** Test previously discovered bugs ***********/
 	
-	TEST_METHOD(77) {
+	TEST_METHOD(79) {
 		// Test detaching, then restarting. This should not violate any invariants.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
