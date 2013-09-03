@@ -156,6 +156,8 @@
 
 6.11.7. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
 
+6.11.8. passenger_intercept_errors	=>	passenger-intercept-errors-1uvcb9x
+
 6.12. Security options	=>	security-options-1bv93g4
 
 6.12.1. passenger_user_switching <on|off>	=>	passenger-user-switching-on-off--1p37u3l

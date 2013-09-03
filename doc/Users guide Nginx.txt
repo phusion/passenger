@@ -903,6 +903,21 @@ In each place, it may be specified at most once. The default value is 'off'.
 These options have the same effect as proxy_module's similarly named options.
 They can be used to modify the maximum allowed HTTP header size.
 
+==== passenger_intercept_errors ====
+
+Decides if Nginx will intercept responses with HTTP status codes of 400 and higher.
+
+By default, all responses are sent as-is from the application or from the Phusion Passenger core. If you turn this option on then Nginx will be able to handle such responses using the Nginx `error_page` option. Responses with status codes that do not match an `error_page` option are sent as-is.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
 === Security options ===
 [[PassengerUserSwitching]]
 ==== passenger_user_switching <on|off> ====

@@ -221,6 +221,11 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:field    => 'upstream_config.busy_buffers_size_conf'
 	},
 	{
+		:name     => 'passenger_intercept_errors',
+		:type     => :flag,
+		:field    => 'upstream_config.intercept_errors'
+	},
+	{
 		:name  => 'passenger_spawn_method',
 		:type  => :string
 	},

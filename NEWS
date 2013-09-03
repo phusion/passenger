@@ -13,6 +13,9 @@ Release 4.0.15
    to specify a timeout for application startup. The startup timeout has exited
    since version 4.0.0, but before version 4.0.15 it was hardcoded at a value
    of 90 seconds. Now it is customizable. Fixes issue #936.
+ * [Nginx] Introduced a configuration option `passenger_intercept_errors`,
+   which decides if Nginx will intercept responses with HTTP status codes of
+   400 and higher. Its effect is similar to `proxy_intercept_errors`.
  * [Standalone] Memory usage optimization: when `passenger start` is run with
    `--daemonize`, the frontend exits after starting the Nginx core. This saves
    ~20 MB of memory per `passenger start` instance.
