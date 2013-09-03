@@ -67,7 +67,7 @@ end
 
 def function_for(option)
 	function_name = option[:name].gsub(/[A-Z]/) do |letter|
-		"_" + letter[0].downcase
+		"_" + letter[0..0].downcase
 	end
 	return "cmd#{function_name}"
 end
