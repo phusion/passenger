@@ -49,9 +49,6 @@ Release 4.0.15
    to reproduce the problem on any other systems running Ubuntu 12.04 32-bit.
    Note that this flag has no effect on non-Phusion Passenger code. Fixes
    issue #937.
- * [Enterprise] The `PassengerMaxRequestTime` (Apache) /
-   `passenger_max_request_time` (Nginx) feature is no longer Ruby-only. It is
-   now also supported on Python and Node.js.
 
 
 Release 4.0.14
