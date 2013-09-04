@@ -141,6 +141,12 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			end
 			sh "cd /tmp/homebrew && hub pull-request 'Update passenger to version #{version}' -h release-#{version}"
 
+			puts "Initiating building of Debian packages"
+			command = "cd /srv/passenger_apt_automation && " +
+				"chpst -L /tmp/passenger_apt_automation.lock " +
+				"./new_release https://github.com/phusion/passenger.git passenger.repo passenger.apt release-#{version}"
+			sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
+
 			puts "Building OS X binaries..."
 			sh "cd ../passenger_autobuilder && " +
 				"git pull && " +
@@ -152,6 +158,14 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			subdir = string_option('NAME', version)
 			sh "scp #{PKG_DIR}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
 			sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
+			
+			puts "Initiating building of Debian packages"
+			git_url = `git config remote.origin.url`.strip
+			command = "cd /srv/passenger_apt_automation && " +
+				"chpst -L /tmp/passenger_apt_automation.lock " +
+				"./new_release #{git_url} passenger-enterprise.repo passenger-enterprise.apt enterprise-#{version}"
+			sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
+
 			sh "cd ../passenger_autobuilder && " +
 				"git pull && " +
 				"./autobuild-osx TODO passenger-enterprise psg_autobuilder_chroot@juvia-helper.phusion.nl --tag=#{tag}"
