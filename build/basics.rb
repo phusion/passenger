@@ -128,7 +128,6 @@ end
 
 PACKAGE_NAME    = PhusionPassenger::PACKAGE_NAME
 PACKAGE_VERSION = PhusionPassenger::VERSION_STRING
-PACKAGE_SIGNING_KEY = string_option('PACKAGE_SIGNING_KEY', '0x0A212A8C')
 MAINTAINER_NAME  = "Phusion"
 MAINTAINER_EMAIL = "info@phusion.nl"
 
