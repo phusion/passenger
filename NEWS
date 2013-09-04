@@ -1,5 +1,5 @@
-Release 4.0.15
---------------
+Release 4.0.15 and 4.0.16
+-------------------------
 
  * Out-of-band work has been much improved. The number of processes which
    may perform out-of-band work concurrently has been limited to 1.
