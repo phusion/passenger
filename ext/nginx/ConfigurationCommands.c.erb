@@ -98,16 +98,27 @@ def struct_for(option)
 	option[:struct] || "NGX_HTTP_LOC_CONF_OFFSET"
 end
 
+def struct_type_for(option)
+	case struct_for(option)
+	when "NGX_HTTP_LOC_CONF_OFFSET"
+		return "passenger_loc_conf_t"
+	when "NGX_HTTP_MAIN_CONF_OFFSET"
+		return "passenger_main_conf_t"
+	else
+		raise "Unknown struct #{struct_for(option).inspect}"
+	end
+end
+
 def struct_field_for(option)
 	if option.has_key?(:field)
 		if field = option[:field]
-			return "offsetof(passenger_loc_conf_t, #{field})"
+			return "offsetof(#{struct_type_for(option)}, #{field})"
 		else
 			return "0"
 		end
 	else
 		field = option[:name].sub(/^passenger_/, '')
-		return "offsetof(passenger_loc_conf_t, #{field})"
+		return "offsetof(#{struct_type_for(option)}, #{field})"
 	end
 end
 %>
