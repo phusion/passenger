@@ -25,10 +25,10 @@
 require 'phusion_passenger/constants'
 require 'build/preprocessor'
 
-ALL_DISTRIBUTIONS  = string_option("DEBIAN_DISTROS", "raring quantal precise lucid").split(/ ,/)
+ALL_DISTRIBUTIONS  = string_option("DEBIAN_DISTROS", "raring quantal precise lucid").split(/[ ,]/)
 DEBIAN_NAME        = "ruby-passenger"
 DEBIAN_EPOCH       = 1
-DEBIAN_ARCHS       = string_option("DEBIAN_ARCHS", "i386 amd64").split(/ ,/)
+DEBIAN_ARCHS       = string_option("DEBIAN_ARCHS", "i386 amd64").split(/[ ,]/)
 DEBIAN_ORIG_TARBALL_FILES = lambda { PhusionPassenger::Packaging.debian_orig_tarball_files }
 
 def create_debian_package_dir(distribution, output_dir = PKG_DIR)
