@@ -16,8 +16,8 @@ Build-Depends: debhelper (>= 7.0.50~), rake,
  libapr1-dev, libcurl4-openssl-dev
 Standards-Version: 3.9.3
 Homepage: https://www.phusionpassenger.com/
-Vcs-Git: git://github.com/johnl/deb-passenger.git
-Vcs-Browser: https://github.com/johnl/deb-passenger
+Vcs-Git: git://github.com/phusion/passenger.git
+Vcs-Browser: https://github.com/phusion/passenger
 XS-Ruby-Versions: all
 
 Package: ruby-passenger
