@@ -105,7 +105,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 		if is_open_source
 			sh "s3cmd -P put #{PKG_DIR}/passenger-#{version}.{gem,tar.gz,gem.asc,tar.gz.asc} s3://phusion-passenger/releases/"
 			sh "gem push #{PKG_DIR}/passenger-#{version}.gem"
-			
+
 			puts "Updating version number on website..."
 			if is_beta
 				uri = URI.parse("https://www.phusionpassenger.com/latest_beta_version")
@@ -158,7 +158,9 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			subdir = string_option('NAME', version)
 			sh "scp #{PKG_DIR}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
 			sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
-			
+			sh "curl -F file=@#{PKG_DIR}/#{basename}.gem --user admin:#{website_config['admin_password']} " +
+				"https://www.phusionpassenger.com/enterprise_gems/upload"
+
 			puts "Initiating building of Debian packages"
 			git_url = `git config remote.origin.url`.strip
 			command = "cd /srv/passenger_apt_automation && " +
