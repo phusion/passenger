@@ -468,7 +468,6 @@ maybeSetsid() {
 static void
 lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 	struct passwd *userEntry;
-	struct group  *groupEntry;
 	
 	userEntry = getpwnam(defaultUser.c_str());
 	if (userEntry == NULL) {
