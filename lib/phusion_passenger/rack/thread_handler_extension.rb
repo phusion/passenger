@@ -106,6 +106,7 @@ module ThreadHandlerExtension
 						# iteration as an optimization.
 						next
 					end
+					values ||= [''] #Protect agains blank headers
 					values.each do |value|
 						headers_output << key
 						headers_output << NAME_VALUE_SEPARATOR
