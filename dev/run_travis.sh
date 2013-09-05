@@ -27,7 +27,7 @@ function apt_get_update() {
 		if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 			if ! [[ -e /usr/bin/add-apt-repository ]]; then
 				run sudo apt-get update
-				run sudo apt-get install python-software-properties
+				run sudo apt-get install -y --no-install-recommends python-software-properties
 			fi
 			run sudo add-apt-repository -y ppa:phusion.nl/misc
 		fi
