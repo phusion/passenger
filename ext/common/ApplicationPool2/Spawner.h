@@ -841,9 +841,18 @@ protected:
 					throw SystemException("Cannot lstat(\"" +
 						startupFile + "\")", e);
 				}
-				groupId = buf.st_gid;
+				if (getgrgid(buf.st_gid) != NULL) {
+					groupId = buf.st_gid;
+				} else {
+					groupId = (gid_t) -1;
+				}
 			} else {
-				groupId = lookupGid(options.group);
+				struct group *groupInfo = getgrnam(options.group.c_str());
+				if (groupInfo != NULL) {
+					groupId = groupInfo->gr_gid;
+				} else {
+					groupId = (gid_t) -1;
+				}
 			}
 		} else if (userInfo != NULL) {
 			groupId = userInfo->pw_gid;
@@ -851,7 +860,7 @@ protected:
 		if (groupId == 0 || groupId == (gid_t) -1) {
 			groupId = lookupGid(defaultGroup);
 		}
-		
+
 		UPDATE_TRACE_POINT();
 		if (userInfo == NULL) {
 			throw RuntimeException("Cannot determine a user to lower privilege to");

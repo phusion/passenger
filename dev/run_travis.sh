@@ -56,6 +56,10 @@ run lsb_release -a
 sudo tee /etc/dpkg/dpkg.cfg.d/02apt-speedup >/dev/null <<<"force-unsafe-io"
 cp test/config.json.travis test/config.json
 
+# Relax permissions on home directory so that the application root
+# permission checks pass.
+chmod g+x,o+x $HOME
+
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
 	if [[ -f ~/.rvm/scripts/rvm ]]; then

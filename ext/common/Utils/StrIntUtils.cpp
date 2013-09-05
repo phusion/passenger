@@ -376,14 +376,18 @@ integerToHexatri(long long value) {
 
 bool
 looksLikePositiveNumber(const StaticString &str) {
-	bool result = true;
-	const char *data = str.data();
-	const char *end = str.data() + str.size();
-	while (result && data != end) {
-		result = result && (*data >= '0' || *data <= '9');
-		data++;
+	if (str.empty()) {
+		return false;
+	} else {
+		bool result = true;
+		const char *data = str.data();
+		const char *end = str.data() + str.size();
+		while (result && data != end) {
+			result = result && (*data >= '0' && *data <= '9');
+			data++;
+		}
+		return result;
 	}
-	return result;
 }
 
 int
