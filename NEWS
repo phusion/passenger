@@ -1,5 +1,12 @@
-Release 4.0.15 and 4.0.16
--------------------------
+Release 4.0.16
+--------------
+
+ * Allow Phusion Passenger to work properly on systems where the user's GID
+   does not have a proper entry in /etc/group, such as Heroku.
+
+
+Release 4.0.15
+--------------
 
  * Out-of-band work has been much improved. The number of processes which
    may perform out-of-band work concurrently has been limited to 1.
