@@ -71,6 +71,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		ENV['PATH'] = PhusionPassenger.bin_dir + ":" + ENV['PATH']
 		
 		show_welcome_screen
+		check_nginx_module_sources_available || exit(1)
 		check_dependencies || exit(1)
 		if needs_compiling_support_files?
 			check_whether_we_can_write_to(PhusionPassenger.source_root) || exit(1)
@@ -134,6 +135,16 @@ private
 	def show_welcome_screen
 		render_template 'nginx/welcome', :version => VERSION_STRING
 		wait
+	end
+
+	def check_nginx_module_sources_available
+		if PhusionPassenger.natively_packaged? && !File.exist?(PhusionPassenger.nginx_module_source_dir)
+			new_screen
+			render_template 'nginx/nginx_module_sources_not_available'
+			return false
+		else
+			return true
+		end
 	end
 
 	def needs_compiling_support_files?
