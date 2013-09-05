@@ -28,6 +28,9 @@ function apt_get_update() {
 			if ! [[ -e /usr/bin/add-apt-repository ]]; then
 				run sudo apt-get update
 				run sudo apt-get install -y --no-install-recommends python-software-properties
+				if ! [[ -e /usr/bin/add-apt-repository ]]; then
+					run sudo apt-get install -y --no-install-recommends software-properties-common
+				fi
 			fi
 			run sudo add-apt-repository -y ppa:phusion.nl/misc
 		fi
