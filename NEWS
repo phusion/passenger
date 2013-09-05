@@ -49,7 +49,16 @@ Release 4.0.15 and 4.0.16
    to reproduce the problem on any other systems running Ubuntu 12.04 32-bit.
    Note that this flag has no effect on non-Phusion Passenger code. Fixes
    issue #937.
+ * It is now possible to preprocess events before they are sent to Union
+   Station. This is useful for removing confidential data as demonstrated in
+   this example `config/initializers/passenger.rb` file:
 
+       if defined?(PhusionPassenger)
+           event_preprocessor = lambda do |e|
+               e.payload[:sql].gsub!("secret","PASSWORD") if e.payload[:sql]
+           end
+           PhusionPassenger.install_framework_extensions!(:event_preprocessor => event_preprocessor)
+       end
 
 Release 4.0.14
 --------------

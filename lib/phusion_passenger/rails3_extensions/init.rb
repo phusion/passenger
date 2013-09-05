@@ -27,7 +27,7 @@ require 'digest/md5'
 module PhusionPassenger
 
 module Rails3Extensions
-	def self.init!(options, user_options={})
+	def self.init!(options, user_options = {})
 		if !AnalyticsLogging.install!(options, user_options)
 			# Remove code to save memory.
 			PhusionPassenger::Rails3Extensions.send(:remove_const, :AnalyticsLogging)
