@@ -781,17 +781,10 @@ protected:
 					getProcessUsername() + "; it looks like your system's " +
 					"user database is broken, please fix it.");
 			}
-			struct group *groupInfo = getgrgid(userInfo->pw_gid);
-			if (groupInfo == NULL) {
-				throw RuntimeException(string("Cannot get group database entry for ") +
-					"the default group belonging to username '" +
-					getProcessUsername() + "'; it looks like your system's " +
-					"user database is broken, please fix it.");
-			}
 			
 			info.switchUser = false;
 			info.username = userInfo->pw_name;
-			info.groupname = groupInfo->gr_name;
+			info.groupname = getGroupName(userInfo->pw_gid);
 			info.home = userInfo->pw_dir;
 			info.shell = userInfo->pw_shell;
 			info.uid = geteuid();
@@ -804,7 +797,7 @@ protected:
 		string defaultGroup;
 		string startupFile = absolutizePath(options.getStartupFile(), info.appRoot);
 		struct passwd *userInfo = NULL;
-		struct group *groupInfo = NULL;
+		gid_t  groupId = (gid_t) -1;
 		
 		if (options.defaultGroup.empty()) {
 			struct passwd *info = getpwnam(options.defaultUser.c_str());
@@ -848,22 +841,22 @@ protected:
 					throw SystemException("Cannot lstat(\"" +
 						startupFile + "\")", e);
 				}
-				groupInfo = getgrgid(buf.st_gid);
+				groupId = buf.st_gid;
 			} else {
-				groupInfo = getgrnam(options.group.c_str());
+				groupId = lookupGid(options.group);
 			}
 		} else if (userInfo != NULL) {
-			groupInfo = getgrgid(userInfo->pw_gid);
+			groupId = userInfo->pw_gid;
 		}
-		if (groupInfo == NULL || groupInfo->gr_gid == 0) {
-			groupInfo = getgrnam(defaultGroup.c_str());
+		if (groupId == 0 || groupId == (gid_t) -1) {
+			groupId = lookupGid(defaultGroup);
 		}
 		
 		UPDATE_TRACE_POINT();
 		if (userInfo == NULL) {
 			throw RuntimeException("Cannot determine a user to lower privilege to");
 		}
-		if (groupInfo == NULL) {
+		if (groupId == (gid_t) -1) {
 			throw RuntimeException("Cannot determine a group to lower privilege to");
 		}
 		
@@ -877,16 +870,16 @@ protected:
 		#endif
 		info.switchUser = true;
 		info.username = userInfo->pw_name;
-		info.groupname = groupInfo->gr_name;
+		info.groupname = getGroupName(groupId);
 		info.home = userInfo->pw_dir;
 		info.shell = userInfo->pw_shell;
 		info.uid = userInfo->pw_uid;
-		info.gid = groupInfo->gr_gid;
+		info.gid = groupId;
 		#if !defined(HAVE_GETGROUPLIST) && (defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__))
 			#define HAVE_GETGROUPLIST
 		#endif
 		#ifdef HAVE_GETGROUPLIST
-			int ret = getgrouplist(userInfo->pw_name, groupInfo->gr_gid,
+			int ret = getgrouplist(userInfo->pw_name, groupId,
 				groups, &info.ngroups);
 			if (ret == -1) {
 				int e = errno;

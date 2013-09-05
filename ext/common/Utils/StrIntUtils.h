@@ -238,6 +238,11 @@ integerToHexatri(IntegerType value, char *output) {
 string integerToHexatri(long long value);
 
 /**
+ * Checks whether the given string looks like a number >= 0.
+ */
+bool looksLikePositiveNumber(const StaticString &str);
+
+/**
  * Converts the given string to an integer.
  */
 int atoi(const string &s);

@@ -211,6 +211,20 @@ string escapeForXml(const string &input);
 string getProcessUsername();
 
 /**
+ * Returns either the group name for the given GID, or (if the group name
+ * couldn't be looked up) a string representation of the given GID.
+ */
+string getGroupName(gid_t gid);
+
+/**
+ * Given a `groupName` which is either the name of a group, or a string
+ * containing the GID of a group, looks up the GID as a gid_t.
+ *
+ * Returns `(gid_t) -1` if the lookup fails.
+ */
+gid_t lookupGid(const StaticString &groupName);
+
+/**
  * Converts a mode string into a mode_t value.
  *
  * At this time only the symbolic mode strings are supported, e.g. something like looks

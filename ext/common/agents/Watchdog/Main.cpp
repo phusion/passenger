@@ -54,6 +54,7 @@
 #include <Utils/Base64.h>
 #include <Utils/Timer.h>
 #include <Utils/ScopeGuard.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
 #include <Utils/VariantMap.h>
@@ -378,17 +379,7 @@ inferDefaultGroup(const string &defaultUser) {
 			string("The user that PassengerDefaultUser refers to, '") +
 			defaultUser + "', does not exist.");
 	}
-	
-	struct group *groupEntry = getgrgid(userEntry->pw_gid);
-	if (groupEntry == NULL) {
-		throw ConfigurationException(
-			string("The option PassengerDefaultUser is set to '" +
-			defaultUser + "', but its primary group doesn't exist. "
-			"In other words, your system's user account database "
-			"is broken. Please fix it."));
-	}
-	
-	return groupEntry->gr_name;
+	return getGroupName(userEntry->pw_gid);
 }
 
 static void
@@ -486,12 +477,11 @@ lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 	}
 	uid = userEntry->pw_uid;
 
-	groupEntry = getgrnam(defaultGroup.c_str());
-	if (groupEntry == NULL) {
+	gid = lookupGid(defaultGroup);
+	if (gid == (gid_t) -1) {
 		throw NonExistentGroupException("Default group '" + defaultGroup +
 			"' does not exist.");
 	}
-	gid = groupEntry->gr_gid;
 }
 
 static void

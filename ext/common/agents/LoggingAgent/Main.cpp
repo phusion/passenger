@@ -182,19 +182,19 @@ initializePrivilegedWorkingObjects(WorkingObjects &wo) {
 }
 
 static void
-lowerPrivilege(const string &username, const struct passwd *user, const struct group *group) {
+lowerPrivilege(const string &username, const struct passwd *user, gid_t gid) {
 	int e;
 	
-	if (initgroups(username.c_str(), group->gr_gid) != 0) {
+	if (initgroups(username.c_str(), gid) != 0) {
 		e = errno;
 		P_WARN("WARNING: Unable to set supplementary groups for " <<
 			"PassengerLoggingAgent: " << strerror(e) << " (" << e << ")");
 	}
-	if (setgid(group->gr_gid) != 0) {
+	if (setgid(gid) != 0) {
 		e = errno;
 		P_WARN("WARNING: Unable to lower PassengerLoggingAgent's "
 			"privilege to that of user '" << username <<
-			"': cannot set group ID to " << group->gr_gid <<
+			"': cannot set group ID to " << gid <<
 			": " << strerror(e) <<
 			" (" << e << ")");
 	}
@@ -210,7 +210,7 @@ lowerPrivilege(const string &username, const struct passwd *user, const struct g
 static void
 maybeLowerPrivilege() {
 	struct passwd *user;
-	struct group  *group;
+	gid_t gid;
 
 	/* Sanity check user accounts. */
 		
@@ -224,27 +224,11 @@ maybeLowerPrivilege() {
 	}
 	
 	if (groupname.empty()) {
-		group = getgrgid(user->pw_gid);
-		if (group == NULL) {
-			throw NonExistentGroupException(string("The configuration option ") +
-				"'PassengerAnalyticsLogGroup' (Apache) or " +
-				"'passenger_analytics_log_group' (Nginx) wasn't set, " +
-				"so PassengerLoggingAgent tried to use the default group " +
-				"for user '" + username + "' - which is GID #" +
-				toString(user->pw_gid) + " - as the group for the analytics " +
-				"log dir, but this GID doesn't exist. " +
-				"You can solve this problem by explicitly " +
-				"setting PassengerAnalyticsLogGroup (Apache) or " +
-				"passenger_analytics_log_group (Nginx) to a group that " +
-				"does exist. In any case, it looks like your system's user " +
-				"database is broken; Phusion Passenger can work fine even " +
-				"with this broken user database, but you should still fix it.");
-		} else {
-			groupname = group->gr_name;
-		}
+		gid = user->pw_gid;
+		groupname = getGroupName(user->pw_gid);
 	} else {
-		group = getgrnam(groupname.c_str());
-		if (group == NULL) {
+		gid = lookupGid(groupname);
+		if (gid == (gid_t) -1) {
 			throw NonExistentGroupException(string("The configuration option ") +
 				"'PassengerAnalyticsLogGroup' (Apache) or " +
 				"'passenger_analytics_log_group' (Nginx) was set to '" +
@@ -255,7 +239,7 @@ maybeLowerPrivilege() {
 
 	/* Now's a good time to lower the privilege. */
 	if (geteuid() == 0) {
-		lowerPrivilege(username, user, group);
+		lowerPrivilege(username, user, gid);
 	}
 }
 

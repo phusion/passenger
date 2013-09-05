@@ -163,18 +163,7 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         return "The user specified by the 'default_user' option does not exist.";
     }
     
-    if (conf->default_group.len == 0) {
-        group_entry = getgrgid(user_entry->pw_gid);
-        if (group_entry != NULL) {
-            conf->default_group.len  = strlen(group_entry->gr_name);
-            conf->default_group.data = ngx_palloc(cf->pool, conf->default_group.len + 1);
-            memcpy(conf->default_group.data, group_entry->gr_name, conf->default_group.len + 1);
-        } else {
-            return "The primary group of the user specified by the 'default_user' "
-                   "option does not exist. Your system's user account database is "
-                   "probably broken, please fix it.";
-        }
-    } else {
+    if (conf->default_group.len > 0) {
         if (conf->default_group.len > sizeof(buf) - 1) {
             return "Value for 'default_group' is too long.";
         }

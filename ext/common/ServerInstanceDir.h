@@ -82,7 +82,6 @@ public:
 			TRACE_POINT();
 			bool runningAsRoot = geteuid() == 0;
 			struct passwd *defaultUserEntry;
-			struct group  *defaultGroupEntry;
 			uid_t defaultUid;
 			gid_t defaultGid;
 			
@@ -92,12 +91,11 @@ public:
 					"' does not exist.");
 			}
 			defaultUid = defaultUserEntry->pw_uid;
-			defaultGroupEntry = getgrnam(defaultGroup.c_str());
-			if (defaultGroupEntry == NULL) {
+			defaultGid = lookupGid(defaultGroup);
+			if (defaultGid == (gid_t) -1) {
 				throw NonExistentGroupException("Default group '" + defaultGroup +
 					"' does not exist.");
 			}
-			defaultGid = defaultGroupEntry->gr_gid;
 			
 			/* We set a very tight permission here: no read or write access for
 			 * anybody except the owner. The individual files and subdirectories

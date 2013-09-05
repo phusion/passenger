@@ -400,6 +400,38 @@ getProcessUsername() {
 	}
 }
 
+string
+getGroupName(gid_t gid) {
+	struct group *groupEntry;
+
+	groupEntry = getgrgid(gid);
+	if (groupEntry == NULL) {
+		return toString(gid);
+	} else {
+		return groupEntry->gr_name;
+	}
+}
+
+gid_t
+lookupGid(const StaticString &groupName) {
+	struct group *groupEntry;
+	char name[groupName.size() + 1];
+
+	memcpy(name, groupName.data(), groupName.size());
+	name[groupName.size()] = '\0';
+
+	groupEntry = getgrnam(name);
+	if (groupEntry == NULL) {
+		if (looksLikePositiveNumber(groupName)) {
+			return atoi(name);
+		} else {
+			return (gid_t) -1;
+		}
+	} else {
+		return groupEntry->gr_gid;
+	}
+}
+
 mode_t
 parseModeString(const StaticString &mode) {
 	mode_t modeBits = 0;

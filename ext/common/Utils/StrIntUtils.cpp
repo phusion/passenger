@@ -374,6 +374,18 @@ integerToHexatri(long long value) {
 	return string(buf);
 }
 
+bool
+looksLikePositiveNumber(const StaticString &str) {
+	bool result = true;
+	const char *data = str.data();
+	const char *end = str.data() + str.size();
+	while (result && data != end) {
+		result = result && (*data >= '0' || *data <= '9');
+		data++;
+	}
+	return result;
+}
+
 int
 atoi(const string &s) {
 	return ::atoi(s.c_str());

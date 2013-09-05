@@ -329,8 +329,8 @@ private:
 	 */
 	void lowerPrivilege(const string &username, const string &groupname) {
 		struct passwd *userEntry;
-		struct group  *groupEntry;
-		int            e;
+		gid_t gid;
+		int e;
 		
 		userEntry = getpwnam(username.c_str());
 		if (userEntry == NULL) {
@@ -338,8 +338,8 @@ private:
 				"HelperAgent's privilege to that of user '") + username +
 				"': user does not exist.");
 		}
-		groupEntry = getgrnam(groupname.c_str());
-		if (groupEntry == NULL) {
+		gid = lookupGid(groupname);
+		if (gid == (gid_t) -1) {
 			throw NonExistentGroupException(string("Unable to lower Passenger "
 				"HelperAgent's privilege to that of user '") + username +
 				"': user does not exist.");
@@ -351,7 +351,7 @@ private:
 				"privilege to that of user '") + username +
 				"': cannot set supplementary groups for this user", e);
 		}
-		if (setgid(groupEntry->gr_gid) != 0) {
+		if (setgid(gid) != 0) {
 			e = errno;
 			throw SystemException(string("Unable to lower Passenger HelperAgent's "
 				"privilege to that of user '") + username +
