@@ -24,11 +24,6 @@
 
 # This script is called during 'gem install'. Its role is to download
 # Phusion Passenger binaries.
-source_root = File.expand_path("../..", File.dirname(__FILE__))
-$LOAD_PATH.unshift("#{source_root}/lib")
-require 'phusion_passenger'
-PhusionPassenger.locate_directories
-require 'fileutils'
 
 # Create a dummy Makefile to prevent 'gem install' from borking out.
 File.open("Makefile", "w") do |f|
@@ -37,6 +32,16 @@ File.open("Makefile", "w") do |f|
 	f.puts "install:"
 	f.puts "	true"
 end
+
+# Don't do anything on Windows. We don't support Windows but exiting now
+# will at least prevent the gem from being not installable on Windows.
+exit if RUBY_PLATFORM =~ /mswin/i || RUBY_PLATFORM =~ /win32/i
+
+source_root = File.expand_path("../..", File.dirname(__FILE__))
+$LOAD_PATH.unshift("#{source_root}/lib")
+require 'phusion_passenger'
+PhusionPassenger.locate_directories
+require 'fileutils'
 
 if PhusionPassenger.natively_packaged?
 	puts "Binary downloading is only available when originally packaged. Stopping."
