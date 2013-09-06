@@ -42,6 +42,8 @@
 	Threeway enabled;
 	/** Enable or disable Passenger's high performance mode. */
 	Threeway highPerformance;
+	/** The maximum number of queued requests. */
+	int maxRequestQueueSize;
 	/** The minimum number of application instances to keep when cleaning idle instances. */
 	int minInstances;
 	/** A timeout for application startup. */

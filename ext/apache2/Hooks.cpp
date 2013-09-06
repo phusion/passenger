@@ -976,6 +976,10 @@ private:
 		addHeader(output, "PASSENGER_SPAWN_METHOD", config->getSpawnMethodString());
 		addHeader(output, "PASSENGER_USER", config->getUser());
 		addHeader(output, "PASSENGER_GROUP", config->getGroup());
+		if (config->maxRequestQueueSize != UNSET_INT_VALUE) {
+			addHeader(output, "PASSENGER_MAX_REQUEST_QUEUE_SIZE",
+				apr_psprintf(r->pool, "%d", config->maxRequestQueueSize));
+		}
 		addHeader(output, "PASSENGER_APP_TYPE", mapper.getApplicationTypeName());
 		addHeader(output, "PASSENGER_MIN_INSTANCES",
 			apr_psprintf(r->pool, "%ld", config->getMinInstances()));

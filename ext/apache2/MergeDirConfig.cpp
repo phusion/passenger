@@ -94,3 +94,10 @@
 			base->enabled :
 			add->enabled;
 	
+
+	
+		config->maxRequestQueueSize =
+			(add->maxRequestQueueSize == UNSET_INT_VALUE) ?
+			base->maxRequestQueueSize :
+			add->maxRequestQueueSize;
+	

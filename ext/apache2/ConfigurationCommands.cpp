@@ -87,3 +87,9 @@
 		OR_ALL,
 		"Enable or disable Phusion Passenger."),
 
+	AP_INIT_TAKE1("PassengerMaxRequestQueueSize",
+		(Take1Func) cmd_passenger_max_request_queue_size,
+		NULL,
+		OR_ALL,
+		"The maximum number of queued requests."),
+

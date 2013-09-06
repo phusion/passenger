@@ -763,84 +763,6 @@ allow the attacker to cause a Denial-of-Service.
 You can prevent this from happening by pointing PassengerRestartDir to a
 directory that's readable by Apache, but only writable by administrators.
 
-[[PassengerBufferResponse]]
-=== PassengerBufferResponse <on|off> ===
-When turned on, application-generated responses are buffered by Apache. Buffering will
-happen in memory.
-
-Before we proceed with explaining this configuration option, we want to state the following to avoid confusion. If you use Phusion Passenger for Apache, there are in fact two response buffering systems active:
-
-1. The Apache response buffering system. `PassengerBufferResponse` turns this on or off.
-2. The Phusion Passenger response buffering system, a.k.a. 'real-time disk-backed response buffering'. This buffering system is always on, regardless of the value of `PassengerBufferResponse`.
-
-Response buffering is useful because it protects against slow HTTP clients that do not read responses immediately or quickly enough. Buffering prevents such slow clients from blocking web applications that have limited concurrency. Because Phusion Passenger's response buffering is always turned on, you are always protected. Therefore, `PassengerBufferResponse` is off by default, and you never should have to turn it on.
-
-If for whatever reason you want to turn Apache-level response buffering on, you can do so with this option.
-
-Apache's response buffering works differently from Phusion Passenger's. Apache's buffering system buffers the entire response before attempting to send it to the client, while Phusion Passenger's attempts to send the data to the client immediately. Therefore, if you turn on `PassengerBufferResponse`, you may interfere with applications that want to stream responses to the client.
-Apache's version also buffers to memory only, making it problematic for large responses. Phusion Passenger's version buffers to disk when the response exceeds a certain threshold.
-
-How does response buffering - whether it's done by Apache or by Phusion Passenger - exactly protect against slow clients?
-Consider an HTTP client that's on a dial-up modem link, and your
-application process generates a 2 MB response. If the response is buffered
-then your application process will be blocked until the entire 2 MB has been
-sent out to the HTTP client. This disallows your application process to do any useful
-work in the mean time. By buffering responses, Phusion Passenger or Apache will read
-the application response as quickly as possible and will take care of forwarding the data
-to slow clients.
-
-So keep in mind that enabling `passenger_buffering_response` will make streaming responses
-impossible. Consider for example this piece of Rails code:
-
---------------------------------
-render :text => lambda { |response, output|
-    10.times do |i|
-        output.write("entry #{i}\n")
-        output.flush
-        sleep 1
-    end
-}
---------------------------------
-
-...or this piece of Rack code:
-
---------------------------------
-class Response
-    def each
-        10.times do |i|
-            yield("entry #{i}\n")
-            sleep 1
-        end
-    end
-end
-
-app = lambda do |env|
-    [200, { "Content-Type" => "text/plain" }, Response.new]
-end
---------------------------------
-
-When `PassengerBufferResponse` is turned on, Apache will wait until
-the application is done sending the entire response before forwarding it
-to the client. The client will not receive anything for 10 seconds,
-after which it receives the entire response at once.
-When `PassengerBufferResponse` is turned off, it works as expected: the client
-receives an "entry X" message every second for 10 seconds.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is 'off'.
-
-[NOTE]
-=====================================================
-The <<PassengerBufferResponse,PassengerBufferResponse>> directive should be turned off
-if responses can be huge. Because entire responses are buffered in memory when turned on.
-=====================================================
-
 [[PassengerRollingRestarts]]
 === PassengerRollingRestarts <on|off> ===
 :version: 3.0.0
@@ -1661,6 +1583,105 @@ http://www.foo.com/chatroom/ajax_update_poll only.
 
 /////////////////////////////////////////
 /////////////////////////////////////////
+
+
+=== Connection handling options ===
+
+[[PassengerBufferResponse]]
+=== PassengerBufferResponse <on|off> ===
+When turned on, application-generated responses are buffered by Apache. Buffering will
+happen in memory.
+
+Before we proceed with explaining this configuration option, we want to state the following to avoid confusion. If you use Phusion Passenger for Apache, there are in fact two response buffering systems active:
+
+1. The Apache response buffering system. `PassengerBufferResponse` turns this on or off.
+2. The Phusion Passenger response buffering system, a.k.a. 'real-time disk-backed response buffering'. This buffering system is always on, regardless of the value of `PassengerBufferResponse`.
+
+Response buffering is useful because it protects against slow HTTP clients that do not read responses immediately or quickly enough. Buffering prevents such slow clients from blocking web applications that have limited concurrency. Because Phusion Passenger's response buffering is always turned on, you are always protected. Therefore, `PassengerBufferResponse` is off by default, and you never should have to turn it on.
+
+If for whatever reason you want to turn Apache-level response buffering on, you can do so with this option.
+
+Apache's response buffering works differently from Phusion Passenger's. Apache's buffering system buffers the entire response before attempting to send it to the client, while Phusion Passenger's attempts to send the data to the client immediately. Therefore, if you turn on `PassengerBufferResponse`, you may interfere with applications that want to stream responses to the client.
+Apache's version also buffers to memory only, making it problematic for large responses. Phusion Passenger's version buffers to disk when the response exceeds a certain threshold.
+
+How does response buffering - whether it's done by Apache or by Phusion Passenger - exactly protect against slow clients?
+Consider an HTTP client that's on a dial-up modem link, and your
+application process generates a 2 MB response. If the response is buffered
+then your application process will be blocked until the entire 2 MB has been
+sent out to the HTTP client. This disallows your application process to do any useful
+work in the mean time. By buffering responses, Phusion Passenger or Apache will read
+the application response as quickly as possible and will take care of forwarding the data
+to slow clients.
+
+So keep in mind that enabling `passenger_buffering_response` will make streaming responses
+impossible. Consider for example this piece of Rails code:
+
+--------------------------------
+render :text => lambda { |response, output|
+    10.times do |i|
+        output.write("entry #{i}\n")
+        output.flush
+        sleep 1
+    end
+}
+--------------------------------
+
+...or this piece of Rack code:
+
+--------------------------------
+class Response
+    def each
+        10.times do |i|
+            yield("entry #{i}\n")
+            sleep 1
+        end
+    end
+end
+
+app = lambda do |env|
+    [200, { "Content-Type" => "text/plain" }, Response.new]
+end
+--------------------------------
+
+When `PassengerBufferResponse` is turned on, Apache will wait until
+the application is done sending the entire response before forwarding it
+to the client. The client will not receive anything for 10 seconds,
+after which it receives the entire response at once.
+When `PassengerBufferResponse` is turned off, it works as expected: the client
+receives an "entry X" message every second for 10 seconds.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
+[NOTE]
+=====================================================
+The <<PassengerBufferResponse,PassengerBufferResponse>> directive should be turned off
+if responses can be huge. Because entire responses are buffered in memory when turned on.
+=====================================================
+
+[[PassengerMaxRequestQueueSize]]
+==== passenger_max_request_queue_size <number> ====
+:version: 4.0.15
+include::users_guide_snippets/since_version.txt[]
+
+When all application processes are already handling their maximum number of concurrent requests, Phusion Passenger will queue all incoming requests. This option specifies the maximum size for that queue. If the queue is already at this specified limit, then Phusion Passenger will immediately send a "503 Service Unavailable" error to any incoming requests.
+
+A value of 0 means that the queue is unbounded.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is '100'.
 
 
 === Compatibility options ===

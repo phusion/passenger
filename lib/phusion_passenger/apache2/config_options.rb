@@ -93,5 +93,12 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:type => :flag,
 		:context => ["OR_ALL"],
 		:desc => "Enable or disable Phusion Passenger."
+	},
+	{
+		:name => "PassengerMaxRequestQueueSize",
+		:type => :integer,
+		:min_value => 0,
+		:context => ["OR_ALL"],
+		:desc => "The maximum number of queued requests."
 	}
 ]
