@@ -150,6 +150,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			puts "Initiating building of Debian packages"
 			command = "cd /srv/passenger_apt_automation && " +
 				"chpst -L /tmp/passenger_apt_automation.lock " +
+				"/tools/silence-unless-failed " +
 				"./new_release https://github.com/phusion/passenger.git passenger.repo passenger.apt release-#{version}"
 			sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
 
@@ -171,6 +172,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			git_url = `git config remote.origin.url`.strip
 			command = "cd /srv/passenger_apt_automation && " +
 				"chpst -L /tmp/passenger_apt_automation.lock " +
+				"/tools/silence-unless-failed " +
 				"./new_release #{git_url} passenger-enterprise.repo passenger-enterprise.apt enterprise-#{version}"
 			sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
 
