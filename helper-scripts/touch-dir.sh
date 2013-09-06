@@ -29,10 +29,20 @@ set -e
 
 dir="$1"
 while true; do
-	sleep 1800
+	# Sleep for approx 1800 seconds, quit if directory no longer exists.
+	i=0
+	while test $i -lt 900; do
+		sleep 2
+		if ! test -e "$dir"; then
+			exit
+		fi
+		i=$((i+1))
+	done
+
+	# Touch directory, then try loop again.
 	if test -e "$dir"; then
 		find "$dir" | xargs touch
 	else
-		break
+		exit
 	fi
 done
