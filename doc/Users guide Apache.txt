@@ -1588,7 +1588,7 @@ http://www.foo.com/chatroom/ajax_update_poll only.
 === Connection handling options ===
 
 [[PassengerBufferResponse]]
-=== PassengerBufferResponse <on|off> ===
+==== PassengerBufferResponse <on|off> ====
 When turned on, application-generated responses are buffered by Apache. Buffering will
 happen in memory.
 
