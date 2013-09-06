@@ -143,7 +143,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			File.open("/tmp/homebrew/Library/Formula/passenger.rb", "w") do |f|
 				f.write(formula)
 			end
-			sh "cd #{homebrew_dir} && git commit -a -m 'Update passenger to #{version}'"
+			sh "cd #{homebrew_dir} && git commit -a -m 'passenger #{version}'"
 			sh "cd #{homebrew_dir} && git push -f"
 			sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b mxcl:master"
 
