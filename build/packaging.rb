@@ -90,7 +90,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			"admin_password: ..."
 	end
 
-	if !PhusionPassenger.PlatformInfo.find_command("hub")
+	if !PhusionPassenger::PlatformInfo.find_command("hub")
 		STDERR.puts "-------------------"
 		abort "*** ERROR: Please 'brew install hub' first"
 	end
