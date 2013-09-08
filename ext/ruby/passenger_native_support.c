@@ -77,6 +77,10 @@
 	/* Linux doesn't define IOV_MAX in limits.h for some reason. */
 	#define IOV_MAX sysconf(_SC_IOV_MAX)
 #endif
+#ifdef HAVE_RB_THREAD_IO_BLOCKING_REGION
+	/* Ruby doesn't define this function in its headers */
+	VALUE rb_thread_io_blocking_region(rb_blocking_function_t *func, void *data1, int fd);
+#endif
 
 static VALUE mPassenger;
 static VALUE mNativeSupport;
@@ -311,8 +315,13 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 				writev_wrapper_data.filedes = fd_num;
 				writev_wrapper_data.iov     = groups[i].io_vectors;
 				writev_wrapper_data.iovcnt  = groups[i].count;
-				ret = (int) rb_thread_blocking_region(writev_wrapper,
-					&writev_wrapper_data, RUBY_UBF_IO, 0);
+				#ifdef HAVE_RB_THREAD_IO_BLOCKING_REGION
+					ret = (int) rb_thread_io_blocking_region(writev_wrapper,
+						&writev_wrapper_data, fd_num);
+				#else
+					ret = (int) rb_thread_blocking_region(writev_wrapper,
+						&writev_wrapper_data, RUBY_UBF_IO, 0);
+				#endif
 			#endif
 			if (ret == -1) {
 				/* If the error is something like EAGAIN, yield to another
@@ -724,11 +733,14 @@ fs_watcher_wait_fd(VALUE _fd) {
 static VALUE
 fs_watcher_read_byte_from_fd(VALUE _arg) {
 	FSWatcherReadByteData *data = (FSWatcherReadByteData *) _arg;
-	#ifdef TRAP_BEG
+	#if defined(TRAP_BEG)
 		TRAP_BEG;
 		data->ret = read(data->fd, &data->byte, 1);
 		TRAP_END;
 		data->error = errno;
+	#elif defined(HAVE_RB_THREAD_IO_BLOCKING_REGION)
+		rb_thread_io_blocking_region(fs_watcher_read_byte_from_fd_wrapper,
+			data, data->fd);
 	#else
 		rb_thread_blocking_region(fs_watcher_read_byte_from_fd_wrapper,
 			data, RUBY_UBF_IO, 0);

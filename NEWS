@@ -3,6 +3,8 @@ Release 4.0.17
 
  * Fixed compilation problems on GCC 4.8 systems, such as Arch Linux 2013.04.
    Fixes issue #941.
+ * Fixed some deprecation warnings when compiling the Ruby native extension
+   on Ruby 2.0.0.
 
 
 Release 4.0.16
