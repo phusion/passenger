@@ -68,7 +68,7 @@ gem install passenger --version 3.9.1.beta --pre
 
 .Enterprise
 
-First, download the *license key* from the link:phusionpassenger.com/orders[Customer Area] and save it as '/etc/passenger-enterprise-license'.
+First, download the *license key* from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as '/etc/passenger-enterprise-license'.
 
 Next, add the Phusion Passenger Enterprise gem server to your RubyGems source list:
 
@@ -76,7 +76,7 @@ Next, add the Phusion Passenger Enterprise gem server to your RubyGems source li
 gem source --add https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_gems/
 ------------------------------------------
 
-Substitute 'YOUR_ORDER_REFERENCE' and 'YOUR_PASSWORD' with your link:phusionpassenger.com/orders[Customer Area] login credentials. And notice the **trailing slash** in the URL! It is very important.
+Substitute 'YOUR_ORDER_REFERENCE' and 'YOUR_PASSWORD' with your link:https://www.phusionpassenger.com/orders[Customer Area] login credentials. And notice the **trailing slash** in the URL! It is very important.
 
 Finally, install the latest gem to obtain the files for the latest stable version of the open source Phusion Passenger:
 
