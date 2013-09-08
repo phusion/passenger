@@ -69,8 +69,8 @@
  * efficiently on either one than if ARCH_IS_BIG_ENDIAN is defined.
  */
 
-typedef uint8_t md5_byte_t; /* 8-bit byte */
-typedef uint32_t md5_word_t; /* 32-bit word */
+typedef boost::uint8_t md5_byte_t; /* 8-bit byte */
+typedef boost::uint32_t md5_word_t; /* 32-bit word */
 
 /** Size of an MD5 checksum, in bytes. */
 #define MD5_SIZE      16
