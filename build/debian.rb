@@ -161,7 +161,7 @@ end
 def create_debian_binary_package_task(distribution, arch)
 	task "debian:binary_package:#{distribution}_#{arch}" => 'debian:binary_packages:check' do
 		base_name = "#{DEBIAN_NAME}_#{PACKAGE_VERSION}-1~#{distribution}1"
-		sh "cd #{pkg_dir} && pbuilder-dist #{distribution} #{arch} build #{base_name}.dsc"
+		sh "cd #{PKG_DIR}/official && pbuilder-dist #{distribution} #{arch} build #{base_name}.dsc"
 	end
 end
 
