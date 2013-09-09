@@ -27,9 +27,9 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter,
 Recommends: ruby-passenger-doc (= ${binary:Version}), ruby-passenger-dev (= ${binary:Version}),
  crash-watch
 Suggests: python
-Breaks: libapache2-mod-passenger (<< 1:3.9.1), passenger-common,
+Breaks: libapache2-mod-passenger (<< <%= DEBIAN_EPOCH %>:<%= PACKAGE_VERSION %>), passenger-common,
  passenger-common1.8, passenger-common1.9.1
-Replaces: libapache2-mod-passenger (<< 1:3.9.1), passenger-common,
+Replaces: libapache2-mod-passenger (<< <%= DEBIAN_EPOCH %>:<%= PACKAGE_VERSION %>), passenger-common,
  passenger-common1.8, passenger-common1.9.1
 Description: Rails and Rack support for Apache2 and Nginx
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
