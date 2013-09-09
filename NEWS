@@ -5,6 +5,7 @@ Release 4.0.17
    Fixes issue #941.
  * Fixed some deprecation warnings when compiling the Ruby native extension
    on Ruby 2.0.0.
+ * Fixed some Union Station-related stability issues.
 
 
 Release 4.0.16
