@@ -1,0 +1,2 @@
+debian/tmp/usr/share/doc/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/* usr/share/doc/passenger/
+CONTRIBUTORS usr/share/doc/passenger/

@@ -1,2 +1,0 @@
-debian/tmp/usr/share/doc/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/* usr/share/doc/ruby-passenger/
-CONTRIBUTORS usr/share/doc/ruby-passenger/
