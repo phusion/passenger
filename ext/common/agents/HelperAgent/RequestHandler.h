@@ -1722,10 +1722,12 @@ private:
 				return;
 			}
 
-			client->options.analytics = true;
-			client->options.unionStationKey = key;
 			client->options.logger = loggerFactory->newTransaction(
 				options.getAppGroupName(), "requests", key, filters);
+			if (!client->options.logger->isNull()) {
+				client->options.analytics = true;
+				client->options.unionStationKey = key;
+			}
 			
 			client->beginScopeLog(&client->scopeLogs.requestProcessing, "request processing");
 
