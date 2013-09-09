@@ -158,17 +158,29 @@ def pbuilder_base_name(distribution, arch)
 	end
 end
 
-desc "Build official Debian binary packages"
-task 'debian:binary_packages' do
+def create_debian_binary_package_task(distribution, arch)
+	task "debian:binary_package:#{distribution}_#{arch}" => 'debian:binary_packages:check' do
+		base_name = "#{DEBIAN_NAME}_#{PACKAGE_VERSION}-1~#{distribution}1"
+		sh "cd #{pkg_dir} && pbuilder-dist #{distribution} #{arch} build #{base_name}.dsc"
+	end
+end
+
+DEBIAN_BINARY_PACKAGE_TASKS = []
+ALL_DISTRIBUTIONS.each do |distribution|
+	DEBIAN_ARCHS.each do |arch|
+		task = create_debian_binary_package_task(distribution, arch)
+		DEBIAN_BINARY_PACKAGE_TASKS << task
+	end
+end
+
+task 'debian:binary_packages:check' do
 	pkg_dir = "#{PKG_DIR}/official"
 	if !File.exist?(pkg_dir)
 		abort "Please run rake debian:source_packages first."
 	end
 
-	all_distributions = [string_option('DISTRO') || ALL_DISTRIBUTIONS].flatten
 	pbuilder_dir = File.expand_path("~/pbuilder")
-
-	all_distributions.each do |distribution|
+	ALL_DISTRIBUTIONS.each do |distribution|
 		DEBIAN_ARCHS.each do |arch|
 			pbase_name = pbuilder_base_name(distribution, arch) + "-base.tgz"
 			if !File.exist?("#{pbuilder_dir}/#{pbase_name}")
@@ -177,14 +189,10 @@ task 'debian:binary_packages' do
 			end
 		end
 	end
-
-	all_distributions.each do |distribution|
-		base_name = "#{DEBIAN_NAME}_#{PACKAGE_VERSION}-1~#{distribution}1"
-		DEBIAN_ARCHS.each do |arch|
-			sh "cd #{pkg_dir} && pbuilder-dist #{distribution} #{arch} build #{base_name}.dsc"
-		end
-	end
 end
+
+desc "Build official Debian binary packages"
+task 'debian:binary_packages' => DEBIAN_BINARY_PACKAGE_TASKS
 
 desc "Clean Debian packaging products, except for orig tarball"
 task 'debian:clean' do

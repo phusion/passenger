@@ -70,10 +70,11 @@ class Preprocessor
 		end
 		the_binding  = create_binding(variables)
 		context      = []
+		@filename    = filename
 		@lineno      = 1
 		@indentation = 0
 
-		each_line(filename) do |line|
+		each_line(filename, the_binding) do |line|
 			debug("context=#{context.inspect}, line=#{line.inspect}")
 
 			name, args_string, cmd_indentation = recognize_command(line)
@@ -144,6 +145,8 @@ class Preprocessor
 				else
 					terminate "#endif is not allowed outside #if block"
 				end
+			when "DEBHELPER"
+				output.puts(line)
 			when "", nil
 				# Either a comment or not a preprocessor command.
 				case context.last
@@ -227,11 +230,11 @@ private
 		end
 	end
 
-	def each_line(filename)
+	def each_line(filename, the_binding)
 		data = File.open(filename, 'r') do |f|
 			erb = ERB.new(f.read, nil, "-")
 			erb.filename = filename
-			erb.result(binding)
+			erb.result(the_binding)
 		end
 		data.each_line do |line|
 			yield line.chomp
@@ -312,6 +315,6 @@ private
 	end
 
 	def terminate(message)
-		abort "*** ERROR: line #{@lineno}: #{message}"
+		abort "*** ERROR: #{@filename} line #{@lineno}: #{message}"
 	end
 end
