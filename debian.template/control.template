@@ -24,11 +24,11 @@ Package: passenger
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter,
  rubygems (>= 1.2),
- #if is_distribution?('<= lucid') || is_distribution?('<= squeeze')
+#if is_distribution?('<= lucid') || is_distribution?('<= squeeze')
      librack-ruby,
- #else
+#else
      ruby-rack,
- #endif
+#endif
  ruby-daemon-controller
 Recommends: passenger-doc (= ${binary:Version}), passenger-dev (= ${binary:Version}),
  crash-watch
