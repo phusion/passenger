@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 # export DH_VERBOSE=1
 
-#if is_distribution?('>= precise')
+#if is_distribution?('>= precise') || is_distribution?('>= wheezy')
     export USE_VENDORED_LIBEV=false
 #endif
 

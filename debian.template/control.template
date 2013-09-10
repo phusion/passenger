@@ -7,10 +7,10 @@ Build-Depends: debhelper (>= 7.0.50~), rake,
  ruby1.8, ruby1.8-dev, rubygems1.8,
  ruby1.9.1, ruby1.9.1-dev,
  apache2-mpm-worker | apache2-mpm, apache2-threaded-dev,
-#if is_distribution?('<= lucid')
-	 rubygems1.9,
+#if is_distribution?('<= lucid') || is_distribution?('<= squeeze')
+     rubygems1.9,
 #endif
-#if is_distribution?('>= precise')
+#if is_distribution?('>= precise') || is_distribution?('>= wheezy')
      libev-dev (>= 1:4.0.0),
 #endif
  libapr1-dev, libcurl4-openssl-dev
@@ -23,7 +23,13 @@ XS-Ruby-Versions: all
 Package: passenger
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter,
- rubygems (>= 1.2), ruby-rack, ruby-daemon-controller
+ rubygems (>= 1.2),
+ #if is_distribution?('<= lucid') || is_distribution?('<= squeeze')
+     librack-ruby,
+ #else
+     ruby-rack,
+ #endif
+ ruby-daemon-controller
 Recommends: passenger-doc (= ${binary:Version}), passenger-dev (= ${binary:Version}),
  crash-watch
 Suggests: python

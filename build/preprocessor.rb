@@ -183,12 +183,18 @@ private
 		"raring"   => "13.04",
 		"saucy"    => "13.10"
 	}
+	DEBIAN_DISTRIBUTIONS = {
+		"squeeze"  => "20110206",
+		"wheezy"   => "20130504"
+	}
 
 	# Provides the DSL that's accessible within.
 	class Evaluator
 		def _infer_distro_table(name)
 			if UBUNTU_DISTRIBUTIONS.has_key?(name)
 				return UBUNTU_DISTRIBUTIONS
+			elsif DEBIAN_DISTRIBUTIONS.has_key?(name)
+				return DEBIAN_DISTRIBUTIONS
 			end
 		end
 
@@ -207,6 +213,7 @@ private
 				table2 = _infer_distro_table(name)
 				raise "Distribution name #{@distribution.inspect} not recognized" if !table1
 				raise "Distribution name #{name.inspect} not recognized" if !table2
+				return false if table1 != table2
 				v1 = table1[@distribution]
 				v2 = table2[name]
 				
