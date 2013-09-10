@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 7.0.50~), rake,
  ruby1.8, ruby1.8-dev, rubygems1.8,
  ruby1.9.1, ruby1.9.1-dev,
  apache2-mpm-worker | apache2-mpm, apache2-threaded-dev,
-#if is_distribution?('<= lucid') || is_distribution?('<= squeeze')
+#if is_distribution?('<= lucid')
      rubygems1.9,
 #endif
 #if is_distribution?('>= precise') || is_distribution?('>= wheezy')
