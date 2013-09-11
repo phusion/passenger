@@ -409,7 +409,7 @@ To install Phusion Passenger for Nginx:
 sudo apt-get install nginx-full passenger
 --------------------------------------------------------------
 
-Then edit `/etc/nginx/nginx.conf`, and comment out `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
+Then edit `/etc/nginx/nginx.conf`, and uncomment `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
 
 To install Phusion Passenger for Apache:
 
@@ -433,7 +433,7 @@ To install Phusion Passenger for Nginx:
 sudo apt-get install nginx-full passenger-enterprise
 --------------------------------------------------------------
 
-Then edit `/etc/nginx/nginx.conf`, and comment out `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
+Then edit `/etc/nginx/nginx.conf`, and uncomment `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
 
 To install Phusion Passenger for Apache:
 
