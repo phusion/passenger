@@ -35,7 +35,7 @@ end
 
 # Don't do anything on Windows. We don't support Windows but exiting now
 # will at least prevent the gem from being not installable on Windows.
-exit if RUBY_PLATFORM =~ /mswin/i || RUBY_PLATFORM =~ /win32/i
+exit if RUBY_PLATFORM =~ /mswin/i || RUBY_PLATFORM =~ /win32/i || RUBY_PLATFORM =~ /mingw/
 
 source_root = File.expand_path("../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
