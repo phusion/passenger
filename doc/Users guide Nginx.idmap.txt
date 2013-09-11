@@ -26,7 +26,11 @@
 
 2.3. Generic installation, upgrade and downgrade method: via tarball	=>	generic-installation-upgrade-and-downgrade-method-via-tarball-2gkx43
 
-2.4. Installing or upgrading on Debian 6 or Ubuntu	=>	installing-or-upgrading-on-ubuntu-fw5fvp
+2.4. Installing or upgrading on Debian or Ubuntu	=>	installing-or-upgrading-on-ubuntu-fw5fvp
+
+2.4.1. Adding our APT repository	=>	adding-our-apt-repository-p60cki
+
+2.4.2. Installing packages	=>	installing-packages-j9glez
 
 2.5. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1
 

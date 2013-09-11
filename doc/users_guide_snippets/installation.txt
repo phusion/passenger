@@ -344,101 +344,108 @@ Please refer to <<verify_passenger_running,this section>>. Note that all Phusion
 
 
 [[install_on_debian_ubuntu]]
-=== Installing or upgrading on Debian 6 or Ubuntu
+=== Installing or upgrading on Debian or Ubuntu
 
-John Leach from Brightbox has kindly provided Ubuntu packages for Phusion Passenger. The Ubuntu Lucid packages are compatible with Debian 6. The packages are available from the link:http://wiki.brightbox.co.uk/docs:phusion-passenger[Brightbox repository]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
+We provide and official Phusion Passenger APT repository. This APT repository contains Phusion Passenger packages for multiple versions of Debian and Ubuntu. These packages are automatically built by our build server after we push out a source release, and thus are always up to date with the official source releases.
 
 If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need.
 
-.Apache
+Packages are available for the x86 and x86_64 architectures. Our policy is to support all Ubuntu LTS releases that are still supported by Canonical, plus the latest non-LTS Ubuntu release, plus all Debian releases that are still supported by Debian.
 
-First register the Brightbox Apache PPA. Run this on Ubuntu:
+==== Adding our APT repository
 
------------------------------
-sudo apt-add-repository ppa:brightbox/passenger-experimental
+Packages are signed by "Phusion Automated Software Signing (auto-software-signing@phusion.nl)", fingerprint 1637 8A33 A6EF 1676 2922 526E 561F 9B9C AC40 B2F7. Install our PGP key:
+
+--------------------------------------------------------------
+gpg --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7
+gpg --armor --export 561F9B9CAC40B2F7 | sudo apt-key add -
+--------------------------------------------------------------
+
+Our APT repository is stored on an HTTPS server so you may need to add HTTPS support for APT:
+
+--------------------------------------------------------------
+sudo apt-get install apt-transport-https
+--------------------------------------------------------------
+
+Next, create a file `/etc/apt/sources.list.d/passenger.list` and insert one of the following lines, depending on your distribution.
+
+Phusion Passenger open source:
+
+--------------------------------------------------------------
+deb https://oss-binaries.phusionpassenger.com/apt/passenger lucid main
+deb https://oss-binaries.phusionpassenger.com/apt/passenger precise main
+deb https://oss-binaries.phusionpassenger.com/apt/passenger raring main
+deb https://oss-binaries.phusionpassenger.com/apt/passenger squeeze main
+deb https://oss-binaries.phusionpassenger.com/apt/passenger wheezy main
+--------------------------------------------------------------
+
+Phusion Passenger Enterprise:
+
+--------------------------------------------------------------
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt lucid main
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt precise main
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt raring main
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt squeeze main
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt wheezy main
+--------------------------------------------------------------
+
+Please replace 'YOUR_ORDER_REFERENCE' and 'YOUR_PASSWORD' with your link:https://www.phusionpassenger.com/orders[Customer Area] login credentials.
+
+After creating `/etc/apt/sources.list.d/passenger.list`, run:
+
+--------------------------------------------------------------
+sudo chown root: /etc/apt/sources.list.d/passenger.list
+sudo chmod 600 /etc/apt/sources.list.d/passenger.list
 sudo apt-get update
------------------------------
+--------------------------------------------------------------
 
-On Debian, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand:
+==== Installing packages
 
------------------------------
-echo deb http://ppa.launchpad.net/brightbox/passenger-experimental/ubuntu lucid main | sudo tee /etc/apt/sources.list.d/brightbox-passenger.list
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
-sudo apt-get update
------------------------------
+.Open source
 
-Once the PPA is added, you can proceed with installing Phusion Passenger for Apache by running:
+To install Phusion Passenger for Nginx:
 
----------------------------------------------
+--------------------------------------------------------------
+sudo apt-get install nginx-full passenger
+--------------------------------------------------------------
+
+Then edit `/etc/nginx/nginx.conf`, and comment out `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
+
+To install Phusion Passenger for Apache:
+
+--------------------------------------------------------------
 sudo apt-get install libapache2-mod-passenger
----------------------------------------------
+--------------------------------------------------------------
 
-The Apache package provides configuration snippets for you, so you don't need to modify any Apache configuration to get it to load Phusion Passenger.
+To install Phusion Passenger Standalone:
 
-.Nginx
+--------------------------------------------------------------
+sudo apt-get install passenger
+--------------------------------------------------------------
 
-First register the Brightbox Apache PPA. Run this on Ubuntu:
+.Enterprise
 
------------------------------
-sudo apt-add-repository ppa:brightbox/passenger-experimental
-sudo apt-get update
------------------------------
+Before installing packages, download your license key from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
 
-On Debian, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand:
+To install Phusion Passenger for Nginx:
 
------------------------------
-echo deb http://ppa.launchpad.net/brightbox/passenger-experimental/ubuntu lucid main | sudo tee /etc/apt/sources.list.d/brightbox-passenger-nginx.list
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
-sudo apt-get update
------------------------------
+--------------------------------------------------------------
+sudo apt-get install nginx-full passenger-enterprise
+--------------------------------------------------------------
 
-Once the PPA is added, you can proceed with installing Phusion Passenger for Nginx by running:
+Then edit `/etc/nginx/nginx.conf`, and comment out `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
 
----------------------------------------------
-sudo apt-get install nginx-full
----------------------------------------------
+To install Phusion Passenger for Apache:
 
-You'll then need to enable the Phusion Passenger module in Nginx by creating the following configuration file:
+--------------------------------------------------------------
+sudo apt-get install libapache2-mod-passenger-enterprise
+--------------------------------------------------------------
 
------------------------------------------------
-echo "passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;" | sudo tee /etc/nginx/conf.d/passenger.conf
------------------------------------------------
+To install Phusion Passenger Standalone:
 
-Then restart Nginx to apply the changes:
-
-----------------------------------------
-sudo /etc/init.d/nginx restart
-----------------------------------------
-
-.Standalone
-
-First register the Brightbox Apache PPA. Run this on Ubuntu:
-
------------------------------
-sudo apt-add-repository ppa:brightbox/passenger-experimental
-sudo apt-get update
------------------------------
-
-On Debian, the `apt-add-repository` command isn't available so you have to install the repository and the key by hand:
-
------------------------------
-echo deb http://ppa.launchpad.net/brightbox/passenger-experimental/ubuntu lucid main | sudo tee /etc/apt/sources.list.d/brightbox-passenger.list
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
-sudo apt-get update
------------------------------
-
-Once the PPA is added, you can proceed with installing Phusion Passenger for Apache by running:
-
----------------------------------------------
-sudo apt-get install ruby-passenger
----------------------------------------------
-
-You can then proceed with starting Phusion Passenger Standalone:
-
----------------------------------------------
-cd /path-to-your-app
-passenger start
----------------------------------------------
+--------------------------------------------------------------
+sudo apt-get install passenger-enterprise
+--------------------------------------------------------------
 
 
 === Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux
