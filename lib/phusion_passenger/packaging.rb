@@ -50,6 +50,17 @@ module Packaging
 		'passenger-status',
 		'passenger-memory-stats'
 	]
+
+	# Used during native packaging. Specifies executables for
+	# which the shebang should NOT be set to #!/usr/bin/ruby,
+	# so that these executables can be run with any Ruby interpreter
+	# the user desires.
+	EXECUTABLES_WITH_FREE_RUBY = [
+		'passenger',
+		'passenger-config',
+		'passenger-install-apache2-module',
+		'passenger-install-nginx-module'
+	]
 	
 	# A list of globs which match all files that should be packaged
 	# in the Phusion Passenger gem or tarball.

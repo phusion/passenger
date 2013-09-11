@@ -31,6 +31,7 @@ override_dh_auto_install:
 	# Merge Ruby 1.8 and 1.9 files into a single directory.
 	cp -a pkg/fakeroot1.8/* debian/tmp/
 	cp -a pkg/fakeroot1.9.1/* debian/tmp/
+	sed -i 's|## Magic comment: set locations\.ini ##|ENV["PASSENGER_LOCATION_CONFIGURATION_FILE"] = "/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini"|' debian/tmp/usr/bin/* debian/tmp/usr/sbin/*
 	touch debian/tmp/usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/release.txt
 
 override_dh_auto_clean:
