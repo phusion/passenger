@@ -268,6 +268,11 @@ void initialize() {
 	ctx->thread_number = 1;
 	ctx->thread_name = "Main thread";
 	set_thread_local_context(ctx);
+
+	ctx->thread = pthread_self();
+	global_context->registered_threads.push_back(ctx);
+	ctx->iterator = global_context->registered_threads.end();
+	ctx->iterator--;
 }
 
 
