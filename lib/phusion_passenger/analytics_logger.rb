@@ -125,7 +125,7 @@ class AnalyticsLogger
 			@connection.synchronize do
 				return if !@connection.connected?
 				begin
-					# We need an ACK here. See abstract_request_handler.rb finalize_request.
+					# We need an ACK here. See thread_handler.rb finalize_request.
 					@connection.channel.write("closeTransaction", @txn_id,
 						AnalyticsLogger.timestamp_string, true)
 					result = @connection.channel.read
