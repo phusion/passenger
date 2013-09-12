@@ -108,7 +108,7 @@ public:
 	typedef void (*Callback)(EventedClient *client);
 	typedef void (*SystemErrorCallback)(EventedClient *client, const string &message, int code);
 	
-private:
+protected:
 	enum {
 		/**
 		 * This is the initial state for a client. It means we're
@@ -692,6 +692,27 @@ public:
 			fd = -1;
 			emitEvent(onDetach);
 			return oldFd;
+		}
+	}
+
+	const char *getStateName() const {
+		switch (state) {
+		case EC_CONNECTED:
+			return "EC_CONNECTED";
+		case EC_WRITES_PENDING:
+			return "EC_WRITES_PENDING";
+		case EC_TOO_MANY_WRITES_PENDING:
+			return "EC_TOO_MANY_WRITES_PENDING";
+		case EC_RO_CONNECTED:
+			return "EC_RO_CONNECTED";
+		case EC_RO_CONNECTED_WITH_WRITES_PENDING:
+			return "EC_RO_CONNECTED_WITH_WRITES_PENDING";
+		case EC_DISCONNECTING_WITH_WRITES_PENDING:
+			return "EC_DISCONNECTING_WITH_WRITES_PENDING";
+		case EC_DISCONNECTED:
+			return "EC_DISCONNECTED";
+		default:
+			return "unknown";
 		}
 	}
 };

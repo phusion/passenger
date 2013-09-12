@@ -67,6 +67,21 @@ struct EventedMessageClientContext {
 		 * it's properly zeroed out. */
 		scalarReader.reset(true);
 	}
+
+	const char *getStateName() const {
+		switch (state) {
+		case MS_READING_USERNAME:
+			return "MS_READING_USERNAME";
+		case MS_READING_PASSWORD:
+			return "MS_READING_PASSWORD";
+		case MS_READING_MESSAGE:
+			return "MS_READING_MESSAGE";
+		case MS_PROCESSING_MESSAGE:
+			return "MS_PROCESSING_MESSAGE";
+		default:
+			return "unknown";
+		}
+	}
 };
 
 class EventedMessageClient: public EventedClient {

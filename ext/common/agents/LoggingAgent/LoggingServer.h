@@ -389,6 +389,22 @@ private:
 			type = UNINITIALIZED;
 			dataReader.setMaxSize(1024 * 128);
 		}
+
+		template<typename Stream>
+		void inspect(Stream &stream) const {
+			stream << "   * Client " << (int) fd << "\n";
+			stream << "     Initialized      : " << bool(type == LOGGER) << "\n";
+			stream << "     Node name        : " << nodeName << "\n";
+			stream << "     Open transactions: (" << openTransactions.size() << ")";
+			set<string>::const_iterator it, end = openTransactions.end();
+			for (it = openTransactions.begin(); it != end; it++) {
+				stream << " " << *it;
+			}
+			stream << "\n";
+			stream << "     Connection state : " << getStateName() << "\n";
+			stream << "     Message state    : " << messageServer.getStateName() << "\n";
+			stream << "     Outbox           : " << outbox.size() << " bytes\n";
+		}
 	};
 	
 	typedef shared_ptr<Client> ClientPtr;
@@ -1156,7 +1172,13 @@ public:
 		TransactionMap::const_iterator it;
 		TransactionMap::const_iterator end = transactions.end();
 		
-		stream << "Number of clients : " << getClients().size() << "\n";
+		ClientSet::const_iterator cit, cend = getClients().end();
+		stream << "Clients:\n";
+		stream << "  Count: " << getClients().size() << "\n";
+		for (cit = getClients().begin(); cit != cend; cit++) {
+			const Client *client = static_cast<Client *>(*cit);
+			client->inspect(stream);
+		}
 		stream << "\n";
 
 		stream << "RemoteSender:\n";
