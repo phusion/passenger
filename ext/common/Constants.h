@@ -42,6 +42,8 @@
 
 	#define DEFAULT_ANALYTICS_LOG_USER "nobody"
 
+	#define DEFAULT_CONCURRENCY_MODEL "process"
+
 	#define DEFAULT_LOG_LEVEL 0
 
 	#define DEFAULT_MAX_INSTANCES_PER_APP 0
@@ -55,6 +57,8 @@
 	#define DEFAULT_RUBY "ruby"
 
 	#define DEFAULT_START_TIMEOUT 90000
+
+	#define DEFAULT_THREAD_COUNT 1
 
 	#define DEFAULT_UNION_STATION_GATEWAY_ADDRESS "gateway.unionstationapp.com"
 

@@ -82,6 +82,8 @@ http {
         passenger_enabled on;
         rails_env <%= app[:env] %>;
         passenger_spawn_method <%= app[:spawn_method] %>;
+        <% if app[:concurrency_model] != DEFAULT_CONCURRENCY_MODEL %>passenger_concurrency_model <%= app[:concurrency_model] %>;<% end %>
+        <% if app[:thread_count] != DEFAULT_THREAD_COUNT %>passenger_thread_count <%= app[:thread_count] %>;<% end %>
         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
         <% if app[:union_station_key] %>
             union_station_support on;

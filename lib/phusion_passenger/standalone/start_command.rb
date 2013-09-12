@@ -155,6 +155,14 @@ private
 				wrap_desc("The spawn method to use (default: #{@options[:spawn_method]})")) do |value|
 				@options[:spawn_method] = value
 			end
+			opts.on("--concurrency-model NAME", String,
+				wrap_desc("The concurrency model to use, either 'process' or 'thread' (default: #{@options[:concurrency_model]}) (Enterprise only)")) do |value|
+				@options[:concurrency_model] = value
+			end
+			opts.on("--thread-count NAME", Integer,
+				wrap_desc("The number of threads to use when using the 'thread' concurrency model (default: #{@options[:thread_count]}) (Enterprise only)")) do |value|
+				@options[:thread_count] = value
+			end
 			opts.on("--rolling-restarts",
 				wrap_desc("Enable rolling restarts (Enterprise only)")) do
 				@options[:rolling_restarts] = true

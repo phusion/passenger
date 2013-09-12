@@ -1,3 +1,10 @@
+Release 4.0.18
+--------------
+
+ * The Enterprise variant of Phusion Passenger Standalone now supports
+   customizing the concurrency model and thread count from the command line.
+
+
 Release 4.0.17
 --------------
 

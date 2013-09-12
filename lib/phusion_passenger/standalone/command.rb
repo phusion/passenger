@@ -36,6 +36,8 @@ class Command
 		:max_pool_size => 6,
 		:min_instances => 1,
 		:spawn_method  => Kernel.respond_to?(:fork) ? 'smart' : 'direct',
+		:concurrency_model => DEFAULT_CONCURRENCY_MODEL,
+		:thread_count  => DEFAULT_THREAD_COUNT,
 		:nginx_version => PREFERRED_NGINX_VERSION,
 		:friendly_error_pages => true
 	}.freeze
