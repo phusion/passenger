@@ -187,6 +187,7 @@ private
 		@config_filename = "#{@temp_dir}/config"
 		location_config_filename = "#{@temp_dir}/locations.ini"
 		File.chmod(0755, @temp_dir)
+		Dir.mkdir("#{@temp_dir}/logs")
 
 		locations_ini_fields =
 			PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS +
