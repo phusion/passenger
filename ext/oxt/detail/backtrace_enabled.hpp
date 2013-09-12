@@ -41,19 +41,25 @@ namespace oxt {
  * Except if you set the 'detached' argument to true.
  */
 struct trace_point {
+	struct detached { };
+
 	const char *function;
 	const char *source;
-	unsigned int line;
+	const char *data;
+	unsigned short line;
 	bool m_detached;
 	
-	trace_point(const char *function, const char *source, unsigned int line);
-	trace_point(const char *function, const char *source, unsigned int line, bool detached);
+	trace_point(const char *function, const char *source, unsigned short line,
+		const char *data = 0);
+	trace_point(const char *function, const char *source, unsigned short line,
+		const char *data, const detached &detached_tag);
 	~trace_point();
-	void update(const char *source, unsigned int line);
+	void update(const char *source, unsigned short line);
 };
 
 #define TRACE_POINT() oxt::trace_point __p(BOOST_CURRENT_FUNCTION, __FILE__, __LINE__)
 #define TRACE_POINT_WITH_NAME(name) oxt::trace_point __p(name, __FILE__, __LINE__)
+#define TRACE_POINT_WITH_DATA(data) oxt::trace_point __p(BOOST_CURRENT_FUNCTION, __FILE__, __LINE__, data)
 #define UPDATE_TRACE_POINT() __p.update(__FILE__, __LINE__)
 
 } // namespace oxt

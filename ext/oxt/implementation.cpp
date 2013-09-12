@@ -131,9 +131,11 @@ static global_context_t *global_context = NULL;
 
 #ifdef OXT_BACKTRACE_IS_ENABLED
 
-trace_point::trace_point(const char *_function, const char *_source, unsigned int _line)
+trace_point::trace_point(const char *_function, const char *_source, unsigned short _line,
+	const char *_data)
 	: function(_function),
 	  source(_source),
+	  data(_data),
 	  line(_line),
 	  m_detached(false)
 {
@@ -146,9 +148,11 @@ trace_point::trace_point(const char *_function, const char *_source, unsigned in
 	}
 }
 
-trace_point::trace_point(const char *_function, const char *_source, unsigned int _line, bool detached)
+trace_point::trace_point(const char *_function, const char *_source, unsigned short _line,
+	const char *_data, const detached &detached_tag)
 	: function(_function),
 	  source(_source),
+	  data(_data),
 	  line(_line),
 	  m_detached(true)
 { }
@@ -165,7 +169,7 @@ trace_point::~trace_point() {
 }
 
 void
-trace_point::update(const char *source, unsigned int line) {
+trace_point::update(const char *source, unsigned short line) {
 	this->source = source;
 	this->line = line;
 }
@@ -183,7 +187,8 @@ tracable_exception::tracable_exception() {
 				(*it)->function,
 				(*it)->source,
 				(*it)->line,
-				true);
+				(*it)->data,
+				trace_point::detached());
 			backtrace_copy.push_back(p);
 		}
 	}
@@ -199,7 +204,8 @@ tracable_exception::tracable_exception(const tracable_exception &other)
 			(*it)->function,
 			(*it)->source,
 			(*it)->line,
-			true);
+			(*it)->data,
+			trace_point::detached());
 		backtrace_copy.push_back(p);
 	}
 }
@@ -239,6 +245,9 @@ format_backtrace(const Collection &backtrace_list) {
 					source = p->source;
 				}
 				result << " (" << source << ":" << p->line << ")";
+				if (p->data != NULL) {
+					result << " -- " << p->data;
+				}
 			}
 			result << endl;
 		}
