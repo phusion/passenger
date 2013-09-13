@@ -64,7 +64,7 @@ static global_context_t *global_context = NULL;
 		/* Do nothing. */
 	}
 	
-	static void
+	void
 	set_thread_local_context(const thread_local_context_ptr &ctx) {
 		local_context = new thread_local_context_ptr(ctx);
 	}
@@ -99,7 +99,7 @@ static global_context_t *global_context = NULL;
 		local_context = new thread_specific_ptr<thread_local_context_ptr>();
 	}
 
-	static void
+	void
 	set_thread_local_context(const thread_local_context_ptr &ctx) {
 		if (local_context != NULL) {
 			local_context->reset(new thread_local_context_ptr(ctx));

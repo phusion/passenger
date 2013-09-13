@@ -45,7 +45,10 @@
 #include <cstdio>
 #include <unistd.h>
 
+#include <oxt/initialize.hpp>
 #include <oxt/macros.hpp>
+#include <oxt/backtrace.hpp>
+#include <oxt/detail/context.hpp>
 #include "Hooks.h"
 #include "Bucket.h"
 #include "Configuration.hpp"
@@ -480,6 +483,17 @@ private:
 	int handleRequest(request_rec *r) {
 		/********** Step 1: preparation work **********/
 		
+		/* Initialize OXT backtrace support if not already done for this thread */
+		if (oxt::get_thread_local_context() == NULL) {
+			/* There is no need to cleanup the context. Apache uses a static
+			 * number of threads per process.
+			 */
+			thread_local_context_ptr context = thread_local_context::make_shared_ptr();
+			unsigned long tid = (unsigned long) pthread_self();
+			context->thread_name = "Worker " + integerToHex(tid);
+			oxt::set_thread_local_context(context);
+		}
+
 		/* Check whether an error occured in prepareRequest() that should be reported
 		 * to the browser.
 		 */
@@ -1583,7 +1597,9 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	 * universal, i.e. it works for some people but not for others. So we got rid of the
 	 * hacks, and now we always initialize in the post_config hook.
 	 */
-	if (hooks != NULL) {
+	if (hooks == NULL) {
+		oxt::initialize();
+	} else {
 		P_DEBUG("Restarting Phusion Passenger....");
 		delete hooks;
 		hooks = NULL;

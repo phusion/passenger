@@ -82,6 +82,7 @@ struct thread_local_context {
 };
 
 
+void set_thread_local_context(const thread_local_context_ptr &ctx);
 thread_local_context *get_thread_local_context();
 
 
