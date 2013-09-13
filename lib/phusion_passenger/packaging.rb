@@ -130,6 +130,11 @@ module Packaging
 		"debian.template/**/*",
 	]
 
+	# Files and directories that should be excluded from the Homebrew installation.
+	HOMEBREW_EXCLUDE = [
+		"dev", "test", ".gitignore", ".travis.yml", "debian.template", "rpm"
+	]
+
 	def self.files
 		return Dir[*GLOB] - Dir[*EXCLUDE_GLOB]
 	end

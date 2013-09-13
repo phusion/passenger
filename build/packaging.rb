@@ -53,6 +53,24 @@ def recursive_copy_files(files, destination_dir, preprocess = false, variables =
 	end
 end
 
+def word_wrap(text, max = 72)
+	while index = (lines = text.split("\n")).find_index{ |line| line.size > max }
+		line = lines[index]
+		pos = max
+		while pos >= 0 && line[pos..pos] != " "
+			pos -= 1
+		end
+		if pos < 0
+			raise "Cannot wrap line: #{line}"
+		else
+			lines[index] = line[0 .. pos - 1]
+			lines.insert(index + 1, line[pos + 1 .. -1])
+			text = lines.join("\n")
+		end
+	end
+	return text
+end
+
 
 task :clobber => 'package:clean'
 
@@ -140,6 +158,15 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 				abort("Unable to substitute Homebrew formula tarball filename")
 			formula.gsub!(/sha1 .*/, "sha1 '#{sha1}'") ||
 				abort("Unable to substitute Homebrew formula SHA-1")
+			necessary_dirs = ORIG_TARBALL_FILES.call.map{ |filename| filename.split("/").first }.uniq
+			necessary_dirs -= PhusionPassenger::Packaging::HOMEBREW_EXCLUDE
+			necessary_dirs += ["buildout"]
+			necessary_dirs_str = word_wrap(necessary_dirs.inspect).split("\n").join("\n      ")
+			if formula =~ /necessary_files/
+				formula.sub!(/necessary_files = .*?\]/m, "necessary_files = Dir#{necessary_dirs_str}")
+			else
+				formula.sub!(/cp_r Dir\["\*"\], prefix/, "cp_r Dir#{necessary_dirs_str}, prefix")
+			end
 			File.open("/tmp/homebrew/Library/Formula/passenger.rb", "w") do |f|
 				f.write(formula)
 			end
