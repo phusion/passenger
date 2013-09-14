@@ -162,11 +162,8 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			necessary_dirs -= PhusionPassenger::Packaging::HOMEBREW_EXCLUDE
 			necessary_dirs += ["buildout"]
 			necessary_dirs_str = word_wrap(necessary_dirs.inspect).split("\n").join("\n      ")
-			if formula =~ /necessary_files/
-				formula.sub!(/necessary_files = .*?\]/m, "necessary_files = Dir#{necessary_dirs_str}")
-			else
-				formula.sub!(/cp_r Dir\["\*"\], prefix/, "cp_r Dir#{necessary_dirs_str}, prefix")
-			end
+			formula.sub!(/necessary_files = .*?\]/m, "necessary_files = Dir#{necessary_dirs_str}") ||
+				abort("Unable to substitute file whitelist")
 			File.open("/tmp/homebrew/Library/Formula/passenger.rb", "w") do |f|
 				f.write(formula)
 			end
