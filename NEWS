@@ -7,6 +7,9 @@ Release 4.0.18
    is enabled in Nginx. This allows you to deploy Nginx binaries, that have
    Phusion Passenger Enterprise compiled in, to servers that are not
    actually running Phusion Passenger Enterprise.
+ * `passenger-status --show=union_station` now displays all clients that
+   are connected to the LoggingAgent.
+ * Fixed backtraces in the Apache module.
 
 
 Release 4.0.17
