@@ -813,7 +813,7 @@ uninstalling the Phusion Passenger files, so that the web server behaves as if P
 Passenger was never installed in the first place. This might be useful to you if -
 for example - you seem to be experiencing a problem caused by Phusion Passenger,
 but you want to make sure whether that's actually the case without having
-to through the hassle of uninstalling Phusion Passenger completely. When disabled,
+to go through the hassle of uninstalling Phusion Passenger completely. When disabled,
 Phusion Passenger will not occupy any memory or CPU or otherwise interfere with
 the web server.
 
