@@ -3,6 +3,10 @@ Release 4.0.18
 
  * The Enterprise variant of Phusion Passenger Standalone now supports
    customizing the concurrency model and thread count from the command line.
+ * On Nginx, the Enterprise license is now only checked if Phusion Passenger
+   is enabled in Nginx. This allows you to deploy Nginx binaries, that have
+   Phusion Passenger Enterprise compiled in, to servers that are not
+   actually running Phusion Passenger Enterprise.
 
 
 Release 4.0.17
