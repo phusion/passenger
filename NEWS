@@ -12,6 +12,8 @@ Release 4.0.18
    100 times faster.
  * `passenger-status --show=union_station` now displays all clients that
    are connected to the LoggingAgent.
+ * Added a workaround for Heroku so that exited processes are properly detected
+   as such.
  * When using Phusion Passenger Standalone with Foreman, pressing Ctrl-C
    in Foreman no longer results in runaway Nginx processes.
  * Fixed backtraces in the Apache module.

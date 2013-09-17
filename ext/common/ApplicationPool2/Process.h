@@ -147,6 +147,34 @@ private:
 	/** The handle inside the associated Group's process priority queue. */
 	PriorityQueue<Process>::Handle pqHandle;
 
+	static bool
+	isZombie(pid_t pid) {
+		string filename = "/proc/" + toString(pid) + "/status";
+		FILE *f = fopen(filename.c_str(), "r");
+		if (f == NULL) {
+			// Don't know.
+			return false;
+		}
+
+		bool result = false;
+		while (!feof(f)) {
+			char buf[512];
+			const char *line;
+
+			line = fgets(buf, sizeof(buf), f);
+			if (line == NULL) {
+				break;
+			}
+			if (strcmp(line, "State:	Z (zombie)\n") == 0) {
+				// Is a zombie.
+				result = true;
+				break;
+			}
+		}
+		fclose(f);
+		return result;
+	}
+
 	void indexSessionSockets() {
 		SocketList::iterator it;
 		concurrency = 0;
@@ -458,8 +486,16 @@ public:
 	 */
 	bool osProcessExists() const {
 		if (!dummy && m_osProcessExists) {
-			// Once we detect that a process is gone.
-			m_osProcessExists = syscalls::kill(pid, 0) == 0 || errno != ESRCH;
+			if (syscalls::kill(pid, 0) == 0) {
+				/* On some environments, e.g. Heroku, the init process does
+				 * not properly reap adopted zombie processes, which can interfere
+				 * with our process existance check. To work around this, we
+				 * explicitly check whether or not the process has become a zombie.
+				 */
+				m_osProcessExists = !isZombie(pid);
+			} else {
+				m_osProcessExists = errno != ESRCH;
+			}
 			return m_osProcessExists;
 		} else {
 			return false;
