@@ -879,7 +879,7 @@ protected:
 				}
 				
 				transaction = make_shared<Transaction>(this, ev_now(getLoop()));
-				if (unionStationKey.empty()) {
+				if (unionStationKey == "-") {
 					char tempNodeId[MD5_HEX_SIZE];
 					
 					if (nodeId == NULL) {
