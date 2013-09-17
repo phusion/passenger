@@ -9,6 +9,8 @@ Release 4.0.18
    actually running Phusion Passenger Enterprise.
  * `passenger-status --show=union_station` now displays all clients that
    are connected to the LoggingAgent.
+ * When using Phusion Passenger Standalone with Foreman, pressing Ctrl-C
+   in Foreman no longer results in runaway Nginx processes.
  * Fixed backtraces in the Apache module.
 
 

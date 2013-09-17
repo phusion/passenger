@@ -85,10 +85,12 @@ class StartCommand < Command
 			watch_log_files_in_background if should_watch_logs?
 			wait_until_nginx_has_exited if should_wait_until_nginx_has_exited?
 		rescue Interrupt
+			begin_shutdown
 			stop_threads
 			stop_nginx
 			exit 2
 		rescue SignalException => signal
+			begin_shutdown
 			stop_threads
 			stop_nginx
 			if signal.message == 'SIGINT' || signal.message == 'SIGTERM'
@@ -97,12 +99,18 @@ class StartCommand < Command
 				raise
 			end
 		rescue Exception => e
+			begin_shutdown
 			stop_threads
 			stop_nginx
 			raise
 		ensure
-			stop_touching_temp_dir_in_background if should_wait_until_nginx_has_exited?
-			stop_threads
+			begin_shutdown
+			begin
+				stop_touching_temp_dir_in_background if should_wait_until_nginx_has_exited?
+				stop_threads
+			ensure
+				finalize_shutdown
+			end
 		end
 	ensure
 		if @temp_dir
@@ -566,6 +574,28 @@ private
 		script = Shellwords.escape("#{PhusionPassenger.helper_scripts_dir}/touch-dir.sh")
 		dir    = Shellwords.escape(@temp_dir)
 		@toucher = IO.popen("sh #{script} #{dir}", "r")
+	end
+
+	def begin_shutdown
+		return if @shutting_down
+		@shutting_down = 1
+		trap("INT", &method(:signal_during_shutdown))
+		trap("TERM", &method(:signal_during_shutdown))
+	end
+
+	def finalize_shutdown
+		@shutting_down = nil
+		trap("INT", "DEFAULT")
+		trap("TERM", "DEFAULT")
+	end
+
+	def signal_during_shutdown(signal)
+		if @shutting_down == 1
+			@shutting_down += 1
+			puts "Ignoring signal #{signal} during shutdown. Send it again to force exit."
+		else
+			exit!(1)
+		end
 	end
 
 	def stop_touching_temp_dir_in_background
