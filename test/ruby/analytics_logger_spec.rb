@@ -28,7 +28,7 @@ describe AnalyticsLogger do
 	end
 	
 	def mock_time(time)
-		AnalyticsLogger.stub!(:current_time).and_return(time)
+		AnalyticsLogger.stub(:current_time).and_return(time)
 	end
 	
 	def start_agent
