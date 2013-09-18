@@ -344,7 +344,7 @@ private:
 			return;
 		}
 
-		assert(dataState = OPENING_FILE);
+		assert(dataState == OPENING_FILE);
 		if (req.result < 0) {
 			setError(req.errorno);
 		} else {

@@ -119,5 +119,10 @@ BackgroundEventLoop::stop() {
 	}
 }
 
+bool
+BackgroundEventLoop::isStarted() const {
+	return priv->thr != NULL;
+}
+
 
 } // namespace Passenger

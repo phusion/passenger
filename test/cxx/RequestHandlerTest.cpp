@@ -63,15 +63,24 @@ namespace tut {
 		
 		~RequestHandlerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
+			if (bg.isStarted()) {
+				bg.safe->runSync(boost::bind(&RequestHandlerTest::destroy, this));
+			} else {
+				destroy();
+			}
 			unlink(serverFilename.c_str());
-			handler.reset();
-			pool->destroy();
-			pool.reset();
 		}
 
 		void init() {
 			handler = make_shared<RequestHandler>(bg.safe, requestSocket, pool, agentOptions);
 			bg.start();
+		}
+
+		void destroy() {
+			handler.reset();
+			pool->destroy();
+			pool.reset();
+			ev_break(bg.loop, EVBREAK_ALL);
 		}
 
 		void initPoolDebugging() {
