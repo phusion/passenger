@@ -1128,6 +1128,7 @@ private:
 		}
 
 		RH_DEBUG(client, "Application sent EOF");
+		client->session.reset();
 		client->endScopeLog(&client->scopeLogs.requestProxying);
 		client->clientOutputPipe->end();
 	}
@@ -2061,7 +2062,10 @@ private:
 
 		RH_TRACE(client, 2, "Sending headers to application");
 
-		if (client->session->getProtocol() == "session") {
+		if (client->session == NULL) {
+			disconnectWithError(client,
+				"Application sent EOF before we were able to send headers to it");
+		} else if (client->session->getProtocol() == "session") {
 			char sizeField[sizeof(uint32_t)];
 			SmallVector<StaticString, 10> data;
 
@@ -2164,15 +2168,20 @@ private:
 	void state_sendingHeaderToApp_onAppOutputWritable(const ClientPtr &client) {
 		state_sendingHeaderToApp_verifyInvariants(client);
 
-		ssize_t ret = gatheredWrite(client->session->fd(), NULL, 0, client->appOutputBuffer);
-		if (ret == -1) {
-			if (errno != EAGAIN && errno != EPIPE && errno != ECONNRESET) {
-				disconnectWithAppSocketWriteError(client, errno);
+		if (client->session == NULL) {
+			disconnectWithError(client,
+				"Application sent EOF before we were able to send headers to it");
+		} else {
+			ssize_t ret = gatheredWrite(client->session->fd(), NULL, 0, client->appOutputBuffer);
+			if (ret == -1) {
+				if (errno != EAGAIN && errno != EPIPE && errno != ECONNRESET) {
+					disconnectWithAppSocketWriteError(client, errno);
+				}
+				// TODO: what about other errors?
+			} else if (client->appOutputBuffer.empty()) {
+				client->appOutputWatcher.stop();
+				sendBodyToApp(client);
 			}
-			// TODO: what about other errors?
-		} else if (client->appOutputBuffer.empty()) {
-			client->appOutputWatcher.stop();
-			sendBodyToApp(client);
 		}
 	}
 
@@ -2216,6 +2225,14 @@ private:
 		}
 
 		RH_TRACE(client, 3, "Forwarding " << size << " bytes of client body data to application.");
+
+		if (client->session == NULL) {
+			RH_TRACE(client, 2, "Application had already sent EOF. Stop reading client input.");
+			client->clientInput->stop();
+			syscalls::shutdown(client->fd, SHUT_RD);
+			return 0;
+		}
+
 		ssize_t ret = syscalls::write(client->session->fd(), data, size);
 		int e = errno;
 		if (ret == -1) {
@@ -2253,7 +2270,7 @@ private:
 
 		RH_TRACE(client, 2, "End of (unbuffered) client body reached; done sending data to application");
 		client->clientInput->stop();
-		if (client->shouldHalfCloseWrite()) {
+		if (client->session != NULL && client->shouldHalfCloseWrite()) {
 			syscalls::shutdown(client->session->fd(), SHUT_WR);
 		}
 	}
@@ -2280,6 +2297,14 @@ private:
 		assert(client->requestBodyIsBuffered);
 
 		RH_TRACE(client, 3, "Forwarding " << size << " bytes of buffered client body data to application.");
+
+		if (client->session == NULL) {
+			RH_TRACE(client, 2, "Application had already sent EOF. Stop reading client input.");
+			syscalls::shutdown(client->fd, SHUT_RD);
+			consumed(0, true);
+			return;
+		}
+
 		ssize_t ret = syscalls::write(client->session->fd(), data, size);
 		if (ret == -1) {
 			int e = errno;
@@ -2306,7 +2331,7 @@ private:
 		assert(client->requestBodyIsBuffered);
 
 		RH_TRACE(client, 2, "End of (buffered) client body reached; done sending data to application");
-		if (client->shouldHalfCloseWrite()) {
+		if (client->session != NULL && client->shouldHalfCloseWrite()) {
 			syscalls::shutdown(client->session->fd(), SHUT_WR);
 		}
 	}

@@ -160,7 +160,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP(RequestHandlerTest);
+	DEFINE_TEST_GROUP_WITH_LIMIT(RequestHandlerTest, 80);
 
 	TEST_METHOD(1) {
 		// Test one normal request.
@@ -921,6 +921,31 @@ namespace tut {
 		string response = readAll(connection);
 		ensure(response.find("Status: 604 Unknown Reason-Phrase") != string::npos);
 		ensure(response.find("This website is under heavy load") != string::npos);
+	}
+
+	TEST_METHOD(51) {
+		set_test_name("It relieves the application process after having read its entire response data");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/blob",
+			NULL);
+		vector<ProcessPtr> processes;
+		EVENTUALLY(5,
+			processes = pool->getProcesses();
+			result = processes.size() == 1;
+		);
+		EVENTUALLY(5,
+			LockGuard l(pool->syncher);
+			result = processes[0]->processed == 1;
+		);
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals("The session is closed before the client is done reading",
+				processes[0]->sessions, 0);
+		}
 	}
 
 	// Test small response buffering.

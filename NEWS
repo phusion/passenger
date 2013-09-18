@@ -1,6 +1,10 @@
 Release 4.0.19
 --------------
 
+ * Fixed a problem with response buffering. Application processes are now
+   properly marked available for request processing immediately after they're
+   done sending the response, instead of after having sent the entire response
+   to the client.
  * The "processed" counter in `passenger-status` is now bumped after the process
    has handled a request, not at the beginning.
 
