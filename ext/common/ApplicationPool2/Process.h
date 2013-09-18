@@ -557,7 +557,6 @@ public:
 		} else {
 			socket->sessions++;
 			this->sessions++;
-			processed++;
 			socket->pqHandle = sessionSockets.push(socket, socket->utilization());
 			lastUsed = SystemTime::getUsec();
 			return make_shared<Session>(shared_from_this(), socket);
@@ -572,6 +571,7 @@ public:
 		
 		socket->sessions--;
 		this->sessions--;
+		processed++;
 		sessionSockets.decrease(socket->pqHandle, socket->utilization());
 		assert(!atFullUtilization());
 	}
