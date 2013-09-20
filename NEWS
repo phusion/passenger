@@ -7,6 +7,7 @@ Release 4.0.19
    to the client.
  * The "processed" counter in `passenger-status` is now bumped after the process
    has handled a request, not at the beginning.
+ * [Enterprise] Fixed an off-by-one bug in the `passenger_max_processes` setting.
 
 
 Release 4.0.18
