@@ -198,7 +198,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			command = "cd /srv/passenger_autobuilder/app && " +
 				"/tools/silence-unless-failed chpst -l /tmp/passenger_autobuilder.lock " +
 				"./autobuild-with-pbuilder #{git_url} passenger-enterprise --tag=#{tag}"
-			ssh "psg_autobuilder_run@juvia-helper.phusion.nl at now <<<'#{command}'"
+			sh "ssh psg_autobuilder_run@juvia-helper.phusion.nl at now <<<'#{command}'"
 
 			puts "Initiating building of Debian packages"
 			command = "cd /srv/passenger_apt_automation && " +
