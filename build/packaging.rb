@@ -187,13 +187,20 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 		else
 			dir = "/u/apps/passenger_website/shared"
 			subdir = string_option('NAME', version)
+			git_url = `git config remote.origin.url`.strip
+
 			sh "scp #{PKG_DIR}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
 			sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
 			sh "curl -F file=@#{PKG_DIR}/#{basename}.gem --user admin:#{website_config['admin_password']} " +
 				"https://www.phusionpassenger.com/enterprise_gems/upload"
 
+			puts "Initiating building of binaries"
+			command = "cd /srv/passenger_autobuilder/app && " +
+				"/tools/silence-unless-failed chpst -l /tmp/passenger_autobuilder.lock " +
+				"./autobuild-with-pbuilder #{git_url} passenger-enterprise --tag=#{tag}"
+			ssh "psg_autobuilder_run@juvia-helper.phusion.nl at now <<<'#{command}'"
+
 			puts "Initiating building of Debian packages"
-			git_url = `git config remote.origin.url`.strip
 			command = "cd /srv/passenger_apt_automation && " +
 				"chpst -l /tmp/passenger_apt_automation.lock " +
 				"/tools/silence-unless-failed " +
