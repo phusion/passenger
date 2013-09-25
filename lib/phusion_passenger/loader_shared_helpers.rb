@@ -187,17 +187,23 @@ module LoaderSharedHelpers
 		elsif File.exist?('config/setup_load_paths.rb')
 			require File.expand_path('config/setup_load_paths')
 		
-		# If the Bundler lock environment file exists then load that. If it
+		# Older versions of Bundler use .bundle/environment.rb as the Bundler
+		# environment lock file. This has been replaced by Gemfile.lock in later
+		# versions, but we still support the older mechanism.
+		# If the Bundler environment lock file exists then load that. If it
 		# exists then there's a 99.9% chance that loading it is the correct
 		# thing to do.
 		elsif File.exist?('.bundle/environment.rb')
-			require File.expand_path('.bundle/environment')
+			running_bundler do
+				require File.expand_path('.bundle/environment')
+			end
 		
-		# If the Bundler environment file doesn't exist then there are two
+		# If the legacy Bundler environment file doesn't exist then there are two
 		# possibilities:
 		# 1. Bundler is not used, in which case we don't have to do anything.
-		# 2. Bundler *is* used, but the gems are not locked and we're supposed
-		#    to call Bundler.setup.
+		# 2. Bundler *is* used, but either the user is using a newer Bundler versions,
+		#    or the gems are not locked. In either case, we're supposed to call
+		#    Bundler.setup.
 		#
 		# The existence of Gemfile indicates whether (2) is true:
 		elsif File.exist?('Gemfile')
@@ -208,8 +214,10 @@ module LoaderSharedHelpers
 			# harmless. If this isn't the correct thing to do after all then
 			# there's always the load_path_setup_file option and
 			# setup_load_paths.rb.
-			require 'rubygems'
-			require 'bundler/setup'
+			running_bundler do
+				require 'rubygems'
+				require 'bundler/setup'
+			end
 		end
 		
 		# Bundler might remove Phusion Passenger from the load path in its zealous
@@ -318,6 +326,52 @@ module LoaderSharedHelpers
 	# will fire off necessary events perform necessary cleanup tasks.
 	def after_handling_requests
 		PhusionPassenger.call_event(:stopping_worker_process)
+	end
+
+private
+	def running_bundler
+		yield
+	rescue Exception => e
+		if defined?(Bundler::GemNotFound) && e.is_a?(Bundler::GemNotFound)
+			prepend_exception_comment(e, "It looks like Bundler could not find a gem. This " +
+				"is probably because your\n" +
+				"application is being run under a different environment than it's supposed to.\n" +
+				"Please check the following:\n\n" +
+				" * Is this app supposed to be run as the `#{whoami}` user?\n" +
+				" * Is this app being run on the correct Ruby interpreter? Below you will\n" +
+				"   see which Ruby interpreter Phusion Passenger attempted to use. If you \n" +
+				"   are using RVM, please also check whether the correct gemset is being used.\n")
+		end
+		raise e
+	end
+
+	def prepend_exception_comment(e, comment)
+		# Since Exception doesn't allow changing the message, we monkeypatch
+		# the #message and #to_s methods.
+		separator = "\n-------- The exception is as follows: -------\n"
+		new_message = comment + separator + e.message
+		new_s = comment + separator + e.to_s
+		metaclass = class << e; self; end
+		metaclass.send(:define_method, :message) do
+			new_message
+		end
+		metaclass.send(:define_method, :to_s) do
+			new_s
+		end
+	end
+
+	def whoami
+		require 'etc'
+		begin
+			user = Etc.getpwuid(Process.uid)
+		rescue ArgumentError
+			user = nil
+		end
+		if user
+			return user.name
+		else
+			return "##{Process.uid}"
+		end
 	end
 end
 
