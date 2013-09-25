@@ -226,16 +226,20 @@ function RequestHandler(readyCallback, clientCallback) {
 
 		function handleData(data) {
 			if (state == 'PARSING_HEADER') {
-				parser.feed(data);
+				var consumed = parser.feed(data);
 				if (parser.state == SPP_DONE) {
 					state = 'HEADER_SEEN';
+					socket.removeListener('data', handleData);
 					PhusionPassenger.emit('request', parser, socket);
+					if (consumed != data.length) {
+						socket.emit('data', data.slice(consumed));
+					}
 				} else if (parser.state == SPP_ERROR) {
 					console.error('Header parse error');
 					socket.destroySoon();
 				}
 			} else {
-				// Do nothing yet.
+				// Do nothing.
 			}
 		}
 
