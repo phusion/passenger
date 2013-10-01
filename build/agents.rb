@@ -176,6 +176,12 @@ file AGENT_OUTPUT_DIR + 'EnvPrinter' => 'ext/common/agents/EnvPrinter.c' do
 		'ext/common/agents/EnvPrinter.c')
 end
 
+file AGENT_OUTPUT_DIR + 'TempDirToucher' => 'ext/common/agents/TempDirToucher.c' do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	create_c_executable(AGENT_OUTPUT_DIR + 'TempDirToucher',
+		'ext/common/agents/TempDirToucher.c')
+end
+
 task 'common:clean' do
 	sh "rm -rf #{AGENT_OUTPUT_DIR}"
 end

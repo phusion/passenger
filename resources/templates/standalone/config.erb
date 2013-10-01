@@ -21,6 +21,7 @@ http {
     passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_root '<%= location_config_filename %>';
     passenger_abort_on_startup_error on;
+    passenger_ctl cleanup_pidfiles <%= serialize_strset("#{@temp_dir}/temp_dir_toucher.pid") %>;
     passenger_user_switching off;
     passenger_max_pool_size <%= @options[:max_pool_size] %>;
     passenger_min_instances <%= @options[:min_instances] %>;

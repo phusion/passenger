@@ -211,6 +211,7 @@ dependencies = [
 	'test/support/allocate_memory',
 	NATIVE_SUPPORT_TARGET,
 	AGENT_OUTPUT_DIR + 'SpawnPreparer',
+	AGENT_OUTPUT_DIR + 'TempDirToucher',
 	AGENT_OUTPUT_DIR + 'EnvPrinter'
 ].compact
 desc "Run unit tests for the Apache 2 and Nginx C++ components"

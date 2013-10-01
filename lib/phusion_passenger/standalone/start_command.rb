@@ -106,16 +106,12 @@ class StartCommand < Command
 		ensure
 			begin_shutdown
 			begin
-				stop_touching_temp_dir_in_background if should_wait_until_nginx_has_exited?
 				stop_threads
 			ensure
 				finalize_shutdown
 			end
 		end
 	ensure
-		if @temp_dir
-			FileUtils.remove_entry_secure(@temp_dir) rescue nil
-		end
 		@plugin.call_hook(:cleanup)
 	end
 
@@ -402,6 +398,10 @@ private
 		return !@options[:daemonize]
 	end
 
+	def should_cleanup_temp_dir?
+		return @temp_dir && !@options[:daemonize]
+	end
+
 	# Returns the URL that Nginx will be listening on.
 	def listen_url
 		if @options[:socket_file]
@@ -570,10 +570,16 @@ private
 	end
 
 	def touch_temp_dir_in_background
-		require 'shellwords'
-		script = Shellwords.escape("#{PhusionPassenger.helper_scripts_dir}/touch-dir.sh")
-		dir    = Shellwords.escape(@temp_dir)
-		@toucher = IO.popen("sh #{script} #{dir}", "r")
+		result = system("#{PhusionPassenger.agents_dir}/TempDirToucher",
+			@temp_dir,
+			"--cleanup",
+			"--daemonize",
+			"--pid-file", "#{@temp_dir}/temp_dir_toucher.pid",
+			"--log-file", @options[:log_file])
+		if !result
+			error "Cannot start #{PhusionPassenger.agents_dir}/TempDirToucher"
+			exit 1
+		end
 	end
 
 	def begin_shutdown

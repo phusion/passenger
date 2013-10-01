@@ -98,6 +98,7 @@ struct WorkingObjects {
 	ServerInstanceDir::GenerationPtr generation;
 	uid_t defaultUid;
 	gid_t defaultGid;
+	vector<string> cleanupPidfiles;
 	string loggingAgentAddress;
 	string loggingAgentPassword;
 	string loggingAgentAdminAddress;
@@ -271,12 +272,40 @@ waitForStarterProcessOrWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcher
 	}
 }
 
+static vector<pid_t>
+readCleanupPids(const WorkingObjectsPtr &wo) {
+	vector<pid_t> result;
+
+	foreach (string filename, wo->cleanupPidfiles) {
+		FILE *f = fopen(filename.c_str(), "r");
+		if (f != NULL) {
+			char buf[33];
+			size_t ret;
+
+			ret = fread(buf, 1, 32, f);
+			if (ret > 0) {
+				buf[ret] = '\0';
+				result.push_back(atoi(buf));
+			} else {
+				P_WARN("Cannot read cleanup PID file " << filename);
+			}
+		} else {
+			P_WARN("Cannot open cleanup PID file " << filename);
+		}
+	}
+
+	return result;
+}
+
 static void
 cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers, char *argv[]) {
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
+	vector<pid_t> cleanupPids;
 	pid_t pid;
 	int e;
+
+	cleanupPids = readCleanupPids(wo);
 
 	pid = fork();
 	if (pid == 0) {
@@ -345,6 +374,12 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 		// Now clean up the server instance directory.
 		delete wo->generation.get();
 		delete wo->serverInstanceDir.get();
+
+		// Notify given PIDs about our shutdown.
+		foreach (pid_t pid, cleanupPids) {
+			P_DEBUG("Sending SIGTERM to cleanup PID " << pid);
+			kill(pid, SIGTERM);
+		}
 		
 		_exit(0);
 		
@@ -518,6 +553,9 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &ser
 
 	UPDATE_TRACE_POINT();
 	lookupDefaultUidGid(wo->defaultUid, wo->defaultGid);
+
+	UPDATE_TRACE_POINT();
+	wo->cleanupPidfiles = agentsOptions.getStrSet("cleanup_pidfiles", false);
 
 	UPDATE_TRACE_POINT();
 	wo->loggingAgentAddress  = "unix:" + wo->generation->getPath() + "/logging";

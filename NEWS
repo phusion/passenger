@@ -1,3 +1,12 @@
+Release 4.0.20
+--------------
+
+ * Fixed a bug in Phusion Passenger Standalone's daemon mode. When in daemon
+   mode, the Nginx temporary directory was deleted prematurely, causing some
+   POST requests to fail. This was a regression that was introduced in 4.0.15
+   as part of an optimization.
+
+
 Release 4.0.19
 --------------
 

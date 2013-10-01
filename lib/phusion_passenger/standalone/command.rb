@@ -222,6 +222,16 @@ private
 			puts output if debugging?
 		end
 	end
+
+	def serialize_strset(*items)
+		if "".respond_to?(:force_encoding)
+			items = items.map { |x| x.force_encoding('binary') }
+			null  = "\0".force_encoding('binary')
+		else
+			null  = "\0"
+		end
+		return [items.join(null)].pack('m*').gsub("\n", "").strip
+	end
 	
 	def determine_nginx_start_command
 		if @options[:nginx_bin]
