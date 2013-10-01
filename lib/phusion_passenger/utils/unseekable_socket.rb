@@ -115,6 +115,12 @@ class UnseekableSocket
 	rescue => e
 		raise annotate(e)
 	end
+
+	def write_nonblock(string)
+		@socket.write_nonblock(string)
+	rescue => e
+		raise annotate(e)
+	end
 	
 	def writev(components)
 		@socket.writev(components)
@@ -134,6 +140,24 @@ class UnseekableSocket
 		raise annotate(e)
 	end if IO.method_defined?(:writev3)
 	
+	def send(*args)
+		@socket.send(*args)
+	rescue => e
+		raise annotate(e)
+	end
+
+	def sendmsg(*args)
+		@socket.sendmsg(*args)
+	rescue => e
+		raise annotate(e)
+	end
+
+	def sendmsg_nonblock(*args)
+		@socket.sendmsg_nonblock(*args)
+	rescue => e
+		raise annotate(e)
+	end
+
 	def puts(*args)
 		@socket.puts(*args)
 	rescue => e
@@ -165,6 +189,13 @@ class UnseekableSocket
 	rescue => e
 		raise annotate(e)
 	end
+
+	def read_nonblock(*args)
+		raise EOFError, "end of file reached" if @simulate_eof
+		@socket.read_nonblock(*args)
+	rescue => e
+		raise annotate(e)
+	end
 	
 	def readpartial(*args)
 		raise EOFError, "end of file reached" if @simulate_eof
@@ -176,6 +207,27 @@ class UnseekableSocket
 	def readline
 		raise EOFError, "end of file reached" if @simulate_eof
 		@socket.readline
+	rescue => e
+		raise annotate(e)
+	end
+
+	def recv(*args)
+		raise EOFError, "end of file reached" if @simulate_eof
+		@socket.recv(*args)
+	rescue => e
+		raise annotate(e)
+	end
+
+	def recvfrom(*args)
+		raise EOFError, "end of file reached" if @simulate_eof
+		@socket.recvfrom(*args)
+	rescue => e
+		raise annotate(e)
+	end
+
+	def recvfrom_nonblock(*args)
+		raise EOFError, "end of file reached" if @simulate_eof
+		@socket.recvfrom_nonblock(*args)
 	rescue => e
 		raise annotate(e)
 	end
