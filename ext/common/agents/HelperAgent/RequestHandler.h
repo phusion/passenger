@@ -1748,7 +1748,7 @@ private:
 			client->beginScopeLog(&client->scopeLogs.requestProcessing, "request processing");
 
 			StaticString staticRequestMethod = parser.getHeader("REQUEST_METHOD");
-			client->logMessage("METHOD: " + staticRequestMethod);
+			client->logMessage("Request method: " + staticRequestMethod);
 
 			StaticString staticRequestURI = parser.getHeader("REQUEST_URI");
 			if (!staticRequestURI.empty()) {
