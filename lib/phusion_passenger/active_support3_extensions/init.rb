@@ -26,17 +26,17 @@ require 'digest/md5'
 
 module PhusionPassenger
 
-module Rails3Extensions
+module ActiveSupport3Extensions
 	def self.init!(options, user_options = {})
 		if !AnalyticsLogging.install!(options, user_options)
 			# Remove code to save memory.
-			PhusionPassenger::Rails3Extensions.send(:remove_const, :AnalyticsLogging)
-			PhusionPassenger.send(:remove_const, :Rails3Extensions)
+			PhusionPassenger::ActiveSupport3Extensions.send(:remove_const, :AnalyticsLogging)
+			PhusionPassenger.send(:remove_const, :ActiveSupport3Extensions)
 		end
 	end
 end
 
-module Rails3Extensions
+module ActiveSupport3Extensions
 class AnalyticsLogging < ActiveSupport::LogSubscriber
 	def self.install!(options, user_options)
 		analytics_logger = options["analytics_logger"]
@@ -67,9 +67,11 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 			exceptions_middleware = ActionDispatch::ShowExceptions
 		end
 		if exceptions_middleware
-			Rails.application.middleware.insert_after(
-				exceptions_middleware,
-				ExceptionLogger, analytics_logger, app_group_name)
+			if defined?(Rails)
+				Rails.application.middleware.insert_after(
+					exceptions_middleware,
+					ExceptionLogger, analytics_logger, app_group_name)
+			end
 		end
 		
 		if defined?(ActionController::Base)
@@ -231,6 +233,6 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 		end
 	end
 end # class AnalyticsLogging
-end # module Rails3Extensions
+end # module ActiveSupport3Extensions
 
 end # module PhusionPassenger
