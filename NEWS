@@ -5,6 +5,10 @@ Release 4.0.20
    mode, the Nginx temporary directory was deleted prematurely, causing some
    POST requests to fail. This was a regression that was introduced in 4.0.15
    as part of an optimization.
+ * [Enterprise] Fixed a packaging problem which caused the flying-passenger
+   executable not to be properly included in the bin path.
+ * [Enterprise] Fixed a race condition which sometimes causes the Flying
+   Passenger socket to be deleted after a restart. Fixes issue #939.
 
 
 Release 4.0.19
