@@ -9,6 +9,9 @@ Release 4.0.20
    executable not to be properly included in the bin path.
  * [Enterprise] Fixed a race condition which sometimes causes the Flying
    Passenger socket to be deleted after a restart. Fixes issue #939.
+ * [Enterprise] The `byebug` gem is now supported for debugging on Ruby 2.0.
+   The byebug gem requires a patch before this works:
+   https://github.com/deivid-rodriguez/byebug/pull/29
 
 
 Release 4.0.19

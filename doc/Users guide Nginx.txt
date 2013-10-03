@@ -1655,13 +1655,14 @@ include::users_guide_snippets/alternative_for_flying_passenger.txt[]
 include::users_guide_snippets/enterprise_only.txt[]
 
 Turns support for application debugging on or off. In case of Ruby applications,
-turning this option on will cause them to load the `ruby-debug` gem (when on Ruby 1.8)
-or the `debugger` gem (when on Ruby 1.9). If you're using Bundler, you should add
-this to your Gemfile:
+turning this option on will cause them to load the `ruby-debug` gem (when on Ruby 1.8),
+the `debugger` gem (when on Ruby 1.9) or the `byebug` gem (when on Ruby 2.0). If you're
+using Bundler, you should add this to your Gemfile:
 
 -------------------------------------------
 gem 'ruby-debug', :platforms => :ruby_18
 gem 'debugger', :platforms => :ruby_19
+gem 'byebug', :platforms => :ruby_20
 -------------------------------------------
 
 Once debugging is turned on, you can use the command `passenger-irb --debug <PID>` to attach an rdebug console to the application process with the given PID. Attaching will succeed once the application process executes a `debugger` command.
