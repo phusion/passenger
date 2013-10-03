@@ -506,7 +506,24 @@ public:
 		requestHandler.reset();
 
 		if (!options.requestSocketLink.empty()) {
-			syscalls::unlink(options.requestSocketLink.c_str());
+			char path[PATH_MAX + 1];
+			ssize_t ret;
+			bool shouldUnlink;
+
+			ret = readlink(options.requestSocketLink.c_str(), path, PATH_MAX);
+			if (ret != -1) {
+				path[ret] = '\0';
+				// Only unlink if a new Flying Passenger instance hasn't overwritten the
+				// symlink.
+				// https://code.google.com/p/phusion-passenger/issues/detail?id=939
+				shouldUnlink = getRequestSocketFilename() == path;
+			} else {
+				shouldUnlink = true;
+			}
+
+			if (shouldUnlink) {
+				syscalls::unlink(options.requestSocketLink.c_str());
+			}
 		}
 		
 		P_TRACE(2, "All threads have been shut down.");
