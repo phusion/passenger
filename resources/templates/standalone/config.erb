@@ -11,6 +11,16 @@ daemon on;
 error_log '<%= @options[:log_file] %>' <% if debugging? %>info<% end %>;
 pid '<%= @options[:pid_file] %>';
 
+<% if Process.euid == 0 %>
+    <% if @options[:user] %>
+        <%# Run workers as the given user. The master process will always run as root and will be able to bind to any port. %>
+        user <%= @options[:user] %> <%= default_group_for(@options[:user]) %>;
+    <% else %>
+        <%# Prevent running Nginx workers as nobody. %>
+        user <%= current_user %> <%= default_group_for(current_user) %>;
+    <% end %>
+<% end %>
+
 events {
     worker_connections 1024;
 }
