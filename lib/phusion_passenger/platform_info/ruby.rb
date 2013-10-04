@@ -255,19 +255,23 @@ module PlatformInfo
 			matching_path = $LOAD_PATH.find_all do |item|
 				item.include?("rvm/gems/")
 			end
-			if matching_path
+			if matching_path && !matching_path.empty?
 				subpath = matching_path.to_s.gsub(/^.*rvm\/gems\//, '')
 				result = subpath.split('/').first
 				return result if result
 			end
-			
+
 			# On Ruby 1.9, $LOAD_PATH does not contain any gem paths until
 			# at least one gem has been required so the above can fail.
 			# We're out of options now, we can't detect the gem set.
 			# Raise an exception so that the user knows what's going on
 			# instead of having things fail in obscure ways later.
 			STDERR.puts "Unable to autodetect the currently active RVM gem " +
-				"set name. Please contact this program's author for support."
+				"set name. This could happen if you ran this program using 'sudo' " +
+				"instead of 'rvmsudo'. When using RVM, you're always supposed to " +
+				"use 'rvmsudo' instead of 'sudo!'.\n\n" +
+				"Please try rerunning this program using 'rvmsudo'. If that " +
+				"doesn't help, please contact this program's author for support."
 			exit 1
 		end
 		return nil
