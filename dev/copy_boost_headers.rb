@@ -35,6 +35,7 @@ ESSENTIALS = [
 	"libs/system/src",
 	"boost/date_time/gregorian/formatters_limited.hpp",
 	"boost/date_time/date_formatting_limited.hpp",
+	"boost/type_traits/detail/*",
 	"boost/non_type.hpp",
 	"boost/detail/fenv.hpp",
 	"boost/foreach.hpp"
