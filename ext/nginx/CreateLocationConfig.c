@@ -133,6 +133,10 @@
 	
 
 	
+		conf->load_shell_envvars = NGX_CONF_UNSET;
+	
+
+	
 		conf->union_station_key.data = NULL;
 		conf->union_station_key.len  = 0;
 	

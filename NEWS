@@ -7,6 +7,9 @@ Release 4.0.20
    as part of an optimization.
  * Improved detection of RVM problems.
  * Fixed compilation problems on Solaris 10 with Sun Studio 12.3.
+ * Introduced a new option, `PassengerLoadShellEnvvars` (Apache) and
+   `passenger_load_shell_envvars` (Nginx). This allows enabling or disabling
+   the loading of bashrc before spawning the application.
  * [Enterprise] Fixed a packaging problem which caused the flying-passenger
    executable not to be properly included in the bin path.
  * [Enterprise] Fixed a race condition which sometimes causes the Flying

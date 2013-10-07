@@ -47,4 +47,5 @@
 				config->highPerformance = DirConfig::UNSET;
 				config->enabled = DirConfig::UNSET;
 				config->maxRequestQueueSize = UNSET_INT_VALUE;
+				config->loadShellEnvvars = DirConfig::UNSET;
 	

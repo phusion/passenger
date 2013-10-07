@@ -100,5 +100,10 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:min_value => 0,
 		:context => ["OR_ALL"],
 		:desc => "The maximum number of queued requests."
+	},
+	{
+		:name => "PassengerLoadShellEnvvars",
+		:type => :flag,
+		:desc => "Whether to load environment variables from the shell before running the application."
 	}
 ]

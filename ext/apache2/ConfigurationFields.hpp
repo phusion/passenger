@@ -38,18 +38,20 @@
 
 
 
-	/** Enable or disable Phusion Passenger. */
-	Threeway enabled;
+	/** Whether to load environment variables from the shell before running the application. */
+	Threeway loadShellEnvvars;
 	/** Enable or disable Passenger's high performance mode. */
 	Threeway highPerformance;
+	/** Enable or disable Phusion Passenger. */
+	Threeway enabled;
 	/** The maximum number of queued requests. */
 	int maxRequestQueueSize;
+	/** The maximum number of requests that an application instance may process. */
+	int maxRequests;
 	/** The minimum number of application instances to keep when cleaning idle instances. */
 	int minInstances;
 	/** A timeout for application startup. */
 	int startTimeout;
-	/** The maximum number of requests that an application instance may process. */
-	int maxRequests;
 	/** The group that Ruby applications must run as. */
 	const char *group;
 	/** The user that Ruby applications must run as. */

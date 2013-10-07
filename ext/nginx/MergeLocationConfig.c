@@ -148,6 +148,12 @@
 	
 
 	
+		ngx_conf_merge_value(conf->load_shell_envvars,
+			prev->load_shell_envvars,
+			NGX_CONF_UNSET);
+	
+
+	
 		ngx_conf_merge_str_value(conf->union_station_key,
 			prev->union_station_key,
 			NULL);

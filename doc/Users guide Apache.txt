@@ -612,6 +612,24 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'smart'.
 
+[[PassengerLoadShellEnvvars]]
+=== passengerLoadShellEnvvars <on|off> ===
+:version: 4.0.20
+include::users_guide_snippets/since_version.txt[]
+
+Enables or disables the loading of shell environment variables before spawning the application.
+
+If this option is turned on, and the user's shell is `bash`, then applications are loaded by running them with `bash -l -c`. Otherwise, they are loaded by running them directly from the `PassengerHelperAgent` process.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
 [[PassengerEnabled]]
 === PassengerEnabled <on|off> ===
 You can set this option to 'off' to completely disable Phusion Passenger for

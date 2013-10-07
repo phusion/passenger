@@ -230,6 +230,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:type  => :string
 	},
 	{
+		:name  => 'passenger_load_shell_envvars',
+		:type  => :flag
+	},
+	{
 		:name  => 'union_station_key',
 		:type  => :string
 	},

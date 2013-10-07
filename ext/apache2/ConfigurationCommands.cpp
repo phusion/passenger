@@ -93,3 +93,9 @@
 		OR_ALL,
 		"The maximum number of queued requests."),
 
+	AP_INIT_FLAG("PassengerLoadShellEnvvars",
+		(FlagFunc) cmd_passenger_load_shell_envvars,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to load environment variables from the shell before running the application."),
+

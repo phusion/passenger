@@ -179,6 +179,13 @@ u_char int_buf[32], *end, *buf, *pos;
 	
 
 	
+		if (conf->load_shell_envvars != NGX_CONF_UNSET) {
+			len += 29;
+			len += conf->load_shell_envvars ? sizeof("true") : sizeof("false");
+		}
+	
+
+	
 		if (conf->union_station_key.data != NULL) {
 			len += 18;
 			len += conf->union_station_key.len + 1;
@@ -446,6 +453,19 @@ buf = pos = ngx_pnalloc(cf->pool, len);
 				conf->spawn_method.len);
 			*pos = '\0';
 			pos++;
+		}
+	
+
+	
+		if (conf->load_shell_envvars != NGX_CONF_UNSET) {
+			pos = ngx_copy(pos,
+				"PASSENGER_LOAD_SHELL_ENVVARS",
+				29);
+			if (conf->load_shell_envvars) {
+				pos = ngx_copy(pos, "true", sizeof("true"));
+			} else {
+				pos = ngx_copy(pos, "false", sizeof("false"));
+			}
 		}
 	
 

@@ -999,6 +999,8 @@ private:
 			apr_psprintf(r->pool, "%ld", config->getMinInstances()));
 		addHeader(output, "PASSENGER_MAX_PRELOADER_IDLE_TIME",
 			apr_psprintf(r->pool, "%ld", config->maxPreloaderIdleTime));
+		addHeader(output, "PASSENGER_LOAD_SHELL_ENVVARS",
+			config->getLoadShellEnvvars() ? "true" : "false");
 		addHeader(output, "PASSENGER_DEBUGGER", "false");
 		addHeader(output, "PASSENGER_SHOW_VERSION_IN_HEADER", "true");
 		addHeader(output, "PASSENGER_MAX_REQUESTS",
