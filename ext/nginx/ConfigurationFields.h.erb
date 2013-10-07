@@ -49,7 +49,7 @@ end
 
 def struct_field_for(option)
 	if option.has_key?(:field)
-		return option[:field]
+		return option[:field].to_s
 	else
 		return option[:name].sub(/^passenger_/, '')
 	end
