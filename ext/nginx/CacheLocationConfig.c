@@ -26,7 +26,7 @@
 /*
  * CacheLocationConfig.c is automatically generated from CacheLocationConfig.c.erb,
  * using definitions from lib/phusion_passenger/nginx/config_options.rb.
- * Edits to MergeLocationConfig.c will be lost.
+ * Edits to CacheLocationConfig.c will be lost.
  *
  * To update CacheLocationConfig.c:
  *   rake nginx
