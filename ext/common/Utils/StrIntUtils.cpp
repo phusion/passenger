@@ -512,7 +512,7 @@ cEscapeString(const StaticString &input) {
 string
 escapeHTML(const StaticString &input) {
 	string result;
-	result.reserve((int) round(input.size() * 1.25));
+	result.reserve((int) ceil(input.size() * 1.25));
 	
 	const char *current = (const char *) input.c_str();
 	const char *end     = current + input.size();
