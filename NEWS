@@ -5,7 +5,6 @@ Release 4.0.20
    mode, the Nginx temporary directory was deleted prematurely, causing some
    POST requests to fail. This was a regression that was introduced in 4.0.15
    as part of an optimization.
- * Fixed compilation problems on OS X Mavericks. Fixes issue #950.
  * Fixed compilation problems on Solaris 10 with Sun Studio 12.3.
  * Improved detection of RVM problems.
  * Introduced a new option, `PassengerLoadShellEnvvars` (Apache) and
