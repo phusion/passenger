@@ -52,8 +52,8 @@ class Installer < PhusionPassenger::AbstractInstaller
 			'depcheck_specs/apache2'
 		]
 		ids = [
-			'gcc',
-			'g++',
+			'cc',
+			'c++',
 			'libcurl-dev',
 			'openssl-dev',
 			'zlib-dev',

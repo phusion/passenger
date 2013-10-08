@@ -1,5 +1,5 @@
-define 'gcc' do
-  name "GNU C compiler"
+define 'cc' do
+  name "C compiler"
   website "http://gcc.gnu.org/"
   define_checker do
     require 'phusion_passenger/platform_info/compiler'
@@ -23,8 +23,8 @@ define 'gcc' do
   end
 end
 
-define 'g++' do
-  name "GNU C++ compiler"
+define 'c++' do
+  name "C++ compiler"
   website "http://gcc.gnu.org/"
   define_checker do
     require 'phusion_passenger/platform_info/compiler'

@@ -132,8 +132,8 @@ MAINTAINER_NAME  = "Phusion"
 MAINTAINER_EMAIL = "info@phusion.nl"
 
 OPTIMIZE = boolean_option("OPTIMIZE")
-CC       = maybe_wrap_in_ccache(string_option("CC", "gcc"))
-CXX      = maybe_wrap_in_ccache(string_option("CXX", "g++"))
+CC       = maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cc)
+CXX      = maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cxx)
 LIBEXT   = PlatformInfo.library_extension
 USE_DMALLOC = boolean_option('USE_DMALLOC')
 USE_EFENCE  = boolean_option('USE_EFENCE')

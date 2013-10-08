@@ -99,8 +99,8 @@ protected
 			'depcheck_specs/utilities'
 		]
 		ids = [
-			'gcc',
-			'g++',
+			'cc',
+			'c++',
 			'gmake',
 			'ruby-openssl',
 			'rubygems',

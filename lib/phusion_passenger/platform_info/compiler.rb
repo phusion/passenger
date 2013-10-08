@@ -22,6 +22,7 @@
 #  THE SOFTWARE.
 
 require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/operating_system'
 
 module PhusionPassenger
 
@@ -106,11 +107,32 @@ private
 
 public
 	def self.cc
-		return string_env('CC', 'gcc')
+		return string_env('CC', default_cc)
 	end
 	
 	def self.cxx
-		return string_env('CXX', 'g++')
+		return string_env('CXX', default_cxx)
+	end
+
+	def self.default_cc
+		# OS X Mavericks (10.9) switched from GCC to Clang as the default compiler,
+		# i.e. as an alias for 'cc'. Since the Nginx by default uses 'cc' as the compiler,
+		# we'll have to do that too. Otherwise we'll get C++ linker errors because Nginx
+		# is compiled with Clang while Phusion Passenger is compiled with GCC.
+		# https://code.google.com/p/phusion-passenger/issues/detail?id=950
+		if PlatformInfo.os_name == "macosx"
+			return 'cc'
+		else
+			return 'gcc'
+		end
+	end
+
+	def self.default_cxx
+		if PlatformInfo.os_name == "macosx"
+			return 'c++'
+		else
+			return 'g++'
+		end
 	end
 
 	def self.cc_is_clang?

@@ -48,8 +48,8 @@ class Installer < PhusionPassenger::AbstractInstaller
 			'depcheck_specs/utilities'
 		]
 		ids = [
-			'gcc',
-			'g++',
+			'cc',
+			'c++',
 			'download-tool',
 			PlatformInfo.passenger_needs_ruby_dev_header? ? 'ruby-dev' : nil,
 			'ruby-openssl',
