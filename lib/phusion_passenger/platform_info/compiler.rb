@@ -123,6 +123,11 @@ public
 	end
 	memoize :cxx_is_clang?
 
+	def self.cc_is_sun_studio?
+		`#{cc} -V 2>&1` =~ /Sun C/ || `#{cc} -flags 2>&1` =~ /Sun C/
+	end
+	memoize :cc_is_sun_studio?
+
 
 	# Looks for the given C or C++ header. This works by invoking the compiler and
 	# searching in the compiler's header search path. Returns its full filename,

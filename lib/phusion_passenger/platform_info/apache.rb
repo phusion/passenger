@@ -399,7 +399,12 @@ module PlatformInfo
 	# The C compiler flags that are necessary to compile an Apache module.
 	# Also includes APR and APU compiler flags if with_apr_flags is true.
 	def self.apache2_module_cflags(with_apr_flags = true)
-		flags = ["-fPIC"]
+		flags = [""]
+		if cc_is_sun_studio?
+			flags << "-KPIC"
+		else
+			flags << "-fPIC"
+		end
 		if with_apr_flags
 			flags << apr_flags
 			flags << apu_flags

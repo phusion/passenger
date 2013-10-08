@@ -87,5 +87,10 @@ def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTR
 	else
 		shlib_flag = "-shared"
 	end
-	run_compiler "#{CXX} #{shlib_flag} #{sources} -fPIC -o #{target} #{flags}"
+	if PhusionPassenger::PlatformInfo.cc_is_sun_studio?
+		fPIC = "-KPIC"
+	else
+		fPIC = "-fPIC"
+	end
+	run_compiler "#{CXX} #{shlib_flag} #{sources} #{fPIC} -o #{target} #{flags}"
 end
