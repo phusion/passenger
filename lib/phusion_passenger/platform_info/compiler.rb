@@ -135,6 +135,11 @@ public
 		end
 	end
 
+	def self.cc_is_gcc?
+		`#{cc} -v 2>&1` =~ /gcc version/
+	end
+	memoize :cc_is_gcc?
+
 	def self.cc_is_clang?
 		`#{cc} --version 2>&1` =~ /clang version/
 	end
@@ -335,10 +340,10 @@ public
 		# -ggdb instead.
 		#
 		# In any case we'll always want to use -ggdb for better GDB debugging.
-		if cc_is_clang? || cxx_is_clang?
-			return '-g'
-		else
+		if cc_is_gcc?
 			return '-ggdb'
+		else
+			return '-g'
 		end
 	end
 

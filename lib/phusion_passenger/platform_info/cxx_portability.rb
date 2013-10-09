@@ -95,7 +95,11 @@ module PlatformInfo
 		flags << '-DHAVE_ACCEPT4' if ok
 		
 		if RUBY_PLATFORM =~ /solaris/
-			flags << '-pthreads'
+			if PhusionPassenger::PlatformInfo.cc_is_sun_studio?
+				flags << '-mt'
+			else
+				flags << '-pthreads'
+			end
 			if RUBY_PLATFORM =~ /solaris2.11/
 				# skip the _XOPEN_SOURCE and _XPG4_2 definitions in later versions of Solaris / OpenIndiana
 				flags << '-D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
@@ -104,7 +108,11 @@ module PlatformInfo
 				flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
 			end
 			flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
-			flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
+			if PhusionPassenger::PlatformInfo.cc_is_sun_studio?
+				flags << '-xtarget=ultra' if RUBY_PLATFORM =~ /sparc/
+			else
+				flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
+			end
 		elsif RUBY_PLATFORM =~ /openbsd/
 			flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
 		elsif RUBY_PLATFORM =~ /aix/
