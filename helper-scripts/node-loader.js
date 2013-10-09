@@ -427,7 +427,11 @@ function use(server) {
 	PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
 		var req = createIncomingMessage(headers, socket, bodyBegin);
 		if (req.headers['upgrade']) {
-			server.emit('upgrade', req, socket, bodyBegin);
+			if (EventEmitter.listenerCount(server, 'upgrade') > 0) {
+				server.emit('upgrade', req, socket, bodyBegin);
+			} else {
+				socket.destroy();
+			}
 		} else {
 			var res = createServerResponse(req);
 			server.emit('request', req, res);
