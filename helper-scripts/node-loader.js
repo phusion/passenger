@@ -25,6 +25,7 @@
 
 var EventEmitter = require('events').EventEmitter;
 var net = require('net');
+var http;
 GLOBAL.PhusionPassenger = new EventEmitter();
 
 /**
@@ -212,10 +213,6 @@ SessionProtocolParser.prototype.parse = function() {
 	}
 }
 
-//var p = new SessionProtocolParser();
-//p.feed(new Buffer("\x00\x00\x00\x06hi\0ho\0"));
-//process.exit();
-
 
 function RequestHandler(readyCallback, clientCallback) {
 	var self = this;
@@ -230,10 +227,7 @@ function RequestHandler(readyCallback, clientCallback) {
 				if (parser.state == SPP_DONE) {
 					state = 'HEADER_SEEN';
 					socket.removeListener('data', handleData);
-					PhusionPassenger.emit('request', parser, socket);
-					if (consumed != data.length) {
-						socket.emit('data', data.slice(consumed));
-					}
+					PhusionPassenger.emit('request', parser, socket, data.slice(consumed));
 				} else if (parser.state == SPP_ERROR) {
 					console.error('Header parse error');
 					socket.destroySoon();
@@ -254,12 +248,121 @@ function RequestHandler(readyCallback, clientCallback) {
 }
 
 
+const HTTP_HEADERS_WITHOUT_PREFIX = {
+	'CONTENT_LENGTH': true,
+	'CONTENT_TYPE': true
+};
+
+function cgiKeyToHttpHeader(key) {
+	if (HTTP_HEADERS_WITHOUT_PREFIX[key]) {
+		return key.toLowerCase().replace(/_/g, '-');
+	} else if (key.match(/^HTTP_/)) {
+		return key.replace(/^HTTP_/, '').toLowerCase().replace(/_/g, '-');
+	} else {
+		return undefined;
+	}
+}
+
+function setHttpHeaders(httpHeaders, cgiHeaders) {
+	for (var i = 0; i < cgiHeaders.keys.length; i++) {
+		var key = cgiHeaders.keys[i];
+		var httpHeader = cgiKeyToHttpHeader(key);
+		if (httpHeader !== undefined) {
+			httpHeaders[httpHeader] = cgiHeaders[key];
+		}
+	}
+
+	if (cgiHeaders['HTTPS']) {
+		httpHeaders['x-forwarded-proto'] = 'https';
+	}
+	if (!httpHeaders['x-forwarded-for']) {
+		httpHeaders['x-forwarded-for'] = cgiHeaders['REMOTE_ADDR'];
+	}
+}
+
+function inferHttpVersion(protocolDescription) {
+	var match = protocolDescription.match(/^HTTP\/(.+)/);
+	if (match) {
+		return match[1];
+	}
+}
+
+function mayHaveRequestBody(headers) {
+	return headers['REQUEST_METHOD'] != 'GET' || headers['HTTP_UPGRADE'];
+}
+
+function createIncomingMessage(headers, socket, bodyBegin) {
+	var message = new http.IncomingMessage(socket);
+	setHttpHeaders(message.headers, headers);
+	message.cgiHeaders = headers;
+	message.httpVersion = inferHttpVersion(headers['SERVER_PROTOCOL']);
+	message.method = headers['REQUEST_METHOD'];
+	message.url    = headers['REQUEST_URI'];
+	message.connection.remoteAddress = headers['REMOTE_ADDR'];
+	message.connection.remotePort = parseInt(headers['REMOTE_PORT']);
+
+	function onSocketData(chunk) {
+		message.emit('data', chunk);
+	}
+
+	function onSocketEnd() {
+		message.emit('end');
+	}
+
+	socket.on('drain', function() {
+		message.emit('drain');
+	});
+	socket.on('timeout', function() {
+		message.emit('timeout');
+	});
+
+	/* Node's HTTP parser simulates an 'end' event if it determines that
+	 * the request should not have a request body. Currently (Node 0.10.18),
+	 * it thinks GET requests without an Upgrade header should not have a
+	 * request body, even though technically such GET requests are allowed
+	 * to have a request body. For compatibility reasons we implement the
+	 * same behavior as Node's HTTP parser.
+	 */
+	if (mayHaveRequestBody(headers)) {
+		socket.on('data', onSocketData);
+		socket.on('end', onSocketEnd);
+		if (bodyBegin.length > 0) {
+			process.nextTick(function() {
+				// TODO: we should check here whether the socket hasn't already been closed
+				socket.emit('data', bodyBegin);
+			});
+		}
+	} else {
+		// TODO: we should check in the next tick whether the socket hasn't already been closed
+		process.nextTick(onSocketEnd);
+	}
+
+	return message;
+}
+
+function createServerResponse(req) {
+	var res = new http.ServerResponse(req);
+	res.assignSocket(req.socket);
+	res.shouldKeepAlive = false;
+	res.once('finish', function() {
+		req.socket.destroySoon();
+	});
+	return res;
+}
+
+
 /**************************/
 
-var reader = new LineReader(process.stdin);
+var stdinReader = new LineReader(process.stdin);
+beginHandshake();
+readInitializationHeader();
+
+function beginHandshake() {
+	process.stdout.write("!> I have control 1.0\n");
+}
 
 function readInitializationHeader() {
-	reader.readLine(function(line) {
+	stdinReader.readLine(function(line) {
 		if (line != "You have control 1.0\n") {
 			console.error('Invalid initialization header');
 			process.exit(1);
@@ -273,9 +376,9 @@ function readOptions() {
 	var options = {};
 
 	function readNextOption() {
-		reader.readLine(function(line) {
+		stdinReader.readLine(function(line) {
 			if (line == "\n") {
-				initialize(options);
+				setupEnvironment(options);
 			} else if (line == "") {
 				console.error("End of stream encountered while reading initialization options");
 				process.exit(1);
@@ -290,20 +393,13 @@ function readOptions() {
 	readNextOption();
 }
 
-function initialize(options) {
+function setupEnvironment(options) {
 	PhusionPassenger.options = options;
+	PhusionPassenger.use     = use;
+	PhusionPassenger._requestHandler = new RequestHandler(loadApplication);
 
-	PhusionPassenger.requestHandler = new RequestHandler(function() {
-		require(options.app_root + '/passenger_node.js');
-		process.stdout.write("!> Ready\n");
-		process.stdout.write("!> socket: main;tcp://127.0.0.1:" +
-			PhusionPassenger.requestHandler.server.address().port +
-			";session;0\n");
-		process.stdout.write("!> \n");
-	});
-
-	reader.close();
-	reader = undefined;
+	stdinReader.close();
+	stdinReader = undefined;
 	process.stdin.on('end', function() {
 		if (PhusionPassenger.listeners('exit').length == 0) {
 			process.exit(0);
@@ -314,5 +410,42 @@ function initialize(options) {
 	process.stdin.resume();
 }
 
-process.stdout.write("!> I have control 1.0\n");
-readInitializationHeader();
+function loadApplication() {
+	require(PhusionPassenger.options.app_root + '/passenger_node.js');
+}
+
+function use(server) {
+	PhusionPassenger._httpServer = server;
+	server.listen = listen;
+	http = require('http');
+
+	if (arguments.length > 1 && typeof(arguments[arguments.length - 1]) == 'function') {
+		var callback = arguments[arguments.length - 1];
+		server.on('request', callback);
+	}
+
+	PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
+		var req = createIncomingMessage(headers, socket, bodyBegin);
+		if (req.headers['upgrade']) {
+			server.emit('upgrade', req, socket, bodyBegin);
+		} else {
+			var res = createServerResponse(req);
+			server.emit('request', req, res);
+		}
+	});
+
+	return server;
+}
+
+function listen() {
+	finalizeStartup();
+	PhusionPassenger._httpServer.emit('listening');
+}
+
+function finalizeStartup() {
+	process.stdout.write("!> Ready\n");
+	process.stdout.write("!> socket: main;tcp://127.0.0.1:" +
+		PhusionPassenger._requestHandler.server.address().port +
+		";session;0\n");
+	process.stdout.write("!> \n");
+}
