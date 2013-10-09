@@ -172,11 +172,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b mxcl:master"
 
 			puts "Initiating building of Debian packages"
-			command = "cd /srv/passenger_apt_automation && " +
-				"chpst -l /tmp/passenger_apt_automation.lock " +
-				"/tools/silence-unless-failed " +
-				"./new_release https://github.com/phusion/passenger.git passenger.repo passenger.apt release-#{version}"
-			sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
+			Rake::Task['package:initiate_debian_building'].invoke
 
 			puts "Building OS X binaries..."
 			sh "cd ../passenger_autobuilder && " +
@@ -201,11 +197,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			sh "ssh psg_autobuilder_run@juvia-helper.phusion.nl at now <<<'#{command}'"
 
 			puts "Initiating building of Debian packages"
-			command = "cd /srv/passenger_apt_automation && " +
-				"chpst -l /tmp/passenger_apt_automation.lock " +
-				"/tools/silence-unless-failed " +
-				"./new_release #{git_url} passenger-enterprise.repo passenger-enterprise.apt enterprise-#{version}"
-			sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
+			Rake::Task['package:initiate_debian_building'].invoke
 
 			sh "cd ../passenger_autobuilder && " +
 				"git pull && " +
@@ -289,6 +281,27 @@ task 'package:sign' do
 	ensure
 		File.unlink('.gpg-password') if File.exist?('.gpg-password')
 	end
+end
+
+task 'package:initiate_debian_building' do
+	version        = PhusionPassenger::VERSION_STRING
+	is_enterprise  = PhusionPassenger::PACKAGE_NAME =~ /enterprise/
+	is_open_source = !is_enterprise
+
+	if is_open_source
+		command = "cd /srv/passenger_apt_automation && " +
+			"chpst -l /tmp/passenger_apt_automation.lock " +
+			"/tools/silence-unless-failed " +
+			"./new_release https://github.com/phusion/passenger.git passenger.repo passenger.apt release-#{version}"
+	else
+		git_url = `git config remote.origin.url`.strip
+		command = "cd /srv/passenger_apt_automation && " +
+			"chpst -l /tmp/passenger_apt_automation.lock " +
+			"/tools/silence-unless-failed " +
+			"./new_release #{git_url} passenger-enterprise.repo passenger-enterprise.apt enterprise-#{version}"
+	end
+
+	sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
 end
 
 desc "Remove gem, tarball and signatures"
