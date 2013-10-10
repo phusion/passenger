@@ -658,6 +658,12 @@ gpg --refresh-keys --keyserver pool.sks-servers.net
 gpg --refresh-keys --keyserver keyserver.ubuntu.com
 -------------------------------------------------------
 
+If you installed Phusion Passenger through our APT repository, then you should update APT's keyring from time to time as well:
+
+-------------------------------------------------------
+sudo apt-key adv --refresh-keys --keyserver keyserver.ubuntu.com
+-------------------------------------------------------
+
 
 === Non-interactive, automatic, headless installs or upgrades
 
