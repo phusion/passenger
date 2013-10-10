@@ -333,7 +333,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 				max = (*it)->getFeedbackFd();
 			}
 		}
-		
+		strcpy(argv[0], "PassengerWatchdog (cleaning up 1...)");
 		timer.start();
 		agentProcessesDone = 0;
 		while (agentProcessesDone != -1
@@ -358,7 +358,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 				usleep(10000);
 			}
 		}
-		
+		strcpy(argv[0], "PassengerWatchdog (cleaning up 2...)");
 		if (agentProcessesDone == -1 || timer.elapsed() >= deadline) {
 			// An error occurred or we've waited long enough. Kill all the
 			// processes.
@@ -367,20 +367,21 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 		} else {
 			P_DEBUG("All Phusion Passenger agent processes have exited. Forcing all subprocesses to shut down.");
 		}
+		strcpy(argv[0], "PassengerWatchdog (cleaning up 3...)");
 		for (it = watchers.begin(); it != watchers.end(); it++) {
 			(*it)->forceShutdown();
 		}
-		
+		strcpy(argv[0], "PassengerWatchdog (cleaning up 4...)");
 		// Now clean up the server instance directory.
 		delete wo->generation.get();
 		delete wo->serverInstanceDir.get();
-
+strcpy(argv[0], "PassengerWatchdog (cleaning up 5...)");
 		// Notify given PIDs about our shutdown.
 		foreach (pid_t pid, cleanupPids) {
 			P_DEBUG("Sending SIGTERM to cleanup PID " << pid);
 			kill(pid, SIGTERM);
 		}
-		
+		strcpy(argv[0], "PassengerWatchdog (cleaning up 6...)");
 		_exit(0);
 		
 	} else if (pid == -1) {
