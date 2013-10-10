@@ -25,7 +25,7 @@
 
 var EventEmitter = require('events').EventEmitter;
 var net = require('net');
-var http;
+var http = require('http');
 GLOBAL.PhusionPassenger = new EventEmitter();
 
 /**
@@ -415,14 +415,25 @@ function loadApplication() {
 }
 
 function use(server) {
-	PhusionPassenger._httpServer = server;
-	server.listen = listen;
-	http = require('http');
-
-	if (arguments.length > 1 && typeof(arguments[arguments.length - 1]) == 'function') {
-		var callback = arguments[arguments.length - 1];
-		server.on('request', callback);
+	if (server instanceof http.Server) {
+		return useHttpServer(server);
+	} else if (typeof(server) == 'function' && server.use) {
+		return useConnectObject(server);
+	} else {
+		throw new Error('Unable to detect server type. At the moment, only ' +
+			'http.Server and Connect.js app objects are supported.');
 	}
+}
+
+function useHttpServer(server) {
+	server.listen = function listen() {
+		if (arguments.length > 1 && typeof(arguments[arguments.length - 1]) == 'function') {
+			var callback = arguments[arguments.length - 1];
+			server.on('request', callback);
+		}
+		finalizeStartup();
+		server.emit('listening');
+	};
 
 	PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
 		var req = createIncomingMessage(headers, socket, bodyBegin);
@@ -441,9 +452,18 @@ function use(server) {
 	return server;
 }
 
-function listen() {
-	finalizeStartup();
-	PhusionPassenger._httpServer.emit('listening');
+function useConnectObject(app) {
+	app.listen = function listen() {
+		finalizeStartup();
+	};
+
+	PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
+		var req = createIncomingMessage(headers, socket, bodyBegin);
+		var res = createServerResponse(req);
+		app(req, res);
+	});
+	
+	return app;
 }
 
 function finalizeStartup() {
