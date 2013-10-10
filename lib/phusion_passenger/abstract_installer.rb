@@ -71,12 +71,17 @@ class AbstractInstaller
 	rescue Abort
 		puts
 		return false
+	rescue SignalException, SystemExit
+		raise
 	rescue PlatformInfo::RuntimeError => e
 		new_screen
 		puts "<red>An error occurred</red>"
 		puts
 		puts e.message
 		exit 1
+	rescue Exception => e
+		show_support_options_for_installer_bug(e)
+		exit 2
 	ensure
 		after_install
 	end
@@ -209,6 +214,28 @@ protected
 				:swap => swap_mb,
 				:doc => users_guide
 			wait
+		end
+	end
+
+	def show_support_options_for_installer_bug(e)
+		# We do not use template rendering here. Since we've determined that there's
+		# a bug, *anything* may be broken, so we use the safest codepath to ensure that
+		# the user sees the proper messages.
+		begin
+			line
+			@stderr.puts "*** EXCEPTION: #{e} (#{e.class})\n    " +
+				e.backtrace.join("\n    ")
+			new_screen
+			puts '<red>Oops, something went wrong :-(</red>'
+			puts
+			puts "We're sorry, but it looks like this installer ran into an unexpected problem.\n" +
+				"Please visit the following website for support. We'll do our best to help you.\n\n" +
+				"  <b>#{SUPPORT_URL}</b>\n\n" +
+				"When submitting a support inquiry, please copy and paste the entire installler\n" +
+				"output."
+		rescue Exception => e2
+			# Raise original exception so that it doesn't get lost.
+			raise e
 		end
 	end
 	
