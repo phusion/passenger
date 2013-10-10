@@ -357,8 +357,7 @@ Packages are available for the x86 and x86_64 architectures. Our policy is to su
 Packages are signed by "Phusion Automated Software Signing (auto-software-signing@phusion.nl)", fingerprint 1637 8A33 A6EF 1676 2922 526E 561F 9B9C AC40 B2F7. Install our PGP key:
 
 --------------------------------------------------------------
-gpg --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7
-gpg --armor --export 561F9B9CAC40B2F7 | sudo apt-key add -
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7
 --------------------------------------------------------------
 
 Our APT repository is stored on an HTTPS server so you may need to add HTTPS support for APT:
