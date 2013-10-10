@@ -1,0 +1,14 @@
+<% @other_installs.each do |result| %>
+ * To compile against <yellow>Apache <%= result.version %> (<%= result.apxs2 %>)</yellow>:
+   Re-run this installer with: <b>--apxs2-path "<%= result.apxs2 %>"</b>
+<% end %>
+You may also want to read the "Installation" section of the manual for
+installation troubleshooting:
+
+  <%= PhusionPassenger.apache2_doc_path %>
+  <%= APACHE2_DOC_URL %>
+
+If you keep having problems installing, please visit the following website for
+support:
+
+  <%= SUPPORT_URL %>

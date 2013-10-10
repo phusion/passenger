@@ -36,8 +36,10 @@ PhusionPassenger.locate_directories
 ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 
 require 'optparse'
+require 'stringio'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/apache'
+require 'phusion_passenger/platform_info/apache_detector'
 require 'phusion_passenger/abstract_installer'
 
 class Installer < PhusionPassenger::AbstractInstaller
@@ -95,6 +97,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		show_welcome_screen
 		check_gem_install_permission_problems || exit(1)
 		check_dependencies || exit(1)
+		check_whether_there_are_multiple_apache_installs || exit
 		check_whether_apache_uses_compatible_mpm
 		check_whether_os_is_broken
 		check_whether_system_has_enough_ram
@@ -112,6 +115,43 @@ private
 	def show_welcome_screen
 		render_template 'apache2/welcome', :version => VERSION_STRING
 		wait
+	end
+
+	def check_whether_there_are_multiple_apache_installs
+		new_screen
+		puts '<banner>Sanity checking Apache installation...</banner>'
+
+		output = StringIO.new
+		detector = PlatformInfo::ApacheDetector.new(output)
+		begin
+			detector.detect_all
+			detector.report
+			@apache2 = detector.result_for(PlatformInfo.apxs2)
+			if detector.results.size > 1
+				other_installs = detector.results - [@apache2]
+				render_template 'apache2/multiple_apache_installations_detected',
+					:current => @apache2,
+					:other_installs => other_installs
+				puts
+				if interactive?
+					result = prompt_confirmation "Are you sure you want to install " +
+						"against Apache #{@apache2.version} (#{@apache2.apxs2})?"
+					if !result
+						puts
+						line
+						render_template 'apache2/installing_against_a_different_apache',
+							:other_installs => other_installs
+					end
+					return result
+				else
+					puts '<yellow>Continuing installation because --auto is given.</yellow>'
+				end
+			else
+				return true
+			end
+		ensure
+			detector.finish
+		end
 	end
 	
 	def check_whether_apache_uses_compatible_mpm

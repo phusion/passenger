@@ -1,0 +1,15 @@
+<yellow>Multiple Apache installations detected!</yellow>
+
+You are about to install <%= PhusionPassenger::PROGRAM_NAME %> against the following
+Apache installation:
+
+  <b>Apache <%= @current.version %></b>
+  apxs2     : <%= @current.apxs2 %>
+  Executable: <%= @current.httpd %>
+
+However, <%= @other_installs.size %> other Apache installation(s) have been found on your system:
+<% @other_installs.each do |result| %>
+  * Apache <%= result.version %>
+    apxs2     : <%= result.apxs2 %>
+    Executable: <%= result.httpd %>
+<% end %>

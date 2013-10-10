@@ -26,9 +26,10 @@ module PhusionPassenger
 	FILE_LOCATION = File.expand_path(__FILE__)
 	
 	
-	###### Version numbers ######
+	###### Names and version numbers ######
 	
 	PACKAGE_NAME = 'passenger'
+	PROGRAM_NAME = 'Phusion Passenger'
 	# Run 'rake ext/common/Constants.h' after changing this number.
 	VERSION_STRING = '4.0.20'
 	
@@ -147,11 +148,22 @@ module PhusionPassenger
 		}
 	end
 	eval(getters_code, binding, __FILE__, __LINE__)
+
+	def self.apache2_doc_path
+		return "#{doc_dir}/Users guide Apache.html"
+	end
+
+	def self.nginx_doc_path
+		return "#{doc_dir}/Users guide Nginx.html"
+	end
 	
 	
 	###### Other resource locations ######
 	
 	BINARIES_URL_ROOT  = "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release"
+	APACHE2_DOC_URL    = "http://www.modrails.com/documentation/Users%20guide%20Apache.html"
+	NGINX_DOC_URL      = "http://www.modrails.com/documentation/Users%20guide%20Nginx.html"
+	SUPPORT_URL        = "http://www.phusionpassenger.com/support"
 
 	def self.binaries_ca_cert_path
 		return "#{resources_dir}/oss-binaries.phusionpassenger.com.crt"

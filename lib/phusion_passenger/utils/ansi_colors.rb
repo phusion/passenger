@@ -53,6 +53,15 @@ module AnsiColors
 		text.gsub!(%r{<banner>(.*?)</banner>}m, "#{BOLD}#{BLUE_BG}#{YELLOW}\\1#{DEFAULT_TERMINAL_COLOR}")
 		return text
 	end
+
+	def strip_color_tags(text)
+		text = text.gsub(%r{<b>(.*?)</b>}m, "\\1")
+		text.gsub!(%r{<red>(.*?)</red>}m, "\\1")
+		text.gsub!(%r{<green>(.*?)</green>}m, "\\1")
+		text.gsub!(%r{<yellow>(.*?)</yellow>}m, "\\1")
+		text.gsub!(%r{<banner>(.*?)</banner>}m, "\\1")
+		return text
+	end
 end
 
 end # module Utils

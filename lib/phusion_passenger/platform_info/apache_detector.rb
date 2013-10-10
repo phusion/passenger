@@ -76,6 +76,8 @@ class ApacheDetector
 		end
 	end
 
+	attr_reader :results
+
 	def initialize(output)
 		@output  = output
 		@results = []
@@ -191,9 +193,17 @@ class ApacheDetector
 		end
 	end
 
+	def result_for(apxs2)
+		return @results.find { |r| r.apxs2 == apxs2 }
+	end
+
 private
 	def log(message)
-		@output.puts(Utils::AnsiColors.ansi_colorize(message))
+		if @output.tty?
+			@output.puts(Utils::AnsiColors.ansi_colorize(message))
+		else
+			@output.puts(Utils::AnsiColors.strip_color_tags(message))
+		end
 	end
 
 	# On Ubuntu, /usr/bin/apxs2 is a symlink to /usr/bin/apxs. We're only
