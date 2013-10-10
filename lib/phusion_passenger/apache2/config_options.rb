@@ -47,7 +47,8 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 	{
 		:name => "PassengerRuby",
 		:type => :string,
-		:desc => "The Ruby interpreter to use."
+		:desc => "The Ruby interpreter to use.",
+		:header_expression => "config->ruby ? config->ruby : serverConfig.defaultRuby"
 	},
 	{
 		:name => "PassengerMinInstances",
@@ -86,13 +87,15 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:name => "PassengerHighPerformance",
 		:type => :flag,
 		:context => ["OR_ALL"],
-		:desc => "Enable or disable Passenger's high performance mode."
+		:desc    => "Enable or disable Passenger's high performance mode.",
+		:header  => nil
 	},
 	{
 		:name => "PassengerEnabled",
 		:type => :flag,
 		:context => ["OR_ALL"],
-		:desc => "Enable or disable Phusion Passenger."
+		:desc    => "Enable or disable Phusion Passenger.",
+		:header  => nil
 	},
 	{
 		:name => "PassengerMaxRequestQueueSize",

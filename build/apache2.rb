@@ -78,7 +78,8 @@ auto_generated_sources = [
 	'ext/apache2/ConfigurationFields.hpp',
 	'ext/apache2/CreateDirConfig.cpp',
 	'ext/apache2/MergeDirConfig.cpp',
-	'ext/apache2/ConfigurationSetters.cpp'
+	'ext/apache2/ConfigurationSetters.cpp',
+	'ext/apache2/SetHeaders.cpp'
 ]
 
 

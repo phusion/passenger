@@ -158,22 +158,6 @@ struct DirConfig {
 		return enabled != DISABLED;
 	}
 	
-	StaticString getUser() const {
-		if (user != NULL) {
-			return user;
-		} else {
-			return "";
-		}
-	}
-	
-	StaticString getGroup() const {
-		if (group != NULL) {
-			return group;
-		} else {
-			return "";
-		}
-	}
-	
 	StaticString getEnvironment() const {
 		if (environment != NULL) {
 			return environment;
@@ -201,34 +185,6 @@ struct DirConfig {
 		}
 	}
 
-	bool getLoadShellEnvvars() const {
-		return loadShellEnvvars != DISABLED;
-	}
-	
-	unsigned long getMinInstances() const {
-		if (minInstances != UNSET_INT_VALUE) {
-			return minInstances;
-		} else {
-			return 1;
-		}
-	}
-
-	unsigned long getMaxRequests() const {
-		if (maxRequests != UNSET_INT_VALUE) {
-			return maxRequests;
-		} else {
-			return 0;
-		}
-	}
-
-	unsigned long getStartTimeout() const {
-		if (startTimeout != UNSET_INT_VALUE) {
-			return startTimeout;
-		} else {
-			return DEFAULT_START_TIMEOUT / 1000;
-		}
-	}
-	
 	bool highPerformanceMode() const {
 		return highPerformance == ENABLED;
 	}

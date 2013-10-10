@@ -884,6 +884,26 @@ private:
 			headers.append(1, '\0');
 		}
 	}
+
+	void addHeader(request_rec *r, string &headers, const char *name, int value) {
+		if (value != UNSET_INT_VALUE) {
+			headers.append(name);
+			headers.append(1, '\0');
+			headers.append(apr_psprintf(r->pool, "%d", value));
+			headers.append(1, '\0');
+		}
+	}
+
+	void addHeader(request_rec *r, string &headers, const char *name, DirConfig::Threeway value) {
+		if (value != DirConfig::UNSET) {
+			headers.append(name);
+			if (value == DirConfig::ENABLED) {
+				headers.append("\0true\0", 6);
+			} else {
+				headers.append("\0false\0", 7);
+			}
+		}
+	}
 	
 	unsigned int constructHeaders(request_rec *r, DirConfig *config,
 		vector<StaticString> &requestData, DirectoryMapper &mapper,
@@ -984,29 +1004,16 @@ private:
 		addHeader(output, "PASSENGER_STATUS_LINE", "false");
 		addHeader(output, "PASSENGER_APP_ROOT", mapper.getAppRoot());
 		addHeader(output, "PASSENGER_APP_GROUP_NAME", config->getAppGroupName(mapper.getAppRoot()));
-		addHeader(output, "PASSENGER_RUBY", config->ruby ? config->ruby : serverConfig.defaultRuby);
+		#include "SetHeaders.cpp"
 		addHeader(output, "PASSENGER_PYTHON", config->python);
 		addHeader(output, "PASSENGER_ENV", config->getEnvironment());
 		addHeader(output, "PASSENGER_SPAWN_METHOD", config->getSpawnMethodString());
-		addHeader(output, "PASSENGER_USER", config->getUser());
-		addHeader(output, "PASSENGER_GROUP", config->getGroup());
-		if (config->maxRequestQueueSize != UNSET_INT_VALUE) {
-			addHeader(output, "PASSENGER_MAX_REQUEST_QUEUE_SIZE",
-				apr_psprintf(r->pool, "%d", config->maxRequestQueueSize));
-		}
+		addHeader(r, output, "PASSENGER_MAX_REQUEST_QUEUE_SIZE", config->maxRequestQueueSize);
 		addHeader(output, "PASSENGER_APP_TYPE", mapper.getApplicationTypeName());
-		addHeader(output, "PASSENGER_MIN_INSTANCES",
-			apr_psprintf(r->pool, "%ld", config->getMinInstances()));
 		addHeader(output, "PASSENGER_MAX_PRELOADER_IDLE_TIME",
 			apr_psprintf(r->pool, "%ld", config->maxPreloaderIdleTime));
-		addHeader(output, "PASSENGER_LOAD_SHELL_ENVVARS",
-			config->getLoadShellEnvvars() ? "true" : "false");
 		addHeader(output, "PASSENGER_DEBUGGER", "false");
 		addHeader(output, "PASSENGER_SHOW_VERSION_IN_HEADER", "true");
-		addHeader(output, "PASSENGER_MAX_REQUESTS",
-			apr_psprintf(r->pool, "%ld", config->getMaxRequests()));
-		addHeader(output, "PASSENGER_START_TIMEOUT",
-			apr_psprintf(r->pool, "%ld", config->getStartTimeout()));
 		addHeader(output, "PASSENGER_STAT_THROTTLE_RATE",
 			apr_psprintf(r->pool, "%ld", config->getStatThrottleRate()));
 		addHeader(output, "PASSENGER_RESTART_DIR", config->getRestartDir());
