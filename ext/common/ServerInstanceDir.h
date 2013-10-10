@@ -174,6 +174,10 @@ public:
 	
 	public:
 		~Generation() {
+			destroy();
+		}
+
+		void destroy() {
 			if (owner) {
 				removeDirTree(path);
 			}
@@ -315,6 +319,10 @@ public:
 	}
 	
 	~ServerInstanceDir() {
+		destroy();
+	}
+
+	void destroy() {
 		if (owner) {
 			GenerationPtr newestGeneration;
 			try {

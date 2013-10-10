@@ -310,79 +310,86 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 	pid = fork();
 	if (pid == 0) {
 		// Child
-		vector<AgentWatcherPtr>::const_iterator it;
-		Timer timer(false);
-		fd_set fds, fds2;
-		int max, agentProcessesDone;
-		unsigned long long deadline = 30000; // miliseconds
+		try {
+			vector<AgentWatcherPtr>::const_iterator it;
+			Timer timer(false);
+			fd_set fds, fds2;
+			int max, agentProcessesDone;
+			unsigned long long deadline = 30000; // miliseconds
 
-		#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(sun)
-			// Change process title.
-			strcpy(argv[0], "PassengerWatchdog (cleaning up...)");
-		#endif
-		
-		// Wait until all agent processes have exited. The starter
-		// process is responsible for telling the individual agents
-		// to exit.
-		
-		max = 0;
-		FD_ZERO(&fds);
-		for (it = watchers.begin(); it != watchers.end(); it++) {
-			FD_SET((*it)->getFeedbackFd(), &fds);
-			if ((*it)->getFeedbackFd() > max) {
-				max = (*it)->getFeedbackFd();
-			}
-		}
-		strcpy(argv[0], "PassengerWatchdog (cleaning up 1...)");
-		timer.start();
-		agentProcessesDone = 0;
-		while (agentProcessesDone != -1
-		    && agentProcessesDone < (int) watchers.size()
-		    && timer.elapsed() < deadline)
-		{
-			struct timeval timeout;
-			
-			#ifdef FD_COPY
-				FD_COPY(&fds, &fds2);
-			#else
-				FD_ZERO(&fds2);
-				for (it = watchers.begin(); it != watchers.end(); it++) {
-					FD_SET((*it)->getFeedbackFd(), &fds2);
-				}
+			#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(sun)
+				// Change process title.
+				strcpy(argv[0], "PassengerWatchdog (cleaning up...)");
 			#endif
 			
-			timeout.tv_sec = 0;
-			timeout.tv_usec = 10000;
-			agentProcessesDone = syscalls::select(max + 1, &fds2, NULL, NULL, &timeout);
-			if (agentProcessesDone > 0 && timer.elapsed() < deadline) {
-				usleep(10000);
+			// Wait until all agent processes have exited. The starter
+			// process is responsible for telling the individual agents
+			// to exit.
+			
+			max = 0;
+			FD_ZERO(&fds);
+			for (it = watchers.begin(); it != watchers.end(); it++) {
+				FD_SET((*it)->getFeedbackFd(), &fds);
+				if ((*it)->getFeedbackFd() > max) {
+					max = (*it)->getFeedbackFd();
+				}
 			}
+
+			timer.start();
+			agentProcessesDone = 0;
+			while (agentProcessesDone != -1
+			    && agentProcessesDone < (int) watchers.size()
+			    && timer.elapsed() < deadline)
+			{
+				struct timeval timeout;
+				
+				#ifdef FD_COPY
+					FD_COPY(&fds, &fds2);
+				#else
+					FD_ZERO(&fds2);
+					for (it = watchers.begin(); it != watchers.end(); it++) {
+						FD_SET((*it)->getFeedbackFd(), &fds2);
+					}
+				#endif
+				
+				timeout.tv_sec = 0;
+				timeout.tv_usec = 10000;
+				agentProcessesDone = syscalls::select(max + 1, &fds2, NULL, NULL, &timeout);
+				if (agentProcessesDone > 0 && timer.elapsed() < deadline) {
+					usleep(10000);
+				}
+			}
+
+			if (agentProcessesDone == -1 || timer.elapsed() >= deadline) {
+				// An error occurred or we've waited long enough. Kill all the
+				// processes.
+				P_WARN("Some Phusion Passenger agent processes did not exit " <<
+					"in time, forcefully shutting down all.");
+			} else {
+				P_DEBUG("All Phusion Passenger agent processes have exited. Forcing all subprocesses to shut down.");
+			}
+			for (it = watchers.begin(); it != watchers.end(); it++) {
+				(*it)->forceShutdown();
+			}
+
+			// Now clean up the server instance directory.
+			wo->generation->destroy();
+			wo->serverInstanceDir->destroy();
+
+			// Notify given PIDs about our shutdown.
+			foreach (pid_t pid, cleanupPids) {
+				P_DEBUG("Sending SIGTERM to cleanup PID " << pid);
+				kill(pid, SIGTERM);
+			}
+			strcpy(argv[0], "PassengerWatchdog (cleaning up 6...)");
+			_exit(0);
+		} catch (const std::exception &e) {
+			P_CRITICAL("An exception occurred during cleaning up: " << e.what());
+			_exit(1);
+		} catch (...) {
+			P_CRITICAL("An unknown exception occurred during cleaning up");
+			_exit(1);
 		}
-		strcpy(argv[0], "PassengerWatchdog (cleaning up 2...)");
-		if (agentProcessesDone == -1 || timer.elapsed() >= deadline) {
-			// An error occurred or we've waited long enough. Kill all the
-			// processes.
-			P_WARN("Some Phusion Passenger agent processes did not exit " <<
-				"in time, forcefully shutting down all.");
-		} else {
-			P_DEBUG("All Phusion Passenger agent processes have exited. Forcing all subprocesses to shut down.");
-		}
-		strcpy(argv[0], "PassengerWatchdog (cleaning up 3...)");
-		for (it = watchers.begin(); it != watchers.end(); it++) {
-			(*it)->forceShutdown();
-		}
-		strcpy(argv[0], "PassengerWatchdog (cleaning up 4...)");
-		// Now clean up the server instance directory.
-		delete wo->generation.get();
-		delete wo->serverInstanceDir.get();
-strcpy(argv[0], "PassengerWatchdog (cleaning up 5...)");
-		// Notify given PIDs about our shutdown.
-		foreach (pid_t pid, cleanupPids) {
-			P_DEBUG("Sending SIGTERM to cleanup PID " << pid);
-			kill(pid, SIGTERM);
-		}
-		strcpy(argv[0], "PassengerWatchdog (cleaning up 6...)");
-		_exit(0);
 		
 	} else if (pid == -1) {
 		// Error
