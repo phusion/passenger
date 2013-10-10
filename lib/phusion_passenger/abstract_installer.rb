@@ -28,6 +28,7 @@ require 'phusion_passenger/platform_info'
 require 'phusion_passenger/platform_info/operating_system'
 require 'phusion_passenger/utils/ansi_colors'
 require 'fileutils'
+require 'etc'
 
 # IMPORTANT: do not directly or indirectly require native_support; we can't compile
 # it yet until we have a compiler, and installers usually check whether a compiler
@@ -161,6 +162,26 @@ protected
 
 	def check_whether_os_is_broken
 		# No known broken OSes at the moment.
+	end
+
+	def check_gem_install_permission_problems
+		return true if PhusionPassenger.natively_packaged?
+		begin
+			require 'rubygems'
+		rescue LoadError
+			return true
+		end
+
+		if Process.uid != 0 &&
+		   PhusionPassenger.source_root =~ /^#{Regexp.escape home_dir}\// &&
+		   PhusionPassenger.source_root =~ /^#{Regexp.escape Gem.dir}\// &&
+		   File.stat(PhusionPassenger.source_root).uid == 0
+			new_screen
+			render_template 'installer_common/gem_install_permission_problems'
+			return false
+		else
+			return true
+		end
 	end
 
 	def check_whether_system_has_enough_ram(required = 1024)
@@ -298,6 +319,10 @@ protected
 		end
 	rescue Interrupt
 		raise Abort
+	end
+
+	def home_dir
+		Etc.getpwuid(Process.uid).dir
 	end
 	
 	

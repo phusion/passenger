@@ -73,6 +73,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		ENV['PATH'] = PhusionPassenger.bin_dir + ":" + ENV['PATH']
 		
 		show_welcome_screen
+		check_gem_install_permission_problems || exit(1)
 		check_nginx_module_sources_available || exit(1)
 		check_dependencies || exit(1)
 		if needs_compiling_support_files?

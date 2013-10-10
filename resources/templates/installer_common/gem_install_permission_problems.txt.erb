@@ -1,0 +1,17 @@
+<red>Permission problems in your gem directory detected</red>
+
+Your gem directory is <%= Gem.dir %>, and the
+files within are supposed to be owned by the '<%= `whoami`.strip %>' user.
+However, it looks like you installed the Phusion Passenger gem with 'sudo',
+causing some files within to be owned by the 'root' user. This will cause
+permission problems later on.
+
+Please run the following command to fix the permissions:
+
+  <b>sudo chown -R <%= `whoami`.strip %> "<%= Gem.dir %>"</b>
+
+Also, please remember to run 'gem install' commands <b>without sudo</b> in the
+future. Sudo is only necessary if the gem directory is located outside the
+home directory.
+
+After having fixed the permissions, please <yellow>re-run this installer</yellow>.
