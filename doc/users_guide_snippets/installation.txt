@@ -620,7 +620,7 @@ gpg --keyserver keyserver.ubuntu.com --search-keys 0xBA8DA3F46FAF3782
 
 ==== Verifying the gem and tarball
 
-You can find the open source version's gem and tarball GPG signatures at https://www.phusionpassenger.com/signatures/. The Enterprise version's GPG signatures can be found in the link:https://www.phusionpassenger.com/orders[Customer Area]. All signatures have the '.asc' extension. Once you have imported our key, you can verify the validity of a file against its signature as follows:
+You can find the open source version's gem and tarball GPG signatures at https://www.phusionpassenger.com/file_releases. The Enterprise version's GPG signatures can be found in the link:https://www.phusionpassenger.com/orders[Customer Area]. All signatures have the '.asc' extension. Once you have imported our key, you can verify the validity of a file against its signature as follows:
 
 -----------------------------------------
 $ gpg --verify passenger-x.x.x.tar.gz.asc passenger-x.x.x.tar.gz
@@ -630,7 +630,7 @@ gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>
 
 ==== Verifying Git signatures
 
-Tags in the link:https://github.com/FooBarWidget/passenger[Git repository for the open source version] are also tagged. You can verify a Git tag as follows:
+Tags in the link:https://github.com/phusion/passenger[Git repository for the open source version] are also tagged. You can verify a Git tag as follows:
 
 -------------------------------------------------------
 $ git tag --verify release-x.x.x
@@ -646,7 +646,7 @@ gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>
 
 ==== Verifying DEB and RPM packages
 
-The DEB and RPM packages are signed with the signatures of the respective packagers. Phusion does not provide signatures for them.
+The DEB and RPM packages are signed with the signatures of the respective packagers. They are automatically checked upon installation.
 
 ==== Revocation
 
