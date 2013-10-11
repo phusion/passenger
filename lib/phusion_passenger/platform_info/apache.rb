@@ -23,6 +23,8 @@
 
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/platform_info/compiler'
+require 'phusion_passenger/platform_info/operating_system'
+require 'phusion_passenger/platform_info/linux'
 
 module PhusionPassenger
 
@@ -97,6 +99,30 @@ module PlatformInfo
 		end
 	end
 	memoize :httpd_version
+
+	# The Apache executable's architectural bits. Returns 32 or 64,
+	# or nil if unable to detect.
+	def self.httpd_architecture_bits(options = nil)
+		if options
+			httpd = options[:httpd] || self.httpd(options)
+		else
+			httpd = self.httpd
+		end
+		if httpd
+			`#{httpd} -V` =~ %r{Architecture:(.*)}
+			text = $1
+			if text =~ /32/
+				return 32
+			elsif text =~ /64/
+				return 64
+			else
+				return nil
+			end
+		else
+			return nil
+		end
+	end
+	memoize :httpd_architecture_bits
 
 	# The Apache root directory.
 	def self.httpd_root(options = nil)
@@ -422,6 +448,17 @@ module PlatformInfo
 				options.reject! { |f| f =~ /^\-fast/ }
 				options.reject! { |f| f =~ /^\-mt/ }
 				apxs2_flags = options.join(' ')
+			end
+
+			if os_name == "linux" &&
+			   linux_distro_tags.include?(:redhat) &&
+			   apxs2 == "/usr/sbin/apxs" &&
+			   httpd_architecture_bits == 64
+				# The Apache package in CentOS 5 x86_64 is broken.
+				# 'apxs -q CFLAGS' contains directives for compiling
+				# the module as 32-bit, even though httpd itself
+				# is 64-bit. Fix this.
+				apxs2_flags.gsub!('-m32 -march=i386 -mtune=generic', '')
 			end
 			
 			apxs2_flags.strip!

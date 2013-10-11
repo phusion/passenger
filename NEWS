@@ -1,3 +1,9 @@
+Release 4.0.21
+--------------
+
+ * Work around an Apache packaging bug in CentOS 5.
+
+
 Release 4.0.20
 --------------
 
