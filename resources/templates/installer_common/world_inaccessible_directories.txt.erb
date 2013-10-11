@@ -1,0 +1,16 @@
+<yellow>Warning: some directories may be inaccessible by the web server!</yellow>
+
+The web server typically runs under a separate user account for security
+reasons. That user must be able to access the <%= PROGRAM_NAME %> files.
+However, it appears that some directories have too strict permissions. This
+may prevent the web server user from accessing <%= PROGRAM_NAME %> files.
+
+It is recommended that you relax permissions as follows:
+
+<% for dir in @directories -%>
+  sudo chmod o+x "<%= dir %>"
+<% end %>
+<b>Press Ctrl-C to return to the shell. (Recommended)</b>
+After relaxing permissions, re-run this installer.
+  -OR-
+<b>Press Enter to continue anyway.</b>

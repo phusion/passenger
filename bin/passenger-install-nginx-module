@@ -78,6 +78,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		
 		show_welcome_screen
 		check_gem_install_permission_problems || exit(1)
+		check_directory_accessible_by_web_server
 		check_nginx_module_sources_available || exit(1)
 		check_dependencies || exit(1)
 		if needs_compiling_support_files?

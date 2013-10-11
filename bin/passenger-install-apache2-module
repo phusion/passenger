@@ -100,6 +100,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		Dir.chdir(PASSENGER_ROOT)
 		show_welcome_screen
 		check_gem_install_permission_problems || exit(1)
+		check_directory_accessible_by_web_server
 		check_dependencies || exit(1)
 		check_whether_there_are_multiple_apache_installs || exit
 		check_whether_apache_uses_compatible_mpm

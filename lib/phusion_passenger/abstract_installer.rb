@@ -197,6 +197,22 @@ protected
 		end
 	end
 
+	def check_directory_accessible_by_web_server
+		return true if PhusionPassenger.natively_packaged?
+		inaccessible_directories = []
+		list_parent_directories(PhusionPassenger.source_root).each do |path|
+			if !world_executable?(path)
+				inaccessible_directories << path
+			end
+		end
+		if !inaccessible_directories.empty?
+			new_screen
+			render_template 'installer_common/world_inaccessible_directories',
+				:directories => inaccessible_directories
+			wait
+		end
+	end
+
 	def check_whether_system_has_enough_ram(required = 1024)
 		begin
 			meminfo = File.read("/proc/meminfo")
@@ -265,7 +281,7 @@ protected
 	
 	def puts(text = nil)
 		if text
-			@stdout.puts(Utils::AnsiColors.ansi_colorize(text))
+			@stdout.puts(Utils::AnsiColors.ansi_colorize(text.to_s))
 		else
 			@stdout.puts
 		end
@@ -421,6 +437,25 @@ protected
 			end
 			return sh("curl", url, "-f", "-L", "-o", output, *args)
 		end
+	end
+
+	def list_parent_directories(dir)
+		dirs = []
+		components = File.expand_path(dir).split(File::SEPARATOR)
+		components.shift # Remove leading /
+		components.size.times do |i|
+			dirs << File::SEPARATOR + components[0 .. i].join(File::SEPARATOR)
+		end
+		return dirs.reverse
+	end
+
+	def world_executable?(dir)
+		begin
+			stat = File.stat(dir)
+		rescue Errno::EACCESS
+			return false
+		end
+		return stat.mode & 0000001 != 0
 	end
 end
 
