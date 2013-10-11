@@ -418,62 +418,14 @@ Phusion Passenger supports multiple languages and its core is written in C++, bu
 
 Even though Ruby is required, Ruby will normally not be loaded during normal operation unless you deploy a Ruby web application on Phusion Passenger. Phusion Passenger's dependency on Ruby is very minimal. See <<relationship_with_ruby,Phusion Passenger and its relationship with Ruby>> for details.
 
-Run `ruby --version` and `rake --version` to find out whether both commands are already installed and recent enough. Phusion Passenger requires Ruby >= 1.8.6. Any Rake version will do.
-
-.Debian 6
-
-We recommend you to use link:http://wiki.brightbox.co.uk/docs:phusion-passenger[the Brightbox Ruby packages]. They provide more up-to-date versions of Ruby than Debian's official repositories provide. Their Ubuntu Lucid repository is compatible with Debian 6. If you do not want to use the Brightbox repository, then follow the instructions for Debian 5.
-
-Add the Brightbox repository and install the Bright APT public key:
-
------------------------------
-echo deb http://ppa.launchpad.net/brightbox/ruby-ng/ubuntu lucid main | sudo tee /etc/apt/sources.list.d/brightbox-source.list
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C3173AA6
------------------------------
-
-Then install Ruby and Rake:
-
------------------------------
-sudo apt-get update
-sudo apt-get install ruby1.9.3
-sudo gem install rake
------------------------------
-
-.Debian 5
-
-Run:
-
------------------------------
-sudo apt-get update
-sudo apt-get install ruby rake
------------------------------
-
-Then <<add_rubygems_bin_dir_to_path,add the RubyGems bin directory to your $PATH>>.
-
-.Ubuntu
-
-We recommend you to use link:http://wiki.brightbox.co.uk/docs:phusion-passenger[the Brightbox Ruby packages]. They provide more up-to-date versions of Ruby than Ubuntu's official repositories provide. Add the Brightbox repository as follows:
-
------------------------------
-sudo apt-add-repository ppa:brightbox/passenger
-sudo apt-get update
------------------------------
-
-Then install Ruby and Rake:
-
------------------------------
-sudo apt-get update
-sudo apt-get install ruby1.9.3
-sudo gem install rake
------------------------------
-
-.Other operating systems
-
-Please install Ruby from link:http://www.ruby-lang.org/[the Ruby website]. Once Ruby is installed, run the following command (<<is_ruby_home_or_system_wide_installed,possibly as root>>) to install Rake:
-
------------------------
-gem install rake
------------------------
+|==========================================================
+| Debian, Ubuntu | `sudo apt-get update` +
+`sudo apt-get install ruby rake`
+| Red Hat, CentOS, ScientificLinux, Amazon Linux | Enable link:http://fedoraproject.org/wiki/EPEL[EPEL], then run as root: +
+`yum install ruby rubygem-rake`
+| Other operating systems | Install Ruby from link:http://www.ruby-lang.org/[the Ruby website]. Once Ruby is installed, run the following command (<<is_ruby_home_or_system_wide_installed,possibly as root>>) to install Rake: +
+`gem install rake`
+|==========================================================
 
 [float]
 ==== Step 3: figuring out whether your Ruby is installed the home directory or system-wide
