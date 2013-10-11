@@ -243,8 +243,12 @@ module Depcheck
 			install_instructions("Please install it with <b>urpmi #{package_name}</b>")
 		end
 
-		def yum_install(package_name)
-			install_instructions("Please install it with <b>yum install #{package_name}</b>")
+		def yum_install(package_name, options = {})
+			if options[:epel]
+				install_instructions("Please enable <b>EPEL</b>, then install with <b>yum install #{package_name}</b>")
+			else
+				install_instructions("Please install it with <b>yum install #{package_name}</b>")
+			end
 		end
 
 		def emerge(package_name)

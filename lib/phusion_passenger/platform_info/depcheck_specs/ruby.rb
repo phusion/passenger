@@ -127,12 +127,8 @@ define 'rake' do
     on :mandriva do
       urpmi "rake"
     end
-    on :amazon do
-      # 'yum install rake' installs Ruby 1.9's Rake but Ruby 1.8 is the default -_-
-      gem_install 'rake'
-    end
     on :redhat do
-      yum_install "rake"
+      yum_install "rubygem-rake", :epel => true
     end
   end
   on :other_platforms do
