@@ -22,19 +22,19 @@
 
 2.1. Synopsis	=>	synopsis-l0om5d
 
-2.2. Generic installation, upgrade and downgrade method: via RubyGems	=>	installing-via-the-gem-39jw1u
+2.2. Installing or upgrading on Mac OS X with Homebrew	=>	installing-or-upgrading-on-mac-os-x-with-homebrew-1pia1cx
 
-2.3. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
+2.3. Installing or upgrading on Debian or Ubuntu	=>	installing-or-upgrading-on-ubuntu-1xg22xs
 
-2.4. Installing or upgrading on Debian or Ubuntu	=>	installing-or-upgrading-on-ubuntu-1xg22xs
+2.3.1. Adding our APT repository	=>	adding-our-apt-repository-1l8plxk
 
-2.4.1. Adding our APT repository	=>	adding-our-apt-repository-1l8plxk
+2.3.2. Installing packages	=>	installing-packages-1jxn722
 
-2.4.2. Installing packages	=>	installing-packages-1jxn722
+2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
 
-2.5. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
+2.5. Generic installation, upgrade and downgrade method: via RubyGems	=>	installing-via-the-gem-39jw1u
 
-2.6. Installing or upgrading on Mac OS X with Homebrew	=>	installing-or-upgrading-on-mac-os-x-with-homebrew-1pia1cx
+2.6. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
 
 2.7. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-b17h8g
 

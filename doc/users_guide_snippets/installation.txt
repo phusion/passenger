@@ -1,15 +1,220 @@
 === Synopsis
 
-The Phusion Passenger installation process consists of two steps:
-
-1. The *obtainment step*, where you download the Phusion Passenger files puts them somewhere on your system. This can be done through downloading the source tarball, installing the Ruby gem or installing a native OS package via APT or YUM.
-2. The *integration step*, where you configure Phusion Passenger so that it works properly with other system components such as Apache, Nginx, Ruby, Python, etc.
-
-Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, both steps can be done in multiple ways. Most users -- especially first-time users -- will be satisfied with the _generic installation instructions_ which covers both steps. However some users may prefer _OS-specific installation instructions_, which allow Phusion Passenger to better integrate into the operating system. Better integration is characterized by following OS-specific conventions.
-
-If you are not familiar with system administration and do not understand all the choices, then we recommend you to go with the <<rubygems_generic_install,RubyGems generic installation method>> (if you're a Ruby user) or the <<tarball_generic_install,tarball generic installation method>> (if you're not a Ruby user).
+Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, there are multiple ways to install it. Most users  -- especially first-time users -- will prefer _OS-specific installation instructions_, which allow Phusion Passenger to integrate into the operating system in the best way possible. Other users should consult the _generic installation instructions_.
 
 The steps for upgrading or downgrading Phusion Passenger is almost the same as the steps for installing. All the installation guides in this section will also teach you how to upgrade and downgrade.
+
+
+=== Installing or upgrading on Mac OS X with Homebrew
+
+.Open source
+
+Every time we release a new Phusion Passenger version, we make it available through Homebrew. Please note that the Homebrew maintainers have to merge our pull requests manually, so it may take a day or two before a new version shows up in the official Homebrew repository.
+
+ 1. Update the Homebrew recipes:
++
+---------------------------
+brew update
+---------------------------
+ 2. Run the following command and follow the instructions. This will give you access to link:Users%20guide%20Apache.html[Phusion Passenger for Apache] and link:Users%20guide%20Standalone.html[Phusion Passenger Standalone].
++
+---------------------------
+brew install passenger
+-OR-
+brew upgrade passenger
+---------------------------
+ 3. (Optional) If you want to use link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx], run:
++
+---------------------------
+brew install nginx --with-passenger
+-OR-
+brew upgrade nginx --wtih-passenger
+---------------------------
+
+.Enterprise
+
+link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] is currently not available through Homebrew. Please try one of the other installation methods insteads.
+
+
+[[install_on_debian_ubuntu]]
+=== Installing or upgrading on Debian or Ubuntu
+
+We provide and official Phusion Passenger APT repository. This APT repository contains Phusion Passenger packages for multiple versions of Debian and Ubuntu. These packages are automatically built by our build server after we push out a source release, and thus are always up to date with the official source releases.
+
+If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need.
+
+Packages are available for the x86 and x86_64 architectures. Our policy is to support all Ubuntu LTS releases that are still supported by Canonical, plus the latest non-LTS Ubuntu release, plus all Debian releases that are still supported by Debian.
+
+==== Adding our APT repository
+
+Packages are signed by "Phusion Automated Software Signing (auto-software-signing@phusion.nl)", fingerprint 1637 8A33 A6EF 1676 2922 526E 561F 9B9C AC40 B2F7. Install our PGP key:
+
+--------------------------------------------------------------
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7
+--------------------------------------------------------------
+
+Our APT repository is stored on an HTTPS server so you may need to add HTTPS support for APT:
+
+--------------------------------------------------------------
+sudo apt-get install apt-transport-https
+--------------------------------------------------------------
+
+Next, create a file `/etc/apt/sources.list.d/passenger.list` and insert one of the following lines, depending on your distribution.
+
+Phusion Passenger open source:
+
+--------------------------------------------------------------
+deb https://oss-binaries.phusionpassenger.com/apt/passenger lucid main
+deb https://oss-binaries.phusionpassenger.com/apt/passenger precise main
+deb https://oss-binaries.phusionpassenger.com/apt/passenger raring main
+deb https://oss-binaries.phusionpassenger.com/apt/passenger squeeze main
+deb https://oss-binaries.phusionpassenger.com/apt/passenger wheezy main
+--------------------------------------------------------------
+
+Phusion Passenger Enterprise:
+
+--------------------------------------------------------------
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt lucid main
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt precise main
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt raring main
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt squeeze main
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt wheezy main
+--------------------------------------------------------------
+
+Please replace 'YOUR_ORDER_REFERENCE' and 'YOUR_PASSWORD' with your link:https://www.phusionpassenger.com/orders[Customer Area] login credentials.
+
+After creating `/etc/apt/sources.list.d/passenger.list`, run:
+
+--------------------------------------------------------------
+sudo chown root: /etc/apt/sources.list.d/passenger.list
+sudo chmod 600 /etc/apt/sources.list.d/passenger.list
+sudo apt-get update
+--------------------------------------------------------------
+
+==== Installing packages
+
+.Open source
+
+To install Phusion Passenger for Nginx:
+
+--------------------------------------------------------------
+sudo apt-get install nginx-full passenger
+--------------------------------------------------------------
+
+Then edit `/etc/nginx/nginx.conf`, and uncomment `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
+
+To install Phusion Passenger for Apache:
+
+--------------------------------------------------------------
+sudo apt-get install libapache2-mod-passenger
+--------------------------------------------------------------
+
+To install Phusion Passenger Standalone:
+
+--------------------------------------------------------------
+sudo apt-get install passenger
+--------------------------------------------------------------
+
+.Enterprise
+
+Before installing packages, download your license key from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
+
+To install Phusion Passenger for Nginx:
+
+--------------------------------------------------------------
+sudo apt-get install nginx-full passenger-enterprise
+--------------------------------------------------------------
+
+Then edit `/etc/nginx/nginx.conf`, and uncomment `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
+
+To install Phusion Passenger for Apache:
+
+--------------------------------------------------------------
+sudo apt-get install libapache2-mod-passenger-enterprise
+--------------------------------------------------------------
+
+To install Phusion Passenger Standalone:
+
+--------------------------------------------------------------
+sudo apt-get install passenger-enterprise
+--------------------------------------------------------------
+
+
+=== Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux
+
+YUM repositories with RPMs are maintained by link:https://github.com/erikogan/passenger[Erik Ogan] and link:http://stealthymonkeys.com/[Stealthy Monkeys Consulting]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
+
+If you use YUM to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. The YUM packages contain all the binaries that you need. You also don't need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.
+
+[float]
+==== Step 1: Import the Stealthy Monkeys Consulting's GPG key
+
+---------------------------------------------
+rpm --import http://passenger.stealthymonkeys.com/RPM-GPG-KEY-stealthymonkeys.asc
+---------------------------------------------
+
+[float]
+==== Step 2: Install the release package
+
+Install the passenger-release package from the link:http://passenger.stealthymonkeys.com/[main repository].
+
+Fedora Core 17:
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/fedora/17/passenger-release.noarch.rpm
+---------------------------------------------
+
+Fedora Core 16:
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/fedora/16/passenger-release.noarch.rpm
+---------------------------------------------
+
+Fedora Core 15:
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/fedora/15/passenger-release.noarch.rpm
+---------------------------------------------
+
+Fedora Core 14:
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/fedora/14/passenger-release.noarch.rpm
+---------------------------------------------
+
+RHEL 6 / CentOS 6 / ScientificLinux 6: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
+---------------------------------------------
+yum install http://passenger.stealthymonkeys.com/rhel/6/passenger-release.noarch.rpm
+---------------------------------------------
+
+RHEL 5 / CentOS 5 / ScientificLinux 5: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
+---------------------------------------------
+rpm -Uvh http://passenger.stealthymonkeys.com/rhel/5/passenger-release.noarch.rpm
+---------------------------------------------
+
+[float]
+==== Step 3: Install the right Phusion Passenger package
+
+From there you can use link:http://prefetch.net/articles/yum.html[YUM] to install packages. For example, try one of these:
+
+Phusion Passenger for Apache:
+
+---------------------------------------------
+yum install mod_passenger
+---------------------------------------------
+
+Phusion Passenger for Nginx:
+
+---------------------------------------------
+yum install nginx-passenger
+---------------------------------------------
+
+Phusion Passenger Standalone:
+
+---------------------------------------------
+yum install passenger-standalone
+---------------------------------------------
+
+[float]
+==== Building your own packages
+
+There are instructions for building your own packages and Yum repositories in the link:https://github.com/phusion/passenger/tree/master/rpm#readme[rpm directory ReadMe] within the link:https://github.com/phusion/passenger[GitHub repository].
 
 
 [[rubygems_generic_install]]
@@ -341,218 +546,6 @@ kill PID_OF_FLYING_PASSENGER
 ==== Step 7: Verifying that Phusion Passenger is running
 
 Please refer to <<verify_passenger_running,this section>>. Note that all Phusion Passenger administration scripts are located inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-memory-stats'.
-
-
-[[install_on_debian_ubuntu]]
-=== Installing or upgrading on Debian or Ubuntu
-
-We provide and official Phusion Passenger APT repository. This APT repository contains Phusion Passenger packages for multiple versions of Debian and Ubuntu. These packages are automatically built by our build server after we push out a source release, and thus are always up to date with the official source releases.
-
-If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need.
-
-Packages are available for the x86 and x86_64 architectures. Our policy is to support all Ubuntu LTS releases that are still supported by Canonical, plus the latest non-LTS Ubuntu release, plus all Debian releases that are still supported by Debian.
-
-==== Adding our APT repository
-
-Packages are signed by "Phusion Automated Software Signing (auto-software-signing@phusion.nl)", fingerprint 1637 8A33 A6EF 1676 2922 526E 561F 9B9C AC40 B2F7. Install our PGP key:
-
---------------------------------------------------------------
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7
---------------------------------------------------------------
-
-Our APT repository is stored on an HTTPS server so you may need to add HTTPS support for APT:
-
---------------------------------------------------------------
-sudo apt-get install apt-transport-https
---------------------------------------------------------------
-
-Next, create a file `/etc/apt/sources.list.d/passenger.list` and insert one of the following lines, depending on your distribution.
-
-Phusion Passenger open source:
-
---------------------------------------------------------------
-deb https://oss-binaries.phusionpassenger.com/apt/passenger lucid main
-deb https://oss-binaries.phusionpassenger.com/apt/passenger precise main
-deb https://oss-binaries.phusionpassenger.com/apt/passenger raring main
-deb https://oss-binaries.phusionpassenger.com/apt/passenger squeeze main
-deb https://oss-binaries.phusionpassenger.com/apt/passenger wheezy main
---------------------------------------------------------------
-
-Phusion Passenger Enterprise:
-
---------------------------------------------------------------
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt lucid main
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt precise main
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt raring main
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt squeeze main
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt wheezy main
---------------------------------------------------------------
-
-Please replace 'YOUR_ORDER_REFERENCE' and 'YOUR_PASSWORD' with your link:https://www.phusionpassenger.com/orders[Customer Area] login credentials.
-
-After creating `/etc/apt/sources.list.d/passenger.list`, run:
-
---------------------------------------------------------------
-sudo chown root: /etc/apt/sources.list.d/passenger.list
-sudo chmod 600 /etc/apt/sources.list.d/passenger.list
-sudo apt-get update
---------------------------------------------------------------
-
-==== Installing packages
-
-.Open source
-
-To install Phusion Passenger for Nginx:
-
---------------------------------------------------------------
-sudo apt-get install nginx-full passenger
---------------------------------------------------------------
-
-Then edit `/etc/nginx/nginx.conf`, and uncomment `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
-
-To install Phusion Passenger for Apache:
-
---------------------------------------------------------------
-sudo apt-get install libapache2-mod-passenger
---------------------------------------------------------------
-
-To install Phusion Passenger Standalone:
-
---------------------------------------------------------------
-sudo apt-get install passenger
---------------------------------------------------------------
-
-.Enterprise
-
-Before installing packages, download your license key from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
-
-To install Phusion Passenger for Nginx:
-
---------------------------------------------------------------
-sudo apt-get install nginx-full passenger-enterprise
---------------------------------------------------------------
-
-Then edit `/etc/nginx/nginx.conf`, and uncomment `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
-
-To install Phusion Passenger for Apache:
-
---------------------------------------------------------------
-sudo apt-get install libapache2-mod-passenger-enterprise
---------------------------------------------------------------
-
-To install Phusion Passenger Standalone:
-
---------------------------------------------------------------
-sudo apt-get install passenger-enterprise
---------------------------------------------------------------
-
-
-=== Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux
-
-YUM repositories with RPMs are maintained by link:https://github.com/erikogan/passenger[Erik Ogan] and link:http://stealthymonkeys.com/[Stealthy Monkeys Consulting]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
-
-If you use YUM to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. The YUM packages contain all the binaries that you need. You also don't need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.
-
-[float]
-==== Step 1: Import the Stealthy Monkeys Consulting's GPG key
-
----------------------------------------------
-rpm --import http://passenger.stealthymonkeys.com/RPM-GPG-KEY-stealthymonkeys.asc
----------------------------------------------
-
-[float]
-==== Step 2: Install the release package
-
-Install the passenger-release package from the link:http://passenger.stealthymonkeys.com/[main repository].
-
-Fedora Core 17:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/fedora/17/passenger-release.noarch.rpm
----------------------------------------------
-
-Fedora Core 16:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/fedora/16/passenger-release.noarch.rpm
----------------------------------------------
-
-Fedora Core 15:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/fedora/15/passenger-release.noarch.rpm
----------------------------------------------
-
-Fedora Core 14:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/fedora/14/passenger-release.noarch.rpm
----------------------------------------------
-
-RHEL 6 / CentOS 6 / ScientificLinux 6: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/rhel/6/passenger-release.noarch.rpm
----------------------------------------------
-
-RHEL 5 / CentOS 5 / ScientificLinux 5: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
----------------------------------------------
-rpm -Uvh http://passenger.stealthymonkeys.com/rhel/5/passenger-release.noarch.rpm
----------------------------------------------
-
-[float]
-==== Step 3: Install the right Phusion Passenger package
-
-From there you can use link:http://prefetch.net/articles/yum.html[YUM] to install packages. For example, try one of these:
-
-Phusion Passenger for Apache:
-
----------------------------------------------
-yum install mod_passenger
----------------------------------------------
-
-Phusion Passenger for Nginx:
-
----------------------------------------------
-yum install nginx-passenger
----------------------------------------------
-
-Phusion Passenger Standalone:
-
----------------------------------------------
-yum install passenger-standalone
----------------------------------------------
-
-[float]
-==== Building your own packages
-
-There are instructions for building your own packages and Yum repositories in the link:https://github.com/phusion/passenger/tree/master/rpm#readme[rpm directory ReadMe] within the link:https://github.com/phusion/passenger[GitHub repository].
-
-
-=== Installing or upgrading on Mac OS X with Homebrew
-
-.Open source
-
-Every time we release a new Phusion Passenger version, we make it available through Homebrew. Please note that the Homebrew maintainers have to merge our pull requests manually, so it may take a day or two before a new version shows up in the official Homebrew repository.
-
- 1. Update the Homebrew recipes:
-+
----------------------------
-brew update
----------------------------
- 2. Run the following command and follow the instructions. This will give you access to link:Users%20guide%20Apache.html[Phusion Passenger for Apache] and link:Users%20guide%20Standalone.html[Phusion Passenger Standalone].
-+
----------------------------
-brew install passenger
--OR-
-brew upgrade passenger
----------------------------
- 3. (Optional) If you want to use link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx], run:
-+
----------------------------
-brew install nginx --with-passenger
--OR-
-brew upgrade nginx --wtih-passenger
----------------------------
-
-.Enterprise
-
-link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] is currently not available through Homebrew. Please try one of the other installation methods insteads.
 
 
 === Upgrading from open source to Enterprise
