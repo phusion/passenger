@@ -30,6 +30,7 @@ require 'phusion_passenger'
 PhusionPassenger.locate_directories
 
 require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/admin_tools/memory_stats'
 
 include PhusionPassenger
@@ -133,9 +134,8 @@ class App
 		if @stats.platform_provides_private_dirty_rss_information? &&
 		   Process.euid != 0 &&
 		   @stats.root_privileges_required_for_private_dirty_rss?
-			puts
-			puts "*** WARNING: Please run this tool as root. Otherwise the " <<
-				"private dirty RSS of processes cannot be determined."
+			puts "*** WARNING: Please run this tool with #{BOLD}#{PlatformInfo.ruby_sudo_command}#{RESET}. Otherwise the " <<
+				"private dirty RSS (a reliable metric for real memory usage) of processes cannot be determined."
 		end
 	end
 	

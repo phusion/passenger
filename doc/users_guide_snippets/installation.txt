@@ -372,7 +372,7 @@ kill `cat /path-to/flying-passenger.pid`
 Or, if Flying Passenger is not running with a PID file, look up its PID us `ps` and then send it SIGTERM:
 
 -------------------------------
-ps auxw | grep flying-passenger
+ps aux | grep flying-passenger
 kill PID_OF_FLYING_PASSENGER
 -------------------------------
 
@@ -386,12 +386,7 @@ Restart your web server and run:
 passenger-memory-stats
 ---------------------------
 
-You should see the web server processes as well as a number of Phusion Passenger processes (e.g. PassengerWatchdog, PassengerHelperAgent). Congratulations, Phusion Passenger is now installed and running!
-ifdef::nginx[]
-At this point you may be interested in <<nginx_init_script,creating an Nginx init script>>.
-endif::[]
-
-If the output is not as expected, then please refer to the <<troubleshooting,Troubleshooting>> section.
+include::installation/verify_running_epilogue.txt[]
 
 
 [[tarball_generic_install]]
@@ -400,9 +395,15 @@ If the output is not as expected, then please refer to the <<troubleshooting,Tro
 [float]
 ==== Step 1: download and extract the tarball
 
-Download the open source Phusion Passenger tarball from link:https://www.phusionpassenger.com/download#open_source[the Phusion Passenger website]. Older versions can be found on link:https://www.phusionpassenger.com/file_releases[the release archive].
+**Open Source**::
+	Download the open source Phusion Passenger tarball from link:https://www.phusionpassenger.com/download#open_source[the Phusion Passenger website].
++
+Older versions can be found in link:https://www.phusionpassenger.com/file_releases[the release archive].
 
-If you a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customer, download the Phusion Passenger Enterprise tarball from the link:https://www.phusionpassenger.com/orders[Customer Area]. Also be sure to download the *license key* and save it as '/etc/passenger-enterprise-license'.
+**Enterprise**::
+	link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers can download the Phusion Passenger Enterprise tarball from the link:https://www.phusionpassenger.com/orders[Customer Area].
++
+Also be sure to download the *license key* and save it as `/etc/passenger-enterprise-license`.
 
 Once you have downloaded the tarball, pick a location to extract it to. You can pick any location. A good location is '/opt/passenger'. Let's call this location `$PREFIX`. Create this directory and extract the tarball as follows:
 
@@ -432,23 +433,19 @@ Even though Ruby is required, Ruby will normally not be loaded during normal ope
 |==========================================================
 
 [float]
-==== Step 3: figuring out whether your Ruby is installed the home directory or system-wide
-
-Depending on whether you installed Ruby system-wide, you need to enter a root prompt before continuing to step 5. Please refer to <<is_ruby_home_or_system_wide_installed,this section>>.
-
-[float]
-==== Step 4: run the Phusion Passenger installer
+==== Step 3: run the Phusion Passenger installer
 
 Please refer to <<run_passenger_installer,this section>>.
 ifdef::apache[]
-Note that the `passenger-install-apache2-module` command is inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-install-apache2-module'.
+Note that the `passenger-install-apache2-module` command is inside the `bin` subdirectory of the Phusion Passenger source directory, so you would have to run something like `/opt/passenger/passenger-x.x.x/bin/passenger-install-apache2-module`.
 endif::[]
 ifdef::nginx[]
-Note that the `passenger-install-nginx-module` command is inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-install-nginx-module'.
+Note that the `passenger-install-nginx-module` command is inside the `bin` subdirectory of the Phusion Passenger source directory, so you would have to run something like `/opt/passenger/passenger-x.x.x/bin/passenger-install-nginx-module`.
 endif::[]
 
+ifdef::nginx[]
 [float]
-==== Step 5: Restarting the Flying Passenger daemon
+==== Step 4: Restarting the Flying Passenger daemon
 
 If you are using <<flying_passenger,Flying Passenger>> then you must restart the Flying Passenger daemon by sending it the SIGTERM signal:
 
@@ -459,14 +456,26 @@ kill `cat /path-to/flying-passenger.pid`
 Or, if Flying Passenger is not running with a PID file, look up its PID us `ps` and then send it SIGTERM:
 
 -------------------------------
-ps auxw | grep flying-passenger
+ps aux | grep flying-passenger
 kill PID_OF_FLYING_PASSENGER
 -------------------------------
+endif::[]
 
 [float]
-==== Step 6: Verifying that Phusion Passenger is running
+ifdef::apache[]
+==== Step 4: Verifying that Phusion Passenger is running
+endif::[]
+ifdef::nginx[]
+==== Step 5: Verifying that Phusion Passenger is running
+endif::[]
 
-Please refer to <<verify_passenger_running,this section>>. Note that all Phusion Passenger administration scripts are located inside the 'bin' subdirectory of the Phusion Passenger source directory, so you would have to run something like '/opt/passenger/passenger-x.x.x/bin/passenger-memory-stats'.
+Restart your web server and run:
+
+---------------------------
+./bin/passenger-memory-stats
+---------------------------
+
+include::installation/verify_running_epilogue.txt[]
 
 
 === Upgrading from open source to Enterprise

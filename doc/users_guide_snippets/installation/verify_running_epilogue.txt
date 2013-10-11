@@ -1,0 +1,6 @@
+You should see the web server processes as well as a number of Phusion Passenger processes (e.g. PassengerWatchdog, PassengerHelperAgent). Congratulations, Phusion Passenger is now installed and running!
+ifdef::nginx[]
+At this point you may be interested in <<nginx_init_script,creating an Nginx init script>>.
+endif::[]
+
+If the output is not as expected, then please refer to the <<troubleshooting,Troubleshooting>> section.
