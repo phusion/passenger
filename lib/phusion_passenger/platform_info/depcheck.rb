@@ -257,7 +257,7 @@ module Depcheck
 
 		def gem_install(package_name)
 			install_instructions("Please make sure RubyGems is installed, then run " +
-				"<b>#{gem_command || 'gem'} install #{package_name}</b>")
+				"<b>#{gem_command} install #{package_name}</b>")
 		end
 
 		def xcode_install(component)
@@ -271,7 +271,7 @@ module Depcheck
 		end
 
 		def gem_command
-			PlatformInfo.gem_command
+			PlatformInfo.gem_command(:sudo => true) || 'gem'
 		end
 
 		def find_command(command, *args)
