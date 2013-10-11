@@ -40,7 +40,7 @@ module PlatformInfo
 	
 	# The current platform's shared library extension ('so' on most Unices).
 	def self.library_extension
-		if RUBY_PLATFORM =~ /darwin/
+		if os_name == "macosx"
 			return "bundle"
 		else
 			return "so"

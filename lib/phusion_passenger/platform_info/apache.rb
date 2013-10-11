@@ -464,7 +464,7 @@ module PlatformInfo
 			apxs2_flags.strip!
 			flags << apxs2_flags
 		end
-		if !httpd.nil? && RUBY_PLATFORM =~ /darwin/
+		if !httpd.nil? && os_name == "macosx"
 			# The default Apache install on OS X is a universal binary.
 			# Figure out which architectures it's compiled for and do the same
 			# thing for mod_passenger. We use the 'file' utility to do this.

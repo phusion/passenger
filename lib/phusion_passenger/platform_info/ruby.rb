@@ -23,6 +23,7 @@
 
 require 'rbconfig'
 require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/operating_system'
 
 module PhusionPassenger
 
@@ -335,7 +336,7 @@ module PlatformInfo
 
 private
 	def self.locate_ruby_tool_by_basename(name)
-		if RUBY_PLATFORM =~ /darwin/ &&
+		if os_name == "macosx" &&
 		   ruby_command =~ %r(\A/System/Library/Frameworks/Ruby.framework/Versions/.*?/usr/bin/ruby\Z)
 			# On OS X we must look for Ruby binaries in /usr/bin.
 			# RubyGems puts executables (e.g. 'rake') in there, not in
