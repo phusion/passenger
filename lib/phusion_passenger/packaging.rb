@@ -26,6 +26,7 @@ module PhusionPassenger
 module Packaging
 	# A list of HTML files that are generated with Asciidoc.
 	ASCII_DOCS = [
+		'doc/Users guide.html',
 		'doc/Users guide Apache.html',
 		'doc/Users guide Nginx.html',
 		'doc/Users guide Standalone.html',

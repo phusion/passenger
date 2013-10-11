@@ -115,8 +115,12 @@ protected
 		return [specs, ids]
 	end
 	
-	def users_guide
-		return "#{PhusionPassenger.doc_dir}/Users guide Standalone.html"
+	def users_guide_path
+		return PhusionPassenger.standalone_doc_path
+	end
+
+	def users_guide_url
+		return STANDALONE_DOC_URL
 	end
 
 	def run_steps

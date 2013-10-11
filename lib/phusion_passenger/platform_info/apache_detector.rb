@@ -177,19 +177,19 @@ class ApacheDetector
 			log "   <b>#{PhusionPassenger.bin_dir}/passenger-install-apache2-module</b>"
 			log ""
 			log "If you are sure that you have Apache installed, please read the documentation:"
-			log " * <b>#{PhusionPassenger.doc_dir}/Users guide Apache.html</b>, section"
+			log " * <b>#{PhusionPassenger.apache2_doc_path}</b>, section"
 			log "   section 'Installation' -> 'Customizing the compilation process' ->"
 			log "   'Forcing location of command line tools and dependencies'"
 			log " * Or visit the online version:"
-			log "   <b>http://www.modrails.com/documentation/Users%20guide%20Apache.html#_forcing_location_of_command_line_tools_and_dependencies</b>"
+			log "   <b>#{APACHE2_DOC_URL}#_forcing_location_of_command_line_tools_and_dependencies</b>"
 		elsif @results.size > 1
 			log "<yellow>WARNING: You have multiple Apache installations on your system!</yellow>"
 			log "You are strongly recommended to read this section of the documentation:"
-			log " * <b>#{PhusionPassenger.doc_dir}/Users guide Apache.html</b>, section"
+			log " * <b>#{PhusionPassenger.apache2_doc_path}</b>, section"
 			log "   section 'Installation' -> 'Customizing the compilation process' ->"
 			log "   'Forcing location of command line tools and dependencies'"
 			log " * Or visit the online version:"
-			log "   <b>http://www.modrails.com/documentation/Users%20guide%20Apache.html#_forcing_location_of_command_line_tools_and_dependencies</b>"
+			log "   <b>#{APACHE2_DOC_URL}#_forcing_location_of_command_line_tools_and_dependencies</b>"
 		end
 	end
 

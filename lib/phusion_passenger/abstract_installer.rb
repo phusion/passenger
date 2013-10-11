@@ -112,6 +112,14 @@ protected
 		STDOUT.write(Utils::AnsiColors::RESET)
 		STDOUT.flush
 	end
+
+	def users_guide_path
+		return PhusionPassenger.index_doc_path
+	end
+
+	def users_guide_url
+		return INDEX_DOC_URL
+	end
 	
 	def dependencies
 		return [[], []]

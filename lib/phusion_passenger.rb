@@ -149,21 +149,35 @@ module PhusionPassenger
 	end
 	eval(getters_code, binding, __FILE__, __LINE__)
 
+	def self.index_doc_path
+		return "#{doc_dir}/#{INDEX_DOC_NAME}"
+	end
+
 	def self.apache2_doc_path
-		return "#{doc_dir}/Users guide Apache.html"
+		return "#{doc_dir}/#{APACHE2_DOC_NAME}"
 	end
 
 	def self.nginx_doc_path
-		return "#{doc_dir}/Users guide Nginx.html"
+		return "#{doc_dir}/#{NGINX_DOC_NAME}"
+	end
+
+	def self.standalone_doc_path
+		return "#{doc_dir}/#{STANDALONE_DOC_NAME}"
 	end
 	
 	
 	###### Other resource locations ######
 	
-	BINARIES_URL_ROOT  = "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release"
-	APACHE2_DOC_URL    = "http://www.modrails.com/documentation/Users%20guide%20Apache.html"
-	NGINX_DOC_URL      = "http://www.modrails.com/documentation/Users%20guide%20Nginx.html"
-	SUPPORT_URL        = "http://www.phusionpassenger.com/support"
+	BINARIES_URL_ROOT   = "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release"
+	INDEX_DOC_NAME      = "Users guide.html"
+	APACHE2_DOC_NAME    = "Users guide Apache.html"
+	NGINX_DOC_NAME      = "Users guide Nginx.html"
+	STANDALONE_DOC_NAME = "Users guide Standalone.html"
+	INDEX_DOC_URL       = "http://www.modrails.com/documentation/Users%20guide.html"
+	APACHE2_DOC_URL     = "http://www.modrails.com/documentation/Users%20guide%20Apache.html"
+	NGINX_DOC_URL       = "http://www.modrails.com/documentation/Users%20guide%20Nginx.html"
+	STANDALONE_DOC_URL  = "http://www.modrails.com/documentation/Users%20guide%20Standalone.html"
+	SUPPORT_URL         = "http://www.phusionpassenger.com/support"
 
 	def self.binaries_ca_cert_path
 		return "#{resources_dir}/oss-binaries.phusionpassenger.com.crt"

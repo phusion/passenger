@@ -63,8 +63,12 @@ class Installer < PhusionPassenger::AbstractInstaller
 		return [specs, ids]
 	end
 	
-	def users_guide
-		return "#{PhusionPassenger.doc_dir}/Users guide Nginx.html"
+	def users_guide_path
+		return PhusionPassenger.nginx_doc_path
+	end
+
+	def users_guide_url
+		return NGINX_DOC_URL
 	end
 	
 	def run_steps
@@ -108,7 +112,10 @@ class Installer < PhusionPassenger::AbstractInstaller
 		check_whether_we_can_write_to(nginx_prefix) || exit(1)
 		nginx_config_already_exists_before_installing = nginx_config_exists?(nginx_prefix)
 		if needs_compiling_support_files?
-			compile_passenger_support_files || exit(1)
+			if !compile_passenger_support_files
+				show_possible_solutions_for_compilation_and_installation_problems
+				exit(1)
+			end
 		end
 		if install_nginx(nginx_source_dir, nginx_prefix, extra_nginx_configure_flags)
 			if nginx_config_already_exists_before_installing || !locate_nginx_config_file(nginx_prefix)
@@ -383,6 +390,8 @@ private
 			end
 		end
 		return true
+	rescue Interrupt
+		raise Aborted
 	end
 	
 	def show_passenger_config_snippets(prefix)
@@ -398,7 +407,8 @@ private
 		line
 		puts
 		render_template 'nginx/deployment_example',
-			:users_guide => users_guide,
+			:users_guide_path => users_guide_path,
+			:users_guide_url => users_guide_url,
 			:phusion_website => PHUSION_WEBSITE,
 			:passenger_website => PASSENGER_WEBSITE
 	end
@@ -407,8 +417,9 @@ private
 		line
 		puts
 		render_template 'nginx/possible_solutions_for_compilation_and_installation_problems',
-			:users_guide => users_guide,
-			:passenger_website => PASSENGER_WEBSITE
+			:users_guide_path => users_guide_path,
+			:users_guide_url => users_guide_url,
+			:support_url => SUPPORT_URL
 	end
 	
 	def locate_nginx_config_file(prefix)

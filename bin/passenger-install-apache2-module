@@ -81,8 +81,12 @@ class Installer < PhusionPassenger::AbstractInstaller
 		return [specs, ids]
 	end
 	
-	def users_guide
-		return "#{PhusionPassenger.doc_dir}/Users guide Apache.html"
+	def users_guide_path
+		return PhusionPassenger.apache2_doc_path
+	end
+
+	def users_guide_url
+		return APACHE2_DOC_URL
 	end
 	
 	def run_steps
@@ -240,7 +244,8 @@ private
 		puts
 		line
 		render_template 'apache2/deployment_example',
-			:users_guide => users_guide,
+			:users_guide_path => users_guide_path,
+			:users_guide_url => users_guide_url,
 			:phusion_website => PHUSION_WEBSITE,
 			:passenger_website => PASSENGER_WEBSITE
 	end
@@ -248,8 +253,9 @@ private
 	def show_possible_solutions_for_compilation_and_installation_problems
 		new_screen
 		render_template 'apache2/possible_solutions_for_compilation_and_installation_problems',
-			:users_guide => users_guide,
-			:passenger_website => PASSENGER_WEBSITE
+			:users_guide_path => users_guide_path,
+			:users_guide_url => users_guide_url,
+			:support_url => SUPPORT_URL
 	end
 end
 
