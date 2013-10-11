@@ -269,7 +269,8 @@ describe RuntimeInstaller do
 			@installer.should_receive(:check_dependencies).and_return(true)
 			@installer.should_not_receive(:download_and_extract_nginx_sources)
 			@installer.should_not_receive(:compile_nginx)
-			lambda { @installer.run }.should raise_error("Rake failed")
+			lambda { @installer.run }.should raise_error(SystemExit)
+			@logs.string.should include("Rake failed")
 		end
 	end
 

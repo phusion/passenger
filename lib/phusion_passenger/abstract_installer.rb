@@ -251,7 +251,7 @@ protected
 	def use_stderr
 		old_stdout = @stdout
 		begin
-			@stdout = STDERR
+			@stdout = @stderr
 			yield
 		ensure
 			@stdout = old_stdout
