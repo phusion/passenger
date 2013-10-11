@@ -395,8 +395,11 @@ function readOptions() {
 
 function setupEnvironment(options) {
 	PhusionPassenger.options = options;
-	PhusionPassenger.use     = use;
+	PhusionPassenger.configure = configure;
 	PhusionPassenger._requestHandler = new RequestHandler(loadApplication);
+	PhusionPassenger._appInstalled = false;
+	http.Server.prototype.originalListen = http.Server.prototype.listen;
+	http.Server.prototype.listen = installServer;
 
 	stdinReader.close();
 	stdinReader = undefined;
@@ -410,60 +413,84 @@ function setupEnvironment(options) {
 	process.stdin.resume();
 }
 
+/**
+ * PhusionPassenger.configure(options)
+ *
+ * Configures Phusion Passenger's behavior inside this Node application.
+ *
+ * Options:
+ *   autoInstall (boolean, default true)
+ *     Whether to install the first HttpServer object for which listen() is called,
+ *     as the Phusion Passenger request handler.
+ */
+function configure(_options) {
+	var options = {
+		autoInstall: true
+	};
+	for (var key in _options) {
+		options[key] = _options[key];
+	}
+
+    if (!options.autoInstall) {
+		http.Server.prototype.listen = listenAndMaybeInstall;
+	}
+}
+
 function loadApplication() {
 	require(PhusionPassenger.options.app_root + '/passenger_node.js');
 }
 
-function use(server) {
-	if (server instanceof http.Server) {
-		return useHttpServer(server);
-	} else if (typeof(server) == 'function' && server.use) {
-		return useConnectObject(server);
-	} else {
-		throw new Error('Unable to detect server type. At the moment, only ' +
-			'http.Server and Connect.js app objects are supported.');
+function extractCallback(args) {
+	if (args.length > 1 && typeof(args[args.length - 1]) == 'function') {
+		return args[args.length - 1];
 	}
 }
 
-function useHttpServer(server) {
-	server.listen = function listen() {
-		if (arguments.length > 1 && typeof(arguments[arguments.length - 1]) == 'function') {
-			var callback = arguments[arguments.length - 1];
-			server.on('request', callback);
-		}
+function installServer() {
+	var server = this;
+	if (!PhusionPassenger._appInstalled) {
+		PhusionPassenger._appInstalled = true;
 		finalizeStartup();
-		server.emit('listening');
-	};
 
-	PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
-		var req = createIncomingMessage(headers, socket, bodyBegin);
-		if (req.headers['upgrade']) {
-			if (EventEmitter.listenerCount(server, 'upgrade') > 0) {
-				server.emit('upgrade', req, socket, bodyBegin);
+		PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
+			var req = createIncomingMessage(headers, socket, bodyBegin);
+			if (req.headers['upgrade']) {
+				if (EventEmitter.listenerCount(server, 'upgrade') > 0) {
+					server.emit('upgrade', req, socket, bodyBegin);
+				} else {
+					socket.destroy();
+				}
 			} else {
-				socket.destroy();
+				var res = createServerResponse(req);
+				server.emit('request', req, res);
 			}
-		} else {
-			var res = createServerResponse(req);
-			server.emit('request', req, res);
-		}
-	});
+		});
 
-	return server;
+		var callback = extractCallback(arguments);
+		if (callback) {
+			server.once('listening', callback);
+		}
+		server.emit('listening');
+	} else {
+		throw new Error("http.Server.listen() was called more than once, which " +
+			"is not allowed because Phusion Passenger is in auto-install mode. " +
+			"This means that the first http.Server object for which listen() is called, " +
+			"is automatically installed as the Phusion Passenger request handler. " +
+			"If you want to create and listen on multiple http.Server object then " +
+			"you should disable auto-install mode.");
+	}
 }
 
-function useConnectObject(app) {
-	app.listen = function listen() {
-		finalizeStartup();
-	};
-
-	PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
-		var req = createIncomingMessage(headers, socket, bodyBegin);
-		var res = createServerResponse(req);
-		app(req, res);
-	});
-	
-	return app;
+function listenAndMaybeInstall(port) {
+	if (port === 'passenger') {
+		if (!PhusionPassenger._appInstalled) {
+			installServer.apply(this, arguments);
+		} else {
+			throw new Error("You may only call listen('passenger') once");
+		}
+	} else {
+		this.originalListen.apply(this, arguments);
+	}
 }
 
 function finalizeStartup() {
