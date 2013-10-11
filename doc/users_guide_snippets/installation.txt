@@ -245,14 +245,13 @@ You must maintain this root prompt throughout this installation guide.
 [float]
 ==== Step 2: install the gem
 
-.Open Source
-
-Install the latest gem to obtain the files for the latest stable version of the open source Phusion Passenger:
-
+**Open Source**::
+	Install the latest gem to obtain the files for the latest stable version of the open source Phusion Passenger:
++
 ----------------------
 gem install passenger
 ----------------------
-
++
 .Previous versions and beta versions
 ********************************************************
 Sometimes you will want to obtain the latest beta version of Phusion Passenger. Beta versions are not normally selected by `gem install`, so to opt-in for beta versions you have to add the `--pre` argument:
@@ -274,24 +273,23 @@ gem install passenger --version 3.9.1.beta --pre
 ----------------------------------------------------
 ********************************************************
 
-.Enterprise
-
-First, download the *license key* from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as '/etc/passenger-enterprise-license'.
-
+**Enterprise**::
+First, download the *license key* from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
++
 Next, add the Phusion Passenger Enterprise gem server to your RubyGems source list:
-
++
 ------------------------------------------
 gem source --add https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_gems/
 ------------------------------------------
-
++
 Substitute 'YOUR_ORDER_REFERENCE' and 'YOUR_PASSWORD' with your link:https://www.phusionpassenger.com/orders[Customer Area] login credentials. And notice the **trailing slash** in the URL! It is very important.
-
++
 Finally, install the latest gem to obtain the files for the latest stable version of the open source Phusion Passenger:
-
++
 ----------------------
 gem install passenger-enterprise-server
 ----------------------
-
++
 .Previous versions and beta versions
 ********************************************************
 Sometimes you will want to obtain the latest beta version of Phusion Passenger Enterprise. Beta versions are not normally selected by `gem install`, so to opt-in for beta versions you have to add the `--pre` argument:
@@ -318,7 +316,7 @@ gem install passenger-enterprise-server --version 3.9.1.beta --pre
 ==== Step 3: run the Phusion Passenger installer
 
 ifdef::apache[]
-The Phusion Passenger gem only contains source files. In this step we will use the installer to compile the Phusion Passenger binaries, which include the various Phusion Passenger agent executables and the Phusion Passenger Apache module.
+The Phusion Passenger gem only contains source files. In this step we will use the installer to compile the Phusion Passenger binaries, which include the various Phusion Passenger agent executables and the Apache module.
 
 Run the following command and follow the on-screen instructions.
 
