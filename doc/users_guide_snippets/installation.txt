@@ -1,6 +1,6 @@
 === Synopsis
 
-Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, there are multiple ways to install it. Most users  -- especially first-time users -- will prefer _OS-specific installation instructions_, which allow Phusion Passenger to integrate into the operating system in the best way possible. Other users should consult the _generic installation instructions_.
+Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, there are multiple ways to install it. Most users  -- especially first-time users -- will prefer _OS-specific installation instructions_. These are not only the easiest, but also allow Phusion Passenger to integrate into the operating system in the best way possible. Other users should consult the _generic installation instructions_.
 
 The steps for upgrading or downgrading Phusion Passenger is almost the same as the steps for installing. All the installation guides in this section will also teach you how to upgrade and downgrade.
 

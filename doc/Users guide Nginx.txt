@@ -21,6 +21,7 @@ using the command line.
 
 include::users_guide_snippets/support_information.txt[]
 
+[[installation]]
 == Installation
 
 include::users_guide_snippets/installation.txt[]
