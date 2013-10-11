@@ -224,7 +224,7 @@ RubyGems is only used as a method to obtain the Phusion Passenger files, so in c
 
 [[is_ruby_home_or_system_wide_installed]]
 [float]
-==== Step 1: figuring out whether your Ruby is installed the home directory or system-wide
+==== Step 1: figuring out whether your Ruby is installed in the home directory or system-wide
 
 Ruby may either be installed in the home directory, or system-wide. If it's installed system-wide then we will want to install gems system-wide as well, so you need to switch to a root prompt first. If Ruby is installed in the home directory then we will want to install gems to the home directory as well, as a normal user.
 
@@ -253,6 +253,8 @@ Install the latest gem to obtain the files for the latest stable version of the 
 gem install passenger
 ----------------------
 
+.Previous versions and beta versions
+********************************************************
 Sometimes you will want to obtain the latest beta version of Phusion Passenger. Beta versions are not normally selected by `gem install`, so to opt-in for beta versions you have to add the `--pre` argument:
 
 -----------------------------------
@@ -270,6 +272,7 @@ If you want to obtain a specific *beta* version of Phusion Passenger then you mu
 ----------------------------------------------------
 gem install passenger --version 3.9.1.beta --pre
 ----------------------------------------------------
+********************************************************
 
 .Enterprise
 
@@ -289,6 +292,8 @@ Finally, install the latest gem to obtain the files for the latest stable versio
 gem install passenger-enterprise-server
 ----------------------
 
+.Previous versions and beta versions
+********************************************************
 Sometimes you will want to obtain the latest beta version of Phusion Passenger Enterprise. Beta versions are not normally selected by `gem install`, so to opt-in for beta versions you have to add the `--pre` argument:
 
 -----------------------------------
@@ -306,6 +311,7 @@ If you want to obtain a specific *beta* version of Phusion Passenger then you mu
 ----------------------------------------------------
 gem install passenger-enterprise-server --version 3.9.1.beta --pre
 ----------------------------------------------------
+********************************************************
 
 [[run_passenger_installer]]
 [float]
