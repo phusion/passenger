@@ -131,6 +131,8 @@ namespace oxt {
 	 * by oxt::thread::interrupt() or oxt::thread::interrupt_and_join().
 	 */
 	namespace syscalls {
+		using namespace std;
+
 		int open(const char *path, int oflag);
 		int open(const char *path, int oflag, mode_t mode);
 		ssize_t read(int fd, void *buf, size_t count);
