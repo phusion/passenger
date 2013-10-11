@@ -1,0 +1,58 @@
+ifdef::apache[]
+The Phusion Passenger gem only contains source files. In this step we will use the installer to compile the Phusion Passenger binaries, which include the various Phusion Passenger agent executables and the Apache module.
+
+Run the following command and follow the on-screen instructions.
+
+ifdef::gem[]
+----------------------------------
+passenger-install-apache2-module
+----------------------------------
+endif::[]
+ifdef::tarball[]
+----------------------------------
+./bin/passenger-install-apache2-module
+----------------------------------
+endif::[]
+
+At the end of the installation process, you will be asked to copy and paste a configuration snippet (containing `LoadModule`, `PassengerRoot`, etc.) into your Apache configuration file. If you're upgrading, then you already had a similar configuration snippet. Be sure to remove the old one before pasting the new one.
+
+Different operating systems and Apache installations have different conventions with regard to where the Apache configuration file is and how it is organized. Please read <<working_with_apache_conf,Working with the Apache configuration file>> if you're not familiar with it. That section is especially of interest for OS X Server >= 10.8 users because the configuration file may not be at a surprising location.
+
+If compilation doesn't succeed, then please consult the <<troubleshooting,Troubleshooting>> section.
+
+.What does the installer do?
+
+Despite the name, this "installer" doesn't actually install anything. The installer checks whether all required dependencies are installed, invokes the compiler, and tells you how to modify the Apache
+configuration file. However, it doesn't copy any files to outside the Phusion Passenger source directory.
+
+`passenger-install-apache2-module` is actually just a user-friendly frontend around the command `rake apache2`, which performs the actual compilation of Phusion Passenger.
+endif::[]
+ifdef::nginx[]
+Nginx is a different from other web servers in that it does not support loadable modules. The only way to extend Nginx is to recompile it entirely from source. Since Phusion Passenger consists of some external executables plus an Nginx module, you must recompile Nginx when first installing Phusion Passenger, but also when upgrading Nginx itself or when upgrading the Phusion Passenger version.
+
+Recompiling Nginx and the Phusion Passenger executables is what we will do in this step. The good news is that Phusion Passenger provides a tool to make this easy for you.
+
+If you've already installed Nginx before, but without Phusion Passenger support, then you *should* uninstall it first. You don't have to, because you can also install another Nginx with Phusion Passenger support, in parallel to the existing Nginx. We merely recommend uninstalling the existing in order to avoid user confusion, but the choice is yours.
+
+If you had previously installed Nginx with Phusion Passenger support, and you are upgrading, then you don't have to uninstall your existing Nginx first. Instead we'll overwrite it this step. But it is important that you recompile Nginx with the configure parameters that you used last time.
+
+Here's how you can uninstall the original Nginx:
+
+- If you installed the existing Nginx through APT, run: `sudo apt-get remove nginx nginx-full nginx-light nginx-naxsi nginx-common`
+- If you installed the existing Nginx through YUM, run `yum remove nginx` as root.
+
+To proceed with installing or upgrading Phusion Passenger, run the Phusion Passenger Nginx installer and follow the on-screen instructions:
+
+ifdef::gem[]
+----------------------------------
+passenger-install-nginx-module
+----------------------------------
+endif::[]
+ifdef::tarball[]
+----------------------------------
+./bin/passenger-install-nginx-module
+----------------------------------
+endif::[]
+
+At some point it will ask you which prefix to install Nginx to. If you're upgrading, then specify the same prefix that you used last time, as well as the same configuration parameters that you used last time.
+endif::[]
