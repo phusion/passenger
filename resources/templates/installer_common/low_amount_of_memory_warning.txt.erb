@@ -1,6 +1,6 @@
 <banner>Your system does not have a lot of virtual memory</banner>
 
-Compiling Phusion Passenger works best when you have at least <%= @required %> MB of virtual
+Compiling <%= PROGRAM_NAME %> works best when you have at least <%= @required %> MB of virtual
 memory. However your system only has <%= @current %> MB of total virtual memory (<%= @ram %> MB
 RAM, <%= @swap %> MB swap). It is recommended that you temporarily add more swap space
 before proceeding. You can do it as follows:
@@ -14,9 +14,11 @@ the swap file on Linux.
 
 If you cannot activate a swap file (e.g. because you're on OpenVZ, or if you
 don't have root privileges) then you should install Phusion Passenger through
-DEB/RPM packages. Please refer to the manual for more information:
-<b><%= @doc %></b>, section
-"Installation".
+DEB/RPM packages. For more information, please refer to the manual, section
+"Installation":
+
+  <%= @doc_path %>
+  <%= @doc_url %>
 
 <b>Press Ctrl-C to abort this installer (recommended).</b>
 <b>Press Enter if you want to continue with installation anyway.</b>

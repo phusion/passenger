@@ -163,12 +163,11 @@ protected
 				puts "   #{dep.install_instructions}"
 				puts
 			end
-			if respond_to?(:users_guide)
-				puts "If the aforementioned instructions didn't solve your problem, then please take"
-				puts "a look at the Users Guide:"
-				puts
-				puts "  <yellow>#{users_guide}</yellow>"
-			end
+			puts "If the aforementioned instructions didn't solve your problem, then please take"
+			puts "a look at the Users Guide:"
+			puts
+			puts "  <yellow>#{users_guide_path}</yellow>"
+			puts "  <yellow>#{users_guide_url}</yellow>"
 			return false
 		end
 	end
@@ -236,7 +235,8 @@ protected
 				:current => ram_mb + swap_mb,
 				:ram => ram_mb,
 				:swap => swap_mb,
-				:doc => users_guide
+				:doc_path => users_guide_path,
+				:doc_url => users_guide_url
 			wait
 		end
 	end
