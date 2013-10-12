@@ -4,6 +4,8 @@ Release 4.0.21
  * Work around an Apache packaging bug in CentOS 5.
  * Various user friendliness improvements in the documentation and the
    installers.
+ * Fixed a bug in the always_restart.txt support. Phusion Passenger was
+   looking for it in the wrong directory.
 
 
 Release 4.0.20
