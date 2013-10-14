@@ -117,6 +117,7 @@ module Packaging
 		'test/cxx/**/*.{cpp,h}',
 		'test/oxt/*.{cpp,hpp}',
 		'test/ruby/**/*',
+		'test/node/**/*',
 		'test/integration_tests/**/*',
 		'test/stub/**/*',
 		'test/stub/**/.*'
