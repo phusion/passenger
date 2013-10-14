@@ -40,6 +40,7 @@
 #include <dirent.h>
 #include <limits.h>
 #include <unistd.h>
+#include <string.h>
 #include <signal.h>
 #ifdef __linux__
 	#include <sys/syscall.h>
