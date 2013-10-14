@@ -437,7 +437,7 @@ function configure(_options) {
 }
 
 function loadApplication() {
-	require(PhusionPassenger.options.app_root + '/passenger_node.js');
+	require(PhusionPassenger.options.app_root + '/app.js');
 }
 
 function extractCallback(args) {
