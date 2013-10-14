@@ -55,6 +55,17 @@ function install_base_test_deps()
 	fi
 }
 
+function install_node_and_modules()
+{
+	if [[ "$install_node_and_modules" = "" ]]; then
+		install_node_and_modules=1
+		wget http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
+		tar xzvf node-v0.10.20-linux-x64.tar.gz
+		export PATH=`pwd`/node-v0.10.20-linux-x64/bin:$PATH
+		run rake test:install_deps NODE_MODULES=yes
+	fi
+}
+
 run uname -a
 run lsb_release -a
 sudo tee /etc/dpkg/dpkg.cfg.d/02apt-speedup >/dev/null <<<"force-unsafe-io"
@@ -94,7 +105,7 @@ if [[ "$TEST_RUBY" = 1 ]]; then
 fi
 
 if [[ "$TEST_NODE" = 1 ]]; then
-	run rake test:install_deps NODE_MODULES=yes
+	install_node_and_modules
 	run rake test:node
 fi
 
