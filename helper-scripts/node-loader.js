@@ -27,240 +27,16 @@ module.paths.unshift(__dirname + "/../node_lib");
 var EventEmitter = require('events').EventEmitter;
 var net = require('net');
 var http = require('http');
+
 var LineReader = require('phusion_passenger/line_reader').LineReader;
+var RequestHandler = require('phusion_passenger/request_handler').RequestHandler;
+var HttplibEmulation = require('phusion_passenger/httplib_emulation');
+
 GLOBAL.PhusionPassenger = new EventEmitter();
-
-
-const
-	SPP_PARSING_SIZE = 0,
-	SPP_PARSING_HEADERS = 1,
-	SPP_DONE = 10,
-	SPP_ERROR = 11,
-	SPP_ENCODING = 'binary';
-
-function SessionProtocolParser() {
-	this.state = SPP_PARSING_SIZE;
-	this.processed = 0;
-	this.size = 0;
-	this.keys = [];
-}
-
-SessionProtocolParser.prototype.feed = function(buffer) {
-	var consumed = 0;
-	var locallyConsumed;
-
-	while (consumed < buffer.length && this.state != SPP_ERROR && this.state != SPP_DONE) {
-		switch (this.state) {
-		case SPP_PARSING_SIZE:
-			this.size += buffer[consumed] * Math.pow(256, 3 - this.processed);
-			locallyConsumed = 1;
-			this.processed++;
-			if (this.processed == 4) {
-				this.state = SPP_PARSING_HEADERS;
-				this.buffer = new Buffer(this.size);
-				this.processed = 0;
-			}
-			break;
-
-		case SPP_PARSING_HEADERS:
-			locallyConsumed = Math.min(buffer.length - consumed, this.buffer.length - this.processed);
-			buffer.copy(this.buffer, this.processed, consumed, consumed + locallyConsumed);
-			this.processed += locallyConsumed;
-			if (this.processed == this.buffer.length) {
-				this.state = SPP_DONE;
-				this.parse();
-			}
-			break;
-
-		default:
-			console.assert(false);
-			break;
-		}
-
-		consumed += locallyConsumed;
-	}
-
-	return consumed;
-}
-
-SessionProtocolParser.prototype.parse = function() {
-	function findZero(buffer, start) {
-		while (start < buffer.length) {
-			if (buffer[start] == 0) {
-				return start;
-			} else {
-				start++;
-			}
-		}
-		return -1;
-	}
-
-	var start = 0;
-	var key, value;
-
-	while (start < this.buffer.length) {
-		var keyEnd = findZero(this.buffer, start);
-		if (keyEnd != -1 && keyEnd + 1 < this.buffer.length) {
-			var valueStart = keyEnd + 1;
-			var valueEnd   = findZero(this.buffer, valueStart);
-			if (valueEnd != -1) {
-				key = this.buffer.toString(SPP_ENCODING, start, keyEnd);
-				value = this.buffer.toString(SPP_ENCODING, valueStart, valueEnd);
-				start = valueEnd + 1;
-				this.keys.push(key);
-				this[key] = value;
-			} else {
-				start = this.buffer.length;
-			}
-		} else {
-			start = this.buffer.length;
-		}
-	}
-}
-
-
-function RequestHandler(readyCallback, clientCallback) {
-	var self = this;
-
-	function handleNewClient(socket) {
-		var state = 'PARSING_HEADER';
-		var parser = new SessionProtocolParser();
-
-		function handleData(data) {
-			if (state == 'PARSING_HEADER') {
-				var consumed = parser.feed(data);
-				if (parser.state == SPP_DONE) {
-					state = 'HEADER_SEEN';
-					socket.removeListener('data', handleData);
-					PhusionPassenger.emit('request', parser, socket, data.slice(consumed));
-				} else if (parser.state == SPP_ERROR) {
-					console.error('Header parse error');
-					socket.destroySoon();
-				}
-			} else {
-				// Do nothing.
-			}
-		}
-
-		socket.on('data', handleData);
-	}
-
-	var server = net.createServer({ allowHalfOpen: true }, handleNewClient);
-	this.server = server;
-	server.listen(0, function() {
-		readyCallback(self);
-	});
-}
-
-
-const HTTP_HEADERS_WITHOUT_PREFIX = {
-	'CONTENT_LENGTH': true,
-	'CONTENT_TYPE': true
-};
-
-function cgiKeyToHttpHeader(key) {
-	if (HTTP_HEADERS_WITHOUT_PREFIX[key]) {
-		return key.toLowerCase().replace(/_/g, '-');
-	} else if (key.match(/^HTTP_/)) {
-		return key.replace(/^HTTP_/, '').toLowerCase().replace(/_/g, '-');
-	} else {
-		return undefined;
-	}
-}
-
-function setHttpHeaders(httpHeaders, cgiHeaders) {
-	for (var i = 0; i < cgiHeaders.keys.length; i++) {
-		var key = cgiHeaders.keys[i];
-		var httpHeader = cgiKeyToHttpHeader(key);
-		if (httpHeader !== undefined) {
-			httpHeaders[httpHeader] = cgiHeaders[key];
-		}
-	}
-
-	if (cgiHeaders['HTTPS']) {
-		httpHeaders['x-forwarded-proto'] = 'https';
-	}
-	if (!httpHeaders['x-forwarded-for']) {
-		httpHeaders['x-forwarded-for'] = cgiHeaders['REMOTE_ADDR'];
-	}
-}
-
-function inferHttpVersion(protocolDescription) {
-	var match = protocolDescription.match(/^HTTP\/(.+)/);
-	if (match) {
-		return match[1];
-	}
-}
-
-function mayHaveRequestBody(headers) {
-	return headers['REQUEST_METHOD'] != 'GET' || headers['HTTP_UPGRADE'];
-}
-
-function createIncomingMessage(headers, socket, bodyBegin) {
-	var message = new http.IncomingMessage(socket);
-	setHttpHeaders(message.headers, headers);
-	message.cgiHeaders = headers;
-	message.httpVersion = inferHttpVersion(headers['SERVER_PROTOCOL']);
-	message.method = headers['REQUEST_METHOD'];
-	message.url    = headers['REQUEST_URI'];
-	message.connection.remoteAddress = headers['REMOTE_ADDR'];
-	message.connection.remotePort = parseInt(headers['REMOTE_PORT']);
-
-	function onSocketData(chunk) {
-		message.emit('data', chunk);
-	}
-
-	function onSocketEnd() {
-		message.emit('end');
-	}
-
-	socket.on('drain', function() {
-		message.emit('drain');
-	});
-	socket.on('timeout', function() {
-		message.emit('timeout');
-	});
-
-	/* Node's HTTP parser simulates an 'end' event if it determines that
-	 * the request should not have a request body. Currently (Node 0.10.18),
-	 * it thinks GET requests without an Upgrade header should not have a
-	 * request body, even though technically such GET requests are allowed
-	 * to have a request body. For compatibility reasons we implement the
-	 * same behavior as Node's HTTP parser.
-	 */
-	if (mayHaveRequestBody(headers)) {
-		socket.on('data', onSocketData);
-		socket.on('end', onSocketEnd);
-		if (bodyBegin.length > 0) {
-			process.nextTick(function() {
-				// TODO: we should check here whether the socket hasn't already been closed
-				socket.emit('data', bodyBegin);
-			});
-		}
-	} else {
-		// TODO: we should check in the next tick whether the socket hasn't already been closed
-		process.nextTick(onSocketEnd);
-	}
-
-	return message;
-}
-
-function createServerResponse(req) {
-	var res = new http.ServerResponse(req);
-	res.assignSocket(req.socket);
-	res.shouldKeepAlive = false;
-	res.once('finish', function() {
-		req.socket.destroySoon();
-	});
-	return res;
-}
-
-
-/**************************/
-
 var stdinReader = new LineReader(process.stdin);
 beginHandshake();
 readInitializationHeader();
+
 
 function beginHandshake() {
 	process.stdout.write("!> I have control 1.0\n");
@@ -353,7 +129,7 @@ function installServer() {
 		finalizeStartup();
 
 		PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
-			var req = createIncomingMessage(headers, socket, bodyBegin);
+			var req = HttplibEmulation.createIncomingMessage(headers, socket, bodyBegin);
 			if (req.headers['upgrade']) {
 				if (EventEmitter.listenerCount(server, 'upgrade') > 0) {
 					server.emit('upgrade', req, socket, bodyBegin);
@@ -361,7 +137,7 @@ function installServer() {
 					socket.destroy();
 				}
 			} else {
-				var res = createServerResponse(req);
+				var res = HttplibEmulation.createServerResponse(req);
 				server.emit('request', req, res);
 			}
 		});
