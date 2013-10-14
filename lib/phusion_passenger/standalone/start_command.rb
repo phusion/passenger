@@ -26,6 +26,7 @@ require 'etc'
 require 'phusion_passenger'
 require 'phusion_passenger/plugin'
 require 'phusion_passenger/standalone/command'
+require 'phusion_passenger/platform_info/operating_system'
 
 # We lazy load as many libraries as possible not only to improve startup performance,
 # but also to ensure that we don't require libraries before we've passed the dependency
@@ -359,7 +360,7 @@ private
 							socket.connect_nonblock(sockaddr)
 						rescue Errno::EISCONN
 						rescue Errno::EINVAL
-							if RUBY_PLATFORM =~ /freebsd/i
+							if PlatformInfo.os_name =~ /freebsd/i
 								raise Errno::ECONNREFUSED
 							else
 								raise

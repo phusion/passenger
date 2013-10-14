@@ -260,7 +260,7 @@ public
 	end
 	
 	def self.compiler_supports_visibility_flag?
-		return false if RUBY_PLATFORM =~ /aix/
+		return false if os_name =~ /aix/
 		return try_compile("Checking for C compiler '-fvisibility' support",
 			:c, '', '-fvisibility=hidden')
 	end
@@ -313,7 +313,7 @@ public
 	# http://gcc.gnu.org/ml/gcc-patches/2006-07/msg00861.html
 	# Warnings should be suppressed with -Wno-attributes.
 	def self.compiler_visibility_flag_generates_warnings?
-		if RUBY_PLATFORM =~ /linux/ && `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
+		if os_name =~ /linux/ && `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
 			return $1 <= "4.1.2"
 		else
 			return false
@@ -351,7 +351,7 @@ public
 		if !ENV['DMALLOC_LIBS'].to_s.empty?
 			return ENV['DMALLOC_LIBS']
 		end
-		if RUBY_PLATFORM =~ /darwin/
+		if os_name == "macosx"
 			['/opt/local', '/usr/local', '/usr'].each do |prefix|
 				filename = "#{prefix}/lib/libdmallocthcxx.a"
 				if File.exist?(filename)
@@ -366,7 +366,7 @@ public
 	memoize :dmalloc_ldflags
 
 	def self.electric_fence_ldflags
-		if RUBY_PLATFORM =~ /darwin/
+		if os_name == "macosx"
 			['/opt/local', '/usr/local', '/usr'].each do |prefix|
 				filename = "#{prefix}/lib/libefence.a"
 				if File.exist?(filename)
@@ -381,7 +381,7 @@ public
 	memoize :electric_fence_ldflags
 	
 	def self.export_dynamic_flags
-		if RUBY_PLATFORM =~ /linux/
+		if os_name == "linux"
 			return '-rdynamic'
 		else
 			return nil

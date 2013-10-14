@@ -163,7 +163,7 @@ AGENT_LDFLAGS << " -faddress-sanitizer" if USE_ASAN
 # Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
 AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
 # Enable dead symbol elimination on OS X.
-AGENT_LDFLAGS << " -Wl,-dead_strip" if RUBY_PLATFORM =~ /darwin/
+AGENT_LDFLAGS << " -Wl,-dead_strip" if PlatformInfo.os_name == "macosx"
 AGENT_LDFLAGS.strip!
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.

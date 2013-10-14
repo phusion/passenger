@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,13 +22,15 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger/platform_info/operating_system'
+
 module PhusionPassenger
 module Utils
 
 # A /etc/hosts parser. Also supports writing groups of data to the file.
 class HostsFileParser
 	def self.flush_dns_cache!
-		if RUBY_PLATFORM =~ /darwin/
+		if PlatformInfo.os_name == "macosx"
 			system("dscacheutil -flushcache")
 		end
 	end

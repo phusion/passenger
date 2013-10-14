@@ -440,7 +440,7 @@ module PlatformInfo
 			apxs2_flags.gsub!(/-O\d? /, '')
 
 			# Remove flags not supported by GCC
-			if RUBY_PLATFORM =~ /solaris/ # TODO: Add support for people using SunStudio
+			if os_name =~ /solaris/ # TODO: Add support for people using SunStudio
 				# The big problem is Coolstack apxs includes a bunch of solaris -x directives.
 				options = apxs2_flags.split
 				options.reject! { |f| f =~ /^\-x/ }
@@ -560,10 +560,10 @@ private
 			flags = `#{apr_config} --cppflags --includes`.strip
 			libs = `#{apr_config} --link-ld`.strip
 			flags.gsub!(/-O\d? /, '')
-			if RUBY_PLATFORM =~ /solaris/
+			if os_name =~ /solaris/
 				# Remove flags not supported by GCC
 				flags = flags.split(/ +/).reject{ |f| f =~ /^\-mt/ }.join(' ')
-			elsif RUBY_PLATFORM =~ /aix/
+			elsif os_name =~ /aix/
 				libs << " -Wl,-G -Wl,-brtl"
 			end
 			return [flags, libs]
