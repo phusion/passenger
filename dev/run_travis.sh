@@ -43,7 +43,7 @@ function install_test_deps_with_doctools()
 {
 	if [[ "$install_test_deps_with_doctools" = "" ]]; then
 		install_test_deps_with_doctools=1
-		run rake test:install_deps RAILS_BUNDLES=no NODE_MODULES=no
+		run rake test:install_deps BASE_DEPS=yes DOCTOOLS=yes
 	fi
 }
 
@@ -51,7 +51,7 @@ function install_base_test_deps()
 {
 	if [[ "$install_base_test_deps" = "" ]]; then
 		install_base_test_deps=1
-		rake test:install_deps RAILS_BUNDLES=no DOCTOOLS=no NODE_MODULES=no
+		rake test:install_deps BASE_DEPS=yes
 	fi
 }
 
@@ -125,7 +125,6 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 fi
 
 if [[ "$TEST_STANDALONE" = 1 ]]; then
-	apt_get_update
 	install_base_test_deps
 	run rake test:integration:standalone
 fi
