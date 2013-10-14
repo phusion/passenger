@@ -403,13 +403,7 @@ function setupEnvironment(options) {
 
 	stdinReader.close();
 	stdinReader = undefined;
-	process.stdin.on('end', function() {
-		if (PhusionPassenger.listeners('exit').length == 0) {
-			process.exit(0);
-		} else {
-			PhusionPassenger.emit('exit');
-		}
-	});
+	process.stdin.on('end', shutdown);
 	process.stdin.resume();
 }
 
@@ -450,6 +444,7 @@ function installServer() {
 	var server = this;
 	if (!PhusionPassenger._appInstalled) {
 		PhusionPassenger._appInstalled = true;
+		PhusionPassenger._server = server;
 		finalizeStartup();
 
 		PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
@@ -499,4 +494,12 @@ function finalizeStartup() {
 		PhusionPassenger._requestHandler.server.address().port +
 		";session;0\n");
 	process.stdout.write("!> \n");
+}
+
+function shutdown() {
+	if (PhusionPassenger.listeners('exit').length == 0) {
+		process.exit(0);
+	} else {
+		PhusionPassenger.emit('exit');
+	}
 }
