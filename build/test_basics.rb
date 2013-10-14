@@ -28,7 +28,7 @@ TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL " <<
 	"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 
 desc "Run all unit tests and integration tests"
-task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
+task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:node', 'test:integration']
 
 desc "Clean all compiled test files"
 task 'test:clean' do
@@ -47,9 +47,15 @@ desc "Install developer dependencies"
 task 'test:install_deps' do
 	gem_install = PlatformInfo.gem_command + " install --no-rdoc --no-ri"
 	gem_install = "#{PlatformInfo.ruby_sudo_command} #{gem_install}" if boolean_option('SUDO')
-	sh "#{gem_install} rails -v 2.3.15"
-	sh "#{gem_install} bundler rspec mime-types daemon_controller json rack"
-	sh "#{gem_install} mizuho bluecloth" if boolean_option('DOCTOOLS', true)
+	default = boolean_option('DEVDEPS_DEFAULT', true)
+
+	if boolean_option('BASE_DEPS', true)
+		sh "#{gem_install} rails -v 2.3.15"
+		sh "#{gem_install} bundler rspec mime-types daemon_controller json rack"
+	end
+	if boolean_option('DOCTOOLS', true)
+		sh "#{gem_install} mizuho bluecloth"
+	end
 	if boolean_option('RAILS_BUNDLES', true)
 		sh "cd test/stub/rails3.0 && bundle install"
 		sh "cd test/stub/rails3.1 && bundle install"
@@ -60,5 +66,8 @@ task 'test:install_deps' do
 		if ruby_version_int >= 190
 		    sh "cd test/stub/rails4.0 && bundle install"
                 end
+	end
+	if boolean_option('NODE_MODULES', true)
+		sh "npm install mocha should sinon"
 	end
 end

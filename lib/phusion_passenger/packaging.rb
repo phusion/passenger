@@ -81,6 +81,7 @@ module Packaging
 		'lib/*.rb',
 		'lib/**/*.rb',
 		'lib/**/*.py',
+		'node_lib/**/*.js',
 		'bin/*',
 		'doc/**/*',
 		'man/*',

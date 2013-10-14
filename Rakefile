@@ -34,6 +34,7 @@ else
 	require 'build/oxt_tests'
 	require 'build/cxx_tests'
 	require 'build/ruby_tests'
+	require 'build/node_tests'
 	require 'build/integration_tests'
 	require 'build/misc'
 	require 'build/debian'

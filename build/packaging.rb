@@ -445,6 +445,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 		f.puts "include_dir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/include"
 		f.puts "doc_dir=/usr/share/doc/#{GLOBAL_NAMESPACE_DIRNAME}"
 		f.puts "ruby_libdir=/usr/lib/ruby/vendor_ruby"
+		f.puts "node_libdir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/node"
 		f.puts "apache2_module_path=/usr/lib/apache2/modules/mod_passenger.so"
 		f.puts "ruby_extension_source_dir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
 		f.puts "nginx_module_source_dir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/ngx_http_passenger_module"

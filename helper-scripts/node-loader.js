@@ -23,107 +23,12 @@
  *  THE SOFTWARE.
  */
 
+module.paths.unshift(__dirname + "/../node_lib");
 var EventEmitter = require('events').EventEmitter;
 var net = require('net');
 var http = require('http');
+var LineReader = require('phusion_passenger/line_reader').LineReader;
 GLOBAL.PhusionPassenger = new EventEmitter();
-
-/**
- * Class for reading a stream line-by-line.
- * Usage:
- *
- * reader = new LineReader(stream);
- * reader.readLine(function(line) {
- *     ...
- *     // When done:
- *     reader.close();
- * });
- */
-function LineReader(stream) {
-	var self = this;
-	this.stream = stream;
-
-	this.buffer = '';
-	this.lines = [];
-	this.callbacks = [];
-
-	function handleLineBuffer() {
-		if (self.lineBufferIsFull()) {
-			stream.pause();
-			self.paused = true;
-		}
-
-		while (self.buffer != undefined && self.lines.length > 0 && self.callbacks.length > 0) {
-			line = self.lines.shift();
-			callback = self.callbacks.shift();
-			callback(line);
-		}
-
-		if (self.buffer != undefined && !self.lineBufferIsFull() && self.paused) {
-			self.paused = false;
-			self.stream.resume();
-		}
-	}
-
-	function onData(data) {
-		var index, line, callback;
-
-		if (self.buffer == undefined) {
-			// Already closed.
-			return;
-		}
-
-		self.buffer += data;
-		while ((index = self.buffer.indexOf("\n")) != -1) {
-			line = self.buffer.substr(0, index + 1);
-			self.buffer = self.buffer.substr(index + 1);
-			self.lines.push(line);
-		}
-		handleLineBuffer();
-	}
-
-	function onEnd() {
-		if (self.buffer != undefined) {
-			self.lines.push(self.buffer);
-			self.buffer = '';
-			handleLineBuffer();
-			if (self.onEof) {
-				self.onEof();
-			}
-		}
-	}
-
-	this.onData = onData;
-	this.onEnd  = onEnd;
-	stream.on('data', onData);
-	stream.on('end', onEnd);
-	stream.resume();
-}
-
-LineReader.prototype.close = function() {
-	this.stream.pause();
-	this.stream.removeListener('data', this.onData);
-	this.stream.removeListener('end', this.onEnd);
-	this.buffer = undefined;
-	this.lines = undefined;
-}
-
-LineReader.prototype.lineBufferIsFull = function() {
-	return this.lines.length > 0;
-}
-
-LineReader.prototype.readLine = function(callback) {
-	if (this.lines.length > 0) {
-		var line = this.lines.shift();
-		if (!this.lineBufferIsFull() && this.paused) {
-			this.paused = false;
-			this.stream.resume();
-		}
-		callback(line);
-	} else {
-		this.callbacks.push(callback);
-	}
-}
 
 
 const

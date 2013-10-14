@@ -64,6 +64,7 @@ module PhusionPassenger
 		:include_dir,
 		:doc_dir,
 		:ruby_libdir,
+		:node_libdir,
 		:apache2_module_path,
 		:ruby_extension_source_dir,
 		:nginx_module_source_dir
@@ -101,6 +102,7 @@ module PhusionPassenger
 			@include_dir           = "#{@source_root}/ext".freeze
 			@doc_dir               = "#{@source_root}/doc".freeze
 			@ruby_libdir           = File.dirname(FILE_LOCATION)
+			@node_libdir           = "#{@source_root}/node_lib".freeze
 			@apache2_module_path   = "#{@source_root}/buildout/apache2/mod_passenger.so".freeze
 			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
 			@nginx_module_source_dir   = "#{@source_root}/ext/nginx"
