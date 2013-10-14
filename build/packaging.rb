@@ -332,6 +332,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	# the files to be installed to /usr, and the Ruby interpreter
 	# on the packaging machine might be in /usr/local.
 	fake_rubylibdir = "#{fakeroot}/usr/lib/ruby/vendor_ruby"
+	fake_nodelibdir = "#{fakeroot}/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/node"
 	fake_libdir = "#{fakeroot}/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}"
 	fake_native_support_dir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
 	fake_agents_dir = "#{fakeroot}/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}/agents"
@@ -353,6 +354,10 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	sh "mkdir -p #{fake_rubylibdir}"
 	sh "cp #{PhusionPassenger.ruby_libdir}/phusion_passenger.rb #{fake_rubylibdir}/"
 	sh "cp -R #{PhusionPassenger.ruby_libdir}/phusion_passenger #{fake_rubylibdir}/"
+
+	# Node.js sources
+	sh "mkdir -p #{fake_nodelibdir}"
+	sh "cp -R #{PhusionPassenger.node_libdir}/phusion_passenger #{fake_nodelibdir}/"
 
 	# Phusion Passenger common libraries
 	sh "mkdir -p #{fake_libdir}"
