@@ -6,6 +6,8 @@ Release 4.0.21
    installers.
  * Fixed a bug in the always_restart.txt support. Phusion Passenger was
    looking for it in the wrong directory.
+ * Many Solaris compatibility fixes. Special thanks to "mark" for his
+   extensive assistance.
 
 
 Release 4.0.20
