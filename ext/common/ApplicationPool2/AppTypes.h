@@ -67,6 +67,7 @@ const char *pp_get_app_type_name(PassengerAppType type);
 #include <oxt/macros.hpp>
 #include <oxt/backtrace.hpp>
 #include <cstdlib>
+#include <limits.h>
 #include <string>
 #include <Logging.h>
 #include <StaticString.h>
@@ -103,8 +104,7 @@ private:
 		pos = appendData(pos, end, name);
 		if (OXT_UNLIKELY(pos == end)) {
 			TRACE_POINT();
-			P_CRITICAL("BUG: buffer overflow");
-			abort();
+			throw RuntimeException("Not enough buffer space");
 		}
 		return fileExists(StaticString(buf, pos - buf), cstat, throttleRate);
 	}
@@ -158,7 +158,12 @@ public:
 				return checkAppRoot(extractDirNameStatic(documentRoot));
 			}
 		} else {
-			char ntDocRoot[documentRoot.size() + 1];
+			if (OXT_UNLIKELY(documentRoot.size() > PATH_MAX)) {
+				TRACE_POINT();
+				throw RuntimeException("Not enough buffer space");
+			}
+
+			char ntDocRoot[PATH_MAX + 1];
 			memcpy(ntDocRoot, documentRoot.data(), documentRoot.size());
 			ntDocRoot[documentRoot.size()] = '\0';
 			string resolvedDocumentRoot = resolveSymlink(ntDocRoot);
@@ -181,8 +186,8 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	PassengerAppType checkAppRoot(const StaticString &appRoot) {
-		char buf[appRoot.size() + 32];
-		const char *end = buf + appRoot.size() + 32;
+		char buf[PATH_MAX + 32];
+		const char *end = buf + sizeof(buf) - 1;
 		const AppTypeDefinition *definition = &appTypeDefinitions[0];
 
 		while (definition->type != PAT_NONE) {

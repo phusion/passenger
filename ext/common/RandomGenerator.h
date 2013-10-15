@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2013 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -99,15 +99,15 @@ public:
 	}
 	
 	string generateByteString(unsigned int size) {
-		char buf[size];
-		generateBytes(buf, size);
-		return string(buf, size);
+		string result(size, '\0');
+		generateBytes(&result[0], size);
+		return result;
 	}
 	
 	string generateHexString(unsigned int size) {
-		char buf[size];
-		generateBytes(buf, size);
-		return toHex(StaticString(buf, size));
+		string buf(size, '\0');
+		generateBytes(&buf[0], size);
+		return toHex(buf);
 	}
 	
 	/**
@@ -122,9 +122,9 @@ public:
 	 * more possibilities than 2**N.
 	 */
 	string generateAsciiString(unsigned int size) {
-		char buf[size];
-		generateAsciiString(buf, size);
-		return string(buf, size);
+		string result(size, '\0');
+		generateAsciiString(&result[0], size);
+		return result;
 	}
 	
 	void generateAsciiString(char *_buf, unsigned int size) {
