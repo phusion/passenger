@@ -72,6 +72,10 @@ oxt::setup_syscall_interruption_support() {
 
 void
 oxt::setup_random_failure_simulation(const ErrorChance *_errorChances, unsigned int n) {
+	if (n > OXT_MAX_ERROR_CHANCES) {
+		throw std::runtime_error("Number of error chances may not exceed OXT_MAX_ERROR_CHANCES");
+	}
+
 	ErrorChance *storage = new ErrorChance[n];
 	for (unsigned int i = 0; i < n; i++) {
 		storage[i] = _errorChances[i];
@@ -84,7 +88,7 @@ static bool
 shouldSimulateFailure() {
 	if (nErrorChances > 0) {
 		double number = random() / (double) RAND_MAX;
-		const ErrorChance *candidates[nErrorChances];
+		const ErrorChance *candidates[OXT_MAX_ERROR_CHANCES];
 		unsigned int i, n = 0;
 
 		for (i = 0; i < nErrorChances; i++) {

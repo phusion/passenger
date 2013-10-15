@@ -222,7 +222,7 @@ string getGroupName(gid_t gid);
  *
  * Returns `(gid_t) -1` if the lookup fails.
  */
-gid_t lookupGid(const StaticString &groupName);
+gid_t lookupGid(const string &groupName);
 
 /**
  * Converts a mode string into a mode_t value.

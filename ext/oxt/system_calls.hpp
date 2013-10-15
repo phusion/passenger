@@ -114,6 +114,7 @@
 
 namespace oxt {
 	static const int INTERRUPTION_SIGNAL = SIGUSR1; // SIGUSR2 is reserved by Valgrind...
+	#define OXT_MAX_ERROR_CHANCES 16
 	
 	struct ErrorChance {
 		double chance;

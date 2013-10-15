@@ -918,7 +918,7 @@ private:
 		 */
 		size_t uriLen = strlen(r->uri);
 		unsigned int escaped = escapeUri(NULL, (const unsigned char *) r->uri, uriLen);
-		char escapedUri[uriLen + 2 * escaped + 1];
+		char *escapedUri = (char *) apr_palloc(r->pool, uriLen + 2 * escaped + 1);
 		escapeUri((unsigned char *) escapedUri, (const unsigned char *) r->uri, uriLen);
 		escapedUri[uriLen + 2 * escaped] = '\0';
 		

@@ -219,10 +219,8 @@ private:
 		*data = endOfWord;
 		return result;
 	}
-	
-	static long long readNextWordAsLongLong(const char **data) {
-		StaticString word = readNextWord(data);
-		char nullTerminatedWord[word.size() + 1];
+
+	static long long processNextWordAsLongLong(const StaticString &word, char *nullTerminatedWord) {
 		memcpy(nullTerminatedWord, word.c_str(), word.size());
 		nullTerminatedWord[word.size()] = '\0';
 		if (*nullTerminatedWord == '\0') {
@@ -232,15 +230,35 @@ private:
 		}
 	}
 	
-	static int readNextWordAsInt(const char **data) {
+	static long long readNextWordAsLongLong(const char **data) {
 		StaticString word = readNextWord(data);
-		char nullTerminatedWord[word.size() + 1];
+		if (word.size() < 50) {
+			char nullTerminatedWord[50];
+			return processNextWordAsLongLong(word, nullTerminatedWord);
+		} else {
+			string nullTerminatedWord(word.size() + 1, '\0');
+			return processNextWordAsLongLong(word, &nullTerminatedWord[0]);
+		}
+	}
+
+	static int processNextWordAsInt(const StaticString &word, char *nullTerminatedWord) {
 		memcpy(nullTerminatedWord, word.c_str(), word.size());
 		nullTerminatedWord[word.size()] = '\0';
 		if (*nullTerminatedWord == '\0') {
 			throw ParseException();
 		} else {
 			return atoi(nullTerminatedWord);
+		}
+	}
+	
+	static int readNextWordAsInt(const char **data) {
+		StaticString word = readNextWord(data);
+		if (word.size() < 50) {
+			char nullTerminatedWord[50];
+			return processNextWordAsInt(word, nullTerminatedWord);
+		} else {
+			string nullTerminatedWord(word.size() + 1, '\0');
+			return processNextWordAsInt(word, &nullTerminatedWord[0]);
 		}
 	}
 	

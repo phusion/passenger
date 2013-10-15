@@ -414,17 +414,13 @@ getGroupName(gid_t gid) {
 }
 
 gid_t
-lookupGid(const StaticString &groupName) {
+lookupGid(const string &groupName) {
 	struct group *groupEntry;
-	char name[groupName.size() + 1];
 
-	memcpy(name, groupName.data(), groupName.size());
-	name[groupName.size()] = '\0';
-
-	groupEntry = getgrnam(name);
+	groupEntry = getgrnam(groupName.c_str());
 	if (groupEntry == NULL) {
 		if (looksLikePositiveNumber(groupName)) {
-			return atoi(name);
+			return atoi(groupName);
 		} else {
 			return (gid_t) -1;
 		}
@@ -852,10 +848,11 @@ getHostName() {
 		// https://bugzilla.redhat.com/show_bug.cgi?id=130733
 		hostNameMax = 255;
 	}
-	char hostname[hostNameMax + 1];
-	if (gethostname(hostname, hostNameMax) == 0) {
-		hostname[hostNameMax] = '\0';
-		return hostname;
+
+	string buf(hostNameMax + 1, '\0');
+	if (gethostname(&buf[0], hostNameMax + 1) == 0) {
+		buf[hostNameMax] = '\0';
+		return string(buf.c_str());
 	} else {
 		int e = errno;
 		throw SystemException("Unable to query the system's host name", e);
