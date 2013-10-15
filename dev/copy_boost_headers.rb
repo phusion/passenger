@@ -30,6 +30,7 @@ ESSENTIALS = [
 	"boost/smart_ptr/detail/sp_counted_*",
 	"boost/smart_ptr/detail/atomic_count*",
 	"boost/smart_ptr/detail/spinlock*",
+	"boost/unordered*",
 	"boost/thread",
 	"libs/thread/src",
 	"libs/system/src",
@@ -57,6 +58,7 @@ PROGRAM_SOURCE = %q{
 	#include <boost/date_time/posix_time/posix_time.hpp>
 	#include <boost/foreach.hpp>
 	#include <boost/lambda/lambda.hpp>
+	#include <boost/unordered_map.hpp>
 }
 
 require 'fileutils'

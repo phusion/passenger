@@ -43,8 +43,8 @@
 	#include <hash_map>
 	#define HashMap stdext::hash_map
 #else
-	#include <tr/unordered_map>
-	#define HashMap std::tr1::unordered_map;
+	#include <boost/unordered_map.hpp>
+	#define HashMap boost::unordered_map
 #endif
 
 #endif /* _PASSENGER_HASH_MAP_H_ */
