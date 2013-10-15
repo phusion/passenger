@@ -57,7 +57,6 @@ PROGRAM_SOURCE = %q{
 	#include <boost/bind.hpp>
 	#include <boost/date_time/posix_time/posix_time.hpp>
 	#include <boost/foreach.hpp>
-	#include <boost/lambda/lambda.hpp>
 	#include <boost/unordered_map.hpp>
 }
 
