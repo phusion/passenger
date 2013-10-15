@@ -165,6 +165,8 @@ private
 			# http://groups.google.com/group/phusion-passenger/t/6b904a962ee28e5c
 			# http://groups.google.com/group/phusion-passenger/browse_thread/thread/aad4bd9d8d200561
 			flags << '-DBOOST_SP_USE_PTHREADS'
+		elsif os_name == "linux"
+			flags << '-lrt'
 		end
 		
 		flags << '-DHAS_ALLOCA_H' if has_alloca_h?
