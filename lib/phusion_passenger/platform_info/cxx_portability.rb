@@ -32,62 +32,104 @@ module PlatformInfo
 	# for portability reasons. These flags should be specified as last
 	# when invoking the compiler.
 	def self.portability_cflags
+		return portability_c_or_cxxflags(:cc)
+	end
+	memoize :portability_cflags, true
+
+	def self.portability_cxxflags
+		return portability_c_or_cxxflags(:cxx)
+	end
+	memoize :portability_cxxflags, true
+
+	# Linker flags that should be used for linking every C/C++ program,
+	# for portability reasons. These flags should be specified as last
+	# when invoking the linker.
+	def self.portability_ldflags
+		if os_name =~ /solaris/
+			result = '-lxnet -lrt -lsocket -lnsl -lpthread'
+		else
+			result = '-lpthread'
+		end
+		flags << ' -lmath' if has_math_library?
+		return result
+	end
+	memoize :portability_ldflags
+
+	# Extra compiler flags that should always be passed to the C compiler,
+	# last in the command string.
+	def self.default_extra_cflags
+		return default_extra_c_or_cxxflags(:cc)
+	end
+	memoize :default_extra_cflags, true
+
+	# Extra compiler flags that should always be passed to the C++ compiler,
+	# last in the command string.
+	def self.default_extra_cxxflags
+		return default_extra_c_or_cxxflags(:cxx)
+	end
+	memoize :default_extra_cxxflags, true
+
+private
+	def self.portability_c_or_cxxflags(cc_or_cxx)
+		language = cc_or_cxx == :cc ? :c : :cxx
 		flags = ["-D_REENTRANT -I/usr/local/include"]
 		
-		# There are too many implementations of of the hash map!
-		# Figure out the right one.
-		ok = try_compile("Checking for tr1/unordered_map", :cxx, %Q{
-			#include <tr1/unordered_map>
-			int
-			main() {
-				std::tr1::unordered_map<int, int> m;
-				return 0;
-			}
-		})
-		if ok
-			flags << "-DHAS_TR1_UNORDERED_MAP"
-		else
-			hash_namespace = nil
-			ok = false
-			['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
-				['hash_map', 'ext/hash_map'].each do |hash_map_header|
-					ok = try_compile("Checking for #{hash_map_header}", :cxx, %Q{
-						#include <#{hash_map_header}>
+		if cc_or_cxx == :cxx
+			# There are too many implementations of of the hash map!
+			# Figure out the right one.
+			ok = try_compile("Checking for tr1/unordered_map", :cxx, %Q{
+				#include <tr1/unordered_map>
+				int
+				main() {
+					std::tr1::unordered_map<int, int> m;
+					return 0;
+				}
+			})
+			if ok
+				flags << "-DHAS_TR1_UNORDERED_MAP"
+			else
+				hash_namespace = nil
+				ok = false
+				['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
+					['hash_map', 'ext/hash_map'].each do |hash_map_header|
+						ok = try_compile("Checking for #{hash_map_header}", :cxx, %Q{
+							#include <#{hash_map_header}>
+							int
+							main() {
+								#{namespace}::hash_map<int, int> m;
+								return 0;
+							}
+						})
+						if ok
+							hash_namespace = namespace
+							flags << "-DHASH_NAMESPACE=\"#{namespace}\""
+							flags << "-DHASH_MAP_HEADER=\"<#{hash_map_header}>\""
+							flags << "-DHASH_MAP_CLASS=\"hash_map\""
+						end
+						break if ok
+					end
+					break if ok
+				end
+				['ext/hash_fun.h', 'functional', 'tr1/functional',
+				 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
+				 'stl/_hash_fun.h'].each do |hash_function_header|
+					ok = try_compile("Checking for #{hash_function_header}", :cxx, %Q{
+						#include <#{hash_function_header}>
 						int
 						main() {
-							#{namespace}::hash_map<int, int> m;
+							#{hash_namespace}::hash<int>()(5);
 							return 0;
 						}
 					})
 					if ok
-						hash_namespace = namespace
-						flags << "-DHASH_NAMESPACE=\"#{namespace}\""
-						flags << "-DHASH_MAP_HEADER=\"<#{hash_map_header}>\""
-						flags << "-DHASH_MAP_CLASS=\"hash_map\""
+						flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
+						break
 					end
-					break if ok
-				end
-				break if ok
-			end
-			['ext/hash_fun.h', 'functional', 'tr1/functional',
-			 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
-			 'stl/_hash_fun.h'].each do |hash_function_header|
-				ok = try_compile("Checking for #{hash_function_header}", :cxx, %Q{
-					#include <#{hash_function_header}>
-					int
-					main() {
-						#{hash_namespace}::hash<int>()(5);
-						return 0;
-					}
-				})
-				if ok
-					flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
-					break
 				end
 			end
 		end
 
-		ok = try_compile("Checking for accept4()", :c, %Q{
+		ok = try_compile("Checking for accept4()", language, %Q{
 			#define _GNU_SOURCE
 			#include <sys/socket.h>
 			static void *foo = accept4;
@@ -95,7 +137,7 @@ module PlatformInfo
 		flags << '-DHAVE_ACCEPT4' if ok
 		
 		if os_name =~ /solaris/
-			if PhusionPassenger::PlatformInfo.cc_is_sun_studio?
+			if send("#{cc_or_cxx}_is_sun_studio?")
 				flags << '-mt'
 			else
 				flags << '-pthreads'
@@ -108,7 +150,7 @@ module PlatformInfo
 				flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if os_name =~ /solaris2\.9/
 			end
 			flags << '-DBOOST_HAS_STDINT_H' unless os_name =~ /solaris2\.9/
-			if PhusionPassenger::PlatformInfo.cc_is_sun_studio?
+			if send("#{cc_or_cxx}_is_sun_studio?")
 				flags << '-xtarget=ultra' if RUBY_PLATFORM =~ /sparc/
 			else
 				flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
@@ -129,23 +171,46 @@ module PlatformInfo
 		flags << '-DHAS_SFENCE' if supports_sfence_instruction?
 		flags << '-DHAS_LFENCE' if supports_lfence_instruction?
 		
-		return flags.compact.join(" ").strip
+		return flags.compact.map{ |str| str.strip }.join(" ").strip
 	end
-	memoize :portability_cflags, true
+	private_class_method :portability_c_or_cxxflags
 
-	# Linker flags that should be used for linking every C/C++ program,
-	# for portability reasons. These flags should be specified as last
-	# when invoking the linker.
-	def self.portability_ldflags
-		if os_name =~ /solaris/
-			result = '-lxnet -lrt -lsocket -lnsl -lpthread'
-		else
-			result = '-lpthread'
+	def self.default_extra_c_or_cxxflags(cc_or_cxx)
+		flags = []
+
+		if !send("#{cc_or_cxx}_is_sun_studio?")
+			flags << "-Wall -Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
+			if send("#{cc_or_cxx}_supports_wno_missing_field_initializers_flag?")
+				flags << "-Wno-missing-field-initializers"
+			end
+			if requires_no_tls_direct_seg_refs? && send("#{cc_or_cxx}_supports_no_tls_direct_seg_refs_option?")
+				flags << "-mno-tls-direct-seg-refs"
+			end
+			# Work around Clang warnings in ev++.h.
+			if send("#{cc_or_cxx}_is_clang?")
+				flags << "-Wno-ambiguous-member-template"
+			end
 		end
-		flags << ' -lmath' if has_math_library?
-		return result
+		
+		flags << debugging_cflags
+		flags << "-DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
+		if !send("#{cc_or_cxx}_is_sun_studio?")
+			flags << "-fcommon"
+			if send("#{cc_or_cxx}_supports_feliminate_unused_debug?")
+				flags << "-feliminate-unused-debug-symbols -feliminate-unused-debug-types"
+			end
+			if send("#{cc_or_cxx}_supports_visibility_flag?")
+				flags << "-fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED"
+				if send("#{cc_or_cxx}_visibility_flag_generates_warnings?") &&
+				   send("#{cc_or_cxx}_supports_wno_attributes_flag?")
+					flags << "-Wno-attributes"
+				end
+			end
+		end
+
+		return flags.compact.map{ |str| str.strip }.join(" ").strip
 	end
-	memoize :portability_ldflags
+	private_class_method :default_extra_c_or_cxxflags
 end
 
 end # module PhusionPassenger

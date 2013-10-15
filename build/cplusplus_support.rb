@@ -53,11 +53,11 @@ def run_compiler(*command)
 	end
 end
 
-def compile_c(source, flags = "#{EXTRA_PRE_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}")
+def compile_c(source, flags = "#{EXTRA_PRE_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CFLAGS}")
 	run_compiler "#{CC} #{flags} -c #{source}"
 end
 
-def compile_cxx(source, flags = "#{EXTRA_PRE_CXXFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}")
+def compile_cxx(source, flags = "#{EXTRA_PRE_CXXFLAGS} #{PlatformInfo.portability_cxxflags} #{EXTRA_CXXFLAGS}")
 	run_compiler "#{CXX} #{flags} -c #{source}"
 end
 
@@ -73,15 +73,15 @@ def create_static_library(target, sources)
 	sh "ranlib #{target}"
 end
 
-def create_executable(target, sources, linkflags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
+def create_executable(target, sources, linkflags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cxxflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
 	run_compiler "#{CXX} #{sources} -o #{target} #{linkflags}"
 end
 
-def create_c_executable(target, sources, linkflags = "#{EXTRA_PRE_CFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
+def create_c_executable(target, sources, linkflags = "#{EXTRA_PRE_CFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
 	run_compiler "#{CC} #{sources} -o #{target} #{linkflags}"
 end
 
-def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
+def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} #{PlatformInfo.portability_cxxflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
 	if PlatformInfo.os_name == "macosx"
 		shlib_flag = "-flat_namespace -bundle -undefined dynamic_lookup"
 	else

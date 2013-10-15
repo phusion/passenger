@@ -200,7 +200,7 @@ task :compile_app => dependencies do
 		create_executable(exe, source,
 			"-DSTANDALONE " <<
 			"-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
-			"#{PlatformInfo.portability_cflags} " <<
+			"#{PlatformInfo.portability_cxxflags} " <<
 			"#{EXTRA_CXXFLAGS} " <<
 			"#{COMMON_LIBRARY.link_objects_as_string} " <<
 			"#{LIBBOOST_OXT} " <<

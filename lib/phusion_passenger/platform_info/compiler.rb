@@ -40,6 +40,18 @@ private
 	end
 	private_class_method :detect_language_extension
 
+	def self.detect_compiler_type_name(language)
+		case language
+		when :c
+			return "C"
+		when :cxx
+			return "C++"
+		else
+			raise ArgumentError, "Unsupported language #{language.inspect}"
+		end
+	end
+	private_class_method :detect_compiler_type_name
+
 	def self.create_compiler_command(language, flags1, flags2, link = false)
 		case language
 		when :c
@@ -105,6 +117,25 @@ private
 	end
 	private_class_method :run_compiler
 
+	def self.cc_or_cxx_supports_feliminate_unused_debug?(language)
+		ext = detect_language_extension(language)
+		compiler_type_name = detect_compiler_type_name(language)
+		create_temp_file("passenger-compile-check.#{ext}") do |filename, f|
+			f.close
+			begin
+				command = create_compiler_command(language,
+					"-c '#{filename}' -o '#{filename}.o'",
+					'-feliminate-unused-debug-symbols -feliminate-unused-debug-types')
+				result = run_compiler("Checking for #{compiler_type_name} compiler '--feliminate-unused-debug-{symbols,types}' support",
+					command, filename, '', true)
+				return result && result[:output].empty?
+			ensure
+				File.unlink("#{filename}.o") rescue nil
+			end
+		end
+	end
+	private_class_method :cc_or_cxx_supports_feliminate_unused_debug?
+
 public
 	def self.cc
 		return string_env('CC', default_cc)
@@ -154,6 +185,11 @@ public
 		`#{cc} -V 2>&1` =~ /Sun C/ || `#{cc} -flags 2>&1` =~ /Sun C/
 	end
 	memoize :cc_is_sun_studio?
+
+	def self.cxx_is_sun_studio?
+		`#{cxx} -V 2>&1` =~ /Sun C/ || `#{cc} -flags 2>&1` =~ /Sun C/
+	end
+	memoize :cxx_is_sun_studio?
 
 
 	# Looks for the given C or C++ header. This works by invoking the compiler and
@@ -259,30 +295,55 @@ public
 			:c, '', "-arch #{arch}")
 	end
 	
-	def self.compiler_supports_visibility_flag?
+	def self.cc_supports_visibility_flag?
 		return false if os_name =~ /aix/
 		return try_compile("Checking for C compiler '-fvisibility' support",
 			:c, '', '-fvisibility=hidden')
 	end
-	memoize :compiler_supports_visibility_flag?, true
+	memoize :cc_supports_visibility_flag?, true
+
+	def self.cxx_supports_visibility_flag?
+		return false if os_name =~ /aix/
+		return try_compile("Checking for C++ compiler '-fvisibility' support",
+			:cxx, '', '-fvisibility=hidden')
+	end
+	memoize :cxx_supports_visibility_flag?, true
 	
-	def self.compiler_supports_wno_attributes_flag?
+	def self.cc_supports_wno_attributes_flag?
 		return try_compile("Checking for C compiler '-Wno-attributes' support",
 			:c, '', '-Wno-attributes')
 	end
-	memoize :compiler_supports_wno_attributes_flag?, true
+	memoize :cc_supports_wno_attributes_flag?, true
 
-	def self.compiler_supports_wno_missing_field_initializers_flag?
+	def self.cxx_supports_wno_attributes_flag?
+		return try_compile("Checking for C++ compiler '-Wno-attributes' support",
+			:cxx, '', '-Wno-attributes')
+	end
+	memoize :cxx_supports_wno_attributes_flag?, true
+
+	def self.cc_supports_wno_missing_field_initializers_flag?
 		return try_compile("Checking for C compiler '-Wno-missing-field-initializers' support",
 			:c, '', '-Wno-missing-field-initializers')
 	end
-	memoize :compiler_supports_wno_missing_field_initializers_flag?, true
+	memoize :cc_supports_wno_missing_field_initializers_flag?, true
+
+	def self.cxx_supports_wno_missing_field_initializers_flag?
+		return try_compile("Checking for C++ compiler '-Wno-missing-field-initializers' support",
+			:cxx, '', '-Wno-missing-field-initializers')
+	end
+	memoize :cxx_supports_wno_missing_field_initializers_flag?, true
 	
-	def self.compiler_supports_no_tls_direct_seg_refs_option?
+	def self.cc_supports_no_tls_direct_seg_refs_option?
 		return try_compile("Checking for C compiler '-mno-tls-direct-seg-refs' support",
 			:c, '', '-mno-tls-direct-seg-refs')
 	end
-	memoize :compiler_supports_no_tls_direct_seg_refs_option?, true
+	memoize :cc_supports_no_tls_direct_seg_refs_option?, true
+
+	def self.cxx_supports_no_tls_direct_seg_refs_option?
+		return try_compile("Checking for C++ compiler '-mno-tls-direct-seg-refs' support",
+			:cxx, '', '-mno-tls-direct-seg-refs')
+	end
+	memoize :cxx_supports_no_tls_direct_seg_refs_option?, true
 
 	def self.compiler_supports_wno_ambiguous_member_template?
 		return try_compile("Checking for C compiler '-Wno-ambiguous-member-template' support",
@@ -290,36 +351,39 @@ public
 	end
 	memoize :compiler_supports_wno_ambiguous_member_template?, true
 
-	def self.compiler_supports_feliminate_unused_debug?
-		create_temp_file("passenger-compile-check.c") do |filename, f|
-			f.close
-			begin
-				command = create_compiler_command(:c,
-					"-c '#{filename}' -o '#{filename}.o'",
-					'-feliminate-unused-debug-symbols -feliminate-unused-debug-types')
-				result = run_compiler("Checking for C compiler '--feliminate-unused-debug-{symbols,types}' support",
-					command, filename, '', true)
-				return result && result[:output].empty?
-			ensure
-				File.unlink("#{filename}.o") rescue nil
-			end
-		end
+	def self.cc_supports_feliminate_unused_debug?
+		return cc_or_cxx_supports_feliminate_unused_debug?(:c)
 	end
-	
+	memoize :cc_supports_feliminate_unused_debug?, true
+
+	def self.cxx_supports_feliminate_unused_debug?
+		return cc_or_cxx_supports_feliminate_unused_debug?(:cxx)
+	end
+	memoize :cxx_supports_feliminate_unused_debug?, true
+
 	# Returns whether compiling C++ with -fvisibility=hidden might result
 	# in tons of useless warnings, like this:
 	# http://code.google.com/p/phusion-passenger/issues/detail?id=526
 	# This appears to be a bug in older g++ versions:
 	# http://gcc.gnu.org/ml/gcc-patches/2006-07/msg00861.html
 	# Warnings should be suppressed with -Wno-attributes.
-	def self.compiler_visibility_flag_generates_warnings?
+	def self.cc_visibility_flag_generates_warnings?
+		if os_name =~ /linux/ && `#{cc} -v 2>&1` =~ /gcc version (.*?)/
+			return $1 <= "4.1.2"
+		else
+			return false
+		end
+	end
+	memoize :cc_visibility_flag_generates_warnings?, true
+
+	def self.cxx_visibility_flag_generates_warnings?
 		if os_name =~ /linux/ && `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
 			return $1 <= "4.1.2"
 		else
 			return false
 		end
 	end
-	memoize :compiler_visibility_flag_generates_warnings?, true
+	memoize :cxx_visibility_flag_generates_warnings?, true
 	
 	def self.has_math_library?
 		return try_link("Checking for -lmath support",

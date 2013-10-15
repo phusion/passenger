@@ -550,7 +550,7 @@ module PlatformInfo
 		return !try_compile("whether APR is needed for building Apache modules",
 			:c, "#include <apr.h>\n", apache2_module_cflags(false))
 	end
-	memoize :apr_config_needed_for_building_apache_modules?
+	memoize :apr_config_needed_for_building_apache_modules?, true
 
 private
 	def self.determine_apr_info
@@ -582,7 +582,7 @@ private
 			return [flags, libs]
 		end
 	end
-	memoize :determine_apu_info
+	memoize :determine_apu_info, true
 	private_class_method :determine_apu_info
 
 	# Run `httpd -V` and return its output. On some systems, such as Ubuntu 13.10,

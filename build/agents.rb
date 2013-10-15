@@ -41,7 +41,7 @@ file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 		"-o #{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
 		"#{EXTRA_PRE_CXXFLAGS} " <<
 		"-Iext -Iext/common " <<
-		"#{PlatformInfo.portability_cflags} #{AGENT_CFLAGS} #{EXTRA_CXXFLAGS}")
+		"#{PlatformInfo.portability_cxxflags} #{AGENT_CFLAGS} #{EXTRA_CXXFLAGS}")
 	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 		"#{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
 		"#{watchdog_libs.link_objects_as_string} " <<
@@ -94,7 +94,7 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 		"#{EXTRA_PRE_CXXFLAGS} " <<
 		"-Iext -Iext/common " <<
 		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
-		"#{PlatformInfo.portability_cflags} " <<
+		"#{PlatformInfo.portability_cxxflags} " <<
 		"#{EXTRA_CXXFLAGS}")
 	create_executable("#{AGENT_OUTPUT_DIR}PassengerHelperAgent",
 		"#{AGENT_OUTPUT_DIR}PassengerHelperAgent.o",
@@ -137,7 +137,7 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} " <<
 		"#{PlatformInfo.curl_flags} " <<
 		"#{PlatformInfo.zlib_flags} " <<
-		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}")
+		"#{PlatformInfo.portability_cxxflags} #{EXTRA_CXXFLAGS}")
 	create_executable("#{AGENT_OUTPUT_DIR}PassengerLoggingAgent",
 		"#{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o",
 		"#{logging_agent_libs.link_objects_as_string} " <<
@@ -163,7 +163,7 @@ file AGENT_OUTPUT_DIR + 'SpawnPreparer' => dependencies do
 		'ext/common/agents/SpawnPreparer.cpp',
 		"#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} " <<
 		"-Iext -Iext/common " <<
-		"#{AGENT_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+		"#{AGENT_CFLAGS} #{PlatformInfo.portability_cxxflags} #{EXTRA_CXXFLAGS} " <<
 		"#{spawn_preparer_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
