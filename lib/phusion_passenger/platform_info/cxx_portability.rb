@@ -46,10 +46,11 @@ module PlatformInfo
 	# when invoking the linker.
 	def self.portability_ldflags
 		if os_name =~ /solaris/
-			result = '-lxnet -lrt -lsocket -lnsl -lpthread'
+			result = '-lxnet -lsocket -lnsl -lpthread'
 		else
 			result = '-lpthread'
 		end
+		flags << ' -lrt' if os_name != "macosx"
 		flags << ' -lmath' if has_math_library?
 		return result
 	end
@@ -165,8 +166,6 @@ private
 			# http://groups.google.com/group/phusion-passenger/t/6b904a962ee28e5c
 			# http://groups.google.com/group/phusion-passenger/browse_thread/thread/aad4bd9d8d200561
 			flags << '-DBOOST_SP_USE_PTHREADS'
-		elsif os_name == "linux"
-			flags << '-lrt'
 		end
 		
 		flags << '-DHAS_ALLOCA_H' if has_alloca_h?
