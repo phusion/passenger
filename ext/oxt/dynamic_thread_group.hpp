@@ -25,6 +25,7 @@
 #ifndef _OXT_DYNAMIC_THREAD_GROUP_HPP_
 #define _OXT_DYNAMIC_THREAD_GROUP_HPP_
 
+#include <vector>
 #include <list>
 #include <memory>
 
@@ -172,10 +173,11 @@ public:
 		list<thread_handle_ptr>::iterator it;
 		thread_handle_ptr handle;
 		unsigned int nthreads_copy = nthreads;
-		thread *threads[nthreads];
+		vector<thread *> threads;
 		unsigned int i = 0;
 		
 		// We make a copy so that the handles aren't destroyed prematurely.
+		threads.reserve(nthreads);
 		thread_handles_copy = thread_handles;
 		for (it = thread_handles.begin(); it != thread_handles.end(); it++, i++) {
 			handle = *it;
@@ -186,7 +188,7 @@ public:
 		nthreads = 0;
 		
 		l.unlock();
-		thread::interrupt_and_join_multiple(threads, nthreads_copy, interruptSyscalls);
+		thread::interrupt_and_join_multiple(&threads[0], nthreads_copy, interruptSyscalls);
 	}
 	
 	void join_all() {
@@ -196,10 +198,11 @@ public:
 		list<thread_handle_ptr>::iterator it;
 		thread_handle_ptr handle;
 		unsigned int nthreads_copy = nthreads;
-		thread *threads[nthreads];
+		vector<thread *> threads;
 		unsigned int i = 0;
 		
 		// We make a copy so that the handles aren't destroyed prematurely.
+		threads.reserve(nthreads);
 		thread_handles_copy = thread_handles;
 		for (it = thread_handles.begin(); it != thread_handles.end(); it++, i++) {
 			handle = *it;
