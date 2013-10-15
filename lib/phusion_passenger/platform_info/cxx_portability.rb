@@ -50,7 +50,7 @@ module PlatformInfo
 		else
 			result = '-lpthread'
 		end
-		result << ' -lrt' if os_name != "macosx"
+		result << ' -lrt' if has_rt_library?
 		result << ' -lmath' if has_math_library?
 		return result
 	end

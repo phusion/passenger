@@ -385,6 +385,12 @@ public
 	end
 	memoize :cxx_visibility_flag_generates_warnings?, true
 	
+	def self.has_rt_library?
+		return try_link("Checking for -lrt support",
+			:c, "int main() { return 0; }\n", '-lrt')
+	end
+	memoize :has_rt_library?, true
+
 	def self.has_math_library?
 		return try_link("Checking for -lmath support",
 			:c, "int main() { return 0; }\n", '-lmath')
