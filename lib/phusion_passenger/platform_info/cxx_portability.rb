@@ -50,8 +50,8 @@ module PlatformInfo
 		else
 			result = '-lpthread'
 		end
-		flags << ' -lrt' if os_name != "macosx"
-		flags << ' -lmath' if has_math_library?
+		result << ' -lrt' if os_name != "macosx"
+		result << ' -lmath' if has_math_library?
 		return result
 	end
 	memoize :portability_ldflags
