@@ -7,7 +7,7 @@
 #ifndef BOOST_NO_EXCEPTIONS
 
 
-#include <boost/thread/future.hpp>
+#include <boost/thread/future_error_code.hpp>
 
 namespace boost
 {
@@ -19,12 +19,12 @@ namespace boost
       public boost::system::error_category
     {
     public:
-        virtual const char* name() const; //BOOST_NOEXCEPT;
+        virtual const char* name() const BOOST_NOEXCEPT;
         virtual std::string message(int ev) const;
     };
 
     const char*
-    future_error_category::name() const //BOOST_NOEXCEPT
+    future_error_category::name() const BOOST_NOEXCEPT
     {
         return "future";
     }
@@ -48,14 +48,16 @@ namespace boost
         }
         return std::string("unspecified future_errc value\n");
     }
+    future_error_category future_error_category_var;
   }
 
+  BOOST_THREAD_DECL
   const system::error_category&
   future_category() BOOST_NOEXCEPT
   {
-      static thread_detail::future_error_category f;
-      return f;
+      return thread_detail::future_error_category_var;
   }
 
 }
 #endif
+
