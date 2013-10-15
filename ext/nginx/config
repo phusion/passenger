@@ -68,6 +68,18 @@ if [ $ngx_found = yes ]; then
     CORE_LIBS="$CORE_LIBS -lm"
 fi
 
+ngx_feature="POSIX realtime library"
+ngx_feature_name=
+ngx_feature_run=no
+ngx_feature_incs=
+ngx_feature_path=
+ngx_feature_libs="-lrt"
+ngx_feature_test=
+. auto/feature
+if [ $ngx_found = yes ]; then
+    CORE_LIBS="$CORE_LIBS -lrt"
+fi
+
 nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g'`
 
 nginx_major_version=`echo "$nginx_version" | cut -d . -f 1`
