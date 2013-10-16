@@ -542,7 +542,7 @@ private:
 			this_thread::disable_syscall_interruption dsi;
 			bool expectingUploadData;
 			string uploadDataMemory;
-			shared_ptr<BufferedUpload> uploadDataFile;
+			boost::shared_ptr<BufferedUpload> uploadDataFile;
 			const char *contentLength;
 			
 			expectingUploadData = ap_should_client_block(r);
@@ -641,7 +641,7 @@ private:
 			/* Setup the bucket brigade. */
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
 			
-			bucketState = make_shared<PassengerBucketState>(conn);
+			bucketState = boost::make_shared<PassengerBucketState>(conn);
 			b = passenger_bucket_create(bucketState, r->connection->bucket_alloc, config->getBufferResponse());
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 			
@@ -1207,10 +1207,10 @@ private:
 	 * @throws SystemException
 	 * @throws IOException
 	 */
-	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r) {
+	boost::shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r) {
 		TRACE_POINT();
 		DirConfig *config = getDirConfig(r);
-		shared_ptr<BufferedUpload> tempFile;
+		boost::shared_ptr<BufferedUpload> tempFile;
 		try {
 			ServerInstanceDir::GenerationPtr generation = agentsStarter.getGeneration();
 			string uploadBufferDir = config->getUploadBufferDir(generation);
@@ -1266,7 +1266,7 @@ private:
 		}
 	}
 	
-	void sendRequestBody(const FileDescriptor &fd, shared_ptr<BufferedUpload> &uploadData) {
+	void sendRequestBody(const FileDescriptor &fd, boost::shared_ptr<BufferedUpload> &uploadData) {
 		TRACE_POINT();
 		rewind(uploadData->handle);
 		while (!feof(uploadData->handle)) {

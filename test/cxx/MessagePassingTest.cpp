@@ -11,7 +11,7 @@ namespace tut {
 		MessageBoxPtr box;
 
 		MessagePassingTest() {
-			box = make_shared<MessageBox>();
+			box = boost::make_shared<MessageBox>();
 		}
 
 		void sendMessagesLater() {

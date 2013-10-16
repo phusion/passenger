@@ -71,6 +71,62 @@ module PlatformInfo
 	memoize :default_extra_cxxflags, true
 
 private
+	def self.check_unordered_map(flags, class_name, header_name, macro_name)
+		ok = try_compile("Checking for unordered_map", :cxx, %Q{
+			#include <#{header_name}>
+			int
+			main() {
+				#{class_name}<int, int> m;
+				return 0;
+			}
+		})
+		flags << "-D#{macro_name}" if ok
+		return ok
+	end
+	private_class_method :check_unordered_map
+	
+	def self.check_hash_map(flags)
+		hash_namespace = nil
+		ok = false
+		['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
+			['hash_map', 'ext/hash_map'].each do |hash_map_header|
+				ok = try_compile("Checking for #{hash_map_header}", :cxx, %Q{
+					#include <#{hash_map_header}>
+					int
+					main() {
+						#{namespace}::hash_map<int, int> m;
+						return 0;
+					}
+				})
+				if ok
+					hash_namespace = namespace
+					flags << "-DHASH_NAMESPACE=\"#{namespace}\""
+					flags << "-DHASH_MAP_HEADER=\"<#{hash_map_header}>\""
+					flags << "-DHASH_MAP_CLASS=\"hash_map\""
+					break
+				end
+			end
+			break if ok
+		end
+		['ext/hash_fun.h', 'functional', 'tr1/functional',
+		 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
+		 'stl/_hash_fun.h'].each do |hash_function_header|
+			ok = try_compile("Checking for #{hash_function_header}", :cxx, %Q{
+				#include <#{hash_function_header}>
+				int
+				main() {
+					#{hash_namespace}::hash<int>()(5);
+					return 0;
+				}
+			})
+			if ok
+				flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
+				break
+			end
+		end
+	end
+	private_class_method :check_hash_map
+	
 	def self.portability_c_or_cxxflags(cc_or_cxx)
 		language = cc_or_cxx == :cc ? :c : :cxx
 		flags = ["-D_REENTRANT -I/usr/local/include"]
@@ -78,56 +134,9 @@ private
 		if cc_or_cxx == :cxx
 			# There are too many implementations of of the hash map!
 			# Figure out the right one.
-			ok = try_compile("Checking for tr1/unordered_map", :cxx, %Q{
-				#include <tr1/unordered_map>
-				int
-				main() {
-					std::tr1::unordered_map<int, int> m;
-					return 0;
-				}
-			})
-			if ok
-				flags << "-DHAS_TR1_UNORDERED_MAP"
-			else
-				hash_namespace = nil
-				ok = false
-				['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
-					['hash_map', 'ext/hash_map'].each do |hash_map_header|
-						ok = try_compile("Checking for #{hash_map_header}", :cxx, %Q{
-							#include <#{hash_map_header}>
-							int
-							main() {
-								#{namespace}::hash_map<int, int> m;
-								return 0;
-							}
-						})
-						if ok
-							hash_namespace = namespace
-							flags << "-DHASH_NAMESPACE=\"#{namespace}\""
-							flags << "-DHASH_MAP_HEADER=\"<#{hash_map_header}>\""
-							flags << "-DHASH_MAP_CLASS=\"hash_map\""
-						end
-						break if ok
-					end
-					break if ok
-				end
-				['ext/hash_fun.h', 'functional', 'tr1/functional',
-				 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
-				 'stl/_hash_fun.h'].each do |hash_function_header|
-					ok = try_compile("Checking for #{hash_function_header}", :cxx, %Q{
-						#include <#{hash_function_header}>
-						int
-						main() {
-							#{hash_namespace}::hash<int>()(5);
-							return 0;
-						}
-					})
-					if ok
-						flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
-						break
-					end
-				end
-			end
+			check_unordered_map(flags, "std::unordered_map", "unordered_map", "HAS_UNORDERED_MAP") ||
+				check_unordered_map(flags, "std::tr1::unordered_map", "unordered_map", "HAS_TR1_UNORDERED_MAP") ||
+				check_hash_map(flags)
 		end
 
 		ok = try_compile("Checking for accept4()", language, %Q{

@@ -77,45 +77,45 @@ using namespace boost;
  * All FileBackedPipe methods may only be called from the event loop on which it
  * is installed.
  *
- * FileBackedPipe *must* be dynamically allocated and assigned to a shared_ptr.
+ * FileBackedPipe *must* be dynamically allocated and assigned to a boost::shared_ptr.
  */
-class FileBackedPipe: public enable_shared_from_this<FileBackedPipe> {
+class FileBackedPipe: public boost::enable_shared_from_this<FileBackedPipe> {
 public:
 	class ConsumeCallback {
 	private:
-		mutable weak_ptr<FileBackedPipe> wself;
+		mutable boost::weak_ptr<FileBackedPipe> wself;
 		unsigned int generation;
 
 	public:
 		ConsumeCallback() { }
 
-		ConsumeCallback(const shared_ptr<FileBackedPipe> &self, unsigned int _generation)
+		ConsumeCallback(const boost::shared_ptr<FileBackedPipe> &self, unsigned int _generation)
 			: wself(self),
 			  generation(_generation)
 			{ }
 
 		void operator()(size_t consumed, bool done) const {
-			shared_ptr<FileBackedPipe> self = wself.lock();
+			boost::shared_ptr<FileBackedPipe> self = wself.lock();
 			if (self != NULL) {
 				wself.reset();
 				self->dataConsumed(consumed, done, generation);
 			}
 		}
 
-		function<void (size_t, bool)> toFunction() const {
-			shared_ptr<FileBackedPipe> self = wself.lock();
+		boost::function<void (size_t, bool)> toFunction() const {
+			boost::shared_ptr<FileBackedPipe> self = wself.lock();
 			if (self != NULL) {
 				return boost::bind(&ConsumeCallback::operator(), this, _1, _2);
 			} else {
-				return function<void (size_t, bool)>();
+				return boost::function<void (size_t, bool)>();
 			}
 		}
 	};
 
-	typedef void (*DataCallback)(const shared_ptr<FileBackedPipe> &source, const char *data,
+	typedef void (*DataCallback)(const boost::shared_ptr<FileBackedPipe> &source, const char *data,
 		size_t size, const ConsumeCallback &consumed);
-	typedef void (*ErrorCallback)(const shared_ptr<FileBackedPipe> &source, int errorCode);
-	typedef void (*Callback)(const shared_ptr<FileBackedPipe> &source);
+	typedef void (*ErrorCallback)(const boost::shared_ptr<FileBackedPipe> &source, int errorCode);
+	typedef void (*Callback)(const boost::shared_ptr<FileBackedPipe> &source);
 
 	enum DataState {
 		IN_MEMORY,
@@ -124,9 +124,9 @@ public:
 	};
 
 private:
-	typedef function<void (int err, const char *data, size_t size)> EioReadCallback;
+	typedef boost::function<void (int err, const char *data, size_t size)> EioReadCallback;
 
-	// We already have a shared_ptr reference to libev through MultiLibeio.
+	// We already have a boost::shared_ptr reference to libev through MultiLibeio.
 	const string dir;
 	size_t threshold;
 
@@ -271,7 +271,7 @@ private:
 				libeio.open(filename.str().c_str(), O_CREAT | O_RDWR | O_TRUNC, 0, 0,
 					boost::bind(&FileBackedPipe::openCallback, this,
 						_1, filename.str(), generation,
-						weak_ptr<FileBackedPipe>(shared_from_this())
+						boost::weak_ptr<FileBackedPipe>(shared_from_this())
 					)
 				);
 			}
@@ -302,7 +302,7 @@ private:
 					&FileBackedPipe::writeBufferToFileCallback, this,
 					_1, file.fd, buffer, file.writeBuffer.size(),
 					generation,
-					weak_ptr<FileBackedPipe>(shared_from_this())
+					boost::weak_ptr<FileBackedPipe>(shared_from_this())
 				)
 			);
 		}
@@ -310,9 +310,9 @@ private:
 
 	void writeBufferToFileCallback(eio_req req, FileDescriptor fd,
 		shared_array<char> buffer, size_t size,
-		unsigned int generation, weak_ptr<FileBackedPipe> wself)
+		unsigned int generation, boost::weak_ptr<FileBackedPipe> wself)
 	{
-		shared_ptr<FileBackedPipe> self = wself.lock();
+		boost::shared_ptr<FileBackedPipe> self = wself.lock();
 		if (self == NULL || EIO_CANCELLED(&req) || generation != self->generation) {
 			return;
 		}
@@ -333,9 +333,9 @@ private:
 	}
 
 	void openCallback(eio_req req, string filename, unsigned int generation,
-		weak_ptr<FileBackedPipe> &wself)
+		boost::weak_ptr<FileBackedPipe> &wself)
 	{
-		shared_ptr<FileBackedPipe> self = wself.lock();
+		boost::shared_ptr<FileBackedPipe> self = wself.lock();
 		if (self == NULL || EIO_CANCELLED(&req) || generation != self->generation) {
 			if (req.result != -1 || EIO_CANCELLED(&req)) {
 				eio_close(req.result, 0, successCallback, NULL);
@@ -354,7 +354,7 @@ private:
 			} else {
 				getLibev()->runAfter(openTimeout,
 					boost::bind(&FileBackedPipe::finalizeOpenFileAfterTimeout, this,
-						weak_ptr<FileBackedPipe>(shared_from_this()),
+						boost::weak_ptr<FileBackedPipe>(shared_from_this()),
 						generation, FileDescriptor(req.result)));
 			}
 		}
@@ -366,10 +366,10 @@ private:
 		writeBufferToFile();
 	}
 
-	void finalizeOpenFileAfterTimeout(weak_ptr<FileBackedPipe> wself,
+	void finalizeOpenFileAfterTimeout(boost::weak_ptr<FileBackedPipe> wself,
 		unsigned int generation, FileDescriptor fd)
 	{
-		shared_ptr<FileBackedPipe> self = wself.lock();
+		boost::shared_ptr<FileBackedPipe> self = wself.lock();
 		if (self != NULL || generation != self->generation) {
 			self->finalizeOpenFile(fd);
 		}
@@ -390,7 +390,7 @@ private:
 				boost::bind(
 					&FileBackedPipe::readCallback, this,
 					_1, file.fd, buffer, callback, generation,
-					weak_ptr<FileBackedPipe>(shared_from_this())
+					boost::weak_ptr<FileBackedPipe>(shared_from_this())
 				)
 			);
 			if (req == NULL) {
@@ -400,9 +400,9 @@ private:
 	}
 
 	void readCallback(eio_req req, FileDescriptor fd, shared_array<char> buffer,
-		EioReadCallback callback, unsigned int generation, weak_ptr<FileBackedPipe> wself)
+		EioReadCallback callback, unsigned int generation, boost::weak_ptr<FileBackedPipe> wself)
 	{
-		shared_ptr<FileBackedPipe> self = wself.lock();
+		boost::shared_ptr<FileBackedPipe> self = wself.lock();
 		if (self == NULL || EIO_CANCELLED(&req) || generation != self->generation) {
 			return;
 		}
@@ -724,7 +724,7 @@ public:
 	}
 };
 
-typedef shared_ptr<FileBackedPipe> FileBackedPipePtr;
+typedef boost::shared_ptr<FileBackedPipe> FileBackedPipePtr;
 
 
 } // namespace Passenger

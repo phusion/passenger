@@ -35,7 +35,7 @@ namespace tut {
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
 		
-		shared_ptr<SmartSpawner> createSpawner(const Options &options, bool exitImmediately = false) {
+		boost::shared_ptr<SmartSpawner> createSpawner(const Options &options, bool exitImmediately = false) {
 			char buf[PATH_MAX + 1];
 			getcwd(buf, PATH_MAX);
 			
@@ -46,7 +46,7 @@ namespace tut {
 				command.push_back("exit-immediately");
 			}
 			
-			return make_shared<SmartSpawner>(bg.safe,
+			return boost::make_shared<SmartSpawner>(bg.safe,
 				*resourceLocator,
 				generation,
 				command,
@@ -77,7 +77,7 @@ namespace tut {
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
-		shared_ptr<SmartSpawner> spawner = createSpawner(options);
+		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options);
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
 		
@@ -99,7 +99,7 @@ namespace tut {
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		setLogLevel(-1);
-		shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
+		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
 			process = spawner->spawn(options);
 			process->requiresShutdown = false;

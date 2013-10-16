@@ -37,9 +37,9 @@ using namespace boost;
 template<typename T>
 class BlockingQueue {
 private:
-	mutable timed_mutex lock;
-	condition_variable_any added;
-	condition_variable_any removed;
+	mutable boost::timed_mutex lock;
+	boost::condition_variable_any added;
+	boost::condition_variable_any removed;
 	unsigned int max;
 	std::queue<T> queue;
 	
@@ -53,12 +53,12 @@ public:
 	}
 	
 	unsigned int size() const {
-		boost::lock_guard<timed_mutex> l(lock);
+		boost::lock_guard<boost::timed_mutex> l(lock);
 		return queue.size();
 	}
 	
 	void add(const T &item) {
-		unique_lock<timed_mutex> l(lock);
+		boost::unique_lock<boost::timed_mutex> l(lock);
 		while (atMaxCapacity()) {
 			removed.wait(l);
 		}
@@ -70,7 +70,7 @@ public:
 	}
 	
 	bool tryAdd(const T &item) {
-		boost::lock_guard<timed_mutex> l(lock);
+		boost::lock_guard<boost::timed_mutex> l(lock);
 		if (!atMaxCapacity()) {
 			queue.push(item);
 			added.notify_one();
@@ -84,7 +84,7 @@ public:
 	}
 	
 	T get() {
-		unique_lock<timed_mutex> l(lock);
+		boost::unique_lock<boost::timed_mutex> l(lock);
 		while (queue.empty()) {
 			added.wait(l);
 		}
@@ -98,7 +98,7 @@ public:
 	}
 	
 	bool timedGet(T &output, unsigned int timeout) {
-		unique_lock<timed_mutex> l(lock);
+		boost::unique_lock<boost::timed_mutex> l(lock);
 		posix_time::ptime deadline = posix_time::microsec_clock::local_time() +
 			posix_time::milliseconds(timeout);
 		bool timedOut = false;
@@ -127,7 +127,7 @@ public:
 	}
 	
 	bool tryGet(T &output) {
-		unique_lock<timed_mutex> l(lock);
+		boost::unique_lock<boost::timed_mutex> l(lock);
 		if (queue.empty()) {
 			return false;
 		} else {
@@ -142,7 +142,7 @@ public:
 	}
 	
 	T peek() {
-		unique_lock<timed_mutex> l(lock);
+		boost::unique_lock<boost::timed_mutex> l(lock);
 		while (queue.empty()) {
 			added.wait(l);
 		}

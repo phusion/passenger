@@ -113,4 +113,4 @@ public:
 	}
 };
 
-typedef shared_ptr<ServerInstanceDirToucher> ServerInstanceDirToucherPtr;
+typedef boost::shared_ptr<ServerInstanceDirToucher> ServerInstanceDirToucherPtr;

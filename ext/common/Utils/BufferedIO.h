@@ -72,7 +72,7 @@ private:
 	}
 	
 public:
-	typedef function< pair<unsigned int, bool>(const char *data, unsigned int size) > AcceptFunction;
+	typedef boost::function< pair<unsigned int, bool>(const char *data, unsigned int size) > AcceptFunction;
 	
 	BufferedIO() { }
 	

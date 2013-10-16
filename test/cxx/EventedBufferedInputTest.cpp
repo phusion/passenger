@@ -14,7 +14,7 @@ namespace tut {
 	public:
 		boost::mutex syncher;
 		int readError;
-		function<void ()> onAfterProcessingBuffer;
+		boost::function<void ()> onAfterProcessingBuffer;
 
 		MyEventedBufferedInput(SafeLibev *libev, const FileDescriptor &fd)
 			: EventedBufferedInput<>(libev, fd)
@@ -42,7 +42,7 @@ namespace tut {
 		}
 
 		virtual void afterProcessingBuffer() {
-			function<void ()> onAfterProcessingBuffer;
+			boost::function<void ()> onAfterProcessingBuffer;
 			{
 				boost::lock_guard<boost::mutex> l(syncher);
 				onAfterProcessingBuffer = this->onAfterProcessingBuffer;
@@ -56,7 +56,7 @@ namespace tut {
 	struct EventedBufferedInputTest {
 		BackgroundEventLoop bg;
 		Pipe p;
-		shared_ptr<MyEventedBufferedInput> ebi;
+		boost::shared_ptr<MyEventedBufferedInput> ebi;
 		boost::mutex syncher;
 		string log;
 		ssize_t toConsume;
@@ -64,7 +64,7 @@ namespace tut {
 		
 		EventedBufferedInputTest() {
 			p = createPipe();
-			ebi = make_shared<MyEventedBufferedInput>(bg.safe.get(), p.first);
+			ebi = boost::make_shared<MyEventedBufferedInput>(bg.safe.get(), p.first);
 			ebi->onData = onData;
 			ebi->onError = onError;
 			ebi->userData = this;
@@ -137,7 +137,7 @@ namespace tut {
 			EventedBufferedInputTest *self = (EventedBufferedInputTest *) input->userData; \
 			boost::mutex &syncher = self->syncher; \
 			string &log = self->log; \
-			shared_ptr<MyEventedBufferedInput> &ebi = self->ebi; \
+			boost::shared_ptr<MyEventedBufferedInput> &ebi = self->ebi; \
 			/* Shut up compiler warning */  \
 			(void) syncher; \
 			(void) log; \
@@ -149,7 +149,7 @@ namespace tut {
 		static void name(EventedBufferedInputTest *self) { \
 			boost::mutex &syncher = self->syncher; \
 			string &log = self->log; \
-			shared_ptr<MyEventedBufferedInput> &ebi = self->ebi; \
+			boost::shared_ptr<MyEventedBufferedInput> &ebi = self->ebi; \
 			/* Shut up compiler warning */ \
 			(void) syncher; \
 			(void) log; \

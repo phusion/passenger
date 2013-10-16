@@ -30,7 +30,10 @@
  * There are too many ways to include hash_map/unordered_map!
  * This header autodetects the correct method.
  */
-#if defined(HAS_TR1_UNORDERED_MAP)
+#if defined(HAS_UNORDERED_MAP)
+	#include <unordered_map>
+	#define HashMap std::unordered_map
+#elif defined(HAS_TR1_UNORDERED_MAP)
 	#include <tr1/unordered_map>
 	#define HashMap std::tr1::unordered_map
 #elif defined(HASH_NAMESPACE) && defined(HASH_MAP_HEADER)

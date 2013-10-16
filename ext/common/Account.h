@@ -163,7 +163,7 @@ public:
 	}
 };
 
-typedef shared_ptr<Account> AccountPtr;
+typedef boost::shared_ptr<Account> AccountPtr;
 
 } // namespace Passenger
 

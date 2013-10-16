@@ -138,7 +138,7 @@ struct Connection {
 	}
 };
 
-typedef shared_ptr<Connection> ConnectionPtr;
+typedef boost::shared_ptr<Connection> ConnectionPtr;
 
 
 /** A special lock type for Connection that also keeps a smart
@@ -217,7 +217,7 @@ enum ExceptionHandlingMode {
 
 
 class LoggerFactory;
-typedef shared_ptr<LoggerFactory> LoggerFactoryPtr;
+typedef boost::shared_ptr<LoggerFactory> LoggerFactoryPtr;
 
 inline void _checkinConnection(const LoggerFactoryPtr &loggerFactory, const ConnectionPtr &connection);
 
@@ -426,7 +426,7 @@ public:
 	}
 };
 
-typedef shared_ptr<Logger> LoggerPtr;
+typedef boost::shared_ptr<Logger> LoggerPtr;
 
 
 class ScopeLog: public noncopyable {
@@ -551,7 +551,7 @@ public:
 };
 
 
-class LoggerFactory: public enable_shared_from_this<LoggerFactory> {
+class LoggerFactory: public boost::enable_shared_from_this<LoggerFactory> {
 private:
 	static const unsigned int CONNECTION_POOL_MAX_SIZE = 10;
 
@@ -637,12 +637,12 @@ private:
 		}
 		
 		guard.clear();
-		return make_shared<Connection>(fd);
+		return boost::make_shared<Connection>(fd);
 	}
 	
 public:
 	LoggerFactory() {
-		nullLogger = make_shared<Logger>();
+		nullLogger = boost::make_shared<Logger>();
 	}
 	
 	LoggerFactory(const string &_serverAddress, const string &_username,
@@ -652,7 +652,7 @@ public:
 		  password(_password),
 		  nodeName(determineNodeName(_nodeName))
 	{
-		nullLogger = make_shared<Logger>();
+		nullLogger = boost::make_shared<Logger>();
 		if (!_serverAddress.empty() && isLocalSocketAddress(_serverAddress)) {
 			maxConnectTries = 10;
 		} else {
@@ -664,7 +664,7 @@ public:
 
 	ConnectionPtr checkoutConnection() {
 		TRACE_POINT();
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		if (!connectionPool.empty()) {
 			P_TRACE(3, "Checked out existing connection");
 			ConnectionPtr connection = connectionPool.back();
@@ -808,7 +808,7 @@ public:
 			}
 			
 			guard.clear();
-			return make_shared<Logger>(shared_from_this(),
+			return boost::make_shared<Logger>(shared_from_this(),
 				connection,
 				string(txnId, end - txnId),
 				groupName, category,
@@ -881,7 +881,7 @@ public:
 				"true",
 				NULL);
 			guard.clear();
-			return make_shared<Logger>(shared_from_this(),
+			return boost::make_shared<Logger>(shared_from_this(),
 				connection,
 				txnId, groupName, category,
 				unionStationKey);

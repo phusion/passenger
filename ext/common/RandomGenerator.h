@@ -153,7 +153,7 @@ public:
 	}
 };
 
-typedef shared_ptr<RandomGenerator> RandomGeneratorPtr;
+typedef boost::shared_ptr<RandomGenerator> RandomGeneratorPtr;
 
 } // namespace Passenger
 

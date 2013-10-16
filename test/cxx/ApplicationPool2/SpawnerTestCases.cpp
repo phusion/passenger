@@ -30,7 +30,7 @@
 		/* Avoid compiler warning. */ \
 		(void) uid; (void) gid; (void) groups
 
-	typedef shared_ptr<Spawner> SpawnerPtr;
+	typedef boost::shared_ptr<Spawner> SpawnerPtr;
 	
 	static void addUserSwitchingCode() {
 		FILE *f = fopen("tmp.wsgi/passenger_wsgi.py", "a");

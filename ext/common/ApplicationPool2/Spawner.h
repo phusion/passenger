@@ -211,7 +211,7 @@ protected:
 		}
 	};
 	
-	typedef shared_ptr<BackgroundIOCapturer> BackgroundIOCapturerPtr;
+	typedef boost::shared_ptr<BackgroundIOCapturer> BackgroundIOCapturerPtr;
 	
 	/**
 	 * A temporary directory for spawned child processes to write
@@ -271,7 +271,7 @@ protected:
 		}
 	};
 
-	typedef shared_ptr<DebugDir> DebugDirPtr;
+	typedef boost::shared_ptr<DebugDir> DebugDirPtr;
 
 	/**
 	 * Contains information that will be used after fork()ing but before exec()ing,
@@ -425,7 +425,7 @@ private:
 
 	ProcessPtr handleSpawnResponse(NegotiationDetails &details) {
 		TRACE_POINT();
-		SocketListPtr sockets = make_shared<SocketList>();
+		SocketListPtr sockets = boost::make_shared<SocketList>();
 		while (true) {
 			string line;
 			
@@ -513,7 +513,7 @@ private:
 				details);
 		}
 		
-		return make_shared<Process>(details.libev, details.pid,
+		return boost::make_shared<Process>(details.libev, details.pid,
 			details.gupid, details.connectPassword,
 			details.adminSocket, details.errorPipe,
 			sockets, creationTime, details.spawnStartTime,
@@ -1273,7 +1273,7 @@ public:
 		return config;
 	}
 };
-typedef shared_ptr<Spawner> SpawnerPtr;
+typedef boost::shared_ptr<Spawner> SpawnerPtr;
 
 
 } // namespace ApplicationPool2

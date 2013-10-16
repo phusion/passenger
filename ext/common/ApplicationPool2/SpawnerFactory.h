@@ -60,7 +60,7 @@ private:
 		} else {
 			return SpawnerPtr();
 		}
-		return make_shared<SmartSpawner>(libev, resourceLocator,
+		return boost::make_shared<SmartSpawner>(libev, resourceLocator,
 			generation, preloaderCommand, options, config);
 	}
 	
@@ -74,7 +74,7 @@ public:
 		  generation(_generation)
 	{
 		if (_config == NULL) {
-			config = make_shared<SpawnerConfig>();
+			config = boost::make_shared<SpawnerConfig>();
 		} else {
 			config = _config;
 		}
@@ -86,13 +86,13 @@ public:
 		if (options.spawnMethod == "smart" || options.spawnMethod == "smart-lv2") {
 			SpawnerPtr spawner = tryCreateSmartSpawner(options);
 			if (spawner == NULL) {
-				spawner = make_shared<DirectSpawner>(libev,
+				spawner = boost::make_shared<DirectSpawner>(libev,
 					resourceLocator, generation, config);
 			}
 			return spawner;
 		} else if (options.spawnMethod == "direct" || options.spawnMethod == "conservative") {
-			shared_ptr<DirectSpawner> spawner = make_shared<DirectSpawner>(libev,
-				resourceLocator, generation, config);
+			boost::shared_ptr<DirectSpawner> spawner = boost::make_shared<DirectSpawner>(
+				libev, resourceLocator, generation, config);
 			return spawner;
 		} else if (options.spawnMethod == "dummy") {
 			syscalls::usleep(config->spawnerCreationSleepTime);
@@ -110,7 +110,7 @@ public:
 	DummySpawnerPtr getDummySpawner() {
 		boost::lock_guard<boost::mutex> l(syncher);
 		if (dummySpawner == NULL) {
-			dummySpawner = make_shared<DummySpawner>(resourceLocator, config);
+			dummySpawner = boost::make_shared<DummySpawner>(resourceLocator, config);
 		}
 		return dummySpawner;
 	}
@@ -131,7 +131,7 @@ public:
 	}
 };
 
-typedef shared_ptr<SpawnerFactory> SpawnerFactoryPtr;
+typedef boost::shared_ptr<SpawnerFactory> SpawnerFactoryPtr;
 
 
 } // namespace ApplicationPool2

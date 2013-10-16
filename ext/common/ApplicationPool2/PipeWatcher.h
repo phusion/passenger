@@ -39,9 +39,9 @@ using namespace boost;
 
 
 /** A PipeWatcher lives until the file descriptor is closed. */
-struct PipeWatcher: public enable_shared_from_this<PipeWatcher> {
+struct PipeWatcher: public boost::enable_shared_from_this<PipeWatcher> {
 	// For unit tests.
-	typedef function<void (const char *data, unsigned int size)> DataCallback;
+	typedef boost::function<void (const char *data, unsigned int size)> DataCallback;
 	static DataCallback onData;
 
 	FileDescriptor fd;
@@ -50,16 +50,16 @@ struct PipeWatcher: public enable_shared_from_this<PipeWatcher> {
 	bool print;
 	bool started;
 	boost::mutex startSyncher;
-	condition_variable startCond;
+	boost::condition_variable startCond;
 
 	PipeWatcher(const FileDescriptor &_fd, const char *name, pid_t pid, bool _print);
 	void initialize();
 	void start();
-	static void threadMain(shared_ptr<PipeWatcher> self);
+	static void threadMain(boost::shared_ptr<PipeWatcher> self);
 	void threadMain();
 };
 
-typedef shared_ptr<PipeWatcher> PipeWatcherPtr;
+typedef boost::shared_ptr<PipeWatcher> PipeWatcherPtr;
 
 
 } // namespace ApplicationPool2

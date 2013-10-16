@@ -155,7 +155,7 @@ public:
 	{
 		generation = _generation;
 		if (_config == NULL) {
-			config = make_shared<SpawnerConfig>();
+			config = boost::make_shared<SpawnerConfig>();
 		} else {
 			config = _config;
 		}
@@ -173,7 +173,7 @@ public:
 		vector<string> command = createCommand(options, preparation, args);
 		SocketPair adminSocket = createUnixSocketPair();
 		Pipe errorPipe = createPipe();
-		DebugDirPtr debugDir = make_shared<DebugDir>(preparation.uid, preparation.gid);
+		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.uid, preparation.gid);
 		pid_t pid;
 		
 		pid = syscalls::fork();

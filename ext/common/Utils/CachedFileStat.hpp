@@ -141,7 +141,7 @@ public:
 		}
 	};
 	
-	typedef shared_ptr<Entry> EntryPtr;
+	typedef boost::shared_ptr<Entry> EntryPtr;
 	typedef list<EntryPtr> EntryList;
 	typedef StringMap<EntryList::iterator> EntryMap;
 	
@@ -196,7 +196,7 @@ public:
 			}
 			
 			// Add to cache as most recently used.
-			entry = make_shared<Entry>(filename);
+			entry = boost::make_shared<Entry>(filename);
 			entries.push_front(entry);
 			cache.set(filename, entries.begin());
 		} else {

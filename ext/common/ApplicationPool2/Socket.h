@@ -162,7 +162,7 @@ public:
 	}
 	
 	void checkinConnection(Connection connection) {
-		unique_lock<boost::mutex> l(connectionPoolLock);
+		boost::unique_lock<boost::mutex> l(connectionPoolLock);
 		
 		if (connection.persistent) {
 			if (connection.fail) {
@@ -237,7 +237,7 @@ public:
 	}
 };
 
-typedef shared_ptr<SocketList> SocketListPtr;
+typedef boost::shared_ptr<SocketList> SocketListPtr;
 
 
 } // namespace ApplicationPool2

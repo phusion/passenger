@@ -31,7 +31,7 @@ namespace tut {
 		ev::dynamic_loop eventLoop;
 		FileDescriptor serverFd;
 		LoggingServerPtr server;
-		shared_ptr<oxt::thread> serverThread;
+		boost::shared_ptr<oxt::thread> serverThread;
 		LoggerFactoryPtr factory, factory2, factory3, factory4;
 		
 		UnionStationTest() {
@@ -60,7 +60,7 @@ namespace tut {
 			setLogLevel(0);
 		}
 		
-		void startLoggingServer(const function<void ()> &initFunc = function<void ()>()) {
+		void startLoggingServer(const boost::function<void ()> &initFunc = boost::function<void ()>()) {
 			VariantMap options;
 			options.set("analytics_dump_file", dumpFile);
 			serverFd = createUnixServer(socketFilename.c_str());

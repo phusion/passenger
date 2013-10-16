@@ -73,23 +73,23 @@ typedef enum {
  * Convenience shortcut for creating a <tt>shared_ptr</tt>.
  * Instead of:
  * @code
- *    shared_ptr<Foo> foo;
+ *    boost::shared_ptr<Foo> foo;
  *    ...
- *    foo = shared_ptr<Foo>(new Foo());
+ *    foo = boost::shared_ptr<Foo>(new Foo());
  * @endcode
  * one can write:
  * @code
- *    shared_ptr<Foo> foo;
+ *    boost::shared_ptr<Foo> foo;
  *    ...
  *    foo = ptr(new Foo());
  * @endcode
  *
- * @param pointer The item to put in the shared_ptr object.
+ * @param pointer The item to put in the boost::shared_ptr object.
  * @ingroup Support
  */
-template<typename T> shared_ptr<T>
+template<typename T> boost::shared_ptr<T>
 ptr(T *pointer) {
-	return shared_ptr<T>(pointer);
+	return boost::shared_ptr<T>(pointer);
 }
 
 /**
@@ -388,8 +388,8 @@ void prestartWebApps(const ResourceLocator &locator, const string &ruby,
  * otherwise the exception is swallowed.
  * thread_interrupted and all other exceptions are silently propagated.
  */
-void runAndPrintExceptions(const function<void ()> &func, bool toAbort);
-void runAndPrintExceptions(const function<void ()> &func);
+void runAndPrintExceptions(const boost::function<void ()> &func, bool toAbort);
+void runAndPrintExceptions(const boost::function<void ()> &func);
 
 /**
  * Returns the system's host name.

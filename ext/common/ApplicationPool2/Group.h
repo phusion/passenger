@@ -60,7 +60,7 @@ using namespace oxt;
  * Except for otherwise documented parts, this class is not thread-safe,
  * so only access within ApplicationPool lock.
  */
-class Group: public enable_shared_from_this<Group> {
+class Group: public boost::enable_shared_from_this<Group> {
 private:
 	friend class Pool;
 	friend class SuperGroup;
@@ -90,7 +90,7 @@ private:
 	 * Groups.
 	 * Read-only; only set during initialization.
 	 */
-	weak_ptr<SuperGroup> superGroup;
+	boost::weak_ptr<SuperGroup> superGroup;
 	CachedFileStat cstat;
 	FileChangeChecker fileChangeChecker;
 	string restartFile;
@@ -150,7 +150,7 @@ private:
 	 * whether any of the Processes can be shut down.
 	 */
 	bool detachedProcessesCheckerActive;
-	condition_variable detachedProcessesCheckerCond;
+	boost::condition_variable detachedProcessesCheckerCond;
 	Callback shutdownCallback;
 	GroupPtr selfPointer;
 	
@@ -329,7 +329,7 @@ private:
 			return true;
 		} else {
 			P_WARN("Request queue is full. Returning an error");
-			callback(SessionPtr(), make_shared<RequestQueueFullException>());
+			callback(SessionPtr(), boost::make_shared<RequestQueueFullException>());
 			return false;
 		}
 	}
@@ -721,14 +721,14 @@ public:
 		}
 		
 		if (OXT_UNLIKELY(newOptions.noop)) {
-			ProcessPtr process = make_shared<Process>(SafeLibevPtr(),
+			ProcessPtr process = boost::make_shared<Process>(SafeLibevPtr(),
 				0, string(), string(),
 				FileDescriptor(), FileDescriptor(),
 				SocketListPtr(), 0, 0);
 			process->dummy = true;
 			process->requiresShutdown = false;
 			process->setGroup(shared_from_this());
-			return make_shared<Session>(process, (Socket *) NULL);
+			return boost::make_shared<Session>(process, (Socket *) NULL);
 		}
 		
 		if (OXT_UNLIKELY(enabledCount == 0)) {

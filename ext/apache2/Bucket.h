@@ -62,7 +62,7 @@ struct PassengerBucketState {
 	}
 };
 
-typedef shared_ptr<PassengerBucketState> PassengerBucketStatePtr;
+typedef boost::shared_ptr<PassengerBucketState> PassengerBucketStatePtr;
 
 /**
  * We used to use an apr_bucket_pipe for forwarding the backend process's

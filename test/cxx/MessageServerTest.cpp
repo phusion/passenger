@@ -23,8 +23,8 @@ namespace tut {
 		string socketAddress;
 		AccountsDatabasePtr accountsDatabase;
 		AccountPtr clientAccount;
-		shared_ptr<MessageServer> server;
-		shared_ptr<oxt::thread> serverThread;
+		boost::shared_ptr<MessageServer> server;
+		boost::shared_ptr<oxt::thread> serverThread;
 		
 		MessageServerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
@@ -94,7 +94,7 @@ namespace tut {
 				}
 			};
 			
-			typedef shared_ptr<SpecificContext> SpecificContextPtr;
+			typedef boost::shared_ptr<SpecificContext> SpecificContextPtr;
 			
 			boost::mutex mutex;
 			volatile int clientsAccepted;
@@ -134,7 +134,7 @@ namespace tut {
 			}
 		};
 		
-		typedef shared_ptr<LoggingHandler> LoggingHandlerPtr;
+		typedef boost::shared_ptr<LoggingHandler> LoggingHandlerPtr;
 		
 		class ProcessMessageReturnsFalseHandler: public MessageServer::Handler {
 		public:

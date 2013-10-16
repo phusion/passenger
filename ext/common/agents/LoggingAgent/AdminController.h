@@ -67,7 +67,7 @@ public:
 	}
 	
 	virtual MessageServer::ClientContextPtr newClient(CommonClientContext &commonContext) {
-		return make_shared<SpecificContext>();
+		return boost::make_shared<SpecificContext>();
 	}
 	
 	virtual bool processMessage(CommonClientContext &commonContext,

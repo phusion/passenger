@@ -374,7 +374,7 @@ public:
 	 */
 	void start(const string &passengerRoot,
 		const VariantMap &extraParams = VariantMap(),
-		const function<void ()> &afterFork = function<void ()>())
+		const boost::function<void ()> &afterFork = boost::function<void ()>())
 	{
 		TRACE_POINT();
 		this_thread::disable_interruption di;
@@ -533,7 +533,7 @@ public:
 				requestSocketPassword   = info.get("request_socket_password");
 				helperAgentAdminSocketAddress = info.get("helper_agent_admin_socket_address");
 				helperAgentExitPassword       = info.get("helper_agent_exit_password");
-				serverInstanceDir = make_shared<ServerInstanceDir>(info.get("server_instance_dir"), false);
+				serverInstanceDir = boost::make_shared<ServerInstanceDir>(info.get("server_instance_dir"), false);
 				generation        = serverInstanceDir->getGeneration(info.getInt("generation"));
 				loggingSocketAddress  = info.get("logging_socket_address");
 				loggingSocketPassword = info.get("logging_socket_password");

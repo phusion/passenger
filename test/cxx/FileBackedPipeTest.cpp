@@ -35,7 +35,7 @@ namespace tut {
 			resetOnData = false;
 			consumeCallbackCount = 0;
 			ended = false;
-			pipe = make_shared<FileBackedPipe>("tmp.pipe");
+			pipe = boost::make_shared<FileBackedPipe>("tmp.pipe");
 			pipe->userData = this;
 			pipe->onData = onData;
 			pipe->onEnd = onEnd;

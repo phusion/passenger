@@ -30,8 +30,8 @@ namespace tut {
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
 		
-		shared_ptr<DirectSpawner> createSpawner(const Options &options) {
-			return make_shared<DirectSpawner>(bg.safe,
+		boost::shared_ptr<DirectSpawner> createSpawner(const Options &options) {
+			return boost::make_shared<DirectSpawner>(bg.safe,
 				*resourceLocator, generation);
 		}
 		

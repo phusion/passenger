@@ -57,13 +57,13 @@ public:
 		possiblyRaiseInternalError(options);
 
 		SocketPair adminSocket = createUnixSocketPair();
-		SocketListPtr sockets = make_shared<SocketList>();
+		SocketListPtr sockets = boost::make_shared<SocketList>();
 		sockets->add("main", "tcp://127.0.0.1:1234", "session", config->concurrency);
 		syscalls::usleep(config->spawnTime);
 		
 		boost::lock_guard<boost::mutex> l(lock);
 		count++;
-		ProcessPtr process = make_shared<Process>(SafeLibevPtr(),
+		ProcessPtr process = boost::make_shared<Process>(SafeLibevPtr(),
 			(pid_t) count, "gupid-" + toString(count),
 			toString(count),
 			adminSocket.second, FileDescriptor(), sockets,
@@ -81,7 +81,7 @@ public:
 	}
 };
 
-typedef shared_ptr<DummySpawner> DummySpawnerPtr;
+typedef boost::shared_ptr<DummySpawner> DummySpawnerPtr;
 
 
 } // namespace ApplicationPool2

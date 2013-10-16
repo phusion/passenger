@@ -67,7 +67,7 @@ private:
 		}
 	};
 	
-	typedef shared_ptr<Entry> EntryPtr;
+	typedef boost::shared_ptr<Entry> EntryPtr;
 	typedef list<EntryPtr> EntryList;
 	typedef map<string, EntryList::iterator> EntryMap;
 	

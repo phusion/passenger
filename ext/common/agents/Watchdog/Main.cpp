@@ -106,7 +106,7 @@ struct WorkingObjects {
 	string adminToolManipulationPassword;
 };
 
-typedef shared_ptr<WorkingObjects> WorkingObjectsPtr;
+typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
 
 static string oldOomScore;
 
@@ -529,11 +529,11 @@ lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 static void
 initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &serverInstanceDirToucher) {
 	TRACE_POINT();
-	wo = make_shared<WorkingObjects>();
-	wo->resourceLocator = make_shared<ResourceLocator>(agentsOptions.get("passenger_root"));
+	wo = boost::make_shared<WorkingObjects>();
+	wo->resourceLocator = boost::make_shared<ResourceLocator>(agentsOptions.get("passenger_root"));
 
 	UPDATE_TRACE_POINT();
-	// Must not used make_shared() here because Watchdog.cpp
+	// Must not used boost::make_shared() here because Watchdog.cpp
 	// deletes the raw pointer in cleanupAgentsInBackground().
 	if (agentsOptions.get("server_instance_dir", false).empty()) {
 		/* We embed the super structure version in the server instance directory name
@@ -557,7 +557,7 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &ser
 	agentsOptions.setInt("generation_number", wo->generation->getNumber());
 
 	UPDATE_TRACE_POINT();
-	serverInstanceDirToucher = make_shared<ServerInstanceDirToucher>(wo);
+	serverInstanceDirToucher = boost::make_shared<ServerInstanceDirToucher>(wo);
 
 	UPDATE_TRACE_POINT();
 	lookupDefaultUidGid(wo->defaultUid, wo->defaultGid);

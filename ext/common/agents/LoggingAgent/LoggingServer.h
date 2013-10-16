@@ -74,7 +74,7 @@ private:
 	static const int GARBAGE_COLLECTION_TIMEOUT = 4500;  // 1 hour 15 minutes
 	
 	struct LogSink;
-	typedef shared_ptr<LogSink> LogSinkPtr;
+	typedef boost::shared_ptr<LogSink> LogSinkPtr;
 	typedef map<string, LogSinkPtr> LogSinkCache;
 	
 	struct LogSink {
@@ -183,7 +183,7 @@ private:
 		}
 	};
 	
-	typedef shared_ptr<LogFileSink> LogFileSinkPtr;
+	typedef boost::shared_ptr<LogFileSink> LogFileSinkPtr;
 	
 	struct RemoteSink: public LogSink {
 		/* RemoteSender compresses the data with zlib before sending it
@@ -363,7 +363,7 @@ private:
 		}
 	};
 	
-	typedef shared_ptr<Transaction> TransactionPtr;
+	typedef boost::shared_ptr<Transaction> TransactionPtr;
 	
 	enum ClientType {
 		UNINITIALIZED,
@@ -407,10 +407,10 @@ private:
 		}
 	};
 	
-	typedef shared_ptr<Client> ClientPtr;
+	typedef boost::shared_ptr<Client> ClientPtr;
 	typedef map<string, TransactionPtr> TransactionMap;
 	
-	typedef shared_ptr<FilterSupport::Filter> FilterPtr;
+	typedef boost::shared_ptr<FilterSupport::Filter> FilterPtr;
 	
 	RemoteSender remoteSender;
 	ev::timer garbageCollectionTimer;
@@ -543,7 +543,7 @@ private:
 		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
 		if (it == logSinkCache.end()) {
 			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE - 1);
-			result = make_shared<LogFileSink>(this, dumpFile);
+			result = boost::make_shared<LogFileSink>(this, dumpFile);
 			pair<LogSinkCache::iterator, bool> p =
 				logSinkCache.insert(make_pair(cacheKey, result));
 			result->cacheIterator = p.first;
@@ -573,7 +573,7 @@ private:
 		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
 		if (it == logSinkCache.end()) {
 			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE - 1);
-			result = make_shared<RemoteSink>(this, unionStationKey,
+			result = boost::make_shared<RemoteSink>(this, unionStationKey,
 				nodeName, category);
 			pair<LogSinkCache::iterator, bool> p =
 				logSinkCache.insert(make_pair(cacheKey, result));
@@ -625,7 +625,7 @@ private:
 		// TODO: garbage collect filters based on time
 		FilterPtr filter = filters.get(source);
 		if (filter == NULL) {
-			filter = make_shared<FilterSupport::Filter>(source);
+			filter = boost::make_shared<FilterSupport::Filter>(source);
 			filters.set(source, filter);
 		}
 		return *filter;
@@ -869,7 +869,7 @@ protected:
 					return true;
 				}
 				
-				transaction = make_shared<Transaction>(this, ev_now(getLoop()));
+				transaction = boost::make_shared<Transaction>(this, ev_now(getLoop()));
 				if (unionStationKey.empty() || unionStationKey == "-") {
 					char tempNodeId[MD5_HEX_SIZE];
 					
@@ -1196,7 +1196,7 @@ public:
 	}
 };
 
-typedef shared_ptr<LoggingServer> LoggingServerPtr;
+typedef boost::shared_ptr<LoggingServer> LoggingServerPtr;
 
 
 } // namespace Passenger

@@ -125,7 +125,7 @@ public:
  * This means that a Group outlives all its Processes, a Process outlives all
  * its Sessions, and a Process also outlives the OS process.
  */
-class Process: public enable_shared_from_this<Process> {
+class Process: public boost::enable_shared_from_this<Process> {
 private:
 	friend class Group;
 	
@@ -136,7 +136,7 @@ private:
 	 * Should never be NULL because a Group should outlive all of its Processes.
 	 * Read-only; only set once during initialization.
 	 */
-	weak_ptr<Group> group;
+	boost::weak_ptr<Group> group;
 	
 	/** A subset of 'sockets': all sockets that speak the
 	 * "session" protocol, sorted by socket.utilization(). */
@@ -345,19 +345,19 @@ public:
 	{
 		SpawnerConfigPtr config;
 		if (_config == NULL) {
-			config = make_shared<SpawnerConfig>();
+			config = boost::make_shared<SpawnerConfig>();
 		} else {
 			config = _config;
 		}
 
 		if (_adminSocket != -1) {
-			PipeWatcherPtr watcher = make_shared<PipeWatcher>(_adminSocket,
+			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(_adminSocket,
 				"stdout", pid, config->forwardStdout);
 			watcher->initialize();
 			watcher->start();
 		}
 		if (_errorPipe != -1) {
-			PipeWatcherPtr watcher = make_shared<PipeWatcher>(_errorPipe,
+			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(_errorPipe,
 				"stderr", pid, config->forwardStderr);
 			watcher->initialize();
 			watcher->start();
@@ -559,7 +559,7 @@ public:
 			this->sessions++;
 			socket->pqHandle = sessionSockets.push(socket, socket->utilization());
 			lastUsed = SystemTime::getUsec();
-			return make_shared<Session>(shared_from_this(), socket);
+			return boost::make_shared<Session>(shared_from_this(), socket);
 		}
 	}
 	

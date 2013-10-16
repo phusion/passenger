@@ -39,8 +39,8 @@ private:
 	SafeLibevPtr libev;
 
 public:
-	typedef function<void (eio_req *req)> ExecuteCallback;
-	typedef function<void (eio_req req)> Callback;
+	typedef boost::function<void (eio_req *req)> ExecuteCallback;
+	typedef boost::function<void (eio_req req)> Callback;
 
 	static void init();
 	static void shutdown();

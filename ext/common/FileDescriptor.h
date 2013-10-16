@@ -96,7 +96,7 @@ private:
 	};
 
 	/** Shared pointer for reference counting on this file descriptor */
-	shared_ptr<SharedData> data;
+	boost::shared_ptr<SharedData> data;
 
 public:
 	/** 
@@ -123,7 +123,7 @@ public:
 			 *    }
 			 */
 			int e = errno;
-			data = make_shared<SharedData>(fd, autoClose);
+			data = boost::make_shared<SharedData>(fd, autoClose);
 			errno = e;
 		}
 	}
@@ -193,7 +193,7 @@ public:
 		 */
 		int e = errno;
 		if (fd >= 0) {
-			data = make_shared<SharedData>(fd, true);
+			data = boost::make_shared<SharedData>(fd, true);
 		} else {
 			data.reset();
 		}
@@ -203,7 +203,7 @@ public:
 	
 	FileDescriptor &operator=(const FileDescriptor &other) {
 		/* Make sure that the 'delete' operator implicitly invoked by
-		 * shared_ptr doesn't overwrite errno so that we can write code
+		 * boost::shared_ptr doesn't overwrite errno so that we can write code
 		 * like this:
 		 *
 		 *    FileDescriptor fd;

@@ -834,10 +834,10 @@ private:
 	struct MultiExpression;
 	struct Comparison;
 	struct FunctionCall;
-	typedef shared_ptr<BooleanComponent> BooleanComponentPtr;
-	typedef shared_ptr<MultiExpression> MultiExpressionPtr;
-	typedef shared_ptr<Comparison> ComparisonPtr;
-	typedef shared_ptr<FunctionCall> FunctionCallPtr;
+	typedef boost::shared_ptr<BooleanComponent> BooleanComponentPtr;
+	typedef boost::shared_ptr<MultiExpression> MultiExpressionPtr;
+	typedef boost::shared_ptr<Comparison> ComparisonPtr;
+	typedef boost::shared_ptr<FunctionCall> FunctionCallPtr;
 	
 	struct BooleanComponent {
 		virtual ~BooleanComponent() { }
@@ -1380,7 +1380,7 @@ private:
 	
 	BooleanComponentPtr matchMultiExpression(int level) {
 		logMatch(level, "matchMultiExpression()");
-		MultiExpressionPtr result = make_shared<MultiExpression>();
+		MultiExpressionPtr result = boost::make_shared<MultiExpression>();
 		
 		result->firstExpression = matchExpression(level + 1);
 		while (isLogicalOperatorToken(peek())) {
@@ -1408,7 +1408,7 @@ private:
 			BooleanComponentPtr expression = matchMultiExpression(level + 1);
 			match(Tokenizer::RPARENTHESIS);
 			if (negate) {
-				return make_shared<Negation>(expression);
+				return boost::make_shared<Negation>(expression);
 			} else {
 				return expression;
 			}
@@ -1428,7 +1428,7 @@ private:
 			}
 			
 			if (negate) {
-				return make_shared<Negation>(component);
+				return boost::make_shared<Negation>(component);
 			} else {
 				return component;
 			}
@@ -1440,12 +1440,12 @@ private:
 	
 	BooleanComponentPtr matchSingleValueComponent(int level, const Token &token) {
 		logMatch(level, "matchSingleValueComponent()");
-		return make_shared<SingleValueComponent>(matchLiteral(level + 1, token));
+		return boost::make_shared<SingleValueComponent>(matchLiteral(level + 1, token));
 	}
 	
 	ComparisonPtr matchComparison(int level, const Token &subjectToken) {
 		logMatch(level, "matchComparison()");
-		ComparisonPtr comparison = make_shared<Comparison>();
+		ComparisonPtr comparison = boost::make_shared<Comparison>();
 		comparison->subject    = matchValue(level + 1, subjectToken);
 		comparison->comparator = matchComparator(level + 1);
 		comparison->object     = matchValue(level + 1, match());
@@ -1460,9 +1460,9 @@ private:
 		FunctionCallPtr function;
 		
 		if (id.rawValue == "starts_with") {
-			function = make_shared<StartsWithFunctionCall>();
+			function = boost::make_shared<StartsWithFunctionCall>();
 		} else if (id.rawValue == "has_hint") {
-			function = make_shared<HasHintFunctionCall>();
+			function = boost::make_shared<HasHintFunctionCall>();
 		} else {
 			raiseSyntaxError("unknown function '" + id.rawValue + "'", id);
 		}

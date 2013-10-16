@@ -46,7 +46,7 @@ using namespace boost;
  */
 class SafeLibev {
 private:
-	typedef function<void ()> Callback;
+	typedef boost::function<void ()> Callback;
 
 	struct Command {
 		int id;
@@ -63,7 +63,7 @@ private:
 	ev_async async;
 	
 	boost::mutex syncher;
-	condition_variable cond;
+	boost::condition_variable cond;
 	vector<Command> commands;
 	unsigned int nextCommandId;
 	
@@ -78,7 +78,7 @@ private:
 	}
 
 	void runCommands() {
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		vector<Command> commands = this->commands;
 		this->commands.clear();
 		l.unlock();
@@ -93,7 +93,7 @@ private:
 	void startWatcherAndNotify(Watcher *watcher, bool *done) {
 		watcher->set(loop);
 		watcher->start();
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		*done = true;
 		cond.notify_all();
 	}
@@ -101,14 +101,14 @@ private:
 	template<typename Watcher>
 	void stopWatcherAndNotify(Watcher *watcher, bool *done) {
 		watcher->stop();
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		*done = true;
 		cond.notify_all();
 	}
 	
 	void runAndNotify(const Callback *callback, bool *done) {
 		(*callback)();
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		*done = true;
 		cond.notify_all();
 	}
@@ -161,7 +161,7 @@ public:
 			watcher.set(loop);
 			watcher.start();
 		} else {
-			unique_lock<boost::mutex> l(syncher);
+			boost::unique_lock<boost::mutex> l(syncher);
 			bool done = false;
 			commands.push_back(Command(nextCommandId,
 				boost::bind(&SafeLibev::startWatcherAndNotify<Watcher>,
@@ -179,7 +179,7 @@ public:
 		if (pthread_equal(pthread_self(), loopThread)) {
 			watcher.stop();
 		} else {
-			unique_lock<boost::mutex> l(syncher);
+			boost::unique_lock<boost::mutex> l(syncher);
 			bool done = false;
 			commands.push_back(Command(nextCommandId,
 				boost::bind(&SafeLibev::stopWatcherAndNotify<Watcher>,
@@ -203,7 +203,7 @@ public:
 
 	void runSync(const Callback &callback) {
 		assert(callback != NULL);
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		bool done = false;
 		commands.push_back(Command(nextCommandId,
 			boost::bind(&SafeLibev::runAndNotify, this,
@@ -235,7 +235,7 @@ public:
 		assert(callback != NULL);
 		unsigned int result;
 		{
-			unique_lock<boost::mutex> l(syncher);
+			boost::unique_lock<boost::mutex> l(syncher);
 			commands.push_back(Command(nextCommandId, callback));
 			result = nextCommandId;
 			incNextCommandId();
@@ -252,7 +252,7 @@ public:
 	 * been called or is currently being called.
 	 */
 	bool cancelCommand(int id) {
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		// TODO: we can do a binary search because the command ID
 		// is monotically increasing except on overflow.
 		vector<Command>::iterator it, end = commands.end();
@@ -266,7 +266,7 @@ public:
 	}
 };
 
-typedef shared_ptr<SafeLibev> SafeLibevPtr;
+typedef boost::shared_ptr<SafeLibev> SafeLibevPtr;
 
 
 } // namespace Passenger

@@ -46,7 +46,7 @@ using namespace oxt;
 	do { \
 		const klass *ep = dynamic_cast<const klass *>(&e); \
 		if (ep != NULL) { \
-			return make_shared<klass>(*ep); \
+			return boost::make_shared<klass>(*ep); \
 		} \
 	} while (false)
 
@@ -81,7 +81,7 @@ copyException(const tracable_exception &e) {
 
 	TRY_COPY_EXCEPTION(boost::thread_interrupted);
 
-	return make_shared<tracable_exception>(e);
+	return boost::make_shared<tracable_exception>(e);
 }
 
 #define TRY_RETHROW_EXCEPTION(klass) \
@@ -157,7 +157,7 @@ SuperGroup::generateSecret() const {
 }
 
 void
-SuperGroup::createInterruptableThread(const function<void ()> &func, const string &name,
+SuperGroup::createInterruptableThread(const boost::function<void ()> &func, const string &name,
 	unsigned int stackSize)
 {
 	getPool()->interruptableThreads.create_thread(func, name, stackSize);
@@ -179,7 +179,7 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 		string message = "The directory " +
 			options.appRoot +
 			" does not seem to contain a web application.";
-		exception = make_shared<SpawnException>(
+		exception = boost::make_shared<SpawnException>(
 			message, message, false);
 	}
 	
@@ -193,7 +193,7 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 			debug->messages->recv("Proceed with initializing SuperGroup");
 		}
 
-		unique_lock<boost::mutex> lock(getPoolSyncher(pool));
+		boost::unique_lock<boost::mutex> lock(getPoolSyncher(pool));
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		NOT_EXPECTING_EXCEPTIONS();
@@ -221,7 +221,7 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 		} else {
 			for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
 				const ComponentInfo &info = *it;
-				GroupPtr group = make_shared<Group>(shared_from_this(),
+				GroupPtr group = boost::make_shared<Group>(shared_from_this(),
 					options, info);
 				groups.push_back(group);
 				if (info.isDefault) {
@@ -254,7 +254,7 @@ SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
 		debug->messages->recv("Proceed with restarting SuperGroup");
 	}
 	
-	unique_lock<boost::mutex> lock(getPoolSyncher(pool));
+	boost::unique_lock<boost::mutex> lock(getPoolSyncher(pool));
 	if (OXT_UNLIKELY(this->generation != generation)) {
 		return;
 	}
@@ -284,7 +284,7 @@ SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
 		} else {
 			// This is not an existing group but a new one,
 			// so create it.
-			group = make_shared<Group>(shared_from_this(),
+			group = boost::make_shared<Group>(shared_from_this(),
 				options, info);
 			newGroups.push_back(group);
 		}
@@ -364,7 +364,7 @@ Group::onSessionInitiateFailure(const ProcessPtr &process, Session *session) {
 	TRACE_POINT();
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
-	unique_lock<boost::mutex> lock(pool->syncher);
+	boost::unique_lock<boost::mutex> lock(pool->syncher);
 	assert(process->isAlive());
 	assert(isAlive() || getLifeStatus() == SHUTTING_DOWN);
 
@@ -384,7 +384,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	TRACE_POINT();
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
-	unique_lock<boost::mutex> lock(pool->syncher);
+	boost::unique_lock<boost::mutex> lock(pool->syncher);
 	assert(process->isAlive());
 	assert(isAlive() || getLifeStatus() == SHUTTING_DOWN);
 
@@ -480,7 +480,7 @@ void
 Group::requestOOBW(const ProcessPtr &process) {
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
-	unique_lock<boost::mutex> lock(pool->syncher);
+	boost::unique_lock<boost::mutex> lock(pool->syncher);
 	if (isAlive() && process->isAlive() && process->oobwStatus == Process::OOBW_NOT_ACTIVE) {
 		process->oobwStatus = Process::OOBW_REQUESTED;
 	}
@@ -524,7 +524,7 @@ Group::lockAndMaybeInitiateOobw(const ProcessPtr &process, DisableResult result,
 	
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
-	unique_lock<boost::mutex> lock(pool->syncher);
+	boost::unique_lock<boost::mutex> lock(pool->syncher);
 	if (OXT_UNLIKELY(!process->isAlive() || !isAlive())) {
 		return;
 	}
@@ -625,7 +625,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	UPDATE_TRACE_POINT();
 	{
 		// Standard resource management boilerplate stuff...
-		unique_lock<boost::mutex> lock(pool->syncher);
+		boost::unique_lock<boost::mutex> lock(pool->syncher);
 		if (OXT_UNLIKELY(!process->isAlive()
 			|| process->enabled == Process::DETACHED
 			|| !isAlive()))
@@ -696,7 +696,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	{
 		// Standard resource management boilerplate stuff...
 		PoolPtr pool = getPool();
-		unique_lock<boost::mutex> lock(pool->syncher);
+		boost::unique_lock<boost::mutex> lock(pool->syncher);
 		if (OXT_UNLIKELY(!process->isAlive() || !isAlive())) {
 			return;
 		}
@@ -798,7 +798,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 
 		UPDATE_TRACE_POINT();
 		ScopeGuard guard(boost::bind(Process::forceTriggerShutdownAndCleanup, process));
-		unique_lock<boost::mutex> lock(pool->syncher);
+		boost::unique_lock<boost::mutex> lock(pool->syncher);
 
 		if (!isAlive()) {
 			if (process != NULL) {
@@ -1006,7 +1006,7 @@ void
 Group::detachedProcessesCheckerMain(GroupPtr self) {
 	TRACE_POINT();
 	PoolPtr pool = getPool();
-	unique_lock<boost::mutex> lock(pool->syncher);
+	boost::unique_lock<boost::mutex> lock(pool->syncher);
 
 	while (true) {
 		assert(detachedProcessesCheckerActive);
@@ -1223,7 +1223,7 @@ PipeWatcher::start() {
 }
 
 void
-PipeWatcher::threadMain(shared_ptr<PipeWatcher> self) {
+PipeWatcher::threadMain(boost::shared_ptr<PipeWatcher> self) {
 	TRACE_POINT();
 	self->threadMain();
 }
@@ -1232,7 +1232,7 @@ void
 PipeWatcher::threadMain() {
 	TRACE_POINT();
 	{
-		unique_lock<boost::mutex> lock(startSyncher);
+		boost::unique_lock<boost::mutex> lock(startSyncher);
 		while (!started) {
 			startCond.wait(lock);
 		}

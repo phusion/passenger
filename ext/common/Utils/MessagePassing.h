@@ -62,8 +62,8 @@ using namespace boost;
  */
 class MessageBox;
 struct Message;
-typedef shared_ptr<MessageBox> MessageBoxPtr;
-typedef shared_ptr<Message> MessagePtr;
+typedef boost::shared_ptr<MessageBox> MessageBoxPtr;
+typedef boost::shared_ptr<Message> MessagePtr;
 
 inline void _sendToMessageBox(const MessageBoxPtr &messageBox, const MessagePtr &message);
 
@@ -71,7 +71,7 @@ inline void _sendToMessageBox(const MessageBoxPtr &messageBox, const MessagePtr 
 struct Message {
 	string name;
 	VariantMap args;
-	weak_ptr<MessageBox> from;
+	boost::weak_ptr<MessageBox> from;
 	void *data;
 	void (*freeData)(void *p);
 
@@ -101,7 +101,7 @@ struct Message {
 	}
 
 	void setFrom(const MessageBoxPtr &messageBox) {
-		from = weak_ptr<MessageBox>(messageBox);
+		from = boost::weak_ptr<MessageBox>(messageBox);
 	}
 
 	void sendReply(const MessagePtr &message) {
@@ -117,13 +117,13 @@ struct Message {
 };
 
 
-class MessageBox: public enable_shared_from_this<MessageBox> {
+class MessageBox: public boost::enable_shared_from_this<MessageBox> {
 	typedef list<MessagePtr> MessageList;
 	typedef MessageList::iterator Iterator;
 	typedef MessageList::const_iterator ConstIterator;
 
 	mutable boost::mutex syncher;
-	condition_variable cond;
+	boost::condition_variable cond;
 	MessageList messages;
 
 	Iterator search(const string &name) {
@@ -163,7 +163,7 @@ class MessageBox: public enable_shared_from_this<MessageBox> {
 		return end;
 	}
 
-	bool checkTimeout(unique_lock<boost::mutex> &l, unsigned long long *timeout,
+	bool checkTimeout(boost::unique_lock<boost::mutex> &l, unsigned long long *timeout,
 		unsigned long long beginTime, posix_time::ptime deadline)
 	{
 		posix_time::time_duration diff = deadline -
@@ -209,7 +209,7 @@ public:
 	}
 
 	const MessagePtr peek(const string &name) const {
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		ConstIterator it = search(name);
 		if (it == messages.end()) {
 			return MessagePtr();
@@ -219,7 +219,7 @@ public:
 	}
 
 	MessagePtr recv(const string &name, unsigned long long *timeout = NULL) {
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		posix_time::ptime deadline;
 		unsigned long long beginTime = 0; // Shut up compiler warning.
 		if (timeout != NULL) {
@@ -258,7 +258,7 @@ public:
 
 	template<typename StringCollection>
 	MessagePtr recvAny(const StringCollection &names, unsigned long long *timeout = NULL) {
-		unique_lock<boost::mutex> l(syncher);
+		boost::unique_lock<boost::mutex> l(syncher);
 		posix_time::ptime deadline;
 		unsigned long long beginTime = 0; // Shut up compiler warning.
 		if (timeout != NULL) {

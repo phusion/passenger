@@ -127,7 +127,7 @@ using namespace oxt;
  *       };
  *       
  *       MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &commonContext) {
- *           return make_shared<MyContext>();
+ *           return boost::make_shared<MyContext>();
  *       }
  *       
  *       bool processMessage(MessageServer::CommonClientContext &commonContext,
@@ -165,7 +165,7 @@ public:
 		virtual ~ClientContext() { }
 	};
 	
-	typedef shared_ptr<ClientContext> ClientContextPtr;
+	typedef boost::shared_ptr<ClientContext> ClientContextPtr;
 	
 	/**
 	 * A common client context, containing client-specific information
@@ -295,7 +295,7 @@ public:
 		                            const vector<string> &args) = 0;
 	};
 	
-	typedef shared_ptr<Handler> HandlerPtr;
+	typedef boost::shared_ptr<Handler> HandlerPtr;
 	
 protected:
 	/** The filename of the server socket on which this MessageServer is listening. */
@@ -565,7 +565,7 @@ public:
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			
-			function<void ()> func(boost::bind(&MessageServer::clientHandlingMainLoop,
+			boost::function<void ()> func(boost::bind(&MessageServer::clientHandlingMainLoop,
 				this, fd));
 			string name = "MessageServer client thread ";
 			name.append(toString(fd));
@@ -595,7 +595,7 @@ public:
 	}
 };
 
-typedef shared_ptr<MessageServer> MessageServerPtr;
+typedef boost::shared_ptr<MessageServer> MessageServerPtr;
 
 } // namespace Passenger
 

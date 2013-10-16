@@ -32,7 +32,7 @@ namespace tut {
 		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr pool;
 		Pool::DebugSupportPtr debug;
-		shared_ptr<RequestHandler> handler;
+		boost::shared_ptr<RequestHandler> handler;
 		FileDescriptor connection;
 		map<string, string> defaultHeaders;
 
@@ -41,8 +41,8 @@ namespace tut {
 		
 		RequestHandlerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation);
-			pool = make_shared<Pool>(bg.safe.get(), spawnerFactory);
+			spawnerFactory = boost::make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation);
+			pool = boost::make_shared<Pool>(bg.safe.get(), spawnerFactory);
 			pool->initialize();
 			serverFilename = generation->getPath() + "/server";
 			requestSocket = createUnixServer(serverFilename);
@@ -72,7 +72,7 @@ namespace tut {
 		}
 
 		void init() {
-			handler = make_shared<RequestHandler>(bg.safe, requestSocket, pool, agentOptions);
+			handler = boost::make_shared<RequestHandler>(bg.safe, requestSocket, pool, agentOptions);
 			bg.start();
 		}
 
@@ -270,7 +270,7 @@ namespace tut {
 		// It disconnects us if the connect password is not sent within a certain time.
 		agentOptions.requestSocketPassword = "hello world";
 		setLogLevel(-1);
-		handler = make_shared<RequestHandler>(bg.safe, requestSocket, pool, agentOptions);
+		handler = boost::make_shared<RequestHandler>(bg.safe, requestSocket, pool, agentOptions);
 		handler->connectPasswordTimeout = 40;
 		bg.start();
 
@@ -839,13 +839,13 @@ namespace tut {
 		
 		// Wait for the original process to finish oobw request.
 		EVENTUALLY(2,
-			unique_lock<boost::mutex> lock(pool->syncher);
+			boost::unique_lock<boost::mutex> lock(pool->syncher);
 			result = origProcess->oobwStatus == Process::OOBW_NOT_ACTIVE;
 		);
 		
 		// Final asserts.
 		{
-			unique_lock<boost::mutex> lock(pool->syncher);
+			boost::unique_lock<boost::mutex> lock(pool->syncher);
 			ensure_equals("2 enabled processes", pool->superGroups.get(wsgiAppPath)->defaultGroup->enabledProcesses.size(), 2u);
 			ensure_equals("oobw is reset", origProcess->oobwStatus, Process::OOBW_NOT_ACTIVE);
 			ensure_equals("process is enabled", origProcess->enabled, Process::ENABLED);

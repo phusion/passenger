@@ -117,7 +117,7 @@ public:
 	}
 };
 
-typedef shared_ptr<ResourceLocator> ResourceLocatorPtr;
+typedef boost::shared_ptr<ResourceLocator> ResourceLocatorPtr;
 
 
 }

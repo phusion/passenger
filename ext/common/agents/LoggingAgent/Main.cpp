@@ -75,7 +75,7 @@ struct WorkingObjects {
 	FileDescriptor serverSocketFd;
 	AccountsDatabasePtr adminAccountsDatabase;
 	MessageServerPtr adminServer;
-	shared_ptr<oxt::thread> adminServerThread;
+	boost::shared_ptr<oxt::thread> adminServerThread;
 	AccountsDatabasePtr accountsDatabase;
 	LoggingServerPtr loggingServer;
 
@@ -155,7 +155,7 @@ initializeOptions(WorkingObjects &wo) {
 	groupname          = agentsOptions.get("analytics_log_group", false);
 	adminToolStatusPassword = agentsOptions.get("admin_tool_status_password");
 
-	wo.resourceLocator = make_shared<ResourceLocator>(passengerRoot);
+	wo.resourceLocator = boost::make_shared<ResourceLocator>(passengerRoot);
 	agentsOptions.set("union_station_gateway_cert", findUnionStationGatewayCert(
 		*wo.resourceLocator, agentsOptions.get("union_station_gateway_cert", false)));
 }
@@ -175,9 +175,9 @@ initializePrivilegedWorkingObjects(WorkingObjects &wo) {
 		} while (ret == -1 && errno == EINTR);
 	}
 
-	wo.adminAccountsDatabase = make_shared<AccountsDatabase>();	
+	wo.adminAccountsDatabase = boost::make_shared<AccountsDatabase>();	
 	wo.adminAccountsDatabase->add("_passenger-status", adminToolStatusPassword, false);
-	wo.adminServer = make_shared<MessageServer>(parseUnixSocketAddress(adminSocketAddress),
+	wo.adminServer = boost::make_shared<MessageServer>(parseUnixSocketAddress(adminSocketAddress),
 		wo.adminAccountsDatabase);
 }
 
@@ -266,16 +266,16 @@ createEventLoop() {
 static void
 initializeUnprivilegedWorkingObjects(WorkingObjects &wo) {
 	eventLoop = createEventLoop();
-	wo.accountsDatabase = make_shared<AccountsDatabase>();
+	wo.accountsDatabase = boost::make_shared<AccountsDatabase>();
 	wo.accountsDatabase->add("logging", password, false);
 
-	wo.loggingServer = make_shared<LoggingServer>(eventLoop, wo.serverSocketFd,
+	wo.loggingServer = boost::make_shared<LoggingServer>(eventLoop, wo.serverSocketFd,
 		wo.accountsDatabase, agentsOptions);
 	loggingServer = wo.loggingServer.get();
 
-	wo.adminServer->addHandler(make_shared<AdminController>(wo.loggingServer));
-	function<void ()> adminServerFunc = boost::bind(&MessageServer::mainLoop, wo.adminServer.get());
-	wo.adminServerThread = make_shared<oxt::thread>(
+	wo.adminServer->addHandler(boost::make_shared<AdminController>(wo.loggingServer));
+	boost::function<void ()> adminServerFunc = boost::bind(&MessageServer::mainLoop, wo.adminServer.get());
+	wo.adminServerThread = boost::make_shared<oxt::thread>(
 		boost::bind(runAndPrintExceptions, adminServerFunc, true),
 		"AdminServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
 	);

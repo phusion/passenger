@@ -66,7 +66,7 @@ using namespace boost;
 using namespace oxt;
 
 
-class Pool: public enable_shared_from_this<Pool> {
+class Pool: public boost::enable_shared_from_this<Pool> {
 public:
 	struct InspectOptions {
 		bool colorize;
@@ -107,8 +107,8 @@ public:
 		unsigned int spawnLoopIteration;
 
 		DebugSupport() {
-			debugger = make_shared<MessageBox>();
-			messages = make_shared<MessageBox>();
+			debugger = boost::make_shared<MessageBox>();
+			messages = boost::make_shared<MessageBox>();
 			restarting = true;
 			spawning   = true;
 			superGroup = false;
@@ -118,7 +118,7 @@ public:
 		}
 	};
 
-	typedef shared_ptr<DebugSupport> DebugSupportPtr;
+	typedef boost::shared_ptr<DebugSupport> DebugSupportPtr;
 
 	SpawnerFactoryPtr spawnerFactory;
 	LoggerFactoryPtr loggerFactory;
@@ -129,7 +129,7 @@ public:
 	unsigned int max;
 	unsigned long long maxIdleTime;
 	
-	condition_variable garbageCollectionCond;
+	boost::condition_variable garbageCollectionCond;
 	
 	/**
 	 * Code can register background threads in one of these dynamic thread groups
@@ -472,7 +472,7 @@ public:
 
 	struct DetachSuperGroupWaitTicket {
 		boost::mutex syncher;
-		condition_variable cond;
+		boost::condition_variable cond;
 		SuperGroup::ShutdownResult result;
 		bool done;
 
@@ -483,7 +483,7 @@ public:
 
 	struct DisableWaitTicket {
 		boost::mutex syncher;
-		condition_variable cond;
+		boost::condition_variable cond;
 		DisableResult result;
 		bool done;
 
@@ -493,7 +493,7 @@ public:
 	};
 
 	static void syncDetachSuperGroupCallback(SuperGroup::ShutdownResult result,
-		shared_ptr<DetachSuperGroupWaitTicket> ticket)
+		boost::shared_ptr<DetachSuperGroupWaitTicket> ticket)
 	{
 		LockGuard l(ticket->syncher);
 		ticket->done = true;
@@ -501,7 +501,7 @@ public:
 		ticket->cond.notify_one();
 	}
 
-	static void waitDetachSuperGroupCallback(shared_ptr<DetachSuperGroupWaitTicket> ticket) {
+	static void waitDetachSuperGroupCallback(boost::shared_ptr<DetachSuperGroupWaitTicket> ticket) {
 		ScopedLock l(ticket->syncher);
 		while (!ticket->done) {
 			ticket->cond.wait(l);
@@ -509,7 +509,7 @@ public:
 	}
 
 	static void syncDisableProcessCallback(const ProcessPtr &process, DisableResult result,
-		shared_ptr<DisableWaitTicket> ticket)
+		boost::shared_ptr<DisableWaitTicket> ticket)
 	{
 		LockGuard l(ticket->syncher);
 		ticket->done = true;
@@ -672,7 +672,7 @@ public:
 		stringstream data;
 	};
 
-	typedef shared_ptr<ProcessAnalyticsLogEntry> ProcessAnalyticsLogEntryPtr;
+	typedef boost::shared_ptr<ProcessAnalyticsLogEntry> ProcessAnalyticsLogEntryPtr;
 
 	static void collectAnalytics(PoolPtr self) {
 		TRACE_POINT();
@@ -782,7 +782,7 @@ public:
 
 					// Log to Union Station.
 					if (group->options.analytics && loggerFactory != NULL) {
-						ProcessAnalyticsLogEntryPtr entry = make_shared<ProcessAnalyticsLogEntry>();
+						ProcessAnalyticsLogEntryPtr entry = boost::make_shared<ProcessAnalyticsLogEntry>();
 						stringstream &xml = entry->data;
 
 						entry->groupName = group->name;
@@ -832,7 +832,7 @@ public:
 	}
 	
 	SuperGroupPtr createSuperGroup(const Options &options) {
-		SuperGroupPtr superGroup = make_shared<SuperGroup>(shared_from_this(),
+		SuperGroupPtr superGroup = boost::make_shared<SuperGroup>(shared_from_this(),
 			options);
 		superGroup->initialize();
 		superGroups.set(options.getAppGroupName(), superGroup);
@@ -867,7 +867,7 @@ public:
 		if (randomGenerator != NULL) {
 			this->randomGenerator = randomGenerator;
 		} else {
-			this->randomGenerator = make_shared<RandomGenerator>();
+			this->randomGenerator = boost::make_shared<RandomGenerator>();
 		}
 		
 		lifeStatus  = ALIVE;
@@ -904,7 +904,7 @@ public:
 
 	void initDebugging() {
 		LockGuard l(syncher);
-		debugSupport = make_shared<DebugSupport>();
+		debugSupport = boost::make_shared<DebugSupport>();
 	}
 
 	void destroy() {
@@ -1019,7 +1019,7 @@ public:
 				 * the missing SuperGroup.
 				 */
 				P_DEBUG("Creating new SuperGroup");
-				superGroup = make_shared<SuperGroup>(shared_from_this(), options);
+				superGroup = boost::make_shared<SuperGroup>(shared_from_this(), options);
 				superGroup->initialize();
 				superGroups.set(options.getAppGroupName(), superGroup);
 				garbageCollectionCond.notify_all();
@@ -1053,7 +1053,7 @@ public:
 		}
 	}
 	
-	// TODO: 'ticket' should be a shared_ptr for interruption-safety.
+	// TODO: 'ticket' should be a boost::shared_ptr for interruption-safety.
 	SessionPtr get(const Options &options, Ticket *ticket) {
 		ticket->session.reset();
 		ticket->exception.reset();
@@ -1236,8 +1236,8 @@ public:
 				verifyExpensiveInvariants();
 				
 				vector<Callback> actions;
-				shared_ptr<DetachSuperGroupWaitTicket> ticket =
-					make_shared<DetachSuperGroupWaitTicket>();
+				boost::shared_ptr<DetachSuperGroupWaitTicket> ticket =
+					boost::make_shared<DetachSuperGroupWaitTicket>();
 				ExceptionPtr exception = copyException(
 					GetAbortedException("The containg SuperGroup was detached."));
 
@@ -1338,8 +1338,8 @@ public:
 		ProcessPtr process = findProcessByGupid(gupid, false);
 		if (process != NULL) {
 			GroupPtr group = process->getGroup();
-			// Must be a shared_ptr to be interruption-safe.
-			shared_ptr<DisableWaitTicket> ticket = make_shared<DisableWaitTicket>();
+			// Must be a boost::shared_ptr to be interruption-safe.
+			boost::shared_ptr<DisableWaitTicket> ticket = boost::make_shared<DisableWaitTicket>();
 			DisableResult result = group->disable(process,
 				boost::bind(syncDisableProcessCallback, _1, _2, ticket));
 			group->verifyInvariants();

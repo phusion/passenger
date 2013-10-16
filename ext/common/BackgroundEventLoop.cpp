@@ -41,7 +41,7 @@ using namespace oxt;
 struct BackgroundEventLoopPrivate {
 	oxt::thread *thr;
 	boost::mutex lock;
-	condition_variable cond;
+	boost::condition_variable cond;
 	bool started;
 };
 
@@ -53,7 +53,7 @@ signalBackgroundEventLoopExit(struct ev_loop *loop, ev_async *async, int revents
 
 static void
 startBackgroundLoop(BackgroundEventLoop *bg) {
-	unique_lock<boost::mutex> l(bg->priv->lock);
+	boost::unique_lock<boost::mutex> l(bg->priv->lock);
 	bg->safe->setCurrentThread();
 	bg->priv->started = true;
 	bg->priv->cond.notify_all();
@@ -83,7 +83,7 @@ BackgroundEventLoop::BackgroundEventLoop(bool scalable) {
 	async->data = this;
 	ev_async_init(async, signalBackgroundEventLoopExit);
 	ev_async_start(loop, async);
-	safe = make_shared<SafeLibev>(loop);
+	safe = boost::make_shared<SafeLibev>(loop);
 	priv = new BackgroundEventLoopPrivate();
 	priv->thr = NULL;
 	priv->started = false;
@@ -99,7 +99,7 @@ BackgroundEventLoop::~BackgroundEventLoop() {
 void
 BackgroundEventLoop::start(const string &threadName, unsigned int stackSize) {
 	assert(priv->thr == NULL);
-	unique_lock<boost::mutex> l(priv->lock);
+	boost::unique_lock<boost::mutex> l(priv->lock);
 	priv->thr = new oxt::thread(
 		boost::bind(startBackgroundLoop, this),
 		threadName,

@@ -34,10 +34,10 @@ namespace tut {
 		ApplicationPool2_PoolTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			retainSessions = false;
-			spawnerConfig = make_shared<SpawnerConfig>();
-			spawnerFactory = make_shared<SpawnerFactory>(bg.safe, *resourceLocator,
+			spawnerConfig = boost::make_shared<SpawnerConfig>();
+			spawnerFactory = boost::make_shared<SpawnerFactory>(bg.safe, *resourceLocator,
 				generation, spawnerConfig);
-			pool = make_shared<Pool>(bg.safe.get(), spawnerFactory);
+			pool = boost::make_shared<Pool>(bg.safe.get(), spawnerFactory);
 			pool->initialize();
 			bg.start();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);
@@ -1330,7 +1330,7 @@ namespace tut {
 		);
 
 		ensure(currentException != NULL);
-		shared_ptr<SpawnException> e = dynamic_pointer_cast<SpawnException>(currentException);
+		boost::shared_ptr<SpawnException> e = dynamic_pointer_cast<SpawnException>(currentException);
 		ensure(e->getErrorPage().find("Something went wrong!") != string::npos);
 	}
 

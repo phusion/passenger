@@ -50,13 +50,13 @@ using namespace oxt;
  */
 class ScopeGuard: public noncopyable {
 private:
-	function<void ()> func;
+	boost::function<void ()> func;
 	bool interruptable;
 	
 public:
 	ScopeGuard() { }
 	
-	ScopeGuard(const function<void ()> &func, bool interruptable = false) {
+	ScopeGuard(const boost::function<void ()> &func, bool interruptable = false) {
 		this->func = func;
 		this->interruptable = interruptable;
 	}
@@ -74,12 +74,12 @@ public:
 	}
 	
 	void clear() {
-		func = function<void()>();
+		func = boost::function<void()>();
 	}
 	
 	void runNow() {
-		function<void ()> oldFunc = func;
-		func = function<void()>();
+		boost::function<void ()> oldFunc = func;
+		func = boost::function<void()>();
 		if (interruptable) {
 			oldFunc();
 		} else {

@@ -35,7 +35,7 @@ using namespace boost;
 using namespace oxt;
 
 
-class SmartSpawner: public Spawner, public enable_shared_from_this<SmartSpawner> {
+class SmartSpawner: public Spawner, public boost::enable_shared_from_this<SmartSpawner> {
 private:
 	/**
 	 * Structure containing arguments and working state for negotiating
@@ -215,7 +215,7 @@ private:
 		vector<string> command = createRealPreloaderCommand(options, args);
 		SocketPair adminSocket = createUnixSocketPair();
 		Pipe errorPipe = createPipe();
-		DebugDirPtr debugDir = make_shared<DebugDir>(preparation.uid, preparation.gid);
+		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.uid, preparation.gid);
 		pid_t pid;
 		
 		pid = syscalls::fork();
@@ -285,12 +285,12 @@ private:
 			
 			PipeWatcherPtr watcher;
 
-			watcher = make_shared<PipeWatcher>(adminSocket.second,
+			watcher = boost::make_shared<PipeWatcher>(adminSocket.second,
 				"stdout", pid, config->forwardStdout);
 			watcher->initialize();
 			watcher->start();
 
-			watcher = make_shared<PipeWatcher>(errorPipe.first,
+			watcher = boost::make_shared<PipeWatcher>(errorPipe.first,
 				"stderr", pid, config->forwardStderr);
 			watcher->initialize();
 			watcher->start();
@@ -715,7 +715,7 @@ public:
 		m_lastUsed = SystemTime::getUsec();
 
 		if (_config == NULL) {
-			config = make_shared<SpawnerConfig>();
+			config = boost::make_shared<SpawnerConfig>();
 		} else {
 			config = _config;
 		}

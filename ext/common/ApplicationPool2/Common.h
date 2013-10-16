@@ -79,16 +79,16 @@ enum DisableResult {
 	DR_DEFERRED
 };
 
-typedef shared_ptr<Pool> PoolPtr;
-typedef shared_ptr<SuperGroup> SuperGroupPtr;
-typedef shared_ptr<Group> GroupPtr;
-typedef shared_ptr<Process> ProcessPtr;
-typedef shared_ptr<Session> SessionPtr;
-typedef shared_ptr<tracable_exception> ExceptionPtr;
+typedef boost::shared_ptr<Pool> PoolPtr;
+typedef boost::shared_ptr<SuperGroup> SuperGroupPtr;
+typedef boost::shared_ptr<Group> GroupPtr;
+typedef boost::shared_ptr<Process> ProcessPtr;
+typedef boost::shared_ptr<Session> SessionPtr;
+typedef boost::shared_ptr<tracable_exception> ExceptionPtr;
 typedef StringMap<SuperGroupPtr> SuperGroupMap;
-typedef function<void (const SessionPtr &session, const ExceptionPtr &e)> GetCallback;
-typedef function<void (const ProcessPtr &process, DisableResult result)> DisableCallback;
-typedef function<void ()> Callback;
+typedef boost::function<void (const SessionPtr &session, const ExceptionPtr &e)> GetCallback;
+typedef boost::function<void (const ProcessPtr &process, DisableResult result)> DisableCallback;
+typedef boost::function<void ()> Callback;
 
 struct GetWaiter {
 	Options options;
@@ -104,7 +104,7 @@ struct GetWaiter {
 
 struct Ticket {
 	boost::mutex syncher;
-	condition_variable cond;
+	boost::condition_variable cond;
 	SessionPtr session;
 	ExceptionPtr exception;
 };
@@ -133,12 +133,12 @@ struct SpawnerConfig {
 		if (randomGenerator != NULL) {
 			this->randomGenerator = randomGenerator;
 		} else {
-			this->randomGenerator = make_shared<RandomGenerator>();
+			this->randomGenerator = boost::make_shared<RandomGenerator>();
 		}
 	}
 };
 
-typedef shared_ptr<SpawnerConfig> SpawnerConfigPtr;
+typedef boost::shared_ptr<SpawnerConfig> SpawnerConfigPtr;
 
 ExceptionPtr copyException(const tracable_exception &e);
 void rethrowException(const ExceptionPtr &e);

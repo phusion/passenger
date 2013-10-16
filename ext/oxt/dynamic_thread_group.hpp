@@ -55,7 +55,7 @@ using namespace boost;
 class dynamic_thread_group {
 private:
 	struct thread_handle;
-	typedef shared_ptr<thread_handle> thread_handle_ptr;
+	typedef boost::shared_ptr<thread_handle> thread_handle_ptr;
 	
 	/** A container which aggregates a thread object
 	 * as well as the its own iterator in the 'thread_handles'

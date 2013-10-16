@@ -823,7 +823,7 @@ prestartWebApps(const ResourceLocator &locator, const string &ruby,
 }
 
 void
-runAndPrintExceptions(const function<void ()> &func, bool toAbort) {
+runAndPrintExceptions(const boost::function<void ()> &func, bool toAbort) {
 	try {
 		func();
 	} catch (const boost::thread_interrupted &) {
@@ -837,7 +837,7 @@ runAndPrintExceptions(const function<void ()> &func, bool toAbort) {
 }
 
 void
-runAndPrintExceptions(const function<void ()> &func) {
+runAndPrintExceptions(const boost::function<void ()> &func) {
 	runAndPrintExceptions(func, true);
 }
 
