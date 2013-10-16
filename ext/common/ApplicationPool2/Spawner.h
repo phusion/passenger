@@ -218,9 +218,15 @@ protected:
 	 * debugging information to. It is removed after spawning has
 	 * determined to be successful or failed.
 	 */
-	struct DebugDir {
+	class DebugDir {
+	private:
 		string path;
 
+		static void doClosedir(DIR *dir) {
+			closedir(dir);
+		}
+
+	public:
 		DebugDir(uid_t uid, gid_t gid) {
 			char buf[PATH_MAX] = "/tmp/passenger.spawn-debug.XXXXXXXXXX";
 			const char *result = mkdtemp(buf);
@@ -247,7 +253,7 @@ protected:
 		map<string, string> readAll() {
 			map<string, string> result;
 			DIR *dir = opendir(path.c_str());
-			ScopeGuard guard(boost::bind(closedir, dir));
+			ScopeGuard guard(boost::bind(doClosedir, dir));
 			struct dirent *ent;
 
 			while ((ent = readdir(dir)) != NULL) {
