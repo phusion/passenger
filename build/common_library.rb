@@ -128,7 +128,7 @@ if USE_VENDORED_LIBEV
 		cc = PlatformInfo.cc
 		cxx = PlatformInfo.cxx
 		# Disable all warnings: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
-		cflags = "#{EXTRA_CXXFLAGS} -w"
+		cflags = "#{EXTRA_CFLAGS} -w"
 		sh "mkdir -p #{LIBEV_OUTPUT_DIR}" if !File.directory?(LIBEV_OUTPUT_DIR)
 		sh "cd #{LIBEV_OUTPUT_DIR} && sh #{LIBEV_SOURCE_DIR}configure " +
 			"--disable-shared --enable-static " +
@@ -181,7 +181,7 @@ if USE_VENDORED_LIBEIO
 		cxx = PlatformInfo.cxx
 		# Disable all warnings. The author has a clear standpoint on that:
 		# http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
-		cflags = "#{EXTRA_CXXFLAGS} -w"
+		cflags = "#{EXTRA_CFLAGS} -w"
 		sh "mkdir -p #{LIBEIO_OUTPUT_DIR}" if !File.directory?(LIBEIO_OUTPUT_DIR)
 		sh "cd #{LIBEIO_OUTPUT_DIR} && sh #{LIBEIO_SOURCE_DIR}configure " +
 			"--disable-shared --enable-static " +

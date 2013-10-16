@@ -1210,7 +1210,7 @@ PipeWatcher::PipeWatcher(const FileDescriptor &_fd, const char *_name, pid_t _pi
 
 void
 PipeWatcher::initialize() {
-	oxt::thread(boost::bind(PipeWatcher::threadMain, shared_from_this()),
+	oxt::thread(boost::bind(threadMain, shared_from_this()),
 		"PipeWatcher: PID " + toString(pid) + " " + name + ", fd " + toString(fd),
 		POOL_HELPER_THREAD_STACK_SIZE);
 }
