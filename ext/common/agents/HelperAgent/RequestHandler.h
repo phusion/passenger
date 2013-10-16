@@ -120,6 +120,8 @@ using namespace ApplicationPool2;
 
 class RequestHandler;
 
+#define MAX_STATUS_HEADER_SIZE 64
+
 #define RH_ERROR(client, x) P_ERROR("[Client " << client->name() << "] " << x)
 #define RH_WARN(client, x) P_WARN("[Client " << client->name() << "] " << x)
 #define RH_DEBUG(client, x) P_DEBUG("[Client " << client->name() << "] " << x)
@@ -897,15 +899,22 @@ private:
 		}
 		if (begin != string::npos && end != string::npos) {
 			StaticString statusValue(headerData.data() + begin + 1, end - begin);
-			char header[statusValue.size() + 20];
-			char *pos = header;
-			const char *end = header + statusValue.size() + 20;
+			if (statusValue.size() <= MAX_STATUS_HEADER_SIZE) {
+				char header[MAX_STATUS_HEADER_SIZE + sizeof("Status: \r\n")];
+				char *pos = header;
+				const char *end = header + sizeof(header);
 
-			pos = appendData(pos, end, "Status: ");
-			pos = appendData(pos, end, statusValue);
-			pos = appendData(pos, end, "\r\n");
-			headerData.append(StaticString(header, pos - header));
-			return true;
+				pos = appendData(pos, end, "Status: ");
+				pos = appendData(pos, end, statusValue);
+				pos = appendData(pos, end, "\r\n");
+				headerData.append(StaticString(header, pos - header));
+				return true;
+			} else {
+				disconnectWithError(client, "application sent malformed response: the Status header's (" +
+					statusValue + ") exceeds the allowed limit of " +
+					toString(MAX_STATUS_HEADER_SIZE) + " bytes.");
+				return false;
+			}
 		} else {
 			disconnectWithError(client, "application sent malformed response: the HTTP status line is invalid.");
 			return false;
