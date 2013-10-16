@@ -56,7 +56,7 @@ define 'apache2-dev' do
 		emerge "apache"
 	end
 	on :macosx do
-		xcode_install "Command Line Tools"
+		install_osx_command_line_tools
 	end
 end
 
@@ -89,7 +89,7 @@ define 'apr-dev' do
 		emerge "apr"
 	end
 	on :macosx do
-		xcode_install "Command Line Tools"
+		install_osx_command_line_tools
 	end
 end
 
@@ -119,6 +119,6 @@ define 'apu-dev' do
 		yum_install "apr-util-devel"
 	end
 	on :macosx do
-		xcode_install "Command Line Tools"
+		install_osx_command_line_tools
 	end
 end

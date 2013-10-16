@@ -486,6 +486,15 @@ public
 		end
 	end
 	memoize :gnu_make, true
+	
+	def self.xcode_select_version
+		if find_command('xcode-select')
+			`xcode-select --version` =~ /version (.+)\./
+			return $1
+		else
+			return nil
+		end
+	end
 end
 
 end # module PhusionPassenger

@@ -24,7 +24,7 @@ define 'ruby-dev' do
     end
   end
   
-  if ruby_command =~ %r(^/usr/bin/ruby)
+  if ruby_command =~ %r(^/usr/bin/ruby) || ruby_command =~ %r(^/System/Library/Frameworks/Ruby.framework)
     # Only tell user to install the headers with the system's package manager
     # if Ruby itself was installed with the package manager.
     on :debian do
@@ -35,6 +35,9 @@ define 'ruby-dev' do
     end
     on :redhat do
       yum_install "ruby-devel"
+    end
+    on :macosx do
+      install_osx_command_line_tools
     end
   end
   on :other_platforms do

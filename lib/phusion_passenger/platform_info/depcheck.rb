@@ -260,9 +260,15 @@ module Depcheck
 				"<b>#{gem_command} install #{package_name}</b>")
 		end
 
-		def xcode_install(component)
-			install_instructions("Please install <b>Xcode</b>, then in Xcode go to " +
-				"<b>Preferences -> Downloads -> Components</b> and install <b>#{component}</b>")
+		def install_osx_command_line_tools
+			require 'phusion_passenger/platform_info/compiler'
+			if PlatformInfo.xcode_select_version.to_s >= "2333"
+				install_instructions "Please install the Xcode command line tools: " +
+					"<b>sudo xcode-select --install</b>"
+			else
+				install_instructions "Please install Xcode, then install the command line tools " +
+					"though the menu <b>Xcode -> Preferences -> Downloads -> Components</b>"
+			end
 		end
 
 
