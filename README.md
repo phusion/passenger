@@ -15,7 +15,7 @@ You can install either Phusion Passenger for Apache or for Nginx. Basically, ins
 -OR-
 
     # From your application directory
-    ~/path-to-passenger/passenger start
+    ~/path-to-passenger/bin/passenger start
 
 That's it. :) However on some systems installation may require some more steps. You may have to run `sudo` or `rvmsudo`, and you may have to relax permissions on some directories, etc. Detailed fool-proof installation instructions can be found in [the documentation](http://www.modrails.com/documentation/Users%20guide.html).
 
