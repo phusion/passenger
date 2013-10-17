@@ -132,7 +132,7 @@ file APACHE2_MODULE => dependencies do
 		"#{APACHE2_MODULE_BOOST_OXT_LIBRARY} " <<
 		"#{PlatformInfo.apache2_module_ldflags} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
-		"#{EXTRA_LDFLAGS} "
+		"#{EXTRA_LDFLAGS} #{EXTRA_CXX_LDFLAGS} "
 	
 	create_shared_library(APACHE2_MODULE, sources, linkflags)
 end

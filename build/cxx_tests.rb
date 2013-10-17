@@ -34,7 +34,7 @@ TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
 	"#{PlatformInfo.portability_ldflags}"
 TEST_CXX_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
 TEST_CXX_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
-TEST_CXX_LDFLAGS << " #{EXTRA_LDFLAGS}"
+TEST_CXX_LDFLAGS << " #{EXTRA_LDFLAGS} #{EXTRA_CXX_LDFLAGS}"
 TEST_CXX_LDFLAGS.strip!
 TEST_CXX_OBJECTS = {
 	'test/cxx/CxxTestMain.o' => %w(

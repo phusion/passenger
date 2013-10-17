@@ -173,7 +173,9 @@ end
 # These should be included first in the command string, before anything else.
 EXTRA_PRE_LDFLAGS  = string_option('EXTRA_PRE_LDFLAGS', '').gsub("\n", " ")
 # These should be included last in the command string, even after PlatformInfo.portability_ldflags.
-EXTRA_LDFLAGS  = string_option('EXTRA_LDFLAGS', '').gsub("\n", " ")
+EXTRA_LDFLAGS     = string_option('EXTRA_LDFLAGS', '').gsub("\n", " ")
+EXTRA_C_LDFLAGS   = string_option('EXTRA_C_LDFLAGS', '').gsub("\n", " ")
+EXTRA_CXX_LDFLAGS = string_option('EXTRA_CXX_LDFLAGS', '').gsub("\n", " ")
 
 
 AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "agents") + "/"

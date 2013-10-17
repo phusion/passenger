@@ -49,7 +49,8 @@ file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 		"#{EXTRA_PRE_LDFLAGS} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_LDFLAGS}")
+		"#{EXTRA_LDFLAGS} " <<
+		"#{EXTRA_CXX_LDFLAGS}")
 end
 
 helper_agent_libs = COMMON_LIBRARY.
@@ -105,7 +106,8 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 		"#{LIBEIO_LIBS} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_LDFLAGS}")
+		"#{EXTRA_LDFLAGS} " <<
+		"#{EXTRA_CXX_LDFLAGS}")
 end
 
 logging_agent_libs = COMMON_LIBRARY.only(:base, :logging_agent, 'AgentsBase.o',
@@ -148,7 +150,8 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{PlatformInfo.zlib_libs} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_LDFLAGS}")
+		"#{EXTRA_LDFLAGS} " <<
+		"#{EXTRA_CXX_LDFLAGS}")
 end
 
 spawn_preparer_libs = COMMON_LIBRARY.only('Utils/Base64.o')
@@ -167,7 +170,8 @@ file AGENT_OUTPUT_DIR + 'SpawnPreparer' => dependencies do
 		"#{spawn_preparer_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
-		"#{EXTRA_LDFLAGS}")
+		"#{EXTRA_LDFLAGS} " <<
+		"#{EXTRA_CXX_LDFLAGS}")
 end
 
 file AGENT_OUTPUT_DIR + 'EnvPrinter' => 'ext/common/agents/EnvPrinter.c' do
