@@ -450,14 +450,15 @@ public:
 	
 	static void stopWatching(vector< boost::shared_ptr<AgentWatcher> > &watchers) {
 		vector< boost::shared_ptr<AgentWatcher> >::const_iterator it;
-		oxt::thread *threads[watchers.size()];
+		vector<oxt::thread *> threads;
 		unsigned int i = 0;
 		
 		for (it = watchers.begin(); it != watchers.end(); it++, i++) {
+			threads.push_back((*it)->thr);
 			threads[i] = (*it)->thr;
 		}
 		
-		oxt::thread::interrupt_and_join_multiple(threads, watchers.size());
+		oxt::thread::interrupt_and_join_multiple(&threads[0], threads.size());
 		for (it = watchers.begin(); it != watchers.end(); it++, i++) {
 			delete (*it)->thr;
 			(*it)->thr = NULL;
