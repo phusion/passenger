@@ -25,7 +25,7 @@
 
 TEST_OXT_CFLAGS = "-I../../ext -I../support #{TEST_COMMON_CFLAGS}"
 TEST_OXT_LDFLAGS = "#{TEST_BOOST_OXT_LIBRARY} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
-TEST_OXT_LDFLAGS << " -faddress-sanitizer" if USE_ASAN
+TEST_OXT_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 TEST_OXT_OBJECTS = {
 	'oxt_test_main.o' => %w(oxt_test_main.cpp),
 	'backtrace_test.o' => %w(backtrace_test.cpp counter.hpp),

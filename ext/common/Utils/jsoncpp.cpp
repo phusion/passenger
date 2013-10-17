@@ -203,6 +203,7 @@ uintToString( LargestUInt value,
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+#include <string.h>
 
 #if _MSC_VER >= 1400 // VC++ 8.0
 #pragma warning( disable : 4996 )   // disable warning about strdup being deprecated.

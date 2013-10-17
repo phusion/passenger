@@ -385,6 +385,19 @@ public
 	end
 	memoize :cxx_visibility_flag_generates_warnings?, true
 	
+	def self.adress_sanitizer_flag
+		if cc_is_clang?
+			if `#{cc} --help` =~ /-fsanitize=/
+				return "-fsanitize=address"
+			else
+				return "-faddress-sanitizer"
+			end
+		else
+			return nil
+		end
+	end
+	memoize :adress_sanitizer_flag
+
 	def self.has_rt_library?
 		return try_link("Checking for -lrt support",
 			:c, "int main() { return 0; }\n", '-lrt')

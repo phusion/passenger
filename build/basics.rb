@@ -141,14 +141,14 @@ USE_ASAN    = boolean_option('USE_ASAN')
 
 # Agent-specific compiler flags.
 AGENT_CFLAGS  = ""
-AGENT_CFLAGS << " -faddress-sanitizer" if USE_ASAN
+AGENT_CFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 AGENT_CFLAGS.strip!
 
 # Agent-specific linker flags.
 AGENT_LDFLAGS = ""
 AGENT_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
 AGENT_LDFLAGS << " #{PlatformInfo.electric_fence_ldflags}" if USE_EFENCE
-AGENT_LDFLAGS << " -faddress-sanitizer" if USE_ASAN
+AGENT_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 # Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
 AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
 # Enable dead symbol elimination on OS X.

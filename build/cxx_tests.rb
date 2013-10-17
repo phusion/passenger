@@ -26,14 +26,14 @@
 TEST_CXX_CFLAGS = "-Iext -Iext/common " <<
 	"#{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} #{PlatformInfo.curl_flags} -Itest/cxx -Itest/support " <<
 	"#{TEST_COMMON_CFLAGS}"
-TEST_CXX_CFLAGS << " -faddress-sanitizer" if USE_ASAN
+TEST_CXX_CFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
 	"#{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} #{LIBEIO_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
 	"#{PlatformInfo.zlib_libs} " <<
 	"#{PlatformInfo.portability_ldflags}"
 TEST_CXX_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
-TEST_CXX_LDFLAGS << " -faddress-sanitizer" if USE_ASAN
+TEST_CXX_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 TEST_CXX_LDFLAGS << " #{EXTRA_LDFLAGS}"
 TEST_CXX_LDFLAGS.strip!
 TEST_CXX_OBJECTS = {
