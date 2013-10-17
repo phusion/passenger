@@ -38,6 +38,8 @@
 #endif
 #include <cstdio>
 #include <cstring>
+#include <string.h>
+#include <stdlib.h>
 
 #include <StaticString.h>
 #include <Exceptions.h>
