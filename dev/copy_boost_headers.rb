@@ -30,6 +30,7 @@ ESSENTIALS = [
 	"boost/smart_ptr/detail/sp_counted_*",
 	"boost/smart_ptr/detail/atomic_count*",
 	"boost/smart_ptr/detail/spinlock*",
+	"boost/atomic",
 	"boost/unordered*",
 	"boost/thread",
 	"libs/thread/src",
@@ -43,7 +44,8 @@ ESSENTIALS = [
 	"boost/foreach.hpp"
 ]
 EXCLUDE = [
-	"libs/thread/src/win32/*"
+	"libs/thread/src/win32/*",
+	"boost/atomic/detail/windows.hpp"
 ]
 PROGRAM_SOURCE = %q{
 	#include <boost/shared_ptr.hpp>
