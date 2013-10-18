@@ -3398,6 +3398,7 @@ Path::make( Value &root ) const
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <ios>
 
 #if _MSC_VER >= 1400 // VC++ 8.0
 #pragma warning( disable : 4996 )   // disable warning about strdup being deprecated.
