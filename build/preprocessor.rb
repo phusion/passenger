@@ -181,7 +181,8 @@ private
 		"precise"  => "12.04",
 		"quantal"  => "12.10",
 		"raring"   => "13.04",
-		"saucy"    => "13.10"
+		"saucy"    => "13.10",
+		"trusty"   => "14.04"
 	}
 	DEBIAN_DISTRIBUTIONS = {
 		"squeeze"  => "20110206",
