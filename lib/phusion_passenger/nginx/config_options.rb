@@ -42,7 +42,7 @@
 #  * context - The context in which this configuration option is valid.
 #              Defaults to [:main, :srv, :loc, :lif]
 #  * type - This configuration option's value type. Allowed types:
-#           :string, :integer, :flag, :string_array, :string_keyval
+#           :string, :integer, :flag, :string_array, :string_keyval, :path
 #  * take - Tells Nginx how many parameters and what kind of parameter
 #           this configuration option takes. It should be set to a string
 #           such as "NGX_CONF_FLAG".
