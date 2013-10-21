@@ -59,7 +59,6 @@
 #include "AgentsStarter.h"
 #include "DirectoryMapper.h"
 #include "Constants.h"
-#include "Exceptions.cpp"
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
  * compilation will fail on OpenBSD.
