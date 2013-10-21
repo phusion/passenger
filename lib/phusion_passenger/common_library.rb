@@ -320,6 +320,12 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			Logging.cpp
 			Logging.h
 		)
+	define_component 'Exceptions.o',
+		:source   => 'Exceptions.cpp',
+		:category => :base,
+		:deps     => %w(
+			Exceptions.h
+		)
 	define_component 'Utils/SystemTime.o',
 		:source   => 'Utils/SystemTime.cpp',
 		:category => :base,
