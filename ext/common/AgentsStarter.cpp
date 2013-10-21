@@ -24,9 +24,11 @@
  */
 #include <oxt/thread.hpp>
 #include <set>
+#include <cstdlib>
 #include <cerrno>
 #include <cstring>
 #include <AgentsStarter.h>
+#include <Exceptions.h>
 
 using namespace std;
 using namespace boost;
@@ -180,4 +182,47 @@ void
 pp_agents_starter_free(PP_AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	delete agentsStarter;
+}
+
+
+void
+pp_error_init(PP_Error *error) {
+	error->message = NULL;
+	error->errnoCode = PP_NO_ERRNO;
+	error->messageIsStatic = 0;
+}
+
+void
+pp_error_destroy(PP_Error *error) {
+	if (!error->messageIsStatic) {
+		free(static_cast<void *>(const_cast<char *>(error->message)));
+		error->message = NULL;
+		error->messageIsStatic = 0;
+	}
+}
+
+void
+pp_error_set(const std::exception &ex, PP_Error *error) {
+	const Passenger::SystemException *sys_e;
+
+	if (error == NULL) {
+		return;
+	}
+
+	if (error->message != NULL && !error->messageIsStatic) {
+		free(static_cast<void *>(const_cast<char *>(error->message)));
+	}
+
+	error->message = strdup(ex.what());
+	error->messageIsStatic = error->message == NULL;
+	if (error->message == NULL) {
+		error->message = "Unknown error message (unable to allocate memory for the message)";
+	}
+
+	sys_e = dynamic_cast<const Passenger::SystemException *>(&ex);
+	if (sys_e != NULL) {
+		error->errnoCode = sys_e->code();
+	} else {
+		error->errnoCode = PP_NO_ERRNO;
+	}
 }

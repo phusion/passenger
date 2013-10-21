@@ -25,12 +25,59 @@
 #ifndef _PASSENGER_EXCEPTIONS_H_
 #define _PASSENGER_EXCEPTIONS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Provides helper structs and functions for translating C++ exceptions
+ * into C error objects.
+ */
+
+#define PP_NO_ERRNO -1
+
+struct PP_Error {
+	/** The exception message. */
+	const char *message;
+	/** If the original exception was a SystemException, then this
+	 * field is set to the corresponding errno value. Otherwise, it
+	 * is set to PP_NO_ERRNO.
+	 */
+	int errnoCode;
+	int messageIsStatic: 1;
+};
+
+typedef struct PP_Error PP_Error;
+
+void pp_error_init(PP_Error *error);
+void pp_error_destroy(PP_Error *error);
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#ifdef __cplusplus
+
 #include <oxt/tracable_exception.hpp>
 #include <string>
 #include <map>
+#include <exception>
 #include <sstream>
 #include <cstring>
 #include <cassert>
+
+
+/**
+ * Use as follows:
+ *
+ *     try {
+ *         ...
+ *     } catch (const std::exception &e) {
+ *         pp_error_set(e, error);
+ *     }
+ */
+void pp_error_set(const std::exception &ex, PP_Error *error);
+
 
 /**
  * @defgroup Exceptions Exceptions
@@ -451,5 +498,7 @@ public:
 };
 
 } // namespace Passenger
+
+#endif /* __cplusplus */
 
 #endif /* _PASSENGER_EXCEPTIONS_H_ */

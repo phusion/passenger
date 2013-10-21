@@ -33,6 +33,8 @@
  * what kind of application lives under the given directory.
  */
 
+#include "../Exceptions.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +46,8 @@ typedef enum {
 	PAT_CLASSIC_RAILS,
 	PAT_NODE,
 	PAT_METEOR,
-	PAT_NONE
+	PAT_NONE,
+	PAT_ERROR
 } PassengerAppType;
 
 typedef void PP_AppTypeDetector;
@@ -52,9 +55,10 @@ typedef void PP_AppTypeDetector;
 PP_AppTypeDetector *pp_app_type_detector_new();
 void pp_app_type_detector_free(PP_AppTypeDetector *detector);
 PassengerAppType pp_app_type_detector_check_document_root(PP_AppTypeDetector *detector,
-	const char *documentRoot, unsigned int len, int resolveFirstSymlink);
+	const char *documentRoot, unsigned int len, int resolveFirstSymlink,
+	PP_Error *error);
 PassengerAppType pp_app_type_detector_check_app_root(PP_AppTypeDetector *detector,
-	const char *appRoot, unsigned int len);
+	const char *appRoot, unsigned int len, PP_Error *error);
 
 const char *pp_get_app_type_name(PassengerAppType type);
 

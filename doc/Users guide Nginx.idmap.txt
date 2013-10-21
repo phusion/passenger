@@ -286,67 +286,80 @@
 
 8.9.6. Caveats and limitations	=>	caveats-and-limitations-15wakf
 
-9. Under the hood	=>	under-the-hood-8uney
+9. Troubleshooting	=>	troubleshooting-1pt0c76
 
-9.1. Page caching support	=>	page-caching-support-nafhf6
+9.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-xhe4nu
 
-9.2. Phusion Passenger and its relationship with Ruby	=>	phusion-passenger-and-its-relationship-with-ruby-1hub1pa
+9.2. Upon accessing the web app, Nginx reports a "Permission denied" error	=>	upon-accessing-the-web-app-nginx-reports-a-permission-denied-error-1wgatlk
 
-9.2.1. How Ruby is used	=>	how-ruby-is-used-j7g2a4
+9.3. I’ve deployed my app on SSL, but the app thinks its not on SSL	=>	i-ve-deployed-my-app-on-ssl-but-the-app-thinks-its-not-on-ssl-14fn8d1
 
-9.2.2. When the system has multiple Ruby interpreters	=>	when-the-system-has-multiple-ruby-interpreters-fwn3t
+10. Under the hood	=>	under-the-hood-8uney
 
-9.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-13qbmhn
+10.1. Page caching support	=>	page-caching-support-nafhf6
 
-10. Appendix A: About this document	=>	appendix-a-about-this-document-zfvixm
+10.2. Phusion Passenger and its relationship with Ruby	=>	phusion-passenger-and-its-relationship-with-ruby-1hub1pa
 
-11. Appendix B: Terminology	=>	appendix-b-terminology-wzv5ro
+10.2.1. How Ruby is used	=>	how-ruby-is-used-j7g2a4
 
-11.1. Application root	=>	application-root-1fd6bqv
+10.2.2. When the system has multiple Ruby interpreters	=>	when-the-system-has-multiple-ruby-interpreters-fwn3t
 
-11.2. Idle process	=>	idle-process-13byfw9
+10.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-13qbmhn
 
-11.3. Inactive process	=>	inactive-process-1d2h0po
+11. Appendix A: About this document	=>	appendix-a-about-this-document-zfvixm
 
-12. Appendix C: Spawning methods explained	=>	appendix-c-spawning-methods-explained-tcp8e6
+12. Appendix B: Terminology	=>	appendix-b-terminology-wzv5ro
 
-12.1. The most straightforward and traditional way: direct spawning	=>	the-most-straightforward-and-traditional-way-conservative-spawning-civ29z
+12.1. Application root	=>	application-root-1fd6bqv
 
-12.2. The smart spawning method	=>	the-smart-spawning-method-7nhgtj
+12.2. Idle process	=>	idle-process-13byfw9
 
-12.2.1. How it works	=>	how-it-works-f9umga
+12.3. Inactive process	=>	inactive-process-1d2h0po
 
-12.2.2. Summary of benefits	=>	summary-of-benefits-qovyvk
+13. Appendix C: Spawning methods explained	=>	appendix-c-spawning-methods-explained-tcp8e6
 
-12.3. Smart spawning gotcha #1: unintentional file descriptor sharing	=>	smart-spawning-gotcha-1-unintentional-file-descriptor-sharing-cebw6q
+13.1. The most straightforward and traditional way: direct spawning	=>	the-most-straightforward-and-traditional-way-conservative-spawning-civ29z
 
-12.3.1. Example 1: Memcached connection sharing (harmful)	=>	example-1-memcached-connection-sharing-harmful--1wfs3ad
+13.2. The smart spawning method	=>	the-smart-spawning-method-7nhgtj
 
-12.3.2. Example 2: Log file sharing (not harmful)	=>	example-2-log-file-sharing-not-harmful--ox4yfy
+13.2.1. How it works	=>	how-it-works-f9umga
 
-12.4. Smart spawning gotcha #2: the need to revive threads	=>	smart-spawning-gotcha-2-the-need-to-revive-threads-1ey176o
+13.2.2. Summary of benefits	=>	summary-of-benefits-qovyvk
 
-12.5. Smart spawning gotcha #3: code load order	=>	smart-spawning-gotcha-3-code-load-order-12ydsn8
+13.3. Smart spawning gotcha #1: unintentional file descriptor sharing	=>	smart-spawning-gotcha-1-unintentional-file-descriptor-sharing-cebw6q
 
-13. Appendix D: About environment variables	=>	appendix-d-about-environment-variables-1t2cuff
+13.3.1. Example 1: Memcached connection sharing (harmful)	=>	example-1-memcached-connection-sharing-harmful--1wfs3ad
 
-13.1. Working with environment variables	=>	working-with-environment-variables-1kmvq8w
+13.3.2. Example 2: Log file sharing (not harmful)	=>	example-2-log-file-sharing-not-harmful--ox4yfy
 
-13.2. The PATH environment variable	=>	the-path-environment-variable-vlp05e
+13.4. Smart spawning gotcha #2: the need to revive threads	=>	smart-spawning-gotcha-2-the-need-to-revive-threads-1ey176o
 
-13.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-1flz2tu
+13.5. Smart spawning gotcha #3: code load order	=>	smart-spawning-gotcha-3-code-load-order-12ydsn8
 
-13.3. Making environment variables permanent	=>	making-environment-variables-permanent-1wjyhzt
+14. Appendix D: About environment variables	=>	appendix-d-about-environment-variables-1t2cuff
 
-13.3.1. bash	=>	bash-19xsxec
+14.1. Working with environment variables	=>	working-with-environment-variables-1kmvq8w
 
-13.3.2. Apache	=>	apache-9hqtyj
+14.2. The PATH environment variable	=>	the-path-environment-variable-vlp05e
 
-13.3.3. Nginx	=>	nginx-157dpwy
+14.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-1flz2tu
 
-13.3.4. cron	=>	cron-1nuc9cz
+14.3. Making environment variables permanent	=>	making-environment-variables-permanent-1wjyhzt
 
-13.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-uiewl5
+14.3.1. bash	=>	bash-19xsxec
 
-13.4. Environment variables and sudo	=>	environment-variables-and-sudo-10lphxn
+14.3.2. Apache	=>	apache-9hqtyj
+
+14.3.3. Nginx	=>	nginx-157dpwy
+
+14.3.4. cron	=>	cron-1nuc9cz
+
+14.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-uiewl5
+
+14.4. Environment variables and sudo	=>	environment-variables-and-sudo-10lphxn
+
+
+### These sections appear to have been removed. Please check.
+
+10. sudo chmod g+x,o+x /Users/phusion/Sites/rack.test	=>	sudo-chmod-g-x-o-x-users-phusion-sites-rack-test-1jwz2zt
 

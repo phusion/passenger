@@ -1744,6 +1744,18 @@ include::users_guide_snippets/analysis_and_system_maintenance.txt[]
 include::users_guide_snippets/tips.txt[]
 
 
+[[troubleshooting]]
+== Troubleshooting ==
+
+include::users_guide_snippets/troubleshooting.txt[]
+
+=== I've deployed my app on SSL, but the app thinks its not on SSL
+
+Rails and many other frameworks infers whether it's running on SSL through the CGI
+environment variable `HTTPS`. This variable is *only* set if you set `ssl on`.
+Setting just `listen 443 ssl` is not enough.
+
+
 == Under the hood ==
 Phusion Passenger hides a lot of complexity for the end user (i.e. the web server
 system administrator), but sometimes it is desirable to know what is going on.

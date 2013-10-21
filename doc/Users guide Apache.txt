@@ -1926,11 +1926,11 @@ This option is no longer available in version 4.0.0. There is no alternative bec
 
 
 [[troubleshooting]]
-== Troubleshooting ==
+== Troubleshooting
 
-=== Operating system-specific problems ===
+include::users_guide_snippets/troubleshooting.txt[]
 
-==== MacOS X: The installer cannot locate MAMP's Apache ====
+=== OS X: The installer cannot locate MAMP's Apache
 
 .Symptoms
 *******************************************************************************
@@ -1948,195 +1948,11 @@ to fix this problem.
 
 See also link:http://code.google.com/p/phusion-passenger/issues/detail?id=12[this bug report].
 
-
-=== Problems during installation ===
-
-[[installing_ruby_dev]]
-==== Ruby development headers aren't installed ====
-
-.Symptoms
-*******************************************************************************
-Installing Phusion Passenger fails because of one of the following errors:
-
-- The Phusion Passenger installer tells you that the Ruby development headers
-  aren't installed.
-- The error message ``'no such file to load -- mkmf''' occurs.
-- The error message ``'ruby.h: No such file or directory''' occurs.
-*******************************************************************************
-
-Phusion Passenger makes use of a native extension, so the Ruby development headers
-must be installed. On most Linux systems, Ruby and the Ruby development headers
-are contained in separate packages, so having Ruby installed does not
-automatically imply having the development headers installed.
-
-Here's how you can install the development headers:
-
-Ubuntu/Debian::
-	Please type:
-+
------------------------------------------
-sudo apt-get install ruby1.8-dev
------------------------------------------
-
-Fedora/CentOS/RHEL::
-	Please type:
-+
------------------------------------------
-su -c 'yum install ruby-devel'
------------------------------------------
-
-FreeBSD::
-	Please install Ruby from 'ports' or with `pkg_add`. If that fails,
-	please install Ruby from source.
-
-MacOS X::
-	Please install Ruby from source.
-
-Other operating systems::
-	Please consult your operating system's native package database.
-	There should be a package containing the Ruby development headers.
-	If that fails, please install Ruby from source.
-
-NOTE: If you've installed a new Ruby version (i.e. your system now contains
-multiple Ruby installations), then you will need to tell Phusion Passenger
-which Ruby installation you want to use. Please read
-<<specifying_ruby_installation,Specifying the correct Ruby installation>>.
-
-==== Apache development headers aren't installed ====
-
-.Symptoms
-*******************************************************************************
-Installing Phusion Passenger fails because of one of the following errors:
-
-- The installer says that the Apache development headers aren't installed.
-- The error message ``'httpd.h: No such file or directory''' occurs.
-+
-(Instead of 'httpd.h', the message might also be 'http_config.h' or something
-else similar to 'http_*.h'.)
-*******************************************************************************
-
-Ubuntu::
-	Please type:
-+
------------------------------------------
-sudo apt-get install apache2-prefork-dev
------------------------------------------
-
-Debian::
-	Please type:
-+
------------------------------------------
-sudo apt-get install apache2-dev
------------------------------------------
-
-Fedora/CentOS/RHEL::
-	Please type:
-+
---------------------------------
-su -c 'yum install httpd-devel'
---------------------------------
-
-FreeBSD::
-	Please install Apache from 'ports' or with `pkg_add`. If that fails,
-	please install Apache from source.
-
-MacOS X::
-	Please install Apache from source.
-
-Other operating systems::
-	Please consult your operating system's native package database.
-	There should be a package containing the Apache development headers.
-	If that fails, please install Apache from source.
-
-
-==== APR development headers aren't installed ====
-
-.Symptoms
-*******************************************************************************
-Installing Phusion Passenger fails because one of the following errors:
-
-- The installer tells you that APR development headers aren't installed.
-- The error message ``'apr_pools.h: No such file or directory''' occurs.
-- The error message ``'apr_strings.h: No such file or directory''' occurs.
-*******************************************************************************
-
-Ubuntu::
-	Please type:
-+
------------------------------------------
-sudo apt-get install libapr1-dev
------------------------------------------
-
-Debian::
-	Please type:
-+
------------------------------------------
-sudo apt-get install libapr1-dev
------------------------------------------
-
-Fedora/CentOS/RHEL::
-	Please type:
-+
---------------------------------
-su -c 'yum install apr-devel'
---------------------------------
-
-Other Linux distributions::
-	Please consult your distribution's package database. There should be a
-	package which provides APR development headers.
-
-Other operating systems::
-	The APR development are bundled with Apache. If the APR headers aren't,
-	then it probably means that they have been removed after Apache's been
-	installed. Please reinstall Apache to get back the APR headers.
-
-
-==== Phusion Passenger is using the wrong Apache during installation ====
-
-Please <<specifying_correct_apache_install,Specifying the correct Apache
-installation>>, and re-run the Phusion Passenger installer.
-
-
-==== Phusion Passenger is using the wrong Ruby during installation ====
-
-Please <<specifying_ruby_installation,Specifying the correct Ruby
-installation>>, and re-run the Phusion Passenger installer.
-
-
-=== Problems after installation ===
-
-[TIP]
-.The golden tip: read your Apache error logs!
-=====================================================
-'mod_passenger' will write all errors to the Apache error log. So if
-you're experiencing post-installation problems, please look
-inside the Apache error logs. It will tell you what exactly went wrong.
-=====================================================
-
-==== My Rails application works on Mongrel, but not on Phusion Passenger ====
-
-Please try setting <<PassengerSpawnMethod,PassengerSpawnMethod>> to 'conservative'.
-
-==== Phusion Passenger has been compiled against the wrong Apache installation ====
-
-.Symptoms
-*******************************************************************************
-Apache crashes during startup (after being daemonized). The Apache error log
-says ``'seg fault or similar nasty error detected in the parent process'''.
-*******************************************************************************
-
-This problem is most likely to occur on MacOS X. Most OS X users have multiple
-Apache installations on their system.
-
-To solve this problem, please <<specifying_correct_apache_install,specify the
-correct Apache installation>>, and <<install_passenger,reinstall Phusion
-Passenger>>.
-
-==== I get a "403 Forbidden" error ====
+=== Apache reports a "403 Forbidden" error
 
 See next subsection.
 
-==== Static assets such as images and stylesheets aren't being displayed ====
+=== Static assets such as images and stylesheets aren't being displayed
 
 Static assets are accelerated, i.e. they are served directly by Apache and do not
 go through the Rails stack. There are two reasons why Apache doesn't serve static
@@ -2161,7 +1977,7 @@ See also link:http://groups.google.com/group/phusion-passenger/browse_thread/thr
    Please make sure that the Rails application's folder, as well as all of its parent folders,
    have the correct permissions and/or ownerships.
 
-==== The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it ====
+=== The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it
 
 If you are sure that the 'PassengerRoot' configuration option is set correctly,
 then this problem is most likely caused by the fact that you're running Apache
@@ -2196,7 +2012,7 @@ chcon -R -h -t httpd_sys_content_t /path/to/passenger/folder
 
 Once the permissions are fixed, restart Apache.
 
-==== The Rails application reports that it's unable to start because of a permission error ====
+=== The Rails application reports that it's unable to start because of a permission error
 
 Please check whether your Rails application's folder has the correct
 permissions. By default, Rails applications are started as the owner of the
@@ -2207,7 +2023,7 @@ specified).
 
 Please read <<user_switching,User switching (security)>> for details.
 
-==== My Rails application's log file is not being written to ====
+=== My Rails application's log file is not being written to
 
 There are a couple things that you should be aware of:
 
@@ -2230,7 +2046,7 @@ following command to give your Rails application folder that context:
 chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
 -----------------------------------------------------------
 
-==== I've deployed my app on SSL, but the app thinks its not on SSL ====
+=== I've deployed my app on SSL, but the app thinks its not on SSL
 
 Rails and many other frameworks infers whether it's running on SSL through the CGI
 environment variable `HTTPS`. Apache always sets this variable when on SSL,

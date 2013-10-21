@@ -1,0 +1,51 @@
+=== Generic troubleshooting tips
+
+One of the first things you should do upon encountering a problem, is to check the *global* (not the per-vhost) 
+ifdef::apache[]
+Apache error log file. This is typically located in /var/log/apache2/error_log. You can find out the exact location of the error log by running `passenger-config --detect-apache2`.
+endif::[]
+ifdef::nginx[]
+Nginx error log file. This is typically located in /var/log/nginx/error.log.
+endif::[]
+Most problems are logged to this file.
+
+
+ifdef::nginx[]
+=== Upon accessing the web app, Nginx reports a "Permission denied" error
+
+**Symptoms**::
+	A typical error message looks like this:
++
+---------------------------------------------
+2013/10/21 17:16:03 [alert] 98687#0: *1 Cannot stat
+'/Users/phusion/Sites/rack.test/config.ru': Permission denied (errno=13); This
+error means that the Nginx worker process (PID 99064, running as UID 70) does
+not have permission to access this file. Please read the manual to learn how to
+fix this problem: section 'Troubleshooting' -> 'Upon accessing the web app,
+Nginx reports a "Permission denied" error'; Extra info, client: 127.0.0.1,
+server: www.foo.com, request: "GET / HTTP/1.1", host: "www.foo.com"
+---------------------------------------------
+
+**Cause**::
+	Phusion Passenger tries to access your application directory in order to find out what language it's written in. This access is initiated from inside an Nginx worker process. This error indicates that the Nginx worker process does not have the proper permissions to access your application's root directory.
+
+**Solution**::
+	You need to relax permissions to that the Nginx worker process can access your application directory, by making the directory group- and world-*executable*:
++
+---------------------------------------------------
+sudo chmod g+x,o+x /Users/phusion/Sites/rack.test
+---------------------------------------------------
++
+You *also* need to ensure that all parent directories are also 'executable' by the Nginx process:
++
+---------------------------------------------------
+sudo chmod g+x,o+x /Users/phusion/Sites
+sudo chmod g+x,o+x /Users/phusion
+sudo chmod g+x,o+x /Users
+---------------------------------------------------
++
+.Why 'executable' permission and not 'readable'?
+[NOTE]
+On Unix, the 'executable' permission on directories dictates whether a process is allowed to *access* files or subdirectories within that directory. The 'readable' permission dictates whether a process is allowed to see what files are inside the directory, but does not necessarily allow access to them. You can learn more at link:http://en.wikipedia.org/wiki/File_system_permissions#Permissions[Wikipedia].
+endif::[]
+
