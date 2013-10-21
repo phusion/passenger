@@ -182,6 +182,7 @@ LOCATION_CONFIGURATION_OPTIONS = [
 	},
 	{
 		:name   => 'passenger_set_cgi_param',
+		:context => [:srv, :loc, :lif],
 		:type   => :string_keyval,
 		:field  => 'vars_source',
 		:header => nil,

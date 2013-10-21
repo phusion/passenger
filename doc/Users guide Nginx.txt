@@ -807,6 +807,9 @@ passenger_set_cgi_param APP_NAME "my super blog";
 passenger_set_cgi_param EXTRA_REQUEST_METHOD method=$request_method;
 ------------------------------
 
+.Use CGI environment names
+[NOTE]
+===============================================
 If you want to set an HTTP header, then you must set it in the CGI environment name
 format, i.e. 'HTTP_*':
 
@@ -817,10 +820,38 @@ passenger_set_cgi_param X-Forwarded-For 127.0.0.2;
 # Instead, write it like this:
 passenger_set_cgi_param HTTP_X_FORWARDED_FOR 127.0.0.2;
 ------------------------------
+===============================================
+
+.This configuration option is NOT inherited across contexts
+[WARNING]
+===============================================
+In each new context (e.g. in each new 'location' block), you must re-specify `passenger_set_cgi_param`. Values set in parent contexts have no effect on subcontexts. For example:
+
+------------------------------
+server {
+    ...
+    passenger_set_cgi_param FOO foo;
+
+    location /users {
+        passenger_enabled_on;
+        # !!!THIS IS WRONG!!! The 'FOO' CGI variable will not
+        # be passed URLs beginning with /users because you didn't
+        # re-specify passenger_set_cgi_param.
+    }
+
+    location /apps {
+        passenger_enabled on;
+        # This is correct. Here we re-specify passenger_set_cgi_param,
+        # so the 'FOO' CGI variable will be correctly passed to URLs
+        # starting with /apps.
+        passenger_set_cgi_param FOO foo;
+    }
+}
+------------------------------
+===============================================
 
 This option may occur in the following places:
 
- * In the 'http' configuration block.
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.

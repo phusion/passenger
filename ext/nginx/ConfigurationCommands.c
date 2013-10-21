@@ -242,7 +242,7 @@
 {
 	
 	ngx_string("passenger_set_cgi_param"),
-	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE2,
+	NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE2,
 	set_null_terminated_keyval_slot,
 	NGX_HTTP_LOC_CONF_OFFSET,
 	offsetof(passenger_loc_conf_t, vars_source),
