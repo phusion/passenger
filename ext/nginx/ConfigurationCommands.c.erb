@@ -57,7 +57,7 @@ end
 
 def context_for(option)
 	context = option.fetch(:context, [:main, :srv, :loc, :lif])
-	return context.map{ |c| "NGX_HTTP_#{c.upcase}_CONF" }.join(" | ")
+	return context.map{ |c| "NGX_HTTP_#{c.to_s.upcase}_CONF" }.join(" | ")
 end
 
 def take_type_for(option)
