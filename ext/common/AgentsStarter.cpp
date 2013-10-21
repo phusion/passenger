@@ -24,9 +24,9 @@
  */
 #include <oxt/thread.hpp>
 #include <set>
-#include <cstdlib>
 #include <cerrno>
 #include <cstring>
+#include <string.h>
 #include <AgentsStarter.h>
 #include <Exceptions.h>
 

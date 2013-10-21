@@ -24,6 +24,9 @@
  */
 
 #include <Exceptions.h>
+#include <cstdlib>
+#include <string.h>
+
 
 void
 pp_error_init(PP_Error *error) {
