@@ -232,67 +232,67 @@
 
 6.18.1. rails_spawn_method	=>	rails-spawn-method-17vdnpt
 
-7. Analysis and system maintenance	=>	analysis-and-system-maintenance-1nnlnj8
+7. Troubleshooting	=>	troubleshooting-1pt0c76
 
-7.1. Inspecting memory usage	=>	inspecting-memory-usage-1k6y8v0
+7.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-xhe4nu
 
-7.2. Inspecting Phusion Passenger’s internal status	=>	inspecting-phusion-passenger-s-internal-status-v36wbc
+7.2. Upon accessing the web app, Nginx reports a "Permission denied" error	=>	upon-accessing-the-web-app-nginx-reports-a-permission-denied-error-1wgatlk
 
-7.3. Debugging frozen applications	=>	debugging-frozen-applications-qoctl8
+7.3. I’ve deployed my app on SSL, but the app thinks its not on SSL	=>	i-ve-deployed-my-app-on-ssl-but-the-app-thinks-its-not-on-ssl-14fn8d1
 
-7.4. Accessing individual application processes	=>	accessing-individual-application-processes-1qe4fqk
+8. Analysis and system maintenance	=>	analysis-and-system-maintenance-1nnlnj8
 
-7.5. Attaching an IRB console to an application process	=>	attaching-an-irb-console-to-an-application-process-d36enw
+8.1. Inspecting memory usage	=>	inspecting-memory-usage-1k6y8v0
 
-8. Tips	=>	tips-n4c22d
+8.2. Inspecting Phusion Passenger’s internal status	=>	inspecting-phusion-passenger-s-internal-status-v36wbc
 
-8.1. User Switching (security feature)	=>	user-switching-security--zmsy9o
+8.3. Debugging frozen applications	=>	debugging-frozen-applications-qoctl8
 
-8.1.1. Requirements	=>	requirements-15ozqdj
+8.4. Accessing individual application processes	=>	accessing-individual-application-processes-1qe4fqk
 
-8.1.2. Effects	=>	effects-nd2m44
+8.5. Attaching an IRB console to an application process	=>	attaching-an-irb-console-to-an-application-process-d36enw
 
-8.1.3. Caveats & troubleshooting	=>	caveats-troubleshooting-mbw582
+9. Tips	=>	tips-n4c22d
 
-8.1.4. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-1ni7zk6
+9.1. User Switching (security feature)	=>	user-switching-security--zmsy9o
 
-8.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1o3z66q
+9.1.1. Requirements	=>	requirements-15ozqdj
 
-8.3. Capistrano recipe	=>	capistrano-recipe-pfn4qu
+9.1.2. Effects	=>	effects-nd2m44
 
-8.4. Bundler support	=>	bundler-support-19v1h43
+9.1.3. Caveats & troubleshooting	=>	caveats-troubleshooting-mbw582
 
-8.4.1. Does Phusion Passenger itself need to be added to the Gemfile?	=>	does-phusion-passenger-itself-need-to-be-added-to-the-gemfile--xn1a11
+9.1.4. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-1ni7zk6
 
-8.5. Installing multiple Ruby on Rails versions	=>	installing-multiple-ruby-on-rails-versions-1bp1fff
+9.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1o3z66q
 
-8.6. Making the application restart after each request	=>	making-the-application-restart-after-each-request-vimy48
+9.3. Capistrano recipe	=>	capistrano-recipe-pfn4qu
 
-8.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-11mzwt6
+9.4. Bundler support	=>	bundler-support-19v1h43
 
-8.8. Out-of-Band Work and Out-of-Band Garbage Collection	=>	out-of-band-work-and-out-of-band-garbage-collection-v89lu2
+9.4.1. Does Phusion Passenger itself need to be added to the Gemfile?	=>	does-phusion-passenger-itself-need-to-be-added-to-the-gemfile--xn1a11
 
-8.9. Flying Passenger	=>	flying-passenger-137qg5e
+9.5. Installing multiple Ruby on Rails versions	=>	installing-multiple-ruby-on-rails-versions-1bp1fff
 
-8.9.1. Requirements	=>	requirements-194ysj6
+9.6. Making the application restart after each request	=>	making-the-application-restart-after-each-request-vimy48
 
-8.9.2. Basic usage	=>	basic-usage-1qtgvwx
+9.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-11mzwt6
 
-8.9.3. Configuring Flying Passenger	=>	configuring-flying-passenger-n558np
+9.8. Out-of-Band Work and Out-of-Band Garbage Collection	=>	out-of-band-work-and-out-of-band-garbage-collection-v89lu2
 
-8.9.4. Managing the Flying Passenger daemon	=>	managing-the-flying-passenger-daemon-vjmzdh
+9.9. Flying Passenger	=>	flying-passenger-137qg5e
 
-8.9.5. Using Flying Passenger with MRI 1.8 or JRuby	=>	using-flying-passenger-with-mri-1-8-or-jruby-pxho35
+9.9.1. Requirements	=>	requirements-194ysj6
 
-8.9.6. Caveats and limitations	=>	caveats-and-limitations-15wakf
+9.9.2. Basic usage	=>	basic-usage-1qtgvwx
 
-9. Troubleshooting	=>	troubleshooting-1pt0c76
+9.9.3. Configuring Flying Passenger	=>	configuring-flying-passenger-n558np
 
-9.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-xhe4nu
+9.9.4. Managing the Flying Passenger daemon	=>	managing-the-flying-passenger-daemon-vjmzdh
 
-9.2. Upon accessing the web app, Nginx reports a "Permission denied" error	=>	upon-accessing-the-web-app-nginx-reports-a-permission-denied-error-1wgatlk
+9.9.5. Using Flying Passenger with MRI 1.8 or JRuby	=>	using-flying-passenger-with-mri-1-8-or-jruby-pxho35
 
-9.3. I’ve deployed my app on SSL, but the app thinks its not on SSL	=>	i-ve-deployed-my-app-on-ssl-but-the-app-thinks-its-not-on-ssl-14fn8d1
+9.9.6. Caveats and limitations	=>	caveats-and-limitations-15wakf
 
 10. Under the hood	=>	under-the-hood-8uney
 
@@ -357,9 +357,4 @@
 14.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-uiewl5
 
 14.4. Environment variables and sudo	=>	environment-variables-and-sudo-10lphxn
-
-
-### These sections appear to have been removed. Please check.
-
-10. sudo chmod g+x,o+x /Users/phusion/Sites/rack.test	=>	sudo-chmod-g-x-o-x-users-phusion-sites-rack-test-1jwz2zt
 

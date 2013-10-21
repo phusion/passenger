@@ -1734,16 +1734,6 @@ compatibility reasons.
 Deprecated in favor of <<PassengerSpawnMethod,passenger_spawn_method>>.
 
 
-== Analysis and system maintenance ==
-
-include::users_guide_snippets/analysis_and_system_maintenance.txt[]
-
-
-== Tips ==
-
-include::users_guide_snippets/tips.txt[]
-
-
 [[troubleshooting]]
 == Troubleshooting ==
 
@@ -1754,6 +1744,16 @@ include::users_guide_snippets/troubleshooting.txt[]
 Rails and many other frameworks infers whether it's running on SSL through the CGI
 environment variable `HTTPS`. This variable is *only* set if you set `ssl on`.
 Setting just `listen 443 ssl` is not enough.
+
+
+== Analysis and system maintenance ==
+
+include::users_guide_snippets/analysis_and_system_maintenance.txt[]
+
+
+== Tips ==
+
+include::users_guide_snippets/tips.txt[]
 
 
 == Under the hood ==
