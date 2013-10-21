@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <MultiLibeio.cpp>
+#include <Exceptions.cpp>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
