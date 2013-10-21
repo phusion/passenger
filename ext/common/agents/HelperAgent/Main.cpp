@@ -71,8 +71,6 @@
 #include <Utils/MessageIO.h>
 #include <Utils/VariantMap.h>
 
-#include <Exceptions.cpp>
-
 using namespace boost;
 using namespace oxt;
 using namespace Passenger;
