@@ -339,8 +339,10 @@ private
 				"Please check the following:\n\n" +
 				" * Is this app supposed to be run as the `#{whoami}` user?\n" +
 				" * Is this app being run on the correct Ruby interpreter? Below you will\n" +
-				"   see which Ruby interpreter Phusion Passenger attempted to use. If you \n" +
-				"   are using RVM, please also check whether the correct gemset is being used.\n")
+				"   see which Ruby interpreter Phusion Passenger attempted to use.\n" +
+				" * Are you using RVM? Please check whether the correct gemset is being used.\n" +
+				" * If all of the above fails, try resetting your RVM gemsets:\n" +
+				"   https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets")
 		end
 		raise e
 	end
