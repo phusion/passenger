@@ -1,0 +1,54 @@
+=== Ruby on Rails-specific troubleshooting
+
+==== The "About your application's environment" link does not work
+
+The "About your application's environment" link only works if the application is started in the 'development' environment. Phusion Passenger starts the application in the 'production' environment by default. Please use
+ifdef::apache[]
+<<RailsEnv,RailsEnv>>
+endif::[]
+ifdef::nginx[]
+<<RailsEnv,rails_env>>
+endif::[]
+to change it.
+
+==== The Rails application reports that it's unable to start because of a permission error
+
+Please check whether your Rails application's folder has the correct
+permissions. By default, Rails applications are started as the owner of the
+file `config.ru`, except if the file is owned by root. If the
+file is owned by root, then the Rails application will be started as 'nobody'
+(or as the user specify by <<RailsDefaultUser,RailsDefaultUser>>, if that's
+specified).
+
+Please read <<user_switching,User switching (security)>> for details.
+
+==== The Rails application's log file is not being written to
+
+There are a couple things that you should be aware of:
+
+- By default, Phusion Passenger runs Rails applications in 'production' mode,
+  so please be sure to check `production.log` instead of `development.log`.
++
+See
+ifdef::apache[]
+<<RailsEnv,RailsEnv>>
+endif::[]
+ifdef::nginx[]
+<<RailsEnv,rails_env>>
+endif::[]
+for configuration.
+- By default, Phusion Passenger runs Rails applications as the owner of `config.ru`.
+  So the log file can only be written to if that user has write permission to the
+  log file. Please `chmod` or `chown` your log file accordingly.
++
+See <<User_switching,User switching (security)>> for details.
+
+If you're using a RedHat-derived Linux distribution (such as Fedora or CentOS)
+then it is link:http://code.google.com/p/phusion-passenger/issues/detail?id=4[possible
+that SELinux is interfering]. RedHat's SELinux policy only allows Apache to read/write
+directories that have the 'httpd_sys_content_t' security context. Please run the
+following command to give your Rails application folder that context:
+
+-----------------------------------------------------------
+chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
+-----------------------------------------------------------
