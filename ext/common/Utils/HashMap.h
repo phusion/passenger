@@ -37,6 +37,12 @@
 	#include <tr1/unordered_map>
 	#define HashMap std::tr1::unordered_map
 #elif defined(HASH_NAMESPACE) && defined(HASH_MAP_HEADER)
+	#ifndef _GLIBCXX_PERMIT_BACKWARD_HASH
+		// Prevent deprecation warning on newer libstdc++ systems.
+		// The warning suggests using unordered_map, but that is only
+		// available when C++11 features are explicitly enabled.
+		#define _GLIBCXX_PERMIT_BACKWARD_HASH
+	#endif
 	#include HASH_MAP_HEADER
 	#define HashMap HASH_NAMESPACE::hash_map
 #elif defined(__GNUC__)
