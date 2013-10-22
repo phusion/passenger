@@ -254,19 +254,21 @@
 
 7.6. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
 
-7.7. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
+7.7. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-u9fcp1
 
-7.8. My Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
+7.8. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-problems-6umss5
 
-7.9. I’ve deployed my app on SSL, but the app thinks its not on SSL	=>	i-ve-deployed-my-app-on-ssl-but-the-app-thinks-its-not-on-ssl-10rvgnr
+7.8.1. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
 
-7.10. Conflicting Apache modules	=>	conflicting-apache-modules-1uwpixk
+7.8.2. The Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
 
-7.10.1. mod_userdir	=>	mod-userdir-x5e2te
+7.9. Conflicting Apache modules	=>	conflicting-apache-modules-1uwpixk
 
-7.10.2. MultiViews (mod_negotiation)	=>	multiviews-mod-negotiation--zchfg0
+7.9.1. mod_userdir	=>	mod-userdir-x5e2te
 
-7.10.3. VirtualDocumentRoot	=>	virtualdocumentroot-14cwd7l
+7.9.2. MultiViews (mod_negotiation)	=>	multiviews-mod-negotiation--zchfg0
+
+7.9.3. VirtualDocumentRoot	=>	virtualdocumentroot-14cwd7l
 
 8. Analysis and system maintenance	=>	analysis-and-system-maintenance-qvkwzr
 

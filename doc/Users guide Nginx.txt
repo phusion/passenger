@@ -1768,13 +1768,15 @@ Deprecated in favor of <<PassengerSpawnMethod,passenger_spawn_method>>.
 [[troubleshooting]]
 == Troubleshooting ==
 
-include::users_guide_snippets/troubleshooting.txt[]
+include::users_guide_snippets/troubleshooting/default.txt[]
 
-=== I've deployed my app on SSL, but the app thinks its not on SSL
+=== The application thinks its not on SSL even though it is
 
 Rails and many other frameworks infers whether it's running on SSL through the CGI
 environment variable `HTTPS`. This variable is *only* set if you set `ssl on`.
 Setting just `listen 443 ssl` is not enough.
+
+include::users_guide_snippets/troubleshooting/rails.txt[]
 
 
 == Analysis and system maintenance ==

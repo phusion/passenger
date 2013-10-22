@@ -1928,7 +1928,7 @@ This option is no longer available in version 4.0.0. There is no alternative bec
 [[troubleshooting]]
 == Troubleshooting
 
-include::users_guide_snippets/troubleshooting.txt[]
+include::users_guide_snippets/troubleshooting/default.txt[]
 
 === OS X: The installer cannot locate MAMP's Apache
 
@@ -2010,41 +2010,7 @@ chcon -R -h -t httpd_sys_content_t /path/to/passenger/folder
 
 Once the permissions are fixed, restart Apache.
 
-=== The Rails application reports that it's unable to start because of a permission error
-
-Please check whether your Rails application's folder has the correct
-permissions. By default, Rails applications are started as the owner of the
-file 'config/environment.rb', except if the file is owned by root. If the
-file is owned by root, then the Rails application will be started as 'nobody'
-(or as the user specify by <<RailsDefaultUser,RailsDefaultUser>>, if that's
-specified).
-
-Please read <<user_switching,User switching (security)>> for details.
-
-=== My Rails application's log file is not being written to
-
-There are a couple things that you should be aware of:
-
-- By default, Phusion Passenger runs Rails applications in 'production' mode,
-  so please be sure to check 'production.log' instead of 'development.log'. See
-  <<RailsEnv,RailsEnv>> for configuration.
-- By default, Phusion Passenger runs Rails applications as the owner of 'environment.rb'.
-  So the log file can only be written to if that user has write permission to the
-  log file. Please 'chmod' or 'chown' your log file accordingly.
-+
-See <<User_switching,User switching (security)>> for details.
-
-If you're using a RedHat-derived Linux distribution (such as Fedora or CentOS)
-then it is link:http://code.google.com/p/phusion-passenger/issues/detail?id=4[possible
-that SELinux is interfering]. RedHat's SELinux policy only allows Apache to read/write
-directories that have the 'httpd_sys_content_t' security context. Please run the
-following command to give your Rails application folder that context:
-
------------------------------------------------------------
-chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
------------------------------------------------------------
-
-=== I've deployed my app on SSL, but the app thinks its not on SSL
+=== The application thinks its not on SSL even though it is
 
 Rails and many other frameworks infers whether it's running on SSL through the CGI
 environment variable `HTTPS`. Apache always sets this variable when on SSL,
@@ -2084,6 +2050,8 @@ Include conf/extra/httpd-ssl.conf
 </Virtualhost>
 --------------------------------------
 
+
+include::users_guide_snippets/troubleshooting/rails.txt[]
 
 [[conflicting_apache_modules]]
 === Conflicting Apache modules ===

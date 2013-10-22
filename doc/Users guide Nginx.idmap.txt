@@ -236,9 +236,17 @@
 
 7.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-xhe4nu
 
-7.2. Upon accessing the web app, Nginx reports a "Permission denied" error	=>	upon-accessing-the-web-app-nginx-reports-a-permission-denied-error-1wgatlk
+7.2. Why does the first request take a long time?	=>	why-does-the-first-request-take-a-long-time--1knj9fp
 
-7.3. I’ve deployed my app on SSL, but the app thinks its not on SSL	=>	i-ve-deployed-my-app-on-ssl-but-the-app-thinks-its-not-on-ssl-14fn8d1
+7.3. Upon accessing the web app, Nginx reports a "Permission denied" error	=>	upon-accessing-the-web-app-nginx-reports-a-permission-denied-error-1wgatlk
+
+7.4. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-1e2m21h
+
+7.5. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-troubleshooting-n8u5u1
+
+7.5.1. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-58ww8s
+
+7.5.2. The Rails application’s log file is not being written to	=>	the-rails-application-s-log-file-is-not-being-written-to-9m2i5h
 
 8. Analysis and system maintenance	=>	analysis-and-system-maintenance-1nnlnj8
 
