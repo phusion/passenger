@@ -51,4 +51,7 @@ See `--help` for all available options.
 
 include::users_guide_snippets/troubleshooting/default.txt[]
 
+[[about_environment_variables]]
+== Appendix: About environment variables
+
 include::users_guide_snippets/environment_variables.txt[]

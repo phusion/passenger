@@ -5,21 +5,24 @@ image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
 link:https://www.phusionpassenger.com/[Phusion Passenger] is a web server and application server, designed to be fast, robust and lightweight. It runs your web apps with the least amount of hassle by taking care of almost all administrative heavy lifting for you. Advanced administration tools allow you to gain deep insight into your web applications' operations and to keep your servers healthy. Phusion Passenger is polyglot by design, and currently supports Ruby (Rack), Python (WSGI) and Node.js.
 
-Phusion Passenger has several modes, each mode with its own documentation, covering *installation*, *usage*, *troubleshooting* and more.
+Phusion Passenger has several integration modes, each mode with its own documentation, covering *installation*, *usage*, *troubleshooting* and more.
 
-== Nginx integration mode
+[[overview]]
+== Overview
+
+=== Nginx integration mode
 
 In this mode, Phusion Passenger integrates directly into Nginx as an Nginx module. You operate Phusion Passenger mostly through Nginx and through Nginx configuration files. The Nginx integration mode is, along with the Standalone mode, highly optimized for performance.
 
 link:Users%20Guide%20Nginx.html[**Read the documentation for the Nginx integration mode >>**]
 
-== Apache integration mode
+=== Apache integration mode
 
 In this mode, Phusion Passenger integrates directly into Apache as an Apache module. You operate Phusion Passenger mostly through Apache and through Apache configuration files.
 
 link:Users%20Guide%20Apache.html[**Read the documentation for the Apache integration mode >>**]
 
-== Standalone mode
+=== Standalone mode
 
 In this mode, Phusion Passenger operates as a fully-featured, secure standalone HTTP server. You do not need to have an existing web server like Apache or Nginx. This mode is ideal...
 

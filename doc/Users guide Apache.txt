@@ -2170,4 +2170,7 @@ include::users_guide_snippets/appendix_b_terminology.txt[]
 
 include::users_guide_snippets/appendix_c_spawning_methods.txt[]
 
+[[about_environment_variables]]
+== Appendix D: About environment variables
+
 include::users_guide_snippets/environment_variables.txt[]

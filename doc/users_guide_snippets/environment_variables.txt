@@ -1,6 +1,3 @@
-[[about_environment_variables]]
-== Appendix D: About environment variables
-
 The Phusion Passenger compilation process can be customized with environment variables.
 
 Environment variables are named values that affect how the system works. For example they tell the system where to look for commands (the `PATH` variable) or where to look for libraries (`LD_LIBRARY_PATH`). Their names are often in all-uppercase. Sometimes people refer to an environment variable with a dollar sign `$` in front, but that's the same thing: when people say "the $PATH environment variable" they mean "the PATH environment variable". This is because the dollar sign `$` is a shell syntax for refering to an environment variable, as you will learn later.

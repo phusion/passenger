@@ -28,8 +28,17 @@ brew upgrade passenger
 ---------------------------
 brew install nginx --with-passenger
 -OR-
-brew upgrade nginx --wtih-passenger
+brew upgrade nginx --with-passenger
 ---------------------------
++
+[NOTE]
+=======================================
+If Phusion Passenger has been updated, but no new Nginx version has been released, then you must reinstall Nginx against the latest version of Phusion Passenger:
+
+---------------------------
+brew reinstall nginx --with-passenger
+---------------------------
+=======================================
 
 .Enterprise
 

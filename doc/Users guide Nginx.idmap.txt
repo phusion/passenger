@@ -368,8 +368,3 @@
 
 14.4. Environment variables and sudo	=>	environment-variables-and-sudo-10lphxn
 
-
-### These sections appear to have been removed. Please check.
-
-7.4. Upon uploading a file, Nginx reports "client_body_temp/00000000xx" failed (2: No such file or directory)"	=>	upon-uploading-a-file-nginx-reports-client-body-temp-00000000xx-failed-2-no-such-file-or-directory--13kj7e5
-

@@ -74,7 +74,7 @@
 
 4.2. Upon uploading a file, Phusion Passenger reports "client_body_temp/00000000xx failed (2: No such file or directory)"	=>	upon-uploading-a-file-phusion-passenger-reports-client-body-temp-00000000xx-failed-2-no-such-file-or-directory--d01goe
 
-5. Appendix D: About environment variables	=>	appendix-d-about-environment-variables-1ct91x3
+5. Appendix: About environment variables	=>	appendix-about-environment-variables-1ct91x3
 
 5.1. Working with environment variables	=>	working-with-environment-variables-11cmwlv
 
