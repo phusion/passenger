@@ -332,7 +332,8 @@ private
 	def running_bundler
 		yield
 	rescue Exception => e
-		if defined?(Bundler::GemNotFound) && e.is_a?(Bundler::GemNotFound)
+		if (defined?(Bundler::GemNotFound) && e.is_a?(Bundler::GemNotFound)) ||
+		   (defined?(Bundler::GitError) && e.is_a?(Bundler::GitError))
 			prepend_exception_comment(e, "It looks like Bundler could not find a gem. This " +
 				"is probably because your\n" +
 				"application is being run under a different environment than it's supposed to.\n" +
@@ -342,7 +343,7 @@ private
 				"   see which Ruby interpreter Phusion Passenger attempted to use.\n" +
 				" * Are you using RVM? Please check whether the correct gemset is being used.\n" +
 				" * If all of the above fails, try resetting your RVM gemsets:\n" +
-				"   https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets")
+				"   https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets\n")
 		end
 		raise e
 	end
