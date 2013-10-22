@@ -5,11 +5,12 @@ Because Phusion Passenger is designed to run in a wide variety of operating syst
 The steps for upgrading or downgrading Phusion Passenger is almost the same as the steps for installing. All the installation guides in this section will also teach you how to upgrade and downgrade.
 
 
+[[install_osx_homebrew]]
 === Installing or upgrading on Mac OS X with Homebrew
 
 .Open source
 
-Every time we release a new Phusion Passenger version, we make it available through Homebrew. Please note that the Homebrew maintainers have to merge our pull requests manually, so it may take a day or two before a new version shows up in the official Homebrew repository.
+Every time we release a new Phusion Passenger version, we make it available through link:http://brew.sh/[Homebrew]. Please note that the Homebrew maintainers have to merge our pull requests manually, so it may take a day or two before a new version shows up in the official Homebrew repository.
 
  1. Update the Homebrew recipes:
 +

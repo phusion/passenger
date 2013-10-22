@@ -84,23 +84,8 @@ task :news_as_html do
 	require 'cgi'
 	contents, items = extract_latest_news_contents_and_items
 	
-	puts "<dl>"
+	puts "<ul>"
 	items.each do |item|
-		item.strip!
-		
-		# Does this item have a header? It does if it consists of multiple lines, and
-		# the next line is capitalized.
-		lines = item.split("\n")
-		if lines.size > 1 && lines[1].strip[0..0] == lines[1].strip[0..0].upcase
-			puts "<dt>#{lines[0]}</dt>"
-			lines.shift
-			item = lines.join("\n")
-			item.strip!
-		end
-		
-		# Split into paragraphs. Empty lines are paragraph dividers.
-		paragraphs = item.split(/^ *$/m)
-		
 		def format_paragraph(text)
 			# Get rid of newlines: convert them into spaces.
 			text.gsub!("\n", ' ')
@@ -121,27 +106,10 @@ task :news_as_html do
 			end
 			text
 		end
-		
-		if paragraphs.size > 1
-			STDOUT.write("<dd>")
-			paragraphs.each do |paragraph|
-				paragraph.gsub!(/\A\n+/, '')
-				paragraph.gsub!(/\n+\Z/, '')
-				
-				if (paragraph =~ /\A       /)
-					# Looks like a code block.
-					paragraph.gsub!(/^       /m, '')
-					puts "<pre lang=\"ruby\">#{CGI.escapeHTML(paragraph)}</pre>"
-				else
-					puts "<p>#{format_paragraph(paragraph)}</p>"
-				end
-			end
-			STDOUT.write("</dd>\n")
-		else
-			puts "<dd>#{format_paragraph(item)}</dd>"
-		end
+
+		puts "<li>" + format_paragraph(item.strip) + "</li>"
 	end
-	puts "</dl>"
+	puts "</ul>"
 end
 
 desc "Convert the NEWS items for the latest release to Markdown"
