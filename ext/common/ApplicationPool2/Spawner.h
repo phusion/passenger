@@ -681,7 +681,8 @@ protected:
 		// remaining stderr output for at most 2 seconds.
 		if (errorKind != SpawnException::PRELOADER_STARTUP_TIMEOUT
 		 && errorKind != SpawnException::APP_STARTUP_TIMEOUT
-		 && details.stderrCapturer != NULL) {
+		 && details.stderrCapturer != NULL)
+		{
 			bool done = false;
 			unsigned long long timeout = 2000;
 			while (!done) {
@@ -708,7 +709,10 @@ protected:
 		
 		// Now throw SpawnException with the captured stderr output
 		// as error response.
-		SpawnException e(msg, stderrOutput, false, errorKind);
+		SpawnException e(msg,
+			createErrorPageFromStderrOutput(msg, errorKind, stderrOutput),
+			true,
+			errorKind);
 		annotateAppSpawnException(e, details);
 		throw e;
 	}
@@ -717,6 +721,35 @@ protected:
 		if (details.debugDir != NULL) {
 			e.addAnnotations(details.debugDir->readAll());
 		}
+	}
+
+	string createErrorPageFromStderrOutput(const string &msg,
+		SpawnException::ErrorKind errorKind,
+		const string &stderrOutput)
+	{
+		// These kinds of SpawnExceptions are not supposed to be handled through this function.
+		assert(errorKind != SpawnException::PRELOADER_STARTUP_EXPLAINABLE_ERROR);
+		assert(errorKind != SpawnException::APP_STARTUP_EXPLAINABLE_ERROR);
+
+		string result = escapeHTML(msg);
+
+		if (errorKind == SpawnException::PRELOADER_STARTUP_TIMEOUT
+		 || errorKind == SpawnException::APP_STARTUP_TIMEOUT)
+		{
+			result.append(" Please read <a href=\"https://github.com/phusion/passenger/wiki/Debugging-application-startup-problems\">this article</a> "
+				"for more information about this problem.");
+		}
+		result.append("<br>\n<h2>Raw process output:</h2>\n");
+
+		if (strip(stderrOutput).empty()) {
+			result.append("(empty)");
+		} else {
+			result.append("<pre>");
+			result.append(escapeHTML(stderrOutput));
+			result.append("</pre>");
+		}
+
+		return result;
 	}
 
 	template<typename Details>

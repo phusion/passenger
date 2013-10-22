@@ -246,8 +246,10 @@ public:
 
 /**
  * Thrown when SpawnManager or ApplicationPool fails to spawn an application
- * instance. The exception may contain an error page, which is a user-friendly
- * HTML page with details about the error.
+ * instance. The exception may contain an error page. This error page contains
+ * detailed information about the error and may be in HTML format. The error
+ * page always contains enough information so that showing `what()` is not
+ * necessary.
  */
 class SpawnException: public oxt::tracable_exception {
 public:
@@ -283,10 +285,6 @@ public:
 		bool isHTML = true, ErrorKind errorKind = UNDEFINED_ERROR)
 		: msg(message), m_errorPage(errorPage)
 	{
-		assert(!isHTML
-			|| errorKind == UNDEFINED_ERROR
-			|| errorKind == PRELOADER_STARTUP_EXPLAINABLE_ERROR
-			|| errorKind == APP_STARTUP_EXPLAINABLE_ERROR);
 		this->errorKind = errorKind;
 		m_hasErrorPage = true;
 		m_isHTML = isHTML;
@@ -297,7 +295,7 @@ public:
 	virtual const char *what() const throw() {
 		return msg.c_str();
 	}
-	
+
 	bool hasErrorPage() const {
 		return m_hasErrorPage;
 	}
