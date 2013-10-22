@@ -94,7 +94,7 @@ namespace tut {
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
-				SpawnException::APP_STARTUP_PROTOCOL_ERROR);
+				SpawnException::APP_STARTUP_ERROR);
 			ensure(e.getErrorPage().find("hello world\n") != string::npos);
 		}
 	}

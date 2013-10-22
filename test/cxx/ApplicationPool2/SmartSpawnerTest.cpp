@@ -169,7 +169,7 @@ namespace tut {
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
-				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR);
+				SpawnException::PRELOADER_STARTUP_ERROR);
 			ensure(e.getErrorPage().find("hello world\n") != string::npos);
 		}
 	}
