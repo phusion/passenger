@@ -84,7 +84,7 @@ Phusion Passenger open source:
 --------------------------------------------------------------
 deb https://oss-binaries.phusionpassenger.com/apt/passenger lucid main
 deb https://oss-binaries.phusionpassenger.com/apt/passenger precise main
-deb https://oss-binaries.phusionpassenger.com/apt/passenger raring main
+deb https://oss-binaries.phusionpassenger.com/apt/passenger saucy main
 deb https://oss-binaries.phusionpassenger.com/apt/passenger squeeze main
 deb https://oss-binaries.phusionpassenger.com/apt/passenger wheezy main
 --------------------------------------------------------------
@@ -94,7 +94,7 @@ Phusion Passenger Enterprise:
 --------------------------------------------------------------
 deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt lucid main
 deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt precise main
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt raring main
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt saucy main
 deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt squeeze main
 deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt wheezy main
 --------------------------------------------------------------
