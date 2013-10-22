@@ -8,42 +8,50 @@ The steps for upgrading or downgrading Phusion Passenger is almost the same as t
 [[install_osx_homebrew]]
 === Installing or upgrading on Mac OS X with Homebrew
 
-.Open source
-
-Every time we release a new Phusion Passenger version, we make it available through link:http://brew.sh/[Homebrew]. Please note that the Homebrew maintainers have to merge our pull requests manually, so it may take a day or two before a new version shows up in the official Homebrew repository.
-
- 1. Update the Homebrew recipes:
+**Open source**::
+	Every time we release a new Phusion Passenger version, we make it available through link:http://brew.sh/[Homebrew]. Please note that the Homebrew maintainers have to merge our pull requests manually, so it may take a day or two before a new version shows up in the official Homebrew repository.
++
+1. Update the Homebrew recipes:
 +
 ---------------------------
 brew update
 ---------------------------
- 2. Run the following command and follow the instructions. This will give you access to link:Users%20guide%20Apache.html[Phusion Passenger for Apache] and link:Users%20guide%20Standalone.html[Phusion Passenger Standalone].
+2. Run one of the following, and follow the instructions:
 +
+ifdef::nginx[]
 ---------------------------
-brew install passenger
+brew install passenger nginx --with-passenger
 -OR-
-brew upgrade passenger
----------------------------
- 3. (Optional) If you want to use link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx], run:
-+
----------------------------
-brew install nginx --with-passenger
--OR-
-brew upgrade nginx --with-passenger
+brew upgrade passenger nginx --with-passenger
 ---------------------------
 +
+.Upgrade note
 [NOTE]
 =======================================
-If Phusion Passenger has been updated, but no new Nginx version has been released, then you must reinstall Nginx against the latest version of Phusion Passenger:
+If Phusion Passenger has been updated, but no new Nginx version has been released, then you must also reinstall Nginx against the latest version of Phusion Passenger:
 
 ---------------------------
 brew reinstall nginx --with-passenger
 ---------------------------
 =======================================
+endif::[]
+ifdef::apache[]
+---------------------------
+brew install passenger
+-OR-
+brew upgrade passenger
+---------------------------
+endif::[]
+ifdef::standalone[]
+---------------------------
+brew install passenger
+-OR-
+brew upgrade passenger
+---------------------------
+endif::[]
 
-.Enterprise
-
-link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] is currently not available through Homebrew. Please try one of the other installation methods instead.
+**Enterprise**::
+	link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] is currently not available through Homebrew. Please try one of the other installation methods instead.
 
 
 [[install_on_debian_ubuntu]]
@@ -103,51 +111,58 @@ sudo apt-get update
 
 ==== Installing packages
 
-.Open source
-
-To install Phusion Passenger for Nginx:
-
+**Open source**::
++
+ifdef::nginx[]
+1. Install the packages:
++
 --------------------------------------------------------------
 sudo apt-get install nginx-full passenger
 --------------------------------------------------------------
-
-Then edit `/etc/nginx/nginx.conf`, and uncomment `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
-
-To install Phusion Passenger for Apache:
-
+2. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
+3. Restart Nginx:
++
+--------------------------------------------------------------
+sudo service nginx restart
+--------------------------------------------------------------
+endif::[]
+ifdef::apache[]
 --------------------------------------------------------------
 sudo apt-get install libapache2-mod-passenger
 --------------------------------------------------------------
-
-To install Phusion Passenger Standalone:
-
+endif::[]
+ifdef::standalone[]
 --------------------------------------------------------------
 sudo apt-get install passenger
 --------------------------------------------------------------
+endif::[]
 
-.Enterprise
-
-Before installing packages, download your license key from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
-
-To install Phusion Passenger for Nginx:
-
+**Enterprise**::
++
+1. Download your license key from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
+2. Install the packages:
++
+ifdef::nginx[]
 --------------------------------------------------------------
 sudo apt-get install nginx-full passenger-enterprise
 --------------------------------------------------------------
-
-Then edit `/etc/nginx/nginx.conf`, and uncomment `passenger_root` and `passenger_ruby`. Finally, run `sudo service nginx restart`.
-
-To install Phusion Passenger for Apache:
-
+3. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
+4. Restart Nginx:
++
+--------------------------------------------------------------
+sudo service nginx restart
+--------------------------------------------------------------
+endif::[]
+ifdef::apache[]
 --------------------------------------------------------------
 sudo apt-get install libapache2-mod-passenger-enterprise
 --------------------------------------------------------------
-
-To install Phusion Passenger Standalone:
-
+endif::[]
+ifdef::standalone[]
 --------------------------------------------------------------
 sudo apt-get install passenger-enterprise
 --------------------------------------------------------------
+endif::[]
 
 
 === Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux
