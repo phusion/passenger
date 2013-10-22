@@ -125,6 +125,12 @@ function createServerResponse(req) {
 	var res = new http.ServerResponse(req);
 	res.assignSocket(req.socket);
 	res.shouldKeepAlive = false;
+	req.socket.on('drain', function() {
+		res.emit('drain');
+	});
+	req.socket.on('timeout', function() {
+		res.emit('timeout');
+	});
 	res.once('finish', function() {
 		req.socket.destroySoon();
 	});
