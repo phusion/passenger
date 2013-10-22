@@ -734,7 +734,9 @@ protected:
 		string result = escapeHTML(msg);
 
 		if (errorKind == SpawnException::PRELOADER_STARTUP_TIMEOUT
-		 || errorKind == SpawnException::APP_STARTUP_TIMEOUT)
+		 || errorKind == SpawnException::APP_STARTUP_TIMEOUT
+		 || errorKind == SpawnException::PRELOADER_STARTUP_ERROR
+		 || errorKind == SpawnException::APP_STARTUP_ERROR)
 		{
 			result.append(" Please read <a href=\"https://github.com/phusion/passenger/wiki/Debugging-application-startup-problems\">this article</a> "
 				"for more information about this problem.");
@@ -1271,9 +1273,9 @@ protected:
 	void handleInvalidSpawnResponseType(const string &line, NegotiationDetails &details) {
 		if (line.empty()) {
 			throwAppSpawnException("An error occurred while starting "
-				"the web application. It did not signal successful startup back to "
-				PROGRAM_NAME ".",
-				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+				"the web application. It exited before signalling successful "
+				"startup back to " PROGRAM_NAME ".",
+				SpawnException::APP_STARTUP_ERROR,
 				details);
 		} else {
 			throwAppSpawnException("An error occurred while starting "

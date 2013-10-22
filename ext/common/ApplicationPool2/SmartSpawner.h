@@ -535,9 +535,9 @@ private:
 	void handleInvalidResponseType(StartupDetails &details, const string &line) {
 		if (line.empty()) {
 			throwPreloaderSpawnException("An error occurred while starting up "
-				"the preloader. It did not signal successful startup back to "
-				PROGRAM_NAME ".",
-				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
+				"the preloader. It exited before signalling successful "
+				"startup back to " PROGRAM_NAME ".",
+				SpawnException::PRELOADER_STARTUP_ERROR,
 				details);
 		} else {
 			throwPreloaderSpawnException("An error occurred while starting up "
