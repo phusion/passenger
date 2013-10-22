@@ -229,6 +229,10 @@ private
 				wrap_desc("Where to store the PID file")) do |value|
 				@options[:pid_file] = value
 			end
+			opts.on("--temp-dir PATH", String,
+				wrap_desc("Use the given temp dir")) do |value|
+				ENV['TMPDIR'] = value
+			end
 
 			opts.separator ""
 			opts.on("--nginx-bin FILENAME", String,
