@@ -106,13 +106,17 @@ private
 		elsif result
 			log("Check suceeded")
 			if capture_output
-				return { :output => output }
+				return { :result => true, :output => output }
 			else
 				return true
 			end
 		else
 			log("Check failed with exit status #{$?.exitstatus}")
-			return false
+			if capture_output == :always
+				return { :result => false, :output => output }
+			else
+				return false
+			end
 		end
 	end
 	private_class_method :run_compiler
@@ -346,8 +350,33 @@ public
 	memoize :cxx_supports_no_tls_direct_seg_refs_option?, true
 
 	def self.compiler_supports_wno_ambiguous_member_template?
-		return try_compile("Checking for C compiler '-Wno-ambiguous-member-template' support",
-			:c, '', '-Wno-ambiguous-member-template')
+		result = try_compile("Checking for C++ compiler '-Wno-ambiguous-member-template' support",
+			:cxx, '', '-Wno-ambiguous-member-template')
+		return false if !result
+
+		# For some reason, GCC does not complain about -Wno-ambiguous-member-template
+		# not being supported unless the source contains another error. So we
+		# check for this.
+		create_temp_file("passenger-compile-check.cpp") do |filename, f|
+			source = %Q{
+				void foo() {
+					return error;
+				}
+			}
+			f.puts(source)
+			f.close
+			begin
+				command = create_compiler_command(:cxx,
+					"-c '#{filename}' -o '#{filename}.o'",
+					'-Wno-ambiguous-member-template')
+				result = run_compiler("Checking whether C++ compiler '-Wno-ambiguous-member-template' support is *really* supported",
+					command, filename, source, :always)
+			ensure
+				File.unlink("#{filename}.o") rescue nil
+			end
+		end
+
+		return result && result[:output] !~ /-Wno-ambiguous-member-template/
 	end
 	memoize :compiler_supports_wno_ambiguous_member_template?, true
 
