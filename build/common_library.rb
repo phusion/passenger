@@ -185,7 +185,7 @@ if USE_VENDORED_LIBEIO
 		sh "mkdir -p #{LIBEIO_OUTPUT_DIR}" if !File.directory?(LIBEIO_OUTPUT_DIR)
 		sh "cd #{LIBEIO_OUTPUT_DIR} && sh #{LIBEIO_SOURCE_DIR}configure " +
 			"--disable-shared --enable-static " +
-			# libev's configure script may select a different default compiler than we
+			# libeio's configure script may select a different default compiler than we
 			# do, so we force our compiler choice.
 			"CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}'"
 	end
