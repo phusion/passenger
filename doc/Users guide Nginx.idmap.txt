@@ -244,9 +244,11 @@
 
 7.5. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-troubleshooting-n8u5u1
 
-7.5.1. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-58ww8s
+7.5.1. The "About your application’s environment" link does not work	=>	the-about-your-application-s-environment-link-does-not-work-9p7b2g
 
-7.5.2. The Rails application’s log file is not being written to	=>	the-rails-application-s-log-file-is-not-being-written-to-9m2i5h
+7.5.2. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-58ww8s
+
+7.5.3. The Rails application’s log file is not being written to	=>	the-rails-application-s-log-file-is-not-being-written-to-9m2i5h
 
 8. Analysis and system maintenance	=>	analysis-and-system-maintenance-1nnlnj8
 
@@ -365,4 +367,9 @@
 14.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-uiewl5
 
 14.4. Environment variables and sudo	=>	environment-variables-and-sudo-10lphxn
+
+
+### These sections appear to have been removed. Please check.
+
+7.4. Upon uploading a file, Nginx reports "client_body_temp/00000000xx" failed (2: No such file or directory)"	=>	upon-uploading-a-file-nginx-reports-client-body-temp-00000000xx-failed-2-no-such-file-or-directory--13kj7e5
 

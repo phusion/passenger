@@ -258,9 +258,11 @@
 
 7.8. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-problems-6umss5
 
-7.8.1. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
+7.8.1. The "About your application’s environment" link does not work	=>	the-about-your-application-s-environment-link-does-not-work-7k4tlm
 
-7.8.2. The Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
+7.8.2. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
+
+7.8.3. The Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
 
 7.9. Conflicting Apache modules	=>	conflicting-apache-modules-1uwpixk
 

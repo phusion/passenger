@@ -22,3 +22,9 @@
 
 3. Usage	=>	usage-1eyt33o
 
+4. Troubleshooting	=>	troubleshooting-o7g75o
+
+4.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-2vokcr
+
+4.2. Upon uploading a file, Phusion Passenger reports "client_body_temp/00000000xx failed (2: No such file or directory)"	=>	upon-uploading-a-file-phusion-passenger-reports-client-body-temp-00000000xx-failed-2-no-such-file-or-directory--d01goe
+

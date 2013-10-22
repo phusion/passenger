@@ -35,7 +35,7 @@ Packaging::ASCII_DOCS.each do |target|
 				type = "nginx"
 				juvia_site_key = "q0ptarhn8o9xanwomq8zkgewbtwffyz"
 			elsif target =~ /standalone/i
-				type = nil
+				type = "standalone"
 				juvia_site_key = "amggdy0k65hb4hbjg3dh7pnb9zd8dwy"
 			else
 				type = nil

@@ -1,4 +1,4 @@
-= Phusion Passenger Standalone users guide =
+= Phusion Passenger Standalone users guide
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
@@ -16,18 +16,18 @@ Here are some of the highlights:
   resource management for you. Crashing application processes are automatically restarted.
 - Can listen on a Unix socket, for use in reverse proxy setups.
 
-== Support information ==
+== Support information
 
 include::users_guide_snippets/support_information.txt[]
 
 [[installation]]
-== Installation ==
+== Installation
 
 ------------------------------
 gem install passenger
 ------------------------------
 
-== Usage ==
+== Usage
 
 Go to your application's root directory, and run:
 
@@ -39,7 +39,12 @@ This will start Phusion Passenger on port 3000. If you want to run it on a diffe
 use the `-p` option, e.g.:
 
 ------------------------------
-sudo passenger start -p 80
+passenger start -p 8000
 ------------------------------
 
 See `--help` for all available options.
+
+[[troubleshooting]]
+== Troubleshooting
+
+include::users_guide_snippets/troubleshooting/default.txt[]

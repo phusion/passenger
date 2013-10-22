@@ -11,6 +11,7 @@ ifdef::nginx[]
 endif::[]
 to change it.
 
+
 ==== The Rails application reports that it's unable to start because of a permission error
 
 Please check whether your Rails application's folder has the correct
@@ -21,6 +22,7 @@ file is owned by root, then the Rails application will be started as 'nobody'
 specified).
 
 Please read <<user_switching,User switching (security)>> for details.
+
 
 ==== The Rails application's log file is not being written to
 
