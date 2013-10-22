@@ -16,16 +16,17 @@ Here are some of the highlights:
   resource management for you. Crashing application processes are automatically restarted.
 - Can listen on a Unix socket, for use in reverse proxy setups.
 
+
 == Support information
 
 include::users_guide_snippets/support_information.txt[]
 
+
 [[installation]]
 == Installation
 
-------------------------------
-gem install passenger
-------------------------------
+include::users_guide_snippets/installation.txt[]
+
 
 == Usage
 
@@ -44,7 +45,10 @@ passenger start -p 8000
 
 See `--help` for all available options.
 
+
 [[troubleshooting]]
 == Troubleshooting
 
 include::users_guide_snippets/troubleshooting/default.txt[]
+
+include::users_guide_snippets/environment_variables.txt[]
