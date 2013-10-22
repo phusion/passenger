@@ -102,7 +102,7 @@ class CommonLibraryBuilder
 
 	def define_tasks(extra_compiler_flags = nil)
 		flags =  "-Iext -Iext/common #{LIBEV_CFLAGS} #{extra_compiler_flags} "
-		flags << "#{PlatformInfo.portability_cxxflags} #{EXTRA_CXXFLAGS}"
+		flags << EXTRA_CXXFLAGS
 		flags.strip!
 
 		group_all_components_by_category.each_pair do |category, object_names|

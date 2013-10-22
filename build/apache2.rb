@@ -60,11 +60,11 @@ APACHE2_MOD_PASSENGER_O = APACHE2_OUTPUT_DIR + "mod_passenger.o"
 APACHE2_MODULE_CFLAGS =
 	"#{EXTRA_PRE_CFLAGS} " <<
 	"-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
-	"#{PlatformInfo.portability_cflags} #{EXTRA_CFLAGS}"
+	"#{EXTRA_CFLAGS}"
 APACHE2_MODULE_CXXFLAGS =
 	"#{EXTRA_PRE_CXXFLAGS} " <<
 	"-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
-	"#{PlatformInfo.portability_cxxflags} #{EXTRA_CXXFLAGS}"
+	"#{EXTRA_CXXFLAGS}"
 
 APACHE2_MODULE_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
 	APACHE2_OUTPUT_DIR + "module_libboost_oxt",
@@ -126,7 +126,6 @@ file APACHE2_MODULE => dependencies do
 	linkflags =
 		"#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} " <<
 		"#{PlatformInfo.apache2_module_cflags} " <<
-		"#{PlatformInfo.portability_cxxflags} " <<
 		"#{EXTRA_CXXFLAGS} " <<
 		"#{APACHE2_MODULE_COMMON_LIBRARIES.join(' ')} " <<
 		"#{APACHE2_MODULE_BOOST_OXT_LIBRARY} " <<

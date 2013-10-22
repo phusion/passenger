@@ -28,19 +28,6 @@ require 'phusion_passenger/platform_info/operating_system'
 module PhusionPassenger
 
 module PlatformInfo
-	# Compiler flags that should be used for compiling every C/C++ program,
-	# for portability reasons. These flags should be specified as last
-	# when invoking the compiler.
-	def self.portability_cflags
-		return portability_c_or_cxxflags(:cc)
-	end
-	memoize :portability_cflags, true
-
-	def self.portability_cxxflags
-		return portability_c_or_cxxflags(:cxx)
-	end
-	memoize :portability_cxxflags, true
-
 	# Linker flags that should be used for linking every C/C++ program,
 	# for portability reasons. These flags should be specified as last
 	# when invoking the linker.
@@ -126,11 +113,45 @@ private
 		end
 	end
 	private_class_method :check_hash_map
-	
-	def self.portability_c_or_cxxflags(cc_or_cxx)
-		language = cc_or_cxx == :cc ? :c : :cxx
-		flags = ["-D_REENTRANT -I/usr/local/include"]
-		
+
+	def self.default_extra_c_or_cxxflags(cc_or_cxx)
+		flags = ["-D_REENTRANT", "-I/usr/local/include"]
+
+		if !send("#{cc_or_cxx}_is_sun_studio?")
+			flags << "-Wall -Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
+			if send("#{cc_or_cxx}_supports_wno_missing_field_initializers_flag?")
+				flags << "-Wno-missing-field-initializers"
+			end
+			if requires_no_tls_direct_seg_refs? && send("#{cc_or_cxx}_supports_no_tls_direct_seg_refs_option?")
+				flags << "-mno-tls-direct-seg-refs"
+			end
+			# Work around Clang warnings in ev++.h.
+			if send("#{cc_or_cxx}_is_clang?")
+				flags << "-Wno-ambiguous-member-template"
+			end
+		end
+
+		if !send("#{cc_or_cxx}_is_sun_studio?")
+			flags << "-fcommon"
+			if send("#{cc_or_cxx}_supports_feliminate_unused_debug?")
+				flags << "-feliminate-unused-debug-symbols -feliminate-unused-debug-types"
+			end
+			if send("#{cc_or_cxx}_supports_visibility_flag?")
+				flags << "-fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED"
+				if send("#{cc_or_cxx}_visibility_flag_generates_warnings?") &&
+				   send("#{cc_or_cxx}_supports_wno_attributes_flag?")
+					flags << "-Wno-attributes"
+				end
+			end
+		end
+
+		flags << debugging_cflags
+		flags << '-DHAS_ALLOCA_H' if has_alloca_h?
+		flags << '-DHAVE_ACCEPT4' if has_accept4?
+		flags << '-DHAS_SFENCE' if supports_sfence_instruction?
+		flags << '-DHAS_LFENCE' if supports_lfence_instruction?
+		flags << "-DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
+
 		if cc_or_cxx == :cxx
 			# There are too many implementations of of the hash map!
 			# Figure out the right one.
@@ -139,13 +160,6 @@ private
 				check_hash_map(flags)
 		end
 
-		ok = try_compile("Checking for accept4()", language, %Q{
-			#define _GNU_SOURCE
-			#include <sys/socket.h>
-			static void *foo = accept4;
-		})
-		flags << '-DHAVE_ACCEPT4' if ok
-		
 		if os_name =~ /solaris/
 			if send("#{cc_or_cxx}_is_sun_studio?")
 				flags << '-mt'
@@ -175,47 +189,6 @@ private
 			# http://groups.google.com/group/phusion-passenger/t/6b904a962ee28e5c
 			# http://groups.google.com/group/phusion-passenger/browse_thread/thread/aad4bd9d8d200561
 			flags << '-DBOOST_SP_USE_PTHREADS'
-		end
-		
-		flags << '-DHAS_ALLOCA_H' if has_alloca_h?
-		flags << '-DHAS_SFENCE' if supports_sfence_instruction?
-		flags << '-DHAS_LFENCE' if supports_lfence_instruction?
-		
-		return flags.compact.map{ |str| str.strip }.join(" ").strip
-	end
-	private_class_method :portability_c_or_cxxflags
-
-	def self.default_extra_c_or_cxxflags(cc_or_cxx)
-		flags = []
-
-		if !send("#{cc_or_cxx}_is_sun_studio?")
-			flags << "-Wall -Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
-			if send("#{cc_or_cxx}_supports_wno_missing_field_initializers_flag?")
-				flags << "-Wno-missing-field-initializers"
-			end
-			if requires_no_tls_direct_seg_refs? && send("#{cc_or_cxx}_supports_no_tls_direct_seg_refs_option?")
-				flags << "-mno-tls-direct-seg-refs"
-			end
-			# Work around Clang warnings in ev++.h.
-			if send("#{cc_or_cxx}_is_clang?")
-				flags << "-Wno-ambiguous-member-template"
-			end
-		end
-		
-		flags << debugging_cflags
-		flags << "-DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
-		if !send("#{cc_or_cxx}_is_sun_studio?")
-			flags << "-fcommon"
-			if send("#{cc_or_cxx}_supports_feliminate_unused_debug?")
-				flags << "-feliminate-unused-debug-symbols -feliminate-unused-debug-types"
-			end
-			if send("#{cc_or_cxx}_supports_visibility_flag?")
-				flags << "-fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED"
-				if send("#{cc_or_cxx}_visibility_flag_generates_warnings?") &&
-				   send("#{cc_or_cxx}_supports_wno_attributes_flag?")
-					flags << "-Wno-attributes"
-				end
-			end
 		end
 
 		return flags.compact.map{ |str| str.strip }.join(" ").strip

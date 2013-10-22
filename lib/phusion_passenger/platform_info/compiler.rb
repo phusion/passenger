@@ -415,6 +415,15 @@ public
 			:c, '#include <alloca.h>')
 	end
 	memoize :has_alloca_h?, true
+
+	def self.has_accept4?
+		return try_compile("Checking for accept4()", :c, %Q{
+			#define _GNU_SOURCE
+			#include <sys/socket.h>
+			static void *foo = accept4;
+		})
+	end
+	memoize :has_accept4?, true
 	
 	# C compiler flags that should be passed in order to enable debugging information.
 	def self.debugging_cflags

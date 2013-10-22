@@ -34,7 +34,7 @@ require 'phusion_passenger/common_library'
 # Defines tasks for compiling a static library containing Boost and OXT.
 def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	output_file = "#{output_dir}.a"
-	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cxxflags} #{EXTRA_CXXFLAGS}"
+	flags = "-Iext #{extra_compiler_flags} #{EXTRA_CXXFLAGS}"
 	
 	if false && boolean_option('RELEASE')
 		# Disable RELEASE support. Passenger Standalone wants to link to the

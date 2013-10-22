@@ -159,7 +159,7 @@ AGENT_LDFLAGS.strip!
 # These should be included first in the command string, before anything else.
 EXTRA_PRE_CFLAGS = string_option('EXTRA_PRE_CFLAGS', '').gsub("\n", " ")
 EXTRA_PRE_CXXFLAGS = string_option('EXTRA_PRE_CXXFLAGS', '').gsub("\n", " ")
-# These should be included last in the command string, even after PlatformInfo.portability_cflags.
+# These should be included last in the command string.
 EXTRA_CFLAGS = PlatformInfo.default_extra_cflags.dup
 EXTRA_CFLAGS << " " << string_option('EXTRA_CFLAGS').gsub("\n", " ") if string_option('EXTRA_CFLAGS')
 EXTRA_CXXFLAGS = PlatformInfo.default_extra_cxxflags.dup
