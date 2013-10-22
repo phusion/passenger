@@ -533,11 +533,19 @@ private:
 	}
 	
 	void handleInvalidResponseType(StartupDetails &details, const string &line) {
-		throwPreloaderSpawnException("An error occurred while starting up "
-			"the preloader. It sent an unknown response type \"" +
-			cEscapeString(line) + "\".",
-			SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-			details);
+		if (line.empty()) {
+			throwPreloaderSpawnException("An error occurred while starting up "
+				"the preloader. It did not signal successful startup back to "
+				PROGRAM_NAME ".",
+				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
+				details);
+		} else {
+			throwPreloaderSpawnException("An error occurred while starting up "
+				"the preloader. It sent an unknown response type \"" +
+				cEscapeString(line) + "\".",
+				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
+				details);
+		}
 	}
 	
 	string negotiatePreloaderStartup(StartupDetails &details) {

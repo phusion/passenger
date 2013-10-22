@@ -36,6 +36,8 @@
 #define DEFAULT_BACKEND_ACCOUNT_RIGHTS Account::DETACH
 
 
+	#define APACHE2_DOC_URL "http://www.modrails.com/documentation/Users%20guide%20Apache.html"
+
 	#define DEFAULT_ANALYTICS_LOG_GROUP ""
 
 	#define DEFAULT_ANALYTICS_LOG_PERMISSIONS "u=rwx,g=rx,o=rx"
@@ -68,9 +70,13 @@
 
 	#define FEEDBACK_FD 3
 
+	#define INDEX_DOC_URL "http://www.modrails.com/documentation/Users%20guide.html"
+
 	#define MESSAGE_SERVER_MAX_PASSWORD_SIZE 100
 
 	#define MESSAGE_SERVER_MAX_USERNAME_SIZE 100
+
+	#define NGINX_DOC_URL "http://www.modrails.com/documentation/Users%20guide%20Nginx.html"
 
 	#define PASSENGER_VERSION "4.0.20"
 
@@ -80,6 +86,8 @@
 
 	#define PROCESS_SHUTDOWN_TIMEOUT_DISPLAY "1 minute"
 
+	#define PROGRAM_NAME "Phusion Passenger"
+
 	#define SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION 2
 
 	#define SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION 0
@@ -88,7 +96,11 @@
 
 	#define SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION 0
 
+	#define STANDALONE_DOC_URL "http://www.modrails.com/documentation/Users%20guide%20Standalone.html"
+
 	#define STANDALONE_NGINX_CONFIGURE_OPTIONS "--with-cc-opt='-Wno-error' --without-http_fastcgi_module --without-http_scgi_module --without-http_uwsgi_module --with-http_gzip_static_module --with-http_stub_status_module"
+
+	#define SUPPORT_URL "http://www.phusionpassenger.com/support"
 
 
 #endif /* _PASSENGER_CONSTANTS_H */

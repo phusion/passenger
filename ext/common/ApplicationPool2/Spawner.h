@@ -1269,11 +1269,19 @@ protected:
 	}
 	
 	void handleInvalidSpawnResponseType(const string &line, NegotiationDetails &details) {
-		throwAppSpawnException("An error occurred while starting "
-			"the web application. It sent an unknown response type \"" +
-			cEscapeString(line) + "\".",
-			SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-			details);
+		if (line.empty()) {
+			throwAppSpawnException("An error occurred while starting "
+				"the web application. It did not signal successful startup back to "
+				PROGRAM_NAME ".",
+				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+				details);
+		} else {
+			throwAppSpawnException("An error occurred while starting "
+				"the web application. It sent an unknown response type \"" +
+				cEscapeString(line) + "\".",
+				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+				details);
+		}
 	}
 	
 public:

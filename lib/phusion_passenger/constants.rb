@@ -68,6 +68,12 @@ module PhusionPassenger
 
 		# Misc
 		FEEDBACK_FD = 3
+		PROGRAM_NAME = "Phusion Passenger"
+		INDEX_DOC_URL       = "http://www.modrails.com/documentation/Users%20guide.html"
+		APACHE2_DOC_URL     = "http://www.modrails.com/documentation/Users%20guide%20Apache.html"
+		NGINX_DOC_URL       = "http://www.modrails.com/documentation/Users%20guide%20Nginx.html"
+		STANDALONE_DOC_URL  = "http://www.modrails.com/documentation/Users%20guide%20Standalone.html"
+		SUPPORT_URL         = "http://www.phusionpassenger.com/support"
 		STANDALONE_NGINX_CONFIGURE_OPTIONS =
 			"--with-cc-opt='-Wno-error' " <<
 			"--without-http_fastcgi_module " <<

@@ -29,7 +29,6 @@ module PhusionPassenger
 	###### Names and version numbers ######
 	
 	PACKAGE_NAME = 'passenger'
-	PROGRAM_NAME = 'Phusion Passenger'
 	# Run 'rake ext/common/Constants.h' after changing this number.
 	VERSION_STRING = '4.0.20'
 	
@@ -175,11 +174,6 @@ module PhusionPassenger
 	APACHE2_DOC_NAME    = "Users guide Apache.html"
 	NGINX_DOC_NAME      = "Users guide Nginx.html"
 	STANDALONE_DOC_NAME = "Users guide Standalone.html"
-	INDEX_DOC_URL       = "http://www.modrails.com/documentation/Users%20guide.html"
-	APACHE2_DOC_URL     = "http://www.modrails.com/documentation/Users%20guide%20Apache.html"
-	NGINX_DOC_URL       = "http://www.modrails.com/documentation/Users%20guide%20Nginx.html"
-	STANDALONE_DOC_URL  = "http://www.modrails.com/documentation/Users%20guide%20Standalone.html"
-	SUPPORT_URL         = "http://www.phusionpassenger.com/support"
 
 	def self.binaries_ca_cert_path
 		return "#{resources_dir}/oss-binaries.phusionpassenger.com.crt"
