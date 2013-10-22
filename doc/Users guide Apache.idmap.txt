@@ -244,28 +244,29 @@
 
 7.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-130iuhe
 
-# fuzzy
-7.2. OS X: The installer cannot locate MAMP’s Apache	=>	macos-x-the-installer-cannot-locate-mamp-s-apache-or908n
+7.2. Why does the first request take a long time?	=>	why-does-the-first-request-take-a-long-time--12mg452
 
-7.3. Apache reports a "403 Forbidden" error	=>	apache-reports-a-403-forbidden-error-140tb4p
+7.3. OS X: The installer cannot locate MAMP’s Apache	=>	macos-x-the-installer-cannot-locate-mamp-s-apache-or908n
 
-7.4. Static assets such as images and stylesheets aren’t being displayed	=>	static-assets-such-as-images-and-stylesheets-aren-t-being-displayed-uaptpi
+7.4. Apache reports a "403 Forbidden" error	=>	apache-reports-a-403-forbidden-error-140tb4p
 
-7.5. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
+7.5. Static assets such as images and stylesheets aren’t being displayed	=>	static-assets-such-as-images-and-stylesheets-aren-t-being-displayed-uaptpi
 
-7.6. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
+7.6. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
 
-7.7. My Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
+7.7. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
 
-7.8. I’ve deployed my app on SSL, but the app thinks its not on SSL	=>	i-ve-deployed-my-app-on-ssl-but-the-app-thinks-its-not-on-ssl-10rvgnr
+7.8. My Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
 
-7.9. Conflicting Apache modules	=>	conflicting-apache-modules-1uwpixk
+7.9. I’ve deployed my app on SSL, but the app thinks its not on SSL	=>	i-ve-deployed-my-app-on-ssl-but-the-app-thinks-its-not-on-ssl-10rvgnr
 
-7.9.1. mod_userdir	=>	mod-userdir-x5e2te
+7.10. Conflicting Apache modules	=>	conflicting-apache-modules-1uwpixk
 
-7.9.2. MultiViews (mod_negotiation)	=>	multiviews-mod-negotiation--zchfg0
+7.10.1. mod_userdir	=>	mod-userdir-x5e2te
 
-7.9.3. VirtualDocumentRoot	=>	virtualdocumentroot-14cwd7l
+7.10.2. MultiViews (mod_negotiation)	=>	multiviews-mod-negotiation--zchfg0
+
+7.10.3. VirtualDocumentRoot	=>	virtualdocumentroot-14cwd7l
 
 8. Analysis and system maintenance	=>	analysis-and-system-maintenance-qvkwzr
 
@@ -390,29 +391,4 @@
 14.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-478vyt
 
 14.4. Environment variables and sudo	=>	environment-variables-and-sudo-1odzcpz
-
-
-### These sections appear to have been removed. Please check.
-
-7.1. Operating system-specific problems	=>	operating-system-specific-problems-327gbk
-
-7.2. Problems during installation	=>	problems-during-installation-q1vlsu
-
-7.2.1. Ruby development headers aren’t installed	=>	ruby-development-headers-aren-t-installed-1yqrom8
-
-7.2.2. Apache development headers aren’t installed	=>	apache-development-headers-aren-t-installed-x2473y
-
-7.2.3. APR development headers aren’t installed	=>	apr-development-headers-aren-t-installed-13bk976
-
-7.2.4. Phusion Passenger is using the wrong Apache during installation	=>	phusion-passenger-is-using-the-wrong-apache-during-installation-82qnt4
-
-7.2.5. Phusion Passenger is using the wrong Ruby during installation	=>	phusion-passenger-is-using-the-wrong-ruby-during-installation-1nh3zml
-
-7.3. Problems after installation	=>	problems-after-installation-fwd23q
-
-7.3.1. My Rails application works on Mongrel, but not on Phusion Passenger	=>	my-rails-application-works-on-mongrel-but-not-on-phusion-passenger-1f28drx
-
-7.3.2. Phusion Passenger has been compiled against the wrong Apache installation	=>	phusion-passenger-has-been-compiled-against-the-wrong-apache-installation-n74ce0
-
-7.3.3. I get a "403 Forbidden" error	=>	i-get-a-403-forbidden-error-m0rlay
 

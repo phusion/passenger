@@ -9,6 +9,36 @@ Nginx error log file. This is typically located in /var/log/nginx/error.log.
 endif::[]
 Most problems are logged to this file.
 
+If you're using Ruby on Rails, then you should be aware that Phusion Passenger runs your app under the 'production' environment by default, not 'development'. You can change this using the
+ifdef::nginx[]
+<<RailsEnv,rails_env>>
+endif::[]
+ifdef::apache[]
+<<RailsEnv,RailsEnv>>
+endif::[]
+option.
+
+If neither the logs nor this troubleshooting guide can help you, then please check out our <<where_to_get_support,support resources>>.
+
+
+=== Why does the first request take a long time?
+
+**Symptoms**::
+	The first request to your application takes more time than usual. Subsequent requests have the normal speed.
+
+**Cause**::
+	Phusion Passenger starts your application the first time it is accessed, not during web server startup. Some applications can take several seconds to start. If you're using Ruby on Rails, then needing 10 seconds to start your application is normal. On slow or heavily loaded servers, or in case of large and heavy applications, the startup time may be even longer.
+
+**Solution**::
+	Use the
+ifdef::nginx[]
+<<PassengerPreStart,passenger_pre_start>>
+endif::[]
+ifdef::apache[]
+<<PassengerPreStart,PassengerPreStart>>
+endif::[]
+configuration option.
+
 
 ifdef::nginx[]
 === Upon accessing the web app, Nginx reports a "Permission denied" error

@@ -1932,21 +1932,19 @@ include::users_guide_snippets/troubleshooting.txt[]
 
 === OS X: The installer cannot locate MAMP's Apache
 
-.Symptoms
-*******************************************************************************
-The installer finds Apache 2 development headers at `/Applications/MAMP/Library/bin/apxs`.
-However, Apache cannot be found. The installer also outputs the following error:
+**Symptoms**::
+	The installer finds Apache 2 development headers at `/Applications/MAMP/Library/bin/apxs`. However, Apache cannot be found. The installer also outputs the following error:
++
 ------------------------------------
 cannot open /Applications/MAMP/Library/build/config_vars.mk:
 No such file or directory at /Applications/MAMP/Library/bin/apxs line 218.
 ------------------------------------
-*******************************************************************************
 
-Your MAMP installation seems to be broken. In particular, 'config_vars.mk' is missing.
-Please read link:http://forum.mamp.info/viewtopic.php?t=1866[this forum topic] to learn how
-to fix this problem.
+**Cause**::
+	Your MAMP installation seems to be broken. In particular, 'config_vars.mk' is missing.
 
-See also link:http://code.google.com/p/phusion-passenger/issues/detail?id=12[this bug report].
+**Solution**::
+	Please read link:http://forum.mamp.info/viewtopic.php?t=1866[this forum topic] to learn how to fix this problem. See also link:http://code.google.com/p/phusion-passenger/issues/detail?id=12[this bug report].
 
 === Apache reports a "403 Forbidden" error
 

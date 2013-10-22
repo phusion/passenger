@@ -14,6 +14,7 @@ or
 link:http://groups.google.com/group/phusion-passenger[join our discussion forum]
 if it doesn't work on your POSIX-compliant operating system.
 
+[[where_to_get_support]]
 === Where to get support ===
 
 include::where_to_get_support.txt[]
