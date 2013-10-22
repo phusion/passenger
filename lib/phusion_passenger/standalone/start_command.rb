@@ -232,6 +232,7 @@ private
 			opts.on("--temp-dir PATH", String,
 				wrap_desc("Use the given temp dir")) do |value|
 				ENV['TMPDIR'] = value
+				@options[:temp_dir] = value
 			end
 
 			opts.separator ""
@@ -486,7 +487,6 @@ private
 		puts "PID file: #{@options[:pid_file]}"
 		puts "Log file: #{@options[:log_file]}"
 		puts "Environment: #{@options[:env]}"
-
 		puts "Accessible via: #{listen_url}"
 
 		puts
@@ -495,6 +495,7 @@ private
 		else
 			puts "You can stop Phusion Passenger Standalone by pressing Ctrl-C."
 		end
+		puts "Problems? Check #{STANDALONE_DOC_URL}#troubleshooting"
 		puts "==============================================================================="
 	end
 

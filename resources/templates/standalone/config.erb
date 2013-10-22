@@ -45,6 +45,7 @@ http {
         passenger_analytics_log_user <%= current_user %>;
     <% end %>
     <% if debugging? %>passenger_log_level 2;<% end %>
+    <% if @options[:temp_dir] %>passenger_temp_dir '<%= @options[:temp_dir] %>';<% end %>
     <% if @options[:rolling_restarts] %>passenger_rolling_restarts on;<% end %>
     <% if @options[:resist_deployment_errors] %>passenger_resist_deployment_errors on;<% end %>
 
