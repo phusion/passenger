@@ -497,8 +497,43 @@ This option specifies the default Ruby interpreter to use for web apps as well a
 
 This option may occur in the global server configuration. The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
 
+=== Deployment options
+
+[[PassengerEnabled]]
+==== PassengerEnabled <on|off>
+You can set this option to 'off' to completely disable Phusion Passenger for
+a certain location. This is useful if, for example, you want to integrate a PHP
+application into the same virtual host as a Rails application.
+
+Suppose that you have a Rails application in '/apps/foo'. Suppose that you've
+dropped Wordpress -- a blogging application written in PHP -- in
+'/apps/foo/public/wordpress'. You can then configure Phusion Passenger as
+follows:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    <Directory /apps/foo/public/wordpress>
+        PassengerEnabled off
+        AllowOverride all      # <-- Makes Wordpress's .htaccess file work.
+    </Directory>
+</VirtualHost>
+------------------------------------
+
+This way, Phusion Passenger will not interfere with Wordpress.
+
+'PassengerEnabled' may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
 [[PassengerRuby]]
-=== PassengerRuby <filename> ===
+==== PassengerRuby <filename>
 The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby interpreter to use. Similarly, the `PassengerPython` directive is for specifying the Python interpreter.
 
 The relationship between `PassengerDefaultRuby` and `PassengerRuby` is as follows:
@@ -554,14 +589,14 @@ PassengerPython /usr/bin/python2.6
 
 include::users_guide_snippets/rvm_helper_tool.txt[]
 
-=== PassengerPython <filename> ===
+==== PassengerPython <filename>
 :version: 4.0.0
 include::users_guide_snippets/since_version.txt[]
 
 This option allows one to specify the Python interpreter to use. See <<PassengerRuby,PassengerRuby>> for more information. The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
 
 [[PassengerAppRoot]]
-=== PassengerAppRoot <path/to/root> ===
+==== PassengerAppRoot <path/to/root>
 By default, Phusion Passenger assumes that the application's root directory
 is the parent directory of the 'public' directory. This option allows one to
 specify the application's root independently from the DocumentRoot, which
@@ -587,144 +622,7 @@ Example:
 </VirtualHost>
 -----------------------------
 
-[[PassengerSpawnMethod]]
-=== PassengerSpawnMethod <string> ===
-[TIP]
-."What spawn method should I use?"
-=========================================================
-This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
-understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
-
-************************************************
-If your application works on Mongrel or Thin, but not on Phusion Passenger, then set
-`PassengerSpawnMethod` to 'direct'. Otherwise, leave it at 'smart' (the default).
-************************************************
-
-However, we do recommend you to try to understand it. The 'smart' spawn
-method bring many benefits.
-=========================================================
-
-include::users_guide_snippets/passenger_spawn_method.txt[]
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is 'smart'.
-
-[[PassengerLoadShellEnvvars]]
-=== passengerLoadShellEnvvars <on|off> ===
-:version: 4.0.20
-include::users_guide_snippets/since_version.txt[]
-
-Enables or disables the loading of shell environment variables before spawning the application.
-
-If this option is turned on, and the user's shell is `bash`, then applications are loaded by running them with `bash -l -c`. Otherwise, they are loaded by running them directly from the `PassengerHelperAgent` process.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. The default value is 'on'.
-
-[[PassengerEnabled]]
-=== PassengerEnabled <on|off> ===
-You can set this option to 'off' to completely disable Phusion Passenger for
-a certain location. This is useful if, for example, you want to integrate a PHP
-application into the same virtual host as a Rails application.
-
-Suppose that you have a Rails application in '/apps/foo'. Suppose that you've
-dropped Wordpress -- a blogging application written in PHP -- in
-'/apps/foo/public/wordpress'. You can then configure Phusion Passenger as
-follows:
-
-------------------------------------
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /apps/foo/public
-    <Directory /apps/foo/public/wordpress>
-        PassengerEnabled off
-        AllowOverride all      # <-- Makes Wordpress's .htaccess file work.
-    </Directory>
-</VirtualHost>
-------------------------------------
-
-This way, Phusion Passenger will not interfere with Wordpress.
-
-'PassengerEnabled' may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is 'on'.
-
-[[PassengerTempDir]]
-=== PassengerTempDir <directory> ===
-Specifies the directory that Phusion Passenger should use for storing temporary
-files. This includes things such as Unix socket files, buffered file uploads
-(see also <<PassengerUploadBufferDir,PassengerUploadBufferDir>>), etc.
-
-This option may be specified once, in the global server configuration. The
-default temp directory that Phusion Passenger uses is '/tmp'.
-
-This option is especially useful if Apache is not allowed to write to /tmp
-(which is the case on some systems with strict SELinux policies) or if the
-partition that /tmp lives on doesn't have enough disk space.
-
-.Command line tools
-Some Phusion Passenger command line administration tools, such as
-`passenger-status`, must know what Phusion Passenger's temp directory is
-in order to function properly. You can pass the directory through the
-`PASSENGER_TMPDIR` environment variable, or the `TMPDIR` environment variable
-(the former will be used if both are specified).
-
-For example, if you set 'PassengerTempDir' to '/my_temp_dir', then invoke
-`passenger-status` after you've set the `PASSENGER_TMPDIR` or `TMPDIR`
-environment variable, like this:
-
-----------------------------------------------------------
-export PASSENGER_TMPDIR=/my_temp-dir
-sudo -E passenger-status
-# The -E option tells 'sudo' to preserve environment variables.
-----------------------------------------------------------
-
-[[PassengerUploadBufferDir]]
-=== PassengerUploadBufferDir <directory> ===
-Phusion Passenger buffers large file uploads to disk in order prevent slow file
-uploads from blocking web applications. By default, a subdirectory in the
-system's temporary files directory (or a subdirectory in the directory specified
-in <<PassengerTempDir,PassengerTempDir>>, if set) is automatically created for
-storing these buffered file uploads.
-
-This configuration directive allows you to specify a different directory for storing
-buffered file uploads. If you've specified such a directory (as opposed to using
-Phusion Passenger's default) then you *must* ensure that this directory exists.
-
-This configuration directive is also useful if you're using apache2-mpm-itk.
-The buffered file upload directory that Phusion Passenger creates by default has
-very strict permissions: it can only be accessed by the Apache worker processes.
-However, Phusion Passenger assumes that all Apache worker processes are running
-as the same user. apache2-mpm-itk breaks this assumption by running multiple
-Apache worker processes as different users. So if you're using apace2-mpm-itk,
-you should set this option to a directory that is writable by all Apache worker
-processes, such as '/tmp'.
-
-You may specify 'PassengerUploadBufferDir' in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverrides Options` is enabled.
-
-In each place, it may be specified at most once.
-
-=== PassengerRestartDir <directory> ===
+==== PassengerRestartDir <directory>
 As described in the deployment chapters of this document, Phusion Passenger
 checks the file 'tmp/restart.txt' in the applications'
 <<application_root,root directory>> for restarting applications. Sometimes it
@@ -783,7 +681,7 @@ You can prevent this from happening by pointing PassengerRestartDir to a
 directory that's readable by Apache, but only writable by administrators.
 
 [[PassengerRollingRestarts]]
-=== PassengerRollingRestarts <on|off> ===
+==== PassengerRollingRestarts <on|off>
 :version: 3.0.0
 include::users_guide_snippets/enterprise_only.txt[]
 
@@ -823,7 +721,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'off'.
 
-=== PassengerResistDeploymentErrors <on|off> ===
+==== PassengerResistDeploymentErrors <on|off>
 :version: 3.0.0
 include::users_guide_snippets/enterprise_only.txt[]
 
@@ -849,6 +747,52 @@ This option may occur in the following places:
  * In '.htaccess', if `AllowOverride Options` is on.
 
 In each place, it may be specified at most once. The default value is 'off'.
+
+=== Process spawning options
+
+[[PassengerSpawnMethod]]
+==== PassengerSpawnMethod <string>
+[TIP]
+."What spawn method should I use?"
+=========================================================
+This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
+understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
+
+************************************************
+If your application works on Mongrel or Thin, but not on Phusion Passenger, then set
+`PassengerSpawnMethod` to 'direct'. Otherwise, leave it at 'smart' (the default).
+************************************************
+
+However, we do recommend you to try to understand it. The 'smart' spawn
+method bring many benefits.
+=========================================================
+
+include::users_guide_snippets/passenger_spawn_method.txt[]
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is 'smart'.
+
+[[PassengerLoadShellEnvvars]]
+==== PassengerLoadShellEnvvars <on|off>
+:version: 4.0.20
+include::users_guide_snippets/since_version.txt[]
+
+Enables or disables the loading of shell environment variables before spawning the application.
+
+If this option is turned on, and the user's shell is `bash`, then applications are loaded by running them with `bash -l -c`. Otherwise, they are loaded by running them directly from the `PassengerHelperAgent` process.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'on'.
 
 === Security options ===
 
@@ -1828,6 +1772,37 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'off'.
 
+=== Rack and Rails >= 3 specific options ===
+
+[[RackBaseURI]]
+==== RackBaseURI <uri> ====
+Used to specify that the given URI is a Rack application. See
+<<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>> for an example.
+
+It is allowed to specify this option multiple times. Do this to deploy multiple
+Rack applications in different sub-URIs under the same virtual host.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+[[rack_env]]
+==== RackEnv <string> ====
+The given value will be accessible in Rack applications in the `RACK_ENV`
+environment variable. This allows one to define the environment in which
+Rack applications are run, very similar to `RAILS_ENV`.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'production'.
 
 === Classic Ruby on Rails (<= 2.x)-specific options ===
 
@@ -1862,37 +1837,67 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'production'.
 
-=== Rack and Rails >= 3 specific options ===
+=== Advanced options
 
-[[RackBaseURI]]
-==== RackBaseURI <uri> ====
-Used to specify that the given URI is a Rack application. See
-<<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>> for an example.
+[[PassengerTempDir]]
+==== PassengerTempDir <directory>
+Specifies the directory that Phusion Passenger should use for storing temporary
+files. This includes things such as Unix socket files, buffered file uploads
+(see also <<PassengerUploadBufferDir,PassengerUploadBufferDir>>), etc.
 
-It is allowed to specify this option multiple times. Do this to deploy multiple
-Rack applications in different sub-URIs under the same virtual host.
+This option may be specified once, in the global server configuration. The
+default temp directory that Phusion Passenger uses is '/tmp'.
 
-This option may occur in the following places:
+This option is especially useful if Apache is not allowed to write to /tmp
+(which is the case on some systems with strict SELinux policies) or if the
+partition that /tmp lives on doesn't have enough disk space.
+
+.Command line tools
+Some Phusion Passenger command line administration tools, such as
+`passenger-status`, must know what Phusion Passenger's temp directory is
+in order to function properly. You can pass the directory through the
+`PASSENGER_TMPDIR` environment variable, or the `TMPDIR` environment variable
+(the former will be used if both are specified).
+
+For example, if you set 'PassengerTempDir' to '/my_temp_dir', then invoke
+`passenger-status` after you've set the `PASSENGER_TMPDIR` or `TMPDIR`
+environment variable, like this:
+
+----------------------------------------------------------
+export PASSENGER_TMPDIR=/my_temp-dir
+sudo -E passenger-status
+# The -E option tells 'sudo' to preserve environment variables.
+----------------------------------------------------------
+
+[[PassengerUploadBufferDir]]
+==== PassengerUploadBufferDir <directory>
+Phusion Passenger buffers large file uploads to disk in order prevent slow file
+uploads from blocking web applications. By default, a subdirectory in the
+system's temporary files directory (or a subdirectory in the directory specified
+in <<PassengerTempDir,PassengerTempDir>>, if set) is automatically created for
+storing these buffered file uploads.
+
+This configuration directive allows you to specify a different directory for storing
+buffered file uploads. If you've specified such a directory (as opposed to using
+Phusion Passenger's default) then you *must* ensure that this directory exists.
+
+This configuration directive is also useful if you're using apache2-mpm-itk.
+The buffered file upload directory that Phusion Passenger creates by default has
+very strict permissions: it can only be accessed by the Apache worker processes.
+However, Phusion Passenger assumes that all Apache worker processes are running
+as the same user. apache2-mpm-itk breaks this assumption by running multiple
+Apache worker processes as different users. So if you're using apace2-mpm-itk,
+you should set this option to a directory that is writable by all Apache worker
+processes, such as '/tmp'.
+
+You may specify 'PassengerUploadBufferDir' in the following places:
 
  * In the global server configuration.
  * In a virtual host configuration block.
  * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
+ * In '.htaccess', if `AllowOverrides Options` is enabled.
 
-[[rack_env]]
-==== RackEnv <string> ====
-The given value will be accessible in Rack applications in the `RACK_ENV`
-environment variable. This allows one to define the environment in which
-Rack applications are run, very similar to `RAILS_ENV`.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. The default value is 'production'.
+In each place, it may be specified at most once.
 
 === Deprecated or removed options ===
 

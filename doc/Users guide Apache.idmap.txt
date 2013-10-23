@@ -122,123 +122,129 @@
 
 6.2. PassengerDefaultRuby <filename>	=>	passengerdefaultruby-and-passengerruby-7zblp8
 
-6.3. PassengerRuby <filename>	=>	passengerruby-filename--1r3fv73
+6.3. Deployment options	=>	deployment-options-1unzrll
 
-6.4. PassengerPython <filename>	=>	passengerpython-filename--1ssesv3
+6.3.1. PassengerEnabled <on|off>	=>	passengerenabled-on-off--74rzth
 
-6.5. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
+6.3.2. PassengerRuby <filename>	=>	passengerruby-filename--1r3fv73
 
-6.6. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
+6.3.3. PassengerPython <filename>	=>	passengerpython-filename--1ssesv3
 
-6.7. passengerLoadShellEnvvars <on|off>	=>	passengerloadshellenvvars-on-off--1290yz1
+6.3.4. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
 
-6.8. PassengerEnabled <on|off>	=>	passengerenabled-on-off--74rzth
+6.3.5. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
 
-6.9. PassengerTempDir <directory>	=>	passengertempdir-directory--68h2ng
+6.3.6. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
 
-6.10. PassengerUploadBufferDir <directory>	=>	passengeruploadbufferdir-directory--kdr8at
+6.3.7. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
 
-6.11. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
+6.4. Process spawning options	=>	process-spawning-options-v2vscm
 
-6.12. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+6.4.1. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
 
-6.13. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
+6.4.2. PassengerLoadShellEnvvars <on|off>	=>	passengerloadshellenvvars-on-off--1290yz1
 
-6.14. Security options	=>	security-options-1pb75ho
+6.5. Security options	=>	security-options-1pb75ho
 
-6.14.1. PassengerUserSwitching <on|off>	=>	passengeruserswitching
+6.5.1. PassengerUserSwitching <on|off>	=>	passengeruserswitching
 
-6.14.2. PassengerUser <username>	=>	passengeruser
+6.5.2. PassengerUser <username>	=>	passengeruser
 
-6.14.3. PassengerGroup <group name>	=>	passengergroup
+6.5.3. PassengerGroup <group name>	=>	passengergroup
 
-6.14.4. PassengerDefaultUser <username>	=>	passengerdefaultuser
+6.5.4. PassengerDefaultUser <username>	=>	passengerdefaultuser
 
-6.14.5. PassengerDefaultGroup <group name>	=>	passengerdefaultgroup
+6.5.5. PassengerDefaultGroup <group name>	=>	passengerdefaultgroup
 
-6.14.6. PassengerFriendlyErrorPages <on|off>	=>	passengerfriendlyerrorpages
+6.5.6. PassengerFriendlyErrorPages <on|off>	=>	passengerfriendlyerrorpages
 
-6.15. Resource control and optimization options	=>	resource-control-and-optimization-options-zu2f7u
+6.6. Resource control and optimization options	=>	resource-control-and-optimization-options-zu2f7u
 
-6.15.1. PassengerMaxPoolSize <integer>	=>	passengermaxpoolsize-integer--am64q8
+6.6.1. PassengerMaxPoolSize <integer>	=>	passengermaxpoolsize-integer--am64q8
 
-6.15.2. PassengerMinInstances <integer>	=>	passengermininstances-integer--wegq6b
+6.6.2. PassengerMinInstances <integer>	=>	passengermininstances-integer--wegq6b
 
-6.15.3. PassengerMaxInstances <integer>	=>	passengermaxinstances
+6.6.3. PassengerMaxInstances <integer>	=>	passengermaxinstances
 
-6.15.4. PassengerMaxInstancesPerApp <integer>	=>	passengermaxinstancesperapp
+6.6.4. PassengerMaxInstancesPerApp <integer>	=>	passengermaxinstancesperapp
 
-6.15.5. PassengerPoolIdleTime <integer>	=>	passengerpoolidletime-integer--a3gunq
+6.6.5. PassengerPoolIdleTime <integer>	=>	passengerpoolidletime-integer--a3gunq
 
-6.15.6. PassengerMaxPreloaderIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
+6.6.6. PassengerMaxPreloaderIdleTime <integer>	=>	railsappspawneridletime-integer--1awgog1
 
-6.15.7. PassengerStartTimeout <seconds>	=>	passengerstarttimeout-seconds--ihnfku
+6.6.7. PassengerStartTimeout <seconds>	=>	passengerstarttimeout-seconds--ihnfku
 
-6.15.8. PassengerConcurrencyModel <process|thread>	=>	passengerconcurrencymodel-process-thread--1eipofj
+6.6.8. PassengerConcurrencyModel <process|thread>	=>	passengerconcurrencymodel-process-thread--1eipofj
 
-6.15.9. PassengerThreadCount <number>	=>	passengerthreadcount-number--10jl64a
+6.6.9. PassengerThreadCount <number>	=>	passengerthreadcount-number--10jl64a
 
-6.15.10. PassengerMaxRequests <integer>	=>	passengermaxrequests-integer--17qkw9n
+6.6.10. PassengerMaxRequests <integer>	=>	passengermaxrequests-integer--17qkw9n
 
-6.15.11. PassengerMaxRequestTime <seconds>	=>	passengermaxrequesttime-seconds--127v1i2
+6.6.11. PassengerMaxRequestTime <seconds>	=>	passengermaxrequesttime-seconds--127v1i2
 
-6.15.12. PassengerMemoryLimit <integer>	=>	passengermemorylimit-integer--18irza1
+6.6.12. PassengerMemoryLimit <integer>	=>	passengermemorylimit-integer--18irza1
 
-6.15.13. PassengerStatThrottleRate <integer>	=>	passengerstatthrottlerate-integer--1dcfda3
+6.6.13. PassengerStatThrottleRate <integer>	=>	passengerstatthrottlerate-integer--1dcfda3
 
-6.15.14. PassengerPreStart <url>	=>	passengerprestart-url--1utb57k
+6.6.14. PassengerPreStart <url>	=>	passengerprestart-url--1utb57k
 
-6.15.15. PassengerHighPerformance <on|off>	=>	passengerhighperformance-on-off--nvfa86
+6.6.15. PassengerHighPerformance <on|off>	=>	passengerhighperformance-on-off--nvfa86
 
-6.16. Connection handling options	=>	connection-handling-options-1k3zd1a
+6.7. Connection handling options	=>	connection-handling-options-1k3zd1a
 
-6.16.1. PassengerBufferResponse <on|off>	=>	passengerbufferresponse-on-off--1y7ilka
+6.7.1. PassengerBufferResponse <on|off>	=>	passengerbufferresponse-on-off--1y7ilka
 
-6.16.2. passenger_max_request_queue_size <number>	=>	passenger-max-request-queue-size-number--1f1uocd
+6.7.2. PassengerMaxRequestQueueSize <number>	=>	passenger-max-request-queue-size-number--1f1uocd
 
-6.17. Compatibility options	=>	compatibility-options-8jve5a
+6.8. Compatibility options	=>	compatibility-options-8jve5a
 
-6.17.1. PassengerResolveSymlinksInDocumentRoot <on|off>	=>	passengerresolvesymlinksindocumentroot-on-off--1r0qcp8
+6.8.1. PassengerResolveSymlinksInDocumentRoot <on|off>	=>	passengerresolvesymlinksindocumentroot-on-off--1r0qcp8
 
-6.17.2. PassengerAllowEncodedSlashes <on|off>	=>	passengerallowencodedslashes-on-off--1y3s1ww
+6.8.2. PassengerAllowEncodedSlashes <on|off>	=>	passengerallowencodedslashes-on-off--1y3s1ww
 
-6.18. Logging and debugging options	=>	logging-and-debugging-options-el2cuc
+6.9. Logging and debugging options	=>	logging-and-debugging-options-el2cuc
 
-6.18.1. PassengerLogLevel <integer>	=>	passengerloglevel-integer--s3kbil
+6.9.1. PassengerLogLevel <integer>	=>	passengerloglevel-integer--s3kbil
 
-6.18.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1wjm2j1
+6.9.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1wjm2j1
 
-6.18.3. PassengerDebugger <on|off>	=>	passengerdebugger-on-off--19you7e
+6.9.3. PassengerDebugger <on|off>	=>	passengerdebugger-on-off--19you7e
 
-6.19. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
+6.10. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
 
-6.19.1. RailsBaseURI <uri>	=>	railsbaseuri-uri--1txrw3k
+6.10.1. RackBaseURI <uri>	=>	rackbaseuri-uri--1to24pj
 
-6.19.2. RailsEnv <string>	=>	railsenv-string--1b0xxvu
+6.10.2. RackEnv <string>	=>	rackenv-string--vve9py
 
-6.20. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
+6.11. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
 
-6.20.1. RackBaseURI <uri>	=>	rackbaseuri-uri--1to24pj
+6.11.1. RailsBaseURI <uri>	=>	railsbaseuri-uri--1txrw3k
 
-6.20.2. RackEnv <string>	=>	rackenv-string--vve9py
+6.11.2. RailsEnv <string>	=>	railsenv-string--1b0xxvu
 
-6.21. Deprecated or removed options	=>	deprecated-options-pm9m57
+6.12. Advanced options	=>	advanced-options-1ab1jkq
 
-6.21.1. RailsRuby	=>	railsruby-ht09ei
+6.12.1. PassengerTempDir <directory>	=>	passengertempdir-directory--68h2ng
 
-6.21.2. RailsUserSwitching	=>	railsuserswitching-1npx8y4
+6.12.2. PassengerUploadBufferDir <directory>	=>	passengeruploadbufferdir-directory--kdr8at
 
-6.21.3. RailsDefaultUser	=>	railsdefaultuser-19j7n3m
+6.13. Deprecated or removed options	=>	deprecated-options-pm9m57
 
-6.21.4. RailsAllowModRewrite	=>	railsallowmodrewrite-1vkziro
+6.13.1. RailsRuby	=>	railsruby-ht09ei
 
-6.21.5. RailsSpawnMethod	=>	railsspawnmethod-1aljgpa
+6.13.2. RailsUserSwitching	=>	railsuserswitching-1npx8y4
 
-6.21.6. RailsAutoDetect, RackAutoDetect and WsgiAutoDetect	=>	railsautodetect-rackautodetect-and-wsgiautodetect-1qgakzs
+6.13.3. RailsDefaultUser	=>	railsdefaultuser-19j7n3m
 
-6.21.7. RailsAppSpawnerIdleTime	=>	railsappspawneridletime-heh41r
+6.13.4. RailsAllowModRewrite	=>	railsallowmodrewrite-1vkziro
 
-6.21.8. RailsFrameworkSpawnerIdleTime	=>	railsframeworkspawneridletime-adcf9k
+6.13.5. RailsSpawnMethod	=>	railsspawnmethod-1aljgpa
+
+6.13.6. RailsAutoDetect, RackAutoDetect and WsgiAutoDetect	=>	railsautodetect-rackautodetect-and-wsgiautodetect-1qgakzs
+
+6.13.7. RailsAppSpawnerIdleTime	=>	railsappspawneridletime-heh41r
+
+6.13.8. RailsFrameworkSpawnerIdleTime	=>	railsframeworkspawneridletime-adcf9k
 
 7. Troubleshooting	=>	troubleshooting-2ihihi
 
