@@ -14,13 +14,13 @@ Phusion Passenger has several integration modes, each mode with its own document
 
 In this mode, Phusion Passenger integrates directly into Nginx as an Nginx module. You operate Phusion Passenger mostly through Nginx and through Nginx configuration files. The Nginx integration mode is, along with the Standalone mode, highly optimized for performance.
 
-link:Users%20Guide%20Nginx.html[**Read the documentation for the Nginx integration mode >>**]
+link:Users%20guide%20Nginx.html[**Read the documentation for the Nginx integration mode >>**]
 
 === Apache integration mode
 
 In this mode, Phusion Passenger integrates directly into Apache as an Apache module. You operate Phusion Passenger mostly through Apache and through Apache configuration files.
 
-link:Users%20Guide%20Apache.html[**Read the documentation for the Apache integration mode >>**]
+link:Users%20guide%20Apache.html[**Read the documentation for the Apache integration mode >>**]
 
 === Standalone mode
 
@@ -32,16 +32,16 @@ In this mode, Phusion Passenger operates as a fully-featured, secure standalone 
 
 Along with the Nginx mode, the Standalone mode is highly optimized for performance.
 
-link:Users%20Guide%20Standalone.html[**Read the documentation for the Standalone mode >>**]
+link:Users%20guide%20Standalone.html[**Read the documentation for the Standalone mode >>**]
 
 [[installation]]
 == Installation and upgrade
 
 Please refer to:
 
- * link:Users%20Guide%20Nginx.html#installation[**Nginx** mode installation & upgrade]
- * link:Users%20Guide%20Apache.html#installation[**Apache** mode installation & upgrade]
- * link:Users%20Guide%20Standalone.html#installation[**Standalone** mode installation & upgrade]
+ * link:Users%20guide%20Nginx.html#installation[**Nginx** mode installation & upgrade]
+ * link:Users%20guide%20Apache.html#installation[**Apache** mode installation & upgrade]
+ * link:Users%20guide%20Standalone.html#installation[**Standalone** mode installation & upgrade]
 
 [[support]]
 == Where to get support
