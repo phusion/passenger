@@ -2,20 +2,13 @@
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-Phusion Passenger Standalone is a web server that allows one to run Ruby web applications.
-Here are some of the highlights:
+link:https://www.phusionpassenger.com/[Phusion Passenger] is a web server and application server, designed to be fast, robust and lightweight. It runs your web apps with the least amount of hassle by taking care of almost all administrative heavy lifting for you. Advanced administration tools allow you to gain deep insight into your web applications' operations and to keep your servers healthy. Phusion Passenger is polyglot by design, and currently supports Ruby (Rack), Python (WSGI) and Node.js.
 
-- Unlike Phusion Passenger for Apache and Phusion Passenger for Nginx, Phusion Passenger
-  Standalone does not require an external web server, it is its own and therefore
-  extremely easy to get started.
-- It is powered by an Nginx core. This allows it to serve static files at blazing speeds,
-  makes it secure enough to be directly attached to port 80, and allows it to handle slow
-  clients. You don't need to have Nginx already installed.
-- Automatically spawns and shuts down application processes. One Phusion Passenger
-  Standalone instance can therefore handle multiple simultaneous connections and handles
-  resource management for you. Crashing application processes are automatically restarted.
-- Can listen on a Unix socket, for use in reverse proxy setups.
+In the Standalone mode, Phusion Passenger operates as a fully-featured, secure standalone HTTP server. You do not need to have an existing web server like Apache or Nginx. This mode is ideal...
 
+ * ...if you are not familiar with Apache or Nginx
+ * ...when you want to quickly start up a server without editing configuration files (e.g. during development)
+ * ...or when you want to decouple the web server from the application server, by setting up reverse proxies.
 
 == Support information
 
@@ -36,14 +29,40 @@ Go to your application's root directory, and run:
 passenger start
 ------------------------------
 
-This will start Phusion Passenger on port 3000. If you want to run it on a different port,
-use the `-p` option, e.g.:
+== Configuration
 
-------------------------------
-passenger start -p 8000
-------------------------------
+=== Command line options
+
+Most configuration is done by customizing the arguments passed to the `passenger` command. The most important ones are:
+
+`--port NUMBER`::
+	The port number that Phusion Passenger should listen on. Defaults to 3000.
+`--environment NAME`::
+	Customizes the value of the `RAILS_ENV`, `RACK_ENV` and `PASSENGER_ENV` environment variable. The default is "development".
+`--max-pool-size NUMBER`::
+	The maximum number of application processes to run. The maximum number that you can run depends on the amount of memory your server has. The article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's concurrency settings] explains how you can infer a good number for this option.
+`--min-instances NUMBER`::
+	If you don't want the number of application processes to scale dynamically, then use this option to set it to a value equal to `--max-pool-size`.
+`--spawn-method NAME`::
+	When set to "smart" (the default), Phusion Passenger preloads your app and utilizes copy-on-write in order to save memory. You can disable this by setting this option to "direct". Preloading is only supported for Ruby apps. For apps written in other languages, it is as if "direct" is always used.
+`--no-friendly-error-pages`::
+	If your app fails to start, Phusion Passenger will tell you by showing a friendly error page in the browser. This option disables it.
 
 See `--help` for all available options.
+
+=== Advanced configuration
+
+Phusion Passenger Standalone is built on the same technology that powers link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx], so any configuration option supported by Phusion Passenger for Nginx can be applied to Standalone as well. You can do this by editing the Standalone configuration template directly.
+
+First, go to the directory where Phusion Passenger is installed:
+
+-------------------------------------
+cd $(passenger-config --root)
+-------------------------------------
+
+Then open the file `resources/templates/standalone/config.erb`.
+
+Please note that changes to this file only last until you reinstall or upgrade Phusion Passenger. We are currently working on a mechanism for permanently editing the configuration file.
 
 
 [[troubleshooting]]
