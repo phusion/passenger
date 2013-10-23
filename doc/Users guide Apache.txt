@@ -1685,7 +1685,7 @@ if responses can be huge. Because entire responses are buffered in memory when t
 =====================================================
 
 [[PassengerMaxRequestQueueSize]]
-==== passenger_max_request_queue_size <number> ====
+==== PassengerMaxRequestQueueSize <number> ====
 :version: 4.0.15
 include::users_guide_snippets/since_version.txt[]
 
