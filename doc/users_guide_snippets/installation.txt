@@ -65,44 +65,56 @@ Packages are available for the x86 and x86_64 architectures. Our policy is to su
 
 ==== Adding our APT repository
 
-Packages are signed by "Phusion Automated Software Signing (auto-software-signing@phusion.nl)", fingerprint 1637 8A33 A6EF 1676 2922 526E 561F 9B9C AC40 B2F7. Install our PGP key:
-
+1. Install our PGP key. Packages are signed by "Phusion Automated Software Signing (auto-software-signing@phusion.nl)", fingerprint 1637 8A33 A6EF 1676 2922 526E 561F 9B9C AC40 B2F7.
++
 --------------------------------------------------------------
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7
 --------------------------------------------------------------
 
-Our APT repository is stored on an HTTPS server so you may need to add HTTPS support for APT:
-
+2. Add HTTPS support for APT. Our APT repository is stored on an HTTPS server.
++
 --------------------------------------------------------------
 sudo apt-get install apt-transport-https
 --------------------------------------------------------------
 
-Next, create a file `/etc/apt/sources.list.d/passenger.list` and insert one of the following lines, depending on your distribution.
-
-Phusion Passenger open source:
-
+3. Create a file `/etc/apt/sources.list.d/passenger.list` and insert one of the following lines, depending on your distribution.
++
+**Open source**:::
++
+[source,sh]
 --------------------------------------------------------------
-deb https://oss-binaries.phusionpassenger.com/apt/passenger lucid main
-deb https://oss-binaries.phusionpassenger.com/apt/passenger precise main
+# Ubuntu 13.10
 deb https://oss-binaries.phusionpassenger.com/apt/passenger saucy main
-deb https://oss-binaries.phusionpassenger.com/apt/passenger squeeze main
+# Ubuntu 12.04
+deb https://oss-binaries.phusionpassenger.com/apt/passenger precise main
+# Ubuntu 10.04
+deb https://oss-binaries.phusionpassenger.com/apt/passenger lucid main
+# Debian 7
 deb https://oss-binaries.phusionpassenger.com/apt/passenger wheezy main
+# Debian 6
+deb https://oss-binaries.phusionpassenger.com/apt/passenger squeeze main
 --------------------------------------------------------------
-
-Phusion Passenger Enterprise:
-
++
+**Enterprise**:::
++
+[source,sh]
 --------------------------------------------------------------
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt lucid main
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt precise main
+# Ubuntu 13.10
 deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt saucy main
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt squeeze main
+# Ubuntu 12.04
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt precise main
+# Ubuntu 10.04
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt lucid main
+# Debian 7
 deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt wheezy main
+# Debian 6
+deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt squeeze main
 --------------------------------------------------------------
-
++
 Please replace 'YOUR_ORDER_REFERENCE' and 'YOUR_PASSWORD' with your link:https://www.phusionpassenger.com/orders[Customer Area] login credentials.
 
-After creating `/etc/apt/sources.list.d/passenger.list`, run:
-
+4. Secure `passenger.list` and update your APT cache:
++
 --------------------------------------------------------------
 sudo chown root: /etc/apt/sources.list.d/passenger.list
 sudo chmod 600 /etc/apt/sources.list.d/passenger.list
