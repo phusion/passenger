@@ -110,7 +110,10 @@ public:
 			return key;
 		}
 	};
-	
+
+	typedef map<string, string>::iterator Iterator;
+	typedef map<string, string>::const_iterator ConstIterator;
+
 	/**
 	 * Populates a VariantMap from the data in <em>argv</em>, which
 	 * consists of <em>argc</em> elements.
@@ -413,7 +416,23 @@ public:
 		}
 		writeArrayMessage(fd, args);
 	}
-	
+
+	Iterator begin() {
+		return store.begin();
+	}
+
+	ConstIterator begin() const {
+		return store.begin();
+	}
+
+	Iterator end() {
+		return store.end();
+	}
+
+	ConstIterator end() const {
+		return store.end();
+	}
+
 	string inspect() const {
 		map<string, string>::const_iterator it;
 		map<string, string>::const_iterator end = store.end();

@@ -30,6 +30,8 @@
 #include <boost/foreach.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <sys/select.h>
 #include <sys/types.h>
@@ -425,6 +427,85 @@ inferDefaultGroup(const string &defaultUser) {
 	return getGroupName(userEntry->pw_gid);
 }
 
+static vector< pair<string, string> >
+agentsOptionsToEnvVars(const VariantMap &agentsOptions) {
+	vector< pair<string, string> > result;
+	VariantMap::ConstIterator it, end = agentsOptions.end();
+
+	result.reserve(agentsOptions.size());
+	for (it = agentsOptions.begin(); it != end; it++) {
+		result.push_back(make_pair("passenger_" + it->first, it->second));
+	}
+
+	return result;
+}
+
+static void
+setEnvVarsFromVector(const vector< pair<string, string> > &envvars) {
+	vector< pair<string, string> >::const_iterator it;
+
+	for (it = envvars.begin(); it != envvars.end(); it++) {
+		setenv(it->first.c_str(), it->second.c_str(), 1);
+	}
+}
+
+static bool
+runHookScript(const char *name) {
+	TRACE_POINT();
+	string value = agentsOptions.get(string("hook_") + name, false);
+	if (value.empty()) {
+		return true;
+	}
+
+	vector< pair<string, string> > envvars = agentsOptionsToEnvVars(agentsOptions);
+	pid_t pid;
+	int e, status;
+
+	P_INFO("Running " << name << " hook script: " << value);
+
+	pid = fork();
+	if (pid == 0) {
+		resetSignalHandlersAndMask();
+		disableMallocDebugging();
+		closeAllFileDescriptors(2);
+		setEnvVarsFromVector(envvars);
+
+		execlp(value.c_str(), value.c_str(), (const char * const) 0);
+		e = errno;
+		fprintf(stderr, "*** ERROR: Cannot execute %s hook script %s: %s (errno=%d)\n",
+			name, value.c_str(), strerror(e), e);
+		fflush(stderr);
+		_exit(1);
+		return true; // Never reached.
+
+	} else if (pid == -1) {
+		e = errno;
+		P_ERROR("Cannot fork a process for hook script " << value <<
+			": " << strerror(e) << " (errno=" << e << ")");
+		return false;
+
+	} else if (waitpid(pid, &status, 0) == -1) {
+		e = errno;
+		P_ERROR("Unable to wait for hook script " << value <<
+			" (PID " << pid << "): " << strerror(e) << " (errno=" <<
+			e << ")");
+		return false;
+
+	} else {
+		P_INFO("Hook script " << value << " (PID " << pid <<
+			") exited with status " << WEXITSTATUS(status));
+		return WEXITSTATUS(status) == 0;
+	}
+}
+
+static void
+runHookScriptAndThrowOnError(const char *name) {
+	TRACE_POINT();
+	if (!runHookScript(name)) {
+		throw RuntimeException(string("Hook script ") + name + " failed");
+	}
+}
+
 static void
 initializeBareEssentials(int argc, char *argv[]) {
 	/*
@@ -555,6 +636,7 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &ser
 		defaultGroup, webServerWorkerUid, webServerWorkerGid);
 	agentsOptions.set("server_instance_dir", wo->serverInstanceDir->getPath());
 	agentsOptions.setInt("generation_number", wo->generation->getNumber());
+	agentsOptions.set("generation_path", wo->generation->getPath());
 
 	UPDATE_TRACE_POINT();
 	serverInstanceDirToucher = boost::make_shared<ServerInstanceDirToucher>(wo);
@@ -660,6 +742,8 @@ main(int argc, char *argv[]) {
 		maybeSetsid();
 		initializeWorkingObjects(wo, serverInstanceDirToucher);
 		initializeAgentWatchers(wo, watchers);
+		UPDATE_TRACE_POINT();
+		runHookScriptAndThrowOnError("before_watchdog_initialization");
 	} catch (const std::exception &e) {
 		writeArrayMessage(FEEDBACK_FD,
 			"Watchdog startup error",
@@ -675,6 +759,8 @@ main(int argc, char *argv[]) {
 		beginWatchingAgents(wo, watchers);
 		reportAgentsInformation(wo, watchers);
 		P_INFO("All Phusion Passenger agents started!");
+		UPDATE_TRACE_POINT();
+		runHookScriptAndThrowOnError("after_watchdog_initialization");
 		
 		UPDATE_TRACE_POINT();
 		this_thread::disable_interruption di;
@@ -690,16 +776,19 @@ main(int argc, char *argv[]) {
 			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all agents...");
 		}
 		UPDATE_TRACE_POINT();
+		runHookScriptAndThrowOnError("after_watchdog_shutdown");
+		UPDATE_TRACE_POINT();
 		AgentWatcher::stopWatching(watchers);
 		if (exitGracefully) {
 			UPDATE_TRACE_POINT();
 			cleanupAgentsInBackground(wo, watchers, argv);
-			return 0;
 		} else {
 			UPDATE_TRACE_POINT();
 			forceAllAgentsShutdown(watchers);
-			return 1;
 		}
+		UPDATE_TRACE_POINT();
+		runHookScriptAndThrowOnError("after_watchdog_shutdown");
+		return exitGracefully ? 0 : 1;
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
 		return 1;
