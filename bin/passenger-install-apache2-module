@@ -37,6 +37,7 @@ ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 
 require 'optparse'
 require 'stringio'
+require 'phusion_passenger/constants'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/apache_detector'
@@ -132,6 +133,15 @@ private
 			detector.detect_all
 			detector.report
 			@apache2 = detector.result_for(PlatformInfo.apxs2)
+			if @apache2.nil?
+				# Yes this can happen (see https://groups.google.com/forum/#!topic/phusion-passenger/JcUJOBzILB4)
+				# but I have no idea how and why. I need people who can help me reproduce this.
+				# Until then, let's output an error.
+				raise "An internal error occurred. No information detected for #{PlatformInfo.apxs2} " +
+					"(@apache2 is nil). Please contact this program's authors for support, and please " +
+					"attach the full output of this installer, as well as the full output of the command " +
+					"'passenger-config --detect-apache2'."
+			end
 			if detector.results.size > 1
 				other_installs = detector.results - [@apache2]
 				render_template 'apache2/multiple_apache_installations_detected',

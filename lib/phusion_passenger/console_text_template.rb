@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -30,12 +30,14 @@ class ConsoleTextTemplate
 	def initialize(input, options = {})
 		@buffer = ''
 		if input[:file]
-			data = File.read("#{PhusionPassenger.resources_dir}/templates/#{input[:file]}.txt.erb")
+			filename = "#{PhusionPassenger.resources_dir}/templates/#{input[:file]}.txt.erb"
+			data = File.read(filename)
 		else
 			data = input[:text]
 		end
 		@template = ERB.new(Utils::AnsiColors.ansi_colorize(data),
 			nil, '-', '@buffer')
+		@template.filename = filename if filename
 		options.each_pair do |name, value|
 			self[name] = value
 		end
