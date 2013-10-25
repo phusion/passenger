@@ -63,6 +63,7 @@ If you use these packages to install Phusion Passenger then you do not need to r
 
 Packages are available for the x86 and x86_64 architectures. Our policy is to support all Ubuntu LTS releases that are still supported by Canonical, plus the latest non-LTS Ubuntu release, plus all Debian releases that are still supported by Debian.
 
+[[install_add_apt_repo]]
 ==== Adding our APT repository
 
 1. Install our PGP key. Packages are signed by "Phusion Automated Software Signing (auto-software-signing@phusion.nl)", fingerprint 1637 8A33 A6EF 1676 2922 526E 561F 9B9C AC40 B2F7.
@@ -125,25 +126,30 @@ sudo apt-get update
 
 **Open source**::
 +
+1. <<install_add_apt_repo,Add our APT repository.>>
 ifdef::nginx[]
-1. Install the packages:
+2. Install the packages:
 +
 --------------------------------------------------------------
 sudo apt-get install nginx-full passenger
 --------------------------------------------------------------
-2. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
-3. Restart Nginx:
+3. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
+4. Restart Nginx:
 +
 --------------------------------------------------------------
 sudo service nginx restart
 --------------------------------------------------------------
 endif::[]
 ifdef::apache[]
+2. Install the package:
++
 --------------------------------------------------------------
 sudo apt-get install libapache2-mod-passenger
 --------------------------------------------------------------
 endif::[]
 ifdef::standalone[]
+2. Install the package:
++
 --------------------------------------------------------------
 sudo apt-get install passenger
 --------------------------------------------------------------
@@ -152,14 +158,15 @@ endif::[]
 **Enterprise**::
 +
 1. Download your license key from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
-2. Install the packages:
+2. <<install_add_apt_repo,Add our APT repository.>>
+3. Install the packages:
 +
 ifdef::nginx[]
 --------------------------------------------------------------
 sudo apt-get install nginx-full passenger-enterprise
 --------------------------------------------------------------
-3. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
-4. Restart Nginx:
+4. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
+5. Restart Nginx:
 +
 --------------------------------------------------------------
 sudo service nginx restart
