@@ -83,7 +83,8 @@ task 'debian:orig_tarball' => Packaging::PREGENERATED_FILES do
 		sh "mkdir -p #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"
 		recursive_copy_files(DEBIAN_ORIG_TARBALL_FILES.call, "#{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}")
 		sh "cd #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION} && tar xzf #{local_nginx_tarball}"
-		sh "cd #{PKG_DIR} && tar -c #{DEBIAN_NAME}_#{PACKAGE_VERSION} | gzip --best > #{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz"
+		sh "cd #{PKG_DIR} && find #{DEBIAN_NAME}_#{PACKAGE_VERSION} -print0 | xargs -0 touch -d '2013-10-27 00:00:00 UTC'"
+		sh "cd #{PKG_DIR} && tar -c #{DEBIAN_NAME}_#{PACKAGE_VERSION} | gzip --no-name --best > #{DEBIAN_NAME}_#{PACKAGE_VERSION}.orig.tar.gz"
 	end
 end
 
