@@ -9,6 +9,13 @@
 	export USE_CCACHE=1
 #endif
 
+# Speed up ccache (reduce I/O) by lightly compressing things.
+# Always set these variables because pbuilder uses ccache transparently.
+CCACHE_COMPRESS=1
+export CCACHE_COMPRESS
+CCACHE_COMPRESS_LEVEL=3
+export CCACHE_COMPRESS_LEVEL
+
 %:
 	dh $@
 
