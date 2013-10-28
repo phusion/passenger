@@ -360,7 +360,7 @@ public
 	def self.find_all_commands(name)
 		search_dirs = ENV['PATH'].to_s.split(File::PATH_SEPARATOR)
 		search_dirs.concat(%w(/bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin))
-		["/opt/*/bin", "/usr/local/*/bin"].each do |glob|
+		["/opt/*/bin", "/opt/*/sbin", "/usr/local/*/bin", "/usr/local/*/sbin"].each do |glob|
 			search_dirs.concat(Dir[glob])
 		end
 		search_dirs.delete("")
