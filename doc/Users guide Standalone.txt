@@ -62,6 +62,8 @@ cd $(passenger-config --root)
 
 Then open the file `resources/templates/standalone/config.erb`.
 
+NOTE: If you installed Phusion Passenger using the Debian or Ubuntu packages, then the filename is `/usr/share/passenger/templates/standalone/config.erb` or `/usr/share/passenger-enterprise/templates/standalone/config.erb`.
+
 Please note that changes to this file only last until you reinstall or upgrade Phusion Passenger. We are currently working on a mechanism for permanently editing the configuration file.
 
 
