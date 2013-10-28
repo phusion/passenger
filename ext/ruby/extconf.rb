@@ -40,4 +40,13 @@ have_func('rb_thread_io_blocking_region')
 
 with_cflags($CFLAGS) do
 	create_makefile('passenger_native_support')
+	if RUBY_PLATFORM =~ /solaris/
+		# Fix syntax error in Solaris /usr/ccs/bin/make.
+		# https://code.google.com/p/phusion-passenger/issues/detail?id=999
+		makefile = File.read("Makefile")
+		makefile.sub!(/^ECHO = .*/, "ECHO = echo")
+		File.open("Makefile", "w") do |f|
+			f.write(makefile)
+		end
+	end
 end
