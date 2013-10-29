@@ -196,6 +196,8 @@ class ApacheDetector
 	end
 
 	def result_for(apxs2)
+		# All the results use realpaths, so the input must too.
+		apxs2 = Pathname.new(apxs2).realpath
 		return @results.find { |r| r.apxs2 == apxs2 }
 	end
 
