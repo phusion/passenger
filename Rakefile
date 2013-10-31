@@ -50,7 +50,7 @@ task :default do
 end
 
 desc "Remove compiled files"
-task :clean => 'clean:buildout'
+task :clean => 'clean:cache'
 task 'common:clean' => 'clean:cache'
 task 'clean:cache' do
 	sh "rm -rf #{OUTPUT_DIR}cache"
