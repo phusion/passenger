@@ -27,7 +27,8 @@ using namespace std;
  */
 class Dechunker {
 public:
-	typedef void (*Callback)(const char *data, size_t size, void *userData);
+	typedef void (*DataCallback)(const char *data, size_t size, void *userData);
+	typedef void (*Callback)(void *userData);
 	
 private:
 	static const char CR = '\x0D';
@@ -71,13 +72,21 @@ private:
 			onData(data, size, userData);
 		}
 	}
+
+	void emitEndEvent() const {
+		if (onEnd != NULL) {
+			onEnd(userData);
+		}
+	}
 	
 public:
-	Callback onData;
+	DataCallback onData;
+	Callback onEnd;
 	void *userData;
 	
 	Dechunker() {
 		onData = NULL;
+		onEnd = NULL;
 		userData = NULL;
 		reset();
 	}
@@ -198,6 +207,7 @@ public:
 			
 			case EXPECTING_FINAL_LF:
 				if (*current == LF) {
+					emitEndEvent();
 					state = DONE;
 					current++;
 				} else {

@@ -12,10 +12,13 @@ namespace tut {
 		Dechunker dechunker;
 		string input;
 		vector<string> chunks;
+		bool ended;
 		
 		DechunkerTest() {
 			dechunker.onData = onData;
+			dechunker.onEnd = onEnd;
 			dechunker.userData = this;
+			ended = false;
 		}
 		
 		void addChunk(const string &data) {
@@ -29,6 +32,11 @@ namespace tut {
 			DechunkerTest *self = (DechunkerTest *) userData;
 			self->chunks.push_back(string(data, len));
 		}
+
+		static void onEnd(void *userData) {
+			DechunkerTest *self = (DechunkerTest *) userData;
+			self->ended = true;
+		}
 	};
 	
 	DEFINE_TEST_GROUP(DechunkerTest);
@@ -37,6 +45,7 @@ namespace tut {
 		// Test initial state.
 		ensure(dechunker.acceptingInput());
 		ensure(!dechunker.hasError());
+		ensure(!ended);
 		ensure_equals(dechunker.getErrorMessage(), (const char *) NULL);
 	}
 	
@@ -51,6 +60,7 @@ namespace tut {
 		ensure_equals(chunks.size(), 2u);
 		ensure_equals(chunks[0], "hello");
 		ensure_equals(chunks[1], "world");
+		ensure(ended);
 	}
 	
 	TEST_METHOD(3) {
@@ -76,6 +86,7 @@ namespace tut {
 		ensure_equals(chunks[2], "l");
 		ensure_equals(chunks[3], "l");
 		ensure_equals(chunks[4], "o");
+		ensure(ended);
 	}
 	
 	TEST_METHOD(4) {
@@ -103,6 +114,7 @@ namespace tut {
 		ensure_equals(chunks[3], "w");
 		ensure_equals(chunks[4], "or");
 		ensure_equals(chunks[5], "ld");
+		ensure(ended);
 	}
 	
 	TEST_METHOD(5) {
@@ -128,6 +140,7 @@ namespace tut {
 		ensure_equals(chunks[1], "lo");
 		ensure_equals(chunks[2], "wo");
 		ensure_equals(chunks[3], "rld");
+		ensure(ended);
 	}
 	
 	TEST_METHOD(6) {
@@ -141,6 +154,7 @@ namespace tut {
 		ensure(!dechunker.hasError());
 		ensure_equals(chunks.size(), 1u);
 		ensure_equals(chunks[0], "xy");
+		ensure(ended);
 	}
 	
 	TEST_METHOD(20) {
@@ -158,6 +172,7 @@ namespace tut {
 		ensure_equals(chunks.size(), 2u);
 		ensure_equals(chunks[0], "hello");
 		ensure_equals(chunks[1], "hello");
+		ensure(ended);
 	}
 	
 	TEST_METHOD(21) {
@@ -166,6 +181,7 @@ namespace tut {
 		ensure_equals(dechunker.feed(input.data(), input.size()), 2u);
 		ensure(!dechunker.acceptingInput());
 		ensure(dechunker.hasError());
+		ensure(!ended);
 	}
 	
 	TEST_METHOD(22) {
@@ -174,6 +190,7 @@ namespace tut {
 		ensure_equals(dechunker.feed(input.data(), input.size()), 3u);
 		ensure(!dechunker.acceptingInput());
 		ensure(dechunker.hasError());
+		ensure(!ended);
 	}
 	
 	TEST_METHOD(23) {
@@ -182,6 +199,7 @@ namespace tut {
 		ensure_equals(dechunker.feed(input.data(), input.size()), 7u);
 		ensure(!dechunker.acceptingInput());
 		ensure(dechunker.hasError());
+		ensure(!ended);
 	}
 	
 	TEST_METHOD(24) {
@@ -191,6 +209,7 @@ namespace tut {
 		ensure_equals(dechunker.feed(input.data(), input.size()), 5u);
 		ensure(!dechunker.acceptingInput());
 		ensure(dechunker.hasError());
+		ensure(!ended);
 	}
 	
 	TEST_METHOD(25) {
@@ -202,6 +221,7 @@ namespace tut {
 		ensure_equals(dechunker.feed(input.data(), input.size()), 11u);
 		ensure(!dechunker.acceptingInput());
 		ensure(dechunker.hasError());
+		ensure(!ended);
 	}
 	
 	TEST_METHOD(26) {
@@ -212,5 +232,19 @@ namespace tut {
 		dechunker.feed(input.data(), input.size());
 		ensure(!dechunker.acceptingInput());
 		ensure(dechunker.hasError());
+		ensure(!ended);
+	}
+
+	TEST_METHOD(27) {
+		// Test feeding a partial stream.
+		addChunk("hello");
+		addChunk("world");
+		ensure_equals(dechunker.feed(input.data(), input.size()), input.size());
+		ensure(dechunker.acceptingInput());
+		ensure(!dechunker.hasError());
+		ensure_equals(chunks.size(), 2u);
+		ensure_equals(chunks[0], "hello");
+		ensure_equals(chunks[1], "world");
+		ensure(!ended);
 	}
 }
