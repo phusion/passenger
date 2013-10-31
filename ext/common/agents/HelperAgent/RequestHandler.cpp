@@ -162,6 +162,14 @@ Client::onAppInputChunk(const char *data, size_t size, void *userData) {
 }
 
 void
+Client::onAppInputChunkEnd(void *userData) {
+	Client *client = (Client *) userData;
+	assert(client != NULL);
+	assert(client->requestHandler != NULL);
+	client->requestHandler->onAppInputChunkEnd(client->shared_from_this());
+}
+
+void
 Client::onAppInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode) {
 	Client *client = (Client *) source->userData;
 	if (client != NULL) {

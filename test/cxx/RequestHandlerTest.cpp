@@ -948,6 +948,33 @@ namespace tut {
 		}
 	}
 
+	TEST_METHOD(52) {
+		set_test_name("It supports responses in chunked transfer encoding");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/chunked",
+			NULL
+		);
+		
+		char buf[1024 * 10];
+		unsigned long long timeout = 500000;
+		unsigned int size;
+		try {
+			size = readExact(connection, buf, sizeof(buf), &timeout);
+		} catch (const TimeoutException &) {
+			fail("RequestHandler did not correctly handle chunked EOF!");
+		}
+
+		string response(buf, size);
+		string body = stripHeaders(response);
+		ensure(containsSubstring(response, "Counter: 0\n"));
+		ensure(containsSubstring(response, "Counter: 1\n"));
+		ensure(containsSubstring(response, "Counter: 2\n"));
+	}
+
 	// Test small response buffering.
 	// Test large response buffering.
 }

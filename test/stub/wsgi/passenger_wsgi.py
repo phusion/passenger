@@ -60,6 +60,22 @@ def application(env, start_response):
 				i += 1
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
 		return body()
+	elif path == '/chunked':
+		sleep_time = float(env.get('HTTP_X_SLEEP', 0.05))
+		count = float(env.get('HTTP_X_COUNT', 3))
+		def body():
+			i = 0
+			while i < count:
+				data = "Counter: " + str(i) + "\n"
+				yield("%x\r\n" % len(data))
+				yield(data)
+				yield("\r\n")
+				time.sleep(sleep_time)
+				i += 1
+			yield("0\r\n\r\n")
+			time.sleep(2)
+		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
+		return body()
 	elif path == '/sleep':
 		sleep_time = float(env.get('HTTP_X_SLEEP', 5))
 		time.sleep(sleep_time)

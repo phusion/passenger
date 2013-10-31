@@ -161,6 +161,7 @@ private:
 
 	static size_t onAppInputData(const EventedBufferedInputPtr &source, const StaticString &data);
 	static void onAppInputChunk(const char *data, size_t size, void *userData);
+	static void onAppInputChunkEnd(void *userData);
 	static void onAppInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode);
 	
 	void onAppOutputWritable(ev::io &io, int revents);
@@ -326,6 +327,7 @@ public:
 
 
 		responseDechunker.onData = onAppInputChunk;
+		responseDechunker.onEnd = onAppInputChunkEnd;
 		responseDechunker.userData = this;
 		
 
@@ -466,6 +468,8 @@ public:
 	}
 
 	bool shouldHalfCloseWrite() const {
+		// Many broken HTTP servers consider a half close to be a full close, so don't
+		// half close HTTP sessions.
 		return session->getProtocol() == "session";
 	}
 
@@ -1130,9 +1134,16 @@ private:
 		writeToClientOutputPipe(client, data);
 	}
 
+	void onAppInputChunkEnd(const ClientPtr &client) {
+		RH_LOG_EVENT(client, "onAppInputChunkEnd");
+		onAppInputEof(client);
+	}
+
 	void onAppInputEof(const ClientPtr &client) {
 		RH_LOG_EVENT(client, "onAppInputEof");
-		if (!client->connected()) {
+		// Check for session == NULL in order to avoid executing the code twice on
+		// responses with chunked encoding.
+		if (!client->connected() || client->session == NULL) {
 			return;
 		}
 
@@ -2200,7 +2211,7 @@ private:
 
 	/******* State: FORWARDING_BODY_TO_APP *******/
 
-	void state_forwardingBodyToApp_verifyInvariants(const ClientPtr &client) {
+	void state_forwardingBodyToApp_verifyInvariants(const ClientPtr &client) const {
 		assert(client->state == Client::FORWARDING_BODY_TO_APP);
 	}
 
