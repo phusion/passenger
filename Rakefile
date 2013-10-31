@@ -50,8 +50,10 @@ task :default do
 end
 
 desc "Remove compiled files"
-task :clean do
-	sh "rm -rf buildout"
+task :clean => 'clean:buildout'
+task 'common:clean' => 'clean:cache'
+task 'clean:cache' do
+	sh "rm -rf #{OUTPUT_DIR}cache"
 end
 
 desc "Remove all generated files"
