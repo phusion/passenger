@@ -50,9 +50,9 @@ namespace tut {
 	TEST_METHOD(1) {
 		// It collects the metrics for the given PIDs.
 		collector.setPsOutput(
-			"  PID  PPID  %CPU    RSS      VSZ  PGID COMMAND\n"
-			"    1     0   0.0   1276  2456836     1 /sbin/launchd\n"
-			"34678  1265  95.2   4128  2437812 34677 /bin/bash -li\n"
+			"  PID  PPID  %CPU    RSS      VSZ  PGID    UID COMMAND\n"
+			"    1     0   0.0   1276  2456836     1      0 /sbin/launchd\n"
+			"34678  1265  95.2   4128  2437812 34677    123 /bin/bash -li\n"
 		);
 		vector<pid_t> pids;
 		pids.push_back(1);
@@ -66,6 +66,7 @@ namespace tut {
 		ensure_equals(result[1].cpu, 0u);
 		ensure_equals(result[1].rss, 1276u);
 		ensure_equals(result[1].processGroupId, (pid_t) 1);
+		ensure_equals(result[1].uid, (uid_t) 0);
 		ensure_equals(result[1].command, "/sbin/launchd");
 		
 		ensure_equals(result[34678].pid, (pid_t) 34678);
@@ -73,6 +74,7 @@ namespace tut {
 		ensure_equals(result[34678].cpu, 95u);
 		ensure_equals(result[34678].rss, 4128u);
 		ensure_equals(result[34678].processGroupId, (pid_t) 34677);
+		ensure_equals(result[34678].uid, (uid_t) 123);
 		ensure_equals(result[34678].command, "/bin/bash -li");
 	}
 	
