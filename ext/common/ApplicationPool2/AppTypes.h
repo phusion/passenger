@@ -110,7 +110,7 @@ private:
 			TRACE_POINT();
 			throw RuntimeException("Not enough buffer space");
 		}
-		return fileExists(StaticString(buf, pos - buf), cstat, throttleRate);
+		return getFileType(StaticString(buf, pos - buf), cstat, throttleRate) != FT_NONEXISTANT;
 	}
 
 public:

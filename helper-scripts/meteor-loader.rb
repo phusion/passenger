@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -93,6 +93,13 @@ module App
 
 		production = options["environment"] == "production" ? "production" : ""
 		pid = fork do
+			# Meteor is quite !@#$% here: if we kill its start script
+			# with *any* signal, it'll leave a ton of garbage processes
+			# around. Apparently it expects the user to press Ctrl-C in a
+			# terminal which happens to send a signal to all processes
+			# in the session. We emulate that behavior here by giving
+			# Meteor its own process group, and sending signals to the
+			# entire process group.
 			Process.setpgrp
 			exec("meteor run -p #{port} #{production}")
 		end
@@ -113,14 +120,19 @@ module App
 		end
 		puts "!> Ready"
 		puts "!> socket: main;tcp://127.0.0.1:#{port};http_session;0"
+		puts "!> pid: #{pid}"
 		puts "!> "
+		puts "reading line..."
 		begin
 			STDIN.readline
 		rescue EOFError
 		end
+		puts "done!"
 	ensure
+		puts "ensure!"
 		Process.kill('INT', -pid) rescue nil
 		Process.waitpid(pid) rescue nil
+		Process.kill('INT', -pid) rescue nil
 	end
 	
 end # module App

@@ -89,6 +89,7 @@
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/Base64.h>
+#include <Utils/ProcessMetricsCollector.h>
 
 namespace tut {
 	struct ApplicationPool2_DirectSpawnerTest;
@@ -497,6 +498,22 @@ private:
 						SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 						details);
 				}
+			} else if (key == "pid") {
+				// pid: <PID>
+				pid_t pid = atoi(value);
+				ProcessMetricsCollector collector;
+				vector<pid_t> pids;
+
+				pids.push_back(pid);
+				ProcessMetricMap result = collector.collect(pids);
+				if (result[pid].uid != details.preparation->uid) {
+					throwAppSpawnException("An error occurred while starting the "
+						"web application. The PID that the loader has returned does "
+						"not have the same UID as the loader itself.",
+						SpawnException::APP_STARTUP_PROTOCOL_ERROR,
+						details);
+				}
+				details.pid = pid;
 			} else {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application. It sent an unknown startup response line "
