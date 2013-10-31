@@ -122,14 +122,11 @@ module App
 		puts "!> socket: main;tcp://127.0.0.1:#{port};http_session;0"
 		puts "!> pid: #{pid}"
 		puts "!> "
-		puts "reading line..."
 		begin
 			STDIN.readline
 		rescue EOFError
 		end
-		puts "done!"
 	ensure
-		puts "ensure!"
 		Process.kill('INT', -pid) rescue nil
 		Process.waitpid(pid) rescue nil
 		Process.kill('INT', -pid) rescue nil
