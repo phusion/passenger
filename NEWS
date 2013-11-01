@@ -2,6 +2,8 @@ Release 4.0.23
 --------------
 
  * Fixed compilation problems on GCC 4.8.2 (e.g. Arch Linux 2013-10-27).
+ * Fixed a compatibility problem with Solaris /usr/ccs/bin/make: issue #999.
+ * Support for the Meteor Javascript framework has been open sourced.
 
 
 Release 4.0.22
@@ -14,6 +16,7 @@ Release 4.0.21
 --------------
 
  * [Nginx] Upgraded the preferred Nginx version to 1.4.3.
+ * Node.js support has been open sourced.
  * Prelimenary OS X Mavericks support.
  * Work around an Apache packaging bug in CentOS 5.
  * Various user friendliness improvements in the documentation and the
