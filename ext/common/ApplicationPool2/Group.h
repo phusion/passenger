@@ -186,7 +186,7 @@ private:
 	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options,
 		unsigned int restartsInitiated);
 	void finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
-		vector<Callback> postLockActions);
+		unsigned int restartsInitiated, vector<Callback> postLockActions);
 	void startCheckingDetachedProcesses(bool immediately);
 	void detachedProcessesCheckerMain(GroupPtr self);
 	void wakeUpGarbageCollector();

@@ -1704,6 +1704,24 @@ namespace tut {
 		);
 	}
 
+	TEST_METHOD(78) {
+		// Test restarting while a previous restart was already being finalized.
+		// The previous finalization should abort.
+		Options options = createOptions();
+		initPoolDebugging();
+		debug->spawning = false;
+		pool->get(options, &ticket);
+
+		ensure_equals(pool->restartSuperGroupsByAppRoot(options.appRoot), 1u);
+		debug->debugger->recv("About to end restarting");
+		ensure_equals(pool->restartSuperGroupsByAppRoot(options.appRoot), 1u);
+		debug->debugger->recv("About to end restarting");
+		debug->messages->send("Finish restarting");
+		debug->messages->send("Finish restarting");
+		debug->debugger->recv("Restarting done");
+		debug->debugger->recv("Restarting aborted");
+	}
+
 	// TODO: Persistent connections.
 	// TODO: If one closes the session before it has reached EOF, and process's maximum concurrency
 	//       has already been reached, then the pool should ping the process so that it can detect

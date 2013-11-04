@@ -907,17 +907,19 @@ Group::restart(const Options &options) {
 	vector<Callback> actions;
 
 	assert(isAlive());
-	assert(!m_restarting);
 	P_DEBUG("Restarting group " << name);
-	// Tell the restarter thread to exit as soon as possible.
+
+	// If there is currently a restarter thread or a spawner thread active,
+	// the following tells them to abort their current work as soon as possible.
 	restartsInitiated++;
+
 	m_spawning = false;
 	m_restarting = true;
 	detachAll(actions);
 	getPool()->interruptableThreads.create_thread(
 		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
 			options.copyAndPersist().clearPerRequestFields(),
-			getPool()->spawnerFactory, actions),
+			getPool()->spawnerFactory, restartsInitiated, actions),
 		"Group restarter: " + name,
 		POOL_HELPER_THREAD_STACK_SIZE
 	);
@@ -926,7 +928,7 @@ Group::restart(const Options &options) {
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.
 void
 Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
-	vector<Callback> postLockActions)
+	unsigned int restartsInitiated, vector<Callback> postLockActions)
 {
 	TRACE_POINT();
 
@@ -955,6 +957,15 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	ScopedLock l(pool->syncher);
 	if (!isAlive()) {
 		P_DEBUG("Group " << name << " is shutting down, so aborting restart");
+		return;
+	}
+	if (restartsInitiated != this->restartsInitiated) {
+		// Before this restart could be finalized, another restart command was given.
+		// The spawner we just created might be out of date now so we abort.
+		P_DEBUG("Restart of group " << name << " aborted because a new restart was initiated concurrently");
+		if (debug != NULL && debug->restarting) {
+			debug->debugger->send("Restarting aborted");
+		}
 		return;
 	}
 
