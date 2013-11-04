@@ -494,7 +494,7 @@ http {
     # Use Python 2.6 by default.
     passenger_python /usr/bin/python2.6;
     # Use /usr/bin/node by default.
-    passenger_node /usr/bin/node;
+    passenger_nodejs /usr/bin/node;
 
     server {
         # This Rails web app will use Ruby 1.8.7
@@ -540,7 +540,7 @@ include::users_guide_snippets/since_version.txt[]
 
 This option allows one to specify the Python interpreter to use. See <<PassengerRuby,passenger_ruby>> for more information. The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
 
-=== passenger_node <filename> ===
+=== passenger_nodejs <filename> ===
 :version: 4.0.24
 include::users_guide_snippets/since_version.txt[]
 

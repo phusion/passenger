@@ -534,7 +534,7 @@ In each place, it may be specified at most once. The default value is 'on'.
 
 [[PassengerRuby]]
 ==== PassengerRuby <filename>
-The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby interpreter to use. Similarly, the `PassengerPython` and `PassengerNode` directives are for specifying the Python interpreter and the Node.js command, respectively.
+The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby interpreter to use. Similarly, the `PassengerPython` and `PassengerNodejs` directives are for specifying the Python interpreter and the Node.js command, respectively.
 
 The relationship between `PassengerDefaultRuby` and `PassengerRuby` is as follows:
 
@@ -557,6 +557,8 @@ The following example illustrates how it works and how you can use these options
 PassengerDefaultRuby /usr/bin/ruby1.8
 # Use Python 2.6 by default.
 PassengerPython /usr/bin/python2.6
+# Use /usr/bin/node by default.
+PassengerNodejs /usr/bin/node;
 
 <VirtualHost *:80>
     # This Rails web app will use Ruby 1.8.7
