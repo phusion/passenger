@@ -51,6 +51,11 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:header_expression => "config->ruby ? config->ruby : serverConfig.defaultRuby"
 	},
 	{
+		:name => "PassengerPython",
+		:type => :string,
+		:desc => "The Python interpreter to use."
+	},
+	{
 		:name => "PassengerMinInstances",
 		:type => :integer,
 		:context => ["OR_LIMIT", "ACCESS_CONF", "RSRC_CONF"],

@@ -70,9 +70,6 @@ struct DirConfig {
 
 	std::set<std::string> baseURIs;
 	
-	/** The Python interpreter to use. */
-	const char *python;
-	
 	/** The environment (RAILS_ENV/RACK_ENV/WSGI_ENV) under which
 	 * applications should operate. */
 	const char *environment;

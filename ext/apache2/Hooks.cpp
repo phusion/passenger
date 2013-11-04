@@ -1005,7 +1005,6 @@ private:
 		addHeader(output, "PASSENGER_APP_ROOT", mapper.getAppRoot());
 		addHeader(output, "PASSENGER_APP_GROUP_NAME", config->getAppGroupName(mapper.getAppRoot()));
 		#include "SetHeaders.cpp"
-		addHeader(output, "PASSENGER_PYTHON", config->python);
 		addHeader(output, "PASSENGER_ENV", config->getEnvironment());
 		addHeader(output, "PASSENGER_SPAWN_METHOD", config->getSpawnMethodString());
 		addHeader(r, output, "PASSENGER_MAX_REQUEST_QUEUE_SIZE", config->maxRequestQueueSize);

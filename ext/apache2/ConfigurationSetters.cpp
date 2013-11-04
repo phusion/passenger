@@ -48,6 +48,14 @@
 	
 	
 		static const char *
+		cmd_passenger_python(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			config->python = arg;
+			return NULL;
+		}
+	
+	
+		static const char *
 		cmd_passenger_min_instances(cmd_parms *cmd, void *pcfg, const char *arg) {
 			DirConfig *config = (DirConfig *) pcfg;
 			char *end;

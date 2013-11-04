@@ -45,6 +45,12 @@
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The Ruby interpreter to use."),
 
+	AP_INIT_TAKE1("PassengerPython",
+		(Take1Func) cmd_passenger_python,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The Python interpreter to use."),
+
 	AP_INIT_TAKE1("PassengerMinInstances",
 		(Take1Func) cmd_passenger_min_instances,
 		NULL,

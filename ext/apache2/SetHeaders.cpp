@@ -44,6 +44,10 @@
 	
 
 	
+		addHeader(output, "PASSENGER_PYTHON", config->python);
+	
+
+	
 		addHeader(r, output, "PASSENGER_MIN_INSTANCES", config->minInstances);
 	
 

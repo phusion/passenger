@@ -44,18 +44,20 @@
 	Threeway highPerformance;
 	/** Enable or disable Phusion Passenger. */
 	Threeway enabled;
-	/** The maximum number of queued requests. */
-	int maxRequestQueueSize;
-	/** The maximum number of requests that an application instance may process. */
-	int maxRequests;
 	/** The minimum number of application instances to keep when cleaning idle instances. */
 	int minInstances;
+	/** The maximum number of queued requests. */
+	int maxRequestQueueSize;
 	/** A timeout for application startup. */
 	int startTimeout;
+	/** The maximum number of requests that an application instance may process. */
+	int maxRequests;
 	/** The group that Ruby applications must run as. */
 	const char *group;
 	/** The user that Ruby applications must run as. */
 	const char *user;
+	/** The Python interpreter to use. */
+	const char *python;
 	/** The Ruby interpreter to use. */
 	const char *ruby;
 

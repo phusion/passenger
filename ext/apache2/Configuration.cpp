@@ -189,7 +189,6 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	
 	#include "CreateDirConfig.cpp"
 
-	config->python = NULL;
 	config->environment = NULL;
 	config->appRoot = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
@@ -220,7 +219,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 		config->baseURIs.insert(*it);
 	}
 	
-	MERGE_STR_CONFIG(python);
 	MERGE_STR_CONFIG(environment);
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
@@ -282,7 +280,6 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 #include "ConfigurationSetters.cpp"
 
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_python, python)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_environment, environment)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
@@ -649,13 +646,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rack app must run."),
-	
-	// WSGI-specific settings.
-	AP_INIT_TAKE1("PassengerPython",
-		(Take1Func) cmd_passenger_python,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The Python interpreter to use."),
 	
 	// Backwards compatibility options.
 	AP_INIT_TAKE1("RailsRuby",

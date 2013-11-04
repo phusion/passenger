@@ -47,6 +47,13 @@
 	
 
 	
+		config->python =
+			(add->python == NULL) ?
+			base->python :
+			add->python;
+	
+
+	
 		config->minInstances =
 			(add->minInstances == UNSET_INT_VALUE) ?
 			base->minInstances :
