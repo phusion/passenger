@@ -101,18 +101,18 @@ deb https://oss-binaries.phusionpassenger.com/apt/passenger squeeze main
 [source,sh]
 --------------------------------------------------------------
 # Ubuntu 13.10
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt saucy main
+deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt saucy main
 # Ubuntu 12.04
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt precise main
+deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt precise main
 # Ubuntu 10.04
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt lucid main
+deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt lucid main
 # Debian 7
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt wheezy main
+deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt wheezy main
 # Debian 6
-deb https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_apt squeeze main
+deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt squeeze main
 --------------------------------------------------------------
 +
-Please replace 'YOUR_ORDER_REFERENCE' and 'YOUR_PASSWORD' with your link:https://www.phusionpassenger.com/orders[Customer Area] login credentials.
+You can find the correct value for 'YOUR_DOWNLOAD_TOKEN' in the link:https://www.phusionpassenger.com/orders[Customer Area].
 
 4. Secure `passenger.list` and update your APT cache:
 +
@@ -323,10 +323,10 @@ First, download the *license key* from the link:https://www.phusionpassenger.com
 Next, add the Phusion Passenger Enterprise gem server to your RubyGems source list:
 +
 ------------------------------------------
-gem source --add https://YOUR_ORDER_REFERENCE:YOUR_PASSWORD@www.phusionpassenger.com/enterprise_gems/
+gem source --add https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_gems/
 ------------------------------------------
 +
-Substitute 'YOUR_ORDER_REFERENCE' and 'YOUR_PASSWORD' with your link:https://www.phusionpassenger.com/orders[Customer Area] login credentials. And notice the **trailing slash** in the URL! It is very important.
+Substitute 'YOUR_DOWNLOAD_TOKEN' with the one you find in the link:https://www.phusionpassenger.com/orders[Customer Area]. And notice the **trailing slash** in the URL! It is very important.
 +
 Finally, install the latest gem to obtain the files for the latest stable version of the open source Phusion Passenger:
 +
