@@ -79,6 +79,8 @@
 
 	ngx_str_t group;
 
+	ngx_str_t nodejs;
+
 	ngx_str_t python;
 
 	ngx_str_t ruby;

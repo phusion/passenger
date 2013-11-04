@@ -58,6 +58,13 @@ u_char int_buf[32], *end, *buf, *pos;
 	
 
 	
+		if (conf->nodejs.data != NULL) {
+			len += 17;
+			len += conf->nodejs.len + 1;
+		}
+	
+
+	
 		if (conf->environment.data != NULL) {
 			len += 14;
 			len += conf->environment.len + 1;
@@ -240,6 +247,19 @@ buf = pos = ngx_pnalloc(cf->pool, len);
 			pos = ngx_copy(pos,
 				conf->python.data,
 				conf->python.len);
+			*pos = '\0';
+			pos++;
+		}
+	
+
+	
+		if (conf->nodejs.data != NULL) {
+			pos = ngx_copy(pos,
+				"PASSENGER_NODEJS",
+				17);
+			pos = ngx_copy(pos,
+				conf->nodejs.data,
+				conf->nodejs.len);
 			*pos = '\0';
 			pos++;
 		}

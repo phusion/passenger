@@ -534,7 +534,7 @@ In each place, it may be specified at most once. The default value is 'on'.
 
 [[PassengerRuby]]
 ==== PassengerRuby <filename>
-The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby interpreter to use. Similarly, the `PassengerPython` directive is for specifying the Python interpreter.
+The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby interpreter to use. Similarly, the `PassengerPython` and `PassengerNode` directives are for specifying the Python interpreter and the Node.js command, respectively.
 
 The relationship between `PassengerDefaultRuby` and `PassengerRuby` is as follows:
 
@@ -548,9 +548,9 @@ It is okay if `PassengerDefaultRuby` refers to a different Ruby interpreter than
 
 The reason why `PassengerDefaultRuby` exists at all is because limitations in the Apache API prevents us from implementing the same behavior using only the `PassengerRuby` directive.
 
-There is no `PassengerDefaultPython` because there are no Phusion Passenger tools written in Python. As such, having `PassengerPython` is enough.
+There is no `PassengerDefaultPython` etc because there are no Phusion Passenger tools written in Python. As such, having `PassengerPython` is enough.
 
-The following example illustrates how it works and how you can use these options to specify different Ruby/Python interpreters for different web apps.
+The following example illustrates how it works and how you can use these options to specify different interpreters for different web apps.
 
 ------------------------------
 # Use Ruby 1.8.7 by default.
@@ -594,6 +594,12 @@ include::users_guide_snippets/rvm_helper_tool.txt[]
 include::users_guide_snippets/since_version.txt[]
 
 This option allows one to specify the Python interpreter to use. See <<PassengerRuby,PassengerRuby>> for more information. The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
+
+==== PassengerNodejs <filename>
+:version: 4.0.24
+include::users_guide_snippets/since_version.txt[]
+
+This option allows one to specify the Node.js command to use. See <<PassengerRuby,PassengerRuby>> for more information. The default value is 'node', meaning that the Node.js command will be looked up according to the `PATH` environment variable.
 
 [[PassengerAppRoot]]
 ==== PassengerAppRoot <path/to/root>

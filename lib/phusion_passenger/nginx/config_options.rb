@@ -101,6 +101,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:type  => :string
 	},
 	{
+		:name  => 'passenger_nodejs',
+		:type  => :string
+	},
+	{
 		:name  => 'passenger_app_env',
 		:type  => :string,
 		:field => 'environment',

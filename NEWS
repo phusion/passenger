@@ -1,3 +1,10 @@
+Release 4.0.24
+--------------
+
+ * Introduced the `PassengerNodejs` (Apache) and `passenger_nodejs` (Nginx)
+   configuration options.
+
+
 Release 4.0.23
 --------------
 

@@ -56,6 +56,11 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:desc => "The Python interpreter to use."
 	},
 	{
+		:name => "PassengerNodejs",
+		:type => :string,
+		:desc => "The Node.js command to use."
+	},
+	{
 		:name => "PassengerMinInstances",
 		:type => :integer,
 		:context => ["OR_LIMIT", "ACCESS_CONF", "RSRC_CONF"],

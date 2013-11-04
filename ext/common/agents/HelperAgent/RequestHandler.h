@@ -1718,6 +1718,7 @@ private:
 		fillPoolOption(client, options.environment, "PASSENGER_ENV");
 		fillPoolOption(client, options.ruby, "PASSENGER_RUBY");
 		fillPoolOption(client, options.python, "PASSENGER_PYTHON");
+		fillPoolOption(client, options.nodejs, "PASSENGER_NODEJS");
 		fillPoolOption(client, options.user, "PASSENGER_USER");
 		fillPoolOption(client, options.group, "PASSENGER_GROUP");
 		fillPoolOption(client, options.minProcesses, "PASSENGER_MIN_INSTANCES");

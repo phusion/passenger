@@ -54,6 +54,13 @@
 	
 
 	
+		config->nodejs =
+			(add->nodejs == NULL) ?
+			base->nodejs :
+			add->nodejs;
+	
+
+	
 		config->minInstances =
 			(add->minInstances == UNSET_INT_VALUE) ?
 			base->minInstances :

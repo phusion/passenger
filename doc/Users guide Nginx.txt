@@ -466,7 +466,7 @@ NOTE: This option has no effect when you are using <<flying_passenger,Flying Pas
 
 [[PassengerRuby]]
 === passenger_ruby <filename> ===
-The `passenger_ruby` option allows one to specify the Ruby interpreter to use. Similarly, the `passenger_python` option is for specifying the Python interpreter.
+The `passenger_ruby` option allows one to specify the Ruby interpreter to use. Similarly, the `passenger_python` and `passenger_nodejs` options are for specifying the Python interpreter and Node.js commands, respectively.
 
 In versions prior to 4.0.0, only a single Ruby version was supported for the entire Nginx instance, so `passenger_ruby` may only occur in the global server configuration. Also, the `passenger_python` option was not supported.
 
@@ -481,9 +481,9 @@ The `passenger_ruby` in the `http` block - that is, the one that `passenger-inst
 
 The `passenger_ruby` directive in the `http` block is also used as the default Ruby interpreter for Ruby web apps. You don't *have* to specify a `passenger_ruby` in the `http` block though, because the default is to use the first `ruby` command found in `$PATH`.
 
-The `passenger_python` option works in a similar manner, but applies to Python instead.
+The `passenger_python` and `passenger_nodejs` options works in a similar manner, but apply to Python and Node.js instead.
 
-You can also override `passenger_ruby` or `passenger_python` in specific contexts if you want to use a different Ruby/Python interpreter for that web app. For example:
+You can also override `passenger_ruby` and other directives in specific contexts if you want to use a different interpreter for that web app. For example:
 
 ------------------------------
 http {
@@ -493,6 +493,8 @@ http {
     passenger_ruby /usr/bin/ruby1.8;
     # Use Python 2.6 by default.
     passenger_python /usr/bin/python2.6;
+    # Use /usr/bin/node by default.
+    passenger_node /usr/bin/node;
 
     server {
         # This Rails web app will use Ruby 1.8.7
@@ -537,6 +539,12 @@ include::users_guide_snippets/rvm_helper_tool.txt[]
 include::users_guide_snippets/since_version.txt[]
 
 This option allows one to specify the Python interpreter to use. See <<PassengerRuby,passenger_ruby>> for more information. The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
+
+=== passenger_node <filename> ===
+:version: 4.0.24
+include::users_guide_snippets/since_version.txt[]
+
+This option allows one to specify the Node.js command to use. See <<PassengerRuby,passenger_ruby>> for more information. The default value is 'node', meaning that the Node.js command will be looked up according to the `PATH` environment variable.
 
 [[PassengerAppRoot]]
 === passenger_app_root <path/to/root> ===

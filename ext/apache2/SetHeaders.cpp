@@ -48,6 +48,10 @@
 	
 
 	
+		addHeader(output, "PASSENGER_NODEJS", config->nodejs);
+	
+
+	
 		addHeader(r, output, "PASSENGER_MIN_INSTANCES", config->minInstances);
 	
 

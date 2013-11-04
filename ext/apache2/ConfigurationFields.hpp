@@ -56,6 +56,8 @@
 	const char *group;
 	/** The user that Ruby applications must run as. */
 	const char *user;
+	/** The Node.js command to use. */
+	const char *nodejs;
 	/** The Python interpreter to use. */
 	const char *python;
 	/** The Ruby interpreter to use. */
