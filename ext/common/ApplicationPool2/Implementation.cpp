@@ -1017,8 +1017,14 @@ void
 Group::detachedProcessesCheckerMain(GroupPtr self) {
 	TRACE_POINT();
 	PoolPtr pool = getPool();
-	boost::unique_lock<boost::mutex> lock(pool->syncher);
 
+	Pool::DebugSupportPtr debug = pool->debugSupport;
+	if (debug != NULL && debug->detachedProcessesChecker) {
+		debug->debugger->send("About to start detached processes checker");
+		debug->messages->recv("Proceed with starting detached processes checker");
+	}
+
+	boost::unique_lock<boost::mutex> lock(pool->syncher);
 	while (true) {
 		assert(detachedProcessesCheckerActive);
 
