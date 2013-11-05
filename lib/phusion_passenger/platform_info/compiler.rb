@@ -182,7 +182,7 @@ module PlatformInfo
 		else
 			result = '-lpthread'
 		end
-		flags << ' -lmath' if has_math_library?
+		result << ' -lmath' if has_math_library?
 		return result
 	end
 	memoize :portability_ldflags
