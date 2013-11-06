@@ -684,8 +684,14 @@ private:
 				if (config->errorOverride == DirConfig::ENABLED
 				 && ap_is_HTTP_ERROR(r->status))
 				{
-					// Send ErrorDocument.
-					ap_die(r->status, r);
+					/* Send ErrorDocument.
+					 * Clear r->status for override error, otherwise ErrorDocument
+					 * thinks that this is a recursive error, and doesn't find the
+					 * custom error page.
+					 */
+					int originalStatus = r->status;
+					r->status = HTTP_OK;
+					return originalStatus;
 				} if (ap_pass_brigade(r->output_filters, bb) == APR_SUCCESS) {
 					apr_brigade_cleanup(bb);
 				}
