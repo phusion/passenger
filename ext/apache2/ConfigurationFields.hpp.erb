@@ -62,11 +62,11 @@ def definition_for(option)
 	field = struct_field_for(option)
 	case option[:type]
 	when :string
-		result = ["const char *#{field}", 8 + 4]
+		result = ["const char *#{field}", 8 + 4, field]
 	when :integer
-		result = ["int #{field}", 4]
+		result = ["int #{field}", 4, field]
 	when :flag
-		result = ["Threeway #{field}", 1]
+		result = ["Threeway #{field}", 1, field]
 	else
 		raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
 	end
@@ -79,7 +79,12 @@ definitions = eligible_options.map { |o| definition_for(o) }
 # It's possible to make it even smaller with a smarter algorithm but for now
 # I don't bother.
 definitions.sort! do |d1, d2|
-	d1[1] <=> d2[1]
+	if d1[1] == d2[1]
+		# After sorting on size, sort alphabetically.
+		d1[2] <=> d2[2]
+	else
+		d1[1] <=> d2[1]
+	end
 end
 %>
 
