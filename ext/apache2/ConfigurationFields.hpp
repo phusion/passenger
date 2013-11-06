@@ -38,28 +38,28 @@
 
 
 
-	/** enabled */
+	/** Enable or disable Phusion Passenger. */
 	Threeway enabled;
-	/** highPerformance */
+	/** Enable or disable Passenger's high performance mode. */
 	Threeway highPerformance;
-	/** loadShellEnvvars */
+	/** Whether to load environment variables from the shell before running the application. */
 	Threeway loadShellEnvvars;
-	/** maxRequestQueueSize */
+	/** The maximum number of queued requests. */
 	int maxRequestQueueSize;
-	/** maxRequests */
+	/** The maximum number of requests that an application instance may process. */
 	int maxRequests;
-	/** minInstances */
+	/** The minimum number of application instances to keep when cleaning idle instances. */
 	int minInstances;
-	/** startTimeout */
+	/** A timeout for application startup. */
 	int startTimeout;
-	/** group */
+	/** The group that Ruby applications must run as. */
 	const char *group;
-	/** nodejs */
+	/** The Node.js command to use. */
 	const char *nodejs;
-	/** python */
+	/** The Python interpreter to use. */
 	const char *python;
-	/** ruby */
+	/** The Ruby interpreter to use. */
 	const char *ruby;
-	/** user */
+	/** The user that Ruby applications must run as. */
 	const char *user;
 

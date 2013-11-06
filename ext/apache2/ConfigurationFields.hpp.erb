@@ -62,11 +62,11 @@ def definition_for(option)
 	field = struct_field_for(option)
 	case option[:type]
 	when :string
-		result = ["const char *#{field}", 8 + 4, field]
+		result = ["const char *#{field}", 8 + 4, field, option[:desc]]
 	when :integer
-		result = ["int #{field}", 4, field]
+		result = ["int #{field}", 4, field, option[:desc]]
 	when :flag
-		result = ["Threeway #{field}", 1, field]
+		result = ["Threeway #{field}", 1, field, option[:desc]]
 	else
 		raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
 	end
@@ -89,6 +89,6 @@ end
 %>
 
 <% for definition in definitions -%>
-	/** <%= definition[2] %> */
+	/** <%= definition[3] %> */
 	<%= definition[0] %>;
 <% end %>
