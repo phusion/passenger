@@ -2,18 +2,26 @@
 
 One of the first things you should do upon encountering a problem, is to check
 ifdef::apache[]
-the *global* (not the per-vhost) Apache error log file. This is typically located in /var/log/apache2/error_log. You can find out the exact location of the error log by running `passenger-config --detect-apache2`.
+the *global* (not the per-vhost) Apache error log file. This is typically located in `/var/log/apache2/error_log`. You can find out the exact location of the error log by running `passenger-config --detect-apache2`.
 endif::[]
 ifdef::nginx[]
 the global Nginx error log file. This is one specified by the `error_log` directive in the main context (*not* the one inside the `http` context). The file is typically located in /var/log/nginx/error.log.
 endif::[]
-ifdef::standalone[]
-Phusion Passenger Standalone log file. This is typically located in `log/passenger.[PORT NUMBER].log`.
+ifndef::standalone[]
+This log file contains:
+
+ * Phusion Passenger error messages.
+ * Everything that the application writes to STDERR. This typically consists of errors that the application encounters during startup, but not errors that it encounters when it's handling requests.
+
 endif::[]
-Most problems are logged to this file.
+ifdef::standalone[]
+Phusion Passenger Standalone log file. This is typically located in `log/passenger.[PORT NUMBER].log`. Most problems are logged to this log file.
+endif::[]
 
 ifndef::standalone[]
-If you're using Ruby on Rails, then you should be aware that Phusion Passenger runs your app under the 'production' environment by default, not 'development'. You can change this using the
+If you're using Ruby on Rails, then you should also check out `log/development.log` and `log/production.log`. When an error occurs during request handling, it is typically logged here. This file does **not** contain errors that Rails encounters during startup.
+
+Finally, you should be aware that Phusion Passenger runs your application under the 'production' environment by default, not 'development'. You can change this using the
 ifdef::apache[]
 <<RailsEnv,RailsEnv>>
 endif::[]

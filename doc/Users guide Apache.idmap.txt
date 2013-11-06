@@ -130,13 +130,15 @@
 
 6.3.3. PassengerPython <filename>	=>	passengerpython-filename--1ssesv3
 
-6.3.4. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
+6.3.4. PassengerNodejs <filename>	=>	passengernodejs-filename--2mjb1j
 
-6.3.5. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
+6.3.5. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
 
-6.3.6. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+6.3.6. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
 
-6.3.7. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
+6.3.7. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+
+6.3.8. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
 
 6.4. Process spawning options	=>	process-spawning-options-v2vscm
 
