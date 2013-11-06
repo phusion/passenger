@@ -42,6 +42,12 @@
 #  * min_value - If `type` is :integer, then this specifies the minimum
 #                allowed value. When nil (the default), there is no minimum.
 #  * desc - A description for this configuration option. Required.
+#  * header - The name of the corresponding CGI header. By default CGI header
+#             generation code is automatically generated, using the configuration
+#             option's name in uppercase as the CGI header name.
+#             Setting this to nil will disable auto-generation of CGI header
+#             generation code. You are then responsible for writing CGI header
+#             passing code yourself in Hooks.cpp.
 
 APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 	{
@@ -78,6 +84,13 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:type => :string,
 		:context => ["ACCESS_CONF", "RSRC_CONF"],
 		:desc => "The group that Ruby applications must run as."
+	},
+	{
+		:name => "PassengerErrorOverride",
+		:type => :flag,
+		:context => ["OR_ALL"],
+		:desc    => "Allow Apache to handle error response.",
+		:header  => nil
 	},
 	{
 		:name => "PassengerMaxRequests",

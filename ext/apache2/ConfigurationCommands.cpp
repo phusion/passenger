@@ -75,6 +75,12 @@
 		ACCESS_CONF | RSRC_CONF,
 		"The group that Ruby applications must run as."),
 
+	AP_INIT_FLAG("PassengerErrorOverride",
+		(FlagFunc) cmd_passenger_error_override,
+		NULL,
+		OR_ALL,
+		"Allow Apache to handle error response."),
+
 	AP_INIT_TAKE1("PassengerMaxRequests",
 		(Take1Func) cmd_passenger_max_requests,
 		NULL,

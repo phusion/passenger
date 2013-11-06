@@ -1636,6 +1636,26 @@ The <<PassengerBufferResponse,PassengerBufferResponse>> directive should be turn
 if responses can be huge. Because entire responses are buffered in memory when turned on.
 =====================================================
 
+[[PassengerErrorOverride]]
+==== PassengerErrorOverride <on|off> ====
+:version: 4.0.24
+include::users_guide_snippets/since_version.txt[]
+
+Decides whether Apache will intercept and handle responses with HTTP status codes of 400 and higher. This directive is useful where you want to have a common look and feel on the error pages seen by the end user. This also allows for included files (via mod_include's SSI) to get the error code and act accordingly (default behavior would display the error page of the proxied server, turning this on shows the SSI Error message).
+
+This directive does not affect the processing of informational (1xx), normal success (2xx), or redirect (3xx) responses.
+
+By default, all responses are sent as-is from the application or from the Phusion Passenger core. If you turn this option on then Apache will be able to handle such responses using the Apache `ErrorDocument` option.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
 [[PassengerMaxRequestQueueSize]]
 ==== PassengerMaxRequestQueueSize <number> ====
 :version: 4.0.15
@@ -1644,6 +1664,13 @@ include::users_guide_snippets/since_version.txt[]
 When all application processes are already handling their maximum number of concurrent requests, Phusion Passenger will queue all incoming requests. This option specifies the maximum size for that queue. If the queue is already at this specified limit, then Phusion Passenger will immediately send a "503 Service Unavailable" error to any incoming requests.
 
 A value of 0 means that the queue is unbounded.
+
+You may combine this with <<PassengerErrorOverride,PassengerErrorOverride>> and `ErrorDocument` to set a custom error page whenever the queue is full. In the following example, Apache will serve /error503.html whenever the queue is full:
+
+---------------------------------
+PassengerErrorOverride on
+ErrorDocument 504 /error504.html
+---------------------------------
 
 This option may occur in the following places:
 

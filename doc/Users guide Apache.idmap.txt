@@ -196,7 +196,9 @@
 
 6.7.1. PassengerBufferResponse <on|off>	=>	passengerbufferresponse-on-off--1y7ilka
 
-6.7.2. PassengerMaxRequestQueueSize <number>	=>	passenger-max-request-queue-size-number--1f1uocd
+6.7.2. PassengerErrorOverride <on|off>	=>	passengererroroverride-on-off--1pq9nez
+
+6.7.3. PassengerMaxRequestQueueSize <number>	=>	passenger-max-request-queue-size-number--1f1uocd
 
 6.8. Compatibility options	=>	compatibility-options-8jve5a
 

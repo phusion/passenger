@@ -40,6 +40,8 @@
 
 	/** Enable or disable Phusion Passenger. */
 	Threeway enabled;
+	/** Allow Apache to handle error response. */
+	Threeway errorOverride;
 	/** Enable or disable Passenger's high performance mode. */
 	Threeway highPerformance;
 	/** Whether to load environment variables from the shell before running the application. */

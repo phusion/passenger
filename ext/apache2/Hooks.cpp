@@ -681,17 +681,18 @@ private:
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 				
 				UPDATE_TRACE_POINT();
-				if (ap_pass_brigade(r->output_filters, bb) == APR_SUCCESS) {
+				if (config->errorOverride == DirConfig::ENABLED
+				 && ap_is_HTTP_ERROR(r->status))
+				{
+					// Send ErrorDocument.
+					ap_die(r->status, r);
+				} if (ap_pass_brigade(r->output_filters, bb) == APR_SUCCESS) {
 					apr_brigade_cleanup(bb);
 				}
-				
 				return OK;
-			} else if (backendData[0] == '\0') {
-				// HelperAgent sent an empty response. No headers either.
-				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
-				return HTTP_INTERNAL_SERVER_ERROR;
 			} else {
-				// HelperAgent sent an invalid HTTP response.
+				// HelperAgent sent an empty response, or an invalid response.
+				apr_brigade_cleanup(bb);
 				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			}

@@ -82,6 +82,13 @@
 	
 
 	
+		config->errorOverride =
+			(add->errorOverride == DirConfig::UNSET) ?
+			base->errorOverride :
+			add->errorOverride;
+	
+
+	
 		config->maxRequests =
 			(add->maxRequests == UNSET_INT_VALUE) ?
 			base->maxRequests :
