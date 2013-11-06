@@ -680,83 +680,16 @@ private:
 				}
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 				
-				//bool xsendfile = hasModXsendfile() &&
-				//	apr_table_get(r->err_headers_out, "X-Sendfile");
-				
 				UPDATE_TRACE_POINT();
 				ap_pass_brigade(r->output_filters, bb);
 				
-				/*
-				if (r->connection->aborted) {
-					P_WARN("Either the visitor clicked on the 'Stop' button in the "
-						"web browser, or the visitor's connection has stalled "
-						"and couldn't receive the data that Apache is sending "
-						"to it. As a result, you will probably see a 'Broken Pipe' "
-						"error in this log file. Please ignore it, "
-						"this is normal. You might also want to increase Apache's "
-						"TimeOut configuration option if you experience this "
-						"problem often.");
-				} else if (!bucketState->completed && !xsendfile) {
-					// mod_xsendfile drops the entire output bucket so
-					// suppress this message when mod_xsendfile is active.
-					P_WARN("Apache stopped forwarding the backend's response, "
-						"even though the HTTP client did not close the "
-						"connection. Is this an Apache bug?");
-				}
-				*/
-				
 				return OK;
 			} else if (backendData[0] == '\0') {
-				/* if ((long long) timer.elapsed() >= r->server->timeout / 1000) {
-					// Looks like an I/O timeout.
-					P_ERROR("No data received from " <<
-						"the backend application (process " <<
-						backendPid << ") within " <<
-						(r->server->timeout / 1000) << " msec. Either " <<
-						"the backend application is frozen, or " <<
-						"your TimeOut value of " <<
-						(r->server->timeout / 1000000) <<
-						" seconds is too low. Please check " <<
-						"whether your application is frozen, or " <<
-						"increase the value of the TimeOut " <<
-						"configuration directive.");
-				} else {
-					P_ERROR("The backend application (process " <<
-						backendPid << ") did not send a valid " <<
-						"HTTP response; instead, it sent nothing " <<
-						"at all. It is possible that it has crashed; " <<
-						"please check whether there are crashing " <<
-						"bugs in this application.");
-				} */
+				// HelperAgent sent an empty response. No headers either.
 				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			} else {
-				/* if ((long long) timer.elapsed() >= r->server->timeout / 1000) {
-					// Looks like an I/O timeout.
-					P_ERROR("The backend application (process " <<
-						backendPid << ") hasn't sent a valid " <<
-						"HTTP response within " <<
-						(r->server->timeout / 1000) << " msec. Either " <<
-						"the backend application froze while " <<
-						"sending a response, or " <<
-						"your TimeOut value of " <<
-						(r->server->timeout / 1000000) <<
-						" seconds is too low. Please check " <<
-						"whether the application is frozen, or " <<
-						"increase the value of the TimeOut " <<
-						"configuration directive. The application " <<
-						"has sent this data so far: [" <<
-						backendData << "]");
-				} else {
-					P_ERROR("The backend application (process " <<
-						backendPid << ") didn't send a valid " <<
-						"HTTP response. It might have crashed " <<
-						"during the middle of sending an HTTP " <<
-						"response, so please check whether there " <<
-						"are crashing problems in your application. " <<
-						"This is the data that it sent: [" <<
-						backendData << "]");
-				} */
+				// HelperAgent sent an invalid HTTP response.
 				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			}
