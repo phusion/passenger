@@ -681,7 +681,9 @@ private:
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 				
 				UPDATE_TRACE_POINT();
-				ap_pass_brigade(r->output_filters, bb);
+				if (ap_pass_brigade(r->output_filters, bb) == APR_SUCCESS) {
+					apr_brigade_cleanup(bb);
+				}
 				
 				return OK;
 			} else if (backendData[0] == '\0') {
