@@ -32,6 +32,8 @@ module PlatformInfo
 	def self.os_name
 		if rb_config['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
 			return "macosx"
+		elsif rb_config['target_os'] == "linux-"
+			return "linux"
 		else
 			return rb_config['target_os']
 		end
