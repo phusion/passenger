@@ -67,7 +67,7 @@ Then restart Nginx. The application has now been deployed.
 [[deploying_rails_to_sub_uri]]
 === Deploying to a sub URI ===
 
-Suppose that you already have a 'server' virtual host entry:
+Suppose that you already have a virtual host for the application `/websites/phusion`:
 
 -------------------------------------------
 http {
@@ -77,23 +77,26 @@ http {
         listen 80;
         server_name www.phusion.nl;
         root /websites/phusion;
+        passenger_enabled on;
     }
 
     ...
 }
 -------------------------------------------
 
-And you want your Ruby on Rails application to be accessible from the URL
-'http://www.phusion.nl/rails'.
+And you want your Rails application, located in `/websites/rails`, to be accessible from the URL
+'http://www.phusion.nl/subapp'.
 
-To do this, make a symlink in the virtual host's document root, and have it
-point to your Ruby on Rails application's 'public' folder. For example:
--------------------------------------------
-ln -s /webapps/mycook/public /websites/phusion/rails
--------------------------------------------
+To do this, you need to perform the following:
 
-Next, set 'passenger_enabled on' and add a <<PassengerBaseURI,passenger_base_uri>>
-option to the 'server' block:
+ 1. Create a `location <SUBURI>` block.
+ 2. Inside the location block, set `passenger_base_uri <SUBURI>`.
+ 3. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
+ 4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
+ 5. Inside the location block, re-specify `passenger_enabled on`.
+
+Here is an example:
+
 -------------------------------------------
 http {
     ...
@@ -102,28 +105,21 @@ http {
         listen 80;
         server_name www.phusion.nl;
         root /websites/phusion;
-        passenger_enabled on;        # <--- These lines have
-        passenger_base_uri /rails;   # <--- been added.
+
+        # This block has been added.
+        location /subapp {
+            passenger_base_uri /subapp;
+            alias /websites/rails/public;  # <-- be sure to point to 'public'!
+            passenger_app_root /websites/rails;
+            passenger_enabled on;
+        }
     }
 
     ...
 }
 -------------------------------------------
-Then restart Nginx. The application has now been deployed.
 
-[TIP]
-======================================
-You can deploy multiple Rails applications under a virtual host, by specifying
-<<PassengerBaseURI,passenger_base_uri>> multiple times. For example:
----------------------------------
-server {
-    ...
-    passenger_base_uri /app1;
-    passenger_base_uri /app2;
-    passenger_base_uri /app3;
-}
----------------------------------
-======================================
+Then restart Nginx. The application has now been deployed on the sub-URI.
 
 === Redeploying (restarting the Ruby on Rails application) ===
 
@@ -262,7 +258,7 @@ Then restart Nginx. The application has now been deployed.
 [[deploying_rack_to_sub_uri]]
 === Deploying to a sub URI ===
 
-Suppose that you already have a virtual host:
+Suppose that you already have a virtual host for the application `/websites/phusion`:
 
 -------------------------------------------
 http {
@@ -279,17 +275,19 @@ http {
 }
 -------------------------------------------
 
-And you want your Rack application to be accessible from the URL
-'http://www.phusion.nl/rack'.
+And you want your Rack application, located in `/websites/rack`, to be accessible from the URL
+'http://www.phusion.nl/subapp'.
 
-To do this, make a symlink in the virtual host's document root, and have it
-point to your Rack application's 'public' folder. For example:
--------------------------------------------
-ln -s /webapps/rackapp/public /websites/phusion/rack
--------------------------------------------
+To do this, you need to perform the following:
 
-Next, set 'passenger_enabled on' and add a <<PassengerBaseURI,passenger_base_uri>>
-option to the 'server' block:
+ 1. Create a `location <SUBURI>` block.
+ 2. Inside the location block, set `passenger_base_uri <SUBURI>`.
+ 3. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
+ 4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
+ 5. Inside the location block, re-specify `passenger_enabled on`.
+
+Here is an example:
+
 -------------------------------------------
 http {
     ...
@@ -298,28 +296,20 @@ http {
         listen 80;
         server_name www.phusion.nl;
         root /websites/phusion;
-        passenger_enabled on;        # <--- These lines have
-        passenger_base_uri /rack;    # <--- been added.
+
+        # This block has been added.
+        location /subapp {
+            passenger_base_uri /subapp;
+            alias /websites/rack/public;  # <-- be sure to point to 'public'!
+            passenger_app_root /websites/rack;
+            passenger_enabled on;
+        }
     }
 
     ...
 }
 -------------------------------------------
-Then restart Nginx. The application has now been deployed.
-
-[TIP]
-======================================
-You can deploy multiple Rack applications under a virtual host, by specifying
-<<PassengerBaseURI,passenger_base_uri>> multiple times. For example:
----------------------------------
-server {
-    ...
-    passenger_base_uri /app1;
-    passenger_base_uri /app2;
-    passenger_base_uri /app3;
-}
----------------------------------
-======================================
+Then restart Nginx. The application has now been deployed on the sub-URI.
 
 === Redeploying (restarting the Rack application) ===
 
@@ -424,6 +414,63 @@ http {
 }
 -------------------------------------------
 Then restart Nginx. The application has now been deployed.
+
+[[deploying_wsgi_to_sub_uri]]
+=== Deploying to a sub URI ===
+
+Suppose that you already have a virtual host for the application `/websites/phusion`:
+
+-------------------------------------------
+http {
+    ...
+
+    server {
+        listen 80;
+        server_name www.phusion.nl;
+        root /websites/phusion;
+        passenger_enabled on;
+    }
+
+    ...
+}
+-------------------------------------------
+
+And you want your WSGI application, located in `/websites/wsgi`, to be accessible from the URL
+'http://www.phusion.nl/subapp'.
+
+To do this, you need to perform the following:
+
+ 1. Create a `location <SUBURI>` block.
+ 2. Inside the location block, set `passenger_base_uri <SUBURI>`.
+ 3. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
+ 4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
+ 5. Inside the location block, re-specify `passenger_enabled on`.
+
+Here is an example:
+
+-------------------------------------------
+http {
+    ...
+
+    server {
+        listen 80;
+        server_name www.phusion.nl;
+        root /websites/phusion;
+
+        # This block has been added.
+        location /subapp {
+            passenger_base_uri /subapp;
+            alias /websites/wsgi/public;  # <-- be sure to point to 'public'!
+            passenger_app_root /websites/wsgi;
+            passenger_enabled on;
+        }
+    }
+
+    ...
+}
+-------------------------------------------
+
+Then restart Nginx. The application has now been deployed on the sub-URI.
 
 === Redeploying (restarting the WSGI application) ===
 
@@ -763,9 +810,12 @@ server {
 [[PassengerBaseURI]]
 ==== passenger_base_uri <uri> ====
 Used to specify that the given URI is an distinct application that should
-be served by Phusion Passenger. This option can be used for both Rails and
-Rack applications. See <<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>>
-for an example.
+be served by Phusion Passenger. Please refer to the following sections for
+more information:
+
+ * <<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>>
+ * <<deploying_wsgi_to_sub_uri,Deploying WSGI to a sub URI>>
+ * <<deploying_rails_to_sub_uri,Deploying Rails 1 and Rails 2 to a sub URI>>
 
 It is allowed to specify this option multiple times. Do this to deploy multiple
 applications in different sub-URIs under the same virtual host.

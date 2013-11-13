@@ -116,7 +116,9 @@
 
 5.2. Deploying to a virtual host’s root	=>	deploying-to-a-virtual-host-s-root-1chcpbj
 
-5.3. Redeploying (restarting the WSGI application)	=>	redeploying-restarting-the-wsgi-application--10zdh2k
+5.3. Deploying to a sub URI	=>	deploying-to-a-sub-uri-5v6zmg
+
+5.4. Redeploying (restarting the WSGI application)	=>	redeploying-restarting-the-wsgi-application--10zdh2k
 
 6. Configuring Phusion Passenger	=>	configuring-phusion-passenger-1g1svey
 
