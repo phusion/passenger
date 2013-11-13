@@ -801,12 +801,17 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'off'.
 
 ==== passenger_set_cgi_param <CGI environment name> <value> ====
-Allows one to define additional CGI environment variables to pass to the backend
-application. This is equivalent to ngx_http_fastcgi_module's 'fastcgi_param'
-directive, and is comparable to ngx_http_proxy_module's 'proxy_set_header' option.
+Allows one to define additional CGI environment variables to pass to the web
+application. This is comparable to ngx_http_fastcgi_module's 'fastcgi_param'
+directive, and to ngx_http_proxy_module's 'proxy_set_header' option.
 Nginx variables in the value are interpolated.
 
-For example:
+These variables passed in the following manner:
+
+ * On every request, in the form of a request variable.
+ * During application spawning, in the form of a system environment variable that can be looked up through `getenv()`.
+
+Example usage:
 ------------------------------
 # Application will see a CGI environment "APP_NAME" with value "my super blog".
 passenger_set_cgi_param APP_NAME "my super blog";
