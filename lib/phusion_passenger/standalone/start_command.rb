@@ -58,10 +58,11 @@ class StartCommand < Command
 			@options[:nginx_version])
 		ensure_runtime_installed
 		exit if @options[:runtime_check_only]
-		determine_various_resource_locations
 		require_app_finder
 		@app_finder = AppFinder.new(@args, @options)
 		@apps = @app_finder.scan
+		@options = @app_finder.global_options
+		determine_various_resource_locations
 		@plugin.call_hook(:found_apps, @apps)
 
 		extra_controller_options = {}
@@ -141,8 +142,8 @@ private
 
 			opts.separator ""
 			opts.on("-e", "--environment ENV", String,
-				wrap_desc("Framework environment (default: #{@options[:env]})")) do |value|
-				@options[:env] = value
+				wrap_desc("Framework environment (default: #{@options[:environment]})")) do |value|
+				@options[:environment] = value
 			end
 			opts.on("-R", "--rackup FILE", String,
 				wrap_desc("If Rack application detected, run this rackup file")) do |value|
@@ -486,7 +487,7 @@ private
 		puts "=============== Phusion Passenger Standalone web server started ==============="
 		puts "PID file: #{@options[:pid_file]}"
 		puts "Log file: #{@options[:log_file]}"
-		puts "Environment: #{@options[:env]}"
+		puts "Environment: #{@options[:environment]}"
 		puts "Accessible via: #{listen_url}"
 
 		puts
@@ -563,7 +564,7 @@ private
 	def watch_log_files_in_background
 		@apps.each do |app|
 			thread = Thread.new do
-				watch_log_file("#{app[:root]}/log/#{@options[:env]}.log")
+				watch_log_file("#{app[:root]}/log/#{@options[:environment]}.log")
 			end
 			@threads << thread
 			@interruptable_threads << thread

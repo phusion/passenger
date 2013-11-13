@@ -32,7 +32,7 @@ class Command
 	DEFAULT_OPTIONS = {
 		:address       => '0.0.0.0',
 		:port          => 3000,
-		:env           => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development',
+		:environment   => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development',
 		:max_pool_size => 6,
 		:min_instances => 1,
 		:spawn_method  => Kernel.respond_to?(:fork) ? 'smart' : 'direct',

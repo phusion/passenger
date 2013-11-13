@@ -47,8 +47,51 @@ Most configuration is done by customizing the arguments passed to the `passenger
 	When set to "smart" (the default), Phusion Passenger preloads your app and utilizes copy-on-write in order to save memory. You can disable this by setting this option to "direct". Preloading is only supported for Ruby apps. For apps written in other languages, it is as if "direct" is always used.
 `--no-friendly-error-pages`::
 	If your app fails to start, Phusion Passenger will tell you by showing a friendly error page in the browser. This option disables it.
+`--ssl`::
+	Enables SSL support. If this is set, you must also set `--ssl-certificate` and `--ssl-certificate-key` to the SSL certificate and key files, respectively.
 
 See `--help` for all available options.
+
+
+[[config_file]]
+=== Configuration file
+:version: 4.0.24
+include::users_guide_snippets/since_version.txt[]
+
+It is possible to store some options in a configuration file `passenger-standalone.json` in the application directory. Configuration in this file overrides command line options. The configuration file format is JSON.
+
+In case Passenger Standalone is in <<mass_deployment,mass deployment mode>>, such a configuration file allows customizing options on a per-application basis.
+
+The following configuration options are supported:
+
+`port`::
+	Equivalent to the `--port` command line option.
+`environment`::
+	Equivalent to the `--environment` command line option.
+`max_pool_size`::
+	Equivalent to the `--max-pool-size` command line option. But when in mass deployment mode, this option in the configuration file has no effect; the command line option should be used to customize this.
+`min_instances`::
+	Equivalent to the `--min-instances` command line option.
+`spawn_method`::
+	Equivalent to the `--spawn-method` command line option.
+`ssl`::
+	Equivalent to the `--ssl` command line option. When given, you must also set `ssl_certificate` and `ssl_certificate_key` in the configuration file.
++
+When in mass deployment mode, you will probably want to set a different `port` too. If you don't, and you end up in a situation in which a port is used for both HTTP and HTTPS traffic, then the builtin Nginx core will abort with an error.
+
+Here is an example configuration file:
+
+[source,javascript]
+------------------
+{
+	"port": 8000,
+	"environment": "production",
+	"ssl": true,
+	"ssl_certificate": "/path-to-cert.crt",
+	"ssl_certificate_key": "/path-to-cert.key"
+}
+------------------
+
 
 === Advanced configuration
 
@@ -65,6 +108,55 @@ Then open the file `resources/templates/standalone/config.erb`.
 NOTE: If you installed Phusion Passenger using the Debian or Ubuntu packages, then the filename is `/usr/share/passenger/templates/standalone/config.erb` or `/usr/share/passenger-enterprise/templates/standalone/config.erb`.
 
 Please note that changes to this file only last until you reinstall or upgrade Phusion Passenger. We are currently working on a mechanism for permanently editing the configuration file.
+
+
+[[mass_deployment]]
+== Mass deployment
+:version: 3.0.0
+include::users_guide_snippets/enterprise_only.txt[]
+
+Mass deployment is a special mode in Phusion Passenger Standalone that allows you to deploy multiple web applications without having to create configuration entries for each one of them. Given a directory with multiple web applications, Passenger Standalone will automatically give each web application its own virtual host entry, and serve all of them from a single server. The virtual host's server name is equal to the web application's directory name. Whenever a new web application is added or removed, Passenger Standalone automatically reconfigures itself without administrator intervention. This makes the mass deployment mode especially useful when there are a large number of web applications.
+
+For example, suppose we have a directory `/webapps` with three web applications: Ruby app, a Python app and a Node.js app.
+
+----------------------------
+/webapps
+  |
+  +-- rubyapp.com
+  |    |
+  |    +-- config.ru
+  |
+  +-- pythonapp.com
+  |    |
+  |    +-- passenger_wsgi.py
+  |
+  +-- nodeapp.com
+       |
+       +-- app.js
+----------------------------
+
+You can activate Passenger Standalone in mass deployment mode by changing the working directory to `/webapps` and running `passenger start`:
+
+----------------------------
+$ cd /webapps
+$ passenger start
+=============== Phusion Passenger Standalone web server started ===============
+PID file: /webapps/passenger.3000.pid
+Log file: /webapps/passenger.3000.log
+Environment: development
+
+Serving these applications on 0.0.0.0 port 3000:
+ Host name                     Directory
+.-----------------------------------------------------------
+ rubyapp.com                   /webapps/rubyapp.com
+ pythonapp.com                 /webapps/pythonapp.com
+ nodeapp.com                   /webapps/nodeapp.com
+.-----------------------------------------------------------
+----------------------------
+
+If you for example remove `/webapps/rubyapp.com`, Passenger Standalone will reconfigure itself without that web application. Or if you add a new web applications `/webapps/newapp.org`, Passenger Standalone will reconfigure itself with that web application.
+
+Any options that you pass to the `passenger` command will affect all deployed web applications. It is also possible to change options on a per-application basis through the use of <<config_file,a `passenger-standalone.json` file inside each application's directory>>.
 
 
 [[troubleshooting]]

@@ -92,7 +92,7 @@ http {
         root '<%= app[:root] %>/public';
         passenger_app_root '<%= app[:root] %>';
         passenger_enabled on;
-        rails_env <%= app[:env] %>;
+        passenger_app_env <%= app[:environment] %>;
         passenger_spawn_method <%= app[:spawn_method] %>;
         <% if app[:concurrency_model] != DEFAULT_CONCURRENCY_MODEL %>passenger_concurrency_model <%= app[:concurrency_model] %>;<% end %>
         <% if app[:thread_count] != DEFAULT_THREAD_COUNT %>passenger_thread_count <%= app[:thread_count] %>;<% end %>
