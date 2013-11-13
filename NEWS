@@ -8,6 +8,7 @@ Release 4.0.24
    using the `ErrorDocument` directive.
  * [Enterprise] Fixed a potential crash when a rolling restart is triggered
    while a process is already shutting down.
+ * [Enterprise] Fixed Mass Deployment support for Node.js and Meteor.
 
 
 Release 4.0.23

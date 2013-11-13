@@ -34,7 +34,8 @@ class AppFinder
 		return File.exist?("#{dir}/config.ru") ||
 			File.exist?("#{dir}/config/environment.rb") ||
 			File.exist?("#{dir}/passenger_wsgi.py") ||
-			File.exist?("#{dir}/passenger_node.js")
+			File.exist?("#{dir}/app.js") ||
+			File.exist?("#{dir}/.meteor")
 	end
 	
 	def initialize(dirs, options = {})
