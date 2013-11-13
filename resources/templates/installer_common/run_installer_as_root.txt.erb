@@ -8,4 +8,5 @@ But it can't do that, because you're running the installer as <b><%= `whoami`.st
 Please re-run this installer using <%= @sudo %>:
 
   <b><%= @sudo_s_e %>
+  export PATH='<%= ENV['PATH'] %>'
   <%= @ruby %> <%= @installer %></b>
