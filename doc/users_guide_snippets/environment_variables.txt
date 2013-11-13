@@ -247,6 +247,8 @@ os.environ['FOO'] = 'bar'
 [[env_vars_and_sudo]]
 === Environment variables and sudo
 
+NOTE: RVM users should always use the `rvmsudo` command instead of `sudo`. However all information in this section apply to `rvmsudo` as well.
+
 The `sudo` command resets all environment variables before running the specified command, for security reasons. So if you set environment variables before running `sudo passenger-install-xxx-module`, `sudo passenger-status` or any other commands, then the environment variables are not correctly passed to the command. You can solve this by running sudo with `-E` (preserve environment variables):
 
 [source,sh]
@@ -261,5 +263,14 @@ Alternatively, you can obtain a root prompt with sudo first, and *then* set the 
 user@localhost bash$ sudo -s
 Password: ...
 root@localhost bash# export APXS2=/usr/sbin/apxs2
+root@localhost bash# passenger-install-apache2-module
+-------------------------
+
+Note that for security reasons, `sudo` **always resets the `PATH` environment variable**, even if you pass `-E`! You can get around this problem by obtaining a root prompt first, and then set the environment variables:
+
+-------------------------
+user@localhost bash$ sudo -s
+Password: ...
+root@localhost bash# export PATH=$PATH:/opt/myruby/bin
 root@localhost bash# passenger-install-apache2-module
 -------------------------

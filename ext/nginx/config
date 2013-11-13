@@ -3,6 +3,8 @@ export PATH
 
 if ! ruby -v >/dev/null 2>/dev/null; then
     echo '*** ERROR: Cannot find the "ruby" command in $PATH. Please fix your $PATH. You can learn more about $PATH at: http://www.modrails.com/documentation/Users%20guide%20Nginx.html#_the_path_environment_variable'
+    echo '*** Do you think that you set $PATH correctly, and you happen to be using sudo or rvmsudo? Read this: http://www.modrails.com/documentation/Users%20guide%20Nginx.html#env_vars_and_sudo'
+    exit 1
 fi
 
 if test "x$PASSENGER_LIBS" = "x" && ! passenger-config --compiled; then
@@ -25,6 +27,13 @@ if test "x$PASSENGER_LIBS" = "x" && ! passenger-config --compiled; then
     echo "*** Phusion Passenger support files have been successfully compiled. ***"
 fi
 
+if test "x$PASSENGER_INCLUDEDIR" = "x"; then
+    PASSENGER_INCLUDEDIR=`passenger-config --includedir`
+fi
+if test "x$PASSENGER_LIBS" = "x"; then
+    PASSENGER_LIBS=`passenger-config --nginx-libs`
+fi
+
 ngx_addon_name=ngx_http_passenger_module
 HTTP_MODULES="$HTTP_MODULES ngx_http_passenger_module"
 NGX_ADDON_SRCS="$NGX_ADDON_SRCS \
@@ -41,20 +50,11 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/ContentHandler.h \
     ${ngx_addon_dir}/StaticContentHandler.h \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
-    `passenger-config --includedir`/common/Constants.h \
-    `passenger-config --includedir`/common/AgentsStarter.h \
-    `passenger-config --includedir`/common/ApplicationPool2/AppTypes.h"
-if test "x$PASSENGER_INCLUDEDIR" = "x"; then
-    CORE_INCS="$CORE_INCS `passenger-config --includedir`"
-else
-    CORE_INCS="$CORE_INCS $PASSENGER_INCLUDEDIR"
-fi
-if test "x$PASSENGER_LIBS" = "x"; then
-    CORE_LIBS="$CORE_LIBS `passenger-config --nginx-libs`"
-else
-    CORE_LIBS="$CORE_LIBS $PASSENGER_LIBS"
-fi
-CORE_LIBS="$CORE_LIBS -lstdc++ -lpthread"
+    ${PASSENGER_INCLUDEDIR}/common/Constants.h \
+    ${PASSENGER_INCLUDEDIR}/common/AgentsStarter.h \
+    ${PASSENGER_INCLUDEDIR}/common/ApplicationPool2/AppTypes.h"
+CORE_INCS="$CORE_INCS $PASSENGER_INCLUDEDIR"
+CORE_LIBS="$CORE_LIBS $PASSENGER_LIBS -lstdc++ -lpthread"
 
 ngx_feature="Math library"
 ngx_feature_name=
