@@ -208,7 +208,7 @@ private
 			render_template 'installer_common/run_installer_as_root',
 				:dir  => PhusionPassenger.source_root,
 				:sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
-				:sudo_e => "#{PhusionPassenger::PlatformInfo.ruby_sudo_command} -E",
+				:sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
 				:ruby => PhusionPassenger::PlatformInfo.ruby_command,
 				:installer => "#{PhusionPassenger.bin_dir}/passenger-install-apache2-module #{ORIG_ARGV.join(' ')}"
 		end
