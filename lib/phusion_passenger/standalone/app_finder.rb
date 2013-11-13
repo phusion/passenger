@@ -25,7 +25,6 @@ require 'phusion_passenger/utils/file_system_watcher'
 module PhusionPassenger
 module Standalone
 
-# Security note: can run arbitrary ruby code by evaluating passenger.conf
 class AppFinder
 	attr_accessor :dirs
 	attr_reader :apps
@@ -54,13 +53,13 @@ class AppFinder
 		}
 		watchlist << app_root
 		watchlist << "#{app_root}/config" if File.exist?("#{app_root}/config")
-		watchlist << "#{app_root}/passenger.conf" if File.exist?("#{app_root}/passenger.conf")
+		watchlist << "#{app_root}/passenger-standalone.json" if File.exist?("#{app_root}/passenger-standalone.json")
 		
 		apps.sort! do |a, b|
 			a[:root] <=> b[:root]
 		end
 		apps.map! do |app|
-			config_filename = File.join(app[:root], "passenger.conf")
+			config_filename = File.join(app[:root], "passenger-standalone.json")
 			if File.exist?(config_filename)
 				local_options = load_config_file(:local_config, config_filename)
 				merged_options = @options.merge(app)
@@ -126,8 +125,32 @@ private
 	end
 	
 	def load_config_file(context, filename)
-		require 'phusion_passenger/standalone/config_file' unless defined?(ConfigFile)
-		return ConfigFile.new(context, filename).options
+		require 'phusion_passenger/utils/json' if !defined?(PhusionPassenger::Utils::JSON)
+		begin
+			data = File.open(filename, "r:utf-8") do |f|
+				f.read
+			end
+		rescue SystemCallError => e
+			STDERR.puts "*** Warning: cannot load config file #{filename} (#{e})"
+			return {}
+		end
+
+		begin
+			config = PhusionPassenger::Utils::JSON.parse(data)
+		rescue => e
+			STDERR.puts "*** Warning: cannot parse config file #{filename} (#{e})"
+			return {}
+		end
+		if !config.is_a?(Hash)
+			STDERR.puts "*** Warning: cannot parse config file #{filename} (it does not contain an object)"
+			return {}
+		end
+
+		result = {}
+		config.each_pair do |key, val|
+			result[key.to_sym] = val
+		end
+		return result
 	end
 	
 	def looks_like_app_directory?(dir)
