@@ -80,7 +80,7 @@
 
 	#define NGINX_DOC_URL "http://www.modrails.com/documentation/Users%20guide%20Nginx.html"
 
-	#define PASSENGER_VERSION "4.0.23"
+	#define PASSENGER_VERSION "4.0.24"
 
 	#define POOL_HELPER_THREAD_STACK_SIZE 262144
 
