@@ -110,6 +110,31 @@ NOTE: If you installed Phusion Passenger using the Debian or Ubuntu packages, th
 Please note that changes to this file only last until you reinstall or upgrade Phusion Passenger. We are currently working on a mechanism for permanently editing the configuration file.
 
 
+== Using Passenger Standalone in production
+
+[[starting_at_system_boot]]
+=== Starting Passenger Standalone at system boot
+
+The easiest way to have Passenger Standalone started during system boot is add it to the file `/etc/rc.local`. This script is called during system boot.
+
+Here's an example of what you may want to add to `/etc/rc.local`. If there is an `exit` command in `rc.local`, make sure you add these _before_ the `exit` command.
+
+[source,sh]
+------------------------------------------
+# If you installed Phusion Passenger from tarball, add its `bin` directory to PATH.
+#export PATH=/path-to-passenger/bin:$PATH
+
+# Change working directory to your webapp.
+cd /path-to-your-webapp
+
+# Start Passenger Standalone in daemonized mode. Passenger will be started as
+# root when run from this file, so we also tell it to drop its privileges to a
+# normal user. Replace 'someusername' with the user you want to run your
+# application under.
+passenger start --daemonize --port 80 --user someusername
+------------------------------------------
+
+
 [[mass_deployment]]
 == Mass deployment
 :version: 3.0.0

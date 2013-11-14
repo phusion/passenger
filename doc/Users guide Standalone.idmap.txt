@@ -76,33 +76,37 @@
 
 4.3. Advanced configuration	=>	advanced-configuration-e3v4pk
 
-5. Mass deployment	=>	mass-deployment-1xqriy4
+5. Using Passenger Standalone in production	=>	using-passenger-standalone-in-production-1i7yjcz
 
-6. Troubleshooting	=>	troubleshooting-o7g75o
+5.1. Starting Passenger Standalone at system boot	=>	starting-passenger-standalone-at-system-boot-jpem2b
 
-6.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-2vokcr
+6. Mass deployment	=>	mass-deployment-1xqriy4
 
-6.2. Upon uploading a file, Phusion Passenger reports "client_body_temp/00000000xx failed (2: No such file or directory)"	=>	upon-uploading-a-file-phusion-passenger-reports-client-body-temp-00000000xx-failed-2-no-such-file-or-directory--d01goe
+7. Troubleshooting	=>	troubleshooting-o7g75o
 
-7. Appendix: About environment variables	=>	appendix-about-environment-variables-1ct91x3
+7.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-2vokcr
 
-7.1. Working with environment variables	=>	working-with-environment-variables-11cmwlv
+7.2. Upon uploading a file, Phusion Passenger reports "client_body_temp/00000000xx failed (2: No such file or directory)"	=>	upon-uploading-a-file-phusion-passenger-reports-client-body-temp-00000000xx-failed-2-no-such-file-or-directory--d01goe
 
-7.2. The PATH environment variable	=>	the-path-environment-variable-yzfn3k
+8. Appendix: About environment variables	=>	appendix-about-environment-variables-1ct91x3
 
-7.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-d7k5mh
+8.1. Working with environment variables	=>	working-with-environment-variables-11cmwlv
 
-7.3. Making environment variables permanent	=>	making-environment-variables-permanent-mkq46d
+8.2. The PATH environment variable	=>	the-path-environment-variable-yzfn3k
 
-7.3.1. bash	=>	bash-hmcscc
+8.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-d7k5mh
 
-7.3.2. Apache	=>	apache-15y3bm0
+8.3. Making environment variables permanent	=>	making-environment-variables-permanent-mkq46d
 
-7.3.3. Nginx	=>	nginx-uarf27
+8.3.1. bash	=>	bash-hmcscc
 
-7.3.4. cron	=>	cron-6272ar
+8.3.2. Apache	=>	apache-15y3bm0
 
-7.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-127wbl2
+8.3.3. Nginx	=>	nginx-uarf27
 
-7.4. Environment variables and sudo	=>	environment-variables-and-sudo-znzmif
+8.3.4. cron	=>	cron-6272ar
+
+8.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-127wbl2
+
+8.4. Environment variables and sudo	=>	environment-variables-and-sudo-znzmif
 
