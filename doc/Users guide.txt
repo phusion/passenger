@@ -43,6 +43,15 @@ Please refer to:
  * link:Users%20guide%20Apache.html#installation[**Apache** mode installation & upgrade]
  * link:Users%20guide%20Standalone.html#installation[**Standalone** mode installation & upgrade]
 
+[[troubleshooting]]
+== Troubleshooting
+
+Please refer to:
+
+ * link:Users%20guide%20Nginx.html#troubleshooting[**Nginx** mode troubleshooting]
+ * link:Users%20guide%20Apache.html#troubleshooting[**Apache** mode troubleshooting]
+ * link:Users%20guide%20Standalone.html#troubleshooting[**Standalone** mode troubleshooting]
+
 [[support]]
 == Where to get support
 
