@@ -726,21 +726,13 @@ endif::[]
 ifdef::nginx[]
 === Installing as a normal Nginx module without using the installer
 
-You can also install Phusion Passenger the way you install any other Nginx module, e.g. with `--add-module`. Run Nginx's configure script with `--add-module=/path-to-passenger-root/ext/nginx`.
+You can also install Phusion Passenger the way you install any other Nginx module, e.g. with `--add-module`. This installation mode is useful if you already have an Nginx tarball somewhere, or if you're using link:http://nginx.com/products/[Nginx Plus].
 
-If you installed Phusion Passenger via the gem, then 'path-to-passenger-root' can be obtained with the command:
+You need to run Nginx's configure script with `--add-module=/path-to-passenger-nginx-addon-dir`. The right value for `/path-to-passenger-nginx-addon-dir` can be obtained with the command:
 
---------------------------
-passenger-config --root
---------------------------
-
-This will probably output something along the lines of '/usr/lib/ruby/gems/1.8/gems/passenger-x.x.x',
-so you'll probably have to specify something like `--add-module=/usr/lib/ruby/gems/1.8/gems/passenger-x.x.x/ext/nginx`.
-
-If you installed Phusion Passenger via a source tarball, then 'path-to-passenger-root'
-is the directory which contains the Phusion Passenger source code. So if you
-extracted the Phusion Passenger source code to '/opt/passenger-x.x.x', then you'll
-have to specify `--add-module=/opt/passenger-x.x.x/ext/nginx`.
+-------------------------------------
+passenger-config --nginx-addon-dir
+-------------------------------------
 
 After having installed Nginx with Phusion Passenger support, you must paste the following
 line into your Nginx configuration file:
@@ -749,7 +741,13 @@ line into your Nginx configuration file:
 passenger_root /path-to-passenger-root;
 ------------------------------------------
 
-After having done so, restart Nginx.
+The right value for `/path-to-passenger-root` can be obtained by running the following command:
+
+-------------------------------------
+passenger-config --root
+-------------------------------------
+
+After having modified the Nginx configuration file, restart Nginx.
 
 [[nginx_init_script]]
 === Creating an Nginx init script
