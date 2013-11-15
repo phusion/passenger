@@ -124,6 +124,10 @@ sudo apt-get update
 
 ==== Installing packages
 
+ifdef::nginx[]
+NOTE: You should install `nginx-extras` even if you have already installed an Nginx package from the official Debian/Ubuntu repository. This is because the Nginx binary that our packages supply is compiled with the Passenger module.
+endif::nginx[]
+
 **Open source**::
 +
 1. <<install_add_apt_repo,Add our APT repository.>>
@@ -131,8 +135,9 @@ ifdef::nginx[]
 2. Install the packages:
 +
 --------------------------------------------------------------
-sudo apt-get install nginx-full passenger
+sudo apt-get install nginx-extras passenger
 --------------------------------------------------------------
++
 3. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
 4. Restart Nginx:
 +
@@ -163,7 +168,7 @@ endif::[]
 +
 ifdef::nginx[]
 --------------------------------------------------------------
-sudo apt-get install nginx-full passenger-enterprise
+sudo apt-get install nginx-extras passenger-enterprise
 --------------------------------------------------------------
 4. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
 5. Restart Nginx:
