@@ -389,6 +389,7 @@ public:
 		params
 			.set    ("web_server_type", type == AS_APACHE ? "apache" : "nginx")
 			.setPid ("web_server_pid",  getpid())
+			.set    ("web_server_passenger_version", PASSENGER_VERSION)
 			.set    ("passenger_root",  passengerRoot)
 			.setInt ("log_level",       getLogLevel())
 			.set    ("temp_dir",        getSystemTempDir());
@@ -404,17 +405,6 @@ public:
 		// .set    ("default_ruby",    defaultRubyCommand)
 		// .setInt ("max_pool_size",   maxPoolSize)
 		// .setInt ("max_instances_per_app",     maxInstancesPerApp)
-		/*
-			.setInt ("pool_idle_time",            poolIdleTime)
-			.set    ("analytics_server",          analyticsServer)
-			.set    ("analytics_log_user",        analyticsLogUser)
-			.set    ("analytics_log_group",       analyticsLogGroup)
-			.set    ("union_station_gateway_address",  unionStationGatewayAddress)
-			.setInt ("union_station_gateway_port", unionStationGatewayPort)
-			.set    ("union_station_gateway_cert", realUnionStationGatewayCert)
-			.set    ("union_station_proxy_address", unionStationProxyAddress)
-			.set    ("prestart_urls",   serializePrestartURLs(prestartURLs));
-		*/
 		
 		fds = createUnixSocketPair();
 		pid = syscalls::fork();
