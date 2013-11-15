@@ -114,7 +114,9 @@
 
 5.2. Deploying to a virtual host’s root	=>	deploying-to-a-virtual-host-s-root-zzo4v7
 
-5.3. Redeploying (restarting the WSGI application)	=>	redeploying-restarting-the-wsgi-application--na7pmf
+5.3. Deploying to a sub URI	=>	deploying-to-a-sub-uri-ayqz96
+
+5.4. Redeploying (restarting the WSGI application)	=>	redeploying-restarting-the-wsgi-application--na7pmf
 
 6. Configuring Phusion Passenger	=>	configuring-phusion-passenger-11oztoe
 
@@ -134,11 +136,13 @@
 
 6.3.5. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
 
-6.3.6. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
+6.3.6. PassengerBaseURI <uri>	=>	passengerbaseuri-uri--97i9mm
 
-6.3.7. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+6.3.7. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
 
-6.3.8. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
+6.3.8. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+
+6.3.9. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
 
 6.4. Process spawning options	=>	process-spawning-options-v2vscm
 
@@ -216,15 +220,11 @@
 
 6.10. Rack and Rails >= 3 specific options	=>	rack-specific-options-wk9qzt
 
-6.10.1. RackBaseURI <uri>	=>	rackbaseuri-uri--1to24pj
-
-6.10.2. RackEnv <string>	=>	rackenv-string--vve9py
+6.10.1. RackEnv <string>	=>	rackenv-string--vve9py
 
 6.11. Classic Ruby on Rails (⇐ 2.x)-specific options	=>	ruby-on-rails-specific-options-1t10wfu
 
-6.11.1. RailsBaseURI <uri>	=>	railsbaseuri-uri--1txrw3k
-
-6.11.2. RailsEnv <string>	=>	railsenv-string--1b0xxvu
+6.11.1. RailsEnv <string>	=>	railsenv-string--1b0xxvu
 
 6.12. Advanced options	=>	advanced-options-1ab1jkq
 
@@ -236,19 +236,21 @@
 
 6.13.1. RailsRuby	=>	railsruby-ht09ei
 
-6.13.2. RailsUserSwitching	=>	railsuserswitching-1npx8y4
+6.13.2. RailsBaseURI and RackBaseURI	=>	railsbaseuri-uri--1txrw3k
 
-6.13.3. RailsDefaultUser	=>	railsdefaultuser-19j7n3m
+6.13.3. RailsUserSwitching	=>	railsuserswitching-1npx8y4
 
-6.13.4. RailsAllowModRewrite	=>	railsallowmodrewrite-1vkziro
+6.13.4. RailsDefaultUser	=>	railsdefaultuser-19j7n3m
 
-6.13.5. RailsSpawnMethod	=>	railsspawnmethod-1aljgpa
+6.13.5. RailsAllowModRewrite	=>	railsallowmodrewrite-1vkziro
 
-6.13.6. RailsAutoDetect, RackAutoDetect and WsgiAutoDetect	=>	railsautodetect-rackautodetect-and-wsgiautodetect-1qgakzs
+6.13.6. RailsSpawnMethod	=>	railsspawnmethod-1aljgpa
 
-6.13.7. RailsAppSpawnerIdleTime	=>	railsappspawneridletime-heh41r
+6.13.7. RailsAutoDetect, RackAutoDetect and WsgiAutoDetect	=>	railsautodetect-rackautodetect-and-wsgiautodetect-1qgakzs
 
-6.13.8. RailsFrameworkSpawnerIdleTime	=>	railsframeworkspawneridletime-adcf9k
+6.13.8. RailsAppSpawnerIdleTime	=>	railsappspawneridletime-heh41r
+
+6.13.9. RailsFrameworkSpawnerIdleTime	=>	railsframeworkspawneridletime-adcf9k
 
 7. Troubleshooting	=>	troubleshooting-2ihihi
 

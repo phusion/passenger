@@ -86,22 +86,21 @@ Suppose that you already have a virtual host:
 </VirtualHost>
 -------------------------------------------
 
-And you want your Ruby on Rails application to be accessible from the URL
-'http://www.phusion.nl/rails'.
+And you want your Rails application, located in `/websites/rails`, to be accessible from the URL
+'http://www.phusion.nl/subapp'.
 
-To do this, make a symlink in the virtual host's document root, and have it
-point to your Ruby on Rails application's 'public' folder. For example:
--------------------------------------------
-ln -s /webapps/mycook/public /websites/phusion/rails
--------------------------------------------
+To do this, you need to perform the following:
 
-Next, add a <<RailsBaseURI,RailsBaseURI>> option to the virtual host configuration,
-and also make sure that:
+ 1. Set `Alias {SUBURI} {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}`.
+ 2. Create a `<Location /{SUBURI}>` block.
+ 3. Inside the Location block, set `PassengerBaseURI /{SUBURI}`.
+ 4. Inside the Location block, set `PassengerAppRoot {PATH TO YOUR APPLICATION ROOT}`.
+ 5. Create a `<Directory {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}>` block.
+ 6. Inside the Directory block, set `Allow from all`.
+ 7. Inside the Directory block, disable MultiViews.
 
-- The Apache per-directory permissions allow access to this folder.
-- MultiViews is disabled for this folder.
+Here is an example:
 
-For example:
 -------------------------------------------
 <VirtualHost *:80>
     ServerName www.phusion.nl
@@ -110,33 +109,26 @@ For example:
         Allow from all
     </Directory>
     
-    RailsBaseURI /rails                   # <-- These lines have
-    <Directory /websites/phusion/rails>   # <-- been added.
-        Options -MultiViews               # <--
-    </Directory>                          # <--
+    # These have been added:
+    Alias /subapp /websites/rails/public
+    <Location /subapp>
+        PassengerBaseURI /subapp
+        PassengerAppRoot /websites/rails
+    </Location>
+    <Directory /websites/rails/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
 </VirtualHost>
 -------------------------------------------
-Then restart Apache. The application has now been deployed.
+
+Then restart Apache. The application has now been deployed to the sub-URI.
 
 NOTE: If you're deploying to a sub-URI then please make sure that your view
 templates correctly handles references to sub-URI static assets! Otherwise
 you may find broken links to images, CSS files, JavaScripts, etc. Please read
 <<sub_uri_deployment_uri_fix,How to fix broken images/CSS/JavaScript URIs in sub-URI deployments>>
 for more information.
-
-[TIP]
-======================================
-You can deploy multiple Rails applications under a virtual host, by specifying
-<<RailsBaseURI,RailsBaseURI>> multiple times. For example:
----------------------------------
-<VirtualHost *:80>
-    ....
-    RailsBaseURI /app1
-    RailsBaseURI /app2
-    RailsBaseURI /app3
-</VirtualHost>
----------------------------------
-======================================
 
 === Redeploying (restarting the Ruby on Rails application) ===
 
@@ -294,22 +286,21 @@ Suppose that you already have a virtual host:
 </VirtualHost>
 -------------------------------------------
 
-And you want your Rack application to be accessible from the URL
-'http://www.phusion.nl/rack'.
+And you want your Rack application, located in `/websites/rack`, to be accessible from the URL
+'http://www.phusion.nl/subapp'.
 
-To do this, make a symlink in the virtual host's document root, and have it
-point to your Rack application's 'public' folder. For example:
--------------------------------------------
-ln -s /webapps/rackapp/public /websites/phusion/rack
--------------------------------------------
+To do this, you need to perform the following:
 
-Next, add a <<RackBaseURI,RackBaseURI>> option to the virtual host configuration,
-and also make sure that:
+ 1. Set `Alias {SUBURI} {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}`.
+ 2. Create a `<Location /{SUBURI}>` block.
+ 3. Inside the Location block, set `PassengerBaseURI /{SUBURI}`.
+ 4. Inside the Location block, set `PassengerAppRoot {PATH TO YOUR APPLICATION ROOT}`.
+ 5. Create a `<Directory {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}>` block.
+ 6. Inside the Directory block, set `Allow from all`.
+ 7. Inside the Directory block, disable MultiViews.
 
-- The Apache per-directory permissions allow access to this folder.
-- MultiViews is disabled for this folder.
+Here is an example:
 
-For example:
 -------------------------------------------
 <VirtualHost *:80>
     ServerName www.phusion.nl
@@ -317,28 +308,21 @@ For example:
     <Directory /websites/phusion>
         Allow from all
     </Directory>
-
-    RackBaseURI /rack                     # <-- These lines have
-    <Directory /websites/phusion/rack>    # <-- been added.
-        Options -MultiViews               # <--
-    </Directory>                          # <--
+    
+    # These have been added:
+    Alias /subapp /websites/rack/public
+    <Location /subapp>
+        PassengerBaseURI /subapp
+        PassengerAppRoot /websites/rack
+    </Location>
+    <Directory /websites/rack/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
 </VirtualHost>
 -------------------------------------------
-Then restart Apache. The application has now been deployed.
 
-[TIP]
-======================================
-You can deploy multiple Rack applications under a virtual host, by specifying
-<<RackBaseURI,RackBaseURI>> multiple times. For example:
----------------------------------
-<VirtualHost *:80>
-    ....
-    RackBaseURI /app1
-    RackBaseURI /app2
-    RackBaseURI /app3
-</VirtualHost>
----------------------------------
-======================================
+Then restart Apache. The application has now been deployed to the sub-URI.
 
 === Redeploying (restarting the Rack application) ===
 
@@ -450,6 +434,59 @@ following folders are readable and executable by Apache:
  * all parent folders. That is, /webapps/wsgiapp and /webapps must also be readable and executable by Apache.
 
 Then restart Apache. The application has now been deployed.
+
+[[deploying_python_to_sub_uri]]
+=== Deploying to a sub URI ===
+
+Suppose that you already have a virtual host:
+
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
+    <Directory /websites/phusion>
+        Allow from all
+    </Directory>
+</VirtualHost>
+-------------------------------------------
+
+And you want your Python application, located in `/websites/python`, to be accessible from the URL
+'http://www.phusion.nl/subapp'.
+
+To do this, you need to perform the following:
+
+ 1. Set `Alias {SUBURI} {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}`.
+ 2. Create a `<Location /{SUBURI}>` block.
+ 3. Inside the Location block, set `PassengerBaseURI /{SUBURI}`.
+ 4. Inside the Location block, set `PassengerAppRoot {PATH TO YOUR APPLICATION ROOT}`.
+ 5. Create a `<Directory {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}>` block.
+ 6. Inside the Directory block, set `Allow from all`.
+ 7. Inside the Directory block, disable MultiViews.
+
+Here is an example:
+
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
+    <Directory /websites/phusion>
+        Allow from all
+    </Directory>
+    
+    # These have been added:
+    Alias /subapp /websites/python/public
+    <Location /subapp>
+        PassengerBaseURI /subapp
+        PassengerAppRoot /websites/python
+    </Location>
+    <Directory /websites/python/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
+</VirtualHost>
+-------------------------------------------
+
+Then restart Apache. The application has now been deployed to the sub-URI.
 
 === Redeploying (restarting the WSGI application) ===
 
@@ -575,10 +612,17 @@ PassengerNodejs /usr/bin/node;
     # If you have a web app deployed in a sub-URI, customize
     # PassengerRuby/PassengerPython inside a <Location> block.
     # The web app under www.bar.com/blog will use JRuby 1.7.1
-    RackBaseURI /blog
+    Alias /blog /websites/blog/public
     <Location /blog>
+        PassengerBaseURI /blog
+        PassengerAppRoot /websites/blog
+
         PassengerRuby /usr/local/rvm/wrappers/jruby-1.7.1/ruby
     </Location>
+    <Directory /websites/blog/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
 </VirtualHost>
 
 <VirtualHost *:80>
@@ -629,6 +673,22 @@ Example:
                                        #     root is "/var/rails/zena/sites/example.com"
 </VirtualHost>
 -----------------------------
+
+[[PassengerBaseURI]]
+==== PassengerBaseURI <uri> ====
+Used to specify that the given URI is a Phusion Passenger-served application. Please refer
+to the following sections for examples:
+
+ * <<deploying_rails_to_sub_uri,Deploying Rails 1.x and 2.x to a sub URI>>
+ * <<deploying_rack_to_sub_uri,Deploying Rack (including Rails >= 3) to a sub URI>>
+ * <<deploying_python_to_sub_uri,Deploying Python to a sub URI>>
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
 
 ==== PassengerRestartDir <directory>
 As described in the deployment chapters of this document, Phusion Passenger
@@ -1358,7 +1418,16 @@ Suppose that you have a web application deployed in a sub-URI '/store', like thi
 <VirtualHost *:80>
    ServerName myblog.com
    DocumentRoot /webapps/wordpress
-   RailsBaseURI /store
+
+   Alias /store /websites/store/public
+    <Location /store>
+        PassengerBaseURI /store
+        PassengerAppRoot /websites/store
+    </Location>
+    <Directory /websites/store/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
 </VirtualHost>
 ---------------------------
 
@@ -1369,7 +1438,16 @@ like this:
 <VirtualHost *:80>
    ServerName myblog.com
    DocumentRoot /webapps/wordpress
-   RailsBaseURI /store
+
+   Alias /store /websites/store/public
+    <Location /store>
+        PassengerBaseURI /store
+        PassengerAppRoot /websites/store
+    </Location>
+    <Directory /websites/store/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
 </VirtualHost>
 
 PassengerPreStart http://myblog.com/store    # <----- added
@@ -1809,21 +1887,6 @@ In each place, it may be specified at most once. The default value is 'off'.
 
 === Rack and Rails >= 3 specific options ===
 
-[[RackBaseURI]]
-==== RackBaseURI <uri> ====
-Used to specify that the given URI is a Rack application. See
-<<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>> for an example.
-
-It is allowed to specify this option multiple times. Do this to deploy multiple
-Rack applications in different sub-URIs under the same virtual host.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
 [[rack_env]]
 ==== RackEnv <string> ====
 The given value will be accessible in Rack applications in the `RACK_ENV`
@@ -1843,21 +1906,6 @@ In each place, it may be specified at most once. The default value is 'productio
 
 These options only have effect on classic Ruby on Rails 1.x and 2.x applications.
 Ruby on Rails >= 3.x applications are considered Rack applications.
-
-[[RailsBaseURI]]
-==== RailsBaseURI <uri> ====
-Used to specify that the given URI is a Rails application. See
-<<deploying_rails_to_sub_uri,Deploying Rails to a sub URI>> for an example.
-
-It is allowed to specify this option multiple times. Do this to deploy multiple
-Rails applications in different sub-URIs under the same virtual host.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
 
 [[rails_env]]
 ==== RailsEnv <string> ====
@@ -1941,6 +1989,9 @@ compatibility reasons.
 
 ==== RailsRuby ====
 Deprecated in favor of <<PassengerRuby,PassengerRuby>>.
+
+==== RailsBaseURI and RackBaseURI ====
+Deprecated in favor of <<PassengerBaseURI,PassengerBaseURI>>.
 
 ==== RailsUserSwitching ====
 Deprecated in favor of <<PassengerUserSwitching,PassengerUserSwitching>>.

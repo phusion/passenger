@@ -89,7 +89,7 @@ And you want your Rails application, located in `/websites/rails`, to be accessi
 
 To do this, you need to perform the following:
 
- 1. Create a `location <SUBURI>` block.
+ 1. Create a `location` with parameter `^/<SUBURI>(/|$)`. This is a regular expression that says: "match everything that is exactly <SUBURI>, or starts with <SUBDURI>/".
  2. Inside the location block, set `passenger_base_uri <SUBURI>`.
  3. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
  4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
@@ -107,7 +107,7 @@ http {
         root /websites/phusion;
 
         # This block has been added.
-        location /subapp {
+        location ^/subapp(/|$) {
             passenger_base_uri /subapp;
             alias /websites/rails/public;  # <-- be sure to point to 'public'!
             passenger_app_root /websites/rails;
@@ -280,7 +280,7 @@ And you want your Rack application, located in `/websites/rack`, to be accessibl
 
 To do this, you need to perform the following:
 
- 1. Create a `location <SUBURI>` block.
+ 1. Create a `location` with parameter `^/<SUBURI>(/|$)`. This is a regular expression that says: "match everything that is exactly <SUBURI>, or starts with <SUBDURI>/".
  2. Inside the location block, set `passenger_base_uri <SUBURI>`.
  3. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
  4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
@@ -298,7 +298,7 @@ http {
         root /websites/phusion;
 
         # This block has been added.
-        location /subapp {
+        location ^/subapp(/|$) {
             passenger_base_uri /subapp;
             alias /websites/rack/public;  # <-- be sure to point to 'public'!
             passenger_app_root /websites/rack;
@@ -440,7 +440,7 @@ And you want your WSGI application, located in `/websites/wsgi`, to be accessibl
 
 To do this, you need to perform the following:
 
- 1. Create a `location <SUBURI>` block.
+ 1. Create a `location` with parameter `^/<SUBURI>(/|$)`. This is a regular expression that says: "match everything that is exactly <SUBURI>, or starts with <SUBDURI>/".
  2. Inside the location block, set `passenger_base_uri <SUBURI>`.
  3. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
  4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
@@ -458,7 +458,7 @@ http {
         root /websites/phusion;
 
         # This block has been added.
-        location /subapp {
+        location ^/subapp(/|$) {
             passenger_base_uri /subapp;
             alias /websites/wsgi/public;  # <-- be sure to point to 'public'!
             passenger_app_root /websites/wsgi;
