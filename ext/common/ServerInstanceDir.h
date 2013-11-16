@@ -110,6 +110,11 @@ public:
 				toString(SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION),
 				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 			
+			string passengerVersionFile = path + "/passenger_version.txt";
+			createFile(passengerVersionFile,
+				PASSENGER_VERSION "\n",
+				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+			
 			
 			/* We want the upload buffer directory to be only writable by the web
 			 * server's worker processs. Other users may not have any access to this
