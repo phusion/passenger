@@ -80,10 +80,6 @@ describe "A natively packaged Phusion Passenger" do
 		end
 	end
 
-	specify "passenger-install-nginx-module is in #{BINDIR}" do
-		which("passenger-install-nginx-module").should == "#{BINDIR}/passenger-install-nginx-module"
-	end
-
 	specify "passenger-status is in #{SBINDIR}" do
 		which("passenger-status").should == "#{SBINDIR}/passenger-status"
 	end
@@ -206,6 +202,20 @@ describe "A natively packaged Phusion Passenger" do
 			output = capture_output("passenger-install-apache2-module --auto")
 			output.should include("LoadModule passenger_module #{APACHE2_MODULE_PATH}")
 			output.should include("PassengerRoot #{LOCATIONS_INI}")
+		end
+	end
+
+	describe "passenger-install-nginx-module" do
+		it "is in #{BINDIR}" do
+			which("passenger-install-nginx-module").should == "#{BINDIR}/passenger-install-nginx-module"
+		end
+
+		it "is able to compile Nginx" do
+			Dir.mktmpdir do |path|
+				output = capture_output("passenger-install-nginx-module --auto --prefix=#{path} --auto-download 2>&1")
+				output.should include("passenger_root #{LOCATIONS_INI};")
+				File.exist?("#{path}/sbin/nginx").should be_true
+			end
 		end
 	end
 

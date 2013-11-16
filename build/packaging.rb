@@ -388,7 +388,9 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	# Headers necessary for building the Nginx module
 	sh "mkdir -p #{fake_include_dir}"
 	# Infer headers that the Nginx module needs
-	headers = []
+	headers = [
+		["ext/common/Exceptions.h", "Exceptions.h"]
+	]
 	Dir["ext/nginx/*.[ch]"].each do |filename|
 		File.read(filename).split("\n").grep(%r{#include "common/(.+)"}) do |match|
 			headers << ["ext/common/#{$1}", $1]
