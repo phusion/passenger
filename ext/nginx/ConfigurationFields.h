@@ -75,6 +75,8 @@
 
 	ngx_str_t app_root;
 
+	ngx_str_t app_type;
+
 	ngx_str_t environment;
 
 	ngx_str_t group;
@@ -88,6 +90,8 @@
 	ngx_str_t ruby;
 
 	ngx_str_t spawn_method;
+
+	ngx_str_t startup_file;
 
 	ngx_str_t union_station_key;
 

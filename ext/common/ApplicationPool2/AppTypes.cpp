@@ -92,3 +92,8 @@ const char *
 pp_get_app_type_name(PassengerAppType type) {
 	return getAppTypeName(type);
 }
+
+PassengerAppType
+pp_get_app_type2(const char *name, unsigned int len) {
+	return getAppType(StaticString(name, len));
+}

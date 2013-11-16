@@ -94,9 +94,12 @@ http {
         passenger_enabled on;
         passenger_app_env <%= app[:environment] %>;
         passenger_spawn_method <%= app[:spawn_method] %>;
+        <% if app[:app_type] %>passenger_app_type <%= app[:app_type] %>;<% end %>
+        <% if app[:startup_file] %>passenger_startup_file <%= app[:startup_file] %>;<% end %>
         <% if app[:concurrency_model] != DEFAULT_CONCURRENCY_MODEL %>passenger_concurrency_model <%= app[:concurrency_model] %>;<% end %>
         <% if app[:thread_count] != DEFAULT_THREAD_COUNT %>passenger_thread_count <%= app[:thread_count] %>;<% end %>
         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
+        <% if app[:restart_dir] %>passenger_restart_dir <%= app[:restart_dir] %>;<% end %>
         <% if app[:union_station_key] %>
             union_station_support on;
             union_station_key <%= app[:union_station_key] %>;

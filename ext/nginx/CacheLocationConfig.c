@@ -228,6 +228,13 @@ u_char int_buf[32], *end, *buf, *pos;
 		}
 	
 
+	
+		if (conf->startup_file.data != NULL) {
+			len += 23;
+			len += conf->startup_file.len + 1;
+		}
+	
+
 
 /* Create string */
 buf = pos = ngx_pnalloc(cf->pool, len);
@@ -551,6 +558,19 @@ buf = pos = ngx_pnalloc(cf->pool, len);
 			pos = ngx_copy(pos,
 				conf->restart_dir.data,
 				conf->restart_dir.len);
+			*pos = '\0';
+			pos++;
+		}
+	
+
+	
+		if (conf->startup_file.data != NULL) {
+			pos = ngx_copy(pos,
+				"PASSENGER_STARTUP_FILE",
+				23);
+			pos = ngx_copy(pos,
+				conf->startup_file.data,
+				conf->startup_file.len);
 			*pos = '\0';
 			pos++;
 		}

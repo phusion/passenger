@@ -254,6 +254,15 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:name  => 'passenger_restart_dir',
 		:type  => :string
 	},
+	{
+		:name   => 'passenger_app_type',
+		:type   => :string,
+		:header => nil
+	},
+	{
+		:name   => 'passenger_startup_file',
+		:type   => :string
+	},
 
 	###### Enterprise features ######
 	{

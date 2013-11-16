@@ -1730,6 +1730,7 @@ private:
 		fillPoolOption(client, options.maxRequestQueueSize, "PASSENGER_MAX_REQUEST_QUEUE_SIZE");
 		fillPoolOption(client, options.statThrottleRate, "PASSENGER_STAT_THROTTLE_RATE");
 		fillPoolOption(client, options.restartDir, "PASSENGER_RESTART_DIR");
+		fillPoolOption(client, options.startupFile, "PASSENGER_STARTUP_FILE");
 		fillPoolOption(client, options.loadShellEnvvars, "PASSENGER_LOAD_SHELL_ENVVARS");
 		fillPoolOption(client, options.debugger, "PASSENGER_DEBUGGER");
 		fillPoolOption(client, options.raiseInternalError, "PASSENGER_RAISE_INTERNAL_ERROR");

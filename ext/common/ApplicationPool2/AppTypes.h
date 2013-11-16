@@ -61,6 +61,7 @@ PassengerAppType pp_app_type_detector_check_app_root(PP_AppTypeDetector *detecto
 	const char *appRoot, unsigned int len, PP_Error *error);
 
 const char *pp_get_app_type_name(PassengerAppType type);
+PassengerAppType pp_get_app_type2(const char *name, unsigned int len);
 
 #ifdef __cplusplus
 }

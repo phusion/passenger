@@ -1304,40 +1304,48 @@ passenger_content_handler(ngx_http_request_t *r)
         return passenger_static_content_handler(r, &page_cache_file);
     }
     
-    pp_error_init(&error);
-    if (slcf->app_root.data == NULL) {
-        context->app_type = pp_app_type_detector_check_document_root(
-            pp_app_type_detector,
-            (const char *) context->public_dir.data, context->public_dir.len,
-            context->base_uri.len != 0,
-            &error);
-    } else {
-        context->app_type = pp_app_type_detector_check_app_root(
-            pp_app_type_detector,
-            (const char *) slcf->app_root.data, slcf->app_root.len,
-            &error);
-    }
-    if (context->app_type == PAT_NONE) {
-        return NGX_DECLINED;
-    } else if (context->app_type == PAT_ERROR) {
-        if (error.errnoCode == EACCES) {
-            ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
-                          "%s; This error means that the Nginx worker process (PID %d, "
-                          "running as UID %d) does not have permission to access this file. "
-                          "Please read the manual to learn how to fix this problem: "
-                          "section 'Troubleshooting' -> 'Upon accessing the web app, Nginx "
-                          "reports a \"Permission denied\" error'; Extra info",
-                          error.message,
-                          (int) getpid(),
-                          (int) getuid());
+    if (slcf->app_type.data == NULL) {
+        pp_error_init(&error);
+        if (slcf->app_root.data == NULL) {
+            context->app_type = pp_app_type_detector_check_document_root(
+                pp_app_type_detector,
+                (const char *) context->public_dir.data, context->public_dir.len,
+                context->base_uri.len != 0,
+                &error);
         } else {
-            ngx_log_error(NGX_LOG_ALERT, r->connection->log,
-                          (error.errnoCode == PP_NO_ERRNO) ? 0 : error.errnoCode,
-                          "%s",
-                          error.message);
+            context->app_type = pp_app_type_detector_check_app_root(
+                pp_app_type_detector,
+                (const char *) slcf->app_root.data, slcf->app_root.len,
+                &error);
         }
-        pp_error_destroy(&error);
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        if (context->app_type == PAT_NONE) {
+            return NGX_DECLINED;
+        } else if (context->app_type == PAT_ERROR) {
+            if (error.errnoCode == EACCES) {
+                ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
+                              "%s; This error means that the Nginx worker process (PID %d, "
+                              "running as UID %d) does not have permission to access this file. "
+                              "Please read the manual to learn how to fix this problem: "
+                              "section 'Troubleshooting' -> 'Upon accessing the web app, Nginx "
+                              "reports a \"Permission denied\" error'; Extra info",
+                              error.message,
+                              (int) getpid(),
+                              (int) getuid());
+            } else {
+                ngx_log_error(NGX_LOG_ALERT, r->connection->log,
+                              (error.errnoCode == PP_NO_ERRNO) ? 0 : error.errnoCode,
+                              "%s",
+                              error.message);
+            }
+            pp_error_destroy(&error);
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+    } else {
+        context->app_type = pp_get_app_type2((const char *) slcf->app_type.data,
+            slcf->app_type.len);
+        if (context->app_type == PAT_NONE) {
+            return NGX_DECLINED;
+        }
     }
     
     

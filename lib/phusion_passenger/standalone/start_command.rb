@@ -146,8 +146,17 @@ private
 				@options[:environment] = value
 			end
 			opts.on("-R", "--rackup FILE", String,
-				wrap_desc("If Rack application detected, run this rackup file")) do |value|
-				ENV["RACKUP_FILE"] = value
+				wrap_desc("Consider application a Ruby Rack app, and use the given rackup file")) do |value|
+				@options[:app_type] = "rack"
+				@options[:startup_file] = value
+			end
+			opts.on("--app-type NAME", String,
+				wrap_desc("Force app to be detected as the given type")) do |value|
+				@options[:app_type] = value
+			end
+			opts.on("--startup-file FILENAME", String,
+				wrap_desc("Force given startup file to be used")) do |value|
+				@options[:startup_file] = value
 			end
 			opts.on("--max-pool-size NUMBER", Integer,
 				wrap_desc("Maximum number of application processes (default: #{@options[:max_pool_size]})")) do |value|
@@ -192,6 +201,10 @@ private
 			opts.on("--ssl-certificate-key PATH", String,
 				wrap_desc("Specify the SSL key path")) do |val|
 				@options[:ssl_certificate_key] = File.expand_path(val)
+			end
+			opts.on("--restart-dir PATH", String,
+				wrap_desc("Specify the restart dir")) do |val|
+				@options[:restart_dir] = File.expand_path(val)
 			end
 			opts.on("--union-station-gateway HOST:PORT", String,
 				wrap_desc("Specify Union Station Gateway host and port")) do |value|
