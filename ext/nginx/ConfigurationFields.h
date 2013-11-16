@@ -83,6 +83,8 @@
 
 	ngx_str_t python;
 
+	ngx_str_t restart_dir;
+
 	ngx_str_t ruby;
 
 	ngx_str_t spawn_method;

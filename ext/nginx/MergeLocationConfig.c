@@ -177,3 +177,9 @@
 			NGX_CONF_UNSET);
 	
 
+	
+		ngx_conf_merge_str_value(conf->restart_dir,
+			prev->restart_dir,
+			NULL);
+	
+

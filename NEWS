@@ -5,6 +5,7 @@ Release 4.0.25
    so that Node.js frameworks like Connect can properly respond to the environment.
  * Fixed a bug in our Debian/Ubuntu packages causing `passenger-install-nginx-module`
    not to be able to compile Nginx.
+ * [Nginx] Introduced the `passenger_restart_dir` option.
 
 
 Release 4.0.24

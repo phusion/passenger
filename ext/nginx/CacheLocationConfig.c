@@ -221,6 +221,13 @@ u_char int_buf[32], *end, *buf, *pos;
 		}
 	
 
+	
+		if (conf->restart_dir.data != NULL) {
+			len += 22;
+			len += conf->restart_dir.len + 1;
+		}
+	
+
 
 /* Create string */
 buf = pos = ngx_pnalloc(cf->pool, len);
@@ -531,6 +538,19 @@ buf = pos = ngx_pnalloc(cf->pool, len);
 			pos = ngx_copy(pos,
 				int_buf,
 				end - int_buf);
+			*pos = '\0';
+			pos++;
+		}
+	
+
+	
+		if (conf->restart_dir.data != NULL) {
+			pos = ngx_copy(pos,
+				"PASSENGER_RESTART_DIR",
+				22);
+			pos = ngx_copy(pos,
+				conf->restart_dir.data,
+				conf->restart_dir.len);
 			*pos = '\0';
 			pos++;
 		}

@@ -154,3 +154,8 @@
 		conf->request_queue_overflow_status_code = NGX_CONF_UNSET;
 	
 
+	
+		conf->restart_dir.data = NULL;
+		conf->restart_dir.len  = 0;
+	
+
