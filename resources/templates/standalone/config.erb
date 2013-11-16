@@ -89,7 +89,11 @@ http {
     server {
         listen <%= nginx_listen_address(app) %> <%= "ssl" if app[:ssl] %>;
         server_name <%= app[:server_names].join(' ') %>;
-        root '<%= app[:root] %>/public';
+        <% if app[:static_files_dir] %>
+            root '<%= app[:static_files_dir] %>';
+        <% else %>
+            root '<%= app[:root] %>/public';
+        <% end %>
         passenger_app_root '<%= app[:root] %>';
         passenger_enabled on;
         passenger_app_env <%= app[:environment] %>;
@@ -99,7 +103,7 @@ http {
         <% if app[:concurrency_model] != DEFAULT_CONCURRENCY_MODEL %>passenger_concurrency_model <%= app[:concurrency_model] %>;<% end %>
         <% if app[:thread_count] != DEFAULT_THREAD_COUNT %>passenger_thread_count <%= app[:thread_count] %>;<% end %>
         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
-        <% if app[:restart_dir] %>passenger_restart_dir <%= app[:restart_dir] %>;<% end %>
+        <% if app[:restart_dir] %>passenger_restart_dir '<%= app[:restart_dir] %>';<% end %>
         <% if app[:union_station_key] %>
             union_station_support on;
             union_station_key <%= app[:union_station_key] %>;

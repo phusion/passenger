@@ -202,6 +202,10 @@ private
 				wrap_desc("Specify the SSL key path")) do |val|
 				@options[:ssl_certificate_key] = File.expand_path(val)
 			end
+			opts.on("--static-files-dir PATH", String,
+				wrap_desc("Specify the static files dir")) do |val|
+				@options[:static_files_dir] = File.expand_path(val)
+			end
 			opts.on("--restart-dir PATH", String,
 				wrap_desc("Specify the restart dir")) do |val|
 				@options[:restart_dir] = File.expand_path(val)
