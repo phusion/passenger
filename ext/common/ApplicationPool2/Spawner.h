@@ -1004,6 +1004,7 @@ protected:
 		appendNullTerminatedKeyValue(result, "RAILS_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "RACK_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "WSGI_ENV", options.environment);
+		appendNullTerminatedKeyValue(result, "NODE_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "PASSENGER_ENV", options.environment);
 		if (!options.baseURI.empty() && options.baseURI != "/") {
 			appendNullTerminatedKeyValue(result,
