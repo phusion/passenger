@@ -1,3 +1,10 @@
+Release 4.0.25
+--------------
+
+ * The `PassengerEnv`/`passenger_env`/`--environment` option now also sets NODE_ENV,
+   so that Node.js frameworks like Connect can properly respond to the environment.
+
+
 Release 4.0.24
 --------------
 

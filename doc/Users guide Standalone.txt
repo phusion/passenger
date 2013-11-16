@@ -38,7 +38,7 @@ Most configuration is done by customizing the arguments passed to the `passenger
 `--port NUMBER`::
 	The port number that Phusion Passenger should listen on. Defaults to 3000.
 `--environment NAME`::
-	Customizes the value of the `RAILS_ENV`, `RACK_ENV` and `PASSENGER_ENV` environment variable. The default is "development".
+	Customizes the value of the `RAILS_ENV`, `RACK_ENV`, `WSGI_ENV`, `NODE_ENV` and `PASSENGER_ENV` environment variables. Some web frameworks, for example Rails and Connect.js, adjust their behavior according to the environment. The default value is 'development'.
 `--max-pool-size NUMBER`::
 	The maximum number of application processes to run. The maximum number that you can run depends on the amount of memory your server has. The article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's concurrency settings] explains how you can infer a good number for this option.
 `--min-instances NUMBER`::
