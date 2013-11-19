@@ -6,6 +6,7 @@ Release 4.0.25
  * Fixed a bug in our Debian/Ubuntu packages causing `passenger-install-nginx-module`
    not to be able to compile Nginx.
  * [Nginx] Introduced the `passenger_restart_dir` option.
+ * [Nginx] Upgraded preferred Nginx version to 1.4.4 because of CVE-2013-4547.
 
 
 Release 4.0.24
