@@ -325,9 +325,6 @@ create_request(ngx_http_request_t *r)
     passenger_loc_conf_t          *slcf;
     passenger_context_t           *context;
     ngx_http_script_len_code_pt    lcode;
-    #if (NGX_HTTP_SSL)
-        ngx_http_ssl_srv_conf_t   *ssl_conf;
-    #endif
     
     cscf = ngx_http_get_module_srv_conf(r, ngx_http_core_module);
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
@@ -403,8 +400,7 @@ create_request(ngx_http_request_t *r)
     }
     
     #if (NGX_HTTP_SSL)
-        ssl_conf = ngx_http_get_module_srv_conf(r, ngx_http_ssl_module);
-        if (ssl_conf->enable) {
+        if (r->http_connection->ssl) {
             len += sizeof("HTTPS") + sizeof("on");
         }
     #endif
@@ -575,8 +571,7 @@ create_request(ngx_http_request_t *r)
     }
     
     #if (NGX_HTTP_SSL)
-        ssl_conf = ngx_http_get_module_srv_conf(r, ngx_http_ssl_module);
-        if (ssl_conf->enable) {
+        if (r->http_connection->ssl) {
             b->last = ngx_copy(b->last, "HTTPS", sizeof("HTTPS"));
             b->last = ngx_copy(b->last, "on", sizeof("on"));
         }
