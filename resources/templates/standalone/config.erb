@@ -73,8 +73,8 @@ http {
     <% if @apps.size > 1 %>
     # Default server entry.
     server {
-        <% if app[:ssl] %>
-            <% if app[:ssl_port] %>
+        <% if @options[:ssl] %>
+            <% if @options[:ssl_port] %>
                 listen <%= nginx_listen_address %>;
                 listen <%= nginx_listen_address_with_ssl_port %> ssl;
             <% else %>
