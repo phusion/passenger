@@ -534,19 +534,21 @@ private:
 			/********** Step 2: handle HTTP upload data, if any **********/
 			
 			int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_DECHUNK);
-	    		if (httpStatus != OK) {
+	    	if (httpStatus != OK) {
 				return httpStatus;
 			}
 			
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			bool expectingUploadData;
+			bool shouldBufferUploads;
 			string uploadDataMemory;
 			boost::shared_ptr<BufferedUpload> uploadDataFile;
 			const char *contentLength;
 			
 			expectingUploadData = ap_should_client_block(r);
 			contentLength = lookupHeader(r, "Content-Length");
+			shouldBufferUploads = config->bufferUpload != DirConfig::DISABLED;
 			
 			/* If the HTTP upload data is larger than a threshold, or if the HTTP
 			 * client sent HTTP upload data using the "chunked" transfer encoding
@@ -557,17 +559,15 @@ private:
 			 * the HTTP client might block indefinitely until it's done uploading.
 			 * This would quickly exhaust the application pool.
 			 */
-			if (expectingUploadData) {
+			if (expectingUploadData && shouldBufferUploads) {
 				if (contentLength == NULL || atol(contentLength) > LARGE_UPLOAD_THRESHOLD) {
 					uploadDataFile = receiveRequestBody(r);
 				} else {
 					receiveRequestBody(r, contentLength, uploadDataMemory);
 				}
-			}
-			
-			if (expectingUploadData) {
+
 				/* We'll set the Content-Length header to the length of the
-				 * received upload data. Rails requires this header for its
+				 * received upload data. Rails 2 requires this header for its
 				 * HTTP upload data multipart parsing process.
 				 * There are two reasons why we don't rely on the Content-Length
 				 * header as sent by the client:
@@ -606,16 +606,20 @@ private:
 			sizeString[ret] = '\0';
 			requestData[0] = StaticString(sizeString, ret);
 			
-			if (expectingUploadData && uploadDataFile == NULL) {
+			if (expectingUploadData && shouldBufferUploads && uploadDataFile == NULL) {
 				requestData.push_back(uploadDataMemory);
 			}
 			
 			FileDescriptor conn = connectToHelperAgent();
 			gatheredWrite(conn, &requestData[0], requestData.size());
 			
-			if (expectingUploadData && uploadDataFile != NULL) {
-				sendRequestBody(conn, uploadDataFile);
-				uploadDataFile.reset();
+			if (expectingUploadData) {
+				if (shouldBufferUploads && uploadDataFile != NULL) {
+					sendRequestBody(conn, uploadDataFile);
+					uploadDataFile.reset();
+				} else if (!shouldBufferUploads) {
+					sendRequestBody(conn, r);
+				}
 			}
 			
 			do {
@@ -1216,6 +1220,26 @@ private:
 			
 			size = fread(buf, 1, sizeof(buf), uploadData->handle);
 			writeExact(fd, buf, size);
+		}
+	}
+
+	void sendRequestBody(const FileDescriptor &fd, request_rec *r) {
+		TRACE_POINT();
+		char buf[1024 * 32];
+		apr_off_t len;
+		
+		try {
+			while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
+				writeExact(fd, buf, len);
+			}
+		} catch (const SystemException &e) {
+			if (e.code() == EPIPE || e.code() == ECONNRESET) {
+				// The HelperAgent stopped reading the body, probably
+				// because the application already sent EOF.
+				return;
+			} else {
+				throw e;
+			}
 		}
 	}
 

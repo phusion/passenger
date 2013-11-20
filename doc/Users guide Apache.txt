@@ -1636,6 +1636,28 @@ http://www.foo.com/chatroom/ajax_update_poll only.
 
 === Connection handling options ===
 
+[[PassengerBufferUpload]]
+==== PassengerBufferUpload <on|off> ====
+When turned on, HTTP request uploads (HTTP POST request bodies) will be buffered before sending the request to the application. Enabling upload buffering protects the application from slow clients, but will also prevent the ability to track upload progress.
+
+If you want to allow your application to track upload progress, it is recommended that you disable upload buffering for specific URIs only. For example:
+
+------------------------
+# Disable upload buffering for /upload_video only.
+<Location /upload_video>
+    PassengerBufferUpload off
+</Location>
+------------------------
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
 [[PassengerBufferResponse]]
 ==== PassengerBufferResponse <on|off> ====
 When turned on, application-generated responses are buffered by Apache. Buffering will

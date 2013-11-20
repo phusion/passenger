@@ -1,3 +1,10 @@
+Release 4.0.26
+--------------
+
+ * Introduced the `PassengerBufferUpload` option for Apache. This option allows one
+   to disable upload buffering, e.g. in order to be able to track upload progress.
+
+
 Release 4.0.25
 --------------
 

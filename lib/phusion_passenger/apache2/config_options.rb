@@ -131,5 +131,12 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:name => "PassengerLoadShellEnvvars",
 		:type => :flag,
 		:desc => "Whether to load environment variables from the shell before running the application."
+	},
+	{
+		:name    => "PassengerBufferUpload",
+		:type    => :flag,
+		:context => ["OR_ALL"],
+		:desc    => "Whether to buffer file uploads.",
+		:header  => nil
 	}
 ]

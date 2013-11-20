@@ -117,3 +117,9 @@
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Whether to load environment variables from the shell before running the application."),
 
+	AP_INIT_FLAG("PassengerBufferUpload",
+		(FlagFunc) cmd_passenger_buffer_upload,
+		NULL,
+		OR_ALL,
+		"Whether to buffer file uploads."),
+
