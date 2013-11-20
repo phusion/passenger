@@ -73,7 +73,16 @@ http {
     <% if @apps.size > 1 %>
     # Default server entry.
     server {
-        listen <%= nginx_listen_address %>;
+        <% if app[:ssl] %>
+            <% if app[:ssl_port] %>
+                listen <%= nginx_listen_address %>;
+                listen <%= nginx_listen_address_with_ssl_port %> ssl;
+            <% else %>
+                listen <%= nginx_listen_address %> ssl;
+            <% end %>
+        <% else %>
+            listen <%= nginx_listen_address %>;
+        <% end %>
         root '<%= PhusionPassenger.resources_dir %>/standalone_default_root';
     }
     <% end %>
@@ -87,7 +96,16 @@ http {
     
     <% for app in @apps %>
     server {
-        listen <%= nginx_listen_address(app) %> <%= "ssl" if app[:ssl] %>;
+        <% if app[:ssl] %>
+            <% if app[:ssl_port] %>
+                listen <%= nginx_listen_address(app) %>;
+                listen <%= nginx_listen_address_with_ssl_port(app) %> ssl;
+            <% else %>
+                listen <%= nginx_listen_address(app) %> ssl;
+            <% end %>
+        <% else %>
+            listen <%= nginx_listen_address(app) %>;
+        <% end %>
         server_name <%= app[:server_names].join(' ') %>;
         <% if app[:static_files_dir] %>
             root '<%= app[:static_files_dir] %>';
@@ -109,7 +127,6 @@ http {
             union_station_key <%= app[:union_station_key] %>;
         <% end %>
         <% if app[:ssl] %>
-            ssl on;
             ssl_certificate <%= app[:ssl_certificate] %>;
             ssl_certificate_key <%= app[:ssl_certificate_key] %>;
         <% end %>

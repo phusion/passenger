@@ -36,7 +36,7 @@ passenger start
 Most configuration is done by customizing the arguments passed to the `passenger` command. The most important ones are:
 
 `--port NUMBER`::
-	The port number that Phusion Passenger should listen on. Defaults to 3000.
+	The port number that Phusion Passenger Standalone should listen on. If not given, port 3000 is assumed.
 `--environment NAME`::
 	Customizes the value of the `RAILS_ENV`, `RACK_ENV`, `WSGI_ENV`, `NODE_ENV` and `PASSENGER_ENV` environment variables. Some web frameworks, for example Rails and Connect.js, adjust their behavior according to the environment. The default value is 'development'.
 `--max-pool-size NUMBER`::
@@ -49,6 +49,13 @@ Most configuration is done by customizing the arguments passed to the `passenger
 	If your app fails to start, Phusion Passenger will tell you by showing a friendly error page in the browser. This option disables it.
 `--ssl`::
 	Enables SSL support. If this is set, you must also set `--ssl-certificate` and `--ssl-certificate-key` to the SSL certificate and key files, respectively.
+`--ssl-port`::
+	If `--ssl` is given, and you set this option, then Phusion Passenger Standalone will listen for HTTP on the regular `--port` number, *as well as* listen for HTTPS on the port you specified with this option. For example:
++
+------------------------------------------------------------------------------
+# Listen for HTTP on port 3000, HTTPS on port 3001.
+passenger start --ssl --ssl-certificate ... --ssl-certificate-key ... --ssl-port 3001
+------------------------------------------------------------------------------
 
 See `--help` for all available options.
 
@@ -76,6 +83,8 @@ The following configuration options are supported:
 	Equivalent to the `--spawn-method` command line option.
 `ssl`::
 	Equivalent to the `--ssl` command line option. When given, you must also set `ssl_certificate` and `ssl_certificate_key` in the configuration file.
+`ssl_port`::
+	Equivalent to the `--ssl-port` command line option.
 +
 When in mass deployment mode, you will probably want to set a different `port` too. If you don't, and you end up in a situation in which a port is used for both HTTP and HTTPS traffic, then the builtin Nginx core will abort with an error.
 

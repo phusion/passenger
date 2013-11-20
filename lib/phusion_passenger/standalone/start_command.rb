@@ -431,7 +431,7 @@ private
 		if @options[:socket_file]
 			return @options[:socket_file]
 		else
-			if @options[:ssl]
+			if @options[:ssl] && !@options[:ssl_port]
 				scheme = "https"
 			else
 				scheme = "http"
@@ -697,6 +697,14 @@ private
 				port = options[:port]
 			end
 			return "#{options[:address]}:#{port}"
+		end
+	end
+
+	def nginx_listen_address_with_ssl_port(options = @options)
+		if options[:socket_file]
+			return "unix:" + File.expand_path(options[:socket_file])
+		else
+			return "#{options[:address]}:#{options[:ssl_port]}"
 		end
 	end
 
