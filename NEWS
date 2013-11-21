@@ -6,6 +6,7 @@ Release 4.0.26
  * [Nginx] The `HTTPS` variable is now set correctly for HTTPS connections, even
    without setting `ssl on`. Fixes issue #401.
  * [Standalone] It is now possible to listen on both a normal HTTP and an HTTPS port.
+ * [Enterprise] The `passenger-status` tool now displays rolling restart status.
 
 
 Release 4.0.25
