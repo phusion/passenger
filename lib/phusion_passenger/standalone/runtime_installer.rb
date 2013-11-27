@@ -274,7 +274,7 @@ private
 	def download_nginx_binary
 		return false if !should_download_binaries?
 
-		puts " --> Downloading web runner for your platform"
+		puts " --> Downloading web helper for your platform"
 		basename = "nginx-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
 		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
@@ -295,7 +295,7 @@ private
 				if system("mv '#{@working_dir}/nginx'/* '#{@nginx_dir}'/")
 					return true
 				else
-					@stderr.puts " *** Error: could not move extracted web runner binary to the right directory"
+					@stderr.puts " *** Error: could not move extracted web helper binary to the right directory"
 					return false
 				end
 			else
@@ -320,7 +320,7 @@ private
 
 	def download_and_extract_nginx_sources
 		begin_progress_bar
-		puts "Downloading web runner source code..."
+		puts "Downloading web helper source code..."
 		if @nginx_tarball
 			tarball  = @nginx_tarball
 		else
@@ -338,13 +338,14 @@ private
 			begin_progress_bar
 			begin
 				result = extract_tarball(tarball) do |progress, total|
-					show_progress(progress / total * 0.1, 1.0, 1, 1, "Extracting web runner source...")
+					show_progress(progress / total * 0.1, 1.0, 1, 1, "Extracting web helper source...")
 				end
 			rescue Exception
 				puts
 				raise
 			end
 			if result
+				rename_nginx_proctitle("#{@working_dir}/#{nginx_sources_name}")
 				return "#{@working_dir}/#{nginx_sources_name}"
 			else
 				puts
@@ -354,6 +355,15 @@ private
 		end
 	rescue Interrupt
 		exit 2
+	end
+
+	def rename_nginx_proctitle(source_dir)
+		filename = "#{source_dir}/src/os/unix/ngx_setproctitle.c"
+		if File.exist?(filename)
+			source = File.open(filename, "r") { |f| f.read }
+			source.gsub!('"nginx: "', '"PassengerWebHelper: "')
+			File.open(filename, "w") { |f| f.write(source) }
+		end
 	end
 
 	def compile_support_binaries
@@ -574,7 +584,7 @@ private
 			command << "#{shell} ./configure --prefix=/tmp " <<
 				"#{STANDALONE_NGINX_CONFIGURE_OPTIONS} " <<
 				"'--add-module=#{PhusionPassenger.nginx_module_source_dir}'"
-			run_command_with_throbber(command, "Preparing web runner...") do |status_text|
+			run_command_with_throbber(command, "Preparing web helper...") do |status_text|
 				yield(0, 1, status_text)
 			end
 			
@@ -598,14 +608,14 @@ private
 					# then increase progress bar. Otherwise it could be compiler
 					# warnings or something, so ignore those.
 					if dry_run_output[line.chomp]
-						yield(progress, total_lines, "Compiling web runner...")
+						yield(progress, total_lines, "Compiling web helper...")
 						progress += 1
 					end
 				end
 			end
 			if $?.exitstatus != 0
 				@stderr.puts
-				@stderr.puts "*** ERROR: unable to compile web runner."
+				@stderr.puts "*** ERROR: unable to compile web helper."
 				@stderr.puts backlog
 				exit 1
 			end
@@ -613,12 +623,12 @@ private
 			yield(1, 1, 'Copying files...')
 			if !system("cp -pR objs/nginx '#{@nginx_dir}/'")
 				@stderr.puts
-				@stderr.puts "*** ERROR: unable to copy web runner binary."
+				@stderr.puts "*** ERROR: unable to copy web helper binary."
 				exit 1
 			end
 			if !strip_binary("#{@nginx_dir}/nginx")
 				@stderr.puts
-				@stderr.puts "*** ERROR: unable to strip debugging symbols from the web runner binary."
+				@stderr.puts "*** ERROR: unable to strip debugging symbols from the web helper binary."
 				exit 1
 			end
 		end
