@@ -603,8 +603,15 @@ public:
 int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
-	AgentOptions options(initializeAgent(argc, argv, "PassengerHelperAgent"));
-	if (options.testBinary) {
+	AgentOptionsPtr options;
+	try {
+		options = boost::make_shared<AgentOptions>(
+			initializeAgent(argc, argv, "PassengerHelperAgent"));
+	} catch (const VariantMap::MissingKeyException &e) {
+		fprintf(stderr, "Option required: %s\n", e.getKey().c_str());
+		return 1;
+	}
+	if (options->testBinary) {
 		printf("PASS\n");
 		exit(0);
 	}
@@ -614,7 +621,7 @@ main(int argc, char *argv[]) {
 	
 	try {
 		UPDATE_TRACE_POINT();
-		Server server(FileDescriptor(FEEDBACK_FD), options);
+		Server server(FileDescriptor(FEEDBACK_FD), *options);
 		P_WARN("PassengerHelperAgent online, listening at unix:" <<
 			server.getRequestSocketFilename());
 		

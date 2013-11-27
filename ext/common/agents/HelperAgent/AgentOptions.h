@@ -27,11 +27,13 @@
 
 #include <sys/types.h>
 #include <string>
+#include <boost/shared_ptr.hpp>
 #include <Utils/VariantMap.h>
 
 namespace Passenger {
 
 using namespace std;
+using namespace boost;
 
 
 struct AgentOptions {
@@ -98,6 +100,8 @@ struct AgentOptions {
 		requestSocketLink     = options.get("request_socket_link", false);
 	}
 };
+
+typedef boost::shared_ptr<AgentOptions> AgentOptionsPtr;
 
 
 } // namespace Passenger
