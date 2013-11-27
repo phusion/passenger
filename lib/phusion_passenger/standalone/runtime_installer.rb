@@ -579,14 +579,28 @@ private
 			end
 			
 			backlog = ""
-			total_lines = `#{PlatformInfo.gnu_make} --dry-run`.split("\n").size
+
+			# Capture and index the `make --dry-run` output for
+			# progress determination.
+			total_lines = 0
+			dry_run_output = {}
+			`#{PlatformInfo.gnu_make} --dry-run`.split("\n").each do |line|
+				total_lines += 1
+				dry_run_output[line] = true
+			end
+
 			IO.popen("#{PlatformInfo.gnu_make} 2>&1", "r") do |io|
 				progress = 1
 				while !io.eof?
 					line = io.readline
 					backlog << line
-					yield(progress, total_lines, "Compiling web runner...")
-					progress += 1
+					# If the output is part of what we saw when dry-running,
+					# then increase progress bar. Otherwise it could be compiler
+					# warnings or something, so ignore those.
+					if dry_run_output[line.chomp]
+						yield(progress, total_lines, "Compiling web runner...")
+						progress += 1
+					end
 				end
 			end
 			if $?.exitstatus != 0
