@@ -62,17 +62,19 @@ FileUtils.mkdir_p(PhusionPassenger.download_cache_dir)
 Dir.chdir(PhusionPassenger.download_cache_dir)
 
 # Initiate downloads
+require 'phusion_passenger/utils/download'
+require 'logger'
 def download(name)
 	if !File.exist?(name)
 		url = "#{PhusionPassenger::BINARIES_URL_ROOT}/#{PhusionPassenger::VERSION_STRING}/#{name}"
 		cert = PhusionPassenger.binaries_ca_cert_path
 		puts "Attempting to download #{url} into #{Dir.pwd}"
 		File.unlink("#{name}.tmp") rescue nil
-		if PhusionPassenger::PlatformInfo.find_command("wget")
-			result = system("wget", "--tries=3", "-O", "#{name}.tmp", "--ca-certificate=#{cert}", url)
-		else
-			result = system("curl", url, "-f", "-L", "-o", "#{name}.tmp", "--cacert", cert)
-		end
+		logger = Logger.new(STDOUT)
+		logger.level = Logger::WARN
+		logger.formatter = proc { |severity, datetime, progname, msg| "*** #{msg}\n" }
+		result = PhusionPassenger::Utils::Download.download(url, "#{name}.tmp",
+			:cacert => cert, :logger => logger)
 		if result
 			File.rename("#{name}.tmp", name)
 		else

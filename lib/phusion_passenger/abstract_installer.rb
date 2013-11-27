@@ -27,7 +27,9 @@ require 'phusion_passenger/console_text_template'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/platform_info/operating_system'
 require 'phusion_passenger/utils/ansi_colors'
+require 'phusion_passenger/utils/download'
 require 'fileutils'
+require 'logger'
 require 'etc'
 
 # IMPORTANT: do not directly or indirectly require native_support; we can't compile
@@ -415,28 +417,11 @@ protected
 	end
 	
 	def download(url, output, options = {})
-		if options[:use_cache] && cache_dir = PhusionPassenger.download_cache_dir
-			basename = url.sub(/.*\//, '')
-			if File.exist?("#{cache_dir}/#{basename}")
-				puts "Copying #{basename} from #{cache_dir}..."
-				FileUtils.cp("#{cache_dir}/#{basename}", output)
-				return true
-			end
-		end
-
-		args = []
-		if PlatformInfo.find_command("wget")
-			if options[:cacert]
-				args << "--ca-certificate=#{options[:cacert]}"
-			end
-			return sh("wget", "--tries=3", "-O", output, url, *args)
-		else
-			if options[:cacert]
-				args << "--cacert"
-				args << options[:cacert]
-			end
-			return sh("curl", url, "-f", "-L", "-o", output, *args)
-		end
+		logger = Logger.new(STDOUT)
+		logger.level = Logger::WARN
+		logger.formatter = proc { |severity, datetime, progname, msg| "*** #{msg}\n" }
+		options[:logger] = logger
+		return PhusionPassenger::Utils::Download.download(url, output, options)
 	end
 
 	def list_parent_directories(dir)
