@@ -26,9 +26,9 @@ describe RuntimeLocator do
 	def create_nginx(nginx_version)
 		version = PhusionPassenger::VERSION_STRING
 		cxx_compat_id = PlatformInfo.cxx_binary_compatibility_id
-		nginx_dir = "#{@temp_dir}/#{version}/nginx-#{nginx_version}-#{cxx_compat_id}"
+		nginx_dir = "#{@temp_dir}/#{version}/webhelper-#{nginx_version}-#{cxx_compat_id}"
 		FileUtils.mkdir_p(nginx_dir)
-		@nginx_filename = "#{nginx_dir}/nginx"
+		@nginx_filename = "#{nginx_dir}/PassengerWebHelper"
 		create_file(@nginx_filename)
 		File.chmod(0755, @nginx_filename)
 	end
@@ -166,7 +166,7 @@ describe RuntimeLocator do
 		context "if no custom Nginx binary is specified in the Standalone config" do
 			context "if the default Nginx version is requested" do
 				it "returns the location of the packaged Nginx binary" do
-					@locator.find_nginx_binary.should == "#{PhusionPassenger.lib_dir}/nginx"
+					@locator.find_nginx_binary.should == "#{PhusionPassenger.lib_dir}/PassengerWebHelper"
 				end
 			end
 

@@ -84,9 +84,9 @@ class RuntimeLocator
 		if result = config["nginx_binary"]
 			@nginx_binary = result
 		elsif PhusionPassenger.natively_packaged? && @nginx_version == PhusionPassenger::PREFERRED_NGINX_VERSION
-			@nginx_binary = "#{PhusionPassenger.lib_dir}/nginx"
+			@nginx_binary = "#{PhusionPassenger.lib_dir}/PassengerWebHelper"
 		else
-			filename = "#{@runtime_dir}/#{version}/nginx-#{@nginx_version}-#{cxx_compat_id}/nginx"
+			filename = "#{@runtime_dir}/#{version}/webhelper-#{@nginx_version}-#{cxx_compat_id}/PassengerWebHelper"
 			if File.exist?(filename)
 				@nginx_binary = filename
 			else
@@ -133,7 +133,7 @@ class RuntimeLocator
 	# Returns the directory to which the Nginx binary may be installed,
 	# in case the RuntimeInstaller is to be invoked.
 	def nginx_binary_install_destination
-		return "#{@runtime_dir}/#{version}/nginx-#{@nginx_version}-#{cxx_compat_id}"
+		return "#{@runtime_dir}/#{version}/webhelper-#{@nginx_version}-#{cxx_compat_id}"
 	end
 
 private

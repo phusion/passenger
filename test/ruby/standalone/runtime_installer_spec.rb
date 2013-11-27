@@ -25,7 +25,7 @@ describe RuntimeInstaller do
 	let(:nginx_version) { PhusionPassenger::PREFERRED_NGINX_VERSION }
 	let(:cxx_compat_id) { PlatformInfo.cxx_binary_compatibility_id }
 	let(:support_binaries_url) { "#{binaries_url_root}/#{version}/support-#{cxx_compat_id}.tar.gz" }
-	let(:nginx_binary_url) { "#{binaries_url_root}/#{version}/nginx-#{nginx_version}-#{cxx_compat_id}.tar.gz" }
+	let(:nginx_binary_url) { "#{binaries_url_root}/#{version}/webhelper-#{nginx_version}-#{cxx_compat_id}.tar.gz" }
 	let(:nginx_source_url) { "http://nginx.org/download/nginx-#{nginx_version}.tar.gz" }
 
 	def create_installer(options = {})
@@ -64,11 +64,11 @@ describe RuntimeInstaller do
 	end
 
 	def create_dummy_nginx_binary
-		File.open("nginx", "w") do |f|
+		File.open("PassengerWebHelper", "w") do |f|
 			f.puts "#!/bin/bash"
 			f.puts "echo nginx version: 1.0.0"
 		end
-		File.chmod(0755, "nginx")
+		File.chmod(0755, "PassengerWebHelper")
 	end
 
 	def create_dummy_nginx_source
@@ -99,24 +99,24 @@ describe RuntimeInstaller do
 				:nginx_dir => "#{@temp_dir}/nginx",
 				:lib_dir => PhusionPassenger.lib_dir)
 
-			@installer.should_receive(:download).
-				and_return do |url, output, options|
-					url.should == nginx_binary_url
-					options[:use_cache].should be_true
-					create_tarball(output) do
-						create_dummy_nginx_binary
-					end
-					true
+		@installer.should_receive(:download).
+			and_return do |url, output, options|
+				url.should == nginx_binary_url
+				options[:use_cache].should be_true
+				create_tarball(output) do
+					create_dummy_nginx_binary
 				end
+				true
+			end
 
-			@installer.should_receive(:check_for_download_tool)
-			@installer.should_not_receive(:check_depdendencies)
-			@installer.should_not_receive(:compile_support_binaries)
-			@installer.should_not_receive(:download_and_extract_nginx_sources)
-			@installer.should_not_receive(:compile_nginx)
-			@installer.run
+		@installer.should_receive(:check_for_download_tool)
+		@installer.should_not_receive(:check_depdendencies)
+		@installer.should_not_receive(:compile_support_binaries)
+		@installer.should_not_receive(:download_and_extract_nginx_sources)
+		@installer.should_not_receive(:compile_nginx)
+		@installer.run
 
-			File.exist?("#{@temp_dir}/nginx/nginx").should be_true
+		File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_true
 	end
 
 	def test_building_nginx_binary
@@ -124,30 +124,30 @@ describe RuntimeInstaller do
 				:nginx_dir => "#{@temp_dir}/nginx",
 				:lib_dir   => PhusionPassenger.lib_dir)
 
-			@installer.should_receive(:download).twice.and_return do |url, output|
-				if url == nginx_binary_url
-					false
-				elsif url == nginx_source_url
-					create_tarball(output) do
-						create_dummy_nginx_source
-					end
-					true
-				else
-					raise "Unexpected download URL: #{url}"
+		@installer.should_receive(:download).twice.and_return do |url, output|
+			if url == nginx_binary_url
+				false
+			elsif url == nginx_source_url
+				create_tarball(output) do
+					create_dummy_nginx_source
 				end
+				true
+			else
+				raise "Unexpected download URL: #{url}"
 			end
+		end
 
-			@installer.should_receive(:check_for_download_tool)
-			@installer.should_receive(:check_dependencies).and_return(true)
-			@installer.should_not_receive(:compile_support_binaries)
-			@installer.should_receive(:strip_binary).
-				with(an_instance_of(String)).
-				and_return(true)
-			@installer.run
+		@installer.should_receive(:check_for_download_tool)
+		@installer.should_receive(:check_dependencies).and_return(true)
+		@installer.should_not_receive(:compile_support_binaries)
+		@installer.should_receive(:strip_binary).
+			with(an_instance_of(String)).
+			and_return(true)
+		@installer.run
 
-			File.read("#{@temp_dir}/nginx/nginx").should == "ok\n"
-			File.read("#{@temp_dir}/configure.txt").should include(
-				"--add-module=#{PhusionPassenger.nginx_module_source_dir}")
+		File.read("#{@temp_dir}/nginx/PassengerWebHelper").should == "ok\n"
+		File.read("#{@temp_dir}/configure.txt").should include(
+			"--add-module=#{PhusionPassenger.nginx_module_source_dir}")
 	end
 
 	context "when originally packaged" do
@@ -216,7 +216,7 @@ describe RuntimeInstaller do
 			@installer.run
 
 			File.exist?("#{@temp_dir}/support/agents/PassengerWatchdog").should be_true
-			File.exist?("#{@temp_dir}/nginx/nginx").should be_true
+			File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_true
 		end
 
 		it "builds the support binaries if it cannot be downloaded" do

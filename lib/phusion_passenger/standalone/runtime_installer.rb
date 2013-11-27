@@ -275,7 +275,7 @@ private
 		return false if !should_download_binaries?
 
 		puts " --> Downloading web helper for your platform"
-		basename = "nginx-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
+		basename = "webhelper-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
 		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
 		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
@@ -308,7 +308,7 @@ private
 
 	def check_nginx_binary
 		puts "     Checking whether the downloaded binary is usable"
-		output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./nginx -v 2>&1`
+		output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./PassengerWebHelper -v 2>&1`
 		if $? && $?.exitstatus == 0 && output =~ /nginx version:/
 			puts "     All good"
 			return true
@@ -621,12 +621,12 @@ private
 			end
 			
 			yield(1, 1, 'Copying files...')
-			if !system("cp -pR objs/nginx '#{@nginx_dir}/'")
+			if !system("cp -pR objs/nginx '#{@nginx_dir}/PassengerWebHelper'")
 				@stderr.puts
 				@stderr.puts "*** ERROR: unable to copy web helper binary."
 				exit 1
 			end
-			if !strip_binary("#{@nginx_dir}/nginx")
+			if !strip_binary("#{@nginx_dir}/PassengerWebHelper")
 				@stderr.puts
 				@stderr.puts "*** ERROR: unable to strip debugging symbols from the web helper binary."
 				exit 1
