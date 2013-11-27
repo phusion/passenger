@@ -304,39 +304,39 @@ describe RuntimeInstaller do
 				:nginx_dir => "#{@temp_dir}/nginx",
 				:lib_dir => PhusionPassenger.lib_dir)
 
-			@installer.should_receive(:download).
-				exactly(3).times.
-				and_return do |url, output, options|
-					if url == support_binaries_url
-						options[:use_cache].should be_true
-						create_tarball(output) do
-							create_dummy_support_binaries
-						end
-					elsif url == nginx_binary_url
-						options[:use_cache].should be_true
-						create_tarball(output) do
-							create_dummy_nginx_binary
-						end
-					elsif url == nginx_source_url
-						create_tarball(output) do
-							create_dummy_nginx_source
-						end
-					else
-						raise "Unexpected download URL: #{url}"
+		@installer.should_receive(:download).
+			exactly(3).times.
+			and_return do |url, output, options|
+				if url == support_binaries_url
+					options[:use_cache].should be_true
+					create_tarball(output) do
+						create_dummy_support_binaries
 					end
-					true
+				elsif url == nginx_binary_url
+					options[:use_cache].should be_true
+					create_tarball(output) do
+						create_dummy_nginx_binary
+					end
+				elsif url == nginx_source_url
+					create_tarball(output) do
+						create_dummy_nginx_source
+					end
+				else
+					raise "Unexpected download URL: #{url}"
 				end
+				true
+			end
 
-			@installer.should_receive(:check_for_download_tool)
-			@installer.should_receive(:check_support_binaries).and_return(false)
-			@installer.should_receive(:check_nginx_binary).and_return(false)
-			@installer.should_receive(:check_dependencies).and_return(true)
-			@installer.should_receive(:compile_support_binaries)
-			@installer.should_receive(:compile_nginx)
-			@installer.run
+		@installer.should_receive(:check_for_download_tool)
+		@installer.should_receive(:check_support_binaries).and_return(false)
+		@installer.should_receive(:check_nginx_binary).and_return(false)
+		@installer.should_receive(:check_dependencies).and_return(true)
+		@installer.should_receive(:compile_support_binaries)
+		@installer.should_receive(:compile_nginx)
+		@installer.run
 
-			Dir["#{@temp_dir}/nginx/*"].should be_empty
-			Dir["#{@temp_dir}/support/*"].should be_empty
+		Dir["#{@temp_dir}/nginx/*"].should be_empty
+		Dir["#{@temp_dir}/support/*"].should be_empty
 	end
 
 	it "aborts if the Nginx source tarball cannot be extracted" do

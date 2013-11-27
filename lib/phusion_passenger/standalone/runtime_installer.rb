@@ -124,13 +124,9 @@ protected
 	end
 
 	def run_steps
-		show_welcome_screen if @nginx_dir
 		check_whether_os_is_broken
 		check_for_download_tool
 		download_or_compile_binaries
-		puts
-		puts "<green><b>All done!</b></green>"
-		puts
 	end
 
 	def before_install
@@ -149,19 +145,17 @@ protected
 	end
 
 private
-	def show_welcome_screen
-		render_template 'standalone/welcome',
-			:version => @nginx_version,
-			:dir => @nginx_dir
-		puts
-	end
-
 	def check_for_download_tool
+		require 'phusion_passenger/platform_info/depcheck'
+		PlatformInfo::Depcheck.load('depcheck_specs/utilities')
+		result = PlatformInfo::Depcheck.find('download-tool').check
+		# Don't output anything if there is a download tool.
+		# We want to be as quiet as possible.
+		return if result && result[:found]
+
 		puts "<banner>Checking for basic prerequities...</banner>"
 		puts
 
-		require 'phusion_passenger/platform_info/depcheck'
-		PlatformInfo::Depcheck.load('depcheck_specs/utilities')
 		runner = PlatformInfo::Depcheck::ConsoleRunner.new
 		runner.add('download-tool')
 
@@ -195,6 +189,7 @@ private
 					"because --no-compile-runtime is given."
 				exit(1)
 			end
+			puts
 			check_dependencies(false) || exit(1)
 			puts
 			if should_compile_support_binaries
@@ -234,29 +229,29 @@ private
 	def download_support_binaries
 		return false if !should_download_binaries?
 
-		puts "<banner>Downloading Passenger support binaries for your platform, if available...</banner>"
+		puts " --> Downloading #{PROGRAM_NAME} support binaries for your platform"
 		basename = "support-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
 		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
 		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
-			puts "<b>No binaries are available for your platform. But don't worry, the " +
-				"necessary binaries will be compiled from source instead.</b>"
-			puts
+			puts "     No binaries are available for your platform. Will compile them from source"
 			return false
 		end
 		
 		FileUtils.mkdir_p(@support_dir)
 		Dir.mkdir("#{@working_dir}/support")
 		Dir.chdir("#{@working_dir}/support") do
-			puts "Extracting tarball..."
-			return false if !extract_tarball(tarball)
+			if !extract_tarball(tarball)
+				@stderr.puts " *** Error: cannot extract tarball"
+				return false
+			end
 			return false if !check_support_binaries
 		end
 
 		if system("mv '#{@working_dir}/support'/* '#{@support_dir}'/")
 			return true
 		else
-			@stderr.puts "Error: could not move extracted files to the support directory"
+			@stderr.puts " *** Error: could not move extracted files to the support directory"
 			return false
 		end
 	rescue Interrupt
@@ -265,42 +260,42 @@ private
 
 	def check_support_binaries
 		["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
-			puts "Checking whether the downloaded #{exe} binary is usable..."
+			puts "     Checking whether the downloaded #{exe.sub(/^Passenger/, '')} binary is usable"
 			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} --test-binary 1`
 			if !$? || $?.exitstatus != 0 || output != "PASS\n"
-				@stderr.puts "Binary #{exe} is not usable."
+				@stderr.puts "      --> Not usable, will compile from source"
 				return false
 			end
 		end
-		puts "All support binaries are usable."
+		puts "     All good"
 		return true
 	end
 
 	def download_nginx_binary
 		return false if !should_download_binaries?
 
-		puts "<banner>Downloading Nginx binary for your platform, if available...</banner>"
+		puts " --> Downloading web runner for your platform"
 		basename = "nginx-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
 		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
 		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
-			puts "<b>No binary available for your platform. But don't worry, the " +
-				"necessary binary will be compiled from source instead.</b>"
-			puts
+			puts "     No binary are available for your platform. Will compile them from source"
 			return false
 		end
 
 		FileUtils.mkdir_p(@nginx_dir)
 		Dir.mkdir("#{@working_dir}/nginx")
 		Dir.chdir("#{@working_dir}/nginx") do
-			puts "Extracting tarball..."
 			result = extract_tarball(tarball)
-			return false if !result
+			if !result
+				@stderr.puts " *** Error: cannot extract tarball"
+				return false
+			end
 			if check_nginx_binary
 				if system("mv '#{@working_dir}/nginx'/* '#{@nginx_dir}'/")
 					return true
 				else
-					@stderr.puts "Error: could not move extracted Nginx binary to the right directory"
+					@stderr.puts " *** Error: could not move extracted web runner binary to the right directory"
 					return false
 				end
 			else
@@ -312,20 +307,20 @@ private
 	end
 
 	def check_nginx_binary
-		puts "Checking whether the downloaded binary is usable..."
+		puts "     Checking whether the downloaded binary is usable"
 		output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./nginx -v 2>&1`
 		if $? && $?.exitstatus == 0 && output =~ /nginx version:/
-			puts "Nginx binary is usable."
+			puts "     All good"
 			return true
 		else
-			@stderr.puts "Nginx binary is not usable."
+			@stderr.puts "      --> Not usable, will compile from source"
 			return false
 		end
 	end
 
 	def download_and_extract_nginx_sources
 		begin_progress_bar
-		puts "Downloading Nginx..."
+		puts "Downloading web runner source code..."
 		if @nginx_tarball
 			tarball  = @nginx_tarball
 		else
@@ -343,7 +338,7 @@ private
 			begin_progress_bar
 			begin
 				result = extract_tarball(tarball) do |progress, total|
-					show_progress(progress / total * 0.1, 1.0, 1, 1, "Extracting Nginx sources...")
+					show_progress(progress / total * 0.1, 1.0, 1, 1, "Extracting web runner source...")
 				end
 			rescue Exception
 				puts
@@ -363,14 +358,14 @@ private
 
 	def compile_support_binaries
 		begin_progress_bar
-		show_progress(0, 1, 1, 1, "Preparing Phusion Passenger...")
+		show_progress(0, 1, 1, 1, "Preparing #{PROGRAM_NAME}...")
 		Dir.chdir(PhusionPassenger.source_root) do
 			args = "nginx_without_native_support" +
 				" CACHING=false" +
 				" OUTPUT_DIR='#{@support_dir}'"
 			begin
 				run_rake_task!(args) do |progress, total|
-					show_progress(progress, total, 1, 1, "Compiling Phusion Passenger...")
+					show_progress(progress, total, 1, 1, "Compiling #{PROGRAM_NAME}...")
 				end
 			ensure
 				puts
@@ -398,6 +393,7 @@ private
 		install_nginx_from_source(nginx_source_dir) do |progress, total, status_text|
 			show_progress(0.1 + progress / total.to_f * 0.9, 1.0, 1, 1, status_text)
 		end
+		puts
 	end
 	
 	def check_whether_we_can_write_to(dir)
@@ -451,7 +447,7 @@ private
 	def begin_progress_bar
 		if !@begun
 			@begun = true
-			puts "<banner>Installing Phusion Passenger Standalone...</banner>"
+			puts "<banner>Installing #{PROGRAM_NAME} Standalone...</banner>"
 		end
 	end
 	
@@ -578,7 +574,7 @@ private
 			command << "#{shell} ./configure --prefix=/tmp " <<
 				"#{STANDALONE_NGINX_CONFIGURE_OPTIONS} " <<
 				"'--add-module=#{PhusionPassenger.nginx_module_source_dir}'"
-			run_command_with_throbber(command, "Preparing Nginx...") do |status_text|
+			run_command_with_throbber(command, "Preparing web runner...") do |status_text|
 				yield(0, 1, status_text)
 			end
 			
@@ -589,13 +585,13 @@ private
 				while !io.eof?
 					line = io.readline
 					backlog << line
-					yield(progress, total_lines, "Compiling Nginx core...")
+					yield(progress, total_lines, "Compiling web runner...")
 					progress += 1
 				end
 			end
 			if $?.exitstatus != 0
 				@stderr.puts
-				@stderr.puts "*** ERROR: unable to compile Nginx."
+				@stderr.puts "*** ERROR: unable to compile web runner."
 				@stderr.puts backlog
 				exit 1
 			end
@@ -603,12 +599,12 @@ private
 			yield(1, 1, 'Copying files...')
 			if !system("cp -pR objs/nginx '#{@nginx_dir}/'")
 				@stderr.puts
-				@stderr.puts "*** ERROR: unable to copy Nginx binary."
+				@stderr.puts "*** ERROR: unable to copy web runner binary."
 				exit 1
 			end
 			if !strip_binary("#{@nginx_dir}/nginx")
 				@stderr.puts
-				@stderr.puts "*** ERROR: unable to strip debugging symbols from the Nginx binary."
+				@stderr.puts "*** ERROR: unable to strip debugging symbols from the web runner binary."
 				exit 1
 			end
 		end
