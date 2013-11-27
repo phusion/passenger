@@ -123,3 +123,15 @@
 		OR_ALL,
 		"Whether to buffer file uploads."),
 
+	AP_INIT_TAKE1("PassengerAppType",
+		(Take1Func) cmd_passenger_app_type,
+		NULL,
+		OR_ALL,
+		"Force specific application type."),
+
+	AP_INIT_TAKE1("PassengerStartupFile",
+		(Take1Func) cmd_passenger_startup_file,
+		NULL,
+		OR_ALL,
+		"Force specific startup file."),
+

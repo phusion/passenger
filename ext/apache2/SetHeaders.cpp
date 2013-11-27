@@ -79,3 +79,7 @@
 		addHeader(r, output, "PASSENGER_LOAD_SHELL_ENVVARS", config->loadShellEnvvars);
 	
 
+	
+		addHeader(output, "PASSENGER_STARTUP_FILE", config->startupFile);
+	
+

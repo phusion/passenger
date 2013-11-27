@@ -56,6 +56,8 @@
 	int minInstances;
 	/** A timeout for application startup. */
 	int startTimeout;
+	/** Force specific application type. */
+	const char *appType;
 	/** The group that Ruby applications must run as. */
 	const char *group;
 	/** The Node.js command to use. */
@@ -64,6 +66,8 @@
 	const char *python;
 	/** The Ruby interpreter to use. */
 	const char *ruby;
+	/** Force specific startup file. */
+	const char *startupFile;
 	/** The user that Ruby applications must run as. */
 	const char *user;
 

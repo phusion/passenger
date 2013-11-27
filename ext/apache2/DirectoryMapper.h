@@ -145,13 +145,22 @@ private:
 		AppTypeDetector detector(cstat, throttleRate);
 		PassengerAppType appType;
 		string appRoot;
-		if (config->appRoot == NULL) {
-			appType = detector.checkDocumentRoot(publicDir,
-				baseURI != NULL || config->resolveSymlinksInDocRoot == DirConfig::ENABLED,
-				&appRoot);
+		if (config->appType == NULL) {
+			if (config->appRoot == NULL) {
+				appType = detector.checkDocumentRoot(publicDir,
+					baseURI != NULL || config->resolveSymlinksInDocRoot == DirConfig::ENABLED,
+					&appRoot);
+			} else {
+				appRoot = config->appRoot;
+				appType = detector.checkAppRoot(appRoot);
+			}
 		} else {
-			appRoot = config->appRoot;
-			appType = detector.checkAppRoot(appRoot);
+			if (config->appRoot == NULL) {
+				appType = PAT_NONE;
+			} else {
+				appRoot = config->appRoot;
+				appType = getAppType(config->appType);
+			}
 		}
 
 		this->appRoot = appRoot;

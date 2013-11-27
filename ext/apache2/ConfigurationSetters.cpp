@@ -269,4 +269,20 @@
 			return NULL;
 		}
 	
+	
+		static const char *
+		cmd_passenger_app_type(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			config->appType = arg;
+			return NULL;
+		}
+	
+	
+		static const char *
+		cmd_passenger_startup_file(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			config->startupFile = arg;
+			return NULL;
+		}
+	
 

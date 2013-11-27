@@ -137,3 +137,17 @@
 			add->bufferUpload;
 	
 
+	
+		config->appType =
+			(add->appType == NULL) ?
+			base->appType :
+			add->appType;
+	
+
+	
+		config->startupFile =
+			(add->startupFile == NULL) ?
+			base->startupFile :
+			add->startupFile;
+	
+

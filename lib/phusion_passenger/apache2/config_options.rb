@@ -138,5 +138,18 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:context => ["OR_ALL"],
 		:desc    => "Whether to buffer file uploads.",
 		:header  => nil
+	},
+	{
+		:name    => 'PassengerAppType',
+		:type    => :string,
+		:context => ["OR_ALL"],
+		:desc    => "Force specific application type.",
+		:header  => nil
+	},
+	{
+		:name    => 'PassengerStartupFile',
+		:context => ["OR_ALL"],
+		:desc    => "Force specific startup file.",
+		:type    => :string
 	}
 ]
