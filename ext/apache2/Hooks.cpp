@@ -696,7 +696,7 @@ private:
 					int originalStatus = r->status;
 					r->status = HTTP_OK;
 					return originalStatus;
-				} if (ap_pass_brigade(r->output_filters, bb) == APR_SUCCESS) {
+				} else if (ap_pass_brigade(r->output_filters, bb) == APR_SUCCESS) {
 					apr_brigade_cleanup(bb);
 				}
 				return OK;
