@@ -35,6 +35,7 @@ const AppTypeDefinition appTypeDefinitions[] = {
 	{ PAT_RACK, "rack", "config.ru", "Passenger RackApp" },
 	{ PAT_WSGI, "wsgi", "passenger_wsgi.py", "Passenger WsgiApp" },
 	{ PAT_CLASSIC_RAILS, "classic-rails", "config/environment.rb", "Passenger ClassicRailsApp" },
+	{ PAT_SAILS, "sails", "config/routes.js", "Passenger SailsApp" },
 	{ PAT_NODE, "node", "app.js", "Passenger NodeApp" },
 	{ PAT_METEOR, "meteor", ".meteor", "Passenger MeteorApp" },
 	{ PAT_NONE, NULL, NULL, NULL }

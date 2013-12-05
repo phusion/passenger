@@ -33,6 +33,7 @@ class AppFinder
 		return File.exist?("#{dir}/config.ru") ||
 			File.exist?("#{dir}/config/environment.rb") ||
 			File.exist?("#{dir}/passenger_wsgi.py") ||
+			File.exist?("#{dir}/config/routes.js") ||
 			File.exist?("#{dir}/app.js") ||
 			File.exist?("#{dir}/.meteor")
 	end
