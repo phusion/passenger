@@ -96,7 +96,10 @@ module App
 		LoaderSharedHelpers.run_load_path_setup_code(options)
 		LoaderSharedHelpers.before_loading_app_code_step2(options)
 		
-		require 'rubygems'
+		begin
+			require 'rubygems'
+		rescue LoadError
+		end
 		require 'rack'
 		rackup_file = options["startup_file"] || "config.ru"
 		rackup_code = ::File.open(rackup_file, 'rb') do |f|
