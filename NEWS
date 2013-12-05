@@ -1,3 +1,10 @@
+Release 4.0.28
+--------------
+
+ * Fixed a bug in the `passenger start -R` option. It was broken because of a
+   change introduced in 4.0.25.
+
+
 Release 4.0.27
 --------------
 

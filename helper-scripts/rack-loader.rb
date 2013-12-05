@@ -71,7 +71,7 @@ module App
 		
 		require 'rubygems'
 		require 'rack'
-		rackup_file = ENV["RACKUP_FILE"] || options["rackup_file"] || "config.ru"
+		rackup_file = options["startup_file"] || "config.ru"
 		rackup_code = ::File.open(rackup_file, 'rb') do |f|
 			f.read
 		end
