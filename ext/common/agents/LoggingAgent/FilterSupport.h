@@ -33,8 +33,10 @@
 
 #include <string>
 #include <set>
+// Checking for _PCREPOSIX_H avoids conflicts with headers provided by Apache.
+// https://code.google.com/p/phusion-passenger/issues/detail?id=651
 #ifndef _PCREPOSIX_H
-	#include <regex.h>
+	#include <boost/regex.h>
 #endif
 #include <cstdio>
 #include <cstring>
