@@ -1638,6 +1638,9 @@ http://www.foo.com/chatroom/ajax_update_poll only.
 
 [[PassengerBufferUpload]]
 ==== PassengerBufferUpload <on|off> ====
+:version: 4.0.26
+include::users_guide_snippets/since_version.txt[]
+
 When turned on, HTTP request uploads (HTTP POST request bodies) will be buffered before sending the request to the application. Enabling upload buffering protects the application from slow clients, but will also prevent the ability to track upload progress.
 
 If you want to allow your application to track upload progress, it is recommended that you disable upload buffering for specific URIs only. For example:
