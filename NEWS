@@ -12,7 +12,7 @@ Release 4.0.26
 Release 4.0.25
 --------------
 
- * The `PassengerEnv`/`passenger_env`/`--environment` option now also sets NODE_ENV,
+ * The `PassengerAppEnv`/`passenger_app_env`/`--environment` option now also sets NODE_ENV,
    so that Node.js frameworks like Connect can properly respond to the environment.
  * Fixed a bug in our Debian/Ubuntu packages causing `passenger-install-nginx-module`
    not to be able to compile Nginx.
