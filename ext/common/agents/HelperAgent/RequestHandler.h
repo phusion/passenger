@@ -1721,7 +1721,8 @@ private:
 		fillPoolOption(client, options.nodejs, "PASSENGER_NODEJS");
 		fillPoolOption(client, options.user, "PASSENGER_USER");
 		fillPoolOption(client, options.group, "PASSENGER_GROUP");
-		fillPoolOption(client, options.minProcesses, "PASSENGER_MIN_INSTANCES");
+		fillPoolOption(client, options.minProcesses, "PASSENGER_MIN_PROCESSES");
+		fillPoolOption(client, options.maxProcesses, "PASSENGER_MAX_PROCESSES");
 		fillPoolOption(client, options.maxRequests, "PASSENGER_MAX_REQUESTS");
 		fillPoolOption(client, options.spawnMethod, "PASSENGER_SPAWN_METHOD");
 		fillPoolOption(client, options.startCommand, "PASSENGER_START_COMMAND");

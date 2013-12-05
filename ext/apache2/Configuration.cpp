@@ -251,7 +251,6 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_ruby, defaultRuby)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int, 0)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_debug_log_file, debugLogFile)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
-DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_instances_per_app, maxInstancesPerApp, unsigned int, 0)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsigned int, 0)
 DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_user_switching, userSwitching)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
@@ -444,11 +443,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of simultaneously alive application instances."),
-	AP_INIT_TAKE1("PassengerMaxInstancesPerApp",
-		(Take1Func) cmd_passenger_max_instances_per_app,
-		NULL,
-		RSRC_CONF,
-		"The maximum number of simultaneously alive application instances a single application may occupy."),
 	AP_INIT_TAKE1("PassengerPoolIdleTime",
 		(Take1Func) cmd_passenger_pool_idle_time,
 		NULL,

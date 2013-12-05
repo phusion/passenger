@@ -75,6 +75,13 @@
 	
 
 	
+		config->maxInstancesPerApp =
+			(add->maxInstancesPerApp == UNSET_INT_VALUE) ?
+			base->maxInstancesPerApp :
+			add->maxInstancesPerApp;
+	
+
+	
 		config->user =
 			(add->user == NULL) ?
 			base->user :

@@ -78,7 +78,6 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->debug_log_file.len = 0;
     conf->abort_on_startup_error = NGX_CONF_UNSET;
     conf->max_pool_size = (ngx_uint_t) NGX_CONF_UNSET;
-    conf->max_instances_per_app = (ngx_uint_t) NGX_CONF_UNSET;
     conf->pool_idle_time = (ngx_uint_t) NGX_CONF_UNSET;
     conf->user_switching = NGX_CONF_UNSET;
     conf->default_user.data = NULL;
@@ -135,10 +134,6 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     
     if (conf->max_pool_size == (ngx_uint_t) NGX_CONF_UNSET) {
         conf->max_pool_size = DEFAULT_MAX_POOL_SIZE;
-    }
-    
-    if (conf->max_instances_per_app == (ngx_uint_t) NGX_CONF_UNSET) {
-        conf->max_instances_per_app = DEFAULT_MAX_INSTANCES_PER_APP;
     }
     
     if (conf->pool_idle_time == (ngx_uint_t) NGX_CONF_UNSET) {
@@ -970,13 +965,6 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_num_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, max_pool_size),
-      NULL },
-
-    { ngx_string("passenger_max_instances_per_app"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_num_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, max_instances_per_app),
       NULL },
 
     { ngx_string("passenger_pool_idle_time"),

@@ -106,6 +106,30 @@
 	
 	
 		static const char *
+		cmd_passenger_max_instances_per_app(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			char *end;
+			long result;
+
+			result = strtol(arg, &end, 10);
+			if (*end != '\0') {
+				string message = "Invalid number specified for ";
+				message.append(cmd->directive->directive);
+				message.append(".");
+
+				char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+					message.size() + 1);
+				memcpy(messageStr, message.c_str(), message.size() + 1);
+				return messageStr;
+			
+			} else {
+				config->maxInstancesPerApp = (int) result;
+				return NULL;
+			}
+		}
+	
+	
+		static const char *
 		cmd_passenger_user(cmd_parms *cmd, void *pcfg, const char *arg) {
 			DirConfig *config = (DirConfig *) pcfg;
 			config->user = arg;

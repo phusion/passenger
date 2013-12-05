@@ -395,17 +395,6 @@ public:
 			.set    ("temp_dir",        getSystemTempDir());
 		extraParams.addTo(params);
 
-		// .setUid ("web_server_worker_uid", webServerWorkerUid)
-		// .setGid ("web_server_worker_gid", webServerWorkerGid)
-		// .set    ("debug_log_file",  debugLogFile)
-		// .set    ("temp_dir",        tempDir.empty() ? getSystemTempDir() : tempDir)
-		// .setBool("user_switching",  userSwitching)
-		// .set    ("default_user",    defaultUser)
-		// .set    ("default_group",   defaultGroup)
-		// .set    ("default_ruby",    defaultRubyCommand)
-		// .setInt ("max_pool_size",   maxPoolSize)
-		// .setInt ("max_instances_per_app",     maxInstancesPerApp)
-		
 		fds = createUnixSocketPair();
 		pid = syscalls::fork();
 		if (pid == 0) {

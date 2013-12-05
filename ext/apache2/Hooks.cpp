@@ -1281,7 +1281,6 @@ public:
 			.set    ("default_ruby", serverConfig.defaultRuby)
 			.setInt ("max_pool_size", serverConfig.maxPoolSize)
 			.setInt ("pool_idle_time", serverConfig.poolIdleTime)
-			.setInt ("max_instances_per_app", serverConfig.maxInstancesPerApp)
 			.set    ("analytics_log_user", serverConfig.analyticsLogUser)
 			.set    ("analytics_log_group", serverConfig.analyticsLogGroup)
 			.set    ("union_station_gateway_address", serverConfig.unionStationGatewayAddress)

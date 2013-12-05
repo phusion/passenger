@@ -47,7 +47,6 @@ struct AgentOptions {
 	string  defaultRubyCommand;
 	unsigned int generationNumber;
 	unsigned int maxPoolSize;
-	unsigned int maxInstancesPerApp;
 	unsigned int poolIdleTime;
 	string requestSocketFilename;
 	string requestSocketPassword;
@@ -77,7 +76,6 @@ struct AgentOptions {
 		defaultUser        = options.get("default_user");
 		defaultGroup       = options.get("default_group");
 		maxPoolSize        = options.getInt("max_pool_size");
-		maxInstancesPerApp = options.getInt("max_instances_per_app");
 		poolIdleTime       = options.getInt("pool_idle_time");
 
 		// Required options only set by the Watchdog.

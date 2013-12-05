@@ -89,6 +89,13 @@
 		"The minimum number of application instances to keep when cleaning idle instances."),
 
 	
+	AP_INIT_TAKE1("PassengerMaxInstancesPerApp",
+		(Take1Func) cmd_passenger_max_instances_per_app,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of simultaneously alive application instances a single application may occupy."),
+
+	
 	AP_INIT_TAKE1("PassengerUser",
 		(Take1Func) cmd_passenger_user,
 		NULL,

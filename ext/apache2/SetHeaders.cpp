@@ -56,7 +56,11 @@
 	
 
 	
-		addHeader(r, output, "PASSENGER_MIN_INSTANCES", config->minInstances);
+		addHeader(r, output, "PASSENGER_MIN_PROCESSES", config->minInstances);
+	
+
+	
+		addHeader(r, output, "PASSENGER_MAX_PROCESSES", config->maxInstancesPerApp);
 	
 
 	

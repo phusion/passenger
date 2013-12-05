@@ -49,6 +49,8 @@
 
 	ngx_int_t load_shell_envvars;
 
+	ngx_int_t max_instances_per_app;
+
 	ngx_int_t max_preloader_idle_time;
 
 	ngx_int_t max_request_queue_size;

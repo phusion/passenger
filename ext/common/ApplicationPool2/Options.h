@@ -300,7 +300,16 @@ public:
 	 * The minimum number of processes for the current group that the application
 	 * pool's cleaner thread should keep around.
 	 */
-	unsigned long minProcesses;
+	unsigned int minProcesses;
+
+	/**
+	 * The maximum number of application instances that may be spawned
+	 * for this app root. This option only has effect if it's lower than
+	 * the application pool's maxPerApp option and lower than its pool size.
+	 *
+	 * A value of 0 (the default) means unspecified, and has no effect.
+	 */
+	unsigned int maxProcesses;
 	
 	/** The number of seconds that preloader processes may stay alive idling. */
 	long maxPreloaderIdleTime;
@@ -401,6 +410,7 @@ public:
 		raiseInternalError      = false;
 		
 		minProcesses            = 1;
+		maxProcesses            = 0;
 		maxPreloaderIdleTime    = -1;
 		maxOutOfBandWorkInstances = 1;
 		maxRequestQueueSize     = 100;
@@ -552,6 +562,7 @@ public:
 		}
 		if (fields & PER_GROUP_POOL_OPTIONS) {
 			appendKeyValue3(vec, "min_processes",       minProcesses);
+			appendKeyValue3(vec, "max_processes",       maxProcesses);
 			appendKeyValue2(vec, "max_preloader_idle_time", maxPreloaderIdleTime);
 			appendKeyValue3(vec, "max_out_of_band_work_instances", maxOutOfBandWorkInstances);
 		}

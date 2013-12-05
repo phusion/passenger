@@ -90,6 +90,17 @@ u_char int_buf[32], *end, *buf, *pos;
 	
 
 	
+		if (conf->max_instances_per_app != NGX_CONF_UNSET) {
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf->max_instances_per_app);
+			len += 24;
+			len += end - int_buf + 1;
+		}
+	
+
+	
 		if (conf->max_requests != NGX_CONF_UNSET) {
 			end = ngx_snprintf(int_buf,
 				sizeof(int_buf) - 1,
@@ -308,12 +319,29 @@ buf = pos = ngx_pnalloc(cf->pool, len);
 	
 		if (conf->min_instances != NGX_CONF_UNSET) {
 			pos = ngx_copy(pos,
-				"PASSENGER_MIN_INSTANCES",
+				"PASSENGER_MIN_PROCESSES",
 				24);
 			end = ngx_snprintf(int_buf,
 				sizeof(int_buf) - 1,
 				"%d",
 				conf->min_instances);
+			pos = ngx_copy(pos,
+				int_buf,
+				end - int_buf);
+			*pos = '\0';
+			pos++;
+		}
+	
+
+	
+		if (conf->max_instances_per_app != NGX_CONF_UNSET) {
+			pos = ngx_copy(pos,
+				"PASSENGER_MAX_PROCESSES",
+				24);
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf->max_instances_per_app);
 			pos = ngx_copy(pos,
 				int_buf,
 				end - int_buf);

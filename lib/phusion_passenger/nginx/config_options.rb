@@ -114,8 +114,15 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:type  => :flag
 	},
 	{
-		:name  => 'passenger_min_instances',
-		:type  => :integer
+		:name   => 'passenger_min_instances',
+		:type   => :integer,
+		:header => 'PASSENGER_MIN_PROCESSES'
+	},
+	{
+		:name     => 'passenger_max_instances_per_app',
+		:context  => [:main],
+		:type     => :integer,
+		:header   => 'PASSENGER_MAX_PROCESSES'
 	},
 	{
 		:name  => 'passenger_max_requests',

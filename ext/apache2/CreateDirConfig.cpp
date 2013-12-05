@@ -43,6 +43,7 @@
 				config->nodejs = NULL;
 				config->appEnv = NULL;
 				config->minInstances = UNSET_INT_VALUE;
+				config->maxInstancesPerApp = UNSET_INT_VALUE;
 				config->user = NULL;
 				config->group = NULL;
 				config->errorOverride = DirConfig::UNSET;

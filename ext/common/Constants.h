@@ -48,8 +48,6 @@
 
 	#define DEFAULT_LOG_LEVEL 0
 
-	#define DEFAULT_MAX_INSTANCES_PER_APP 0
-
 	#define DEFAULT_MAX_POOL_SIZE 6
 
 	#define DEFAULT_NODEJS "node"

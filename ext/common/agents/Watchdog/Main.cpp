@@ -551,7 +551,6 @@ initializeOptions() {
 		.setDefault    ("default_ruby", DEFAULT_RUBY)
 		.setDefault    ("default_python", DEFAULT_PYTHON)
 		.setDefaultInt ("max_pool_size", DEFAULT_MAX_POOL_SIZE)
-		.setDefaultInt ("max_instances_per_app", DEFAULT_MAX_INSTANCES_PER_APP)
 		.setDefaultInt ("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 
 	// Check for required options

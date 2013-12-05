@@ -82,6 +82,12 @@
 	
 
 	
+		ngx_conf_merge_value(conf->max_instances_per_app,
+			prev->max_instances_per_app,
+			NGX_CONF_UNSET);
+	
+
+	
 		ngx_conf_merge_value(conf->max_requests,
 			prev->max_requests,
 			NGX_CONF_UNSET);

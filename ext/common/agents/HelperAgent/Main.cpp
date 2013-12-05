@@ -454,7 +454,6 @@ public:
 			randomGenerator);
 		pool->initialize();
 		pool->setMax(options.maxPoolSize);
-		//pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(options.poolIdleTime * 1000000);
 		
 		requestHandler = boost::make_shared<RequestHandler>(requestLoop.safe,

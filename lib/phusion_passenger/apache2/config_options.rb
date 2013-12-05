@@ -88,7 +88,15 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:type => :integer,
 		:context => ["OR_LIMIT", "ACCESS_CONF", "RSRC_CONF"],
 		:min_value => 0,
+		:header  => "PASSENGER_MIN_PROCESSES",
 		:desc => "The minimum number of application instances to keep when cleaning idle instances."
+	},
+	{
+		:name => "PassengerMaxInstancesPerApp",
+		:type => :integer,
+		:context => ["RSRC_CONF"],
+		:header  => "PASSENGER_MAX_PROCESSES",
+		:desc => "The maximum number of simultaneously alive application instances a single application may occupy."
 	},
 	{
 		:name => "PassengerUser",
