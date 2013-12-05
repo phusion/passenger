@@ -511,8 +511,38 @@ This required option may only occur once, in the 'http' configuration block.
 
 NOTE: This option has no effect when you are using <<flying_passenger,Flying Passenger>>.
 
+=== Deployment options
+
+==== passenger_enabled <on|off>
+This option may be specified in the 'http' configuration block, a
+'server' configuration block, a 'location' configuration block or
+an 'if' configuration scope, to enable or disable Phusion Passenger
+for that server or that location.
+
+Phusion Passenger is disabled by default, so you must explicitly enable
+it for server blocks that you wish to serve through Phusion Passenger.
+Please see <<deploying_a_rack_app,Deploying a Rack-based Ruby application>>
+and <<deploying_a_wsgi_app,Deploying a WSGI (Python) application>>
+for examples.
+
+When using `location` blocks, you must re-specify `passenger_enabled` in each `location` block that you want to enable Phusion Passenger. This is because each `location` block has `passenger_enabled` turned off by default. For example:
+
+----------------------------
+server {
+    listen 80;
+    server_name www.foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+
+    location /attachments {
+        # Re-specify passenger_enabled here!
+        passenger_enabled on;
+    }
+}
+----------------------------
+
 [[PassengerRuby]]
-=== passenger_ruby <filename> ===
+==== passenger_ruby <filename>
 The `passenger_ruby` option allows one to specify the Ruby interpreter to use. Similarly, the `passenger_python` and `passenger_nodejs` options are for specifying the Python interpreter and Node.js commands, respectively.
 
 In versions prior to 4.0.0, only a single Ruby version was supported for the entire Nginx instance, so `passenger_ruby` may only occur in the global server configuration. Also, the `passenger_python` option was not supported.
@@ -581,20 +611,53 @@ http {
 
 include::users_guide_snippets/rvm_helper_tool.txt[]
 
-=== passenger_python <filename> ===
+==== passenger_python <filename>
 :version: 4.0.0
 include::users_guide_snippets/since_version.txt[]
 
 This option allows one to specify the Python interpreter to use. See <<PassengerRuby,passenger_ruby>> for more information. The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
 
-=== passenger_nodejs <filename> ===
+==== passenger_nodejs <filename>
 :version: 4.0.24
 include::users_guide_snippets/since_version.txt[]
 
 This option allows one to specify the Node.js command to use. See <<PassengerRuby,passenger_ruby>> for more information. The default value is 'node', meaning that the Node.js command will be looked up according to the `PATH` environment variable.
 
+[[PassengerAppEnv]]
+==== passenger_app_env <string>
+This option sets the value of the following environment variables:
+
+ * `RAILS_ENV`
+ * `RACK_ENV`
+ * `WSGI_ENV`
+ * `NODE_ENV`
+ * `PASSENGER_APP_ENV`
+
+Some web frameworks, for example Rails and Connect.js, adjust their behavior according to the value in one of these environment variables.
+
+Phusion Passenger for Nginx sets the default value to **production**. If you're developing an Rails application then you should set this to `development`.
+
+If you want to set other environment variables, please refer to <<env_vars_passenger_apps,Setting environment variables for Phusion Passenger-served apps>>.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'production'.
+
+[[RailsEnv]]
+==== rails_env <string>
+An alias for <<PassengerAppEnv,passenger_app_env>>.
+
+[[RackEnv]]
+==== rack_env <string>
+An alias for <<PassengerAppEnv,passenger_app_env>>.
+
 [[PassengerAppRoot]]
-=== passenger_app_root <path/to/root> ===
+==== passenger_app_root <path/to/root>
 :version: 4.0.0
 include::users_guide_snippets/since_version.txt[]
 By default, Phusion Passenger assumes that the application's root directory
@@ -624,8 +687,28 @@ server {
 }
 -----------------------------
 
+[[PassengerBaseURI]]
+==== passenger_base_uri <uri>
+Used to specify that the given URI is an distinct application that should
+be served by Phusion Passenger. Please refer to the following sections for
+more information:
+
+ * <<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>>
+ * <<deploying_wsgi_to_sub_uri,Deploying WSGI to a sub URI>>
+ * <<deploying_rails_to_sub_uri,Deploying Rails 1 and Rails 2 to a sub URI>>
+
+It is allowed to specify this option multiple times. Do this to deploy multiple
+applications in different sub-URIs under the same virtual host.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
 [[PassengerSpawnMethod]]
-=== passenger_spawn_method <string> ===
+==== passenger_spawn_method <string>
 [TIP]
 ."What spawn method should I use?"
 =========================================================
@@ -653,7 +736,7 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'smart'.
 
 [[PassengerLoadShellEnvvars]]
-=== passenger_load_shell_envvars <on|off> ===
+==== passenger_load_shell_envvars <on|off>
 :version: 4.0.20
 include::users_guide_snippets/since_version.txt[]
 
@@ -671,7 +754,7 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'on'.
 
 [[PassengerRollingRestarts]]
-=== passenger_rolling_restarts <on|off> ===
+==== passenger_rolling_restarts <on|off>
 :version: 3.0.0
 include::users_guide_snippets/enterprise_only.txt[]
 
@@ -711,7 +794,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'off'.
 
-=== passenger_resist_deployment_errors <on|off> ===
+==== passenger_resist_deployment_errors <on|off>
 :version: 3.0.0
 include::users_guide_snippets/enterprise_only.txt[]
 
@@ -737,95 +820,6 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 In each place, it may be specified at most once. The default value is 'off'.
-
-[[PassengerTempDir]]
-=== passenger_temp_dir <directory> ===
-Specifies the directory that Phusion Passenger should use for storing temporary
-files. This includes things such as Unix socket files.
-
-This option may only be specified in the 'http' configuration block. The
-default temp directory that Phusion Passenger uses is '/tmp'.
-
-This option is especially useful if Nginx is not allowed to write to /tmp
-(which is the case on some systems with strict SELinux policies) or if the
-partition that /tmp lives on doesn't have enough disk space.
-
-.Command line tools
-Some Phusion Passenger command line administration tools, such as
-`passenger-status`, must know what Phusion Passenger's temp directory is
-in order to function properly. You can pass the directory through the
-`PASSENGER_TMPDIR` environment variable, or the `TMPDIR` environment variable
-(the former will be used if both are specified).
-
-For example, if you set 'passenger_temp_dir' to '/my_temp_dir', then invoke
-`passenger-status` after you've set the `PASSENGER_TMPDIR` or `TMPDIR`
-environment variable, like this:
-
-----------------------------------------------------------
-export PASSENGER_TMPDIR=/my_temp-dir
-sudo -E passenger-status
-# The -E option tells 'sudo' to preserve environment variables.
-----------------------------------------------------------
-
-:option: `--temp-dir`
-include::users_guide_snippets/alternative_for_flying_passenger.txt[]
-
-=== passenger_fly_with <socket filename>
-:version: 4.1.0
-include::users_guide_snippets/enterprise_only.txt[]
-
-Enables <<flying_passenger,Flying Passenger>> mode, and configures Nginx to connect to the Flying Passenger daemon that's listening on the given socket filename.
-
-This option may only occur once, in the 'http' configuration block. When not set, Flying Passenger is not enabled.
-
-=== Important deployment options ===
-==== passenger_enabled <on|off> ====
-This option may be specified in the 'http' configuration block, a
-'server' configuration block, a 'location' configuration block or
-an 'if' configuration scope, to enable or disable Phusion Passenger
-for that server or that location.
-
-Phusion Passenger is disabled by default, so you must explicitly enable
-it for server blocks that you wish to serve through Phusion Passenger.
-Please see <<deploying_a_rack_app,Deploying a Rack-based Ruby application>>
-and <<deploying_a_wsgi_app,Deploying a WSGI (Python) application>>
-for examples.
-
-When using `location` blocks, you must re-specify `passenger_enabled` in each `location` block that you want to enable Phusion Passenger. This is because each `location` block has `passenger_enabled` turned off by default. For example:
-
-----------------------------
-server {
-    listen 80;
-    server_name www.foo.com;
-    root /webapps/foo/public;
-    passenger_enabled on;
-
-    location /attachments {
-        # Re-specify passenger_enabled here!
-        passenger_enabled on;
-    }
-}
-----------------------------
-
-[[PassengerBaseURI]]
-==== passenger_base_uri <uri> ====
-Used to specify that the given URI is an distinct application that should
-be served by Phusion Passenger. Please refer to the following sections for
-more information:
-
- * <<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>>
- * <<deploying_wsgi_to_sub_uri,Deploying WSGI to a sub URI>>
- * <<deploying_rails_to_sub_uri,Deploying Rails 1 and Rails 2 to a sub URI>>
-
-It is allowed to specify this option multiple times. Do this to deploy multiple
-applications in different sub-URIs under the same virtual host.
-
-This option may occur in the following places:
-
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
 
 === Connection handling options ===
 
@@ -1790,33 +1784,47 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'off'.
 
 
-=== Ruby on Rails-specific options ===
-[[RailsEnv]]
-==== rails_env <string> ====
-This option allows one to specify the default `RAILS_ENV` value.
+=== Advanced options
 
-This option may occur in the following places:
+[[PassengerTempDir]]
+==== passenger_temp_dir <directory>
+Specifies the directory that Phusion Passenger should use for storing temporary
+files. This includes things such as Unix socket files.
 
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
+This option may only be specified in the 'http' configuration block. The
+default temp directory that Phusion Passenger uses is '/tmp'.
 
-In each place, it may be specified at most once. The default value is 'production'.
+This option is especially useful if Nginx is not allowed to write to /tmp
+(which is the case on some systems with strict SELinux policies) or if the
+partition that /tmp lives on doesn't have enough disk space.
 
-=== Rack and Rails >= 3 specific options ===
-[[RackEnv]]
-==== rack_env <string> ====
-This option allows one to specify the default `RACK_ENV` value.
+.Command line tools
+Some Phusion Passenger command line administration tools, such as
+`passenger-status`, must know what Phusion Passenger's temp directory is
+in order to function properly. You can pass the directory through the
+`PASSENGER_TMPDIR` environment variable, or the `TMPDIR` environment variable
+(the former will be used if both are specified).
 
-This option may occur in the following places:
+For example, if you set 'passenger_temp_dir' to '/my_temp_dir', then invoke
+`passenger-status` after you've set the `PASSENGER_TMPDIR` or `TMPDIR`
+environment variable, like this:
 
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
+----------------------------------------------------------
+export PASSENGER_TMPDIR=/my_temp-dir
+sudo -E passenger-status
+# The -E option tells 'sudo' to preserve environment variables.
+----------------------------------------------------------
 
-In each place, it may be specified at most once. The default value is 'production'.
+:option: `--temp-dir`
+include::users_guide_snippets/alternative_for_flying_passenger.txt[]
+
+==== passenger_fly_with <socket filename>
+:version: 4.1.0
+include::users_guide_snippets/enterprise_only.txt[]
+
+Enables <<flying_passenger,Flying Passenger>> mode, and configures Nginx to connect to the Flying Passenger daemon that's listening on the given socket filename.
+
+This option may only occur once, in the 'http' configuration block. When not set, Flying Passenger is not enabled.
 
 
 === Deprecated options ===

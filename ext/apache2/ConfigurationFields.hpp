@@ -56,6 +56,8 @@
 	int minInstances;
 	/** A timeout for application startup. */
 	int startTimeout;
+	/** The environment under which applications are run. */
+	const char *appEnv;
 	/** Force specific application type. */
 	const char *appType;
 	/** The group that Ruby applications must run as. */

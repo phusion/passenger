@@ -70,10 +70,6 @@ struct DirConfig {
 
 	std::set<std::string> baseURIs;
 	
-	/** The environment (RAILS_ENV/RACK_ENV/WSGI_ENV) under which
-	 * applications should operate. */
-	const char *environment;
-	
 	/** The path to the application's root (for example: RAILS_ROOT
 	 * for Rails applications, directory containing 'config.ru'
 	 * for Rack applications). If this value is NULL, the default
@@ -153,14 +149,6 @@ struct DirConfig {
 	
 	bool isEnabled() const {
 		return enabled != DISABLED;
-	}
-	
-	StaticString getEnvironment() const {
-		if (environment != NULL) {
-			return environment;
-		} else {
-			return "production";
-		}
 	}
 	
 	StaticString getAppGroupName(const StaticString &appRoot) const {

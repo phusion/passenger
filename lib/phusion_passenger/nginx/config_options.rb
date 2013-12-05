@@ -107,8 +107,7 @@ LOCATION_CONFIGURATION_OPTIONS = [
 	{
 		:name  => 'passenger_app_env',
 		:type  => :string,
-		:field => 'environment',
-		:header => 'PASSENGER_ENV'
+		:field => 'environment'
 	},
 	{
 		:name  => 'passenger_friendly_error_pages',

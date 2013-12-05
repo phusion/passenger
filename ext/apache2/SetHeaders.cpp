@@ -52,6 +52,10 @@
 	
 
 	
+		addHeader(output, "PASSENGER_APP_ENV", config->appEnv);
+	
+
+	
 		addHeader(r, output, "PASSENGER_MIN_INSTANCES", config->minInstances);
 	
 

@@ -39,6 +39,18 @@
 <%
 require 'phusion_passenger/apache2/config_options'
 
+def resolve_possible_alias(option)
+	if option[:alias_for]
+		the_alias = APACHE2_DIRECTORY_CONFIGURATION_OPTIONS.find do |o|
+			o[:name] == option[:alias_for]
+		end.dup
+		the_alias[:aliased_for] = option[:name]
+		return the_alias
+	else
+		return option
+	end
+end
+
 def macro_for(option)
 	case option[:type]
 	when :string, :integer
@@ -83,6 +95,7 @@ end
 %>
 
 <% for option in APACHE2_DIRECTORY_CONFIGURATION_OPTIONS %>
+	<% option = resolve_possible_alias(option) %>
 	<%= macro_for(option) %>(<%= name_for(option) %>,
 		(<%= function_type_for(option) %>) <%= function_for(option) %>,
 		NULL,

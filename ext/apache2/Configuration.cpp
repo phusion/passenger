@@ -189,7 +189,6 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	
 	#include "CreateDirConfig.cpp"
 
-	config->environment = NULL;
 	config->appRoot = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
 	config->maxPreloaderIdleTime = -1;
@@ -219,7 +218,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 		config->baseURIs.insert(*it);
 	}
 	
-	MERGE_STR_CONFIG(environment);
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
@@ -280,7 +278,6 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 #include "ConfigurationSetters.cpp"
 
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_environment, environment)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_group_name, appGroupName)
@@ -633,20 +630,6 @@ const command_rec passenger_commands[] = {
 		OR_ALL,
 		"The number of threads that Phusion Passenger should spawn per application."),
 
-	// Rails-specific settings.
-	AP_INIT_TAKE1("RailsEnv",
-		(Take1Func) cmd_environment,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The environment under which a Rails app must run."),
-	
-	// Rack-specific settings.
-	AP_INIT_TAKE1("RackEnv",
-		(Take1Func) cmd_environment,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The environment under which a Rack app must run."),
-	
 	// Backwards compatibility options.
 	AP_INIT_TAKE1("RailsRuby",
 		(Take1Func) cmd_passenger_ruby,

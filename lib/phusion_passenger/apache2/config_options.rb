@@ -67,6 +67,23 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:desc => "The Node.js command to use."
 	},
 	{
+		:name => "PassengerAppEnv",
+		:type => :string,
+		:desc => "The environment under which applications are run."
+	},
+	{
+		:name => "RailsEnv",
+		:type => :string,
+		:desc => "The environment under which applications are run.",
+		:alias_for => "PassengerAppEnv"
+	},
+	{
+		:name => "RackEnv",
+		:type => :string,
+		:desc => "The environment under which applications are run.",
+		:alias_for => "PassengerAppEnv"
+	},
+	{
 		:name => "PassengerMinInstances",
 		:type => :integer,
 		:context => ["OR_LIMIT", "ACCESS_CONF", "RSRC_CONF"],

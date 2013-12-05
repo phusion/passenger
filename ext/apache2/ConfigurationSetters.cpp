@@ -64,6 +64,14 @@
 	
 	
 		static const char *
+		cmd_passenger_app_env(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			config->appEnv = arg;
+			return NULL;
+		}
+	
+	
+		static const char *
 		cmd_passenger_min_instances(cmd_parms *cmd, void *pcfg, const char *arg) {
 			DirConfig *config = (DirConfig *) pcfg;
 			char *end;
