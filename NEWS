@@ -3,7 +3,7 @@ Release 4.0.27
 
  * [Apache] Fixed a bug in the Apache module which could lock up the Apache
    process or thread. This is a regression introduced in version 4.0.24.
- * 
+ * Node.js application processes now have friendly process titles.
 
 
 Release 4.0.26

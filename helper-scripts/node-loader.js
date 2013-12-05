@@ -79,6 +79,7 @@ function setupEnvironment(options) {
 	PhusionPassenger.configure = configure;
 	PhusionPassenger._requestHandler = new RequestHandler(loadApplication);
 	PhusionPassenger._appInstalled = false;
+	process.title = 'Passenger NodeApp: ' + options.app_root;
 	http.Server.prototype.originalListen = http.Server.prototype.listen;
 	http.Server.prototype.listen = installServer;
 
