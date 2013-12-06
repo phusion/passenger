@@ -1,9 +1,14 @@
 Release 4.0.28
 --------------
 
+ * Introduced a workaround for a GCC 4.6 bug. This bug could cause Phusion
+   Passsenger to crash during startup. Affected operating systems include
+   Ubuntu 12.04 and Amazon Linux 2013.09.01, though not every machine with
+   this OS installed exhibits the problem. See issue #902.
  * Fixed a bug in the `passenger start -R` option. It was broken because of a
    change introduced in 4.0.25.
  * Fixed a bug in PassengerMaxInstancesPerApp. Fixes issue #1016.
+ * Fixed compilation problems on Solaris.
 
 
 Release 4.0.27

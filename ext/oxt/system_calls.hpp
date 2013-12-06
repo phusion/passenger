@@ -188,7 +188,7 @@ namespace this_thread {
 	 * @intern
 	 */
 	#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
-		extern __thread bool _syscalls_interruptable;
+		extern __thread int _syscalls_interruptable;
 	#else
 		extern thread_specific_ptr<bool> _syscalls_interruptable;
 	#endif
@@ -211,8 +211,8 @@ namespace this_thread {
 	public:
 		enable_syscall_interruption() {
 			#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
-				last_value = _syscalls_interruptable;
-				_syscalls_interruptable = true;
+				last_value = !!_syscalls_interruptable;
+				_syscalls_interruptable = 1;
 			#else
 				if (_syscalls_interruptable.get() == NULL) {
 					last_value = true;
@@ -246,8 +246,8 @@ namespace this_thread {
 	public:
 		disable_syscall_interruption() {
 			#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
-				last_value = _syscalls_interruptable;
-				_syscalls_interruptable = false;
+				last_value = !!_syscalls_interruptable;
+				_syscalls_interruptable = 0;
 			#else
 				if (_syscalls_interruptable.get() == NULL) {
 					last_value = true;
@@ -274,11 +274,11 @@ namespace this_thread {
 	 */
 	class restore_syscall_interruption {
 	private:
-		int last_value;
+		bool last_value;
 	public:
 		restore_syscall_interruption(const disable_syscall_interruption &intr) {
 			#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
-				last_value = _syscalls_interruptable;
+				last_value = !!_syscalls_interruptable;
 				_syscalls_interruptable = intr.last_value;
 			#else
 				assert(_syscalls_interruptable.get() != NULL);
