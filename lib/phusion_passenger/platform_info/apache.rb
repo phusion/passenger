@@ -1,3 +1,4 @@
+# encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2013 Phusion
 #
@@ -184,7 +185,7 @@ module PlatformInfo
 
 	def self.httpd_actual_error_log(options = nil)
 		if config_file = httpd_default_config_file(options)
-			contents = File.read(config_file)
+			contents = File.open(config_file, "rb") { |f| f.read }
 			# We don't want to match comments
 			contents.gsub!(/^[ \t]*#.*/, '')
 			if contents =~ /^ErrorLog (.+)$/

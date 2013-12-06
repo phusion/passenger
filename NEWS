@@ -9,6 +9,8 @@ Release 4.0.28
    change introduced in 4.0.25.
  * Fixed a bug in PassengerMaxInstancesPerApp. Fixes issue #1016.
  * Fixed compilation problems on Solaris.
+ * Fixed an encoding problem in the Apache autodetection code. Fixes
+   issue #1026.
 
 
 Release 4.0.27
