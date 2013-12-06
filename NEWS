@@ -11,6 +11,7 @@ Release 4.0.28
  * Fixed compilation problems on Solaris.
  * Fixed an encoding problem in the Apache autodetection code. Fixes
    issue #1026.
+ * The Debian packages no longer depend on libruby.
 
 
 Release 4.0.27

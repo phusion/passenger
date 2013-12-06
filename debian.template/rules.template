@@ -49,3 +49,11 @@ override_dh_auto_clean:
 	cd nginx-<%= PhusionPassenger::PREFERRED_NGINX_VERSION %> && if test -f Makefile; then make clean; fi
 	# Hack to prevent HTML files from being renegerated
 	touch doc/*.html
+
+# Because we include Ruby extensions, the Debian package depends on libruby.
+# Since Phusion Passenger works fine without the Ruby extensions, we don't want
+# to depend on libruby.
+# https://github.com/phusion/passenger_apt_automation/issues/3
+override_dh_shlibdeps:
+	dh_shlibdeps
+	sed -i -E 's/libruby.*?, //g' debian/*.substvars
