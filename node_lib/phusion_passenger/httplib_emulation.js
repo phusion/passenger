@@ -81,15 +81,13 @@ function createIncomingMessage(headers, socket, bodyBegin) {
 	message.url    = headers['REQUEST_URI'];
 	message.connection.remoteAddress = headers['REMOTE_ADDR'];
 	message.connection.remotePort = parseInt(headers['REMOTE_PORT']);
+	message._mayHaveRequestBody = mayHaveRequestBody(headers);
+	message._emitEndEvent = IncomingMessage_emitEndEvent;
+	resetIncomingMessageOverridedMethods(message);
 
-	function onSocketData(chunk) {
-		message.emit('data', chunk);
-	}
-
-	function onSocketEnd() {
-		message.emit('end');
-	}
-
+	socket.on('end', function() {
+		message._emitEndEvent();
+	});
 	socket.on('drain', function() {
 		message.emit('drain');
 	});
@@ -104,21 +102,91 @@ function createIncomingMessage(headers, socket, bodyBegin) {
 	 * to have a request body. For compatibility reasons we implement the
 	 * same behavior as Node's HTTP parser.
 	 */
-	if (mayHaveRequestBody(headers)) {
-		socket.on('data', onSocketData);
-		socket.on('end', onSocketEnd);
+	if (message._mayHaveRequestBody) {
 		if (bodyBegin.length > 0) {
-			process.nextTick(function() {
-				// TODO: we should check here whether the socket hasn't already been closed
-				socket.emit('data', bodyBegin);
-			});
+			message.push(bodyBegin);
+		}
+		socket.ondata = function(buffer, offset, end) {
+			if (!message.push(buffer.slice(offset, end))) {
+				socket._handle.readStop();
+			}
 		}
 	} else {
-		// TODO: we should check in the next tick whether the socket hasn't already been closed
-		process.nextTick(onSocketEnd);
+		message.push(null);
 	}
 
 	return message;
+}
+
+function IncomingMessage_pause() {
+	this._flowing = false;
+	this._orig_pause();
+	resetIncomingMessageOverridedMethods(this);
+}
+
+function IncomingMessage_resume() {
+	this._flowing = true;
+	this._orig_resume();
+	resetIncomingMessageOverridedMethods(this);
+}
+
+function IncomingMessage_on(event, listener) {
+	if (event == 'data') {
+		this._flowing = true;
+		installDataEventHandler(this);
+	} else if (event == 'readable') {
+		installReadableEventHandler(this);
+	}
+	this._orig_on.call(this, event, listener);
+	resetIncomingMessageOverridedMethods(this);
+}
+
+function IncomingMessage_emitEndEvent() {
+	if (!this._readableState.endEmitted) {
+		this._readableState.endEmitted = true;
+		this.emit('end');
+	}
+}
+
+/*
+ * Calling on(), pause() etc on the message object may cause our overrided
+ * methods to be set to something else. This is probably becaused by the code
+ * in Node.js responsible for switching a stream to flowing mode, e.g.
+ * emitDataEvents() in _stream_readable.js. Thus, this function
+ * should be called from on(), pause() etc.
+ */
+function resetIncomingMessageOverridedMethods(message) {
+	if (message.pause !== IncomingMessage_pause) {
+		message._orig_pause = message.pause;
+		message.pause = IncomingMessage_pause;
+	}
+	if (message.resume !== IncomingMessage_resume) {
+		message._orig_resume = message.resume;
+		message.resume = IncomingMessage_resume;
+	}
+	if (message.on !== IncomingMessage_on) {
+		message._orig_on = message.on;
+		message.on = IncomingMessage_on;
+		message.addListener = IncomingMessage_on;
+	}
+}
+
+function installDataEventHandler(message) {
+	if (!message._dataEventHandlerInstalled) {
+		message._dataEventHandlerInstalled = true;
+		message.socket.on('data', function(chunk) {
+			message.emit('data', chunk);
+		});
+	}
+}
+
+function installReadableEventHandler(message) {
+	if (!message._readableEventHandlerInstalled) {
+		message._readableEventHandlerInstalled = true;
+		message.socket.on('readable', function() {
+			message.emit('readable');
+		});
+	}
 }
 
 function createServerResponse(req) {
