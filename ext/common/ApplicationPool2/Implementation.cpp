@@ -1279,8 +1279,11 @@ PipeWatcher::threadMain() {
 			}
 		} else if (ret == 1 && buf[0] == '\n') {
 			UPDATE_TRACE_POINT();
-			P_LOG(print ? LVL_INFO : LVL_DEBUG,
-				"[App " << pid << " " << name << "] ");
+			if (print) {
+				printf("App %d %s: \n", (int) pid, name);
+			} else {
+				P_DEBUG("App " << pid << " " << name << ": ");
+			}
 		} else {
 			UPDATE_TRACE_POINT();
 			vector<StaticString> lines;
@@ -1290,8 +1293,18 @@ PipeWatcher::threadMain() {
 			}
 			split(StaticString(buf, ret2), '\n', lines);
 			foreach (const StaticString line, lines) {
-				P_LOG(print ? LVL_INFO : LVL_DEBUG,
-					"[App " << pid << " " << name << "] " << line);
+				if (print) {
+					string message = "App ";
+					message.append(toString(pid));
+					message.append(" ");
+					message.append(name);
+					message.append(": ");
+					message.append(line.data(), line.size());
+					message.append("\n");
+					fwrite(message.data(), 1, message.size(), stdout);
+				} else {
+					P_DEBUG("App " << pid << " " << name << ": " << line);
+				}
 			}
 		}
 
