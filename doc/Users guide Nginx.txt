@@ -844,6 +844,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'off'.
 
+[[passenger_set_cgi_param]]
 ==== passenger_set_cgi_param <CGI environment name> <value> ====
 Allows one to define additional CGI environment variables to pass to the web
 application. This is comparable to ngx_http_fastcgi_module's 'fastcgi_param'
