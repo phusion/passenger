@@ -506,6 +506,15 @@ command line:
 touch /webapps/wsgiapp/tmp/restart.txt
 -------------------------------------------
 
+== Deploying a Node.js application
+
+Please refer to link:https://github.com/phusion/passenger/wiki/Phusion-Passenger%3A-Node.js-tutorial[the Node.js tutorial].
+
+
+== Deploying a Meteor application
+
+Please refer to link:http://blog.phusion.nl/2013/11/01/will-meteor-kill-rails-i-dont-know-but-phusion-passenger-open-sources-meteor-support/[the Meteor tutorial].
+
 
 == Configuring Phusion Passenger ==
 

@@ -191,6 +191,8 @@ endif::[]
 
 === Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux
 
+WARNING: The RPMs are currently unmaintained. As such, the repository only contains Phusion Passenger 3.x (the latest version is 4.x), which did not support Node.js, Meteor, multiple Rubies, etc. For more recent versions of Phusion Passenger, you are suggested to install from gem or tarball instead.
+
 YUM repositories with RPMs are maintained by link:https://github.com/erikogan/passenger[Erik Ogan] and link:http://stealthymonkeys.com/[Stealthy Monkeys Consulting]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
 
 If you use YUM to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. The YUM packages contain all the binaries that you need. You also don't need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.
