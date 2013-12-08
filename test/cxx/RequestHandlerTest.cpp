@@ -48,6 +48,7 @@ namespace tut {
 			requestSocket = createUnixServer(serverFilename);
 			setNonBlocking(requestSocket);
 			setLogLevel(LVL_ERROR); // TODO: set to LVL_WARN
+			setPrintAppOutputAsDebuggingMessages(true);
 
 			agentOptions.passengerRoot = resourceLocator->getRoot();
 			agentOptions.defaultUser   = testConfig["default_user"].asString();
@@ -63,6 +64,7 @@ namespace tut {
 		
 		~RequestHandlerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
+			setPrintAppOutputAsDebuggingMessages(false);
 			if (bg.isStarted()) {
 				bg.safe->runSync(boost::bind(&RequestHandlerTest::destroy, this));
 			} else {
@@ -332,7 +334,6 @@ namespace tut {
 			"STDERR.puts 'I have failed'");
 
 		setLogLevel(-2);
-		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -357,7 +358,6 @@ namespace tut {
 			"STDERR.puts 'I have failed'\n");
 
 		setLogLevel(-2);
-		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -380,7 +380,6 @@ namespace tut {
 		writeFile("tmp.handler/start.rb", "");
 
 		setLogLevel(-2);
-		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -408,7 +407,6 @@ namespace tut {
 			"STDERR.puts 'I have failed'");
 
 		setLogLevel(-2);
-		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -434,7 +432,6 @@ namespace tut {
 			"STDERR.puts 'I have failed'\n");
 
 		setLogLevel(-2);
-		spawnerFactory->getConfig()->forwardStderr = false;
 		init();
 		connect();
 		sendHeaders(defaultHeaders,

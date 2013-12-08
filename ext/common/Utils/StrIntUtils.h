@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <stdexcept>
+#include <new>
 #include <cstddef>
 #include <ctime>
 #include <oxt/macros.hpp>
@@ -36,6 +38,34 @@
 namespace Passenger {
 
 using namespace std;
+
+
+/**
+ * A RAII construct for memory buffers that are dynamically allocated with malloc().
+ * Upon destruction of a DynamicBuffer, the memory buffer is freed.
+ */
+struct DynamicBuffer {
+	typedef string::size_type size_type;
+
+	char *data;
+	size_type size;
+
+	/**
+	 * @throws std::bad_alloc The buffer cannot be allocated.
+	 */
+	DynamicBuffer(size_type _size)
+		: size(_size)
+	{
+		data = (char *) malloc(_size);
+		if (data == NULL) {
+			throw std::bad_alloc();
+		}
+	}
+
+	~DynamicBuffer() throw() {
+		free(data);
+	}
+};
 
 
 /**
@@ -162,39 +192,53 @@ string toHex(const StaticString &data);
  */
 void toHex(const StaticString & restrict_ref data, char * restrict output, bool upperCase = false);
 
+static inline void
+reverseString(char *str, unsigned int size) {
+	char *end = str + size;
+	for (--end; str < end; str++, end--) {
+		*str = *str ^ *end,
+		*end = *str ^ *end,
+		*str = *str ^ *end;
+	}
+}
+
 /**
  * Convert the given integer to some other radix, placing
- * the result into the given output buffer. This buffer must be at
- * least <tt>2 * sizeof(IntegerType) + 1</tt> bytes. The output buffer
+ * the result into the given output buffer. The output buffer
  * will be NULL terminated. Supported radices are 2-36.
- *
+ * 
+ * @param outputSize The size of the output buffer, including space for
+ *                   the terminating NULL.
  * @return The size of the created string, excluding
  *         terminating NULL.
+ * @throws std::length_error The output buffer is not large enough.
  */
 template<typename IntegerType, int radix>
 unsigned int
-integerToOtherBase(IntegerType value, char *output) {
-	static const char hex_chars[] = {
+integerToOtherBase(IntegerType value, char *output, unsigned int outputSize) {
+	static const char chars[] = {
 		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 		'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
 		'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
 		'u', 'v', 'w', 'x', 'y', 'z'
 	};
-	char buf[sizeof(value) * 2];
 	IntegerType remainder = value;
 	unsigned int size = 0;
 	
 	do {
-		buf[size] = hex_chars[remainder % radix];
+		output[size] = chars[remainder % radix];
 		remainder = remainder / radix;
 		size++;
-	} while (remainder != 0);
+	} while (remainder != 0 && size < outputSize - 1);
 	
-	for (unsigned int i = 0; i < size; i++) {
-		output[size - i - 1] = buf[i];
+	if (remainder == 0) {
+		reverseString(output, size);
+		output[size] = '\0';
+		return size;
+	} else {
+		throw std::length_error("Buffer not large enough to for integerToOtherBase()");
+		return -1; // Shut up compiler warning.
 	}
-	output[size] = '\0';
-	return size;
 }
 
 /**
@@ -209,7 +253,7 @@ integerToOtherBase(IntegerType value, char *output) {
 template<typename IntegerType>
 unsigned int
 integerToHex(IntegerType value, char *output) {
-	return integerToOtherBase<IntegerType, 16>(value, output);
+	return integerToOtherBase<IntegerType, 16>(value, output, 2 * sizeof(IntegerType) + 1);
 }
 
 /**
@@ -229,7 +273,7 @@ string integerToHex(long long value);
 template<typename IntegerType>
 unsigned int
 integerToHexatri(IntegerType value, char *output) {
-	return integerToOtherBase<IntegerType, 36>(value, output);
+	return integerToOtherBase<IntegerType, 36>(value, output, 2 * sizeof(IntegerType) + 1);
 }
 
 /**

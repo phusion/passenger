@@ -42,6 +42,7 @@ namespace tut {
 			bg.start();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);
 			setLogLevel(LVL_ERROR); // TODO: change to LVL_WARN
+			setPrintAppOutputAsDebuggingMessages(true);
 		}
 		
 		~ApplicationPool2_PoolTest() {
@@ -55,6 +56,7 @@ namespace tut {
 			UPDATE_TRACE_POINT();
 			pool.reset();
 			setLogLevel(DEFAULT_LOG_LEVEL);
+			setPrintAppOutputAsDebuggingMessages(false);
 			SystemTime::releaseAll();
 		}
 
@@ -1316,7 +1318,6 @@ namespace tut {
 		options.appRoot = "tmp.wsgi";
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
-		spawnerConfig->forwardStderr = false;
 
 		writeFile("tmp.wsgi/passenger_wsgi.py",
 			"import sys\n"
@@ -1342,7 +1343,6 @@ namespace tut {
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
 		options.minProcesses = 4;
-		spawnerConfig->forwardStderr = false;
 
 		writeFile("tmp.wsgi/counter", "0");
 		chmod("tmp.wsgi/counter", 0666);
@@ -1547,7 +1547,6 @@ namespace tut {
 		options.appRoot = "tmp.wsgi";
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
-		spawnerConfig->forwardStderr = false;
 		pool->setMax(1);
 
 		writeFile("tmp.wsgi/passenger_wsgi.py",
@@ -1598,7 +1597,6 @@ namespace tut {
 		options.appType = "wsgi";
 		options.spawnMethod = "direct";
 		options.minProcesses = 2;
-		spawnerConfig->forwardStderr = false;
 
 		// Spawn 2 processes.
 		retainSessions = true;

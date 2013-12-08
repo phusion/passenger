@@ -49,16 +49,12 @@ private:
 		BackgroundIOCapturerPtr stderrCapturer;
 		DebugDirPtr debugDir;
 		const Options *options;
-		bool forwardStderr;
-		int forwardStderrTo;
 
 		/****** Working state ******/
 		unsigned long long timeout;
 
 		StartupDetails() {
 			options = NULL;
-			forwardStderr = false;
-			forwardStderrTo = STDERR_FILENO;
 			timeout = 0;
 		}
 	};
@@ -268,13 +264,13 @@ private:
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
-					string("[App ") + toString(pid) + " stderr] ",
-					config->forwardStderr);
+					pid,
+					// The cast works around a compilation problem in Clang.
+					(const char *) "stderr");
 			details.stderrCapturer->start();
 			details.debugDir = debugDir;
 			details.options = &options;
 			details.timeout = options.startTimeout * 1000;
-			details.forwardStderr = config->forwardStderr;
 			
 			{
 				this_thread::restore_interruption ri(di);
@@ -290,12 +286,12 @@ private:
 			PipeWatcherPtr watcher;
 
 			watcher = boost::make_shared<PipeWatcher>(adminSocket.second,
-				"stdout", pid, config->forwardStdout);
+				"stdout", pid);
 			watcher->initialize();
 			watcher->start();
 
 			watcher = boost::make_shared<PipeWatcher>(errorPipe.first,
-				"stderr", pid, config->forwardStderr);
+				"stderr", pid);
 			watcher->initialize();
 			watcher->start();
 			
@@ -777,7 +773,6 @@ public:
 		details.adminSocket = result.adminSocket;
 		details.io = result.io;
 		details.options = &options;
-		details.forwardStderr = config->forwardStderr;
 		ProcessPtr process = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
 			", pid=" << process->pid);

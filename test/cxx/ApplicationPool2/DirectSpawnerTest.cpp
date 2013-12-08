@@ -22,10 +22,12 @@ namespace tut {
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 			gatherOutput = boost::bind(&ApplicationPool2_DirectSpawnerTest::_gatherOutput, this, _1, _2);
 			setLogLevel(LVL_ERROR); // TODO: change to LVL_WARN
+			setPrintAppOutputAsDebuggingMessages(true);
 		}
 
 		~ApplicationPool2_DirectSpawnerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
+			setPrintAppOutputAsDebuggingMessages(false);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
@@ -63,7 +65,6 @@ namespace tut {
 		options.startTimeout = 300;
 		
 		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
-		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			process = spawner.spawn(options);
@@ -86,7 +87,6 @@ namespace tut {
 		options.startupFile  = ".";
 		
 		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
-		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			process = spawner.spawn(options);

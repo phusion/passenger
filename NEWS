@@ -14,6 +14,8 @@ Release 4.0.28
  * Fixed an encoding problem in the Apache autodetection code. Fixes
    issue #1026.
  * The Debian packages no longer depend on libruby.
+ * Application stdout and stderr are now printed without normal
+   Phusion Passenger debugging information, making them easier to read.
 
 
 Release 4.0.27

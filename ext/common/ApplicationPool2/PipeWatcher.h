@@ -47,12 +47,11 @@ struct PipeWatcher: public boost::enable_shared_from_this<PipeWatcher> {
 	FileDescriptor fd;
 	const char *name;
 	pid_t pid;
-	bool print;
 	bool started;
 	boost::mutex startSyncher;
 	boost::condition_variable startCond;
 
-	PipeWatcher(const FileDescriptor &_fd, const char *name, pid_t pid, bool _print);
+	PipeWatcher(const FileDescriptor &_fd, const char *name, pid_t pid);
 	void initialize();
 	void start();
 	static void threadMain(boost::shared_ptr<PipeWatcher> self);

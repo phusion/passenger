@@ -352,13 +352,13 @@ public:
 
 		if (_adminSocket != -1) {
 			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(_adminSocket,
-				"stdout", pid, config->forwardStdout);
+				"stdout", pid);
 			watcher->initialize();
 			watcher->start();
 		}
 		if (_errorPipe != -1) {
 			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(_errorPipe,
-				"stderr", pid, config->forwardStderr);
+				"stderr", pid);
 			watcher->initialize();
 			watcher->start();
 		}

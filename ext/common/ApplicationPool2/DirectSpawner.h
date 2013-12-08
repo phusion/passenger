@@ -222,15 +222,15 @@ public:
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
-					string("[App ") + toString(pid) + " stderr] ",
-					config->forwardStderr);
+					pid,
+					// The cast works around a compilation problem in Clang.
+					(const char *) "stderr");
 			details.stderrCapturer->start();
 			details.pid = pid;
 			details.adminSocket = adminSocket.second;
 			details.io = BufferedIO(adminSocket.second);
 			details.errorPipe = errorPipe.first;
 			details.options = &options;
-			details.forwardStderr = config->forwardStderr;
 			details.debugDir = debugDir;
 			
 			ProcessPtr process;

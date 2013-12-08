@@ -1219,11 +1219,10 @@ Session::kill(int signo) {
 
 PipeWatcher::DataCallback PipeWatcher::onData;
 
-PipeWatcher::PipeWatcher(const FileDescriptor &_fd, const char *_name, pid_t _pid, bool _print)
+PipeWatcher::PipeWatcher(const FileDescriptor &_fd, const char *_name, pid_t _pid)
 	: fd(_fd),
 	  name(_name),
-	  pid(_pid),
-	  print(_print)
+	  pid(_pid)
 {
 	started = false;
 }
@@ -1279,11 +1278,7 @@ PipeWatcher::threadMain() {
 			}
 		} else if (ret == 1 && buf[0] == '\n') {
 			UPDATE_TRACE_POINT();
-			if (print) {
-				printf("App %d %s: \n", (int) pid, name);
-			} else {
-				P_DEBUG("App " << pid << " " << name << ": ");
-			}
+			printAppOutput(pid, name, "", 0);
 		} else {
 			UPDATE_TRACE_POINT();
 			vector<StaticString> lines;
@@ -1293,18 +1288,7 @@ PipeWatcher::threadMain() {
 			}
 			split(StaticString(buf, ret2), '\n', lines);
 			foreach (const StaticString line, lines) {
-				if (print) {
-					string message = "App ";
-					message.append(toString(pid));
-					message.append(" ");
-					message.append(name);
-					message.append(": ");
-					message.append(line.data(), line.size());
-					message.append("\n");
-					fwrite(message.data(), 1, message.size(), stdout);
-				} else {
-					P_DEBUG("App " << pid << " " << name << ": " << line);
-				}
+				printAppOutput(pid, name, line.data(), line.size());
 			}
 		}
 

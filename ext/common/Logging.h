@@ -124,7 +124,29 @@ enum PassengerLogLevel {
 	#define P_TRACE(level, expr) do { /* nothing */ } while (false)
 #endif
 
+/**
+ * Print a message that was received from an application's stdout/stderr.
+ *
+ * @param pid The application's PID.
+ * @param channelName "stdout" or "stderr".
+ * @param message The message that was received.
+ */
+void printAppOutput(pid_t pid, const char *channelName, const char *message, unsigned int size);
 
+/**
+ * Controls how messages that are received from applications are printed.
+ *
+ * If `enabled` is true then messages are printed using P_DEBUG, meaning that
+ * the normal Passenger logging prefixes will be printed as well.
+ *
+ * If `enabled` is false (the default), then messages are printed directly
+ * to the log output channel using write(), with only a very short prefix
+ * that contains the PID and channel name.
+ */
+void setPrintAppOutputAsDebuggingMessages(bool enabled);
+
+
+/** Print a [BUG] error message and abort with a stack trace. */
 #define P_BUG(expr) \
 	do { \
 		TRACE_POINT(); \
@@ -165,7 +187,7 @@ public:
 
 /**
  * Put this in code sections where you don't expect *any* exceptions to be thrown.
- * This macro will automatically disables interruptions in the current scope,
+ * This macro will automatically disable interruptions in the current scope,
  * and will print an error message whenever the scope exits with an exception.
  *
  * When inside critical sections, you should put this macro right after the lock

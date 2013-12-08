@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <Logging.h>
+#include <StaticString.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 
@@ -34,6 +35,7 @@ namespace Passenger {
 
 int _logLevel = 0;
 int _logOutput = STDERR_FILENO;
+static bool printAppOutputAsDebuggingMessages = false;
 
 int
 getLogLevel() {
@@ -86,8 +88,8 @@ _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line
 		" ]: ";
 }
 
-void
-_writeLogEntry(const std::string &str) {
+static void
+_writeLogEntry(const StaticString &str) {
 	try {
 		writeExact(_logOutput, str.data(), str.size());
 	} catch (const SystemException &) {
@@ -99,6 +101,69 @@ _writeLogEntry(const std::string &str) {
 		 * something like this.
 		 */
 	}
+}
+
+void
+_writeLogEntry(const std::string &str) {
+	_writeLogEntry(StaticString(str));
+}
+
+static void
+realPrintAppOutput(char *buf, unsigned int bufSize,
+	const char *pidStr, unsigned int pidStrLen,
+	const char *channelName, unsigned int channelNameLen,
+	const char *message, unsigned int messageLen)
+{
+	char *pos = buf;
+	char *end = buf + bufSize;
+
+	pos = appendData(pos, end, "App ");
+	pos = appendData(pos, end, pidStr, pidStrLen);
+	pos = appendData(pos, end, " ");
+	pos = appendData(pos, end, channelName, channelNameLen);
+	pos = appendData(pos, end, ": ");
+	pos = appendData(pos, end, message, messageLen);
+	pos = appendData(pos, end, "\n");
+	_writeLogEntry(StaticString(buf, pos - buf));
+}
+
+void
+printAppOutput(pid_t pid, const char *channelName, const char *message, unsigned int size) {
+	if (printAppOutputAsDebuggingMessages) {
+		P_DEBUG("App " << pid << " " << channelName << ": " << StaticString(message, size));
+	} else {
+		char pidStr[sizeof("4294967295")];
+		unsigned int pidStrLen, channelNameLen, totalLen;
+
+		try {
+			pidStrLen = integerToOtherBase<pid_t, 10>(pid, pidStr, sizeof(pidStr));
+		} catch (const std::length_error &) {
+			pidStr[0] = '?';
+			pidStr[1] = '\0';
+			pidStrLen = 1;
+		}
+
+		channelNameLen = strlen(channelName);
+		totalLen = (sizeof("App X Y: \n") - 2) + pidStrLen + channelNameLen + size;
+		if (totalLen < 1024) {
+			char buf[1024];
+			realPrintAppOutput(buf, sizeof(buf),
+				pidStr, pidStrLen,
+				channelName, channelNameLen,
+				message, size);
+		} else {
+			DynamicBuffer buf(totalLen);
+			realPrintAppOutput(buf.data, totalLen,
+				pidStr, pidStrLen,
+				channelName, channelNameLen,
+				message, size);
+		}
+	}
+}
+
+void
+setPrintAppOutputAsDebuggingMessages(bool enabled) {
+	printAppOutputAsDebuggingMessages = enabled;
 }
 
 } // namespace Passenger

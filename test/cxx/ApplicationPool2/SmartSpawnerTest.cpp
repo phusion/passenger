@@ -27,10 +27,12 @@ namespace tut {
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 			gatherOutput = boost::bind(&ApplicationPool2_SmartSpawnerTest::_gatherOutput, this, _1, _2);
 			setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
+			setPrintAppOutputAsDebuggingMessages(true);
 		}
 		
 		~ApplicationPool2_SmartSpawnerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
+			setPrintAppOutputAsDebuggingMessages(false);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
@@ -128,8 +130,6 @@ namespace tut {
 			generation,
 			preloaderCommand,
 			options);
-		spawner.getConfig()->forwardStdout = false;
-		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			process = spawner.spawn(options);
@@ -160,8 +160,6 @@ namespace tut {
 			generation,
 			preloaderCommand,
 			options);
-		spawner.getConfig()->forwardStdout = false;
-		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			process = spawner.spawn(options);
@@ -192,8 +190,6 @@ namespace tut {
 			generation,
 			preloaderCommand,
 			options);
-		spawner.getConfig()->forwardStdout = false;
-		spawner.getConfig()->forwardStderr = false;
 		
 		try {
 			process = spawner.spawn(options);
