@@ -209,7 +209,11 @@ public:
 	SafeLibev * const libev;
 	/** Process PID. */
 	pid_t pid;
-	/** UUID for this process, randomly generated and will never appear again. */
+	/** An ID that uniquely identifies this Process in the Group, for
+	 * use in implementing sticky sessions. Set by Group::attach(). */
+	unsigned int stickySessionId;
+	/** UUID for this process, randomly generated and extremely unlikely to ever
+	 * appear again in this universe. */
 	string gupid;
 	string connectPassword;
 	/** Admin socket, see class description. */
@@ -326,6 +330,7 @@ public:
 		: pqHandle(NULL),
 		  libev(_libev.get()),
 		  pid(_pid),
+		  stickySessionId(0),
 		  gupid(_gupid),
 		  connectPassword(_connectPassword),
 		  adminSocket(_adminSocket),
@@ -537,8 +542,21 @@ public:
 		return atFullUtilization();
 	}
 
+	/**
+	 * Whether we've reached the maximum number of concurrent sessions for this
+	 * process.
+	 */
 	bool atFullUtilization() const {
 		return concurrency != 0 && sessions >= concurrency;
+	}
+
+	/**
+	 * Whether a get() request can be routed to this process, assuming that
+	 * the sticky session ID (if any) matches. This is only not the case
+	 * if this process is at full utilization.
+	 */
+	bool canBeRoutedTo() const {
+		return !atFullUtilization();
 	}
 	
 	/**
@@ -588,6 +606,7 @@ public:
 	template<typename Stream>
 	void inspectXml(Stream &stream, bool includeSockets = true) const {
 		stream << "<pid>" << pid << "</pid>";
+		stream << "<sticky_session_id>" << stickySessionId << "</sticky_session_id>";
 		stream << "<gupid>" << gupid << "</gupid>";
 		stream << "<connect_password>" << connectPassword << "</connect_password>";
 		stream << "<concurrency>" << concurrency << "</concurrency>";

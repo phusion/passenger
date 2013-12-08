@@ -363,6 +363,11 @@ public:
 	UnionStation::LoggerPtr logger;
 
 	/**
+	 * A sticky session ID for routing to a specific process.
+	 */
+	unsigned int stickySessionId;
+	
+	/**
 	 * A throttling rate for file stats. When set to a non-zero value N,
 	 * restart.txt and other files which are usually stat()ted on every
 	 * ApplicationPool::get() call will be stat()ed at most every N seconds.
@@ -432,6 +437,7 @@ public:
 		maxOutOfBandWorkInstances = 1;
 		maxRequestQueueSize     = 100;
 		
+		stickySessionId         = 0;
 		statThrottleRate        = 0;
 		maxRequests             = 0;
 		noop                    = false;
@@ -523,6 +529,7 @@ public:
 	Options &clearPerRequestFields() {
 		hostName = StaticString();
 		uri      = StaticString();
+		stickySessionId = 0;
 		noop     = false;
 		return clearLogger();
 	}

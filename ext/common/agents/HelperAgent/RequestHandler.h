@@ -184,6 +184,7 @@ private:
 		contentLength = 0;
 		clientBodyAlreadyRead = 0;
 		checkoutSessionAfterCommit = false;
+		stickySession = false;
 		sessionCheckedOut = false;
 		sessionCheckoutTry = 0;
 		responseHeaderSeen = false;
@@ -283,6 +284,7 @@ public:
 	bool requestBodyIsBuffered;
 	bool sessionCheckedOut;
 	bool checkoutSessionAfterCommit;
+	bool stickySession;
 
 	bool responseHeaderSeen;
 	bool chunkedResponse;
@@ -1044,6 +1046,16 @@ private:
 			headerData.append("X-Powered-By: Phusion Passenger\r\n");
 		}
 
+		// Add sticky session ID.
+		if (client->stickySession && client->session != NULL) {
+			StaticString cookieName = getStickySessionCookieName(client);
+			headerData.append("Set-Cookie: ");
+			headerData.append(cookieName.data(), cookieName.size());
+			headerData.append("=");
+			headerData.append(toString(client->session->getStickySessionId()));
+			headerData.append("; HttpOnly\r\n");
+		}
+
 		// Add Date header. https://code.google.com/p/phusion-passenger/issues/detail?id=485
 		if (lookupHeader(headerData, "Date", "date").empty()) {
 			char dateStr[60];
@@ -1735,6 +1747,8 @@ private:
 		fillPoolOption(client, options.loadShellEnvvars, "PASSENGER_LOAD_SHELL_ENVVARS");
 		fillPoolOption(client, options.debugger, "PASSENGER_DEBUGGER");
 		fillPoolOption(client, options.raiseInternalError, "PASSENGER_RAISE_INTERNAL_ERROR");
+		setStickySessionId(client);
+		/******************/
 		
 		for (it = client->scgiParser.begin(); it != end; it++) {
 			if (!startsWith(it->first, "PASSENGER_")
@@ -1786,6 +1800,53 @@ private:
 				}
 				client->logMessage("URI: " + requestURI);
 			}
+		}
+	}
+
+	void setStickySessionId(const ClientPtr &client) {
+		ScgiRequestParser &parser = client->scgiParser;
+		if (parser.getHeader("PASSENGER_STICKY_SESSION") == "true") {
+			// TODO: This is not entirely correct. Clients MAY send multiple Cookie
+			// headers, although this is in practice extremely rare.
+			// http://stackoverflow.com/questions/16305814/are-multiple-cookie-headers-allowed-in-an-http-request
+			StaticString cookie = parser.getHeader("HTTP_COOKIE");
+			StaticString cookieName = getStickySessionCookieName(client);
+			vector<StaticString> parts;
+
+			client->stickySession = true;
+			split(cookie, ';', parts);
+			foreach (StaticString part, parts) {
+				const char *begin = part.data();
+				const char *end = part.data() + part.size();
+				const char *sep;
+
+				// Skip leading whitespace in the name.
+				while (begin < end && *begin == ' ') {
+					begin++;
+				}
+				part = StaticString(begin, end - begin);
+
+				// Find the separator ('=').
+				sep = (const char *) memchr(begin, '=', end - begin);
+				if (sep != NULL) {
+					StaticString name(begin, sep - begin);
+					if (name == cookieName) {
+						// This cookie matches the one we're looking for.
+						StaticString value(sep + 1, end - (sep + 1));
+						client->options.stickySessionId = stringToUint(value);
+						return;
+					}
+				}
+			}
+		}
+	}
+
+	StaticString getStickySessionCookieName(const ClientPtr &client) const {
+		StaticString value = client->scgiParser.getHeader("PASSENGER_STICKY_SESSION_COOKIE_NAME");
+		if (value.empty()) {
+			return StaticString("_passenger_route", sizeof("_passenger_route") - 1);
+		} else {
+			return value;
 		}
 	}
 

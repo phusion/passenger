@@ -343,7 +343,7 @@ public:
 			postLockActions.push_back(boost::bind(
 				getWaitlist.front().callback, SessionPtr(),
 				exception));
-			getWaitlist.pop();
+			getWaitlist.pop_front();
 		}
 	}
 	
@@ -385,7 +385,7 @@ public:
 		getWaitlist.reserve(getWaitlist.size() + superGroup->getWaitlist.size());
 		while (!superGroup->getWaitlist.empty()) {
 			getWaitlist.push_back(superGroup->getWaitlist.front());
-			superGroup->getWaitlist.pop();
+			superGroup->getWaitlist.pop_front();
 		}
 	}
 	

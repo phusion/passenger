@@ -37,6 +37,7 @@
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/dynamic_thread_group.hpp>
+#include <cstdlib>
 #include <cassert>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/ComponentInfo.h>
@@ -77,6 +78,16 @@ private:
 		DisableWaiter(const ProcessPtr &_process, const DisableCallback &_callback)
 			: process(_process),
 			  callback(_callback)
+			{ }
+	};
+
+	struct RouteResult {
+		Process *process;
+		bool finished;
+
+		RouteResult(Process *p, bool _finished = false)
+			: process(p),
+			  finished(_finished)
 			{ }
 	};
 	
@@ -208,8 +219,7 @@ private:
 		assert((lifeStatus == ALIVE) == (spawner != NULL));
 
 		// Verify getWaitlist invariants.
-		assert(!( !getWaitlist.empty() ) || ( enabledProcesses.empty() || pqueue.top()->atFullUtilization() ));
-		assert(!( !enabledProcesses.empty() && !pqueue.top()->atFullUtilization() ) || ( getWaitlist.empty() ));
+		assert(!( !getWaitlist.empty() ) || ( enabledProcesses.empty() || verifyNoRequestsOnGetWaitlistAreRoutable() ));
 		assert(!( enabledProcesses.empty() && !spawning() && !restarting() && !poolAtFullCapacity() ) || ( getWaitlist.empty() ));
 		assert(!( !getWaitlist.empty() ) || ( !enabledProcesses.empty() || spawning() || restarting() || poolAtFullCapacity() ));
 		
@@ -272,6 +282,19 @@ private:
 		}
 		#endif
 	}
+
+	#ifndef NDEBUG
+	bool verifyNoRequestsOnGetWaitlistAreRoutable() const {
+		deque<GetWaiter>::const_iterator it, end = getWaitlist.end();
+
+		for (it = getWaitlist.begin(); it != end; it++) {
+			if (route(it->options).process != NULL) {
+				return false;
+			}
+		}
+		return true;
+	}
+	#endif
 	
 	/**
 	 * Sets options for this Group. Called at creation time and at restart time.
@@ -303,18 +326,71 @@ private:
 	static void doCleanupSpawner(SpawnerPtr spawner) {
 		spawner->cleanup();
 	}
-	
-	SessionPtr newSession(Process *process = NULL) {
-		if (process == NULL) {
-			assert(enabledCount > 0);
-			process = pqueue.top();
+
+	unsigned int generateStickySessionId() {
+		unsigned int result;
+
+		while (true) {
+			result = (unsigned int) rand();
+			if (findProcessWithStickySessionId(result) == NULL) {
+				return result;
+			}
 		}
+		// Never reached; shut up compiler warning.
+		return 0;
+	}
+
+	/* Determines which process to route a get() action to. The returned process
+	 * is guaranteed to be `canBeRoutedTo()`, i.e. not at full utilization.
+	 *
+	 * A request is routed to an enabled processes, or if there are none,
+	 * from a disabling process. The rationale is as follows:
+	 * If there are no enabled process, then waiting for one to spawn is too
+	 * expensive. The next best thing is to route to disabling processes
+	 * until more processes have been spawned.
+	 */
+	RouteResult route(const Options &options) const {
+		if (OXT_LIKELY(enabledCount > 0)) {
+			if (options.stickySessionId == 0) {
+				if (pqueue.top()->canBeRoutedTo()) {
+					return RouteResult(pqueue.top());
+				} else {
+					return RouteResult(NULL, true);
+				}
+			} else {
+				Process *process = findProcessWithStickySessionId(options.stickySessionId);
+				if (process != NULL) {
+					if (process->canBeRoutedTo()) {
+						return RouteResult(process);
+					} else {
+						return RouteResult(NULL, false);
+					}
+				} else if (pqueue.top()->canBeRoutedTo()) {
+					return RouteResult(pqueue.top());
+				} else {
+					return RouteResult(NULL, true);
+				}
+			}
+		} else {
+			Process *process = findProcessWithLowestUtilization(disablingProcesses);
+			if (process->canBeRoutedTo()) {
+				return RouteResult(process);
+			} else {
+				return RouteResult(NULL, true);
+			}
+		}
+	}
+
+	SessionPtr newSession(Process *process) {
 		SessionPtr session = process->newSession();
 		session->onInitiateFailure = _onSessionInitiateFailure;
 		session->onClose   = _onSessionClose;
 		if (process->enabled == Process::ENABLED) {
-			assert(process == pqueue.top());
-			pqueue.pop();
+			if (process == pqueue.top()) {
+				pqueue.pop();
+			} else {
+				pqueue.erase(process->pqHandle);
+			}
 			process->pqHandle = pqueue.push(process, process->utilization());
 		}
 		return session;
@@ -325,13 +401,24 @@ private:
 			&& (newOptions.maxRequestQueueSize == 0
 			    || getWaitlist.size() < newOptions.maxRequestQueueSize)))
 		{
-			getWaitlist.push(GetWaiter(newOptions.copyAndPersist().clearLogger(), callback));
+			getWaitlist.push_back(GetWaiter(newOptions.copyAndPersist().clearLogger(), callback));
 			return true;
 		} else {
 			P_WARN("Request queue is full. Returning an error");
 			callback(SessionPtr(), boost::make_shared<RequestQueueFullException>());
 			return false;
 		}
+	}
+
+	Process *findProcessWithStickySessionId(unsigned int id) const {
+		ProcessList::const_iterator it, end = enabledProcesses.end();
+		for (it = enabledProcesses.begin(); it != end; it++) {
+			Process *process = it->get();
+			if (process->stickySessionId == id) {
+				return process;
+			}
+		}
+		return NULL;
 	}
 
 	Process *findProcessWithLowestUtilization(const ProcessList &processes) const {
@@ -403,40 +490,38 @@ private:
 			P_BUG("Unknown destination list");
 		}
 	}
-	
+
 	template<typename Lock>
 	void assignSessionsToGetWaitersQuickly(Lock &lock) {
+		if (getWaitlist.empty()) {
+			verifyInvariants();
+			lock.unlock();
+			return;
+		}
+
 		SmallVector<GetAction, 50> actions;
+		unsigned int i = 0;
+		bool done = false;
+
 		actions.reserve(getWaitlist.size());
-		
-		// Checkout sessions from enabled processes, or if there are none,
-		// from disabling processes.
-		if (enabledCount > 0) {
-			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullUtilization()) {
+
+		while (!done && i < getWaitlist.size()) {
+			const GetWaiter &waiter = getWaitlist[i];
+			RouteResult result = route(waiter.options);
+			if (result.process != NULL) {
 				GetAction action;
-				action.callback = getWaitlist.front().callback;
-				action.session  = newSession();
-				getWaitlist.pop();
+				action.callback = waiter.callback;
+				action.session  = newSession(result.process);
+				getWaitlist.erase(getWaitlist.begin() + i);
 				actions.push_back(action);
-			}
-		} else if (disablingCount > 0) {
-			bool done = false;
-			while (!getWaitlist.empty() && !done) {
-				Process *process = findProcessWithLowestUtilization(
-					disablingProcesses);
-				assert(process != NULL);
-				if (process->atFullUtilization()) {
-					done = true;
-				} else {
-					GetAction action;
-					action.callback = getWaitlist.front().callback;
-					action.session  = newSession(process);
-					getWaitlist.pop();
-					actions.push_back(action);
+			} else {
+				done = result.finished;
+				if (!result.finished) {
+					i++;
 				}
 			}
 		}
-		
+
 		verifyInvariants();
 		lock.unlock();
 		SmallVector<GetAction, 50>::const_iterator it, end = actions.end();
@@ -446,26 +531,22 @@ private:
 	}
 	
 	void assignSessionsToGetWaiters(vector<Callback> &postLockActions) {
-		if (enabledCount > 0) {
-			while (!getWaitlist.empty() && pqueue.top() != NULL && !pqueue.top()->atFullUtilization()) {
+		unsigned int i = 0;
+		bool done = false;
+
+		while (!done && i < getWaitlist.size()) {
+			const GetWaiter &waiter = getWaitlist[i];
+			RouteResult result = route(waiter.options);
+			if (result.process != NULL) {
 				postLockActions.push_back(boost::bind(
-					getWaitlist.front().callback, newSession(),
+					waiter.callback,
+					newSession(result.process),
 					ExceptionPtr()));
-				getWaitlist.pop();
-			}
-		} else if (disablingCount > 0) {
-			bool done = false;
-			while (!getWaitlist.empty() && !done) {
-				Process *process = findProcessWithLowestUtilization(
-					disablingProcesses);
-				assert(process != NULL);
-				if (process->atFullUtilization()) {
-					done = true;
-				} else {
-					postLockActions.push_back(boost::bind(
-						getWaitlist.front().callback, newSession(process),
-						ExceptionPtr()));
-					getWaitlist.pop();
+				getWaitlist.erase(getWaitlist.begin() + i);
+			} else {
+				done = result.finished;
+				if (!result.finished) {
+					i++;
 				}
 			}
 		}
@@ -641,27 +722,33 @@ public:
 	 * put on this wait list, which must be processed as soon as the necessary
 	 * resources have become free.
 	 * 
-	 * 'std::' is required because Solaris in its infinite wisdom has a C
-	 * struct in its system headers called 'queue'.
-	 * http://code.google.com/p/phusion-passenger/issues/detail?id=840
-	 *
-	 * Invariant 1 (safety):
-	 * If actions are queued in the getWaitlist, then that's because there are
+	 * ### Invariant 1 (safety)
+	 * 
+	 * If requests are queued in the getWaitlist, then that's because there are
 	 * no processes that can serve them.
+	 * 
 	 *    if getWaitlist is non-empty:
-	 *       enabledProcesses.empty() || (all enabled processes are at full utilization)
-	 * Equivalently:
-	 *    if !enabledProcesses.empty() && (an enabled process is not at full utilization):
-	 *        getWaitlist is empty.
+	 *       enabledProcesses.empty() || (no request in getWaitlist is routeable)
 	 *
-	 * Invariant 2:
+	 * Here, "routeable" is defined as `route(options).process != NULL`.
+	 * 
+	 * ### Invariant 2 (progress)
+	 *
+	 * The only reason why there are no enabled processes, while at the same time we're
+	 * not spawning or waiting for pool capacity, is because there is nothing to do.
+	 * 
 	 *    if enabledProcesses.empty() && !spawning() && !restarting() && !poolAtFullCapacity():
 	 *       getWaitlist is empty
+	 * 
 	 * Equivalently:
+	 * If requests are queued in the getWaitlist, then either we have processes that can process
+	 * them (some time in the future), or we're actively trying to spawn processes, unless we're
+	 * unable to do that because of resource limits.
+	 * 
 	 *    if getWaitlist is non-empty:
 	 *       !enabledProcesses.empty() || spawning() || restarting() || poolAtFullCapacity()
 	 */
-	std::queue<GetWaiter> getWaitlist;
+	deque<GetWaiter> getWaitlist;
 	/**
 	 * Disable() commands that couldn't finish immediately will put their callbacks
 	 * in this queue. Note that there may be multiple DisableWaiters pointing to the
@@ -762,9 +849,8 @@ public:
 			}
 			return SessionPtr();
 		} else {
-			Process *process = pqueue.top();
-			assert(process != NULL);
-			if (process->atFullUtilization()) {
+			RouteResult result = route(newOptions);
+			if (result.process == NULL) {
 				/* Looks like all processes are at full utilization.
 				 * Wait until a new one has been spawned or until
 				 * resources have become free.
@@ -774,8 +860,8 @@ public:
 				}
 				return SessionPtr();
 			} else {
-				P_DEBUG("Session checked out from process " << process->inspect());
-				return newSession();
+				P_DEBUG("Session checked out from process " << result.process->inspect());
+				return newSession(result.process);
 			}
 		}
 	}
@@ -827,6 +913,7 @@ public:
 		assert(isAlive());
 
 		process->setGroup(shared_from_this());
+		process->stickySessionId = generateStickySessionId();
 		P_DEBUG("Attaching process " << process->inspect());
 		addProcessToList(process, enabledProcesses);
 
