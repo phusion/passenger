@@ -393,10 +393,10 @@ namespace tut {
 		stat.stat("test4.txt", &buf, 1);
 		stat.stat("test5.txt", &buf, 1);
 		stat.setMaxSize(2);
-		ensure(!stat.knows("test.txt"));
-		ensure(!stat.knows("test2.txt"));
-		ensure(!stat.knows("test3.txt"));
-		ensure(stat.knows("test4.txt"));
-		ensure(stat.knows("test5.txt"));
+		ensure("(1)", !stat.knows("test.txt"));
+		ensure("(2)", !stat.knows("test2.txt"));
+		ensure("(3)", !stat.knows("test3.txt"));
+		ensure("(4)", stat.knows("test4.txt"));
+		ensure("(5)", stat.knows("test5.txt"));
 	}
 }

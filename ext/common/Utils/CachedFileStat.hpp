@@ -237,7 +237,7 @@ public:
 	 */
 	bool knows(const StaticString &filename) const {
 		boost::unique_lock<boost::mutex> l(lock);
-		return cache.get(filename) != EntryList::iterator();
+		return cache.has(filename);
 	}
 };
 

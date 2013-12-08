@@ -170,6 +170,10 @@ public:
 			return it->second.thePair.second;
 		}
 	}
+
+	bool has(const StaticString &key) const {
+		return store.find(key) != store.end();
+	}
 	
 	bool set(const StaticString &key, const T &value) {
 		pair<InternalIterator, bool> result = store.insert(make_pair(key, Entry()));
