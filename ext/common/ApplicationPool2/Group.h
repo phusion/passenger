@@ -645,11 +645,13 @@ public:
 	 * struct in its system headers called 'queue'.
 	 * http://code.google.com/p/phusion-passenger/issues/detail?id=840
 	 *
-	 * Invariant 1:
+	 * Invariant 1 (safety):
+	 * If actions are queued in the getWaitlist, then that's because there are
+	 * no processes that can serve them.
 	 *    if getWaitlist is non-empty:
-	 *       enabledProcesses.empty() || (all enabled processes are at full capacity)
+	 *       enabledProcesses.empty() || (all enabled processes are at full utilization)
 	 * Equivalently:
-	 *    if !enabledProcesses.empty() && (an enabled process is not at full capacity):
+	 *    if !enabledProcesses.empty() && (an enabled process is not at full utilization):
 	 *        getWaitlist is empty.
 	 *
 	 * Invariant 2:
