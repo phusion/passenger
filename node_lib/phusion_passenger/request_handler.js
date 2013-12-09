@@ -36,12 +36,21 @@ function RequestHandler(readyCallback, clientCallback) {
 		var state = 'PARSING_HEADER';
 		var parser = new SessionProtocolParser();
 
+		function handleReadable() {
+			// read(n) returns null unless the buffer is at least n bytes.
+			// We just want to read whatever we can we poke into its buffer.
+			// Hope they don't change the this.
+			var len = socket._readableState.length;
+			handleData(socket.read(len));
+		}
+
 		function handleData(data) {
 			if (state == 'PARSING_HEADER') {
 				var consumed = parser.feed(data);
 				if (parser.state == SessionProtocolParser.SPP_DONE) {
 					state = 'HEADER_SEEN';
-					socket.removeListener('data', handleData);
+					socket.removeListener('readable', handleReadable);
+					console.log(parser);
 					PhusionPassenger.emit('request', parser, socket, data.slice(consumed));
 				} else if (parser.state == SessionProtocolParser.SPP_ERROR) {
 					console.error('Header parse error');
@@ -52,7 +61,7 @@ function RequestHandler(readyCallback, clientCallback) {
 			}
 		}
 
-		socket.on('data', handleData);
+		socket.on('readable', handleReadable);
 	}
 
 	var server = net.createServer({ allowHalfOpen: true }, handleNewClient);
