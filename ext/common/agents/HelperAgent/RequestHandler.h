@@ -90,6 +90,7 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <sys/un.h>
+#include <utility>
 #include <typeinfo>
 #include <cassert>
 #include <cctype>
@@ -1353,7 +1354,7 @@ private:
 			} else {
 				ClientPtr client = boost::make_shared<Client>();
 				client->associate(this, fd);
-				clients.insert(make_pair<int, ClientPtr>(fd, client));
+				clients.insert(make_pair((int) fd, client));
 				acceptedClients[count] = client;
 				count++;
 				RH_DEBUG(client, "New client accepted; new client count = " << clients.size());
