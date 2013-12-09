@@ -153,6 +153,8 @@ private
 		flags << "-DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 
 		if cc_or_cxx == :cxx
+			flags << cxx_11_flag if cxx_11_flag
+
 			# There are too many implementations of of the hash map!
 			# Figure out the right one.
 			check_unordered_map(flags, "std::unordered_map", "unordered_map", "HAS_UNORDERED_MAP") ||

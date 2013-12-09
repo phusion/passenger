@@ -130,7 +130,7 @@ private
 				command = create_compiler_command(language,
 					"-c '#{filename}' -o '#{filename}.o'",
 					'-feliminate-unused-debug-symbols -feliminate-unused-debug-types')
-				result = run_compiler("Checking for #{compiler_type_name} compiler '--feliminate-unused-debug-{symbols,types}' support",
+				result = run_compiler("Checking for #{compiler_type_name} compiler '-feliminate-unused-debug-{symbols,types}' support",
 					command, filename, '', true)
 				return result && result[:output].empty?
 			ensure
@@ -426,6 +426,20 @@ public
 		end
 	end
 	memoize :adress_sanitizer_flag
+
+	def self.cxx_11_flag
+		source = %Q{
+			#include <unordered_map>
+		}
+		if try_compile("Checking for C++ -std=gnu++11 compiler flag", :cxx, source, '-std=gnu++11')
+			return "-std=gnu++11"
+		elsif try_compile("Checking for C++ -std=c++11 compiler flag", :cxx, source, '-std=c++')
+			return "-std=c++11"
+		else
+			return nil
+		end
+	end
+	memoize :cxx_11_flag, true
 
 	def self.has_rt_library?
 		return try_link("Checking for -lrt support",
