@@ -192,7 +192,10 @@ string toHex(const StaticString &data);
  */
 void toHex(const StaticString & restrict_ref data, char * restrict output, bool upperCase = false);
 
-static inline void
+/**
+ * Reverse a string in-place.
+ */
+inline void
 reverseString(char *str, unsigned int size) {
 	char *end = str + size;
 	for (--end; str < end; str++, end--) {
