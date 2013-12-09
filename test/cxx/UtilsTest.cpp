@@ -667,18 +667,18 @@ namespace tut {
 	TEST_METHOD(56) {
 		char buf[20], smallbuf[4];
 
-		ensure_equals("(1)", integerToOtherBase<int, 10>(0, buf, sizeof(buf)), 1);
+		ensure_equals("(1)", integerToOtherBase<int, 10>(0, buf, sizeof(buf)), 1u);
 		ensure_equals("(1.1)", buf[0], '0');
 		ensure_equals("(1.2)", buf[1], '\0');
 
-		ensure_equals("(2)", integerToOtherBase<int, 10>(1234, buf, sizeof(buf)), 4);
+		ensure_equals("(2)", integerToOtherBase<int, 10>(1234, buf, sizeof(buf)), 4u);
 		ensure_equals("(2.1)", buf[0], '1');
 		ensure_equals("(2.2)", buf[1], '2');
 		ensure_equals("(2.3)", buf[2], '3');
 		ensure_equals("(2.4)", buf[3], '4');
 		ensure_equals("(2.5)", buf[4], '\0');
 
-		ensure_equals("(3)", integerToOtherBase<int, 10>(123, smallbuf, sizeof(smallbuf)), 3);
+		ensure_equals("(3)", integerToOtherBase<int, 10>(123, smallbuf, sizeof(smallbuf)), 3u);
 		ensure_equals("(3.1)", smallbuf[0], '1');
 		ensure_equals("(3.2)", smallbuf[1], '2');
 		ensure_equals("(3.3)", smallbuf[2], '3');
