@@ -50,7 +50,6 @@ function RequestHandler(readyCallback, clientCallback) {
 				if (parser.state == SessionProtocolParser.SPP_DONE) {
 					state = 'HEADER_SEEN';
 					socket.removeListener('readable', handleReadable);
-					console.log(parser);
 					PhusionPassenger.emit('request', parser, socket, data.slice(consumed));
 				} else if (parser.state == SessionProtocolParser.SPP_ERROR) {
 					console.error('Header parse error');
