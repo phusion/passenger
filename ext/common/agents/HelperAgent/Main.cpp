@@ -450,7 +450,7 @@ public:
 			"logging", options.loggingAgentPassword);
 		spawnerFactory = boost::make_shared<SpawnerFactory>(poolLoop.safe,
 			resourceLocator, generation, boost::make_shared<SpawnerConfig>(randomGenerator));
-		pool = boost::make_shared<Pool>(poolLoop.safe.get(), spawnerFactory, loggerFactory,
+		pool = boost::make_shared<Pool>(spawnerFactory, loggerFactory,
 			randomGenerator);
 		pool->initialize();
 		pool->setMax(options.maxPoolSize);

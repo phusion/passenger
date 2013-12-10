@@ -48,7 +48,6 @@
 #include <ApplicationPool2/Options.h>
 #include <UnionStation.h>
 #include <Logging.h>
-#include <SafeLibev.h>
 #include <Exceptions.h>
 #include <RandomGenerator.h>
 #include <Utils/Lock.h>
@@ -129,7 +128,6 @@ public:
 	RandomGeneratorPtr randomGenerator;
 
 	mutable boost::mutex syncher;
-	SafeLibev *libev;
 	unsigned int max;
 	unsigned long long maxIdleTime;
 	
@@ -861,11 +859,10 @@ public:
 	const SuperGroupPtr getSuperGroup(const char *name);
 	
 public:
-	Pool(SafeLibev *libev, const SpawnerFactoryPtr &spawnerFactory,
+	Pool(const SpawnerFactoryPtr &spawnerFactory,
 		const LoggerFactoryPtr &loggerFactory = LoggerFactoryPtr(),
 		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr())
 	{
-		this->libev = libev;
 		this->spawnerFactory = spawnerFactory;
 		this->loggerFactory = loggerFactory;
 		if (randomGenerator != NULL) {

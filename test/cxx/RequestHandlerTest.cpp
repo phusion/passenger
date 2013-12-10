@@ -42,7 +42,7 @@ namespace tut {
 		RequestHandlerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			spawnerFactory = boost::make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation);
-			pool = boost::make_shared<Pool>(bg.safe.get(), spawnerFactory);
+			pool = boost::make_shared<Pool>(spawnerFactory);
 			pool->initialize();
 			serverFilename = generation->getPath() + "/server";
 			requestSocket = createUnixServer(serverFilename);

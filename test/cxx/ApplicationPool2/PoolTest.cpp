@@ -37,7 +37,7 @@ namespace tut {
 			spawnerConfig = boost::make_shared<SpawnerConfig>();
 			spawnerFactory = boost::make_shared<SpawnerFactory>(bg.safe, *resourceLocator,
 				generation, spawnerConfig);
-			pool = boost::make_shared<Pool>(bg.safe.get(), spawnerFactory);
+			pool = boost::make_shared<Pool>(spawnerFactory);
 			pool->initialize();
 			bg.start();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);
