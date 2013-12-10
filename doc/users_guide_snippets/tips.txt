@@ -494,6 +494,7 @@ If a hook script fails -- that is, if it exits with anything other than exit cod
  - Phusion Passenger itself is shutting down.
 +
 Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Errors in the hook script are ignored.
+
 `after_initialize_supergroup`::
 	Called right after Phusion Passenger has allocated data structures for an application, and is about to spawn a process for the first time for this application. Errors in the hook script are ignored. Extra environment variables: `PASSENGER_APP_ROOT`.
 `before_destroy_supergroup`::

@@ -302,11 +302,11 @@
 
 11.9.1. Example	=>	example-1orara9
 
-11.9.2. Blocking and error handling	=>	blocking-and-error-handling-bn6vk1
+11.9.2. Environment	=>	environment-10uhg8m
 
-11.9.3. Environment	=>	environment-10uhg8m
+11.9.4. Error handling	=>	error-handling-m78oxs
 
-11.9.4. Available hooks	=>	available-hooks-11w1prq
+11.9.5. Available hooks	=>	available-hooks-11w1prq
 
 11.10. Flying Passenger	=>	flying-passenger-137qg5e
 

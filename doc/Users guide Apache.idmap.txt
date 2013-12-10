@@ -328,23 +328,35 @@
 
 11.8. Out-of-Band Work and Out-of-Band Garbage Collection	=>	out-of-band-work-and-out-of-band-garbage-collection-kav2p8
 
-11.9. Flying Passenger	=>	flying-passenger-q916f7
+11.9. Hooks	=>	hooks-bcltgp
 
-11.9.1. Requirements	=>	requirements-1ntkin3
+11.9.1. Example	=>	example-icjf0z
 
-11.9.2. Basic usage	=>	basic-usage-joifsk
+11.9.2. Environment	=>	environment-1amls4v
 
-11.9.3. Configuring Flying Passenger	=>	configuring-flying-passenger-1v35vgg
+11.9.3. Blocking and concurrency	=>	blocking-and-concurrency-cxpbyu
 
-11.9.4. Managing the Flying Passenger daemon	=>	managing-the-flying-passenger-daemon-1bng2bu
+11.9.4. Error handling	=>	error-handling-1a1uvod
 
-11.9.5. Using Flying Passenger with MRI 1.8 or JRuby	=>	using-flying-passenger-with-mri-1-8-or-jruby-f5tbvs
+11.9.5. Available hooks	=>	available-hooks-159anc3
 
-11.9.6. Caveats and limitations	=>	caveats-and-limitations-lz3rbb
+11.10. Flying Passenger	=>	flying-passenger-q916f7
 
-11.10. X-Sendfile support	=>	x-sendfile-support-1cgyykw
+11.10.1. Requirements	=>	requirements-1ntkin3
 
-11.11. Upload progress	=>	upload-progress-71cyl7
+11.10.2. Basic usage	=>	basic-usage-joifsk
+
+11.10.3. Configuring Flying Passenger	=>	configuring-flying-passenger-1v35vgg
+
+11.10.4. Managing the Flying Passenger daemon	=>	managing-the-flying-passenger-daemon-1bng2bu
+
+11.10.5. Using Flying Passenger with MRI 1.8 or JRuby	=>	using-flying-passenger-with-mri-1-8-or-jruby-f5tbvs
+
+11.10.6. Caveats and limitations	=>	caveats-and-limitations-lz3rbb
+
+11.11. X-Sendfile support	=>	x-sendfile-support-1cgyykw
+
+11.12. Upload progress	=>	upload-progress-71cyl7
 
 12. Under the hood	=>	under-the-hood-21ue5t
 
