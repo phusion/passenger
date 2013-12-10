@@ -1810,7 +1810,9 @@ When all application processes are already handling their maximum number of conc
 
 A value of 0 means that the queue is unbounded.
 
-You may combine this with <<PassengerErrorOverride,PassengerErrorOverride>> and `ErrorDocument` to set a custom error page whenever the queue is full. In the following example, Apache will serve /error503.html whenever the queue is full:
+link:http://stackoverflow.com/questions/20402801/what-is-optimal-value-for-phusion-passenger-passengermaxrequestqueuesize[This article on StackOverflow] explains how the request queue works, what it means for the queue to grow or become full, why that is bad, and what you can do about it.
+
+You may combine this option with <<PassengerErrorOverride,PassengerErrorOverride>> and `ErrorDocument` to set a custom error page whenever the queue is full. In the following example, Apache will serve /error503.html whenever the queue is full:
 
 ---------------------------------
 PassengerErrorOverride on
