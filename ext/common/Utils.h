@@ -337,48 +337,6 @@ void makeDirTree(const string &path, const StaticString &mode = "u=rwx,g=,o=",
  */
 void removeDirTree(const string &path);
 
-/**
- * Check whether the specified directory is a valid Ruby on Rails
- * application root directory.
- *
- * @param cstat A CachedFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
- * @throws FileSystemException Unable to check because of a system error.
- * @throws TimeRetrievalException
- * @throws boost::thread_interrupted
- * @ingroup Support
- */
-bool verifyRailsDir(const string &dir, CachedFileStat *cstat = 0,
-                    unsigned int throttleRate = 0);
-
-/**
- * Check whether the specified directory is a valid Rack application
- * root directory.
- *
- * @param cstat A CachedFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
- * @throws FileSystemException Unable to check because of a filesystem error.
- * @throws TimeRetrievalException
- * @throws boost::thread_interrupted
- * @ingroup Support
- */
-bool verifyRackDir(const string &dir, CachedFileStat *cstat = 0,
-                   unsigned int throttleRate = 0);
-
-/**
- * Check whether the specified directory is a valid WSGI application
- * root directory.
- *
- * @param cstat A CachedFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
- * @throws FileSystemException Unable to check because of a filesystem error.
- * @throws TimeRetrievalException
- * @throws boost::thread_interrupted
- * @ingroup Support
- */
-bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
-                   unsigned int throttleRate = 0);
-
 void prestartWebApps(const ResourceLocator &locator, const string &ruby,
 	const vector<string> &prestartURLs);
 

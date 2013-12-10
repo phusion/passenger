@@ -731,27 +731,6 @@ removeDirTree(const string &path) {
 	}
 }
 
-bool
-verifyRailsDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
-	string temp(dir);
-	temp.append("/config/environment.rb");
-	return fileExists(temp, cstat, throttleRate);
-}
-
-bool
-verifyRackDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
-	string temp(dir);
-	temp.append("/config.ru");
-	return fileExists(temp, cstat, throttleRate);
-}
-
-bool
-verifyWSGIDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
-	string temp(dir);
-	temp.append("/passenger_wsgi.py");
-	return fileExists(temp, cstat, throttleRate);
-}
-
 void
 prestartWebApps(const ResourceLocator &locator, const string &ruby,
 	const vector<string> &prestartURLs)
