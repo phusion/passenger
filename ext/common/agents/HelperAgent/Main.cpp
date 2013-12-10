@@ -451,7 +451,7 @@ public:
 		spawnerFactory = boost::make_shared<SpawnerFactory>(poolLoop.safe,
 			resourceLocator, generation, boost::make_shared<SpawnerConfig>(randomGenerator));
 		pool = boost::make_shared<Pool>(spawnerFactory, loggerFactory,
-			randomGenerator);
+			randomGenerator, &options);
 		pool->initialize();
 		pool->setMax(options.maxPoolSize);
 		pool->setMaxIdleTime(options.poolIdleTime * 1000000);

@@ -51,6 +51,7 @@
 #include <Logging.h>
 #include <Exceptions.h>
 #include <StaticString.h>
+#include <Hooks.h>
 #include <ResourceLocator.h>
 #include <Utils.h>
 #include <Utils/Base64.h>
@@ -427,81 +428,16 @@ inferDefaultGroup(const string &defaultUser) {
 	return getGroupName(userEntry->pw_gid);
 }
 
-static vector< pair<string, string> >
-agentsOptionsToEnvVars(const VariantMap &agentsOptions) {
-	vector< pair<string, string> > result;
-	VariantMap::ConstIterator it, end = agentsOptions.end();
-
-	result.reserve(agentsOptions.size());
-	for (it = agentsOptions.begin(); it != end; it++) {
-		result.push_back(make_pair("passenger_" + it->first, it->second));
-	}
-
-	return result;
-}
-
-static void
-setEnvVarsFromVector(const vector< pair<string, string> > &envvars) {
-	vector< pair<string, string> >::const_iterator it;
-
-	for (it = envvars.begin(); it != envvars.end(); it++) {
-		setenv(it->first.c_str(), it->second.c_str(), 1);
-	}
-}
-
-static bool
-runHookScript(const char *name) {
-	TRACE_POINT();
-	string value = agentsOptions.get(string("hook_") + name, false);
-	if (value.empty()) {
-		return true;
-	}
-
-	vector< pair<string, string> > envvars = agentsOptionsToEnvVars(agentsOptions);
-	pid_t pid;
-	int e, status;
-
-	P_INFO("Running " << name << " hook script: " << value);
-
-	pid = fork();
-	if (pid == 0) {
-		resetSignalHandlersAndMask();
-		disableMallocDebugging();
-		closeAllFileDescriptors(2);
-		setEnvVarsFromVector(envvars);
-
-		execlp(value.c_str(), value.c_str(), (const char * const) 0);
-		e = errno;
-		fprintf(stderr, "*** ERROR: Cannot execute %s hook script %s: %s (errno=%d)\n",
-			name, value.c_str(), strerror(e), e);
-		fflush(stderr);
-		_exit(1);
-		return true; // Never reached.
-
-	} else if (pid == -1) {
-		e = errno;
-		P_ERROR("Cannot fork a process for hook script " << value <<
-			": " << strerror(e) << " (errno=" << e << ")");
-		return false;
-
-	} else if (waitpid(pid, &status, 0) == -1) {
-		e = errno;
-		P_ERROR("Unable to wait for hook script " << value <<
-			" (PID " << pid << "): " << strerror(e) << " (errno=" <<
-			e << ")");
-		return false;
-
-	} else {
-		P_INFO("Hook script " << value << " (PID " << pid <<
-			") exited with status " << WEXITSTATUS(status));
-		return WEXITSTATUS(status) == 0;
-	}
-}
-
 static void
 runHookScriptAndThrowOnError(const char *name) {
 	TRACE_POINT();
-	if (!runHookScript(name)) {
+	HookScriptOptions options;
+
+	options.name = name;
+	options.spec = agentsOptions.get(string("hook_") + name, false);
+	options.agentsOptions = &agentsOptions;
+
+	if (!runHookScripts(options)) {
 		throw RuntimeException(string("Hook script ") + name + " failed");
 	}
 }
@@ -552,6 +488,7 @@ initializeOptions() {
 		.setDefault    ("default_python", DEFAULT_PYTHON)
 		.setDefaultInt ("max_pool_size", DEFAULT_MAX_POOL_SIZE)
 		.setDefaultInt ("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
+	agentsOptions.set  ("passenger_version", PASSENGER_VERSION);
 
 	// Check for required options
 	UPDATE_TRACE_POINT();

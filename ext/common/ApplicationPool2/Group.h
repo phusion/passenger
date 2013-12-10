@@ -44,6 +44,7 @@
 #include <ApplicationPool2/SpawnerFactory.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
+#include <Hooks.h>
 #include <Utils.h>
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/FileChangeChecker.h>
@@ -205,6 +206,9 @@ private:
 	bool anotherGroupIsWaitingForCapacity() const;
 	bool testOverflowRequestQueue() const;
 	const ResourceLocator &getResourceLocator() const;
+	void runAttachHooks(const ProcessPtr process) const;
+	void runDetachHooks(const ProcessPtr process) const;
+	void setupAttachOrDetachHook(const ProcessPtr process, HookScriptOptions &options) const;
 
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
@@ -947,6 +951,8 @@ public:
 
 		// Update GC sleep timer.
 		wakeUpGarbageCollector();
+
+		postLockActions.push_back(boost::bind(&Group::runAttachHooks, this, process));
 	}
 
 	/**
@@ -978,6 +984,8 @@ public:
 
 		addProcessToList(process, detachedProcesses);
 		startCheckingDetachedProcesses(false);
+
+		postLockActions.push_back(boost::bind(&Group::runDetachHooks, this, process));
 	}
 	
 	/**

@@ -386,6 +386,123 @@ References:
 
 - link:http://blog.phusion.nl/2013/01/22/phusion-passenger-4-technology-preview-out-of-band-work/[The Phusion Blog article which first introduced this feature.]
 
+=== Hooks
+
+:version: 4.0.28
+include::since_version.txt[]
+
+Phusion Passenger provides a powerful but simple hooking system, which allows you to extend many aspects of Phusion Passenger's behavior. The hooking system works by executing commands during certain events. Event parameters are passed to the command in the form of environment variables.
+
+ifdef::apache[]
+You can define hooks by setting the configuration option `PassengerCtl hook_<HOOK NAME> <COMMAND TO EXECUTE>`.
+endif::apache[]
+ifdef::nginx[]
+You can define hooks by setting the configuration option `passenger_ctl hook_<HOOK NAME> <COMMAND TO EXECUTE>;`.
+endif::nginx[]
+ifdef::standalone[]
+You can define hooks by <<advanced_configuration,editing the advanced configuration file>>, and adding the configuration option `passenger_ctl hook_<HOOK NAME> <COMMAND TO EXECUTE>;`.
+endif::standalone[]
+
+==== Example
+
+The hook system is best demonstrated with a simple example. In the following example we will hook into the `attached_process` event. This event is called whenever Phusion Passenger has successfully spawned an application processes and added it to the process pool. We print the process's PID and application root.
+
+First, let's create a script `/home/phusion/attached.sh` which is to be called during the hook.
+
+[source,sh]
+---------------------------------------------------
+#!/bin/sh
+echo "Attached process $PASSENGER_PROCESS_PID for app $PASSENGER_APP_ROOT."
+---------------------------------------------------
+
+Then we make it executable:
+
+---------------------------------------------------
+chmod +x /home/phusion/attached.sh
+---------------------------------------------------
+
+And we define the hook in the configuration file:
+
+ifdef::apache[]
+---------------------------------------------------
+PassengerCtl hook_attached_process /home/phusion/attached.sh
+---------------------------------------------------
+endif::apache[]
+ifdef::nginx[]
+---------------------------------------------------
+passenger_ctl hook_attached_process /home/phusion/attached.sh;
+---------------------------------------------------
+endif::nginx[]
+ifdef::standalone[]
+---------------------------------------------------
+passenger_ctl hook_attached_process /home/phusion/attached.sh;
+---------------------------------------------------
+endif::standalone[]
+
+Now restart the web server and access a web app hosted by Phusion Passenger. You should see our message in the web server error log:
+
+---------------------------------------------------
+[ 2013-12-10 16:12:21.6456 28934/0x1064cb000 Hooks.h:129 ]: Running attached_process hook script: /home/phusion/attached.sh
+Attached process 28303 for app /webapps/foobar.
+[ 2013-12-10 16:12:21.6580 28934/0x1064cb000 Hooks.h:161 ]: Hook script /home/phusion/attached.sh (PID 28948) exited with status 0
+---------------------------------------------------
+
+==== Environment
+
+A lot of information is passed to hook scripts in the form of environment variables. They are all uppercase and begin with `PASSENGER_`. Some environment variables are passed to all hook scripts, others are passed depending on the hook.
+
+Here are some of the environment variables which are passed to all hooks, unless documented otherwise:
+
+ * `PASSENGER_VERSION`
+ * `PASSENGER_PASSENGER_ROOT`
+ * `PASSENGER_SERVER_INSTANCE_DIR`
+ * `PASSENGER_GENERATION_PATH`
+
+==== Blocking and concurrency
+
+All hooks block. That is, Phusion Passenger waits until your hook command is finished. You should therefore be careful when writing hook scripts: if your script never finishes, so Phusion Passenger does not do that either.
+
+If you have a bug in your script and it blocks, then you will be able to see that using the command `passenger-status --show=backtraces` which prints the backtraces of all threads in the Phusion Passenger HelperAgent. Look for the `runSingleHookScript` function in the backtrace. The following example shows at line 2 that Phusion Passenger is waiting for the hook script `/home/phusion/badscript.sh`.
+
+---------------------------------------------------------------------------------------------------
+Thread 'Group process spawner: /home/phusion/webapp.test#default' (0x1062d4000):
+     in 'bool Passenger::runSingleHookScript(Passenger::HookScriptOptions &, const string &, const vector<pair<string, string> > &)' (Hooks.h:116) -- /home/phusion/badscript.sh
+     in 'bool Passenger::runHookScripts(Passenger::HookScriptOptions &)' (Hooks.h:159)
+     in 'void Passenger::ApplicationPool2::Group::spawnThreadRealMain(const SpawnerPtr &, const Passenger::ApplicationPool2::Options &, unsigned int)' (Implementation.cpp:878)
+---------------------------------------------------------------------------------------------------
+
+Hooks may be called concurrently. For example, while the `attached_process` hook is being called, a `detached_process` hook may be called, perhaps even for the same application. It is your responsibility to ensure that your hook scripts are concurrency-safe, e.g. by employing locks and other concurrency control techniques.
+
+==== Error handling
+
+If a hook script fails -- that is, if it exits with anything other than exit code 0 -- then the error handling depends on the hook. Some hooks will abort, other hooks will ignore the error. In all cases, the result of the hook script is printed to the log.
+
+==== Available hooks
+
+`before_watchdog_initialization`::
+	Called at the very beginning of Phusion Passenger's life cycle, during the start of the Watchdog process. The first hook is called before initialization is performed (before the HelperAgent is started). Errors in the hook script cause Phusion Passenger to abort.
+`after_watchdog_initialization`::
+	Like `before_watchdog_initialization`, but called after initialization of all Phusion Passenger agent processes. Errors in the hook script cause Phusion Passenger to abort.
+`attached_process`::
+	Called when Phusion Passenger has successfully spawned an application processes and added it to the process pool. Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Errors in the hook script are ignored.
+`detached_process`::
+	Called when Phusion Passenger has removed an application process from the process pool. This could happen when:
++
+ - The process has crashed, and Phusion Passenger noticed it.
+ - Phusion Passenger has shut down a process because it's been idle for too long.
+ - The administrator configured different resource limits, and Phusion Passenger is starting or shutting down processes in response.
+ - Phusion Passenger itself is shutting down.
++
+Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Errors in the hook script are ignored.
+`after_initialize_supergroup`::
+	Called right after Phusion Passenger has allocated data structures for an application, and is about to spawn a process for the first time for this application. Errors in the hook script are ignored. Extra environment variables: `PASSENGER_APP_ROOT`.
+`before_destroy_supergroup`::
+	Called right before Phusion Passenger decallocates data structures for an application. Errors in the hook script are ignored.
++
+Note that the `after_initialize_supergroup` hook may be called while this hook is still being executed, so make sure that operations don't conflict with each other.
++
+Extra environment variables: `PASSENGER_APP_ROOT`.
+
 [[flying_passenger]]
 === Flying Passenger
 :version: 4.0.6

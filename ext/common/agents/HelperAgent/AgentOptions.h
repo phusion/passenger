@@ -36,7 +36,7 @@ using namespace std;
 using namespace boost;
 
 
-struct AgentOptions {
+struct AgentOptions: public VariantMap {
 	pid_t   webServerPid;
 	string  serverInstanceDir;
 	string  tempDir;
@@ -62,7 +62,9 @@ struct AgentOptions {
 
 	AgentOptions() { }
 
-	AgentOptions(const VariantMap &options) {
+	AgentOptions(const VariantMap &options)
+		: VariantMap(options)
+	{
 		testBinary = options.get("test_binary", false) == "1";
 		if (testBinary) {
 			return;

@@ -102,6 +102,7 @@ Here is an example configuration file:
 ------------------
 
 
+[[advanced_configuration]]
 === Advanced configuration
 
 Phusion Passenger Standalone is built on the same technology that powers link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx], so any configuration option supported by Phusion Passenger for Nginx can be applied to Standalone as well. You can do this by editing the Standalone configuration template directly.

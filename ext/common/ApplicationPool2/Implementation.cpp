@@ -24,6 +24,7 @@
  */
 #include <typeinfo>
 #include <algorithm>
+#include <utility>
 #include <boost/make_shared.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/backtrace.hpp>
@@ -157,6 +158,23 @@ SuperGroup::generateSecret() const {
 }
 
 void
+SuperGroup::runInitializationHooks() const {
+	getPool()->runHookScripts("after_initialize_supergroup",
+		boost::bind(&SuperGroup::setupInitializationOrDestructionHook, this, _1));
+}
+
+void
+SuperGroup::runDestructionHooks() const {
+	getPool()->runHookScripts("before_destroy_supergroup",
+		boost::bind(&SuperGroup::setupInitializationOrDestructionHook, this, _1));
+}
+
+void
+SuperGroup::setupInitializationOrDestructionHook(HookScriptOptions &options) const {
+	options.environment.push_back(make_pair("PASSENGER_APP_ROOT", this->options.appRoot));
+}
+
+void
 SuperGroup::createInterruptableThread(const boost::function<void ()> &func, const string &name,
 	unsigned int stackSize)
 {
@@ -236,9 +254,11 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 		verifyInvariants();
 		P_TRACE(2, "Done initializing SuperGroup " << inspect());
 	}
+
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
 	runAllActions(actions);
+	runInitializationHooks();
 }
 
 void
@@ -1155,6 +1175,26 @@ Group::testOverflowRequestQueue() const {
 const ResourceLocator &
 Group::getResourceLocator() const {
 	return getPool()->spawnerFactory->getResourceLocator();
+}
+
+// 'process' is not a reference so that bind(runAttachHooks, ...) causes the shared
+// pointer reference to increment.
+void
+Group::runAttachHooks(const ProcessPtr process) const {
+	getPool()->runHookScripts("attached_process",
+		boost::bind(&Group::setupAttachOrDetachHook, this, process, _1));
+}
+
+void
+Group::runDetachHooks(const ProcessPtr process) const {
+	getPool()->runHookScripts("detached_process",
+		boost::bind(&Group::setupAttachOrDetachHook, this, process, _1));
+}
+
+void
+Group::setupAttachOrDetachHook(const ProcessPtr process, HookScriptOptions &options) const {
+	options.environment.push_back(make_pair("PASSENGER_PROCESS_PID", toString(process->pid)));
+	options.environment.push_back(make_pair("PASSENGER_APP_ROOT", this->options.appRoot));
 }
 
 string

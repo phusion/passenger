@@ -7,6 +7,8 @@ Release 4.0.28
    this OS installed exhibits the problem. See issue #902.
  * Improved Node.js support: the Sails framework is now supported.
  * Improved Node.js support: the streams2 API is now supported.
+ * Introduced support for hooks, allowing users to easily extend Phusion
+   Passenger's behavior.
  * Fixed a bug in the `passenger start -R` option. It was broken because of a
    change introduced in 4.0.25.
  * Fixed a bug in PassengerMaxInstancesPerApp. Fixes issue #1016.

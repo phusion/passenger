@@ -192,6 +192,9 @@ private:
 	static boost::mutex &getPoolSyncher(const PoolPtr &pool);
 	static void runAllActions(const vector<Callback> &actions);
 	string generateSecret() const;
+	void runInitializationHooks() const;
+	void runDestructionHooks() const;
+	void setupInitializationOrDestructionHook(HookScriptOptions &options) const;
 	
 	void createInterruptableThread(const boost::function<void ()> &func, const string &name,
 		unsigned int stackSize);
@@ -321,9 +324,7 @@ private:
 	void doDestroy(SuperGroupPtr self, unsigned int generation, ShutdownCallback callback) {
 		TRACE_POINT();
 		
-		// In the future we can run more destruction code here,
-		// without holding the lock. Note that any destruction
-		// code may not interfere with doInitialize().
+		runDestructionHooks();
 		
 		// Wait until 'detachedGroups' is empty.
 		UPDATE_TRACE_POINT();
