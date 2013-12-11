@@ -152,6 +152,7 @@ function installServer() {
 			server.once('listening', callback);
 		}
 		server.emit('listening');
+		return server;
 	} else {
 		throw new Error("http.Server.listen() was called more than once, which " +
 			"is not allowed because Phusion Passenger is in auto-install mode. " +
@@ -165,12 +166,12 @@ function installServer() {
 function listenAndMaybeInstall(port) {
 	if (port === 'passenger') {
 		if (!PhusionPassenger._appInstalled) {
-			installServer.apply(this, arguments);
+			return installServer.apply(this, arguments);
 		} else {
 			throw new Error("You may only call listen('passenger') once");
 		}
 	} else {
-		this.originalListen.apply(this, arguments);
+		return this.originalListen.apply(this, arguments);
 	}
 }
 
