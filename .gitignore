@@ -1,6 +1,7 @@
 .cache
 .DS_Store
 .rbx
+.vagrant
 autom4te.cache
 *.o
 *.so

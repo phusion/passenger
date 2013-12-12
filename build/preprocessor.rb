@@ -188,6 +188,12 @@ private
 		"squeeze"  => "20110206",
 		"wheezy"   => "20130504"
 	}
+	REDHAT_ENTERPRISE_DISTRIBUTIONS = {
+		"el6"      => "el6.0"
+	}
+	AMAZON_DISTRIBUTIONS = {
+		"amazon"   => "amazon"
+	}
 
 	# Provides the DSL that's accessible within.
 	class Evaluator
@@ -196,6 +202,10 @@ private
 				return UBUNTU_DISTRIBUTIONS
 			elsif DEBIAN_DISTRIBUTIONS.has_key?(name)
 				return DEBIAN_DISTRIBUTIONS
+			elsif REDHAT_ENTERPRISE_DISTRIBUTIONS.has_key?(name)
+				return REDHAT_ENTERPRISE_DISTRIBUTIONS
+			elsif AMAZON_DISTRIBUTIONS.has_key?(name)
+				return AMAZON_DISTRIBUTIONS
 			end
 		end
 
