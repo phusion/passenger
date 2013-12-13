@@ -304,6 +304,8 @@
 
 11.9.2. Environment	=>	environment-10uhg8m
 
+11.9.3. Blocking and concurrency	=>	blocking-and-concurrency-g5njp1
+
 11.9.4. Error handling	=>	error-handling-m78oxs
 
 11.9.5. Available hooks	=>	available-hooks-11w1prq
