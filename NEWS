@@ -1,3 +1,9 @@
+Release 4.0.29
+--------------
+
+ * Fixed a compilation problem on OS X Mavericks.
+
+
 Release 4.0.28
 --------------
 

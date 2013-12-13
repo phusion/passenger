@@ -102,11 +102,11 @@ class CommonLibraryBuilder
 
 	def define_tasks(extra_compiler_flags = nil)
 		flags =  "-Iext -Iext/common #{LIBEV_CFLAGS} #{extra_compiler_flags} "
-		flags << EXTRA_CXXFLAGS
-		flags.strip!
+		cflags = (flags + EXTRA_CFLAGS).strip
+		cxxflags = (flags + EXTRA_CXXFLAGS).strip
 
 		group_all_components_by_category.each_pair do |category, object_names|
-			define_category_tasks(category, object_names, flags)
+			define_category_tasks(category, object_names, cflags, cxxflags)
 		end
 
 		task("#{@namespace}:clean") do
@@ -117,7 +117,7 @@ class CommonLibraryBuilder
 	end
 
 private
-	def define_category_tasks(category, object_names, flags)
+	def define_category_tasks(category, object_names, cflags, cxxflags)
 		object_filenames = object_filenames_for(object_names)
 
 		object_names.each do |object_name|
@@ -128,9 +128,9 @@ private
 			file(object_file => dependencies_for(options)) do
 				ensure_directory_exists(File.dirname(object_file))
 				if source_file =~ /\.c$/
-					compile_c(source_file, "#{flags} -o #{object_file}")
+					compile_c(source_file, "#{cflags} -o #{object_file}")
 				else
-					compile_cxx(source_file, "#{flags} -o #{object_file}")
+					compile_cxx(source_file, "#{cxxflags} -o #{object_file}")
 				end
 			end
 		end
