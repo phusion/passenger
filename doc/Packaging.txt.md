@@ -43,8 +43,9 @@ package. This configuration comes not only with all necessary binaries, but also
 with some (but not all) source files. This is because when you run Phusion Passenger
 with a different Ruby interpreter than the packager intended, Phusion Passenger
 must be able to compile a new Ruby extension for that Ruby interpreter. This
-configuration does not however allow compiling against a different Apache or Nginx
-version than the packager intended.
+configuration does not however allow compiling against a different Apache version
+than the packager intended (but does allow compiling against a different Nginx
+version).
 
 In this configuration, files can be scattered anywhere throughout the filesystem. This
 way Phusion Passenger can be packaged in an FHS-compliant way. The exact locations
@@ -52,14 +53,8 @@ of the different types of files can be specified through a
 _location configuration file_. The existance and usage of a location configuration
 file does not automatically imply that Phusion Passenger is natively packaged.
 
-This configuration also does not allow running Phusion Passenger Standalone against
-a different Nginx version than the packager intended, but does allow running
-against a different Ruby version. Passenger Standlone looks for its binaries
-in the location as specified by the location configuration file; it makes no
-attempt to compile anything, except of course for the Ruby extension.
-
-If either the non-Standalone or the Standalone Passenger needs to have a new Ruby
-extension compiled, then it will store that in `~/.passenger/native_support/<VERSION>/<ARCH>`.
+If Phusion Passenger needs to have a new Ruby extension compiled, then it will
+store that in `~/.passenger/native_support/<VERSION>/<ARCH>`.
 
 
 # The location configuration file
