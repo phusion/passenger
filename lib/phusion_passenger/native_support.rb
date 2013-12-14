@@ -34,7 +34,7 @@ class NativeSupportLoader
 		else
 			require 'phusion_passenger'
 			load_from_native_support_output_dir ||
-			load_from_source_root ||
+			load_from_buildout_dir ||
 			load_from_load_path ||
 			load_from_home_dir
 		end
@@ -74,15 +74,6 @@ private
 		File.join(PhusionPassenger.ruby_extension_source_dir, "extconf.rb")
 	end
 	
-	def native_support_dir_in_source_root
-		if PhusionPassenger.originally_packaged?
-			@native_support_dir_in_source_root ||=
-				File.expand_path("#{PhusionPassenger.source_root}/buildout/ruby")
-		else
-			return nil
-		end
-	end
-
 	def load_from_native_support_output_dir
 		# Quick workaround for people suffering from
 		# https://code.google.com/p/phusion-passenger/issues/detail?id=865
@@ -99,10 +90,10 @@ private
 		end
 	end
 	
-	def load_from_source_root
-		if PhusionPassenger.originally_packaged?
+	def load_from_buildout_dir
+		if PhusionPassenger.buildout_dir
 			begin
-				require "#{native_support_dir_in_source_root}/#{archdir}/#{library_name}"
+				require "#{PhusionPassenger.buildout_dir}/ruby/#{archdir}/#{library_name}"
 				return true
 			rescue LoadError
 				return false
@@ -212,8 +203,8 @@ private
 		if (output_dir = ENV['PASSENGER_NATIVE_SUPPORT_OUTPUT_DIR']) && !output_dir.empty?
 			target_dirs << "#{output_dir}/#{VERSION_STRING}/#{archdir}"
 		end
-		if native_support_dir_in_source_root
-			target_dirs << "#{native_support_dir_in_source_root}/#{archdir}"
+		if PhusionPassenger.buildout_dir
+			target_dirs << "#{PhusionPassenger.buildout_dir}/ruby/#{archdir}"
 		end
 		target_dirs << "#{home}/#{USER_NAMESPACE_DIRNAME}/native_support/#{VERSION_STRING}/#{archdir}"
 		return target_dirs
@@ -311,11 +302,8 @@ private
 					STDERR.puts "-------------------------------"
 				end
 			rescue Errno::ENOTDIR
-				# This can occur when PhusionPassenger.source_root
-				# is a location configuration file, and natively_packaged
-				# is set to false. For example, when we're running
-				# in Phusion Passenger Standalone. In this case
-				# just ignore this directory.
+				# This can occur when locations.ini set buildout_dir
+				# to an invalid path. Just ignore this error.
 				if i == dirs.size - 1
 					STDERR.puts "Not a valid directory, " +
 						"but no more directories to try. Giving up."

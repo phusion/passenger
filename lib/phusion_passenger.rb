@@ -71,7 +71,10 @@ module PhusionPassenger
 	OPTIONAL_LOCATIONS_INI_FIELDS = [
 		# Directory in which downloaded Phusion Passenger binaries are stored.
 		# Only available when originally packaged.
-		:download_cache_dir
+		:download_cache_dir,
+		# Directory in which the build system's output is stored, e.g.
+		# the compiled agent executables. Only available when originally packaged.
+		:buildout_dir
 	].freeze
 	
 	# Follows the logic of ext/common/ResourceLocator.h, so don't forget to modify that too.
@@ -84,12 +87,20 @@ module PhusionPassenger
 			options  = parse_ini_file(filename)
 			
 			@natively_packaged       = get_bool_option(filename, options, 'natively_packaged')
-			@native_packaging_method = get_option(filename, options, 'native_packaging_method')
+			if natively_packaged?
+				@native_packaging_method = get_option(filename, options, 'native_packaging_method')
+			end
 			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 				instance_variable_set("@#{field}", get_option(filename, options, field.to_s).freeze)
 			end
 			OPTIONAL_LOCATIONS_INI_FIELDS.each do |field|
 				instance_variable_set("@#{field}", get_option(filename, options, field.to_s, false).freeze)
+			end
+			if !originally_packaged?
+				# Since these options are only supposed to be available when
+				# originally packaged, force them to be nil when natively packaged.
+				@download_cache_dir = nil
+				@buildout_dir = nil
 			end
 		else
 			@source_root           = File.dirname(File.dirname(FILE_LOCATION))
@@ -107,6 +118,7 @@ module PhusionPassenger
 			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
 			@nginx_module_source_dir   = "#{@source_root}/ext/nginx"
 			@download_cache_dir    = "#{@source_root}/download_cache"
+			@buildout_dir          = "#{@source_root}/buildout"
 			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 				if instance_variable_get("@#{field}").nil?
 					raise "BUG: @#{field} not set"

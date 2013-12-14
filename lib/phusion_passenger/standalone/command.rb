@@ -198,8 +198,10 @@ private
 		
 		File.open(location_config_filename, 'w') do |f|
 			f.puts '[locations]'
-			f.puts "natively_packaged=false"
-			f.puts "native_packaging_method=#{PhusionPassenger.native_packaging_method}"
+			f.puts "natively_packaged=#{PhusionPassenger.natively_packaged?}"
+			if PhusionPassenger.natively_packaged?
+				f.puts "native_packaging_method=#{PhusionPassenger.native_packaging_method}"
+			end
 			f.puts "lib_dir=#{@runtime_locator.find_lib_dir}"
 			f.puts "agents_dir=#{@runtime_locator.find_agents_dir}"
 			locations_ini_fields.each do |field|

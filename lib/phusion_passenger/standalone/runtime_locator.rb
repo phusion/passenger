@@ -55,7 +55,7 @@ class RuntimeLocator
 
 		if PhusionPassenger.originally_packaged?
 			if debugging?
-				@support_dir = "#{PhusionPassenger.source_root}/buildout"
+				@support_dir = PhusionPassenger.buildout_dir
 			else
 				dir = "#{@runtime_dir}/#{version}/support-#{cxx_compat_id}"
 				if self.class.looks_like_support_dir?(dir)

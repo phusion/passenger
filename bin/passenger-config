@@ -95,9 +95,16 @@ when "--installed-from-release-package"
 when "--make-locations-ini"
 	puts "[locations]"
 	puts "natively_packaged=#{PhusionPassenger.natively_packaged?}"
-	puts "native_packaging_method=#{PhusionPassenger.native_packaging_method}"
+	if PhusionPassenger.natively_packaged?
+		puts "native_packaging_method=#{PhusionPassenger.native_packaging_method}"
+	end
 	PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 		puts "#{field}=#{PhusionPassenger.send(field)}"
+	end
+	PhusionPassenger::OPTIONAL_LOCATIONS_INI_FIELDS.each do |field|
+		if value = PhusionPassenger.send(field)
+			puts "#{field}=#{value}"
+		end
 	end
 when "--detect-apache2"
 	require 'phusion_passenger/platform_info/apache_detector'
