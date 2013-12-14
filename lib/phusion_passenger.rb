@@ -83,7 +83,8 @@ module PhusionPassenger
 			filename = root_or_file
 			options  = parse_ini_file(filename)
 			
-			@natively_packaged     = get_bool_option(filename, options, 'natively_packaged')
+			@natively_packaged       = get_bool_option(filename, options, 'natively_packaged')
+			@native_packaging_method = get_option(filename, options, 'native_packaging_method')
 			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 				instance_variable_set("@#{field}", get_option(filename, options, field.to_s).freeze)
 			end
@@ -122,6 +123,12 @@ module PhusionPassenger
 
 	def self.natively_packaged?
 		return @natively_packaged
+	end
+
+	# If Phusion Passenger is natively packaged, returns which packaging
+	# method was used. Can be 'deb' or 'rpm'.
+	def self.native_packaging_method
+		return @native_packaging_method
 	end
 
 	# Whether the current Phusion Passenger installation is installed

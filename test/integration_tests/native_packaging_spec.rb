@@ -32,6 +32,9 @@ ENV['PATH'] = "/usr/bin:#{ENV['PATH']}"
 LOCATIONS_INI = ENV['LOCATIONS_INI']
 abort "Please set the LOCATIONS_INI environment variable to the right locations.ini" if !LOCATIONS_INI
 
+NATIVE_PACKAGING_METHOD = ENV['NATIVE_PACKAGING_METHOD']
+abort "Please set NATIVE_PACKAGING_METHOD to either 'deb' or 'rpm'" if !["deb", "rpm"].include?(NATIVE_PACKAGING_METHOD)
+
 source_root = File.expand_path("../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
@@ -78,6 +81,10 @@ describe "A natively packaged Phusion Passenger" do
 				end
 			end
 		end
+	end
+
+	specify "locations.ini sets native_packaging_method to #{NATIVE_PACKAGING_METHOD}" do
+		File.read(LOCATIONS_INI).should =~ /^native_packaging_method=#{NATIVE_PACKAGING_METHOD}$/
 	end
 
 	specify "passenger-status is in #{SBINDIR}" do

@@ -444,6 +444,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	File.open("#{fake_rubylibdir}/phusion_passenger/locations.ini", "w") do |f|
 		f.puts "[locations]"
 		f.puts "natively_packaged=true"
+		f.puts "native_packaging_method=deb"
 		f.puts "bin_dir=/usr/bin"
 		f.puts "agents_dir=/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}/agents"
 		f.puts "lib_dir=/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}"

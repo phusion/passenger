@@ -94,7 +94,8 @@ when "--installed-from-release-package"
 	end
 when "--make-locations-ini"
 	puts "[locations]"
-	puts "natively_packaged=true"
+	puts "natively_packaged=#{PhusionPassenger.natively_packaged?}"
+	puts "native_packaging_method=#{PhusionPassenger.native_packaging_method}"
 	PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 		puts "#{field}=#{PhusionPassenger.send(field)}"
 	end

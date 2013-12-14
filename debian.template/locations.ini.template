@@ -1,5 +1,6 @@
 [locations]
 natively_packaged=true
+native_packaging_method=deb
 bin_dir=/usr/bin
 agents_dir=/usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/agents
 lib_dir=/usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>

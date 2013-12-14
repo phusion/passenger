@@ -139,6 +139,7 @@ if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	run rake debian:dev debian:dev:reinstall
 	run rake test:integration:native_packaging \
 		LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
+		NATIVE_PACKAGING_METHOD=deb \
 		SUDO=1
 	run env PASSENGER_LOCATION_CONFIGURATION_FILE=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
 		rake test:integration:apache2 SUDO=1
