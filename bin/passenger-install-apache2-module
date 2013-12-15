@@ -24,8 +24,8 @@
 
 ## Magic comment: set locations.ini ##
 
-PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/..")
-$LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
+source_root = File.expand_path("..", File.dirname(__FILE__))
+$LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 
@@ -92,13 +92,16 @@ class Installer < PhusionPassenger::AbstractInstaller
 	
 	def run_steps
 		if PhusionPassenger.natively_packaged?
-			check_dependencies || exit(1)
-			show_apache2_config_snippets
-			show_deployment_example
+			if apache_module_available?
+				notify_apache_module_installed
+				show_deployment_example
+			else
+				install_apache_module_from_native_package || exit(1)
+			end
 			exit
 		end
 		
-		Dir.chdir(PASSENGER_ROOT)
+		Dir.chdir(PhusionPassenger.source_root)
 		show_welcome_screen
 		check_gem_install_permission_problems || exit(1)
 		check_directory_accessible_by_web_server
@@ -221,7 +224,7 @@ private
 		puts
 		line
 		puts '<banner>Compiling and installing Apache 2 module...</banner>'
-		puts "cd #{PASSENGER_ROOT}"
+		puts "cd #{PhusionPassenger.source_root}"
 		if ENV['TRACE']
 			puts "#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes"
 			return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes")
@@ -267,6 +270,31 @@ private
 			:users_guide_path => users_guide_path,
 			:users_guide_url => users_guide_url,
 			:support_url => SUPPORT_URL
+	end
+
+	def apache_module_available?
+		return File.exist?(PhusionPassenger.apache2_module_path)
+	end
+
+	def install_apache_module_from_native_package
+		case PhusionPassenger.native_packaging_method
+		when 'deb'
+			sh! "sudo apt-get update"
+			sh! "sudo apt-get install libapache2-mod-passenger"
+			return true
+		when 'rpm'
+			sh! "sudo yum install mod_passenger"
+			return true
+		else
+			puts "<red>The #{PROGRAM_NAME} Apache module package is not installed.</red>"
+			puts "Please ask your operating system vendor how to install it."
+			return false
+		end
+	end
+
+	def notify_apache_module_installed
+		render_template 'apache2/notify_apache_module_installed'
+		wait
 	end
 end
 

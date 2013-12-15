@@ -1,3 +1,13 @@
+Release 4.0.30
+--------------
+
+ * When Phusion Passenger is installed through the Debian package,
+   passenger-install-apache2-module now checks whether the Apache
+   module package (libapache2-mod-passenger) is properly installed,
+   and installs it using apt-get if it's not installed. Fixes
+   issue #1031.
+
+
 Release 4.0.29
 --------------
 

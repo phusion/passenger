@@ -1,3 +1,4 @@
+# encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2013 Phusion
 #
