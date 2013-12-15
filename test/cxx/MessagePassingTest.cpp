@@ -51,7 +51,7 @@ namespace tut {
 		unsigned long long timeout = 0;
 		Timer timer;
 		ensure_equals(box->recv("hi", &timeout), MessagePtr());
-		ensure(timer.elapsed() < 2);
+		ensure(timer.elapsed() < 10);
 		ensure_equals(timeout, 0ull);
 	}
 
