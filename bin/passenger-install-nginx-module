@@ -34,10 +34,12 @@ require 'optparse'
 require 'fileutils'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/abstract_installer'
+require 'phusion_passenger/utils/terminal_choice_menu'
 require 'phusion_passenger/utils/tmpio'
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
+	TerminalChoiceMenu = PhusionPassenger::Utils::TerminalChoiceMenu
 	
 	def dependencies
 		specs = [
@@ -51,15 +53,19 @@ class Installer < PhusionPassenger::AbstractInstaller
 			'cc',
 			'c++',
 			'download-tool',
-			PlatformInfo.passenger_needs_ruby_dev_header? ? 'ruby-dev' : nil,
-			'ruby-openssl',
-			'rubygems',
-			'rake',
-			'rack',
 			'libcurl-dev',
 			'openssl-dev',
-			'zlib-dev'
-		].compact
+			'zlib-dev',
+			'rake',
+			'ruby-openssl',
+			'rubygems'
+		]
+		if @languages.include?("ruby")
+			if PlatformInfo.passenger_needs_ruby_dev_header?
+				ids << 'ruby-dev'
+			end
+			ids << 'rack'
+		end
 		return [specs, ids]
 	end
 	
@@ -77,6 +83,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		ENV['PATH'] = PhusionPassenger.bin_dir + ":" + ENV['PATH']
 		
 		show_welcome_screen
+		query_interested_languages
 		check_gem_install_permission_problems || exit(1)
 		check_directory_accessible_by_web_server
 		check_nginx_module_sources_available || exit(1)
@@ -146,6 +153,45 @@ private
 	def show_welcome_screen
 		render_template 'nginx/welcome', :version => VERSION_STRING
 		wait
+	end
+
+	def query_interested_languages
+		menu = TerminalChoiceMenu.new(["Ruby", "Python", "Node.js", "Meteor"])
+		menu["Ruby"].checked = interesting_language?('ruby')
+		menu["Python"].checked = interesting_language?('python')
+		menu["Node.js"].checked = interesting_language?('nodejs', 'node')
+		menu["Meteor"].checked = interesting_language?('meteor')
+
+		new_screen
+		puts "<banner>Which languages are you interested in?</banner>"
+		puts
+		if interactive?
+			puts "Use <space> to select."
+		else
+			puts "Override selection with --languages."
+		end
+		puts
+
+		if interactive?
+			begin
+				menu.query
+			rescue Interrupt
+				raise Abort
+			end
+		else
+			menu.display_choices
+			puts
+		end
+
+		@languages = menu.selected_choices.map{ |x| x.downcase.gsub(/\./, '') }
+	end
+
+	def interesting_language?(name, command = nil)
+		if @languages
+			return @languages.include?(name)
+		else
+			return !!PlatformInfo.find_command(command || name)
+		end
 	end
 
 	def check_nginx_module_sources_available
@@ -494,35 +540,41 @@ parser = OptionParser.new do |opts|
 	opts.banner = "Usage: passenger-install-nginx-module [options]"
 	opts.separator ""
 	
+	indent = ' ' * 37
 	opts.separator "Options:"
 	opts.on("--auto", "Automatically confirm 'Press ENTER to\n" <<
-	        "#{' ' * 37}continue' prompts.") do
+	        "#{indent}continue' prompts.") do
 		options[:auto] = true
 	end
 	opts.on("--prefix=DIR", String, "Use the given Nginx install prefix instead\n" <<
-	        "#{' ' * 37}of asking for it interactively.") do |dir|
+	        "#{indent}of asking for it interactively.") do |dir|
 		options[:prefix] = dir
 	end
 	opts.on("--auto-download", "Download and install Nginx automatically,\n" <<
-	        "#{' ' * 37}instead of asking interactively whether to\n" <<
-	        "#{' ' * 37}download+install or to use an existing\n" <<
-	        "#{' ' * 37}Nginx source directory.") do
+	        "#{indent}instead of asking interactively whether to\n" <<
+	        "#{indent}download+install or to use an existing\n" <<
+	        "#{indent}Nginx source directory.") do
 		options[:auto_download] = true
 	end
 	opts.on("--nginx-source-dir=DIR", String, "Compile and install Nginx using the given\n" <<
-	        "#{' ' * 37}Nginx source directory, instead of\n" <<
-	        "#{' ' * 37}interactively asking to download+install\n" <<
-	        "#{' ' * 37}or to use an existing Nginx source\n" <<
-	        "#{' ' * 37}directory. Conflicts with --auto-download.") do |dir|
+	        "#{indent}Nginx source directory, instead of\n" <<
+	        "#{indent}interactively asking to download+install\n" <<
+	        "#{indent}or to use an existing Nginx source\n" <<
+	        "#{indent}directory. Conflicts with --auto-download.") do |dir|
 		options[:nginx_source_dir] = dir
 	end
 	opts.on("--extra-configure-flags=STRING", String, "Pass these extra flags to Nginx's\n" <<
-	        "#{' ' * 37}'configure' script, instead of asking for\n" <<
-	        "#{' ' * 37}it interactively. Specify 'none' if you\n" <<
-	        "#{' ' * 37}do not want to pass additional flags but do\n" <<
-	        "#{' ' * 37}not want this installer to ask\n" <<
-	        "#{' ' * 37}interactively either.") do |flags|
+	        "#{indent}'configure' script, instead of asking for\n" <<
+	        "#{indent}it interactively. Specify 'none' if you\n" <<
+	        "#{indent}do not want to pass additional flags but do\n" <<
+	        "#{indent}not want this installer to ask\n" <<
+	        "#{indent}interactively either.") do |flags|
 		options[:extra_configure_flags] = flags
+	end
+	opts.on("--languages NAMES", "Comma-separated list of interested\n" <<
+			"#{indent}languages (e.g.\n" <<
+			"#{indent}'ruby,python,nodejs,meteor')") do |value|
+		options[:languages] = value.split(",")
 	end
 end
 begin

@@ -42,9 +42,11 @@ require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/apache_detector'
 require 'phusion_passenger/abstract_installer'
+require 'phusion_passenger/utils/terminal_choice_menu'
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
+	TerminalChoiceMenu = PhusionPassenger::Utils::TerminalChoiceMenu
 	
 	def dependencies
 		specs = [
@@ -60,14 +62,18 @@ class Installer < PhusionPassenger::AbstractInstaller
 			'libcurl-dev',
 			'openssl-dev',
 			'zlib-dev',
-			PlatformInfo.passenger_needs_ruby_dev_header? ? 'ruby-dev' : nil,
-			'ruby-openssl',
-			'rubygems',
-			'rake',
-			'rack',
 			'apache2',
-			'apache2-dev'
-		].compact
+			'apache2-dev',
+			'rake',
+			'ruby-openssl',
+			'rubygems'
+		]
+		if @languages.include?("ruby")
+			if PlatformInfo.passenger_needs_ruby_dev_header?
+				ids << 'ruby-dev'
+			end
+			ids << 'rack'
+		end
 		# Some broken servers don't have apr-config or apu-config installed.
 		# Nevertheless, it is possible to compile Apache modules if Apache
 		# was configured with --included-apr. So here we check whether
@@ -103,6 +109,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		
 		Dir.chdir(PhusionPassenger.source_root)
 		show_welcome_screen
+		query_interested_languages
 		check_gem_install_permission_problems || exit(1)
 		check_directory_accessible_by_web_server
 		check_dependencies || exit(1)
@@ -124,6 +131,45 @@ private
 	def show_welcome_screen
 		render_template 'apache2/welcome', :version => VERSION_STRING
 		wait
+	end
+
+	def query_interested_languages
+		menu = TerminalChoiceMenu.new(["Ruby", "Python", "Node.js", "Meteor"])
+		menu["Ruby"].checked = interesting_language?('ruby')
+		menu["Python"].checked = interesting_language?('python')
+		menu["Node.js"].checked = interesting_language?('nodejs', 'node')
+		menu["Meteor"].checked = interesting_language?('meteor')
+
+		new_screen
+		puts "<banner>Which languages are you interested in?</banner>"
+		puts
+		if interactive?
+			puts "Use <space> to select."
+		else
+			puts "Override selection with --languages."
+		end
+		puts
+
+		if interactive?
+			begin
+				menu.query
+			rescue Interrupt
+				raise Abort
+			end
+		else
+			menu.display_choices
+			puts
+		end
+
+		@languages = menu.selected_choices.map{ |x| x.downcase.gsub(/\./, '') }
+	end
+
+	def interesting_language?(name, command = nil)
+		if @languages
+			return @languages.include?(name)
+		else
+			return !!PlatformInfo.find_command(command || name)
+		end
 	end
 
 	def check_whether_there_are_multiple_apache_installs
@@ -255,13 +301,13 @@ private
 	end
 	
 	def show_deployment_example
-		puts
-		line
+		new_screen
 		render_template 'apache2/deployment_example',
 			:users_guide_path => users_guide_path,
 			:users_guide_url => users_guide_url,
 			:phusion_website => PHUSION_WEBSITE,
-			:passenger_website => PASSENGER_WEBSITE
+			:passenger_website => PASSENGER_WEBSITE,
+			:languages => @languages
 	end
 	
 	def show_possible_solutions_for_compilation_and_installation_problems
@@ -304,10 +350,11 @@ parser = OptionParser.new do |opts|
 	opts.banner = "Usage: passenger-install-apache2-module [options]"
 	opts.separator ""
 	
+	indent = ' ' * 37
 	opts.separator "Options:"
 	opts.on("-a", "--auto", String, "Automatically build the Apache module,\n" <<
-	        "#{' ' * 37}without interactively asking for user\n" <<
-	        "#{' ' * 37}input.") do
+	        "#{indent}without interactively asking for user\n" <<
+	        "#{indent}input.") do
 		options[:auto] = true
 	end
 	opts.on("--apxs2-path PATH", String, "Path to 'apxs2' command.") do |value|
@@ -315,6 +362,11 @@ parser = OptionParser.new do |opts|
 	end
 	opts.on("--apr-config-path PATH", String, "Path to 'apr-config' command.") do |value|
 		ENV['APR_CONFIG'] = value
+	end
+	opts.on("--languages NAMES", "Comma-separated list of interested\n" <<
+			"#{indent}languages (e.g.\n" <<
+			"#{indent}'ruby,python,nodejs,meteor')") do |value|
+		options[:languages] = value.split(",")
 	end
 	opts.on("--snippet", "Show just the Apache config snippet.") do
 		options[:snippet] = true
