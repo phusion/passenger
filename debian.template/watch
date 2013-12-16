@@ -1,3 +1,0 @@
-version=3
-options="dversionmangle=s/debian[0-9]*//" \
-http://rubyforge.org/frs/?group_id=5873 .*passenger-([\d.-]*)\.t.* debian debian/repack.sh
