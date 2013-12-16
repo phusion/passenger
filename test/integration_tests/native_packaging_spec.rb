@@ -198,17 +198,9 @@ describe "A natively packaged Phusion Passenger" do
 			which("passenger-install-apache2-module").should == "#{BINDIR}/passenger-install-apache2-module"
 		end
 
-		it "prints the configuration snippet and exits" do
+		it "checks whether the Apache module is installed" do
 			output = capture_output("passenger-install-apache2-module --auto")
-			output.should =~ /Please edit your Apache configuration file/
-			output.should_not include("Compiling and installing Apache 2 module")
-			output.should_not include("rake apache2")
-		end
-
-		it "produces a correct configuration snippet" do
-			output = capture_output("passenger-install-apache2-module --auto")
-			output.should include("LoadModule passenger_module #{APACHE2_MODULE_PATH}")
-			output.should include("PassengerRoot #{LOCATIONS_INI}")
+			output.should =~ /Apache module is correctly installed/
 		end
 	end
 
