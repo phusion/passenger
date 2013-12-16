@@ -3,9 +3,8 @@ require 'resolv'
 require 'net/http'
 require 'uri'
 require 'support/multipart'
-require 'phusion_passenger'
-require 'phusion_passenger/debug_logging'
-require 'phusion_passenger/platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'debug_logging'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
 # Module containing helper methods, to be included in unit tests.
 module TestHelper

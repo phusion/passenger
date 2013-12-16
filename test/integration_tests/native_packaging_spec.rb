@@ -38,6 +38,7 @@ abort "Please set NATIVE_PACKAGING_METHOD to either 'deb' or 'rpm'" if !["deb", 
 source_root = File.expand_path("../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
 require 'tmpdir'
 require 'fileutils'
 require 'open-uri'

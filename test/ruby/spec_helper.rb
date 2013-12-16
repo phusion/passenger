@@ -38,12 +38,12 @@ $LOAD_PATH.unshift("#{source_root}/test")
 require 'thread'
 require 'timeout'
 require 'fileutils'
-require 'support/test_helper'
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'debug_logging'
 PhusionPassenger.require_passenger_lib 'utils'
 PhusionPassenger.require_passenger_lib 'utils/tmpdir'
+require 'support/test_helper'
 
 include TestHelper
 
