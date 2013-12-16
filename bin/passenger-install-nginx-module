@@ -22,11 +22,12 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-## Magic comment: set locations.ini ##
-
+## Magic comment: begin bootstrap ##
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
+## Magic comment: end bootstrap ##
+
 PhusionPassenger.locate_directories
 
 require 'digest'
