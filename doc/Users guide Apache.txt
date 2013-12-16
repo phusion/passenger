@@ -513,7 +513,7 @@ Please refer to link:https://github.com/phusion/passenger/wiki/Phusion-Passenger
 
 == Deploying a Meteor application
 
-Please refer to link:http://blog.phusion.nl/2013/11/01/will-meteor-kill-rails-i-dont-know-but-phusion-passenger-open-sources-meteor-support/[the Meteor tutorial].
+Please refer to link:https://github.com/phusion/passenger/wiki/Phusion-Passenger:-Meteor-tutorial[the Meteor tutorial].
 
 
 == Configuring Phusion Passenger ==
