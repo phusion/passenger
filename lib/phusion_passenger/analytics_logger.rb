@@ -22,9 +22,9 @@
 #  THE SOFTWARE.
 
 require 'thread'
-require 'phusion_passenger/utils'
-require 'phusion_passenger/debug_logging'
-require 'phusion_passenger/message_channel'
+PhusionPassenger.require_passenger_lib 'utils'
+PhusionPassenger.require_passenger_lib 'debug_logging'
+PhusionPassenger.require_passenger_lib 'message_channel'
 
 module PhusionPassenger
 

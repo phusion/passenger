@@ -25,13 +25,13 @@
 ## Magic comment: begin bootstrap ##
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
+require 'rubygems' rescue nil
 require 'phusion_passenger'
 ## Magic comment: end bootstrap ##
 
 PhusionPassenger.locate_directories
-
-require 'phusion_passenger/platform_info'
-require 'phusion_passenger/platform_info/compiler'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 
 def help
 	puts "Tool for showing Passenger configuration information."
@@ -55,7 +55,7 @@ def help
 end
 
 def common_library
-	require 'phusion_passenger/common_library'
+	PhusionPassenger.require_passenger_lib 'common_library'
 	return COMMON_LIBRARY.
 		only(*NGINX_LIBS_SELECTOR).
 		set_output_dir("#{PhusionPassenger.lib_dir}/common/libpassenger_common")
@@ -108,7 +108,7 @@ when "--make-locations-ini"
 		end
 	end
 when "--detect-apache2"
-	require 'phusion_passenger/platform_info/apache_detector'
+	PhusionPassenger.require_passenger_lib 'platform_info/apache_detector'
 	detector = PhusionPassenger::PlatformInfo::ApacheDetector.new(STDOUT)
 	begin
 		detector.detect_all
@@ -117,7 +117,7 @@ when "--detect-apache2"
 		detector.finish
 	end
 when "--ruby-command"
-	require 'phusion_passenger/platform_info/ruby'
+	PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 	ruby = PhusionPassenger::PlatformInfo.ruby_command
 	puts "passenger-config was invoked through the following Ruby interpreter:"
 	puts "  Command: #{ruby}"
@@ -150,10 +150,10 @@ when "--ruby-command"
 when "--ruby-libdir"
 	puts PhusionPassenger.ruby_libdir
 when "--rubyext-compat-id"
-	require 'phusion_passenger/platform_info/binary_compatibility'
+	PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
 	puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_id
 when "--cxx-compat-id"
-	require 'phusion_passenger/platform_info/binary_compatibility'
+	PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
 	puts PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id
 when "--version"
 	puts PhusionPassenger::VERSION_STRING

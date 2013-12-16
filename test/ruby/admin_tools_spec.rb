@@ -1,9 +1,9 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'fileutils'
-require 'phusion_passenger/constants'
-require 'phusion_passenger/utils'
-require 'phusion_passenger/admin_tools'
-require 'phusion_passenger/admin_tools/server_instance'
+PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'utils'
+PhusionPassenger.require_passenger_lib 'admin_tools'
+PhusionPassenger.require_passenger_lib 'admin_tools/server_instance'
 
 module PhusionPassenger
 

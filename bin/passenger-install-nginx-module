@@ -25,6 +25,7 @@
 ## Magic comment: begin bootstrap ##
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
+require 'rubygems' rescue nil
 require 'phusion_passenger'
 ## Magic comment: end bootstrap ##
 
@@ -33,10 +34,10 @@ PhusionPassenger.locate_directories
 require 'digest'
 require 'optparse'
 require 'fileutils'
-require 'phusion_passenger/platform_info/ruby'
-require 'phusion_passenger/abstract_installer'
-require 'phusion_passenger/utils/terminal_choice_menu'
-require 'phusion_passenger/utils/tmpio'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'abstract_installer'
+PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
+PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger

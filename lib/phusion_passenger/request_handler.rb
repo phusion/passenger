@@ -25,14 +25,14 @@
 require 'socket'
 require 'fcntl'
 require 'phusion_passenger'
-require 'phusion_passenger/constants'
-require 'phusion_passenger/public_api'
-require 'phusion_passenger/message_client'
-require 'phusion_passenger/debug_logging'
-require 'phusion_passenger/utils'
-require 'phusion_passenger/utils/tmpdir'
-require 'phusion_passenger/ruby_core_enhancements'
-require 'phusion_passenger/request_handler/thread_handler'
+PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'public_api'
+PhusionPassenger.require_passenger_lib 'message_client'
+PhusionPassenger.require_passenger_lib 'debug_logging'
+PhusionPassenger.require_passenger_lib 'utils'
+PhusionPassenger.require_passenger_lib 'utils/tmpdir'
+PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
+PhusionPassenger.require_passenger_lib 'request_handler/thread_handler'
 
 module PhusionPassenger
 

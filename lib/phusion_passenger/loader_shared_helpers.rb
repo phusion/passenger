@@ -22,8 +22,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger/public_api'
-require 'phusion_passenger/debug_logging'
+PhusionPassenger.require_passenger_lib 'public_api'
+PhusionPassenger.require_passenger_lib 'debug_logging'
 
 module PhusionPassenger
 
@@ -152,7 +152,7 @@ module LoaderSharedHelpers
 		DebugLogging.log_level = options["log_level"] if options["log_level"]
 
 		# Instantiate the analytics logger if requested. Can be nil.
-		require 'phusion_passenger/analytics_logger'
+		PhusionPassenger.require_passenger_lib 'analytics_logger'
 		options["analytics_logger"] = AnalyticsLogger.new_from_options(options)
 	end
 	
@@ -220,15 +220,6 @@ module LoaderSharedHelpers
 			end
 		end
 		
-		# Bundler might remove Phusion Passenger from the load path in its zealous
-		# attempt to un-require RubyGems, so here we put Phusion Passenger back
-		# into the load path. This must be done before loading the app's startup
-		# file because the app might require() Phusion Passenger files.
-		if !$LOAD_PATH.include?(PhusionPassenger.ruby_libdir)
-			$LOAD_PATH.unshift(PhusionPassenger.ruby_libdir)
-			$LOAD_PATH.uniq!
-		end
-		
 		
 		# !!! NOTE !!!
 		# If the app is using Bundler then any dependencies required past this
@@ -242,15 +233,6 @@ module LoaderSharedHelpers
 	# This method is to be called after loading the application code but
 	# before forking a worker process.
 	def after_loading_app_code(options)
-		# Even though run_load_path_setup_code() restores the Phusion Passenger
-		# load path after setting up Bundler, the app itself might also
-		# remove Phusion Passenger from the load path for whatever reason,
-		# so here we restore the load path again.
-		if !$LOAD_PATH.include?(PhusionPassenger.ruby_libdir)
-			$LOAD_PATH.unshift(PhusionPassenger.ruby_libdir)
-			$LOAD_PATH.uniq!
-		end
-		
 		# Post-install framework extensions. Possibly preceded by a call to
 		# PhusionPassenger.install_framework_extensions!
 		if defined?(::Rails) && !defined?(::Rails::VERSION)

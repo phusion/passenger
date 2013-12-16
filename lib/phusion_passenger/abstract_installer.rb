@@ -22,12 +22,12 @@
 #  THE SOFTWARE.
 
 require 'phusion_passenger'
-require 'phusion_passenger/constants'
-require 'phusion_passenger/console_text_template'
-require 'phusion_passenger/platform_info'
-require 'phusion_passenger/platform_info/operating_system'
-require 'phusion_passenger/utils/ansi_colors'
-require 'phusion_passenger/utils/download'
+PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'console_text_template'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
+PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
+PhusionPassenger.require_passenger_lib 'utils/download'
 require 'fileutils'
 require 'logger'
 require 'etc'
@@ -132,7 +132,7 @@ protected
 		puts "<banner>Checking for required software...</banner>"
 		puts
 		
-		require 'phusion_passenger/platform_info/depcheck'
+		PhusionPassenger.require_passenger_lib 'platform_info/depcheck'
 		specs, ids = dependencies
 		runner = PlatformInfo::Depcheck::ConsoleRunner.new
 
@@ -399,7 +399,7 @@ protected
 	end
 	
 	def rake(*args)
-		require 'phusion_passenger/platform_info/ruby'
+		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 		if !PlatformInfo.rake_command
 			puts_error 'Cannot find Rake.'
 			raise Abort
@@ -408,7 +408,7 @@ protected
 	end
 
 	def rake!(*args)
-		require 'phusion_passenger/platform_info/ruby'
+		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 		if !PlatformInfo.rake_command
 			puts_error 'Cannot find Rake.'
 			raise Abort

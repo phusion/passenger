@@ -43,7 +43,7 @@ class Main
 		COMMANDS.each do |command_spec|
 			command_name = command_spec[0]
 			filename     = command_name.sub(/-/, '_') + "_command"
-			require "phusion_passenger/standalone/#{filename}"
+			PhusionPassenger.require_passenger_lib "standalone/#{filename}"
 			command_class = Standalone.const_get(command_spec[1])
 			yield(command_name, command_class)
 		end
@@ -107,7 +107,7 @@ private
 	def get_command_class(spec)
 		command_name, class_name = spec
 		filename = command_name.sub(/-/, '_') + "_command"
-		require "phusion_passenger/standalone/#{filename}"
+		PhusionPassenger.require_passenger_lib("standalone/#{filename}")
 		return Standalone.const_get(class_name)
 	end
 end

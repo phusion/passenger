@@ -25,13 +25,12 @@
 ## Magic comment: begin bootstrap ##
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
+require 'rubygems' rescue nil
 require 'phusion_passenger'
 ## Magic comment: end bootstrap ##
 
 PhusionPassenger.locate_directories
-
-require 'rubygems' rescue nil
-require 'phusion_passenger/standalone/main'
+PhusionPassenger.require_passenger_lib 'standalone/main'
 
 STDOUT.sync = STDERR.sync = true
 PhusionPassenger::Standalone::Main.run!(ARGV)

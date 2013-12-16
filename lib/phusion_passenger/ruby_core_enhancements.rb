@@ -37,7 +37,7 @@ if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
 			"gem install fastthread"
 	end
 end
-require 'phusion_passenger/native_support'
+PhusionPassenger.require_passenger_lib 'native_support'
 
 class Exception
 	def backtrace_string(current_location = nil)

@@ -1,5 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
-require 'phusion_passenger/utils/hosts_file_parser'
+PhusionPassenger.require_passenger_lib 'utils/hosts_file_parser'
 require 'stringio'
 
 module PhusionPassenger

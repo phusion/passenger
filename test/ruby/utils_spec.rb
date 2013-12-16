@@ -3,10 +3,10 @@ require 'tmpdir'
 require 'fileutils'
 require 'stringio'
 require 'etc'
-require 'phusion_passenger/message_channel'
-require 'phusion_passenger/platform_info/ruby'
-require 'phusion_passenger/loader_shared_helpers'
-require 'phusion_passenger/utils'
+PhusionPassenger.require_passenger_lib 'message_channel'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'loader_shared_helpers'
+PhusionPassenger.require_passenger_lib 'utils'
 
 module PhusionPassenger
 

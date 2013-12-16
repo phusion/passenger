@@ -47,14 +47,14 @@ class NativeSupportLoader
 private
 	def archdir
 		@archdir ||= begin
-			require 'phusion_passenger/platform_info/binary_compatibility'
+			PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
 			PlatformInfo.ruby_extension_binary_compatibility_id
 		end
 	end
 	
 	def libext
 		@libext ||= begin
-			require 'phusion_passenger/platform_info/operating_system'
+			PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 			PlatformInfo.library_extension
 		end
 	end
@@ -132,8 +132,8 @@ private
 			"the current Ruby interpreter. Downloading precompiled binary from the Phusion server " +
 			"(set PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY=0 to disable)..."
 		
-		require 'phusion_passenger/platform_info/ruby'
-		require 'phusion_passenger/utils/tmpio'
+		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+		PhusionPassenger.require_passenger_lib 'utils/tmpio'
 		PhusionPassenger::Utils.mktmpdir("passenger-native-support-") do |dir|
 			Dir.chdir(dir) do
 				basename = "rubyext-#{archdir}.tar.gz"
@@ -187,7 +187,7 @@ private
 			"PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY=0 to disable)..."
 
 		require 'fileutils'
-		require 'phusion_passenger/platform_info/ruby'
+		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 		
 		target_dir = compile(installation_target_dirs)
 		if target_dir

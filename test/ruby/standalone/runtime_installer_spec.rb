@@ -1,5 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
-require 'phusion_passenger/standalone/runtime_installer'
+PhusionPassenger.require_passenger_lib 'standalone/runtime_installer'
 require 'tmpdir'
 require 'fileutils'
 require 'stringio'

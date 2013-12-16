@@ -1,5 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
-require 'phusion_passenger/utils/unseekable_socket'
+PhusionPassenger.require_passenger_lib 'utils/unseekable_socket'
 
 module PhusionPassenger
 

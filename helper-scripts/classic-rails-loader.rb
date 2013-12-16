@@ -61,11 +61,11 @@ module App
 		$LOAD_PATH.unshift(options["ruby_libdir"])
 		require 'phusion_passenger'
 		PhusionPassenger.locate_directories(options["passenger_root"])
-		require 'phusion_passenger/native_support'
-		require 'phusion_passenger/ruby_core_enhancements'
-		require 'phusion_passenger/utils/tmpdir'
-		require 'phusion_passenger/loader_shared_helpers'
-		require 'phusion_passenger/request_handler'
+		PhusionPassenger.require_passenger_lib 'native_support'
+		PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
+		PhusionPassenger.require_passenger_lib 'utils/tmpdir'
+		PhusionPassenger.require_passenger_lib 'loader_shared_helpers'
+		PhusionPassenger.require_passenger_lib 'request_handler'
 		LoaderSharedHelpers.init
 		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
@@ -118,11 +118,11 @@ module App
 		LoaderSharedHelpers.after_loading_app_code(options)
 
 		if Rails::VERSION::STRING >= '2.3.0'
-			require 'phusion_passenger/rack/thread_handler_extension'
+			PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'
 			RequestHandler::ThreadHandler.send(:include, Rack::ThreadHandlerExtension)
 			app = ActionController::Dispatcher.new
 		else
-			require 'phusion_passenger/classic_rails/thread_handler_extension'
+			PhusionPassenger.require_passenger_lib 'classic_rails/thread_handler_extension'
 			RequestHandler::ThreadHandler.send(:include, ClassicRails::ThreadHandlerExtension)
 			app = nil
 		end

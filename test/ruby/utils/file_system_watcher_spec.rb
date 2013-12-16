@@ -1,5 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
-require 'phusion_passenger/utils/file_system_watcher'
+PhusionPassenger.require_passenger_lib 'utils/file_system_watcher'
 
 module PhusionPassenger
 

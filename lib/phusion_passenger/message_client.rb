@@ -23,9 +23,9 @@
 #  THE SOFTWARE.
 
 require 'socket'
-require 'phusion_passenger/message_channel'
-require 'phusion_passenger/utils'
-require 'phusion_passenger/utils/tmpdir'
+PhusionPassenger.require_passenger_lib 'message_channel'
+PhusionPassenger.require_passenger_lib 'utils'
+PhusionPassenger.require_passenger_lib 'utils/tmpdir'
 
 module PhusionPassenger
 

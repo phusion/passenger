@@ -1,9 +1,9 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
-require 'phusion_passenger/request_handler'
-require 'phusion_passenger/request_handler/thread_handler'
-require 'phusion_passenger/rack/thread_handler_extension'
-require 'phusion_passenger/analytics_logger'
-require 'phusion_passenger/utils'
+PhusionPassenger.require_passenger_lib 'request_handler'
+PhusionPassenger.require_passenger_lib 'request_handler/thread_handler'
+PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'
+PhusionPassenger.require_passenger_lib 'analytics_logger'
+PhusionPassenger.require_passenger_lib 'utils'
 
 require 'fileutils'
 

@@ -25,14 +25,14 @@
 ## Magic comment: begin bootstrap ##
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
+require 'rubygems' rescue nil
 require 'phusion_passenger'
 ## Magic comment: end bootstrap ##
 
 PhusionPassenger.locate_directories
-
-require 'phusion_passenger/platform_info'
-require 'phusion_passenger/admin_tools/server_instance'
-require 'phusion_passenger/utils/ansi_colors'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'admin_tools/server_instance'
+PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 require 'optparse'
 
 include PhusionPassenger::AdminTools
@@ -152,7 +152,7 @@ def show_status(server_instance, options)
 		puts response
 	end
 rescue ServerInstance::RoleDeniedError
-	require 'phusion_passenger/platform_info/ruby'
+	PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 	STDERR.puts "*** ERROR: You are not authorized to query the status for this Phusion " <<
 		"Passenger instance. Please try again with '#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
 	exit 2

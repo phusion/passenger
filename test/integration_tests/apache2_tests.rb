@@ -2,9 +2,9 @@ require File.expand_path(File.dirname(__FILE__) + "/spec_helper")
 require 'socket'
 require 'fileutils'
 require 'support/apache2_controller'
-require 'phusion_passenger/platform_info'
-require 'phusion_passenger/admin_tools'
-require 'phusion_passenger/admin_tools/server_instance'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'admin_tools'
+PhusionPassenger.require_passenger_lib 'admin_tools/server_instance'
 
 require 'integration_tests/mycook_spec'
 require 'integration_tests/cgi_environment_spec'

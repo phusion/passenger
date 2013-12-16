@@ -1,6 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'socket'
-require 'phusion_passenger/message_channel'
+PhusionPassenger.require_passenger_lib 'message_channel'
 
 module PhusionPassenger
 

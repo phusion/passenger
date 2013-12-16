@@ -44,7 +44,7 @@ class << self
 	def install_framework_extensions!(*args)
 		require 'active_support/version' if defined?(::ActiveSupport) && !defined?(::ActiveSupport::VERSION)
 		if defined?(::ActiveSupport) && ::ActiveSupport::VERSION::MAJOR >= 3
-			require 'phusion_passenger/active_support3_extensions/init'
+			PhusionPassenger.require_passenger_lib 'active_support3_extensions/init'
 			ActiveSupport3Extensions.init!(PhusionPassenger::App.options, *args)
 		end
 	end

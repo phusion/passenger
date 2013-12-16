@@ -1,6 +1,6 @@
 require 'socket'
-require 'phusion_passenger/utils'
-require 'phusion_passenger/message_channel'
+PhusionPassenger.require_passenger_lib 'utils'
+PhusionPassenger.require_passenger_lib 'message_channel'
 
 module PhusionPassenger
 

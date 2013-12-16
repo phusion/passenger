@@ -159,7 +159,6 @@ module PhusionPassenger
 
 	# Generate getters for the directory types in locations.ini.
 	getters_code = ""
-	@ruby_libdir = File.dirname(FILE_LOCATION)
 	(REQUIRED_LOCATIONS_INI_FIELDS + OPTIONAL_LOCATIONS_INI_FIELDS).each do |field|
 		getters_code << %Q{
 			def self.#{field}
@@ -199,9 +198,20 @@ module PhusionPassenger
 	end
 	
 	
-	if !$LOAD_PATH.include?(ruby_libdir)
-		$LOAD_PATH.unshift(ruby_libdir)
-		$LOAD_PATH.uniq!
+	# Instead of calling `require 'phusion_passenger/foo'`, you should call
+	# `PhusionPassenger.require_passenger_lib 'foo'`. This is because when Phusion
+	# Passenger is natively packaged, it may still be run with arbitrary Ruby
+	# interpreters. Adding ruby_libdir to $LOAD_PATH is then dangerous because ruby_libdir
+	# may be the distribution's Ruby's vendor_ruby directory, which may be incompatible
+	# with the active Ruby interpreter. This method looks up the exact filename directly.
+	# 
+	# Using this method also has two more advantages:
+	# 
+	#  1. It is immune to Bundler's load path mangling code.
+	#  2. It is faster than plan require() because it doesn't need to
+	#     scan the entire load path.
+	def self.require_passenger_lib(name)
+		require("#{ruby_libdir}/phusion_passenger/#{name}")
 	end
 
 

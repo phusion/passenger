@@ -25,6 +25,7 @@
 ## Magic comment: begin bootstrap ##
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
+require 'rubygems' rescue nil
 require 'phusion_passenger'
 ## Magic comment: end bootstrap ##
 
@@ -38,12 +39,12 @@ ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 
 require 'optparse'
 require 'stringio'
-require 'phusion_passenger/constants'
-require 'phusion_passenger/platform_info/ruby'
-require 'phusion_passenger/platform_info/apache'
-require 'phusion_passenger/platform_info/apache_detector'
-require 'phusion_passenger/abstract_installer'
-require 'phusion_passenger/utils/terminal_choice_menu'
+PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'platform_info/apache'
+PhusionPassenger.require_passenger_lib 'platform_info/apache_detector'
+PhusionPassenger.require_passenger_lib 'abstract_installer'
+PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger

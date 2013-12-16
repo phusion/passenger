@@ -23,7 +23,7 @@
 #  THE SOFTWARE.
 
 require 'erb'
-require 'phusion_passenger/utils/ansi_colors'
+PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 module PhusionPassenger
 

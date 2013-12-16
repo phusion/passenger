@@ -1,6 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'stringio'
-require 'phusion_passenger/analytics_logger'
+PhusionPassenger.require_passenger_lib 'analytics_logger'
 
 module PhusionPassenger
 

@@ -23,7 +23,7 @@
 #  THE SOFTWARE.
 
 require 'socket'
-require 'phusion_passenger/native_support'
+PhusionPassenger.require_passenger_lib 'native_support'
 
 module PhusionPassenger
 

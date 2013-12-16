@@ -26,7 +26,7 @@ begin
 	require 'rubygems'
 rescue LoadError
 end
-require 'phusion_passenger/native_support'
+PhusionPassenger.require_passenger_lib 'native_support'
 
 module PhusionPassenger
 
