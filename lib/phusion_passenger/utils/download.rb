@@ -22,8 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger'
-require 'phusion_passenger/platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info'
 require 'fileutils'
 require 'shellwords'
 

@@ -22,8 +22,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger/platform_info/binary_compatibility'
-require 'phusion_passenger/utils/json'
+PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
+PhusionPassenger.require_passenger_lib 'utils/json'
 require 'etc'
 
 module PhusionPassenger

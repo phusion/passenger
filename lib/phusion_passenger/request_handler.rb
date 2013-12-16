@@ -24,7 +24,6 @@
 
 require 'socket'
 require 'fcntl'
-require 'phusion_passenger'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'public_api'
 PhusionPassenger.require_passenger_lib 'message_client'

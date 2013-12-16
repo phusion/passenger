@@ -54,7 +54,7 @@
 #    PURPOSE.
 
 require 'stringio'
-require 'phusion_passenger/utils/tmpio'
+PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
 module Utils

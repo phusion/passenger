@@ -22,7 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger/classic_rails/cgi_fixed'
+PhusionPassenger.require_passenger_lib 'classic_rails/cgi_fixed'
 module PhusionPassenger
 module ClassicRails
 

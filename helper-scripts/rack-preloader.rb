@@ -65,8 +65,7 @@ module App
 	end
 	
 	def self.init_passenger
-		$LOAD_PATH.unshift(options["ruby_libdir"])
-		require 'phusion_passenger'
+		require "#{options["ruby_libdir"]}/phusion_passenger"
 		PhusionPassenger.locate_directories(options["passenger_root"])
 		PhusionPassenger.require_passenger_lib 'native_support'
 		PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'

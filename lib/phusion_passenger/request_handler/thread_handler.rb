@@ -21,11 +21,11 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger/constants'
-require 'phusion_passenger/debug_logging'
-require 'phusion_passenger/message_channel'
-require 'phusion_passenger/utils'
-require 'phusion_passenger/utils/unseekable_socket'
+PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'debug_logging'
+PhusionPassenger.require_passenger_lib 'message_channel'
+PhusionPassenger.require_passenger_lib 'utils'
+PhusionPassenger.require_passenger_lib 'utils/unseekable_socket'
 
 module PhusionPassenger
 class RequestHandler

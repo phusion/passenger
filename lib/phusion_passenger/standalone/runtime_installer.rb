@@ -23,15 +23,14 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 require 'fileutils'
-require 'phusion_passenger'
-require 'phusion_passenger/abstract_installer'
-require 'phusion_passenger/packaging'
-require 'phusion_passenger/common_library'
-require 'phusion_passenger/platform_info'
-require 'phusion_passenger/platform_info/ruby'
-require 'phusion_passenger/platform_info/binary_compatibility'
-require 'phusion_passenger/standalone/utils'
-require 'phusion_passenger/utils/tmpio'
+PhusionPassenger.require_passenger_lib 'abstract_installer'
+PhusionPassenger.require_passenger_lib 'packaging'
+PhusionPassenger.require_passenger_lib 'common_library'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
+PhusionPassenger.require_passenger_lib 'standalone/utils'
+PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
 module Standalone
@@ -146,7 +145,7 @@ protected
 
 private
 	def check_for_download_tool
-		require 'phusion_passenger/platform_info/depcheck'
+		PhusionPassenger.require_passenger_lib 'platform_info/depcheck'
 		PlatformInfo::Depcheck.load('depcheck_specs/utilities')
 		result = PlatformInfo::Depcheck.find('download-tool').check
 		# Don't output anything if there is a download tool.
@@ -563,7 +562,7 @@ private
 	end
 	
 	def install_nginx_from_source(source_dir)
-		require 'phusion_passenger/platform_info/compiler'
+		PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 		Dir.chdir(source_dir) do
 			shell = PlatformInfo.find_command('bash') || "sh"
 			command = ""

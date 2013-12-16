@@ -1,9 +1,9 @@
 # encoding: utf-8
-require 'phusion_passenger/platform_info/ruby'
-require 'phusion_passenger/platform_info/linux'
-require 'phusion_passenger/platform_info/compiler'
-require 'phusion_passenger/platform_info/operating_system'
-require 'phusion_passenger/utils/ansi_colors'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'platform_info/linux'
+PhusionPassenger.require_passenger_lib 'platform_info/compiler'
+PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
+PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 module PhusionPassenger
 module PlatformInfo
@@ -261,7 +261,7 @@ module Depcheck
 		end
 
 		def install_osx_command_line_tools
-			require 'phusion_passenger/platform_info/compiler'
+			PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 			if PlatformInfo.xcode_select_version.to_s >= "2333"
 				install_instructions "Please install the Xcode command line tools: " +
 					"<b>sudo xcode-select --install</b>"

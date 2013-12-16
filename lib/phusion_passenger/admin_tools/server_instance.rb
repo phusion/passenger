@@ -26,11 +26,11 @@ require 'rexml/document'
 require 'fileutils'
 require 'socket'
 require 'ostruct'
-require 'phusion_passenger/admin_tools'
-require 'phusion_passenger/constants'
-require 'phusion_passenger/utils'
-require 'phusion_passenger/message_channel'
-require 'phusion_passenger/message_client'
+PhusionPassenger.require_passenger_lib 'admin_tools'
+PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'utils'
+PhusionPassenger.require_passenger_lib 'message_channel'
+PhusionPassenger.require_passenger_lib 'message_client'
 
 module PhusionPassenger
 module AdminTools

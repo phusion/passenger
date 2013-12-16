@@ -23,8 +23,8 @@
 
 require 'rbconfig'
 require 'etc'
-require 'phusion_passenger/platform_info'
-require 'phusion_passenger/platform_info/operating_system'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 
 module PhusionPassenger
 

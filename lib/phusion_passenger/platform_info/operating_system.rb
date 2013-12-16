@@ -22,7 +22,7 @@
 #  THE SOFTWARE.
 
 require 'rbconfig'
-require 'phusion_passenger/platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info'
 
 module PhusionPassenger
 

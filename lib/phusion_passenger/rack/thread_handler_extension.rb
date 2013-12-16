@@ -22,7 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger/utils/tee_input'
+PhusionPassenger.require_passenger_lib 'utils/tee_input'
 
 module PhusionPassenger
 module Rack

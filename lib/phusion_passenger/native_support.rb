@@ -32,7 +32,6 @@ class NativeSupportLoader
 		if defined?(NativeSupport)
 			return true
 		else
-			require 'phusion_passenger'
 			load_from_native_support_output_dir ||
 			load_from_buildout_dir ||
 			load_from_load_path ||

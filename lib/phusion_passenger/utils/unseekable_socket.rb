@@ -21,7 +21,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger/utils'   # So that we can know whether #writev is supported.
+PhusionPassenger.require_passenger_lib 'utils'   # So that we can know whether #writev is supported.
 
 module PhusionPassenger
 module Utils

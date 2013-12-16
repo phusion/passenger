@@ -21,7 +21,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger/constants'
+PhusionPassenger.require_passenger_lib 'constants'
 require 'digest/md5'
 
 module PhusionPassenger

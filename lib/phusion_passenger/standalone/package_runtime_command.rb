@@ -31,8 +31,8 @@ class PackageRuntimeCommand < Command
 	end
 
 	def self.require_libs
-		require 'phusion_passenger/platform_info/binary_compatibility'
-		require 'phusion_passenger/standalone/runtime_installer'
+		PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
+		PhusionPassenger.require_passenger_lib 'standalone/runtime_installer'
 	end
 
 	def run

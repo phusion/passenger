@@ -23,10 +23,9 @@
 require 'socket'
 require 'thread'
 require 'etc'
-require 'phusion_passenger'
-require 'phusion_passenger/plugin'
-require 'phusion_passenger/standalone/command'
-require 'phusion_passenger/platform_info/operating_system'
+PhusionPassenger.require_passenger_lib 'plugin'
+PhusionPassenger.require_passenger_lib 'standalone/command'
+PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 
 # We lazy load as many libraries as possible not only to improve startup performance,
 # but also to ensure that we don't require libraries before we've passed the dependency
@@ -53,7 +52,7 @@ class StartCommand < Command
 		parse_my_options
 		sanity_check_options
 
-		require 'phusion_passenger/standalone/runtime_locator'
+		PhusionPassenger.require_passenger_lib 'standalone/runtime_locator'
 		@runtime_locator = RuntimeLocator.new(@options[:runtime_dir],
 			@options[:nginx_version])
 		ensure_runtime_installed
@@ -321,7 +320,7 @@ private
 			begin
 				TCPServer.new('127.0.0.1', @options[:port]).close
 			rescue Errno::EACCES
-				require 'phusion_passenger/platform_info/ruby'
+				PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 				myself = `whoami`.strip
 				error "Only the 'root' user can run this program on port #{@options[:port]}. " <<
 				      "You are currently running as '#{myself}'. Please re-run this program " <<
@@ -450,7 +449,7 @@ private
 	end
 
 	def install_runtime(runtime_locator)
-		require 'phusion_passenger/standalone/runtime_installer'
+		PhusionPassenger.require_passenger_lib 'standalone/runtime_installer'
 		installer = RuntimeInstaller.new(
 			:targets     => runtime_locator.install_targets,
 			:support_dir => runtime_locator.support_dir_install_destination,

@@ -20,7 +20,7 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
-require 'phusion_passenger/utils/file_system_watcher'
+PhusionPassenger.require_passenger_lib 'utils/file_system_watcher'
 
 module PhusionPassenger
 module Standalone
@@ -137,7 +137,7 @@ private
 	end
 	
 	def load_config_file!(context, filename)
-		require 'phusion_passenger/utils/json' if !defined?(PhusionPassenger::Utils::JSON)
+		PhusionPassenger.require_passenger_lib 'utils/json' if !defined?(PhusionPassenger::Utils::JSON)
 		begin
 			data = File.open(filename, "r:utf-8") do |f|
 				f.read

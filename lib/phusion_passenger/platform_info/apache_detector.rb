@@ -21,12 +21,11 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger'
-require 'phusion_passenger/constants'
-require 'phusion_passenger/platform_info'
-require 'phusion_passenger/platform_info/ruby'
-require 'phusion_passenger/platform_info/apache'
-require 'phusion_passenger/utils/ansi_colors'
+PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'platform_info/apache'
+PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 require 'pathname'
 
 module PhusionPassenger
