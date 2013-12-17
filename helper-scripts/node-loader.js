@@ -159,7 +159,8 @@ function installServer() {
 			"This means that the first http.Server object for which listen() is called, " +
 			"is automatically installed as the Phusion Passenger request handler. " +
 			"If you want to create and listen on multiple http.Server object then " +
-			"you should disable auto-install mode.");
+			"you should disable auto-install mode. Please read " +
+			"http://stackoverflow.com/questions/20645231/phusion-passenger-error-http-server-listen-was-called-more-than-once/20645549");
 	}
 }
 
@@ -168,7 +169,7 @@ function listenAndMaybeInstall(port) {
 		if (!PhusionPassenger._appInstalled) {
 			return installServer.apply(this, arguments);
 		} else {
-			throw new Error("You may only call listen('passenger') once");
+			throw new Error("You may only call listen('passenger') once. Please read http://stackoverflow.com/questions/20645231/phusion-passenger-error-http-server-listen-was-called-more-than-once/20645549");
 		}
 	} else {
 		return this.originalListen.apply(this, arguments);
