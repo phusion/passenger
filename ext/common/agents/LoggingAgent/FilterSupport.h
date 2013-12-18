@@ -920,6 +920,7 @@ private:
 		union {
 			struct {
 				char stringStorage[sizeof(string)];
+				string *stringPointer;
 				struct {
 					regex_t regexp;
 					int options;
@@ -945,7 +946,8 @@ private:
 			} else {
 				source = STRING_LITERAL;
 			}
-			new (u.stringOrRegexpValue.stringStorage) string(value.data(), value.size());
+			u.stringOrRegexpValue.stringPointer = new (u.stringOrRegexpValue.stringStorage)
+				string(value.data(), value.size());
 			if (regexp) {
 				int options = REG_EXTENDED;
 				u.stringOrRegexpValue.regexp.options = 0;
@@ -955,7 +957,7 @@ private:
 						Tokenizer::REGEXP_OPTION_CASE_INSENSITIVE;
 				}
 				regcomp(&u.stringOrRegexpValue.regexp.regexp,
-					value.toString().c_str(),
+					u.stringOrRegexpValue.stringPointer->c_str(),
 					options);
 			}
 		}
@@ -1066,7 +1068,7 @@ private:
 	
 	private:
 		const string &storedString() const {
-			return *((string *) u.stringOrRegexpValue.stringStorage);
+			return *u.stringOrRegexpValue.stringPointer;
 		}
 		
 		regex_t &storedRegexp() const {
@@ -1087,7 +1089,8 @@ private:
 			source = other.source;
 			switch (source) {
 			case REGEXP_LITERAL:
-				new (u.stringOrRegexpValue.stringStorage) string(other.storedString());
+				u.stringOrRegexpValue.stringPointer = new (u.stringOrRegexpValue.stringStorage)
+					string(other.storedString());
 				options = REG_EXTENDED;
 				if (other.u.stringOrRegexpValue.regexp.options & Tokenizer::REGEXP_OPTION_CASE_INSENSITIVE) {
 					options |= REG_ICASE;
@@ -1098,7 +1101,8 @@ private:
 				u.stringOrRegexpValue.regexp.options = other.u.stringOrRegexpValue.regexp.options;
 				break;
 			case STRING_LITERAL:
-				new (u.stringOrRegexpValue.stringStorage) string(other.storedString());
+				u.stringOrRegexpValue.stringPointer = new (u.stringOrRegexpValue.stringStorage)
+					string(other.storedString());
 				break;
 			case INTEGER_LITERAL:
 				u.intValue = other.u.intValue;
