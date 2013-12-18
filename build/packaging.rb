@@ -335,26 +335,49 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	require 'rbconfig'
 	require 'fileutils'
 	include RbConfig
-	fakeroot = "pkg/fakeroot"
-	
+
+	fs_prefix  = ENV['FS_PREFIX']  || "/usr"
+	fs_bindir  = ENV['FS_BINDIR']  || "#{fs_prefix}/bin"
+	fs_sbindir = ENV['FS_SBINDIR'] || "#{fs_prefix}/sbin"
+	fs_datadir = ENV['FS_DATADIR'] || "#{fs_prefix}/share"
+	fs_docdir  = ENV['FS_DOCDIR']  || "#{fs_datadir}/doc"
+	fs_libdir  = ENV['FS_LIBDIR']  || "#{fs_prefix}/lib"
+
 	# We don't use CONFIG['archdir'] and the like because we want
 	# the files to be installed to /usr, and the Ruby interpreter
 	# on the packaging machine might be in /usr/local.
-	fake_rubylibdir = "#{fakeroot}/usr/lib/ruby/vendor_ruby"
-	fake_nodelibdir = "#{fakeroot}/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/node"
-	fake_libdir = "#{fakeroot}/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}"
-	fake_native_support_dir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
-	fake_agents_dir = "#{fakeroot}/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}/agents"
-	fake_helper_scripts_dir = "#{fakeroot}/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/helper-scripts"
-	fake_resources_dir = "#{fakeroot}/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}"
-	fake_include_dir = "#{fakeroot}/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/include"
-	fake_docdir = "#{fakeroot}/usr/share/doc/#{GLOBAL_NAMESPACE_DIRNAME}"
-	fake_bindir = "#{fakeroot}/usr/bin"
-	fake_sbindir = "#{fakeroot}/usr/sbin"
-	fake_apache2_module_dir = "#{fakeroot}/usr/lib/apache2/modules"
-	fake_apache2_module = "#{fake_apache2_module_dir}/mod_passenger.so"
-	fake_ruby_extension_source_dir = "#{fakeroot}/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
-	fake_nginx_module_source_dir = "#{fakeroot}/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/ngx_http_passenger_module"
+	psg_rubylibdir = "#{fs_libdir}/ruby/vendor_ruby"
+	psg_nodelibdir = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}/node"
+	psg_libdir     = "#{fs_libdir}/#{GLOBAL_NAMESPACE_DIRNAME}"
+	psg_native_support_dir = "#{fs_libdir}/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
+	psg_agents_dir = "#{fs_libdir}/#{GLOBAL_NAMESPACE_DIRNAME}/agents"
+	psg_helper_scripts_dir = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}/helper-scripts"
+	psg_resources_dir      = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}"
+	psg_include_dir        = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}/include"
+	psg_docdir     = "#{fs_docdir}/#{GLOBAL_NAMESPACE_DIRNAME}"
+	psg_bindir     = "#{fs_bindir}"
+	psg_sbindir    = "#{fs_sbindir}"
+	psg_apache2_module_path       = ENV['APACHE2_MODULE_PATH'] "#{fs_libdir}/apache2/modules/mod_passenger.so"
+	psg_ruby_extension_source_dir = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
+	psg_nginx_module_source_dir   = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}/ngx_http_passenger_module"
+	
+	fakeroot = "pkg/fakeroot"
+	fake_rubylibdir = "#{fakeroot}#{psg_rubylibdir}"
+	fake_nodelibdir = "#{fakeroot}#{psg_nodelibdir}"
+	fake_libdir     = "#{fakeroot}#{psg_libdir}"
+	fake_native_support_dir = "#{fakeroot}#{psg_native_support_dir}"
+	fake_agents_dir = "#{fakeroot}#{psg_agents_dir}"
+	fake_helper_scripts_dir = "#{fakeroot}#{psg_helper_scripts_dir}"
+	fake_resources_dir = "#{fakeroot}#{psg_resources_dir}"
+	fake_include_dir   = "#{fakeroot}#{psg_include_dir}"
+	fake_docdir     = "#{fakeroot}#{psg_docdir}"
+	fake_bindir     = "#{fakeroot}#{psg_bindir}"
+	fake_sbindir    = "#{fakeroot}#{psg_sbindir}"
+	fake_apache2_module_path       = "#{fakeroot}#{psg_apache2_module_path}"
+	fake_ruby_extension_source_dir = "#{fakeroot}#{psg_ruby_extension_source_dir}"
+	fake_nginx_module_source_dir   = "#{fakeroot}#{psg_nginx_module_source_dir}"
+
+	native_packaging_method = ENV['NATIVE_PACKAGING_METHOD'] || "deb"
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
@@ -442,8 +465,8 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	end
 	
 	# Apache 2 module
-	sh "mkdir -p #{fake_apache2_module_dir}"
-	sh "cp #{APACHE2_MODULE} #{fake_apache2_module_dir}/"
+	sh "mkdir -p #{File.dirname(fake_apache2_module_path)}"
+	sh "cp #{APACHE2_MODULE} #{fake_apache2_module_path}"
 
 	# Ruby extension sources
 	sh "mkdir -p #{fake_ruby_extension_source_dir}"
@@ -453,19 +476,19 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	File.open("#{fake_rubylibdir}/phusion_passenger/locations.ini", "w") do |f|
 		f.puts "[locations]"
 		f.puts "natively_packaged=true"
-		f.puts "native_packaging_method=deb"
-		f.puts "bin_dir=/usr/bin"
-		f.puts "agents_dir=/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}/agents"
-		f.puts "lib_dir=/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}"
-		f.puts "helper_scripts_dir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/helper-scripts"
-		f.puts "resources_dir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}"
-		f.puts "include_dir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/include"
-		f.puts "doc_dir=/usr/share/doc/#{GLOBAL_NAMESPACE_DIRNAME}"
-		f.puts "ruby_libdir=/usr/lib/ruby/vendor_ruby"
-		f.puts "node_libdir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/node"
-		f.puts "apache2_module_path=/usr/lib/apache2/modules/mod_passenger.so"
-		f.puts "ruby_extension_source_dir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
-		f.puts "nginx_module_source_dir=/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/ngx_http_passenger_module"
+		f.puts "native_packaging_method=#{native_packaging_method}"
+		f.puts "bin_dir=#{psg_bindir}"
+		f.puts "agents_dir=#{psg_agents_dir}"
+		f.puts "lib_dir=#{psg_libdir}"
+		f.puts "helper_scripts_dir=#{psg_helper_scripts_dir}"
+		f.puts "resources_dir=#{psg_resources_dir}"
+		f.puts "include_dir=#{psg_include_dir}"
+		f.puts "doc_dir=#{psg_docdir}"
+		f.puts "ruby_libdir=#{psg_rubylibdir}"
+		f.puts "node_libdir=#{psg_nodelibdir}"
+		f.puts "apache2_module_path=#{psg_apache2_module_path}"
+		f.puts "ruby_extension_source_dir=#{psg_ruby_extension_source_dir}"
+		f.puts "nginx_module_source_dir=#{psg_nginx_module_source_dir}"
 	end
 
 	# Sanity check the locations.ini file
