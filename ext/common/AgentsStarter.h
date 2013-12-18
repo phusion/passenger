@@ -446,7 +446,7 @@ public:
 			UPDATE_TRACE_POINT();
 			FileDescriptor feedbackFd = fds[0];
 			vector<string> args;
-			bool result;
+			bool result = false;
 			
 			ScopeGuard guard(boost::bind(&AgentsStarter::killProcessGroupAndWait, &pid, 0));
 			fds[1].close();
