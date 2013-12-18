@@ -19,6 +19,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   pkg_cmd = %Q{
+    echo "exclude = kernel*" >> /etc/yum.conf
     rpm -Uvh http://mirror.overthewire.com.au/pub/epel/6/i386/epel-release-6-8.noarch.rpm &&
     yum update -y &&
     yum install -y @development-tools fedora-packager git sudo nano &&
