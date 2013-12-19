@@ -249,8 +249,10 @@ mode_t parseModeString(const StaticString &mode);
 /**
  * Turns the given path into an absolute path. Unlike realpath(), this function does
  * not resolve symlinks.
+ *
+ * @throws SystemException
  */
-string absolutizePath(const StaticString &path, const StaticString &workingDir = "");
+string absolutizePath(const StaticString &path, const StaticString &workingDir = StaticString());
 
 /**
  * Return the path name for the directory in which the system stores general

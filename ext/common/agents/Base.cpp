@@ -150,6 +150,15 @@ hasEnvOption(const char *name, bool defaultValue = false) {
 	}
 }
 
+// When we're in a crash handler, there's nothing we can do if we fail to
+// write to stderr, so we ignore its return value and we ignore compiler
+// warnings about ignoring that.
+static void
+write_nowarn(int fd, const void *buf, size_t n) {
+	ssize_t ret = write(fd, buf, n);
+	(void) ret;
+}
+
 // No idea whether strlen() is async signal safe, but let's not risk it
 // and write our own version instead that's guaranteed to be safe.
 static size_t
@@ -165,7 +174,7 @@ safeStrlen(const char *str) {
 // Async-signal safe way to print to stderr.
 static void
 safePrintErr(const char *message) {
-	write(STDERR_FILENO, message, strlen(message));
+	write_nowarn(STDERR_FILENO, message, strlen(message));
 }
 
 // Must be async signal safe.
@@ -369,7 +378,7 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 		end = appendText(end, "Could not create subprocess: pipe() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
-		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 		return -1;
 	}
 
@@ -388,7 +397,7 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 		end = appendText(end, "Could not create subprocess: fork() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
-		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 		return -1;
 
 	} else {
@@ -430,7 +439,7 @@ dumpFileDescriptorInfoWithLsof(AbortHandlerState &state, void *userData) {
 	end = appendText(end, "ERROR: cannot execute command 'lsof': errno=");
 	end = appendULL(end, errno);
 	end = appendText(end, "\n");
-	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+	write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 	_exit(1);
 }
 
@@ -462,7 +471,7 @@ dumpFileDescriptorInfo(AbortHandlerState &state) {
 	end = messageBuf;
 	end = appendText(end, state.messagePrefix);
 	end = appendText(end, " ] Open files and file descriptors:\n");
-	write(STDERR_FILENO, messageBuf, end - messageBuf);
+	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 
 	status = runInSubprocessWithTimeLimit(state, dumpFileDescriptorInfoWithLsof, NULL, 4000);
 
@@ -485,7 +494,7 @@ dumpFileDescriptorInfo(AbortHandlerState &state) {
 			} else {
 				end = messageBuf;
 				end = appendText(end, "ERROR: No other file descriptor dumping mechanism on current platform detected.\n");
-				write(STDERR_FILENO, messageBuf, end - messageBuf);
+				write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 			}
 		}
 	}
@@ -513,7 +522,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 			end = appendText(end, "(execlp() returned errno=");
 			end = appendULL(end, e);
 			end = appendText(end, ") Please check your file permissions or something.\n");
-			write(STDERR_FILENO, messageBuf, end - messageBuf);
+			write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 		}
 		_exit(1);
 
@@ -523,7 +532,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 		end = appendText(end, "Could not execute crash-watch: fork() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
-		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 
 	} else {
 		waitpid(child, NULL, 0);
@@ -542,7 +551,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 		end = appendText(end, " ] Backtrace with ");
 		end = appendULL(end, (unsigned long long) frames);
 		end = appendText(end, " frames:\n");
-		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
 		if (backtraceSanitizerCommand != NULL) {
 			int p[2];
@@ -553,7 +562,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 				end = appendULL(end, e);
 				end = appendText(end, "\n");
 				end = appendText(end, "Falling back to writing to stderr directly...\n");
-				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 				backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 				return;
 			}
@@ -586,7 +595,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 				end = appendText(end, "ERROR: cannot execute '");
 				end = appendText(end, backtraceSanitizerCommand);
 				end = appendText(end, "' for sanitizing the backtrace, trying 'cat'...\n");
-				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 				execlp("cat", "cat", (const char * const) 0);
 				execlp("/bin/cat", "cat", (const char * const) 0);
 				execlp("/usr/bin/cat", "cat", (const char * const) 0);
@@ -602,7 +611,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 				end = appendULL(end, e);
 				end = appendText(end, "\n");
 				end = appendText(end, "Falling back to writing to stderr directly...\n");
-				write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 				backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 
 			} else {
@@ -616,7 +625,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 					end = appendText(end, "ERROR: cannot execute '");
 					end = appendText(end, backtraceSanitizerCommand);
 					end = appendText(end, "' for sanitizing the backtrace, writing to stderr directly...\n");
-					write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+					write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 					backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 				}
 			}
@@ -643,7 +652,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 	end = messageBuf;
 	end = appendText(end, state.messagePrefix);
 	end = appendText(end, " ] Date, uname and ulimits:\n");
-	write(STDERR_FILENO, messageBuf, end - messageBuf);
+	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 
 	// Dump human-readable time string and string.
 	pid = asyncFork();
@@ -686,7 +695,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 	end = messageBuf;
 	end = appendText(end, state.messagePrefix);
 	end = appendText(end, " ] Phusion Passenger version: " PASSENGER_VERSION "\n");
-	write(STDERR_FILENO, messageBuf, end - messageBuf);
+	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 
 	if (lastAssertionFailure.filename != NULL) {
 		end = messageBuf;
@@ -704,7 +713,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 		end = appendText(end, ", line ");
 		end = appendULL(end, lastAssertionFailure.line);
 		end = appendText(end, ".\n");
-		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 	}
 
 	// It is important that writing the message and the backtrace are two
@@ -717,7 +726,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 	#else
 		end = appendText(end, " ] libc backtrace not available.\n");
 	#endif
-	write(STDERR_FILENO, messageBuf, end - messageBuf);
+	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
 		runInSubprocessWithTimeLimit(state, dumpBacktrace, NULL, 4000);
@@ -729,7 +738,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 		end = messageBuf;
 		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] Dumping additional diagnostical information...\n");
-		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 		safePrintErr("--------------------------------------\n");
 		runInSubprocessWithTimeLimit(state, runCustomDiagnosticsDumper, NULL, 2000);
 		safePrintErr("--------------------------------------\n");
@@ -746,10 +755,10 @@ dumpDiagnostics(AbortHandlerState &state) {
 		#else
 			end = appendText(end, " ] Dumping a backtrace with crash-watch...\n");
 		#endif
-		write(STDERR_FILENO, messageBuf, end - messageBuf);
+		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 		dumpWithCrashWatch(state);
 	} else {
-		write(STDERR_FILENO, "\n", 1);
+		write_nowarn(STDERR_FILENO, "\n", 1);
 	}
 }
 
@@ -836,7 +845,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			end = appendText(end, ", reason=");
 			end = appendSignalReason(end, state.info);
 			end = appendText(end, "\n");
-			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 			// Run default signal handler.
 			raise(signo);
 		} else {
@@ -847,7 +856,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			end = appendText(end, ", reason=");
 			end = appendSignalReason(end, state.info);
 			end = appendText(end, "\n");
-			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 			_exit(1);
 		}
 		return;
@@ -883,7 +892,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	end = appendText(end, ", randomSeed=");
 	end = appendULL(end, (unsigned long long) randomSeed);
 	end = appendText(end, "\n");
-	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+	write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
 	end = state.messageBuf;
 	if (*crashLogFile != '\0') {
@@ -895,13 +904,13 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] Could not create crash log file, so dumping to stderr only.\n");
 	}
-	write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+	write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
 	if (beepOnAbort) {
 		end = state.messageBuf;
 		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] PASSENGER_BEEP_ON_ABORT on, executing beep...\n");
-		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
 		child = asyncFork();
 		if (child == 0) {
@@ -922,7 +931,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			end = appendText(end, " ] Could fork a child process for invoking a beep: fork() failed with errno=");
 			end = appendULL(end, e);
 			end = appendText(end, "\n");
-			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 		}
 	}
 
@@ -930,7 +939,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		end = state.messageBuf;
 		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] PASSENGER_STOP_ON_ABORT on, so process stopped. Send SIGCONT when you want to continue.\n");
-		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 		raise(SIGSTOP);
 	}
 
@@ -970,7 +979,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 			end = appendText(end, "] Could fork a child process for dumping diagnostics: fork() failed with errno=");
 			end = appendULL(end, e);
 			end = appendText(end, "\n");
-			write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 			_exit(1);
 
 		} else {
@@ -985,7 +994,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		end = appendText(end, " ] Could fork a child process for dumping diagnostics: fork() failed with errno=");
 		end = appendULL(end, e);
 		end = appendText(end, "\n");
-		write(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
 	} else {
 		raise(SIGSTOP);

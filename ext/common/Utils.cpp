@@ -540,7 +540,10 @@ absolutizePath(const StaticString &path, const StaticString &workingDir) {
 	if (!startsWith(path, "/")) {
 		if (workingDir.empty()) {
 			char buffer[PATH_MAX];
-			getcwd(buffer, sizeof(buffer));
+			if (getcwd(buffer, sizeof(buffer)) == NULL) {
+				int e = errno;
+				throw SystemException("Unable to query current working directory", e);
+			}
 			split(buffer + 1, '/', components);
 		} else {
 			string absoluteWorkingDir = absolutizePath(workingDir);
