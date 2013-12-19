@@ -24,17 +24,19 @@
 ### C++ components tests ###
 
 TEST_CXX_CFLAGS = "-Iext -Iext/common " <<
+	"#{EXTRA_PRE_CXXFLAGS} " <<
 	"#{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} #{PlatformInfo.curl_flags} -Itest/cxx -Itest/support " <<
 	"#{TEST_COMMON_CFLAGS}"
 TEST_CXX_CFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
-TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
+TEST_CXX_LDFLAGS = "#{EXTRA_PRE_CXX_LDFLAGS} " <<
+	"#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
 	"#{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} #{LIBEIO_LIBS} " <<
 	"#{PlatformInfo.curl_libs} " <<
 	"#{PlatformInfo.zlib_libs} " <<
-	"#{PlatformInfo.portability_ldflags}"
+	"#{PlatformInfo.portability_cxx_ldflags}"
 TEST_CXX_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
 TEST_CXX_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
-TEST_CXX_LDFLAGS << " #{EXTRA_LDFLAGS} #{EXTRA_CXX_LDFLAGS}"
+TEST_CXX_LDFLAGS << " #{EXTRA_CXX_LDFLAGS}"
 TEST_CXX_LDFLAGS.strip!
 TEST_CXX_OBJECTS = {
 	'test/cxx/CxxTestMain.o' => %w(

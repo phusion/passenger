@@ -173,8 +173,8 @@ task :compile_app => dependencies do
 			"#{LIBBOOST_OXT} " <<
 			"#{LIBEV_LIBS} " <<
 			"#{LIBEIO_LIBS} " <<
-			"#{PlatformInfo.portability_ldflags} " <<
-			"#{EXTRA_LDFLAGS}")
+			"#{PlatformInfo.portability_cxx_ldflags} " <<
+			"#{EXTRA_CXX_LDFLAGS}")
 	ensure
 		File.unlink('_source.cpp') rescue nil
 	end

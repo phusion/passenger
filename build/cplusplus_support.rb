@@ -73,15 +73,15 @@ def create_static_library(target, sources)
 	sh "ranlib #{target}"
 end
 
-def create_executable(target, sources, linkflags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS} #{EXTRA_CXX_LDFLAGS}")
+def create_executable(target, sources, linkflags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_C_LDFLAGS} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_cxx_ldflags} #{EXTRA_CXX_LDFLAGS}")
 	run_compiler "#{CXX} #{sources} -o #{target} #{linkflags}"
 end
 
-def create_c_executable(target, sources, linkflags = "#{EXTRA_PRE_CFLAGS} #{EXTRA_PRE_LDFLAGS}#{EXTRA_CFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS} #{EXTRA_C_LDFLAGS}")
+def create_c_executable(target, sources, linkflags = "#{EXTRA_PRE_CFLAGS} #{EXTRA_PRE_CXX_LDFLAGS}#{EXTRA_CFLAGS} #{PlatformInfo.portability_c_ldflags} #{EXTRA_C_LDFLAGS}")
 	run_compiler "#{CC} #{sources} -o #{target} #{linkflags}"
 end
 
-def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS} #{EXTRA_CXX_LDFLAGS}")
+def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_CXX_LDFLAGS} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_cxx_ldflags} #{EXTRA_CXX_LDFLAGS}")
 	if PlatformInfo.os_name == "macosx"
 		shlib_flag = "-flat_namespace -bundle -undefined dynamic_lookup"
 	else

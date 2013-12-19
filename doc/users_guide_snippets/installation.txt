@@ -651,7 +651,7 @@ NOTE: If you run the installer with `sudo` then environment variables may not be
 On some systems, C/C++ libraries and headers that Phusion Passenger requires may be located in a non-standard directory. You can force the Phusion Passenger build system to look in those locations by injecting compiler and linker flags using the following environment variables:
 
 `EXTRA_PRE_CFLAGS`::
-	These flags are injected into all C compiler invocations that involve compiling C or C++ source files. This includes compiler invocations that compile *and* link. The flags are injected at the beginning of the command string, even before `EXTRA_PRE_LDFLAGS`.
+	These flags are injected into all C compiler invocations that involve compiling C source files. This also covers compiler invocations that compile *and* link. The flags are injected at the beginning of the command string, even before `EXTRA_PRE_LDFLAGS`.
 `EXTRA_CFLAGS`::
 	Similar to `EXTRA_PRE_CFLAGS`, but injected at the end of the command string, before `EXTRA_LDFLAGS`.
 `EXTRA_PRE_CXXFLAGS`::
@@ -659,7 +659,11 @@ On some systems, C/C++ libraries and headers that Phusion Passenger requires may
 `EXTRA_CXXFLAGS`::
 	Similar to `EXTRA_CFLAGS`, but for C++ compiler invocations.
 `EXTRA_PRE_LDFLAGS`::
-	These flags are injected into all C/C++ compiler invocations that involve linking. This includes compiler invocations that compile *and* link. The flags are injected at the beginning of the command string, but after `EXTRA_PRE_CFLAGS` and `EXTRA_PRE_CXXFLAGS`.
+	These flags are injected into all C/C++ compiler invocations that involve linking. This includes compiler invocations that compile *and* link. The flags are injected at the beginning of the command string, but after `EXTRA_PRE_CFLAGS`/`EXTRA_PRE_CXXFLAGS`.
+`EXTRA_PRE_C_LDFLAGS`::
+	These flags are injected into all C compiler invocations that involve linking, right after `EXTRA_PRE_LDFLAGS`.
+`EXTRA_PRE_CXX_LDFLAGS`::
+	Similar to `EXTRA_PRE_CXX_LDFLAGS`, but for C++ compiler invocations.
 `EXTRA_LDFLAGS`::
 	Similar to `EXTRA_PRE_LDFLAGS`, but injected at the very end of the command string, even after `EXTRA_CFLAGS` and `EXTRA_CXXFLAGS`.
 `EXTRA_C_LDFLAGS`::

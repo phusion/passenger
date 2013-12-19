@@ -105,7 +105,11 @@ APACHE2_MODULE_INPUT_FILES.each_pair do |target, sources|
 	file(target => sources + extra_deps) do
 		object_basename = File.basename(target)
 		object_filename = APACHE2_OUTPUT_DIR + object_basename
-		compile_cxx(sources[0], "#{APACHE2_MODULE_CXXFLAGS} -o #{object_filename}")
+		compile_cxx(sources[0],
+			"#{EXTRA_PRE_CXXFLAGS} " <<
+			"#{APACHE2_MODULE_CXXFLAGS} " <<
+			"-o #{object_filename} " <<
+			"#{EXTRA_CXXFLAGS}")
 	end
 end
 
@@ -124,21 +128,22 @@ file APACHE2_MODULE => dependencies do
 	
 	sources = (APACHE2_MODULE_OBJECTS + [APACHE2_MOD_PASSENGER_O]).join(' ')
 	linkflags =
-		"#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} " <<
-		"#{PlatformInfo.apache2_module_cflags} " <<
-		"#{EXTRA_CXXFLAGS} " <<
+		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
 		"#{APACHE2_MODULE_COMMON_LIBRARIES.join(' ')} " <<
 		"#{APACHE2_MODULE_BOOST_OXT_LIBRARY} " <<
 		"#{PlatformInfo.apache2_module_ldflags} " <<
-		"#{PlatformInfo.portability_ldflags} " <<
-		"#{EXTRA_LDFLAGS} #{EXTRA_CXX_LDFLAGS} "
+		"#{PlatformInfo.portability_cxx_ldflags} " <<
+		"#{EXTRA_CXX_LDFLAGS} "
 	
 	create_shared_library(APACHE2_MODULE, sources, linkflags)
 end
 
 file APACHE2_MOD_PASSENGER_O => ['ext/apache2/mod_passenger.c'] do
 	compile_c('ext/apache2/mod_passenger.c',
-		"#{APACHE2_MODULE_CFLAGS} -o #{APACHE2_MOD_PASSENGER_O}")
+		"#{EXTRA_PRE_CFLAGS} " <<
+		"#{APACHE2_MODULE_CFLAGS} " <<
+		"-o #{APACHE2_MOD_PASSENGER_O} " <<
+		"#{EXTRA_CFLAGS}")
 end
 
 task :clean => 'apache2:clean'

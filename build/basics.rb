@@ -83,6 +83,10 @@ def string_option(name, default_value = nil)
 	end
 end
 
+def compiler_flag_option(name)
+	return string_option(name, '').gsub("\n", " ")
+end
+
 def boolean_option(name, default_value = false)
 	value = ENV[name]
 	if value.nil? || value.empty?
@@ -157,25 +161,29 @@ AGENT_LDFLAGS.strip!
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.
 # These should be included first in the command string, before anything else.
-EXTRA_PRE_CFLAGS = string_option('EXTRA_PRE_CFLAGS', '').gsub("\n", " ")
-EXTRA_PRE_CXXFLAGS = string_option('EXTRA_PRE_CXXFLAGS', '').gsub("\n", " ")
+EXTRA_PRE_CFLAGS = compiler_flag_option('EXTRA_PRE_CFLAGS')
+EXTRA_PRE_CXXFLAGS = compiler_flag_option('EXTRA_PRE_CXXFLAGS')
 # These should be included last in the command string.
 EXTRA_CFLAGS = PlatformInfo.default_extra_cflags.dup
-EXTRA_CFLAGS << " " << string_option('EXTRA_CFLAGS').gsub("\n", " ") if string_option('EXTRA_CFLAGS')
+EXTRA_CFLAGS << " " << compiler_flag_option('EXTRA_CFLAGS') if !compiler_flag_option('EXTRA_CFLAGS').empty?
 EXTRA_CXXFLAGS = PlatformInfo.default_extra_cxxflags.dup
-EXTRA_CXXFLAGS << " " << string_option('EXTRA_CXXFLAGS').gsub("\n", " ") if string_option('EXTRA_CXXFLAGS')
+EXTRA_CXXFLAGS << " " << compiler_flag_option('EXTRA_CXXFLAGS') if !compiler_flag_option('EXTRA_CXXFLAGS').empty?
 [EXTRA_CFLAGS, EXTRA_CXXFLAGS].each do |flags|
 	flags << " -fno-omit-frame-pointers" if USE_ASAN
 	flags << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
 end
 
 # Extra linker flags that should always be passed to the linker.
-# These should be included first in the command string, before anything else.
-EXTRA_PRE_LDFLAGS  = string_option('EXTRA_PRE_LDFLAGS', '').gsub("\n", " ")
-# These should be included last in the command string, even after PlatformInfo.portability_ldflags.
-EXTRA_LDFLAGS     = string_option('EXTRA_LDFLAGS', '').gsub("\n", " ")
-EXTRA_C_LDFLAGS   = string_option('EXTRA_C_LDFLAGS', '').gsub("\n", " ")
-EXTRA_CXX_LDFLAGS = string_option('EXTRA_CXX_LDFLAGS', '').gsub("\n", " ")
+# These should be included first in the command string.
+EXTRA_PRE_C_LDFLAGS   = compiler_flag_option('EXTRA_PRE_LDFLAGS') + " " +
+	compiler_flag_option('EXTRA_PRE_C_LDFLAGS')
+EXTRA_PRE_CXX_LDFLAGS = compiler_flag_option('EXTRA_PRE_LDFLAGS') + " " +
+	compiler_flag_option('EXTRA_PRE_CXX_LDFLAGS')
+# These should be included last in the command string, even after portability_*_ldflags.
+EXTRA_C_LDFLAGS   = compiler_flag_option('EXTRA_LDFLAGS') + " " +
+	compiler_flag_option('EXTRA_C_LDFLAGS')
+EXTRA_CXX_LDFLAGS = compiler_flag_option('EXTRA_LDFLAGS') + " " +
+	compiler_flag_option('EXTRA_CXX_LDFLAGS')
 
 
 AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "agents") + "/"

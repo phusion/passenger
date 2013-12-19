@@ -24,8 +24,7 @@
 TEST_BOOST_OXT_LIBRARY = LIBBOOST_OXT
 TEST_COMMON_LIBRARY    = COMMON_LIBRARY
 
-TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL " <<
-	"#{EXTRA_CXXFLAGS}"
+TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL #{EXTRA_CXXFLAGS}"
 
 desc "Run all unit tests and integration tests"
 task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:node', 'test:integration']

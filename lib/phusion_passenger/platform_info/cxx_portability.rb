@@ -28,20 +28,19 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
 module PlatformInfo
-	# Linker flags that should be used for linking every C/C++ program,
-	# for portability reasons. These flags should be specified as last
-	# when invoking the linker.
-	def self.portability_ldflags
-		if os_name =~ /solaris/
-			result = '-lxnet -lsocket -lnsl -lpthread'
-		else
-			result = '-lpthread'
-		end
-		result << ' -lrt' if has_rt_library?
-		result << ' -lmath' if has_math_library?
-		return result
+	# Extra flags that should always be passed to the C compiler
+	# when linking, to be included last in the command string.
+	def self.portability_c_ldflags
+		return portability_c_or_cxx_ldflags(:c)
 	end
-	memoize :portability_ldflags
+	memoize :portability_c_ldflags
+
+	# Extra flags that should always be passed to the C++ compiler
+	# when linking, to be included last in the command string.
+	def self.portability_cxx_ldflags
+		return portability_c_or_cxx_ldflags(:cxx)
+	end
+	memoize :portability_cxx_ldflags
 
 	# Extra compiler flags that should always be passed to the C compiler,
 	# last in the command string.
@@ -196,6 +195,21 @@ private
 		return flags.compact.map{ |str| str.strip }.join(" ").strip
 	end
 	private_class_method :default_extra_c_or_cxxflags
+
+	def self.portability_c_or_cxx_ldflags(cc_or_cxx)
+		result = ''
+		result << cxx_11_flag if cc_or_cxx == :cxx && cxx_11_flag
+		if os_name =~ /solaris/
+			result << ' -lxnet -lsocket -lnsl -lpthread'
+		else
+			result << ' -lpthread'
+		end
+		result << ' -lrt' if has_rt_library?
+		result << ' -lmath' if has_math_library?
+		result.strip!
+		return result
+	end
+	private_class_method :portability_c_or_cxx_ldflags
 end
 
 end # module PhusionPassenger

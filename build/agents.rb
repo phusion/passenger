@@ -46,10 +46,9 @@ file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 		"#{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
 		"#{watchdog_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
-		"#{EXTRA_PRE_LDFLAGS} " <<
-		"#{PlatformInfo.portability_ldflags} " <<
+		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
+		"#{PlatformInfo.portability_cxx_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_LDFLAGS} " <<
 		"#{EXTRA_CXX_LDFLAGS}")
 end
 
@@ -100,12 +99,11 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 		"#{AGENT_OUTPUT_DIR}PassengerHelperAgent.o",
 		"#{helper_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
-		"#{EXTRA_PRE_LDFLAGS} " <<
+		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
 		"#{LIBEV_LIBS} " <<
 		"#{LIBEIO_LIBS} " <<
-		"#{PlatformInfo.portability_ldflags} " <<
+		"#{PlatformInfo.portability_cxx_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_LDFLAGS} " <<
 		"#{EXTRA_CXX_LDFLAGS}")
 end
 
@@ -143,13 +141,12 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o",
 		"#{logging_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
-		"#{EXTRA_PRE_LDFLAGS} " <<
+		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
 		"#{LIBEV_LIBS} " <<
 		"#{PlatformInfo.curl_libs} " <<
 		"#{PlatformInfo.zlib_libs} " <<
-		"#{PlatformInfo.portability_ldflags} " <<
+		"#{PlatformInfo.portability_cxx_ldflags} " <<
 		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_LDFLAGS} " <<
 		"#{EXTRA_CXX_LDFLAGS}")
 end
 
@@ -163,13 +160,12 @@ file AGENT_OUTPUT_DIR + 'SpawnPreparer' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'SpawnPreparer',
 		'ext/common/agents/SpawnPreparer.cpp',
-		"#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_LDFLAGS} " <<
+		"#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_CXX_LDFLAGS} " <<
 		"-Iext -Iext/common " <<
 		"#{AGENT_CFLAGS} #{EXTRA_CXXFLAGS} " <<
 		"#{spawn_preparer_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
-		"#{PlatformInfo.portability_ldflags} " <<
-		"#{EXTRA_LDFLAGS} " <<
+		"#{PlatformInfo.portability_cxx_ldflags} " <<
 		"#{EXTRA_CXX_LDFLAGS}")
 end
 
