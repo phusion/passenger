@@ -357,7 +357,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	psg_docdir     = "#{fs_docdir}/#{GLOBAL_NAMESPACE_DIRNAME}"
 	psg_bindir     = "#{fs_bindir}"
 	psg_sbindir    = "#{fs_sbindir}"
-	psg_apache2_module_path       = ENV['APACHE2_MODULE_PATH'] "#{fs_libdir}/apache2/modules/mod_passenger.so"
+	psg_apache2_module_path       = ENV['APACHE2_MODULE_PATH'] || "#{fs_libdir}/apache2/modules/mod_passenger.so"
 	psg_ruby_extension_source_dir = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
 	psg_nginx_module_source_dir   = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}/ngx_http_passenger_module"
 	
