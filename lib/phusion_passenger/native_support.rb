@@ -40,7 +40,13 @@ class NativeSupportLoader
 	end
 	
 	def start
-		try_load || download_binary_and_load || compile_and_load
+		if try_load || download_binary_and_load || compile_and_load
+			STDERR.puts " --> #{library_name} successfully loaded."
+			return true
+		else
+			STDERR.puts " --> Continuing without #{library_name}."
+			return false
+		end
 	end
 
 private
@@ -123,16 +129,18 @@ private
 			return
 		end
 		if ENV['PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY'] == '0'
-			STDERR.puts "*** Phusion Passenger: PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY set, " +
-				"not downloading precompiled binary"
+			STDERR.puts " --> Skipping downloading of precompiled #{library_name}"
 			return
 		end
-		STDERR.puts "*** Phusion Passenger: no #{library_name} found for " +
-			"the current Ruby interpreter. Downloading precompiled binary from the Phusion server " +
-			"(set PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY=0 to disable)..."
+
+		STDERR.puts " --> Downloading precompiled #{library_name} for the current Ruby interpreter..."
+		STDERR.puts "     (set PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY=0 to disable)"
 		
+		require 'shellwords'
+		require 'logger'
 		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 		PhusionPassenger.require_passenger_lib 'utils/tmpio'
+		PhusionPassenger.require_passenger_lib 'utils/download'
 		PhusionPassenger::Utils.mktmpdir("passenger-native-support-") do |dir|
 			Dir.chdir(dir) do
 				basename = "rubyext-#{archdir}.tar.gz"
@@ -140,9 +148,10 @@ private
 					return false
 				end
 
-				sh "tar", "xzf", basename
-				sh "rm", "-f", basename
-				STDERR.puts "Checking whether downloaded binary is usable..."
+				s_basename = Shellwords.escape(basename)
+				sh "tar xzf #{s_basename}"
+				sh "rm -f #{s_basename}"
+				STDERR.puts "     Checking whether downloaded binary is usable..."
 
 				File.open("test.rb", "w") do |f|
 					f.puts(%Q{
@@ -160,14 +169,14 @@ private
 					File.unlink("test.txt")
 					result = try_directories(installation_target_dirs) do |target_dir|
 						files = Dir["#{dir}/*"]
-						STDERR.puts "# Installing " + files.map{ |n| File.basename(n) }.join(' ')
+						STDERR.puts "     Installing " + files.map{ |n| File.basename(n) }.join(' ')
 						FileUtils.cp(files, target_dir)
 						require "#{target_dir}/#{library_name}"
 						[true, false]
 					end
 					return result
 				else
-					STDERR.puts "Binary is not usable."
+					STDERR.puts "     Binary is not usable."
 					return false
 				end
 			end
@@ -176,23 +185,22 @@ private
 
 	def compile_and_load
 		if ENV['PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY'] == '0'
-			STDERR.puts "*** Phusion Passenger: PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY set, " +
-				"not compiling native_support"
+			STDERR.puts " --> Skipping compiling of #{library_name}"
 			return false
 		end
 
-		STDERR.puts "*** Phusion Passenger: no #{library_name} found for " +
-			"the current Ruby interpreter. Compiling one (set " +
-			"PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY=0 to disable)..."
+		STDERR.puts " --> Compiling #{library_name} for the current Ruby interpreter..."
+		STDERR.puts "     (set PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY=0 to disable)"
+		STDERR.puts "     -------------------------------"
 
 		require 'fileutils'
+		require 'shellwords'
 		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 		
 		target_dir = compile(installation_target_dirs)
 		if target_dir
 			require "#{target_dir}/#{library_name}"
 		else
-			STDERR.puts "Ruby native_support extension not loaded. Continuing without native_support."
 			return false
 		end
 	end
@@ -212,62 +220,48 @@ private
 	def download(name, output_dir)
 		url = "#{PhusionPassenger::BINARIES_URL_ROOT}/#{PhusionPassenger::VERSION_STRING}/#{name}"
 		filename = "#{output_dir}/#{name}"
-		
-		cache_dir = PhusionPassenger.download_cache_dir
-		if File.exist?("#{cache_dir}/#{name}")
-			FileUtils.cp("#{cache_dir}/#{name}", filename, :verbose => true)
-			return true
-		end
-
-		STDERR.puts "Attempting to download #{url} into #{output_dir}"
-		cert = PhusionPassenger.binaries_ca_cert_path
-		File.unlink("#{filename}.tmp") rescue nil
-		if PhusionPassenger::PlatformInfo.find_command("wget")
-			result = system("wget", "--tries=3", "-O", "#{filename}.tmp", "--ca-certificate=#{cert}", url)
-		else
-			result = system("curl", url, "-f", "-L", "-o", "#{filename}.tmp", "--cacert", cert)
-		end
-		if result
-			File.rename("#{filename}.tmp", filename)
-		else
-			File.unlink("#{filename}.tmp") rescue nil
-		end
-		return result
+		logger = Logger.new(STDERR)
+		logger.level = Logger::WARN
+		logger.formatter = proc { |severity, datetime, progname, msg| "     #{msg}\n" }
+		return PhusionPassenger::Utils::Download.download(url, filename,
+			:use_cache => true,
+			:logger => logger)
 	end
 	
 	def mkdir(dir)
 		begin
-			STDERR.puts "# mkdir -p #{dir}"
+			STDERR.puts "     # mkdir -p #{dir}"
 			FileUtils.mkdir_p(dir)
 		rescue Errno::EEXIST
 		end
 	end
 	
-	def sh(*args)
-		if !sh_nonfatal(*args)
-			command_string = args.join(' ')
+	def sh(command_string)
+		if !sh_nonfatal(command_string)
 			raise "Could not compile #{library_name} (\"#{command_string}\" failed)"
 		end
 	end
 
-	def sh_nonfatal(*args)
-		command_string = args.join(' ')
-		STDERR.puts "# #{command_string}"
-		return system(*args)
+	def sh_nonfatal(command_string)
+		STDERR.puts "     # #{command_string}"
+		PhusionPassenger::Utils.mktmpdir("passenger-native-support-") do |tmpdir|
+			s_tmpdir = Shellwords.escape(tmpdir)
+			result = system("#{command_string} >#{s_tmpdir}/log 2>&1")
+			system("cat #{s_tmpdir}/log | sed 's/^/     /'")
+			return result
+		end
 	end
 	
 	def compile(target_dirs)
 		try_directories(target_dirs) do |target_dir|
 			result =
-				sh_nonfatal("#{PlatformInfo.ruby_command} '#{extconf_rb}'") &&
+				sh_nonfatal("#{PlatformInfo.ruby_command} #{Shellwords.escape extconf_rb}") &&
 				sh_nonfatal("make")
 			if result
-				STDERR.puts "Compilation succesful."
-				STDERR.puts "-------------------------------"
+				STDERR.puts "     Compilation succesful."
 				[target_dir, false]
 			else
-				STDERR.puts "Compilation failed."
-				STDERR.puts "-------------------------------"
+				STDERR.puts "     Compilation failed."
 				[nil, false]
 			end
 		end
@@ -280,7 +274,7 @@ private
 				mkdir(dir)
 				File.open("#{dir}/.permission_test", "w").close
 				File.unlink("#{dir}/.permission_test")
-				STDERR.puts "# cd #{dir}"
+				STDERR.puts "     # cd #{dir}"
 				Dir.chdir(dir) do
 					result, should_retry = yield(dir)
 					return result if !should_retry
@@ -291,26 +285,26 @@ private
 				# error on the last one too then propagate the
 				# exception.
 				if i == dirs.size - 1
-					STDERR.puts "Encountered permission error, " +
+					STDERR.puts "     Encountered permission error, " +
 						"but no more directories to try. Giving up."
-					STDERR.puts "-------------------------------"
+					STDERR.puts "     -------------------------------"
 					return nil
 				else
-					STDERR.puts "Encountered permission error, " +
+					STDERR.puts "     Encountered permission error, " +
 						"trying a different directory..."
-					STDERR.puts "-------------------------------"
+					STDERR.puts "     -------------------------------"
 				end
 			rescue Errno::ENOTDIR
 				# This can occur when locations.ini set buildout_dir
 				# to an invalid path. Just ignore this error.
 				if i == dirs.size - 1
-					STDERR.puts "Not a valid directory, " +
+					STDERR.puts "     Not a valid directory, " +
 						"but no more directories to try. Giving up."
-					STDERR.puts "-------------------------------"
+					STDERR.puts "     -------------------------------"
 					return nil
 				else
-					STDERR.puts "Not a valid directory. Trying a different one..."
-					STDERR.puts "-------------------------------"
+					STDERR.puts "     Not a valid directory. Trying a different one..."
+					STDERR.puts "     -------------------------------"
 				end
 			end
 		end
