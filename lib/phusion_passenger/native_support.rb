@@ -189,6 +189,25 @@ private
 			return false
 		end
 
+		if PhusionPassenger.natively_packaged? && !File.exist?(ruby_extension_source_dir)
+			PhusionPassenger.require_passenger_lib "constants"
+			STDERR.puts " --> No #{library_name} found for current Ruby interpreter."
+			case PhusionPassenger.native_packaging_method
+			when 'deb'
+				STDERR.puts "     This library provides various optimized routines that make"
+				STDERR.puts "     #{PhusionPassenger::PROGRAM_NAME} faster. Please run 'sudo apt-get install passenger-dev'"
+				STDERR.puts "     so that #{PhusionPassenger::PROGRAM_NAME} can compile one on the next run."
+			when 'rpm'
+				STDERR.puts "     This library provides various optimized routines that make"
+				STDERR.puts "     #{PhusionPassenger::PROGRAM_NAME} faster. Please run 'sudo yum install passenger-devel'"
+				STDERR.puts "     so that #{PhusionPassenger::PROGRAM_NAME} can compile one on the next run."
+			else
+				STDERR.puts "     #{PhusionPassenger::PROGRAM_NAME} can compile one, but an extra package must be installed"
+				STDERR.puts "     first. Please ask your operating system vendor for instructions."
+			end
+			return false
+		end
+
 		STDERR.puts " --> Compiling #{library_name} for the current Ruby interpreter..."
 		STDERR.puts "     (set PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY=0 to disable)"
 		STDERR.puts "     -------------------------------"
