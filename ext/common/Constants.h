@@ -38,6 +38,12 @@
 
 	#define APACHE2_DOC_URL "http://www.modrails.com/documentation/Users%20guide%20Apache.html"
 
+	#define DEB_APACHE_MODULE_PACKAGE "libapache2-mod-passenger"
+
+	#define DEB_DEV_PACKAGE "passenger-dev"
+
+	#define DEB_NGINX_PACKAGE "nginx-extras"
+
 	#define DEFAULT_ANALYTICS_LOG_GROUP ""
 
 	#define DEFAULT_ANALYTICS_LOG_PERMISSIONS "u=rwx,g=rx,o=rx"
@@ -87,6 +93,12 @@
 	#define PROCESS_SHUTDOWN_TIMEOUT_DISPLAY "1 minute"
 
 	#define PROGRAM_NAME "Phusion Passenger"
+
+	#define RPM_APACHE_MODULE_PACKAGE "mod_passenger"
+
+	#define RPM_DEV_PACKAGE "passenger-devel"
+
+	#define RPM_NGINX_PACKAGE "nginx"
 
 	#define SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION 3
 

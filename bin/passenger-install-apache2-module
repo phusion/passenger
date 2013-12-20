@@ -328,10 +328,10 @@ private
 		case PhusionPassenger.native_packaging_method
 		when 'deb'
 			sh! "sudo apt-get update"
-			sh! "sudo apt-get install libapache2-mod-passenger"
+			sh! "sudo apt-get install #{DEB_APACHE_MODULE_PACKAGE}"
 			return true
 		when 'rpm'
-			sh! "sudo yum install mod_passenger"
+			sh! "sudo yum install #{RPM_APACHE_MODULE_PACKAGE}"
 			return true
 		else
 			puts "<red>The #{PROGRAM_NAME} Apache module package is not installed.</red>"

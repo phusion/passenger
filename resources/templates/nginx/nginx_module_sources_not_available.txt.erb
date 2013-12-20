@@ -1,6 +1,12 @@
-<red>Nginx module sources not available</red>
+<red>The necessary source files for compiling Nginx are not installed.</red>
+<% if PhusionPassenger.native_packaging_method == "deb" %>
+Please install them with:
 
-You didn't install the Phusion Passenger Nginx module sources. If you're on
-Debian or Ubuntu, please run <b>sudo apt-get install ruby-passenger-dev</b>
-first. If you're not on Debian/Ubuntu, or if you cannot run apt-get, please
-install Phusion Passenger from source: https://www.phusionpassenger.com/
+  <b>sudo apt-get install <%= DEB_DEV_PACKAGE %></b>
+<% elsif PhusionPassenger.native_packaging_method == "rpm" %>
+Please install them with:
+
+  <b>sudo yum install <%= RPM_DEV_PACKAGE %></b>
+<% else %>
+Please ask your operating system vendor how to solve this problem.
+<% end %>

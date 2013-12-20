@@ -83,7 +83,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		# Make sure the configure script finds the correct
 		# passenger-config command.
 		ENV['PATH'] = PhusionPassenger.bin_dir + ":" + ENV['PATH']
-		
+
 		show_welcome_screen
 		query_interested_languages
 		check_gem_install_permission_problems || exit(1)

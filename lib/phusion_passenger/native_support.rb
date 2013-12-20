@@ -195,11 +195,11 @@ private
 			case PhusionPassenger.native_packaging_method
 			when 'deb'
 				STDERR.puts "     This library provides various optimized routines that make"
-				STDERR.puts "     #{PhusionPassenger::PROGRAM_NAME} faster. Please run 'sudo apt-get install passenger-dev'"
+				STDERR.puts "     #{PhusionPassenger::PROGRAM_NAME} faster. Please run 'sudo apt-get install #{PhusionPassenger::DEB_DEV_PACKAGE}'"
 				STDERR.puts "     so that #{PhusionPassenger::PROGRAM_NAME} can compile one on the next run."
 			when 'rpm'
 				STDERR.puts "     This library provides various optimized routines that make"
-				STDERR.puts "     #{PhusionPassenger::PROGRAM_NAME} faster. Please run 'sudo yum install passenger-devel'"
+				STDERR.puts "     #{PhusionPassenger::PROGRAM_NAME} faster. Please run 'sudo yum install #{PhusionPassenger::RPM_DEV_PACKAGE}'"
 				STDERR.puts "     so that #{PhusionPassenger::PROGRAM_NAME} can compile one on the next run."
 			else
 				STDERR.puts "     #{PhusionPassenger::PROGRAM_NAME} can compile one, but an extra package must be installed"
