@@ -416,10 +416,12 @@ protected
 	end
 	
 	def download(url, output, options = {})
-		logger = Logger.new(STDOUT)
-		logger.level = Logger::WARN
-		logger.formatter = proc { |severity, datetime, progname, msg| "*** #{msg}\n" }
-		options[:logger] = logger
+		options[:logger] ||= begin
+			logger = Logger.new(STDOUT)
+			logger.level = Logger::WARN
+			logger.formatter = proc { |severity, datetime, progname, msg| "*** #{msg}\n" }
+			logger
+		end
 		return PhusionPassenger::Utils::Download.download(url, output, options)
 	end
 

@@ -23,6 +23,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 require 'fileutils'
+require 'logger'
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'abstract_installer'
 PhusionPassenger.require_passenger_lib 'packaging'
 PhusionPassenger.require_passenger_lib 'common_library'
@@ -188,6 +190,7 @@ private
 					"because --no-compile-runtime is given."
 				exit(1)
 			end
+			check_nginx_module_sources_available || exit(1)
 			puts
 			check_dependencies(false) || exit(1)
 			puts
@@ -277,8 +280,15 @@ private
 		basename = "webhelper-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
 		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
-		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
-			puts "     No binary are available for your platform. Will compile them from source"
+		logger = Logger.new(STDOUT)
+		logger.level = Logger::WARN
+		logger.formatter = proc { |severity, datetime, progname, msg| "     #{msg}\n" }
+		result = download(url, tarball,
+			:cacert => PhusionPassenger.binaries_ca_cert_path,
+			:use_cache => true,
+			:logger => logger)
+		if !result
+			puts "     No binary is available for your platform. Will compile it from source."
 			return false
 		end
 
@@ -405,6 +415,39 @@ private
 		puts
 	end
 	
+	def check_nginx_module_sources_available
+		if PhusionPassenger.natively_packaged? && !File.exist?(PhusionPassenger.nginx_module_source_dir)
+			case PhusionPassenger.native_packaging_method
+			when "deb"
+				command = "sudo sh -c 'apt-get update && apt-get install #{DEB_DEV_PACKAGE}'"
+			when "rpm"
+				command = "sudo yum install #{RPM_DEV_PACKAGE}"
+			end
+			if command
+				if STDIN.tty?
+					puts " --> Installing #{PhusionPassenger::PROGRAM_NAME} web helper sources"
+					puts "     Running: #{command}"
+					if system(command)
+						return true
+					else
+						puts "     <red>*** Command failed: #{command}</red>"
+						return false
+					end
+				else
+					puts " --> #{PhusionPassenger::PROGRAM_NAME} web helper sources not installed"
+					puts "     Please install them first: #{command}"
+					return false
+				end
+			else
+				puts " --> #{PhusionPassenger::PROGRAM_NAME} web helper sources not installed"
+				puts "     <red>Please ask your operating system vendor how to install these.</red>"
+				return false
+			end
+		else
+			return true
+		end
+	end
+
 	def check_whether_we_can_write_to(dir)
 		FileUtils.mkdir_p(dir)
 		File.new("#{dir}/__test__.txt", "w").close
