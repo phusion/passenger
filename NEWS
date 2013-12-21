@@ -2,6 +2,7 @@ Release 4.0.30
 --------------
 
  * Fixed compilation problems on FreeBSD.
+ * Fixed some C++ strict aliasing problems.
  * When Phusion Passenger is installed through the Debian package,
    passenger-install-apache2-module now checks whether the Apache
    module package (libapache2-mod-passenger) is properly installed,
