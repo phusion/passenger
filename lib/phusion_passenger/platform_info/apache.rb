@@ -185,7 +185,11 @@ module PlatformInfo
 
 	def self.httpd_actual_error_log(options = nil)
 		if config_file = httpd_default_config_file(options)
-			contents = File.open(config_file, "rb") { |f| f.read }
+			begin
+				contents = File.open(config_file, "rb") { |f| f.read }
+			rescue Errno::EACCES
+				return nil
+			end
 			# We don't want to match comments
 			contents.gsub!(/^[ \t]*#.*/, '')
 			if contents =~ /^ErrorLog (.+)$/
