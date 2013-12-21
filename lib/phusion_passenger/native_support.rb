@@ -245,6 +245,7 @@ private
 		logger.level = Logger::WARN
 		logger.formatter = proc { |severity, datetime, progname, msg| "     #{msg}\n" }
 		return PhusionPassenger::Utils::Download.download(url, filename,
+			:cacert => PhusionPassenger.binaries_ca_cert_path,
 			:use_cache => true,
 			:logger => logger)
 	end
