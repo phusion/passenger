@@ -40,7 +40,9 @@ class NativeSupportLoader
 	end
 	
 	def start
-		if try_load || download_binary_and_load || compile_and_load
+		if try_load
+			return true
+		elsif download_binary_and_load || compile_and_load
 			STDERR.puts " --> #{library_name} successfully loaded."
 			return true
 		else
