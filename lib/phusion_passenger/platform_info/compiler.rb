@@ -182,6 +182,11 @@ public
 	end
 	memoize :cc_is_gcc?
 
+	def self.cxx_is_gcc?
+		`#{cxx} -v 2>&1` =~ /gcc version/
+	end
+	memoize :cxx_is_gcc?
+
 	def self.cc_is_clang?
 		`#{cc} --version 2>&1` =~ /clang version/
 	end
@@ -435,12 +440,14 @@ public
 	memoize :adress_sanitizer_flag
 
 	def self.cxx_11_flag
-		source = %Q{
-			#include <unordered_map>
+		source = %{
+			struct Foo {
+				Foo(Foo &&f) { }
+			};
 		}
 		if try_compile("Checking for C++ -std=gnu++11 compiler flag", :cxx, source, '-std=gnu++11')
 			return "-std=gnu++11"
-		elsif try_compile("Checking for C++ -std=c++11 compiler flag", :cxx, source, '-std=c++')
+		elsif try_compile("Checking for C++ -std=c++11 compiler flag", :cxx, source, '-std=c++11')
 			return "-std=c++11"
 		else
 			return nil
