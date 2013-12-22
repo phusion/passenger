@@ -1,6 +1,8 @@
 Release 4.0.30
 --------------
 
+ * Fixed some problems with the handling of HTTP chunked transfer encoding
+   bodies. These problems only occurred in Ruby.
  * Fixed compilation problems on FreeBSD.
  * Fixed some C++ strict aliasing problems.
  * When Phusion Passenger is installed through the Debian package,
