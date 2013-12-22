@@ -144,18 +144,25 @@ public
 	def self.cc
 		return string_env('CC', default_cc)
 	end
+	memoize :cc
 	
 	def self.cxx
 		return string_env('CXX', default_cxx)
 	end
+	memoize :cxx
 
 	def self.default_cc
-		# OS X Mavericks (10.9) switched from GCC to Clang as the default compiler,
-		# i.e. as an alias for 'cc'. Since the Nginx by default uses 'cc' as the compiler,
-		# we'll have to do that too. Otherwise we'll get C++ linker errors because Nginx
-		# is compiled with Clang while Phusion Passenger is compiled with GCC.
+		# On most platforms, we'll want to use the same compiler as what the rest
+		# of the system uses, so that we generate compatible binaries. That's
+		# most likely the 'cc' command. We used to use 'gcc' by default.
+		#
+		# See for example this issue with OS X Mavericks (10.9). They switched from
+		# GCC to Clang as the default compiler. Since the Nginx by default uses 'cc'
+		# as the compiler, we'll have to do that too. Otherwise we'll get C++ linker
+		# errors because Nginx is compiled with Clang while Phusion Passenger is
+		# compiled with GCC.
 		# https://code.google.com/p/phusion-passenger/issues/detail?id=950
-		if PlatformInfo.os_name == "macosx"
+		if PlatformInfo.find_command('cc')
 			return 'cc'
 		else
 			return 'gcc'
@@ -163,7 +170,7 @@ public
 	end
 
 	def self.default_cxx
-		if PlatformInfo.os_name == "macosx"
+		if PlatformInfo.find_command('c++')
 			return 'c++'
 		else
 			return 'g++'
