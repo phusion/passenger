@@ -256,7 +256,7 @@ protected
 			puts "We're sorry, but it looks like this installer ran into an unexpected problem.\n" +
 				"Please visit the following website for support. We'll do our best to help you.\n\n" +
 				"  <b>#{SUPPORT_URL}</b>\n\n" +
-				"When submitting a support inquiry, please copy and paste the entire installler\n" +
+				"When submitting a support inquiry, please copy and paste the entire installer\n" +
 				"output."
 		rescue Exception => e2
 			# Raise original exception so that it doesn't get lost.
