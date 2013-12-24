@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+require File.expand_path(File.dirname(__FILE__) + "/../lib/phusion_passenger")
+PhusionPassenger.locate_directories
+
+while true
+	if ARGV[0] =~ /^-r(.*)/
+		if $1.empty?
+			lib = ARGV[1]
+			ARGV.shift
+			ARGV.shift
+		else
+			lib = $1
+			ARGV.shift
+		end
+		begin
+			PhusionPassenger.require_passenger_lib(lib)
+		rescue LoadError
+			require(lib)
+		end
+	else
+		break
+	end
+end
+
+module PhusionPassenger
+	p eval(ARGV.join(" "))
+end
