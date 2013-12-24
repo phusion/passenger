@@ -49,6 +49,22 @@ module PlatformInfo
 		end
 	end
 	
+	# Returns the `uname` command, or nil if `uname` cannot be found.
+	# In addition to looking for `uname` in `PATH`, this method also looks
+	# for `uname` in /bin and /usr/bin, just in case the user didn't
+	# configure its PATH properly.
+	def self.uname_command
+		if result = find_command("uname")
+			result
+		elsif File.exist?("/bin/uname")
+			return "/bin/uname"
+		elsif File.exist?("/usr/bin/uname")
+			return "/usr/bin/uname"
+		else
+			return nil
+		end
+	end
+
 	# Returns a list of all CPU architecture names that the current machine CPU
 	# supports. If there are multiple such architectures then the first item in
 	# the result denotes that OS runtime's main/preferred architecture.
@@ -77,8 +93,10 @@ module PlatformInfo
 	# everything is 64-bit by default. The latter result indicates an OS X
 	# version older than 10.6.
 	def self.cpu_architectures
+		uname = uname_command
+		raise "The 'uname' command cannot be found" if !uname
 		if os_name == "macosx"
-			arch = `uname -p`.strip
+			arch = `#{uname} -p`.strip
 			if arch == "i386"
 				# Macs have been x86 since around 2007. I think all of them come with
 				# a recent enough Intel CPU that supports both x86 and x86_64, and I
@@ -97,12 +115,12 @@ module PlatformInfo
 				arch
 			end
 		else
-			arch = `uname -p`.strip
+			arch = `#{uname} -p`.strip
 			# On some systems 'uname -p' returns something like
 			# 'Intel(R) Pentium(R) M processor 1400MHz' or
 			# 'Intel(R)_Xeon(R)_CPU___________X7460__@_2.66GHz'.
 			if arch == "unknown" || arch =~ / / || arch =~ /Hz$/
-				arch = `uname -m`.strip
+				arch = `#{uname} -m`.strip
 			end
 			if arch =~ /^i.86$/
 				arch = "x86"
