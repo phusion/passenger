@@ -926,7 +926,7 @@ Group::allowSpawn() const {
 }
 
 void
-Group::restart(const Options &options) {
+Group::restart(const Options &options, RestartMethod method) {
 	vector<Callback> actions;
 
 	assert(isAlive());
@@ -942,7 +942,7 @@ Group::restart(const Options &options) {
 	getPool()->interruptableThreads.create_thread(
 		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
 			options.copyAndPersist().clearPerRequestFields(),
-			getPool()->spawnerFactory, restartsInitiated, actions),
+			method, getPool()->spawnerFactory, restartsInitiated, actions),
 		"Group restarter: " + name,
 		POOL_HELPER_THREAD_STACK_SIZE
 	);
@@ -950,8 +950,9 @@ Group::restart(const Options &options) {
 
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.
 void
-Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
-	unsigned int restartsInitiated, vector<Callback> postLockActions)
+Group::finalizeRestart(GroupPtr self, Options options, RestartMethod method,
+	SpawnerFactoryPtr spawnerFactory, unsigned int restartsInitiated,
+	vector<Callback> postLockActions)
 {
 	TRACE_POINT();
 
@@ -1003,7 +1004,7 @@ Group::finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawner
 	spawner    = newSpawner;
 
 	m_restarting = false;
-	if (!getWaitlist.empty()) {
+	if (shouldSpawn()) {
 		spawn();
 	}
 	verifyInvariants();

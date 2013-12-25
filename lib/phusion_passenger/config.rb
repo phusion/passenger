@@ -28,6 +28,7 @@ module PhusionPassenger
 # Core of the `passenger-config` command. Dispatches a subcommand to a specific class.
 module Config
 	KNOWN_COMMANDS = [
+		["restart", "RestartCommand"],
 		["info", "InfoCommand"]
 	]
 	
@@ -70,11 +71,13 @@ module Config
 			command_class = lookup_command_class_by_class_name(props[1])
 			printf "  %-15s %s\n", props[0], command_class.description
 		end
+		puts
+		puts "Type 'passenger-config help <COMMAND>' for more information."
 	end
 
 private
 	def self.help_requested?(argv)
-		return argv[0] == "--help" || argv[0] == "-h" || argv[0] == "help"
+		return argv.size == 1 && (argv[0] == "--help" || argv[0] == "-h" || argv[0] == "help")
 	end
 
 	def self.lookup_command_class_by_argv(argv)
@@ -90,6 +93,11 @@ private
 			else
 				return nil
 			end
+		end
+
+		# Convert "passenger-config help <COMMAND>" to "passenger-config <COMMAND> --help".
+		if argv.size == 2 && argv[0] == "help"
+			argv = [argv[1], "--help"]
 		end
 
 		KNOWN_COMMANDS.each do |props|

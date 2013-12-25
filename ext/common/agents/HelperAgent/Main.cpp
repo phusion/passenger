@@ -122,17 +122,8 @@ private:
 			return false;
 		}
 
-		VariantMap map;
-		vector<string>::const_iterator it = args.begin(), end = args.end();
-		it++;
-		while (it != end) {
-			const string &key = *it;
-			it++;
-			const string &value = *it;
-			map.set(key, value);
-			it++;
-		}
-		writeScalarMessage(commonContext.fd, pool->inspect(Pool::InspectOptions(map)));
+		VariantMap options = argsToOptions(args);
+		writeScalarMessage(commonContext.fd, pool->inspect(Pool::InspectOptions(options)));
 		return true;
 	}
 	
@@ -153,6 +144,22 @@ private:
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BACKTRACES);
 		writeScalarMessage(commonContext.fd, oxt::thread::all_backtraces());
+	}
+
+	void processRestartAppGroup(CommonClientContext &commonContext, SpecificContext *specificContext,
+		const vector<string> &args)
+	{
+		TRACE_POINT();
+		commonContext.requireRights(Account::RESTART);
+		VariantMap options = argsToOptions(args, 2);
+		RestartMethod method = RM_DEFAULT;
+		if (options.get("method", false) == "blocking") {
+			method = RM_BLOCKING;
+		} else if (options.get("method", false) == "rolling") {
+			method = RM_ROLLING;
+		}
+		bool result = pool->restartGroupByName(args[1], method);
+		writeArrayMessage(commonContext.fd, result ? "true" : "false", NULL);
 	}
 
 	void processRequests(CommonClientContext &commonContext, SpecificContext *specificContext,
@@ -191,6 +198,8 @@ public:
 				processToXml(commonContext, specificContext, args);
 			} else if (isCommand(args, "backtraces", 0)) {
 				processBacktraces(commonContext, specificContext, args);
+			} else if (isCommand(args, "restart_app_group", 1, 99)) {
+				processRestartAppGroup(commonContext, specificContext, args);
 			} else if (isCommand(args, "requests", 0)) {
 				processRequests(commonContext, specificContext, args);
 			} else {
@@ -424,7 +433,8 @@ public:
 		accountsDatabase = boost::make_shared<AccountsDatabase>();
 		accountsDatabase->add("_passenger-status", options.adminToolStatusPassword, false,
 			Account::INSPECT_BASIC_INFO | Account::INSPECT_SENSITIVE_INFO |
-			Account::INSPECT_BACKTRACES | Account::INSPECT_REQUESTS);
+			Account::INSPECT_BACKTRACES | Account::INSPECT_REQUESTS |
+			Account::RESTART);
 		accountsDatabase->add("_web_server", options.exitPassword, false, Account::EXIT);
 		messageServer = boost::make_shared<MessageServer>(
 			parseUnixSocketAddress(options.adminSocketAddress), accountsDatabase);

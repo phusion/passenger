@@ -49,6 +49,7 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
+#include <Utils/VariantMap.h>
 
 namespace Passenger {
 
@@ -245,6 +246,27 @@ public:
 			unsigned int minargs, unsigned int maxargs) const
 		{
 			return args.size() >= minargs + 1 && args.size() <= maxargs + 1 && args[0] == command;
+		}
+
+		/** Utility function for converting arguments (starting from the given index)
+		 * into a VariantMap.
+		 *
+		 * @throws ArgumentException The number of arguments isn't an even number.
+		 */
+		VariantMap argsToOptions(const vector<string> &args, unsigned int startIndex = 1) const {
+			VariantMap map;
+			vector<string>::const_iterator it = args.begin() + startIndex, end = args.end();
+			while (it != end) {
+				const string &key = *it;
+				it++;
+				if (it == end) {
+					throw ArgumentException("Invalid options");
+				}
+				const string &value = *it;
+				map.set(key, value);
+				it++;
+			}
+			return map;
 		}
 
 	public:

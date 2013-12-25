@@ -72,6 +72,7 @@ module PhusionPassenger
 		NGINX_DOC_URL       = "http://www.modrails.com/documentation/Users%20guide%20Nginx.html"
 		STANDALONE_DOC_URL  = "http://www.modrails.com/documentation/Users%20guide%20Standalone.html"
 		SUPPORT_URL         = "http://www.phusionpassenger.com/support"
+		ENTERPRISE_URL      = "http://www.phusionpassenger.com/enterprise"
 		DEB_DEV_PACKAGE           = "passenger-dev"
 		DEB_APACHE_MODULE_PACKAGE = "libapache2-mod-passenger"
 		DEB_NGINX_PACKAGE         = "nginx-extras"

@@ -74,6 +74,8 @@
 
 	#define DEFAULT_WEB_APP_USER "nobody"
 
+	#define ENTERPRISE_URL "http://www.phusionpassenger.com/enterprise"
+
 	#define FEEDBACK_FD 3
 
 	#define INDEX_DOC_URL "http://www.modrails.com/documentation/Users%20guide.html"

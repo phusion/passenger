@@ -197,8 +197,9 @@ private:
 		unsigned int restartsInitiated);
 	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options,
 		unsigned int restartsInitiated);
-	void finalizeRestart(GroupPtr self, Options options, SpawnerFactoryPtr spawnerFactory,
-		unsigned int restartsInitiated, vector<Callback> postLockActions);
+	void finalizeRestart(GroupPtr self, Options options, RestartMethod method,
+		SpawnerFactoryPtr spawnerFactory, unsigned int restartsInitiated,
+		vector<Callback> postLockActions);
 	void startCheckingDetachedProcesses(bool immediately);
 	void detachedProcessesCheckerMain(GroupPtr self);
 	void wakeUpGarbageCollector();
@@ -1159,8 +1160,8 @@ public:
 			       fileChangeChecker.changed(restartFile, options.statThrottleRate);
 		}
 	}
-	
-	void restart(const Options &options);
+
+	void restart(const Options &options, RestartMethod method = RM_DEFAULT);
 	
 	bool spawning() const {
 		return m_spawning;

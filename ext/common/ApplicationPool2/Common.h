@@ -79,6 +79,21 @@ enum DisableResult {
 	DR_DEFERRED
 };
 
+/**
+ * Determines the behavior of Pool::restartGroupsByName() and Group::restart().
+ * Specifically, determines whether to perform a rolling restart or not.
+ */
+enum RestartMethod {
+	// Whether a rolling restart is performed, is determined by whether rolling restart
+	// was enabled in the web server configuration (i.e. whether group->options.rollingRestart
+	// is already true).
+	RM_DEFAULT,
+	// Perform a blocking restart. group->options.rollingRestart will not be changed.
+	RM_BLOCKING,
+	// Perform a rolling restart. group->options.rollingRestart will not be changed.
+	RM_ROLLING
+};
+
 typedef boost::shared_ptr<Pool> PoolPtr;
 typedef boost::shared_ptr<SuperGroup> SuperGroupPtr;
 typedef boost::shared_ptr<Group> GroupPtr;

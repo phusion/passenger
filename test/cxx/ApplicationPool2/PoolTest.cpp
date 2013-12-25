@@ -577,7 +577,7 @@ namespace tut {
 		debug->messages->send("Proceed with spawn loop iteration 1");
 		ensureMinProcesses(1);
 
-		ensure_equals(pool->restartGroupsByAppRoot("stub/rack"), 1u);
+		ensure(pool->restartGroupByName("stub/rack#default"));
 		debug->debugger->recv("About to end restarting");
 		ensure(pool->detachSuperGroupByName("stub/rack"));
 		ensure_equals(pool->getSuperGroupCount(), 0u);
@@ -619,6 +619,16 @@ namespace tut {
 		debug->debugger->recv("About to finish SuperGroup restart");
 		ensure(pool->detachSuperGroupByName("stub/rack"));
 		ensure_equals(pool->getSuperGroupCount(), 0u);
+	}
+
+	TEST_METHOD(17) {
+		// Test that restartGroupByName() spawns more processes to ensure
+		// that minProcesses and other constraints are met.
+		ensureMinProcesses(1);
+		ensure(pool->restartGroupByName("stub/rack#default"));
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 1;
+		);
 	}
 	
 	

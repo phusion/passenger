@@ -162,6 +162,8 @@ class InfoCommand < Command
 			puts PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id
 		when "--version"
 			puts PhusionPassenger::VERSION_STRING
+		when "--help"
+			self.class.help
 		else
 			self.class.help
 			exit 1

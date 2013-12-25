@@ -28,9 +28,9 @@
 #include <string>
 #include <vector>
 #include <boost/shared_ptr.hpp>
-#include "StaticString.h"
-#include "Exceptions.h"
-#include "Utils/StrIntUtils.h"
+#include <StaticString.h>
+#include <Exceptions.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 
@@ -66,8 +66,9 @@ public:
 		CLEAR                     = 1 << 0,
 		DETACH                    = 1 << 1,
 		SET_PARAMETERS            = 1 << 2,
-		INSPECT_BASIC_INFO        = 1 << 3,
-		INSPECT_SENSITIVE_INFO    = 1 << 4,
+		RESTART                   = 1 << 3,
+		INSPECT_BASIC_INFO        = 1 << 4,
+		INSPECT_SENSITIVE_INFO    = 1 << 5,
 		
 		// HelperAgent admin rights.
 		INSPECT_REQUESTS          = 1 << 8,

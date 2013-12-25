@@ -1385,34 +1385,33 @@ public:
 		}
 	}
 
-	unsigned int restartGroupsByAppRoot(const string &appRoot) {
+	bool restartGroupByName(const StaticString &name, RestartMethod method = RM_DEFAULT) {
 		ScopedLock l(syncher);
 		SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
-		unsigned int result = 0;
 
 		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
 			const SuperGroupPtr &superGroup = sg_it->second;
 			foreach (const GroupPtr &group, superGroup->groups) {
-				if (group->options.appRoot == appRoot) {
-					result++;
+				if (name == group->name) {
 					if (!group->restarting()) {
-						group->restart(group->options);
+						group->restart(group->options, method);
 					}
+					return true;
 				}
 			}
 		}
 
-		return result;
+		return false;
 	}
 
-	unsigned int restartSuperGroupsByAppRoot(const string &appRoot) {
+	unsigned int restartSuperGroupsByAppRoot(const StaticString &appRoot) {
 		ScopedLock l(syncher);
 		SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
 		unsigned int result = 0;
 
 		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
 			const SuperGroupPtr &superGroup = sg_it->second;
-			if (superGroup->options.appRoot == appRoot) {
+			if (appRoot == superGroup->options.appRoot) {
 				result++;
 				superGroup->restart(superGroup->options);
 			}
