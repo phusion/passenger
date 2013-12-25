@@ -477,6 +477,10 @@ Hooks may be called concurrently. For example, while the `attached_process` hook
 
 If a hook script fails -- that is, if it exits with anything other than exit code 0 -- then the error handling depends on the hook. Some hooks will abort, other hooks will ignore the error. In all cases, the result of the hook script is printed to the log.
 
+==== Compatibility
+
+Because hooks are inherently tied to the implementation of Phusion Passenger, there is no guarantee that hooks that currently work will continue to be available in the future versions of Phusion Passenger. The availability of hooks is very much tied to the specific version of Phusion Passenger.
+
 ==== Available hooks
 
 `before_watchdog_initialization`::
