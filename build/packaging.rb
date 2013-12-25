@@ -451,7 +451,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	Packaging::USER_EXECUTABLES.each do |exe|
 		sh "cp bin/#{exe} #{fake_bindir}/"
 		if !Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
-			change_shebang("#{fake_bindir}/#{exe}", "/usr/bin/ruby")
+			change_shebang("#{fake_bindir}/#{exe}", "#{fs_bindir}/ruby")
 		end
 	end
 	
@@ -460,7 +460,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	Packaging::SUPER_USER_EXECUTABLES.each do |exe|
 		sh "cp bin/#{exe} #{fake_sbindir}/"
 		if !Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
-			change_shebang("#{fake_sbindir}/#{exe}", "/usr/bin/ruby")
+			change_shebang("#{fake_sbindir}/#{exe}", "#{fs_bindir}/ruby")
 		end
 	end
 	

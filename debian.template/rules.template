@@ -39,7 +39,8 @@ override_dh_auto_install:
 	# Merge Ruby 1.8 and 1.9 files into a single directory.
 	cp -a pkg/fakeroot1.8/* debian/tmp/
 	cp -a pkg/fakeroot1.9.1/* debian/tmp/
-	./debian/install_scripts_bootstrap_code.rb /usr/lib/ruby/vendor_ruby debian/tmp/usr/bin/* debian/tmp/usr/sbin/*
+	./dev/install_scripts_bootstrap_code.rb --ruby /usr/lib/ruby/vendor_ruby debian/tmp/usr/bin/* debian/tmp/usr/sbin/*
+	./dev/install_scripts_bootstrap_code.rb --nginx-module-config /usr/bin /usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/ngx_http_passenger_module/config
 	touch debian/tmp/usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/release.txt
 
 override_dh_auto_clean:
