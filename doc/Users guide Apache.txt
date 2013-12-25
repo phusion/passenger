@@ -795,8 +795,8 @@ directory that's readable by Apache, but only writable by administrators.
 :version: 3.0.0
 include::users_guide_snippets/enterprise_only.txt[]
 
-Enables or disables support for rolling restarts. Normally when you
-restart an application (by touching restart.txt), Phusion Passenger would
+Enables or disables support for rolling restarts through restart.txt. Normally when you
+restart an application by touching restart.txt, Phusion Passenger would
 shut down all application processes and spawn a new one. The spawning
 of a new application process could take a while, and any requests that
 come in during this time will be blocked until this first application
@@ -821,6 +821,8 @@ Rolling restarts have a few caveat however that you should be aware of:
   not see changes brought about by the new version until all processes have
   been restarted. It is for this reason that you should not use rolling
   restarts in development, only in production.
+
+Please note that this option is completely unrelated to the `passenger-config restart` command. That command always initiates a blocking restart, unless `--rolling-restart` is given.
 
 This option may occur in the following places:
 

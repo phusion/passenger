@@ -1,6 +1,10 @@
 Release 4.0.30
 --------------
 
+ * Introduced a new tool: `passenger-config restart`. With this command you
+   can initiate an application restart without touching restart.txt.
+   Unlike touching restart.txt, this tool initiates the restart immediately
+   instead of on the next request.
  * Fixed some problems with the handling of HTTP chunked transfer encoding
    bodies. These problems only occurred in Ruby.
  * Fixed compilation problems on FreeBSD.
