@@ -113,7 +113,7 @@ private
 
 	def self.lookup_command_class_by_class_name(class_name)
 		base_name = class_name.gsub(/[A-Z]/) do |match|
-			"_" + match[0].downcase
+			"_" + match[0..0].downcase
 		end
 		base_name.sub!(/^_/, '')
 		base_name << ".rb"
