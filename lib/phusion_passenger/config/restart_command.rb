@@ -66,7 +66,8 @@ private
 				options[:app_group_name] = value
 			end
 			opts.on("--rolling-restart", "Perform a rolling restart instead of a#{nl}" +
-				"regular restart (Enterprise only)") do |value|
+				"regular restart (Enterprise only). The#{nl}" +
+				"default is a blocking restart.") do |value|
 				if Config::Utils.is_enterprise?
 					options[:rolling_restart] = true
 				else

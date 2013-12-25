@@ -72,7 +72,7 @@ module Config
 			printf "  %-15s %s\n", props[0], command_class.description
 		end
 		puts
-		puts "Type 'passenger-config help <COMMAND>' for more information."
+		puts "Type 'passenger-config <COMMAND> --help' for more information."
 	end
 
 private
