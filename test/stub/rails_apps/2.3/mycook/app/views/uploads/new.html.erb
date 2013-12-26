@@ -1,0 +1,8 @@
+<h1>Upload something useless</h1>
+
+<% form_tag(uploads_path, { :method => :post, :multipart => true }) do %>
+	<p>Name 1:<br><%= text_field :upload, :name1 %></p>
+	<p>Name 2:<br><%= text_field :upload, :name2 %></p>
+	<p>File:<br><%= file_field :upload, :data %></p>
+	<%= submit_tag 'Upload!' %>
+<% end %>

@@ -1,0 +1,1 @@
+This useless file prevents git from removing this directory.
