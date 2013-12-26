@@ -1,8 +1,8 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'socket'
 require 'fileutils'
-require 'phusion_passenger/analytics_logger'
-require 'phusion_passenger/utils/tmpdir'
+PhusionPassenger.require_passenger_lib 'analytics_logger'
+PhusionPassenger.require_passenger_lib 'utils/tmpdir'
 
 module PhusionPassenger
 

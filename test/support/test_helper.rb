@@ -379,7 +379,7 @@ module TestHelper
 	end
 	
 	def flush_logging_agent(password, socket_address)
-		require 'phusion_passenger/message_client' if !defined?(PhusionPassenger::MessageClient)
+		PhusionPassenger.require_passenger_lib 'message_client' if !defined?(PhusionPassenger::MessageClient)
 		client = PhusionPassenger::MessageClient.new("logging", password, socket_address)
 		begin
 			client.write("flush")
