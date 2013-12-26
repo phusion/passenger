@@ -7,6 +7,8 @@ Release 4.0.30
    instead of on the next request.
  * Fixed some problems with the handling of HTTP chunked transfer encoding
    bodies. These problems only occurred in Ruby.
+ * Fixed the HelperAgent, upon shutdown, not correctly waiting 5 seconds until
+   all clients have disconnected. Fixes issue #884.
  * Fixed compilation problems on FreeBSD.
  * Fixed some C++ strict aliasing problems.
  * When Phusion Passenger is installed through the Debian package,

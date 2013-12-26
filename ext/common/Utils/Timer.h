@@ -91,7 +91,21 @@ public:
 		startTime.tv_sec = 0;
 		startTime.tv_usec = 0;
 	}
-	
+
+	/**
+	 * Resets the timer. If the timer was already started then it is still started;
+	 * if it was stopped then it is still stopped.
+	 */
+	void reset() {
+		boost::lock_guard<boost::mutex> l(lock);
+		if (startTime.tv_sec != 0 || startTime.tv_usec != 0) {
+			int ret;
+			do {
+				ret = gettimeofday(&startTime, NULL);
+			} while (ret == -1 && errno == EINTR);
+		}
+	}
+
 	/**
 	 * Returns the amount of time that has elapsed since the timer was last started,
 	 * in miliseconds. If the timer is currently stopped, then 0 is returned.

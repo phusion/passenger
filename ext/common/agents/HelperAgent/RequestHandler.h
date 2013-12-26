@@ -639,6 +639,10 @@ private:
 	// GDB helper function, implemented in .cpp file to prevent inlining.
 	Client *getClientPointer(const ClientPtr &client);
 
+	void doResetInactivityTime() {
+		inactivityTimer.reset();
+	}
+
 	void getInactivityTime(unsigned long long *result) const {
 		*result = inactivityTimer.elapsed();
 	}
@@ -2465,6 +2469,10 @@ public:
 			stream << "  Client " << client->fd << ":\n";
 			client->inspect(stream);
 		}
+	}
+
+	void resetInactivityTime() {
+		libev->run(boost::bind(&RequestHandler::doResetInactivityTime, this));
 	}
 
 	unsigned long long inactivityTime() const {
