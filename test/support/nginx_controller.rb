@@ -1,5 +1,4 @@
 require 'erb'
-require 'phusion_passenger/platform_info/ruby'
 begin
 	require 'daemon_controller'
 rescue LoadError
@@ -10,15 +9,16 @@ rescue LoadError
 	exit!(1)
 end
 
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+
 class NginxController
-	include PhusionPassenger
-	PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/../..")
+	PlatformInfo = PhusionPassenger::PlatformInfo
 	TEMPLATE_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/nginx")
 	PORT = 64507
 	
 	def initialize(root_dir)
 		root_dir     = File.expand_path(root_dir)
-		@passenger_root = PASSENGER_ROOT
+		@passenger_root = PhusionPassenger.source_root
 		@nginx_root  = root_dir
 		@port        = PORT
 		@config_file = "#{root_dir}/nginx.conf"
@@ -51,6 +51,12 @@ class NginxController
 	
 	def stop
 		@controller.stop
+		# On OS X, the Nginx server socket may linger around for a while
+		# after Nginx shutdown, despite Nginx setting SO_REUSEADDR.
+		sockaddr = Socket.pack_sockaddr_in(PORT, '127.0.0.1')
+		eventually(30) do
+			!@controller.send(:ping_socket, Socket::Constants::AF_INET, sockaddr)
+		end
 	end
 	
 	def running?
