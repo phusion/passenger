@@ -223,9 +223,7 @@ module TestHelper
 				"127.0.0.1 7.passenger.test 8.passenger.test 9.passenger.test\n"
 			if RUBY_PLATFORM =~ /darwin/
 				message << "\n\nThen run:\n\n" <<
-					"  lookupd -flushcache      (OS X Tiger)\n\n" <<
-					"-OR-\n\n" <<
-					"  dscacheutil -flushcache  (OS X Leopard)"
+					"  dscacheutil -flushcache"
 			end
 			STDERR.puts "---------------------------"
 			STDERR.puts message
