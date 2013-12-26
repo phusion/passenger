@@ -1,8 +1,0 @@
-<h1>Create a new recipe</h1>
-<% form_tag(recipes_url, :method => :post) do %>
-	<p>Name:<br><%= text_field :recipe, :name %></p>
-	<p>Instructions:<br><%= text_area :recipe, :instructions, :rows => 15, :cols => 60 %></p>
-	<p>
-		<%= submit_tag('Submit') %>
-	</p>
-<% end %>
