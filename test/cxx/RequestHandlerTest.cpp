@@ -175,9 +175,9 @@ namespace tut {
 		string response = readAll(connection);
 		string body = stripHeaders(response);
 		ensure("Status line is correct", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
-		ensure("Headers are correct", containsSubstring(response, "Content-Type: text/html\r\n"));
+		ensure("Headers are correct", containsSubstring(response, "Content-Type: text/plain\r\n"));
 		ensure("Contains a Status header", containsSubstring(response, "Status: 200 OK\r\n"));
-		ensure_equals(body, "hello <b>world</b>");
+		ensure_equals(body, "front page");
 	}
 
 	TEST_METHOD(2) {
@@ -192,9 +192,9 @@ namespace tut {
 			string response = readAll(connection);
 			string body = stripHeaders(response);
 			ensure("Status line is correct", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
-			ensure("Headers are correct", containsSubstring(response, "Content-Type: text/html\r\n"));
+			ensure("Headers are correct", containsSubstring(response, "Content-Type: text/plain\r\n"));
 			ensure("Contains a Status header", containsSubstring(response, "Status: 200 OK\r\n"));
-			ensure_equals(body, "hello <b>world</b>");
+			ensure_equals(body, "front page");
 		}
 	}
 
@@ -227,9 +227,9 @@ namespace tut {
 		string response = readAll(connection);
 		string body = stripHeaders(response);
 		ensure("Status line is correct", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
-		ensure("Headers are correct", containsSubstring(response, "Content-Type: text/html\r\n"));
+		ensure("Headers are correct", containsSubstring(response, "Content-Type: text/plain\r\n"));
 		ensure("Contains a Status header", containsSubstring(response, "Status: 200 OK\r\n"));
-		ensure_equals(body, "hello <b>world</b>");
+		ensure_equals(body, "front page");
 	}
 
 	TEST_METHOD(4) {
@@ -245,7 +245,7 @@ namespace tut {
 			"PATH_INFO", "/",
 			NULL
 		);
-		ensure(containsSubstring(readAll(connection), "hello <b>world</b>"));
+		ensure(containsSubstring(readAll(connection), "front page"));
 
 		connect();
 		try {
@@ -297,7 +297,7 @@ namespace tut {
 			"PATH_INFO", "/",
 			NULL
 		);
-		ensure(containsSubstring(readAll(connection), "hello <b>world</b>"));
+		ensure(containsSubstring(readAll(connection), "front page"));
 	}
 
 	TEST_METHOD(7) {
@@ -458,7 +458,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/upload",
+			"PATH_INFO", "/raw_upload_to_file",
 			"HTTP_X_OUTPUT", (root + "/test/tmp.output").c_str(),
 			NULL);
 		writeExact(connection, "hello\n");
@@ -482,7 +482,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PASSENGER_BUFFERING", "true",
-			"PATH_INFO", "/upload",
+			"PATH_INFO", "/raw_upload_to_file",
 			"HTTP_X_OUTPUT", (root + "/test/tmp.output").c_str(),
 			NULL);
 		writeExact(connection, "hello\n");
@@ -515,7 +515,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/upload",
+			"PATH_INFO", "/raw_upload_to_file",
 			"PASSENGER_BUFFERING", "true",
 			"HTTP_X_WAIT_FOR_FILE", "/tmp/wait.txt",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
@@ -653,7 +653,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/upload",
+			"PATH_INFO", "/raw_upload_to_file",
 			"CONTENT_LENGTH", toString(requestBody.size()).c_str(),
 			"PASSENGER_BUFFERING", "true",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
@@ -678,7 +678,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/upload",
+			"PATH_INFO", "/raw_upload_to_file",
 			"CONTENT_LENGTH", toString(requestBody.size()).c_str(),
 			"PASSENGER_BUFFERING", "true",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
@@ -710,7 +710,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/upload",
+			"PATH_INFO", "/raw_upload_to_file",
 			"CONTENT_LENGTH", toString(requestBody.size()).c_str(),
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
@@ -735,7 +735,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/upload",
+			"PATH_INFO", "/raw_upload_to_file",
 			"CONTENT_LENGTH", toString(requestBody.size()).c_str(),
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
@@ -758,7 +758,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/upload",
+			"PATH_INFO", "/raw_upload_to_file",
 			"CONTENT_LENGTH", "0",
 			"PASSENGER_BUFFERING", "true",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
@@ -781,7 +781,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/upload",
+			"PATH_INFO", "/raw_upload_to_file",
 			"CONTENT_LENGTH", "0",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
@@ -952,7 +952,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/chunked",
+			"PATH_INFO", "/chunked_stream",
 			NULL
 		);
 		

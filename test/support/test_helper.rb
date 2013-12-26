@@ -115,6 +115,18 @@ module TestHelper
 			return "#{@full_app_root}/config.ru"
 		end
 	end
+
+	class PythonStub < Stub
+		def startup_file
+			return "#{@full_app_root}/passenger_wsgi.py"
+		end
+	end
+
+	class NodejsStub < Stub
+		def startup_file
+			return "#{@full_app_root}/app.js"
+		end
+	end
 	
 	def describe_rails_versions(matcher, &block)
 		if ENV['ONLY_RAILS_VERSION'] && !ENV['ONLY_RAILS_VERSION'].empty?
@@ -397,6 +409,16 @@ module TestHelper
 			end
 		else
 			return instance
+		end
+	end
+
+	if "".respond_to?(:force_encoding)
+		def binary_string(str)
+			return str.force_encoding("binary")
+		end
+	else
+		def binary_string(str)
+			return str
 		end
 	end
 end

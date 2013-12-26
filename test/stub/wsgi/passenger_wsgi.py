@@ -1,4 +1,4 @@
-import os, time
+import os, time, cgi
 
 def file_exist(filename):
 	try:
@@ -23,14 +23,51 @@ def application(env, start_response):
 			time.sleep(0.01)
 	
 	path = env['PATH_INFO']
-	if path == '/pid':
+	if path == '/':
+		if file_exist("front_page.txt"):
+			with file("front_page.txt", "r") as f:
+				body = f.read()
+		else:
+			body = "front page"
+	elif path == '/parameters':
+		method = env['REQUEST_METHOD']
+		params = cgi.parse(env['wsgi.input'], env)
+		first  = params['first'][0]
+		second = params['second'][0]
+		body = "Method: %s\nFirst: %s\nSecond: %s\n" % (method, first, second)
+	elif path == '/chunked':
+		chunks = [str("7\r\nchunk1\n\r\n"), str("7\r\nchunk2\n\r\n"),
+			str("7\r\nchunk3\n\r\n"), str("0\r\n\r\n")]
+		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
+		return chunks
+	elif path == '/pid':
 		body = os.getpid()
-	elif path == '/env':
+	elif path.startswith('/env'):
 		body = ''
 		for pair in env.iteritems():
 			body += pair[0] + ' = ' + str(pair[1]) + "\n"
 		body = body
-	elif path == '/upload':
+	elif path == '/touch_file':
+		params = cgi.parse(env['wsgi.input'], env)
+		filename = params["file"][0]
+		file(filename, 'w').close()
+		body = "ok"
+	elif path == '/extra_header':
+		start_response(status, [('Content-Type', 'text/html'), ('X-Foo', 'Bar')])
+		return ["ok"]
+	elif path == '/cached':
+		body = "This is the uncached version of /cached"
+	elif path == '/upload_with_params':
+		params = cgi.FieldStorage(fp = env['wsgi.input'], environ = env)
+		name1 = params["name1"].value
+		name2 = params["name2"].value
+		data  = params["data"].value
+		format = \
+			b"name 1 = %s\n" + \
+			b"name 2 = %s\n" + \
+			b"data = %s"
+		body = format % (name1, name2, data)
+	elif path == '/raw_upload_to_file':
 		sleep_time = float(env.get('HTTP_X_SLEEP', 0))
 		f = open(env['HTTP_X_OUTPUT'], 'w')
 		try:
@@ -60,7 +97,7 @@ def application(env, start_response):
 				i += 1
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
 		return body()
-	elif path == '/chunked':
+	elif path == '/chunked_stream':
 		sleep_time = float(env.get('HTTP_X_SLEEP', 0.05))
 		count = float(env.get('HTTP_X_COUNT', 3))
 		def body():
@@ -95,7 +132,9 @@ def application(env, start_response):
 		start_response(status, [('Content-Type', 'text/plain'), ('X-Passenger-Request-OOB-Work', 'true')])
 		return [str(os.getpid())]
 	else:
-		body = 'hello <b>world</b>'
+		status = "404 Not Found"
+		body = "Unknown URI"
 	
-	start_response(status, [('Content-Type', 'text/html')])
-	return [str(body)]
+	body = str(body)
+	start_response(status, [('Content-Type', 'text/plain'), ('Content-Length', len(body))])
+	return [body]

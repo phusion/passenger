@@ -1,6 +1,6 @@
 class FooController < ActionController::Base
 	def new
-		render :text => 'hello world'
+		render :text => 'front page'
 	end
 	
 	def rails_env

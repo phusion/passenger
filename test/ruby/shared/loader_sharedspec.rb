@@ -234,12 +234,12 @@ shared_examples_for "a loader" do
 		result[:status].should == "Ready"
 		headers, body = perform_request(
 			"REQUEST_METHOD" => "GET",
-			"PATH_INFO" => "/hello",
+			"PATH_INFO" => "/",
 			# For Rails 2
-			"REQUEST_URI" => "/hello"
+			"REQUEST_URI" => "/"
 		)
 		headers["Status"].should == "200"
-		body.should == "hello world"
+		body.should == "front page"
 	end
 end
 
