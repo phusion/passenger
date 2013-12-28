@@ -297,7 +297,8 @@ private:
 			Group *group = route(waiter.options);
 			Options adjustedOptions = waiter.options;
 			adjustOptions(adjustedOptions, group);
-			SessionPtr session = group->get(adjustedOptions, waiter.callback);
+			SessionPtr session = group->get(adjustedOptions, waiter.callback,
+				postLockActions);
 			if (session != NULL) {
 				postLockActions.push_back(boost::bind(
 					waiter.callback, session, ExceptionPtr()));
@@ -573,7 +574,9 @@ public:
 		return false;
 	}
 	
-	SessionPtr get(const Options &newOptions, const GetCallback &callback) {
+	SessionPtr get(const Options &newOptions, const GetCallback &callback,
+		vector<Callback> &postLockActions)
+	{
 		switch (state) {
 		case INITIALIZING:
 			getWaitlist.push_back(GetWaiter(newOptions, callback));
@@ -589,10 +592,10 @@ public:
 				Options adjustedOptions = newOptions;
 				adjustOptions(adjustedOptions, group);
 				verifyInvariants();
-				return group->get(adjustedOptions, callback);
+				return group->get(adjustedOptions, callback, postLockActions);
 			} else {
 				verifyInvariants();
-				return defaultGroup->get(newOptions, callback);
+				return defaultGroup->get(newOptions, callback, postLockActions);
 			}
 		case DESTROYING:
 		case DESTROYED:
@@ -618,19 +621,29 @@ public:
 		return defaultGroup;
 	}
 	
-	unsigned int utilization() const {
+	unsigned int capacityUsed() const {
 		vector<GroupPtr>::const_iterator it, end = groups.end();
 		unsigned int result = 0;
 		
 		for (it = groups.begin(); it != end; it++) {
-			result += (*it)->utilization();
+			result += (*it)->capacityUsed();
 		}
 		if (state == INITIALIZING || state == RESTARTING) {
 			result++;
 		}
 		return result;
 	}
-	
+
+	unsigned int getProcessCount() const {
+		unsigned int result = 0;
+		vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+		for (g_it = groups.begin(); g_it != g_end; g_it++) {
+			const GroupPtr &group = *g_it;
+			result += group->getProcessCount();
+		}
+		return result;
+	}
+
 	bool needsRestart() const {
 		return false;
 	}
@@ -650,16 +663,6 @@ public:
 			state = RESTARTING;
 		}
 		verifyInvariants();
-	}
-
-	unsigned int getProcessCount() const {
-		unsigned int result = 0;
-		vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
-		for (g_it = groups.begin(); g_it != g_end; g_it++) {
-			const GroupPtr &group = *g_it;
-			result += group->getProcessCount();
-		}
-		return result;
 	}
 
 	string inspect() const {

@@ -162,7 +162,7 @@ namespace tut {
 			ProcessPtr process = currentSession->getProcess();
 			currentSession.reset();
 			EVENTUALLY(5,
-				result = process->utilization() == 0;
+				result = process->busyness() == 0;
 			);
 			return body;
 		}
@@ -233,8 +233,8 @@ namespace tut {
 		// Close the session so that the process is now idle.
 		ProcessPtr process = currentSession->getProcess();
 		currentSession.reset();
-		ensure_equals(process->utilization(), 0);
-		ensure(!process->atFullCapacity());
+		ensure_equals(process->busyness(), 0);
+		ensure(!process->isTotallyBusy());
 		
 		// Verify test assertion.
 		ScopedLock l(pool->syncher);
@@ -262,7 +262,7 @@ namespace tut {
 		ProcessPtr process = session1->getProcess();
 		currentSession.reset();
 		ensure_equals(process->sessions, 1);
-		ensure(process->atFullCapacity());
+		ensure(process->isTotallyBusy());
 		
 		// Now call asyncGet() again.
 		pool->asyncGet(options, callback);
@@ -685,7 +685,6 @@ namespace tut {
 		EVENTUALLY(5,
 			result = number == 1;
 		);
-		SessionPtr session1 = currentSession;
 		ProcessPtr process1 = currentSession->getProcess();
 		GroupPtr group1 = process1->getGroup();
 		SuperGroupPtr superGroup1 = group1->getSuperGroup();
@@ -709,50 +708,209 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 2u);
 		ensure_equals(superGroup1->getProcessCount(), 0u);
 	}
-	
+
 	TEST_METHOD(22) {
-		// Suppose the pool is full, and one tries to asyncGet() from a nonexistant group,
-		// and the process that is selected for killing is the sole process in its group.
-		// If there were waiters in the group then those waiters will be satisfied after
-		// capacity has become free.
+		// Suppose the pool is at full capacity, and one tries to asyncGet() from an
+		// existant group that does not have any processes. It should kill a process
+		// from another group, and the request should succeed.
 		Options options = createOptions();
-		pool->setMax(2);
-		
-		// Get from /foo and retain its session.
+		SessionPtr session;
+		pid_t pid1, pid2;
+		pool->setMax(1);
+
+		// Create a group /foo.
 		options.appRoot = "/foo";
 		SystemTime::force(1);
-		SessionPtr session1 = pool->get(options, &ticket);
-		GroupPtr fooGroup = session1->getGroup();
+		session = pool->get(options, &ticket);
+		pid1 = session->getPid();
+		session.reset();
 
-		// Get from /bar and retain its session.
+		// Create a group /bar.
 		options.appRoot = "/bar";
 		SystemTime::force(2);
-		SessionPtr session2 = pool->get(options, &ticket);
+		session = pool->get(options, &ticket);
+		pid2 = session->getPid();
+		session.reset();
 
-		// Request another get(). /foo will now have 1 waiter in its waitlist.
+		// Sleep for a short while to give Pool a chance to shutdown
+		// the first process.
+		usleep(300000);
+		ensure_equals("(1)", pool->getProcessCount(), 1u);
+
+		// Get from /foo.
 		options.appRoot = "/foo";
-		pool->asyncGet(options, callback);
-		{
-			LockGuard l(pool->syncher);
-			ensure("(1)", session1->getProcess()->isAlive());
-			ensure_equals("(3)", fooGroup->getWaitlist.size(), 1u);
-		}
-
-		// This kill the process for /foo.
 		SystemTime::force(3);
-		options.appRoot = "/baz";
-		SessionPtr session3 = pool->get(options, &ticket);
+		session = pool->get(options, &ticket);
+		ensure("(2)", session->getPid() != pid1);
+		ensure("(3)", session->getPid() != pid2);
+		ensure_equals("(4)", pool->getProcessCount(), 1u);
+	}
+
+	TEST_METHOD(23) {
+		// Suppose the pool is at full capacity, and one tries to asyncGet() from an
+		// existant group that does not have any processes, and that happens to need
+		// restarting. It should kill a process from another group and the request
+		// should succeed.
+		Options options1 = createOptions();
+		Options options2 = createOptions();
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		SessionPtr session;
+		pid_t pid1, pid2;
+		pool->setMax(1);
+
+		// Create a group tmp.wsgi.
+		options1.appRoot = "tmp.wsgi";
+		options1.appType = "wsgi";
+		options1.spawnMethod = "direct";
+		SystemTime::force(1);
+		session = pool->get(options1, &ticket);
+		pid1 = session->getPid();
+		session.reset();
+
+		// Create a group bar.
+		options2.appRoot = "bar";
+		SystemTime::force(2);
+		session = pool->get(options2, &ticket);
+		pid2 = session->getPid();
+		session.reset();
+
+		// Sleep for a short while to give Pool a chance to shutdown
+		// the first process.
+		usleep(300000);
+		ensure_equals("(1)", pool->getProcessCount(), 1u);
+
+		// Get from tmp.wsgi.
+		SystemTime::force(3);
+		touchFile("tmp.wsgi/tmp/restart.txt", 4);
+		session = pool->get(options1, &ticket);
+		ensure("(2)", session->getPid() != pid1);
+		ensure("(3)", session->getPid() != pid2);
+		ensure_equals("(4)", pool->getProcessCount(), 1u);
+	}
+
+	TEST_METHOD(24) {
+		// Suppose the pool is at full capacity, with two groups:
+		// - one that is spawning a process.
+		// - one with no processes.
+		// When one tries to asyncGet() from the second group, there should
+		// be no process to kill, but when the first group is done spawning
+		// it should throw away that process immediately to allow the second
+		// group to spawn.
+		Options options1 = createOptions();
+		Options options2 = createOptions();
+		initPoolDebugging();
+		debug->restarting = false;
+		pool->setMax(1);
+
+		// Create a group foo.
+		options1.appRoot = "foo";
+		options1.noop = true;
+		SystemTime::force(1);
+		pool->get(options1, &ticket);
+
+		// Create a group bar, but don't let it finish spawning.
+		options2.appRoot = "bar";
+		options2.noop = true;
+		SystemTime::force(2);
+		GroupPtr barGroup = pool->get(options2, &ticket)->getGroup();
 		{
 			LockGuard l(pool->syncher);
-			ensure("(4)", session1->getProcess()->enabled == Process::DETACHED);
-			ensure_equals("(6)", fooGroup->getWaitlist.size(), 1u);
-			ensure_equals("(7)", pool->getWaitlist.size(), 0u);
+			ensure_equals("(1)", barGroup->spawn(), SR_OK);
 		}
+		debug->debugger->recv("Begin spawn loop iteration 1");
 
-		// Make process /bar available for killing.
-		session2.reset();
+		// Now get from foo again and let the request be queued.
+		options1.noop = false;
+		SystemTime::force(3);
+		pool->asyncGet(options1, callback);
+
+		// Nothing should happen while bar is spawning.
+		SHOULD_NEVER_HAPPEN(100,
+			result = number > 0;
+		);
+		ensure_equals("(2)", pool->getProcessCount(), 0u);
+
+		// Now let bar finish spawning. Eventually there should
+		// only be one process: the one for foo.
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->debugger->recv("Spawn loop done");
+		debug->messages->send("Proceed with spawn loop iteration 2");
+		debug->debugger->recv("Spawn loop done");
+		EVENTUALLY(5,
+			LockGuard l(pool->syncher);
+			vector<ProcessPtr> processes = pool->getProcesses(false);
+			if (processes.size() == 1) {
+				GroupPtr group = processes[0]->getGroup();
+				result = group->name == "foo#default";
+			} else {
+				result = false;
+			}
+		);
+	}
+
+	TEST_METHOD(25) {
+		// Suppose the pool is at full capacity, with two groups:
+		// - one that is spawning a process, and has a queued request.
+		// - one with no processes.
+		// When one tries to asyncGet() from the second group, there should
+		// be no process to kill, but when the first group is done spawning
+		// it should throw away that process immediately to allow the second
+		// group to spawn.
+		Options options1 = createOptions();
+		Options options2 = createOptions();
+		initPoolDebugging();
+		debug->restarting = false;
+		pool->setMax(1);
+
+		// Create a group foo.
+		options1.appRoot = "foo";
+		options1.noop = true;
+		SystemTime::force(1);
+		pool->get(options1, &ticket);
+
+		// Create a group bar with a queued request, but don't let it finish spawning.
+		options2.appRoot = "bar";
+		SystemTime::force(2);
+		pool->asyncGet(options2, callback);
+		debug->debugger->recv("Begin spawn loop iteration 1");
+
+		// Now get from foo again and let the request be queued.
+		options1.noop = false;
+		SystemTime::force(3);
+		pool->asyncGet(options1, callback);
+
+		// Nothing should happen while bar is spawning.
+		SHOULD_NEVER_HAPPEN(100,
+			result = number > 0;
+		);
+		ensure_equals("(1)", pool->getProcessCount(), 0u);
+
+		// Now let bar finish spawning. The request for bar should be served.
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->debugger->recv("Spawn loop done");
 		EVENTUALLY(5,
 			result = number == 1;
+		);
+		ensure_equals(currentSession->getGroup()->name, "bar#default");
+
+		// When that request is done, the process for bar should be killed,
+		// and a process for foo should be spawned.
+		currentSession.reset();
+		debug->messages->send("Proceed with spawn loop iteration 2");
+		debug->debugger->recv("Spawn loop done");
+		EVENTUALLY(5,
+			LockGuard l(pool->syncher);
+			vector<ProcessPtr> processes = pool->getProcesses(false);
+			if (processes.size() == 1) {
+				GroupPtr group = processes[0]->getGroup();
+				result = group->name == "foo#default";
+			} else {
+				result = false;
+			}
+		);
+
+		EVENTUALLY(5,
+			result = number == 2;
 		);
 	}
 	
@@ -1296,14 +1454,14 @@ namespace tut {
 		pool->setMax(1);
 
 		// Send normal request.
-		ensure_equals(sendRequest(options, "/"), "hello <b>world</b>");
+		ensure_equals(sendRequest(options, "/"), "front page");
 
 		// Modify application; it shouldn't have effect yet.
 		writeFile("tmp.wsgi/passenger_wsgi.py",
 			"def application(env, start_response):\n"
 			"	start_response('200 OK', [('Content-Type', 'text/html')])\n"
 			"	return ['restarted']\n");
-		ensure_equals(sendRequest(options, "/"), "hello <b>world</b>");
+		ensure_equals(sendRequest(options, "/"), "front page");
 
 		// Create restart.txt and send request again. The change should now be activated.
 		touchFile("tmp.wsgi/tmp/restart.txt", 1);
@@ -1422,7 +1580,6 @@ namespace tut {
 		Options options1 = createOptions();
 		Options options2 = createOptions();
 		options2.appRoot = "stub/wsgi";
-		options2.allowTrashingNonIdleProcesses = false;
 
 		retainSessions = true;
 		pool->setMax(2);

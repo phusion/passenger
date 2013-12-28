@@ -5,6 +5,7 @@ Release 4.0.30
    can initiate an application restart without touching restart.txt.
    Unlike touching restart.txt, this tool initiates the restart immediately
    instead of on the next request.
+ * Fixed some problems in process spawning and request handling.
  * Fixed some problems with the handling of HTTP chunked transfer encoding
    bodies. These problems only occurred in Ruby.
  * Fixed the HelperAgent, upon shutdown, not correctly waiting 5 seconds until

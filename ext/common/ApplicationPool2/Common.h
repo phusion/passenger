@@ -50,6 +50,63 @@ class Process;
 class Session;
 
 /**
+ * The result of a Group::spawn() call.
+ */
+enum SpawnResult {
+	// The spawn request has been honored. One or more processes are now being spawned.
+	SR_OK,
+
+	// A previous spawn request is still in progress, so this spawn request has been
+	// ignored. Having said that, the desired result (increasing the number of processes
+	// by one, within imposed constraints) will still be achieved.
+	SR_IN_PROGRESS,
+
+	// A non-rolling restart is currently in progress, so the spawn request cannot
+	// be honored.
+	SR_ERR_RESTARTING,
+
+	// Unable to spawn a new process: the upper bound of the group process limits have
+	// already been reached.
+	// The group limit is checked before checking whether the pool is at full capacity,
+	// so if you get this result then it is possible that the pool is also at full
+	// capacity at the same time.
+	SR_ERR_GROUP_UPPER_LIMITS_REACHED,
+
+	// Unable to spawn a new process: the pool is at full capacity. Pool capacity is
+	// checked after checking the group upper bound limits, so if you get this result
+	// then it is guaranteed that the group upper bound limits have not been reached.
+	SR_ERR_POOL_AT_FULL_CAPACITY
+};
+
+/**
+ * The result of a Group::attach() call.
+ */
+enum AttachResult {
+	// Attaching succeeded.
+	AR_OK,
+
+	// Attaching failed: the upper bound of the group process limits have
+	// already been reached.
+	// The group limit is checked before checking whether the pool is at full capacity,
+	// so if you get this result then it is possible that the pool is also at full
+	// capacity at the same time.
+	AR_GROUP_UPPER_LIMITS_REACHED,
+
+	// Attaching failed: the pool is at full capacity. Pool capacity is
+	// checked after checking the group upper bound limits, so if you get this result
+	// then it is guaranteed that the group upper bound limits have not been reached.
+	AR_POOL_AT_FULL_CAPACITY,
+
+	// Attaching failed: another group is waiting for capacity, while this group is
+	// not waiting for capacity. You should throw away the current process and let the
+	// other group spawn, e.g. by calling `pool->possiblySpawnMoreProcessesForExistingGroups()`.
+	// This is checked after checking for the group upper bound limits and the pool
+	// capacity, so if you get this result then there is guaranteed to be capacity
+	// in the current group and in the pool.
+	AR_ANOTHER_GROUP_IS_WAITING_FOR_CAPACITY,
+};
+
+/**
  * The result of a Pool::disableProcess/Group::disable() call. Some values are only
  * returned by the functions, some values are only passed to the Group::disable()
  * callback, some values appear in all cases.

@@ -45,7 +45,7 @@ class NginxController
 	end
 	
 	def start
-		@controller.stop
+		stop
 		@controller.start
 	end
 	

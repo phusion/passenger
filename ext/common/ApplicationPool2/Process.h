@@ -139,7 +139,7 @@ private:
 	boost::weak_ptr<Group> group;
 	
 	/** A subset of 'sockets': all sockets that speak the
-	 * "session" protocol, sorted by socket.utilization(). */
+	 * "session" protocol, sorted by socket.busyness(). */
 	PriorityQueue<Socket> sessionSockets;
 	
 	/** The iterator inside the associated Group's process list. */
@@ -181,7 +181,7 @@ private:
 		for (it = sockets->begin(); it != sockets->end(); it++) {
 			Socket *socket = &(*it);
 			if (socket->protocol == "session" || socket->protocol == "http_session") {
-				socket->pqHandle = sessionSockets.push(socket, socket->utilization());
+				socket->pqHandle = sessionSockets.push(socket, socket->busyness());
 				if (concurrency != -1) {
 					if (socket->concurrency == 0) {
 						// If one of the sockets has a concurrency of
@@ -516,13 +516,13 @@ public:
 		}
 	}
 	
-	int utilization() const {
+	int busyness() const {
 		/* Different processes within a Group may have different
 		 * 'concurrency' values. We want:
 		 * - Group.pqueue to sort the processes from least used to most used.
 		 * - to give processes with concurrency == 0 more priority over processes
 		 *   with concurrency > 0.
-		 * Therefore, we describe our utilization as a percentage of 'concurrency', with
+		 * Therefore, we describe our busyness as a percentage of 'concurrency', with
 		 * the percentage value in [0..INT_MAX] instead of [0..1].
 		 */
 		if (concurrency == 0) {
@@ -537,26 +537,21 @@ public:
 		}
 	}
 	
-	// TODO: remove this
-	bool atFullCapacity() const {
-		return atFullUtilization();
-	}
-
 	/**
 	 * Whether we've reached the maximum number of concurrent sessions for this
 	 * process.
 	 */
-	bool atFullUtilization() const {
+	bool isTotallyBusy() const {
 		return concurrency != 0 && sessions >= concurrency;
 	}
 
 	/**
 	 * Whether a get() request can be routed to this process, assuming that
 	 * the sticky session ID (if any) matches. This is only not the case
-	 * if this process is at full utilization.
+	 * if this process is totally busy.
 	 */
 	bool canBeRoutedTo() const {
-		return !atFullUtilization();
+		return !isTotallyBusy();
 	}
 	
 	/**
@@ -570,12 +565,12 @@ public:
 	 */
 	SessionPtr newSession() {
 		Socket *socket = sessionSockets.pop();
-		if (socket->atFullCapacity()) {
+		if (socket->isTotallyBusy()) {
 			return SessionPtr();
 		} else {
 			socket->sessions++;
 			this->sessions++;
-			socket->pqHandle = sessionSockets.push(socket, socket->utilization());
+			socket->pqHandle = sessionSockets.push(socket, socket->busyness());
 			lastUsed = SystemTime::getUsec();
 			return boost::make_shared<Session>(shared_from_this(), socket);
 		}
@@ -590,8 +585,8 @@ public:
 		socket->sessions--;
 		this->sessions--;
 		processed++;
-		sessionSockets.decrease(socket->pqHandle, socket->utilization());
-		assert(!atFullUtilization());
+		sessionSockets.decrease(socket->pqHandle, socket->busyness());
+		assert(!isTotallyBusy());
 	}
 
 	/**
@@ -611,7 +606,7 @@ public:
 		stream << "<connect_password>" << connectPassword << "</connect_password>";
 		stream << "<concurrency>" << concurrency << "</concurrency>";
 		stream << "<sessions>" << sessions << "</sessions>";
-		stream << "<utilization>" << utilization() << "</utilization>";
+		stream << "<busyness>" << busyness() << "</busyness>";
 		stream << "<processed>" << processed << "</processed>";
 		stream << "<spawner_creation_time>" << spawnerCreationTime << "</spawner_creation_time>";
 		stream << "<spawn_start_time>" << spawnStartTime << "</spawn_start_time>";

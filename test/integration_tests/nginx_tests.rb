@@ -166,11 +166,13 @@ describe "Phusion Passenger for Nginx" do
 			create_nginx_controller
 			@server = "http://1.passenger.test:#{@nginx.port}"
 			@stub = RackStub.new('rack')
+			@nginx.set(:passenger_load_shell_envvars => 'off')
 			@nginx.add_server do |server|
 				server[:server_name] = "1.passenger.test"
 				server[:root]        = "#{@stub.full_app_root}/public"
 				server << %q{
 					location /crash_without_friendly_error_page {
+						passenger_enabled on;
 						passenger_friendly_error_pages off;
 					}
 				}
@@ -183,6 +185,7 @@ describe "Phusion Passenger for Nginx" do
 			end
 			@nginx.add_server do |server|
 				server[:server_name] = "3.passenger.test"
+				server[:passenger_app_group_name] = "tertiary"
 				server[:root]        = "#{@stub.full_app_root}/public"
 				server[:passenger_max_requests] = 3
 			end

@@ -179,17 +179,17 @@ public:
 	}
 	
 	
-	bool idle() const {
+	bool isIdle() const {
 		return sessions == 0;
 	}
 	
-	int utilization() const {
+	int busyness() const {
 		/* Different sockets within a Process may have different
 		 * 'concurrency' values. We want:
 		 * - Process.sessionSockets to sort the sockets from least used to most used.
 		 * - to give sockets with concurrency == 0 more priority over sockets
 		 *   with concurrency > 0.
-		 * Therefore, we describe our utilization as a percentage of 'concurrency', with
+		 * Therefore, we describe our busyness as a percentage of 'concurrency', with
 		 * the percentage value in [0..INT_MAX] instead of [0..1].
 		 */
 		if (concurrency == 0) {
@@ -205,7 +205,7 @@ public:
 		}
 	}
 	
-	bool atFullCapacity() const {
+	bool isTotallyBusy() const {
 		return concurrency != 0 && sessions >= concurrency;
 	}
 };
