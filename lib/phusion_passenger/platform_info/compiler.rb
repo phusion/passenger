@@ -440,6 +440,10 @@ public
 	memoize :adress_sanitizer_flag
 
 	def self.cxx_11_flag
+		# C++11 support on FreeBSD 10.0 + Clang seems to be bugged.
+		# http://llvm.org/bugs/show_bug.cgi?id=18310
+		return nil if os_name =~ /freebsd/
+
 		source = %{
 			struct Foo {
 				Foo(Foo &&f) { }

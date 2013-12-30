@@ -28,7 +28,9 @@ module PhusionPassenger
 
 module PlatformInfo
 	# Returns the operating system's name. This name is in lowercase and contains no spaces,
-	# and thus is suitable to be used in some kind of ID. E.g. "linux", "macosx".
+	# and thus is suitable to be used in some kind of ID. It may contain a version number.
+	# Linux is always identified as "linux". OS X is always identified as "macosx".
+	# Identifiers for other operating systems may contain a version number, e.g. "freebsd10".
 	def self.os_name
 		if rb_config['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
 			return "macosx"
