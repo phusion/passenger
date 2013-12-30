@@ -1301,7 +1301,8 @@ private:
 		if (accept4Available) {
 			FileDescriptor fd(callAccept4(requestSocket,
 				(struct sockaddr *) &u, &addrlen, O_NONBLOCK));
-			if (fd == -1 && errno == ENOSYS) {
+			// FreeBSD returns EINVAL if accept4() is called with invalid flags.
+			if (fd == -1 && (errno == ENOSYS || errno == EINVAL)) {
 				accept4Available = false;
 				return acceptNonBlockingSocket(sock);
 			} else {
