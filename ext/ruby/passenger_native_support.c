@@ -27,9 +27,11 @@
 	/* Ruby 1.9 */
 	#include "ruby/intern.h"
 	#include "ruby/io.h"
+	#include "ruby/version.h"
 #else
 	#include "rubysig.h"
 	#include "rubyio.h"
+	#include "version.h"
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -861,8 +863,56 @@ void
 Init_passenger_native_support() {
 	struct sockaddr_un addr;
 	
-	/* */
-	mPassenger = rb_define_module("PhusionPassenger"); // Do not remove the above comment. We want the Passenger module's rdoc to be empty.
+	// Only defined on Ruby >= 1.9
+	#ifdef RUBY_API_VERSION_CODE
+		if (ruby_api_version[0] != RUBY_API_VERSION_MAJOR
+		 || ruby_api_version[1] != RUBY_API_VERSION_MINOR
+		 || ruby_api_version[2] != RUBY_API_VERSION_TEENY)
+		{
+			fprintf(stderr, " --> passenger_native_support was compiled for Ruby API version %d.%d.%d, "
+				"but you're currently running a Ruby interpreter with API version %d.%d.%d.\n",
+				RUBY_API_VERSION_MAJOR,
+				RUBY_API_VERSION_MINOR,
+				RUBY_API_VERSION_TEENY,
+				ruby_api_version[0],
+				ruby_api_version[1],
+				ruby_api_version[2]);
+			fprintf(stderr, "     Refusing to load existing passenger_native_support.\n");
+			return;
+		}
+		// Because native extensions may be linked to libruby, loading
+		// a Ruby 1.9 native extension may not fail on Ruby 1.8 (even though
+		// the extension will crash later on). We detect such a case here and
+		// abort early.
+		if (strlen(ruby_version) >= sizeof("1.8.7") - 1
+		 && ruby_version[0] == '1'
+		 && ruby_version[1] == '.'
+		 && ruby_version[2] == '8')
+		{
+			fprintf(stderr, " --> passenger_native_support was compiled for Ruby %d.%d, "
+				"but you're currently running Ruby %s\n",
+				RUBY_API_VERSION_MAJOR,
+				RUBY_API_VERSION_MINOR,
+				ruby_version);
+			fprintf(stderr, "     Refusing to load existing passenger_native_support.\n");
+			return;
+		}
+	#else
+		printf("here 2!\n");
+		if (strlen(ruby_version) < sizeof("1.8.7") - 1
+		 || ruby_version[0] != '1'
+		 || ruby_version[1] != '.'
+		 || ruby_version[2] != '8')
+		{
+			fprintf(stderr, " --> passenger_native_support was compiled for Ruby " RUBY_VERSION ", "
+				"but you're currently running Ruby %s\n",
+				ruby_version);
+			fprintf(stderr, "     Refusing to load existing passenger_native_support.\n");
+			return;
+		}
+	#endif
+
+	mPassenger = rb_define_module("PhusionPassenger");
 	
 	/*
 	 * Utility functions for accessing system functionality.

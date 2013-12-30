@@ -87,8 +87,7 @@ private
 		output_dir = ENV['PASSENGER_NATIVE_SUPPORT_OUTPUT_DIR']
 		if output_dir && !output_dir.empty?
 			begin
-				require "#{output_dir}/#{VERSION_STRING}/#{archdir}/#{library_name}"
-				return true
+				return load_native_extension("#{output_dir}/#{VERSION_STRING}/#{archdir}/#{library_name}")
 			rescue LoadError
 				return false
 			end
@@ -100,8 +99,7 @@ private
 	def load_from_buildout_dir
 		if PhusionPassenger.buildout_dir
 			begin
-				require "#{PhusionPassenger.buildout_dir}/ruby/#{archdir}/#{library_name}"
-				return true
+				return load_native_extension("#{PhusionPassenger.buildout_dir}/ruby/#{archdir}/#{library_name}")
 			rescue LoadError
 				return false
 			end
@@ -111,16 +109,14 @@ private
 	end
 	
 	def load_from_load_path
-		require 'passenger_native_support'
-		return true
+		return load_native_extension('passenger_native_support')
 	rescue LoadError
 		return false
 	end
 	
 	def load_from_home_dir
 		begin
-			require "#{home}/#{USER_NAMESPACE_DIRNAME}/native_support/#{VERSION_STRING}/#{archdir}/#{library_name}"
-			return true
+			return load_native_extension("#{home}/#{USER_NAMESPACE_DIRNAME}/native_support/#{VERSION_STRING}/#{archdir}/#{library_name}")
 		rescue LoadError
 			return false
 		end
@@ -173,8 +169,8 @@ private
 						files = Dir["#{dir}/*"]
 						STDERR.puts "     Installing " + files.map{ |n| File.basename(n) }.join(' ')
 						FileUtils.cp(files, target_dir)
-						require "#{target_dir}/#{library_name}"
-						[true, false]
+						load_result = load_native_extension("#{target_dir}/#{library_name}")
+						[load_result, false]
 					end
 					return result
 				else
@@ -220,7 +216,7 @@ private
 		
 		target_dir = compile(installation_target_dirs)
 		if target_dir
-			require "#{target_dir}/#{library_name}"
+			return load_native_extension("#{target_dir}/#{library_name}")
 		else
 			return false
 		end
@@ -278,7 +274,7 @@ private
 		try_directories(target_dirs) do |target_dir|
 			result =
 				sh_nonfatal("#{PlatformInfo.ruby_command} #{Shellwords.escape extconf_rb}") &&
-				sh_nonfatal("make")
+				sh_nonfatal("make clean && make")
 			if result
 				STDERR.puts "     Compilation succesful."
 				[target_dir, false]
@@ -329,6 +325,25 @@ private
 					STDERR.puts "     -------------------------------"
 				end
 			end
+		end
+	end
+
+	def load_native_extension(name_or_filename)
+		# If passenger_native_support.so exited because it detected that it was compiled
+		# for a different Ruby version, then subsequent require("passenger_native_support")
+		# calls will do nothing. So we remove passenger_native_support from $LOADED_FEATURES
+		# to force it to be loaded.
+		$LOADED_FEATURES.reject! { |fn| File.basename(fn) == library_name }
+		begin
+			require(name_or_filename)
+			return defined?(PhusionPassenger::NativeSupport)
+		rescue LoadError => e
+			if e.to_s =~ /dlopen/
+				# Print dlopen failures. We're not interested in any other
+				# kinds of failures, such as file-not-found.
+				puts e.to_s.gsub(/^/, "     ")
+			end
+			return false
 		end
 	end
 end
