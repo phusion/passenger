@@ -9,12 +9,14 @@ Release 4.0.30
    be found at [Github pull request 93](https://github.com/phusion/passenger/pull/93).
 
    This issue only affects Phusion Passenger for Nginx and Phusion Passenger
-   Standalone, and does not affect Phusion for Apache.
+   Standalone, and does not affect Phusion Passenger for Apache.
 
    You can work around this problem in your application by setting a
    Date header. For example, in Rails you can do:
 
        before_filter { response.date = Time.now.utc }
+
+   Many thanks to Jeff Michael Dean (zilkey) and many others for bringing this to our attention and for providing workarounds and feedback.
 
 
 Release 4.0.29
