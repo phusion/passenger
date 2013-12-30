@@ -1,4 +1,4 @@
-Release 4.0.30
+Release 4.0.31
 --------------
 
  * Introduced a new tool: `passenger-config restart`. With this command you
@@ -21,6 +21,27 @@ Release 4.0.30
    version, to prevent problems when people upgrade Ruby without recompiling
    their native extensions.
  * Various other minor Debian packaging improvements.
+
+
+Release 4.0.30
+--------------
+
+ * Fixed wrong autogeneration of HTTP Date header. If the web app does
+   not supply a Date header, then Passenger will add one. Unfortunately
+   due to the use of the wrong format string, December 30 2013 is
+   formatted as December 30 2014. As a result, cookies that expire before
+   2014 would expire on December 30 2013 and December 31 2013. Details can
+   be found at [Github pull request 93](https://github.com/phusion/passenger/pull/93).
+
+   This issue only affects Phusion Passenger for Nginx and Phusion Passenger
+   Standalone, and does not affect Phusion Passenger for Apache.
+
+   You can work around this problem in your application by setting a
+   Date header. For example, in Rails you can do:
+
+       before_filter { response.date = Time.now.utc }
+
+   Many thanks to Jeff Michael Dean (zilkey) and many others for bringing this to our attention and for providing workarounds and feedback.
 
 
 Release 4.0.29
