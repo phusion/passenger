@@ -166,7 +166,7 @@ private
 				if sh_nonfatal("#{PlatformInfo.ruby_command} -I. test.rb") &&
 				   File.exist?("test.txt") &&
 				   File.read("test.txt") == "hello\n"
-					STDERR.puts "Binary is usable."
+					STDERR.puts "     Binary is usable."
 					File.unlink("test.rb")
 					File.unlink("test.txt")
 					result = try_directories(installation_target_dirs) do |target_dir|
