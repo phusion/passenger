@@ -904,9 +904,9 @@ Init_passenger_native_support() {
 		 || ruby_version[1] != '.'
 		 || ruby_version[2] != '8')
 		{
-			fprintf(stderr, " --> passenger_native_support was compiled for Ruby " RUBY_VERSION ", "
+			fprintf(stderr, " --> passenger_native_support was compiled for Ruby %s, "
 				"but you're currently running Ruby %s\n",
-				ruby_version);
+				RUBY_VERSION, ruby_version);
 			fprintf(stderr, "     Refusing to load existing passenger_native_support.\n");
 			return;
 		}
