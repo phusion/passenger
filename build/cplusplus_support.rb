@@ -24,7 +24,7 @@
 # Rake functions for compiling/linking C++ stuff.
 
 def run_compiler(*command)
-	require 'phusion_passenger/utils/ansi_colors' if !defined?(PhusionPassenger::Utils::AnsiColors)
+	PhusionPassenger.require_passenger_lib 'utils/ansi_colors' if !defined?(PhusionPassenger::Utils::AnsiColors)
 	show_command = command.join(' ')
 	puts show_command
 	if !system(*command)

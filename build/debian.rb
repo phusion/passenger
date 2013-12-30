@@ -22,7 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'phusion_passenger/constants'
+PhusionPassenger.require_passenger_lib 'constants'
 require 'build/preprocessor'
 
 # If you change the default distribution list, don't forget to update the configuration
@@ -70,7 +70,6 @@ task 'debian:orig_tarball' => Packaging::PREGENERATED_FILES do
 			"It will not be regenerated. If you are sure that the orig tarball is outdated, please delete it " +
 			"and rerun this task."
 	else
-		require 'phusion_passenger/constants'
 		sh "mkdir -p #{PKG_DIR}"
 		nginx_version = PhusionPassenger::PREFERRED_NGINX_VERSION
 		local_nginx_tarball = File.expand_path("#{PKG_DIR}/nginx-#{nginx_version}.tar.gz")

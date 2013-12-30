@@ -80,8 +80,7 @@ end
 
 desc "Build, sign & upload gem & tarball"
 task 'package:release' => ['package:set_official', 'package:gem', 'package:tarball', 'package:sign'] do
-	require 'phusion_passenger'
-	require 'phusion_passenger/platform_info'
+	PhusionPassenger.require_passenger_lib 'platform_info'
 	require 'yaml'
 	require 'uri'
 	require 'net/http'
