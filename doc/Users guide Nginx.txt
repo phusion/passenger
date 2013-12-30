@@ -90,10 +90,11 @@ And you want your Rails application, located in `/websites/rails`, to be accessi
 To do this, you need to perform the following:
 
  1. Create a `location` with parameter `~ ^/<SUBURI>(/.*|$)`. This is a regular expression that says: "match everything that is exactly <SUBURI>, or starts with <SUBDURI>/".
- 2. Inside the location block, set `passenger_base_uri <SUBURI>`.
- 3. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>$1`.
+ 2. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>$1`.
+ 3. Inside the location block, set `passenger_base_uri <SUBURI>`.
  4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
- 5. Inside the location block, re-specify `passenger_enabled on`.
+ 5. Inside the location block, set `passenger_document_root <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
+ 6. Inside the location block, re-specify `passenger_enabled on`.
 
 Here is an example:
 
@@ -108,9 +109,10 @@ http {
 
         # This block has been added.
         location ~ ^/subapp(/.*|$) {
-            passenger_base_uri /subapp;
             alias /websites/rails/public$1;  # <-- be sure to point to 'public'!
+            passenger_base_uri /subapp;
             passenger_app_root /websites/rails;
+            passenger_document_root /websites/rails/public;
             passenger_enabled on;
         }
     }
@@ -281,10 +283,11 @@ And you want your Rack application, located in `/websites/rack`, to be accessibl
 To do this, you need to perform the following:
 
  1. Create a `location` with parameter `~ ^/<SUBURI>(/.*|$)`. This is a regular expression that says: "match everything that is exactly <SUBURI>, or starts with <SUBDURI>/".
- 2. Inside the location block, set `passenger_base_uri <SUBURI>`.
- 3. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>$1`.
+ 2. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>$1`.
+ 3. Inside the location block, set `passenger_base_uri <SUBURI>`.
  4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
- 5. Inside the location block, re-specify `passenger_enabled on`.
+ 5. Inside the location block, set `passenger_document_root <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
+ 6. Inside the location block, re-specify `passenger_enabled on`.
 
 Here is an example:
 
@@ -299,9 +302,10 @@ http {
 
         # This block has been added.
         location ~ ^/subapp(/.*|$) {
-            passenger_base_uri /subapp;
             alias /websites/rack/public$1;  # <-- be sure to point to 'public'!
+            passenger_base_uri /subapp;
             passenger_app_root /websites/rack;
+            passenger_document_root /websites/rack/public;
             passenger_enabled on;
         }
     }
@@ -441,10 +445,11 @@ And you want your WSGI application, located in `/websites/wsgi`, to be accessibl
 To do this, you need to perform the following:
 
  1. Create a `location` with parameter `~ ^/<SUBURI>(/.*|$)`. This is a regular expression that says: "match everything that is exactly <SUBURI>, or starts with <SUBDURI>/".
- 2. Inside the location block, set `passenger_base_uri <SUBURI>`.
- 3. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>$1`.
+ 2. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>$1`.
+ 3. Inside the location block, set `passenger_base_uri <SUBURI>`.
  4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
- 5. Inside the location block, re-specify `passenger_enabled on`.
+ 5. Inside the location block, set `passenger_document_root <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
+ 6. Inside the location block, re-specify `passenger_enabled on`.
 
 Here is an example:
 
@@ -459,9 +464,10 @@ http {
 
         # This block has been added.
         location ~ ^/subapp(/.*|$) {
-            passenger_base_uri /subapp;
             alias /websites/wsgi/public$1;  # <-- be sure to point to 'public'!
+            passenger_base_uri /subapp;
             passenger_app_root /websites/wsgi;
+            passenger_document_root /websites/wsgi/public;
             passenger_enabled on;
         }
     }
@@ -601,8 +607,11 @@ http {
         # If you have a web app deployed in a sub-URI, customize
         # passenger_ruby/passenger_python inside a `location` block.
         # The web app under www.bar.com/blog will use JRuby 1.7.1
-        passenger_base_uri /blog;
-        location /blog {
+        location ~ ^/blog(/.*|$) {
+            alias /websites/blog/public$1;
+            passenger_base_uri /blog;
+            passenger_app_root /websites/blog;
+            passenger_document_root /websites/blog/public;
             passenger_enabled on;
             passenger_ruby /usr/local/rvm/wrappers/jruby-1.7.1/ruby;
         }
@@ -716,6 +725,25 @@ This option may occur in the following places:
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
+
+[[PassengerDocumentRoot]]
+==== passenger_document_root <path>
+Used in sub-URI deployment scenarios to tell Phusion Passenger where it
+should look for static files. Please refer to the following sections for
+more information:
+
+ * <<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>>
+ * <<deploying_wsgi_to_sub_uri,Deploying WSGI to a sub URI>>
+ * <<deploying_rails_to_sub_uri,Deploying Rails 1 and Rails 2 to a sub URI>>
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once.
 
 [[PassengerSpawnMethod]]
 ==== passenger_spawn_method <string>

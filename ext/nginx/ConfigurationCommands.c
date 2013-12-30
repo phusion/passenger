@@ -151,6 +151,16 @@
 
 {
 	
+	ngx_string("passenger_document_root"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+	ngx_conf_set_str_slot,
+	NGX_HTTP_LOC_CONF_OFFSET,
+	offsetof(passenger_loc_conf_t, document_root),
+	NULL
+},
+
+{
+	
 	ngx_string("passenger_user"),
 	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
 	ngx_conf_set_str_slot,

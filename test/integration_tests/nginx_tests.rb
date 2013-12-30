@@ -73,8 +73,9 @@ describe "Phusion Passenger for Nginx" do
 				server[:root]        = "#{PhusionPassenger.source_root}/test/stub"
 				server << %Q{
 					location ~ ^/subapp(/.*|$) {
-						passenger_base_uri /subapp;
 						alias #{@stub.full_app_root}/public$1;
+						passenger_base_uri /subapp;
+						passenger_document_root #{@stub.full_app_root}/public;
 						passenger_app_root #{@stub.full_app_root};
 						passenger_enabled on;
 					}
@@ -134,9 +135,10 @@ describe "Phusion Passenger for Nginx" do
 				server[:root]        = "#{PhusionPassenger.source_root}/test/stub"
 				server << %Q{
 					location ~ ^/subapp(/.*|$) {
-						passenger_base_uri /subapp;
 						alias #{@stub.full_app_root}/public$1;
+						passenger_base_uri /subapp;
 						passenger_app_root #{@stub.full_app_root};
+						passenger_document_root #{@stub.full_app_root}/public;
 						passenger_enabled on;
 					}
 				}

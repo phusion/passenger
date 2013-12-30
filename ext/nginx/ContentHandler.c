@@ -87,6 +87,16 @@ file_exists(const u_char *filename, unsigned int throttle_rate) {
     return get_file_type(filename, throttle_rate) == FT_FILE;
 }
 
+static int
+mapped_filename_equals(const u_char *filename, size_t filename_len, ngx_str_t *str)
+{
+    return (str->len == filename_len &&
+            memcmp(str->data, filename, filename_len) == 0) ||
+           (str->len == filename_len - 1 &&
+            filename[filename_len - 1] == '/' &&
+            memcmp(str->data, filename, filename_len - 1) == 0);
+}
+
 /**
  * Maps the URI for the given request to a page cache file, if possible.
  *
@@ -115,16 +125,12 @@ map_uri_to_page_cache_file(ngx_http_request_t *r, ngx_str_t *public_dir,
     
     /* From this point on we know that filename is not an empty string. */
     
-    /* Check whether filename is equal to public_dir. filename may also be equal to
-     * public_dir + "/" so check for that as well.
+    
+    /* Check whether `filename` is equal to public_dir.
+     * `filename` may also be equal to public_dir + "/" so check for that as well.
      */
-    if ((public_dir->len == filename_len && memcmp(public_dir->data, filename,
-                                                   filename_len) == 0) ||
-        (public_dir->len == filename_len - 1 &&
-         filename[filename_len - 1] == '/' &&
-         memcmp(public_dir->data, filename, filename_len - 1) == 0)
-       ) {
-        /* If the URI maps to the 'public' directory (i.e. the request is the
+    if (mapped_filename_equals(filename, filename_len, public_dir)) {
+        /* If the URI maps to the 'public' or the alias directory (i.e. the request is the
          * base URI) then index.html is the page cache file.
          */
         
@@ -1216,7 +1222,7 @@ passenger_content_handler(ngx_http_request_t *r)
     u_char                *path_last, *end;
     u_char                 root_path_str[NGX_MAX_PATH + 1];
     ngx_str_t              root_path;
-    size_t                 root, len;
+    size_t                 root_len, len;
     u_char                 page_cache_file_str[NGX_MAX_PATH + 1];
     ngx_str_t              page_cache_file;
     passenger_context_t   *context;
@@ -1243,7 +1249,7 @@ passenger_content_handler(ngx_http_request_t *r)
     /* Let the next content handler take care of this request if this URL
      * maps to an existing file.
      */
-    path_last = ngx_http_map_uri_to_path(r, &path, &root, 0);
+    path_last = ngx_http_map_uri_to_path(r, &path, &root_len, 0);
     if (path_last != NULL && file_exists(path.data, 0)) {
         return NGX_DECLINED;
     }
@@ -1251,10 +1257,10 @@ passenger_content_handler(ngx_http_request_t *r)
     /* Create a string containing the root path. This path already
      * contains a trailing slash.
      */
-    end = ngx_copy(root_path_str, path.data, root);
+    end = ngx_copy(root_path_str, path.data, root_len);
     *end = '\0';
     root_path.data = root_path_str;
-    root_path.len  = root;
+    root_path.len  = root_len;
     
     
     context = ngx_pcalloc(r->pool, sizeof(passenger_context_t));
@@ -1266,13 +1272,20 @@ passenger_content_handler(ngx_http_request_t *r)
     
     /* Find the base URI for this web application, if any. */
     if (find_base_uri(r, slcf, &base_uri)) {
-        /* Store the found base URI into context->public_dir. We infer that the 'public'
-         * directory of the web application is document root + base URI.
+        /* Store the found base URI into context->public_dir. We infer that
+         * the 'public' directory of the web app equals document root + base URI.
          */
-        len = root_path.len + base_uri.len + 1;
-        context->public_dir.data = ngx_palloc(r->pool, sizeof(u_char) * len);
-        end = ngx_copy(context->public_dir.data, root_path.data, root_path.len);
-        end = ngx_copy(end, base_uri.data, base_uri.len);
+        if (slcf->document_root.data != NULL) {
+            len = slcf->document_root.len + 1;
+            context->public_dir.data = ngx_palloc(r->pool, sizeof(u_char) * len);
+            end = ngx_copy(context->public_dir.data, slcf->document_root.data,
+                           slcf->document_root.len);
+        } else {
+            len = root_path.len + base_uri.len + 1;
+            context->public_dir.data = ngx_palloc(r->pool, sizeof(u_char) * len);
+            end = ngx_copy(context->public_dir.data, root_path.data, root_path.len);
+            end = ngx_copy(end, base_uri.data, base_uri.len);
+        }
         *end = '\0';
         context->public_dir.len = len - 1;
         context->base_uri = base_uri;

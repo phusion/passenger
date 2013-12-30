@@ -140,6 +140,11 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:auto_generate_nginx_merge_code => false
 	},
 	{
+		:name   => 'passenger_document_root',
+		:type   => :string,
+		:header => nil
+	},
+	{
 		:name  => 'passenger_user',
 		:type  => :string
 	},

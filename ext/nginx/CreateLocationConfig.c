@@ -88,6 +88,11 @@
 	
 
 	
+		conf->document_root.data = NULL;
+		conf->document_root.len  = 0;
+	
+
+	
 		conf->user.data = NULL;
 		conf->user.len  = 0;
 	

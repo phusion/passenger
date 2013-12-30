@@ -100,6 +100,12 @@
 	
 
 	
+		ngx_conf_merge_str_value(conf->document_root,
+			prev->document_root,
+			NULL);
+	
+
+	
 		ngx_conf_merge_str_value(conf->user,
 			prev->user,
 			NULL);
