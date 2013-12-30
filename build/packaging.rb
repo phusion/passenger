@@ -149,9 +149,9 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			homebrew_dir = "/tmp/homebrew"
 			sh "rm -rf #{homebrew_dir}"
 			sh "git clone git@github.com:phusion/homebrew.git #{homebrew_dir}"
-			sh "cd #{homebrew_dir} && git remote add mxcl https://github.com/mxcl/homebrew.git"
-			sh "cd #{homebrew_dir} && git fetch mxcl"
-			sh "cd #{homebrew_dir} && git reset --hard mxcl/master"
+			sh "cd #{homebrew_dir} && git remote add Homebrew https://github.com/Homebrew/homebrew.git"
+			sh "cd #{homebrew_dir} && git fetch Homebrew"
+			sh "cd #{homebrew_dir} && git reset --hard Homebrew/master"
 			formula = File.read("/tmp/homebrew/Library/Formula/passenger.rb")
 			formula.gsub!(/passenger-.+?\.tar\.gz/, "passenger-#{version}.tar.gz") ||
 				abort("Unable to substitute Homebrew formula tarball filename")
@@ -168,7 +168,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			end
 			sh "cd #{homebrew_dir} && git commit -a -m 'passenger #{version}'"
 			sh "cd #{homebrew_dir} && git push -f"
-			sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b mxcl:master"
+			sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b Homebrew:master"
 
 			puts "Initiating building of Debian packages"
 			Rake::Task['package:initiate_debian_building'].invoke
