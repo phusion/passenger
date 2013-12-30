@@ -863,7 +863,7 @@ void
 Init_passenger_native_support() {
 	struct sockaddr_un addr;
 	
-	// Only defined on Ruby >= 1.9
+	/* Only defined on Ruby >= 1.9 */
 	#ifdef RUBY_API_VERSION_CODE
 		if (ruby_api_version[0] != RUBY_API_VERSION_MAJOR
 		 || ruby_api_version[1] != RUBY_API_VERSION_MINOR
@@ -880,10 +880,11 @@ Init_passenger_native_support() {
 			fprintf(stderr, "     Refusing to load existing passenger_native_support.\n");
 			return;
 		}
-		// Because native extensions may be linked to libruby, loading
-		// a Ruby 1.9 native extension may not fail on Ruby 1.8 (even though
-		// the extension will crash later on). We detect such a case here and
-		// abort early.
+		/* Because native extensions may be linked to libruby, loading
+		 * a Ruby 1.9 native extension may not fail on Ruby 1.8 (even though
+		 * the extension will crash later on). We detect such a case here and
+		 * abort early.
+		 */
 		if (strlen(ruby_version) >= sizeof("1.8.7") - 1
 		 && ruby_version[0] == '1'
 		 && ruby_version[1] == '.'
@@ -898,15 +899,23 @@ Init_passenger_native_support() {
 			return;
 		}
 	#else
-		printf("here 2!\n");
 		if (strlen(ruby_version) < sizeof("1.8.7") - 1
 		 || ruby_version[0] != '1'
 		 || ruby_version[1] != '.'
 		 || ruby_version[2] != '8')
 		{
+			/* We may not have included Ruby 1.8's version.h because of compiler
+			 * header file search paths, so we can't rely on RUBY_VERSION being
+			 * defined.
+			 */
+			#ifdef RUBY_VERSION
+				#define ESTIMATED_RUBY_VERSION RUBY_VERSION
+			#else
+				#define ESTIMATED_RUBY_VERSION "1.8"
+			#endif
 			fprintf(stderr, " --> passenger_native_support was compiled for Ruby %s, "
 				"but you're currently running Ruby %s\n",
-				RUBY_VERSION, ruby_version);
+				ESTIMATED_RUBY_VERSION, ruby_version);
 			fprintf(stderr, "     Refusing to load existing passenger_native_support.\n");
 			return;
 		}
