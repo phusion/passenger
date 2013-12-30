@@ -72,7 +72,7 @@ describe "Apache 2 module" do
 			@server = "http://1.passenger.test:#{@apache2.port}/subapp"
 			@stub = RackStub.new('rack')
 			@apache2 << "RailsMaxPoolSize 1"
-			@apache2.set_vhost("1.passenger.test", "#{PhusionPassenger.source_root}/test/stub") do |vhost|
+			@apache2.set_vhost("1.passenger.test", File.expand_path("stub")) do |vhost|
 				vhost << %Q{
 					Alias /subapp #{@stub.full_app_root}/public
 					<Location /subapp>
@@ -129,7 +129,7 @@ describe "Apache 2 module" do
 			@server = "http://1.passenger.test:#{@apache2.port}/subapp"
 			@stub = PythonStub.new('wsgi')
 			@apache2 << "RailsMaxPoolSize 1"
-			@apache2.set_vhost("1.passenger.test", "#{PhusionPassenger.source_root}/test/stub") do |vhost|
+			@apache2.set_vhost("1.passenger.test", File.expand_path("stub")) do |vhost|
 				vhost << %Q{
 					Alias /subapp #{@stub.full_app_root}/public
 					<Location /subapp>
