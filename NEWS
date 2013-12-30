@@ -1,3 +1,22 @@
+Release 4.0.30
+--------------
+
+ * Fixed wrong autogeneration of HTTP Date header. If the web app does
+   not supply a Date header, then Passenger will add one. Unfortunately
+   due to the use of the wrong format string, December 30 2013 is
+   formatted as December 30 2014. As a result, cookies that expire before
+   2014 would expire on December 30 2013 and December 31 2013. Details can
+   be found at [Github pull request 93](https://github.com/phusion/passenger/pull/93).
+
+   This issue only affects Phusion Passenger for Nginx and Phusion Passenger
+   Standalone, and does not affect Phusion for Apache.
+
+   You can work around this problem in your application by setting a
+   Date header. For example, in Rails you can do:
+
+       before_filter { response.date = Time.now.utc }
+
+
 Release 4.0.29
 --------------
 
