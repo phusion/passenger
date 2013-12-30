@@ -338,7 +338,9 @@
 
 11.9.4. Error handling	=>	error-handling-1a1uvod
 
-11.9.5. Available hooks	=>	available-hooks-159anc3
+11.9.5. Compatibility	=>	compatibility-18tl6g3
+
+11.9.6. Available hooks	=>	available-hooks-159anc3
 
 11.10. Flying Passenger	=>	flying-passenger-q916f7
 
