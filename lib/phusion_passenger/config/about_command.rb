@@ -27,19 +27,20 @@ PhusionPassenger.require_passenger_lib 'config/command'
 module PhusionPassenger
 module Config
 
-class InfoCommand < Command
+class AboutCommand < Command
 	def self.description
 		return "Show information about #{PROGRAM_NAME}"
 	end
 
 	def self.help
-		puts "Usage: passenger-config info <SUBCOMMAND>"
+		puts "Usage: passenger-config about <SUBCOMMAND>"
 		puts "Show information about #{PROGRAM_NAME}."
 		puts
 		puts "Available subcommands:"
-		puts "  root                     Show Phusion Passenger's root directory."
+		puts "  root                     Show #{PROGRAM_NAME}'s root directory."
+		puts "  ruby-libdir              Show #{PROGRAM_NAME}'s Ruby library directory."
 		puts "  includedir               Show the Nginx runtime library headers directory."
-		puts "  nginx-addon-dir          Show the Phusion Passenger Nginx addon directory."
+		puts "  nginx-addon-dir          Show #{PROGRAM_NAME}'s Nginx addon directory."
 		puts "  nginx-libs               Show Nginx runtime library flags."
 		puts "  compiled                 Check whether runtime libraries are compiled."
 		puts "  natively-packaged        Check whether Phusion Passenger is natively"
@@ -49,12 +50,11 @@ class InfoCommand < Command
 		puts "  make-locations-ini       Generate a locations.ini based on the current"
 		puts "                           install paths."
 		puts "  detect-apache2           Autodetect Apache installations."
-		puts "  ruby-command             Print the correct command for invoking the Ruby"
+		puts "  ruby-command             Show the correct command for invoking the Ruby"
 		puts "                           interpreter."
-		puts "  ruby-libdir              Show Phusion Passenger's Ruby library directory."
-		puts "  rubyext-compat-id        Print the Ruby extension binary compatibility ID."
-		puts "  cxx-compat-id            Print the C++ binary compatibility ID."
-		puts "  version                  Show version number."
+		puts "  rubyext-compat-id        Show the Ruby extension binary compatibility ID."
+		puts "  cxx-compat-id            Show the C++ binary compatibility ID."
+		puts "  version                  Show the version number."
 	end
 
 	def run
@@ -69,6 +69,8 @@ class InfoCommand < Command
 		case subcommand
 		when "--root"
 			puts PhusionPassenger.source_root
+		when "--ruby-libdir"
+			puts PhusionPassenger.ruby_libdir
 		when "--includedir"
 			puts PhusionPassenger.include_dir
 		when "--nginx-addon-dir"
@@ -152,8 +154,6 @@ class InfoCommand < Command
 			puts
 			puts "## Notes for RVM users"
 			puts "Do you want to know which command to use for a different Ruby interpreter? 'rvm use' that Ruby interpreter, then re-run 'passenger-config --ruby-command'."
-		when "--ruby-libdir"
-			puts PhusionPassenger.ruby_libdir
 		when "--rubyext-compat-id"
 			PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
 			puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_id

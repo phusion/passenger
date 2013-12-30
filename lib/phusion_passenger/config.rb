@@ -29,10 +29,10 @@ module PhusionPassenger
 module Config
 	KNOWN_COMMANDS = [
 		["restart", "RestartCommand"],
-		["info", "InfoCommand"]
+		["about", "AboutCommand"]
 	]
 	
-	INFO_OPTIONS = [
+	ABOUT_OPTIONS = [
 		"root",
 		"includedir",
 		"nginx-addon-dir",
@@ -84,11 +84,11 @@ private
 		return nil if argv.empty?
 
 		# Compatibility with version <= 4.0.29: try to pass all
-		# --switch invocations to InfoCommand.
+		# --switch invocations to AboutCommand.
 		if argv[0] =~ /^--/
 			name = argv[0].sub(/^--/, '')
-			if INFO_OPTIONS.include?(name)
-				command_class = lookup_command_class_by_class_name("InfoCommand")
+			if ABOUT_OPTIONS.include?(name)
+				command_class = lookup_command_class_by_class_name("AboutCommand")
 				return [command_class, argv]
 			else
 				return nil
