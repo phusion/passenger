@@ -37,6 +37,10 @@ task 'test:integration:apache2' => dependencies do
 		if boolean_option('SUDO')
 			command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 		end
+		if grep = string_option('E')
+			require 'shellwords'
+			command << " -e #{Shellwords.escape(grep)}"
+		end
 		sh "cd test && #{command}"
 	end
 end
@@ -83,14 +87,17 @@ end
 dependencies = [:apache2, NATIVE_SUPPORT_TARGET].compact
 desc "Run the 'apache2' integration test infinitely, and abort if/when it fails"
 task 'test:restart' => dependencies do
-	Dir.chdir("test") do
-		color_code_start = "\e[33m\e[44m\e[1m"
-		color_code_end = "\e[0m"
-		i = 1
-		while true do
-			puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
-			sh "spec -c -f s integration_tests/apache2.rb -e 'mod_passenger running in Apache 2 : MyCook(tm) beta running on root URI should support restarting via restart.txt'"
-			i += 1
+	require 'shellwords'
+	color_code_start = "\e[33m\e[44m\e[1m"
+	color_code_end = "\e[0m"
+	i = 1
+	while true do
+		puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
+		command = "cd test && rspec -c -f s integration_tests/apache2_tests.rb"
+		if grep = string_option('E')
+			command << " -e #{Shellwords.escape(grep)}"
 		end
+		sh(command)
+		i += 1
 	end
 end

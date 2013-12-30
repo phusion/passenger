@@ -1218,7 +1218,17 @@ private:
 			size_t size;
 			
 			size = fread(buf, 1, sizeof(buf), uploadData->handle);
-			writeExact(fd, buf, size);
+			try {
+				writeExact(fd, buf, size);
+			} catch (const SystemException &e) {
+				if (e.code() == EPIPE || e.code() == ECONNRESET) {
+					// The HelperAgent stopped reading the body, probably
+					// because the application already sent EOF.
+					return;
+				} else {
+					throw e;
+				}
+			}
 		}
 	}
 
