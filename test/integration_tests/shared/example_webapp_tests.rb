@@ -87,7 +87,7 @@ shared_examples_for "an example web app" do
 			chunk = "foo=bar!"
 			socket.write("%X\r\n%s\r\n" % [chunk.size, chunk])
 			socket.write("0\r\n\r\n")
-			socket.close_write
+			socket.flush
 
 			socket.read.should =~ /\r\nok\Z/
 		ensure

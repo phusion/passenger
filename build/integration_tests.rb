@@ -55,6 +55,10 @@ task 'test:integration:nginx' => dependencies do
 		if boolean_option('SUDO')
 			command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 		end
+		if grep = string_option('E')
+			require 'shellwords'
+			command << " -e #{Shellwords.escape(grep)}"
+		end
 		sh "cd test && #{command}"
 	end
 end
