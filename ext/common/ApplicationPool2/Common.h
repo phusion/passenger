@@ -103,7 +103,7 @@ enum AttachResult {
 	// This is checked after checking for the group upper bound limits and the pool
 	// capacity, so if you get this result then there is guaranteed to be capacity
 	// in the current group and in the pool.
-	AR_ANOTHER_GROUP_IS_WAITING_FOR_CAPACITY,
+	AR_ANOTHER_GROUP_IS_WAITING_FOR_CAPACITY
 };
 
 /**

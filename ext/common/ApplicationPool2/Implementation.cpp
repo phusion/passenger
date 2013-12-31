@@ -1015,9 +1015,7 @@ Group::finalizeRestart(GroupPtr self, Options options, RestartMethod method,
 		P_INFO("Group " << name << " is waiting for capacity to become available. "
 			"Trying to shutdown another idle process to free capacity...");
 		if (pool->forceFreeCapacity(this, postLockActions) != NULL) {
-			SpawnResult result = spawn();
-			assert(result == SR_OK);
-			(void) result;
+			spawn();
 		} else {
 			P_INFO("There are no processes right now that are eligible "
 				"for shutdown. Will try again later.");
