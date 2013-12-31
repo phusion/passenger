@@ -2,6 +2,7 @@ source_root = File.expand_path("../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
 require 'tmpdir'
 require 'fileutils'
@@ -15,6 +16,8 @@ ENV['PATH'] = "#{PhusionPassenger.bin_dir}:#{ENV['PATH']}"
 ENV.delete('PASSENGER_DEBUG')
 ENV['PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY'] = '0'
 ENV['PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY']  = '0'
+
+module PhusionPassenger
 
 describe "Passenger Standalone" do
 	after :each do
@@ -85,11 +88,11 @@ describe "Passenger Standalone" do
 	end
 
 	def create_dummy_nginx_binary
-		File.open("nginx", "w") do |f|
+		File.open("PassengerWebHelper", "w") do |f|
 			f.puts "#!/bin/bash"
 			f.puts "echo nginx version: 1.0.0"
 		end
-		File.chmod(0755, "nginx")
+		File.chmod(0755, "PassengerWebHelper")
 	end
 
 	def create_file(filename, contents = nil)
@@ -114,10 +117,10 @@ describe "Passenger Standalone" do
 	end
 
 	describe "start command" do
-		SUPPORT_BINARIES_DOWNLOAD_MESSAGE = "Downloading Passenger support binaries for your platform, if available"
-		NGINX_BINARY_DOWNLOAD_MESSAGE = "Downloading Nginx binary for your platform, if available"
-		NGINX_SOURCE_DOWNLOAD_MESSAGE = "Downloading Nginx..."
-		COMPILING_MESSAGE = "Installing Phusion Passenger Standalone"
+		SUPPORT_BINARIES_DOWNLOAD_MESSAGE = " --> Downloading #{PROGRAM_NAME} support binaries for your platform"
+		NGINX_BINARY_DOWNLOAD_MESSAGE = "Downloading web helper for your platform"
+		NGINX_SOURCE_DOWNLOAD_MESSAGE = "Downloading web helper source code..."
+		COMPILING_MESSAGE = "Installing #{PROGRAM_NAME} Standalone..."
 
 		def test_serving_application(passenger_command)
 			Dir.chdir(@runtime_dir) do
@@ -150,7 +153,7 @@ describe "Passenger Standalone" do
 
 				Dir.mkdir("#{@webroot}/#{version}")
 				Dir.chdir("#{@webroot}/#{version}") do
-					create_tarball("nginx-#{nginx_version}-#{compat_id}.tar.gz") do
+					create_tarball("webhelper-#{nginx_version}-#{compat_id}.tar.gz") do
 						create_dummy_nginx_binary
 					end
 					create_tarball("support-#{compat_id}.tar.gz") do
@@ -198,16 +201,16 @@ describe "Passenger Standalone" do
 					test_serving_application(command)
 				end
 
-				specify "if the downloaded support binaries work but the download Nginx binary doesn't, " +
-					"and Nginx compilation doesn't succeed the first time, then Nginx compilation " +
+				specify "if the downloaded support binaries work but the downloaded web helper binary doesn't, " +
+					"and web helper compilation doesn't succeed the first time, then web helper compilation " +
 					"succeeds the second time" do
 					Dir.chdir("#{@webroot}/#{version}") do
 						create_tarball("support-#{compat_id}.tar.gz") do
 							FileUtils.cp_r(Dir["#{PhusionPassenger.source_root}/buildout/*"],
 								".")
 						end
-						create_tarball("nginx-#{nginx_version}-#{compat_id}.tar.gz") do
-							create_file("nginx",
+						create_tarball("webhelper-#{nginx_version}-#{compat_id}.tar.gz") do
+							create_file("PassengerWebHelper",
 								"#!/bin/sh\n" +
 								"exit 1\n")
 						end
@@ -225,10 +228,10 @@ describe "Passenger Standalone" do
 						@output = `#{command} --runtime-check-only --no-compile-runtime 2>&1`
 						$?.exitstatus.should_not == 0
 						@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
-						@output.should include("All support binaries are usable.")
+						@output.should include("All good\n")
 						@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
-						@output.should include("Nginx binary is not usable.")
-						@output.should include("Refusing to compile the Phusion Passenger Standalone")
+						@output.should include("Not usable, will compile from source")
+						@output.should include("Refusing to compile the Phusion Passenger Standalone runtime")
 
 						@output = capture_output("#{command} --runtime-check-only")
 						@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
@@ -258,23 +261,25 @@ describe "Passenger Standalone" do
 					File.open("#{@runtime_dir}/locations.ini", "r+") do |f|
 						data = f.read
 						data.sub!(/natively_packaged=.*/, 'natively_packaged=true')
-						data.sub!(/native_packaging_method=.*/, 'native_packaging_method=deb')
+						if !data.sub!(/native_packaging_method=.*/, 'native_packaging_method=deb')
+							data << "native_packaging_method=deb\n"
+						end
 						f.rewind
 						f.truncate(0)
 						f.write(data)
 					end
 					ENV['PASSENGER_LOCATION_CONFIGURATION_FILE'] = "#{@runtime_dir}/locations.ini"
-					create_file("#{PhusionPassenger.lib_dir}/nginx")
+					create_file("#{PhusionPassenger.lib_dir}/PassengerWebHelper")
 				end
 
 				after :each do
 					ENV.delete('PASSENGER_LOCATION_CONFIGURATION_FILE')
-					File.unlink("#{PhusionPassenger.lib_dir}/nginx")
+					File.unlink("#{PhusionPassenger.lib_dir}/PassengerWebHelper")
 				end
 
 				it "downloads only the Nginx binary from the Internet" do
-					File.rename("#{@webroot}/#{version}/nginx-#{nginx_version}-#{compat_id}.tar.gz",
-						"#{@webroot}/#{version}/nginx-0.0.1-#{compat_id}.tar.gz")
+					File.rename("#{@webroot}/#{version}/webhelper-#{nginx_version}-#{compat_id}.tar.gz",
+						"#{@webroot}/#{version}/webhelper-0.0.1-#{compat_id}.tar.gz")
 					@output = capture_output("passenger start " +
 						"--runtime-dir '#{@runtime_dir}' " +
 						"--runtime-check-only " +
@@ -329,3 +334,5 @@ describe "Passenger Standalone" do
 		end
 	end
 end
+
+end # module PhusionPassenger

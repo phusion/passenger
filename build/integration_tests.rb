@@ -69,8 +69,13 @@ task 'test:integration:standalone' => dependencies do
 	if PlatformInfo.rspec.nil?
 		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
 	else
+		command = "#{PlatformInfo.rspec} -c -f s integration_tests/standalone_tests.rb"
+		if grep = string_option('E')
+			require 'shellwords'
+			command << " -e #{Shellwords.escape(grep)}"
+		end
 		Dir.chdir("test") do
-			#ruby "#{PlatformInfo.rspec} -c -f s integration_tests/standalone_tests.rb"
+			ruby command
 		end
 	end
 end
