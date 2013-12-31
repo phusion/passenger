@@ -390,14 +390,14 @@ namespace tut {
 			"PATH_INFO", "/",
 			NULL);
 		string response = readAll(connection);
-		ensure(containsSubstring(response, "HTTP/1.1 500 Internal Server Error\r\n"));
-		ensure(containsSubstring(response, "Status: 500 Internal Server Error\r\n"));
-		ensure(containsSubstring(response, "Content-Type: text/html; charset=UTF-8\r\n"));
-		ensure(containsSubstring(response, "<html>"));
-		ensure(containsSubstring(response, "An internal error occurred while trying to spawn the application."));
-		ensure(containsSubstring(response, "Passenger:<wbr>:<wbr>RuntimeException"));
-		ensure(containsSubstring(response, "An internal error!"));
-		ensure(containsSubstring(response, "Spawner.h"));
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 500 Internal Server Error\r\n"));
+		ensure("(2)", containsSubstring(response, "Status: 500 Internal Server Error\r\n"));
+		ensure("(3)", containsSubstring(response, "Content-Type: text/html; charset=UTF-8\r\n"));
+		ensure("(4)", containsSubstring(response, "<html>"));
+		ensure("(5)", containsSubstring(response, "An internal error occurred while trying to spawn the application."));
+		ensure("(6)", containsSubstring(response, "RuntimeException"));
+		ensure("(7)", containsSubstring(response, "An internal error!"));
+		ensure("(8)", containsSubstring(response, "Spawner.h"));
 	}
 
 	TEST_METHOD(13) {
