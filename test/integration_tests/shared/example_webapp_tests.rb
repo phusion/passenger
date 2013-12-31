@@ -211,7 +211,7 @@ shared_examples_for "an example web app" do
 				get('/').should == "front page"
 			end
 			sockets.each do |socket|
-				socket.write(upload_data[0 .. size_of_first_half])
+				socket.write(upload_data[size_of_first_half .. -1])
 				socket.flush
 				socket.read.should =~ /front page/
 			end
