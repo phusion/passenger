@@ -12,6 +12,8 @@ Release 4.0.31
    all clients have disconnected. Fixes issue #884.
  * Fixed compilation problems on FreeBSD.
  * Fixed some C++ strict aliasing problems.
+ * Fixed some problems with spawning applications that print messages without
+   newline during startup. Fixes issue #1039.
  * When Phusion Passenger is installed through the Debian package,
    passenger-install-apache2-module now checks whether the Apache
    module package (libapache2-mod-passenger) is properly installed,

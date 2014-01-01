@@ -137,7 +137,7 @@ module App
 			exit exit_code_for_exception(e)
 		end
 
-		puts "!> Ready"
+		LoaderSharedHelpers.advertise_readiness
 		LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
 		puts "!> "
 		return handler

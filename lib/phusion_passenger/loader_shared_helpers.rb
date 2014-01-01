@@ -42,6 +42,8 @@ module LoaderSharedHelpers
 	# To be called whenever the (pre)loader is about to abort with an error.
 	def about_to_abort(exception = nil)
 		dump_all_information
+		# https://code.google.com/p/phusion-passenger/issues/detail?id=1039
+		puts
 	end
 
 	def to_boolean(value)
@@ -250,6 +252,13 @@ module LoaderSharedHelpers
 		end
 	end
 	
+	def advertise_readiness
+		# https://code.google.com/p/phusion-passenger/issues/detail?id=1039
+		puts
+
+		puts "!> Ready"
+	end
+
 	def advertise_sockets(output, request_handler)
 		request_handler.server_sockets.each_pair do |name, options|
 			concurrency = PhusionPassenger.advertised_concurrency_level || options[:concurrency]

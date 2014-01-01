@@ -98,7 +98,7 @@ module App
 	load_app
 	LoaderSharedHelpers.before_handling_requests(false, options)
 	handler = RequestHandler.new(STDIN, options.merge("app" => app))
-	puts "!> Ready"
+	LoaderSharedHelpers.advertise_readiness
 	LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
 	puts "!> "
 	handler.main_loop

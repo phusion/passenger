@@ -149,7 +149,7 @@ module App
 	handshake_and_read_startup_request
 	init_passenger
 	handler = load_app
-	puts "!> Ready"
+	LoaderSharedHelpers.advertise_readiness
 	LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
 	puts "!> "
 	handler.main_loop
