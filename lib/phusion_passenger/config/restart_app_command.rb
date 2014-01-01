@@ -30,7 +30,7 @@ PhusionPassenger.require_passenger_lib 'config/utils'
 module PhusionPassenger
 module Config
 
-class RestartCommand < Command
+class RestartAppCommand < Command
 	include PhusionPassenger::Config::Utils
 
 	def self.description
@@ -50,22 +50,22 @@ private
 		OptionParser.new do |opts|
 			nl = "\n" + ' ' * 37
 			opts.banner =
-				"Usage 1: passenger-config restart <APP PATH PREFIX> [OPTIONS]\n" +
-				"Usage 2: passenger-config restart --name <APP GROUP NAME> [OPTIONS]"
+				"Usage 1: passenger-config restart-app <APP PATH PREFIX> [OPTIONS]\n" +
+				"Usage 2: passenger-config restart-app --name <APP GROUP NAME> [OPTIONS]"
 			opts.separator ""
 			opts.separator "  Restart an application. The syntax determines how the application that is to"
 			opts.separator "  be restarted, will be selected."
 			opts.separator ""
 			opts.separator "  1. Selects all applications whose paths begin with the given prefix."
 			opts.separator ""
-			opts.separator "     Example: passenger-config restart /webapps"
+			opts.separator "     Example: passenger-config restart-app /webapps"
 			opts.separator "     Restarts all apps whose path begin with /webapps, such as /webapps/foo,"
 			opts.separator "     /webapps/bar and /webapps123."
 			opts.separator ""
 			opts.separator "  2. Selects a specific application based on an exact match of its app group"
 			opts.separator "     name."
 			opts.separator ""
-			opts.separator "     Example: passenger-config restart --name /webapps/foo"
+			opts.separator "     Example: passenger-config restart-app --name /webapps/foo"
 			opts.separator "     Restarts only /webapps/foo, but not for example /webapps/foo/bar or"
 			opts.separator "     /webapps/foo123."
 			opts.separator ""

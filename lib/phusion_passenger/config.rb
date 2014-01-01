@@ -28,7 +28,7 @@ module PhusionPassenger
 # Core of the `passenger-config` command. Dispatches a subcommand to a specific class.
 module Config
 	KNOWN_COMMANDS = [
-		["restart", "RestartCommand"],
+		["restart-app", "RestartAppCommand"],
 		["about", "AboutCommand"]
 	]
 	

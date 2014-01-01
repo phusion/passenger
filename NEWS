@@ -1,7 +1,7 @@
 Release 4.0.31
 --------------
 
- * Introduced a new tool: `passenger-config restart`. With this command you
+ * Introduced a new tool: `passenger-config restart-app`. With this command you
    can initiate an application restart without touching restart.txt.
    Unlike touching restart.txt, this tool initiates the restart immediately
    instead of on the next request.
