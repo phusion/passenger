@@ -148,7 +148,10 @@ initialize(int argc, char *argv[]) {
 
 static void
 exitHandler(int signo) {
-	(void) write(terminationPipe[1], "x", 1);
+	int ret = write(terminationPipe[1], "x", 1);
+	// We can't do anything about failures, so ignore
+	// compiler warnings about not using the result.
+	(void) ret;
 }
 
 static void

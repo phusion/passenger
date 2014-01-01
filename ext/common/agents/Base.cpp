@@ -85,6 +85,13 @@ struct AbortHandlerState {
 typedef void (*Callback)(AbortHandlerState &state, void *userData);
 
 
+#define IGNORE_SYSCALL_RESULT(code) \
+	do { \
+		int _ret = code; \
+		(void) _ret; \
+	} while (false)
+
+
 static bool _feedbackFdAvailable = false;
 static const char digits[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
@@ -862,10 +869,18 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		return;
 	}
 
-	close(emergencyPipe1[0]);
-	close(emergencyPipe1[1]);
-	close(emergencyPipe2[0]);
-	close(emergencyPipe2[1]);
+	if (emergencyPipe1[0] != -1) {
+		close(emergencyPipe1[0]);
+	}
+	if (emergencyPipe1[1] != -1) {
+		close(emergencyPipe1[1]);
+	}
+	if (emergencyPipe2[0] != -1) {
+		close(emergencyPipe2[0]);
+	}
+	if (emergencyPipe2[1] != -1) {
+		close(emergencyPipe2[1]);
+	}
 	emergencyPipe1[0] = emergencyPipe1[1] = -1;
 	emergencyPipe2[0] = emergencyPipe2[1] = -1;
 
@@ -1486,8 +1501,8 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
 		beepOnAbort  = hasEnvOption("PASSENGER_BEEP_ON_ABORT", false);
 		stopOnAbort = hasEnvOption("PASSENGER_STOP_ON_ABORT", false);
-		pipe(emergencyPipe1);
-		pipe(emergencyPipe2);
+		IGNORE_SYSCALL_RESULT(pipe(emergencyPipe1));
+		IGNORE_SYSCALL_RESULT(pipe(emergencyPipe2));
 		installAbortHandler();
 	}
 	oxt::initialize();

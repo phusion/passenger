@@ -1602,6 +1602,7 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	} catch (const thread_resource_error &e) {
 		struct rlimit lim;
 		string pthread_threads_max;
+		int ret;
 		
 		lim.rlim_cur = 0;
 		lim.rlim_max = 0;
@@ -1635,11 +1636,13 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 		
 		fprintf(stderr, "Output of 'uname -a' follows:\n");
 		fflush(stderr);
-		::system("uname -a >&2");
+		ret = ::system("uname -a >&2");
+		(void) ret; // Ignore compiler warning.
 		
 		fprintf(stderr, "\nOutput of 'ulimit -a' follows:\n");
 		fflush(stderr);
-		::system("ulimit -a >&2");
+		ret = ::system("ulimit -a >&2");
+		(void) ret; // Ignore compiler warning.
 		
 		return DECLINED;
 		

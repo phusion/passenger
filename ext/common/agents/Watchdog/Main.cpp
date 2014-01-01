@@ -172,7 +172,10 @@ setOomScore(const StaticString &score) {
 	
 	f = openOomAdjFile("w", type);
 	if (f != NULL) {
-		fwrite(score.data(), 1, score.size(), f);
+		size_t ret = fwrite(score.data(), 1, score.size(), f);
+		// We can't do anything about failures, so ignore compiler
+		// warnings about not doing anything with the result.
+		(void) ret;
 		fclose(f);
 	}
 }
@@ -467,7 +470,10 @@ initializeBareEssentials(int argc, char *argv[]) {
 	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");
 
 	if (agentsOptions.get("test_binary", false) == "1") {
-		write(oldStdout, "PASS\n", 5);
+		int ret;
+		do {
+			ret = write(oldStdout, "PASS\n", 5);
+		} while (ret == -1 && errno == EAGAIN);
 		exit(0);
 	}
 	close(oldStdout);
