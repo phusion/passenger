@@ -630,6 +630,28 @@ namespace tut {
 			result = pool->getProcessCount() == 1;
 		);
 	}
+
+	TEST_METHOD(18) {
+		// Test getting from an app for which minProcesses is set to 0,
+		// and restart.txt already existed.
+		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
+		Options options = createOptions();
+		options.appRoot = "tmp.wsgi";
+		options.appType = "wsgi";
+		options.spawnMethod = "direct";
+		options.minProcesses = 0;
+		initPoolDebugging();
+		debug->spawning = false;
+
+		touchFile("tmp.wsgi/tmp/restart.txt", 1);
+		pool->asyncGet(options, callback, false);
+		debug->debugger->recv("About to end restarting");
+		debug->messages->send("Finish restarting");
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		ensure_equals(pool->getProcessCount(), 1u);
+	}
 	
 	
 	/*********** Test asyncGet() behavior on multiple SuperGroups,
