@@ -187,8 +187,8 @@ private
 			return false
 		end
 
-		if PhusionPassenger.natively_packaged? && !File.exist?(ruby_extension_source_dir)
-			PhusionPassenger.require_passenger_lib "constants"
+		if PhusionPassenger.natively_packaged? && !File.exist?(PhusionPassenger.ruby_extension_source_dir)
+			PhusionPassenger.require_passenger_lib 'constants'
 			STDERR.puts " --> No #{library_name} found for current Ruby interpreter."
 			case PhusionPassenger.native_packaging_method
 			when 'deb'
