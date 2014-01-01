@@ -14,6 +14,8 @@ Release 4.0.31
  * Fixed some C++ strict aliasing problems.
  * Fixed some problems with spawning applications that print messages without
    newline during startup. Fixes issue #1039.
+ * Fixed potential hangs on JRuby when Ctrl-C is used to shutdown the server.
+   Fixes issue #1035.
  * When Phusion Passenger is installed through the Debian package,
    passenger-install-apache2-module now checks whether the Apache
    module package (libapache2-mod-passenger) is properly installed,
