@@ -17,6 +17,8 @@ Release 4.0.31
    module package (libapache2-mod-passenger) is properly installed,
    and installs it using apt-get if it's not installed. Fixes
    issue #1031.
+ * The `passenger-status --show=xml` command no longer prints the non-XML
+   preamble, such as the version number and the time. Fixes issue #1037.
  * The Ruby native extension check whether it's loaded against the right Ruby
    version, to prevent problems when people upgrade Ruby without recompiling
    their native extensions.
