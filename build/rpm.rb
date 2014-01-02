@@ -45,6 +45,23 @@ task 'rpm:local' => 'rpm:gem' do
 	sh "rpmbuild -ba #{spec_target_file}"
 end
 
+task 'rpm:local:uninstall' do
+	sh "sudo yum remove -y passenger mod_passenger passenger-devel passenger-doc passenger-native-libs passenger-debuginfo"
+end
+
+task 'rpm:local:reinstall' => 'rpm:local:uninstall' do
+	rpm_spec_dir = "#{RPMBUILD_ROOT}/RPMS"
+	files = []
+	["passenger", "mod_passenger", "passenger-devel", "passenger-doc", "passenger-native-libs", "passenger-debuginfo"].each do |package_name|
+		files << Dir["#{rpm_spec_dir}/*/#{package_name}-#{PACKAGE_VERSION}-*.rpm"].first
+	end
+	files.compact!
+	if files.empty?
+		abort "No RPMs have been built yet. Please run 'rake rpm:local' first."
+	end
+	sh "sudo yum install -y #{files.join(' ')}"
+end
+
 def create_rpm_build_task(distro_id, mock_chroot_name, distro_name)
 	desc "Build RPM for #{distro_name}"
 	task "rpm:#{distro_id}" => 'rpm:gem' do
