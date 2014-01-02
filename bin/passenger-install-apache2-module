@@ -334,7 +334,7 @@ private
 			sh! "sudo apt-get install #{DEB_APACHE_MODULE_PACKAGE}"
 			return true
 		when 'rpm'
-			sh! "sudo yum install #{RPM_APACHE_MODULE_PACKAGE}"
+			sh! "sudo yum install #{RPM_APACHE_MODULE_PACKAGE}-#{VERSION_STRING}"
 			return true
 		else
 			puts "<red>The #{PROGRAM_NAME} Apache module package is not installed.</red>"

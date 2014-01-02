@@ -421,7 +421,7 @@ private
 			when "deb"
 				command = "sudo sh -c 'apt-get update && apt-get install #{DEB_DEV_PACKAGE}'"
 			when "rpm"
-				command = "sudo yum install #{RPM_DEV_PACKAGE}"
+				command = "sudo yum install #{RPM_DEV_PACKAGE}-#{VERSION_STRING}"
 			end
 			if command
 				if STDIN.tty?
