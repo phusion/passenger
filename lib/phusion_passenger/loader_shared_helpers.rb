@@ -22,6 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'public_api'
 PhusionPassenger.require_passenger_lib 'debug_logging'
 
@@ -32,11 +33,28 @@ module LoaderSharedHelpers
 	extend self
 
 	# To be called by the (pre)loader as soon as possible.
-	def init
+	def init(options)
 		Thread.main[:name] = "Main thread"
 		# We don't dump PATH info because at this point it's
 		# unlikely to be changed.
 		dump_ruby_environment
+		check_rvm_using_wrapper_script(options)
+		return sanitize_spawn_options(options)
+	end
+
+	def check_rvm_using_wrapper_script(options)
+		ruby = options["ruby"]
+		if ruby =~ %r(/\.?rvm/) && ruby =~ %r(/bin/ruby$)
+			raise "You've set the `PassengerRuby` (Apache) or `passenger_ruby` (Nginx) option to '#{ruby}'. " +
+				"However, because you are using RVM, this is not allowed: the option must point to " +
+				"an RVM wrapper script, not a raw Ruby binary. This is because RVM is implemented " +
+				"through various environment variables, which are set through the wrapper script.\n" +
+				"\n" +
+				"To find out the correct value for `PassengerRuby`/`passenger_ruby`, please read:\n\n" +
+				"  #{NGINX_DOC_URL}#PassengerRuby\n\n" +
+				"Scroll to section 'RVM helper tool'.\n" +
+				"\n-------------------------\n"
+		end
 	end
 
 	# To be called whenever the (pre)loader is about to abort with an error.

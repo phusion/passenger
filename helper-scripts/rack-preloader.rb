@@ -74,9 +74,8 @@ module App
 		PhusionPassenger.require_passenger_lib 'loader_shared_helpers'
 		PhusionPassenger.require_passenger_lib 'request_handler'
 		PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'
-		LoaderSharedHelpers.init
-		PreloaderSharedHelpers.init
-		@@options = LoaderSharedHelpers.sanitize_spawn_options(@@options)
+		@@options = LoaderSharedHelpers.init(@@options)
+		@@options = PreloaderSharedHelpers.init(@@options)
 		Utils.passenger_tmpdir = options["generation_dir"]
 		if defined?(NativeSupport)
 			NativeSupport.disable_stdio_buffering

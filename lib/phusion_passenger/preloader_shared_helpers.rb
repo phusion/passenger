@@ -31,7 +31,7 @@ module PhusionPassenger
 module PreloaderSharedHelpers
 	extend self
 
-	def init
+	def init(options)
 		if !Kernel.respond_to?(:fork)
 			message = "Smart spawning is not available on this Ruby " +
 				"implementation because it does not support `Kernel.fork`. "
@@ -42,6 +42,7 @@ module PreloaderSharedHelpers
 			end
 			raise(message)
 		end
+		return options
 	end
 	
 	def accept_and_process_next_client(server_socket)
