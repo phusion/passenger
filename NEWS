@@ -1,3 +1,10 @@
+Release 4.0.33
+--------------
+
+ * Fixed a compatibility problem in passenger-install-apache2-module with Ruby 1.8.
+   The language selection menu didn't work properly.
+
+
 Release 4.0.32
 --------------
 
