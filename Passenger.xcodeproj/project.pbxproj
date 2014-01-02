@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		5151064B1875A39F0011D307 /* helper-scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "helper-scripts"; sourceTree = "<group>"; };
+		5151064C1875A39F0011D307 /* resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = resources; sourceTree = "<group>"; };
+		5151064D1875A3E30011D307 /* bin */ = {isa = PBXFileReference; lastKnownFileType = folder; path = bin; sourceTree = "<group>"; };
+		5151064E1875A3E30011D307 /* lib */ = {isa = PBXFileReference; lastKnownFileType = folder; path = lib; sourceTree = "<group>"; };
+		5151064F1875A3E30011D307 /* node_lib */ = {isa = PBXFileReference; lastKnownFileType = folder; path = node_lib; sourceTree = "<group>"; };
 		51D74E5D15551B770037B917 /* cxx */ = {isa = PBXFileReference; lastKnownFileType = folder; name = cxx; path = test/cxx; sourceTree = "<group>"; };
 		51D74E5F15551B9E0037B917 /* oxt */ = {isa = PBXFileReference; lastKnownFileType = folder; name = oxt; path = test/oxt; sourceTree = "<group>"; };
 		51D74E6015551B9E0037B917 /* support */ = {isa = PBXFileReference; lastKnownFileType = folder; name = support; path = test/support; sourceTree = "<group>"; };
@@ -18,25 +23,38 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		51D74E5E15551B7E0037B917 /* test */ = {
+		515106451875A2F00011D307 /* C and C++ sources */ = {
+			isa = PBXGroup;
+			children = (
+				51F4511E154D46DA00D6561F /* ruby */,
+				51F4511D154D46DA00D6561F /* oxt */,
+				51F4511B154D46DA00D6561F /* common */,
+				51F4511C154D46DA00D6561F /* nginx */,
+				51F4511A154D46DA00D6561F /* apache2 */,
+			);
+			name = "C and C++ sources";
+			sourceTree = "<group>";
+		};
+		51D74E5E15551B7E0037B917 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
 				51D74E5F15551B9E0037B917 /* oxt */,
 				51D74E6015551B9E0037B917 /* support */,
 				51D74E5D15551B770037B917 /* cxx */,
 			);
-			name = test;
+			name = Tests;
 			sourceTree = "<group>";
 		};
 		51F45104154D462300D6561F = {
 			isa = PBXGroup;
 			children = (
-				51D74E5E15551B7E0037B917 /* test */,
-				51F4511A154D46DA00D6561F /* apache2 */,
-				51F4511B154D46DA00D6561F /* common */,
-				51F4511C154D46DA00D6561F /* nginx */,
-				51F4511D154D46DA00D6561F /* oxt */,
-				51F4511E154D46DA00D6561F /* ruby */,
+				5151064D1875A3E30011D307 /* bin */,
+				5151064E1875A3E30011D307 /* lib */,
+				5151064F1875A3E30011D307 /* node_lib */,
+				515106451875A2F00011D307 /* C and C++ sources */,
+				5151064B1875A39F0011D307 /* helper-scripts */,
+				5151064C1875A39F0011D307 /* resources */,
+				51D74E5E15551B7E0037B917 /* Tests */,
 			);
 			sourceTree = "<group>";
 			usesTabs = 1;
@@ -104,7 +122,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 			};
@@ -124,7 +142,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -160,7 +178,7 @@
 				51F4510D154D462300D6561F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		51F4510E154D462300D6561F /* Build configuration list for PBXLegacyTarget "CxxTestMain" */ = {
 			isa = XCConfigurationList;
@@ -169,7 +187,7 @@
 				51F45110154D462300D6561F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 	};
