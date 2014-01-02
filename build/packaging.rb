@@ -190,8 +190,9 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 				"--output /dev/stderr --write-out '%{http_code}' --silent " +
 				"https://www.phusionpassenger.com/enterprise_gems/upload"
 			puts command
-			if `#{command}` != "200\n"
-				abort "Gem upload failed"
+			result = `#{command}`
+			if result != "200"
+				abort "Gem upload failed. HTTP status code: #{result.inspect}"
 			else
 				# The response body does not contain a newline,
 				# so fix terminal output.
