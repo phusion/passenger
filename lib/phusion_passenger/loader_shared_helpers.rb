@@ -101,17 +101,22 @@ module LoaderSharedHelpers
 					f.puts "#{key} = #{value}"
 				end
 			end
-			require 'rubygems' if !defined?(Gem)
-			File.open("#{dir}/ruby_info", "a") do |f|
-				f.puts "RubyGems version = #{Gem::VERSION}"
+			begin
+				require 'rubygems' if !defined?(Gem)
+			rescue LoadError
 			end
-			File.open("#{dir}/activated_gems", "wb") do |f|
-				if Gem.respond_to?(:loaded_specs)
-					Gem.loaded_specs.each_pair do |name, spec|
-						f.puts "#{name} => #{spec.version}"
+			if defined?(Gem)
+				File.open("#{dir}/ruby_info", "a") do |f|
+					f.puts "RubyGems version = #{Gem::VERSION}"
+				end
+				File.open("#{dir}/activated_gems", "wb") do |f|
+					if Gem.respond_to?(:loaded_specs)
+						Gem.loaded_specs.each_pair do |name, spec|
+							f.puts "#{name} => #{spec.version}"
+						end
+					else
+						f.puts "Unable to query this information; incompatible RubyGems API."
 					end
-				else
-					f.puts "Unable to query this information; incompatible RubyGems API."
 				end
 			end
 		end

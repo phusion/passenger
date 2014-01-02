@@ -1,3 +1,9 @@
+Release 4.0.32
+--------------
+
+ * Fixed compatibility problems with old Ruby versions that didn't include RubyGems.
+
+
 Release 4.0.31
 --------------
 
