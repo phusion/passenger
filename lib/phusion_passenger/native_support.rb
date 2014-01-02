@@ -40,7 +40,11 @@ class NativeSupportLoader
 	end
 	
 	def start
-		if try_load
+		if ENV['PASSENGER_USE_RUBY_NATIVE_SUPPORT'] == '0'
+			STDERR.puts " --> Continuing without #{library_name}."
+			STDERR.puts "     Because PASSENGER_USE_RUBY_NATIVE_SUPPORT is set to 0."
+			return false
+		elsif try_load
 			return true
 		elsif download_binary_and_load || compile_and_load
 			STDERR.puts " --> #{library_name} successfully loaded."

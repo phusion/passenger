@@ -1,3 +1,10 @@
+Release 4.0.34
+--------------
+
+ * It is now possible to disable the usage of the Ruby native extension by setting
+   the environment variable `PASSENGER_USE_RUBY_NATIVE_SUPPORT=0`.
+
+
 Release 4.0.33
 --------------
 
