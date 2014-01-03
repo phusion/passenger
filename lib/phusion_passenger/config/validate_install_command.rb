@@ -64,10 +64,9 @@ private
 	def check_tools_in_path
 		logn " * Checking whether this #{PROGRAM_NAME} install is in PATH... "
 		paths = ENV['PATH'].to_s.split(':')
-		if (gem_bindir &&
-				File.exist?("#{gem_bindir}/passenger-config") &&
-				paths.include?(gem_bindir)
-			) || paths.include?(PhusionPassenger.bin_dir)
+		if paths.include?(gem_bindir) ||
+		   paths.include?(homebrew_bindir) ||
+		   paths.include?(PhusionPassenger.bin_dir)
 			log_ok "yes"
 		else
 			log_fail "no"
@@ -80,14 +79,6 @@ private
 
 				  #{NGINX_DOC_URL}#_the_path_environment_variable
 			}
-		end
-	end
-
-	def gem_bindir
-		if defined?(Gem)
-			return Gem.bindir
-		else
-			return nil
 		end
 	end
 
@@ -107,6 +98,7 @@ private
 		end
 
 		paths.delete(gem_bindir)
+		paths.delete(homebrew_bindir)
 		paths.delete(PhusionPassenger.bin_dir)
 		# These may not be in PATH if the user did not run this command through sudo.
 		paths << "/usr/bin"
@@ -132,6 +124,26 @@ private
 
 				Please uninstall them to avoid confusion or conflicts.
 			}
+		end
+	end
+
+	# Returns the RubyGems bin dir, if Phusion Passenger is installed through RubyGems.
+	def gem_bindir
+		if defined?(Gem) &&
+		   PhusionPassenger.source_root =~ /^#{Regexp.escape Gem.dir}\// &&
+		   File.exist?("#{Gem.bindir}/passenger-config")
+			return Gem.bindir
+		else
+			return nil
+		end
+	end
+
+	# Returns the Homebrew bin dir, if Phusion Passenger is installed through Homebrew.
+	def homebrew_bindir
+		if PhusionPassenger.bin_dir =~ %r(^/usr/local/Cellar)
+			return "/usr/local/bin"
+		else
+			return nil
 		end
 	end
 
@@ -174,10 +186,6 @@ private
 
 	def reindent(text, level)
 		return PlatformInfo.send(:reindent, text, level)
-	end
-
-	def get_paths
-		return ENV['PATH'].to_s.split(':')
 	end
 end
 
