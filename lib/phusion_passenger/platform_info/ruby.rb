@@ -50,7 +50,7 @@ module PlatformInfo
 	def self.ruby_command
 		# Detect usage of gem-wrappers: https://github.com/rvm/gem-wrappers
 		# This is currently used by RVM >= 1.25, although it's not exclusive to RVM.
-		if File.exist?("#{GEM_HOME}/wrappers/ruby")
+		if GEM_HOME && File.exist?("#{GEM_HOME}/wrappers/ruby")
 			return "#{GEM_HOME}/wrappers/ruby"
 		end
 
