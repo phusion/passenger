@@ -51,6 +51,7 @@ module LoaderSharedHelpers
 				"through various environment variables, which are set through the wrapper script.\n" +
 				"\n" +
 				"To find out the correct value for `PassengerRuby`/`passenger_ruby`, please read:\n\n" +
+				"  #{APACHE2_DOC_URL}#PassengerRuby\n\n" +
 				"  #{NGINX_DOC_URL}#PassengerRuby\n\n" +
 				"Scroll to section 'RVM helper tool'.\n" +
 				"\n-------------------------\n"
@@ -219,7 +220,7 @@ module LoaderSharedHelpers
 		# exists then there's a 99.9% chance that loading it is the correct
 		# thing to do.
 		elsif File.exist?('.bundle/environment.rb')
-			running_bundler do
+			running_bundler(options) do
 				require File.expand_path('.bundle/environment')
 			end
 		
@@ -239,7 +240,7 @@ module LoaderSharedHelpers
 			# harmless. If this isn't the correct thing to do after all then
 			# there's always the load_path_setup_file option and
 			# setup_load_paths.rb.
-			running_bundler do
+			running_bundler(options) do
 				require 'rubygems'
 				require 'bundler/setup'
 			end
@@ -343,21 +344,52 @@ module LoaderSharedHelpers
 	end
 
 private
-	def running_bundler
+	def running_bundler(options)
 		yield
 	rescue Exception => e
 		if (defined?(Bundler::GemNotFound) && e.is_a?(Bundler::GemNotFound)) ||
 		   (defined?(Bundler::GitError) && e.is_a?(Bundler::GitError))
-			prepend_exception_comment(e, "It looks like Bundler could not find a gem. This " +
-				"is probably because your\n" +
-				"application is being run under a different environment than it's supposed to.\n" +
-				"Please check the following:\n\n" +
+			PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+			comment =
+				"It looks like Bundler could not find a gem. Maybe you didn't install all the\n" +
+				"gems that this application needs. To install your gems, please run:\n\n" +
+				"  bundle install\n\n"
+			ruby = options["ruby"]
+			if ruby =~ %r(^/usr/local/rvm/)
+				comment <<
+					"If that didn't work, then maybe the problem is that your gems are installed to\n" +
+					"#{home_dir}/.rvm/gems, while at the same time you set `PassengerRuby` (Apache)\n" +
+					"or `passenger_ruby` (Nginx) to #{ruby}.\n" +
+					"Because of the latter, RVM does not load gems from the home directory.\n" +
+					"To make RVM load gems from the home directory, you need to set `PassengerRuby`\n" +
+					"or `passenger_ruby` to an RVM wrapper script inside the home directory:\n\n" +
+					" 1. Login as #{whoami}.\n"
+				if PlatformInfo.rvm_installation_mode == :multi
+					comment << " 2. Enable RVM mixed mode by running: rvm user gemsets\n"
+					next_step = 3
+				else
+					next_step = 2
+				end
+				comment << " #{next_step}. Run this to find out what to set `PassengerRuby`/`passenger_ruby` to:\n" +
+					"    #{PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-config --detect-ruby\n\n" +
+					"If that didn't help either, then maybe your application is being run under a\n" +
+					"different environment than it's supposed to. Please check the following:\n\n"
+			else
+				comment << "If that didn't work, then the problem is probably caused by your\n" +
+					"application being run under a different environment than it's supposed to.\n" +
+					"Please check the following:\n\n"
+			end
+			comment <<
 				" * Is this app supposed to be run as the `#{whoami}` user?\n" +
 				" * Is this app being run on the correct Ruby interpreter? Below you will\n" +
-				"   see which Ruby interpreter Phusion Passenger attempted to use.\n" +
-				" * Are you using RVM? Please check whether the correct gemset is being used.\n" +
-				" * If all of the above fails, try resetting your RVM gemsets:\n" +
-				"   https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets\n")
+				"   see which Ruby interpreter Phusion Passenger attempted to use.\n"
+			if PlatformInfo.in_rvm?
+				comment << 
+					" * Please check whether the correct RVM gemset is being used.\n" +
+					" * Sometimes, RVM gemsets may be broken. Try resetting them:\n" +
+					"   https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets\n"
+			end
+			prepend_exception_comment(e, comment)
 		end
 		raise e
 	end
@@ -378,7 +410,7 @@ private
 	end
 
 	def whoami
-		require 'etc'
+		require 'etc' if !defined?(Etc)
 		begin
 			user = Etc.getpwuid(Process.uid)
 		rescue ArgumentError
@@ -388,6 +420,13 @@ private
 			return user.name
 		else
 			return "##{Process.uid}"
+		end
+	end
+
+	def home_dir
+		@home_dir ||= begin
+			require 'etc' if !defined?(Etc)
+			Etc.getpwuid(Process.uid).dir
 		end
 	end
 end
