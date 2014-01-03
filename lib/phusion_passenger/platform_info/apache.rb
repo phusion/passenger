@@ -192,7 +192,7 @@ module PlatformInfo
 			end
 			# We don't want to match comments
 			contents.gsub!(/^[ \t]*#.*/, '')
-			if contents =~ /^ErrorLog (.+)$/
+			if contents =~ /^[ \t]*ErrorLog (.+)$/
 				filename = $1.strip.sub(/^"/, '').sub(/"$/, '')
 				if filename.include?("${")
 					log "Error log seems to be located in \"#{filename}\", " +
