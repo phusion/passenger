@@ -188,13 +188,12 @@ private
 			detector.report
 			@apache2 = detector.result_for(PlatformInfo.apxs2)
 			if @apache2.nil?
-				# Yes this can happen (see https://groups.google.com/forum/#!topic/phusion-passenger/JcUJOBzILB4)
-				# but I have no idea how and why. I need people who can help me reproduce this.
-				# Until then, let's output an error.
-				raise "An internal error occurred. No information detected for #{PlatformInfo.apxs2} " +
-					"(@apache2 is nil). Please contact this program's authors for support, and please " +
-					"attach the full output of this installer, as well as the full output of the command " +
-					"'passenger-config --detect-apache2'."
+				render_template 'apache2/apache_install_broken',
+					:apxs2 => PlatformInfo.apxs2,
+					:sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
+					:ruby => PhusionPassenger::PlatformInfo.ruby_command,
+					:passenger_config => "#{PhusionPassenger.bin_dir}/passenger-config"
+				return false
 			end
 			if detector.results.size > 1
 				other_installs = detector.results - [@apache2]
@@ -214,6 +213,7 @@ private
 					return result
 				else
 					puts '<yellow>Continuing installation because --auto is given.</yellow>'
+					return true
 				end
 			else
 				return true

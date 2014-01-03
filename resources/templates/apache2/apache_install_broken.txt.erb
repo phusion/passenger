@@ -1,0 +1,20 @@
+<red>Your Apache installation might be broken</red>
+
+You are about to install <%= PhusionPassenger::PROGRAM_NAME %> against the following
+Apache installation:
+
+  apxs2: <%= @apxs2 %>
+
+However, this Apache installation appears to be broken, so this installer
+cannot continue. To find out why this installer thinks the above Apache
+installation is broken, run:
+
+  <b>export ORIG_PATH="$PATH"
+  <%= @sudo_s_e %>
+  export PATH="$ORIG_PATH"
+  <%= @ruby %> <%= @passenger_config %> --detect-apache2</b>
+
+It is also possible that your system has multiple Apache installations,
+and that you are simply compiling <%= PROGRAM_NAME %> against the wrong
+Apache install. If this is the case, then the above command will also
+advise you about what to do.
