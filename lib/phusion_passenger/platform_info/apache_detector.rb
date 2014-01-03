@@ -56,7 +56,7 @@ class ApacheDetector
 			log "      Main executable: #{httpd}"
 			log "      Control command: #{ctl}"
 			log "      Config file    : #{config_file}"
-			log "      Error log file : #{error_log}"
+			log "      Error log file : #{error_log || 'unknown'}"
 			log ""
 			log "   To install Phusion Passenger against this specific Apache version:"
 			log "      #{PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-install-apache2-module --apxs2-path='#{apxs2}'"
@@ -66,9 +66,11 @@ class ApacheDetector
 			log "      #{ctl} stop"
 			log "      #{ctl} restart"
 			log ""
-			log "   To troubleshoot, please read the logs in this file:"
-			log "      #{error_log}"
-			log ""
+			if error_log
+				log "   To troubleshoot, please read the logs in this file:"
+				log "      #{error_log}"
+				log ""
+			end
 		end
 
 	private
@@ -85,9 +87,9 @@ class ApacheDetector
 		PlatformInfo.verbose = true
 		PlatformInfo.log_implementation = lambda do |message|
 			if message =~ /: found$/
-				log("<green> * #{message}</green>")
+				log("<green> --> #{message}</green>")
 			else
-				log(" * #{message}")
+				log(" --> #{message}")
 			end
 		end
 	end
@@ -115,10 +117,11 @@ class ApacheDetector
 			log "Detecting main Apache executable..."
 			result.httpd = PlatformInfo.httpd(:apxs2 => apxs2)
 			if result.httpd
+				log "Detecting version..."
 				if result.version = PlatformInfo.httpd_version(:httpd => result.httpd)
-					log "Version detected: #{result.version}"
+					log " --> #{result.version}"
 				else
-					log "<red>Cannot detect version!</red>"
+					log "<red> --> Cannot detect version!</red>"
 					result.httpd = nil
 				end
 			end
@@ -128,21 +131,22 @@ class ApacheDetector
 				result.httpd = nil if !result.ctl
 			end
 			if result.httpd
+				log "Detecting configuration file location..."
 				result.config_file = PlatformInfo.httpd_default_config_file(:httpd => result.httpd)
 				if result.config_file
-					log "Default config file location detected: #{result.config_file}"
+					log " --> #{result.config_file}"
 				else
-					log "<red>Cannot detect default config file location!</red>"
+					log "<red> --> Cannot detect default config file location!</red>"
 					result.httpd = nil
 				end
 			end
 			if result.httpd
+				log "Detecting error log file..."
 				result.error_log = PlatformInfo.httpd_actual_error_log(:httpd => result.httpd)
 				if result.error_log
-					log "Error log file detected: #{result.error_log}"
+					log " --> #{result.error_log}"
 				else
-					log "<red>Cannot detect error log file!</red>"
-					result.httpd = nil
+					log "<red> --> Cannot detect error log file!</red>"
 				end
 			end
 			if result.httpd

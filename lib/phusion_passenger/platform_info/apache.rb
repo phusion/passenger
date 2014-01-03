@@ -188,6 +188,7 @@ module PlatformInfo
 			begin
 				contents = File.open(config_file, "rb") { |f| f.read }
 			rescue Errno::EACCES
+				log "Unable to open #{config_file} for reading"
 				return nil
 			end
 			# We don't want to match comments
@@ -206,7 +207,7 @@ module PlatformInfo
 						log "Substituted \"#{varname}\" -> \"#{value}\""
 						value
 					else
-						log "Cannot substituted \"#{varname}\""
+						log "Cannot substitute \"#{varname}\""
 						varname
 					end
 				end
@@ -229,8 +230,10 @@ module PlatformInfo
 				# we can't parse it. The default error log location,
 				# as reported by `httpd -V`, may be wrong (it is on OS X).
 				# So to be safe, let's assume that we don't know.
+				log "Unable to parse ErrorLog directive in Apache configuration file"
 				return nil
 			else
+				log "No ErrorLog directive in Apache configuration file"
 				return httpd_default_error_log(options)
 			end
 		else
