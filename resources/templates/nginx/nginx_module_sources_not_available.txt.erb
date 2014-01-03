@@ -6,7 +6,7 @@ Please install them with:
 <% elsif PhusionPassenger.native_packaging_method == "rpm" %>
 Please install them with:
 
-  <b>sudo yum install <%= RPM_DEV_PACKAGE %></b>
+  <b>sudo yum install <%= RPM_DEV_PACKAGE %>-<%= VERSION_STRING %></b>
 <% else %>
 Please ask your operating system vendor how to solve this problem.
 <% end %>
