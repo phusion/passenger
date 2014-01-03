@@ -49,6 +49,12 @@ module PlatformInfo
 	# that executes the current Ruby interpreter in the currently active gem set.
 	def self.ruby_command
 		if in_rvm?
+			# Detect RVM >= 1.25 wrapper script location.
+			if File.exist?("#{GEM_HOME}/wrappers/ruby")
+				return "#{GEM_HOME}/wrappers/ruby"
+			end
+
+			# Detect old-school RVM wrapper script location.
 			name = rvm_ruby_string
 			dirs = rvm_paths
 			if name && dirs
