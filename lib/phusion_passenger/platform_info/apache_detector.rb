@@ -58,7 +58,7 @@ class ApacheDetector
 			log "      Config file    : #{config_file}"
 			log "      Error log file : #{error_log || 'unknown'}"
 			log ""
-			log "   To install Phusion Passenger against this specific Apache version:"
+			log "   To install #{PROGRAM_NAME} against this specific Apache version:"
 			log "      #{PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-install-apache2-module --apxs2-path='#{apxs2}'"
 			log ""
 			log "   To start, stop or restart this specific Apache version:"
@@ -182,19 +182,11 @@ class ApacheDetector
 			log "   <b>#{PhusionPassenger.bin_dir}/passenger-install-apache2-module</b>"
 			log ""
 			log "If you are sure that you have Apache installed, please read the documentation:"
-			log " * <b>#{PhusionPassenger.apache2_doc_path}</b>, section"
-			log "   section 'Installation' -> 'Customizing the compilation process' ->"
-			log "   'Forcing location of command line tools and dependencies'"
-			log " * Or visit the online version:"
-			log "   <b>#{APACHE2_DOC_URL}#_forcing_location_of_command_line_tools_and_dependencies</b>"
+			log "<b>#{APACHE2_DOC_URL}#forcing_location_of_command_line_tools_and_dependencies</b>"
 		elsif @results.size > 1
 			log "<yellow>WARNING: You have multiple Apache installations on your system!</yellow>"
 			log "You are strongly recommended to read this section of the documentation:"
-			log " * <b>#{PhusionPassenger.apache2_doc_path}</b>, section"
-			log "   section 'Installation' -> 'Customizing the compilation process' ->"
-			log "   'Forcing location of command line tools and dependencies'"
-			log " * Or visit the online version:"
-			log "   <b>#{APACHE2_DOC_URL}#_forcing_location_of_command_line_tools_and_dependencies</b>"
+			log "<b>#{APACHE2_DOC_URL}#multiple_apache_installs</b>"
 		end
 	end
 

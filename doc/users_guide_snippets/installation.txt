@@ -675,6 +675,7 @@ On some systems, C/C++ libraries and headers that Phusion Passenger requires may
 
 NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
 
+[[forcing_location_of_command_line_tools_and_dependencies]]
 ==== Forcing location of command line tools and dependencies
 
 The Phusion Passenger build system attempts to autodetect many things by locating relevant helper tools. For example, to find out which compiler flags it should use for compiling Apache modules, it locates the `apxs2` command and queries it. To find out which compiler flags it should use for libcurl, it queries the `curl-config` command. These commands may not be in `$PATH`, or even when they are you may want to use a different one.
@@ -710,6 +711,20 @@ NOTE: If you run the installer with `sudo` then environment variables may not be
 
 
 ifdef::apache[]
+[[multiple_apache_installs]]
+=== Dealing with multiple Apache installations
+Some systems have multiple Apache installations. Maybe you already know about that, and you installed multiple Apaches for a reason. Or maybe you did so in the past but then forgot about the other installs. Or maybe someone else -- or some other software -- installed another Apache for you without your knowledge.
+
+Whatever the reason might be, it is important that you know about the existance of multiple Apache installations, and that you decide *which one* you want to use. **Unless you know exactly what you are doing, we recommend that you remove all the Apache installations that you don't intend to use, in order to avoid confusion and problems**. You should end up with only a single Apache installation. Unfortunately, this manual cannot tell you how to remove the other Apache installs: it depends on how you originally installed them. Usually it's a matter of removing the directories that they're located in, and removing their configuration files. But some Apache distributions might bundle an uninstaller. You need to do the proper research on how they ended up there in the first place.
+
+Phusion Passenger provides a tool to check whether you have multiple Apache installations on your system. You can invoke the tool by running `passenger-config --detect-apache2`.
+
+If the existance of multiple Apache installations is intentional, then Phusion Passenger can happily go along with your choice: you simply have to tell `passenger-install-apache2-module` which Apache to install against. There are several ways to specify which Apache you want to install against:
+
+ * By passing the `--apxs2-path` parameter. The `passenger-config --detect-apache2` command will tell you how to use this parameter.
+ * By setting `APXS2`, `HTTPD` and other kinds of environment variables. Please refer to <<forcing_location_of_command_line_tools_and_dependencies,Forcing location of command line tools and dependencies>> for more information.
+
+
 [[working_with_apache_conf]]
 === Working with the Apache configuration file
 

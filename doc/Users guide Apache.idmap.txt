@@ -64,13 +64,15 @@
 
 2.10.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1hym30u
 
-2.11. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
+2.11. Dealing with multiple Apache installations	=>	dealing-with-multiple-apache-installations-ks5nkz
 
-2.12. Disabling without uninstalling	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
+2.12. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
 
-2.13. Uninstalling	=>	uninstalling-phusion-passenger-1qb4ssq
+2.13. Disabling without uninstalling	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
 
-2.14. Moving to a different directory	=>	moving-to-a-different-directory-1n0gkwh
+2.14. Uninstalling	=>	uninstalling-phusion-passenger-1qb4ssq
+
+2.15. Moving to a different directory	=>	moving-to-a-different-directory-1n0gkwh
 
 3. Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3.x) application	=>	deploying-a-ruby-on-rails-1-x-or-2-x-but-not-rails-3-x-application-9r92hi
 
