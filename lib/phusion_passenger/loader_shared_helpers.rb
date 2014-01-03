@@ -40,7 +40,7 @@ module LoaderSharedHelpers
 		dump_ruby_environment
 		check_rvm_using_wrapper_script(options)
 		return sanitize_spawn_options(options)
-	end
+7	end
 
 	def check_rvm_using_wrapper_script(options)
 		ruby = options["ruby"]
@@ -351,55 +351,63 @@ private
 		   (defined?(Bundler::GitError) && e.is_a?(Bundler::GitError))
 			PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 			comment =
-				"It looks like Bundler could not find a gem. Maybe you didn't install all the\n" +
-				"gems that this application needs. To install your gems, please run:\n\n" +
-				"  bundle install\n\n"
+				"<p>It looks like Bundler could not find a gem. Maybe you didn't install all the " +
+				"gems that this application needs. To install your gems, please run:</p>\n\n" +
+				"  <pre class=\"commands\">bundle install</pre>\n\n"
 			ruby = options["ruby"]
 			if ruby =~ %r(^/usr/local/rvm/)
 				comment <<
-					"If that didn't work, then maybe the problem is that your gems are installed to\n" +
-					"#{home_dir}/.rvm/gems, while at the same time you set `PassengerRuby` (Apache)\n" +
-					"or `passenger_ruby` (Nginx) to #{ruby}.\n" +
-					"Because of the latter, RVM does not load gems from the home directory.\n" +
-					"To make RVM load gems from the home directory, you need to set `PassengerRuby`\n" +
-					"or `passenger_ruby` to an RVM wrapper script inside the home directory:\n\n" +
-					" 1. Login as #{whoami}.\n"
+					"<p>If that didn't work, then maybe the problem is that your gems are installed " +
+					"to <code>#{h home_dir}/.rvm/gems</code>, while at the same time you set " +
+					"<code>PassengerRuby</code> (Apache) or <code>passenger_ruby</code> (Nginx) to " +
+					"<code>#{h ruby}</code>. Because of the latter, RVM does not load gems from the " +
+					"home directory.</p>\n\n" +
+					"<p>To make RVM load gems from the home directory, you need to set " +
+					"<code>PassengerRuby</code>/<code>passenger_ruby</code> to an RVM wrapper script " +
+					"inside the home directory:</p>\n\n" +
+					"<ol>\n" +
+					"  <li>Login as #{h whoami}.</li>\n"
 				if PlatformInfo.rvm_installation_mode == :multi
-					comment << " 2. Enable RVM mixed mode by running: rvm user gemsets\n"
-					next_step = 3
-				else
-					next_step = 2
+					comment <<
+						"  <li>Enable RVM mixed mode by running:\n" +
+						"      <pre class=\"commands\">rvm user gemsets</pre></li>\n"
 				end
-				comment << " #{next_step}. Run this to find out what to set `PassengerRuby`/`passenger_ruby` to:\n" +
-					"    #{PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-config --detect-ruby\n\n" +
-					"If that didn't help either, then maybe your application is being run under a\n" +
-					"different environment than it's supposed to. Please check the following:\n\n"
+				comment <<
+					"  <li>Run this to find out what to set <code>PassengerRuby</code>/<code>passenger_ruby</code> to:\n" +
+					"      <pre class=\"commands\">#{PlatformInfo.ruby_command} \\\n" +
+					"#{PhusionPassenger.bin_dir}/passenger-config --detect-ruby</pre></li>\n" +
+					"</ol>\n\n" +
+					"<p>If that didn't help either, then maybe your application is being run under a " +
+					"different environment than it's supposed to. Please check the following:</p>\n\n"
 			else
-				comment << "If that didn't work, then the problem is probably caused by your\n" +
-					"application being run under a different environment than it's supposed to.\n" +
-					"Please check the following:\n\n"
+				comment <<
+					"<p>If that didn't work, then the problem is probably caused by your " +
+					"application being run under a different environment than it's supposed to. " +
+					"Please check the following:</p>\n\n"
 			end
+			comment << "<ol>\n"
 			comment <<
-				" * Is this app supposed to be run as the `#{whoami}` user?\n" +
-				" * Is this app being run on the correct Ruby interpreter? Below you will\n" +
-				"   see which Ruby interpreter Phusion Passenger attempted to use.\n"
+				"  <li>Is this app supposed to be run as the <code>#{h whoami}</code> user?</li>\n" +
+				"  <li>Is this app being run on the correct Ruby interpreter? Below you will\n" +
+				"      see which Ruby interpreter Phusion Passenger attempted to use.</li>\n"
 			if PlatformInfo.in_rvm?
-				comment << 
-					" * Please check whether the correct RVM gemset is being used.\n" +
-					" * Sometimes, RVM gemsets may be broken. Try resetting them:\n" +
-					"   https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets\n"
+				comment <<
+					"  <li>Please check whether the correct RVM gemset is being used.</li>\n" +
+					"  <li>Sometimes, RVM gemsets may be broken.\n" +
+					"      <a href=\"https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets\">Try resetting them.</a></li>\n"
 			end
-			prepend_exception_comment(e, comment)
+			comment << "</ol>\n"
+			prepend_exception_html_comment(e, comment)
 		end
 		raise e
 	end
 
-	def prepend_exception_comment(e, comment)
+	def prepend_exception_html_comment(e, comment)
 		# Since Exception doesn't allow changing the message, we monkeypatch
 		# the #message and #to_s methods.
-		separator = "\n-------- The exception is as follows: -------\n"
-		new_message = comment + separator + e.message
-		new_s = comment + separator + e.to_s
+		separator = "\n<p>-------- The exception is as follows: -------</p>\n"
+		new_message = comment + separator + h(e.message)
+		new_s = comment + separator + h(e.to_s)
 		metaclass = class << e; self; end
 		metaclass.send(:define_method, :message) do
 			new_message
@@ -407,6 +415,14 @@ private
 		metaclass.send(:define_method, :to_s) do
 			new_s
 		end
+		metaclass.send(:define_method, :html?) do
+			true
+		end
+	end
+
+	def h(text)
+		require 'erb' if !defined?(ERB)
+		return ERB::Util.h(text)
 	end
 
 	def whoami
