@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2013-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -29,6 +29,7 @@ module PhusionPassenger
 module Config
 	KNOWN_COMMANDS = [
 		["restart-app", "RestartAppCommand"],
+		["validate-install", "ValidateInstallCommand"],
 		["about", "AboutCommand"]
 	]
 	
@@ -69,7 +70,7 @@ module Config
 		puts "Available commands:"
 		KNOWN_COMMANDS.each do |props|
 			command_class = lookup_command_class_by_class_name(props[1])
-			printf "  %-15s %s\n", props[0], command_class.description
+			printf "  %-18s %s\n", props[0], command_class.description
 		end
 		puts
 		puts "Type 'passenger-config <COMMAND> --help' for more information."

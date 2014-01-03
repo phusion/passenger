@@ -33,5 +33,5 @@ require 'phusion_passenger'
 ## Magic comment: end bootstrap ##
 
 PhusionPassenger.locate_directories
-PhusionPassenger.require_passenger_lib 'config'
+PhusionPassenger.require_passenger_lib 'config/main'
 PhusionPassenger::Config.run!(ARGV)
