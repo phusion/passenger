@@ -43,9 +43,9 @@ class ValidateInstallCommand < Command
 		puts "Validate this #{PROGRAM_NAME} installation."
 		puts
 		puts "Exit codes:"
-		puts "  0 - All checks passed. No failures, no warnings."
-		puts "  #{FAIL_EXIT_CODE} - There are some failures."
-		puts "  #{WARN_EXIT_CODE} - There are no failures, but there are some warnings."
+		puts "  0 - All checks passed. No errors, no warnings."
+		puts "  #{FAIL_EXIT_CODE} - There are some errors."
+		puts "  #{WARN_EXIT_CODE} - There are no errors, but there are some warnings."
 	end
 
 	def run

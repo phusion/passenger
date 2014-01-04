@@ -36,6 +36,9 @@ module PlatformInfo
 # many people have multiple Apache installations on their system, but they
 # don't know about that, or they don't know how to compile against the
 # correct Apache installation. This tool helps them.
+# 
+# If you use this class to log things to the terminal, then be sure to set
+# the terminal color to Utils::AnsiColors::DEFAULT_TERMINAL_COLOR.
 class ApacheDetector
 	class Result
 		# These are required and are never nil.

@@ -117,11 +117,15 @@ class AboutCommand < Command
 		when "--detect-apache2"
 			PhusionPassenger.require_passenger_lib 'platform_info/apache_detector'
 			detector = PhusionPassenger::PlatformInfo::ApacheDetector.new(STDOUT)
+			STDOUT.write(Utils::AnsiColors::DEFAULT_TERMINAL_COLOR)
+			STDOUT.flush
 			begin
 				detector.detect_all
 				detector.report
 			ensure
 				detector.finish
+				STDOUT.write(Utils::AnsiColors::RESET)
+				STDOUT.flush
 			end
 		when "--ruby-command"
 			PhusionPassenger.require_passenger_lib 'platform_info/ruby'
