@@ -1,3 +1,4 @@
+# encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2014 Phusion
 #
@@ -28,6 +29,11 @@ module PhusionPassenger
 module Config
 
 class ValidateInstallCommand < Command
+	# Signifies that there is at least 1 error.
+	FAIL_EXIT_CODE = 1
+	# Signifies that there are no error, but at least 1 warning.
+	WARN_EXIT_CODE = 2
+
 	def self.description
 		return "Validate this #{PROGRAM_NAME} installation"
 	end
@@ -35,6 +41,11 @@ class ValidateInstallCommand < Command
 	def self.help
 		puts "Usage: passenger-config validate-install"
 		puts "Validate this #{PROGRAM_NAME} installation."
+		puts
+		puts "Exit codes:"
+		puts "  0 - All checks passed. No failures, no warnings."
+		puts "  #{FAIL_EXIT_CODE} - There are some failures."
+		puts "  #{WARN_EXIT_CODE} - There are no failures, but there are some warnings."
 	end
 
 	def run
@@ -53,23 +64,41 @@ class ValidateInstallCommand < Command
 		PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 		PhusionPassenger.require_passenger_lib 'platform_info'
 
-		@ok_count = 0
-		@fail_count = 0
-		check_tools_in_path
-		check_no_other_installs_in_path
-		exit 1 if @fail_count > 0
+		@error_count = 0
+		@warning_count = 0
+
+		prepare_terminal
+		begin
+			check_tools_in_path
+			check_no_other_installs_in_path
+
+			exit(FAIL_EXIT_CODE) if @error_count > 0
+			exit(WARN_EXIT_CODE) if @warning_count > 0
+		ensure
+			reset_terminal
+		end
 	end
 
 private
+	def prepare_terminal
+		STDOUT.write(Utils::AnsiColors::DEFAULT_TERMINAL_COLOR)
+		STDOUT.flush
+	end
+
+	def reset_terminal
+		STDOUT.write(Utils::AnsiColors::RESET)
+		STDOUT.flush
+	end
+
 	def check_tools_in_path
-		logn " * Checking whether this #{PROGRAM_NAME} install is in PATH... "
+		checking "whether this #{PROGRAM_NAME} install is in PATH"
 		paths = ENV['PATH'].to_s.split(':')
 		if paths.include?(gem_bindir) ||
 		   paths.include?(homebrew_bindir) ||
 		   paths.include?(PhusionPassenger.bin_dir)
-			log_ok "yes"
+			check_ok
 		else
-			log_fail "no"
+			check_warning
 			suggest %Q{
 				Please add #{PhusionPassenger.bin_dir} to PATH.
 				Otherwise you will get "command not found" errors upon running
@@ -113,9 +142,9 @@ private
 			end
 		end
 		if other_installs.empty?
-			log_ok "ok"
+			check_ok
 		else
-			log_fail "not ok"
+			check_warning
 			suggest %Q{
 				Besides this #{PROGRAM_NAME} installation, the following other
 				#{PROGRAM_NAME} installations have been detected:
@@ -164,14 +193,22 @@ private
 		end
 	end
 
-	def log_ok(message)
-		log "<green>#{message}</green>"
-		@ok_count += 1
+	def checking(message)
+		logn " * Checking #{message}... "
 	end
 
-	def log_fail(message)
+	def check_ok(message = "✓")
+		log "<green>#{message}</green>"
+	end
+
+	def check_error(message = "✗")
 		log "<red>#{message}</red>"
-		@fail_count += 1
+		@error_count += 1
+	end
+
+	def check_warning(message = "(!)")
+		log "<yellow>#{message}</yellow>"
+		@warning_count += 1
 	end
 
 	def suggest(message)
