@@ -25,6 +25,7 @@ PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'debug_logging'
 PhusionPassenger.require_passenger_lib 'message_channel'
 PhusionPassenger.require_passenger_lib 'utils'
+PhusionPassenger.require_passenger_lib 'utils/native_support_utils'
 PhusionPassenger.require_passenger_lib 'utils/unseekable_socket'
 
 module PhusionPassenger
@@ -192,7 +193,7 @@ private
 		if headers_data.nil?
 			return
 		end
-		headers = Utils.split_by_null_into_hash(headers_data)
+		headers = Utils::NativeSupportUtils.split_by_null_into_hash(headers_data)
 		if @connect_password && headers[PASSENGER_CONNECT_PASSWORD] != @connect_password
 			warn "*** Passenger RequestHandler warning: " <<
 				"someone tried to connect with an invalid connect password."

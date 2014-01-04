@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -28,6 +28,7 @@ PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'public_api'
 PhusionPassenger.require_passenger_lib 'message_client'
 PhusionPassenger.require_passenger_lib 'debug_logging'
+PhusionPassenger.require_passenger_lib 'native_support'
 PhusionPassenger.require_passenger_lib 'utils'
 PhusionPassenger.require_passenger_lib 'utils/tmpdir'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'

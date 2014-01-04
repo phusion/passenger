@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -21,12 +21,6 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
-
-begin
-	require 'rubygems'
-rescue LoadError
-end
-PhusionPassenger.require_passenger_lib 'native_support'
 
 module PhusionPassenger
 
@@ -179,22 +173,6 @@ module Utils
 			output << "    " << caller.join("\n    ")
 		end
 		return output
-	end
-	
-	if defined?(PhusionPassenger::NativeSupport)
-		# Split the given string into an hash. Keys and values are obtained by splitting the
-		# string using the null character as the delimitor.
-		def split_by_null_into_hash(data)
-			return PhusionPassenger::NativeSupport.split_by_null_into_hash(data)
-		end
-	else
-		NULL = "\0".freeze
-		
-		def split_by_null_into_hash(data)
-			args = data.split(NULL, -1)
-			args.pop
-			return Hash[*args]
-		end
 	end
 	
 	####################################
