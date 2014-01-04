@@ -46,6 +46,8 @@ module PhusionPassenger
 	GLOBAL_NAMESPACE_DIRNAME            = "passenger"
 	# Subdirectory under $HOME to use for storing stuff.
 	USER_NAMESPACE_DIRNAME              = ".passenger"
+	# The name for the /etc/apache2/mods-available/*.{load,conf} file.
+	APACHE2_MODULE_CONF_NAME            = "passenger"
 	
 	# Directories in which to look for plugins.
 	PLUGIN_DIRS = [

@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
+# encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -52,7 +53,12 @@ PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
 	TerminalChoiceMenu = PhusionPassenger::Utils::TerminalChoiceMenu
-	
+
+	AUTOINSTALL_BEGIN_LOAD_BLOCK = "### Begin automatically installed #{PROGRAM_NAME} load snippet ###"
+	AUTOINSTALL_END_LOAD_BLOCK   = "### End automatically installed #{PROGRAM_NAME} load snippet ###"
+	AUTOINSTALL_BEGIN_CONF_BLOCK = "### Begin automatically installed #{PROGRAM_NAME} config snippet ###"
+	AUTOINSTALL_END_CONF_BLOCK   = "### End automatically installed #{PROGRAM_NAME} config snippet ###"
+
 	def dependencies
 		specs = [
 			'depcheck_specs/compiler_toolchain',
@@ -123,8 +129,9 @@ class Installer < PhusionPassenger::AbstractInstaller
 		check_whether_os_is_broken
 		check_whether_system_has_enough_ram
 		check_write_permission_to_passenger_root || exit(1)
-		if install_apache2_module
-			show_apache2_config_snippets
+		check_write_permission_to_web_server_config_files || exit(1)
+		if compile_apache2_module
+			install_apache2_config_snippets || exit(1)
 			show_deployment_example
 		else
 			show_possible_solutions_for_compilation_and_installation_problems
@@ -217,6 +224,7 @@ private
 					return true
 				end
 			else
+				puts '<green>All good!</green>'
 				return true
 			end
 		ensure
@@ -258,7 +266,9 @@ private
 		puts
 		line
 		if Process.uid == 0
-			render_template 'apache2/no_write_permission_to_passenger_root'
+			render_template 'installer_common/cannot_access_files_as_root',
+				:type => "directory",
+				:files => [PhusionPassenger.source_root]
 		else
 			render_template 'installer_common/run_installer_as_root',
 				:dir  => PhusionPassenger.source_root,
@@ -271,41 +281,483 @@ private
 	ensure
 		File.unlink("__test__.txt") rescue nil
 	end
-	
-	def install_apache2_module
-		puts
-		line
-		puts '<banner>Compiling and installing Apache 2 module...</banner>'
-		puts "cd #{PhusionPassenger.source_root}"
-		if ENV['TRACE']
-			puts "#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes"
-			return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes")
-		else
-			puts "#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes"
-			return sh("#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes")
+
+	def check_write_permission_to_web_server_config_files
+		return true if !@update_config
+		config_file = PlatformInfo.httpd_default_config_file
+		return if !config_file || !File.exist?(config_file)
+
+		all_config_files = PlatformInfo.httpd_included_config_files(config_file)
+		if all_config_files[:unreadable_files].any?
+			puts
+			line
+			if Process.uid == 0
+				render_template 'installer_common/cannot_access_files_as_root',
+					:access => "read from",
+					:files => all_config_files[:unreadable_files]
+			else
+				render_template 'installer_common/run_installer_as_root',
+					:access => "read from",
+					:desc => "an Apache configuration file",
+					:sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
+					:sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
+					:ruby => PhusionPassenger::PlatformInfo.ruby_command,
+					:installer => "#{PhusionPassenger.bin_dir}/passenger-install-apache2-module #{ORIG_ARGV.join(' ')}"
+			end
+			puts
+			render_template 'apache2/present_choice_for_no_update_config'
+			return false
 		end
-	end
-	
-	def show_apache2_config_snippets(bare = false)
-		if bare
-			puts "LoadModule passenger_module #{PhusionPassenger.apache2_module_path}"
-			puts "PassengerRoot #{PhusionPassenger.source_root}"
-			puts "PassengerDefaultRuby #{PlatformInfo.ruby_command}"
+
+		unwriteable_files = []
+		all_config_files[:files].each do |filename|
+			if !File.writable_real?(filename)
+				unwriteable_files << filename
+			end
+		end
+		if unwriteable_files.empty?
+			return true
 		else
 			puts
 			line
-			render_template 'apache2/config_snippets',
-				:module_location => PhusionPassenger.apache2_module_path,
-				:passenger_root => PhusionPassenger.source_root,
-				:ruby => PlatformInfo.ruby_command
-			if PhusionPassenger.originally_packaged?
-				wait
+			if Process.uid == 0
+				render_template 'installer_common/cannot_access_files_as_root',
+					:files => unwriteable_files
 			else
-				wait(10)
+				render_template 'installer_common/run_installer_as_root',
+					:desc => "an Apache configuration file",
+					:sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
+					:sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
+					:ruby => PhusionPassenger::PlatformInfo.ruby_command,
+					:installer => "#{PhusionPassenger.bin_dir}/passenger-install-apache2-module #{ORIG_ARGV.join(' ')}"
 			end
+			puts
+			render_template 'apache2/present_choice_for_no_update_config'
+			return false
 		end
 	end
 	
+	def compile_apache2_module
+		puts
+		line
+		puts '<banner>Compiling and installing Apache 2 module...</banner>'
+		if @compile
+			puts "cd #{PhusionPassenger.source_root}"
+			if ENV['TRACE']
+				puts "#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes"
+				return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes")
+			else
+				puts "#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes"
+				return sh("#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes")
+			end
+		else
+			puts "Skipping compilation"
+			return true
+		end
+	end
+	
+	def load_snippet
+		return "LoadModule passenger_module #{PhusionPassenger.apache2_module_path}"
+	end
+
+	def config_snippet
+		return "<IfModule mod_passenger.c>\n" +
+			"  PassengerRoot #{PhusionPassenger.source_root}\n" +
+			"  PassengerDefaultRuby #{PlatformInfo.ruby_command}\n" +
+			"</IfModule>"
+	end
+
+	def apache2_config_snippets
+		return "#{load_snippet}\n#{config_snippet}\n"
+	end
+
+	def backup_config_files(config_file, all_config_files)
+		now = Time.now.strftime("%Y-%m-%d-%H:%M:%S")
+		archive = "#{config_file}.#{GLOBAL_NAMESPACE_DIRNAME}-backup-#{now}.tar.gz"
+		backup_files = all_config_files.dup
+
+		# Some people create a regular file in /etc/apache2/mods-enabled, for convenience
+		# reasons. This file is not actually managed by a2enmod. We will remove such files
+		# because we're going to use mods-eanbled ourselves, so we need to back them up.
+		if (dir = PlatformInfo.httpd_mods_enabled_directory) && PlatformInfo.a2enmod
+			if File.file?("#{dir}/#{APACHE2_MODULE_CONF_NAME}.load")
+				backup_files << "#{dir}/#{APACHE2_MODULE_CONF_NAME}.load"
+			end
+			if File.file?("#{dir}/#{APACHE2_MODULE_CONF_NAME}.conf")
+				backup_files << "#{dir}/#{APACHE2_MODULE_CONF_NAME}.conf"
+			end
+		end
+
+		puts "Backing up existing configuration files to #{archive}..."
+		backup_files.uniq!
+		backup_files.map! { |x| x.sub(/^\//, '') }
+		Dir.chdir("/") do
+			sh! "tar", "-czf", archive, *backup_files
+		end
+	end
+
+	def uninstall_or_comment_out_existing_config_snippets(all_config_files)
+		files_containing_autoinstall_load_blocks = []
+		files_containing_autoinstall_conf_blocks = []
+
+		# Some people create a regular file in /etc/apache2/mods-enabled, for convenience
+		# reasons. This file is not actually managed by a2enmod. We remove such files
+		# because we're going to use mods-enabled ourselves. They've already been backed up.
+		if (dir = PlatformInfo.httpd_mods_enabled_directory) && PlatformInfo.a2enmod
+			filename = "#{dir}/#{APACHE2_MODULE_CONF_NAME}.load"
+			if File.file?(filename) && !File.symlink?(filename)
+				puts "Removing #{filename}"
+				File.unlink(filename)
+			end
+			filename = "#{dir}/#{APACHE2_MODULE_CONF_NAME}.conf"
+			if File.file?(filename) && !File.symlink?(filename)
+				puts "Removing #{filename}"
+				File.unlink(filename)
+			end
+		end
+
+		# Uncomment Phusion Passenger config snippets.
+		all_config_files.each do |filename|
+			next if !File.exist?(filename)
+
+			contents = File.open(filename, "rb") do |f|
+				f.read
+			end
+			if contents =~ /#{Regexp.escape AUTOINSTALL_BEGIN_LOAD_BLOCK}.*?#{Regexp.escape AUTOINSTALL_END_LOAD_BLOCK}/m
+				files_containing_autoinstall_load_blocks << filename
+			end
+			if contents =~ /#{Regexp.escape AUTOINSTALL_BEGIN_CONF_BLOCK}.*?#{Regexp.escape AUTOINSTALL_END_CONF_BLOCK}/m
+				files_containing_autoinstall_conf_blocks << filename
+			end
+			subst1 = contents.gsub!(/^([ \t]*LoadModule[ \t]+passenger_module[ \t]+.*)$/i, '# \1')
+			subst2 = contents.gsub!(/^([ \t]*PassengerRoot[ \t]+.*)$/i, '# \1')
+			subst3 = contents.gsub!(/^([ \t]*PassengerDefaultRuby[ \t]+.*)$/i, '# \1')
+			if subst1 || subst2 || subst3
+				puts "Uninstalling previous #{PROGRAM_NAME} from #{filename}..."
+				File.open(filename, "wb") do |f|
+					f.write(contents)
+				end
+			end
+		end
+
+		# If there are multiple auto-install comment blocks, remove the duplicates.
+		# First, we remove all comment blocks from all files besides the first one.
+		if files_containing_autoinstall_load_blocks.size > 1
+			files_containing_autoinstall_load_blocks[1..-1].each do |filename|
+				puts "Removing duplicate load snippets from #{filename}..."
+				remove_comment_blocks(filename,
+					AUTOINSTALL_BEGIN_LOAD_BLOCK,
+					AUTOINSTALL_END_LOAD_BLOCK)
+			end
+		end
+		if files_containing_autoinstall_conf_blocks.size > 1
+			files_containing_autoinstall_conf_blocks[1..-1].each do |filename|
+				puts "Removing duplicate conf snippets from #{filename}..."
+				remove_comment_blocks(filename,
+					AUTOINSTALL_BEGIN_CONF_BLOCK,
+					AUTOINSTALL_END_CONF_BLOCK)
+			end
+		end
+
+		# Then we are left with exactly 0 or exactly 1 file with comment blocks
+		# of each type. There may be duplicates inside that single file, so
+		# remove duplicates there too.
+		if files_containing_autoinstall_load_blocks.size > 0
+			filename = files_containing_autoinstall_load_blocks[0]
+			puts "Removing duplicate load snippets inside #{filename}..."
+			remove_duplicate_comment_blocks(filename,
+				AUTOINSTALL_BEGIN_LOAD_BLOCK,
+				AUTOINSTALL_END_LOAD_BLOCK)
+		end
+		if files_containing_autoinstall_conf_blocks.size > 0
+			filename = files_containing_autoinstall_conf_blocks[0]
+			puts "Removing duplicate configuration snippets inside #{filename}..."
+			remove_duplicate_comment_blocks(filename,
+				AUTOINSTALL_BEGIN_CONF_BLOCK,
+				AUTOINSTALL_END_CONF_BLOCK)
+		end
+
+		# One or more files may have been removed, so filter out the ones
+		# that are left.
+		all_config_files.reject! do |filename|
+			!File.exist?(filename)
+		end
+	end
+
+	def remove_comment_blocks(filename, begin_marker, end_marker)
+		contents = File.open(filename, "rb") do |f|
+			f.read
+		end
+		regexp = /#{Regexp.escape begin_marker}.*?#{Regexp.escape end_marker}\n?/m
+		contents.gsub!(regexp, '')
+		File.open(filename, "wb") do |f|
+			f.write(contents)
+		end
+	end
+
+	def remove_duplicate_comment_blocks(filename, begin_marker, end_marker)
+		contents = File.open(filename, "rb") do |f|
+			f.read
+		end
+		regexp = /#{Regexp.escape begin_marker}.*?#{Regexp.escape end_marker}\n?/m
+		if m = regexp.match(contents)
+			offset = m.end(0)
+			rest = contents.slice!(m.end(0) .. -1)
+			rest.gsub!(regexp, '')
+			contents << rest
+			File.open(filename, "wb") do |f|
+				f.write(contents)
+			end
+		end
+	end
+
+	def add_new_config_snippets(all_config_files)
+		# Look for the file containing the auto-install load and conf comment blocks.
+		# The uninstall_or_comment_out_existing_config_snippets method has already
+		# guaranteed that there is at most 1 file per comment block type, and that
+		# inside each file there are no duplicate comment blocks.
+		load_block_file = find_config_file_containing_comment_block(all_config_files,
+			AUTOINSTALL_BEGIN_LOAD_BLOCK,
+			AUTOINSTALL_END_LOAD_BLOCK)
+		conf_block_file = find_config_file_containing_comment_block(all_config_files,
+			AUTOINSTALL_BEGIN_CONF_BLOCK,
+			AUTOINSTALL_END_CONF_BLOCK)
+		if load_block_file && conf_block_file
+			puts "Updating #{PROGRAM_NAME} module load snippet inside #{load_block_file}..."
+			update_comment_block(load_block_file,
+				AUTOINSTALL_BEGIN_LOAD_BLOCK,
+				AUTOINSTALL_END_LOAD_BLOCK,
+				load_snippet)
+			puts "Updating #{PROGRAM_NAME} configuration snippet inside #{conf_block_file}..."
+			update_comment_block(conf_block_file,
+				AUTOINSTALL_BEGIN_CONF_BLOCK,
+				AUTOINSTALL_END_CONF_BLOCK,
+				config_snippet)
+		elsif !load_block_file && !conf_block_file
+			create_load_snippet_file(:maybe_in_mods_available)
+			create_conf_snippet_file(:maybe_in_mods_available)
+			if PlatformInfo.httpd_mods_available_directory && PlatformInfo.a2enmod
+				sh! "#{PlatformInfo.a2enmod} #{APACHE2_MODULE_CONF_NAME}"
+			end
+		# It looks like either the load or conf file isn't available.
+		# If the file that is available is inside mods-available, then it
+		# means that the mods-available files are broken.
+		elsif is_file_inside_mods_available?(load_block_file, "#{APACHE2_MODULE_CONF_NAME}.load") ||
+		      is_file_inside_mods_available?(conf_block_file, "#{APACHE2_MODULE_CONF_NAME}.conf")
+			# We fix it if a2enmod is available. Otherwise, we remove the block.
+			if PlatformInfo.a2enmod
+				if !load_block_file
+					create_load_snippet_file(:must_be_in_mods_available)
+				else
+					create_conf_snippet_file(:must_be_in_mods_available)
+				end
+			else
+				if load_block_file
+					puts "Removing load snippets from #{filename}..."
+					remove_comment_blocks(load_block_file,
+						AUTOINSTALL_BEGIN_LOAD_BLOCK,
+						AUTOINSTALL_END_LOAD_BLOCK)
+				else
+					puts "Removing configuration snippets from #{filename}..."
+					remove_comment_blocks(conf_block_file,
+						AUTOINSTALL_BEGIN_CONF_BLOCK,
+						AUTOINSTALL_END_CONF_BLOCK)
+				end
+				create_load_snippet_file(:must_be_in_mods_available)
+				create_conf_snippet_file(:must_be_in_mods_available)
+			end
+			sh! "#{PlatformInfo.a2enmod} passenger"
+		else
+			if !load_block_file
+				create_load_snippet_file(:not_in_mods_available)
+				puts "Updating #{PROGRAM_NAME} configuration snippet inside #{conf_block_file}..."
+				update_comment_block(conf_block_file,
+					AUTOINSTALL_BEGIN_CONF_BLOCK,
+					AUTOINSTALL_END_CONF_BLOCK,
+					config_snippet)
+			else
+				create_conf_snippet_file(:not_in_mods_available)
+				puts "Updating #{PROGRAM_NAME} module load snippet inside #{load_block_file}..."
+				update_comment_block(load_block_file,
+					AUTOINSTALL_BEGIN_LOAD_BLOCK,
+					AUTOINSTALL_END_LOAD_BLOCK,
+					load_snippet)
+			end
+		end
+	end
+
+	def find_config_file_containing_comment_block(all_config_files, begin_marker, end_marker)
+		regexp = /#{Regexp.escape begin_marker}.*?#{Regexp.escape end_marker}/m
+		all_config_files.each do |filename|
+			contents = File.open(filename, "rb") do |f|
+				f.read
+			end
+			if contents =~ regexp
+				return filename
+			end
+		end
+		return nil
+	end
+
+	def update_comment_block(filename, begin_marker, end_marker, block_contents)
+		regexp = /#{Regexp.escape begin_marker}.*?#{Regexp.escape end_marker}\n?/m
+		contents = File.open(filename, "rb") do |f|
+			f.read
+		end
+		if contents.sub!(regexp, "#{begin_marker}\n#{block_contents}\n#{end_marker}\n")
+			File.open(filename, "wb") do |f|
+				f.write(contents)
+			end
+			return true
+		else
+			return false
+		end
+	end
+
+	def remove_comment_blocks(filename, begin_marker, end_marker)
+		regexp = /#{Regexp.escape begin_marker}.*?#{Regexp.escape end_marker}\n?/m
+		contents = File.open(filename, "rb") do |f|
+			f.read
+		end
+		contents.gsub!(regexp, "")
+		File.open(filename, "wb") do |f|
+			f.write(contents)
+		end
+	end
+
+	def is_file_inside_mods_available?(filename, basename)
+		if dir = PlatformInfo.httpd_mods_available_directory
+			return filename == "#{dir}/#{basename}"
+		else
+			return false
+		end
+	end
+
+	def create_load_snippet_file(where)
+		case where
+		when :maybe_in_mods_available
+			if PlatformInfo.httpd_mods_available_directory && PlatformInfo.a2enmod
+				filename = "#{PlatformInfo.httpd_mods_available_directory}/#{APACHE2_MODULE_CONF_NAME}.load"
+			else
+				filename = PlatformInfo.httpd_default_config_file
+			end
+		when :must_be_in_mods_available
+			if PlatformInfo.httpd_mods_available_directory && PlatformInfo.a2enmod
+				filename = "#{PlatformInfo.httpd_mods_available_directory}/#{APACHE2_MODULE_CONF_NAME}.load"
+			else
+				raise "Apache does not support the mods-available directory"
+			end
+		when :not_in_mods_available
+			filename = PlatformInfo.httpd_default_config_file
+		else
+			raise ArgumentError
+		end
+
+		if File.exist?(filename)
+			# If this is a file inside mods-available, and the file didn't have a symlink
+			# in mods-enabled, then the uninstall phase did not remove duplicates from this
+			# file. So here we remove duplicates again.
+			puts "Removing duplicate load snippets inside #{filename}..."
+			remove_duplicate_comment_blocks(filename,
+				AUTOINSTALL_BEGIN_LOAD_BLOCK,
+				AUTOINSTALL_END_LOAD_BLOCK)
+
+			puts "Installing #{PROGRAM_NAME} module load snippet to #{filename}..."
+			should_add = !update_comment_block(filename,
+				AUTOINSTALL_BEGIN_LOAD_BLOCK,
+				AUTOINSTALL_END_LOAD_BLOCK,
+				load_snippet)
+		else
+			puts "Installing #{PROGRAM_NAME} module load snippet to #{filename}..."
+			should_add = true
+		end
+		if should_add
+			File.open(filename, "ab") do |f|
+				f.write("\n#{AUTOINSTALL_BEGIN_LOAD_BLOCK}\n" +
+					"#{load_snippet}\n" +
+					"#{AUTOINSTALL_END_LOAD_BLOCK}\n")
+			end
+		end
+	end
+
+	def create_conf_snippet_file(where)
+		case where
+		when :maybe_in_mods_available
+			if PlatformInfo.httpd_mods_available_directory && PlatformInfo.a2enmod
+				filename = "#{PlatformInfo.httpd_mods_available_directory}/#{APACHE2_MODULE_CONF_NAME}.conf"
+			else
+				filename = PlatformInfo.httpd_default_config_file
+			end
+		when :must_be_in_mods_available
+			if PlatformInfo.httpd_mods_available_directory && PlatformInfo.a2enmod
+				filename = "#{PlatformInfo.httpd_mods_available_directory}/#{APACHE2_MODULE_CONF_NAME}.conf"
+			else
+				raise "Apache does not support the mods-available directory"
+			end
+		when :not_in_mods_available
+			filename = PlatformInfo.httpd_default_config_file
+		else
+			raise ArgumentError
+		end
+
+		if File.exist?(filename)
+			# If this is a file inside mods-available, and the file didn't have a symlink
+			# in mods-enabled, then the uninstall phase did not remove duplicates from this
+			# file. So here we remove duplicates again.
+			puts "Removing duplicate configuration snippets inside #{filename}..."
+			remove_duplicate_comment_blocks(filename,
+				AUTOINSTALL_BEGIN_CONF_BLOCK,
+				AUTOINSTALL_END_CONF_BLOCK)
+
+			puts "Installing #{PROGRAM_NAME} module configuration snippet to #{filename}..."
+			should_add = !update_comment_block(filename,
+				AUTOINSTALL_BEGIN_CONF_BLOCK,
+				AUTOINSTALL_END_CONF_BLOCK,
+				config_snippet)
+		else
+			puts "Installing #{PROGRAM_NAME} module configuration snippet to #{filename}..."
+			should_add = true
+		end
+		if should_add
+			File.open(filename, "ab") do |f|
+				f.write("\n#{AUTOINSTALL_BEGIN_CONF_BLOCK}\n" +
+					"#{config_snippet}\n" +
+					"#{AUTOINSTALL_END_CONF_BLOCK}\n")
+			end
+		end
+	end
+
+	def install_apache2_config_snippets
+		if !@update_config
+			show_apache2_config_snippets
+			return true
+		end
+
+		config_file = PlatformInfo.httpd_default_config_file
+		if config_file && File.exist?(config_file)
+			puts
+			line
+			puts "<banner>Updating Apache configuration files...</banner>"
+			config_file = PlatformInfo.httpd_default_config_file
+			all_config_files = PlatformInfo.httpd_included_config_files(config_file)[:files]
+			backup_config_files(config_file, all_config_files) if @backup_config
+			uninstall_or_comment_out_existing_config_snippets(all_config_files)
+			add_new_config_snippets(all_config_files)
+			return true
+		else
+			show_apache2_config_snippets
+			return true
+		end
+	end
+
+	def show_apache2_config_snippets
+		puts
+		line
+		render_template 'apache2/config_snippets',
+			:snippet => apache2_config_snippets
+		wait
+	end
+
 	def show_deployment_example
 		new_screen
 		render_template 'apache2/deployment_example',
@@ -351,7 +803,7 @@ private
 end
 
 ORIG_ARGV = ARGV.dup
-options = {}
+options = { :compile => true, :update_config => true, :backup_config => true }
 parser = OptionParser.new do |opts|
 	opts.banner = "Usage: passenger-install-apache2-module [options]"
 	opts.separator ""
@@ -374,6 +826,17 @@ parser = OptionParser.new do |opts|
 			"#{indent}'ruby,python,nodejs,meteor')") do |value|
 		options[:languages] = value.split(",")
 	end
+	opts.on("--no-compile", "Skip compilation.") do
+		options[:compile] = false
+	end
+	opts.on("--no-update-config", "Do not automatically update Apache config\n" <<
+			"#{indent}files.") do
+		options[:update_config] = false
+	end
+	opts.on("--no-backup-config", "When updating Apache config files, do not\n" <<
+			"#{indent}create backups of the existing files.") do
+		options[:backup_config] = false
+	end
 	opts.on("--snippet", "Show just the Apache config snippet.") do
 		options[:snippet] = true
 	end
@@ -389,7 +852,7 @@ end
 
 installer = Installer.new(options)
 if options[:snippet]
-	installer.send(:show_apache2_config_snippets, true)
+	puts installer.send(:apache2_config_snippets)
 else
 	installer.run
 end

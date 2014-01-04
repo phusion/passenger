@@ -1,0 +1,15 @@
+<red>Cannot access <%= @type || "files" %></red>
+
+This installer must be able to <%= @access || "write to" %> the following <%= @type || "files" %>:
+
+  <b><%= @files.join("\n  ") %></b>
+
+But it can't do that, despite the fact that it's running as root. There's
+probably a permission problem, an SELinux problem or some kind of operating
+system security problem.
+
+This installer tried its best to find out the exact reason for this failure,
+but unfortunately it couldn't figure it out, so it's up to you now. Please
+find out what's wrong with your system, fix the problems, and re-run this
+installer. If you don't know it either, please contact your operating system
+vendor for support, or consult your operating system's manual.

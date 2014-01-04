@@ -1,11 +1,14 @@
 <red>Permission problems</red>
-
-This installer must be able to write to the following directory:
+<% if @desc %>
+This installer must be able to <%= @access || "write to" %> <%= @desc %>.
+<% else %>
+This installer must be able to <%= @access || "write to" %> the following directory:
 
   <b><%= @dir %></b>
 
+<% end -%>
 But it can't do that, because you're running the installer as <b><%= `whoami`.strip %></b>.
-Please re-run this installer using <%= @sudo %>:
+Please give this installer root privileges, by re-running it with <yellow><%= @sudo %></yellow>:
 
   <b>export ORIG_PATH="$PATH"
   <%= @sudo_s_e %>

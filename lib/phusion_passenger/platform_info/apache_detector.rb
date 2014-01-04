@@ -153,13 +153,9 @@ class ApacheDetector
 				end
 			end
 			if result.httpd
-				if PlatformInfo.httpd_supports_a2enmod?(:httpd => result.httpd)
-					log "This Apache installation does not support a2enmod."
-				else
-					log "Detecting a2enmod and a2dismod..."
-					result.a2enmod = PlatformInfo.a2enmod(:apxs2 => apxs2)
-					result.a2dismod = PlatformInfo.a2dismod(:apxs2 => apxs2)
-				end
+				log "Detecting a2enmod and a2dismod..."
+				result.a2enmod = PlatformInfo.a2enmod(:apxs2 => apxs2)
+				result.a2dismod = PlatformInfo.a2dismod(:apxs2 => apxs2)
 			end
 			if result.httpd
 				log "<green>Found a usable Apache installation using #{apxs2}.</green>"

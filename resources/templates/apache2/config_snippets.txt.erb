@@ -1,10 +1,8 @@
-<banner>The Apache 2 module was successfully installed.</banner>
+<banner>Almost there!</banner>
 
 Please edit your Apache configuration file, and add these lines:
 
-   <b>LoadModule passenger_module <%= @module_location %></b>
-   <b>PassengerRoot <%= @passenger_root %></b>
-   <b>PassengerDefaultRuby <%= @ruby %></b>
+   <b><%= @snippet.split("\n").join("\n   ") %></b>
 
 After you restart Apache, you are ready to deploy any number of web
 applications on Apache, with a minimum amount of configuration!
