@@ -105,6 +105,9 @@ protected
 	
 	
 	def before_install
+		if STDOUT.respond_to?(:set_encoding)
+			STDOUT.set_encoding("UTF-8")
+		end
 		STDOUT.write(Utils::AnsiColors::DEFAULT_TERMINAL_COLOR)
 		STDOUT.flush
 	end
