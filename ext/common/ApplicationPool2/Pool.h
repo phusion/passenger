@@ -1284,7 +1284,7 @@ public:
 				boost::shared_ptr<DetachSuperGroupWaitTicket> ticket =
 					boost::make_shared<DetachSuperGroupWaitTicket>();
 				ExceptionPtr exception = copyException(
-					GetAbortedException("The containg SuperGroup was detached."));
+					GetAbortedException("The containing SuperGroup was detached."));
 
 				forceDetachSuperGroup(superGroup, actions,
 					boost::bind(syncDetachSuperGroupCallback, _1, ticket));
