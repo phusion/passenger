@@ -120,7 +120,6 @@ module App
 		end
 		puts "!> Ready"
 		puts "!> socket: main;tcp://127.0.0.1:#{port};http_session;0"
-		puts "!> pid: #{pid}"
 		puts "!> "
 		begin
 			STDIN.readline

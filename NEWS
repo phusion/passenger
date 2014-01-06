@@ -1,6 +1,8 @@
 Release 4.0.34
 --------------
 
+ * Improved support for Meteor in development mode. Terminating Phusion Passenger
+   now leaves less garbage Meteor processes behind.
  * It is now possible to disable the usage of the Ruby native extension by setting
    the environment variable `PASSENGER_USE_RUBY_NATIVE_SUPPORT=0`.
  * When using RVM, if you set PassengerRuby/passenger_ruby to the raw Ruby binary
