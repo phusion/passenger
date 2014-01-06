@@ -41,7 +41,7 @@ task 'test:integration:apache2' => dependencies do
 			require 'shellwords'
 			command << " -e #{Shellwords.escape(grep)}"
 		end
-		sh "cd test && #{command}"
+		sh "cd test && exec #{command}"
 	end
 end
 
@@ -59,7 +59,7 @@ task 'test:integration:nginx' => dependencies do
 			require 'shellwords'
 			command << " -e #{Shellwords.escape(grep)}"
 		end
-		sh "cd test && #{command}"
+		sh "cd test && exec #{command}"
 	end
 end
 
@@ -74,9 +74,7 @@ task 'test:integration:standalone' => dependencies do
 			require 'shellwords'
 			command << " -e #{Shellwords.escape(grep)}"
 		end
-		Dir.chdir("test") do
-			ruby command
-		end
+		sh "cd test && exec #{command}"
 	end
 end
 
@@ -89,7 +87,7 @@ task 'test:integration:native_packaging' do
 		if boolean_option('SUDO')
 			command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 		end
-		sh "cd test && #{command}"
+		sh "cd test && exec #{command}"
 	end
 end
 
@@ -102,11 +100,11 @@ task 'test:restart' => dependencies do
 	i = 1
 	while true do
 		puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
-		command = "cd test && rspec -c -f s integration_tests/apache2_tests.rb"
+		command = "rspec -c -f s integration_tests/apache2_tests.rb"
 		if grep = string_option('E')
 			command << " -e #{Shellwords.escape(grep)}"
 		end
-		sh(command)
+		sh "cd test && exec #{command}"
 		i += 1
 	end
 end

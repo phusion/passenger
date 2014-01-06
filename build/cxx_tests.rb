@@ -234,7 +234,7 @@ task 'test:cxx' => dependencies do
 		end
 		sh "cd test && while #{command}; do echo -------------------------------------------; done"
 	else
-		sh "cd test && #{command}"
+		sh "cd test && exec #{command}"
 	end
 end
 

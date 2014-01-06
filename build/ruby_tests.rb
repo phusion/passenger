@@ -33,9 +33,8 @@ task 'test:ruby' => dependencies do
 			require 'shellwords'
 			maybe_grep = "-e #{Shellwords.escape(maybe_grep)}"
 		end
-		Dir.chdir("test") do
-			ruby "#{PlatformInfo.rspec} -c -f s -P 'dont-autoload-anything' #{maybe_grep} ruby/*_spec.rb ruby/*/*_spec.rb"
-		end
+		command = "#{PlatformInfo.rspec} -c -f s -P 'dont-autoload-anything' #{maybe_grep} ruby/*_spec.rb ruby/*/*_spec.rb"
+		sh "cd test && exec #{command}"
 	end
 end
 
