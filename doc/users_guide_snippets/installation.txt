@@ -78,12 +78,13 @@ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7
 sudo apt-get install apt-transport-https
 --------------------------------------------------------------
 
-3. Create a file `/etc/apt/sources.list.d/passenger.list` and insert one of the following lines, depending on your distribution.
+3. Create a file `/etc/apt/sources.list.d/passenger.list` and insert **one of** the following lines, depending on your distribution.
 +
 **Open source**:::
 +
 [source,sh]
 --------------------------------------------------------------
+##### !!!! Only add ONE of these lines, not all of them !!!! #####
 # Ubuntu 13.10
 deb https://oss-binaries.phusionpassenger.com/apt/passenger saucy main
 # Ubuntu 12.04
@@ -100,6 +101,7 @@ deb https://oss-binaries.phusionpassenger.com/apt/passenger squeeze main
 +
 [source,sh]
 --------------------------------------------------------------
+##### !!!! Only add ONE of these lines, not all of them !!!! #####
 # Ubuntu 13.10
 deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt saucy main
 # Ubuntu 12.04
