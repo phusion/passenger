@@ -42,6 +42,8 @@
 
 	#define DEB_DEV_PACKAGE "passenger-dev"
 
+	#define DEB_MAIN_PACKAGE "passenger"
+
 	#define DEB_NGINX_PACKAGE "nginx-extras"
 
 	#define DEFAULT_ANALYTICS_LOG_GROUP ""
@@ -99,6 +101,8 @@
 	#define RPM_APACHE_MODULE_PACKAGE "mod_passenger"
 
 	#define RPM_DEV_PACKAGE "passenger-devel"
+
+	#define RPM_MAIN_PACKAGE "passenger"
 
 	#define RPM_NGINX_PACKAGE "nginx"
 
