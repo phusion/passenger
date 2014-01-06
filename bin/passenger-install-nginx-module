@@ -112,6 +112,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 				exit(1)
 			end
 			nginx_prefix = ask_for_nginx_install_prefix
+			check_whether_other_nginx_installations_exist(nginx_prefix)
 			if @extra_configure_flags == "none"
 				extra_nginx_configure_flags = nil
 			else
@@ -120,6 +121,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		else
 			nginx_source_dir = ask_for_nginx_source_dir
 			nginx_prefix = ask_for_nginx_install_prefix
+			check_whether_other_nginx_installations_exist(nginx_prefix)
 			extra_nginx_configure_flags = ask_for_extra_nginx_configure_flags(nginx_prefix)
 		end
 		check_whether_we_can_write_to(nginx_prefix) || exit(1)
@@ -346,6 +348,27 @@ private
 		end
 	end
 	
+	def check_whether_other_nginx_installations_exist(nginx_prefix)
+		check_for = [
+			"/usr/bin/nginx",
+			"/usr/sbin/nginx"
+		]
+		check_for.each do |filename|
+			if File.exist?(filename)
+				existing_binary = filename
+				break
+			end
+		end
+		existing_binary = "/usr/bin/nginx"
+		if existing_binary
+			new_screen
+			render_template 'nginx/other_nginx_installations_exist',
+				:existing_binary => existing_binary,
+				:prefix => nginx_prefix
+			wait
+		end
+	end
+
 	def ask_for_nginx_source_dir
 		new_screen
 		puts "<banner>Where is your Nginx source code located?</banner>"

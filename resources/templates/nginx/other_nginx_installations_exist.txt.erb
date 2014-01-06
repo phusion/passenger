@@ -1,0 +1,17 @@
+<yellow>Wait! You are about to install a NEW Nginx installation!</yellow>
+
+Your system already has an Nginx installation at:
+
+  <b><%= @existing_binary %></b>
+
+If you continue using this installer, then it will install an <b>an entirely new</b>
+Nginx installation, at <b><%= @prefix %>/sbin/nginx</b>.
+Are you sure this is what you want?
+
+  <yellow>"Wait, what? Do you mean you're not going to extend my existing Nginx with
+  <%= PROGRAM_NAME %> support?"</yellow>
+  We're sorry, but no. Please read the following for more information, and for
+  advise on how to deal with this situation:
+  <b>https://github.com/phusion/passenger/wiki/Why-can't-Phusion-Passenger-extend-my-existing-Nginx%3F</b>
+
+<b>Press Enter to continue installing, or Ctrl-C to abort.</b>
