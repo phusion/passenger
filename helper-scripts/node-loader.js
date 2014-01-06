@@ -32,7 +32,7 @@ var LineReader = require('phusion_passenger/line_reader').LineReader;
 var RequestHandler = require('phusion_passenger/request_handler').RequestHandler;
 var HttplibEmulation = require('phusion_passenger/httplib_emulation');
 
-GLOBAL.PhusionPassenger = new EventEmitter();
+GLOBAL.PhusionPassenger = exports.PhusionPassenger = new EventEmitter();
 var stdinReader = new LineReader(process.stdin);
 beginHandshake();
 readInitializationHeader();
