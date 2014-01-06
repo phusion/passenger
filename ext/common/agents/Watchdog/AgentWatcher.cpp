@@ -172,6 +172,16 @@ protected:
 	 */
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) = 0;
 	
+	static void killAndDontWait(pid_t pid) {
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
+		// If the process is a process group leader then killing the
+		// group will likely kill all its child processes too.
+		if (syscalls::killpg(pid, SIGTERM) == -1) {
+			syscalls::kill(pid, SIGTERM);
+		}
+	}
+
 	/**
 	 * Kill a process with SIGKILL, and attempt to kill its children too. 
 	 * Then wait until it has quit.
@@ -465,6 +475,16 @@ public:
 		}
 	}
 	
+	virtual bool signalShutdown() {
+		boost::lock_guard<boost::mutex> l(lock);
+		if (pid == 0) {
+			return false;
+		} else {
+			killAndDontWait(pid);
+			return true;
+		}
+	}
+
 	/**
 	 * Force the agent process to shut down. Returns true if it was shut down,
 	 * or false if it wasn't started.
