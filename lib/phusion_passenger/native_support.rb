@@ -269,7 +269,7 @@ private
 		PhusionPassenger::Utils.mktmpdir("passenger-native-support-") do |tmpdir|
 			s_tmpdir = Shellwords.escape(tmpdir)
 			result = system("#{command_string} >#{s_tmpdir}/log 2>&1")
-			system("cat #{s_tmpdir}/log | sed 's/^/     /'")
+			system("cat #{s_tmpdir}/log | sed 's/^/     /' >&2")
 			return result
 		end
 	end
