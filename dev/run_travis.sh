@@ -120,7 +120,7 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 	run sudo apt-get install -y --no-install-recommends \
 		apache2-mpm-worker apache2-threaded-dev
 	install_base_test_deps
-	run ./bin/passenger-install-apache2-module --auto --no-update-config
+	run ./bin/passenger-install-apache2-module --auto #--no-update-config
 	run rvmsudo ./bin/passenger-install-apache2-module --auto --no-compile
 	run rake test:integration:apache2
 fi
