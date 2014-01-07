@@ -2203,7 +2203,7 @@ private:
 			data.append("Connection: close\r\n");
 
 			for (it = parser.begin(); it != end; it++) {
-				if (startsWith(it->first, "HTTP_")) {
+				if (startsWith(it->first, "HTTP_") && it->first != "HTTP_CONNECTION") {
 					string subheader = it->first.substr(sizeof("HTTP_") - 1);
 					string::size_type i;
 					for (i = 0; i < subheader.size(); i++) {
