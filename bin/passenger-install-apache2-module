@@ -239,7 +239,7 @@ private
 		# ...
 		# Server compiled with....
 		#  -D APACHE_MPM_DIR="server/mpm/prefork"
-		output = `#{PlatformInfo.httpd} -V`
+		output = PlatformInfo.httpd_V
 		output =~ /^Server MPM: +(.*)$/
 		if $1
 			mpm = $1.downcase

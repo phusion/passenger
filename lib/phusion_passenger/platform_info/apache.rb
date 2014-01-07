@@ -101,6 +101,27 @@ module PlatformInfo
 	end
 	memoize :httpd_version
 
+	# Run `httpd -V` and return its output. On some systems, such as Ubuntu 13.10,
+	# `httpd -V` fails without the environment variables defined in various scripts.
+	# Here we take care of evaluating those scripts before running `httpd -V`.
+	def self.httpd_V(options = nil)
+		if options
+			httpd = options[:httpd] || self.httpd(options)
+		else
+			httpd = self.httpd
+		end
+		if httpd
+			command = "#{httpd} -V"
+			if envvars_file = httpd_envvars_file(options)
+				command = ". '#{envvars_file}' && #{command}"
+			end
+			return `#{command}`
+		else
+			return nil
+		end
+	end
+	memoize :httpd_V
+
 	# The Apache executable's architectural bits. Returns 32 or 64,
 	# or nil if unable to detect.
 	def self.httpd_architecture_bits(options = nil)
@@ -652,26 +673,6 @@ private
 	memoize :determine_apu_info, true
 	private_class_method :determine_apu_info
 
-	# Run `httpd -V` and return its output. On some systems, such as Ubuntu 13.10,
-	# `httpd -V` fails without the environment variables defined in various scripts.
-	# Here we take care of evaluating those scripts before running `httpd -V`.
-	def self.httpd_V(options = nil)
-		if options
-			httpd = options[:httpd] || self.httpd(options)
-		else
-			httpd = self.httpd
-		end
-		if httpd
-			command = "#{httpd} -V"
-			if envvars_file = httpd_envvars_file(options)
-				command = ". '#{envvars_file}' && #{command}"
-			end
-			return `#{command}`
-		else
-			return nil
-		end
-	end
-
 	def self.scan_for_included_apache2_config_files(config_file, state, options = nil)
 		begin
 			config = File.open(config_file, "rb") do |f|
@@ -704,6 +705,7 @@ private
 			end
 		end
 	end
+	private_class_method :scan_for_included_apache2_config_files
 
 	def self.expand_apache2_glob(glob)
 		if File.directory?(glob)
@@ -724,6 +726,7 @@ private
 		end
 		return result
 	end
+	private_class_method :expand_apache2_glob
 
 	def self.unescape_apache_config_value(value, options = nil)
 		if value =~ /^"(.*)"$/
@@ -750,6 +753,7 @@ private
 			return value
 		end
 	end
+	private_class_method :unescape_apache_config_value
 
 	def self.unescape_c_string(s)
 		state = 0
@@ -773,6 +777,7 @@ private
 		end
 		return res
 	end
+	private_class_method :unescape_c_string
 end
 
 end
