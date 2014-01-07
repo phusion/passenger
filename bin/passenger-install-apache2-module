@@ -803,7 +803,7 @@ private
 end
 
 ORIG_ARGV = ARGV.dup
-options = { :compile => true, :update_config => true, :backup_config => true }
+options = { :compile => true, :update_config => false, :backup_config => true }
 parser = OptionParser.new do |opts|
 	opts.banner = "Usage: passenger-install-apache2-module [options]"
 	opts.separator ""
@@ -829,10 +829,10 @@ parser = OptionParser.new do |opts|
 	opts.on("--no-compile", "Skip compilation.") do
 		options[:compile] = false
 	end
-	opts.on("--no-update-config", "Do not automatically update Apache config\n" <<
-			"#{indent}files.") do
-		options[:update_config] = false
-	end
+	#opts.on("--no-update-config", "Do not automatically update Apache config\n" <<
+	#		"#{indent}files.") do
+	#	options[:update_config] = false
+	#end
 	opts.on("--no-backup-config", "When updating Apache config files, do not\n" <<
 			"#{indent}create backups of the existing files.") do
 		options[:backup_config] = false

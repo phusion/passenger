@@ -17,20 +17,6 @@ Release 4.0.34
 
  * Improved support for Meteor in development mode. Terminating Phusion Passenger
    now leaves less garbage Meteor processes behind.
- * `passenger-install-apache2-module` now automatically updates the Apache
-   configuration file. It is no longer necessary to manually edit the config
-   file every time you run the installer. A lot of care has gone into this
-   part of the installer: it tries its best to do the right thing, and to
-   avoid breaking anything. For example, it backs up existing config files,
-   it removes configuration snippets for loading older versions of Phusion
-   Passengers, and it supports the Debian "mods-available" structure and the
-   "a2enmod" tool.
-
-   Despite all this, if you've already automated the installation of Phusion
-   Passenger through tools like Chef or Puppet, then this new behavior might
-   be incompatible. You can disable automatically updating the config file by
-   passing `--no-update-config`, which will make the installer revert to the
-   old behavior.
  * It is now possible to disable the usage of the Ruby native extension by setting
    the environment variable `PASSENGER_USE_RUBY_NATIVE_SUPPORT=0`.
  * When using RVM, if you set PassengerRuby/passenger_ruby to the raw Ruby binary
