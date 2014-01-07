@@ -21,15 +21,8 @@ ALL_RPM_DISTROS = {
 	"amazon" => { :mock_chroot_name => "epel-6", :distro_name => "Amazon Linux" }
 }
 
-desc "Build gem for use in RPM building"
-task 'rpm:gem' do
-	rpm_source_dir = "#{rpmbuild_root}/SOURCES"
-	sh "gem build #{PACKAGE_NAME}.gemspec"
-	sh "cp #{PACKAGE_NAME}-#{PACKAGE_VERSION}.gem #{rpm_source_dir}/"
-end
-
 desc "Build RPM for local machine"
-task 'rpm:local' => 'rpm:gem' do
+task 'rpm:local' do
 	distro_id = `./rpm/get_distro_id.py`.strip
 	rpm_spec_dir = "#{rpmbuild_root}/SPECS"
 	spec_target_dir = "#{rpm_spec_dir}/#{distro_id}"
