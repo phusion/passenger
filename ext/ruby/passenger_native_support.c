@@ -863,7 +863,7 @@ void
 Init_passenger_native_support() {
 	struct sockaddr_un addr;
 	
-	/* Only defined on Ruby >= 1.9 */
+	/* Only defined on Ruby >= 1.9.3 */
 	#ifdef RUBY_API_VERSION_CODE
 		if (ruby_api_version[0] != RUBY_API_VERSION_MAJOR
 		 || ruby_api_version[1] != RUBY_API_VERSION_MINOR
@@ -899,20 +899,32 @@ Init_passenger_native_support() {
 			return;
 		}
 	#else
-		if (strlen(ruby_version) < sizeof("1.8.7") - 1
-		 || ruby_version[0] != '1'
-		 || ruby_version[1] != '.'
-		 || ruby_version[2] != '8')
-		{
-			/* We may not have included Ruby 1.8's version.h because of compiler
-			 * header file search paths, so we can't rely on RUBY_VERSION being
-			 * defined.
-			 */
-			#ifdef RUBY_VERSION
-				#define ESTIMATED_RUBY_VERSION RUBY_VERSION
+		/* Ruby 1.8 - 1.9.2 */
+
+		/* We may not have included Ruby 1.8's version.h because of compiler
+		 * header file search paths, so we can't rely on RUBY_VERSION being
+		 * defined.
+		 */
+		#ifdef RUBY_VERSION
+			#define ESTIMATED_RUBY_VERSION RUBY_VERSION
+		#else
+			#ifdef HAVE_RUBY_IO_H
+				#define ESTIMATED_RUBY_VERSION "1.9.1 or 1.9.2"
 			#else
 				#define ESTIMATED_RUBY_VERSION "1.8"
 			#endif
+		#endif
+		#ifdef HAVE_RUBY_IO_H
+			#define ESTIMATED_RUBY_MINOR_VERSION '9'
+		#else
+			#define ESTIMATED_RUBY_MINOR_VERSION '8'
+		#endif
+
+		if (strlen(ruby_version) < sizeof("1.8.7") - 1
+		 || ruby_version[0] != '1'
+		 || ruby_version[1] != '.'
+		 || ruby_version[2] != ESTIMATED_RUBY_MINOR_VERSION)
+		{
 			fprintf(stderr, " --> passenger_native_support was compiled for Ruby %s, "
 				"but you're currently running Ruby %s\n",
 				ESTIMATED_RUBY_VERSION, ruby_version);

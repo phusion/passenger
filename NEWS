@@ -8,6 +8,7 @@ Release 4.0.34
  * When using RVM, if you set PassengerRuby/passenger_ruby to the raw Ruby binary
    instead of the wrapper script, Phusion Passenger will now print an error.
  * Added support for RVM >= 1.25 wrapper scripts.
+ * Fixed loading passenger_native_support on Ruby 1.9.2.
 
 
 Release 4.0.33
