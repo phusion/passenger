@@ -27,6 +27,7 @@ STDERR.sync = true
 
 require 'uri'
 require 'socket'
+require 'timeout'
 
 class PrespawnLocation
 	class InvalidURLError < RuntimeError
@@ -92,7 +93,12 @@ class PrespawnLocation
 		socket.write("Connection: close\r\n")
 		socket.write("\r\n")
 
-		socket.read
+		begin
+			Timeout.timeout(10) do
+				socket.read
+			end
+		rescue Timeout::Error
+		end
 	end
 end
 
