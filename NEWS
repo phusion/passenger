@@ -1,6 +1,20 @@
 Release 4.0.34
 --------------
 
+ * The Node.js loader code now sets the `isApplicationLoader` attribute on the
+   bootstrapping module. This provides a way for apps and frameworks that check
+   for `module.parent` to check whether the current file is loaded by Phusion
+   Passenger, or by other software that work in a similar way.
+
+   This change has been introduced to solve a compatibility issue with CompoundJS.
+   CompoundJS users should modify their server.js, and change the following:
+
+       if (!module.parent) {
+
+   to:
+
+       if (!module.parent || module.parent.isApplicationLoader) {
+
  * Improved support for Meteor in development mode. Terminating Phusion Passenger
    now leaves less garbage Meteor processes behind.
  * It is now possible to disable the usage of the Ruby native extension by setting
