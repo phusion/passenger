@@ -359,7 +359,6 @@ private
 				break
 			end
 		end
-		existing_binary = "/usr/bin/nginx"
 		if existing_binary
 			new_screen
 			render_template 'nginx/other_nginx_installations_exist',
