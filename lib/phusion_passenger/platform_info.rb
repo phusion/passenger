@@ -1,5 +1,6 @@
+# encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -218,7 +219,9 @@ public
 	end
 
 	def self.read_file(filename)
-		return File.read(filename)
+		return File.open(filename, "rb") do |f|
+			f.read
+		end
 	rescue
 		return ""
 	end
