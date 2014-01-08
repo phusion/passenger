@@ -353,6 +353,7 @@ private
 			"/usr/bin/nginx",
 			"/usr/sbin/nginx"
 		]
+		existing_binary = nil
 		check_for.each do |filename|
 			if File.exist?(filename)
 				existing_binary = filename
