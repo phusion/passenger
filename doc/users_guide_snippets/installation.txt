@@ -75,7 +75,7 @@ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7
 2. Add HTTPS support for APT. Our APT repository is stored on an HTTPS server.
 +
 --------------------------------------------------------------
-sudo apt-get install apt-transport-https
+sudo apt-get install apt-transport-https ca-certificates
 --------------------------------------------------------------
 
 3. Create a file `/etc/apt/sources.list.d/passenger.list` and insert **one of** the following lines, depending on your distribution.
