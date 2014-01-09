@@ -24,6 +24,7 @@ Release 4.0.34
    instead of the wrapper script, Phusion Passenger will now print an error.
  * Added support for RVM >= 1.25 wrapper scripts.
  * Fixed loading passenger_native_support on Ruby 1.9.2.
+ * The Union Station analytics code now works even without native_support.
 
 
 Release 4.0.33

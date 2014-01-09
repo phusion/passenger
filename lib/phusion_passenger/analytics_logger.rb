@@ -23,7 +23,7 @@
 
 require 'thread'
 PhusionPassenger.require_passenger_lib 'utils'
-PhusionPassenger.require_passenger_lib 'native_support'
+PhusionPassenger.require_passenger_lib 'utils/native_support_utils'
 PhusionPassenger.require_passenger_lib 'debug_logging'
 PhusionPassenger.require_passenger_lib 'message_channel'
 
@@ -82,12 +82,12 @@ class AnalyticsLogger
 			else
 				extra_info_base64 = nil
 			end
-			times = NativeSupport.process_times
+			times = Utils::NativeSupportUtils.process_times
 			message "BEGIN: #{name} (#{current_timestamp.to_s(36)},#{times.utime.to_s(36)},#{times.stime.to_s(36)}) #{extra_info_base64}"
 		end
 		
 		def end_measure(name, error_encountered = false)
-			times = NativeSupport.process_times
+			times = Utils::NativeSupportUtils.process_times
 			if error_encountered
 				message "FAIL: #{name} (#{current_timestamp.to_s(36)},#{times.utime.to_s(36)},#{times.stime.to_s(36)})"
 			else

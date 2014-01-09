@@ -205,31 +205,77 @@ describe AnalyticsLogger do
 		end
 	end
 	
-	specify "once a Log object is closed, be becomes null" do
-		log = @logger.new_transaction("foobar")
-		log.close
-		log.should be_null
-	end
-	
-	specify "null Log objects don't do anything" do
-		logger = AnalyticsLogger.new(nil, nil, nil, nil)
-		begin
-			log = logger.new_transaction("foobar")
-			log.message("hello")
-			log.close(true)
-		ensure
-			logger.close
-		end
-		
-		File.exist?("#{@log_dir}/1").should be_false
-	end
-	
 	specify "#clear_connection closes the connection" do
 		@logger.new_transaction("foobar").close
 		@logger.clear_connection
 		connection = @logger.instance_variable_get(:"@connection")
 		connection.synchronize do
 			connection.channel.should be_nil
+		end
+	end
+
+	describe "Log objects" do
+		it "becomes null once it is closed" do
+			log = @logger.new_transaction("foobar")
+			log.close
+			log.should be_null
+		end
+
+		it "does nothing if it's null" do
+			logger = AnalyticsLogger.new(nil, nil, nil, nil)
+			begin
+				log = logger.new_transaction("foobar")
+				log.message("hello")
+				log.close(true)
+			ensure
+				logger.close
+			end
+			
+			File.exist?("#{@log_dir}/1").should be_false
+		end
+
+		describe "#begin_measure" do
+			it "sends a BEGIN message" do
+				log = @logger.new_transaction("foobar")
+				begin
+					log.should_receive(:message).with(/^BEGIN: hello \(.+?,.+?,.+?\) $/)
+					log.begin_measure("hello")
+				ensure
+					log.close
+				end
+			end
+
+			it "adds extra information as base64" do
+				log = @logger.new_transaction("foobar")
+				begin
+					log.should_receive(:message).with(/^BEGIN: hello \(.+?,.+?,.+?\) YWJjZA==$/)
+					log.begin_measure("hello", "abcd")
+				ensure
+					log.close
+				end
+			end
+		end
+
+		describe "#end_measure" do
+			it "sends an END message if error_countered=false" do
+				log = @logger.new_transaction("foobar")
+				begin
+					log.should_receive(:message).with(/^END: hello \(.+?,.+?,.+?\)$/)
+					log.end_measure("hello")
+				ensure
+					log.close
+				end
+			end
+
+			it "sends a FAIL message if error_countered=true" do
+				log = @logger.new_transaction("foobar")
+				begin
+					log.should_receive(:message).with(/^FAIL: hello \(.+?,.+?,.+?\)$/)
+					log.end_measure("hello", true)
+				ensure
+					log.close
+				end
+			end
 		end
 	end
 end

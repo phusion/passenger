@@ -36,13 +36,27 @@ module NativeSupportUtils
 		def split_by_null_into_hash(data)
 			return PhusionPassenger::NativeSupport.split_by_null_into_hash(data)
 		end
+
+		# Wrapper for getrusage().
+		def process_times
+			return PhusionPassenger::NativeSupport.process_times
+		end
 	else
 		NULL = "\0".freeze
+
+		class ProcessTimes < Struct.new(:utime, :stime)
+		end
 
 		def split_by_null_into_hash(data)
 			args = data.split(NULL, -1)
 			args.pop
 			return Hash[*args]
+		end
+
+		def process_times
+			times = Process.times
+			return ProcessTimes.new((times.utime * 1_000_000).to_i,
+				(times.stime * 1_000_000).to_i)
 		end
 	end
 end
