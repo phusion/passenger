@@ -27,29 +27,25 @@ task :doc => Packaging::ASCII_DOCS
 Packaging::ASCII_DOCS.each do |target|
 	source = target.sub(/\.html$/, '.txt')
 	file target => [source] + Dir["doc/users_guide_snippets/**/*"] do
-		if PlatformInfo.find_command('mizuho')
-			if target =~ /apache/i
-				type = "apache"
-				juvia_site_key = "5jpmkyjqlml8rktsfldfpbwth8ig7w9"
-			elsif target =~ /nginx/i
-				type = "nginx"
-				juvia_site_key = "q0ptarhn8o9xanwomq8zkgewbtwffyz"
-			elsif target =~ /standalone/i
-				type = "standalone"
-				juvia_site_key = "amggdy0k65hb4hbjg3dh7pnb9zd8dwy"
-			else
-				type = nil
-				juvia_site_key = nil
-			end
-			command = "mizuho '#{source}'"
-			command << " -a #{type}" if type
-			if juvia_site_key
-				command << " -c juvia --juvia-url http://juvia.phusion.nl --juvia-site-key #{juvia_site_key}"
-			end
-			sh(command)
+		if target =~ /apache/i
+			type = "apache"
+			juvia_site_key = "5jpmkyjqlml8rktsfldfpbwth8ig7w9"
+		elsif target =~ /nginx/i
+			type = "nginx"
+			juvia_site_key = "q0ptarhn8o9xanwomq8zkgewbtwffyz"
+		elsif target =~ /standalone/i
+			type = "standalone"
+			juvia_site_key = "amggdy0k65hb4hbjg3dh7pnb9zd8dwy"
 		else
-			sh "echo 'Mizuho required to build docs' > '#{target}'"
+			type = nil
+			juvia_site_key = nil
 		end
+		command = "mizuho '#{source}'"
+		command << " -a #{type}" if type
+		if juvia_site_key
+			command << " -c juvia --juvia-url http://juvia.phusion.nl --juvia-site-key #{juvia_site_key}"
+		end
+		sh(command)
 	end
 	
 	task :clean do
@@ -84,6 +80,8 @@ def create_markdown_compilation_task(target)
 			sh "rm -f #{target}.tmp"
 		end
 	end
+
+	task :doc => target
 
 	task :clean do
 		if boolean_option('CLEAN_DOCS', true)

@@ -21,8 +21,20 @@ ALL_RPM_DISTROS = {
 	"amazon" => { :mock_chroot_name => "epel-6", :distro_name => "Amazon Linux" }
 }
 
+task 'rpm:sources' => ['package:set_official', 'package:tarball'] do
+	basename = "#{PACKAGE_NAME}-#{VERSION_STRING}"
+	nginx_version = PhusionPassenger::PREFERRED_NGINX_VERSION
+
+	sh "cp #{PKG_DIR}/#{basename}.tar.gz rpm/* #{rpmbuild_root}/SOURCES/"
+	if File.exist?("#{rpmbuild_root}/SOURCES/nginx-#{nginx_version}.tar.gz")
+		puts "Local Nginx tarball already exists."
+	else
+		sh "curl -L -o #{rpmbuild_root}/SOURCES/nginx-#{nginx_version}.tar.gz http://nginx.org/download/nginx-#{nginx_version}.tar.gz"
+	end
+end
+
 desc "Build RPM for local machine"
-task 'rpm:local' do
+task 'rpm:local' => 'rpm:sources' do
 	distro_id = `./rpm/get_distro_id.py`.strip
 	rpm_spec_dir = "#{rpmbuild_root}/SPECS"
 	spec_target_dir = "#{rpm_spec_dir}/#{distro_id}"

@@ -1,0 +1,16 @@
+diff --git a/test/oxt/dynamic_thread_group_test.cpp b/test/oxt/dynamic_thread_group_test.cpp
+index 003b7ef..5a90463 100644
+--- a/test/oxt/dynamic_thread_group_test.cpp
++++ b/test/oxt/dynamic_thread_group_test.cpp
+@@ -103,9 +103,9 @@ namespace tut {
+ 	}
+ 	
+ 	static void create_threads(dynamic_thread_group *group) {
+-		for (int i = 1000; i >= 0; i--) {
++		for (int i = 100; i >= 0; i--) {
+ 			boost::function<void ()> f(boost::bind(do_nothing, i * 1000));
+-			group->create_thread(f, "", 256 * 1024);
++			group->create_thread(f, "", 8 * 1024);
+ 		}
+ 	}
+ 	

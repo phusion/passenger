@@ -1,0 +1,45 @@
+diff -urp passenger-release-4.0.18.orig/ext/common/EventedMessageServer.h passenger-release-4.0.18/ext/common/EventedMessageServer.h
+--- passenger-release-4.0.18.orig/ext/common/EventedMessageServer.h	2013-09-17 13:47:54.000000000 -0500
++++ passenger-release-4.0.18/ext/common/EventedMessageServer.h	2013-09-23 13:59:23.012484647 -0500
+@@ -27,6 +27,7 @@
+ 
+ #include <boost/shared_ptr.hpp>
+ #include <ev++.h>
++#include <sys/types.h>
+ #include <cstdarg>
+ #include <cstdlib>
+ #include <EventedServer.h>
+diff -urp passenger-release-4.0.18.orig/ext/common/FileDescriptor.h passenger-release-4.0.18/ext/common/FileDescriptor.h
+--- passenger-release-4.0.18.orig/ext/common/FileDescriptor.h	2013-09-17 13:47:54.000000000 -0500
++++ passenger-release-4.0.18/ext/common/FileDescriptor.h	2013-09-23 13:59:23.013484647 -0500
+@@ -30,6 +30,7 @@
+ #include <oxt/system_calls.hpp>
+ 
+ #include <utility>
++#include <sys/types.h>
+ #include <unistd.h>
+ #include <cerrno>
+ 
+diff -urp passenger-release-4.0.18.orig/ext/common/Utils/BufferedIO.h passenger-release-4.0.18/ext/common/Utils/BufferedIO.h
+--- passenger-release-4.0.18.orig/ext/common/Utils/BufferedIO.h	2013-09-17 13:47:54.000000000 -0500
++++ passenger-release-4.0.18/ext/common/Utils/BufferedIO.h	2013-09-23 13:59:23.014484646 -0500
+@@ -1,6 +1,7 @@
+ #ifndef _PASSENGER_BUFFERED_IO_H_
+ #define _PASSENGER_BUFFERED_IO_H_
+ 
++#include <sys/types.h>
+ #include <string>
+ #include <utility>
+ #include <algorithm>
+diff -urp passenger-release-4.0.18.orig/ext/common/Utils/StreamBoyerMooreHorspool.h passenger-release-4.0.18/ext/common/Utils/StreamBoyerMooreHorspool.h
+--- passenger-release-4.0.18.orig/ext/common/Utils/StreamBoyerMooreHorspool.h	2013-09-17 13:47:54.000000000 -0500
++++ passenger-release-4.0.18/ext/common/Utils/StreamBoyerMooreHorspool.h	2013-09-23 13:59:23.015484645 -0500
+@@ -189,7 +189,7 @@
+ 	#endif
+ #endif
+ 
+-
++#include <sys/types.h>
+ #include <cstddef>
+ #include <cstring>
+ #include <cassert>

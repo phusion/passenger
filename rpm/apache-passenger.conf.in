@@ -1,0 +1,26 @@
+### Begin automatically installed Phusion Passenger load snippet ###
+LoadModule passenger_module modules/mod_passenger.so
+### End automatically installed Phusion Passenger load snippet ###
+### Begin automatically installed Phusion Passenger config snippet ###
+<IfModule mod_passenger.c>
+   PassengerRoot @PASSENGERROOT@
+   PassengerRuby /usr/bin/ruby
+</IfModule>
+### End automatically installed Phusion Passenger config snippet ###
+
+# Deploying a web application: an example
+
+# Suppose you have a web application in /somewhere. Add a virtual host to
+# your Apache configuration file and set its DocumentRoot to /somewhere/public:
+#
+#    <VirtualHost *:80>
+#       ServerName www.yourhost.com
+#       # Be sure to point to 'public'!
+#       DocumentRoot /somewhere/public
+#       <Directory /somewhere/public>
+#          # Relax Apache security settings
+#          AllowOverride all  
+#          # <-- MultiViews must be turned off
+#          Options -MultiViews
+#       </Directory>
+#    </VirtualHost>

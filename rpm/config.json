@@ -1,0 +1,30 @@
+{
+  //// This file contains system-specific configuration options that the test suite needs.
+  //// Please customize it for your system.
+
+  // These are the usernames and group names of normal, non-administrator
+  // users and groups. Preferably, these are user and group accounts that
+  // are normally not used.
+  //
+  // These users and groups MUST be able to access this 'test' directory,
+  // otherwise the tests will fail.
+
+  ///// Good values for Linux and FreeBSD. Same restrictions apply.
+  "normal_user_1": "games",
+  "normal_user_2": "daemon",
+  "default_user": "man",
+  "normal_group_1": "daemon",
+  "normal_group_2": "man",
+  "default_group": "games",
+
+  // A nonexistant username, group name, user ID and group ID.
+  "nonexistant_user": "xxxxxxxxxxxxxxxxxxx",
+  "nonexistant_group": "xxxxxxxxxxxxxxxxxxx",
+  "nonexistant_uid": 9999,
+  "nonexistant_gid": 9999,
+
+  // If you want to run the Nginx integration tests, then set the following
+  // config option to the full path of the Nginx binary. This Nginx binary *must*
+  // be compiled with Phusion Passenger support!
+  "nginx": "/usr/local/sbin/nginx"
+}

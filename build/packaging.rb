@@ -252,7 +252,8 @@ task 'package:tarball' => Packaging::PREGENERATED_FILES do
 	if ENV['OFFICIAL_RELEASE']
 		File.open("#{PKG_DIR}/#{basename}/resources/release.txt", "w").close
 	end
-	sh "cd #{PKG_DIR} && tar -c #{basename} | gzip --best > #{basename}.tar.gz"
+	sh "cd #{PKG_DIR}/#{basename} && find . -print0 | xargs -0 touch -d '2013-10-27 00:00:00 UTC'"
+	sh "cd #{PKG_DIR} && tar -c #{basename} | gzip --no-name --best > #{basename}.tar.gz"
 	sh "rm -rf #{PKG_DIR}/#{basename}"
 end
 

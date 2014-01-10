@@ -1,0 +1,21 @@
+diff -urp passenger-release-4.0.18.orig/ext/boost/cstdint.hpp passenger-release-4.0.18/ext/boost/cstdint.hpp
+--- passenger-release-4.0.18.orig/ext/boost/cstdint.hpp	2013-09-17 13:47:54.000000000 -0500
++++ passenger-release-4.0.18/ext/boost/cstdint.hpp	2013-09-23 16:34:02.074450639 -0500
+@@ -41,7 +41,15 @@
+ // so we disable use of stdint.h when GLIBC does not define __GLIBC_HAVE_LONG_LONG.
+ // See https://svn.boost.org/trac/boost/ticket/3548 and http://sources.redhat.com/bugzilla/show_bug.cgi?id=10990
+ //
+-#if defined(BOOST_HAS_STDINT_H) && (!defined(__GLIBC__) || defined(__GLIBC_HAVE_LONG_LONG))
++// This define has been dropped altogether in GLIBC 2.17.  As of then,
++// support for long long is part of baseline requirements, and
++// [u]int64_t is always defined.  See here:
++// http://sourceware.org/ml/libc-alpha/2013-01/msg00440.html
++//
++#if defined(BOOST_HAS_STDINT_H)					\
++  && (!defined(__GLIBC__)					\
++      || defined(__GLIBC_HAVE_LONG_LONG)			\
++      || (defined __GLIBC_PREREQ && __GLIBC_PREREQ(2,17)))
+ 
+ // The following #include is an implementation artifact; not part of interface.
+ # ifdef __hpux
+Only in passenger-release-4.0.18/ext/boost: cstdint.hpp.glibc-long
