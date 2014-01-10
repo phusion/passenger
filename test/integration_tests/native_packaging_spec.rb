@@ -28,7 +28,7 @@
 #         rspec -f s -c test/integration_tests/native_packaging_spec.rb
 
 # Ensure that the natively installed tools are in PATH.
-ENV['PATH'] = "/usr/bin:#{ENV['PATH']}"
+ENV['PATH'] = "/usr/bin:/usr/sbin:#{ENV['PATH']}"
 LOCATIONS_INI = ENV['LOCATIONS_INI']
 abort "Please set the LOCATIONS_INI environment variable to the right locations.ini" if !LOCATIONS_INI
 
@@ -50,8 +50,26 @@ NGINX_ADDON_DIR = "/usr/share/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}/ngx_
 DOCDIR = "/usr/share/doc/passenger"
 RESOURCESDIR = "/usr/share/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}"
 RUBY_EXTENSION_SOURCE_DIR = "/usr/share/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
-AGENTS_DIR = "/usr/lib/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}/agents"
-APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
+
+if NATIVE_PACKAGING_METHOD == "deb"
+	AGENTS_DIR = "/usr/lib/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}/agents"
+	APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
+
+	APXS2 = "/usr/bin/apxs2"
+	APACHE2 = "/usr/sbin/apache2"
+	APACHE2CTL = "/usr/sbin/apache2ctl"
+	APACHE_CONFIG_FILE = "/etc/apache2/apache2.conf"
+	APACHE_ERROR_LOG = "/var/log/apache2/error.log"
+else
+	AGENTS_DIR = "/usr/lib64/#{PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME}/agents"
+	APACHE2_MODULE_PATH = "/usr/lib64/httpd/modules/mod_passenger.so"
+
+	APXS2 = "/usr/sbin/apxs"
+	APACHE2 = "/usr/sbin/httpd"
+	APACHE2CTL = "/usr/sbin/apachectl"
+	APACHE_CONFIG_FILE = "/etc/httpd/conf/httpd.conf"
+	APACHE_ERROR_LOG = "/etc/httpd/logs/error_log"
+end
 
 describe "A natively packaged Phusion Passenger" do
 	def capture_output(command)
@@ -152,19 +170,19 @@ describe "A natively packaged Phusion Passenger" do
 			output = capture_output("passenger-config --detect-apache2")
 			output.gsub!(/.*Final autodetection results\n/m, '')
 			output.scan(/\* Found Apache .*\!/).size.should == 1
-			output.should include("apxs2          : /usr/bin/apxs2\n")
-			output.should include("Main executable: /usr/sbin/apache2\n")
-			output.should include("Control command: /usr/sbin/apache2ctl\n")
-			output.should include("Config file    : /etc/apache2/apache2.conf\n")
-			output.should include("Error log file : /var/log/apache2/error.log\n")
+			output.should include("apxs2          : #{APXS2}\n")
+			output.should include("Main executable: #{APACHE2}\n")
+			output.should include("Control command: #{APACHE2CTL}\n")
+			output.should include("Config file    : #{APACHE_CONFIG_FILE}\n")
+			output.should include("Error log file : #{APACHE_ERROR_LOG}\n")
 			output.should include(%Q{
    To start, stop or restart this specific Apache version:
-      /usr/sbin/apache2ctl start
-      /usr/sbin/apache2ctl stop
-      /usr/sbin/apache2ctl restart})
+      #{APACHE2CTL} start
+      #{APACHE2CTL} stop
+      #{APACHE2CTL} restart})
 			output.should include(%Q{
    To troubleshoot, please read the logs in this file:
-      /var/log/apache2/error.log})
+      #{APACHE_ERROR_LOG}})
 		end
 
 		it "shows the directory to the runtime library headers" do
