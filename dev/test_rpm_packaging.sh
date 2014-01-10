@@ -12,9 +12,9 @@ sudo sh -c 'cat >> /etc/hosts' <<EOF
 EOF
 
 # Don't care about the docs.
-for F in "doc/Users guide.html" "doc/Users guide Apache.html" "doc/Users guide Nginx.html" "doc/Users guide Standalone.html" "doc/Packaging.html"; do
-	if [[ ! -f "$F" ]]; then
-		echo > "$F"
+for F in "Users guide.html" "Users guide Apache.html" "Users guide Nginx.html" "Users guide Standalone.html" "Packaging.html" "Security of user switching support.html" "Architectural overview.html"; do
+	if [[ ! -f "doc/$F" ]]; then
+		echo > "doc/$F"
 	fi
 done
 
