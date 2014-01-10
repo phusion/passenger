@@ -54,6 +54,15 @@ task 'test:install_deps' do
 		sh "#{gem_install} bundler rspec daemon_controller json rack"
 	end
 	if boolean_option('DOCTOOLS', default)
+		begin
+			require 'nokogiri'
+		rescue LoadError
+			if RUBY_VERSION < '1.9'
+				sh "#{gem_install} nokogiri -v 1.5.9"
+			else
+				sh "#{gem_install} nokogiri"
+			end
+		end
 		sh "#{gem_install} mizuho bluecloth"
 	end
 	if boolean_option('RAILS_BUNDLES', default)
