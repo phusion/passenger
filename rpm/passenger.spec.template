@@ -93,8 +93,6 @@ BuildRequires: rubygems
 BuildRequires: rubygems-devel
 BuildRequires: rubygem(rake) >= 0.8.1
 BuildRequires: rubygem(rack)
-BuildRequires: rubygem(rspec)
-BuildRequires: rubygem(mime-types)
 BuildRequires: zlib-devel
 BuildRequires: pcre-devel
 BuildRequires: openssl-devel
