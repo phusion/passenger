@@ -1,6 +1,6 @@
-%global package_name passenger
-%global namespace passenger
-%global nginx_version 1.4.4
+%global package_name <%= RPM_NAME %>
+%global namespace <%= GLOBAL_NAMESPACE_DIRNAME %>
+%global nginx_version <%= PREFERRED_NGINX_VERSION %>
 %global bundled_boost_version 1.54.0
 
 %if 0%{?fc18}
