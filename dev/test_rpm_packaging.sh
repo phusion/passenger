@@ -20,7 +20,7 @@ done
 
 cp test/config.json.rpm-automation test/config.json
 
-rake test:install_deps DEVDEPS_DEFAULT=false BASE_DEPS=true RAILS_BUNDLES=true SUDO=1
+rake test:install_deps DEVDEPS_DEFAULT=false BASE_DEPS=true RAILS_BUNDLES=true
 rake rpm:local rpm:local:reinstall
 rake test:integration:native_packaging \
 	LOCATIONS_INI=/usr/lib/ruby/site_ruby/1.8/phusion_passenger/locations.ini \
