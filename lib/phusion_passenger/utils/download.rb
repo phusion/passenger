@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2013-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -51,7 +51,20 @@ module Download
 	#           The default is to use the download tool's down CA database.
 	#   use_cache: Whether to copy the file from the download cache, if available.
 	#              Default: false.
+	#   connect_timeout: The maximum amount of time to spend on DNS lookup
+	#                    and establishing the TCP connection. Set to nil to
+	#                    disable this timeout. Default: 4.
+	#   idle_timeout: The maximum idle read time. Set to nil to set this timeout
+	#                 to the default wget value, 900. Set to nil to disable this
+	#                 timeout. Default: 5.
+	#   total_timeout: The maximum amount of time spent on the whole download
+	#                  operation, including connection time. Only has effect on curl.
+	#                  Set to nil to disable this timeout. Default: nil.
 	def download(url, output, options = {})
+		options = {
+			:connect_timeout => 4,
+			:idle_timeout    => 5
+		}.merge(options)
 		logger = options[:logger] || Logger.new(STDERR)
 
 		if options[:use_cache] && cache_dir = PhusionPassenger.download_cache_dir
@@ -89,6 +102,20 @@ private
 		if options[:cacert]
 			command << "--cacert"
 			command << options[:cacert]
+		end
+		if options[:connect_timeout]
+			command << "--connect-timeout"
+			command << options[:connect_timeout].to_s
+		end
+		if options[:idle_timeout]
+			command << "--speed-time"
+			command << options[:idle_timeout].to_s
+			command << "--speed-limit"
+			command << "1"
+		end
+		if options[:total_timeout]
+			command << "--max-time"
+			command << options[:total_timeout].to_s
 		end
 		command << url
 		command_str = Shellwords.join(command)
@@ -147,12 +174,19 @@ private
 	end
 
 	def download_with_wget(logger, url, output, options)
-		command = ["wget", "--tries=3", "-O", output]
+		command = ["wget", "--tries=1", "-O", output]
 		if !options[:show_progress]
 			command << "-nv"
 		end
 		if options[:cacert]
 			command << "--ca-certificate=#{options[:cacert]}"
+		end
+		if options[:connect_timeout]
+			command << "--dns-timeout=#{options[:connect_timeout]}"
+			command << "--connect-timeout=#{options[:connect_timeout]}"
+		end
+		if options[:idle_timeout]
+			command << "--timeout=#{options[:idle_timeout]}"
 		end
 		command << url
 		command_str = Shellwords.join(command)

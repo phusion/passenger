@@ -143,10 +143,11 @@ private
 		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 		PhusionPassenger.require_passenger_lib 'utils/tmpio'
 		PhusionPassenger.require_passenger_lib 'utils/download'
+
 		PhusionPassenger::Utils.mktmpdir("passenger-native-support-") do |dir|
 			Dir.chdir(dir) do
 				basename = "rubyext-#{archdir}.tar.gz"
-				if !download(basename, dir)
+				if !download(basename, dir, :total_timeout => 30)
 					return false
 				end
 
@@ -238,16 +239,18 @@ private
 		return target_dirs
 	end
 
-	def download(name, output_dir)
+	def download(name, output_dir, options = {})
 		url = "#{PhusionPassenger::BINARIES_URL_ROOT}/#{PhusionPassenger::VERSION_STRING}/#{name}"
 		filename = "#{output_dir}/#{name}"
 		logger = Logger.new(STDERR)
 		logger.level = Logger::WARN
 		logger.formatter = proc { |severity, datetime, progname, msg| "     #{msg}\n" }
-		return PhusionPassenger::Utils::Download.download(url, filename,
+		options.merge!(
 			:cacert => PhusionPassenger.binaries_ca_cert_path,
 			:use_cache => true,
-			:logger => logger)
+			:logger => logger
+		)
+		return PhusionPassenger::Utils::Download.download(url, filename, options)
 	end
 	
 	def mkdir(dir)
