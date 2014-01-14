@@ -111,6 +111,7 @@ module Packaging
 		'test/.rspec',
 		'test/*.example',
 		'test/*.travis',
+		'test/*.rpm-automation',
 		'test/*.supp',
 		'test/support/*.{c,cpp,h,rb}',
 		'test/tut/*',
