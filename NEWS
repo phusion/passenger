@@ -44,17 +44,17 @@ Release 4.0.34
    to maintain compatibility without reintroducing the Debian and RPM packaging
    issues. Users should modify the following:
 
-     require 'phusion_passenger/rack/out_of_band_gc'
+       require 'phusion_passenger/rack/out_of_band_gc'
 
    to:
 
-     if PhusionPassenger.respond_to?(:require_passenger_lib)
-       # Phusion Passenger >= 4.0.33
-       PhusionPassenger.require_passenger_lib 'rack/out_of_band_gc'
-     else
-       # Phusion Passenger < 4.0.33
-       require 'phusion_passenger/rack/out_of_band_gc'
-     end
+       if PhusionPassenger.respond_to?(:require_passenger_lib)
+         # Phusion Passenger >= 4.0.33
+         PhusionPassenger.require_passenger_lib 'rack/out_of_band_gc'
+       else
+         # Phusion Passenger < 4.0.33
+         require 'phusion_passenger/rack/out_of_band_gc'
+       end
 
 Release 4.0.33
 --------------
