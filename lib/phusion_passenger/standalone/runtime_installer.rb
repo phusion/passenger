@@ -136,7 +136,7 @@ protected
 		@working_dir = PhusionPassenger::Utils.mktmpdir("passenger.", PlatformInfo.tmpexedir)
 		@nginx_version ||= PREFERRED_NGINX_VERSION
 		@download_binaries = true if !defined?(@download_binaries)
-		@binaries_url_root ||= BINARIES_URL_ROOT
+		@binaries_url_root ||= PhusionPassenger.binaries_sites
 	end
 
 	def after_install
@@ -233,9 +233,8 @@ private
 
 		puts " --> Downloading #{PROGRAM_NAME} support binaries for your platform"
 		basename = "support-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
-		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
-		if !download(url, tarball, :cacert => PhusionPassenger.binaries_ca_cert_path, :use_cache => true)
+		if !download_support_file(basename, tarball)
 			puts "     No binaries are available for your platform. Will compile them from source"
 			return false
 		end
@@ -278,16 +277,8 @@ private
 
 		puts " --> Downloading web helper for your platform"
 		basename = "webhelper-#{@nginx_version}-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
-		url      = "#{@binaries_url_root}/#{PhusionPassenger::VERSION_STRING}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
-		logger = Logger.new(STDOUT)
-		logger.level = Logger::WARN
-		logger.formatter = proc { |severity, datetime, progname, msg| "     #{msg}\n" }
-		result = download(url, tarball,
-			:cacert => PhusionPassenger.binaries_ca_cert_path,
-			:use_cache => true,
-			:logger => logger)
-		if !result
+		if !download_support_file(basename, tarball)
 			puts "     No binary is available for your platform. Will compile it from source."
 			return false
 		end
@@ -541,6 +532,37 @@ private
 			end
 		end
 		return true
+	end
+
+	def download_support_file(name, output)
+		logger = Logger.new(STDOUT)
+		logger.level = Logger::WARN
+		logger.formatter = proc do |severity, datetime, progname, msg|
+			msg.gsub(/^/, "     ") + "\n"
+		end
+
+		if @binaries_url_root.is_a?(String)
+			sites = [{ :url => @binaries_url_root }]
+		else
+			sites = @binaries_url_root
+		end
+		sites.each_with_index do |site, i|
+			if real_download_support_file(site, name, output, logger)
+				logger.warn "Download OK!" if i > 0
+				return true
+			elsif i != sites.size - 1
+				logger.warn "Trying next mirror..."
+			end
+		end
+		return false
+	end
+
+	def real_download_support_file(site, name, output, logger)
+		url = "#{site[:url]}/#{VERSION_STRING}/#{name}"
+		return download(url, output,
+			:cacert => site[:cacert],
+			:logger => logger,
+			:use_cache => true)
 	end
 	
 	def run_command_with_throbber(command, status_text)
