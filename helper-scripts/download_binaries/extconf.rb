@@ -64,21 +64,32 @@ Dir.chdir(PhusionPassenger.download_cache_dir)
 # Initiate downloads
 require 'phusion_passenger/utils/download'
 require 'logger'
+
 def download(name, options = {})
 	if File.exist?(name)
 		puts "#{Dir.pwd}/#{name} already exists"
-		return
+		return true
 	end
 
-	url = "#{PhusionPassenger::BINARIES_URL_ROOT}/#{PhusionPassenger::VERSION_STRING}/#{name}"
-	cert = PhusionPassenger.binaries_ca_cert_path
-	puts "Attempting to download #{url} into #{Dir.pwd}"
-	File.unlink("#{name}.tmp") rescue nil
 	logger = Logger.new(STDOUT)
 	logger.level = Logger::WARN
 	logger.formatter = proc { |severity, datetime, progname, msg| "*** #{msg}\n" }
+
+	PhusionPassenger.binaries_sites.each do |site|
+		if really_download(site, name, logger, options)
+			return true
+		end
+	end
+	return false
+end
+
+def really_download(site, name, logger, options)
+	url = "#{site[:url]}/#{PhusionPassenger::VERSION_STRING}/#{name}"
+	puts "Attempting to download #{url} into #{Dir.pwd}"
+	File.unlink("#{name}.tmp") rescue nil
+	
 	options = {
-		:cacert => cert,
+		:cacert => site[:cert],
 		:logger => logger
 	}.merge(options)
 	result = PhusionPassenger::Utils::Download.download(url, "#{name}.tmp", options)
@@ -87,6 +98,7 @@ def download(name, options = {})
 	else
 		File.unlink("#{name}.tmp") rescue nil
 	end
+	return result
 end
 
 download "rubyext-#{ruby_compat_id}.tar.gz", :total_timeout => 10
