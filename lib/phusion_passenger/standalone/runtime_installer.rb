@@ -369,7 +369,7 @@ private
 	def compile_support_binaries
 		begin_progress_bar
 		show_progress(0, 1, 1, 1, "Preparing #{PROGRAM_NAME}...")
-		Dir.chdir(PhusionPassenger.source_root) do
+		Dir.chdir(PhusionPassenger.build_system_dir) do
 			args = "nginx_without_native_support" +
 				" CACHING=false" +
 				" OUTPUT_DIR='#{@support_dir}'"

@@ -189,9 +189,9 @@ protected
 		end
 
 		if Process.uid != 0 &&
-		   PhusionPassenger.source_root =~ /^#{Regexp.escape home_dir}\// &&
-		   PhusionPassenger.source_root =~ /^#{Regexp.escape Gem.dir}\// &&
-		   File.stat(PhusionPassenger.source_root).uid == 0
+		   PhusionPassenger.build_system_dir =~ /^#{Regexp.escape home_dir}\// &&
+		   PhusionPassenger.build_system_dir =~ /^#{Regexp.escape Gem.dir}\// &&
+		   File.stat(PhusionPassenger.build_system_dir).uid == 0
 			new_screen
 			render_template 'installer_common/gem_install_permission_problems'
 			return false
@@ -203,7 +203,7 @@ protected
 	def check_directory_accessible_by_web_server
 		return true if PhusionPassenger.natively_packaged?
 		inaccessible_directories = []
-		list_parent_directories(PhusionPassenger.source_root).each do |path|
+		list_parent_directories(PhusionPassenger.build_system_dir).each do |path|
 			if !world_executable?(path)
 				inaccessible_directories << path
 			end

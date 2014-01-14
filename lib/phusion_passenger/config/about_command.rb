@@ -37,7 +37,8 @@ class AboutCommand < Command
 		puts "Show information about #{PROGRAM_NAME}."
 		puts
 		puts "Available subcommands:"
-		puts "  root                     Show #{PROGRAM_NAME}'s root directory."
+		puts "  root                     Show #{PROGRAM_NAME}'s root."
+		puts "  build-system-dir         Show #{PROGRAM_NAME}'s build system directory."
 		puts "  ruby-libdir              Show #{PROGRAM_NAME}'s Ruby library directory."
 		puts "  includedir               Show the Nginx runtime library headers directory."
 		puts "  nginx-addon-dir          Show #{PROGRAM_NAME}'s Nginx addon directory."
@@ -69,6 +70,8 @@ class AboutCommand < Command
 		case subcommand
 		when "--root"
 			puts PhusionPassenger.source_root
+		when "--build-system-dir"
+			puts PhusionPassenger.build_system_dir
 		when "--ruby-libdir"
 			puts PhusionPassenger.ruby_libdir
 		when "--includedir"

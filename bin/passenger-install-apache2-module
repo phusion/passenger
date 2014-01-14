@@ -118,7 +118,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 			exit
 		end
 		
-		Dir.chdir(PhusionPassenger.source_root)
+		Dir.chdir(PhusionPassenger.build_system_dir)
 		show_welcome_screen
 		query_interested_languages
 		check_gem_install_permission_problems || exit(1)
@@ -268,10 +268,10 @@ private
 		if Process.uid == 0
 			render_template 'installer_common/cannot_access_files_as_root',
 				:type => "directory",
-				:files => [PhusionPassenger.source_root]
+				:files => [PhusionPassenger.build_system_dir]
 		else
 			render_template 'installer_common/run_installer_as_root',
-				:dir  => PhusionPassenger.source_root,
+				:dir  => PhusionPassenger.build_system_dir,
 				:sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
 				:sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
 				:ruby => PhusionPassenger::PlatformInfo.ruby_command,
@@ -342,7 +342,7 @@ private
 		line
 		puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		if @compile
-			puts "cd #{PhusionPassenger.source_root}"
+			puts "cd #{PhusionPassenger.build_system_dir}"
 			if ENV['TRACE']
 				puts "#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes"
 				return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes")
@@ -362,7 +362,7 @@ private
 
 	def config_snippet
 		return "<IfModule mod_passenger.c>\n" +
-			"  PassengerRoot #{PhusionPassenger.source_root}\n" +
+			"  PassengerRoot #{PhusionPassenger.build_system_dir}\n" +
 			"  PassengerDefaultRuby #{PlatformInfo.ruby_command}\n" +
 			"</IfModule>"
 	end

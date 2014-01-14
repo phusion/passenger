@@ -159,6 +159,7 @@ private
 	# Returns the RubyGems bin dir, if Phusion Passenger is installed through RubyGems.
 	def gem_bindir
 		if defined?(Gem) &&
+		   PhusionPassenger.originally_packaged? &&
 		   PhusionPassenger.source_root =~ /^#{Regexp.escape Gem.dir}\// &&
 		   File.exist?("#{Gem.bindir}/passenger-config")
 			return Gem.bindir

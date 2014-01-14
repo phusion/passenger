@@ -25,6 +25,8 @@ Release 4.0.34
  * Added support for RVM >= 1.25 wrapper scripts.
  * Fixed loading passenger_native_support on Ruby 1.9.2.
  * The Union Station analytics code now works even without native_support.
+ * Fixed `passenger-install-apache2-module` and `passenger-install-nginx-module` in
+   Homebrew.
  * Binaries are now downloaded from an Amazon S3 mirror if the main binary server
    is unavailable.
  * And finally, although this isn't really a change in 4.0.34, it should be noted.

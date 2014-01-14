@@ -76,7 +76,10 @@ module PhusionPassenger
 		:download_cache_dir,
 		# Directory in which the build system's output is stored, e.g.
 		# the compiled agent executables. Only available when originally packaged.
-		:buildout_dir
+		:buildout_dir,
+		# Directory in which we can run 'rake apache2' and 'rake nginx'. Only available
+		# when originally packaged.
+		:build_system_dir
 	].freeze
 	
 	# Follows the logic of ext/common/ResourceLocator.h, so don't forget to modify that too.
@@ -103,6 +106,7 @@ module PhusionPassenger
 				# originally packaged, force them to be nil when natively packaged.
 				@download_cache_dir = nil
 				@buildout_dir = nil
+				@build_system_dir = nil
 			end
 		else
 			@source_root           = File.dirname(File.dirname(FILE_LOCATION))
@@ -114,13 +118,14 @@ module PhusionPassenger
 			@resources_dir         = "#{@source_root}/resources".freeze
 			@include_dir           = "#{@source_root}/ext".freeze
 			@doc_dir               = "#{@source_root}/doc".freeze
-			@ruby_libdir           = File.dirname(FILE_LOCATION)
+			@ruby_libdir           = File.dirname(FILE_LOCATION).freeze
 			@node_libdir           = "#{@source_root}/node_lib".freeze
 			@apache2_module_path   = "#{@source_root}/buildout/apache2/mod_passenger.so".freeze
-			@ruby_extension_source_dir = "#{@source_root}/ext/ruby"
-			@nginx_module_source_dir   = "#{@source_root}/ext/nginx"
-			@download_cache_dir    = "#{@source_root}/download_cache"
-			@buildout_dir          = "#{@source_root}/buildout"
+			@ruby_extension_source_dir = "#{@source_root}/ext/ruby".freeze
+			@nginx_module_source_dir   = "#{@source_root}/ext/nginx".freeze
+			@download_cache_dir    = "#{@source_root}/download_cache".freeze
+			@buildout_dir          = "#{@source_root}/buildout".freeze
+			@build_system_dir      = @source_root.dup.freeze
 			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 				if instance_variable_get("@#{field}").nil?
 					raise "BUG: @#{field} not set"
