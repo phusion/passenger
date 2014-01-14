@@ -82,7 +82,7 @@ def download(name, options = {})
 	logger.level = Logger::WARN
 	logger.formatter = proc { |severity, datetime, progname, msg| "*** #{msg}\n" }
 
-	PhusionPassenger.binaries_sites.each do |site|
+	SITES.each do |site|
 		if really_download(site, name, logger, options)
 			return true
 		end
