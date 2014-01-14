@@ -60,7 +60,7 @@ ruby_compat_id = PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibil
 
 ABORT_ON_ERROR = ARGV[0] == "--abort-on-error"
 if url_root = ENV['BINARIES_URL_ROOT']
-	SITES = { :url => url_root }
+	SITES = [{ :url => url_root }]
 else
 	SITES = PhusionPassenger.binaries_sites
 end
