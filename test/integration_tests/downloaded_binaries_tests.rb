@@ -96,7 +96,7 @@ describe "Downloaded Phusion Passenger binaries" do
 		server, url_root = start_server("server_root")
 		File.rename("download_cache", "download_cache.old")
 		begin
-			FileUtils.cp_r("download_cache.old", "server_root/#{VERSION_STRING}")
+			FileUtils.cp_r("download_cache.old", "server_root/#{PhusionPassenger::VERSION_STRING}")
 			sh "cd #{PhusionPassenger.source_root} && " +
 				"env BINARIES_URL_ROOT=#{url_root} " +
 				"ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
