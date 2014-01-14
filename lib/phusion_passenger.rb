@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -194,6 +194,14 @@ module PhusionPassenger
 	APACHE2_DOC_NAME    = "Users guide Apache.html"
 	NGINX_DOC_NAME      = "Users guide Nginx.html"
 	STANDALONE_DOC_NAME = "Users guide Standalone.html"
+
+	def self.binaries_sites
+		return [
+			{ :url => "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release",
+			  :cacert => "#{resources_dir}/oss-binaries.phusionpassenger.com.crt" },
+			{ :url => "https://s3.amazonaws.com/phusion-passenger/binaries/passenger/by_release" }
+		]
+	end
 
 	def self.binaries_ca_cert_path
 		return "#{resources_dir}/oss-binaries.phusionpassenger.com.crt"

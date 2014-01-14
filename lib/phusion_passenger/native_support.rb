@@ -240,17 +240,32 @@ private
 	end
 
 	def download(name, output_dir, options = {})
-		url = "#{PhusionPassenger::BINARIES_URL_ROOT}/#{PhusionPassenger::VERSION_STRING}/#{name}"
-		filename = "#{output_dir}/#{name}"
 		logger = Logger.new(STDERR)
 		logger.level = Logger::WARN
-		logger.formatter = proc { |severity, datetime, progname, msg| "     #{msg}\n" }
-		options.merge!(
-			:cacert => PhusionPassenger.binaries_ca_cert_path,
+		logger.formatter = proc do |severity, datetime, progname, msg|
+			msg.gsub(/^/, "     ") + "\n"
+		end
+		sites = PhusionPassenger.binaries_sites
+		sites.each_with_index do |site, i|
+			if real_download(site, name, output_dir, logger, options)
+				logger.warn "Download OK!" if i > 0
+				return true
+			elsif i != sites.size - 1
+				logger.warn "Trying next mirror..."
+			end
+		end
+		return false
+	end
+
+	def real_download(site, name, output_dir, logger, options)
+		url = "#{site[:url]}/#{VERSION_STRING}/#{name}"
+		filename = "#{output_dir}/#{name}"
+		real_options = options.merge(
+			:cacert => site[:cacert],
 			:use_cache => true,
 			:logger => logger
 		)
-		return PhusionPassenger::Utils::Download.download(url, filename, options)
+		return PhusionPassenger::Utils::Download.download(url, filename, real_options)
 	end
 	
 	def mkdir(dir)
