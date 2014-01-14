@@ -96,7 +96,6 @@ describe "Downloaded Phusion Passenger binaries" do
 		server, url_root = start_server("server_root")
 		File.rename("download_cache", "download_cache.old")
 		begin
-			Dir.mkdir("server_root")
 			FileUtils.cp_r("download_cache.old", "server_root/#{VERSION_STRING}")
 			sh "cd #{PhusionPassenger.source_root} && " +
 				"env BINARIES_URL_ROOT=#{url_root} " +
