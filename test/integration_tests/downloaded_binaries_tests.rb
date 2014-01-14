@@ -7,6 +7,7 @@ require 'phusion_passenger'
 PhusionPassenger.locate_directories
 require 'tmpdir'
 require 'fileutils'
+require 'webrick'
 require 'open-uri'
 
 ENV['PATH'] = "#{PhusionPassenger.bin_dir}:#{ENV['PATH']}"
@@ -33,6 +34,19 @@ describe "Downloaded Phusion Passenger binaries" do
 		if !system(*command)
 			abort "Command failed: #{command.join(' ')}"
 		end
+	end
+
+	def start_server(document_root)
+		server = WEBrick::HTTPServer.new(:BindAddress => '127.0.0.1',
+			:Port => 0,
+			:DocumentRoot => document_root,
+			:Logger => WEBrick::Log.new("/dev/null"),
+			:AccessLog => [])
+		Thread.new do
+			Thread.current.abort_on_exception = true
+			server.start
+		end
+		[server, "http://127.0.0.1:#{server.config[:Port]}"]
 	end
 
 	specify "Passenger Standalone is able to use the binaries" do
@@ -74,6 +88,22 @@ describe "Downloaded Phusion Passenger binaries" do
 			ensure
 				sh "passenger stop -p 4000"
 			end
+		end
+	end
+
+	specify "helper-scripts/download_binaries/extconf.rb succeeds in downloading all necessary binaries" do
+		server, url_root = start_server("download_cache.old")
+		File.rename("download_cache", "download_cache.old")
+		begin
+			sh "cd #{PhusionPassenger.source_root} && " +
+				"env BINARIES_URL_ROOT=#{url_root} " +
+				"ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
+			Dir["download_cache/*"].should_not be_empty
+		ensure
+			File.unlink("Makefile") rescue nil
+			FileUtils.rm_rf("download_cache")
+			File.rename("download_cache.old", "download_cache")
+			server.stop
 		end
 	end
 end

@@ -53,10 +53,17 @@ if !PhusionPassenger.installed_from_release_package?
 end
 
 # Create download directory and do some preparation
-require 'phusion_passenger/platform_info'
-require 'phusion_passenger/platform_info/binary_compatibility'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
 cxx_compat_id = PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id
 ruby_compat_id = PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_id
+
+ABORT_ON_ERROR = ARGV[0] == "--abort-on-error"
+if url_root = ENV['BINARIES_URL_ROOT']
+	SITES = { :url => url_root }
+else
+	SITES = PhusionPassenger.binaries_sites
+end
 
 FileUtils.mkdir_p(PhusionPassenger.download_cache_dir)
 Dir.chdir(PhusionPassenger.download_cache_dir)
@@ -80,6 +87,7 @@ def download(name, options = {})
 			return true
 		end
 	end
+	abort "Cannot download #{name}, aborting" if ABORT_ON_ERROR
 	return false
 end
 
