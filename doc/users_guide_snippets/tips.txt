@@ -373,7 +373,7 @@ For your convenience, Phusion Passenger provides a Rack middleware for out-of-ba
 [source, ruby]
 ----------------------------------------------------
 if defined?(PhusionPassenger)
-    require 'phusion_passenger/rack/out_of_band_gc'
+    PhusionPassenger.require_passenger_lib 'rack/out_of_band_gc'
     
     # Trigger out-of-band GC every 5 requests.
     use PhusionPassenger::Rack::OutOfBandGc, 5

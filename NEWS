@@ -25,7 +25,36 @@ Release 4.0.34
  * Added support for RVM >= 1.25 wrapper scripts.
  * Fixed loading passenger_native_support on Ruby 1.9.2.
  * The Union Station analytics code now works even without native_support.
+ * Binaries are now downloaded from an Amazon S3 mirror if the main binary server
+   is unavailable.
+ * And finally, although this isn't really a change in 4.0.34, it should be noted.
+   In version 4.0.33 we changed the way Phusion Passenger's own Ruby source files
+   are loaded, in order to fix some Debian and RPM packaging issues. The following
+   doesn't work anymore:
 
+       require 'phusion_passenger/foo'
+
+   Instead, it should become:
+
+       PhusionPassenger.require_passenger_lib 'foo'
+
+   However, we overlooked the fact that this change breaks Ruby apps which use
+   our Out-of-Band GC feature, because such apps had to call
+   `require 'phusion_passenger/rack/out_of_band_gc'`. Unfortunately we're not able
+   to maintain compatibility without reintroducing the Debian and RPM packaging
+   issues. Users should modify the following:
+
+     require 'phusion_passenger/rack/out_of_band_gc'
+
+   to:
+
+     if PhusionPassenger.respond_to?(:require_passenger_lib)
+       # Phusion Passenger >= 4.0.33
+       PhusionPassenger.require_passenger_lib 'rack/out_of_band_gc'
+     else
+       # Phusion Passenger < 4.0.33
+       require 'phusion_passenger/rack/out_of_band_gc'
+     end
 
 Release 4.0.33
 --------------
