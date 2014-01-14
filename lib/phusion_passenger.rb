@@ -189,7 +189,6 @@ module PhusionPassenger
 	
 	###### Other resource locations ######
 	
-	BINARIES_URL_ROOT   = "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release"
 	INDEX_DOC_NAME      = "Users guide.html"
 	APACHE2_DOC_NAME    = "Users guide Apache.html"
 	NGINX_DOC_NAME      = "Users guide Nginx.html"
@@ -201,10 +200,6 @@ module PhusionPassenger
 			  :cacert => "#{resources_dir}/oss-binaries.phusionpassenger.com.crt" },
 			{ :url => "https://s3.amazonaws.com/phusion-passenger/binaries/passenger/by_release" }
 		]
-	end
-
-	def self.binaries_ca_cert_path
-		return "#{resources_dir}/oss-binaries.phusionpassenger.com.crt"
 	end
 	
 	
