@@ -1,3 +1,6 @@
+# These tests are run by passenger_autobuilder, right after it has built binaries.
+# passenger_autobuilder populates the download_cache directory and runs this test script.
+
 source_root = File.expand_path("../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
@@ -32,7 +35,7 @@ describe "Downloaded Phusion Passenger binaries" do
 		end
 	end
 
-	it "works" do
+	specify "Passenger Standalone is able to use the binaries" do
 		Dir.mkdir("#{@temp_dir}/#{version}")
 		Dir.chdir("#{@temp_dir}/#{version}") do
 			tarballs = Dir["#{PhusionPassenger.download_cache_dir}/*.tar.gz"]
