@@ -85,7 +85,6 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 	require 'uri'
 	require 'net/http'
 	require 'net/https'
-	require 'digest/sha1'
 	basename   = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
 	version    = PhusionPassenger::VERSION_STRING
 	is_enterprise  = basename =~ /enterprise/
@@ -143,32 +142,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			end
 
 			puts "Submitting Homebrew pull request..."
-			sha1 = File.open("#{PKG_DIR}/passenger-#{version}.tar.gz", "rb") do |f|
-				Digest::SHA1.hexdigest(f.read)
-			end
-			homebrew_dir = "/tmp/homebrew"
-			sh "rm -rf #{homebrew_dir}"
-			sh "git clone git@github.com:phusion/homebrew.git #{homebrew_dir}"
-			sh "cd #{homebrew_dir} && git remote add Homebrew https://github.com/Homebrew/homebrew.git"
-			sh "cd #{homebrew_dir} && git fetch Homebrew"
-			sh "cd #{homebrew_dir} && git reset --hard Homebrew/master"
-			formula = File.read("/tmp/homebrew/Library/Formula/passenger.rb")
-			formula.gsub!(/passenger-.+?\.tar\.gz/, "passenger-#{version}.tar.gz") ||
-				abort("Unable to substitute Homebrew formula tarball filename")
-			formula.gsub!(/sha1 .*/, "sha1 '#{sha1}'") ||
-				abort("Unable to substitute Homebrew formula SHA-1")
-			necessary_dirs = ORIG_TARBALL_FILES.call.map{ |filename| filename.split("/").first }.uniq
-			necessary_dirs -= PhusionPassenger::Packaging::HOMEBREW_EXCLUDE
-			necessary_dirs += ["buildout"]
-			necessary_dirs_str = word_wrap(necessary_dirs.inspect).split("\n").join("\n      ")
-			formula.sub!(/necessary_files = .*?\]/m, "necessary_files = Dir#{necessary_dirs_str}") ||
-				abort("Unable to substitute file whitelist")
-			File.open("/tmp/homebrew/Library/Formula/passenger.rb", "w") do |f|
-				f.write(formula)
-			end
-			sh "cd #{homebrew_dir} && git commit -a -m 'passenger #{version}'"
-			sh "cd #{homebrew_dir} && git push -f"
-			sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b Homebrew:master"
+			Rake::Task['package:update_homebrew'].invoke
 
 			puts "Initiating building of Debian packages"
 			Rake::Task['package:initiate_debian_building'].invoke
@@ -252,14 +226,16 @@ task 'package:tarball' => Packaging::PREGENERATED_FILES do
 	if ENV['OFFICIAL_RELEASE']
 		File.open("#{PKG_DIR}/#{basename}/resources/release.txt", "w").close
 	end
-	sh "cd #{PKG_DIR}/#{basename} && find . -print0 | xargs -0 touch -d '2013-10-27 00:00:00 UTC'"
+	if PlatformInfo.os_name == "macosx"
+		sh "cd #{PKG_DIR}/#{basename} && find . -print0 | xargs -0 touch -t '201310270000'"
+	else
+		sh "cd #{PKG_DIR}/#{basename} && find . -print0 | xargs -0 touch -d '2013-10-27 00:00:00 UTC'"
+	end
 	sh "cd #{PKG_DIR} && tar -c #{basename} | gzip --no-name --best > #{basename}.tar.gz"
 	sh "rm -rf #{PKG_DIR}/#{basename}"
 end
 
 task 'package:sign' do
-	require 'phusion_passenger'
-
 	if File.exist?(File.expand_path("~/.gnupg/gpg-agent.conf")) || ENV['GPG_AGENT_INFO']
 		puts "It looks like you're using gpg-agent, so skipping automatically password caching."
 	else
@@ -290,6 +266,41 @@ task 'package:sign' do
 		end
 	ensure
 		File.unlink('.gpg-password') if File.exist?('.gpg-password')
+	end
+end
+
+task 'package:update_homebrew' do
+	require 'digest/sha1'
+	version = VERSION_STRING
+	sha1 = File.open("#{PKG_DIR}/passenger-#{version}.tar.gz", "rb") do |f|
+		Digest::SHA1.hexdigest(f.read)
+	end
+	homebrew_dir = "/tmp/homebrew"
+	sh "rm -rf #{homebrew_dir}"
+	sh "git clone git@github.com:phusion/homebrew.git #{homebrew_dir}"
+	sh "cd #{homebrew_dir} && git remote add Homebrew https://github.com/Homebrew/homebrew.git"
+	sh "cd #{homebrew_dir} && git fetch Homebrew"
+	sh "cd #{homebrew_dir} && git reset --hard Homebrew/master"
+	formula = File.read("/tmp/homebrew/Library/Formula/passenger.rb")
+	formula.gsub!(/passenger-.+?\.tar\.gz/, "passenger-#{version}.tar.gz") ||
+		abort("Unable to substitute Homebrew formula tarball filename")
+	formula.gsub!(/sha1 .*/, "sha1 '#{sha1}'") ||
+		abort("Unable to substitute Homebrew formula SHA-1")
+	necessary_dirs = ORIG_TARBALL_FILES.call.map{ |filename| filename.split("/").first }.uniq
+	necessary_dirs -= Packaging::HOMEBREW_EXCLUDE
+	necessary_dirs += ["buildout"]
+	necessary_dirs_str = word_wrap(necessary_dirs.inspect).split("\n").join("\n      ")
+	formula.sub!(/necessary_files = .*?\]/m, "necessary_files = Dir#{necessary_dirs_str}") ||
+		abort("Unable to substitute file whitelist")
+	File.open("/tmp/homebrew/Library/Formula/passenger.rb", "w") do |f|
+		f.write(formula)
+	end
+	sh "cd #{homebrew_dir} && git commit -a -m 'passenger #{version}'"
+	sh "cd #{homebrew_dir} && git push -f"
+	if boolean_option('HOMEBREW_DRY_RUN', false)
+		echo "HOMEBREW_DRY_RUN set, not submitting pull request."
+	else
+		sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b Homebrew:master"
 	end
 end
 
