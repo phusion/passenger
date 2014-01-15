@@ -71,6 +71,34 @@ def word_wrap(text, max = 72)
 	return text
 end
 
+def is_open_source?
+	return !is_enterprise?
+end
+
+def is_enterprise?
+	return PACKAGE_NAME =~ /enterprise/
+end
+
+def enterprise_git_url
+	return "TODO"
+end
+
+def git_tag_prefix
+	if is_open_source?
+		return "release"
+	else
+		return "enterprise"
+	end
+end
+
+def git_tag
+	return "#{git_tag_prefix}-#{VERSION_STRING}"
+end
+
+def homebrew_dir
+	return "/tmp/homebrew"
+end
+
 
 task :clobber => 'package:clean'
 
@@ -87,10 +115,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 	require 'net/https'
 	basename   = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
 	version    = PhusionPassenger::VERSION_STRING
-	is_enterprise  = basename =~ /enterprise/
-	is_open_source = !is_enterprise
 	is_beta        = !!version.split('.')[3]
-	tag_prefix     = is_open_source ? 'release' : 'enterprise'
 	
 	if !`git status --porcelain | grep -Ev '^\\?\\? '`.empty?
 		STDERR.puts "-------------------"
@@ -111,14 +136,20 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 		abort "*** ERROR: Please 'brew install hub' first"
 	end
 
-	tag = "#{tag_prefix}-#{version}"
-	sh "git tag -s #{tag} -u 0A212A8C -m 'Release #{version}'"
+	if string_option('HOMEBREW_UPDATE', true)
+		puts "Updating Homebrew formula..."
+		Rake::Task['package:update_homebrew'].invoke
+	else
+		puts "HOMEBREW_UPDATE set to false, not updating Homebrew formula."
+	end
+
+	sh "git tag -s #{git_tag} -u 0A212A8C -m 'Release #{version}'"
 
 	puts "Proceed with pushing tag to remote Git repo and uploading the gem and signatures? [y/n]"
 	if STDIN.readline == "y\n"
-		sh "git push origin #{tag_prefix}-#{version}"
+		sh "git push origin #{git_tag}"
 		
-		if is_open_source
+		if is_open_source?
 			sh "s3cmd -P put #{PKG_DIR}/passenger-#{version}.{gem,tar.gz,gem.asc,tar.gz.asc} s3://phusion-passenger/releases/"
 			sh "gem push #{PKG_DIR}/passenger-#{version}.gem"
 
@@ -141,22 +172,24 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 					response.body
 			end
 
-			puts "Submitting Homebrew pull request..."
-			Rake::Task['package:update_homebrew'].invoke
-
 			puts "Initiating building of Debian packages"
 			Rake::Task['package:initiate_debian_building'].invoke
 
 			puts "Building OS X binaries..."
-			sh "cd ../passenger_autobuilder && " +
-				"git pull && " +
-				"./autobuild-osx https://github.com/phusion/passenger.git passenger psg_autobuilder_chroot@juvia-helper.phusion.nl --tag=#{tag}"
+			Rake::Task['package:build_osx_binaries'].invoke
+
+			if boolean_option('HOMEBREW_DRY_RUN', false)
+				echo "HOMEBREW_DRY_RUN set, not submitting pull request. Please find the repo in /tmp/homebrew."
+			else
+				echo "Submitting Homebrew pull request..."
+				sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b Homebrew:master"
+			end
+
 			puts "--------------"
 			puts "All done."
 		else
 			dir = "/u/apps/passenger_website/shared"
 			subdir = string_option('NAME', version)
-			git_url = `git config remote.origin.url`.strip
 
 			sh "scp #{PKG_DIR}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
 			sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
@@ -176,15 +209,17 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			puts "Initiating building of binaries"
 			command = "cd /srv/passenger_autobuilder/app && " +
 				"/tools/silence-unless-failed chpst -l /tmp/passenger_autobuilder.lock " +
-				"./autobuild-with-pbuilder #{git_url} passenger-enterprise --tag=#{tag}"
+				"./autobuild-with-pbuilder #{enterprise_git_url} passenger-enterprise --tag=#{git_tag}"
 			sh "ssh psg_autobuilder_run@juvia-helper.phusion.nl at now <<<'#{command}'"
 
 			puts "Initiating building of Debian packages"
 			Rake::Task['package:initiate_debian_building'].invoke
 
-			sh "cd ../passenger_autobuilder && " +
-				"git pull && " +
-				"./autobuild-osx TODO passenger-enterprise psg_autobuilder_chroot@juvia-helper.phusion.nl --tag=#{tag}"
+			puts "Building OS X binaries..."
+			Rake::Task['package:build_osx_binaries'].invoke
+
+			puts "--------------"
+			puts "All done."
 		end
 	else
 		puts "Did not upload anything."
@@ -275,7 +310,6 @@ task 'package:update_homebrew' do
 	sha1 = File.open("#{PKG_DIR}/passenger-#{version}.tar.gz", "rb") do |f|
 		Digest::SHA1.hexdigest(f.read)
 	end
-	homebrew_dir = "/tmp/homebrew"
 	sh "rm -rf #{homebrew_dir}"
 	sh "git clone git@github.com:phusion/homebrew.git #{homebrew_dir}"
 	sh "cd #{homebrew_dir} && git remote add Homebrew https://github.com/Homebrew/homebrew.git"
@@ -297,32 +331,46 @@ task 'package:update_homebrew' do
 	end
 	sh "cd #{homebrew_dir} && git commit -a -m 'passenger #{version}'"
 	sh "cd #{homebrew_dir} && git push -f"
-	if boolean_option('HOMEBREW_DRY_RUN', false)
-		echo "HOMEBREW_DRY_RUN set, not submitting pull request. Please find the repo in /tmp/homebrew."
-	else
-		sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b Homebrew:master"
+	if boolean_option('HOMEBREW_TEST', true)
+		sh "cp /tmp/homebrew/Library/Formula/passenger.rb /usr/local/Library/Formula/passenger.rb"
+		if `brew info passenger` !~ /^Not installed$/
+			sh "brew uninstall passenger"
+		end
+		sh "cp #{PKG_DIR}/passenger-#{version}.tar.gz `brew --cache`/"
+		sh "brew install passenger"
+		Rake::Task['test:integration:native_packaging'].invoke
 	end
 end
 
 task 'package:initiate_debian_building' do
-	version        = PhusionPassenger::VERSION_STRING
-	is_enterprise  = PhusionPassenger::PACKAGE_NAME =~ /enterprise/
-	is_open_source = !is_enterprise
-
-	if is_open_source
+	version = VERSION_STRING
+	if is_open_source?
 		command = "cd /srv/passenger_apt_automation && " +
 			"chpst -l /tmp/passenger_apt_automation.lock " +
 			"/tools/silence-unless-failed " +
-			"./new_release https://github.com/phusion/passenger.git passenger.repo passenger.apt release-#{version}"
+			"./new_release https://github.com/phusion/passenger.git passenger.repo passenger.apt #{git_tag}"
 	else
-		git_url = `git config remote.origin.url`.strip
 		command = "cd /srv/passenger_apt_automation && " +
 			"chpst -l /tmp/passenger_apt_automation.lock " +
 			"/tools/silence-unless-failed " +
-			"./new_release #{git_url} passenger-enterprise.repo passenger-enterprise.apt enterprise-#{version}"
+			"./new_release #{enterprise_git_url} passenger-enterprise.repo passenger-enterprise.apt #{git_tag}"
 	end
 
 	sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
+end
+
+task 'package:build_osx_binaries' do
+	if is_open_source?
+		sh "cd ../passenger_autobuilder && " +
+			"git pull && " +
+			"./autobuild-osx https://github.com/phusion/passenger.git passenger " +
+				"psg_autobuilder_chroot@juvia-helper.phusion.nl --tag=#{git_tag}"
+	else
+		sh "cd ../passenger_autobuilder && " +
+			"git pull && " +
+			"./autobuild-osx #{enterprise_git_url} passenger-enterprise " +
+			"psg_autobuilder_chroot@juvia-helper.phusion.nl --tag=#{git_tag}"
+	end
 end
 
 desc "Remove gem, tarball and signatures"
