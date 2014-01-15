@@ -136,11 +136,13 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 		abort "*** ERROR: Please 'brew install hub' first"
 	end
 
-	if boolean_option('HOMEBREW_UPDATE', true)
-		puts "Updating Homebrew formula..."
-		Rake::Task['package:update_homebrew'].invoke
-	else
-		puts "HOMEBREW_UPDATE set to false, not updating Homebrew formula."
+	if is_open_source?
+		if boolean_option('HOMEBREW_UPDATE', true)
+			puts "Updating Homebrew formula..."
+			Rake::Task['package:update_homebrew'].invoke
+		else
+			puts "HOMEBREW_UPDATE set to false, not updating Homebrew formula."
+		end
 	end
 
 	sh "git tag -s #{git_tag} -u 0A212A8C -m 'Release #{version}'"
