@@ -521,7 +521,7 @@ private
 		new_screen
 		render_template 'nginx/config_snippets_inserted',
 			:config_file => config_file,
-			:passenger_root => PhusionPassenger.build_system_dir,
+			:passenger_root => PhusionPassenger.source_root,
 			:ruby => PlatformInfo.ruby_command
 		wait
 	end
