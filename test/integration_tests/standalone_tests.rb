@@ -257,17 +257,8 @@ describe "Passenger Standalone" do
 
 			context "when natively packaged" do
 				before :each do
-					sh "passenger-config --make-locations-ini > '#{@runtime_dir}/locations.ini'"
-					File.open("#{@runtime_dir}/locations.ini", "r+") do |f|
-						data = f.read
-						data.sub!(/natively_packaged=.*/, 'natively_packaged=true')
-						if !data.sub!(/native_packaging_method=.*/, 'native_packaging_method=deb')
-							data << "native_packaging_method=deb\n"
-						end
-						f.rewind
-						f.truncate(0)
-						f.write(data)
-					end
+					sh "passenger-config --make-locations-ini --for-native-packaging-method=deb " +
+						"> '#{@runtime_dir}/locations.ini'"
 					ENV['PASSENGER_LOCATION_CONFIGURATION_FILE'] = "#{@runtime_dir}/locations.ini"
 					create_file("#{PhusionPassenger.lib_dir}/PassengerWebHelper")
 				end

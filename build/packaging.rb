@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -298,7 +298,7 @@ task 'package:update_homebrew' do
 	sh "cd #{homebrew_dir} && git commit -a -m 'passenger #{version}'"
 	sh "cd #{homebrew_dir} && git push -f"
 	if boolean_option('HOMEBREW_DRY_RUN', false)
-		echo "HOMEBREW_DRY_RUN set, not submitting pull request."
+		echo "HOMEBREW_DRY_RUN set, not submitting pull request. Please find the repo in /tmp/homebrew."
 	else
 		sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b Homebrew:master"
 	end

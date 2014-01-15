@@ -108,7 +108,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def run_steps
-		if PhusionPassenger.natively_packaged?
+		if PhusionPassenger.natively_packaged? && PhusionPassenger.apache2_module_source_dir.nil?
 			if apache_module_available?
 				notify_apache_module_installed
 				show_deployment_example
@@ -118,7 +118,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 			exit
 		end
 		
-		Dir.chdir(PhusionPassenger.build_system_dir)
+		Dir.chdir(PhusionPassenger.apache2_module_source_dir)
 		show_welcome_screen
 		query_interested_languages
 		check_gem_install_permission_problems || exit(1)
@@ -268,10 +268,10 @@ private
 		if Process.uid == 0
 			render_template 'installer_common/cannot_access_files_as_root',
 				:type => "directory",
-				:files => [PhusionPassenger.build_system_dir]
+				:files => [PhusionPassenger.apache2_module_source_dir]
 		else
 			render_template 'installer_common/run_installer_as_root',
-				:dir  => PhusionPassenger.build_system_dir,
+				:dir  => PhusionPassenger.apache2_module_source_dir,
 				:sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
 				:sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
 				:ruby => PhusionPassenger::PlatformInfo.ruby_command,
@@ -342,14 +342,20 @@ private
 		line
 		puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		if @compile
-			puts "cd #{PhusionPassenger.build_system_dir}"
+			puts "cd #{PhusionPassenger.apache2_module_source_dir}"
 			if ENV['TRACE']
-				puts "#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes"
-				return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes")
+				rake = "#{PlatformInfo.rake_command} --trace RELEASE=yes"
 			else
-				puts "#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes"
-				return sh("#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes")
+				rake = "#{PlatformInfo.rake_command} RELEASE=yes"
 			end
+			command = "#{rake} apache2:clean apache2"
+			if PhusionPassenger.native_packaging_method == "homebrew"
+				# Running apache2:clean deletes some object files needed
+				# by passenger-install-nginx-module, so we ensure those
+				# object files are compiled.
+				command << " nginx"
+			end
+			return sh(command)
 		else
 			puts "Skipping compilation"
 			return true
@@ -833,10 +839,10 @@ parser = OptionParser.new do |opts|
 	#		"#{indent}files.") do
 	#	options[:update_config] = false
 	#end
-	opts.on("--no-backup-config", "When updating Apache config files, do not\n" <<
-			"#{indent}create backups of the existing files.") do
-		options[:backup_config] = false
-	end
+	#opts.on("--no-backup-config", "When updating Apache config files, do not\n" <<
+	#		"#{indent}create backups of the existing files.") do
+	#	options[:backup_config] = false
+	#end
 	opts.on("--snippet", "Show just the Apache config snippet.") do
 		options[:snippet] = true
 	end

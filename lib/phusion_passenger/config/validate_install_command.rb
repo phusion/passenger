@@ -170,7 +170,7 @@ private
 
 	# Returns the Homebrew bin dir, if Phusion Passenger is installed through Homebrew.
 	def homebrew_bindir
-		if PhusionPassenger.bin_dir =~ %r(^/usr/local/Cellar)
+		if PhusionPassenger.native_packaging_method == "homebrew"
 			return "/usr/local/bin"
 		else
 			return nil

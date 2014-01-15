@@ -17,7 +17,7 @@ define 'libcurl-dev' do
 	name "Curl development headers with SSL support"
 	website "http://curl.haxx.se/libcurl"
 	define_checker do
-		require 'phusion_passenger/platform_info/curl'
+		PhusionPassenger.require_passenger_lib 'platform_info/curl'
 		result = { :found => false }
 		
 		if !(curl_config = PlatformInfo.find_command('curl-config'))

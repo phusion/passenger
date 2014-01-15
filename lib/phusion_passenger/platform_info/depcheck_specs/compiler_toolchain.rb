@@ -2,7 +2,7 @@ define 'cc' do
   name "C compiler"
   website "http://gcc.gnu.org/"
   define_checker do
-    require 'phusion_passenger/platform_info/compiler'
+    PhusionPassenger.require_passenger_lib 'platform_info/compiler'
     check_for_command(PlatformInfo.cc, false)
   end
   
@@ -27,7 +27,7 @@ define 'c++' do
   name "C++ compiler"
   website "http://gcc.gnu.org/"
   define_checker do
-    require 'phusion_passenger/platform_info/compiler'
+    PhusionPassenger.require_passenger_lib 'platform_info/compiler'
     check_for_command(PlatformInfo.cxx, false)
   end
   
@@ -51,7 +51,7 @@ end
 define 'make' do
   name "The 'make' tool"
   define_checker do
-    require 'phusion_passenger/platform_info/compiler'
+    PhusionPassenger.require_passenger_lib 'platform_info/compiler'
     check_for_command(PlatformInfo.make)
   end
   
@@ -75,7 +75,7 @@ end
 define 'gmake' do
   name "GNU make"
   define_checker do
-    require 'phusion_passenger/platform_info/compiler'
+    Phusionpassenger.require_passenger_lib 'platform_info/compiler'
     check_for_command(PlatformInfo.gnu_make)
   end
   

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -467,7 +467,7 @@ private
 	def ensure_runtime_installed
 		if @runtime_locator.everything_installed?
 			if !File.exist?(@runtime_locator.find_nginx_binary)
-				error "The Nginx binary '#{@runtime_locator.find_nginx_binary}' does not exist."
+				error "The web helper binary '#{@runtime_locator.find_nginx_binary}' does not exist."
 				exit 1
 			end
 		else

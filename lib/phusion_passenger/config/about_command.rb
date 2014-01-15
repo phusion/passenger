@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -38,7 +38,6 @@ class AboutCommand < Command
 		puts
 		puts "Available subcommands:"
 		puts "  root                     Show #{PROGRAM_NAME}'s root."
-		puts "  build-system-dir         Show #{PROGRAM_NAME}'s build system directory."
 		puts "  ruby-libdir              Show #{PROGRAM_NAME}'s Ruby library directory."
 		puts "  includedir               Show the Nginx runtime library headers directory."
 		puts "  nginx-addon-dir          Show #{PROGRAM_NAME}'s Nginx addon directory."
@@ -70,8 +69,6 @@ class AboutCommand < Command
 		case subcommand
 		when "--root"
 			puts PhusionPassenger.source_root
-		when "--build-system-dir"
-			puts PhusionPassenger.build_system_dir
 		when "--ruby-libdir"
 			puts PhusionPassenger.ruby_libdir
 		when "--includedir"
@@ -104,16 +101,33 @@ class AboutCommand < Command
 				exit 1
 			end
 		when "--make-locations-ini"
+			if @argv[1] =~ /^--for-native-packaging-method=(.*)/
+				native_packaging_method = $1
+			else
+				native_packaging_method = nil
+			end
+			
 			puts "[locations]"
-			puts "natively_packaged=#{PhusionPassenger.natively_packaged?}"
-			if PhusionPassenger.natively_packaged?
-				puts "native_packaging_method=#{PhusionPassenger.native_packaging_method}"
+			if native_packaging_method
+				puts "natively_packaged=true"
+				puts "native_packaging_method=#{native_packaging_method}"
+			else
+				puts "natively_packaged=#{PhusionPassenger.natively_packaged?}"
+				if PhusionPassenger.natively_packaged?
+					puts "native_packaging_method=#{PhusionPassenger.native_packaging_method}"
+				end
 			end
 			PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 				puts "#{field}=#{PhusionPassenger.send(field)}"
 			end
 			PhusionPassenger::OPTIONAL_LOCATIONS_INI_FIELDS.each do |field|
-				if value = PhusionPassenger.send(field)
+				value = PhusionPassenger.send(field)
+				should_print = value &&
+					(!ORIGINALLY_PACKAGED_LOCATIONS_INI_FIELDS.include?(field) || (
+						PhusionPassenger.originally_packaged? &&
+						!native_packaging_method
+					))
+				if should_print
 					puts "#{field}=#{value}"
 				end
 			end

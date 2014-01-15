@@ -2,7 +2,7 @@ define 'apache2' do
 	name 'Apache 2'
 	website 'http://httpd.apache.org/'
 	define_checker do
-		require 'phusion_passenger/platform_info/apache'
+		PhusionPassenger.require_passenger_lib 'platform_info/apache'
 		if check_for_command(PlatformInfo.httpd)
 			{
 				:found => true,
@@ -32,7 +32,7 @@ define 'apache2-dev' do
 	name "Apache 2 development headers"
 	website "http://httpd.apache.org/"
 	define_checker do
-		require 'phusion_passenger/platform_info/apache'
+		PhusionPassenger.require_passenger_lib 'platform_info/apache'
 		if PlatformInfo.apxs2
 			{
 				:found => true,
@@ -64,7 +64,7 @@ define 'apr-dev' do
 	name "Apache Portable Runtime (APR) development headers"
 	website "http://httpd.apache.org/"
 	define_checker do
-		require 'phusion_passenger/platform_info/apache'
+		PhusionPassenger.require_passenger_lib 'platform_info/apache'
 		if PlatformInfo.apr_config
 			{
 				:found     => true,
@@ -97,7 +97,7 @@ define 'apu-dev' do
 	name "Apache Portable Runtime Utility (APU) development headers"
 	website "http://httpd.apache.org/"
 	define_checker do
-		require 'phusion_passenger/platform_info/apache'
+		PhusionPassenger.require_passenger_lib 'platform_info/apache'
 		if PlatformInfo.apu_config
 			{
 				:found     => true,
