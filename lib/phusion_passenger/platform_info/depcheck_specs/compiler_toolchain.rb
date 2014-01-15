@@ -75,7 +75,7 @@ end
 define 'gmake' do
   name "GNU make"
   define_checker do
-    Phusionpassenger.require_passenger_lib 'platform_info/compiler'
+    PhusionPassenger.require_passenger_lib 'platform_info/compiler'
     check_for_command(PlatformInfo.gnu_make)
   end
   
