@@ -93,11 +93,11 @@ task 'test:integration:native_packaging' do
 	end
 	case PlatformInfo.os_name
 	when "linux"
-		if PlatformInfo.linux_distro_tags.include?("debian")
+		if PlatformInfo.linux_distro_tags.include?(:debian)
 			command = "env NATIVE_PACKAGING_METHOD=deb " +
 				"LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini " +
 				command
-		elsif PlatformInfo.linux_distro_tags.include?("redhat")
+		elsif PlatformInfo.linux_distro_tags.include?(:redhat)
 			command = "env NATIVE_PACKAGING_METHOD=rpm " +
 				"LOCATIONS_INI=/usr/lib/ruby/site_ruby/1.8/phusion_passenger/locations.ini " +
 				command
