@@ -474,7 +474,7 @@ private
 		new_screen
 		render_template 'nginx/config_snippets',
 			:config_file => locate_nginx_config_file(prefix),
-			:passenger_root => PhusionPassenger.build_system_dir,
+			:passenger_root => PhusionPassenger.source_root,
 			:ruby => PlatformInfo.ruby_command
 		wait
 	end
@@ -512,7 +512,7 @@ private
 		contents = File.read(config_file)
 		contents.sub!(/^http \{/,
 			"http {\n" <<
-			"    passenger_root #{PhusionPassenger.build_system_dir};\n" <<
+			"    passenger_root #{PhusionPassenger.source_root};\n" <<
 			"    passenger_ruby #{PlatformInfo.ruby_command};\n")
 		File.open(config_file, 'w') do |f|
 			f.write(contents)

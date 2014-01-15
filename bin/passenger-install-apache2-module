@@ -362,7 +362,7 @@ private
 
 	def config_snippet
 		return "<IfModule mod_passenger.c>\n" +
-			"  PassengerRoot #{PhusionPassenger.build_system_dir}\n" +
+			"  PassengerRoot #{PhusionPassenger.source_root}\n" +
 			"  PassengerDefaultRuby #{PlatformInfo.ruby_command}\n" +
 			"</IfModule>"
 	end
