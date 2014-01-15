@@ -136,7 +136,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 		abort "*** ERROR: Please 'brew install hub' first"
 	end
 
-	if string_option('HOMEBREW_UPDATE', true)
+	if boolean_option('HOMEBREW_UPDATE', true)
 		puts "Updating Homebrew formula..."
 		Rake::Task['package:update_homebrew'].invoke
 	else
