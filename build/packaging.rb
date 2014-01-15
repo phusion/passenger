@@ -178,11 +178,13 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			puts "Building OS X binaries..."
 			Rake::Task['package:build_osx_binaries'].invoke
 
-			if boolean_option('HOMEBREW_DRY_RUN', false)
-				echo "HOMEBREW_DRY_RUN set, not submitting pull request. Please find the repo in /tmp/homebrew."
-			else
-				echo "Submitting Homebrew pull request..."
-				sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b Homebrew:master"
+			if boolean_option('HOMEBREW_UPDATE', true)
+				if boolean_option('HOMEBREW_DRY_RUN', false)
+					puts "HOMEBREW_DRY_RUN set, not submitting pull request. Please find the repo in /tmp/homebrew."
+				else
+					puts "Submitting Homebrew pull request..."
+					sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b Homebrew:master"
+				end
 			end
 
 			puts "--------------"
