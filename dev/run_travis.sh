@@ -75,6 +75,11 @@ cp test/config.json.travis test/config.json
 # permission checks pass.
 chmod g+x,o+x $HOME
 
+if [[ -e /etc/lsb-release ]]; then
+	apt_get_update
+	run sudo apt-get install -y --no-install-recommends base-files
+fi
+
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
 	if [[ -f ~/.rvm/scripts/rvm ]]; then
