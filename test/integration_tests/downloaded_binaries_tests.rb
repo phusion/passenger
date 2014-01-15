@@ -30,6 +30,7 @@ $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
+PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
 require 'tmpdir'
 require 'fileutils'
 require 'webrick'
@@ -39,6 +40,8 @@ ENV['PATH'] = "#{PhusionPassenger.bin_dir}:#{ENV['PATH']}"
 # This environment variable changes Passenger Standalone's behavior,
 # so ensure that it's not set.
 ENV.delete('PASSENGER_DEBUG')
+
+module PhusionPassenger
 
 describe "Downloaded Phusion Passenger binaries" do
 	before :each do
@@ -51,9 +54,9 @@ describe "Downloaded Phusion Passenger binaries" do
 		File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
 	end
 
-	let(:version) { PhusionPassenger::VERSION_STRING }
-	let(:nginx_version) { PhusionPassenger::PREFERRED_NGINX_VERSION }
-	let(:compat_id) { PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id }
+	let(:version) { VERSION_STRING }
+	let(:nginx_version) { PREFERRED_NGINX_VERSION }
+	let(:compat_id) { PlatformInfo.cxx_binary_compatibility_id }
 
 	def sh(*command)
 		if !system(*command)
@@ -121,7 +124,7 @@ describe "Downloaded Phusion Passenger binaries" do
 		server, url_root = start_server("server_root")
 		File.rename("download_cache", "download_cache.old")
 		begin
-			FileUtils.cp_r("download_cache.old", "server_root/#{PhusionPassenger::VERSION_STRING}")
+			FileUtils.cp_r("download_cache.old", "server_root/#{VERSION_STRING}")
 			sh "cd #{PhusionPassenger.source_root} && " +
 				"env BINARIES_URL_ROOT=#{url_root} " +
 				"ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
@@ -153,3 +156,5 @@ describe "Downloaded Phusion Passenger binaries" do
 		end
 	end
 end
+
+end # module PhusionPassenger
