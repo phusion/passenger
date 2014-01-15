@@ -1,3 +1,27 @@
+# encoding: utf-8
+#  Phusion Passenger - https://www.phusionpassenger.com/
+#  Copyright (c) 2013-2014 Phusion
+#
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+
 # These tests are run by passenger_autobuilder, right after it has built binaries.
 # passenger_autobuilder populates the download_cache directory and runs this test script.
 
@@ -101,6 +125,24 @@ describe "Downloaded Phusion Passenger binaries" do
 				"env BINARIES_URL_ROOT=#{url_root} " +
 				"ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
 			Dir["download_cache/*"].should_not be_empty
+		ensure
+			File.unlink("Makefile") rescue nil
+			FileUtils.rm_rf("download_cache")
+			FileUtils.rm_rf("server_root")
+			File.rename("download_cache.old", "download_cache")
+			server.stop
+		end
+	end
+
+	specify "helper-scripts/download_binaries/extconf.rb fails at downloading all necessary binaries if one of them does not exist" do
+		FileUtils.mkdir_p("server_root")
+		server, url_root = start_server("server_root")
+		File.rename("download_cache", "download_cache.old")
+		begin
+			result = system "cd #{PhusionPassenger.source_root} && " +
+				"env BINARIES_URL_ROOT=#{url_root} " +
+				"ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
+			result.should be_false
 		ensure
 			File.unlink("Makefile") rescue nil
 			FileUtils.rm_rf("download_cache")
