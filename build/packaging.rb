@@ -212,7 +212,8 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 
 			puts "Initiating building of binaries"
 			command = "cd /srv/passenger_autobuilder/app && " +
-				"/tools/silence-unless-failed chpst -l /tmp/passenger_autobuilder.lock " +
+				"/tools/silence-unless-failed -f /tmp/passenger_autobuilder.log " +
+				"chpst -l /var/cache/passenger_ci/lock " +
 				"./autobuild-with-pbuilder #{enterprise_git_url} passenger-enterprise --tag=#{git_tag}"
 			sh "ssh psg_autobuilder_run@juvia-helper.phusion.nl at now <<<'#{command}'"
 
