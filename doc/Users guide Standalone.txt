@@ -177,12 +177,14 @@ Putting Passenger Standalone behind a reverse proxy requires three steps. First,
 ------------------------------
 # Start foo on port 4000
 cd /webapps/foo
-passenger start --daemonize --port 4000
+passenger start --daemonize --address 127.0.0.1 --port 4000
 
 # Start bar on port 4010
 cd /webapps/bar
-passenger start --daemonize --port 4010
+passenger start --daemonize --address 127.0.0.1 --port 4010
 ------------------------------
+
+Notice the fact that we pass `--address 127.0.0.1`, which tells Passenger Standalone to only listen for requests that originate from the local machine. This is because the reverse proxy/load balancer, not Passenger Standalone, is supposed to be responsible for receiving external HTTP requests. The reverse proxy/load balancer will be running on the same machine only, so limiting Passenger Standalone in this manner improves security.
 
 [float]
 ==== Step 2: install and configure the reverse proxy/load balancer
@@ -237,6 +239,7 @@ http {
             # Tells Nginx to forward all requests for www.foo.com
             # to the Passenger Standalone instance listening on port 4000.
             proxy_pass http://127.0.0.1:4000;
+
             # These are "magic" Nginx configuration options that
             # should be present in order to make the reverse proxying
             # work properly. Also contains some options that make WebSockets
@@ -261,6 +264,7 @@ http {
             # bar is listening on port 4010 instead of 4000, we
             # change the URL here.
             proxy_pass http://127.0.0.1:4010;
+
             proxy_http_version 1.1;
             proxy_set_header Host $http_host;
             proxy_set_header Upgrade $http_upgrade;
