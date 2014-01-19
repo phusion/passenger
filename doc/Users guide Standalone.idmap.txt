@@ -80,6 +80,10 @@
 
 5.1. Starting Passenger Standalone at system boot	=>	starting-passenger-standalone-at-system-boot-jpem2b
 
+5.2. Sharing the same port between multiple Passenger Standalone instances	=>	sharing-the-same-port-between-multiple-passenger-standalone-instances-3lcmc5
+
+5.3. Installing Passenger Standalone behind Nginx	=>	installing-passenger-standalone-behind-nginx-1xylsfk
+
 6. Mass deployment	=>	mass-deployment-1xqriy4
 
 7. Troubleshooting	=>	troubleshooting-o7g75o

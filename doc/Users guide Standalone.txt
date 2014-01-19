@@ -144,6 +144,188 @@ cd /path-to-your-webapp
 passenger start --daemonize --port 80 --user someusername
 ------------------------------------------
 
+To stop Passenger Standalone, run:
+
+[source,sh]
+------------------------------------------
+cd /path-to-your-webapp
+
+# If you use RVM, use 'rvmsudo' instead of 'sudo'
+sudo passenger stop
+------------------------------------------
+
+
+[[sharing_port]]
+=== Sharing the same port between multiple Passenger Standalone instances
+
+If you have multiple applications on your server then it is desirable to have all of them listen on the same port (e.g. port 80), with the HTTP request's host name determining which Passenger Standalone instance should handle the request. There are three ways to achieve this.
+
+ 1. The first way is to use the <<mass_deployment,Mass deployment>> feature, which allows Passenger Standalone to directly host multiple applications at the same time. Please refer to that section to learn more.
+ 2. The second way is to run multiple Passenger Standalone instances -- one for each application -- and to put all of them behind a *reverse proxy* or *load balancer*. The reverse proxy/load balancer can for example be Nginx, Apache or HAProxy. The reverse proxy/load balancer listens on port 80, determines which Passenger Standalone instance should handle the request, and forwards the request to that instance.
+ 3. The third way is to use link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx] or link:Users%20guide%20Apache.html[Phusion Passenger for Apache]. These are two modes of Phusion Passenger that are distinct from the Standalone mode, which this document describes. In the Nginx and Apache modes, Phusion Passenger integrates directly into Nginx and Apache, and makes it very easy to host multiple applications directly on Nginx or Apache.
++
+Compared method 2 -- putting Passenger Standalone behind a reverse proxy or load balancer -- the Nginx or Apache modes are easier to use and require less configuration. On the other hand, the Nginx modes requires reinstalling or recompiling Nginx, while the Apache mode requires that the Phusion Passenger Apache module is installed.
+
+**The rest of this subsection describes method 2.**
+
+[float]
+==== Step 1: starting all applications
+
+Putting Passenger Standalone behind a reverse proxy requires three steps. First, you must start all Passenger Standalone instances that you want. Each one must be listening on a different port, because two applications can't listen on the same port. Suppose that you have two applications, `/webapps/foo` and `/webapps/bar`. Here's how you may start them:
+
+[source,sh]
+------------------------------
+# Start foo on port 4000
+cd /webapps/foo
+passenger start --daemonize --port 4000
+
+# Start bar on port 4010
+cd /webapps/bar
+passenger start --daemonize --port 4010
+------------------------------
+
+[float]
+==== Step 2: install and configure the reverse proxy/load balancer
+
+The next step is to **install a reverse proxy/load balancer**, and to **configure** it to do the following:
+
+ * To listen on port 80.
+ * To forward requests to either 'foo' or 'bar', depending on the request's HTTP host name.
+
+You can use any reverse proxy/load balancer you want, but we're going to show an example using link:http://www.nginx.org/[Nginx] because it's a pretty popular choice. Install Nginx as follows:
+
+|======================================================================
+| Debian, Ubuntu | `sudo apt-get update` +
+`sudo apt-get install nginx-extras`
+| Red Hat, CentOS, ScientificLinux, Amazon Linux | Enable link:http://fedoraproject.org/wiki/EPEL[EPEL], then run as root: +
+`yum install nginx`
+| Mac OS X (Homebrew) | `brew install nginx`
+| Other operating systems | Install Nginx from link:http://www.nginx.org/[the Nginx website].
+|======================================================================
+
+Open the Nginx configuration file:
+
+|======================================================================
+| Debian, Ubuntu | `/etc/nginx/nginx.conf`
+| Red Hat, CentOS, ScientificLinux, Amazon Linux | `/etc/nginx/nginx.conf`
+| Mac OS X (Homebrew) | `/usr/local/etc/nginx/nginx.conf`
+| Other operating systems | It depends on how you installed Nginx, but it's usually `$PREFIX/conf/nginx.conf`, where `$PREFIX` is the prefix you installed Nginx to.
+|======================================================================
+
+Add virtual host entries for your applications foo and bar. While making the virtual host entries, you must determine what host names foo and bar should respond to. Let's say that foo should respond to 'www.foo.com' and bar should respond to 'www.bar.com'. Then the following entries will tell Nginx to listen on port 80, and to handle requests for the domains 'www.foo.com' and 'www.bar.com' differently.
+
+--------------------------
+http {
+    ...
+
+    # These are some "magic" Nginx configuration options that aid in making
+    # WebSockets work properly with Passenger Standalone. Please learn more
+    # at http://nginx.org/en/docs/http/websocket.html
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
+    server {
+        listen 80;
+        server_name www.foo.com;
+
+        # Tells Nginx to serve static assets from this directory.
+        root /webapps/foo/public;
+
+        location / {
+            # Tells Nginx to forward all requests for www.foo.com
+            # to the Passenger Standalone instance listening on port 4000.
+            proxy_pass http://127.0.0.1:4000;
+            # These are "magic" Nginx configuration options that
+            # should be present in order to make the reverse proxying
+            # work properly. Also contains some options that make WebSockets
+            # work properly with Passenger Standalone. Please learn more at
+            # http://nginx.org/en/docs/http/ngx_http_proxy_module.html
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_buffering off;
+        }
+    }
+
+    # We handle bar in a similar manner.
+    server {
+        listen 80;
+        server_name www.bar.com;
+
+        root /webapps/bar/public;
+
+        location / {
+            # bar is listening on port 4010 instead of 4000, we
+            # change the URL here.
+            proxy_pass http://127.0.0.1:4010;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_buffering off;
+        }
+    }
+}
+--------------------------
+
+Once you're done editing the Nginx configuration file, restart Nginx:
+
+|======================================================================
+| Debian, Ubuntu | `sudo /etc/init.d/nginx restart`
+| Red Hat, CentOS, ScientificLinux, Amazon Linux | `sudo service nginx restart`
+| Mac OS X (Homebrew) | 1. Run `sudo kill $(cat /usr/local/var/run/nginx.pid)` +
+ 2. You you installed the Nginx launchd plist that Homebrew provides (see `brew info nginx` to learn more), then you don't have to do anything, and launchd will automatically restart Nginx. Otherwise, you have to manually start Nginx again: `sudo /usr/local/bin/nginx`.
+| Other operating systems | It depends on how you installed Nginx, but it's usually as follows:
+
+ 1. Lookup the PID of the Nginx master process using `ps aux`. +
+ 2. Run `sudo kill <PID>` +
+ 3. Start Nginx again: `sudo $PREFIX/sbin/nginx`, where `$PREFIX` is the prefix you installed Nginx to.
+|======================================================================
+
+[float]
+==== Step 3: testing
+
+Nginx should now be listening on port 80, and should forward requests to foo and bar respectively. Let's test it out by accessing http://www.foo.com and http://www.bar.com. But first, we need to ensure that any requests to 'www.foo.com' and 'www.bar.com', that originate from the local machine, actually end up at the local host, and not at the IP address specified in the DNS records. To do this, edit `/etc/hosts` and add:
+
+--------------------------------
+127.0.0.1  www.foo.com www.bar.com
+--------------------------------
+
+Now visit http://www.foo.com and http://www.bar.com, and verify that it works.
+
+[float]
+==== Step 4: making all apps start at system boot
+
+Once you restart the server, the reverse proxy/load balancer will no longer be able to serve 'www.foo.com' or 'www.bar.com' because the Passenger Standalone instances that host them are no longer running. You must therefore configure the system to start Passenger Standalone at system boot. Please refer to <<starting_at_system_boot,Starting Passenger Standalone at system boot>> for more information.
+
+For example, you can put this in `/etc/rc.local` to make the system start foo and bar at system boot:
+
+[source,sh]
+-----------------------------------
+# If you installed Phusion Passenger from tarball, add its `bin` directory to PATH.
+#export PATH=/path-to-passenger/bin:$PATH
+
+cd /webapps/foo
+passenger start --daemonize --port 4000 --user someusername1
+
+cd /webapps/bar
+passenger start --daemonize --port 4010 --user someusername2
+-----------------------------------
+
+[float]
+==== Step 5: wrapping up
+
+Edit `/etc/hosts` and remove the entry that you added in step 3.
+
+
+=== Installing Passenger Standalone behind Nginx
+
+This is described in <<sharing_port,Sharing the same port between multiple Passenger Standalone instances>>.
+
+
 
 [[mass_deployment]]
 == Mass deployment

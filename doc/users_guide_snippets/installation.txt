@@ -750,7 +750,7 @@ endif::[]
 ifdef::nginx[]
 === Installing as a normal Nginx module without using the installer
 
-You can also install Phusion Passenger the way you install any other Nginx module, e.g. with `--add-module`. This installation mode is useful if you already have an Nginx tarball somewhere, or if you're using link:http://nginx.com/products/[Nginx Plus].
+You can also install Phusion Passenger the way you install any other Nginx module, e.g. with `--add-module`. This installation mode is useful if you already have an Nginx tarball somewhere.
 
 You need to run Nginx's configure script with `--add-module=/path-to-passenger-nginx-addon-dir`. The right value for `/path-to-passenger-nginx-addon-dir` can be obtained with the command:
 
@@ -772,6 +772,7 @@ passenger-config --root
 -------------------------------------
 
 After having modified the Nginx configuration file, restart Nginx.
+
 
 [[nginx_init_script]]
 === Creating an Nginx init script
