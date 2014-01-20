@@ -554,7 +554,7 @@ public:
 		poolLoop.start("Pool event loop", 0);
 		requestLoop.start("Request event loop", 0);
 
-		
+
 		/* Wait until the watchdog closes the feedback fd (meaning it
 		 * was killed) or until we receive an exit message.
 		 */
