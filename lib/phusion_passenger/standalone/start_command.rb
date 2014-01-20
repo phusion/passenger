@@ -422,7 +422,7 @@ private
 	end
 
 	def should_wait_until_nginx_has_exited?
-		return !@options[:daemonize]
+		return !@options[:daemonize] || @app_finder.multi_mode?
 	end
 
 	def should_cleanup_temp_dir?
