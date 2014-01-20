@@ -30,6 +30,7 @@
 #include <cstring>
 #include <cassert>
 #include <cerrno>
+#include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
 #include <pwd.h>
@@ -372,6 +373,8 @@ private:
 				"privilege to that of user '") + username +
 				"': cannot set user ID", e);
 		}
+
+		setenv("HOME", userEntry->pw_dir, 1);
 	}
 	
 	void onSigquit(ev::sig &signal, int revents) {
