@@ -45,13 +45,17 @@ static char *dir;
 /**
  * When Passenger Standalone is started with --daemonize, then it will
  * pass --cleanup to this tool so that this tool is responsible
- * for cleaning up the Standalone temp dir.
+ * for cleaning up the Standalone temp dir. This is because Passenger
+ * Standalone may be started in daemonize mode, which makes it exit asap
+ * in order to conserve memory. Passenger Standalone can therefore not
+ * be responsible for cleaning up the temp dir.
  */
 static int shouldCleanup = 0;
 static int shouldDaemonize = 0;
 static const char *pidFile = NULL;
 static const char *logFile = NULL;
 static int terminationPipe[2];
+static sig_atomic_t shouldIgnoreNextTermSignal = 0;
 
 
 static void
@@ -148,10 +152,19 @@ initialize(int argc, char *argv[]) {
 
 static void
 exitHandler(int signo) {
-	int ret = write(terminationPipe[1], "x", 1);
-	// We can't do anything about failures, so ignore
-	// compiler warnings about not using the result.
-	(void) ret;
+	if (shouldIgnoreNextTermSignal) {
+		shouldIgnoreNextTermSignal = 0;
+	} else {
+		int ret = write(terminationPipe[1], "x", 1);
+		// We can't do anything about failures, so ignore
+		// compiler warnings about not using the result.
+		(void) ret;
+	}
+}
+
+static void
+ignoreNextTermSignalHandler(int signo) {
+	shouldIgnoreNextTermSignal = 1;
 }
 
 static void
@@ -163,6 +176,10 @@ installSignalHandlers() {
 	sigemptyset(&action.sa_mask);
 	sigaction(SIGINT, &action, NULL);
 	sigaction(SIGTERM, &action, NULL);
+
+	action.sa_handler = ignoreNextTermSignalHandler;
+	action.sa_flags = SA_RESTART;
+	sigaction(SIGHUP, &action, NULL);
 }
 
 static void

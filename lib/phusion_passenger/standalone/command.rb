@@ -183,12 +183,17 @@ private
 	def write_nginx_config_file
 		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 		PhusionPassenger.require_passenger_lib 'utils/tmpio'
-		@temp_dir = PhusionPassenger::Utils.mktmpdir(
+		# @temp_dir may already be set because we're redeploying
+		# using Mass Deployment.
+		@temp_dir ||= PhusionPassenger::Utils.mktmpdir(
 			"passenger-standalone.")
 		@config_filename = "#{@temp_dir}/config"
 		location_config_filename = "#{@temp_dir}/locations.ini"
 		File.chmod(0755, @temp_dir)
-		Dir.mkdir("#{@temp_dir}/logs")
+		begin
+			Dir.mkdir("#{@temp_dir}/logs")
+		rescue Errno::EEXIST
+		end
 
 		locations_ini_fields =
 			PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS +
