@@ -418,7 +418,7 @@ private
 	end
 
 	def should_watch_logs?
-		return should_wait_until_nginx_has_exited? && @options[:log_file] != "/dev/null"
+		return !@options[:daemonize] && @options[:log_file] != "/dev/null"
 	end
 
 	def should_wait_until_nginx_has_exited?
