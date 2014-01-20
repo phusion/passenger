@@ -68,7 +68,8 @@ http {
     gzip_comp_level 3;
     gzip_min_length 150;
     gzip_proxied any;
-    gzip_types text/plain text/css application/javascript application/x-javascript;
+    gzip_types text/plain text/css text/json text/javascript \
+        application/javascript application/x-javascript application/json;
     
     <% if @apps.size > 1 %>
     # Default server entry.
