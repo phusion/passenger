@@ -418,15 +418,11 @@ private
 	end
 
 	def should_watch_logs?
-		return !@options[:daemonize] && @options[:log_file] != "/dev/null"
+		return should_wait_until_nginx_has_exited? && @options[:log_file] != "/dev/null"
 	end
 
 	def should_wait_until_nginx_has_exited?
 		return !@options[:daemonize] || @app_finder.multi_mode?
-	end
-
-	def should_cleanup_temp_dir?
-		return @temp_dir && !@options[:daemonize]
 	end
 
 	# Returns the URL that Nginx will be listening on.
