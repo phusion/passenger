@@ -1,3 +1,18 @@
+Release 4.0.36
+--------------
+
+ * [Enterprise] Fixed some Mass Deployment bugs.
+ * Passenger Standalone now gzips JSON responses.
+ * Fixed some cases in which Passenger Standalone does not to properly cleanup
+   its temporary files.
+
+
+Release 4.0.35
+--------------
+
+ * Fixed some unit tests.
+
+
 Release 4.0.34
 --------------
 
