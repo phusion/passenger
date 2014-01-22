@@ -30,7 +30,7 @@ module PhusionPassenger
 	
 	PACKAGE_NAME = 'passenger'
 	# Run 'rake ext/common/Constants.h' after changing this number.
-	VERSION_STRING = '4.0.35'
+	VERSION_STRING = '4.0.36'
 	
 	PREFERRED_NGINX_VERSION = '1.4.4'
 	NGINX_SHA256_CHECKSUM = '7c989a58e5408c9593da0bebcd0e4ffc3d892d1316ba5042ddb0be5b0b4102b9'
