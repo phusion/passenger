@@ -822,7 +822,12 @@ Rolling restarts have a few caveat however that you should be aware of:
   been restarted. It is for this reason that you should not use rolling
   restarts in development, only in production.
 
-Please note that this option is completely unrelated to the `passenger-config restart` command. That command always initiates a blocking restart, unless `--rolling-restart` is given.
+If Passenger Enterprise could not rolling restart a process (let's call it 'A') because it is unable to spawn a new process (let's call it 'B'), then Passenger Enterprise will give up trying to rolling restart that particular process 'A'. What happens next depends on whether <<PassengerResistDeploymentErrors,deployment error resistance>> is enabled:
+
+- If deployment error resistance is disabled (the default), then Passenger Enterprise will proceed with trying to restart the remaining processes.
+- If deployment error resistance is enabled, the Passenger Enterprise will give up rolling restarting immediately. The application group will be put into Deployment Error Resistance Mode.
+
+Please note that `PassengerRollingRestarts` is completely unrelated to the `passenger-config restart-app` command. That command always initiates a blocking restart, unless `--rolling-restart` is given.
 
 This option may occur in the following places:
 
@@ -833,6 +838,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'off'.
 
+[[PassengerResistDeploymentErrors]]
 ==== PassengerResistDeploymentErrors <on|off>
 :version: 3.0.0
 include::users_guide_snippets/enterprise_only.txt[]
@@ -845,7 +851,7 @@ By enabling deployment error resistance, Phusion Passenger Enterprise would inst
 
 - It passes the request to one of the existing application processes (that belong to the previous version of the application). The visitor will not see a Phusion Passenger process spawning error message.
 - It logs the error to the global web server error log file.
-- It sets an internal flag so that no processes for this application will be spawned (even when the current traffic would normally result in more processes being spawned) and no processes will be idle cleaned. Processes *could* still be shutdown because of other events, e.g. because their <<PassengerMemoryLimit,memory limit>> have been reached.
+- It sets an internal flag (Deployment Error Resistance Mode) so that no processes for this application will be spawned (even when the current traffic would normally result in more processes being spawned) and no processes will be idle cleaned. Processes *could* still be shutdown because of other events, e.g. because their <<PassengerMemoryLimit,memory limit>> have been reached. You can see whether the flag is set by invoking `passenger-status`. If you see the message "Resisting deployment error" then the flag is set.
 
 This way, visitors will suffer minimally from deployment errors. Phusion Passenger will attempt to restart the application again next time restart.txt is touched.
 

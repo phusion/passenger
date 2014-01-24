@@ -2,6 +2,10 @@ Release 4.0.36
 --------------
 
  * [Enterprise] Fixed some Mass Deployment bugs.
+ * [Enterprise] Fixed a bug that causes an application group to be put into
+   Deployment Error Resistance Mode if rolling restarting fails while
+   deployment error resistance is off. Deployment Error Resistance Mode is
+   now only activated if it's explicitly turned on.
  * Passenger Standalone now gzips JSON responses.
  * Fixed some cases in which Passenger Standalone does not to properly cleanup
    its temporary files.
