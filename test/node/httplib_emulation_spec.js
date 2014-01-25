@@ -116,6 +116,25 @@ describe('HttplibEmulation', function() {
 				done();
 			});
 		});
+
+		it('sets no "upgrade" flag if there is no Upgrade header', function(done) {
+			var state = this.state;
+			state.setup(function() {
+				assert.ok(!state.req.upgrade);
+				done();
+			});
+		});
+
+		it('sets the "upgrade" flag if there is an Upgrade header', function(done) {
+			var state = this.state;
+			var headers = {
+				'HTTP_UPGRADE': 'WebSocket'
+			};
+			state.setup(headers, function() {
+				assert.ok(state.req.upgrade);
+				done();
+			});
+		});
 	});
 
 	describe('if the request may have a request body', function() {

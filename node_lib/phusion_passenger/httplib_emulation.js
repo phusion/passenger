@@ -69,7 +69,7 @@ function inferHttpVersion(protocolDescription) {
 }
 
 function mayHaveRequestBody(headers) {
-	return headers['REQUEST_METHOD'] != 'GET' || headers['HTTP_UPGRADE'];
+	return headers['REQUEST_METHOD'] != 'GET' || !!headers['HTTP_UPGRADE'];
 }
 
 function createIncomingMessage(headers, socket, bodyBegin) {
@@ -81,6 +81,7 @@ function createIncomingMessage(headers, socket, bodyBegin) {
 	message.url    = headers['REQUEST_URI'];
 	message.connection.remoteAddress = headers['REMOTE_ADDR'];
 	message.connection.remotePort = parseInt(headers['REMOTE_PORT']);
+	message.upgrade = !!headers['HTTP_UPGRADE'];
 	message._mayHaveRequestBody = mayHaveRequestBody(headers);
 	message._emitEndEvent = IncomingMessage_emitEndEvent;
 	resetIncomingMessageOverridedMethods(message);
