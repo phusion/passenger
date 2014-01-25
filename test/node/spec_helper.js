@@ -46,6 +46,19 @@ var Helper = {
 				assert.fail("Something which should eventually happen never happened");
 			}
 		}, 10);
+	},
+
+	shouldNeverHappen: function(timeout, check, done) {
+		var startTime = new Date();
+		var id = setInterval(function() {
+			if (check()) {
+				clearInterval(id);
+				assert.fail("Something which should never happen, happened anyway");
+			} else if (new Date() - startTime > timeout) {
+				clearInterval(id);
+				done();
+			}
+		}, 10);
 	}
 };
 

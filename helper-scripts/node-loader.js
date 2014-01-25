@@ -135,15 +135,17 @@ function installServer() {
 		finalizeStartup();
 
 		PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
-			var req = HttplibEmulation.createIncomingMessage(headers, socket, bodyBegin);
-			if (req.headers['upgrade']) {
+			var req, res;
+			if (headers['HTTP_UPGRADE']) {
 				if (EventEmitter.listenerCount(server, 'upgrade') > 0) {
+					req = HttplibEmulation.createIncomingMessage(headers, socket, bodyBegin);
 					server.emit('upgrade', req, socket, bodyBegin);
 				} else {
 					socket.destroy();
 				}
 			} else {
-				var res = HttplibEmulation.createServerResponse(req);
+				req = HttplibEmulation.createIncomingMessage(headers, socket, bodyBegin);
+				res = HttplibEmulation.createServerResponse(req);
 				server.emit('request', req, res);
 			}
 		});

@@ -3,7 +3,8 @@ Release 4.0.37
 
  * Improved Node.js compatibility. Calling on() on the request object
    now returns the request object itself. This fixes some issues with
-   Express, Connect and Formidable.
+   Express, Connect and Formidable. Furthermore, some WebSocket-related
+   issues have been fixed.
 
 
 Release 4.0.36
