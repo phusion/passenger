@@ -91,6 +91,33 @@ describe('HttplibEmulation', function() {
 		return result;
 	}
 
+	describe('the request object', function() {
+		beforeEach(function() {
+			var state = this.state;
+			state.setup = function(headers, callback) {
+				if (!callback) {
+					callback = headers;
+					headers = {};
+				}
+				state.headers = createHeaders(headers);
+				state.createSocket(function(serverSocket, client) {
+					state.req = HttplibEmulation.createIncomingMessage(
+						state.headers, serverSocket, "");
+					callback();
+				});
+			}
+		});
+
+		specify('.on() returns the request object', function(done) {
+			var state = this.state;
+			state.setup(function() {
+				var result = state.req.on('foo', function() {});
+				assert.strictEqual(result, state.req);
+				done();
+			});
+		});
+	});
+
 	describe('if the request may have a request body', function() {
 		beforeEach(function() {
 			var state = this.state;
