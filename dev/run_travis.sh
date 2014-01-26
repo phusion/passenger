@@ -111,6 +111,7 @@ fi
 
 if [[ "$TEST_NGINX" = 1 ]]; then
 	install_base_test_deps
+	install_node_and_modules
 	run ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download
 	run rake test:integration:nginx
 fi
@@ -120,6 +121,7 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 	run sudo apt-get install -y --no-install-recommends \
 		apache2-mpm-worker apache2-threaded-dev
 	install_base_test_deps
+	install_node_and_modules
 	run ./bin/passenger-install-apache2-module --auto #--no-update-config
 	run rvmsudo ./bin/passenger-install-apache2-module --auto --no-compile
 	run rake test:integration:apache2

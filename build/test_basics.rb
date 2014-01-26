@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -77,6 +77,6 @@ task 'test:install_deps' do
                 end
 	end
 	if boolean_option('NODE_MODULES', default)
-		sh "npm install mocha should sinon"
+		sh "npm install mocha should sinon express"
 	end
 end

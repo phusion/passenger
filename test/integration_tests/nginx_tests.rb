@@ -163,6 +163,68 @@ describe "Phusion Passenger for Nginx" do
 		end
 	end
 
+	describe "a Node.js app running on the root URI" do
+		before :all do
+			create_nginx_controller
+			@server = "http://1.passenger.test:#{@nginx.port}"
+			@stub = NodejsStub.new('node')
+			@nginx.add_server do |server|
+				server[:server_name] = "1.passenger.test"
+				server[:root]        = "#{@stub.full_app_root}/public"
+			end
+			@nginx.start
+		end
+
+		after :all do
+			@stub.destroy
+			@nginx.stop if @nginx
+		end
+
+		before :each do
+			@stub.reset
+		end
+
+		it_should_behave_like "an example web app"
+	end
+
+	describe "a Node.js app running in a sub-URI" do
+		before :all do
+			create_nginx_controller
+			@server = "http://1.passenger.test:#{@nginx.port}/subapp"
+			@stub = NodejsStub.new('node')
+			@nginx.add_server do |server|
+				server[:server_name] = "1.passenger.test"
+				server[:root]        = "#{PhusionPassenger.source_root}/test/stub"
+				server << %Q{
+					location ~ ^/subapp(/.*|$) {
+						alias #{@stub.full_app_root}/public$1;
+						passenger_base_uri /subapp;
+						passenger_document_root #{@stub.full_app_root}/public;
+						passenger_app_root #{@stub.full_app_root};
+						passenger_enabled on;
+					}
+				}
+			end
+			@nginx.start
+		end
+
+		after :all do
+			@stub.destroy
+			@nginx.stop if @nginx
+		end
+
+		before :each do
+			@stub.reset
+		end
+
+		it_should_behave_like "an example web app"
+
+		it "does not interfere with the root website" do
+			@server = "http://1.passenger.test:#{@nginx.port}"
+			get('/').should == "This is the stub directory."
+		end
+	end
+
 	describe "various features" do
 		before :all do
 			create_nginx_controller
