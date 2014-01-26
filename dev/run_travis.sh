@@ -139,6 +139,7 @@ if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev rubygems libev-dev gdebi-core \
 		source-highlight
 	install_test_deps_with_doctools
+	install_node_and_modules
 	run rake debian:dev debian:dev:reinstall
 	run rake test:integration:native_packaging SUDO=1
 	run env PASSENGER_LOCATION_CONFIGURATION_FILE=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
