@@ -561,9 +561,9 @@ server {
 ==== passenger_ruby <filename>
 The `passenger_ruby` option allows one to specify the Ruby interpreter to use. Similarly, the `passenger_python` and `passenger_nodejs` options are for specifying the Python interpreter and Node.js commands, respectively.
 
-In versions prior to 4.0.0, only a single Ruby version was supported for the entire Nginx instance, so `passenger_ruby` may only occur in the global server configuration. Also, the `passenger_python` option was not supported.
+In versions prior to 4.0.0, only a single Ruby version was supported for the entire Nginx instance, so `passenger_ruby` may only occur in the global server configuration. Also, the `passenger_python`/`passenger_nodejs` options were not supported.
 
-Since version 4.0.0, the `passenger_python` option was added. Also, Phusion Passenger supports multiple Ruby or Python interpreters in the same Nginx instance. And so, since version 4.0.0, this option may occur in the following places:
+Since version 4.0.0, Phusion Passenger supports multiple Ruby interpreters in the same Nginx instance. And so, since version 4.0.0, this option may occur in the following places:
 
  * In the 'http' configuration block.
  * In a 'server' configuration block.
@@ -574,7 +574,7 @@ The `passenger_ruby` in the `http` block - that is, the one that `passenger-inst
 
 The `passenger_ruby` directive in the `http` block is also used as the default Ruby interpreter for Ruby web apps. You don't *have* to specify a `passenger_ruby` in the `http` block though, because the default is to use the first `ruby` command found in `$PATH`.
 
-The `passenger_python` and `passenger_nodejs` options works in a similar manner, but apply to Python and Node.js instead.
+The `passenger_python` and `passenger_nodejs` options work in a similar manner, but apply to Python and Node.js instead.
 
 You can also override `passenger_ruby` and other directives in specific contexts if you want to use a different interpreter for that web app. For example:
 
