@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2013 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -35,6 +35,7 @@
 #include <Exceptions.h>
 #include <MessageReadersWriters.h>
 #include <Utils/ScopeGuard.h>
+#include <Utils/MessageIO.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -1225,10 +1226,38 @@ Group::generateSecret(const SuperGroupPtr &superGroup) {
 }
 
 
+PoolPtr
+Process::getPool() const {
+	assert(getLifeStatus() != DEAD);
+	return getGroup()->getPool();
+}
+
 SuperGroupPtr
 Process::getSuperGroup() const {
 	assert(getLifeStatus() != DEAD);
 	return getGroup()->getSuperGroup();
+}
+
+void
+Process::sendAbortLongRunningConnectionsMessage(const string &address) {
+	boost::function<void ()> func = boost::bind(
+		realSendAbortLongRunningConnectionsMessage, address);
+	return getPool()->nonInterruptableThreads.create_thread(
+		boost::bind(runAndPrintExceptions, func, false),
+		"Sending detached message to process " + toString(pid),
+		256 * 1024);
+}
+
+void
+Process::realSendAbortLongRunningConnectionsMessage(string address) {
+	TRACE_POINT();
+	FileDescriptor fd(connectToServer(address));
+	unsigned long long timeout = 3000000;
+	vector<string> args;
+
+	UPDATE_TRACE_POINT();
+	args.push_back("abort_long_running_connections");
+	writeArrayMessage(fd, args, &timeout);
 }
 
 string

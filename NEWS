@@ -5,6 +5,10 @@ Release 4.0.37
    now returns the request object itself. This fixes some issues with
    Express, Connect and Formidable. Furthermore, some WebSocket-related
    issues have been fixed.
+ * Improved Meteor support. Meteor application processes are now shut down
+   quicker. Previously, they linger around for 5 seconds while waiting for
+   all connections to terminate, but that didn't work well because WebSocket
+   connections were kept open indefinitely.
  * Introduced a new tool `passenger-config detach-process` for gracefully
    detaching an application process from the process pool. Has a similar
    effect to killing the application process directly with `kill <PID>`,

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2013 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -113,14 +113,14 @@ public:
  * ## Life time
  *
  * A Process object lives until the containing Group calls `detach(process)`,
- * which indicates that it wants this Process to should down. This causes
- * the Process to enter the `detached() == true` state. Processes in this
- * state are stored in the `detachedProcesses` collection in the Group and
- * are no longer eligible for receiving requests. They will be removed from
- * the Group and destroyed when all of the following applies:
- * 
- *  1. the OS process is gone.
- *  2. `sessions == 0`
+ * which indicates that it wants this Process to shut down. This causes
+ * `signalDetached()` to be called, which may or may not send a message
+ * to the process. After this, the Process object is stored in the
+ * `detachedProcesses` collection in the Group and are no longer eligible for
+ * receiving requests. Once all requests on this Process have finished,
+ * `triggerShutdown()` will be called, which will send a message to the
+ * process telling it to shut down. Once the process is gone, `cleanup()` is
+ * called, and the Process object is removed from the collection.
  *
  * This means that a Group outlives all its Processes, a Process outlives all
  * its Sessions, and a Process also outlives the OS process.
@@ -146,6 +146,9 @@ private:
 	ProcessList::iterator it;
 	/** The handle inside the associated Group's process priority queue. */
 	PriorityQueue<Process>::Handle pqHandle;
+
+	void sendAbortLongRunningConnectionsMessage(const string &address);
+	static void realSendAbortLongRunningConnectionsMessage(string address);
 
 	static bool
 	isZombie(pid_t pid) {
@@ -308,6 +311,7 @@ public:
 	} oobwStatus;
 	/** Caches whether or not the OS process still exists. */
 	mutable bool m_osProcessExists;
+	bool longRunningConnectionsAborted;
 	/** Time at which shutdown began. */
 	time_t shutdownStartTime;
 	/** Collected by Pool::collectAnalytics(). */
@@ -346,6 +350,7 @@ public:
 		  enabled(ENABLED),
 		  oobwStatus(OOBW_NOT_ACTIVE),
 		  m_osProcessExists(true),
+		  longRunningConnectionsAborted(false),
 		  shutdownStartTime(0)
 	{
 		SpawnerConfigPtr config;
@@ -413,6 +418,13 @@ public:
 	 * @pre getLifeState() != DEAD
 	 * @post result != NULL
 	 */
+	PoolPtr getPool() const;
+
+	/**
+	 * Thread-safe.
+	 * @pre getLifeState() != DEAD
+	 * @post result != NULL
+	 */
 	SuperGroupPtr getSuperGroup() const;
 
 	// Thread-safe.
@@ -437,6 +449,22 @@ public:
 	LifeStatus getLifeStatus() const {
 		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
 		return lifeStatus;
+	}
+
+	bool abortLongRunningConnections() {
+		bool sent = false;
+		if (!longRunningConnectionsAborted) {
+			SocketList::iterator it, end = sockets->end();
+			for (it = sockets->begin(); it != end; it++) {
+				Socket *socket = &(*it);
+				if (socket->name == "control") {
+					sendAbortLongRunningConnectionsMessage(socket->address);
+					sent = true;
+				}
+			}
+			longRunningConnectionsAborted = true;
+		}
+		return sent;
 	}
 
 	bool canTriggerShutdown() const {
