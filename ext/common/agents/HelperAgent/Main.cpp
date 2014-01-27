@@ -437,7 +437,7 @@ public:
 		accountsDatabase->add("_passenger-status", options.adminToolStatusPassword, false,
 			Account::INSPECT_BASIC_INFO | Account::INSPECT_SENSITIVE_INFO |
 			Account::INSPECT_BACKTRACES | Account::INSPECT_REQUESTS |
-			Account::RESTART);
+			Account::DETACH | Account::RESTART);
 		accountsDatabase->add("_web_server", options.exitPassword, false, Account::EXIT);
 		messageServer = boost::make_shared<MessageServer>(
 			parseUnixSocketAddress(options.adminSocketAddress), accountsDatabase);

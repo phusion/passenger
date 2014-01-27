@@ -28,6 +28,7 @@ module PhusionPassenger
 # Core of the `passenger-config` command. Dispatches a subcommand to a specific class.
 module Config
 	KNOWN_COMMANDS = [
+		["detach-process", "DetachProcessCommand"],
 		["restart-app", "RestartAppCommand"],
 		["validate-install", "ValidateInstallCommand"],
 		["about", "AboutCommand"]
