@@ -696,8 +696,12 @@ private:
 			status, (unsigned long) data.size());
 
 		client->clientOutputPipe->write(header, pos - header);
-		client->clientOutputPipe->write(data.data(), data.size());
-		client->clientOutputPipe->end();
+		if (client->connected()) {
+			client->clientOutputPipe->write(data.data(), data.size());
+			if (client->connected()) {
+				client->clientOutputPipe->end();
+			}
+		}
 
 		if (client->useUnionStation()) {
 			snprintf(header, end - header, "Status: %d %s",
@@ -778,8 +782,12 @@ private:
 
 		const string header = str.str();
 		client->clientOutputPipe->write(header.data(), header.size());
-		client->clientOutputPipe->write(data.data(), data.size());
-		client->clientOutputPipe->end();
+		if (client->connected()) {
+			client->clientOutputPipe->write(data.data(), data.size());
+			if (client->connected()) {
+				client->clientOutputPipe->end();
+			}
+		}
 
 		if (client->useUnionStation()) {
 			client->logMessage("Status: 500 Internal Server Error");
@@ -1094,6 +1102,10 @@ private:
 	void writeToClientOutputPipe(const ClientPtr &client, const StaticString &data) {
 		bool wasCommittingToDisk = client->clientOutputPipe->isCommittingToDisk();
 		bool nowCommittingToDisk = !client->clientOutputPipe->write(data.data(), data.size());
+		if (!client->connected()) {
+			// EPIPE/ECONNRESET detected.
+			return;
+		}
 		if (!wasCommittingToDisk && nowCommittingToDisk) {
 			RH_TRACE(client, 3, "Buffering response data to disk; temporarily stopping application socket.");
 			client->backgroundOperations++;

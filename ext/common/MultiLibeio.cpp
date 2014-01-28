@@ -55,6 +55,10 @@ struct Data {
 		: libev(_libev),
 		  callback(_callback)
 	{
+		// If this assertion fails, then in the context of RequestHandler it means
+		// that it was operating on a client that has already been disconnected.
+		// The RequestHandler code is probably missing some necessary checks on
+		// `client->connected()`.
 		assert(_libev != NULL);
 	}
 };

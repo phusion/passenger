@@ -15,6 +15,8 @@ Release 4.0.37
    effect to killing the application process directly with `kill <PID>`,
    but killing directly may cause the HTTP client to see an error, while
    using this command guarantees that clients see no errors.
+ * Fixed a crash occurs when an application fails to spawn, but the HTTP
+   client disconnects before the error page is generated. Fixes issue #1028.
 
 
 Release 4.0.36
