@@ -17,6 +17,36 @@ Release 4.0.37
    using this command guarantees that clients see no errors.
  * Fixed a crash occurs when an application fails to spawn, but the HTTP
    client disconnects before the error page is generated. Fixes issue #1028.
+ * Fixed a symlink-related security vulnerability.
+
+   Urgency: low
+   Scope: local exploit
+   Summary: writing files to arbitrary directory by hijacking temp directories
+   Affected versions: 4.0.5 and later
+   Fixed versions: 4.0.37
+
+   Description:
+   Phusion Passenger creates a "server instance directory" in /tmp during startup,
+   which is a temporary directory that Phusion Passenger uses to store working files.
+   This directory is deleted after Phusion Passenger exits. For various technical
+   reasons, this directory must have a semi-predictable filename. If a local attacker
+   can predict this filename, and precreates a symlink with the same filename that
+   points to an arbitrary directory with mode 755, owner root and group root, then
+   the attacker will succeed in making Phusion Passenger write files and create
+   subdirectories inside that target directory. The following files/subdirectories
+   are created:
+
+    * control_process.pid
+    * generation-X, where X is a number.
+
+   If you happen to have a file inside the target directory called `control_process.pid`,
+   then that file's contents are overwritten.
+
+   These files and directories are deleted during Phusion Passenger exit. The target
+   directory itself is not deleted, nor are any other contents inside the target
+   directory, although the symlink is.
+
+   Thanks go to Jakub Wilk for discovering this issue.
 
 
 Release 4.0.36

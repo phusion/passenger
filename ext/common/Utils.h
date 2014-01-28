@@ -65,6 +65,8 @@ typedef enum {
 	FT_REGULAR,
 	/** A directory. */
 	FT_DIRECTORY,
+	/** A symlink. Only returned by getFileTypeNoFollowSymlinks(), not by getFileType(). */
+	FT_SYMLINK,
 	/** Something else, e.g. a pipe or a socket. */
 	FT_OTHER
 } FileType;
@@ -110,7 +112,7 @@ bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
 /**
  * Check whether 'filename' exists and what kind of file it is.
  *
- * @param filename The filename to check.
+ * @param filename The filename to check. It MUST be NULL-terminated.
  * @param mstat A CachedFileStat object, if you want to use cached statting.
  * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @return The file type.
@@ -121,6 +123,10 @@ bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
  */
 FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
                      unsigned int throttleRate = 0);
+/**
+ * Like getFileType(), but does not follow symlinks.
+ */
+FileType getFileTypeNoFollowSymlinks(const StaticString &filename);
 
 /**
  * Create the given file with the given contents, permissions and ownership.
