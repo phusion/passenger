@@ -106,6 +106,7 @@ class RequestHandler:
 				if not client:
 					done = True
 					break
+				socket_hijacked = False
 				try:
 					try:
 						env, input_stream = self.parse_request(client)
@@ -113,7 +114,7 @@ class RequestHandler:
 							if env['REQUEST_METHOD'] == 'ping':
 								self.process_ping(env, input_stream, client)
 							else:
-								self.process_request(env, input_stream, client)
+								socket_hijacked = self.process_request(env, input_stream, client)
 					except KeyboardInterrupt:
 						done = True
 					except IOError:
@@ -123,16 +124,17 @@ class RequestHandler:
 					except Exception:
 						logging.exception("WSGI application raised an exception!")
 				finally:
-					try:
-						# Shutdown the socket like this just in case the app
-						# spawned a child process that keeps it open.
-						client.shutdown(socket.SHUT_WR)
-					except:
-						pass
-					try:
-						client.close()
-					except:
-						pass
+					if not socket_hijacked:
+						try:
+							# Shutdown the socket like this just in case the app
+							# spawned a child process that keeps it open.
+							client.shutdown(socket.SHUT_WR)
+						except:
+							pass
+						try:
+							client.close()
+						except:
+							pass
 		except KeyboardInterrupt:
 			pass
 
@@ -232,7 +234,16 @@ class RequestHandler:
 			headers_set[:] = [status, response_headers]
 			return write
 		
+		def hijack():
+			env['passenger.hijacked_socket'] = output_stream
+			return output_stream
+
+		env['passenger.hijack'] = hijack
+
 		result = self.app(env, start_response)
+		if 'passenger.hijacked_socket' in env:
+			# Socket connection hijacked. Don't do anything.
+			return True
 		try:
 			for data in result:
 				# Don't send headers until body appears.
@@ -244,6 +255,7 @@ class RequestHandler:
 		finally:
 			if hasattr(result, 'close'):
 				result.close()
+		return False
 	
 	def process_ping(self, env, input_stream, output_stream):
 		output_stream.sendall(b"pong")

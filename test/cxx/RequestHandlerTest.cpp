@@ -6,6 +6,7 @@
 #include <Utils/json.h>
 #include <Utils/IOUtils.h>
 #include <Utils/Timer.h>
+#include <Utils/BufferedIO.h>
 
 #include <boost/shared_array.hpp>
 #include <string>
@@ -51,6 +52,7 @@ namespace tut {
 			setPrintAppOutputAsDebuggingMessages(true);
 
 			agentOptions.passengerRoot = resourceLocator->getRoot();
+			agentOptions.defaultRubyCommand = DEFAULT_RUBY;
 			agentOptions.defaultUser   = testConfig["default_user"].asString();
 			agentOptions.defaultGroup  = testConfig["default_group"].asString();
 			root = resourceLocator->getRoot();
@@ -970,6 +972,84 @@ namespace tut {
 		ensure(containsSubstring(response, "Counter: 0\n"));
 		ensure(containsSubstring(response, "Counter: 1\n"));
 		ensure(containsSubstring(response, "Counter: 2\n"));
+	}
+
+	TEST_METHOD(53) {
+		set_test_name("It supports switching protocols when communicating over application session sockets");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/switch_protocol",
+			"HTTP_UPGRADE", "raw",
+			"HTTP_CONNECTION", "Upgrade",
+			NULL
+		);
+
+		BufferedIO io(connection);
+		string header;
+		bool done = false;
+
+		ensure_equals(io.readLine(), "HTTP/1.1 101 Switching Protocols\r\n");
+
+		do {
+			string line = io.readLine();
+			done = line.empty() || line == "\r\n";
+			if (!done) {
+				header.append(line);
+			}
+		} while (!done);
+
+		ensure("(1)", containsSubstring(header, "Upgrade: raw\r\n"));
+		ensure("(2)", containsSubstring(header, "Connection: Upgrade\r\n"));
+
+		writeExact(connection, "hello\n");
+		ensure_equals(io.readLine(), "Echo: hello\n");
+	}
+
+	TEST_METHOD(54) {
+		set_test_name("It supports switching protocols when communication over application http_session sockets");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"_PASSENGER_FORCE_HTTP_SESSION", "true",
+			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PASSENGER_APP_TYPE", "rack",
+			"REQUEST_URI", "/switch_protocol",
+			"PATH_INFO", "/switch_protocol",
+			"HTTP_UPGRADE", "raw",
+			"HTTP_CONNECTION", "Upgrade",
+			NULL
+		);
+
+		BufferedIO io(connection);
+		string header;
+		bool done = false;
+		vector<ProcessPtr> processes;
+
+		ensure_equals(io.readLine(), "HTTP/1.1 101 Switching Protocols\r\n");
+		processes = pool->getProcesses();
+		{
+			LockGuard l(pool->syncher);
+			ProcessPtr process = processes[0];
+			ensure_equals(process->sessionSockets.top()->protocol, "http_session");
+		}
+
+		do {
+			string line = io.readLine();
+			done = line.empty() || line == "\r\n";
+			if (!done) {
+				header.append(line);
+			}
+		} while (!done);
+
+		ensure("(1)", containsSubstring(header, "Upgrade: raw\r\n"));
+		ensure("(2)", containsSubstring(header, "Connection: Upgrade\r\n"));
+
+		writeExact(connection, "hello\n");
+		ensure_equals(io.readLine(), "Echo: hello\n");
 	}
 
 	// Test small response buffering.

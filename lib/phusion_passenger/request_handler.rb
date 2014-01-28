@@ -95,6 +95,11 @@ class RequestHandler
 			"analytics_logger",
 			"pool_account_username"
 		)
+
+		@force_http_session = ENV["_PASSENGER_FORCE_HTTP_SESSION"] == "true"
+		if @force_http_session
+			@connect_password = nil
+		end
 		@thread_handler = options["thread_handler"] || ThreadHandler
 		@concurrency = 1
 		if options["pool_account_password_base64"]
@@ -114,7 +119,7 @@ class RequestHandler
 		@server_sockets[:main] = {
 			:address     => @main_socket_address,
 			:socket      => @main_socket,
-			:protocol    => :session,
+			:protocol    => @force_http_session ? :http_session : :session,
 			:concurrency => @concurrency
 		}
 
@@ -125,7 +130,7 @@ class RequestHandler
 			:protocol    => :http,
 			:concurrency => 1
 		}
-		
+
 		@owner_pipe = owner_pipe
 		@options = options
 		@previous_signal_handlers = {}
@@ -308,7 +313,7 @@ private
 		# is still bugged as of version 1.7.0. They can
 		# cause unexplicable freezes when used in combination
 		# with threading.
-		return ruby_engine != "jruby"
+		return !@force_http_session && ruby_engine != "jruby"
 	end
 
 	def create_unix_socket_on_filesystem
@@ -400,7 +405,9 @@ private
 		main_socket_options = common_options.merge(
 			:server_socket => @main_socket,
 			:socket_name => "main socket",
-			:protocol => :session
+			:protocol => @server_sockets[:main][:protocol] == :session ?
+				:session :
+				:http
 		)
 		http_socket_options = common_options.merge(
 			:server_socket => @http_socket,

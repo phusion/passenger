@@ -1,4 +1,4 @@
-import os, time, cgi
+import os, sys, time, cgi
 
 def file_exist(filename):
 	try:
@@ -6,6 +6,19 @@ def file_exist(filename):
 		return True
 	except OSError:
 		return False
+
+if sys.version_info[0] >= 3:
+	def bytes_to_str(b):
+		return b.decode()
+
+	def str_to_bytes(s):
+		return s.encode('latin-1')
+else:
+	def bytes_to_str(b):
+		return b
+
+	def str_to_bytes(s):
+		return s
 
 def application(env, start_response):
 	status = '200 OK'
@@ -131,6 +144,29 @@ def application(env, start_response):
 	elif path == '/oobw':
 		start_response(status, [('Content-Type', 'text/plain'), ('X-Passenger-Request-OOB-Work', 'true')])
 		return [str(os.getpid())]
+	elif path == '/switch_protocol':
+		if env['HTTP_UPGRADE'] != 'raw' or env['HTTP_CONNECTION'].lower() != 'upgrade':
+			status = '500 Internal Server Error'
+			body = str('Invalid headers')
+			start_response(status, [('Content-Type', 'text/plain'), ('Content-Length', len(body))])
+			return [body]
+		socket = env['passenger.hijack']()
+		io = socket.makefile()
+		socket.close()
+		try:
+			io.write(
+				b"HTTP/1.1 101 Switching Protocols\r\n" +
+				b"Upgrade: raw\r\n" +
+				b"Connection: Upgrade\r\n" +
+				b"\r\n")
+			io.flush()
+			line = io.readline()
+			while line != "":
+				io.write("Echo: " + line)
+				io.flush()
+				line = io.readline()
+		finally:
+			io.close()
 	else:
 		status = "404 Not Found"
 		body = "Unknown URI"

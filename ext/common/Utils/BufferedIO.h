@@ -171,6 +171,19 @@ public:
 		return output;
 	}
 	
+	/**
+	 * Reads a line and returns the line including the newline character. Upon
+	 * encountering EOF, the empty string is returned.
+	 *
+	 * The `max` parameter dictates the maximum length of the returned line.
+	 * If the line is longer than this number of characters, then a SecurityException
+	 * is thrown, and the BufferedIO becomes unusable (enters an undefined state).
+	 *
+	 * @throws SystemException
+	 * @throws TimeoutException
+	 * @throws SecurityException
+	 * @throws boost::thread_interrupted
+	 */
 	string readLine(unsigned int max = 1024, unsigned long long *timeout = NULL) {
 		string output;
 		readUntil(boost::bind(newlineFound, _1, _2, &output, max), timeout);

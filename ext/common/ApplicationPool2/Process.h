@@ -126,7 +126,8 @@ public:
  * its Sessions, and a Process also outlives the OS process.
  */
 class Process: public boost::enable_shared_from_this<Process> {
-private:
+// Actually private, but marked public so that unit tests can access the fields.
+public:
 	friend class Group;
 	
 	/** A mutex to protect access to `lifeStatus`. */
