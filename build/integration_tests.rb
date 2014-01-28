@@ -59,7 +59,11 @@ task 'test:integration:nginx' => dependencies do
 			require 'shellwords'
 			command << " -e #{Shellwords.escape(grep)}"
 		end
-		sh "cd test && exec #{command}"
+		repeat = true
+		while repeat
+			sh "cd test && exec #{command}"
+			repeat = boolean_option('REPEAT')
+		end
 	end
 end
 

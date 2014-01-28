@@ -116,8 +116,9 @@ app.all('/raw_upload_to_file', function(req, res) {
 		stream.write(data);
 	});
 	req.on('end', function() {
-		stream.end();
-		textResponse(res, "ok");
+		stream.end(function() {
+			textResponse(res, "ok");
+		});
 	});
 });
 
