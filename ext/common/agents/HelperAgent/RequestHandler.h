@@ -2010,6 +2010,7 @@ private:
 	}
 
 	void sessionCheckedOut_real(ClientPtr client, const SessionPtr &session, const ExceptionPtr &e) {
+		RH_LOG_EVENT(client, "sessionCheckedOut");
 		if (!client->connected()) {
 			return;
 		}
