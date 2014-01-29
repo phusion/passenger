@@ -1,3 +1,21 @@
+Release 4.0.38
+--------------
+
+ * Fixed a symlink-related security vulnerability.
+
+   Urgency: low
+   Scope: local exploit
+   Summary: writing files to arbitrary directory by hijacking temp directories
+   Affected versions: 4.0.37
+   Fixed versions: 4.0.38
+
+   Description:
+   This issue is related to the security issue as mentioned in the 4.0.37
+   release notes. The previous fix was incomplete, and still has a
+   (albeit smaller) small attack time window in between two filesystem
+   checks. This attack window is now gone.
+
+
 Release 4.0.37
 --------------
 

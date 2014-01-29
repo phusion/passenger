@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -193,6 +193,9 @@ private:
 	
 	void initialize(const string &path, bool owner) {
 		TRACE_POINT();
+		struct stat buf;
+		int ret;
+
 		this->path  = path;
 		this->owner = owner;
 		
@@ -212,18 +215,25 @@ private:
 		 * rights though, because we want admin tools to be able to list the available
 		 * generations no matter what user they're running as.
 		 */
+
+		do {
+			ret = lstat(path.c_str(), &buf);
+		} while (ret == -1 && errno == EAGAIN);
 		if (owner) {
-			switch (getFileTypeNoFollowSymlinks(path)) {
-			case FT_NONEXISTANT:
+			if (ret == 0) {
+				if (S_ISDIR(buf.st_mode)) {
+					verifyDirectoryPermissions(path, buf);
+				} else {
+					throw RuntimeException("'" + path + "' already exists, and is not a directory");
+				}
+			} else if (errno == ENOENT) {
 				createDirectory(path);
-				break;
-			case FT_DIRECTORY:
-				verifyDirectoryPermissions(path);
-				break;
-			default:
-				throw RuntimeException("'" + path + "' already exists, and is not a directory");
+			} else {
+				int e = errno;
+				throw FileSystemException("Cannot lstat '" + path + "'",
+					e, path);
 			}
-		} else if (getFileType(path) != FT_DIRECTORY) {
+		} else if (!S_ISDIR(buf.st_mode)) {
 			throw RuntimeException("Server instance directory '" + path +
 				"' does not exist");
 		}
@@ -259,14 +269,10 @@ private:
 	 * so that an attacker cannot pre-create a directory with too liberal
 	 * permissions.
 	 */
-	void verifyDirectoryPermissions(const string &path) {
+	void verifyDirectoryPermissions(const string &path, struct stat &buf) {
 		TRACE_POINT();
-		struct stat buf;
 
-		if (stat(path.c_str(), &buf) == -1) {
-			int e = errno;
-			throw FileSystemException("Cannot stat() " + path, e, path);
-		} else if (buf.st_mode != (S_IFDIR | parseModeString("u=rwx,g=rx,o=rx"))) {
+		if (buf.st_mode != (S_IFDIR | parseModeString("u=rwx,g=rx,o=rx"))) {
 			throw RuntimeException("Tried to reuse existing server instance directory " +
 				path + ", but it has wrong permissions");
 		} else if (buf.st_uid != geteuid() || buf.st_gid != getegid()) {

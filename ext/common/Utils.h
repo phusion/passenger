@@ -65,8 +65,6 @@ typedef enum {
 	FT_REGULAR,
 	/** A directory. */
 	FT_DIRECTORY,
-	/** A symlink. Only returned by getFileTypeNoFollowSymlinks(), not by getFileType(). */
-	FT_SYMLINK,
 	/** Something else, e.g. a pipe or a socket. */
 	FT_OTHER
 } FileType;
@@ -123,10 +121,6 @@ bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
  */
 FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
                      unsigned int throttleRate = 0);
-/**
- * Like getFileType(), but does not follow symlinks.
- */
-FileType getFileTypeNoFollowSymlinks(const StaticString &filename);
 
 /**
  * Create the given file with the given contents, permissions and ownership.
