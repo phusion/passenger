@@ -14,6 +14,7 @@ Release 4.0.38
    release notes. The previous fix was incomplete, and still has a
    (albeit smaller) small attack time window in between two filesystem
    checks. This attack window is now gone.
+ * Fixed some compilation problems on Solaris. See issue #1047.
 
 
 Release 4.0.37
