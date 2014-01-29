@@ -15,6 +15,9 @@ Release 4.0.38
    (albeit smaller) small attack time window in between two filesystem
    checks. This attack window is now gone.
  * Fixed some compilation problems on Solaris. See issue #1047.
+ * passenger-install-apache2-module and passenger-install-nginx-module
+   now automatically run in `--auto` mode if stdin is not a TTY. Fixes
+   issue #1030.
 
 
 Release 4.0.37

@@ -59,6 +59,7 @@ class AbstractInstaller
 	def initialize(options = {})
 		@stdout = STDOUT
 		@stderr = STDERR
+		@auto   = !STDIN.tty?
 		options.each_pair do |key, value|
 			instance_variable_set(:"@#{key}", value)
 		end
