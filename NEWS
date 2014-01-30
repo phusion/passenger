@@ -8,10 +8,11 @@ Release 4.0.38
    Summary: writing files to arbitrary directory by hijacking temp directories
    Affected versions: 4.0.37
    Fixed versions: 4.0.38
+   CVE-2014-1831
 
    Description:
-   This issue is related to the security issue as mentioned in the 4.0.37
-   release notes. The previous fix was incomplete, and still has a
+   This issue is related to CVE-2014-1831 (the security issue as mentioned in
+   the 4.0.37 release notes). The previous fix was incomplete, and still has a
    (albeit smaller) small attack time window in between two filesystem
    checks. This attack window is now gone.
  * Fixed some compilation problems on Solaris. See issue #1047.
@@ -46,6 +47,7 @@ Release 4.0.37
    Summary: writing files to arbitrary directory by hijacking temp directories
    Affected versions: 4.0.5 and later
    Fixed versions: 4.0.37
+   CVE-2014-1831
 
    Description:
    Phusion Passenger creates a "server instance directory" in /tmp during startup,
