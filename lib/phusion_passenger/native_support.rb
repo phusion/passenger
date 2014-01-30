@@ -213,7 +213,6 @@ private
 
 		STDERR.puts " --> Compiling #{library_name} for the current Ruby interpreter..."
 		STDERR.puts "     (set PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY=0 to disable)"
-		STDERR.puts "     -------------------------------"
 
 		require 'fileutils'
 		require 'shellwords'
@@ -268,9 +267,17 @@ private
 		return PhusionPassenger::Utils::Download.download(url, filename, real_options)
 	end
 	
-	def mkdir(dir)
+	def log(message, options = {})
+		if logger = options[:logger]
+			logger.puts(message)
+		else
+			STDERR.puts "     #{message}"
+		end
+	end
+
+	def mkdir(dir, options = {})
 		begin
-			STDERR.puts "     # mkdir -p #{dir}"
+			log("# mkdir -p #{dir}", options)
 			FileUtils.mkdir_p(dir)
 		rescue Errno::EEXIST
 		end
@@ -282,39 +289,57 @@ private
 		end
 	end
 
-	def sh_nonfatal(command_string)
-		STDERR.puts "     # #{command_string}"
-		PhusionPassenger::Utils.mktmpdir("passenger-native-support-") do |tmpdir|
-			s_tmpdir = Shellwords.escape(tmpdir)
-			result = system("#{command_string} >#{s_tmpdir}/log 2>&1")
-			system("cat #{s_tmpdir}/log | sed 's/^/     /' >&2")
-			return result
+	def sh_nonfatal(command_string, options = {})
+		log("# #{command_string}", options)
+		if logger = options[:logger]
+			s_logpath = Shellwords.escape(logger.path)
+			return system("(#{command_string}) >>#{s_logpath} 2>&1")
+		else
+			Utils.mktmpdir("passenger-native-support-") do |tmpdir|
+				s_tmpdir = Shellwords.escape(tmpdir)
+				result = system("(#{command_string}) >#{s_tmpdir}/log 2>&1")
+				system("cat #{s_tmpdir}/log | sed 's/^/     /' >&2")
+				return result
+			end
 		end
 	end
 	
 	def compile(target_dirs)
-		try_directories(target_dirs) do |target_dir|
-			result =
-				sh_nonfatal("#{PlatformInfo.ruby_command} #{Shellwords.escape extconf_rb}") &&
-				sh_nonfatal("make clean && make")
-			if result
-				STDERR.puts "     Compilation succesful."
-				[target_dir, false]
-			else
-				STDERR.puts "     Compilation failed."
-				[nil, false]
+		logger = Utils::TmpIO.new('passenger_native_support',
+			:mode   => File::WRONLY | File::APPEND,
+			:binary => false,
+			:suffix => ".log",
+			:unlink_immediately => false)
+		options = { :logger => logger }
+		begin
+			try_directories(target_dirs, options) do |target_dir|
+				result =
+					sh_nonfatal("#{PlatformInfo.ruby_command} #{Shellwords.escape extconf_rb}",
+						options) &&
+					sh_nonfatal("make clean && make", options)
+				if result
+					log "Compilation succesful. The logs are here:"
+					log logger.path
+					[target_dir, false]
+				else
+					log "Warning: compilation didn't succeed. To learn why, read this file:"
+					log logger.path
+					[nil, false]
+				end
 			end
 		end
+	ensure
+		logger.close if logger
 	end
 
-	def try_directories(dirs)
+	def try_directories(dirs, options = {})
 		result = nil
 		dirs.each_with_index do |dir, i|
 			begin
-				mkdir(dir)
+				mkdir(dir, options)
 				File.open("#{dir}/.permission_test", "w").close
 				File.unlink("#{dir}/.permission_test")
-				STDERR.puts "     # cd #{dir}"
+				log("# cd #{dir}", options)
 				Dir.chdir(dir) do
 					result, should_retry = yield(dir)
 					return result if !should_retry
@@ -325,26 +350,30 @@ private
 				# error on the last one too then propagate the
 				# exception.
 				if i == dirs.size - 1
-					STDERR.puts "     Encountered permission error, " +
-						"but no more directories to try. Giving up."
-					STDERR.puts "     -------------------------------"
+					log("Encountered permission error, " +
+						"but no more directories to try. Giving up.",
+						options)
+					log("-------------------------------", options)
 					return nil
 				else
-					STDERR.puts "     Encountered permission error, " +
-						"trying a different directory..."
-					STDERR.puts "     -------------------------------"
+					log("Encountered permission error, " +
+						"trying a different directory...",
+						options)
+					log("-------------------------------", options)
 				end
 			rescue Errno::ENOTDIR
 				# This can occur when locations.ini set buildout_dir
 				# to an invalid path. Just ignore this error.
 				if i == dirs.size - 1
-					STDERR.puts "     Not a valid directory, " +
-						"but no more directories to try. Giving up."
-					STDERR.puts "     -------------------------------"
+					log("Not a valid directory, " +
+						"but no more directories to try. Giving up.",
+						options)
+					log("-------------------------------", options)
 					return nil
 				else
-					STDERR.puts "     Not a valid directory. Trying a different one..."
-					STDERR.puts "     -------------------------------"
+					log("Not a valid directory. Trying a different one...",
+						options)
+					log("-------------------------------", options)
 				end
 			end
 		end

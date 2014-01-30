@@ -12,14 +12,25 @@ class TmpIO < File
   # creates and returns a new File object.  The File is unlinked
   # immediately, switched to binary mode, and userspace output
   # buffering is disabled
-  def self.new(namespace)
+  def self.new(namespace, options = nil)
+    if options
+      mode   = options[:mode] || RDWR
+      binary = options.fetch(:binary, true)
+      suffix = options[:suffix]
+      unlink_immediately = options.fetch(:unlink_immediately, true)
+    else
+      mode   = RDWR
+      binary = true
+      suffix = nil
+      unlink_immediately = true
+    end
     fp = begin
-      super("#{Dir::tmpdir}/#{namespace}-#{rand}", RDWR|CREAT|EXCL, 0600)
+      super("#{Dir::tmpdir}/#{namespace}-#{rand(0x100000000).to_s(36)}#{suffix}", mode | CREAT | EXCL, 0600)
     rescue Errno::EEXIST
       retry
     end
-    unlink(fp.path)
-    fp.binmode
+    unlink(fp.path) if unlink_immediately
+    fp.binmode if binary
     fp.sync = true
     fp
   end
