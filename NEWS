@@ -1,6 +1,9 @@
 Release 4.0.38
 --------------
 
+ * Added support for the new Ruby 2.1.0 out-of-band garbage collector.
+   This can much improve garbage collection performance, and drastically
+   reduce request times.
  * Fixed a symlink-related security vulnerability.
 
    Urgency: low
