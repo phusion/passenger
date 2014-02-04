@@ -451,6 +451,9 @@ public:
 			pidsArg.resize(pidsArg.size() - 1);
 		}
 
+		// The list of format arguments must also follow -o
+		// without a space.
+		// https://github.com/phusion/passenger/pull/94
 		string fmtArg = "-o";
 		#if defined(sun) || defined(__sun)
 			fmtArg.append("pid,ppid,pcpu,rss,vsz,pgid,uid,args");
