@@ -57,7 +57,7 @@ endif::[]
 [[install_on_debian_ubuntu]]
 === Installing or upgrading on Debian or Ubuntu
 
-We provide and official Phusion Passenger APT repository. This APT repository contains Phusion Passenger packages for multiple versions of Debian and Ubuntu. These packages are automatically built by our build server after we push out a source release, and thus are always up to date with the official source releases.
+We provide an official Phusion Passenger APT repository. This APT repository contains Phusion Passenger packages for multiple versions of Debian and Ubuntu. These packages are automatically built by our build server after we push out a source release, and thus are always up to date with the official source releases.
 
 If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need.
 
