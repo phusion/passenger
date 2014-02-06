@@ -602,7 +602,7 @@ Group::initiateOobw(const ProcessPtr &process) {
 			// Continue code flow.
 			break;
 		case DR_DEFERRED:
-			// lockAndMaybeInitateOobw() will eventually be called.
+			// lockAndMaybeInitiateOobw() will eventually be called.
 			return;
 		case DR_ERROR:
 		case DR_NOOP:
