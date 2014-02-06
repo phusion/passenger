@@ -11,7 +11,7 @@ Release 4.0.38
    Summary: writing files to arbitrary directory by hijacking temp directories
    Affected versions: 4.0.37
    Fixed versions: 4.0.38
-   CVE-2014-1831
+   CVE-2014-1832
 
    Description:
    This issue is related to CVE-2014-1831 (the security issue as mentioned in
