@@ -22,6 +22,8 @@ Release 4.0.38
  * passenger-install-apache2-module and passenger-install-nginx-module
    now automatically run in `--auto` mode if stdin is not a TTY. Fixes
    issue #1030.
+ * Fixed an issue with non-bundled Meteor apps not correctly running in
+   production mode.
 
 
 Release 4.0.37
