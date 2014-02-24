@@ -74,6 +74,7 @@ module Packaging
 		'CONTRIBUTORS',
 		'CONTRIBUTING.md',
 		'LICENSE',
+		'CHANGELOG',
 		'INSTALL.md',
 		'NEWS',
 		'passenger.gemspec',

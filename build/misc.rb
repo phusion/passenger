@@ -64,7 +64,7 @@ def extract_latest_news_contents_and_items
 	#   Release y.y.y
 	#   -------------
 	#   .....
-	contents = File.read("NEWS")
+	contents = File.read("CHANGELOG")
 	
 	# We're only interested in the latest release, so extract the text for that.
 	contents =~ /\A(Release.*?)^(Release|Older releases)/m
@@ -79,8 +79,8 @@ def extract_latest_news_contents_and_items
 	return [contents, items]
 end
 
-desc "Convert the NEWS items for the latest release to HTML"
-task :news_as_html do
+desc "Convert the Changelog items for the latest release to HTML"
+task :changelog_as_html do
 	require 'cgi'
 	contents, items = extract_latest_news_contents_and_items
 	
@@ -112,8 +112,8 @@ task :news_as_html do
 	puts "</ul>"
 end
 
-desc "Convert the NEWS items for the latest release to Markdown"
-task :news_as_markdown do
+desc "Convert the Changelog items for the latest release to Markdown"
+task :changelog_as_markdown do
 	contents, items = extract_latest_news_contents_and_items
 
 	# Auto-link to issue tracker.
