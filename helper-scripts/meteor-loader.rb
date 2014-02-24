@@ -107,7 +107,7 @@ module App
 			abort "Cannot find a suitable port to start Meteor on"
 		end
 
-		production = options["environment"] == "production" ? "production" : ""
+		production = options["environment"] == "production" ? "--production" : ""
 		pid = fork do
 			# Meteor is quite !@#$% here: if we kill its start script
 			# with *any* signal, it'll leave a ton of garbage processes
