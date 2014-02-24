@@ -496,6 +496,7 @@ Because hooks are inherently tied to the implementation of Phusion Passenger, th
  - Phusion Passenger has shut down a process because it's been idle for too long.
  - The administrator configured different resource limits, and Phusion Passenger is starting or shutting down processes in response.
  - Phusion Passenger itself is shutting down.
+
 +
 Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Errors in the hook script are ignored.
 
