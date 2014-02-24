@@ -460,7 +460,7 @@ Here are some of the environment variables which are passed to all hooks, unless
 
 ==== Blocking and concurrency
 
-All hooks block. That is, Phusion Passenger waits until your hook command is finished. You should therefore be careful when writing hook scripts: if your script never finishes, so Phusion Passenger does not do that either.
+All hooks block in the background. That is, while your hook command is running, Phusion Passenger can still handle web requests, but the background thread which is running your hook will be blocked and won't be able to perform any further operations. For example, if you wrote a hook script for the `attached_process` event, then Phusion Passenger won't be able to attach further processes until your hook script finishes. You should therefore be careful when writing hook scripts.
 
 If you have a bug in your script and it blocks, then you will be able to see that using the command `passenger-status --show=backtraces` which prints the backtraces of all threads in the Phusion Passenger HelperAgent. Look for the `runSingleHookScript` function in the backtrace. The following example shows at line 2 that Phusion Passenger is waiting for the hook script `/home/phusion/badscript.sh`.
 
@@ -471,7 +471,7 @@ Thread 'Group process spawner: /home/phusion/webapp.test#default' (0x1062d4000):
      in 'void Passenger::ApplicationPool2::Group::spawnThreadRealMain(const SpawnerPtr &, const Passenger::ApplicationPool2::Options &, unsigned int)' (Implementation.cpp:878)
 ---------------------------------------------------------------------------------------------------
 
-Hooks may be called concurrently. For example, while the `attached_process` hook is being called, a `detached_process` hook may be called, perhaps even for the same application. It is your responsibility to ensure that your hook scripts are concurrency-safe, e.g. by employing locks and other concurrency control techniques.
+Hooks may be called concurrently, because Phusion Passenger sometimes uses multiple background threads. For example, while the `attached_process` hook is being called, a `detached_process` hook may be called, perhaps even for the same application. It is your responsibility to ensure that your hook scripts are concurrency-safe, e.g. by employing locks and other concurrency control techniques.
 
 ==== Error handling
 
