@@ -191,7 +191,7 @@ class RequestHandler:
 		env['wsgi.version']      = (1, 0)
 		env['wsgi.multithread']  = False
 		env['wsgi.multiprocess'] = True
-		env['wsgi.run_once']	 = True
+		env['wsgi.run_once']	 = False
 		if env.get('HTTPS','off') in ('on', '1', 'true', 'yes'):
 			env['wsgi.url_scheme'] = 'https'
 		else:
