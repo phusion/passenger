@@ -24,6 +24,7 @@ Release 4.0.38
    issue #1030.
  * Fixed an issue with non-bundled Meteor apps not correctly running in
    production mode.
+ * The `PassengerPreStart` option is now compatible with IPv6 server sockets.
 
 
 Release 4.0.37
