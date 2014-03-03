@@ -18,6 +18,7 @@ Release 4.0.38
    the 4.0.37 release notes). The previous fix was incomplete, and still has a
    (albeit smaller) small attack time window in between two filesystem
    checks. This attack window is now gone.
+ * Passenger Standalone is now compatible with IPv6.
  * Fixed some compilation problems on Solaris. See issue #1047.
  * passenger-install-apache2-module and passenger-install-nginx-module
    now automatically run in `--auto` mode if stdin is not a TTY. Fixes

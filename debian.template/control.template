@@ -30,7 +30,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
 #else
      ruby-rack,
 #endif
- ruby-daemon-controller
+ ruby-daemon-controller (>= 1.2.0)
 Recommends: passenger-doc (= ${binary:Version}), passenger-dev (= ${binary:Version}),
  crash-watch
 Suggests: python

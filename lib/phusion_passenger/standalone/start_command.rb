@@ -374,9 +374,9 @@ private
 			end
 		end
 	else
-		def check_port(address, port)
+		def check_port_with_protocol(address, port, protocol)
 			begin
-				socket = Socket.new(Socket::Constants::AF_INET, Socket::Constants::SOCK_STREAM, 0)
+				socket = Socket.new(protocol, Socket::Constants::SOCK_STREAM, 0)
 				sockaddr = Socket.pack_sockaddr_in(port, address)
 				begin
 					socket.connect_nonblock(sockaddr)
@@ -401,6 +401,14 @@ private
 				return false
 			ensure
 				socket.close if socket && !socket.closed?
+			end
+		end
+
+		def check_port(address, port)
+			begin
+				check_port_with_protocol(address, port, Socket::Constants::AF_INET)
+			rescue Errno::EAFNOSUPPORT
+				check_port_with_protocol(address, port, Socket::Constants::AF_INET6)
 			end
 		end
 	end
@@ -435,9 +443,11 @@ private
 			else
 				scheme = "http"
 			end
-			result = "#{scheme}://#{@options[:address]}"
-			if @options[:port] != 80
-				result << ":#{@options[:port]}"
+			result = "#{scheme}://"
+			if @options[:port] == 80
+				result << @options[:address]
+			else
+				result << compose_ip_and_port(@options[:address], @options[:port])
 			end
 			result << "/"
 			return result
@@ -695,7 +705,7 @@ private
 			else
 				port = options[:port]
 			end
-			return "#{options[:address]}:#{port}"
+			return compose_ip_and_port(options[:address], port)
 		end
 	end
 
@@ -703,7 +713,16 @@ private
 		if options[:socket_file]
 			return "unix:" + File.expand_path(options[:socket_file])
 		else
-			return "#{options[:address]}:#{options[:ssl_port]}"
+			return compose_ip_and_port(options[:address], options[:ssl_port])
+		end
+	end
+
+	def compose_ip_and_port(ip, port)
+		if ip =~ /:/
+			# IPv6
+			return "[#{ip}]:#{port}"
+		else
+			return "#{ip}:#{port}"
 		end
 	end
 
