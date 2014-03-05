@@ -888,14 +888,6 @@ getSignalName(int sig) {
 
 void
 resetSignalHandlersAndMask() {
-	sigset_t signal_set;
-	int ret;
-	
-	sigemptyset(&signal_set);
-	do {
-		ret = sigprocmask(SIG_SETMASK, &signal_set, NULL);
-	} while (ret == -1 && errno == EINTR);
-	
 	struct sigaction action;
 	action.sa_handler = SIG_DFL;
 	action.sa_flags   = SA_RESTART;
@@ -926,6 +918,14 @@ resetSignalHandlersAndMask() {
 	#endif
 	sigaction(SIGUSR1, &action, NULL);
 	sigaction(SIGUSR2, &action, NULL);
+
+	sigset_t signal_set;
+	int ret;
+	
+	sigemptyset(&signal_set);
+	do {
+		ret = sigprocmask(SIG_SETMASK, &signal_set, NULL);
+	} while (ret == -1 && errno == EINTR);
 }
 
 void
