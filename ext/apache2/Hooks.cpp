@@ -773,11 +773,21 @@ private:
 		}
 		return 0;
 	}
+
+	/**
+	 * Checks case-insensitively whether the given header is "Transfer-Encoding".
+	 */
+	bool headerIsTransferEncoding(const char *headerName, size_t len) const {
+		return len == sizeof("transfer-encoding") - 1 &&
+			apr_tolower(headerName[0]) == (u_char) 't' &&
+			apr_tolower(headerName[sizeof("transfer-encoding") - 2]) == (u_char) 'g' &&
+			apr_strnatcasecmp(headerName + 1, "ransfer-encoding") == 0;
+	}
 	
 	/**
 	 * Convert an HTTP header name to a CGI environment name.
 	 */
-	char *httpToEnv(apr_pool_t *p, const char *headerName) {
+	char *httpToEnv(apr_pool_t *p, const char *headerName, size_t len) {
 		char *result  = apr_pstrcat(p, "HTTP_", headerName, (char *) NULL);
 		char *current = result + sizeof("HTTP_") - 1;
 		
@@ -931,8 +941,15 @@ private:
 		hdrs_arr = apr_table_elts(r->headers_in);
 		hdrs = (apr_table_entry_t *) hdrs_arr->elts;
 		for (i = 0; i < hdrs_arr->nelts; ++i) {
-			if (hdrs[i].key) {
-				addHeader(output, httpToEnv(r->pool, hdrs[i].key), hdrs[i].val);
+			if (hdrs[i].key == NULL) {
+				continue;
+			}
+			size_t keylen = strlen(hdrs[i].key);
+			// We only pass the Transfer-Encoding header if PassengerBufferUpload is disabled,
+			// so that the HelperAgent and the app knows that there is a request body despite
+			// there not being a Content-Length header.
+			if (!headerIsTransferEncoding(hdrs[i].key, keylen) || config->bufferUpload == DirConfig::DISABLED) {
+				addHeader(output, httpToEnv(r->pool, hdrs[i].key, keylen), hdrs[i].val);
 			}
 		}
 		

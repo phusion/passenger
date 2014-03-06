@@ -28,6 +28,10 @@ Release 4.0.38
  * The `PassengerPreStart` option is now compatible with IPv6 server sockets.
  * When running Python WSGI apps, `wsgi.run_once` is now set to False.
    This should improve the performance of certain apps and frameworks.
+ * When handling HTTP requests with chunked transfer encoding, the
+   'Transfer-Encoding' header is no longer passed to the application.
+   This is because the web server already buffers and dechunks the
+   request body.
 
 
 Release 4.0.37

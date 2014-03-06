@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010-2013 Phusion
+ * Copyright (C) 2010-2014 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -305,6 +305,21 @@ create_key(ngx_http_request_t *r)
 
 #endif
 
+/**
+ * Checks whether the given header is "Transfer-Encoding".
+ * We do not pass Transfer-Encoding headers to the HelperAgent because
+ * Nginx always buffers the request body and always sets Content-Length
+ * in the request headers.
+ */
+static int
+header_is_transfer_encoding(ngx_str_t *key)
+{
+    return key->len == sizeof("transfer-encoding") - 1 &&
+        ngx_tolower(key->data[0]) == (u_char) 't' &&
+        ngx_tolower(key->data[sizeof("transfer-encoding") - 2]) == (u_char) 'g' &&
+        ngx_strncasecmp(key->data + 1, "ransfer-encodin", sizeof("ransfer-encodin") - 1) == 0;
+}
+
 
 static ngx_int_t
 create_request(ngx_http_request_t *r)
@@ -475,8 +490,10 @@ create_request(ngx_http_request_t *r)
                 i = 0;
             }
 
-            len += sizeof("HTTP_") - 1 + header[i].key.len + 1
-                + header[i].value.len + 1;
+            if (!header_is_transfer_encoding(&header[i].key)) {
+                len += sizeof("HTTP_") - 1 + header[i].key.len + 1
+                    + header[i].value.len + 1;
+            }
         }
     }
 
@@ -654,6 +671,10 @@ create_request(ngx_http_request_t *r)
                 part = part->next;
                 header = part->elts;
                 i = 0;
+            }
+
+            if (header_is_transfer_encoding(&header[i].key)) {
+                continue;
             }
 
             b->last = ngx_cpymem(b->last, "HTTP_", sizeof("HTTP_") - 1);

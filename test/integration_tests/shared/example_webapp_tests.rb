@@ -72,29 +72,57 @@ shared_examples_for "an example web app" do
 		end
 	end
 
-	it "properly handles POST requests with 'chunked' transfer encoding" do
-		uri = URI.parse(@server)
-		socket = TCPSocket.new(uri.host, uri.port)
-		begin
-			socket.write("POST #{base_uri}/raw_upload_to_file HTTP/1.1\r\n")
-			socket.write("Host: #{uri.host}:#{uri.port}\r\n")
-			socket.write("Transfer-Encoding: chunked\r\n")
-			socket.write("Content-Type: text/plain\r\n")
-			socket.write("Connection: close\r\n")
-			socket.write("X-Output: output.txt\r\n")
-			socket.write("\r\n")
-
-			chunk = "foo=bar!"
-			socket.write("%X\r\n%s\r\n" % [chunk.size, chunk])
-			socket.write("0\r\n\r\n")
-			socket.flush
-
-			socket.read.should =~ /\r\nok\Z/
-		ensure
-			socket.close
+	describe "when handling POST requests with 'chunked' transfer encoding" do
+		before :each do
+			@uri = URI.parse(@server)
 		end
 
-		File.read(@stub.full_app_root + "/output.txt").should == "foo=bar!"
+		it "dechunks the request body for the app" do
+			socket = TCPSocket.new(@uri.host, @uri.port)
+			begin
+				socket.write("POST #{base_uri}/raw_upload_to_file HTTP/1.1\r\n")
+				socket.write("Host: #{@uri.host}:#{@uri.port}\r\n")
+				socket.write("Transfer-Encoding: chunked\r\n")
+				socket.write("Content-Type: text/plain\r\n")
+				socket.write("Connection: close\r\n")
+				socket.write("X-Output: output.txt\r\n")
+				socket.write("\r\n")
+
+				chunk = "foo=bar!"
+				socket.write("%X\r\n%s\r\n" % [chunk.size, chunk])
+				socket.write("0\r\n\r\n")
+				socket.flush
+
+				socket.read.should =~ /\r\nok\Z/
+			ensure
+				socket.close
+			end
+
+			File.read(@stub.full_app_root + "/output.txt").should == "foo=bar!"
+		end
+
+		it "sets Content-Length and removes Transfer-Encoding in the request" do
+			socket = TCPSocket.new(@uri.host, @uri.port)
+			begin
+				socket.write("POST #{base_uri}/env HTTP/1.1\r\n")
+				socket.write("Host: #{@uri.host}:#{@uri.port}\r\n")
+				socket.write("Transfer-Encoding: chunked\r\n")
+				socket.write("Content-Type: text/plain\r\n")
+				socket.write("Connection: close\r\n")
+				socket.write("\r\n")
+
+				chunk = "foo=bar!"
+				socket.write("%X\r\n%s\r\n" % [chunk.size, chunk])
+				socket.write("0\r\n\r\n")
+				socket.flush
+
+				response = socket.read
+				response.should include("CONTENT_LENGTH = 8\n")
+				response.should_not include("HTTP_TRANSFER_ENCODING = ")
+			ensure
+				socket.close
+			end
+		end
 	end
 
 	it "supports responses with the 'chunked' transfer encoding" do

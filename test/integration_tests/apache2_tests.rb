@@ -291,6 +291,12 @@ describe "Apache 2 module" do
 				vhost << "PassengerAppRoot #{@mycook2.full_app_root}"
 			end
 
+			@stub = RackStub.new('rack')
+			@stub_url_root = "http://5.passenger.test:#{@apache2.port}"
+			@apache2.set_vhost('5.passenger.test', "#{@stub.full_app_root}/public") do |vhost|
+				vhost << "PassengerBufferUpload off"
+			end
+
 			@apache2.start
 		end
 
@@ -298,6 +304,7 @@ describe "Apache 2 module" do
 			@mycook.destroy
 			@foobar.destroy
 			@mycook2.destroy
+			@stub.destroy
 			@apache2.stop if @apache2
 		end
 
@@ -305,6 +312,7 @@ describe "Apache 2 module" do
 			@mycook.reset
 			@foobar.reset
 			@mycook2.reset
+			@stub.reset
 		end
 
 		specify "RailsEnv is per-virtual host" do
@@ -384,6 +392,32 @@ describe "Apache 2 module" do
 			@server = @mycook_url_root
 			File.write("#{@mycook.app_root}/public/.htaccess", "PassengerAllowEncodedSlashes on")
 			get('/welcome/show_id/foo%2fbar').should == 'foo/bar'
+		end
+
+		describe "when handling POST requests with 'chunked' transfer encoding, if PassengerBufferUpload is off" do
+			it "sets Transfer-Encoding to 'chunked' and removes Content-Length" do
+				@uri = URI.parse(@stub_url_root)
+				socket = TCPSocket.new(@uri.host, @uri.port)
+				begin
+					socket.write("POST #{@stub_url_root}/env HTTP/1.1\r\n")
+					socket.write("Host: #{@uri.host}:#{@uri.port}\r\n")
+					socket.write("Transfer-Encoding: chunked\r\n")
+					socket.write("Content-Type: text/plain\r\n")
+					socket.write("Connection: close\r\n")
+					socket.write("\r\n")
+
+					chunk = "foo=bar!"
+					socket.write("%X\r\n%s\r\n" % [chunk.size, chunk])
+					socket.write("0\r\n\r\n")
+					socket.flush
+
+					response = socket.read
+					response.should_not include("CONTENT_LENGTH = ")
+					response.should include("HTTP_TRANSFER_ENCODING = chunked\n")
+				ensure
+					socket.close
+				end
+			end
 		end
 
 		####################################
