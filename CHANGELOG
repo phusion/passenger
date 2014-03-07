@@ -36,6 +36,9 @@ Release 4.0.38
    is instructed to reload or reopen log files. Thanks to Feng Gu,
    [pull request #97](https://github.com/phusion/passenger/pull/97).
  * The preferred Nginx version has been upgraded to 1.4.6.
+ * Fixed a problem with running passenger-install-apache2-module and
+   passenger-install-nginx-module on JRuby. They were not able to accept
+   any terminal input after displaying the programming language menu.
 
 
 Release 4.0.37

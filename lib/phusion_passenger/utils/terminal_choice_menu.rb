@@ -54,7 +54,6 @@ class TerminalChoiceMenu
 		@choices = choices.map { |choice| Choice.create(choice) }
 		@pointer = 0
 		@index   = index_choices
-		initialize_terminal_control
 	end
 
 	def display_choices
@@ -187,27 +186,22 @@ private
 		require 'readline'
 		java_import 'jline.console.ConsoleReader'
 
-		def initialize_terminal_control
+		def raw_no_echo_mode
 			input = STDIN.to_inputstream
 			output = STDOUT.to_outputstream
 			@console = ConsoleReader.new(input, output)
 			@console.set_history_enabled(false)
 			@console.set_bell_enabled(true)
 			@console.set_pagination_enabled(false)
-		end
-
-		def raw_no_echo_mode
 			@terminal_state = @console.getEchoCharacter
-            @console.setEchoCharacter(0)
+			@console.setEchoCharacter(0)
 		end
 
 		def restore_mode
 			@console.setEchoCharacter(@terminal_state)
+			@console.get_terminal.restore
 		end
 	else
-		def initialize_terminal_control
-		end
-
 		def raw_no_echo_mode
 			@terminal_state = `stty -g`
 			system("stty raw -echo -icanon isig")
