@@ -32,6 +32,9 @@ Release 4.0.38
    'Transfer-Encoding' header is no longer passed to the application.
    This is because the web server already buffers and dechunks the
    request body.
+ * Fixed a possible hang in Phusion Passenger for Nginx when Nginx
+   is instructed to reload or reopen log files. Thanks to Feng Gu,
+   [pull request #97](https://github.com/phusion/passenger/pull/97).
 
 
 Release 4.0.37

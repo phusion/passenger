@@ -406,19 +406,21 @@ public:
 			 * we can kill all of our subprocesses in a single killpg().
 			 */
 			setsid();
-			
+
+			/* We don't know how the web server or the environment affect
+			 * signal handlers and the signal mask, so reset this stuff
+			 * just in case. Also, we reset the signal handlers before
+			 * closing all file descriptors, in order to prevent bugs
+			 * like this: https://github.com/phusion/passenger/pull/97
+			 */
+			resetSignalHandlersAndMask();
+
 			// Make sure the feedback fd is 3 and close all file descriptors
 			// except stdin, stdout, stderr and 3.
 			syscalls::close(fds[0]);
 			installFeedbackFd(fds[1]);
 			closeAllFileDescriptors(FEEDBACK_FD);
-			
-			/* We don't know how the web server or the environment affect
-			 * signal handlers and the signal mask, so reset this stuff
-			 * just in case.
-			 */
-			resetSignalHandlersAndMask();
-			
+
 			if (afterFork) {
 				afterFork();
 			}
