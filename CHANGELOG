@@ -35,6 +35,7 @@ Release 4.0.38
  * Fixed a possible hang in Phusion Passenger for Nginx when Nginx
    is instructed to reload or reopen log files. Thanks to Feng Gu,
    [pull request #97](https://github.com/phusion/passenger/pull/97).
+ * The preferred Nginx version has been upgraded to 1.4.6.
 
 
 Release 4.0.37
