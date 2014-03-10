@@ -72,6 +72,40 @@
                 (o)
         clientOutputWatcher
 
+
+
+   REQUEST BODY HANDLING STRATEGIES
+
+   This table describes how we should handle the request body (the part in the request
+   that comes after the request header, and may include WebSocket data), given various
+   factors. Strategies that are listed first have precedence.
+
+    Method     'Upgrade'  'Content-Length' or   Application    Action
+               header     'Transfer-Encoding'   socket
+               present?   header present?       protocol
+    ---------------------------------------------------------------------------------------------
+
+    GET/HEAD   -          Y                     -              Reject request[1]
+    Other      Y          -                     -              Reject request[2]
+
+    -          N          N                     http_session   Set requestBodyLength=0, keep socket open when done forwarding.
+    GET/HEAD   Y          N                     http_session   Set requestBodyLength=-1, keep socket open when done forwarding.
+    Other      N          Y                     http_session   Keep socket open when done forwarding. If Transfer-Encoding is
+                                                               chunked, rechunck the body during forwarding.
+
+    -          N          N                     session        Set requestBodyLength=0, half-close app socket when done forwarding.
+    GET/HEAD   Y          N                     session        Set requestBodyLength=-1, half-close app socket when done forwarding.
+    Other      N          Y                     session        Half-close app socket when done forwarding.
+    ---------------------------------------------------------------------------------------------
+
+    [1] Supporting situations in which there is both an HTTP request body and WebSocket data
+        is way too complicated. The RequestHandler code is complicated enough as it is.
+        Furthermore, GET requests with a body, although legal, are almost nonexistent and
+        support by other servers are shaky at best. For these reasons, we don't bother
+        supporting GET requests with body at all.
+    [2] RFC 6455 states that WebSocket upgrades may only happen over GET requests.
+        We don't bother supporting non-WebSocket upgrades.
+
  */
 
 #ifndef _PASSENGER_REQUEST_HANDLER_H_
@@ -180,10 +214,11 @@ private:
 		state = DISCONNECTED;
 		backgroundOperations = 0;
 		requestBodyIsBuffered = false;
+		requestIsChunked = false;
 		freeBufferedConnectPassword();
 		connectedAt = 0;
-		contentLength = 0;
-		clientBodyAlreadyRead = 0;
+		requestBodyLength = 0;
+		requestBodyAlreadyRead = 0;
 		checkoutSessionAfterCommit = false;
 		stickySession = false;
 		sessionCheckedOut = false;
@@ -268,8 +303,19 @@ public:
 	ev::timer timeoutTimer;
 
 	ev_tstamp connectedAt;
-	long long contentLength;
-	unsigned long long clientBodyAlreadyRead;
+	/** The size of the request body. The request body is the part that comes
+	 * after the request headers, which may be the HTTP request message body,
+	 * but may also be any other arbitrary data that is sent over the request
+	 * socket (e.g. WebSocket data).
+	 *
+	 * Possible values:
+	 * 
+	 * -1: infinite. Should keep forwarding client body until end of stream.
+	 *  0: no client body. Should stop after sending headers to application.
+	 * >0: Should forward exactly this many bytes of the client body.
+	 */
+	long long requestBodyLength;
+	unsigned long long requestBodyAlreadyRead;
 	Options options;
 	ScgiRequestParser scgiParser;
 	SessionPtr session;
@@ -283,6 +329,7 @@ public:
 	} scopeLogs;
 	unsigned int sessionCheckoutTry;
 	bool requestBodyIsBuffered;
+	bool requestIsChunked;
 	bool sessionCheckedOut;
 	bool checkoutSessionAfterCommit;
 	bool stickySession;
@@ -470,9 +517,13 @@ public:
 		}
 	}
 
+	/**
+	 * Checks whether we should half-close the application socket after forwarding
+	 * the request. HTTP does not formally support half-closing, and Node.js treats a
+	 * half-close as a full close, so we only half-close session sockets, not
+	 * HTTP sockets.
+	 */
 	bool shouldHalfCloseWrite() const {
-		// Many broken HTTP servers consider a half close to be a full close, so don't
-		// half close HTTP sessions.
 		return session->getProtocol() == "session";
 	}
 
@@ -532,8 +583,9 @@ public:
 		}
 		stream
 			<< indent << "requestBodyIsBuffered       = " << boolStr(requestBodyIsBuffered) << "\n"
-			<< indent << "contentLength               = " << contentLength << "\n"
-			<< indent << "clientBodyAlreadyRead       = " << clientBodyAlreadyRead << "\n"
+			<< indent << "requestIsChunked            = " << boolStr(requestIsChunked) << "\n"
+			<< indent << "requestBodyLength           = " << requestBodyLength << "\n"
+			<< indent << "requestBodyAlreadyRead      = " << requestBodyAlreadyRead << "\n"
 			<< indent << "clientInput                 = " << clientInput.get() <<  " " << clientInput->inspect() << "\n"
 			<< indent << "clientInput started         = " << boolStr(clientInput->isStarted()) << "\n"
 			<< indent << "clientBodyBuffer started    = " << boolStr(clientBodyBuffer->isStarted()) << "\n"
@@ -1673,6 +1725,72 @@ private:
 		return modified;
 	}
 
+	void reportBadRequestAndDisconnect(const ClientPtr &client, const char *message) {
+		writeSimpleResponse(client, message, 400);
+		if (client->connected()) {
+			disconnectWithError(client, message);
+		}
+	}
+
+	void checkAndInternalizeRequestHeaders(const ClientPtr &client) {
+		ScgiRequestParser &parser = client->scgiParser;
+		StaticString requestMethod = parser.getHeader("REQUEST_METHOD");
+
+		if (requestMethod.empty()) {
+			reportBadRequestAndDisconnect(client, "Bad request (no request method given)");
+			return;
+		}
+
+		// Check Content-Length and Transfer-Encoding.
+		long long contentLength = getULongLongOption(client, "CONTENT_LENGTH");
+		StaticString transferEncoding = parser.getHeader("HTTP_TRANSFER_ENCODING");
+		if (contentLength != -1 && !transferEncoding.empty()) {
+			reportBadRequestAndDisconnect(client, "Bad request (request may not contain both Content-Length and Transfer-Encoding)");
+			return;
+		}
+		if (!transferEncoding.empty() && transferEncoding != "chunked") {
+			reportBadRequestAndDisconnect(client, "Bad request (only Transfer-Encoding chunked is supported)");
+			return;
+		}
+		// According to the HTTP/1.1 spec, Content-Length may not be 0.
+		// We could reject the request, but some important HTTP clients are broken
+		// (*cough* Ruby Net::HTTP *cough*) and fixing them is too much of
+		// a pain, so we choose support it.
+		if (contentLength == 0) {
+			contentLength = -1;
+			assert(transferEncoding.empty());
+		}
+
+		StaticString upgrade = parser.getHeader("HTTP_UPGRADE");
+		const bool requestIsGetOrHead = requestMethod == "GET" || requestMethod == "HEAD";
+		const bool requestBodyOffered = contentLength != -1 || !transferEncoding.empty();
+
+		// Reject requests that have a request body even though it's not allowed,
+		// and requests that have an Upgrade header even though it's not allowed.
+		if (requestIsGetOrHead) {
+			if (requestBodyOffered) {
+				reportBadRequestAndDisconnect(client, "Bad request (GET and HEAD requests may not contain a request body)");
+				return;
+			}
+		} else {
+			if (!upgrade.empty()) {
+				reportBadRequestAndDisconnect(client, "Bad request (Upgrade header is only allowed for non-GET and non-HEAD requests)");
+				return;
+			}
+		}
+
+		if (!requestBodyOffered) {
+			if (upgrade.empty()) {
+				client->requestBodyLength = 0;
+			} else {
+				client->requestBodyLength = -1;
+			}
+		} else {
+			client->requestBodyLength = contentLength;
+			client->requestIsChunked = !transferEncoding.empty();
+		}
+	}
+
 	static void fillPoolOption(const ClientPtr &client, StaticString &field, const StaticString &name) {
 		ScgiRequestParser::const_iterator it = client->scgiParser.getHeaderIterator(name);
 		if (it != client->scgiParser.end()) {
@@ -1903,7 +2021,11 @@ private:
 			 * onClientData exits.
 			 */
 			parser.rebuildData(modified);
-			client->contentLength = getULongLongOption(client, "CONTENT_LENGTH");
+
+			checkAndInternalizeRequestHeaders(client);
+			if (!client->connected()) {
+				return consumed;
+			}
 			fillPoolOptions(client);
 			if (!client->connected()) {
 				return consumed;
@@ -1918,7 +2040,7 @@ private:
 				client->state = Client::BUFFERING_REQUEST_BODY;
 				client->requestBodyIsBuffered = true;
 				client->beginScopeLog(&client->scopeLogs.bufferingRequestBody, "buffering request body");
-				if (client->contentLength == 0) {
+				if (client->requestBodyLength == 0) {
 					client->clientInput->stop();
 					state_bufferingRequestBody_onClientEof(client);
 					return 0;
@@ -1944,10 +2066,10 @@ private:
 		state_bufferingRequestBody_verifyInvariants(client);
 		assert(!client->clientBodyBuffer->isCommittingToDisk());
 
-		if (client->contentLength >= 0) {
+		if (client->requestBodyLength >= 0) {
 			size = std::min<unsigned long long>(
 				size,
-				(unsigned long long) client->contentLength - client->clientBodyAlreadyRead
+				(unsigned long long) client->requestBodyLength - client->requestBodyAlreadyRead
 			);
 		}
 
@@ -1957,13 +2079,13 @@ private:
 			client->backgroundOperations++; // TODO: figure out whether this is necessary
 			client->clientInput->stop();
 		}
-		client->clientBodyAlreadyRead += size;
+		client->requestBodyAlreadyRead += size;
 
 		RH_TRACE(client, 3, "Buffered " << size << " bytes of client body data; total=" <<
-			client->clientBodyAlreadyRead << ", content-length=" << client->contentLength);
-		assert(client->contentLength == -1 || client->clientBodyAlreadyRead <= (unsigned long long) client->contentLength);
+			client->requestBodyAlreadyRead << ", content-length=" << client->requestBodyLength);
+		assert(client->requestBodyLength == -1 || client->requestBodyAlreadyRead <= (unsigned long long) client->requestBodyLength);
 
-		if (client->contentLength >= 0 && client->clientBodyAlreadyRead == (unsigned long long) client->contentLength) {
+		if (client->requestBodyLength >= 0 && client->requestBodyAlreadyRead == (unsigned long long) client->requestBodyLength) {
 			if (client->clientBodyBuffer->isCommittingToDisk()) {
 				RH_TRACE(client, 3, "Done buffering request body, but clientBodyBuffer not yet done committing data to disk; waiting until it's done");
 				client->checkoutSessionAfterCommit = true;
@@ -2327,7 +2449,7 @@ private:
 		client->state = Client::FORWARDING_BODY_TO_APP;
 		if (client->requestBodyIsBuffered) {
 			client->clientBodyBuffer->start();
-		} else if (client->contentLength == 0) {
+		} else if (client->requestBodyLength == 0) {
 			state_forwardingBodyToApp_onClientEof(client);
 		} else {
 			client->clientInput->start();
@@ -2341,10 +2463,10 @@ private:
 		state_forwardingBodyToApp_verifyInvariants(client);
 		assert(!client->requestBodyIsBuffered);
 
-		if (client->contentLength >= 0) {
+		if (client->requestBodyLength >= 0) {
 			size = std::min<unsigned long long>(
 				size,
-				(unsigned long long) client->contentLength - client->clientBodyAlreadyRead
+				(unsigned long long) client->requestBodyLength - client->requestBodyAlreadyRead
 			);
 		}
 
@@ -2374,12 +2496,12 @@ private:
 			}
 			return 0;
 		} else {
-			client->clientBodyAlreadyRead += ret;
+			client->requestBodyAlreadyRead += ret;
 
 			RH_TRACE(client, 3, "Managed to forward " << ret << " bytes; total=" <<
-				client->clientBodyAlreadyRead << ", content-length=" << client->contentLength);
-			assert(client->contentLength == -1 || client->clientBodyAlreadyRead <= (unsigned long long) client->contentLength);
-			if (client->contentLength >= 0 && client->clientBodyAlreadyRead == (unsigned long long) client->contentLength) {
+				client->requestBodyAlreadyRead << ", content-length=" << client->requestBodyLength);
+			assert(client->requestBodyLength == -1 || client->requestBodyAlreadyRead <= (unsigned long long) client->requestBodyLength);
+			if (client->requestBodyLength >= 0 && client->requestBodyAlreadyRead == (unsigned long long) client->requestBodyLength) {
 				client->clientInput->stop();
 				state_forwardingBodyToApp_onClientEof(client);
 			}

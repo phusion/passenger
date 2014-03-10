@@ -100,32 +100,39 @@ namespace tut {
 		void sendHeaders(const map<string, string> &headers, ...) {
 			va_list ap;
 			const char *arg;
+			map<string, string> finalHeaders;
 			map<string, string>::const_iterator it;
 			vector<StaticString> args;
+			unsigned int totalSize = 0;
 
 			for (it = headers.begin(); it != headers.end(); it++) {
-				args.push_back(StaticString(it->first.data(), it->first.size() + 1));
-				args.push_back(StaticString(it->second.data(), it->second.size() + 1));
+				string key = string(it->first.data(), it->first.size() + 1);
+				string value = string(it->second.data(), it->second.size() + 1);
+				finalHeaders[key] = value;
 			}
 
 			va_start(ap, headers);
 			while ((arg = va_arg(ap, const char *)) != NULL) {
-				args.push_back(StaticString(arg, strlen(arg) + 1));
+				string key(arg, strlen(arg) + 1);
+				arg = va_arg(ap, const char *);
+				string value(arg, strlen(arg) + 1);
+				finalHeaders[key] = value;
 			}
 			va_end(ap);
 
-			shared_array<StaticString> args_array(new StaticString[args.size() + 2]);
-			unsigned int totalSize = 0;
-			for (unsigned int i = 0; i < args.size(); i++) {
-				args_array[i + 1] = args[i];
-				totalSize += args[i].size();
+			for (it = finalHeaders.begin(); it != finalHeaders.end(); it++) {
+				args.push_back(it->first);
+				args.push_back(it->second);
+				totalSize += it->first.size();
+				totalSize += it->second.size();
 			}
+
 			char totalSizeString[10];
 			snprintf(totalSizeString, sizeof(totalSizeString), "%u:", totalSize);
-			args_array[0] = StaticString(totalSizeString);
-			args_array[args.size() + 1] = ",";
-			
-			gatheredWrite(connection, args_array.get(), args.size() + 2, NULL);
+			args.insert(args.begin(), StaticString(totalSizeString));
+			args.push_back(",");
+
+			gatheredWrite(connection, &args[0], args.size(), NULL);
 		}
 
 		string stripHeaders(const string &str) {
@@ -462,7 +469,7 @@ namespace tut {
 	/***** Buffering tests *****/
 
 	TEST_METHOD(21) {
-		set_test_name("It buffers the request body if PASSENGER_BUFFERING is true.");
+		set_test_name("If PASSENGER_BUFFERING is true, and Content-Length is given, it buffers the request body.");
 		DeleteFileEventually file("tmp.output");
 
 		init();
@@ -470,7 +477,34 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PASSENGER_BUFFERING", "true",
+			"REQUEST_METHOD", "POST",
 			"PATH_INFO", "/raw_upload_to_file",
+			"CONTENT_LENGTH", "12",
+			"HTTP_X_OUTPUT", (root + "/test/tmp.output").c_str(),
+			NULL);
+		writeExact(connection, "hello\n");
+		SHOULD_NEVER_HAPPEN(200,
+			result = fileExists("tmp.output");
+		);
+		writeExact(connection, "world\n");
+		EVENTUALLY(1,
+			result = fileExists("tmp.output");
+		);
+		ensure_equals(stripHeaders(readAll(connection)), "ok");
+	}
+
+	TEST_METHOD(22) {
+		set_test_name("If PASSENGER_BUFFERING is true, and Transfer-Encoding is given, it buffers the request body.");
+		DeleteFileEventually file("tmp.output");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PASSENGER_BUFFERING", "true",
+			"REQUEST_METHOD", "POST",
+			"PATH_INFO", "/raw_upload_to_file",
+			"HTTP_TRANSFER_ENCODING", "chunked",
 			"HTTP_X_OUTPUT", (root + "/test/tmp.output").c_str(),
 			NULL);
 		writeExact(connection, "hello\n");
@@ -485,7 +519,7 @@ namespace tut {
 		ensure_equals(stripHeaders(readAll(connection)), "ok");
 	}
 
-	TEST_METHOD(22) {
+	TEST_METHOD(24) {
 		set_test_name("Test buffering of large request bodies that fit in neither the socket "
 		              "buffer nor the FileBackedPipe memory buffer, and that the application "
 		              "cannot read quickly enough.");
@@ -503,8 +537,10 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"REQUEST_METHOD", "POST",
 			"PATH_INFO", "/raw_upload_to_file",
 			"PASSENGER_BUFFERING", "true",
+			"CONTENT_LENGTH", toString(requestBody.size()).c_str(),
 			"HTTP_X_WAIT_FOR_FILE", "/tmp/wait.txt",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
@@ -525,7 +561,7 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(23) {
+	TEST_METHOD(25) {
 		set_test_name("Test handling of slow clients that can't receive response data fast enough (response buffering).");
 		init();
 		connect();
@@ -556,6 +592,7 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"REQUEST_METHOD", "POST",
 			"PATH_INFO", "/env",
 			"HTTP_CONTENT_LENGTH", "5",
 			NULL);
@@ -634,6 +671,71 @@ namespace tut {
 		string result = readAll(connection);
 		ensure(result.find("Date: ") != string::npos);
 	}
+
+	TEST_METHOD(32) {
+		set_test_name("It rejects non-GET, non-HEAD requests with an Upgrade header.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			"REQUEST_METHOD", "POST",
+			"HTTP_UPGRADE", "WebSocket",
+			NULL);
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 400 Bad Request"));
+	}
+
+	TEST_METHOD(33) {
+		set_test_name("It rejects GET/HEAD requests with a Content-Length header.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			"REQUEST_METHOD", "GET",
+			"CONTENT_LENGTH", "2",
+			NULL);
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 400 Bad Request"));
+
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			"REQUEST_METHOD", "HEAD",
+			"CONTENT_LENGTH", "2",
+			NULL);
+		response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 400 Bad Request"));
+	}
+
+	TEST_METHOD(34) {
+		set_test_name("It rejects GET/HEAD requests with a Transfer-Encoding header.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			"REQUEST_METHOD", "GET",
+			"HTTP_TRANSFER_ENCODING", "chunked",
+			NULL);
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 400 Bad Request"));
+
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			"REQUEST_METHOD", "HEAD",
+			"HTTP_TRANSFER_ENCODING", "chunked",
+			NULL);
+		response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 400 Bad Request"));
+	}
 	
 
 	/***** Advanced connection handling tests *****/
@@ -646,7 +748,9 @@ namespace tut {
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"REQUEST_METHOD", "POST",
 			"PATH_INFO", "/raw_upload_to_file",
+			"HTTP_TRANSFER_ENCODING", "chunked",
 			"HTTP_X_OUTPUT", (root + "/test/tmp.output").c_str(),
 			NULL);
 		writeExact(connection, "hello\n");
@@ -662,8 +766,78 @@ namespace tut {
 	}
 
 	TEST_METHOD(41) {
+		set_test_name("If no Content-Length and no Transfer-Encoding are given, and buffering is on:  "
+			"it does not pass any request body data.");
+		
+		DeleteFileEventually d("/tmp/output.txt");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/raw_upload_to_file",
+			"REQUEST_METHOD", "POST",
+			"PASSENGER_BUFFERING", "true",
+			"HTTP_X_OUTPUT", "/tmp/output.txt",
+			NULL);
+		writeExact(connection, "hello\n");
+
+		string result = stripHeaders(readAll(connection));
+		ensure_equals(result, "ok");
+		struct stat buf;
+		ensure(stat("/tmp/output.txt", &buf) == 0);
+		ensure_equals(buf.st_size, (off_t) 0);
+	}
+
+	TEST_METHOD(42) {
+		set_test_name("If no Content-Length and no Transfer-Encoding are given, and buffering is off: "
+			"it does not pass any request body data.");
+		
+		DeleteFileEventually d("/tmp/output.txt");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/raw_upload_to_file",
+			"REQUEST_METHOD", "POST",
+			"HTTP_X_OUTPUT", "/tmp/output.txt",
+			NULL);
+		writeExact(connection, "hello\n");
+
+		string result = stripHeaders(readAll(connection));
+		ensure_equals(result, "ok");
+		struct stat buf;
+		ensure(stat("/tmp/output.txt", &buf) == 0);
+		ensure_equals(buf.st_size, (off_t) 0);
+	}
+
+	TEST_METHOD(43) {
+		set_test_name("If Upgrade is given, it keeps passing the request body until end of stream.");
+
+		DeleteFileEventually d("/tmp/output.txt");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/raw_upload_to_file",
+			"HTTP_UPGRADE", "websocket",
+			"HTTP_X_OUTPUT", "/tmp/output.txt",
+			NULL);
+		writeExact(connection, "hello\n");
+		shutdown(connection, SHUT_WR);
+
+		string result = stripHeaders(readAll(connection));
+		ensure_equals(result, "ok");
+		struct stat buf;
+		ensure(stat("/tmp/output.txt", &buf) == 0);
+		ensure_equals(buf.st_size, (off_t) 6);
+	}
+
+	TEST_METHOD(45) {
 		set_test_name("If Content-Length is given, buffering is on, and request body is large:  "
-			"it does not read more than Content-Length bytes from the client body.");
+			"it passes Content-Length bytes of the request body.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 
@@ -678,6 +852,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/raw_upload_to_file",
+			"REQUEST_METHOD", "POST",
 			"CONTENT_LENGTH", toString(requestBody.size()).c_str(),
 			"PASSENGER_BUFFERING", "true",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
@@ -691,9 +866,9 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(43) {
+	TEST_METHOD(46) {
 		set_test_name("If Content-Length is given, buffering is on, and request body is small:  "
-			"it does not read more than Content-Length bytes from the client body.");
+			"it passes Content-Length bytes of the request body.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 		string requestBody = "hello world";
@@ -703,6 +878,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/raw_upload_to_file",
+			"REQUEST_METHOD", "POST",
 			"CONTENT_LENGTH", toString(requestBody.size()).c_str(),
 			"PASSENGER_BUFFERING", "true",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
@@ -716,9 +892,9 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(44) {
+	TEST_METHOD(47) {
 		set_test_name("If Content-Length is given, buffering is off, and request body is large: "
-			"it does not read more than Content-Length bytes from the client body.");
+			"it passes Content-Length bytes of the request body.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 
@@ -735,6 +911,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/raw_upload_to_file",
+			"REQUEST_METHOD", "POST",
 			"CONTENT_LENGTH", toString(requestBody.size()).c_str(),
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
@@ -748,9 +925,9 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(45) {
+	TEST_METHOD(48) {
 		set_test_name("If Content-Length is given, buffering is off, and request body is small: "
-			"it does not read more than Content-Length bytes from the client body.");
+			"it passes Content-Length bytes of the request body.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 		string requestBody = "hello world";
@@ -760,6 +937,7 @@ namespace tut {
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/raw_upload_to_file",
+			"REQUEST_METHOD", "POST",
 			"CONTENT_LENGTH", toString(requestBody.size()).c_str(),
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
@@ -773,52 +951,77 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(46) {
-		set_test_name("If buffering is on:  it does not pass any client body data when Content-Length = 0.");
+	TEST_METHOD(49) {
+		set_test_name("If Transfer-Encoding is given and buffering is on:  "
+			"it keeps passing the request body until end of stream.");
 
 		DeleteFileEventually d("/tmp/output.txt");
+
+		// 2.6 MB of request body. Guaranteed not to fit in any socket buffer.
+		string requestBody;
+		for (int i = 0; i < 204800; i++) {
+			requestBody.append("hello world!\n");
+		}
 
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/raw_upload_to_file",
-			"CONTENT_LENGTH", "0",
+			"REQUEST_METHOD", "POST",
 			"PASSENGER_BUFFERING", "true",
+			"HTTP_TRANSFER_ENCODING", "chunked",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
-		writeExact(connection, "hello world");
+		writeExact(connection, requestBody);
+		shutdown(connection, SHUT_WR);
 
 		string result = stripHeaders(readAll(connection));
 		ensure_equals(result, "ok");
 		struct stat buf;
 		ensure(stat("/tmp/output.txt", &buf) == 0);
-		ensure_equals(buf.st_size, (off_t) 0);
+		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(47) {
-		set_test_name("If buffering is off: it does not pass any client body data when Content-Length = 0.");
+	TEST_METHOD(50) {
+		set_test_name("If Transfer-Encoding is given and buffering is off: "
+			"it keeps passing the request body until end of stream.");
 
 		DeleteFileEventually d("/tmp/output.txt");
+
+		// 2.6 MB of request body. Guaranteed not to fit in any socket buffer.
+		string requestBody;
+		for (int i = 0; i < 204800; i++) {
+			requestBody.append("hello world!\n");
+		}
 
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
 			"PATH_INFO", "/raw_upload_to_file",
-			"CONTENT_LENGTH", "0",
+			"REQUEST_METHOD", "POST",
+			"HTTP_TRANSFER_ENCODING", "chunked",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
-		writeExact(connection, "hello world");
+		writeExact(connection, requestBody);
+		shutdown(connection, SHUT_WR);
 
 		string result = stripHeaders(readAll(connection));
 		ensure_equals(result, "ok");
 		struct stat buf;
 		ensure(stat("/tmp/output.txt", &buf) == 0);
-		ensure_equals(buf.st_size, (off_t) 0);
+		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(48) {
+	TEST_METHOD(51) {
+		set_test_name("If Transfer-Encoding is given and the application socket uses the HTTP protocol, "
+			"rechunk the body when forwarding it to the application.");
+
+		fprintf(stderr, "TODO: implement test 51\n");
+	}
+
+	TEST_METHOD(54) {
 		set_test_name("It writes an appropriate response if the request queue is overflown.");
 
 		initPoolDebugging();
@@ -836,7 +1039,7 @@ namespace tut {
 		ensure(response.find("This website is under heavy load") != string::npos);
 	}
 
-	TEST_METHOD(49) {
+	TEST_METHOD(55) {
 		set_test_name("It uses the status code dictated by PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE "
 			"if the request queue is overflown");
 
@@ -856,7 +1059,7 @@ namespace tut {
 		ensure(response.find("This website is under heavy load") != string::npos);
 	}
 
-	TEST_METHOD(50) {
+	TEST_METHOD(56) {
 		set_test_name("PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE should work even if it is an unknown code");
 
 		initPoolDebugging();
@@ -875,7 +1078,7 @@ namespace tut {
 		ensure(response.find("This website is under heavy load") != string::npos);
 	}
 
-	TEST_METHOD(51) {
+	TEST_METHOD(57) {
 		set_test_name("It relieves the application process after having read its entire response data.");
 
 		init();
@@ -900,7 +1103,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(52) {
+	TEST_METHOD(58) {
 		set_test_name("It supports responses in chunked transfer encoding.");
 
 		init();
@@ -927,7 +1130,7 @@ namespace tut {
 		ensure(containsSubstring(response, "Counter: 2\n"));
 	}
 
-	TEST_METHOD(53) {
+	TEST_METHOD(59) {
 		set_test_name("It supports switching protocols when communicating over application session sockets.");
 
 		init();
@@ -961,7 +1164,7 @@ namespace tut {
 		ensure_equals(io.readLine(), "Echo: hello\n");
 	}
 
-	TEST_METHOD(54) {
+	TEST_METHOD(60) {
 		set_test_name("It supports switching protocols when communication over application http_session sockets.");
 
 		init();
@@ -1008,7 +1211,7 @@ namespace tut {
 
 	/***** Out-of-band work tests *****/
 
-	TEST_METHOD(60) {
+	TEST_METHOD(65) {
 		set_test_name("If the application outputs a request oobw header, handler should remove the header, mark "
 			"the process as oobw requested. The process should continue to process requests until the "
 			"spawner spawns another process (to avoid the group being empty). As soon as the new "

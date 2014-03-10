@@ -46,7 +46,6 @@ class ThreadHandler
 	OOBW           = 'OOBW'.freeze
 	PASSENGER_CONNECT_PASSWORD  = 'PASSENGER_CONNECT_PASSWORD'.freeze
 	CONTENT_LENGTH = 'CONTENT_LENGTH'.freeze
-	HTTP_TRANSFER_ENCODING = 'HTTP_TRANSFER_ENCODING'.freeze
 
 	MAX_HEADER_SIZE = 128 * 1024
 
@@ -277,10 +276,6 @@ private
 #	end
 
 	def prepare_request(connection, headers)
-		if !may_have_request_body?(headers)
-			connection.simulate_eof!
-		end
-
 		if @analytics_logger && headers[PASSENGER_TXN_ID]
 			txn_id = headers[PASSENGER_TXN_ID]
 			union_station_key = headers[PASSENGER_UNION_STATION_KEY]
@@ -310,10 +305,6 @@ private
 	end
 	
 	def finalize_request(connection, headers, has_error)
-		if connection
-			connection.stop_simulating_eof!
-		end
-
 		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
 		if log && !log.closed?
 			exception_occurred = false
@@ -382,18 +373,6 @@ private
 			log.message("Backtrace: #{backtrace_string}")
 		ensure
 			log.close
-		end
-	end
-
-	def may_have_request_body?(headers)
-		if headers[REQUEST_METHOD] == GET
-			if content_length = headers[CONTENT_LENGTH]
-				return content_length != 0
-			else
-				return headers.has_key?(HTTP_TRANSFER_ENCODING)
-			end
-		else
-			return true
 		end
 	end
 

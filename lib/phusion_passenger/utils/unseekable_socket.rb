@@ -92,14 +92,6 @@ class UnseekableSocket
 		@socket
 	end
 
-	def simulate_eof!
-		@simulate_eof = true
-	end
-
-	def stop_simulating_eof!
-		@simulate_eof = false
-	end
-
 	def fileno
 		@socket.fileno
 	end
@@ -165,82 +157,60 @@ class UnseekableSocket
 	end
 	
 	def gets
-		return nil if @simulate_eof
 		@socket.gets
 	rescue => e
 		raise annotate(e)
 	end
 	
 	def read(*args)
-		if @simulate_eof
-			length, buffer = args
-			if buffer
-				buffer.replace(binary_string(""))
-			else
-				buffer = binary_string("")
-			end
-			if length
-				return nil
-			else
-				return buffer
-			end
-		end
 		@socket.read(*args)
 	rescue => e
 		raise annotate(e)
 	end
 
 	def read_nonblock(*args)
-		raise EOFError, "end of file reached" if @simulate_eof
 		@socket.read_nonblock(*args)
 	rescue => e
 		raise annotate(e)
 	end
 	
 	def readpartial(*args)
-		raise EOFError, "end of file reached" if @simulate_eof
 		@socket.readpartial(*args)
 	rescue => e
 		raise annotate(e)
 	end
 	
 	def readline
-		raise EOFError, "end of file reached" if @simulate_eof
 		@socket.readline
 	rescue => e
 		raise annotate(e)
 	end
 
 	def recv(*args)
-		raise EOFError, "end of file reached" if @simulate_eof
 		@socket.recv(*args)
 	rescue => e
 		raise annotate(e)
 	end
 
 	def recvfrom(*args)
-		raise EOFError, "end of file reached" if @simulate_eof
 		@socket.recvfrom(*args)
 	rescue => e
 		raise annotate(e)
 	end
 
 	def recvfrom_nonblock(*args)
-		raise EOFError, "end of file reached" if @simulate_eof
 		@socket.recvfrom_nonblock(*args)
 	rescue => e
 		raise annotate(e)
 	end
 	
 	def each(&block)
-		return if @simulate_eof
 		@socket.each(&block)
 	rescue => e
 		raise annotate(e)
 	end
 
 	def eof?
-		return true if @simulate_eof
 		@socket.eof?
 	rescue => e
 		raise annotate(e)

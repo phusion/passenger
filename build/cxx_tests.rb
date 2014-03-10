@@ -233,6 +233,11 @@ task 'test:cxx' => dependencies do
 			abort "You cannot set both REPEAT=1 and GDB=1."
 		end
 		sh "cd test && while #{command}; do echo -------------------------------------------; done"
+	elsif boolean_option('REPEAT_FOREVER')
+		if boolean_option('GDB')
+			abort "You cannot set both REPEAT_FOREVER=1 and GDB=1."
+		end
+		sh "cd test && while true; do #{command}; echo -------------------------------------------; done"
 	else
 		sh "cd test && exec #{command}"
 	end

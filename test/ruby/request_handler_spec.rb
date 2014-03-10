@@ -328,7 +328,7 @@ describe RequestHandler do
 		hijack_callback_called.should == true
 	end
 
-	specify "GET requests with Content-Length are assumed to have a request body" do
+	specify "requests with Content-Length are assumed to have a request body" do
 		@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
 			include Rack::ThreadHandlerExtension
 		end
@@ -362,7 +362,7 @@ describe RequestHandler do
 		lambda_called.should be_true
 	end
 
-	specify "GET requests with Transfer-Encoding are assumed to have a request body" do
+	specify "requests with Transfer-Encoding chunked are assumed to have a request body" do
 		@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
 			include Rack::ThreadHandlerExtension
 		end
@@ -402,7 +402,7 @@ describe RequestHandler do
 		lambda_called.should be_true
 	end
 
-	specify "GET requests with neither Content-Length nor Transfer-Encoding are assumed to have no request body" do
+	specify "requests with neither Content-Length nor Transfer-Encoding are assumed to have no request body" do
 		@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
 			include Rack::ThreadHandlerExtension
 		end
@@ -413,72 +413,6 @@ describe RequestHandler do
 			lambda_called = true
 			env['rack.input'].read(1).should be_nil
 			env['rack.input'].gets.should be_nil
-			[200, {}, ["ok"]]
-		end
-
-		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
-		@request_handler.start_main_loop_thread
-		client = connect
-		begin
-			send_binary_request(client,
-				"REQUEST_METHOD" => "GET",
-				"PATH_INFO" => "/")
-			client.close_write
-			client.read.should ==
-				"Status: 200\r\n" +
-				"\r\n" +
-				"ok"
-		ensure
-			client.close
-		end
-
-		lambda_called.should be_true
-	end
-
-	specify "GET requests with Content-Length 0 are assumed to have no request body" do
-		@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
-			include Rack::ThreadHandlerExtension
-		end
-
-		lambda_called = false
-
-		@options["app"] = lambda do |env|
-			lambda_called = true
-			env['rack.input'].read(1).should be_nil
-			env['rack.input'].gets.should be_nil
-			[200, {}, ["ok"]]
-		end
-
-		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
-		@request_handler.start_main_loop_thread
-		client = connect
-		begin
-			send_binary_request(client,
-				"REQUEST_METHOD" => "GET",
-				"PATH_INFO" => "/",
-				"CONTENT_LENGTH" => "0")
-			client.close_write
-			client.read.should ==
-				"Status: 200\r\n" +
-				"\r\n" +
-				"ok"
-		ensure
-			client.close
-		end
-
-		lambda_called.should be_true
-	end
-
-	specify "non-GET requests are assumed to have a request body, even those without Content-Length and Transfer-Encoding" do
-		@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
-			include Rack::ThreadHandlerExtension
-		end
-
-		lambda_called = false
-
-		@options["app"] = lambda do |env|
-			lambda_called = true
-			env['rack.input'].read(3).should == "abc"
 			[200, {}, ["ok"]]
 		end
 
@@ -489,7 +423,6 @@ describe RequestHandler do
 			send_binary_request(client,
 				"REQUEST_METHOD" => "POST",
 				"PATH_INFO" => "/")
-			client.write("abc")
 			client.close_write
 			client.read.should ==
 				"Status: 200\r\n" +
@@ -502,7 +435,7 @@ describe RequestHandler do
 		lambda_called.should be_true
 	end
 
-	describe "on GET requests that are not supposed to have a body" do
+	describe "on requests that are not supposed to have a body" do
 		before :each do
 			@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
 				include Rack::ThreadHandlerExtension

@@ -67,10 +67,7 @@ module ThreadHandlerExtension
 			end
 			env[RACK_HIJACK_P] = true
 			env[RACK_HIJACK] = lambda do
-				env[RACK_HIJACK_IO] ||= begin
-					connection.stop_simulating_eof!
-					connection
-				end
+				env[RACK_HIJACK_IO] ||= connection
 			end
 			
 			begin
