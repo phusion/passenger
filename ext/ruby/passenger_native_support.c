@@ -27,11 +27,21 @@
 	/* Ruby 1.9 */
 	#include "ruby/intern.h"
 	#include "ruby/io.h"
-	#include "ruby/version.h"
+	#ifdef HAVE_RUBY_VERSION_H
+		/* Ruby 1.9.2 or higher */
+		#include "ruby/version.h"
+		/* Ruby >= 1.9.2 has the ruby_version variable.
+		 * 1.9.0 and 1.9.1 do not.
+		 */
+		#define HAVE_RUBY_VERSION
+	#endif
 #else
+	/* Ruby 1.8 */
 	#include "rubysig.h"
 	#include "rubyio.h"
 	#include "version.h"
+	/* Ruby 1.8 has the ruby_version variable */
+	#define HAVE_RUBY_VERSION
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -920,17 +930,19 @@ Init_passenger_native_support() {
 			#define ESTIMATED_RUBY_MINOR_VERSION '8'
 		#endif
 
-		if (strlen(ruby_version) < sizeof("1.8.7") - 1
-		 || ruby_version[0] != '1'
-		 || ruby_version[1] != '.'
-		 || ruby_version[2] != ESTIMATED_RUBY_MINOR_VERSION)
-		{
-			fprintf(stderr, " --> passenger_native_support was compiled for Ruby %s, "
-				"but you're currently running Ruby %s\n",
-				ESTIMATED_RUBY_VERSION, ruby_version);
-			fprintf(stderr, "     Refusing to load existing passenger_native_support.\n");
-			return;
-		}
+		#ifdef HAVE_RUBY_VERSION
+			if (strlen(ruby_version) < sizeof("1.8.7") - 1
+			 || ruby_version[0] != '1'
+			 || ruby_version[1] != '.'
+			 || ruby_version[2] != ESTIMATED_RUBY_MINOR_VERSION)
+			{
+				fprintf(stderr, " --> passenger_native_support was compiled for Ruby %s, "
+					"but you're currently running Ruby %s\n",
+					ESTIMATED_RUBY_VERSION, ruby_version);
+				fprintf(stderr, "     Refusing to load existing passenger_native_support.\n");
+				return;
+			}
+		#endif
 	#endif
 
 	mPassenger = rb_define_module("PhusionPassenger");
