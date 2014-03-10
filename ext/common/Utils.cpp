@@ -1031,13 +1031,17 @@ getFileDescriptorLimit() {
 	}
 	
 	long result;
-	if (sysconfResult > rlimitResult) {
+	// OS X 10.9 returns LLONG_MAX. It doesn't make sense
+	// to use that result so we limit ourselves to the
+	// sysconf result.
+	if (rlimitResult >= INT_MAX || sysconfResult > rlimitResult) {
 		result = sysconfResult;
 	} else {
 		result = rlimitResult;
 	}
+
 	if (result < 0) {
-		// Both calls returned errors.
+		// Unable to query the file descriptor limit.
 		result = 9999;
 	} else if (result < 2) {
 		// The calls reported broken values.
