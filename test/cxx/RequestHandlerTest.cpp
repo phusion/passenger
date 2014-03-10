@@ -166,8 +166,11 @@ namespace tut {
 
 	DEFINE_TEST_GROUP_WITH_LIMIT(RequestHandlerTest, 80);
 
+
+	/***** Basic tests *****/
+
 	TEST_METHOD(1) {
-		// Test one normal request.
+		set_test_name("A request is forwarded to the app process, and its response is forwarded back.");
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -183,7 +186,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(2) {
-		// Test multiple normal requests.
+		set_test_name("It can handle multiple requests in serial.");
 		init();
 		for (int i = 0; i < 10; i++) {
 			connect();
@@ -201,7 +204,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(3) {
-		// Test sending request data in pieces.
+		set_test_name("It can handle request data that is sent piece-wise.");
 		defaultHeaders["PASSENGER_APP_ROOT"] = wsgiAppPath;
 		defaultHeaders["PATH_INFO"] = "/";
 
@@ -235,7 +238,36 @@ namespace tut {
 	}
 
 	TEST_METHOD(4) {
-		// It denies access if the connect password is wrong.
+		set_test_name("It closes the connection with the application if the client has closed the connection.");
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/stream",
+			NULL
+		);
+		BufferedIO io(connection);
+		ensure_equals(io.readLine(), "HTTP/1.1 200 OK\r\n");
+		ProcessPtr process;
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(pool->getProcessCount(false), 1u);
+			SuperGroupPtr superGroup = pool->superGroups.get(wsgiAppPath);
+			process = superGroup->defaultGroup->enabledProcesses.front();
+			ensure_equals(process->sessions, 1);
+		}
+		connection.close();
+		EVENTUALLY(5,
+			LockGuard l(pool->syncher);
+			result = process->sessions == 0;
+		);
+	}
+
+
+	/***** Connect password tests *****/
+
+	TEST_METHOD(5) {
+		set_test_name("It denies access if the connect password is wrong.");
 		agentOptions.requestSocketPassword = "hello world";
 		setLogLevel(-1);
 		init();
@@ -270,8 +302,8 @@ namespace tut {
 		ensure_equals(response, "");
 	}
 
-	TEST_METHOD(5) {
-		// It disconnects us if the connect password is not sent within a certain time.
+	TEST_METHOD(6) {
+		set_test_name("It disconnects the client if the connect password is not sent within a certain time.");
 		agentOptions.requestSocketPassword = "hello world";
 		setLogLevel(-1);
 		handler = boost::make_shared<RequestHandler>(bg.safe, requestSocket, pool, agentOptions);
@@ -285,8 +317,8 @@ namespace tut {
 		ensure(timer.elapsed() <= 60);
 	}
 
-	TEST_METHOD(6) {
-		// It works correct if the connect password is sent in pieces.
+	TEST_METHOD(7) {
+		set_test_name("It works correctly if the connect password is sent piece-wise.");
 		agentOptions.requestSocketPassword = "hello world";
 		init();
 		connect();
@@ -302,35 +334,11 @@ namespace tut {
 		ensure(containsSubstring(readAll(connection), "front page"));
 	}
 
-	TEST_METHOD(7) {
-		// It closes the connection with the application if the client has closed the connection.
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/stream",
-			NULL
-		);
-		BufferedIO io(connection);
-		ensure_equals(io.readLine(), "HTTP/1.1 200 OK\r\n");
-		ProcessPtr process;
-		{
-			LockGuard l(pool->syncher);
-			ensure_equals(pool->getProcessCount(false), 1u);
-			SuperGroupPtr superGroup = pool->superGroups.get(wsgiAppPath);
-			process = superGroup->defaultGroup->enabledProcesses.front();
-			ensure_equals(process->sessions, 1);
-		}
-		connection.close();
-		EVENTUALLY(5,
-			LockGuard l(pool->syncher);
-			result = process->sessions == 0;
-		);
-	}
-	
+
+	/***** Error page tests *****/
+
 	TEST_METHOD(10) {
-		// If the app crashes at startup without an error page then it renders
-		// a generic error page.
+		set_test_name("If the app crashes at startup without an error page then it renders a generic error page.");
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'I have failed'");
@@ -351,8 +359,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(11) {
-		// If the app crashes at startup with an error page then it renders
-		// a friendly error page.
+		set_test_name("If the app crashes at startup with an error page then it renders a friendly error page.");
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'Error'\n"
@@ -377,7 +384,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(12) {
-		// If spawning fails because of an internal error then it reports the error appropriately.
+		set_test_name("If spawning fails because of an internal error then it reports the error appropriately.");
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb", "");
 
@@ -403,7 +410,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(13) {
-		// Error pages respect the PASSENGER_STATUS_LINE option.
+		set_test_name("Error pages respect the PASSENGER_STATUS_LINE option.");
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'I have failed'");
@@ -425,8 +432,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(14) {
-		// If PASSENGER_FRIENDLY_ERROR_PAGES is false then it does not render
-		// a friendly error page.
+		set_test_name("If PASSENGER_FRIENDLY_ERROR_PAGES is false then it does not render a friendly error page.");
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'Error'\n"
@@ -452,31 +458,11 @@ namespace tut {
 		ensure(containsSubstring(response, "We're sorry, but something went wrong"));
 	}
 
-	TEST_METHOD(20) {
-		// It streams the request body to the application.
-		DeleteFileEventually file("tmp.output");
 
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/raw_upload_to_file",
-			"HTTP_X_OUTPUT", (root + "/test/tmp.output").c_str(),
-			NULL);
-		writeExact(connection, "hello\n");
-		EVENTUALLY(5,
-			result = fileExists("tmp.output") && readAll("tmp.output") == "hello\n";
-		);
-		writeExact(connection, "world\n");
-		EVENTUALLY(3,
-			result = readAll("tmp.output") == "hello\nworld\n";
-		);
-		shutdown(connection, SHUT_WR);
-		ensure_equals(stripHeaders(readAll(connection)), "ok");
-	}
+	/***** Buffering tests *****/
 
 	TEST_METHOD(21) {
-		// It buffers the request body if PASSENGER_BUFFERING is true.
+		set_test_name("It buffers the request body if PASSENGER_BUFFERING is true.");
 		DeleteFileEventually file("tmp.output");
 
 		init();
@@ -539,86 +525,8 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(30) {
-		// It replaces HTTP_CONTENT_LENGTH with CONTENT_LENGTH.
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/env",
-			"HTTP_CONTENT_LENGTH", "5",
-			NULL);
-		writeExact(connection, "hello");
-		string response = readAll(connection);
-		ensure(containsSubstring(response, "CONTENT_LENGTH = 5\n"));
-		ensure(!containsSubstring(response, "HTTP_CONTENT_LENGTH"));
-	}
-	
-	TEST_METHOD(31) {
-		// It replaces HTTP_CONTENT_TYPE with CONTENT_TYPE.
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/env",
-			"HTTP_CONTENT_TYPE", "application/json",
-			NULL);
-		string response = readAll(connection);
-		ensure(containsSubstring(response, "CONTENT_TYPE = application/json\n"));
-		ensure(!containsSubstring(response, "HTTP_CONTENT_TYPE"));
-	}
-
-	TEST_METHOD(35) {
-		// The response doesn't contain an HTTP status line if PASSENGER_STATUS_LINE is false.
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PASSENGER_STATUS_LINE", "false",
-			"PATH_INFO", "/",
-			NULL);
-		string response = readAll(connection);
-		ensure(!containsSubstring(response, "HTTP/1.1 "));
-		ensure(containsSubstring(response, "Status: 200 OK\r\n"));
-	}
-
-	TEST_METHOD(36) {
-		// If the application outputs a status line without a reason phrase,
-		// then a reason phrase is automatically appended.
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/custom_status",
-			"HTTP_X_CUSTOM_STATUS", "201",
-			NULL);
-		string response = readAll(connection);
-		ensure(containsSubstring(response, "HTTP/1.1 201 Created\r\n"));
-		ensure(containsSubstring(response, "Status: 201 Created\r\n"));
-	}
-
-	TEST_METHOD(37) {
-		// If the application outputs a status line with a custom reason phrase,
-		// then that reason phrase is used.
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/custom_status",
-			"HTTP_X_CUSTOM_STATUS", "201 Bunnies Jump",
-			NULL);
-		string response = readAll(connection);
-		ensure(containsSubstring(response, "HTTP/1.1 201 Bunnies Jump\r\n"));
-		ensure(containsSubstring(response, "Status: 201 Bunnies Jump\r\n"));
-	}
-	
-	TEST_METHOD(38) {
-		// If the application doesn't output a status line then it rejects the application response.
-		// TODO
-	}
-
-	TEST_METHOD(39) {
-		// Test handling of slow clients that can't receive response data fast enough (response buffering).
+	TEST_METHOD(23) {
+		set_test_name("Test handling of slow clients that can't receive response data fast enough (response buffering).");
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -639,9 +547,123 @@ namespace tut {
 		}
 	}
 
+
+	/***** Header handling tests *****/
+
+	TEST_METHOD(26) {
+		set_test_name("It replaces HTTP_CONTENT_LENGTH with CONTENT_LENGTH.");
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/env",
+			"HTTP_CONTENT_LENGTH", "5",
+			NULL);
+		writeExact(connection, "hello");
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "CONTENT_LENGTH = 5\n"));
+		ensure(!containsSubstring(response, "HTTP_CONTENT_LENGTH"));
+	}
+	
+	TEST_METHOD(27) {
+		set_test_name("It replaces HTTP_CONTENT_TYPE with CONTENT_TYPE.");
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/env",
+			"HTTP_CONTENT_TYPE", "application/json",
+			NULL);
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "CONTENT_TYPE = application/json\n"));
+		ensure(!containsSubstring(response, "HTTP_CONTENT_TYPE"));
+	}
+
+	TEST_METHOD(28) {
+		set_test_name("The response doesn't contain an HTTP status line if PASSENGER_STATUS_LINE is false.");
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PASSENGER_STATUS_LINE", "false",
+			"PATH_INFO", "/",
+			NULL);
+		string response = readAll(connection);
+		ensure(!containsSubstring(response, "HTTP/1.1 "));
+		ensure(containsSubstring(response, "Status: 200 OK\r\n"));
+	}
+
+	TEST_METHOD(29) {
+		set_test_name("If the application outputs a status line without a reason phrase, then a reason phrase is automatically appended.");
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/custom_status",
+			"HTTP_X_CUSTOM_STATUS", "201",
+			NULL);
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 201 Created\r\n"));
+		ensure(containsSubstring(response, "Status: 201 Created\r\n"));
+	}
+
+	TEST_METHOD(30) {
+		set_test_name("If the application outputs a status line with a custom reason phrase, then that reason phrase is used.");
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/custom_status",
+			"HTTP_X_CUSTOM_STATUS", "201 Bunnies Jump",
+			NULL);
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 201 Bunnies Jump\r\n"));
+		ensure(containsSubstring(response, "Status: 201 Bunnies Jump\r\n"));
+	}
+
+	TEST_METHOD(31) {
+		set_test_name("It appends a Date header if the app doesn't output one.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/pid",
+			NULL);
+
+		string result = readAll(connection);
+		ensure(result.find("Date: ") != string::npos);
+	}
+	
+
+	/***** Advanced connection handling tests *****/
+
 	TEST_METHOD(40) {
-		set_test_name("Test that RequestHandler does not read more than CONTENT_LENGTH bytes "
-		              "from the client body (when buffering is on and request body is large).");
+		set_test_name("It streams the request body to the application.");
+		DeleteFileEventually file("tmp.output");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/raw_upload_to_file",
+			"HTTP_X_OUTPUT", (root + "/test/tmp.output").c_str(),
+			NULL);
+		writeExact(connection, "hello\n");
+		EVENTUALLY(5,
+			result = fileExists("tmp.output") && readAll("tmp.output") == "hello\n";
+		);
+		writeExact(connection, "world\n");
+		EVENTUALLY(3,
+			result = readAll("tmp.output") == "hello\nworld\n";
+		);
+		shutdown(connection, SHUT_WR);
+		ensure_equals(stripHeaders(readAll(connection)), "ok");
+	}
+
+	TEST_METHOD(41) {
+		set_test_name("If Content-Length is given, buffering is on, and request body is large:  "
+			"it does not read more than Content-Length bytes from the client body.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 
@@ -669,9 +691,9 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(41) {
-		set_test_name("Test that RequestHandler does not read more than CONTENT_LENGTH bytes "
-		              "from the client body (when buffering is on and request body is small).");
+	TEST_METHOD(43) {
+		set_test_name("If Content-Length is given, buffering is on, and request body is small:  "
+			"it does not read more than Content-Length bytes from the client body.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 		string requestBody = "hello world";
@@ -694,9 +716,9 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(42) {
-		set_test_name("Test that RequestHandler does not read more than CONTENT_LENGTH bytes "
-		              "from the client body (when buffering is off and request body is large).");
+	TEST_METHOD(44) {
+		set_test_name("If Content-Length is given, buffering is off, and request body is large: "
+			"it does not read more than Content-Length bytes from the client body.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 
@@ -726,9 +748,9 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(43) {
-		set_test_name("Test that RequestHandler does not read more than CONTENT_LENGTH bytes "
-		              "from the client body (when buffering is off and request body is small).");
+	TEST_METHOD(45) {
+		set_test_name("If Content-Length is given, buffering is off, and request body is small: "
+			"it does not read more than Content-Length bytes from the client body.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 		string requestBody = "hello world";
@@ -751,8 +773,8 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) requestBody.size());
 	}
 
-	TEST_METHOD(44) {
-		set_test_name("Test that RequestHandler does not pass any client body data when CONTENT_LENGTH == 0 (when buffering is on).");
+	TEST_METHOD(46) {
+		set_test_name("If buffering is on:  it does not pass any client body data when Content-Length = 0.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 
@@ -774,8 +796,8 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) 0);
 	}
 
-	TEST_METHOD(45) {
-		set_test_name("Test that RequestHandler does not pass any client body data when CONTENT_LENGTH == 0 (when buffering is off).");
+	TEST_METHOD(47) {
+		set_test_name("If buffering is off: it does not pass any client body data when Content-Length = 0.");
 
 		DeleteFileEventually d("/tmp/output.txt");
 
@@ -796,12 +818,202 @@ namespace tut {
 		ensure_equals(buf.st_size, (off_t) 0);
 	}
 
-	TEST_METHOD(46) {
-		// If the application outputs a request oobw header, handler should remove the header, mark
-		// the process as oobw requested. The process should continue to process requests until the
-		// spawner spawns another process (to avoid the group being empty). As soon as the new 
-		// process is spawned, the original process will make the oobw request. Afterwards, the 
-		// original process is re-enabled.
+	TEST_METHOD(48) {
+		set_test_name("It writes an appropriate response if the request queue is overflown.");
+
+		initPoolDebugging();
+		debug->restarting = false;
+		debug->spawning = false;
+		debug->testOverflowRequestQueue = true;
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			NULL);
+		string response = readAll(connection);
+		ensure(response.find("Status: 503 Service Unavailable") != string::npos);
+		ensure(response.find("This website is under heavy load") != string::npos);
+	}
+
+	TEST_METHOD(49) {
+		set_test_name("It uses the status code dictated by PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE "
+			"if the request queue is overflown");
+
+		initPoolDebugging();
+		debug->restarting = false;
+		debug->spawning = false;
+		debug->testOverflowRequestQueue = true;
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			"PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE", "504",
+			NULL);
+		string response = readAll(connection);
+		ensure(response.find("Status: 504 Gateway Timeout") != string::npos);
+		ensure(response.find("This website is under heavy load") != string::npos);
+	}
+
+	TEST_METHOD(50) {
+		set_test_name("PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE should work even if it is an unknown code");
+
+		initPoolDebugging();
+		debug->restarting = false;
+		debug->spawning = false;
+		debug->testOverflowRequestQueue = true;
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/",
+			"PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE", "604",
+			NULL);
+		string response = readAll(connection);
+		ensure(response.find("Status: 604 Unknown Reason-Phrase") != string::npos);
+		ensure(response.find("This website is under heavy load") != string::npos);
+	}
+
+	TEST_METHOD(51) {
+		set_test_name("It relieves the application process after having read its entire response data.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/blob",
+			NULL);
+		vector<ProcessPtr> processes;
+		EVENTUALLY(5,
+			processes = pool->getProcesses();
+			result = processes.size() == 1;
+		);
+		EVENTUALLY(5,
+			LockGuard l(pool->syncher);
+			result = processes[0]->processed == 1;
+		);
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals("The session is closed before the client is done reading",
+				processes[0]->sessions, 0);
+		}
+	}
+
+	TEST_METHOD(52) {
+		set_test_name("It supports responses in chunked transfer encoding.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/chunked_stream",
+			NULL
+		);
+		
+		char buf[1024 * 10];
+		unsigned long long timeout = 500000;
+		unsigned int size;
+		try {
+			size = readExact(connection, buf, sizeof(buf), &timeout);
+		} catch (const TimeoutException &) {
+			fail("RequestHandler did not correctly handle chunked EOF!");
+		}
+
+		string response(buf, size);
+		string body = stripHeaders(response);
+		ensure(containsSubstring(response, "Counter: 0\n"));
+		ensure(containsSubstring(response, "Counter: 1\n"));
+		ensure(containsSubstring(response, "Counter: 2\n"));
+	}
+
+	TEST_METHOD(53) {
+		set_test_name("It supports switching protocols when communicating over application session sockets.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/switch_protocol",
+			"HTTP_UPGRADE", "raw",
+			"HTTP_CONNECTION", "Upgrade",
+			NULL
+		);
+
+		BufferedIO io(connection);
+		string header;
+		bool done = false;
+
+		ensure_equals(io.readLine(), "HTTP/1.1 101 Switching Protocols\r\n");
+
+		do {
+			string line = io.readLine();
+			done = line.empty() || line == "\r\n";
+			if (!done) {
+				header.append(line);
+			}
+		} while (!done);
+
+		ensure("(1)", containsSubstring(header, "Upgrade: raw\r\n"));
+		ensure("(2)", containsSubstring(header, "Connection: Upgrade\r\n"));
+
+		writeExact(connection, "hello\n");
+		ensure_equals(io.readLine(), "Echo: hello\n");
+	}
+
+	TEST_METHOD(54) {
+		set_test_name("It supports switching protocols when communication over application http_session sockets.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"_PASSENGER_FORCE_HTTP_SESSION", "true",
+			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
+			"PASSENGER_APP_TYPE", "rack",
+			"REQUEST_URI", "/switch_protocol",
+			"PATH_INFO", "/switch_protocol",
+			"HTTP_UPGRADE", "raw",
+			"HTTP_CONNECTION", "Upgrade",
+			NULL
+		);
+
+		BufferedIO io(connection);
+		string header;
+		bool done = false;
+		vector<ProcessPtr> processes;
+
+		ensure_equals(io.readLine(), "HTTP/1.1 101 Switching Protocols\r\n");
+		processes = pool->getProcesses();
+		{
+			LockGuard l(pool->syncher);
+			ProcessPtr process = processes[0];
+			ensure_equals(process->sessionSockets.top()->protocol, "http_session");
+		}
+
+		do {
+			string line = io.readLine();
+			done = line.empty() || line == "\r\n";
+			if (!done) {
+				header.append(line);
+			}
+		} while (!done);
+
+		ensure("(1)", containsSubstring(header, "Upgrade: raw\r\n"));
+		ensure("(2)", containsSubstring(header, "Connection: Upgrade\r\n"));
+
+		writeExact(connection, "hello\n");
+		ensure_equals(io.readLine(), "Echo: hello\n");
+	}
+
+
+	/***** Out-of-band work tests *****/
+
+	TEST_METHOD(60) {
+		set_test_name("If the application outputs a request oobw header, handler should remove the header, mark "
+			"the process as oobw requested. The process should continue to process requests until the "
+			"spawner spawns another process (to avoid the group being empty). As soon as the new "
+			"process is spawned, the original process will make the oobw request. Afterwards, the "
+			"original process is re-enabled.");
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -851,207 +1063,8 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(47) {
-		set_test_name("The RequestHandler should append a Date header if the app doesn't output one.");
-
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/pid",
-			NULL);
-
-		string result = readAll(connection);
-		ensure(result.find("Date: ") != string::npos);
-	}
-
-	TEST_METHOD(48) {
-		set_test_name("It should write an appropriate response if the request queue is overflown");
-
-		initPoolDebugging();
-		debug->restarting = false;
-		debug->spawning = false;
-		debug->testOverflowRequestQueue = true;
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/",
-			NULL);
-		string response = readAll(connection);
-		ensure(response.find("Status: 503 Service Unavailable") != string::npos);
-		ensure(response.find("This website is under heavy load") != string::npos);
-	}
-
-	TEST_METHOD(49) {
-		set_test_name("It should use the status code dictated by PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE "
-			"if the request queue is overflown");
-
-		initPoolDebugging();
-		debug->restarting = false;
-		debug->spawning = false;
-		debug->testOverflowRequestQueue = true;
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/",
-			"PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE", "504",
-			NULL);
-		string response = readAll(connection);
-		ensure(response.find("Status: 504 Gateway Timeout") != string::npos);
-		ensure(response.find("This website is under heavy load") != string::npos);
-	}
-
-	TEST_METHOD(50) {
-		set_test_name("PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE should work even if it is an unknown code");
-
-		initPoolDebugging();
-		debug->restarting = false;
-		debug->spawning = false;
-		debug->testOverflowRequestQueue = true;
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/",
-			"PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE", "604",
-			NULL);
-		string response = readAll(connection);
-		ensure(response.find("Status: 604 Unknown Reason-Phrase") != string::npos);
-		ensure(response.find("This website is under heavy load") != string::npos);
-	}
-
-	TEST_METHOD(51) {
-		set_test_name("It relieves the application process after having read its entire response data");
-
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/blob",
-			NULL);
-		vector<ProcessPtr> processes;
-		EVENTUALLY(5,
-			processes = pool->getProcesses();
-			result = processes.size() == 1;
-		);
-		EVENTUALLY(5,
-			LockGuard l(pool->syncher);
-			result = processes[0]->processed == 1;
-		);
-		{
-			LockGuard l(pool->syncher);
-			ensure_equals("The session is closed before the client is done reading",
-				processes[0]->sessions, 0);
-		}
-	}
-
-	TEST_METHOD(52) {
-		set_test_name("It supports responses in chunked transfer encoding");
-
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/chunked_stream",
-			NULL
-		);
-		
-		char buf[1024 * 10];
-		unsigned long long timeout = 500000;
-		unsigned int size;
-		try {
-			size = readExact(connection, buf, sizeof(buf), &timeout);
-		} catch (const TimeoutException &) {
-			fail("RequestHandler did not correctly handle chunked EOF!");
-		}
-
-		string response(buf, size);
-		string body = stripHeaders(response);
-		ensure(containsSubstring(response, "Counter: 0\n"));
-		ensure(containsSubstring(response, "Counter: 1\n"));
-		ensure(containsSubstring(response, "Counter: 2\n"));
-	}
-
-	TEST_METHOD(53) {
-		set_test_name("It supports switching protocols when communicating over application session sockets");
-
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/switch_protocol",
-			"HTTP_UPGRADE", "raw",
-			"HTTP_CONNECTION", "Upgrade",
-			NULL
-		);
-
-		BufferedIO io(connection);
-		string header;
-		bool done = false;
-
-		ensure_equals(io.readLine(), "HTTP/1.1 101 Switching Protocols\r\n");
-
-		do {
-			string line = io.readLine();
-			done = line.empty() || line == "\r\n";
-			if (!done) {
-				header.append(line);
-			}
-		} while (!done);
-
-		ensure("(1)", containsSubstring(header, "Upgrade: raw\r\n"));
-		ensure("(2)", containsSubstring(header, "Connection: Upgrade\r\n"));
-
-		writeExact(connection, "hello\n");
-		ensure_equals(io.readLine(), "Echo: hello\n");
-	}
-
-	TEST_METHOD(54) {
-		set_test_name("It supports switching protocols when communication over application http_session sockets");
-
-		init();
-		connect();
-		sendHeaders(defaultHeaders,
-			"_PASSENGER_FORCE_HTTP_SESSION", "true",
-			"PASSENGER_APP_ROOT", rackAppPath.c_str(),
-			"PASSENGER_APP_TYPE", "rack",
-			"REQUEST_URI", "/switch_protocol",
-			"PATH_INFO", "/switch_protocol",
-			"HTTP_UPGRADE", "raw",
-			"HTTP_CONNECTION", "Upgrade",
-			NULL
-		);
-
-		BufferedIO io(connection);
-		string header;
-		bool done = false;
-		vector<ProcessPtr> processes;
-
-		ensure_equals(io.readLine(), "HTTP/1.1 101 Switching Protocols\r\n");
-		processes = pool->getProcesses();
-		{
-			LockGuard l(pool->syncher);
-			ProcessPtr process = processes[0];
-			ensure_equals(process->sessionSockets.top()->protocol, "http_session");
-		}
-
-		do {
-			string line = io.readLine();
-			done = line.empty() || line == "\r\n";
-			if (!done) {
-				header.append(line);
-			}
-		} while (!done);
-
-		ensure("(1)", containsSubstring(header, "Upgrade: raw\r\n"));
-		ensure("(2)", containsSubstring(header, "Connection: Upgrade\r\n"));
-
-		writeExact(connection, "hello\n");
-		ensure_equals(io.readLine(), "Echo: hello\n");
-	}
-
 	// Test small response buffering.
 	// Test large response buffering.
+	
+	/***************************/
 }
