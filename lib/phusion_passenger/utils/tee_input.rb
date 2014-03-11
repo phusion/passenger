@@ -111,11 +111,18 @@ class TeeInput
     @len = @tmp.size
   end
 
-  def read(*args)
+  def read(len = nil, buf = '')
+    if len
+      if len < 0
+        raise ArgumentError, "negatie length #{len} given"
+      elsif len == 0
+        return ''
+      end
+    end
     if socket_drained?
-      @tmp.read(*args)
+      @tmp.read(len, buf)
     else
-      tee(@socket.read(*args))
+      tee(@socket.read(len, buf))
     end
   end
 
