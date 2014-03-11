@@ -106,10 +106,8 @@ APACHE2_MODULE_INPUT_FILES.each_pair do |target, sources|
 		object_basename = File.basename(target)
 		object_filename = APACHE2_OUTPUT_DIR + object_basename
 		compile_cxx(sources[0],
-			"#{EXTRA_PRE_CXXFLAGS} " <<
 			"#{APACHE2_MODULE_CXXFLAGS} " <<
-			"-o #{object_filename} " <<
-			"#{EXTRA_CXXFLAGS}")
+			"-o #{object_filename}")
 	end
 end
 
@@ -140,10 +138,8 @@ end
 
 file APACHE2_MOD_PASSENGER_O => ['ext/apache2/mod_passenger.c'] do
 	compile_c('ext/apache2/mod_passenger.c',
-		"#{EXTRA_PRE_CFLAGS} " <<
 		"#{APACHE2_MODULE_CFLAGS} " <<
-		"-o #{APACHE2_MOD_PASSENGER_O} " <<
-		"#{EXTRA_CFLAGS}")
+		"-o #{APACHE2_MOD_PASSENGER_O}")
 end
 
 task :clean => 'apache2:clean'
