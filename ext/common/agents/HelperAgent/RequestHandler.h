@@ -1057,7 +1057,7 @@ private:
 		// Process chunked transfer encoding.
 		Header transferEncoding = lookupHeader(headerData, "Transfer-Encoding", "transfer-encoding");
 		if (!transferEncoding.empty() && transferEncoding.value == "chunked") {
-			P_TRACE(3, "Response with chunked transfer encoding detected.");
+			RH_TRACE(client, 3, "Response with chunked transfer encoding detected.");
 			client->chunkedResponse = true;
 			removeHeader(headerData, transferEncoding);
 		}

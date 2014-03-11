@@ -165,14 +165,17 @@ void
 Client::onAppInputChunkEnd(void *userData) {
 	Client *client = (Client *) userData;
 	assert(client != NULL);
-	assert(client->requestHandler != NULL);
-	client->requestHandler->onAppInputChunkEnd(client->shared_from_this());
+	// onAppInputChunk() could have triggered an error which caused a disconnect.
+	if (client->connected()) {
+		client->requestHandler->onAppInputChunkEnd(client->shared_from_this());
+	}
 }
 
 void
 Client::onAppInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode) {
 	Client *client = (Client *) source->userData;
-	if (client != NULL) {
+	// onAppInputChunk() could have triggered an error which caused a disconnect.
+	if (client != NULL && client->connected()) {
 		client->requestHandler->onAppInputError(client->shared_from_this(), message, errnoCode);
 	}
 }

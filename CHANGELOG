@@ -1,6 +1,8 @@
 Release 4.0.39
 --------------
 
+ * Fixed a crash that could happen if the client disconnects while a chunked
+   response is being sent. Fixes issue #1062.
  * Fixed closing of file descriptors on OS X 10.9.
  * The programming language selection menu in passenger-install-apache2-module
    and passenger-install-nginx-module only works on terminals that support
