@@ -157,7 +157,7 @@ private
 		puts
 		if interactive?
 			puts "Use <space> to select."
-			puts "<dgray>If the menu doesn't display correctly, ensure that your terminal supports UTF-8.</dgray>"
+			puts "<dgray>If the menu doesn't display correctly, press '!'</dgray>"
 		else
 			puts "Override selection with --languages."
 		end

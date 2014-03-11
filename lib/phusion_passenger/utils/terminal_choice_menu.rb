@@ -109,6 +109,9 @@ private
 		when " "
 			process_toggle
 			return false
+		when "!"
+			process_disable_utf8
+			return false
 		when "\r"
 			return true
 		else
@@ -131,6 +134,10 @@ private
 		@choices[@pointer].toggle!
 	end
 
+	def process_disable_utf8
+		ENV['UTF8_MENUS'] = '0'
+	end
+
 	def render_to_string
 		str = ""
 		@choices.each_with_index do |choice, i|
@@ -143,11 +150,11 @@ private
 	end
 
 	def render_pointer(index)
-		return @pointer == index ? "‣" : " "
+		return @pointer == index ? maybe_utf8("‣", ">") : " "
 	end
 
 	def render_checkbox(checked)
-		return checked ? "⬢" : "⬡"
+		return checked ? maybe_utf8("⬢", "(*)") : maybe_utf8("⬡", "( )")
 	end
 
 	def display(str)
@@ -160,6 +167,14 @@ private
 		display("\r")
 		(number_of_lines - 1).times do
 			display(move_up)
+		end
+	end
+
+	def maybe_utf8(utf8, plain)
+		if ENV['UTF8_MENUS'] == '0'
+			return plain
+		else
+			return utf8
 		end
 	end
 

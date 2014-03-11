@@ -2,6 +2,12 @@ Release 4.0.39
 --------------
 
  * Fixed closing of file descriptors on OS X 10.9.
+ * The programming language selection menu in passenger-install-apache2-module
+   and passenger-install-nginx-module only works on terminals that support
+   UTF-8 and that have a UTF-8 capable font. To cater to users who cannot meet
+   these requirements (e.g. PuTTY users using any of the default Windows fonts),
+   it is now possible to switch the menu to a plain text mode by pressing '!'.
+   Fixes issue #1066.
 
 
 Release 4.0.38
