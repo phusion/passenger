@@ -72,6 +72,8 @@ module Utils
 # "rack.input" of the Rack environment.
 class TeeInput
   CONTENT_LENGTH = "CONTENT_LENGTH".freeze
+  HTTP_TRANSFER_ENCODING = "HTTP_TRANSFER_ENCODING".freeze
+  CHUNKED = "chunked".freeze
 
   # The maximum size (in +bytes+) to buffer in memory before
   # resorting to a temporary file.  Default is 112 kilobytes.
@@ -92,11 +94,18 @@ class TeeInput
   # Initializes a new TeeInput object.  You normally do not have to call
   # this unless you are writing an HTTP server.
   def initialize(socket, env)
-    @len = env[CONTENT_LENGTH]
-    @len = @len.to_i if @len
+    if @len = env[CONTENT_LENGTH]
+      @len = @len.to_i
+    elsif env[HTTP_TRANSFER_ENCODING] != CHUNKED
+      @len = 0
+    end
     @socket = socket
-    @tmp = @len && @len <= @@client_body_buffer_size ?
-           StringIO.new("") : TmpIO.new("PassengerTeeInput")
+    @bytes_read = 0
+    if @len && @len <= @@client_body_buffer_size
+      @tmp = StringIO.new("")
+    else
+      @tmp = TmpIO.new("PassengerTeeInput")
+    end
   end
 
   def close
@@ -104,25 +113,37 @@ class TeeInput
   end
 
   def size
-    @len and return @len
-    pos = @tmp.pos
-    consume!
-    @tmp.pos = pos
-    @len = @tmp.size
+    if @len
+      @len
+    else
+      pos = @tmp.pos
+      consume!
+      @tmp.pos = pos
+      @len = @tmp.size
+    end
   end
 
-  def read(len = nil, buf = '')
+  def read(len = nil, buf = "")
+    buf ||= ""
     if len
       if len < 0
-        raise ArgumentError, "negatie length #{len} given"
+        raise ArgumentError, "negative length #{len} given"
       elsif len == 0
-        return ''
+        buf.replace('')
+        buf
+      else
+        if socket_drained?
+          @tmp.read(len, buf)
+        else
+          tee(read_exact(len, buf))
+        end
       end
-    end
-    if socket_drained?
-      @tmp.read(len, buf)
     else
-      tee(@socket.read(len, buf))
+      if socket_drained?
+        @tmp.read(nil, buf)
+      else
+        tee(read_all(buf))
+      end
     end
   end
 
@@ -130,7 +151,18 @@ class TeeInput
     if socket_drained?
       @tmp.gets
     else
-      tee(@socket.gets)
+      if @bytes_read == @len
+        nil
+      elsif line = @socket.gets
+        if @len
+          max_len = @len - @bytes_read
+          line.slice!(max_len, line.size - max_len)
+        end
+        @bytes_read += line.size
+        tee(line)
+      else
+        nil
+      end
     end
   end
 
@@ -167,6 +199,7 @@ private
   def consume!
     junk = ""
     nil while read(16 * 1024, junk)
+    @socket = nil
   end
 
   def tee(buffer)
@@ -174,6 +207,34 @@ private
       @tmp.write(buffer)
     end
     buffer
+  end
+
+  def read_exact(len, buf)
+    if @len
+      max_len = @len - @bytes_read
+      len = max_len if len > max_len
+      return nil if len == 0
+    end
+    ret = @socket.read(len, buf)
+    @bytes_read += ret.size if ret
+    ret
+  end
+
+  def read_all(buf)
+    if @len
+      ret = @socket.read(@len - @bytes_read, buf)
+      if ret
+        @bytes_read += ret.size
+        ret
+      else
+        buf.replace("")
+        buf
+      end
+    else
+      ret = @socket.read(nil, buf)
+      @bytes_read += ret.size
+      ret
+    end
   end
 end
 
