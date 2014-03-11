@@ -36,7 +36,7 @@
 				<dl>
 				<dt>Application root</dt>
 				<dd>{{APP_ROOT}}</dd>
-				<dt>Environment (value of RAILS_ENV, RACK_ENV, WSGI_ENV and PASSENGER_ENV)</dt>
+				<dt>Environment (value of RAILS_ENV, RACK_ENV, WSGI_ENV, NODE_ENV and PASSENGER_APP_ENV)</dt>
 				<dd>{{ENVIRONMENT}}</dd>
 				{{if IS_RUBY_APP}}
 					<dt>Ruby interpreter command</dt>
