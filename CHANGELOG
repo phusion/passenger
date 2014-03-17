@@ -12,6 +12,7 @@ Release 4.0.39
    Fixes issue #1066.
  * It is now possible to dump live backtraces of Python apps through the
    'SIGABRT' signal.
+ * Fixed compilation of native_support on Rubinius.
 
 
 Release 4.0.38

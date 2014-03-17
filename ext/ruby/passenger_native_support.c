@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,21 +27,14 @@
 	/* Ruby 1.9 */
 	#include "ruby/intern.h"
 	#include "ruby/io.h"
-	#ifdef HAVE_RUBY_VERSION_H
-		/* Ruby 1.9.2 or higher */
-		#include "ruby/version.h"
-		/* Ruby >= 1.9.2 has the ruby_version variable.
-		 * 1.9.0 and 1.9.1 do not.
-		 */
-		#define HAVE_RUBY_VERSION
-	#endif
 #else
 	/* Ruby 1.8 */
 	#include "rubysig.h"
 	#include "rubyio.h"
 	#include "version.h"
-	/* Ruby 1.8 has the ruby_version variable */
-	#define HAVE_RUBY_VERSION
+#endif
+#ifdef HAVE_RUBY_VERSION_H
+	#include "ruby/version.h"
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
