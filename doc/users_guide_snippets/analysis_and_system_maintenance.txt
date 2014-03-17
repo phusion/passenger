@@ -128,20 +128,13 @@ The most likely reason why a spike occurs is because your application is frozen,
 [[debugging_frozen]]
 === Debugging frozen applications ===
 
-If one of your application instances is frozen (stopped responding), then you
+If one of your application processes is frozen (stopped responding), then you
 can figure out where it is frozen by killing it with 'SIGABRT'. This will cause the
-application to raise an exception, with a backtrace.
+processs to print a backtrace, after which it aborts. The backtrace information is
+logged into the web server error log file.
 
-The exception (with full backtrace information) is normally logged into the web server
-error log. But if your application or if its web framework has its own exception logging
-routines, then exceptions might be logged into the application's log files instead.
-This is the case with Ruby on Rails. So if you kill a Ruby on Rails application with
-'SIGABRT', please check the application's 'production.log' first (assuming that you're
-running it in a 'production' environment). If you don't see a backtrace there, check
-the web server error log.
-
-NOTE: It is safe to kill application instances, even in live environments. Phusion Passenger
-will restart killed application instances, as if nothing bad happened.
+In case of Ruby applications, you can also send the 'SIGQUIT' signal to have it print
+a backtrace without aborting.
 
 
 === Accessing individual application processes ===
