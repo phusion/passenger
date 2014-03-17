@@ -36,4 +36,9 @@ PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'standalone/main'
 
 STDOUT.sync = STDERR.sync = true
+
+# Fixes https://github.com/phusion/passenger-ruby-heroku-demo/issues/11
+STDOUT.binmode
+STDERR.binmode
+
 PhusionPassenger::Standalone::Main.run!(ARGV)
