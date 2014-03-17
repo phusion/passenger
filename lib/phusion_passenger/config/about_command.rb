@@ -42,6 +42,7 @@ class AboutCommand < Command
 		puts "  includedir               Show the Nginx runtime library headers directory."
 		puts "  nginx-addon-dir          Show #{PROGRAM_NAME}'s Nginx addon directory."
 		puts "  nginx-libs               Show Nginx runtime library flags."
+		puts "  resourcesdir             Show #{PROGRAM_NAME}'s resources directory."
 		puts "  compiled                 Check whether runtime libraries are compiled."
 		puts "  natively-packaged        Check whether Phusion Passenger is natively"
 		puts "                           packaged."
@@ -77,6 +78,8 @@ class AboutCommand < Command
 			puts PhusionPassenger.nginx_module_source_dir
 		when "--nginx-libs"
 			puts "#{common_library.link_objects_as_string} #{PhusionPassenger.lib_dir}/common/libboost_oxt.a"
+		when "--resourcesdir"
+			puts PhusionPassenger.resources_dir
 		when "--compiled"
 			common_library.link_objects.each do |filename|
 				if !File.exist?(filename)

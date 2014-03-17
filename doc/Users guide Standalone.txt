@@ -57,6 +57,9 @@ Most configuration is done by customizing the arguments passed to the `passenger
 passenger start --ssl --ssl-certificate ... --ssl-certificate-key ... --ssl-port 3001
 ------------------------------------------------------------------------------
 
+`--nginx-config-template`::
+	Specifies the Nginx configuration template file to use. See <<advanced_configuration,Advanced configuration>>.
+
 See `--help` for all available options.
 
 
@@ -88,6 +91,9 @@ The following configuration options are supported:
 +
 When in mass deployment mode, you will probably want to set a different `port` too. If you don't, and you end up in a situation in which a port is used for both HTTP and HTTPS traffic, then the builtin Nginx core will abort with an error.
 
+`nginx_config_template`::
+	Equivalent to the `--nginx-config-template` command line option.
+
 Here is an example configuration file:
 
 [source,javascript]
@@ -104,20 +110,29 @@ Here is an example configuration file:
 
 [[advanced_configuration]]
 === Advanced configuration
+:version: 4.0.39
+include::users_guide_snippets/since_version.txt[]
 
 Phusion Passenger Standalone is built on the same technology that powers link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx], so any configuration option supported by Phusion Passenger for Nginx can be applied to Standalone as well. You can do this by editing the Standalone configuration template directly.
 
-First, go to the directory where Phusion Passenger is installed:
+First, create a copy of the default Phusion Passenger Nginx configuration template file:
 
 -------------------------------------
-cd $(passenger-config --root)
+cp $(passenger-config about resourcesdir)/templates/standalone/config.erb nginx.conf.erb
 -------------------------------------
 
-Then open the file `resources/templates/standalone/config.erb`.
+Then open `nginx.conf.erb` and modify it as you see fit. The file is a normal Nginx configuration file, in the ERB template format.
 
-NOTE: If you installed Phusion Passenger using the Debian or Ubuntu packages, then the filename is `/usr/share/passenger/templates/standalone/config.erb` or `/usr/share/passenger-enterprise/templates/standalone/config.erb`.
+Every time you start Standalone, you must pass the `--nginx-config-template` parameter, which tells Standalone to use your specific Nginx configuration template file. For example:
 
-Please note that changes to this file only last until you reinstall or upgrade Phusion Passenger. We are currently working on a mechanism for permanently editing the configuration file.
+[source,sh]
+------------------------------------------
+passenger start --nginx-config-template nginx.config.erb
+------------------------------------------
+
+Alternatively, if you don't want to pass this parameter every time, you can also set the `nginx_config_template` option in <<config_file,passenger-standalone.json>>.
+
+NOTE: The original configuration template file may change from time to time, e.g. because new features are introduced into Phusion Passenger. If your configuration template file does not contain the required changes, then these new features may not work properly. In the worst case, Standalone might even malfunction. Therefore, every time you upgrade Phusion Passenger, you should check whether the original configuration template file has changed, and merge back any changes into your own file.
 
 
 == Using Passenger Standalone in production

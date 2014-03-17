@@ -270,6 +270,10 @@ private
 				          "be used instead of downloading from the Internet")) do |value|
 				@options[:nginx_tarball] = File.expand_path(value)
 			end
+			opts.on("--nginx-config-template FILENAME", String,
+				wrap_desc("The template to use for generating the Nginx config file")) do |value|
+				@options[:nginx_config_template] = File.expand_path(value)
+			end
 			opts.on("--binaries-url-root URL", String,
 				wrap_desc("If Nginx needs to be installed, then the specified URL will be " +
 				          "checked for binaries prior to a local build.")) do |value|

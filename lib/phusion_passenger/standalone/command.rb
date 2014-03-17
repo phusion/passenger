@@ -217,16 +217,23 @@ private
 		
 		File.open(@config_filename, 'w') do |f|
 			f.chmod(0644)
-			template_filename = File.join(PhusionPassenger.resources_dir,
-				"templates", "standalone", "config.erb")
 			require_erb
-			erb = ERB.new(File.read(template_filename))
+			erb = ERB.new(File.read(nginx_config_template_filename))
 			current_user = Etc.getpwuid(Process.uid).name
 			
 			# The template requires some helper methods which are defined in start_command.rb.
 			output = erb.result(binding)
 			f.write(output)
 			puts output if debugging?
+		end
+	end
+
+	def nginx_config_template_filename
+		if @options[:nginx_config_template]
+			return @options[:nginx_config_template]
+		else
+			return File.join(PhusionPassenger.resources_dir,
+				"templates", "standalone", "config.erb")
 		end
 	end
 

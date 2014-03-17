@@ -3,7 +3,11 @@ Release 4.0.39
 
  * Fixed a crash that could happen if the client disconnects while a chunked
    response is being sent. Fixes issue #1062.
- * Fixed closing of file descriptors on OS X 10.9.
+ * In Phusion Passenger Standalone, it is now possible to customize the Nginx
+   configuration file on Heroku. It is now also possible to permanently apply
+   changes to the Nginx configuration file, surviving upgrades. Please refer
+   to the "Advanced configuration" section of the Phusion Passenger Standalone
+   manual for more information.
  * The programming language selection menu in passenger-install-apache2-module
    and passenger-install-nginx-module only works on terminals that support
    UTF-8 and that have a UTF-8 capable font. To cater to users who cannot meet
@@ -12,6 +16,7 @@ Release 4.0.39
    Fixes issue #1066.
  * It is now possible to dump live backtraces of Python apps through the
    'SIGABRT' signal.
+ * Fixed closing of file descriptors on OS X 10.9.
  * Fixed compilation of native_support on Rubinius.
 
 
