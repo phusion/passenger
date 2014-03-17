@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -492,7 +492,7 @@ writeArrayMessage(int fd, const StaticString args[], unsigned int nargs, unsigne
 }
 
 inline void
-writeArrayMessage(int fd, const StaticString &name, va_list &ap, unsigned long long *timeout = NULL) {
+writeArrayMessageVA(int fd, const StaticString &name, va_list &ap, unsigned long long *timeout = NULL) {
 	StaticString args[10];
 	unsigned int nargs = 1;
 	bool done = false;
@@ -547,16 +547,11 @@ struct _VaGuard {
  * arguments as message elements. The list must be terminated with a NULL.
  */
 inline void
-writeArrayMessage(int fd, const StaticString &name, ...) {
+writeArrayMessage(int fd, const char *name, ...) {
 	va_list ap;
 	va_start(ap, name);
 	_VaGuard guard(ap);
-	writeArrayMessage(fd, name, ap);
-}
-
-inline void
-writeArrayMessage(int fd, const char *name) {
-	abort();
+	writeArrayMessageVA(fd, name, ap);
 }
 
 /** Version of writeArrayMessage() that accepts a variadic list of 'const char *'
@@ -564,11 +559,11 @@ writeArrayMessage(int fd, const char *name) {
  * with a NULL.
  */
 inline void
-writeArrayMessage(int fd, unsigned long long *timeout, const StaticString &name, ...) {
+writeArrayMessage(int fd, unsigned long long *timeout, const char *name, ...) {
 	va_list ap;
 	va_start(ap, name);
 	_VaGuard guard(ap);
-	writeArrayMessage(fd, name, ap, timeout);
+	writeArrayMessageVA(fd, name, ap, timeout);
 }
 
 /**
