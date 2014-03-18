@@ -1,3 +1,11 @@
+Release 4.0.40
+--------------
+
+ * Upgraded preferred Nginx version to 1.4.7. This Nginx version fixes
+   a buffer overflow. Users are strongly urged to upgrade Nginx as soon
+   as possible.
+
+
 Release 4.0.39
 --------------
 
