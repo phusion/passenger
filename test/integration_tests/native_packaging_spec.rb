@@ -113,7 +113,11 @@ describe "A natively packaged Phusion Passenger" do
 		if $?.exitstatus == 0
 			return output
 		else
-			abort "Command #{command} exited with status #{$?.exitstatus}"
+			filename = `mktemp /tmp/output.XXXXXX`.strip
+			File.open(filename, "w") do |f|
+				f.write(output)
+			end
+			abort "Command #{command} exited with status #{$?.exitstatus}. Output written to #{filename}"
 		end
 	end
 
