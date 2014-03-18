@@ -18,6 +18,7 @@ Release 4.0.39
  * It is now possible to dump live backtraces of Python apps through the
    'SIGABRT' signal.
  * Fixed closing of file descriptors on OS X 10.9.
+ * Fixed compilation problems with Apple Clang 503.0.38 on OS X.
  * Fixed compilation of native_support on Rubinius.
 
 
