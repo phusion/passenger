@@ -325,7 +325,6 @@ task 'package:update_homebrew' do
 		abort("Unable to substitute Homebrew formula tarball filename")
 	formula.gsub!(/sha1 .*/, "sha1 '#{sha1}'") ||
 		abort("Unable to substitute Homebrew formula SHA-1")
-	formula.gsub!(/^  bottle do.*?end\n *\n/m, '')
 	necessary_dirs = ORIG_TARBALL_FILES.call.map{ |filename| filename.split("/").first }.uniq
 	necessary_dirs -= Packaging::HOMEBREW_EXCLUDE
 	necessary_dirs += ["buildout"]
