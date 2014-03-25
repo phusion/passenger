@@ -552,23 +552,23 @@ The email address software-signing@phusion.nl redirects to info@phusion.nl so it
 The Phusion Software Signing key is also *signed by the Phusion founders*. Their keys are as follows:
 
   Hongli Lai (hongli@phusion.nl)
-  Short key ID: 4B6F4332
-  Long key ID: 06A131094B6F4332
-  Fingerprint: 64E8 0420 FC6A 499F 9E1F  81FA 06A1 3109 4B6F 4332
+  Short key ID: 8C59158F
+  Long key ID: CD70085E8C59158F
+  Fingerprint: 218A 7255 83D0 2ECE F3A9 C2A7 CD70 085E 8C59 158F
 
   Ninh Bui (ninh@phusion.nl)
-  Short key ID: 6FAF3782
-  Long key ID: BA8DA3F46FAF3782
-  Fingerprint: 353A 398C 49AF 5CD5 74A0  656C BA8D A3F4 6FAF 3782
+  Short key ID: 69481265
+  Long key ID: AE405F7869481265
+  Fingerprint: A77C 9CEF 766D 0E7D A95B 8778 AE40 5F78 6948 1265
 
 Both keys are stored at both sks-servers.net and keyserver.ubuntu.com. Import them with:
 
 ------------------------------------------
-gpg --keyserver pool.sks-servers.net --search-keys 0x06A131094B6F4332
-gpg --keyserver pool.sks-servers.net --search-keys 0xBA8DA3F46FAF3782
+gpg --keyserver pool.sks-servers.net --search-keys 0xCD70085E8C59158F
+gpg --keyserver pool.sks-servers.net --search-keys 0xAE405F7869481265
 # -OR-
-gpg --keyserver keyserver.ubuntu.com --search-keys 0x06A131094B6F4332
-gpg --keyserver keyserver.ubuntu.com --search-keys 0xBA8DA3F46FAF3782
+gpg --keyserver keyserver.ubuntu.com --search-keys 0xCD70085E8C59158F
+gpg --keyserver keyserver.ubuntu.com --search-keys 0xAE405F7869481265
 ------------------------------------------
 
 ==== Verifying the gem and tarball
