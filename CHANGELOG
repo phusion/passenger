@@ -1,3 +1,9 @@
+Release 4.0.41
+--------------
+
+ * Fix some issues with printing UTF-8 log files on Heroku.
+
+
 Release 4.0.40
 --------------
 

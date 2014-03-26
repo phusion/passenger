@@ -56,6 +56,7 @@ class StartCommand < Command
 		@runtime_locator = RuntimeLocator.new(@options[:runtime_dir],
 			@options[:nginx_version])
 		ensure_runtime_installed
+		set_stdout_stderr_binmode
 		exit if @options[:runtime_check_only]
 		require_app_finder
 		@app_finder = AppFinder.new(@args, @options)
@@ -490,6 +491,14 @@ private
 			install_runtime(@runtime_locator) || exit(1)
 			@runtime_locator.reload
 		end
+	end
+
+	def set_stdout_stderr_binmode
+		# We already set STDOUT and STDERR to binmode in bin/passenger, which
+		# fixes https://github.com/phusion/passenger-ruby-heroku-demo/issues/11.
+		# However RuntimeInstaller sets them to UTF-8, so here we set them back.
+		STDOUT.binmode
+		STDERR.binmode
 	end
 
 	def start_nginx
