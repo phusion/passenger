@@ -1,7 +1,14 @@
 Release 4.0.41
 --------------
 
- * Fix some issues with printing UTF-8 log files on Heroku.
+ * Fixed some issues with printing UTF-8 log files on Heroku.
+ * Our precompiled Passenger Standalone binaries have been upgraded to use
+   OpenSSL 1.0.1g, which fixes [the OpenSSL Heartbleed vulnerability](http://heartbleed.com/).
+   Users who are using Passenger Standalone with SSL enabled are vulnerable,
+   and should upgrade immediately. Users who do not use Passenger Standalone,
+   users who use Passenger Standalone without SSL, or users who use Passenger
+   Standalone with SSL behind another SSL-enabled reverse proxy, are not
+   vulnerable.
 
 
 Release 4.0.40
