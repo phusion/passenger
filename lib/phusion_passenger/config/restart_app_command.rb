@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2013-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -83,6 +83,11 @@ private
 					abort "--rolling-restart is only available in #{PROGRAM_NAME} Enterprise: #{ENTERPRISE_URL}"
 				end
 			end
+			opts.on("--ignore-app-not-running", "Exit successfully if the specified#{nl}" +
+				"application is not currently running. The#{nl}" +
+				"default is to exit with an error") do
+				options[:ignore_app_not_running] = true
+			end
 			opts.on("--instance PID", Integer, "The #{PROGRAM_NAME} instance to select") do |value|
 				options[:instance] = value
 			end
@@ -121,13 +126,13 @@ private
 		if app_group_name = @options[:app_group_name]
 			@groups = [groups.find { |g| g.name == app_group_name }]
 			if !@groups[0]
-				abort "There is no #{PROGRAM_NAME}-served application running with the app group name '#{app_group_name}'."
+				abort_app_not_found "There is no #{PROGRAM_NAME}-served application running with the app group name '#{app_group_name}'."
 			end
 		else
 			regex = /^#{Regexp.escape(@argv.first)}/
 			@groups = groups.find_all { |g| g.app_root =~ regex }
 			if @groups.empty?
-				abort "There are no #{PROGRAM_NAME}-served applications running whose paths begin with '#{@argv.first}'."
+				abort_app_not_found "There are no #{PROGRAM_NAME}-served applications running whose paths begin with '#{@argv.first}'."
 			end
 		end
 	end
@@ -138,6 +143,15 @@ private
 			puts "Restarting #{group.name}"
 			@admin_client.restart_app_group(group.name,
 				:method => restart_method)
+		end
+	end
+
+	def abort_app_not_found(message)
+		if @options[:ignore_app_not_running]
+			STDERR.puts(message)
+			exit
+		else
+			abort(message)
 		end
 	end
 end

@@ -2,6 +2,10 @@ Release 4.0.41
 --------------
 
  * Fixed some issues with printing UTF-8 log files on Heroku.
+ * Added a new flag `--ignore-app-not-running` to `passenger-config restart-app`.
+   When this flag is given, `passenger-config restart-app` will exit successfully
+   when the specified application is not running, instead of exiting with
+   an error.
  * Our precompiled Passenger Standalone binaries have been upgraded to use
    OpenSSL 1.0.1g, which fixes [the OpenSSL Heartbleed vulnerability](http://heartbleed.com/).
    Users who are using Passenger Standalone with SSL enabled are vulnerable,
