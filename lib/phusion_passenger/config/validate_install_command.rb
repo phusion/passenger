@@ -34,10 +34,6 @@ class ValidateInstallCommand < Command
 	# Signifies that there are no error, but at least 1 warning.
 	WARN_EXIT_CODE = 2
 
-	def self.description
-		return "Validate this #{PROGRAM_NAME} installation"
-	end
-
 	def self.help
 		puts "Usage: passenger-config validate-install"
 		puts "Validate this #{PROGRAM_NAME} installation."

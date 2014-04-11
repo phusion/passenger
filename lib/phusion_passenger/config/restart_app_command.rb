@@ -33,10 +33,6 @@ module Config
 class RestartAppCommand < Command
 	include PhusionPassenger::Config::Utils
 
-	def self.description
-		return "Restart an application"
-	end
-
 	def run
 		parse_options
 		select_passenger_instance

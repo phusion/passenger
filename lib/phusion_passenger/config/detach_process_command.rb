@@ -33,10 +33,6 @@ module Config
 class DetachProcessCommand < Command
 	include PhusionPassenger::Config::Utils
 
-	def self.description
-		return "Detach an application process from the process pool"
-	end
-
 	def run
 		parse_options
 		select_passenger_instance

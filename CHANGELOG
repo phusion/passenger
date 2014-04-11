@@ -1,6 +1,14 @@
 Release 4.0.41
 --------------
 
+ * Introduced a new command, `passenger-config build-native-support`, for ensuring
+   that the native_support library for the current Ruby interpreter is built. This
+   is useful in system provisioning scripts.
+
+
+Release 4.0.41
+--------------
+
  * Fixed some issues with printing UTF-8 log files on Heroku.
  * Added a new flag `--ignore-app-not-running` to `passenger-config restart-app`.
    When this flag is given, `passenger-config restart-app` will exit successfully

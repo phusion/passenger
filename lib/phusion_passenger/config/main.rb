@@ -30,6 +30,7 @@ module Config
 	KNOWN_COMMANDS = [
 		["detach-process", "DetachProcessCommand"],
 		["restart-app", "RestartAppCommand"],
+		["build-native-support", "BuildNativeSupportCommand"],
 		["validate-install", "ValidateInstallCommand"],
 		["about", "AboutCommand"]
 	]
@@ -68,11 +69,17 @@ module Config
 		puts "Usage: passenger-config <COMMAND> [options]"
 		puts "Tool for controlling or configurating a #{PROGRAM_NAME} instance or installation."
 		puts
-		puts "Available commands:"
-		KNOWN_COMMANDS.each do |props|
-			command_class = lookup_command_class_by_class_name(props[1])
-			printf "  %-18s %s\n", props[0], command_class.description
-		end
+		puts "Management commands:"
+		puts "  detach-process        Detach an application process from the process pool"
+		puts "  restart-app           Restart an application"
+		puts
+		puts "Informational commands:"
+		puts "  validate-install      Validate this Phusion Passenger installation"
+		puts "  about                 Show information about Phusion Passenger"
+		puts
+		puts "Miscellaneous commands:"
+		puts "  build-native-support  Ensure that the native_support library for the current"
+		puts "                        Ruby interpeter is built"
 		puts
 		puts "Type 'passenger-config <COMMAND> --help' for more information."
 	end
