@@ -195,6 +195,7 @@ describe "Phusion Passenger for Nginx" do
 			@nginx.add_server do |server|
 				server[:server_name] = "1.passenger.test"
 				server[:root]        = "#{PhusionPassenger.source_root}/test/stub"
+				server[:passenger_friendly_error_pages] = 'on'
 				server << %Q{
 					location ~ ^/subapp(/.*|$) {
 						alias #{@stub.full_app_root}/public$1;

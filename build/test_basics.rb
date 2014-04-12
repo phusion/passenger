@@ -77,6 +77,7 @@ task 'test:install_deps' do
                 end
 	end
 	if boolean_option('NODE_MODULES', default)
-		sh "npm install mocha should sinon express"
+		sh "npm install mocha should sinon"
+		sh "npm install express@3.4.8"
 	end
 end
