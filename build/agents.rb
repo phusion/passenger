@@ -108,7 +108,7 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 end
 
 logging_agent_libs = COMMON_LIBRARY.only(:base, :logging_agent, 'AgentsBase.o',
-	'Utils/Base64.o', 'Utils/MD5.o')
+	'Utils/Base64.o', 'Utils/MD5.o', 'Utils/jsoncpp.o')
 dependencies = [
 	'ext/common/agents/LoggingAgent/Main.cpp',
 	'ext/common/agents/LoggingAgent/AdminController.h',

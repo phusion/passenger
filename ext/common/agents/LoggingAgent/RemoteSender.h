@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -45,6 +45,7 @@
 #include <Utils/SystemTime.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/Base64.h>
+#include <Utils/json.h>
 #include <Utils/Curl.h>
 
 namespace Passenger {
@@ -126,6 +127,60 @@ private:
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 			responseBody.clear();
 		}
+
+		static bool validateResponse(const Json::Value &response) {
+			if (response.isObject() && response["status"].isString()) {
+				string status = response["status"].asString();
+				if (status == "ok") {
+					return true;
+				} else if (status == "error") {
+					return response["message"].isString();
+				} else {
+					return false;
+				}
+			} else {
+				return false;
+			}
+		}
+
+		bool handleSendResponse() {
+			Json::Reader reader;
+			Json::Value response;
+			long httpCode = -1;
+
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+
+			if (!reader.parse(responseBody, response, false) || !validateResponse(response)) {
+				P_ERROR("The Union Station gateway server " << ip << " encountered an error "
+					"while processing sent analytics data. It sent an invalid response "
+					"(parse error: " << reader.getFormattedErrorMessages().c_str() <<
+					"; HTTP code: " << httpCode <<
+					"; data: \"" << cEscapeString(responseBody) << "\").");
+				return false;
+			} else if (response["status"].asString() == "ok") {
+				if (httpCode == 200) {
+					P_DEBUG("The Union Station gateway server " << ip << " accepted the packet.");
+					return true;
+				} else {
+					P_ERROR("The Union Station gateway server " << ip << " encountered an error "
+						"while processing sent analytics data. It sent an invalid response "
+						"(HTTP code: " << httpCode <<
+						"; data: \"" << cEscapeString(responseBody) << "\").");
+					return false;
+				}
+			} else {
+				// response == error
+				P_ERROR("The Union Station gateway server " << ip << " did not accept the "
+					"sent analytics data. Error message: " << response["message"].asString());
+				// Return value of true is intentional. See comment for send().
+				return true;
+			}
+		}
+
+		void handleSendError() {
+			P_ERROR("Could not send data to Union Station gateway server " << ip
+				<< ": " << lastErrorMessage);
+		}
 		
 		static size_t curlDataReceived(void *buffer, size_t size, size_t nmemb, void *userData) {
 			Server *self = (Server *) userData;
@@ -193,6 +248,14 @@ private:
 			}
 		}
 		
+		/** Returns true if the server is up, false if the server is down.
+		 * The return value does NOT indicate whether the server accepted the data!
+		 * Thus, if (for example) the Union Station key is invalid or disabled,
+		 * but the connection is fine, then this method still returns true.
+		 * This is because the return value is used to determine whether a different
+		 * gateway server should be used. If the server is up but rejects the data
+		 * then we'll want the code to keep sending future packets.
+		 */
 		bool send(const Item &item) {
 			ScopeGuard guard(boost::bind(&Server::resetConnection, this));
 			prepareRequest(sinkURL);
@@ -245,11 +308,9 @@ private:
 			
 			if (code == CURLE_OK) {
 				guard.clear();
-				// TODO: check response
-				return true;
+				return handleSendResponse();
 			} else {
-				P_DEBUG("Could not send data to Union Station gateway server " << ip
-					<< ": " << lastErrorMessage);
+				handleSendError();
 				return false;
 			}
 		}

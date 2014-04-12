@@ -59,6 +59,10 @@ namespace Passenger {
 using namespace std;
 using namespace boost;
 
+#ifndef CURLINFO_RESPONSE_CODE
+	#define CURLINFO_RESPONSE_CODE CURLINFO_HTTP_CODE
+#endif
+
 struct CurlProxyInfo {
 	string hostAndPort;
 	string credentials;
