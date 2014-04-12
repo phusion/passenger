@@ -1216,11 +1216,13 @@ In each place, it may be specified at most once. The default value is 'on'.
 ==== passenger_friendly_error_pages <on|off> ====
 Phusion Passenger can display friendly error pages whenever an application fails
 to start. This friendly error page presents the startup error message, some
-suggestions for solving the problem, and a backtrace. This feature is very useful
-during application development and useful for less experienced system administrators,
-but the page might reveal potentially sensitive information, depending on the
-application. Experienced system administrators who are using Phusion Passenger
-on serious production servers should consider turning this feature off.
+suggestions for solving the problem, a backtrace and a dump of the environment variables.
+This feature is very useful during application development and useful for less experienced
+system administrators, but the page might reveal potentially sensitive information,
+depending on the application. For this reason, friendly error pages are turned off by default when
+<<PassengerAppEnv,passenger_app_env (and its aliases such as rails_env and rack_env)>>
+is set to 'staging' or 'production', but enabled by default otherwise. You can use
+this option to explicitly enable or disable this feature.
 
 This option may occur in the following places:
 
@@ -1229,7 +1231,7 @@ This option may occur in the following places:
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-In each place, it may be specified at most once. The default value is 'on'.
+In each place, it may be specified at most once. The default value depends on <<PassengerAppEnv,passenger_app_env (and its aliases such as rails_env and rack_env)>>, as documented above.
 
 === Resource control and optimization options ===
 [[PassengerMaxPoolSize]]

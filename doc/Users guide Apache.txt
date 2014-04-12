@@ -979,11 +979,13 @@ The default value is the primary group of the user specifified by
 ==== PassengerFriendlyErrorPages <on|off> ====
 Phusion Passenger can display friendly error pages whenever an application fails
 to start. This friendly error page presents the startup error message, some
-suggestions for solving the problem, and a backtrace. This feature is very useful
-during application development and useful for less experienced system administrators,
-but the page might reveal potentially sensitive information, depending on the
-application. Experienced system administrators who are using Phusion Passenger
-on serious production servers should consider turning this feature off.
+suggestions for solving the problem, a backtrace and a dump of the environment variables.
+This feature is very useful during application development and useful for less experienced
+system administrators, but the page might reveal potentially sensitive information,
+depending on the application. For this reason, friendly error pages are turned off by default when
+<<PassengerAppEnv,PassengerAppEnv (and its aliases such as RailsEnv and RackEnv)>>
+is set to 'staging' or 'production', but enabled by default otherwise. You can use
+this option to explicitly enable or disable this feature.
 
 This option may occur in the following places:
 
@@ -992,7 +994,7 @@ This option may occur in the following places:
  * In a `<Directory>` or `<Location>` block.
  * In '.htaccess', if `AllowOverride Options` is on.
 
-In each place, it may be specified at most once. The default value is 'on'.
+In each place, it may be specified at most once. The default value depends on <<PassengerAppEnv,PassengerAppEnv (and its aliases such as RailsEnv and RackEnv)>>, as documented above.
 
 
 === Resource control and optimization options ===

@@ -723,6 +723,12 @@ private:
 		}
 	}
 
+	bool friendlyErrorPagesEnabled(const ClientPtr &client) const {
+		bool defaultValue = client->options.environment != "staging"
+			&& client->options.environment != "production";
+		return getBoolOption(client, "PASSENGER_FRIENDLY_ERROR_PAGES", defaultValue);
+	}
+
 	void writeSimpleResponse(const ClientPtr &client, const StaticString &data, int code = 200) {
 		char header[256], statusBuffer[50];
 		char *pos = header;
@@ -774,7 +780,7 @@ private:
 		string templatesDir = resourceLocator.getResourcesDir() + "/templates";
 		string data;
 
-		if (getBoolOption(client, "PASSENGER_FRIENDLY_ERROR_PAGES", true)) {
+		if (friendlyErrorPagesEnabled(client)) {
 			try {
 				string cssFile = templatesDir + "/error_layout.css";
 				string errorLayoutFile = templatesDir + "/error_layout.html.template";
@@ -819,7 +825,13 @@ private:
 			}
 		} else {
 			try {
-				data = readAll(templatesDir + "/undisclosed_error.html.template");
+				StringMap<StaticString> params;
+				params.set("PROGRAM_NAME", PROGRAM_NAME);
+				params.set("NGINX_DOC_URL", NGINX_DOC_URL);
+				params.set("APACHE2_DOC_URL", APACHE2_DOC_URL);
+				params.set("STANDALONE_DOC_URL", STANDALONE_DOC_URL);
+				data = Template::apply(readAll(templatesDir + "/undisclosed_error.html.template"),
+					params);
 			} catch (const SystemException &e2) {
 				P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
 					e2.backtrace());

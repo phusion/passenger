@@ -31,14 +31,13 @@ class Command
 	DEFAULT_OPTIONS = {
 		:address       => '0.0.0.0',
 		:port          => 3000,
-		:environment   => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development',
+		:environment   => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['NODE_ENV'] || ENV['PASSENGER_APP_ENV'] || 'development',
 		:max_pool_size => 6,
 		:min_instances => 1,
 		:spawn_method  => Kernel.respond_to?(:fork) ? 'smart' : 'direct',
 		:concurrency_model => DEFAULT_CONCURRENCY_MODEL,
 		:thread_count  => DEFAULT_THREAD_COUNT,
-		:nginx_version => PREFERRED_NGINX_VERSION,
-		:friendly_error_pages => true
+		:nginx_version => PREFERRED_NGINX_VERSION
 	}.freeze
 	
 	include Utils
@@ -218,7 +217,7 @@ private
 		File.open(@config_filename, 'w') do |f|
 			f.chmod(0644)
 			require_erb
-			erb = ERB.new(File.read(nginx_config_template_filename))
+			erb = ERB.new(File.read(nginx_config_template_filename), nil, "-")
 			current_user = Etc.getpwuid(Process.uid).name
 			
 			# The template requires some helper methods which are defined in start_command.rb.
@@ -235,6 +234,10 @@ private
 			return File.join(PhusionPassenger.resources_dir,
 				"templates", "standalone", "config.erb")
 		end
+	end
+
+	def boolean_config_value(val)
+		return val ? "on" : "off"
 	end
 
 	def serialize_strset(*items)

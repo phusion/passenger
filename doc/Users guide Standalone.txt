@@ -45,8 +45,11 @@ Most configuration is done by customizing the arguments passed to the `passenger
 	If you don't want the number of application processes to scale dynamically, then use this option to set it to a value equal to `--max-pool-size`.
 `--spawn-method NAME`::
 	When set to "smart" (the default), Phusion Passenger preloads your app and utilizes copy-on-write in order to save memory. You can disable this by setting this option to "direct". Preloading is only supported for Ruby apps. For apps written in other languages, it is as if "direct" is always used.
-`--no-friendly-error-pages`::
-	If your app fails to start, Phusion Passenger will tell you by showing a friendly error page in the browser. This option disables it.
+`--friendly-error-pages`::
+    Phusion Passenger can display a friendly error page whenever your application fails to start. The friendly error page presents the startup error message, some suggestions for solving the problem, a backtrace, and a dump of the environment variables. This feature is very useful during application development and useful for less experienced system administrators, but the page might reveal potentially sensitive information, depending on the application. For this reason, friendly error pages are turned off by default when `--environment` is set to 'staging' or 'production', but enabled by default otherwise.
++
+You can use `--friendly-error-pages` and `--no-friendly-error-pages` to explicitly enable or disable this feature, respectively.
+
 `--ssl`::
 	Enables SSL support. If this is set, you must also set `--ssl-certificate` and `--ssl-certificate-key` to the SSL certificate and key files, respectively.
 `--ssl-port`::

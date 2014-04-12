@@ -4,6 +4,10 @@ Release 4.0.41
  * Introduced a new command, `passenger-config build-native-support`, for ensuring
    that the native_support library for the current Ruby interpreter is built. This
    is useful in system provisioning scripts.
+ * For security reasons, friendly error pages (those black/purple pages that shows
+   the error message, backtrace and environment variable dump when an application
+   fails to start) are now disabled by default when the application environment is
+   set to 'staging' or 'production'. Fixes issue #1063.
 
 
 Release 4.0.41

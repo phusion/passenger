@@ -186,8 +186,12 @@ private
 				wrap_desc("Enable deployment error resistance (Enterprise only)")) do
 				@options[:resist_deployment_errors] = true
 			end
+			opts.on("--friendly-error-pages",
+				wrap_desc("Turn on friendly error pages")) do
+				@options[:friendly_error_pages] = true
+			end
 			opts.on("--no-friendly-error-pages",
-				wrap_desc("Disable passenger_friendly_error_pages")) do
+				wrap_desc("Turn off friendly error pages")) do
 				@options[:friendly_error_pages] = false
 			end
 			opts.on("--ssl",
