@@ -345,7 +345,8 @@ namespace tut {
 	/***** Error page tests *****/
 
 	TEST_METHOD(10) {
-		set_test_name("If the app crashes at startup without an error page then it renders a generic error page.");
+		set_test_name("If the app crashes at startup without an error page, "
+			"and friendly error pages are turned on, then it renders a generic error page.");
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'I have failed'");
@@ -357,6 +358,7 @@ namespace tut {
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
 			"PASSENGER_START_COMMAND", ("ruby\t" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_FRIENDLY_ERROR_PAGES", "true",
 			"PATH_INFO", "/",
 			NULL);
 		string response = readAll(connection);
@@ -366,7 +368,8 @@ namespace tut {
 	}
 
 	TEST_METHOD(11) {
-		set_test_name("If the app crashes at startup with an error page then it renders a friendly error page.");
+		set_test_name("If the app crashes at startup with an error page, "
+			"and friendly error pages are turned on, then it renders a friendly error page.");
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'Error'\n"
@@ -380,6 +383,7 @@ namespace tut {
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
 			"PASSENGER_START_COMMAND", ("ruby\t" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_FRIENDLY_ERROR_PAGES", "true",
 			"PATH_INFO", "/",
 			NULL);
 		string response = readAll(connection);
@@ -391,7 +395,8 @@ namespace tut {
 	}
 
 	TEST_METHOD(12) {
-		set_test_name("If spawning fails because of an internal error then it reports the error appropriately.");
+		set_test_name("If spawning fails because of an internal error, "
+			"and friendly error pages are on, then it reports the error appropriately.");
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb", "");
 
@@ -402,6 +407,7 @@ namespace tut {
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
 			"PASSENGER_START_COMMAND", ("ruby\t" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_FRIENDLY_ERROR_PAGES", "true",
 			"PASSENGER_RAISE_INTERNAL_ERROR", "true",
 			"PATH_INFO", "/",
 			NULL);
@@ -429,6 +435,7 @@ namespace tut {
 			"PASSENGER_APP_ROOT", (root + "/test/tmp.handler").c_str(),
 			"PASSENGER_APP_TYPE", "",
 			"PASSENGER_START_COMMAND", ("ruby\t" + root + "/test/tmp.handler/start.rb").c_str(),
+			"PASSENGER_FRIENDLY_ERROR_PAGES", "true",
 			"PASSENGER_STATUS_LINE", "false",
 			"PATH_INFO", "/",
 			NULL);
