@@ -274,6 +274,7 @@ describe "Apache 2 module" do
 			@mycook = ClassicRailsStub.new('rails2.3-mycook')
 			@mycook_url_root = "http://1.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost('1.passenger.test', "#{@mycook.full_app_root}/public") do |vhost|
+				vhost << "PassengerFriendlyErrorPages on"
 				vhost << "AllowEncodedSlashes on"
 			end
 
