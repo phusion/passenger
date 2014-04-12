@@ -22,6 +22,30 @@ function run()
 	"$@"
 }
 
+function retry_run()
+{
+	local reset='\x1B[0m'
+	local red='\x1B[31m'
+	local yellow='\x1B[33m'
+
+	local max_tries="$1"
+	local number=2
+	shift
+
+	echo "$ $@"
+	while true; do
+		if "$@"; then
+			return 0
+		elif [[ $number -le $max_tries ]]; then
+			echo -e "${yellow}The command \"$@\" failed. Retrying, $number of $max_tries:${reset}"
+			(( number++ ))
+		else
+			echo -e "${red}The command \"$@\" failed after $max_tries attempts. Giving up.${reset}"
+			return 1
+		fi
+	done
+}
+
 function apt_get_update() {
 	if [[ "$apt_get_updated" = "" ]]; then
 		apt_get_updated=1
@@ -43,7 +67,7 @@ function install_test_deps_with_doctools()
 {
 	if [[ "$install_test_deps_with_doctools" = "" ]]; then
 		install_test_deps_with_doctools=1
-		run rake test:install_deps BASE_DEPS=yes DOCTOOLS=yes
+		retry_run 3 rake test:install_deps BASE_DEPS=yes DOCTOOLS=yes
 	fi
 }
 
@@ -51,7 +75,7 @@ function install_base_test_deps()
 {
 	if [[ "$install_base_test_deps" = "" ]]; then
 		install_base_test_deps=1
-		rake test:install_deps BASE_DEPS=yes
+		retry_run 3 rake test:install_deps BASE_DEPS=yes
 	fi
 }
 
@@ -59,10 +83,10 @@ function install_node_and_modules()
 {
 	if [[ "$install_node_and_modules" = "" ]]; then
 		install_node_and_modules=1
-		curl -O http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
+		curl --fail -O http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
 		tar xzvf node-v0.10.20-linux-x64.tar.gz
 		export PATH=`pwd`/node-v0.10.20-linux-x64/bin:$PATH
-		run rake test:install_deps NODE_MODULES=yes
+		retry_run rake test:install_deps NODE_MODULES=yes
 	fi
 }
 
@@ -89,18 +113,18 @@ if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 fi
 
 if [[ "$TEST_RUBYGEMS_VERSION" != "" ]]; then
-	run rvm install rubygems $TEST_RUBYGEMS_VERSION
+	retry_run 3 rvm install rubygems $TEST_RUBYGEMS_VERSION
 	run gem --version
 fi
 
 if [[ "$TEST_CXX" = 1 ]]; then
-	run rake test:install_deps BASE_DEPS=yes
+	install_base_test_deps
 	run rake test:cxx
 	run rake test:oxt
 fi
 
 if [[ "$TEST_RUBY" = 1 ]]; then
-	run rake test:install_deps BASE_DEPS=yes RAILS_BUNDLES=yes
+	retry_run 3 rake test:install_deps BASE_DEPS=yes RAILS_BUNDLES=yes
 	run rake test:ruby
 fi
 
