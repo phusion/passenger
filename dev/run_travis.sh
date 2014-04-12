@@ -86,7 +86,7 @@ function install_node_and_modules()
 		curl --fail -O http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
 		tar xzvf node-v0.10.20-linux-x64.tar.gz
 		export PATH=`pwd`/node-v0.10.20-linux-x64/bin:$PATH
-		retry_run rake test:install_deps NODE_MODULES=yes
+		retry_run 3 rake test:install_deps NODE_MODULES=yes
 	fi
 }
 
