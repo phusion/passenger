@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -127,7 +127,7 @@ private:
 
 		// Default interval at which this sink should be flushed.
 		virtual unsigned int defaultFlushInterval() const {
-			return 15;
+			return 5;
 		}
 		
 		virtual void append(const DataStoreId &dataStoreId,
@@ -228,7 +228,7 @@ private:
 		}
 
 		virtual unsigned int defaultFlushInterval() const {
-			return 60;
+			return 5;
 		}
 		
 		virtual void append(const DataStoreId &dataStoreId, const StaticString &data) {
@@ -1128,7 +1128,7 @@ public:
 		  exitTimer(loop),
 		  dumpFile(options.get("analytics_dump_file", false, "/dev/null"))
 	{
-		int sinkFlushTimerInterval = options.getInt("analytics_sink_flush_timer_interval", false, 15);
+		int sinkFlushTimerInterval = options.getInt("analytics_sink_flush_timer_interval", false, 5);
 		sinkFlushInterval = options.getInt("analytics_sink_flush_interval", false, 0);
 		garbageCollectionTimer.set<LoggingServer, &LoggingServer::garbageCollect>(this);
 		garbageCollectionTimer.start(GARBAGE_COLLECTION_TIMEOUT, GARBAGE_COLLECTION_TIMEOUT);
