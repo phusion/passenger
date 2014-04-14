@@ -8,6 +8,9 @@ Release 4.0.42
    the error message, backtrace and environment variable dump when an application
    fails to start) are now disabled by default when the application environment is
    set to 'staging' or 'production'. Fixes issue #1063.
+ * Improved error handling in [Union Station](https://www.unionstationapp.com) support.
+ * Data is now sent to Union Station on a more frequent basis, in order to make new
+   data show up more quickly.
 
 
 Release 4.0.41
