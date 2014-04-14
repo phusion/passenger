@@ -318,6 +318,9 @@ protected:
 		gid_t gid;
 		int ngroups;
 		shared_array<gid_t> gidset;
+
+		// Other information
+		string codeRevision;
 	};
 
 	/**
@@ -526,11 +529,14 @@ private:
 				details);
 		}
 		
-		return boost::make_shared<Process>(details.libev, details.pid,
+		ProcessPtr process = boost::make_shared<Process>(
+			details.libev, details.pid,
 			details.gupid, details.connectPassword,
 			details.adminSocket, details.errorPipe,
 			sockets, creationTime, details.spawnStartTime,
 			config);
+		process->codeRevision = details.preparation->codeRevision;
+		return process;
 	}
 	
 protected:
@@ -799,6 +805,7 @@ protected:
 		prepareChroot(info, options);
 		prepareUserSwitching(info, options);
 		prepareSwitchingWorkingDirectory(info, options);
+		inferApplicationInfo(info);
 		return info;
 	}
 
@@ -978,6 +985,49 @@ protected:
 		}
 
 		assert(info.appRootPathsInsideChroot.back() == info.appRootInsideChroot);
+	}
+
+	void inferApplicationInfo(SpawnPreparationInfo &info) const {
+		info.codeRevision = readFromRevisionFile(info);
+		if (info.codeRevision.empty()) {
+			info.codeRevision = inferCodeRevisionFromCapistranoSymlink(info);
+		}
+	}
+
+	string readFromRevisionFile(const SpawnPreparationInfo &info) const {
+		string filename = info.appRoot + "/REVISION";
+		try {
+			if (fileExists(filename)) {
+				return strip(readAll(filename));
+			}
+		} catch (const SystemException &e) {
+			P_WARN("Cannot access " << filename << ": " << e.what());
+		}
+		return string();
+	}
+
+	string inferCodeRevisionFromCapistranoSymlink(const SpawnPreparationInfo &info) const {
+		if (extractBaseName(info.appRoot) == "current") {
+			char buf[PATH_MAX + 1];
+			ssize_t ret;
+
+			do {
+				ret = readlink(info.appRoot.c_str(), buf, PATH_MAX);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				if (errno == EINVAL) {
+					return string();
+				} else {
+					int e = errno;
+					P_WARN("Cannot read symlink " << info.appRoot << ": " << strerror(e));
+				}
+			}
+
+			buf[ret] = '\0';
+			return extractBaseName(buf);
+		} else {
+			return string();
+		}
 	}
 
 	bool shouldLoadShellEnvvars(const Options &options, const SpawnPreparationInfo &preparation) const {

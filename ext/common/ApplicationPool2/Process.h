@@ -224,6 +224,11 @@ public:
 	FileDescriptor adminSocket;
 	/** The sockets that this Process listens on for connections. */
 	SocketListPtr sockets;
+	/** The code revision of the application, inferred through various means.
+	 * See Spawner::prepareSpawn() to learn how this is determined.
+	 * May be an empty string.
+	 */
+	string codeRevision;
 	/** Time at which the Spawner that created this process was created.
 	 * Microseconds resolution. */
 	unsigned long long spawnerCreationTime;
@@ -642,6 +647,9 @@ public:
 		stream << "<spawn_end_time>" << spawnEndTime << "</spawn_end_time>";
 		stream << "<last_used>" << lastUsed << "</last_used>";
 		stream << "<uptime>" << uptime() << "</uptime>";
+		if (!codeRevision.empty()) {
+			stream << "<code_revision>" << codeRevision << "</code_revision>";
+		}
 		switch (lifeStatus) {
 		case ALIVE:
 			stream << "<life_status>ALIVE</life_status>";

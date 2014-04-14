@@ -11,6 +11,8 @@ Release 4.0.42
  * Improved error handling in [Union Station](https://www.unionstationapp.com) support.
  * Data is now sent to Union Station on a more frequent basis, in order to make new
    data show up more quickly.
+ * Information about the code revision is now sent to Union Station, which will be
+   used in the upcoming deployment tracking feature in Union Station 2.
 
 
 Release 4.0.41

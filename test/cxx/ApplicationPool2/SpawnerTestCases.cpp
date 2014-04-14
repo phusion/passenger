@@ -317,6 +317,40 @@
 				&& gatheredOutput.find("hello stderr!\n") != string::npos;
 		);
 	}
+
+	TEST_METHOD(11) {
+		// It infers the code revision from the REVISION file.
+		TempDirCopy dir("stub/rack", "tmp.rack");
+		createFile("tmp.rack/REVISION", "hello\n");
+
+		Options options = createOptions();
+		options.appRoot      = "tmp.rack";
+		options.startCommand = "ruby\t" "start.rb";
+		options.startupFile  = "start.rb";
+		SpawnerPtr spawner = createSpawner(options);
+		process = spawner->spawn(options);
+		process->requiresShutdown = false;
+		
+		ensure_equals(process->codeRevision, "hello");
+	}
+
+	TEST_METHOD(12) {
+		// It infers the code revision from the app root symlink,
+		// if the app root is called "current".
+		TempDir dir1("tmp.rack");
+		TempDirCopy dir2("stub/rack", "tmp.rack/today");
+		symlink("today", "tmp.rack/current");
+
+		Options options = createOptions();
+		options.appRoot      = "tmp.rack/current";
+		options.startCommand = "ruby\t" "start.rb";
+		options.startupFile  = "start.rb";
+		SpawnerPtr spawner = createSpawner(options);
+		process = spawner->spawn(options);
+		process->requiresShutdown = false;
+		
+		ensure_equals(process->codeRevision, "today");
+	}
 	
 	// It raises an exception if getStartupCommand() is empty.
 
