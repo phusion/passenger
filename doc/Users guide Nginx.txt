@@ -1696,7 +1696,7 @@ passenger_pre_start http://myblog.com/;    # <----- WRONG! Missing "/store" part
 Application processes started with passenger_pre_start are
 also subject to the idle timeout rules as specified by
 <<PassengerPoolIdleTime,passenger_pool_idle_time>>! That means that by default,
-the pre-started application processes for foo.com are bar.com are shut down
+the pre-started application processes for foo.com and bar.com are shut down
 after a few minutes of inactivity. If you don't want that to happen, then
 you should combine passenger_pre_start with
 <<PassengerMinInstances,passenger_min_instances>>, like this:
