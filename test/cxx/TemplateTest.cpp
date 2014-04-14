@@ -6,7 +6,7 @@ using namespace Passenger;
 
 namespace tut {
 	struct TemplateTest {
-		string apply(const StaticString &templateContent, ...) {
+		string apply(const char *templateContent, ...) {
 			va_list ap;
 			const char *arg;
 			StringMap<StaticString> params;
