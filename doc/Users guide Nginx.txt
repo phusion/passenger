@@ -998,7 +998,7 @@ Nginx's response buffering works differently from Phusion Passenger's. Nginx's b
 
 How does response buffering - whether it's done by Nginx or by Phusion Passenger - exactly protect against slow clients?
 Consider an HTTP client that's on a dial-up modem link, and your
-application process generates a 2 MB response. If the response is buffered
+application process generates a 2 MB response. If the response is not buffered
 then your application process will be blocked until the entire 2 MB has been
 sent out to the HTTP client. This disallows your application process to do any useful
 work in the mean time. By buffering responses, Phusion Passenger or Nginx will read
