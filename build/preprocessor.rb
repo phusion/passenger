@@ -186,7 +186,8 @@ private
 	}
 	DEBIAN_DISTRIBUTIONS = {
 		"squeeze"  => "20110206",
-		"wheezy"   => "20130504"
+		"wheezy"   => "20130504",
+		"jessie"   => "20140000"
 	}
 	REDHAT_ENTERPRISE_DISTRIBUTIONS = {
 		"el6"      => "el6.0"
