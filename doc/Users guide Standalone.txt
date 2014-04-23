@@ -130,7 +130,7 @@ Every time you start Standalone, you must pass the `--nginx-config-template` par
 
 [source,sh]
 ------------------------------------------
-passenger start --nginx-config-template nginx.config.erb
+passenger start --nginx-config-template nginx.conf.erb
 ------------------------------------------
 
 Alternatively, if you don't want to pass this parameter every time, you can also set the `nginx_config_template` option in <<config_file,passenger-standalone.json>>.
