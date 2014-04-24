@@ -1,6 +1,7 @@
 Release 4.0.42
 --------------
 
+ * [Nginx] Upgraded the preferred Nginx version to 1.6.0.
  * [Nginx] Fixed compatibility with Nginx 1.7.0.
  * Introduced a new command, `passenger-config build-native-support`, for ensuring
    that the native_support library for the current Ruby interpreter is built. This
