@@ -28,8 +28,8 @@ XS-Ruby-Versions: all
 Package: passenger
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
- rubygems2.0 | rubygems1.9.1 | rubygems1.9 | rubygems (>= 1.2),
+ ruby2.2 | ruby2.1 | ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
+ rubygems1.9.1 | rubygems1.9 | rubygems (>= 1.2),
 #if is_distribution?('<= lucid') || is_distribution?('<= squeeze')
      librack-ruby,
 #else
@@ -52,7 +52,7 @@ Description: Rails and Rack support for Apache2 and Nginx
 Package: passenger-dev
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
+ ruby2.2 | ruby2.1 | ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
  passenger (= ${binary:Version})
 Suggests: python
 Replaces: ruby-passenger-dev
