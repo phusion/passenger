@@ -12,6 +12,8 @@ Apache configuration file and set its DocumentRoot to <b>/somewhere/public</b>:
          AllowOverride all
          # MultiViews must be turned off.
          Options -MultiViews
+         # Uncomment this if you're on Apache >= 2.4:
+         #Require all granted
       </Directory>
    </VirtualHost>
 </b>
