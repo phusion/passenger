@@ -4,10 +4,15 @@ Priority: optional
 Maintainer: John Leach <john@brightbox.co.uk>
 Uploaders: Phusion <info@phusion.nl>, Hongli Lai <hongli@phusion.nl>
 Build-Depends: debhelper (>= 7.0.50~), rake,
- ruby1.8, ruby1.8-dev, rubygems1.8,
+#if is_distribution?("<= saucy") || is_distribution?("<= wheezy")
+     ruby1.8, ruby1.8-dev, rubygems1.8,
+#endif
  ruby1.9.1, ruby1.9.1-dev,
 #if is_distribution?('<= lucid')
      rubygems1.9,
+#endif
+#if is_distribution?(">= trusty") || is_distribution?(">= jessie")
+     ruby2.0, ruby2.0-dev,
 #endif
  apache2-mpm-worker | apache2-mpm, apache2-threaded-dev,
 #if is_distribution?('>= precise') || is_distribution?('>= wheezy')
@@ -23,8 +28,8 @@ XS-Ruby-Versions: all
 Package: passenger
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
- rubygems2.0 | rubygems1.9.1 | rubygems1.9 | rubygems (>= 1.2),
+ ruby2.2 | ruby2.1 | ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
+ rubygems1.9.1 | rubygems1.9 | rubygems (>= 1.2),
 #if is_distribution?('<= lucid') || is_distribution?('<= squeeze')
      librack-ruby,
 #else
@@ -47,7 +52,7 @@ Description: Rails and Rack support for Apache2 and Nginx
 Package: passenger-dev
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
+ ruby2.2 | ruby2.1 | ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
  passenger (= ${binary:Version})
 Suggests: python
 Replaces: ruby-passenger-dev

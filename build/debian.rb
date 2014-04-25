@@ -76,7 +76,7 @@ task 'debian:orig_tarball' => Packaging::PREGENERATED_FILES do
 		if File.exist?(local_nginx_tarball)
 			puts "#{local_nginx_tarball} already exists"
 		else
-			sh "curl -L -o #{local_nginx_tarball} http://nginx.org/download/nginx-#{nginx_version}.tar.gz"
+			sh "curl -L --fail -o #{local_nginx_tarball} http://nginx.org/download/nginx-#{nginx_version}.tar.gz"
 		end
 		sh "rm -rf #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"
 		sh "mkdir -p #{PKG_DIR}/#{DEBIAN_NAME}_#{PACKAGE_VERSION}"

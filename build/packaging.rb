@@ -351,14 +351,12 @@ task 'package:initiate_debian_building' do
 	version = VERSION_STRING
 	if is_open_source?
 		command = "cd /srv/passenger_apt_automation && " +
-			"chpst -l /tmp/passenger_apt_automation.lock " +
 			"/tools/silence-unless-failed " +
-			"./new_release https://github.com/phusion/passenger.git passenger.repo passenger.apt #{git_tag}"
+			"./new_release https://github.com/phusion/passenger.git passenger #{git_tag}"
 	else
 		command = "cd /srv/passenger_apt_automation && " +
-			"chpst -l /tmp/passenger_apt_automation.lock " +
 			"/tools/silence-unless-failed " +
-			"./new_release #{enterprise_git_url} passenger-enterprise.repo passenger-enterprise.apt #{git_tag}"
+			"./new_release #{enterprise_git_url} passenger-enterprise #{git_tag}"
 	end
 
 	sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"

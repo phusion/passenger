@@ -32,8 +32,8 @@ module PhusionPassenger
 	# Run 'rake ext/common/Constants.h' after changing this number.
 	VERSION_STRING = '4.0.42'
 	
-	PREFERRED_NGINX_VERSION = '1.4.7'
-	NGINX_SHA256_CHECKSUM = '23b8ff4a76817090678f91b0efbfcef59a93492f6612dc8370c44c1f1ce1b626'
+	PREFERRED_NGINX_VERSION = '1.6.0'
+	NGINX_SHA256_CHECKSUM = '943ad757a1c3e8b3df2d5c4ddacc508861922e36fa10ea6f8e3a348fc9abfc1a'
 
 	PREFERRED_PCRE_VERSION  = '8.34'
 	PCRE_SHA256_CHECKSUM = '1dd78994c81e44ac41cf30b2a21d4b4cc6d76ccde7fc6e77713ed51d7bddca47'
