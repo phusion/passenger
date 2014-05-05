@@ -227,9 +227,6 @@ module TestHelper
 				"your hosts file.\n" <<
 				"Please add these to your /etc/hosts:\n\n" <<
 				"127.0.0.1 passenger.test\n" <<
-				"127.0.0.1 mycook.passenger.test\n" <<
-				"127.0.0.1 zsfa.passenger.test\n" <<
-				"127.0.0.1 norails.passenger.test\n" <<
 				"127.0.0.1 1.passenger.test 2.passenger.test 3.passenger.test\n" <<
 				"127.0.0.1 4.passenger.test 5.passenger.test 6.passenger.test\n" <<
 				"127.0.0.1 7.passenger.test 8.passenger.test 9.passenger.test\n"
