@@ -348,7 +348,13 @@ public
 			:cxx, '', '-Wno-missing-field-initializers')
 	end
 	memoize :cxx_supports_wno_missing_field_initializers_flag?, true
-	
+
+	def self.cxx_supports_wno_unused_local_typedefs_flag?
+		return try_compile("Checking for C++ compiler '-Wno-unused-local-typedefs' support",
+			:cxx, '', '-Wno-unused-local-typedefs')
+	end
+	memoize :cxx_supports_wno_unused_local_typedefs_flag?, true
+
 	def self.cc_supports_no_tls_direct_seg_refs_option?
 		return try_compile("Checking for C compiler '-mno-tls-direct-seg-refs' support",
 			:c, '', '-mno-tls-direct-seg-refs')

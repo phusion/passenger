@@ -154,6 +154,11 @@ private
 		if cc_or_cxx == :cxx
 			flags << cxx_11_flag if cxx_11_flag
 
+			if cxx_supports_wno_unused_local_typedefs_flag?
+				# Avoids some compilaton warnings with Boost on Ubuntu 14.04.
+				flags << "-Wno-unused-local-typedefs"
+			end
+
 			# There are too many implementations of of the hash map!
 			# Figure out the right one.
 			check_unordered_map(flags, "std::unordered_map", "unordered_map", "HAS_UNORDERED_MAP") ||
