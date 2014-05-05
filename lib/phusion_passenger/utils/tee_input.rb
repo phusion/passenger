@@ -106,6 +106,7 @@ class TeeInput
     else
       @tmp = TmpIO.new("PassengerTeeInput")
     end
+    @tmp.binmode
   end
 
   def close
