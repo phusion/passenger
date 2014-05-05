@@ -27,7 +27,7 @@ desc "Run all integration tests"
 task 'test:integration' => ['test:integration:apache2', 'test:integration:nginx'] do
 end
 
-dependencies = [:apache2, NATIVE_SUPPORT_TARGET].compact
+dependencies = [:_apache2, NATIVE_SUPPORT_TARGET].compact
 desc "Run Apache 2 integration tests"
 task 'test:integration:apache2' => dependencies do
 	if PlatformInfo.rspec.nil?
@@ -45,7 +45,7 @@ task 'test:integration:apache2' => dependencies do
 	end
 end
 
-dependencies = [:nginx, NATIVE_SUPPORT_TARGET].compact
+dependencies = [:_nginx, NATIVE_SUPPORT_TARGET].compact
 desc "Run Nginx integration tests"
 task 'test:integration:nginx' => dependencies do
 	if PlatformInfo.rspec.nil?
@@ -67,7 +67,7 @@ task 'test:integration:nginx' => dependencies do
 	end
 end
 
-dependencies = [:nginx, NATIVE_SUPPORT_TARGET].compact
+dependencies = [:_nginx, NATIVE_SUPPORT_TARGET].compact
 desc "Run Passenger Standalone integration tests"
 task 'test:integration:standalone' => dependencies do
 	if PlatformInfo.rspec.nil?
@@ -124,7 +124,7 @@ task 'test:integration:native_packaging' do
 	sh "cd test && exec #{command}"
 end
 
-dependencies = [:apache2, NATIVE_SUPPORT_TARGET].compact
+dependencies = [:_apache2, NATIVE_SUPPORT_TARGET].compact
 desc "Run the 'apache2' integration test infinitely, and abort if/when it fails"
 task 'test:restart' => dependencies do
 	require 'shellwords'

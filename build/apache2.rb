@@ -98,6 +98,9 @@ task :apache2 => [
 	NATIVE_SUPPORT_TARGET
 ].compact
 
+# Workaround for https://github.com/jimweirich/rake/issues/274
+task :_apache2 => :apache2
+
 
 # Define rules for the individual Apache 2 module source files.
 APACHE2_MODULE_INPUT_FILES.each_pair do |target, sources|

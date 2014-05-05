@@ -35,6 +35,9 @@ task :nginx => [
 	NATIVE_SUPPORT_TARGET
 ].compact
 
+# Workaround for https://github.com/jimweirich/rake/issues/274
+task :_nginx => :nginx
+
 task :nginx_without_native_support => [
 	auto_generated_sources,
 	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',

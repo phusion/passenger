@@ -13,6 +13,8 @@ Release 4.0.42
    fails to start) are now disabled by default when the application environment is
    set to 'staging' or 'production'. Fixes issue #1063.
  * Fixed some compilation warnings on Ubuntu 14.04.
+ * Fixed some compatibility problems with Rake 10.2.0 and later.
+   See [Rake issue 274](https://github.com/jimweirich/rake/issues/274).
  * Improved error handling in [Union Station](https://www.unionstationapp.com) support.
  * Data is now sent to Union Station on a more frequent basis, in order to make new
    data show up more quickly.
