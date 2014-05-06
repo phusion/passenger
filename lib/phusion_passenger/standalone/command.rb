@@ -68,16 +68,21 @@ private
 					too_old = true
 				end
 				if too_old
+					PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+					gem_command = PlatformInfo.gem_command(:sudo => true)
 					error "Your version of daemon_controller is too old. " <<
 					      "You must install 1.1.0 or later. Please upgrade:\n\n" <<
 					      
-					      " sudo gem uninstall FooBarWidget-daemon_controller\n" <<
-					      " sudo gem install daemon_controller"
+					      " #{gem_command} uninstall FooBarWidget-daemon_controller\n" <<
+					      " #{gem_command} install daemon_controller",
+					      :wrap => false
 					exit 1
 				end
 			rescue LoadError
+				PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+				gem_command = PlatformInfo.gem_command(:sudo => true)
 				error "Please install daemon_controller first:\n\n" <<
-				      " sudo gem install daemon_controller"
+				      " #{gem_command} install daemon_controller"
 				exit 1
 			end
 		end
@@ -127,11 +132,22 @@ private
 		end
 	end
 	
-	def error(message)
+	def error(message, options = {})
+		wrap = options.fetch(:wrap, true)
 		if message =~ /\n/
-			STDERR.puts("*** ERROR ***\n" << wrap_desc(message, 80, 0))
+			if wrap
+				processed_message = wrap_desc(message, 80, 0)
+			else
+				processed_message = message
+			end
+			STDERR.puts("*** ERROR ***\n" << processed_message)
 		else
-			STDERR.puts(wrap_desc("*** ERROR: #{message}", 80, 0))
+			if wrap
+				processed_message = wrap_desc("*** ERROR: #{message}", 80, 0)
+			else
+				processed_message = "*** ERROR: #{message}"
+			end
+			STDERR.puts(processed_message)
 		end
 		@plugin.call_hook(:error, message) if @plugin
 	end
