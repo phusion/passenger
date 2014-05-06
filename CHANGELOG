@@ -3,6 +3,8 @@ Release 4.0.42
 
  * [Nginx] Upgraded the preferred Nginx version to 1.6.0.
  * [Nginx] Fixed compatibility with Nginx 1.7.0.
+ * [Standalone] The MIME type for .woff files has been changed to application/font-woff.
+   Fixes issue #1071.
  * There are now APT packages for Ubuntu 14.04. At the same time, packages for
    Ubuntu 13.10 have been abandoned.
  * Introduced a new command, `passenger-config build-native-support`, for ensuring

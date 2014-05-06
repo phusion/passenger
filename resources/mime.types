@@ -26,7 +26,7 @@ types {
 
     application/x-font-ttf                ttf;
     font/opentype                         otf;
-    font/x-woff                           woff;
+    application/font-woff                 woff;
     application/vnd.ms-fontobject         eot;
 
     application/java-archive              jar war ear;
