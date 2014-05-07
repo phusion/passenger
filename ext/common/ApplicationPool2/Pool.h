@@ -1538,8 +1538,9 @@ public:
 		ProcessList::const_iterator p_it;
 
 		result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
-		result << "<info version=\"2\">";
+		result << "<info version=\"3\">";
 		
+		result << "<passenger_version>" << PASSENGER_VERSION << "</passenger_version>";
 		result << "<process_count>" << getProcessCount(false) << "</process_count>";
 		result << "<max>" << max << "</max>";
 		result << "<capacity_used>" << capacityUsed(false) << "</capacity_used>";

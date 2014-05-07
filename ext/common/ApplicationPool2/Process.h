@@ -646,6 +646,7 @@ public:
 		stream << "<spawn_start_time>" << spawnStartTime << "</spawn_start_time>";
 		stream << "<spawn_end_time>" << spawnEndTime << "</spawn_end_time>";
 		stream << "<last_used>" << lastUsed << "</last_used>";
+		stream << "<last_used_desc>" << distanceOfTimeInWords(lastUsed / 1000000).c_str() << " ago</last_used_desc>";
 		stream << "<uptime>" << uptime() << "</uptime>";
 		if (!codeRevision.empty()) {
 			stream << "<code_revision>" << codeRevision << "</code_revision>";
