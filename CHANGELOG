@@ -1,3 +1,10 @@
+Release 4.0.43
+--------------
+
+ * Introduced a new command `passenger-config list-instances`, which prints all
+   running Phusion Passenger instances.
+
+
 Release 4.0.42
 --------------
 

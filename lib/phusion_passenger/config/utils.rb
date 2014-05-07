@@ -50,7 +50,7 @@ module Utils
 		else
 			server_instances = AdminTools::ServerInstance.list
 			if server_instances.empty?
-				abort "*** ERROR: Phusion Passenger doesn't seem to be running."
+				abort "*** ERROR: #{PROGRAM_NAME} doesn't seem to be running."
 			elsif server_instances.size == 1
 				@server_instance = server_instances.first
 			else

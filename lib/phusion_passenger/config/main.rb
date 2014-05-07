@@ -30,6 +30,7 @@ module Config
 	KNOWN_COMMANDS = [
 		["detach-process", "DetachProcessCommand"],
 		["restart-app", "RestartAppCommand"],
+		["list-instances", "ListInstancesCommand"],
 		["build-native-support", "BuildNativeSupportCommand"],
 		["validate-install", "ValidateInstallCommand"],
 		["about", "AboutCommand"]
@@ -74,8 +75,9 @@ module Config
 		puts "  restart-app           Restart an application"
 		puts
 		puts "Informational commands:"
-		puts "  validate-install      Validate this Phusion Passenger installation"
-		puts "  about                 Show information about Phusion Passenger"
+		puts "  validate-install      Validate this #{PROGRAM_NAME} installation"
+		puts "  list-instances        List running #{PROGRAM_NAME} instances"
+		puts "  about                 Show information about #{PROGRAM_NAME}"
 		puts
 		puts "Miscellaneous commands:"
 		puts "  build-native-support  Ensure that the native_support library for the current"
