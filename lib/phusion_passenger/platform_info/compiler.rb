@@ -268,7 +268,7 @@ public
 				"-c '#{filename}' -o '#{filename}.o'",
 				flags)
 			result = run_compiler(description, command, filename, source, true)
-			return result[:result] && result[:output] !~ /unknown warning option/i
+			return result && result[:result] && result[:output] !~ /unknown warning option/i
 		end
 	end
 	
