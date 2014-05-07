@@ -191,7 +191,7 @@ ifdef::apache[]
 sudo apt-get install libapache2-mod-passenger-enterprise
 --------------------------------------------------------------
 +
-3. Enable the Phusion Passenger Apache module and restart Apache:
+4. Enable the Phusion Passenger Apache module and restart Apache:
 +
 --------------------------------------------------------------
 sudo a2enmod passenger
