@@ -14,7 +14,7 @@
 
 1. Support information	=>	support-information-1x8e9ee
 
-1.1. Supported operating systems	=>	supported-operating-systems-1387080
+1.1. Supported operating systems and languages	=>	supported-operating-systems-1387080
 
 1.2. Where to get support	=>	where-to-get-support-xkx7rx
 

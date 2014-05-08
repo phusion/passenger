@@ -14,7 +14,7 @@
 
 1. Support information	=>	support-information-nl5gdn
 
-1.1. Supported operating systems	=>	supported-operating-systems-a5n2x4
+1.1. Supported operating systems and languages	=>	supported-operating-systems-a5n2x4
 
 1.2. Where to get support	=>	where-to-get-support-2s9na5
 

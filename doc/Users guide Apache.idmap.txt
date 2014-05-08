@@ -14,7 +14,7 @@
 
 1. Support information	=>	support-information-zkewk3
 
-1.1. Supported operating systems	=>	supported-operating-systems-rhbg35
+1.1. Supported operating systems and languages	=>	supported-operating-systems-rhbg35
 
 1.2. Where to get support	=>	where-to-get-support-f3pbrb
 
