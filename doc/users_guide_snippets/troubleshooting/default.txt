@@ -118,3 +118,45 @@ cd /path-to-your-app
 passenger start --temp-dir=$HOME/tmp
 ---------------------------------------
 endif::[]
+
+=== I get "command not found" when running a Phusion Passenger command through sudo
+
+**Symptoms**::
+	Phusion Passenger commands can be found as a normal user, but not when run through sudo:
++
+-------------------------
+$ passenger-status
+...some output, but no "command not found" error...
+$ passenger-install-apache2-module
+...some output, but no "command not found" error...
+$ sudo passenger-status
+sudo: passenger-status: command not found
+$ sudo passenger-install-apache2-module
+sudo: passenger-install-apache2-module: command not found
+-------------------------
+
+**Cause**::
+	The operating system looks up commands using <<the_path_env_var,the PATH environment variable>>. However, sudo resets all environment variables to a default value, dictated by sudo. If Phusion Passenger was installed to a location that is not in the default sudo PATH value, then sudo will not be able to find the Phusion Passenger commands.
++
+In addition, if you installed Phusion Passenger using a Ruby interpreter that was installed through RVM, then you **must** use rvmsudo instead of sudo. As a rule, when you're an RVM user, always use rvmsudo instead of sudo.
+
+**Solution**::
+	Execute the command using its full path. You can use `which` as a normal user to lookup the full path:
++
+---------------------------------------
+$ which passenger-status
+/somewhere/bin/passenger-status
+---------------------------------------
++
+Next, run full path of the command using either sudo or rvmsudo:
++
+---------------------------------------
+$ sudo /somewhere/bin/passenger-status
+
+# -OR, if you're using RVM:-
+
+$ rvmsudo /somewhere/bin/passenger-status
+---------------------------------------
+
+**Recommended reading**::
+	When using sudo, you will probably run into similar "command not found" issues in the future, with components other than Phusion Passenger. We **strongly recommend** you to <<about_environment_variables,learn about environment variables>> so that you know what to do in the future.

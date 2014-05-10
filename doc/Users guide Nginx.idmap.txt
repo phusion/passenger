@@ -250,15 +250,17 @@
 
 9.3. Upon accessing the web app, Nginx reports a "Permission denied" error	=>	upon-accessing-the-web-app-nginx-reports-a-permission-denied-error-1wgatlk
 
-9.4. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-1e2m21h
+9.4. I get "command not found" when running a Phusion Passenger command through sudo	=>	i-get-command-not-found-when-running-a-phusion-passenger-command-through-sudo-10fzwno
 
-9.5. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-troubleshooting-n8u5u1
+9.5. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-1e2m21h
 
-9.5.1. The "About your application’s environment" link does not work	=>	the-about-your-application-s-environment-link-does-not-work-9p7b2g
+9.6. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-troubleshooting-n8u5u1
 
-9.5.2. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-58ww8s
+9.6.1. The "About your application’s environment" link does not work	=>	the-about-your-application-s-environment-link-does-not-work-9p7b2g
 
-9.5.3. The Rails application’s log file is not being written to	=>	the-rails-application-s-log-file-is-not-being-written-to-9m2i5h
+9.6.2. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-58ww8s
+
+9.6.3. The Rails application’s log file is not being written to	=>	the-rails-application-s-log-file-is-not-being-written-to-9m2i5h
 
 10. Analysis and system maintenance	=>	analysis-and-system-maintenance-1nnlnj8
 

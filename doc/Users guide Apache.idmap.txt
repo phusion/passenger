@@ -264,31 +264,33 @@
 
 9.2. Why does the first request take a long time?	=>	why-does-the-first-request-take-a-long-time--12mg452
 
-9.3. OS X: The installer cannot locate MAMP’s Apache	=>	macos-x-the-installer-cannot-locate-mamp-s-apache-or908n
+9.3. I get "command not found" when running a Phusion Passenger command through sudo	=>	i-get-command-not-found-when-running-a-phusion-passenger-command-through-sudo-v9z223
 
-9.4. Apache reports a "403 Forbidden" error	=>	apache-reports-a-403-forbidden-error-140tb4p
+9.4. OS X: The installer cannot locate MAMP’s Apache	=>	macos-x-the-installer-cannot-locate-mamp-s-apache-or908n
 
-9.5. Static assets such as images and stylesheets aren’t being displayed	=>	static-assets-such-as-images-and-stylesheets-aren-t-being-displayed-uaptpi
+9.5. Apache reports a "403 Forbidden" error	=>	apache-reports-a-403-forbidden-error-140tb4p
 
-9.6. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
+9.6. Static assets such as images and stylesheets aren’t being displayed	=>	static-assets-such-as-images-and-stylesheets-aren-t-being-displayed-uaptpi
 
-9.7. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-u9fcp1
+9.7. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
 
-9.8. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-problems-6umss5
+9.8. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-u9fcp1
 
-9.8.1. The "About your application’s environment" link does not work	=>	the-about-your-application-s-environment-link-does-not-work-7k4tlm
+9.9. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-problems-6umss5
 
-9.8.2. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
+9.9.1. The "About your application’s environment" link does not work	=>	the-about-your-application-s-environment-link-does-not-work-7k4tlm
 
-9.8.3. The Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
+9.9.2. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-v53i6s
 
-9.9. Conflicting Apache modules	=>	conflicting-apache-modules-1uwpixk
+9.9.3. The Rails application’s log file is not being written to	=>	my-rails-application-s-log-file-is-not-being-written-to-3i747l
 
-9.9.1. mod_userdir	=>	mod-userdir-x5e2te
+9.10. Conflicting Apache modules	=>	conflicting-apache-modules-1uwpixk
 
-9.9.2. MultiViews (mod_negotiation)	=>	multiviews-mod-negotiation--zchfg0
+9.10.1. mod_userdir	=>	mod-userdir-x5e2te
 
-9.9.3. VirtualDocumentRoot	=>	virtualdocumentroot-14cwd7l
+9.10.2. MultiViews (mod_negotiation)	=>	multiviews-mod-negotiation--zchfg0
+
+9.10.3. VirtualDocumentRoot	=>	virtualdocumentroot-14cwd7l
 
 10. Analysis and system maintenance	=>	analysis-and-system-maintenance-qvkwzr
 

@@ -69,6 +69,7 @@ export PATH=/opt/local/bin:$PATH
 export PATH=$PATH:/usr/local/bin
 ---------------------------------
 
+[[the_path_env_var]]
 === The PATH environment variable
 
 The `PATH` environment variable dictates where the system looks for command. It is a colon-separated list of directories. If you get a "command not found" error while you know that the command is installed, then setting `PATH` will help. For example suppose that the command `frobnicator` is in `/opt/local/bin`:
