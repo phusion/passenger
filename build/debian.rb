@@ -166,7 +166,7 @@ def create_debian_binary_package_task(distribution, arch)
 		command = "cd #{PKG_DIR}/official && " +
 			"pbuilder-dist #{distribution} #{arch} build #{base_name}.dsc " +
 			"2>&1 | awk '{ print strftime(\"%Y-%m-%d %H:%M:%S -- \"), $0; fflush(); }'" +
-			" | tee #{logfile}"
+			" | tee #{logfile}; test ${PIPESTATUS[0]} -eq 0"
 		sh "bash -c #{Shellwords.escape(command)}"
 		sh "echo Done >> #{logfile}"
 	end
