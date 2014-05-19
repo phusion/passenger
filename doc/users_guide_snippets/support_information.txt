@@ -33,7 +33,9 @@ Supported languages and frameworks:
 [options="header"]
 |==================================================
 | Language/framework  | Minimum version
-| Ruby                | 1.8.5
+| Ruby (MRI)          | 1.8.5
+| JRuby               | 1.7.0
+| Rubinius            | 2.2.0
 | Ruby on Rails       | 1.2
 | Python              | 2.6
 | Node.js             | 0.10
