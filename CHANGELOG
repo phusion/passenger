@@ -3,6 +3,8 @@ Release 4.0.43
 
  * Introduced a new command `passenger-config list-instances`, which prints all
    running Phusion Passenger instances.
+ * Introduced a new command `passenger-config system-metrics, which displays
+   metrics about the system such as the total CPU and memory usage.
  * Fixed some compilation problems caused by the compiler capability autodetector.
 
 

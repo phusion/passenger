@@ -26,6 +26,7 @@
 
 #define ANSI_COLOR_RESET    "\e[0m"
 #define ANSI_COLOR_BOLD     "\e[1m"
+#define ANSI_COLOR_DGRAY    "\e[90m"
 #define ANSI_COLOR_RED      "\e[31m"
 #define ANSI_COLOR_GREEN    "\e[32m"
 #define ANSI_COLOR_YELLOW   "\e[33m"

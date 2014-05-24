@@ -439,6 +439,12 @@ distanceOfTimeInWords(time_t fromTime, time_t toTime) {
 		time_t minutes = seconds / 60;
 		if (minutes >= 60) {
 			time_t hours = minutes / 60;
+			if (hours >= 24) {
+				time_t days = hours / 24;
+				hours = hours % 24;
+				result << days << "d ";
+			}
+
 			minutes = minutes % 60;
 			result << hours << "h ";
 		}

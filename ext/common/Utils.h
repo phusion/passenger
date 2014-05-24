@@ -201,7 +201,7 @@ string extractBaseName(const StaticString &path);
  * @throws std::bad_alloc Something went wrong.
  * @ingroup Support
  */
-string escapeForXml(const string &input);
+string escapeForXml(const StaticString &input);
 
 /**
  * Returns the username of the user that the current process is running as.
@@ -384,6 +384,14 @@ void disableMallocDebugging();
  * _command_ must be null-terminated.
  */
 int runShellCommand(const StaticString &command);
+
+/**
+ * Run a command and capture its stdout output.
+ *
+ * @param command The argument to pass to execvp();
+ * @throws SystemException.
+ */
+string runCommandAndCaptureOutput(const char **command);
 
 /**
  * Async-signal safe way to fork().

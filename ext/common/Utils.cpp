@@ -55,6 +55,7 @@
 #include <Utils/Base64.h>
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/StrIntUtils.h>
+#include <Utils/IOUtils.h>
 #include <Utils/HttpHeaderBufferer.h>
 
 #ifndef HOST_NAME_MAX
@@ -338,8 +339,8 @@ extractBaseName(const StaticString &path) {
 }
 
 string
-escapeForXml(const string &input) {
-	string result(input);
+escapeForXml(const StaticString &input) {
+	string result(input.data(), input.size());
 	string::size_type input_pos = 0;
 	string::size_type input_end_pos = input.size();
 	string::size_type result_pos = 0;
@@ -990,6 +991,74 @@ runShellCommand(const StaticString &command) {
 			return -1;
 		} else {
 			return status;
+		}
+	}
+}
+
+string
+runCommandAndCaptureOutput(const char **command) {
+	pid_t pid;
+	int e;
+	Pipe p;
+	
+	p = createPipe();
+	
+	this_thread::disable_syscall_interruption dsi;
+	pid = syscalls::fork();
+	if (pid == 0) {
+		// Make ps nicer, we want to have as little impact on the rest
+		// of the system as possible while collecting the metrics.
+		int prio = getpriority(PRIO_PROCESS, getpid());
+		prio++;
+		if (prio > 20) {
+			prio = 20;
+		}
+		setpriority(PRIO_PROCESS, getpid(), prio);
+
+		dup2(p[1], 1);
+		close(p[0]);
+		close(p[1]);
+		closeAllFileDescriptors(2);
+		execvp(command[0], (char * const *) command);
+		_exit(1);
+	} else if (pid == -1) {
+		e = errno;
+		throw SystemException("Cannot fork() a new process", e);
+	} else {
+		bool done = false;
+		string result;
+		
+		p[1].close();
+		while (!done) {
+			char buf[1024 * 4];
+			ssize_t ret;
+			
+			try {
+				this_thread::restore_syscall_interruption rsi(dsi);
+				ret = syscalls::read(p[0], buf, sizeof(buf));
+			} catch (const thread_interrupted &) {
+				syscalls::kill(SIGKILL, pid);
+				syscalls::waitpid(pid, NULL, 0);
+				throw;
+			}
+			if (ret == -1) {
+				e = errno;
+				syscalls::kill(SIGKILL, pid);
+				syscalls::waitpid(pid, NULL, 0);
+				throw SystemException(string("Cannot read output from the '") +
+					command[1] + "' command", e);
+			}
+			done = ret == 0;
+			result.append(buf, ret);
+		}
+		p[0].close();
+		syscalls::waitpid(pid, NULL, 0);
+		
+		if (result.empty()) {
+			throw RuntimeException(string("The '") + command[1] +
+				"' command failed");
+		} else {
+			return result;
 		}
 	}
 }

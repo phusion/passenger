@@ -62,6 +62,7 @@
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/IOUtils.h>
+#include <Utils/StringScanning.h>
 
 namespace Passenger {
 
@@ -185,183 +186,18 @@ public:
  * command name, etc.
  */
 class ProcessMetricsCollector {
-public:
-	struct ParseException {};
-	
 private:
 	bool canMeasureRealMemory;
 	string psOutput;
 	
-	/**
-	 * Scan the given data for the first word that appears on the first line.
-	 * Leading whitespaces (but not newlines) are ignored. If a word is found
-	 * then the word is returned and the data pointer is moved to the end of
-	 * the word. Otherwise, a ParseException is thrown.
-	 *
-	 * @post result.size() > 0
-	 */
-	static StaticString readNextWord(const char **data) {
-		// Skip leading whitespaces.
-		while (**data == ' ') {
-			(*data)++;
-		}
-		if (**data == '\n' || **data == '\0') {
-			throw ParseException();
-		}
-		
-		// Find end of word and extract the word.
-		const char *endOfWord = *data;
-		while (*endOfWord != ' ' && *endOfWord != '\n' && *endOfWord != '\0') {
-			endOfWord++;
-		}
-		StaticString result(*data, endOfWord - *data);
-		
-		// Move data pointer to the end of this word.
-		*data = endOfWord;
-		return result;
-	}
-
-	static long long processNextWordAsLongLong(const StaticString &word, char *nullTerminatedWord) {
-		memcpy(nullTerminatedWord, word.c_str(), word.size());
-		nullTerminatedWord[word.size()] = '\0';
-		if (*nullTerminatedWord == '\0') {
-			throw ParseException();
-		} else {
-			return atoll(nullTerminatedWord);
-		}
-	}
-	
-	static long long readNextWordAsLongLong(const char **data) {
-		StaticString word = readNextWord(data);
-		if (word.size() < 50) {
-			char nullTerminatedWord[50];
-			return processNextWordAsLongLong(word, nullTerminatedWord);
-		} else {
-			string nullTerminatedWord(word.size() + 1, '\0');
-			return processNextWordAsLongLong(word, &nullTerminatedWord[0]);
-		}
-	}
-
-	static int processNextWordAsInt(const StaticString &word, char *nullTerminatedWord) {
-		memcpy(nullTerminatedWord, word.c_str(), word.size());
-		nullTerminatedWord[word.size()] = '\0';
-		if (*nullTerminatedWord == '\0') {
-			throw ParseException();
-		} else {
-			return atoi(nullTerminatedWord);
-		}
-	}
-	
-	static int readNextWordAsInt(const char **data) {
-		StaticString word = readNextWord(data);
-		if (word.size() < 50) {
-			char nullTerminatedWord[50];
-			return processNextWordAsInt(word, nullTerminatedWord);
-		} else {
-			string nullTerminatedWord(word.size() + 1, '\0');
-			return processNextWordAsInt(word, &nullTerminatedWord[0]);
-		}
-	}
-	
-	string runCommandAndCaptureOutput(const char **command) const {
-		pid_t pid;
-		int e;
-		Pipe p;
-		
-		p = createPipe();
-		
-		this_thread::disable_syscall_interruption dsi;
-		pid = syscalls::fork();
-		if (pid == 0) {
-			// Make ps nicer, we want to have as little impact on the rest
-			// of the system as possible while collecting the metrics.
-			int prio = getpriority(PRIO_PROCESS, getpid());
-			prio++;
-			if (prio > 20) {
-				prio = 20;
-			}
-			setpriority(PRIO_PROCESS, getpid(), prio);
-			
-			dup2(p[1], 1);
-			close(p[0]);
-			close(p[1]);
-			closeAllFileDescriptors(2);
-			execvp(command[0], (char * const *) command);
-			_exit(1);
-		} else if (pid == -1) {
-			e = errno;
-			throw SystemException("Cannot fork() a new process", e);
-		} else {
-			bool done = false;
-			string result;
-			
-			p[1].close();
-			while (!done) {
-				char buf[1024 * 4];
-				ssize_t ret;
-				
-				try {
-					this_thread::restore_syscall_interruption rsi(dsi);
-					ret = syscalls::read(p[0], buf, sizeof(buf));
-				} catch (const thread_interrupted &) {
-					syscalls::kill(SIGKILL, pid);
-					syscalls::waitpid(pid, NULL, 0);
-					throw;
-				}
-				if (ret == -1) {
-					e = errno;
-					syscalls::kill(SIGKILL, pid);
-					syscalls::waitpid(pid, NULL, 0);
-					throw SystemException("Cannot read output from the 'ps' command", e);
-				}
-				done = ret == 0;
-				result.append(buf, ret);
-			}
-			p[0].close();
-			syscalls::waitpid(pid, NULL, 0);
-			
-			if (result.empty()) {
-				throw RuntimeException("The 'ps' command failed");
-			} else {
-				return result;
-			}
-		}
-	}
-	
-	string readRestOfLine(const char *data) const {
-		// Skip leading whitespaces.
-		while (*data == ' ') {
-			data++;
-		}
-		// Rest of line is allowed to be empty.
-		if (*data == '\n' || *data == '\0') {
-			return "";
-		}
-		
-		// Look for newline character. From there, scan back until we've
-		// found a non-whitespace character.
-		const char *endOfLine = strchr(data, '\n');
-		if (endOfLine == NULL) {
-			throw ParseException();
-		}
-		while (*(endOfLine - 1) == ' ') {
-			endOfLine--;
-		}
-		
-		return string(data, endOfLine - data);
-	}
-	
 	template<typename Collection, typename ConstIterator>
 	ProcessMetricMap parsePsOutput(const string &output, const Collection &allowedPids) const {
 		ProcessMetricMap result;
+		const char *start = output.c_str();
+
 		// Ignore first line, it contains the column names.
-		const char *start = strchr(output.c_str(), '\n');
-		if (start != NULL) {
-			// Skip to beginning of next line.
-			start++;
-			if (*start == '\0') {
-				start = NULL;
-			}
+		if (!skipToNextLine(&start) || *start == '\0') {
+			start = NULL;
 		}
 
 		#ifndef PS_SUPPORTS_MULTIPLE_PIDS
@@ -428,7 +264,7 @@ public:
 	 *
 	 * Returns a map which maps a given PID to its collected metrics.
 	 *
-	 * @throws ProcessMetricsCollector::ParseException
+	 * @throws ParseException The ps output cannot be parsed.
 	 * @throws SystemException
 	 * @throws RuntimeException
 	 */

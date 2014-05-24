@@ -53,6 +53,7 @@
 #include <agents/HelperAgent/RequestHandler.h>
 #include <agents/HelperAgent/RequestHandler.cpp>
 #include <agents/HelperAgent/AgentOptions.h>
+#include <agents/HelperAgent/SystemMetricsTool.cpp>
 
 #include <agents/Base.h>
 #include <Constants.h>
@@ -620,6 +621,11 @@ public:
 int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
+
+	if (argc > 1 && strcmp(argv[1], "system-metrics") == 0) {
+		return SystemMetricsTool::main(argc, argv);
+	}
+
 	AgentOptionsPtr options;
 	try {
 		options = boost::make_shared<AgentOptions>(

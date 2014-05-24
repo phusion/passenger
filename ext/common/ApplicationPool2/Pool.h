@@ -819,7 +819,7 @@ public:
 			// data structures, and log the state into the analytics logs.
 			UPDATE_TRACE_POINT();
 			allMetrics = ProcessMetricsCollector().collect(pids);
-		} catch (const ProcessMetricsCollector::ParseException &) {
+		} catch (const ParseException &) {
 			P_WARN("Unable to collect process metrics: cannot parse 'ps' output.");
 			goto end;
 		}
