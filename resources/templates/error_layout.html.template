@@ -48,9 +48,9 @@
 				<dd><pre>{{ENVVARS|default=Unknown}}</pre></dd>
 				<dt>Ulimits</dt>
 				<dd><pre>{{ULIMIT|default=Unknown}}</pre></dd>
-				{{if SYSMEMORY}}
-					<dt>System memory usage</dt>
-					<dd><pre>{{SYSMEMORY|default=Unknown}}</pre></dd>
+				{{if SYSTEM_METRICS}}
+					<dt>System metrics</dt>
+					<dd><pre>{{SYSTEM_METRICS|default=Unknown}}</pre></dd>
 				{{/if}}
 				{{if RUBY_INFO}}
 					<dt>General Ruby interpreter information</dt>

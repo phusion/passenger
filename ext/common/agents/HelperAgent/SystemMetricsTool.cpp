@@ -129,27 +129,31 @@ main(int argc, char *argv[]) {
 	SystemMetrics metrics;
 	SystemMetricsCollector collector;
 
-	if (options.descOptions.cpu) {
-		collector.collect(metrics);
-		// We have to measure system metrics within an interval
-		// in order to determine the CPU usage.
-		usleep(50000);
+	try {
+		if (options.descOptions.cpu) {
+			collector.collect(metrics);
+			// We have to measure system metrics within an interval
+			// in order to determine the CPU usage.
+			usleep(50000);
+		}
+
+		do {
+			collector.collect(metrics);
+			if (options.xml) {
+				cout << "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
+				metrics.toXml(cout, options.xmlOptions);
+			} else {
+				metrics.toDescription(cout, options.descOptions);
+			}
+			if (options.interval != -1) {
+				sleep(options.interval);
+			}
+		} while (options.interval != -1);
+		return 0;
+	} catch (const RuntimeException &e) {
+		fprintf(stderr, "An error occurred while collecting system metrics: %s\n", e.what());
+		return 1;
 	}
-
-	do {
-		collector.collect(metrics);
-		if (options.xml) {
-			cout << "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
-			metrics.toXml(cout, options.xmlOptions);
-		} else {
-			metrics.toDescription(cout, options.descOptions);
-		}
-		if (options.interval != -1) {
-			sleep(options.interval);
-		}
-	} while (options.interval != -1);
-
-	return 0;
 }
 
 } // namespace SystemMetricsTool

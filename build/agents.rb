@@ -152,7 +152,8 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 		"#{EXTRA_CXX_LDFLAGS}")
 end
 
-spawn_preparer_libs = COMMON_LIBRARY.only('Utils/Base64.o')
+spawn_preparer_libs = COMMON_LIBRARY.only('Utils/Base64.o', 'Utils/SystemTime.o',
+	'Utils/StrIntUtils.o', 'Utils/IOUtils.o')
 dependencies = [
 	'ext/common/agents/SpawnPreparer.cpp',
 	spawn_preparer_libs.link_objects,

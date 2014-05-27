@@ -40,7 +40,7 @@ module LoaderSharedHelpers
 		dump_ruby_environment
 		check_rvm_using_wrapper_script(options)
 		return sanitize_spawn_options(options)
-7	end
+	end
 
 	def check_rvm_using_wrapper_script(options)
 		ruby = options["ruby"]
@@ -92,7 +92,7 @@ module LoaderSharedHelpers
 	def dump_all_information
 		dump_ruby_environment
 		dump_envvars
-		dump_system_memory_stats
+		dump_system_metrics
 	end
 
 	def dump_ruby_environment
@@ -155,10 +155,13 @@ module LoaderSharedHelpers
 		# Don't care.
 	end
 
-	def dump_system_memory_stats
+	def dump_system_metrics
 		if dir = ENV['PASSENGER_DEBUG_DIR']
-			File.open("#{dir}/sysmemory", "wb") do |f|
-				f.write(`"#{PhusionPassenger.helper_scripts_dir}/system-memory-stats.py"`)
+			contents = `"#{PhusionPassenger.bin_dir}/passenger-config" system-metrics`
+			if $? && $?.exitstatus == 0
+				File.open("#{dir}/system_metrics", "wb") do |f|
+					f.write(contents)
+				end
 			end
 		end
 	rescue SystemCallError
