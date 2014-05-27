@@ -64,7 +64,7 @@
 #include <ResourceLocator.h>
 #include <BackgroundEventLoop.cpp>
 #include <ServerInstanceDir.h>
-#include <UnionStation.h>
+#include <UnionStation/Core.h>
 #include <Exceptions.h>
 #include <MultiLibeio.cpp>
 #include <Utils.h>
@@ -262,7 +262,7 @@ private:
 	FileDescriptor requestSocket;
 	ServerInstanceDir serverInstanceDir;
 	ServerInstanceDir::GenerationPtr generation;
-	UnionStation::LoggerFactoryPtr loggerFactory;
+	UnionStation::CorePtr unionStationCore;
 	RandomGeneratorPtr randomGenerator;
 	SpawnerFactoryPtr spawnerFactory;
 	PoolPtr pool;
@@ -460,11 +460,11 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		loggerFactory = boost::make_shared<UnionStation::LoggerFactory>(options.loggingAgentAddress,
+		unionStationCore = boost::make_shared<UnionStation::Core>(options.loggingAgentAddress,
 			"logging", options.loggingAgentPassword);
 		spawnerFactory = boost::make_shared<SpawnerFactory>(resourceLocator,
 			generation, boost::make_shared<SpawnerConfig>(randomGenerator));
-		pool = boost::make_shared<Pool>(spawnerFactory, loggerFactory,
+		pool = boost::make_shared<Pool>(spawnerFactory, unionStationCore,
 			randomGenerator, &options);
 		pool->initialize();
 		pool->setMax(options.maxPoolSize);

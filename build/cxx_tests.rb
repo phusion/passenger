@@ -115,7 +115,9 @@ TEST_CXX_OBJECTS = {
 		ext/common/agents/LoggingAgent/RemoteSender.h
 		ext/common/agents/LoggingAgent/DataStoreId.h
 		ext/common/agents/LoggingAgent/FilterSupport.h
-		ext/common/UnionStation.h
+		ext/common/UnionStation/Connection.h
+		ext/common/UnionStation/Core.h
+		ext/common/UnionStation/Transaction.h
 		ext/common/Utils.h
 		ext/common/EventedServer.h
 		ext/common/EventedClient.h
@@ -144,7 +146,10 @@ TEST_CXX_OBJECTS = {
 		ext/common/agents/HelperAgent/FileBackedPipe.h
 		ext/common/agents/HelperAgent/ScgiRequestParser.h
 		ext/common/agents/HelperAgent/AgentOptions.h
-		ext/common/UnionStation.h
+		ext/common/UnionStation/Connection.h
+		ext/common/UnionStation/Core.h
+		ext/common/UnionStation/Transaction.h
+		ext/common/UnionStation/ScopeLog.h
 		ext/common/ApplicationPool2/Pool.h
 		ext/common/ApplicationPool2/SuperGroup.h
 		ext/common/ApplicationPool2/Group.h

@@ -47,7 +47,8 @@
 #include <ApplicationPool2/Session.h>
 #include <ApplicationPool2/SpawnerFactory.h>
 #include <ApplicationPool2/Options.h>
-#include <UnionStation.h>
+#include <UnionStation/Core.h>
+#include <UnionStation/Transaction.h>
 #include <Logging.h>
 #include <Exceptions.h>
 #include <RandomGenerator.h>
@@ -88,9 +89,6 @@ public:
 public:
 	friend class SuperGroup;
 	friend class Group;
-	typedef UnionStation::LoggerFactory LoggerFactory;
-	typedef UnionStation::LoggerFactoryPtr LoggerFactoryPtr;
-	typedef UnionStation::LoggerPtr LoggerPtr;
 
 	struct DebugSupport {
 		/** Mailbox for the unit tests to receive messages on. */
@@ -126,7 +124,7 @@ public:
 	typedef boost::shared_ptr<DebugSupport> DebugSupportPtr;
 
 	SpawnerFactoryPtr spawnerFactory;
-	LoggerFactoryPtr loggerFactory;
+	UnionStation::CorePtr unionStationCore;
 	RandomGeneratorPtr randomGenerator;
 
 	mutable boost::mutex syncher;
@@ -845,7 +843,7 @@ public:
 					updateProcessMetrics(group->disabledProcesses, allMetrics, processesToDetach);
 
 					// Log to Union Station.
-					if (group->options.analytics && loggerFactory != NULL) {
+					if (group->options.analytics && unionStationCore != NULL) {
 						ProcessAnalyticsLogEntryPtr entry = boost::make_shared<ProcessAnalyticsLogEntry>();
 						stringstream &xml = entry->data;
 
@@ -871,9 +869,12 @@ public:
 			while (!logEntries.empty()) {
 				ProcessAnalyticsLogEntryPtr entry = logEntries.back();
 				logEntries.pop_back();
-				LoggerPtr logger = loggerFactory->newTransaction(entry->groupName,
-					"processes", entry->key);
-				logger->message(entry->data.str());
+				UnionStation::TransactionPtr transaction =
+					unionStationCore->newTransaction(
+						entry->groupName,
+						"processes",
+						entry->key);
+				transaction->message(entry->data.str());
 			}
 
 			UPDATE_TRACE_POINT();
@@ -923,12 +924,12 @@ public:
 	
 public:
 	Pool(const SpawnerFactoryPtr &spawnerFactory,
-		const LoggerFactoryPtr &loggerFactory = LoggerFactoryPtr(),
+		const UnionStation::CorePtr &unionStationCore = UnionStation::CorePtr(),
 		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr(),
 		const VariantMap *agentsOptions = NULL)
 	{
 		this->spawnerFactory = spawnerFactory;
-		this->loggerFactory = loggerFactory;
+		this->unionStationCore = unionStationCore;
 		if (randomGenerator != NULL) {
 			this->randomGenerator = randomGenerator;
 		} else {
@@ -1075,7 +1076,7 @@ public:
 				 */
 				P_DEBUG("Could not free a process; putting request to top-level getWaitlist");
 				getWaitlist.push_back(GetWaiter(
-					options.copyAndPersist().clearLogger(),
+					options.copyAndPersist().detachFromUnionStationTransaction(),
 					callback));
 			} else {
 				/* Now that a process has been trashed we can create

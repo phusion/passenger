@@ -29,6 +29,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <oxt/tracable_exception.hpp>
+#include <RandomGenerator.h>
 #include <ApplicationPool2/Options.h>
 #include <Utils/StringMap.h>
 

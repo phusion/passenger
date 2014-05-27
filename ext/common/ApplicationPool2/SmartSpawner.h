@@ -712,7 +712,7 @@ public:
 		}
 		
 		generation = _generation;
-		options    = _options.copyAndPersist().clearLogger();
+		options    = _options.copyAndPersist().detachFromUnionStationTransaction();
 		pid        = -1;
 		m_lastUsed = SystemTime::getUsec();
 

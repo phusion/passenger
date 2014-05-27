@@ -133,7 +133,9 @@
 #include <EventedBufferedInput.h>
 #include <MessageReadersWriters.h>
 #include <Constants.h>
-#include <UnionStation.h>
+#include <UnionStation/Core.h>
+#include <UnionStation/Transaction.h>
+#include <UnionStation/ScopeLog.h>
 #include <ApplicationPool2/Pool.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
@@ -528,16 +530,16 @@ public:
 	}
 
 	bool useUnionStation() const {
-		return options.logger != NULL;
+		return options.transaction != NULL;
 	}
 
-	UnionStation::LoggerPtr getLogger() const {
-		return options.logger;
+	UnionStation::TransactionPtr getUnionStationTransaction() const {
+		return options.transaction;
 	}
 
 	void beginScopeLog(UnionStation::ScopeLog **scopeLog, const char *name) {
-		if (options.logger != NULL) {
-			*scopeLog = new UnionStation::ScopeLog(options.logger, name);
+		if (options.transaction != NULL) {
+			*scopeLog = new UnionStation::ScopeLog(options.transaction, name);
 		}
 	}
 
@@ -550,7 +552,7 @@ public:
 	}
 
 	void logMessage(const StaticString &message) {
-		options.logger->message(message);
+		options.transaction->message(message);
 	}
 
 	void verifyInvariants() const {
@@ -617,16 +619,13 @@ public:
 
 private:
 	friend class Client;
-	typedef UnionStation::LoggerFactory LoggerFactory;
-	typedef UnionStation::LoggerFactoryPtr LoggerFactoryPtr;
-	typedef UnionStation::LoggerPtr LoggerPtr;
 
 	const SafeLibevPtr libev;
 	FileDescriptor requestSocket;
 	PoolPtr pool;
 	const AgentOptions &options;
 	const ResourceLocator resourceLocator;
-	LoggerFactoryPtr loggerFactory;
+	UnionStation::CorePtr unionStationCore;
 	ev::io requestSocketWatcher;
 	ev::timer resumeSocketWatcherTimer;
 	HashMap<int, ClientPtr> clients;
@@ -1933,9 +1932,9 @@ private:
 				return;
 			}
 
-			client->options.logger = loggerFactory->newTransaction(
+			client->options.transaction = unionStationCore->newTransaction(
 				options.getAppGroupName(), "requests", key, filters);
-			if (!client->options.logger->isNull()) {
+			if (!client->options.transaction->isNull()) {
 				client->options.analytics = true;
 				client->options.unionStationKey = key;
 			}
@@ -2327,7 +2326,7 @@ private:
 
 			if (client->options.analytics) {
 				data.push_back(makeStaticStringWithNull("PASSENGER_TXN_ID"));
-				data.push_back(makeStaticStringWithNull(client->options.logger->getTxnId()));
+				data.push_back(makeStaticStringWithNull(client->options.transaction->getTxnId()));
 			}
 
 			uint32_t dataSize = 0;
@@ -2402,7 +2401,7 @@ private:
 
 			if (client->options.analytics) {
 				data.append("Passenger-Txn-Id: ");
-				data.append(client->options.logger->getTxnId());
+				data.append(client->options.transaction->getTxnId());
 				data.append("\r\n");
 			}
 
@@ -2614,7 +2613,7 @@ public:
 	{
 		accept4Available = true;
 		connectPasswordTimeout = 15000;
-		loggerFactory = pool->loggerFactory;
+		unionStationCore = pool->unionStationCore;
 
 		requestSocketWatcher.set(_requestSocket, ev::READ);
 		requestSocketWatcher.set(_libev->getLoop());

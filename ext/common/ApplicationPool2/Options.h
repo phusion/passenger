@@ -31,7 +31,8 @@
 #include <boost/shared_array.hpp>
 #include <ApplicationPool2/AppTypes.h>
 #include <Account.h>
-#include <UnionStation.h>
+#include <UnionStation/Core.h>
+#include <UnionStation/Transaction.h>
 #include <Constants.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
@@ -361,10 +362,11 @@ public:
 	StaticString uri;
 	
 	/**
-	 * A Union Station logger object to log things to. May be the null pointer,
-	 * in which case Union Station logging is disabled for this request.
+	 * The Union Station log transaction that this request belongs to.
+	 * May be the null pointer, in which case Union Station logging is
+	 * disabled for this request.
 	 */
-	UnionStation::LoggerPtr logger;
+	UnionStation::TransactionPtr transaction;
 
 	/**
 	 * A sticky session ID for routing to a specific process.
@@ -529,11 +531,11 @@ public:
 		uri      = StaticString();
 		stickySessionId = 0;
 		noop     = false;
-		return clearLogger();
+		return detachFromUnionStationTransaction();
 	}
 
-	Options &clearLogger() {
-		logger.reset();
+	Options &detachFromUnionStationTransaction() {
+		transaction.reset();
 		return *this;
 	}
 
