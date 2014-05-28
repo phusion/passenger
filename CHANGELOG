@@ -6,6 +6,9 @@ Release 4.0.43
  * Introduced a new command `passenger-config system-metrics, which displays
    metrics about the system such as the total CPU and memory usage.
  * Fixed some compilation problems caused by the compiler capability autodetector.
+ * System metrics such as total CPU usage and memory usage, are now sent to
+   [Union Station](https://www.unionstationapp.com) in preparation for future
+   features.
 
 
 Release 4.0.42

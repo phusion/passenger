@@ -59,6 +59,7 @@
 #include <Utils/MessagePassing.h>
 #include <Utils/VariantMap.h>
 #include <Utils/ProcessMetricsCollector.h>
+#include <Utils/SystemMetricsCollector.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -126,6 +127,8 @@ public:
 	SpawnerFactoryPtr spawnerFactory;
 	UnionStation::CorePtr unionStationCore;
 	RandomGeneratorPtr randomGenerator;
+	SystemMetricsCollector systemMetricsCollector;
+	SystemMetrics systemMetrics;
 
 	mutable boost::mutex syncher;
 	unsigned int max;
@@ -728,13 +731,12 @@ public:
 		return sleepTime;
 	}
 
-	struct ProcessAnalyticsLogEntry {
+	struct UnionStationLogEntry {
 		string groupName;
+		const char *category;
 		string key;
-		stringstream data;
+		string data;
 	};
-
-	typedef boost::shared_ptr<ProcessAnalyticsLogEntry> ProcessAnalyticsLogEntryPtr;
 
 	static void collectAnalytics(PoolPtr self) {
 		TRACE_POINT();
@@ -778,6 +780,43 @@ public:
 		}
 	}
 
+	void prepareUnionStationProcessStateLogs(vector<UnionStationLogEntry> &logEntries,
+		const GroupPtr &group) const
+	{
+		if (group->options.analytics && unionStationCore != NULL) {
+			logEntries.push_back(UnionStationLogEntry());
+			UnionStationLogEntry &entry = logEntries.back();
+			stringstream stream;
+
+			stream << "Group: <group>";
+			group->inspectXml(stream, false);
+			stream << "</group>";
+
+			entry.groupName = group->name;
+			entry.category  = "processes";
+			entry.key       = group->options.unionStationKey;
+			entry.data      = stream.str();
+		}
+	}
+
+	void prepareUnionStationSystemMetricsLogs(vector<UnionStationLogEntry> &logEntries,
+		const GroupPtr &group) const
+	{
+		if (group->options.analytics && unionStationCore != NULL) {
+			logEntries.push_back(UnionStationLogEntry());
+			UnionStationLogEntry &entry = logEntries.back();
+			stringstream stream;
+
+			stream << "System metrics: ";
+			systemMetrics.toXml(stream);
+
+			entry.groupName = group->name;
+			entry.category  = "system_metrics";
+			entry.key       = group->options.unionStationKey;
+			entry.data      = stream.str();
+		}
+	}
+
 	unsigned long long realCollectAnalytics() {
 		TRACE_POINT();
 		this_thread::disable_interruption di;
@@ -811,20 +850,27 @@ public:
 			}
 		}
 		
-		ProcessMetricMap allMetrics;
+		// Collect process metrics and system and store them in the
+		// data structures. Later, we log them to Union Station.
+		ProcessMetricMap processMetrics;
 		try {
-			// Now collect the process metrics and store them in the
-			// data structures, and log the state into the analytics logs.
 			UPDATE_TRACE_POINT();
-			allMetrics = ProcessMetricsCollector().collect(pids);
+			processMetrics = ProcessMetricsCollector().collect(pids);
 		} catch (const ParseException &) {
 			P_WARN("Unable to collect process metrics: cannot parse 'ps' output.");
+			goto end;
+		}
+		try {
+			UPDATE_TRACE_POINT();
+			systemMetricsCollector.collect(systemMetrics);
+		} catch (const RuntimeException &e) {
+			P_WARN("Unable to collect system metrics: " << e.what());
 			goto end;
 		}
 
 		{
 			UPDATE_TRACE_POINT();
-			vector<ProcessAnalyticsLogEntryPtr> logEntries;
+			vector<UnionStationLogEntry> logEntries;
 			vector<ProcessPtr> processesToDetach;
 			vector<Callback> actions;
 			ScopedLock l(syncher);
@@ -838,22 +884,11 @@ public:
 				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
 					const GroupPtr &group = *g_it;
 
-					updateProcessMetrics(group->enabledProcesses, allMetrics, processesToDetach);
-					updateProcessMetrics(group->disablingProcesses, allMetrics, processesToDetach);
-					updateProcessMetrics(group->disabledProcesses, allMetrics, processesToDetach);
-
-					// Log to Union Station.
-					if (group->options.analytics && unionStationCore != NULL) {
-						ProcessAnalyticsLogEntryPtr entry = boost::make_shared<ProcessAnalyticsLogEntry>();
-						stringstream &xml = entry->data;
-
-						entry->groupName = group->name;
-						entry->key = group->options.unionStationKey;
-						xml << "Group: <group>";
-						group->inspectXml(xml, false);
-						xml << "</group>";
-						logEntries.push_back(entry);
-					}
+					updateProcessMetrics(group->enabledProcesses, processMetrics, processesToDetach);
+					updateProcessMetrics(group->disablingProcesses, processMetrics, processesToDetach);
+					updateProcessMetrics(group->disabledProcesses, processMetrics, processesToDetach);
+					prepareUnionStationProcessStateLogs(logEntries, group);
+					prepareUnionStationSystemMetricsLogs(logEntries, group);
 				}
 			}
 
@@ -867,14 +902,14 @@ public:
 			l.unlock();
 			UPDATE_TRACE_POINT();
 			while (!logEntries.empty()) {
-				ProcessAnalyticsLogEntryPtr entry = logEntries.back();
-				logEntries.pop_back();
+				UnionStationLogEntry &entry = logEntries.back();
 				UnionStation::TransactionPtr transaction =
 					unionStationCore->newTransaction(
-						entry->groupName,
-						"processes",
-						entry->key);
-				transaction->message(entry->data.str());
+						entry.groupName,
+						entry.category,
+						entry.key);
+				transaction->message(entry.data);
+				logEntries.pop_back();
 			}
 
 			UPDATE_TRACE_POINT();
@@ -936,7 +971,13 @@ public:
 			this->randomGenerator = boost::make_shared<RandomGenerator>();
 		}
 		this->agentsOptions = agentsOptions;
-		
+
+		try {
+			systemMetricsCollector.collect(systemMetrics);
+		} catch (const RuntimeException &e) {
+			P_WARN("Unable to collect system metrics: " << e.what());
+		}
+
 		lifeStatus  = ALIVE;
 		max         = 6;
 		maxIdleTime = 60 * 1000000;
