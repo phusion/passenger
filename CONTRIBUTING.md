@@ -280,23 +280,6 @@ The usual Ruby coding style applies, with some exceptions:
  * Use 4-space tabs for indentation.
  * Return values explicitly with `return`.
 
-### Prefer shared_ptrs
+## Further reading
 
-You should prefer `shared_ptr`s over raw pointers because they make memory leaks and memory errors less likely. There are only very limited cases in which raw pointers are justified, e.g. optimizations in very hot code paths.
-
-### Event loop callbacks
-
-Be careful with event loop callbacks, they are more tricky than one would expect.
-
- * If your event loop callback ever calls user-defined functions, either explicitly or implicitly, you should obtain a `shared_ptr` to your `this` object. This is because the user-defined function could call something that would free your object. Your class should derive from `boost::enable_shared_from_this` to make it easy for you to obtain a `shared_ptr` to yourself.
-
-        void callback(ev::io &io, int revents) {
-            shared_ptr<Foo> self = shared_from_this();
-            ...
-        }
-
- * Event loop callbacks should catch expected exceptions. Letting an exception pass will crash the program. When system call failure simulation is turned on, the code can throw arbitrary SystemExceptions, so beware of those.
-
-### Thread interruption and RAII destructors
-
-When using thread interruption, make sure that RAII destructors are non-interruptable. If your code is interrupted and then a `thread_interrupted` is thrown, make sure that RAII destructors don't check for the interruption flag and then throw `thread_interrupted` again. This not only fails to clean things up properly, but also confuses the exception system, resulting in strange errors such as "terminate called without an active exception".
+Please read "doc/CodingTipsAndPitfalls.md".
