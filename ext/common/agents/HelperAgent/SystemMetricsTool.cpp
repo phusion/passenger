@@ -142,6 +142,7 @@ main(int argc, char *argv[]) {
 			if (options.xml) {
 				cout << "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
 				metrics.toXml(cout, options.xmlOptions);
+				cout << endl;
 			} else {
 				metrics.toDescription(cout, options.descOptions);
 			}
