@@ -41,12 +41,16 @@ struct Options {
 	SystemMetrics::XmlOptions xmlOptions;
 	SystemMetrics::DescriptionOptions descOptions;
 	int interval;
+	bool stdin;
+	bool exitOnUnexpectedError;
 	bool help;
 
 	Options() {
 		xml = false;
 		descOptions.colors = isatty(1);
 		interval = -1;
+		stdin = false;
+		exitOnUnexpectedError = true;
 		help = false;
 	}
 };
@@ -70,6 +74,12 @@ usage() {
 	printf("        --no-memory        Do not display memory metrics\n");
 	printf("        --force-colors     Display colors even if stdout is not a TTY\n");
 	printf("    -w  --watch INTERVAL   Reprint metrics every INTERVAL seconds\n");
+	printf("        --stdin            Reprint metrics every time a newline is received on\n");
+	printf("                           stdin, until EOF. Mutually exclusive with --watch\n");
+	printf("        --no-exit-on-unexpected-error   Normally, if an unexpected error is\n");
+	printf("                           encountered while collecting system metrics, this\n");
+	printf("                           program will exit with an error code. This option\n");
+	printf("                           suppresses that\n");
 	printf("    -h, --help             Show this help\n");
 }
 
@@ -106,6 +116,12 @@ parseOptions(int argc, char *argv[]) {
 				usage();
 				exit(1);
 			}
+		} else if (isFlag(argv[i], '\0', "--stdin")) {
+			options.stdin = true;
+			i++;
+		} else if (isFlag(argv[i], '\0', "--no-exit-on-unexpected-error")) {
+			options.exitOnUnexpectedError = false;
+			i++;
 		} else if (isFlag(argv[i], 'h', "--help")) {
 			options.help = true;
 			i++;
@@ -115,7 +131,36 @@ parseOptions(int argc, char *argv[]) {
 			exit(1);
 		}
 	}
+	if (options.interval != -1 && options.stdin) {
+		fprintf(stderr, "ERROR: --watch and --stdin are mutually exclusive.\n");
+		exit(1);
+	}
 	return options;
+}
+
+static bool
+waitForNextLine() {
+	char buf[1024];
+	return fgets(buf, sizeof(buf), stdin) != NULL;
+}
+
+static void
+perform(const Options &options, SystemMetricsCollector &collector, SystemMetrics &metrics) {
+	try {
+		collector.collect(metrics);
+		if (options.xml) {
+			cout << "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
+			metrics.toXml(cout, options.xmlOptions);
+			cout << endl;
+		} else {
+			metrics.toDescription(cout, options.descOptions);
+		}
+	} catch (const RuntimeException &e) {
+		fprintf(stderr, "An error occurred while collecting system metrics: %s\n", e.what());
+		if (options.exitOnUnexpectedError) {
+			exit(1);
+		}
+	}
 }
 
 static int
@@ -126,35 +171,29 @@ main(int argc, char *argv[]) {
 		return 0;
 	}
 
-	SystemMetrics metrics;
 	SystemMetricsCollector collector;
+	SystemMetrics metrics;
 
-	try {
-		if (options.descOptions.cpu) {
-			collector.collect(metrics);
-			// We have to measure system metrics within an interval
-			// in order to determine the CPU usage.
-			usleep(50000);
+	if (options.descOptions.cpu) {
+		collector.collect(metrics);
+		// We have to measure system metrics within an interval
+		// in order to determine the CPU usage.
+		usleep(50000);
+	}
+
+	if (options.stdin) {
+		while (waitForNextLine()) {
+			perform(options, collector, metrics);
 		}
-
+	} else {
 		do {
-			collector.collect(metrics);
-			if (options.xml) {
-				cout << "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
-				metrics.toXml(cout, options.xmlOptions);
-				cout << endl;
-			} else {
-				metrics.toDescription(cout, options.descOptions);
-			}
+			perform(options, collector, metrics);
 			if (options.interval != -1) {
 				sleep(options.interval);
 			}
 		} while (options.interval != -1);
-		return 0;
-	} catch (const RuntimeException &e) {
-		fprintf(stderr, "An error occurred while collecting system metrics: %s\n", e.what());
-		return 1;
 	}
+	return 0;
 }
 
 } // namespace SystemMetricsTool
