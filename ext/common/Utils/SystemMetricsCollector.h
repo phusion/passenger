@@ -553,46 +553,6 @@ public:
 				stream << endl;
 			}
 
-			if (swapInRate != -2) {
-				stream << "Swap in           : ";
-				if (std::isnan(swapInRate) || swapInRate < 0) {
-					if (options.colors) {
-						stream << ANSI_COLOR_DGRAY;
-					}
-					stream << "unknown";
-					if (options.colors) {
-						stream << ANSI_COLOR_RESET;
-					}
-				} else {
-					char buf[32];
-
-					snprintf(buf, sizeof(buf), "%.1f", swapInRate / 1024);
-					stream << maybeColorAfterThreshold(options, buf, swapInRate / 1024, 2);
-					stream << " MB/sec";
-				}
-				stream << endl;
-			}
-
-			if (swapOutRate != -2) {
-				stream << "Swap out          : ";
-				if (std::isnan(swapOutRate) || swapOutRate < 0) {
-					if (options.colors) {
-						stream << ANSI_COLOR_DGRAY;
-					}
-					stream << "unknown";
-					if (options.colors) {
-						stream << ANSI_COLOR_RESET;
-					}
-				} else {
-					char buf[32];
-
-					snprintf(buf, sizeof(buf), "%.1f", swapOutRate / 1024);
-					stream << maybeColorAfterThreshold(options, buf, swapOutRate / 1024, 2);
-					stream << " MB/sec";
-				}
-				stream << endl;
-			}
-
 			stream << endl;
 		}
 
@@ -684,6 +644,47 @@ public:
 			stream << "Swap used         : " << formatWidth(kbToMb(swapUsed), 6) << " MB ("
 				<< formatPercent0(options, swapUsedPct, 1, 90) << ")" << endl;
 			stream << "Swap free         : " << formatWidth(kbToMb(swapFree()), 6) << " MB" << endl;
+
+			if (swapInRate != -2) {
+				stream << "Swap in           : ";
+				if (std::isnan(swapInRate) || swapInRate < 0) {
+					if (options.colors) {
+						stream << ANSI_COLOR_DGRAY;
+					}
+					stream << "unknown";
+					if (options.colors) {
+						stream << ANSI_COLOR_RESET;
+					}
+				} else {
+					char buf[32];
+
+					snprintf(buf, sizeof(buf), "%.1f", swapInRate / 1024);
+					stream << maybeColorAfterThreshold(options, buf, swapInRate / 1024, 2);
+					stream << " MB/sec";
+				}
+				stream << endl;
+			}
+
+			if (swapOutRate != -2) {
+				stream << "Swap out          : ";
+				if (std::isnan(swapOutRate) || swapOutRate < 0) {
+					if (options.colors) {
+						stream << ANSI_COLOR_DGRAY;
+					}
+					stream << "unknown";
+					if (options.colors) {
+						stream << ANSI_COLOR_RESET;
+					}
+				} else {
+					char buf[32];
+
+					snprintf(buf, sizeof(buf), "%.1f", swapOutRate / 1024);
+					stream << maybeColorAfterThreshold(options, buf, swapOutRate / 1024, 2);
+					stream << " MB/sec";
+				}
+				stream << endl;
+			}
+
 			stream << endl;
 		}
 	}
@@ -715,8 +716,6 @@ public:
 				stream << "<fifteen>" << loadAverage15 << "</fifteen>";
 			stream << "</load_averages>";
 			stream << "<fork_rate>" << forkRate << "</fork_rate>";
-			stream << "<swap_in_rate>" << swapInRate << "</swap_in_rate>";
-			stream << "<swap_out_rate>" << swapOutRate << "</swap_out_rate>";
 			stream << "</general>";
 		}
 
@@ -760,6 +759,8 @@ public:
 			stream << "<swap_total>" << swapTotal << "</swap_total>";
 			stream << "<swap_used>" << swapUsed << "</swap_used>";
 			stream << "<swap_free>" << swapFree() << "</swap_free>";
+			stream << "<swap_in_rate>" << swapInRate << "</swap_in_rate>";
+			stream << "<swap_out_rate>" << swapOutRate << "</swap_out_rate>";
 			stream << "</memory_metrics>";
 		}
 
