@@ -62,6 +62,7 @@
 #endif
 #include <unistd.h>
 #include <stdlib.h>
+#include <Constants.h>
 #include <StaticString.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
@@ -698,6 +699,7 @@ public:
 				stream << "<localtime>" << strip(std::ctime(&timestamp)) << "</localtime>";
 				stream << "<timestamp>" << timestamp << "</timestamp>";
 			stream << "</current_time>";
+			stream << "<passenger_version>" PASSENGER_VERSION "</passenger_version>";
 			stream << "<kernel_version>" << kernelVersion << "</kernel_version>";
 			stream << "<boottime>";
 				stream << "<localtime>" << strip(std::ctime(&boottime)) << "</localtime>";
