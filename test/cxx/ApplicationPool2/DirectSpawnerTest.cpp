@@ -10,7 +10,6 @@ namespace tut {
 	struct ApplicationPool2_DirectSpawnerTest {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
-		BackgroundEventLoop bg;
 		ProcessPtr process;
 		PipeWatcher::DataCallback gatherOutput;
 		string gatheredOutput;
@@ -18,7 +17,6 @@ namespace tut {
 		
 		ApplicationPool2_DirectSpawnerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			bg.start();
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 			gatherOutput = boost::bind(&ApplicationPool2_DirectSpawnerTest::_gatherOutput, this, _1, _2);
 			setLogLevel(LVL_ERROR); // TODO: change to LVL_WARN
@@ -33,7 +31,7 @@ namespace tut {
 		}
 		
 		boost::shared_ptr<DirectSpawner> createSpawner(const Options &options) {
-			return boost::make_shared<DirectSpawner>(bg.safe,
+			return boost::make_shared<DirectSpawner>(
 				*resourceLocator, generation);
 		}
 		
@@ -64,7 +62,7 @@ namespace tut {
 		options.startupFile  = ".";
 		options.startTimeout = 300;
 		
-		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
+		DirectSpawner spawner(*resourceLocator, generation);
 		
 		try {
 			process = spawner.spawn(options);
@@ -86,7 +84,7 @@ namespace tut {
 		options.startCommand = "perl\t" "-e\t" "print STDERR \"hello world\\n\"";
 		options.startupFile  = ".";
 		
-		DirectSpawner spawner(bg.safe, *resourceLocator, generation);
+		DirectSpawner spawner(*resourceLocator, generation);
 		
 		try {
 			process = spawner.spawn(options);

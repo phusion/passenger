@@ -40,7 +40,6 @@ using namespace oxt;
 
 class SpawnerFactory {
 private:
-	SafeLibevPtr libev;
 	ResourceLocator resourceLocator;
 	ServerInstanceDir::GenerationPtr generation;
 	RandomGeneratorPtr randomGenerator;
@@ -60,17 +59,15 @@ private:
 		} else {
 			return SpawnerPtr();
 		}
-		return boost::make_shared<SmartSpawner>(libev, resourceLocator,
+		return boost::make_shared<SmartSpawner>(resourceLocator,
 			generation, preloaderCommand, options, config);
 	}
 	
 public:
-	SpawnerFactory(const SafeLibevPtr &_libev,
-		const ResourceLocator &_resourceLocator,
+	SpawnerFactory(const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
-		: libev(_libev),
-		  resourceLocator(_resourceLocator),
+		: resourceLocator(_resourceLocator),
 		  generation(_generation)
 	{
 		if (_config == NULL) {
@@ -86,13 +83,13 @@ public:
 		if (options.spawnMethod == "smart" || options.spawnMethod == "smart-lv2") {
 			SpawnerPtr spawner = tryCreateSmartSpawner(options);
 			if (spawner == NULL) {
-				spawner = boost::make_shared<DirectSpawner>(libev,
-					resourceLocator, generation, config);
+				spawner = boost::make_shared<DirectSpawner>(resourceLocator,
+					generation, config);
 			}
 			return spawner;
 		} else if (options.spawnMethod == "direct" || options.spawnMethod == "conservative") {
 			boost::shared_ptr<DirectSpawner> spawner = boost::make_shared<DirectSpawner>(
-				libev, resourceLocator, generation, config);
+				resourceLocator, generation, config);
 			return spawner;
 		} else if (options.spawnMethod == "dummy") {
 			syscalls::usleep(config->spawnerCreationSleepTime);

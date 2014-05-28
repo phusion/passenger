@@ -77,7 +77,6 @@
 #include <ApplicationPool2/Options.h>
 #include <ApplicationPool2/PipeWatcher.h>
 #include <FileDescriptor.h>
-#include <SafeLibev.h>
 #include <Exceptions.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
@@ -334,8 +333,6 @@ protected:
 		 * by security validators to check whether the information sent back by the
 		 * process make any sense. */
 		SpawnPreparationInfo *preparation;
-		/** The SafeLibev that the returned Process should be initialized with. */
-		SafeLibevPtr libev;
 		/** This object captures the process's stderr while negotiation is in progress.
 		 * (Recall that negotiation is performed over the process's stdout while stderr
 		 * is used purely for outputting messages.)
@@ -530,7 +527,7 @@ private:
 		}
 		
 		ProcessPtr process = boost::make_shared<Process>(
-			details.libev, details.pid,
+			details.pid,
 			details.gupid, details.connectPassword,
 			details.adminSocket, details.errorPipe,
 			sockets, creationTime, details.spawnStartTime,

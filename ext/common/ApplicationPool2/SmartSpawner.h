@@ -65,10 +65,6 @@ private:
 		BufferedIO io;
 	};
 
-	/** The event loop that created Process objects should use, and that I/O forwarding
-	 * functions should use. For example data on the error pipe is forwarded using this event loop.
-	 */
-	SafeLibevPtr libev;
 	const vector<string> preloaderCommand;
 	map<string, string> preloaderAnnotations;
 	Options options;
@@ -703,14 +699,12 @@ protected:
 	}
 
 public:
-	SmartSpawner(const SafeLibevPtr &_libev,
-		const ResourceLocator &_resourceLocator,
+	SmartSpawner(const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const vector<string> &_preloaderCommand,
 		const Options &_options,
 		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
 		: Spawner(_resourceLocator),
-		  libev(_libev),
 		  preloaderCommand(_preloaderCommand)
 	{
 		if (preloaderCommand.size() < 2) {
@@ -768,7 +762,6 @@ public:
 		UPDATE_TRACE_POINT();
 		NegotiationDetails details;
 		details.preparation = &preparation;
-		details.libev = libev;
 		details.pid = result.pid;
 		details.adminSocket = result.adminSocket;
 		details.io = result.io;

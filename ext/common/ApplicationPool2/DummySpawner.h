@@ -63,7 +63,7 @@ public:
 		
 		boost::lock_guard<boost::mutex> l(lock);
 		count++;
-		ProcessPtr process = boost::make_shared<Process>(SafeLibevPtr(),
+		ProcessPtr process = boost::make_shared<Process>(
 			(pid_t) count, "gupid-" + toString(count),
 			toString(count),
 			adminSocket.second, FileDescriptor(), sockets,

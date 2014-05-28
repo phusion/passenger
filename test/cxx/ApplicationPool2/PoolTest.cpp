@@ -17,7 +17,6 @@ namespace tut {
 	struct ApplicationPool2_PoolTest {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
-		BackgroundEventLoop bg;
 		SpawnerConfigPtr spawnerConfig;
 		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr pool;
@@ -35,11 +34,10 @@ namespace tut {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			retainSessions = false;
 			spawnerConfig = boost::make_shared<SpawnerConfig>();
-			spawnerFactory = boost::make_shared<SpawnerFactory>(bg.safe, *resourceLocator,
+			spawnerFactory = boost::make_shared<SpawnerFactory>(*resourceLocator,
 				generation, spawnerConfig);
 			pool = boost::make_shared<Pool>(spawnerFactory);
 			pool->initialize();
-			bg.start();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);
 			setLogLevel(LVL_ERROR); // TODO: change to LVL_WARN
 			setPrintAppOutputAsDebuggingMessages(true);

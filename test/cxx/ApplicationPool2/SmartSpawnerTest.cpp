@@ -15,7 +15,6 @@ namespace tut {
 	struct ApplicationPool2_SmartSpawnerTest {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
-		BackgroundEventLoop bg;
 		ProcessPtr process;
 		PipeWatcher::DataCallback gatherOutput;
 		string gatheredOutput;
@@ -23,7 +22,6 @@ namespace tut {
 		
 		ApplicationPool2_SmartSpawnerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			bg.start();
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 			gatherOutput = boost::bind(&ApplicationPool2_SmartSpawnerTest::_gatherOutput, this, _1, _2);
 			setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
@@ -48,7 +46,7 @@ namespace tut {
 				command.push_back("exit-immediately");
 			}
 			
-			return boost::make_shared<SmartSpawner>(bg.safe,
+			return boost::make_shared<SmartSpawner>(
 				*resourceLocator,
 				generation,
 				command,
@@ -125,7 +123,7 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2; sleep 60");
-		SmartSpawner spawner(bg.safe,
+		SmartSpawner spawner(
 			*resourceLocator,
 			generation,
 			preloaderCommand,
@@ -155,7 +153,7 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
-		SmartSpawner spawner(bg.safe,
+		SmartSpawner spawner(
 			*resourceLocator,
 			generation,
 			preloaderCommand,
@@ -185,7 +183,7 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
-		SmartSpawner spawner(bg.safe,
+		SmartSpawner spawner(
 			*resourceLocator,
 			generation,
 			preloaderCommand,
@@ -212,7 +210,7 @@ namespace tut {
 			vector<string> preloaderCommand;
 			preloaderCommand.push_back("ruby");
 			preloaderCommand.push_back(resourceLocator->getHelperScriptsDir() + "/rack-preloader.rb");
-			SmartSpawner spawner(bg.safe,
+			SmartSpawner spawner(
 				*resourceLocator,
 				generation,
 				preloaderCommand,

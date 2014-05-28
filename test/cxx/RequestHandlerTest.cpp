@@ -5,6 +5,7 @@
 #include <ApplicationPool2/Pool.h>
 #include <Utils/json.h>
 #include <Utils/IOUtils.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/Timer.h>
 #include <Utils/BufferedIO.h>
 
@@ -42,7 +43,7 @@ namespace tut {
 		
 		RequestHandlerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			spawnerFactory = boost::make_shared<SpawnerFactory>(bg.safe, *resourceLocator, generation);
+			spawnerFactory = boost::make_shared<SpawnerFactory>(*resourceLocator, generation);
 			pool = boost::make_shared<Pool>(spawnerFactory);
 			pool->initialize();
 			serverFilename = generation->getPath() + "/server";
@@ -97,7 +98,9 @@ namespace tut {
 			return connection;
 		}
 
-		void sendHeaders(const map<string, string> &headers, ...) {
+		void sendHeaders(const map<string, string> &headers, const char *header1,
+			const char *value1, ...)
+		{
 			va_list ap;
 			const char *arg;
 			map<string, string> finalHeaders;
@@ -111,7 +114,10 @@ namespace tut {
 				finalHeaders[key] = value;
 			}
 
-			va_start(ap, headers);
+			finalHeaders[makeStaticStringWithNull(header1)] =
+				makeStaticStringWithNull(value1);
+
+			va_start(ap, value1);
 			while ((arg = va_arg(ap, const char *)) != NULL) {
 				string key(arg, strlen(arg) + 1);
 				arg = va_arg(ap, const char *);

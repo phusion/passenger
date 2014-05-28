@@ -40,8 +40,6 @@ using namespace oxt;
 
 class DirectSpawner: public Spawner {
 private:
-	SafeLibevPtr libev;
-	
 	static int startBackgroundThread(void *(*mainFunction)(void *), void *arg) {
 		// Using raw pthread API because we don't want to register such
 		// trivial threads on the oxt::thread list.
@@ -146,12 +144,10 @@ private:
 	}
 	
 public:
-	DirectSpawner(const SafeLibevPtr &_libev,
-		const ResourceLocator &_resourceLocator,
+	DirectSpawner(const ResourceLocator &_resourceLocator,
 		const ServerInstanceDir::GenerationPtr &_generation,
 		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
-		: Spawner(_resourceLocator),
-		  libev(_libev)
+		: Spawner(_resourceLocator)
 	{
 		generation = _generation;
 		if (_config == NULL) {
@@ -218,7 +214,6 @@ public:
 			
 			NegotiationDetails details;
 			details.preparation = &preparation;
-			details.libev = libev;
 			details.stderrCapturer =
 				make_shared<BackgroundIOCapturer>(
 					errorPipe.first,

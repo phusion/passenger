@@ -48,7 +48,7 @@ namespace tut {
 	
 	TEST_METHOD(1) {
 		// Test initial state.
-		ProcessPtr process = boost::make_shared<Process>(bg.safe,
+		ProcessPtr process = boost::make_shared<Process>(
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
 		process->dummy = true;
@@ -59,7 +59,7 @@ namespace tut {
 	
 	TEST_METHOD(2) {
 		// Test opening and closing sessions.
-		ProcessPtr process = boost::make_shared<Process>(bg.safe,
+		ProcessPtr process = boost::make_shared<Process>(
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
 		process->dummy = true;
@@ -76,7 +76,7 @@ namespace tut {
 	TEST_METHOD(3) {
 		// newSession() checks out the socket with the smallest busyness number
 		// and sessionClosed() restores the session busyness statistics.
-		ProcessPtr process = boost::make_shared<Process>(bg.safe,
+		ProcessPtr process = boost::make_shared<Process>(
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
 		process->dummy = true;
@@ -121,7 +121,7 @@ namespace tut {
 	
 	TEST_METHOD(4) {
 		// If all sockets are at their full capacity then newSession() will fail.
-		ProcessPtr process = boost::make_shared<Process>(bg.safe,
+		ProcessPtr process = boost::make_shared<Process>(
 			123, "", "", adminSocket[0],
 			errorPipe[0], sockets, 0, 0);
 		process->dummy = true;

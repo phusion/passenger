@@ -900,7 +900,7 @@ public:
 		}
 		
 		if (OXT_UNLIKELY(newOptions.noop)) {
-			ProcessPtr process = boost::make_shared<Process>(SafeLibevPtr(),
+			ProcessPtr process = boost::make_shared<Process>(
 				0, string(), string(),
 				FileDescriptor(), FileDescriptor(),
 				SocketListPtr(), 0, 0);
