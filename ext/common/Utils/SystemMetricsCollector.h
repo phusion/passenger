@@ -1003,6 +1003,12 @@ private:
 			unsigned long long forkCount = 0;
 
 			while (start != NULL) {
+				if (*start == '\n') {
+					// Empty line. Skip to next line.
+					start++;
+					continue;
+				}
+
 				StaticString name = readNextWord(&start);
 
 				if (name.size() > 3 && startsWith(name, "cpu")) {
