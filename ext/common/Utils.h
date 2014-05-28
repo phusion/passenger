@@ -403,15 +403,28 @@ string runCommandAndCaptureOutput(const char **command);
  * OS X apparently does something similar, except they use a
  * spinlock so it results in 100% CPU. See _cthread_fork_prepare()
  * at http://www.opensource.apple.com/source/Libc/Libc-166/threads.subproj/cthreads.c
+ * However, since POSIX in OS X is implemented on top of a Mach layer,
+ * calling asyncFork() can mess up the state of the Mach layer, causing
+ * some POSIX functions to mysteriously fail. See
+ * https://code.google.com/p/phusion-passenger/issues/detail?id=1094
+ * You should therefore not use asyncFork() unless you're in a signal
+ * handler.
  */
 pid_t asyncFork();
 
 /**
  * Close all file descriptors that are higher than <em>lastToKeepOpen</em>.
- * This function is async-signal safe. But make sure there are no other
- * threads running that might open file descriptors!
+ *
+ * If you set `asyncSignalSafe` to true, then this function becomes fully async-signal,
+ * through the use of asyncFork() instead of fork(). However, read the documentation
+ * for asyncFork() to learn about its caveats.
+ *
+ * Also, regardless of whether `asyncSignalSafe` is true or not, this function is not
+ * *thread* safe. Make sure there are no other threads running that might open file
+ * descriptors, otherwise some file descriptors might not be closed even though they
+ * should be.
  */
-void closeAllFileDescriptors(int lastToKeepOpen);
+void closeAllFileDescriptors(int lastToKeepOpen, bool asyncSignalSafe = false);
 
 /**
  * A no-op, but usually set as a breakpoint in gdb. See CONTRIBUTING.md.

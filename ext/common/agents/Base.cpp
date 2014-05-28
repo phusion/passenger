@@ -438,7 +438,7 @@ dumpFileDescriptorInfoWithLsof(AbortHandlerState &state, void *userData) {
 	end = appendULL(end, state.pid);
 	*end = '\0';
 
-	closeAllFileDescriptors(2);
+	closeAllFileDescriptors(2, true);
 
 	execlp("lsof", "lsof", "-p", state.messageBuf, "-nP", (const char * const) 0);
 
@@ -457,7 +457,7 @@ dumpFileDescriptorInfoWithLs(AbortHandlerState &state, char *end) {
 
 	pid = asyncFork();
 	if (pid == 0) {
-		closeAllFileDescriptors(2);
+		closeAllFileDescriptors(2, true);
 		// The '-v' is for natural sorting on Linux. On BSD -v means something else but it's harmless.
 		execlp("ls", "ls", "-lv", state.messageBuf, (const char * const) 0);
 		_exit(1);
@@ -517,7 +517,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 	
 	pid_t child = asyncFork();
 	if (child == 0) {
-		closeAllFileDescriptors(2);
+		closeAllFileDescriptors(2, true);
 		execlp("crash-watch", "crash-watch", "--dump", pidStr, (char * const) 0);
 		if (errno == ENOENT) {
 			safePrintErr("Crash-watch is not installed. Please install it with 'gem install crash-watch' "
@@ -583,7 +583,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 
 				close(p[1]);
 				dup2(p[0], STDIN_FILENO);
-				closeAllFileDescriptors(2);
+				closeAllFileDescriptors(2, true);
 				
 				char *command = end;
 				end = appendText(end, "exec ");
@@ -664,7 +664,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 	// Dump human-readable time string and string.
 	pid = asyncFork();
 	if (pid == 0) {
-		closeAllFileDescriptors(2);
+		closeAllFileDescriptors(2, true);
 		execlp("date", "date", (const char * const) 0);
 		_exit(1);
 	} else if (pid == -1) {
@@ -676,7 +676,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 	// Dump system uname.
 	pid = asyncFork();
 	if (pid == 0) {
-		closeAllFileDescriptors(2);
+		closeAllFileDescriptors(2, true);
 		execlp("uname", "uname", "-mprsv", (const char * const) 0);
 		_exit(1);
 	} else if (pid == -1) {
@@ -688,7 +688,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 	// Dump ulimit.
 	pid = asyncFork();
 	if (pid == 0) {
-		closeAllFileDescriptors(2);
+		closeAllFileDescriptors(2, true);
 		execlp("ulimit", "ulimit", "-a", (const char * const) 0);
 		// On Linux 'ulimit' is a shell builtin, not a command.
 		execlp("/bin/sh", "/bin/sh", "-c", "ulimit -a", (const char * const) 0);
@@ -929,7 +929,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 		child = asyncFork();
 		if (child == 0) {
-			closeAllFileDescriptors(2);
+			closeAllFileDescriptors(2, true);
 			#ifdef __APPLE__
 				execlp("osascript", "osascript", "-e", "beep 2", (const char * const) 0);
 				safePrintErr("Cannot execute 'osascript' command\n");

@@ -1123,7 +1123,7 @@ getFileDescriptorLimit() {
 // descriptor that the process is currently using.
 // See also http://stackoverflow.com/questions/899038/getting-the-highest-allocated-file-descriptor
 static int
-getHighestFileDescriptor() {
+getHighestFileDescriptor(bool asyncSignalSafe) {
 #if defined(F_MAXFD)
 	int ret;
 	
@@ -1168,9 +1168,15 @@ getHighestFileDescriptor() {
 		goto done;
 	}
 	
-	do {
-		pid = asyncFork();
-	} while (pid == -1 && errno == EINTR);
+	if (asyncSignalSafe) {
+		do {
+			pid = asyncFork();
+		} while (pid == -1 && errno == EINTR);
+	} else {
+		do {
+			pid = fork();
+		} while (pid == -1 && errno == EINTR);
+	}
 	
 	if (pid == 0) {
 		// Don't close p[0] here or it might affect the result.
@@ -1312,7 +1318,7 @@ done:
 }
 
 void
-closeAllFileDescriptors(int lastToKeepOpen) {
+closeAllFileDescriptors(int lastToKeepOpen, bool asyncSignalSafe) {
 	#if defined(F_CLOSEM)
 		int ret;
 		do {
@@ -1326,7 +1332,7 @@ closeAllFileDescriptors(int lastToKeepOpen) {
 		return;
 	#endif
 	
-	for (int i = getHighestFileDescriptor(); i > lastToKeepOpen; i--) {
+	for (int i = getHighestFileDescriptor(asyncSignalSafe); i > lastToKeepOpen; i--) {
 		/* Even though we normally shouldn't retry on EINTR
 		 * (http://news.ycombinator.com/item?id=3363819)
 		 * it's okay to do that here because because this function
