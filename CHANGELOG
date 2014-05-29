@@ -1,13 +1,6 @@
 Release 4.0.44
 --------------
 
- * Due to user demand, GET requests with request bodies are once again supported.
-   Support for these kinds of requests was removed in 4.0.42 in an attempt to
-   increase the strictness and robustness of our request handling code. It has
-   been determined that GET requests with request bodies can be adequately
-   supported without degrading robustness in Phusion Passenger. However, GET
-   requests with both request bodies and WebSocket upgrade headers are
-   unsupported. Fixes issue #1092.
  * Fixed compilation problems on OS X Lion and OS X Mountain Lion.
 
 

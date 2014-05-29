@@ -701,75 +701,53 @@ namespace tut {
 	}
 
 	TEST_METHOD(33) {
-		set_test_name("It accepts GET/HEAD requests with a Content-Length header.");
-
-		DeleteFileEventually d("/tmp/output.txt");
+		set_test_name("It rejects GET/HEAD requests with a Content-Length header.");
 
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/raw_upload_to_file",
+			"PATH_INFO", "/",
 			"REQUEST_METHOD", "GET",
 			"CONTENT_LENGTH", "2",
-			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
-		writeExact(connection, "hi");
-
-		string result = stripHeaders(readAll(connection));
-		ensure_equals(result, "ok");
-		ensure_equals(readAll("/tmp/output.txt"), "hi");
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 400 Bad Request"));
 
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/raw_upload_to_file",
+			"PATH_INFO", "/",
 			"REQUEST_METHOD", "HEAD",
 			"CONTENT_LENGTH", "2",
-			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
-		writeExact(connection, "ho");
-
-		result = stripHeaders(readAll(connection));
-		ensure_equals(result, "ok");
-		ensure_equals(readAll("/tmp/output.txt"), "ho");
+		response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 400 Bad Request"));
 	}
 
 	TEST_METHOD(34) {
 		set_test_name("It rejects GET/HEAD requests with a Transfer-Encoding header.");
 
-		DeleteFileEventually d("/tmp/output.txt");
-
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/raw_upload_to_file",
+			"PATH_INFO", "/",
 			"REQUEST_METHOD", "GET",
 			"HTTP_TRANSFER_ENCODING", "chunked",
-			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
-		writeExact(connection, "hi");
-		shutdown(connection, SHUT_WR);
-
-		string result = stripHeaders(readAll(connection));
-		ensure_equals(result, "ok");
-		ensure_equals(readAll("/tmp/output.txt"), "hi");
+		string response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 400 Bad Request"));
 
 		connect();
 		sendHeaders(defaultHeaders,
 			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
-			"PATH_INFO", "/raw_upload_to_file",
+			"PATH_INFO", "/",
 			"REQUEST_METHOD", "HEAD",
 			"HTTP_TRANSFER_ENCODING", "chunked",
-			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
-		writeExact(connection, "ho");
-		shutdown(connection, SHUT_WR);
-
-		result = stripHeaders(readAll(connection));
-		ensure_equals(result, "ok");
-		ensure_equals(readAll("/tmp/output.txt"), "ho");
+		response = readAll(connection);
+		ensure(containsSubstring(response, "HTTP/1.1 400 Bad Request"));
 	}
 	
 

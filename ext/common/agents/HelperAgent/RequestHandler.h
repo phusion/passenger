@@ -85,22 +85,24 @@
                present?   header present?       protocol
     ---------------------------------------------------------------------------------------------
 
-    GET/HEAD   Y          Y                     -              Reject request[1]
+    GET/HEAD   -          Y                     -              Reject request[1]
     Other      Y          -                     -              Reject request[2]
 
-    GET/HEAD   Y          N                     http_session   Set requestBodyLength=-1, keep socket open when done forwarding.
     -          N          N                     http_session   Set requestBodyLength=0, keep socket open when done forwarding.
-    -          N          Y                     http_session   Keep socket open when done forwarding. If Transfer-Encoding is
+    GET/HEAD   Y          N                     http_session   Set requestBodyLength=-1, keep socket open when done forwarding.
+    Other      N          Y                     http_session   Keep socket open when done forwarding. If Transfer-Encoding is
                                                                chunked, rechunck the body during forwarding.
 
-    GET/HEAD   Y          N                     session        Set requestBodyLength=-1, half-close app socket when done forwarding.
     -          N          N                     session        Set requestBodyLength=0, half-close app socket when done forwarding.
-    -          N          Y                     session        Half-close app socket when done forwarding.
+    GET/HEAD   Y          N                     session        Set requestBodyLength=-1, half-close app socket when done forwarding.
+    Other      N          Y                     session        Half-close app socket when done forwarding.
     ---------------------------------------------------------------------------------------------
 
     [1] Supporting situations in which there is both an HTTP request body and WebSocket data
-        is way too complicated. The RequestHandler code is complicated enough as it is,
-        so we choose not to support requests like these.
+        is way too complicated. The RequestHandler code is complicated enough as it is.
+        Furthermore, GET requests with a body, although legal, are almost nonexistent and
+        support by other servers are shaky at best. For these reasons, we don't bother
+        supporting GET requests with body at all.
     [2] RFC 6455 states that WebSocket upgrades may only happen over GET requests.
         We don't bother supporting non-WebSocket upgrades.
 
@@ -1774,10 +1776,18 @@ private:
 		const bool requestIsGetOrHead = requestMethod == "GET" || requestMethod == "HEAD";
 		const bool requestBodyOffered = contentLength != -1 || !transferEncoding.empty();
 
-		// Reject requests that have a request body and an Upgrade header.
-		if (!requestIsGetOrHead && !upgrade.empty()) {
-			reportBadRequestAndDisconnect(client, "Bad request (Upgrade header is only allowed for non-GET and non-HEAD requests)");
-			return;
+		// Reject requests that have a request body even though it's not allowed,
+		// and requests that have an Upgrade header even though it's not allowed.
+		if (requestIsGetOrHead) {
+			if (requestBodyOffered) {
+				reportBadRequestAndDisconnect(client, "Bad request (GET and HEAD requests may not contain a request body)");
+				return;
+			}
+		} else {
+			if (!upgrade.empty()) {
+				reportBadRequestAndDisconnect(client, "Bad request (Upgrade header is only allowed for non-GET and non-HEAD requests)");
+				return;
+			}
 		}
 
 		if (!requestBodyOffered) {
