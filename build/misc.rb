@@ -95,7 +95,7 @@ task :changelog_as_html do
 			
 			# Auto-link to issue tracker.
 			text.gsub!(/(bug|issue) #(\d+)/i) do
-				url = "http://code.google.com/p/phusion-passenger/issues/detail?id=#{$2}"
+				url = "https://github.com/phusion/passenger/issues/#{$2}"
 				%Q(<{a href="#{url}"}>#{$1} ##{$2}<{/a}>)
 			end
 			
@@ -118,7 +118,7 @@ task :changelog_as_markdown do
 
 	# Auto-link to issue tracker.
 	contents.gsub!(/(bug|issue) #(\d+)/i) do
-		url = "http://code.google.com/p/phusion-passenger/issues/detail?id=#{$2}"
+		url = "https://github.com/phusion/passenger/issues/#{$2}"
 		%Q([#{$1} ##{$2}](#{url}))
 	end
 
