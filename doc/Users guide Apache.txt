@@ -746,9 +746,96 @@ Example:
 -----------------------------
 <VirtualHost test.host>
     DocumentRoot /var/rails/zena/sites/example.com/public
-    PassengerAppRoot /var/rails/zena   # <-- normally Phusion Passenger would
-                                       #     have assumed that the application
-                                       #     root is "/var/rails/zena/sites/example.com"
+    # Normally Phusion Passenger would have assumed that the
+    # application root is "/var/rails/zena/sites/example.com".
+    # This overrides it.
+    PassengerAppRoot /var/rails/zena
+</VirtualHost>
+-----------------------------
+
+[[PassengerAppType]]
+==== PassengerAppType <name>
+:version: 4.0.25
+include::users_guide_snippets/since_version.txt[]
+
+By default, Phusion Passenger autodetects the type of the application, e.g. whether it's a Ruby, Python, Node.js or Meteor app. If it's unable to autodetect the type of the application (e.g. because you've specified a custom <<PassengerStartupFile,PassengerStartupFile>>) then you can use this option to force Phusion Passenger to recognize the application as a specific type.
+
+Allowed values are:
+
+ * `rack` - Ruby on Rails >= 3.0 and Ruby Rack
+ * `classic-rails` - Ruby on Rails 1.x and 2.0
+ * `wsgi` - Python
+ * `node` - Node.js
+ * `meteor` - Meteor
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once.
+
+Example:
+
+-----------------------------
+<VirtualHost test.host>
+    DocumentRoot /webapps/example.com/public
+    # Use server.js as the startup file (entry point file) for
+    # your Node.js application, instead of the default app.js
+    PassengerStartupFile server.js
+    PassengerAppType node
+</VirtualHost>
+-----------------------------
+
+[[PassengerStartupFile]]
+==== PassengerStartupFile <filename>
+:version: 4.0.25
+include::users_guide_snippets/since_version.txt[]
+
+This option specifies the startup file that Phusion Passenger should use when loading the application.
+
+Every application has a *startup file* or *entry point file*: a file where the application begins execution. Some languages have widely accepted conventions about how such a file should be called (e.g. Ruby, with its `config.ru`). Other languages have somewhat-accepted conventions (e.g. Node.js, with its `app.js`). In these cases, Phusion Passenger reuses these conventions, and executes applications through those files.
+
+Other languages have no conventions at all, and so Phusion Passenger invents one (e.g. Python WSGI with `passenger_wsgi.py`).
+
+Here's a list of the language-specific conventions that Phusion Passenger accepts:
+
+[options="header"]
+|================================================
+| Language                        | Phusion Passenger convention
+| Ruby on Rails >= 3.0, Ruby Rack | config.ru
+| Ruby on Rails 1.x and 2.x       | config/environment.rb
+| Python                          | passenger_wsgi.py
+| Node.js                         | app.js
+|================================================
+
+But sometimes you might not want to adhere to the convention that Phusion Passenger accepts. For example, on Node.js, you might want to use `server.js` as the startup file instead of the default `app.js`. With this option, you can customize the startup file to any file you like.
+
+Notes:
+
+ * Customizing the startup file affects <<user_switching,user switching>>. After all, if user switching is enabled, the application is executed as the user that owns the startup file.
+ * If you set this option, you **must** also set <<PassengerAppType,PassengerAppType>>, otherwise Phusion Passenger doesn't know what kind of application it is.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once.
+
+Example:
+
+-----------------------------
+<VirtualHost test.host>
+    DocumentRoot /webapps/example.com/public
+    # Use server.js as the startup file (entry point file) for
+    # your Node.js application, instead of the default app.js
+    PassengerStartupFile server.js
+    PassengerAppType node
 </VirtualHost>
 -----------------------------
 

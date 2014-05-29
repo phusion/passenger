@@ -33,7 +33,7 @@
  * what kind of application lives under the given directory.
  */
 
-#include "../Exceptions.h"
+#include <Exceptions.h>
 
 
 #ifdef __cplusplus

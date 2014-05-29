@@ -148,13 +148,17 @@
 
 8.3.8. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
 
-8.3.9. PassengerBaseURI <uri>	=>	passengerbaseuri-uri--97i9mm
+8.3.9. PassengerAppType <name>	=>	passengerapptype-name--62jzqf
 
-8.3.10. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
+8.3.10. PassengerStartupFile <filename>	=>	passengerstartupfile-filename--14vhvn9
 
-8.3.11. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+8.3.11. PassengerBaseURI <uri>	=>	passengerbaseuri-uri--97i9mm
 
-8.3.12. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
+8.3.12. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
+
+8.3.13. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+
+8.3.14. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
 
 8.4. Process spawning options	=>	process-spawning-options-v2vscm
 

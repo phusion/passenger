@@ -146,17 +146,21 @@
 
 8.2.8. passenger_app_root <path/to/root>	=>	passenger-app-root-path-to-root--1dbudc6
 
-8.2.9. passenger_base_uri <uri>	=>	passenger-base-uri-uri--1xtuo50
+8.2.9. passenger_app_type <name>	=>	passenger-app-type-name--g9zccv
 
-8.2.10. passenger_document_root <path>	=>	passenger-document-root-path--1pge8kd
+8.2.10. passenger_startup_file <filename>	=>	passenger-startup-file-filename--y4gy1m
 
-8.2.11. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
+8.2.11. passenger_base_uri <uri>	=>	passenger-base-uri-uri--1xtuo50
 
-8.2.12. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
+8.2.12. passenger_document_root <path>	=>	passenger-document-root-path--1pge8kd
 
-8.2.13. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+8.2.13. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
 
-8.2.14. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
+8.2.14. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
+
+8.2.15. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+
+8.2.16. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
 
 8.3. Connection handling options	=>	connection-handling-options-8jgq90
 
