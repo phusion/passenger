@@ -227,7 +227,10 @@ module PlatformInfo
 				next if path.nil?
 				path = File.expand_path(path)
 				rubies_path = File.join(path, 'rubies')
-				if File.directory?(path) && File.directory?(rubies_path)
+				wrappers_path = File.join(path, 'wrappers')
+				gems_path = File.join(path, 'gems')
+				if File.directory?(path) && (File.directory?(rubies_path) ||
+				   File.directory?(wrappers_path) || File.directory?(gems_path))
 					result << path
 				end
 			end
