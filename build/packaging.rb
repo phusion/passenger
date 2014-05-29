@@ -104,6 +104,11 @@ task :clobber => 'package:clean'
 
 task 'package:set_official' do
 	ENV['OFFICIAL_RELEASE'] = '1'
+	# These environment variables interfere with 'brew install'
+	# and maybe other stuff, so unset them.
+	ENV.delete('CC')
+	ENV.delete('CXX')
+	ENV.delete('USE_CCACHE')
 end
 
 desc "Build, sign & upload gem & tarball"
