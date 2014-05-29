@@ -1,7 +1,13 @@
 Release 4.0.44
 --------------
 
+ * The issue tracker has now been moved from Google Code to Github.
+   Before version 4.0.44 (May 29 2014, commit 3dd0964c9f4), all
+   issue numbers referred to Google Code. From now on, all issue
+   numbers will refer to Github Issues.
  * Fixed compilation problems on OS X Lion and OS X Mountain Lion.
+ * On Ruby, fixed `nil` being frozen on accident in some cases.
+   See issue #1192.
 
 
 Release 4.0.43
