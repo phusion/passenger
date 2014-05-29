@@ -768,6 +768,8 @@ Allowed values are:
  * `node` - Node.js
  * `meteor` - Meteor
 
+If you set this option, then you **must** also set <<PassengerAppRoot>>, otherwise Phusion Passenger does not properly recognize your application.
+
 This option may occur in the following places:
 
  * In the global server configuration.
@@ -786,6 +788,7 @@ Example:
     # your Node.js application, instead of the default app.js
     PassengerStartupFile server.js
     PassengerAppType node
+    PassengerAppRoot /webapps/example.com
 </VirtualHost>
 -----------------------------
 
@@ -816,7 +819,7 @@ But sometimes you might not want to adhere to the convention that Phusion Passen
 Notes:
 
  * Customizing the startup file affects <<user_switching,user switching>>. After all, if user switching is enabled, the application is executed as the user that owns the startup file.
- * If you set this option, you **must** also set <<PassengerAppType,PassengerAppType>>, otherwise Phusion Passenger doesn't know what kind of application it is.
+ * If you set this option, you **must** also set <<PassengerAppRoot,PassengerAppRoot>> and <<PassengerAppType,PassengerAppType>>, otherwise Phusion Passenger doesn't know what kind of application it is.
 
 This option may occur in the following places:
 
@@ -836,6 +839,7 @@ Example:
     # your Node.js application, instead of the default app.js
     PassengerStartupFile server.js
     PassengerAppType node
+    PassengerAppRoot /webapps/example.com
 </VirtualHost>
 -----------------------------
 
