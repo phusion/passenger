@@ -43,7 +43,7 @@ Supported languages and frameworks:
 |==================================================
 
 If you run into any issues, please
-link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
+link:https://github.com/phusion/passenger/issues[report a bug]
 or
 link:http://groups.google.com/group/phusion-passenger[join our discussion forum].
 
