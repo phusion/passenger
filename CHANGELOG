@@ -8,6 +8,7 @@ Release 4.0.44
    supported without degrading robustness in Phusion Passenger. However, GET
    requests with both request bodies and WebSocket upgrade headers are
    unsupported. Fixes issue #1092.
+ * Fixed compilation problems on OS X Lion and OS X Mountain Lion.
 
 
 Release 4.0.43
