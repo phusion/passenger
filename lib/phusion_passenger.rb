@@ -105,10 +105,14 @@ module PhusionPassenger
 			
 			@natively_packaged = get_bool_option(filename, options, 'natively_packaged')
 			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
-				instance_variable_set("@#{field}", get_option(filename, options, field.to_s).freeze)
+				value = get_option(filename, options, field.to_s)
+				value.freeze unless value.nil?
+				instance_variable_set("@#{field}", value)
 			end
 			OPTIONAL_LOCATIONS_INI_FIELDS.each do |field|
-				instance_variable_set("@#{field}", get_option(filename, options, field.to_s, false).freeze)
+				value = get_option(filename, options, field.to_s, false)
+				value.freeze unless value.nil?
+				instance_variable_set("@#{field}", value)
 			end
 			if natively_packaged?
 				@native_packaging_method = get_option(filename, options, 'native_packaging_method')
