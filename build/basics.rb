@@ -128,6 +128,9 @@ if boolean_option('CACHING', true) && !boolean_option('RELEASE')
 	FileUtils.mkdir_p(PlatformInfo.cache_dir)
 end
 
+# https://github.com/phusion/passenger/issues/672
+ENV.delete('CDPATH')
+
 #################################################
 
 PACKAGE_NAME    = PhusionPassenger::PACKAGE_NAME
