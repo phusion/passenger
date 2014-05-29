@@ -921,16 +921,19 @@ configuration directives from your web server configuration file(s). After you'v
 done this, you need to remove the Phusion Passenger files.
 endif::[]
 
+- If you installed Phusion Passenger through Homebrew, then run `brew uninstall passenger`.
+ifdef::apache[]
+Then run `rm -f /etc/apache2/other/passenger.conf`.
+endif::[]
 - If you installed Phusion Passenger via a Ruby gem, then run `gem uninstall passenger` (or, if you're a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] user, `gem uninstall passenger-enterprise-server`).
   You <<is_ruby_home_or_system_wide_installed,might have to run this as root>>.
 - If you installed Phusion Passenger via a source tarball, then remove the directory
   in which you placed the extracted Phusion Passenger files. This directory is the
   same as the one pointed to the by `PassengerRoot`/`passenger_root` configuration directive.
 - If you installed Phusion Passenger through APT or YUM, then use them to uninstall Phusion Passenger.
-- If you installed Phusion Passenger through Homebrew, then run `brew uninstall passenger`.
 
 ifdef::nginx[]
-Nginx does not have to be recompiled. Altough it contains Phusion Passenger code, it will not do anything when all Phusion Passenger configuration directives are removed.
+Nginx does not have to be recompiled after uninstalling Phusion Passenger. Altough Nginx will contain the Phusion Passenger Nginx module, the module will not do anything when all Phusion Passenger configuration directives are removed.
 endif::[]
 
 
