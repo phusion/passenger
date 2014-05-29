@@ -768,7 +768,7 @@ Allowed values are:
  * `node` - Node.js
  * `meteor` - Meteor
 
-If you set this option, then you **must** also set <<PassengerAppRoot>>, otherwise Phusion Passenger does not properly recognize your application.
+If you set this option, then you **must** also set <<PassengerAppRoot,PassengerAppRoot>>, otherwise Phusion Passenger does not properly recognize your application.
 
 This option may occur in the following places:
 
