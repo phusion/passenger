@@ -1,17 +1,32 @@
 # Contributing to Phusion Passenger
 
+**Table of contents**
+
+ * [Filing bug reports](#file_bugs)
+ * [Contributing documentation](#contrib_docs)
+ * [Contributing by bug triaging](#contrib_triag)
+ * [Contributing community support](#contrib_support)
+ * [Contributing code](#contrib_code)
+   * [Compilation and build system](#build_system)
+   * [Running the unit tests](#unit_tests)
+   * [Directory structure](#dir_structure)
+   * [C++ coding style](#cxx_coding_style)
+   * [Ruby coding style](#ruby_coding_style)
+   * [Further reading](#further_reading)
+
 Thank you for your interest in Phusion Passenger. Phusion Passenger is open source so your contributions are very welcome. Although we also provide a [commercial version](https://www.phusionpassenger.com/enterprise) and [commercial support](https://www.phusionpassenger.com/commercial_support), the core remains open source and we remain committed to keep it that way. This guide gives you an overview of the ways with which you can contribute, as well as contribution guidelines.
 
 You can contribute in one of the following areas:
 
- * Documentation (user documentation, developer documentation, contributor documentation).
+ * Filing bugs.
  * Bug triage.
+ * Documentation (user documentation, developer documentation, contributor documentation).
  * Community support.
  * Code.
 
 We require contributors to sign our [contributor agreement](http://www.phusion.nl/forms/contributor_agreement) before we can merge their patches.
 
-Please submit patches in the form of a Github pull request or as a patch on the [bug tracker](http://code.google.com/p/phusion-passenger/issues/list). Pull requests are preferred and generally get more attention because Github has better email notifications and better discussion capabilities.
+Please submit patches in the form of a Github pull request or as a patch on the [bug tracker](https://github.com/phusion/passenger/issues). Pull requests are preferred and generally get more attention because Github has better email notifications and better discussion capabilities.
 
 You should also install required developer tools. The following command will install everything you need:
 
@@ -21,15 +36,27 @@ If your system requires gems to be installed with root privileges, run:
 
     rake test:install_deps SUDO=1
 
+<a name="file_bugs"></a>
+## Filing bug reports
+
+When filing a bug report, please ensure that you include the following information:
+
+ * What steps will reproduce the problem?
+ * What is the expected output? What do you see instead?
+ * What version of Phusion Passenger are you using?
+ * Which version of Ruby, Rails, Node.js or Meteor are you using? On what operating system?
+
+<a name="contrib_docs"></a>
 ## Contributing documentation
 
 All good software should have good documentation, and we take this very seriously. However writing and maintaing quality documentation is not an easy task. If you are not skilled in C++ or programming, then writing documentation is the easiest way to contribute.
 
 Most documentation can be located in the `doc` directory, and are either written in Markdown or in Asciidoc format. They can be compiled to HTML with `rake doc`. You need [Mizuho](https://github.com/FooBarWidget/mizuho) to compile Asciidoc and [BlueCloth](http://deveiate.org/projects/BlueCloth) to compile Markdown. Both gems are automatically installed as part of the Phusion Passenger developer tools.
 
+<a name="contrib_tiag"></a>
 ## Contributing by bug triaging
 
-Users [fill bug reports](http://code.google.com/p/phusion-passenger/issues/list) on a regular basis, but not all bug reports are legit, not all bug reports are equally important, etc. By helping with bug triaging you make the lives of the core developers a lot easier.
+Users [file bug reports](https://github.com/phusion/passenger/issues) on a regular basis, but not all bug reports are legit,contain sufficient information, are equally important, etc. By helping with bug triaging you make the lives of the core developers a lot easier.
 
 To start contributing, please submit a comment on any bug report that needs triaging. This comment should contain triaging instructions, e.g. whether a report should be considered duplicate. If you contribute regularly we'll give you moderator access to the bug tracker so that you can apply triaging labels directly.
 
@@ -43,10 +70,12 @@ Here are some of the things that you should look for:
 
 **Always be polite to bug reporters.** Not all reporters are fluent in English, and not everybody may be tech-savvy. But we ask you for your patience and tolerance on this. We want to stimulate a positive and ejoyable environment.
 
+<a name="contrib_support"></a>
 ## Contributing community support
 
 You can contribute by answering support questions on the [community discussion forum](http://groups.google.com/group/phusion-passenger) or on [Stack Overflow](http://stackoverflow.com/search?q=passenger).
 
+<a name="contrib_code"></a>
 ## Contributing code
 
 Phusion Passenger is mostly written in C++, but the build system and various small helper scripts are in Ruby. The loaders for each supported language is written in the respective language.
@@ -56,6 +85,7 @@ The source code is filled with inline comments, so look there if you want to und
  * ext/common/ApplicationPool2/README.md - If you're interesting in the ApplicationPool and Spawner subsystems.
  * doc/DebuggingAndStressTesting.md
 
+<a name="build_system"></a>
 ### Compilation and build system
 
 `passenger-install-apache2-module` and `passenger-install-nginx-module` are actually user-friendly wrappers around the build system. The build system is written in Rake, and most of it can be found in the `build/` directory.
@@ -67,6 +97,7 @@ Run the following command to compile everything:
 
 It is recommended that you install ccache and set the `USE_CCACHE=1` environment variable. The build system will then automatically wrap all compiler calls in ccache, significantly improving recompilation times.
 
+<a name="unit_tests"></a>
 ### Running the unit tests
 
 The tests depend on the Phusion Passenger developer tools. Make sure they're installed:
@@ -109,6 +140,7 @@ Run just the integration tests:
 
 Note that some tests, such as the ones that test privilege lowering, require root privileges. Those will only be run if Rake is run as root.
 
+<a name="dir_structure"></a>
 ### Directory structure
 
 The most important directories are:
@@ -160,6 +192,7 @@ Less important directories:
  * `build` <br>
    Source code of the build system.
 
+<a name="cxx_coding_style"></a>
 ### C++ coding style
 
  * Use 4-space tabs for indentation.
@@ -273,6 +306,7 @@ Less important directories:
 
    Other than the aforementioned rules, function definitions follow the same rules as function declarations.
 
+<a name="ruby_coding_style"></a>
 ### Ruby coding style
 
 The usual Ruby coding style applies, with some exceptions:
@@ -280,6 +314,7 @@ The usual Ruby coding style applies, with some exceptions:
  * Use 4-space tabs for indentation.
  * Return values explicitly with `return`.
 
-## Further reading
+<a name="further_reading"></a>
+### Further reading
 
 Please read "doc/CodingTipsAndPitfalls.md".
