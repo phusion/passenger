@@ -1,0 +1,28 @@
+{
+  "__comment__": [
+    "This file is only meant for shrinkwrapping the development dependencies."
+  ],
+  "name": "passenger",
+  "version": "0.0.0",
+  "description": "A fast and robust web server and application server for Ruby, Python and Node.js",
+  "main": "index.js",
+  "dependencies": {
+    "should": "^2.0.1",
+    "sinon": "^1.7.3",
+    "express": "^3.4.8",
+    "mocha": "^1.15.1"
+  },
+  "scripts": {
+    "test": "rake test:node"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/phusion/passenger.git"
+  },
+  "author": "Phusion <info@phusion.nl>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/phusion/passenger/issues"
+  },
+  "homepage": "https://www.phusionpassenger.com"
+}
