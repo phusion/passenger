@@ -25,6 +25,7 @@
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'public_api'
 PhusionPassenger.require_passenger_lib 'debug_logging'
+require 'shellwords'
 
 module PhusionPassenger
 
@@ -157,7 +158,16 @@ module LoaderSharedHelpers
 
 	def dump_system_metrics
 		if dir = ENV['PASSENGER_DEBUG_DIR']
-			contents = `"#{PhusionPassenger.bin_dir}/passenger-config" system-metrics`
+			# When invoked through Passenger Standalone, we want passenger-config
+			# to use the HelperAgent in the Passsenger Standalone buildout directory,
+			# because the one in the source root may not exist.
+			command = [
+				"env",
+				"PASSENGER_LOCATION_CONFIGURATION_FILE=#{PhusionPassenger.source_root}",
+				"#{PhusionPassenger.bin_dir}/passenger-config",
+				"system-metrics"
+			]
+			contents = `#{Shellwords.join(command)}`
 			if $? && $?.exitstatus == 0
 				File.open("#{dir}/system_metrics", "wb") do |f|
 					f.write(contents)
