@@ -38,8 +38,8 @@ function RequestHandler(readyCallback, clientCallback) {
 
 		function handleReadable() {
 			// read(n) returns null unless the buffer is at least n bytes.
-			// We just want to read whatever we can we poke into its buffer.
-			// Hope they don't change the this.
+			// We just want to read whatever we can so we poke into its buffer.
+			// Hope they don't change this.
 			var len = socket._readableState.length;
 			handleData(socket.read(len));
 		}
