@@ -56,20 +56,28 @@ app.all('/pid', function(req, res) {
 });
 
 app.all(/^\/env/, function(req, res) {
-	var body = '';
-	var keys = [];
-	for (var key in req.cgiHeaders) {
-		keys.push(key);
+	var result = [];
+	var requestUri = req.url;
+	var urlParts = url.parse(req.url);
+
+	if (process.env.PASSENGER_BASE_URI) {
+		requestUri = process.env.PASSENGER_BASE_URI + requestUri;
+		result.push('SCRIPT_NAME = ' + process.env.PASSENGER_BASE_URI);
+	} else {
+		result.push('SCRIPT_NAME = ');
 	}
-	keys.sort();
-	for (var i = 0; i < keys.length; i++) {
-		var val = req.cgiHeaders[keys[i]];
-		if (val === undefined) {
-			val = '';
-		}
-		body += keys[i] + " = " + val + "\n";
+
+	result.push('REQUEST_URI = ' + requestUri);
+	result.push('PATH_INFO = ' + req.path);
+	result.push('QUERY_STRING = ' + (urlParts.query || ''));
+
+	for (var key in req.headers) {
+		result.push('HTTP_' + key.toUpperCase().replace(/-/g, '_')
+			+ ' = ' + req.headers[key]);
 	}
-	textResponse(res, body);
+
+	result.sort();
+	textResponse(res, result.join("\n") + "\n");
 });
 
 app.all('/touch_file', function(req, res) {
@@ -95,15 +103,15 @@ app.all('/upload_with_params', function(req, res) {
 	bodyParser(req, res, function() {
 		var name1 = req.query.name1 || req.body.name1;
 		var name2 = req.query.name2 || req.body.name2;
-		var data = fs.readFileSync(req.files.data.path);
-		var body =
+		var data = req.body.data ? new Buffer(req.body.data) : fs.readFileSync(req.files.data.path);
+		var preamble = new Buffer(
 			"name 1 = " + name1 + "\n" +
 			"name 2 = " + name2 + "\n" +
-			"data = ";
-		var bodyBuffer = new Buffer(body);
+			"data = ");
+
 		res.setHeader("Content-Type", "text/plain");
-		res.setHeader("Content-Length", bodyBuffer.length + data.length);
-		res.write(bodyBuffer);
+		res.setHeader("Transfer-Encoding", "chunked");
+		res.write(preamble);
 		res.write(data);
 		res.end();
 	});

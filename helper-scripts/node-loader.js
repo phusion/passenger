@@ -29,8 +29,6 @@ var net = require('net');
 var http = require('http');
 
 var LineReader = require('phusion_passenger/line_reader').LineReader;
-var RequestHandler = require('phusion_passenger/request_handler').RequestHandler;
-var HttplibEmulation = require('phusion_passenger/httplib_emulation');
 
 module.isApplicationLoader = true; // https://groups.google.com/forum/#!topic/compoundjs/4txxkNtROQg
 GLOBAL.PhusionPassenger = exports.PhusionPassenger = new EventEmitter();
@@ -78,7 +76,6 @@ function readOptions() {
 function setupEnvironment(options) {
 	PhusionPassenger.options = options;
 	PhusionPassenger.configure = configure;
-	PhusionPassenger._requestHandler = new RequestHandler(loadApplication);
 	PhusionPassenger._appInstalled = false;
 	process.title = 'Passenger NodeApp: ' + options.app_root;
 	http.Server.prototype.originalListen = http.Server.prototype.listen;
@@ -88,6 +85,8 @@ function setupEnvironment(options) {
 	stdinReader = undefined;
 	process.stdin.on('end', shutdown);
 	process.stdin.resume();
+
+	loadApplication();
 }
 
 /**
@@ -124,37 +123,52 @@ function extractCallback(args) {
 	}
 }
 
+function generateServerSocketPath() {
+	return PhusionPassenger.options.generation_dir + "/backends/"
+		+ process.pid + "." + ((Math.random() * 0xFFFFFFFF) & 0xFFFFFFF);
+}
+
 function installServer() {
 	var server = this;
 	if (!PhusionPassenger._appInstalled) {
 		PhusionPassenger._appInstalled = true;
 		PhusionPassenger._server = server;
-		server.address = function() {
-			return 'passenger';
-		}
-		finalizeStartup();
 
-		PhusionPassenger.on('request', function(headers, socket, bodyBegin) {
-			var req, res;
-			if (headers['HTTP_UPGRADE']) {
-				if (EventEmitter.listenerCount(server, 'upgrade') > 0) {
-					req = HttplibEmulation.createIncomingMessage(headers, socket, bodyBegin);
-					server.emit('upgrade', req, socket, bodyBegin);
+		var listenTries = 0;
+		doListen(extractCallback(arguments));
+
+		function doListen(callback) {
+			function errorHandler(error) {
+				if (error.errno == 'EADDRINUSE') {
+					if (listenTries == 100) {
+						server.emit('error', new Error(
+							'Phusion Passenger could not find suitable socket address to bind on'));
+					} else {
+						// Try again with another socket path.
+						listenTries++;
+						doListen(callback);
+					}
 				} else {
-					socket.destroy();
+					server.emit('error', error);
 				}
-			} else {
-				req = HttplibEmulation.createIncomingMessage(headers, socket, bodyBegin);
-				res = HttplibEmulation.createServerResponse(req);
-				server.emit('request', req, res);
 			}
-		});
 
-		var callback = extractCallback(arguments);
-		if (callback) {
-			server.once('listening', callback);
+			server.once('error', errorHandler);
+			server.originalListen(generateServerSocketPath(), function() {
+				server.removeListener('error', errorHandler);
+				finalizeStartup(function() {
+					doneListening(callback);
+				});
+			});
 		}
-		server.emit('listening');
+
+		function doneListening(callback) {
+			if (callback) {
+				server.once('listening', callback);
+			}
+			server.emit('listening');
+		}
+
 		return server;
 	} else {
 		throw new Error("http.Server.listen() was called more than once, which " +
@@ -179,12 +193,13 @@ function listenAndMaybeInstall(port) {
 	}
 }
 
-function finalizeStartup() {
+function finalizeStartup(callback) {
 	process.stdout.write("!> Ready\n");
-	process.stdout.write("!> socket: main;tcp://127.0.0.1:" +
-		PhusionPassenger._requestHandler.server.address().port +
-		";session_nohalfclose;0\n");
+	process.stdout.write("!> socket: main;unix:" +
+		PhusionPassenger._server.address() +
+		";http_session;0\n");
 	process.stdout.write("!> \n");
+	process.nextTick(callback);
 }
 
 function shutdown() {

@@ -1204,6 +1204,7 @@ private:
 						disconnectWithError(client, "application response format error (invalid header)");
 					} else {
 						// Now that we have a full header, do something with it.
+						RH_TRACE(client, 3, "Response header fully buffered");
 						client->responseHeaderSeen = true;
 						StaticString header = client->responseHeaderBufferer.getData();
 						if (processResponseHeader(client, header)) {

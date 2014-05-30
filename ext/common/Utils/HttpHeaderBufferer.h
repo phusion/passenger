@@ -41,7 +41,8 @@ using namespace std;
  *
  * Feed data until acceptingInput() is false. The entire HTTP header
  * will become available through getData(). Non-HTTP header data is
- * not consumed and will not be included in getData().
+ * not consumed and will not be included in getData(). 100-Continue
+ * messages are ignored.
  *
  * This class has zero-copy support. If the first feed already contains
  * an entire HTTP header getData() will point to the fed data. Otherwise
@@ -77,6 +78,13 @@ private:
 		char padding[SBMH_SIZE(4)];
 	} u;
 	
+	bool is100Continue(const StaticString &buffer) const {
+		return buffer.size() >= sizeof("HTTP/1.1 100 Continue\r\n") - 1
+			&& memcmp(buffer.data(), "HTTP/1.", sizeof("HTTP/1.") - 1) == 0
+			&& memcmp(buffer.data() + sizeof("HTTP/1.1 ") - 1,
+				"100 Continue\r\n", sizeof("100 Continue\r\n") - 1) == 0;
+	}
+
 public:
 	HttpHeaderBufferer() {
 		sbmh_init(&u.terminatorFinder,
@@ -114,8 +122,13 @@ public:
 				(const unsigned char *) data,
 				feedSize);
 			if (u.terminatorFinder.found) {
-				state = DONE;
-				this->data = StaticString(data, accepted);
+				if (is100Continue(StaticString(data, accepted))) {
+					reset();
+					accepted += feed(data + accepted, size - accepted);
+				} else {
+					state = DONE;
+					this->data = StaticString(data, accepted);
+				}
 			} else if (feedSize == max) {
 				state = ERROR;
 				this->data = StaticString(data, accepted);
@@ -135,7 +148,12 @@ public:
 			buffer.append(data, accepted);
 			this->data = buffer;
 			if (u.terminatorFinder.found) {
-				state = DONE;
+				if (is100Continue(buffer)) {
+					reset();
+					accepted += feed(data + accepted, size - accepted);
+				} else {
+					state = DONE;
+				}
 			} else if (buffer.size() == (size_t) max) {
 				state = ERROR;
 			}
