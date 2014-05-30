@@ -183,7 +183,7 @@ function finalizeStartup() {
 	process.stdout.write("!> Ready\n");
 	process.stdout.write("!> socket: main;tcp://127.0.0.1:" +
 		PhusionPassenger._requestHandler.server.address().port +
-		";session;0\n");
+		";session_nohalfclose;0\n");
 	process.stdout.write("!> \n");
 }
 

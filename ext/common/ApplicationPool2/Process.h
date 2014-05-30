@@ -183,7 +183,10 @@ public:
 		concurrency = 0;
 		for (it = sockets->begin(); it != sockets->end(); it++) {
 			Socket *socket = &(*it);
-			if (socket->protocol == "session" || socket->protocol == "http_session") {
+			if (socket->protocol == "session"
+			 || socket->protocol == "session_nohalfclose"
+			 || socket->protocol == "http_session")
+			{
 				socket->pqHandle = sessionSockets.push(socket, socket->busyness());
 				if (concurrency != -1) {
 					if (socket->concurrency == 0) {
