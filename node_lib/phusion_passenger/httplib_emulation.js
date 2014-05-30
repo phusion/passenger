@@ -68,6 +68,10 @@ function inferHttpVersion(protocolDescription) {
 	}
 }
 
+function mayHaveRequestBody(message) {
+	return message.method != 'GET' || message.upgrade;
+}
+
 function createIncomingMessage(headers, socket, bodyBegin) {
 	/* Node's HTTP parser simulates an 'end' event if it determines that
 	 * the request should not have a request body. Currently (Node 0.10.18),
@@ -88,7 +92,7 @@ function createIncomingMessage(headers, socket, bodyBegin) {
 	message.upgrade = !!headers['HTTP_UPGRADE'];
 
 	if (message.upgrade) {
-		// Emit end event as described above.
+		// Node.js ends upgraded requests immediately.
 		message.push(null);
 		return message;
 	}
@@ -117,11 +121,19 @@ function createIncomingMessage(headers, socket, bodyBegin) {
 		}
 	} else {
 		// Emit end event as described above.
-		message.push(null);
+		// Note that we have to push in a next tick because the Node.js
+		// HTTP parser emits the parse finished event *after* calling
+		// the handler callback.
+		process.nextTick(function() {
+			message.push(null);
+		});
 	}
 
 	return message;
 }
+
+
+/***** Begin IncomingMessage patches *****/
 
 function IncomingMessage_pause() {
 	this._flowing = false;
@@ -139,18 +151,26 @@ function IncomingMessage_on(event, listener) {
 	if (event == 'data') {
 		this._flowing = true;
 		installDataEventHandler(this);
+		this._orig_on.call(this, event, listener);
 	} else if (event == 'readable') {
-		installReadableEventHandler(this);
+		// Function will be responsible for calling _orig_on.
+		installReadableEventHandler(this, event, listener);
+	} else {
+		this._orig_on.call(this, event, listener);
 	}
-	this._orig_on.call(this, event, listener);
 	resetIncomingMessageOverridedMethods(this);
 	return this;
 }
 
 function IncomingMessage_emitEndEvent() {
-	if (!this._readableState.endEmitted) {
-		this._readableState.endEmitted = true;
-		this.emit('end');
+	if (this._flowing) {
+		if (!this._readableState.endEmitted && this._readableState.length == 0) {
+			this._readableState.endEmitted = true;
+			this.readable = false;
+			this.emit('end');
+		}
+	} else if (!this._readableState.ended) {
+		this.push(null);
 	}
 }
 
@@ -186,14 +206,25 @@ function installDataEventHandler(message) {
 	}
 }
 
-function installReadableEventHandler(message) {
+function installReadableEventHandler(message, event, listener) {
 	if (!message._readableEventHandlerInstalled) {
 		message._readableEventHandlerInstalled = true;
 		message.socket.on('readable', function() {
 			message.emit('readable');
 		});
+		if (!mayHaveRequestBody(message)) {
+			message._orig_on.call(message, event, listener);
+			message._emitEndEvent();
+		} else {
+			message._orig_on.call(message, event, listener);
+		}
+	} else {
+		message._orig_on.call(message, event, listener);
 	}
 }
+
+/***** End IncomingMessage patches *****/
+
 
 function createServerResponse(req) {
 	var res = new http.ServerResponse(req);

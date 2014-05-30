@@ -24,7 +24,7 @@ describe('HttplibEmulation', function() {
 				throw new Error('createSocket() may only be called once');
 			}
 
-			var server = net.createServer();
+			var server = net.createServer({ allowHalfOpen: true });
 
 			function maybeDone() {
 				if (state.serverSocket && state.client) {
@@ -358,6 +358,7 @@ describe('HttplibEmulation', function() {
 			it("doesn't emit the end event if the request was never read from", function(done) {
 				var state = this.state;
 				var finished;
+
 				setTimeout(function() {
 					if (!finished) {
 						finished = true;
@@ -370,15 +371,39 @@ describe('HttplibEmulation', function() {
 						assert.fail("unexpected end event");
 					}
 				});
+				state.client.end();
+			});
+
+			it("doesn't emit the end event if we never completely consumed the data", function(done) {
+				var state = this.state;
+				var finished;
+
+				setTimeout(function() {
+					if (!finished) {
+						finished = true;
+						done();
+					}
+				}, 50);
+				state.req.once('readable', function() {
+					state.req.read(1);
+				});
+				state.req.on('end', function() {
+					if (!finished) {
+						finished = true;
+						assert.fail("unexpected end event");
+					}
+				});
+
+				state.client.write(new Buffer('hello'));
+				state.client.end();
 			});
 
 			it("emits the end event upon reaching the end of the request body", function(done) {
 				var state = this.state;
 				var i, buf;
 
-				state.client.write("hello");
 				buf = new Buffer(1024);
-				buf.fill("x");
+				buf.fill('x');
 				for (i = 0; i < 1024; i++) {
 					state.client.write(buf);
 				}
@@ -393,22 +418,7 @@ describe('HttplibEmulation', function() {
 				state.req.on('end', function() {
 					len.should.equal(1024 * 1024);
 					done();
-				})
-			});
-
-			it("emits the end event when read() encounters EOF", function(done) {
-				var state = this.state;
-				var finished;
-				state.req.on('end', function() {
-					if (!finished) {
-						finished = true;
-						done();
-					}
 				});
-				state.client.end();
-				setTimeout(function() {
-					state.req.read(10);
-				}, 10);
 			});
 		});
 	});
@@ -502,7 +512,7 @@ describe('HttplibEmulation', function() {
 				});
 			});
 
-			it("doesn't send the end event if the request was never read from", function(done) {
+			it("doesn't send the end event if the request was never read from, and the 'readable' event was never listened on", function(done) {
 				var state = this.state;
 				var finished;
 				setTimeout(function() {
@@ -517,9 +527,10 @@ describe('HttplibEmulation', function() {
 						assert.fail("unexpected end event");
 					}
 				});
+				state.client.end();
 			});
 
-			it("sends the end event when read() encounters EOF", function(done) {
+			it("emits the end event soon after read() is called", function(done) {
 				var state = this.state;
 				var finished;
 				state.req.on('end', function() {
@@ -529,6 +540,37 @@ describe('HttplibEmulation', function() {
 					}
 				});
 				state.req.read(10);
+			});
+
+			it("emits the end event soon after listening to the 'readable' event", function(done) {
+				var state = this.state;
+				var finished;
+				state.req.on('end', function() {
+					if (!finished) {
+						finished = true;
+						done();
+					}
+				});
+				state.req.once('readable', function() { });
+			});
+
+			it("eventually emits the end event when read() is called after the socket has already ended", function(done) {
+				var state = this.state;
+				var finished;
+				state.req.on('end', function() {
+					if (!finished) {
+						finished = true;
+						done();
+					}
+				});
+				state.client.end();
+				setTimeout(function() {
+					if (!finished) {
+						state.req.read(10);
+					} else {
+						assert.fail("End event emitted prematurely");
+					}
+				}, 10);
 			});
 		});
 	});

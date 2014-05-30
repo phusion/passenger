@@ -25,5 +25,11 @@
 
 desc "Run unit tests for the Node.js libraries"
 task 'test:node' do
-	sh "cd test && env NODE_PATH=#{PhusionPassenger.node_libdir} ../node_modules/.bin/mocha -R spec node/*_spec.js"
+	require 'shellwords'
+	command = "cd test && env NODE_PATH=#{PhusionPassenger.node_libdir} " +
+		"../node_modules/.bin/mocha -R spec node/*_spec.js"
+	if grep = string_option('G')
+		command << " -g #{Shellwords.escape(grep)}"
+	end
+	sh(command)
 end
