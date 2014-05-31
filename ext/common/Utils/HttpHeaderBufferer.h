@@ -28,6 +28,7 @@
 #include <string>
 #include <algorithm>
 #include <cstddef>
+#include <cstring>
 #include <cassert>
 #include <StaticString.h>
 #include <Utils/StreamBoyerMooreHorspool.h>
