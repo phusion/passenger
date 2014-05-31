@@ -41,6 +41,7 @@ class PackageRuntimeCommand < Command
 			"Package the Phusion Passenger Standalone runtime into the specified directory.\n" <<
 			"If DIRECTORY is not given then #{destdir} will be used."
 		parse_options!("package [directory]", description) do |opts|
+			opts.separator "Options:"
 			opts.on("--nginx-version VERSION", String,
 				wrap_desc("Nginx version to use as core (default: #{@options[:nginx_version]})")) do |value|
 				@options[:nginx_version] = value

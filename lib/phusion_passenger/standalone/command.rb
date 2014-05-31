@@ -119,7 +119,6 @@ private
 			opts.banner = "Usage: passenger #{command_name} [options]"
 			opts.separator description if description
 			opts.separator " "
-			opts.separator "Options:"
 			yield opts
 			opts.on("-h", "--help", "Show this help message") do
 				help = true

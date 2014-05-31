@@ -32,6 +32,7 @@ class StatusCommand < Command
 	
 	def run
 		parse_options!("status") do |opts|
+			opts.separator "Options:"
 			opts.on("-p", "--port NUMBER", Integer,
 				wrap_desc("The port number of a Phusion Passenger Standalone instance (default: #{@options[:port]})")) do |value|
 				@options[:port] = value
