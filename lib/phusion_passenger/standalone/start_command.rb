@@ -246,6 +246,17 @@ private
 			end
 
 			opts.separator ""
+			opts.separator "Request handling options:"
+			opts.on("--sticky-sessions",
+				wrap_desc("Enable sticky sessions")) do
+				@options[:sticky_sessions] = true
+			end
+			opts.on("--sticky-sessions-cookie-name", String,
+				wrap_desc("Cookie name to use for sticky sessions (default: #{DEFAULT_STICKY_SESSIONS_COOKIE_NAME})")) do |val|
+				@options[:sticky_sessions_cookie_name] = val
+			end
+
+			opts.separator ""
 			opts.separator "Union Station options:"
 			opts.on("--union-station-gateway HOST:PORT", String,
 				wrap_desc("Specify Union Station Gateway host and port")) do |value|

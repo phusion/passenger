@@ -65,6 +65,8 @@
 
 	ngx_int_t start_timeout;
 
+	ngx_int_t sticky_sessions;
+
 	ngx_array_t *union_station_filters;
 
 	ngx_int_t union_station_support;
@@ -96,6 +98,8 @@
 	ngx_str_t spawn_method;
 
 	ngx_str_t startup_file;
+
+	ngx_str_t sticky_sessions_cookie_name;
 
 	ngx_str_t union_station_key;
 

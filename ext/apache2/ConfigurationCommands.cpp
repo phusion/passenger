@@ -179,3 +179,17 @@
 		OR_ALL,
 		"Force specific startup file."),
 
+	
+	AP_INIT_FLAG("PassengerStickySessions",
+		(FlagFunc) cmd_passenger_sticky_sessions,
+		NULL,
+		OR_ALL,
+		"Whether to enable sticky sessions."),
+
+	
+	AP_INIT_FLAG("PassengerStickySessionsCookieName",
+		(FlagFunc) cmd_passenger_sticky_sessions_cookie_name,
+		NULL,
+		OR_ALL,
+		"The cookie name to use for sticky sessions."),
+

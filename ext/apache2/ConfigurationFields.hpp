@@ -48,6 +48,10 @@
 	Threeway highPerformance;
 	/** Whether to load environment variables from the shell before running the application. */
 	Threeway loadShellEnvvars;
+	/** Whether to enable sticky sessions. */
+	Threeway stickySessions;
+	/** The cookie name to use for sticky sessions. */
+	Threeway stickySessionsCookieName;
 	/** The maximum number of simultaneously alive application instances a single application may occupy. */
 	int maxInstancesPerApp;
 	/** The maximum number of queued requests. */

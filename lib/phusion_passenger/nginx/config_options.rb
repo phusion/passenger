@@ -274,6 +274,14 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:name   => 'passenger_startup_file',
 		:type   => :string
 	},
+	{
+		:name   => 'passenger_sticky_sessions',
+		:type   => :flag
+	},
+	{
+		:name   => 'passenger_sticky_sessions_cookie_name',
+		:type   => :string
+	},
 
 	###### Enterprise features ######
 	{

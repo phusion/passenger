@@ -61,6 +61,8 @@ http {
     <% if @options[:temp_dir] %>passenger_temp_dir '<%= @options[:temp_dir] %>';<% end %>
     <% if @options[:rolling_restarts] %>passenger_rolling_restarts on;<% end %>
     <% if @options[:resist_deployment_errors] %>passenger_resist_deployment_errors on;<% end %>
+    <% if @options[:sticky_sessions] %>passenger_sticky_sessions on;<% end %>
+    <% if @options[:sticky_sessions_cookie_name] %>passenger_sticky_sessions_cookie_name '<%= sticky_sessions_cookie_name %>';<% end %>
 
     <% if !@options[:friendly_error_pages].nil? -%>
         passenger_friendly_error_pages <%= boolean_config_value(@options[:friendly_error_pages]) %>;

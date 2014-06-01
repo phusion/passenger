@@ -68,6 +68,8 @@
 
 	#define DEFAULT_START_TIMEOUT 90000
 
+	#define DEFAULT_STICKY_SESSIONS_COOKIE_NAME "_passenger_route"
+
 	#define DEFAULT_THREAD_COUNT 1
 
 	#define DEFAULT_UNION_STATION_GATEWAY_ADDRESS "gateway.unionstationapp.com"

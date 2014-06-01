@@ -91,3 +91,11 @@
 		addHeader(output, "PASSENGER_STARTUP_FILE", config->startupFile);
 	
 
+	
+		addHeader(r, output, "PASSENGER_STICKY_SESSIONS", config->stickySessions);
+	
+
+	
+		addHeader(r, output, "PASSENGER_STICKY_SESSIONS_COOKIE_NAME", config->stickySessionsCookieName);
+	
+

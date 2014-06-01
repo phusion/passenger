@@ -56,4 +56,6 @@
 				config->bufferUpload = DirConfig::UNSET;
 				config->appType = NULL;
 				config->startupFile = NULL;
+				config->stickySessions = DirConfig::UNSET;
+				config->stickySessionsCookieName = DirConfig::UNSET;
 	

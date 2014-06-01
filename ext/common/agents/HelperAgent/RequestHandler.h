@@ -1953,7 +1953,7 @@ private:
 
 	void setStickySessionId(const ClientPtr &client) {
 		ScgiRequestParser &parser = client->scgiParser;
-		if (parser.getHeader("PASSENGER_STICKY_SESSION") == "true") {
+		if (parser.getHeader("PASSENGER_STICKY_SESSIONS") == "true") {
 			// TODO: This is not entirely correct. Clients MAY send multiple Cookie
 			// headers, although this is in practice extremely rare.
 			// http://stackoverflow.com/questions/16305814/are-multiple-cookie-headers-allowed-in-an-http-request
@@ -1990,9 +1990,10 @@ private:
 	}
 
 	StaticString getStickySessionCookieName(const ClientPtr &client) const {
-		StaticString value = client->scgiParser.getHeader("PASSENGER_STICKY_SESSION_COOKIE_NAME");
+		StaticString value = client->scgiParser.getHeader("PASSENGER_STICKY_SESSIONS_COOKIE_NAME");
 		if (value.empty()) {
-			return StaticString("_passenger_route", sizeof("_passenger_route") - 1);
+			return StaticString(DEFAULT_STICKY_SESSIONS_COOKIE_NAME,
+				sizeof(DEFAULT_STICKY_SESSIONS_COOKIE_NAME) - 1);
 		} else {
 			return value;
 		}

@@ -173,8 +173,20 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 	},
 	{
 		:name    => 'PassengerStartupFile',
+		:type    => :string,
 		:context => ["OR_ALL"],
-		:desc    => "Force specific startup file.",
-		:type    => :string
+		:desc    => "Force specific startup file."
+	},
+	{
+		:name    => 'PassengerStickySessions',
+		:type    => :flag,
+		:context => ["OR_ALL"],
+		:desc    => "Whether to enable sticky sessions."
+	},
+	{
+		:name    => 'PassengerStickySessionsCookieName',
+		:type    => :flag,
+		:context => ["OR_ALL"],
+		:desc    => "The cookie name to use for sticky sessions."
 	}
 ]

@@ -317,4 +317,26 @@
 			return NULL;
 		}
 	
+	
+		static const char *
+		cmd_passenger_sticky_sessions(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			config->stickySessions =
+				arg ?
+				DirConfig::ENABLED :
+				DirConfig::DISABLED;
+			return NULL;
+		}
+	
+	
+		static const char *
+		cmd_passenger_sticky_sessions_cookie_name(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			config->stickySessionsCookieName =
+				arg ?
+				DirConfig::ENABLED :
+				DirConfig::DISABLED;
+			return NULL;
+		}
+	
 
