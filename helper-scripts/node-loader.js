@@ -156,9 +156,8 @@ function installServer() {
 			server.once('error', errorHandler);
 			server.originalListen(generateServerSocketPath(), function() {
 				server.removeListener('error', errorHandler);
-				finalizeStartup(function() {
-					doneListening(callback);
-				});
+				doneListening(callback);
+				process.nextTick(finalizeStartup);
 			});
 		}
 
@@ -193,13 +192,12 @@ function listenAndMaybeInstall(port) {
 	}
 }
 
-function finalizeStartup(callback) {
+function finalizeStartup() {
 	process.stdout.write("!> Ready\n");
 	process.stdout.write("!> socket: main;unix:" +
 		PhusionPassenger._server.address() +
 		";http_session;0\n");
 	process.stdout.write("!> \n");
-	process.nextTick(callback);
 }
 
 function shutdown() {
