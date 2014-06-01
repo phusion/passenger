@@ -783,8 +783,8 @@ Allowed values are:
  * `rack` - Ruby on Rails >= 3.0 and Ruby Rack
  * `classic-rails` - Ruby on Rails 1.x and 2.0
  * `wsgi` - Python
- * `node` - Node.js
- * `meteor` - Meteor
+ * `node` - Node.js, or Meteor JS in bundled mode
+ * `meteor` - Meteor JS in non-bundled mode
 
 If you set this option, then you **must** also set <<PassengerAppRoot,PassengerAppRoot>>, otherwise Phusion Passenger does not properly recognize your application.
 

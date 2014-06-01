@@ -1,0 +1,37 @@
+== Deploying a web application: the basics
+
+=== Anatomy of a web application
+
+==== Ruby
+
+==== Python
+
+===== Django
+
+For Django >= 1.4, `passenger_wsgi.py` should contain the following. Replace "mysite" with your application's actual module name.
+
+--------------------------------------------------------------------
+from mysite.wsgi import application
+--------------------------------------------------------------------
+
+For earlier Django versions, it should contain:
+
+--------------------------------------------------------------------
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
+
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
+--------------------------------------------------------------------
+
+==== Node.js
+
+=== Attaching to a virtual host's root URI
+
+=== Attaching to a sub-URI
+
+==== How to fix broken images/CSS/JavaScript URIs in sub-URI deployments
+
+=== Restarting the web application
+
+=== Inspecting the status

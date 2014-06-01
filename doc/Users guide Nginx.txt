@@ -760,8 +760,8 @@ Allowed values are:
  * `rack` - Ruby on Rails >= 3.0 and Ruby Rack
  * `classic-rails` - Ruby on Rails 1.x and 2.0
  * `wsgi` - Python
- * `node` - Node.js
- * `meteor` - Meteor
+ * `node` - Node.js, or Meteor JS in bundled mode
+ * `meteor` - Meteor JS in non-bundled mode
 
 This option may occur in the following places:
 
