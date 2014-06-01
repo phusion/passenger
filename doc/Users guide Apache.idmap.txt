@@ -134,37 +134,37 @@
 
 8.3.1. PassengerEnabled <on|off>	=>	passengerenabled-on-off--74rzth
 
-8.3.2. PassengerRuby <filename>	=>	passengerruby-filename--1r3fv73
+8.3.2. PassengerBaseURI <uri>	=>	passengerbaseuri-uri--97i9mm
 
-8.3.3. PassengerPython <filename>	=>	passengerpython-filename--1ssesv3
+8.4. Application loading options	=>	application-loading-options-1uedd4o
 
-8.3.4. PassengerNodejs <filename>	=>	passengernodejs-filename--2mjb1j
+8.4.1. PassengerRuby <filename>	=>	passengerruby-filename--1r3fv73
 
-8.3.5. PassengerAppEnv <string>	=>	passengerappenv-string--s3ojlc
+8.4.2. PassengerPython <filename>	=>	passengerpython-filename--1ssesv3
 
-8.3.6. RailsEnv <string>	=>	railsenv-string--1b0xxvu
+8.4.3. PassengerNodejs <filename>	=>	passengernodejs-filename--2mjb1j
 
-8.3.7. RackEnv <string>	=>	rackenv-string--vve9py
+8.4.4. PassengerAppEnv <string>	=>	passengerappenv-string--s3ojlc
 
-8.3.8. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
+8.4.5. RailsEnv <string>	=>	railsenv-string--1b0xxvu
 
-8.3.9. PassengerAppType <name>	=>	passengerapptype-name--62jzqf
+8.4.6. RackEnv <string>	=>	rackenv-string--vve9py
 
-8.3.10. PassengerStartupFile <filename>	=>	passengerstartupfile-filename--14vhvn9
+8.4.7. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
 
-8.3.11. PassengerBaseURI <uri>	=>	passengerbaseuri-uri--97i9mm
+8.4.8. PassengerAppType <name>	=>	passengerapptype-name--62jzqf
 
-8.3.12. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
+8.4.9. PassengerStartupFile <filename>	=>	passengerstartupfile-filename--14vhvn9
 
-8.3.13. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+8.4.10. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
 
-8.3.14. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
+8.4.11. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
 
-8.4. Process spawning options	=>	process-spawning-options-v2vscm
+8.4.12. PassengerLoadShellEnvvars <on|off>	=>	passengerloadshellenvvars-on-off--1290yz1
 
-8.4.1. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
+8.4.13. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
 
-8.4.2. PassengerLoadShellEnvvars <on|off>	=>	passengerloadshellenvvars-on-off--1290yz1
+8.4.14. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
 
 8.5. Security options	=>	security-options-1pb75ho
 

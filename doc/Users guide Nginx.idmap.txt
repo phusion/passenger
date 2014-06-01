@@ -132,57 +132,37 @@
 
 8.2.1. passenger_enabled <on|off>	=>	passenger-enabled-on-off--1rpb2t7
 
-8.2.2. passenger_ruby <filename>	=>	passenger-ruby-filename--1gnok5k
+8.2.2. passenger_base_uri <uri>	=>	passenger-base-uri-uri--1xtuo50
 
-8.2.3. passenger_python <filename>	=>	passenger-python-filename--14p554
+8.2.3. passenger_document_root <path>	=>	passenger-document-root-path--1pge8kd
 
-8.2.4. passenger_nodejs <filename>	=>	passenger-nodejs-filename--16hzjsv
+8.3. Application loading options	=>	application-loading-options-f3skts
 
-8.2.5. passenger_app_env <string>	=>	passenger-app-env-string--qjeimp
+8.3.1. passenger_ruby <filename>	=>	passenger-ruby-filename--1gnok5k
 
-8.2.6. rails_env <string>	=>	rails-env-string--jlh7v9
+8.3.2. passenger_python <filename>	=>	passenger-python-filename--14p554
 
-8.2.7. rack_env <string>	=>	rack-env-string--tqmrt0
+8.3.3. passenger_nodejs <filename>	=>	passenger-nodejs-filename--16hzjsv
 
-8.2.8. passenger_app_root <path/to/root>	=>	passenger-app-root-path-to-root--1dbudc6
+8.3.4. passenger_app_env <string>	=>	passenger-app-env-string--qjeimp
 
-8.2.9. passenger_app_type <name>	=>	passenger-app-type-name--g9zccv
+8.3.5. rails_env <string>	=>	rails-env-string--jlh7v9
 
-8.2.10. passenger_startup_file <filename>	=>	passenger-startup-file-filename--y4gy1m
+8.3.6. rack_env <string>	=>	rack-env-string--tqmrt0
 
-8.2.11. passenger_base_uri <uri>	=>	passenger-base-uri-uri--1xtuo50
+8.3.7. passenger_app_root <path/to/root>	=>	passenger-app-root-path-to-root--1dbudc6
 
-8.2.12. passenger_document_root <path>	=>	passenger-document-root-path--1pge8kd
+8.3.8. passenger_app_type <name>	=>	passenger-app-type-name--g9zccv
 
-8.2.13. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
+8.3.9. passenger_startup_file <filename>	=>	passenger-startup-file-filename--y4gy1m
 
-8.2.14. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
+8.3.10. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
 
-8.2.15. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+8.3.11. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
 
-8.2.16. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
+8.3.12. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
 
-8.3. Connection handling options	=>	connection-handling-options-8jgq90
-
-8.3.1. passenger_ignore_client_abort <on|off>	=>	passenger-ignore-client-abort
-
-8.3.2. passenger_set_cgi_param <CGI environment name> <value>	=>	passenger-set-cgi-param-cgi-environment-name-value--rx9gc0
-
-8.3.3. passenger_pass_header <header name>	=>	passenger-pass-header-header-name--1cg31je
-
-8.3.4. passenger_buffer_response <on|off>	=>	passenger-buffer-response
-
-8.3.5. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
-
-8.3.6. passenger_buffers	=>	passenger-busy-buffers
-
-8.3.7. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
-
-8.3.8. passenger_intercept_errors <on|off>	=>	passenger-intercept-errors-1uvcb9x
-
-8.3.9. passenger_max_request_queue_size <number>	=>	passenger-max-request-queue-size-number--i0te1b
-
-8.3.10. passenger_request_queue_overflow_status_code <code>	=>	passenger-request-queue-overflow-status-code-code--1wcwuxl
+8.3.13. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
 
 8.4. Security options	=>	security-options-1bv93g4
 
@@ -228,23 +208,45 @@
 
 8.5.13. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
 
-8.6. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
+8.6. Connection handling options	=>	connection-handling-options-8jgq90
 
-8.6.1. passenger_log_level <integer>	=>	passenger-log-level-integer--17snhon
+8.6.1. passenger_set_cgi_param <CGI environment name> <value>	=>	passenger-set-cgi-param-cgi-environment-name-value--rx9gc0
 
-8.6.2. passenger_debug_log_file <filename>	=>	passenger-debug-log-file-filename--21ubaj
+8.6.2. passenger_max_request_queue_size <number>	=>	passenger-max-request-queue-size-number--i0te1b
 
-8.6.3. passenger_debugger <on|off>	=>	passenger-debugger-on-off--1wkuq85
+8.6.3. passenger_request_queue_overflow_status_code <code>	=>	passenger-request-queue-overflow-status-code-code--1wcwuxl
 
-8.7. Advanced options	=>	advanced-options-hnuhqz
+8.6.4. passenger_ignore_client_abort <on|off>	=>	passenger-ignore-client-abort
 
-8.7.1. passenger_temp_dir <directory>	=>	passenger-temp-dir-directory--1t3opri
+8.6.5. passenger_intercept_errors <on|off>	=>	passenger-intercept-errors-1uvcb9x
 
-8.7.2. passenger_fly_with <socket filename>	=>	passenger-fly-with-socket-filename--1amd1xn
+8.6.6. passenger_pass_header <header name>	=>	passenger-pass-header-header-name--1cg31je
 
-8.8. Deprecated options	=>	deprecated-options-1dtzo0g
+8.6.7. passenger_buffer_response <on|off>	=>	passenger-buffer-response
 
-8.8.1. rails_spawn_method	=>	rails-spawn-method-17vdnpt
+8.6.8. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
+
+8.6.9. passenger_buffers	=>	passenger-busy-buffers
+
+8.6.10. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
+
+8.7. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
+
+8.7.1. passenger_log_level <integer>	=>	passenger-log-level-integer--17snhon
+
+8.7.2. passenger_debug_log_file <filename>	=>	passenger-debug-log-file-filename--21ubaj
+
+8.7.3. passenger_debugger <on|off>	=>	passenger-debugger-on-off--1wkuq85
+
+8.8. Advanced options	=>	advanced-options-hnuhqz
+
+8.8.1. passenger_temp_dir <directory>	=>	passenger-temp-dir-directory--1t3opri
+
+8.8.2. passenger_fly_with <socket filename>	=>	passenger-fly-with-socket-filename--1amd1xn
+
+8.9. Deprecated options	=>	deprecated-options-1dtzo0g
+
+8.9.1. rails_spawn_method	=>	rails-spawn-method-17vdnpt
 
 9. Troubleshooting	=>	troubleshooting-1pt0c76
 

@@ -612,6 +612,24 @@ This way, Phusion Passenger will not interfere with Wordpress.
 
 In each place, it may be specified at most once. The default value is 'on'.
 
+[[PassengerBaseURI]]
+==== PassengerBaseURI <uri> ====
+Used to specify that the given URI is a Phusion Passenger-served application. Please refer
+to the following sections for examples:
+
+ * <<deploying_rails_to_sub_uri,Deploying Rails 1.x and 2.x to a sub URI>>
+ * <<deploying_rack_to_sub_uri,Deploying Rack (including Rails >= 3) to a sub URI>>
+ * <<deploying_python_to_sub_uri,Deploying Python to a sub URI>>
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+=== Application loading options
+
 [[PassengerRuby]]
 ==== PassengerRuby <filename>
 The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby interpreter to use. Similarly, the `PassengerPython` and `PassengerNodejs` directives are for specifying the Python interpreter and the Node.js command, respectively.
@@ -843,22 +861,6 @@ Example:
 </VirtualHost>
 -----------------------------
 
-[[PassengerBaseURI]]
-==== PassengerBaseURI <uri> ====
-Used to specify that the given URI is a Phusion Passenger-served application. Please refer
-to the following sections for examples:
-
- * <<deploying_rails_to_sub_uri,Deploying Rails 1.x and 2.x to a sub URI>>
- * <<deploying_rack_to_sub_uri,Deploying Rack (including Rails >= 3) to a sub URI>>
- * <<deploying_python_to_sub_uri,Deploying Python to a sub URI>>
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
 ==== PassengerRestartDir <directory>
 As described in the deployment chapters of this document, Phusion Passenger
 checks the file 'tmp/restart.txt' in the applications'
@@ -916,6 +918,50 @@ allow the attacker to cause a Denial-of-Service.
 
 You can prevent this from happening by pointing PassengerRestartDir to a
 directory that's readable by Apache, but only writable by administrators.
+
+[[PassengerSpawnMethod]]
+==== PassengerSpawnMethod <string>
+[TIP]
+."What spawn method should I use?"
+=========================================================
+This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
+understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
+
+************************************************
+If your application works on Mongrel or Thin, but not on Phusion Passenger, then set
+`PassengerSpawnMethod` to 'direct'. Otherwise, leave it at 'smart' (the default).
+************************************************
+
+However, we do recommend you to try to understand it. The 'smart' spawn
+method bring many benefits.
+=========================================================
+
+include::users_guide_snippets/passenger_spawn_method.txt[]
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is 'smart'.
+
+[[PassengerLoadShellEnvvars]]
+==== PassengerLoadShellEnvvars <on|off>
+:version: 4.0.20
+include::users_guide_snippets/since_version.txt[]
+
+Enables or disables the loading of shell environment variables before spawning the application.
+
+If this option is turned on, and the user's shell is `bash`, then applications are loaded by running them with `bash -l -c`. Otherwise, they are loaded by running them directly from the `PassengerHelperAgent` process.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'on'.
 
 [[PassengerRollingRestarts]]
 ==== PassengerRollingRestarts <on|off>
@@ -992,52 +1038,6 @@ This option may occur in the following places:
  * In '.htaccess', if `AllowOverride Options` is on.
 
 In each place, it may be specified at most once. The default value is 'off'.
-
-=== Process spawning options
-
-[[PassengerSpawnMethod]]
-==== PassengerSpawnMethod <string>
-[TIP]
-."What spawn method should I use?"
-=========================================================
-This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
-understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
-
-************************************************
-If your application works on Mongrel or Thin, but not on Phusion Passenger, then set
-`PassengerSpawnMethod` to 'direct'. Otherwise, leave it at 'smart' (the default).
-************************************************
-
-However, we do recommend you to try to understand it. The 'smart' spawn
-method bring many benefits.
-=========================================================
-
-include::users_guide_snippets/passenger_spawn_method.txt[]
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is 'smart'.
-
-[[PassengerLoadShellEnvvars]]
-==== PassengerLoadShellEnvvars <on|off>
-:version: 4.0.20
-include::users_guide_snippets/since_version.txt[]
-
-Enables or disables the loading of shell environment variables before spawning the application.
-
-If this option is turned on, and the user's shell is `bash`, then applications are loaded by running them with `bash -l -c`. Otherwise, they are loaded by running them directly from the `PassengerHelperAgent` process.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. The default value is 'on'.
 
 === Security options ===
 
