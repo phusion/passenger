@@ -50,6 +50,10 @@ Most configuration is done by customizing the arguments passed to the `passenger
 +
 You can use `--friendly-error-pages` and `--no-friendly-error-pages` to explicitly enable or disable this feature, respectively.
 
+`--sticky-sessions`::
+    Enables link:Users%20guide%20Nginx.html#PassengerStickySessions[sticky sessions]. Required for SockJS, Socket.io, faye-websocket and Meteor JS applications.
+`--sticky-sessions-cookie-name NAME`::
+    Allows customizing the sticky session cookie name.
 `--ssl`::
 	Enables SSL support. If this is set, you must also set `--ssl-certificate` and `--ssl-certificate-key` to the SSL certificate and key files, respectively.
 `--ssl-port`::
@@ -87,6 +91,10 @@ The following configuration options are supported:
 	Equivalent to the `--min-instances` command line option.
 `spawn_method`::
 	Equivalent to the `--spawn-method` command line option.
+`sticky_sessions`::
+    Equivalent to the `--sticky-sessions` command line option.
+`sticky_sessions_cookie_name`::
+    Equivalent to the `--sticky-sessions-cookie-name` command line option.
 `ssl`::
 	Equivalent to the `--ssl` command line option. When given, you must also set `ssl_certificate` and `ssl_certificate_key` in the configuration file.
 `ssl_port`::

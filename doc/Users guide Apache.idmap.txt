@@ -222,6 +222,10 @@
 
 8.7.4. PassengerMaxRequestQueueSize <number>	=>	passenger-max-request-queue-size-number--1f1uocd
 
+8.7.5. PassengerStickySessions <on|off>	=>	passengerstickysessions-on-off--fx1jkt
+
+8.7.6. PassengerStickySessionsCookieName	=>	passenger-sticky-sessions-cookie-name-stktkx
+
 8.8. Compatibility options	=>	compatibility-options-8jve5a
 
 8.8.1. PassengerResolveSymlinksInDocumentRoot <on|off>	=>	passengerresolvesymlinksindocumentroot-on-off--1r0qcp8

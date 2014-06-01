@@ -1735,6 +1735,53 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is '503'.
 
+[[PassengerStickySessions]]
+==== passenger_sticky_sessions <on|off>
+:version: 4.0.55
+include::users_guide_snippets/since_version.txt[]
+
+When sticky sessions are enabled, all requests that a client sends will be routed to the same originating application process, whenever possible. When sticky sessions are disabled, requests may be distributed over multiple processes, and may not necessarily be routed to the originating process, in order to balance traffic over multiple CPU cores. Because of this, sticky sessions should only be enabled in specific circumstances.
+
+For applications that store important state inside the process's own memory -- that is, as opposed to storing state in a distributed data store, such as the database or Redis -- sticky sessions *should* be enabled. This is because otherwise, some requests could be routed to a different process, which stores different state data. Because processes don't share memory with each other, there's no way for one process to know about the state in another process, and then things can go wrong.
+
+One prominent example is the popular link:http://sockjs.org/[SockJS library], which is capable of emulating WebSockets through long polling. This is implemented through two HTTP endpoints, `/SESSION_ID/xhr_stream` (a long polling end point which sends data from the server to the client), and `/SESSION_ID/xhr_send` (a normal POST endpoint which is used for sending data from the client to the server). SockJS correlates the two requests with each other through a session identifier. At the same time, in its default configuration, it stores all known session identifiers in an in-memory data structure. It is therefore important that a particular `/SESSION_ID/xhr_send` request is sent to the same process where the corresponding `/SESSION_ID/xhr_stream` request originates from; otherwise, SockJS cannot correlate the two requests, and an error occurs.
+
+So prominent examples where sticky sessions should (or even *must*) be enabled, include:
+
+ * Applications that use the SockJS library (unless configured with a distributed data store)
+ * Applications that use the Socket.io library (unless configured with a distributed data store)
+ * Applications that use the faye-websocket gem (unless configured with a distributed data store)
+ * Meteor JS applications (because Meteor uses SockJS)
+
+Sticky sessions work through the use of a special cookie, whose name can be customized with <<PassengerStickySessionsCookieName,passenger_sticky_sessions_cookie_name>>. Phusion Passenger puts an identifier in this cookie, which tells Phusion Passenger what the originating process is. Next time the client sends a request, Phusion Passenger reads this cookie and uses the value in the cookie to route the request back to the originating process. If the originating process no longer exists (e.g. because it has crashed or restarted) then Phusion Passenger will route the request to some other process, and reset the cookie.
+
+If you have a load balancer in front end of Phusion Passenger + Nginx, then you must configure sticky sessions on that load balancer too. Otherwise, the load balancer could route the request to a different server.
+
+This option may occur in the following places:
+
+ * In the `http` configuration block.
+ * In a `server` configuration block.
+ * In a `location` configuration block.
+ * In an `if` configuration scope.
+
+In each place, it may be specified at most once. The default value is `off`.
+
+[[PassengerStickySessionsCookieName]]
+==== passenger_sticky_sessions_cookie_name
+:version: 4.0.55
+include::users_guide_snippets/since_version.txt[]
+
+Sets the name of the <<PassengerStickySessions,sticky sessions>> cookie.
+
+This option may occur in the following places:
+
+ * In the `http` configuration block.
+ * In a `server` configuration block.
+ * In a `location` configuration block.
+ * In an `if` configuration scope.
+
+In each place, it may be specified at most once. The default value is `_passenger_route`.
+
 ==== passenger_ignore_client_abort <on|off> ====
 Normally, when the HTTP client aborts the connection (e.g. when the user clicked on "Stop"
 in the browser), the connection with the application process will be closed too. If the

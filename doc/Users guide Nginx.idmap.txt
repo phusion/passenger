@@ -216,19 +216,23 @@
 
 8.6.3. passenger_request_queue_overflow_status_code <code>	=>	passenger-request-queue-overflow-status-code-code--1wcwuxl
 
-8.6.4. passenger_ignore_client_abort <on|off>	=>	passenger-ignore-client-abort
+8.6.4. passenger_sticky_sessions <on|off>	=>	passenger-sticky-sessions-on-off--lwvbxs
 
-8.6.5. passenger_intercept_errors <on|off>	=>	passenger-intercept-errors-1uvcb9x
+8.6.5. passenger_sticky_sessions_cookie_name	=>	passenger-sticky-sessions-cookie-name-8hrox9
 
-8.6.6. passenger_pass_header <header name>	=>	passenger-pass-header-header-name--1cg31je
+8.6.6. passenger_ignore_client_abort <on|off>	=>	passenger-ignore-client-abort
 
-8.6.7. passenger_buffer_response <on|off>	=>	passenger-buffer-response
+8.6.7. passenger_intercept_errors <on|off>	=>	passenger-intercept-errors-1uvcb9x
 
-8.6.8. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
+8.6.8. passenger_pass_header <header name>	=>	passenger-pass-header-header-name--1cg31je
 
-8.6.9. passenger_buffers	=>	passenger-busy-buffers
+8.6.9. passenger_buffer_response <on|off>	=>	passenger-buffer-response
 
-8.6.10. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
+8.6.10. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
+
+8.6.11. passenger_buffers	=>	passenger-busy-buffers
+
+8.6.12. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
 
 8.7. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
 
