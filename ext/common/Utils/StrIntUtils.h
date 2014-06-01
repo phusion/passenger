@@ -145,6 +145,41 @@ string replaceAll(const string &str, const string &toFind, const string &replace
 string strip(const StaticString &str);
 
 /**
+ * Given a pointer to a NULL-terminated string, update it to a
+ * position where all leading whitespaces (0x20) have been skipped.
+ */
+inline void
+skipLeadingWhitespaces(const char **data) {
+	while (**data == ' ') {
+		(*data)++;
+	}
+}
+
+/**
+ * Given a pointer to a string and its end, update the begin pointer to a
+ * position where all leading whitespaces (0x20) have been skipped.
+ * The pointer will not be moved past `end`.
+ */
+inline void
+skipLeadingWhitespaces(const char **data, const char *end) {
+	while (*data < end && **data == ' ') {
+		(*data)++;
+	}
+}
+
+/**
+ * Given a string and a pointer to its position within it, update the pointer
+ * to a position where all trailing whitespaces (0x20) have been skipped.
+ * The pointer will not be moved before `begin`.
+ */
+inline void
+skipTrailingWhitespaces(const char *begin, const char **pos) {
+	while (*pos > begin && (*pos)[-1] == ' ') {
+		(*pos)--;
+	}
+}
+
+/**
  * Convert anything to a string.
  */
 template<typename T> string

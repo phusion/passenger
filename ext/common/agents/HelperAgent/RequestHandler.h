@@ -1138,6 +1138,30 @@ private:
 			headerData.append("=");
 			headerData.append(toString(client->session->getStickySessionId()));
 			headerData.append("; HttpOnly\r\n");
+
+			// Invalidate all cookies with a different route.
+			// 
+			// TODO: This is not entirely correct. Clients MAY send multiple Cookie
+			// headers, although this is in practice extremely rare.
+			// http://stackoverflow.com/questions/16305814/are-multiple-cookie-headers-allowed-in-an-http-request
+			StaticString cookieHeader = client->scgiParser.getHeader("HTTP_COOKIE");
+			vector< pair<StaticString, StaticString> > cookies;
+			pair<StaticString, StaticString> cookie;
+
+			parseCookieHeader(cookieHeader, cookies);
+
+			foreach (cookie, cookies) {
+				if (cookie.first == cookieName) {
+					unsigned int stickySessionId = stringToUint(cookie.second);
+					if (stickySessionId != client->session->getStickySessionId()) {
+						headerData.append("Set-Cookie: ");
+						headerData.append(cookie.first.data(), cookie.first.size());
+						headerData.append("=");
+						headerData.append(cookie.second.data(), cookie.second.size());
+						headerData.append("; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly\r\n");
+					}
+				}
+			}
 		}
 
 		// Add Date header. https://code.google.com/p/phusion-passenger/issues/detail?id=485
@@ -1951,39 +1975,62 @@ private:
 		}
 	}
 
+	void parseCookieHeader(const StaticString &header,
+		vector< pair<StaticString, StaticString> > &cookies) const
+	{
+		// See http://stackoverflow.com/questions/6108207/definite-guide-to-valid-cookie-values
+		// for syntax grammar.
+		vector<StaticString> parts;
+		vector<StaticString>::const_iterator it, it_end;
+
+		split(header, ';', parts);
+		cookies.reserve(parts.size());
+		it_end = parts.end();
+
+		for (it = parts.begin(); it != it_end; it++) {
+			const char *begin = it->data();
+			const char *end = it->data() + it->size();
+			const char *sep;
+
+			skipLeadingWhitespaces(&begin, end);
+			skipTrailingWhitespaces(begin, &end);
+
+			// Find the separator ('=').
+			sep = (const char *) memchr(begin, '=', end - begin);
+			if (sep != NULL) {
+				// Valid cookie. Otherwise, ignore it.
+				const char *nameEnd = sep;
+				const char *valueBegin = sep + 1;
+
+				skipTrailingWhitespaces(begin, &nameEnd);
+				skipLeadingWhitespaces(&valueBegin, end);
+
+				cookies.push_back(make_pair(
+					StaticString(begin, nameEnd - begin),
+					StaticString(valueBegin, end - valueBegin)
+				));
+			}
+		}
+	}
+
 	void setStickySessionId(const ClientPtr &client) {
 		ScgiRequestParser &parser = client->scgiParser;
 		if (parser.getHeader("PASSENGER_STICKY_SESSIONS") == "true") {
 			// TODO: This is not entirely correct. Clients MAY send multiple Cookie
 			// headers, although this is in practice extremely rare.
 			// http://stackoverflow.com/questions/16305814/are-multiple-cookie-headers-allowed-in-an-http-request
-			StaticString cookie = parser.getHeader("HTTP_COOKIE");
+			StaticString cookieHeader = parser.getHeader("HTTP_COOKIE");
 			StaticString cookieName = getStickySessionCookieName(client);
-			vector<StaticString> parts;
+			vector< pair<StaticString, StaticString> > cookies;
+			pair<StaticString, StaticString> cookie;
 
 			client->stickySession = true;
-			split(cookie, ';', parts);
-			foreach (StaticString part, parts) {
-				const char *begin = part.data();
-				const char *end = part.data() + part.size();
-				const char *sep;
-
-				// Skip leading whitespace in the name.
-				while (begin < end && *begin == ' ') {
-					begin++;
-				}
-				part = StaticString(begin, end - begin);
-
-				// Find the separator ('=').
-				sep = (const char *) memchr(begin, '=', end - begin);
-				if (sep != NULL) {
-					StaticString name(begin, sep - begin);
-					if (name == cookieName) {
-						// This cookie matches the one we're looking for.
-						StaticString value(sep + 1, end - (sep + 1));
-						client->options.stickySessionId = stringToUint(value);
-						return;
-					}
+			parseCookieHeader(cookieHeader, cookies);
+			foreach (cookie, cookies) {
+				if (cookie.first == cookieName) {
+					// This cookie matches the one we're looking for.
+					client->options.stickySessionId = stringToUint(cookie.second);
+					return;
 				}
 			}
 		}

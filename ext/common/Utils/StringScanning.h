@@ -29,6 +29,7 @@
 #include <cstdlib>
 #include <string>
 #include <StaticString.h>
+#include <Utils/StrIntUtils.h>
 
 
 /**
@@ -58,13 +59,6 @@ using namespace std;
 
 struct ParseException {};
 
-inline void
-_skipLeadingWhitespaces(const char **data) {
-	while (**data == ' ') {
-		(*data)++;
-	}
-}
-
 /**
  * Scan the given data for the first word that appears on the first line.
  * Leading whitespaces (but not newlines) are ignored. If a word is found
@@ -78,7 +72,7 @@ _skipLeadingWhitespaces(const char **data) {
  */
 inline StaticString
 readNextWord(const char **data) {
-	_skipLeadingWhitespaces(data);
+	skipLeadingWhitespaces(data);
 	if (**data == '\n' || **data == '\0') {
 		throw ParseException();
 	}
@@ -201,7 +195,7 @@ readNextWordAsDouble(const char **data) {
  */
 inline string
 readRestOfLine(const char *data) {
-	_skipLeadingWhitespaces(&data);
+	skipLeadingWhitespaces(&data);
 	// Rest of line is allowed to be empty.
 	if (*data == '\n' || *data == '\0') {
 		return "";
@@ -251,7 +245,7 @@ skipToNextLine(const char **data) {
  */
 inline StaticString
 readNextSentence(const char **data, char terminator) {
-	_skipLeadingWhitespaces(data);
+	skipLeadingWhitespaces(data);
 	if (**data == '\n' || **data == '\0' || **data == terminator) {
 		throw ParseException();
 	}
