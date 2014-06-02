@@ -50,7 +50,6 @@ class StartCommand < Command
 
 	def run
 		parse_my_options
-		sanity_check_options
 
 		PhusionPassenger.require_passenger_lib 'standalone/runtime_locator'
 		@runtime_locator = RuntimeLocator.new(@options[:runtime_dir],
@@ -62,6 +61,7 @@ class StartCommand < Command
 		@app_finder = AppFinder.new(@args, @options)
 		@apps = @app_finder.scan
 		@options = @app_finder.global_options
+		sanity_check_server_options
 		determine_various_resource_locations
 		@plugin.call_hook(:found_apps, @apps)
 
@@ -322,7 +322,7 @@ private
 		@plugin.call_hook(:done_parsing_options)
 	end
 
-	def sanity_check_options
+	def sanity_check_server_options
 		if @options[:tcp_explicitly_given] && @options[:socket_file]
 			error "You cannot specify both --address/--port and --socket. Please choose either one."
 			exit 1
