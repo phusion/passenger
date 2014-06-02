@@ -510,6 +510,12 @@ private:
 			// mod_rewrite is at work.
 			return DECLINED;
 		}
+
+		/* mod_mime might have set the httpd/unix-directory Content-Type
+		 * if it detects that the current URL maps to a directory. We do
+		 * not want to preserve that Content-Type.
+		 */
+		ap_set_content_type(r, NULL);
 		
 		TRACE_POINT();
 		DirConfig *config = note->config;
