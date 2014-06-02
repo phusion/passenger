@@ -61,8 +61,6 @@ http {
     <% if @options[:temp_dir] %>passenger_temp_dir '<%= @options[:temp_dir] %>';<% end %>
     <% if @options[:rolling_restarts] %>passenger_rolling_restarts on;<% end %>
     <% if @options[:resist_deployment_errors] %>passenger_resist_deployment_errors on;<% end %>
-    <% if @options[:sticky_sessions] %>passenger_sticky_sessions on;<% end %>
-    <% if @options[:sticky_sessions_cookie_name] %>passenger_sticky_sessions_cookie_name '<%= sticky_sessions_cookie_name %>';<% end %>
 
     <% if !@options[:friendly_error_pages].nil? -%>
         passenger_friendly_error_pages <%= boolean_config_value(@options[:friendly_error_pages]) %>;
@@ -140,6 +138,8 @@ http {
         <% if app[:thread_count] != DEFAULT_THREAD_COUNT %>passenger_thread_count <%= app[:thread_count] %>;<% end %>
         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
         <% if app[:restart_dir] %>passenger_restart_dir '<%= app[:restart_dir] %>';<% end %>
+        <% if @options[:sticky_sessions] %>passenger_sticky_sessions on;<% end %>
+        <% if @options[:sticky_sessions_cookie_name] %>passenger_sticky_sessions_cookie_name '<%= sticky_sessions_cookie_name %>';<% end %>
         <% if app[:union_station_key] %>
             union_station_support on;
             union_station_key <%= app[:union_station_key] %>;
