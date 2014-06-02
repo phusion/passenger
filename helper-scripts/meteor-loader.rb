@@ -94,15 +94,6 @@ module App
 	end
 
 	def self.load_app(control_server)
-		if ENV['PASSENGER_STICKY_SESSIONS'] != 'true'
-			abort "This is a Meteor application, and you must enable sticky " +
-				"sessions in order to run Meteor applications. However, sticky " +
-				"sessions are disabled right now. Please enable them with: " +
-				"`passenger_sticky_sessions on` (Nginx), " +
-				"`PassengerStickySessions on` (Apache), " +
-				"`--sticky-sessions` (Standalone)"
-		end
-
 		port = nil
 		tries = 0
 		while port.nil? && tries < 200
