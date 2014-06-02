@@ -1133,11 +1133,13 @@ private:
 		// Add sticky session ID.
 		if (client->stickySession && client->session != NULL) {
 			StaticString cookieName = getStickySessionCookieName(client);
+			// Note that we do NOT set HttpOnly. If we set that flag then Chrome
+			// doesn't send cookies over WebSocket handshakes. Confirmed on Chrome 25.
 			headerData.append("Set-Cookie: ");
 			headerData.append(cookieName.data(), cookieName.size());
 			headerData.append("=");
 			headerData.append(toString(client->session->getStickySessionId()));
-			headerData.append("; HttpOnly\r\n");
+			headerData.append("\r\n");
 
 			// Invalidate all cookies with a different route.
 			// 
@@ -1158,7 +1160,7 @@ private:
 						headerData.append(cookie.first.data(), cookie.first.size());
 						headerData.append("=");
 						headerData.append(cookie.second.data(), cookie.second.size());
-						headerData.append("; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly\r\n");
+						headerData.append("; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT\r\n");
 					}
 				}
 			}
