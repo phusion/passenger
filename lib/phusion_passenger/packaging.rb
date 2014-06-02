@@ -77,6 +77,8 @@ module Packaging
 		'CHANGELOG',
 		'INSTALL.md',
 		'NEWS',
+		'package.json',
+		'npm-shrinkwrap.json',
 		'passenger.gemspec',
 		'build/*.rb',
 		'lib/*.rb',
