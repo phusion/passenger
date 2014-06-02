@@ -229,10 +229,7 @@ public:
 	bool hasSessionSockets() const {
 		const_iterator it;
 		for (it = begin(); it != end(); it++) {
-			if (it->protocol == "session"
-			 || it->protocol == "session_nohalfclose"
-			 || it->protocol == "http_session")
-			{
+			if (it->protocol == "session" || it->protocol == "http_session") {
 				return true;
 			}
 		}

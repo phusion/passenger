@@ -521,7 +521,7 @@ public:
 	 * Checks whether we should half-close the application socket after forwarding
 	 * the request. HTTP does not formally support half-closing, and Node.js treats a
 	 * half-close as a full close, so we only half-close session sockets, not
-	 * HTTP sockets and session_nohalfclose sockets.
+	 * HTTP sockets.
 	 */
 	bool shouldHalfCloseWrite() const {
 		return session->getProtocol() == "session";
@@ -2355,9 +2355,7 @@ private:
 		if (client->session == NULL) {
 			disconnectWithError(client,
 				"Application sent EOF before we were able to send headers to it");
-		} else if (client->session->getProtocol() == "session"
-		        || client->session->getProtocol() == "session_nohalfclose")
-		{
+		} else if (client->session->getProtocol() == "session") {
 			char sizeField[sizeof(uint32_t)];
 			SmallVector<StaticString, 10> data;
 
