@@ -22,7 +22,7 @@ Release 4.0.45
  * Fixed some issues with RVM mixed mode support, issue #1121.
  * Fixed Passenger Standalone complaining about not finding PassengerHelperAgent
    during startup.
- * Fixed various minor issues such as #1190.
+ * Fixed various minor issues such as #1190 and #1197.
 
 
 Release 4.0.44
