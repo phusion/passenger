@@ -51,7 +51,8 @@ task 'test:install_deps' do
 	if boolean_option('BASE_DEPS', default)
 		sh "#{gem_install} rails -v 2.3.15"
 		sh "#{gem_install} mime-types -v 1.25"
-		sh "#{gem_install} bundler rspec daemon_controller json rack"
+		sh "#{gem_install} rspec -v 2.14.1"
+		sh "#{gem_install} bundler daemon_controller json rack"
 	end
 	if boolean_option('DOCTOOLS', default)
 		begin
