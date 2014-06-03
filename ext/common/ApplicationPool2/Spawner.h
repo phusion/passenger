@@ -73,12 +73,12 @@
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>
+#include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
 #include <ApplicationPool2/PipeWatcher.h>
 #include <FileDescriptor.h>
 #include <Exceptions.h>
-#include <ResourceLocator.h>
 #include <StaticString.h>
 #include <ServerInstanceDir.h>
 #include <Utils.h>
@@ -384,16 +384,16 @@ private:
 		TRACE_POINT();
 		try {
 			string data = "You have control 1.0\n"
-				"passenger_root: " + resourceLocator.getRoot() + "\n"
+				"passenger_root: " + config->resourceLocator.getRoot() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
-				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
+				"ruby_libdir: " + config->resourceLocator.getRubyLibDir() + "\n"
 				"generation_dir: " + generation->getPath() + "\n"
 				"gupid: " + details.gupid + "\n"
 				"connect_password: " + details.connectPassword + "\n";
 
 			vector<string> args;
 			vector<string>::const_iterator it, end;
-			details.options->toVector(args, resourceLocator, Options::SPAWN_OPTIONS);
+			details.options->toVector(args, config->resourceLocator, Options::SPAWN_OPTIONS);
 			for (it = args.begin(); it != args.end(); it++) {
 				const string &key = *it;
 				it++;
@@ -530,14 +530,12 @@ private:
 			details.pid,
 			details.gupid, details.connectPassword,
 			details.adminSocket, details.errorPipe,
-			sockets, creationTime, details.spawnStartTime,
-			config);
+			sockets, creationTime, details.spawnStartTime);
 		process->codeRevision = details.preparation->codeRevision;
 		return process;
 	}
 	
 protected:
-	ResourceLocator resourceLocator;
 	ServerInstanceDir::GenerationPtr generation;
 	SpawnerConfigPtr config;
 	
@@ -730,6 +728,12 @@ protected:
 			true,
 			errorKind);
 		annotateAppSpawnException(e, details);
+		throwSpawnException(e, *details.options);
+	}
+
+	void throwSpawnException(SpawnException &e, const Options &options) {
+		processAndLogNewSpawnException(e, options, config->resourceLocator,
+			*config->randomGenerator);
 		throw e;
 	}
 
@@ -796,7 +800,7 @@ protected:
 		}
 	}
 
-	SpawnPreparationInfo prepareSpawn(const Options &options) const {
+	SpawnPreparationInfo prepareSpawn(const Options &options) {
 		TRACE_POINT();
 		SpawnPreparationInfo info;
 		prepareChroot(info, options);
@@ -806,7 +810,7 @@ protected:
 		return info;
 	}
 
-	void prepareChroot(SpawnPreparationInfo &info, const Options &options) const {
+	void prepareChroot(SpawnPreparationInfo &info, const Options &options) {
 		TRACE_POINT();
 		info.appRoot = absolutizePath(options.appRoot);
 		if (options.preexecChroot.empty()) {
@@ -815,10 +819,11 @@ protected:
 			info.chrootDir = absolutizePath(options.preexecChroot);
 		}
 		if (info.appRoot != info.chrootDir && startsWith(info.appRoot, info.chrootDir + "/")) {
-			throw SpawnException("Invalid configuration: '" + info.chrootDir +
+			SpawnException e("Invalid configuration: '" + info.chrootDir +
 				"' has been configured as the chroot jail, but the application " +
 				"root directory '" + info.appRoot + "' is not a subdirectory of the " +
 				"chroot directory, which it must be.");
+			throwSpawnException(e, options);
 		}
 		if (info.appRoot == info.chrootDir) {
 			info.appRootInsideChroot = "/";
@@ -1042,7 +1047,7 @@ protected:
 		
 		appendNullTerminatedKeyValue(result, "IN_PASSENGER", "1");
 		appendNullTerminatedKeyValue(result, "PYTHONUNBUFFERED", "1");
-		appendNullTerminatedKeyValue(result, "NODE_PATH", resourceLocator.getNodeLibDir());
+		appendNullTerminatedKeyValue(result, "NODE_PATH", config->resourceLocator.getNodeLibDir());
 		appendNullTerminatedKeyValue(result, "RAILS_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "RACK_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "WSGI_ENV", options.environment);
@@ -1313,7 +1318,7 @@ protected:
 				attributes["html"] == "true",
 				SpawnException::APP_STARTUP_EXPLAINABLE_ERROR);
 			annotateAppSpawnException(e, details);
-			throw e;
+			throwSpawnException(e, *details.options);
 		} catch (const SystemException &e) {
 			throwAppSpawnException("An error occurred while starting the "
 				"web application. It tried to report an error message, but "
@@ -1352,8 +1357,8 @@ public:
 	 */
 	const unsigned long long creationTime;
 
-	Spawner(const ResourceLocator &_resourceLocator)
-		: resourceLocator(_resourceLocator),
+	Spawner(const SpawnerConfigPtr &_config)
+		: config(_config),
 		  creationTime(SystemTime::getUsec())
 		{ }
 	

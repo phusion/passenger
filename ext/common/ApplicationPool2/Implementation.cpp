@@ -25,6 +25,8 @@
 #include <typeinfo>
 #include <algorithm>
 #include <utility>
+#include <sstream>
+#include <limits.h>
 #include <boost/make_shared.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/backtrace.hpp>
@@ -32,8 +34,10 @@
 #include <ApplicationPool2/SuperGroup.h>
 #include <ApplicationPool2/Group.h>
 #include <ApplicationPool2/PipeWatcher.h>
+#include <ApplicationPool2/ErrorRenderer.h>
 #include <Exceptions.h>
 #include <MessageReadersWriters.h>
+#include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/MessageIO.h>
 
@@ -136,6 +140,59 @@ rethrowException(const ExceptionPtr &e) {
 	throw tracable_exception(*e);
 }
 
+void processAndLogNewSpawnException(SpawnException &e, const Options &options,
+	ResourceLocator &resourceLocator, RandomGenerator &randomGenerator)
+{
+	ErrorRenderer renderer(resourceLocator);
+	string errorId = randomGenerator.generateHexString(4);
+	string appMessage = e.getErrorPage();
+	char filename[PATH_MAX];
+	stringstream stream;
+
+	e.set("ERROR_ID", errorId);
+	if (appMessage.empty()) {
+		appMessage = "none";
+	}
+
+	try {
+		int fd = -1;
+		FdGuard guard(fd, true);
+		string errorPage;
+
+		errorPage = renderer.renderWithDetails(appMessage, options, &e);
+
+		#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+			snprintf(filename, PATH_MAX, "%s/passenger-error-XXXXXX.html",
+				getSystemTempDir());
+			fd = mkstemps(filename, sizeof(".html") - 1);
+		#else
+			snprintf(filename, PATH_MAX, "%s/passenger-error.XXXXXX",
+				getSystemTempDir());
+			fd = mkstemp(filename);
+		#endif
+		if (fd == -1) {
+			int e = errno;
+			throw SystemException("Cannot generate a temporary filename",
+				e);
+		}
+
+		writeExact(fd, errorPage);
+	} catch (const SystemException &e2) {
+		filename[0] = '\0';
+		P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
+			e2.backtrace());
+	}
+
+	stream << "Could not spawn process for application " << options.appRoot <<
+		": " << e.what() << "\n" <<
+		"  Error ID: " << errorId << "\n";
+	if (filename[0] != '\0') {
+		stream << "  Error details saved to: " << filename << "\n";
+	}
+	stream << "  Message from application: " << appMessage << "\n";
+	P_ERROR(stream.str());
+}
+
 
 const SuperGroupPtr
 Pool::getSuperGroup(const char *name) {
@@ -187,6 +244,8 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 	vector<ComponentInfo> componentInfos;
 	vector<ComponentInfo>::const_iterator it;
 	ExceptionPtr exception;
+
+	PoolPtr pool = getPool();
 	
 	P_TRACE(2, "Initializing SuperGroup " << inspect() << " in the background...");
 	try {
@@ -198,13 +257,15 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 		string message = "The directory " +
 			options.appRoot +
 			" does not seem to contain a web application.";
-		exception = boost::make_shared<SpawnException>(
-			message, message, false);
+		boost::shared_ptr<SpawnException> spawnException =
+			boost::make_shared<SpawnException>(
+				message, message, false);
+		exception = spawnException;
+		processAndLogNewSpawnException(*spawnException, options,
+			pool->getResourceLocator(), *pool->randomGenerator);
 	}
 	
-	PoolPtr pool = getPool();
 	Pool::DebugSupportPtr debug = pool->debugSupport;
-	
 	vector<Callback> actions;
 	{
 		if (debug != NULL && debug->superGroup) {
@@ -805,7 +866,10 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
 			if (shouldFail) {
-				throw SpawnException("Simulated failure");
+				SpawnException e("Simulated failure");
+				processAndLogNewSpawnException(e, options, pool->getResourceLocator(),
+					*pool->randomGenerator);
+				throw e;
 			} else {
 				process = spawner->spawn(options);
 				process->setGroup(shared_from_this());
@@ -878,9 +942,6 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 		} else {
 			// TODO: sure this is the best thing? if there are
 			// processes currently alive we should just use them.
-			P_ERROR("Could not spawn process for group " << name <<
-				": " << exception->what() << "\n" <<
-				exception->backtrace());
 			if (enabledCount == 0) {
 				enableAllDisablingProcesses(actions);
 			}
@@ -1197,7 +1258,7 @@ Group::testOverflowRequestQueue() const {
 
 const ResourceLocator &
 Group::getResourceLocator() const {
-	return getPool()->spawnerFactory->getResourceLocator();
+	return getPool()->getResourceLocator();
 }
 
 // 'process' is not a reference so that bind(runAttachHooks, ...) causes the shared

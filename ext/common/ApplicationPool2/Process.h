@@ -331,8 +331,7 @@ public:
 		const FileDescriptor &_errorPipe,
 		const SocketListPtr &_sockets,
 		unsigned long long _spawnerCreationTime,
-		unsigned long long _spawnStartTime,
-		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
+		unsigned long long _spawnStartTime)
 		: pqHandle(NULL),
 		  pid(_pid),
 		  stickySessionId(0),
@@ -354,13 +353,6 @@ public:
 		  longRunningConnectionsAborted(false),
 		  shutdownStartTime(0)
 	{
-		SpawnerConfigPtr config;
-		if (_config == NULL) {
-			config = boost::make_shared<SpawnerConfig>();
-		} else {
-			config = _config;
-		}
-
 		if (_adminSocket != -1) {
 			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(_adminSocket,
 				"stdout", pid);

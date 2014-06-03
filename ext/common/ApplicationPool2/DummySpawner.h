@@ -37,16 +37,14 @@ using namespace oxt;
 
 class DummySpawner: public Spawner {
 private:
-	SpawnerConfigPtr config;
 	boost::mutex lock;
 	unsigned int count;
 	
 public:
 	unsigned int cleanCount;
 	
-	DummySpawner(const ResourceLocator &resourceLocator, const SpawnerConfigPtr &_config)
-		: Spawner(resourceLocator),
-		  config(_config)
+	DummySpawner(const SpawnerConfigPtr &_config)
+		: Spawner(_config)
 	{
 		count = 0;
 		cleanCount = 0;

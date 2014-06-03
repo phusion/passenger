@@ -279,6 +279,10 @@ public:
 		}
 	}
 
+	ResourceLocator &getResourceLocator() const {
+		return spawnerFactory->getConfig()->resourceLocator;
+	}
+
 	ProcessPtr findOldestIdleProcess(const Group *exclude = NULL) const {
 		ProcessPtr oldestIdleProcess;
 		

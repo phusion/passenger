@@ -99,7 +99,7 @@ private:
 	vector<string> createRealPreloaderCommand(const Options &options,
 		shared_array<const char *> &args)
 	{
-		string agentsDir = resourceLocator.getAgentsDir();
+		string agentsDir = config->resourceLocator.getAgentsDir();
 		vector<string> command;
 		
 		if (shouldLoadShellEnvvars(options, preparation)) {
@@ -131,12 +131,13 @@ private:
 		StartupDetails &details)
 	{
 		throwPreloaderSpawnException(msg, errorKind, details.stderrCapturer,
-			details.debugDir);
+			*details.options, details.debugDir);
 	}
 
 	void throwPreloaderSpawnException(const string &msg,
 		SpawnException::ErrorKind errorKind,
 		BackgroundIOCapturerPtr &stderrCapturer,
+		const Options &options,
 		const DebugDirPtr &debugDir)
 	{
 		TRACE_POINT();
@@ -185,7 +186,7 @@ private:
 			errorKind);
 		e.setPreloaderCommand(getPreloaderCommandString());
 		annotatePreloaderException(e, debugDir);
-		throw e;
+		throwSpawnException(e, options);
 	}
 
 	void annotatePreloaderException(SpawnException &e, const DebugDirPtr &debugDir) {
@@ -331,14 +332,14 @@ private:
 		TRACE_POINT();
 		try {
 			string data = "You have control 1.0\n"
-				"passenger_root: " + resourceLocator.getRoot() + "\n"
-				"ruby_libdir: " + resourceLocator.getRubyLibDir() + "\n"
+				"passenger_root: " + config->resourceLocator.getRoot() + "\n"
+				"ruby_libdir: " + config->resourceLocator.getRubyLibDir() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"generation_dir: " + generation->getPath() + "\n";
 
 			vector<string> args;
 			vector<string>::const_iterator it, end;
-			details.options->toVector(args, resourceLocator, Options::SPAWN_OPTIONS);
+			details.options->toVector(args, config->resourceLocator, Options::SPAWN_OPTIONS);
 			for (it = args.begin(); it != args.end(); it++) {
 				const string &key = *it;
 				it++;
@@ -507,7 +508,7 @@ private:
 				SpawnException::PRELOADER_STARTUP_EXPLAINABLE_ERROR);
 			e.setPreloaderCommand(getPreloaderCommandString());
 			annotatePreloaderException(e, details.debugDir);
-			throw e;
+			throwSpawnException(e, *details.options);
 		} catch (const SystemException &e) {
 			throwPreloaderSpawnException("An error occurred while starting up "
 				"the preloader. It tried to report an error message, but "
@@ -608,6 +609,7 @@ private:
 				"socket: " + string(e.what()),
 				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 				stderrCapturer,
+				options,
 				DebugDirPtr());
 		}
 		
@@ -619,7 +621,7 @@ private:
 		vector<string>::const_iterator it;
 		
 		writeExact(fd, "spawn\n", &timeout);
-		options.toVector(args, resourceLocator, Options::SPAWN_OPTIONS);
+		options.toVector(args, config->resourceLocator, Options::SPAWN_OPTIONS);
 		for (it = args.begin(); it != args.end(); it++) {
 			const string &key = *it;
 			it++;
@@ -642,6 +644,7 @@ private:
 					toString(spawnedPid) + "'",
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 					stderrCapturer,
+					options,
 					DebugDirPtr());
 			}
 			// TODO: we really should be checking UID.
@@ -654,6 +657,7 @@ private:
 					"the same session: '" + toString(spawnedPid) + "'",
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 					stderrCapturer,
+					options,
 					DebugDirPtr());
 			}
 			
@@ -699,12 +703,11 @@ protected:
 	}
 
 public:
-	SmartSpawner(const ResourceLocator &_resourceLocator,
-		const ServerInstanceDir::GenerationPtr &_generation,
+	SmartSpawner(const ServerInstanceDir::GenerationPtr &_generation,
 		const vector<string> &_preloaderCommand,
 		const Options &_options,
-		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
-		: Spawner(_resourceLocator),
+		const SpawnerConfigPtr &_config)
+		: Spawner(_config),
 		  preloaderCommand(_preloaderCommand)
 	{
 		if (preloaderCommand.size() < 2) {
@@ -715,12 +718,6 @@ public:
 		options    = _options.copyAndPersist().detachFromUnionStationTransaction();
 		pid        = -1;
 		m_lastUsed = SystemTime::getUsec();
-
-		if (_config == NULL) {
-			config = boost::make_shared<SpawnerConfig>();
-		} else {
-			config = _config;
-		}
 	}
 	
 	virtual ~SmartSpawner() {

@@ -33,9 +33,9 @@ namespace tut {
 		ApplicationPool2_PoolTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			retainSessions = false;
-			spawnerConfig = boost::make_shared<SpawnerConfig>();
-			spawnerFactory = boost::make_shared<SpawnerFactory>(*resourceLocator,
-				generation, spawnerConfig);
+			spawnerConfig = boost::make_shared<SpawnerConfig>(*resourceLocator);
+			spawnerFactory = boost::make_shared<SpawnerFactory>(generation,
+				spawnerConfig);
 			pool = boost::make_shared<Pool>(spawnerFactory);
 			pool->initialize();
 			callback = boost::bind(&ApplicationPool2_PoolTest::_callback, this, _1, _2);

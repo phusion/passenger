@@ -84,6 +84,7 @@ dependencies = [
 	'ext/common/ApplicationPool2/SpawnerFactory.h',
 	'ext/common/ApplicationPool2/SmartSpawner.h',
 	'ext/common/ApplicationPool2/DirectSpawner.h',
+	'ext/common/ApplicationPool2/ErrorRenderer.h',
 	LIBBOOST_OXT,
 	helper_agent_libs.link_objects,
 	LIBEV_TARGET,

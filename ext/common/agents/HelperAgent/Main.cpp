@@ -462,8 +462,8 @@ public:
 		UPDATE_TRACE_POINT();
 		unionStationCore = boost::make_shared<UnionStation::Core>(options.loggingAgentAddress,
 			"logging", options.loggingAgentPassword);
-		spawnerFactory = boost::make_shared<SpawnerFactory>(resourceLocator,
-			generation, boost::make_shared<SpawnerConfig>(randomGenerator));
+		spawnerFactory = boost::make_shared<SpawnerFactory>(generation,
+			boost::make_shared<SpawnerConfig>(resourceLocator, randomGenerator));
 		pool = boost::make_shared<Pool>(spawnerFactory, unionStationCore,
 			randomGenerator, &options);
 		pool->initialize();

@@ -99,6 +99,7 @@
 		options.startupFile  = ".";
 		options.startTimeout = 300;
 		SpawnerPtr spawner = createSpawner(options);
+		setLogLevel(LVL_CRIT);
 		try {
 			process = spawner->spawn(options);
 			process->requiresShutdown = false;
@@ -117,6 +118,7 @@
 		options.startCommand = "echo\t" "!> hello world";
 		options.startupFile  = ".";
 		SpawnerPtr spawner = createSpawner(options);
+		setLogLevel(LVL_CRIT);
 		try {
 			process = spawner->spawn(options);
 			process->requiresShutdown = false;
@@ -135,6 +137,7 @@
 		options.startCommand = "perl\t" "start_error.pl";
 		options.startupFile  = "start_error.pl";
 		SpawnerPtr spawner = createSpawner(options);
+		setLogLevel(LVL_CRIT);
 		try {
 			process = spawner->spawn(options);
 			process->requiresShutdown = false;
@@ -157,6 +160,7 @@
 		options.startupFile  = "start_error.pl";
 		options.startTimeout = 300;
 		SpawnerPtr spawner = createSpawner(options);
+		setLogLevel(LVL_CRIT);
 		try {
 			process = spawner->spawn(options);
 			process->requiresShutdown = false;
@@ -213,6 +217,7 @@
 		options.startupFile  = ".";
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		SpawnerPtr spawner = createSpawner(options);
+		setLogLevel(LVL_CRIT);
 		try {
 			process = spawner->spawn(options);
 			process->requiresShutdown = false;
@@ -236,6 +241,7 @@
 		options.appRoot = "tmp.check/a/b/c/d";
 		options.appType = "rack";
 		SpawnerPtr spawner = createSpawner(options);
+		setLogLevel(LVL_CRIT);
 
 		if (getuid() != 0) {
 			// TODO: implement this test for root too

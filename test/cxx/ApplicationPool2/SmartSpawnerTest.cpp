@@ -47,10 +47,10 @@ namespace tut {
 			}
 			
 			return boost::make_shared<SmartSpawner>(
-				*resourceLocator,
 				generation,
 				command,
-				options);
+				options,
+				make_shared<SpawnerConfig>(*resourceLocator));
 		}
 		
 		Options createOptions() {
@@ -78,6 +78,7 @@ namespace tut {
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options);
+		setLogLevel(LVL_CRIT);
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
 		
@@ -86,7 +87,6 @@ namespace tut {
 		usleep(300000);
 		
 		// No exception at next spawn.
-		setLogLevel(-1);
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
 	}
@@ -98,7 +98,7 @@ namespace tut {
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
-		setLogLevel(-1);
+		setLogLevel(LVL_CRIT);
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
 			process = spawner->spawn(options);
@@ -124,10 +124,11 @@ namespace tut {
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2; sleep 60");
 		SmartSpawner spawner(
-			*resourceLocator,
 			generation,
 			preloaderCommand,
-			options);
+			options,
+			make_shared<SpawnerConfig>(*resourceLocator));
+		setLogLevel(LVL_CRIT);
 		
 		try {
 			process = spawner.spawn(options);
@@ -154,11 +155,12 @@ namespace tut {
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
 		SmartSpawner spawner(
-			*resourceLocator,
 			generation,
 			preloaderCommand,
-			options);
-		
+			options,
+			make_shared<SpawnerConfig>(*resourceLocator));
+		setLogLevel(LVL_CRIT);
+
 		try {
 			process = spawner.spawn(options);
 			process->requiresShutdown = false;
@@ -184,10 +186,11 @@ namespace tut {
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
 		SmartSpawner spawner(
-			*resourceLocator,
 			generation,
 			preloaderCommand,
-			options);
+			options,
+			make_shared<SpawnerConfig>(*resourceLocator));
+		setLogLevel(LVL_CRIT);
 		
 		try {
 			process = spawner.spawn(options);
@@ -211,10 +214,10 @@ namespace tut {
 			preloaderCommand.push_back("ruby");
 			preloaderCommand.push_back(resourceLocator->getHelperScriptsDir() + "/rack-preloader.rb");
 			SmartSpawner spawner(
-				*resourceLocator,
 				generation,
 				preloaderCommand,
-				options);
+				options,
+				make_shared<SpawnerConfig>(*resourceLocator));
 			process = spawner.spawn(options);
 			process->requiresShutdown = false;
 		}

@@ -34,6 +34,8 @@
 				{{CONTENT|raw}}
 
 				<dl>
+				<dt>Error ID</dt>
+				<dd>{{ERROR_ID}}</dd>
 				<dt>Application root</dt>
 				<dd>{{APP_ROOT}}</dd>
 				<dt>Environment (value of RAILS_ENV, RACK_ENV, WSGI_ENV, NODE_ENV and PASSENGER_APP_ENV)</dt>

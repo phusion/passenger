@@ -32,7 +32,7 @@ namespace tut {
 		
 		boost::shared_ptr<DirectSpawner> createSpawner(const Options &options) {
 			return boost::make_shared<DirectSpawner>(
-				*resourceLocator, generation);
+				generation, make_shared<SpawnerConfig>(*resourceLocator));
 		}
 		
 		Options createOptions() {
@@ -62,7 +62,8 @@ namespace tut {
 		options.startupFile  = ".";
 		options.startTimeout = 300;
 		
-		DirectSpawner spawner(*resourceLocator, generation);
+		DirectSpawner spawner(generation, make_shared<SpawnerConfig>(*resourceLocator));
+		setLogLevel(LVL_CRIT);
 		
 		try {
 			process = spawner.spawn(options);
@@ -84,7 +85,8 @@ namespace tut {
 		options.startCommand = "perl\t" "-e\t" "print STDERR \"hello world\\n\"";
 		options.startupFile  = ".";
 		
-		DirectSpawner spawner(*resourceLocator, generation);
+		DirectSpawner spawner(generation, make_shared<SpawnerConfig>(*resourceLocator));
+		setLogLevel(LVL_CRIT);
 		
 		try {
 			process = spawner.spawn(options);

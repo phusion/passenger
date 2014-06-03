@@ -135,6 +135,7 @@
 #include <UnionStation/Transaction.h>
 #include <UnionStation/ScopeLog.h>
 #include <ApplicationPool2/Pool.h>
+#include <ApplicationPool2/ErrorRenderer.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/HttpHeaderBufferer.h>
@@ -774,47 +775,12 @@ private:
 		assert(client->state < Client::FORWARDING_BODY_TO_APP);
 		client->state = Client::WRITING_SIMPLE_RESPONSE;
 
-		string templatesDir = resourceLocator.getResourcesDir() + "/templates";
+		ErrorRenderer renderer(resourceLocator);
 		string data;
 
 		if (friendlyErrorPagesEnabled(client)) {
 			try {
-				string cssFile = templatesDir + "/error_layout.css";
-				string errorLayoutFile = templatesDir + "/error_layout.html.template";
-				string generalErrorFile =
-					(e != NULL && e->isHTML())
-					? templatesDir + "/general_error_with_html.html.template"
-					: templatesDir + "/general_error.html.template";
-				string css = readAll(cssFile);
-				StringMap<StaticString> params;
-
-				params.set("CSS", css);
-				params.set("APP_ROOT", client->options.appRoot);
-				params.set("RUBY", client->options.ruby);
-				params.set("ENVIRONMENT", client->options.environment);
-				params.set("MESSAGE", message);
-				params.set("IS_RUBY_APP",
-					(client->options.appType == "classic-rails" || client->options.appType == "rack")
-					? "true" : "false");
-				if (e != NULL) {
-					params.set("TITLE", "Web application could not be started");
-					// Store all SpawnException annotations into 'params',
-					// but convert its name to uppercase.
-					const map<string, string> &annotations = e->getAnnotations();
-					map<string, string>::const_iterator it, end = annotations.end();
-					for (it = annotations.begin(); it != end; it++) {
-						string name = it->first;
-						for (string::size_type i = 0; i < name.size(); i++) {
-							name[i] = toupper(name[i]);
-						}
-						params.set(name, it->second);
-					}
-				} else {
-					params.set("TITLE", "Internal server error");
-				}
-				string content = Template::apply(readAll(generalErrorFile), params);
-				params.set("CONTENT", content);
-				data = Template::apply(readAll(errorLayoutFile), params);
+				data = renderer.renderWithDetails(message, client->options, e);
 			} catch (const SystemException &e2) {
 				P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
 					e2.backtrace());
@@ -822,13 +788,7 @@ private:
 			}
 		} else {
 			try {
-				StringMap<StaticString> params;
-				params.set("PROGRAM_NAME", PROGRAM_NAME);
-				params.set("NGINX_DOC_URL", NGINX_DOC_URL);
-				params.set("APACHE2_DOC_URL", APACHE2_DOC_URL);
-				params.set("STANDALONE_DOC_URL", STANDALONE_DOC_URL);
-				data = Template::apply(readAll(templatesDir + "/undisclosed_error.html.template"),
-					params);
+				data = renderer.renderWithoutDetails();
 			} catch (const SystemException &e2) {
 				P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
 					e2.backtrace());
@@ -2263,14 +2223,10 @@ private:
 	}
 
 	void writeSpawnExceptionErrorResponse(const ClientPtr &client, const boost::shared_ptr<SpawnException> &e) {
-		if (strip(e->getErrorPage()).empty()) {
-			RH_WARN(client, "Cannot checkout session. " << e->what());
-			writeErrorResponse(client, e->what());
-		} else {
-			RH_WARN(client, "Cannot checkout session.\nError page:\n" <<
-				e->getErrorPage());
-			writeErrorResponse(client, e->getErrorPage(), e.get());
-		}
+		RH_ERROR(client, "Cannot checkout session because a spawning error occurred. " <<
+			"The identifier of the error is " << e->get("ERROR_ID") << ". Please see earlier logs for " <<
+			"details about the error.");
+		writeErrorResponse(client, e->getErrorPage(), e.get());
 	}
 
 	void writeOtherExceptionErrorResponse(const ClientPtr &client, const ExceptionPtr &e) {

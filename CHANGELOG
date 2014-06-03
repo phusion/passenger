@@ -8,6 +8,9 @@ Release 4.0.46
    modules from the same directory.
  * Fixed a compatibility problem with Django, which could cause Django apps to
    freeze indefinitely. Closes GH-1215.
+ * Logging of application spawning errors has been much improved. Full details
+   about the error, such as environment variables, are saved to a private log file.
+   In the past, these details were only viewable in the browser.
  * Passenger Standalone no longer, by default, loads shell startup files before
    loading the application. This is because Passenger Standalone is often invoked
    from the shell anyway. Indeed, loading shell startup files again can interfere

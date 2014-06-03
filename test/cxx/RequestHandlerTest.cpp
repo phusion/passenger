@@ -43,7 +43,8 @@ namespace tut {
 		
 		RequestHandlerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			spawnerFactory = boost::make_shared<SpawnerFactory>(*resourceLocator, generation);
+			spawnerFactory = boost::make_shared<SpawnerFactory>(generation,
+				make_shared<SpawnerConfig>(*resourceLocator));
 			pool = boost::make_shared<Pool>(spawnerFactory);
 			pool->initialize();
 			serverFilename = generation->getPath() + "/server";

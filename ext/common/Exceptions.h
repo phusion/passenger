@@ -342,6 +342,10 @@ public:
 		return get(name);
 	}
 
+	void set(const string &name, const string &value) {
+		annotations[name] = value;
+	}
+
 	string get(const string &name) const {
 		map<string, string>::const_iterator it = annotations.find(name);
 		if (it == annotations.end()) {

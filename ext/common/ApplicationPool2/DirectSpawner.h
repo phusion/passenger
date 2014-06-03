@@ -111,10 +111,10 @@ private:
 		shared_array<const char *> &args) const
 	{
 		vector<string> startCommandArgs;
-		string agentsDir = resourceLocator.getAgentsDir();
+		string agentsDir = config->resourceLocator.getAgentsDir();
 		vector<string> command;
 		
-		split(options.getStartCommand(resourceLocator), '\t', startCommandArgs);
+		split(options.getStartCommand(config->resourceLocator), '\t', startCommandArgs);
 		if (startCommandArgs.empty()) {
 			throw RuntimeException("No startCommand given");
 		}
@@ -144,17 +144,11 @@ private:
 	}
 	
 public:
-	DirectSpawner(const ResourceLocator &_resourceLocator,
-		const ServerInstanceDir::GenerationPtr &_generation,
-		const SpawnerConfigPtr &_config = SpawnerConfigPtr())
-		: Spawner(_resourceLocator)
+	DirectSpawner(const ServerInstanceDir::GenerationPtr &_generation,
+		const SpawnerConfigPtr &_config)
+		: Spawner(_config)
 	{
 		generation = _generation;
-		if (_config == NULL) {
-			config = boost::make_shared<SpawnerConfig>();
-		} else {
-			config = _config;
-		}
 	}
 	
 	virtual ProcessPtr spawn(const Options &options) {
