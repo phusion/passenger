@@ -97,7 +97,7 @@ def boolean_option(name, default_value = false)
 end
 
 def maybe_wrap_in_ccache(command)
-	if boolean_option('USE_CCACHE', false)
+	if boolean_option('USE_CCACHE', false) && command !~ /^ccache /
 		return "ccache #{command}"
 	else
 		return command

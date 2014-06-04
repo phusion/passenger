@@ -1,0 +1,32 @@
+#!/usr/bin/ruby
+# This file is overwritten by 'vagrant provision'. For the source,
+# see dev/vagrant/nginx_start in the Phusion Passenger source
+# tree.
+
+ENV['PASSENGER_BEEP_ON_ABORT'] = '1'
+
+def run_in_bg(*command)
+  return fork do
+    Process.setsid
+    exec(*command)
+  end
+end
+
+File.open('inst/logs/error.log', 'a') do |f|
+  f.write("\n\n\n\n-------------- NGINX START #{Time.now} --------------\n\n\n\n")
+end
+
+tail_pid = run_in_bg("tail -n 0 -f inst/logs/error.log")
+nginx_pid = run_in_bg("./objs/nginx", *ARGV)
+begin
+  Process.waitpid(nginx_pid)
+  nginx_pid = nil
+rescue Interrupt
+ensure
+  Process.kill('INT', tail_pid)
+  Process.waitpid(tail_pid)
+  if nginx_pid
+    Process.kill('INT', nginx_pid)
+    Process.waitpid(nginx_pid)
+  end
+end

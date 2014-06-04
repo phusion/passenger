@@ -1,6 +1,3 @@
-# -*- mode: ruby -*-
-# vi: set ft=ruby :
-
 # This Vagrantfile sets up a CentOS VM, for the purpose of RPM development.
 
 ROOT = File.expand_path(File.dirname(__FILE__) + "/..")

@@ -1,0 +1,1 @@
+LoadModule passenger_module /vagrant/buildout/apache2/mod_passenger.so

@@ -7,6 +7,7 @@
  * [Contributing by bug triaging](#contrib_triag)
  * [Contributing community support](#contrib_support)
  * [Contributing code](#contrib_code)
+   * [Developer QuickStart](#dev_quickstart)
    * [Compilation and build system](#build_system)
    * [Running the unit tests](#unit_tests)
    * [Directory structure](#dir_structure)
@@ -84,6 +85,11 @@ The source code is filled with inline comments, so look there if you want to und
 
  * ext/common/ApplicationPool2/README.md - If you're interesting in the ApplicationPool and Spawner subsystems.
  * doc/DebuggingAndStressTesting.md
+
+<a name="dev_quickstart"></a>
+### Developer QuickStart
+
+We provide an easy and convenient development environment that contributors can use. Learn more at the [Developer QuickStart](https://github.com/phusion/passenger/blob/master/doc/DeveloperQuickstart.md).
 
 <a name="build_system"></a>
 ### Compilation and build system

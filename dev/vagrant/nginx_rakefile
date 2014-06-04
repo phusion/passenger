@@ -1,0 +1,34 @@
+ENV['CC']  ||= 'ccache cc'
+ENV['CXX'] ||= 'ccache c++'
+
+desc "Bootstrap Nginx for the first time"
+task :bootstrap => :configure do
+  sh "make -j2"
+  sh "make install"
+  sh "rm -f inst/sbin/nginx"
+  puts
+  puts "--------------------------"
+  puts "You're all set! You can start Nginx by running:"
+  puts
+  puts "  ./start"
+  puts
+  puts "Nginx can be reached from the host machine on http://127.0.0.1:8100/"
+  puts
+  puts "You never have to run `rake bootstrap` again. You also never have to " +
+    "run `make install`. If you've made changes to the Passenger Nginx module, " +
+    "simply run `make && ./start` in /home/vagrant/nginx. The `start` script " +
+    "will start the newly compiled Nginx binary directly."
+end
+
+desc "Configure Nginx source tree"
+task :configure do
+  sh "./configure --prefix=/home/vagrant/nginx/inst" +
+    " --add-module=/vagrant/ext/nginx" +
+    " --with-http_ssl_module" +
+    " --with-http_gzip_static_module" +
+    " --with-http_stub_status_module" +
+    " --with-http_spdy_module" +
+    " --with-ipv6" +
+    " --with-debug"
+  sh "sed", "-E", "-i", 's/ -O[0-9]? / -ggdb /g', "objs/Makefile"
+end

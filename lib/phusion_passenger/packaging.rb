@@ -70,6 +70,7 @@ module Packaging
 		'.travis.yml',
 		'configure',
 		'Rakefile',
+		'Vagrantfile',
 		'README.md',
 		'CONTRIBUTORS',
 		'CONTRIBUTING.md',
@@ -109,12 +110,13 @@ module Packaging
 		'ext/oxt/*.txt',
 		'ext/oxt/detail/*.hpp',
 		'ext/ruby/*.{c,rb}',
-		'dev/*',
+		'dev/**/*',
 		'resources/**/*',
 		'test/.rspec',
 		'test/*.example',
 		'test/*.travis',
 		'test/*.rpm-automation',
+		'test/*.vagrant',
 		'test/*.supp',
 		'test/support/*.{c,cpp,h,rb}',
 		'test/tut/*',
@@ -139,7 +141,8 @@ module Packaging
 
 	# Files and directories that should be excluded from the Homebrew installation.
 	HOMEBREW_EXCLUDE = [
-		"dev", "test", ".gitignore", ".travis.yml", "debian.template", "rpm"
+		"dev", "test", ".gitignore", ".travis.yml", "debian.template", "rpm",
+		"Vagrantfile", "package.json", "npm-shrinkwrap.json"
 	]
 
 	def self.files
