@@ -237,13 +237,13 @@ create_file(ngx_cycle_t *cycle, const u_char *filename, const u_char *contents, 
 }
 
 /**
- * Start the helper server and save its runtime information into various variables.
+ * Start the watchdog and save the runtime information into various variables.
  *
- * @pre The helper server isn't already started.
+ * @pre The watchdog isn't already started.
  * @pre The Nginx configuration has been loaded.
  */
 static ngx_int_t
-start_helper_server(ngx_cycle_t *cycle) {
+start_watchdog(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
     ngx_int_t        ret, result;
     ngx_uint_t       i;
@@ -427,7 +427,7 @@ init_module(ngx_cycle_t *cycle) {
             ignore_sigpipe();
             first_start = 0;
         }
-        if (start_helper_server(cycle) != NGX_OK) {
+        if (start_watchdog(cycle) != NGX_OK) {
             passenger_main_conf.root_dir.len = 0;
             return NGX_OK;
         }
