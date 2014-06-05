@@ -194,11 +194,13 @@ struct DirConfig {
 		}
 	}
 	
-	string getUploadBufferDir(const ServerInstanceDir::GenerationPtr &generation) const {
+	string getUploadBufferDir(const ServerInstanceDir::Generation *generation) const {
 		if (uploadBufferDir != NULL) {
 			return uploadBufferDir;
-		} else {
+		} else if (generation != NULL) {
 			return generation->getPath() + "/buffered_uploads";
+		} else {
+			return getSystemTempDir();
 		}
 	}
 	
