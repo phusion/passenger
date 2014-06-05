@@ -19,6 +19,8 @@ Release 4.0.45
    supported without degrading robustness in Phusion Passenger. However, GET
    requests with both request bodies and WebSocket upgrade headers are
    unsupported. Fixes issue #1092.
+ * [Enterprise] The [Flying Passenger](http://www.modrails.com/documentation/Users%20guide%20Apache.html#flying_passenger)
+   feature is now also available on Apache.
  * Fixed some issues with RVM mixed mode support, issue #1121.
  * Fixed Passenger Standalone complaining about not finding PassengerHelperAgent
    during startup.

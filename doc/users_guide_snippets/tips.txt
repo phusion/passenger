@@ -511,8 +511,14 @@ Extra environment variables: `PASSENGER_APP_ROOT`.
 
 [[flying_passenger]]
 === Flying Passenger
+ifdef::apache[]
+:version: 4.0.45
+include::enterprise_only.txt[]
+endif::apache[]
+ifdef::nginx[]
 :version: 4.0.6
 include::enterprise_only.txt[]
+endif::nginx[]
 
 Flying Passenger allows one to decouple Phusion Passenger's life time from the web server's life time, so that the web server can be independently restarted from Phusion Passenger, and from any of the application processes served by Phusion Passenger.
 
@@ -526,7 +532,14 @@ This problem is solved by 'Flying Passenger', which is an advanced mode of opera
 
 ==== Requirements
 
-At this time, this feature is **only available in the Enterprise version of Phusion Passenger for Nginx**. You must have Phusion Passenger for Nginx properly installed.
+Before you can use the Flying Passenger feature, you must have Phusion Passenger for
+ifdef::apache[]
+Apache
+endif::apache[]
+ifdef::nginx[]
+Nginx
+endif::nginx[]
+properly installed.
 
 ==== Basic usage
 
@@ -542,7 +555,16 @@ I, [2013-06-14T09:10:13.129017 #77179]  INFO -- : PassengerWatchdog initialized 
 I, [2013-06-14T09:10:13.129127 #77179]  INFO -- : Flying Passenger up and listening on /var/run/flying-passenger.sock!
 -------------------
 
-Now configure Phusion Passenger for Nginx to make use of the Flying Passenger daemon, by setting the `passenger_fly_with` option to the socket filename:
+Now configure the web server to make use of the Flying Passenger daemon,
+ifdef::apache[]
+by setting the `PassengerFlyWith` option to the socket filename:
+
+-------------------
+PassengerFlyWith /var/run/flying-passenger.sock
+-------------------
+endif::apache[]
+ifdef::nginx[]
+by setting the `passenger_fly_with` option to the socket filename:
 
 -------------------
 http {
@@ -551,15 +573,36 @@ http {
     ...
 }
 -------------------
+endif::nginx[]
 
-After (re)starting Nginx, Nginx + Flying Passenger is fully operational:
+After (re)starting
+ifdef::apache[]
+Apache, Apache + Flying Passenger is fully operational:
+
+-------------------
+$ sudo service apache2 restart
+-------------------
+endif::apache[]
+ifdef::nginx[]
+Nginx, Nginx + Flying Passenger is fully operational:
 
 -------------------
 $ sudo /path-to/nginx
 -------------------
+endif::nginx[]
+Flying Passenger is fully operational:
 
 You can test it by adding a virtual host for a web app:
 
+ifdef::apache[]
+-------------------
+<VirtualHost *:80>
+    ServerName www.foo.local
+    DocumentRoot /webapps/foo/public
+</VirtualHost>
+-------------------
+endif::apache[]
+ifdef::nginx[]
 -------------------
 http {
     ...
@@ -572,6 +615,7 @@ http {
     }
 }
 -------------------
+endif::nginx[]
 
 Verify that it works by making an HTTP request to it:
 
@@ -598,13 +642,21 @@ Requests in top-level queue : 0
     CPU: 1%      Memory  : 8M      Last used: 2s ago
 ---------------------------------
 
-As you can see, the PID of the application process is **77283**. Now let's see what happens if we restart Nginx:
+As you can see, the PID of the application process is **77283**. Now let's see what happens if we restart the web server:
 
+ifdef::apache[]
+------------------------
+$ sudo service apache2 restart
+$ sudo passenger-status
+------------------------
+endif::apache[]
+ifdef::nginx[]
 ------------------------
 $ sudo /path-to/nginx -s stop
 $ sudo /path-to/nginx
 $ sudo passenger-status
 ------------------------
+endif::nginx[]
 
 The application process should remain there, unchanged:
 
@@ -628,9 +680,23 @@ Requests in top-level queue : 0
 [[configuring_flying_passenger]]
 ==== Configuring Flying Passenger
 
-Flying Passenger gets *some* configuration from the web server, but not all. In particular, most web server directives that are only valid in the `http` context, e.g. <<PassengerLogLevel,passenger_log_level>>, have no effect when using Flying Passenger. Instead, you are supposed to pass these configuration directives through command line options to the Flying Passenger daemon. Configuration directives that have no effect on Flying Passenger are documented as such. You can assume that configuration directives that are not documented as such, work fine on Flying Passenger.
+Flying Passenger gets *some* configuration from the web server, but not all. In particular, most web server directives that are only valid in the
+ifdef::apache[]
+global context, e.g. <<PassengerLogLevel,PassengerLogLevel>>,
+endif::apache[]
+ifdef::nginx[]
+`http` context, e.g. <<PassengerLogLevel,passenger_log_level>>,
+endif::nginx[]
+have no effect when using Flying Passenger. Instead, you are supposed to pass these configuration directives through command line options to the Flying Passenger daemon. Configuration directives that have no effect on Flying Passenger are documented as such. You can assume that configuration directives that are not documented as such, work fine on Flying Passenger.
 
-For example, to achieve the same effect as setting passenger_log_level to 2, run the Flying Passenger daemon as follows:
+For example, to achieve the same effect as setting
+ifdef::apache[]
+`PassengerLogLevel`
+endif::apache[]
+ifdef::nginx[]
+`passenger_log_level`
+endif::nginx[]
+to 2, run the Flying Passenger daemon as follows:
 
 ----------------------------------
 $ sudo flying-passenger --socket-file=/var/run/flying-passenger.sock --log-level=2
@@ -681,8 +747,23 @@ Using Flying Passenger in combination with MRI Ruby 1.8 or with JRuby requires s
 
 It is however possible to use Flying Passenger with MRI Ruby 1.8 and JRuby. You can't run the Flying Passenger daemon in MRI 1.8 or JRuby, but you can still run the web applications - hosted under Flying Passenger - in MRI 1.8 or JRuby.
 
-First, edit your Nginx configuration file and specify a Ruby interpreter for your web applications. For example:
+First, edit your web server configuration file and specify a Ruby interpreter for your web applications. For example:
 
+ifdef::apache[]
+--------------------
+# Connect to the Flying Passenger daemon on the following socket
+PassengerFlyWith /var/run/flying-passenger.sock
+...
+
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /webapps/foo/public
+    # Use JRuby for this web application
+    PassengerRuby /opt/jruby/bin/jruby
+</VirtualHost>
+--------------------
+endif::apache[]
+ifdef::nginx[]
 --------------------
 # Connect to the Flying Passenger daemon on the following socket
 passenger_fly_with /var/run/flying-passenger.sock;
@@ -697,6 +778,7 @@ server {
     passenger_ruby /opt/jruby/bin/jruby;
 }
 --------------------
+endif::nginx[]
 
 Then you need to install a Ruby 1.9-compatible Ruby interpeter with POSIX spawn support, alongside JRuby/MRI 1.8. Ruby interpreters which can be used for running the Flying Passenger daemon include:
 
@@ -732,10 +814,36 @@ The Flying Passenger daemon will now be run on Ruby 1.9, while the web applicati
 
 Beware of the following caveats and limitations when using Flying Passenger:
 
+ifdef::apache[]
+- The Phusion Passenger module that is loaded into Apache, **must** be of the same version as the Flying Passenger daemon. Failing to meet this requirement may result in cryptic errors, or may result in certain features not working, until you've fixed the situation. When upgrading Phusion Passenger, you must restart both Apache and the Flying Passenger daemon.
+- The <<PassengerRoot,PassengerRoot>> directive has no effect. When using Flying Passenger, you are not supposed to set `PassengerRoot`.
+endif::apache[]
+ifdef::nginx[]
 - The Nginx executable **must** be compiled with the same version of Phusion Passenger as the Flying Passenger daemon. Failing to meet this requirement may result in cryptic errors, or may result in certain features not working, until you've fixed the situation. When upgrading Phusion Passenger, you must restart both Nginx and the Flying Passenger daemon.
 - The <<PassengerRoot,passenger_root>> directive has no effect. When using Flying Passenger, you are not supposed to set `passenger_root`.
+endif::nginx[]
 - The Flying Passenger daemon is written in Ruby. It requires a Ruby interpreter with proper `Process#spawn` support. At the time of writing, all Ruby interpreters in existance satisfy this requirement, except for MRI Ruby 1.8 and JRuby. See <<using_flying_passenger_with_mri_18_or_jruby,Using Flying Passenger with MRI 1.8 or JRuby>> for more information.
-- When you add a new application to the web server configuration, Flying Passenger will automatically pick up the application's settings and spawn this new application upon the first request to it. However it is not capable of automatically starting the new app before a request has been sent to it (i.e. <<PassengerPreStart,passenger_pre_start>>-like behavior is not available in this case). As a workaround, you can send an HTTP request to your application after starting the daemon, which forces it to spawn application processes.
-- When you remove an application from the web server configuration, Flying Passenger will not detect the removal and will not shut down the associated application processes. Killing the application processes will also not help, because Flying Passenger will restart them per the (now-removed, but still in the Flying Passenger daemon's memory) <<PassengerMinInstances,passenger_min_instances>> settings. At the moment, there are two ways to get rid of those processes:
+- When you add a new application to the web server configuration, Flying Passenger will automatically pick up the application's settings and spawn this new application upon the first request to it. However it is not capable of automatically starting the new app before a request has been sent to it (i.e.
+ifdef::apache[]
+<<PassengerPreStart,PassengerPreStart>>-like
+endif::apache[]
+ifdef::nginx[]
+<<PassengerPreStart,passenger_pre_start>>-like
+endif::nginx[]
+behavior is not available in this case). As a workaround, you can send an HTTP request to your application after starting the daemon, which forces it to spawn application processes.
+- When you remove an application from the web server configuration, Flying Passenger will not detect the removal and will not shut down the associated application processes. Killing the application processes will also not help, because Flying Passenger will restart them per the (now-removed, but still in the Flying Passenger daemon's memory)
+ifdef::apache[]
+<<PassengerMinInstances,PassengerMinInstances>>
+endif::apache[]
+ifdef::nginx[]
+<<PassengerMinInstances,passenger_min_instances>>
+endif::nginx[]
+settings. At the moment, there are two ways to get rid of those processes:
++
+ifdef::apache[]
+  * Before removing the application from the web server configuration, explicitly set its `PassengerMinInstances` to 0. Next, send a request to it, which will cause the Flying Passenger daemon to take over the new `PassengerMinInstances 0` option. You can then proceed with removing the application from the web server configuration, and restarting the web server. Finally, kill the PIDs associated to those application processes and remove the application configuration.
+endif::apache[]
+ifdef::nginx[]
   * Before removing the application from the web server configuration, explicitly set its `passenger_min_instances` to 0. Next, send a request to it, which will cause the Flying Passenger daemon to take over the new `passenger_min_instances 0` option. You can then proceed with removing the application from the web server configuration, and restarting the web server. Finally, kill the PIDs associated to those application processes and remove the application configuration.
+endif::nginx[]
   * Restart the Flying Passenger daemon.
