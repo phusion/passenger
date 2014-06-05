@@ -1,6 +1,7 @@
 # Phusion Passenger Developer QuickStart
 
 <a href="https://vimeo.com/phusionnl/review/97427161/15cb4cc59a"><img src="http://blog.phusion.nl/wp-content/uploads/2014/06/passenger_developer_quickstart.png"></a>
+
 _Watch the Developer QuickStart screencast_
 
 Phusion Passenger provides an easy and convenient development environment that contributors can use. The development environment is a 64-bit Ubuntu 14.04 virtual machine and contains everything that you need. The build toolchain is already setup, all dependencies are installed and web servers are preconfigured. You can start coding almost immediately. And because it's a virtual machine, it doesn't matter which host operating system you're using.

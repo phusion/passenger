@@ -90,6 +90,7 @@ The source code is filled with inline comments, so look there if you want to und
 ### Developer QuickStart
 
 <a href="https://vimeo.com/phusionnl/review/97427161/15cb4cc59a"><img src="http://blog.phusion.nl/wp-content/uploads/2014/06/passenger_developer_quickstart.png"></a>
+
 _Watch the Developer QuickStart screencast_
 
 We provide an easy and convenient development environment that contributors can use. Learn more at the [Developer QuickStart](https://github.com/phusion/passenger/blob/master/doc/DeveloperQuickstart.md).
