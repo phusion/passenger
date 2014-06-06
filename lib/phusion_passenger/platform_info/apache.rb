@@ -239,6 +239,9 @@ module PlatformInfo
 		if config_file = httpd_default_config_file(options)
 			begin
 				contents = File.open(config_file, "rb") { |f| f.read }
+			rescue Errno::ENOENT
+				log "#{config_file} does not exist"
+				return nil
 			rescue Errno::EACCES
 				log "Unable to open #{config_file} for reading"
 				return nil
