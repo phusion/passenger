@@ -91,3 +91,9 @@ def create_markdown_compilation_task(target)
 end
 
 create_markdown_compilation_task('doc/Packaging.html')
+
+desc "Upload documentation to the Phusion web server"
+task 'doc:rsync' => :doc do
+	sh "cd doc && rsync -rv --progress --partial-dir=.rsync-partial --human-readable . " +
+		"shell.phusion.nl:/home/phusion/websites/passenger_docs/"
+end

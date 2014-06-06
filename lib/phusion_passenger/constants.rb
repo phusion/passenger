@@ -68,12 +68,12 @@ module PhusionPassenger
 		# Misc
 		FEEDBACK_FD = 3
 		PROGRAM_NAME = "Phusion Passenger"
-		INDEX_DOC_URL       = "http://www.modrails.com/documentation/Users%20guide.html"
-		APACHE2_DOC_URL     = "http://www.modrails.com/documentation/Users%20guide%20Apache.html"
-		NGINX_DOC_URL       = "http://www.modrails.com/documentation/Users%20guide%20Nginx.html"
-		STANDALONE_DOC_URL  = "http://www.modrails.com/documentation/Users%20guide%20Standalone.html"
-		SUPPORT_URL         = "http://www.phusionpassenger.com/support"
-		ENTERPRISE_URL      = "http://www.phusionpassenger.com/enterprise"
+		INDEX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide.html"
+		APACHE2_DOC_URL     = "https://www.phusionpassenger.com/documentation/Users%20guide%20Apache.html"
+		NGINX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html"
+		STANDALONE_DOC_URL  = "https://www.phusionpassenger.com/documentation/Users%20guide%20Standalone.html"
+		SUPPORT_URL         = "https://www.phusionpassenger.com/documentation_and_support"
+		ENTERPRISE_URL      = "https://www.phusionpassenger.com/enterprise"
 		DEB_MAIN_PACKAGE          = "passenger"
 		DEB_DEV_PACKAGE           = "passenger-dev"
 		DEB_APACHE_MODULE_PACKAGE = "libapache2-mod-passenger"

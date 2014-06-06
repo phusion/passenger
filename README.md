@@ -16,7 +16,7 @@ Please follow [the installation instructions on the website](https://www.phusion
 
 ### Installing the source directly from git
 
-If you mean to install the latest version of Passenger directly from this git repository, then you should run one of the following commands. Installing from the git repository is basically the same as the tarball installation method, as [described in the manual](http://modrails.com/documentation/Users%20guide.html#installation).
+If you mean to install the latest version of Passenger directly from this git repository, then you should run one of the following commands. Installing from the git repository is basically the same as the tarball installation method, as [described in the manual](https://www.phusionpassenger.com/documentation/Users%20guide.html#installation).
 
     ./bin/passenger-install-apache2-module
 

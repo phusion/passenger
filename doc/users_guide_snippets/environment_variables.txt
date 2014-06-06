@@ -190,7 +190,7 @@ If you installed Nginx through <<install_on_debian_ubuntu,the Debian or Ubuntu p
 
 Otherwise, environment variables are best set through the script which starts Nginx. For example, if you installed Nginx from source and you used
 ifdef::apache[]
-the Nginx init script described in the link:http://www.modrails.com/documentation/Users%20guide%20Nginx.html[Phusion Passenger Users Guide, Nginx version],
+the Nginx init script described in the link:Users%20guide%20Nginx.html[Phusion Passenger Users Guide, Nginx version],
 endif::apache[]
 ifdef::nginx[]
 <<nginx_init_script,the Nginx init script described earlier in this manual>>,
