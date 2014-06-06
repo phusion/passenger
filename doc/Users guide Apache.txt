@@ -1297,19 +1297,19 @@ The default value is '300'.
 
 [[PassengerMaxPreloaderIdleTime]]
 ==== PassengerMaxPreloaderIdleTime <integer> ====
-The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
+The preloader process(explained in <<spawning_methods_explained,Spawning
 methods explained>>) has an idle timeout, just like the backend processes spawned by
 Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
 anything for a given period.
 
-This option allows you to set the ApplicationSpawner server's idle timeout, in
+This option allows you to set the preloader's idle timeout, in
 seconds. A value of '0' means that it should never idle timeout.
 
-Setting a higher value will mean that the ApplicationSpawner server is kept around
+Setting a higher value will mean that the preloader is kept around
 longer, which may slightly increase memory usage. But as long as the
-ApplicationSpawner server is running, the time to spawn a Ruby on Rails backend
+preloader server is running, the time to spawn a Ruby on Rails backend
 process only takes about 10% of the time that is normally needed, assuming that
-you're using the 'smart' or 'smart-lv2' <<PassengerSpawnMethod,spawning method>>. So if your
+you're using the 'smart' <<PassengerSpawnMethod,spawning method>>. So if your
 system has enough memory, is it recommended that you set this option to a high
 value or to '0'.
 

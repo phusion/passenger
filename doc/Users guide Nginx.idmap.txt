@@ -372,15 +372,13 @@
 
 15.2.2. Summary of benefits	=>	summary-of-benefits-qovyvk
 
-15.3. Smart spawning gotcha #1: unintentional file descriptor sharing	=>	smart-spawning-gotcha-1-unintentional-file-descriptor-sharing-cebw6q
+15.3. Smart spawning caveat #1: unintentional file descriptor sharing	=>	smart-spawning-gotcha-1-unintentional-file-descriptor-sharing-cebw6q
 
 15.3.1. Example 1: Memcached connection sharing (harmful)	=>	example-1-memcached-connection-sharing-harmful--1wfs3ad
 
 15.3.2. Example 2: Log file sharing (not harmful)	=>	example-2-log-file-sharing-not-harmful--ox4yfy
 
-15.4. Smart spawning gotcha #2: the need to revive threads	=>	smart-spawning-gotcha-2-the-need-to-revive-threads-1ey176o
-
-15.5. Smart spawning gotcha #3: code load order	=>	smart-spawning-gotcha-3-code-load-order-12ydsn8
+15.4. Smart spawning caveat #2: the need to revive threads	=>	smart-spawning-gotcha-2-the-need-to-revive-threads-1ey176o
 
 16. Appendix D: About environment variables	=>	appendix-d-about-environment-variables-1t2cuff
 

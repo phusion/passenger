@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
+
 <svg
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
@@ -13,11 +14,11 @@
    height="275"
    id="svg2"
    sodipodi:version="0.32"
-   inkscape:version="0.46"
-   sodipodi:docname="conservative_spawning.svg"
+   inkscape:version="0.48.2 r9819"
+   sodipodi:docname="direct_spawning.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
    version="1.0"
-   inkscape:export-filename="/home/hongli/Projects/mod_rails/doc/images/conservative_spawning.png"
+   inkscape:export-filename="/Users/hongli/Projects/passenger/doc/images/direct_spawning.png"
    inkscape:export-xdpi="73.972603"
    inkscape:export-ydpi="73.972603">
   <defs
@@ -79,8 +80,9 @@
      showgrid="false"
      inkscape:window-width="1280"
      inkscape:window-height="703"
-     inkscape:window-x="0"
-     inkscape:window-y="72" />
+     inkscape:window-x="73"
+     inkscape:window-y="28"
+     inkscape:window-maximized="0" />
   <metadata
      id="metadata7">
     <rdf:RDF>
@@ -89,6 +91,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -161,15 +164,15 @@
          style="font-weight:normal;-inkscape-font-specification:Arial">Other memory</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
-       x="276.86664"
+       style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       x="285.86664"
        y="45.084782"
        id="text3185"><tspan
          sodipodi:role="line"
          id="tspan3187"
-         x="276.86664"
+         x="285.86664"
          y="45.084782"
-         style="font-size:23.35318184px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial">Worker process 1</tspan></text>
+         style="font-size:23.35318184px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial">App process 1</tspan></text>
     <rect
        style="fill:url(#linearGradient3213);fill-opacity:1;stroke:none"
        id="rect3189"
@@ -235,14 +238,14 @@
          style="font-weight:normal;-inkscape-font-specification:Arial">Other memory</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
-       x="275.86664"
+       style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       x="285.86664"
        y="175.08478"
        id="text3209"><tspan
          sodipodi:role="line"
          id="tspan3211"
-         x="275.86664"
+         x="285.86664"
          y="175.08478"
-         style="font-size:23.35318184px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial">Worker process 2</tspan></text>
+         style="font-size:23.35318184px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial">App process 2</tspan></text>
   </g>
 </svg>

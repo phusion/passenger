@@ -1,4 +1,4 @@
-# Contributing to Phusion Passenger
+# Contributors Guide
 
 **Table of contents**
 
@@ -13,6 +13,7 @@
    * [Directory structure](#dir_structure)
    * [C++ coding style](#cxx_coding_style)
    * [Ruby coding style](#ruby_coding_style)
+   * [Systems programming fundamentals](#systems_programming_fundamentals)
    * [Further reading](#further_reading)
 
 Thank you for your interest in Phusion Passenger. Phusion Passenger is open source so your contributions are very welcome. Although we also provide a [commercial version](https://www.phusionpassenger.com/enterprise) and [commercial support](https://www.phusionpassenger.com/commercial_support), the core remains open source and we remain committed to keep it that way. This guide gives you an overview of the ways with which you can contribute, as well as contribution guidelines.
@@ -83,7 +84,6 @@ Phusion Passenger is mostly written in C++, but the build system and various sma
 
 The source code is filled with inline comments, so look there if you want to understand how things work. We also have dedicated documents on some topics and for some subsystems. Some interesting documents are:
 
- * ext/common/ApplicationPool2/README.md - If you're interesting in the ApplicationPool and Spawner subsystems.
  * doc/DebuggingAndStressTesting.md
 
 <a name="dev_quickstart"></a>
@@ -323,6 +323,19 @@ The usual Ruby coding style applies, with some exceptions:
 
  * Use 4-space tabs for indentation.
  * Return values explicitly with `return`.
+
+<a name="systems_programming_fundamentals"></a>
+### Systems programming fundamentals
+
+Large parts of Phusion Passenger are written in C++. You can find a free C++ tutorial at [cplusplus.com](http://www.cplusplus.com/doc/tutorial/).
+
+Phusion Passenger heavily utilizes POSIX, the API that is in use by all Unix systems. The POSIX API is heavily used for:
+
+ * Filesystem operations.
+ * Process management.
+ * Sockets.
+
+A good and comprehensive, but rather large source for learning POSIX is the [POSIX Programmer's Guide](ftp://92.42.8.18/pub/doc/books/OReilly_-_POSIX_Programmers_Guide.pdf) by Donald A. Lewine. You can find smaller but less comprehensive documents all over the Internet. In particular, you will want to familiarize yourself with [fork-exec](http://en.wikipedia.org/wiki/Fork-exec), the standard process creation pattern in Unix.
 
 <a name="further_reading"></a>
 ### Further reading

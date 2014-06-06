@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
+
 <svg
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
@@ -13,11 +14,11 @@
    height="420"
    id="svg3235"
    sodipodi:version="0.32"
-   inkscape:version="0.46"
-   sodipodi:docname="smart-lv2.svg"
+   inkscape:version="0.48.2 r9819"
+   sodipodi:docname="smart_spawning.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
    version="1.0"
-   inkscape:export-filename="/home/hongli/Projects/mod_rails/doc/images/smart-lv2.png"
+   inkscape:export-filename="/Users/hongli/Projects/passenger/doc/images/smart_spawning.png"
    inkscape:export-xdpi="78.947365"
    inkscape:export-ydpi="78.947365">
   <defs
@@ -105,15 +106,16 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="1"
-     inkscape:cx="276.76087"
-     inkscape:cy="173.93662"
+     inkscape:cx="406.58261"
+     inkscape:cy="159.47704"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1280"
      inkscape:window-height="703"
      inkscape:window-x="0"
-     inkscape:window-y="72" />
+     inkscape:window-y="72"
+     inkscape:window-maximized="0" />
   <metadata
      id="metadata3240">
     <rdf:RDF>
@@ -122,6 +124,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -211,14 +214,14 @@
       <text
          id="text3185"
          y="150.08478"
-         x="287.36664"
-         style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         x="305.36664"
+         style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
          xml:space="preserve"><tspan
            style="font-size:23.35318184px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial"
            y="150.08478"
-           x="287.36664"
+           x="305.36664"
            id="tspan3187"
-           sodipodi:role="line">Worker process 1</tspan></text>
+           sodipodi:role="line">App process 1</tspan></text>
     </g>
     <g
        id="g3835"
@@ -252,15 +255,15 @@
            sodipodi:role="line">Other memory</tspan></text>
       <text
          id="text3807"
-         y="304.58478"
-         x="288.36664"
-         style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         y="302.58478"
+         x="303.36664"
+         style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
          xml:space="preserve"><tspan
            style="font-size:23.35318184px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial"
-           y="304.58478"
-           x="288.36664"
+           y="302.58478"
+           x="303.36664"
            id="tspan3809"
-           sodipodi:role="line">Worker process 2</tspan></text>
+           sodipodi:role="line">App process 2</tspan></text>
     </g>
     <g
        id="g3843"
@@ -295,14 +298,14 @@
       <text
          id="text3821"
          y="225.58478"
-         x="43.366638"
-         style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         x="99.366638"
+         style="font-size:66.72337341px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
          xml:space="preserve"><tspan
            style="font-size:23.35318184px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial"
            y="225.58478"
-           x="43.366638"
+           x="99.366638"
            id="tspan3823"
-           sodipodi:role="line">ApplicationSpawner</tspan></text>
+           sodipodi:role="line">Preloader</tspan></text>
     </g>
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:4;stroke-linecap:butt;stroke-linejoin:miter;marker-end:url(#Arrow1Mend);stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
