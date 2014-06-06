@@ -8,6 +8,7 @@
  * [Contributing community support](#contrib_support)
  * [Contributing code](#contrib_code)
    * [Developer QuickStart](#dev_quickstart)
+   * [Design and Architecture](#design_and_architecture)
    * [Compilation and build system](#build_system)
    * [Running the unit tests](#unit_tests)
    * [Directory structure](#dir_structure)
@@ -80,11 +81,7 @@ You can contribute by answering support questions on the [community discussion f
 <a name="contrib_code"></a>
 ## Contributing code
 
-Phusion Passenger is mostly written in C++, but the build system and various small helper scripts are in Ruby. The loaders for each supported language is written in the respective language.
-
-The source code is filled with inline comments, so look there if you want to understand how things work. We also have dedicated documents on some topics and for some subsystems. Some interesting documents are:
-
- * doc/DebuggingAndStressTesting.md
+Phusion Passenger is mostly written in C++, but the build system and various small helper scripts are in Ruby. The loaders for each supported language is written in the respective language. The source code is filled with inline comments, so look there if you want to understand how things work.
 
 <a name="dev_quickstart"></a>
 ### Developer QuickStart
@@ -94,6 +91,11 @@ The source code is filled with inline comments, so look there if you want to und
 _Watch the Developer QuickStart screencast_
 
 We provide an easy and convenient development environment that contributors can use. Learn more at the [Developer QuickStart](https://github.com/phusion/passenger/blob/master/doc/DeveloperQuickstart.md).
+
+<a name="design_and_architecture"></a>
+### Design and Architecture
+
+Phusion Passenger's design and architecture is documented in detail in the [Design & Architecture](https://www.phusionpassenger.com/documentation/Design%20and%20Architecture.html) document.
 
 <a name="build_system"></a>
 ### Compilation and build system
@@ -340,4 +342,4 @@ A good and comprehensive, but rather large source for learning POSIX is the [POS
 <a name="further_reading"></a>
 ### Further reading
 
-Please read "doc/CodingTipsAndPitfalls.md".
+ * [Coding Tips and Pitfalls](https://github.com/phusion/passenger/blob/master/doc/CodingTipsAndPitfalls.md)

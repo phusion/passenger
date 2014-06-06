@@ -62,3 +62,9 @@ Tests can be run immediately without any setup.
     rake test:cxx
     rake test:integration:apache2
     rake test:integration:nginx
+
+## Further reading
+
+ * [Contributors Guide](https://github.com/phusion/passenger/blob/master/CONTRIBUTING.md)
+ * [Design and Architecture](https://www.phusionpassenger.com/documentation/Design%20and%20Architecture.html)
+ * [Coding Tips and Pitfalls](https://github.com/phusion/passenger/blob/master/doc/CodingTipsAndPitfalls.md)
