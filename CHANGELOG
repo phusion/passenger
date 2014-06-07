@@ -25,6 +25,8 @@ Release 4.0.45
  * Fixed Passenger Standalone complaining about not finding PassengerHelperAgent
    during startup.
  * Fixed various minor issues such as #1190 and #1197.
+ * The download timeout for passenger-install-nginx-module has been increased.
+   Patch by 亀田 義裕.
 
 
 Release 4.0.44
