@@ -42,6 +42,11 @@ PhusionPassenger.require_passenger_lib 'abstract_installer'
 PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
+DOWNLOAD_OPTION = {
+	:connect_timeout => 30,
+	:idle_timeout    => 30
+}
+
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
 	TerminalChoiceMenu = PhusionPassenger::Utils::TerminalChoiceMenu
@@ -260,7 +265,7 @@ private
 		dirname = "pcre-#{PREFERRED_PCRE_VERSION}"
 		tarball = "#{@working_dir}/pcre.tar.gz"
 		
-		if download(url, tarball)
+		if download(url, tarball, DOWNLOAD_OPTION)
 			Dir.chdir(@working_dir) do
 				puts "<banner>Verifying PCRE checksum...</banner>"
 				if Digest::SHA256.file(tarball) != PCRE_SHA256_CHECKSUM
@@ -298,7 +303,7 @@ private
 		dirname = "nginx-#{PREFERRED_NGINX_VERSION}"
 		tarball = "#{@working_dir}/nginx.tar.gz"
 		
-		if download(url, tarball)
+		if download(url, tarball, DOWNLOAD_OPTION)
 			Dir.chdir(@working_dir) do
 				puts "<banner>Verifying Nginx checksum...</banner>"
 				if Digest::SHA256.file(tarball) != NGINX_SHA256_CHECKSUM
