@@ -1378,7 +1378,7 @@ passenger_content_handler(ngx_http_request_t *r)
     }
     
     
-    /* Setup upstream stuff and prepare sending the request to the backend. */
+    /* Setup upstream stuff and prepare sending the request to the HelperAgent. */
     
     if (ngx_http_upstream_create(r) != NGX_OK) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;

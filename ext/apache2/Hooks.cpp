@@ -485,8 +485,8 @@ private:
 	}
 	
 	/**
-	 * Most of the high-level logic for forwarding a request to a backend application
-	 * is contained in this method.
+	 * Most of the high-level logic for forwarding a request to the
+	 * HelperAgent is contained in this method.
 	 */
 	int handleRequest(request_rec *r) {
 		/********** Step 1: preparation work **********/
@@ -648,8 +648,8 @@ private:
 			}
 			
 
-			/********** Step 4: forwarding the response from the backend
-			                    process back to the HTTP client **********/
+			/********** Step 4: forwarding the response from the HelperAgent
+			                    back to the HTTP client **********/
 			
 			UPDATE_TRACE_POINT();
 			apr_bucket_brigade *bb;

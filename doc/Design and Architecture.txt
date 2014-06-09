@@ -218,7 +218,7 @@ The main interface into the subsystem is the Pool class, with its `asyncGet()` m
 Pool is the core of the subsystem. It contains high-level process management logic but not the low-level details of spawning processes. The code is further divided into the following classes, each of which contain the core code managing its respective domain:
 
 **SuperGroup**::
-	A logical collection of different applications. Can contain one or more Groups, but currently it contains exactly 1 Group.
+	A logical collection of different applications. It's designed to be able to contain one or more Groups, but currently it always contains exactly 1 Group.
 +
 SuperGroup was originally introduced as a building block for a future feature: polyglot, multi-language applications. The idea was that, as more and more programming languages are introduced and become popular, there would be more and more demand to write applications in multiple languages. This would be done by splitting applications into multiple parts, with each part implemented in a different language. We wanted to introduce a feature that makes it super-easy to make such polyglot applications as a single whole. However, as time went on, we realized that we were mistaken and that most developers actually don't want to bother with multiple programming languages: they'd rather stick with a single one. So nowadays, SuperGroup is actually obsolete, but it's still kept in the codebase because it's not harmful, and removing it is too much work.
 
