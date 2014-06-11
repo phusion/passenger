@@ -10,6 +10,8 @@ Supported operating systems:
 | OS                  | Minimum version
 | Ubuntu              | 10.04
 | Debian              | 6
+| Red Hat, CentOS     | 5
+| Amazon Linux        | All versions supported
 | Mac OS X            | 10.8 Mountain Lion
 | FreeBSD             | 8
 | OpenBSD             | 5.2
