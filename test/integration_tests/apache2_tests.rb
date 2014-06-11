@@ -16,6 +16,7 @@ describe "Apache 2 module" do
 		check_hosts_configuration
 		@passenger_temp_dir = "/tmp/passenger-test.#{$$}"
 		Dir.mkdir(@passenger_temp_dir)
+		FileUtils.chmod_R(0777, @passenger_temp_dir)
 		ENV['PASSENGER_TEMP_DIR'] = @passenger_temp_dir
 	end
 
