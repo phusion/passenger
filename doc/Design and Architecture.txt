@@ -6,6 +6,8 @@ This guide describes Phusion Passenger's design and architecture in detail. With
 
 The guide assumes that you're familiar with using Phusion Passenger and with Nginx or Apache, and that you've read the link:https://github.com/phusion/passenger/blob/master/CONTRIBUTING.md[Contributors Guide] and the link:https://github.com/phusion/passenger/blob/master/doc/DeveloperQuickstart.md[Developer QuickStart].
 
+image:images/code_walkthrough.jpg[link="http://vimeo.com/phusionnl/review/98027409/03ba678684"] +
+'You should also watch the complementary video: link:http://vimeo.com/phusionnl/review/98027409/03ba678684[Phusion Passenger Code Walkthrough]'
 
 == Introduction
 

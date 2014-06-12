@@ -9,6 +9,7 @@
  * [Contributing code](#contrib_code)
    * [Developer QuickStart](#dev_quickstart)
    * [Design and Architecture](#design_and_architecture)
+   * [Code Walkthrough](#code_walkthrough)
    * [Compilation and build system](#build_system)
    * [Running the unit tests](#unit_tests)
    * [Directory structure](#dir_structure)
@@ -96,6 +97,13 @@ We provide an easy and convenient development environment that contributors can 
 ### Design and Architecture
 
 Phusion Passenger's design and architecture is documented in detail in the [Design & Architecture](https://www.phusionpassenger.com/documentation/Design%20and%20Architecture.html) document.
+
+<a name="code_walkthrough"></a>
+### Code Walkthrough
+
+<a href="http://vimeo.com/phusionnl/review/98027409/03ba678684"><img src="http://blog.phusion.nl/wp-content/uploads/2014/06/code_walkthrough.png"></a>
+
+We have [a video](http://vimeo.com/phusionnl/review/98027409/03ba678684) which walks you through the Phusion Passenger codebase, showing you step-by-step how things fit together. It complements the [Design & Architecture](https://www.phusionpassenger.com/documentation/Design%20and%20Architecture.html) document.
 
 <a name="build_system"></a>
 ### Compilation and build system
