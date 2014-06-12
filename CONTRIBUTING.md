@@ -120,7 +120,7 @@ It is recommended that you install ccache and set the `USE_CCACHE=1` environment
 <a name="unit_tests"></a>
 ### Running the unit tests
 
-The tests depend on the Phusion Passenger developer tools. Make sure they're installed:
+The tests depend on the Phusion Passenger developer tools. If you're not using our [Vagrant environment](https://github.com/phusion/passenger/blob/master/doc/DeveloperQuickstart.md), you need to make sure they're installed:
 
     rake test:install_deps
 
