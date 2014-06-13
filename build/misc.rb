@@ -139,6 +139,7 @@ task :contributors do
 	entries.push "Goffert van Gool (Phusion)"
 	entries.delete "Gokulnath"
 	entries.push "Gokulnath Manakkattil"
+	entries.push "Sean Wilkinson"
 	File.open("CONTRIBUTORS", "w") do |f|
 		f.puts(entries.sort{ |a, b| a.downcase <=> b.downcase }.join("\n"))
 	end
