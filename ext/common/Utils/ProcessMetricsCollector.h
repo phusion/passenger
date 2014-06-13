@@ -92,7 +92,7 @@ struct ProcessMetrics {
 	 */
 	ssize_t  swap;
 	/** OS X Snow Leopard does not report the VM size correctly, so don't use this. */
-	size_t  vmsize;
+	ssize_t  vmsize;
 	pid_t   processGroupId;
 	uid_t   uid;
 	string  command;
