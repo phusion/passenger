@@ -193,9 +193,9 @@ If the ApplicationPool replied with an exception, the RequestHandler sends back 
 
 ==== I/O model
 
-The RequestHandler uses the **evented I/O model**. This means that the RequestHandler handles many clients (requests) at the same time, using a single thread, inside a single process. This is possible through the use of I/O event multiplexing mechanisms, which are provided by the OS. Examples of such mechanisms include the `select()`, `poll()`, `epoll()` and `kqueue()` system calls. But those mechanisms are very low-level and OS-specific, so the RequestHandler uses two libraries which abstract away the differences and provide a higher-level API, link:http://software.schmorp.de/pkg/libev.html[libev] and link:http://software.schmorp.de/pkg/libeio.html[libeio].
+The RequestHandler uses the **evented I/O model**. This means that the RequestHandler handles many clients (requests) at the same time, using a single thread, inside a single process. This is possible through the use of I/O event multiplexing mechanisms, which are provided by the OS. Examples of such mechanisms include the `select()`, `poll()`, `epoll()` and `kqueue()` system calls. But those mechanisms are very low-level and OS-specific, so the RequestHandler uses two libraries which abstract away the differences and provide a higher-level API: link:http://software.schmorp.de/pkg/libev.html[libev] and link:http://software.schmorp.de/pkg/libeio.html[libeio].
 
-The evented I/O model is also used in Nginx. It is in contrast to the single-threaded multi-process model which handles 1 client per process (used by Apache with the prefork MPM), or the multi-threaded model which handles 1 client per thread (used by Apache with the worker MPM). You can learn more about evented I/O and the different I/O models using these resources:
+The evented I/O model is also used in Nginx. It is in contrast to the single-threaded multi-process model which handles 1 client per process (used by Apache with the prefork MPM), or the multi-threaded model which handles 1 client per thread (used by Apache with the worker MPM). You can learn more about evented I/O and the different I/O models through these resources:
 
  * link:http://www.slideshare.net/marc.seeger/seeger-aysnc-io[Event-Driven I/O: A hands-on introduction] -- Marc Seeger, 2010
  * link:http://stackoverflow.com/questions/5807246/event-driven-io-and-blocking-vs-nonblocking[Event Driven IO And Blocking vs NonBlocking] -- Stack Overflow
@@ -213,11 +213,11 @@ The ApplicationPool subsystem is responsible for:
  * Enforcing resource limits. Ensuring that not too many processes are spawned, ensuring that processes that use too much memory are shut down, etc.
  * Restarting processes on demand (e.g. when the timestamp of `restart.txt` has changed).
  * Restarting processes that have crashed.
- * Queuing requests and limiting concurrency. Each process tells the ApplicationPool how many concurrent requests it can handle. If more concurrent requests come in than the processes say they can handle, then the excess requests are queued within the ApplicationPool subsystem. Similarly, if requests come in while a process is being spawned, then those requests are queued until the process is done spawning.
+ * Queuing requests and limiting concurrency. Each process tells the ApplicationPool how many concurrent requests it can handle. If more concurrent requests come in than the processes says it can handle, then the excess requests are queued within the ApplicationPool subsystem. Similarly, if requests come in while a process is being spawned, then those requests are queued until the process is done spawning.
 
 The main interface into the subsystem is the Pool class, with its `asyncGet()` method. The RequestHandler calls something like `pool->asyncGet(options, callback)` inside its `checkoutSession()` method. `asyncGet()` replies with a Session, or an exception.
 
-Pool is the core of the subsystem. It contains high-level process management logic but not the low-level details of spawning processes. The code is further divided into the following classes, each of which contain the core code managing its respective domain:
+The Pool class is the core of the subsystem. It contains high-level process management logic but not low-level details, such as the details of spawning processes. The code is further divided into the following classes, each of which contain the core code managing its respective domain:
 
 **SuperGroup**::
 	A logical collection of different applications. It's designed to be able to contain one or more Groups, but currently it always contains exactly 1 Group.
@@ -480,13 +480,13 @@ Information about the supported application types, startup files, loaders and pr
 [[instance_state_and_communication]]
 == Instance state and communication
 
-Every time you start Phusion Passenger, you've created a new *instance*. Every instance consists of multiple processes that work together (Watchdog, HelperAgent, LoggingAgent, application processes). All those processes have to work together and have to be able to communicate with each other. Those processes must also *not* communicate with the processes belonging to other instances. For example, if you start Apache+Passenger *and Nginx+Passenger, then we don't want the HelperAgent that's started from Apache to use LoggingAgent that's started from Nginx.
+Every time you start Phusion Passenger, you've created a new *instance*. Every instance consists of multiple processes that work together (Watchdog, HelperAgent, LoggingAgent, application processes). All those processes have to be able to communicate with each other. Those processes must also *not* communicate with the processes belonging to other instances. For example, if you start Apache+Passenger *and* Nginx+Passenger, then we don't want the HelperAgent that's started from Apache to use LoggingAgent that's started from Nginx.
 
 Clearly, the processes can't listen on a specific TCP port for communication. Nor can they listen on a fixed Unix domain socket filename.
 
 That is where the 'server instance directory' comes in. Every Phusion Passenger instance has its own, unique temporary directory. That directory is removed when the instance halts. The directory contains Unix domain socket files that the processes listen on. Every Phusion Passenger related process knows where its own server instance directory is, and thus, knows how to communicate with other processes belonging to the same instance. The server instance directory is implemented in `ext/common/ServerInstanceDir.h`.
 
-Administration tools such as `passenger-status` query information using server instance directories. First, they check which server instance directories exist on the system. If they find only one, then they query the sockets inside that sole server instance directory. Otherwise, they abort with an error and asks the user to specifically select the instance to query.
+Administration tools such as `passenger-status` query information using server instance directories. First, they check which server instance directories exist on the system. If they find only one, then they query the sockets inside that sole server instance directory. Otherwise, they abort with an error and ask the user to specifically select the instance to query.
 
 
 [appendix]
