@@ -2,7 +2,7 @@
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-This guide describes Phusion Passenger's design and architecture in detail. With this guide, we hope that contributors can quickly find their way around the Phusion Passenger codebase.
+This guide describes link:https://www.phusionpassenger.com/[Phusion Passenger]'s design and architecture in detail. With this guide, we hope that contributors can quickly find their way around the Phusion Passenger codebase.
 
 The guide assumes that you're familiar with using Phusion Passenger and with Nginx or Apache, and that you've read the link:https://github.com/phusion/passenger/blob/master/CONTRIBUTING.md[Contributors Guide] and the link:https://github.com/phusion/passenger/blob/master/doc/DeveloperQuickstart.md[Developer QuickStart].
 
