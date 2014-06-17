@@ -1132,6 +1132,11 @@ private:
 
 		// Add sticky session ID.
 		if (client->stickySession && client->session != NULL) {
+			StaticString baseURI = client->scgiParser.getHeader("SCRIPT_NAME");
+			if (baseURI.empty()) {
+				baseURI = StaticString("/", 1);
+			}
+
 			StaticString cookieName = getStickySessionCookieName(client);
 			// Note that we do NOT set HttpOnly. If we set that flag then Chrome
 			// doesn't send cookies over WebSocket handshakes. Confirmed on Chrome 25.
@@ -1139,6 +1144,8 @@ private:
 			headerData.append(cookieName.data(), cookieName.size());
 			headerData.append("=");
 			headerData.append(toString(client->session->getStickySessionId()));
+			headerData.append("; Path=");
+			headerData.append(baseURI.data(), baseURI.size());
 			headerData.append("\r\n");
 
 			// Invalidate all cookies with a different route.
@@ -1160,7 +1167,9 @@ private:
 						headerData.append(cookie.first.data(), cookie.first.size());
 						headerData.append("=");
 						headerData.append(cookie.second.data(), cookie.second.size());
-						headerData.append("; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT\r\n");
+						headerData.append("; Path=");
+						headerData.append(baseURI.data(), baseURI.size());
+						headerData.append("; Expires=Thu, 01 Jan 1970 00:00:00 GMT\r\n");
 					}
 				}
 			}
