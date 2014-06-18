@@ -170,6 +170,8 @@ To make them permanent for future bash sessions **for all users**, add them to `
 
 NOTE: Depending on the system, the bashrc file may have a different filename. On Debian and Ubuntu, it's `/etc/bash.bashrc`.
 
+NOTE: Ubuntu doesn't appear to source ~/.bashrc by default so you'll either want to add your environment variables to ~/.profile or ensure you source ~/.bashrc from ~/.profile.
+
 ==== Apache
 
 NOTE: This subsection describes how to set environment variables on Apache itself, not on apps served through Phusion Passenger for Apache. The environment variables you set here will be passed to all apps, but you cannot customize them on a per-app basis. See also <<env_vars_passenger_apps,Setting environment variables on Phusion Passenger-served apps>>.
