@@ -232,8 +232,7 @@ public:
 	}
 
 	static ValueType unknownSpeed() {
-		assert(numeric_limits<ValueType>::is_iec559);
-		return -numeric_limits<ValueType>::max();
+		return numeric_limits<ValueType>::max();
 	}
 
 	#if 1
