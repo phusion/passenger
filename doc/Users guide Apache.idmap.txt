@@ -120,6 +120,8 @@
 
 5.4. Redeploying (restarting the WSGI application)	=>	redeploying-restarting-the-wsgi-application--na7pmf
 
+5.5. Sample passenger_wsgi.py for Django	=>	sample-passenger-wsgi-py-for-django-slb9m8
+
 6. Deploying a Node.js application	=>	deploying-a-node-js-application-882ecy
 
 7. Deploying a Meteor application	=>	deploying-a-meteor-application-mxfmir

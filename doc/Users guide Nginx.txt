@@ -496,6 +496,18 @@ command line:
 touch /webapps/wsgiapp/tmp/restart.txt
 -------------------------------------------
 
+=== Sample `passenger_wsgi.py` for Django
+
+For Django applications, `passenger_wsgi.py` should look like this:
+
+[code,python]
+-------------------------------------------
+import myproject.wsgi
+application = myproject.wsgi.application
+-------------------------------------------
+
+Replace `myproject` with your project's module name.
+
 
 == Deploying a Node.js application
 
