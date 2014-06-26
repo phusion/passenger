@@ -150,7 +150,7 @@ def application(env, start_response):
 			body = str('Invalid headers')
 			start_response(status, [('Content-Type', 'text/plain'), ('Content-Length', len(body))])
 			return [body]
-		socket = env['passenger.hijack']()
+		socket = env['passenger.hijack'](True)
 		io = socket.makefile()
 		socket.close()
 		try:

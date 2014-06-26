@@ -13,6 +13,8 @@ Release 4.0.46
    The fact that this was not done previously caused a lot of confusion amongst
    Python users, who wondered why their `passenger_wsgi.py` could not import any
    modules from the same directory.
+ * Fixed a compatibility problem with Django, which could cause Django apps to
+   freeze indefinitely. Closes GH-1215.
 
 
 Release 4.0.45
