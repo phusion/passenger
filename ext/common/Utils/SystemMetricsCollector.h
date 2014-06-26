@@ -346,13 +346,14 @@ public:
 	time_t boottime;
 
 	/** Speed at which processes are created per second.
-	 * forkRateMeter.unknownSpeed() if it's not yet known (because too few samples have been taken so far).
+	 * SpeedMeter<unsigned long long>::unknownSpeed() if it's not yet known (because too
+	 * few samples have been taken so far).
 	 * -1 if there was an error querying this information.
 	 * -2 if the OS does not support this metric.
 	 */
 	double forkRate;
 	/** Speed at which the OS swaps in and swaps out data, in KB/sec.
-	 * swapInSpeedMeter.unknownSpeed()/swapOutSpeedMeter.unknownSpeed() if it's not yet known
+	 * SpeedMeter<size_t>::unknownSpeed() if it's not yet known
 	 * (because too few samples have been taken so far).
 	 * -1 if there was an error querying this information.
 	 * -2 if the OS does not support this metric.
@@ -538,7 +539,7 @@ public:
 
 			if (forkRate != -2) {
 				stream << "Fork rate         : ";
-				if (forkRate == forkRateSpeedMeter.unknownSpeed() || forkRate < 0) {
+				if (forkRate == SpeedMeter<unsigned long long>::unknownSpeed() || forkRate < 0) {
 					if (options.colors) {
 						stream << ANSI_COLOR_DGRAY;
 					}
@@ -649,7 +650,7 @@ public:
 
 			if (swapInRate != -2) {
 				stream << "Swap in           : ";
-				if (swapInRate == swapInSpeedMeter.unknownSpeed() || swapInRate < 0) {
+				if (swapInRate == SpeedMeter<size_t>::unknownSpeed() || swapInRate < 0) {
 					if (options.colors) {
 						stream << ANSI_COLOR_DGRAY;
 					}
@@ -669,7 +670,7 @@ public:
 
 			if (swapOutRate != -2) {
 				stream << "Swap out          : ";
-				if (swapOutRate == swapOutSpeedMeter.unknownSpeed() || swapOutRate < 0) {
+				if (swapOutRate == SpeedMeter<size_t>::unknownSpeed() || swapOutRate < 0) {
 					if (options.colors) {
 						stream << ANSI_COLOR_DGRAY;
 					}
