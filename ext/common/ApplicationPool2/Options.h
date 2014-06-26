@@ -278,10 +278,14 @@ public:
 	 */
 	bool loadShellEnvvars;
 	
-	/** Whether Union Station logging should be enabled. This option only affects
-	 * whether the application enables Union Station support; whether a request
-	 * actually results in data being logged to Union Station depends on whether
-	 * the 'logger' member is set.
+	/** Whether Union Station logging should be enabled. Enabling this option will
+	 * result in:
+	 * 
+	 *  - The application enabling its Union Station support.
+	 *  - Periodic tasks such as `collectAnalytics()` to log things to Union Station.
+	 *
+	 * It does *not* necessarily result in a request logging data to Union Station.
+	 * That depends on whether the `transaction` member is set.
 	 *
 	 * If this is set to true, then 'loggingAgentAddress', 'loggingAgentUsername'
 	 * and 'loggingAgentPassword' must be non-empty.
@@ -365,6 +369,11 @@ public:
 	 * The Union Station log transaction that this request belongs to.
 	 * May be the null pointer, in which case Union Station logging is
 	 * disabled for this request.
+	 *
+	 * When an Options object is passed to another thread (either direct or through
+	 * a copy), the caller should call `detachFromUnionStationTransaction()`.
+	 * Each Union Station transaction object is only supposed to be used in the same
+	 * thread.
 	 */
 	UnionStation::TransactionPtr transaction;
 
