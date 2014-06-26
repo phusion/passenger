@@ -53,6 +53,7 @@ def handshake_and_read_startup_request():
 		line = readline()
 
 def load_app():
+	sys.path.insert(0, os.getcwd())
 	return imp.load_source('passenger_wsgi', 'passenger_wsgi.py')
 
 def create_server_socket():
