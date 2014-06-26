@@ -57,6 +57,10 @@ module Utils
 		end
 	end
 	
+	def home_dir
+		Etc.getpwuid(Process.uid).dir
+	end
+
 	# Print the given exception, including the stack trace, to STDERR.
 	#
 	# +current_location+ is a string which describes where the code is

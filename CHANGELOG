@@ -2,6 +2,12 @@ Release 4.0.46
 --------------
 
  * Sticky session cookies have been made more reliable.
+ * The Python application loader now inserts the application root into `sys.path`.
+   The fact that this was not done previously caused a lot of confusion amongst
+   Python users, who wondered why their `passenger_wsgi.py` could not import any
+   modules from the same directory.
+ * Fixed a compatibility problem with Django, which could cause Django apps to
+   freeze indefinitely. Closes GH-1215.
  * Passenger Standalone no longer, by default, loads shell startup files before
    loading the application. This is because Passenger Standalone is often invoked
    from the shell anyway. Indeed, loading shell startup files again can interfere
@@ -9,12 +15,8 @@ Release 4.0.46
    still tell Passenger Standalone to load shell startup files by passing
    `--load-shell-envvars`. Passenger for Apache and Passenger for Nginx still
    load shell startup files by default.
- * The Python application loader now inserts the application root into `sys.path`.
-   The fact that this was not done previously caused a lot of confusion amongst
-   Python users, who wondered why their `passenger_wsgi.py` could not import any
-   modules from the same directory.
- * Fixed a compatibility problem with Django, which could cause Django apps to
-   freeze indefinitely. Closes GH-1215.
+ * Passenger Standalone now works properly when the HOME environment variable
+   isn't set. Closes GH-713.
 
 
 Release 4.0.45
