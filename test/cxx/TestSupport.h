@@ -86,6 +86,15 @@ using namespace oxt;
 		}									\
 	} while (0)
 
+// Do not run some tests in the Vagrant development environment because
+// they don't work over NFS.
+#define DONT_RUN_IN_VAGRANT() \
+	do { \
+		if (getenv("PASSENGER_VAGRANT_ENVIRONMENT") != NULL) { \
+			return; \
+		} \
+	} while (false)
+
 
 extern ResourceLocator *resourceLocator;
 extern Json::Value testConfig;
@@ -154,8 +163,9 @@ string getPrimaryGroupName(const string &username);
 class TempDir {
 private:
 	string name;
+	bool ignoreRemoveErrors;
 public:
-	TempDir(const string &name) {
+	TempDir(const string &name, bool _ignoreRemoveErrors = false) {
 		this->name = name;
 		if (mkdir(name.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 			int e = errno;
@@ -164,10 +174,19 @@ public:
 			message.append("'");
 			throw FileSystemException(message, e, name);
 		}
+		ignoreRemoveErrors = _ignoreRemoveErrors;
 	}
 	
 	~TempDir() {
-		removeDirTree(name);
+		if (ignoreRemoveErrors) {
+			try {
+				removeDirTree(name);
+			} catch (const RuntimeException &) {
+				// Do nothing.
+			}
+		} else {
+			removeDirTree(name);
+		}
 	}
 };
 

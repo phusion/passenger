@@ -171,6 +171,7 @@ namespace tut {
 	
 	TEST_METHOD(21) {
 		// It immediately unlinks the temp file.
+		DONT_RUN_IN_VAGRANT();
 		TempDir td("utils_test.tmp");
 		BufferedUpload t("utils_test.tmp");
 		ensure_equals(listDir("utils_test.tmp").size(), 0u);

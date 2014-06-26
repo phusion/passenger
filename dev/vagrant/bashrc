@@ -15,6 +15,8 @@ export CCACHE_COMPRESS=1
 # Tell Phusion Passenger Standalone to run in debug mode.
 export PASSENGER_DEBUG=1
 
+export PASSENGER_VAGRANT_ENVIRONMENT=1
+
 alias ls='ls -Fh --color'
 alias dir='ls -l'
 alias free='free -m'

@@ -27,6 +27,7 @@ namespace tut {
 		// The (string) constructor creates a ServerInstanceDir object that's
 		// associated with the given directory, and creates the directory
 		// if it doesn't exist.
+		DONT_RUN_IN_VAGRANT();
 		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ServerInstanceDir dir2(dir.getPath());
 		ServerInstanceDir dir3(parentDir + "/foo");
@@ -167,6 +168,7 @@ namespace tut {
 	TEST_METHOD(14) {
 		// It's possible to have two ServerInstanceDir objects constructed
 		// with the same (pid_t, string) constructor arguments.
+		DONT_RUN_IN_VAGRANT();
 		ServerInstanceDir dir(parentDir + "/passenger-test.1234");
 		ServerInstanceDir dir2(parentDir + "/passenger-test.1234");
 	}

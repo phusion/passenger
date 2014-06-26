@@ -27,7 +27,7 @@ namespace tut {
 		AtomicInt commitCount;
 
 		FileBackedPipeTest()
-			: tmpdir("tmp.pipe")
+			: tmpdir("tmp.pipe", true) // Removing the directory may not work over NFS
 		{
 			consumeImmediately = true;
 			toConsume = 9999;
