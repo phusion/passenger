@@ -217,6 +217,10 @@ private
 				wrap_desc("Turn off friendly error pages")) do
 				@options[:friendly_error_pages] = false
 			end
+			opts.on("--load-shell-envvars",
+				wrap_desc("Load shell startup files before loading application")) do
+				@options[:load_shell_envvars] = true
+			end
 
 			opts.separator ""
 			opts.separator "Process management options:"

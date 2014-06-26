@@ -2,6 +2,13 @@ Release 4.0.46
 --------------
 
  * Sticky session cookies have been made more reliable.
+ * Passenger Standalone no longer, by default, loads shell startup files before
+   loading the application. This is because Passenger Standalone is often invoked
+   from the shell anyway. Indeed, loading shell startup files again can interfere
+   with any environment variables already set in the invoking shell. You can
+   still tell Passenger Standalone to load shell startup files by passing
+   `--load-shell-envvars`. Passenger for Apache and Passenger for Nginx still
+   load shell startup files by default.
 
 
 Release 4.0.45
