@@ -21,6 +21,7 @@ Release 4.0.46
    been broken for a while and has nowadays been obsolete by our automatic
    [binary generation system](https://github.com/phusion/passenger_autobuilder).
    Closes GH-1133.
+ * Fixed compilation problems on OmniOS and OpenIndiana. Closes GH-1212.
 
 
 Release 4.0.45
