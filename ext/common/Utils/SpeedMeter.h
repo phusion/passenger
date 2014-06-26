@@ -191,7 +191,7 @@ public:
 		return count;
 	}
 
-	/** Current speed over the configured window. Returns NaN if less than 2
+	/** Current speed over the configured window. Returns unknownSpeed() if less than 2
 	 * samples have been collected so far.
 	 */
 	double currentSpeed() const {
@@ -221,14 +221,19 @@ public:
 		}
 		avgWeight /= std::max(1, (int) count - 1 - begin);
 
-		interval = getSample(count - 1).timestamp - getSample(begin).timestamp;
+		interval = getSample((int) count - 1).timestamp - getSample(begin).timestamp;
 		if (interval > 0) {
 			// sum / interval is the speed per average delta interval,
 			// so we extrapolate that over the entire window interval.
 			return (sum / interval) * (window / avgWeight);
 		} else {
-			return numeric_limits<double>::quiet_NaN();
+			return unknownSpeed();
 		}
+	}
+
+	static ValueType unknownSpeed() {
+		assert(numeric_limits<ValueType>::is_iec559);
+		return -numeric_limits<ValueType>::max();
 	}
 
 	#if 1
