@@ -17,6 +17,10 @@ Release 4.0.46
    load shell startup files by default.
  * Passenger Standalone now works properly when the HOME environment variable
    isn't set. Closes GH-713.
+ * Passenger Standalone's `package-runtime` command has been removed. It has
+   been broken for a while and has nowadays been obsolete by our automatic
+   [binary generation system](https://github.com/phusion/passenger_autobuilder).
+   Closes GH-1133.
 
 
 Release 4.0.45
