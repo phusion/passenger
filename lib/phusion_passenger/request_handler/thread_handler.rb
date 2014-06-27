@@ -166,8 +166,8 @@ private
 				print_exception("Passenger RequestHandler's client socket", e)
 			end
 		else
-			if @union_station_core && headers && headers[PASSENGER_TXN_ID]
-				log_analytics_exception(headers, e)
+			if headers
+				PhusionPassenger.log_request_exception(headers, e)
 			end
 			raise e if should_reraise_error?(e)
 		end
@@ -283,7 +283,10 @@ private
 				@app_group_name,
 				:requests, union_station_key)
 			headers[UNION_STATION_REQUEST_TRANSACTION] = transaction
+			headers[UNION_STATION_CORE] = @union_station_core
+			headers[PASSENGER_APP_GROUP_NAME] = @app_group_name
 			Thread.current[UNION_STATION_REQUEST_TRANSACTION] = transaction
+			Thread.current[UNION_STATION_CORE] = @union_station_core
 			Thread.current[PASSENGER_TXN_ID] = txn_id
 			Thread.current[PASSENGER_UNION_STATION_KEY] = union_station_key
 			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
@@ -306,6 +309,9 @@ private
 	
 	def finalize_request(connection, headers, has_error)
 		transaction = headers[UNION_STATION_REQUEST_TRANSACTION]
+		Thread.current[UNION_STATION_CORE] = nil
+		Thread.current[UNION_STATION_REQUEST_TRANSACTION] = nil
+
 		if transaction && !transaction.closed?
 			exception_occurred = false
 			begin
@@ -326,7 +332,6 @@ private
 					# Clear statistics to void integer wraps.
 					GC.clear_stats
 				end
-				Thread.current[UNION_STATION_REQUEST_TRANSACTION] = nil
 			rescue Exception
 				# Maybe this exception was raised while communicating
 				# with the logging agent. If that is the case then
@@ -351,29 +356,6 @@ private
 		end
 		
 		#################
-	end
-	
-	def log_analytics_exception(env, exception)
-		transaction = @union_station_core.new_transaction(
-			@app_group_name,
-			:exceptions,
-			env[PASSENGER_UNION_STATION_KEY])
-		begin
-			request_txn_id = env[PASSENGER_TXN_ID]
-			message = exception.message
-			message = exception.to_s if message.empty?
-			message = [message].pack('m')
-			message.gsub!("\n", "")
-			backtrace_string = [exception.backtrace.join("\n")].pack('m')
-			backtrace_string.gsub!("\n", "")
-
-			transaction.message("Request transaction ID: #{request_txn_id}")
-			transaction.message("Message: #{message}")
-			transaction.message("Class: #{exception.class.name}")
-			transaction.message("Backtrace: #{backtrace_string}")
-		ensure
-			transaction.close
-		end
 	end
 
 	def should_reraise_error?(e)

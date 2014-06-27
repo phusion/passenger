@@ -97,21 +97,18 @@ class UnionStationExtension < ActiveSupport::LogSubscriber
 	end
 	
 	def process_action(event)
-		transaction = Thread.current[UNION_STATION_REQUEST_TRANSACTION]
-		if transaction
-			view_runtime = event.payload[:view_runtime]
-			transaction.message("View rendering time: #{(view_runtime * 1000).to_i}") if view_runtime
+		view_runtime = event.payload[:view_runtime]
+		if view_runtime
+			PhusionPassenger.log_total_view_rendering_time(nil, (view_runtime * 1000).to_i)
 		end
 	end
 	
 	def sql(event)
-		if transaction = Thread.current[UNION_STATION_REQUEST_TRANSACTION]
-			name = event.payload[:name] || "SQL"
-			sql = event.payload[:sql]
-			digest = Digest::MD5.hexdigest("#{name}\0#{sql}\0#{rand}")
-			transaction.measured_time_points("DB BENCHMARK: #{digest}",
-				event.time, event.end, "#{name}\n#{sql}")
-		end
+		PhusionPassenger.log_database_query(nil,
+			event.payload[:name] || "SQL",
+			event.time,
+			event.end,
+			event.payload[:sql])
 	end
 	
 	def cache_read(event)
@@ -147,61 +144,30 @@ class UnionStationExtension < ActiveSupport::LogSubscriber
 	
 	private
 		def log_union_station_exception(env, exception)
-			transaction = @union_station_core.new_transaction(
-				@app_group_name,
-				:exceptions,
-				env[PASSENGER_UNION_STATION_KEY])
-			begin
-				request = ActionDispatch::Request.new(env)
-				if request.parameters['controller']
-					controller = request.parameters['controller'].humanize + "Controller"
-					action = request.parameters['action']
-				end
-				
-				request_txn_id = env[PASSENGER_TXN_ID]
-				message = exception.message
-				message = exception.to_s if message.empty?
-				message = [message].pack('m')
-				message.gsub!("\n", "")
-				backtrace_string = [exception.backtrace.join("\n")].pack('m')
-				backtrace_string.gsub!("\n", "")
-				if action && controller
-					controller_action = "#{controller}##{action}"
-				else
-					controller_action = controller
-				end
-				
-				transaction.message("Request transaction ID: #{request_txn_id}")
-				transaction.message("Message: #{message}")
-				transaction.message("Class: #{exception.class.name}")
-				transaction.message("Backtrace: #{backtrace_string}")
-				transaction.message("Controller action: #{controller_action}") if controller_action
-			ensure
-				transaction.close
+			options = {}
+			request = ActionDispatch::Request.new(env)
+			if request.parameters['controller']
+				options[:controller_name] = request.parameters['controller'].humanize + "Controller"
+				options[:action_name] = request.parameters['action']
 			end
+			PhusionPassenger.log_request_exception(env, exception, options)
 		end
 	end
 	
 	module ACExtension
 		def process_action(action, *args)
-			transaction = PhusionPassenger.lookup_union_station_web_transaction(request.env)
-			if transaction
-				transaction.message("Controller action: #{self.class.name}##{action_name}")
-				transaction.measure("framework request processing") do
-					super
-				end
-			else
+			options = {
+				:controller_name => self.class.name,
+				:action_name => action_name,
+				:method => request.request_method
+			}
+			PhusionPassenger.log_controller_action(request.env, options) do
 				super
 			end
 		end
 		
 		def render(*args)
-			transaction = PhusionPassenger.lookup_union_station_web_transaction(request.env)
-			if transaction
-				transaction.measure("view rendering") do
-					super
-				end
-			else
+			PhusionPassenger.log_view_rendering(request.env) do
 				super
 			end
 		end
@@ -209,14 +175,7 @@ class UnionStationExtension < ActiveSupport::LogSubscriber
 	
 	module ASBenchmarkableExtension
 		def benchmark_with_passenger(message = "Benchmarking", *args)
-			transaction = PhusionPassenger.lookup_union_station_web_transaction
-			if transaction
-				transaction.measure("BENCHMARK: #{message}") do
-					benchmark_without_passenger(message, *args) do
-						yield
-					end
-				end
-			else
+			PhusionPassenger.benchmark(nil, message) do
 				benchmark_without_passenger(message, *args) do
 					yield
 				end
@@ -224,7 +183,7 @@ class UnionStationExtension < ActiveSupport::LogSubscriber
 		end
 	end
 
-	private
+private
 	def install_event_preprocessor(event_preprocessor)
 		public_methods(false).each do |name|
 			singleton = class << self; self end

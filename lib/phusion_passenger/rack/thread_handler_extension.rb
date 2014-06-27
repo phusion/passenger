@@ -80,6 +80,7 @@ module ThreadHandlerExtension
 					# otherwise maliciously crafted responses can crash the app,
 					# forcing it to be respawned, and thereby effectively DoSing it.
 					print_exception("Rack application object", e)
+					PhusionPassenger.log_request_exception(env, e)
 				end
 				return false
 			end
