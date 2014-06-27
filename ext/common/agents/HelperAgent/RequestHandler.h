@@ -2619,7 +2619,7 @@ public:
 	{
 		accept4Available = true;
 		connectPasswordTimeout = 15000;
-		unionStationCore = pool->unionStationCore;
+		unionStationCore = pool->getUnionStationCore();
 
 		requestSocketWatcher.set(_requestSocket, ev::READ);
 		requestSocketWatcher.set(_libev->getLoop());

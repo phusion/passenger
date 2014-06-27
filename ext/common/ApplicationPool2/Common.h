@@ -31,6 +31,8 @@
 #include <oxt/tracable_exception.hpp>
 #include <ResourceLocator.h>
 #include <RandomGenerator.h>
+#include <UnionStation/Core.h>
+#include <UnionStation/Transaction.h>
 #include <ApplicationPool2/Options.h>
 #include <Utils/StringMap.h>
 
@@ -187,6 +189,9 @@ struct SpawnerConfig {
 	// Used by error pages.
 	ResourceLocator resourceLocator;
 
+	// Used for Union Station logging.
+	UnionStation::CorePtr unionStationCore;
+
 	// Used by SmartSpawner and DirectSpawner.
 	/** A random generator to use. */
 	RandomGeneratorPtr randomGenerator;
@@ -197,8 +202,10 @@ struct SpawnerConfig {
 	unsigned int spawnTime;
 
 	SpawnerConfig(const ResourceLocator &_resourceLocator,
+		const UnionStation::CorePtr &_unionStationCore = UnionStation::CorePtr(),
 		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr())
 		: resourceLocator(_resourceLocator),
+		  unionStationCore(_unionStationCore),
 		  concurrency(1),
 		  spawnerCreationSleepTime(0),
 		  spawnTime(0)
@@ -216,7 +223,7 @@ typedef boost::shared_ptr<SpawnerConfig> SpawnerConfigPtr;
 ExceptionPtr copyException(const tracable_exception &e);
 void rethrowException(const ExceptionPtr &e);
 void processAndLogNewSpawnException(SpawnException &e, const Options &options,
-	ResourceLocator &resourceLocator, RandomGenerator &randomGenerator);
+	const SpawnerConfigPtr &config);
 
 } // namespace ApplicationPool2
 } // namespace Passenger

@@ -46,13 +46,13 @@ using namespace boost;
 
 /**
  * This struct encapsulates information for ApplicationPool::get() and for
- * SpawnManager::spawn(), such as which application is to be spawned.
+ * Spawner::spawn(), such as which application is to be spawned.
  *
- * <h2>Privilege lowering support</h2>
+ * ## Privilege lowering support
  *
  * If <em>user</em> is given and isn't the empty string, then the application process
  * will run as the given username. Otherwise, the owner of the application's startup
- * file (e.g. config.ru or config/environment.rb) will be used.
+ * file (e.g. config.ru) will be used.
  *
  * If <em>group</em> is given and isn't the empty string, then the application process
  * will run as the given group name. If it's set to the special value

@@ -105,7 +105,7 @@ public:
 	/**
 	 * All created Spawner objects share the same SpawnerConfig object.
 	 */
-	SpawnerConfigPtr getConfig() const {
+	const SpawnerConfigPtr &getConfig() const {
 		return config;
 	}
 };

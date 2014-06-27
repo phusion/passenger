@@ -732,8 +732,7 @@ protected:
 	}
 
 	void throwSpawnException(SpawnException &e, const Options &options) {
-		processAndLogNewSpawnException(e, options, config->resourceLocator,
-			*config->randomGenerator);
+		processAndLogNewSpawnException(e, options, config);
 		throw e;
 	}
 
