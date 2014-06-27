@@ -2,7 +2,7 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 PhusionPassenger.require_passenger_lib 'request_handler'
 PhusionPassenger.require_passenger_lib 'request_handler/thread_handler'
 PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'
-PhusionPassenger.require_passenger_lib 'analytics_logger'
+PhusionPassenger.require_passenger_lib 'union_station/core'
 PhusionPassenger.require_passenger_lib 'utils'
 
 require 'fileutils'
@@ -512,7 +512,7 @@ describe RequestHandler do
 		end
 	end
 
-	describe "if analytics logger is given" do
+	describe "if Union Station core is given" do
 		def preinitialize
 			if @agent_pid
 				Process.kill('KILL', @agent_pid)
@@ -523,9 +523,9 @@ describe RequestHandler do
 			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file,
 				@logging_agent_password)
 			
-			@logger = AnalyticsLogger.new(@socket_address, "logging",
+			@union_station_core = UnionStation::Core.new(@socket_address, "logging",
 				"1234", "localhost")
-			@options = { "analytics_logger" => @logger }
+			@options = { "union_station_core" => @union_station_core }
 		end
 		
 		after :each do
@@ -543,8 +543,8 @@ describe RequestHandler do
 			header_value = nil
 			thread_value = nil
 			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
-				header_value = headers[PASSENGER_ANALYTICS_WEB_LOG]
-				thread_value = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
+				header_value = headers[UNION_STATION_REQUEST_TRANSACTION]
+				thread_value = Thread.current[UNION_STATION_REQUEST_TRANSACTION]
 			end
 			@request_handler.start_main_loop_thread
 			client = connect
@@ -557,8 +557,8 @@ describe RequestHandler do
 			ensure
 				client.close
 			end
-			header_value.should be_kind_of(AnalyticsLogger::Log)
-			thread_value.should be_kind_of(AnalyticsLogger::Log)
+			header_value.should be_kind_of(UnionStation::Transaction)
+			thread_value.should be_kind_of(UnionStation::Transaction)
 			header_value.should == thread_value
 		end
 		

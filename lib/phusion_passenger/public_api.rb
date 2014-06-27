@@ -58,7 +58,7 @@ class << self
 	end
 	
 	def benchmark(env = nil, title = "Benchmarking")
-		log = lookup_analytics_log(env)
+		log = lookup_union_station_web_transaction(env)
 		if log
 			log.measure("BENCHMARK: #{title}") do
 				yield
@@ -69,7 +69,7 @@ class << self
 	end
 	
 	def log_cache_hit(env, name)
-		log = lookup_analytics_log(env)
+		log = lookup_union_station_web_transaction(env)
 		if log
 			log.message("Cache hit: #{name}")
 			return true
@@ -79,7 +79,7 @@ class << self
 	end
 	
 	def log_cache_miss(env, name, generation_time = nil)
-		log = lookup_analytics_log(env)
+		log = lookup_union_station_web_transaction(env)
 		if log
 			if generation_time
 				log.message("Cache miss (#{generation_time.to_i}): #{name}")
@@ -90,6 +90,13 @@ class << self
 		else
 			return false
 		end
+	end
+
+	def lookup_union_station_web_transaction(env = nil)
+		if env
+			result = env[UNION_STATION_REQUEST_TRANSACTION]
+		end
+		return result || Thread.current[UNION_STATION_REQUEST_TRANSACTION]
 	end
 
 private
@@ -111,14 +118,5 @@ private
 			raise ArgumentError, "Unknown event name '#{name}'"
 		end
 	end
-	
-	def lookup_analytics_log(env)
-		if env
-			return env[PASSENGER_ANALYTICS_WEB_LOG]
-		else
-			return Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
-		end
-	end
-
 end
 end # module PhusionPassenger
