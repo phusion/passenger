@@ -1749,7 +1749,7 @@ In each place, it may be specified at most once. The default value is '503'.
 
 [[PassengerStickySessions]]
 ==== passenger_sticky_sessions <on|off>
-:version: 4.0.55
+:version: 4.0.45
 include::users_guide_snippets/since_version.txt[]
 
 When sticky sessions are enabled, all requests that a client sends will be routed to the same originating application process, whenever possible. When sticky sessions are disabled, requests may be distributed over multiple processes, and may not necessarily be routed to the originating process, in order to balance traffic over multiple CPU cores. Because of this, sticky sessions should only be enabled in specific circumstances.
@@ -1780,7 +1780,7 @@ In each place, it may be specified at most once. The default value is `off`.
 
 [[PassengerStickySessionsCookieName]]
 ==== passenger_sticky_sessions_cookie_name
-:version: 4.0.55
+:version: 4.0.45
 include::users_guide_snippets/since_version.txt[]
 
 Sets the name of the <<PassengerStickySessions,sticky sessions>> cookie.
