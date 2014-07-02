@@ -27,6 +27,8 @@ Release 4.0.46
    [binary generation system](https://github.com/phusion/passenger_autobuilder).
    Closes GH-1133.
  * Fixed compilation problems on OmniOS and OpenIndiana. Closes GH-1212.
+ * Fixed compilation problems when Nginx is configured with OpenResty.
+   Thanks to Yichun Zhang. Closes GH-1226.
 
 
 Release 4.0.45

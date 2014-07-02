@@ -87,7 +87,7 @@ if [ $ngx_found = yes ]; then
     CORE_LIBS="$CORE_LIBS -lrt"
 fi
 
-nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g'`
+nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g' | head -n1`
 
 nginx_major_version=`echo "$nginx_version" | cut -d . -f 1`
 have=PASSENGER_NGINX_MAJOR_VERSION value="$nginx_major_version"
