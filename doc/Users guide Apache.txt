@@ -380,7 +380,7 @@ So '/webapps/wsgiapp' must, at minimum, look like this:
 ----------------------
 /webapps/wsgiapp
   |
-  +-- config.ru
+  +-- passenger_wsgi.py
   |
   +-- public/
   |
