@@ -4,11 +4,15 @@ root = true
 
 [*]
 end_of_line = lf
-insert_final_newline = true
+charset = utf-8
 
 [{*.cpp,*.c,*.h,*.hpp,*.rb,*.js}]
 indent_style = tab
 indent_size = 4
+trim_trailing_whitespace = true
+
+[{*.cpp,*.c,*.h,*.hpp}]
+insert_final_newline = true
 
 [ext/nginx/{*.c,*.h}]
 indent_style = space
