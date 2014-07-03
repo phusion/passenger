@@ -68,6 +68,7 @@ module Packaging
 	GLOB = [
 		'.gitignore',
 		'.travis.yml',
+		'.editorconfig',
 		'configure',
 		'Rakefile',
 		'Vagrantfile',
