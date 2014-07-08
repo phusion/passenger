@@ -128,6 +128,11 @@ module LoaderSharedHelpers
 			if defined?(Gem)
 				File.open("#{dir}/ruby_info", "a") do |f|
 					f.puts "RubyGems version = #{Gem::VERSION}"
+					if Gem.respond_to?(:path)
+						f.puts "RubyGems paths = #{Gem.path.inspect}"
+					else
+						f.puts "RubyGems paths = unknown; incompatible RubyGems API"
+					end
 				end
 				File.open("#{dir}/activated_gems", "wb") do |f|
 					if Gem.respond_to?(:loaded_specs)
