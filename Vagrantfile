@@ -1,4 +1,6 @@
-# This Vagrantfile sets up an Ubuntu VM, for the purpose of developing Phusion Passenger.
+# This Vagrantfile sets up an Ubuntu VM, for the purpose of developing Phusion Passenger itself.
+# It is NOT for setting up a Vagrant VM for the purpose of developing your own app. See:
+# https://github.com/phusion/passenger/issues/1230#issuecomment-48337881
 
 # Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = "2"
