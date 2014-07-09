@@ -463,9 +463,9 @@ public:
 		unionStationCore = boost::make_shared<UnionStation::Core>(options.loggingAgentAddress,
 			"logging", options.loggingAgentPassword);
 		spawnerFactory = boost::make_shared<SpawnerFactory>(generation,
-			boost::make_shared<SpawnerConfig>(resourceLocator, randomGenerator));
-		pool = boost::make_shared<Pool>(spawnerFactory, unionStationCore,
-			randomGenerator, &options);
+			boost::make_shared<SpawnerConfig>(resourceLocator, unionStationCore,
+				randomGenerator));
+		pool = boost::make_shared<Pool>(spawnerFactory, &options);
 		pool->initialize();
 		pool->setMax(options.maxPoolSize);
 		pool->setMaxIdleTime(options.poolIdleTime * 1000000);

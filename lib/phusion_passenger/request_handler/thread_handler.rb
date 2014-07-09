@@ -68,7 +68,7 @@ class ThreadHandler
 		@app_group_name    = Utils.require_option(options, :app_group_name)
 		Utils.install_options_as_ivars(self, options,
 			:app,
-			:analytics_logger,
+			:union_station_core,
 			:connect_password
 		)
 
@@ -166,8 +166,8 @@ private
 				print_exception("Passenger RequestHandler's client socket", e)
 			end
 		else
-			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
-				log_analytics_exception(headers, e)
+			if headers
+				PhusionPassenger.log_request_exception(headers, e)
 			end
 			raise e if should_reraise_error?(e)
 		end
@@ -276,64 +276,69 @@ private
 #	end
 
 	def prepare_request(connection, headers)
-		if @analytics_logger && headers[PASSENGER_TXN_ID]
+		if @union_station_core && headers[PASSENGER_TXN_ID]
 			txn_id = headers[PASSENGER_TXN_ID]
 			union_station_key = headers[PASSENGER_UNION_STATION_KEY]
-			log = @analytics_logger.continue_transaction(txn_id,
+			transaction = @union_station_core.continue_transaction(txn_id,
 				@app_group_name,
 				:requests, union_station_key)
-			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
-			Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = log
+			headers[UNION_STATION_REQUEST_TRANSACTION] = transaction
+			headers[UNION_STATION_CORE] = @union_station_core
+			headers[PASSENGER_APP_GROUP_NAME] = @app_group_name
+			Thread.current[UNION_STATION_REQUEST_TRANSACTION] = transaction
+			Thread.current[UNION_STATION_CORE] = @union_station_core
 			Thread.current[PASSENGER_TXN_ID] = txn_id
 			Thread.current[PASSENGER_UNION_STATION_KEY] = union_station_key
 			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
-				log.message("Initial objects on heap: #{ObjectSpace.live_objects}")
+				transaction.message("Initial objects on heap: #{ObjectSpace.live_objects}")
 			end
 			if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
-				log.message("Initial objects allocated so far: #{ObjectSpace.allocated_objects}")
+				transaction.message("Initial objects allocated so far: #{ObjectSpace.allocated_objects}")
 			elsif OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS
 				count = ObjectSpace.count_objects
-				log.message("Initial objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
+				transaction.message("Initial objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
 			end
 			if GC_SUPPORTS_TIME
-				log.message("Initial GC time: #{GC.time}")
+				transaction.message("Initial GC time: #{GC.time}")
 			end
-			log.begin_measure("app request handler processing")
+			transaction.begin_measure("app request handler processing")
 		end
 		
 		#################
 	end
 	
 	def finalize_request(connection, headers, has_error)
-		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
-		if log && !log.closed?
+		transaction = headers[UNION_STATION_REQUEST_TRANSACTION]
+		Thread.current[UNION_STATION_CORE] = nil
+		Thread.current[UNION_STATION_REQUEST_TRANSACTION] = nil
+
+		if transaction && !transaction.closed?
 			exception_occurred = false
 			begin
-				log.end_measure("app request handler processing", has_error)
+				transaction.end_measure("app request handler processing", has_error)
 				if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
-					log.message("Final objects on heap: #{ObjectSpace.live_objects}")
+					transaction.message("Final objects on heap: #{ObjectSpace.live_objects}")
 				end
 				if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
-					log.message("Final objects allocated so far: #{ObjectSpace.allocated_objects}")
+					transaction.message("Final objects allocated so far: #{ObjectSpace.allocated_objects}")
 				elsif OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS
 					count = ObjectSpace.count_objects
-					log.message("Final objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
+					transaction.message("Final objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
 				end
 				if GC_SUPPORTS_TIME
-					log.message("Final GC time: #{GC.time}")
+					transaction.message("Final GC time: #{GC.time}")
 				end
 				if GC_SUPPORTS_CLEAR_STATS
 					# Clear statistics to void integer wraps.
 					GC.clear_stats
 				end
-				Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = nil
 			rescue Exception
 				# Maybe this exception was raised while communicating
 				# with the logging agent. If that is the case then
-				# log.close may also raise an exception, but we're only
+				# transaction.close may also raise an exception, but we're only
 				# interested in the original exception. So if this
 				# situation occurs we must ignore any exceptions raised
-				# by log.close.
+				# by transaction.close.
 				exception_occurred = true
 				raise
 			ensure
@@ -343,7 +348,7 @@ private
 				# the helper agent may close the transaction before this
 				# process's openTransaction command is processed.
 				begin
-					log.close
+					transaction.close
 				rescue
 					raise if !exception_occurred
 				end
@@ -351,29 +356,6 @@ private
 		end
 		
 		#################
-	end
-	
-	def log_analytics_exception(env, exception)
-		log = @analytics_logger.new_transaction(
-			@app_group_name,
-			:exceptions,
-			env[PASSENGER_UNION_STATION_KEY])
-		begin
-			request_txn_id = env[PASSENGER_TXN_ID]
-			message = exception.message
-			message = exception.to_s if message.empty?
-			message = [message].pack('m')
-			message.gsub!("\n", "")
-			backtrace_string = [exception.backtrace.join("\n")].pack('m')
-			backtrace_string.gsub!("\n", "")
-
-			log.message("Request transaction ID: #{request_txn_id}")
-			log.message("Message: #{message}")
-			log.message("Class: #{exception.class.name}")
-			log.message("Backtrace: #{backtrace_string}")
-		ensure
-			log.close
-		end
 	end
 
 	def should_reraise_error?(e)

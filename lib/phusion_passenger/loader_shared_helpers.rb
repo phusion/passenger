@@ -195,9 +195,9 @@ module LoaderSharedHelpers
 	def before_loading_app_code_step1(startup_file, options)
 		DebugLogging.log_level = options["log_level"] if options["log_level"]
 
-		# Instantiate the analytics logger if requested. Can be nil.
-		PhusionPassenger.require_passenger_lib 'analytics_logger'
-		options["analytics_logger"] = AnalyticsLogger.new_from_options(options)
+		# Instantiate the Union Station core if requested. Can be nil.
+		PhusionPassenger.require_passenger_lib 'union_station/core'
+		options["union_station_core"] = UnionStation::Core.new_from_options(options)
 	end
 	
 	def run_load_path_setup_code(options)
@@ -325,8 +325,8 @@ module LoaderSharedHelpers
 			$0 = options["process_title"] + ": " + options["app_group_name"]
 		end
 
-		if forked && options["analytics_logger"]
-			options["analytics_logger"].clear_connection
+		if forked && options["union_station_core"]
+			options["union_station_core"].clear_connection
 		end
 		
 		# If we were forked from a preloader process then clear or

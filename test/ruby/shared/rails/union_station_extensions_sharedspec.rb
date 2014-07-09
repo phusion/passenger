@@ -1,12 +1,12 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'socket'
 require 'fileutils'
-PhusionPassenger.require_passenger_lib 'analytics_logger'
+PhusionPassenger.require_passenger_lib 'union_station/core'
 PhusionPassenger.require_passenger_lib 'utils/tmpdir'
 
 module PhusionPassenger
 
-shared_examples_for "analytics logging extensions for Rails" do
+shared_examples_for "Union Station extensions for Rails" do
 	before :each do
 		@logging_agent_password = "1234"
 		@dump_file = "#{Utils.passenger_tmpdir}/log.txt"
@@ -43,13 +43,13 @@ shared_examples_for "analytics logging extensions for Rails" do
 		return [data].pack('m').gsub("\n", "")
 	end
 	
-	it "doesn't install analytics logging extensions if analytics logging is turned off" do
+	it "doesn't install Union Station extensions if analytics logging is turned off" do
 		@options.delete("analytics")
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
 				def index
 					File.open("out.txt", "w") do |f|
-						f.write(request.env["PASSENGER_ANALYTICS_WEB_LOG"].class.to_s)
+						f.write(request.env["UNION_STATION_REQUEST_TRANSACTION"].class.to_s)
 					end
 					render :nothing => true
 				end
@@ -305,6 +305,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 			File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 				class FooController < ActionController::Base
 					def index
+						STDERR.puts 'hi'
 						Rails.cache.write("key1", "foo")
 						Rails.cache.write("key2", "foo")
 						Rails.cache.write("key3", "foo")

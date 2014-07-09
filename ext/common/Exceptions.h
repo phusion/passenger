@@ -255,17 +255,26 @@ class SpawnException: public oxt::tracable_exception {
 public:
 	enum ErrorKind {
 		UNDEFINED_ERROR,
-		/** The preloader failed to start, not due to a wrong protocol message. */
+		/** The preloader failed to start, not due to a wrong protocol message.
+		 * It did not explicitly supply an error message.
+		 */
 		PRELOADER_STARTUP_ERROR,
 		/** The preloader sent a wrong protocol message during startup. */
 		PRELOADER_STARTUP_PROTOCOL_ERROR,
+		/** The preloader timed out during startup. */
 		PRELOADER_STARTUP_TIMEOUT,
+		/** The preloader failed to start, not due to a wrong protocol message.
+		 * It DID explicitly supply an error message. */
 		PRELOADER_STARTUP_EXPLAINABLE_ERROR,
-		/** The application failed to start, not due to a wrong protocol message. */
+		/** The application failed to start, not due to a wrong protocol message.
+		 * It did not explicitly supply an error message. */
 		APP_STARTUP_ERROR,
 		/** The application sent a wrong protocol message during startup. */
 		APP_STARTUP_PROTOCOL_ERROR,
+		/** The application timed out during startup. */
 		APP_STARTUP_TIMEOUT,
+		/** The application failed to start, not due to a wrong protocol message.
+		 * It DID explicitly supply an error message. */
 		APP_STARTUP_EXPLAINABLE_ERROR
 	};
 	

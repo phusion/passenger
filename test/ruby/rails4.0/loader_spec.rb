@@ -1,6 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'ruby/shared/loader_sharedspec'
-require 'ruby/shared/rails/analytics_logging_extensions_sharedspec'
+require 'ruby/shared/rails/union_station_extensions_sharedspec'
 
 if RUBY_VERSION_INT >= 190
 module PhusionPassenger
@@ -21,7 +21,7 @@ describe "Rack loader with Rails 4.0" do
 		return "4.0"
 	end
 
-	include_examples "analytics logging extensions for Rails"
+	include_examples "Union Station extensions for Rails"
 end
 
 end # module PhusionPassenger

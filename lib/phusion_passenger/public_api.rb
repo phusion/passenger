@@ -57,21 +57,108 @@ class << self
 		@@advertised_concurrency_level = value
 	end
 	
-	def benchmark(env = nil, title = "Benchmarking")
-		log = lookup_analytics_log(env)
-		if log
-			log.measure("BENCHMARK: #{title}") do
+	def measure_and_log_event(env, name)
+		transaction = lookup_union_station_web_transaction(env)
+		if transaction
+			transaction.measure(name) do
 				yield
 			end
 		else
 			yield
 		end
 	end
+
+	def benchmark(env = nil, title = "Benchmarking", &block)
+		measure_and_log_event(env, "BENCHMARK: #{title}", &block)
+	end
+
+	# Log an exception that occurred during a request.
+	def log_request_exception(env, exception, options = nil)
+		return if !env[PASSENGER_TXN_ID]
+		core = lookup_union_station_core(env)
+		if core
+			transaction = core.new_transaction(
+				env[PASSENGER_APP_GROUP_NAME],
+				:exceptions,
+				env[PASSENGER_UNION_STATION_KEY])
+			begin
+				request_txn_id = env[PASSENGER_TXN_ID]
+				message = exception.message
+				message = exception.to_s if message.empty?
+				message = [message].pack('m')
+				message.gsub!("\n", "")
+				backtrace_string = [exception.backtrace.join("\n")].pack('m')
+				backtrace_string.gsub!("\n", "")
+
+				transaction.message("Request transaction ID: #{request_txn_id}")
+				transaction.message("Message: #{message}")
+				transaction.message("Class: #{exception.class.name}")
+				transaction.message("Backtrace: #{backtrace_string}")
+
+				if options && options[:controller_name]
+					if options[:action_name]
+						controller_action = "#{options[:controller_name]}##{options[:action_name]}"
+					else
+						controller_action = controller_name
+					end
+					transaction.message("Controller action: #{controller_action}")
+				end
+			ensure
+				transaction.close
+			end
+		end
+	end
+
+	# Log a controller action invocation.
+	def log_controller_action(env, options)
+		transaction = lookup_union_station_web_transaction(env)
+		if transaction
+			if options[:controller_name]
+				if !options[:action_name]
+					raise ArgumentError, "The :action_name option must be set"
+				end
+				transaction.message("Controller action: #{options[:controller_name]}##{options[:action_name]}")
+			end
+			if options[:method]
+				transaction.message("Request method: #{options[:method]}")
+			end
+			transaction.measure("framework request processing") do
+				yield
+			end
+		else
+			yield
+		end
+	end
+
+	# Log the total view rendering time of a request.
+	def log_total_view_rendering_time(env, runtime)
+		transaction = lookup_union_station_web_transaction(env)
+		if transaction
+			transaction.message("View rendering time: #{(runtime).to_i}")
+		end
+	end
+
+	# Log a single view rendering.
+	def log_view_rendering(env = nil, &block)
+		measure_and_log_event(env, "view rendering", &block)
+	end
 	
+	# Log a database query.
+	def log_database_query(env, name, begin_time, end_time, sql)
+		transaction = lookup_union_station_web_transaction(env)
+		if transaction
+			digest = Digest::MD5.hexdigest("#{name}\0#{sql}\0#{rand}")
+			transaction.measured_time_points("DB BENCHMARK: #{digest}",
+				begin_time,
+				end_time,
+				"#{name}\n#{sql}")
+		end
+	end
+
 	def log_cache_hit(env, name)
-		log = lookup_analytics_log(env)
-		if log
-			log.message("Cache hit: #{name}")
+		transaction = lookup_union_station_web_transaction(env)
+		if transaction
+			transaction.message("Cache hit: #{name}")
 			return true
 		else
 			return false
@@ -79,12 +166,12 @@ class << self
 	end
 	
 	def log_cache_miss(env, name, generation_time = nil)
-		log = lookup_analytics_log(env)
-		if log
+		transaction = lookup_union_station_web_transaction(env)
+		if transaction
 			if generation_time
-				log.message("Cache miss (#{generation_time.to_i}): #{name}")
+				transaction.message("Cache miss (#{generation_time.to_i}): #{name}")
 			else
-				log.message("Cache miss: #{name}")
+				transaction.message("Cache miss: #{name}")
 			end
 			return true
 		else
@@ -111,14 +198,19 @@ private
 			raise ArgumentError, "Unknown event name '#{name}'"
 		end
 	end
-	
-	def lookup_analytics_log(env)
+
+	def lookup_union_station_core(env = nil)
 		if env
-			return env[PASSENGER_ANALYTICS_WEB_LOG]
-		else
-			return Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
+			result = env[UNION_STATION_CORE]
 		end
+		return result || Thread.current[UNION_STATION_CORE]
 	end
 
+	def lookup_union_station_web_transaction(env = nil)
+		if env
+			result = env[UNION_STATION_REQUEST_TRANSACTION]
+		end
+		return result || Thread.current[UNION_STATION_REQUEST_TRANSACTION]
+	end
 end
 end # module PhusionPassenger

@@ -26,6 +26,10 @@ Release 4.0.46
    been broken for a while and has nowadays been obsolete by our automatic
    [binary generation system](https://github.com/phusion/passenger_autobuilder).
    Closes GH-1133.
+ * If you are a [Union Station](https://www.unionstationapp.com) customer, then
+   Phusion Passenger will now also log application spawning errors to Union Station.
+   This data isn't shown in the Union Station interface yet, but it will be
+   implemented in the future.
  * Fixed compilation problems on OmniOS and OpenIndiana. Closes GH-1212.
  * Fixed compilation problems when Nginx is configured with OpenResty.
    Thanks to Yichun Zhang. Closes GH-1226.

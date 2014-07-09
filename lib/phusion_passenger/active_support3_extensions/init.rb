@@ -28,31 +28,31 @@ module PhusionPassenger
 
 module ActiveSupport3Extensions
 	def self.init!(options, user_options = {})
-		if !AnalyticsLogging.install!(options, user_options)
+		if !UnionStationExtension.install!(options, user_options)
 			# Remove code to save memory.
-			PhusionPassenger::ActiveSupport3Extensions.send(:remove_const, :AnalyticsLogging)
+			PhusionPassenger::ActiveSupport3Extensions.send(:remove_const, :UnionStationExtension)
 			PhusionPassenger.send(:remove_const, :ActiveSupport3Extensions)
 		end
 	end
 end
 
 module ActiveSupport3Extensions
-class AnalyticsLogging < ActiveSupport::LogSubscriber
+class UnionStationExtension < ActiveSupport::LogSubscriber
 	def self.install!(options, user_options)
-		analytics_logger = options["analytics_logger"]
+		union_station_core = options["union_station_core"]
 		app_group_name = options["app_group_name"]
-		return false if !analytics_logger || !options["analytics"]
+		return false if !union_station_core || !options["analytics"]
 		
 		# If the Ruby interpreter supports GC statistics then turn it on
 		# so that the info can be logged.
 		GC.enable_stats if GC.respond_to?(:enable_stats)
 		
 		subscriber = self.new(user_options)
-		AnalyticsLogging.attach_to(:action_controller, subscriber)
-		AnalyticsLogging.attach_to(:active_record, subscriber)
+		UnionStationExtension.attach_to(:action_controller, subscriber)
+		UnionStationExtension.attach_to(:active_record, subscriber)
 		if defined?(ActiveSupport::Cache::Store)
 			ActiveSupport::Cache::Store.instrument = true
-			AnalyticsLogging.attach_to(:active_support, subscriber)
+			UnionStationExtension.attach_to(:active_support, subscriber)
 		end
 		PhusionPassenger.on_event(:starting_request_handler_thread) do
 			if defined?(ActiveSupport::Cache::Store)
@@ -70,7 +70,9 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 			if defined?(Rails)
 				Rails.application.middleware.insert_after(
 					exceptions_middleware,
-					ExceptionLogger, analytics_logger, app_group_name)
+					ExceptionLogger,
+					union_station_core,
+					app_group_name)
 			end
 		end
 		
@@ -95,21 +97,18 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 	end
 	
 	def process_action(event)
-		log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
-		if log
-			view_runtime = event.payload[:view_runtime]
-			log.message("View rendering time: #{(view_runtime * 1000).to_i}") if view_runtime
+		view_runtime = event.payload[:view_runtime]
+		if view_runtime
+			PhusionPassenger.log_total_view_rendering_time(nil, (view_runtime * 1000).to_i)
 		end
 	end
 	
 	def sql(event)
-		if log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
-			name = event.payload[:name] || "SQL"
-			sql = event.payload[:sql]
-			digest = Digest::MD5.hexdigest("#{name}\0#{sql}\0#{rand}")
-			log.measured_time_points("DB BENCHMARK: #{digest}",
-				event.time, event.end, "#{name}\n#{sql}")
-		end
+		PhusionPassenger.log_database_query(nil,
+			event.payload[:name] || "SQL",
+			event.time,
+			event.end,
+			event.payload[:sql])
 	end
 	
 	def cache_read(event)
@@ -130,76 +129,45 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 	end
 	
 	class ExceptionLogger
-		def initialize(app, analytics_logger, app_group_name)
+		def initialize(app, union_station_core, app_group_name)
 			@app = app
-			@analytics_logger = analytics_logger
+			@union_station_core = union_station_core
 			@app_group_name = app_group_name
 		end
 		
 		def call(env)
 			@app.call(env)
 		rescue Exception => e
-			log_analytics_exception(env, e) if env[PASSENGER_TXN_ID]
+			log_union_station_exception(env, e) if env[PASSENGER_TXN_ID]
 			raise e
 		end
 	
 	private
-		def log_analytics_exception(env, exception)
-			log = @analytics_logger.new_transaction(
-				@app_group_name,
-				:exceptions,
-				env[PASSENGER_UNION_STATION_KEY])
-			begin
-				request = ActionDispatch::Request.new(env)
-				if request.parameters['controller']
-					controller = request.parameters['controller'].humanize + "Controller"
-					action = request.parameters['action']
-				end
-				
-				request_txn_id = env[PASSENGER_TXN_ID]
-				message = exception.message
-				message = exception.to_s if message.empty?
-				message = [message].pack('m')
-				message.gsub!("\n", "")
-				backtrace_string = [exception.backtrace.join("\n")].pack('m')
-				backtrace_string.gsub!("\n", "")
-				if action && controller
-					controller_action = "#{controller}##{action}"
-				else
-					controller_action = controller
-				end
-				
-				log.message("Request transaction ID: #{request_txn_id}")
-				log.message("Message: #{message}")
-				log.message("Class: #{exception.class.name}")
-				log.message("Backtrace: #{backtrace_string}")
-				log.message("Controller action: #{controller_action}") if controller_action
-			ensure
-				log.close
+		def log_union_station_exception(env, exception)
+			options = {}
+			request = ActionDispatch::Request.new(env)
+			if request.parameters['controller']
+				options[:controller_name] = request.parameters['controller'].humanize + "Controller"
+				options[:action_name] = request.parameters['action']
 			end
+			PhusionPassenger.log_request_exception(env, exception, options)
 		end
 	end
 	
 	module ACExtension
 		def process_action(action, *args)
-			log = request.env[PASSENGER_ANALYTICS_WEB_LOG]
-			if log
-				log.message("Controller action: #{self.class.name}##{action_name}")
-				log.measure("framework request processing") do
-					super
-				end
-			else
+			options = {
+				:controller_name => self.class.name,
+				:action_name => action_name,
+				:method => request.request_method
+			}
+			PhusionPassenger.log_controller_action(request.env, options) do
 				super
 			end
 		end
 		
 		def render(*args)
-			log = request.env[PASSENGER_ANALYTICS_WEB_LOG]
-			if log
-				log.measure("view rendering") do
-					super
-				end
-			else
+			PhusionPassenger.log_view_rendering(request.env) do
 				super
 			end
 		end
@@ -207,14 +175,7 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 	
 	module ASBenchmarkableExtension
 		def benchmark_with_passenger(message = "Benchmarking", *args)
-			log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
-			if log
-				log.measure("BENCHMARK: #{message}") do
-					benchmark_without_passenger(message, *args) do
-						yield
-					end
-				end
-			else
+			PhusionPassenger.benchmark(nil, message) do
 				benchmark_without_passenger(message, *args) do
 					yield
 				end
@@ -222,7 +183,7 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 		end
 	end
 
-	private
+private
 	def install_event_preprocessor(event_preprocessor)
 		public_methods(false).each do |name|
 			singleton = class << self; self end
@@ -232,7 +193,7 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 			end)
 		end
 	end
-end # class AnalyticsLogging
+end # class UnionStationExtension
 end # module ActiveSupport3Extensions
 
 end # module PhusionPassenger

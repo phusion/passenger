@@ -47,11 +47,8 @@
 #include <ApplicationPool2/Session.h>
 #include <ApplicationPool2/SpawnerFactory.h>
 #include <ApplicationPool2/Options.h>
-#include <UnionStation/Core.h>
-#include <UnionStation/Transaction.h>
 #include <Logging.h>
 #include <Exceptions.h>
-#include <RandomGenerator.h>
 #include <Hooks.h>
 #include <Utils/Lock.h>
 #include <Utils/AnsiColorConstants.h>
@@ -125,8 +122,6 @@ public:
 	typedef boost::shared_ptr<DebugSupport> DebugSupportPtr;
 
 	SpawnerFactoryPtr spawnerFactory;
-	UnionStation::CorePtr unionStationCore;
-	RandomGeneratorPtr randomGenerator;
 	SystemMetricsCollector systemMetricsCollector;
 	SystemMetrics systemMetrics;
 
@@ -279,8 +274,16 @@ public:
 		}
 	}
 
-	ResourceLocator &getResourceLocator() const {
-		return spawnerFactory->getConfig()->resourceLocator;
+	const SpawnerConfigPtr &getSpawnerConfig() const {
+		return spawnerFactory->getConfig();
+	}
+
+	const UnionStation::CorePtr &getUnionStationCore() const {
+		return getSpawnerConfig()->unionStationCore;
+	}
+
+	const RandomGeneratorPtr &getRandomGenerator() const {
+		return getSpawnerConfig()->randomGenerator;
 	}
 
 	ProcessPtr findOldestIdleProcess(const Group *exclude = NULL) const {
@@ -787,6 +790,7 @@ public:
 	void prepareUnionStationProcessStateLogs(vector<UnionStationLogEntry> &logEntries,
 		const GroupPtr &group) const
 	{
+		const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
 		if (group->options.analytics && unionStationCore != NULL) {
 			logEntries.push_back(UnionStationLogEntry());
 			UnionStationLogEntry &entry = logEntries.back();
@@ -796,7 +800,7 @@ public:
 			group->inspectXml(stream, false);
 			stream << "</group>";
 
-			entry.groupName = group->name;
+			entry.groupName = group->options.getAppGroupName();
 			entry.category  = "processes";
 			entry.key       = group->options.unionStationKey;
 			entry.data      = stream.str();
@@ -806,6 +810,7 @@ public:
 	void prepareUnionStationSystemMetricsLogs(vector<UnionStationLogEntry> &logEntries,
 		const GroupPtr &group) const
 	{
+		const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
 		if (group->options.analytics && unionStationCore != NULL) {
 			logEntries.push_back(UnionStationLogEntry());
 			UnionStationLogEntry &entry = logEntries.back();
@@ -814,7 +819,7 @@ public:
 			stream << "System metrics: ";
 			systemMetrics.toXml(stream);
 
-			entry.groupName = group->name;
+			entry.groupName = group->options.getAppGroupName();
 			entry.category  = "system_metrics";
 			entry.key       = group->options.unionStationKey;
 			entry.data      = stream.str();
@@ -905,15 +910,18 @@ public:
 
 			l.unlock();
 			UPDATE_TRACE_POINT();
-			while (!logEntries.empty()) {
-				UnionStationLogEntry &entry = logEntries.back();
-				UnionStation::TransactionPtr transaction =
-					unionStationCore->newTransaction(
-						entry.groupName,
-						entry.category,
-						entry.key);
-				transaction->message(entry.data);
-				logEntries.pop_back();
+			if (!logEntries.empty()) {
+				const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
+				while (!logEntries.empty()) {
+					UnionStationLogEntry &entry = logEntries.back();
+					UnionStation::TransactionPtr transaction =
+						unionStationCore->newTransaction(
+							entry.groupName,
+							entry.category,
+							entry.key);
+					transaction->message(entry.data);
+					logEntries.pop_back();
+				}
 			}
 
 			UPDATE_TRACE_POINT();
@@ -963,17 +971,9 @@ public:
 	
 public:
 	Pool(const SpawnerFactoryPtr &spawnerFactory,
-		const UnionStation::CorePtr &unionStationCore = UnionStation::CorePtr(),
-		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr(),
 		const VariantMap *agentsOptions = NULL)
 	{
 		this->spawnerFactory = spawnerFactory;
-		this->unionStationCore = unionStationCore;
-		if (randomGenerator != NULL) {
-			this->randomGenerator = randomGenerator;
-		} else {
-			this->randomGenerator = boost::make_shared<RandomGenerator>();
-		}
 		this->agentsOptions = agentsOptions;
 
 		try {
