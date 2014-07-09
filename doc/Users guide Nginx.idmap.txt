@@ -30,6 +30,8 @@
 
 2.3.2. Installing packages	=>	installing-packages-j9glez
 
+2.3.3. Inserting passenger_root into nginx.conf.	=>	inserting-passenger-root-into-nginx-conf--1pmj19o
+
 2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1
 
 2.5. Generic installation, upgrade and downgrade method: via RubyGems	=>	generic-installation-upgrade-and-downgrade-method-via-rubygems-76uol7

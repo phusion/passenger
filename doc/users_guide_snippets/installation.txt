@@ -141,6 +141,9 @@ sudo apt-get install nginx-extras passenger
 --------------------------------------------------------------
 +
 3. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
++
+Especially <<PassengerRoot,passenger_root>> is important: Phusion Passenger won't work without it! If you don't see a commented version of `passenger_root` inside nginx.conf, then you need to <<inserting_passenger_root_for_apt,insert it yourself>>.
++
 4. Restart Nginx:
 +
 --------------------------------------------------------------
@@ -180,6 +183,9 @@ ifdef::nginx[]
 sudo apt-get install nginx-extras passenger-enterprise
 --------------------------------------------------------------
 4. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
++
+Especially <<PassengerRoot,passenger_root>> is important: Phusion Passenger won't work without it! If you don't see a commented version of `passenger_root` inside nginx.conf, then you need to <<inserting_passenger_root_for_apt,insert it yourself>>.
++
 5. Restart Nginx:
 +
 --------------------------------------------------------------
@@ -203,6 +209,38 @@ ifdef::standalone[]
 sudo apt-get install passenger-enterprise
 --------------------------------------------------------------
 endif::[]
+
+ifdef::nginx[]
+[[inserting_passenger_root_for_apt]]
+==== Inserting `passenger_root` into nginx.conf.
+
+During step 3 of the 'Installing packages' subsection, you were instructed to uncomment the <<PassengerRoot,passenger_root>> directive in `/etc/nginx/nginx.conf`. If there is no commented version in there, then you need to insert it yourself.
+
+First, run the following command and take note of its output:
+
+-----------------------------------
+/usr/bin/passenger-config --root
+-----------------------------------
+
+Next, insert the following snippet into `/etc/nginx/nginx.conf`, under the `http` block:
+
+-------------------------------------------------------------
+passenger_root whatever_value_you_got_from_previous_command;
+-------------------------------------------------------------
+
+Here is an example:
+
+-------------------------------------------------------------
+...
+http {
+   # path-to-locations.ini is given to you by `passenger-config --root`.
+   passenger_root /path-to-locations.ini;
+   ...
+}
+-------------------------------------------------------------
+
+Once you're done editing nginx.conf, continue with step 4.
+endif::nginx[]
 
 
 === Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux
