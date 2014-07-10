@@ -29,6 +29,7 @@ Release 4.0.46
    been broken for a while and has nowadays been obsolete by our automatic
    [binary generation system](https://github.com/phusion/passenger_autobuilder).
    Closes GH-1133.
+ * The `passenger_startup_file` option now also works on Python apps. Closes GH-1233.
  * If you are a [Union Station](https://www.unionstationapp.com) customer, then
    Phusion Passenger will now also log application spawning errors to Union Station.
    This data isn't shown in the Union Station interface yet, but it will be
