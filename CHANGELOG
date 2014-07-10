@@ -13,6 +13,9 @@ Release 4.0.46
    In the past, these details were only viewable in the browser. This change also
    fixes a bug on Phusion Passenger Enterprise, where enabling Deployment Error
    Resistance causes error messages to get lost. Closes GH-1021 and GH-1175.
+ * Fixed a regression in Node.js support. When a Node.js app is deployed on
+   a HTTPS host, the `X-Forwarded-Proto` header wasn't set in 4.0.45.
+   Closes GH-1231.
  * Passenger Standalone no longer, by default, loads shell startup files before
    loading the application. This is because Passenger Standalone is often invoked
    from the shell anyway. Indeed, loading shell startup files again can interfere

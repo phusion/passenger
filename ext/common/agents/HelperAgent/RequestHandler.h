@@ -2405,6 +2405,18 @@ private:
 				data.append("\r\n");
 			}
 
+			header = parser.getHeader("HTTPS");
+			if (!header.empty()) {
+				data.append("X-Forwarded-Proto: https\r\n");
+			}
+
+			header = parser.getHeader("REMOTE_ADDR");
+			if (!header.empty()) {
+				data.append("X-Forwarded-For: ");
+				data.append(header);
+				data.append("\r\n");
+			}
+
 			if (client->options.analytics) {
 				data.append("Passenger-Txn-Id: ");
 				data.append(client->options.transaction->getTxnId());
