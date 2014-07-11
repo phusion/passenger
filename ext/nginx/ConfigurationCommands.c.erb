@@ -123,6 +123,11 @@ def struct_field_for(option)
 		return "offsetof(#{struct_type_for(option)}, #{field})"
 	end
 end
+
+def post_for(option)
+	return option[:post] if option[:post]
+	return "NULL"
+end
 %>
 
 <% for option in LOCATION_CONFIGURATION_OPTIONS %>
@@ -133,6 +138,6 @@ end
 	<%= setter_function_for(option) %>,
 	<%= struct_for(option) %>,
 	<%= struct_field_for(option) %>,
-	NULL
+	<%= post_for(option) %>
 },
 <% end %>
