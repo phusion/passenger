@@ -66,6 +66,7 @@
 #            a dot (.e.g `upstream_config.pass_headers`) then the structure field will
 #            also not be auto-generated, because it is assumed to belong to an existing
 #            structure field.
+#  * post - The extra information needed by function for post-processing.
 #  * header - The name of the corresponding CGI header. By default CGI header
 #             generation code is automatically generated, using the configuration
 #             option's name in uppercase as the CGI header name.
@@ -193,7 +194,8 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:name     => 'passenger_ignore_headers',
 		:take     => 'NGX_CONF_1MORE',
 		:function => 'ngx_conf_set_bitmask_slot',
-		:field    => 'upstream_config.ignore_headers'
+		:field    => 'upstream_config.ignore_headers',
+		:post     => '&ngx_http_upstream_ignore_headers_masks'
 	},
 	{
 		:name   => 'passenger_set_cgi_param',
