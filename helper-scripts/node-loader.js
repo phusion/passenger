@@ -128,11 +128,34 @@ function generateServerSocketPath() {
 		+ process.pid + "." + ((Math.random() * 0xFFFFFFFF) & 0xFFFFFFF);
 }
 
+function addListenerAtBeginning(emitter, event, callback) {
+	var listeners = emitter.listeners(event);
+	var i;
+
+	emitter.removeAllListeners(event);
+	emitter.on(event, callback);
+	for (i = 0; i < listeners.length; i++) {
+		emitter.on(event, listeners[i]);
+	}
+}
+
 function installServer() {
 	var server = this;
 	if (!PhusionPassenger._appInstalled) {
 		PhusionPassenger._appInstalled = true;
 		PhusionPassenger._server = server;
+
+		// Ensure that req.connection.remoteAddress and remotePort return something
+		// instead of undefined. Apps like Etherpad expect it.
+		// See https://github.com/phusion/passenger/issues/1224
+		addListenerAtBeginning(server, 'request', function(req) {
+			req.connection.__defineGetter__('remoteAddress', function() {
+				return '127.0.0.1';
+			});
+			req.connection.__defineGetter__('remotePort', function() {
+				return 0;
+			});
+		});
 
 		var listenTries = 0;
 		doListen(extractCallback(arguments));
