@@ -1244,10 +1244,163 @@ namespace tut {
 		ensure_equals(io.readLine(), "Echo: hello\n");
 	}
 
+	TEST_METHOD(61) {
+		set_test_name("If the response contains Transfer-Encoding chunked, "
+			"it dechunks the response body and forwards it until the "
+			"zero-length chunk is encountered.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/chunked",
+			NULL);
+
+		string response = readAll(connection);
+		string body = stripHeaders(response);
+		ensure_equals(body,
+			"chunk1\n"
+			"chunk2\n"
+			"chunk3\n");
+	}
+
+	TEST_METHOD(62) {
+		set_test_name("If the response contains Transfer-Encoding chunked, "
+			"it closes the connection with the app when the zero-length chunk is encountered.");
+
+		DeleteFileEventually statusFile("/tmp/passenger-tail-status.txt");
+		createFile("/tmp/passenger-tail-status.txt", "");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/chunked",
+			"HTTP_X_SLEEP_WHEN_DONE", "0.01",
+			"HTTP_X_EXTRA_DATA", "true",
+			"HTTP_X_TAIL_STATUS_FILE", "/tmp/passenger-tail-status.txt",
+			NULL);
+
+		string response = readAll(connection);
+		string body = stripHeaders(response);
+		ensure_equals(body,
+			"chunk1\n"
+			"chunk2\n"
+			"chunk3\n");
+		EVENTUALLY(5,
+			result = readAll("/tmp/passenger-tail-status.txt") == "False";
+		);
+	}
+
+	TEST_METHOD(63) {
+		set_test_name("If the response contains Transfer-Encoding chunked, "
+			"it discards any additional response body data after the zero-length chunk is encountered.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/chunked",
+			"HTTP_X_EXTRA_DATA", "true",
+			NULL);
+
+		string response = readAll(connection);
+		string body = stripHeaders(response);
+		ensure_equals(body,
+			"chunk1\n"
+			"chunk2\n"
+			"chunk3\n");
+	}
+
+	TEST_METHOD(64) {
+		set_test_name("If the response contains Content-Length, "
+			"it forwards exactly Content-Length bytes of the response body.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/blob",
+			"HTTP_X_SIZE", "5000000",
+			"HTTP_X_CONTENT_LENGTH", "true",
+			NULL);
+
+		string response = readAll(connection);
+		string body = stripHeaders(response);
+		FILE *f = fopen("/tmp/debug.txt", "w");
+		fwrite(response.data(), 1, response.size(), f);
+		fclose(f);
+		ensure_equals(body.size(), 5000000u);
+	}
+
+	TEST_METHOD(65) {
+		set_test_name("If the response contains Content-Length, "
+			"it closes the connection with the app after forwarding exactly Content-Length bytes.");
+
+		DeleteFileEventually statusFile("/tmp/passenger-tail-status.txt");
+		createFile("/tmp/passenger-tail-status.txt", "");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/blob",
+			"HTTP_X_SIZE", "5000000",
+			"HTTP_X_CONTENT_LENGTH", "true",
+			"HTTP_X_SLEEP_WHEN_DONE", "0.01",
+			"HTTP_X_EXTRA_DATA", "true",
+			"HTTP_X_TAIL_STATUS_FILE", "/tmp/passenger-tail-status.txt",
+			NULL);
+
+		string response = readAll(connection);
+		string body = stripHeaders(response);
+		ensure_equals(body.size(), 5000000u);
+		EVENTUALLY(5,
+			result = readAll("/tmp/passenger-tail-status.txt") == "False";
+		);
+	}
+
+	TEST_METHOD(66) {
+		set_test_name("If the response contains Content-Length, "
+			"it discards any additional response body data after Content-Length bytes.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/blob",
+			"HTTP_X_SIZE", "5000000",
+			"HTTP_X_CONTENT_LENGTH", "true",
+			"HTTP_X_EXTRA_DATA", "true",
+			NULL);
+
+		string response = readAll(connection);
+		string body = stripHeaders(response);
+		ensure_equals(body.size(), 5000000u);
+	}
+
+	TEST_METHOD(67) {
+		set_test_name("If the response contains neither Transfer-Encoding chunked nor Content-Length, "
+			"it forwards the response body until EOF.");
+
+		init();
+		connect();
+		sendHeaders(defaultHeaders,
+			"PASSENGER_APP_ROOT", wsgiAppPath.c_str(),
+			"PATH_INFO", "/blob",
+			"HTTP_X_SIZE", "5000000",
+			"HTTP_X_EXTRA_DATA", "true",
+			NULL);
+
+		string response = readAll(connection);
+		string body = stripHeaders(response);
+		ensure_equals(body.size(), 5000004u);
+	}
+
 
 	/***** Out-of-band work tests *****/
 
-	TEST_METHOD(65) {
+	TEST_METHOD(75) {
 		set_test_name("If the application outputs a request oobw header, handler should remove the header, mark "
 			"the process as oobw requested. The process should continue to process requests until the "
 			"spawner spawns another process (to avoid the group being empty). As soon as the new "

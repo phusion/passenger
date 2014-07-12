@@ -226,6 +226,8 @@ private:
 		sessionCheckoutTry = 0;
 		responseHeaderSeen = false;
 		chunkedResponse = false;
+		responseContentLength = -1;
+		responseBodyAlreadyRead = 0;
 		appRoot.clear();
 	}
 
@@ -337,6 +339,21 @@ public:
 
 	bool responseHeaderSeen;
 	bool chunkedResponse;
+	/** The size of the response body, set based on the values of
+	 * the Content-Length and Transfer-Encoding response headers.
+	 * Possible values:
+	 *
+	 * -1: infinite. Should keep forwarding response body until end of stream.
+	 *     This is the case for WebSockets or for responses without Content-Length.
+	 *     Responses with "Transfer-Encoding: chunked" also fall under this
+	 *     category, though in this case encountering the zero-length chunk is
+	 *     treated the same as end of stream.
+	 * 0 : no client body. Should immediately close connection after forwarding
+	 *     headers.
+	 * >0: Should forward exactly this many bytes of the response body.
+	 */
+	long long responseContentLength;
+	unsigned long long responseBodyAlreadyRead;
 	HttpHeaderBufferer responseHeaderBufferer;
 	Dechunker responseDechunker;
 
@@ -587,6 +604,8 @@ public:
 			<< indent << "requestIsChunked            = " << boolStr(requestIsChunked) << "\n"
 			<< indent << "requestBodyLength           = " << requestBodyLength << "\n"
 			<< indent << "requestBodyAlreadyRead      = " << requestBodyAlreadyRead << "\n"
+			<< indent << "responseContentLength       = " << responseContentLength << "\n"
+			<< indent << "responseBodyAlreadyRead     = " << responseBodyAlreadyRead << "\n"
 			<< indent << "clientInput                 = " << clientInput.get() <<  " " << clientInput->inspect() << "\n"
 			<< indent << "clientInput started         = " << boolStr(clientInput->isStarted()) << "\n"
 			<< indent << "clientBodyBuffer started    = " << boolStr(clientBodyBuffer->isStarted()) << "\n"
@@ -1081,6 +1100,20 @@ private:
 			RH_TRACE(client, 3, "Response with chunked transfer encoding detected.");
 			client->chunkedResponse = true;
 			removeHeader(headerData, transferEncoding);
+		} else {
+			Header contentLength = lookupHeader(headerData, "Content-Length", "content-length");
+			if (!contentLength.empty()) {
+				client->responseContentLength = stringToLL(contentLength.value);
+			}
+		}
+
+		Header connection = lookupHeader(headerData, "Connection", "connection");
+		if (!connection.empty() && (connection.value == "keep-alive"
+			|| connection.value == "Keep-Alive"))
+		{
+			RH_TRACE(client, 3, "Keep-alive response detected. Changing to non-keep alive.");
+			removeHeader(headerData, connection);
+			headerData.append("Connection: close\r\n");
 		}
 
 		// Add X-Powered-By.
@@ -1160,6 +1193,7 @@ private:
 			removeHeader(headerData, oobw);
 		}
 
+		P_TRACE(2, "Fowarding response header from app client: " << headerData);
 		headerData.append("\r\n");
 		writeToClientOutputPipe(client, headerData);
 		return true;
@@ -1203,6 +1237,10 @@ private:
 						client->responseHeaderSeen = true;
 						StaticString header = client->responseHeaderBufferer.getData();
 						if (processResponseHeader(client, header)) {
+							if (client->responseContentLength == 0) {
+								RH_TRACE(client, 3, "Disconnecting client because response Content-Length = 0");
+								onAppInputEof(client);
+							}
 							return consumed;
 						} else {
 							assert(!client->connected());
@@ -1227,7 +1265,40 @@ private:
 
 	void onAppInputChunk(const ClientPtr &client, const StaticString &data) {
 		RH_LOG_EVENT(client, "onAppInputChunk");
-		writeToClientOutputPipe(client, data);
+		StaticString data2;
+
+		if (client->responseContentLength == -1) {
+			data2 = data;
+		} else {
+			size_t rest = client->responseContentLength -
+				client->responseBodyAlreadyRead;
+			data2 = StaticString(data.data(), std::min<size_t>(
+				rest, data.size()));
+		}
+
+		client->responseBodyAlreadyRead += data2.size();
+		assert(client->responseContentLength == -1 || client->responseBodyAlreadyRead <=
+			(unsigned long long) client->responseContentLength);
+		if (data2.empty()) {
+			// Client sent more data than was advertised through
+			// Content-Length. Ignore them.
+			return;
+		}
+
+		writeToClientOutputPipe(client, data2);
+
+		if (client->responseContentLength > 0) {
+			RH_TRACE(client, 3, client->responseBodyAlreadyRead << "/" <<
+				client->responseContentLength <<
+				" bytes of application data forwarded so far.");
+
+			if (client->connected() && (unsigned long long) client->responseContentLength
+				== client->responseBodyAlreadyRead)
+			{
+				RH_TRACE(client, 3, "Disconnecting client because application data has been fully forwarded.");
+				onAppInputEof(client);
+			}
+		}
 	}
 
 	void onAppInputChunkEnd(const ClientPtr &client) {
@@ -1239,11 +1310,15 @@ private:
 		RH_LOG_EVENT(client, "onAppInputEof");
 		// Check for session == NULL in order to avoid executing the code twice on
 		// responses with chunked encoding.
+		// This also ensures that when onAppInputEof() is called twice (e.g. because
+		// additional data was received after onAppInputChunk has already called onAppInputEof()),
+		// we don't do things twice.
 		if (!client->connected() || client->session == NULL) {
 			return;
 		}
 
 		RH_DEBUG(client, "Application sent EOF");
+		client->appInput->stop();
 		client->session.reset();
 		client->endScopeLog(&client->scopeLogs.requestProxying);
 		client->clientOutputPipe->end();
@@ -2423,6 +2498,7 @@ private:
 				data.append("\r\n");
 			}
 
+			P_TRACE(3, "Sending headers to application: " << data);
 			data.append("\r\n");
 
 			StaticString datas[] = { data };

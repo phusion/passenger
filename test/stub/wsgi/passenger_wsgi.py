@@ -49,10 +49,28 @@ def application(env, start_response):
 		second = params['second'][0]
 		body = "Method: %s\nFirst: %s\nSecond: %s\n" % (method, first, second)
 	elif path == '/chunked':
-		chunks = [str("7\r\nchunk1\n\r\n"), str("7\r\nchunk2\n\r\n"),
-			str("7\r\nchunk3\n\r\n"), str("0\r\n\r\n")]
+		def body():
+			yield str("7\r\nchunk1\n\r\n")
+			yield str("7\r\nchunk2\n\r\n")
+			yield str("7\r\nchunk3\n\r\n")
+			yield str("0\r\n\r\n")
+			sleep_time = float(env.get('HTTP_X_SLEEP_WHEN_DONE', 0))
+			time.sleep(sleep_time)
+			if env.get('HTTP_X_EXTRA_DATA') is not None:
+				status = False
+				try:
+					yield str("7\r\nchunk4\n\r\n")
+					status = True
+				finally:
+					filename = env.get('HTTP_X_TAIL_STATUS_FILE')
+					if filename is not None:
+						f = open(filename, "w")
+						try:
+							f.write(str(status))
+						finally:
+							f.close()
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
-		return chunks
+		return body()
 	elif path == '/pid':
 		body = os.getpid()
 	elif path.startswith('/env'):
@@ -133,13 +151,31 @@ def application(env, start_response):
 		body = 'ok'
 	elif path == '/blob':
 		size = int(env.get('HTTP_X_SIZE', 1024 * 1024 * 10))
+		headers = [('Content-Type', 'text/plain')]
+		if env.get('HTTP_X_CONTENT_LENGTH') is not None:
+			headers.append(('Content-Length', size))
 		def body():
 			written = 0
 			while written < size:
 				data = 'x' * min(1024 * 8, size - written)
 				yield(data)
 				written += len(data)
-		start_response(status, [('Content-Type', 'text/plain')])
+			sleep_time = float(env.get('HTTP_X_SLEEP_WHEN_DONE', 0))
+			time.sleep(sleep_time)
+			if env.get('HTTP_X_EXTRA_DATA') is not None:
+				status = False
+				try:
+					yield str("tail")
+					status = True
+				finally:
+					filename = env.get('HTTP_X_TAIL_STATUS_FILE')
+					if filename is not None:
+						f = open(filename, "w")
+						try:
+							f.write(str(status))
+						finally:
+							f.close()
+		start_response(status, headers)
 		return body()
 	elif path == '/oobw':
 		start_response(status, [('Content-Type', 'text/plain'), ('X-Passenger-Request-OOB-Work', 'true')])

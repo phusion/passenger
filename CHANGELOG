@@ -1,6 +1,7 @@
 Release 4.0.46
 --------------
 
+ * Further improved Node.js and Socket.io compatibility.
  * Sticky session cookies have been made more reliable.
  * The Python application loader now inserts the application root into `sys.path`.
    The fact that this was not done previously caused a lot of confusion amongst
