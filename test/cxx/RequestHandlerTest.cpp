@@ -1269,7 +1269,8 @@ namespace tut {
 			"it closes the connection with the app when the zero-length chunk is encountered.");
 
 		DeleteFileEventually statusFile("/tmp/passenger-tail-status.txt");
-		createFile("/tmp/passenger-tail-status.txt", "");
+		createFile("/tmp/passenger-tail-status.txt", "",
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 
 		init();
 		connect();
@@ -1338,7 +1339,8 @@ namespace tut {
 			"it closes the connection with the app after forwarding exactly Content-Length bytes.");
 
 		DeleteFileEventually statusFile("/tmp/passenger-tail-status.txt");
-		createFile("/tmp/passenger-tail-status.txt", "");
+		createFile("/tmp/passenger-tail-status.txt", "",
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 
 		init();
 		connect();
