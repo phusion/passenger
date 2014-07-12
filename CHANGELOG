@@ -39,6 +39,7 @@ Release 4.0.46
  * Fixed compilation problems when Nginx is configured with OpenResty.
    Thanks to Yichun Zhang. Closes GH-1226.
  * Documentation contributions by Tim Bishop and Tugdual de Kerviler.
+ * Minor Nginx bug fix by Feng Gu. Closes GH-1235.
 
 
 Release 4.0.45
