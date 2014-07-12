@@ -112,6 +112,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/regex.hpp>
 #include <ev++.h>
 
 #if defined(__GLIBCXX__) || defined(__APPLE__)
@@ -649,6 +650,7 @@ private:
 	HashMap<int, ClientPtr> clients;
 	Timer inactivityTimer;
 	bool accept4Available;
+	boost::regex upgradeHeaderRegex;
 
 
 	void disconnect(const ClientPtr &client) {
@@ -2458,7 +2460,9 @@ private:
 			}
 
 			StaticString connection = parser.getHeader("HTTP_CONNECTION");
-			if (connection == "upgrade" || connection == "Upgrade") {
+			if (regex_match(connection.data(), connection.data() + connection.size(),
+				upgradeHeaderRegex))
+			{
 				data.append("Connection: ");
 				data.append(connection.data(), connection.size());
 				data.append("\r\n");
@@ -2703,6 +2707,8 @@ public:
 		  pool(_pool),
 		  options(_options),
 		  resourceLocator(_options.passengerRoot),
+		  upgradeHeaderRegex("(keep-alive, *)?upgrade(, *keep-alive)?",
+		      boost::regex::perl | boost::regex::icase),
 		  benchmarkPoint(getDefaultBenchmarkPoint())
 	{
 		accept4Available = true;
