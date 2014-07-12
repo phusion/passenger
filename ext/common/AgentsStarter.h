@@ -535,10 +535,13 @@ public:
 				guard.clear();
 				if (e == ENOENT) {
 					string passengerRootConfig;
+					string docURL;
 					if (type == AS_APACHE) {
 						passengerRootConfig = "PassengerRoot";
+						docURL = APACHE2_DOC_URL "#PassengerRoot";
 					} else {
 						passengerRootConfig = "passenger_root";
+						docURL = NGINX_DOC_URL "#PassengerRoot";
 					}
 					throw RuntimeException("Unable to start the Phusion Passenger watchdog "
 						"because its executable (" + watchdogFilename + ") does "
@@ -546,7 +549,9 @@ public:
 						"installation is broken or incomplete, or that your '" +
 						passengerRootConfig + "' directive is set to the wrong value. "
 						"Please reinstall Phusion Passenger or fix your '" +
-						passengerRootConfig + "' directive, whichever is applicable.");
+						passengerRootConfig + "' directive, whichever is applicable. "
+						"To learn how to fix '" + passengerRootConfig + "', please read " +
+						docURL);
 				} else {
 					throw SystemException("Unable to start the Phusion Passenger watchdog (" +
 						watchdogFilename + ")", e);

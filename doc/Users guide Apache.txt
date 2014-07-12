@@ -570,10 +570,17 @@ Nevertheless, the system administrator may be interested in changing
 Phusion Passenger's behavior. Phusion Passenger's Apache module supports the
 following configuration options:
 
+[[PassengerRoot]]
 === PassengerRoot <directory> ===
 The location to the Phusion Passenger root directory. This configuration option
 is essential to Phusion Passenger, and allows Phusion Passenger to locate its own
-data files. The correct value is given by the installer.
+data files. If you do not set this option, or if you set this option to the wrong value, then Phusion Passenger will make Apache abort with an error.
+
+While installing Phusion Passenger, you have been told to set this option in your Apache configuration file, and you have been told what value to set it to. So under normal conditions, you don't have ask yourself what value to set for this option. But in case you lost the value (e.g. because you accidentally removed the Apache configuration file, and you are trying to reconstruct it), or in case you didn't follow the installation instructions correctly, then here's how you can find out the correct value:
+
+ * If you installed Phusion Passenger through <<install_on_debian_ubuntu,our APT repository>>, then the value can be obtained by running `/usr/bin/passenger-config --root`.
+ * If you installed Phusion Passenger through RubyGems, then the value can be obtained by running `passenger-config --root`.
+ * If you installed Phusion Passenger through the source tarball, then the value is the path to the Phusion Passenger directory. For example, if you extracted the tarball's contents to `/opt/passenger/passenger-x.x.x`, then `passenger_root` must be `/opt/passenger/passenger-x.x.x`.
 
 If you've moved Phusion Passenger to a different directory then you need to update
 this option as well. Please read

@@ -212,7 +212,7 @@ endif::[]
 
 ifdef::nginx[]
 [[inserting_passenger_root_for_apt]]
-==== Inserting `passenger_root` into nginx.conf.
+==== Inserting `passenger_root` into nginx.conf
 
 During step 3 of the 'Installing packages' subsection, you were instructed to uncomment the <<PassengerRoot,passenger_root>> directive in `/etc/nginx/nginx.conf`. If there is no commented version in there, then you need to insert it yourself.
 
