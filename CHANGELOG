@@ -39,6 +39,8 @@ Release 4.0.46
  * Fixed compilation problems on OmniOS and OpenIndiana. Closes GH-1212.
  * Fixed compilation problems when Nginx is configured with OpenResty.
    Thanks to Yichun Zhang. Closes GH-1226.
+ * Fixed Nginx HTTP POST failures on ARM platforms. Thanks to nocelic for the fix.
+   Closes GH-1151.
  * Documentation contributions by Tim Bishop and Tugdual de Kerviler.
  * Minor Nginx bug fix by Feng Gu. Closes GH-1235.
 
