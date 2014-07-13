@@ -534,7 +534,7 @@ create_request(ngx_http_request_t *r)
                            sizeof("CONTENT_LENGTH"));
 
         b->last = ngx_snprintf(b->last, 10, "%O",
-            (unsigned int) r->headers_in.content_length_n);
+            r->headers_in.content_length_n);
         *b->last++ = (u_char) 0;
     }
     
