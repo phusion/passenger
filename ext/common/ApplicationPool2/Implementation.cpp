@@ -25,8 +25,10 @@
 #include <typeinfo>
 #include <algorithm>
 #include <utility>
+#include <cstdio>
 #include <sstream>
 #include <limits.h>
+#include <unistd.h>
 #include <boost/make_shared.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/backtrace.hpp>
@@ -38,6 +40,7 @@
 #include <Exceptions.h>
 #include <MessageReadersWriters.h>
 #include <Utils.h>
+#include <Utils/IOUtils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/MessageIO.h>
 #include <Utils/JsonUtils.h>
