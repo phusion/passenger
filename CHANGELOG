@@ -1,6 +1,8 @@
 Release 4.0.47
 --------------
 
+ * [Enterprise] Fixed a bug in Flying Passenger's `--max-preloader-idle-time`
+   option.
 
 
 Release 4.0.46
