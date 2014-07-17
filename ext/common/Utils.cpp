@@ -25,6 +25,7 @@
 
 #include <oxt/system_calls.hpp>
 #include <boost/thread.hpp>
+#include <boost/shared_array.hpp>
 
 #include <cassert>
 #include <cstdlib>
@@ -38,6 +39,8 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <dirent.h>
+#include <pwd.h>
+#include <grp.h>
 #include <limits.h>
 #include <unistd.h>
 #include <string.h>
@@ -381,21 +384,25 @@ escapeForXml(const StaticString &input) {
 string
 getProcessUsername() {
 	struct passwd pwd, *result;
-	char strings[1024];
-	int ret;
-	
+	long bufSize;
+	shared_array<char> strings;
+
+	bufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+	if (bufSize == -1) {
+		// Let's hope this is enough.
+		bufSize = 1024 * 64;
+	}
+	strings.reset(new char[bufSize]);
+
 	result = (struct passwd *) NULL;
-	do {
-		ret = getpwuid_r(getuid(), &pwd, strings, sizeof(strings), &result);
-	} while (ret == -1 && errno == EINTR);
-	if (ret == -1) {
+	if (getpwuid_r(getuid(), &pwd, strings.get(), bufSize, &result) != 0) {
 		result = (struct passwd *) NULL;
 	}
-	
+
 	if (result == (struct passwd *) NULL || result->pw_name == NULL || result->pw_name[0] == '\0') {
-		snprintf(strings, sizeof(strings), "UID %lld", (long long) getuid());
-		strings[sizeof(strings) - 1] = '\0';
-		return strings;
+		snprintf(strings.get(), bufSize, "UID %lld", (long long) getuid());
+		strings.get()[bufSize - 1] = '\0';
+		return strings.get();
 	} else {
 		return result->pw_name;
 	}
@@ -403,10 +410,23 @@ getProcessUsername() {
 
 string
 getGroupName(gid_t gid) {
-	struct group *groupEntry;
+	struct group grp, *groupEntry;
+	long bufSize;
+	shared_array<char> strings;
 
-	groupEntry = getgrgid(gid);
-	if (groupEntry == NULL) {
+	bufSize = sysconf(_SC_GETGR_R_SIZE_MAX);
+	if (bufSize == -1) {
+		// Let's hope this is enough.
+		bufSize = 1024 * 64;
+	}
+	strings.reset(new char[bufSize]);
+
+	groupEntry = (struct group *) NULL;
+	if (getgrgid_r(gid, &grp, strings.get(), bufSize, &groupEntry) != 0) {
+		groupEntry = (struct group *) NULL;
+	}
+
+	if (groupEntry == (struct group *) NULL) {
 		return toString(gid);
 	} else {
 		return groupEntry->gr_name;
@@ -415,10 +435,23 @@ getGroupName(gid_t gid) {
 
 gid_t
 lookupGid(const string &groupName) {
-	struct group *groupEntry;
+	struct group grp, *groupEntry;
+	long bufSize;
+	shared_array<char> strings;
 
-	groupEntry = getgrnam(groupName.c_str());
-	if (groupEntry == NULL) {
+	bufSize = sysconf(_SC_GETGR_R_SIZE_MAX);
+	if (bufSize == -1) {
+		// Let's hope this is enough.
+		bufSize = 1024 * 64;
+	}
+	strings.reset(new char[bufSize]);
+
+	groupEntry = (struct group *) NULL;
+	if (getgrnam_r(groupName.c_str(), &grp, strings.get(), bufSize, &groupEntry) != 0) {
+		groupEntry = (struct group *) NULL;
+	}
+
+	if (groupEntry == (struct group *) NULL) {
 		if (looksLikePositiveNumber(groupName)) {
 			return atoi(groupName);
 		} else {

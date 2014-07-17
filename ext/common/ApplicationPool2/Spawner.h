@@ -836,8 +836,21 @@ protected:
 	void prepareUserSwitching(SpawnPreparationInfo &info, const Options &options) const {
 		TRACE_POINT();
 		if (geteuid() != 0) {
-			struct passwd *userInfo = getpwuid(geteuid());
-			if (userInfo == NULL) {
+			struct passwd pwd, *userInfo;
+			long bufSize;
+			shared_array<char> strings;
+
+			bufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+			if (bufSize == -1) {
+				// Let's hope this is enough.
+				bufSize = 1024 * 64;
+			}
+			strings.reset(new char[bufSize]);
+
+			userInfo = (struct passwd *) NULL;
+			if (getpwuid_r(geteuid(), &pwd, strings.get(), bufSize, &userInfo) != 0
+			 || userInfo == (struct passwd *) NULL)
+			{
 				throw RuntimeException("Cannot get user database entry for user " +
 					getProcessUsername() + "; it looks like your system's " +
 					"user database is broken, please fix it.");
@@ -857,17 +870,48 @@ protected:
 		UPDATE_TRACE_POINT();
 		string defaultGroup;
 		string startupFile = absolutizePath(options.getStartupFile(), info.appRoot);
-		struct passwd *userInfo = NULL;
+		struct passwd pwd, *userInfo;
+		struct group  grp;
 		gid_t  groupId = (gid_t) -1;
+		long pwdBufSize, grpBufSize;
+		shared_array<char> pwdBuf, grpBuf;
+		int ret;
 		
+		pwdBufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+		if (pwdBufSize == -1) {
+			// Let's hope this is enough.
+			pwdBufSize = 1024 * 64;
+		}
+		pwdBuf.reset(new char[pwdBufSize]);
+
+		grpBufSize = sysconf(_SC_GETGR_R_SIZE_MAX);
+		if (grpBufSize == -1) {
+			// Let's hope this is enough.
+			grpBufSize = 1024 * 64;
+		}
+		grpBuf.reset(new char[grpBufSize]);
+
 		if (options.defaultGroup.empty()) {
-			struct passwd *info = getpwnam(options.defaultUser.c_str());
-			if (info == NULL) {
+			struct passwd *info;
+			struct group *group;
+
+			info = (struct passwd *) NULL;
+			ret = getpwnam_r(options.defaultUser.c_str(), &pwd, pwdBuf.get(),
+				pwdBufSize, &info);
+			if (ret != 0) {
+				info = (struct passwd *) NULL;
+			}
+			if (info == (struct passwd *) NULL) {
 				throw RuntimeException("Cannot get user database entry for username '" +
 					options.defaultUser + "'");
 			}
-			struct group *group = getgrgid(info->pw_gid);
-			if (group == NULL) {
+
+			group = (struct group *) NULL;
+			ret = getgrgid_r(info->pw_gid, &grp, grpBuf.get(), grpBufSize, &group);
+			if (ret != 0) {
+				group = (struct group *) NULL;
+			}
+			if (group == (struct group *) NULL) {
 				throw RuntimeException(string("Cannot get group database entry for ") +
 					"the default group belonging to username '" +
 					options.defaultUser + "'");
@@ -878,8 +922,13 @@ protected:
 		}
 		
 		UPDATE_TRACE_POINT();
+		userInfo = (struct passwd *) NULL;
 		if (!options.user.empty()) {
-			userInfo = getpwnam(options.user.c_str());
+			ret = getpwnam_r(options.user.c_str(), &pwd, pwdBuf.get(),
+				pwdBufSize, &userInfo);
+			if (ret != 0) {
+				userInfo = (struct passwd *) NULL;
+			}
 		} else {
 			struct stat buf;
 			if (syscalls::lstat(startupFile.c_str(), &buf) == -1) {
@@ -887,35 +936,57 @@ protected:
 				throw SystemException("Cannot lstat(\"" + startupFile +
 					"\")", e);
 			}
-			userInfo = getpwuid(buf.st_uid);
+			ret = getpwuid_r(buf.st_uid, &pwd, pwdBuf.get(),
+				pwdBufSize, &userInfo);
+			if (ret != 0) {
+				userInfo = (struct passwd *) NULL;
+			}
 		}
-		if (userInfo == NULL || userInfo->pw_uid == 0) {
-			userInfo = getpwnam(options.defaultUser.c_str());
+		if (userInfo == (struct passwd *) NULL || userInfo->pw_uid == 0) {
+			userInfo = (struct passwd *) NULL;
+			ret = getpwnam_r(options.defaultUser.c_str(), &pwd,
+				pwdBuf.get(), pwdBufSize, &userInfo);
+			if (ret != 0) {
+				userInfo = (struct passwd *) NULL;
+			}
 		}
 		
 		UPDATE_TRACE_POINT();
 		if (!options.group.empty()) {
+			struct group *groupInfo = (struct group *) NULL;
+
 			if (options.group == "!STARTUP_FILE!") {
 				struct stat buf;
+
 				if (syscalls::lstat(startupFile.c_str(), &buf) == -1) {
 					int e = errno;
 					throw SystemException("Cannot lstat(\"" +
 						startupFile + "\")", e);
 				}
-				if (getgrgid(buf.st_gid) != NULL) {
+
+				ret = getgrgid_r(buf.st_gid, &grp, grpBuf.get(), grpBufSize,
+					&groupInfo);
+				if (ret != 0) {
+					groupInfo = (struct group *) NULL;
+				}
+				if (groupInfo != NULL) {
 					groupId = buf.st_gid;
 				} else {
 					groupId = (gid_t) -1;
 				}
 			} else {
-				struct group *groupInfo = getgrnam(options.group.c_str());
+				ret = getgrnam_r(options.group.c_str(), &grp, grpBuf.get(),
+					grpBufSize, &groupInfo);
+				if (ret != 0) {
+					groupInfo = (struct group *) NULL;
+				}
 				if (groupInfo != NULL) {
 					groupId = groupInfo->gr_gid;
 				} else {
 					groupId = (gid_t) -1;
 				}
 			}
-		} else if (userInfo != NULL) {
+		} else if (userInfo != (struct passwd *) NULL) {
 			groupId = userInfo->pw_gid;
 		}
 		if (groupId == 0 || groupId == (gid_t) -1) {
@@ -923,7 +994,7 @@ protected:
 		}
 
 		UPDATE_TRACE_POINT();
-		if (userInfo == NULL) {
+		if (userInfo == (struct passwd *) NULL) {
 			throw RuntimeException("Cannot determine a user to lower privilege to");
 		}
 		if (groupId == (gid_t) -1) {
@@ -949,7 +1020,7 @@ protected:
 			#define HAVE_GETGROUPLIST
 		#endif
 		#ifdef HAVE_GETGROUPLIST
-			int ret = getgrouplist(userInfo->pw_name, groupId,
+			ret = getgrouplist(userInfo->pw_name, groupId,
 				groups, &info.ngroups);
 			if (ret == -1) {
 				int e = errno;
