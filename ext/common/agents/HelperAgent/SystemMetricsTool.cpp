@@ -41,7 +41,7 @@ struct Options {
 	SystemMetrics::XmlOptions xmlOptions;
 	SystemMetrics::DescriptionOptions descOptions;
 	int interval;
-	bool stdin;
+	bool useStdin;
 	bool exitOnUnexpectedError;
 	bool help;
 
@@ -49,7 +49,7 @@ struct Options {
 		xml = false;
 		descOptions.colors = isatty(1);
 		interval = -1;
-		stdin = false;
+		useStdin = false;
 		exitOnUnexpectedError = true;
 		help = false;
 	}
@@ -117,7 +117,7 @@ parseOptions(int argc, char *argv[]) {
 				exit(1);
 			}
 		} else if (isFlag(argv[i], '\0', "--stdin")) {
-			options.stdin = true;
+			options.useStdin = true;
 			i++;
 		} else if (isFlag(argv[i], '\0', "--no-exit-on-unexpected-error")) {
 			options.exitOnUnexpectedError = false;
@@ -131,7 +131,7 @@ parseOptions(int argc, char *argv[]) {
 			exit(1);
 		}
 	}
-	if (options.interval != -1 && options.stdin) {
+	if (options.interval != -1 && options.useStdin) {
 		fprintf(stderr, "ERROR: --watch and --stdin are mutually exclusive.\n");
 		exit(1);
 	}
@@ -181,7 +181,7 @@ main(int argc, char *argv[]) {
 		usleep(50000);
 	}
 
-	if (options.stdin) {
+	if (options.useStdin) {
 		while (waitForNextLine()) {
 			perform(options, collector, metrics);
 		}

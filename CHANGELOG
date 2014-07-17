@@ -4,6 +4,7 @@ Release 4.0.48
  * Fixed a race condition while determining what user an application should
    be executed as. This bug could lead to applications being run as the wrong
    user. Closes GH-1241.
+ * Fixed compilation problems on OpenBSD.
 
 
 Release 4.0.47
