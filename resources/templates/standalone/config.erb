@@ -151,7 +151,7 @@ http {
         <% end %>
 
         # Rails asset pipeline support.
-        location ~ ^/assets/ {
+        location ~ ^/assets/.+-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]\..+ {
             error_page 490 = @static_asset;
             error_page 491 = @dynamic_request;
             recursive_error_pages on;
