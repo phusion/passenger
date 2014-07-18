@@ -1,5 +1,9 @@
 #!/usr/bin/env ruby
+#
+# Usage: ./dev/list_tests.rb <FILENAME>
+#
 # Lists the test names in the given .cpp test file.
+
 require_relative '../lib/phusion_passenger/utils/ansi_colors'
 
 include PhusionPassenger::Utils::AnsiColors

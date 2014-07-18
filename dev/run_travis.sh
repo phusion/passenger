@@ -1,4 +1,6 @@
 #!/bin/bash
+# This script is run by Travis, to execute tests in the CI environment.
+
 set -e
 
 export VERBOSE=1

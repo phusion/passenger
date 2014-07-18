@@ -1,4 +1,10 @@
 #!/usr/bin/env ruby
+#
+# Usage: ./dev/runner <CODE>
+#
+# Evaluates Ruby code in an environment that has the Phusion Passenger
+# libraries loaded.
+
 require File.expand_path(File.dirname(__FILE__) + "/../lib/phusion_passenger")
 PhusionPassenger.locate_directories
 
