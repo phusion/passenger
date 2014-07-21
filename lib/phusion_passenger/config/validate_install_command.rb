@@ -122,12 +122,12 @@ private
 			paths.concat(output.split(':'))
 		end
 
-		paths.delete(gem_bindir)
-		paths.delete(homebrew_bindir)
-		paths.delete(PhusionPassenger.bin_dir)
 		# These may not be in PATH if the user did not run this command through sudo.
 		paths << "/usr/bin"
 		paths << "/usr/sbin"
+		paths.delete(gem_bindir)
+		paths.delete(homebrew_bindir)
+		paths.delete(PhusionPassenger.bin_dir)
 		paths.uniq!
 
 		other_installs = []
