@@ -138,11 +138,11 @@ private
 		STDERR.puts " --> Downloading precompiled #{library_name} for the current Ruby interpreter..."
 		STDERR.puts "     (set PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY=0 to disable)"
 		
-		require 'shellwords'
 		require 'logger'
 		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 		PhusionPassenger.require_passenger_lib 'utils/tmpio'
 		PhusionPassenger.require_passenger_lib 'utils/download'
+		PhusionPassenger.require_passenger_lib 'utils/shellwords'
 
 		PhusionPassenger::Utils.mktmpdir("passenger-native-support-") do |dir|
 			Dir.chdir(dir) do
@@ -215,7 +215,7 @@ private
 		STDERR.puts "     (set PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY=0 to disable)"
 
 		require 'fileutils'
-		require 'shellwords'
+		PhusionPassenger.require_passenger_lib 'utils/shellwords'
 		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 		
 		target_dir = compile(installation_target_dirs)

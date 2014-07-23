@@ -9,6 +9,7 @@ Release 4.0.48
    pipeline files. Closes GH-1225.
  * Fixed compilation problems on CentOS 5. Thanks to J. Smith. Closes GH-1247.
  * Fixed compilation problems on OpenBSD.
+ * Fixed compatibility with Ruby 1.8.5.
 
 
 Release 4.0.47

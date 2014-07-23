@@ -34,7 +34,7 @@ require 'phusion_passenger'
 
 PhusionPassenger.locate_directories
 
-require 'digest'
+require 'digest/sha2'
 require 'optparse'
 require 'fileutils'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
@@ -268,7 +268,7 @@ private
 		if download(url, tarball, DOWNLOAD_OPTION)
 			Dir.chdir(@working_dir) do
 				puts "<banner>Verifying PCRE checksum...</banner>"
-				if Digest::SHA256.file(tarball) != PCRE_SHA256_CHECKSUM
+				if sha256_file(tarball) != PCRE_SHA256_CHECKSUM
 					new_screen
 					render_template "nginx/pcre_checksum_could_not_be_verified"
 					wait
@@ -306,7 +306,7 @@ private
 		if download(url, tarball, DOWNLOAD_OPTION)
 			Dir.chdir(@working_dir) do
 				puts "<banner>Verifying Nginx checksum...</banner>"
-				if Digest::SHA256.file(tarball) != NGINX_SHA256_CHECKSUM
+				if sha256_file(tarball) != NGINX_SHA256_CHECKSUM
 					return nil
 				end
 
@@ -565,6 +565,20 @@ private
 			end
 		end
 		return @pcre_is_installed
+	end
+
+	def sha256_file(path)
+		# We do this instead of using #file, for Ruby 1.8.5 support.
+		digest = Digest::SHA256.new
+		File.open(path, "rb") do |f|
+			buf = ''
+			buf.force_encoding('binary') if buf.respond_to?(:force_encoding)
+			while !f.eof?
+				f.read(1024 * 16, buf)
+				digest.update(buf)
+			end
+		end
+		return digest.hexdigest
 	end
 end
 

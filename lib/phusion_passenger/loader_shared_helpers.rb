@@ -25,7 +25,7 @@
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'public_api'
 PhusionPassenger.require_passenger_lib 'debug_logging'
-require 'shellwords'
+PhusionPassenger.require_passenger_lib 'utils/shellwords'
 
 module PhusionPassenger
 
