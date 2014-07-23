@@ -187,7 +187,7 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 		UPDATE_TRACE_POINT();
 		errorPage = renderer.renderWithDetails(appMessage, options, &e);
 
-		#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+		#if (defined(__linux__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 11))) || defined(__APPLE__) || defined(__FreeBSD__)
 			snprintf(filename, PATH_MAX, "%s/passenger-error-XXXXXX.html",
 				getSystemTempDir());
 			fd = mkstemps(filename, sizeof(".html") - 1);
