@@ -7,6 +7,7 @@ Release 4.0.48
  * [Standalone] Improved autodetection of Rails asset pipeline files. This
    prevents Standalone from incorrectly setting caching headers on non-asset
    pipeline files. Closes GH-1225.
+ * Fixed compilation problems on CentOS 5. Thanks to J. Smith. Closes GH-1247.
  * Fixed compilation problems on OpenBSD.
 
 
