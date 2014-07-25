@@ -6,7 +6,7 @@ set -e
 PASSENGER_ROOT=`dirname "$0"`
 PASSENGER_ROOT=`cd "$PASSENGER_ROOT/../.." && pwd`
 
-if [[ "$WORKSPACE" != "" ]]; then
+if [[ "$WORKSPACE" = "" ]]; then
 	echo "Please set WORKSPACE."
 	exit 1
 fi
