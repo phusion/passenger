@@ -91,7 +91,7 @@ module Packaging
 		'doc/**/*',
 		'man/*',
 		'debian.template/**/*',
-		'rpm/**/*',
+		'packaging/**/*',
 		'helper-scripts/**/*',
 		'ext/common/**/*.{cpp,c,h,hpp,md,erb}',
 		'ext/apache2/*.{cpp,h,hpp,c,erb}',
@@ -131,6 +131,8 @@ module Packaging
 	]
 	
 	EXCLUDE_GLOB = [
+		'.gitmodules',
+		'packaging/*/.git',
 		'test/stub/rails_apps/3.0/empty/help/**/*',
 		'test/stub/*.dSYM'
 	]

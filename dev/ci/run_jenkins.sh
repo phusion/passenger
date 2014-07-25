@@ -5,7 +5,11 @@ set -e
 
 PASSENGER_ROOT=`dirname "$0"`
 PASSENGER_ROOT=`cd "$PASSENGER_ROOT/../.." && pwd`
-WORKSPACE=${WORKSPACE:-/tmp}
+
+if [[ "$WORKSPACE" != "" ]]; then
+	echo "Please set WORKSPACE."
+	exit 1
+fi
 
 JENKINS_CACHE_DIR="$WORKSPACE/jenkins_cache"
 mkdir -p "$JENKINS_CACHE_DIR"

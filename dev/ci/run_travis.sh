@@ -21,6 +21,8 @@ export rvmsudo_secure_path=1
 
 if [[ -e /etc/workaround-docker-2267/hosts ]]; then
 	HOSTS_FILE=/etc/workaround-docker-2267/hosts
+	workaround-docker-2267
+	find /usr/local/rvm/rubies/*/lib/ruby -name resolv.rb | xargs sed -i 's|/etc/hosts|/cte/hosts|g'
 else
 	HOSTS_FILE=/etc/hosts
 fi
@@ -217,8 +219,11 @@ if [[ "$TEST_RPM_PACKAGING" = 1 ]]; then
 		-v "$PASSENGER_ROOT_ON_DOCKER_HOST/packaging/rpm:/system:ro" \
 		-v "$PASSENGER_ROOT_ON_DOCKER_HOST:/passenger" \
 		-v "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/output/el6-x86_64:/packages:ro" \
+		-e "APP_UID=`id -u`" \
+		-e "APP_GID=`id -g`" \
 		phusion/passenger_rpm_automation \
 		/system/internal/my_init --skip-runit --skip-startup-files --quiet -- \
+		/system/internal/inituidgid \
 		/bin/bash -c "cd /passenger && exec ./dev/ci/run_rpm_tests.sh"
 	run cp "test/config.json.travis" "test/config.json"
 fi
