@@ -21,8 +21,8 @@ export rvmsudo_secure_path=1
 
 if [[ -e /etc/workaround-docker-2267/hosts ]]; then
 	HOSTS_FILE=/etc/workaround-docker-2267/hosts
-	workaround-docker-2267
-	find /usr/local/rvm/rubies/*/lib/ruby -name resolv.rb | xargs sed -i 's|/etc/hosts|/cte/hosts|g'
+	sudo workaround-docker-2267
+	find /usr/local/rvm/rubies/*/lib/ruby -name resolv.rb | sudo xargs sed -i 's|/etc/hosts|/cte/hosts|g'
 else
 	HOSTS_FILE=/etc/hosts
 fi
