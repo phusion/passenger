@@ -1,0 +1,3 @@
+[submodule "packaging/rpm"]
+	path = packaging/rpm
+	url = https://github.com/phusion/passenger_rpm_automation.git

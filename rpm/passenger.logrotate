@@ -1,7 +1,0 @@
-/var/log/passenger-analytics/*.log {
-    missingok
-    notifempty
-    sharedscripts
-    compress
-    delaycompress
-}

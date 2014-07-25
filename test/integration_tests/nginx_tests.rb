@@ -70,7 +70,7 @@ describe "Phusion Passenger for Nginx" do
 			@stub = RackStub.new('rack')
 			@nginx.add_server do |server|
 				server[:server_name] = "1.passenger.test"
-				server[:root]        = "#{PhusionPassenger.source_root}/test/stub"
+				server[:root]        = File.expand_path("stub")
 				server << %Q{
 					location ~ ^/subapp(/.*|$) {
 						alias #{@stub.full_app_root}/public$1;
@@ -132,7 +132,7 @@ describe "Phusion Passenger for Nginx" do
 			@stub = PythonStub.new('wsgi')
 			@nginx.add_server do |server|
 				server[:server_name] = "1.passenger.test"
-				server[:root]        = "#{PhusionPassenger.source_root}/test/stub"
+				server[:root]        = File.expand_path("stub")
 				server << %Q{
 					location ~ ^/subapp(/.*|$) {
 						alias #{@stub.full_app_root}/public$1;
@@ -194,7 +194,7 @@ describe "Phusion Passenger for Nginx" do
 			@stub = NodejsStub.new('node')
 			@nginx.add_server do |server|
 				server[:server_name] = "1.passenger.test"
-				server[:root]        = "#{PhusionPassenger.source_root}/test/stub"
+				server[:root]        = File.expand_path("stub")
 				server[:passenger_friendly_error_pages] = 'on'
 				server << %Q{
 					location ~ ^/subapp(/.*|$) {

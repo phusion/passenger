@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+if grep -q docker_env /etc/group; then
+	delgroup docker_env >/dev/null
+fi
+
+chown -R "$APP_UID:$APP_GID" /home/appa
+groupmod -g "$APP_GID" appa
+usermod -u "$APP_UID" -g "$APP_GID" appa
+
+groupmod -g "$DOCKER_GID" docker
+usermod -a -G docker appa
+
+# There's something strange with either Docker or the kernel, so that
+# the 'appa' user cannot access its home directory even after a proper
+# chown/chmod. We work around it like this.
+mv /home/appa /home/appa2
+cp -dpR /home/appa2 /home/appa
+rm -rf /home/appa2
+
+if [[ $# -gt 0 ]]; then
+  exec "$@"
+fi

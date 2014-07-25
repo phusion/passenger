@@ -1,7 +1,13 @@
 worker_processes  2;
 
-error_log <%= @passenger_root %>/test/test.log;
+error_log <%= @nginx_root %>/../test.log;
 pid       <%= @nginx_root %>/nginx.pid;
+
+# Makes integration tests work when run in a CentOS container, with Node.js
+# and Python installed through SCL.
+env PATH;
+env LD_LIBRARY_PATH;
+env PYTHONPATH;
 
 events {
     worker_connections  1024;
@@ -21,6 +27,7 @@ http {
     
     passenger_root <%= @passenger_root %>;
     passenger_ruby <%= PlatformInfo.ruby_command %>;
+    passenger_nodejs <%= PlatformInfo.find_command('node') %>;
     passenger_default_user <%= CONFIG['default_user'] %>;
     passenger_default_group <%= CONFIG['default_group'] %>;
     passenger_max_pool_size <%= @max_pool_size %>;

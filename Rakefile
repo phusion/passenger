@@ -38,7 +38,6 @@ else
 	require 'build/integration_tests'
 	require 'build/misc'
 	require 'build/debian'
-	require 'build/rpm'
 end
 
 #### Default tasks

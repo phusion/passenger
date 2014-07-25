@@ -3,12 +3,29 @@
 
 set -e
 
+PASSENGER_ROOT=`dirname "$0"`
+PASSENGER_ROOT=`cd "$PASSENGER_ROOT/../.." && pwd`
+PASSENGER_ROOT_ON_DOCKER_HOST=${PASSENGER_ROOT_ON_DOCKER_HOST:-$PASSENGER_ROOT}
+
+if [[ "$CACHE_DIR_ON_DOCKER_HOST" != "" ]]; then
+	CACHE_DIR=/host_cache
+else
+	CACHE_DIR=/tmp
+	CACHE_DIR_ON_DOCKER_HOST=/tmp
+fi
+
 export VERBOSE=1
 export TRACE=1
 export DEVDEPS_DEFAULT=no
 export rvmsudo_secure_path=1
 
-sudo sh -c 'cat >> /etc/hosts' <<EOF
+if [[ -e /etc/workaround-docker-2267/hosts ]]; then
+	HOSTS_FILE=/etc/workaround-docker-2267/hosts
+else
+	HOSTS_FILE=/etc/hosts
+fi
+
+sudo sh -c "cat >> $HOSTS_FILE" <<EOF
 127.0.0.1 passenger.test
 127.0.0.1 mycook.passenger.test
 127.0.0.1 zsfa.passenger.test
@@ -92,14 +109,18 @@ function install_node_and_modules()
 	fi
 }
 
+if [[ "$MAGNUM" != "" ]]; then
+	run sudo sh -c "echo 127.0.0.1 magnum >> /etc/hosts"
+fi
+
 run uname -a
 run lsb_release -a
-sudo tee /etc/dpkg/dpkg.cfg.d/02apt-speedup >/dev/null <<<"force-unsafe-io"
-cp test/config.json.travis test/config.json
+run sudo tee /etc/dpkg/dpkg.cfg.d/02apt-speedup >/dev/null <<<"force-unsafe-io"
+run cp test/config.json.travis test/config.json
 
 # Relax permissions on home directory so that the application root
 # permission checks pass.
-chmod g+x,o+x $HOME
+run chmod g+x,o+x $HOME
 
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
@@ -170,6 +191,36 @@ if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	run rake test:integration:native_packaging SUDO=1
 	run env PASSENGER_LOCATION_CONFIGURATION_FILE=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
 		rake test:integration:apache2 SUDO=1
+fi
+
+if [[ "$TEST_RPM_PACKAGING" = 1 ]]; then
+	if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
+		pushd packaging/rpm
+		run mkdir -p "$CACHE_DIR/passenger_rpm"
+		run mkdir -p "$CACHE_DIR/passenger_rpm/cache"
+		run mkdir "$CACHE_DIR/passenger_rpm/output"
+		run ./build -S "$PASSENGER_ROOT_ON_DOCKER_HOST/packaging/rpm" \
+			-P "$PASSENGER_ROOT_ON_DOCKER_HOST" \
+			-o "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/output" \
+			-c "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/cache" \
+			-d el6 -a x86_64 -j 2
+		popd >/dev/null
+	fi
+
+	echo "------------- Testing built RPMs -------------"
+	run cp "test/config.json.rpm-automation" "test/config.json"
+	run mkdir -p "$CACHE_DIR/passenger_rpm/output/el6-x86_64"
+	if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
+		run rm "$CACHE_DIR/passenger_rpm/output/el6-x86_64"/*.src.rpm
+	fi
+	run docker run --rm -t -i \
+		-v "$PASSENGER_ROOT_ON_DOCKER_HOST/packaging/rpm:/system:ro" \
+		-v "$PASSENGER_ROOT_ON_DOCKER_HOST:/passenger" \
+		-v "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/output/el6-x86_64:/packages:ro" \
+		phusion/passenger_rpm_automation \
+		/system/internal/my_init --skip-runit --skip-startup-files --quiet -- \
+		/bin/bash -c "cd /passenger && exec ./dev/ci/run_rpm_tests.sh"
+	run cp "test/config.json.travis" "test/config.json"
 fi
 
 if [[ "$TEST_SOURCE_PACKAGING" = 1 ]]; then

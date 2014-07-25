@@ -11,5 +11,5 @@
   "nonexistant_uid": 9999,
   "nonexistant_gid": 9999,
 
-  "nginx": "/tmp/nginx/sbin/nginx"
+  "nginx": "/usr/sbin/nginx"
 }

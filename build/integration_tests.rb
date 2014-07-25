@@ -23,11 +23,19 @@
 
 ### Integration tests ###
 
+def integration_test_dependencies(runtime_target_name)
+	if string_option('PASSENGER_LOCATION_CONFIGURATION_FILE')
+		return []
+	else
+		return [runtime_target_name, NATIVE_SUPPORT_TARGET].compact
+	end
+end
+
 desc "Run all integration tests"
 task 'test:integration' => ['test:integration:apache2', 'test:integration:nginx'] do
 end
 
-dependencies = [:_apache2, NATIVE_SUPPORT_TARGET].compact
+dependencies = integration_test_dependencies(:_apache2)
 desc "Run Apache 2 integration tests"
 task 'test:integration:apache2' => dependencies do
 	if PlatformInfo.rspec.nil?
@@ -45,7 +53,7 @@ task 'test:integration:apache2' => dependencies do
 	end
 end
 
-dependencies = [:_nginx, NATIVE_SUPPORT_TARGET].compact
+dependencies = integration_test_dependencies(:_nginx)
 desc "Run Nginx integration tests"
 task 'test:integration:nginx' => dependencies do
 	if PlatformInfo.rspec.nil?
@@ -67,7 +75,7 @@ task 'test:integration:nginx' => dependencies do
 	end
 end
 
-dependencies = [:_nginx, NATIVE_SUPPORT_TARGET].compact
+dependencies = integration_test_dependencies(:_nginx)
 desc "Run Passenger Standalone integration tests"
 task 'test:integration:standalone' => dependencies do
 	if PlatformInfo.rspec.nil?
@@ -124,7 +132,7 @@ task 'test:integration:native_packaging' do
 	sh "cd test && exec #{command}"
 end
 
-dependencies = [:_apache2, NATIVE_SUPPORT_TARGET].compact
+dependencies = integration_test_dependencies(:_apache2)
 desc "Run the 'apache2' integration test infinitely, and abort if/when it fails"
 task 'test:restart' => dependencies do
 	require 'shellwords'
