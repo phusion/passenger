@@ -22,7 +22,7 @@ function run_exec()
 # We do not use the my_init inside the image to work around
 # a bug in baseimage-docker 0.9.12: pressing Ctrl-C does
 # not properly result in a non-zero exit status.
-run_exec docker run --rm -t -i \
+run_exec docker run --rm \
 	-v "$PASSENGER_ROOT:/passenger" \
 	-v /var/run/docker.sock:/docker.sock \
 	-v "$JENKINS_CACHE_DIR:/host_cache" \

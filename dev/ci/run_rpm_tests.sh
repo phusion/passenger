@@ -46,6 +46,13 @@ cd /passenger
 echo '%_excludedocs 0' > /etc/rpm/macros.imgcreate
 sed -i 's/nodocs//' /etc/yum.conf
 
+mkdir -p /etc/workaround-docker-2267
+if [[ ! -e /cte ]]; then
+	ln -s /etc/workaround-docker-2267 /cte
+fi
+cp /etc/hosts /etc/workaround-docker-2267/hosts
+/usr/bin/perl -pi -e 's:/etc/hosts:/cte/hosts:g' /lib64/libnss_files.so.2
+
 run yum_install /packages/*.x86_64.rpm /packages/*.noarch.rpm
 retry_run 3 rake test:install_deps BASE_DEPS=yes
 chown -R app: /var/log/nginx /var/lib/nginx
