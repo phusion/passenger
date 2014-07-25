@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2013-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -50,6 +50,8 @@ shared_examples_for "a proper package" do
 	it "includes all files in the git repository" do
 		git_files = `git ls-files`.split("\n")
 		git_files.reject! { |filename| filename =~ /^Passenger.xcodeproj\// }
+		git_files.delete(".gitmodules")
+		git_files.delete("packaging/rpm")
 		git_files.delete("ext/libeio/eio.3")
 		git_files.delete("ext/libeio/eio.pod")
 
