@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -115,7 +115,7 @@ private:
 
 	void incNextCommandId() {
 		if (nextCommandId == INT_MAX) {
-			nextCommandId = 0;
+			nextCommandId = 1;
 		} else {
 			nextCommandId++;
 		}
@@ -126,7 +126,7 @@ public:
 	SafeLibev(struct ev_loop *loop) {
 		this->loop = loop;
 		loopThread = pthread_self();
-		nextCommandId = 0;
+		nextCommandId = 1;
 		
 		ev_async_init(&async, asyncHandler);
 		ev_set_priority(&async, EV_MAXPRI);
@@ -252,6 +252,10 @@ public:
 	 * been called or is currently being called.
 	 */
 	bool cancelCommand(int id) {
+		if (id == 0) {
+			return false;
+		}
+
 		boost::unique_lock<boost::mutex> l(syncher);
 		// TODO: we can do a binary search because the command ID
 		// is monotically increasing except on overflow.
