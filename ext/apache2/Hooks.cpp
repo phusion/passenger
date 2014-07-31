@@ -113,6 +113,25 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 
 /**
+ * Exception during upload.
+ *
+ * @ingroup Exceptions
+ */
+class UploadException: public std::exception {
+private:
+	string msg;
+	int http_status;
+public:
+	UploadException(const string &message, int status = HTTP_INTERNAL_SERVER_ERROR)
+		: msg(message), http_status(status) {}
+	UploadException(int status): msg(""), http_status(status) {}
+	virtual ~UploadException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+	bool hasMessage() const throw() { return !msg.empty(); }
+	int getHttpStatus() const throw() { return http_status; }
+};
+
+/**
  * Apache hook functions, wrapped in a class.
  *
  * @ingroup Core
@@ -727,6 +746,11 @@ private:
 				e.backtrace());
 			return HTTP_INTERNAL_SERVER_ERROR;
 			
+		} catch (const UploadException &e) {
+			if (e.hasMessage())
+				P_ERROR(e.what() << "\n");
+			return e.getHttpStatus();
+		
 		} catch (const tracable_exception &e) {
 			P_ERROR("Unexpected error in mod_passenger: " <<
 				e.what() << "\n" << "  Backtrace:\n" << e.backtrace());
@@ -1108,6 +1132,22 @@ private:
 			r->connection->keepalive = AP_CONN_CLOSE;
 			apr_brigade_destroy(bb);
 			
+			/* Set informative status instead of generic 500 in case of
+			 * connection problems
+			 */
+			if (APR_STATUS_IS_TIMEUP(rv) || APR_STATUS_IS_ECONNRESET(rv))
+				throw UploadException(HTTP_REQUEST_TIME_OUT);
+
+			/* When content length limit is exceeded, error bucket is
+			 * created for request which is then passed to output filters.
+			 * 'ap_http_header_filter' output filter calls ap_die and
+			 * fails with AP_FILTER_ERROR when error is present.
+			 * Mark request as completely served so that ap_die won't
+			 * be called again for this request in ap_process_request
+			 */
+			if ((rv == AP_FILTER_ERROR) && (r->status == HTTP_REQUEST_ENTITY_TOO_LARGE))
+				throw UploadException(OK);
+
 			char buf[150], *errorString, message[1024];
 			errorString = apr_strerror(rv, buf, sizeof(buf));
 			if (errorString != NULL) {
@@ -1120,7 +1160,7 @@ private:
 					rv);
 			}
 			message[sizeof(message) - 1] = '\0';
-			throw RuntimeException(message);
+			throw UploadException(message);
 		}
 		
 		/* If this fails, it means that a filter is written incorrectly and that
