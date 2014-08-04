@@ -80,7 +80,7 @@
 static void eio_destroy (eio_req *req);
 
 #ifndef EIO_FINISH
-# define EIO_FINISH(req)  ((req)->finish) && !EIO_CANCELLED (req) ? (req)->finish (req) : 0
+# define EIO_FINISH(req)  ((req)->finish) ? (req)->finish (req) : 0
 #endif
 
 #ifndef EIO_DESTROY
