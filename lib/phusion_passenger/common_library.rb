@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2012 Phusion
+#  Copyright (c) 2012-214 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -126,11 +126,14 @@ private
 			object_file = "#{@output_dir}/#{object_name}"
 
 			file(object_file => dependencies_for(options)) do
+				if options[:optimize]
+					optimize = "-O2"
+				end
 				ensure_directory_exists(File.dirname(object_file))
 				if source_file =~ /\.c$/
-					compile_c(source_file, "#{cflags} -o #{object_file}")
+					compile_c(source_file, "#{optimize} #{cflags} -o #{object_file}".strip)
 				else
-					compile_cxx(source_file, "#{cxxflags} -o #{object_file}")
+					compile_cxx(source_file, "#{optimize} #{cxxflags} -o #{object_file}".strip)
 				end
 			end
 		end
@@ -316,6 +319,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 	define_component 'Logging.o',
 		:source   => 'Logging.cpp',
 		:category => :base,
+		:optimize => false,
 		:deps     => %w(
 			Logging.cpp
 			Logging.h
@@ -357,6 +361,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 	define_component 'Utils/Base64.o',
 		:source   => 'Utils/Base64.cpp',
 		:category => :other,
+		:optimize => true,
 		:deps     => %w(
 			Utils/Base64.h
 		)
@@ -424,15 +429,52 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:deps     => %w(
 			agents/LoggingAgent/FilterSupport.h
 		)
+	define_component 'MemoryKit/mbuf.o',
+		:source   => 'MemoryKit/mbuf.cpp',
+		:category => :other,
+		:optimize => true,
+		:deps     => %w(
+			MemoryKit/palloc.h
+		)
+	define_component 'MemoryKit/palloc.o',
+		:source   => 'MemoryKit/palloc.cpp',
+		:category => :other,
+		:optimize => true,
+		:deps     => %w(
+			MemoryKit/palloc.h
+		)
+	define_component 'MemoryKit/palloc.o',
+		:source   => 'MemoryKit/palloc.cpp',
+		:category => :other,
+		:optimize => true,
+		:deps     => %w(
+			MemoryKit/palloc.h
+		)
+	define_component 'ServerKit/http_parser.o',
+		:source   => 'ServerKit/http_parser.cpp',
+		:category => :other,
+		:optimize => true,
+		:deps     => %w(
+			ServerKit/http_parser.h
+		)
 	define_component 'Utils/MD5.o',
 		:source   => 'Utils/MD5.cpp',
 		:category => :other,
+		:optimize => true,
 		:deps     => %w(
 			Utils/MD5.h
+		)
+	define_component 'Utils/Hasher.o',
+		:source   => 'Utils/Hasher.cpp',
+		:category => :other,
+		:optimize => true,
+		:deps     => %w(
+			Utils/Hasher.h
 		)
 	define_component 'Utils/fib.o',
 		:source   => 'Utils/fib.c',
 		:category => :other,
+		:optimize => true,
 		:deps     => %w(
 			Utils/fib.h
 			Utils/fibpriv.h
@@ -440,6 +482,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 	define_component 'Utils/jsoncpp.o',
 		:source   => 'Utils/jsoncpp.cpp',
 		:category => :other,
+		:optimize => true,
 		:deps     => %w(
 			Utils/json.h
 			Utils/json-forwards.h
