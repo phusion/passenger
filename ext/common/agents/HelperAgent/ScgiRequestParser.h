@@ -232,29 +232,35 @@ public:
 			switch (state) {
 			case READING_LENGTH_STRING:
 				while (consumed < size
-				    && lengthStringBufferSize < sizeof(lengthStringBuffer) - 1
-				    && isDigit(data[consumed])) {
+				    && lengthStringBufferSize < sizeof(lengthStringBuffer)
+				    && isDigit(data[consumed]))
+				{
 					lengthStringBuffer[lengthStringBufferSize] = data[consumed];
 					lengthStringBufferSize++;
 					consumed++;
 				}
 				if (consumed < size) {
-					if (data[consumed] == ':') {
-						consumed++;
-						lengthStringBuffer[lengthStringBufferSize] = '\0';
-						headerSize = atol(lengthStringBuffer);
-						if (maxSize > 0 && headerSize > maxSize) {
-							state = ERROR;
-							errorReason = LIMIT_REACHED;
-						} else if (headerSize == 0) {
-							state = ERROR;
-							errorReason = EMPTY_HEADER;
-						} else {
-							state = READING_HEADER_DATA;
-						}
-					} else if (lengthStringBufferSize >= sizeof(lengthStringBuffer) - 1) {
+					if (lengthStringBufferSize == sizeof(lengthStringBuffer)) {
 						state = ERROR;
 						errorReason = LENGTH_STRING_TOO_LARGE;
+					} else if (data[consumed] == ':') {
+						if (lengthStringBufferSize == 0) {
+							state = ERROR;
+							errorReason = INVALID_LENGTH_STRING;
+						} else {
+							consumed++;
+							lengthStringBuffer[lengthStringBufferSize] = '\0';
+							headerSize = atol(lengthStringBuffer);
+							if (maxSize > 0 && headerSize > maxSize) {
+								state = ERROR;
+								errorReason = LIMIT_REACHED;
+							} else if (headerSize == 0) {
+								state = ERROR;
+								errorReason = EMPTY_HEADER;
+							} else {
+								state = READING_HEADER_DATA;
+							}
+						}
 					} else {
 						state = ERROR;
 						errorReason = INVALID_LENGTH_STRING;
