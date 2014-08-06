@@ -6,13 +6,39 @@ root = true
 end_of_line = lf
 charset = utf-8
 
-[{*.cpp,*.c,*.h,*.hpp,*.rb,*.js}]
+[*.cpp]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.c]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.h]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.hpp]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.rb]
 indent_style = tab
 indent_size = 4
 trim_trailing_whitespace = true
 
-[{*.cpp,*.c,*.h,*.hpp}]
-insert_final_newline = true
+[*.js]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
 
 [ext/nginx/{*.c,*.h}]
 indent_style = space
