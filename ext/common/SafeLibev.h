@@ -61,12 +61,12 @@ private:
 	struct ev_loop *loop;
 	pthread_t loopThread;
 	ev_async async;
-	
+
 	boost::mutex syncher;
 	boost::condition_variable cond;
 	vector<Command> commands;
 	unsigned int nextCommandId;
-	
+
 	static void asyncHandler(EV_P_ ev_async *w, int revents) {
 		SafeLibev *self = (SafeLibev *) w->data;
 		self->runCommands();
@@ -82,13 +82,13 @@ private:
 		vector<Command> commands = this->commands;
 		this->commands.clear();
 		l.unlock();
-		
+
 		vector<Command>::const_iterator it, end = commands.end();
 		for (it = commands.begin(); it != end; it++) {
 			it->callback();
 		}
 	}
-	
+
 	template<typename Watcher>
 	void startWatcherAndNotify(Watcher *watcher, bool *done) {
 		watcher->set(loop);
@@ -97,7 +97,7 @@ private:
 		*done = true;
 		cond.notify_all();
 	}
-	
+
 	template<typename Watcher>
 	void stopWatcherAndNotify(Watcher *watcher, bool *done) {
 		watcher->stop();
@@ -105,7 +105,7 @@ private:
 		*done = true;
 		cond.notify_all();
 	}
-	
+
 	void runAndNotify(const Callback *callback, bool *done) {
 		(*callback)();
 		boost::unique_lock<boost::mutex> l(syncher);
@@ -120,20 +120,20 @@ private:
 			nextCommandId++;
 		}
 	}
-	
+
 public:
 	/** SafeLibev takes over ownership of the loop object. */
 	SafeLibev(struct ev_loop *loop) {
 		this->loop = loop;
 		loopThread = pthread_self();
 		nextCommandId = 1;
-		
+
 		ev_async_init(&async, asyncHandler);
 		ev_set_priority(&async, EV_MAXPRI);
 		async.data = this;
 		ev_async_start(loop, &async);
 	}
-	
+
 	~SafeLibev() {
 		destroy();
 		ev_loop_destroy(loop);
@@ -142,11 +142,11 @@ public:
 	void destroy() {
 		ev_async_stop(loop, &async);
 	}
-	
+
 	struct ev_loop *getLoop() const {
 		return loop;
 	}
-	
+
 	void setCurrentThread() {
 		loopThread = pthread_self();
 	}
@@ -173,7 +173,7 @@ public:
 			}
 		}
 	}
-	
+
 	template<typename Watcher>
 	void stop(Watcher &watcher) {
 		if (pthread_equal(pthread_self(), loopThread)) {
@@ -191,7 +191,7 @@ public:
 			}
 		}
 	}
-	
+
 	void run(const Callback &callback) {
 		assert(callback != NULL);
 		if (pthread_equal(pthread_self(), loopThread)) {

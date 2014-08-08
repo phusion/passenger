@@ -50,7 +50,7 @@ private:
 
 	static std::string make_thread_name(const std::string &given_name);
 	static void thread_main(const boost::function<void ()> func, thread_local_context_ptr ctx);
-	
+
 public:
 	/**
 	 * Create a new thread.
@@ -82,7 +82,7 @@ public:
 		unsigned long min_stack_size;
 		bool stack_min_size_defined;
 		bool round_stack_size;
-		
+
 		#ifdef PTHREAD_STACK_MIN
 			// PTHREAD_STACK_MIN may not be a constant macro so we need
 			// to evaluate it dynamically.
@@ -99,7 +99,7 @@ public:
 		} else {
 			round_stack_size = true;
 		}
-		
+
 		if (round_stack_size) {
 			// Round stack size up to page boundary.
 			long page_size;
@@ -123,23 +123,23 @@ public:
 		attrs.set_stack_size(stack_size);
 		start_thread(attrs);
 	}
-	
+
 	/**
 	 * Return this thread's name. The name was set during construction.
 	 */
 	std::string name() const throw();
-	
+
 	/**
 	 * Return the current backtrace of the thread of execution, as a string.
 	 */
 	std::string backtrace() const throw();
-	
+
 	/**
 	 * Return the backtraces of all oxt::thread threads, as well as that of the
 	 * main thread, in a nicely formatted string.
 	 */
 	static std::string all_backtraces() throw();
-	
+
 	/**
 	 * Interrupt the thread. This method behaves just like
 	 * boost::thread::interrupt(), but if <em>interruptSyscalls</em> is true
@@ -153,7 +153,7 @@ public:
 	 * pattern.
 	 */
 	void interrupt(bool interruptSyscalls = true);
-	
+
 	/**
 	 * Keep interrupting the thread until it's done, then join it.
 	 *
@@ -169,7 +169,7 @@ public:
 			done = timed_join(boost::posix_time::millisec(10));
 		}
 	}
-	
+
 	/**
 	 * Keep interrupting the thread until it's done, then join it.
 	 * This method will keep trying for at most <em>timeout</em> milliseconds.
@@ -195,7 +195,7 @@ public:
 		}
 		return joined;
 	}
-	
+
 	/**
 	 * Interrupt and join multiple threads in a way that's more efficient than calling
 	 * interrupt_and_join() on each thread individually. It iterates over all threads,
@@ -217,11 +217,11 @@ public:
 		std::list<oxt::thread *>::iterator it, current;
 		oxt::thread *thread;
 		unsigned int i;
-		
+
 		for (i = 0; i < size; i++) {
 			remaining_threads.push_back(threads[i]);
 		}
-		
+
 		while (!remaining_threads.empty()) {
 			for (it = remaining_threads.begin(); it != remaining_threads.end(); it++) {
 				thread = *it;
@@ -252,7 +252,7 @@ private:
 public:
 	interruptable_lock_guard(TimedLockable &m): mutex(m) {
 		bool locked = false;
-		
+
 		while (!locked) {
 			locked = m.timed_lock(boost::posix_time::milliseconds(20));
 			if (!locked) {
@@ -260,7 +260,7 @@ public:
 			}
 		}
 	}
-	
+
 	~interruptable_lock_guard() {
 		mutex.unlock();
 	}

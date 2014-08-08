@@ -63,7 +63,7 @@ static global_context_t *global_context = NULL;
 	init_thread_local_context_support() {
 		/* Do nothing. */
 	}
-	
+
 	void
 	set_thread_local_context(const thread_local_context_ptr &ctx) {
 		local_context = new thread_local_context_ptr(ctx);
@@ -93,7 +93,7 @@ static global_context_t *global_context = NULL;
 	 * this object alive until the OS cleans it up.
 	 */
 	static thread_specific_ptr<thread_local_context_ptr> *local_context = NULL;
-	
+
 	static void
 	init_thread_local_context_support() {
 		local_context = new thread_specific_ptr<thread_local_context_ptr>();
@@ -180,7 +180,7 @@ tracable_exception::tracable_exception() {
 	if (OXT_LIKELY(ctx != NULL)) {
 		spin_lock::scoped_lock l(ctx->backtrace_lock);
 		vector<trace_point *>::const_iterator it, end = ctx->backtrace_list.end();
-		
+
 		backtrace_copy.reserve(ctx->backtrace_list.size());
 		for (it = ctx->backtrace_list.begin(); it != end; it++) {
 			trace_point *p = new trace_point(
@@ -232,10 +232,10 @@ format_backtrace(const Collection &backtrace_list) {
 		backtrace_list.rbegin();
 		stringstream result;
 		typename Collection::const_reverse_iterator it;
-		
+
 		for (it = backtrace_list.rbegin(); it != backtrace_list.rend(); it++) {
 			const trace_point *p = *it;
-			
+
 			result << "     in '" << p->function << "'";
 			if (p->source != NULL) {
 				const char *source = strrchr(p->source, '/');
@@ -387,7 +387,7 @@ thread::all_backtraces() throw() {
 			boost::lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
 			list<thread_local_context_ptr>::const_iterator it;
 			std::stringstream result;
-			
+
 			for (it = global_context->registered_threads.begin();
 			     it != global_context->registered_threads.end();
 			     it++)
@@ -399,7 +399,7 @@ thread::all_backtraces() throw() {
 					result << ", LWP " << ctx->tid;
 				#endif
 				result << "):" << endl;
-				
+
 				spin_lock::scoped_lock l(ctx->backtrace_lock);
 				std::string bt = format_backtrace(ctx->backtrace_list);
 				result << bt;
@@ -420,7 +420,7 @@ thread::all_backtraces() throw() {
 void
 thread::interrupt(bool interruptSyscalls) {
 	int ret;
-	
+
 	boost::thread::interrupt();
 	if (interruptSyscalls && context->syscall_interruption_lock.try_lock()) {
 		do {

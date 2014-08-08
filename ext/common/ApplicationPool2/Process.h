@@ -69,11 +69,11 @@ public:
 			return *it;
 		}
 	}
-	
+
 	ProcessPtr &operator[](unsigned int index) {
 		return get(index);
 	}
-	
+
 	iterator last_iterator() {
 		if (empty()) {
 			return end();
@@ -128,7 +128,7 @@ class Process: public boost::enable_shared_from_this<Process> {
 // Actually private, but marked public so that unit tests can access the fields.
 public:
 	friend class Group;
-	
+
 	/** A mutex to protect access to `lifeStatus`. */
 	mutable boost::mutex lifetimeSyncher;
 
@@ -137,11 +137,11 @@ public:
 	 * Read-only; only set once during initialization.
 	 */
 	boost::weak_ptr<Group> group;
-	
+
 	/** A subset of 'sockets': all sockets that speak the
 	 * "session" protocol, sorted by socket.busyness(). */
 	PriorityQueue<Socket> sessionSockets;
-	
+
 	/** The iterator inside the associated Group's process list. */
 	ProcessList::iterator it;
 	/** The handle inside the associated Group's process priority queue. */
@@ -201,13 +201,13 @@ public:
 			concurrency = 0;
 		}
 	}
-	
+
 public:
 	/*************************************************************
 	 * Read-only fields, set once during initialization and never
 	 * written to again. Reading is thread-safe.
 	 *************************************************************/
-	
+
 	/** Process PID. */
 	pid_t pid;
 	/** An ID that uniquely identifies this Process in the Group, for
@@ -245,13 +245,13 @@ public:
 	 * processes are never added to Group.enabledProcesses.
 	 */
 	bool requiresShutdown;
-	
+
 	/*************************************************************
 	 * Information used by Pool. Do not write to these from
 	 * outside the Pool. If you read these make sure the Pool
 	 * isn't concurrently modifying.
 	 *************************************************************/
-	
+
 	/** Time at which we finished spawning this process, i.e. when this
 	 * process was finished initializing. Microseconds resolution.
 	 */
@@ -319,7 +319,7 @@ public:
 	time_t shutdownStartTime;
 	/** Collected by Pool::collectAnalytics(). */
 	ProcessMetrics metrics;
-	
+
 	Process(pid_t _pid,
 		const string &_gupid,
 		const string &_connectPassword,
@@ -365,15 +365,15 @@ public:
 			watcher->initialize();
 			watcher->start();
 		}
-		
+
 		if (OXT_LIKELY(sockets != NULL)) {
 			indexSessionSockets();
 		}
-		
+
 		lastUsed      = SystemTime::getUsec();
 		spawnEndTime  = lastUsed;
 	}
-	
+
 	~Process() {
 		if (OXT_UNLIKELY(!isDead() && requiresShutdown)) {
 			P_BUG("You must call Process::triggerShutdown() and Process::cleanup() before actually "
@@ -400,7 +400,7 @@ public:
 		assert(!isDead());
 		return group.lock();
 	}
-	
+
 	void setGroup(const GroupPtr &group) {
 		assert(this->group.lock() == NULL || this->group.lock() == group);
 		this->group = group;
@@ -536,7 +536,7 @@ public:
 			return 0;
 		}
 	}
-	
+
 	int busyness() const {
 		/* Different processes within a Group may have different
 		 * 'concurrency' values. We want:
@@ -557,7 +557,7 @@ public:
 			return (int) (((long long) sessions * INT_MAX) / (double) concurrency);
 		}
 	}
-	
+
 	/**
 	 * Whether we've reached the maximum number of concurrent sessions for this
 	 * process.
@@ -574,7 +574,7 @@ public:
 	bool canBeRoutedTo() const {
 		return !isTotallyBusy();
 	}
-	
+
 	/**
 	 * Create a new communication session with this process. This will connect to one
 	 * of the session sockets or reuse an existing connection. See Session for
@@ -596,13 +596,13 @@ public:
 			return boost::make_shared<Session>(shared_from_this(), socket);
 		}
 	}
-	
+
 	void sessionClosed(Session *session) {
 		Socket *socket = session->getSocket();
-		
+
 		assert(socket->sessions > 0);
 		assert(sessions > 0);
-		
+
 		socket->sessions--;
 		this->sessions--;
 		processed++;

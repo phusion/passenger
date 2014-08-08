@@ -119,17 +119,17 @@ enum DisableResult {
 	// The process has been successfully disabled.
 	// Returned by functions and passed to the callback.
 	DR_SUCCESS,
-	
+
 	// The disabling of the process was canceled before completion.
 	// The process still exists.
 	// Only passed to the callback.
 	DR_CANCELED,
-	
+
 	// Nothing happened: the requested process does not exist (anymore)
 	// or was already disabled.
 	// Returned by functions and passed to the callback.
 	DR_NOOP,
-	
+
 	// The disabling of the process failed: an error occurred.
 	// Returned by functions and passed to the callback.
 	DR_ERROR,
@@ -169,7 +169,7 @@ typedef boost::function<void ()> Callback;
 struct GetWaiter {
 	Options options;
 	GetCallback callback;
-	
+
 	GetWaiter(const Options &o, const GetCallback &cb)
 		: options(o),
 		  callback(cb)

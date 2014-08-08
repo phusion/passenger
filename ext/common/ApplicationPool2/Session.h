@@ -57,11 +57,11 @@ private:
 	ProcessPtr process;
 	/** Socket to use for this session. Guaranteed to be alive thanks to the 'process' reference. */
 	Socket *socket;
-	
+
 	Connection connection;
 	FileDescriptor theFd;
 	bool closed;
-	
+
 	void deinitiate(bool success) {
 		connection.fail = !success;
 		socket->checkinConnection(connection);
@@ -74,7 +74,7 @@ private:
 			onInitiateFailure(this);
 		}
 	}
-	
+
 	void callOnClose() {
 		if (OXT_LIKELY(onClose != NULL)) {
 			onClose(this);
@@ -85,7 +85,7 @@ private:
 public:
 	Callback onInitiateFailure;
 	Callback onClose;
-	
+
 	Session(const ProcessPtr &_process, Socket *_socket)
 		: process(_process),
 		  socket(_socket),
@@ -93,7 +93,7 @@ public:
 		  onInitiateFailure(NULL),
 		  onClose(NULL)
 		{ }
-	
+
 	~Session() {
 		TRACE_POINT();
 		// If user doesn't close() explicitly, we penalize performance.
@@ -112,7 +112,7 @@ public:
 	const GroupPtr getGroup() const;
 	void requestOOBW();
 	int kill(int signo);
-	
+
 	bool isClosed() const {
 		return closed;
 	}
@@ -125,7 +125,7 @@ public:
 		assert(!closed);
 		return process;
 	}
-	
+
 	Socket *getSocket() const {
 		return socket;
 	}
@@ -133,7 +133,7 @@ public:
 	const string &getProtocol() const {
 		return socket->protocol;
 	}
-	
+
 	void initiate() {
 		assert(!closed);
 		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));
@@ -142,15 +142,15 @@ public:
 		theFd = FileDescriptor(connection.fd, false);
 		g.clear();
 	}
-	
+
 	bool initiated() const {
 		return connection.fd != -1;
 	}
-	
+
 	const FileDescriptor &fd() const {
 		return theFd;
 	}
-	
+
 	/**
 	 * This Session object becomes fully unsable after closing.
 	 */
