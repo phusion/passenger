@@ -35,18 +35,18 @@ PhusionPassenger.require_passenger_lib 'common_library'
 def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	output_file = "#{output_dir}.a"
 	flags = "-Iext #{extra_compiler_flags} #{EXTRA_CXXFLAGS}"
-	
+
 	if false && boolean_option('RELEASE')
 		# Disable RELEASE support. Passenger Standalone wants to link to the
 		# common library but does not know whether it was compiled with RELEASE
 		# or not. See http://code.google.com/p/phusion-passenger/issues/detail?id=808
 		sources = Dir['ext/boost/libs/**/*.cpp'] + Dir['ext/oxt/*.cpp']
 		sources.sort!
-		
+
 		aggregate_source = "#{output_dir}/aggregate.cpp"
 		aggregate_object = "#{output_dir}/aggregate.o"
 		object_files     = [aggregate_object]
-		
+
 		file(aggregate_object => sources) do
 			sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
 			aggregate_content = %Q{
@@ -71,13 +71,13 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 			boost_output_dir  = "#{output_dir}/boost"
 			object_file = "#{boost_output_dir}/#{object_name}"
 			boost_object_files << object_file
-		
+
 			file object_file => source_file do
 				sh "mkdir -p #{boost_output_dir}" if !File.directory?(boost_output_dir)
 				compile_cxx(source_file, "#{flags} -o #{object_file}")
 			end
 		end
-		
+
 		# Define compilation targets for .cpp files in ext/oxt.
 		oxt_object_files = []
 		oxt_dependency_files = Dir["ext/oxt/*.hpp"] + Dir["ext/oxt/detail/*.hpp"]
@@ -89,22 +89,22 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 
 			file object_file => [source_file, *oxt_dependency_files] do
 				sh "mkdir -p #{oxt_output_dir}" if !File.directory?(oxt_output_dir)
-				compile_cxx(source_file, "#{flags} -o #{object_file}")
+				compile_cxx(source_file, "-O2 #{flags} -o #{object_file}".strip)
 			end
 		end
-		
+
 		object_files = boost_object_files + oxt_object_files
 	end
-	
+
 	file(output_file => object_files) do
 		sh "mkdir -p #{output_dir}"
 		create_static_library(output_file, object_files.join(' '))
 	end
-	
+
 	task "#{namespace}:clean" do
 		sh "rm -rf #{output_file} #{output_dir}"
 	end
-	
+
 	return output_file
 end
 
@@ -116,9 +116,9 @@ if USE_VENDORED_LIBEV
 	LIBEV_CFLAGS = "-Iext/libev"
 	LIBEV_LIBS = LIBEV_OUTPUT_DIR + ".libs/libev.a"
 	LIBEV_TARGET = LIBEV_LIBS
-	
+
 	task :libev => LIBEV_TARGET
-	
+
 	dependencies = [
 		"ext/libev/configure",
 		"ext/libev/config.h.in",
@@ -136,7 +136,7 @@ if USE_VENDORED_LIBEV
 			# do, so we force our compiler choice.
 			"CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}' orig_CFLAGS=1"
 	end
-	
+
 	libev_sources = Dir["ext/libev/{*.c,*.h}"]
 	file LIBEV_OUTPUT_DIR + ".libs/libev.a" => [LIBEV_OUTPUT_DIR + "Makefile"] + libev_sources do
 		sh "rm -f #{LIBEV_OUTPUT_DIR}/libev.la"
@@ -148,7 +148,7 @@ if USE_VENDORED_LIBEV
 			sh "cd #{LIBEV_OUTPUT_DIR} && make maintainer-clean"
 		end
 	end
-	
+
 	task :clean => 'libev:clean'
 else
 	LIBEV_CFLAGS = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
@@ -168,9 +168,9 @@ if USE_VENDORED_LIBEIO
 	LIBEIO_CFLAGS = "-Iext/libeio"
 	LIBEIO_LIBS = LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
 	LIBEIO_TARGET = LIBEIO_LIBS
-	
+
 	task :libeio => LIBEIO_TARGET
-	
+
 	dependencies = [
 		"ext/libeio/configure",
 		"ext/libeio/config.h.in",
@@ -189,13 +189,13 @@ if USE_VENDORED_LIBEIO
 			# do, so we force our compiler choice.
 			"CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}'"
 	end
-	
+
 	libeio_sources = Dir["ext/libeio/{*.c,*.h}"]
 	file LIBEIO_OUTPUT_DIR + ".libs/libeio.a" => [LIBEIO_OUTPUT_DIR + "Makefile"] + libeio_sources do
 		sh "rm -f #{LIBEIO_OUTPUT_DIR}/libeio.la"
 		sh "cd #{LIBEIO_OUTPUT_DIR} && make libeio.la"
 	end
-	
+
 	task :clean do
 		if File.exist?(LIBEIO_OUTPUT_DIR + "Makefile")
 			sh "cd #{LIBEIO_OUTPUT_DIR} && make maintainer-clean"

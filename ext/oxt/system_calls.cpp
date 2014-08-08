@@ -117,12 +117,12 @@ shouldSimulateFailure() {
 
 #define CHECK_INTERRUPTION(error_expression, allowSimulatingFailure, error_assignment, code) \
 	do { \
-		if (allowSimulatingFailure && shouldSimulateFailure()) { \
+		if (OXT_UNLIKELY(allowSimulatingFailure && shouldSimulateFailure())) { \
 			error_assignment; \
 			break; \
 		} \
 		thread_local_context *ctx = get_thread_local_context(); \
-		if (OXT_UNLIKELY(ctx != NULL)) { \
+		if (OXT_LIKELY(ctx != NULL)) { \
 			ctx->syscall_interruption_lock.unlock(); \
 		} \
 		int _my_errno; \
@@ -135,7 +135,7 @@ shouldSimulateFailure() {
 			&& (!this_thread::syscalls_interruptable() \
 			    || !(_intr_requested = this_thread::interruption_requested())) \
 		); \
-		if (OXT_UNLIKELY(ctx != NULL)) { \
+		if (OXT_LIKELY(ctx != NULL)) { \
 			ctx->syscall_interruption_lock.lock(); \
 		} \
 		if ((error_expression) \
