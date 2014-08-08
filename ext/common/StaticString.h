@@ -115,15 +115,15 @@ public:
 		}
 	};
 
-	StaticString() {
-		content = "";
-		len = 0;
-	}
+	StaticString()
+		: content(""),
+		  len(0)
+		{ }
 
-	StaticString(const StaticString &b) {
-		content = b.content;
-		len = b.len;
-	}
+	StaticString(const StaticString &b)
+		: content(b.content),
+		  len(b.len)
+		{ }
 
 	StaticString(const string &s) {
 		content = s.data();
@@ -135,10 +135,10 @@ public:
 		len = strlen(data);
 	}
 
-	StaticString(const char *data, string::size_type len) {
-		content = data;
-		this->len = len;
-	}
+	StaticString(const char *data, string::size_type _len)
+		: content(data),
+		  len(_len)
+		{ }
 
 	bool empty() const {
 		return len == 0;
