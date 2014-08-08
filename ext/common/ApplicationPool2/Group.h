@@ -34,6 +34,7 @@
 #include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/container/vector.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/dynamic_thread_group.hpp>
@@ -216,14 +217,14 @@ public:
 		unsigned int restartsInitiated);
 	void finalizeRestart(GroupPtr self, Options options, RestartMethod method,
 		SpawnerFactoryPtr spawnerFactory, unsigned int restartsInitiated,
-		vector<Callback> postLockActions);
+		boost::container::vector<Callback> postLockActions);
 	void startCheckingDetachedProcesses(bool immediately);
 	void detachedProcessesCheckerMain(GroupPtr self);
 	void wakeUpGarbageCollector();
 	bool poolAtFullCapacity() const;
 	bool anotherGroupIsWaitingForCapacity() const;
 	boost::shared_ptr<Group> findOtherGroupWaitingForCapacity() const;
-	ProcessPtr poolForceFreeCapacity(const Group *exclude, vector<Callback> &postLockActions);
+	ProcessPtr poolForceFreeCapacity(const Group *exclude, boost::container::vector<Callback> &postLockActions);
 	bool testOverflowRequestQueue() const;
 	const ResourceLocator &getResourceLocator() const;
 	void runAttachHooks(const ProcessPtr process) const;
@@ -342,8 +343,8 @@ public:
 		options.maxPreloaderIdleTime = other.maxPreloaderIdleTime;
 	}
 
-	static void runAllActions(const vector<Callback> &actions) {
-		vector<Callback>::const_iterator it, end = actions.end();
+	static void runAllActions(const boost::container::vector<Callback> &actions) {
+		boost::container::vector<Callback>::const_iterator it, end = actions.end();
 		for (it = actions.begin(); it != end; it++) {
 			(*it)();
 		}
@@ -559,7 +560,7 @@ public:
 		}
 	}
 
-	void assignSessionsToGetWaiters(vector<Callback> &postLockActions) {
+	void assignSessionsToGetWaiters(boost::container::vector<Callback> &postLockActions) {
 		unsigned int i = 0;
 		bool done = false;
 
@@ -581,7 +582,7 @@ public:
 		}
 	}
 
-	void enableAllDisablingProcesses(vector<Callback> &postLockActions) {
+	void enableAllDisablingProcesses(boost::container::vector<Callback> &postLockActions) {
 		P_DEBUG("Enabling all DISABLING processes with result DR_ERROR");
 		deque<DisableWaiter>::iterator it, end = disableWaitlist.end();
 		for (it = disableWaitlist.begin(); it != end; it++) {
@@ -600,7 +601,7 @@ public:
 	}
 
 	void removeFromDisableWaitlist(const ProcessPtr &p, DisableResult result,
-		vector<Callback> &postLockActions)
+		boost::container::vector<Callback> &postLockActions)
 	{
 		deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
 		deque<DisableWaiter> newList;
@@ -616,7 +617,9 @@ public:
 		disableWaitlist = newList;
 	}
 
-	void clearDisableWaitlist(DisableResult result, vector<Callback> &postLockActions) {
+	void clearDisableWaitlist(DisableResult result,
+		boost::container::vector<Callback> &postLockActions)
+	{
 		// This function may be called after processes in the disableWaitlist
 		// have been disabled or enabled, so do not assume any value for
 		// waiter.process->enabled in this function.
@@ -643,7 +646,7 @@ public:
 	/** One of the post lock actions can potentially perform a long-running
 	 * operation, so running them in a thread is advised.
 	 */
-	void finishShutdown(vector<Callback> &postLockActions) {
+	void finishShutdown(boost::container::vector<Callback> &postLockActions) {
 		TRACE_POINT();
 		assert(getLifeStatus() == SHUTTING_DOWN);
 		P_DEBUG("Finishing shutdown of group " << name);
@@ -816,7 +819,9 @@ public:
 	 * One of the post lock actions can potentially perform a long-running
 	 * operation, so running them in a thread is advised.
 	 */
-	void shutdown(const Callback &callback, vector<Callback> &postLockActions) {
+	void shutdown(const Callback &callback,
+		boost::container::vector<Callback> &postLockActions)
+	{
 		assert(isAlive());
 
 		P_DEBUG("Begin shutting down group " << name);
@@ -878,7 +883,7 @@ public:
 	 ********************************************/
 
 	SessionPtr get(const Options &newOptions, const GetCallback &callback,
-		vector<Callback> &postLockActions)
+		boost::container::vector<Callback> &postLockActions)
 	{
 		assert(isAlive());
 
@@ -978,7 +983,9 @@ public:
 	 * function doesn't touch `getWaitlist` so be sure to fix its invariants
 	 * afterwards if necessary, e.g. by calling `assignSessionsToGetWaiters()`.
 	 */
-	AttachResult attach(const ProcessPtr &process, vector<Callback> &postLockActions) {
+	AttachResult attach(const ProcessPtr &process,
+		boost::container::vector<Callback> &postLockActions)
+	{
 		TRACE_POINT();
 		assert(process->getGroup() == NULL || process->getGroup().get() == this);
 		assert(process->isAlive());
@@ -1039,7 +1046,7 @@ public:
 	 * `pool->detachProcessUnlocked()` does that so you should usually use
 	 * that method over this one.
 	 */
-	void detach(const ProcessPtr &process, vector<Callback> &postLockActions) {
+	void detach(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
 		TRACE_POINT();
 		assert(process->getGroup().get() == this);
 		assert(process->isAlive());
@@ -1077,7 +1084,7 @@ public:
 	 * Detaches all processes from this Group. This function doesn't touch
 	 * getWaitlist so be sure to fix its invariants afterwards if necessary.
 	 */
-	void detachAll(vector<Callback> &postLockActions) {
+	void detachAll(boost::container::vector<Callback> &postLockActions) {
 		assert(isAlive());
 		P_DEBUG("Detaching all processes in group " << name);
 
@@ -1107,7 +1114,7 @@ public:
 	 * Marks the given process as enabled. This function doesn't touch getWaitlist
 	 * so be sure to fix its invariants afterwards if necessary.
 	 */
-	void enable(const ProcessPtr &process, vector<Callback> &postLockActions) {
+	void enable(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
 		assert(process->getGroup().get() == this);
 		assert(process->isAlive());
 		assert(isAlive());
@@ -1212,7 +1219,7 @@ public:
 		}
 	}
 
-	void cleanupSpawner(vector<Callback> &postLockActions) {
+	void cleanupSpawner(boost::container::vector<Callback> &postLockActions) {
 		assert(isAlive());
 		postLockActions.push_back(boost::bind(doCleanupSpawner, spawner));
 	}

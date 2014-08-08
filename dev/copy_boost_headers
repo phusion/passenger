@@ -34,6 +34,8 @@ ESSENTIALS = [
 	"boost/pool",
 	"boost/unordered*",
 	"boost/thread",
+	"boost/intrusive",
+	"boost/container",
 	"libs/thread/src",
 	"libs/system/src",
 	"libs/regex/src",
@@ -65,6 +67,7 @@ PROGRAM_SOURCE = %q{
 	#include <boost/noncopyable.hpp>
 	#include <boost/function.hpp>
 	#include <boost/bind.hpp>
+	#include <boost/container/vector.hpp>
 	#include <boost/date_time/posix_time/posix_time.hpp>
 	#include <boost/foreach.hpp>
 	#include <boost/unordered_map.hpp>

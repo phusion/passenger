@@ -314,7 +314,7 @@ SuperGroup::getPoolSyncher(const PoolPtr &pool) {
 }
 
 void
-SuperGroup::runAllActions(const vector<Callback> &actions) {
+SuperGroup::runAllActions(const boost::container::vector<Callback> &actions) {
 	Pool::runAllActions(actions);
 }
 
@@ -374,7 +374,7 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 	}
 
 	Pool::DebugSupportPtr debug = pool->debugSupport;
-	vector<Callback> actions;
+	boost::container::vector<Callback> actions;
 	{
 		if (debug != NULL && debug->superGroup) {
 			debug->debugger->send("About to finish SuperGroup initialization");
@@ -456,7 +456,7 @@ SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
 	vector<GroupPtr> updatedGroups;
 	vector<GroupPtr> newGroups;
 	vector<GroupPtr>::const_iterator g_it;
-	vector<Callback> actions;
+	boost::container::vector<Callback> actions;
 	this->options = options;
 
 	// Update the component information for existing groups.
@@ -551,7 +551,7 @@ Group::getPool() const {
 
 void
 Group::onSessionInitiateFailure(const ProcessPtr &process, Session *session) {
-	vector<Callback> actions;
+	boost::container::vector<Callback> actions;
 
 	TRACE_POINT();
 	// Standard resource management boilerplate stuff...
@@ -622,7 +622,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 
 	if (shouldDetach || shouldDisable) {
 		UPDATE_TRACE_POINT();
-		vector<Callback> actions;
+		boost::container::vector<Callback> actions;
 
 		if (shouldDetach) {
 			if (detachingBecauseCapacityNeeded) {
@@ -887,7 +887,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	}
 
 	UPDATE_TRACE_POINT();
-	vector<Callback> actions;
+	boost::container::vector<Callback> actions;
 	{
 		// Standard resource management boilerplate stuff...
 		PoolPtr pool = getPool();
@@ -1031,7 +1031,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 		assert(processesBeingSpawned == 0);
 
 		UPDATE_TRACE_POINT();
-		vector<Callback> actions;
+		boost::container::vector<Callback> actions;
 		if (process != NULL) {
 			AttachResult result = attach(process, actions);
 			if (result == AR_OK) {
@@ -1103,7 +1103,7 @@ Group::shouldSpawnForGetAction() const {
 
 void
 Group::restart(const Options &options, RestartMethod method) {
-	vector<Callback> actions;
+	boost::container::vector<Callback> actions;
 
 	assert(isAlive());
 	P_DEBUG("Restarting group " << name);
@@ -1130,7 +1130,7 @@ Group::restart(const Options &options, RestartMethod method) {
 void
 Group::finalizeRestart(GroupPtr self, Options options, RestartMethod method,
 	SpawnerFactoryPtr spawnerFactory, unsigned int restartsInitiated,
-	vector<Callback> postLockActions)
+	boost::container::vector<Callback> postLockActions)
 {
 	TRACE_POINT();
 
@@ -1294,7 +1294,7 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 			P_DEBUG("Stopping detached processes checker");
 			detachedProcessesCheckerActive = false;
 
-			vector<Callback> actions;
+			boost::container::vector<Callback> actions;
 			if (shutdownCanFinish()) {
 				UPDATE_TRACE_POINT();
 				finishShutdown(actions);
@@ -1352,7 +1352,9 @@ Group::findOtherGroupWaitingForCapacity() const {
 }
 
 ProcessPtr
-Group::poolForceFreeCapacity(const Group *exclude, vector<Callback> &postLockActions) {
+Group::poolForceFreeCapacity(const Group *exclude,
+	boost::container::vector<Callback> &postLockActions)
+{
 	return getPool()->forceFreeCapacity(exclude, postLockActions);
 }
 

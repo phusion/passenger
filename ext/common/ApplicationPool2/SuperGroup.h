@@ -29,6 +29,7 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/container/vector.hpp>
 #include <oxt/thread.hpp>
 #include <vector>
 #include <utility>
@@ -190,7 +191,7 @@ private:
 
 	// Thread-safe.
 	static boost::mutex &getPoolSyncher(const PoolPtr &pool);
-	static void runAllActions(const vector<Callback> &actions);
+	static void runAllActions(const boost::container::vector<Callback> &actions);
 	string generateSecret() const;
 	void runInitializationHooks() const;
 	void runDestructionHooks() const;
@@ -268,7 +269,9 @@ private:
 	/** One of the post lock actions can potentially perform a long-running
 	 * operation, so running them in a thread is advised.
 	 */
-	void detachAllGroups(vector<GroupPtr> &groups, vector<Callback> &postLockActions) {
+	void detachAllGroups(vector<GroupPtr> &groups,
+		boost::container::vector<Callback> &postLockActions)
+	{
 		foreach (const GroupPtr &group, groups) {
 			// doRestart() may temporarily nullify elements in 'groups'.
 			if (group == NULL) {
@@ -291,7 +294,7 @@ private:
 		groups.clear();
 	}
 
-	void assignGetWaitlistToGroups(vector<Callback> &postLockActions) {
+	void assignGetWaitlistToGroups(boost::container::vector<Callback> &postLockActions) {
 		while (!getWaitlist.empty()) {
 			GetWaiter &waiter = getWaitlist.front();
 			Group *group = route(waiter.options);
@@ -492,7 +495,8 @@ public:
 	 * One of the post lock actions can potentially perform a long-running
 	 * operation, so running them in a thread is advised.
 	 */
-	void destroy(bool allowReinitialization, vector<Callback> &postLockActions,
+	void destroy(bool allowReinitialization,
+		boost::container::vector<Callback> &postLockActions,
 		const ShutdownCallback &callback)
 	{
 		verifyInvariants();
@@ -575,7 +579,7 @@ public:
 	}
 
 	SessionPtr get(const Options &newOptions, const GetCallback &callback,
-		vector<Callback> &postLockActions)
+		boost::container::vector<Callback> &postLockActions)
 	{
 		switch (state) {
 		case INITIALIZING:

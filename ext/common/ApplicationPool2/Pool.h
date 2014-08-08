@@ -37,6 +37,10 @@
 #include <boost/make_shared.hpp>
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
+// We use boost::container::vector instead of std::vector, because the
+// former does not allocate memory in its default constructor. This is
+// useful for post lock action vectors which often remain empty.
+#include <boost/container/vector.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/dynamic_thread_group.hpp>
 #include <oxt/backtrace.hpp>
@@ -193,14 +197,14 @@ public:
 	const VariantMap *agentsOptions;
 	DebugSupportPtr debugSupport;
 
-	static void runAllActions(const vector<Callback> &actions) {
-		vector<Callback>::const_iterator it, end = actions.end();
+	static void runAllActions(const boost::container::vector<Callback> &actions) {
+		boost::container::vector<Callback>::const_iterator it, end = actions.end();
 		for (it = actions.begin(); it != end; it++) {
 			(*it)();
 		}
 	}
 
-	static void runAllActionsWithCopy(vector<Callback> actions) {
+	static void runAllActionsWithCopy(boost::container::vector<Callback> actions) {
 		runAllActions(actions);
 	}
 
@@ -345,7 +349,7 @@ public:
 	 * This function assigns sessions to them by calling get() on the corresponding
 	 * SuperGroups, or by creating more SuperGroups, in so far the new capacity allows.
 	 */
-	void assignSessionsToGetWaiters(vector<Callback> &postLockActions) {
+	void assignSessionsToGetWaiters(boost::container::vector<Callback> &postLockActions) {
 		bool done = false;
 		vector<GetWaiter>::iterator it, end = getWaitlist.end();
 		vector<GetWaiter> newWaitlist;
@@ -381,7 +385,7 @@ public:
 	template<typename Queue>
 	static void assignExceptionToGetWaiters(Queue &getWaitlist,
 		const ExceptionPtr &exception,
-		vector<Callback> &postLockActions)
+		boost::container::vector<Callback> &postLockActions)
 	{
 		while (!getWaitlist.empty()) {
 			postLockActions.push_back(boost::bind(
@@ -438,7 +442,7 @@ public:
 	 * See the comments for Group::detach() and the code for detachProcessUnlocked().
 	 */
 	ProcessPtr forceFreeCapacity(const Group *exclude,
-		vector<Callback> &postLockActions)
+		boost::container::vector<Callback> &postLockActions)
 	{
 		ProcessPtr process = findOldestIdleProcess(exclude);
 		if (process != NULL) {
@@ -466,7 +470,7 @@ public:
 	 * operation, so running them in a thread is advised.
 	 */
 	void forceDetachSuperGroup(const SuperGroupPtr &superGroup,
-		vector<Callback> &postLockActions,
+		boost::container::vector<Callback> &postLockActions,
 		const SuperGroup::ShutdownCallback &callback)
 	{
 		const SuperGroupPtr sp = superGroup; // Prevent premature destruction.
@@ -476,7 +480,9 @@ public:
 		superGroup->destroy(false, postLockActions, callback);
 	}
 
-	bool detachProcessUnlocked(const ProcessPtr &process, vector<Callback> &postLockActions) {
+	bool detachProcessUnlocked(const ProcessPtr &process,
+		boost::container::vector<Callback> &postLockActions)
+	{
 		if (OXT_LIKELY(process->isAlive())) {
 			verifyInvariants();
 
@@ -606,7 +612,7 @@ public:
 	struct GarbageCollectorState {
 		unsigned long long now;
 		unsigned long long nextGcRunTime;
-		vector<Callback> actions;
+		boost::container::vector<Callback> actions;
 	};
 
 	static void garbageCollect(PoolPtr self) {
@@ -882,7 +888,7 @@ public:
 			UPDATE_TRACE_POINT();
 			vector<UnionStationLogEntry> logEntries;
 			vector<ProcessPtr> processesToDetach;
-			vector<Callback> actions;
+			boost::container::vector<Callback> actions;
 			ScopedLock l(syncher);
 			SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
 
@@ -954,7 +960,7 @@ public:
 	}
 
 	SuperGroupPtr createSuperGroupAndAsyncGetFromIt(const Options &options,
-		const GetCallback &callback, vector<Callback> &postLockActions)
+		const GetCallback &callback, boost::container::vector<Callback> &postLockActions)
 	{
 		SuperGroupPtr superGroup = createSuperGroup(options);
 		SessionPtr session = superGroup->get(options, callback,
@@ -1077,7 +1083,7 @@ public:
 		assert(lifeStatus == ALIVE || lifeStatus == PREPARED_FOR_SHUTDOWN);
 		verifyInvariants();
 		P_TRACE(2, "asyncGet(appGroupName=" << options.getAppGroupName() << ")");
-		vector<Callback> actions;
+		boost::container::vector<Callback> actions;
 
 		SuperGroup *existingSuperGroup = findMatchingSuperGroup(options);
 		if (OXT_LIKELY(existingSuperGroup != NULL)) {
@@ -1222,7 +1228,7 @@ public:
 			 * resources to eventually complete. Favoring waiters
 			 * on the pool should be fairer.
 			 */
-			vector<Callback> actions;
+			boost::container::vector<Callback> actions;
 			assignSessionsToGetWaiters(actions);
 			possiblySpawnMoreProcessesForExistingGroups();
 
@@ -1350,7 +1356,7 @@ public:
 				verifyInvariants();
 				verifyExpensiveInvariants();
 
-				vector<Callback> actions;
+				boost::container::vector<Callback> actions;
 				boost::shared_ptr<DetachSuperGroupWaitTicket> ticket =
 					boost::make_shared<DetachSuperGroupWaitTicket>();
 				ExceptionPtr exception = copyException(
@@ -1410,7 +1416,7 @@ public:
 
 	bool detachProcess(const ProcessPtr &process) {
 		ScopedLock l(syncher);
-		vector<Callback> actions;
+		boost::container::vector<Callback> actions;
 		bool result = detachProcessUnlocked(process, actions);
 		fullVerifyInvariants();
 		l.unlock();
@@ -1422,7 +1428,7 @@ public:
 		ScopedLock l(syncher);
 		ProcessPtr process = findProcessByPid(pid, false);
 		if (process != NULL) {
-			vector<Callback> actions;
+			boost::container::vector<Callback> actions;
 			bool result = detachProcessUnlocked(process, actions);
 			fullVerifyInvariants();
 			l.unlock();
@@ -1437,7 +1443,7 @@ public:
 		ScopedLock l(syncher);
 		ProcessPtr process = findProcessByGupid(gupid, false);
 		if (process != NULL) {
-			vector<Callback> actions;
+			boost::container::vector<Callback> actions;
 			bool result = detachProcessUnlocked(process, actions);
 			fullVerifyInvariants();
 			l.unlock();
