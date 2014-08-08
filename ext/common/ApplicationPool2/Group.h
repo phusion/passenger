@@ -38,6 +38,7 @@
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/dynamic_thread_group.hpp>
+#include <sys/stat.h>
 #include <cstdlib>
 #include <cassert>
 #include <ApplicationPool2/Common.h>
@@ -47,8 +48,6 @@
 #include <ApplicationPool2/Options.h>
 #include <Hooks.h>
 #include <Utils.h>
-#include <Utils/CachedFileStat.hpp>
-#include <Utils/FileChangeChecker.h>
 #include <Utils/SmallVector.h>
 
 namespace Passenger {
@@ -134,10 +133,10 @@ public:
 	 * Read-only; only set during initialization.
 	 */
 	boost::weak_ptr<SuperGroup> superGroup;
-	CachedFileStat cstat;
-	FileChangeChecker fileChangeChecker;
 	string restartFile;
 	string alwaysRestartFile;
+	time_t lastRestartFileMtime;
+	time_t lastRestartFileCheckTime;
 
 	/** Number of times a restart has been initiated so far. This is incremented immediately
 	 * in Group::restart(), and is used to abort the restarter thread that was active at the
@@ -171,6 +170,7 @@ public:
 	 *    if m_restarting: processesBeingSpawned == 0
 	 */
 	bool m_restarting;
+	bool alwaysRestartFileExists;
 
 	/** Contains the spawn loop thread and the restarter thread. */
 	dynamic_thread_group interruptableThreads;
@@ -1305,9 +1305,72 @@ public:
 		if (m_restarting) {
 			return false;
 		} else {
+			time_t now = SystemTime::get();
 			struct stat buf;
-			return cstat.stat(alwaysRestartFile, &buf, options.statThrottleRate) == 0 ||
-			       fileChangeChecker.changed(restartFile, options.statThrottleRate);
+
+			if (lastRestartFileCheckTime == 0) {
+				// First time we call needsRestart() for this group.
+				if (syscalls::stat(restartFile.c_str(), &buf) == 0) {
+					lastRestartFileMtime = buf.st_mtime;
+				} else {
+					lastRestartFileMtime = 0;
+				}
+				lastRestartFileCheckTime = now;
+				return false;
+
+			} else if (lastRestartFileCheckTime <= now - (time_t) options.statThrottleRate) {
+				// Not first time we call needsRestart() for this group.
+				// Stat throttle time has passed.
+				bool restart;
+
+				lastRestartFileCheckTime = now;
+
+				if (lastRestartFileMtime > 0) {
+					// restart.txt existed before
+					if (syscalls::stat(restartFile.c_str(), &buf) == -1) {
+						// restart.txt no longer exists
+						lastRestartFileMtime = buf.st_mtime;
+						restart = false;
+					} else if (buf.st_mtime != lastRestartFileMtime) {
+						// restart.txt's mtime has changed
+						lastRestartFileMtime = buf.st_mtime;
+						restart = true;
+					} else {
+						restart = false;
+					}
+				} else {
+					// restart.txt didn't exist before
+					if (syscalls::stat(restartFile.c_str(), &buf) == 0) {
+						// restart.txt now exists
+						lastRestartFileMtime = buf.st_mtime;
+						restart = true;
+					} else {
+						// restart.txt still doesn't exist
+						lastRestartFileMtime = 0;
+						restart = false;
+					}
+				}
+
+				if (!restart) {
+					alwaysRestartFileExists = restart =
+						syscalls::stat(alwaysRestartFile.c_str(), &buf) == 0;
+				}
+
+				return restart;
+
+			} else {
+				// Not first time we call needsRestart() for this group.
+				// Still within stat throttling window.
+				if (alwaysRestartFileExists) {
+					// always_restart.txt existed before
+					alwaysRestartFileExists = syscalls::stat(
+						alwaysRestartFile.c_str(), &buf) == 0;
+					return alwaysRestartFileExists;
+				} else {
+					// Don't check until stat throttling window is over
+					return false;
+				}
+			}
 		}
 	}
 

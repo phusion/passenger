@@ -520,6 +520,9 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	m_spawning     = false;
 	m_restarting   = false;
 	lifeStatus     = ALIVE;
+	lastRestartFileMtime = 0;
+	lastRestartFileCheckTime = 0;
+	alwaysRestartFileExists = false;
 	if (options.restartDir.empty()) {
 		restartFile = options.appRoot + "/tmp/restart.txt";
 		alwaysRestartFile = options.appRoot + "/tmp/always_restart.txt";
