@@ -273,13 +273,6 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-
-	TEST_METHOD(28) {
-		// Empty header names.
-		ensure_equals(parser.feed("2:\0\0,", 5), (size_t) 2);
-		ensure_equals("Parser is in the error state.",
-			parser.getState(), ScgiRequestParser::ERROR);
-	}
 	
 	/***** Test parsing invalid SCGI requests in multiple passes. *****/
 	

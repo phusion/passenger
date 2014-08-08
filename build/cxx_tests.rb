@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2013 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -85,10 +85,6 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/SmartSpawner.h
 		ext/common/ApplicationPool2/DirectSpawner.h
 		ext/common/ApplicationPool2/DummySpawner.h),
-	'test/cxx/ServerKit/ChannelTest.o' => %w(
-		test/cxx/ServerKit/ChannelTest.cpp
-		ext/common/ServerKit/Channel.h
-		ext/common/ServerKit/Context.h),
 	'test/cxx/MessageReadersWritersTest.o' => %w(
 		test/cxx/MessageReadersWritersTest.cpp
 		ext/common/MessageReadersWriters.h
