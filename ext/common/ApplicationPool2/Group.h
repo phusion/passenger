@@ -414,7 +414,9 @@ public:
 		return session;
 	}
 
-	bool pushGetWaiter(const Options &newOptions, const GetCallback &callback) {
+	bool pushGetWaiter(const Options &newOptions, const GetCallback &callback,
+		boost::container::vector<Callback> &postLockActions)
+	{
 		if (OXT_LIKELY(!testOverflowRequestQueue()
 			&& (newOptions.maxRequestQueueSize == 0
 			    || getWaitlist.size() < newOptions.maxRequestQueueSize)))
@@ -425,7 +427,8 @@ public:
 			return true;
 		} else {
 			P_WARN("Request queue is full. Returning an error");
-			callback(SessionPtr(), boost::make_shared<RequestQueueFullException>());
+			postLockActions.push_back(boost::bind(GetCallback::call,
+				callback, SessionPtr(), boost::make_shared<RequestQueueFullException>()));
 			return false;
 		}
 	}
@@ -939,7 +942,7 @@ public:
 				}
 			}
 
-			if (pushGetWaiter(newOptions, callback)) {
+			if (pushGetWaiter(newOptions, callback, postLockActions)) {
 				P_DEBUG("No session checked out yet: group is spawning or restarting");
 			}
 			return SessionPtr();
@@ -950,7 +953,7 @@ public:
 				 * Wait until a new one has been spawned or until
 				 * resources have become free.
 				 */
-				if (pushGetWaiter(newOptions, callback)) {
+				if (pushGetWaiter(newOptions, callback, postLockActions)) {
 					P_DEBUG("No session checked out yet: all processes are at full capacity");
 				}
 				return SessionPtr();
