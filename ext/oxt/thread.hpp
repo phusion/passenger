@@ -29,6 +29,7 @@
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
+#include "macros.hpp"
 #include "system_calls.hpp"
 #include "detail/context.hpp"
 #include <string>
@@ -37,6 +38,13 @@
 #include <limits.h>  // for PTHREAD_STACK_MIN
 
 namespace oxt {
+
+#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+	/** A thread-specific signature that you can use for identifying threads.
+	 * It defaults to NULL. You have to set it manually in every thread.
+	 */
+	extern __thread void *thread_signature;
+#endif
 
 /**
  * Enhanced thread class with support for:

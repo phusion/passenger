@@ -58,6 +58,7 @@ static global_context_t *global_context = NULL;
  */
 #ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
 	static __thread thread_local_context_ptr *local_context = NULL;
+	__thread void *thread_signature = NULL;
 
 	static void
 	init_thread_local_context_support() {

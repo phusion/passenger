@@ -154,10 +154,27 @@ public:
 
 	void setCurrentThread() {
 		loopThread = pthread_self();
+		#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+			oxt::thread_signature = this;
+		#endif
 	}
 
 	pthread_t getCurrentThread() const {
 		return loopThread;
+	}
+
+	bool onEventLoopThread() const {
+		#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+			// Avoid double reads of the thread-local variable.
+			const void *sig = oxt::thread_signature;
+			if (OXT_UNLIKELY(sig == NULL)) {
+				return pthread_equal(pthread_self(), loopThread);
+			} else {
+				return sig == this;
+			}
+		#else
+			return pthread_equal(pthread_self(), loopThread);
+		#endif
 	}
 
 	template<typename Watcher>
