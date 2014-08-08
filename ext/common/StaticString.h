@@ -36,6 +36,8 @@ namespace Passenger {
 
 using namespace std;
 
+#define P_STATIC_STRING(x) Passenger::StaticString(x, sizeof(x) - 1)
+
 /**
  * An immutable, static byte buffer. This class will never copy data:
  * it just holds a pointer to the data. So a StaticString will become unusable
@@ -47,7 +49,7 @@ class StaticString {
 private:
 	const char *content;
 	string::size_type len;
-	
+
 	static const char *memmem(const char *haystack, string::size_type haystack_len,
 		const char *needle, string::size_type needle_len)
 	{
@@ -77,7 +79,7 @@ private:
 			}
 		} while (true);
 	}
-	
+
 public:
 	/** A hash function object for StaticString. */
 	struct Hash {
@@ -85,7 +87,7 @@ public:
 			const char *data = str.content;
 			const char *end  = str.content + str.len;
 			size_t result    = 0;
-			
+
 			#if defined(__i386__) || defined(__x86_64__)
 				/* When on x86 or x86_64, process 4 or 8 bytes
 				 * per iteration by treating the data as an
@@ -96,15 +98,15 @@ public:
 				const char *last_long = str.content +
 					str.len / sizeof(unsigned long) *
 					sizeof(unsigned long);
-				
+
 				while (data < last_long) {
 					result = result * 33 + *((unsigned long *) data);
 					data += sizeof(unsigned long);
 				}
-				
+
 				/* Process leftover data byte-by-byte. */
 			#endif
-			
+
 			while (data < end) {
 				result = result * 33 + *data;
 				data++;
@@ -112,68 +114,68 @@ public:
 			return result;
 		}
 	};
-	
+
 	StaticString() {
 		content = "";
 		len = 0;
 	}
-	
+
 	StaticString(const StaticString &b) {
 		content = b.content;
 		len = b.len;
 	}
-	
+
 	StaticString(const string &s) {
 		content = s.data();
 		len = s.size();
 	}
-	
+
 	StaticString(const char *data) {
 		content = data;
 		len = strlen(data);
 	}
-	
+
 	StaticString(const char *data, string::size_type len) {
 		content = data;
 		this->len = len;
 	}
-	
+
 	bool empty() const {
 		return len == 0;
 	}
-	
+
 	string::size_type size() const {
 		return len;
 	}
-	
+
 	char operator[](string::size_type i) const {
 		return content[i];
 	}
-	
+
 	char at(string::size_type i) const {
 		return content[i];
 	}
-	
+
 	const char *c_str() const {
 		return content;
 	}
-	
+
 	const char *data() const {
 		return content;
 	}
-	
+
 	string toString() const {
 		return string(content, len);
 	}
-	
+
 	bool equals(const StaticString &other) const {
 		return len == other.len && memcmp(content, other.content, len) == 0;
 	}
-	
+
 	bool equals(const string &other) const {
 		return len == other.size() && memcmp(content, other.data(), len) == 0;
 	}
-	
+
 	string::size_type find(char c, string::size_type pos = 0) const {
 		if (pos < len) {
 			const char *result = (const char *) memchr(content + pos, c, len - pos);
@@ -186,7 +188,7 @@ public:
 			return string::npos;
 		}
 	}
-	
+
 	string::size_type find(const StaticString &s, string::size_type pos = 0) const {
 		if (s.empty()) {
 			return 0;
@@ -201,11 +203,11 @@ public:
 			return string::npos;
 		}
 	}
-	
+
 	string::size_type find(const char *s, string::size_type pos, string::size_type n) const {
 		return find(StaticString(s, n), pos);
 	}
-	
+
 	StaticString substr(string::size_type pos = 0, string::size_type n = string::npos) const {
 		if (pos > len) {
 			throw out_of_range("Argument 'pos' out of range");
@@ -216,33 +218,33 @@ public:
 			return StaticString(content + pos, n);
 		}
 	}
-	
+
 	bool operator==(const StaticString &other) const {
 		return len == other.len && memcmp(content, other.content, len) == 0;
 	}
-	
+
 	bool operator==(const string &other) const {
 		return len == other.size() && memcmp(content, other.data(), len) == 0;
 	}
-	
+
 	bool operator==(const char *other) const {
 		size_t other_len = strlen(other);
 		return len == other_len && memcmp(content, other, other_len) == 0;
 	}
-	
+
 	bool operator!=(const StaticString &other) const {
 		return len != other.len || memcmp(content, other.content, len) != 0;
 	}
-	
+
 	bool operator!=(const string &other) const {
 		return len != other.size() || memcmp(content, other.data(), len) != 0;
 	}
-	
+
 	bool operator!=(const char *other) const {
 		size_t other_len = strlen(other);
 		return len != other_len || memcmp(content, other, other_len) != 0;
 	}
-	
+
 	bool operator<(const StaticString &other) const {
 		size_t size = (len < other.size()) ? len : other.size();
 		int result = memcmp(content, other.data(), size);
@@ -252,25 +254,25 @@ public:
 			return result < 0;
 		}
 	}
-	
+
 	bool operator<(const char *other) const {
 		return *this < StaticString(other);
 	}
-	
+
 	string operator+(const char *other) const {
 		return string(content, len) + other;
 	}
-	
+
 	string operator+(const string &other) const {
 		return string(content, len) + other;
 	}
-	
+
 	string operator+(const StaticString &other) const {
 		string result(content, len);
 		result.append(other.data(), other.size());
 		return result;
 	}
-	
+
 	operator string() const {
 		return string(content, len);
 	}
