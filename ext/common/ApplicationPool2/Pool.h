@@ -362,7 +362,7 @@ public:
 				SessionPtr session = superGroup->get(waiter.options, waiter.callback,
 					postLockActions);
 				if (session != NULL) {
-					postLockActions.push_back(boost::bind(
+					postLockActions.push_back(boost::bind(GetCallback::call,
 						waiter.callback, session, ExceptionPtr()));
 				}
 				/* else: the callback has now been put in
@@ -388,7 +388,7 @@ public:
 		boost::container::vector<Callback> &postLockActions)
 	{
 		while (!getWaitlist.empty()) {
-			postLockActions.push_back(boost::bind(
+			postLockActions.push_back(boost::bind(GetCallback::call,
 				getWaitlist.front().callback, SessionPtr(),
 				exception));
 			getWaitlist.pop_front();
@@ -595,7 +595,10 @@ public:
 		ticket->cond.notify_one();
 	}
 
-	static void syncGetCallback(Ticket *ticket, const SessionPtr &session, const ExceptionPtr &e) {
+	static void syncGetCallback(const SessionPtr &session, const ExceptionPtr &e,
+		void *userData)
+	{
+		Ticket *ticket = static_cast<Ticket *>(userData);
 		ScopedLock lock(ticket->syncher);
 		if (OXT_LIKELY(session != NULL)) {
 			ticket->session = session;
@@ -1178,7 +1181,10 @@ public:
 		ticket->session.reset();
 		ticket->exception.reset();
 
-		asyncGet(options, boost::bind(syncGetCallback, ticket, _1, _2));
+		GetCallback callback;
+		callback.func = syncGetCallback;
+		callback.userData = ticket;
+		asyncGet(options, callback);
 
 		ScopedLock lock(ticket->syncher);
 		while (ticket->session == NULL && ticket->exception == NULL) {

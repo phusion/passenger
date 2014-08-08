@@ -559,6 +559,7 @@ public:
 			RouteResult result = route(waiter.options);
 			if (result.process != NULL) {
 				postLockActions.push_back(boost::bind(
+					GetCallback::call,
 					waiter.callback,
 					newSession(result.process),
 					ExceptionPtr()));

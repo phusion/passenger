@@ -303,7 +303,7 @@ private:
 			SessionPtr session = group->get(adjustedOptions, waiter.callback,
 				postLockActions);
 			if (session != NULL) {
-				postLockActions.push_back(boost::bind(
+				postLockActions.push_back(boost::bind(GetCallback::call,
 					waiter.callback, session, ExceptionPtr()));
 			}
 			getWaitlist.pop_front();

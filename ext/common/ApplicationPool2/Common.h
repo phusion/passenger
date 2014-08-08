@@ -164,9 +164,21 @@ typedef boost::shared_ptr<Process> ProcessPtr;
 typedef boost::shared_ptr<Session> SessionPtr;
 typedef boost::shared_ptr<tracable_exception> ExceptionPtr;
 typedef StringMap<SuperGroupPtr> SuperGroupMap;
-typedef boost::function<void (const SessionPtr &session, const ExceptionPtr &e)> GetCallback;
 typedef boost::function<void (const ProcessPtr &process, DisableResult result)> DisableCallback;
 typedef boost::function<void ()> Callback;
+
+struct GetCallback {
+	void (*func)(const SessionPtr &session, const ExceptionPtr &e, void *userData);
+	mutable void *userData;
+
+	void operator()(const SessionPtr &session, const ExceptionPtr &e) const {
+		func(session, e, userData);
+	}
+
+	static void call(GetCallback cb, const SessionPtr &session, const ExceptionPtr &e) {
+		cb(session, e);
+	}
+};
 
 struct GetWaiter {
 	Options options;

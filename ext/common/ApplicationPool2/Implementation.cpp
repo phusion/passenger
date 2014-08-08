@@ -402,8 +402,8 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 			actions.reserve(getWaitlist.size());
 			while (!getWaitlist.empty()) {
 				const GetWaiter &waiter = getWaitlist.front();
-				actions.push_back(boost::bind(waiter.callback,
-					SessionPtr(), exception));
+				actions.push_back(boost::bind(GetCallback::call,
+					waiter.callback, SessionPtr(), exception));
 				getWaitlist.pop_front();
 			}
 		} else {
@@ -542,6 +542,7 @@ Group::~Group() {
 	}
 	assert(lifeStatus == SHUT_DOWN);
 	assert(!detachedProcessesCheckerActive);
+	assert(getWaitlist.empty());
 }
 
 PoolPtr
