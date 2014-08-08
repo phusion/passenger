@@ -38,7 +38,7 @@
 #include <oxt/system_calls.hpp>
 
 #include <StaticString.h>
- #include <Utils/SystemTime.h>
+#include <Utils/SystemTime.h>
 #include <Utils/StringMap.h>
 
 namespace Passenger {
@@ -55,8 +55,6 @@ using namespace boost;
  * The cache has a maximum size, which may be altered during runtime. If a
  * file that wasn't in the cache is being stat()ed, and the cache is full,
  * then the oldest cache entry will be removed.
- *
- * This class is fully thread-safe.
  */
 class CachedFileStat {
 public:
@@ -148,7 +146,6 @@ public:
 	unsigned int maxSize;
 	EntryList entries;
 	EntryMap cache;
-	mutable boost::mutex lock;
 
 	/**
 	 * Creates a new CachedFileStat object.
@@ -178,7 +175,6 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	int stat(const StaticString &filename, struct stat *buf, unsigned int throttleRate = 0) {
-		boost::unique_lock<boost::mutex> l(lock);
 		EntryList::iterator it(cache.get(filename, entries.end()));
 		EntryPtr entry;
 		int ret;
@@ -220,7 +216,6 @@ public:
 	 * A size of 0 means unlimited.
 	 */
 	void setMaxSize(unsigned int maxSize) {
-		boost::unique_lock<boost::mutex> l(lock);
 		if (maxSize != 0) {
 			int toRemove = cache.size() - maxSize;
 			for (int i = 0; i < toRemove; i++) {
@@ -236,7 +231,6 @@ public:
 	 * Returns whether `filename` is in the cache.
 	 */
 	bool knows(const StaticString &filename) const {
-		boost::unique_lock<boost::mutex> l(lock);
 		return cache.has(filename);
 	}
 };

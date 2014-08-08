@@ -26,12 +26,10 @@
 #define _PASSENGER_CHANGE_FILE_CHECKER_H_
 
 #include <string>
+#include <cerrno>
 
-#include <boost/thread.hpp>
-#include <errno.h>
-
-#include "CachedFileStat.hpp"
-#include "SystemTime.h"
+#include <Utils/CachedFileStat.hpp>
+#include <Utils/SystemTime.h>
 
 namespace Passenger {
 
@@ -72,7 +70,6 @@ private:
 	typedef map<string, EntryList::iterator> EntryMap;
 
 	CachedFileStat cstat;
-	mutable boost::mutex lock;
 	unsigned int maxSize;
 	EntryList entries;
 	EntryMap fileToEntry;
@@ -113,7 +110,6 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	bool changed(const string &filename, unsigned int throttleRate = 0) {
-		boost::unique_lock<boost::mutex> l(lock);
 		EntryMap::iterator it(fileToEntry.find(filename));
 		EntryPtr entry;
 		struct stat buf;
@@ -182,7 +178,6 @@ public:
 	 * A size of 0 means unlimited.
 	 */
 	void setMaxSize(unsigned int maxSize) {
-		boost::unique_lock<boost::mutex> l(lock);
 		if (maxSize != 0) {
 			int toRemove = fileToEntry.size() - maxSize;
 			for (int i = 0; i < toRemove; i++) {
@@ -199,7 +194,6 @@ public:
 	 * Returns whether <tt>filename</tt> is in the internal file list.
 	 */
 	bool knows(const string &filename) const {
-		boost::unique_lock<boost::mutex> l(lock);
 		return fileToEntry.find(filename) != fileToEntry.end();
 	}
 };
