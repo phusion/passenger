@@ -65,28 +65,28 @@ copyException(const tracable_exception &e) {
 	TRY_COPY_EXCEPTION(FileSystemException);
 	TRY_COPY_EXCEPTION(TimeRetrievalException);
 	TRY_COPY_EXCEPTION(SystemException);
-	
+
 	TRY_COPY_EXCEPTION(FileNotFoundException);
 	TRY_COPY_EXCEPTION(EOFException);
 	TRY_COPY_EXCEPTION(IOException);
-	
+
 	TRY_COPY_EXCEPTION(ConfigurationException);
-	
+
 	TRY_COPY_EXCEPTION(RequestQueueFullException);
 	TRY_COPY_EXCEPTION(GetAbortedException);
 	TRY_COPY_EXCEPTION(SpawnException);
-	
+
 	TRY_COPY_EXCEPTION(InvalidModeStringException);
 	TRY_COPY_EXCEPTION(ArgumentException);
-	
+
 	TRY_COPY_EXCEPTION(RuntimeException);
-	
+
 	TRY_COPY_EXCEPTION(TimeoutException);
-	
+
 	TRY_COPY_EXCEPTION(NonExistentUserException);
 	TRY_COPY_EXCEPTION(NonExistentGroupException);
 	TRY_COPY_EXCEPTION(SecurityException);
-	
+
 	TRY_COPY_EXCEPTION(SyntaxError);
 
 	TRY_COPY_EXCEPTION(boost::thread_interrupted);
@@ -107,28 +107,28 @@ rethrowException(const ExceptionPtr &e) {
 	TRY_RETHROW_EXCEPTION(FileSystemException);
 	TRY_RETHROW_EXCEPTION(TimeRetrievalException);
 	TRY_RETHROW_EXCEPTION(SystemException);
-	
+
 	TRY_RETHROW_EXCEPTION(FileNotFoundException);
 	TRY_RETHROW_EXCEPTION(EOFException);
 	TRY_RETHROW_EXCEPTION(IOException);
-	
+
 	TRY_RETHROW_EXCEPTION(ConfigurationException);
-	
+
 	TRY_RETHROW_EXCEPTION(SpawnException);
 	TRY_RETHROW_EXCEPTION(RequestQueueFullException);
 	TRY_RETHROW_EXCEPTION(GetAbortedException);
-	
+
 	TRY_RETHROW_EXCEPTION(InvalidModeStringException);
 	TRY_RETHROW_EXCEPTION(ArgumentException);
-	
+
 	TRY_RETHROW_EXCEPTION(RuntimeException);
-	
+
 	TRY_RETHROW_EXCEPTION(TimeoutException);
-	
+
 	TRY_RETHROW_EXCEPTION(NonExistentUserException);
 	TRY_RETHROW_EXCEPTION(NonExistentGroupException);
 	TRY_RETHROW_EXCEPTION(SecurityException);
-	
+
 	TRY_RETHROW_EXCEPTION(SyntaxError);
 
 	TRY_RETHROW_EXCEPTION(boost::lock_error);
@@ -140,7 +140,7 @@ rethrowException(const ExceptionPtr &e) {
 	TRY_RETHROW_EXCEPTION(boost::thread_interrupted);
 	TRY_RETHROW_EXCEPTION(boost::thread_exception);
 	TRY_RETHROW_EXCEPTION(boost::condition_error);
-	
+
 	throw tracable_exception(*e);
 }
 
@@ -337,7 +337,7 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 	ExceptionPtr exception;
 
 	PoolPtr pool = getPool();
-	
+
 	P_TRACE(2, "Initializing SuperGroup " << inspect() << " in the background...");
 	try {
 		componentInfos = loadComponentInfos(options);
@@ -355,7 +355,7 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 		processAndLogNewSpawnException(*spawnException, options,
 			pool->getSpawnerConfig());
 	}
-	
+
 	Pool::DebugSupportPtr debug = pool->debugSupport;
 	vector<Callback> actions;
 	{
@@ -374,14 +374,14 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 		P_TRACE(2, "Initialization of SuperGroup " << inspect() << " almost done; grabbed lock");
 		assert(state == INITIALIZING);
 		verifyInvariants();
-		
+
 		if (componentInfos.empty()) {
 			/* Somehow initialization failed. Maybe something has deleted
 			 * the supergroup files while we're working.
 			 */
 			assert(exception != NULL);
 			setState(DESTROYED);
-			
+
 			actions.reserve(getWaitlist.size());
 			while (!getWaitlist.empty()) {
 				const GetWaiter &waiter = getWaitlist.front();
@@ -403,7 +403,7 @@ SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
 			setState(READY);
 			assignGetWaitlistToGroups(actions);
 		}
-		
+
 		verifyInvariants();
 		P_TRACE(2, "Done initializing SuperGroup " << inspect());
 	}
@@ -419,14 +419,14 @@ SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
 	TRACE_POINT();
 	vector<ComponentInfo> componentInfos = loadComponentInfos(options);
 	vector<ComponentInfo>::const_iterator it;
-	
+
 	PoolPtr pool = getPool();
 	Pool::DebugSupportPtr debug = pool->debugSupport;
 	if (debug != NULL && debug->superGroup) {
 		debug->debugger->send("About to finish SuperGroup restart");
 		debug->messages->recv("Proceed with restarting SuperGroup");
 	}
-	
+
 	boost::unique_lock<boost::mutex> lock(getPoolSyncher(pool));
 	if (OXT_UNLIKELY(this->generation != generation)) {
 		return;
@@ -434,14 +434,14 @@ SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
 
 	assert(state == RESTARTING);
 	verifyInvariants();
-	
+
 	vector<GroupPtr> allGroups;
 	vector<GroupPtr> updatedGroups;
 	vector<GroupPtr> newGroups;
 	vector<GroupPtr>::const_iterator g_it;
 	vector<Callback> actions;
 	this->options = options;
-	
+
 	// Update the component information for existing groups.
 	UPDATE_TRACE_POINT();
 	for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
@@ -464,22 +464,22 @@ SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
 		// allGroups must be in the same order as componentInfos.
 		allGroups.push_back(group);
 	}
-	
+
 	// Some components might have been deleted, so delete the
 	// corresponding groups.
 	detachAllGroups(groups, actions);
-	
+
 	// Tell all previous existing groups to restart.
 	for (g_it = updatedGroups.begin(); g_it != updatedGroups.end(); g_it++) {
 		GroupPtr group = *g_it;
 		group->restart(options);
 	}
-	
+
 	groups = allGroups;
 	defaultGroup = findDefaultGroup(allGroups);
 	setState(READY);
 	assignGetWaitlistToGroups(actions);
-	
+
 	UPDATE_TRACE_POINT();
 	verifyInvariants();
 	lock.unlock();
@@ -565,7 +565,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 	P_TRACE(2, "Session closed for process " << process->inspect());
 	verifyInvariants();
 	UPDATE_TRACE_POINT();
-	
+
 	/* Update statistics. */
 	process->sessionClosed(session);
 	assert(process->getLifeStatus() == Process::ALIVE);
@@ -630,7 +630,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 			removeFromDisableWaitlist(process, DR_SUCCESS, actions);
 			maybeInitiateOobw(process);
 		}
-		
+
 		pool->fullVerifyInvariants();
 		lock.unlock();
 		runAllActions(actions);
@@ -695,7 +695,7 @@ Group::maybeInitiateOobw(const ProcessPtr &process) {
 void
 Group::lockAndMaybeInitiateOobw(const ProcessPtr &process, DisableResult result, GroupPtr self) {
 	TRACE_POINT();
-	
+
 	// Standard resource management boilerplate stuff...
 	PoolPtr pool = getPool();
 	boost::unique_lock<boost::mutex> lock(pool->syncher);
@@ -766,10 +766,10 @@ Group::initiateOobw(const ProcessPtr &process) {
 			P_BUG("Unexpected disable() result " << result);
 		}
 	}
-	
+
 	assert(process->enabled == Process::DISABLED);
 	assert(process->sessions == 0);
-	
+
 	P_DEBUG("Initiating OOBW request for process " << process->inspect());
 	interruptableThreads.create_thread(
 		boost::bind(&Group::spawnThreadOOBWRequest, this, shared_from_this(), process),
@@ -795,7 +795,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		debug->debugger->send("OOBW request about to start");
 		debug->messages->recv("Proceed with OOBW request");
 	}
-	
+
 	UPDATE_TRACE_POINT();
 	{
 		// Standard resource management boilerplate stuff...
@@ -816,13 +816,13 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 			}
 			return;
 		}
-		
+
 		assert(process->oobwStatus == Process::OOBW_IN_PROGRESS);
 		assert(process->sessions == 0);
 		socket = process->sessionSockets.top();
 		assert(socket != NULL);
 	}
-	
+
 	UPDATE_TRACE_POINT();
 	unsigned long long timeout = 1000 * 1000 * 60; // 1 min
 	try {
@@ -835,7 +835,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		connection = socket->checkoutConnection();
 		connection.fail = true;
 		ScopeGuard guard(boost::bind(&Socket::checkinConnection, socket, connection));
-		
+
 		// This is copied from RequestHandler when it is sending data using the
 		// "session" protocol.
 		char sizeField[sizeof(uint32_t)];
@@ -864,7 +864,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	} catch (const TimeoutException &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 	}
-	
+
 	UPDATE_TRACE_POINT();
 	vector<Callback> actions;
 	{
@@ -874,7 +874,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		if (OXT_UNLIKELY(!process->isAlive() || !isAlive())) {
 			return;
 		}
-		
+
 		process->oobwStatus = Process::OOBW_NOT_ACTIVE;
 		if (process->enabled == Process::DISABLED) {
 			enable(process, actions);
@@ -924,7 +924,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 
 	PoolPtr pool = getPool();
 	Pool::DebugSupportPtr debug = pool->debugSupport;
-	
+
 	bool done = false;
 	while (!done) {
 		bool shouldFail = false;
@@ -942,7 +942,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 			P_DEBUG("Begin spawn loop iteration " << iteration);
 			debug->debugger->send("Begin spawn loop iteration " +
 				iteration);
-			
+
 			vector<string> cases;
 			cases.push_back("Proceed with spawn loop iteration " + iteration);
 			cases.push_back("Fail spawn loop iteration " + iteration);
@@ -1153,7 +1153,7 @@ Group::finalizeRestart(GroupPtr self, Options options, RestartMethod method,
 	pool->fullVerifyInvariants();
 	assert(m_restarting);
 	UPDATE_TRACE_POINT();
-	
+
 	// Atomically swap the new spawner with the old one.
 	resetOptions(options);
 	oldSpawner = spawner;
@@ -1508,7 +1508,7 @@ PipeWatcher::threadMain() {
 	while (!this_thread::interruption_requested()) {
 		char buf[1024 * 8];
 		ssize_t ret;
-		
+
 		UPDATE_TRACE_POINT();
 		ret = syscalls::read(fd, buf, sizeof(buf));
 		if (ret == 0) {
