@@ -132,7 +132,7 @@ public:
 	 * Groups.
 	 * Read-only; only set during initialization.
 	 */
-	boost::weak_ptr<SuperGroup> superGroup;
+	SuperGroup *superGroup;
 	string restartFile;
 	string alwaysRestartFile;
 	time_t lastRestartFileMtime;
@@ -175,6 +175,8 @@ public:
 	/** Contains the spawn loop thread and the restarter thread. */
 	dynamic_thread_group interruptableThreads;
 
+	ProcessPtr nullProcess;
+
 	/** This timer scans `detachedProcesses` periodically to see
 	 * whether any of the Processes can be shut down.
 	 */
@@ -185,27 +187,27 @@ public:
 
 
 	static void _onSessionInitiateFailure(Session *session) {
-		ProcessPtr process = session->getProcess();
+		Process *process = session->getProcess();
 		assert(process != NULL);
 		process->getGroup()->onSessionInitiateFailure(process, session);
 	}
 
 	static void _onSessionClose(Session *session) {
-		ProcessPtr process = session->getProcess();
+		Process *process = session->getProcess();
 		assert(process != NULL);
 		process->getGroup()->onSessionClose(process, session);
 	}
 
-	static string generateSecret(const SuperGroupPtr &superGroup);
-	static string generateUuid(const SuperGroupPtr &superGroup);
-	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
-	void onSessionClose(const ProcessPtr &process, Session *session);
+	static string generateSecret(const SuperGroup *superGroup);
+	static string generateUuid(const SuperGroup *superGroup);
+	void onSessionInitiateFailure(Process *process, Session *session);
+	void onSessionClose(Process *process, Session *session);
 
 	/** Returns whether it is allowed to perform a new OOBW in this group. */
 	bool oobwAllowed() const;
 	/** Returns whether a new OOBW should be initiated for this process. */
-	bool shouldInitiateOobw(const ProcessPtr &process) const;
-	void maybeInitiateOobw(const ProcessPtr &process);
+	bool shouldInitiateOobw(Process *process) const;
+	void maybeInitiateOobw(Process *process);
 	void lockAndMaybeInitiateOobw(const ProcessPtr &process, DisableResult result, GroupPtr self);
 	void initiateOobw(const ProcessPtr &process);
 	void spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process);
@@ -801,8 +803,9 @@ public:
 	 * Constructors and destructors
 	 ********************************************/
 
-	Group(const SuperGroupPtr &superGroup, const Options &options, const ComponentInfo &info);
+	Group(SuperGroup *superGroup, const Options &options, const ComponentInfo &info);
 	~Group();
+	void initialize();
 
 	/**
 	 * Must be called before destroying a Group. You can optionally provide a
@@ -843,12 +846,12 @@ public:
 	 * @pre getLifeState() != SHUT_DOWN
 	 * @post result != NULL
 	 */
-	SuperGroupPtr getSuperGroup() const {
-		return superGroup.lock();
+	SuperGroup *getSuperGroup() const {
+		return superGroup;
 	}
 
-	void setSuperGroup(const SuperGroupPtr &superGroup) {
-		assert(this->superGroup.lock() == NULL);
+	void setSuperGroup(SuperGroup *superGroup) {
+		assert(this->superGroup == NULL);
 		this->superGroup = superGroup;
 	}
 
@@ -857,7 +860,7 @@ public:
 	 * @pre getLifeState() != SHUT_DOWN
 	 * @post result != NULL
 	 */
-	PoolPtr getPool() const;
+	Pool *getPool() const;
 
 	// Thread-safe.
 	bool isAlive() const {
@@ -908,14 +911,8 @@ public:
 		}
 
 		if (OXT_UNLIKELY(newOptions.noop)) {
-			ProcessPtr process = boost::make_shared<Process>(
-				0, string(), string(),
-				FileDescriptor(), FileDescriptor(),
-				SocketListPtr(), 0, 0);
-			process->dummy = true;
-			process->requiresShutdown = false;
-			process->setGroup(shared_from_this());
-			return boost::make_shared<Session>(process, (Socket *) NULL);
+			return boost::make_shared<Session>(nullProcess.get(),
+				(Socket *) NULL);
 		}
 
 		if (OXT_UNLIKELY(enabledCount == 0)) {
@@ -981,7 +978,7 @@ public:
 		boost::container::vector<Callback> &postLockActions)
 	{
 		TRACE_POINT();
-		assert(process->getGroup() == NULL || process->getGroup().get() == this);
+		assert(process->getGroup() == NULL || process->getGroup() == this);
 		assert(process->isAlive());
 		assert(isAlive());
 
@@ -993,7 +990,7 @@ public:
 			return AR_ANOTHER_GROUP_IS_WAITING_FOR_CAPACITY;
 		}
 
-		process->setGroup(shared_from_this());
+		process->setGroup(this);
 		process->stickySessionId = generateStickySessionId();
 		P_DEBUG("Attaching process " << process->inspect());
 		addProcessToList(process, enabledProcesses);
@@ -1042,7 +1039,7 @@ public:
 	 */
 	void detach(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
 		TRACE_POINT();
-		assert(process->getGroup().get() == this);
+		assert(process->getGroup() == this);
 		assert(process->isAlive());
 		assert(isAlive());
 
@@ -1108,7 +1105,7 @@ public:
 	 * so be sure to fix its invariants afterwards if necessary.
 	 */
 	void enable(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
-		assert(process->getGroup().get() == this);
+		assert(process->getGroup() == this);
 		assert(process->isAlive());
 		assert(isAlive());
 
@@ -1132,7 +1129,7 @@ public:
 	 * called later with the result of this action.
 	 */
 	DisableResult disable(const ProcessPtr &process, const DisableCallback &callback) {
-		assert(process->getGroup().get() == this);
+		assert(process->getGroup() == this);
 		assert(process->isAlive());
 		assert(isAlive());
 

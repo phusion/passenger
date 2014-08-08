@@ -449,12 +449,13 @@ public:
 			P_DEBUG("Forcefully detaching process " << process->inspect() <<
 				" in order to free capacity in the pool");
 
-			const GroupPtr group = process->getGroup();
+			Group *group = process->getGroup();
 			assert(group != NULL);
 			assert(group->getWaitlist.empty());
 
-			const SuperGroupPtr superGroup = group->getSuperGroup();
+			SuperGroup *superGroup = group->getSuperGroup();
 			assert(superGroup != NULL);
+			(void) superGroup;
 
 			group->detach(process, postLockActions);
 		}
@@ -486,10 +487,11 @@ public:
 		if (OXT_LIKELY(process->isAlive())) {
 			verifyInvariants();
 
-			const GroupPtr group = process->getGroup();
-			const SuperGroupPtr superGroup = group->getSuperGroup();
+			Group *group = process->getGroup();
+			SuperGroup *superGroup = group->getSuperGroup();
 			assert(superGroup->state != SuperGroup::INITIALIZING);
 			assert(superGroup->getWaitlist.empty());
+			(void) superGroup;
 
 			group->detach(process, postLockActions);
 			// 'process' may now be a stale pointer so don't use it anymore.
@@ -954,7 +956,7 @@ public:
 	}
 
 	SuperGroupPtr createSuperGroup(const Options &options) {
-		SuperGroupPtr superGroup = boost::make_shared<SuperGroup>(shared_from_this(),
+		SuperGroupPtr superGroup = boost::make_shared<SuperGroup>(this,
 			options);
 		superGroup->initialize();
 		superGroups.set(options.getAppGroupName(), superGroup);
@@ -1139,7 +1141,7 @@ public:
 				 */
 				P_DEBUG("Creating new SuperGroup");
 				SuperGroupPtr superGroup;
-				superGroup = boost::make_shared<SuperGroup>(shared_from_this(), options);
+				superGroup = boost::make_shared<SuperGroup>(this, options);
 				superGroup->initialize();
 				superGroups.set(options.getAppGroupName(), superGroup);
 				garbageCollectionCond.notify_all();
@@ -1215,7 +1217,7 @@ public:
 				createSuperGroup(options);
 			}
 		}
-		return get(options2, &ticket)->getGroup();
+		return get(options2, &ticket)->getGroup()->shared_from_this();
 	}
 
 	void setMax(unsigned int max) {
@@ -1464,7 +1466,7 @@ public:
 		ScopedLock l(syncher);
 		ProcessPtr process = findProcessByGupid(gupid, false);
 		if (process != NULL) {
-			GroupPtr group = process->getGroup();
+			Group *group = process->getGroup();
 			// Must be a boost::shared_ptr to be interruption-safe.
 			boost::shared_ptr<DisableWaitTicket> ticket = boost::make_shared<DisableWaitTicket>();
 			DisableResult result = group->disable(process,

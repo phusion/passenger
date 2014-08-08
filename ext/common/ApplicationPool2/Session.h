@@ -54,8 +54,7 @@ public:
 	typedef void (*Callback)(Session *session);
 
 private:
-	ProcessPtr process;
-	/** Socket to use for this session. Guaranteed to be alive thanks to the 'process' reference. */
+	Process *process;
 	Socket *socket;
 
 	Connection connection;
@@ -86,7 +85,7 @@ public:
 	Callback onInitiateFailure;
 	Callback onClose;
 
-	Session(const ProcessPtr &_process, Socket *_socket)
+	Session(Process *_process, Socket *_socket)
 		: process(_process),
 		  socket(_socket),
 		  closed(false),
@@ -109,7 +108,7 @@ public:
 	pid_t getPid() const;
 	const string &getGupid() const;
 	unsigned int getStickySessionId() const;
-	const GroupPtr getGroup() const;
+	Group *getGroup() const;
 	void requestOOBW();
 	int kill(int signo);
 
@@ -121,7 +120,7 @@ public:
 	 * @pre !isClosed()
 	 * @post result != NULL
 	 */
-	const ProcessPtr &getProcess() const {
+	Process *getProcess() const {
 		assert(!closed);
 		return process;
 	}

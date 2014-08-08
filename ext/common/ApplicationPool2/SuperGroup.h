@@ -190,8 +190,9 @@ private:
 
 
 	// Thread-safe.
-	static boost::mutex &getPoolSyncher(const PoolPtr &pool);
+	static boost::mutex &getPoolSyncher(Pool *pool);
 	static void runAllActions(const boost::container::vector<Callback> &actions);
+	const PoolPtr getPoolPtr();
 	string generateSecret() const;
 	void runInitializationHooks() const;
 	void runDestructionHooks() const;
@@ -254,7 +255,7 @@ private:
 	static void oneGroupHasBeenShutDown(SuperGroupPtr self, GroupPtr group) {
 		// This function is either called from the pool event loop or directly from
 		// the detachAllGroups post lock actions. In both cases getPool() is never NULL.
-		PoolPtr pool = self->getPool();
+		Pool *pool = self->getPool();
 		boost::lock_guard<boost::mutex> lock(self->getPoolSyncher(pool));
 
 		vector<GroupPtr>::iterator it, end = self->detachedGroups.end();
@@ -332,7 +333,7 @@ private:
 
 		// Wait until 'detachedGroups' is empty.
 		UPDATE_TRACE_POINT();
-		PoolPtr pool = getPool();
+		Pool *pool = getPool();
 		boost::unique_lock<boost::mutex> lock(getPoolSyncher(pool));
 		verifyInvariants();
 		while (true) {
@@ -371,7 +372,7 @@ private:
 
 public:
 	mutable boost::mutex backrefSyncher;
-	const boost::weak_ptr<Pool> pool;
+	Pool *pool;
 
 	State state;
 	string name;
@@ -420,7 +421,7 @@ public:
 	/** One MUST call initialize() after construction because shared_from_this()
 	 * is not available in the constructor.
 	 */
-	SuperGroup(const PoolPtr &_pool, const Options &options)
+	SuperGroup(Pool *_pool, const Options &options)
 		: pool(_pool)
 	{
 		this->options = options.copyAndPersist().detachFromUnionStationTransaction();
@@ -458,8 +459,8 @@ public:
 	 * because Pool::destroy() joins all threads, so Pool can never
 	 * be destroyed before all thread callbacks have finished.
 	 */
-	PoolPtr getPool() const {
-		return pool.lock();
+	Pool *getPool() const {
+		return pool;
 	}
 
 	bool isAlive() const {

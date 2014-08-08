@@ -152,7 +152,7 @@ public:
 	 * Should never be NULL because a Group should outlive all of its Processes.
 	 * Read-only; only set once during initialization.
 	 */
-	boost::weak_ptr<Group> group;
+	Group *group;
 
 	/** A subset of 'sockets': all sockets that speak the
 	 * "session" protocol, sorted by socket.busyness(). */
@@ -348,7 +348,8 @@ public:
 		const SocketListPtr &_sockets,
 		unsigned long long _spawnerCreationTime,
 		unsigned long long _spawnStartTime)
-		: pid(_pid),
+		: group(NULL),
+		  pid(_pid),
 		  stickySessionId(0),
 		  gupid(_gupid),
 		  connectPassword(_connectPassword),
@@ -411,13 +412,13 @@ public:
 	 * @pre getLifeState() != SHUT_DOWN
 	 * @post result != NULL
 	 */
-	const GroupPtr getGroup() const {
+	Group *getGroup() const {
 		assert(!isDead());
-		return group.lock();
+		return group;
 	}
 
-	void setGroup(const GroupPtr &group) {
-		assert(this->group.lock() == NULL || this->group.lock() == group);
+	void setGroup(Group *group) {
+		assert(this->group == NULL || this->group == group);
 		this->group = group;
 	}
 
@@ -426,14 +427,14 @@ public:
 	 * @pre getLifeState() != DEAD
 	 * @post result != NULL
 	 */
-	PoolPtr getPool() const;
+	Pool *getPool() const;
 
 	/**
 	 * Thread-safe.
 	 * @pre getLifeState() != DEAD
 	 * @post result != NULL
 	 */
-	SuperGroupPtr getSuperGroup() const;
+	SuperGroup *getSuperGroup() const;
 
 	// Thread-safe.
 	bool isAlive() const {
