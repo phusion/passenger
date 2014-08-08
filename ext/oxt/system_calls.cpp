@@ -48,7 +48,7 @@ oxt::setup_syscall_interruption_support() {
 	struct sigaction action;
 	sigset_t signal_set;
 	int ret;
-	
+
 	/* Very important! The signal mask is inherited across fork()
 	 * and exec() and we don't know what the parent process did to
 	 * us. At least on OS X, having a signal mask blocking important
@@ -58,7 +58,7 @@ oxt::setup_syscall_interruption_support() {
 	do {
 		ret = sigprocmask(SIG_SETMASK, &signal_set, NULL);
 	} while (ret == -1 && errno == EINTR);
-	
+
 	action.sa_handler = interruption_signal_handler;
 	action.sa_flags   = 0;
 	sigemptyset(&action.sa_mask);
@@ -86,7 +86,7 @@ oxt::setup_random_failure_simulation(const ErrorChance *_errorChances, unsigned 
 
 static bool
 shouldSimulateFailure() {
-	if (nErrorChances > 0) {
+	if (OXT_UNLIKELY(nErrorChances > 0)) {
 		double number = random() / (double) RAND_MAX;
 		const ErrorChance *candidates[OXT_MAX_ERROR_CHANCES];
 		unsigned int i, n = 0;
@@ -239,7 +239,7 @@ syscalls::close(int fd) {
 		if (shouldSimulateFailure()) {
 			return -1;
 		}
-		
+
 		thread_local_context *ctx = get_thread_local_context();
 		if (OXT_UNLIKELY(ctx != NULL)) {
 			ctx->syscall_interruption_lock.unlock();
@@ -579,7 +579,7 @@ syscalls::sleep(unsigned int seconds) {
 	// enough resolution so it won't trigger the problem.
 	struct timespec spec, rem;
 	int ret;
-	
+
 	spec.tv_sec = seconds;
 	spec.tv_nsec = 0;
 	ret = syscalls::nanosleep(&spec, &rem);
@@ -619,7 +619,7 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	if (OXT_UNLIKELY(ctx != NULL)) {
 		ctx->syscall_interruption_lock.unlock();
 	}
-	
+
 	do {
 		ret = ::nanosleep(&req2, &rem2);
 		e = errno;
@@ -641,11 +641,11 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 		&& (!this_thread::syscalls_interruptable()
 		    || !(intr_requested = this_thread::interruption_requested()))
 	);
-	
+
 	if (OXT_UNLIKELY(ctx != NULL)) {
 		ctx->syscall_interruption_lock.lock();
 	}
-	
+
 	if (ret == -1
 	 && e == EINTR
 	 && this_thread::syscalls_interruptable()
