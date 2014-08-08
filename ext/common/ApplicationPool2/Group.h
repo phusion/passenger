@@ -237,7 +237,7 @@ public:
 		assert(enabledCount >= 0);
 		assert(disablingCount >= 0);
 		assert(disabledCount >= 0);
-		assert(enabledProcesses.empty() == (pqueue.top() == NULL));
+		assert(enabledProcesses.empty() == pqueue.empty());
 		assert(!( enabledCount == 0 && disablingCount > 0 ) || ( processesBeingSpawned > 0) );
 		assert(!( !m_spawning ) || ( enabledCount > 0 || disablingCount == 0 ));
 
@@ -276,7 +276,6 @@ public:
 		for (it = enabledProcesses.begin(); it != end; it++) {
 			const ProcessPtr &process = *it;
 			assert(process->enabled == Process::ENABLED);
-			assert(process->pqHandle != NULL);
 			assert(process->isAlive());
 			assert(process->oobwStatus == Process::OOBW_NOT_ACTIVE
 				|| process->oobwStatus == Process::OOBW_REQUESTED);
@@ -286,7 +285,6 @@ public:
 		for (it = disablingProcesses.begin(); it != end; it++) {
 			const ProcessPtr &process = *it;
 			assert(process->enabled == Process::DISABLING);
-			assert(process->pqHandle == NULL);
 			assert(process->isAlive());
 			assert(process->oobwStatus == Process::OOBW_NOT_ACTIVE
 				|| process->oobwStatus == Process::OOBW_IN_PROGRESS);
@@ -296,7 +294,6 @@ public:
 		for (it = disabledProcesses.begin(); it != end; it++) {
 			const ProcessPtr &process = *it;
 			assert(process->enabled == Process::DISABLED);
-			assert(process->pqHandle == NULL);
 			assert(process->isAlive());
 			assert(process->oobwStatus == Process::OOBW_NOT_ACTIVE
 				|| process->oobwStatus == Process::OOBW_IN_PROGRESS);
@@ -304,7 +301,6 @@ public:
 
 		foreach (const ProcessPtr &process, detachedProcesses) {
 			assert(process->enabled == Process::DETACHED);
-			assert(process->pqHandle == NULL);
 		}
 		#endif
 	}
@@ -413,12 +409,7 @@ public:
 		session->onInitiateFailure = _onSessionInitiateFailure;
 		session->onClose   = _onSessionClose;
 		if (process->enabled == Process::ENABLED) {
-			if (process == pqueue.top()) {
-				pqueue.pop();
-			} else {
-				pqueue.erase(process->pqHandle);
-			}
-			process->pqHandle = pqueue.push(process, process->busyness());
+			pqueue.increase(process->pqHandle);
 		}
 		return session;
 	}
@@ -474,7 +465,6 @@ public:
 			assert(&source == &enabledProcesses);
 			enabledCount--;
 			pqueue.erase(process->pqHandle);
-			process->pqHandle = NULL;
 			break;
 		case Process::DISABLING:
 			assert(&source == &disablingProcesses);
@@ -503,7 +493,7 @@ public:
 		process->it = destination.last_iterator();
 		if (&destination == &enabledProcesses) {
 			process->enabled = Process::ENABLED;
-			process->pqHandle = pqueue.push(process.get(), process->busyness());
+			process->pqHandle = pqueue.push(process.get());
 			enabledCount++;
 		} else if (&destination == &disablingProcesses) {
 			process->enabled = Process::DISABLING;
@@ -708,7 +698,7 @@ public:
 	 *    disablingProcesses.size() == disabingCount
 	 *    disabledProcesses.size() == disabledCount
      *
-	 *    enabledProcesses.empty() == (pqueue.top() == NULL)
+	 *    enabledProcesses.empty() == pqueue.empty()
 	 *
 	 *    if (enabledCount == 0):
 	 *       processesBeingSpawned > 0 || restarting() || poolAtFullCapacity()
@@ -722,24 +712,24 @@ public:
 	 *
 	 *    for all process in enabledProcesses:
 	 *       process.enabled == Process::ENABLED
-	 *       process.pqHandle != NULL
+	 *       process.pqHandle is valid
 	 *       process.isAlive()
 	 *       process.oobwStatus == Process::OOBW_NOT_ACTIVE || process.oobwStatus == Process::OOBW_REQUESTED
 	 *    for all processes in disablingProcesses:
 	 *       process.enabled == Process::DISABLING
-	 *       process.pqHandle == NULL
+	 *       process.pqHandle is invalid
 	 *       process.isAlive()
 	 *       process.oobwStatus == Process::OOBW_NOT_ACTIVE || process.oobwStatus == Process::OOBW_IN_PROGRESS
 	 *    for all process in disabledProcesses:
 	 *       process.enabled == Process::DISABLED
-	 *       process.pqHandle == NULL
+	 *       process.pqHandle is invalid
 	 *       process.isAlive()
 	 *       process.oobwStatus == Process::OOBW_NOT_ACTIVE || process.oobwStatus == Process::OOBW_IN_PROGRESS
 	 */
 	int enabledCount;
 	int disablingCount;
 	int disabledCount;
-	PriorityQueue<Process> pqueue;
+	ProcessPriorityQueue pqueue;
 	ProcessList enabledProcesses;
 	ProcessList disablingProcesses;
 	ProcessList disabledProcesses;
@@ -1090,7 +1080,6 @@ public:
 
 		foreach (ProcessPtr process, enabledProcesses) {
 			addProcessToList(process, detachedProcesses);
-			process->pqHandle = NULL;
 		}
 		foreach (ProcessPtr process, disablingProcesses) {
 			addProcessToList(process, detachedProcesses);

@@ -29,6 +29,7 @@
 #include <list>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/heap/d_ary_heap.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/macros.hpp>
 #include <sys/types.h>
@@ -42,7 +43,6 @@
 #include <Constants.h>
 #include <FileDescriptor.h>
 #include <Logging.h>
-#include <Utils/PriorityQueue.h>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/ProcessMetricsCollector.h>
@@ -53,6 +53,22 @@ namespace ApplicationPool2 {
 using namespace std;
 using namespace boost;
 
+
+struct ProcessBusynessComparator {
+	bool operator()(const Process *a, const Process *b) const;
+};
+
+/*
+ * We use a d-ary heap because it's an in-place data structure that's backed by a vector,
+ * and thus has great CPU caching behavior. This makes it perform better than a fibonacci
+ * heap despite worse algorithmic complexity.
+ */
+typedef boost::heap::d_ary_heap<
+		Process *,
+		boost::heap::arity<2>,
+		boost::heap::compare<ProcessBusynessComparator>,
+		boost::heap::mutable_<true>
+	> ProcessPriorityQueue;
 
 class ProcessList: public list<ProcessPtr> {
 public:
@@ -140,12 +156,12 @@ public:
 
 	/** A subset of 'sockets': all sockets that speak the
 	 * "session" protocol, sorted by socket.busyness(). */
-	PriorityQueue<Socket> sessionSockets;
+	SocketPriorityQueue sessionSockets;
 
 	/** The iterator inside the associated Group's process list. */
 	ProcessList::iterator it;
 	/** The handle inside the associated Group's process priority queue. */
-	PriorityQueue<Process>::Handle pqHandle;
+	ProcessPriorityQueue::handle_type pqHandle;
 
 	void sendAbortLongRunningConnectionsMessage(const string &address);
 	static void realSendAbortLongRunningConnectionsMessage(string address);
@@ -184,7 +200,7 @@ public:
 		for (it = sockets->begin(); it != sockets->end(); it++) {
 			Socket *socket = &(*it);
 			if (socket->protocol == "session" || socket->protocol == "http_session") {
-				socket->pqHandle = sessionSockets.push(socket, socket->busyness());
+				socket->pqHandle = sessionSockets.push(socket);
 				if (concurrency != -1) {
 					if (socket->concurrency == 0) {
 						// If one of the sockets has a concurrency of
@@ -332,8 +348,7 @@ public:
 		const SocketListPtr &_sockets,
 		unsigned long long _spawnerCreationTime,
 		unsigned long long _spawnStartTime)
-		: pqHandle(NULL),
-		  pid(_pid),
+		: pid(_pid),
 		  stickySessionId(0),
 		  gupid(_gupid),
 		  connectPassword(_connectPassword),
@@ -585,13 +600,14 @@ public:
 	 * not result in any harmful behavior.
 	 */
 	SessionPtr newSession() {
-		Socket *socket = sessionSockets.pop();
+		Socket *socket = sessionSockets.top();
 		if (socket->isTotallyBusy()) {
+			sessionSockets.pop();
 			return SessionPtr();
 		} else {
 			socket->sessions++;
 			this->sessions++;
-			socket->pqHandle = sessionSockets.push(socket, socket->busyness());
+			sessionSockets.increase(socket->pqHandle);
 			lastUsed = SystemTime::getUsec();
 			return boost::make_shared<Session>(shared_from_this(), socket);
 		}
@@ -606,7 +622,7 @@ public:
 		socket->sessions--;
 		this->sessions--;
 		processed++;
-		sessionSockets.decrease(socket->pqHandle, socket->busyness());
+		sessionSockets.decrease(socket->pqHandle);
 		assert(!isTotallyBusy());
 	}
 

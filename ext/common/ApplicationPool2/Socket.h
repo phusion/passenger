@@ -30,10 +30,10 @@
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+#include <boost/heap/d_ary_heap.hpp>
 #include <climits>
 #include <cassert>
 #include <Logging.h>
-#include <Utils/PriorityQueue.h>
 #include <Utils/IOUtils.h>
 
 namespace Passenger {
@@ -66,6 +66,17 @@ struct Connection {
 	}
 };
 
+struct SocketBusynessComparator {
+	bool operator()(const Socket *a, const Socket *b) const;
+};
+
+typedef boost::heap::d_ary_heap<
+		Socket *,
+		boost::heap::arity<2>,
+		boost::heap::compare<SocketBusynessComparator>,
+		boost::heap::mutable_<true>
+	> SocketPriorityQueue;
+
 /**
  * Not thread-safe except for the connection pooling methods, so only use
  * within the ApplicationPool lock.
@@ -97,7 +108,7 @@ public:
 	/** The handle inside the associated Process's 'sessionSockets' priority queue.
 	 * Guaranteed to be valid as long as the Process is alive.
 	 */
-	PriorityQueue<Socket>::Handle pqHandle;
+	SocketPriorityQueue::handle_type pqHandle;
 
 	/** Invariant: sessions >= 0 */
 	int sessions;

@@ -35,10 +35,13 @@ ESSENTIALS = [
 	"boost/unordered*",
 	"boost/thread",
 	"boost/intrusive",
+	"boost/heap",
 	"boost/container",
 	"libs/thread/src",
 	"libs/system/src",
 	"libs/regex/src",
+	"boost/preprocessor",
+	"boost/parameter",
 	"boost/date_time/gregorian/formatters_limited.hpp",
 	"boost/date_time/date_formatting_limited.hpp",
 	"boost/type_traits/make_signed.hpp",
@@ -68,6 +71,7 @@ PROGRAM_SOURCE = %q{
 	#include <boost/function.hpp>
 	#include <boost/bind.hpp>
 	#include <boost/container/vector.hpp>
+	#include <boost/heap/d_ary_heap.hpp>
 	#include <boost/date_time/posix_time/posix_time.hpp>
 	#include <boost/foreach.hpp>
 	#include <boost/unordered_map.hpp>

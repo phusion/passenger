@@ -591,7 +591,7 @@ Group::onSessionClose(const ProcessPtr &process, Session *session) {
 		|| process->enabled == Process::DISABLING
 		|| process->enabled == Process::DETACHED);
 	if (process->enabled == Process::ENABLED) {
-		pqueue.decrease(process->pqHandle, process->busyness());
+		pqueue.decrease(process->pqHandle);
 	}
 
 	/* This group now has a process that's guaranteed to be not
@@ -1403,6 +1403,17 @@ Group::generateSecret(const SuperGroupPtr &superGroup) {
 string
 Group::generateUuid(const SuperGroupPtr &superGroup) {
 	return superGroup->getPool()->getRandomGenerator()->generateAsciiString(20);
+}
+
+
+bool
+ProcessBusynessComparator::operator()(const Process *a, const Process *b) const {
+	return a->busyness() < b->busyness();
+}
+
+bool
+SocketBusynessComparator::operator()(const Socket *a, const Socket *b) const {
+	return a->busyness() < b->busyness();
 }
 
 

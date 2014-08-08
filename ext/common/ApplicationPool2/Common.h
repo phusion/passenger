@@ -52,6 +52,7 @@ class Pool;
 class SuperGroup;
 class Group;
 class Process;
+class Socket;
 class Session;
 
 /**

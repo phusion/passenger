@@ -489,14 +489,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:deps     => %w(
 			Utils/Hasher.h
 		)
-	define_component 'Utils/fib.o',
-		:source   => 'Utils/fib.c',
-		:category => :other,
-		:optimize => true,
-		:deps     => %w(
-			Utils/fib.h
-			Utils/fibpriv.h
-		)
 	define_component 'Utils/jsoncpp.o',
 		:source   => 'Utils/jsoncpp.cpp',
 		:category => :other,
