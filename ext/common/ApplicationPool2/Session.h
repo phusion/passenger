@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2013 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -105,9 +105,9 @@ public:
 		}
 	}
 
-	const string &getConnectPassword() const;
+	StaticString getConnectPassword() const;
 	pid_t getPid() const;
-	const string &getGupid() const;
+	StaticString getGupid() const;
 	unsigned int getStickySessionId() const;
 	Group *getGroup() const;
 	void requestOOBW();
@@ -131,7 +131,7 @@ public:
 		return socket;
 	}
 
-	const string &getProtocol() const {
+	StaticString getProtocol() const {
 		return socket->protocol;
 	}
 

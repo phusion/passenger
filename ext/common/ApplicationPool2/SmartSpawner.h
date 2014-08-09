@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2013 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -725,7 +725,7 @@ public:
 		stopPreloader();
 	}
 
-	virtual ProcessPtr spawn(const Options &options) {
+	virtual SpawnObject spawn(const Options &options) {
 		TRACE_POINT();
 		assert(options.appType == this->options.appType);
 		assert(options.appRoot == this->options.appRoot);
@@ -763,10 +763,10 @@ public:
 		details.adminSocket = result.adminSocket;
 		details.io = result.io;
 		details.options = &options;
-		ProcessPtr process = negotiateSpawn(details);
+		SpawnObject object = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
-			", pid=" << process->pid);
-		return process;
+			", pid=" << object.process->pid);
+		return object;
 	}
 
 	virtual bool cleanable() const {

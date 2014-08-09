@@ -301,6 +301,11 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	}
 }
 
+void
+recreateString(psg_pool_t *pool, StaticString &str) {
+	str = psg_pstrdup(pool, str);
+}
+
 
 const SuperGroupPtr
 Pool::getSuperGroup(const char *name) {
@@ -558,7 +563,7 @@ Group::~Group() {
 void
 Group::initialize() {
 	nullProcess = boost::make_shared<Process>(
-		0, string(), string(),
+		0, StaticString(), StaticString(),
 		FileDescriptor(), FileDescriptor(),
 		SocketList(), 0, 0);
 	nullProcess->dummy = true;
@@ -996,6 +1001,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 			shouldFail = message->name == "Fail spawn loop iteration " + iteration;
 		}
 
+		SpawnObject spawnObject;
 		ProcessPtr process;
 		ExceptionPtr exception;
 		try {
@@ -1007,7 +1013,8 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 				processAndLogNewSpawnException(e, options, pool->getSpawnerConfig());
 				throw e;
 			} else {
-				process = spawner->spawn(options);
+				spawnObject = spawner->spawn(options);
+				process = spawnObject.process;
 				process->setGroup(this);
 			}
 		} catch (const thread_interrupted &) {
@@ -1058,7 +1065,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 		UPDATE_TRACE_POINT();
 		boost::container::vector<Callback> actions;
 		if (process != NULL) {
-			AttachResult result = attach(process, actions);
+			AttachResult result = attach(spawnObject, actions);
 			if (result == AR_OK) {
 				guard.clear();
 				if (getWaitlist.empty()) {
@@ -1401,6 +1408,11 @@ Group::testOverflowRequestQueue() const {
 	}
 }
 
+psg_pool_t *
+Group::getPallocPool() const {
+	return getPool()->palloc;
+}
+
 const ResourceLocator &
 Group::getResourceLocator() const {
 	return getPool()->getSpawnerConfig()->resourceLocator;
@@ -1509,7 +1521,7 @@ Process::inspect() const {
 }
 
 
-const string &
+StaticString
 Session::getConnectPassword() const {
 	return getProcess()->connectPassword;
 }
@@ -1519,7 +1531,7 @@ Session::getPid() const {
 	return getProcess()->pid;
 }
 
-const string &
+StaticString
 Session::getGupid() const {
 	return getProcess()->gupid;
 }

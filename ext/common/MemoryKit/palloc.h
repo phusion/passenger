@@ -33,6 +33,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <StaticString.h>
 
 /** A pool allocator taken from Nginx. Modified to suit our needs.
  * The concept is also known as region-based memory management:
@@ -107,6 +108,8 @@ void *psg_pcalloc(psg_pool_t *pool, size_t size);
 
 /** Allocate `size` bytes from the pool, aligned on the given alignment. */
 void *psg_pmemalign(psg_pool_t *pool, size_t size, size_t alignment);
+
+Passenger::StaticString psg_pstrdup(psg_pool_t *pool, const Passenger::StaticString &str);
 
 /** Attempt to free the given memory, which was allocated from the given pool.
  * If the memory was allocated using the pool's large memory allocator,

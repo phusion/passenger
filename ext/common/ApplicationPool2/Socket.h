@@ -25,7 +25,6 @@
 #ifndef _PASSENGER_APPLICATION_POOL_SOCKET_H_
 #define _PASSENGER_APPLICATION_POOL_SOCKET_H_
 
-#include <string>
 #include <vector>
 #include <oxt/macros.hpp>
 #include <boost/thread.hpp>
@@ -35,6 +34,7 @@
 #include <climits>
 #include <cassert>
 #include <Logging.h>
+#include <StaticString.h>
 #include <ApplicationPool2/Common.h>
 #include <Utils/SmallVector.h>
 #include <Utils/IOUtils.h>
@@ -101,9 +101,9 @@ private:
 
 public:
 	// Socket properties. Read-only.
-	string name;
-	string address;
-	string protocol;
+	StaticString name;
+	StaticString address;
+	StaticString protocol;
 	int concurrency;
 
 	/** The handle inside the associated Process's 'sessionSockets' priority queue.
@@ -121,7 +121,7 @@ public:
 		: concurrency(0)
 		{ }
 
-	Socket(const string &_name, const string &_address, const string &_protocol, int _concurrency)
+	Socket(const StaticString &_name, const StaticString &_address, const StaticString &_protocol, int _concurrency)
 		: name(_name),
 		  address(_address),
 		  protocol(_protocol),
@@ -223,11 +223,17 @@ public:
 	bool isTotallyBusy() const {
 		return concurrency != 0 && sessions >= concurrency;
 	}
+
+	void recreateStrings(psg_pool_t *newPool) {
+		recreateString(newPool, name);
+		recreateString(newPool, address);
+		recreateString(newPool, protocol);
+	}
 };
 
 class SocketList: public SmallVector<Socket, 1> {
 public:
-	void add(const string &name, const string &address, const string &protocol, int concurrency) {
+	void add(const StaticString &name, const StaticString &address, const StaticString &protocol, int concurrency) {
 		push_back(Socket(name, address, protocol, concurrency));
 	}
 

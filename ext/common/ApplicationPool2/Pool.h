@@ -52,6 +52,7 @@
 #include <ApplicationPool2/Session.h>
 #include <ApplicationPool2/SpawnerFactory.h>
 #include <ApplicationPool2/Options.h>
+#include <MemoryKit/palloc.h>
 #include <Logging.h>
 #include <Exceptions.h>
 #include <Hooks.h>
@@ -158,6 +159,7 @@ public:
 	SuperGroupMap superGroups;
 	boost::mutex sessionObjectPoolSyncher;
 	object_pool<Session> sessionObjectPool;
+	psg_pool_t *palloc;
 
 	/**
 	 * get() requests that...
@@ -1001,6 +1003,7 @@ public:
 		lifeStatus  = ALIVE;
 		max         = 6;
 		maxIdleTime = 60 * 1000000;
+		palloc      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 
 		// The following code only serve to instantiate certain inline methods
 		// so that they can be invoked from gdb.
@@ -1014,6 +1017,7 @@ public:
 		if (lifeStatus != SHUT_DOWN) {
 			P_BUG("You must call Pool::destroy() before actually destroying the Pool object!");
 		}
+		psg_destroy_pool(palloc);
 	}
 
 	/** Must be called right after construction. */

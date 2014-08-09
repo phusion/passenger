@@ -50,7 +50,7 @@ public:
 		cleanCount = 0;
 	}
 
-	virtual ProcessPtr spawn(const Options &options) {
+	virtual SpawnObject spawn(const Options &options) {
 		TRACE_POINT();
 		possiblyRaiseInternalError(options);
 
@@ -61,13 +61,17 @@ public:
 
 		boost::lock_guard<boost::mutex> l(lock);
 		count++;
-		ProcessPtr process = boost::make_shared<Process>(
-			(pid_t) count, "gupid-" + toString(count),
-			toString(count),
+		SpawnObject object;
+		StaticString gupid = psg_pstrdup(object.pool,
+			"gupid-" + toString(count));
+		StaticString countStr = psg_pstrdup(object.pool,
+			toString(count));
+		object.process = boost::make_shared<Process>(
+			(pid_t) count, gupid, countStr,
 			adminSocket.second, FileDescriptor(), sockets,
 			SystemTime::getUsec(), SystemTime::getUsec());
-		process->dummy = true;
-		return process;
+		object.process->dummy = true;
+		return object;
 	}
 
 	virtual bool cleanable() const {

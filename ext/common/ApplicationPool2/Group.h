@@ -46,6 +46,7 @@
 #include <ApplicationPool2/SpawnerFactory.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
+#include <MemoryKit/palloc.h>
 #include <Hooks.h>
 #include <Utils.h>
 #include <Utils/SmallVector.h>
@@ -228,6 +229,7 @@ public:
 	boost::shared_ptr<Group> findOtherGroupWaitingForCapacity() const;
 	ProcessPtr poolForceFreeCapacity(const Group *exclude, boost::container::vector<Callback> &postLockActions);
 	bool testOverflowRequestQueue() const;
+	psg_pool_t *getPallocPool() const;
 	const ResourceLocator &getResourceLocator() const;
 	void runAttachHooks(const ProcessPtr process) const;
 	void runDetachHooks(const ProcessPtr process) const;
@@ -973,10 +975,11 @@ public:
 	 * function doesn't touch `getWaitlist` so be sure to fix its invariants
 	 * afterwards if necessary, e.g. by calling `assignSessionsToGetWaiters()`.
 	 */
-	AttachResult attach(const ProcessPtr &process,
+	AttachResult attach(const SpawnObject &spawnObject,
 		boost::container::vector<Callback> &postLockActions)
 	{
 		TRACE_POINT();
+		const ProcessPtr &process = spawnObject.process;
 		assert(process->getGroup() == NULL || process->getGroup() == this);
 		assert(process->isAlive());
 		assert(isAlive());
@@ -993,6 +996,10 @@ public:
 		process->stickySessionId = generateStickySessionId();
 		P_DEBUG("Attaching process " << process->inspect());
 		addProcessToList(process, enabledProcesses);
+
+		if (spawnObject.pool != getPallocPool()) {
+			process->recreateStrings(getPallocPool());
+		}
 
 		/* Now that there are enough resources, relevant processes in
 		 * 'disableWaitlist' can be disabled.

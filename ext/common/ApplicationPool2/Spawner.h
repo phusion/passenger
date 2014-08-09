@@ -77,6 +77,7 @@
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
+#include <ApplicationPool2/SpawnObject.h>
 #include <ApplicationPool2/PipeWatcher.h>
 #include <FileDescriptor.h>
 #include <Exceptions.h>
@@ -421,9 +422,11 @@ private:
 		}
 	}
 
-	ProcessPtr handleSpawnResponse(NegotiationDetails &details) {
+	SpawnObject handleSpawnResponse(NegotiationDetails &details) {
 		TRACE_POINT();
 		SocketList sockets;
+		SpawnObject result;
+
 		while (true) {
 			string line;
 
@@ -484,10 +487,13 @@ private:
 							SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 							details);
 					}
-					sockets.add(args[0],
-						fixupSocketAddress(*details.options, args[1]),
-						args[2],
-						atoi(args[3]));
+
+					StaticString name = psg_pstrdup(result.pool, args[0]);
+					StaticString address = psg_pstrdup(result.pool,
+						fixupSocketAddress(*details.options, args[1]));
+					StaticString protocol = psg_pstrdup(result.pool, args[2]);
+
+					sockets.add(name, address, protocol, atoi(args[3]));
 				} else {
 					throwAppSpawnException("An error occurred while starting the "
 						"web application. It reported a wrongly formatted 'socket'"
@@ -502,8 +508,8 @@ private:
 				vector<pid_t> pids;
 
 				pids.push_back(pid);
-				ProcessMetricMap result = collector.collect(pids);
-				if (result[pid].uid != details.preparation->uid) {
+				ProcessMetricMap metrics = collector.collect(pids);
+				if (metrics[pid].uid != details.preparation->uid) {
 					throwAppSpawnException("An error occurred while starting the "
 						"web application. The PID that the loader has returned does "
 						"not have the same UID as the loader itself.",
@@ -527,13 +533,15 @@ private:
 				details);
 		}
 
-		ProcessPtr process = boost::make_shared<Process>(
+		result.process = boost::make_shared<Process>(
 			details.pid,
-			details.gupid, details.connectPassword,
+			psg_pstrdup(result.pool, details.gupid),
+			psg_pstrdup(result.pool, details.connectPassword),
 			details.adminSocket, details.errorPipe,
 			sockets, creationTime, details.spawnStartTime);
-		process->codeRevision = details.preparation->codeRevision;
-		return process;
+		result.process->codeRevision = details.preparation->codeRevision;
+		result.process->recreateStrings(result.pool);
+		return result;
 	}
 
 protected:
@@ -1275,7 +1283,7 @@ protected:
 	/**
 	 * Execute the process spawning negotiation protocol.
 	 */
-	ProcessPtr negotiateSpawn(NegotiationDetails &details) {
+	SpawnObject negotiateSpawn(NegotiationDetails &details) {
 		TRACE_POINT();
 		details.spawnStartTime = SystemTime::getUsec();
 		details.gupid = integerToHex(SystemTime::get() / 60) + "-" +
@@ -1334,7 +1342,7 @@ protected:
 				handleInvalidSpawnResponseType(result, details);
 			}
 		}
-		return ProcessPtr(); // Never reached.
+		return SpawnObject(); // Never reached.
 	}
 
 	void handleSpawnErrorResponse(NegotiationDetails &details) {
@@ -1425,7 +1433,7 @@ public:
 		{ }
 
 	virtual ~Spawner() { }
-	virtual ProcessPtr spawn(const Options &options) = 0;
+	virtual SpawnObject spawn(const Options &options) = 0;
 
 	/** Does not depend on the event loop. */
 	virtual bool cleanable() const {

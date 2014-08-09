@@ -32,6 +32,8 @@
 #include <oxt/tracable_exception.hpp>
 #include <ResourceLocator.h>
 #include <RandomGenerator.h>
+#include <StaticString.h>
+#include <MemoryKit/palloc.h>
 #include <UnionStation/Core.h>
 #include <UnionStation/Transaction.h>
 #include <ApplicationPool2/Options.h>
@@ -242,6 +244,7 @@ ExceptionPtr copyException(const tracable_exception &e);
 void rethrowException(const ExceptionPtr &e);
 void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	const SpawnerConfigPtr &config);
+void recreateString(psg_pool_t *pool, StaticString &str);
 
 } // namespace ApplicationPool2
 } // namespace Passenger

@@ -288,6 +288,16 @@ psg_pmemalign(psg_pool_t *pool, size_t size, size_t alignment)
 }
 
 
+Passenger::StaticString
+psg_pstrdup(psg_pool_t *pool, const Passenger::StaticString &str)
+{
+	char *newstr = (char *) psg_pnalloc(pool, str.size() + 1);
+	memcpy(newstr, str.data(), str.size());
+	newstr[str.size()] = '\0';
+	return Passenger::StaticString(newstr, str.size());
+}
+
+
 bool
 psg_pfree(psg_pool_t *pool, void *p)
 {

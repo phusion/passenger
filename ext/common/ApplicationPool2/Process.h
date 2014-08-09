@@ -231,8 +231,8 @@ public:
 	unsigned int stickySessionId;
 	/** UUID for this process, randomly generated and extremely unlikely to ever
 	 * appear again in this universe. */
-	string gupid;
-	string connectPassword;
+	StaticString gupid;
+	StaticString connectPassword;
 	/** Admin socket, see class description. */
 	FileDescriptor adminSocket;
 	/** The sockets that this Process listens on for connections. */
@@ -337,8 +337,8 @@ public:
 	ProcessMetrics metrics;
 
 	Process(pid_t _pid,
-		const string &_gupid,
-		const string &_connectPassword,
+		const StaticString &_gupid,
+		const StaticString &_connectPassword,
 		const FileDescriptor &_adminSocket,
 		/** Pipe on which this process outputs errors. Mapped to the process's STDERR.
 		 * Only Processes spawned by DirectSpawner have this set.
@@ -640,6 +640,17 @@ public:
 	}
 
 	string inspect() const;
+
+	void recreateStrings(psg_pool_t *pool) {
+		SocketList::iterator it;
+
+		recreateString(pool, gupid);
+		recreateString(pool, connectPassword);
+
+		for (it = sockets.begin(); it != sockets.end(); it++) {
+			it->recreateStrings(pool);
+		}
+	}
 
 	template<typename Stream>
 	void inspectXml(Stream &stream, bool includeSockets = true) const {
