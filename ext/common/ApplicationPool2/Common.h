@@ -27,6 +27,7 @@
 
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/intrusive_ptr.hpp>
 #include <boost/function.hpp>
 #include <oxt/tracable_exception.hpp>
 #include <ResourceLocator.h>
@@ -161,7 +162,7 @@ typedef boost::shared_ptr<Pool> PoolPtr;
 typedef boost::shared_ptr<SuperGroup> SuperGroupPtr;
 typedef boost::shared_ptr<Group> GroupPtr;
 typedef boost::shared_ptr<Process> ProcessPtr;
-typedef boost::shared_ptr<Session> SessionPtr;
+typedef boost::intrusive_ptr<Session> SessionPtr;
 typedef boost::shared_ptr<tracable_exception> ExceptionPtr;
 typedef StringMap<SuperGroupPtr> SuperGroupMap;
 typedef boost::function<void (const ProcessPtr &process, DisableResult result)> DisableCallback;

@@ -26,7 +26,8 @@
 #define _PASSENGER_APPLICATION_POOL_SESSION_H_
 
 #include <sys/types.h>
-#include <boost/shared_ptr.hpp>
+#include <boost/atomic.hpp>
+#include <boost/intrusive_ptr.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
@@ -58,14 +59,13 @@ private:
 	Socket *socket;
 
 	Connection connection;
-	FileDescriptor theFd;
+	mutable boost::atomic<int> refcount;
 	bool closed;
 
 	void deinitiate(bool success) {
 		connection.fail = !success;
 		socket->checkinConnection(connection);
 		connection.fd = -1;
-		theFd = FileDescriptor();
 	}
 
 	void callOnInitiateFailure() {
@@ -88,6 +88,7 @@ public:
 	Session(Process *_process, Socket *_socket)
 		: process(_process),
 		  socket(_socket),
+		  refcount(1),
 		  closed(false),
 		  onInitiateFailure(NULL),
 		  onClose(NULL)
@@ -111,6 +112,7 @@ public:
 	Group *getGroup() const;
 	void requestOOBW();
 	int kill(int signo);
+	void destroySelf() const;
 
 	bool isClosed() const {
 		return closed;
@@ -138,7 +140,6 @@ public:
 		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));
 		connection = socket->checkoutConnection();
 		connection.fail = true;
-		theFd = FileDescriptor(connection.fd, false);
 		g.clear();
 	}
 
@@ -146,8 +147,8 @@ public:
 		return connection.fd != -1;
 	}
 
-	const FileDescriptor &fd() const {
-		return theFd;
+	int fd() const {
+		return connection.fd;
 	}
 
 	/**
@@ -161,12 +162,43 @@ public:
 			callOnClose();
 		}
 	}
+
+	void ref() const {
+		refcount.fetch_add(1, boost::memory_order_relaxed);
+	}
+
+	void unref() const {
+		if (refcount.fetch_sub(1, boost::memory_order_release) == 1) {
+			boost::atomic_thread_fence(boost::memory_order_acquire);
+			destroySelf();
+		}
+	}
 };
 
-typedef boost::shared_ptr<Session> SessionPtr;
+
+inline void
+intrusive_ptr_add_ref(const Session *session) {
+	session->ref();
+}
+
+inline void
+intrusive_ptr_release(const Session *session) {
+	session->unref();
+}
 
 
 } // namespace ApplicationPool2
 } // namespace Passenger
+
+
+namespace boost {
+	inline void intrusive_ptr_add_ref(const Passenger::ApplicationPool2::Session *session) {
+		session->ref();
+	}
+
+	inline void intrusive_ptr_release(const Passenger::ApplicationPool2::Session *session) {
+		session->unref();
+	}
+}
 
 #endif /* _PASSENGER_APPLICATION_POOL2_SESSION_H_ */

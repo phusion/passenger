@@ -911,8 +911,7 @@ public:
 		}
 
 		if (OXT_UNLIKELY(newOptions.noop)) {
-			return boost::make_shared<Session>(nullProcess.get(),
-				(Socket *) NULL);
+			return nullProcess->createSessionObject((Socket *) NULL);
 		}
 
 		if (OXT_UNLIKELY(enabledCount == 0)) {

@@ -50,11 +50,11 @@ struct Connection {
 	bool persistent: 1;
 	bool fail: 1;
 
-	Connection() {
-		fd = -1;
-		persistent = false;
-		fail = false;
-	}
+	Connection()
+		: fd(-1),
+		  persistent(false),
+		  fail(false)
+		{ }
 
 	void close() {
 		if (fd != -1) {

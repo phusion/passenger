@@ -1482,20 +1482,6 @@ Process::realSendAbortLongRunningConnectionsMessage(string address) {
 	writeArrayMessage(fd, args, &timeout);
 }
 
-struct SessionDestroyer {
-	Pool *pool;
-
-	SessionDestroyer(Pool *_pool)
-		: pool(_pool)
-		{ }
-
-	void operator()(Session *session) {
-		session->~Session();
-		LockGuard l(pool->sessionObjectPoolSyncher);
-		pool->sessionObjectPool.free(session);
-	}
-};
-
 SessionPtr
 Process::createSessionObject(Socket *socket) {
 	Pool *pool = getGroup()->getPool();
@@ -1504,8 +1490,8 @@ Process::createSessionObject(Socket *socket) {
 		LockGuard l(pool->sessionObjectPoolSyncher);
 		session = pool->sessionObjectPool.malloc();
 	}
-	new (session) Session(this, socket);
-	return SessionPtr(session, SessionDestroyer(pool));
+	session = new (session) Session(this, socket);
+	return SessionPtr(session, false);
 }
 
 string
@@ -1558,6 +1544,14 @@ Session::requestOOBW() {
 int
 Session::kill(int signo) {
 	return getProcess()->kill(signo);
+}
+
+void
+Session::destroySelf() const {
+	Pool *pool = getGroup()->getPool();
+	this->~Session();
+	LockGuard l(pool->sessionObjectPoolSyncher);
+	pool->sessionObjectPool.free(const_cast<Session *>(this));
 }
 
 
