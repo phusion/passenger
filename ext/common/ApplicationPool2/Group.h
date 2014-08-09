@@ -406,8 +406,8 @@ public:
 		}
 	}
 
-	SessionPtr newSession(Process *process) {
-		SessionPtr session = process->newSession();
+	SessionPtr newSession(Process *process, unsigned long long now = 0) {
+		SessionPtr session = process->newSession(now);
 		session->onInitiateFailure = _onSessionInitiateFailure;
 		session->onClose   = _onSessionClose;
 		if (process->enabled == Process::ENABLED) {
@@ -935,7 +935,7 @@ public:
 					disablingProcesses);
 				assert(process != NULL);
 				if (!process->isTotallyBusy()) {
-					return newSession(process);
+					return newSession(process, newOptions.currentTime);
 				}
 			}
 
@@ -956,7 +956,7 @@ public:
 				return SessionPtr();
 			} else {
 				P_DEBUG("Session checked out from process " << result.process->inspect());
-				return newSession(result.process);
+				return newSession(result.process, newOptions.currentTime);
 			}
 		}
 	}
@@ -1305,8 +1305,14 @@ public:
 		if (m_restarting) {
 			return false;
 		} else {
-			time_t now = SystemTime::get();
+			time_t now;
 			struct stat buf;
+
+			if (options.currentTime != 0) {
+				now = options.currentTime / 1000000;
+			} else {
+				now = SystemTime::get();
+			}
 
 			if (lastRestartFileCheckTime == 0) {
 				// First time we call needsRestart() for this group.

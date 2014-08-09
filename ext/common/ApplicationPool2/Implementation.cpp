@@ -1363,6 +1363,12 @@ Group::anotherGroupIsWaitingForCapacity() const {
 boost::shared_ptr<Group>
 Group::findOtherGroupWaitingForCapacity() const {
 	Pool *pool = getPool();
+	// TODO: this only works if SuperGroup can only have one Group.
+	// If we ever extend SuperGroup then this needs to be changed.
+	if (pool->superGroups.size() == 1) {
+		return GroupPtr();
+	}
+
 	StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = pool->superGroups.end();
 	for (sg_it = pool->superGroups.begin(); sg_it != sg_end; sg_it++) {
 		pair<StaticString, SuperGroupPtr> p = *sg_it;

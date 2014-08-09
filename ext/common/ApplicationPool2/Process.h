@@ -596,11 +596,14 @@ public:
 	 * of the session sockets or reuse an existing connection. See Session for
 	 * more information about sessions.
 	 *
-	 * One SHOULD call sessionClosed() when one's done with the session.
+	 * If you know the current time (in microseconds), pass it to `now`, which
+	 * prevents this function from having to query the time.
+	 *
+	 * You SHOULD call sessionClosed() when one's done with the session.
 	 * Failure to do so will mess up internal statistics but will otherwise
 	 * not result in any harmful behavior.
 	 */
-	SessionPtr newSession() {
+	SessionPtr newSession(unsigned long long now = 0) {
 		Socket *socket = sessionSockets.top();
 		if (socket->isTotallyBusy()) {
 			sessionSockets.pop();
@@ -609,7 +612,11 @@ public:
 			socket->sessions++;
 			this->sessions++;
 			sessionSockets.increase(socket->pqHandle);
-			lastUsed = SystemTime::getUsec();
+			if (now != 0) {
+				lastUsed = now;
+			} else {
+				lastUsed = SystemTime::getUsec();
+			}
 			return createSessionObject(socket);
 		}
 	}
