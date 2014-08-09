@@ -65,7 +65,7 @@ struct ProcessBusynessComparator {
  */
 typedef boost::heap::d_ary_heap<
 		Process *,
-		boost::heap::arity<2>,
+		boost::heap::arity<6>,
 		boost::heap::compare<ProcessBusynessComparator>,
 		boost::heap::mutable_<true>
 	> ProcessPriorityQueue;

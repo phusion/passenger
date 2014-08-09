@@ -72,7 +72,7 @@ struct SocketBusynessComparator {
 
 typedef boost::heap::d_ary_heap<
 		Socket *,
-		boost::heap::arity<2>,
+		boost::heap::arity<6>,
 		boost::heap::compare<SocketBusynessComparator>,
 		boost::heap::mutable_<true>
 	> SocketPriorityQueue;
