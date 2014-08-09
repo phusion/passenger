@@ -610,9 +610,11 @@ public:
 			this->sessions++;
 			sessionSockets.increase(socket->pqHandle);
 			lastUsed = SystemTime::getUsec();
-			return boost::make_shared<Session>(shared_from_this(), socket);
+			return createSessionObject(socket);
 		}
 	}
+
+	SessionPtr createSessionObject(Socket *socket);
 
 	void sessionClosed(Session *session) {
 		Socket *socket = session->getSocket();

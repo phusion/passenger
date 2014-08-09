@@ -1476,6 +1476,32 @@ Process::realSendAbortLongRunningConnectionsMessage(string address) {
 	writeArrayMessage(fd, args, &timeout);
 }
 
+struct SessionDestroyer {
+	Pool *pool;
+
+	SessionDestroyer(Pool *_pool)
+		: pool(_pool)
+		{ }
+
+	void operator()(Session *session) {
+		session->~Session();
+		LockGuard l(pool->sessionObjectPoolSyncher);
+		pool->sessionObjectPool.free(session);
+	}
+};
+
+SessionPtr
+Process::createSessionObject(Socket *socket) {
+	Pool *pool = getGroup()->getPool();
+	Session *session;
+	{
+		LockGuard l(pool->sessionObjectPoolSyncher);
+		session = pool->sessionObjectPool.malloc();
+	}
+	new (session) Session(this, socket);
+	return SessionPtr(session, SessionDestroyer(pool));
+}
+
 string
 Process::inspect() const {
 	assert(getLifeStatus() != DEAD);

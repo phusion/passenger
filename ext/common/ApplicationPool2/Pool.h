@@ -37,6 +37,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
+#include <boost/pool/object_pool.hpp>
 // We use boost::container::vector instead of std::vector, because the
 // former does not allocate memory in its default constructor. This is
 // useful for post lock action vectors which often remain empty.
@@ -155,6 +156,8 @@ public:
 	} lifeStatus;
 
 	SuperGroupMap superGroups;
+	boost::mutex sessionObjectPoolSyncher;
+	object_pool<Session> sessionObjectPool;
 
 	/**
 	 * get() requests that...
@@ -984,6 +987,7 @@ public:
 public:
 	Pool(const SpawnerFactoryPtr &spawnerFactory,
 		const VariantMap *agentsOptions = NULL)
+		: sessionObjectPool(64, 1024)
 	{
 		this->spawnerFactory = spawnerFactory;
 		this->agentsOptions = agentsOptions;
