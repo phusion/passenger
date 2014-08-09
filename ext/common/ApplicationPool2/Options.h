@@ -433,33 +433,34 @@ public:
 	 * Creates a new Options object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
-	Options() {
-		logLevel                = DEFAULT_LOG_LEVEL;
-		startTimeout            = 90 * 1000;
-		environment             = P_STATIC_STRING("production");
-		baseURI                 = P_STATIC_STRING("/");
-		spawnMethod             = P_STATIC_STRING("smart");
-		defaultUser             = P_STATIC_STRING("nobody");
-		ruby                    = P_STATIC_STRING(DEFAULT_RUBY);
-		python                  = P_STATIC_STRING(DEFAULT_PYTHON);
-		nodejs                  = P_STATIC_STRING(DEFAULT_NODEJS);
-		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
-		debugger                = false;
-		loadShellEnvvars        = true;
-		analytics               = false;
-		raiseInternalError      = false;
+	Options()
+		: logLevel(DEFAULT_LOG_LEVEL),
+		  startTimeout(90 * 1000),
+		  environment("production", sizeof("production") - 1),
+		  baseURI("/", 1),
+		  spawnMethod("smart", sizeof("smart") - 1),
+		  defaultUser("nobody", sizeof("nobody") - 1),
+		  ruby(DEFAULT_RUBY, sizeof(DEFAULT_RUBY) - 1),
+		  python(DEFAULT_PYTHON, sizeof(DEFAULT_PYTHON) - 1),
+		  nodejs(DEFAULT_NODEJS, sizeof(DEFAULT_NODEJS) - 1),
+		  rights(DEFAULT_BACKEND_ACCOUNT_RIGHTS),
+		  debugger(false),
+		  loadShellEnvvars(true),
+		  analytics(false),
+		  raiseInternalError(false),
 
-		minProcesses            = 1;
-		maxProcesses            = 0;
-		maxPreloaderIdleTime    = -1;
-		maxOutOfBandWorkInstances = 1;
-		maxRequestQueueSize     = 100;
+		  minProcesses(1),
+		  maxProcesses(0),
+		  maxPreloaderIdleTime(-1),
+		  maxOutOfBandWorkInstances(1),
+		  maxRequestQueueSize(100),
 
-		stickySessionId         = 0;
-		statThrottleRate        = 0;
-		maxRequests             = 0;
-		noop                    = false;
-
+		  stickySessionId(0),
+		  statThrottleRate(0),
+		  maxRequests(0),
+		  noop(false)
+		  /*********************************/
+	{
 		/*********************************/
 	}
 
