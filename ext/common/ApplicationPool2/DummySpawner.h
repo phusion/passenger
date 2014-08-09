@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2013 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -39,17 +39,17 @@ class DummySpawner: public Spawner {
 private:
 	boost::mutex lock;
 	unsigned int count;
-	
+
 public:
 	unsigned int cleanCount;
-	
+
 	DummySpawner(const SpawnerConfigPtr &_config)
 		: Spawner(_config)
 	{
 		count = 0;
 		cleanCount = 0;
 	}
-	
+
 	virtual ProcessPtr spawn(const Options &options) {
 		TRACE_POINT();
 		possiblyRaiseInternalError(options);
@@ -58,7 +58,7 @@ public:
 		SocketListPtr sockets = boost::make_shared<SocketList>();
 		sockets->add("main", "tcp://127.0.0.1:1234", "session", config->concurrency);
 		syscalls::usleep(config->spawnTime);
-		
+
 		boost::lock_guard<boost::mutex> l(lock);
 		count++;
 		ProcessPtr process = boost::make_shared<Process>(

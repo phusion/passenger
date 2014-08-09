@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2013 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -107,7 +107,7 @@ class Spawner {
 protected:
 	friend struct tut::ApplicationPool2_DirectSpawnerTest;
 	friend struct tut::ApplicationPool2_SmartSpawnerTest;
-	
+
 	/**
 	 * Given a file descriptor, captures its output in a background thread
 	 * and also forwards it immediately to a target file descriptor.
@@ -122,13 +122,13 @@ protected:
 		boost::mutex dataSyncher;
 		string data;
 		oxt::thread *thr;
-		
+
 		void capture() {
 			TRACE_POINT();
 			while (!this_thread::interruption_requested()) {
 				char buf[1024 * 8];
 				ssize_t ret;
-				
+
 				UPDATE_TRACE_POINT();
 				ret = syscalls::read(fd, buf, sizeof(buf));
 				int e = errno;
@@ -162,7 +162,7 @@ protected:
 				}
 			}
 		}
-		
+
 	public:
 		BackgroundIOCapturer(const FileDescriptor &_fd, pid_t _pid, const char *_channelName)
 			: fd(_fd),
@@ -170,7 +170,7 @@ protected:
 			  channelName(_channelName),
 			  thr(NULL)
 			{ }
-		
+
 		~BackgroundIOCapturer() {
 			TRACE_POINT();
 			if (thr != NULL) {
@@ -181,17 +181,17 @@ protected:
 				thr = NULL;
 			}
 		}
-		
+
 		const FileDescriptor &getFd() const {
 			return fd;
 		}
-		
+
 		void start() {
 			assert(thr == NULL);
 			thr = new oxt::thread(boost::bind(&BackgroundIOCapturer::capture, this),
 				"Background I/O capturer", 64 * 1024);
 		}
-		
+
 		string stop() {
 			TRACE_POINT();
 			assert(thr != NULL);
@@ -210,9 +210,9 @@ protected:
 			data.append(dataToAdd.data(), dataToAdd.size());
 		}
 	};
-	
+
 	typedef boost::shared_ptr<BackgroundIOCapturer> BackgroundIOCapturerPtr;
-	
+
 	/**
 	 * A temporary directory for spawned child processes to write
 	 * debugging information to. It is removed after spawning has
@@ -345,14 +345,14 @@ protected:
 		FileDescriptor errorPipe;
 		const Options *options;
 		DebugDirPtr debugDir;
-		
+
 		/****** Working state ******/
 		BufferedIO io;
 		string gupid;
 		string connectPassword;
 		unsigned long long spawnStartTime;
 		unsigned long long timeout;
-		
+
 		NegotiationDetails() {
 			preparation = NULL;
 			pid = 0;
@@ -361,8 +361,8 @@ protected:
 			timeout = 0;
 		}
 	};
-	
-	
+
+
 private:
 	/**
 	 * Appends key + "\0" + value + "\0" to 'output'.
@@ -425,7 +425,7 @@ private:
 		SocketListPtr sockets = boost::make_shared<SocketList>();
 		while (true) {
 			string line;
-			
+
 			try {
 				line = readMessageLine(details);
 			} catch (const SystemException &e) {
@@ -440,7 +440,7 @@ private:
 					SpawnException::APP_STARTUP_TIMEOUT,
 					details);
 			}
-			
+
 			if (line.empty()) {
 				throwAppSpawnException("An error occurred while starting the "
 					"web application. It unexpected closed the connection while "
@@ -456,7 +456,7 @@ private:
 			} else if (line == "\n") {
 				break;
 			}
-			
+
 			string::size_type pos = line.find(": ");
 			if (pos == string::npos) {
 				throwAppSpawnException("An error occurred while starting the "
@@ -465,7 +465,7 @@ private:
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 					details);
 			}
-			
+
 			string key = line.substr(0, pos);
 			string value = line.substr(pos + 2, line.size() - pos - 3);
 			if (key == "socket") {
@@ -525,7 +525,7 @@ private:
 				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 				details);
 		}
-		
+
 		ProcessPtr process = boost::make_shared<Process>(
 			details.pid,
 			details.gupid, details.connectPassword,
@@ -534,17 +534,17 @@ private:
 		process->codeRevision = details.preparation->codeRevision;
 		return process;
 	}
-	
+
 protected:
 	ServerInstanceDir::GenerationPtr generation;
 	SpawnerConfigPtr config;
-	
+
 	static void nonInterruptableKillAndWaitpid(pid_t pid) {
 		this_thread::disable_syscall_interruption dsi;
 		syscalls::kill(pid, SIGKILL);
 		syscalls::waitpid(pid, NULL, 0);
 	}
-	
+
 	/**
 	 * Behaves like <tt>waitpid(pid, status, WNOHANG)</tt>, but waits at most
 	 * <em>timeout</em> miliseconds for the process to exit.
@@ -552,7 +552,7 @@ protected:
 	static int timedWaitpid(pid_t pid, int *status, unsigned long long timeout) {
 		Timer timer;
 		int ret;
-		
+
 		do {
 			ret = syscalls::waitpid(pid, status, WNOHANG);
 			if (ret > 0 || ret == -1) {
@@ -563,7 +563,7 @@ protected:
 		} while (timer.elapsed() < timeout);
 		return 0; // timed out
 	}
-	
+
 	static string fixupSocketAddress(const Options &options, const string &address) {
 		TRACE_POINT();
 		if (!options.preexecChroot.empty() && !options.postexecChroot.empty()) {
@@ -662,7 +662,7 @@ protected:
 			// and whether postexecChroot is a child directory of appRoot.
 		}
 	}
-	
+
 	static void createCommandArgs(const vector<string> &command,
 		shared_array<const char *> &args)
 	{
@@ -678,7 +678,7 @@ protected:
 			throw RuntimeException("An internal error!");
 		}
 	}
-	
+
 	void throwAppSpawnException(const string &msg,
 		SpawnException::ErrorKind errorKind,
 		NegotiationDetails &details)
@@ -690,7 +690,7 @@ protected:
 		if (details.stderrCapturer != NULL) {
 			stderrOutput = details.stderrCapturer->stop();
 		}
-		
+
 		// If the exception wasn't due to a timeout, try to capture the
 		// remaining stderr output for at most 2 seconds.
 		if (errorKind != SpawnException::PRELOADER_STARTUP_TIMEOUT
@@ -702,7 +702,7 @@ protected:
 			while (!done) {
 				char buf[1024 * 32];
 				unsigned int ret;
-				
+
 				try {
 					ret = readExact(details.stderrCapturer->getFd(), buf,
 						sizeof(buf), &timeout);
@@ -720,7 +720,7 @@ protected:
 			}
 		}
 		details.stderrCapturer.reset();
-		
+
 		// Now throw SpawnException with the captured stderr output
 		// as error response.
 		SpawnException e(msg,
@@ -782,7 +782,7 @@ protected:
 			if (!line.empty() && line[line.size() - 1] == '\n') {
 				line.erase(line.size() - 1, 1);
 			}
-			
+
 			if (result.empty()) {
 				// EOF
 				return result;
@@ -855,7 +855,7 @@ protected:
 					getProcessUsername() + "; it looks like your system's " +
 					"user database is broken, please fix it.");
 			}
-			
+
 			info.switchUser = false;
 			info.username = userInfo->pw_name;
 			info.groupname = getGroupName(userInfo->pw_gid);
@@ -866,7 +866,7 @@ protected:
 			info.ngroups = 0;
 			return;
 		}
-		
+
 		UPDATE_TRACE_POINT();
 		string defaultGroup;
 		string startupFile = absolutizePath(options.getStartupFile(), info.appRoot);
@@ -876,7 +876,7 @@ protected:
 		long pwdBufSize, grpBufSize;
 		shared_array<char> pwdBuf, grpBuf;
 		int ret;
-		
+
 		pwdBufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
 		if (pwdBufSize == -1) {
 			// Let's hope this is enough.
@@ -920,7 +920,7 @@ protected:
 		} else {
 			defaultGroup = options.defaultGroup;
 		}
-		
+
 		UPDATE_TRACE_POINT();
 		userInfo = (struct passwd *) NULL;
 		if (!options.user.empty()) {
@@ -950,7 +950,7 @@ protected:
 				userInfo = (struct passwd *) NULL;
 			}
 		}
-		
+
 		UPDATE_TRACE_POINT();
 		if (!options.group.empty()) {
 			struct group *groupInfo = (struct group *) NULL;
@@ -1000,7 +1000,7 @@ protected:
 		if (groupId == (gid_t) -1) {
 			throw RuntimeException("Cannot determine a group to lower privilege to");
 		}
-		
+
 		UPDATE_TRACE_POINT();
 		#ifdef __APPLE__
 			int groups[1024];
@@ -1110,11 +1110,11 @@ protected:
 			return false;
 		}
 	}
-	
+
 	string serializeEnvvarsFromPoolOptions(const Options &options) const {
 		vector< pair<StaticString, StaticString> >::const_iterator it, end;
 		string result;
-		
+
 		appendNullTerminatedKeyValue(result, "IN_PASSENGER", "1");
 		appendNullTerminatedKeyValue(result, "PYTHONUNBUFFERED", "1");
 		appendNullTerminatedKeyValue(result, "NODE_PATH", config->resourceLocator.getNodeLibDir());
@@ -1134,14 +1134,14 @@ protected:
 				"PASSENGER_BASE_URI",
 				options.baseURI);
 		}
-		
+
 		it  = options.environmentVariables.begin();
 		end = options.environmentVariables.end();
 		while (it != end) {
 			appendNullTerminatedKeyValue(result, it->first, it->second);
 			it++;
 		}
-		
+
 		return Base64::encode(result);
 	}
 
@@ -1189,7 +1189,7 @@ protected:
 				fflush(stdout);
 				_exit(1);
 			}
-			
+
 			// We set these environment variables here instead of
 			// in the SpawnPreparer because SpawnPreparer might
 			// be executed by bash, but these environment variables
@@ -1200,7 +1200,7 @@ protected:
 			setenv("HOME", info.home.c_str(), 1);
 		}
 	}
-	
+
 	void setChroot(const SpawnPreparationInfo &info) {
 		if (info.chrootDir != "/") {
 			int ret = chroot(info.chrootDir.c_str());
@@ -1215,7 +1215,7 @@ protected:
 			}
 		}
 	}
-	
+
 	void setWorkingDirectory(const SpawnPreparationInfo &info) {
 		vector<string>::const_iterator it, end = info.appRootPathsInsideChroot.end();
 		int ret;
@@ -1279,7 +1279,7 @@ protected:
 			_exit(1);
 		}
 	}
-	
+
 	/**
 	 * Execute the process spawning negotiation protocol.
 	 */
@@ -1290,7 +1290,7 @@ protected:
 			config->randomGenerator->generateAsciiString(11);
 		details.connectPassword = config->randomGenerator->generateAsciiString(43);
 		details.timeout = details.options->startTimeout * 1000;
-		
+
 		string result;
 		try {
 			result = readMessageLine(details);
@@ -1306,7 +1306,7 @@ protected:
 				SpawnException::APP_STARTUP_TIMEOUT,
 				details);
 		}
-		
+
 		protocol_begin:
 		if (result == "I have control 1.0\n") {
 			UPDATE_TRACE_POINT();
@@ -1344,11 +1344,11 @@ protected:
 		}
 		return ProcessPtr(); // Never reached.
 	}
-	
+
 	void handleSpawnErrorResponse(NegotiationDetails &details) {
 		TRACE_POINT();
 		map<string, string> attributes;
-		
+
 		while (true) {
 			string line = readMessageLine(details);
 			if (line.empty()) {
@@ -1366,7 +1366,7 @@ protected:
 			} else if (line == "\n") {
 				break;
 			}
-			
+
 			string::size_type pos = line.find(": ");
 			if (pos == string::npos) {
 				throwAppSpawnException("An error occurred while starting the "
@@ -1375,12 +1375,12 @@ protected:
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 					details);
 			}
-			
+
 			string key = line.substr(0, pos);
 			string value = line.substr(pos + 2, line.size() - pos - 3);
 			attributes[key] = value;
 		}
-		
+
 		try {
 			string message = details.io.readAll(&details.timeout);
 			SpawnException e("An error occured while starting the web application.",
@@ -1404,7 +1404,7 @@ protected:
 				details);
 		}
 	}
-	
+
 	void handleInvalidSpawnResponseType(const string &line, NegotiationDetails &details) {
 		if (line.empty()) {
 			throwAppSpawnException("An error occurred while starting "
@@ -1420,7 +1420,7 @@ protected:
 				details);
 		}
 	}
-	
+
 public:
 	/**
 	 * Timestamp at which this Spawner was created. Microseconds resolution.
@@ -1431,10 +1431,10 @@ public:
 		: config(_config),
 		  creationTime(SystemTime::getUsec())
 		{ }
-	
+
 	virtual ~Spawner() { }
 	virtual ProcessPtr spawn(const Options &options) = 0;
-	
+
 	/** Does not depend on the event loop. */
 	virtual bool cleanable() const {
 		return false;
