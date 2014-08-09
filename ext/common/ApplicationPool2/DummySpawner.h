@@ -55,8 +55,8 @@ public:
 		possiblyRaiseInternalError(options);
 
 		SocketPair adminSocket = createUnixSocketPair();
-		SocketListPtr sockets = boost::make_shared<SocketList>();
-		sockets->add("main", "tcp://127.0.0.1:1234", "session", config->concurrency);
+		SocketList sockets;
+		sockets.add("main", "tcp://127.0.0.1:1234", "session", config->concurrency);
 		syscalls::usleep(config->spawnTime);
 
 		boost::lock_guard<boost::mutex> l(lock);

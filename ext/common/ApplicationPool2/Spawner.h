@@ -423,7 +423,7 @@ private:
 
 	ProcessPtr handleSpawnResponse(NegotiationDetails &details) {
 		TRACE_POINT();
-		SocketListPtr sockets = boost::make_shared<SocketList>();
+		SocketList sockets;
 		while (true) {
 			string line;
 
@@ -484,7 +484,7 @@ private:
 							SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 							details);
 					}
-					sockets->add(args[0],
+					sockets.add(args[0],
 						fixupSocketAddress(*details.options, args[1]),
 						args[2],
 						atoi(args[3]));
@@ -520,7 +520,7 @@ private:
 			}
 		}
 
-		if (sockets->hasSessionSockets() == 0) {
+		if (!sockets.hasSessionSockets()) {
 			throwAppSpawnException("An error occured while starting the web "
 				"application. It did not advertise any session sockets.",
 				SpawnException::APP_STARTUP_PROTOCOL_ERROR,

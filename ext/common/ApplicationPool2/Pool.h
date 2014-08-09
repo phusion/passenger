@@ -546,7 +546,7 @@ public:
 			}
 
 			const Socket *socket;
-			if (options.verbose && (socket = process->sockets->findSocketWithName("http")) != NULL) {
+			if (options.verbose && (socket = process->sockets.findSocketWithName("http")) != NULL) {
 				result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
 				result << "    Password: " << process->connectPassword << endl;
 			}

@@ -560,7 +560,7 @@ Group::initialize() {
 	nullProcess = boost::make_shared<Process>(
 		0, string(), string(),
 		FileDescriptor(), FileDescriptor(),
-		SocketListPtr(), 0, 0);
+		SocketList(), 0, 0);
 	nullProcess->dummy = true;
 	nullProcess->requiresShutdown = false;
 	nullProcess->setGroup(this);

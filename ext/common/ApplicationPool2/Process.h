@@ -197,7 +197,7 @@ public:
 	void indexSessionSockets() {
 		SocketList::iterator it;
 		concurrency = 0;
-		for (it = sockets->begin(); it != sockets->end(); it++) {
+		for (it = sockets.begin(); it != sockets.end(); it++) {
 			Socket *socket = &(*it);
 			if (socket->protocol == "session" || socket->protocol == "http_session") {
 				socket->pqHandle = sessionSockets.push(socket);
@@ -236,7 +236,7 @@ public:
 	/** Admin socket, see class description. */
 	FileDescriptor adminSocket;
 	/** The sockets that this Process listens on for connections. */
-	SocketListPtr sockets;
+	SocketList sockets;
 	/** The code revision of the application, inferred through various means.
 	 * See Spawner::prepareSpawn() to learn how this is determined.
 	 * May be an empty string.
@@ -345,7 +345,7 @@ public:
 		 * SmartSpawner-spawned Processes use the same STDERR as their parent preloader processes.
 		 */
 		const FileDescriptor &_errorPipe,
-		const SocketListPtr &_sockets,
+		const SocketList &_sockets,
 		unsigned long long _spawnerCreationTime,
 		unsigned long long _spawnStartTime)
 		: group(NULL),
@@ -382,9 +382,7 @@ public:
 			watcher->start();
 		}
 
-		if (OXT_LIKELY(sockets != NULL)) {
-			indexSessionSockets();
-		}
+		indexSessionSockets();
 
 		lastUsed      = SystemTime::getUsec();
 		spawnEndTime  = lastUsed;
@@ -463,8 +461,8 @@ public:
 	bool abortLongRunningConnections() {
 		bool sent = false;
 		if (!longRunningConnectionsAborted) {
-			SocketList::iterator it, end = sockets->end();
-			for (it = sockets->begin(); it != end; it++) {
+			SocketList::iterator it, end = sockets.end();
+			for (it = sockets.begin(); it != end; it++) {
 				Socket *socket = &(*it);
 				if (socket->name == "control") {
 					sendAbortLongRunningConnectionsMessage(socket->address);
@@ -506,13 +504,11 @@ public:
 
 		P_TRACE(2, "Cleaning up process " << inspect());
 		if (!dummy) {
-			if (OXT_LIKELY(sockets != NULL)) {
-				SocketList::const_iterator it, end = sockets->end();
-				for (it = sockets->begin(); it != end; it++) {
-					if (getSocketAddressType(it->address) == SAT_UNIX) {
-						string filename = parseUnixSocketAddress(it->address);
-						syscalls::unlink(filename.c_str());
-					}
+			SocketList::const_iterator it, end = sockets.end();
+			for (it = sockets.begin(); it != end; it++) {
+				if (getSocketAddressType(it->address) == SAT_UNIX) {
+					string filename = parseUnixSocketAddress(it->address);
+					syscalls::unlink(filename.c_str());
 				}
 			}
 		}
@@ -709,7 +705,7 @@ public:
 			SocketList::const_iterator it;
 
 			stream << "<sockets>";
-			for (it = sockets->begin(); it != sockets->end(); it++) {
+			for (it = sockets.begin(); it != sockets.end(); it++) {
 				const Socket &socket = *it;
 				stream << "<socket>";
 				stream << "<name>" << escapeForXml(socket.name) << "</name>";

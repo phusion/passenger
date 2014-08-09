@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,6 +27,7 @@
 
 #include <string>
 #include <vector>
+#include <oxt/macros.hpp>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
@@ -34,6 +35,8 @@
 #include <climits>
 #include <cassert>
 #include <Logging.h>
+#include <ApplicationPool2/Common.h>
+#include <Utils/SmallVector.h>
 #include <Utils/IOUtils.h>
 
 namespace Passenger {
@@ -42,8 +45,6 @@ namespace ApplicationPool2 {
 using namespace std;
 using namespace boost;
 
-
-class Process;
 
 struct Connection {
 	int fd;
@@ -84,9 +85,9 @@ typedef boost::heap::d_ary_heap<
 class Socket {
 private:
 	boost::mutex connectionPoolLock;
-	int totalConnections;
 	vector<Connection> idleConnections;
 
+	OXT_FORCE_INLINE
 	int connectionPoolLimit() const {
 		return concurrency;
 	}
@@ -99,7 +100,7 @@ private:
 	}
 
 public:
-	// Read-only.
+	// Socket properties. Read-only.
 	string name;
 	string address;
 	string protocol;
@@ -110,6 +111,9 @@ public:
 	 */
 	SocketPriorityQueue::handle_type pqHandle;
 
+	// Private. In public section as alignment optimization.
+	int totalConnections;
+
 	/** Invariant: sessions >= 0 */
 	int sessions;
 
@@ -118,22 +122,22 @@ public:
 		{ }
 
 	Socket(const string &_name, const string &_address, const string &_protocol, int _concurrency)
-		: totalConnections(0),
-		  name(_name),
+		: name(_name),
 		  address(_address),
 		  protocol(_protocol),
 		  concurrency(_concurrency),
+		  totalConnections(0),
 		  sessions(0)
 		{ }
 
 	Socket(const Socket &other)
-		: totalConnections(other.totalConnections),
-		  idleConnections(other.idleConnections),
+		: idleConnections(other.idleConnections),
 		  name(other.name),
 		  address(other.address),
 		  protocol(other.protocol),
 		  concurrency(other.concurrency),
 		  pqHandle(other.pqHandle),
+		  totalConnections(other.totalConnections),
 		  sessions(other.sessions)
 		{ }
 
@@ -221,7 +225,7 @@ public:
 	}
 };
 
-class SocketList: public vector<Socket> {
+class SocketList: public SmallVector<Socket, 1> {
 public:
 	void add(const string &name, const string &address, const string &protocol, int concurrency) {
 		push_back(Socket(name, address, protocol, concurrency));
