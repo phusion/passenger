@@ -466,7 +466,10 @@ public:
 	 */
 	void removeProcessFromList(const ProcessPtr &process, ProcessList &source) {
 		ProcessPtr p = process; // Keep an extra reference count just in case.
-		source.erase(process->it);
+
+		source.erase(source.begin() + process->index);
+		process->index = -1;
+
 		switch (process->enabled) {
 		case Process::ENABLED:
 			assert(&source == &enabledProcesses);
@@ -487,6 +490,14 @@ public:
 		default:
 			P_BUG("Unknown 'enabled' state " << (int) process->enabled);
 		}
+
+		// Rebuild indices
+		ProcessList::iterator it, end = source.end();
+		unsigned int i = 0;
+		for (it = source.begin(); it != end; it++, i++) {
+			const ProcessPtr &process = *it;
+			process->index = i;
+		}
 	}
 
 	/**
@@ -497,7 +508,7 @@ public:
 	 */
 	void addProcessToList(const ProcessPtr &process, ProcessList &destination) {
 		destination.push_back(process);
-		process->it = destination.last_iterator();
+		process->index = destination.size() - 1;
 		if (&destination == &enabledProcesses) {
 			process->enabled = Process::ENABLED;
 			process->pqHandle = pqueue.push(process.get());

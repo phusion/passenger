@@ -26,7 +26,7 @@
 #define _PASSENGER_APPLICATION_POOL_PROCESS_H_
 
 #include <string>
-#include <list>
+#include <vector>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/heap/d_ary_heap.hpp>
@@ -70,36 +70,7 @@ typedef boost::heap::d_ary_heap<
 		boost::heap::mutable_<true>
 	> ProcessPriorityQueue;
 
-class ProcessList: public list<ProcessPtr> {
-public:
-	ProcessPtr &get(unsigned int index) {
-		iterator it = begin(), end = this->end();
-		unsigned int i = 0;
-		while (i != index && it != end) {
-			i++;
-			it++;
-		}
-		if (it == end) {
-			throw RuntimeException("Index out of bounds");
-		} else {
-			return *it;
-		}
-	}
-
-	ProcessPtr &operator[](unsigned int index) {
-		return get(index);
-	}
-
-	iterator last_iterator() {
-		if (empty()) {
-			return end();
-		} else {
-			iterator last = end();
-			last--;
-			return last;
-		}
-	}
-};
+typedef vector<ProcessPtr> ProcessList;
 
 /**
  * Represents an application process, as spawned by a Spawner. Every Process has
@@ -158,8 +129,8 @@ public:
 	 * "session" protocol, sorted by socket.busyness(). */
 	SocketPriorityQueue sessionSockets;
 
-	/** The iterator inside the associated Group's process list. */
-	ProcessList::iterator it;
+	/** The index inside the associated Group's process list. */
+	unsigned int index;
 	/** The handle inside the associated Group's process priority queue. */
 	ProcessPriorityQueue::handle_type pqHandle;
 
@@ -349,6 +320,7 @@ public:
 		unsigned long long _spawnerCreationTime,
 		unsigned long long _spawnStartTime)
 		: group(NULL),
+		  index(-1),
 		  pid(_pid),
 		  stickySessionId(0),
 		  gupid(_gupid),
