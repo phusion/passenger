@@ -382,6 +382,8 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			ApplicationPool2/Pool.h
 			ApplicationPool2/SuperGroup.h
 			ApplicationPool2/Group.h
+			ApplicationPool2/Process.h
+			ApplicationPool2/Socket.h
 			ApplicationPool2/Session.h
 			ApplicationPool2/Options.h
 			ApplicationPool2/PipeWatcher.h
