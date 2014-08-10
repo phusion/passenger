@@ -417,12 +417,13 @@ public:
 	}
 
 	SessionPtr newSession(Process *process, unsigned long long now = 0) {
+		bool wasTotallyBusy = process->isTotallyBusy();
 		SessionPtr session = process->newSession(now);
 		session->onInitiateFailure = _onSessionInitiateFailure;
 		session->onClose   = _onSessionClose;
 		if (process->enabled == Process::ENABLED) {
 			enabledProcessBusynessLevels[process->index] = process->busyness();
-			if (process->isTotallyBusy()) {
+			if (!wasTotallyBusy && process->isTotallyBusy()) {
 				nEnabledProcessesTotallyBusy++;
 			}
 		}

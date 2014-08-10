@@ -613,6 +613,7 @@ Group::onSessionClose(Process *process, Session *session) {
 	UPDATE_TRACE_POINT();
 
 	/* Update statistics. */
+	bool wasTotallyBusy = process->isTotallyBusy();
 	process->sessionClosed(session);
 	assert(process->getLifeStatus() == Process::ALIVE);
 	assert(process->enabled == Process::ENABLED
@@ -620,8 +621,10 @@ Group::onSessionClose(Process *process, Session *session) {
 		|| process->enabled == Process::DETACHED);
 	if (process->enabled == Process::ENABLED) {
 		enabledProcessBusynessLevels[process->index] = process->busyness();
-		assert(nEnabledProcessesTotallyBusy >= 1);
-		nEnabledProcessesTotallyBusy--;
+		if (wasTotallyBusy) {
+			assert(nEnabledProcessesTotallyBusy >= 1);
+			nEnabledProcessesTotallyBusy--;
+		}
 	}
 
 	/* This group now has a process that's guaranteed to be not
