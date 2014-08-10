@@ -30,6 +30,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <oxt/system_calls.hpp>
+#include <oxt/spin_lock.hpp>
 #include <oxt/macros.hpp>
 #include <sys/types.h>
 #include <cstdio>
@@ -104,7 +105,7 @@ public:
 	friend class Group;
 
 	/** A mutex to protect access to `lifeStatus`. */
-	mutable boost::mutex lifetimeSyncher;
+	mutable oxt::spin_lock lifetimeSyncher;
 
 	/** Group inside the Pool that this Process belongs to.
 	 * Should never be NULL because a Group should outlive all of its Processes.
@@ -393,25 +394,25 @@ public:
 
 	// Thread-safe.
 	bool isAlive() const {
-		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
+		oxt::spin_lock::scoped_lock lock(lifetimeSyncher);
 		return lifeStatus == ALIVE;
 	}
 
 	// Thread-safe.
 	bool hasTriggeredShutdown() const {
-		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
+		oxt::spin_lock::scoped_lock lock(lifetimeSyncher);
 		return lifeStatus == SHUTDOWN_TRIGGERED;
 	}
 
 	// Thread-safe.
 	bool isDead() const {
-		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
+		oxt::spin_lock::scoped_lock lock(lifetimeSyncher);
 		return lifeStatus == DEAD;
 	}
 
 	// Thread-safe.
 	LifeStatus getLifeStatus() const {
-		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
+		oxt::spin_lock::scoped_lock lock(lifetimeSyncher);
 		return lifeStatus;
 	}
 
@@ -438,10 +439,11 @@ public:
 	void triggerShutdown() {
 		assert(canTriggerShutdown());
 		{
-			boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
+			time_t now = SystemTime::get();
+			oxt::spin_lock::scoped_lock lock(lifetimeSyncher);
 			assert(lifeStatus == ALIVE);
 			lifeStatus = SHUTDOWN_TRIGGERED;
-			shutdownStartTime = SystemTime::get();
+			shutdownStartTime = now;
 		}
 		if (!dummy) {
 			syscalls::shutdown(adminSocket, SHUT_WR);
@@ -470,7 +472,7 @@ public:
 			}
 		}
 
-		boost::lock_guard<boost::mutex> lock(lifetimeSyncher);
+		oxt::spin_lock::scoped_lock lock(lifetimeSyncher);
 		lifeStatus = DEAD;
 	}
 
