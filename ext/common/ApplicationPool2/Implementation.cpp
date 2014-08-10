@@ -1493,7 +1493,7 @@ Process::createSessionObject(Socket *socket) {
 		LockGuard l(pool->sessionObjectPoolSyncher);
 		session = pool->sessionObjectPool.malloc();
 	}
-	session = new (session) Session(this, socket);
+	session = new (session) Session(pool, this, socket);
 	return SessionPtr(session, false);
 }
 
@@ -1551,7 +1551,6 @@ Session::kill(int signo) {
 
 void
 Session::destroySelf() const {
-	Pool *pool = getGroup()->getPool();
 	this->~Session();
 	LockGuard l(pool->sessionObjectPoolSyncher);
 	pool->sessionObjectPool.free(const_cast<Session *>(this));

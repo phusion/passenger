@@ -49,12 +49,22 @@ using namespace oxt;
  *
  * Not thread-safe, but Pool's and Process's API encourage that
  * a Session is only used by 1 thread and then thrown away.
+ *
+ * You MUST destroy all Session objects before destroying the Pool, because Session
+ * objects are stored inside a memory pool inside Pool.
  */
 class Session {
 public:
 	typedef void (*Callback)(Session *session);
 
 private:
+	/**
+	 * Backpointers to the Pool, Process and Socket that this Session was made
+	 * from. `pool` is always non-NULL, but `process` and `socket` are only
+	 * non-NULL as long as the Session hasn't been closed. This is because Group
+	 * waits until all sessions are closed before destroying a Process.
+	 */
+	Pool *pool;
 	Process *process;
 	Socket *socket;
 
@@ -62,8 +72,9 @@ private:
 	mutable boost::atomic<int> refcount;
 	bool closed;
 
-	void deinitiate(bool success) {
+	void deinitiate(bool success, bool persistent) {
 		connection.fail = !success;
+		connection.persistent = persistent;
 		socket->checkinConnection(connection);
 		connection.fd = -1;
 	}
@@ -85,8 +96,9 @@ public:
 	Callback onInitiateFailure;
 	Callback onClose;
 
-	Session(Process *_process, Socket *_socket)
-		: process(_process),
+	Session(Pool *_pool, Process *_process, Socket *_socket)
+		: pool(_pool),
+		  process(_process),
 		  socket(_socket),
 		  refcount(1),
 		  closed(false),
@@ -98,7 +110,7 @@ public:
 		TRACE_POINT();
 		// If user doesn't close() explicitly, we penalize performance.
 		if (OXT_LIKELY(initiated())) {
-			deinitiate(false);
+			deinitiate(false, false);
 		}
 		if (OXT_LIKELY(!closed)) {
 			callOnClose();
@@ -118,21 +130,18 @@ public:
 		return closed;
 	}
 
-	/**
-	 * @pre !isClosed()
-	 * @post result != NULL
-	 */
 	Process *getProcess() const {
 		assert(!closed);
 		return process;
 	}
 
 	Socket *getSocket() const {
+		assert(!closed);
 		return socket;
 	}
 
 	StaticString getProtocol() const {
-		return socket->protocol;
+		return getSocket()->protocol;
 	}
 
 	void initiate() {
@@ -147,20 +156,24 @@ public:
 		return connection.fd != -1;
 	}
 
+	OXT_FORCE_INLINE
 	int fd() const {
+		assert(!closed);
 		return connection.fd;
 	}
 
 	/**
 	 * This Session object becomes fully unsable after closing.
 	 */
-	void close(bool success) {
+	void close(bool success, bool persistent = false) {
 		if (OXT_LIKELY(initiated())) {
-			deinitiate(success);
+			deinitiate(success, persistent);
 		}
 		if (OXT_LIKELY(!closed)) {
 			callOnClose();
 		}
+		process = NULL;
+		socket  = NULL;
 	}
 
 	void ref() const {
