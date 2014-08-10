@@ -539,8 +539,8 @@ private:
 			psg_pstrdup(result.pool, details.connectPassword),
 			details.adminSocket, details.errorPipe,
 			sockets, creationTime, details.spawnStartTime);
-		result.process->codeRevision = details.preparation->codeRevision;
-		result.process->recreateStrings(result.pool);
+		result.process->codeRevision = psg_pstrdup(result.pool,
+			details.preparation->codeRevision);
 		return result;
 	}
 

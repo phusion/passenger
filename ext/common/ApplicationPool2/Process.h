@@ -198,7 +198,7 @@ public:
 	 * See Spawner::prepareSpawn() to learn how this is determined.
 	 * May be an empty string.
 	 */
-	string codeRevision;
+	StaticString codeRevision;
 	/** Time at which the Spawner that created this process was created.
 	 * Microseconds resolution. */
 	unsigned long long spawnerCreationTime;
@@ -605,6 +605,7 @@ public:
 
 		recreateString(pool, gupid);
 		recreateString(pool, connectPassword);
+		recreateString(pool, codeRevision);
 
 		for (it = sockets.begin(); it != sockets.end(); it++) {
 			it->recreateStrings(pool);
