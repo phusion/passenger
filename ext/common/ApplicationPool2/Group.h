@@ -238,6 +238,8 @@ public:
 
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
+		#ifndef NDEBUG
+		LifeStatus lifeStatus = getLifeStatus();
 
 		assert(enabledCount >= 0);
 		assert(disablingCount >= 0);
@@ -261,17 +263,19 @@ public:
 		assert(!( m_restarting ) || ( processesBeingSpawned == 0 ));
 
 		// Verify lifeStatus.
-		LifeStatus lifeStatus = getLifeStatus();
-		assert(!( lifeStatus != ALIVE ) || ( enabledCount == 0 ));
-		assert(!( lifeStatus != ALIVE ) || ( disablingCount == 0 ));
-		assert(!( lifeStatus != ALIVE ) || ( disabledCount == 0 ));
-		assert(!( lifeStatus != ALIVE ) || ( nEnabledProcessesTotallyBusy == 0 ));
+		if (lifeStatus != ALIVE) {
+			assert(enabledCount == 0);
+			assert(disablingCount == 0);
+			assert(disabledCount == 0);
+			assert(nEnabledProcessesTotallyBusy == 0);
+		}
 
 		// Verify list sizes.
 		assert((int) enabledProcesses.size() == enabledCount);
 		assert((int) disablingProcesses.size() == disablingCount);
 		assert((int) disabledProcesses.size() == disabledCount);
 		assert(nEnabledProcessesTotallyBusy <= enabledCount);
+		#endif
 	}
 
 	void verifyExpensiveInvariants() const {
