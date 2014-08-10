@@ -84,6 +84,8 @@ private:
 		Connection connection;
 		P_TRACE(3, "Connecting to " << address);
 		connection.fd = connectToServer(address);
+		connection.fail = true;
+		connection.persistent = false;
 		return connection;
 	}
 
@@ -95,7 +97,7 @@ public:
 	int concurrency;
 
 	// Private. In public section as alignment optimization.
-	int totalConnections;
+	int totalActiveConnections;
 
 	/** Invariant: sessions >= 0 */
 	int sessions;
@@ -109,7 +111,7 @@ public:
 		  address(_address),
 		  protocol(_protocol),
 		  concurrency(_concurrency),
-		  totalConnections(0),
+		  totalActiveConnections(0),
 		  sessions(0)
 		{ }
 
@@ -119,12 +121,12 @@ public:
 		  address(other.address),
 		  protocol(other.protocol),
 		  concurrency(other.concurrency),
-		  totalConnections(other.totalConnections),
+		  totalActiveConnections(other.totalActiveConnections),
 		  sessions(other.sessions)
 		{ }
 
 	Socket &operator=(const Socket &other) {
-		totalConnections = other.totalConnections;
+		totalActiveConnections = other.totalActiveConnections;
 		idleConnections = other.idleConnections;
 		name = other.name;
 		address = other.address;
@@ -141,36 +143,43 @@ public:
 	 * Failure to do so will result in a resource leak.
 	 */
 	Connection checkoutConnection() {
-		boost::lock_guard<boost::mutex> l(connectionPoolLock);
+		boost::unique_lock<boost::mutex> l(connectionPoolLock);
 
 		if (!idleConnections.empty()) {
+			P_TRACE(3, "Socket " << address << ": checking out connection from connection pool (" <<
+				idleConnections.size() << " -> " << (idleConnections.size() - 1) <<
+				" items). Current active connections: " << totalActiveConnections);
 			Connection connection = idleConnections.back();
 			idleConnections.pop_back();
 			return connection;
-		} else if (totalConnections < connectionPoolLimit()) {
+		} else if (totalActiveConnections < connectionPoolLimit()) {
 			Connection connection = connect();
-			connection.persistent = true;
-			totalConnections++;
+			totalActiveConnections++;
+			P_TRACE(3, "Socket " << address << ": there are now " <<
+				totalActiveConnections << " active connections");
+			l.unlock();
 			return connection;
 		} else {
+			l.unlock();
 			return connect();
 		}
 	}
 
-	void checkinConnection(Connection connection) {
+	void checkinConnection(Connection &connection) {
 		boost::unique_lock<boost::mutex> l(connectionPoolLock);
 
-		if (connection.persistent) {
-			if (connection.fail) {
-				totalConnections--;
-				l.unlock();
-				connection.close();
-			} else {
-				idleConnections.push_back(connection);
-			}
-		} else {
+		if (connection.fail || !connection.persistent) {
+			totalActiveConnections--;
+			P_TRACE(3, "Socket " << address << ": connection not checked back into "
+				"connection pool. There are now " << totalActiveConnections <<
+				" active connections");
 			l.unlock();
 			connection.close();
+		} else {
+			P_TRACE(3, "Socket " << address << ": checking in connection into connection pool (" <<
+				idleConnections.size() << " -> " << (idleConnections.size() + 1) <<
+				" items). Current active connections: " << totalActiveConnections);
+			idleConnections.push_back(connection);
 		}
 	}
 
