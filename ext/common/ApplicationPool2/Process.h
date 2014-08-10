@@ -54,10 +54,6 @@ using namespace std;
 using namespace boost;
 
 
-struct ProcessBusynessComparator {
-	bool operator()(const Process *a, const Process *b) const;
-};
-
 typedef vector<ProcessPtr> ProcessList;
 
 /**
@@ -100,6 +96,9 @@ typedef vector<ProcessPtr> ProcessList;
  * its Sessions, and a Process also outlives the OS process.
  */
 class Process: public boost::enable_shared_from_this<Process> {
+public:
+	static const unsigned int MAX_SESSION_SOCKETS = 3;
+
 // Actually private, but marked public so that unit tests can access the fields.
 public:
 	friend class Group;
@@ -117,8 +116,8 @@ public:
 	Group *group;
 
 	/** A subset of 'sockets': all sockets that speak the
-	 * "session" protocol, sorted by socket.busyness(). */
-	SocketPriorityQueue sessionSockets;
+	 * "session" or "http_session" protocol. */
+	Socket *sessionSockets[MAX_SESSION_SOCKETS];
 
 	void sendAbortLongRunningConnectionsMessage(const string &address);
 	static void realSendAbortLongRunningConnectionsMessage(string address);
@@ -153,11 +152,20 @@ public:
 
 	void indexSessionSockets() {
 		SocketList::iterator it;
+
 		concurrency = 0;
+		memset(sessionSockets, 0, sizeof(sessionSockets));
+
 		for (it = sockets.begin(); it != sockets.end(); it++) {
 			Socket *socket = &(*it);
 			if (socket->protocol == "session" || socket->protocol == "http_session") {
-				socket->pqHandle = sessionSockets.push(socket);
+				if (sessionSocketCount == MAX_SESSION_SOCKETS) {
+					throw RuntimeException("The process has many session sockets. "
+						"A maximum of " + toString(MAX_SESSION_SOCKETS) + " is allowed");
+				}
+				sessionSockets[sessionSocketCount] = socket;
+				sessionSocketCount++;
+
 				if (concurrency != -1) {
 					if (socket->concurrency == 0) {
 						// If one of the sockets has a concurrency of
@@ -170,6 +178,7 @@ public:
 				}
 			}
 		}
+
 		if (concurrency == -1) {
 			concurrency = 0;
 		}
@@ -288,6 +297,10 @@ public:
 	/** Caches whether or not the OS process still exists. */
 	mutable bool m_osProcessExists: 1;
 	bool longRunningConnectionsAborted: 1;
+	/** Number of items in `sessionSockets`. Private field, but put here
+	 * for alignment optimization.
+	 */
+	unsigned int sessionSocketCount: 8;
 	/** Time at which shutdown began. */
 	time_t shutdownStartTime;
 	/** Collected by Pool::collectAnalytics(). */
@@ -325,6 +338,7 @@ public:
 		  oobwStatus(OOBW_NOT_ACTIVE),
 		  m_osProcessExists(true),
 		  longRunningConnectionsAborted(false),
+		  sessionSocketCount(0),
 		  shutdownStartTime(0)
 	{
 		if (_adminSocket != -1) {
@@ -414,6 +428,24 @@ public:
 	LifeStatus getLifeStatus() const {
 		oxt::spin_lock::scoped_lock lock(lifetimeSyncher);
 		return lifeStatus;
+	}
+
+	Socket *findSessionSocketWithLowestBusyness() const {
+		if (OXT_UNLIKELY(sessionSocketCount == 0)) {
+			return NULL;
+		}
+
+		int leastBusySessionSocketIndex = 0;
+		int lowestBusyness = sessionSockets[0]->busyness();
+
+		for (unsigned i = 1; i < sessionSocketCount; i++) {
+			if (sessionSockets[i]->busyness() < lowestBusyness) {
+				leastBusySessionSocketIndex = i;
+				lowestBusyness = sessionSockets[i]->busyness();
+			}
+		}
+
+		return sessionSockets[leastBusySessionSocketIndex];
 	}
 
 	bool abortLongRunningConnections() {
@@ -559,14 +591,12 @@ public:
 	 * not result in any harmful behavior.
 	 */
 	SessionPtr newSession(unsigned long long now = 0) {
-		Socket *socket = sessionSockets.top();
+		Socket *socket = findSessionSocketWithLowestBusyness();
 		if (socket->isTotallyBusy()) {
-			sessionSockets.pop();
 			return SessionPtr();
 		} else {
 			socket->sessions++;
 			this->sessions++;
-			sessionSockets.increase(socket->pqHandle);
 			if (now != 0) {
 				lastUsed = now;
 			} else {
@@ -587,7 +617,6 @@ public:
 		socket->sessions--;
 		this->sessions--;
 		processed++;
-		sessionSockets.decrease(socket->pqHandle);
 		assert(!isTotallyBusy());
 	}
 

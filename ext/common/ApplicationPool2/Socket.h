@@ -30,7 +30,6 @@
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
-#include <boost/heap/d_ary_heap.hpp>
 #include <climits>
 #include <cassert>
 #include <Logging.h>
@@ -67,17 +66,6 @@ struct Connection {
 	}
 };
 
-struct SocketBusynessComparator {
-	bool operator()(const Socket *a, const Socket *b) const;
-};
-
-typedef boost::heap::d_ary_heap<
-		Socket *,
-		boost::heap::arity<6>,
-		boost::heap::compare<SocketBusynessComparator>,
-		boost::heap::mutable_<true>
-	> SocketPriorityQueue;
-
 /**
  * Not thread-safe except for the connection pooling methods, so only use
  * within the ApplicationPool lock.
@@ -106,11 +94,6 @@ public:
 	StaticString protocol;
 	int concurrency;
 
-	/** The handle inside the associated Process's 'sessionSockets' priority queue.
-	 * Guaranteed to be valid as long as the Process is alive.
-	 */
-	SocketPriorityQueue::handle_type pqHandle;
-
 	// Private. In public section as alignment optimization.
 	int totalConnections;
 
@@ -136,7 +119,6 @@ public:
 		  address(other.address),
 		  protocol(other.protocol),
 		  concurrency(other.concurrency),
-		  pqHandle(other.pqHandle),
 		  totalConnections(other.totalConnections),
 		  sessions(other.sessions)
 		{ }
@@ -148,7 +130,6 @@ public:
 		address = other.address;
 		protocol = other.protocol;
 		concurrency = other.concurrency;
-		pqHandle = other.pqHandle;
 		sessions = other.sessions;
 		return *this;
 	}

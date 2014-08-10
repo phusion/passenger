@@ -873,8 +873,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 
 		assert(process->oobwStatus == Process::OOBW_IN_PROGRESS);
 		assert(process->sessions == 0);
-		socket = process->sessionSockets.top();
-		assert(socket != NULL);
+		socket = process->findSessionSocketWithLowestBusyness();
 	}
 
 	UPDATE_TRACE_POINT();
@@ -1449,17 +1448,6 @@ Group::generateSecret(const SuperGroup *superGroup) {
 string
 Group::generateUuid(const SuperGroup *superGroup) {
 	return superGroup->getPool()->getRandomGenerator()->generateAsciiString(20);
-}
-
-
-bool
-ProcessBusynessComparator::operator()(const Process *a, const Process *b) const {
-	return a->busyness() < b->busyness();
-}
-
-bool
-SocketBusynessComparator::operator()(const Socket *a, const Socket *b) const {
-	return a->busyness() < b->busyness();
 }
 
 
