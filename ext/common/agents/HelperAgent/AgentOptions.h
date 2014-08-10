@@ -94,7 +94,7 @@ struct AgentOptions: public VariantMap {
 		loggingAgentAddress   = options.get("logging_agent_address");
 		loggingAgentPassword  = options.get("logging_agent_password");
 		adminToolStatusPassword = options.get("admin_tool_status_password");
-		
+
 		// Optional options.
 		prestartUrls          = options.getStrSet("prestart_urls", false);
 		requestSocketLink     = options.get("request_socket_link", false);

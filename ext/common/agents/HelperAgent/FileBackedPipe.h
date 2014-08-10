@@ -276,7 +276,7 @@ private:
 				);
 			}
 			break;
-		
+
 		case OPENING_FILE:
 			file.writeBuffer.append(data, size);
 			break;
@@ -285,7 +285,7 @@ private:
 			file.writeBuffer.append(data, size);
 			writeBufferToFile();
 			break;
-		
+
 		default:
 			abort();
 		}
@@ -418,7 +418,7 @@ private:
 		if (OXT_UNLIKELY(oldGeneration != generation)) {
 			throw RuntimeException("Don't call the consumed callback after you've reset the FileBackedPipe!");
 		}
-		
+
 		if (pthread_equal(pthread_self(), getLibev()->getCurrentThread())) {
 			real_dataConsumed(consumed, done, oldGeneration);
 		} else {
@@ -516,7 +516,7 @@ private:
 				}
 			}
 			break;
-		
+
 		default:
 			abort();
 		}
@@ -571,7 +571,7 @@ public:
 	~FileBackedPipe() {
 		delete[] memory.data;
 	}
-	
+
 	bool resetable() const {
 		//return dataState == IN_MEMORY;
 		return true;
@@ -614,7 +614,7 @@ public:
 			return (ssize_t) file.writtenSize
 				- file.readOffset
 				+ file.writeBuffer.size();
-		
+
 		default:
 			abort();
 		}

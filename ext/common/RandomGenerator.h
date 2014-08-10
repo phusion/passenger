@@ -37,7 +37,7 @@
 
 
 /**
- * A random 
+ * A random
  */
 namespace Passenger {
 
@@ -60,7 +60,7 @@ using namespace oxt;
 class RandomGenerator: public boost::noncopyable {
 private:
 	FILE *handle;
-	
+
 public:
 	RandomGenerator(bool open = true) {
 		handle = NULL;
@@ -68,12 +68,12 @@ public:
 			reopen();
 		}
 	}
-	
+
 	~RandomGenerator() {
 		this_thread::disable_syscall_interruption dsi;
 		close();
 	}
-	
+
 	void reopen() {
 		close();
 		handle = syscalls::fopen("/dev/urandom", "r");
@@ -82,14 +82,14 @@ public:
 				errno, "/dev/urandom");
 		}
 	}
-	
+
 	void close() {
 		if (handle != NULL) {
 			syscalls::fclose(handle);
 			handle = NULL;
 		}
 	}
-	
+
 	StaticString generateBytes(void *buf, unsigned int size) {
 		size_t ret = syscalls::fread(buf, 1, size, handle);
 		if (ret != size) {
@@ -97,19 +97,19 @@ public:
 		}
 		return StaticString((const char *) buf, size);
 	}
-	
+
 	string generateByteString(unsigned int size) {
 		string result(size, '\0');
 		generateBytes(&result[0], size);
 		return result;
 	}
-	
+
 	string generateHexString(unsigned int size) {
 		string buf(size, '\0');
 		generateBytes(&buf[0], size);
 		return toHex(buf);
 	}
-	
+
 	/**
 	 * Generates a random string of <em>size</em> bytes which is also
 	 * valid ASCII. The result consists only of the characters A-Z,
@@ -126,7 +126,7 @@ public:
 		generateAsciiString(&result[0], size);
 		return result;
 	}
-	
+
 	void generateAsciiString(char *_buf, unsigned int size) {
 		static const char chars[] = {
 			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
@@ -141,13 +141,13 @@ public:
 			buf[i] = chars[buf[i] % sizeof(chars)];
 		}
 	}
-	
+
 	int generateInt() {
 		int ret;
 		generateBytes(&ret, sizeof(ret));
 		return ret;
 	}
-	
+
 	unsigned int generateUint() {
 		return (unsigned int) generateInt();
 	}

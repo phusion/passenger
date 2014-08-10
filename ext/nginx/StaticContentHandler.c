@@ -30,7 +30,7 @@
 static void
 set_request_extension(ngx_http_request_t *r, ngx_str_t *filename) {
     u_char *tmp;
-    
+
     /* Scan filename from the right until we've found a slash or a dot. */
     tmp = filename->data + filename->len - 1;
     while (tmp >= filename->data && *tmp != '/' && *tmp != '.') {
@@ -124,7 +124,7 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
     #if NGINX_VERSION_NUM >= 7000
         r->root_tested = !r->error_page;
     #endif
-	
+
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0, "http static fd: %d", of.fd);
 
     if (of.is_dir) {

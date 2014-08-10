@@ -89,35 +89,35 @@ using namespace oxt;
 class EventedServer {
 protected:
 	typedef set<EventedClient *> ClientSet;
-	
+
 	const ClientSet &getClients() const {
 		return clients;
 	}
-	
+
 	string getClientName(const EventedClient *client) const {
 		return toString(client);
 	}
-	
+
 	void logError(const EventedClient *client, const string &message) {
 		P_ERROR("Error in client " << getClientName(client) << ": " << message);
 	}
-	
+
 	void logSystemError(const EventedClient *client, const string &message, int errorCode) {
 		P_ERROR("Error in client " << getClientName(client) << ": " <<
 			message << ": " << strerror(errorCode) << " (" << errorCode << ")");
 	}
-	
+
 	void logSystemError(const string &message, int errorCode) {
 		P_ERROR(message << ": " << strerror(errorCode) << " (" << errorCode << ")");
 	}
-	
+
 	virtual EventedClient *createClient(const FileDescriptor &fd) {
 		return new EventedClient(loop, fd);
 	}
-	
+
 	virtual void onNewClient(EventedClient *client) { }
 	virtual void onClientReadable(EventedClient *client) { }
-	
+
 	/**
 	 * Called when a client has been disconnected. This may either be triggered
 	 * immediately by disconnect() or triggered after pending data has been sent
@@ -135,54 +135,54 @@ private:
 	FileDescriptor fd;
 	ev::io acceptWatcher;
 	ClientSet clients;
-	
+
 	void removeClient(EventedClient *client) {
 		clients.erase(client);
 	}
-	
+
 	void freeAllClients() {
 		ClientSet::iterator it;
 		ClientSet::iterator end = clients.end();
-		
+
 		for (it = clients.begin(); it != end; it++) {
 			(*it)->unref();
 		}
 		clients.clear();
 	}
-	
+
 	static void _onReadable(EventedClient *client) {
 		EventedServer *server = (EventedServer *) client->userData;
 		client->ref();
 		ScopeGuard guard(boost::bind(&EventedClient::unref, client));
 		server->onClientReadable((EventedClient *) client);
 	}
-	
+
 	static void _onDisconnect(EventedClient *client) {
 		EventedServer *server = (EventedServer *) client->userData;
 		ScopeGuard guard1(boost::bind(&EventedClient::unref, client));
-		
+
 		client->ref();
 		ScopeGuard guard2(boost::bind(&EventedClient::unref, client));
-		
+
 		server->removeClient(client);
 		server->onClientDisconnected((EventedClient *) client);
 	}
-	
+
 	static void _onDetach(EventedClient *client) {
 		EventedServer *server = (EventedServer *) client->userData;
 		ScopeGuard guard1(boost::bind(&EventedClient::unref, client));
-		
+
 		client->ref();
 		ScopeGuard guard2(boost::bind(&EventedClient::unref, client));
-		
+
 		server->removeClient(client);
 	}
-	
+
 	static void _onSystemError(EventedClient *client, const string &message, int code) {
 		EventedServer *server = (EventedServer *) client->userData;
 		server->logSystemError(client, message, code);
 	}
-	
+
 	void exceptionThrownWhileInitializingClient(EventedClient *client, ClientSet::iterator it) {
 		if (!client->ioAllowed()) {
 			// onNewClient() disconnected or detached the
@@ -196,12 +196,12 @@ private:
 		}
 		// Now client refcount == 0
 	}
-	
+
 	void onAcceptable(ev::io &w, int revents) {
 		this_thread::disable_syscall_interruption dsi;
 		int i = 0;
 		bool done = false;
-		
+
 		// Accept at most 10 connections on every accept readiness event
 		// in order to give other events the chance to be processed.
 		while (i < 10 && !done) {
@@ -212,7 +212,7 @@ private:
 				struct sockaddr_in inet;
 			} addr;
 			socklen_t len = sizeof(addr);
-			
+
 			int clientfd = syscalls::accept(fd, (struct sockaddr *) &addr, &len);
 			if (clientfd == -1) {
 				if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -223,11 +223,11 @@ private:
 			} else {
 				FileDescriptor clientfdGuard(clientfd);
 				int optval = 1;
-				
+
 				setNonBlocking(clientfdGuard);
 				syscalls::setsockopt(clientfd, SOL_SOCKET, SO_KEEPALIVE,
 					&optval, sizeof(optval));
-				
+
 				EventedClient *client = createClient(clientfdGuard);
 				client->onReadable    = _onReadable;
 				client->onDisconnect  = _onDisconnect;
@@ -235,9 +235,9 @@ private:
 				client->onSystemError = _onSystemError;
 				client->userData      = this;
 				client->notifyReads(true);
-				
+
 				pair<ClientSet::iterator, bool> p = clients.insert(client);
-				
+
 				client->ref();
 				// client refcount == 2
 				{
@@ -250,7 +250,7 @@ private:
 					g.clear();
 					// If exception occurred: client refcount == 0
 				}
-				
+
 				/* No exception occured.
 				 * If onNewClient() disconnected or detached the client:
 				 *     client refcount == 1
@@ -264,7 +264,7 @@ private:
 			i++;
 		}
 	}
-	
+
 public:
 	EventedServer(struct ev_loop *_loop, FileDescriptor serverFd)
 		: loop(_loop),
@@ -275,15 +275,15 @@ public:
 		acceptWatcher.set<EventedServer, &EventedServer::onAcceptable>(this);
 		acceptWatcher.start(fd, ev::READ);
 	}
-	
+
 	virtual ~EventedServer() {
 		freeAllClients();
 	}
-	
+
 	struct ev_loop *getLoop() const {
 		return loop;
 	}
-	
+
 	FileDescriptor getServerFd() const {
 		return fd;
 	}

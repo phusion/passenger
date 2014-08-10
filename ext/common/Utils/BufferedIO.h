@@ -32,7 +32,7 @@ class BufferedIO {
 private:
 	FileDescriptor fd;
 	string buffer;
-	
+
 	static pair<unsigned int, bool> nReadOrEofReached(const char *data,
 		unsigned int size, void *output, unsigned int goalSize, unsigned int *alreadyRead)
 	{
@@ -43,14 +43,14 @@ private:
 		*alreadyRead += consumed;
 		return make_pair(consumed, *alreadyRead == goalSize);
 	}
-	
+
 	static pair<unsigned int, bool> eofReached(const char *data,
 		unsigned int size, string *output)
 	{
 		output->append(data, size);
 		return make_pair(size, false);
 	}
-	
+
 	static pair<unsigned int, bool> newlineFound(const char *data,
 		unsigned int size, string *output, unsigned int max)
 	{
@@ -70,24 +70,24 @@ private:
 			return make_pair(size, false);
 		}
 	}
-	
+
 public:
 	typedef boost::function< pair<unsigned int, bool>(const char *data, unsigned int size) > AcceptFunction;
-	
+
 	BufferedIO() { }
-	
+
 	BufferedIO(const FileDescriptor &_fd)
 		: fd(_fd)
 		{ }
-	
+
 	FileDescriptor getFd() const {
 		return fd;
 	}
-	
+
 	const string &getBuffer() const {
 		return buffer;
 	}
-	
+
 	/**
 	 * This method keeps reading data in a loop, feeding each chunk to the given
 	 * acceptor function, until the function says that it has consumed all data
@@ -113,7 +113,7 @@ public:
 	unsigned int readUntil(const AcceptFunction &acceptor, unsigned long long *timeout = NULL) {
 		pair<unsigned int, bool> acceptResult;
 		unsigned int totalRead = 0;
-		
+
 		if (!buffer.empty()) {
 			acceptResult = acceptor(buffer.c_str(), buffer.size());
 			if (OXT_UNLIKELY(!acceptResult.second && acceptResult.first < buffer.size())) {
@@ -127,12 +127,12 @@ public:
 				return totalRead;
 			}
 		}
-		
+
 		while (true) {
 			if (OXT_UNLIKELY(timeout != NULL && !waitUntilReadable(fd, timeout))) {
 				throw TimeoutException("Read timeout");
 			}
-			
+
 			char tmp[1024 * 8];
 			ssize_t ret = syscalls::read(fd, tmp, sizeof(tmp));
 			if (ret == 0) {
@@ -157,20 +157,20 @@ public:
 			}
 		}
 	}
-	
+
 	unsigned int read(void *buf, unsigned int size, unsigned long long *timeout = NULL) {
 		unsigned int counter = 0;
 		return readUntil(
 			boost::bind(nReadOrEofReached, _1, _2, buf, size, &counter),
 			timeout);
 	}
-	
+
 	string readAll(unsigned long long *timeout = NULL) {
 		string output;
 		readUntil(boost::bind(eofReached, _1, _2, &output), timeout);
 		return output;
 	}
-	
+
 	/**
 	 * Reads a line and returns the line including the newline character. Upon
 	 * encountering EOF, the empty string is returned.
@@ -189,7 +189,7 @@ public:
 		readUntil(boost::bind(newlineFound, _1, _2, &output, max), timeout);
 		return output;
 	}
-	
+
 	void unread(const void *buf, unsigned int size) {
 		string newBuffer;
 		newBuffer.reserve(size + buffer.size());
@@ -197,7 +197,7 @@ public:
 		newBuffer.append(buffer);
 		buffer = newBuffer;
 	}
-	
+
 	void unread(const StaticString &str) {
 		unread(str.c_str(), str.size());
 	}

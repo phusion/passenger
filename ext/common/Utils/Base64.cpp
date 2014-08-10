@@ -31,7 +31,7 @@
 
 namespace Passenger {
 
-static const std::string base64_chars = 
+static const std::string base64_chars =
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
              "abcdefghijklmnopqrstuvwxyz"
              "0123456789+/";
@@ -54,7 +54,7 @@ Base64::encode(const unsigned char *bytes_to_encode, unsigned int in_len) {
 	// + 814 bytes larger than the original. Here we reserve a little
 	// more than that to avoid memory reallocations.
 	ret.reserve((std::string::size_type) (in_len * 1.37) + 1024);
-	
+
 	while (in_len--) {
 		char_array_3[i++] = *(bytes_to_encode++);
 		if (i == 3) {
@@ -105,7 +105,7 @@ Base64::decode(const unsigned char *base64_data, unsigned int in_len) {
 		reserved_size = in_len;
 	}
 	ret.reserve(reserved_size);
-	
+
 	while (in_len-- && ( base64_data[in_] != '=') && is_base64(base64_data[in_])) {
 		char_array_4[i++] = base64_data[in_]; in_++;
 		if (i == 4) {

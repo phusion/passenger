@@ -64,7 +64,7 @@ struct ParseException {};
  * Leading whitespaces (but not newlines) are ignored. If a word is found
  * then the word is returned and the data pointer is moved to the end of
  * the word.
- * 
+ *
  * If the first line only contains whitespaces, or if the first line is empty,
  * then a ParseException is thrown.
  *
@@ -76,14 +76,14 @@ readNextWord(const char **data) {
 	if (**data == '\n' || **data == '\0') {
 		throw ParseException();
 	}
-	
+
 	// Find end of word and extract the word.
 	const char *endOfWord = *data;
 	while (*endOfWord != ' ' && *endOfWord != '\n' && *endOfWord != '\0') {
 		endOfWord++;
 	}
 	StaticString result(*data, endOfWord - *data);
-	
+
 	// Move data pointer to the end of this word.
 	*data = endOfWord;
 	return result;
@@ -200,7 +200,7 @@ readRestOfLine(const char *data) {
 	if (*data == '\n' || *data == '\0') {
 		return "";
 	}
-	
+
 	// Look for newline character. From there, scan back until we've
 	// found a non-whitespace character.
 	const char *endOfLine = strchr(data, '\n');
@@ -210,7 +210,7 @@ readRestOfLine(const char *data) {
 	while (*(endOfLine - 1) == ' ') {
 		endOfLine--;
 	}
-	
+
 	return string(data, endOfLine - data);
 }
 

@@ -168,7 +168,7 @@ private:
 		if (endPos == string::npos) {
 			return state.result.size();
 		}
-		
+
 		string name = state.result.substr(pos + 2, endPos - pos - 2);
 		if (startsWith(name, "if ")) {
 			return processIf(state, pos, endPos, name);
@@ -194,7 +194,7 @@ public:
 	Template(const StaticString &_content)
 		: content(_content)
 		{ }
-	
+
 	string apply(const StringMap<StaticString> &substitutions) {
 		State state(content, substitutions);
 		apply(state);

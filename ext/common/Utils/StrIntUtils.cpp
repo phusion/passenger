@@ -40,7 +40,7 @@ fillInMiddle(unsigned int max, const string &prefix, const string &middle, const
 	if (max <= prefix.size() + postfix.size()) {
 		throw ArgumentException("Impossible to build string with the given size constraint.");
 	}
-	
+
 	unsigned int fillSize = max - (prefix.size() + postfix.size());
 	if (fillSize > middle.size()) {
 		return prefix + middle + postfix;
@@ -200,7 +200,7 @@ stringToUnsignedNumeric(const StaticString &str) {
 	Numeric result = 0;
 	string::size_type i = 0;
 	const char *data = str.data();
-	
+
 	while (data[i] == ' ' && i < str.size()) {
 		i++;
 	}
@@ -229,7 +229,7 @@ stringToSignedNumeric(const StaticString &str) {
 	string::size_type i = 0;
 	const char *data = str.data();
 	bool minus = false;
-	
+
 	while (data[i] == ' ' && i < str.size()) {
 		i++;
 	}
@@ -266,7 +266,7 @@ hexToUnsignedNumeric(const StaticString &hex) {
 	const char *end = hex.data() + hex.size();
 	Numeric result = 0;
 	bool done = false;
-	
+
 	while (pos < end && !done) {
 		char c = *pos;
 		if (c >= '0' && c <= '9') {
@@ -301,7 +301,7 @@ hexatriToULL(const StaticString &str) {
 	unsigned long long result = 0;
 	string::size_type i = 0;
 	bool done = false;
-	
+
 	while (i < str.size() && !done) {
 		char c = str[i];
 		if (c >= '0' && c <= '9') {
@@ -346,7 +346,7 @@ void
 toHex(const StaticString &data, char *output, bool upperCase) {
 	const char *data_buf = data.c_str();
 	string::size_type i;
-	
+
 	if (upperCase) {
 		for (i = 0; i < data.size(); i++) {
 			output[i * 2] = upcase_hex_chars[(unsigned char) data_buf[i] / 16];
@@ -434,7 +434,7 @@ distanceOfTimeInWords(time_t fromTime, time_t toTime) {
 	} else {
 		seconds = fromTime - toTime;
 	}
-	
+
 	if (seconds >= 60) {
 		time_t minutes = seconds / 60;
 		if (minutes >= 60) {
@@ -448,7 +448,7 @@ distanceOfTimeInWords(time_t fromTime, time_t toTime) {
 			minutes = minutes % 60;
 			result << hours << "h ";
 		}
-		
+
 		seconds = seconds % 60;
 		result << minutes << "m ";
 	}
@@ -473,7 +473,7 @@ cEscapeString(const StaticString &input) {
 	string result;
 	const char *current = input.c_str();
 	const char *end = current + input.size();
-	
+
 	result.reserve(input.size());
 	while (current < end) {
 		char c = *current;
@@ -482,7 +482,7 @@ cEscapeString(const StaticString &input) {
 			result.append(1, c);
 		} else {
 			char buf[sizeof("\\xFF")];
-			
+
 			switch (c) {
 			case '\0':
 				// Explicitly in hex format in order to avoid confusion
@@ -519,10 +519,10 @@ string
 escapeHTML(const StaticString &input) {
 	string result;
 	result.reserve((int) ceil(input.size() * 1.25));
-	
+
 	const char *current = (const char *) input.c_str();
 	const char *end     = current + input.size();
-	
+
 	while (current < end) {
 		char ch = *current;
 		if (ch & 128) {
@@ -530,7 +530,7 @@ escapeHTML(const StaticString &input) {
 			const char *prev = current;
 			utf8::advance(current, 1, end);
 			result.append(prev, current - prev);
-			
+
 		} else {
 			// ASCII character <= 127.
 			if (ch == '<') {

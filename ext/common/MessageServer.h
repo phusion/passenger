@@ -121,16 +121,16 @@ using namespace oxt;
  *   public:
  *       struct MyContext: public MessageServer::ClientContext {
  *           int count;
- *           
+ *
  *           MyContext() {
  *               count = 0;
  *           }
  *       };
- *       
+ *
  *       MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &commonContext) {
  *           return boost::make_shared<MyContext>();
  *       }
- *       
+ *
  *       bool processMessage(MessageServer::CommonClientContext &commonContext,
  *                           MessageServer::ClientContextPtr &specificContext,
  *                           const vector<string> &args)
@@ -145,9 +145,9 @@ using namespace oxt;
  *           }
  *       }
  *   };
- *   
+ *
  *   ...
- *   
+ *
  *   MessageServer server("server.sock");
  *   server.addHandler(MessageServer::HandlerPtr(new PingHandler()));
  *   server.addHandler(MessageServer::HandlerPtr(new PingHandler()));
@@ -159,15 +159,15 @@ using namespace oxt;
 class MessageServer {
 public:
 	static const unsigned int CLIENT_THREAD_STACK_SIZE = 1024 * 128;
-	
+
 	/** Interface for client context objects. */
 	class ClientContext {
 	public:
 		virtual ~ClientContext() { }
 	};
-	
+
 	typedef boost::shared_ptr<ClientContext> ClientContextPtr;
-	
+
 	/**
 	 * A common client context, containing client-specific information
 	 * used by MessageServer itself.
@@ -176,21 +176,21 @@ public:
 	public:
 		/** The client's socket file descriptor. */
 		FileDescriptor fd;
-		
+
 		/** The account with which the client authenticated. */
 		AccountPtr account;
-		
-		
+
+
 		CommonClientContext(FileDescriptor &_fd, AccountPtr &_account)
 			: fd(_fd),
 			  account(_account)
 			{ }
-		
+
 		/** Returns a string representation for this client context. */
 		string name() {
 			return toString(fd);
 		}
-		
+
 		/**
 		 * Checks whether this client has all of the rights in `rights`. The
 		 * client will be notified about the result of this check, by sending it a
@@ -219,7 +219,7 @@ public:
 			writeArrayMessage(fd, "Passed security", NULL);
 		}
 	};
-	
+
 	/**
 	 * An abstract message handler class.
 	 *
@@ -271,7 +271,7 @@ public:
 
 	public:
 		virtual ~Handler() { }
-		
+
 		/**
 		 * Called when a new client has connected to the MessageServer.
 		 *
@@ -284,7 +284,7 @@ public:
 		virtual ClientContextPtr newClient(CommonClientContext &context) {
 			return ClientContextPtr();
 		}
-		
+
 		/**
 		 * Called when a client has disconnected from the MessageServer. The
 		 * default implementation does nothing.
@@ -299,7 +299,7 @@ public:
 		virtual void clientDisconnected(MessageServer::CommonClientContext &context,
 		                                MessageServer::ClientContextPtr &handlerSpecificContext)
 		{ }
-		
+
 		/**
 		 * Called then a client has sent a request message.
 		 *
@@ -316,41 +316,41 @@ public:
 		                            ClientContextPtr &handlerSpecificContext,
 		                            const vector<string> &args) = 0;
 	};
-	
+
 	typedef boost::shared_ptr<Handler> HandlerPtr;
-	
+
 protected:
 	/** The filename of the server socket on which this MessageServer is listening. */
 	string socketFilename;
-	
+
 	/** An accounts database, used for authenticating clients. */
 	AccountsDatabasePtr accountsDatabase;
-	
+
 	/** The registered message handlers. */
 	vector<HandlerPtr> handlers;
-	
+
 	/** The maximum number of milliseconds that client may spend on logging in.
 	 * Clients that take longer are disconnected.
 	 *
 	 * @invariant loginTimeout != 0
 	 */
 	unsigned long long loginTimeout;
-	
+
 	/** The client threads. */
 	dynamic_thread_group threadGroup;
-	
+
 	/** The server socket's file descriptor.
 	 * @invariant serverFd >= 0
 	 */
 	int serverFd;
-	
-	
+
+
 	/** Calls clientDisconnected() on all handlers when destroyed. */
 	struct DisconnectEventBroadcastGuard {
 		vector<HandlerPtr> &handlers;
 		CommonClientContext &commonContext;
 		vector<ClientContextPtr> &handlerSpecificContexts;
-		
+
 		DisconnectEventBroadcastGuard(vector<HandlerPtr> &_handlers,
 		                              CommonClientContext &_commonContext,
 		                              vector<ClientContextPtr> &_handlerSpecificContexts)
@@ -358,7 +358,7 @@ protected:
 		  commonContext(_commonContext),
 		  handlerSpecificContexts(_handlerSpecificContexts)
 		{ }
-		
+
 		~DisconnectEventBroadcastGuard() {
 			vector<HandlerPtr>::iterator handler_iter;
 			vector<ClientContextPtr>::iterator context_iter;
@@ -370,8 +370,8 @@ protected:
 			}
 		}
 	};
-	
-	
+
+
 	/**
 	 * Create a server socket and set it up for listening. This socket will
 	 * be world-writable.
@@ -383,7 +383,7 @@ protected:
 	void startListening() {
 		TRACE_POINT();
 		int ret;
-		
+
 		serverFd = createUnixServer(socketFilename.c_str());
 		do {
 			ret = chmod(socketFilename.c_str(),
@@ -393,7 +393,7 @@ protected:
 				S_IROTH | S_IWOTH | S_IXOTH);
 		} while (ret == -1 && errno == EINTR);
 	}
-	
+
 	/**
 	 * Authenticate the given client and returns its account information.
 	 *
@@ -403,10 +403,10 @@ protected:
 		string username, password;
 		MemZeroGuard passwordGuard(password);
 		unsigned long long timeout = loginTimeout;
-		
+
 		try {
 			writeArrayMessage(client, &timeout, "version", "1", NULL);
-			
+
 			try {
 				if (!readScalarMessage(client, username, MESSAGE_SERVER_MAX_USERNAME_SIZE, &timeout)) {
 					return AccountPtr();
@@ -415,7 +415,7 @@ protected:
 				writeArrayMessage(client, &timeout, "The supplied username is too long.", NULL);
 				return AccountPtr();
 			}
-			
+
 			try {
 				if (!readScalarMessage(client, password, MESSAGE_SERVER_MAX_PASSWORD_SIZE, &timeout)) {
 					return AccountPtr();
@@ -424,7 +424,7 @@ protected:
 				writeArrayMessage(client, &timeout, "The supplied password is too long.", NULL);
 				return AccountPtr();
 			}
-			
+
 			AccountPtr account = accountsDatabase->authenticate(username, password);
 			passwordGuard.zeroNow();
 			if (account == NULL) {
@@ -441,22 +441,22 @@ protected:
 			return AccountPtr();
 		}
 	}
-	
+
 	void broadcastNewClientEvent(CommonClientContext &context,
 	                             vector<ClientContextPtr> &handlerSpecificContexts) {
 		vector<HandlerPtr>::iterator it;
-		
+
 		for (it = handlers.begin(); it != handlers.end(); it++) {
 			handlerSpecificContexts.push_back((*it)->newClient(context));
 		}
 	}
-	
+
 	bool processMessage(CommonClientContext &commonContext,
 	                    vector<ClientContextPtr> &handlerSpecificContexts,
 	                    const vector<string> &args) {
 		vector<HandlerPtr>::iterator handler_iter;
 		vector<ClientContextPtr>::iterator context_iter;
-		
+
 		for (handler_iter = handlers.begin(), context_iter = handlerSpecificContexts.begin();
 		     handler_iter != handlers.end();
 		     handler_iter++, context_iter++) {
@@ -466,7 +466,7 @@ protected:
 		}
 		return false;
 	}
-	
+
 	void processUnknownMessage(CommonClientContext &commonContext, const vector<string> &args) {
 		TRACE_POINT();
 		string name;
@@ -478,38 +478,38 @@ protected:
 		P_TRACE(2, "A MessageServer client sent an invalid command: "
 			<< name << " (" << args.size() << " elements)");
 	}
-	
+
 	/**
 	 * The main function for a thread which handles a client.
 	 */
 	void clientHandlingMainLoop(FileDescriptor client) {
 		TRACE_POINT();
 		vector<string> args;
-		
+
 		P_TRACE(4, "MessageServer client thread " << (int) client << " started.");
-		
+
 		try {
 			AccountPtr account(authenticate(client));
 			if (account == NULL) {
 				P_TRACE(4, "MessageServer client thread " << (int) client << " exited.");
 				return;
 			}
-			
+
 			CommonClientContext commonContext(client, account);
 			vector<ClientContextPtr> handlerSpecificContexts;
 			broadcastNewClientEvent(commonContext, handlerSpecificContexts);
 			DisconnectEventBroadcastGuard dguard(handlers, commonContext, handlerSpecificContexts);
-			
+
 			while (!this_thread::interruption_requested()) {
 				UPDATE_TRACE_POINT();
 				if (!readArrayMessage(commonContext.fd, args)) {
 					// Client closed connection.
 					break;
 				}
-				
+
 				P_TRACE(4, "MessageServer client " << commonContext.name() <<
 					": received message: " << toString(args));
-				
+
 				UPDATE_TRACE_POINT();
 				if (!processMessage(commonContext, handlerSpecificContexts, args)) {
 					processUnknownMessage(commonContext, args);
@@ -517,7 +517,7 @@ protected:
 				}
 				args.clear();
 			}
-			
+
 			P_TRACE(4, "MessageServer client thread " << (int) client << " exited.");
 			client.close();
 		} catch (const boost::thread_interrupted &) {
@@ -529,7 +529,7 @@ protected:
 				<< "   backtrace:\n" << e.backtrace());
 		}
 	}
-	
+
 public:
 	/**
 	 * Creates a new MessageServer object.
@@ -549,17 +549,17 @@ public:
 		loginTimeout = 2000000;
 		startListening();
 	}
-	
+
 	~MessageServer() {
 		this_thread::disable_syscall_interruption dsi;
 		syscalls::close(serverFd);
 		syscalls::unlink(socketFilename.c_str());
 	}
-	
+
 	string getSocketFilename() const {
 		return socketFilename;
 	}
-	
+
 	/**
 	 * Starts the server main loop. This method will loop forever until some
 	 * other thread interrupts the calling thread, or until an exception is raised.
@@ -576,17 +576,17 @@ public:
 			sockaddr_un addr;
 			socklen_t len = sizeof(addr);
 			FileDescriptor fd;
-			
+
 			UPDATE_TRACE_POINT();
 			fd = syscalls::accept(serverFd, (struct sockaddr *) &addr, &len);
 			if (fd == -1) {
 				throw SystemException("Unable to accept a new client", errno);
 			}
-			
+
 			UPDATE_TRACE_POINT();
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
-			
+
 			boost::function<void ()> func(boost::bind(&MessageServer::clientHandlingMainLoop,
 				this, fd));
 			string name = "MessageServer client thread ";
@@ -594,16 +594,16 @@ public:
 			threadGroup.create_thread(func, name, CLIENT_THREAD_STACK_SIZE);
 		}
 	}
-	
+
 	/**
 	 * Registers a new handler.
-	 * 
+	 *
 	 * @pre The main loop isn't running.
 	 */
 	void addHandler(HandlerPtr handler) {
 		handlers.push_back(handler);
 	}
-	
+
 	/**
 	 * Sets the maximum number of microseconds that clients may spend on logging in.
 	 * Clients that take longer are disconnected.

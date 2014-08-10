@@ -60,7 +60,7 @@ class VariantMap {
 private:
 	map<string, string> store;
 	string empty;
-	
+
 	/**
 	 * Looks up the string value associated with <em>name</em>.
 	 * If found, then <tt>true</tt> is returned and a pointer to
@@ -85,26 +85,26 @@ private:
 			return true;
 		}
 	}
-	
+
 public:
 	/** Thrown when a required key is not found by one of the get() methods. */
 	class MissingKeyException: public oxt::tracable_exception {
 	private:
 		string message;
 		string key;
-		
+
 	public:
 		MissingKeyException(const string &key) {
 			this->key = key;
 			message = string("Required key '") + key + "' is missing";
 		}
-		
+
 		virtual ~MissingKeyException() throw() { }
-		
+
 		virtual const char *what() const throw() {
 			return message.c_str();
 		}
-		
+
 		/** The key that wasn't found. */
 		const string &getKey() const {
 			return key;
@@ -140,7 +140,7 @@ public:
 			i += 2;
 		}
 	}
-	
+
 	/**
 	 * Populates a VariantMap from the data in `fd`. MessageIO
 	 * is used to read from the file descriptor.
@@ -151,7 +151,7 @@ public:
 	void readFrom(int fd, const StaticString &messageName = "VariantMap") {
 		TRACE_POINT();
 		vector<string> args;
-		
+
 		if (!readArrayMessage(fd, args)) {
 			throw IOException("Unexpected end-of-file encountered");
 		}
@@ -164,7 +164,7 @@ public:
 		if (args.size() % 2 != 1) {
 			throw IOException("Message from channel has an unexpected number of arguments");
 		}
-		
+
 		vector<string>::const_iterator it = args.begin();
 		it++;
 		while (it != args.end()) {
@@ -175,7 +175,7 @@ public:
 			store[key] = value;
 		}
 	}
-	
+
 	VariantMap &set(const string &name, const string &value) {
 		if (value.empty()) {
 			map<string, string>::iterator it = store.find(name);
@@ -194,7 +194,7 @@ public:
 		}
 		return *this;
 	}
-	
+
 	VariantMap &setInt(const string &name, int value) {
 		set(name, toString(value));
 		return *this;
@@ -206,7 +206,7 @@ public:
 		}
 		return *this;
 	}
-	
+
 	VariantMap &setULL(const string &name, unsigned long long value) {
 		set(name, toString(value));
 		return *this;
@@ -218,7 +218,7 @@ public:
 		}
 		return *this;
 	}
-	
+
 	VariantMap &setPid(const string &name, pid_t value) {
 		set(name, toString((unsigned long long) value));
 		return *this;
@@ -230,7 +230,7 @@ public:
 		}
 		return *this;
 	}
-	
+
 	VariantMap &setUid(const string &name, uid_t value) {
 		set(name, toString((long long) value));
 		return *this;
@@ -242,7 +242,7 @@ public:
 		}
 		return *this;
 	}
-	
+
 	VariantMap &setGid(const string &name, gid_t value) {
 		set(name, toString((long long) value));
 		return *this;
@@ -254,7 +254,7 @@ public:
 		}
 		return *this;
 	}
-	
+
 	VariantMap &setBool(const string &name, bool value) {
 		set(name, value ? "true" : "false");
 		return *this;
@@ -291,7 +291,7 @@ public:
 			return it->second;
 		}
 	}
-	
+
 	const string &get(const string &name, bool required, const string &defaultValue) const {
 		map<string, string>::const_iterator it = store.find(name);
 		if (it == store.end()) {
@@ -304,7 +304,7 @@ public:
 			return it->second;
 		}
 	}
-	
+
 	int getInt(const string &name, bool required = true, int defaultValue = 0) const {
 		int result = defaultValue;
 		const string *str;
@@ -313,7 +313,7 @@ public:
 		}
 		return result;
 	}
-	
+
 	unsigned long long getULL(const string &name, bool required = true,
 		unsigned long long defaultValue = 0) const
 	{
@@ -324,7 +324,7 @@ public:
 		}
 		return result;
 	}
-	
+
 	pid_t getPid(const string &name, bool required = true, pid_t defaultValue = 0) const {
 		pid_t result = defaultValue;
 		const string *str;
@@ -333,7 +333,7 @@ public:
 		}
 		return result;
 	}
-	
+
 	uid_t getUid(const string &name, bool required = true, uid_t defaultValue = 0) const {
 		uid_t result = defaultValue;
 		const string *str;
@@ -342,7 +342,7 @@ public:
 		}
 		return result;
 	}
-	
+
 	gid_t getGid(const string &name, bool required = true, gid_t defaultValue = 0) const {
 		gid_t result = defaultValue;
 		const string *str;
@@ -351,7 +351,7 @@ public:
 		}
 		return result;
 	}
-	
+
 	bool getBool(const string &name, bool required = true, bool defaultValue = false) const {
 		bool result = defaultValue;
 		const string *str;
@@ -372,16 +372,16 @@ public:
 		}
 		return result;
 	}
-	
+
 	bool erase(const string &name) {
 		return store.erase(name) != 0;
 	}
-	
+
 	/** Checks whether the specified key is in this map. */
 	bool has(const string &name) const {
 		return store.find(name) != store.end();
 	}
-	
+
 	/** Returns the number of elements in this map. */
 	unsigned int size() const {
 		return store.size();
@@ -395,7 +395,7 @@ public:
 			other.set(it->first, it->second);
 		}
 	}
-	
+
 	/**
 	 * Writes a representation of the contents in this VariantMap to
 	 * the given file descriptor with MessageIO. The data can be
@@ -407,7 +407,7 @@ public:
 		map<string, string>::const_iterator it;
 		map<string, string>::const_iterator end = store.end();
 		vector<string> args;
-		
+
 		args.reserve(1 + 2 * store.size());
 		args.push_back(messageName);
 		for (it = store.begin(); it != end; it++) {
@@ -438,7 +438,7 @@ public:
 		map<string, string>::const_iterator end = store.end();
 		string result;
 		unsigned int i = 0;
-		
+
 		result.append("{ ");
 		for (it = store.begin(); it != end; it++, i++) {
 			result.append("'");

@@ -150,7 +150,7 @@ public:
 	{
 		generation = _generation;
 	}
-	
+
 	virtual ProcessPtr spawn(const Options &options) {
 		TRACE_POINT();
 		this_thread::disable_interruption di;
@@ -221,7 +221,7 @@ public:
 			details.errorPipe = errorPipe.first;
 			details.options = &options;
 			details.debugDir = debugDir;
-			
+
 			ProcessPtr process;
 			{
 				this_thread::restore_interruption ri(di);

@@ -169,7 +169,7 @@ setOomScore(const StaticString &score) {
 
 	FILE *f;
 	OomFileType type;
-	
+
 	f = openOomAdjFile("w", type);
 	if (f != NULL) {
 		size_t ret = fwrite(score.data(), 1, score.size(), f);
@@ -188,7 +188,7 @@ setOomScoreNeverKill() {
 	string oldScore;
 	FILE *f;
 	OomFileType type;
-	
+
 	f = openOomAdjFile("r", type);
 	if (f == NULL) {
 		return "";
@@ -207,7 +207,7 @@ setOomScoreNeverKill() {
 		}
 	}
 	fclose(f);
-	
+
 	f = openOomAdjFile("w", type);
 	if (f == NULL) {
 		return "";
@@ -219,7 +219,7 @@ setOomScoreNeverKill() {
 		fprintf(f, "-17\n");
 	}
 	fclose(f);
-	
+
 	return oldScore;
 }
 
@@ -237,34 +237,34 @@ waitForStarterProcessOrWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcher
 	fd_set fds;
 	int max, ret;
 	char x;
-	
+
 	FD_ZERO(&fds);
 	FD_SET(FEEDBACK_FD, &fds);
 	FD_SET(wo->errorEvent.fd(), &fds);
-	
+
 	if (FEEDBACK_FD > wo->errorEvent.fd()) {
 		max = FEEDBACK_FD;
 	} else {
 		max = wo->errorEvent.fd();
 	}
-	
+
 	ret = syscalls::select(max + 1, &fds, NULL, NULL, NULL);
 	if (ret == -1) {
 		int e = errno;
 		P_ERROR("select() failed: " << strerror(e));
 		return false;
 	}
-	
+
 	if (FD_ISSET(wo->errorEvent.fd(), &fds)) {
 		vector<AgentWatcherPtr>::const_iterator it;
 		string message, backtrace, watcherName;
-		
+
 		for (it = watchers.begin(); it != watchers.end() && message.empty(); it++) {
 			message   = (*it)->getErrorMessage();
 			backtrace = (*it)->getErrorBacktrace();
 			watcherName = (*it)->name();
 		}
-		
+
 		if (!message.empty() && backtrace.empty()) {
 			P_ERROR("Error in " << watcherName << " watcher:\n  " << message);
 		} else if (!message.empty() && !backtrace.empty()) {
@@ -340,11 +340,11 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 				// Change process title.
 				strcpy(argv[0], "PassengerWatchdog (cleaning up...)");
 			#endif
-			
+
 			// Wait until all agent processes have exited. The starter
 			// process is responsible for telling the individual agents
 			// to exit.
-			
+
 			max = 0;
 			FD_ZERO(&fds);
 			for (it = watchers.begin(); it != watchers.end(); it++) {
@@ -361,7 +361,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 			    && timer.elapsed() < deadline)
 			{
 				struct timeval timeout;
-				
+
 				#ifdef FD_COPY
 					FD_COPY(&fds, &fds2);
 				#else
@@ -370,7 +370,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 						FD_SET((*it)->getFeedbackFd(), &fds2);
 					}
 				#endif
-				
+
 				timeout.tv_sec = 0;
 				timeout.tv_usec = 10000;
 				agentProcessesDone = syscalls::select(max + 1, &fds2, NULL, NULL, &timeout);
@@ -413,15 +413,15 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 			P_CRITICAL("An unknown exception occurred during cleaning up");
 			_exit(1);
 		}
-		
+
 	} else if (pid == -1) {
 		// Error
 		e = errno;
 		throw SystemException("fork() failed", e);
-		
+
 	} else {
 		// Parent
-		
+
 		// Let child process handle cleanup.
 		wo->serverInstanceDir->detach();
 		wo->generation->detach();
@@ -431,7 +431,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 static void
 forceAllAgentsShutdown(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	vector<AgentWatcherPtr>::iterator it;
-	
+
 	for (it = watchers.begin(); it != watchers.end(); it++) {
 		(*it)->signalShutdown();
 	}
@@ -488,7 +488,7 @@ initializeBareEssentials(int argc, char *argv[]) {
 	 * so we need to restore it after each fork().
 	 */
 	oldOomScore = setOomScoreNeverKill();
-	
+
 	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");
 
 	if (agentsOptions.get("test_binary", false) == "1") {
@@ -556,7 +556,7 @@ maybeSetsid() {
 static void
 lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 	struct passwd *userEntry;
-	
+
 	userEntry = getpwnam(defaultUser.c_str());
 	if (userEntry == NULL) {
 		throw NonExistentUserException("Default user '" + defaultUser +
@@ -699,7 +699,7 @@ main(int argc, char *argv[]) {
 	WorkingObjectsPtr wo;
 	ServerInstanceDirToucherPtr serverInstanceDirToucher;
 	vector<AgentWatcherPtr> watchers;
-	
+
 	try {
 		TRACE_POINT();
 		initializeOptions();
@@ -728,7 +728,7 @@ main(int argc, char *argv[]) {
 		P_INFO("All Phusion Passenger agents started!");
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("after_watchdog_initialization");
-		
+
 		UPDATE_TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;

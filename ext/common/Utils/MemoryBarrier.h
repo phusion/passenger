@@ -40,7 +40,7 @@
 			#define P_WRITE_BARRIER() \
 				do { __asm__ __volatile__ ("lock; addl $0,0(%%esp)" ::: "memory"); } while (false)
 		#endif
-		
+
 	#elif defined(__x86_64__)
 		#define P_READ_BARRIER() \
 			do { __asm__ __volatile__ ("lfence" ::: "memory"); } while (false)

@@ -30,18 +30,18 @@ class AgentWatcher: public boost::enable_shared_from_this<AgentWatcher> {
 private:
 	/** The watcher thread. */
 	oxt::thread *thr;
-	
+
 	void threadMain(boost::shared_ptr<AgentWatcher> self) {
 		try {
 			pid_t pid, ret;
 			int status, e;
-			
+
 			while (!this_thread::interruption_requested()) {
 				{
 					boost::lock_guard<boost::mutex> l(lock);
 					pid = this->pid;
 				}
-				
+
 				// Process can be started before the watcher thread is launched.
 				if (pid == 0) {
 					pid = start();
@@ -63,12 +63,12 @@ private:
 				} else {
 					e = errno;
 				}
-				
+
 				{
 					boost::lock_guard<boost::mutex> l(lock);
 					this->pid = 0;
 				}
-				
+
 				this_thread::disable_interruption di;
 				this_thread::disable_syscall_interruption dsi;
 				if (ret == -1) {
@@ -117,21 +117,21 @@ private:
 			wo->errorEvent.notify();
 		}
 	}
-	
+
 protected:
 	/** PID of the process we're watching. 0 if no process is started at this time. */
 	pid_t pid;
-	
+
 	/** If the watcher thread threw an uncaught exception then its information will
 	 * be stored here so that the main thread can check whether a watcher encountered
 	 * an error. These are empty strings if everything is OK.
 	 */
 	string threadExceptionMessage;
 	string threadExceptionBacktrace;
-	
+
 	/** The agent process's feedback fd. */
 	FileDescriptor feedbackFd;
-	
+
 	/**
 	 * Lock for protecting the exchange of data between the main thread and
 	 * the watcher thread.
@@ -139,13 +139,13 @@ protected:
 	mutable boost::mutex lock;
 
 	WorkingObjectsPtr wo;
-	
+
 	/**
 	 * Returns the filename of the agent process's executable. This method may be
 	 * called in a forked child process and may therefore not allocate memory.
 	 */
 	virtual string getExeFilename() const = 0;
-	
+
 	/**
 	 * This method is to exec() the agent with the right arguments.
 	 * It is called from within a forked child process, so don't do any dynamic
@@ -158,20 +158,20 @@ protected:
 			"3",  // feedback fd
 			(char *) 0);
 	}
-	
+
 	/**
 	 * This method is to send startup arguments to the agent process through
 	 * the given file descriptor, which is the agent process's feedback fd.
 	 * May throw arbitrary exceptions.
 	 */
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) = 0;
-	
+
 	/**
 	 * This method is to process the startup info that the agent process has
 	 * sent back. May throw arbitrary exceptions.
 	 */
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) = 0;
-	
+
 	static void killAndDontWait(pid_t pid) {
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -183,7 +183,7 @@ protected:
 	}
 
 	/**
-	 * Kill a process with SIGKILL, and attempt to kill its children too. 
+	 * Kill a process with SIGKILL, and attempt to kill its children too.
 	 * Then wait until it has quit.
 	 */
 	static void killAndWait(pid_t pid) {
@@ -196,7 +196,7 @@ protected:
 		}
 		syscalls::waitpid(pid, NULL, 0);
 	}
-	
+
 	/**
 	 * Behaves like <tt>waitpid(pid, status, WNOHANG)</tt>, but waits at most
 	 * <em>timeout</em> miliseconds for the process to exit.
@@ -204,7 +204,7 @@ protected:
 	static int timedWaitPid(pid_t pid, int *status, unsigned long long timeout) {
 		Timer timer;
 		int ret;
-		
+
 		do {
 			ret = syscalls::waitpid(pid, status, WNOHANG);
 			if (ret > 0 || ret == -1) {
@@ -215,10 +215,10 @@ protected:
 		} while (timer.elapsed() < timeout);
 		return 0; // timed out
 	}
-	
+
 	static void waitpidUsingKillPolling(pid_t pid) {
 		bool done = false;
-		
+
 		while (!done) {
 			int ret = syscalls::kill(pid, 0);
 			done = ret == -1;
@@ -227,18 +227,18 @@ protected:
 			}
 		}
 	}
-	
+
 public:
 	AgentWatcher(const WorkingObjectsPtr &wo) {
 		thr = NULL;
 		pid = 0;
 		this->wo = wo;
 	}
-	
+
 	virtual ~AgentWatcher() {
 		delete thr;
 	}
-	
+
 	/**
 	 * Store information about the started agent process in the given report object.
 	 * May throw arbitrary exceptions.
@@ -246,10 +246,10 @@ public:
 	 * @pre start() has been called and succeeded.
 	 */
 	virtual void reportAgentsInformation(VariantMap &report) = 0;
-	
+
 	/** Returns the name of the agent that this class is watching. */
 	virtual const char *name() const = 0;
-	
+
 	/**
 	 * Starts the agent process. May throw arbitrary exceptions.
 	 */
@@ -260,17 +260,17 @@ public:
 		SocketPair fds;
 		int e, ret;
 		pid_t pid;
-		
+
 		/* Create feedback fd for this agent process. We'll send some startup
 		 * arguments to this agent process through this fd, and we'll receive
 		 * startup information through it as well.
 		 */
 		fds = createUnixSocketPair();
-		
+
 		pid = syscalls::fork();
 		if (pid == 0) {
 			// Child
-			
+
 			/* Make sure file descriptor FEEDBACK_FD refers to the newly created
 			 * feedback fd (fds[1]) and close all other file descriptors.
 			 * In this child process we don't care about the original FEEDBACK_FD
@@ -280,7 +280,7 @@ public:
 			 * is started with FEEDBACK_FD already assigned.
 			 */
 			syscalls::close(fds[0]);
-			
+
 			if (syscalls::dup2(fds[1], FEEDBACK_FD) == -1) {
 				/* Something went wrong, report error through feedback fd. */
 				e = errno;
@@ -298,15 +298,15 @@ public:
 					_exit(1);
 				}
 			}
-			
+
 			closeAllFileDescriptors(FEEDBACK_FD);
-			
+
 			/* Become the process group leader so that the watchdog can kill the
 			 * agent as well as all its descendant processes. */
 			setpgid(getpid(), getpid());
-			
+
 			setOomScore(oldOomScore);
-			
+
 			try {
 				execProgram();
 			} catch (...) {
@@ -334,12 +334,12 @@ public:
 			// Parent
 			FileDescriptor feedbackFd = fds[0];
 			vector<string> args;
-			
+
 			fds[1].close();
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
 			ScopeGuard failGuard(boost::bind(killAndWait, pid));
-			
+
 			/* Send startup arguments. Ignore EPIPE and ECONNRESET here
 			 * because the child process might have sent an feedback message
 			 * without reading startup arguments.
@@ -353,7 +353,7 @@ public:
 						ex.code());
 				}
 			}
-			
+
 			// Now read its feedback.
 			try {
 				ret = readArrayMessage(feedbackFd, args);
@@ -370,7 +370,7 @@ public:
 				this_thread::disable_interruption di2;
 				this_thread::disable_syscall_interruption dsi2;
 				int status;
-				
+
 				/* The feedback fd was prematurely closed for an unknown reason.
 				 * Did the agent process crash?
 				 *
@@ -405,7 +405,7 @@ public:
 						"with exit code " + toString(WEXITSTATUS(status)));
 				}
 			}
-			
+
 			if (args[0] == "system error before exec") {
 				throw SystemException(string("Unable to start the ") + name() +
 					": " + args[1], atoi(args[2]));
@@ -427,7 +427,7 @@ public:
 					" sent an unknown startup info message '" +
 					args[0] + "'");
 			}
-			
+
 			boost::lock_guard<boost::mutex> l(lock);
 			this->feedbackFd = feedbackFd;
 			this->pid = pid;
@@ -435,7 +435,7 @@ public:
 			return pid;
 		}
 	}
-	
+
 	/**
 	 * Begin watching the agent process.
 	 *
@@ -453,28 +453,28 @@ public:
 		if (thr != NULL) {
 			throw RuntimeException("Already started watching.");
 		}
-		
+
 		thr = new oxt::thread(boost::bind(&AgentWatcher::threadMain, this, shared_from_this()),
 			name(), 256 * 1024);
 	}
-	
+
 	static void stopWatching(vector< boost::shared_ptr<AgentWatcher> > &watchers) {
 		vector< boost::shared_ptr<AgentWatcher> >::const_iterator it;
 		vector<oxt::thread *> threads;
 		unsigned int i = 0;
-		
+
 		for (it = watchers.begin(); it != watchers.end(); it++, i++) {
 			threads.push_back((*it)->thr);
 			threads[i] = (*it)->thr;
 		}
-		
+
 		oxt::thread::interrupt_and_join_multiple(&threads[0], threads.size());
 		for (it = watchers.begin(); it != watchers.end(); it++, i++) {
 			delete (*it)->thr;
 			(*it)->thr = NULL;
 		}
 	}
-	
+
 	virtual bool signalShutdown() {
 		boost::lock_guard<boost::mutex> l(lock);
 		if (pid == 0) {
@@ -499,7 +499,7 @@ public:
 			return true;
 		}
 	}
-	
+
 	/**
 	 * If the watcher thread has encountered an error, then the error message
 	 * will be stored here. If the error message is empty then it means
@@ -509,7 +509,7 @@ public:
 		boost::lock_guard<boost::mutex> l(lock);
 		return threadExceptionMessage;
 	}
-	
+
 	/**
 	 * The error backtrace, if applicable.
 	 */
@@ -517,7 +517,7 @@ public:
 		boost::lock_guard<boost::mutex> l(lock);
 		return threadExceptionBacktrace;
 	}
-	
+
 	/**
 	 * Returns the agent process feedback fd, or -1 if the agent process
 	 * hasn't been started yet. Can be used to check whether this agent process

@@ -186,7 +186,7 @@ create_dir_config_struct(apr_pool_t *pool) {
 void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
-	
+
 	#include "CreateDirConfig.cpp"
 
 	config->appRoot = NULL;
@@ -210,14 +210,14 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	DirConfig *config = create_dir_config_struct(p);
 	DirConfig *base = (DirConfig *) basev;
 	DirConfig *add = (DirConfig *) addv;
-	
+
 	#include "MergeDirConfig.cpp"
-	
+
 	config->baseURIs = base->baseURIs;
 	for (set<string>::const_iterator it(add->baseURIs.begin()); it != add->baseURIs.end(); it++) {
 		config->baseURIs.insert(*it);
 	}
-	
+
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
@@ -354,7 +354,7 @@ cmd_passenger_max_preloader_idle_time(cmd_parms *cmd, void *pcfg, const char *ar
 	DirConfig *config = (DirConfig *) pcfg;
 	char *end;
 	long int result;
-	
+
 	result = strtol(arg, &end, 10);
 	if (*end != '\0') {
 		return "Invalid number specified for PassengerMaxPreloaderIdleTime.";
@@ -513,9 +513,9 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
-	
+
 	#include "ConfigurationCommands.cpp"
-	
+
 	AP_INIT_TAKE1("PassengerAppGroupName",
 		(Take1Func) cmd_passenger_app_group_name,
 		NULL,

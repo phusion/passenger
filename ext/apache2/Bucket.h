@@ -36,24 +36,24 @@ using namespace boost;
 struct PassengerBucketState {
 	/** The number of bytes that this PassengerBucket has read so far. */
 	unsigned long bytesRead;
-	
+
 	/** Whether this PassengerBucket is completed, i.e. no more data
 	 * can be read from the underlying file descriptor. When true,
 	 * this can either mean that EOF has been reached, or that an I/O
 	 * error occured. Use errorCode to check whether an error occurred.
 	 */
 	bool completed;
-	
+
 	/** When completed is true, errorCode contains the errno value of
 	 * the last read() call.
 	 *
 	 * A value of 0 means that no error occured.
 	 */
 	int errorCode;
-	
+
 	/** Connection to the helper agent. */
 	FileDescriptor connection;
-	
+
 	PassengerBucketState(const FileDescriptor &conn) {
 		bytesRead  = 0;
 		completed  = false;

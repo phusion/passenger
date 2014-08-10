@@ -48,10 +48,10 @@ namespace Passenger {
 		ev_async *async;
 		boost::shared_ptr<SafeLibev> safe;
 		BackgroundEventLoopPrivate *priv;
-		
+
 		BackgroundEventLoop(bool scalable = false);
 		~BackgroundEventLoop();
-		
+
 		void start(const string &threadName = "", unsigned int stackSize = 1024 * 1024);
 		void stop();
 		bool isStarted() const;

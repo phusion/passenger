@@ -44,12 +44,12 @@ public:
 	class scoped_lock: boost::noncopyable {
 	private:
 		spin_lock &l;
-		
+
 	public:
 		scoped_lock(spin_lock &lock): l(lock) {
 			l.lock();
 		}
-		
+
 		~scoped_lock() {
 			l.unlock();
 		}
@@ -64,14 +64,14 @@ public:
 			throw boost::thread_resource_error(ret, "Cannot initialize a spin lock");
 		}
 	}
-	
+
 	~spin_lock() {
 		int ret;
 		do {
 			ret = pthread_spin_destroy(&spin);
 		} while (ret == EINTR);
 	}
-	
+
 	void lock() {
 		int ret;
 		do {

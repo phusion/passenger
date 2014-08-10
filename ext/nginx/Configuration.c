@@ -61,12 +61,12 @@ void *
 passenger_create_main_conf(ngx_conf_t *cf)
 {
     passenger_main_conf_t *conf;
-    
+
     conf = ngx_pcalloc(cf->pool, sizeof(passenger_main_conf_t));
     if (conf == NULL) {
         return NGX_CONF_ERROR;
     }
-    
+
     conf->ctl = ngx_array_create(cf->pool, 1, sizeof(ngx_keyval_t));
     if (conf->ctl == NULL) {
         return NGX_CONF_ERROR;
@@ -95,12 +95,12 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->union_station_gateway_cert.len = 0;
     conf->union_station_proxy_address.data = NULL;
     conf->union_station_proxy_address.len = 0;
-    
+
     conf->prestart_uris = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
     if (conf->prestart_uris == NULL) {
         return NGX_CONF_ERROR;
     }
-    
+
     return conf;
 }
 
@@ -111,10 +111,10 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     struct passwd         *user_entry;
     struct group          *group_entry;
     char buf[128];
-    
+
     conf = &passenger_main_conf;
     *conf = *((passenger_main_conf_t *) conf_pointer);
-    
+
     if (conf->default_ruby.len == 0) {
         conf->default_ruby.data = (u_char *) DEFAULT_RUBY;
         conf->default_ruby.len = strlen(DEFAULT_RUBY);
@@ -123,27 +123,27 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     if (conf->log_level == (ngx_int_t) NGX_CONF_UNSET) {
         conf->log_level = DEFAULT_LOG_LEVEL;
     }
-    
+
     if (conf->debug_log_file.len == 0) {
         conf->debug_log_file.data = (u_char *) "";
     }
-    
+
     if (conf->abort_on_startup_error == NGX_CONF_UNSET) {
         conf->abort_on_startup_error = 0;
     }
-    
+
     if (conf->max_pool_size == (ngx_uint_t) NGX_CONF_UNSET) {
         conf->max_pool_size = DEFAULT_MAX_POOL_SIZE;
     }
-    
+
     if (conf->pool_idle_time == (ngx_uint_t) NGX_CONF_UNSET) {
         conf->pool_idle_time = DEFAULT_POOL_IDLE_TIME;
     }
-    
+
     if (conf->user_switching == NGX_CONF_UNSET) {
         conf->user_switching = 1;
     }
-    
+
     if (conf->default_user.len == 0) {
         conf->default_user.len  = sizeof(DEFAULT_WEB_APP_USER) - 1;
         conf->default_user.data = (u_char *) DEFAULT_WEB_APP_USER;
@@ -157,7 +157,7 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     if (user_entry == NULL) {
         return "The user specified by the 'default_user' option does not exist.";
     }
-    
+
     if (conf->default_group.len > 0) {
         if (conf->default_group.len > sizeof(buf) - 1) {
             return "Value for 'default_group' is too long.";
@@ -169,34 +169,34 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
             return "The group specified by the 'default_group' option does not exist.";
         }
     }
-    
+
     if (conf->analytics_log_user.len == 0) {
         conf->analytics_log_user.len  = sizeof(DEFAULT_ANALYTICS_LOG_USER) - 1;
         conf->analytics_log_user.data = (u_char *) DEFAULT_ANALYTICS_LOG_USER;
     }
-    
+
     if (conf->analytics_log_group.len == 0) {
         conf->analytics_log_group.len  = sizeof(DEFAULT_ANALYTICS_LOG_GROUP) - 1;
         conf->analytics_log_group.data = (u_char *) DEFAULT_ANALYTICS_LOG_GROUP;
     }
-    
+
     if (conf->union_station_gateway_address.len == 0) {
         conf->union_station_gateway_address.len = sizeof(DEFAULT_UNION_STATION_GATEWAY_ADDRESS) - 1;
         conf->union_station_gateway_address.data = (u_char *) DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
     }
-    
+
     if (conf->union_station_gateway_port == (ngx_uint_t) NGX_CONF_UNSET) {
         conf->union_station_gateway_port = DEFAULT_UNION_STATION_GATEWAY_PORT;
     }
-    
+
     if (conf->union_station_gateway_cert.len == 0) {
         conf->union_station_gateway_cert.data = (u_char *) "";
     }
-    
+
     if (conf->union_station_proxy_address.len == 0) {
         conf->union_station_proxy_address.data = (u_char *) "";
     }
-    
+
     return NGX_CONF_OK;
 }
 
@@ -271,19 +271,19 @@ passenger_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream_config.cyclic_temp_file = 0;
     conf->upstream_config.change_buffering = 1;
-    
+
     #define DEFINE_VAR_TO_PASS(header_name, var_name) \
         kv = ngx_array_push(conf->vars_source);       \
         kv->key.data = (u_char *) header_name;        \
         kv->key.len  = strlen(header_name) + 1;       \
         kv->value.data = (u_char *) var_name;         \
         kv->value.len  = strlen(var_name) + 1
-    
+
     conf->vars_source = ngx_array_create(cf->pool, 4, sizeof(ngx_keyval_t));
     if (conf->vars_source == NULL) {
         return NGX_CONF_ERROR;
     }
-    
+
     DEFINE_VAR_TO_PASS("SCGI",            "1");
     DEFINE_VAR_TO_PASS("QUERY_STRING",    "$query_string");
     DEFINE_VAR_TO_PASS("REQUEST_METHOD",  "$request_method");
@@ -329,7 +329,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         cache_loc_conf_options(cf, prev);
     }
     cache_loc_conf_options(cf, conf);
-    
+
     if (prev->base_uris != NGX_CONF_UNSET_PTR) {
         if (conf->base_uris == NGX_CONF_UNSET_PTR) {
             conf->base_uris = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
@@ -337,7 +337,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                 return NGX_CONF_ERROR;
             }
         }
-        
+
         prev_base_uris = (ngx_str_t *) prev->base_uris->elts;
         for (i = 0; i < prev->base_uris->nelts; i++) {
             base_uri = (ngx_str_t *) ngx_array_push(conf->base_uris);
@@ -347,7 +347,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
             *base_uri = prev_base_uris[i];
         }
     }
-    
+
     if (prev->union_station_filters != NGX_CONF_UNSET_PTR) {
         if (conf->union_station_filters == NGX_CONF_UNSET_PTR) {
             conf->union_station_filters = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
@@ -355,7 +355,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                 return NGX_CONF_ERROR;
             }
         }
-        
+
         prev_union_station_filters = (ngx_str_t *) prev->union_station_filters->elts;
         for (i = 0; i < prev->union_station_filters->nelts; i++) {
             union_station_filter = (ngx_str_t *) ngx_array_push(conf->union_station_filters);
@@ -758,7 +758,7 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     value = cf->args->elts;
     if (ngx_strcasecmp(value[1].data, (u_char *) "on") == 0) {
         passenger_conf->enabled = 1;
-        
+
         /* Register a placeholder value as upstream address. The real upstream
          * address (the helper agent socket filename) will be set while processing
          * requests, because we can't start the helper agent until config
@@ -771,7 +771,7 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         if (passenger_conf->upstream_config.upstream == NULL) {
             return NGX_CONF_ERROR;
         }
-        
+
         clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
         clcf->handler = passenger_content_handler;
 
@@ -885,7 +885,7 @@ set_null_terminated_keyval_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     kv->key.len  = value[1].len + 1;
     last = ngx_copy(kv->key.data, value[1].data, value[1].len);
     *last = '\0';
-    
+
     kv->value.data = ngx_palloc(cf->pool, value[2].len + 1);
     kv->value.len  = value[2].len + 1;
     last = ngx_copy(kv->value.data, value[2].data, value[2].len);

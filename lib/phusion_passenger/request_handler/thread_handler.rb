@@ -102,7 +102,7 @@ class ThreadHandler
 		channel        = MessageChannel.new
 		buffer         = ''
 		buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
-		
+
 		begin
 			finish_callback.call
 			while true
@@ -205,13 +205,13 @@ private
 			"HTTP header size exceeded maximum.")
 		return
 	end
-	
+
 	# Like parse_session_request, but parses an HTTP request. This is a very minimalistic
 	# HTTP parser and is not intended to be complete, fast or secure, since the HTTP server
 	# socket is intended to be used for debugging purposes only.
 	def parse_http_request(connection, channel, buffer)
 		headers = {}
-		
+
 		data = ""
 		while data !~ /\r\n\r\n/ && data.size < MAX_HEADER_SIZE
 			data << connection.readpartial(16 * 1024)
@@ -221,7 +221,7 @@ private
 				"HTTP header size exceeded maximum.")
 			return
 		end
-		
+
 		data.gsub!(/\r\n\r\n.*/, '')
 		data.split("\r\n").each_with_index do |line, i|
 			if i == 0
@@ -250,7 +250,7 @@ private
 				end
 			end
 		end
-		
+
 		if @connect_password && headers["HTTP_X_PASSENGER_CONNECT_PASSWORD"] != @connect_password
 			warn "*** Passenger RequestHandler warning: " <<
 				"someone tried to connect with an invalid connect password."
@@ -303,10 +303,10 @@ private
 			end
 			transaction.begin_measure("app request handler processing")
 		end
-		
+
 		#################
 	end
-	
+
 	def finalize_request(connection, headers, has_error)
 		transaction = headers[UNION_STATION_REQUEST_TRANSACTION]
 		Thread.current[UNION_STATION_CORE] = nil
@@ -354,7 +354,7 @@ private
 				end
 			end
 		end
-		
+
 		#################
 	end
 

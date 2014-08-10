@@ -217,7 +217,7 @@ appendULL(char *buf, unsigned long long value) {
 		remainder = remainder / 10;
 		size++;
 	} while (remainder != 0);
-	
+
 	reverse(buf, size);
 	return buf + size;
 }
@@ -228,13 +228,13 @@ static char *
 appendIntegerAsHex(char *buf, IntegerType value) {
 	IntegerType remainder = value;
 	unsigned int size = 0;
-	
+
 	do {
 		buf[size] = hex_chars[remainder % 16];
 		remainder = remainder / 16;
 		size++;
 	} while (remainder != 0);
-	
+
 	reverse(buf, size);
 	return buf + size;
 }
@@ -298,7 +298,7 @@ appendSignalName(char *buf, int signo) {
 static char *
 appendSignalReason(char *buf, siginfo_t *info) {
 	bool handled = true;
-	
+
 	switch (info->si_code) {
 	SI_CODE_HANDLER(SI_USER);
 	#ifdef SI_KERNEL
@@ -359,7 +359,7 @@ appendSignalReason(char *buf, siginfo_t *info) {
 		}
 		break;
 	}
-	
+
 	if (info->si_code <= 0) {
 		buf = appendText(buf, ", signal sent by PID ");
 		buf = appendULL(buf, (unsigned long long) info->si_pid);
@@ -369,7 +369,7 @@ appendSignalReason(char *buf, siginfo_t *info) {
 
 	buf = appendText(buf, ", si_addr=");
 	buf = appendPointerAsString(buf, info->si_addr);
-	
+
 	return buf;
 }
 
@@ -514,7 +514,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 	char *end = messageBuf;
 	end = appendULL(end, (unsigned long long) state.pid);
 	*end = '\0';
-	
+
 	pid_t child = asyncFork();
 	if (child == 0) {
 		closeAllFileDescriptors(2, true);
@@ -584,7 +584,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 				close(p[1]);
 				dup2(p[0], STDIN_FILENO);
 				closeAllFileDescriptors(2, true);
-				
+
 				char *command = end;
 				end = appendText(end, "exec ");
 				end = appendText(end, backtraceSanitizerCommand);
@@ -1046,7 +1046,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	 * We work around this for anything in the same linkage unit by just definin
 	 * our own versions of the assert handler and abort.
 	 */
-	
+
 	#include <pthread.h>
 
 	extern "C" int
@@ -1093,7 +1093,7 @@ installAbortHandler() {
 		fflush(stderr);
 		abort();
 	}
-	
+
 	stack_t stack;
 	stack.ss_sp = alternativeStack;
 	stack.ss_size = alternativeStackSize;
@@ -1105,7 +1105,7 @@ installAbortHandler() {
 		fflush(stderr);
 		abort();
 	}
-	
+
 	struct sigaction action;
 	action.sa_sigaction = abortHandler;
 	action.sa_flags = SA_RESETHAND | SA_SIGINFO;
@@ -1406,7 +1406,7 @@ initializeSyscallFailureSimulation(const char *processName) {
 	string prefix = string(processName) + "=";
 	vector<string> components;
 	unsigned int i;
-	
+
 	// Lookup this process in the specification string.
 	split(spec, ';', components);
 	for (i = 0; i < components.size(); i++) {
@@ -1495,7 +1495,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	}
 	srand(randomSeed);
 	srandom(randomSeed);
-	
+
 	ignoreSigpipe();
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
 		shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
@@ -1512,7 +1512,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	}
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
-	
+
 	TRACE_POINT();
 	try {
 		if (argc == 1) {
@@ -1544,7 +1544,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		} else {
 			options.readFrom((const char **) argv + 1, argc - 1);
 		}
-		
+
 		#ifdef __linux__
 			if (options.has("passenger_root")) {
 				ResourceLocator locator(options.get("passenger_root", true));
@@ -1569,14 +1569,14 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 				 */
 				string filename = options.get("debug_log_file");
 				options.erase("debug_log_file");
-				
+
 				int fd = open(filename.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0644);
 				if (fd == -1) {
 					int e = errno;
 					throw FileSystemException("Cannot open debug log file " +
 						filename, e, filename);
 				}
-				
+
 				dup2(fd, STDOUT_FILENO);
 				dup2(fd, STDERR_FILENO);
 				close(fd);
@@ -1588,7 +1588,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		exit(1);
 	}
-	
+
 	// Change process title.
 	argv0 = strdup(argv[0]);
 	strncpy(argv[0], processName, strlen(argv[0]));
@@ -1597,7 +1597,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	}
 
 	P_DEBUG("Random seed: " << randomSeed);
-	
+
 	return options;
 }
 

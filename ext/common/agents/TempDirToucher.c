@@ -85,7 +85,7 @@ parseArguments(int argc, char *argv[]) {
 static void
 setNonBlocking(int fd) {
 	int flags, ret, e;
-	
+
 	do {
 		flags = fcntl(fd, F_GETFL);
 	} while (flags == -1 && errno == EINTR);
@@ -146,7 +146,7 @@ initialize(int argc, char *argv[]) {
 			strerror(e), e);
 		exit(1);
 	}
-	
+
 	setNonBlocking(terminationPipe[1]);
 }
 

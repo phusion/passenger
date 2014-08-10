@@ -29,15 +29,15 @@ protected:
 	VariantMap params, report;
 	string requestSocketFilename;
 	string messageSocketFilename;
-	
+
 	virtual const char *name() const {
 		return "Phusion Passenger helper agent";
 	}
-	
+
 	virtual string getExeFilename() const {
 		return helperAgentFilename;
 	}
-	
+
 	virtual void execProgram() const {
 		if (hasEnvOption("PASSENGER_RUN_HELPER_AGENT_IN_VALGRIND", false)) {
 			execlp("valgrind", "valgrind", "--dsymutil=yes",
@@ -46,13 +46,13 @@ protected:
 			execl(helperAgentFilename.c_str(), "PassengerHelperAgent", (char *) 0);
 		}
 	}
-	
+
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = agentsOptions;
 		params.addTo(options);
 		options.writeToFd(fd);
 	}
-	
+
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
 		if (args[0] == "initialized") {
 			requestSocketFilename = args[1];
@@ -62,7 +62,7 @@ protected:
 			return false;
 		}
 	}
-	
+
 public:
 	HelperAgentWatcher(const WorkingObjectsPtr &wo)
 		: AgentWatcher(wo)
@@ -88,7 +88,7 @@ public:
 			.set("logging_agent_address", wo->loggingAgentAddress)
 			.set("logging_agent_password", wo->loggingAgentPassword);
 	}
-	
+
 	virtual void reportAgentsInformation(VariantMap &report) {
 		this->report.addTo(report);
 	}

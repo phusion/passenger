@@ -83,17 +83,17 @@ class RemoteController: public MessageServer::Handler {
 private:
 	struct SpecificContext: public MessageServer::ClientContext {
 	};
-	
+
 	typedef MessageServer::CommonClientContext CommonClientContext;
-	
+
 	boost::shared_ptr<RequestHandler> requestHandler;
 	PoolPtr pool;
-	
-	
+
+
 	/*********************************************
 	 * Message handler methods
 	 *********************************************/
-	
+
 	void processDetachProcess(CommonClientContext &commonContext, SpecificContext *specificContext,
 		const vector<string> &args)
 	{
@@ -114,7 +114,7 @@ private:
 		// TODO: implement this
 		writeArrayMessage(commonContext.fd, "false", NULL);
 	}
-	
+
 	bool processInspect(CommonClientContext &commonContext, SpecificContext *specificContext,
 		const vector<string> &args)
 	{
@@ -128,7 +128,7 @@ private:
 		writeScalarMessage(commonContext.fd, pool->inspect(Pool::InspectOptions(options)));
 		return true;
 	}
-	
+
 	void processToXml(CommonClientContext &commonContext, SpecificContext *specificContext,
 		const vector<string> &args)
 	{
@@ -173,17 +173,17 @@ private:
 		requestHandler->inspect(stream);
 		writeScalarMessage(commonContext.fd, stream.str());
 	}
-	
+
 public:
 	RemoteController(const boost::shared_ptr<RequestHandler> &requestHandler, const PoolPtr &pool) {
 		this->requestHandler = requestHandler;
 		this->pool = pool;
 	}
-	
+
 	virtual MessageServer::ClientContextPtr newClient(CommonClientContext &commonContext) {
 		return boost::make_shared<SpecificContext>();
 	}
-	
+
 	virtual bool processMessage(CommonClientContext &commonContext,
 	                            MessageServer::ClientContextPtr &_specificContext,
 	                            const vector<string> &args)
@@ -219,12 +219,12 @@ public:
 class ExitHandler: public MessageServer::Handler {
 private:
 	EventFd &exitEvent;
-	
+
 public:
 	ExitHandler(EventFd &_exitEvent)
 		: exitEvent(_exitEvent)
 	{ }
-	
+
 	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
 	                            MessageServer::ClientContextPtr &handlerSpecificContext,
 	                            const vector<string> &args)
@@ -252,10 +252,10 @@ class Server {
 private:
 	static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 128 * 1024;
 	static const int EVENT_LOOP_THREAD_STACK_SIZE = 256 * 1024;
-	
+
 	FileDescriptor feedbackFd;
 	const AgentOptions &options;
-	
+
 	BackgroundEventLoop poolLoop;
 	BackgroundEventLoop requestLoop;
 
@@ -275,7 +275,7 @@ private:
 	boost::shared_ptr<oxt::thread> messageServerThread;
 	boost::shared_ptr<oxt::thread> eventLoopThread;
 	EventFd exitEvent;
-	
+
 	/**
 	 * Starts listening for client connections on this server's request socket.
 	 *
@@ -285,7 +285,7 @@ private:
 	void startListening() {
 		this_thread::disable_syscall_interruption dsi;
 		requestSocket = createUnixServer(getRequestSocketFilename().c_str());
-		
+
 		int ret, e;
 		do {
 			ret = chmod(getRequestSocketFilename().c_str(), S_ISVTX |
@@ -334,7 +334,7 @@ private:
 			}
 		}
 	}
-	
+
 	/**
 	 * Lowers this process's privilege to that of <em>username</em> and <em>groupname</em>.
 	 */
@@ -342,7 +342,7 @@ private:
 		struct passwd *userEntry;
 		gid_t gid;
 		int e;
-		
+
 		userEntry = getpwnam(username.c_str());
 		if (userEntry == NULL) {
 			throw NonExistentUserException(string("Unable to lower Passenger "
@@ -355,7 +355,7 @@ private:
 				"HelperAgent's privilege to that of user '") + username +
 				"': user does not exist.");
 		}
-		
+
 		if (initgroups(username.c_str(), userEntry->pw_gid) != 0) {
 			e = errno;
 			throw SystemException(string("Unable to lower Passenger HelperAgent's "
@@ -377,7 +377,7 @@ private:
 
 		setenv("HOME", userEntry->pw_dir, 1);
 	}
-	
+
 	void onSigquit(ev::sig &signal, int revents) {
 		requestHandler->inspect(cerr);
 		cerr.flush();
@@ -402,7 +402,7 @@ private:
 		self->requestHandler->inspect(cerr);
 		cerr << "\n";
 		cerr.flush();
-		
+
 		cerr << "### Pool state (simple)\n";
 		// Do not lock, the crash may occur within the pool.
 		Pool::InspectOptions options;
@@ -420,7 +420,7 @@ private:
 		cerr << oxt::thread::all_backtraces();
 		cerr.flush();
 	}
-	
+
 public:
 	Server(FileDescriptor feedbackFd, const AgentOptions &_options)
 		: options(_options),
@@ -430,7 +430,7 @@ public:
 	{
 		TRACE_POINT();
 		this->feedbackFd = feedbackFd;
-		
+
 		UPDATE_TRACE_POINT();
 		generation = serverInstanceDir.getGeneration(options.generationNumber);
 		startListening();
@@ -442,10 +442,10 @@ public:
 		accountsDatabase->add("_web_server", options.exitPassword, false, Account::EXIT);
 		messageServer = boost::make_shared<MessageServer>(
 			parseUnixSocketAddress(options.adminSocketAddress), accountsDatabase);
-		
+
 		createFile(generation->getPath() + "/helper_agent.pid",
 			toString(getpid()), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-		
+
 		if (geteuid() == 0 && !options.userSwitching) {
 			lowerPrivilege(options.defaultUser, options.defaultGroup);
 		}
@@ -458,7 +458,7 @@ public:
 			throw RuntimeException("Your random number device, /dev/urandom, appears to be broken. "
 				"It doesn't seem to be returning random data. Please fix this.");
 		}
-		
+
 		UPDATE_TRACE_POINT();
 		unionStationCore = boost::make_shared<UnionStation::Core>(options.loggingAgentAddress,
 			"logging", options.loggingAgentPassword);
@@ -469,7 +469,7 @@ public:
 		pool->initialize();
 		pool->setMax(options.maxPoolSize);
 		pool->setMaxIdleTime(options.poolIdleTime * 1000000);
-		
+
 		requestHandler = boost::make_shared<RequestHandler>(requestLoop.safe,
 			requestSocket, pool, options);
 
@@ -480,14 +480,14 @@ public:
 		sigquitWatcher.set(SIGQUIT);
 		sigquitWatcher.set<Server, &Server::onSigquit>(this);
 		sigquitWatcher.start();
-		
+
 		UPDATE_TRACE_POINT();
 		writeArrayMessage(feedbackFd,
 			"initialized",
 			getRequestSocketFilename().c_str(),
 			messageServer->getSocketFilename().c_str(),
 			NULL);
-		
+
 		boost::function<void ()> func = boost::bind(prestartWebApps,
 			resourceLocator,
 			options.defaultRubyCommand,
@@ -497,18 +497,18 @@ public:
 			boost::bind(runAndPrintExceptions, func, true)
 		));
 	}
-	
+
 	~Server() {
 		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
-		
+
 		P_DEBUG("Shutting down helper agent...");
 		prestarterThread->interrupt_and_join();
 		if (messageServerThread != NULL) {
 			messageServerThread->interrupt_and_join();
 		}
-		
+
 		messageServer.reset();
 		P_DEBUG("Destroying application pool...");
 		pool->destroy();
@@ -538,10 +538,10 @@ public:
 				syscalls::unlink(options.requestSocketLink.c_str());
 			}
 		}
-		
+
 		P_TRACE(2, "All threads have been shut down.");
 	}
-	
+
 	void mainLoop() {
 		TRACE_POINT();
 		boost::function<void ()> func;
@@ -551,7 +551,7 @@ public:
 			boost::bind(runAndPrintExceptions, func, true),
 			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
 		));
-		
+
 		poolLoop.start("Pool event loop", 0);
 		requestLoop.start("Request event loop", 0);
 
@@ -562,7 +562,7 @@ public:
 		this_thread::disable_syscall_interruption dsi;
 		fd_set fds;
 		int largestFd;
-		
+
 		FD_ZERO(&fds);
 		FD_SET(feedbackFd, &fds);
 		FD_SET(exitEvent.fd(), &fds);
@@ -574,7 +574,7 @@ public:
 			uninstallDiagnosticsDumper();
 			throw SystemException("select() failed", e);
 		}
-		
+
 		if (FD_ISSET(feedbackFd, &fds)) {
 			/* If the watchdog has been killed then we'll kill all descendant
 			 * processes and exit. There's no point in keeping this helper
@@ -641,20 +641,20 @@ main(int argc, char *argv[]) {
 
 	P_DEBUG("Starting PassengerHelperAgent...");
 	MultiLibeio::init();
-	
+
 	try {
 		UPDATE_TRACE_POINT();
 		Server server(FileDescriptor(FEEDBACK_FD), *options);
 		P_WARN("PassengerHelperAgent online, listening at unix:" <<
 			server.getRequestSocketFilename());
-		
+
 		UPDATE_TRACE_POINT();
 		server.mainLoop();
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		return 1;
 	}
-	
+
 	MultiLibeio::shutdown();
 	P_TRACE(2, "Helper agent exiting with code 0.");
 	return 0;

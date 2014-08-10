@@ -56,7 +56,7 @@ public:
 	virtual std::string backtrace() const throw() {
 		return "     (backtrace support disabled during compile time)\n";
 	}
-	
+
 	virtual const char *what() const throw() {
 		return "oxt::tracable_exception";
 	}

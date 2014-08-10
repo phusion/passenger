@@ -69,7 +69,7 @@ module ThreadHandlerExtension
 			env[RACK_HIJACK] = lambda do
 				env[RACK_HIJACK_IO] ||= connection
 			end
-			
+
 			begin
 				status, headers, body = @app.call(env)
 			rescue => e

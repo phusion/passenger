@@ -176,7 +176,7 @@ initializePrivilegedWorkingObjects(WorkingObjects &wo) {
 		} while (ret == -1 && errno == EINTR);
 	}
 
-	wo.adminAccountsDatabase = boost::make_shared<AccountsDatabase>();	
+	wo.adminAccountsDatabase = boost::make_shared<AccountsDatabase>();
 	wo.adminAccountsDatabase->add("_passenger-status", adminToolStatusPassword, false);
 	wo.adminServer = boost::make_shared<MessageServer>(parseUnixSocketAddress(adminSocketAddress),
 		wo.adminAccountsDatabase);
@@ -185,7 +185,7 @@ initializePrivilegedWorkingObjects(WorkingObjects &wo) {
 static void
 lowerPrivilege(const string &username, const struct passwd *user, gid_t gid) {
 	int e;
-	
+
 	if (initgroups(username.c_str(), gid) != 0) {
 		e = errno;
 		P_WARN("WARNING: Unable to set supplementary groups for " <<
@@ -216,7 +216,7 @@ maybeLowerPrivilege() {
 	gid_t gid;
 
 	/* Sanity check user accounts. */
-		
+
 	user = getpwnam(username.c_str());
 	if (user == NULL) {
 		throw NonExistentUserException(string("The configuration option ") +
@@ -225,7 +225,7 @@ maybeLowerPrivilege() {
 			username + "', but this user doesn't exist. Please fix " +
 			"the configuration option.");
 	}
-	
+
 	if (groupname.empty()) {
 		gid = user->pw_gid;
 		groupname = getGroupName(user->pw_gid);
@@ -249,7 +249,7 @@ maybeLowerPrivilege() {
 static struct ev_loop *
 createEventLoop() {
 	struct ev_loop *loop;
-	
+
 	// libev doesn't like choosing epoll and kqueue because the author thinks they're broken,
 	// so let's try to force it.
 	loop = ev_default_loop(EVBACKEND_EPOLL);
@@ -310,14 +310,14 @@ runMainLoop(WorkingObjects &wo) {
 	ev::sig sigintWatcher(eventLoop);
 	ev::sig sigtermWatcher(eventLoop);
 	ev::sig sigquitWatcher(eventLoop);
-	
+
 	sigintWatcher.set<&caughtExitSignal>();
 	sigintWatcher.start(SIGINT);
 	sigtermWatcher.set<&caughtExitSignal>();
 	sigtermWatcher.start(SIGTERM);
 	sigquitWatcher.set<&printInfo>();
 	sigquitWatcher.start(SIGQUIT);
-	
+
 	P_WARN("PassengerLoggingAgent online, listening at " << socketAddress);
 	if (feedbackFdAvailable()) {
 		feedbackFdWatcher.set<&feedbackFdBecameReadable>();

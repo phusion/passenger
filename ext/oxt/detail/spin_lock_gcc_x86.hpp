@@ -44,19 +44,19 @@ public:
 	class scoped_lock: boost::noncopyable {
 	private:
 		spin_lock &l;
-		
+
 	public:
 		scoped_lock(spin_lock &lock): l(lock) {
 			l.lock();
 		}
-		
+
 		~scoped_lock() {
 			l.unlock();
 		}
 	};
 
 	spin_lock(): exclusion(0) { }
-	
+
 	/**
 	 * Lock this spin lock.
 	 * @throws boost::thread_resource_error Something went wrong.

@@ -278,7 +278,7 @@ main() {
 	FileDescriptor requestSocket(createTcpServer("127.0.0.1", 3000));
 	setNonBlocking(requestSocket);
 	handler = new RequestHandler(libev, requestSocket, pool, options);
-	
+
 	ev_signal_init(&sigquitwatcher, sigquit_cb, SIGQUIT);
 	ev_signal_start(loop, &sigquitwatcher);
 

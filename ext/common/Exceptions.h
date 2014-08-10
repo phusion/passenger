@@ -116,32 +116,32 @@ public:
 	 */
 	SystemException(const string &briefMessage, int errorCode) {
 		stringstream str;
-		
+
 		str << strerror(errorCode) << " (errno=" << errorCode << ")";
 		systemMessage = str.str();
-		
+
 		setBriefMessage(briefMessage);
 		m_code = errorCode;
 	}
-	
+
 	virtual ~SystemException() throw() {}
-	
+
 	virtual const char *what() const throw() {
 		return fullMessage.c_str();
 	}
-	
+
 	void setBriefMessage(const string &message) {
 		briefMessage = message;
 		fullMessage = briefMessage + ": " + systemMessage;
 	}
-	
+
 	/**
 	 * The value of <tt>errno</tt> at the time the error occured.
 	 */
 	int code() const throw() {
 		return m_code;
 	}
-	
+
 	/**
 	 * Returns a brief version of the exception message. This message does
 	 * not include the system error description, and is equivalent to the
@@ -150,7 +150,7 @@ public:
 	string brief() const throw() {
 		return briefMessage;
 	}
-	
+
 	/**
 	 * Returns the system's error message. This message contains both the
 	 * content of <tt>strerror(errno)</tt> and the errno number itself.
@@ -174,9 +174,9 @@ public:
 		const string &filename)
 		: SystemException(message, errorCode),
 		  m_filename(filename) {}
-	
+
 	virtual ~FileSystemException() throw() {}
-	
+
 	/**
 	 * The filename that's associated to the error.
 	 */
@@ -277,7 +277,7 @@ public:
 		 * It DID explicitly supply an error message. */
 		APP_STARTUP_EXPLAINABLE_ERROR
 	};
-	
+
 private:
 	ErrorKind errorKind;
 	string msg;
@@ -286,7 +286,7 @@ private:
 	string m_errorPage;
 	string preloaderCommand;
 	map<string, string> annotations;
-	
+
 public:
 	SpawnException(const string &message, ErrorKind errorKind = UNDEFINED_ERROR)
 		: msg(message)
@@ -295,7 +295,7 @@ public:
 		m_hasErrorPage = false;
 		m_isHTML = false;
 	}
-	
+
 	SpawnException(const string &message, const string &errorPage,
 		bool isHTML = true, ErrorKind errorKind = UNDEFINED_ERROR)
 		: msg(message), m_errorPage(errorPage)
@@ -304,9 +304,9 @@ public:
 		m_hasErrorPage = true;
 		m_isHTML = isHTML;
 	}
-	
+
 	virtual ~SpawnException() throw() {}
-	
+
 	virtual const char *what() const throw() {
 		return msg.c_str();
 	}
@@ -314,24 +314,24 @@ public:
 	bool hasErrorPage() const {
 		return m_hasErrorPage;
 	}
-	
+
 	const string &getErrorPage() const {
 		return m_errorPage;
 	}
-	
+
 	bool isHTML() const {
 		return m_isHTML;
 	}
-	
+
 	ErrorKind getErrorKind() const {
 		return errorKind;
 	}
-	
+
 	SpawnException &setPreloaderCommand(const string &filename) {
 		preloaderCommand = filename;
 		return *this;
 	}
-	
+
 	const string &getPreloaderCommand() const {
 		return preloaderCommand;
 	}
@@ -379,13 +379,13 @@ public:
 	GetAbortedException(const string &message)
 		: msg(message)
 		{ }
-	
+
 	GetAbortedException(const oxt::tracable_exception::no_backtrace &tag)
 		: oxt::tracable_exception(tag)
 		{ }
 
 	virtual ~GetAbortedException() throw() {}
-	
+
 	virtual const char *what() const throw() {
 		return msg.c_str();
 	}
@@ -400,7 +400,7 @@ public:
 	RequestQueueFullException()
 		: GetAbortedException(oxt::tracable_exception::no_backtrace())
 		{ }
-	
+
 	virtual const char *what() const throw() {
 		return "Request queue is full";
 	}

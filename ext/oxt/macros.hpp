@@ -42,7 +42,7 @@
 	 * This allows the CPU to better perform branch prediction.
 	 */
 	#define OXT_LIKELY(expr) __builtin_expect((expr), 1)
-	
+
 	/**
 	 * Indicate that the given expression is likely to be false.
 	 * This allows the CPU to better perform branch prediction.
@@ -92,7 +92,7 @@
  * GCC on OpenBSD supports __thread, but any access to such a variable
  * results in a segfault.
  *
- * Solaris does support __thread, but often it's not compiled into default GCC 
+ * Solaris does support __thread, but often it's not compiled into default GCC
  * packages (not to mention it's not available for Sparc). Playing it safe...
  *
  * On MacOS X, neither gcc nor llvm-gcc support the __thread keyword, but Clang

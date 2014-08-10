@@ -73,7 +73,7 @@ setGivenEnvVars(const char *envvarsData) {
 	string envvars = Base64::decode(envvarsData);
 	const char *key = envvars.data();
 	const char *end = envvars.data() + envvars.size();
-	
+
 	while (key < end) {
 		const char *keyEnd = (const char *) memchr(key, '\0', end - key);
 		if (keyEnd != NULL) {
@@ -181,16 +181,16 @@ main(int argc, char *argv[]) {
 		fprintf(stderr, "Too few arguments.\n");
 		exit(1);
 	}
-	
+
 	const char *workingDir = argv[1];
 	const char *envvars = argv[2];
 	const char *executable = argv[3];
 	char **execArgs = &argv[4];
-	
+
 	changeWorkingDir(workingDir);
 	setGivenEnvVars(envvars);
 	dumpInformation();
-	
+
 	// Print a newline just in case whatever executed us printed data
 	// without a newline. Otherwise the next process's "!> I have control"
 	// command will not be properly recognized.

@@ -38,7 +38,7 @@ typedef struct {
     ngx_array_t *vars;
     /** Raw SCGI header data for this location is cached here. */
     ngx_str_t    options_cache;
-    
+
     #include "ConfigurationFields.h"
 
 #if (NGX_HTTP_CACHE)

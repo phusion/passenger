@@ -41,16 +41,16 @@ class AdminController: public MessageServer::Handler {
 private:
 	struct SpecificContext: public MessageServer::ClientContext {
 	};
-	
+
 	typedef MessageServer::CommonClientContext CommonClientContext;
-	
+
 	LoggingServerPtr server;
-	
-	
+
+
 	/*********************************************
 	 * Message handler methods
 	 *********************************************/
-	
+
 	void processStatus(CommonClientContext &commonContext, SpecificContext *specificContext,
 		const vector<string> &args)
 	{
@@ -60,16 +60,16 @@ private:
 		server->dump(stream);
 		writeScalarMessage(commonContext.fd, stream.str());
 	}
-	
+
 public:
 	AdminController(const LoggingServerPtr &server) {
 		this->server = server;
 	}
-	
+
 	virtual MessageServer::ClientContextPtr newClient(CommonClientContext &commonContext) {
 		return boost::make_shared<SpecificContext>();
 	}
-	
+
 	virtual bool processMessage(CommonClientContext &commonContext,
 	                            MessageServer::ClientContextPtr &_specificContext,
 	                            const vector<string> &args)

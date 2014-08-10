@@ -724,7 +724,7 @@ public:
 		boost::lock_guard<boost::mutex> l(syncher);
 		stopPreloader();
 	}
-	
+
 	virtual ProcessPtr spawn(const Options &options) {
 		TRACE_POINT();
 		assert(options.appType == this->options.appType);

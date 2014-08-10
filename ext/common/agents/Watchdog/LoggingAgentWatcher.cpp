@@ -27,19 +27,19 @@ class LoggingAgentWatcher: public AgentWatcher {
 protected:
 	string agentFilename;
 	string socketAddress;
-	
+
 	virtual const char *name() const {
 		return "Phusion Passenger logging agent";
 	}
-	
+
 	virtual string getExeFilename() const {
 		return agentFilename;
 	}
-	
+
 	virtual void execProgram() const {
 		execl(agentFilename.c_str(), "PassengerLoggingAgent", (char *) 0);
 	}
-	
+
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = agentsOptions;
 		options.set("logging_agent_address", wo->loggingAgentAddress);
@@ -47,7 +47,7 @@ protected:
 		options.set("logging_agent_admin_address", wo->loggingAgentAdminAddress);
 		options.writeToFd(fd);
 	}
-	
+
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
 		if (args[0] == "initialized") {
 			return true;
@@ -55,14 +55,14 @@ protected:
 			return false;
 		}
 	}
-	
+
 public:
 	LoggingAgentWatcher(const WorkingObjectsPtr &wo)
 		: AgentWatcher(wo)
 	{
 		agentFilename = wo->resourceLocator->getAgentsDir() + "/PassengerLoggingAgent";
 	}
-	
+
 	virtual void reportAgentsInformation(VariantMap &report) {
 		report
 			.set("logging_socket_address", wo->loggingAgentAddress)

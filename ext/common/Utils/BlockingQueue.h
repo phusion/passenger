@@ -42,7 +42,7 @@ private:
 	boost::condition_variable_any removed;
 	unsigned int max;
 	std::queue<T> queue;
-	
+
 	bool atMaxCapacity() const {
 		return max > 0 && queue.size() >= max;
 	}
@@ -51,12 +51,12 @@ public:
 	BlockingQueue(unsigned int max = 0) {
 		this->max = max;
 	}
-	
+
 	unsigned int size() const {
 		boost::lock_guard<boost::timed_mutex> l(lock);
 		return queue.size();
 	}
-	
+
 	void add(const T &item) {
 		boost::unique_lock<boost::timed_mutex> l(lock);
 		while (atMaxCapacity()) {
@@ -68,7 +68,7 @@ public:
 			removed.notify_one();
 		}
 	}
-	
+
 	bool tryAdd(const T &item) {
 		boost::lock_guard<boost::timed_mutex> l(lock);
 		if (!atMaxCapacity()) {
@@ -82,7 +82,7 @@ public:
 			return false;
 		}
 	}
-	
+
 	T get() {
 		boost::unique_lock<boost::timed_mutex> l(lock);
 		while (queue.empty()) {
@@ -96,13 +96,13 @@ public:
 		}
 		return item;
 	}
-	
+
 	bool timedGet(T &output, unsigned int timeout) {
 		boost::unique_lock<boost::timed_mutex> l(lock);
 		posix_time::ptime deadline = posix_time::microsec_clock::local_time() +
 			posix_time::milliseconds(timeout);
 		bool timedOut = false;
-		
+
 		while (queue.empty() && !timedOut) {
 			posix_time::time_duration diff = deadline -
 				posix_time::microsec_clock::local_time();
@@ -125,7 +125,7 @@ public:
 			return false;
 		}
 	}
-	
+
 	bool tryGet(T &output) {
 		boost::unique_lock<boost::timed_mutex> l(lock);
 		if (queue.empty()) {
@@ -140,7 +140,7 @@ public:
 			return true;
 		}
 	}
-	
+
 	T peek() {
 		boost::unique_lock<boost::timed_mutex> l(lock);
 		while (queue.empty()) {

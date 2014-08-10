@@ -98,7 +98,7 @@ public:
 	 * Guaranteed to be valid as long as the Process is alive.
 	 */
 	PriorityQueue<Socket>::Handle pqHandle;
-	
+
 	/** Invariant: sessions >= 0 */
 	int sessions;
 

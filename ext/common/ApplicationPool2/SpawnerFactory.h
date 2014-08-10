@@ -44,7 +44,7 @@ private:
 	boost::mutex syncher;
 	SpawnerConfigPtr config;
 	DummySpawnerPtr dummySpawner;
-	
+
 	SpawnerPtr tryCreateSmartSpawner(const Options &options) {
 		string dir = config->resourceLocator.getHelperScriptsDir();
 		vector<string> preloaderCommand;
@@ -60,16 +60,16 @@ private:
 		return boost::make_shared<SmartSpawner>(generation, preloaderCommand,
 			options, config);
 	}
-	
+
 public:
 	SpawnerFactory(const ServerInstanceDir::GenerationPtr &_generation,
 		const SpawnerConfigPtr &_config)
 		: generation(_generation),
 		  config(_config)
 		{ }
-	
+
 	virtual ~SpawnerFactory() { }
-	
+
 	virtual SpawnerPtr create(const Options &options) {
 		if (options.spawnMethod == "smart" || options.spawnMethod == "smart-lv2") {
 			SpawnerPtr spawner = tryCreateSmartSpawner(options);

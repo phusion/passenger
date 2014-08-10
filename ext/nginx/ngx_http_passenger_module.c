@@ -67,7 +67,7 @@ ngx_cycle_t              *pp_current_cycle;
     data to the upstream handler even though it shouldn't. Is this an Nginx
     bug? In any case, setting ngx_http_core_loc_conf_t->handler fixed the
     problem.
-    
+
 static ngx_int_t
 register_content_handler(ngx_conf_t *cf)
 {
@@ -81,7 +81,7 @@ register_content_handler(ngx_conf_t *cf)
         return NGX_ERROR;
     }
     *h = passenger_content_handler;
-    
+
     return NGX_OK;
 }
 */
@@ -89,7 +89,7 @@ register_content_handler(ngx_conf_t *cf)
 static void
 ignore_sigpipe() {
     struct sigaction action;
-    
+
     action.sa_handler = SIG_IGN;
     action.sa_flags   = 0;
     sigemptyset(&action.sa_mask);
@@ -127,11 +127,11 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     u_char filename[NGX_MAX_PATH];
     u_char *last;
     FILE *f;
-    
+
     last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/control_process.pid",
                         pp_agents_starter_get_server_instance_dir(pp_agents_starter));
     *last = (u_char) '\0';
-    
+
     f = fopen((const char *) filename, "w");
     if (f != NULL) {
         fprintf(f, "%ld", (long) getppid());
@@ -140,7 +140,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                       "could not create %s", filename);
     }
-    
+
     return NGX_OK;
 }
 
@@ -156,7 +156,7 @@ starting_helper_server_after_fork(void *arg) {
     ngx_uint_t   i;
     ngx_str_t   *envs;
     const char  *env;
-    
+
     /* At this point, stdout and stderr may still point to the console.
      * Make sure that they're both redirected to the log file.
      */
@@ -201,7 +201,7 @@ starting_helper_server_after_fork(void *arg) {
             putenv(strdup(env));
         }
     }
-    
+
     /* Set SERVER_SOFTWARE so that application processes know what web
      * server they're running on during startup. */
     setenv("SERVER_SOFTWARE", NGINX_VER, 1);
@@ -254,12 +254,12 @@ start_watchdog(ngx_cycle_t *cycle) {
     u_char  filename[NGX_MAX_PATH], *last;
     char   *passenger_root = NULL;
     char   *error_message = NULL;
-    
+
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
     params    = pp_variant_map_new();
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
-    
+
     prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
     prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
     for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
@@ -299,7 +299,7 @@ start_watchdog(ngx_cycle_t *cycle) {
             (const char *) ctl[i].key.data, ctl[i].key.len - 1,
             (const char *) ctl[i].value.data, ctl[i].value.len - 1);
     }
-    
+
     ret = pp_agents_starter_start(pp_agents_starter,
         passenger_root,
         params,
@@ -311,7 +311,7 @@ start_watchdog(ngx_cycle_t *cycle) {
         result = NGX_ERROR;
         goto cleanup;
     }
-    
+
     /* Create the file passenger_temp_dir + "/control_process.pid"
      * and make it writable by the worker processes. This is because
      * save_master_process_pid is run after Nginx has lowered privileges.
@@ -350,7 +350,7 @@ start_watchdog(ngx_cycle_t *cycle) {
         result = NGX_ERROR;
         goto cleanup;
     }
-    
+
 cleanup:
     pp_variant_map_free(params);
     free(passenger_root);
@@ -361,11 +361,11 @@ cleanup:
         }
         free(prestart_uris_ary);
     }
-    
+
     if (result == NGX_ERROR && passenger_main_conf.abort_on_startup_error) {
         exit(1);
     }
-    
+
     return result;
 }
 
@@ -390,9 +390,9 @@ static ngx_int_t
 pre_config_init(ngx_conf_t *cf)
 {
     char *error_message;
-    
+
     shutdown_helper_server();
-    
+
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
     pp_schema_string.data = (u_char *) "passenger:";
     pp_schema_string.len  = sizeof("passenger:") - 1;
@@ -401,13 +401,13 @@ pre_config_init(ngx_conf_t *cf)
     pp_stat_cache = pp_cached_file_stat_new(1024);
     pp_app_type_detector = pp_app_type_detector_new();
     pp_agents_starter = pp_agents_starter_new(AS_NGINX, &error_message);
-    
+
     if (pp_agents_starter == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno, "%s", error_message);
         free(error_message);
         return NGX_ERROR;
     }
-    
+
     return NGX_OK;
 }
 
@@ -447,10 +447,10 @@ init_module(ngx_cycle_t *cycle) {
 static ngx_int_t
 init_worker_process(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
-    
+
     if (passenger_main_conf.root_dir.len != 0) {
         save_master_process_pid(cycle);
-        
+
         core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
         if (core_conf->master) {
             pp_agents_starter_detach(pp_agents_starter);

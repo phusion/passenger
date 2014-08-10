@@ -154,7 +154,7 @@ public:
 	pthread_t getCurrentThread() const {
 		return loopThread;
 	}
-	
+
 	template<typename Watcher>
 	void start(Watcher &watcher) {
 		if (pthread_equal(pthread_self(), loopThread)) {

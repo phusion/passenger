@@ -42,11 +42,11 @@ private:
 	unsigned short groupNameSize;
 	unsigned short nodeNameSize;
 	unsigned short categorySize;
-	
+
 	size_t totalSize() const {
 		return groupNameSize + nodeNameSize + categorySize + 3;
 	}
-	
+
 	StaticString toStaticString() const {
 		if (id == NULL) {
 			return StaticString();
@@ -54,7 +54,7 @@ private:
 			return StaticString(id, totalSize());
 		}
 	}
-	
+
 public:
 	DataStoreId(const StaticString &groupName, const StaticString &nodeName,
 		const StaticString &category)
@@ -62,35 +62,35 @@ public:
 		assert(groupName.size() <= USHRT_MAX);
 		assert(nodeName.size() <= USHRT_MAX);
 		assert(category.size() <= USHRT_MAX);
-		
+
 		char *end;
-		
+
 		id = new char[groupName.size() + nodeName.size() +
 			category.size() + 3];
 		end = id;
-		
+
 		memcpy(end, groupName.c_str(), groupName.size());
 		groupNameSize = groupName.size();
 		end += groupName.size();
 		*end = '\0';
 		end++;
-		
+
 		memcpy(end, nodeName.c_str(), nodeName.size());
 		nodeNameSize = nodeName.size();
 		end += nodeName.size();
 		*end = '\0';
 		end++;
-		
+
 		memcpy(end, category.c_str(), category.size());
 		categorySize = category.size();
 		end += category.size();
 		*end = '\0';
 	}
-	
+
 	DataStoreId() {
 		id = NULL;
 	}
-	
+
 	DataStoreId(const DataStoreId &other) {
 		if (other.id == NULL) {
 			id = NULL;
@@ -102,11 +102,11 @@ public:
 			categorySize = other.categorySize;
 		}
 	}
-	
+
 	~DataStoreId() {
 		delete id;
 	}
-	
+
 	DataStoreId &operator=(const DataStoreId &other) {
 		if (other.id == NULL) {
 			delete id;
@@ -127,11 +127,11 @@ public:
 			return *this;
 		}
 	}
-	
+
 	bool operator<(const DataStoreId &other) const {
 		return toStaticString() < other.toStaticString();
 	}
-	
+
 	bool operator==(const DataStoreId &other) const {
 		if (id == NULL) {
 			return other.id == NULL;
@@ -143,7 +143,7 @@ public:
 			}
 		}
 	}
-	
+
 	StaticString getGroupName() const {
 		if (id != NULL) {
 			return StaticString(id, groupNameSize);
@@ -151,7 +151,7 @@ public:
 			return StaticString();
 		}
 	}
-	
+
 	StaticString getNodeName() const {
 		if (id != NULL) {
 			return StaticString(id + groupNameSize + 1,
@@ -160,7 +160,7 @@ public:
 			return StaticString();
 		}
 	}
-	
+
 	StaticString getCategory() const {
 		if (id != NULL) {
 			return StaticString(id + groupNameSize + 1 + nodeNameSize + 1,

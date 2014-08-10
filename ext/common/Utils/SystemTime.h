@@ -75,7 +75,7 @@ public:
 			return ret;
 		}
 	}
-	
+
 	/**
 	 * Returns the time since the Epoch, measured in milliseconds. Or, if a
 	 * time was forced with forceMsec(), then the forced time is returned instead.
@@ -90,7 +90,7 @@ public:
 		} else {
 			struct timeval t;
 			int ret;
-			
+
 			do {
 				ret = gettimeofday(&t, NULL);
 			} while (ret == -1 && errno == EINTR);
@@ -103,7 +103,7 @@ public:
 			return (unsigned long long) t.tv_sec * 1000 + t.tv_usec / 1000;
 		}
 	}
-	
+
 	/**
 	 * Returns the time since the Epoch, measured in microseconds. Or, if a
 	 * time was forced with forceUsec(), then the forced time is returned instead.
@@ -117,7 +117,7 @@ public:
 		} else {
 			struct timeval t;
 			int ret;
-			
+
 			do {
 				ret = gettimeofday(&t, NULL);
 			} while (ret == -1 && errno == EINTR);
@@ -138,7 +138,7 @@ public:
 		SystemTimeData::hasForcedValue = true;
 		SystemTimeData::forcedValue = value;
 	}
-	
+
 	/**
 	 * Force getMsec() to return the given value.
 	 */
@@ -146,7 +146,7 @@ public:
 		SystemTimeData::hasForcedMsecValue = true;
 		SystemTimeData::forcedMsecValue = value;
 	}
-	
+
 	/**
 	 * Force getUsec() to return the given value.
 	 */
@@ -154,7 +154,7 @@ public:
 		SystemTimeData::hasForcedUsecValue = true;
 		SystemTimeData::forcedUsecValue = value;
 	}
-	
+
 	static void forceAll(unsigned long long usec) {
 		force(usec / 1000000);
 		forceMsec(usec / 1000);
@@ -168,7 +168,7 @@ public:
 	static void release() {
 		SystemTimeData::hasForcedValue = false;
 	}
-	
+
 	/**
 	 * Release the previously forced msec value, so that getMsec()
 	 * returns the system time once again.
@@ -176,7 +176,7 @@ public:
 	static void releaseMsec() {
 		SystemTimeData::hasForcedMsecValue = false;
 	}
-	
+
 	/**
 	 * Release the previously forced usec value, so that getUsec()
 	 * returns the system time once again.
@@ -184,7 +184,7 @@ public:
 	static void releaseUsec() {
 		SystemTimeData::hasForcedUsecValue = false;
 	}
-	
+
 	/**
 	 * Release all previously forced values, so that get(), getMsec()
 	 * and getUsec() return the system time once again.

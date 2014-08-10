@@ -42,7 +42,7 @@ public:
 	static string encode(const StaticString &data) {
 		return encode((const unsigned char *) data.data(), data.size());
 	}
-	
+
 	/** Encode using a modified Base64 format, suitable for inclusion in URLs without
 	 * needing escaping.
 	 */
@@ -50,7 +50,7 @@ public:
 		string result = encode(data);
 		string::size_type i;
 		int paddingSize = 0;
-		
+
 		for (i = 0; i < result.size(); i++) {
 			char c = result[i];
 			if (c == '+') {
@@ -61,20 +61,20 @@ public:
 				paddingSize++;
 			}
 		}
-		
+
 		if (paddingSize > 0) {
 			result.resize(result.size() - paddingSize);
 		}
-		
+
 		return result;
 	}
-	
+
 	static string decode(const StaticString &base64_data) {
 		return decode((const unsigned char *) base64_data.data(), base64_data.size());
 	}
-	
+
 	static string encode(const unsigned char *data, unsigned int len);
-	
+
 	static string decode(const unsigned char *base64_data, unsigned int len);
 };
 

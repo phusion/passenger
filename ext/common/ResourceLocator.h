@@ -53,7 +53,7 @@ private:
 	string docDir;
 	string rubyLibDir;
 	string nodeLibDir;
-	
+
 	static string getOption(const string &file, const IniFileSectionPtr &section, const string &key) {
 		if (section->hasKey(key)) {
 			return section->get(key);
@@ -61,7 +61,7 @@ private:
 			throw RuntimeException("Option '" + key + "' missing in file '" + file + "'");
 		}
 	}
-	
+
 public:
 	ResourceLocator(const string &rootOrFile) {
 		root = rootOrFile;
@@ -86,27 +86,27 @@ public:
 			nodeLibDir          = root + "/node_lib";
 		}
 	}
-	
+
 	string getRoot() const {
 		return root;
 	}
-	
+
 	string getAgentsDir() const {
 		return agentsDir;
 	}
-	
+
 	string getHelperScriptsDir() const {
 		return helperScriptsDir;
 	}
-	
+
 	string getResourcesDir() const {
 		return resourcesDir;
 	}
-	
+
 	string getDocDir() const {
 		return docDir;
 	}
-	
+
 	// Can be empty.
 	string getRubyLibDir() const {
 		return rubyLibDir;

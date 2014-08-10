@@ -49,34 +49,34 @@ private:
 	mutable boost::mutex lock;
 	map<string, AccountPtr> accounts;
 	unsigned int uniqueNumber;
-	
+
 public:
 	AccountsDatabase() {
 		uniqueNumber = 0;
 	}
-	
+
 	unsigned int size() const {
 		boost::lock_guard<boost::mutex> l(lock);
 		return (unsigned int) accounts.size();
 	}
-	
+
 	vector<string> listUsernames() const {
 		map<string, AccountPtr>::const_iterator it;
 		vector<string> result;
-		
+
 		for (it = accounts.begin(); it != accounts.end(); it++) {
 			result.push_back(it->second->getUsername());
 		}
 		return result;
 	}
-	
+
 	AccountPtr add(const string &username, const string &passwordOrHash, bool hashGiven, int rights = Account::ALL) {
 		AccountPtr account(new Account(username, passwordOrHash, hashGiven, rights));
 		boost::lock_guard<boost::mutex> l(lock);
 		accounts[username] = account;
 		return account;
 	}
-	
+
 	const AccountPtr get(const string &username) const {
 		boost::lock_guard<boost::mutex> l(lock);
 		map<string, AccountPtr>::const_iterator it = accounts.find(username);
@@ -86,7 +86,7 @@ public:
 			return it->second;
 		}
 	}
-	
+
 	AccountPtr authenticate(const string &username, const StaticString &userSuppliedPassword) const {
 		boost::lock_guard<boost::mutex> l(lock);
 		map<string, AccountPtr>::const_iterator it = accounts.find(username);
@@ -101,7 +101,7 @@ public:
 			}
 		}
 	}
-	
+
 	bool remove(const string &username) {
 		boost::lock_guard<boost::mutex> l(lock);
 		map<string, AccountPtr>::iterator it = accounts.find(username);
@@ -112,7 +112,7 @@ public:
 			return true;
 		}
 	}
-	
+
 	unsigned int getUniqueNumber() {
 		boost::lock_guard<boost::mutex> l(lock);
 		unsigned int result = uniqueNumber;

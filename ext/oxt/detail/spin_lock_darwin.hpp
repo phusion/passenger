@@ -42,12 +42,12 @@ public:
 	class scoped_lock: boost::noncopyable {
 	private:
 		spin_lock &l;
-		
+
 	public:
 		scoped_lock(spin_lock &lock): l(lock) {
 			l.lock();
 		}
-		
+
 		~scoped_lock() {
 			l.unlock();
 		}
@@ -56,11 +56,11 @@ public:
 	spin_lock() {
 		spin = 0;
 	}
-	
+
 	void lock() {
 		OSSpinLockLock(&spin);
 	}
-	
+
 	void unlock() {
 		OSSpinLockUnlock(&spin);
 	}

@@ -74,7 +74,7 @@ _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line
 			}
 		}
 	}
-	
+
 	the_time = time(NULL);
 	localtime_r(&the_time, &the_tm);
 	strftime(datetime_buf, sizeof(datetime_buf) - 1, "%F %H:%M:%S", &the_tm);

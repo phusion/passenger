@@ -245,7 +245,7 @@ reverseString(char *str, unsigned int size) {
  * Convert the given integer to some other radix, placing
  * the result into the given output buffer. The output buffer
  * will be NULL terminated. Supported radices are 2-36.
- * 
+ *
  * @param outputSize The size of the output buffer, including space for
  *                   the terminating NULL.
  * @return The size of the created string, excluding
@@ -263,13 +263,13 @@ integerToOtherBase(IntegerType value, char *output, unsigned int outputSize) {
 	};
 	IntegerType remainder = value;
 	unsigned int size = 0;
-	
+
 	do {
 		output[size] = chars[remainder % radix];
 		remainder = remainder / radix;
 		size++;
 	} while (remainder != 0 && size < outputSize - 1);
-	
+
 	if (remainder == 0) {
 		reverseString(output, size);
 		output[size] = '\0';

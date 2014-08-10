@@ -243,14 +243,14 @@ public:
 		 *
 		 * userUsage, niceUsage, systemUsage and idleUsage are fractions
 		 * of user + nice + system + idle.
-		 * 
+		 *
 		 * ioWaitUsage is a fraction of user + nice + system + idle + iowait.
 		 *
 		 * stealUsage is a fraction of user + nice + system + idle + steal.
 		 *
 		 * All fractions range from 0 (unutilized) to SHRT_MAX (fully utilized).
 		 * Use the *Pct() methods to convert them to percentages.
-		 * 
+		 *
 		 * Each statistic can individually be -1 if an error occurred while querying
 		 * it, or -2 if the OS doesn't support it.
 		 */

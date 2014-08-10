@@ -63,7 +63,7 @@ startBackgroundLoop(BackgroundEventLoop *bg) {
 
 BackgroundEventLoop::BackgroundEventLoop(bool scalable) {
 	TRACE_POINT();
-	
+
 	if (scalable) {
 		loop = ev_loop_new(EVBACKEND_KQUEUE);
 		if (loop == NULL) {

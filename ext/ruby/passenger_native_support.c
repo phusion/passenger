@@ -119,7 +119,7 @@ split_by_null_into_hash(VALUE self, VALUE data) {
 	const char *current = cdata;
 	const char *end     = cdata + len;
 	VALUE result, key, value;
-	
+
 	result = rb_hash_new();
 	while (current < end) {
 		if (*current == '\0') {
@@ -145,10 +145,10 @@ split_by_null_into_hash(VALUE self, VALUE data) {
 typedef struct {
 	/* The IO vectors in this group. */
 	struct iovec *io_vectors;
-	
+
 	/* The number of IO vectors in io_vectors. */
 	unsigned int count;
-	
+
 	/* The combined size of all IO vectors in this group. */
 	ssize_t      total_size;
 } IOVectorGroup;
@@ -162,7 +162,7 @@ update_group_written_info(IOVectorGroup *group, ssize_t bytes_written) {
 	unsigned int i;
 	size_t counter;
 	struct iovec *current_vec;
-	
+
 	/* Find the last vector that contains data that had already been written. */
 	counter = 0;
 	for (i = 0; i < group->count; i++) {
@@ -198,7 +198,7 @@ update_group_written_info(IOVectorGroup *group, ssize_t bytes_written) {
 		const struct iovec *iov;
 		int iovcnt;
 	} WritevWrapperData;
-	
+
 	static VALUE
 	writev_wrapper(void *ptr) {
 		WritevWrapperData *data = (WritevWrapperData *) ptr;
@@ -218,7 +218,7 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 	#ifndef TRAP_BEG
 		WritevWrapperData writev_wrapper_data;
 	#endif
-	
+
 	/* First determine the number of components that we have. */
 	total_components   = 0;
 	for (i = 0; i < count; i++) {
@@ -228,7 +228,7 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 	if (total_components == 0) {
 		return NUM2INT(0);
 	}
-	
+
 	/* A single writev() call can only accept IOV_MAX vectors, so we
 	 * may have to split the components into groups and perform
 	 * multiple writev() calls, one per group. Determine the number
@@ -269,7 +269,7 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 		}
 		groups[ngroups - 1].count = total_components % IOV_MAX;
 	}
-	
+
 	/* Now distribute the components among the groups, filling the iovec
 	 * array in each group. Also calculate the total data size while we're
 	 * at it.
@@ -297,19 +297,19 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 			}
 		}
 	}
-	
+
 	/* We don't compare to SSIZE_MAX directly in order to shut up a compiler warning on OS X Snow Leopard. */
 	ssize_max = SSIZE_MAX;
 	if (total_size > ssize_max) {
 		rb_raise(rb_eArgError, "The total size of the components may not be larger than SSIZE_MAX.");
 	}
-	
+
 	/* Write the data. */
 	fd_num = NUM2INT(fd);
 	for (i = 0; i < ngroups; i++) {
 		/* Wait until the file descriptor becomes writable before writing things. */
 		rb_thread_fd_writable(fd_num);
-		
+
 		done = 0;
 		while (!done) {
 			#ifdef TRAP_BEG
@@ -399,11 +399,11 @@ static VALUE
 process_times(VALUE self) {
 	struct rusage usage;
 	unsigned long long utime, stime;
-	
+
 	if (getrusage(RUSAGE_SELF, &usage) == -1) {
 		rb_sys_fail("getrusage()");
 	}
-	
+
 	utime = (unsigned long long) usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec;
 	stime = (unsigned long long) usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
 	return rb_struct_new(S_ProcessTimes, rb_ull2inum(utime), rb_ull2inum(stime));
@@ -424,11 +424,11 @@ detach_process(VALUE self, VALUE pid) {
 	pthread_t thr;
 	pthread_attr_t attr;
 	size_t stack_size = 96 * 1024;
-	
+
 	unsigned long min_stack_size;
 	int stack_min_size_defined;
 	int round_stack_size;
-	
+
 	#ifdef PTHREAD_STACK_MIN
 		// PTHREAD_STACK_MIN may not be a constant macro so we need
 		// to evaluate it dynamically.
@@ -445,7 +445,7 @@ detach_process(VALUE self, VALUE pid) {
 	} else {
 		round_stack_size = 1;
 	}
-	
+
 	if (round_stack_size) {
 		// Round stack size up to page boundary.
 		long page_size;
@@ -464,7 +464,7 @@ detach_process(VALUE self, VALUE pid) {
 			stack_size = stack_size - (stack_size % page_size) + page_size;
 		}
 	}
-	
+
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, 1);
 	pthread_attr_setstacksize(&attr, stack_size);
@@ -490,24 +490,24 @@ typedef struct {
 	VALUE klass;
 	VALUE filenames;
 	VALUE termination_pipe;
-	
+
 	/* File descriptor of termination_pipe. */
 	int termination_fd;
-	
+
 	/* Whether something went wrong during initialization. */
 	int preparation_error;
-	
+
 	/* Information for kqueue. */
 	unsigned int events_len;
 	int *fds;
 	unsigned int fds_len;
 	int kq;
-	
+
 	/* When the watcher thread is done it'll write to this pipe
 	 * to signal the main (Ruby) thread.
 	 */
 	int notification_fd[2];
-	
+
 	/* When the main (Ruby) thread is interrupted it'll write to
 	 * this pipe to tell the watcher thread to exit.
 	 */
@@ -524,7 +524,7 @@ typedef struct {
 static void
 fs_watcher_real_close(FSWatcher *watcher) {
 	unsigned int i;
-	
+
 	if (watcher->kq != -1) {
 		close(watcher->kq);
 		watcher->kq = -1;
@@ -572,9 +572,9 @@ fs_watcher_init(VALUE arg) {
 	VALUE filenum;
 	struct stat buf;
 	int fd;
-	
+
 	/* Open each file in the filenames list and add each one to the events array. */
-	
+
 	/* +2 for the termination pipe and the interruption pipe. */
 	events = alloca((RARRAY_LEN(watcher->filenames) + 2) * sizeof(struct kevent));
 	watcher->fds = malloc(RARRAY_LEN(watcher->filenames) * sizeof(int));
@@ -587,12 +587,12 @@ fs_watcher_init(VALUE arg) {
 		if (TYPE(filename) != T_STRING) {
 			filename = rb_obj_as_string(filename);
 		}
-		
+
 		if (stat(RSTRING_PTR(filename), &buf) == -1) {
 			watcher->preparation_error = 1;
 			goto end;
 		}
-		
+
 		#ifdef O_EVTONLY
 			fd = open(RSTRING_PTR(filename), O_EVTONLY);
 		#else
@@ -602,18 +602,18 @@ fs_watcher_init(VALUE arg) {
 			watcher->preparation_error = 1;
 			goto end;
 		}
-		
+
 		watcher->fds[i] = fd;
 		watcher->fds_len++;
 		fflags = NOTE_WRITE | NOTE_EXTEND | NOTE_RENAME | NOTE_DELETE | NOTE_REVOKE;
 		EV_SET(&events[i], fd, EVFILT_VNODE, EV_ADD | EV_ENABLE | EV_CLEAR,
 			fflags, 0, 0);
 	}
-	
+
 	watcher->events_len = watcher->fds_len;
-	
+
 	/* Create pipes for inter-thread communication. */
-	
+
 	if (pipe(watcher->notification_fd) == -1) {
 		rb_sys_fail("pipe()");
 		return Qnil;
@@ -622,15 +622,15 @@ fs_watcher_init(VALUE arg) {
 		rb_sys_fail("pipe()");
 		return Qnil;
 	}
-	
+
 	/* Create a kqueue and register all events. */
-	
+
 	watcher->kq = kqueue();
 	if (watcher->kq == -1) {
 		rb_sys_fail("kqueue()");
 		return Qnil;
 	}
-	
+
 	if (watcher->termination_pipe != Qnil) {
 		filenum = rb_funcall(watcher->termination_pipe,
 			rb_intern("fileno"), 0);
@@ -642,12 +642,12 @@ fs_watcher_init(VALUE arg) {
 	EV_SET(&events[watcher->events_len], watcher->interruption_fd[0],
 		EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, 0);
 	watcher->events_len++;
-	
+
 	if (kevent(watcher->kq, events, watcher->events_len, NULL, 0, NULL) == -1) {
 		rb_sys_fail("kevent()");
 		return Qnil;
 	}
-	
+
 end:
 	if (watcher->preparation_error) {
 		for (i = 0; i < watcher->fds_len; i++) {
@@ -665,7 +665,7 @@ fs_watcher_new(VALUE klass, VALUE filenames, VALUE termination_pipe) {
 	FSWatcher *watcher;
 	VALUE result;
 	int status;
-	
+
 	Check_Type(filenames, T_ARRAY);
 	watcher = (FSWatcher *) calloc(1, sizeof(FSWatcher));
 	if (watcher == NULL) {
@@ -681,7 +681,7 @@ fs_watcher_new(VALUE klass, VALUE filenames, VALUE termination_pipe) {
 	watcher->notification_fd[1] = -1;
 	watcher->interruption_fd[0] = -1;
 	watcher->interruption_fd[1] = -1;
-	
+
 	result = rb_protect(fs_watcher_init, (VALUE) watcher, &status);
 	if (status) {
 		fs_watcher_free(watcher);
@@ -698,7 +698,7 @@ fs_watcher_wait_on_kqueue(void *arg) {
 	struct kevent *events;
 	int nevents;
 	ssize_t ret;
-	
+
 	events = alloca(sizeof(struct kevent) * watcher->events_len);
 	nevents = kevent(watcher->kq, NULL, 0, events, watcher->events_len, NULL);
 	if (nevents == -1) {
@@ -760,27 +760,27 @@ fs_watcher_wait_for_change(VALUE self) {
 	ssize_t ret;
 	int e, interrupted = 0;
 	FSWatcherReadByteData read_data;
-	
+
 	Data_Get_Struct(self, FSWatcher, watcher);
-	
+
 	if (watcher->preparation_error) {
 		return Qfalse;
 	}
-	
+
 	/* Spawn a thread, and let the thread perform the blocking kqueue
 	 * wait. When kevent() returns the thread will write its status to the
 	 * notification pipe. In the mean time we let the Ruby interpreter wait
 	 * on the other side of the pipe for us so that we don't block Ruby
 	 * threads.
 	 */
-	
+
 	e = pthread_create(&thr, NULL, fs_watcher_wait_on_kqueue, watcher);
 	if (e != 0) {
 		errno = e;
 		rb_sys_fail("pthread_create()");
 		return Qnil;
 	}
-	
+
 	/* Note that rb_thread_wait() does not wait for the fd when the app
 	 * is single threaded, so we must join the thread after we've read
 	 * from the notification fd.
@@ -797,13 +797,13 @@ fs_watcher_wait_for_change(VALUE self) {
 			return Qnil;
 		}
 		pthread_join(thr, NULL);
-		
+
 		/* Now clean up stuff. */
 		fs_watcher_real_close(watcher);
 		rb_jump_tag(interrupted);
 		return Qnil;
 	}
-	
+
 	read_data.fd = watcher->notification_fd[0];
 	rb_protect(fs_watcher_read_byte_from_fd, (VALUE) &read_data, &interrupted);
 	if (interrupted) {
@@ -817,15 +817,15 @@ fs_watcher_wait_for_change(VALUE self) {
 			return Qnil;
 		}
 		pthread_join(thr, NULL);
-		
+
 		/* Now clean up stuff. */
 		fs_watcher_real_close(watcher);
 		rb_jump_tag(interrupted);
 		return Qnil;
 	}
-	
+
 	pthread_join(thr, NULL);
-	
+
 	if (read_data.ret == -1) {
 		fs_watcher_real_close(watcher);
 		errno = read_data.error;
@@ -865,7 +865,7 @@ fs_watcher_close(VALUE self) {
 void
 Init_passenger_native_support() {
 	struct sockaddr_un addr;
-	
+
 	/* Only defined on Ruby >= 1.9.3 */
 	#ifdef RUBY_API_VERSION_CODE
 		if (ruby_api_version[0] != RUBY_API_VERSION_MAJOR
@@ -939,14 +939,14 @@ Init_passenger_native_support() {
 	#endif
 
 	mPassenger = rb_define_module("PhusionPassenger");
-	
+
 	/*
 	 * Utility functions for accessing system functionality.
 	 */
 	mNativeSupport = rb_define_module_under(mPassenger, "NativeSupport");
-	
+
 	S_ProcessTimes = rb_struct_define("ProcessTimes", "utime", "stime", NULL);
-	
+
 	rb_define_singleton_method(mNativeSupport, "disable_stdio_buffering", disable_stdio_buffering, 0);
 	rb_define_singleton_method(mNativeSupport, "split_by_null_into_hash", split_by_null_into_hash, 1);
 	rb_define_singleton_method(mNativeSupport, "writev", f_writev, 2);
@@ -955,7 +955,7 @@ Init_passenger_native_support() {
 	rb_define_singleton_method(mNativeSupport, "process_times", process_times, 0);
 	rb_define_singleton_method(mNativeSupport, "detach_process", detach_process, 1);
 	rb_define_singleton_method(mNativeSupport, "freeze_process", freeze_process, 0);
-	
+
 	#ifdef HAVE_KQUEUE
 		cFileSystemWatcher = rb_define_class_under(mNativeSupport,
 			"FileSystemWatcher", rb_cObject);
@@ -966,7 +966,7 @@ Init_passenger_native_support() {
 		rb_define_method(cFileSystemWatcher, "close",
 			fs_watcher_close, 0);
 	#endif
-	
+
 	/* The maximum length of a Unix socket path, including terminating null. */
 	rb_define_const(mNativeSupport, "UNIX_PATH_MAX", INT2NUM(sizeof(addr.sun_path)));
 	/* The maximum size of the data that may be passed to #writev. */

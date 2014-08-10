@@ -75,7 +75,7 @@ struct thread_local_context {
 		std::vector<trace_point *> backtrace_list;
 		spin_lock backtrace_lock;
 	#endif
-	
+
 	static thread_local_context_ptr make_shared_ptr();
 
 	thread_local_context();

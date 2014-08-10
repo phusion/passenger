@@ -65,7 +65,7 @@ namespace Passenger {
  * If you have few samples then recent data have the most impact on the results.
  *
  * ### `minAge`
- * 
+ *
  * A new sample is only accepted if at least `minAge` microseconds
  * have passed since the last sample. This is to ensure that the sample
  * buffer contains enough historical data so that results are not skewed by

@@ -48,7 +48,7 @@ struct trace_point {
 	const char *data;
 	unsigned short line;
 	bool m_detached;
-	
+
 	trace_point(const char *function, const char *source, unsigned short line,
 		const char *data = 0);
 	trace_point(const char *function, const char *source, unsigned short line,
