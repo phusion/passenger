@@ -619,6 +619,7 @@ Group::onSessionClose(Process *process, Session *session) {
 		|| process->enabled == Process::DISABLING
 		|| process->enabled == Process::DETACHED);
 	if (process->enabled == Process::ENABLED) {
+		enabledProcessBusynessLevels[process->index] = process->busyness();
 		assert(nEnabledProcessesTotallyBusy >= 1);
 		nEnabledProcessesTotallyBusy--;
 	}

@@ -416,8 +416,11 @@ public:
 		SessionPtr session = process->newSession(now);
 		session->onInitiateFailure = _onSessionInitiateFailure;
 		session->onClose   = _onSessionClose;
-		if (process->enabled == Process::ENABLED && process->isTotallyBusy()) {
-			nEnabledProcessesTotallyBusy++;
+		if (process->enabled == Process::ENABLED) {
+			enabledProcessBusynessLevels[process->index] = process->busyness();
+			if (process->isTotallyBusy()) {
+				nEnabledProcessesTotallyBusy++;
+			}
 		}
 		return session;
 	}
@@ -453,29 +456,36 @@ public:
 	}
 
 	Process *findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
-		Process *lowestBusyness = NULL;
-		ProcessList::const_iterator it, end = enabledProcesses.end();
-		for (it = enabledProcesses.begin(); it != end; it++) {
-			Process *process = it->get();
+		int leastBusyProcessIndex = -1;
+		int lowestBusyness = 0;
+		unsigned int i, size = enabledProcessBusynessLevels.size();
+		const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
+
+		for (i = 0; i < size; i++) {
+			Process *process = enabledProcesses[i].get();
 			if (process->stickySessionId == id) {
 				return process;
-			} else if (lowestBusyness == NULL || process->busyness() < lowestBusyness->busyness()) {
-				lowestBusyness = process;
+			} else if (leastBusyProcessIndex == -1 || enabledProcessBusynessLevels[i] < lowestBusyness) {
+				leastBusyProcessIndex = i;
+				lowestBusyness = enabledProcessBusynessLevels[i];
 			}
 		}
-		return lowestBusyness;
+		return enabledProcesses[leastBusyProcessIndex].get();
 	}
 
 	Process *findProcessWithLowestBusyness(const ProcessList &processes) const {
-		Process *result = NULL;
-		ProcessList::const_iterator it, end = processes.end();
-		for (it = processes.begin(); it != end; it++) {
-			Process *process = it->get();
-			if (result == NULL || process->busyness() < result->busyness()) {
-				result = process;
+		int leastBusyProcessIndex = -1;
+		int lowestBusyness = 0;
+		unsigned int i, size = enabledProcessBusynessLevels.size();
+		const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
+
+		for (i = 0; i < size; i++) {
+			if (leastBusyProcessIndex == -1 || enabledProcessBusynessLevels[i] < lowestBusyness) {
+				leastBusyProcessIndex = i;
+				lowestBusyness = enabledProcessBusynessLevels[i];
 			}
 		}
-		return result;
+		return enabledProcesses[leastBusyProcessIndex].get();
 	}
 
 	/**
@@ -518,6 +528,16 @@ public:
 			const ProcessPtr &process = *it;
 			process->index = i;
 		}
+
+		// Rebuild enabledProcessBusynessLevels
+		if (&source == &enabledProcesses) {
+			enabledProcessBusynessLevels.clear();
+			for (it = source.begin(); it != end; it++, i++) {
+				const ProcessPtr &process = *it;
+				enabledProcessBusynessLevels.push_back(process->busyness());
+			}
+			enabledProcessBusynessLevels.shrink_to_fit();
+		}
 	}
 
 	/**
@@ -532,6 +552,7 @@ public:
 		if (&destination == &enabledProcesses) {
 			process->enabled = Process::ENABLED;
 			enabledCount++;
+			enabledProcessBusynessLevels.push_back(process->busyness());
 			if (process->isTotallyBusy()) {
 				nEnabledProcessesTotallyBusy++;
 			}
@@ -776,6 +797,13 @@ public:
 	 *    process.enabled == Process::DETACHED
 	 */
 	ProcessList detachedProcesses;
+
+	/**
+	 * A cache of the processes' busyness. It's in a compact structure
+	 * so that `findProcessWithLowestBusyness()` can work very quickly
+	 * when there are a large number of processes.
+	 */
+	boost::container::vector<int> enabledProcessBusynessLevels;
 
 	/**
 	 * get() requests for this group that cannot be immediately satisfied are
