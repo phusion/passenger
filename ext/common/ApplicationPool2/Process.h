@@ -107,6 +107,9 @@ public:
 	/** A mutex to protect access to `lifeStatus`. */
 	mutable oxt::spin_lock lifetimeSyncher;
 
+	/** The index inside the associated Group's process list. */
+	unsigned int index;
+
 	/** Group inside the Pool that this Process belongs to.
 	 * Should never be NULL because a Group should outlive all of its Processes.
 	 * Read-only; only set once during initialization.
@@ -116,9 +119,6 @@ public:
 	/** A subset of 'sockets': all sockets that speak the
 	 * "session" protocol, sorted by socket.busyness(). */
 	SocketPriorityQueue sessionSockets;
-
-	/** The index inside the associated Group's process list. */
-	unsigned int index;
 
 	void sendAbortLongRunningConnectionsMessage(const string &address);
 	static void realSendAbortLongRunningConnectionsMessage(string address);
@@ -252,7 +252,7 @@ public:
 		 * this object is no longer usable.
 		 */
 		DEAD
-	} lifeStatus;
+	} lifeStatus: 2;
 	enum EnabledStatus {
 		/** Up and operational. */
 		ENABLED,
@@ -273,7 +273,7 @@ public:
 		 * eligible for new requests.
 		 */
 		DETACHED
-	} enabled;
+	} enabled: 2;
 	enum OobwStatus {
 		/** Process is not using out-of-band work. */
 		OOBW_NOT_ACTIVE,
@@ -284,10 +284,10 @@ public:
 		 * sessions have ended and the process has been disabled before the
 		 * out-of-band work can be performed. */
 		OOBW_IN_PROGRESS,
-	} oobwStatus;
+	} oobwStatus: 2;
 	/** Caches whether or not the OS process still exists. */
-	mutable bool m_osProcessExists;
-	bool longRunningConnectionsAborted;
+	mutable bool m_osProcessExists: 1;
+	bool longRunningConnectionsAborted: 1;
 	/** Time at which shutdown began. */
 	time_t shutdownStartTime;
 	/** Collected by Pool::collectAnalytics(). */
@@ -305,8 +305,8 @@ public:
 		const SocketList &_sockets,
 		unsigned long long _spawnerCreationTime,
 		unsigned long long _spawnStartTime)
-		: group(NULL),
-		  index(-1),
+		: index(-1),
+		  group(NULL),
 		  pid(_pid),
 		  stickySessionId(0),
 		  gupid(_gupid),
