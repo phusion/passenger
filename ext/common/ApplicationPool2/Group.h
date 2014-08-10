@@ -109,6 +109,7 @@ public:
 	 *       enabledCount == 0
 	 *       disablingCount == 0
 	 *       disabledCount == 0
+	 *       nEnabledProcessesTotallyBusy == 0
 	 */
 	enum LifeStatus {
 		/** Up and operational. */
@@ -241,7 +242,7 @@ public:
 		assert(enabledCount >= 0);
 		assert(disablingCount >= 0);
 		assert(disabledCount >= 0);
-		assert(enabledProcesses.empty() == pqueue.empty());
+		assert(nEnabledProcessesTotallyBusy >= 0);
 		assert(!( enabledCount == 0 && disablingCount > 0 ) || ( processesBeingSpawned > 0) );
 		assert(!( !m_spawning ) || ( enabledCount > 0 || disablingCount == 0 ));
 
@@ -264,15 +265,18 @@ public:
 		assert(!( lifeStatus != ALIVE ) || ( enabledCount == 0 ));
 		assert(!( lifeStatus != ALIVE ) || ( disablingCount == 0 ));
 		assert(!( lifeStatus != ALIVE ) || ( disabledCount == 0 ));
+		assert(!( lifeStatus != ALIVE ) || ( nEnabledProcessesTotallyBusy == 0 ));
+
+		// Verify list sizes.
+		assert((int) enabledProcesses.size() == enabledCount);
+		assert((int) disablingProcesses.size() == disablingCount);
+		assert((int) disabledProcesses.size() == disabledCount);
+		assert(nEnabledProcessesTotallyBusy <= enabledCount);
 	}
 
 	void verifyExpensiveInvariants() const {
 		#ifndef NDEBUG
 		// !a || b: logical equivalent of a IMPLIES b.
-
-		assert((int) enabledProcesses.size() == enabledCount);
-		assert((int) disablingProcesses.size() == disablingCount);
-		assert((int) disabledProcesses.size() == disabledCount);
 
 		ProcessList::const_iterator it, end;
 
@@ -379,21 +383,21 @@ public:
 	RouteResult route(const Options &options) const {
 		if (OXT_LIKELY(enabledCount > 0)) {
 			if (options.stickySessionId == 0) {
-				if (pqueue.top()->canBeRoutedTo()) {
-					return RouteResult(pqueue.top());
+				Process *process = findProcessWithLowestBusyness(enabledProcesses);
+				if (process->canBeRoutedTo()) {
+					return RouteResult(process);
 				} else {
 					return RouteResult(NULL, true);
 				}
 			} else {
-				Process *process = findProcessWithStickySessionId(options.stickySessionId);
+				Process *process = findProcessWithStickySessionIdOrLowestBusyness(
+					options.stickySessionId);
 				if (process != NULL) {
 					if (process->canBeRoutedTo()) {
 						return RouteResult(process);
 					} else {
 						return RouteResult(NULL, false);
 					}
-				} else if (pqueue.top()->canBeRoutedTo()) {
-					return RouteResult(pqueue.top());
 				} else {
 					return RouteResult(NULL, true);
 				}
@@ -412,8 +416,8 @@ public:
 		SessionPtr session = process->newSession(now);
 		session->onInitiateFailure = _onSessionInitiateFailure;
 		session->onClose   = _onSessionClose;
-		if (process->enabled == Process::ENABLED) {
-			pqueue.increase(process->pqHandle);
+		if (process->enabled == Process::ENABLED && process->isTotallyBusy()) {
+			nEnabledProcessesTotallyBusy++;
 		}
 		return session;
 	}
@@ -448,6 +452,20 @@ public:
 		return NULL;
 	}
 
+	Process *findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
+		Process *lowestBusyness = NULL;
+		ProcessList::const_iterator it, end = enabledProcesses.end();
+		for (it = enabledProcesses.begin(); it != end; it++) {
+			Process *process = it->get();
+			if (process->stickySessionId == id) {
+				return process;
+			} else if (lowestBusyness == NULL || process->busyness() < lowestBusyness->busyness()) {
+				lowestBusyness = process;
+			}
+		}
+		return lowestBusyness;
+	}
+
 	Process *findProcessWithLowestBusyness(const ProcessList &processes) const {
 		Process *result = NULL;
 		ProcessList::const_iterator it, end = processes.end();
@@ -474,7 +492,9 @@ public:
 		case Process::ENABLED:
 			assert(&source == &enabledProcesses);
 			enabledCount--;
-			pqueue.erase(process->pqHandle);
+			if (process->isTotallyBusy()) {
+				nEnabledProcessesTotallyBusy--;
+			}
 			break;
 		case Process::DISABLING:
 			assert(&source == &disablingProcesses);
@@ -511,8 +531,10 @@ public:
 		process->index = destination.size() - 1;
 		if (&destination == &enabledProcesses) {
 			process->enabled = Process::ENABLED;
-			process->pqHandle = pqueue.push(process.get());
 			enabledCount++;
+			if (process->isTotallyBusy()) {
+				nEnabledProcessesTotallyBusy++;
+			}
 		} else if (&destination == &disablingProcesses) {
 			process->enabled = Process::DISABLING;
 			disablingCount++;
@@ -706,8 +728,8 @@ public:
 	 * their numbers.
 	 * These lists do not intersect. A process is in exactly 1 list.
 	 *
-	 * 'pqueue' orders all enabled processes according to busyness() values,
-	 * from small to large.
+	 * `nEnabledProcessesTotallyBusy` counts the number of enabled processes for which
+	 * `isTotallyBusy()` is true.
 	 *
 	 * Invariants:
 	 *    enabledCount >= 0
@@ -716,9 +738,8 @@ public:
 	 *    enabledProcesses.size() == enabledCount
 	 *    disablingProcesses.size() == disabingCount
 	 *    disabledProcesses.size() == disabledCount
+	 *    nEnabledProcessesTotallyBusy <= enabledCount
      *
-	 *    enabledProcesses.empty() == pqueue.empty()
-	 *
 	 *    if (enabledCount == 0):
 	 *       processesBeingSpawned > 0 || restarting() || poolAtFullCapacity()
 	 *    if (enabledCount == 0) and (disablingCount > 0):
@@ -726,29 +747,23 @@ public:
 	 *    if !m_spawning:
 	 *       (enabledCount > 0) || (disablingCount == 0)
 	 *
-	 *    if pqueue.top().isTotallyBusy():
-	 *       All enabled processes are totally busy.
-	 *
 	 *    for all process in enabledProcesses:
 	 *       process.enabled == Process::ENABLED
-	 *       process.pqHandle is valid
 	 *       process.isAlive()
 	 *       process.oobwStatus == Process::OOBW_NOT_ACTIVE || process.oobwStatus == Process::OOBW_REQUESTED
 	 *    for all processes in disablingProcesses:
 	 *       process.enabled == Process::DISABLING
-	 *       process.pqHandle is invalid
 	 *       process.isAlive()
 	 *       process.oobwStatus == Process::OOBW_NOT_ACTIVE || process.oobwStatus == Process::OOBW_IN_PROGRESS
 	 *    for all process in disabledProcesses:
 	 *       process.enabled == Process::DISABLED
-	 *       process.pqHandle is invalid
 	 *       process.isAlive()
 	 *       process.oobwStatus == Process::OOBW_NOT_ACTIVE || process.oobwStatus == Process::OOBW_IN_PROGRESS
 	 */
 	int enabledCount;
 	int disablingCount;
 	int disabledCount;
-	ProcessPriorityQueue pqueue;
+	int nEnabledProcessesTotallyBusy;
 	ProcessList enabledProcesses;
 	ProcessList disablingProcesses;
 	ProcessList disabledProcesses;
@@ -759,7 +774,6 @@ public:
 	 *
 	 * for all process in detachedProcesses:
 	 *    process.enabled == Process::DETACHED
-	 *    process.pqHandle == NULL
 	 */
 	ProcessList detachedProcesses;
 
@@ -1109,10 +1123,10 @@ public:
 		enabledProcesses.clear();
 		disablingProcesses.clear();
 		disabledProcesses.clear();
-		pqueue.clear();
 		enabledCount = 0;
 		disablingCount = 0;
 		disabledCount = 0;
+		nEnabledProcessesTotallyBusy = 0;
 		clearDisableWaitlist(DR_NOOP, postLockActions);
 		startCheckingDetachedProcesses(false);
 	}
@@ -1274,7 +1288,7 @@ public:
 	 * Returns false if there are no enabled processes.
 	 */
 	bool allEnabledProcessesAreTotallyBusy() const {
-		return enabledCount > 0 && pqueue.top()->isTotallyBusy();
+		return nEnabledProcessesTotallyBusy == enabledCount;
 	}
 
 	/**

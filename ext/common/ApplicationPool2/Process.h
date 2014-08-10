@@ -29,7 +29,6 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
-#include <boost/heap/d_ary_heap.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/macros.hpp>
 #include <sys/types.h>
@@ -57,18 +56,6 @@ using namespace boost;
 struct ProcessBusynessComparator {
 	bool operator()(const Process *a, const Process *b) const;
 };
-
-/*
- * We use a d-ary heap because it's an in-place data structure that's backed by a vector,
- * and thus has great CPU caching behavior. This makes it perform better than a fibonacci
- * heap despite worse algorithmic complexity.
- */
-typedef boost::heap::d_ary_heap<
-		Process *,
-		boost::heap::arity<6>,
-		boost::heap::compare<ProcessBusynessComparator>,
-		boost::heap::mutable_<true>
-	> ProcessPriorityQueue;
 
 typedef vector<ProcessPtr> ProcessList;
 
@@ -131,8 +118,6 @@ public:
 
 	/** The index inside the associated Group's process list. */
 	unsigned int index;
-	/** The handle inside the associated Group's process priority queue. */
-	ProcessPriorityQueue::handle_type pqHandle;
 
 	void sendAbortLongRunningConnectionsMessage(const string &address);
 	static void realSendAbortLongRunningConnectionsMessage(string address);

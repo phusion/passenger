@@ -526,6 +526,7 @@ Group::Group(SuperGroup *_superGroup, const Options &options, const ComponentInf
 	enabledCount   = 0;
 	disablingCount = 0;
 	disabledCount  = 0;
+	nEnabledProcessesTotallyBusy = 0;
 	spawner        = getPool()->spawnerFactory->create(options);
 	restartsInitiated = 0;
 	processesBeingSpawned = 0;
@@ -618,7 +619,8 @@ Group::onSessionClose(Process *process, Session *session) {
 		|| process->enabled == Process::DISABLING
 		|| process->enabled == Process::DETACHED);
 	if (process->enabled == Process::ENABLED) {
-		pqueue.decrease(process->pqHandle);
+		assert(nEnabledProcessesTotallyBusy >= 1);
+		nEnabledProcessesTotallyBusy--;
 	}
 
 	/* This group now has a process that's guaranteed to be not
