@@ -301,8 +301,8 @@ public:
 		SuperGroupMap::const_iterator it, end = superGroups.end();
 		for (it = superGroups.begin(); it != end; it++) {
 			const SuperGroupPtr &superGroup = it->second;
-			const vector<GroupPtr> &groups = superGroup->groups;
-			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+			const SuperGroup::GroupList &groups = superGroup->groups;
+			SuperGroup::GroupList::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				const GroupPtr &group = *g_it;
 				if (group.get() == exclude) {
@@ -331,8 +331,8 @@ public:
 		SuperGroupMap::const_iterator it, end = superGroups.end();
 		for (it = superGroups.begin(); it != end; it++) {
 			const SuperGroupPtr &superGroup = it->second;
-			const vector<GroupPtr> &groups = superGroup->groups;
-			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+			const SuperGroup::GroupList &groups = superGroup->groups;
+			SuperGroup::GroupList::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				const GroupPtr &group = *g_it;
 				const ProcessList &processes = group->enabledProcesses;
@@ -703,8 +703,8 @@ public:
 		// For all supergroups and groups...
 		for (it = superGroups.begin(); it != end; it++) {
 			SuperGroupPtr superGroup = it->second;
-			vector<GroupPtr> &groups = superGroup->groups;
-			vector<GroupPtr>::iterator g_it, g_end = groups.end();
+			SuperGroup::GroupList &groups = superGroup->groups;
+			SuperGroup::GroupList::iterator g_it, g_end = groups.end();
 
 			superGroup->verifyInvariants();
 
@@ -865,7 +865,7 @@ public:
 
 			for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
 				const SuperGroupPtr &superGroup = sg_it->second;
-				vector<GroupPtr>::const_iterator g_it, g_end = superGroup->groups.end();
+				SuperGroup::GroupList::const_iterator g_it, g_end = superGroup->groups.end();
 
 				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
 					const GroupPtr &group = *g_it;
@@ -905,7 +905,7 @@ public:
 			UPDATE_TRACE_POINT();
 			for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
 				const SuperGroupPtr &superGroup = sg_it->second;
-				vector<GroupPtr>::iterator g_it, g_end = superGroup->groups.end();
+				SuperGroup::GroupList::iterator g_it, g_end = superGroup->groups.end();
 
 				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
 					const GroupPtr &group = *g_it;
@@ -1284,8 +1284,8 @@ public:
 		SuperGroupMap::const_iterator it, end = superGroups.end();
 		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
 			const SuperGroupPtr &superGroup = it->second;
-			vector<GroupPtr> &groups = superGroup->groups;
-			vector<GroupPtr>::const_iterator g_it, g_end = groups.end();
+			SuperGroup::GroupList &groups = superGroup->groups;
+			SuperGroup::GroupList::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
 				const GroupPtr &group = *g_it;
 				ProcessList::const_iterator p_it;
@@ -1603,7 +1603,7 @@ public:
 		DynamicScopedLock l(syncher, lock);
 		stringstream result;
 		SuperGroupMap::const_iterator sg_it;
-		vector<GroupPtr>::const_iterator g_it;
+		SuperGroup::GroupList::const_iterator g_it;
 		ProcessList::const_iterator p_it;
 
 		result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";

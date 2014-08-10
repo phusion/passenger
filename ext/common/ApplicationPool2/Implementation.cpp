@@ -463,10 +463,10 @@ SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
 	assert(state == RESTARTING);
 	verifyInvariants();
 
-	vector<GroupPtr> allGroups;
-	vector<GroupPtr> updatedGroups;
-	vector<GroupPtr> newGroups;
-	vector<GroupPtr>::const_iterator g_it;
+	SuperGroup::GroupList allGroups;
+	SuperGroup::GroupList updatedGroups;
+	SuperGroup::GroupList newGroups;
+	SuperGroup::GroupList::const_iterator g_it;
 	boost::container::vector<Callback> actions;
 	this->options = options;
 
@@ -1382,7 +1382,7 @@ Group::findOtherGroupWaitingForCapacity() const {
 	StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = pool->superGroups.end();
 	for (sg_it = pool->superGroups.begin(); sg_it != sg_end; sg_it++) {
 		pair<StaticString, SuperGroupPtr> p = *sg_it;
-		vector<GroupPtr>::const_iterator g_it, g_end = p.second->groups.end();
+		SuperGroup::GroupList::const_iterator g_it, g_end = p.second->groups.end();
 		for (g_it = p.second->groups.begin(); g_it != g_end; g_it++) {
 			if (g_it->get() != this && (*g_it)->isWaitingForCapacity()) {
 				return *g_it;
