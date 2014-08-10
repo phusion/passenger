@@ -227,7 +227,7 @@ public:
 	void wakeUpGarbageCollector();
 	bool poolAtFullCapacity() const;
 	bool anotherGroupIsWaitingForCapacity() const;
-	boost::shared_ptr<Group> findOtherGroupWaitingForCapacity() const;
+	Group *findOtherGroupWaitingForCapacity() const;
 	ProcessPtr poolForceFreeCapacity(const Group *exclude, boost::container::vector<Callback> &postLockActions);
 	bool testOverflowRequestQueue() const;
 	psg_pool_t *getPallocPool() const;

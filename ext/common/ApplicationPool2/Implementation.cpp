@@ -1370,26 +1370,26 @@ Group::anotherGroupIsWaitingForCapacity() const {
 	return findOtherGroupWaitingForCapacity() != NULL;
 }
 
-boost::shared_ptr<Group>
+Group *
 Group::findOtherGroupWaitingForCapacity() const {
 	Pool *pool = getPool();
 	// TODO: this only works if SuperGroup can only have one Group.
 	// If we ever extend SuperGroup then this needs to be changed.
 	if (pool->superGroups.size() == 1) {
-		return GroupPtr();
+		return NULL;
 	}
 
 	StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = pool->superGroups.end();
 	for (sg_it = pool->superGroups.begin(); sg_it != sg_end; sg_it++) {
-		pair<StaticString, SuperGroupPtr> p = *sg_it;
-		SuperGroup::GroupList::const_iterator g_it, g_end = p.second->groups.end();
-		for (g_it = p.second->groups.begin(); g_it != g_end; g_it++) {
+		const SuperGroup *superGroup = sg_it->second.get();
+		SuperGroup::GroupList::const_iterator g_it, g_end = superGroup->groups.end();
+		for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
 			if (g_it->get() != this && (*g_it)->isWaitingForCapacity()) {
-				return *g_it;
+				return g_it->get();
 			}
 		}
 	}
-	return GroupPtr();
+	return NULL;
 }
 
 ProcessPtr
