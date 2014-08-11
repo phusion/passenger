@@ -9,6 +9,7 @@ Release 4.0.49
  * Fixed some user and group information lookup issues. Closes GH-1253.
  * Fixed some request handling crashes. Closes GH-1250.
  * Fixed some compilation problems on Gentoo. Closes GH-1261.
+ * Fixed some compilation problems on Solaris. Closes GH-1260.
 
 
 Release 4.0.48

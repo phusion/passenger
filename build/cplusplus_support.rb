@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -87,7 +87,7 @@ def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTR
 	else
 		shlib_flag = "-shared"
 	end
-	if PhusionPassenger::PlatformInfo.cc_is_sun_studio?
+	if PhusionPassenger::PlatformInfo.cxx_is_sun_studio?
 		fPIC = "-KPIC"
 	else
 		fPIC = "-fPIC"
