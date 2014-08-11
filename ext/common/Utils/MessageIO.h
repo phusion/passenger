@@ -118,10 +118,10 @@ using namespace boost;
  * @throws boost::thread_interrupted
  */
 inline bool
-readUint16(int fd, uint16_t &output, unsigned long long *timeout = NULL) {
-	uint16_t temp;
-	
-	if (readExact(fd, &temp, sizeof(uint16_t), timeout) == sizeof(uint16_t)) {
+readUint16(int fd, boost::uint16_t &output, unsigned long long *timeout = NULL) {
+	boost::uint16_t temp;
+
+	if (readExact(fd, &temp, sizeof(boost::uint16_t), timeout) == sizeof(boost::uint16_t)) {
 		output = ntohs(temp);
 		return true;
 	} else {
@@ -145,10 +145,10 @@ readUint16(int fd, uint16_t &output, unsigned long long *timeout = NULL) {
  *                          <tt>timeout</tt> microseconds.
  * @throws boost::thread_interrupted
  */
-inline uint16_t
+inline boost::uint16_t
 readUint16(int fd, unsigned long long *timeout = NULL) {
-	uint16_t temp;
-	
+	boost::uint16_t temp;
+
 	if (readUint16(fd, temp, timeout)) {
 		return temp;
 	} else {
@@ -174,10 +174,10 @@ readUint16(int fd, unsigned long long *timeout = NULL) {
  * @throws boost::thread_interrupted
  */
 inline bool
-readUint32(int fd, uint32_t &output, unsigned long long *timeout = NULL) {
-	uint32_t temp;
-	
-	if (readExact(fd, &temp, sizeof(uint32_t), timeout) == sizeof(uint32_t)) {
+readUint32(int fd, boost::uint32_t &output, unsigned long long *timeout = NULL) {
+	boost::uint32_t temp;
+
+	if (readExact(fd, &temp, sizeof(boost::uint32_t), timeout) == sizeof(boost::uint32_t)) {
 		output = ntohl(temp);
 		return true;
 	} else {
@@ -201,10 +201,10 @@ readUint32(int fd, uint32_t &output, unsigned long long *timeout = NULL) {
  *                          <tt>timeout</tt> microseconds.
  * @throws boost::thread_interrupted
  */
-inline uint32_t
+inline boost::uint32_t
 readUint32(int fd, unsigned long long *timeout = NULL) {
-	uint32_t temp;
-	
+	boost::uint32_t temp;
+
 	if (readUint32(fd, temp, timeout)) {
 		return temp;
 	} else {
@@ -235,17 +235,17 @@ readUint32(int fd, unsigned long long *timeout = NULL) {
 template<typename Collection>
 inline bool
 readArrayMessage(int fd, Collection &output, unsigned long long *timeout = NULL) {
-	uint16_t size;
+	boost::uint16_t size;
 	if (!readUint16(fd, size, timeout)) {
 		return false;
 	}
-	
+
 	scoped_array<char> buffer(new char[size]);
 	MemZeroGuard g(buffer.get(), size);
 	if (readExact(fd, buffer.get(), size, timeout) != size) {
 		return false;
 	}
-	
+
 	output.clear();
 	if (size != 0) {
 		string::size_type start = 0, pos;
@@ -278,7 +278,7 @@ readArrayMessage(int fd, Collection &output, unsigned long long *timeout = NULL)
 inline vector<string>
 readArrayMessage(int fd, unsigned long long *timeout = NULL) {
 	vector<string> output;
-	
+
 	if (readArrayMessage(fd, output, timeout)) {
 		return output;
 	} else {
@@ -309,15 +309,15 @@ readArrayMessage(int fd, unsigned long long *timeout = NULL) {
  */
 inline bool
 readScalarMessage(int fd, string &output, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
-	uint32_t size;
+	boost::uint32_t size;
 	if (!readUint32(fd, size, timeout)) {
 		return false;
 	}
-	
-	if (maxSize != 0 && size > (uint32_t) maxSize) {
+
+	if (maxSize != 0 && size > (boost::uint32_t) maxSize) {
 		throw SecurityException("The scalar message body is larger than the size limit");
 	}
-	
+
 	unsigned int remaining = size;
 	if (OXT_UNLIKELY(!output.empty())) {
 		output.clear();
@@ -326,10 +326,10 @@ readScalarMessage(int fd, string &output, unsigned int maxSize = 0, unsigned lon
 	if (OXT_LIKELY(remaining > 0)) {
 		char buf[1024 * 32];
 		MemZeroGuard g(buf, sizeof(buf));
-		
+
 		while (remaining > 0) {
 			unsigned int blockSize = min((unsigned int) sizeof(buf), remaining);
-			
+
 			if (readExact(fd, buf, blockSize, timeout) != blockSize) {
 				return false;
 			}
@@ -387,9 +387,9 @@ readScalarMessage(int fd, unsigned int maxSize = 0, unsigned long long *timeout 
  * @throws boost::thread_interrupted
  */
 inline void
-writeUint16(int fd, uint16_t value, unsigned long long *timeout = NULL) {
-	uint16_t l = htons(value);
-	writeExact(fd, &l, sizeof(uint16_t), timeout);
+writeUint16(int fd, boost::uint16_t value, unsigned long long *timeout = NULL) {
+	boost::uint16_t l = htons(value);
+	writeExact(fd, &l, sizeof(boost::uint16_t), timeout);
 }
 
 /**
@@ -408,9 +408,9 @@ writeUint16(int fd, uint16_t value, unsigned long long *timeout = NULL) {
  * @throws boost::thread_interrupted
  */
 inline void
-writeUint32(int fd, uint32_t value, unsigned long long *timeout = NULL) {
-	uint32_t l = htonl(value);
-	writeExact(fd, &l, sizeof(uint32_t), timeout);
+writeUint32(int fd, boost::uint32_t value, unsigned long long *timeout = NULL) {
+	boost::uint32_t l = htonl(value);
+	writeExact(fd, &l, sizeof(boost::uint32_t), timeout);
 }
 
 
@@ -436,25 +436,25 @@ template<typename Collection>
 inline void
 writeArrayMessageEx(int fd, const Collection &args, unsigned long long *timeout = NULL) {
 	typename Collection::const_iterator it, end = args.end();
-	uint16_t bodySize = 0;
-	
+	boost::uint16_t bodySize = 0;
+
 	for (it = args.begin(); it != end; it++) {
 		bodySize += it->size() + 1;
 	}
-	
-	scoped_array<char> data(new char[sizeof(uint16_t) + bodySize]);
-	uint16_t header = htons(bodySize);
-	memcpy(data.get(), &header, sizeof(uint16_t));
-	
-	char *dataEnd = data.get() + sizeof(uint16_t);
+
+	scoped_array<char> data(new char[sizeof(boost::uint16_t) + bodySize]);
+	boost::uint16_t header = htons(bodySize);
+	memcpy(data.get(), &header, sizeof(boost::uint16_t));
+
+	char *dataEnd = data.get() + sizeof(boost::uint16_t);
 	for (it = args.begin(); it != end; it++) {
 		memcpy(dataEnd, it->data(), it->size());
 		dataEnd += it->size();
 		*dataEnd = '\0';
 		dataEnd++;
 	}
-	
-	writeExact(fd, data.get(), sizeof(uint16_t) + bodySize, timeout);
+
+	writeExact(fd, data.get(), sizeof(boost::uint16_t) + bodySize, timeout);
 }
 
 inline void
@@ -470,25 +470,25 @@ writeArrayMessage(int fd, const vector<string> &args, unsigned long long *timeou
 inline void
 writeArrayMessage(int fd, const StaticString args[], unsigned int nargs, unsigned long long *timeout = NULL) {
 	unsigned int i;
-	uint16_t bodySize = 0;
-	
+	boost::uint16_t bodySize = 0;
+
 	for (i = 0; i < nargs; i++) {
 		bodySize += args[i].size() + 1;
 	}
-	
-	scoped_array<char> data(new char[sizeof(uint16_t) + bodySize]);
-	uint16_t header = htons(bodySize);
-	memcpy(data.get(), &header, sizeof(uint16_t));
-	
-	char *dataEnd = data.get() + sizeof(uint16_t);
+
+	scoped_array<char> data(new char[sizeof(boost::uint16_t) + bodySize]);
+	boost::uint16_t header = htons(bodySize);
+	memcpy(data.get(), &header, sizeof(boost::uint16_t));
+
+	char *dataEnd = data.get() + sizeof(boost::uint16_t);
 	for (i = 0; i < nargs; i++) {
 		memcpy(dataEnd, args[i].data(), args[i].size());
 		dataEnd += args[i].size();
 		*dataEnd = '\0';
 		dataEnd++;
 	}
-	
-	writeExact(fd, data.get(), sizeof(uint16_t) + bodySize, timeout);
+
+	writeExact(fd, data.get(), sizeof(boost::uint16_t) + bodySize, timeout);
 }
 
 inline void
@@ -496,7 +496,7 @@ writeArrayMessageVA(int fd, const StaticString &name, va_list &ap, unsigned long
 	StaticString args[10];
 	unsigned int nargs = 1;
 	bool done = false;
-	
+
 	args[0] = name;
 	do {
 		const char *arg = va_arg(ap, const char *);
@@ -507,14 +507,14 @@ writeArrayMessageVA(int fd, const StaticString &name, va_list &ap, unsigned long
 			nargs++;
 		}
 	} while (!done && nargs < sizeof(args) / sizeof(StaticString));
-	
+
 	if (done) {
 		writeArrayMessage(fd, args, nargs, timeout);
 	} else {
 		// Arguments don't fit in static array. Use dynamic
 		// array instead.
 		vector<StaticString> dyn_args;
-		
+
 		for (unsigned int i = 0; i < nargs; i++) {
 			dyn_args.push_back(args[i]);
 		}
@@ -526,18 +526,18 @@ writeArrayMessageVA(int fd, const StaticString &name, va_list &ap, unsigned long
 				dyn_args.push_back(arg);
 			}
 		} while (!done);
-		
+
 		writeArrayMessage(fd, dyn_args, timeout);
 	}
 }
 
 struct _VaGuard {
 	va_list &ap;
-	
+
 	_VaGuard(va_list &_ap)
 		: ap(_ap)
 		{ }
-	
+
 	~_VaGuard() {
 		va_end(ap);
 	}
@@ -583,9 +583,9 @@ writeArrayMessage(int fd, unsigned long long *timeout, const char *name, ...) {
  */
 inline void
 writeScalarMessage(int fd, const StaticString &data, unsigned long long *timeout = NULL) {
-	uint32_t header = htonl(data.size());
+	boost::uint32_t header = htonl(data.size());
 	StaticString buffers[2] = {
-		StaticString((const char *) &header, sizeof(uint32_t)),
+		StaticString((const char *) &header, sizeof(boost::uint32_t)),
 		data
 	};
 	gatheredWrite(fd, buffers, 2, timeout);
@@ -646,14 +646,14 @@ readFileDescriptorWithNegotiation(int fd, unsigned long long *timeout = NULL) {
 inline void
 writeFileDescriptorWithNegotiation(int fd, int fdToPass, unsigned long long *timeout = NULL) {
 	vector<string> args;
-	
+
 	args = readArrayMessage(fd, timeout);
 	if (args.size() != 1 || args[0] != "pass IO") {
 		throw IOException("FD passing pre-negotiation message expected");
 	}
-	
+
 	writeFileDescriptor(fd, fdToPass, timeout);
-	
+
 	args = readArrayMessage(fd, timeout);
 	if (args.size() != 1 || args[0] != "got IO") {
 		throw IOException("FD passing post-negotiation message expected.");

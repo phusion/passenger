@@ -74,7 +74,7 @@ using namespace oxt;
 struct ProcessMetrics {
 	pid_t   pid;
 	pid_t   ppid;
-	uint8_t cpu;
+	boost::uint8_t cpu;
 	/** Resident Set Size, amount of memory in RAM. Does not include swap.
 	 * -1 if not yet known, 0 if completely swapped out.
 	 */
@@ -96,7 +96,7 @@ struct ProcessMetrics {
 	pid_t   processGroupId;
 	uid_t   uid;
 	string  command;
-	
+
 	ProcessMetrics() {
 		pid = (pid_t) -1;
 		rss = -1;
@@ -105,11 +105,11 @@ struct ProcessMetrics {
 		swap = -1;
 		vmsize = -1;
 	}
-	
+
 	bool isValid() const {
 		return pid != (pid_t) -1;
 	}
-	
+
 	/**
 	 * Returns an estimate of the "real" memory usage of a process in KB.
 	 * We don't use the PSS here because that would mean if another
@@ -148,33 +148,33 @@ public:
 	size_t totalMemory(ssize_t &shared) const {
 		const_iterator it, end = this->end();
 		bool pssAndPrivateDirtyAvailable = true;
-		
+
 		for (it = begin(); it != end && pssAndPrivateDirtyAvailable; it++) {
 			const ProcessMetrics &metric = it->second;
 			pssAndPrivateDirtyAvailable = pssAndPrivateDirtyAvailable &&
 				metric.pss != -1 && metric.privateDirty != -1;
 		}
-		
+
 		if (pssAndPrivateDirtyAvailable) {
 			size_t total = 0;
 			size_t priv = 0;
-			
+
 			for (it = begin(); it != end; it++) {
 				const ProcessMetrics &metric = it->second;
 				total += metric.pss;
 				priv += metric.privateDirty;
 			}
-			
+
 			shared = total - priv;
 			return total;
 		} else {
 			size_t total = 0;
-			
+
 			for (it = begin(); it != end; it++) {
 				const ProcessMetrics &metric = it->second;
 				total += metric.realMemory();
 			}
-			
+
 			shared = -1;
 			return total;
 		}
@@ -189,7 +189,7 @@ class ProcessMetricsCollector {
 private:
 	bool canMeasureRealMemory;
 	string psOutput;
-	
+
 	template<typename Collection, typename ConstIterator>
 	ProcessMetricMap parsePsOutput(const string &output, const Collection &allowedPids) const {
 		ProcessMetricMap result;
@@ -207,11 +207,11 @@ private:
 				pids.insert(*it);
 			}
 		#endif
-		
+
 		// Parse each line.
 		while (start != NULL) {
 			ProcessMetrics metrics;
-			
+
 			metrics.pid  = (pid_t) readNextWordAsLongLong(&start);
 			metrics.ppid = (pid_t) readNextWordAsLongLong(&start);
 			metrics.cpu  = readNextWordAsInt(&start);
@@ -230,7 +230,7 @@ private:
 
 			if (pidAllowed) {
 				result[metrics.pid] = metrics;
-				
+
 				start = strchr(start, '\n');
 				if (start != NULL) {
 					// Skip to beginning of next line.
@@ -243,7 +243,7 @@ private:
 		}
 		return result;
 	}
-	
+
 public:
 	ProcessMetricsCollector() {
 		#ifdef __APPLE__
@@ -252,12 +252,12 @@ public:
 			canMeasureRealMemory = fileExists("/proc/self/smaps");
 		#endif
 	}
-	
+
 	/** Mock 'ps' output, used by unit tests. */
 	void setPsOutput(const string &data) {
 		this->psOutput = data;
 	}
-	
+
 	/**
 	 * Collect metrics for the given process IDs. Nonexistant PIDs are not
 	 * included in the result.
@@ -273,12 +273,12 @@ public:
 		if (pids.empty()) {
 			return ProcessMetricMap();
 		}
-		
+
 		ConstIterator it;
 		// The list of PIDs must follow -p without a space.
 		// https://groups.google.com/forum/#!topic/phusion-passenger/WKXy61nJBMA
 		string pidsArg = "-p";
-		
+
 		for (it = pids.begin(); it != pids.end(); it++) {
 			pidsArg.append(toString(*it));
 			pidsArg.append(",");
@@ -296,7 +296,7 @@ public:
 		#else
 			fmtArg.append("pid,ppid,%cpu,rss,vsize,pgid,uid,command");
 		#endif
-		
+
 		const char *command[] = {
 			"ps", fmtArg.c_str(),
 			#ifdef PS_SUPPORTS_MULTIPLE_PIDS
@@ -304,7 +304,7 @@ public:
 			#endif
 			NULL
 		};
-		
+
 		string psOutput = this->psOutput;
 		if (psOutput.empty()) {
 			psOutput = runCommandAndCaptureOutput(command);
@@ -323,11 +323,11 @@ public:
 		}
 		return result;
 	}
-	
+
 	ProcessMetricMap collect(const vector<pid_t> &pids) const {
 		return collect< vector<pid_t>, vector<pid_t>::const_iterator >(pids);
 	}
-	
+
 	/**
 	 * Attempt to measure various parts of a process's memory usage that may
 	 * contribute to insight as to what its "real" memory usage might be.
@@ -337,7 +337,7 @@ public:
 	 *   sharing it.
 	 * - The private dirty RSS.
 	 * - Amount of memory in swap.
-	 * 
+	 *
 	 * At this time only OS X and recent Linux versions (>= 2.6.25) support
 	 * measuring the proportional set size. Usually root privileges are required.
 	 *
@@ -349,35 +349,35 @@ public:
 		#ifdef __APPLE__
 			kern_return_t ret;
 			mach_port_t task;
-			
+
 			swap = -1;
-			
+
 			ret = task_for_pid(mach_task_self(), pid, &task);
 			if (ret != KERN_SUCCESS) {
 				pss = -1;
 				privateDirty = -1;
 				return;
 			}
-			
+
 			mach_vm_address_t addr = 0;
 			int pagesize = getpagesize();
-			
+
 			// In bytes.
 			pss = 0;
 			privateDirty = 0;
-			
+
 			while (true) {
 				mach_vm_address_t size;
 				vm_region_top_info_data_t info;
 				mach_msg_type_number_t count = VM_REGION_TOP_INFO_COUNT;
 				mach_port_t object_name;
-				
+
 				ret = mach_vm_region(task, &addr, &size, VM_REGION_TOP_INFO,
 					(vm_region_info_t) &info, &count, &object_name);
 				if (ret != KERN_SUCCESS) {
 					break;
 				}
-				
+
 				if (info.share_mode == SM_PRIVATE) {
 					// shared_pages_resident here means that region
 					// has shared memory only "shared" between 1 process.
@@ -391,12 +391,12 @@ public:
 				} else if (info.share_mode == SM_SHARED) {
 					pss += info.shared_pages_resident * pagesize / info.ref_count;
 				}
-				
+
 				addr += size;
 			}
-			
+
 			mach_port_deallocate(mach_task_self(), task);
-			
+
 			// Convert result back to KB.
 			pss /= 1024;
 			privateDirty /= 1024;
@@ -404,7 +404,7 @@ public:
 			string smapsFilename = "/proc/";
 			smapsFilename.append(toString(pid));
 			smapsFilename.append("/smaps");
-			
+
 			FILE *f = syscalls::fopen(smapsFilename.c_str(), "r");
 			if (f == NULL) {
 				error:
@@ -413,21 +413,21 @@ public:
 				swap = -1;
 				return;
 			}
-			
+
 			StdioGuard guard(f);
 			bool hasPss = false;
 			bool hasPrivateDirty = false;
 			bool hasSwap = false;
-			
+
 			// In KB.
 			pss = 0;
 			privateDirty = 0;
 			swap = 0;
-			
+
 			while (!feof(f)) {
 				char line[1024 * 4];
 				const char *buf;
-				
+
 				buf = fgets(line, sizeof(line), f);
 				if (buf == NULL) {
 					if (ferror(f)) {
@@ -466,7 +466,7 @@ public:
 					goto error;
 				}
 			}
-			
+
 			if (!hasPss) {
 				pss = -1;
 			}

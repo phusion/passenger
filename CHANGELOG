@@ -1,6 +1,7 @@
 Release 4.0.49
 --------------
 
+ * Fixed some compilation problems on Gentoo. Closes GH-1261.
 
 
 Release 4.0.48

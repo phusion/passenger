@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2013 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -25,7 +25,7 @@
 
 /*
    STAGES
-   
+
      Accept connect password
               |
              \|/
@@ -113,6 +113,7 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/regex.hpp>
+#include <boost/cstdint.hpp>
 #include <ev++.h>
 
 #if defined(__GLIBCXX__) || defined(__APPLE__)
@@ -186,21 +187,21 @@ private:
 	static void onClientBodyBufferEnd(const FileBackedPipePtr &source);
 	static void onClientBodyBufferError(const FileBackedPipePtr &source, int errorCode);
 	static void onClientBodyBufferCommit(const FileBackedPipePtr &source);
-	
+
 	static void onClientOutputPipeData(const FileBackedPipePtr &source,
 		const char *data, size_t size,
 		const FileBackedPipe::ConsumeCallback &callback);
 	static void onClientOutputPipeEnd(const FileBackedPipePtr &source);
 	static void onClientOutputPipeError(const FileBackedPipePtr &source, int errorCode);
 	static void onClientOutputPipeCommit(const FileBackedPipePtr &source);
-	
+
 	void onClientOutputWritable(ev::io &io, int revents);
 
 	static size_t onAppInputData(const EventedBufferedInputPtr &source, const StaticString &data);
 	static void onAppInputChunk(const char *data, size_t size, void *userData);
 	static void onAppInputChunkEnd(void *userData);
 	static void onAppInputError(const EventedBufferedInputPtr &source, const char *message, int errnoCode);
-	
+
 	void onAppOutputWritable(ev::io &io, int revents);
 
 	void onTimeout(ev::timer &timer, int revents);
@@ -313,7 +314,7 @@ public:
 	 * socket (e.g. WebSocket data).
 	 *
 	 * Possible values:
-	 * 
+	 *
 	 * -1: infinite. Should keep forwarding client body until end of stream.
 	 *  0: no client body. Should stop after sending headers to application.
 	 * >0: Should forward exactly this many bytes of the client body.
@@ -366,7 +367,7 @@ public:
 		clientInput->onData   = onClientInputData;
 		clientInput->onError  = onClientInputError;
 		clientInput->userData = this;
-		
+
 		clientBodyBuffer = boost::make_shared<FileBackedPipe>("/tmp");
 		clientBodyBuffer->userData  = this;
 		clientBodyBuffer->onData    = onClientBodyBufferData;
@@ -383,12 +384,12 @@ public:
 
 		clientOutputWatcher.set<Client, &Client::onClientOutputWritable>(this);
 
-		
+
 		appInput = boost::make_shared< EventedBufferedInput<> >();
 		appInput->onData   = onAppInputData;
 		appInput->onError  = onAppInputError;
 		appInput->userData = this;
-		
+
 		appOutputWatcher.set<Client, &Client::onAppOutputWritable>(this);
 
 
@@ -398,7 +399,7 @@ public:
 		responseDechunker.onData = onAppInputChunk;
 		responseDechunker.onEnd = onAppInputChunkEnd;
 		responseDechunker.userData = this;
-		
+
 
 		bufferedConnectPassword.data = NULL;
 		bufferedConnectPassword.alreadyRead = 0;
@@ -453,7 +454,7 @@ public:
 		appInput->reset(NULL, FileDescriptor());
 		appOutputBuffer.resize(0);
 		appOutputWatcher.stop();
-		
+
 		timeoutTimer.stop();
 		scgiParser.reset();
 		session.reset();
@@ -873,7 +874,7 @@ private:
 	 * possibly modifies it, and forwards it to
 	 * clientOutputPipe.
 	 *****************************************************/
-	
+
 	struct Header {
 		StaticString key;
 		StaticString value;
@@ -884,7 +885,7 @@ private:
 			: key(_key),
 			  value(_value)
 			{ }
-		
+
 		bool empty() const {
 			return key.empty();
 		}
@@ -915,11 +916,11 @@ private:
 		const char *start = data;
 		const char *end   = data + size;
 		const char *terminator;
-		
+
 		while (start < end && *start == ' ') {
 			start++;
 		}
-		
+
 		terminator = (const char *) memchr(start, '\r', end - start);
 		if (terminator == NULL) {
 			return StaticString();
@@ -1054,7 +1055,7 @@ private:
 		headerData.reserve(origHeaderData.size() + 150);
 		// Strip trailing CRLF.
 		headerData.append(origHeaderData.data(), origHeaderData.size() - 2);
-		
+
 		if (startsWith(headerData, "HTTP/1.")) {
 			Header status = lookupHeader(headerData, "Status", "status");
 			if (status.empty()) {
@@ -1144,7 +1145,7 @@ private:
 			headerData.append("\r\n");
 
 			// Invalidate all cookies with a different route.
-			// 
+			//
 			// TODO: This is not entirely correct. Clients MAY send multiple Cookie
 			// headers, although this is in practice extremely rare.
 			// http://stackoverflow.com/questions/16305814/are-multiple-cookie-headers-allowed-in-an-http-request
@@ -1937,7 +1938,7 @@ private:
 			}
 			options.baseURI = scriptName;
 		}
-		
+
 		options.ruby = this->options.defaultRubyCommand;
 		options.logLevel = getLogLevel();
 		options.loggingAgentAddress = this->options.loggingAgentAddress;
@@ -1969,7 +1970,7 @@ private:
 		fillPoolOption(client, options.raiseInternalError, "PASSENGER_RAISE_INTERNAL_ERROR");
 		setStickySessionId(client);
 		/******************/
-		
+
 		for (it = client->scgiParser.begin(); it != end; it++) {
 			if (!startsWith(it->first, "PASSENGER_")
 			 && !startsWith(it->first, "HTTP_")
@@ -2001,7 +2002,7 @@ private:
 				client->options.analytics = true;
 				client->options.unionStationKey = key;
 			}
-			
+
 			client->beginScopeLog(&client->scopeLogs.requestProcessing, "request processing");
 
 			StaticString staticRequestMethod = parser.getHeader("REQUEST_METHOD");
@@ -2323,7 +2324,7 @@ private:
 
 		RH_WARN(client, "Cannot checkout session (exception type " <<
 			typeName << "): " << e->what());
-		
+
 		string response = "An internal error occurred while trying to spawn the application.\n";
 		response.append("Exception type: ");
 		response.append(typeName);
@@ -2362,7 +2363,7 @@ private:
 			}
 			return;
 		}
-		
+
 		if (client->useUnionStation()) {
 			client->endScopeLog(&client->scopeLogs.getFromPool);
 			client->logMessage("Application PID: " +
@@ -2370,7 +2371,7 @@ private:
 				" (GUPID: " + client->session->getGupid() + ")");
 			client->beginScopeLog(&client->scopeLogs.requestProxying, "request proxying");
 		}
-		
+
 		RH_DEBUG(client, "Session initiated: fd=" << client->session->fd());
 		setNonBlocking(client->session->fd());
 		client->appInput->reset(libev.get(), client->session->fd());
@@ -2398,10 +2399,10 @@ private:
 			disconnectWithError(client,
 				"Application sent EOF before we were able to send headers to it");
 		} else if (client->session->getProtocol() == "session") {
-			char sizeField[sizeof(uint32_t)];
+			char sizeField[sizeof(boost::uint32_t)];
 			SmallVector<StaticString, 10> data;
 
-			data.push_back(StaticString(sizeField, sizeof(uint32_t)));
+			data.push_back(StaticString(sizeField, sizeof(boost::uint32_t)));
 			data.push_back(client->scgiParser.getHeaderData());
 
 			data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
@@ -2412,9 +2413,9 @@ private:
 				data.push_back(makeStaticStringWithNull(client->options.transaction->getTxnId()));
 			}
 
-			uint32_t dataSize = 0;
+			boost::uint32_t dataSize = 0;
 			for (unsigned int i = 1; i < data.size(); i++) {
-				dataSize += (uint32_t) data[i].size();
+				dataSize += (boost::uint32_t) data[i].size();
 			}
 			Uint32Message::generate(sizeField, dataSize);
 

@@ -30,6 +30,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <boost/make_shared.hpp>
+#include <boost/cstdint.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/backtrace.hpp>
 #include <ApplicationPool2/Pool.h>
@@ -838,19 +839,19 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 
 		// This is copied from RequestHandler when it is sending data using the
 		// "session" protocol.
-		char sizeField[sizeof(uint32_t)];
+		char sizeField[sizeof(boost::uint32_t)];
 		SmallVector<StaticString, 10> data;
 
-		data.push_back(StaticString(sizeField, sizeof(uint32_t)));
+		data.push_back(StaticString(sizeField, sizeof(boost::uint32_t)));
 		data.push_back(makeStaticStringWithNull("REQUEST_METHOD"));
 		data.push_back(makeStaticStringWithNull("OOBW"));
 
 		data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
 		data.push_back(makeStaticStringWithNull(process->connectPassword));
 
-		uint32_t dataSize = 0;
+		boost::uint32_t dataSize = 0;
 		for (unsigned int i = 1; i < data.size(); i++) {
-			dataSize += (uint32_t) data[i].size();
+			dataSize += (boost::uint32_t) data[i].size();
 		}
 		Uint32Message::generate(sizeField, dataSize);
 
