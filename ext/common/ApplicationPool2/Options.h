@@ -418,6 +418,13 @@ public:
 	/** The secret key of the pool group that the spawned process is to belong to. */
 	StaticString groupSecret;
 
+	/**
+	 * A UUID that's generated on Group initialization, and changes every time
+	 * the Group receives a restart command. Allows Union Station to track app
+	 * restarts.
+	 */
+	StaticString groupUuid;
+
 
 	/*********************************/
 

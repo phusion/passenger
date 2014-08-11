@@ -492,6 +492,7 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 	: superGroup(_superGroup),
 	  name(_superGroup->name + "#" + info.name),
 	  secret(generateSecret(_superGroup)),
+	  uuid(generateUuid(_superGroup)),
 	  componentInfo(info)
 {
 	enabledCount   = 0;
@@ -1095,6 +1096,7 @@ Group::restart(const Options &options, RestartMethod method) {
 	processesBeingSpawned = 0;
 	m_spawning   = false;
 	m_restarting = true;
+	uuid         = generateUuid(getSuperGroup());
 	detachAll(actions);
 	getPool()->interruptableThreads.create_thread(
 		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
@@ -1375,6 +1377,11 @@ Group::setupAttachOrDetachHook(const ProcessPtr process, HookScriptOptions &opti
 string
 Group::generateSecret(const SuperGroupPtr &superGroup) {
 	return superGroup->getPool()->getRandomGenerator()->generateAsciiString(43);
+}
+
+string
+Group::generateUuid(const SuperGroupPtr &superGroup) {
+	return superGroup->getPool()->getRandomGenerator()->generateAsciiString(20);
 }
 
 

@@ -196,6 +196,7 @@ public:
 	}
 
 	static string generateSecret(const SuperGroupPtr &superGroup);
+	static string generateUuid(const SuperGroupPtr &superGroup);
 	void onSessionInitiateFailure(const ProcessPtr &process, Session *session);
 	void onSessionClose(const ProcessPtr &process, Session *session);
 
@@ -328,6 +329,7 @@ public:
 		options.persist(newOptions);
 		options.clearPerRequestFields();
 		options.groupSecret = secret;
+		options.groupUuid   = uuid;
 	}
 
 	/**
@@ -666,6 +668,11 @@ public:
 	 * intra-group process communication.
 	 */
 	const string secret;
+	/** A UUID that's generated on Group initialization, and changes every time
+	 * the Group receives a restart command. Allows Union Station to track app
+	 * restarts. This information is public.
+	 */
+	string uuid;
 	ComponentInfo componentInfo;
 
 	/**
@@ -1316,6 +1323,7 @@ public:
 		stream << "<app_root>" << escapeForXml(options.appRoot) << "</app_root>";
 		stream << "<app_type>" << escapeForXml(options.appType) << "</app_type>";
 		stream << "<environment>" << escapeForXml(options.environment) << "</environment>";
+		stream << "<uuid>" << toString(uuid) << "</uuid>";
 		stream << "<enabled_process_count>" << enabledCount << "</enabled_process_count>";
 		stream << "<disabling_process_count>" << disablingCount << "</disabling_process_count>";
 		stream << "<disabled_process_count>" << disabledCount << "</disabled_process_count>";
