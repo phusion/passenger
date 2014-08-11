@@ -2302,7 +2302,7 @@ private:
 
 	void writeSpawnExceptionErrorResponse(const ClientPtr &client, const boost::shared_ptr<SpawnException> &e) {
 		RH_ERROR(client, "Cannot checkout session because a spawning error occurred. " <<
-			"The identifier of the error is " << e->get("ERROR_ID") << ". Please see earlier logs for " <<
+			"The identifier of the error is " << e->get("error_id") << ". Please see earlier logs for " <<
 			"details about the error.");
 		writeErrorResponse(client, e->getErrorPage(), e.get());
 	}
