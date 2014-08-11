@@ -57,6 +57,7 @@
 #include <map>
 #include <vector>
 #include <utility>
+#include <algorithm>
 #include <boost/make_shared.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/bind.hpp>
@@ -840,11 +841,9 @@ protected:
 			long bufSize;
 			shared_array<char> strings;
 
-			bufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
-			if (bufSize == -1) {
-				// Let's hope this is enough.
-				bufSize = 1024 * 64;
-			}
+			// _SC_GETPW_R_SIZE_MAX is not a maximum:
+			// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
+			bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
 			strings.reset(new char[bufSize]);
 
 			userInfo = (struct passwd *) NULL;
@@ -877,18 +876,11 @@ protected:
 		shared_array<char> pwdBuf, grpBuf;
 		int ret;
 
-		pwdBufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
-		if (pwdBufSize == -1) {
-			// Let's hope this is enough.
-			pwdBufSize = 1024 * 64;
-		}
+		// _SC_GETPW_R_SIZE_MAX/_SC_GETGR_R_SIZE_MAX are not maximums:
+		// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
+		pwdBufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
 		pwdBuf.reset(new char[pwdBufSize]);
-
-		grpBufSize = sysconf(_SC_GETGR_R_SIZE_MAX);
-		if (grpBufSize == -1) {
-			// Let's hope this is enough.
-			grpBufSize = 1024 * 64;
-		}
+		grpBufSize = std::max<long>(1024 * 128, sysconf(_SC_GETGR_R_SIZE_MAX));
 		grpBuf.reset(new char[grpBufSize]);
 
 		if (options.defaultGroup.empty()) {

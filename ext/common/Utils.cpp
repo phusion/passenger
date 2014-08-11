@@ -27,6 +27,7 @@
 #include <boost/thread.hpp>
 #include <boost/shared_array.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -387,11 +388,9 @@ getProcessUsername() {
 	long bufSize;
 	shared_array<char> strings;
 
-	bufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
-	if (bufSize == -1) {
-		// Let's hope this is enough.
-		bufSize = 1024 * 64;
-	}
+	// _SC_GETPW_R_SIZE_MAX is not a maximum:
+	// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
+	bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
 	strings.reset(new char[bufSize]);
 
 	result = (struct passwd *) NULL;
@@ -414,11 +413,9 @@ getGroupName(gid_t gid) {
 	long bufSize;
 	shared_array<char> strings;
 
-	bufSize = sysconf(_SC_GETGR_R_SIZE_MAX);
-	if (bufSize == -1) {
-		// Let's hope this is enough.
-		bufSize = 1024 * 64;
-	}
+	// _SC_GETGR_R_SIZE_MAX is not a maximum:
+	// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
+	bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETGR_R_SIZE_MAX));
 	strings.reset(new char[bufSize]);
 
 	groupEntry = (struct group *) NULL;
@@ -439,11 +436,9 @@ lookupGid(const string &groupName) {
 	long bufSize;
 	shared_array<char> strings;
 
-	bufSize = sysconf(_SC_GETGR_R_SIZE_MAX);
-	if (bufSize == -1) {
-		// Let's hope this is enough.
-		bufSize = 1024 * 64;
-	}
+	// _SC_GETGR_R_SIZE_MAX is not a maximum:
+	// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
+	bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETGR_R_SIZE_MAX));
 	strings.reset(new char[bufSize]);
 
 	groupEntry = (struct group *) NULL;
