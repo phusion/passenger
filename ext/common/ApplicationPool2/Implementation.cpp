@@ -30,6 +30,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <boost/make_shared.hpp>
+#include <boost/ref.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/backtrace.hpp>
@@ -39,6 +40,7 @@
 #include <ApplicationPool2/PipeWatcher.h>
 #include <ApplicationPool2/ErrorRenderer.h>
 #include <Exceptions.h>
+#include <Hooks.h>
 #include <MessageReadersWriters.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
@@ -283,6 +285,20 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	}
 	stream << "  Message from application: " << appMessage << "\n";
 	P_ERROR(stream.str());
+
+	if (config->agentsOptions != NULL) {
+		HookScriptOptions hOptions;
+		hOptions.name = "spawn_failed";
+		hOptions.spec = config->agentsOptions->get("hook_spawn_failed");
+		hOptions.agentsOptions = config->agentsOptions;
+		hOptions.environment.push_back(make_pair("PASSENGER_APP_ROOT", options.appRoot));
+		hOptions.environment.push_back(make_pair("PASSENGER_APP_GROUP_NAME", options.getAppGroupName()));
+		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_MESSAGE", e.what()));
+		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_ID", errorId));
+		hOptions.environment.push_back(make_pair("PASSENGER_APP_ERROR_MESSAGE", appMessage));
+		oxt::thread(boost::bind(runHookScripts, hOptions),
+			"Hook: spawn_failed", 256 * 1024);
+	}
 }
 
 

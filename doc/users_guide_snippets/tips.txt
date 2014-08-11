@@ -460,7 +460,7 @@ Here are some of the environment variables which are passed to all hooks, unless
 
 ==== Blocking and concurrency
 
-All hooks block in the background. That is, while your hook command is running, Phusion Passenger can still handle web requests, but the background thread which is running your hook will be blocked and won't be able to perform any further operations. For example, if you wrote a hook script for the `attached_process` event, then Phusion Passenger won't be able to attach further processes until your hook script finishes. You should therefore be careful when writing hook scripts.
+Except when otherwise documented, all hooks block in the background. That is, while your hook command is running, Phusion Passenger can still handle web requests, but the background thread which is running your hook will be blocked and won't be able to perform any further operations. For example, if you wrote a hook script for the `attached_process` event, then Phusion Passenger won't be able to attach further processes until your hook script finishes. You should therefore be careful when writing hook scripts.
 
 If you have a bug in your script and it blocks, then you will be able to see that using the command `passenger-status --show=backtraces` which prints the backtraces of all threads in the Phusion Passenger HelperAgent. Look for the `runSingleHookScript` function in the backtrace. The following example shows at line 2 that Phusion Passenger is waiting for the hook script `/home/phusion/badscript.sh`.
 
@@ -499,6 +499,25 @@ Because hooks are inherently tied to the implementation of Phusion Passenger, th
 
 +
 Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Errors in the hook script are ignored.
+
+`spawn_failed` (since 4.0.49)::
+	Called when an application process could not be spawned. This could happen when:
++
+- The application failing to start. For example: bugs in the application, database problems causing the application to crash, incorrectly installed dependencies.
+- Operating system-level problems, such as running out of memory.
+- The application taking too long to start, and hitting Phusion Passenger's timeout.
+
++
+Extra environment variables:
++
+- `PASSENGER_APP_ROOT`: the path to the application that failed to spawn.
+- `PASSENGER_APP_GROUP_NAME`: the configured app group name.
+- `PASSENGER_ERROR_MESSAGE`: an error message that describes the problem.
+- `PASSENGER_ERROR_ID`: a unique ID for this error event. If you search for this ID in the web server error log files, you should be able to find details about the error.
+- `PASSENGER_APP_ERROR_MESSAGE`: output captured from the application at the time the error occurred.
+
++
+This hook does not block because it's always run in an extra background thread. Errors in the hook script are ignored.
 
 `after_initialize_supergroup`::
 	Called right after Phusion Passenger has allocated data structures for an application, and is about to spawn a process for the first time for this application. Errors in the hook script are ignored. Extra environment variables: `PASSENGER_APP_ROOT`.

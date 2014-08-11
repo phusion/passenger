@@ -6,6 +6,14 @@ root = true
 end_of_line = lf
 charset = utf-8
 
+[doc/*.txt]
+indent_style=tab
+indent_size=4
+
+[doc/*/*.txt]
+indent_style=tab
+indent_size=4
+
 [*.cpp]
 indent_style = tab
 indent_size = 4

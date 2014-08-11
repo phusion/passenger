@@ -35,6 +35,7 @@
 #include <UnionStation/Transaction.h>
 #include <ApplicationPool2/Options.h>
 #include <Utils/StringMap.h>
+#include <Utils/VariantMap.h>
 
 namespace tut {
 	struct ApplicationPool2_PoolTest;
@@ -186,8 +187,9 @@ struct Ticket {
 };
 
 struct SpawnerConfig {
-	// Used by error pages.
+	// Used by error pages and hooks.
 	ResourceLocator resourceLocator;
+	const VariantMap *agentsOptions;
 
 	// Used for Union Station logging.
 	UnionStation::CorePtr unionStationCore;
@@ -203,8 +205,10 @@ struct SpawnerConfig {
 
 	SpawnerConfig(const ResourceLocator &_resourceLocator,
 		const UnionStation::CorePtr &_unionStationCore = UnionStation::CorePtr(),
-		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr())
+		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr(),
+		const VariantMap *_agentsOptions = NULL)
 		: resourceLocator(_resourceLocator),
+		  agentsOptions(_agentsOptions),
 		  unionStationCore(_unionStationCore),
 		  concurrency(1),
 		  spawnerCreationSleepTime(0),

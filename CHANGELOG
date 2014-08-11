@@ -1,6 +1,9 @@
 Release 4.0.49
 --------------
 
+ * Introduced the `spawn_failed` hook, which is called when an application
+   process fails to spawn. You could use this hook to setup an error
+   notification system. Closes GH-1252.
  * Fonts, RSS and XML are now gzip-compressed by default in Phusion Passenger
    Standalone. Thanks to Jacob Elder. Closes GH-1254.
  * Fixed some user and group information lookup issues. Closes GH-1253.

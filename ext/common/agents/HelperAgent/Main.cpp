@@ -264,6 +264,7 @@ private:
 	ServerInstanceDir::GenerationPtr generation;
 	UnionStation::CorePtr unionStationCore;
 	RandomGeneratorPtr randomGenerator;
+	SpawnerConfigPtr spawnerConfig;
 	SpawnerFactoryPtr spawnerFactory;
 	PoolPtr pool;
 	ev::sig sigquitWatcher;
@@ -462,9 +463,9 @@ public:
 		UPDATE_TRACE_POINT();
 		unionStationCore = boost::make_shared<UnionStation::Core>(options.loggingAgentAddress,
 			"logging", options.loggingAgentPassword);
-		spawnerFactory = boost::make_shared<SpawnerFactory>(generation,
-			boost::make_shared<SpawnerConfig>(resourceLocator, unionStationCore,
-				randomGenerator));
+		spawnerConfig = boost::make_shared<SpawnerConfig>(resourceLocator, unionStationCore,
+				randomGenerator, &options);
+		spawnerFactory = boost::make_shared<SpawnerFactory>(generation, spawnerConfig);
 		pool = boost::make_shared<Pool>(spawnerFactory, &options);
 		pool->initialize();
 		pool->setMax(options.maxPoolSize);
