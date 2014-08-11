@@ -289,7 +289,7 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	if (config->agentsOptions != NULL) {
 		HookScriptOptions hOptions;
 		hOptions.name = "spawn_failed";
-		hOptions.spec = config->agentsOptions->get("hook_spawn_failed");
+		hOptions.spec = config->agentsOptions->get("hook_spawn_failed", false);
 		hOptions.agentsOptions = config->agentsOptions;
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_ROOT", options.appRoot));
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_GROUP_NAME", options.getAppGroupName()));
