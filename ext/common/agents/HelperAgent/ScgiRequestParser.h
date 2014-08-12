@@ -131,7 +131,7 @@ public:
 		/** The length string contains an invalid character. */
 		INVALID_LENGTH_STRING,
 
-		/** A header terminator character (",") was expected, but some else
+		/** A header terminator character (",") was expected, but something else
 		 * was encountered instead. */
 		HEADER_TERMINATOR_EXPECTED,
 

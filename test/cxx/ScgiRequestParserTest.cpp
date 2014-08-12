@@ -8,7 +8,7 @@ namespace tut {
 	struct ScgiRequestParserTest {
 		ScgiRequestParser parser;
 	};
-	
+
 	DEFINE_TEST_GROUP(ScgiRequestParserTest);
 
 	TEST_METHOD(1) {
@@ -17,9 +17,9 @@ namespace tut {
 		ensure_equals(parser.getState(), ScgiRequestParser::READING_LENGTH_STRING);
 		ensure(parser.getHeaderData().empty());
 	}
-	
+
 	/***** Test parsing a complete SCGI request in a single pass. *****/
-	
+
 	TEST_METHOD(2) {
 		// Parsing a request with a single header and no body.
 		static const char data[] = "12:hello\0world\0,";
@@ -33,7 +33,7 @@ namespace tut {
 			string("hello\0world\0", 12));
 		ensure(parser.getHeader("hello") == "world");
 	}
-	
+
 	TEST_METHOD(3) {
 		// Parsing a request with a single header and a body.
 		static const char data[] = "12:hello\0world\0,data";
@@ -47,7 +47,7 @@ namespace tut {
 			string("hello\0world\0", 12));
 		ensure(parser.getHeader("hello") == "world");
 	}
-	
+
 	TEST_METHOD(4) {
 		// Parsing a request with multiple headers and no body.
 		static const char data[] = "19:hello\0world\0SCGI\0001\0,";
@@ -62,7 +62,7 @@ namespace tut {
 		ensure(parser.getHeader("hello") == "world");
 		ensure(parser.getHeader("SCGI") == "1");
 	}
-	
+
 	TEST_METHOD(5) {
 		// Parsing a request with multiple headers and a body.
 		static const char data[] = "19:hello\0world\0SCGI\0001\0,body";
@@ -77,7 +77,7 @@ namespace tut {
 		ensure(parser.getHeader("hello") == "world");
 		ensure(parser.getHeader("SCGI") == "1");
 	}
-	
+
 	TEST_METHOD(6) {
 		// Parsing a request that's larger than the limit.
 		parser = ScgiRequestParser(9);
@@ -87,9 +87,9 @@ namespace tut {
 		ensure_equals(parser.getErrorReason(),
 			ScgiRequestParser::LIMIT_REACHED);
 	}
-	
+
 	/***** Test parsing a complete SCGI request in multiple passes. *****/
-	
+
 	TEST_METHOD(8) {
 		// Parsing a request with multiple headers and a body.
 		// 1 byte per pass.
@@ -105,7 +105,7 @@ namespace tut {
 		ensure(parser.getHeader("hello") == "world");
 		ensure(parser.getHeader("foo") == "bar");
 	}
-	
+
 	TEST_METHOD(9) {
 		// Parsing a request with multiple headers and a body.
 		// Half element per pass.
@@ -125,7 +125,7 @@ namespace tut {
 		ensure(parser.getHeader("hello") == "world");
 		ensure(parser.getHeader("foo") == "bar");
 	}
-	
+
 	TEST_METHOD(10) {
 		// Parsing a request with multiple headers and a body.
 		// 1 element per pass.
@@ -142,7 +142,7 @@ namespace tut {
 		ensure(parser.getHeader("hello") == "world");
 		ensure(parser.getHeader("foo") == "bar");
 	}
-	
+
 	TEST_METHOD(11) {
 		// Parsing a request with multiple headers and a body.
 		// 2 elements per pass.
@@ -157,7 +157,7 @@ namespace tut {
 		ensure(parser.getHeader("hello") == "world");
 		ensure(parser.getHeader("foo") == "bar");
 	}
-	
+
 	TEST_METHOD(12) {
 		// Parsing a request with multiple headers and a body.
 		// Variable number of elements per pass.
@@ -185,9 +185,9 @@ namespace tut {
 		ensure(parser.getHeader("hello") == "world");
 		ensure(parser.getHeader("foo") == "bar");
 	}
-	
+
 	/***** Test parsing invalid SCGI requests in one pass. *****/
-	
+
 	TEST_METHOD(16) {
 		// Invalid first character for length string.
 		ensure_equals("Parser did not accept anything.",
@@ -195,56 +195,56 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(17) {
 		// Invalid character inside length string.
 		ensure_equals(parser.feed("12x:hello world!", 16), 2u);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(18) {
 		// Invalid character in place of colon.
 		ensure_equals(parser.feed("12#hello world!", 15), 2u);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(19) {
 		// Invalid character in place of comma.
 		ensure_equals(parser.feed("12:hello\0world\0!", 16), 15u);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(20) {
 		// Only a header name, without even a null terminator.
 		ensure_equals(parser.feed("5:hello,", 8), (size_t) 8);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(21) {
 		// Only a header name, with a null terminator.
 		ensure_equals(parser.feed("6:hello\0,", 9), (size_t) 9);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(22) {
 		// A header name with its value not having a null terminator.
 		ensure_equals(parser.feed("7:foo\0bar,", 10), (size_t) 10);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(23) {
 		// A header name without corresponding value.
 		ensure_equals(parser.feed("10:foo\0bar\0a\0,", 14), (size_t) 14);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(24) {
 		// Length string is too large.
 		static const char data[] = "999999999999999999999";
@@ -252,14 +252,14 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(25) {
 		// An empty header name.
 		ensure_equals(parser.feed("5:\0bar\0,", 8), (size_t) 8);
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(26) {
 		// An empty header.
 		ensure_equals(parser.feed("0:,", 3), (size_t) 2);
@@ -273,9 +273,16 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
+	TEST_METHOD(28) {
+		// Empty header names.
+		ensure_equals(parser.feed("2:\0\0,", 5), (size_t) 5);
+		ensure_equals("Parser is in the error state.",
+			parser.getState(), ScgiRequestParser::ERROR);
+	}
+
 	/***** Test parsing invalid SCGI requests in multiple passes. *****/
-	
+
 	TEST_METHOD(30) {
 		// Once the parser has entered the error state, it stays there.
 		ensure_equals(parser.feed("hello world!", 12), 0u);
@@ -283,7 +290,7 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(31) {
 		// Invalid character inside length string.
 		ensure_equals(parser.feed("12", 2), 2u);
@@ -291,7 +298,7 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(32) {
 		// Invalid character in place of colon.
 		ensure_equals(parser.feed("12", 2), 2u);
@@ -299,7 +306,7 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(33) {
 		// Invalid character in place of comma.
 		ensure_equals(parser.feed("12:hello\0world\0", 15), 15u);
@@ -307,7 +314,7 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(34) {
 		// Only a header name, without even a null terminator.
 		ensure_equals(parser.feed("5:hell", 6), (size_t) 6);
@@ -315,7 +322,7 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(35) {
 		// Only a header name, with a null terminator.
 		ensure_equals(parser.feed("6:hello", 7), (size_t) 7);
@@ -323,7 +330,7 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(36) {
 		// A header name with its value not having a null terminator.
 		ensure_equals(parser.feed("7:foo\0ba", 8), (size_t) 8);
@@ -331,7 +338,7 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(37) {
 		// A header name without corresponding value.
 		ensure_equals(parser.feed("10:foo\0bar\0a", 12), (size_t) 12);
@@ -339,7 +346,7 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(38) {
 		// Length string is too large.
 		static const char data[] = "999999999999999999999";
@@ -348,7 +355,7 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	TEST_METHOD(39) {
 		// Parsing a request that's larger than the limit.
 		parser = ScgiRequestParser(9);
@@ -360,7 +367,7 @@ namespace tut {
 		ensure_equals(parser.getErrorReason(),
 			ScgiRequestParser::LIMIT_REACHED);
 	}
-	
+
 	TEST_METHOD(40) {
 		// An empty header name.
 		ensure_equals(parser.feed("5:\0", 3), (size_t) 3);
@@ -368,46 +375,46 @@ namespace tut {
 		ensure_equals("Parser is in the error state.",
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
-	
+
 	/***** Test parsing incomplete SCGI requests. *****/
-	
+
 	TEST_METHOD(45) {
 		// Incomplete length string.
 		ensure_equals(parser.feed("2", 1), 1u);
 		ensure_equals("Parser is still waiting for length string input.",
 			parser.getState(), ScgiRequestParser::READING_LENGTH_STRING);
 	}
-	
+
 	TEST_METHOD(46) {
 		// Incomplete header.
 		ensure_equals(parser.feed("21:", 3), 3u);
 		ensure_equals("Parser is waiting for header data input.",
 			parser.getState(), ScgiRequestParser::READING_HEADER_DATA);
 	}
-	
+
 	TEST_METHOD(47) {
 		// Incomplete header.
 		ensure_equals(parser.feed("20:hel", 6), 6u);
 		ensure_equals("Parser is waiting for header data input.",
 			parser.getState(), ScgiRequestParser::READING_HEADER_DATA);
 	}
-	
+
 	TEST_METHOD(48) {
 		// Complete header but no comma.
 		ensure_equals(parser.feed("8:foo\0bar\0", 10), 10u);
 		ensure_equals("Parser is waiting for comma.",
 			parser.getState(), ScgiRequestParser::EXPECTING_COMMA);
 	}
-	
+
 	TEST_METHOD(49) {
 		// Parsing a request that's smaller than the limit.
 		static const char data[] = "10:";
-		
+
 		parser = ScgiRequestParser(11);
 		parser.feed(data, sizeof(data) - 1);
 		ensure_equals("It accepted the data (9)",
 			parser.getState(), ScgiRequestParser::READING_HEADER_DATA);
-		
+
 		parser = ScgiRequestParser(10);
 		parser.feed(data, sizeof(data) - 1);
 		ensure_equals("It accepted the data (10)",
