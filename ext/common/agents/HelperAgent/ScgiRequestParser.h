@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -55,12 +55,12 @@ using namespace std;
  *    char buf[1024 * 16];
  *    ssize_t size;
  *    unsigned in bytesAccepted;
- *    
+ *
  *    do {
  *        size = read(fd, buf, sizeof(buf));
  *        bytesAccepted = parser.feed(buf, size);
  *    } while (parser.acceptingInput());
- *    
+ *
  *    // Check whether a parse error occured.
  *    if (parser.getState() == ScgiRequestParser::ERROR) {
  *        bailOut();
@@ -68,7 +68,7 @@ using namespace std;
  *        // All good! Do something with the SCGI header that the parser parsed.
  *        processHeader(parser.getHeaderData());
  *        print(parser.getHeader("DOCUMENT_ROOT"));
- *        
+ *
  *        // If the last buffer passed to the parser also contains body data,
  *        // then the body data starts at 'buf + bytesAccepted'.
  *        if (bytesAccepted < size) {
@@ -115,53 +115,53 @@ public:
 		DONE,
 		ERROR
 	};
-	
+
 	enum ErrorReason {
 		NONE,
-		
+
 		/** The header has a length of 0 bytes. */
 		EMPTY_HEADER,
-		
+
 		/** The length string is too large. */
 		LENGTH_STRING_TOO_LARGE,
-		
+
 		/** The header is larger than the maxSize value provided to the constructor. */
 		LIMIT_REACHED,
-		
+
 		/** The length string contains an invalid character. */
 		INVALID_LENGTH_STRING,
-		
+
 		/** A header terminator character (",") was expected, but some else
 		 * was encountered instead. */
 		HEADER_TERMINATOR_EXPECTED,
-		
+
 		/** The header data itself contains errors. */
 		INVALID_HEADER_DATA
 	};
-	
+
 private:
 	State state;
 	ErrorReason errorReason;
 	unsigned int lengthStringBufferSize;
 	size_t headerSize;
 	size_t maxSize;
-	
+
 	StaticString headerData;
 	string headerBuffer;
 	HeaderMap headers;
 	char lengthStringBuffer[sizeof("4294967296")];
-	
+
 	static inline bool isDigit(char byte) {
 		return byte >= '0' && byte <= '9';
 	}
-	
+
 	/**
 	 * Parse the given header data into key-value pairs, returns whether parsing succeeded.
 	 */
 	bool parseHeaderData(const StaticString &data, HeaderMap &output) {
 		const char *current = data.data();
 		const char *end     = data.data() + data.size();
-		
+
 		while (current < end) {
 			const char *keyEnd = (const char *) memchr(current, '\0', end - current);
 			if (OXT_UNLIKELY(
@@ -170,24 +170,24 @@ private:
 			) {
 				return false;
 			}
-			
+
 			StaticString key(current, keyEnd - current);
 			current = keyEnd + 1;
 			if (OXT_UNLIKELY(current >= end)) {
 				return false;
 			}
-			
+
 			const char *valueEnd = (const char *) memchr(current, '\0', end - current);
 			if (OXT_UNLIKELY(valueEnd == NULL)) {
 				return false;
 			}
-			
+
 			output[key] = StaticString(current, valueEnd - current);
 			current = valueEnd + 1;
 		}
 		return true;
 	}
-	
+
 public:
 	/**
 	 * Create a new ScgiRequestParser, ready to parse a request.
@@ -199,7 +199,7 @@ public:
 		this->maxSize = maxSize;
 		reset();
 	}
-	
+
 	void reset() {
 		state = READING_LENGTH_STRING;
 		errorReason = NONE;
@@ -227,7 +227,7 @@ public:
 	 */
 	size_t feed(const char *data, size_t size) {
 		size_t consumed = 0;
-		
+
 		while (acceptingInput() && consumed < size) {
 			switch (state) {
 			case READING_LENGTH_STRING:
@@ -267,7 +267,7 @@ public:
 					}
 				}
 				break;
-				
+
 			case READING_HEADER_DATA: {
 				const char *localData = data + consumed;
 				size_t localSize = std::min(
@@ -289,7 +289,7 @@ public:
 				consumed += localSize;
 				break;
 			}
-			
+
 			case EXPECTING_COMMA:
 				if (data[consumed] == ',') {
 					if (parseHeaderData(headerData, headers)) {
@@ -304,12 +304,12 @@ public:
 					errorReason = HEADER_TERMINATOR_EXPECTED;
 				}
 				break;
-			
+
 			default:
 				abort(); // Never reached.
 			}
 		}
-		
+
 		if (state == EXPECTING_COMMA && headerBuffer.empty()) {
 			/* We got all the header data in a single round, except
 			 * for the closing comma. The static header data isn't
@@ -319,10 +319,10 @@ public:
 			headerBuffer.assign(headerData.c_str(), headerData.size());
 			headerData = headerBuffer;
 		}
-		
+
 		return consumed;
 	}
-	
+
 	/**
 	 * Get the raw header data that has been processed so far.
 	 * Please read the zero-copy notes in the class description for
@@ -336,7 +336,7 @@ public:
 	const_iterator getHeaderIterator(const StaticString &name) const {
 		return headers.find(name);
 	}
-	
+
 	/**
 	 * Get the value of the header with the given name.
 	 * Lookup is case-sensitive.
@@ -356,7 +356,7 @@ public:
 			return it->second;
 		}
 	}
-	
+
 	/**
 	 * Checks whether there is a header with the given name.
 	 * Lookup is case-sensitive.
@@ -370,7 +370,7 @@ public:
 	HeaderMap &getMap() {
 		return headers;
 	}
-	
+
 	unsigned int size() const {
 		return headers.size();
 	}
@@ -382,14 +382,14 @@ public:
 	const_iterator end() const {
 		return headers.end();
 	}
-	
+
 	/**
 	 * Get the parser's current state.
 	 */
 	State getState() const {
 		return state;
 	}
-	
+
 	/**
 	 * Returns the reason why the parser entered the error state.
 	 *
@@ -398,7 +398,7 @@ public:
 	ErrorReason getErrorReason() const {
 		return errorReason;
 	}
-	
+
 	/**
 	 * Checks whether this parser is still capable of accepting input (that
 	 * is, that this parser is not in a final/error state).
