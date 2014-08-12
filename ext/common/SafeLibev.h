@@ -29,7 +29,6 @@
 #include <vector>
 #include <list>
 #include <memory>
-#include <climits>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
@@ -46,15 +45,19 @@ using namespace boost;
  */
 class SafeLibev {
 private:
+	static const int MAX_COMMAND_ID = 268435455;
+
 	typedef boost::function<void ()> Callback;
 
 	struct Command {
-		int id;
 		Callback callback;
+		unsigned int id: 31;
+		bool canceled: 1;
 
 		Command(unsigned int _id, const Callback &_callback)
-			: id(_id),
-			  callback(_callback)
+			: callback(_callback),
+			  id(_id),
+			  canceled(false)
 			{ }
 	};
 
@@ -85,7 +88,9 @@ private:
 
 		vector<Command>::const_iterator it, end = commands.end();
 		for (it = commands.begin(); it != end; it++) {
-			it->callback();
+			if (!it->canceled) {
+				it->callback();
+			}
 		}
 	}
 
@@ -114,7 +119,7 @@ private:
 	}
 
 	void incNextCommandId() {
-		if (nextCommandId == INT_MAX) {
+		if (nextCommandId == MAX_COMMAND_ID) {
 			nextCommandId = 1;
 		} else {
 			nextCommandId++;
@@ -251,7 +256,7 @@ public:
 	 * in the future, while a return value of false means that the callback has already
 	 * been called or is currently being called.
 	 */
-	bool cancelCommand(int id) {
+	bool cancelCommand(unsigned int id) {
 		if (id == 0) {
 			return false;
 		}
@@ -262,7 +267,7 @@ public:
 		vector<Command>::iterator it, end = commands.end();
 		for (it = commands.begin(); it != end; it++) {
 			if (it->id == id) {
-				commands.erase(it);
+				it->canceled = true;
 				return true;
 			}
 		}
