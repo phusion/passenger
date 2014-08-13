@@ -203,7 +203,7 @@ public
 	memoize :cc_is_sun_studio?
 
 	def self.cxx_is_sun_studio?
-		`#{cxx} -V 2>&1` =~ /Sun C/ || `#{cc} -flags 2>&1` =~ /Sun C/
+		`#{cxx} -V 2>&1` =~ /Sun C/ || `#{cxx} -flags 2>&1` =~ /Sun C/
 	end
 	memoize :cxx_is_sun_studio?
 

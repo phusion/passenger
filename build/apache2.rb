@@ -63,7 +63,7 @@ APACHE2_MODULE_CFLAGS =
 	"#{EXTRA_CFLAGS}"
 APACHE2_MODULE_CXXFLAGS =
 	"#{EXTRA_PRE_CXXFLAGS} " <<
-	"-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
+	"-Iext -Iext/common #{PlatformInfo.apache2_module_cxxflags} " <<
 	"#{EXTRA_CXXFLAGS}"
 
 APACHE2_MODULE_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
@@ -132,7 +132,7 @@ file APACHE2_MODULE => dependencies do
 		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
 		"#{APACHE2_MODULE_COMMON_LIBRARIES.join(' ')} " <<
 		"#{APACHE2_MODULE_BOOST_OXT_LIBRARY} " <<
-		"#{PlatformInfo.apache2_module_ldflags} " <<
+		"#{PlatformInfo.apache2_module_cxx_ldflags} " <<
 		"#{PlatformInfo.portability_cxx_ldflags} " <<
 		"#{EXTRA_CXX_LDFLAGS} "
 

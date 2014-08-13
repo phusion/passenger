@@ -512,12 +512,22 @@ module PlatformInfo
 
 
 	################ Compiler and linker flags ################
-	
+
+	def self.apache2_module_cflags(with_apr_flags = true)
+		return apache2_module_c_or_cxxflags(:c, with_apr_flags)
+	end
+	memoize :apache2_module_cflags, true
+
+	def self.apache2_module_cxxflags(with_apr_flags = true)
+		return apache2_module_c_or_cxxflags(:cxx, with_apr_flags)
+	end
+	memoize :apache2_module_cxxflags, true
+
 	# The C compiler flags that are necessary to compile an Apache module.
 	# Also includes APR and APU compiler flags if with_apr_flags is true.
-	def self.apache2_module_cflags(with_apr_flags = true)
+	def self.apache2_module_c_or_cxxflags(language, with_apr_flags = true)
 		flags = [""]
-		if cc_is_sun_studio?
+		if (language == :c && cc_is_sun_studio?) || (language == :cxx && cxx_is_sun_studio?)
 			flags << "-KPIC"
 		else
 			flags << "-fPIC"
@@ -598,17 +608,21 @@ module PlatformInfo
 		end
 		return flags.compact.join(' ').strip
 	end
-	memoize :apache2_module_cflags, true
-	
+
 	# Linker flags that are necessary for linking an Apache module.
 	# Already includes APR and APU linker flags.
-	def self.apache2_module_ldflags
-		flags = "-fPIC #{apr_libs} #{apu_libs}"
+	def self.apache2_module_cxx_ldflags
+		if cxx_is_sun_studio?
+			flags = "-KPIC"
+		else
+			flags = "-fPIC"
+		end
+		flags << " #{apr_libs} #{apu_libs}"
 		flags.strip!
 		return flags
 	end
-	memoize :apache2_module_ldflags
-	
+	memoize :apache2_module_cxx_ldflags
+
 	# The C compiler flags that are necessary for programs that use APR.
 	def self.apr_flags
 		return determine_apr_info[0]
