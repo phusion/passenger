@@ -50,8 +50,7 @@
 
 #include <ev++.h>
 
-#include <agents/HelperAgent/RequestHandler.h>
-#include <agents/HelperAgent/RequestHandler.cpp>
+#include <agents/HelperAgent/RequestHandler2.h>
 #include <agents/HelperAgent/AgentOptions.h>
 #include <agents/HelperAgent/SystemMetricsTool.cpp>
 
@@ -243,6 +242,10 @@ public:
 	}
 };
 
+static struct ev_loop *eioLoop;
+static ev_idle eioRepeatWatcher;
+static ev_async eioReadyWatcher;
+
 /**
  * A representation of the Server responsible for handling Client instances.
  *
@@ -271,11 +274,33 @@ private:
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
 	ResourceLocator resourceLocator;
+	ServerKit::Context *context;
 	boost::shared_ptr<RequestHandler> requestHandler;
 	boost::shared_ptr<oxt::thread> prestarterThread;
 	boost::shared_ptr<oxt::thread> messageServerThread;
 	boost::shared_ptr<oxt::thread> eventLoopThread;
 	EventFd exitEvent;
+
+	static void
+	eioRepeat(EV_P_ ev_idle *w, int revents) {
+		if (eio_poll() != -1) {
+			ev_idle_stop(EV_A_ w);
+		}
+	}
+
+	/* eio has some results, process them */
+	static void
+	eioReady(EV_P_ ev_async *w, int revents) {
+		if (eio_poll() == -1) {
+	 		ev_idle_start(EV_A_ &eioRepeatWatcher);
+	 	}
+	}
+
+	/* wake up the event loop */
+	static void
+	eioWantPoll() {
+		ev_async_send(eioLoop, &eioReadyWatcher);
+	}
 
 	/**
 	 * Starts listening for client connections on this server's request socket.
@@ -471,11 +496,23 @@ public:
 		pool->setMax(options.maxPoolSize);
 		pool->setMaxIdleTime(options.poolIdleTime * 1000000);
 
-		requestHandler = boost::make_shared<RequestHandler>(requestLoop.safe,
-			requestSocket, pool, options);
+		context = new ServerKit::Context(requestLoop.safe);
+
+		requestHandler = boost::make_shared<RequestHandler>(context,
+			pool, options);
+		requestHandler->createSpareClients();
+		// TODOs
+		//requestHandler->listen(requestSocket);
+		requestHandler->listen(createTcpServer("127.0.0.1", 3000));
 
 		messageServer->addHandler(boost::make_shared<RemoteController>(requestHandler, pool));
 		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
+
+		eioLoop = requestLoop.loop;
+		ev_idle_init(&eioRepeatWatcher, eioRepeat);
+		ev_async_init(&eioReadyWatcher, eioReady);
+		ev_async_start(requestLoop.loop, &eioReadyWatcher);
+		eio_init(eioWantPoll, 0);
 
 		sigquitWatcher.set(requestLoop.loop);
 		sigquitWatcher.set(SIGQUIT);
@@ -565,7 +602,8 @@ public:
 		int largestFd;
 
 		FD_ZERO(&fds);
-		FD_SET(feedbackFd, &fds);
+		// TODO:
+		//FD_SET(feedbackFd, &fds);
 		FD_SET(exitEvent.fd(), &fds);
 		largestFd = (feedbackFd > exitEvent.fd()) ? (int) feedbackFd : exitEvent.fd();
 		UPDATE_TRACE_POINT();
@@ -598,10 +636,11 @@ public:
 			P_DEBUG("Received command to exit gracefully. "
 				"Waiting until 5 seconds after all clients have disconnected...");
 			pool->prepareForShutdown();
-			requestHandler->resetInactivityTime();
+			// TODO
+			/* requestHandler->resetInactivityTime();
 			while (requestHandler->inactivityTime() < 5000) {
 				syscalls::usleep(250000);
-			}
+			} */
 			P_DEBUG("It's now 5 seconds after all clients have disconnected. "
 				"Proceeding with graceful exit.");
 		}
@@ -641,7 +680,6 @@ main(int argc, char *argv[]) {
 	}
 
 	P_DEBUG("Starting PassengerHelperAgent...");
-	MultiLibeio::init();
 
 	try {
 		UPDATE_TRACE_POINT();
@@ -656,7 +694,6 @@ main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	MultiLibeio::shutdown();
 	P_TRACE(2, "Helper agent exiting with code 0.");
 	return 0;
 }
