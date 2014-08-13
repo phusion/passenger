@@ -34,7 +34,7 @@ module RakeExtensions
 #        sh 'gcc foo.c -shared -fPIC -o libfoo.so'
 #     end
 #  end
-#  
+#
 #  subdir 'bar' do
 #     file 'bar' => ['bar.c', '../foo/libfoo.so'] do
 #         sh 'gcc bar.c -o bar -L../foo -lfoo'
@@ -48,7 +48,7 @@ module RakeExtensions
 #        sh 'gcc foo.c -shared -fPIC -o libfoo.so'
 #     end
 #  end
-#  
+#
 #  file 'bar/bar' => ['bar/bar.c', 'foo/libfoo.so'] do
 #      Dir.chdir('bar') do
 #         sh 'gcc bar.c -o bar -L../foo -lfoo'
@@ -62,11 +62,11 @@ module RakeExtensions
 #
 #  subdir 'foo' do
 #     task 'super_app' => ['super_app:compile', 'super_app:unit_test']
-#  
+#
 #     task 'super_app:compile' do
 #        ...
 #     end
-#  
+#
 #     task 'super_app:unit_test' do
 #        ...
 #     end
@@ -77,11 +77,11 @@ module RakeExtensions
 #  subdir 'foo' do
 #     # !!!!!!!
 #     task 'super_app' => ['foo/super_app:compile', 'foo/super_app:unit_test']
-#  
+#
 #     task 'super_app:compile' do
 #        ...
 #     end
-#  
+#
 #     task 'super_app:unit_test' do
 #        ...
 #     end
@@ -108,12 +108,12 @@ class Subdir # :nodoc:
 	# aren't available in Object anymore.
 	# See: https://github.com/jimweirich/rake/issues/33#issuecomment-1213705
 	include Rake::DSL if defined?(Rake::DSL)
-	
+
 	def initialize(dir)
 		@dir = dir
 		@toplevel_dir = Pathname.getwd
 	end
-	
+
 	def file(args, &block)
 		case args
 		when String
@@ -131,7 +131,7 @@ class Subdir # :nodoc:
 			puts ""
 		end
 	end
-	
+
 	def task(*args, &block)
 		if !args.empty? && args[0].is_a?(Hash)
 			target = args[0].keys[0]
@@ -156,7 +156,7 @@ private
 		path = File.expand_path(path)
 		return Pathname.new(path).relative_path_from(@toplevel_dir).to_s
 	end
-	
+
 	def mangle_path_array(array)
 		array = array.dup
 		array.each_with_index do |item, i|
@@ -166,7 +166,7 @@ private
 		end
 		return array
 	end
-	
+
 	def mangle_path_or_path_array(item)
 		case item
 		when String

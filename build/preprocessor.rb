@@ -24,7 +24,7 @@
 
 # Implements a simple preprocessor language which combines elements in the C
 # preprocessor with ERB:
-# 
+#
 #     Today
 #     #if @today == :fine
 #         is a fine day.
@@ -35,20 +35,20 @@
 #     #endif
 #     Let's go walking.
 #     Today is <%= Time.now %>.
-# 
+#
 # When run with...
-# 
+#
 #     Preprocessor.new.start('input.txt', 'output.txt', :today => :fine)
-# 
+#
 # ...will produce:
-# 
+#
 #     Today
 #     is a fine day.
 #     Let's go walking.
 #     Today is 2013-08-11 22:37:06 +0200.
-# 
+#
 # Highlights:
-# 
+#
 #  * #if blocks can be nested.
 #  * Expressions are Ruby expressions, evaluated within the binding of a
 #    Preprocessor::Evaluator object.
@@ -228,7 +228,7 @@ private
 				return false if table1 != table2
 				v1 = table1[@distribution]
 				v2 = table2[name]
-				
+
 				case comparator
 				when ">"
 					return v1 > v2
@@ -259,7 +259,7 @@ private
 			yield line.chomp
 		end
 	end
-	
+
 	def recognize_command(line)
 		if line =~ /^([\s\t]*)#(.+)/
 			indentation_str = $1
@@ -309,7 +309,7 @@ private
 		# Declare tabs as equivalent to 4 spaces. This is necessary for
 		# Makefiles in which the use of tabs is required.
 		found = $1.to_s.gsub("\t", "    ").size
-		
+
 		if found >= @indentation
 			# Tab-friendly way to remove indentation.
 			remaining = @indentation

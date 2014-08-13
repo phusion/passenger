@@ -42,7 +42,7 @@ module PhusionPassenger
 
 module PlatformInfo
 	################ Programs ################
-	
+
 	# The absolute path to the 'apxs' or 'apxs2' executable, or nil if not found.
 	def self.apxs2
 		if env_defined?("APXS2")
@@ -57,14 +57,14 @@ module PlatformInfo
 		return nil
 	end
 	memoize :apxs2
-	
+
 	# The absolute path to the 'apachectl' or 'apache2ctl' binary, or nil if
 	# not found.
 	def self.apache2ctl(options = {})
 		return find_apache2_executable('apache2ctl', 'apachectl2', 'apachectl', options)
 	end
 	memoize :apache2ctl
-	
+
 	# The absolute path to the Apache binary (that is, 'httpd', 'httpd2', 'apache'
 	# or 'apache2'), or nil if not found.
 	def self.httpd(options = {})
@@ -190,7 +190,7 @@ module PlatformInfo
 	memoize :httpd_default_config_file
 
 	# Given an Apache config file, returns the a hash with the following elements:
-	# 
+	#
 	#  * `:files` - An array containing `config_file`, as well as all config files
 	#               included from that config file, including recursively included
 	#               ones. Only filenames that actually exist are put here.
@@ -212,7 +212,7 @@ module PlatformInfo
 	# The default Apache error log's filename, as it is compiled into the Apache
 	# main executable. This may not be the actual error log that is used. The actual
 	# error log depends on the configuration file.
-	# 
+	#
 	# Returns nil if Apache is not detected, or if the default error log filename
 	# cannot be detected.
 	def self.httpd_default_error_log(options = nil)
@@ -285,7 +285,7 @@ module PlatformInfo
 		else
 			httpd = self.httpd
 		end
-		
+
 		httpd_dir = File.dirname(httpd)
 		if httpd_dir == "/usr/bin" || httpd_dir == "/usr/sbin"
 			if File.exist?("/etc/apache2/envvars")
@@ -294,7 +294,7 @@ module PlatformInfo
 				return "/etc/httpd/envvars"
 			end
 		end
-		
+
 		conf_dir = File.expand_path(File.dirname(httpd) + "/../conf")
 		if File.exist?("#{conf_dir}/envvars")
 			return "#{conf_dir}/envvars"
@@ -397,7 +397,7 @@ module PlatformInfo
 		end
 	end
 	memoize :a2dismod
-	
+
 	# The absolute path to the 'apr-config' or 'apr-1-config' executable,
 	# or nil if not found.
 	def self.apr_config
@@ -423,7 +423,7 @@ module PlatformInfo
 		end
 	end
 	memoize :apr_config
-	
+
 	# The absolute path to the 'apu-config' or 'apu-1-config' executable, or nil
 	# if not found.
 	def self.apu_config
@@ -484,10 +484,10 @@ module PlatformInfo
 		end
 		return nil
 	end
-	
-	
+
+
 	################ Directories ################
-	
+
 	# The absolute path to the Apache 2 'bin' directory, or nil if unknown.
 	def self.apache2_bindir(options = {})
 		apxs2 = options[:apxs2] || self.apxs2
@@ -498,7 +498,7 @@ module PlatformInfo
 		end
 	end
 	memoize :apache2_bindir
-	
+
 	# The absolute path to the Apache 2 'sbin' directory, or nil if unknown.
 	def self.apache2_sbindir(options = {})
 		apxs2 = options[:apxs2] || self.apxs2
@@ -509,8 +509,8 @@ module PlatformInfo
 		end
 	end
 	memoize :apache2_sbindir
-	
-	
+
+
 	################ Compiler and linker flags ################
 	
 	# The C compiler flags that are necessary to compile an Apache module.
@@ -551,7 +551,7 @@ module PlatformInfo
 				# is 64-bit. Fix this.
 				apxs2_flags.gsub!('-m32 -march=i386 -mtune=generic', '')
 			end
-			
+
 			apxs2_flags.strip!
 			flags << apxs2_flags
 		end
@@ -613,25 +613,25 @@ module PlatformInfo
 	def self.apr_flags
 		return determine_apr_info[0]
 	end
-	
+
 	# The linker flags that are necessary for linking programs that use APR.
 	def self.apr_libs
 		return determine_apr_info[1]
 	end
-	
+
 	# The C compiler flags that are necessary for programs that use APR-Util.
 	def self.apu_flags
 		return determine_apu_info[0]
 	end
-	
+
 	# The linker flags that are necessary for linking programs that use APR-Util.
 	def self.apu_libs
 		return determine_apu_info[1]
 	end
-	
+
 	################ Miscellaneous information ################
-	
-	
+
+
 	# Returns whether it is necessary to use information outputted by
 	# 'apr-config' and 'apu-config' in order to compile an Apache module.
 	# When Apache is installed with --with-included-apr, the APR/APU

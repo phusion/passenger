@@ -47,7 +47,7 @@ Packaging::ASCII_DOCS.each do |target|
 		end
 		sh(command)
 	end
-	
+
 	task :clean do
 		if boolean_option('CLEAN_DOCS', true)
 			sh "rm -f '#{target}'"

@@ -145,7 +145,7 @@ public
 		return string_env('CC', default_cc)
 	end
 	memoize :cc
-	
+
 	def self.cxx
 		return string_env('CXX', default_cxx)
 	end
@@ -271,7 +271,7 @@ public
 			return result && result[:result] && result[:output] !~ /unknown warning option/i
 		end
 	end
-	
+
 	def self.try_link(description, language, source, flags = nil)
 		extension = detect_language_extension(language)
 		create_temp_file("passenger-link-check.#{extension}") do |filename, f|
@@ -283,7 +283,7 @@ public
 			return run_compiler(description, command, filename, source)
 		end
 	end
-	
+
 	def self.try_compile_and_run(description, language, source, flags = nil)
 		extension = detect_language_extension(language)
 		create_temp_file("passenger-run-check.#{extension}", tmpexedir) do |filename, f|
@@ -315,7 +315,7 @@ public
 		return try_compile("Checking for C compiler '-arch' support",
 			:c, '', "-arch #{arch}")
 	end
-	
+
 	def self.cc_supports_visibility_flag?
 		return false if os_name =~ /aix/
 		return try_compile("Checking for C compiler '-fvisibility' support",
@@ -329,7 +329,7 @@ public
 			:cxx, '', '-fvisibility=hidden')
 	end
 	memoize :cxx_supports_visibility_flag?, true
-	
+
 	def self.cc_supports_wno_attributes_flag?
 		return try_compile_with_warning_flag(
 			"Checking for C compiler '-Wno-attributes' support",
@@ -442,7 +442,7 @@ public
 		end
 	end
 	memoize :cxx_visibility_flag_generates_warnings?, true
-	
+
 	def self.adress_sanitizer_flag
 		if cc_is_clang?
 			if `#{cc} --help` =~ /-fsanitize=/
@@ -487,7 +487,7 @@ public
 			:c, "int main() { return 0; }\n", '-lmath')
 	end
 	memoize :has_math_library?, true
-	
+
 	def self.has_alloca_h?
 		return try_compile("Checking for alloca.h",
 			:c, '#include <alloca.h>')
@@ -502,7 +502,7 @@ public
 		})
 	end
 	memoize :has_accept4?, true
-	
+
 	# C compiler flags that should be passed in order to enable debugging information.
 	def self.debugging_cflags
 		# According to OpenBSD's pthreads man page, pthreads do not work
@@ -549,7 +549,7 @@ public
 		end
 	end
 	memoize :electric_fence_ldflags
-	
+
 	def self.export_dynamic_flags
 		if os_name == "linux"
 			return '-rdynamic'
@@ -586,7 +586,7 @@ public
 		end
 	end
 	memoize :gnu_make, true
-	
+
 	def self.xcode_select_version
 		if find_command('xcode-select')
 			`xcode-select --version` =~ /version (.+)\./
