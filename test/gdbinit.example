@@ -6,6 +6,9 @@
 handle SIGUSR1 noprint pass
 handle SIGPIPE noprint pass
 
+# Use Intel syntax for disassembles.
+set disassembly-flavor intel
+
 # Convenience command.
 define rake
 	shell rake $arg0
