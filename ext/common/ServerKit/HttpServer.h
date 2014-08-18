@@ -160,9 +160,7 @@ private:
 		if (freeRequestCount < requestFreelistLimit) {
 			STAILQ_INSERT_HEAD(&freeRequests, request, nextRequest.freeRequest);
 			freeRequestCount++;
-			int prevref = request->refcount.fetch_add(1, boost::memory_order_relaxed);
-			assert(prevref == 0);
-			(void) prevref;
+			request->refcount.store(1, boost::memory_order_relaxed);
 			request->httpState = Request::IN_FREELIST;
 			return true;
 		} else {

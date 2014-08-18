@@ -30,6 +30,7 @@
 #include <boost/cstdint.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
+#include <oxt/macros.hpp>
 #include <vector>
 #include <new>
 #include <ev++.h>
@@ -91,7 +92,7 @@ using namespace oxt;
 	} while (0)
 #define SKC_DEBUG_FROM_STATIC(server, client, expr) \
 	do { \
-		if (Passenger::_logLevel >= LVL_DEBUG) { \
+		if (OXT_UNLIKELY(Passenger::_logLevel >= LVL_DEBUG)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_DEBUG("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
@@ -99,7 +100,7 @@ using namespace oxt;
 	} while (0)
 #define SKC_TRACE_FROM_STATIC(server, client, level, expr) \
 	do { \
-		if (Passenger::_logLevel >= level) { \
+		if (OXT_UNLIKELY(Passenger::_logLevel >= level)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_TRACE(level, "[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
@@ -376,9 +377,7 @@ private:
 		if (freeClientCount < freelistLimit) {
 			STAILQ_INSERT_HEAD(&freeClients, client, nextClient.freeClient);
 			freeClientCount++;
-			int prevref = client->refcount.fetch_add(2, boost::memory_order_relaxed);
-			assert(prevref == 0);
-			(void) prevref;
+			client->refcount.store(2, boost::memory_order_relaxed);
 			client->setConnState(Client::IN_FREELIST);
 			return true;
 		} else {
@@ -405,13 +404,13 @@ private:
 	}
 
 	void logClientDataReceived(Client *client, const MemoryKit::mbuf &buffer, int errcode) {
-		if (errcode != 0) {
-			SKC_TRACE(client, 2, "Error reading from client socket: " <<
-				strerror(errcode) << " (errno=" << errcode << ")");
+		if (errcode == 0 && buffer.empty()) {
+			SKC_TRACE(client, 3, "Processing " << buffer.size() << " bytes of client data");
 		} else if (buffer.empty()) {
 			SKC_TRACE(client, 2, "Client sent EOF");
 		} else {
-			SKC_TRACE(client, 3, "Processing " << buffer.size() << " bytes of client data");
+			SKC_TRACE(client, 2, "Error reading from client socket: " <<
+				strerror(errcode) << " (errno=" << errcode << ")");
 		}
 	}
 
@@ -724,6 +723,7 @@ public:
 
 	/***** Introspection *****/
 
+	OXT_FORCE_INLINE
 	Context *getContext() {
 		return ctx;
 	}

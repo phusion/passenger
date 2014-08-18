@@ -145,10 +145,12 @@ public:
 		return watcher.fd;
 	}
 
+	OXT_FORCE_INLINE
 	bool ended() const {
 		return FileBufferedChannel::ended();
 	}
 
+	OXT_FORCE_INLINE
 	bool endAcked() const {
 		return FileBufferedChannel::endAcked();
 	}
