@@ -129,6 +129,9 @@ private
 				if options[:optimize]
 					optimize = "-O2"
 				end
+				if options[:strict_aliasing] == false
+					optimize = "#{optimize} -fno-strict-aliasing"
+				end
 				ensure_directory_exists(File.dirname(object_file))
 				if source_file =~ /\.c$/
 					compile_c(source_file, "#{optimize} #{cflags} -o #{object_file}".strip)
@@ -474,6 +477,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:source   => 'Utils/Hasher.cpp',
 		:category => :other,
 		:optimize => true,
+		:strict_aliasing => false,
 		:deps     => %w(
 			Utils/Hasher.h
 		)
