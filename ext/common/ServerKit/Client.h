@@ -28,6 +28,7 @@
 #include <Utils/sysqueue.h>
 #include <boost/atomic.hpp>
 #include <boost/cstdint.hpp>
+#include <ServerKit/Hooks.h>
 #include <ServerKit/FdInputChannel.h>
 #include <ServerKit/FileBufferedFdOutputChannel.h>
 

@@ -45,6 +45,7 @@
 #include <Logging.h>
 #include <SafeLibev.h>
 #include <ServerKit/Context.h>
+#include <ServerKit/Hooks.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/ClientRef.h>
 #include <Utils.h>

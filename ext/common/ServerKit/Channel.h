@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <cassert>
 #include <ServerKit/Context.h>
+#include <ServerKit/Hooks.h>
 #include <MemoryKit/mbuf.h>
 #include <Logging.h>
 #include <Utils/StrIntUtils.h>

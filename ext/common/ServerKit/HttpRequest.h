@@ -29,6 +29,7 @@
 #include <boost/cstdint.hpp>
 #include <boost/atomic.hpp>
 #include <ServerKit/http_parser.h>
+#include <ServerKit/Hooks.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/HeaderTable.h>
 #include <ServerKit/FileBufferedChannel.h>
