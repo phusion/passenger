@@ -41,7 +41,8 @@ using namespace oxt;
 
 class FdChannel: protected Channel {
 public:
-	typedef int (*Callback)(FdChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
+	typedef int (*DataCallback)(FdChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
+	typedef int (*Callback)(FdChannel *channel);
 
 private:
 	ev_io watcher;
@@ -94,13 +95,6 @@ private:
 		}
 	}
 
-	static int onChannelCallback(Channel *source, const MemoryKit::mbuf &buffer,
-		int errcode)
-	{
-		FdChannel *self = static_cast<FdChannel *>(source);
-		return self->callback(self, buffer, errcode);
-	}
-
 	static void onChannelIdle(Channel *source) {
 		FdChannel *self = static_cast<FdChannel *>(source);
 		ev_io_start(self->ctx->libev->getLoop(), &self->watcher);
@@ -108,25 +102,20 @@ private:
 	}
 
 	void initialize() {
-		Channel::callback = onChannelCallback;
 		burstReadCount = 1;
 		watcher.fd = -1;
 		watcher.data = this;
 	}
 
 public:
-	Callback callback;
 	unsigned int burstReadCount;
 
-	FdChannel()
-		: callback(NULL)
-	{
+	FdChannel() {
 		initialize();
 	}
 
 	FdChannel(Context *context)
-		: Channel(context),
-		  callback(NULL)
+		: Channel(context)
 	{
 		initialize();
 	}
@@ -156,6 +145,11 @@ public:
 	// May only be called right after reinitialize().
 	void startReading() {
 		ev_io_start(ctx->libev->getLoop(), &watcher);
+	}
+
+	// May only be called right after reinitialize().
+	void startReadingInNextTick() {
+		startReading();
 		onReadable(&watcher, EV_READ);
 	}
 
@@ -170,6 +164,14 @@ public:
 	OXT_FORCE_INLINE
 	int getFd() const {
 		return watcher.fd;
+	}
+
+	void setCallback(DataCallback callback) {
+		this->callback = (Channel::DataCallback) callback;
+	}
+
+	void setEndAckCallback(Callback callback) {
+		this->endAckCallback = (Channel::Callback) callback;
 	}
 
 	OXT_FORCE_INLINE

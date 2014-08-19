@@ -37,14 +37,17 @@ namespace ServerKit {
 class FileBufferedFdOutputChannel: protected FileBufferedChannel {
 public:
 	typedef void (*ErrorCallback)(FileBufferedFdOutputChannel *channel, int errcode);
-	typedef void (*BelowThresholdCallback)(FileBufferedFdOutputChannel *channel);
-	typedef void (*FlushedCallback)(FileBufferedFdOutputChannel *channel);
+	typedef void (*Callback)(FileBufferedFdOutputChannel *channel);
 
 private:
 	ev_io watcher;
 
 	static int onCallback(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer, int errcode) {
 		FileBufferedFdOutputChannel *self = static_cast<FileBufferedFdOutputChannel *>(channel);
+
+		if (buffer.empty()) {
+			return 0;
+		}
 
 		if (errcode != 0) {
 			self->callOnError(errcode);
@@ -59,7 +62,12 @@ private:
 				return 0;
 			} else {
 				errcode = errno;
+				RefGuard guard(self->getHooks(), self);
+				unsigned int generation = self->generation;
 				self->feedError(errcode);
+				if (generation != self->generation) {
+					return 0;
+				}
 				self->callOnError(errcode);
 				return 0;
 			}
@@ -84,8 +92,9 @@ public:
 	FileBufferedFdOutputChannel()
 		: errorCallback(NULL)
 	{
-		FileBufferedChannel::callback = onCallback;
+		FileBufferedChannel::setCallback(onCallback);
 		watcher.fd = -1;
+		watcher.data = this;
 	}
 
 	~FileBufferedFdOutputChannel() {
@@ -101,6 +110,14 @@ public:
 		FileBufferedChannel::feed(buffer);
 	}
 
+	void feed(const char *data, unsigned int size) {
+		FileBufferedChannel::feed(data, size);
+	}
+
+	void feed(const char *data) {
+		FileBufferedChannel::feed(data);
+	}
+
 	void reinitialize(int fd) {
 		FileBufferedChannel::reinitialize();
 		ev_io_init(&watcher, onWritable, fd, EV_WRITE);
@@ -110,6 +127,22 @@ public:
 		ev_io_stop(ctx->libev->getLoop(), &watcher);
 		watcher.fd = -1;
 		FileBufferedChannel::deinitialize();
+	}
+
+	void reset() {
+		FileBufferedChannel::reset();
+	}
+
+	bool ended() const {
+		return FileBufferedChannel::ended();
+	}
+
+	bool endAcked() const {
+		return FileBufferedChannel::endAcked();
+	}
+
+	Channel::State getState() const {
+		return FileBufferedChannel::getState();
 	}
 
 	bool passedThreshold() const {
@@ -133,16 +166,20 @@ public:
 		FileBufferedChannel::setHooks(hooks);
 	}
 
-	void setBelowThresholdCallback(BelowThresholdCallback callback) {
-		FileBufferedChannel::belowThresholdCallback = (FileBufferedChannel::BelowThresholdCallback) callback;
+	void setEndAckCallback(Callback callback) {
+		FileBufferedChannel::endAckCallback = (FileBufferedChannel::Callback) callback;
 	}
 
-	FlushedCallback getFlushedCallback() const {
-		return (FlushedCallback) FileBufferedChannel::flushedCallback;
+	void setBelowThresholdCallback(Callback callback) {
+		FileBufferedChannel::belowThresholdCallback = (FileBufferedChannel::Callback) callback;
 	}
 
-	void setFlushedCallback(FlushedCallback callback) {
-		FileBufferedChannel::flushedCallback = (FileBufferedChannel::FlushedCallback) callback;
+	Callback getFlushedCallback() const {
+		return (Callback) FileBufferedChannel::flushedCallback;
+	}
+
+	void setFlushedCallback(Callback callback) {
+		FileBufferedChannel::flushedCallback = (FileBufferedChannel::Callback) callback;
 	}
 };
 

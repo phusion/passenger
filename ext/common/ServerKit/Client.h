@@ -88,7 +88,7 @@ public:
 
 	BaseClient(void *_server)
 		: server(_server),
-		  refcount(1)
+		  refcount(2)
 	{
 		setConnState(DISCONNECTED);
 	}

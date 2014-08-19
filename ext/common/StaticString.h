@@ -25,6 +25,7 @@
 #ifndef _PASSENGER_STATIC_STRING_H_
 #define _PASSENGER_STATIC_STRING_H_
 
+#include <oxt/macros.hpp>
 #include <sys/types.h>
 #include <string>
 #include <cstring>
@@ -140,26 +141,32 @@ public:
 		  len(_len)
 		{ }
 
+	OXT_FORCE_INLINE
 	bool empty() const {
 		return len == 0;
 	}
 
+	OXT_FORCE_INLINE
 	string::size_type size() const {
 		return len;
 	}
 
+	OXT_FORCE_INLINE
 	char operator[](string::size_type i) const {
 		return content[i];
 	}
 
+	OXT_FORCE_INLINE
 	char at(string::size_type i) const {
 		return content[i];
 	}
 
+	OXT_FORCE_INLINE
 	const char *c_str() const {
 		return content;
 	}
 
+	OXT_FORCE_INLINE
 	const char *data() const {
 		return content;
 	}
