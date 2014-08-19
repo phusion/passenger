@@ -79,11 +79,28 @@ namespace {
 }
 
 
+inline void psg_lstr_append(LString *str, psg_pool_t *pool, const char *data,
+	unsigned int size);
+
+
 inline void
 psg_lstr_init(LString *str) {
 	str->start = NULL;
 	str->end   = NULL;
 	str->size  = 0;
+}
+
+inline LString *
+psg_lstr_create(psg_pool_t *pool, const char *data, unsigned int size) {
+	LString *result = (LString *) psg_palloc(pool, sizeof(LString));
+	psg_lstr_init(result);
+	psg_lstr_append(result, pool, data, size);
+	return result;
+}
+
+inline LString *
+psg_lstr_create(psg_pool_t *pool, const StaticString &str) {
+	return psg_lstr_create(pool, str.data(), str.size());
 }
 
 inline void
@@ -133,6 +150,46 @@ psg_lstr_append(LString *str, psg_pool_t *pool, const char *data, unsigned int s
 inline void
 psg_lstr_append(LString *str, psg_pool_t *pool, const char *data) {
 	psg_lstr_append(str, pool, data, strlen(data));
+}
+
+inline LString *
+psg_lstr_null_terminate(const LString *str, psg_pool_t *pool) {
+	LString *newstr;
+	LString::Part *part;
+	char *data, *pos;
+
+	data = (char *) psg_pnalloc(pool, str->size + 1);
+	pos = data;
+	part = str->start;
+	while (part != str->end) {
+		memcpy(pos, part->data, part->size);
+		pos += part->size;
+		part = part->next;
+	}
+	*pos = '\0';
+
+	newstr = (LString *) psg_palloc(pool, sizeof(LString));
+	psg_lstr_init(newstr);
+	psg_lstr_append(newstr, pool, data, str->size);
+	return newstr;
+}
+
+inline LString *
+psg_lstr_make_contiguous(LString *str, psg_pool_t *pool) {
+	if (str->size == 0 || str->start == str->end) {
+		return str;
+	} else {
+		return psg_lstr_null_terminate(str, pool);
+	}
+}
+
+inline const LString *
+psg_lstr_make_contiguous(const LString *str, psg_pool_t *pool) {
+	if (str->size == 0 || str->start == str->end) {
+		return str;
+	} else {
+		return psg_lstr_null_terminate(str, pool);
+	}
 }
 
 inline bool
