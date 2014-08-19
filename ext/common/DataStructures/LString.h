@@ -48,6 +48,8 @@ using namespace std;
  *
  * The empty string is repesented by `size == 0 && start == NULL && end == NULL`.
  * Parts may never contain the empty string.
+ *
+ * This struct must be a POD so that we can allocate it with psg_pool_t.
  */
 struct LString {
 	struct Part {

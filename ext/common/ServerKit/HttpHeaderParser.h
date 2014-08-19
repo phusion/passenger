@@ -32,11 +32,16 @@
 #include <ServerKit/Context.h>
 #include <ServerKit/HttpRequest.h>
 #include <DataStructures/LString.h>
+#include <DataStructures/HashedStaticString.h>
 #include <Logging.h>
 #include <Utils/Hasher.h>
 
 namespace Passenger {
 namespace ServerKit {
+
+
+extern const HashedStaticString TRANSFER_ENCODING;
+void forceLowerCase(unsigned char *data, size_t len);
 
 
 class HttpHeaderParser {
@@ -65,7 +70,7 @@ private:
 		case PARSING_FIRST_HEADER_VALUE:
 			// We're just done parsing the first header.
 			// Check whether it contains the secure mode password.
-			if (psg_lstr_cmp(&header->key, "!~")) {
+			if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"))) {
 				if (ctx->secureModePassword.empty()
 				 || psg_lstr_cmp(&header->key, ctx->secureModePassword))
 				{
@@ -82,7 +87,7 @@ private:
 			// We're just done parsing a header, which is not the first one.
 			// We only allow secure headers in secure mode.
 			if (secureMode) {
-				if (psg_lstr_cmp(&header->key, "!~", 2)) {
+				if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
 					if (header->key.size >= 3) {
 						return true;
 					} else {
@@ -93,7 +98,7 @@ private:
 					return true;
 				}
 			} else {
-				if (psg_lstr_cmp(&header->key, "!~", 2)) {
+				if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
 					state = ERROR_SECURE_HEADER_NOT_ALLOWED;
 					return false;
 				} else {
@@ -107,17 +112,8 @@ private:
 	}
 
 	bool hasTransferEncodingChunked() {
-		const LString *value = request->headers.lookup("transfer-encoding");
-		return value != NULL && psg_lstr_cmp(value, "chunked");
-	}
-
-	static void forceLowerCase(unsigned char *data, size_t len) {
-		const unsigned char *end = data + len;
-		while (data < end) {
-			unsigned char c = *data;
-			*data = ((c >= 'A' && c <= 'Z') ? (c | 0x20) : c);
-			data++;
-		}
+		const LString *value = request->headers.lookup(TRANSFER_ENCODING);
+		return value != NULL && psg_lstr_cmp(value, P_STATIC_STRING("chunked"));
 	}
 
 	static size_t http_parser_execute_and_handle_pause(http_parser *parser,

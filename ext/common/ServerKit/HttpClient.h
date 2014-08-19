@@ -40,7 +40,12 @@ public:
 	typedef Request RequestType;
 	LIST_HEAD(RequestList, Request);
 
-	// Its state may be WAITING_FOR_REFERENCES
+	/**
+	 * @invariant
+	 *     if currentRequest != NULL:
+	 *         currentRequest->httpState != HttpRequest::WAITING_FOR_REFERENCES
+	 *         currentRequest->httpState != HttpRequest::IN_FREELIST
+	 */
 	Request *currentRequest;
 	HttpHeaderParser *reqHeaderParser;
 

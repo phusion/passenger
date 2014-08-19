@@ -50,11 +50,11 @@ using namespace boost;
  * then you have to buffer the partially received request body. Writing this code is
  * error-prone, its flow is hard to test (because it depends on network conditions),
  * and it's ridden with boilerplate.
- * 
+ *
  * The Channel class solves this problem with a nice abstraction. First, you attach
  * a callback to a Channel. Whatever is written to the Channel, will be forwarded to
  * the callback.
- * 
+ *
  * The callback can consume the buffer immediately, and tell Channel how many bytes
  * it has consumed, by returning an integer. If the buffer was not fully consumed then
  * Channel will call the callback again with the remainder of the buffer. This repeats
@@ -83,8 +83,8 @@ using namespace boost;
  */
 class Channel: public boost::noncopyable {
 public:
-	typedef int (*Callback)(Channel *channel, const MemoryKit::mbuf &buffer, int errcode);
-	typedef void (*IdleCallback)(Channel *channel);
+	typedef int  (*DataCallback)(Channel *channel, const MemoryKit::mbuf &buffer, int errcode);
+	typedef void (*Callback)(Channel *channel);
 
 	enum State {
 		/**
@@ -214,6 +214,10 @@ protected:
 					done = true;
 					break;
 				case CALLING_WITH_EOF:
+					state = EOF_REACHED;
+					done = true;
+					callEndAckCallback();
+					break;
 				case EOF_REACHED:
 					state = EOF_REACHED;
 					done = true;
@@ -274,9 +278,16 @@ protected:
 		}
 	}
 
+	void callEndAckCallback() {
+		if (endAckCallback != NULL) {
+			endAckCallback(this);
+		}
+	}
+
 public:
-	Callback callback;
-	IdleCallback idleCallback;
+	DataCallback callback;
+	Callback idleCallback;
+	Callback endAckCallback;
 	Hooks *hooks;
 
 	Channel()
@@ -287,6 +298,7 @@ public:
 		  generation(0),
 		  callback(NULL),
 		  idleCallback(NULL),
+		  endAckCallback(NULL),
 		  hooks(NULL)
 		{ }
 
@@ -298,6 +310,7 @@ public:
 		  generation(0),
 		  callback(NULL),
 		  idleCallback(NULL),
+		  endAckCallback(NULL),
 		  hooks(NULL)
 		{ }
 
@@ -354,6 +367,10 @@ public:
 		case WAITING_FOR_CALLBACK:
 		case CALLING_WITH_EOF:
 		case EOF_WAITING:
+			this->errcode = errcode;
+			state = EOF_REACHED;
+			callEndAckCallback();
+			break;
 		case EOF_REACHED:
 			this->errcode = errcode;
 			state = EOF_REACHED;
@@ -369,6 +386,7 @@ public:
 			planId = 0;
 			this->errcode = errcode;
 			state = EOF_REACHED;
+			callEndAckCallback();
 			break;
 		default:
 			P_BUG("Unknown state" << toString((int) state));
@@ -450,6 +468,7 @@ public:
 			break;
 		case EOF_WAITING:
 			state = EOF_REACHED;
+			callEndAckCallback();
 			break;
 		default:
 			P_BUG("Unknown state" << toString((int) state));
@@ -467,6 +486,14 @@ public:
 
 	bool isStarted() const {
 		return state != STOPPED && state != STOPPED_WHILE_CALLING && state != STOPPED_WHILE_WAITING;
+	}
+
+	bool ended() const {
+		return state == CALLING_WITH_EOF || state == EOF_WAITING || state == EOF_REACHED;
+	}
+
+	bool endAcked() const {
+		return state == EOF_REACHED;
 	}
 };
 

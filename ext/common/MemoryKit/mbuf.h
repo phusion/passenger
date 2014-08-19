@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cassert>
+#include <cstring>
 #include <oxt/macros.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/move/core.hpp>
@@ -129,37 +130,31 @@ private:
     }
 
     void initialize_with_block(unsigned int start, unsigned int len) {
+        this->start = clamp<char *>(
+            mbuf_block->start + start,
+            mbuf_block->start,
+            mbuf_block->end);
+        this->end = clamp<char *>(
+            mbuf_block->start + start + len,
+            mbuf_block->start,
+            mbuf_block->end);
         if (mbuf_block != NULL) {
-            this->start = clamp<char *>(
-                mbuf_block->start + start,
-                mbuf_block->start,
-                mbuf_block->end);
-            this->end = clamp<char *>(
-                mbuf_block->start + start + len,
-                mbuf_block->start,
-                mbuf_block->end);
             mbuf_block_ref(mbuf_block);
-        } else {
-            this->start = NULL;
-            this->end   = NULL;
         }
     }
 
     void initialize_with_mbuf(const mbuf &mbuf, unsigned int start, unsigned int len) {
         mbuf_block = mbuf.mbuf_block;
+        this->start = clamp<char *>(
+            mbuf.start + start,
+            mbuf.start,
+            mbuf.end);
+        this->end = clamp<char *>(
+            mbuf.start + start + len,
+            mbuf.start,
+            mbuf.end);
         if (mbuf.mbuf_block != NULL) {
-            this->start = clamp<char *>(
-                mbuf.start + start,
-                mbuf.start,
-                mbuf.end);
-            this->end = clamp<char *>(
-                mbuf.start + start + len,
-                mbuf.start,
-                mbuf.end);
             mbuf_block_ref(mbuf.mbuf_block);
-        } else {
-            this->start = NULL;
-            this->end   = NULL;
         }
     }
 
@@ -186,11 +181,25 @@ public:
         initialize_with_block(start, len);
     }
 
+    // Create an mbuf as a dumb wrapper around a memory buffer.
+    explicit mbuf(const char *data, unsigned int len)
+        : mbuf_block(NULL),
+          start(const_cast<char *>(data)),
+          end(const_cast<char *>(data) + len)
+        { }
+
+    explicit mbuf(const char *data)
+        : mbuf_block(NULL),
+          start(const_cast<char *>(data)),
+          end(const_cast<char *>(data) + strlen(data))
+        { }
+
     // Copy constructor.
     mbuf(const mbuf &mbuf, unsigned int start = 0) {
         initialize_with_mbuf(mbuf, start, mbuf.end - mbuf.start);
     }
 
+    // Take a subset of another mbuf.
     mbuf(const mbuf &mbuf, unsigned int start, unsigned int len) {
         initialize_with_mbuf(mbuf, start, len);
     }

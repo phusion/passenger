@@ -174,7 +174,7 @@ private
 			# packaging the runtime ('passenger package-runtime') so we
 			# never generate static libraries.
 			library = "#{@output_dir}/#{category}.a"
-			
+
 			file(library => object_filenames) do
 				create_static_library(library, object_filenames.join(' '))
 			end
@@ -459,6 +459,10 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:deps     => %w(
 			ServerKit/http_parser.h
 		)
+	define_component 'ServerKit/Implementation.o',
+		:source   => 'ServerKit/Implementation.cpp',
+		:category => :other,
+		:optimize => true
 	define_component 'Utils/MD5.o',
 		:source   => 'Utils/MD5.cpp',
 		:category => :other,

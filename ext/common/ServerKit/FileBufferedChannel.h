@@ -80,7 +80,7 @@ using namespace std;
  *   file.
  *
  * When data is buffered to a file, we keep the following states:
- * 
+ *
  *     +------------------------+
  *     |                        |
  *     |      already read      |
@@ -104,9 +104,8 @@ public:
 	// `buffered` is 25-bit. This is 2^25-1, or 32 MB.
 	static const unsigned int MAX_MEMORY_BUFFERING = 33554431;
 
-	typedef int  (*Callback)(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
-	typedef void (*BelowThresholdCallback)(FileBufferedChannel *channel);
-	typedef void (*FlushedCallback)(FileBufferedChannel *channel);
+	typedef int  (*DataCallback)(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
+	typedef void (*Callback)(FileBufferedChannel *channel);
 
 private:
 	typedef void (*IdleCallback)(FileBufferedChannel *channel);
@@ -115,7 +114,7 @@ private:
 		/**
 		 * The writer isn't active. It will be activated next time
 		 * `feed()` notices that the threshold has passed.
-		 * 
+		 *
 		 * @invariant !passedThreshold()
 		 */
 		WS_INACTIVE,
@@ -156,7 +155,7 @@ private:
 	 *   their cancellation have been acknowledged by their callbacks).
 	 *
 	 * The variables inside this structure point to different places in the file:
-	 * 
+	 *
 	 *     +------------------------+
 	 *     |                        |
 	 *     |      already read      |
@@ -216,7 +215,7 @@ private:
 		/**
 		 * Number of bytes written to the file by the writer (relative to `readOffset`),
 		 * but not yet read by the reader.
-		 * 
+		 *
 		 * `written` can be _negative_, which means that the writer is still writing buffers to
 		 * the file, but the reader has already fed one or more of those still-being-written
 		 * buffers to the underlying channel.
@@ -261,7 +260,7 @@ private:
 		/**
 		 * If either the reader or writer encountered an error, it will
 		 * cancel everything and switch to the error mode.
-		 * 
+		 *
 		 * @invariant
 		 *     readerState == RS_TERMINATED
 		 *     inFileMode == NULL
@@ -290,19 +289,20 @@ private:
 
 		/**
 		 * The reader is feeding a buffer to the underlying channel.
-		 *
-		 * Invariant:
-		 * 
-		 *     mode != ERROR
 		 */
 		RS_FEEDING,
+
+		/**
+		 * The reader is feeding an empty buffer to the underlying channel.
+		 */
+		RS_FEEDING_EOF,
 
 		/**
 		 * The reader has just fed a buffer to the underlying channel,
 		 * and is waiting for it to become idle.
 		 *
 		 * Invariant:
-		 * 
+		 *
 		 *     mode != ERROR
 		 */
 		RS_WAITING_FOR_CHANNEL_IDLE,
@@ -310,7 +310,7 @@ private:
 		/** The reader is reading from the file.
 		 *
 		 * Invariant:
-		 * 
+		 *
 		 *     mode == IN_FILE_MODE
 		 *     inFileMode->readRequest != NULL
 		 *     inFileMode->written > 0
@@ -367,7 +367,12 @@ private:
 		nbuffers = 0;
 		bytesBuffered = 0;
 		firstBuffer = MemoryKit::mbuf();
-		moreBuffers.clear();
+		if (!moreBuffers.empty()) {
+			// Some STL implementations, like OS X's, iterate through
+			// the deque in its clear() implementation, so adding
+			// a conditional here improves performance slightly.
+			moreBuffers.clear();
+		}
 	}
 
 	void pushBuffer(const MemoryKit::mbuf &buffer) {
@@ -416,6 +421,14 @@ private:
 		}
 	}
 
+	const MemoryKit::mbuf &peekLastBuffer() const {
+		if (nbuffers <= 1) {
+			return firstBuffer;
+		} else {
+			return moreBuffers.back();
+		}
+	}
+
 	void notifyBelowThreshold() {
 		if (belowThresholdCallback != NULL) {
 			FBC_DEBUG("Calling belowThresholdCallback callback");
@@ -429,6 +442,12 @@ private:
 		}
 	}
 
+	void callEndAckCallback() {
+		if (endAckCallback != NULL) {
+			endAckCallback(this);
+		}
+	}
+
 
 	/***** Reader *****/
 
@@ -438,10 +457,14 @@ private:
 		}
 
 		RefGuard guard(hooks, this);
-		unsigned int generation = this->generation;
+		readNextWithoutRefGuard();
+	}
 
+	void readNextWithoutRefGuard() {
 		begin:
 		FBC_DEBUG("Reader: reading next");
+		assert(Channel::state == IDLE);
+		unsigned int generation = this->generation;
 
 		switch (mode) {
 		case IN_MEMORY_MODE:
@@ -449,8 +472,18 @@ private:
 				FBC_DEBUG("Reader: no more buffers. Transitioning to RS_INACTIVE");
 				readerState = RS_INACTIVE;
 				verifyInvariants();
-			} else if (peekBuffer().is_null()) {
-				FBC_DEBUG("Reader: EOF encountered. Transitioning to RS_TERMINATED");
+			} else if (peekBuffer().empty()) {
+				FBC_DEBUG("Reader: EOF encountered. Feeding EOF");
+				readerState = RS_FEEDING_EOF;
+				verifyInvariants();
+				Channel::feed(peekBuffer());
+				if (generation != this->generation || mode == ERROR) {
+					// Callback deinitialized this object, or callback
+					// called a method that encountered an error.
+					return;
+				}
+				verifyInvariants();
+				FBC_DEBUG("Reader: EOF fed. Transitioning to RS_TERMINATED");
 				readerState = RS_TERMINATED;
 				verifyInvariants();
 			} else {
@@ -493,8 +526,18 @@ private:
 						switchToInMemoryMode();
 					}
 					verifyInvariants();
-				} else if (result.first.is_null()) {
-					FBC_DEBUG("Reader: EOF encountered. Transitioning to RS_TERMINATED");
+				} else if (result.first.empty()) {
+					FBC_DEBUG("Reader: EOF encountered. Feeding EOF");
+					readerState = RS_FEEDING_EOF;
+					verifyInvariants();
+					Channel::feed(result.first);
+					if (generation != this->generation || mode == ERROR) {
+						// Callback deinitialized this object, or callback
+						// called a method that encountered an error.
+						return;
+					}
+					verifyInvariants();
+					FBC_DEBUG("Reader: EOF fed. Transitioning to RS_TERMINATED");
 					readerState = RS_TERMINATED;
 					verifyInvariants();
 				} else {
@@ -777,7 +820,7 @@ private:
 			FBC_DEBUG("Writer: no more buffers. Transitioning to WS_INACTIVE");
 			inFileMode->writerState = WS_INACTIVE;
 			return;
-		} else if (peekBuffer().is_null()) {
+		} else if (peekBuffer().empty()) {
 			FBC_DEBUG("Writer: EOF encountered. Transitioning to WS_TERMINATED");
 			inFileMode->writerState = WS_TERMINATED;
 			return;
@@ -811,7 +854,7 @@ private:
 		}
 
 		assert(self->mode == IN_FILE_MODE);
-		assert(!self->peekBuffer().is_null());
+		assert(!self->peekBuffer().empty());
 		self->verifyInvariants();
 		self->inFileMode->writerRequest = NULL;
 
@@ -884,6 +927,7 @@ private:
 	void cancelReader() {
 		switch (readerState) {
 		case RS_FEEDING:
+		case RS_FEEDING_EOF:
 			break;
 		case RS_WAITING_FOR_CHANNEL_IDLE:
 			idleCallback = NULL;
@@ -928,6 +972,8 @@ private:
 				assert(mode == IN_MEMORY_MODE);
 				break;
 			case RS_FEEDING:
+			case RS_FEEDING_EOF:
+				break;
 			case RS_WAITING_FOR_CHANNEL_IDLE:
 				assert(mode != ERROR);
 				break;
@@ -960,17 +1006,21 @@ private:
 		}
 	}
 
-	static int onChannelCallback(Channel *channel, const MemoryKit::mbuf &buffer,
-		int errcode)
-	{
+	static void onChannelEndAcked(Channel *channel) {
 		FileBufferedChannel *self = static_cast<FileBufferedChannel *>(channel);
-		return self->callback(self, buffer, errcode);
+		RefGuard guard(self->hooks, self);
+		unsigned int generation = self->generation;
+
+		self->callFlushedCallback();
+		if (self->generation == generation) {
+			self->callEndAckCallback();
+		}
 	}
 
 public:
-	Callback callback;
-	BelowThresholdCallback belowThresholdCallback;
-	FlushedCallback flushedCallback;
+	Callback endAckCallback;
+	Callback belowThresholdCallback;
+	Callback flushedCallback;
 
 	FileBufferedChannel()
 		: mode(IN_MEMORY_MODE),
@@ -980,12 +1030,12 @@ public:
 		  bytesBuffered(0),
 		  inFileMode(),
 		  idleCallback(NULL),
-		  callback(NULL),
+		  endAckCallback(NULL),
 		  belowThresholdCallback(NULL),
 		  flushedCallback(NULL)
 	{
-		Channel::callback = onChannelCallback;
 		Channel::idleCallback = onChannelIdle;
+		Channel::endAckCallback = onChannelEndAcked;
 	}
 
 	~FileBufferedChannel() {
@@ -1006,7 +1056,7 @@ public:
 
 		FBC_DEBUG("Feeding " << buffer.size() << " bytes");
 		verifyInvariants();
-		if ((hasBuffers() && peekLastBuffer().is_null()) || errcode != 0) {
+		if (ended()) {
 			FBC_DEBUG("Feeding aborted: EOF or error detected");
 			return;
 		}
@@ -1014,12 +1064,20 @@ public:
 		if (mode == IN_MEMORY_MODE && passedThreshold()) {
 			switchToInFileMode();
 		}
-		readNext();
+		readNextWithoutRefGuard();
 		if (this->generation == generation && readerState == RS_INACTIVE) {
 			assert(nbuffers == 0);
 			assert(mode == IN_MEMORY_MODE);
 			callFlushedCallback();
 		}
+	}
+
+	void feed(const char *data, unsigned int size) {
+		feed(MemoryKit::mbuf(data, size));
+	}
+
+	void feed(const char *data) {
+		feed(MemoryKit::mbuf(data));
 	}
 
 	void reinitialize() {
@@ -1042,6 +1100,11 @@ public:
 		Channel::deinitialize();
 	}
 
+	void reset() {
+		deinitialize();
+		reinitialize();
+	}
+
 	void start() {
 		Channel::start();
 	}
@@ -1050,12 +1113,29 @@ public:
 		Channel::stop();
 	}
 
+	bool ended() const {
+		return (hasBuffers() && peekLastBuffer().empty()) || errcode != 0 || Channel::ended();
+	}
+
+	bool endAcked() const {
+		return Channel::endAcked();
+	}
+
+	Channel::State getState() const {
+		return state;
+	}
+
 	bool passedThreshold() const {
 		return bytesBuffered >= 1024 * 128;
 	}
 
 	bool writing() const {
-		return state != IDLE || readerState != RS_INACTIVE;
+		// TOOD: gotta take a better look at this...
+		return (state != IDLE && state != EOF_REACHED) || readerState != RS_INACTIVE;
+	}
+
+	void setCallback(DataCallback callback) {
+		this->callback = (Channel::DataCallback) callback;
 	}
 
 	OXT_FORCE_INLINE

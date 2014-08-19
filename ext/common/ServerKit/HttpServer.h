@@ -28,6 +28,7 @@
 
 #include <Utils/sysqueue.h>
 #include <boost/pool/object_pool.hpp>
+#include <oxt/macros.hpp>
 #include <algorithm>
 #include <cassert>
 #include <pthread.h>
@@ -41,6 +42,10 @@ namespace Passenger {
 namespace ServerKit {
 
 using namespace boost;
+
+
+extern const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[];
+extern const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE;
 
 
 template< typename DerivedServer, typename Client = HttpClient<HttpRequest> >
@@ -61,17 +66,19 @@ private:
 	object_pool<HttpHeaderParser> headerParserObjectPool;
 
 
-	Request *checkoutRequestObject() {
+	Request *checkoutRequestObject(Client *client) {
 		// Try to obtain request object from freelist.
 		if (!STAILQ_EMPTY(&freeRequests)) {
 			return checkoutRequestObjectFromFreelist();
 		} else {
-			return createNewRequestObject();
+			return createNewRequestObject(client);
 		}
 	}
 
 	Request *checkoutRequestObjectFromFreelist() {
 		assert(freeRequestCount > 0);
+		SKS_TRACE(3, "Checking out request object from freelist (" <<
+			freeRequestCount << " -> " << (freeRequestCount - 1) << ")");
 		Request *request = STAILQ_FIRST(&freeRequests);
 		assert(request->httpState == Request::IN_FREELIST);
 		freeRequestCount--;
@@ -79,14 +86,15 @@ private:
 		return request;
 	}
 
-	Request *createNewRequestObject() {
+	Request *createNewRequestObject(Client *client) {
 		Request *request;
+		SKS_TRACE(3, "Creating new request object");
 		try {
 			request = new Request();
 		} catch (const std::bad_alloc &) {
 			return NULL;
 		}
-		onRequestObjectCreated(request);
+		onRequestObjectCreated(client, request);
 		return request;
 	}
 
@@ -94,14 +102,21 @@ private:
 		Client *client = static_cast<Client *>(request->client);
 		assert(request->httpState == Request::WAITING_FOR_REFERENCES);
 		assert(client->endedRequestCount > 0);
+		assert(client->currentRequest != request);
 		assert(!LIST_EMPTY(&client->endedRequests));
 
+		SKC_TRACE(client, 3, "Request object reached a reference count of 0");
 		LIST_REMOVE(request, nextRequest.endedRequest);
 		assert(client->endedRequestCount > 0);
 		client->endedRequestCount--;
 		request->client = NULL;
 
-		if (!addRequestToFreelist(request)) {
+		if (addRequestToFreelist(request)) {
+			SKC_TRACE(client, 3, "Request object added to freelist (" <<
+				(freeRequestCount - 1) << " -> " << freeRequestCount << ")");
+		} else {
+			SKC_TRACE(client, 3, "Request object destroyed; not added to freelist " <<
+				"because it's full (" << freeRequestCount << ")");
 			delete request;
 		}
 
@@ -137,37 +152,56 @@ private:
 	}
 
 
-	static void _onClientOutputFlushed(ServerKit::FileBufferedFdOutputChannel *channel) {
+	static void _onClientOutputEndAcked(ServerKit::FileBufferedFdOutputChannel *channel) {
 		Client *client = static_cast<Client *>(channel->getHooks()->userData);
 		HttpServer *self = static_cast<HttpServer *>(client->getServer());
-		self->onClientOutputFlushed(client);
+		self->onClientOutputEndAcked(client);
 	}
 
-	void onClientOutputFlushed(Client *client) {
+	void onClientOutputEndAcked(Client *client) {
 		if (client->currentRequest != NULL
 		 && client->currentRequest->httpState == Request::FLUSHING_OUTPUT)
 		{
-			doneWithCurrentRequest(client);
+			doneWithCurrentRequest(&client);
 		}
 	}
 
-	void doneWithCurrentRequest(Client *client) {
-		assert(client->currentRequest != NULL);
-		bool keepAlive = client->currentRequest->keepAlive;
+	void deinitCurrentRequest(Client *client) {
+		if (client->reqHeaderParser != NULL) {
+			headerParserObjectPool.destroy(client->reqHeaderParser);
+			client->reqHeaderParser = NULL;
+		}
 
-		client->currentRequest->httpState = Request::WAITING_FOR_REFERENCES;
-		unrefRequest(client->currentRequest);
-		client->currentRequest = NULL;
+		if (client->currentRequest != NULL) {
+			Request *req = client->currentRequest;
+			req->httpState = Request::WAITING_FOR_REFERENCES;
+			req->deinitialize();
+			LIST_INSERT_HEAD(&client->endedRequests, req,
+				nextRequest.endedRequest);
+			client->endedRequestCount++;
+		}
+	}
+
+	void doneWithCurrentRequest(Client **client) {
+		Client *c = *client;
+		assert(c->currentRequest != NULL);
+		Request *req = c->currentRequest;
+		bool keepAlive = req->keepAlive;
+
+		assert(req->httpState = Request::WAITING_FOR_REFERENCES);
+		c->currentRequest = NULL;
+		unrefRequest(req);
 		if (keepAlive) {
-			handleNextRequest(client);
+			handleNextRequest(c);
 		} else {
-			this->disconnect(&client);
+			this->disconnect(client);
 		}
 	}
 
 	void handleNextRequest(Client *client) {
 		client->input.start();
-		client->currentRequest = checkoutRequestObject();
+		client->output.reset();
+		client->currentRequest = checkoutRequestObject(client);
 		client->currentRequest->client = client;
 		client->currentRequest->reinitialize();
 		client->reqHeaderParser = headerParserObjectPool.construct(
@@ -197,9 +231,7 @@ protected:
 		if (oldRefcount == 1) {
 			boost::atomic_thread_fence(boost::memory_order_acquire);
 
-			if (pthread_equal(pthread_self(),
-			    this->getContext()->libev->getCurrentThread()))
-			{
+			if (this->getContext()->libev->onEventLoopThread()) {
 				requestReachedZeroRefcount(request);
 			} else {
 				// Let the event loop handle the request reaching the 0 refcount.
@@ -208,12 +240,59 @@ protected:
 		}
 	}
 
+	void writeResponse(Client *client, const MemoryKit::mbuf &buffer) {
+		client->currentRequest->responded = true;
+		client->output.feed(buffer);
+	}
+
+	void writeResponse(Client *client, const char *data, unsigned int size) {
+		writeResponse(client, MemoryKit::mbuf(data, size));
+	}
+
+	void writeResponse(Client *client, const StaticString &data) {
+		writeResponse(client, data.data(), data.size());
+	}
+
+	bool endRequest(Client **client, Request **request) {
+		Client *c = *client;
+		Request *req = *request;
+
+		*client = NULL;
+		*request = NULL;
+
+		if (req->ended()) {
+			return false;
+		}
+
+		SKC_TRACE(c, 2, "Ending request");
+		assert(c->currentRequest == req);
+
+		if (OXT_UNLIKELY(!req->responded)) {
+			SKC_WARN(c, "The server did not generate a response. Sending default 500 response");
+			req->keepAlive = false;
+			writeResponse(c, "HTTP/1.0 500 Internal Server Error\r\n");
+			writeResponse(c, DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE);
+		}
+
+		deinitCurrentRequest(c);
+		if (!c->output.ended()) {
+			c->output.feed(NULL, 0);
+		}
+		if (c->output.endAcked()) {
+			doneWithCurrentRequest(&c);
+		} else {
+			req->httpState = Request::FLUSHING_OUTPUT;
+		}
+
+		return true;
+	}
+
 
 	/***** Hook overrides *****/
 
 	virtual void onClientObjectCreated(Client *client) {
 		ParentClass::onClientObjectCreated(client);
-		client->output.setFlushedCallback(_onClientOutputFlushed);
+		client->output.setEndAckCallback(_onClientOutputEndAcked);
 	}
 
 	virtual void onClientAccepted(Client *client) {
@@ -229,9 +308,8 @@ protected:
 
 		switch (req->httpState) {
 		case Request::PARSING_HEADERS:
-			if (errcode != 0 || buffer.is_null()) {
-				req->keepAlive = false;
-				endRequest(&req);
+			if (errcode != 0 || buffer.empty()) {
+				this->disconnect(&client);
 				return 0;
 			} else {
 				size_t ret = client->reqHeaderParser->feed(buffer);
@@ -241,6 +319,7 @@ protected:
 				}
 
 				// Done parsing.
+				SKC_TRACE(client, 2, "New request received");
 				headerParserObjectPool.free(client->reqHeaderParser);
 				client->reqHeaderParser = NULL;
 
@@ -266,7 +345,7 @@ protected:
 				case Request::ERROR:
 					// TODO: auto-detect errors and set keepalive to false
 					req->keepAlive = false;
-					endRequest(&req);
+					endRequest(&client, &req);
 					this->disconnect(&client);
 					return 0;
 				default:
@@ -336,6 +415,20 @@ protected:
 		P_BUG("TODO");
 		return 0;
 	}
+
+	virtual void onClientDisconnecting(Client *client) {
+		ParentClass::onClientDisconnecting(client);
+
+		// Handle client being disconnect()'ed without endRequest().
+
+		deinitCurrentRequest(client);
+		if (client->currentRequest != NULL) {
+			Request *req = client->currentRequest;
+			client->currentRequest = NULL;
+			unrefRequest(req);
+		}
+	}
+
 /*
 	void handleRequestBodyConsumed(Client *client, unsigned int size) {
 		assert(client->req.httpState == Request::PARSING_BODY
@@ -357,7 +450,7 @@ protected:
 
 	/***** New hooks *****/
 
-	virtual void onRequestObjectCreated(Request *request) {
+	virtual void onRequestObjectCreated(Client *client, Request *request) {
 		// Do nothing.
 	}
 
@@ -366,7 +459,7 @@ protected:
 	}
 /*
 	virtual int onRequestBody(Client *client, const MemoryKit::mbuf &buffer, int errcode) {
-		if (errcode != 0 || buffer.is_null()) {
+		if (errcode != 0 || buffer.empty()) {
 			disconnect(&client);
 		}
 		return buf.size();
@@ -384,34 +477,6 @@ public:
 		  requestFreelistLimit(1024),
 		  headerParserObjectPool(16, 256)
 		{ }
-
-	void endRequest(Request **request) {
-		Request *req = *request;
-		if (req->ended()) {
-			return;
-		}
-
-		Client *client = static_cast<Client *>(req->client);
-		assert(client->currentRequest == req);
-
-		if (client->reqHeaderParser != NULL) {
-			headerParserObjectPool.free(client->reqHeaderParser);
-			client->reqHeaderParser = NULL;
-		}
-
-		LIST_INSERT_HEAD(&client->endedRequests, req,
-			nextRequest.endedRequest);
-		client->endedRequestCount++;
-
-		req->deinitialize();
-		*request = NULL;
-
-		if (req->client->output.writing()) {
-			req->httpState = Request::FLUSHING_OUTPUT;
-		} else {
-			doneWithCurrentRequest(client);
-		}
-	}
 
 
 	/***** Friend-public methods and hook implementations *****/

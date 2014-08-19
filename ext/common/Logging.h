@@ -69,6 +69,7 @@ void _writeLogEntry(const std::string &str);
 enum PassengerLogLevel {
 	LVL_CRIT   = -2,
 	LVL_ERROR  = -1,
+	LVL_NOTICE = 0,
 	LVL_INFO   = 0,
 	LVL_WARN   = 0,
 	LVL_DEBUG  = 1,
@@ -95,7 +96,13 @@ enum PassengerLogLevel {
 #define P_WARN(expr) P_LOG(LVL_WARN, expr)
 
 /**
- * Write the given expression, which represents a warning,
+ * Write the given expression, which represents a notice (important information),
+ * to the log stream.
+ */
+#define P_NOTICE(expr) P_LOG(LVL_NOTICE, expr)
+
+/**
+ * Write the given expression, which represents a normal information message,
  * to the log stream.
  */
 #define P_INFO(expr) P_LOG(LVL_INFO, expr)

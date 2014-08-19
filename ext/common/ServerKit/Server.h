@@ -29,6 +29,7 @@
 
 #include <boost/cstdint.hpp>
 #include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 #include <vector>
 #include <new>
 #include <ev++.h>
@@ -57,6 +58,16 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
+
+// We use 'this' so that the macros work in derived template classes like HttpServer<>.
+#define SKS_ERROR(expr)  P_ERROR("[" << this->getServerName() << "] " << expr)
+#define SKS_WARN(expr)   P_WARN("[" << this->getServerName() << "] " << expr)
+#define SKS_NOTICE(expr) P_NOTICE("[" << this->getServerName() << "] " << expr)
+#define SKS_DEBUG(expr)  P_DEBUG("[" << this->getServerName() << "] " << expr)
+#define SKS_TRACE(level, expr) P_TRACE(level, "[" << this->getServerName() << "] " << expr)
+
+#define SKC_WARN(client, expr) P_WARN("[Client " << this->getClientName(client) << "] " << expr)
+#define SKC_TRACE(client, level, expr) P_TRACE(level, "[Client " << this->getClientName(client) << "] " << expr)
 
 /*
 start main server
@@ -88,6 +99,8 @@ public:
 		STOPPED
 	};
 
+	static const unsigned int MAX_ACCEPT_BURST_COUNT = 127;
+
 	/***** Configuration *****/
 	unsigned int acceptBurstCount: 7;
 	bool startReadingAfterAccept: 1;
@@ -117,15 +130,17 @@ private:
 	}
 
 	void onAcceptable(ev_io *io, int revents) {
-		Client *lastActiveClient = TAILQ_FIRST(&activeClients);
 		unsigned int acceptCount = 0;
 		bool error = false;
-		int errcode;
+		int fd, errcode;
+		Client *client;
+		Client *acceptedClients[MAX_ACCEPT_BURST_COUNT];
 
 		assert(serverState == ACTIVE);
+		SKS_DEBUG("New clients can be accepted on a server socket");
 
 		for (unsigned int i = 0; i < acceptBurstCount; i++) {
-			int fd = acceptNonBlockingSocket(io->fd);
+			fd = acceptNonBlockingSocket(io->fd);
 			if (fd == -1) {
 				error = true;
 				errcode = errno;
@@ -133,8 +148,9 @@ private:
 			}
 
 			FdGuard guard(fd);
-			Client *client = checkoutClientObject();
+			client = checkoutClientObject();
 			TAILQ_INSERT_HEAD(&activeClients, client, nextClient.activeOrDisconnectedClient);
+			acceptedClients[acceptCount] = client;
 			activeClientCount++;
 			acceptCount++;
 			client->setConnState(Client::ACTIVE);
@@ -146,11 +162,11 @@ private:
 		}
 
 		if (acceptCount > 0) {
-			P_DEBUG("[Server] " << acceptCount << " new clients accepted (" <<
-				(activeClientCount - acceptCount) << " -> " << acceptCount << " clients)");
+			SKS_DEBUG(acceptCount << " new client(s) accepted; there are now " <<
+				activeClientCount << " active client(s)");
 		}
 		if (error && errcode != EAGAIN && errcode != EWOULDBLOCK) {
-			P_ERROR("[Server] Cannot accept client: " << strerror(errcode) <<
+			SKS_ERROR("Cannot accept client: " << strerror(errcode) <<
 				" (errno=" << errcode << "). " <<
 				"Stop accepting clients for 3 seconds. " <<
 				"Current client count: " << activeClientCount);
@@ -161,12 +177,12 @@ private:
 			}
 		}
 
-		onClientsAccepted(lastActiveClient);
+		onClientsAccepted(acceptedClients, acceptCount);
 	}
 
 	void onAcceptResumeTimeout(ev::timer &timer, int revents) {
 		assert(serverState == TOO_MANY_FDS);
-		P_WARN("[Server] Resuming accepting new clients");
+		SKS_NOTICE("Resuming accepting new clients");
 		serverState = ACTIVE;
 		for (uint8_t i = 0; i < nEndpoints; i++) {
 			ev_io_start(ctx->libev->getLoop(), &endpoints[i]);
@@ -204,6 +220,8 @@ private:
 				try {
 					setNonBlocking(fd);
 				} catch (const SystemException &e) {
+					SKS_DEBUG("Unable to set non-blocking flag on accepted client socket: " <<
+						e.what() << " (errno=" << e.code() << ")");
 					errno = e.code();
 					return -1;
 				}
@@ -224,8 +242,11 @@ private:
 
 	Client *checkoutClientObjectFromFreelist() {
 		assert(freeClientCount > 0);
+		SKS_TRACE(3, "Checking out client object from freelist (" <<
+			freeClientCount << " -> " << (freeClientCount - 1) << ")");
 		Client *client = STAILQ_FIRST(&freeClients);
 		assert(client->getConnState() == Client::IN_FREELIST);
+		client->refcount.store(2, boost::memory_order_relaxed);
 		freeClientCount--;
 		STAILQ_REMOVE_HEAD(&freeClients, nextClient.freeClient);
 		return client;
@@ -233,6 +254,7 @@ private:
 
 	Client *createNewClientObject() {
 		Client *client;
+		SKS_TRACE(3, "Creating new client object");
 		try {
 			client = new Client(this);
 		} catch (const std::bad_alloc &) {
@@ -246,10 +268,16 @@ private:
 		assert(disconnectedClientCount > 0);
 		assert(!TAILQ_EMPTY(&disconnectedClients));
 
+		SKC_TRACE(client, 3, "Client object reached a reference count of 0");
 		TAILQ_REMOVE(&disconnectedClients, client, nextClient.activeOrDisconnectedClient);
 		disconnectedClientCount--;
 
-		if (!addClientToFreelist(client)) {
+		if (addClientToFreelist(client)) {
+			SKC_TRACE(client, 3, "Client object added to freelist (" <<
+				(freeClientCount - 1) << " -> " << freeClientCount << ")");
+		} else {
+			SKC_TRACE(client, 3, "Client object destroyed; not added to freelist " <<
+				"because it's full (" << freeClientCount << ")");
 			delete client;
 		}
 
@@ -265,7 +293,7 @@ private:
 		if (freeClientCount < freelistLimit) {
 			STAILQ_INSERT_HEAD(&freeClients, client, nextClient.freeClient);
 			freeClientCount++;
-			int prevref = client->refcount.fetch_add(1, boost::memory_order_relaxed);
+			int prevref = client->refcount.fetch_add(2, boost::memory_order_relaxed);
 			assert(prevref == 0);
 			(void) prevref;
 			client->setConnState(Client::IN_FREELIST);
@@ -289,7 +317,19 @@ private:
 	}
 
 	void stopCompleted() {
+		SKS_NOTICE("Shutdown complete");
 		serverState = STOPPED;
+	}
+
+	void logClientDataReceived(Client *client, const MemoryKit::mbuf &buffer, int errcode) {
+		if (errcode != 0) {
+			SKC_TRACE(client, 2, "Error reading from client socket: " <<
+				strerror(errcode) << " (errno=" << errcode << ")");
+		} else if (buffer.empty()) {
+			SKC_TRACE(client, 2, "Client sent EOF");
+		} else {
+			SKC_TRACE(client, 3, "Processing " << buffer.size() << " bytes of client data");
+		}
 	}
 
 	static int _onClientDataReceived(FdChannel *channel, const MemoryKit::mbuf &buffer,
@@ -297,6 +337,7 @@ private:
 	{
 		Client *client = static_cast<Client *>(channel->getHooks()->userData);
 		Server *server = static_cast<Server *>(client->getServer());
+		server->logClientDataReceived(client, buffer, errcode);
 		return server->onClientDataReceived(client, buffer, errcode);
 	}
 
@@ -318,7 +359,8 @@ protected:
 
 	/** Increase client reference count. */
 	void refClient(Client *client) {
-		client->refcount.fetch_add(1, boost::memory_order_relaxed);
+		int oldRefcount = client->refcount.fetch_add(1, boost::memory_order_relaxed);
+		SKC_TRACE(client, 3, "Refcount increased; it is now " << (oldRefcount + 1));
 	}
 
 	/** Decrease client reference count. Adds client to the
@@ -328,10 +370,11 @@ protected:
 		int oldRefcount = client->refcount.fetch_sub(1, boost::memory_order_release);
 		assert(oldRefcount >= 1);
 
+		SKC_TRACE(client, 3, "Refcount decreased; it is now " << (oldRefcount - 1));
 		if (oldRefcount == 1) {
 			boost::atomic_thread_fence(boost::memory_order_acquire);
 
-			if (pthread_equal(pthread_self(), ctx->libev->getCurrentThread())) {
+			if (ctx->libev->onEventLoopThread()) {
 				assert(client->getConnState() != Client::IN_FREELIST);
 				/* As long as the client is still in the ACTIVE state, it has at least
 				 * one reference, namely from the Server itself. Therefore it's impossible
@@ -340,9 +383,18 @@ protected:
 				clientReachedZeroRefcount(client);
 			} else {
 				// Let the event loop handle the client reaching the 0 refcount.
+				SKC_TRACE(client, 3, "Passing client object to event loop thread");
 				passClientToEventLoopThread(client);
 			}
 		}
+	}
+
+	virtual StaticString getServerName() const {
+		return StaticString("Server", sizeof("Server") - 1);
+	}
+
+	virtual string getClientName(Client *client) const {
+		return toString(client->fdnum);
 	}
 
 
@@ -354,27 +406,39 @@ protected:
 
 		client->input.setContext(ctx);
 		client->input.setHooks(&client->hooks);
-		client->input.callback    = _onClientDataReceived;
+		client->input.setCallback(_onClientDataReceived);
 
 		client->output.setContext(ctx);
 		client->output.setHooks(&client->hooks);
 		client->output.errorCallback = _onClientOutputError;
 	}
 
-	virtual void onClientsAccepted(Client *lastActiveClient) {
-		ClientRef client(TAILQ_FIRST(&activeClients));
+	virtual void onClientsAccepted(Client **clients, unsigned int size) {
+		unsigned int i;
 
-		while (client.get() != NULL && client.get() != lastActiveClient) {
-			ClientRef nextClient(TAILQ_NEXT(client.get(), nextClient.activeOrDisconnectedClient));
-			onClientAccepted(client.get());
-			if (client.get()->connected() && startReadingAfterAccept) {
-				client.get()->input.startReading();
+		for (i = 0; i < size; i++) {
+			Client *client = clients[i];
+
+			onClientAccepted(client);
+			if (client->connected()) {
+				if (startReadingAfterAccept) {
+					client->input.startReading();
+				} else {
+					client->input.startReadingInNextTick();
+				}
 			}
-			client = boost::move(nextClient);
+			// A Client object starts with a refcount of 2 so that we can
+			// be sure it won't be destroyted while we're looping inside this
+			// function. But we also need an extra unref here.
+			unrefClient(client);
 		}
 	}
 
 	virtual void onClientAccepted(Client *client) {
+		// Do nothing.
+	}
+
+	virtual void onClientDisconnecting(Client *client) {
 		// Do nothing.
 	}
 
@@ -520,6 +584,10 @@ public:
 		if (c->getConnState() != Client::ACTIVE) {
 			return false;
 		}
+
+		SKC_TRACE(c, 2, "Disconnecting; there are now " << (activeClientCount - 1) <<
+			" active clients");
+		onClientDisconnecting(c);
 
 		c->setConnState(ServerKit::Client::DISCONNECTED);
 		TAILQ_REMOVE(&activeClients, c, nextClient.activeOrDisconnectedClient);

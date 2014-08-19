@@ -26,7 +26,7 @@
 #define _PASSENGER_SERVER_KIT_CONTEXT_H_
 
 #include <boost/make_shared.hpp>
-#include <stddef.h>
+#include <cstddef>
 #include <MemoryKit/mbuf.h>
 #include <SafeLibev.h>
 #include <Constants.h>

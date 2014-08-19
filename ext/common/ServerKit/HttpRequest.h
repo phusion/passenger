@@ -61,15 +61,16 @@ public:
 		/** An error occurred. */
 		ERROR,
 		/**
-		 * The request has been ended. We're now waiting for output to be flushed before
-		 * transitioning to WAITING_FOR_REFERENCES. In this state, the client object's
-		 * `currentRequest` field still points to this request.
+		 * The request has been ended. We've deinitialized the request object, and we're now
+		 * waiting for output to be flushed before transitioning to WAITING_FOR_REFERENCES.
+		 * In this state, the client object's `currentRequest` field still points to this
+		 * request.
 		 */
 		FLUSHING_OUTPUT,
 		/**
-		 * The request has ended. We're now waiting until all references to this request
-		 * object are gone. In this state, the client object's `currentRequest` field no
-		 * longer points to this request.
+		 * The request has ended. We've deinitialized the request object, and we're now
+		 * waiting until all references to this request object are gone. In this state,
+		 * the client object's `currentRequest` field no longer points to this request.
 		 */
 		WAITING_FOR_REFERENCES,
 		/** This request object is in the freelist. */
@@ -82,6 +83,7 @@ public:
 
 	http_method method: 5;
 	bool keepAlive: 1;
+	bool responded: 1;
 
 	boost::atomic<int> refcount;
 
@@ -117,6 +119,7 @@ public:
 		httpState = PARSING_HEADERS;
 		method    = HTTP_GET;
 		keepAlive = false;
+		responded = false;
 		pool      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 		psg_lstr_init(&path);
 		parseError = NULL;
@@ -125,10 +128,6 @@ public:
 	}
 
 	void deinitialize() {
-		if (pool != NULL) {
-			psg_destroy_pool(pool);
-			pool = NULL;
-		}
 		psg_lstr_deinit(&path);
 
 		HeaderTable::Iterator it(headers);
@@ -136,6 +135,11 @@ public:
 			psg_lstr_deinit(&it->header->key);
 			psg_lstr_deinit(&it->header->val);
 			it.next();
+		}
+
+		if (pool != NULL) {
+			psg_destroy_pool(pool);
+			pool = NULL;
 		}
 
 		headers.clear();
