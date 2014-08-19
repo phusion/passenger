@@ -191,6 +191,16 @@ namespace tut {
 			*result = channel.acceptingInput();
 		}
 
+		bool channelMayAcceptInputLater() {
+			bool result;
+			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::realChannelMayAcceptInputLater, this, &result));
+			return result;
+		}
+
+		void realChannelMayAcceptInputLater(bool *result) {
+			*result = channel.mayAcceptInputLater();
+		}
+
 		void logChannelStateLater() {
 			bg.safe->runLater(boost::bind(&ServerKit_ChannelTest::logChannelState, this));
 		}
@@ -1375,6 +1385,14 @@ namespace tut {
 		}
 	}
 
+	TEST_METHOD(72) {
+		set_test_name("It no longer accepts further input");
+
+		feedChannel("");
+		ensure(!channelIsAcceptingInput());
+		ensure(!channelMayAcceptInputLater());
+	}
+
 
 	/***** Upon being fed an error *****/
 
@@ -1419,5 +1437,13 @@ namespace tut {
 			LOCK();
 			ensure_equals(endAcked, 1u);
 		}
+	}
+
+	TEST_METHOD(77) {
+		set_test_name("It no longer accepts further input");
+
+		feedChannelError(EIO);
+		ensure(!channelIsAcceptingInput());
+		ensure(!channelMayAcceptInputLater());
 	}
 }

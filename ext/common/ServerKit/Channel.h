@@ -672,7 +672,7 @@ public:
 	 */
 	bool mayAcceptInputLater() const {
 		// Branchless code
-		return (state >= CALLING) | (state <= PLANNING_TO_CALL);
+		return (state >= CALLING) & (state <= PLANNING_TO_CALL);
 	}
 
 	/**
