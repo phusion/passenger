@@ -91,8 +91,50 @@ upon receiving exit signal on admin server:
 		exit main loop
 */
 
+/**
+ * A highly optimized generic base class for evented socket servers, implementing basic,
+ * low-level connection management.
+ *
+ * ## Features
+ *
+ * ### Client objects
+ *
+ * Every connected client is represented by a client object, which inherits from
+ * ServerKit::BaseClient. The client object provides input and output, and you can
+ * extend with your own fields.
+ *
+ * Client objects are reference counted, for easy memory management.
+ *
+ * Creation and destruction is very efficient, because client objects are put on a
+ * freelist upon destruction, so that no malloc calls are necessary next time.
+ *
+ * ### Zero-copy buffers
+ *
+ * All input is handled in a zero-copy manner, by using the mbuf system.
+ *
+ * ### Channel I/O abstraction
+ *
+ * All input is handled through the Channel abstraction, and all output is
+ * handled through the FileBufferedFdOutputChannel abstraction.. This makes writing
+ * evented servers very easy.
+ *
+ * ### Multiple listen endpoints
+ *
+ * The server can listen on multiple server endpoints at the same time (e.g. TCP and
+ * Unix domain sockets), up to MAX_ENDPOINTS.
+ *
+ * ### Automatic backoff when too many file descriptors are active
+ *
+ * If ENFILES or EMFILES is encountered when accepting new clients, Server will stop
+ * accepting new clients for a few seconds so that doesn't keep triggering the error
+ * in a busy loop.
+ *
+ * ### Logging
+ *
+ * Provides basic logging macros that also log the client name.
+ */
 template<typename DerivedServer, typename Client = Client>
-class Server: public HooksImpl {
+class BaseServer: public HooksImpl {
 public:
 	/***** Types *****/
 	typedef Client ClientType;
@@ -103,11 +145,12 @@ public:
 	enum State {
 		ACTIVE,
 		TOO_MANY_FDS,
-		STOPPING,
-		STOPPED
+		SHUTTING_DOWN,
+		FINISHED_SHUTDOWN
 	};
 
 	static const unsigned int MAX_ACCEPT_BURST_COUNT = 127;
+	static const unsigned int MAX_ENDPOINTS = 4;
 
 	/***** Configuration *****/
 	unsigned int acceptBurstCount: 7;
@@ -122,8 +165,6 @@ public:
 	unsigned int freeClientCount, activeClientCount, disconnectedClientCount;
 
 private:
-	static const unsigned int MAX_ENDPOINTS = 4;
-
 	Context *ctx;
 	uint8_t nEndpoints;
 	bool accept4Available;
@@ -134,7 +175,7 @@ private:
 	/***** Private methods *****/
 
 	static void _onAcceptable(EV_P_ ev_io *io, int revents) {
-		static_cast<Server *>(io->data)->onAcceptable(io, revents);
+		static_cast<BaseServer *>(io->data)->onAcceptable(io, revents);
 	}
 
 	void onAcceptable(ev_io *io, int revents) {
@@ -289,11 +330,11 @@ private:
 			delete client;
 		}
 
-		if (serverState == STOPPING
+		if (serverState == SHUTTING_DOWN
 		 && activeClientCount == 0
 		 && disconnectedClientCount == 0)
 		{
-			stopCompleted();
+			finishShutdown();
 		}
 	}
 
@@ -315,7 +356,7 @@ private:
 		// The shutdown procedure waits until all ACTIVE and DISCONNECTED
 		// clients are gone before destroying a Server, so we know for sure
 		// that this async callback outlives the Server.
-		ctx->libev->runLater(boost::bind(&Server::passClientToEventLoopThreadCallback,
+		ctx->libev->runLater(boost::bind(&BaseServer::passClientToEventLoopThreadCallback,
 			this, ClientRef(client)));
 	}
 
@@ -324,9 +365,9 @@ private:
 		// client drops to 0, and clientReachedZeroRefcount() is called.
 	}
 
-	void stopCompleted() {
-		SKS_NOTICE("Shutdown complete");
-		serverState = STOPPED;
+	void finishShutdown() {
+		SKS_NOTICE("Shutdown finished");
+		serverState = FINISHED_SHUTDOWN;
 	}
 
 	void logClientDataReceived(Client *client, const MemoryKit::mbuf &buffer, int errcode) {
@@ -344,14 +385,14 @@ private:
 		const MemoryKit::mbuf &buffer, int errcode)
 	{
 		Client *client = static_cast<Client *>(channel->getHooks()->userData);
-		Server *server = static_cast<Server *>(client->getServer());
+		BaseServer *server = static_cast<BaseServer *>(client->getServer());
 		server->logClientDataReceived(client, buffer, errcode);
 		return server->onClientDataReceived(client, buffer, errcode);
 	}
 
 	static void _onClientOutputError(FileBufferedFdOutputChannel *channel, int errcode) {
 		Client *client = static_cast<Client *>(channel->getHooks()->userData);
-		Server *server = static_cast<Server *>(client->getServer());
+		BaseServer *server = static_cast<BaseServer *>(client->getServer());
 		server->onClientOutputError(client, errcode);
 	}
 
@@ -446,13 +487,16 @@ protected:
 		// Do nothing.
 	}
 
-	virtual bool shouldDisconnectClientOnStop(Client *client) {
+	virtual bool shouldDisconnectClientOnShutdown(Client *client) {
 		return true;
 	}
 
 	virtual Channel::Result onClientDataReceived(Client *client, const MemoryKit::mbuf &buffer,
 		int errcode)
 	{
+		if (buffer.empty()) {
+			disconnect(&client);
+		}
 		return Channel::Result(0, true);
 	}
 
@@ -463,7 +507,7 @@ protected:
 public:
 	/***** Public methods *****/
 
-	Server(Context *context)
+	BaseServer(Context *context)
 		: acceptBurstCount(32),
 		  startReadingAfterAccept(true),
 		  minSpareClients(128),
@@ -482,13 +526,16 @@ public:
 		acceptResumptionWatcher.set(context->libev->getLoop());
 		acceptResumptionWatcher.set(0, 3);
 		acceptResumptionWatcher.set<
-			Server<DerivedServer, Client>,
-			&Server<DerivedServer, Client>::onAcceptResumeTimeout>(this);
+			BaseServer<DerivedServer, Client>,
+			&BaseServer<DerivedServer, Client>::onAcceptResumeTimeout>(this);
 	}
 
-	~Server() {
-		assert(serverState == STOPPED);
+	virtual ~BaseServer() {
+		assert(serverState == FINISHED_SHUTDOWN);
 	}
+
+
+	/***** Initialization, listening and shutdown *****/
 
 	// Pre-create multiple client objects so that they get allocated
 	// near each other in memory. Hopefully increases CPU cache locality.
@@ -510,7 +557,7 @@ public:
 		nEndpoints++;
 	}
 
-	void stop() {
+	void shutdown(bool forceDisconnect = false) {
 		if (serverState != ACTIVE) {
 			return;
 		}
@@ -519,7 +566,7 @@ public:
 		Client *client;
 		typename vector<Client *>::iterator v_it, v_end;
 
-		serverState = STOPPING;
+		serverState = SHUTTING_DOWN;
 
 		// Stop listening on all endpoints.
 		acceptResumptionWatcher.stop();
@@ -528,11 +575,11 @@ public:
 		}
 
 		if (activeClientCount == 0 && disconnectedClientCount == 0) {
-			stopCompleted();
+			finishShutdown();
 			return;
 		}
 
-		// Once we've set serverState to STOPPING, `activeClientCount` will no
+		// Once we've set serverState to SHUTTING_DOWN, `activeClientCount` will no
 		// longer grow, but may change due to hooks and callbacks.
 		// So we make a copy of the client list here and operate on that.
 		clients.reserve(activeClientCount);
@@ -546,7 +593,7 @@ public:
 		v_end = clients.end();
 		for (v_it = clients.begin(); v_it != v_end; v_it++) {
 			client = (Client *) *v_it;
-			if (shouldDisconnectClientOnStop(client)) {
+			if (forceDisconnect || shouldDisconnectClientOnShutdown(client)) {
 				Client *c = client;
 				disconnect(&client);
 				unrefClient(c);
@@ -554,15 +601,25 @@ public:
 		}
 
 		// When all active and disconnected clients are gone,
-		// stopCompleted() will be called to set state to STOPPED.
+		// shutdownCompleted() will be called to set state to FINISHED_SHUTDOWN.
 	}
 
-	virtual StaticString getServerName() const {
-		return StaticString("Server", sizeof("Server") - 1);
-	}
+
+	/***** Client management *****/
 
 	virtual string getClientName(Client *client) const {
 		return toString(client->fdnum);
+	}
+
+	vector<ClientRef> getActiveClients() {
+		vector<ClientRef> result;
+		Client *client;
+
+		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
+			assert(client->getConnState() == Client::ACTIVE);
+			result.push_back(ClientRef(client));
+		}
+		return result;
 	}
 
 	Client *lookupClient(int fd) {
@@ -578,7 +635,7 @@ public:
 	}
 
 	bool disconnect(int fd) {
-		assert(serverState != STOPPED);
+		assert(serverState != FINISHED_SHUTDOWN);
 		Client *client = lookupClient(fd);
 		if (client != NULL) {
 			return disconnect(&client);
@@ -606,11 +663,12 @@ public:
 		c->input.deinitialize();
 		c->output.deinitialize();
 		c->deinitialize();
-		// TODO: handle exception
-		safelyClose(c->fdnum);
-
-		// TODO:
-		//RH_DEBUG(client, "Disconnected; new client count = " << clients.size());
+		try {
+			safelyClose(c->fdnum);
+		} catch (SystemException &e) {
+			SKC_WARN(c, "An error occurred while closing the client file descriptor: " <<
+				e.what() << " (errno=" << e.code() << ")");
+		}
 
 		*client = NULL;
 		onClientDisconnected(c);
@@ -618,8 +676,15 @@ public:
 		return true;
 	}
 
+
+	/***** Introspection *****/
+
 	Context *getContext() {
 		return ctx;
+	}
+
+	virtual StaticString getServerName() const {
+		return StaticString("Server", sizeof("Server") - 1);
 	}
 
 	void configure(void *json) { }
@@ -650,6 +715,15 @@ public:
 		Client *client = static_cast<Client *>(hooks->userData);
 		unrefClient(client);
 	}
+};
+
+
+template <typename Client = Client>
+class Server: public BaseServer<Server<Client>, Client> {
+public:
+	Server(Context *context)
+		: BaseServer<Server, Client>(context)
+		{ }
 };
 
 
