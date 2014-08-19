@@ -53,16 +53,16 @@ using namespace boost;
  * and it's ridden with boilerplate.
  *
  * The Channel class solves this problem with a nice abstraction. First, you attach
- * a callback to a Channel. Whatever is written to the Channel, will be forwarded to
- * the callback.
+ * a data callback to a Channel. Whatever is written to the Channel, will be forwarded to
+ * the data callback.
  *
- * The callback can consume the buffer immediately, and tell Channel how many bytes
+ * The data callback can consume the buffer immediately, and tell Channel how many bytes
  * it has consumed, by returning an integer. If the buffer was not fully consumed then
- * Channel will call the callback again with the remainder of the buffer. This repeats
+ * Channel will call the data callback again with the remainder of the buffer. This repeats
  * until the buffer is fully consumed, or (if proper hooks are provided) until the
  * client is disconnected.
  *
- * The callback can also tell Channel that it wants to consume the buffer
+ * The data callback can also tell Channel that it wants to consume the buffer
  * *asynchronously*, by returning a negative integer. At some later point, something
  * must notify Channel that the buffer is consumed, by calling `channel.consumed()`.
  * Until that happens, the Channel will tell the writer that it is not accepting any new
@@ -85,8 +85,20 @@ using namespace boost;
  */
 class Channel: public boost::noncopyable {
 public:
-	typedef int  (*DataCallback)(Channel *channel, const MemoryKit::mbuf &buffer, int errcode);
-	typedef void (*Callback)(Channel *channel);
+	struct Result {
+		int consumed;
+		bool end;
+
+		Result() { }
+
+		Result(int _consumed, bool _end)
+			: consumed(_consumed),
+			  end(_end)
+			{ }
+	};
+
+	typedef Result (*DataCallback)(Channel *channel, const MemoryKit::mbuf &buffer, int errcode);
+	typedef   void (*Callback)(Channel *channel);
 
 	enum State {
 		/**
@@ -168,28 +180,28 @@ protected:
 	Context *ctx;
 	unsigned int generation;
 
-	void callCallback() {
+	void callDataCallback() {
 		RefGuard guard(hooks, this);
-		callCallbackWithoutRefGuard();
+		callDataCallbackWithoutRefGuard();
 	}
 
-	void callCallbackWithoutRefGuard() {
+	void callDataCallbackWithoutRefGuard() {
 		unsigned int generation = this->generation;
 		bool done = false;
-		int consumed;
+		Result cbResult;
 
 		do {
 			assert(state == CALLING || state == CALLING_WITH_EOF);
 			assert(state != CALLING || !buffer.empty());
 			assert(state != CALLING_WITH_EOF || buffer.empty());
 
-			consumed = callback(this, buffer, errcode);
+			cbResult = dataCallback(this, buffer, errcode);
 			if (generation != this->generation) {
 				// Callback deinitialized this object.
 				return;
 			}
-			if (consumed > (int) buffer.size()) {
-				consumed = (int) buffer.size();
+			if (cbResult.consumed > (int) buffer.size()) {
+				cbResult.consumed = (int) buffer.size();
 			}
 
 			assert(state != IDLE);
@@ -199,16 +211,20 @@ protected:
 			assert(state != PLANNING_TO_CALL);
 			assert(state != EOF_WAITING);
 
-			if (consumed >= 0) {
-				if (consumed == (int) buffer.size()) {
+			if (cbResult.consumed >= 0) {
+				if ((unsigned int) cbResult.consumed == buffer.size()) {
 					buffer = MemoryKit::mbuf();
 				} else {
-					buffer = MemoryKit::mbuf(buffer, consumed);
+					buffer = MemoryKit::mbuf(buffer, cbResult.consumed);
 				}
 
 				switch (state) {
 				case CALLING:
-					if (buffer.empty()) {
+					if (cbResult.end) {
+						state = EOF_REACHED;
+						done = true;
+						callEndAckCallback();
+					} else if (buffer.empty()) {
 						state = IDLE;
 						done = true;
 						callIdleCallback();
@@ -216,8 +232,14 @@ protected:
 					// else: continue loop and call again with remaining data
 					break;
 				case STOPPED_WHILE_CALLING:
-					state = STOPPED;
-					done = true;
+					if (cbResult.end) {
+						state = EOF_REACHED;
+						done = true;
+						callEndAckCallback();
+					} else {
+						state = STOPPED;
+						done = true;
+					}
 					break;
 				case CALLING_WITH_EOF:
 					state = EOF_REACHED;
@@ -275,7 +297,7 @@ protected:
 		assert(state == PLANNING_TO_CALL);
 		planId = 0;
 		state = CALLING;
-		callCallback();
+		callDataCallback();
 	}
 
 	void callIdleCallback() {
@@ -291,7 +313,7 @@ protected:
 	}
 
 public:
-	DataCallback callback;
+	DataCallback dataCallback;
 	Callback idleCallback;
 	Callback endAckCallback;
 	Hooks *hooks;
@@ -306,7 +328,7 @@ public:
 		  errcode(0),
 		  ctx(NULL),
 		  generation(0),
-		  callback(NULL),
+		  dataCallback(NULL),
 		  idleCallback(NULL),
 		  endAckCallback(NULL),
 		  hooks(NULL)
@@ -321,7 +343,7 @@ public:
 		  errcode(0),
 		  ctx(context),
 		  generation(0),
-		  callback(NULL),
+		  dataCallback(NULL),
 		  idleCallback(NULL),
 		  endAckCallback(NULL),
 		  hooks(NULL)
@@ -400,7 +422,7 @@ public:
 			state = CALLING;
 		}
 		buffer = mbuf;
-		callCallbackWithoutRefGuard();
+		callDataCallbackWithoutRefGuard();
 	}
 
 	/**
@@ -424,7 +446,7 @@ public:
 		case IDLE:
 			this->errcode = errcode;
 			state = CALLING_WITH_EOF;
-			callCallback();
+			callDataCallback();
 			break;
 		case CALLING:
 		case WAITING_FOR_CALLBACK:
@@ -522,7 +544,7 @@ public:
 	 * If the callback returned -1, then at some later point it must call this method
 	 * to notify Channel how many bytes have been consumed.
 	 */
-	void consumed(unsigned int size) {
+	void consumed(unsigned int size, bool end) {
 		assert(state != IDLE);
 		assert(state != CALLING);
 		assert(state != STOPPED);
@@ -535,12 +557,21 @@ public:
 
 		switch (state) {
 		case WAITING_FOR_CALLBACK:
-			planNextActivity();
+			if (end) {
+				goto end_reached;
+			} else {
+				planNextActivity();
+			}
 			break;
 		case STOPPED_WHILE_WAITING:
-			state = STOPPED;
+			if (end) {
+				goto end_reached;
+			} else {
+				state = STOPPED;
+			}
 			break;
 		case EOF_WAITING:
+			end_reached:
 			state = EOF_REACHED;
 			callEndAckCallback();
 			break;

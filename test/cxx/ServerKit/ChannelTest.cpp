@@ -20,6 +20,7 @@ namespace tut {
 		boost::mutex syncher;
 		string log;
 		int toConsume;
+		bool endConsume;
 		unsigned int counter, idleCount, endAcked;
 		Channel::State lastState;
 
@@ -28,13 +29,14 @@ namespace tut {
 			  context(bg.safe),
 			  channel(&context)
 		{
-			channel.callback = callback;
+			channel.dataCallback = dataCallback;
 			channel.idleCallback = idleCallback;
 			channel.endAckCallback = endAckCallback;
 			channel.hooks = this;
 			Hooks::impl = NULL;
 			Hooks::userData = NULL;
 			toConsume = CONSUME_FULLY;
+			endConsume = false;
 			counter = 0;
 			idleCount = 0;
 			endAcked = 0;
@@ -47,7 +49,7 @@ namespace tut {
 			setLogLevel(DEFAULT_LOG_LEVEL);
 		}
 
-		static int callback(Channel *channel, const mbuf &buffer, int errcode) {
+		static Channel::Result dataCallback(Channel *channel, const mbuf &buffer, int errcode) {
 			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks;
 			boost::lock_guard<boost::mutex> l(self->syncher);
 			if (errcode == 0) {
@@ -62,9 +64,9 @@ namespace tut {
 				self->log.append("Error: " + toString(errcode) + "\n");
 			}
 			if (self->toConsume == CONSUME_FULLY) {
-				return buffer.size();
+				return Channel::Result(buffer.size(), self->endConsume);
 			} else {
-				return self->toConsume;
+				return Channel::Result(self->toConsume, self->endConsume);
 			}
 		}
 
@@ -142,21 +144,22 @@ namespace tut {
 			channel.feedError(errcode);
 		}
 
-		void channelConsumed(int size) {
-			bg.safe->runLater(boost::bind(&ServerKit_ChannelTest::realChannelConsumed, this, size));
+		void channelConsumed(int size, bool end) {
+			bg.safe->runLater(boost::bind(&ServerKit_ChannelTest::realChannelConsumed,
+				this, size, end));
 		}
 
-		void realChannelConsumed(int size) {
-			channel.consumed(size);
+		void realChannelConsumed(int size, bool end) {
+			channel.consumed(size, end);
 		}
 
-		void setChannelCallback(const Channel::DataCallback &callback) {
-			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::realSetChannelCallback,
+		void setChannelDataCallback(const Channel::DataCallback &callback) {
+			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::realSetChannelDataCallback,
 				this, callback));
 		}
 
-		void realSetChannelCallback(Channel::DataCallback callback) {
-			channel.callback = callback;
+		void realSetChannelDataCallback(Channel::DataCallback callback) {
+			channel.dataCallback = callback;
 		}
 
 		Channel::State getChannelState() {
@@ -218,7 +221,7 @@ namespace tut {
 	#define UNLOCK() l.unlock()
 
 	#define DEFINE_DATA_CALLBACK_METHOD(name, code) \
-		static int name(Channel *channel, const mbuf &buffer, int errcode) { \
+		static Channel::Result name(Channel *channel, const mbuf &buffer, int errcode) { \
 			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks; \
 			boost::mutex &syncher = self->syncher; \
 			/* Shut up compiler warning */  \
@@ -371,13 +374,13 @@ namespace tut {
 	DEFINE_DATA_CALLBACK_METHOD(test_20_callback,
 		LOCK();
 		self->lastState = self->channel.getState();
-		return buffer.size();
+		return Channel::Result(buffer.size(), false);
 	);
 
 	TEST_METHOD(20) {
 		set_test_name("It is in the calling state");
 
-		setChannelCallback(test_20_callback);
+		setChannelDataCallback(test_20_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
@@ -399,14 +402,14 @@ namespace tut {
 			self->log.append("Received error: " + toString(errcode) + "\n");
 			UNLOCK();
 		}
-		return buffer.size();
+		return Channel::Result(buffer.size(), false);
 	);
 
 	TEST_METHOD(21) {
 		set_test_name("Upon being fed an error, it transitions to the EOF state immediately "
 			"and doesn't call the callback with an error code");
 
-		setChannelCallback(test_21_callback);
+		setChannelDataCallback(test_21_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::EOF_REACHED;
@@ -423,13 +426,13 @@ namespace tut {
 		LOCK();
 		self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
 		self->log.append("Channel started: " + toString(self->channel.isStarted()) + "\n");
-		return buffer.size();
+		return Channel::Result(buffer.size(), false);
 	);
 
 	TEST_METHOD(22) {
 		set_test_name("Upon calling start(), nothing happens");
 
-		setChannelCallback(test_22_callback);
+		setChannelDataCallback(test_22_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
@@ -444,13 +447,13 @@ namespace tut {
 
 	DEFINE_DATA_CALLBACK_METHOD(test_23_callback,
 		self->channel.stop();
-		return buffer.size();
+		return Channel::Result(buffer.size(), false);
 	);
 
 	TEST_METHOD(23) {
 		set_test_name("Upon calling stop(), it transitions to the stopped state");
 
-		setChannelCallback(test_23_callback);
+		setChannelDataCallback(test_23_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::STOPPED;
@@ -473,13 +476,13 @@ namespace tut {
 			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
 			self->log.append("Channel started: " + toString(self->channel.isStarted()) + "\n");
 		}
-		return buffer.size();
+		return Channel::Result(buffer.size(), false);
 	);
 
 	TEST_METHOD(24) {
 		set_test_name("Upon calling stop() then start(), it transitions to the calling state");
 
-		setChannelCallback(test_24_callback);
+		setChannelDataCallback(test_24_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
@@ -506,13 +509,13 @@ namespace tut {
 			self->log.append("Data: " + cEscapeString(str) + "\n");
 			self->log.append("Error: " + toString(errcode) + "\n");
 		}
-		return buffer.size();
+		return Channel::Result(buffer.size(), false);
 	);
 
 	TEST_METHOD(25) {
 		set_test_name("Upon calling stop() then start(), it calls the callback next time data is fed");
 
-		setChannelCallback(test_25_callback);
+		setChannelDataCallback(test_25_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
@@ -541,13 +544,13 @@ namespace tut {
 			self->log.append("Data: " + cEscapeString(str) + "\n");
 			self->log.append("Error: " + toString(errcode) + "\n");
 		}
-		return buffer.size();
+		return Channel::Result(buffer.size(), false);
 	);
 
 	TEST_METHOD(26) {
 		set_test_name("Upon calling stop() then start(), it calls the callback next time EOF is fed");
 
-		setChannelCallback(test_26_27_callback);
+		setChannelDataCallback(test_26_27_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
@@ -567,7 +570,7 @@ namespace tut {
 	TEST_METHOD(27) {
 		set_test_name("Upon calling stop() then start(), it calls the callback next time an error is fed");
 
-		setChannelCallback(test_26_27_callback);
+		setChannelDataCallback(test_26_27_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
@@ -603,7 +606,6 @@ namespace tut {
 		ensure(!channelIsStarted());
 	}
 
-/*
 	static void test_32_callback(ServerKit_ChannelTest *self) {
 		self->channel.stop();
 		self->channel.start();
@@ -612,11 +614,10 @@ namespace tut {
 			LOCK();
 			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
 		}
-		self->channel.feed(MemoryKit::mbuf("abc"));
 	}
 
 	TEST_METHOD(32) {
-		set_test_name("Upon calling stop() then start(), it transitions to the idle state in the next tick");
+		set_test_name("Upon calling stop() then start(), it transitions to the idle state");
 
 		bg.safe->runLater(boost::bind(test_32_callback, this));
 		EVENTUALLY(5,
@@ -624,12 +625,10 @@ namespace tut {
 		);
 		{
 			LOCK();
-			ensure_equals(counter, 1u);
 			ensure_equals(log,
-				"Channel state: " + toString(Channel::PLANNING_TO_CALL) + "\n");
+				"Channel state: " + toString(Channel::IDLE) + "\n");
 		}
 	}
-*/
 
 	static void test_33_callback(ServerKit_ChannelTest *self) {
 		self->channel.stop();
@@ -716,8 +715,29 @@ namespace tut {
 	/***** If the callback immediately consumed the buffer partially *****/
 
 	TEST_METHOD(40) {
-		set_test_name("It calls the callback again with the remainder of the the buffer, "
-			"until the buffer is fully consumed");
+		set_test_name("If the callback has ended consumption, the Channel transitions "
+			"to the 'EOF reached' state and calls the endAck callback");
+
+		{
+			LOCK();
+			toConsume = 1;
+			endConsume = true;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(endAcked, 1u);
+			ensure_equals(log,
+				"Data: abc\n");
+		}
+	}
+
+	TEST_METHOD(41) {
+		set_test_name("If the callback has not ended consumption, the Channel calls "
+			"the callback again with the remainder of the the buffer, until the buffer is fully consumed");
 
 		{
 			LOCK();
@@ -736,24 +756,21 @@ namespace tut {
 		}
 	}
 
-	DEFINE_DATA_CALLBACK_METHOD(test_41_callback,
+	DEFINE_DATA_CALLBACK_METHOD(test_42_callback,
 		LOCK();
 		self->counter++;
-		if (self->counter == 1) {
-			UNLOCK();
-			return 1;
-		} else {
+		if (self->counter != 1) {
 			UNLOCK();
 			self->channel.feedError(EIO);
-			return 1;
 		}
+		return Channel::Result(1, false);
 	);
 
-	TEST_METHOD(41) {
+	TEST_METHOD(42) {
 		set_test_name("Upon being fed an error, it transitions to the EOF state immediately, "
 			"and it won't call the callback with an error code");
 
-		setChannelCallback(test_41_callback);
+		setChannelDataCallback(test_42_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::EOF_REACHED;
@@ -766,21 +783,21 @@ namespace tut {
 		}
 	}
 
-	DEFINE_DATA_CALLBACK_METHOD(test_42_callback,
+	DEFINE_DATA_CALLBACK_METHOD(test_43_callback,
 		LOCK();
 		self->counter++;
 		if (self->counter == 1) {
 			UNLOCK();
 			self->channel.stop();
 		}
-		return 1;
+		return Channel::Result(1, false);
 	);
 
-	TEST_METHOD(42) {
+	TEST_METHOD(43) {
 		set_test_name("If stop() was called, it doesn't call the callback with the "
 			"remainder of the buffer");
 
-		setChannelCallback(test_42_callback);
+		setChannelDataCallback(test_43_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::STOPPED;
@@ -791,7 +808,54 @@ namespace tut {
 		}
 	}
 
-	DEFINE_DATA_CALLBACK_METHOD(test_43_callback,
+	DEFINE_DATA_CALLBACK_METHOD(test_44_callback,
+		self->channel.stop();
+		LOCK();
+		self->counter++;
+		return Channel::Result(1, true);
+	);
+
+	TEST_METHOD(44) {
+		set_test_name("If stop() was called, and the callback has ended consumption, then "
+			"the Channel transitions to the 'EOF reached' state and calls the endAck callback");
+
+		setChannelDataCallback(test_44_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 1u);
+			ensure_equals(endAcked, 1u);
+		}
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_45_callback,
+		self->channel.stop();
+		self->channel.start();
+		LOCK();
+		self->counter++;
+		return Channel::Result(1, true);
+	);
+
+	TEST_METHOD(45) {
+		set_test_name("If stop() then start() was called, and the channel has ended consumption, "
+			"then it transitions to the 'EOF reached' state and calls the endAck callback");
+
+		setChannelDataCallback(test_45_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 1u);
+			ensure_equals(endAcked, 1u);
+		}
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_46_callback,
 		LOCK();
 		StaticString str(buffer.start, buffer.size());
 		self->counter++;
@@ -801,14 +865,14 @@ namespace tut {
 			self->channel.stop();
 			self->channel.start();
 		}
-		return 1;
+		return Channel::Result(1, false);
 	);
 
-	TEST_METHOD(43) {
-		set_test_name("If stop() then start() was called, it calls the callback with the remainder of the "
-			"data in the next tick");
+	TEST_METHOD(46) {
+		set_test_name("If stop() then start() was called, and the channel has not ended consumption, "
+			"then it calls the callback with the remainder of the data in the next tick");
 
-		setChannelCallback(test_43_callback);
+		setChannelDataCallback(test_46_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
@@ -823,7 +887,7 @@ namespace tut {
 		}
 	}
 
-	DEFINE_DATA_CALLBACK_METHOD(test_44_callback,
+	DEFINE_DATA_CALLBACK_METHOD(test_47_callback,
 		LOCK();
 		StaticString str(buffer.start, buffer.size());
 		self->counter++;
@@ -832,14 +896,14 @@ namespace tut {
 			UNLOCK();
 			self->channel.deinitialize();
 		}
-		return 1;
+		return Channel::Result(1, false);
 	);
 
-	TEST_METHOD(44) {
+	TEST_METHOD(47) {
 		set_test_name("If it had been deinitialized in the callback, it doesn't call the "
 			"callback again");
 
-		setChannelCallback(test_44_callback);
+		setChannelDataCallback(test_47_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::CALLING;
@@ -852,8 +916,28 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(45) {
-		set_test_name("Upon fully consuming the buffer, it calls the idle callback");
+	TEST_METHOD(48) {
+		set_test_name("If the callback has ended consumption, upon fully consuming the buffer, "
+			"the Channel transitions to the 'EOF reached' state and calls the endAck callback");
+
+		{
+			LOCK();
+			endConsume = true;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 1u);
+			ensure_equals(endAcked, 1u);
+		}
+	}
+
+	TEST_METHOD(49) {
+		set_test_name("If the callback has not ended consumption, upon fully "
+			"consuming the buffer, the Channel calls the idle callback");
 
 		{
 			LOCK();
@@ -874,16 +958,30 @@ namespace tut {
 	/***** If the callback immediately consumed the buffer fully *****/
 
 	TEST_METHOD(50) {
-		set_test_name("It transitions to the idle state");
+		set_test_name("If the callback has ended consumption, the Channel"
+			"transitions to the 'EOF reached' state and calls the endAck callback");
+
+		{
+			LOCK();
+			endConsume = true;
+		}
+		feedChannel("aaabbb");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(log, "Data: aaabbb\n");
+			ensure_equals(endAcked, 1u);
+		}
+	}
+
+	TEST_METHOD(52) {
+		set_test_name("If the callback has not ended consumption, "
+			"the Channel transitions to the idle state and calls the idle callback");
 
 		feedSomeDataAndWaitForConsumption();
 		ensure_equals(getChannelState(), Channel::IDLE);
-	}
-
-	TEST_METHOD(51) {
-		set_test_name("It calls the idle callback");
-
-		feedSomeDataAndWaitForConsumption();
 		ensure_equals(idleCount, 1u);
 	}
 
@@ -925,6 +1023,29 @@ namespace tut {
 	}
 
 	TEST_METHOD(57) {
+		set_test_name("When consumed() is called with the end flag, it "
+			"transitions to the 'EOF reached' state and calls the endAck callback");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		channelConsumed(3, true);
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(endAcked, 1u);
+		}
+	}
+
+	TEST_METHOD(58) {
 		set_test_name("When consumed() is called with the full buffer size, "
 			"it transitions to the idle state");
 
@@ -937,13 +1058,13 @@ namespace tut {
 			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
 		);
 
-		bg.safe->runLater(boost::bind(&Channel::consumed, &channel, 3));
+		channelConsumed(3, false);
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
 		);
 	}
 
-	TEST_METHOD(58) {
+	TEST_METHOD(59) {
 		set_test_name("Upon calling stop(), it transitions to the stopped state");
 
 		{
@@ -961,7 +1082,7 @@ namespace tut {
 		);
 	}
 
-	static void test_59_stop_start_channel(ServerKit_ChannelTest *self) {
+	static void test_60_stop_start_channel(ServerKit_ChannelTest *self) {
 		self->channel.stop();
 		self->channel.start();
 		{
@@ -972,7 +1093,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(59) {
+	TEST_METHOD(60) {
 		set_test_name("Upon calling stop() then start(), it transitions to the 'waiting for callback' state");
 
 		{
@@ -988,7 +1109,7 @@ namespace tut {
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
 		);
-		bg.safe->runLater(boost::bind(test_59_stop_start_channel, this));
+		bg.safe->runLater(boost::bind(test_60_stop_start_channel, this));
 		EVENTUALLY(5,
 			LOCK();
 			result = counter == 2;
@@ -1001,7 +1122,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(60) {
+	TEST_METHOD(61) {
 		set_test_name("Upon calling stop() then start() then feedError(), "
 			"it transitions to the EOF state immediately");
 
@@ -1033,7 +1154,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(61) {
+	TEST_METHOD(62) {
 		set_test_name("When consumed() is called with a partial buffer size, "
 			"it calls the callback again with the remainder of the buffer");
 
@@ -1050,7 +1171,7 @@ namespace tut {
 			LOCK();
 			toConsume = CONSUME_FULLY;
 		}
-		channelConsumed(2);
+		channelConsumed(2, false);
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
 		);
@@ -1063,7 +1184,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(62) {
+	TEST_METHOD(63) {
 		set_test_name("If stop() was called, and consumed() is called with a partial buffer size, "
 			"then it doesn't call the callback");
 
@@ -1085,7 +1206,7 @@ namespace tut {
 			LOCK();
 			toConsume = CONSUME_FULLY;
 		}
-		channelConsumed(2);
+		channelConsumed(2, false);
 		SHOULD_NEVER_HAPPEN(100,
 			LOCK();
 			result = counter > 1;
@@ -1093,7 +1214,7 @@ namespace tut {
 		ensure_equals(getChannelState(), Channel::STOPPED);
 	}
 
-	static void test_63_start_channel(ServerKit_ChannelTest *self) {
+	static void test_64_start_channel(ServerKit_ChannelTest *self) {
 		self->channel.start();
 		{
 			boost::mutex &syncher = self->syncher;
@@ -1103,7 +1224,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(63) {
+	TEST_METHOD(64) {
 		set_test_name("If stop() was called, and consumed() is called with a partial buffer size, "
 			"then it calls the callback with the remainder of the data one tick after next time "
 			"start() is called");
@@ -1126,8 +1247,8 @@ namespace tut {
 			LOCK();
 			toConsume = CONSUME_FULLY;
 		}
-		channelConsumed(2);
-		bg.safe->runLater(boost::bind(test_63_start_channel, this));
+		channelConsumed(2, false);
+		bg.safe->runLater(boost::bind(test_64_start_channel, this));
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
 		);
@@ -1141,7 +1262,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(64) {
+	TEST_METHOD(65) {
 		set_test_name("If stop() was called, and consumed() is called with a full buffer size, "
 			"then it doesn't call the callback");
 
@@ -1159,7 +1280,7 @@ namespace tut {
 			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
 		);
 
-		channelConsumed(3);
+		channelConsumed(3, false);
 		SHOULD_NEVER_HAPPEN(100,
 			LOCK();
 			result = counter > 1;
@@ -1167,7 +1288,7 @@ namespace tut {
 		ensure_equals(getChannelState(), Channel::STOPPED);
 	}
 
-	static void test_65_start_channel(ServerKit_ChannelTest *self) {
+	static void test_66_start_channel(ServerKit_ChannelTest *self) {
 		self->channel.start();
 		{
 			boost::mutex &syncher = self->syncher;
@@ -1178,7 +1299,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(65) {
+	TEST_METHOD(66) {
 		set_test_name("If stop() was called, and consumed() is called with a full buffer size, "
 			"then when start() is called, it transitions to the idle state and calls the idle callback");
 
@@ -1196,8 +1317,8 @@ namespace tut {
 			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
 		);
 
-		channelConsumed(3);
-		bg.safe->runLater(boost::bind(test_65_start_channel, this));
+		channelConsumed(3, false);
+		bg.safe->runLater(boost::bind(test_66_start_channel, this));
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
 		);
@@ -1232,7 +1353,7 @@ namespace tut {
 			ensure_equals(endAcked, 0u);
 		}
 
-		channelConsumed(0);
+		channelConsumed(0, false);
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::EOF_REACHED;
 		);
@@ -1276,7 +1397,7 @@ namespace tut {
 			ensure_equals(endAcked, 0u);
 		}
 
-		channelConsumed(0);
+		channelConsumed(0, false);
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::EOF_REACHED;
 		);
