@@ -104,7 +104,7 @@ public:
 	// `buffered` is 25-bit. This is 2^25-1, or 32 MB.
 	static const unsigned int MAX_MEMORY_BUFFERING = 33554431;
 
-	typedef int  (*DataCallback)(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
+	typedef Channel::Result (*DataCallback)(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
 	typedef void (*Callback)(FileBufferedChannel *channel);
 
 private:
@@ -398,8 +398,8 @@ private:
 			moreBuffers.pop_front();
 		}
 		FBC_DEBUG("popBuffer() completed: nbuffers = " << nbuffers << ", bytesBuffered = " << bytesBuffered);
-		if (!passedThreshold()) {
-			notifyBelowThreshold();
+		if (nbuffers == 0) {
+			callBuffersFlushedCallback();
 		}
 	}
 
@@ -429,22 +429,17 @@ private:
 		}
 	}
 
-	void notifyBelowThreshold() {
-		if (belowThresholdCallback != NULL) {
-			FBC_DEBUG("Calling belowThresholdCallback callback");
-			belowThresholdCallback(this);
+	void callBuffersFlushedCallback() {
+		if (buffersFlushedCallback != NULL) {
+			FBC_DEBUG("Calling buffersFlushedCallback");
+			buffersFlushedCallback(this);
 		}
 	}
 
-	void callFlushedCallback() {
-		if (flushedCallback != NULL) {
-			flushedCallback(this);
-		}
-	}
-
-	void callEndAckCallback() {
-		if (endAckCallback != NULL) {
-			endAckCallback(this);
+	void callDataFlushedCallback() {
+		if (dataFlushedCallback != NULL) {
+			FBC_DEBUG("Calling dataFlushedCallback");
+			dataFlushedCallback(this);
 		}
 	}
 
@@ -472,6 +467,7 @@ private:
 				FBC_DEBUG("Reader: no more buffers. Transitioning to RS_INACTIVE");
 				readerState = RS_INACTIVE;
 				verifyInvariants();
+				callDataFlushedCallback();
 			} else if (peekBuffer().empty()) {
 				FBC_DEBUG("Reader: EOF encountered. Feeding EOF");
 				readerState = RS_FEEDING_EOF;
@@ -482,14 +478,19 @@ private:
 					// called a method that encountered an error.
 					return;
 				}
+				assert(readerState == RS_FEEDING_EOF);
 				verifyInvariants();
 				FBC_DEBUG("Reader: EOF fed. Transitioning to RS_TERMINATED");
-				readerState = RS_TERMINATED;
-				verifyInvariants();
+				terminateReaderBecauseOfEOF();
 			} else {
 				MemoryKit::mbuf buffer(peekBuffer());
 				FBC_DEBUG("Reader: found buffer, " << buffer.size() << " bytes");
 				popBuffer();
+				if (generation != this->generation || mode == ERROR) {
+					// buffersFlushedCallback deinitialized this object, or callback
+					// called a method that encountered an error.
+					return;
+				}
 				readerState = RS_FEEDING;
 				FBC_DEBUG("Reader: feeding buffer, " << buffer.size() << " bytes");
 				Channel::feedWithoutRefGuard(buffer);
@@ -498,11 +499,15 @@ private:
 					// called a method that encountered an error.
 					return;
 				}
+				assert(readerState == RS_FEEDING);
 				verifyInvariants();
 				if (acceptingInput()) {
 					goto begin;
-				} else {
+				} else if (mayAcceptInputLater()) {
 					readNextWhenChannelIdle();
+				} else {
+					FBC_DEBUG("Reader: data callback no longer accepts further data");
+					terminateReaderBecauseOfEOF();
 				}
 			}
 			break;
@@ -526,6 +531,7 @@ private:
 						switchToInMemoryMode();
 					}
 					verifyInvariants();
+					callDataFlushedCallback();
 				} else if (result.first.empty()) {
 					FBC_DEBUG("Reader: EOF encountered. Feeding EOF");
 					readerState = RS_FEEDING_EOF;
@@ -536,10 +542,10 @@ private:
 						// called a method that encountered an error.
 						return;
 					}
+					assert(readerState == RS_FEEDING_EOF);
 					verifyInvariants();
 					FBC_DEBUG("Reader: EOF fed. Transitioning to RS_TERMINATED");
-					readerState = RS_TERMINATED;
-					verifyInvariants();
+					terminateReaderBecauseOfEOF();
 				} else {
 					FBC_DEBUG("Reader: found buffer, " << result.first.size() << " bytes");
 					inFileMode->readOffset += result.first.size();
@@ -552,35 +558,51 @@ private:
 						// called a method that encountered an error.
 						return;
 					}
+					assert(readerState == RS_FEEDING);
 					verifyInvariants();
 					if (acceptingInput()) {
 						goto begin;
-					} else {
+					} else if (mayAcceptInputLater()) {
 						readNextWhenChannelIdle();
+					} else {
+						FBC_DEBUG("Reader: data callback no longer accepts further data");
+						terminateReaderBecauseOfEOF();
 					}
 				}
 			}
 			break;
 		case ERROR:
-			readerState = RS_TERMINATED;
-			verifyInvariants();
+			P_BUG("Should never be reached");
 			break;
 		}
+	}
+
+	void terminateReaderBecauseOfEOF() {
+		readerState = RS_TERMINATED;
+		verifyInvariants();
+		callDataFlushedCallback();
 	}
 
 	void readNextWhenChannelIdle() {
 		FBC_DEBUG("Reader: waiting for underlying channel to become idle");
 		readerState = RS_WAITING_FOR_CHANNEL_IDLE;
-		idleCallback = channelHasBecomeIdle;
 		verifyInvariants();
 	}
 
-	static void channelHasBecomeIdle(FileBufferedChannel *self) {
-		FBC_DEBUG_FROM_STATIC("Reader: underlying channel has become idle");
-		self->verifyInvariants();
-		self->idleCallback = NULL;
-		self->readerState = RS_INACTIVE;
-		self->readNext();
+	void channelHasBecomeIdle() {
+		FBC_DEBUG("Reader: underlying channel has become idle");
+		verifyInvariants();
+		readerState = RS_INACTIVE;
+		readNext();
+	}
+
+	void channelEndedWhileWaitingForItToBecomeIdle() {
+		if (hasError()) {
+			FBC_DEBUG("Reader: error encountered while waiting for underlying channel to become idle");
+		} else {
+			FBC_DEBUG("Reader: underlying channel ended while waiting for it to become idle");
+		}
+		terminateReaderBecauseOfEOF();
 	}
 
 	struct ReadContext {
@@ -636,18 +658,22 @@ private:
 
 			FBC_DEBUG("Reader: feeding buffer, " << buffer.size() << " bytes");
 			readerState = RS_FEEDING;
-			Channel::feed(buffer);
+			Channel::feedWithoutRefGuard(buffer);
 			if (generation != this->generation || mode != ERROR) {
 				// Callback deinitialized this object, or callback
 				// called a method that encountered an error.
 				return 0;
 			}
+			assert(readerState == RS_FEEDING);
 			verifyInvariants();
 			if (acceptingInput()) {
 				readerState = RS_INACTIVE;
 				readNext();
-			} else {
+			} else if (mayAcceptInputLater()) {
 				readNextWhenChannelIdle();
+			} else {
+				FBC_DEBUG("Reader: data callback no longer accepts further data");
+				terminateReaderBecauseOfEOF();
 			}
 		} else {
 			setError(req->errorno);
@@ -864,11 +890,21 @@ private:
 
 			if (moveContext->written == moveContext->buffer.size()) {
 				// Write completed. Proceed with next buffer.
+				RefGuard guard(self->hooks, self);
+				unsigned int generation = self->generation;
+
 				FBC_DEBUG_FROM_STATIC("Writer: move complete");
 				delete moveContext;
+
 				assert(self->peekBuffer().size() == moveContext->buffer.size());
 				self->inFileMode->written += moveContext->buffer.size();
 				self->popBuffer();
+				if (generation != self->generation || self->mode == ERROR) {
+					// buffersFlushedCallback deinitialized this object, or callback
+					// called a method that encountered an error.
+					return 0;
+				}
+
 				self->moveNextBufferToFile();
 			} else {
 				FBC_DEBUG_FROM_STATIC("Writer: move incomplete, proceeding " <<
@@ -991,36 +1027,21 @@ private:
 		#endif
 	}
 
-	static void onChannelIdle(Channel *channel) {
+	static void onChannelConsumed(Channel *channel, unsigned int size) {
 		FileBufferedChannel *self = static_cast<FileBufferedChannel *>(channel);
-		RefGuard guard(self->hooks, self);
-		unsigned int generation = self->generation;
-
-		if (self->idleCallback != NULL) {
-			self->idleCallback(self);
-		}
-		if (self->generation == generation && self->mode != ERROR
-		 && !self->writing())
-		{
-			self->callFlushedCallback();
-		}
-	}
-
-	static void onChannelEndAcked(Channel *channel) {
-		FileBufferedChannel *self = static_cast<FileBufferedChannel *>(channel);
-		RefGuard guard(self->hooks, self);
-		unsigned int generation = self->generation;
-
-		self->callFlushedCallback();
-		if (self->generation == generation) {
-			self->callEndAckCallback();
+		if (self->readerState == RS_WAITING_FOR_CHANNEL_IDLE) {
+			if (self->acceptingInput()) {
+				self->channelHasBecomeIdle();
+			} else {
+				assert(self->Channel::ended());
+				self->channelEndedWhileWaitingForItToBecomeIdle();
+			}
 		}
 	}
 
 public:
-	Callback endAckCallback;
-	Callback belowThresholdCallback;
-	Callback flushedCallback;
+	Callback buffersFlushedCallback;
+	Callback dataFlushedCallback;
 
 	FileBufferedChannel()
 		: mode(IN_MEMORY_MODE),
@@ -1029,13 +1050,10 @@ public:
 		  errcode(0),
 		  bytesBuffered(0),
 		  inFileMode(),
-		  idleCallback(NULL),
-		  endAckCallback(NULL),
-		  belowThresholdCallback(NULL),
-		  flushedCallback(NULL)
+		  buffersFlushedCallback(NULL),
+		  dataFlushedCallback(NULL)
 	{
-		Channel::idleCallback = onChannelIdle;
-		Channel::endAckCallback = onChannelEndAcked;
+		Channel::consumedCallback = onChannelConsumed;
 	}
 
 	FileBufferedChannel(Context *context)
@@ -1046,15 +1064,11 @@ public:
 		  errcode(0),
 		  bytesBuffered(0),
 		  inFileMode(),
-		  idleCallback(NULL),
-		  endAckCallback(NULL),
-		  belowThresholdCallback(NULL),
-		  flushedCallback(NULL)
+		  buffersFlushedCallback(NULL),
+		  dataFlushedCallback(NULL)
 	{
-		Channel::idleCallback = onChannelIdle;
-		Channel::endAckCallback = onChannelEndAcked;
+		Channel::consumedCallback = onChannelConsumed;
 	}
-
 
 	~FileBufferedChannel() {
 		cancelReader();
@@ -1070,7 +1084,6 @@ public:
 
 	void feed(const MemoryKit::mbuf &buffer) {
 		RefGuard guard(hooks, this);
-		unsigned int generation = this->generation;
 
 		FBC_DEBUG("Feeding " << buffer.size() << " bytes");
 		verifyInvariants();
@@ -1083,11 +1096,6 @@ public:
 			switchToInFileMode();
 		}
 		readNextWithoutRefGuard();
-		if (this->generation == generation && readerState == RS_INACTIVE) {
-			assert(nbuffers == 0);
-			assert(mode == IN_MEMORY_MODE);
-			callFlushedCallback();
-		}
 	}
 
 	void feed(const char *data, unsigned int size) {
@@ -1113,14 +1121,8 @@ public:
 		mode = IN_MEMORY_MODE;
 		readerState = RS_INACTIVE;
 		errcode = 0;
-		idleCallback = NULL;
 		inFileMode.reset();
 		Channel::deinitialize();
-	}
-
-	void reset() {
-		deinitialize();
-		reinitialize();
 	}
 
 	void start() {
@@ -1131,38 +1133,33 @@ public:
 		Channel::stop();
 	}
 
+	Channel::State getState() const {
+		return state;
+	}
+
 	bool ended() const {
-		return (hasBuffers() && peekLastBuffer().empty()) || errcode != 0 || Channel::ended();
+		return (hasBuffers() && peekLastBuffer().empty()) || mode == ERROR || Channel::ended();
 	}
 
 	bool endAcked() const {
 		return Channel::endAcked();
 	}
 
-	Channel::State getState() const {
-		return state;
-	}
-
 	bool passedThreshold() const {
 		return bytesBuffered >= 1024 * 128;
 	}
 
-	bool writing() const {
-		// TOOD: gotta take a better look at this...
-		return (state != IDLE && state != EOF_REACHED) || readerState != RS_INACTIVE;
-	}
-
-	void setCallback(DataCallback callback) {
-		this->callback = (Channel::DataCallback) callback;
+	void setDataCallback(DataCallback callback) {
+		Channel::dataCallback = (Channel::DataCallback) callback;
 	}
 
 	OXT_FORCE_INLINE
 	Hooks *getHooks() const {
-		return hooks;
+		return Channel::hooks;
 	}
 
 	void setHooks(Hooks *hooks) {
-		this->hooks = hooks;
+		Channel::hooks = hooks;
 	}
 };
 

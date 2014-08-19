@@ -37,51 +37,51 @@ namespace ServerKit {
 
 class FileBufferedFdOutputChannel: protected FileBufferedChannel {
 public:
-	typedef void (*ErrorCallback)(FileBufferedFdOutputChannel *channel, int errcode);
 	typedef void (*Callback)(FileBufferedFdOutputChannel *channel);
+	typedef void (*ErrorCallback)(FileBufferedFdOutputChannel *channel, int errcode);
 
 private:
 	ev_io watcher;
 
-	static int onCallback(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer, int errcode) {
+	static Channel::Result onDataCallback(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer,
+		int errcode)
+	{
 		FileBufferedFdOutputChannel *self = static_cast<FileBufferedFdOutputChannel *>(channel);
+		// A RefGuard is not necessary here. Both Channel and FileBufferedChannel
+		// install a RefGuard before calling this callback.
 
-		if (buffer.empty()) {
-			return 0;
-		}
-
-		if (errcode != 0) {
-			self->callOnError(errcode);
-			return 0;
-		} else {
+		if (buffer.size() > 0) {
 			ssize_t ret;
 			do {
 				ret = ::write(self->watcher.fd, buffer.start, buffer.size());
 			} while (OXT_UNLIKELY(ret == -1 && errno == EINTR));
 			if (ret != -1) {
-				return ret;
-			} else if (errno == EAGAIN) {
-				self->FileBufferedChannel::stop();
+				return Channel::Result(ret, false);
+			} else if (errno == EAGAIN || errno == EWOULDBLOCK) {
 				ev_io_start(self->ctx->libev->getLoop(), &self->watcher);
-				return 0;
+				return Channel::Result(-1, false);
 			} else {
 				errcode = errno;
-				RefGuard guard(self->getHooks(), self);
 				unsigned int generation = self->generation;
 				self->feedError(errcode);
 				if (generation != self->generation) {
-					return 0;
+					return Channel::Result(0, true);
 				}
 				self->callOnError(errcode);
-				return 0;
+				return Channel::Result(0, true);
 			}
+		} else if (errcode == 0) {
+			return Channel::Result(0, false);
+		} else {
+			self->callOnError(errcode);
+			return Channel::Result(0, false);
 		}
 	}
 
 	static void onWritable(EV_P_ ev_io *io, int revents) {
 		FileBufferedFdOutputChannel *self = static_cast<FileBufferedFdOutputChannel *>(io->data);
 		ev_io_stop(self->ctx->libev->getLoop(), &self->watcher);
-		self->start();
+		self->consumed(0, false);
 	}
 
 	void callOnError(int errcode) {
@@ -96,7 +96,7 @@ public:
 	FileBufferedFdOutputChannel()
 		: errorCallback(NULL)
 	{
-		FileBufferedChannel::setCallback(onCallback);
+		FileBufferedChannel::setDataCallback(onDataCallback);
 		watcher.fd = -1;
 		watcher.data = this;
 	}
@@ -133,18 +133,6 @@ public:
 		FileBufferedChannel::deinitialize();
 	}
 
-	void reset() {
-		FileBufferedChannel::reset();
-	}
-
-	bool ended() const {
-		return FileBufferedChannel::ended();
-	}
-
-	bool endAcked() const {
-		return FileBufferedChannel::endAcked();
-	}
-
 	Channel::State getState() const {
 		return FileBufferedChannel::getState();
 	}
@@ -153,12 +141,16 @@ public:
 		return FileBufferedChannel::passedThreshold();
 	}
 
-	bool writing() const {
-		return FileBufferedChannel::writing();
-	}
-
 	int getFd() const {
 		return watcher.fd;
+	}
+
+	bool ended() const {
+		return FileBufferedChannel::ended();
+	}
+
+	bool endAcked() const {
+		return FileBufferedChannel::endAcked();
 	}
 
 	OXT_FORCE_INLINE
@@ -170,20 +162,12 @@ public:
 		FileBufferedChannel::setHooks(hooks);
 	}
 
-	void setEndAckCallback(Callback callback) {
-		FileBufferedChannel::endAckCallback = (FileBufferedChannel::Callback) callback;
+	void setBuffersFlushedCallback(Callback callback) {
+		FileBufferedChannel::buffersFlushedCallback = (FileBufferedChannel::Callback) callback;
 	}
 
-	void setBelowThresholdCallback(Callback callback) {
-		FileBufferedChannel::belowThresholdCallback = (FileBufferedChannel::Callback) callback;
-	}
-
-	Callback getFlushedCallback() const {
-		return (Callback) FileBufferedChannel::flushedCallback;
-	}
-
-	void setFlushedCallback(Callback callback) {
-		FileBufferedChannel::flushedCallback = (FileBufferedChannel::Callback) callback;
+	void setDataFlushedCallback(Callback callback) {
+		FileBufferedChannel::dataFlushedCallback = (FileBufferedChannel::Callback) callback;
 	}
 };
 
