@@ -279,6 +279,7 @@ public:
 			bool isChunked = hasTransferEncodingChunked();
 			boost::uint64_t contentLength;
 
+			ret++;
 			request->httpMajor = parser.http_major;
 			request->httpMinor = parser.http_minor;
 			request->keepAlive = http_should_keep_alive(&parser);
@@ -295,15 +296,18 @@ public:
 
 			if (contentLength > 0 || isChunked) {
 				// There is a request body.
-				request->contentLength = contentLength;
+				request->requestBodyInfo.contentLength = contentLength;
 				if (isChunked) {
 					request->httpState = HttpRequest::PARSING_CHUNKED_BODY;
+					request->requestBodyType = HttpRequest::RBT_CHUNKED;
 				} else {
 					request->httpState = HttpRequest::PARSING_BODY;
+					request->requestBodyType = HttpRequest::RBT_CONTENT_LENGTH;
 				}
 			} else {
 				// There is no request body.
 				request->httpState = HttpRequest::COMPLETE;
+				request->requestBodyType = HttpRequest::RBT_NO_BODY;
 			}
 		}
 

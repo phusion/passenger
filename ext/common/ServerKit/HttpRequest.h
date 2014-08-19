@@ -31,12 +31,16 @@
 #include <ServerKit/http_parser.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/HeaderTable.h>
+#include <ServerKit/FileBufferedChannel.h>
+#include <ServerKit/HttpChunkedBodyParserFwd.h>
 #include <MemoryKit/palloc.h>
 #include <DataStructures/LString.h>
 
 namespace Passenger {
 namespace ServerKit {
 
+
+class HttpHeaderParser;
 
 class BaseHttpRequest {
 public:
@@ -77,9 +81,22 @@ public:
 		IN_FREELIST
 	};
 
+	// Enum values are deliberately chosen so that hasRequestBody() can be branchless.
+	enum RequestBodyType {
+		/** The request has no body. */
+		RBT_NO_BODY = 0,
+		/** The connection has been upgraded. */
+		RBT_UPGRADE = 1,
+		/** The request body's size is determined by the Content-Length header. */
+		RBT_CONTENT_LENGTH = 2,
+		/** The request body's size is determined by the chunked Transfer-Encoding. */
+		RBT_CHUNKED = 4
+	};
+
 	boost::uint8_t httpMajor;
 	boost::uint8_t httpMinor;
-	HttpState httpState;
+	HttpState httpState: 5;
+	RequestBodyType requestBodyType: 3;
 
 	http_method method: 5;
 	bool keepAlive: 1;
@@ -88,16 +105,27 @@ public:
 	boost::atomic<int> refcount;
 
 	BaseClient *client;
+	union {
+		HttpHeaderParser *headerParser;
+		HttpChunkedBodyParser chunkedBodyParser;
+	} reqParser;
 	psg_pool_t *pool;
+	Hooks hooks;
 	LString path;
 	HeaderTable headers;
+	FileBufferedChannel requestBodyChannel;
 
 	/** If a request parsing error occurred, the error message is stored here. */
 	const char *parseError;
 
 	/** Length of the message body. Only has meaning when state is PARSING_BODY. */
-	boost::uint64_t contentLength;
-	boost::uint64_t contentAlreadyRead;
+	union {
+		// If requestBodyType == RBT_CONTENT_LENGTH
+		boost::uint64_t contentLength;
+		// If requestBodyType == RBT_CHUNKED
+		bool endChunkReached;
+	} requestBodyInfo;
+	boost::uint64_t requestBodyAlreadyRead;
 
 
 	BaseHttpRequest()
@@ -117,14 +145,16 @@ public:
 		httpMajor = 1;
 		httpMinor = 0;
 		httpState = PARSING_HEADERS;
+		requestBodyType = RBT_NO_BODY;
 		method    = HTTP_GET;
 		keepAlive = false;
 		responded = false;
 		pool      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 		psg_lstr_init(&path);
+		requestBodyChannel.reinitialize();
 		parseError = NULL;
-		contentLength = 0;
-		contentAlreadyRead = 0;
+		requestBodyInfo.contentLength = 0; // Also sets endChunkReached to false
+		requestBodyAlreadyRead = 0;
 	}
 
 	void deinitialize() {
@@ -143,10 +173,32 @@ public:
 		}
 
 		headers.clear();
+		requestBodyChannel.buffersFlushedCallback = NULL;
+		requestBodyChannel.dataFlushedCallback = NULL;
+		requestBodyChannel.deinitialize();
+	}
+
+	bool requestBodyFullyRead() const {
+		switch (requestBodyType) {
+		case RBT_NO_BODY:
+			return true;
+		case RBT_CONTENT_LENGTH:
+			return requestBodyAlreadyRead >= requestBodyInfo.contentLength;
+		case RBT_CHUNKED:
+			return requestBodyInfo.endChunkReached;
+		case RBT_UPGRADE:
+			return false;
+		}
+	}
+
+	bool hasRequestBody() const {
+		// Branchless way to check whether RBT_CONTENT_LENGTH or RBT_CHUNKED is set.
+		return requestBodyType & 0x6;
 	}
 
 	bool ended() const {
-		return (int) httpState >= (int) ERROR;
+		// Branchless OR.
+		return ((int) httpState >= (int) ERROR) | !client->connected();
 	}
 };
 

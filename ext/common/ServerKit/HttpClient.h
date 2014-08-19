@@ -28,7 +28,6 @@
 #include <Utils/sysqueue.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/HttpRequest.h>
-#include <ServerKit/HttpHeaderParser.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -47,19 +46,14 @@ public:
 	 *         currentRequest->httpState != HttpRequest::IN_FREELIST
 	 */
 	Request *currentRequest;
-	HttpHeaderParser *reqHeaderParser;
 
 	BaseHttpClient(void *server)
 		: BaseClient(server),
-		  currentRequest(NULL),
-		  reqHeaderParser(NULL)
-	{
-
-	}
+		  currentRequest(NULL)
+		{ }
 
 	virtual void deinitialize() {
 		currentRequest = NULL;
-		reqHeaderParser = NULL;
 		BaseClient::deinitialize();
 	}
 };
