@@ -49,7 +49,7 @@ namespace Passenger {
 		boost::shared_ptr<SafeLibev> safe;
 		BackgroundEventLoopPrivate *priv;
 
-		BackgroundEventLoop(bool scalable = false);
+		BackgroundEventLoop(bool scalable = false, bool useLibeio = false);
 		~BackgroundEventLoop();
 
 		void start(const string &threadName = "", unsigned int stackSize = 1024 * 1024);

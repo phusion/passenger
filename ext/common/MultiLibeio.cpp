@@ -146,6 +146,11 @@ MultiLibeio::shutdown() {
 	quit = false;
 }
 
+bool
+MultiLibeio::isInitialized() {
+	return thr != NULL;
+}
+
 #define MAKE_REQUEST(code) \
 	eio_req *result; \
 	Data *data = new Data(libev, callback); \
