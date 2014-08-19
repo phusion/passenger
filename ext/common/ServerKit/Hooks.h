@@ -22,45 +22,49 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_SERVER_KIT_CONTEXT_H_
-#define _PASSENGER_SERVER_KIT_CONTEXT_H_
-
-#include <boost/make_shared.hpp>
-#include <cstddef>
-#include <MemoryKit/mbuf.h>
-#include <SafeLibev.h>
-#include <Constants.h>
+#ifndef _PASSENGER_SERVER_KIT_HOOKS_H_
+#define _PASSENGER_SERVER_KIT_HOOKS_H_
 
 namespace Passenger {
 namespace ServerKit {
 
 
-class Context {
-private:
-	void initialize() {
-		mbuf_pool.mbuf_block_chunk_size = DEFAULT_MBUF_CHUNK_SIZE;
-		MemoryKit::mbuf_pool_init(&mbuf_pool);
-	}
+class HooksImpl;
 
+struct Hooks {
+	HooksImpl *impl;
+	void *userData;
+};
+
+class HooksImpl {
 public:
-	SafeLibevPtr libev;
-	struct MemoryKit::mbuf_pool mbuf_pool;
-	string secureModePassword;
+	virtual ~HooksImpl() { }
 
-	Context(const SafeLibevPtr &_libev)
-		: libev(_libev)
-	{
-		initialize();
+	virtual bool hook_isConnected(Hooks *hooks, void *source) {
+		return true;
 	}
 
-	Context(struct ev_loop *loop)
-		: libev(make_shared<SafeLibev>(loop))
+	virtual void hook_ref(Hooks *hooks, void *source) { }
+	virtual void hook_unref(Hooks *hooks, void *source) { }
+};
+
+struct RefGuard {
+	Hooks *hooks;
+	void *source;
+
+	RefGuard(Hooks *_hooks, void *_source)
+		: hooks(_hooks),
+		  source(_source)
 	{
-		initialize();
+		if (_hooks != NULL && _hooks->impl != NULL) {
+			_hooks->impl->hook_ref(_hooks, _source);
+		}
 	}
 
-	~Context() {
-		MemoryKit::mbuf_pool_deinit(&mbuf_pool);
+	~RefGuard() {
+		if (hooks != NULL && hooks->impl != NULL) {
+			hooks->impl->hook_unref(hooks, source);
+		}
 	}
 };
 
@@ -68,4 +72,4 @@ public:
 } // namespace ServerKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_SERVER_KIT_CONTEXT_H_ */
+#endif /* _PASSENGER_SERVER_KIT_HOOKS_H_ */
