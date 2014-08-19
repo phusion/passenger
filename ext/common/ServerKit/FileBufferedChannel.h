@@ -423,6 +423,12 @@ private:
 		}
 	}
 
+	void callFlushedCallback() {
+		if (flushedCallback != NULL) {
+			flushedCallback(this);
+		}
+	}
+
 
 	/***** Reader *****/
 
@@ -948,9 +954,9 @@ private:
 			self->idleCallback(self);
 		}
 		if (self->generation == generation && self->mode != ERROR
-		 && !self->writing() && self->flushedCallback)
+		 && !self->writing())
 		{
-			self->flushedCallback(self);
+			self->callFlushedCallback();
 		}
 	}
 
@@ -995,6 +1001,9 @@ public:
 	}
 
 	void feed(const MemoryKit::mbuf &buffer) {
+		RefGuard guard(hooks, this);
+		unsigned int generation = this->generation;
+
 		FBC_DEBUG("Feeding " << buffer.size() << " bytes");
 		verifyInvariants();
 		if ((hasBuffers() && peekLastBuffer().is_null()) || errcode != 0) {
@@ -1006,6 +1015,11 @@ public:
 			switchToInFileMode();
 		}
 		readNext();
+		if (this->generation == generation && readerState == RS_INACTIVE) {
+			assert(nbuffers == 0);
+			assert(mode == IN_MEMORY_MODE);
+			callFlushedCallback();
+		}
 	}
 
 	void reinitialize() {

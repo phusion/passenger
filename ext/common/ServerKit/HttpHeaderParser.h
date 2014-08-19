@@ -22,16 +22,15 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_SERVER_KIT_HTTP_REQUEST_PARSER_H_
-#define _PASSENGER_SERVER_KIT_HTTP_REQUEST_PARSER_H_
+#ifndef _PASSENGER_SERVER_KIT_HTTP_HEADER_PARSER_H_
+#define _PASSENGER_SERVER_KIT_HTTP_HEADER_PARSER_H_
 
+#include <boost/cstdint.hpp>
 #include <cstddef>
 #include <cassert>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/Context.h>
-#include <ServerKit/Request.h>
-#include <ServerKit/HeaderTable.h>
-#include <ServerKit/http_parser.h>
+#include <ServerKit/HttpRequest.h>
 #include <DataStructures/LString.h>
 #include <Logging.h>
 #include <Utils/Hasher.h>
@@ -40,10 +39,10 @@ namespace Passenger {
 namespace ServerKit {
 
 
-class HttpRequestParser {
+class HttpHeaderParser {
 private:
 	Context *ctx;
-	Request *request;
+	BaseHttpRequest *request;
 	http_parser parser;
 	const MemoryKit::mbuf *currentBuffer;
 	Header *currentHeader;
@@ -107,6 +106,20 @@ private:
 		}
 	}
 
+	bool hasTransferEncodingChunked() {
+		const LString *value = request->headers.lookup("transfer-encoding");
+		return value != NULL && psg_lstr_cmp(value, "chunked");
+	}
+
+	static void forceLowerCase(unsigned char *data, size_t len) {
+		const unsigned char *end = data + len;
+		while (data < end) {
+			unsigned char c = *data;
+			*data = ((c >= 'A' && c <= 'Z') ? (c | 0x20) : c);
+			data++;
+		}
+	}
+
 	static size_t http_parser_execute_and_handle_pause(http_parser *parser,
 		const http_parser_settings *settings, const char *data, size_t len,
 		bool &paused)
@@ -121,7 +134,7 @@ private:
 	}
 
 	static int onURL(http_parser *parser, const char *data, size_t len) {
-		HttpRequestParser *self = static_cast<HttpRequestParser *>(parser->data);
+		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 		self->state = PARSING_URL;
 		psg_lstr_append(&self->request->path, self->request->pool,
 			*self->currentBuffer, data, len);
@@ -129,7 +142,7 @@ private:
 	}
 
 	static int onHeaderField(http_parser *parser, const char *data, size_t len) {
-		HttpRequestParser *self = static_cast<HttpRequestParser *>(parser->data);
+		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
 		if (self->state == PARSING_URL
 		 || self->state == PARSING_HEADER_VALUE
@@ -160,13 +173,14 @@ private:
 
 		psg_lstr_append(&self->currentHeader->key, self->request->pool,
 			*self->currentBuffer, data, len);
+		forceLowerCase((unsigned char *) const_cast<char *>(data), len);
 		self->hasher.update(data, len);
 
 		return 0;
 	}
 
 	static int onHeaderValue(http_parser *parser, const char *data, size_t len) {
-		HttpRequestParser *self = static_cast<HttpRequestParser *>(parser->data);
+		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
 		if (self->state == PARSING_FIRST_HEADER_FIELD || self->state == PARSING_HEADER_FIELD) {
 			// New header value encountered. Finalize corresponding header field.
@@ -176,7 +190,7 @@ private:
 				self->state = PARSING_HEADER_VALUE;
 			}
 			self->currentHeader->hash = self->hasher.finalize();
-			
+
 		}
 
 		psg_lstr_append(&self->currentHeader->val, self->request->pool,
@@ -187,7 +201,7 @@ private:
 	}
 
 	static int onHeadersComplete(http_parser *parser) {
-		HttpRequestParser *self = static_cast<HttpRequestParser *>(parser->data);
+		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
 		if (self->state == PARSING_HEADER_VALUE
 		 || self->state == PARSING_FIRST_HEADER_VALUE)
@@ -200,35 +214,27 @@ private:
 		}
 
 		self->currentHeader = NULL;
-		self->request->headersComplete = true;
+		self->request->httpState = HttpRequest::PARSED_HEADERS;
 		http_parser_pause(parser, 1);
 		return 0;
 	}
 
 public:
-	HttpRequestParser(Request *_request)
-		: request(_request)
+	HttpHeaderParser(Context *context, BaseHttpRequest *_request)
+		: ctx(context),
+		  request(_request),
+		  currentBuffer(NULL),
+		  currentHeader(NULL),
+		  state(PARSING_NOT_STARTED),
+		  secureMode(false)
 	{
-		reinitialize();
+		http_parser_init(&parser, HTTP_REQUEST);
 		parser.data = this;
 	}
 
-	// May only be called right after construction.
-	void setContext(Context *context) {
-		ctx = context;
-	}
-
-	void reinitialize() {
-		currentBuffer = NULL;
-		currentHeader = NULL;
-		state = PARSING_NOT_STARTED;
-		secureMode = false;
-		http_parser_init(&parser, HTTP_REQUEST);
-	}
-
-	void deinitialize() { }
-
 	size_t feed(const MemoryKit::mbuf &buffer) {
+		assert(request->httpState == HttpRequest::PARSING_HEADERS);
+
 		http_parser_settings settings;
 		size_t ret;
 		bool paused;
@@ -246,7 +252,11 @@ public:
 			&settings, buffer.start, buffer.size(), paused);
 		currentBuffer = NULL;
 
-		if (ret != buffer.size() && !paused) {
+		if (parser.upgrade) {
+			assert(request->httpState == HttpRequest::PARSED_HEADERS);
+			request->httpState = HttpRequest::UPGRADED;
+		} else if (ret != buffer.size() && !paused) {
+			request->httpState = HttpRequest::ERROR;
 			switch (HTTP_PARSER_ERRNO(&parser)) {
 			case HPE_CB_header_field:
 			case HPE_CB_headers_complete:
@@ -269,8 +279,36 @@ public:
 				request->parseError = http_errno_description(HTTP_PARSER_ERRNO(&parser));
 				break;
 			}
-		} else if (request->headersComplete) {
+		} else if (request->httpState == HttpRequest::PARSED_HEADERS) {
+			bool isChunked = hasTransferEncodingChunked();
+			boost::uint64_t contentLength;
+
+			request->httpMajor = parser.http_major;
+			request->httpMinor = parser.http_minor;
 			request->keepAlive = http_should_keep_alive(&parser);
+			request->method    = (http_method) parser.method;
+
+			// TODO: check that content-length and transfer-encoding aren't simultaneously given
+
+			// For some reason, the parser leaves content_length at ULLONG_MAX
+			// if Content-Length is not given.
+			contentLength = parser.content_length;
+			if (contentLength == std::numeric_limits<boost::uint64_t>::max()) {
+				contentLength = 0;
+			}
+
+			if (contentLength > 0 || isChunked) {
+				// There is a request body.
+				request->contentLength = contentLength;
+				if (isChunked) {
+					request->httpState = HttpRequest::PARSING_CHUNKED_BODY;
+				} else {
+					request->httpState = HttpRequest::PARSING_BODY;
+				}
+			} else {
+				// There is no request body.
+				request->httpState = HttpRequest::COMPLETE;
+			}
 		}
 
 		return ret;
@@ -281,4 +319,4 @@ public:
 } // namespace ServerKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_SERVER_KIT_HTTP_REQUEST_PARSER_H_ */
+#endif /* _PASSENGER_SERVER_KIT_HTTP_HEADER_PARSER_H_ */
