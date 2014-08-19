@@ -66,8 +66,16 @@ using namespace oxt;
 #define SKS_DEBUG(expr)  P_DEBUG("[" << this->getServerName() << "] " << expr)
 #define SKS_TRACE(level, expr) P_TRACE(level, "[" << this->getServerName() << "] " << expr)
 
-#define SKC_WARN(client, expr) P_WARN("[Client " << this->getClientName(client) << "] " << expr)
-#define SKC_TRACE(client, level, expr) P_TRACE(level, "[Client " << this->getClientName(client) << "] " << expr)
+#define SKC_WARN(client, expr) SKC_WARN_FROM_STATIC(this, client, expr)
+#define SKC_DEBUG(client, expr) SKC_DEBUG_FROM_STATIC(this, client, expr)
+#define SKC_TRACE(client, level, expr) SKC_TRACE_FROM_STATIC(this, client, level, expr)
+
+#define SKC_WARN_FROM_STATIC(server, client, expr) \
+	P_WARN("[Client " << server->getClientName(client) << "] " << expr)
+#define SKC_DEBUG_FROM_STATIC(server, client, expr) \
+	P_DEBUG("[Client " << server->getClientName(client) << "] " << expr)
+#define SKC_TRACE_FROM_STATIC(server, client, level, expr) \
+	P_TRACE(level, "[Client " << server->getClientName(client) << "] " << expr)
 
 /*
 start main server
@@ -332,8 +340,8 @@ private:
 		}
 	}
 
-	static int _onClientDataReceived(FdChannel *channel, const MemoryKit::mbuf &buffer,
-		int errcode)
+	static Channel::Result _onClientDataReceived(FdChannel *channel,
+		const MemoryKit::mbuf &buffer, int errcode)
 	{
 		Client *client = static_cast<Client *>(channel->getHooks()->userData);
 		Server *server = static_cast<Server *>(client->getServer());
@@ -389,14 +397,6 @@ protected:
 		}
 	}
 
-	virtual StaticString getServerName() const {
-		return StaticString("Server", sizeof("Server") - 1);
-	}
-
-	virtual string getClientName(Client *client) const {
-		return toString(client->fdnum);
-	}
-
 
 	/***** Hooks *****/
 
@@ -406,7 +406,7 @@ protected:
 
 		client->input.setContext(ctx);
 		client->input.setHooks(&client->hooks);
-		client->input.setCallback(_onClientDataReceived);
+		client->input.setDataCallback(_onClientDataReceived);
 
 		client->output.setContext(ctx);
 		client->output.setHooks(&client->hooks);
@@ -450,10 +450,10 @@ protected:
 		return true;
 	}
 
-	virtual int onClientDataReceived(Client *client, const MemoryKit::mbuf &buffer,
+	virtual Channel::Result onClientDataReceived(Client *client, const MemoryKit::mbuf &buffer,
 		int errcode)
 	{
-		return -1;
+		return Channel::Result(0, true);
 	}
 
 	virtual void onClientOutputError(Client *client, int errcode) {
@@ -555,6 +555,14 @@ public:
 
 		// When all active and disconnected clients are gone,
 		// stopCompleted() will be called to set state to STOPPED.
+	}
+
+	virtual StaticString getServerName() const {
+		return StaticString("Server", sizeof("Server") - 1);
+	}
+
+	virtual string getClientName(Client *client) const {
+		return toString(client->fdnum);
 	}
 
 	Client *lookupClient(int fd) {
