@@ -4,7 +4,6 @@
 #include <Constants.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
-#include <MemoryKit/mbuf.cpp>
 
 using namespace Passenger;
 using namespace Passenger::ServerKit;
@@ -12,26 +11,34 @@ using namespace Passenger::MemoryKit;
 using namespace std;
 
 namespace tut {
-	struct ServerKit_ChannelTest: public Hooks {
+	#define CONSUME_FULLY -2
+
+	struct ServerKit_ChannelTest: public ServerKit::Hooks {
 		BackgroundEventLoop bg;
 		ServerKit::Context context;
 		Channel channel;
 		boost::mutex syncher;
 		string log;
 		int toConsume;
-		unsigned int counter;
-		
+		unsigned int counter, idleCount, endAcked;
+		Channel::State lastState;
+
 		ServerKit_ChannelTest()
 			: bg(),
 			  context(bg.safe),
 			  channel(&context)
 		{
 			channel.callback = callback;
+			channel.idleCallback = idleCallback;
+			channel.endAckCallback = endAckCallback;
 			channel.hooks = this;
 			Hooks::impl = NULL;
 			Hooks::userData = NULL;
-			toConsume = -1;
+			toConsume = CONSUME_FULLY;
 			counter = 0;
+			idleCount = 0;
+			endAcked = 0;
+			lastState = Channel::IDLE;
 			bg.start();
 		}
 
@@ -51,15 +58,26 @@ namespace tut {
 					StaticString str(buffer.start, buffer.size());
 					self->log.append("Data: " + cEscapeString(str) + "\n");
 				}
-				if (self->toConsume == -1) {
-					return buffer.size();
-				} else {
-					return self->toConsume;
-				}
 			} else {
 				self->log.append("Error: " + toString(errcode) + "\n");
-				return 0;
 			}
+			if (self->toConsume == CONSUME_FULLY) {
+				return buffer.size();
+			} else {
+				return self->toConsume;
+			}
+		}
+
+		static void idleCallback(Channel *channel) {
+			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks;
+			boost::lock_guard<boost::mutex> l(self->syncher);
+			self->idleCount++;
+		}
+
+		static void endAckCallback(Channel *channel) {
+			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks;
+			boost::lock_guard<boost::mutex> l(self->syncher);
+			self->endAcked++;
 		}
 
 		unsigned int getCounter() {
@@ -68,16 +86,24 @@ namespace tut {
 		}
 
 		void startChannel() {
-			bg.safe->run(boost::bind(&ServerKit_ChannelTest::realStartChannel, this));
+			bg.safe->runLater(boost::bind(&ServerKit_ChannelTest::realStartChannel, this));
 		}
 
 		void realStartChannel() {
 			channel.start();
 		}
 
+		void stopChannel() {
+			bg.safe->runLater(boost::bind(&ServerKit_ChannelTest::realStopChannel, this));
+		}
+
+		void realStopChannel() {
+			channel.stop();
+		}
+
 		bool channelIsStarted() {
 			bool result;
-			bg.safe->run(boost::bind(&ServerKit_ChannelTest::realChannelIsStarted, this, &result));
+			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::realChannelIsStarted, this, &result));
 			return result;
 		}
 
@@ -85,8 +111,18 @@ namespace tut {
 			*result = channel.isStarted();
 		}
 
+		bool channelHasError() {
+			bool result;
+			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::realChannelHasError, this, &result));
+			return result;
+		}
+
+		void realChannelHasError(bool *result) {
+			*result = channel.hasError();
+		}
+
 		void feedChannel(const string &data) {
-			bg.safe->run(boost::bind(&ServerKit_ChannelTest::realFeedChannel, this, data));
+			bg.safe->runLater(boost::bind(&ServerKit_ChannelTest::realFeedChannel, this, data));
 		}
 
 		void realFeedChannel(string data) {
@@ -98,7 +134,7 @@ namespace tut {
 		}
 
 		void feedChannelError(int errcode) {
-			bg.safe->run(boost::bind(&ServerKit_ChannelTest::realFeedChannelError,
+			bg.safe->runLater(boost::bind(&ServerKit_ChannelTest::realFeedChannelError,
 				this, errcode));
 		}
 
@@ -106,12 +142,20 @@ namespace tut {
 			channel.feedError(errcode);
 		}
 
-		void setChannelCallback(const Channel::Callback &callback) {
+		void channelConsumed(int size) {
+			bg.safe->runLater(boost::bind(&ServerKit_ChannelTest::realChannelConsumed, this, size));
+		}
+
+		void realChannelConsumed(int size) {
+			channel.consumed(size);
+		}
+
+		void setChannelCallback(const Channel::DataCallback &callback) {
 			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::realSetChannelCallback,
 				this, callback));
 		}
 
-		void realSetChannelCallback(Channel::Callback callback) {
+		void realSetChannelCallback(Channel::DataCallback callback) {
 			channel.callback = callback;
 		}
 
@@ -125,6 +169,26 @@ namespace tut {
 			*result = channel.getState();
 		}
 
+		int getChannelErrcode() {
+			int result;
+			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::realGetChannelErrcode, this, &result));
+			return result;
+		}
+
+		void realGetChannelErrcode(int *result) {
+			*result = channel.getErrcode();
+		}
+
+		bool channelIsAcceptingInput() {
+			bool result;
+			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::realChannelIsAcceptingInput, this, &result));
+			return result;
+		}
+
+		void realChannelIsAcceptingInput(bool *result) {
+			*result = channel.acceptingInput();
+		}
+
 		void logChannelStateLater() {
 			bg.safe->runLater(boost::bind(&ServerKit_ChannelTest::logChannelState, this));
 		}
@@ -133,37 +197,49 @@ namespace tut {
 			boost::lock_guard<boost::mutex> l(syncher);
 			log.append("State: " + toString((int) channel.getState()) + "\n");
 		}
+
+		void feedSomeDataAndWaitForConsumption() {
+			feedChannel("aaabbb");
+			EVENTUALLY(5,
+				boost::lock_guard<boost::mutex> l(syncher);
+				result = !log.empty();
+			);
+			{
+				boost::lock_guard<boost::mutex> l(syncher);
+				ensure_equals(log, "Data: aaabbb\n");
+			}
+			EVENTUALLY(5,
+				result = getChannelState() == Channel::IDLE;
+			);
+		}
 	};
 
-	#define LOCK() boost::lock_guard<boost::mutex> l(syncher)
+	#define LOCK() boost::unique_lock<boost::mutex> l(syncher)
+	#define UNLOCK() l.unlock()
 
-	#define DEFINE_ON_DATA_METHOD(name, code) \
+	#define DEFINE_DATA_CALLBACK_METHOD(name, code) \
 		static int name(Channel *channel, const mbuf &buffer, int errcode) { \
 			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks; \
 			boost::mutex &syncher = self->syncher; \
-			string &log = self->log; \
 			/* Shut up compiler warning */  \
 			(void) syncher; \
-			(void) log; \
-			code \
-		}
-	
-	#define DEFINE_FINISH_METHOD(name, code) \
-		static void name(ServerKit_ChannelTest *self) { \
-			boost::mutex &syncher = self->syncher; \
-			string &log = self->log; \
-			boost::shared_ptr<MyChannel> &channel = self->channel; \
-			/* Shut up compiler warning */ \
-			(void) syncher; \
-			(void) log; \
-			(void) channel; \
 			code \
 		}
 
-	DEFINE_TEST_GROUP(ServerKit_ChannelTest);
+	DEFINE_TEST_GROUP_WITH_LIMIT(ServerKit_ChannelTest, 100);
+
+
+	/***** Initial state *****/
 
 	TEST_METHOD(1) {
-		set_test_name("It calls the callback upon being fed data");
+		set_test_name("It is idle and accepts input");
+		ensure_equals(channel.getState(), Channel::IDLE);
+		ensure(channel.acceptingInput());
+	}
+
+	TEST_METHOD(2) {
+		set_test_name("Upon being fed data, it calls the callback, transitions "
+			"to the idle state and calls the idle callback");
 		feedChannel("aaabbb");
 		EVENTUALLY(5,
 			LOCK();
@@ -172,14 +248,16 @@ namespace tut {
 		{
 			LOCK();
 			ensure_equals(log, "Data: aaabbb\n");
+			ensure_equals(idleCount, 1u);
 		}
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
 		);
 	}
 
-	TEST_METHOD(2) {
-		set_test_name("It emits EOF events after feeding EOF");
+	TEST_METHOD(3) {
+		set_test_name("Upon being fed EOF, it calls the callback with an empty buffer "
+			"and transitions to the EOF state");
 		feedChannel("");
 		EVENTUALLY(5,
 			LOCK();
@@ -194,22 +272,62 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(3) {
-		set_test_name("It emits EOF events after all data has been consumed");
-
-		feedChannel("aaabbb");
+	TEST_METHOD(4) {
+		set_test_name("Upon being fed an error, it calls the callback with an error code "
+			"and transitions to the EOF state");
+		feedChannelError(EIO);
 		EVENTUALLY(5,
 			LOCK();
 			result = !log.empty();
 		);
 		{
 			LOCK();
-			ensure_equals(log, "Data: aaabbb\n");
+			ensure_equals(log, "Error: " + toString(EIO) + "\n");
 		}
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+	}
+
+
+	/***** When the callback is done consuming data and the Channel is now idle *****/
+
+	TEST_METHOD(10) {
+		set_test_name("It is idle and accepts input");
+
+		feedSomeDataAndWaitForConsumption();
+		ensure_equals(getChannelState(), Channel::IDLE);
+		ensure(channelIsAcceptingInput());
+	}
+
+	TEST_METHOD(11) {
+		set_test_name("It calls the idle callback");
+
+		feedSomeDataAndWaitForConsumption();
+		LOCK();
+		ensure_equals(idleCount, 1u);
+	}
+
+	TEST_METHOD(12) {
+		set_test_name("Upon being fed data, it calls the callback and transitions "
+			"to the idle state");
+
+		feedSomeDataAndWaitForConsumption();
+		feedChannel("aaabbb");
+		EVENTUALLY(5,
+			LOCK();
+			result = log.find("Data: aaabbb\n") != string::npos;
+		);
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
 		);
+	}
 
+	TEST_METHOD(13) {
+		set_test_name("Upon being fed EOF, it calls the callback with an empty "
+			"buffer and transitions to the EOF state");
+
+		feedSomeDataAndWaitForConsumption();
 		feedChannel("");
 		EVENTUALLY(5,
 			LOCK();
@@ -226,482 +344,961 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(4) {
-		set_test_name("It emits error events after feeding an error");
-		feedChannelError(EIO);
-		EVENTUALLY(5,
-			LOCK();
-			result = !log.empty();
-		);
-		{
-			LOCK();
-			ensure_equals(log, "Error: " + toString(EIO) + "\n");
-		}
-		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
-		);
-	}
+	TEST_METHOD(14) {
+		set_test_name("Upon being fed an error, it calls the callback with an "
+			"error code and transitions to the EOF state");
 
-	TEST_METHOD(5) {
-		set_test_name("It emits error events after all data has been consumed");
-		feedChannel("aaabbb");
-		EVENTUALLY(5,
-			LOCK();
-			result = !log.empty();
-		);
-		EVENTUALLY(5,
-			result = getChannelState() == Channel::IDLE;
-		);
-
+		feedSomeDataAndWaitForConsumption();
 		feedChannelError(EIO);
 		EVENTUALLY(5,
 			LOCK();
 			result = log.find("Error") != string::npos;
 		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Data: aaabbb\n"
+				"Error: " + toString(EIO) + "\n");
+		}
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::EOF_REACHED;
 		);
-
-		LOCK();
-		ensure_equals(log,
-			"Data: aaabbb\n"
-			"Error: " + toString(EIO) + "\n");
 	}
 
-	TEST_METHOD(6) {
-		set_test_name("If the callback partially consumes the buffer, "
-			"the Channel calls the callback again with the remaining data");
+
+	/***** When the callback is in progress *****/
+
+	DEFINE_DATA_CALLBACK_METHOD(test_20_callback,
+		LOCK();
+		self->lastState = self->channel.getState();
+		return buffer.size();
+	);
+
+	TEST_METHOD(20) {
+		set_test_name("It is in the calling state");
+
+		setChannelCallback(test_20_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(lastState, Channel::CALLING);
+		}
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_21_callback,
+		LOCK();
+		self->counter++;
+		if (self->counter == 1) {
+			self->log.append("Feeding error\n");
+			UNLOCK();
+			self->channel.feedError(EIO);
+		} else {
+			self->log.append("Received error: " + toString(errcode) + "\n");
+			UNLOCK();
+		}
+		return buffer.size();
+	);
+
+	TEST_METHOD(21) {
+		set_test_name("Upon being fed an error, it transitions to the EOF state immediately "
+			"and doesn't call the callback with an error code");
+
+		setChannelCallback(test_21_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Feeding error\n");
+		}
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_22_callback,
+		self->channel.start();
+		LOCK();
+		self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+		self->log.append("Channel started: " + toString(self->channel.isStarted()) + "\n");
+		return buffer.size();
+	);
+
+	TEST_METHOD(22) {
+		set_test_name("Upon calling start(), nothing happens");
+
+		setChannelCallback(test_22_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Channel state: " + toString(Channel::CALLING) + "\n"
+				"Channel started: 1\n");
+		}
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_23_callback,
+		self->channel.stop();
+		return buffer.size();
+	);
+
+	TEST_METHOD(23) {
+		set_test_name("Upon calling stop(), it transitions to the stopped state");
+
+		setChannelCallback(test_23_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::STOPPED;
+		);
+		SHOULD_NEVER_HAPPEN(100,
+			result = getChannelState() != Channel::STOPPED;
+		);
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_24_callback,
+		self->channel.stop();
+		{
+			LOCK();
+			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+			self->log.append("Channel started: " + toString(self->channel.isStarted()) + "\n");
+		}
+		self->channel.start();
+		{
+			LOCK();
+			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+			self->log.append("Channel started: " + toString(self->channel.isStarted()) + "\n");
+		}
+		return buffer.size();
+	);
+
+	TEST_METHOD(24) {
+		set_test_name("Upon calling stop() then start(), it transitions to the calling state");
+
+		setChannelCallback(test_24_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Channel state: " + toString(Channel::STOPPED_WHILE_CALLING) + "\n"
+				"Channel started: 0\n"
+				"Channel state: " + toString(Channel::CALLING) + "\n"
+				"Channel started: 1\n");
+		}
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_25_callback,
+		LOCK();
+		self->counter++;
+		if (self->counter == 1) {
+			UNLOCK();
+			self->channel.stop();
+			self->channel.start();
+		} else {
+			StaticString str(buffer.start, buffer.size());
+			self->log.append("Data: " + cEscapeString(str) + "\n");
+			self->log.append("Error: " + toString(errcode) + "\n");
+		}
+		return buffer.size();
+	);
+
+	TEST_METHOD(25) {
+		set_test_name("Upon calling stop() then start(), it calls the callback next time data is fed");
+
+		setChannelCallback(test_25_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		feedChannel("def");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Data: def\n"
+				"Error: 0\n");
+		}
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_26_27_callback,
+		LOCK();
+		self->counter++;
+		if (self->counter == 1) {
+			UNLOCK();
+			self->channel.stop();
+			self->channel.start();
+		} else {
+			StaticString str(buffer.start, buffer.size());
+			self->log.append("Data: " + cEscapeString(str) + "\n");
+			self->log.append("Error: " + toString(errcode) + "\n");
+		}
+		return buffer.size();
+	);
+
+	TEST_METHOD(26) {
+		set_test_name("Upon calling stop() then start(), it calls the callback next time EOF is fed");
+
+		setChannelCallback(test_26_27_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		feedChannel("");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Data: \n"
+				"Error: 0\n");
+		}
+	}
+
+	TEST_METHOD(27) {
+		set_test_name("Upon calling stop() then start(), it calls the callback next time an error is fed");
+
+		setChannelCallback(test_26_27_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		feedChannelError(EIO);
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Data: \n"
+				"Error: " + toString(EIO) + "\n");
+		}
+	}
+
+
+	/***** When the callback is not in progress *****/
+
+	TEST_METHOD(30) {
+		set_test_name("Upon calling start(), nothing happens");
+
+		startChannel();
+		ensure_equals(getChannelState(), Channel::IDLE);
+		ensure(channelIsStarted());
+	}
+
+	TEST_METHOD(31) {
+		set_test_name("Upon calling stop(), it transitions to the stopped state");
+
+		stopChannel();
+		ensure_equals(getChannelState(), Channel::STOPPED);
+		ensure(!channelIsStarted());
+	}
+
+/*
+	static void test_32_callback(ServerKit_ChannelTest *self) {
+		self->channel.stop();
+		self->channel.start();
+		{
+			boost::mutex &syncher = self->syncher;
+			LOCK();
+			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+		}
+		self->channel.feed(MemoryKit::mbuf("abc"));
+	}
+
+	TEST_METHOD(32) {
+		set_test_name("Upon calling stop() then start(), it transitions to the idle state in the next tick");
+
+		bg.safe->runLater(boost::bind(test_32_callback, this));
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 1u);
+			ensure_equals(log,
+				"Channel state: " + toString(Channel::PLANNING_TO_CALL) + "\n");
+		}
+	}
+*/
+
+	static void test_33_callback(ServerKit_ChannelTest *self) {
+		self->channel.stop();
+		self->channel.start();
+		{
+			boost::mutex &syncher = self->syncher;
+			LOCK();
+			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+		}
+		self->channel.feed(mbuf("abc"));
+	}
+
+	TEST_METHOD(33) {
+		set_test_name("Upon calling stop() then start(), it calls the callback next time data is fed");
+
+		bg.safe->runLater(boost::bind(test_33_callback, this));
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Channel state: " + toString(Channel::IDLE) + "\n"
+				"Data: abc\n");
+			ensure_equals(counter, 1u);
+		}
+	}
+
+	static void test_34_callback(ServerKit_ChannelTest *self) {
+		self->channel.stop();
+		self->channel.start();
+		{
+			boost::mutex &syncher = self->syncher;
+			LOCK();
+			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+		}
+		self->channel.feed(mbuf());
+	}
+
+	TEST_METHOD(34) {
+		set_test_name("Upon calling stop() then start(), it calls the callback next time EOF is fed");
+
+		bg.safe->runLater(boost::bind(test_34_callback, this));
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Channel state: " + toString(Channel::IDLE) + "\n"
+				"EOF\n");
+			ensure_equals(counter, 1u);
+		}
+	}
+
+	static void test_35_callback(ServerKit_ChannelTest *self) {
+		self->channel.stop();
+		self->channel.start();
+		{
+			boost::mutex &syncher = self->syncher;
+			LOCK();
+			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+		}
+		self->channel.feedError(EIO);
+	}
+
+	TEST_METHOD(35) {
+		set_test_name("Upon calling stop() then start(), it calls the callback next time an error is fed");
+
+		bg.safe->runLater(boost::bind(test_35_callback, this));
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Channel state: " + toString(Channel::IDLE) + "\n"
+				"Error: " + toString(EIO) + "\n");
+			ensure_equals(counter, 0u);
+		}
+	}
+
+
+	/***** If the callback immediately consumed the buffer partially *****/
+
+	TEST_METHOD(40) {
+		set_test_name("It calls the callback again with the remainder of the the buffer, "
+			"until the buffer is fully consumed");
+
 		{
 			LOCK();
 			toConsume = 1;
 		}
-		feedChannel("aabb");
-
-		EVENTUALLY(5,
-			LOCK();
-			result = log ==
-				"Data: aabb\n"
-				"Data: abb\n"
-				"Data: bb\n"
-				"Data: b\n";
-		);
-	}
-
-	DEFINE_ON_DATA_METHOD(on_data_8,
-		channel->stop();
-		LOCK();
-		log.append("stopped\n");
-		return 3;
-	)
-
-	TEST_METHOD(8) {
-		set_test_name("If the callback consumes everything and stops the "
-			"Channel, then the Channel is left in the STOPPED state");
-		
-		setChannelCallback(on_data_8);
 		feedChannel("abc");
-		EVENTUALLY(5,
-			LOCK();
-			result = log == "stopped\n";
-		);
-		EVENTUALLY(5,
-			result = getChannelState() == Channel::STOPPED;
-		);
-	}
-
-	DEFINE_ON_DATA_METHOD(on_data_9,
-		channel->start();
-		LOCK();
-		log.append("started\n");
-		return 3;
-	)
-
-	TEST_METHOD(9) {
-		set_test_name("If the callback consumes everything and starts the "
-			"Channel, then the Channel is left in the IDLE state");
-		setChannelCallback(on_data_9);
-		feedChannel("abc");
-		EVENTUALLY(5,
-			LOCK();
-			result = log == "started\n";
-		);
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
 		);
-	}
-
-	DEFINE_ON_DATA_METHOD(on_data_10,
-		channel->stop();
-		LOCK();
-		log.append("stopped\n");
-		return 1;
-	)
-
-	TEST_METHOD(10) {
-		set_test_name("If the callback consumes partially and stops the "
-			"Channel, then the Channel is left in the STOPPED state");
-		setChannelCallback(on_data_10);
-		feedChannel("abc");
-		EVENTUALLY(5,
+		{
 			LOCK();
-			result = log == "stopped\n";
-		);
-		EVENTUALLY(5,
-			result = getChannelState() == Channel::STOPPED;
-		);
+			ensure_equals(log,
+				"Data: abc\n"
+				"Data: bc\n"
+				"Data: c\n");
+		}
 	}
 
-	DEFINE_ON_DATA_METHOD(on_data_11,
-		channel->start();
-		LOCK();
-		log.append("Data: " + StaticString(buffer.start, buffer.size()) + "\n");
-		return 1;
-	)
-
-	TEST_METHOD(11) {
-		set_test_name("If the callback consumes partially and starts the "
-			"Channel, then the Channel continues calling the callback "
-			"until the entire buffer is conusmed");
-		setChannelCallback(on_data_11);
-		feedChannel("ab");
-		EVENTUALLY(5,
-			result = getChannelState() == Channel::IDLE;
-		);
-		LOCK();
-		ensure_equals(log,
-			"Data: ab\n"
-			"Data: b\n");
-	}
-
-	DEFINE_ON_DATA_METHOD(on_data_12,
+	DEFINE_DATA_CALLBACK_METHOD(test_41_callback,
 		LOCK();
 		self->counter++;
-		log.append("Data: " + StaticString(buffer.start, buffer.size()) + "\n");
-		if (self->counter == 2) {
-			channel->stop();
-			log.append("stopped\n");
+		if (self->counter == 1) {
+			UNLOCK();
+			return 1;
+		} else {
+			UNLOCK();
+			self->channel.feedError(EIO);
+			return 1;
 		}
-		return 2;
-	)
+	);
 
-	TEST_METHOD(12) {
-		set_test_name("If the callback first consumes the buffer partially, then "
-			"consumes the buffer fully and stops the Channel, then the "
-			"Channel is left at the STOPPED state");
-		setChannelCallback(on_data_12);
-		feedChannel("aabb");
+	TEST_METHOD(41) {
+		set_test_name("Upon being fed an error, it transitions to the EOF state immediately, "
+			"and it won't call the callback with an error code");
+
+		setChannelCallback(test_41_callback);
+		feedChannel("abc");
 		EVENTUALLY(5,
-			LOCK();
-			result = log ==
-				"Data: aabb\n"
-				"Data: bb\n"
-				"stopped\n";
+			result = getChannelState() == Channel::EOF_REACHED;
 		);
+		{
+			LOCK();
+			ensure_equals(counter, 2u);
+			ensure(channelHasError());
+			ensure_equals(getChannelErrcode(), EIO);
+		}
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_42_callback,
+		LOCK();
+		self->counter++;
+		if (self->counter == 1) {
+			UNLOCK();
+			self->channel.stop();
+		}
+		return 1;
+	);
+
+	TEST_METHOD(42) {
+		set_test_name("If stop() was called, it doesn't call the callback with the "
+			"remainder of the buffer");
+
+		setChannelCallback(test_42_callback);
+		feedChannel("abc");
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::STOPPED;
 		);
+		{
+			LOCK();
+			ensure_equals(counter, 1u);
+		}
 	}
 
-	DEFINE_ON_DATA_METHOD(on_data_13,
+	DEFINE_DATA_CALLBACK_METHOD(test_43_callback,
 		LOCK();
+		StaticString str(buffer.start, buffer.size());
 		self->counter++;
-		log.append("Data: " + StaticString(buffer.start, buffer.size()) + "\n");
-		if (self->counter == 2) {
-			channel->start();
-			log.append("started\n");
+		self->log.append("Data: " + cEscapeString(str) + "\n");
+		if (self->counter == 1) {
+			UNLOCK();
+			self->channel.stop();
+			self->channel.start();
 		}
-		return 2;
-	)
+		return 1;
+	);
 
-	TEST_METHOD(13) {
-		set_test_name("If the callback first consumes the buffer partially, then "
-			"consumes the buffer fully and starts the Channel, then the "
-			"Channel is left at the IDLE state");
-		setChannelCallback(on_data_13);
-		feedChannel("aabb");
+	TEST_METHOD(43) {
+		set_test_name("If stop() then start() was called, it calls the callback with the remainder of the "
+			"data in the next tick");
+
+		setChannelCallback(test_43_callback);
+		feedChannel("abc");
 		EVENTUALLY(5,
-			LOCK();
-			result = log ==
-				"Data: aabb\n"
-				"Data: bb\n"
-				"started\n";
+			result = getChannelState() == Channel::IDLE;
 		);
+		{
+			LOCK();
+			ensure_equals(counter, 3u);
+			ensure_equals(log,
+				"Data: abc\n"
+				"Data: bc\n"
+				"Data: c\n");
+		}
+	}
+
+	DEFINE_DATA_CALLBACK_METHOD(test_44_callback,
+		LOCK();
+		StaticString str(buffer.start, buffer.size());
+		self->counter++;
+		self->log.append("Data: " + cEscapeString(str) + "\n");
+		if (self->counter == 1) {
+			UNLOCK();
+			self->channel.deinitialize();
+		}
+		return 1;
+	);
+
+	TEST_METHOD(44) {
+		set_test_name("If it had been deinitialized in the callback, it doesn't call the "
+			"callback again");
+
+		setChannelCallback(test_44_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::CALLING;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 1u);
+			ensure_equals(log,
+				"Data: abc\n");
+		}
+	}
+
+	TEST_METHOD(45) {
+		set_test_name("Upon fully consuming the buffer, it calls the idle callback");
+
+		{
+			LOCK();
+			toConsume = 1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 3u);
+			ensure_equals(idleCount, 1u);
+		}
+	}
+
+
+	/***** If the callback immediately consumed the buffer fully *****/
+
+	TEST_METHOD(50) {
+		set_test_name("It transitions to the idle state");
+
+		feedSomeDataAndWaitForConsumption();
+		ensure_equals(getChannelState(), Channel::IDLE);
+	}
+
+	TEST_METHOD(51) {
+		set_test_name("It calls the idle callback");
+
+		feedSomeDataAndWaitForConsumption();
+		ensure_equals(idleCount, 1u);
+	}
+
+
+
+	/***** If the callback deferred consumption *****/
+
+	TEST_METHOD(55) {
+		set_test_name("It transitions to the 'waiting for callback' state");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+		SHOULD_NEVER_HAPPEN(100,
+			result = getChannelState() != Channel::WAITING_FOR_CALLBACK;
+		);
+	}
+
+	TEST_METHOD(56) {
+		set_test_name("Upon being fed an error, it transitions to the 'EOF waiting' state");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannelError(EIO);
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_WAITING;
+		);
+		SHOULD_NEVER_HAPPEN(100,
+			result = getChannelState() != Channel::EOF_WAITING;
+		);
+		ensure_equals(getChannelErrcode(), EIO);
+	}
+
+	TEST_METHOD(57) {
+		set_test_name("When consumed() is called with the full buffer size, "
+			"it transitions to the idle state");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		bg.safe->runLater(boost::bind(&Channel::consumed, &channel, 3));
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
 		);
 	}
 
-	/***** If the callback didn't consume everything... *****/
+	TEST_METHOD(58) {
+		set_test_name("Upon calling stop(), it transitions to the stopped state");
 
-		/***** If stop() is called outside the callback... *****/
-#if 0
-			static void on_after_processing_buffer_21(ServerKit_ChannelTest *self) {
-				if (self->getCounter() == 1) {
-					self->channel.stop();
-					boost::lock_guard<boost::mutex> l(self->syncher);
-					self->log.append("isSocketStarted: " +
-						toString(self->channel.isSocketStarted()) + "\n");
-				}
-			}
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
 
-			TEST_METHOD(21) {
-				set_test_name("It doesn't call");
-				toConsume = 1;
-				channel.onAfterProcessingBuffer = boost::bind(on_after_processing_buffer_21, this);
-				startChannel();
-				writeExact(p.second, "aaabbb");
-				EVENTUALLY(5,
-					LOCK();
-					result = log.find("isSocketStarted") != string::npos;
-				);
-				LOCK();
-				ensure_equals(log,
-					"Data: aaabbb\n"
-					"isSocketStarted: 0\n");
-			}
-
-			static void on_after_processing_buffer_22(ServerKit_ChannelTest *self) {
-				if (self->getCounter() == 1) {
-					self->channel.stop();
-					{
-						boost::lock_guard<boost::mutex> l(self->syncher);
-						self->log.append("Paused; isSocketStarted: " +
-							toString(self->channel.isSocketStarted()) + "\n");
-					}
-					self->channel.start();
-					{
-						boost::lock_guard<boost::mutex> l(self->syncher);
-						self->log.append("Resumed; isSocketStarted: " +
-							toString(self->channel.isSocketStarted()) + "\n");
-					}
-				}
-			}
-
-			DEFINE_FINISH_METHOD(finish_22,
-				LOCK();
-				log.append("Done; isSocketStarted: " +
-					toString(channel.isStarted()) + "\n");
-			);
-
-			TEST_METHOD(22) {
-				set_test_name("It resumes the socket and re-emits remaining "
-					"data one tick after start() is called");
-				toConsume = 3;
-				channel.onAfterProcessingBuffer = boost::bind(on_after_processing_buffer_22, this);
-				startChannel();
-				writeExact(p.second, "aaabbb");
-				bg.safe->runAfterTS(10, boost::bind(finish_22, this));
-				EVENTUALLY(5,
-					LOCK();
-					result = log.find("Done") != string::npos;
-				);
-				{
-					LOCK();
-					ensure_equals(log,
-						"Data: aaabbb\n"
-						"Paused; isSocketStarted: 0\n"
-						"Resumed; isSocketStarted: 0\n"
-						"Data: bbb\n"
-						"Done; isSocketStarted: 1\n");
-				}
-
-				bg.safe->runAfterTS(10, boost::bind(finish_22, this));
-				startChannel();
-				EVENTUALLY(5,
-					LOCK();
-					result = log.find("Done") != string::npos;
-				);
-			}
-
-			static void on_after_processing_buffer_23(ServerKit_ChannelTest *self) {
-				if (self->getCounter() == 1) {
-					self->channel.stop();
-					{
-						boost::lock_guard<boost::mutex> l(self->syncher);
-						self->log.append("Paused; isSocketStarted: " +
-							toString(self->channel.isSocketStarted()) + "\n");
-					}
-					self->channel.start();
-					{
-						boost::lock_guard<boost::mutex> l(self->syncher);
-						self->log.append("Resumed; isSocketStarted: " +
-							toString(self->channel.isSocketStarted()) + "\n");
-					}
-					self->channel.stop();
-					{
-						boost::lock_guard<boost::mutex> l(self->syncher);
-						self->log.append("Paused again; isSocketStarted: " +
-							toString(self->channel.isSocketStarted()) + "\n");
-					}
-				}
-			}
-
-			DEFINE_FINISH_METHOD(finish_23,
-				LOCK();
-				log.append("Timeout; isSocketStarted: " +
-					toString(channel.isStarted()) + "\n");
-			);
-
-			TEST_METHOD(23) {
-				set_test_name("It doesn't re-emit remaining data if start() "
-					"is called, then stop() again");
-				toConsume = 3;
-				channel.onAfterProcessingBuffer = boost::bind(on_after_processing_buffer_23, this);
-				startChannel();
-				writeExact(p.second, "aaabbb");
-				bg.safe->runAfterTS(10, boost::bind(finish_23, this));
-				EVENTUALLY(5,
-					LOCK();
-					result = log.find("Timeout") != string::npos;
-				);
-				LOCK();
-				ensure_equals(log,
-					"Data: aaabbb\n"
-					"Paused; isSocketStarted: 0\n"
-					"Resumed; isSocketStarted: 0\n"
-					"Paused again; isSocketStarted: 0\n"
-					"Timeout; isSocketStarted: 0\n");
-			}
-
-		/***** If pause() is called during the handler *****/
-
-			DEFINE_ON_DATA_METHOD(on_data_24,
-				{
-					LOCK();
-					self->counter++;
-					self->log.append("Data: " + cEscapeString(data) + "\n");
-				}
-				if (self->getCounter() == 1) {
-					input->stop();
-				}
-				return 1;
-			)
-
-			DEFINE_FINISH_METHOD(finish_24,
-				LOCK();
-				log.append("Timeout; isSocketStarted: " +
-					toString(channel.isSocketStarted()) + "\n");
-			);
-
-			TEST_METHOD(24) {
-				set_test_name("It pauses the socket and doesn't re-emit remaining data");
-				channel.onData = on_data_24;
-				startChannel();
-				writeExact(p.second, "aaabbb");
-				bg.safe->runAfterTS(10, boost::bind(finish_24, this));
-				EVENTUALLY(5,
-					LOCK();
-					result = log.find("Timeout") != string::npos;
-				);
-				LOCK();
-				ensure_equals(log,
-					"Data: aaabbb\n"
-					"Timeout; isSocketStarted: 0\n");
-			}
-
-			DEFINE_ON_DATA_METHOD(on_data_25,
-				{
-					LOCK();
-					self->counter++;
-					self->log.append("Data: " + cEscapeString(data) + "\n");
-				}
-				if (self->getCounter() == 1) {
-					input->stop();
-					input->start();
-				}
-				return 3;
-			)
-
-			static void on_after_processing_buffer_25(ServerKit_ChannelTest *self) {
-				boost::lock_guard<boost::mutex> l(self->syncher);
-				if (self->counter == 1) {
-					self->log.append("Handler done; isSocketStarted: " +
-						toString(self->channel.isSocketStarted()) + "\n");
-				}
-			}
-
-			DEFINE_FINISH_METHOD(finish_25,
-				LOCK();
-				log.append("Timeout; isSocketStarted: " +
-					toString(channel.isStarted()) + "\n");
-			);
-
-			TEST_METHOD(25) {
-				set_test_name("It re-emits remaining data one tick after start() is called");
-				channel.onData = on_data_25;
-				channel.onAfterProcessingBuffer = boost::bind(on_after_processing_buffer_25, this);
-				startChannel();
-				writeExact(p.second, "aaabbb");
-				bg.safe->runAfterTS(10, boost::bind(finish_25, this));
-				EVENTUALLY(5,
-					LOCK();
-					result = log.find("Timeout") != string::npos;
-				);
-				LOCK();
-				ensure_equals(log,
-					"Data: aaabbb\n"
-					"Handler done; isSocketStarted: 0\n"
-					"Data: bbb\n"
-					"Timeout; isSocketStarted: 1\n");
-			}
-
-			DEFINE_ON_DATA_METHOD(on_data_26,
-				{
-					LOCK();
-					self->counter++;
-					self->log.append("Data: " + cEscapeString(data) + "\n");
-				}
-				if (self->getCounter() == 1) {
-					input->stop();
-					input->start();
-					input->stop();
-				}
-				return 3;
-			)
-
-			static void on_after_processing_buffer_26(ServerKit_ChannelTest *self) {
-				boost::lock_guard<boost::mutex> l(self->syncher);
-				if (self->counter == 1) {
-					self->log.append("Handler done; isSocketStarted: " +
-						toString(self->channel.isSocketStarted()) + "\n");
-				}
-			}
-
-			DEFINE_FINISH_METHOD(finish_26,
-				LOCK();
-				log.append("Timeout; isSocketStarted: " +
-					toString(channel.isSocketStarted()) + "\n");
-			);
-
-			TEST_METHOD(26) {
-				set_test_name("It doesn't re-emit remaining data if start() is called, then stop() again");
-				channel.onData = on_data_26;
-				channel.onAfterProcessingBuffer = boost::bind(on_after_processing_buffer_26, this);
-				startChannel();
-				writeExact(p.second, "aaabbb");
-				bg.safe->runAfterTS(10, boost::bind(finish_26, this));
-				EVENTUALLY(5,
-					LOCK();
-					result = log.find("Timeout") != string::npos;
-				);
-				LOCK();
-				ensure_equals(log,
-					"Data: aaabbb\n"
-					"Handler done; isSocketStarted: 0\n"
-					"Timeout; isSocketStarted: 0\n");
-			}
-
-		/***** If the socket was disconnected *****/
-
-			TEST_METHOD(27) {
-				set_test_name("It doesn't re-emit the remaining data");
-				// TODO
-			}
-
-	TEST_METHOD(31) {
-		set_test_name("It doesn't emit data events if it's paused, but re-emits "
-			"previously unemitted data events after resume");
-		// TODO
+		stopChannel();
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
+		);
 	}
-#endif
+
+	static void test_59_stop_start_channel(ServerKit_ChannelTest *self) {
+		self->channel.stop();
+		self->channel.start();
+		{
+			boost::mutex &syncher = self->syncher;
+			LOCK();
+			self->counter++;
+			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+		}
+	}
+
+	TEST_METHOD(59) {
+		set_test_name("Upon calling stop() then start(), it transitions to the 'waiting for callback' state");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		stopChannel();
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
+		);
+		bg.safe->runLater(boost::bind(test_59_stop_start_channel, this));
+		EVENTUALLY(5,
+			LOCK();
+			result = counter == 2;
+		);
+		{
+			LOCK();
+			ensure_equals(log,
+				"Data: abc\n"
+				"Channel state: " + toString(Channel::WAITING_FOR_CALLBACK) + "\n");
+		}
+	}
+
+	TEST_METHOD(60) {
+		set_test_name("Upon calling stop() then start() then feedError(), "
+			"it transitions to the EOF state immediately");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		stopChannel();
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
+		);
+
+		startChannel();
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		feedChannelError(EIO);
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		SHOULD_NEVER_HAPPEN(100,
+			result = getChannelState() != Channel::EOF_REACHED;
+		);
+	}
+
+	TEST_METHOD(61) {
+		set_test_name("When consumed() is called with a partial buffer size, "
+			"it calls the callback again with the remainder of the buffer");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		{
+			LOCK();
+			toConsume = CONSUME_FULLY;
+		}
+		channelConsumed(2);
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 2u);
+			ensure_equals(log,
+				"Data: abc\n"
+				"Data: c\n");
+		}
+	}
+
+	TEST_METHOD(62) {
+		set_test_name("If stop() was called, and consumed() is called with a partial buffer size, "
+			"then it doesn't call the callback");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		stopChannel();
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
+		);
+
+		{
+			LOCK();
+			toConsume = CONSUME_FULLY;
+		}
+		channelConsumed(2);
+		SHOULD_NEVER_HAPPEN(100,
+			LOCK();
+			result = counter > 1;
+		);
+		ensure_equals(getChannelState(), Channel::STOPPED);
+	}
+
+	static void test_63_start_channel(ServerKit_ChannelTest *self) {
+		self->channel.start();
+		{
+			boost::mutex &syncher = self->syncher;
+			LOCK();
+			self->counter++;
+			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+		}
+	}
+
+	TEST_METHOD(63) {
+		set_test_name("If stop() was called, and consumed() is called with a partial buffer size, "
+			"then it calls the callback with the remainder of the data one tick after next time "
+			"start() is called");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		stopChannel();
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
+		);
+
+		{
+			LOCK();
+			toConsume = CONSUME_FULLY;
+		}
+		channelConsumed(2);
+		bg.safe->runLater(boost::bind(test_63_start_channel, this));
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 3u);
+			ensure_equals(log,
+				"Data: abc\n"
+				"Channel state: " + toString(Channel::PLANNING_TO_CALL) + "\n"
+				"Data: c\n");
+		}
+	}
+
+	TEST_METHOD(64) {
+		set_test_name("If stop() was called, and consumed() is called with a full buffer size, "
+			"then it doesn't call the callback");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		stopChannel();
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
+		);
+
+		channelConsumed(3);
+		SHOULD_NEVER_HAPPEN(100,
+			LOCK();
+			result = counter > 1;
+		);
+		ensure_equals(getChannelState(), Channel::STOPPED);
+	}
+
+	static void test_65_start_channel(ServerKit_ChannelTest *self) {
+		self->channel.start();
+		{
+			boost::mutex &syncher = self->syncher;
+			LOCK();
+			self->counter++;
+			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
+			self->log.append("Idle count so far: " + toString(self->idleCount) + "\n");
+		}
+	}
+
+	TEST_METHOD(65) {
+		set_test_name("If stop() was called, and consumed() is called with a full buffer size, "
+			"then when start() is called, it transitions to the idle state and calls the idle callback");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK;
+		);
+
+		stopChannel();
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::STOPPED_WHILE_WAITING;
+		);
+
+		channelConsumed(3);
+		bg.safe->runLater(boost::bind(test_65_start_channel, this));
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::IDLE;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 2u);
+			ensure_equals(idleCount, 1u);
+			ensure_equals(log,
+				"Data: abc\n"
+				"Channel state: " + toString(Channel::IDLE) + "\n"
+				"Idle count so far: 1\n");
+		}
+	}
+
+
+	/***** Upon being fed EOF *****/
+
+	TEST_METHOD(70) {
+		set_test_name("If the callback does not immediately consume the EOF, "
+			"the endAck callback is called when consumed() is called");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannel("");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_WAITING;
+		);
+		{
+			LOCK();
+			ensure_equals(endAcked, 0u);
+		}
+
+		channelConsumed(0);
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(endAcked, 1u);
+		}
+	}
+
+	TEST_METHOD(71) {
+		set_test_name("If the callback immediately consumes the EOF, "
+			"the endAck callback is called when the data callback returns");
+
+		feedChannel("");
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		{
+			LOCK();
+			ensure_equals(endAcked, 1u);
+		}
+	}
+
+
+	/***** Upon being fed an error *****/
+
+	TEST_METHOD(75) {
+		set_test_name("If the callback does not immediately consume the error, "
+			"the endAck callback is called when consumed() is called");
+
+		{
+			LOCK();
+			toConsume = -1;
+		}
+		feedChannelError(EIO);
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_WAITING;
+		);
+		{
+			LOCK();
+			ensure_equals(endAcked, 0u);
+		}
+
+		channelConsumed(0);
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		ensure_equals(getChannelErrcode(), EIO);
+		{
+			LOCK();
+			ensure_equals(endAcked, 1u);
+		}
+	}
+
+	TEST_METHOD(76) {
+		set_test_name("If the callback immediately consumes the error, "
+			"the endAck callback is called when the data callback returns");
+
+		feedChannelError(EIO);
+		EVENTUALLY(5,
+			result = getChannelState() == Channel::EOF_REACHED;
+		);
+		ensure_equals(getChannelErrcode(), EIO);
+		{
+			LOCK();
+			ensure_equals(endAcked, 1u);
+		}
+	}
 }

@@ -1038,6 +1038,24 @@ public:
 		Channel::endAckCallback = onChannelEndAcked;
 	}
 
+	FileBufferedChannel(Context *context)
+		: Channel(context),
+		  mode(IN_MEMORY_MODE),
+		  readerState(RS_INACTIVE),
+		  nbuffers(0),
+		  errcode(0),
+		  bytesBuffered(0),
+		  inFileMode(),
+		  idleCallback(NULL),
+		  endAckCallback(NULL),
+		  belowThresholdCallback(NULL),
+		  flushedCallback(NULL)
+	{
+		Channel::idleCallback = onChannelIdle;
+		Channel::endAckCallback = onChannelEndAcked;
+	}
+
+
 	~FileBufferedChannel() {
 		cancelReader();
 		if (mode == IN_FILE_MODE) {
