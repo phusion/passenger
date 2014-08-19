@@ -404,7 +404,7 @@ private:
 	}
 
 	void logClientDataReceived(Client *client, const MemoryKit::mbuf &buffer, int errcode) {
-		if (errcode == 0 && buffer.empty()) {
+		if (errcode == 0 && !buffer.empty()) {
 			SKC_TRACE(client, 3, "Processing " << buffer.size() << " bytes of client data");
 		} else if (buffer.empty()) {
 			SKC_TRACE(client, 2, "Client sent EOF");

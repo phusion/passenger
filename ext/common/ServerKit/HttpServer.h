@@ -237,22 +237,23 @@ private:
 	/***** Miscellaneous *****/
 
 	void writeDefault500Response(Client *client, Request *req) {
-		MemoryKit::mbuf dateBuffer(mbuf_get(&this->getContext()->mbuf_pool));
-		char *pos = dateBuffer.start;
-		const char *end = dateBuffer.start + dateBuffer.size();
+		const unsigned int DATE_BUFFER_SIZE = 128;
+		char *dateBuffer = (char *) psg_pnalloc(req->pool, DATE_BUFFER_SIZE);
+		char *pos = dateBuffer;
+		const char *end = dateBuffer + DATE_BUFFER_SIZE;
 		time_t the_time = SystemTime::get();
 		struct tm the_tm;
 
 		SKC_WARN(client, "The server did not generate a response. Sending default 500 response");
 		req->wantKeepAlive = false;
 
+		pos = appendData(pos, end, "HTTP/1.0 500 Internal Server Error\r\n");
 		pos = appendData(pos, end, "Date: ");
 		gmtime_r(&the_time, &the_tm);
 		pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %Z", &the_tm);
 		pos = appendData(pos, end, "\r\n");
 
-		writeResponse(client, "HTTP/1.0 500 Internal Server Error\r\n");
-		writeResponse(client, MemoryKit::mbuf(dateBuffer, pos - dateBuffer.start));
+		writeResponse(client, dateBuffer, pos - dateBuffer);
 		writeResponse(client, DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE);
 	}
 
@@ -427,7 +428,7 @@ protected:
 					}
 					return buffer.size(); */
 				case Request::ERROR:
-					this->disconnect(&client);
+					this->disconnectWithError(&client, req->parseError);
 					return Channel::Result(0, true);
 				default:
 					P_BUG("TODO");

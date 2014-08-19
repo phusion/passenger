@@ -66,13 +66,15 @@ private:
 	bool secureMode;
 
 	bool validateHeader(const Header *header) {
-		switch (state) {
-		case PARSING_FIRST_HEADER_VALUE:
-			// We're just done parsing the first header.
-			// Check whether it contains the secure mode password.
-			if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"))) {
-				if (ctx->secureModePassword.empty()
-				 || psg_lstr_cmp(&header->key, ctx->secureModePassword))
+		if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
+			if (header->key.size == 2) {
+				// Security password. Check whether it hasn't been
+				// given before and whether it is correct.
+				if (secureMode) {
+					state = ERROR_SECURITY_PASSWORD_DUPLICATE;
+					return false;
+				} else if (ctx->secureModePassword.empty()
+				 || psg_lstr_cmp(&header->val, ctx->secureModePassword))
 				{
 					secureMode = true;
 					return true;
@@ -81,33 +83,17 @@ private:
 					return false;
 				}
 			} else {
-				return true;
-			}
-		case PARSING_HEADER_VALUE:
-			// We're just done parsing a header, which is not the first one.
-			// We only allow secure headers in secure mode.
-			if (secureMode) {
-				if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
-					if (header->key.size >= 3) {
-						return true;
-					} else {
-						state = ERROR_SECURITY_PASSWORD_DUPLICATE;
-						return false;
-					}
-				} else {
+				// Secure header. Only allow when security password
+				// was provided before.
+				if (secureMode) {
 					return true;
-				}
-			} else {
-				if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
+				} else {
 					state = ERROR_SECURE_HEADER_NOT_ALLOWED;
 					return false;
-				} else {
-					return true;
 				}
 			}
-		default:
-			P_BUG("validateHeader() called from invalid state");
-			return false;
+		} else {
+			return true;
 		}
 	}
 
@@ -169,7 +155,9 @@ private:
 
 		psg_lstr_append(&self->currentHeader->key, self->request->pool,
 			*self->currentBuffer, data, len);
-		forceLowerCase((unsigned char *) const_cast<char *>(data), len);
+		if (psg_lstr_first_byte(&self->currentHeader->key) != '!') {
+			forceLowerCase((unsigned char *) const_cast<char *>(data), len);
+		}
 		self->hasher.update(data, len);
 
 		return 0;
