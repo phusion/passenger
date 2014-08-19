@@ -19,7 +19,7 @@ using namespace oxt;
 
 namespace tut {
 	struct ServerKit_ServerTest {
-		typedef ClientRef<Server<Client>, Client> ClientRef;
+		typedef ClientRef<Server<Client>, Client> ClientRefType;
 
 		BackgroundEventLoop bg;
 		ServerKit::Context context;
@@ -95,14 +95,14 @@ namespace tut {
 			*result = server->freeClientCount;
 		}
 
-		vector<ClientRef> getActiveClients() {
-			vector<ClientRef> result;
+		vector<ClientRefType> getActiveClients() {
+			vector<ClientRefType> result;
 			bg.safe->runSync(boost::bind(&ServerKit_ServerTest::_getActiveClients,
 				this, &result));
 			return result;
 		}
 
-		void _getActiveClients(vector<ClientRef> *result) {
+		void _getActiveClients(vector<ClientRefType> *result) {
 			*result = server->getActiveClients();
 		}
 
@@ -222,7 +222,7 @@ namespace tut {
 			"the limit, and there are still references to the client, then the client is first "
 			"put in the disconnecting list, then in the freelist when the last references disappear");
 
-		vector<ClientRef> clients;
+		vector<ClientRefType> clients;
 		startServer();
 
 		FileDescriptor fd = connectToServer1();
@@ -251,7 +251,7 @@ namespace tut {
 			"and there are still references to the client, then the client is first put in the "
 			"disconnecting list, then destroyed when the last references disappear");
 
-		vector<ClientRef> clients;
+		vector<ClientRefType> clients;
 		server->freelistLimit = 0;
 		startServer();
 
@@ -375,7 +375,7 @@ namespace tut {
 			result = getActiveClientCount() == 1u;
 		);
 
-		ClientRef client = getActiveClients()[0];
+		ClientRefType client = getActiveClients()[0];
 		writeExact(client.get()->getFd(), "hello", 5);
 
 		char buf[5];
@@ -393,7 +393,7 @@ namespace tut {
 			result = getActiveClientCount() == 1u;
 		);
 
-		ClientRef client = getActiveClients()[0];
+		ClientRefType client = getActiveClients()[0];
 		ensure(clientIsConnected(client.get()));
 		fd.close();
 		EVENTUALLY(5,

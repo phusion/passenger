@@ -168,7 +168,7 @@ class BaseServer: public HooksImpl {
 public:
 	/***** Types *****/
 	typedef Client ClientType;
-	typedef ClientRef<DerivedServer, Client> ClientRef;
+	typedef ClientRef<DerivedServer, Client> ClientRefType;
 	STAILQ_HEAD(FreeClientList, Client);
 	TAILQ_HEAD(ClientList, Client);
 
@@ -390,10 +390,10 @@ private:
 		// clients are gone before destroying a Server, so we know for sure
 		// that this async callback outlives the Server.
 		ctx->libev->runLater(boost::bind(&BaseServer::passClientToEventLoopThreadCallback,
-			this, ClientRef(client)));
+			this, ClientRefType(client)));
 	}
 
-	void passClientToEventLoopThreadCallback(ClientRef clientRef) {
+	void passClientToEventLoopThreadCallback(ClientRefType clientRef) {
 		// Do nothing. Once this method returns, the reference count of the
 		// client drops to 0, and clientReachedZeroRefcount() is called.
 	}
@@ -435,8 +435,8 @@ protected:
 	/** Get a thread-safe reference to the client. As long as the client
 	 * has a reference, it will never be added to the freelist.
 	 */
-	ClientRef getClientRef(Client *client) {
-		return ClientRef(client);
+	ClientRefType getClientRef(Client *client) {
+		return ClientRefType(client);
 	}
 
 	/** Increase client reference count. */
@@ -649,13 +649,13 @@ public:
 		return snprintf(buf, size, "%03x", client->number);
 	}
 
-	vector<ClientRef> getActiveClients() {
-		vector<ClientRef> result;
+	vector<ClientRefType> getActiveClients() {
+		vector<ClientRefType> result;
 		Client *client;
 
 		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
 			assert(client->getConnState() == Client::ACTIVE);
-			result.push_back(ClientRef(client));
+			result.push_back(ClientRefType(client));
 		}
 		return result;
 	}
