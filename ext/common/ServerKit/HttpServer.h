@@ -52,7 +52,7 @@ extern const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE;
 
 
 template< typename DerivedServer, typename Client = HttpClient<HttpRequest> >
-class HttpServer: public Server<DerivedServer, Client> {
+class HttpServer: public BaseServer<DerivedServer, Client> {
 public:
 	typedef typename Client::RequestType Request;
 	typedef HttpRequestRef<DerivedServer, Request> RequestRef;
@@ -64,7 +64,7 @@ public:
 private:
 	/***** Types and nested classes *****/
 
-	typedef Server<DerivedServer, Client> ParentClass;
+	typedef BaseServer<DerivedServer, Client> ParentClass;
 
 	class RequestHooksImpl: public HooksImpl {
 	public:
