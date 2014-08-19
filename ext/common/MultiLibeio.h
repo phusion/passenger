@@ -44,6 +44,7 @@ public:
 
 	static void init();
 	static void shutdown();
+	static bool isInitialized();
 
 	MultiLibeio() { }
 

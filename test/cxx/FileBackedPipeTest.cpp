@@ -29,6 +29,9 @@ namespace tut {
 		FileBackedPipeTest()
 			: tmpdir("tmp.pipe", true) // Removing the directory may not work over NFS
 		{
+			if (!MultiLibeio::isInitialized()) {
+				MultiLibeio::init();
+			}
 			consumeImmediately = true;
 			toConsume = 9999;
 			doneAfterConsuming = false;
@@ -41,7 +44,7 @@ namespace tut {
 			pipe->onEnd = onEnd;
 			pipe->onCommit = onCommit;
 		}
-		
+
 		~FileBackedPipeTest() {
 			bg.stop();
 			pipe.reset();
@@ -269,7 +272,7 @@ namespace tut {
 		ensure_equals(receivedData,
 			"hello\n"
 			"oworld");
-		
+
 		callConsumedCallback(6, false);
 		ensure_equals(getBufferSize(), 0u);
 		ensure("not committing to disk", !isCommittingToDisk());
@@ -303,7 +306,7 @@ namespace tut {
 		ensure_equals("(8)", receivedData,
 			"hello\n"
 			"oworld");
-		
+
 		callConsumedCallback(6, false);
 		ensure_equals("(9)", getDataState(), FileBackedPipe::OPENING_FILE);
 		ensure_equals("(10)", getBufferSize(), 0u);
@@ -338,7 +341,7 @@ namespace tut {
 		ensure_equals("(7)", receivedData,
 			"hello\n"
 			"oworld");
-		
+
 		callConsumedCallback(6, false);
 		ensure_equals("(8)", getDataState(), FileBackedPipe::IN_FILE);
 		ensure_equals("(9)", getBufferSize(), 0u);
@@ -498,7 +501,7 @@ namespace tut {
 		endPipe();
 		ensure_equals(consumeCallbackCount, 1);
 		ensure(ended);
-		
+
 		stopPipe();
 		ensure(reachedEnd());
 		ensure(!isStarted());
@@ -533,7 +536,7 @@ namespace tut {
 			result = commitCount > 0;
 		);
 	}
-	
+
 	TEST_METHOD(23) {
 		// If the pipe is paused and the written data fits into the memory
 		// buffer, then write() returns true and the commit callback is never called.

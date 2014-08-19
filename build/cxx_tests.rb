@@ -92,6 +92,10 @@ TEST_CXX_OBJECTS = {
 		test/cxx/ServerKit/ChannelTest.cpp
 		ext/common/ServerKit/Channel.h
 		ext/common/ServerKit/Context.h),
+	'test/cxx/ServerKit/FileBufferedChannelTest.o' => %w(
+		test/cxx/ServerKit/FileBufferedChannelTest.cpp
+		ext/common/ServerKit/FileBufferedChannel.h
+		ext/common/ServerKit/Context.h),
 	'test/cxx/ServerKit/HeaderTableTest.o' => %w(
 		test/cxx/ServerKit/HeaderTableTest.cpp
 		ext/common/ServerKit/HeaderTable.h

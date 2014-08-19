@@ -27,6 +27,7 @@
 #include <boost/make_shared.hpp>
 #include <oxt/thread.hpp>
 #include <ev++.h>
+#include <eio.h>
 #include <BackgroundEventLoop.h>
 #include <Exceptions.h>
 #include <SafeLibev.h>
@@ -42,8 +43,14 @@ struct BackgroundEventLoopPrivate {
 	oxt::thread *thr;
 	boost::mutex lock;
 	boost::condition_variable cond;
+	ev_idle eioRepeatWatcher;
+	ev_async eioReadyWatcher;
+	bool useLibeio;
 	bool started;
 };
+
+static BackgroundEventLoop *eioInstanceData = NULL;
+
 
 static void
 signalBackgroundEventLoopExit(struct ev_loop *loop, ev_async *async, int revents) {
@@ -61,7 +68,28 @@ startBackgroundLoop(BackgroundEventLoop *bg) {
 	ev_run(bg->loop, 0);
 }
 
-BackgroundEventLoop::BackgroundEventLoop(bool scalable) {
+static void
+eioRepeat(EV_P_ ev_idle *w, int revents) {
+	if (eio_poll() != -1) {
+		ev_idle_stop(EV_A_ w);
+	}
+}
+
+/* eio has some results, process them */
+static void
+eioReady(EV_P_ ev_async *w, int revents) {
+	if (eio_poll() == -1) {
+ 		ev_idle_start(EV_A_ &eioInstanceData->priv->eioRepeatWatcher);
+ 	}
+}
+
+/* wake up the event loop */
+static void
+eioWantPoll(void) {
+	ev_async_send(eioInstanceData->loop, &eioInstanceData->priv->eioReadyWatcher);
+}
+
+BackgroundEventLoop::BackgroundEventLoop(bool scalable, bool useLibeio) {
 	TRACE_POINT();
 
 	if (scalable) {
@@ -86,11 +114,25 @@ BackgroundEventLoop::BackgroundEventLoop(bool scalable) {
 	safe = boost::make_shared<SafeLibev>(loop);
 	priv = new BackgroundEventLoopPrivate();
 	priv->thr = NULL;
+	priv->useLibeio = useLibeio;
 	priv->started = false;
+
+	if (useLibeio) {
+		eioInstanceData = this;
+		ev_idle_init(&priv->eioRepeatWatcher, eioRepeat);
+		ev_async_init(&priv->eioReadyWatcher, eioReady);
+		ev_async_start(loop, &priv->eioReadyWatcher);
+		eio_init(eioWantPoll, 0);
+	}
 }
 
 BackgroundEventLoop::~BackgroundEventLoop() {
 	stop();
+	if (priv->useLibeio) {
+		ev_idle_stop(loop, &priv->eioRepeatWatcher);
+		ev_async_stop(loop, &priv->eioReadyWatcher);
+		eioInstanceData = NULL;
+	}
 	ev_async_stop(loop, async);
 	delete priv;
 	free(async);

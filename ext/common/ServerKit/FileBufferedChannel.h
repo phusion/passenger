@@ -67,48 +67,89 @@ using namespace std;
  * FileBufferedChannel operates by default in the in-memory mode. All data is buffered
  * in memory. Beyond a threshold (determined by `passedThreshold()`), it switches
  * to in-file mode.
- *
- * FileBufferedChannel is composed of 3 subsystems:
- *
- * - The `feed()` method puts commands on an internal queue for other subsystems
- *   to process.
- * - The writer writes the buffers associated with the commands to a temp file as
- *   quickly as it can, and frees these buffers from memory.
- * - The reader reads from the temp file and the internal queue as quickly as it
- *   can, and feeds the associated buffers to the underlying Channel.
- *   When the reader has consumed all data, it tells the writer to truncate the
- *   file.
- *
- * When data is buffered to a file, we keep the following states:
- *
- *     +------------------------+
- *     |                        |
- *     |      already read      |
- *     |                        |
- *     +------------------------+  <------ readOffset
- *     |                        |  \
- *     |  written but not read  |   |----- written
- *     |                        |  /
- *     +------------------------+  <------ readOffset + written
- *     |  buffer being written  |  --+
- *     +------------------------+    |
- *     |   unwritten buffer 1   |    |
- *     +------------------------+    |
- *     |   unwritten buffer 2   |    |---- buffered
- *     +------------------------+    |     (sum of all unwritten buffers' sizes)
- *     |          ....          |  --+
- *     +------------------------+
  */
 class FileBufferedChannel: protected Channel {
 public:
-	// `buffered` is 25-bit. This is 2^25-1, or 32 MB.
-	static const unsigned int MAX_MEMORY_BUFFERING = 33554431;
+	/***** Types and constants *****/
 
-	typedef Channel::Result (*DataCallback)(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
-	typedef void (*Callback)(FileBufferedChannel *channel);
+	enum Mode {
+		/**
+		 * The default mode. The reader is responsible for switching from
+		 * in-file mode to in-memory mode.
+		 */
+		IN_MEMORY_MODE,
 
-private:
-	typedef void (*IdleCallback)(FileBufferedChannel *channel);
+		/**
+		 * The `feed()` method is responsible for switching to
+		 * in-file mode.
+		 */
+		IN_FILE_MODE,
+
+		/**
+		 * If either the reader or writer encountered an error, it will
+		 * cancel everything and switch to the error mode.
+		 *
+		 * @invariant
+		 *     readerState == RS_TERMINATED
+		 *     inFileMode == NULL
+		 */
+		ERROR,
+
+		/**
+		 * When switching to the error made, an attempt is made to pass the
+		 * error to the data callback. If the previous data callback isn't
+		 * finsihed yet, then we'll switch to this state, wait until it
+		 * becomes idle, then feed the error and switch to ERROR.
+		 *
+		 * @invariant
+		 *     readerState == RS_TERMINATED
+		 *     inFileMode == NULL
+		 */
+		ERROR_WAITING
+	};
+
+	enum ReaderState {
+		/** The reader isn't active. It will be activated next time a buffer
+		 * is pushed to the queue.
+		 */
+		RS_INACTIVE,
+
+		/**
+		 * The reader is feeding a buffer to the underlying channel.
+		 */
+		RS_FEEDING,
+
+		/**
+		 * The reader is feeding an empty buffer to the underlying channel.
+		 */
+		RS_FEEDING_EOF,
+
+		/**
+		 * The reader has just fed a buffer to the underlying channel,
+		 * and is waiting for it to become idle.
+		 *
+		 * Invariant:
+		 *
+		 *     mode < ERROR
+		 */
+		RS_WAITING_FOR_CHANNEL_IDLE,
+
+		/** The reader is reading from the file.
+		 *
+		 * Invariant:
+		 *
+		 *     mode == IN_FILE_MODE
+		 *     inFileMode->readRequest != NULL
+		 *     inFileMode->written > 0
+		 */
+		RS_READING_FROM_FILE,
+
+		/**
+		 * The reader has encountered EOF or an error. It cannot be reactivated
+		 * until the FileBufferedChannel is deinitialized and reinitialized.
+		 */
+		RS_TERMINATED
+	};
 
 	enum WriterState {
 		/**
@@ -141,6 +182,21 @@ private:
 		WS_TERMINATED
 	};
 
+	typedef Channel::Result (*DataCallback)(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
+	typedef void (*Callback)(FileBufferedChannel *channel);
+
+	// `buffered` is 25-bit. This is 2^25-1, or 32 MB.
+	static const unsigned int MAX_MEMORY_BUFFERING = 33554431;
+
+	/***** Configuration *****/
+
+	unsigned int threshold;
+	unsigned int delayInFileModeSwitching;
+	bool autoTruncateFile;
+	bool autoStartMover;
+
+
+private:
 	/**
 	 * Holds all states for the in-file mode. Reasons why this is a separate
 	 * structure:
@@ -244,86 +300,8 @@ private:
 		}
 	};
 
-	enum {
-		/**
-		 * The default mode. The reader is responsible for switching from
-		 * in-file mode to in-memory mode.
-		 */
-		IN_MEMORY_MODE,
-
-		/**
-		 * The `feed()` method is responsible for switching to
-		 * in-file mode.
-		 */
-		IN_FILE_MODE,
-
-		/**
-		 * If either the reader or writer encountered an error, it will
-		 * cancel everything and switch to the error mode.
-		 *
-		 * @invariant
-		 *     readerState == RS_TERMINATED
-		 *     inFileMode == NULL
-		 */
-		ERROR
-	} mode;
-
-	enum {
-		/** The reader isn't active. It will be activated next time a buffer
-		 * is pushed to the queue.
-		 *
-		 * Invariant 1:
-		 * The buffer queue is empty.
-		 *
-		 *     nbuffers == 0
-		 *
-		 * Invariant 2:
-		 * We must be in the in-memory mode. Being in the in-file mode means that there's
-		 * still data available to read. It's not allowed for the reader to be inactive
-		 * while there is actually data to be available. It's not possible to be inactive
-		 * in the error mode, because in the error mode the reader state is RS_TERMINATED.
-		 *
-		 *     mode == IN_MEMORY_MODE
-		 */
-		RS_INACTIVE,
-
-		/**
-		 * The reader is feeding a buffer to the underlying channel.
-		 */
-		RS_FEEDING,
-
-		/**
-		 * The reader is feeding an empty buffer to the underlying channel.
-		 */
-		RS_FEEDING_EOF,
-
-		/**
-		 * The reader has just fed a buffer to the underlying channel,
-		 * and is waiting for it to become idle.
-		 *
-		 * Invariant:
-		 *
-		 *     mode != ERROR
-		 */
-		RS_WAITING_FOR_CHANNEL_IDLE,
-
-		/** The reader is reading from the file.
-		 *
-		 * Invariant:
-		 *
-		 *     mode == IN_FILE_MODE
-		 *     inFileMode->readRequest != NULL
-		 *     inFileMode->written > 0
-		 */
-		RS_READING_FROM_FILE,
-
-		/**
-		 * The reader has encountered EOF or an error. It cannot be reactivated
-		 * until the FileBufferedChannel is deinitialized and reinitialized.
-		 */
-		RS_TERMINATED
-	} readerState;
-
+	Mode mode;
+	ReaderState readerState;
 	/** Number of buffers in `firstBuffer` + `moreBuffers`. */
 	boost::uint16_t nbuffers;
 
@@ -331,7 +309,7 @@ private:
 	 * If an error is encountered, its details are stored here.
 	 *
 	 * @invariant
-	 *     (errcode == 0) == (mode != ERROR)
+	 *     (errcode == 0) == (mode < ERROR)
 	 */
 	int errcode;
 
@@ -357,8 +335,6 @@ private:
 	 *     (inFileMode != NULL) == (mode == IN_FILE_MODE)
 	 */
 	boost::shared_ptr<InFileMode> inFileMode;
-
-	IdleCallback idleCallback;
 
 
 	/***** Buffer manipulation *****/
@@ -447,10 +423,6 @@ private:
 	/***** Reader *****/
 
 	void readNext() {
-		if (readerState != RS_INACTIVE) {
-			return;
-		}
-
 		RefGuard guard(hooks, this);
 		readNextWithoutRefGuard();
 	}
@@ -473,7 +445,7 @@ private:
 				readerState = RS_FEEDING_EOF;
 				verifyInvariants();
 				Channel::feedWithoutRefGuard(peekBuffer());
-				if (generation != this->generation || mode == ERROR) {
+				if (generation != this->generation || mode >= ERROR) {
 					// Callback deinitialized this object, or callback
 					// called a method that encountered an error.
 					return;
@@ -486,7 +458,7 @@ private:
 				MemoryKit::mbuf buffer(peekBuffer());
 				FBC_DEBUG("Reader: found buffer, " << buffer.size() << " bytes");
 				popBuffer();
-				if (generation != this->generation || mode == ERROR) {
+				if (generation != this->generation || mode >= ERROR) {
 					// buffersFlushedCallback deinitialized this object, or callback
 					// called a method that encountered an error.
 					return;
@@ -494,7 +466,7 @@ private:
 				readerState = RS_FEEDING;
 				FBC_DEBUG("Reader: feeding buffer, " << buffer.size() << " bytes");
 				Channel::feedWithoutRefGuard(buffer);
-				if (generation != this->generation || mode == ERROR) {
+				if (generation != this->generation || mode >= ERROR) {
 					// Callback deinitialized this object, or callback
 					// called a method that encountered an error.
 					return;
@@ -522,13 +494,13 @@ private:
 				pair<MemoryKit::mbuf, bool> result = findBufferForReadProcessing();
 
 				if (!result.second) {
-					FBC_DEBUG("Reader: no more buffers. Transitioning to RS_INACTIVE, truncating file");
 					readerState = RS_INACTIVE;
-					if (nbuffers == 0 && inFileMode->written == 0) {
-						// We've processed all memory buffers. Now is a good time
-						// to truncate the file.
-						cancelWriter();
+					if (autoTruncateFile) {
+						FBC_DEBUG("Reader: no more buffers. Transitioning to RS_INACTIVE, truncating file");
 						switchToInMemoryMode();
+					} else {
+						FBC_DEBUG("Reader: no more buffers. Transitioning to RS_INACTIVE, "
+							"not truncating file because autoTruncateFile is turned off");
 					}
 					verifyInvariants();
 					callDataFlushedCallback();
@@ -537,7 +509,7 @@ private:
 					readerState = RS_FEEDING_EOF;
 					verifyInvariants();
 					Channel::feedWithoutRefGuard(result.first);
-					if (generation != this->generation || mode == ERROR) {
+					if (generation != this->generation || mode >= ERROR) {
 						// Callback deinitialized this object, or callback
 						// called a method that encountered an error.
 						return;
@@ -553,7 +525,7 @@ private:
 					readerState = RS_FEEDING;
 					FBC_DEBUG("Reader: feeding buffer, " << result.first.size() << " bytes");
 					Channel::feedWithoutRefGuard(result.first);
-					if (generation != this->generation || mode == ERROR) {
+					if (generation != this->generation || mode >= ERROR) {
 						// Callback deinitialized this object, or callback
 						// called a method that encountered an error.
 						return;
@@ -572,6 +544,7 @@ private:
 			}
 			break;
 		case ERROR:
+		case ERROR_WAITING:
 			P_BUG("Should never be reached");
 			break;
 		}
@@ -592,7 +565,7 @@ private:
 	void channelHasBecomeIdle() {
 		FBC_DEBUG("Reader: underlying channel has become idle");
 		verifyInvariants();
-		readerState = RS_INACTIVE;
+		//readerState = RS_INACTIVE;
 		readNext();
 	}
 
@@ -643,7 +616,7 @@ private:
 	int nextChunkDoneReading(eio_req *req, MemoryKit::mbuf &buffer) {
 		RefGuard guard(hooks, this);
 
-		FBC_DEBUG("Reader: done reading chunk: " << buffer.size() << " bytes");
+		FBC_DEBUG("Reader: done reading chunk");
 		assert(readerState == RS_READING_FROM_FILE);
 		verifyInvariants();
 		inFileMode->readRequest = NULL;
@@ -659,7 +632,7 @@ private:
 			FBC_DEBUG("Reader: feeding buffer, " << buffer.size() << " bytes");
 			readerState = RS_FEEDING;
 			Channel::feedWithoutRefGuard(buffer);
-			if (generation != this->generation || mode != ERROR) {
+			if (generation != this->generation || mode >= ERROR) {
 				// Callback deinitialized this object, or callback
 				// called a method that encountered an error.
 				return 0;
@@ -703,8 +676,8 @@ private:
 			if (offset == target || it->empty()) {
 				return make_pair(*it, true);
 			} else {
-				it++;
 				offset += it->size();
+				it++;
 			}
 		}
 
@@ -732,11 +705,11 @@ private:
 	 */
 	void switchToInMemoryMode() {
 		assert(mode == IN_FILE_MODE);
-		assert(bytesBuffered == 0);
-		assert(inFileMode->writerState == WS_INACTIVE);
-		assert(inFileMode->written == 0);
+		assert(inFileMode->written <= 0);
 
 		FBC_DEBUG("Recreating file, switching to in-memory mode");
+		cancelWriter();
+		clearBuffers();
 		mode = IN_MEMORY_MODE;
 		inFileMode.reset();
 	}
@@ -753,19 +726,44 @@ private:
 		assert(mode == IN_FILE_MODE);
 		assert(inFileMode->writerState == WS_INACTIVE);
 		assert(inFileMode->fd == -1);
-		verifyInvariants();
 
 		FileCreationContext *fcContext = new FileCreationContext();
 		fcContext->self = this;
 		fcContext->path = "/tmp/buffer.";
 		fcContext->path.append(toString(rand()));
 
-		FBC_DEBUG("Writer: creating file " << fcContext->path);
 		inFileMode->writerState = WS_CREATING_FILE;
-		inFileMode->writerRequest = eio_open(fcContext->path.c_str(),
+		if (delayInFileModeSwitching == 0) {
+			FBC_DEBUG("Writer: delaying in-file mode switching for " <<
+				delayInFileModeSwitching << "ms");
+			inFileMode->writerRequest = eio_open(fcContext->path.c_str(),
+				O_RDWR | O_CREAT | O_EXCL, 0600, 0,
+				bufferFileCreated, fcContext);
+		} else {
+			FBC_DEBUG("Writer: creating file " << fcContext->path);
+			inFileMode->writerRequest = eio_busy(
+				(eio_tstamp) delayInFileModeSwitching * 1000.0,
+				0, bufferFileDoneDelaying, fcContext);
+		}
+	}
+
+	static int bufferFileDoneDelaying(eio_req *req) {
+		FileCreationContext *fcContext = static_cast<FileCreationContext *>(req->data);
+		FileBufferedChannel *self = fcContext->self;
+
+		if (EIO_CANCELLED(req)) {
+			FBC_DEBUG_FROM_STATIC("Writer: creation of file " << fcContext->path <<
+				"canceled. Deleting file in the background");
+			eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
+			return 0;
+		}
+
+		FBC_DEBUG_FROM_STATIC("Writer: done delaying in-file mode switching. "
+			"Creating file: " << fcContext->path);
+		self->inFileMode->writerRequest = eio_open(fcContext->path.c_str(),
 			O_RDWR | O_CREAT | O_EXCL, 0600, 0,
 			bufferFileCreated, fcContext);
-		verifyInvariants();
+		return 0;
 	}
 
 	static int bufferFileCreated(eio_req *req) {
@@ -797,6 +795,7 @@ private:
 				FBC_DEBUG_FROM_STATIC("Writer: file already exists, retrying");
 				self->inFileMode->writerState = WS_INACTIVE;
 				self->createBufferFile();
+				self->verifyInvariants();
 			} else {
 				self->setError(req->errorno);
 			}
@@ -899,7 +898,7 @@ private:
 				assert(self->peekBuffer().size() == moveContext->buffer.size());
 				self->inFileMode->written += moveContext->buffer.size();
 				self->popBuffer();
-				if (generation != self->generation || self->mode == ERROR) {
+				if (generation != self->generation || self->mode >= ERROR) {
 					// buffersFlushedCallback deinitialized this object, or callback
 					// called a method that encountered an error.
 					return 0;
@@ -929,31 +928,37 @@ private:
 	/***** Misc *****/
 
 	void setError(int errcode) {
-		assert(errcode != 0);
+		if (mode >= ERROR) {
+			return;
+		}
+
 		FBC_DEBUG("Reader: setting error: errno=" << errcode <<
 			" (" << strerror(errcode) << ")");
 		cancelReader();
 		if (mode == IN_FILE_MODE) {
 			cancelWriter();
 		}
-		mode = ERROR;
 		readerState = RS_TERMINATED;
 		this->errcode = errcode;
 		inFileMode.reset();
 		if (acceptingInput()) {
 			FBC_DEBUG("Feeding error");
+			mode = ERROR;
 			Channel::feedError(errcode);
 		} else {
 			FBC_DEBUG("Waiting until underlying channel becomes idle for error feeding");
-			idleCallback = feedErrorWhenIdle;
+			mode = ERROR_WAITING;
 		}
 	}
 
-	static void feedErrorWhenIdle(FileBufferedChannel *self) {
-		assert(self->errcode != 0);
-		self->idleCallback = NULL;
-		FBC_DEBUG_FROM_STATIC("Channel has become idle. Feeding error");
-		self->Channel::feedError(self->errcode);
+	void feedErrorWhenChannelIdleOrEnded() {
+		assert(errcode != 0);
+		if (isIdle()) {
+			FBC_DEBUG("Channel has become idle. Feeding error");
+			Channel::feedError(errcode);
+		} else {
+			FBC_DEBUG("Channel ended while trying to feed an error");
+		}
 	}
 
 	/**
@@ -964,9 +969,7 @@ private:
 		switch (readerState) {
 		case RS_FEEDING:
 		case RS_FEEDING_EOF:
-			break;
 		case RS_WAITING_FOR_CHANNEL_IDLE:
-			idleCallback = NULL;
 			break;
 		case RS_READING_FROM_FILE:
 			eio_cancel(inFileMode->readRequest);
@@ -997,21 +1000,18 @@ private:
 
 	void verifyInvariants() const {
 		#ifndef NDEBUG
-			if (mode == ERROR) {
+			if (mode >= ERROR) {
 				assert(readerState == RS_TERMINATED);
 				assert(inFileMode == NULL);
 			}
 
 			switch (readerState) {
 			case RS_INACTIVE:
-				assert(nbuffers == 0);
-				assert(mode == IN_MEMORY_MODE);
-				break;
 			case RS_FEEDING:
 			case RS_FEEDING_EOF:
 				break;
 			case RS_WAITING_FOR_CHANNEL_IDLE:
-				assert(mode != ERROR);
+				assert(mode < ERROR);
 				break;
 			case RS_READING_FROM_FILE:
 				assert(mode == IN_FILE_MODE);
@@ -1022,7 +1022,7 @@ private:
 				break;
 			}
 
-			assert((errcode == 0) == (mode != ERROR));
+			assert((errcode == 0) == (mode < ERROR));
 			assert((inFileMode != NULL) == (mode == IN_FILE_MODE));
 		#endif
 	}
@@ -1036,6 +1036,8 @@ private:
 				assert(self->Channel::ended());
 				self->channelEndedWhileWaitingForItToBecomeIdle();
 			}
+		} else if (self->mode == ERROR_WAITING) {
+			self->feedErrorWhenChannelIdleOrEnded();
 		}
 	}
 
@@ -1044,7 +1046,11 @@ public:
 	Callback dataFlushedCallback;
 
 	FileBufferedChannel()
-		: mode(IN_MEMORY_MODE),
+		: threshold(1024 * 128),
+		  delayInFileModeSwitching(0),
+		  autoTruncateFile(true),
+		  autoStartMover(true),
+		  mode(IN_MEMORY_MODE),
 		  readerState(RS_INACTIVE),
 		  nbuffers(0),
 		  errcode(0),
@@ -1058,6 +1064,10 @@ public:
 
 	FileBufferedChannel(Context *context)
 		: Channel(context),
+		  threshold(1024 * 128),
+		  delayInFileModeSwitching(0),
+		  autoTruncateFile(true),
+		  autoStartMover(true),
 		  mode(IN_MEMORY_MODE),
 		  readerState(RS_INACTIVE),
 		  nbuffers(0),
@@ -1094,8 +1104,15 @@ public:
 		pushBuffer(buffer);
 		if (mode == IN_MEMORY_MODE && passedThreshold()) {
 			switchToInFileMode();
+		} else if (mode == IN_FILE_MODE
+		        && inFileMode->writerState == WS_INACTIVE
+		        && autoStartMover)
+		{
+			moveNextBufferToFile();
 		}
-		readNextWithoutRefGuard();
+		if (readerState == RS_INACTIVE) {
+			readNextWithoutRefGuard();
+		}
 	}
 
 	void feed(const char *data, unsigned int size) {
@@ -1137,12 +1154,33 @@ public:
 		Channel::stop();
 	}
 
+	void consumed(unsigned int size, bool end) {
+		Channel::consumed(size, end);
+	}
+
 	Channel::State getState() const {
 		return state;
 	}
 
+	Mode getMode() const {
+		return mode;
+	}
+
+	ReaderState getReaderState() const {
+		return readerState;
+	}
+
+	WriterState getWriterState() const {
+		return inFileMode->writerState;
+	}
+
+	unsigned int getBytesBuffered() const {
+		return bytesBuffered;
+	}
+
 	bool ended() const {
-		return (hasBuffers() && peekLastBuffer().empty()) || mode == ERROR || Channel::ended();
+		return (hasBuffers() && peekLastBuffer().empty())
+			|| mode >= ERROR || Channel::ended();
 	}
 
 	bool endAcked() const {
@@ -1150,7 +1188,7 @@ public:
 	}
 
 	bool passedThreshold() const {
-		return bytesBuffered >= 1024 * 128;
+		return bytesBuffered >= threshold;
 	}
 
 	void setDataCallback(DataCallback callback) {
