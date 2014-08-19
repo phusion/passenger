@@ -42,8 +42,7 @@ using namespace oxt;
 
 class FdChannel: protected Channel {
 public:
-	typedef int (*DataCallback)(FdChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
-	typedef int (*Callback)(FdChannel *channel);
+	typedef Channel::Result (*DataCallback)(FdChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
 
 private:
 	ev_io watcher;
@@ -55,7 +54,12 @@ private:
 
 	void onReadable(ev_io *io, int revents) {
 		RefGuard guard(hooks, this);
-		unsigned int i;
+		onReadableWithoutRefGuard();
+	}
+
+	void onReadableWithoutRefGuard() {
+		unsigned int generation = this->generation;
+		unsigned int i, origBufferSize;
 		bool done = false;
 		ssize_t ret;
 		int e;
@@ -65,32 +69,46 @@ private:
 				buffer = MemoryKit::mbuf_get(&ctx->mbuf_pool);
 			}
 
+			origBufferSize = buffer.size();
 			do {
 				ret = ::read(watcher.fd, buffer.start, buffer.size());
 			} while (OXT_UNLIKELY(ret == -1 && errno == EINTR));
 			if (ret > 0) {
-				unsigned int generation = this->generation;
 				MemoryKit::mbuf buffer2(buffer, 0, ret);
-				buffer = MemoryKit::mbuf(buffer, ret);
+				if (size_t(ret) == size_t(buffer.size())) {
+					// Unref mbuf_block
+					buffer = MemoryKit::mbuf();
+				} else {
+					buffer = MemoryKit::mbuf(buffer, ret);
+				}
 				feedWithoutRefGuard(boost::move(buffer2));
-				if (OXT_UNLIKELY(generation != this->generation)) {
+				if (generation != this->generation) {
 					// Callback deinitialized this object.
 					return;
 				}
+
 				if (!acceptingInput()) {
+					done = true;
 					ev_io_stop(ctx->libev->getLoop(), &watcher);
-					idleCallback = onChannelIdle;
+					if (mayAcceptInputLater()) {
+						consumedCallback = onChannelConsumed;
+					}
+				} else {
+					// If we were unable to fill the entire buffer, then it's likely that
+					// the client is slow and that the next read() will fail with
+					// EAGAIN, so we stop looping and return to the event loop poller.
+					done = (size_t) ret < origBufferSize;
 				}
-				done = !acceptingInput()
-					|| (size_t) ret < ctx->mbuf_pool.mbuf_block_chunk_size;
+
 			} else if (ret == 0) {
 				ev_io_stop(ctx->libev->getLoop(), &watcher);
 				done = true;
 				feedWithoutRefGuard(MemoryKit::mbuf());
+
 			} else {
 				e = errno;
 				done = true;
-				if (e != EAGAIN) {
+				if (e != EAGAIN && e != EWOULDBLOCK) {
 					ev_io_stop(ctx->libev->getLoop(), &watcher);
 					feedError(e);
 				}
@@ -98,10 +116,12 @@ private:
 		}
 	}
 
-	static void onChannelIdle(Channel *source) {
-		FdChannel *self = static_cast<FdChannel *>(source);
-		ev_io_start(self->ctx->libev->getLoop(), &self->watcher);
-		self->idleCallback = NULL;
+	static void onChannelConsumed(Channel *channel, unsigned int size) {
+		FdChannel *self = static_cast<FdChannel *>(channel);
+		self->consumedCallback = NULL;
+		if (self->acceptingInput()) {
+			ev_io_start(self->ctx->libev->getLoop(), &self->watcher);
+		}
 	}
 
 	void initialize() {
@@ -124,7 +144,9 @@ public:
 	}
 
 	~FdChannel() {
-		ev_io_stop(ctx->libev->getLoop(), &watcher);
+		if (ctx != NULL) {
+			ev_io_stop(ctx->libev->getLoop(), &watcher);
+		}
 	}
 
 	// May only be called right after construction.
@@ -141,19 +163,20 @@ public:
 		buffer = MemoryKit::mbuf();
 		ev_io_stop(ctx->libev->getLoop(), &watcher);
 		watcher.fd = -1;
-		idleCallback = NULL;
+		consumedCallback = NULL;
 		Channel::deinitialize();
 	}
 
-	// May only be called right after reinitialize().
+	// May only be called right after the constructor or reinitialize().
 	void startReading() {
-		ev_io_start(ctx->libev->getLoop(), &watcher);
+		startReadingInNextTick();
+		onReadableWithoutRefGuard();
 	}
 
-	// May only be called right after reinitialize().
+	// May only be called right after the constructor or reinitialize().
 	void startReadingInNextTick() {
-		startReading();
-		onReadable(&watcher, EV_READ);
+		assert(Channel::acceptingInput());
+		ev_io_start(ctx->libev->getLoop(), &watcher);
 	}
 
 	void start() {
@@ -169,12 +192,8 @@ public:
 		return watcher.fd;
 	}
 
-	void setCallback(DataCallback callback) {
-		this->callback = (Channel::DataCallback) callback;
-	}
-
-	void setEndAckCallback(Callback callback) {
-		this->endAckCallback = (Channel::Callback) callback;
+	void setDataCallback(DataCallback callback) {
+		Channel::dataCallback = (Channel::DataCallback) callback;
 	}
 
 	OXT_FORCE_INLINE

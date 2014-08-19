@@ -29,6 +29,7 @@
 #include <oxt/macros.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/move/core.hpp>
+#include <algorithm>
 #include <cassert>
 #include <ServerKit/Context.h>
 #include <MemoryKit/mbuf.h>
@@ -48,35 +49,78 @@ using namespace boost;
  * after parsing request headers, you might want to create a temp file for storing the
  * request body, and you can't parse the request body until the temp file is created. If
  * you received the headers and (a part of) the request body in the same `read()` call
- * then you have to buffer the partially received request body. Writing this code is
- * error-prone, its flow is hard to test (because it depends on network conditions),
- * and it's ridden with boilerplate.
+ * then you have to buffer the partially received request body. You might not even want
+ * to consume all data, because some data might belong to the next request, so you have
+ * to pass the remainder of the buffer to the next parser iteration.
  *
- * The Channel class solves this problem with a nice abstraction. First, you attach
- * a data callback to a Channel. Whatever is written to the Channel, will be forwarded to
- * the data callback.
+ * Writing all this code is complicated, error-prone, its flow is hard to test (because
+ * it depends on network conditions), and it's ridden with boilerplate. The Channel class
+ * solves this problem with a nice abstraction. First, you attach a data callback to a
+ * Channel. Whatever is written to the Channel, will be forwarded to the data callback.
  *
  * The data callback can consume the buffer immediately, and tell Channel how many bytes
- * it has consumed, by returning an integer. If the buffer was not fully consumed then
- * Channel will call the data callback again with the remainder of the buffer. This repeats
- * until the buffer is fully consumed, or (if proper hooks are provided) until the
- * client is disconnected.
+ * it has consumed, and whether it accepts any further data, by returning a Channel::Result.
+ * If the buffer was not fully consumed the buffer, and is still willing to accept further data,
+ * then Channel will call the data callback again with the remainder of the buffer. This repeats
+ * until the buffer is fully consumed, or until the callback indicates that it's no longer
+ * accepting further data, or (if proper hooks are provided) until the client is disconnected.
+ *
+ *     Channel channel;
+ *     channel.dataCallback = channelDataReceived;
+ *
+ *     channel.consumedCallback = channelConsumed;
+ *     channel.feed("hello");
+ *
+ *     void
+ *     channelConsumed(Channel *channel, unsigned int size) {
+ *         channel->consumedCallback = NULL;
+ *         if (channel->acceptingInput()) {
+ *             // The channel is now able to accept more data.
+ *             // Write some more data...
+ *             channel->consumedCallback = channelConsumed;
+ *             channel->feed("hello");
+ *         } else if (channel->ended()) {
+ *             ...the data callback no longer accepts further data...
+ *         } else {
+ *             ...the data callback signaled an error...
+ *         }
+ *     }
+ *
+ *     Channel::Result
+ *     channelDataReceived(Channel *channel, mbuf &buffer, int errcode) {
+ *         if (errcode != 0) {
+ *             // An error occurred! Result doesn't matter in this case.
+ *             fprintf(stderr, "An error occurred! errno=%d\n", errcode);
+ *             return Channel::Result(0, false);
+ *         } else if (buffer.empty()) {
+ *             // EOF reached. Result doesn't matter in this case.
+ *             return Channel::Result(0, false);
+ *         } else {
+ *             int bytesProcessed;
+ *             bool acceptFurtherData;
+ *
+ *             ...process buffer....
+ *
+ *             return Channel::Result(bytesProcessed, acceptFurtherData);
+ *         }
+ *     }
  *
  * The data callback can also tell Channel that it wants to consume the buffer
- * *asynchronously*, by returning a negative integer. At some later point, something
- * must notify Channel that the buffer is consumed, by calling `channel.consumed()`.
- * Until that happens, the Channel will tell the writer that it is not accepting any new
- * data, so that the writer can stop writing temporarily. When the buffer is consumed,
- * the Channel notifies the writer about this so that it can continue writing.
+ * *asynchronously*, by returning a Channel::Result with a negative consumption size.
+ * At some later point, something must notify Channel that the buffer is consumed,
+ * by calling `channel.consumed()`. Until that happens, the Channel will tell the
+ * writer that it is not accepting any new data, so that the writer can stop writing
+ * temporarily. When the buffer is consumed, the Channel notifies the writer about
+ * this so that it can continue writing.
  *
  * Typical usage goes like this:
  *
- * 1. Write to the Channel using `channel.write()`.
+ * 1. Write to the Channel using `channel.feed()`.
  * 2. Check whether `channel.acceptingInput()`. If so, continue writing. If not, and
- *    `!channel.hasError()` stop writing and install an idle callback with
- *    `channel.idleCallback = ...`.
- * 3. When the idle callback is called, set `channel.idleCallback = NULL` and resume
- *    writing to the channel.
+ *    `channel.mayAcceptInputLater()`, then stop writing and install a consumed
+ *    callback with `channel.consumedCallback = ...`.
+ * 3. When the consumed callback is called, `channel.consumedCallback = NULL` and
+ *    check whether `channel.acceptingInput()`. It so, resume writing to the channel.
  *
  * A good example of this is FdChannel. It reads data from a file descriptor using
  * `read()`, then writes them to a Channel. It stops reading from the file descriptor
@@ -98,7 +142,7 @@ public:
 	};
 
 	typedef Result (*DataCallback)(Channel *channel, const MemoryKit::mbuf &buffer, int errcode);
-	typedef   void (*Callback)(Channel *channel);
+	typedef   void (*ConsumedCallback)(Channel *channel, unsigned int size);
 
 	enum State {
 		/**
@@ -175,117 +219,118 @@ protected:
 	unsigned int planId: 28;
 	/** If an error occurred, the errno code is stored here. 0 means no error. */
 	int errcode;
+	unsigned int generation;
+	unsigned int bytesConsumed;
 	/** Buffer that will be (or is being) passed to the callback. */
 	MemoryKit::mbuf buffer;
 	Context *ctx;
-	unsigned int generation;
 
-	void callDataCallback() {
+	int callDataCallback() {
 		RefGuard guard(hooks, this);
-		callDataCallbackWithoutRefGuard();
+		return callDataCallbackWithoutRefGuard();
 	}
 
-	void callDataCallbackWithoutRefGuard() {
+	int callDataCallbackWithoutRefGuard() {
 		unsigned int generation = this->generation;
-		bool done = false;
 		Result cbResult;
 
-		do {
-			assert(state == CALLING || state == CALLING_WITH_EOF);
-			assert(state != CALLING || !buffer.empty());
-			assert(state != CALLING_WITH_EOF || buffer.empty());
+		begin:
 
-			cbResult = dataCallback(this, buffer, errcode);
-			if (generation != this->generation) {
-				// Callback deinitialized this object.
-				return;
-			}
-			if (cbResult.consumed > (int) buffer.size()) {
-				cbResult.consumed = (int) buffer.size();
-			}
+		assert(state == CALLING || state == CALLING_WITH_EOF);
+		assert(state != CALLING || !buffer.empty());
+		assert(state != CALLING_WITH_EOF || buffer.empty());
 
-			assert(state != IDLE);
-			assert(state != WAITING_FOR_CALLBACK);
-			assert(state != STOPPED);
-			assert(state != STOPPED_WHILE_WAITING);
-			assert(state != PLANNING_TO_CALL);
-			assert(state != EOF_WAITING);
+		cbResult = dataCallback(this, buffer, errcode);
+		if (generation != this->generation) {
+			// Callback deinitialized this object.
+			return bytesConsumed;
+		}
+		cbResult.consumed = std::min<int>(cbResult.consumed, buffer.size());
 
-			if (cbResult.consumed >= 0) {
-				if ((unsigned int) cbResult.consumed == buffer.size()) {
-					buffer = MemoryKit::mbuf();
-				} else {
-					buffer = MemoryKit::mbuf(buffer, cbResult.consumed);
-				}
+		assert(state != IDLE);
+		assert(state != WAITING_FOR_CALLBACK);
+		assert(state != STOPPED);
+		assert(state != STOPPED_WHILE_WAITING);
+		assert(state != PLANNING_TO_CALL);
+		assert(state != EOF_WAITING);
 
-				switch (state) {
-				case CALLING:
-					if (cbResult.end) {
-						state = EOF_REACHED;
-						done = true;
-						callEndAckCallback();
-					} else if (buffer.empty()) {
-						state = IDLE;
-						done = true;
-						callIdleCallback();
-					}
-					// else: continue loop and call again with remaining data
-					break;
-				case STOPPED_WHILE_CALLING:
-					if (cbResult.end) {
-						state = EOF_REACHED;
-						done = true;
-						callEndAckCallback();
-					} else {
-						state = STOPPED;
-						done = true;
-					}
-					break;
-				case CALLING_WITH_EOF:
-					state = EOF_REACHED;
-					done = true;
-					callEndAckCallback();
-					break;
-				case EOF_REACHED:
-					state = EOF_REACHED;
-					done = true;
-					break;
-				default:
-					P_BUG("Unknown state" << toString((int) state));
-					break;
-				}
-
+		if (cbResult.consumed >= 0) {
+			bytesConsumed += cbResult.consumed;
+			if ((unsigned int) cbResult.consumed == buffer.size()) {
+				// Unref mbuf_block
+				buffer = MemoryKit::mbuf();
 			} else {
-				switch (state) {
-				case CALLING:
-					state = WAITING_FOR_CALLBACK;
-					done = true;
-					break;
-				case STOPPED_WHILE_CALLING:
-					state = STOPPED_WHILE_WAITING;
-					done = true;
-					break;
-				case CALLING_WITH_EOF:
-				case EOF_REACHED:
-					state = EOF_WAITING;
-					done = true;
-					break;
-				default:
-					P_BUG("Unknown state" << toString((int) state));
-					break;
-				}
+				buffer = MemoryKit::mbuf(buffer, cbResult.consumed);
 			}
 
-			if (!done && hooks != NULL && hooks->impl != NULL) {
-				done = !hooks->impl->hook_isConnected(hooks, this);
+			switch (state) {
+			case CALLING:
+				if (cbResult.end) {
+					state = EOF_REACHED;
+					callConsumedCallback();
+					return bytesConsumed;
+				} else if (buffer.empty()) {
+					state = IDLE;
+					callConsumedCallback();
+					return bytesConsumed;
+				} else {
+					if (hooks == NULL
+					 || hooks->impl == NULL
+					 || hooks->impl->hook_isConnected(hooks, this))
+					{
+						goto begin;
+					} else {
+						callConsumedCallback();
+						return bytesConsumed;
+					}
+				}
+			case STOPPED_WHILE_CALLING:
+				if (cbResult.end) {
+					state = EOF_REACHED;
+					callConsumedCallback();
+					return bytesConsumed;
+				} else {
+					state = STOPPED;
+					return -1;
+				}
+			case CALLING_WITH_EOF:
+				state = EOF_REACHED;
+				callConsumedCallback();
+				return bytesConsumed;
+			case EOF_REACHED:
+				// feedError() called inside callback, so we
+				// don't callConsumedCallback() here.
+				state = EOF_REACHED;
+				return bytesConsumed;
+			default:
+				P_BUG("Unknown state" << toString((int) state));
+				return 0;
 			}
-		} while (!done);
+
+		} else {
+			switch (state) {
+			case CALLING:
+				state = WAITING_FOR_CALLBACK;
+				break;
+			case STOPPED_WHILE_CALLING:
+				state = STOPPED_WHILE_WAITING;
+				break;
+			case CALLING_WITH_EOF:
+			case EOF_REACHED:
+				state = EOF_WAITING;
+				break;
+			default:
+				P_BUG("Unknown state" << toString((int) state));
+				break;
+			}
+			return -1;
+		}
 	}
 
 	void planNextActivity() {
 		if (buffer.empty()) {
 			state = IDLE;
-			callIdleCallback();
+			callConsumedCallback();
 		} else {
 			state = PLANNING_TO_CALL;
 			planId = ctx->libev->runLater(boost::bind(
@@ -300,22 +345,22 @@ protected:
 		callDataCallback();
 	}
 
-	void callIdleCallback() {
-		if (idleCallback != NULL) {
-			idleCallback(this);
-		}
-	}
-
-	void callEndAckCallback() {
-		if (endAckCallback != NULL) {
-			endAckCallback(this);
+	void callConsumedCallback() {
+		unsigned int bytesConsumed = this->bytesConsumed;
+		this->bytesConsumed = 0;
+		if (consumedCallback != NULL) {
+			consumedCallback(this, bytesConsumed);
 		}
 	}
 
 public:
 	DataCallback dataCallback;
-	Callback idleCallback;
-	Callback endAckCallback;
+	/**
+	 * Called whenever fed data has been fully consumed, or whenever the Channel
+	 * has become idle. Note that `size` may be 0, which could be triggered by
+	 * calling `stop()` then `start()` on an idle Channe.
+	 */
+	ConsumedCallback consumedCallback;
 	Hooks *hooks;
 
 	/**
@@ -326,11 +371,11 @@ public:
 		: state(EOF_REACHED),
 		  planId(0),
 		  errcode(0),
-		  ctx(NULL),
 		  generation(0),
+		  bytesConsumed(0),
+		  ctx(NULL),
 		  dataCallback(NULL),
-		  idleCallback(NULL),
-		  endAckCallback(NULL),
+		  consumedCallback(NULL),
 		  hooks(NULL)
 		{ }
 
@@ -341,11 +386,11 @@ public:
 		: state(IDLE),
 		  planId(0),
 		  errcode(0),
-		  ctx(context),
 		  generation(0),
+		  bytesConsumed(0),
+		  ctx(context),
 		  dataCallback(NULL),
-		  idleCallback(NULL),
-		  endAckCallback(NULL),
+		  consumedCallback(NULL),
 		  hooks(NULL)
 		{ }
 
@@ -371,6 +416,7 @@ public:
 	void reinitialize() {
 		state   = IDLE;
 		errcode = 0;
+		bytesConsumed = 0;
 	}
 
 	/**
@@ -392,14 +438,14 @@ public:
 	 *
 	 * @pre acceptingInput()
 	 */
-	void feed(const MemoryKit::mbuf &mbuf) {
+	int feed(const MemoryKit::mbuf &mbuf) {
 		MemoryKit::mbuf mbuf_copy(mbuf);
-		feed(boost::move(mbuf_copy));
+		return feed(boost::move(mbuf_copy));
 	}
 
-	void feed(BOOST_RV_REF(MemoryKit::mbuf) mbuf) {
+	int feed(BOOST_RV_REF(MemoryKit::mbuf) mbuf) {
 		RefGuard guard(hooks, this);
-		feedWithoutRefGuard(mbuf);
+		return feedWithoutRefGuard(mbuf);
 	}
 
 	/**
@@ -409,20 +455,21 @@ public:
 	 *
 	 * @pre acceptingInput()
 	 */
-	void feedWithoutRefGuard(const MemoryKit::mbuf &mbuf) {
+	int feedWithoutRefGuard(const MemoryKit::mbuf &mbuf) {
 		MemoryKit::mbuf mbuf_copy(mbuf);
-		feedWithoutRefGuard(boost::move(mbuf_copy));
+		return feedWithoutRefGuard(boost::move(mbuf_copy));
 	}
 
-	void feedWithoutRefGuard(BOOST_RV_REF(MemoryKit::mbuf) mbuf) {
+	int feedWithoutRefGuard(BOOST_RV_REF(MemoryKit::mbuf) mbuf) {
 		assert(state == IDLE);
+		assert(bytesConsumed == 0);
 		if (mbuf.empty()) {
 			state = CALLING_WITH_EOF;
 		} else {
 			state = CALLING;
 		}
 		buffer = mbuf;
-		callDataCallbackWithoutRefGuard();
+		return callDataCallbackWithoutRefGuard();
 	}
 
 	/**
@@ -454,7 +501,7 @@ public:
 		case EOF_WAITING:
 			this->errcode = errcode;
 			state = EOF_REACHED;
-			callEndAckCallback();
+			callConsumedCallback();
 			break;
 		case EOF_REACHED:
 			this->errcode = errcode;
@@ -471,7 +518,7 @@ public:
 			planId = 0;
 			this->errcode = errcode;
 			state = EOF_REACHED;
-			callEndAckCallback();
+			callConsumedCallback();
 			break;
 		default:
 			P_BUG("Unknown state" << toString((int) state));
@@ -553,27 +600,35 @@ public:
 		assert(state != CALLING_WITH_EOF);
 		assert(state != EOF_REACHED);
 
-		buffer = MemoryKit::mbuf(buffer, size);
+		size = std::min<unsigned int>(size, buffer.size());
+		bytesConsumed += size;
+		if (size == buffer.size()) {
+			// Unref mbuf_block
+			buffer = MemoryKit::mbuf();
+		} else {
+			buffer = MemoryKit::mbuf(buffer, size);
+		}
 
 		switch (state) {
 		case WAITING_FOR_CALLBACK:
 			if (end) {
-				goto end_reached;
+				state = EOF_REACHED;
+				callConsumedCallback();
 			} else {
 				planNextActivity();
 			}
 			break;
 		case STOPPED_WHILE_WAITING:
 			if (end) {
-				goto end_reached;
+				state = EOF_REACHED;
+				callConsumedCallback();
 			} else {
 				state = STOPPED;
 			}
 			break;
 		case EOF_WAITING:
-			end_reached:
 			state = EOF_REACHED;
-			callEndAckCallback();
+			callConsumedCallback();
 			break;
 		default:
 			P_BUG("Unknown state" << toString((int) state));
@@ -586,24 +641,48 @@ public:
 		return state;
 	}
 
+	OXT_FORCE_INLINE
+	bool isIdle() const {
+		return acceptingInput();
+	}
+
+	bool isStarted() const {
+		return state != STOPPED && state != STOPPED_WHILE_CALLING && state != STOPPED_WHILE_WAITING;
+	}
+
 	/**
 	 * Returns whether this Channel accepts more input right now.
-	 * There are two reasons why this might not be the case:
-	 * either the callback isn't done yet, or an error had been fed.
-	 * Use `hasError()` to check for the latter.
+	 * There are three reasons why this might not be the case:
+	 *
+	 * 1. The callback isn't done yet.
+	 * 2. EOF has been fed, or the data callback has ended consumption.
+	 *    Use `ended()` to check for this.
+	 * 3. An error had been fed. Use `hasError()` to check for this.
 	 */
 	OXT_FORCE_INLINE
 	bool acceptingInput() const {
 		return state == IDLE;
 	}
 
+	/**
+	 * Returns whether this Channel's callback is currently processing the
+	 * fed data, and is not accepting any more input now, but may accept
+	 * more input later. You should wait for that event by setting
+	 * `consumedCallback`.
+	 */
+	bool mayAcceptInputLater() const {
+		// Branchless code
+		return (state >= CALLING) | (state <= PLANNING_TO_CALL);
+	}
+
+	/**
+	 * Returns whether an error flag has been set. Note that this does not
+	 * necessarily mean that the callback has consumed the error yet.
+	 * Use `hasError() && endAcked()` to check for that.
+	 */
 	OXT_FORCE_INLINE
 	bool hasError() const {
 		return errcode != 0;
-	}
-
-	bool isStarted() const {
-		return state != STOPPED && state != STOPPED_WHILE_CALLING && state != STOPPED_WHILE_WAITING;
 	}
 
 	OXT_FORCE_INLINE
@@ -611,6 +690,11 @@ public:
 		return errcode;
 	}
 
+	/**
+	 * Returns whether the EOF flag has been set. Note that this does not
+	 * necessarily mean that the callback has consumed the EOF yet.
+	 * Use `endAcked()` to check for that.
+	 */
 	bool ended() const {
 		return state == CALLING_WITH_EOF || state == EOF_WAITING || state == EOF_REACHED;
 	}

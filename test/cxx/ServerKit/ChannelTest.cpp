@@ -21,7 +21,7 @@ namespace tut {
 		string log;
 		int toConsume;
 		bool endConsume;
-		unsigned int counter, idleCount, endAcked;
+		unsigned int counter, idleCount, endAcked, bytesConsumed;
 		Channel::State lastState;
 
 		ServerKit_ChannelTest()
@@ -30,8 +30,7 @@ namespace tut {
 			  channel(&context)
 		{
 			channel.dataCallback = dataCallback;
-			channel.idleCallback = idleCallback;
-			channel.endAckCallback = endAckCallback;
+			channel.consumedCallback = consumedCallback;
 			channel.hooks = this;
 			Hooks::impl = NULL;
 			Hooks::userData = NULL;
@@ -40,6 +39,7 @@ namespace tut {
 			counter = 0;
 			idleCount = 0;
 			endAcked = 0;
+			bytesConsumed = 0;
 			lastState = Channel::IDLE;
 			bg.start();
 		}
@@ -70,16 +70,15 @@ namespace tut {
 			}
 		}
 
-		static void idleCallback(Channel *channel) {
+		static void consumedCallback(Channel *channel, unsigned int size) {
 			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks;
 			boost::lock_guard<boost::mutex> l(self->syncher);
-			self->idleCount++;
-		}
-
-		static void endAckCallback(Channel *channel) {
-			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks;
-			boost::lock_guard<boost::mutex> l(self->syncher);
-			self->endAcked++;
+			self->bytesConsumed += size;
+			if (channel->isIdle()) {
+				self->idleCount++;
+			} else if (channel->endAcked()) {
+				self->endAcked++;
+			}
 		}
 
 		unsigned int getCounter() {
@@ -235,14 +234,16 @@ namespace tut {
 	/***** Initial state *****/
 
 	TEST_METHOD(1) {
-		set_test_name("It is idle and accepts input");
+		set_test_name("It is idle, accepts input, is not error'red and hasn't ended");
 		ensure_equals(channel.getState(), Channel::IDLE);
 		ensure(channel.acceptingInput());
+		ensure(!channel.hasError());
+		ensure(!channel.ended());
 	}
 
 	TEST_METHOD(2) {
 		set_test_name("Upon being fed data, it calls the callback, transitions "
-			"to the idle state and calls the idle callback");
+			"to the idle state and calls the consumption callback");
 		feedChannel("aaabbb");
 		EVENTUALLY(5,
 			LOCK();
@@ -252,6 +253,7 @@ namespace tut {
 			LOCK();
 			ensure_equals(log, "Data: aaabbb\n");
 			ensure_equals(idleCount, 1u);
+			ensure_equals(bytesConsumed, 6u);
 		}
 		EVENTUALLY(5,
 			result = getChannelState() == Channel::IDLE;
@@ -263,16 +265,14 @@ namespace tut {
 			"and transitions to the EOF state");
 		feedChannel("");
 		EVENTUALLY(5,
-			LOCK();
-			result = !log.empty();
+			result = getChannelState() == Channel::EOF_REACHED;
 		);
 		{
 			LOCK();
 			ensure_equals(log, "EOF\n");
+			ensure_equals(endAcked, 1u);
+			ensure_equals(bytesConsumed, 0u);
 		}
-		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
-		);
 	}
 
 	TEST_METHOD(4) {
@@ -280,16 +280,14 @@ namespace tut {
 			"and transitions to the EOF state");
 		feedChannelError(EIO);
 		EVENTUALLY(5,
-			LOCK();
-			result = !log.empty();
+			result = getChannelState() == Channel::EOF_REACHED;
 		);
 		{
 			LOCK();
 			ensure_equals(log, "Error: " + toString(EIO) + "\n");
+			ensure_equals(endAcked, 1u);
+			ensure_equals(bytesConsumed, 0u);
 		}
-		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
-		);
 	}
 
 
@@ -304,7 +302,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(11) {
-		set_test_name("It calls the idle callback");
+		set_test_name("It calls the consumption callback");
 
 		feedSomeDataAndWaitForConsumption();
 		LOCK();
@@ -937,7 +935,7 @@ namespace tut {
 
 	TEST_METHOD(49) {
 		set_test_name("If the callback has not ended consumption, upon fully "
-			"consuming the buffer, the Channel calls the idle callback");
+			"consuming the buffer, the Channel calls the consumption callback");
 
 		{
 			LOCK();
@@ -978,7 +976,7 @@ namespace tut {
 
 	TEST_METHOD(52) {
 		set_test_name("If the callback has not ended consumption, "
-			"the Channel transitions to the idle state and calls the idle callback");
+			"the Channel transitions to the idle state and calls the consumption callback");
 
 		feedSomeDataAndWaitForConsumption();
 		ensure_equals(getChannelState(), Channel::IDLE);
@@ -1301,7 +1299,7 @@ namespace tut {
 
 	TEST_METHOD(66) {
 		set_test_name("If stop() was called, and consumed() is called with a full buffer size, "
-			"then when start() is called, it transitions to the idle state and calls the idle callback");
+			"then when start() is called, it transitions to the idle state and calls the consumption callback");
 
 		{
 			LOCK();
