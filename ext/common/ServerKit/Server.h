@@ -340,7 +340,7 @@ private:
 		}
 	}
 
-	static Channel::Result _onClientDataReceived(FdChannel *channel,
+	static Channel::Result _onClientDataReceived(FdInputChannel *channel,
 		const MemoryKit::mbuf &buffer, int errcode)
 	{
 		Client *client = static_cast<Client *>(channel->getHooks()->userData);

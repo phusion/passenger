@@ -28,7 +28,7 @@
 #include <Utils/sysqueue.h>
 #include <boost/atomic.hpp>
 #include <boost/cstdint.hpp>
-#include <ServerKit/FdChannel.h>
+#include <ServerKit/FdInputChannel.h>
 #include <ServerKit/FileBufferedFdOutputChannel.h>
 
 namespace Passenger {
@@ -83,7 +83,7 @@ public:
 
 	boost::atomic<int> refcount;
 	Hooks hooks;
-	FdChannel input;
+	FdInputChannel input;
 	FileBufferedFdOutputChannel output;
 
 	BaseClient(void *_server)
