@@ -942,7 +942,7 @@ private:
 		inFileMode.reset();
 		if (acceptingInput()) {
 			FBC_DEBUG("Feeding error");
-			feedError(errcode);
+			Channel::feedError(errcode);
 		} else {
 			FBC_DEBUG("Waiting until underlying channel becomes idle for error feeding");
 			idleCallback = feedErrorWhenIdle;
@@ -953,7 +953,7 @@ private:
 		assert(self->errcode != 0);
 		self->idleCallback = NULL;
 		FBC_DEBUG_FROM_STATIC("Channel has become idle. Feeding error");
-		self->feedError(self->errcode);
+		self->Channel::feedError(self->errcode);
 	}
 
 	/**
@@ -1104,6 +1104,10 @@ public:
 
 	void feed(const char *data) {
 		feed(MemoryKit::mbuf(data));
+	}
+
+	void feedError(int errcode) {
+		setError(errcode);
 	}
 
 	void reinitialize() {
