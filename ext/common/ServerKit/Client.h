@@ -139,7 +139,7 @@ public:
 		STAILQ_ENTRY(ClientType) freeClient; \
 		TAILQ_ENTRY(ClientType) activeOrDisconnectedClient; \
 	} nextClient; \
-	int fdnum
+	unsigned int number
 
 
 class Client: public BaseClient {

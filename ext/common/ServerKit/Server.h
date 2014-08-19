@@ -40,6 +40,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
+#include <cstdio>
 
 #include <Logging.h>
 #include <SafeLibev.h>
@@ -66,16 +67,35 @@ using namespace oxt;
 #define SKS_DEBUG(expr)  P_DEBUG("[" << this->getServerName() << "] " << expr)
 #define SKS_TRACE(level, expr) P_TRACE(level, "[" << this->getServerName() << "] " << expr)
 
+#define SKC_ERROR(client, expr) SKC_ERROR_FROM_STATIC(this, client, expr)
 #define SKC_WARN(client, expr) SKC_WARN_FROM_STATIC(this, client, expr)
 #define SKC_DEBUG(client, expr) SKC_DEBUG_FROM_STATIC(this, client, expr)
 #define SKC_TRACE(client, level, expr) SKC_TRACE_FROM_STATIC(this, client, level, expr)
 
+#define SKC_ERROR_FROM_STATIC(server, client, expr) \
+	do { \
+		char _clientName[16]; \
+		int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+		P_ERROR("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+	} while (0)
 #define SKC_WARN_FROM_STATIC(server, client, expr) \
-	P_WARN("[Client " << server->getClientName(client) << "] " << expr)
+	do { \
+		char _clientName[16]; \
+		int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+		P_WARN("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+	} while (0)
 #define SKC_DEBUG_FROM_STATIC(server, client, expr) \
-	P_DEBUG("[Client " << server->getClientName(client) << "] " << expr)
+	do { \
+		char _clientName[16]; \
+		int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+		P_DEBUG("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+	} while (0)
 #define SKC_TRACE_FROM_STATIC(server, client, level, expr) \
-	P_TRACE(level, "[Client " << server->getClientName(client) << "] " << expr)
+	do { \
+		char _clientName[16]; \
+		int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+		P_TRACE(level, "[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+	} while (0)
 
 /*
 start main server
@@ -166,8 +186,9 @@ public:
 
 private:
 	Context *ctx;
-	uint8_t nEndpoints;
-	bool accept4Available;
+	unsigned int nextClientNumber: 28;
+	uint8_t nEndpoints: 3;
+	bool accept4Available: 1;
 	ev::timer acceptResumptionWatcher;
 	ev::io endpoints[MAX_ENDPOINTS];
 
@@ -203,7 +224,7 @@ private:
 			activeClientCount++;
 			acceptCount++;
 			client->setConnState(Client::ACTIVE);
-			client->fdnum = fd;
+			client->number = getNextClientNumber();
 			client->input.reinitialize(fd);
 			client->output.reinitialize(fd);
 			client->reinitialize(fd);
@@ -278,6 +299,10 @@ private:
 				return fd;
 			}
 		}
+	}
+
+	unsigned int getNextClientNumber() {
+		return nextClientNumber++;
 	}
 
 	Client *checkoutClientObject() {
@@ -501,7 +526,11 @@ protected:
 	}
 
 	virtual void onClientOutputError(Client *client, int errcode) {
-		disconnect(&client);
+		char message[1024];
+		int ret = snprintf(message, sizeof(message),
+			"client socket write error: %s (errno=%d)",
+			strerror(errcode), errcode);
+		disconnectWithError(&client, StaticString(message, ret));
 	}
 
 public:
@@ -517,6 +546,7 @@ public:
 		  activeClientCount(0),
 		  disconnectedClientCount(0),
 		  ctx(context),
+		  nextClientNumber(1),
 		  nEndpoints(0),
 		  accept4Available(true)
 	{
@@ -595,7 +625,7 @@ public:
 			client = (Client *) *v_it;
 			if (forceDisconnect || shouldDisconnectClientOnShutdown(client)) {
 				Client *c = client;
-				disconnect(&client);
+				disconnectWithError(&client, "server is shutting down");
 				unrefClient(c);
 			}
 		}
@@ -607,8 +637,8 @@ public:
 
 	/***** Client management *****/
 
-	virtual string getClientName(Client *client) const {
-		return toString(client->fdnum);
+	virtual int getClientName(Client *client, char *buf, size_t size) const {
+		return snprintf(buf, size, "%03x", client->number);
 	}
 
 	vector<ClientRef> getActiveClients() {
@@ -650,11 +680,12 @@ public:
 			return false;
 		}
 
+		int fdnum = c->getFd();
 		SKC_TRACE(c, 2, "Disconnecting; there are now " << (activeClientCount - 1) <<
 			" active clients");
 		onClientDisconnecting(c);
 
-		c->setConnState(ServerKit::Client::DISCONNECTED);
+		c->setConnState(ClientType::DISCONNECTED);
 		TAILQ_REMOVE(&activeClients, c, nextClient.activeOrDisconnectedClient);
 		activeClientCount--;
 		TAILQ_INSERT_HEAD(&disconnectedClients, c, nextClient.activeOrDisconnectedClient);
@@ -664,7 +695,7 @@ public:
 		c->output.deinitialize();
 		c->deinitialize();
 		try {
-			safelyClose(c->fdnum);
+			safelyClose(fdnum);
 		} catch (SystemException &e) {
 			SKC_WARN(c, "An error occurred while closing the client file descriptor: " <<
 				e.what() << " (errno=" << e.code() << ")");
@@ -674,6 +705,11 @@ public:
 		onClientDisconnected(c);
 		unrefClient(c);
 		return true;
+	}
+
+	void disconnectWithError(Client **client, const StaticString &message) {
+		SKC_WARN(*client, "Disconnecting with error: " << message);
+		disconnect(client);
 	}
 
 
