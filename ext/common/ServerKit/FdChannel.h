@@ -110,6 +110,7 @@ private:
 	void initialize() {
 		Channel::callback = onChannelCallback;
 		burstReadCount = 1;
+		watcher.fd = -1;
 		watcher.data = this;
 	}
 

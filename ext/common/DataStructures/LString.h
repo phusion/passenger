@@ -28,13 +28,13 @@
 #include <boost/cstdint.hpp>
 #include <cstring>
 #include <cassert>
+#include <algorithm>
 #include <MemoryKit/palloc.h>
 #include <MemoryKit/mbuf.h>
 #include <StaticString.h>
 #include <Utils/Hasher.h>
 
 namespace Passenger {
-namespace ServerKit {
 
 using namespace std;
 
@@ -312,7 +312,6 @@ psg_lstr_deinit(LString *str) {
 }
 
 
-} // namespace ServerKit
 } // namespace Passenger
 
 #endif /* _PASSENGER_DATA_STRUCTURES_LSTRING_H_ */

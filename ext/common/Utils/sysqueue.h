@@ -404,7 +404,7 @@ struct {                                                                \
  */
 #define LIST_HEAD(name, type)                                           \
 struct name {                                                           \
-    struct type *lh_first; /* first element */                          \
+    type *lh_first; /* first element */                          \
 }
 
 #define LIST_HEAD_INITIALIZER(head)                                     \
@@ -412,8 +412,8 @@ struct name {                                                           \
 
 #define LIST_ENTRY(type)                                                \
 struct {                                                                \
-    struct type *le_next;  /* next element */                           \
-    struct type **le_prev; /* address of previous next element */       \
+    type *le_next;  /* next element */                           \
+    type **le_prev; /* address of previous next element */       \
 }
 
 /*

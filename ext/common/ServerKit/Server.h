@@ -72,10 +72,11 @@ upon receiving exit signal on admin server:
 		exit main loop
 */
 
-template<typename DerivedServer, typename Client>
+template<typename DerivedServer, typename Client = Client>
 class Server: public HooksImpl {
 public:
 	/***** Types *****/
+	typedef Client ClientType;
 	typedef ClientRef<DerivedServer, Client> ClientRef;
 	STAILQ_HEAD(FreeClientList, Client);
 	TAILQ_HEAD(ClientList, Client);
@@ -117,6 +118,7 @@ private:
 
 	void onAcceptable(ev_io *io, int revents) {
 		Client *lastActiveClient = TAILQ_FIRST(&activeClients);
+		unsigned int acceptCount = 0;
 		bool error = false;
 		int errcode;
 
@@ -134,15 +136,24 @@ private:
 			Client *client = checkoutClientObject();
 			TAILQ_INSERT_HEAD(&activeClients, client, nextClient.activeOrDisconnectedClient);
 			activeClientCount++;
+			acceptCount++;
 			client->setConnState(Client::ACTIVE);
 			client->fdnum = fd;
 			client->input.reinitialize(fd);
+			client->output.reinitialize(fd);
 			client->reinitialize(fd);
 			guard.clear();
 		}
 
-		if (error && (errcode == EMFILE || errcode == ENFILE)) {
-			P_WARN("[Server] Too many file descriptors. Stop accepting clients for 3 seconds");
+		if (acceptCount > 0) {
+			P_DEBUG("[Server] " << acceptCount << " new clients accepted (" <<
+				(activeClientCount - acceptCount) << " -> " << acceptCount << " clients)");
+		}
+		if (error && errcode != EAGAIN && errcode != EWOULDBLOCK) {
+			P_ERROR("[Server] Cannot accept client: " << strerror(errcode) <<
+				" (errno=" << errcode << "). " <<
+				"Stop accepting clients for 3 seconds. " <<
+				"Current client count: " << activeClientCount);
 			serverState = TOO_MANY_FDS;
 			acceptResumptionWatcher.start();
 			for (uint8_t i = 0; i < nEndpoints; i++) {
@@ -155,7 +166,7 @@ private:
 
 	void onAcceptResumeTimeout(ev::timer &timer, int revents) {
 		assert(serverState == TOO_MANY_FDS);
-		P_WARN("[Server] Resuming with accepting clients");
+		P_WARN("[Server] Resuming accepting new clients");
 		serverState = ACTIVE;
 		for (uint8_t i = 0; i < nEndpoints; i++) {
 			ev_io_start(ctx->libev->getLoop(), &endpoints[i]);
@@ -231,42 +242,6 @@ private:
 		return client;
 	}
 
-	/** Get a thread-safe reference to the client. As long as the client
-	 * has a reference, it will never be added to the freelist.
-	 */
-	ClientRef getClientRef(Client *client) {
-		return ClientRef(client);
-	}
-
-	/** Increase client reference count. */
-	void refClient(Client *client) {
-		client->refcount.fetch_add(1, boost::memory_order_relaxed);
-	}
-
-	/** Decrease client reference count. Adds client to the
-	 * freelist if reference count drops to 0.
-	 */
-	void unrefClient(Client *client) {
-		// TODO: what do we do if this is called from another thread?
-		assert(client->getConnState() != Client::IN_FREELIST);
-
-		if (client->refcount.fetch_sub(1, boost::memory_order_release) == 1) {
-			boost::atomic_thread_fence(boost::memory_order_acquire);
-
-			/* As long as the client is still in the ACTIVE state, it has at least
-			 * one reference, namely from the Server itself. Therefore it's impossible
-			 * to get to a zero reference count without having disconnected a client. */
-			assert(client->getConnState() == Client::DISCONNECTED);
-
-			if (pthread_equal(pthread_self(), ctx->libev->getCurrentThread())) {
-				clientReachedZeroRefcount(client);
-			} else {
-				// Let the event loop handle the client reaching the 0 refcount.
-				passClientToEventLoopThread(client);
-			}
-		}
-	}
-
 	void clientReachedZeroRefcount(Client *client) {
 		assert(disconnectedClientCount > 0);
 		assert(!TAILQ_EMPTY(&disconnectedClients));
@@ -322,18 +297,68 @@ private:
 	{
 		Client *client = static_cast<Client *>(channel->getHooks()->userData);
 		Server *server = static_cast<Server *>(client->getServer());
-		return server->onClientDataReceived(client, channel, buffer, errcode);
+		return server->onClientDataReceived(client, buffer, errcode);
+	}
+
+	static void _onClientOutputError(FileBufferedFdOutputChannel *channel, int errcode) {
+		Client *client = static_cast<Client *>(channel->getHooks()->userData);
+		Server *server = static_cast<Server *>(client->getServer());
+		server->onClientOutputError(client, errcode);
 	}
 
 protected:
+	/***** Protected API *****/
+
+	/** Get a thread-safe reference to the client. As long as the client
+	 * has a reference, it will never be added to the freelist.
+	 */
+	ClientRef getClientRef(Client *client) {
+		return ClientRef(client);
+	}
+
+	/** Increase client reference count. */
+	void refClient(Client *client) {
+		client->refcount.fetch_add(1, boost::memory_order_relaxed);
+	}
+
+	/** Decrease client reference count. Adds client to the
+	 * freelist if reference count drops to 0.
+	 */
+	void unrefClient(Client *client) {
+		int oldRefcount = client->refcount.fetch_sub(1, boost::memory_order_release);
+		assert(oldRefcount >= 1);
+
+		if (oldRefcount == 1) {
+			boost::atomic_thread_fence(boost::memory_order_acquire);
+
+			if (pthread_equal(pthread_self(), ctx->libev->getCurrentThread())) {
+				assert(client->getConnState() != Client::IN_FREELIST);
+				/* As long as the client is still in the ACTIVE state, it has at least
+				 * one reference, namely from the Server itself. Therefore it's impossible
+				 * to get to a zero reference count without having disconnected a client. */
+				assert(client->getConnState() == Client::DISCONNECTED);
+				clientReachedZeroRefcount(client);
+			} else {
+				// Let the event loop handle the client reaching the 0 refcount.
+				passClientToEventLoopThread(client);
+			}
+		}
+	}
+
+
 	/***** Hooks *****/
 
 	virtual void onClientObjectCreated(Client *client) {
+		client->hooks.impl        = this;
+		client->hooks.userData    = client;
+
 		client->input.setContext(ctx);
 		client->input.setHooks(&client->hooks);
 		client->input.callback    = _onClientDataReceived;
-		client->hooks.impl        = this;
-		client->hooks.userData    = client;
+
+		client->output.setContext(ctx);
+		client->output.setHooks(&client->hooks);
+		client->output.errorCallback = _onClientOutputError;
 	}
 
 	virtual void onClientsAccepted(Client *lastActiveClient) {
@@ -342,14 +367,15 @@ protected:
 		while (client.get() != NULL && client.get() != lastActiveClient) {
 			ClientRef nextClient(TAILQ_NEXT(client.get(), nextClient.activeOrDisconnectedClient));
 			onClientAccepted(client.get());
+			if (client.get()->connected() && startReadingAfterAccept) {
+				client.get()->input.startReading();
+			}
 			client = boost::move(nextClient);
 		}
 	}
 
 	virtual void onClientAccepted(Client *client) {
-		if (startReadingAfterAccept) {
-			client->input.startReading();
-		}
+		// Do nothing.
 	}
 
 	virtual void onClientDisconnected(Client *client) {
@@ -360,10 +386,14 @@ protected:
 		return true;
 	}
 
-	virtual int onClientDataReceived(Client *client, FdChannel *channel,
-		const MemoryKit::mbuf &buffer, int errcode)
+	virtual int onClientDataReceived(Client *client, const MemoryKit::mbuf &buffer,
+		int errcode)
 	{
 		return -1;
+	}
+
+	virtual void onClientOutputError(Client *client, int errcode) {
+		disconnect(&client);
 	}
 
 public:
@@ -382,6 +412,9 @@ public:
 		  nEndpoints(0),
 		  accept4Available(true)
 	{
+		STAILQ_INIT(&freeClients);
+		TAILQ_INIT(&activeClients);
+		TAILQ_INIT(&disconnectedClients);
 		acceptResumptionWatcher.set(context->libev->getLoop());
 		acceptResumptionWatcher.set(0, 3);
 		acceptResumptionWatcher.set<
@@ -488,16 +521,20 @@ public:
 			return false;
 		}
 
-		c->setConnState(Client::DISCONNECTED);
+		c->setConnState(ServerKit::Client::DISCONNECTED);
 		TAILQ_REMOVE(&activeClients, c, nextClient.activeOrDisconnectedClient);
 		activeClientCount--;
 		TAILQ_INSERT_HEAD(&disconnectedClients, c, nextClient.activeOrDisconnectedClient);
 		disconnectedClientCount++;
 
 		c->input.deinitialize();
+		c->output.deinitialize();
 		c->deinitialize();
 		// TODO: handle exception
 		safelyClose(c->fdnum);
+
+		// TODO:
+		//RH_DEBUG(client, "Disconnected; new client count = " << clients.size());
 
 		*client = NULL;
 		onClientDisconnected(c);

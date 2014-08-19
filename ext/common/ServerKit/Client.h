@@ -29,6 +29,7 @@
 #include <boost/atomic.hpp>
 #include <boost/cstdint.hpp>
 #include <ServerKit/FdChannel.h>
+#include <ServerKit/FileBufferedFdOutputChannel.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -37,7 +38,7 @@ using namespace std;
 using namespace boost;
 
 
-class Client {
+class BaseClient {
 private:
 	/** Reference to the Server that this Client belongs to.
 	 * It's a tagged pointer, with the lower 2 bits containing
@@ -83,15 +84,16 @@ public:
 	boost::atomic<int> refcount;
 	Hooks hooks;
 	FdChannel input;
+	FileBufferedFdOutputChannel output;
 
-	Client(void *_server)
+	BaseClient(void *_server)
 		: server(_server),
 		  refcount(1)
 	{
 		setConnState(DISCONNECTED);
 	}
 
-	virtual ~Client() { }
+	virtual ~BaseClient() { }
 
 	OXT_FORCE_INLINE
 	int getFd() const {
@@ -130,13 +132,24 @@ public:
 	}
 };
 
-#define DEFINE_SERVER_KIT_CLIENT_FOOTER(ClientType) \
+
+#define DEFINE_SERVER_KIT_BASE_CLIENT_FOOTER(ClientType) \
 	public: \
 	union { \
 		STAILQ_ENTRY(ClientType) freeClient; \
 		TAILQ_ENTRY(ClientType) activeOrDisconnectedClient; \
 	} nextClient; \
 	int fdnum
+
+
+class Client: public BaseClient {
+public:
+	Client(void *server)
+		: BaseClient(server)
+		{ }
+
+	DEFINE_SERVER_KIT_BASE_CLIENT_FOOTER(Client);
+};
 
 
 } // namespace ServerKit

@@ -255,12 +255,12 @@ public:
 
     OXT_FORCE_INLINE
     bool empty() const {
-        return start == end || mbuf_block == NULL;
+        return start == end;
     }
 
     OXT_FORCE_INLINE
     bool is_null() const {
-        return mbuf_block == NULL;
+        return start == NULL;
     }
 };
 
