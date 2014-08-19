@@ -75,27 +75,35 @@ using namespace oxt;
 
 #define SKC_ERROR_FROM_STATIC(server, client, expr) \
 	do { \
-		char _clientName[16]; \
-		int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-		P_ERROR("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		if (Passenger::_logLevel >= LVL_ERROR) { \
+			char _clientName[16]; \
+			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+			P_ERROR("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		} \
 	} while (0)
 #define SKC_WARN_FROM_STATIC(server, client, expr) \
 	do { \
-		char _clientName[16]; \
-		int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-		P_WARN("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		if (Passenger::_logLevel >= LVL_WARN) { \
+			char _clientName[16]; \
+			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+			P_WARN("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		} \
 	} while (0)
 #define SKC_DEBUG_FROM_STATIC(server, client, expr) \
 	do { \
-		char _clientName[16]; \
-		int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-		P_DEBUG("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		if (Passenger::_logLevel >= LVL_DEBUG) { \
+			char _clientName[16]; \
+			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+			P_DEBUG("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		} \
 	} while (0)
 #define SKC_TRACE_FROM_STATIC(server, client, level, expr) \
 	do { \
-		char _clientName[16]; \
-		int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-		P_TRACE(level, "[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		if (Passenger::_logLevel >= level) { \
+			char _clientName[16]; \
+			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+			P_TRACE(level, "[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		} \
 	} while (0)
 
 /*
