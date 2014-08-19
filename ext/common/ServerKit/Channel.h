@@ -122,7 +122,7 @@ using namespace boost;
  * 3. When the consumed callback is called, `channel.consumedCallback = NULL` and
  *    check whether `channel.acceptingInput()`. It so, resume writing to the channel.
  *
- * A good example of this is FdChannel. It reads data from a file descriptor using
+ * A good example of this is FdInputChannel. It reads data from a file descriptor using
  * `read()`, then writes them to a Channel. It stops reading from the file descriptor
  * when the Channel is not accepting reads, and it starts reading from the file
  * descriptor when the channel is accepting reads again.
