@@ -46,7 +46,9 @@ using namespace boost;
  */
 class SafeLibev {
 private:
-	static const int MAX_COMMAND_ID = 268435455;
+	// 2^28-1. Command IDs are 28-bit so that we can pack DataSource's state and
+	// its planId in 32-bits total.
+	static const unsigned int MAX_COMMAND_ID = 268435455;
 
 	typedef boost::function<void ()> Callback;
 
