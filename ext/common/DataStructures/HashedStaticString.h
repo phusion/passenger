@@ -83,7 +83,7 @@ public:
 		m_hash = h.finalize();
 	}
 
-	OXT_FORCE_INLINE uint32_t hash() const {
+	OXT_FORCE_INLINE boost::uint32_t hash() const {
 		return m_hash;
 	}
 };

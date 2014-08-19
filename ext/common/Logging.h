@@ -100,6 +100,16 @@ enum PassengerLogLevel {
 		} \
 	} while (false)
 
+#define P_LOG_UNLIKELY(level, expr) \
+	do { \
+		if (OXT_UNLIKELY(Passenger::_logLevel >= (level))) { \
+			std::stringstream sstream; \
+			Passenger::_prepareLogEntry(sstream, __FILE__, __LINE__); \
+			sstream << expr << "\n"; \
+			Passenger::_writeLogEntry(sstream.str()); \
+		} \
+	} while (false)
+
 /**
  * Write the given expression, which represents a warning,
  * to the log stream.
@@ -137,7 +147,7 @@ enum PassengerLogLevel {
 #define P_DEBUG(expr) P_TRACE(LVL_DEBUG, expr)
 
 #ifdef PASSENGER_DEBUG
-	#define P_TRACE(level, expr) P_LOG(level, expr)
+	#define P_TRACE(level, expr) P_LOG_UNLIKELY(level, expr)
 #else
 	#define P_TRACE(level, expr) do { /* nothing */ } while (false)
 #endif

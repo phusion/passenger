@@ -344,11 +344,13 @@ public:
 			return m_cur = NULL;
 		}
 
-		inline Cell *operator*() const {
+		OXT_FORCE_INLINE
+		Cell *operator*() const {
 			return m_cur;
 		}
 
-		inline Cell *operator->() const {
+		OXT_FORCE_INLINE
+		Cell *operator->() const {
 			return m_cur;
 		}
 	};

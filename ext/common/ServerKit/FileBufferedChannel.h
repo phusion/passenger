@@ -367,15 +367,14 @@ private:
 		assert(bytesBuffered >= firstBuffer.size());
 		bytesBuffered -= firstBuffer.size();
 		nbuffers--;
+		FBC_DEBUG("popBuffer() completed: nbuffers = " << nbuffers << ", bytesBuffered = " << bytesBuffered);
 		if (moreBuffers.empty()) {
 			firstBuffer = MemoryKit::mbuf();
+			assert(nbuffers == 0);
+			callBuffersFlushedCallback();
 		} else {
 			firstBuffer = moreBuffers.front();
 			moreBuffers.pop_front();
-		}
-		FBC_DEBUG("popBuffer() completed: nbuffers = " << nbuffers << ", bytesBuffered = " << bytesBuffered);
-		if (nbuffers == 0) {
-			callBuffersFlushedCallback();
 		}
 	}
 
