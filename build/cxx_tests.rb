@@ -85,6 +85,9 @@ TEST_CXX_OBJECTS = {
 		ext/common/ApplicationPool2/SmartSpawner.h
 		ext/common/ApplicationPool2/DirectSpawner.h
 		ext/common/ApplicationPool2/DummySpawner.h),
+	'test/cxx/MemoryKit/MbufTest.o' => %w(
+		test/cxx/MemoryKit/MbufTest.cpp
+		ext/common/MemoryKit/mbuf.h),
 	'test/cxx/ServerKit/ChannelTest.o' => %w(
 		test/cxx/ServerKit/ChannelTest.cpp
 		ext/common/ServerKit/Channel.h
