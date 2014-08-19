@@ -66,6 +66,19 @@ struct LString {
 };
 
 
+namespace {
+	OXT_FORCE_INLINE char
+	psg_lstr_first_byte(const LString *str) {
+		return str->start->data[0];
+	}
+
+	OXT_FORCE_INLINE char
+	psg_lstr_last_byte(const LString *str) {
+		return str->end->data[str->end->size - 1];
+	}
+}
+
+
 inline void
 psg_lstr_init(LString *str) {
 	str->start = NULL;
@@ -122,16 +135,6 @@ psg_lstr_append(LString *str, psg_pool_t *pool, const char *data) {
 	psg_lstr_append(str, pool, data, strlen(data));
 }
 
-static OXT_FORCE_INLINE char
-psg_lstr_first_byte(const LString *str) {
-	return str->start->data[0];
-}
-
-static OXT_FORCE_INLINE char
-psg_lstr_last_byte(const LString *str) {
-	return str->end->data[str->end->size - 1];
-}
-
 inline bool
 psg_lstr_cmp(const LString *str, const StaticString &other) {
 	const LString::Part *part;
@@ -167,6 +170,10 @@ psg_lstr_cmp(const LString *str, const StaticString &other, unsigned int size) {
 	const LString::Part *part;
 	const char *b;
 	unsigned int checked;
+
+	if (size > str->size && size > other.size()) {
+		size = std::max<size_t>(str->size, other.size());
+	}
 
 	// Fast check: check lengths
 	if (size == 0) {
