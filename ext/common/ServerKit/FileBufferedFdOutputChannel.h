@@ -26,7 +26,8 @@
 #define _PASSENGER_SERVER_KIT_FILE_BUFFERED_FD_OUTPUT_CHANNEL_H_
 
 #include <oxt/macros.hpp>
-#include <oxt/system_calls.hpp>
+#include <sys/types.h>
+#include <unistd.h>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/FileBufferedChannel.h>
 
@@ -53,7 +54,10 @@ private:
 			self->callOnError(errcode);
 			return 0;
 		} else {
-			ssize_t ret = syscalls::write(self->watcher.fd, buffer.start, buffer.size());
+			ssize_t ret;
+			do {
+				ret = ::write(self->watcher.fd, buffer.start, buffer.size());
+			} while (OXT_UNLIKELY(ret == -1 && errno == EINTR));
 			if (ret != -1) {
 				return ret;
 			} else if (errno == EAGAIN) {

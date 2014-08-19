@@ -476,7 +476,7 @@ private:
 				FBC_DEBUG("Reader: EOF encountered. Feeding EOF");
 				readerState = RS_FEEDING_EOF;
 				verifyInvariants();
-				Channel::feed(peekBuffer());
+				Channel::feedWithoutRefGuard(peekBuffer());
 				if (generation != this->generation || mode == ERROR) {
 					// Callback deinitialized this object, or callback
 					// called a method that encountered an error.
@@ -492,7 +492,7 @@ private:
 				popBuffer();
 				readerState = RS_FEEDING;
 				FBC_DEBUG("Reader: feeding buffer, " << buffer.size() << " bytes");
-				Channel::feed(buffer);
+				Channel::feedWithoutRefGuard(buffer);
 				if (generation != this->generation || mode == ERROR) {
 					// Callback deinitialized this object, or callback
 					// called a method that encountered an error.
@@ -530,7 +530,7 @@ private:
 					FBC_DEBUG("Reader: EOF encountered. Feeding EOF");
 					readerState = RS_FEEDING_EOF;
 					verifyInvariants();
-					Channel::feed(result.first);
+					Channel::feedWithoutRefGuard(result.first);
 					if (generation != this->generation || mode == ERROR) {
 						// Callback deinitialized this object, or callback
 						// called a method that encountered an error.
@@ -546,7 +546,7 @@ private:
 					inFileMode->written -= result.first.size();
 					readerState = RS_FEEDING;
 					FBC_DEBUG("Reader: feeding buffer, " << result.first.size() << " bytes");
-					Channel::feed(result.first);
+					Channel::feedWithoutRefGuard(result.first);
 					if (generation != this->generation || mode == ERROR) {
 						// Callback deinitialized this object, or callback
 						// called a method that encountered an error.

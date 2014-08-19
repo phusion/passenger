@@ -168,6 +168,10 @@ protected:
 
 	void callCallback() {
 		RefGuard guard(hooks, this);
+		callCallbackWithoutRefGuard();
+	}
+
+	void callCallbackWithoutRefGuard() {
 		unsigned int generation = this->generation;
 		bool done = false;
 		int consumed;
@@ -345,6 +349,16 @@ public:
 	}
 
 	void feed(BOOST_RV_REF(MemoryKit::mbuf) mbuf) {
+		RefGuard guard(hooks, this);
+		feedWithoutRefGuard(mbuf);
+	}
+
+	void feedWithoutRefGuard(const MemoryKit::mbuf &mbuf) {
+		MemoryKit::mbuf mbuf_copy(mbuf);
+		feedWithoutRefGuard(boost::move(mbuf_copy));
+	}
+
+	void feedWithoutRefGuard(BOOST_RV_REF(MemoryKit::mbuf) mbuf) {
 		assert(state == IDLE);
 		if (mbuf.empty()) {
 			state = CALLING_WITH_EOF;
@@ -352,7 +366,7 @@ public:
 			state = CALLING;
 		}
 		buffer = mbuf;
-		callCallback();
+		callCallbackWithoutRefGuard();
 	}
 
 	void feedError(int errcode) {
