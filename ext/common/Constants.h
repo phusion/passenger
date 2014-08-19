@@ -58,6 +58,8 @@
 
 	#define DEFAULT_MAX_POOL_SIZE 6
 
+	#define DEFAULT_MBUF_CHUNK_SIZE 512
+
 	#define DEFAULT_NODEJS "node"
 
 	#define DEFAULT_POOL_IDLE_TIME 300

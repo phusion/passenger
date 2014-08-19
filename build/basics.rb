@@ -138,7 +138,6 @@ PACKAGE_VERSION = PhusionPassenger::VERSION_STRING
 MAINTAINER_NAME  = "Phusion"
 MAINTAINER_EMAIL = "info@phusion.nl"
 
-OPTIMIZE = boolean_option("OPTIMIZE")
 CC       = maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cc)
 CXX      = maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cxx)
 LIBEXT   = PlatformInfo.library_extension
