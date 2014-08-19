@@ -26,8 +26,9 @@
 #define _PASSENGER_SERVER_KIT_FD_CHANNEL_H_
 
 #include <oxt/macros.hpp>
-#include <oxt/system_calls.hpp>
 #include <boost/move/move.hpp>
+#include <sys/types.h>
+#include <unistd.h>
 #include <ev.h>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/Context.h>
@@ -64,24 +65,15 @@ private:
 				buffer = MemoryKit::mbuf_get(&ctx->mbuf_pool);
 			}
 
-			ret = syscalls::read(io->fd, buffer.start, buffer.size());
-			if (ret == -1) {
-				e = errno;
-				done = true;
-				if (e != EAGAIN) {
-					ev_io_stop(ctx->libev->getLoop(), &watcher);
-					feedError(e);
-				}
-			} else if (ret == 0) {
-				ev_io_stop(ctx->libev->getLoop(), &watcher);
-				done = true;
-				feed(MemoryKit::mbuf());
-			} else {
+			do {
+				ret = ::read(watcher.fd, buffer.start, buffer.size());
+			} while (OXT_UNLIKELY(ret == -1 && errno == EINTR));
+			if (ret > 0) {
 				unsigned int generation = this->generation;
 				MemoryKit::mbuf buffer2(buffer, 0, ret);
 				buffer = MemoryKit::mbuf(buffer, ret);
-				feed(boost::move(buffer2));
-				if (generation != this->generation) {
+				feedWithoutRefGuard(boost::move(buffer2));
+				if (OXT_UNLIKELY(generation != this->generation)) {
 					// Callback deinitialized this object.
 					return;
 				}
@@ -91,6 +83,17 @@ private:
 				}
 				done = !acceptingInput()
 					|| (size_t) ret < ctx->mbuf_pool.mbuf_block_chunk_size;
+			} else if (ret == 0) {
+				ev_io_stop(ctx->libev->getLoop(), &watcher);
+				done = true;
+				feedWithoutRefGuard(MemoryKit::mbuf());
+			} else {
+				e = errno;
+				done = true;
+				if (e != EAGAIN) {
+					ev_io_stop(ctx->libev->getLoop(), &watcher);
+					feedError(e);
+				}
 			}
 		}
 	}
