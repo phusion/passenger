@@ -26,6 +26,7 @@
 #define _PASSENGER_SERVER_KIT_CHANNEL_H_
 
 #include <oxt/backtrace.hpp>
+#include <oxt/macros.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/move/core.hpp>
 #include <cassert>
@@ -71,8 +72,9 @@ using namespace boost;
  * Typical usage goes like this:
  *
  * 1. Write to the Channel using `channel.write()`.
- * 2. Check whether `channel.acceptingInput()`. If so, continue writing. If not, stop
- *    writing and install an idle callback with `channel.idleCallback = ...`.
+ * 2. Check whether `channel.acceptingInput()`. If so, continue writing. If not, and
+ *    `!channel.hasError()` stop writing and install an idle callback with
+ *    `channel.idleCallback = ...`.
  * 3. When the idle callback is called, set `channel.idleCallback = NULL` and resume
  *    writing to the channel.
  *
@@ -294,6 +296,10 @@ public:
 	Callback endAckCallback;
 	Hooks *hooks;
 
+	/**
+	 * Creates a Channel without a context. It doesn't work properly yet until
+	 * you call `setContext()`.
+	 */
 	Channel()
 		: state(EOF_REACHED),
 		  planId(0),
@@ -306,6 +312,9 @@ public:
 		  hooks(NULL)
 		{ }
 
+	/**
+	 * Creates a Channel with the given context, which must be non-NULL.
+	 */
 	Channel(Context *context)
 		: state(IDLE),
 		  planId(0),
@@ -324,16 +333,29 @@ public:
 		}
 	}
 
-	// May only be called right after construction.
+	/**
+	 * Sets the context in case you constructed a Channel without one.
+	 * The Channel object doesn't work until you've set a context.
+	 * May only be called right after construction.
+	 */
 	void setContext(Context *context) {
 		ctx = context;
 	}
 
+	/**
+	 * Reinitialize the Channel to its starting state so that you can reuse the
+	 * object. You may only call this after calling `deinitialize()`.
+	 */
 	void reinitialize() {
 		state   = IDLE;
 		errcode = 0;
 	}
 
+	/**
+	 * Deinitialize the channel and reset it into a terminal state.
+	 * Whatever operations it was doing in the background will be canceled.
+	 * After deinitializing, you may reinitialize it and reuse the Channel.
+	 */
 	void deinitialize() {
 		if (ctx != NULL) {
 			ctx->libev->cancelCommand(planId);
@@ -343,6 +365,11 @@ public:
 		generation++;
 	}
 
+	/**
+	 * Feed data to the Channel. The data will be passed to the callback.
+	 *
+	 * @pre acceptingInput()
+	 */
 	void feed(const MemoryKit::mbuf &mbuf) {
 		MemoryKit::mbuf mbuf_copy(mbuf);
 		feed(boost::move(mbuf_copy));
@@ -353,6 +380,13 @@ public:
 		feedWithoutRefGuard(mbuf);
 	}
 
+	/**
+	 * A special version of `feed()` which does not call `hooks->hook_ref()`
+	 * and `hooks->hook_unref()`. Use it in certain optimization scenarios,
+	 * where you are sure that extra reference counts are not needed.
+	 *
+	 * @pre acceptingInput()
+	 */
 	void feedWithoutRefGuard(const MemoryKit::mbuf &mbuf) {
 		MemoryKit::mbuf mbuf_copy(mbuf);
 		feedWithoutRefGuard(boost::move(mbuf_copy));
@@ -369,6 +403,21 @@ public:
 		callCallbackWithoutRefGuard();
 	}
 
+	/**
+	 * Tell the Channel that an error has occurred.
+	 *
+	 * If this method is called while the data callback is not active, and the
+	 * channel is idle, then the error will be passed to the callback immediately.
+	 * Otherwise (if the channel isn't idle), it will be passed to the callback
+	 * when the channel becomes idle.
+	 *
+	 * If this method is called inside the data callback, or (if the data callback returned -1)
+	 * when the data callback hasn't called `consumed()` yet, then the channel transitions
+	 * to the end state immediately, and stops calling the data callback even when the
+	 * current invocation of the data callback doesn't fully consume the buffer.
+	 *
+	 * Once an error has been fed, no more data will be accepted by `feed()`.
+	 */
 	void feedError(int errcode) {
 		assert(errcode != 0);
 		switch (state) {
@@ -408,6 +457,9 @@ public:
 		}
 	}
 
+	/**
+	 * Resume a stopped Channel.
+	 */
 	void start() {
 		switch (state) {
 		case IDLE:
@@ -433,6 +485,10 @@ public:
 		}
 	}
 
+	/**
+	 * Stops a Channel. That is, do not call the callback even when there
+	 * is data available. This continues until you call `start()`.
+	 */
 	void stop() {
 		switch (state) {
 		case STOPPED:
@@ -462,6 +518,10 @@ public:
 		}
 	}
 
+	/**
+	 * If the callback returned -1, then at some later point it must call this method
+	 * to notify Channel how many bytes have been consumed.
+	 */
 	void consumed(unsigned int size) {
 		assert(state != IDLE);
 		assert(state != CALLING);
@@ -490,22 +550,41 @@ public:
 		}
 	}
 
+	OXT_FORCE_INLINE
 	State getState() const {
 		return state;
 	}
 
+	/**
+	 * Returns whether this Channel accepts more input right now.
+	 * There are two reasons why this might not be the case:
+	 * either the callback isn't done yet, or an error had been fed.
+	 * Use `hasError()` to check for the latter.
+	 */
+	OXT_FORCE_INLINE
 	bool acceptingInput() const {
 		return state == IDLE;
+	}
+
+	OXT_FORCE_INLINE
+	bool hasError() const {
+		return errcode != 0;
 	}
 
 	bool isStarted() const {
 		return state != STOPPED && state != STOPPED_WHILE_CALLING && state != STOPPED_WHILE_WAITING;
 	}
 
+	OXT_FORCE_INLINE
+	int getErrcode() const {
+		return errcode;
+	}
+
 	bool ended() const {
 		return state == CALLING_WITH_EOF || state == EOF_WAITING || state == EOF_REACHED;
 	}
 
+	OXT_FORCE_INLINE
 	bool endAcked() const {
 		return state == EOF_REACHED;
 	}
