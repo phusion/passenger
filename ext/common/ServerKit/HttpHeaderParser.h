@@ -61,39 +61,58 @@ private:
 		PARSING_HEADER_VALUE,
 		ERROR_SECURITY_PASSWORD_MISMATCH,
 		ERROR_SECURITY_PASSWORD_DUPLICATE,
-		ERROR_SECURE_HEADER_NOT_ALLOWED
+		ERROR_SECURE_HEADER_NOT_ALLOWED,
+		ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD
 	} state;
 	bool secureMode;
 
 	bool validateHeader(const Header *header) {
-		if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
-			if (header->key.size == 2) {
-				// Security password. Check whether it hasn't been
-				// given before and whether it is correct.
-				if (secureMode) {
-					state = ERROR_SECURITY_PASSWORD_DUPLICATE;
-					return false;
-				} else if (ctx->secureModePassword.empty()
-				 || psg_lstr_cmp(&header->val, ctx->secureModePassword))
-				{
-					secureMode = true;
-					return true;
-				} else {
-					state = ERROR_SECURITY_PASSWORD_MISMATCH;
-					return false;
-				}
+		if (!secureMode) {
+			if (!psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
+				return true;
 			} else {
-				// Secure header. Only allow when security password
-				// was provided before.
-				if (secureMode) {
-					return true;
+				if (header->key.size == 2) {
+					// Security password. Check whether it hasn't been
+					// given before and whether it is correct.
+					if (ctx->secureModePassword.empty()
+					 || psg_lstr_cmp(&header->val, ctx->secureModePassword))
+					{
+						secureMode = true;
+						return true;
+					} else {
+						state = ERROR_SECURITY_PASSWORD_MISMATCH;
+						return false;
+					}
 				} else {
+					// Secure header encountered without having
+					// encountered a security password.
 					state = ERROR_SECURE_HEADER_NOT_ALLOWED;
 					return false;
 				}
 			}
 		} else {
-			return true;
+			if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
+				if (header->key.size == 2) {
+					secureMode = false;
+				}
+				return true;
+			} else {
+				// To prevent Internet clients from injecting secure headers,
+				// we require the web server put secure headers between a begin
+				// marker (the security password header) and an end marker.
+				// If we find a normal header between the markers, then we
+				// can assume the web server is bugged or compromised.
+				state = ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD;
+				return false;
+			}
+		}
+	}
+
+	void insertCurrentHeader() {
+		if (!secureMode) {
+			request->headers.insert(currentHeader);
+		} else {
+			request->secureHeaders.insert(currentHeader);
 		}
 	}
 
@@ -139,7 +158,7 @@ private:
 				if (!self->validateHeader(self->currentHeader)) {
 					return 1;
 				}
-				self->request->headers.insert(self->currentHeader);
+				self->insertCurrentHeader();
 			}
 
 			self->currentHeader = (Header *) psg_palloc(self->request->pool, sizeof(Header));
@@ -194,7 +213,7 @@ private:
 			if (!self->validateHeader(self->currentHeader)) {
 				return 1;
 			}
-			self->request->headers.insert(self->currentHeader);
+			self->insertCurrentHeader();
 		}
 
 		self->currentHeader = NULL;
@@ -253,6 +272,9 @@ public:
 					break;
 				case ERROR_SECURE_HEADER_NOT_ALLOWED:
 					request->parseError = "A secure header was provided, but no security password was provided";
+					break;
+				case ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD:
+					request->parseError = "A normal header was encountered after the security password header";
 					break;
 				default:
 					goto default_error;

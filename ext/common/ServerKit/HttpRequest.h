@@ -114,6 +114,10 @@ public:
 	Hooks hooks;
 	LString path;
 	HeaderTable headers;
+	// We separate headers and secure headers because the number of normal
+	// headers is variable, but the number of secure headers is more or less
+	// constant.
+	HeaderTable secureHeaders;
 	FileBufferedChannel requestBodyChannel;
 
 	/** If a request parsing error occurred, the error message is stored here. */
@@ -133,6 +137,8 @@ public:
 		: refcount(1),
 		  client(NULL),
 		  pool(NULL),
+		  headers(16),
+		  secureHeaders(32),
 		  parseError(NULL)
 	{
 		psg_lstr_init(&path);
@@ -168,12 +174,20 @@ public:
 			it.next();
 		}
 
+		it = HeaderTable::Iterator(secureHeaders);
+		while (*it != NULL) {
+			psg_lstr_deinit(&it->header->key);
+			psg_lstr_deinit(&it->header->val);
+			it.next();
+		}
+
 		if (pool != NULL) {
 			psg_destroy_pool(pool);
 			pool = NULL;
 		}
 
 		headers.clear();
+		secureHeaders.clear();
 		requestBodyChannel.buffersFlushedCallback = NULL;
 		requestBodyChannel.dataFlushedCallback = NULL;
 		requestBodyChannel.deinitialize();
