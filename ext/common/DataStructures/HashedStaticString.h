@@ -46,7 +46,7 @@ public:
 	{
 		rehash();
 	}
-	
+
 	HashedStaticString(const StaticString &b)
 		: StaticString(b)
 	{
@@ -58,24 +58,30 @@ public:
 	{
 		m_hash = b.m_hash;
 	}
-	
+
 	HashedStaticString(const string &s)
 		: StaticString(s)
 	{
 		rehash();
 	}
-	
+
 	HashedStaticString(const char *data)
 		: StaticString(data)
 	{
 		rehash();
 	}
-	
+
 	HashedStaticString(const char *data, string::size_type len)
 		: StaticString(data, len)
 	{
 		rehash();
 	}
+
+	HashedStaticString(const char *data, string::size_type len,
+		boost::uint32_t hash)
+		: StaticString(data, len),
+		  m_hash(hash)
+		{ }
 
 	void rehash() {
 		Hasher h;

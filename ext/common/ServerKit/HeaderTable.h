@@ -27,6 +27,7 @@
 
 #include <boost/cstdint.hpp>
 #include <cstring>
+#include <cassert>
 
 #include <DataStructures/LString.h>
 #include <DataStructures/HashedStaticString.h>
@@ -48,7 +49,7 @@ struct Header {
 /**
  * A hash table, optimized for storing HTTP headers. It assumes the following workload:
  *
- *  * Inserts happen in bulk, soon after hash table creation.
+ *  * Inserts happen in bulk, soon after hash table creation or clearing.
  *  * Once the bulk insertion phase is over, lookups are frequent, but modifications
  *    are not.
  *  * The hash table does not contain a lot of elements. Maybe 35 or so.
@@ -238,6 +239,8 @@ public:
 				} else if (psg_lstr_cmp(&cell->header->key, &header->key)) {
 					// Cell matches.
 					if (overwrite) {
+						psg_lstr_deinit(&cell->header->key);
+						psg_lstr_deinit(&cell->header->val);
 						cell->header = header;
 					}
 					return;
@@ -317,13 +320,13 @@ public:
 		Iterator(HeaderTable &table)
 			: m_table(&table)
 		{
-			if (m_table->m_cells == NULL) {
-				m_cur = NULL;
-			} else {
+			if (m_table->m_cells != NULL) {
 				m_cur = &m_table->m_cells[0];
 				if (m_table->cellIsEmpty(m_cur)) {
 					next();
 				}
+			} else {
+				m_cur = NULL;
 			}
 		}
 
