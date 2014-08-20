@@ -309,7 +309,12 @@ recreateString(psg_pool_t *pool, StaticString &str) {
 
 const SuperGroupPtr
 Pool::getSuperGroup(const char *name) {
-	return superGroups.get(name);
+	SuperGroupPtr *superGroup;
+	if (superGroups.lookup(name, &superGroup)) {
+		return *superGroup;
+	} else {
+		return SuperGroupPtr();
+	}
 }
 
 
@@ -1381,15 +1386,16 @@ Group::findOtherGroupWaitingForCapacity() const {
 		return NULL;
 	}
 
-	StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = pool->superGroups.end();
-	for (sg_it = pool->superGroups.begin(); sg_it != sg_end; sg_it++) {
-		const SuperGroup *superGroup = sg_it->second.get();
+	SuperGroupMap::ConstIterator sg_it(pool->superGroups);
+	while (*sg_it != NULL) {
+		const SuperGroupPtr &superGroup = sg_it.getValue();
 		SuperGroup::GroupList::const_iterator g_it, g_end = superGroup->groups.end();
 		for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
 			if (g_it->get() != this && (*g_it)->isWaitingForCapacity()) {
 				return g_it->get();
 			}
 		}
+		sg_it.next();
 	}
 	return NULL;
 }

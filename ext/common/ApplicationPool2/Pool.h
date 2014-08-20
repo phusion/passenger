@@ -232,7 +232,8 @@ public:
 		vector<GetWaiter>::const_iterator it, end = getWaitlist.end();
 		for (it = getWaitlist.begin(); it != end; it++) {
 			const GetWaiter &waiter = *it;
-			assert(superGroups.get(waiter.options.getAppGroupName()) == NULL);
+			const SuperGroupPtr *superGroup;
+			assert(!superGroups.lookup(waiter.options.getAppGroupName(), &superGroup));
 		}
 		#endif
 	}
@@ -243,14 +244,16 @@ public:
 		UPDATE_TRACE_POINT();
 		verifyExpensiveInvariants();
 		UPDATE_TRACE_POINT();
-		StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = superGroups.end();
-		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
-			pair<StaticString, SuperGroupPtr> p = *sg_it;
-			p.second->verifyInvariants();
-			foreach (GroupPtr group, p.second->groups) {
+
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
+			superGroup->verifyInvariants();
+			foreach (GroupPtr group, superGroup->groups) {
 				group->verifyInvariants();
 				group->verifyExpensiveInvariants();
 			}
+			sg_it.next();
 		}
 	}
 
@@ -298,9 +301,9 @@ public:
 	ProcessPtr findOldestIdleProcess(const Group *exclude = NULL) const {
 		ProcessPtr oldestIdleProcess;
 
-		SuperGroupMap::const_iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); it != end; it++) {
-			const SuperGroupPtr &superGroup = it->second;
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 			const SuperGroup::GroupList &groups = superGroup->groups;
 			SuperGroup::GroupList::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
@@ -320,6 +323,7 @@ public:
 					}
 				}
 			}
+			sg_it.next();
 		}
 
 		return oldestIdleProcess;
@@ -328,9 +332,9 @@ public:
 	ProcessPtr findBestProcessToTrash() const {
 		ProcessPtr oldestProcess;
 
-		SuperGroupMap::const_iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); it != end; it++) {
-			const SuperGroupPtr &superGroup = it->second;
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 			const SuperGroup::GroupList &groups = superGroup->groups;
 			SuperGroup::GroupList::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
@@ -345,6 +349,7 @@ public:
 					}
 				}
 			}
+			sg_it.next();
 		}
 
 		return oldestProcess;
@@ -401,13 +406,13 @@ public:
 	}
 
 	void possiblySpawnMoreProcessesForExistingGroups() {
-		StringMap<SuperGroupPtr>::const_iterator sg_it, sg_end = superGroups.end();
 		/* Looks for Groups that are waiting for capacity to become available,
 		 * and spawn processes in those groups.
 		 */
-		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
-			pair<StaticString, SuperGroupPtr> p = *sg_it;
-			foreach (GroupPtr group, p.second->groups) {
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
+			foreach (GroupPtr group, superGroup->groups) {
 				if (group->isWaitingForCapacity()) {
 					P_DEBUG("Group " << group->name << " is waiting for capacity");
 					group->spawn();
@@ -416,13 +421,15 @@ public:
 					}
 				}
 			}
+			sg_it.next();
 		}
 		/* Now look for Groups that haven't maximized their allowed capacity
 		 * yet, and spawn processes in those groups.
 		 */
-		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
-			pair<StaticString, SuperGroupPtr> p = *sg_it;
-			foreach (GroupPtr group, p.second->groups) {
+		sg_it = SuperGroupMap::ConstIterator(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
+			foreach (GroupPtr group, superGroup->groups) {
 				if (group->shouldSpawn()) {
 					P_DEBUG("Group " << group->name << " requests more processes to be spawned");
 					group->spawn();
@@ -431,6 +438,7 @@ public:
 					}
 				}
 			}
+			sg_it.next();
 		}
 	}
 
@@ -480,7 +488,7 @@ public:
 		const SuperGroup::ShutdownCallback &callback)
 	{
 		const SuperGroupPtr sp = superGroup; // Prevent premature destruction.
-		bool removed = superGroups.remove(superGroup->name);
+		bool removed = superGroups.erase(superGroup->name);
 		assert(removed);
 		(void) removed; // Shut up compiler warning.
 		superGroup->destroy(false, postLockActions, callback);
@@ -616,7 +624,12 @@ public:
 	}
 
 	SuperGroup *findMatchingSuperGroup(const Options &options) {
-		return superGroups.get(options.getAppGroupName()).get();
+		SuperGroupPtr *superGroup;
+		if (superGroups.lookup(options.getAppGroupName(), &superGroup)) {
+			return superGroup->get();
+		} else {
+			return NULL;
+		}
 	}
 
 	struct GarbageCollectorState {
@@ -692,7 +705,7 @@ public:
 	unsigned long long realGarbageCollect() {
 		TRACE_POINT();
 		ScopedLock lock(syncher);
-		SuperGroupMap::iterator it, end = superGroups.end();
+		SuperGroupMap::ConstIterator sg_it(superGroups);
 		GarbageCollectorState state;
 		state.now = SystemTime::getUsec();
 		state.nextGcRunTime = 0;
@@ -701,8 +714,8 @@ public:
 		verifyInvariants();
 
 		// For all supergroups and groups...
-		for (it = superGroups.begin(); it != end; it++) {
-			SuperGroupPtr superGroup = it->second;
+		while (*sg_it != NULL) {
+			const SuperGroupPtr superGroup = sg_it.getValue();
 			SuperGroup::GroupList &groups = superGroup->groups;
 			SuperGroup::GroupList::iterator g_it, g_end = groups.end();
 
@@ -729,6 +742,7 @@ public:
 			}
 
 			superGroup->verifyInvariants();
+			sg_it.next();
 		}
 
 		verifyInvariants();
@@ -861,10 +875,10 @@ public:
 		{
 			UPDATE_TRACE_POINT();
 			LockGuard l(syncher);
-			SuperGroupMap::const_iterator sg_it, sg_end = superGroups.end();
+			SuperGroupMap::ConstIterator sg_it(superGroups);
 
-			for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
-				const SuperGroupPtr &superGroup = sg_it->second;
+			while (*sg_it != NULL) {
+				const SuperGroupPtr &superGroup = sg_it.getValue();
 				SuperGroup::GroupList::const_iterator g_it, g_end = superGroup->groups.end();
 
 				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
@@ -873,6 +887,7 @@ public:
 					collectPids(group->disablingProcesses, pids);
 					collectPids(group->disabledProcesses, pids);
 				}
+				sg_it.next();
 			}
 		}
 
@@ -900,11 +915,11 @@ public:
 			vector<ProcessPtr> processesToDetach;
 			boost::container::vector<Callback> actions;
 			ScopedLock l(syncher);
-			SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
+			SuperGroupMap::ConstIterator sg_it(superGroups);
 
 			UPDATE_TRACE_POINT();
-			for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
-				const SuperGroupPtr &superGroup = sg_it->second;
+			while (*sg_it != NULL) {
+				const SuperGroupPtr &superGroup = sg_it.getValue();
 				SuperGroup::GroupList::iterator g_it, g_end = superGroup->groups.end();
 
 				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
@@ -916,6 +931,7 @@ public:
 					prepareUnionStationProcessStateLogs(logEntries, group);
 					prepareUnionStationSystemMetricsLogs(logEntries, group);
 				}
+				sg_it.next();
 			}
 
 			UPDATE_TRACE_POINT();
@@ -964,7 +980,7 @@ public:
 		SuperGroupPtr superGroup = boost::make_shared<SuperGroup>(this,
 			options);
 		superGroup->initialize();
-		superGroups.set(options.getAppGroupName(), superGroup);
+		superGroups.insert(options.getAppGroupName(), superGroup);
 		garbageCollectionCond.notify_all();
 		return superGroup;
 	}
@@ -1069,7 +1085,9 @@ public:
 		lifeStatus = SHUTTING_DOWN;
 
 		while (!superGroups.empty()) {
-			string name = superGroups.begin()->second->name;
+			SuperGroupPtr *superGroup;
+			superGroups.lookupRandom(NULL, &superGroup);
+			string name = superGroup->get()->name;
 			lock.unlock();
 			detachSuperGroupByName(name);
 			lock.lock();
@@ -1151,7 +1169,7 @@ public:
 				SuperGroupPtr superGroup;
 				superGroup = boost::make_shared<SuperGroup>(this, options);
 				superGroup->initialize();
-				superGroups.set(options.getAppGroupName(), superGroup);
+				superGroups.insert(options.getAppGroupName(), superGroup);
 				garbageCollectionCond.notify_all();
 				SessionPtr session = superGroup->get(options, callback,
 					actions);
@@ -1219,7 +1237,8 @@ public:
 		Ticket ticket;
 		{
 			LockGuard l(syncher);
-			if (superGroups.get(options.getAppGroupName()) == NULL) {
+			SuperGroupPtr *superGroup;
+			if (!superGroups.lookup(options.getAppGroupName(), &superGroup)) {
 				// Forcefully create SuperGroup, don't care whether resource limits
 				// actually allow it.
 				createSuperGroup(options);
@@ -1264,11 +1283,12 @@ public:
 
 	unsigned int capacityUsed(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
-		SuperGroupMap::const_iterator it, end = superGroups.end();
+		SuperGroupMap::ConstIterator sg_it(superGroups);
 		int result = 0;
-		for (it = superGroups.begin(); it != end; it++) {
-			const SuperGroupPtr &superGroup = it->second;
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 			result += superGroup->capacityUsed();
+			sg_it.next();
 		}
 		return result;
 	}
@@ -1281,9 +1301,9 @@ public:
 	vector<ProcessPtr> getProcesses(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
 		vector<ProcessPtr> result;
-		SuperGroupMap::const_iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
-			const SuperGroupPtr &superGroup = it->second;
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 			SuperGroup::GroupList &groups = superGroup->groups;
 			SuperGroup::GroupList::const_iterator g_it, g_end = groups.end();
 			for (g_it = groups.begin(); g_it != g_end; g_it++) {
@@ -1300,6 +1320,7 @@ public:
 					result.push_back(*p_it);
 				}
 			}
+			sg_it.next();
 		}
 		return result;
 	}
@@ -1312,10 +1333,11 @@ public:
 	unsigned int getProcessCount(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
 		unsigned int result = 0;
-		SuperGroupMap::const_iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
-			const SuperGroupPtr &superGroup = it->second;
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 			result += superGroup->getProcessCount();
+			sg_it.next();
 		}
 		return result;
 	}
@@ -1327,12 +1349,13 @@ public:
 
 	SuperGroupPtr findSuperGroupBySecret(const string &secret, bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
-		SuperGroupMap::const_iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); OXT_LIKELY(it != end); it++) {
-			const SuperGroupPtr &superGroup = it->second;
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 			if (superGroup->secret == secret) {
 				return superGroup;
 			}
+			sg_it.next();
 		}
 		return SuperGroupPtr();
 	}
@@ -1365,9 +1388,15 @@ public:
 		TRACE_POINT();
 		ScopedLock l(syncher);
 
-		SuperGroupPtr superGroup = superGroups.get(name);
+		SuperGroupPtr *lookupResult;
+		SuperGroupPtr superGroup;
+
+		if (superGroups.lookup(name, &lookupResult)) {
+			superGroup = *lookupResult;
+		}
+
 		if (OXT_LIKELY(superGroup != NULL)) {
-			if (OXT_LIKELY(superGroups.get(superGroup->name) != NULL)) {
+			if (OXT_LIKELY(superGroups.lookup(superGroup->name, &lookupResult))) {
 				UPDATE_TRACE_POINT();
 				verifyInvariants();
 				verifyExpensiveInvariants();
@@ -1498,10 +1527,9 @@ public:
 
 	bool restartGroupByName(const StaticString &name, RestartMethod method = RM_DEFAULT) {
 		ScopedLock l(syncher);
-		SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
-
-		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
-			const SuperGroupPtr &superGroup = sg_it->second;
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 			foreach (const GroupPtr &group, superGroup->groups) {
 				if (name == group->name) {
 					if (!group->restarting()) {
@@ -1510,6 +1538,7 @@ public:
 					return true;
 				}
 			}
+			sg_it.next();
 		}
 
 		return false;
@@ -1517,15 +1546,16 @@ public:
 
 	unsigned int restartSuperGroupsByAppRoot(const StaticString &appRoot) {
 		ScopedLock l(syncher);
-		SuperGroupMap::iterator sg_it, sg_end = superGroups.end();
+		SuperGroupMap::ConstIterator sg_it(superGroups);
 		unsigned int result = 0;
 
-		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
-			const SuperGroupPtr &superGroup = sg_it->second;
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 			if (appRoot == superGroup->options.appRoot) {
 				result++;
 				superGroup->restart(superGroup->options);
 			}
+			sg_it.next();
 		}
 
 		return result;
@@ -1536,13 +1566,15 @@ public:
 	 */
 	bool isSpawning(bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
-		SuperGroupMap::const_iterator it, end = superGroups.end();
-		for (it = superGroups.begin(); it != end; it++) {
-			foreach (GroupPtr group, it->second->groups) {
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
+			foreach (GroupPtr group, superGroup->groups) {
 				if (group->spawning()) {
 					return true;
 				}
 			}
+			sg_it.next();
 		}
 		return false;
 	}
@@ -1567,9 +1599,9 @@ public:
 		result << endl;
 
 		result << headerColor << "----------- Application groups -----------" << resetColor << endl;
-		SuperGroupMap::const_iterator sg_it, sg_end = superGroups.end();
-		for (sg_it = superGroups.begin(); sg_it != sg_end; sg_it++) {
-			const SuperGroupPtr &superGroup = sg_it->second;
+		SuperGroupMap::ConstIterator sg_it(superGroups);
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 			const Group *group = superGroup->defaultGroup;
 			ProcessList::const_iterator p_it;
 
@@ -1595,6 +1627,7 @@ public:
 				inspectProcessList(options, result, group, group->detachedProcesses);
 				result << endl;
 			}
+			sg_it.next();
 		}
 		return result.str();
 	}
@@ -1602,7 +1635,7 @@ public:
 	string toXml(bool includeSecrets = true, bool lock = true) const {
 		DynamicScopedLock l(syncher, lock);
 		stringstream result;
-		SuperGroupMap::const_iterator sg_it;
+		SuperGroupMap::ConstIterator sg_it(superGroups);
 		SuperGroup::GroupList::const_iterator g_it;
 		ProcessList::const_iterator p_it;
 
@@ -1629,8 +1662,8 @@ public:
 		}
 
 		result << "<supergroups>";
-		for (sg_it = superGroups.begin(); sg_it != superGroups.end(); sg_it++) {
-			const SuperGroupPtr &superGroup = sg_it->second;
+		while (*sg_it != NULL) {
+			const SuperGroupPtr &superGroup = sg_it.getValue();
 
 			result << "<supergroup>";
 			result << "<name>" << escapeForXml(superGroup->name) << "</name>";
@@ -1653,6 +1686,8 @@ public:
 				result << "</group>";
 			}
 			result << "</supergroup>";
+
+			sg_it.next();
 		}
 		result << "</supergroups>";
 

@@ -585,7 +585,7 @@ public:
 			return;
 		}
 
-		SmallVector<GetAction, 50> actions;
+		SmallVector<GetAction, 8> actions;
 		unsigned int i = 0;
 		bool done = false;
 

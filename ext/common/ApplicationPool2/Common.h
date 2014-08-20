@@ -34,10 +34,10 @@
 #include <RandomGenerator.h>
 #include <StaticString.h>
 #include <MemoryKit/palloc.h>
+#include <DataStructures/StringKeyTable.h>
 #include <UnionStation/Core.h>
 #include <UnionStation/Transaction.h>
 #include <ApplicationPool2/Options.h>
-#include <Utils/StringMap.h>
 #include <Utils/VariantMap.h>
 
 namespace tut {
@@ -166,7 +166,7 @@ typedef boost::shared_ptr<Group> GroupPtr;
 typedef boost::shared_ptr<Process> ProcessPtr;
 typedef boost::intrusive_ptr<Session> SessionPtr;
 typedef boost::shared_ptr<tracable_exception> ExceptionPtr;
-typedef StringMap<SuperGroupPtr> SuperGroupMap;
+typedef StringKeyTable<SuperGroupPtr> SuperGroupMap;
 typedef boost::function<void (const ProcessPtr &process, DisableResult result)> DisableCallback;
 typedef boost::function<void ()> Callback;
 
