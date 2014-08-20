@@ -1,5 +1,3 @@
-The Phusion Passenger compilation process can be customized with environment variables.
-
 Environment variables are named values that affect how the system works. For example they tell the system where to look for commands (the `PATH` variable) or where to look for libraries (`LD_LIBRARY_PATH`). Their names are often in all-uppercase. Sometimes people refer to an environment variable with a dollar sign `$` in front, but that's the same thing: when people say "the $PATH environment variable" they mean "the PATH environment variable". This is because the dollar sign `$` is a shell syntax for refering to an environment variable, as you will learn later.
 
 Environment variables are set on a **per-process** basis, but they are **inherited** by child processes. This means that if you set environment variables in process A, another already running process B will not see these new environment variables. But if A spawns a child process C, then C will have all environment variables that A had. If you once again change the environment variables in A, then C will not see the changes.
