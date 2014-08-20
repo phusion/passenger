@@ -80,7 +80,6 @@ namespace tut {
 		table.insert(createHeader("Accept-Language", "nl"));
 		table.insert(createHeader("User-Agent", "Mozilla"));
 		table.insert(createHeader("Set-Cookie", "foo=bar"));
-		table.insert(createHeader("User-Agent", "Mozilla"));
 		table.insert(createHeader("Connection", "keep-alive"));
 		table.insert(createHeader("Cache-Control", "no-cache"));
 		table.insert(createHeader("Pragma", "no-cache"));
@@ -93,7 +92,6 @@ namespace tut {
 		ensure(psg_lstr_cmp(table.lookup("Accept-Language"), "nl"));
 		ensure(psg_lstr_cmp(table.lookup("User-Agent"), "Mozilla"));
 		ensure(psg_lstr_cmp(table.lookup("Set-Cookie"), "foo=bar"));
-		ensure(psg_lstr_cmp(table.lookup("User-Agent"), "Mozilla"));
 		ensure(psg_lstr_cmp(table.lookup("Connection"), "keep-alive"));
 		ensure(psg_lstr_cmp(table.lookup("Cache-Control"), "no-cache"));
 		ensure(psg_lstr_cmp(table.lookup("Pragma"), "no-cache"));

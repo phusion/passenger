@@ -112,6 +112,9 @@ TEST_CXX_OBJECTS = {
 	'test/cxx/DataStructures/LStringTest.o' => %w(
 		test/cxx/DataStructures/LStringTest.cpp
 		ext/common/DataStructures/LString.h),
+	'test/cxx/DataStructures/StringKeyTableTest.o' => %w(
+		test/cxx/DataStructures/StringKeyTableTest.cpp
+		ext/common/DataStructures/StringKeyTable.h),
 	'test/cxx/MessageReadersWritersTest.o' => %w(
 		test/cxx/MessageReadersWritersTest.cpp
 		ext/common/MessageReadersWriters.h
