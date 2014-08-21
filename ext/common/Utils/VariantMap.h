@@ -272,8 +272,10 @@ public:
 		string result;
 
 		for (it = value.begin(); it != value.end(); it++) {
+			if (it != value.begin()) {
+				result.append(1, '\0');
+			}
 			result.append(*it);
-			result.append(1, '\0');
 		}
 		set(name, Base64::encode(result));
 		return *this;
