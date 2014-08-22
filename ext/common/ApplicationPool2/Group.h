@@ -979,6 +979,7 @@ public:
 	 * afterwards if necessary, e.g. by calling `assignSessionsToGetWaiters()`.
 	 */
 	AttachResult attach(const ProcessPtr &process, vector<Callback> &postLockActions) {
+		TRACE_POINT();
 		assert(process->getGroup() == NULL || process->getGroup().get() == this);
 		assert(process->isAlive());
 		assert(isAlive());
@@ -1039,6 +1040,7 @@ public:
 	 * that method over this one.
 	 */
 	void detach(const ProcessPtr &process, vector<Callback> &postLockActions) {
+		TRACE_POINT();
 		assert(process->getGroup().get() == this);
 		assert(process->isAlive());
 		assert(isAlive());

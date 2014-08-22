@@ -620,6 +620,7 @@ public:
 			try {
 				UPDATE_TRACE_POINT();
 				unsigned long long sleepTime = self->realGarbageCollect();
+				UPDATE_TRACE_POINT();
 				ScopedLock lock(self->syncher);
 				self->garbageCollectionCond.timed_wait(lock,
 					posix_time::microseconds(sleepTime));
