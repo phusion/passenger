@@ -1131,6 +1131,46 @@ namespace tut {
 		);
 	}
 
+	TEST_METHOD(36) {
+		// Detaching a process that is already being detached, works.
+		Options options = createOptions();
+		options.appGroupName = "test";
+		options.minProcesses = 0;
+
+		initPoolDebugging();
+		debug->restarting = false;
+		debug->spawning   = false;
+		debug->detachedProcessesChecker = true;
+
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 1;
+		);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+
+		ProcessPtr process = currentSession->getProcess();
+		pool->detachProcess(currentSession->getProcess());
+		debug->debugger->recv("About to start detached processes checker");
+		{
+			LockGuard l(pool->syncher);
+			ensure(process->enabled == Process::DETACHED);
+		}
+
+		pool->detachProcess(currentSession->getProcess());
+		debug->messages->send("Proceed with starting detached processes checker");
+		debug->messages->send("Proceed with starting detached processes checker");
+
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 0;
+		);
+		currentSession.reset();
+		EVENTUALLY(5,
+			result = process->isDead();
+		);
+	}
+
 
 	/*********** Test disabling and enabling processes ***********/
 

@@ -1045,6 +1045,11 @@ public:
 		assert(process->isAlive());
 		assert(isAlive());
 
+		if (process->enabled == Process::DETACHED) {
+			P_DEBUG("Detaching process " << process->inspect() << ", which was already being detached");
+			return;
+		}
+
 		const ProcessPtr p = process; // Keep an extra reference just in case.
 		P_DEBUG("Detaching process " << process->inspect());
 
@@ -1057,6 +1062,7 @@ public:
 				removeFromDisableWaitlist(process, DR_NOOP, postLockActions);
 			}
 		} else {
+			assert(process->enabled == Process::DISABLED);
 			assert(!disabledProcesses.empty());
 			removeProcessFromList(process, disabledProcesses);
 		}
