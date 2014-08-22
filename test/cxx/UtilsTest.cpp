@@ -187,6 +187,7 @@ namespace tut {
 		ensure_equals(escapeForXml("hello\xFFworld"), "hello&#255;world");
 		ensure_equals(escapeForXml("hello\xFF\xCCworld"), "hello&#255;&#204;world");
 		ensure_equals(escapeForXml("hello\xFFworld\xCC"), "hello&#255;world&#204;");
+		ensure_equals(escapeForXml("hello\nworld"), "hello&#10;world");
 	}
 
 	/***** Test extractDirName() *****/

@@ -636,7 +636,7 @@ public:
 		stream << "<last_used_desc>" << distanceOfTimeInWords(lastUsed / 1000000).c_str() << " ago</last_used_desc>";
 		stream << "<uptime>" << uptime() << "</uptime>";
 		if (!codeRevision.empty()) {
-			stream << "<code_revision>" << codeRevision << "</code_revision>";
+			stream << "<code_revision>" << escapeForXml(codeRevision) << "</code_revision>";
 		}
 		switch (lifeStatus) {
 		case ALIVE:
