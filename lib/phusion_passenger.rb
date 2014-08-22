@@ -24,38 +24,38 @@
 
 module PhusionPassenger
 	FILE_LOCATION = File.expand_path(__FILE__)
-	
-	
+
+
 	###### Names and version numbers ######
-	
+
 	PACKAGE_NAME = 'passenger'
 	# Run 'rake ext/common/Constants.h' after changing this number.
 	VERSION_STRING = '4.0.49'
-	
-	PREFERRED_NGINX_VERSION = '1.6.0'
-	NGINX_SHA256_CHECKSUM = '943ad757a1c3e8b3df2d5c4ddacc508861922e36fa10ea6f8e3a348fc9abfc1a'
+
+	PREFERRED_NGINX_VERSION = '1.6.1'
+	NGINX_SHA256_CHECKSUM = 'f5cfe682a1aeef4602c2ca705402d5049b748f946563f41d8256c18674836067'
 
 	PREFERRED_PCRE_VERSION  = '8.34'
 	PCRE_SHA256_CHECKSUM = '1dd78994c81e44ac41cf30b2a21d4b4cc6d76ccde7fc6e77713ed51d7bddca47'
 
 	STANDALONE_INTERFACE_VERSION  = 1
-	
-	
+
+
 	###### Directories ######
-	
+
 	GLOBAL_NAMESPACE_DIRNAME            = "passenger"
 	# Subdirectory under $HOME to use for storing stuff.
 	USER_NAMESPACE_DIRNAME              = ".passenger"
 	# The name for the /etc/apache2/mods-available/*.{load,conf} file.
 	APACHE2_MODULE_CONF_NAME            = "passenger"
-	
+
 	# Directories in which to look for plugins.
 	PLUGIN_DIRS = [
 		"/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/plugins",
 		"/usr/local/share/#{GLOBAL_NAMESPACE_DIRNAME}/plugins",
 		"~/#{USER_NAMESPACE_DIRNAME}/plugins"
 	]
-	
+
 	REQUIRED_LOCATIONS_INI_FIELDS = [
 		:bin_dir,
 		:agents_dir,
@@ -93,16 +93,16 @@ module PhusionPassenger
 		:build_system_dir,
 		:buildout_dir
 	].freeze
-	
+
 	# Follows the logic of ext/common/ResourceLocator.h, so don't forget to modify that too.
 	def self.locate_directories(source_root_or_location_configuration_file = nil)
 		source_root_or_location_configuration_file ||= find_location_configuration_file
 		root_or_file = @source_root = source_root_or_location_configuration_file
-		
+
 		if root_or_file && File.file?(root_or_file)
 			filename = root_or_file
 			options  = parse_ini_file(filename)
-			
+
 			@natively_packaged = get_bool_option(filename, options, 'natively_packaged')
 			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 				value = get_option(filename, options, field.to_s)
@@ -146,7 +146,7 @@ module PhusionPassenger
 			end
 		end
 	end
-	
+
 	# Returns whether this Phusion Passenger installation is in the 'originally packaged'
 	# configuration (as opposed to the 'natively packaged' configuration.
 	def self.originally_packaged?
@@ -203,10 +203,10 @@ module PhusionPassenger
 	def self.standalone_doc_path
 		return "#{doc_dir}/#{STANDALONE_DOC_NAME}"
 	end
-	
-	
+
+
 	###### Other resource locations ######
-	
+
 	INDEX_DOC_NAME      = "Users guide.html"
 	APACHE2_DOC_NAME    = "Users guide Apache.html"
 	NGINX_DOC_NAME      = "Users guide Nginx.html"
@@ -219,17 +219,17 @@ module PhusionPassenger
 			{ :url => "https://s3.amazonaws.com/phusion-passenger/binaries/passenger/by_release" }
 		]
 	end
-	
-	
+
+
 	# Instead of calling `require 'phusion_passenger/foo'`, you should call
 	# `PhusionPassenger.require_passenger_lib 'foo'`. This is because when Phusion
 	# Passenger is natively packaged, it may still be run with arbitrary Ruby
 	# interpreters. Adding ruby_libdir to $LOAD_PATH is then dangerous because ruby_libdir
 	# may be the distribution's Ruby's vendor_ruby directory, which may be incompatible
 	# with the active Ruby interpreter. This method looks up the exact filename directly.
-	# 
+	#
 	# Using this method also has two more advantages:
-	# 
+	#
 	#  1. It is immune to Bundler's load path mangling code.
 	#  2. It is faster than plan require() because it doesn't need to
 	#     scan the entire load path.
@@ -293,7 +293,7 @@ private
 			return nil
 		end
 	end
-	
+
 	def self.get_bool_option(filename, options, key)
 		value = get_option(filename, options, key)
 		return value == 'yes' || value == 'true' || value == 'on' || value == '1'

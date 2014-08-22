@@ -1,6 +1,7 @@
 Release 4.0.49
 --------------
 
+ * Upgraded the preferred Nginx version to 1.6.1.
  * Fixed a crash that may be triggered by the `passenger_max_requests` feature.
  * Introduced the `spawn_failed` hook, which is called when an application
    process fails to spawn. You could use this hook to setup an error
