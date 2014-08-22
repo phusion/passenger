@@ -19,7 +19,7 @@ namespace tut {
 		PipeWatcher::DataCallback gatherOutput;
 		string gatheredOutput;
 		boost::mutex gatheredOutputSyncher;
-		
+
 		ApplicationPool2_SmartSpawnerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			PipeWatcher::onData = PipeWatcher::DataCallback();
@@ -27,32 +27,32 @@ namespace tut {
 			setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
 			setPrintAppOutputAsDebuggingMessages(true);
 		}
-		
+
 		~ApplicationPool2_SmartSpawnerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			setPrintAppOutputAsDebuggingMessages(false);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
-		
+
 		boost::shared_ptr<SmartSpawner> createSpawner(const Options &options, bool exitImmediately = false) {
 			char buf[PATH_MAX + 1];
 			getcwd(buf, PATH_MAX);
-			
+
 			vector<string> command;
 			command.push_back("ruby");
 			command.push_back(string(buf) + "/support/placebo-preloader.rb");
 			if (exitImmediately) {
 				command.push_back("exit-immediately");
 			}
-			
+
 			return boost::make_shared<SmartSpawner>(
 				generation,
 				command,
 				options,
 				make_shared<SpawnerConfig>(*resourceLocator));
 		}
-		
+
 		Options createOptions() {
 			Options options;
 			options.spawnMethod = "smart";
@@ -65,11 +65,11 @@ namespace tut {
 			gatheredOutput.append(data, size);
 		}
 	};
-	
+
 	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_SmartSpawnerTest, 90);
-	
+
 	#include "SpawnerTestCases.cpp"
-	
+
 	TEST_METHOD(80) {
 		// If the preloader has crashed then SmartSpawner will
 		// restart it and try again.
@@ -81,16 +81,16 @@ namespace tut {
 		setLogLevel(LVL_CRIT);
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
-		
+
 		kill(spawner->getPreloaderPid(), SIGTERM);
 		// Give it some time to exit.
 		usleep(300000);
-		
+
 		// No exception at next spawn.
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
 	}
-	
+
 	TEST_METHOD(81) {
 		// If the preloader still crashes after the restart then
 		// SmartSpawner will throw an exception.
@@ -108,7 +108,7 @@ namespace tut {
 			// Pass.
 		}
 	}
-	
+
 	TEST_METHOD(82) {
 		// If the preloader didn't start within the timeout
 		// then it's killed and an exception is thrown, with
@@ -118,7 +118,7 @@ namespace tut {
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		options.startTimeout = 300;
-		
+
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
@@ -129,7 +129,7 @@ namespace tut {
 			options,
 			make_shared<SpawnerConfig>(*resourceLocator));
 		setLogLevel(LVL_CRIT);
-		
+
 		try {
 			process = spawner.spawn(options);
 			process->requiresShutdown = false;
@@ -140,7 +140,7 @@ namespace tut {
 			ensure(e.getErrorPage().find("hello world\n") != string::npos);
 		}
 	}
-	
+
 	TEST_METHOD(83) {
 		// If the preloader crashed during startup without returning
 		// a proper error response, then its stderr output is used
@@ -149,7 +149,7 @@ namespace tut {
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
-		
+
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
@@ -180,7 +180,7 @@ namespace tut {
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
-		
+
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
@@ -191,7 +191,7 @@ namespace tut {
 			options,
 			make_shared<SpawnerConfig>(*resourceLocator));
 		setLogLevel(LVL_CRIT);
-		
+
 		try {
 			process = spawner.spawn(options);
 			process->requiresShutdown = false;
@@ -208,7 +208,7 @@ namespace tut {
 		PipeWatcher::onData = gatherOutput;
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
-		
+
 		{
 			vector<string> preloaderCommand;
 			preloaderCommand.push_back("ruby");
@@ -221,10 +221,10 @@ namespace tut {
 			process = spawner.spawn(options);
 			process->requiresShutdown = false;
 		}
-		
+
 		SessionPtr session = process->newSession();
 		session->initiate();
-		
+
 		const char header[] =
 			"REQUEST_METHOD\0GET\0"
 			"PATH_INFO\0/print_stderr\0";

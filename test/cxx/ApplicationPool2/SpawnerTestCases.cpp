@@ -31,7 +31,7 @@
 		(void) uid; (void) gid; (void) groups
 
 	typedef boost::shared_ptr<Spawner> SpawnerPtr;
-	
+
 	static void addUserSwitchingCode() {
 		FILE *f = fopen("tmp.wsgi/passenger_wsgi.py", "a");
 		fputs(
@@ -84,7 +84,7 @@
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
 		ensure_equals(process->sockets->size(), 1u);
-		
+
 		Connection conn = process->sockets->front().checkoutConnection();
 		ScopeGuard guard(boost::bind(checkin, process, &conn));
 		writeExact(conn.fd, "ping\n");
@@ -181,13 +181,13 @@
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
 		ensure_equals(process->sockets->size(), 1u);
-		
+
 		Connection conn = process->sockets->front().checkoutConnection();
 		ScopeGuard guard(boost::bind(checkin, process, &conn));
 		writeExact(conn.fd, "pid\n");
 		ensure_equals(readAll(conn.fd), toString(process->pid) + "\n");
 	}
-	
+
 	TEST_METHOD(7) {
 		// Custom environment variables can be passed.
 		Options options = createOptions();
@@ -200,7 +200,7 @@
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
 		ensure_equals(process->sockets->size(), 1u);
-		
+
 		Connection conn = process->sockets->front().checkoutConnection();
 		ScopeGuard guard(boost::bind(checkin, process, &conn));
 		writeExact(conn.fd, "envvars\n");
@@ -296,10 +296,10 @@
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
-		
+
 		SessionPtr session = process->newSession();
 		session->initiate();
-		
+
 		setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
 		const char header[] =
 			"REQUEST_METHOD\0GET\0"
@@ -336,7 +336,7 @@
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
-		
+
 		ensure_equals(process->codeRevision, "hello");
 	}
 
@@ -354,10 +354,10 @@
 		SpawnerPtr spawner = createSpawner(options);
 		process = spawner->spawn(options);
 		process->requiresShutdown = false;
-		
+
 		ensure_equals(process->codeRevision, "today");
 	}
-	
+
 	// It raises an exception if getStartupCommand() is empty.
 
 	/******* User switching tests *******/
@@ -820,6 +820,6 @@
 			}
 			defaultGroups.erase(0, pos);
 		}
-		
+
 		ensure_equals(groups, defaultGroups);
 	}
