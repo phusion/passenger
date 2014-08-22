@@ -52,10 +52,10 @@
 
 #include <agents/HelperAgent/RequestHandler2.h>
 #include <agents/HelperAgent/AgentOptions.h>
-#include <agents/HelperAgent/SystemMetricsTool.cpp>
 
 #include <agents/Base.h>
 #include <Constants.h>
+#include <ServerKit/Server.h>
 #include <ApplicationPool2/Pool.h>
 #include <MessageServer.h>
 #include <MessageReadersWriters.h>
@@ -76,6 +76,8 @@ using namespace boost;
 using namespace oxt;
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
+
+static VariantMap *agentOptions;
 
 
 class RemoteController: public MessageServer::Handler {
@@ -488,9 +490,13 @@ public:
 		UPDATE_TRACE_POINT();
 		unionStationCore = boost::make_shared<UnionStation::Core>(options.loggingAgentAddress,
 			"logging", options.loggingAgentPassword);
-		spawnerConfig = boost::make_shared<SpawnerConfig>(resourceLocator, unionStationCore,
-				randomGenerator, &options);
-		spawnerFactory = boost::make_shared<SpawnerFactory>(generation, spawnerConfig);
+		spawnerConfig = boost::make_shared<SpawnerConfig>();
+		spawnerConfig->resourceLocator = &resourceLocator;
+		spawnerConfig->unionStationCore = unionStationCore;
+		spawnerConfig->randomGenerator = randomGenerator;
+		spawnerConfig->agentsOptions = &options;
+		spawnerConfig->finalize();
+		spawnerFactory = boost::make_shared<SpawnerFactory>(spawnerConfig);
 		pool = boost::make_shared<Pool>(spawnerFactory, &options);
 		pool->initialize();
 		pool->setMax(options.maxPoolSize);
@@ -498,8 +504,10 @@ public:
 
 		context = new ServerKit::Context(requestLoop.safe);
 
-		requestHandler = boost::make_shared<RequestHandler>(context,
-			pool, options);
+		requestHandler = boost::make_shared<RequestHandler>(context, agentOptions);
+		requestHandler->resourceLocator = &resourceLocator;
+		requestHandler->appPool = pool;
+		requestHandler->initialize();
 		requestHandler->createSpareClients();
 		// TODOs
 		//requestHandler->listen(requestSocket);
@@ -651,25 +659,14 @@ public:
 	}
 };
 
-/**
- * Initializes and starts the helper agent that is responsible for handling communication
- * between Nginx and the backend Rails processes.
- *
- * @see Server
- * @see Client
- */
 int
-main(int argc, char *argv[]) {
+oldMain(int argc, char *argv[]) {
 	TRACE_POINT();
-
-	if (argc > 1 && strcmp(argv[1], "system-metrics") == 0) {
-		return SystemMetricsTool::main(argc, argv);
-	}
 
 	AgentOptionsPtr options;
 	try {
 		options = boost::make_shared<AgentOptions>(
-			initializeAgent(argc, argv, "PassengerHelperAgent"));
+			initializeAgent(argc, &argv, "PassengerHelperAgent"));
 	} catch (const VariantMap::MissingKeyException &e) {
 		fprintf(stderr, "Option required: %s\n", e.getKey().c_str());
 		return 1;
@@ -696,4 +693,394 @@ main(int argc, char *argv[]) {
 
 	P_TRACE(2, "Helper agent exiting with code 0.");
 	return 0;
+}
+
+/***** Structures, constants, global variables and forward declarations *****/
+
+#define DEFAULT_LISTEN_ADDRESS "tcp://127.0.0.1:3000"
+
+struct WorkingObjects {
+	int serverFds[ServerKit::Server<>::MAX_ENDPOINTS];
+	ResourceLocator resourceLocator;
+	RandomGeneratorPtr randomGenerator;
+	UnionStation::CorePtr unionStationCore;
+	SpawnerConfigPtr spawnerConfig;
+	SpawnerFactoryPtr spawnerFactory;
+	BackgroundEventLoop *bgloop;
+	PoolPtr appPool;
+	ServerKit::Context *serverKitContext;
+	RequestHandler *requestHandler;
+};
+
+static WorkingObjects *workingObjects;
+
+static void usage();
+
+
+/***** Server stuff *****/
+
+static void
+initializePrivilegedWorkingObjects() {
+	TRACE_POINT();
+	workingObjects = new WorkingObjects();
+}
+
+static void
+initializeSingleAppMode(WorkingObjects *wo) {
+	TRACE_POINT();
+	VariantMap &options = *agentOptions;
+
+	if (options.getBool("multi_app")) {
+		P_NOTICE("PassengerAgent server running in multi-application mode.");
+		return;
+	}
+
+	if (!options.has("app_type")) {
+		AppTypeDetector detector(NULL, 0);
+		PassengerAppType appType = detector.checkAppRoot(options.get("app_root"));
+		if (appType == PAT_NONE || appType == PAT_ERROR) {
+			fprintf(stderr, "ERROR: unable to autodetect what kind of application "
+				"lives in %s. Please specify information about the app using "
+				"--app-type and --startup-file, or specify a correct location to "
+				"the application you want to serve.\n"
+				"Type 'PassengerAgent server --help' for more information.\n",
+				options.get("app_root").c_str());
+			exit(1);
+		}
+
+		options.set("app_type", getAppTypeName(appType));
+		options.set("startup_file", getAppTypeStartupFile(appType));
+	}
+
+	P_NOTICE("PassengerAgent server running in single-application mode.");
+	P_NOTICE("Serving app     : " << options.get("app_root"));
+	P_NOTICE("App type        : " << options.get("app_type"));
+	P_NOTICE("App startup file: " << options.get("startup_file"));
+}
+
+static void
+startListening(WorkingObjects *wo) {
+	TRACE_POINT();
+	vector<string> addresses = agentOptions->getStrSet("server_listen_addresses");
+
+	for (unsigned int i = 0; i < addresses.size(); i++) {
+		wo->serverFds[i] = createServer(addresses[i]);
+	}
+}
+
+static void
+createPidFile(WorkingObjects *wo) {
+	TRACE_POINT();
+}
+
+static void
+lowerPrivilege(WorkingObjects *wo) {
+	TRACE_POINT();
+}
+
+static void
+initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
+	TRACE_POINT();
+	VariantMap &options = *agentOptions;
+	vector<string> addresses = options.getStrSet("server_listen_addresses");
+
+	wo->resourceLocator = ResourceLocator(options.get("passenger_root"));
+
+	wo->randomGenerator = boost::make_shared<RandomGenerator>();
+	// Check whether /dev/urandom is actually random.
+	// https://code.google.com/p/phusion-passenger/issues/detail?id=516
+	if (wo->randomGenerator->generateByteString(16) == wo->randomGenerator->generateByteString(16)) {
+		throw RuntimeException("Your random number device, /dev/urandom, appears to be broken. "
+			"It doesn't seem to be returning random data. Please fix this.");
+	}
+
+	UPDATE_TRACE_POINT();
+	//wo->unionStationCore = boost::make_shared<UnionStation::Core>(
+	//	"TODO: logging agent address", "logging", "TODO: logging agent password");
+	wo->spawnerConfig = boost::make_shared<SpawnerConfig>();
+	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
+	wo->spawnerConfig->agentsOptions = agentOptions;
+	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
+	wo->spawnerConfig->finalize();
+
+	UPDATE_TRACE_POINT();
+	wo->spawnerFactory = boost::make_shared<SpawnerFactory>(wo->spawnerConfig);
+
+	wo->bgloop = new BackgroundEventLoop(true, true);
+
+	wo->appPool = boost::make_shared<Pool>(wo->spawnerFactory, agentOptions);
+	wo->appPool->initialize();
+	wo->appPool->setMax(options.getInt("max_pool_size"));
+	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000);
+
+	UPDATE_TRACE_POINT();
+	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
+	wo->requestHandler = new RequestHandler(wo->serverKitContext, agentOptions);
+	wo->requestHandler->resourceLocator = &wo->resourceLocator;
+	wo->requestHandler->appPool = wo->appPool;
+	wo->requestHandler->initialize();
+
+	UPDATE_TRACE_POINT();
+	for (unsigned int i = 0; i < addresses.size(); i++) {
+		wo->requestHandler->listen(wo->serverFds[i]);
+	}
+	wo->requestHandler->createSpareClients();
+}
+
+static void
+reportInitializationInfo(WorkingObjects *wo) {
+	vector<string> addresses = agentOptions->getStrSet("server_listen_addresses");
+	string address;
+
+	P_NOTICE("PassengerAgent server online, PID " << getpid () <<
+		", listening on " << addresses.size() << " socket(s):");
+	foreach (address, addresses) {
+		if (startsWith(address, "tcp://")) {
+			address.erase(0, sizeof("tcp://") - 1);
+			address.insert(0, "http://");
+			address.append("/");
+		}
+		P_NOTICE(" * " << address);
+	}
+
+	if (feedbackFdAvailable()) {
+		writeArrayMessage(FEEDBACK_FD,
+			"initialized",
+			NULL);
+	}
+}
+
+static void
+mainLoop(WorkingObjects *wo) {
+	TRACE_POINT();
+	wo->bgloop->start("Main event loop", 0);
+	while (true) {
+		sleep(100);
+	}
+}
+
+static void
+cleanup(WorkingObjects *wo) {
+	TRACE_POINT();
+}
+
+static int
+runServer() {
+	TRACE_POINT();
+	P_DEBUG("Starting PassengerAgent server...");
+
+	try {
+		UPDATE_TRACE_POINT();
+		initializePrivilegedWorkingObjects();
+		initializeSingleAppMode(workingObjects);
+		startListening(workingObjects);
+		createPidFile(workingObjects);
+		lowerPrivilege(workingObjects);
+		initializeNonPrivilegedWorkingObjects(workingObjects);
+
+		UPDATE_TRACE_POINT();
+		reportInitializationInfo(workingObjects);
+		mainLoop(workingObjects);
+
+		UPDATE_TRACE_POINT();
+		cleanup(workingObjects);
+	} catch (const tracable_exception &e) {
+		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
+		return 1;
+	}
+
+	P_TRACE(2, "PassengerAgent server exiting with code 0.");
+	return 0;
+}
+
+
+/***** Entry point and command line argument parsing *****/
+
+static bool
+isFlag(const char *arg, char shortFlagName, const char *longFlagName) {
+	return strcmp(arg, longFlagName) == 0
+		|| (shortFlagName != '\0' && arg[0] == '-'
+			&& arg[1] == shortFlagName && arg[2] == '\0');
+}
+
+static bool
+isValueFlag(int argc, int i, const char *arg, char shortFlagName, const char *longFlagName) {
+	if (isFlag(arg, shortFlagName, longFlagName)) {
+		if (argc >= i + 2) {
+			return true;
+		} else {
+			fprintf(stderr, "ERROR: extra argument required for %s\n", arg);
+			usage();
+			exit(1);
+			return false; // Never reached
+		}
+	} else {
+		return false;
+	}
+}
+
+static void
+usage() {
+	printf("Usage: PassengerAgent server <OPTIONS...> [APP DIRECTORY]\n");
+	printf("Runs the " PROGRAM_NAME " standalone HTTP server.\n");
+	printf("\n");
+	printf("The server starts in single-app mode, unless --multi-app is specified. When\n");
+	printf("in single-app mode, it serves the app at the current working directory, or the\n");
+	printf("app specified by APP DIRECTORY.\n");
+	printf("\n");
+	printf("Required options:\n");
+	printf("  --passenger-root PATH     The location to the " PROGRAM_NAME " source\n");
+	printf("                            directory\n");
+	printf("\n");
+	printf("Socket options (optional):\n");
+	printf("  -l,  --listen ADDRESS     Listen on the given address. The address must be\n");
+	printf("                            formatted as tcp://IP:PORT for TCP sockets, or\n");
+	printf("                            unix:PATH for Unix domain sockets. You can specify\n");
+	printf("                            this option multiple times (up to %u times) to\n",
+		ServerKit::Server<>::MAX_ENDPOINTS);
+	printf("                            listen on multiple addresses. Default:\n");
+	printf("                            " DEFAULT_LISTEN_ADDRESS "\n");
+	printf("\n");
+	printf("Application serving options (optional):\n");
+	printf("      --app-type TYPE       The type of application you want to serve\n");
+	printf("                            (single-app mode only)\n");
+	printf("      --startup-file PATH   The path of the app's startup file, relative to\n");
+	printf("                            the app root directory (single-app mode only)\n");
+	printf("\n");
+	printf("      --multi-app           Enable multi-app mode\n");
+	printf("\n");
+	printf("Process management options (optional):\n");
+	printf("      --max-pool-size N     Maximum number of application processes.\n");
+	printf("                            Default: %d\n", DEFAULT_MAX_POOL_SIZE);
+	printf("\n");
+	printf("Other options (optional):\n");
+	printf("      --log-level LEVEL     Logging level. Default: %d\n", DEFAULT_LOG_LEVEL);
+	printf("  -h, --help                Show this help\n");
+}
+
+static void
+parseOptions(int argc, const char *argv[], VariantMap &options) {
+	int i = 2;
+
+	while (i < argc) {
+		if (isValueFlag(argc, i, argv[i], '\0', "--passenger-root")) {
+			options.set("passenger_root", argv[i + 1]);
+			i += 2;
+		} else if (isValueFlag(argc, i, argv[i], 'l', "--listen")) {
+			if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
+				vector<string> addresses = options.getStrSet("listen", false);
+				if (addresses.size() == ServerKit::Server<>::MAX_ENDPOINTS) {
+					fprintf(stderr, "ERROR: you may specify up to %u --listen addresses.\n",
+						ServerKit::Server<>::MAX_ENDPOINTS);
+					exit(1);
+				}
+				addresses.push_back(argv[i + 1]);
+				options.setStrSet("server_listen_addresses", addresses);
+				i += 2;
+			} else {
+				fprintf(stderr, "ERROR: invalid address format for --listen. The address "
+					"must be formatted as tcp://IP:PORT for TCP sockets, or unix:PATH "
+					"for Unix domain sockets.\n");
+				exit(1);
+			}
+		} else if (isValueFlag(argc, i, argv[i], '\0', "--max-pool-size")) {
+			options.setInt("max_pool_size", atoi(argv[i + 1]));
+			i += 2;
+		} else if (isValueFlag(argc, i, argv[i], '\0', "--app-type")) {
+			options.set("app_type", argv[i + 1]);
+			i += 2;
+		} else if (isValueFlag(argc, i, argv[i], '\0', "--startup-file")) {
+			options.set("startup_file", argv[i + 1]);
+			i += 2;
+		} else if (isFlag(argv[i], '\0', "--multi-app")) {
+			options.setBool("multi_app", true);
+			i++;
+		} else if (isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
+			options.setInt("log_level", atoi(argv[i + 1]));
+			i += 2;
+		} else if (isFlag(argv[i], 'h', "--help")) {
+			usage();
+			exit(0);
+		} else if (startsWith(argv[i], "-")) {
+			fprintf(stderr, "ERROR: unrecognized argument %s. Please type "
+				"'%s server --help' for usage.\n", argv[i], argv[0]);
+			exit(1);
+		} else {
+			if (!options.has("app_root")) {
+				options.set("app_root", argv[i]);
+				i++;
+			} else {
+				fprintf(stderr, "ERROR: you may not pass multiple application directories. "
+					"Please type '%s server --help' for usage.\n", argv[0]);
+				exit(1);
+			}
+		}
+	}
+}
+
+static void
+setAgentOptionsDefaults() {
+	VariantMap &options = *agentOptions;
+	set<string> defaultListenAddress;
+	defaultListenAddress.insert(DEFAULT_LISTEN_ADDRESS);
+
+	options.setDefaultStrSet("server_listen_addresses", defaultListenAddress);
+	options.setDefaultBool("multi_app", false);
+	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
+	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
+
+	options.setDefault("default_ruby", DEFAULT_RUBY);
+	if (!options.getBool("multi_app") && !options.has("app_root")) {
+		char *pwd = getcwd(NULL, 0);
+		options.set("app_root", pwd);
+		free(pwd);
+	}
+}
+
+static void
+sanityCheckOptions() {
+	VariantMap &options = *agentOptions;
+	bool ok = true;
+
+	if (!options.has("passenger_root")) {
+		fprintf(stderr, "ERROR: please set the --passenger-root argument.\n");
+		ok = false;
+	}
+	if (options.getBool("multi_app") && options.has("app_root")) {
+		fprintf(stderr, "ERROR: you may not specify an application directory "
+			"when in multi-app mode.\n");
+		ok = false;
+	}
+	if (!options.getBool("multi_app") && options.has("app_type")) {
+		PassengerAppType appType = getAppType(options.get("app_type"));
+		if (appType == PAT_NONE || appType == PAT_ERROR) {
+			fprintf(stderr, "ERROR: '%s' is not a valid applicaion type. Supported app types are:",
+				options.get("app_type").c_str());
+			const AppTypeDefinition *definition = &appTypeDefinitions[0];
+			while (definition->type != PAT_NONE) {
+				fprintf(stderr, " %s", definition->name);
+				definition++;
+			}
+			fprintf(stderr, "\n");
+			ok = false;
+		}
+
+		if (!options.has("startup_file")) {
+			fprintf(stderr, "ERROR: if you've passed --app-type, then you must also pass --startup-file.\n");
+			ok = false;
+		}
+	}
+
+	if (!ok) {
+		exit(1);
+	}
+}
+
+int
+serverMain(int argc, char *argv[]) {
+	agentOptions = new VariantMap();
+	*agentOptions = initializeAgent(argc, &argv, "PassengerHelperAgent", parseOptions, 2);
+	setAgentOptionsDefaults();
+	sanityCheckOptions();
+	return runServer();
 }

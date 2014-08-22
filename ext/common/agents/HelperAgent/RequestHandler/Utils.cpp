@@ -3,6 +3,7 @@
 private:
 
 HashedStaticString PASSENGER_APP_GROUP_NAME;
+HashedStaticString PASSENGER_MAX_REQUESTS;
 HashedStaticString PASSENGER_STICKY_SESSIONS;
 HashedStaticString PASSENGER_STICKY_SESSIONS_COOKIE_NAME;
 HashedStaticString HTTP_COOKIE;
@@ -34,6 +35,73 @@ void
 disconnectWithWarning(Client **client, const StaticString &message) {
 	SKC_DEBUG(*client, "Disconnected client with warning: " << message);
 	disconnect(client);
+}
+
+/**
+ * `data` must outlive the request.
+ */
+void
+endRequestWithSimpleResponse(Client **c, Request **r, const StaticString &data, int code = 200) {
+	const unsigned int HEADER_BUF_SIZE = 300;
+	Client *client = *c;
+	Request *req = *r;
+
+	char *header = (char *) psg_pnalloc(req->pool, HEADER_BUF_SIZE);
+	char statusBuffer[50];
+	char *pos = header;
+	const char *end = header + HEADER_BUF_SIZE - 1;
+	const char *status;
+	time_t the_time = time(NULL);
+	struct tm the_tm;
+
+	status = getStatusCodeAndReasonPhrase(code);
+	if (status == NULL) {
+		snprintf(statusBuffer, sizeof(statusBuffer), "%d Unknown Reason-Phrase", code);
+		status = statusBuffer;
+	}
+
+	gmtime_r(&the_time, &the_tm);
+
+	pos += snprintf(pos, end - pos,
+		"HTTP/1.1 %s\r\n"
+		"Status: %s\r\n"
+		"Content-Length: %lu\r\n"
+		"Content-Type: text/html; charset=UTF-8\r\n"
+		"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+		"Date: ",
+		status, status, (unsigned long) data.size());
+	pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %Z", &the_tm);
+	pos = appendData(pos, end, "\r\n");
+	if (req->canKeepAlive()) {
+		pos = appendData(pos, end, "Connection: keep-alive\r\n");
+	} else {
+		pos = appendData(pos, end, "Connection: close\r\n");
+	}
+	pos = appendData(pos, end, "\r\n");
+
+	writeResponse(client, header, pos - header);
+	if (req->ended()) {
+		return;
+	}
+	writeResponse(client, data.data(), data.size());
+	endRequest(c, r);
+
+	// TODO:
+	/* if (client->useUnionStation()) {
+		snprintf(header, end - header, "Status: %d %s",
+			code, status);
+		client->logMessage(header);
+	} */
+}
+
+bool
+getBoolOption(Request *req, const HashedStaticString &name, bool defaultValue = false) {
+	const LString *value = req->headers.lookup(name);
+	if (value != NULL && value->size > 0) {
+		return psg_lstr_first_byte(value) == 't';
+	} else {
+		return defaultValue;
+	}
 }
 
 template<typename Number>

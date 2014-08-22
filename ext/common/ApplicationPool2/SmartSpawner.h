@@ -99,7 +99,7 @@ private:
 	vector<string> createRealPreloaderCommand(const Options &options,
 		shared_array<const char *> &args)
 	{
-		string agentsDir = config->resourceLocator.getAgentsDir();
+		string agentsDir = config->resourceLocator->getAgentsDir();
 		vector<string> command;
 
 		if (shouldLoadShellEnvvars(options, preparation)) {
@@ -332,14 +332,16 @@ private:
 		TRACE_POINT();
 		try {
 			string data = "You have control 1.0\n"
-				"passenger_root: " + config->resourceLocator.getRoot() + "\n"
-				"ruby_libdir: " + config->resourceLocator.getRubyLibDir() + "\n"
-				"passenger_version: " PASSENGER_VERSION "\n"
-				"generation_dir: " + generation->getPath() + "\n";
+				"passenger_root: " + config->resourceLocator->getRoot() + "\n"
+				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
+				"passenger_version: " PASSENGER_VERSION "\n";
+			if (config->generation != NULL) {
+				data.append("generation_dir: " + config->generation->getPath() + "\n");
+			}
 
 			vector<string> args;
 			vector<string>::const_iterator it, end;
-			details.options->toVector(args, config->resourceLocator, Options::SPAWN_OPTIONS);
+			details.options->toVector(args, *config->resourceLocator, Options::SPAWN_OPTIONS);
 			for (it = args.begin(); it != args.end(); it++) {
 				const string &key = *it;
 				it++;
@@ -621,7 +623,7 @@ private:
 		vector<string>::const_iterator it;
 
 		writeExact(fd, "spawn\n", &timeout);
-		options.toVector(args, config->resourceLocator, Options::SPAWN_OPTIONS);
+		options.toVector(args, *config->resourceLocator, Options::SPAWN_OPTIONS);
 		for (it = args.begin(); it != args.end(); it++) {
 			const string &key = *it;
 			it++;
@@ -703,8 +705,7 @@ protected:
 	}
 
 public:
-	SmartSpawner(const ServerInstanceDir::GenerationPtr &_generation,
-		const vector<string> &_preloaderCommand,
+	SmartSpawner(const vector<string> &_preloaderCommand,
 		const Options &_options,
 		const SpawnerConfigPtr &_config)
 		: Spawner(_config),
@@ -714,7 +715,6 @@ public:
 			throw ArgumentException("preloaderCommand must have at least 2 elements");
 		}
 
-		generation = _generation;
 		options    = _options.copyAndPersist().detachFromUnionStationTransaction();
 		pid        = -1;
 		m_lastUsed = SystemTime::getUsec();

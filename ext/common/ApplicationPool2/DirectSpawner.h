@@ -111,10 +111,10 @@ private:
 		shared_array<const char *> &args) const
 	{
 		vector<string> startCommandArgs;
-		string agentsDir = config->resourceLocator.getAgentsDir();
+		string agentsDir = config->resourceLocator->getAgentsDir();
 		vector<string> command;
 
-		split(options.getStartCommand(config->resourceLocator), '\t', startCommandArgs);
+		split(options.getStartCommand(*config->resourceLocator), '\t', startCommandArgs);
 		if (startCommandArgs.empty()) {
 			throw RuntimeException("No startCommand given");
 		}
@@ -144,12 +144,9 @@ private:
 	}
 
 public:
-	DirectSpawner(const ServerInstanceDir::GenerationPtr &_generation,
-		const SpawnerConfigPtr &_config)
+	DirectSpawner(const SpawnerConfigPtr &_config)
 		: Spawner(_config)
-	{
-		generation = _generation;
-	}
+		{ }
 
 	virtual SpawnObject spawn(const Options &options) {
 		TRACE_POINT();

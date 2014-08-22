@@ -152,7 +152,7 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 {
 	TRACE_POINT();
 	UnionStation::TransactionPtr transaction;
-	ErrorRenderer renderer(config->resourceLocator);
+	ErrorRenderer renderer(*config->resourceLocator);
 	string appMessage = e.getErrorPage();
 	string errorId;
 	char filename[PATH_MAX];
@@ -1426,7 +1426,7 @@ Group::getPallocPool() const {
 
 const ResourceLocator &
 Group::getResourceLocator() const {
-	return getPool()->getSpawnerConfig()->resourceLocator;
+	return *getPool()->getSpawnerConfig()->resourceLocator;
 }
 
 // 'process' is not a reference so that bind(runAttachHooks, ...) causes the shared

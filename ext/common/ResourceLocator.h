@@ -63,6 +63,8 @@ private:
 	}
 
 public:
+	ResourceLocator() { }
+
 	ResourceLocator(const string &rootOrFile) {
 		root = rootOrFile;
 		if (getFileType(rootOrFile) == FT_REGULAR) {

@@ -137,9 +137,8 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/HttpConstants.h>
-#include <Utils/Template.h>
+#include <Utils/VariantMap.h>
 #include <Utils/Timer.h>
-#include <agents/HelperAgent/AgentOptions.h>
 #include <agents/HelperAgent/RequestHandler/Client.h>
 
 namespace Passenger {
@@ -163,10 +162,13 @@ class RequestHandler: public ServerKit::HttpServer<RequestHandler, Client> {
 private:
 	typedef ServerKit::HttpServer<RequestHandler, Client> ParentClass;
 
-	const AgentOptions &options;
-	const ResourceLocator resourceLocator;
-	PoolPtr pool;
-	UnionStation::CorePtr unionStationCore;
+	const VariantMap *agentsOptions;
+	string defaultRuby;
+	string loggingAgentAddress;
+	string loggingAgentPassword;
+	string defaultUser;
+	string defaultGroup;
+
 	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
 	bool singleAppMode;
 
@@ -176,21 +178,52 @@ private:
 	#include <agents/HelperAgent/RequestHandler/CheckoutSession.cpp>
 
 public:
-	RequestHandler(ServerKit::Context *context,
-		const PoolPtr &_pool,
-		const AgentOptions &_options)
+	ResourceLocator *resourceLocator;
+	PoolPtr appPool;
+	UnionStation::CorePtr unionStationCore;
+
+	RequestHandler(ServerKit::Context *context, const VariantMap *_agentsOptions)
 		: ParentClass(context),
-		  options(_options),
-		  resourceLocator(_options.passengerRoot),
-		  pool(_pool),
+		  agentsOptions(_agentsOptions),
 		  poolOptionsCache(4),
 		  singleAppMode(false),
 		  PASSENGER_APP_GROUP_NAME("!~PASSENGER_APP_GROUP_NAME"),
+		  PASSENGER_MAX_REQUESTS("!~PASSENGER_MAX_REQUESTS"),
 		  PASSENGER_STICKY_SESSIONS("!~PASSENGER_STICKY_SESSIONS"),
 		  PASSENGER_STICKY_SESSIONS_COOKIE_NAME("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME"),
 		  HTTP_COOKIE("cookie")
 	{
-		unionStationCore = pool->getUnionStationCore();
+		defaultRuby = agentsOptions->get("default_ruby");
+		loggingAgentAddress = agentsOptions->get("logging_agent_address", false);
+		loggingAgentPassword = agentsOptions->get("logging_agent_password", false);
+		defaultUser = agentsOptions->get("default_user", false);
+		defaultGroup = agentsOptions->get("default_group", false);
+
+		if (!agentsOptions->getBool("multi_app")) {
+			boost::shared_ptr<Options> options = make_shared<Options>();
+			fillPoolOptionsFromAgentsOptions(*options);
+			options->appRoot = agentsOptions->get("app_root");
+			options->appType = agentsOptions->get("app_type");
+			options->startupFile = agentsOptions->get("startup_file");
+			options->persist(*options);
+			options->clearPerRequestFields();
+			options->detachFromUnionStationTransaction();
+			poolOptionsCache.insert(options->getAppGroupName(), options);
+			singleAppMode = true;
+		}
+	}
+
+	void initialize() {
+		TRACE_POINT();
+		if (resourceLocator == NULL) {
+			throw RuntimeException("ResourceLocator not initialized");
+		}
+		if (appPool == NULL) {
+			throw RuntimeException("AppPool not initialized");
+		}
+		if (unionStationCore != NULL) {
+			unionStationCore = appPool->getUnionStationCore();
+		}
 	}
 
 	void inspect(ostream &stream) {

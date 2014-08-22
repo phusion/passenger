@@ -31,8 +31,6 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/SystemMetricsCollector.h>
 
-namespace SystemMetricsTool {
-
 using namespace std;
 using namespace Passenger;
 
@@ -163,8 +161,8 @@ perform(const Options &options, SystemMetricsCollector &collector, SystemMetrics
 	}
 }
 
-static int
-main(int argc, char *argv[]) {
+int
+systemMetricsMain(int argc, char *argv[]) {
 	Options options = parseOptions(argc, argv);
 	if (options.help) {
 		usage();
@@ -195,5 +193,3 @@ main(int argc, char *argv[]) {
 	}
 	return 0;
 }
-
-} // namespace SystemMetricsTool

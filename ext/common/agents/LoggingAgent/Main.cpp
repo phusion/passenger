@@ -125,7 +125,7 @@ myself() {
 
 static void
 initializeBareEssentials(int argc, char *argv[]) {
-	agentsOptions = initializeAgent(argc, argv, "PassengerLoggingAgent");
+	agentsOptions = initializeAgent(argc, &argv, "PassengerLoggingAgent");
 	curl_global_init(CURL_GLOBAL_ALL);
 	if (agentsOptions.get("test_binary", false) == "1") {
 		printf("PASS\n");

@@ -18,9 +18,9 @@ onRequestBegin(Client *client, Request *req) {
 	}
 	setStickySessionId(client, req);
 
-	//checkoutSession(client, req);
+	checkoutSession(client, req);
 
-	writeResponse(client,
+	/* writeResponse(client,
 		"HTTP/1.1 200 OK\r\n"
 		"Content-Length: 3\r\n"
 		"Content-Type: text/plain\r\n"
@@ -28,7 +28,7 @@ onRequestBegin(Client *client, Request *req) {
 		"\r\n"
 		"ok\n"
 	);
-	endRequest(&client, &req);
+	endRequest(&client, &req); */
 }
 
 private:
@@ -61,6 +61,25 @@ initializePoolOptions(Client *client, Request *req) {
 			disconnectWithError(&client, "the !~PASSENGER_APP_GROUP_NAME header must be set");
 			return;
 		}
+	}
+
+	if (!req->ended()) {
+		fillPoolOption(req, req->options.maxRequests, PASSENGER_MAX_REQUESTS);
+	}
+}
+
+void
+fillPoolOptionsFromAgentsOptions(Options &options) {
+	options.ruby = defaultRuby;
+	options.logLevel = getLogLevel();
+	options.loggingAgentAddress = loggingAgentAddress;
+	options.loggingAgentUsername = P_STATIC_STRING("logging");
+	options.loggingAgentPassword = loggingAgentPassword;
+	if (!this->defaultUser.empty()) {
+		options.defaultUser = defaultUser;
+	}
+	if (!this->defaultGroup.empty()) {
+		options.defaultGroup = defaultGroup;
 	}
 }
 
@@ -164,13 +183,7 @@ createNewPoolOptions(Client *client, Request *req) {
 		options.baseURI = StaticString(scriptName->start->data, scriptName->size);
 	}
 
-	options.ruby = this->options.defaultRubyCommand;
-	options.logLevel = getLogLevel();
-	options.loggingAgentAddress = this->options.loggingAgentAddress;
-	options.loggingAgentUsername = P_STATIC_STRING("logging");
-	options.loggingAgentPassword = this->options.loggingAgentPassword;
-	options.defaultUser = this->options.defaultUser;
-	options.defaultGroup = this->options.defaultGroup;
+	fillPoolOptionsFromAgentsOptions(options);
 
 	fillPoolOption(req, options.appGroupName, "!~PASSENGER_APP_GROUP_NAME");
 	fillPoolOption(req, options.appType, "!~PASSENGER_APP_TYPE");
@@ -182,7 +195,6 @@ createNewPoolOptions(Client *client, Request *req) {
 	fillPoolOption(req, options.group, "!~PASSENGER_GROUP");
 	fillPoolOption(req, options.minProcesses, "!~PASSENGER_MIN_PROCESSES");
 	fillPoolOption(req, options.maxProcesses, "!~PASSENGER_MAX_PROCESSES");
-	fillPoolOption(req, options.maxRequests, "!~PASSENGER_MAX_REQUESTS");
 	fillPoolOption(req, options.spawnMethod, "!~PASSENGER_SPAWN_METHOD");
 	fillPoolOption(req, options.startCommand, "!~PASSENGER_START_COMMAND");
 	fillPoolOptionSecToMsec(req, options.startTimeout, "!~PASSENGER_START_TIMEOUT");

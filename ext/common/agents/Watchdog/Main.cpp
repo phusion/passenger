@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -77,7 +77,6 @@ enum OomFileType {
 
 class ServerInstanceDirToucher;
 class AgentWatcher;
-static bool hasEnvOption(const char *name, bool defaultValue = false);
 static void setOomScore(const StaticString &score);
 
 
@@ -120,24 +119,6 @@ static string oldOomScore;
 
 
 /***** Functions *****/
-
-static bool
-hasEnvOption(const char *name, bool defaultValue) {
-	const char *value = getenv(name);
-	if (value != NULL) {
-		if (*value != '\0') {
-			return strcmp(value, "yes") == 0
-				|| strcmp(value, "y") == 0
-				|| strcmp(value, "1") == 0
-				|| strcmp(value, "on") == 0
-				|| strcmp(value, "true") == 0;
-		} else {
-			return defaultValue;
-		}
-	} else {
-		return defaultValue;
-	}
-}
 
 static FILE *
 openOomAdjFile(const char *mode, OomFileType &type) {
@@ -489,7 +470,7 @@ initializeBareEssentials(int argc, char *argv[]) {
 	 */
 	oldOomScore = setOomScoreNeverKill();
 
-	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");
+	agentsOptions = initializeAgent(argc, &argv, "PassengerWatchdog");
 
 	if (agentsOptions.get("test_binary", false) == "1") {
 		int ret;
@@ -693,7 +674,7 @@ reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPt
 }
 
 int
-main(int argc, char *argv[]) {
+watchdogMain(int argc, char *argv[]) {
 	initializeBareEssentials(argc, argv);
 	P_DEBUG("Starting Watchdog...");
 	WorkingObjectsPtr wo;

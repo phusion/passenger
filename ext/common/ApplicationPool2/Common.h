@@ -32,6 +32,7 @@
 #include <oxt/tracable_exception.hpp>
 #include <ResourceLocator.h>
 #include <RandomGenerator.h>
+#include <ServerInstanceDir.h>
 #include <StaticString.h>
 #include <MemoryKit/palloc.h>
 #include <DataStructures/StringKeyTable.h>
@@ -204,36 +205,36 @@ struct Ticket {
 
 struct SpawnerConfig {
 	// Used by error pages and hooks.
-	ResourceLocator resourceLocator;
+	ResourceLocator *resourceLocator;
 	const VariantMap *agentsOptions;
 
 	// Used for Union Station logging.
 	UnionStation::CorePtr unionStationCore;
 
 	// Used by SmartSpawner and DirectSpawner.
-	/** A random generator to use. */
 	RandomGeneratorPtr randomGenerator;
+	ServerInstanceDir::GenerationPtr generation;
 
 	// Used by DummySpawner and SpawnerFactory.
 	unsigned int concurrency;
 	unsigned int spawnerCreationSleepTime;
 	unsigned int spawnTime;
 
-	SpawnerConfig(const ResourceLocator &_resourceLocator,
-		const UnionStation::CorePtr &_unionStationCore = UnionStation::CorePtr(),
-		const RandomGeneratorPtr &randomGenerator = RandomGeneratorPtr(),
-		const VariantMap *_agentsOptions = NULL)
-		: resourceLocator(_resourceLocator),
-		  agentsOptions(_agentsOptions),
-		  unionStationCore(_unionStationCore),
+	SpawnerConfig()
+		: resourceLocator(NULL),
+		  agentsOptions(NULL),
 		  concurrency(1),
 		  spawnerCreationSleepTime(0),
 		  spawnTime(0)
-	{
-		if (randomGenerator != NULL) {
-			this->randomGenerator = randomGenerator;
-		} else {
-			this->randomGenerator = boost::make_shared<RandomGenerator>();
+		{ }
+
+	void finalize() {
+		TRACE_POINT();
+		if (resourceLocator == NULL) {
+			throw RuntimeException("ResourceLocator not initialized");
+		}
+		if (randomGenerator == NULL) {
+			randomGenerator = boost::make_shared<RandomGenerator>();
 		}
 	}
 };

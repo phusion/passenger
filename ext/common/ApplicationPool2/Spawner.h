@@ -386,16 +386,18 @@ private:
 		TRACE_POINT();
 		try {
 			string data = "You have control 1.0\n"
-				"passenger_root: " + config->resourceLocator.getRoot() + "\n"
+				"passenger_root: " + config->resourceLocator->getRoot() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
-				"ruby_libdir: " + config->resourceLocator.getRubyLibDir() + "\n"
-				"generation_dir: " + generation->getPath() + "\n"
+				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
 				"gupid: " + details.gupid + "\n"
 				"connect_password: " + details.connectPassword + "\n";
+			if (config->generation != NULL) {
+				data.append("generation_dir: " + config->generation->getPath() + "\n");
+			}
 
 			vector<string> args;
 			vector<string>::const_iterator it, end;
-			details.options->toVector(args, config->resourceLocator, Options::SPAWN_OPTIONS);
+			details.options->toVector(args, *config->resourceLocator, Options::SPAWN_OPTIONS);
 			for (it = args.begin(); it != args.end(); it++) {
 				const string &key = *it;
 				it++;
@@ -545,7 +547,6 @@ private:
 	}
 
 protected:
-	ServerInstanceDir::GenerationPtr generation;
 	SpawnerConfigPtr config;
 
 	static void nonInterruptableKillAndWaitpid(pid_t pid) {
@@ -1117,7 +1118,7 @@ protected:
 
 		appendNullTerminatedKeyValue(result, "IN_PASSENGER", "1");
 		appendNullTerminatedKeyValue(result, "PYTHONUNBUFFERED", "1");
-		appendNullTerminatedKeyValue(result, "NODE_PATH", config->resourceLocator.getNodeLibDir());
+		appendNullTerminatedKeyValue(result, "NODE_PATH", config->resourceLocator->getNodeLibDir());
 		appendNullTerminatedKeyValue(result, "RAILS_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "RACK_ENV", options.environment);
 		appendNullTerminatedKeyValue(result, "WSGI_ENV", options.environment);

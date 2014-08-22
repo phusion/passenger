@@ -109,7 +109,7 @@ static unsigned int alternativeStackSize;
 
 static volatile unsigned int abortHandlerCalled = 0;
 static unsigned int randomSeed = 0;
-static const char *argv0 = NULL;
+static char **origArgv = NULL;
 static const char *backtraceSanitizerCommand = NULL;
 static bool backtraceSanitizerPassProgramInfo = true;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
@@ -131,19 +131,25 @@ ignoreSigpipe() {
 	sigaction(SIGPIPE, &action, NULL);
 }
 
-static bool
-hasEnvOption(const char *name, bool defaultValue = false) {
+const char *
+getEnvString(const char *name, const char *defaultValue) {
 	const char *value = getenv(name);
+	if (value != NULL && *value != '\0') {
+		return value;
+	} else {
+		return defaultValue;
+	}
+}
+
+bool
+hasEnvOption(const char *name, bool defaultValue) {
+	const char *value = getEnvString(name);
 	if (value != NULL) {
-		if (*value != '\0') {
-			return strcmp(value, "yes") == 0
-				|| strcmp(value, "y") == 0
-				|| strcmp(value, "1") == 0
-				|| strcmp(value, "on") == 0
-				|| strcmp(value, "true") == 0;
-		} else {
-			return defaultValue;
-		}
+		return strcmp(value, "yes") == 0
+			|| strcmp(value, "y") == 0
+			|| strcmp(value, "1") == 0
+			|| strcmp(value, "on") == 0
+			|| strcmp(value, "true") == 0;
 	} else {
 		return defaultValue;
 	}
@@ -582,7 +588,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 				end = appendText(end, backtraceSanitizerCommand);
 				if (backtraceSanitizerPassProgramInfo) {
 					end = appendText(end, " \"");
-					end = appendText(end, argv0);
+					end = appendText(end, origArgv[0]);
 					end = appendText(end, "\" ");
 					end = appendText(end, pidStr);
 				}
@@ -1443,44 +1449,15 @@ initializeSyscallFailureSimulation(const char *processName) {
 	}
 }
 
-enum FdIsSocketResult {
-	FISR_YES,
-	FISR_NO,
-	FISR_ERROR
-};
-
-static FdIsSocketResult fdIsSocket(int fd) {
-	int ret = fcntl(fd, F_GETFL);
-	if (ret == -1) {
-		if (errno == EBADF) {
-			return FISR_NO;
-		} else {
-			return FISR_ERROR;
-		}
-	} else {
-		struct stat buf;
-		ret = fstat(fd, &buf);
-		if (ret == -1) {
-			// I think some platforms return this for anonymous
-			// Unix socket pairs.
-			return FISR_YES;
-		} else {
-			if (buf.st_mode & S_IFSOCK) {
-				return FISR_YES;
-			} else {
-				return FISR_NO;
-			}
-		}
-	}
-}
-
 VariantMap
-initializeAgent(int argc, char *argv[], const char *processName) {
+initializeAgent(int argc, char **argv[], const char *processName,
+	OptionParserFunc optionParser, int argStartIndex)
+{
 	VariantMap options;
 	const char *seedStr;
 
-	seedStr = getenv("PASSENGER_RANDOM_SEED");
-	if (seedStr == NULL || *seedStr == '\0') {
+	seedStr = getEnvString("PASSENGER_RANDOM_SEED");
+	if (seedStr == NULL) {
 		randomSeed = (unsigned int) time(NULL);
 	} else {
 		randomSeed = (unsigned int) atoll(seedStr);
@@ -1491,15 +1468,15 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	ignoreSigpipe();
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
 		shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
-		beepOnAbort  = hasEnvOption("PASSENGER_BEEP_ON_ABORT", false);
-		stopOnAbort = hasEnvOption("PASSENGER_STOP_ON_ABORT", false);
+		beepOnAbort = hasEnvOption("PASSENGER_BEEP_ON_ABORT");
+		stopOnAbort = hasEnvOption("PASSENGER_STOP_ON_ABORT");
 		IGNORE_SYSCALL_RESULT(pipe(emergencyPipe1));
 		IGNORE_SYSCALL_RESULT(pipe(emergencyPipe2));
 		installAbortHandler();
 	}
 	oxt::initialize();
 	setup_syscall_interruption_support();
-	if (getenv("PASSENGER_SIMULATE_SYSCALL_FAILURES")) {
+	if (hasEnvOption("PASSENGER_SIMULATE_SYSCALL_FAILURES")) {
 		initializeSyscallFailureSimulation(processName);
 	}
 	setvbuf(stdout, NULL, _IONBF, 0);
@@ -1507,34 +1484,18 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 
 	TRACE_POINT();
 	try {
-		if (argc == 1) {
-			int e;
-
-			switch (fdIsSocket(FEEDBACK_FD)) {
-			case FISR_YES:
-				_feedbackFdAvailable = true;
-				options.readFrom(FEEDBACK_FD);
-				if (options.getBool("fire_and_forget", false)) {
-					_feedbackFdAvailable = false;
-					close(FEEDBACK_FD);
-				}
-				break;
-			case FISR_NO:
-				fprintf(stderr,
-					"You're not supposed to start this program from the command line. "
-					"It's used internally by Phusion Passenger.\n");
+		if (hasEnvOption("PASSENGER_USE_FEEDBACK_FD")) {
+			if (argc > argStartIndex) {
+				fprintf(stderr, "No arguments may be passed when using the feedback FD.\n");
 				exit(1);
-				break;
-			case FISR_ERROR:
-				e = errno;
-				fprintf(stderr,
-					"Encountered an error in feedback file descriptor 3: %s (%d)\n",
-						strerror(e), e);
-				exit(1);
-				break;
 			}
+			_feedbackFdAvailable = true;
+			options.readFrom(FEEDBACK_FD);
+		} else if (optionParser != NULL) {
+			optionParser(argc, (const char **) *argv, options);
 		} else {
-			options.readFrom((const char **) argv + 1, argc - 1);
+			options.readFrom((const char **) *argv + argStartIndex,
+				argc - argStartIndex);
 		}
 
 		#ifdef __linux__
@@ -1581,12 +1542,18 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		exit(1);
 	}
 
-	// Change process title.
-	argv0 = strdup(argv[0]);
-	strncpy(argv[0], processName, strlen(argv[0]));
-	for (int i = 1; i < argc; i++) {
-		memset(argv[i], '\0', strlen(argv[i]));
+	// Make a copy of the arguments before changing process title.
+	origArgv = (char **) malloc(argc * sizeof(char *));
+	for (int i = 0; i < argc; i++) {
+		origArgv[i] = strdup((*argv)[i]);
 	}
+
+	// Change process title.
+	strncpy((*argv)[0], processName, strlen((*argv)[0]));
+	for (int i = 1; i < argc; i++) {
+		memset((*argv)[i], '\0', strlen((*argv)[i]));
+	}
+	*argv = origArgv;
 
 	P_DEBUG("Random seed: " << randomSeed);
 
