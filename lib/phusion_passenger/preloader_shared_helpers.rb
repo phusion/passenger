@@ -120,7 +120,7 @@ module PreloaderSharedHelpers
 			server = UNIXServer.new(socket_filename)
 		end
 		server.close_on_exec!
-		File.chmod(0600, socket_address)
+		File.chmod(0600, socket_filename)
 
 		# Update the dump information just before telling the preloader that we're
 		# ready because the HelperAgent will read and memorize this information.
