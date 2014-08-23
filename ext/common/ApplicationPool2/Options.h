@@ -76,40 +76,41 @@ class Options {
 private:
 	shared_array<char> storage;
 
-	vector<const StaticString *> getStringFields() const {
-		vector<const StaticString *> result;
+	template<typename OptionsClass, typename StaticStringClass>
+	static vector<StaticStringClass *> getStringFields(OptionsClass &options) {
+		vector<StaticStringClass *> result;
 		result.reserve(20);
 
-		result.push_back(&appRoot);
-		result.push_back(&appGroupName);
-		result.push_back(&appType);
-		result.push_back(&startCommand);
-		result.push_back(&startupFile);
-		result.push_back(&processTitle);
+		result.push_back(&options.appRoot);
+		result.push_back(&options.appGroupName);
+		result.push_back(&options.appType);
+		result.push_back(&options.startCommand);
+		result.push_back(&options.startupFile);
+		result.push_back(&options.processTitle);
 
-		result.push_back(&environment);
-		result.push_back(&baseURI);
-		result.push_back(&spawnMethod);
+		result.push_back(&options.environment);
+		result.push_back(&options.baseURI);
+		result.push_back(&options.spawnMethod);
 
-		result.push_back(&user);
-		result.push_back(&group);
-		result.push_back(&defaultUser);
-		result.push_back(&defaultGroup);
-		result.push_back(&restartDir);
+		result.push_back(&options.user);
+		result.push_back(&options.group);
+		result.push_back(&options.defaultUser);
+		result.push_back(&options.defaultGroup);
+		result.push_back(&options.restartDir);
 
-		result.push_back(&preexecChroot);
-		result.push_back(&postexecChroot);
+		result.push_back(&options.preexecChroot);
+		result.push_back(&options.postexecChroot);
 
-		result.push_back(&ruby);
-		result.push_back(&python);
-		result.push_back(&nodejs);
-		result.push_back(&loggingAgentAddress);
-		result.push_back(&loggingAgentUsername);
-		result.push_back(&loggingAgentPassword);
-		result.push_back(&groupSecret);
-		result.push_back(&hostName);
-		result.push_back(&uri);
-		result.push_back(&unionStationKey);
+		result.push_back(&options.ruby);
+		result.push_back(&options.python);
+		result.push_back(&options.nodejs);
+		result.push_back(&options.loggingAgentAddress);
+		result.push_back(&options.loggingAgentUsername);
+		result.push_back(&options.loggingAgentPassword);
+		result.push_back(&options.groupSecret);
+		result.push_back(&options.hostName);
+		result.push_back(&options.uri);
+		result.push_back(&options.unionStationKey);
 
 		return result;
 	}
@@ -478,8 +479,9 @@ public:
 	 * area.
 	 */
 	Options &persist(const Options &other) {
-		const vector<const StaticString *> strings = getStringFields();
-		const vector<const StaticString *> otherStrings = other.getStringFields();
+		vector<StaticString *> strings = getStringFields<Options, StaticString>(*this);
+		const vector<const StaticString *> otherStrings =
+			getStringFields<const Options, const StaticString>(other);
 		unsigned int i;
 		size_t otherLen = 0;
 		char *end;
@@ -501,18 +503,19 @@ public:
 
 		// Copy string fields into the internal storage area.
 		for (i = 0; i < otherStrings.size(); i++) {
-			const StaticString *str = strings[i];
+			const char *pos = end;
+			StaticString *str = strings[i];
 			const StaticString *otherStr = otherStrings[i];
-
-			// Point current object's field to the data in the
-			// internal storage area.
-			*const_cast<StaticString *>(str) = StaticString(end, otherStr->size());
 
 			// Copy over the string data.
 			memcpy(end, otherStr->c_str(), otherStr->size());
 			end += otherStr->size();
 			*end = '\0';
 			end++;
+
+			// Point current object's field to the data in the
+			// internal storage area.
+			*str = StaticString(pos, end - pos - 1);
 		}
 
 		// Copy environmentVariables names and values into the internal storage area.
