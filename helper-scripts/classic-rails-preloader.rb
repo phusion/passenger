@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2013-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -185,6 +185,7 @@ module App
 	if PreloaderSharedHelpers.run_main_loop(options) == :forked
 		handler = negotiate_spawn_command
 		handler.main_loop
+		handler.cleanup
 		LoaderSharedHelpers.after_handling_requests
 	end
 	

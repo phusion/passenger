@@ -20,16 +20,18 @@ describe RequestHandler do
 		preinitialize if respond_to?(:preinitialize)
 		@old_passenger_tmpdir = Utils.passenger_tmpdir
 		Utils.passenger_tmpdir = "request_handler_spec.tmp"
+		Utils.passenger_tmpdir
 		@owner_pipe = IO.pipe
 		@options ||= {}
 		@thread_handler = Class.new(DummyThreadHandler)
 		@options = {
 			"app_group_name" => "foobar",
-			"thread_handler" => @thread_handler
+			"thread_handler" => @thread_handler,
+			"generation_dir" => "request_handler_spec.tmp"
 		}.merge(@options)
 		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
 	end
-	
+
 	after :each do
 		stop_request_handler
 		Utils.passenger_tmpdir = @old_passenger_tmpdir
@@ -44,12 +46,12 @@ describe RequestHandler do
 			@request_handler = nil
 		end
 	end
-	
+
 	def connect(socket_name = :main)
 		address = @request_handler.server_sockets[socket_name][:address]
 		return Utils.connect_to_server(address)
 	end
-	
+
 	def send_binary_request(socket, env)
 		channel = MessageChannel.new(socket)
 		data = ""
@@ -59,7 +61,7 @@ describe RequestHandler do
 		end
 		channel.write_scalar(data)
 	end
-	
+
 	it "exits if the owner pipe is closed" do
 		@request_handler.start_main_loop_thread
 		@owner_pipe[0].close
@@ -74,7 +76,7 @@ describe RequestHandler do
 			Dir["request_handler_spec.tmp/backends/*"].should_not be_empty
 		end
 	end
-	
+
 	specify "the main socket rejects headers that are too large" do
 		stderr = StringIO.new
 		DebugLogging.log_level = 0
@@ -95,7 +97,7 @@ describe RequestHandler do
 			client.close rescue nil
 		end
 	end
-	
+
 	specify "the main socket rejects unauthenticated connections, if a connect password is supplied" do
 		@request_handler.connect_password = "1234"
 		@request_handler.start_main_loop_thread
@@ -116,7 +118,7 @@ describe RequestHandler do
 			client.close rescue nil
 		end
 	end
-	
+
 	it "accepts pings on the main server socket" do
 		@request_handler.start_main_loop_thread
 		client = connect
@@ -128,7 +130,7 @@ describe RequestHandler do
 			client.close
 		end
 	end
-	
+
 	it "accepts pings on the HTTP server socket" do
 		@request_handler.start_main_loop_thread
 		client = connect(:http)
@@ -141,7 +143,7 @@ describe RequestHandler do
 			client.close
 		end
 	end
-	
+
 	specify "the HTTP socket rejects headers that are too large" do
 		stderr = StringIO.new
 		DebugLogging.log_level = 0
@@ -163,7 +165,7 @@ describe RequestHandler do
 			client.close rescue nil
 		end
 	end
-	
+
 	specify "the HTTP socket rejects unauthenticated connections, if a connect password is supplied" do
 		DebugLogging.log_level = -1
 		@request_handler.connect_password = "1234"
@@ -522,23 +524,23 @@ describe RequestHandler do
 			@logging_agent_password = "1234"
 			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file,
 				@logging_agent_password)
-			
+
 			@union_station_core = UnionStation::Core.new(@socket_address, "logging",
 				"1234", "localhost")
 			@options = { "union_station_core" => @union_station_core }
 		end
-		
+
 		after :each do
 			if @agent_pid
 				Process.kill('KILL', @agent_pid)
 				Process.waitpid(@agent_pid)
 			end
 		end
-		
+
 		def base64(data)
 			return [data].pack('m').gsub("\n", "")
 		end
-		
+
 		it "makes the analytics log object available through the request env and a thread-local variable" do
 			header_value = nil
 			thread_value = nil
@@ -561,7 +563,7 @@ describe RequestHandler do
 			thread_value.should be_kind_of(UnionStation::Transaction)
 			header_value.should == thread_value
 		end
-		
+
 		it "logs uncaught exceptions for requests that have a transaction ID" do
 			reraised = false
 			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
@@ -596,18 +598,18 @@ describe RequestHandler do
 			reraised.should be_true
 		end
 	end
-	
+
 	describe "HTTP parsing" do
 		before :each do
 			@request_handler.start_main_loop_thread
 			@client = connect(:http)
 			@client.sync = true
 		end
-		
+
 		after :each do
 			@client.close if @client
 		end
-		
+
 		it "correctly parses HTTP requests without query string" do
 			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				headers["REQUEST_METHOD"].should == "POST"
@@ -623,7 +625,7 @@ describe RequestHandler do
 				headers["CONTENT_LENGTH"].should == "10"
 				headers["CONTENT_TYPE"].should == "text/plain"
 			end
-			
+
 			@client.write("POST /foo/bar HTTP/1.1\r\n")
 			@client.write("Host: foo.com\r\n")
 			@client.write("X-Foo-Bar: baz\r\n")
@@ -633,7 +635,7 @@ describe RequestHandler do
 			@client.close_write
 			@client.read
 		end
-		
+
 		it "correctly parses HTTP requests with query string" do
 			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				headers["REQUEST_METHOD"].should == "POST"
@@ -649,7 +651,7 @@ describe RequestHandler do
 				headers["CONTENT_LENGTH"].should == "10"
 				headers["CONTENT_TYPE"].should == "text/plain"
 			end
-			
+
 			@client.write("POST /foo/bar?hello=world&a=b+c HTTP/1.1\r\n")
 			@client.write("Host: foo.com\r\n")
 			@client.write("X-Foo-Bar: baz\r\n")
@@ -659,7 +661,7 @@ describe RequestHandler do
 			@client.close_write
 			@client.read
 		end
-		
+
 		it "correct parses HTTP requests that come in arbitrary chunks" do
 			@thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
 				headers["REQUEST_METHOD"].should == "POST"
@@ -676,7 +678,7 @@ describe RequestHandler do
 				headers["CONTENT_TYPE"].should == "text/plain"
 				headers["HTTP_PLUS_SOME"].should be_nil
 			end
-			
+
 			@client.write("POST /fo")
 			sleep 0.001
 			@client.write("o/bar?hello=world&a=b+c HT")
@@ -700,7 +702,7 @@ describe RequestHandler do
 			@client.read
 		end
 	end
-	
+
 	############################
 end
 

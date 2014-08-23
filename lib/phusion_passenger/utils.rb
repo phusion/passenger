@@ -57,6 +57,18 @@ module Utils
 		end
 	end
 
+	def retry_at_most(n, *exceptions)
+		n.times do |i|
+			begin
+				return yield
+			rescue *exceptions
+				if i == n - 1
+					raise
+				end
+			end
+		end
+	end
+
 	def home_dir
 		Etc.getpwuid(Process.uid).dir
 	end

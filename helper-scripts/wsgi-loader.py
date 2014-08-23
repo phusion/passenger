@@ -23,6 +23,7 @@
 #  THE SOFTWARE.
 
 import sys, os, re, imp, threading, signal, traceback, socket, select, struct, logging, errno
+import tempfile
 
 options = {}
 
@@ -62,13 +63,31 @@ def load_app():
 def create_server_socket():
 	global options
 
-	filename = options['generation_dir'] + '/backends/wsgi.' + str(os.getpid())
-	s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-	try:
-		os.remove(filename)
-	except OSError:
-		pass
-	s.bind(filename)
+	UNIX_PATH_MAX = options.get('UNIX_PATH_MAX', 100)
+	if 'generation_dir' in options:
+		socket_dir = options['generation_dir'] + '/backends'
+		socket_prefix = 'wsgi'
+	else:
+		socket_dir = tempfile.gettempdir()
+		socket_prefix = 'PsgWsgiApp'
+
+	i = 0
+	while i < 128:
+		s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+		socket_suffix = format(struct.unpack('Q', os.urandom(8))[0], 'x')
+		filename = socket_dir + '/' + socket_prefix + '.' + socket_suffix
+		filename = filename[0:UNIX_PATH_MAX]
+		try:
+			s.bind(filename)
+			break
+		except socket.error as e:
+			if e.errno == errno.EADDRINUSE:
+				i += 1
+				if i == 128:
+					raise e
+			else:
+				raise e
+
 	s.listen(1000)
 	return (filename, s)
 
@@ -305,3 +324,7 @@ if __name__ == "__main__":
 	print("!> Ready")
 	advertise_sockets(socket_filename)
 	handler.main_loop()
+	try:
+		os.remove(socket_filename)
+	except OSError:
+		pass

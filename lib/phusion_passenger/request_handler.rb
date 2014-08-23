@@ -112,7 +112,7 @@ class RequestHandler
 		@server_sockets = {}
 		
 		if should_use_unix_sockets?
-			@main_socket_address, @main_socket = create_unix_socket_on_filesystem
+			@main_socket_address, @main_socket = create_unix_socket_on_filesystem(options)
 		else
 			@main_socket_address, @main_socket = create_tcp_socket
 		end
@@ -159,11 +159,14 @@ class RequestHandler
 			end
 			@main_loop_thread.join
 		end
-		@server_sockets.each_value do |value|
-			address, type, socket = value
-			socket.close rescue nil
-			if type == 'unix'
-				File.unlink(address) rescue nil
+		@server_sockets.each_value do |info|
+			socket = info[:socket]
+			type = get_socket_address_type(info[:address])
+
+			socket.close if !socket.closed?
+			if type == :unix
+				filename = info[:address].sub(/^unix:/, '')
+				File.unlink(filename) rescue nil
 			end
 		end
 		@owner_pipe.close rescue nil
@@ -316,24 +319,28 @@ private
 		return !@force_http_session && ruby_engine != "jruby"
 	end
 
-	def create_unix_socket_on_filesystem
-		while true
-			begin
-				if defined?(NativeSupport)
-					unix_path_max = NativeSupport::UNIX_PATH_MAX
-				else
-					unix_path_max = 100
-				end
-				socket_address = "#{passenger_tmpdir}/backends/ruby.#{generate_random_id(:base64)}"
-				socket_address = socket_address.slice(0, unix_path_max - 10)
-				socket = UNIXServer.new(socket_address)
-				socket.listen(BACKLOG_SIZE)
-				socket.close_on_exec!
-				File.chmod(0600, socket_address)
-				return ["unix:#{socket_address}", socket]
-			rescue Errno::EADDRINUSE
-				# Do nothing, try again with another name.
-			end
+	def create_unix_socket_on_filesystem(options)
+		if defined?(NativeSupport)
+			unix_path_max = NativeSupport::UNIX_PATH_MAX
+		else
+			unix_path_max = options.fetch('UNIX_PATH_MAX', 100)
+		end
+		if options['generation_dir']
+			socket_dir = "#{options['generation_dir']}/backends"
+			socket_prefix = "ruby"
+		else
+			socket_dir = Dir.tmpdir
+			socket_prefix = "PsgRubyApp"
+		end
+
+		retry_at_most(128, Errno::EADDRINUSE) do
+			socket_address = "#{socket_dir}/#{socket_prefix}.#{generate_random_id(:base64)}"
+			socket_address = socket_address.slice(0, unix_path_max - 10)
+			socket = UNIXServer.new(socket_address)
+			socket.listen(BACKLOG_SIZE)
+			socket.close_on_exec!
+			File.chmod(0600, socket_address)
+			["unix:#{socket_address}", socket]
 		end
 	end
 	
