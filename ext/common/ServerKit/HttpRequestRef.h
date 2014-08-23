@@ -38,7 +38,9 @@ private:
 	Request *request;
 
 	static Server *getServer(Request *request) {
-		return (Server *) request->client->getServer();
+		return static_cast<Server *>(
+			static_cast<typename Server::BaseClass *>(request->client->getServerBaseClassPointer())
+		);
 	}
 
 public:

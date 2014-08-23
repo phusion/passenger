@@ -41,9 +41,6 @@ using namespace oxt;
 
 
 class FdInputChannel: protected Channel {
-public:
-	typedef Channel::Result (*DataCallback)(FdInputChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
-
 private:
 	ev_io watcher;
 	MemoryKit::mbuf buffer;
@@ -193,7 +190,7 @@ public:
 	}
 
 	void setDataCallback(DataCallback callback) {
-		Channel::dataCallback = (Channel::DataCallback) callback;
+		Channel::dataCallback = callback;
 	}
 
 	OXT_FORCE_INLINE

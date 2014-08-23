@@ -53,9 +53,9 @@ namespace tut {
 			bg.start();
 		}
 
-		static Channel::Result dataCallback(FileBufferedChannel *channel,
-			const mbuf &buffer, int errcode)
+		static Channel::Result dataCallback(Channel *_channel, const mbuf &buffer, int errcode)
 		{
+			FileBufferedChannel *channel = reinterpret_cast<FileBufferedChannel *>(_channel);
 			ServerKit_FileBufferedChannelTest *self = (ServerKit_FileBufferedChannelTest *)
 				channel->getHooks();
 			boost::lock_guard<boost::mutex> l(self->syncher);

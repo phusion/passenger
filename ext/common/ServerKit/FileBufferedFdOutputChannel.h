@@ -37,13 +37,12 @@ namespace ServerKit {
 
 class FileBufferedFdOutputChannel: protected FileBufferedChannel {
 public:
-	typedef void (*Callback)(FileBufferedFdOutputChannel *channel);
 	typedef void (*ErrorCallback)(FileBufferedFdOutputChannel *channel, int errcode);
 
 private:
 	ev_io watcher;
 
-	static Channel::Result onDataCallback(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer,
+	static Channel::Result onDataCallback(Channel *channel, const MemoryKit::mbuf &buffer,
 		int errcode)
 	{
 		FileBufferedFdOutputChannel *self = static_cast<FileBufferedFdOutputChannel *>(channel);
@@ -165,11 +164,11 @@ public:
 	}
 
 	void setBuffersFlushedCallback(Callback callback) {
-		FileBufferedChannel::buffersFlushedCallback = (FileBufferedChannel::Callback) callback;
+		FileBufferedChannel::buffersFlushedCallback = callback;
 	}
 
 	void setDataFlushedCallback(Callback callback) {
-		FileBufferedChannel::dataFlushedCallback = (FileBufferedChannel::Callback) callback;
+		FileBufferedChannel::dataFlushedCallback = callback;
 	}
 };
 

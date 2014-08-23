@@ -167,6 +167,7 @@ template<typename DerivedServer, typename Client = Client>
 class BaseServer: public HooksImpl {
 public:
 	/***** Types *****/
+	typedef BaseServer BaseClass;
 	typedef Client ClientType;
 	typedef ClientRef<DerivedServer, Client> ClientRefType;
 	STAILQ_HEAD(FreeClientList, Client);
@@ -414,18 +415,23 @@ private:
 		}
 	}
 
-	static Channel::Result _onClientDataReceived(FdInputChannel *channel,
+	static Channel::Result _onClientDataReceived(Channel *_channel,
 		const MemoryKit::mbuf &buffer, int errcode)
 	{
-		Client *client = static_cast<Client *>(channel->getHooks()->userData);
-		BaseServer *server = static_cast<BaseServer *>(client->getServer());
+		FdInputChannel *channel = reinterpret_cast<FdInputChannel *>(_channel);
+		Client *client = static_cast<Client *>(static_cast<BaseClient *>(
+			channel->getHooks()->userData));
+		BaseServer *server = getServerFromClient(client);
 		server->logClientDataReceived(client, buffer, errcode);
 		return server->onClientDataReceived(client, buffer, errcode);
 	}
 
-	static void _onClientOutputError(FileBufferedFdOutputChannel *channel, int errcode) {
-		Client *client = static_cast<Client *>(channel->getHooks()->userData);
-		BaseServer *server = static_cast<BaseServer *>(client->getServer());
+	static void _onClientOutputError(FileBufferedFdOutputChannel *_channel, int errcode) {
+		FileBufferedFdOutputChannel *channel =
+			reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
+		Client *client = static_cast<Client *>(static_cast<BaseClient *>(
+			channel->getHooks()->userData));
+		BaseServer *server = getServerFromClient(client);
 		server->onClientOutputError(client, errcode);
 	}
 
@@ -437,6 +443,19 @@ protected:
 	 */
 	ClientRefType getClientRef(Client *client) {
 		return ClientRefType(client);
+	}
+
+	/**
+	 * Returns a pointer to the BaseServer that created the given Client object.
+	 * Unlike the void pointer that Client::getServerBaseClassPointer() returns,
+	 * this method's typed return value allows safe recasting of the result pointer.
+	 */
+	static const BaseServer *getConstServerFromClient(const Client *client) {
+		return static_cast<BaseServer *>(client->getServerBaseClassPointer());
+	}
+
+	static BaseServer *getServerFromClient(Client *client) {
+		return static_cast<BaseServer *>(client->getServerBaseClassPointer());
 	}
 
 	/** Increase client reference count. */
@@ -476,7 +495,7 @@ protected:
 
 	virtual void onClientObjectCreated(Client *client) {
 		client->hooks.impl        = this;
-		client->hooks.userData    = client;
+		client->hooks.userData    = static_cast<BaseClient *>(client);
 
 		client->input.setContext(ctx);
 		client->input.setHooks(&client->hooks);
@@ -747,17 +766,17 @@ public:
 	}
 
 	virtual bool hook_isConnected(Hooks *hooks, void *source) {
-		Client *client = static_cast<Client *>(hooks->userData);
+		Client *client = static_cast<Client *>(static_cast<BaseClient *>(hooks->userData));
 		return client->connected();
 	}
 
 	virtual void hook_ref(Hooks *hooks, void *source) {
-		Client *client = static_cast<Client *>(hooks->userData);
+		Client *client = static_cast<Client *>(static_cast<BaseClient *>(hooks->userData));
 		refClient(client);
 	}
 
 	virtual void hook_unref(Hooks *hooks, void *source) {
-		Client *client = static_cast<Client *>(hooks->userData);
+		Client *client = static_cast<Client *>(static_cast<BaseClient *>(hooks->userData));
 		unrefClient(client);
 	}
 };

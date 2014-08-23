@@ -182,7 +182,7 @@ public:
 		WS_TERMINATED
 	};
 
-	typedef Channel::Result (*DataCallback)(FileBufferedChannel *channel, const MemoryKit::mbuf &buffer, int errcode);
+	typedef Channel::DataCallback DataCallback;
 	typedef void (*Callback)(FileBufferedChannel *channel);
 
 	// `buffered` is 25-bit. This is 2^25-1, or 32 MB.
@@ -1191,7 +1191,7 @@ public:
 	}
 
 	void setDataCallback(DataCallback callback) {
-		Channel::dataCallback = (Channel::DataCallback) callback;
+		Channel::dataCallback = callback;
 	}
 
 	OXT_FORCE_INLINE

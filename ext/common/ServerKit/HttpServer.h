@@ -69,21 +69,21 @@ private:
 	class RequestHooksImpl: public HooksImpl {
 	public:
 		virtual bool hook_isConnected(Hooks *hooks, void *source) {
-			Request *req = static_cast<Request *>(hooks->userData);
+			Request *req = static_cast<Request *>(static_cast<BaseHttpRequest *>(hooks->userData));
 			return !req->ended();
 		}
 
 		virtual void hook_ref(Hooks *hooks, void *source) {
-			Request *req       = static_cast<Request *>(hooks->userData);
+			Request *req       = static_cast<Request *>(static_cast<BaseHttpRequest *>(hooks->userData));
 			Client *client     = static_cast<Client *>(req->client);
-			HttpServer *server = static_cast<HttpServer *>(client->getServer());
+			HttpServer *server = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
 			server->refRequest(req);
 		}
 
 		virtual void hook_unref(Hooks *hooks, void *source) {
-			Request *req       = static_cast<Request *>(hooks->userData);
+			Request *req       = static_cast<Request *>(static_cast<BaseHttpRequest *>(hooks->userData));
 			Client *client     = static_cast<Client *>(req->client);
-			HttpServer *server = static_cast<HttpServer *>(client->getServer());
+			HttpServer *server = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
 			server->unrefRequest(req);
 		}
 	};
@@ -185,20 +185,28 @@ private:
 
 	/***** Request deinitialization and preparation for next request *****/
 
+	/**
+	 * Must be idempotent, because onClientDisconnecting() can call it
+	 * after endRequest() is called.
+	 */
 	void deinitCurrentRequest(Client *client, Request *req) {
 		assert(client->currentRequest == req);
 
-		if (req->httpState == Request::PARSING_HEADERS && req->reqParser.headerParser != NULL) {
+		if (req->httpState == Request::PARSING_HEADERS
+		 && req->reqParser.headerParser != NULL)
+		{
 			headerParserObjectPool.destroy(req->reqParser.headerParser);
 			req->reqParser.headerParser = NULL;
 		}
 
-		req->httpState = Request::WAITING_FOR_REFERENCES;
-		req->deinitialize();
-		assert(req->ended());
-		LIST_INSERT_HEAD(&client->endedRequests, req,
-			nextRequest.endedRequest);
-		client->endedRequestCount++;
+		if (req->httpState != Request::WAITING_FOR_REFERENCES) {
+			req->httpState = Request::WAITING_FOR_REFERENCES;
+			req->deinitialize();
+			assert(req->ended());
+			LIST_INSERT_HEAD(&client->endedRequests, req,
+				nextRequest.endedRequest);
+			client->endedRequestCount++;
+		}
 	}
 
 	void doneWithCurrentRequest(Client **client) {
@@ -208,7 +216,10 @@ private:
 		bool keepAlive = req->canKeepAlive();
 
 		assert(req->httpState = Request::WAITING_FOR_REFERENCES);
+		assert(req->pool != NULL);
 		c->currentRequest = NULL;
+		psg_destroy_pool(req->pool);
+		req->pool = NULL;
 		unrefRequest(req);
 		if (keepAlive) {
 			handleNextRequest(c);
@@ -272,9 +283,12 @@ private:
 
 	/***** Channel callbacks *****/
 
-	static void _onClientOutputDataFlushed(ServerKit::FileBufferedFdOutputChannel *channel) {
-		Client *client = static_cast<Client *>(channel->getHooks()->userData);
-		HttpServer *self = static_cast<HttpServer *>(client->getServer());
+	static void _onClientOutputDataFlushed(FileBufferedChannel *_channel) {
+		FileBufferedFdOutputChannel *channel =
+			reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
+		Client *client = static_cast<Client *>(static_cast<BaseClient *>(
+			channel->getHooks()->userData));
+		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
 		if (client->currentRequest != NULL
 		 && client->currentRequest->httpState == Request::FLUSHING_OUTPUT)
 		{
@@ -282,20 +296,23 @@ private:
 		}
 	}
 
-	static Channel::Result onRequestBodyChannelData(FileBufferedChannel *channel,
+	static Channel::Result onRequestBodyChannelData(Channel *_channel,
 		const MemoryKit::mbuf &buffer, int errcode)
 	{
-		Request *req     = static_cast<Request *>(channel->getHooks()->userData);
+		FileBufferedChannel *channel = reinterpret_cast<FileBufferedChannel *>(_channel);
+		Request *req     = static_cast<Request *>(static_cast<BaseHttpRequest *>(
+			channel->getHooks()->userData));
 		Client *client   = static_cast<Client *>(req->client);
-		HttpServer *self = static_cast<HttpServer *>(client->getServer());
+		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
 
 		return self->onRequestBody(client, req, buffer, errcode);
 	}
 
 	static void onRequestBodyChannelBuffersFlushed(FileBufferedChannel *channel) {
-		Request *req     = static_cast<Request *>(channel->getHooks()->userData);
+		Request *req     = static_cast<Request *>(static_cast<BaseHttpRequest *>(
+			channel->getHooks()->userData));
 		Client *client   = static_cast<Client *>(req->client);
-		HttpServer *self = static_cast<HttpServer *>(client->getServer());
+		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
 
 		req->requestBodyChannel.buffersFlushedCallback = NULL;
 		client->input.start();
@@ -345,6 +362,7 @@ protected:
 	bool endRequest(Client **client, Request **request) {
 		Client *c = *client;
 		Request *req = *request;
+		psg_pool_t *pool;
 
 		*client = NULL;
 		*request = NULL;
@@ -360,7 +378,16 @@ protected:
 			writeDefault500Response(c, req);
 		}
 
+		// The memory buffers that we're writing out during the
+		// FLUSHING_OUTPUT state might live in the palloc pool,
+		// so we want to deinitialize the request while preserving
+		// the pool. We'll destroy the pool when the output is
+		// flushed.
+		pool = req->pool;
+		req->pool = NULL;
 		deinitCurrentRequest(c, req);
+		req->pool = pool;
+
 		if (!c->output.ended()) {
 			c->output.feed(MemoryKit::mbuf());
 		}
@@ -510,7 +537,7 @@ protected:
 
 	virtual void onRequestObjectCreated(Client *client, Request *req) {
 		req->hooks.impl = &requestHooksImpl;
-		req->hooks.userData = req;
+		req->hooks.userData = static_cast<BaseHttpRequest *>(req);
 		req->requestBodyChannel.setContext(this->getContext());
 		req->requestBodyChannel.setHooks(&req->hooks);
 		req->requestBodyChannel.setDataCallback(onRequestBodyChannelData);

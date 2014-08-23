@@ -113,11 +113,16 @@ public:
 
 	OXT_FORCE_INLINE
 	void setConnState(ConnState state) {
-		server = (void *) ((uintptr_t) getServer() | (uintptr_t) state);
+		server = (void *) ((uintptr_t) getServerBaseClassPointer() | (uintptr_t) state);
 	}
 
+	/**
+	 * Returns a pointer to the BaseServer base class object. Using it is dangerous.
+	 * You should use BaseServer::getServerFromClient() instead, which provides
+	 * better type-safety and which allows safe recasting.
+	 */
 	OXT_FORCE_INLINE
-	void *getServer() {
+	void *getServerBaseClassPointer() {
 		return (void *) ((uintptr_t) server & ~((uintptr_t) 0x3));
 	}
 
