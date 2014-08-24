@@ -200,7 +200,7 @@ public:
 		process->getGroup()->onSessionClose(process, session);
 	}
 
-	static string generateSecret(const SuperGroup *superGroup);
+	static void generateSecret(const SuperGroup *superGroup, char *secret);
 	static string generateUuid(const SuperGroup *superGroup);
 	void onSessionInitiateFailure(Process *process, Session *session);
 	void onSessionClose(Process *process, Session *session);
@@ -337,7 +337,7 @@ public:
 		options = newOptions;
 		options.persist(newOptions);
 		options.clearPerRequestFields();
-		options.groupSecret = secret;
+		options.groupSecret = StaticString(secret, SECRET_SIZE);
 		options.groupUuid   = uuid;
 	}
 
@@ -721,13 +721,15 @@ public:
 	}
 
 public:
+	static const unsigned int SECRET_SIZE = 16;
+
 	Options options;
 	/** This name uniquely identifies this Group within its Pool. It can also be used as the display name. */
 	const string name;
 	/** A secret token that may be known among all processes in this Group. Used for securing
 	 * intra-group process communication.
 	 */
-	const string secret;
+	char secret[SECRET_SIZE];
 	/** A UUID that's generated on Group initialization, and changes every time
 	 * the Group receives a restart command. Allows Union Station to track app
 	 * restarts. This information is public.
@@ -1476,7 +1478,7 @@ public:
 			stream << "<restarting/>";
 		}
 		if (includeSecrets) {
-			stream << "<secret>" << escapeForXml(secret) << "</secret>";
+			stream << "<secret>" << escapeForXml(StaticString(secret, SECRET_SIZE)) << "</secret>";
 		}
 		switch (lifeStatus) {
 		case ALIVE:

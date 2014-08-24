@@ -27,6 +27,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <oxt/system_calls.hpp>
@@ -36,6 +37,7 @@
 #include <cstdio>
 #include <climits>
 #include <cassert>
+#include <cstring>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Socket.h>
 #include <ApplicationPool2/Session.h>
@@ -98,6 +100,7 @@ typedef vector<ProcessPtr> ProcessList;
 class Process: public boost::enable_shared_from_this<Process> {
 public:
 	static const unsigned int MAX_SESSION_SOCKETS = 3;
+	static const unsigned int GUPID_MAX_SIZE = 20;
 
 // Actually private, but marked public so that unit tests can access the fields.
 public:
@@ -197,8 +200,8 @@ public:
 	unsigned int stickySessionId;
 	/** UUID for this process, randomly generated and extremely unlikely to ever
 	 * appear again in this universe. */
-	StaticString gupid;
-	StaticString connectPassword;
+	char gupid[GUPID_MAX_SIZE];
+	unsigned int gupidSize;
 	/** Admin socket, see class description. */
 	FileDescriptor adminSocket;
 	/** The sockets that this Process listens on for connections. */
@@ -308,7 +311,6 @@ public:
 
 	Process(pid_t _pid,
 		const StaticString &_gupid,
-		const StaticString &_connectPassword,
 		const FileDescriptor &_adminSocket,
 		/** Pipe on which this process outputs errors. Mapped to the process's STDERR.
 		 * Only Processes spawned by DirectSpawner have this set.
@@ -322,8 +324,6 @@ public:
 		  group(NULL),
 		  pid(_pid),
 		  stickySessionId(0),
-		  gupid(_gupid),
-		  connectPassword(_connectPassword),
 		  adminSocket(_adminSocket),
 		  sockets(_sockets),
 		  spawnerCreationTime(_spawnerCreationTime),
@@ -341,6 +341,8 @@ public:
 		  sessionSocketCount(0),
 		  shutdownStartTime(0)
 	{
+		assert(_gupid.size() <= GUPID_MAX_SIZE);
+
 		if (_adminSocket != -1) {
 			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(_adminSocket,
 				"stdout", pid);
@@ -358,6 +360,8 @@ public:
 
 		lastUsed      = SystemTime::getUsec();
 		spawnEndTime  = lastUsed;
+		gupidSize     = _gupid.size();
+		memcpy(gupid, _gupid.data(), _gupid.size());
 	}
 
 	~Process() {
@@ -632,8 +636,6 @@ public:
 	void recreateStrings(psg_pool_t *pool) {
 		SocketList::iterator it;
 
-		recreateString(pool, gupid);
-		recreateString(pool, connectPassword);
 		recreateString(pool, codeRevision);
 
 		for (it = sockets.begin(); it != sockets.end(); it++) {
@@ -645,8 +647,7 @@ public:
 	void inspectXml(Stream &stream, bool includeSockets = true) const {
 		stream << "<pid>" << pid << "</pid>";
 		stream << "<sticky_session_id>" << stickySessionId << "</sticky_session_id>";
-		stream << "<gupid>" << gupid << "</gupid>";
-		stream << "<connect_password>" << connectPassword << "</connect_password>";
+		stream << "<gupid>" << StaticString(gupid, gupidSize) << "</gupid>";
 		stream << "<concurrency>" << concurrency << "</concurrency>";
 		stream << "<sessions>" << sessions << "</sessions>";
 		stream << "<busyness>" << busyness() << "</busyness>";

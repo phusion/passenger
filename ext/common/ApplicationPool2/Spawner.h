@@ -351,7 +351,6 @@ protected:
 		/****** Working state ******/
 		BufferedIO io;
 		string gupid;
-		string connectPassword;
 		unsigned long long spawnStartTime;
 		unsigned long long timeout;
 
@@ -389,8 +388,10 @@ private:
 				"passenger_root: " + config->resourceLocator->getRoot() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
-				"gupid: " + details.gupid + "\n"
-				"connect_password: " + details.connectPassword + "\n";
+				"gupid: " + details.gupid + "\n";
+			if (!details.options->groupSecret.empty()) {
+				"connect_password: " + details.options->groupSecret + "\n";
+			}
 			if (config->generation != NULL) {
 				data.append("generation_dir: " + config->generation->getPath() + "\n");
 			}
@@ -537,8 +538,7 @@ private:
 
 		result.process = boost::make_shared<Process>(
 			details.pid,
-			psg_pstrdup(result.pool, details.gupid),
-			psg_pstrdup(result.pool, details.connectPassword),
+			details.gupid,
 			details.adminSocket, details.errorPipe,
 			sockets, creationTime, details.spawnStartTime);
 		result.process->codeRevision = psg_pstrdup(result.pool,
@@ -1288,8 +1288,7 @@ protected:
 		TRACE_POINT();
 		details.spawnStartTime = SystemTime::getUsec();
 		details.gupid = integerToHex(SystemTime::get() / 60) + "-" +
-			config->randomGenerator->generateAsciiString(11);
-		details.connectPassword = config->randomGenerator->generateAsciiString(43);
+			config->randomGenerator->generateAsciiString(10);
 		details.timeout = details.options->startTimeout * 1000;
 
 		string result;

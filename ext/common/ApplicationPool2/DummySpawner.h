@@ -62,12 +62,9 @@ public:
 		boost::lock_guard<boost::mutex> l(lock);
 		count++;
 		SpawnObject object;
-		StaticString gupid = psg_pstrdup(object.pool,
-			"gupid-" + toString(count));
-		StaticString countStr = psg_pstrdup(object.pool,
-			toString(count));
+		string gupid = "gupid-" + toString(count);
 		object.process = boost::make_shared<Process>(
-			(pid_t) count, gupid, countStr,
+			(pid_t) count, gupid,
 			adminSocket.second, FileDescriptor(), sockets,
 			SystemTime::getUsec(), SystemTime::getUsec());
 		object.process->dummy = true;

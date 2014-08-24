@@ -524,10 +524,10 @@ SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
 Group::Group(SuperGroup *_superGroup, const Options &options, const ComponentInfo &info)
 	: superGroup(_superGroup),
 	  name(_superGroup->name + "#" + info.name),
-	  secret(generateSecret(_superGroup)),
 	  uuid(generateUuid(_superGroup)),
 	  componentInfo(info)
 {
+	generateSecret(_superGroup, secret);
 	enabledCount   = 0;
 	disablingCount = 0;
 	disabledCount  = 0;
@@ -569,7 +569,7 @@ Group::~Group() {
 void
 Group::initialize() {
 	nullProcess = boost::make_shared<Process>(
-		0, StaticString(), StaticString(),
+		0, StaticString(),
 		FileDescriptor(), FileDescriptor(),
 		SocketList(), 0, 0);
 	nullProcess->dummy = true;
@@ -907,7 +907,8 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		data.push_back(makeStaticStringWithNull("OOBW"));
 
 		data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
-		data.push_back(makeStaticStringWithNull(process->connectPassword));
+		data.push_back(StaticString(secret, SECRET_SIZE));
+		data.push_back(StaticString("", 1));
 
 		boost::uint32_t dataSize = 0;
 		for (unsigned int i = 1; i < data.size(); i++) {
@@ -1449,9 +1450,9 @@ Group::setupAttachOrDetachHook(const ProcessPtr process, HookScriptOptions &opti
 	options.environment.push_back(make_pair("PASSENGER_APP_ROOT", this->options.appRoot));
 }
 
-string
-Group::generateSecret(const SuperGroup *superGroup) {
-	return superGroup->getPool()->getRandomGenerator()->generateAsciiString(43);
+void
+Group::generateSecret(const SuperGroup *superGroup, char *secret) {
+	superGroup->getPool()->getRandomGenerator()->generateAsciiString(secret, SECRET_SIZE);
 }
 
 string
@@ -1496,7 +1497,8 @@ Process::realSendAbortLongRunningConnectionsMessage(string address) {
 
 SessionPtr
 Process::createSessionObject(Socket *socket) {
-	Pool *pool = getGroup()->getPool();
+	Group *group = getGroup();
+	Pool *pool = group->getPool();
 	Session *session;
 	{
 		LockGuard l(pool->sessionObjectPoolSyncher);
@@ -1522,8 +1524,8 @@ Process::inspect() const {
 
 
 StaticString
-Session::getConnectPassword() const {
-	return getProcess()->connectPassword;
+Session::getGroupSecret() const {
+	return StaticString(getGroup()->secret, Group::SECRET_SIZE);
 }
 
 pid_t
@@ -1533,7 +1535,8 @@ Session::getPid() const {
 
 StaticString
 Session::getGupid() const {
-	return getProcess()->gupid;
+	const Process *process = getProcess();
+	return StaticString(process->gupid, process->gupidSize);
 }
 
 unsigned int

@@ -47,8 +47,8 @@ using namespace oxt;
  * within Phusion Passenger is usually a single request + response but the API
  * allows arbitrary I/O. See Process's class overview for normal usage of Session.
  *
- * Not thread-safe, but Pool's and Process's API encourage that
- * a Session is only used by 1 thread and then thrown away.
+ * This class can be used outside the ApplicationPool lock, but is not thread-safe,
+ * and so should only be access through 1 thread.
  *
  * You MUST destroy all Session objects before destroying the Pool, because Session
  * objects are stored inside a memory pool inside Pool.
@@ -117,7 +117,7 @@ public:
 		}
 	}
 
-	StaticString getConnectPassword() const;
+	StaticString getGroupSecret() const;
 	pid_t getPid() const;
 	StaticString getGupid() const;
 	unsigned int getStickySessionId() const;
