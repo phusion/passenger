@@ -326,8 +326,8 @@ public:
 		if (nonEmptyIndex < MAX_ITEMS) {
 			assert(m_population > 0);
 			Cell *cell = &m_cells[nonEmptyIndex];
-			const char *cellKey = lookupCellKey(cell);
 			if (key != NULL) {
+				const char *cellKey = lookupCellKey(cell);
 				*key = HashedStaticString(cellKey, cell->keyLength, cell->hash);
 			}
 			*result = &cell->value;
