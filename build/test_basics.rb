@@ -75,6 +75,7 @@ task 'test:install_deps' do
 
 		if ruby_version_int >= 190
 		    sh "cd test/stub/rails4.0 && bundle install"
+		    sh "cd test/stub/rails4.1 && bundle install"
                 end
 	end
 	if boolean_option('NODE_MODULES', default)
