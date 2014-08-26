@@ -187,7 +187,7 @@ private
 	end
 end
 
-if '-m' in ARGV
+if ARGV.include? '-m'
     require 'yaml'
     puts App.new.machine_readable.to_yaml
 else
