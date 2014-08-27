@@ -111,6 +111,17 @@ public:
 		return (ConnState) ((uintptr_t) server & 0x3);
 	}
 
+	const char *getConnStateString() const {
+		switch (getConnState()) {
+		case IN_FREELIST:
+			return "IN_FREELIST";
+		case ACTIVE:
+			return "ACTIVE";
+		case DISCONNECTED:
+			return "DISCONNECTED";
+		}
+	}
+
 	OXT_FORCE_INLINE
 	void setConnState(ConnState state) {
 		server = (void *) ((uintptr_t) getServerBaseClassPointer() | (uintptr_t) state);
@@ -124,17 +135,6 @@ public:
 	OXT_FORCE_INLINE
 	void *getServerBaseClassPointer() {
 		return (void *) ((uintptr_t) server & ~((uintptr_t) 0x3));
-	}
-
-
-	/***** Overridable methods *****/
-
-	virtual void reinitialize(int fd) {
-		// Do nothing.
-	}
-
-	virtual void deinitialize() {
-		// Do nothing.
 	}
 };
 

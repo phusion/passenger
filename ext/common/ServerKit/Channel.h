@@ -340,7 +340,7 @@ protected:
 	}
 
 	void executeCall() {
-		assert(state == PLANNING_TO_CALL);
+		P_ASSERT_EQ(state, PLANNING_TO_CALL);
 		planId = 0;
 		state = CALLING;
 		callDataCallback();
@@ -462,8 +462,8 @@ public:
 	}
 
 	int feedWithoutRefGuard(BOOST_RV_REF(MemoryKit::mbuf) mbuf) {
-		assert(state == IDLE);
-		assert(bytesConsumed == 0);
+		P_ASSERT_EQ(state, IDLE);
+		P_ASSERT_EQ(bytesConsumed, 0);
 		if (mbuf.empty()) {
 			state = CALLING_WITH_EOF;
 		} else {

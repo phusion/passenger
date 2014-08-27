@@ -202,7 +202,7 @@ namespace tut {
 		set_test_name("Once a client has been disconnected, and the freelist has "
 			"reached the limit, the client object is destroyed");
 
-		server->freelistLimit = 0;
+		server->clientFreelistLimit = 0;
 		startServer();
 
 		FileDescriptor fd = connectToServer1();
@@ -252,7 +252,7 @@ namespace tut {
 			"disconnecting list, then destroyed when the last references disappear");
 
 		vector<ClientRefType> clients;
-		server->freelistLimit = 0;
+		server->clientFreelistLimit = 0;
 		startServer();
 
 		FileDescriptor fd = connectToServer1();

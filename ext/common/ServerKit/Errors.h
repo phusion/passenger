@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2012-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,41 +22,43 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#include <DataStructures/HashedStaticString.h>
+#ifndef _PASSENGER_SERVER_KIT_ERRORS_H_
+#define _PASSENGER_SERVER_KIT_ERRORS_H_
+
+#include <cstring>
 
 namespace Passenger {
 namespace ServerKit {
 
 
-extern const HashedStaticString TRANSFER_ENCODING;
-extern const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[];
-extern const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE;
+enum Error {
+	CHUNK_SIZE_TOO_LARGE        = -1000,
+	CHUNK_SIZE_PARSE_ERROR      = -1001,
+	CHUNK_FOOTER_PARSE_ERROR    = -1002,
+	CHUNK_FINALIZER_PARSE_ERROR = -1003,
+	UNEXPECTED_EOF              = -1004
+};
 
-const HashedStaticString TRANSFER_ENCODING("transfer-encoding");
-const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[] =
-	"Status: 500 Internal Server Error\r\n"
-	"Content-Length: 22\r\n"
-	"Content-Type: text/plain\r\n"
-	"Connection: close\r\n"
-	"\r\n"
-	"Internal server error\n";
-const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE =
-	sizeof(DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE) - 1;
-
-// The following functions are defined in this compilation unit so that they're
-// compiled with optimizations on by default.
-
-void
-forceLowerCase(unsigned char *data, size_t len) {
-	const unsigned char *end = data + len;
-	while (data < end) {
-		unsigned char c = *data;
-		if (c >= 'A' && c <= 'Z') {
-			*data = c | 0x20;
-		}
-		data++;
+inline const char *
+getErrorDesc(int errcode) {
+	switch (errcode) {
+	case CHUNK_SIZE_TOO_LARGE:
+		return "Chunked encoding size too large";
+	case CHUNK_SIZE_PARSE_ERROR:
+		return "Chunked encoding size string parse error";
+	case CHUNK_FOOTER_PARSE_ERROR:
+		return "Chunked encoding footer parse error";
+	case CHUNK_FINALIZER_PARSE_ERROR:
+		return "Chunked encoding final chunk parse error";
+	case UNEXPECTED_EOF:
+		return "Unexpected end-of-stream";
+	default:
+		return std::strerror(errcode);
 	}
 }
 
+
 } // namespace ServerKit
-} // namespace
+} // namespace Passenger
+
+#endif /* _PASSENGER_SERVER_KIT_ERRORS_H_ */

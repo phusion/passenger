@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <cassert>
 #include <pthread.h>
+#include <Logging.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/HttpClient.h>
 #include <ServerKit/HttpRequest.h>
@@ -40,6 +41,8 @@
 #include <ServerKit/HttpChunkedBodyParser.h>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/HttpConstants.h>
+#include <Utils/Hasher.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -60,6 +63,7 @@ public:
 
 	FreeRequestList freeRequests;
 	unsigned int freeRequestCount, requestFreelistLimit;
+	unsigned int totalRequestsAccepted;
 
 private:
 	/***** Types and nested classes *****/
@@ -88,13 +92,45 @@ private:
 		}
 	};
 
+	struct ChunkedBodyParserAdapter {
+		typedef Request Message;
+		typedef FdInputChannel InputChannel;
+		typedef FileBufferedChannel OutputChannel;
+
+		Request *req;
+
+		ChunkedBodyParserAdapter(Request *_req)
+			: req(_req)
+			{ }
+
+		bool requestEnded() {
+			return req->ended();
+		}
+
+		void setOutputBuffersFlushedCallback() {
+			req->bodyChannel.setBuffersFlushedCallback(outputBuffersFlushed);
+		}
+
+		static void outputBuffersFlushed(FileBufferedChannel *_channel) {
+			FileBufferedFdOutputChannel *channel =
+				reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
+			Request *req = static_cast<Request *>(static_cast<BaseHttpRequest *>(
+				channel->getHooks()->userData));
+			Client *client = static_cast<Client *>(req->client);
+			HttpServer::createChunkedBodyParser(client, req).
+				outputBuffersFlushed();
+		}
+	};
+
+	typedef HttpChunkedBodyParser<ChunkedBodyParserAdapter> ChunkedBodyParser;
+
 	friend class RequestHooksImpl;
 
 
 	/***** Working state *****/
 
 	RequestHooksImpl requestHooksImpl;
-	object_pool<HttpHeaderParser> headerParserObjectPool;
+	object_pool<HttpHeaderParserState> headerParserStatePool;
 
 
 	/***** Request object creation and destruction *****/
@@ -113,7 +149,7 @@ private:
 		SKS_TRACE(3, "Checking out request object from freelist (" <<
 			freeRequestCount << " -> " << (freeRequestCount - 1) << ")");
 		Request *request = STAILQ_FIRST(&freeRequests);
-		assert(request->httpState == Request::IN_FREELIST);
+		P_ASSERT_EQ(request->httpState, Request::IN_FREELIST);
 		freeRequestCount--;
 		STAILQ_REMOVE_HEAD(&freeRequests, nextRequest.freeRequest);
 		return request;
@@ -133,7 +169,7 @@ private:
 
 	void requestReachedZeroRefcount(Request *request) {
 		Client *client = static_cast<Client *>(request->client);
-		assert(request->httpState == Request::WAITING_FOR_REFERENCES);
+		P_ASSERT_EQ(request->httpState, Request::WAITING_FOR_REFERENCES);
 		assert(client->endedRequestCount > 0);
 		assert(client->currentRequest != request);
 		assert(!LIST_EMPTY(&client->endedRequests));
@@ -185,23 +221,12 @@ private:
 
 	/***** Request deinitialization and preparation for next request *****/
 
-	/**
-	 * Must be idempotent, because onClientDisconnecting() can call it
-	 * after endRequest() is called.
-	 */
-	void deinitCurrentRequest(Client *client, Request *req) {
+	void deinitializeRequestAndAddToFreelist(Client *client, Request *req) {
 		assert(client->currentRequest == req);
-
-		if (req->httpState == Request::PARSING_HEADERS
-		 && req->reqParser.headerParser != NULL)
-		{
-			headerParserObjectPool.destroy(req->reqParser.headerParser);
-			req->reqParser.headerParser = NULL;
-		}
 
 		if (req->httpState != Request::WAITING_FOR_REFERENCES) {
 			req->httpState = Request::WAITING_FOR_REFERENCES;
-			req->deinitialize();
+			deinitializeRequest(client, req);
 			assert(req->ended());
 			LIST_INSERT_HEAD(&client->endedRequests, req,
 				nextRequest.endedRequest);
@@ -215,7 +240,7 @@ private:
 		Request *req = c->currentRequest;
 		bool keepAlive = req->canKeepAlive();
 
-		assert(req->httpState = Request::WAITING_FOR_REFERENCES);
+		P_ASSERT_EQ(req->httpState, Request::WAITING_FOR_REFERENCES);
 		assert(req->pool != NULL);
 		c->currentRequest = NULL;
 		psg_destroy_pool(req->pool);
@@ -231,52 +256,212 @@ private:
 	void handleNextRequest(Client *client) {
 		Request *req;
 
+		this->refClient(client);
 		client->input.start();
 		client->output.deinitialize();
 		client->output.reinitialize(client->getFd());
 
 		client->currentRequest = req = checkoutRequestObject(client);
 		req->client = client;
-		req->reinitialize();
-		req->reqParser.headerParser = headerParserObjectPool.construct(
-			this->getContext(), req);
+		reinitializeRequest(client, req);
+	}
 
-		this->refClient(client);
+
+	/***** Client data handling *****/
+
+	Channel::Result processClientDataWhenParsingHeaders(Client *client, Request *req,
+		const MemoryKit::mbuf &buffer, int errcode)
+	{
+		if (buffer.size() > 0) {
+			size_t ret;
+			{
+				ret = createRequestHeaderParser(this->getContext(), req).
+					feed(buffer);
+			}
+			if (req->httpState == Request::PARSING_HEADERS) {
+				// Not yet done parsing.
+				return Channel::Result(buffer.size(), false);
+			}
+
+			// Done parsing.
+			SKC_TRACE(client, 2, "New request received");
+			headerParserStatePool.destroy(req->parserState.headerParser);
+			req->parserState.headerParser = NULL;
+
+			switch (req->httpState) {
+			case Request::COMPLETE:
+				client->input.stop();
+				onRequestBegin(client, req);
+				return Channel::Result(ret, false);
+			case Request::PARSING_BODY:
+				SKC_TRACE(client, 2, "Expecting a request body");
+				onRequestBegin(client, req);
+				return Channel::Result(ret, false);
+			case Request::PARSING_CHUNKED_BODY:
+				SKC_TRACE(client, 2, "Expecting a chunked request body");
+				prepareChunkedBodyParsing(client, req);
+				onRequestBegin(client, req);
+				return Channel::Result(ret, false);
+			case Request::UPGRADED:
+				if (supportsUpgrade(client, req)) {
+					SKC_TRACE(client, 2, "Expecting connection upgrade");
+					onRequestBegin(client, req);
+					return Channel::Result(ret, false);
+				} else {
+					endAsBadRequest(&client, &req,
+						"Bad request (connection upgrading not allowed for this request)");
+					return Channel::Result(0, true);
+				}
+			case Request::ERROR:
+				// Change state so that the response body will be written.
+				req->httpState = Request::COMPLETE;
+				{
+					Request *req2 = req;
+					endAsBadRequest(&client, &req2, req->parseError);
+				}
+				return Channel::Result(0, true);
+			default:
+				P_BUG("Invalid request HTTP state " << (int) req->httpState);
+				return Channel::Result(0, true);
+			}
+		} else {
+			this->disconnect(&client);
+			return Channel::Result(0, true);
+		}
+	}
+
+	Channel::Result processClientDataWhenParsingBody(Client *client, Request *req,
+		const MemoryKit::mbuf &buffer, int errcode)
+	{
+		if (buffer.size() > 0) {
+			// Data
+			boost::uint64_t maxRemaining, remaining;
+
+			if (req->bodyInfo.contentLength == 0) {
+				maxRemaining = std::numeric_limits<boost::uint64_t>::max();
+			} else {
+				maxRemaining = req->bodyInfo.contentLength -
+					req->bodyAlreadyRead;
+			}
+			remaining = std::min<boost::uint64_t>(buffer.size(), maxRemaining);
+
+			req->bodyAlreadyRead += remaining;
+
+			if (req->bodyInfo.contentLength == 0) {
+				SKC_TRACE(client, 3, "Client response body: " <<
+					req->bodyAlreadyRead << " bytes already read");
+			} else {
+				SKC_TRACE(client, 3, "Client response body: " <<
+					req->bodyAlreadyRead << " of " <<
+					req->bodyInfo.contentLength << " bytes already read");
+			}
+
+			req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, remaining));
+			if (!req->ended()) {
+				if (!req->bodyChannel.passedThreshold()) {
+					requestBodyConsumed(client, req);
+				} else {
+					client->input.stop();
+					req->bodyChannel.buffersFlushedCallback =
+						onRequestBodyChannelBuffersFlushed;
+				}
+			}
+			return Channel::Result(remaining, false);
+		} else if (errcode == 0) {
+			// EOF
+			if (req->bodyFullyRead()) {
+				SKC_TRACE(client, 2, "Client sent EOF");
+				req->bodyChannel.feed(MemoryKit::mbuf());
+			} else {
+				SKC_DEBUG(client, "Client sent EOF before finishing response body: " <<
+					req->bodyAlreadyRead << " bytes already read, " <<
+					req->bodyInfo.contentLength << " bytes expected");
+				req->bodyChannel.feedError(UNEXPECTED_EOF);
+			}
+			return Channel::Result(0, false);
+		} else {
+			// Error
+			req->bodyChannel.feedError(errcode);
+			return Channel::Result(0, false);
+		}
+	}
+
+	Channel::Result processClientDataWhenParsingChunkedBody(Client *client, Request *req,
+		const MemoryKit::mbuf &buffer, int errcode)
+	{
+		if (buffer.size() > 0) {
+			return createChunkedBodyParser(client, req).feed(buffer);
+		} else {
+			createChunkedBodyParser(client, req).feedEof(this,
+				client, req);
+			return Channel::Result(0, false);
+		}
+	}
+
+	Channel::Result processClientDataWhenUpgraded(Client *client, Request *req,
+		const MemoryKit::mbuf &buffer, int errcode)
+	{
+		if (buffer.size() > 0) {
+			// Data
+			req->bodyChannel.feed(buffer);
+			if (!req->ended()) {
+				if (!req->bodyChannel.passedThreshold()) {
+					requestBodyConsumed(client, req);
+				} else {
+					client->input.stop();
+					req->bodyChannel.buffersFlushedCallback =
+						onRequestBodyChannelBuffersFlushed;
+				}
+			}
+			return Channel::Result(buffer.size(), false);
+		} else if (errcode == 0) {
+			// EOF
+			req->bodyChannel.feed(MemoryKit::mbuf());
+			return Channel::Result(0, false);
+		} else {
+			// Error
+			req->bodyChannel.feedError(errcode);
+			return Channel::Result(0, false);
+		}
 	}
 
 
 	/***** Miscellaneous *****/
 
+	char *appendLStringData(char *pos, const char *end, const LString *lstr) {
+		const LString::Part *part = lstr->start;
+		while (part != NULL) {
+			pos = appendData(pos, end, part->data, part->size);
+			part = part->next;
+		}
+		return pos;
+	}
+
 	void writeDefault500Response(Client *client, Request *req) {
-		const unsigned int DATE_BUFFER_SIZE = 128;
-		char *dateBuffer = (char *) psg_pnalloc(req->pool, DATE_BUFFER_SIZE);
-		char *pos = dateBuffer;
-		const char *end = dateBuffer + DATE_BUFFER_SIZE;
-		time_t the_time = SystemTime::get();
-		struct tm the_tm;
+		writeSimpleResponse(client, 500, NULL, DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE);
+	}
 
-		SKC_WARN(client, "The server did not generate a response. Sending default 500 response");
-		req->wantKeepAlive = false;
+	static HttpHeaderParser<Request> createRequestHeaderParser(Context *ctx,
+		Request *req)
+	{
+		return HttpHeaderParser<Request>(ctx, req->parserState.headerParser,
+			req, req->pool);
+	}
 
-		pos = appendData(pos, end, "HTTP/1.0 500 Internal Server Error\r\n");
-		pos = appendData(pos, end, "Date: ");
-		gmtime_r(&the_time, &the_tm);
-		pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %Z", &the_tm);
-		pos = appendData(pos, end, "\r\n");
-
-		writeResponse(client, dateBuffer, pos - dateBuffer);
-		writeResponse(client, DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE);
+	static ChunkedBodyParser createChunkedBodyParser(Client *client, Request *req) {
+		return ChunkedBodyParser(&req->parserState.chunkedBodyParser, req,
+			&client->input, &req->bodyChannel, ChunkedBodyParserAdapter(req));
 	}
 
 	void prepareChunkedBodyParsing(Client *client, Request *req) {
-		assert(req->requestBodyType == Request::RBT_CHUNKED);
-		HttpChunkedBodyParser_initialize(&req->reqParser.chunkedBodyParser, req);
+		P_ASSERT_EQ(req->bodyType, Request::RBT_CHUNKED);
+		createChunkedBodyParser(client, req).initialize();
 	}
 
 	void requestBodyConsumed(Client *client, Request *req) {
-		if (req->requestBodyFullyRead()) {
+		if (req->bodyFullyRead()) {
 			client->input.stop();
-			req->requestBodyChannel.feed(MemoryKit::mbuf());
+			req->bodyChannel.feed(MemoryKit::mbuf());
 		}
 	}
 
@@ -314,7 +499,7 @@ private:
 		Client *client   = static_cast<Client *>(req->client);
 		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
 
-		req->requestBodyChannel.buffersFlushedCallback = NULL;
+		req->bodyChannel.buffersFlushedCallback = NULL;
 		client->input.start();
 		self->requestBodyConsumed(client, req);
 	}
@@ -346,8 +531,12 @@ protected:
 		}
 	}
 
+	object_pool<HttpHeaderParserState> &getHeaderParserStatePool() {
+		return headerParserStatePool;
+	}
+
 	void writeResponse(Client *client, const MemoryKit::mbuf &buffer) {
-		client->currentRequest->responded = true;
+		client->currentRequest->responseBegun = true;
 		client->output.feed(buffer);
 	}
 
@@ -357,6 +546,113 @@ protected:
 
 	void writeResponse(Client *client, const StaticString &data) {
 		writeResponse(client, data.data(), data.size());
+	}
+
+	void
+	writeSimpleResponse(Client *client, int code, const HeaderTable *headers,
+		const StaticString &body)
+	{
+		unsigned int headerBufSize = 300;
+
+		if (headers != NULL) {
+			HeaderTable::ConstIterator it(*headers);
+			while (*it != NULL) {
+				headerBufSize += it->header->key.size + sizeof(": ") - 1;
+				headerBufSize += it->header->val.size + sizeof("\r\n") - 1;
+				it.next();
+			}
+		}
+
+		Request *req = client->currentRequest;
+		char *header = (char *) psg_pnalloc(req->pool, headerBufSize);
+		char statusBuffer[50];
+		char *pos = header;
+		const char *end = header + headerBufSize;
+		const char *status;
+		const LString *value;
+
+		status = getStatusCodeAndReasonPhrase(code);
+		if (status == NULL) {
+			snprintf(statusBuffer, sizeof(statusBuffer), "%d Unknown Reason-Phrase", code);
+			status = statusBuffer;
+		}
+
+		pos += snprintf(pos, end - pos,
+			"HTTP/%d.%d %s\r\n"
+			"Status: %s\r\n",
+			(int) req->httpMajor, (int) req->httpMinor, status, status);
+
+		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("content-type")) : NULL;
+		if (value == NULL) {
+			pos = appendData(pos, end, P_STATIC_STRING("Content-Type: text/html; charset=UTF-8\r\n"));
+		} else {
+			pos = appendData(pos, end, P_STATIC_STRING("Content-Type: "));
+			pos = appendLStringData(pos, end, value);
+			pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+		}
+
+		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("date")) : NULL;
+		pos = appendData(pos, end, P_STATIC_STRING("Date: "));
+		if (value == NULL) {
+			time_t the_time = time(NULL);
+			struct tm the_tm;
+			gmtime_r(&the_time, &the_tm);
+			pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %Z", &the_tm);
+		} else {
+			pos = appendLStringData(pos, end, value);
+		}
+		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+
+		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("connection")) : NULL;
+		if (value == NULL) {
+			if (req->canKeepAlive()) {
+				pos = appendData(pos, end, P_STATIC_STRING("Connection: keep-alive\r\n"));
+			} else {
+				pos = appendData(pos, end, P_STATIC_STRING("Connection: close\r\n"));
+			}
+		} else {
+			pos = appendData(pos, end, P_STATIC_STRING("Connection: "));
+			pos = appendLStringData(pos, end, value);
+			pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+			if (!psg_lstr_cmp(value, P_STATIC_STRING("Keep-Alive"))
+			 && !psg_lstr_cmp(value, P_STATIC_STRING("keep-alive")))
+			{
+				req->wantKeepAlive = false;
+			}
+		}
+
+		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("content-length")) : NULL;
+		pos = appendData(pos, end, P_STATIC_STRING("Content-Length: "));
+		if (value == NULL) {
+			pos += snprintf(pos, end - pos, "%u", (unsigned int) body.size());
+		} else {
+			pos = appendLStringData(pos, end, value);
+		}
+		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+
+		if (headers != NULL) {
+			HeaderTable::ConstIterator it(*headers);
+			while (*it != NULL) {
+				if (!psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-type"))
+				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("date"))
+				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
+				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length")))
+				{
+					pos = appendLStringData(pos, end, &it->header->key);
+					pos = appendData(pos, end, P_STATIC_STRING(": "));
+					pos = appendLStringData(pos, end, &it->header->val);
+					pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+				}
+				it.next();
+			}
+		}
+
+		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+
+		writeResponse(client, header, pos - header);
+		if (!req->ended() && req->method != HTTP_HEAD) {
+			writeResponse(client, body.data(), body.size());
+		}
 	}
 
 	bool endRequest(Client **client, Request **request) {
@@ -374,7 +670,7 @@ protected:
 		SKC_TRACE(c, 2, "Ending request");
 		assert(c->currentRequest == req);
 
-		if (OXT_UNLIKELY(!req->responded)) {
+		if (OXT_UNLIKELY(!req->responseBegun)) {
 			writeDefault500Response(c, req);
 		}
 
@@ -385,7 +681,7 @@ protected:
 		// flushed.
 		pool = req->pool;
 		req->pool = NULL;
-		deinitCurrentRequest(c, req);
+		deinitializeRequestAndAddToFreelist(c, req);
 		req->pool = pool;
 
 		if (!c->output.ended()) {
@@ -399,6 +695,14 @@ protected:
 		}
 
 		return true;
+	}
+
+	void endAsBadRequest(Client **client, Request **req, const StaticString &body) {
+		HeaderTable headers;
+		headers.insert((*req)->pool, "connection", "close");
+		headers.insert((*req)->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		writeSimpleResponse(*client, 400, &headers, body);
+		endRequest(client, req);
 	}
 
 
@@ -421,101 +725,22 @@ protected:
 		Request *req = client->currentRequest;
 		RequestRef ref(req);
 
-		switch (req->httpState) {
-		case Request::PARSING_HEADERS:
-			if (errcode == 0 && !buffer.empty()) {
-				size_t ret = req->reqParser.headerParser->feed(buffer);
-				if (req->httpState == Request::PARSING_HEADERS) {
-					// Not yet done parsing.
-					return Channel::Result(buffer.size(), false);
-				}
-
-				// Done parsing.
-				SKC_TRACE(client, 2, "New request received");
-				headerParserObjectPool.free(req->reqParser.headerParser);
-				req->reqParser.headerParser = NULL;
-
-				switch (req->httpState) {
-				case Request::COMPLETE:
-					client->input.stop();
-					onRequestBegin(client, req);
-					return Channel::Result(ret, false);
-				case Request::PARSING_BODY:
-					onRequestBegin(client, req);
-					return Channel::Result(ret, false);
-				case Request::PARSING_CHUNKED_BODY:
-					prepareChunkedBodyParsing(client, req);
-					onRequestBegin(client, req);
-					return Channel::Result(ret, false);
-				/* case Request::UPGRADED:
-					if (supportsUpgrade(client)) {
-						onRequestBegin(client);
-					} else {
-						disconnect(&client);
-					}
-					return buffer.size(); */
-				case Request::ERROR:
-					this->disconnectWithError(&client, req->parseError);
-					return Channel::Result(0, true);
-				default:
-					P_BUG("TODO");
-					return Channel::Result(0, true);
-				}
-			} else {
-				this->disconnect(&client);
-				return Channel::Result(0, true);
-			}
-
-		case Request::PARSING_BODY:
-			if (errcode != 0) {
-				req->requestBodyChannel.feedError(errcode);
-				return Channel::Result(0, false);
-			} else if (buffer.empty()) {
-				req->requestBodyChannel.feed(MemoryKit::mbuf());
-				return Channel::Result(0, false);
-			} else {
-				boost::uint64_t maxRemaining, remaining;
-
-				if (req->requestBodyInfo.contentLength == 0) {
-					maxRemaining = std::numeric_limits<boost::uint64_t>::max();
-				} else {
-					maxRemaining = req->requestBodyInfo.contentLength -
-						req->requestBodyAlreadyRead;
-				}
-				remaining = std::min<boost::uint64_t>(buffer.size(), maxRemaining);
-
-				req->requestBodyAlreadyRead += remaining;
-				req->requestBodyChannel.feed(MemoryKit::mbuf(buffer, 0, remaining));
-				if (!req->ended()) {
-					if (!req->requestBodyChannel.passedThreshold()) {
-						requestBodyConsumed(client, req);
-					} else {
-						client->input.stop();
-						req->requestBodyChannel.buffersFlushedCallback =
-							onRequestBodyChannelBuffersFlushed;
-					}
-				}
-				return Channel::Result(remaining, false);
-			}
-
-		case Request::PARSING_CHUNKED_BODY:
-			if (!buffer.empty()) {
-				Channel::Result r = HttpChunkedBodyParser_feed(&req->reqParser.chunkedBodyParser,
-					buffer);
-				return r;
-			} else {
-				HttpChunkedBodyParser_feedEof(&req->reqParser.chunkedBodyParser,
-					this, client, req);
+		// Moved outside switch() so that the CPU branch predictor can do its work
+		if (req->httpState == Request::PARSING_HEADERS) {
+			return processClientDataWhenParsingHeaders(client, req, buffer, errcode);
+		} else {
+			switch (req->httpState) {
+			case Request::PARSING_BODY:
+				return processClientDataWhenParsingBody(client, req, buffer, errcode);
+			case Request::PARSING_CHUNKED_BODY:
+				return processClientDataWhenParsingChunkedBody(client, req, buffer, errcode);
+			case Request::UPGRADED:
+				return processClientDataWhenUpgraded(client, req, buffer, errcode);
+			default:
+				P_BUG("Invalid request HTTP state " << (int) req->httpState);
+				// Never reached
 				return Channel::Result(0, false);
 			}
-
-		case Request::UPGRADED:
-			P_BUG("TODO");
-			return Channel::Result(0, false);
-
-		default:
-			P_BUG("Invalid request HTTP state " << toString((int) req->httpState));
-			return Channel::Result(0, false);
 		}
 	}
 
@@ -526,10 +751,15 @@ protected:
 
 		if (client->currentRequest != NULL) {
 			Request *req = client->currentRequest;
-			deinitCurrentRequest(client, req);
+			deinitializeRequestAndAddToFreelist(client, req);
 			client->currentRequest = NULL;
 			unrefRequest(req);
 		}
+	}
+
+	virtual void deinitializeClient(Client *client) {
+		ParentClass::deinitializeClient(client);
+		client->currentRequest = NULL;
 	}
 
 
@@ -538,13 +768,13 @@ protected:
 	virtual void onRequestObjectCreated(Client *client, Request *req) {
 		req->hooks.impl = &requestHooksImpl;
 		req->hooks.userData = static_cast<BaseHttpRequest *>(req);
-		req->requestBodyChannel.setContext(this->getContext());
-		req->requestBodyChannel.setHooks(&req->hooks);
-		req->requestBodyChannel.setDataCallback(onRequestBodyChannelData);
+		req->bodyChannel.setContext(this->getContext());
+		req->bodyChannel.setHooks(&req->hooks);
+		req->bodyChannel.setDataCallback(onRequestBodyChannelData);
 	}
 
 	virtual void onRequestBegin(Client *client, Request *req) {
-		// Do nothing.
+		totalRequestsAccepted++;
 	}
 
 	virtual Channel::Result onRequestBody(Client *client, Request *req,
@@ -556,8 +786,68 @@ protected:
 		return Channel::Result(buffer.size(), false);
 	}
 
-	virtual bool supportsUpgrade(Client *client) {
+	virtual bool supportsUpgrade(Client *client, Request *req) {
 		return false;
+	}
+
+	virtual void reinitializeRequest(Client *client, Request *req) {
+		req->httpMajor = 1;
+		req->httpMinor = 0;
+		req->httpState = Request::PARSING_HEADERS;
+		req->bodyType  = Request::RBT_NO_BODY;
+		req->method    = HTTP_GET;
+		req->wantKeepAlive = false;
+		req->responseBegun = false;
+		req->parserState.headerParser = headerParserStatePool.construct();
+		createRequestHeaderParser(this->getContext(), req).
+			initialize(HTTP_REQUEST);
+		req->pool      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+		psg_lstr_init(&req->path);
+		req->bodyChannel.reinitialize();
+		req->parseError = NULL;
+		req->bodyInfo.contentLength = 0; // Also sets endChunkReached to false
+		req->bodyAlreadyRead = 0;
+	}
+
+	/**
+	 * Must be idempotent, because onClientDisconnecting() can call it
+	 * after endRequest() is called.
+	 */
+	virtual void deinitializeRequest(Client *client, Request *req) {
+		if (req->httpState == Request::PARSING_HEADERS
+		 && req->parserState.headerParser != NULL)
+		{
+			headerParserStatePool.destroy(req->parserState.headerParser);
+			req->parserState.headerParser = NULL;
+		}
+
+		psg_lstr_deinit(&req->path);
+
+		HeaderTable::Iterator it(req->headers);
+		while (*it != NULL) {
+			psg_lstr_deinit(&it->header->key);
+			psg_lstr_deinit(&it->header->val);
+			it.next();
+		}
+
+		it = HeaderTable::Iterator(req->secureHeaders);
+		while (*it != NULL) {
+			psg_lstr_deinit(&it->header->key);
+			psg_lstr_deinit(&it->header->val);
+			it.next();
+		}
+
+		if (req->pool != NULL) {
+			psg_destroy_pool(req->pool);
+			req->pool = NULL;
+		}
+
+		req->httpState = Request::WAITING_FOR_REFERENCES;
+		req->headers.clear();
+		req->secureHeaders.clear();
+		req->bodyChannel.buffersFlushedCallback = NULL;
+		req->bodyChannel.dataFlushedCallback = NULL;
+		req->bodyChannel.deinitialize();
 	}
 
 public:
@@ -566,9 +856,74 @@ public:
 		  freeRequests(STAILQ_HEAD_INITIALIZER(freeRequests)),
 		  freeRequestCount(0),
 		  requestFreelistLimit(1024),
-		  headerParserObjectPool(16, 256)
+		  totalRequestsAccepted(0),
+		  headerParserStatePool(16, 256)
 		{ }
 
+	virtual void configure(const Json::Value &doc) {
+		ParentClass::configure(doc);
+		if (doc.isMember("request_freelist_limit")) {
+			requestFreelistLimit = doc["request_freelist_limit"].asUInt();
+		}
+	}
+
+	virtual Json::Value getConfigAsJson() const {
+		Json::Value doc = ParentClass::getConfigAsJson();
+		doc["request_freelist_limit"] = requestFreelistLimit;
+		return doc;
+	}
+
+	virtual Json::Value inspectStateAsJson() const {
+		Json::Value doc = ParentClass::inspectStateAsJson();
+		doc["free_request_count"] = freeRequestCount;
+		doc["total_requests_accepted"] = totalRequestsAccepted;
+		return doc;
+	}
+
+	virtual Json::Value inspectClientStateAsJson(const Client *client) const {
+		Json::Value doc = ParentClass::inspectClientStateAsJson(client);
+		if (client->currentRequest) {
+			doc["current_request"] = inspectRequestStateAsJson(client->currentRequest);
+		}
+		doc["ended_request_count"] = client->endedRequestCount;
+		return doc;
+	}
+
+	virtual Json::Value inspectRequestStateAsJson(const Request *req) const {
+		Json::Value doc(Json::objectValue);
+		assert(req->httpState != Request::IN_FREELIST);
+		const LString::Part *part;
+
+		doc["refcount"] = req->refcount.load(boost::memory_order_relaxed);
+		doc["http_state"] = req->getHttpStateString();
+
+		if (req->begun()) {
+			doc["http_major"] = req->httpMajor;
+			doc["http_minor"] = req->httpMinor;
+			doc["want_keep_alive"] = req->wantKeepAlive;
+			doc["request_body_type"] = req->getBodyTypeString();
+			doc["request_body_fully_read"] = req->bodyFullyRead();
+			doc["request_body_already_read"] = req->bodyAlreadyRead;
+			doc["response_begun"] = req->responseBegun;
+			doc["method"] = http_method_str(req->method);
+			if (req->bodyType == Request::RBT_CONTENT_LENGTH) {
+				doc["content_length"] = req->bodyInfo.contentLength;
+			} else if (req->bodyType == Request::RBT_CHUNKED) {
+				doc["end_chunk_reached"] = req->bodyInfo.endChunkReached;
+			}
+
+			string path;
+			path.reserve(req->path.size);
+			part = req->path.start;
+			while (part != NULL) {
+				path.append(part->data, part->size);
+				part = part->next;
+			}
+			doc["path"] = path;
+		}
+
+		return doc;
+	}
 
 	/***** Friend-public methods and hook implementations *****/
 

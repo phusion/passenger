@@ -51,11 +51,6 @@ public:
 		: BaseClient(server),
 		  currentRequest(NULL)
 		{ }
-
-	virtual void deinitialize() {
-		currentRequest = NULL;
-		BaseClient::deinitialize();
-	}
 };
 
 

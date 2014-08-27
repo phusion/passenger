@@ -171,6 +171,24 @@ namespace tut {
 		void _channelEnableAutoStartMover(bool enabled) {
 			channel.autoStartMover = enabled;
 		}
+
+		void startChannel() {
+			bg.safe->runLater(boost::bind(&ServerKit_FileBufferedChannelTest::_startChannel,
+				this));
+		}
+
+		void _startChannel() {
+			channel.start();
+		}
+
+		void setChannelDataCallback(FileBufferedChannel::DataCallback callback) {
+			bg.safe->runLater(boost::bind(&ServerKit_FileBufferedChannelTest::_setChannelDataCallback,
+				this, callback));
+		}
+
+		void _setChannelDataCallback(FileBufferedChannel::DataCallback callback) {
+			channel.setDataCallback(callback);
+		}
 	};
 
 	DEFINE_TEST_GROUP_WITH_LIMIT(ServerKit_FileBufferedChannelTest, 100);
@@ -718,5 +736,83 @@ namespace tut {
 				"Data: world!\n"
 				"Data: !\n";
 		);
+	}
+
+
+	/***** When stopped *****/
+
+	TEST_METHOD(45) {
+		set_test_name("Upon feeding data, it calls the callback when start() is called");
+
+		channel.stop();
+		startLoop();
+
+		feedChannel("hello");
+		ensure_equals(getChannelBytesBuffered(), 5u);
+		feedChannel("world");
+		ensure_equals(getChannelBytesBuffered(), 10u);
+		ensure_equals(getChannelReaderState(),
+			FileBufferedChannel::RS_WAITING_FOR_CHANNEL_IDLE);
+		SHOULD_NEVER_HAPPEN(100,
+			result = getChannelBytesBuffered() != 10;
+		);
+		SHOULD_NEVER_HAPPEN(100,
+			LOCK();
+			result = !log.empty();
+		);
+
+		startChannel();
+		EVENTUALLY(5,
+			result = getChannelBytesBuffered() == 0;
+		);
+		EVENTUALLY(5,
+			LOCK();
+			result = log ==
+				"Data: hello\n"
+				"Data: world\n";
+		);
+	}
+
+	static Channel::Result test_46_callback(Channel *_channel, const mbuf &buffer,
+		int errcode)
+	{
+		FileBufferedChannel *channel = reinterpret_cast<FileBufferedChannel *>(_channel);
+		ServerKit_FileBufferedChannelTest *self = (ServerKit_FileBufferedChannelTest *)
+			channel->getHooks();
+		boost::mutex &syncher = self->syncher;
+
+		{
+			LOCK();
+			self->counter++;
+		}
+		channel->stop();
+		return Channel::Result(buffer.size(), false);
+	}
+
+	TEST_METHOD(46) {
+		set_test_name("If stop() is called in the callback, it doesn't call the "
+			"callback with remaining buffers until start() is called");
+
+		channel.setDataCallback(test_46_callback);
+		startLoop();
+		feedChannel("hello");
+		feedChannel("world");
+		EVENTUALLY(5,
+			result = getChannelBytesBuffered() == 5;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 1u);
+		}
+
+		setChannelDataCallback(dataCallback);
+		startChannel();
+		EVENTUALLY(5,
+			result = getChannelBytesBuffered() == 0;
+		);
+		{
+			LOCK();
+			ensure_equals(counter, 2u);
+		}
 	}
 }

@@ -46,12 +46,14 @@
 #include <Logging.h>
 #include <SafeLibev.h>
 #include <ServerKit/Context.h>
+#include <ServerKit/Errors.h>
 #include <ServerKit/Hooks.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/ClientRef.h>
 #include <Utils.h>
 #include <Utils/SmallVector.h>
 #include <Utils/ScopeGuard.h>
+#include <Utils/json.h>
 #include <Utils/IOUtils.h>
 
 namespace Passenger {
@@ -187,13 +189,14 @@ public:
 	unsigned int acceptBurstCount: 7;
 	bool startReadingAfterAccept: 1;
 	unsigned int minSpareClients: 12;
-	unsigned int freelistLimit: 12;
+	unsigned int clientFreelistLimit: 12;
 
 	/***** Working state and statistics (do not modify) *****/
 	State serverState;
 	FreeClientList freeClients;
 	ClientList activeClients, disconnectedClients;
 	unsigned int freeClientCount, activeClientCount, disconnectedClientCount;
+	unsigned long totalClientsAccepted;
 
 private:
 	Context *ctx;
@@ -217,7 +220,7 @@ private:
 		Client *client;
 		Client *acceptedClients[MAX_ACCEPT_BURST_COUNT];
 
-		assert(serverState == ACTIVE);
+		P_ASSERT_EQ(serverState, ACTIVE);
 		SKS_DEBUG("New clients can be accepted on a server socket");
 
 		for (unsigned int i = 0; i < acceptBurstCount; i++) {
@@ -234,11 +237,9 @@ private:
 			acceptedClients[acceptCount] = client;
 			activeClientCount++;
 			acceptCount++;
-			client->setConnState(Client::ACTIVE);
+			totalClientsAccepted++;
 			client->number = getNextClientNumber();
-			client->input.reinitialize(fd);
-			client->output.reinitialize(fd);
-			client->reinitialize(fd);
+			reinitializeClient(client, fd);
 			guard.clear();
 		}
 
@@ -247,7 +248,7 @@ private:
 				activeClientCount << " active client(s)");
 		}
 		if (error && errcode != EAGAIN && errcode != EWOULDBLOCK) {
-			SKS_ERROR("Cannot accept client: " << strerror(errcode) <<
+			SKS_ERROR("Cannot accept client: " << getErrorDesc(errcode) <<
 				" (errno=" << errcode << "). " <<
 				"Stop accepting clients for 3 seconds. " <<
 				"Current client count: " << activeClientCount);
@@ -262,7 +263,7 @@ private:
 	}
 
 	void onAcceptResumeTimeout(ev::timer &timer, int revents) {
-		assert(serverState == TOO_MANY_FDS);
+		P_ASSERT_EQ(serverState, TOO_MANY_FDS);
 		SKS_NOTICE("Resuming accepting new clients");
 		serverState = ACTIVE;
 		for (uint8_t i = 0; i < nEndpoints; i++) {
@@ -330,7 +331,7 @@ private:
 		SKS_TRACE(3, "Checking out client object from freelist (" <<
 			freeClientCount << " -> " << (freeClientCount - 1) << ")");
 		Client *client = STAILQ_FIRST(&freeClients);
-		assert(client->getConnState() == Client::IN_FREELIST);
+		P_ASSERT_EQ(client->getConnState(), Client::IN_FREELIST);
 		client->refcount.store(2, boost::memory_order_relaxed);
 		freeClientCount--;
 		STAILQ_REMOVE_HEAD(&freeClients, nextClient.freeClient);
@@ -375,7 +376,7 @@ private:
 	}
 
 	bool addClientToFreelist(Client *client) {
-		if (freeClientCount < freelistLimit) {
+		if (freeClientCount < clientFreelistLimit) {
 			STAILQ_INSERT_HEAD(&freeClients, client, nextClient.freeClient);
 			freeClientCount++;
 			client->refcount.store(2, boost::memory_order_relaxed);
@@ -399,6 +400,19 @@ private:
 		// client drops to 0, and clientReachedZeroRefcount() is called.
 	}
 
+	const char *getServerStateString() const {
+		switch (serverState) {
+		case ACTIVE:
+			return "ACTIVE";
+		case TOO_MANY_FDS:
+			return "TOO_MANY_FDS";
+		case SHUTTING_DOWN:
+			return "SHUTTING_DOWN";
+		case FINISHED_SHUTDOWN:
+			return "FINISHED_SHUTDOWN";
+		}
+	}
+
 	void finishShutdown() {
 		SKS_NOTICE("Shutdown finished");
 		serverState = FINISHED_SHUTDOWN;
@@ -411,7 +425,7 @@ private:
 			SKC_TRACE(client, 2, "Client sent EOF");
 		} else {
 			SKC_TRACE(client, 2, "Error reading from client socket: " <<
-				strerror(errcode) << " (errno=" << errcode << ")");
+				getErrorDesc(errcode) << " (errno=" << errcode << ")");
 		}
 	}
 
@@ -480,7 +494,7 @@ protected:
 				/* As long as the client is still in the ACTIVE state, it has at least
 				 * one reference, namely from the Server itself. Therefore it's impossible
 				 * to get to a zero reference count without having disconnected a client. */
-				assert(client->getConnState() == Client::DISCONNECTED);
+				P_ASSERT_EQ(client->getConnState(), Client::DISCONNECTED);
 				clientReachedZeroRefcount(client);
 			} else {
 				// Let the event loop handle the client reaching the 0 refcount.
@@ -556,8 +570,19 @@ protected:
 		char message[1024];
 		int ret = snprintf(message, sizeof(message),
 			"client socket write error: %s (errno=%d)",
-			strerror(errcode), errcode);
+			getErrorDesc(errcode), errcode);
 		disconnectWithError(&client, StaticString(message, ret));
+	}
+
+	virtual void reinitializeClient(Client *client, int fd) {
+		client->setConnState(Client::ACTIVE);
+		client->input.reinitialize(fd);
+		client->output.reinitialize(fd);
+	}
+
+	virtual void deinitializeClient(Client *client) {
+		client->input.deinitialize();
+		client->output.deinitialize();
 	}
 
 public:
@@ -567,11 +592,12 @@ public:
 		: acceptBurstCount(32),
 		  startReadingAfterAccept(true),
 		  minSpareClients(128),
-		  freelistLimit(1024),
+		  clientFreelistLimit(1024),
 		  serverState(ACTIVE),
 		  freeClientCount(0),
 		  activeClientCount(0),
 		  disconnectedClientCount(0),
+		  totalClientsAccepted(0),
 		  ctx(context),
 		  nextClientNumber(1),
 		  nEndpoints(0),
@@ -588,7 +614,7 @@ public:
 	}
 
 	virtual ~BaseServer() {
-		assert(serverState == FINISHED_SHUTDOWN);
+		P_ASSERT_EQ(serverState, FINISHED_SHUTDOWN);
 	}
 
 
@@ -641,7 +667,7 @@ public:
 		// So we make a copy of the client list here and operate on that.
 		clients.reserve(activeClientCount);
 		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
-			assert(client->getConnState() == Client::ACTIVE);
+			P_ASSERT_EQ(client->getConnState(), Client::ACTIVE);
 			refClient(client);
 			clients.push_back(client);
 		}
@@ -664,7 +690,7 @@ public:
 
 	/***** Client management *****/
 
-	virtual int getClientName(Client *client, char *buf, size_t size) const {
+	virtual int getClientName(const Client *client, char *buf, size_t size) const {
 		return snprintf(buf, size, "%03x", client->number);
 	}
 
@@ -673,7 +699,7 @@ public:
 		Client *client;
 
 		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
-			assert(client->getConnState() == Client::ACTIVE);
+			P_ASSERT_EQ(client->getConnState(), Client::ACTIVE);
 			result.push_back(ClientRefType(client));
 		}
 		return result;
@@ -683,7 +709,7 @@ public:
 		Client *client;
 
 		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
-			assert(client->getConnState() == Client::ACTIVE);
+			P_ASSERT_EQ(client->getConnState(), Client::ACTIVE);
 			if (client->fd == fd) {
 				return client;
 			}
@@ -718,9 +744,7 @@ public:
 		TAILQ_INSERT_HEAD(&disconnectedClients, c, nextClient.activeOrDisconnectedClient);
 		disconnectedClientCount++;
 
-		c->input.deinitialize();
-		c->output.deinitialize();
-		c->deinitialize();
+		deinitializeClient(c);
 		try {
 			safelyClose(fdnum);
 		} catch (SystemException &e) {
@@ -734,8 +758,13 @@ public:
 		return true;
 	}
 
+	void disconnectWithWarning(Client **client, const StaticString &message) {
+		SKC_WARN(*client, "Disconnecting client with warning: " << message);
+		disconnect(client);
+	}
+
 	void disconnectWithError(Client **client, const StaticString &message) {
-		SKC_WARN(*client, "Disconnecting with error: " << message);
+		SKC_WARN(*client, "Disconnecting client with error: " << message);
 		disconnect(client);
 	}
 
@@ -751,8 +780,75 @@ public:
 		return StaticString("Server", sizeof("Server") - 1);
 	}
 
-	void configure(void *json) { }
-	void inspectStateAsJson() { }
+	virtual void configure(const Json::Value &doc) {
+		if (doc.isMember("accept_burst_count")) {
+			acceptBurstCount = doc["accept_burst_count"].asUInt();
+		}
+		if (doc.isMember("start_reading_after_accept")) {
+			startReadingAfterAccept = doc["start_reading_after_accept"].asBool();
+		}
+		if (doc.isMember("min_spare_clients")) {
+			minSpareClients = doc["min_spare_clients"].asUInt();
+		}
+		if (doc.isMember("client_freelist_limit")) {
+			clientFreelistLimit = doc["client_freelist_limit"].asUInt();
+		}
+	}
+
+	virtual Json::Value getConfigAsJson() const {
+		Json::Value doc;
+		doc["accept_burst_count"] = acceptBurstCount;
+		doc["start_reading_after_accept"] = startReadingAfterAccept;
+		doc["min_spare_clients"] = minSpareClients;
+		doc["client_freelist_limit"] = clientFreelistLimit;
+		doc["total_clients_accepted"] = (Json::UInt64) totalClientsAccepted;
+		return doc;
+	}
+
+	virtual Json::Value inspectStateAsJson() const {
+		Json::Value doc;
+		const Client *client;
+
+		doc["pid"] = (unsigned int) getpid();
+		doc["server_state"] = getServerStateString();
+		doc["free_client_count"] = freeClientCount;
+		Json::Value &activeClientsDoc = doc["active_clients"] = Json::Value(Json::objectValue);
+		doc["active_client_count"] = activeClientCount;
+		Json::Value &disconnectedClientsDoc = doc["disconnected_clients"] = Json::Value(Json::objectValue);
+		doc["disconnected_client_count"] = disconnectedClientCount;
+
+		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
+			Json::Value subdoc;
+			char clientName[16];
+
+			getClientName(client, clientName, sizeof(clientName));
+			activeClientsDoc[clientName] = inspectClientStateAsJson(client);
+		}
+
+		TAILQ_FOREACH (client, &disconnectedClients, nextClient.activeOrDisconnectedClient) {
+			Json::Value subdoc;
+			char clientName[16];
+
+			getClientName(client, clientName, sizeof(clientName));
+			disconnectedClientsDoc[clientName] = inspectClientStateAsJson(client);
+		}
+
+		return doc;
+	}
+
+	virtual Json::Value inspectClientStateAsJson(const Client *client) const {
+		Json::Value doc;
+		char clientName[16];
+
+		assert(client->getConnState() != Client::IN_FREELIST);
+		getClientName(client, clientName, sizeof(clientName));
+		doc["connection_state"] = client->getConnStateString();
+		doc["name"] = clientName;
+		doc["number"] = client->number;
+		doc["refcount"] = client->refcount.load(boost::memory_order_relaxed);
+
+		return doc;
+	}
 
 
 	/***** Friend-public methods and hook implementations *****/

@@ -40,6 +40,7 @@
 #include <deque>
 #include <Logging.h>
 #include <ServerKit/Context.h>
+#include <ServerKit/Errors.h>
 #include <ServerKit/Channel.h>
 
 namespace Passenger {
@@ -292,8 +293,8 @@ private:
 			{ }
 
 		~InFileMode() {
-			assert(readRequest == NULL);
-			assert(writerRequest == NULL);
+			P_ASSERT_EQ(readRequest, NULL);
+			P_ASSERT_EQ(writerRequest, NULL);
 			if (fd != -1) {
 				eio_close(fd, 0, NULL, NULL);
 			}
@@ -370,7 +371,7 @@ private:
 		FBC_DEBUG("popBuffer() completed: nbuffers = " << nbuffers << ", bytesBuffered = " << bytesBuffered);
 		if (moreBuffers.empty()) {
 			firstBuffer = MemoryKit::mbuf();
-			assert(nbuffers == 0);
+			P_ASSERT_EQ(nbuffers, 0);
 			callBuffersFlushedCallback();
 		} else {
 			firstBuffer = moreBuffers.front();
@@ -429,7 +430,7 @@ private:
 	void readNextWithoutRefGuard() {
 		begin:
 		FBC_DEBUG("Reader: reading next");
-		assert(Channel::state == IDLE);
+		P_ASSERT_EQ(Channel::state, IDLE);
 		unsigned int generation = this->generation;
 
 		switch (mode) {
@@ -449,7 +450,7 @@ private:
 					// called a method that encountered an error.
 					return;
 				}
-				assert(readerState == RS_FEEDING_EOF);
+				P_ASSERT_EQ(readerState, RS_FEEDING_EOF);
 				verifyInvariants();
 				FBC_DEBUG("Reader: EOF fed. Transitioning to RS_TERMINATED");
 				terminateReaderBecauseOfEOF();
@@ -470,7 +471,7 @@ private:
 					// called a method that encountered an error.
 					return;
 				}
-				assert(readerState == RS_FEEDING);
+				P_ASSERT_EQ(readerState, RS_FEEDING);
 				verifyInvariants();
 				if (acceptingInput()) {
 					goto begin;
@@ -513,7 +514,7 @@ private:
 						// called a method that encountered an error.
 						return;
 					}
-					assert(readerState == RS_FEEDING_EOF);
+					P_ASSERT_EQ(readerState, RS_FEEDING_EOF);
 					verifyInvariants();
 					FBC_DEBUG("Reader: EOF fed. Transitioning to RS_TERMINATED");
 					terminateReaderBecauseOfEOF();
@@ -529,7 +530,7 @@ private:
 						// called a method that encountered an error.
 						return;
 					}
-					assert(readerState == RS_FEEDING);
+					P_ASSERT_EQ(readerState, RS_FEEDING);
 					verifyInvariants();
 					if (acceptingInput()) {
 						goto begin;
@@ -616,7 +617,7 @@ private:
 		RefGuard guard(hooks, this);
 
 		FBC_DEBUG("Reader: done reading chunk");
-		assert(readerState == RS_READING_FROM_FILE);
+		P_ASSERT_EQ(readerState, RS_READING_FROM_FILE);
 		verifyInvariants();
 		inFileMode->readRequest = NULL;
 
@@ -636,7 +637,7 @@ private:
 				// called a method that encountered an error.
 				return 0;
 			}
-			assert(readerState == RS_FEEDING);
+			P_ASSERT_EQ(readerState, RS_FEEDING);
 			verifyInvariants();
 			if (acceptingInput()) {
 				readerState = RS_INACTIVE;
@@ -655,7 +656,7 @@ private:
 
 	// Returns (mbuf, found).
 	pair<MemoryKit::mbuf, bool> findBufferForReadProcessing() {
-		assert(mode == IN_FILE_MODE);
+		P_ASSERT_EQ(mode, IN_FILE_MODE);
 
 		if (nbuffers == 0) {
 			return make_pair(MemoryKit::mbuf(), false);
@@ -687,8 +688,8 @@ private:
 	/***** Switching to or resetting in-file mode *****/
 
 	void switchToInFileMode() {
-		assert(mode == IN_MEMORY_MODE);
-		assert(inFileMode == NULL);
+		P_ASSERT_EQ(mode, IN_MEMORY_MODE);
+		P_ASSERT_EQ(inFileMode, NULL);
 
 		FBC_DEBUG("Switching to in-file mode");
 		mode = IN_FILE_MODE;
@@ -703,7 +704,7 @@ private:
 	 * affect correctness.
 	 */
 	void switchToInMemoryMode() {
-		assert(mode == IN_FILE_MODE);
+		P_ASSERT_EQ(mode, IN_FILE_MODE);
 		assert(inFileMode->written <= 0);
 
 		FBC_DEBUG("Recreating file, switching to in-memory mode");
@@ -722,9 +723,9 @@ private:
 	};
 
 	void createBufferFile() {
-		assert(mode == IN_FILE_MODE);
-		assert(inFileMode->writerState == WS_INACTIVE);
-		assert(inFileMode->fd == -1);
+		P_ASSERT_EQ(mode, IN_FILE_MODE);
+		P_ASSERT_EQ(inFileMode->writerState, WS_INACTIVE);
+		P_ASSERT_EQ(inFileMode->fd, -1);
 
 		FileCreationContext *fcContext = new FileCreationContext();
 		fcContext->self = this;
@@ -779,7 +780,7 @@ private:
 			return 0;
 		}
 
-		assert(self->inFileMode->writerState == WS_CREATING_FILE);
+		P_ASSERT_EQ(self->inFileMode->writerState, WS_CREATING_FILE);
 		self->verifyInvariants();
 		self->inFileMode->writerRequest = NULL;
 
@@ -836,7 +837,7 @@ private:
 	};
 
 	void moveNextBufferToFile() {
-		assert(mode == IN_FILE_MODE);
+		P_ASSERT_EQ(mode, IN_FILE_MODE);
 		assert(inFileMode->fd != -1);
 		verifyInvariants();
 
@@ -877,7 +878,7 @@ private:
 			return 0;
 		}
 
-		assert(self->mode == IN_FILE_MODE);
+		P_ASSERT_EQ(self->mode, IN_FILE_MODE);
 		assert(!self->peekBuffer().empty());
 		self->verifyInvariants();
 		self->inFileMode->writerRequest = NULL;
@@ -932,7 +933,7 @@ private:
 		}
 
 		FBC_DEBUG("Reader: setting error: errno=" << errcode <<
-			" (" << strerror(errcode) << ")");
+			" (" << getErrorDesc(errcode) << ")");
 		cancelReader();
 		if (mode == IN_FILE_MODE) {
 			cancelWriter();
@@ -981,7 +982,7 @@ private:
 	}
 
 	void cancelWriter() {
-		assert(mode == IN_FILE_MODE);
+		P_ASSERT_EQ(mode, IN_FILE_MODE);
 
 		switch (inFileMode->writerState) {
 		case WS_INACTIVE:
@@ -1000,8 +1001,8 @@ private:
 	void verifyInvariants() const {
 		#ifndef NDEBUG
 			if (mode >= ERROR) {
-				assert(readerState == RS_TERMINATED);
-				assert(inFileMode == NULL);
+				P_ASSERT_EQ(readerState, RS_TERMINATED);
+				P_ASSERT_EQ(inFileMode, NULL);
 			}
 
 			switch (readerState) {
@@ -1013,7 +1014,7 @@ private:
 				assert(mode < ERROR);
 				break;
 			case RS_READING_FROM_FILE:
-				assert(mode == IN_FILE_MODE);
+				P_ASSERT_EQ(mode, IN_FILE_MODE);
 				assert(inFileMode->readRequest != NULL);
 				assert(inFileMode->written > 0);
 				break;
@@ -1110,7 +1111,11 @@ public:
 			moveNextBufferToFile();
 		}
 		if (readerState == RS_INACTIVE) {
-			readNextWithoutRefGuard();
+			if (acceptingInput()) {
+				readNextWithoutRefGuard();
+			} else {
+				readNextWhenChannelIdle();
+			}
 		}
 	}
 
@@ -1192,6 +1197,14 @@ public:
 
 	void setDataCallback(DataCallback callback) {
 		Channel::dataCallback = callback;
+	}
+
+	void setBuffersFlushedCallback(Callback callback) {
+		buffersFlushedCallback = callback;
+	}
+
+	void setDataFlushedCallback(Callback callback) {
+		dataFlushedCallback = callback;
 	}
 
 	OXT_FORCE_INLINE

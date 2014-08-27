@@ -31,6 +31,7 @@
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/Context.h>
 #include <ServerKit/HttpRequest.h>
+#include <ServerKit/HttpHeaderParserState.h>
 #include <DataStructures/LString.h>
 #include <DataStructures/HashedStaticString.h>
 #include <Logging.h>
@@ -43,31 +44,20 @@ namespace ServerKit {
 extern const HashedStaticString TRANSFER_ENCODING;
 void forceLowerCase(unsigned char *data, size_t len);
 
+struct HttpParseRequest {};
+struct HttpParseResponse {};
 
+template<typename Message, typename MessageType = HttpParseRequest>
 class HttpHeaderParser {
 private:
 	Context *ctx;
-	BaseHttpRequest *request;
-	http_parser parser;
+	HttpHeaderParserState *state;
+	Message *message;
+	psg_pool_t *pool;
 	const MemoryKit::mbuf *currentBuffer;
-	Header *currentHeader;
-	Hasher hasher;
-	enum {
-		PARSING_NOT_STARTED,
-		PARSING_URL,
-		PARSING_FIRST_HEADER_FIELD,
-		PARSING_FIRST_HEADER_VALUE,
-		PARSING_HEADER_FIELD,
-		PARSING_HEADER_VALUE,
-		ERROR_SECURITY_PASSWORD_MISMATCH,
-		ERROR_SECURITY_PASSWORD_DUPLICATE,
-		ERROR_SECURE_HEADER_NOT_ALLOWED,
-		ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD
-	} state;
-	bool secureMode;
 
 	bool validateHeader(const Header *header) {
-		if (!secureMode) {
+		if (!state->secureMode) {
 			if (!psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
 				return true;
 			} else {
@@ -77,23 +67,23 @@ private:
 					if (ctx->secureModePassword.empty()
 					 || psg_lstr_cmp(&header->val, ctx->secureModePassword))
 					{
-						secureMode = true;
+						state->secureMode = true;
 						return true;
 					} else {
-						state = ERROR_SECURITY_PASSWORD_MISMATCH;
+						state->state = HttpHeaderParserState::ERROR_SECURITY_PASSWORD_MISMATCH;
 						return false;
 					}
 				} else {
 					// Secure header encountered without having
 					// encountered a security password.
-					state = ERROR_SECURE_HEADER_NOT_ALLOWED;
+					state->state = HttpHeaderParserState::ERROR_SECURE_HEADER_NOT_ALLOWED;
 					return false;
 				}
 			}
 		} else {
 			if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
 				if (header->key.size == 2) {
-					secureMode = false;
+					state->secureMode = false;
 				}
 				return true;
 			} else {
@@ -102,22 +92,22 @@ private:
 				// marker (the security password header) and an end marker.
 				// If we find a normal header between the markers, then we
 				// can assume the web server is bugged or compromised.
-				state = ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD;
+				state->state = HttpHeaderParserState::ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD;
 				return false;
 			}
 		}
 	}
 
 	void insertCurrentHeader() {
-		if (!secureMode) {
-			request->headers.insert(currentHeader);
+		if (!state->secureMode) {
+			message->headers.insert(state->currentHeader);
 		} else {
-			request->secureHeaders.insert(currentHeader);
+			message->secureHeaders.insert(state->currentHeader);
 		}
 	}
 
 	bool hasTransferEncodingChunked() {
-		const LString *value = request->headers.lookup(TRANSFER_ENCODING);
+		const LString *value = message->headers.lookup(TRANSFER_ENCODING);
 		return value != NULL && psg_lstr_cmp(value, P_STATIC_STRING("chunked"));
 	}
 
@@ -134,50 +124,59 @@ private:
 		return ret;
 	}
 
-	static int onURL(http_parser *parser, const char *data, size_t len) {
+	static int _onURL(http_parser *parser, const char *data, size_t len) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
-		self->state = PARSING_URL;
-		psg_lstr_append(&self->request->path, self->request->pool,
-			*self->currentBuffer, data, len);
+		return self->onURL(MessageType(), data, len);
+	}
+
+	int onURL(const HttpParseRequest &tag, const char *data, size_t len) {
+		state->state = HttpHeaderParserState::PARSING_URL;
+		psg_lstr_append(&message->path, pool, *currentBuffer, data, len);
+		return 0;
+	}
+
+	int onURL(const HttpParseResponse &tag, const char *data, size_t len) {
+		P_BUG("Should never be called");
 		return 0;
 	}
 
 	static int onHeaderField(http_parser *parser, const char *data, size_t len) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
-		if (self->state == PARSING_URL
-		 || self->state == PARSING_HEADER_VALUE
-		 || self->state == PARSING_FIRST_HEADER_VALUE)
+		if (self->state->state == HttpHeaderParserState::PARSING_NOT_STARTED
+		 || self->state->state == HttpHeaderParserState::PARSING_URL
+		 || self->state->state == HttpHeaderParserState::PARSING_HEADER_VALUE
+		 || self->state->state == HttpHeaderParserState::PARSING_FIRST_HEADER_VALUE)
 		{
 			// New header key encountered.
 
-			if (self->state == PARSING_FIRST_HEADER_VALUE
-			 || self->state == PARSING_HEADER_VALUE)
+			if (self->state->state == HttpHeaderParserState::PARSING_FIRST_HEADER_VALUE
+			 || self->state->state == HttpHeaderParserState::PARSING_HEADER_VALUE)
 			{
 				// Validate previous header and insert into table.
-				if (!self->validateHeader(self->currentHeader)) {
+				if (!self->validateHeader(self->state->currentHeader)) {
 					return 1;
 				}
 				self->insertCurrentHeader();
 			}
 
-			self->currentHeader = (Header *) psg_palloc(self->request->pool, sizeof(Header));
-			psg_lstr_init(&self->currentHeader->key);
-			psg_lstr_init(&self->currentHeader->val);
-			self->hasher.reset();
-			if (self->state == PARSING_URL) {
-				self->state = PARSING_FIRST_HEADER_FIELD;
+			self->state->currentHeader = (Header *) psg_palloc(self->pool, sizeof(Header));
+			psg_lstr_init(&self->state->currentHeader->key);
+			psg_lstr_init(&self->state->currentHeader->val);
+			self->state->hasher.reset();
+			if (self->state->state == HttpHeaderParserState::PARSING_URL) {
+				self->state->state = HttpHeaderParserState::PARSING_FIRST_HEADER_FIELD;
 			} else {
-				self->state = PARSING_HEADER_FIELD;
+				self->state->state = HttpHeaderParserState::PARSING_HEADER_FIELD;
 			}
 		}
 
-		psg_lstr_append(&self->currentHeader->key, self->request->pool,
+		psg_lstr_append(&self->state->currentHeader->key, self->pool,
 			*self->currentBuffer, data, len);
-		if (psg_lstr_first_byte(&self->currentHeader->key) != '!') {
+		if (psg_lstr_first_byte(&self->state->currentHeader->key) != '!') {
 			forceLowerCase((unsigned char *) const_cast<char *>(data), len);
 		}
-		self->hasher.update(data, len);
+		self->state->hasher.update(data, len);
 
 		return 0;
 	}
@@ -185,20 +184,22 @@ private:
 	static int onHeaderValue(http_parser *parser, const char *data, size_t len) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
-		if (self->state == PARSING_FIRST_HEADER_FIELD || self->state == PARSING_HEADER_FIELD) {
+		if (self->state->state == HttpHeaderParserState::PARSING_FIRST_HEADER_FIELD
+		 || self->state->state == HttpHeaderParserState::PARSING_HEADER_FIELD)
+		{
 			// New header value encountered. Finalize corresponding header field.
-			if (self->state == PARSING_FIRST_HEADER_FIELD) {
-				self->state = PARSING_FIRST_HEADER_VALUE;
+			if (self->state->state == HttpHeaderParserState::PARSING_FIRST_HEADER_FIELD) {
+				self->state->state = HttpHeaderParserState::PARSING_FIRST_HEADER_VALUE;
 			} else {
-				self->state = PARSING_HEADER_VALUE;
+				self->state->state = HttpHeaderParserState::PARSING_HEADER_VALUE;
 			}
-			self->currentHeader->hash = self->hasher.finalize();
+			self->state->currentHeader->hash = self->state->hasher.finalize();
 
 		}
 
-		psg_lstr_append(&self->currentHeader->val, self->request->pool,
+		psg_lstr_append(&self->state->currentHeader->val, self->pool,
 			*self->currentBuffer, data, len);
-		self->hasher.update(data, len);
+		self->state->hasher.update(data, len);
 
 		return 0;
 	}
@@ -206,75 +207,92 @@ private:
 	static int onHeadersComplete(http_parser *parser) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
-		if (self->state == PARSING_HEADER_VALUE
-		 || self->state == PARSING_FIRST_HEADER_VALUE)
+		if (self->state->state == HttpHeaderParserState::PARSING_HEADER_VALUE
+		 || self->state->state == HttpHeaderParserState::PARSING_FIRST_HEADER_VALUE)
 		{
 			// Validate previous header and insert into table.
-			if (!self->validateHeader(self->currentHeader)) {
+			if (!self->validateHeader(self->state->currentHeader)) {
 				return 1;
 			}
 			self->insertCurrentHeader();
 		}
 
-		self->currentHeader = NULL;
-		self->request->httpState = HttpRequest::PARSED_HEADERS;
+		self->state->currentHeader = NULL;
+		self->message->httpState = Message::PARSED_HEADERS;
 		http_parser_pause(parser, 1);
 		return 0;
 	}
 
+	void setMethodOrStatus(const HttpParseRequest &tag) {
+		message->method = (http_method) state->parser.method;
+	}
+
+	void setMethodOrStatus(const HttpParseResponse &tag) {
+		message->statusCode = state->parser.status_code;
+	}
+
+	bool isHeadRequest(const HttpParseRequest &tag) const {
+		return message->method == HTTP_HEAD;
+	}
+
+	bool isHeadRequest(const HttpParseResponse &tag) const {
+		return false;
+	}
+
 public:
-	HttpHeaderParser(Context *context, BaseHttpRequest *_request)
+	HttpHeaderParser(Context *context, HttpHeaderParserState *_state,
+		Message *_message, psg_pool_t *_pool)
 		: ctx(context),
-		  request(_request),
-		  currentBuffer(NULL),
-		  currentHeader(NULL),
-		  state(PARSING_NOT_STARTED),
-		  secureMode(false)
-	{
-		http_parser_init(&parser, HTTP_REQUEST);
-		parser.data = this;
+		  state(_state),
+		  message(_message),
+		  pool(_pool),
+		  currentBuffer(NULL)
+		{ }
+
+	void initialize(enum http_parser_type type) {
+		http_parser_init(&state->parser, type);
+		state->state = HttpHeaderParserState::PARSING_NOT_STARTED;
+		state->secureMode = false;
 	}
 
 	size_t feed(const MemoryKit::mbuf &buffer) {
-		assert(request->httpState == HttpRequest::PARSING_HEADERS);
+		P_ASSERT_EQ(message->httpState, Message::PARSING_HEADERS);
 
 		http_parser_settings settings;
 		size_t ret;
 		bool paused;
 
 		settings.on_message_begin = NULL;
-		settings.on_url = onURL;
+		settings.on_url = _onURL;
 		settings.on_header_field = onHeaderField;
 		settings.on_header_value = onHeaderValue;
 		settings.on_headers_complete = onHeadersComplete;
 		settings.on_body = NULL;
 		settings.on_message_complete = NULL;
 
+		state->parser.data = this;
 		currentBuffer = &buffer;
-		ret = http_parser_execute_and_handle_pause(&parser,
+		ret = http_parser_execute_and_handle_pause(&state->parser,
 			&settings, buffer.start, buffer.size(), paused);
 		currentBuffer = NULL;
 
-		if (parser.upgrade) {
-			assert(request->httpState == HttpRequest::PARSED_HEADERS);
-			request->httpState = HttpRequest::UPGRADED;
-		} else if (ret != buffer.size() && !paused) {
-			request->httpState = HttpRequest::ERROR;
-			switch (HTTP_PARSER_ERRNO(&parser)) {
+		if (!state->parser.upgrade && ret != buffer.size() && !paused) {
+			message->httpState = Message::ERROR;
+			switch (HTTP_PARSER_ERRNO(&state->parser)) {
 			case HPE_CB_header_field:
 			case HPE_CB_headers_complete:
-				switch (state) {
-				case ERROR_SECURITY_PASSWORD_MISMATCH:
-					request->parseError = "Security password mismatch";
+				switch (state->state) {
+				case HttpHeaderParserState::ERROR_SECURITY_PASSWORD_MISMATCH:
+					message->parseError = "Security password mismatch";
 					break;
-				case ERROR_SECURITY_PASSWORD_DUPLICATE:
-					request->parseError = "A duplicate security password header was encountered";
+				case HttpHeaderParserState::ERROR_SECURITY_PASSWORD_DUPLICATE:
+					message->parseError = "A duplicate security password header was encountered";
 					break;
-				case ERROR_SECURE_HEADER_NOT_ALLOWED:
-					request->parseError = "A secure header was provided, but no security password was provided";
+				case HttpHeaderParserState::ERROR_SECURE_HEADER_NOT_ALLOWED:
+					message->parseError = "A secure header was provided, but no security password was provided";
 					break;
-				case ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD:
-					request->parseError = "A normal header was encountered after the security password header";
+				case HttpHeaderParserState::ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD:
+					message->parseError = "A normal header was encountered after the security password header";
 					break;
 				default:
 					goto default_error;
@@ -282,42 +300,53 @@ public:
 				break;
 			default:
 				default_error:
-				request->parseError = http_errno_description(HTTP_PARSER_ERRNO(&parser));
+				message->parseError = http_errno_description(HTTP_PARSER_ERRNO(&state->parser));
 				break;
 			}
-		} else if (request->httpState == HttpRequest::PARSED_HEADERS) {
+		} else if (message->httpState == Message::PARSED_HEADERS) {
 			bool isChunked = hasTransferEncodingChunked();
 			boost::uint64_t contentLength;
 
 			ret++;
-			request->httpMajor = parser.http_major;
-			request->httpMinor = parser.http_minor;
-			request->wantKeepAlive = http_should_keep_alive(&parser);
-			request->method    = (http_method) parser.method;
-
-			// TODO: check that content-length and transfer-encoding aren't simultaneously given
+			message->httpMajor = state->parser.http_major;
+			message->httpMinor = state->parser.http_minor;
+			message->wantKeepAlive = http_should_keep_alive(&state->parser);
+			setMethodOrStatus(MessageType());
 
 			// For some reason, the parser leaves content_length at ULLONG_MAX
 			// if Content-Length is not given.
-			contentLength = parser.content_length;
+			contentLength = state->parser.content_length;
 			if (contentLength == std::numeric_limits<boost::uint64_t>::max()) {
 				contentLength = 0;
 			}
 
-			if (contentLength > 0 || isChunked) {
+			if (contentLength > 0 && isChunked) {
+				message->httpState = Message::ERROR;
+				message->parseError = "Bad request (request may not contain both Content-Length and Transfer-Encoding)";
+			} else if (contentLength > 0 || isChunked) {
 				// There is a request body.
-				request->requestBodyInfo.contentLength = contentLength;
-				if (isChunked) {
-					request->httpState = HttpRequest::PARSING_CHUNKED_BODY;
-					request->requestBodyType = HttpRequest::RBT_CHUNKED;
+				message->bodyInfo.contentLength = contentLength;
+				if (state->parser.upgrade) {
+					message->httpState = Message::ERROR;
+					message->parseError = "Bad request ('Upgrade' header is only allowed for requests without request body)";
+				} else if (isChunked) {
+					message->httpState = Message::PARSING_CHUNKED_BODY;
+					message->bodyType = Message::RBT_CHUNKED;
 				} else {
-					request->httpState = HttpRequest::PARSING_BODY;
-					request->requestBodyType = HttpRequest::RBT_CONTENT_LENGTH;
+					message->httpState = Message::PARSING_BODY;
+					message->bodyType = Message::RBT_CONTENT_LENGTH;
 				}
 			} else {
 				// There is no request body.
-				request->httpState = HttpRequest::COMPLETE;
-				request->requestBodyType = HttpRequest::RBT_NO_BODY;
+				if (!state->parser.upgrade) {
+					message->httpState = Message::COMPLETE;
+				} else if (isHeadRequest(MessageType())) {
+					message->httpState = Message::ERROR;
+					message->parseError = "Bad request ('Upgrade' header is not allowed for HEAD requests)";
+				} else {
+					message->httpState = Message::UPGRADED;
+				}
+				message->bodyType = Message::RBT_NO_BODY;
 			}
 		}
 

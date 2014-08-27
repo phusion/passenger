@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2012-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,41 +22,49 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#include <DataStructures/HashedStaticString.h>
+#ifndef _PASSENGER_SERVER_KIT_CHUNKED_BODY_PARSER_STATE_H_
+#define _PASSENGER_SERVER_KIT_CHUNKED_BODY_PARSER_STATE_H_
+
+#include <boost/cstdint.hpp>
 
 namespace Passenger {
 namespace ServerKit {
 
+using namespace std;
 
-extern const HashedStaticString TRANSFER_ENCODING;
-extern const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[];
-extern const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE;
 
-const HashedStaticString TRANSFER_ENCODING("transfer-encoding");
-const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[] =
-	"Status: 500 Internal Server Error\r\n"
-	"Content-Length: 22\r\n"
-	"Content-Type: text/plain\r\n"
-	"Connection: close\r\n"
-	"\r\n"
-	"Internal server error\n";
-const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE =
-	sizeof(DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE) - 1;
+struct HttpChunkedBodyParserState {
+	/***** Types and constants *****/
 
-// The following functions are defined in this compilation unit so that they're
-// compiled with optimizations on by default.
+	// (2^32-1)/10 (409 MB), because `remainingDataSize` is 32-bit. Divided by 10 to
+	// prevent overflow during parsing of the chunk size.
+	static const unsigned int MAX_CHUNK_SIZE = 429496729;
+	static const char CR = '\x0D';
+	static const char LF = '\x0A';
 
-void
-forceLowerCase(unsigned char *data, size_t len) {
-	const unsigned char *end = data + len;
-	while (data < end) {
-		unsigned char c = *data;
-		if (c >= 'A' && c <= 'Z') {
-			*data = c | 0x20;
-		}
-		data++;
-	}
-}
+	enum State {
+		EXPECTING_SIZE_FIRST_DIGIT,
+		EXPECTING_SIZE,
+		EXPECTING_CHUNK_EXTENSION,
+		EXPECTING_HEADER_LF,
+		EXPECTING_DATA,
+		EXPECTING_NON_FINAL_CR,
+		EXPECTING_NON_FINAL_LF,
+		EXPECTING_FINAL_CR,
+		EXPECTING_FINAL_LF,
+		DONE,
+		ERROR
+	};
+
+
+	/***** Working state *****/
+
+	State state;
+	boost::uint32_t remainingDataSize;
+};
+
 
 } // namespace ServerKit
-} // namespace
+} // namespace Passenger
+
+#endif /* _PASSENGER_SERVER_KIT_CHUNKED_BODY_PARSER_STATE_H_ */

@@ -89,7 +89,7 @@ private:
 	}
 
 	OXT_FORCE_INLINE
-	bool cellIsEmpty(const Cell * const cell) {
+	bool cellIsEmpty(const Cell * const cell) const {
 		return cell->header == NULL;
 	}
 
@@ -182,7 +182,7 @@ public:
 		m_population = 0;
 	}
 
-	Cell *lookupCell(const HashedStaticString &key) {
+	const Cell *lookupCell(const HashedStaticString &key) const {
 		assert(!key.empty());
 		assert(key.size() < MAX_KEY_LENGTH);
 
@@ -190,7 +190,7 @@ public:
 			return NULL;
 		}
 
-		Cell *cell = PHT_FIRST_CELL(key.hash());
+		const Cell *cell = PHT_FIRST_CELL(key.hash());
 		while (true) {
 			if (cellIsEmpty(cell)) {
 				// Empty cell found.
@@ -205,13 +205,23 @@ public:
 		}
 	}
 
-	const LString *lookup(const HashedStaticString &key) {
+	OXT_FORCE_INLINE
+	Cell *lookupCell(const HashedStaticString &key) {
+		return const_cast<Cell *>(static_cast<const HeaderTable *>(this)->lookupCell(key));
+	}
+
+	const LString *lookup(const HashedStaticString &key) const {
 		const Cell * const cell = lookupCell(key);
 		if (cell != NULL) {
 			return &cell->header->val;
 		} else {
 			return NULL;
 		}
+	}
+
+	OXT_FORCE_INLINE
+	LString *lookup(const HashedStaticString &key) {
+		return const_cast<LString *>(static_cast<const HeaderTable *>(this)->lookup(key));
 	}
 
 	/** header must stay alive */
@@ -249,6 +259,19 @@ public:
 				}
 			}
 		}
+	}
+
+	Header *insert(psg_pool_t *pool, const HashedStaticString &name,
+		const StaticString &value, bool overwrite = false)
+	{
+		Header *header = (Header *) psg_palloc(pool, sizeof(Header));
+		psg_lstr_init(&header->key);
+		psg_lstr_append(&header->key, pool, name.data(), name.size());
+		psg_lstr_init(&header->val);
+		psg_lstr_append(&header->val, pool, value.data(), value.size());
+		header->hash = name.hash();
+		insert(header, overwrite);
+		return header;
 	}
 
 	void erase(Cell *cell) {
@@ -354,6 +377,54 @@ public:
 
 		OXT_FORCE_INLINE
 		Cell *operator->() const {
+			return m_cur;
+		}
+	};
+
+	friend class ConstIterator;
+	class ConstIterator {
+	private:
+		const HeaderTable *m_table;
+		const Cell *m_cur;
+
+	public:
+		ConstIterator(const HeaderTable &table)
+			: m_table(&table)
+		{
+			if (m_table->m_cells != NULL) {
+				m_cur = &m_table->m_cells[0];
+				if (m_table->cellIsEmpty(m_cur)) {
+					next();
+				}
+			} else {
+				m_cur = NULL;
+			}
+		}
+
+		const Cell *next() {
+			if (m_cur == NULL) {
+				// Already finished.
+				return NULL;
+			}
+
+			const Cell *end = m_table->m_cells + m_table->m_arraySize;
+			while (++m_cur != end) {
+				if (!m_table->cellIsEmpty(m_cur)) {
+					return m_cur;
+				}
+			}
+
+			// Finished
+			return m_cur = NULL;
+		}
+
+		OXT_FORCE_INLINE
+		const Cell *operator*() const {
+			return m_cur;
+		}
+
+		OXT_FORCE_INLINE
+		const Cell *operator->() const {
 			return m_cur;
 		}
 	};

@@ -121,6 +121,10 @@ public:
 		FileBufferedChannel::feed(data);
 	}
 
+	void feedError(int errcode) {
+		FileBufferedChannel::feedError(errcode);
+	}
+
 	void reinitialize(int fd) {
 		FileBufferedChannel::reinitialize();
 		ev_io_init(&watcher, onWritable, fd, EV_WRITE);
@@ -164,11 +168,11 @@ public:
 	}
 
 	void setBuffersFlushedCallback(Callback callback) {
-		FileBufferedChannel::buffersFlushedCallback = callback;
+		FileBufferedChannel::setBuffersFlushedCallback(callback);
 	}
 
 	void setDataFlushedCallback(Callback callback) {
-		FileBufferedChannel::dataFlushedCallback = callback;
+		FileBufferedChannel::setDataFlushedCallback(callback);
 	}
 };
 

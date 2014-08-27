@@ -33,15 +33,14 @@
 #include <ServerKit/Client.h>
 #include <ServerKit/HeaderTable.h>
 #include <ServerKit/FileBufferedChannel.h>
-#include <ServerKit/HttpChunkedBodyParserFwd.h>
+#include <ServerKit/HttpHeaderParserState.h>
+#include <ServerKit/HttpChunkedBodyParserState.h>
 #include <MemoryKit/palloc.h>
 #include <DataStructures/LString.h>
 
 namespace Passenger {
 namespace ServerKit {
 
-
-class HttpHeaderParser;
 
 class BaseHttpRequest {
 public:
@@ -82,8 +81,8 @@ public:
 		IN_FREELIST
 	};
 
-	// Enum values are deliberately chosen so that hasRequestBody() can be branchless.
-	enum RequestBodyType {
+	// Enum values are deliberately chosen so that hasBody() can be branchless.
+	enum BodyType {
 		/** The request has no body. */
 		RBT_NO_BODY = 0,
 		/** The connection has been upgraded. */
@@ -97,19 +96,19 @@ public:
 	boost::uint8_t httpMajor;
 	boost::uint8_t httpMinor;
 	HttpState httpState: 5;
-	RequestBodyType requestBodyType: 3;
+	BodyType bodyType: 3;
 
 	http_method method: 5;
 	bool wantKeepAlive: 1;
-	bool responded: 1;
+	bool responseBegun: 1;
 
 	boost::atomic<int> refcount;
 
 	BaseClient *client;
 	union {
-		HttpHeaderParser *headerParser;
-		HttpChunkedBodyParser chunkedBodyParser;
-	} reqParser;
+		HttpHeaderParserState *headerParser;
+		HttpChunkedBodyParserState chunkedBodyParser;
+	} parserState;
 	psg_pool_t *pool;
 	Hooks hooks;
 	LString path;
@@ -118,19 +117,19 @@ public:
 	// headers is variable, but the number of secure headers is more or less
 	// constant.
 	HeaderTable secureHeaders;
-	FileBufferedChannel requestBodyChannel;
+	FileBufferedChannel bodyChannel;
 
 	/** If a request parsing error occurred, the error message is stored here. */
 	const char *parseError;
 
 	/** Length of the message body. Only has meaning when state is PARSING_BODY. */
 	union {
-		// If requestBodyType == RBT_CONTENT_LENGTH
+		// If bodyType == RBT_CONTENT_LENGTH
 		boost::uint64_t contentLength;
-		// If requestBodyType == RBT_CHUNKED
+		// If bodyType == RBT_CHUNKED
 		bool endChunkReached;
-	} requestBodyInfo;
-	boost::uint64_t requestBodyAlreadyRead;
+	} bodyInfo;
+	boost::uint64_t bodyAlreadyRead;
 
 
 	BaseHttpRequest()
@@ -139,80 +138,77 @@ public:
 		  pool(NULL),
 		  headers(16),
 		  secureHeaders(32),
-		  parseError(NULL)
+		  parseError(NULL),
+		  bodyAlreadyRead(0)
 	{
 		psg_lstr_init(&path);
+		bodyInfo.contentLength = 0; // Also sets endChunkReached to false
 	}
 
-	~BaseHttpRequest() {
-		deinitialize();
-	}
-
-	void reinitialize() {
-		httpMajor = 1;
-		httpMinor = 0;
-		httpState = PARSING_HEADERS;
-		requestBodyType = RBT_NO_BODY;
-		method    = HTTP_GET;
-		wantKeepAlive = false;
-		responded = false;
-		pool      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
-		psg_lstr_init(&path);
-		requestBodyChannel.reinitialize();
-		parseError = NULL;
-		requestBodyInfo.contentLength = 0; // Also sets endChunkReached to false
-		requestBodyAlreadyRead = 0;
-	}
-
-	void deinitialize() {
-		psg_lstr_deinit(&path);
-
-		HeaderTable::Iterator it(headers);
-		while (*it != NULL) {
-			psg_lstr_deinit(&it->header->key);
-			psg_lstr_deinit(&it->header->val);
-			it.next();
+	const char *getHttpStateString() const {
+		switch (httpState) {
+		case PARSING_HEADERS:
+			return "PARSING_HEADERS";
+		case PARSED_HEADERS:
+			return "PARSED_HEADERS";
+		case COMPLETE:
+			return "COMPLETE";
+		case PARSING_BODY:
+			return "PARSING_BODY";
+		case PARSING_CHUNKED_BODY:
+			return "PARSING_CHUNKED_BODY";
+		case UPGRADED:
+			return "UPGRADED";
+		case ERROR:
+			return "ERROR";
+		case FLUSHING_OUTPUT:
+			return "FLUSHING_OUTPUT";
+		case WAITING_FOR_REFERENCES:
+			return "WAITING_FOR_REFERENCES";
+		case IN_FREELIST:
+			return "IN_FREELIST";
 		}
-
-		it = HeaderTable::Iterator(secureHeaders);
-		while (*it != NULL) {
-			psg_lstr_deinit(&it->header->key);
-			psg_lstr_deinit(&it->header->val);
-			it.next();
-		}
-
-		if (pool != NULL) {
-			psg_destroy_pool(pool);
-			pool = NULL;
-		}
-
-		headers.clear();
-		secureHeaders.clear();
-		requestBodyChannel.buffersFlushedCallback = NULL;
-		requestBodyChannel.dataFlushedCallback = NULL;
-		requestBodyChannel.deinitialize();
 	}
 
-	bool requestBodyFullyRead() const {
-		switch (requestBodyType) {
+	const char *getBodyTypeString() const {
+		switch (bodyType) {
+		case RBT_NO_BODY:
+			return "NO_BODY";
+		case RBT_UPGRADE:
+			return "UPGRADE";
+		case RBT_CONTENT_LENGTH:
+			return "CONTENT_LENGTH";
+		case RBT_CHUNKED:
+			return "CHUNKED";
+		}
+	}
+
+	bool bodyFullyRead() const {
+		switch (bodyType) {
 		case RBT_NO_BODY:
 			return true;
 		case RBT_CONTENT_LENGTH:
-			return requestBodyAlreadyRead >= requestBodyInfo.contentLength;
+			return bodyAlreadyRead >= bodyInfo.contentLength;
 		case RBT_CHUNKED:
-			return requestBodyInfo.endChunkReached;
+			return bodyInfo.endChunkReached;
 		case RBT_UPGRADE:
 			return false;
 		}
 	}
 
-	bool hasRequestBody() const {
+	bool hasBody() const {
 		// Branchless way to check whether RBT_CONTENT_LENGTH or RBT_CHUNKED is set.
-		return requestBodyType & 0x6;
+		return bodyType & 0x6;
 	}
 
 	bool canKeepAlive() const {
-		return wantKeepAlive && requestBodyFullyRead();
+		return wantKeepAlive && bodyFullyRead();
+	}
+
+	// Not mutually exclusive with ended(). If a request has begun() and is ended(),
+	// then it just means that it hasn't been reinitialized for the next request yet.
+	bool begun() const {
+		return (int) httpState >= COMPLETE;
 	}
 
 	bool ended() const {
