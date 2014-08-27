@@ -69,6 +69,7 @@
 #include <Utils.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
+#include <Utils/json.h>
 #include <Utils/MessageIO.h>
 #include <Utils/VariantMap.h>
 
@@ -171,7 +172,7 @@ private:
 		TRACE_POINT();
 		stringstream stream;
 		commonContext.requireRights(Account::INSPECT_REQUESTS);
-		requestHandler->inspect(stream);
+		//requestHandler->inspect(stream);
 		writeScalarMessage(commonContext.fd, stream.str());
 	}
 
@@ -407,7 +408,7 @@ private:
 	}
 
 	void onSigquit(ev::sig &signal, int revents) {
-		requestHandler->inspect(cerr);
+		//requestHandler->inspect(cerr);
 		cerr.flush();
 		cerr << "\n" << pool->inspect();
 		cerr.flush();
@@ -427,7 +428,7 @@ private:
 		Server *self = (Server *) userData;
 
 		cerr << "### Request handler state\n";
-		self->requestHandler->inspect(cerr);
+		//self->requestHandler->inspect(cerr);
 		cerr << "\n";
 		cerr.flush();
 
@@ -707,6 +708,7 @@ struct WorkingObjects {
 	SpawnerConfigPtr spawnerConfig;
 	SpawnerFactoryPtr spawnerFactory;
 	BackgroundEventLoop *bgloop;
+	struct ev_signal sigquitWatcher;
 	PoolPtr appPool;
 	ServerKit::Context *serverKitContext;
 	RequestHandler *requestHandler;
@@ -779,6 +781,31 @@ lowerPrivilege(WorkingObjects *wo) {
 }
 
 static void
+onSigquit(EV_P_ struct ev_signal *watcher, int revents) {
+	WorkingObjects *wo = workingObjects;
+
+	cerr << "### Request handler state\n";
+	cerr << wo->requestHandler->inspectStateAsJson();
+	cerr << "\n";
+	cerr.flush();
+
+	cerr << "### Request handler config\n";
+	cerr << wo->requestHandler->getConfigAsJson();
+	cerr << "\n";
+	cerr.flush();
+
+	cerr << "### Pool state\n";
+	cerr << "\n" << wo->appPool->inspect();
+	cerr << "\n";
+	cerr.flush();
+
+	cerr << "### Backtraces\n";
+	cerr << "\n" << oxt::thread::all_backtraces();
+	cerr << "\n";
+	cerr.flush();
+}
+
+static void
 initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
 	TRACE_POINT();
 	VariantMap &options = *agentOptions;
@@ -807,6 +834,8 @@ initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
 	wo->spawnerFactory = boost::make_shared<SpawnerFactory>(wo->spawnerConfig);
 
 	wo->bgloop = new BackgroundEventLoop(true, true);
+	ev_signal_init(&wo->sigquitWatcher, onSigquit, SIGQUIT);
+	ev_signal_start(wo->bgloop->loop, &wo->sigquitWatcher);
 
 	wo->appPool = boost::make_shared<Pool>(wo->spawnerFactory, agentOptions);
 	wo->appPool->initialize();
@@ -851,12 +880,46 @@ reportInitializationInfo(WorkingObjects *wo) {
 }
 
 static void
+dumpDiagnosticsOnCrash(void *userData) {
+	WorkingObjects *wo = workingObjects;
+
+	cerr << "### Request handler state\n";
+	cerr << wo->requestHandler->inspectStateAsJson();
+	cerr << "\n";
+	cerr.flush();
+
+	cerr << "### Request handler config\n";
+	cerr << wo->requestHandler->getConfigAsJson();
+	cerr << "\n";
+	cerr.flush();
+
+	cerr << "### Pool state (simple)\n";
+	// Do not lock, the crash may occur within the pool.
+	Pool::InspectOptions options;
+	options.verbose = true;
+	cerr << wo->appPool->inspect(options, false);
+	cerr << "\n";
+	cerr.flush();
+
+	cerr << "### Pool state (XML)\n";
+	cerr << wo->appPool->toXml(true, false);
+	cerr << "\n\n";
+	cerr.flush();
+
+	cerr << "### Backtraces\n";
+	cerr << oxt::thread::all_backtraces();
+	cerr.flush();
+}
+
+static void
 mainLoop(WorkingObjects *wo) {
 	TRACE_POINT();
+	installDiagnosticsDumper(dumpDiagnosticsOnCrash, NULL);
 	wo->bgloop->start("Main event loop", 0);
 	while (true) {
 		sleep(100);
 	}
+	installDiagnosticsDumper(NULL, NULL);
 }
 
 static void

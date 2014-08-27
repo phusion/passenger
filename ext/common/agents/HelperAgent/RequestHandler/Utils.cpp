@@ -2,101 +2,82 @@
 
 private:
 
-HashedStaticString PASSENGER_APP_GROUP_NAME;
-HashedStaticString PASSENGER_MAX_REQUESTS;
-HashedStaticString PASSENGER_STICKY_SESSIONS;
-HashedStaticString PASSENGER_STICKY_SESSIONS_COOKIE_NAME;
-HashedStaticString HTTP_COOKIE;
-
 struct ev_loop *
 getLoop() {
 	return getContext()->libev->getLoop();
 }
 
 void
-disconnectWithClientSocketWriteError(Client *client, int e) {
+disconnectWithClientSocketWriteError(Client **client, int e) {
 	stringstream message;
 	message << "client socket write error: ";
-	message << strerror(e);
+	message << ServerKit::getErrorDesc(e);
 	message << " (errno=" << e << ")";
-	disconnectWithError(&client, message.str());
+	disconnectWithError(client, message.str());
 }
 
 void
-disconnectWithAppSocketWriteError(Client *client, int e) {
+disconnectWithAppSocketIncompleteResponseError(Client **client) {
+	disconnectWithError(client, "application did not send a complete response");
+}
+
+void
+disconnectWithAppSocketReadError(Client **client, int e) {
+	stringstream message;
+	message << "app socket read error: ";
+	message << ServerKit::getErrorDesc(e);
+	message << " (errno=" << e << ")";
+	disconnectWithError(client, message.str());
+}
+
+void
+disconnectWithAppSocketWriteError(Client **client, int e) {
 	stringstream message;
 	message << "app socket write error: ";
-	message << strerror(e);
+	message << ServerKit::getErrorDesc(e);
 	message << " (errno=" << e << ")";
-	disconnectWithError(&client, message.str());
+	disconnectWithError(client, message.str());
 }
 
 void
-disconnectWithWarning(Client **client, const StaticString &message) {
-	SKC_DEBUG(*client, "Disconnected client with warning: " << message);
-	disconnect(client);
+endRequestWithAppSocketIncompleteResponse(Client **client, Request **req) {
+	if (!(*req)->responseBegun) {
+		SKC_WARN(*client, "Sending 502 response: application did not send a complete response");
+		endRequestWithSimpleResponse(client, req,
+			"<h2>Incomplete response received from application</h2>", 502);
+	} else {
+		disconnectWithAppSocketIncompleteResponseError(client);
+	}
+}
+
+void
+endRequestWithAppSocketReadError(Client **client, Request **req, int e) {
+	Client *c = *client;
+	if (!(*req)->responseBegun) {
+		SKC_WARN(*client, "Sending 502 response: application socket read error");
+		endRequestWithSimpleResponse(client, req, "<h2>Application socket read error</h2>", 502);
+	} else {
+		disconnectWithAppSocketReadError(&c, e);
+	}
 }
 
 /**
  * `data` must outlive the request.
  */
 void
-endRequestWithSimpleResponse(Client **c, Request **r, const StaticString &data, int code = 200) {
-	const unsigned int HEADER_BUF_SIZE = 300;
+endRequestWithSimpleResponse(Client **c, Request **r, const StaticString &body, int code = 200) {
 	Client *client = *c;
 	Request *req = *r;
+	ServerKit::HeaderTable headers;
 
-	char *header = (char *) psg_pnalloc(req->pool, HEADER_BUF_SIZE);
-	char statusBuffer[50];
-	char *pos = header;
-	const char *end = header + HEADER_BUF_SIZE - 1;
-	const char *status;
-	time_t the_time = time(NULL);
-	struct tm the_tm;
-
-	status = getStatusCodeAndReasonPhrase(code);
-	if (status == NULL) {
-		snprintf(statusBuffer, sizeof(statusBuffer), "%d Unknown Reason-Phrase", code);
-		status = statusBuffer;
-	}
-
-	gmtime_r(&the_time, &the_tm);
-
-	pos += snprintf(pos, end - pos,
-		"HTTP/1.1 %s\r\n"
-		"Status: %s\r\n"
-		"Content-Length: %lu\r\n"
-		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Cache-Control: no-cache, no-store, must-revalidate\r\n"
-		"Date: ",
-		status, status, (unsigned long) data.size());
-	pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %Z", &the_tm);
-	pos = appendData(pos, end, "\r\n");
-	if (req->canKeepAlive()) {
-		pos = appendData(pos, end, "Connection: keep-alive\r\n");
-	} else {
-		pos = appendData(pos, end, "Connection: close\r\n");
-	}
-	pos = appendData(pos, end, "\r\n");
-
-	writeResponse(client, header, pos - header);
-	if (req->ended()) {
-		return;
-	}
-	writeResponse(client, data.data(), data.size());
+	headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+	writeSimpleResponse(client, code, &headers, body);
 	endRequest(c, r);
-
-	// TODO:
-	/* if (client->useUnionStation()) {
-		snprintf(header, end - header, "Status: %d %s",
-			code, status);
-		client->logMessage(header);
-	} */
 }
 
 bool
 getBoolOption(Request *req, const HashedStaticString &name, bool defaultValue = false) {
-	const LString *value = req->headers.lookup(name);
+	const LString *value = req->secureHeaders.lookup(name);
 	if (value != NULL && value->size > 0) {
 		return psg_lstr_first_byte(value) == 't';
 	} else {
@@ -110,9 +91,42 @@ clamp(Number value, Number min, Number max) {
 	return std::max(std::min(value, max), min);
 }
 
-// `path` MUST be NULL-terminated.
-// Returns a contiguous LString.
-LString *
+static void
+gatherBuffers(char * restrict dest, unsigned int size, const struct iovec *buffers,
+	unsigned int nbuffers)
+{
+	const char *end = dest + size;
+	char *pos = dest;
+
+	for (unsigned int i = 0; i < nbuffers; i++) {
+		assert(pos + buffers[i].iov_len <= end);
+		memcpy(pos, buffers[i].iov_base, buffers[i].iov_len);
+		pos += buffers[i].iov_len;
+	}
+}
+
+static Json::Value
+timeToJson(ev_tstamp tstamp) {
+	Json::Value doc;
+	time_t time = (time_t) tstamp;
+	char buf[32];
+	size_t len;
+
+	doc["timestamp"] = tstamp;
+
+	ctime_r(&time, buf);
+	len = strlen(buf);
+	if (len > 0) {
+		// Get rid of trailing newline
+		buf[len - 1] = '\0';
+	}
+	doc["local"] = buf;
+
+	return doc;
+}
+
+// `path` MUST be NULL-terminated. Returns a contiguous LString.
+static LString *
 resolveSymlink(const StaticString &path, psg_pool_t *pool) {
 	char linkbuf[PATH_MAX];
 	ssize_t size;

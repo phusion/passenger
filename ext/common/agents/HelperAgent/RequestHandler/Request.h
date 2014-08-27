@@ -35,6 +35,7 @@
 #include <UnionStation/Core.h>
 #include <UnionStation/Transaction.h>
 #include <UnionStation/ScopeLog.h>
+#include <agents/HelperAgent/RequestHandler/AppResponse.h>
 #include <Logging.h>
 #include <Utils/HttpHeaderBufferer.h>
 #include <Utils/Dechunker.h>
@@ -52,6 +53,7 @@ public:
 
 	ServerKit::FileBufferedFdOutputChannel appInput;
 	ServerKit::FdInputChannel appOutput;
+	AppResponse appResponse;
 
 
 	/***** State variables *****/
@@ -61,10 +63,11 @@ public:
 		CHECKING_OUT_SESSION,
 		SENDING_HEADER_TO_APP,
 		FORWARDING_BODY_TO_APP,
-		SENDING_SIMPLE_RESPONSE
+		WAITING_FOR_APP_OUTPUT
 	} state;
 
 	ev_tstamp startedAt;
+	bool halfCloseAppConnection;
 
 	Options options;
 	SessionPtr session;
@@ -75,8 +78,8 @@ public:
 		UnionStation::ScopeLog *requestProxying;
 	} scopeLogs;
 	unsigned int sessionCheckoutTry;
+
 	bool sessionCheckedOut;
-	bool checkoutSessionAfterCommit;
 	bool stickySession;
 	bool responseHeaderSeen;
 	bool chunkedResponse;
@@ -99,56 +102,18 @@ public:
 	Dechunker responseDechunker;
 
 
-	~Request() {
-		deinitializeRequest();
-	}
-
-	void reinitialize() {
-		ServerKit::BaseHttpRequest::reinitialize();
-
-		// appInput and appOutput are initialized in
-		// RequestHandler::checkoutSession().
-
-		state = ANALYZING_REQUEST;
-		sessionCheckedOut = false;
-		sessionCheckoutTry = 0;
-		stickySession = false;
-		responseHeaderSeen = false;
-		chunkedResponse = false;
-		responseContentLength = -1;
-		responseBodyAlreadyRead = 0;
-	}
-
-	void deinitializeRequest() {
-		session.reset();
-		responseHeaderBufferer.reset();
-		responseDechunker.reset();
-		endScopeLog(&scopeLogs.requestProxying, false);
-		endScopeLog(&scopeLogs.getFromPool, false);
-		endScopeLog(&scopeLogs.bufferingRequestBody, false);
-		endScopeLog(&scopeLogs.requestProcessing, false);
-
-		appOutput.deinitialize();
-		appInput.deinitialize();
-	}
-
-	void deinitialize() {
-		deinitializeRequest();
-		ServerKit::BaseHttpRequest::deinitialize();
-	}
-
-	const char *getStateName() const {
+	const char *getStateString() const {
 		switch (state) {
+		case ANALYZING_REQUEST:
+			return "ANALYZING_REQUEST";
 		case CHECKING_OUT_SESSION:
 			return "CHECKING_OUT_SESSION";
 		case SENDING_HEADER_TO_APP:
 			return "SENDING_HEADER_TO_APP";
 		case FORWARDING_BODY_TO_APP:
 			return "FORWARDING_BODY_TO_APP";
-		case SENDING_SIMPLE_RESPONSE:
-			return "SENDING_SIMPLE_RESPONSE";
-		default:
-			return "UNKNOWN";
+		case WAITING_FOR_APP_OUTPUT:
+			return "WAITING_FOR_APP_OUTPUT";
 		}
 	}
 

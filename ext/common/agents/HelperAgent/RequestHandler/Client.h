@@ -45,14 +45,6 @@ public:
 		: ServerKit::BaseHttpClient<Request>(server)
 		{ }
 
-	virtual void reinitialize(int fd) {
-		ServerKit::BaseHttpClient<Request>::reinitialize(fd);
-	}
-
-	virtual void deinitialize() {
-		ServerKit::BaseHttpClient<Request>::deinitialize();
-	}
-
 	void inspect(struct ev_loop *loop, ostream &stream) const {
 		#if 0
 		const char *indent = "    ";

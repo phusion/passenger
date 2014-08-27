@@ -1,12 +1,14 @@
 // This file is included inside the RequestHandler class.
-// It handles main events, and may forward events to
-// respective state-specific handlers.
 
 protected:
 
 virtual void
 onRequestBegin(Client *client, Request *req) {
+	ParentClass::onRequestBegin(client, req);
+
+	SKC_TRACE(client, 2, "Initiating request");
 	req->startedAt = ev_now(getLoop());
+	req->bodyChannel.stop();
 
 	initializePoolOptions(client, req);
 	if (req->ended()) {
@@ -19,16 +21,11 @@ onRequestBegin(Client *client, Request *req) {
 	setStickySessionId(client, req);
 
 	checkoutSession(client, req);
+}
 
-	/* writeResponse(client,
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Length: 3\r\n"
-		"Content-Type: text/plain\r\n"
-		"Connection: keep-alive\r\n"
-		"\r\n"
-		"ok\n"
-	);
-	endRequest(&client, &req); */
+virtual bool
+supportsUpgrade(Client *client, Request *req) {
+	return true;
 }
 
 private:
@@ -231,7 +228,34 @@ createNewPoolOptions(Client *client, Request *req) {
 
 void
 initializeUnionStation(Client *client, Request *req) {
-	// TODO
+	if (getBoolOption(req, UNION_STATION_SUPPORT, false)) {
+		Options &options = req->options;
+		ServerKit::HeaderTable &headers = req->headers;
+
+		const LString *key = headers.lookup("!~UNION_STATION_KEY");
+		const LString *filters = headers.lookup("!~UNION_STATION_FILTERS");
+		if (key == NULL || key->size == 0) {
+			disconnectWithError(&client, "header UNION_STATION_KEY must be set.");
+			return;
+		}
+
+		key = psg_lstr_make_contiguous(key, req->pool);
+		filters = psg_lstr_make_contiguous(filters, req->pool);
+		options.transaction = unionStationCore->newTransaction(
+			options.getAppGroupName(), "requests",
+			string(key->start->data, key->size),
+			string(filters->start->data, filters->size));
+		if (!options.transaction->isNull()) {
+			options.analytics = true;
+			options.unionStationKey = StaticString(key->start->data, key->size);
+		}
+
+		req->beginScopeLog(&req->scopeLogs.requestProcessing, "request processing");
+		req->logMessage(string("Request method: ") + http_method_str(req->method));
+
+		const LString *path = psg_lstr_make_contiguous(&req->path, req->pool);
+		req->logMessage("URI: " + StaticString(path->start->data, path->size));
+	}
 }
 
 void

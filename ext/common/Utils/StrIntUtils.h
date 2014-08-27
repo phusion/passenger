@@ -242,6 +242,24 @@ reverseString(char *str, unsigned int size) {
 }
 
 /**
+ * Calculates the size (in characters) of an integer when converted
+ * to another base.
+ */
+template<typename IntegerType, int radix>
+unsigned int
+integerSizeInOtherBase(IntegerType value) {
+	IntegerType remainder = value;
+	unsigned int size = 0;
+
+	do {
+		remainder = remainder / radix;
+		size++;
+	} while (remainder != 0);
+
+	return size;
+}
+
+/**
  * Convert the given integer to some other radix, placing
  * the result into the given output buffer. The output buffer
  * will be NULL terminated. Supported radices are 2-36.
@@ -294,6 +312,9 @@ unsigned int
 integerToHex(IntegerType value, char *output) {
 	return integerToOtherBase<IntegerType, 16>(value, output, 2 * sizeof(IntegerType) + 1);
 }
+
+unsigned int integerSizeAsString(unsigned int value);
+unsigned int integerToString(unsigned int value, char *output, unsigned int outputSize);
 
 /**
  * Convert the given integer to a hexadecimal string.

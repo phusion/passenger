@@ -360,6 +360,16 @@ toHex(const StaticString &data, char *output, bool upperCase) {
 	}
 }
 
+unsigned int
+integerSizeAsString(unsigned int value) {
+	return integerSizeInOtherBase<unsigned int, 10>(value);
+}
+
+unsigned int
+integerToString(unsigned int value, char *output, unsigned int outputSize) {
+	return integerToOtherBase<unsigned int, 10>(value, output, outputSize);
+}
+
 string
 integerToHex(long long value) {
 	char buf[sizeof(long long) * 2 + 1];

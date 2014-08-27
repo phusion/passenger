@@ -38,6 +38,7 @@ namespace Passenger {
 using namespace std;
 
 #define P_STATIC_STRING(x) Passenger::StaticString(x, sizeof(x) - 1)
+#define P_STATIC_STRING_WITH_NULL(x) Passenger::StaticString(x, sizeof(x))
 
 /**
  * An immutable, static byte buffer. This class will never copy data:

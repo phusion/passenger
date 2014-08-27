@@ -1,3 +1,5 @@
+// This file is included inside the RequestHandler class.
+
 private:
 
 void
@@ -7,7 +9,7 @@ checkoutSession(Client *client, Request *req) {
 
 	SKC_TRACE(client, 2, "Checking out session: appRoot=" << options.appRoot);
 	req->state = Request::CHECKING_OUT_SESSION;
-	req->requestBodyChannel.stop();
+	req->bodyChannel.stop();
 	req->beginScopeLog(&req->scopeLogs.getFromPool, "get from pool");
 
 	callback.func = sessionCheckedOut;
@@ -33,22 +35,27 @@ sessionCheckedOut(const SessionPtr &session, const ExceptionPtr &e,
 	} else {
 		self->getContext()->libev->runLater(
 			boost::bind(&RequestHandler::sessionCheckedOutFromAnotherThread,
-				self, client, RequestRef(req), session, e));
-		self->unrefRequest(req);
+				self, client, req, session, e));
 	}
 }
 
 void
-sessionCheckedOutFromAnotherThread(Client *client, RequestRef req,
+sessionCheckedOutFromAnotherThread(Client *client, Request *req,
 	SessionPtr session, ExceptionPtr e)
 {
-	sessionCheckedOutFromEventLoopThread(client, req.get(), session, e);
+	sessionCheckedOutFromEventLoopThread(client, req, session, e);
+	unrefRequest(req);
 }
 
 void
 sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 	const SessionPtr &session, const ExceptionPtr &e)
 {
+	TRACE_POINT();
+	if (req->ended()) {
+		return;
+	}
+
 	if (e == NULL) {
 		SKC_DEBUG(client, "Session checked out: pid=" << session->getPid() <<
 			", gupid=" << session->getGupid());
@@ -62,15 +69,53 @@ sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 
 void
 initiateSession(Client *client, Request *req) {
-	writeResponse(client,
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Length: 3\r\n"
-		"Content-Type: text/plain\r\n"
-		"Connection: keep-alive\r\n"
-		"\r\n"
-		"ok\n"
-	);
-	endRequest(&client, &req);
+	req->sessionCheckoutTry++;
+	try {
+		req->session->initiate();
+	} catch (const SystemException &e2) {
+		if (req->sessionCheckoutTry < 10) {
+			SKC_DEBUG(client, "Error checking out session (" << e2.what() <<
+				"); retrying (attempt " << req->sessionCheckoutTry << ")");
+			req->sessionCheckedOut = false;
+			refRequest(req);
+			getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
+		} else {
+			string message = "could not initiate a session (";
+			message.append(e2.what());
+			message.append(")");
+			disconnectWithError(&client, message);
+		}
+		return;
+	}
+
+	if (req->useUnionStation()) {
+		req->endScopeLog(&req->scopeLogs.getFromPool);
+		req->logMessage("Application PID: " +
+			toString(req->session->getPid()) +
+			" (GUPID: " + req->session->getGupid() + ")");
+		req->beginScopeLog(&req->scopeLogs.requestProxying, "request proxying");
+	}
+
+	SKC_DEBUG(client, "Session initiated: fd=" << req->session->fd());
+	setNonBlocking(req->session->fd());
+	req->appInput.reinitialize(req->session->fd());
+	req->appOutput.reinitialize(req->session->fd());
+	reinitializeAppResponse(client, req);
+	sendHeaderToApp(client, req);
+}
+
+static void
+checkoutSessionLater(Request *req) {
+	TRACE_POINT();
+	Client *client = static_cast<Client *>(req->client);
+	RequestHandler *self = static_cast<RequestHandler *>(
+		RequestHandler::getServerFromClient(client));
+	bool ended = req->ended();
+
+	if (!ended) {
+		self->checkoutSession(client, req);
+	}
+	self->unrefRequest(req);
 }
 
 void

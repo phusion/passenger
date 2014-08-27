@@ -111,6 +111,8 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/cstdint.hpp>
+#include <oxt/macros.hpp>
 #include <ev++.h>
 #include <ostream>
 
@@ -120,6 +122,7 @@
 #endif
 
 #include <sys/types.h>
+#include <sys/uio.h>
 #include <utility>
 #include <typeinfo>
 #include <cassert>
@@ -128,8 +131,11 @@
 #include <Logging.h>
 #include <MessageReadersWriters.h>
 #include <Constants.h>
+#include <ServerKit/Errors.h>
 #include <ServerKit/HttpServer.h>
+#include <ServerKit/HttpHeaderParser.h>
 #include <MemoryKit/palloc.h>
+#include <DataStructures/LString.h>
 #include <DataStructures/StringKeyTable.h>
 #include <ApplicationPool2/ErrorRenderer.h>
 #include <StaticString.h>
@@ -140,6 +146,7 @@
 #include <Utils/VariantMap.h>
 #include <Utils/Timer.h>
 #include <agents/HelperAgent/RequestHandler/Client.h>
+#include <agents/HelperAgent/RequestHandler/AppResponse.h>
 
 namespace Passenger {
 
@@ -148,8 +155,6 @@ using namespace boost;
 using namespace oxt;
 using namespace ApplicationPool2;
 
-
-#define MAX_STATUS_HEADER_SIZE 64
 
 #define RH_LOG_EVENT(client, eventName) \
 	char _clientName[32]; \
@@ -161,56 +166,205 @@ using namespace ApplicationPool2;
 class RequestHandler: public ServerKit::HttpServer<RequestHandler, Client> {
 private:
 	typedef ServerKit::HttpServer<RequestHandler, Client> ParentClass;
+	typedef ServerKit::Channel Channel;
+	typedef ServerKit::FdInputChannel FdInputChannel;
+	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
+	typedef ServerKit::FileBufferedFdOutputChannel FileBufferedFdOutputChannel;
 
 	const VariantMap *agentsOptions;
-	string defaultRuby;
-	string loggingAgentAddress;
-	string loggingAgentPassword;
-	string defaultUser;
-	string defaultGroup;
+	psg_pool_t *stringPool;
+	StaticString defaultRuby;
+	StaticString loggingAgentAddress;
+	StaticString loggingAgentPassword;
+	StaticString defaultUser;
+	StaticString defaultGroup;
+	StaticString serverName;
+	HashedStaticString PASSENGER_APP_GROUP_NAME;
+	HashedStaticString PASSENGER_MAX_REQUESTS;
+	HashedStaticString PASSENGER_STICKY_SESSIONS;
+	HashedStaticString PASSENGER_STICKY_SESSIONS_COOKIE_NAME;
+	HashedStaticString UNION_STATION_SUPPORT;
+	HashedStaticString HTTPS;
+	HashedStaticString REMOTE_ADDR;
+	HashedStaticString HTTP_COOKIE;
+	HashedStaticString HTTP_CONTENT_LENGTH;
+	boost::uint32_t HTTP_CONTENT_TYPE_HASH;
+	boost::uint32_t HTTP_CONNECTION_HASH;
+	boost::uint32_t HTTP_STATUS_HASH;
 
 	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
 	bool singleAppMode;
-
-	#include <agents/HelperAgent/RequestHandler/Utils.cpp>
-	#include <agents/HelperAgent/RequestHandler/Hooks.cpp>
-	#include <agents/HelperAgent/RequestHandler/InitRequest.cpp>
-	#include <agents/HelperAgent/RequestHandler/CheckoutSession.cpp>
 
 public:
 	ResourceLocator *resourceLocator;
 	PoolPtr appPool;
 	UnionStation::CorePtr unionStationCore;
 
+protected:
+	#include <agents/HelperAgent/RequestHandler/Utils.cpp>
+	#include <agents/HelperAgent/RequestHandler/InitRequest.cpp>
+	#include <agents/HelperAgent/RequestHandler/CheckoutSession.cpp>
+	#include <agents/HelperAgent/RequestHandler/SendRequest.cpp>
+	#include <agents/HelperAgent/RequestHandler/ForwardResponse.cpp>
+
+	virtual void
+	onClientAccepted(Client *client) {
+		ParentClass::onClientAccepted(client);
+		client->connectedAt = ev_now(getLoop());
+	}
+
+	virtual void
+	onRequestObjectCreated(Client *client, Request *req) {
+		ParentClass::onRequestObjectCreated(client, req);
+
+		req->appInput.setContext(getContext());
+		req->appInput.setHooks(&req->hooks);
+		req->appInput.errorCallback = onAppInputError;
+
+		req->appOutput.setContext(getContext());
+		req->appOutput.setHooks(&req->hooks);
+		req->appOutput.setDataCallback(_onAppOutputData);
+	}
+
+	virtual void deinitializeClient(Client *client) {
+		ParentClass::deinitializeClient(client);
+		client->output.setBuffersFlushedCallback(NULL);
+	}
+
+	virtual void reinitializeRequest(Client *client, Request *req) {
+		ParentClass::reinitializeRequest(client, req);
+
+		// appInput and appOutput are initialized in
+		// RequestHandler::checkoutSession().
+
+		req->state = Request::ANALYZING_REQUEST;
+		req->startedAt = 0;
+		req->halfCloseAppConnection = false;
+		req->sessionCheckedOut = false;
+		req->sessionCheckoutTry = 0;
+		req->stickySession = false;
+		req->responseHeaderSeen = false;
+		req->chunkedResponse = false;
+		req->responseContentLength = -1;
+		req->responseBodyAlreadyRead = 0;
+	}
+
+	virtual void deinitializeRequest(Client *client, Request *req) {
+		req->session.reset();
+		req->responseHeaderBufferer.reset();
+		req->responseDechunker.reset();
+		req->endScopeLog(&req->scopeLogs.requestProxying, false);
+		req->endScopeLog(&req->scopeLogs.getFromPool, false);
+		req->endScopeLog(&req->scopeLogs.bufferingRequestBody, false);
+		req->endScopeLog(&req->scopeLogs.requestProcessing, false);
+
+		req->appInput.deinitialize();
+		req->appInput.setBuffersFlushedCallback(NULL);
+		req->appInput.setDataFlushedCallback(NULL);
+		req->appOutput.deinitialize();
+
+		deinitializeAppResponse(client, req);
+
+		ParentClass::deinitializeRequest(client, req);
+	}
+
+	void reinitializeAppResponse(Client *client, Request *req) {
+		AppResponse *resp = &req->appResponse;
+
+		resp->httpMajor = 1;
+		resp->httpMinor = 0;
+		resp->httpState = AppResponse::PARSING_HEADERS;
+		resp->bodyType  = AppResponse::RBT_NO_BODY;
+		resp->wantKeepAlive = false;
+		resp->statusCode = 0;
+		resp->parserState.headerParser = getHeaderParserStatePool().construct();
+		createAppResponseHeaderParser(getContext(), req).initialize(HTTP_RESPONSE);
+		resp->parseError = NULL;
+		resp->bodyInfo.contentLength = 0; // Also sets endChunkReached to false
+		resp->bodyAlreadyRead = 0;
+	}
+
+	void deinitializeAppResponse(Client *client, Request *req) {
+		AppResponse *resp = &req->appResponse;
+
+		if (resp->httpState == AppResponse::PARSING_HEADERS
+		 && resp->parserState.headerParser != NULL)
+		{
+			getHeaderParserStatePool().destroy(resp->parserState.headerParser);
+			resp->parserState.headerParser = NULL;
+		}
+
+		ServerKit::HeaderTable::Iterator it(resp->headers);
+		while (*it != NULL) {
+			psg_lstr_deinit(&it->header->key);
+			psg_lstr_deinit(&it->header->val);
+			it.next();
+		}
+
+		it = ServerKit::HeaderTable::Iterator(resp->secureHeaders);
+		while (*it != NULL) {
+			psg_lstr_deinit(&it->header->key);
+			psg_lstr_deinit(&it->header->val);
+			it.next();
+		}
+
+		resp->headers.clear();
+		resp->secureHeaders.clear();
+	}
+
+public:
 	RequestHandler(ServerKit::Context *context, const VariantMap *_agentsOptions)
 		: ParentClass(context),
 		  agentsOptions(_agentsOptions),
-		  poolOptionsCache(4),
-		  singleAppMode(false),
+		  stringPool(psg_create_pool(1024 * 4)),
 		  PASSENGER_APP_GROUP_NAME("!~PASSENGER_APP_GROUP_NAME"),
 		  PASSENGER_MAX_REQUESTS("!~PASSENGER_MAX_REQUESTS"),
 		  PASSENGER_STICKY_SESSIONS("!~PASSENGER_STICKY_SESSIONS"),
 		  PASSENGER_STICKY_SESSIONS_COOKIE_NAME("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME"),
-		  HTTP_COOKIE("cookie")
+		  UNION_STATION_SUPPORT("!~UNION_STATION_SUPPORT"),
+		  HTTPS("!~HTTPS"),
+		  REMOTE_ADDR("!~REMOTE_ADDR"),
+		  HTTP_COOKIE("cookie"),
+		  HTTP_CONTENT_LENGTH("content-length"),
+		  HTTP_CONTENT_TYPE_HASH(HashedStaticString("content-type").hash()),
+		  HTTP_CONNECTION_HASH(HashedStaticString("connection").hash()),
+		  HTTP_STATUS_HASH(HashedStaticString("status").hash()),
+		  poolOptionsCache(4),
+		  singleAppMode(false)
 	{
-		defaultRuby = agentsOptions->get("default_ruby");
-		loggingAgentAddress = agentsOptions->get("logging_agent_address", false);
-		loggingAgentPassword = agentsOptions->get("logging_agent_password", false);
-		defaultUser = agentsOptions->get("default_user", false);
-		defaultGroup = agentsOptions->get("default_group", false);
+		defaultRuby = psg_pstrdup(stringPool,
+			agentsOptions->get("default_ruby"));
+		loggingAgentAddress = psg_pstrdup(stringPool,
+			agentsOptions->get("logging_agent_address", false));
+		loggingAgentPassword = psg_pstrdup(stringPool,
+			agentsOptions->get("logging_agent_password", false));
+		defaultUser = psg_pstrdup(stringPool,
+			agentsOptions->get("default_user", false));
+		defaultGroup = psg_pstrdup(stringPool,
+			agentsOptions->get("default_group", false));
+		if (agentsOptions->has("server_name")) {
+			serverName = psg_pstrdup(stringPool,
+				agentsOptions->get("server_name"));
+		} else {
+			serverName = PROGRAM_NAME "/" PASSENGER_VERSION;
+		}
 
 		if (!agentsOptions->getBool("multi_app")) {
 			boost::shared_ptr<Options> options = make_shared<Options>();
 			fillPoolOptionsFromAgentsOptions(*options);
-			options->appRoot = agentsOptions->get("app_root");
-			options->appType = agentsOptions->get("app_type");
-			options->startupFile = agentsOptions->get("startup_file");
-			options->persist(*options);
-			options->clearPerRequestFields();
-			options->detachFromUnionStationTransaction();
+			options->appRoot = psg_pstrdup(stringPool,
+				agentsOptions->get("app_root"));
+			options->appType = psg_pstrdup(stringPool,
+				agentsOptions->get("app_type"));
+			options->startupFile = psg_pstrdup(stringPool,
+				agentsOptions->get("startup_file"));
 			poolOptionsCache.insert(options->getAppGroupName(), options);
 			singleAppMode = true;
 		}
+	}
+
+	~RequestHandler() {
+		psg_destroy_pool(stringPool);
 	}
 
 	void initialize() {
@@ -221,20 +375,60 @@ public:
 		if (appPool == NULL) {
 			throw RuntimeException("AppPool not initialized");
 		}
-		if (unionStationCore != NULL) {
+		if (unionStationCore == NULL) {
 			unionStationCore = appPool->getUnionStationCore();
 		}
 	}
 
-	void inspect(ostream &stream) {
-		Client *client;
+	virtual Json::Value getConfigAsJson() const {
+		Json::Value doc = ParentClass::getConfigAsJson();
+		doc["single_app_mode"] = singleAppMode;
+		return doc;
+	}
 
-		stream << activeClientCount << " clients:\n";
+	virtual Json::Value inspectClientStateAsJson(const Client *client) const {
+		Json::Value doc = ParentClass::inspectClientStateAsJson(client);
+		doc["connected_at"] = timeToJson(client->connectedAt);
+		return doc;
+	}
 
-		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
-			stream << "  Client " << client->getFd() << ":\n";
-			client->inspect(getLoop(), stream);
+	virtual Json::Value inspectRequestStateAsJson(const Request *req) const {
+		Json::Value doc = ParentClass::inspectRequestStateAsJson(req);
+
+		doc["state"] = req->getStateString();
+		doc["started_at"] = timeToJson(req->startedAt);
+		doc["sticky_session"] = req->stickySession;
+		if (req->stickySession) {
+			doc["sticky_session_id"] = req->options.stickySessionId;
 		}
+
+		if (req->session != NULL) {
+			Json::Value &sessionDoc = doc["session"] = Json::Value(Json::objectValue);
+			const Session *session = req->session.get();
+			const AppResponse *resp = &req->appResponse;
+
+			if (req->session->isClosed()) {
+				sessionDoc["closed"] = true;
+			} else {
+				sessionDoc["pid"] = session->getPid();
+				sessionDoc["gupid"] = session->getGupid().toString();
+			}
+
+			doc["app_response_http_state"] = resp->getHttpStateString();
+			doc["app_response_http_major"] = resp->httpMajor;
+			doc["app_response_http_minor"] = resp->httpMinor;
+			doc["app_response_want_keep_alive"] = resp->wantKeepAlive;
+			doc["app_response_body_type"] = resp->getBodyTypeString();
+			doc["app_response_body_fully_read"] = resp->bodyFullyRead();
+			doc["app_response_body_already_read"] = resp->bodyAlreadyRead;
+			if (resp->bodyType == AppResponse::RBT_CONTENT_LENGTH) {
+				doc["app_response_content_length"] = resp->bodyInfo.contentLength;
+			} else if (resp->bodyType == AppResponse::RBT_CHUNKED) {
+				doc["app_response_end_chunk_reached"] = resp->bodyInfo.endChunkReached;
+			}
+		}
+
+		return doc;
 	}
 };
 

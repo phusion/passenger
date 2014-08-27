@@ -89,12 +89,10 @@ module ThreadHandlerExtension
 			return true if env[RACK_HIJACK_IO]
 
 			begin
-				if full_http_response
-					connection.write("HTTP/1.1 #{status.to_i.to_s} Whatever#{CRLF}")
-					connection.write("Connection: close#{CRLF}")
-				end
+				status_str = status.to_i.to_s
 				headers_output = [
-					STATUS, status.to_i.to_s, CRLF
+					"HTTP/1.1 #{status_str} Whatever", CRLF,
+					STATUS, status_str, CRLF
 				]
 				headers.each do |key, values|
 					if values.is_a?(String)
