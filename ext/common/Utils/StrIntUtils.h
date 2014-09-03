@@ -345,6 +345,11 @@ roundUp(IntegerType number, IntegerType multiple) {
 }
 
 /**
+ * Converts the given character array to lowercase.
+ */
+void convertLowerCase(unsigned char *data, size_t len);
+
+/**
  * Compare two strings using a constant time algorithm to avoid timing attacks.
  */
 bool constantTimeCompare(const StaticString &a, const StaticString &b);

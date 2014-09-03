@@ -35,6 +35,7 @@
 #include <DataStructures/LString.h>
 #include <DataStructures/HashedStaticString.h>
 #include <Logging.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/Hasher.h>
 
 namespace Passenger {
@@ -42,7 +43,6 @@ namespace ServerKit {
 
 
 extern const HashedStaticString TRANSFER_ENCODING;
-void forceLowerCase(unsigned char *data, size_t len);
 
 struct HttpParseRequest {};
 struct HttpParseResponse {};
@@ -174,7 +174,7 @@ private:
 		psg_lstr_append(&self->state->currentHeader->key, self->pool,
 			*self->currentBuffer, data, len);
 		if (psg_lstr_first_byte(&self->state->currentHeader->key) != '!') {
-			forceLowerCase((unsigned char *) const_cast<char *>(data), len);
+			convertLowerCase((unsigned char *) const_cast<char *>(data), len);
 		}
 		self->state->hasher.update(data, len);
 

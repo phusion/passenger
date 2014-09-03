@@ -129,6 +129,9 @@ private
 				if options[:optimize]
 					optimize = "-O2"
 				end
+				if options[:strict_aliasing] == false
+					optimize = "#{optimize} -fno-strict-aliasing"
+				end
 				ensure_directory_exists(File.dirname(object_file))
 				if source_file =~ /\.c$/
 					compile_c(source_file, "#{optimize} #{cflags} -o #{object_file}".strip)
@@ -339,6 +342,15 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 	define_component 'Utils/StrIntUtils.o',
 		:source   => 'Utils/StrIntUtils.cpp',
 		:category => :base,
+		:optimize => true,
+		:deps     => %w(
+			Utils/StrIntUtils.h
+		)
+	define_component 'Utils/StrIntUtilsNoStrictAliasing.o',
+		:source   => 'Utils/StrIntUtilsNoStrictAliasing.cpp',
+		:category => :base,
+		:optimize => true,
+		:strict_aliasing => false,
 		:deps     => %w(
 			Utils/StrIntUtils.h
 		)
