@@ -912,14 +912,26 @@ public:
 				doc["end_chunk_reached"] = req->bodyInfo.endChunkReached;
 			}
 
-			string path;
-			path.reserve(req->path.size);
+			string str;
+			str.reserve(req->path.size);
 			part = req->path.start;
 			while (part != NULL) {
-				path.append(part->data, part->size);
+				str.append(part->data, part->size);
 				part = part->next;
 			}
-			doc["path"] = path;
+			doc["path"] = str;
+
+			const LString *host = req->headers.lookup("host");
+			if (host != NULL) {
+				str.clear();
+				str.reserve(host->size);
+				part = host->start;
+				while (part != NULL) {
+					str.append(part->data, part->size);
+					part = part->next;
+				}
+				doc["host"] = str;
+			}
 		}
 
 		return doc;
