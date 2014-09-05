@@ -1,3 +1,9 @@
+Release 4.0.51
+--------------
+
+ * Fixed a null termination bug when autodetecting application types.
+
+
 Release 4.0.50
 --------------
 
