@@ -328,6 +328,19 @@ toHex(const StaticString &data) {
 	return result;
 }
 
+void
+reverseString(char *str, unsigned int size) {
+	char *end = str + size - 1;
+	char aux;
+	while (str < end) {
+		aux = *end;
+		*end = *str;
+		*str = aux;
+		end--;
+		str++;
+	}
+}
+
 static const char hex_chars[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
@@ -361,12 +374,12 @@ toHex(const StaticString &data, char *output, bool upperCase) {
 }
 
 unsigned int
-integerSizeAsString(unsigned int value) {
+uintSizeAsString(unsigned int value) {
 	return integerSizeInOtherBase<unsigned int, 10>(value);
 }
 
 unsigned int
-integerToString(unsigned int value, char *output, unsigned int outputSize) {
+uintToString(unsigned int value, char *output, unsigned int outputSize) {
 	return integerToOtherBase<unsigned int, 10>(value, output, outputSize);
 }
 

@@ -225,9 +225,9 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
 		const char *end = buf + BUFSIZE;
 		char *pos = buf;
-		pos += integerToString(req->httpMajor, pos, end - pos);
+		pos += uintToString(req->httpMajor, pos, end - pos);
 		pos = appendData(pos, end, ".", 1);
-		pos += integerToString(req->httpMinor, pos, end - pos);
+		pos += uintToString(req->httpMinor, pos, end - pos);
 		buffers[i].iov_base = (void *) buf;
 		buffers[i].iov_len  = pos - buf;
 		dataSize += pos - buf;
@@ -235,9 +235,9 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		char buf[16];
 		const char *end = buf + sizeof(buf);
 		char *pos = buf;
-		pos += integerToString(req->httpMajor, pos, end - pos);
+		pos += uintToString(req->httpMajor, pos, end - pos);
 		pos = appendData(pos, end, ".", 1);
-		pos += integerToString(req->httpMinor, pos, end - pos);
+		pos += uintToString(req->httpMinor, pos, end - pos);
 		dataSize += pos - buf;
 	}
 	INC_BUFFER_ITER(i);
@@ -259,7 +259,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 			char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
 			const char *end = buf + BUFSIZE;
 			char *pos = buf;
-			int size = integerToString(resp->statusCode, pos, end - pos);
+			int size = uintToString(resp->statusCode, pos, end - pos);
 			buffers[i].iov_base = (void *) buf;
 			buffers[i].iov_len  = size;
 			INC_BUFFER_ITER(i);
@@ -271,7 +271,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 			char buf[8];
 			const char *end = buf + sizeof(buf);
 			char *pos = buf;
-			int size = integerToString(resp->statusCode, pos, end - pos);
+			int size = uintToString(resp->statusCode, pos, end - pos);
 			INC_BUFFER_ITER(i);
 			dataSize += size;
 		}

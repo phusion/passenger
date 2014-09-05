@@ -54,6 +54,7 @@
 #include <Utils/SmallVector.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/json.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 
 namespace Passenger {
@@ -690,8 +691,8 @@ public:
 
 	/***** Client management *****/
 
-	virtual int getClientName(const Client *client, char *buf, size_t size) const {
-		return snprintf(buf, size, "%03x", client->number);
+	virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {
+		return uintToString(client->number, buf, size);
 	}
 
 	vector<ClientRefType> getActiveClients() {

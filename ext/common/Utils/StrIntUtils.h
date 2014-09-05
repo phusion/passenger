@@ -231,15 +231,7 @@ void toHex(const StaticString & restrict_ref data, char * restrict output, bool 
 /**
  * Reverse a string in-place.
  */
-inline void
-reverseString(char *str, unsigned int size) {
-	char *end = str + size;
-	for (--end; str < end; str++, end--) {
-		*str = *str ^ *end,
-		*end = *str ^ *end,
-		*str = *str ^ *end;
-	}
-}
+void reverseString(char *str, unsigned int size);
 
 /**
  * Calculates the size (in characters) of an integer when converted
@@ -282,6 +274,25 @@ integerToOtherBase(IntegerType value, char *output, unsigned int outputSize) {
 	IntegerType remainder = value;
 	unsigned int size = 0;
 
+	if (outputSize >= 4) {
+		if (value < radix) {
+			output[0] = chars[value];
+			output[1] = '\0';
+			return 1;
+		} else if (value < radix * radix) {
+			output[0] = chars[value / radix];
+			output[1] = chars[value % radix];
+			output[2] = '\0';
+			return 2;
+		} else if (value < radix * radix * radix) {
+			output[0] = chars[value / radix / radix];
+			output[1] = chars[value / radix % radix];
+			output[2] = chars[value % radix];
+			output[3] = '\0';
+			return 3;
+		}
+	}
+
 	do {
 		output[size] = chars[remainder % radix];
 		remainder = remainder / radix;
@@ -313,8 +324,8 @@ integerToHex(IntegerType value, char *output) {
 	return integerToOtherBase<IntegerType, 16>(value, output, 2 * sizeof(IntegerType) + 1);
 }
 
-unsigned int integerSizeAsString(unsigned int value);
-unsigned int integerToString(unsigned int value, char *output, unsigned int outputSize);
+unsigned int uintSizeAsString(unsigned int value);
+unsigned int uintToString(unsigned int value, char *output, unsigned int outputSize);
 
 /**
  * Convert the given integer to a hexadecimal string.
