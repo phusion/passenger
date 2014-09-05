@@ -40,18 +40,23 @@ namespace ServerKit {
 using namespace std;
 
 
+#define CBP_DEBUG(expr) \
+	P_TRACE(3, adapter.getLoggingPrefix() << expr)
+
+
 /**
  * Parses data in HTTP/1.1 chunked transfer encoding.
  *
  * This is a POD struct so that we can put it in a union.
  */
-template<typename Adapter, bool throttle = true>
+template<typename Adapter>
 class HttpChunkedBodyParser {
 private:
 	HttpChunkedBodyParserState *state;
 	typename Adapter::Message *message;
 	typename Adapter::InputChannel *input;
 	typename Adapter::OutputChannel *output;
+	int *errcodeOutput;
 	Adapter adapter;
 
 	static bool isHexDigit(char ch) {
@@ -70,9 +75,19 @@ private:
 		}
 	}
 
+	void logChunkSize() {
+		CBP_DEBUG("chunk size determined: " << state->remainingDataSize << " bytes");
+	}
+
 	void setError(int errcode) {
+		CBP_DEBUG("setting error: " << getErrorDesc(errcode));
 		state->state = HttpChunkedBodyParserState::ERROR;
-		output->feedError(errcode);
+		if (output != NULL) {
+			output->feedError(errcode);
+		}
+		if (errcodeOutput != NULL) {
+			*errcodeOutput = errcode;
+		}
 	}
 
 public:
@@ -80,11 +95,13 @@ public:
 		typename Adapter::Message *_message,
 		typename Adapter::InputChannel *_input,
 		typename Adapter::OutputChannel *_output,
+		int *_errcodeOutput,
 		const Adapter &_adapter)
 		: state(_state),
 		  message(_message),
 		  input(_input),
 		  output(_output),
+		  errcodeOutput(_errcodeOutput),
 		  adapter(_adapter)
 		{ }
 
@@ -104,7 +121,11 @@ public:
 			switch (state->state) {
 			case HttpChunkedBodyParserState::EXPECTING_DATA:
 				dataSize = std::min<size_t>(state->remainingDataSize, end - current);
+				CBP_DEBUG("parsing " << dataSize << " of " << state->remainingDataSize <<
+					" bytes of remaining chunk data; " <<
+					(state->remainingDataSize - dataSize) << " now remaining");
 				if (dataSize == 0) {
+					CBP_DEBUG("end chunk detected");
 					state->state = HttpChunkedBodyParserState::EXPECTING_FINAL_CR;
 					break;
 				} else {
@@ -112,17 +133,23 @@ public:
 					if (state->remainingDataSize == 0) {
 						state->state = HttpChunkedBodyParserState::EXPECTING_NON_FINAL_CR;
 					}
-					output->feed(MemoryKit::mbuf(buffer, current - buffer.start, dataSize));
-					if (throttle && !adapter.requestEnded() && !output->ended()
-					 && output->passedThreshold())
-					{
-						input->stop();
-						adapter.setOutputBuffersFlushedCallback();
+					if (output != NULL) {
+						output->feed(MemoryKit::mbuf(buffer, current - buffer.start, dataSize));
+						if (!adapter.requestEnded() && !output->ended()
+						 && output->passedThreshold())
+						{
+							input->stop();
+							adapter.setOutputBuffersFlushedCallback();
+						}
+						return Channel::Result(current + dataSize - buffer.start, false);
+					} else {
+						current += dataSize;
+						break;
 					}
-					return Channel::Result(current + dataSize - buffer.start, false);
 				}
 
 			case HttpChunkedBodyParserState::EXPECTING_SIZE_FIRST_DIGIT:
+				CBP_DEBUG("parsing new chunk");
 				if (isHexDigit(*current)) {
 					state->remainingDataSize = parseHexDigit(*current);
 					state->state = HttpChunkedBodyParserState::EXPECTING_SIZE;
@@ -139,14 +166,17 @@ public:
 						setError(CHUNK_SIZE_TOO_LARGE);
 						break;
 					} else {
-						state->remainingDataSize = 10 * state->remainingDataSize +
+						state->remainingDataSize = 16 * state->remainingDataSize +
 							parseHexDigit(*current);
 						current++;
 					}
 				} else if (*current == HttpChunkedBodyParserState::CR) {
+					logChunkSize();
 					state->state = HttpChunkedBodyParserState::EXPECTING_HEADER_LF;
 					current++;
 				} else if (*current == ';') {
+					logChunkSize();
+					CBP_DEBUG("parsing chunk extension");
 					state->state = HttpChunkedBodyParserState::EXPECTING_CHUNK_EXTENSION;
 					current++;
 				} else {
@@ -161,6 +191,7 @@ public:
 				if (needle == NULL) {
 					return Channel::Result(buffer.size(), false);
 				} else {
+					CBP_DEBUG("done parsing chunk extension");
 					state->state = HttpChunkedBodyParserState::EXPECTING_HEADER_LF;
 					current = needle + 1;
 					break;
@@ -188,6 +219,7 @@ public:
 
 			case HttpChunkedBodyParserState::EXPECTING_NON_FINAL_LF:
 				if (*current == HttpChunkedBodyParserState::LF) {
+					CBP_DEBUG("done parsing a chunk");
 					state->state = HttpChunkedBodyParserState::EXPECTING_SIZE_FIRST_DIGIT;
 					current++;
 					break;
@@ -208,11 +240,16 @@ public:
 
 			case HttpChunkedBodyParserState::EXPECTING_FINAL_LF:
 				if (*current == HttpChunkedBodyParserState::LF) {
+					CBP_DEBUG("end chunk reached");
 					state->state = HttpChunkedBodyParserState::DONE;
 					input->stop();
 					message->bodyInfo.endChunkReached = true;
-					output->feed(MemoryKit::mbuf());
-					return Channel::Result(current + 1 - buffer.start, false);
+					if (output != NULL) {
+						output->feed(MemoryKit::mbuf());
+						return Channel::Result(current + 1 - buffer.start, false);
+					} else {
+						return Channel::Result(current + 1 - buffer.start, true);
+					}
 				} else {
 					setError(CHUNK_FINALIZER_PARSE_ERROR);
 					break;
@@ -230,7 +267,7 @@ public:
 	}
 
 	template<typename Server, typename Client, typename Request>
-	void feedEof(Server *server, Client *client, Request *req) {
+	void feedUnexpectedEof(Server *server, Client *client, Request *req) {
 		// When state == DONE, we stop `input`, so the following
 		// assertion should always be true.
 		assert(state->state != HttpChunkedBodyParserState::DONE);

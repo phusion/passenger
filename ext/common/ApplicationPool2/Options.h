@@ -441,7 +441,7 @@ public:
 	Options()
 		: logLevel(DEFAULT_LOG_LEVEL),
 		  startTimeout(90 * 1000),
-		  environment("production", sizeof("production") - 1),
+		  environment(DEFAULT_APP_ENV, sizeof(DEFAULT_APP_ENV) - 1),
 		  baseURI("/", 1),
 		  spawnMethod("smart", sizeof("smart") - 1),
 		  defaultUser("nobody", sizeof("nobody") - 1),

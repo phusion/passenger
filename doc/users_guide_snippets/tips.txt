@@ -344,7 +344,7 @@ and
 <<PassengerMinInstances,passenger_min_instances>>
 endif::[]
 are both larger than 1. Out-of-band work only works if there are at least 2 application processes.
-2. Request out-of-band work by outputting the `X-Passenger-Request-OOB-Work` header during a request. It does not matter what the value is. At this time, it is not possible to request out-of-band work from outside requests.
+2. Request out-of-band work by outputting the `!~Request-OOB-Work` header during a request. It does not matter what the value is. At this time, it is not possible to request out-of-band work from outside requests.
 3. You can actually perform out-of-band work when you receive a `:oob_work` Phusion Passenger event.
 
 Note that even though you can request out-of-band work, there's no guarantee that Phusion Passenger will send an `oob_work` event in a timely manner, if at all. It is also possible that Phusion Passenger sends an `oob_work` event without you ever having requested one. This latter could for example happen if the OOB work is administrator-initiated. Do not make any assumptions in your code.
@@ -355,7 +355,7 @@ Here's an example which implements out-of-band garbage collection using the Out-
 -------------------------------------------------
 # Somewhere in a controller method:
 # Tell Phusion Passenger we want to perform OOB work.
-response.headers["X-Passenger-Request-OOB-Work"] = "true"
+response.headers["!~Request-OOB-Work"] = "true"
 
 # Somewhere during application initialization:
 if defined?(PhusionPassenger)

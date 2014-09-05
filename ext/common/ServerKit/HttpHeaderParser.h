@@ -55,8 +55,9 @@ private:
 	Message *message;
 	psg_pool_t *pool;
 	const MemoryKit::mbuf *currentBuffer;
+	http_method	requestMethod;
 
-	bool validateHeader(const Header *header) {
+	bool validateHeader(const HttpParseRequest &tag, const Header *header) {
 		if (!state->secureMode) {
 			if (!psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
 				return true;
@@ -96,6 +97,11 @@ private:
 				return false;
 			}
 		}
+	}
+
+	bool validateHeader(const HttpParseResponse &tag, const Header *header) {
+		state->secureMode = psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2);
+		return true;
 	}
 
 	void insertCurrentHeader() {
@@ -154,7 +160,7 @@ private:
 			 || self->state->state == HttpHeaderParserState::PARSING_HEADER_VALUE)
 			{
 				// Validate previous header and insert into table.
-				if (!self->validateHeader(self->state->currentHeader)) {
+				if (!self->validateHeader(MessageType(), self->state->currentHeader)) {
 					return 1;
 				}
 				self->insertCurrentHeader();
@@ -211,7 +217,7 @@ private:
 		 || self->state->state == HttpHeaderParserState::PARSING_FIRST_HEADER_VALUE)
 		{
 			// Validate previous header and insert into table.
-			if (!self->validateHeader(self->state->currentHeader)) {
+			if (!self->validateHeader(MessageType(), self->state->currentHeader)) {
 				return 1;
 			}
 			self->insertCurrentHeader();
@@ -223,6 +229,14 @@ private:
 		return 0;
 	}
 
+	void initializeParser(const HttpParseRequest &tag) {
+		http_parser_init(&state->parser, HTTP_REQUEST);
+	}
+
+	void initializeParser(const HttpParseResponse &tag) {
+		http_parser_init(&state->parser, HTTP_RESPONSE);
+	}
+
 	void setMethodOrStatus(const HttpParseRequest &tag) {
 		message->method = (http_method) state->parser.method;
 	}
@@ -231,26 +245,96 @@ private:
 		message->statusCode = state->parser.status_code;
 	}
 
-	bool isHeadRequest(const HttpParseRequest &tag) const {
-		return message->method == HTTP_HEAD;
+	void processBodyInfo(const HttpParseRequest &tag) {
+		bool isChunked = hasTransferEncodingChunked();
+		boost::uint64_t contentLength;
+
+		// The parser sets content_length to ULLONG_MAX if
+		// Content-Length is not given. We treat it the same as 0.
+		contentLength = state->parser.content_length;
+		if (contentLength == std::numeric_limits<boost::uint64_t>::max()) {
+			contentLength = 0;
+		}
+
+		if (contentLength > 0 && isChunked) {
+			message->httpState = Message::ERROR;
+			message->parseError = "Bad request (request may not contain both Content-Length and Transfer-Encoding)";
+		} else if (contentLength > 0 || isChunked) {
+			// There is a request body.
+			message->bodyInfo.contentLength = contentLength;
+			if (state->parser.upgrade) {
+				message->httpState = Message::ERROR;
+				message->parseError = "Bad request ('Upgrade' header is only allowed for requests without request body)";
+			} else if (isChunked) {
+				message->httpState = Message::PARSING_CHUNKED_BODY;
+				message->bodyType = Message::RBT_CHUNKED;
+			} else {
+				message->httpState = Message::PARSING_BODY;
+				message->bodyType = Message::RBT_CONTENT_LENGTH;
+			}
+		} else {
+			// There is no request body.
+			if (!state->parser.upgrade) {
+				message->httpState = Message::COMPLETE;
+			} else if (message->method == HTTP_HEAD) {
+				message->httpState = Message::ERROR;
+				message->parseError = "Bad request ('Upgrade' header is not allowed for HEAD requests)";
+			} else {
+				message->httpState = Message::UPGRADED;
+			}
+			message->bodyType = Message::RBT_NO_BODY;
+		}
 	}
 
-	bool isHeadRequest(const HttpParseResponse &tag) const {
-		return false;
+	void processBodyInfo(const HttpParseResponse &tag) {
+		const unsigned int status = state->parser.status_code;
+		const boost::uint64_t contentLength = state->parser.content_length;
+
+		if (state->parser.upgrade) {
+			message->httpState = Message::UPGRADED;
+		} else if (requestMethod == HTTP_HEAD
+		 || (status >= 100 && status < 200)
+		 || status == 204
+		 || status == 304)
+		{
+			message->httpState = Message::COMPLETE;
+			message->bodyType = Message::RBT_NO_BODY;
+		} else if (hasTransferEncodingChunked()) {
+			if (contentLength == std::numeric_limits<boost::uint64_t>::max()) {
+				message->httpState = Message::PARSING_CHUNKED_BODY;
+				message->bodyType = Message::RBT_CHUNKED;
+			} else {
+				message->httpState = Message::ERROR;
+				message->parseError = "Response may not contain both Content-Length and Transfer-Encoding";
+			}
+		} else if (contentLength == 0) {
+			message->httpState = Message::COMPLETE;
+			message->bodyType = Message::RBT_NO_BODY;
+		} else if (contentLength != std::numeric_limits<boost::uint64_t>::max()) {
+			message->httpState = Message::PARSING_BODY_WITH_LENGTH;
+			message->bodyType = Message::RBT_CONTENT_LENGTH;
+			message->bodyInfo.contentLength = contentLength;
+		} else {
+			message->httpState = Message::PARSING_BODY_UNTIL_EOF;
+			message->bodyType = Message::RBT_UNTIL_EOF;
+			message->wantKeepAlive = false;
+		}
 	}
 
 public:
 	HttpHeaderParser(Context *context, HttpHeaderParserState *_state,
-		Message *_message, psg_pool_t *_pool)
+		Message *_message, psg_pool_t *_pool,
+		enum http_method _requestMethod = HTTP_GET)
 		: ctx(context),
 		  state(_state),
 		  message(_message),
 		  pool(_pool),
-		  currentBuffer(NULL)
+		  currentBuffer(NULL),
+		  requestMethod(_requestMethod)
 		{ }
 
-	void initialize(enum http_parser_type type) {
-		http_parser_init(&state->parser, type);
+	void initialize() {
+		initializeParser(MessageType());
 		state->state = HttpHeaderParserState::PARSING_NOT_STARTED;
 		state->secureMode = false;
 	}
@@ -304,50 +388,12 @@ public:
 				break;
 			}
 		} else if (message->httpState == Message::PARSED_HEADERS) {
-			bool isChunked = hasTransferEncodingChunked();
-			boost::uint64_t contentLength;
-
 			ret++;
 			message->httpMajor = state->parser.http_major;
 			message->httpMinor = state->parser.http_minor;
 			message->wantKeepAlive = http_should_keep_alive(&state->parser);
 			setMethodOrStatus(MessageType());
-
-			// For some reason, the parser leaves content_length at ULLONG_MAX
-			// if Content-Length is not given.
-			contentLength = state->parser.content_length;
-			if (contentLength == std::numeric_limits<boost::uint64_t>::max()) {
-				contentLength = 0;
-			}
-
-			if (contentLength > 0 && isChunked) {
-				message->httpState = Message::ERROR;
-				message->parseError = "Bad request (request may not contain both Content-Length and Transfer-Encoding)";
-			} else if (contentLength > 0 || isChunked) {
-				// There is a request body.
-				message->bodyInfo.contentLength = contentLength;
-				if (state->parser.upgrade) {
-					message->httpState = Message::ERROR;
-					message->parseError = "Bad request ('Upgrade' header is only allowed for requests without request body)";
-				} else if (isChunked) {
-					message->httpState = Message::PARSING_CHUNKED_BODY;
-					message->bodyType = Message::RBT_CHUNKED;
-				} else {
-					message->httpState = Message::PARSING_BODY;
-					message->bodyType = Message::RBT_CONTENT_LENGTH;
-				}
-			} else {
-				// There is no request body.
-				if (!state->parser.upgrade) {
-					message->httpState = Message::COMPLETE;
-				} else if (isHeadRequest(MessageType())) {
-					message->httpState = Message::ERROR;
-					message->parseError = "Bad request ('Upgrade' header is not allowed for HEAD requests)";
-				} else {
-					message->httpState = Message::UPGRADED;
-				}
-				message->bodyType = Message::RBT_NO_BODY;
-			}
+			processBodyInfo(MessageType());
 		}
 
 		return ret;

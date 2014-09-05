@@ -52,11 +52,14 @@ public:
 		/** The headers have been parsed, and there is no body. */
 		COMPLETE,
 		/** The headers have been parsed, and we are now receiving/parsing the body,
-		 * which does not have the chunked transfer-encoding. */
-		PARSING_BODY,
+		 * whose length is specified by Content-Length. */
+		PARSING_BODY_WITH_LENGTH,
 		/** The headers have been parsed, and we are now receiving/parsing the body,
 		 * which has the chunked transfer-encoding. */
 		PARSING_CHUNKED_BODY,
+		/** The headers have been parsed, and we are now receiving/parsing the body,
+		 * which ends when EOF is encountered on the app socket. */
+		PARSING_BODY_UNTIL_EOF,
 		/** The headers have been parsed, and the connection has been upgraded. */
 		UPGRADED,
 		/** An error occurred. */
@@ -72,14 +75,16 @@ public:
 		/** The message body's size is determined by the Content-Length header. */
 		RBT_CONTENT_LENGTH = 2,
 		/** The message body's size is determined by the chunked Transfer-Encoding. */
-		RBT_CHUNKED = 4
+		RBT_CHUNKED = 4,
+		/** The message body's size is equal to the stream's size. */
+		RBT_UNTIL_EOF = 8
 	};
 
 	boost::uint8_t httpMajor;
 	boost::uint8_t httpMinor;
 	HttpState httpState: 5;
-	BodyType bodyType: 3;
-	bool wantKeepAlive;
+	bool wantKeepAlive: 1;
+	BodyType bodyType;
 
 	boost::uint16_t statusCode;
 
@@ -95,10 +100,12 @@ public:
 
 	/** Length of the message body. Only has meaning when state is PARSING_BODY. */
 	union {
-		// If bodyType == RBT_CONTENT_LENGTH
+		// If bodyType == RBT_CONTENT_LENGTH. Guaranteed to be > 0.
 		boost::uint64_t contentLength;
 		// If bodyType == RBT_CHUNKED
 		bool endChunkReached;
+		// If bodyType == PARSING_BODY_UNTIL_EOF
+		bool endReached;
 	} bodyInfo;
 	boost::uint64_t bodyAlreadyRead;
 
@@ -110,7 +117,7 @@ public:
 		  bodyAlreadyRead(0)
 	{
 		parserState.headerParser = NULL;
-		bodyInfo.contentLength = 0; // Also sets endChunkReached to false
+		bodyInfo.contentLength = 0; // Also sets endChunkReached/endReached to false
 	}
 
 	const char *getHttpStateString() const {
@@ -121,10 +128,12 @@ public:
 			return "PARSED_HEADERS";
 		case COMPLETE:
 			return "COMPLETE";
-		case PARSING_BODY:
-			return "PARSING_BODY";
+		case PARSING_BODY_WITH_LENGTH:
+			return "PARSING_BODY_WITH_LENGTH";
 		case PARSING_CHUNKED_BODY:
 			return "PARSING_CHUNKED_BODY";
+		case PARSING_BODY_UNTIL_EOF:
+			return "PARSING_BODY_UNTIL_EOF";
 		case UPGRADED:
 			return "UPGRADED";
 		case ERROR:
@@ -140,6 +149,8 @@ public:
 			return "UPGRADE";
 		case RBT_CONTENT_LENGTH:
 			return "CONTENT_LENGTH";
+		case RBT_UNTIL_EOF:
+			return "RBT_UNTIL_EOF";
 		case RBT_CHUNKED:
 			return "CHUNKED";
 		}
@@ -153,14 +164,15 @@ public:
 			return bodyAlreadyRead >= bodyInfo.contentLength;
 		case RBT_CHUNKED:
 			return bodyInfo.endChunkReached;
+		case RBT_UNTIL_EOF:
+			return bodyInfo.endReached;
 		case RBT_UPGRADE:
 			return false;
 		}
 	}
 
 	bool hasBody() const {
-		// Branchless way to check whether RBT_CONTENT_LENGTH or RBT_CHUNKED is set.
-		return bodyType & 0x6;
+		return bodyType & (RBT_CONTENT_LENGTH | RBT_CHUNKED | RBT_UNTIL_EOF);
 	}
 
 	bool canKeepAlive() const {

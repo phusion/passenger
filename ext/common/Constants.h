@@ -52,13 +52,15 @@
 
 	#define DEFAULT_ANALYTICS_LOG_USER "nobody"
 
+	#define DEFAULT_APP_ENV "production"
+
 	#define DEFAULT_CONCURRENCY_MODEL "process"
 
 	#define DEFAULT_LOG_LEVEL 0
 
 	#define DEFAULT_MAX_POOL_SIZE 6
 
-	#define DEFAULT_MBUF_CHUNK_SIZE 512
+	#define DEFAULT_MBUF_CHUNK_SIZE 1024 * 8
 
 	#define DEFAULT_NODEJS "node"
 

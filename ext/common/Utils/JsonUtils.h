@@ -48,6 +48,27 @@ jsonString(const Passenger::StaticString &str) {
 	return stringifyJson(Json::Value(Json::StaticString(str.data())));
 }
 
+inline Json::Value
+timeToJson(unsigned long long timestamp) {
+	Json::Value doc;
+	time_t time = (time_t) timestamp / 1000000;
+	char buf[32];
+	size_t len;
+
+	doc["timestamp"] = timestamp / (double) 1000000;
+
+	ctime_r(&time, buf);
+	len = strlen(buf);
+	if (len > 0) {
+		// Get rid of trailing newline
+		buf[len - 1] = '\0';
+	}
+	doc["local"] = buf;
+	doc["relative"] = distanceOfTimeInWords(time) + " ago";
+
+	return doc;
+}
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_UTILS_JSON_UTILS_H_ */

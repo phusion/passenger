@@ -40,17 +40,17 @@ module PhusionPassenger
 class RequestHandler
 	include DebugLogging
 	include Utils
-	
+
 	# Signal which will cause the Rails application to exit immediately.
 	HARD_TERMINATION_SIGNAL = "SIGTERM"
 	# Signal which will cause the Rails application to exit as soon as it's done processing a request.
 	SOFT_TERMINATION_SIGNAL = "SIGUSR1"
 	BACKLOG_SIZE    = 500
-	
+
 	# String constants which exist to relieve Ruby's garbage collector.
 	IGNORE              = 'IGNORE'              # :nodoc:
 	DEFAULT             = 'DEFAULT'             # :nodoc:
-	
+
 	# A hash containing all server sockets that this request handler listens on.
 	# The hash is in the form of:
 	#
@@ -68,15 +68,15 @@ class RequestHandler
 	attr_reader :server_sockets
 
 	attr_reader :concurrency
-	
+
 	# If a soft termination signal was received, then the main loop will quit
 	# the given amount of seconds after the last time a connection was accepted.
 	# Defaults to 3 seconds.
 	attr_accessor :soft_termination_linger_time
-	
+
 	# A password with which clients must authenticate. Default is unauthenticated.
 	attr_accessor :connect_password
-	
+
 	# Create a new RequestHandler with the given owner pipe.
 	# +owner_pipe+ must be the readable part of a pipe IO object.
 	#
@@ -110,7 +110,7 @@ class RequestHandler
 		#############
 
 		@server_sockets = {}
-		
+
 		if should_use_unix_sockets?
 			@main_socket_address, @main_socket = create_unix_socket_on_filesystem(options)
 		else
@@ -141,10 +141,10 @@ class RequestHandler
 		@threads_mutex = Mutex.new
 		@soft_termination_linger_time = 3
 		@main_loop_running  = false
-		
+
 		#############
 	end
-	
+
 	# Clean up temporary stuff created by the request handler.
 	#
 	# If the main loop was started by #main_loop, then this method may only
@@ -171,14 +171,14 @@ class RequestHandler
 		end
 		@owner_pipe.close rescue nil
 	end
-	
+
 	# Check whether the main loop's currently running.
 	def main_loop_running?
 		@main_loop_thread_lock.synchronize do
 			return @main_loop_running
 		end
 	end
-	
+
 	# Enter the request handler's main loop.
 	def main_loop
 		debug("Entering request handler main loop")
@@ -187,14 +187,14 @@ class RequestHandler
 			@graceful_termination_pipe = IO.pipe
 			@graceful_termination_pipe[0].close_on_exec!
 			@graceful_termination_pipe[1].close_on_exec!
-			
+
 			@main_loop_thread_lock.synchronize do
 				@main_loop_generation += 1
 				@main_loop_running = true
 				@main_loop_thread_cond.broadcast
-				
+
 				@select_timeout = nil
-				
+
 				@selectable_sockets = []
 				@server_sockets.each_value do |value|
 					socket = value[2]
@@ -203,7 +203,7 @@ class RequestHandler
 				@selectable_sockets << @owner_pipe
 				@selectable_sockets << @graceful_termination_pipe[0]
 			end
-			
+
 			install_useful_signal_handlers
 			start_threads
 			wait_until_termination_requested
@@ -239,7 +239,7 @@ class RequestHandler
 			end
 		end
 	end
-	
+
 	# Start the main loop in a new thread. This thread will be stopped by #cleanup.
 	def start_main_loop_thread
 		current_generation = @main_loop_generation
@@ -256,7 +256,7 @@ class RequestHandler
 			end
 		end
 	end
-	
+
 	# Remove this request handler from the application pool so that no
 	# new connections will come in. Then make the main loop quit a few
 	# seconds after the last time a connection came in. This all is to
@@ -308,7 +308,7 @@ private
 		# if something like this ever happens again, we know why, and we
 		# can easily reactivate the workaround. Or maybe if we just need
 		# TCP sockets for some other reason.
-		
+
 		#return RUBY_PLATFORM !~ /darwin/
 
 		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
@@ -338,17 +338,21 @@ private
 			socket_address = socket_address.slice(0, unix_path_max - 10)
 			socket = UNIXServer.new(socket_address)
 			socket.listen(BACKLOG_SIZE)
+			socket.binmode
+			socket.sync = true
 			socket.close_on_exec!
 			File.chmod(0600, socket_address)
 			["unix:#{socket_address}", socket]
 		end
 	end
-	
+
 	def create_tcp_socket
 		# We use "127.0.0.1" as address in order to force
 		# TCPv4 instead of TCPv6.
 		socket = TCPServer.new('127.0.0.1', 0)
 		socket.listen(BACKLOG_SIZE)
+		socket.binmode
+		socket.sync = true
 		socket.close_on_exec!
 		socket_address = "tcp://127.0.0.1:#{socket.addr[1]}"
 		return [socket_address, socket]
@@ -371,10 +375,10 @@ private
 		trap('HUP', IGNORE)
 		PhusionPassenger.call_event(:after_installing_signal_handlers)
 	end
-	
+
 	def install_useful_signal_handlers
 		trappable_signals = Signal.list_trappable
-		
+
 		trap(SOFT_TERMINATION_SIGNAL) do
 			begin
 				soft_shutdown
@@ -382,7 +386,7 @@ private
 				print_exception("Passenger RequestHandler soft shutdown routine", e)
 			end
 		end if trappable_signals.has_key?(SOFT_TERMINATION_SIGNAL.sub(/^SIG/, ''))
-		
+
 		trap('ABRT') do
 			print_status_report
 		end if trappable_signals.has_key?('ABRT')
@@ -390,7 +394,7 @@ private
 			print_status_report
 		end if trappable_signals.has_key?('QUIT')
 	end
-	
+
 	def revert_signal_handlers
 		@previous_signal_handlers.each_pair do |signal, handler|
 			trap(signal, handler)
@@ -585,13 +589,13 @@ private
 		end
 		debug("All threads stopped")
 	end
-	
+
 	def wait_until_all_threads_are_idle
 		debug("Waiting until all threads have become idle...")
 
 		# We wait until 100 ms have passed since all handlers have become
 		# interruptable and remained in the same iterations.
-		
+
 		done = false
 
 		while !done
@@ -614,7 +618,7 @@ private
 
 			start_time = Time.now
 			sleep 0.01
-			
+
 			while true
 				if handlers.size != @threads_mutex.synchronize { @threads.size }
 					debug("The number of threads changed. Restarting waiting algorithm")

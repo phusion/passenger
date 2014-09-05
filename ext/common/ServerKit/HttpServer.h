@@ -30,6 +30,7 @@
 #include <boost/pool/object_pool.hpp>
 #include <oxt/macros.hpp>
 #include <algorithm>
+#include <cstdio>
 #include <cassert>
 #include <pthread.h>
 #include <Logging.h>
@@ -119,6 +120,14 @@ private:
 			Client *client = static_cast<Client *>(req->client);
 			HttpServer::createChunkedBodyParser(client, req).
 				outputBuffersFlushed();
+		}
+
+		string getLoggingPrefix() {
+			char buf[256];
+			int size = snprintf(buf, sizeof(buf),
+				"[Client %u] ChunkedBodyParser: ",
+				static_cast<Client *>(req->client)->number);
+			return string(buf, size);
 		}
 	};
 
@@ -337,24 +346,12 @@ private:
 			// Data
 			boost::uint64_t maxRemaining, remaining;
 
-			if (req->bodyInfo.contentLength == 0) {
-				maxRemaining = std::numeric_limits<boost::uint64_t>::max();
-			} else {
-				maxRemaining = req->bodyInfo.contentLength -
-					req->bodyAlreadyRead;
-			}
+			maxRemaining = req->bodyInfo.contentLength - req->bodyAlreadyRead;
 			remaining = std::min<boost::uint64_t>(buffer.size(), maxRemaining);
-
 			req->bodyAlreadyRead += remaining;
-
-			if (req->bodyInfo.contentLength == 0) {
-				SKC_TRACE(client, 3, "Client response body: " <<
-					req->bodyAlreadyRead << " bytes already read");
-			} else {
-				SKC_TRACE(client, 3, "Client response body: " <<
-					req->bodyAlreadyRead << " of " <<
-					req->bodyInfo.contentLength << " bytes already read");
-			}
+			SKC_TRACE(client, 3, "Client response body: " <<
+				req->bodyAlreadyRead << " of " <<
+				req->bodyInfo.contentLength << " bytes already read");
 
 			req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, remaining));
 			if (!req->ended()) {
@@ -390,11 +387,12 @@ private:
 		const MemoryKit::mbuf &buffer, int errcode)
 	{
 		if (buffer.size() > 0) {
+			req->bodyAlreadyRead += buffer.size();
 			return createChunkedBodyParser(client, req).feed(buffer);
 		} else {
-			createChunkedBodyParser(client, req).feedEof(this,
+			createChunkedBodyParser(client, req).feedUnexpectedEof(this,
 				client, req);
-			return Channel::Result(0, false);
+			return Channel::Result(0, true);
 		}
 	}
 
@@ -403,6 +401,7 @@ private:
 	{
 		if (buffer.size() > 0) {
 			// Data
+			req->bodyAlreadyRead += buffer.size();
 			req->bodyChannel.feed(buffer);
 			if (!req->ended()) {
 				if (!req->bodyChannel.passedThreshold()) {
@@ -450,7 +449,8 @@ private:
 
 	static ChunkedBodyParser createChunkedBodyParser(Client *client, Request *req) {
 		return ChunkedBodyParser(&req->parserState.chunkedBodyParser, req,
-			&client->input, &req->bodyChannel, ChunkedBodyParserAdapter(req));
+			&client->input, &req->bodyChannel, NULL,
+			ChunkedBodyParserAdapter(req));
 	}
 
 	void prepareChunkedBodyParsing(Client *client, Request *req) {
@@ -799,8 +799,7 @@ protected:
 		req->wantKeepAlive = false;
 		req->responseBegun = false;
 		req->parserState.headerParser = headerParserStatePool.construct();
-		createRequestHeaderParser(this->getContext(), req).
-			initialize(HTTP_REQUEST);
+		createRequestHeaderParser(this->getContext(), req).initialize();
 		req->pool      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 		psg_lstr_init(&req->path);
 		req->bodyChannel.reinitialize();

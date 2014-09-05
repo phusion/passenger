@@ -125,6 +125,7 @@
 #include <sys/uio.h>
 #include <utility>
 #include <typeinfo>
+#include <cstdio>
 #include <cassert>
 #include <cctype>
 
@@ -142,6 +143,7 @@
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
+#include <Utils/JsonUtils.h>
 #include <Utils/HttpConstants.h>
 #include <Utils/VariantMap.h>
 #include <Utils/Timer.h>
@@ -183,10 +185,12 @@ private:
 	HashedStaticString PASSENGER_MAX_REQUESTS;
 	HashedStaticString PASSENGER_STICKY_SESSIONS;
 	HashedStaticString PASSENGER_STICKY_SESSIONS_COOKIE_NAME;
+	HashedStaticString PASSENGER_REQUEST_OOB_WORK;
 	HashedStaticString UNION_STATION_SUPPORT;
 	HashedStaticString HTTPS;
 	HashedStaticString REMOTE_ADDR;
 	HashedStaticString HTTP_COOKIE;
+	HashedStaticString HTTP_DATE;
 	HashedStaticString HTTP_CONTENT_LENGTH;
 	boost::uint32_t HTTP_CONTENT_TYPE_HASH;
 	boost::uint32_t HTTP_CONNECTION_HASH;
@@ -278,7 +282,7 @@ protected:
 		resp->wantKeepAlive = false;
 		resp->statusCode = 0;
 		resp->parserState.headerParser = getHeaderParserStatePool().construct();
-		createAppResponseHeaderParser(getContext(), req).initialize(HTTP_RESPONSE);
+		createAppResponseHeaderParser(getContext(), req).initialize();
 		resp->parseError = NULL;
 		resp->bodyInfo.contentLength = 0; // Also sets endChunkReached to false
 		resp->bodyAlreadyRead = 0;
@@ -321,10 +325,12 @@ public:
 		  PASSENGER_MAX_REQUESTS("!~PASSENGER_MAX_REQUESTS"),
 		  PASSENGER_STICKY_SESSIONS("!~PASSENGER_STICKY_SESSIONS"),
 		  PASSENGER_STICKY_SESSIONS_COOKIE_NAME("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME"),
+		  PASSENGER_REQUEST_OOB_WORK("!~request-oob-work"),
 		  UNION_STATION_SUPPORT("!~UNION_STATION_SUPPORT"),
 		  HTTPS("!~HTTPS"),
 		  REMOTE_ADDR("!~REMOTE_ADDR"),
 		  HTTP_COOKIE("cookie"),
+		  HTTP_DATE("date"),
 		  HTTP_CONTENT_LENGTH("content-length"),
 		  HTTP_CONTENT_TYPE_HASH(HashedStaticString("content-type").hash()),
 		  HTTP_CONNECTION_HASH(HashedStaticString("connection").hash()),
@@ -354,6 +360,8 @@ public:
 			fillPoolOptionsFromAgentsOptions(*options);
 			options->appRoot = psg_pstrdup(stringPool,
 				agentsOptions->get("app_root"));
+			options->environment = psg_pstrdup(stringPool,
+				agentsOptions->get("environment"));
 			options->appType = psg_pstrdup(stringPool,
 				agentsOptions->get("app_type"));
 			options->startupFile = psg_pstrdup(stringPool,
@@ -388,7 +396,7 @@ public:
 
 	virtual Json::Value inspectClientStateAsJson(const Client *client) const {
 		Json::Value doc = ParentClass::inspectClientStateAsJson(client);
-		doc["connected_at"] = timeToJson(client->connectedAt);
+		doc["connected_at"] = timeToJson(client->connectedAt * 1000000.0);
 		return doc;
 	}
 
@@ -396,7 +404,7 @@ public:
 		Json::Value doc = ParentClass::inspectRequestStateAsJson(req);
 
 		doc["state"] = req->getStateString();
-		doc["started_at"] = timeToJson(req->startedAt);
+		doc["started_at"] = timeToJson(req->startedAt * 1000000.0);
 		doc["sticky_session"] = req->stickySession;
 		if (req->stickySession) {
 			doc["sticky_session_id"] = req->options.stickySessionId;

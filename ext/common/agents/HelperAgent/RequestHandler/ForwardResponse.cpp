@@ -22,8 +22,8 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 		if (buffer.size() > 0) {
 			// Data
 			size_t ret;
-			SKC_TRACE(client, 3, "Application sent " <<
-				buffer.size() << " bytes of data: \"" << cEscapeString(StaticString(
+			SKC_TRACE(client, 3, "Processing " << buffer.size() <<
+				" bytes of application data: \"" << cEscapeString(StaticString(
 					buffer.start, buffer.size())) << "\"");
 			{
 				ret = createAppResponseHeaderParser(getContext(), req).
@@ -44,19 +44,28 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 				req->appOutput.stop();
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
-			case AppResponse::PARSING_BODY:
+			case AppResponse::PARSING_BODY_WITH_LENGTH:
+			case AppResponse::PARSING_BODY_UNTIL_EOF:
+				SKC_TRACE(client, 2,
+					((resp->httpState == AppResponse::PARSING_BODY_WITH_LENGTH)
+					? "Expecting an app response body with fixed length"
+					: "Expecting app response body until end of stream"));
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
 			case AppResponse::PARSING_CHUNKED_BODY:
+				SKC_TRACE(client, 2, "Expecting a chunked app response body");
 				prepareAppResponseChunkedBodyParsing(client, req);
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
 			case AppResponse::UPGRADED:
+				SKC_TRACE(client, 2, "Application upgraded connection");
 				req->wantKeepAlive = false;
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
 			case AppResponse::ERROR:
-				endAsBadRequest(&client, &req, resp->parseError);
+				SKC_ERROR(client, "Error parsing application response header: " <<
+					resp->parseError);
+				endRequestAsBadGateway(&client, &req);
 				return Channel::Result(0, true);
 			default:
 				P_BUG("Invalid response HTTP state " << (int) resp->httpState);
@@ -74,32 +83,21 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			return Channel::Result(0, true);
 		}
 
-	case AppResponse::PARSING_BODY:
+	case AppResponse::PARSING_BODY_WITH_LENGTH:
 		if (buffer.size() > 0) {
 			// Data
 			boost::uint64_t maxRemaining, remaining;
 
-			if (resp->bodyInfo.contentLength == 0) {
-				maxRemaining = std::numeric_limits<boost::uint64_t>::max();
-			} else {
-				maxRemaining = resp->bodyInfo.contentLength -
-					resp->bodyAlreadyRead;
-			}
+			maxRemaining = resp->bodyInfo.contentLength - resp->bodyAlreadyRead;
 			remaining = std::min<boost::uint64_t>(buffer.size(), maxRemaining);
-
 			resp->bodyAlreadyRead += remaining;
 
-			SKC_TRACE(client, 3, "Application sent " <<
-				buffer.size() << " bytes of data: \"" << cEscapeString(StaticString(
+			SKC_TRACE(client, 3, "Processing " << buffer.size() <<
+				" bytes of application data: \"" << cEscapeString(StaticString(
 					buffer.start, buffer.size())) << "\"");
-			if (resp->bodyInfo.contentLength == 0) {
-				SKC_TRACE(client, 3, "Application response body: " <<
-					resp->bodyAlreadyRead << " bytes already read");
-			} else {
-				SKC_TRACE(client, 3, "Application response body: " <<
-					resp->bodyAlreadyRead << " of " <<
-					resp->bodyInfo.contentLength << " bytes already read");
-			}
+			SKC_TRACE(client, 3, "Application response body: " <<
+				resp->bodyAlreadyRead << " of " <<
+				resp->bodyInfo.contentLength << " bytes already read");
 
 			writeResponse(client, MemoryKit::mbuf(buffer, 0, remaining));
 			return Channel::Result(remaining, false);
@@ -123,20 +121,55 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 
 	case AppResponse::PARSING_CHUNKED_BODY:
 		if (!buffer.empty()) {
-			return createAppResponseChunkedBodyParser(client, req).
-				feed(buffer);
-		} else {
+			// Data
+			int errcode;
+
+			SKC_TRACE(client, 3, "Processing " << buffer.size() <<
+				" bytes of application data: \"" << cEscapeString(StaticString(
+					buffer.start, buffer.size())) << "\"");
+			Channel::Result result = createAppResponseChunkedBodyParser(client,
+				req, &errcode).feed(buffer);
+			resp->bodyAlreadyRead += result.consumed;
+			writeResponse(client, MemoryKit::mbuf(buffer, 0, result.consumed));
+
+			if (result.end) {
+				if (resp->parserState.chunkedBodyParser.state !=
+					ServerKit::HttpChunkedBodyParserState::ERROR)
+				{
+					writeResponse(client, MemoryKit::mbuf());
+					endRequest(&client, &req);
+				} else {
+					string message = "error parsing app response chunked encoding: ";
+					message.append(ServerKit::getErrorDesc(errcode));
+					disconnectWithError(&client, message);
+				}
+			}
+			return Channel::Result(result.consumed, false);
+		} else if (errcode == 0) {
+			// Premature EOF. This cannot be an expected EOF because
+			// the parser stops req->bodyChannel upon consuming the end
+			// of the chunked body.
+			#ifndef NDEBUG
+				RequestRef ref(req);
+			#endif
 			createAppResponseChunkedBodyParser(client, req).
-				feedEof(this, client, req);
+				feedUnexpectedEof(this, client, req);
+			assert(!client->connected());
 			return Channel::Result(0, false);
+		} else {
+			// Error
+			endRequestWithAppSocketReadError(&client, &req, errcode);
+			return Channel::Result(0, true);
 		}
 
+	case AppResponse::PARSING_BODY_UNTIL_EOF:
 	case AppResponse::UPGRADED:
 		if (buffer.size() > 0) {
 			// Data
-			SKC_TRACE(client, 3, "Application sent " <<
-				buffer.size() << " bytes of data: \"" << cEscapeString(StaticString(
+			SKC_TRACE(client, 3, "Processing " << buffer.size() <<
+				" bytes of application data: \"" << cEscapeString(StaticString(
 					buffer.start, buffer.size())) << "\"");
+			resp->bodyAlreadyRead += buffer.size();
 			writeResponse(client, buffer);
 			return Channel::Result(buffer.size(), false);
 		} else if (errcode == 0) {
@@ -158,7 +191,17 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 
 void
 onAppResponseBegin(Client *client, Request *req) {
+	const AppResponse *resp = &req->appResponse;
 	ssize_t bytesWritten;
+	const LString *value;
+
+	value = resp->secureHeaders.lookup(PASSENGER_REQUEST_OOB_WORK);
+	if (value != NULL) {
+		SKC_TRACE(client, 2, "Response with OOBW detected");
+		if (req->session != NULL) {
+			req->session->requestOOBW();
+		}
+	}
 
 	if (!sendResponseHeaderWithWritev(client, req, bytesWritten)) {
 		if (bytesWritten >= 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -168,6 +211,10 @@ onAppResponseBegin(Client *client, Request *req) {
 			assert(bytesWritten == -1);
 			disconnectWithClientSocketWriteError(&client, e);
 		}
+	}
+
+	if (!req->ended() && !resp->hasBody()) {
+		endRequest(&client, &req);
 	}
 }
 
@@ -211,6 +258,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 
 	AppResponse *resp = &req->appResponse;
 	ServerKit::HeaderTable::Iterator it(resp->headers);
+	const LString *value;
 	const LString::Part *part;
 	const char *statusAndReason;
 	unsigned int i = 0;
@@ -259,7 +307,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 			char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
 			const char *end = buf + BUFSIZE;
 			char *pos = buf;
-			int size = uintToString(resp->statusCode, pos, end - pos);
+			unsigned int size = uintToString(resp->statusCode, pos, end - pos);
 			buffers[i].iov_base = (void *) buf;
 			buffers[i].iov_len  = size;
 			INC_BUFFER_ITER(i);
@@ -271,7 +319,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 			char buf[8];
 			const char *end = buf + sizeof(buf);
 			char *pos = buf;
-			int size = uintToString(resp->statusCode, pos, end - pos);
+			unsigned int size = uintToString(resp->statusCode, pos, end - pos);
 			INC_BUFFER_ITER(i);
 			dataSize += size;
 		}
@@ -328,6 +376,35 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		it.next();
 	}
 
+	// Add Date header. https://code.google.com/p/phusion-passenger/issues/detail?id=485
+	value = resp->headers.lookup(HTTP_DATE);
+	if (value == NULL) {
+		unsigned int size;
+
+		if (buffers != NULL) {
+			const unsigned int BUFSIZE = 60;
+			char *dateStr = (char *) psg_pnalloc(req->pool, BUFSIZE);
+			size = constructDateHeaderBuffersForResponse(dateStr, BUFSIZE);
+			buffers[i].iov_base = dateStr;
+			buffers[i].iov_len  = size;
+		} else {
+			char dateStr[60];
+			size = constructDateHeaderBuffersForResponse(dateStr, sizeof(dateStr));
+		}
+		INC_BUFFER_ITER(i);
+		dataSize += size;
+
+		PUSH_STATIC_BUFFER("\r\n");
+	}
+
+	if (resp->bodyType == AppResponse::RBT_UPGRADE) {
+		PUSH_STATIC_BUFFER("Connection: upgrade\r\n");
+	} else if (req->wantKeepAlive) {
+		PUSH_STATIC_BUFFER("Connection: keep-alive\r\n");
+	} else {
+		PUSH_STATIC_BUFFER("Connection: close\r\n");
+	}
+
 	PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME "\r\n\r\n");
 
 	nbuffers = i;
@@ -337,10 +414,23 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	#undef PUSH_STATIC_BUFFER
 }
 
+unsigned int
+constructDateHeaderBuffersForResponse(char *dateStr, unsigned int bufsize) {
+	char *pos = dateStr;
+	const char *end = dateStr + bufsize - 1;
+	time_t the_time = (time_t) ev_now(getContext()->libev->getLoop());
+	struct tm the_tm;
+
+	pos = appendData(pos, end, "Date: ");
+	gmtime_r(&the_time, &the_tm);
+	pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %Z", &the_tm);
+	return pos - dateStr;
+}
+
 bool
 sendResponseHeaderWithWritev(Client *client, Request *req, ssize_t &bytesWritten) {
 	unsigned int maxbuffers = std::min<unsigned int>(
-		8 + req->appResponse.headers.size() * 4 + 1, IOV_MAX);
+		8 + req->appResponse.headers.size() * 4 + 4, IOV_MAX);
 	struct iovec *buffers = (struct iovec *) psg_palloc(req->pool,
 		sizeof(struct iovec) * maxbuffers);
 	unsigned int nbuffers, dataSize;
@@ -407,34 +497,34 @@ struct AppResponseChunkedBodyParserAdapter {
 	}
 
 	void setOutputBuffersFlushedCallback() {
-		req->client->output.setBuffersFlushedCallback(outputBuffersFlushed);
+		// Do nothing. Not necessary.
 	}
 
-	static void outputBuffersFlushed(FileBufferedChannel *_channel) {
-		FileBufferedFdOutputChannel *channel =
-			reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
-		Request *req = static_cast<Request *>(static_cast<ServerKit::BaseHttpRequest *>(
-			channel->getHooks()->userData));
-		Client *client = static_cast<Client *>(req->client);
-		RequestHandler::createAppResponseChunkedBodyParser(client, req).
-			outputBuffersFlushed();
+	string getLoggingPrefix() {
+		char buf[256];
+		int size = snprintf(buf, sizeof(buf),
+			"[Client %u] AppResponse ChunkedBodyParser: ",
+			static_cast<Client *>(req->client)->number);
+		return string(buf, size);
 	}
 };
 
-typedef ServerKit::HttpChunkedBodyParser<AppResponseChunkedBodyParserAdapter, false> \
+typedef ServerKit::HttpChunkedBodyParser<AppResponseChunkedBodyParserAdapter> \
 	AppResponseChunkedBodyParser;
 
 static ServerKit::HttpHeaderParser<AppResponse, ServerKit::HttpParseResponse>
 createAppResponseHeaderParser(ServerKit::Context *ctx, Request *req) {
 	return ServerKit::HttpHeaderParser<AppResponse, ServerKit::HttpParseResponse>(
 		ctx, req->appResponse.parserState.headerParser,
-		&req->appResponse, req->pool);
+		&req->appResponse, req->pool, req->method);
 }
 
 static AppResponseChunkedBodyParser
-createAppResponseChunkedBodyParser(Client *client, Request *req) {
+createAppResponseChunkedBodyParser(Client *client, Request *req,
+	int *errcode = NULL)
+{
 	return AppResponseChunkedBodyParser(&req->appResponse.parserState.chunkedBodyParser,
-		&req->appResponse, &req->bodyChannel, &client->output,
+		&req->appResponse, &req->bodyChannel, NULL, errcode,
 		AppResponseChunkedBodyParserAdapter(req));
 }
 

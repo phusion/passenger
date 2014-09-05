@@ -124,7 +124,7 @@ public:
 
 	/** Length of the message body. Only has meaning when state is PARSING_BODY. */
 	union {
-		// If bodyType == RBT_CONTENT_LENGTH
+		// If bodyType == RBT_CONTENT_LENGTH. Guaranteed to be > 0.
 		boost::uint64_t contentLength;
 		// If bodyType == RBT_CHUNKED
 		bool endChunkReached;

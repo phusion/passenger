@@ -244,7 +244,8 @@ class RequestHandler:
 
 		headers_set = []
 		headers_sent = []
-		
+		is_head = env['REQUEST_METHOD'] == 'HEAD'
+
 		def write(data):
 			try:
 				if not headers_set:
@@ -252,11 +253,14 @@ class RequestHandler:
 				elif not headers_sent:
 					# Before the first output, send the stored headers.
 					status, response_headers = headers_sent[:] = headers_set
-					output_stream.sendall(str_to_bytes('Status: %s\r\n' % status))
+					output_stream.sendall(str_to_bytes(
+						'HTTP/1.1 %s\r\nStatus: %s\r\nConnection: close\r\n' %
+						(status, status)))
 					for header in response_headers:
 						output_stream.sendall(str_to_bytes('%s: %s\r\n' % header))
 					output_stream.sendall(b'\r\n')
-				output_stream.sendall(data)
+				if not is_head:
+					output_stream.sendall(data)
 			except IOError:
 				# Mark this exception as coming from the Phusion Passenger
 				# socket and not some other socket.

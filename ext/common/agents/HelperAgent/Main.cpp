@@ -738,6 +738,7 @@ initializeSingleAppMode(WorkingObjects *wo) {
 	}
 
 	if (!options.has("app_type")) {
+		P_DEBUG("Autodetecting application type...");
 		AppTypeDetector detector(NULL, 0);
 		PassengerAppType appType = detector.checkAppRoot(options.get("app_root"));
 		if (appType == PAT_NONE || appType == PAT_ERROR) {
@@ -796,6 +797,16 @@ onSigquit(EV_P_ struct ev_signal *watcher, int revents) {
 
 	cerr << "### Pool state\n";
 	cerr << "\n" << wo->appPool->inspect();
+	cerr << "\n";
+	cerr.flush();
+
+	cerr << "### mbuf stats\n\n";
+	cerr << "nfree_mbuf_blockq    : " <<
+		wo->serverKitContext->mbuf_pool.nfree_mbuf_blockq << "\n";
+	cerr << "nactive_mbuf_blockq  : " <<
+		wo->serverKitContext->mbuf_pool.nactive_mbuf_blockq << "\n";
+	cerr << "mbuf_block_chunk_size: " <<
+		wo->serverKitContext->mbuf_pool.mbuf_block_chunk_size << "\n";
 	cerr << "\n";
 	cerr.flush();
 
@@ -906,6 +917,16 @@ dumpDiagnosticsOnCrash(void *userData) {
 	cerr << "\n\n";
 	cerr.flush();
 
+	cerr << "### mbuf stats\n\n";
+	cerr << "nfree_mbuf_blockq  : " <<
+		wo->serverKitContext->mbuf_pool.nfree_mbuf_blockq << "\n";
+	cerr << "nactive_mbuf_blockq: " <<
+		wo->serverKitContext->mbuf_pool.nactive_mbuf_blockq << "\n";
+	cerr << "mbuf_block_chunk_size: " <<
+		wo->serverKitContext->mbuf_pool.mbuf_block_chunk_size << "\n";
+	cerr << "\n";
+	cerr.flush();
+
 	cerr << "### Backtraces\n";
 	cerr << oxt::thread::all_backtraces();
 	cerr.flush();
@@ -1005,6 +1026,8 @@ usage() {
 	printf("                            " DEFAULT_LISTEN_ADDRESS "\n");
 	printf("\n");
 	printf("Application serving options (optional):\n");
+	printf("  -e, --environment NAME    Default framework environment name to use.\n");
+	printf("                            Default: " DEFAULT_APP_ENV "\n");
 	printf("      --app-type TYPE       The type of application you want to serve\n");
 	printf("                            (single-app mode only)\n");
 	printf("      --startup-file PATH   The path of the app's startup file, relative to\n");
@@ -1049,6 +1072,9 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 		} else if (isValueFlag(argc, i, argv[i], '\0', "--max-pool-size")) {
 			options.setInt("max_pool_size", atoi(argv[i + 1]));
 			i += 2;
+		} else if (isValueFlag(argc, i, argv[i], 'e', "--environment")) {
+			options.set("environment", argv[i + 1]);
+			i += 2;
 		} else if (isValueFlag(argc, i, argv[i], '\0', "--app-type")) {
 			options.set("app_type", argv[i + 1]);
 			i += 2;
@@ -1089,6 +1115,7 @@ setAgentOptionsDefaults() {
 
 	options.setDefaultStrSet("server_listen_addresses", defaultListenAddress);
 	options.setDefaultBool("multi_app", false);
+	options.setDefault("environment", DEFAULT_APP_ENV);
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 

@@ -52,13 +52,13 @@ class OutOfBandGc
         @request_count += 1
         if @request_count == @frequency
           @request_count = 0
-          headers['X-Passenger-Request-OOB-Work'] = 'true'
+          headers['!~Request-OOB-Work'] = 'true'
         end
       end
 
     when :gctools_oobgc
       if GC::OOB.dry_run
-        headers['X-Passenger-Request-OOB-Work'] = 'true'
+        headers['!~Request-OOB-Work'] = 'true'
       end
 
     else

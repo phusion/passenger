@@ -75,6 +75,17 @@ endRequestWithSimpleResponse(Client **c, Request **r, const StaticString &body, 
 	endRequest(c, r);
 }
 
+void endRequestAsBadGateway(Client **client, Request **req) {
+	if ((*req)->responseBegun) {
+		disconnectWithError(client, "bad gateway");
+	} else {
+		ServerKit::HeaderTable headers;
+		headers.insert((*req)->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		writeSimpleResponse(*client, 502, &headers, "<h1>Bad Gateway</h1>");
+		endRequest(client, req);
+	}
+}
+
 bool
 getBoolOption(Request *req, const HashedStaticString &name, bool defaultValue = false) {
 	const LString *value = req->secureHeaders.lookup(name);
@@ -103,26 +114,6 @@ gatherBuffers(char * restrict dest, unsigned int size, const struct iovec *buffe
 		memcpy(pos, buffers[i].iov_base, buffers[i].iov_len);
 		pos += buffers[i].iov_len;
 	}
-}
-
-static Json::Value
-timeToJson(ev_tstamp tstamp) {
-	Json::Value doc;
-	time_t time = (time_t) tstamp;
-	char buf[32];
-	size_t len;
-
-	doc["timestamp"] = tstamp;
-
-	ctime_r(&time, buf);
-	len = strlen(buf);
-	if (len > 0) {
-		// Get rid of trailing newline
-		buf[len - 1] = '\0';
-	}
-	doc["local"] = buf;
-
-	return doc;
 }
 
 // `path` MUST be NULL-terminated. Returns a contiguous LString.
