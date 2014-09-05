@@ -107,6 +107,7 @@ private:
 		pos = appendData(pos, end, appRoot);
 		pos = appendData(pos, end, "/");
 		pos = appendData(pos, end, name);
+		pos = appendData(pos, end, "\0", 1);
 		if (OXT_UNLIKELY(pos == end)) {
 			TRACE_POINT();
 			throw RuntimeException("Not enough buffer space");
