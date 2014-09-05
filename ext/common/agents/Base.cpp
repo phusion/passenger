@@ -121,14 +121,6 @@ static void *customDiagnosticsDumperUserData;
 static int emergencyPipe1[2] = { -1, -1 };
 static int emergencyPipe2[2] = { -1, -1 };
 
-// If assert() failed, its information is stored here.
-static struct {
-	const char *filename;
-	const char *function; // May be NULL.
-	const char *expression;
-	unsigned int line;
-} lastAssertionFailure;
-
 
 static void
 ignoreSigpipe() {

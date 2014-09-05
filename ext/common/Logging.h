@@ -56,14 +56,25 @@ using namespace oxt;
 
 /********** Debug logging facilities **********/
 
+struct AssertionFailureInfo {
+	const char *filename;
+	const char *function; // May be NULL.
+	const char *expression;
+	unsigned int line;
+};
+
 extern int _logLevel;
 extern int _logOutput;
+
+// If assert() or similar fails, we attempt to store its information here.
+extern AssertionFailureInfo lastAssertionFailure;
 
 int getLogLevel();
 void setLogLevel(int value);
 bool setDebugFile(const char *logFile = NULL);
 void _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line);
 void _writeLogEntry(const std::string &str);
+const char *_strdupStringStream(const std::stringstream &stream);
 
 
 enum PassengerLogLevel {
@@ -145,20 +156,42 @@ void printAppOutput(pid_t pid, const char *channelName, const char *message, uns
  */
 void setPrintAppOutputAsDebuggingMessages(bool enabled);
 
-
 /** Print a [BUG] error message and abort with a stack trace. */
 #define P_BUG(expr) \
 	do { \
 		TRACE_POINT(); \
-		P_CRITICAL("[BUG] " << expr); \
+		const char *_exprStr; \
+		std::stringstream sstream; \
+		sstream << expr; \
+		_exprStr = Passenger::_strdupStringStream(sstream); \
+		Passenger::lastAssertionFailure.filename = __FILE__; \
+		Passenger::lastAssertionFailure.line = __LINE__; \
+		Passenger::lastAssertionFailure.function = __PRETTY_FUNCTION__; \
+		Passenger::lastAssertionFailure.expression = _exprStr; \
+		P_CRITICAL("[BUG] " << _exprStr); \
 		abort(); \
 	} while (false)
 
 #define P_BUG_UTP(expr) \
 	do { \
 		UPDATE_TRACE_POINT(); \
-		P_CRITICAL("[BUG] " << expr); \
+		const char *_exprStr; \
+		std::stringstream sstream; \
+		sstream << expr; \
+		_exprStr = Passenger::_strdupStringStream(sstream); \
+		Passenger::lastAssertionFailure.filename = __FILE__; \
+		Passenger::lastAssertionFailure.line = __LINE__; \
+		Passenger::lastAssertionFailure.function = __PRETTY_FUNCTION__; \
+		Passenger::lastAssertionFailure.expression = _exprStr; \
+		P_CRITICAL("[BUG] " << _exprStr); \
 		abort(); \
+	} while (false)
+
+#define P_ASSERT_EQ(value, expected) \
+	do { \
+		if (OXT_UNLIKELY(value != expected)) { \
+			P_BUG("Expected " << #value << " to be " << expected << ", got " << value); \
+		} \
 	} while (false)
 
 
