@@ -4,7 +4,6 @@
 #include <BackgroundEventLoop.h>
 #include <Constants.h>
 #include <Logging.h>
-#include <MultiLibeio.h>
 #include <StaticString.h>
 #include <ServerKit/FileBufferedChannel.h>
 #include <Utils/StrIntUtils.h>
@@ -35,9 +34,6 @@ namespace tut {
 			  endConsume(false),
 			  counter(0)
 		{
-			if (MultiLibeio::isInitialized()) {
-				MultiLibeio::shutdown();
-			}
 			channel.setDataCallback(dataCallback);
 			channel.setHooks(this);
 			Hooks::impl = NULL;
@@ -47,6 +43,8 @@ namespace tut {
 		~ServerKit_FileBufferedChannelTest() {
 			channel.deinitialize(); // Cancel any event loop next tick callbacks.
 			setLogLevel(DEFAULT_LOG_LEVEL);
+			bg.stop();
+			shutdownLibeio();
 		}
 
 		void startLoop() {

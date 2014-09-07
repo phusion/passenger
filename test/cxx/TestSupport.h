@@ -107,6 +107,9 @@ extern Json::Value testConfig;
 void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
                                           ServerInstanceDir::GenerationPtr &generation);
 
+void initializeLibeio();
+void shutdownLibeio();
+
 /**
  * Writes zeroes into the given file descriptor its buffer is full (i.e.
  * the next write will block).
@@ -176,7 +179,7 @@ public:
 		}
 		ignoreRemoveErrors = _ignoreRemoveErrors;
 	}
-	
+
 	~TempDir() {
 		if (ignoreRemoveErrors) {
 			try {
@@ -202,7 +205,7 @@ public:
 	TempDirCopy(const string &source, const string &dest) {
 		dir = dest;
 		removeDirTree(dest);
-		
+
 		char command[1024];
 		snprintf(command, sizeof(command), "cp -pR \"%s\" \"%s\"",
 			source.c_str(), dest.c_str());
@@ -220,7 +223,7 @@ public:
 			waitpid(pid, NULL, 0);
 		}
 	}
-	
+
 	~TempDirCopy() {
 		removeDirTree(dir);
 	}
@@ -240,7 +243,7 @@ public:
 			unlink(filename.c_str());
 		}
 	}
-	
+
 	~DeleteFileEventually() {
 		unlink(filename.c_str());
 	}
@@ -254,11 +257,11 @@ public:
 class TempThread {
 public:
 	oxt::thread thread;
-	
+
 	TempThread(boost::function<void ()> func)
 		: thread(boost::bind(runAndPrintExceptions, func, true))
 		{ }
-	
+
 	~TempThread() {
 		thread.interrupt_and_join();
 	}
@@ -273,43 +276,43 @@ public:
 	AtomicInt() {
 		val = 0;
 	}
-	
+
 	AtomicInt(int value) {
 		val = value;
 	}
-	
+
 	AtomicInt(const AtomicInt &other) {
 		val = other.val;
 	}
-	
+
 	int get() const {
 		boost::lock_guard<boost::mutex> l(lock);
 		return val;
 	}
-	
+
 	void set(int value) {
 		boost::lock_guard<boost::mutex> l(lock);
 		val = value;
 	}
-	
+
 	AtomicInt &operator=(int value) {
 		set(value);
 		return *this;
 	}
-	
+
 	AtomicInt &operator++() {
 		boost::lock_guard<boost::mutex> l(lock);
 		val++;
 		return *this;
 	}
-	
+
 	AtomicInt operator++(int) {
 		boost::lock_guard<boost::mutex> l(lock);
 		AtomicInt temp(*this);
 		val++;
 		return temp;
 	}
-	
+
 	operator int() const {
 		return get();
 	}

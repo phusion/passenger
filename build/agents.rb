@@ -36,7 +36,7 @@ AGENT_OBJECTS = {
 	],
 	'ServerMain.o' => [
 		'ext/common/agents/HelperAgent/Main.cpp',
-		'ext/common/agents/HelperAgent/RequestHandler2.h',
+		'ext/common/agents/HelperAgent/RequestHandler.h',
 		'ext/common/agents/HelperAgent/RequestHandler/Client.h',
 		'ext/common/agents/HelperAgent/RequestHandler/AppResponse.h',
 		'ext/common/agents/HelperAgent/RequestHandler/Utils.cpp',
@@ -45,7 +45,6 @@ AGENT_OBJECTS = {
 		'ext/common/agents/HelperAgent/RequestHandler/SendRequest.cpp',
 		'ext/common/agents/HelperAgent/RequestHandler/ForwardResponse.cpp',
 		'ext/common/agents/HelperAgent/ScgiRequestParser.h',
-		'ext/common/agents/HelperAgent/SystemMetricsTool.cpp',
 		'ext/common/Constants.h',
 		'ext/common/StaticString.h',
 		'ext/common/Account.h',
@@ -83,57 +82,8 @@ agent_libs = COMMON_LIBRARY.
 	exclude('AgentsStarter.o')
 agent_objects = AGENT_OBJECTS.keys.map { |x| "#{AGENT_OUTPUT_DIR}#{x}" }
 dependencies = agent_objects + [
+	'ext/common/Constants.h',
 	'ext/common/agents/Main.cpp',
-	'ext/common/agents/HelperAgent/Main.cpp',
-	'ext/common/agents/HelperAgent/RequestHandler2.h',
-	'ext/common/agents/HelperAgent/RequestHandler/Client.h',
-	'ext/common/agents/HelperAgent/RequestHandler/Utils.cpp',
-	'ext/common/agents/HelperAgent/RequestHandler/InitRequest.cpp',
-	'ext/common/agents/HelperAgent/RequestHandler/CheckoutSession.cpp',
-	'ext/common/agents/HelperAgent/ScgiRequestParser.h',
-	'ext/common/agents/HelperAgent/SystemMetricsTool.cpp',
-	'ext/common/Constants.h',
-	'ext/common/StaticString.h',
-	'ext/common/Account.h',
-	'ext/common/AccountsDatabase.h',
-	'ext/common/MessageServer.h',
-	'ext/common/FileDescriptor.h',
-	'ext/common/Logging.h',
-	'ext/common/ResourceLocator.h',
-	'ext/common/Utils/ProcessMetricsCollector.h',
-	'ext/common/Utils/SystemMetricsCollector.h',
-	'ext/common/Utils/VariantMap.h',
-	'ext/common/ApplicationPool2/Pool.h',
-	'ext/common/ApplicationPool2/Common.h',
-	'ext/common/ApplicationPool2/SuperGroup.h',
-	'ext/common/ApplicationPool2/Group.h',
-	'ext/common/ApplicationPool2/Process.h',
-	'ext/common/ApplicationPool2/Session.h',
-	'ext/common/ApplicationPool2/Options.h',
-	'ext/common/ApplicationPool2/PipeWatcher.h',
-	'ext/common/ApplicationPool2/Spawner.h',
-	'ext/common/ApplicationPool2/SpawnerFactory.h',
-	'ext/common/ApplicationPool2/SmartSpawner.h',
-	'ext/common/ApplicationPool2/DirectSpawner.h',
-	'ext/common/ApplicationPool2/ErrorRenderer.h',
-	'ext/common/agents/Watchdog/Main.cpp',
-	'ext/common/agents/Watchdog/AgentWatcher.cpp',
-	'ext/common/agents/Watchdog/HelperAgentWatcher.cpp',
-	'ext/common/agents/Watchdog/LoggingAgentWatcher.cpp',
-	'ext/common/agents/Watchdog/ServerInstanceDirToucher.cpp',
-	'ext/common/Constants.h',
-	'ext/common/ServerInstanceDir.h',
-	'ext/common/ResourceLocator.h',
-	'ext/common/Utils/VariantMap.h',
-	'ext/common/agents/LoggingAgent/Main.cpp',
-	'ext/common/agents/LoggingAgent/AdminController.h',
-	'ext/common/agents/LoggingAgent/LoggingServer.h',
-	'ext/common/agents/LoggingAgent/RemoteSender.h',
-	'ext/common/agents/LoggingAgent/DataStoreId.h',
-	'ext/common/agents/LoggingAgent/FilterSupport.h',
-	'ext/common/EventedServer.h',
-	'ext/common/EventedClient.h',
-	'ext/common/Utils/BlockingQueue.h',
 	LIBBOOST_OXT,
 	agent_libs.link_objects,
 	LIBEV_TARGET,
@@ -152,99 +102,6 @@ file AGENT_OUTPUT_DIR + 'PassengerAgent' => dependencies do
 		"#{AGENT_OUTPUT_DIR}PassengerAgent.o",
 		"#{agent_libs.link_objects_as_string} " <<
 		"#{agent_objects_as_string} " <<
-		"#{LIBBOOST_OXT} " <<
-		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
-		"#{LIBEV_LIBS} " <<
-		"#{LIBEIO_LIBS} " <<
-		"#{PlatformInfo.portability_cxx_ldflags} " <<
-		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_CXX_LDFLAGS}")
-end
-
-
-watchdog_libs = COMMON_LIBRARY.only(:base, 'AgentsBase.o', 'Utils/Base64.o')
-dependencies = [
-	'ext/common/agents/Watchdog/Main.cpp',
-	'ext/common/agents/Watchdog/AgentWatcher.cpp',
-	'ext/common/agents/Watchdog/HelperAgentWatcher.cpp',
-	'ext/common/agents/Watchdog/LoggingAgentWatcher.cpp',
-	'ext/common/agents/Watchdog/ServerInstanceDirToucher.cpp',
-	'ext/common/Constants.h',
-	'ext/common/ServerInstanceDir.h',
-	'ext/common/ResourceLocator.h',
-	'ext/common/Utils/VariantMap.h',
-	LIBBOOST_OXT,
-	watchdog_libs.link_objects
-].flatten
-file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
-	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-	compile_cxx("ext/common/agents/Watchdog/Main.cpp",
-		"-o #{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
-		"#{EXTRA_PRE_CXXFLAGS} " <<
-		"-Iext -Iext/common " <<
-		"#{AGENT_CFLAGS} #{EXTRA_CXXFLAGS}")
-	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
-		"#{AGENT_OUTPUT_DIR}PassengerWatchdog.o " <<
-		"#{watchdog_libs.link_objects_as_string} " <<
-		"#{LIBBOOST_OXT} " <<
-		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
-		"#{PlatformInfo.portability_cxx_ldflags} " <<
-		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_CXX_LDFLAGS}")
-end
-
-helper_agent_libs = COMMON_LIBRARY.
-	only(:base, :other).
-	exclude('AgentsStarter.o')
-dependencies = [
-	'ext/common/agents/HelperAgent/Main.cpp',
-	'ext/common/agents/HelperAgent/RequestHandler2.h',
-	'ext/common/agents/HelperAgent/RequestHandler/Client.h',
-	'ext/common/agents/HelperAgent/RequestHandler/Utils.cpp',
-	'ext/common/agents/HelperAgent/RequestHandler/InitRequest.cpp',
-	'ext/common/agents/HelperAgent/RequestHandler/CheckoutSession.cpp',
-	'ext/common/agents/HelperAgent/ScgiRequestParser.h',
-	'ext/common/agents/HelperAgent/SystemMetricsTool.cpp',
-	'ext/common/Constants.h',
-	'ext/common/StaticString.h',
-	'ext/common/Account.h',
-	'ext/common/AccountsDatabase.h',
-	'ext/common/MessageServer.h',
-	'ext/common/FileDescriptor.h',
-	'ext/common/Logging.h',
-	'ext/common/ResourceLocator.h',
-	'ext/common/Utils/ProcessMetricsCollector.h',
-	'ext/common/Utils/SystemMetricsCollector.h',
-	'ext/common/Utils/VariantMap.h',
-	'ext/common/ApplicationPool2/Pool.h',
-	'ext/common/ApplicationPool2/Common.h',
-	'ext/common/ApplicationPool2/SuperGroup.h',
-	'ext/common/ApplicationPool2/Group.h',
-	'ext/common/ApplicationPool2/Process.h',
-	'ext/common/ApplicationPool2/Session.h',
-	'ext/common/ApplicationPool2/Options.h',
-	'ext/common/ApplicationPool2/PipeWatcher.h',
-	'ext/common/ApplicationPool2/Spawner.h',
-	'ext/common/ApplicationPool2/SpawnerFactory.h',
-	'ext/common/ApplicationPool2/SmartSpawner.h',
-	'ext/common/ApplicationPool2/DirectSpawner.h',
-	'ext/common/ApplicationPool2/ErrorRenderer.h',
-	LIBBOOST_OXT,
-	helper_agent_libs.link_objects,
-	LIBEV_TARGET,
-	LIBEIO_TARGET
-].flatten.compact
-file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
-	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-	compile_cxx("ext/common/agents/HelperAgent/Main.cpp",
-		"-o #{AGENT_OUTPUT_DIR}PassengerHelperAgent.o " <<
-		"#{EXTRA_PRE_CXXFLAGS} " <<
-		"-Iext -Iext/common " <<
-		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
-		"#{EXTRA_CXXFLAGS}")
-	create_executable("#{AGENT_OUTPUT_DIR}PassengerHelperAgent",
-		"#{AGENT_OUTPUT_DIR}PassengerHelperAgent.o",
-		"#{helper_agent_libs.link_objects_as_string} " <<
 		"#{LIBBOOST_OXT} " <<
 		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
 		"#{LIBEV_LIBS} " <<

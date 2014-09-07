@@ -298,6 +298,8 @@ enum {
  */
 int eio_init (void (*want_poll)(void), void (*done_poll)(void));
 
+int eio_deinit ();
+
 /* must be called regularly to handle pending requests */
 /* returns 0 if all requests were handled, -1 if not, or the value of EIO_FINISH if != 0 */
 int eio_poll (void);

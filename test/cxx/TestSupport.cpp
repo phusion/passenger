@@ -1,10 +1,12 @@
 #include "TestSupport.h"
+#include "../support/valgrind.h"
 #include <dirent.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <pwd.h>
 #include <grp.h>
 #include <cassert>
+#include <eio.h>
 #include <BackgroundEventLoop.cpp>
 #include <Utils/IOUtils.h>
 #include <Utils/ScopeGuard.h>
@@ -26,15 +28,36 @@ void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDi
 		geteuid(), getegid());
 }
 
+static int
+doNothing(eio_req *req) {
+	return 0;
+}
+
+void
+initializeLibeio() {
+	eio_set_idle_timeout(9999); // Never timeout.
+	eio_set_min_parallel(1);
+	eio_set_max_parallel(1);
+	if (RUNNING_ON_VALGRIND) {
+		// Start an EIO thread to warm up Valgrind.
+		eio_nop(0, doNothing, NULL);
+	}
+}
+
+void
+shutdownLibeio() {
+	eio_deinit();
+}
+
 void
 writeUntilFull(int fd) {
 	int flags, ret;
 	char buf[1024];
-	
+
 	memset(buf, 0, sizeof(buf));
 	flags = fcntl(fd, F_GETFL);
 	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-	
+
 	while (true) {
 		ret = write(fd, buf, sizeof(buf));
 		if (ret == -1) {
@@ -68,7 +91,7 @@ writeUntilFull(int fd) {
 			}
 		}
 	}
-	
+
 	fcntl(fd, F_SETFL, flags);
 }
 
@@ -121,7 +144,7 @@ touchFile(const char *filename, time_t timestamp) {
 		message.append("'");
 		throw FileSystemException(message, e, filename);
 	}
-	
+
 	if (timestamp != (time_t) -1) {
 		struct utimbuf times;
 		times.actime = timestamp;
@@ -135,7 +158,7 @@ listDir(const string &path) {
 	vector<string> result;
 	DIR *d = opendir(path.c_str());
 	struct dirent *ent;
-	
+
 	if (d == NULL) {
 		int e = errno;
 		throw FileSystemException("Cannot open directory " + path,
@@ -154,7 +177,7 @@ string
 getPrimaryGroupName(const string &username) {
 	struct passwd *user;
 	struct group  *group;
-	
+
 	user = getpwnam(username.c_str());
 	if (user == NULL) {
 		throw RuntimeException(string("User '") + username + "' does not exist.");
@@ -163,7 +186,7 @@ getPrimaryGroupName(const string &username) {
 	if (group == NULL) {
 		throw RuntimeException(string("Primary group for user '") + username + "' does not exist.");
 	}
-	
+
 	return group->gr_name;
 }
 

@@ -48,43 +48,43 @@ TEST_CXX_OBJECTS = {
 		ext/common/BackgroundEventLoop.cpp
 		ext/common/Exceptions.h
 		ext/common/Utils.h),
-	'test/cxx/ApplicationPool2/OptionsTest.o' => %w(
-		test/cxx/ApplicationPool2/OptionsTest.cpp
-		ext/common/ApplicationPool2/Options.h),
-	'test/cxx/ApplicationPool2/DirectSpawnerTest.o' => %w(
-		test/cxx/ApplicationPool2/DirectSpawnerTest.cpp
-		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
-		ext/common/ApplicationPool2/Options.h
-		ext/common/ApplicationPool2/Process.h
-		ext/common/ApplicationPool2/Socket.h
-		ext/common/ApplicationPool2/Spawner.h
-		ext/common/ApplicationPool2/DirectSpawner.h),
-	'test/cxx/ApplicationPool2/SmartSpawnerTest.o' => %w(
-		test/cxx/ApplicationPool2/SmartSpawnerTest.cpp
-		test/cxx/ApplicationPool2/SpawnerTestCases.cpp
-		ext/common/ApplicationPool2/Options.h
-		ext/common/ApplicationPool2/Process.h
-		ext/common/ApplicationPool2/Socket.h
-		ext/common/ApplicationPool2/Spawner.h
-		ext/common/ApplicationPool2/SmartSpawner.h),
-	'test/cxx/ApplicationPool2/ProcessTest.o' => %w(
-		test/cxx/ApplicationPool2/ProcessTest.cpp
-		ext/common/ApplicationPool2/Process.h
-		ext/common/ApplicationPool2/Socket.h
-		ext/common/ApplicationPool2/Session.h),
-	'test/cxx/ApplicationPool2/PoolTest.o' => %w(
-		test/cxx/ApplicationPool2/PoolTest.cpp
-		ext/common/ApplicationPool2/SuperGroup.h
-		ext/common/ApplicationPool2/Group.h
-		ext/common/ApplicationPool2/Pool.h
-		ext/common/ApplicationPool2/Process.h
-		ext/common/ApplicationPool2/Socket.h
-		ext/common/ApplicationPool2/Options.h
-		ext/common/ApplicationPool2/Spawner.h
-		ext/common/ApplicationPool2/SpawnerFactory.h
-		ext/common/ApplicationPool2/SmartSpawner.h
-		ext/common/ApplicationPool2/DirectSpawner.h
-		ext/common/ApplicationPool2/DummySpawner.h),
+	# 'test/cxx/ApplicationPool2/OptionsTest.o' => %w(
+	# 	test/cxx/ApplicationPool2/OptionsTest.cpp
+	# 	ext/common/ApplicationPool2/Options.h),
+	# 'test/cxx/ApplicationPool2/DirectSpawnerTest.o' => %w(
+	# 	test/cxx/ApplicationPool2/DirectSpawnerTest.cpp
+	# 	test/cxx/ApplicationPool2/SpawnerTestCases.cpp
+	# 	ext/common/ApplicationPool2/Options.h
+	# 	ext/common/ApplicationPool2/Process.h
+	# 	ext/common/ApplicationPool2/Socket.h
+	# 	ext/common/ApplicationPool2/Spawner.h
+	# 	ext/common/ApplicationPool2/DirectSpawner.h),
+	# 'test/cxx/ApplicationPool2/SmartSpawnerTest.o' => %w(
+	# 	test/cxx/ApplicationPool2/SmartSpawnerTest.cpp
+	# 	test/cxx/ApplicationPool2/SpawnerTestCases.cpp
+	# 	ext/common/ApplicationPool2/Options.h
+	# 	ext/common/ApplicationPool2/Process.h
+	# 	ext/common/ApplicationPool2/Socket.h
+	# 	ext/common/ApplicationPool2/Spawner.h
+	# 	ext/common/ApplicationPool2/SmartSpawner.h),
+	# 'test/cxx/ApplicationPool2/ProcessTest.o' => %w(
+	# 	test/cxx/ApplicationPool2/ProcessTest.cpp
+	# 	ext/common/ApplicationPool2/Process.h
+	# 	ext/common/ApplicationPool2/Socket.h
+	# 	ext/common/ApplicationPool2/Session.h),
+	# 'test/cxx/ApplicationPool2/PoolTest.o' => %w(
+	# 	test/cxx/ApplicationPool2/PoolTest.cpp
+	# 	ext/common/ApplicationPool2/SuperGroup.h
+	# 	ext/common/ApplicationPool2/Group.h
+	# 	ext/common/ApplicationPool2/Pool.h
+	# 	ext/common/ApplicationPool2/Process.h
+	# 	ext/common/ApplicationPool2/Socket.h
+	# 	ext/common/ApplicationPool2/Options.h
+	# 	ext/common/ApplicationPool2/Spawner.h
+	# 	ext/common/ApplicationPool2/SpawnerFactory.h
+	# 	ext/common/ApplicationPool2/SmartSpawner.h
+	# 	ext/common/ApplicationPool2/DirectSpawner.h
+	# 	ext/common/ApplicationPool2/DummySpawner.h),
 	'test/cxx/MemoryKit/MbufTest.o' => %w(
 		test/cxx/MemoryKit/MbufTest.cpp
 		ext/common/MemoryKit/mbuf.h),
@@ -170,29 +170,26 @@ TEST_CXX_OBJECTS = {
 		test/cxx/ServerInstanceDirTest.cpp
 		ext/common/ServerInstanceDir.h
 		ext/common/Utils.h),
-	'test/cxx/RequestHandlerTest.o' => %w(
-		test/cxx/RequestHandlerTest.cpp
-		ext/common/agents/HelperAgent/RequestHandler.h
-		ext/common/agents/HelperAgent/FileBackedPipe.h
-		ext/common/agents/HelperAgent/ScgiRequestParser.h
-		ext/common/agents/HelperAgent/AgentOptions.h
-		ext/common/UnionStation/Connection.h
-		ext/common/UnionStation/Core.h
-		ext/common/UnionStation/Transaction.h
-		ext/common/UnionStation/ScopeLog.h
-		ext/common/ApplicationPool2/Pool.h
-		ext/common/ApplicationPool2/SuperGroup.h
-		ext/common/ApplicationPool2/Group.h
-		ext/common/ApplicationPool2/Process.h
-		ext/common/ApplicationPool2/Options.h
-		ext/common/ApplicationPool2/Spawner.h
-		ext/common/ApplicationPool2/SpawnerFactory.h
-		ext/common/ApplicationPool2/SmartSpawner.h
-		ext/common/ApplicationPool2/DirectSpawner.h
-		ext/common/ApplicationPool2/DummySpawner.h),
-	'test/cxx/FileBackedPipeTest.o' => %w(
-		test/cxx/FileBackedPipeTest.cpp
-		ext/common/agents/HelperAgent/FileBackedPipe.h),
+	# 'test/cxx/RequestHandlerTest.o' => %w(
+	# 	test/cxx/RequestHandlerTest.cpp
+	# 	ext/common/agents/HelperAgent/RequestHandler.h
+	# 	ext/common/agents/HelperAgent/FileBackedPipe.h
+	# 	ext/common/agents/HelperAgent/ScgiRequestParser.h
+	# 	ext/common/agents/HelperAgent/AgentOptions.h
+	# 	ext/common/UnionStation/Connection.h
+	# 	ext/common/UnionStation/Core.h
+	# 	ext/common/UnionStation/Transaction.h
+	# 	ext/common/UnionStation/ScopeLog.h
+	# 	ext/common/ApplicationPool2/Pool.h
+	# 	ext/common/ApplicationPool2/SuperGroup.h
+	# 	ext/common/ApplicationPool2/Group.h
+	# 	ext/common/ApplicationPool2/Process.h
+	# 	ext/common/ApplicationPool2/Options.h
+	# 	ext/common/ApplicationPool2/Spawner.h
+	# 	ext/common/ApplicationPool2/SpawnerFactory.h
+	# 	ext/common/ApplicationPool2/SmartSpawner.h
+	# 	ext/common/ApplicationPool2/DirectSpawner.h
+	# 	ext/common/ApplicationPool2/DummySpawner.h),
 	'test/cxx/FileChangeCheckerTest.o' => %w(
 		test/cxx/FileChangeCheckerTest.cpp
 		ext/common/Utils/FileChangeChecker.h
@@ -284,8 +281,7 @@ dependencies = [
 	LIBEIO_TARGET,
 	TEST_BOOST_OXT_LIBRARY,
 	TEST_COMMON_LIBRARY.link_objects,
-	'ext/common/Constants.h',
-	'ext/common/MultiLibeio.cpp'
+	'ext/common/Constants.h'
 ].flatten.compact
 file 'test/cxx/CxxTestMain' => dependencies.flatten do
 	objects = TEST_CXX_OBJECTS.keys.join(' ')

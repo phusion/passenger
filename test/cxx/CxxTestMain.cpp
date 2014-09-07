@@ -1,6 +1,5 @@
 #include <TestSupport.h>
 #include "../tut/tut_reporter.h"
-#include "../support/valgrind.h"
 #include <oxt/initialize.hpp>
 #include <oxt/system_calls.hpp>
 #include <string>
@@ -12,7 +11,6 @@
 #include <cstring>
 #include <unistd.h>
 
-#include <MultiLibeio.cpp>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
@@ -123,11 +121,6 @@ parseOptions(int argc, char *argv[]) {
 	}
 }
 
-static int
-doNothing(eio_req *req) {
-	return 0;
-}
-
 static void
 loadConfigFile() {
 	Json::Reader reader;
@@ -183,15 +176,6 @@ main(int argc, char *argv[]) {
 	getcwd(path, PATH_MAX);
 	resourceLocator = new ResourceLocator(extractDirName(path));
 
-	Passenger::MultiLibeio::init();
-	eio_set_idle_timeout(9999); // Never timeout.
-	eio_set_min_parallel(1);
-	eio_set_max_parallel(1);
-	if (RUNNING_ON_VALGRIND) {
-		// Start an EIO thread to warm up Valgrind.
-		eio_nop(0, doNothing, NULL);
-	}
-
 	loadConfigFile();
 	installAbortHandler();
 
@@ -202,9 +186,6 @@ main(int argc, char *argv[]) {
 		tut::runner.get().run_tests(groupsToRun);
 	}
 	all_ok = reporter.all_ok();
-	if (Passenger::MultiLibeio::isInitialized()) {
-		Passenger::MultiLibeio::shutdown();
-	}
 	if (all_ok) {
 		return 0;
 	} else {

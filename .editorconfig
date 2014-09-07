@@ -51,3 +51,13 @@ trim_trailing_whitespace = true
 [ext/nginx/{*.c,*.h}]
 indent_style = space
 indent_size = 4
+
+[ext/libeio/*.c]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+[ext/libeio/*.h]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false

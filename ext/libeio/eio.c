@@ -592,6 +592,17 @@ etp_init (void (*want_poll)(void), void (*done_poll)(void))
   return 0;
 }
 
+static void ecb_cold etp_end_thread (void);
+
+static int
+etp_deinit ()
+{
+  while (started > 0)
+    etp_end_thread ();
+
+  return 0;
+}
+
 X_THREAD_PROC (etp_proc);
 
 static void ecb_cold
@@ -2239,6 +2250,12 @@ int ecb_cold
 eio_init (void (*want_poll)(void), void (*done_poll)(void))
 {
   return etp_init (want_poll, done_poll);
+}
+
+int ecb_cold
+eio_deinit ()
+{
+  return etp_deinit ();
 }
 
 ecb_inline void

@@ -27,7 +27,7 @@ namespace tut {
 		int serverSocket1, serverSocket2;
 
 		ServerKit_ServerTest()
-			: bg(),
+			: bg(false, true),
 			  context(bg.safe)
 		{
 			setLogLevel(LVL_CRIT);
@@ -48,6 +48,7 @@ namespace tut {
 			unlink("tmp.server2");
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			bg.stop();
+			shutdownLibeio();
 		}
 
 		void startServer() {
