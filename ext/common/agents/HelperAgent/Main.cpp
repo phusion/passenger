@@ -589,6 +589,9 @@ usage() {
 	printf("Process management options (optional):\n");
 	printf("      --max-pool-size N     Maximum number of application processes.\n");
 	printf("                            Default: %d\n", DEFAULT_MAX_POOL_SIZE);
+	printf("      --pool-idle-time SECS  Maximum number of seconds an application process\n");
+	printf("                             may be idle. Default: %d\n", DEFAULT_POOL_IDLE_TIME);
+	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
 	printf("\n");
 	printf("Other options (optional):\n");
 	printf("      --log-level LEVEL     Logging level. Default: %d\n", DEFAULT_LOG_LEVEL);
@@ -622,6 +625,12 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			}
 		} else if (isValueFlag(argc, i, argv[i], '\0', "--max-pool-size")) {
 			options.setInt("max_pool_size", atoi(argv[i + 1]));
+			i += 2;
+		} else if (isValueFlag(argc, i, argv[i], '\0', "--pool-idle-time")) {
+			options.setInt("pool_idle_time", atoi(argv[i + 1]));
+			i += 2;
+		} else if (isValueFlag(argc, i, argv[i], '\0', "--min-instances")) {
+			options.setInt("min_instances", atoi(argv[i + 1]));
 			i += 2;
 		} else if (isValueFlag(argc, i, argv[i], 'e', "--environment")) {
 			options.set("environment", argv[i + 1]);
@@ -669,6 +678,7 @@ setAgentOptionsDefaults() {
 	options.setDefault("environment", DEFAULT_APP_ENV);
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
+	options.setDefaultInt("min_instances", 1);
 
 	options.setDefault("default_ruby", DEFAULT_RUBY);
 	if (!options.getBool("multi_app") && !options.has("app_root")) {

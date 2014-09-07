@@ -311,14 +311,18 @@ public:
 		}
 	}
 
+	OXT_FORCE_INLINE
 	bool lookup(const HashedStaticString &key, T **result) {
-		Cell *cell = lookupCell(key);
-		if (cell != NULL) {
-			*result = &cell->value;
-			return true;
+		return static_cast<const StringKeyTable<T> *>(this)->lookup(key,
+			const_cast<const T **>(result));
+	}
+
+	const T lookupCopy(const HashedStaticString &key) const {
+		const T *result;
+		if (lookup(key, &result)) {
+			return *result;
 		} else {
-			*result = NULL;
-			return false;
+			return T();
 		}
 	}
 

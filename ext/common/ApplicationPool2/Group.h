@@ -475,10 +475,19 @@ public:
 				lowestBusyness = enabledProcessBusynessLevels[i];
 			}
 		}
-		return enabledProcesses[leastBusyProcessIndex].get();
+
+		if (leastBusyProcessIndex == -1) {
+			return NULL;
+		} else {
+			return enabledProcesses[leastBusyProcessIndex].get();
+		}
 	}
 
 	Process *findProcessWithLowestBusyness(const ProcessList &processes) const {
+		if (processes.empty()) {
+			return NULL;
+		}
+
 		int leastBusyProcessIndex = -1;
 		int lowestBusyness = 0;
 		unsigned int i, size = enabledProcessBusynessLevels.size();
@@ -1158,6 +1167,7 @@ public:
 		enabledProcesses.clear();
 		disablingProcesses.clear();
 		disabledProcesses.clear();
+		enabledProcessBusynessLevels.clear();
 		enabledCount = 0;
 		disablingCount = 0;
 		disabledCount = 0;

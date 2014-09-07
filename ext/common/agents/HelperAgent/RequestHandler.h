@@ -359,7 +359,10 @@ public:
 
 		if (!agentsOptions->getBool("multi_app")) {
 			boost::shared_ptr<Options> options = make_shared<Options>();
+
+			singleAppMode = true;
 			fillPoolOptionsFromAgentsOptions(*options);
+
 			options->appRoot = psg_pstrdup(stringPool,
 				agentsOptions->get("app_root"));
 			options->environment = psg_pstrdup(stringPool,
@@ -369,7 +372,6 @@ public:
 			options->startupFile = psg_pstrdup(stringPool,
 				agentsOptions->get("startup_file"));
 			poolOptionsCache.insert(options->getAppGroupName(), options);
-			singleAppMode = true;
 		}
 	}
 

@@ -1294,9 +1294,10 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 		if (!detachedProcesses.empty()) {
 			P_TRACE(2, "Checking whether any of the " << detachedProcesses.size() <<
 				" detached processes have exited...");
-			ProcessList::iterator it = detachedProcesses.begin();
-			ProcessList::iterator end = detachedProcesses.end();
-			while (it != end) {
+			ProcessList::iterator it, end = detachedProcesses.end();
+			ProcessList processesToRemove;
+
+			for (it = detachedProcesses.begin(); it != end; it++) {
 				const ProcessPtr process = *it;
 				switch (process->getLifeStatus()) {
 				case Process::ALIVE:
@@ -1306,28 +1307,28 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 						process->triggerShutdown();
 						assert(process->getLifeStatus() == Process::SHUTDOWN_TRIGGERED);
 					}
-					it++;
 					break;
 				case Process::SHUTDOWN_TRIGGERED:
 					if (process->canCleanup()) {
 						P_DEBUG("Detached process " << process->inspect() << " has shut down. Cleaning up associated resources.");
 						process->cleanup();
 						assert(process->getLifeStatus() == Process::DEAD);
-						it++;
-						removeProcessFromList(process, detachedProcesses);
+						processesToRemove.push_back(process);
 					} else if (process->shutdownTimeoutExpired()) {
 						P_WARN("Detached process " << process->inspect() <<
 							" didn't shut down within " PROCESS_SHUTDOWN_TIMEOUT_DISPLAY
 							". Forcefully killing it with SIGKILL.");
 						kill(process->pid, SIGKILL);
-						it++;
-					} else {
-						it++;
 					}
 					break;
 				default:
 					P_BUG("Unknown 'lifeStatus' state " << (int) process->getLifeStatus());
 				}
+			}
+
+			end = processesToRemove.end();
+			for (it = processesToRemove.begin(); it != end; it++) {
+				removeProcessFromList(*it, detachedProcesses);
 			}
 		}
 
@@ -1473,6 +1474,11 @@ Process::getSuperGroup() const {
 	return getGroup()->getSuperGroup();
 }
 
+StaticString
+Process::getGroupSecret() const {
+	return StaticString(getGroup()->secret, Group::SECRET_SIZE);
+}
+
 void
 Process::sendAbortLongRunningConnectionsMessage(const string &address) {
 	boost::function<void ()> func = boost::bind(
@@ -1497,14 +1503,27 @@ Process::realSendAbortLongRunningConnectionsMessage(string address) {
 
 SessionPtr
 Process::createSessionObject(Socket *socket) {
+	Pool *pool = NULL;
 	Group *group = getGroup();
-	Pool *pool = group->getPool();
-	Session *session;
-	{
-		LockGuard l(pool->sessionObjectPoolSyncher);
-		session = pool->sessionObjectPool.malloc();
+	if (group != NULL) {
+		// Backpointers are normally never NULL, but they can be
+		// NULL in unit tests
+		SuperGroup *superGroup = group->getSuperGroup();
+		if (superGroup != NULL) {
+			pool = superGroup->getPool();
+		}
 	}
-	session = new (session) Session(pool, this, socket);
+
+	Session *session;
+	if (OXT_LIKELY(pool != NULL)) {
+		{
+			LockGuard l(pool->sessionObjectPoolSyncher);
+			session = pool->sessionObjectPool.malloc();
+		}
+		session = new (session) Session(pool, this, socket);
+	} else {
+		session = new Session(NULL, this, socket);
+	}
 	return SessionPtr(session, false);
 }
 
@@ -1563,9 +1582,16 @@ Session::kill(int signo) {
 
 void
 Session::destroySelf() const {
-	this->~Session();
-	LockGuard l(pool->sessionObjectPoolSyncher);
-	pool->sessionObjectPool.free(const_cast<Session *>(this));
+	Pool *pool = this->pool;
+	// Backpointers are normally never NULL, but they can be
+	// NULL in unit tests
+	if (pool != NULL) {
+		this->~Session();
+		LockGuard l(pool->sessionObjectPoolSyncher);
+		pool->sessionObjectPool.free(const_cast<Session *>(this));
+	} else {
+		delete this;
+	}
 }
 
 

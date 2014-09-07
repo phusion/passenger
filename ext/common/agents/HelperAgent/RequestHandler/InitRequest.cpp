@@ -78,6 +78,7 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 	if (!this->defaultGroup.empty()) {
 		options.defaultGroup = defaultGroup;
 	}
+	options.minProcesses = agentsOptions->getInt("min_instances");
 }
 
 static void

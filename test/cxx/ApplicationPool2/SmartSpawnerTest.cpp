@@ -15,7 +15,7 @@ namespace tut {
 	struct ApplicationPool2_SmartSpawnerTest {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
-		ProcessPtr process;
+		SpawnObject object;
 		PipeWatcher::DataCallback gatherOutput;
 		string gatheredOutput;
 		boost::mutex gatheredOutputSyncher;
@@ -46,11 +46,15 @@ namespace tut {
 				command.push_back("exit-immediately");
 			}
 
-			return boost::make_shared<SmartSpawner>(
-				generation,
-				command,
-				options,
-				make_shared<SpawnerConfig>(*resourceLocator));
+			return boost::make_shared<SmartSpawner>(command,
+				options, createSpawnerConfig());
+		}
+
+		SpawnerConfigPtr createSpawnerConfig() {
+			SpawnerConfigPtr config = make_shared<SpawnerConfig>();
+			config->resourceLocator = resourceLocator;
+			config->finalize();
+			return config;
 		}
 
 		Options createOptions() {
@@ -79,16 +83,16 @@ namespace tut {
 		options.startupFile  = "start.rb";
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
-		process = spawner->spawn(options);
-		process->requiresShutdown = false;
+		object = spawner->spawn(options);
+		object.process->requiresShutdown = false;
 
 		kill(spawner->getPreloaderPid(), SIGTERM);
 		// Give it some time to exit.
 		usleep(300000);
 
 		// No exception at next spawn.
-		process = spawner->spawn(options);
-		process->requiresShutdown = false;
+		object = spawner->spawn(options);
+		object.process->requiresShutdown = false;
 	}
 
 	TEST_METHOD(81) {
@@ -101,8 +105,8 @@ namespace tut {
 		setLogLevel(LVL_CRIT);
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
-			process = spawner->spawn(options);
-			process->requiresShutdown = false;
+			object = spawner->spawn(options);
+			object.process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &) {
 			// Pass.
@@ -123,16 +127,12 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2; sleep 60");
-		SmartSpawner spawner(
-			generation,
-			preloaderCommand,
-			options,
-			make_shared<SpawnerConfig>(*resourceLocator));
+		SmartSpawner spawner(preloaderCommand, options, createSpawnerConfig());
 		setLogLevel(LVL_CRIT);
 
 		try {
-			process = spawner.spawn(options);
-			process->requiresShutdown = false;
+			object = spawner.spawn(options);
+			object.process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -154,16 +154,12 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
-		SmartSpawner spawner(
-			generation,
-			preloaderCommand,
-			options,
-			make_shared<SpawnerConfig>(*resourceLocator));
+		SmartSpawner spawner(preloaderCommand, options, createSpawnerConfig());
 		setLogLevel(LVL_CRIT);
 
 		try {
-			process = spawner.spawn(options);
-			process->requiresShutdown = false;
+			object = spawner.spawn(options);
+			object.process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -185,16 +181,12 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
-		SmartSpawner spawner(
-			generation,
-			preloaderCommand,
-			options,
-			make_shared<SpawnerConfig>(*resourceLocator));
+		SmartSpawner spawner(preloaderCommand, options, createSpawnerConfig());
 		setLogLevel(LVL_CRIT);
 
 		try {
-			process = spawner.spawn(options);
-			process->requiresShutdown = false;
+			object = spawner.spawn(options);
+			object.process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
@@ -213,28 +205,19 @@ namespace tut {
 			vector<string> preloaderCommand;
 			preloaderCommand.push_back("ruby");
 			preloaderCommand.push_back(resourceLocator->getHelperScriptsDir() + "/rack-preloader.rb");
-			SmartSpawner spawner(
-				generation,
-				preloaderCommand,
-				options,
-				make_shared<SpawnerConfig>(*resourceLocator));
-			process = spawner.spawn(options);
-			process->requiresShutdown = false;
+			SmartSpawner spawner(preloaderCommand, options, createSpawnerConfig());
+			object = spawner.spawn(options);
+			object.process->requiresShutdown = false;
 		}
 
-		SessionPtr session = process->newSession();
+		SessionPtr session = object.process->newSession();
 		session->initiate();
 
 		const char header[] =
 			"REQUEST_METHOD\0GET\0"
 			"PATH_INFO\0/print_stderr\0";
-		string data(header, sizeof(header) - 1);
-		data.append("PASSENGER_CONNECT_PASSWORD");
-		data.append(1, '\0');
-		data.append(process->connectPassword);
-		data.append(1, '\0');
 
-		writeScalarMessage(session->fd(), data);
+		writeScalarMessage(session->fd(), header, sizeof(header) - 1);
 		shutdown(session->fd(), SHUT_WR);
 		readAll(session->fd());
 		EVENTUALLY(2,

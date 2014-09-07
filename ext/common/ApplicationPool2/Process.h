@@ -434,6 +434,9 @@ public:
 		return lifeStatus;
 	}
 
+	// Thread-safe.
+	StaticString getGroupSecret() const;
+
 	Socket *findSessionSocketWithLowestBusyness() const {
 		if (OXT_UNLIKELY(sessionSocketCount == 0)) {
 			return NULL;

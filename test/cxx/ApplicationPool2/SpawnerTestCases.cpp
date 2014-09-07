@@ -21,8 +21,8 @@
 		spawner = createSpawner(options)
 
 	#define RUN_USER_SWITCHING_TEST() \
-		process = spawner->spawn(options); \
-		process->requiresShutdown = false; \
+		object = spawner->spawn(options); \
+		object.process->requiresShutdown = false; \
 		BufferedIO io(FileDescriptor(open("/tmp/info.txt", O_RDONLY))); \
 		uid_t uid = (uid_t) atol(io.readLine().c_str()); \
 		gid_t gid = (gid_t) atol(io.readLine().c_str()); \
@@ -50,7 +50,7 @@
 	}
 
 	static void checkin(ProcessPtr process, Connection *conn) {
-		process->sockets->front().checkinConnection(*conn);
+		process->sockets.front().checkinConnection(*conn);
 	}
 
 	static string userNameForUid(uid_t uid) {
@@ -81,12 +81,12 @@
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		process = spawner->spawn(options);
-		process->requiresShutdown = false;
-		ensure_equals(process->sockets->size(), 1u);
+		object = spawner->spawn(options);
+		object.process->requiresShutdown = false;
+		ensure_equals(object.process->sockets.size(), 1u);
 
-		Connection conn = process->sockets->front().checkoutConnection();
-		ScopeGuard guard(boost::bind(checkin, process, &conn));
+		Connection conn = object.process->sockets.front().checkoutConnection();
+		ScopeGuard guard(boost::bind(checkin, object.process, &conn));
 		writeExact(conn.fd, "ping\n");
 		ensure_equals(readAll(conn.fd), "pong\n");
 	}
@@ -101,8 +101,8 @@
 		SpawnerPtr spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
 		try {
-			process = spawner->spawn(options);
-			process->requiresShutdown = false;
+			object = spawner->spawn(options);
+			object.process->requiresShutdown = false;
 			fail("Timeout expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -120,8 +120,8 @@
 		SpawnerPtr spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
 		try {
-			process = spawner->spawn(options);
-			process->requiresShutdown = false;
+			object = spawner->spawn(options);
+			object.process->requiresShutdown = false;
 			fail("Exception expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -139,8 +139,8 @@
 		SpawnerPtr spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
 		try {
-			process = spawner->spawn(options);
-			process->requiresShutdown = false;
+			object = spawner->spawn(options);
+			object.process->requiresShutdown = false;
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -162,8 +162,8 @@
 		SpawnerPtr spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
 		try {
-			process = spawner->spawn(options);
-			process->requiresShutdown = false;
+			object = spawner->spawn(options);
+			object.process->requiresShutdown = false;
 			fail("Timeout expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -178,14 +178,14 @@
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		process = spawner->spawn(options);
-		process->requiresShutdown = false;
-		ensure_equals(process->sockets->size(), 1u);
+		object = spawner->spawn(options);
+		object.process->requiresShutdown = false;
+		ensure_equals(object.process->sockets.size(), 1u);
 
-		Connection conn = process->sockets->front().checkoutConnection();
-		ScopeGuard guard(boost::bind(checkin, process, &conn));
+		Connection conn = object.process->sockets.front().checkoutConnection();
+		ScopeGuard guard(boost::bind(checkin, object.process, &conn));
 		writeExact(conn.fd, "pid\n");
-		ensure_equals(readAll(conn.fd), toString(process->pid) + "\n");
+		ensure_equals(readAll(conn.fd), toString(object.process->pid) + "\n");
 	}
 
 	TEST_METHOD(7) {
@@ -197,12 +197,12 @@
 		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
 		options.environmentVariables.push_back(make_pair("PASSENGER_BAR", "bar"));
 		SpawnerPtr spawner = createSpawner(options);
-		process = spawner->spawn(options);
-		process->requiresShutdown = false;
-		ensure_equals(process->sockets->size(), 1u);
+		object = spawner->spawn(options);
+		object.process->requiresShutdown = false;
+		ensure_equals(object.process->sockets.size(), 1u);
 
-		Connection conn = process->sockets->front().checkoutConnection();
-		ScopeGuard guard(boost::bind(checkin, process, &conn));
+		Connection conn = object.process->sockets.front().checkoutConnection();
+		ScopeGuard guard(boost::bind(checkin, object.process, &conn));
 		writeExact(conn.fd, "envvars\n");
 		string envvars = readAll(conn.fd);
 		ensure("(1)", envvars.find("PASSENGER_FOO = foo\n") != string::npos);
@@ -219,8 +219,8 @@
 		SpawnerPtr spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
 		try {
-			process = spawner->spawn(options);
-			process->requiresShutdown = false;
+			object = spawner->spawn(options);
+			object.process->requiresShutdown = false;
 			fail("Exception expected");
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
@@ -250,8 +250,8 @@
 			runShellCommand("chmod 600 tmp.check/a");
 
 			try {
-				process = spawner->spawn(options);
-				process->requiresShutdown = false;
+				object = spawner->spawn(options);
+				object.process->requiresShutdown = false;
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(1)", containsSubstring(e.getErrorPage(),
@@ -260,8 +260,8 @@
 
 			runShellCommand("chmod 700 tmp.check/a");
 			try {
-				process = spawner->spawn(options);
-				process->requiresShutdown = false;
+				object = spawner->spawn(options);
+				object.process->requiresShutdown = false;
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(2)", containsSubstring(e.getErrorPage(),
@@ -270,8 +270,8 @@
 
 			runShellCommand("chmod 700 tmp.check/a/b/c");
 			try {
-				process = spawner->spawn(options);
-				process->requiresShutdown = false;
+				object = spawner->spawn(options);
+				object.process->requiresShutdown = false;
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(3)", containsSubstring(e.getErrorPage(),
@@ -279,8 +279,8 @@
 			}
 
 			runShellCommand("chmod 700 tmp.check/a/b/c/d");
-			process = spawner->spawn(options); // Should not throw.
-			process->requiresShutdown = false;
+			object = spawner->spawn(options); // Should not throw.
+			object.process->requiresShutdown = false;
 		}
 	}
 
@@ -294,28 +294,23 @@
 		options.appRoot = "stub/rack";
 		options.appType = "rack";
 		SpawnerPtr spawner = createSpawner(options);
-		process = spawner->spawn(options);
-		process->requiresShutdown = false;
+		object = spawner->spawn(options);
+		object.process->requiresShutdown = false;
 
-		SessionPtr session = process->newSession();
+		SessionPtr session = object.process->newSession();
 		session->initiate();
 
 		setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
 		const char header[] =
 			"REQUEST_METHOD\0GET\0"
 			"PATH_INFO\0/print_stdout_and_stderr\0";
-		string data(header, sizeof(header) - 1);
-		data.append("PASSENGER_CONNECT_PASSWORD");
-		data.append(1, '\0');
-		data.append(process->connectPassword);
-		data.append(1, '\0');
 
-		writeScalarMessage(session->fd(), data);
+		writeScalarMessage(session->fd(), StaticString(header, sizeof(header) - 1));
 		shutdown(session->fd(), SHUT_WR);
 		readAll(session->fd());
 		session->close(true);
 		session.reset();
-		process.reset();
+		object.process.reset();
 
 		EVENTUALLY(2,
 			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
@@ -334,10 +329,10 @@
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		process = spawner->spawn(options);
-		process->requiresShutdown = false;
+		object = spawner->spawn(options);
+		object.process->requiresShutdown = false;
 
-		ensure_equals(process->codeRevision, "hello");
+		ensure_equals(object.process->codeRevision, "hello");
 	}
 
 	TEST_METHOD(12) {
@@ -352,10 +347,10 @@
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		process = spawner->spawn(options);
-		process->requiresShutdown = false;
+		object = spawner->spawn(options);
+		object.process->requiresShutdown = false;
 
-		ensure_equals(process->codeRevision, "today");
+		ensure_equals(object.process->codeRevision, "today");
 	}
 
 	// It raises an exception if getStartupCommand() is empty.

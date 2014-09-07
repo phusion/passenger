@@ -64,7 +64,7 @@ private:
 	 * non-NULL as long as the Session hasn't been closed. This is because Group
 	 * waits until all sessions are closed before destroying a Process.
 	 */
-	Pool *pool;
+	Pool * const pool;
 	Process *process;
 	Socket *socket;
 

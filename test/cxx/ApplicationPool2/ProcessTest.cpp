@@ -9,7 +9,7 @@ using namespace std;
 namespace tut {
 	struct ApplicationPool2_ProcessTest {
 		BackgroundEventLoop bg;
-		SocketListPtr sockets;
+		SocketList sockets;
 		SocketPair adminSocket;
 		Pipe errorPipe;
 		FileDescriptor server1, server2, server3;
@@ -19,28 +19,35 @@ namespace tut {
 
 			struct sockaddr_in addr;
 			socklen_t len = sizeof(addr);
-			sockets = boost::make_shared<SocketList>();
 
 			server1 = createTcpServer("127.0.0.1", 0);
 			getsockname(server1, (struct sockaddr *) &addr, &len);
-			sockets->add("main1",
+			sockets.add("main1",
 				"tcp://127.0.0.1:" + toString(addr.sin_port),
 				"session", 3);
 
 			server2 = createTcpServer("127.0.0.1", 0);
 			getsockname(server2, (struct sockaddr *) &addr, &len);
-			sockets->add("main2",
+			sockets.add("main2",
 				"tcp://127.0.0.1:" + toString(addr.sin_port),
 				"session", 3);
 
 			server3 = createTcpServer("127.0.0.1", 0);
 			getsockname(server3, (struct sockaddr *) &addr, &len);
-			sockets->add("main3",
+			sockets.add("main3",
 				"tcp://127.0.0.1:" + toString(addr.sin_port),
 				"session", 3);
 
 			adminSocket = createUnixSocketPair();
 			errorPipe = createPipe();
+		}
+
+		ProcessPtr createProcess() {
+			ProcessPtr process = boost::make_shared<Process>(123,
+				"123", adminSocket[0], errorPipe[0], sockets, 0, 0);
+			process->dummy = true;
+			process->requiresShutdown = false;
+			return process;
 		}
 	};
 
@@ -48,22 +55,14 @@ namespace tut {
 
 	TEST_METHOD(1) {
 		// Test initial state.
-		ProcessPtr process = boost::make_shared<Process>(
-			123, "", "", adminSocket[0],
-			errorPipe[0], sockets, 0, 0);
-		process->dummy = true;
-		process->requiresShutdown = false;
+		ProcessPtr process = createProcess();
 		ensure_equals(process->busyness(), 0);
 		ensure(!process->isTotallyBusy());
 	}
 
 	TEST_METHOD(2) {
 		// Test opening and closing sessions.
-		ProcessPtr process = boost::make_shared<Process>(
-			123, "", "", adminSocket[0],
-			errorPipe[0], sockets, 0, 0);
-		process->dummy = true;
-		process->requiresShutdown = false;
+		ProcessPtr process = createProcess();
 		SessionPtr session = process->newSession();
 		SessionPtr session2 = process->newSession();
 		ensure_equals(process->sessions, 2);
@@ -76,11 +75,7 @@ namespace tut {
 	TEST_METHOD(3) {
 		// newSession() checks out the socket with the smallest busyness number
 		// and sessionClosed() restores the session busyness statistics.
-		ProcessPtr process = boost::make_shared<Process>(
-			123, "", "", adminSocket[0],
-			errorPipe[0], sockets, 0, 0);
-		process->dummy = true;
-		process->requiresShutdown = false;
+		ProcessPtr process = createProcess();
 
 		// The first 3 newSession() commands check out an idle socket.
 		SessionPtr session1 = process->newSession();
@@ -99,7 +94,7 @@ namespace tut {
 		// and 2 processes with 2 sessions.
 		map<int, int> sessionCount;
 		SocketList::const_iterator it;
-		for (it = process->sockets->begin(); it != process->sockets->end(); it++) {
+		for (it = process->sockets.begin(); it != process->sockets.end(); it++) {
 			sessionCount[it->sessions]++;
 		}
 		ensure_equals(sessionCount.size(), 2u);
@@ -112,7 +107,7 @@ namespace tut {
 		process->sessionClosed(session2.get());
 		process->sessionClosed(session3.get());
 		sessionCount.clear();
-		for (it = process->sockets->begin(); it != process->sockets->end(); it++) {
+		for (it = process->sockets.begin(); it != process->sockets.end(); it++) {
 			sessionCount[it->sessions]++;
 		}
 		ensure_equals(sessionCount[0], 1);
@@ -121,11 +116,7 @@ namespace tut {
 
 	TEST_METHOD(4) {
 		// If all sockets are at their full capacity then newSession() will fail.
-		ProcessPtr process = boost::make_shared<Process>(
-			123, "", "", adminSocket[0],
-			errorPipe[0], sockets, 0, 0);
-		process->dummy = true;
-		process->requiresShutdown = false;
+		ProcessPtr process = createProcess();
 		vector<SessionPtr> sessions;
 		for (int i = 0; i < 9; i++) {
 			ensure(!process->isTotallyBusy());

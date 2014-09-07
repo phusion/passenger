@@ -1387,60 +1387,51 @@ public:
 	bool detachSuperGroupByName(const string &name) {
 		TRACE_POINT();
 		ScopedLock l(syncher);
-
-		SuperGroupPtr *lookupResult;
-		SuperGroupPtr superGroup;
-
-		if (superGroups.lookup(name, &lookupResult)) {
-			superGroup = *lookupResult;
-		}
+		SuperGroupPtr superGroup = superGroups.lookupCopy(name);
 
 		if (OXT_LIKELY(superGroup != NULL)) {
-			if (OXT_LIKELY(superGroups.lookup(superGroup->name, &lookupResult))) {
-				UPDATE_TRACE_POINT();
-				verifyInvariants();
-				verifyExpensiveInvariants();
+			P_ASSERT_EQ(superGroup->name, name);
+			UPDATE_TRACE_POINT();
+			verifyInvariants();
+			verifyExpensiveInvariants();
 
-				boost::container::vector<Callback> actions;
-				boost::shared_ptr<DetachSuperGroupWaitTicket> ticket =
-					boost::make_shared<DetachSuperGroupWaitTicket>();
-				ExceptionPtr exception = copyException(
-					GetAbortedException("The containing SuperGroup was detached."));
+			boost::container::vector<Callback> actions;
+			boost::shared_ptr<DetachSuperGroupWaitTicket> ticket =
+				boost::make_shared<DetachSuperGroupWaitTicket>();
+			ExceptionPtr exception = copyException(
+				GetAbortedException("The containing SuperGroup was detached."));
 
-				forceDetachSuperGroup(superGroup, actions,
-					boost::bind(syncDetachSuperGroupCallback, _1, ticket));
-				assignExceptionToGetWaiters(superGroup->getWaitlist,
-					exception, actions);
-				#if 0
-				/* If this SuperGroup had get waiters, either
-				 * on itself or in one of its groups, then we must
-				 * reprocess them immediately. Detaching such a
-				 * SuperGroup is essentially the same as restarting it.
-				 */
-				migrateSuperGroupGetWaitlistToPool(superGroup);
+			forceDetachSuperGroup(superGroup, actions,
+				boost::bind(syncDetachSuperGroupCallback, _1, ticket));
+			assignExceptionToGetWaiters(superGroup->getWaitlist,
+				exception, actions);
+			#if 0
+			/* If this SuperGroup had get waiters, either
+			 * on itself or in one of its groups, then we must
+			 * reprocess them immediately. Detaching such a
+			 * SuperGroup is essentially the same as restarting it.
+			 */
+			migrateSuperGroupGetWaitlistToPool(superGroup);
 
-				UPDATE_TRACE_POINT();
-				assignSessionsToGetWaiters(actions);
-				#endif
-				possiblySpawnMoreProcessesForExistingGroups();
+			UPDATE_TRACE_POINT();
+			assignSessionsToGetWaiters(actions);
+			#endif
+			possiblySpawnMoreProcessesForExistingGroups();
 
-				verifyInvariants();
-				verifyExpensiveInvariants();
+			verifyInvariants();
+			verifyExpensiveInvariants();
 
-				l.unlock();
-				UPDATE_TRACE_POINT();
-				runAllActions(actions);
-				actions.clear();
+			l.unlock();
+			UPDATE_TRACE_POINT();
+			runAllActions(actions);
+			actions.clear();
 
-				UPDATE_TRACE_POINT();
-				ScopedLock l2(ticket->syncher);
-				while (!ticket->done) {
-					ticket->cond.wait(l2);
-				}
-				return ticket->result == SuperGroup::SUCCESS;
-			} else {
-				return false;
+			UPDATE_TRACE_POINT();
+			ScopedLock l2(ticket->syncher);
+			while (!ticket->done) {
+				ticket->cond.wait(l2);
 			}
+			return ticket->result == SuperGroup::SUCCESS;
 		} else {
 			return false;
 		}
