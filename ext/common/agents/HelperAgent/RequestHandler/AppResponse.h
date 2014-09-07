@@ -62,6 +62,8 @@ public:
 		PARSING_BODY_UNTIL_EOF,
 		/** The headers have been parsed, and the connection has been upgraded. */
 		UPGRADED,
+		/** A 100-Continue status line has been encountered. */
+		ONEHUNDRED_CONTINUE,
 		/** An error occurred. */
 		ERROR
 	};
@@ -84,40 +86,46 @@ public:
 	boost::uint8_t httpMinor;
 	HttpState httpState: 5;
 	bool wantKeepAlive: 1;
+	bool oneHundredContinueSent: 1;
 	BodyType bodyType;
 
 	boost::uint16_t statusCode;
 
 	union {
+		// If httpState == PARSING_HEADERS
 		ServerKit::HttpHeaderParserState *headerParser;
+		// If httpState == PARSING_CHUNKED_BODY
 		ServerKit::HttpChunkedBodyParserState chunkedBodyParser;
 	} parserState;
 	ServerKit::HeaderTable headers;
 	ServerKit::HeaderTable secureHeaders;
 
-	/** If a request parsing error occurred, the error message is stored here. */
-	const char *parseError;
-
-	/** Length of the message body. Only has meaning when state is PARSING_BODY. */
 	union {
-		// If bodyType == RBT_CONTENT_LENGTH. Guaranteed to be > 0.
-		boost::uint64_t contentLength;
-		// If bodyType == RBT_CHUNKED
-		bool endChunkReached;
-		// If bodyType == PARSING_BODY_UNTIL_EOF
-		bool endReached;
-	} bodyInfo;
+		/** Length of the message body. Only use when httpState != ERROR. */
+		union {
+			// If bodyType == RBT_CONTENT_LENGTH. Guaranteed to be > 0.
+			boost::uint64_t contentLength;
+			// If bodyType == RBT_CHUNKED
+			bool endChunkReached;
+			// If bodyType == PARSING_BODY_UNTIL_EOF
+			bool endReached;
+		} bodyInfo;
+
+		/** If a request parsing error occurred, the error code is stored here.
+		 * Only use if httpState == ERROR.
+		 */
+		int parseError;
+	} aux;
 	boost::uint64_t bodyAlreadyRead;
 
 
 	AppResponse()
 		: headers(16),
 		  secureHeaders(0),
-		  parseError(NULL),
 		  bodyAlreadyRead(0)
 	{
 		parserState.headerParser = NULL;
-		bodyInfo.contentLength = 0; // Also sets endChunkReached/endReached to false
+		aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.
 	}
 
 	const char *getHttpStateString() const {
@@ -136,6 +144,8 @@ public:
 			return "PARSING_BODY_UNTIL_EOF";
 		case UPGRADED:
 			return "UPGRADED";
+		case ONEHUNDRED_CONTINUE:
+			return "ONEHUNDRED_CONTINUE";
 		case ERROR:
 			return "ERROR";
 		}
@@ -160,14 +170,14 @@ public:
 		switch (bodyType) {
 		case RBT_NO_BODY:
 			return true;
-		case RBT_CONTENT_LENGTH:
-			return bodyAlreadyRead >= bodyInfo.contentLength;
-		case RBT_CHUNKED:
-			return bodyInfo.endChunkReached;
-		case RBT_UNTIL_EOF:
-			return bodyInfo.endReached;
 		case RBT_UPGRADE:
 			return false;
+		case RBT_CONTENT_LENGTH:
+			return bodyAlreadyRead >= aux.bodyInfo.contentLength;
+		case RBT_CHUNKED:
+			return aux.bodyInfo.endChunkReached;
+		case RBT_UNTIL_EOF:
+			return aux.bodyInfo.endReached;
 		}
 	}
 

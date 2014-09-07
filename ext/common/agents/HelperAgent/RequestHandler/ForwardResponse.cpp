@@ -62,9 +62,13 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 				req->wantKeepAlive = false;
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
+			case AppResponse::ONEHUNDRED_CONTINUE:
+				SKC_TRACE(client, 2, "Application sent 100-Continue status");
+				onAppResponse100Continue(client, req);
+				return Channel::Result(ret, false);
 			case AppResponse::ERROR:
 				SKC_ERROR(client, "Error parsing application response header: " <<
-					resp->parseError);
+					ServerKit::getErrorDesc(resp->aux.parseError));
 				endRequestAsBadGateway(&client, &req);
 				return Channel::Result(0, true);
 			default:
@@ -88,7 +92,7 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			// Data
 			boost::uint64_t maxRemaining, remaining;
 
-			maxRemaining = resp->bodyInfo.contentLength - resp->bodyAlreadyRead;
+			maxRemaining = resp->aux.bodyInfo.contentLength - resp->bodyAlreadyRead;
 			remaining = std::min<boost::uint64_t>(buffer.size(), maxRemaining);
 			resp->bodyAlreadyRead += remaining;
 
@@ -97,7 +101,7 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 					buffer.start, buffer.size())) << "\"");
 			SKC_TRACE(client, 3, "Application response body: " <<
 				resp->bodyAlreadyRead << " of " <<
-				resp->bodyInfo.contentLength << " bytes already read");
+				resp->aux.bodyInfo.contentLength << " bytes already read");
 
 			writeResponse(client, MemoryKit::mbuf(buffer, 0, remaining));
 			return Channel::Result(remaining, false);
@@ -109,7 +113,7 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			} else {
 				SKC_WARN(client, "Application sent EOF before finishing response body: " <<
 					resp->bodyAlreadyRead << " bytes already read, " <<
-					resp->bodyInfo.contentLength << " bytes expected");
+					resp->aux.bodyInfo.contentLength << " bytes expected");
 				endRequestWithAppSocketIncompleteResponse(&client, &req);
 			}
 			return Channel::Result(0, true);
@@ -215,6 +219,22 @@ onAppResponseBegin(Client *client, Request *req) {
 
 	if (!req->ended() && !resp->hasBody()) {
 		endRequest(&client, &req);
+	}
+}
+
+void
+onAppResponse100Continue(Client *client, Request *req) {
+	const unsigned int BUFSIZE = 32;
+	char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
+	int size = snprintf(buf, BUFSIZE, "HTTP/%d.%d 100 Continue\r\n",
+		(int) req->httpMajor, (int) req->httpMinor);
+	writeResponse(client, buf, size);
+	if (!req->ended()) {
+		deinitializeAppResponse(client, req);
+		reinitializeAppResponse(client, req);
+		req->appResponse.oneHundredContinueSent = true;
+		// Allow sending more response headers.
+		req->responseBegun = false;
 	}
 }
 
@@ -400,9 +420,17 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	if (resp->bodyType == AppResponse::RBT_UPGRADE) {
 		PUSH_STATIC_BUFFER("Connection: upgrade\r\n");
 	} else if (req->wantKeepAlive) {
-		PUSH_STATIC_BUFFER("Connection: keep-alive\r\n");
+		unsigned int httpVersion = req->httpMajor * 1000 + req->httpMinor * 10;
+		if (httpVersion < 1010) {
+			// HTTP < 1.1 defaults to "Connection: close"
+			PUSH_STATIC_BUFFER("Connection: keep-alive\r\n");
+		}
 	} else {
-		PUSH_STATIC_BUFFER("Connection: close\r\n");
+		unsigned int httpVersion = req->httpMajor * 1000 + req->httpMinor * 10;
+		if (httpVersion >= 1010) {
+			// HTTP 1.1 defaults to "Connection: keep-alive"
+			PUSH_STATIC_BUFFER("Connection: close\r\n");
+		}
 	}
 
 	PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME "\r\n\r\n");
@@ -423,7 +451,7 @@ constructDateHeaderBuffersForResponse(char *dateStr, unsigned int bufsize) {
 
 	pos = appendData(pos, end, "Date: ");
 	gmtime_r(&the_time, &the_tm);
-	pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %Z", &the_tm);
+	pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %z", &the_tm);
 	return pos - dateStr;
 }
 

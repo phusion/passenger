@@ -106,7 +106,9 @@ public:
 
 	BaseClient *client;
 	union {
+		// If httpState == PARSING_HEADERS
 		HttpHeaderParserState *headerParser;
+		// If httpState == PARSING_CHUNKED_BODY
 		HttpChunkedBodyParserState chunkedBodyParser;
 	} parserState;
 	psg_pool_t *pool;
@@ -119,16 +121,22 @@ public:
 	HeaderTable secureHeaders;
 	FileBufferedChannel bodyChannel;
 
-	/** If a request parsing error occurred, the error message is stored here. */
-	const char *parseError;
-
-	/** Length of the message body. Only has meaning when state is PARSING_BODY. */
 	union {
-		// If bodyType == RBT_CONTENT_LENGTH. Guaranteed to be > 0.
-		boost::uint64_t contentLength;
-		// If bodyType == RBT_CHUNKED
-		bool endChunkReached;
-	} bodyInfo;
+		/** Length of the message body. Only use when httpState != ERROR. */
+		union {
+			// If bodyType == RBT_CONTENT_LENGTH. Guaranteed to be > 0.
+			boost::uint64_t contentLength;
+			// If bodyType == RBT_CHUNKED
+			bool endChunkReached;
+			// If bodyType == PARSING_BODY_UNTIL_EOF
+			bool endReached;
+		} bodyInfo;
+
+		/** If a request parsing error occurred, the error code is stored here.
+		 * Only use if httpState == ERROR.
+		 */
+		int parseError;
+	} aux;
 	boost::uint64_t bodyAlreadyRead;
 
 
@@ -138,11 +146,10 @@ public:
 		  pool(NULL),
 		  headers(16),
 		  secureHeaders(32),
-		  parseError(NULL),
 		  bodyAlreadyRead(0)
 	{
 		psg_lstr_init(&path);
-		bodyInfo.contentLength = 0; // Also sets endChunkReached to false
+		aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.
 	}
 
 	const char *getHttpStateString() const {
@@ -187,18 +194,21 @@ public:
 		switch (bodyType) {
 		case RBT_NO_BODY:
 			return true;
-		case RBT_CONTENT_LENGTH:
-			return bodyAlreadyRead >= bodyInfo.contentLength;
-		case RBT_CHUNKED:
-			return bodyInfo.endChunkReached;
 		case RBT_UPGRADE:
 			return false;
+		case RBT_CONTENT_LENGTH:
+			return bodyAlreadyRead >= aux.bodyInfo.contentLength;
+		case RBT_CHUNKED:
+			return aux.bodyInfo.endChunkReached;
 		}
 	}
 
 	bool hasBody() const {
-		// Branchless way to check whether RBT_CONTENT_LENGTH or RBT_CHUNKED is set.
-		return bodyType & 0x6;
+		return bodyType & (RBT_CONTENT_LENGTH | RBT_CHUNKED);
+	}
+
+	bool upgraded() const {
+		return bodyType == RBT_UPGRADE;
 	}
 
 	bool canKeepAlive() const {

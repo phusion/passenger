@@ -538,7 +538,7 @@ sendHeaderToAppWithSessionProtocolWithBuffering(Request *req, unsigned int offse
 
 void
 sendBodyToApp(Client *client, Request *req) {
-	if (req->hasBody()) {
+	if (req->hasBody() || req->upgraded()) {
 		// onRequestBody() will take care of forwarding
 		// the request body to the app.
 		SKC_TRACE(client, 2, "Sending body to application");

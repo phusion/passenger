@@ -243,7 +243,7 @@ public:
 					CBP_DEBUG("end chunk reached");
 					state->state = HttpChunkedBodyParserState::DONE;
 					input->stop();
-					message->bodyInfo.endChunkReached = true;
+					message->aux.bodyInfo.endChunkReached = true;
 					if (output != NULL) {
 						output->feed(MemoryKit::mbuf());
 						return Channel::Result(current + 1 - buffer.start, false);

@@ -192,6 +192,7 @@ private:
 	HashedStaticString HTTP_COOKIE;
 	HashedStaticString HTTP_DATE;
 	HashedStaticString HTTP_CONTENT_LENGTH;
+	HashedStaticString HTTP_EXPECT;
 	boost::uint32_t HTTP_CONTENT_TYPE_HASH;
 	boost::uint32_t HTTP_CONNECTION_HASH;
 	boost::uint32_t HTTP_STATUS_HASH;
@@ -280,11 +281,11 @@ protected:
 		resp->httpState = AppResponse::PARSING_HEADERS;
 		resp->bodyType  = AppResponse::RBT_NO_BODY;
 		resp->wantKeepAlive = false;
+		resp->oneHundredContinueSent = false;
 		resp->statusCode = 0;
 		resp->parserState.headerParser = getHeaderParserStatePool().construct();
 		createAppResponseHeaderParser(getContext(), req).initialize();
-		resp->parseError = NULL;
-		resp->bodyInfo.contentLength = 0; // Also sets endChunkReached to false
+		resp->aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.
 		resp->bodyAlreadyRead = 0;
 	}
 
@@ -332,6 +333,7 @@ public:
 		  HTTP_COOKIE("cookie"),
 		  HTTP_DATE("date"),
 		  HTTP_CONTENT_LENGTH("content-length"),
+		  HTTP_EXPECT("expect"),
 		  HTTP_CONTENT_TYPE_HASH(HashedStaticString("content-type").hash()),
 		  HTTP_CONNECTION_HASH(HashedStaticString("connection").hash()),
 		  HTTP_STATUS_HASH(HashedStaticString("status").hash()),
@@ -429,10 +431,14 @@ public:
 			doc["app_response_body_type"] = resp->getBodyTypeString();
 			doc["app_response_body_fully_read"] = resp->bodyFullyRead();
 			doc["app_response_body_already_read"] = resp->bodyAlreadyRead;
-			if (resp->bodyType == AppResponse::RBT_CONTENT_LENGTH) {
-				doc["app_response_content_length"] = resp->bodyInfo.contentLength;
-			} else if (resp->bodyType == AppResponse::RBT_CHUNKED) {
-				doc["app_response_end_chunk_reached"] = resp->bodyInfo.endChunkReached;
+			if (resp->httpState != AppResponse::ERROR) {
+				if (resp->bodyType == AppResponse::RBT_CONTENT_LENGTH) {
+					doc["app_response_content_length"] = resp->aux.bodyInfo.contentLength;
+				} else if (resp->bodyType == AppResponse::RBT_CHUNKED) {
+					doc["app_response_end_chunk_reached"] = resp->aux.bodyInfo.endChunkReached;
+				}
+			} else {
+				doc["parse_error"] = ServerKit::getErrorDesc(resp->aux.parseError);
 			}
 		}
 

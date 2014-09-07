@@ -324,9 +324,10 @@ private:
 			case Request::ERROR:
 				// Change state so that the response body will be written.
 				req->httpState = Request::COMPLETE;
-				{
-					Request *req2 = req;
-					endAsBadRequest(&client, &req2, req->parseError);
+				if (req->aux.parseError == HTTP_VERSION_NOT_SUPPORTED) {
+					endWithErrorResponse(&client, &req, 505, "HTTP version not supported\n");
+				} else {
+					endAsBadRequest(&client, &req, getErrorDesc(req->aux.parseError));
 				}
 				return Channel::Result(0, true);
 			default:
@@ -346,12 +347,12 @@ private:
 			// Data
 			boost::uint64_t maxRemaining, remaining;
 
-			maxRemaining = req->bodyInfo.contentLength - req->bodyAlreadyRead;
+			maxRemaining = req->aux.bodyInfo.contentLength - req->bodyAlreadyRead;
 			remaining = std::min<boost::uint64_t>(buffer.size(), maxRemaining);
 			req->bodyAlreadyRead += remaining;
 			SKC_TRACE(client, 3, "Client response body: " <<
 				req->bodyAlreadyRead << " of " <<
-				req->bodyInfo.contentLength << " bytes already read");
+				req->aux.bodyInfo.contentLength << " bytes already read");
 
 			req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, remaining));
 			if (!req->ended()) {
@@ -372,7 +373,7 @@ private:
 			} else {
 				SKC_DEBUG(client, "Client sent EOF before finishing response body: " <<
 					req->bodyAlreadyRead << " bytes already read, " <<
-					req->bodyInfo.contentLength << " bytes expected");
+					req->aux.bodyInfo.contentLength << " bytes expected");
 				req->bodyChannel.feedError(UNEXPECTED_EOF);
 			}
 			return Channel::Result(0, false);
@@ -438,6 +439,14 @@ private:
 
 	void writeDefault500Response(Client *client, Request *req) {
 		writeSimpleResponse(client, 500, NULL, DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE);
+	}
+
+	void endWithErrorResponse(Client **client, Request **req, int code, const StaticString &body) {
+		HeaderTable headers;
+		headers.insert((*req)->pool, "connection", "close");
+		headers.insert((*req)->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		writeSimpleResponse(*client, code, &headers, body);
+		endRequest(client, req);
 	}
 
 	static HttpHeaderParser<Request> createRequestHeaderParser(Context *ctx,
@@ -597,7 +606,7 @@ protected:
 			time_t the_time = time(NULL);
 			struct tm the_tm;
 			gmtime_r(&the_time, &the_tm);
-			pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %Z", &the_tm);
+			pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %z", &the_tm);
 		} else {
 			pos = appendLStringData(pos, end, value);
 		}
@@ -698,11 +707,7 @@ protected:
 	}
 
 	void endAsBadRequest(Client **client, Request **req, const StaticString &body) {
-		HeaderTable headers;
-		headers.insert((*req)->pool, "connection", "close");
-		headers.insert((*req)->pool, "cache-control", "no-cache, no-store, must-revalidate");
-		writeSimpleResponse(*client, 400, &headers, body);
-		endRequest(client, req);
+		endWithErrorResponse(client, req, 400, body);
 	}
 
 
@@ -803,8 +808,7 @@ protected:
 		req->pool      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 		psg_lstr_init(&req->path);
 		req->bodyChannel.reinitialize();
-		req->parseError = NULL;
-		req->bodyInfo.contentLength = 0; // Also sets endChunkReached to false
+		req->aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.
 		req->bodyAlreadyRead = 0;
 	}
 
@@ -905,10 +909,14 @@ public:
 			doc["request_body_already_read"] = req->bodyAlreadyRead;
 			doc["response_begun"] = req->responseBegun;
 			doc["method"] = http_method_str(req->method);
-			if (req->bodyType == Request::RBT_CONTENT_LENGTH) {
-				doc["content_length"] = req->bodyInfo.contentLength;
-			} else if (req->bodyType == Request::RBT_CHUNKED) {
-				doc["end_chunk_reached"] = req->bodyInfo.endChunkReached;
+			if (req->httpState != Request::ERROR) {
+				if (req->bodyType == Request::RBT_CONTENT_LENGTH) {
+					doc["content_length"] = req->aux.bodyInfo.contentLength;
+				} else if (req->bodyType == Request::RBT_CHUNKED) {
+					doc["end_chunk_reached"] = req->aux.bodyInfo.endChunkReached;
+				}
+			} else {
+				doc["parse_error"] = getErrorDesc(req->aux.parseError);
 			}
 
 			string str;

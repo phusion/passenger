@@ -60,10 +60,33 @@ sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 		SKC_DEBUG(client, "Session checked out: pid=" << session->getPid() <<
 			", gupid=" << session->getGupid());
 		req->session = session;
+		maybeSend100Continue(client, req);
 		initiateSession(client, req);
 	} else {
 		req->endScopeLog(&req->scopeLogs.getFromPool, false);
 		reportSessionCheckoutError(client, req, e);
+	}
+}
+
+void
+maybeSend100Continue(Client *client, Request *req) {
+	int httpVersion = req->httpMajor * 1000 + req->httpMinor * 10;
+	if (httpVersion >= 1010 && req->hasBody()) {
+		const LString *value = req->headers.lookup(HTTP_EXPECT);
+		if (value != NULL
+		 && psg_lstr_cmp(value, P_STATIC_STRING("100-continue"))
+		 && req->session->getProtocol() == P_STATIC_STRING("session"))
+		{
+			const unsigned int BUFSIZE = 32;
+			char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
+			int size = snprintf(buf, BUFSIZE, "HTTP/%d.%d 100 Continue\r\n",
+				(int) req->httpMajor, (int) req->httpMinor);
+			writeResponse(client, buf, size);
+			if (!req->ended()) {
+				// Allow sending more response headers.
+				req->responseBegun = false;
+			}
+		}
 	}
 }
 

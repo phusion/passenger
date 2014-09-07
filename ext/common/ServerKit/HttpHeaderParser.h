@@ -146,6 +146,23 @@ private:
 		return 0;
 	}
 
+	static int onStatus(http_parser *parser, const char *data, size_t len) {
+		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
+		if (parser->status_code == 100) {
+			self->set100ContinueHttpState(MessageType());
+			http_parser_pause(parser, 1);
+		}
+		return 0;
+	}
+
+	void set100ContinueHttpState(const HttpParseRequest &tag) {
+		P_BUG("Should never be called");
+	}
+
+	void set100ContinueHttpState(const HttpParseResponse &tag) {
+		message->httpState = Message::ONEHUNDRED_CONTINUE;
+	}
+
 	static int onHeaderField(http_parser *parser, const char *data, size_t len) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
@@ -229,25 +246,31 @@ private:
 		return 0;
 	}
 
+	OXT_FORCE_INLINE
 	void initializeParser(const HttpParseRequest &tag) {
 		http_parser_init(&state->parser, HTTP_REQUEST);
 	}
 
+	OXT_FORCE_INLINE
 	void initializeParser(const HttpParseResponse &tag) {
 		http_parser_init(&state->parser, HTTP_RESPONSE);
 	}
 
-	void setMethodOrStatus(const HttpParseRequest &tag) {
-		message->method = (http_method) state->parser.method;
+	OXT_FORCE_INLINE
+	bool messageHttpStateIndicatesCompletion(const HttpParseRequest &tag) const {
+		return message->httpState == Message::PARSED_HEADERS;
 	}
 
-	void setMethodOrStatus(const HttpParseResponse &tag) {
-		message->statusCode = state->parser.status_code;
+	OXT_FORCE_INLINE
+	bool messageHttpStateIndicatesCompletion(const HttpParseResponse &tag) const {
+		return message->httpState == Message::PARSED_HEADERS
+			|| message->httpState == Message::ONEHUNDRED_CONTINUE;
 	}
 
-	void processBodyInfo(const HttpParseRequest &tag) {
+	void processParseResult(const HttpParseRequest &tag) {
 		bool isChunked = hasTransferEncodingChunked();
 		boost::uint64_t contentLength;
+		int httpVersion;
 
 		// The parser sets content_length to ULLONG_MAX if
 		// Content-Length is not given. We treat it the same as 0.
@@ -256,67 +279,85 @@ private:
 			contentLength = 0;
 		}
 
-		if (contentLength > 0 && isChunked) {
-			message->httpState = Message::ERROR;
-			message->parseError = "Bad request (request may not contain both Content-Length and Transfer-Encoding)";
+		message->method = (http_method) state->parser.method;
+		httpVersion = state->parser.http_major * 1000 + state->parser.http_minor * 10;
+
+		if (httpVersion > 1010) {
+			// Maximum supported HTTP version is 1.1
+			message->httpState      = Message::ERROR;
+			message->aux.parseError = HTTP_VERSION_NOT_SUPPORTED;
+			message->httpMajor      = 1;
+			message->httpMinor      = 1;
+			message->wantKeepAlive  = false;
+		} else if (contentLength > 0 && isChunked) {
+			message->httpState  = Message::ERROR;
+			message->aux.parseError = REQUEST_CONTAINS_CONTENT_LENGTH_AND_TRANSFER_ENCODING;
 		} else if (contentLength > 0 || isChunked) {
 			// There is a request body.
-			message->bodyInfo.contentLength = contentLength;
+			message->aux.bodyInfo.contentLength = contentLength;
 			if (state->parser.upgrade) {
-				message->httpState = Message::ERROR;
-				message->parseError = "Bad request ('Upgrade' header is only allowed for requests without request body)";
+				message->httpState      = Message::ERROR;
+				message->aux.parseError = UPGRADE_NOT_ALLOWED_WHEN_REQUEST_BODY_EXISTS;
 			} else if (isChunked) {
 				message->httpState = Message::PARSING_CHUNKED_BODY;
-				message->bodyType = Message::RBT_CHUNKED;
+				message->bodyType  = Message::RBT_CHUNKED;
 			} else {
 				message->httpState = Message::PARSING_BODY;
-				message->bodyType = Message::RBT_CONTENT_LENGTH;
+				message->bodyType  = Message::RBT_CONTENT_LENGTH;
 			}
 		} else {
 			// There is no request body.
 			if (!state->parser.upgrade) {
 				message->httpState = Message::COMPLETE;
+				P_ASSERT_EQ(message->bodyType, Message::RBT_NO_BODY);
 			} else if (message->method == HTTP_HEAD) {
-				message->httpState = Message::ERROR;
-				message->parseError = "Bad request ('Upgrade' header is not allowed for HEAD requests)";
+				message->httpState      = Message::ERROR;
+				message->aux.parseError = UPGRADE_NOT_ALLOWED_FOR_HEAD_REQUESTS;
 			} else {
 				message->httpState = Message::UPGRADED;
+				message->bodyType  = Message::RBT_UPGRADE;
+				assert(!message->wantKeepAlive);
 			}
-			message->bodyType = Message::RBT_NO_BODY;
 		}
 	}
 
-	void processBodyInfo(const HttpParseResponse &tag) {
+	void processParseResult(const HttpParseResponse &tag) {
 		const unsigned int status = state->parser.status_code;
 		const boost::uint64_t contentLength = state->parser.content_length;
+
+		message->statusCode = state->parser.status_code;
 
 		if (state->parser.upgrade) {
 			message->httpState = Message::UPGRADED;
 		} else if (requestMethod == HTTP_HEAD
-		 || (status >= 100 && status < 200)
+		 || status / 100 == 1  // status 1xx
 		 || status == 204
 		 || status == 304)
 		{
-			message->httpState = Message::COMPLETE;
+			if (status != 100) {
+				message->httpState = Message::COMPLETE;
+			} else {
+				message->httpState = Message::ONEHUNDRED_CONTINUE;
+			}
 			message->bodyType = Message::RBT_NO_BODY;
 		} else if (hasTransferEncodingChunked()) {
 			if (contentLength == std::numeric_limits<boost::uint64_t>::max()) {
 				message->httpState = Message::PARSING_CHUNKED_BODY;
-				message->bodyType = Message::RBT_CHUNKED;
+				message->bodyType  = Message::RBT_CHUNKED;
 			} else {
-				message->httpState = Message::ERROR;
-				message->parseError = "Response may not contain both Content-Length and Transfer-Encoding";
+				message->httpState      = Message::ERROR;
+				message->aux.parseError = RESPONSE_CONTAINS_CONTENT_LENGTH_AND_TRANSFER_ENCODING;
 			}
 		} else if (contentLength == 0) {
 			message->httpState = Message::COMPLETE;
-			message->bodyType = Message::RBT_NO_BODY;
+			message->bodyType  = Message::RBT_NO_BODY;
 		} else if (contentLength != std::numeric_limits<boost::uint64_t>::max()) {
 			message->httpState = Message::PARSING_BODY_WITH_LENGTH;
-			message->bodyType = Message::RBT_CONTENT_LENGTH;
-			message->bodyInfo.contentLength = contentLength;
+			message->bodyType  = Message::RBT_CONTENT_LENGTH;
+			message->aux.bodyInfo.contentLength = contentLength;
 		} else {
 			message->httpState = Message::PARSING_BODY_UNTIL_EOF;
-			message->bodyType = Message::RBT_UNTIL_EOF;
+			message->bodyType  = Message::RBT_UNTIL_EOF;
 			message->wantKeepAlive = false;
 		}
 	}
@@ -348,6 +389,7 @@ public:
 
 		settings.on_message_begin = NULL;
 		settings.on_url = _onURL;
+		settings.on_status = onStatus;
 		settings.on_header_field = onHeaderField;
 		settings.on_header_value = onHeaderValue;
 		settings.on_headers_complete = onHeadersComplete;
@@ -367,16 +409,16 @@ public:
 			case HPE_CB_headers_complete:
 				switch (state->state) {
 				case HttpHeaderParserState::ERROR_SECURITY_PASSWORD_MISMATCH:
-					message->parseError = "Security password mismatch";
+					message->aux.parseError = SECURITY_PASSWORD_MISMATCH;
 					break;
 				case HttpHeaderParserState::ERROR_SECURITY_PASSWORD_DUPLICATE:
-					message->parseError = "A duplicate security password header was encountered";
+					message->aux.parseError = SECURITY_PASSWORD_DUPLICATE;
 					break;
 				case HttpHeaderParserState::ERROR_SECURE_HEADER_NOT_ALLOWED:
-					message->parseError = "A secure header was provided, but no security password was provided";
+					message->aux.parseError = ERROR_SECURE_HEADER_NOT_ALLOWED;
 					break;
 				case HttpHeaderParserState::ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD:
-					message->parseError = "A normal header was encountered after the security password header";
+					message->aux.parseError = NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD;
 					break;
 				default:
 					goto default_error;
@@ -384,16 +426,15 @@ public:
 				break;
 			default:
 				default_error:
-				message->parseError = http_errno_description(HTTP_PARSER_ERRNO(&state->parser));
+				message->aux.parseError = HTTP_PARSER_ERRNO_BEGIN - HTTP_PARSER_ERRNO(&state->parser);
 				break;
 			}
-		} else if (message->httpState == Message::PARSED_HEADERS) {
+		} else if (messageHttpStateIndicatesCompletion(MessageType())) {
 			ret++;
 			message->httpMajor = state->parser.http_major;
 			message->httpMinor = state->parser.http_minor;
 			message->wantKeepAlive = http_should_keep_alive(&state->parser);
-			setMethodOrStatus(MessageType());
-			processBodyInfo(MessageType());
+			processParseResult(MessageType());
 		}
 
 		return ret;
