@@ -38,6 +38,9 @@ sendHeaderToApp(Client *client, Request *req) {
 }
 
 struct SessionProtocolWorkingState {
+	const LString *httpPath;
+	StaticString path;
+	StaticString queryString;
 	const char *methodStr;
 	size_t methodStrLen;
 };
@@ -94,15 +97,31 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	SessionProtocolWorkingState &state)
 {
 	unsigned int dataSize = sizeof(boost::uint32_t);
+	const char *queryStringStart;
+
+	state.httpPath = psg_lstr_make_contiguous(&req->path, req->pool);
+	queryStringStart = (const char *) memchr(
+		state.httpPath->start->data, '?', state.httpPath->size);
+	if (queryStringStart != NULL) {
+		state.path = StaticString(state.httpPath->start->data,
+			queryStringStart - state.httpPath->start->data);
+		state.queryString = StaticString(queryStringStart,
+			state.httpPath->start->data + state.httpPath->size - queryStringStart);
+	} else {
+		state.path = StaticString(state.httpPath->start->data, state.httpPath->size);
+	}
 
 	dataSize += sizeof("REQUEST_URI");
 	dataSize += req->path.size + 1;
 
 	dataSize += sizeof("PATH_INFO");
-	dataSize += req->path.size + 1;
+	dataSize += state.path.size() + 1;
 
 	dataSize += sizeof("SCRIPT_NAME");
 	dataSize += sizeof("");
+
+	dataSize += sizeof("QUERY_STRING");
+	dataSize += state.queryString.size() + 1;
 
 	state.methodStr = http_method_str(req->method);
 	state.methodStrLen = strlen(state.methodStr);
@@ -142,23 +161,19 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	pos += sizeof(boost::uint32_t);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("REQUEST_URI"));
-	part = req->path.start;
-	while (part != NULL) {
-		pos = appendData(pos, end, part->data, part->size);
-		part = part->next;
-	}
+	pos = appendData(pos, end, state.httpPath->start->data, state.httpPath->size);
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PATH_INFO"));
-	part = req->path.start;
-	while (part != NULL) {
-		pos = appendData(pos, end, part->data, part->size);
-		part = part->next;
-	}
+	pos = appendData(pos, end, state.path.data(), state.path.size());
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SCRIPT_NAME"));
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL(""));
+
+	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("QUERY_STRING"));
+	pos = appendData(pos, end, state.queryString.data(), state.queryString.size());
+	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("REQUEST_METHOD"));
 	pos = appendData(pos, end, StaticString(state.methodStr, state.methodStrLen));
