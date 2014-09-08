@@ -112,11 +112,6 @@ private:
 		}
 	}
 
-	bool hasTransferEncodingChunked() {
-		const LString *value = message->headers.lookup(TRANSFER_ENCODING);
-		return value != NULL && psg_lstr_cmp(value, P_STATIC_STRING("chunked"));
-	}
-
 	static size_t http_parser_execute_and_handle_pause(http_parser *parser,
 		const http_parser_settings *settings, const char *data, size_t len,
 		bool &paused)
@@ -268,7 +263,7 @@ private:
 	}
 
 	void processParseResult(const HttpParseRequest &tag) {
-		bool isChunked = hasTransferEncodingChunked();
+		bool isChunked = state->parser.flags & F_CHUNKED;
 		boost::uint64_t contentLength;
 		int httpVersion;
 
@@ -340,7 +335,7 @@ private:
 				message->httpState = Message::ONEHUNDRED_CONTINUE;
 			}
 			message->bodyType = Message::RBT_NO_BODY;
-		} else if (hasTransferEncodingChunked()) {
+		} else if (state->parser.flags & F_CHUNKED) {
 			if (contentLength == std::numeric_limits<boost::uint64_t>::max()) {
 				message->httpState = Message::PARSING_CHUNKED_BODY;
 				message->bodyType  = Message::RBT_CHUNKED;

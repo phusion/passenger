@@ -124,39 +124,8 @@ class mbuf {
 private:
 	BOOST_COPYABLE_AND_MOVABLE(mbuf)
 
-	template<typename Address>
-	static Address clamp(Address value, Address min, Address max) {
-		return std::max(std::min(value, max), min);
-	}
-
-	void initialize_with_block(unsigned int start, unsigned int len) {
-		this->start = clamp<char *>(
-			mbuf_block->start + start,
-			mbuf_block->start,
-			mbuf_block->end);
-		this->end = clamp<char *>(
-			mbuf_block->start + start + len,
-			mbuf_block->start,
-			mbuf_block->end);
-		if (mbuf_block != NULL) {
-			mbuf_block_ref(mbuf_block);
-		}
-	}
-
-	void initialize_with_mbuf(const mbuf &mbuf, unsigned int start, unsigned int len) {
-		mbuf_block = mbuf.mbuf_block;
-		this->start = clamp<char *>(
-			mbuf.start + start,
-			mbuf.start,
-			mbuf.end);
-		this->end = clamp<char *>(
-			mbuf.start + start + len,
-			mbuf.start,
-			mbuf.end);
-		if (mbuf.mbuf_block != NULL) {
-			mbuf_block_ref(mbuf.mbuf_block);
-		}
-	}
+	void initialize_with_block(unsigned int start, unsigned int len);
+	void initialize_with_mbuf(const mbuf &mbuf, unsigned int start, unsigned int len);
 
 public:
 	struct mbuf_block *mbuf_block; /* container block */
