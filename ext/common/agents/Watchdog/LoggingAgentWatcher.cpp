@@ -37,11 +37,12 @@ protected:
 	}
 
 	virtual void execProgram() const {
+		setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);
 		execl(agentFilename.c_str(), "PassengerLoggingAgent", (char *) 0);
 	}
 
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
-		VariantMap options = agentsOptions;
+		VariantMap options = *agentsOptions;
 		options.set("logging_agent_address", wo->loggingAgentAddress);
 		options.set("logging_agent_password", wo->loggingAgentPassword);
 		options.set("logging_agent_admin_address", wo->loggingAgentAdminAddress);

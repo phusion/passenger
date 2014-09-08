@@ -56,11 +56,13 @@
 
 	#define DEFAULT_CONCURRENCY_MODEL "process"
 
+	#define DEFAULT_HTTP_SERVER_LISTEN_ADDRESS "tcp://127.0.0.1:3000"
+
 	#define DEFAULT_LOG_LEVEL 0
 
 	#define DEFAULT_MAX_POOL_SIZE 6
 
-	#define DEFAULT_MBUF_CHUNK_SIZE 1024 * 8
+	#define DEFAULT_MBUF_CHUNK_SIZE 512
 
 	#define DEFAULT_NODEJS "node"
 
@@ -119,6 +121,8 @@
 	#define SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION 1
 
 	#define SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION 0
+
+	#define SERVER_KIT_MAX_SERVER_ENDPOINTS 4
 
 	#define STANDALONE_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Standalone.html"
 

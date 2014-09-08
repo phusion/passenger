@@ -44,7 +44,9 @@
 #include <cerrno>
 
 #include <agents/Base.h>
+#include <agents/HelperAgent/OptionParser.h>
 #include <Constants.h>
+#include <InstanceDirectory.h>
 #include <ServerInstanceDir.h>
 #include <FileDescriptor.h>
 #include <RandomGenerator.h>
@@ -60,6 +62,7 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
+#include <Utils/OptionParsing.h>
 #include <Utils/VariantMap.h>
 
 using namespace std;
@@ -82,13 +85,7 @@ static void setOomScore(const StaticString &score);
 
 /***** Agent options *****/
 
-static VariantMap agentsOptions;
-static string  tempDir;
-static bool    userSwitching;
-static string  defaultUser;
-static string  defaultGroup;
-static uid_t   webServerWorkerUid;
-static gid_t   webServerWorkerGid;
+static VariantMap *agentsOptions;
 
 /***** Working objects *****/
 
@@ -96,10 +93,9 @@ struct WorkingObjects {
 	RandomGenerator randomGenerator;
 	EventFd errorEvent;
 	ResourceLocatorPtr resourceLocator;
-	ServerInstanceDirPtr serverInstanceDir;
-	ServerInstanceDir::GenerationPtr generation;
 	uid_t defaultUid;
 	gid_t defaultGid;
+	InstanceDirectoryPtr instanceDir;
 	vector<string> cleanupPidfiles;
 	string loggingAgentAddress;
 	string loggingAgentPassword;
@@ -378,9 +374,8 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 				(*it)->forceShutdown();
 			}
 
-			// Now clean up the server instance directory.
-			wo->generation->destroy();
-			wo->serverInstanceDir->destroy();
+			// Now clean up the instance directory.
+			wo->instanceDir->destroy();
 
 			// Notify given PIDs about our shutdown.
 			killCleanupPids(cleanupPids);
@@ -404,8 +399,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 		// Parent
 
 		// Let child process handle cleanup.
-		wo->serverInstanceDir->detach();
-		wo->generation->detach();
+		wo->instanceDir->detach();
 	}
 }
 
@@ -440,11 +434,122 @@ runHookScriptAndThrowOnError(const char *name) {
 	HookScriptOptions options;
 
 	options.name = name;
-	options.spec = agentsOptions.get(string("hook_") + name, false);
-	options.agentsOptions = &agentsOptions;
+	options.spec = agentsOptions->get(string("hook_") + name, false);
+	options.agentsOptions = agentsOptions;
 
 	if (!runHookScripts(options)) {
 		throw RuntimeException(string("Hook script ") + name + " failed");
+	}
+}
+
+
+static void
+usage() {
+	printf("Usage: PassengerAgent watchdog <OPTIONS...>\n");
+	printf("Runs the " PROGRAM_NAME " watchdog.\n\n");
+	printf("The watchdog runs and supervises various " PROGRAM_NAME " agent processes,\n");
+	printf("namely the HTTP server and logging server. Arguments marked with \"[A]\", e.g.\n");
+	printf("--passenger-root and --log-level, are automatically passed to all supervised\n");
+	printf("agents, unless you explicitly override them by passing extra arguments to a\n");
+	printf("supervised agent specifically. You can pass arguments to a supervised agent by\n");
+	printf("wrapping those arguments between --BS/--ES and --BL/--EL.\n");
+	printf("\n");
+	printf("  Example 1: pass some arguments to the HTTP server.\n\n");
+	printf("  PassengerAgent watchdog --passenger-root /opt/passenger \\\n");
+	printf("    --BS --listen tcp://127.0.0.1:4000 /webapps/foo\n");
+	printf("\n");
+	printf("  Example 2: pass some arguments to the HTTP server, and some others to the\n");
+	printf("  logging server. The watchdog itself and the HTTP server will use logging\n");
+	printf("  level 3, while the logging server will use logging level 1.\n\n");
+	printf("  PassengerAgent watchdog --passenger-root /opt/passenger \\\n");
+	printf("    --BS --listen tcp://127.0.0.1:4000 /webapps/foo --ES \\\n");
+	printf("    --BL --log-level 1 --EL \\\n");
+	printf("    --log-level 3\n");
+	printf("\n");
+	printf("Required options:\n");
+	printf("       --passenger-root PATH  The location to the " PROGRAM_NAME " source\n");
+	printf("                              directory [A]\n");
+	printf("\n");
+	printf("Argument passing options (optional):\n");
+	printf("  --BS, --begin-server-args   Signals the beginning of arguments to pass to the\n");
+	printf("                              HTTP server\n");
+	printf("  --ES, --end-server-args     Signals the end of arguments to pass to the HTTP\n");
+	printf("                              server\n");
+	printf("  --BL, --begin-logging-args  Signals the beginning of arguments to pass to the\n");
+	printf("                              logging server\n");
+	printf("  --EL, --end-logging-args    Signals the end of arguments to pass to the\n");
+	printf("                              logging server\n");
+	printf("\n");
+	printf("Other options (optional):\n");
+	printf("      --no-register-instance   Do not register this watchdog instance\n");
+	printf("      --instance-registry-dir  Directory to register instance into.\n");
+	printf("                               Default: %s\n", getSystemTempDir());
+	printf("\n");
+	printf("      --no-user-switching     Disables user switching support [A]\n");
+	printf("      --default-user NAME     Default user to start apps as, when user\n");
+	printf("                              switching is enabled. Default: " DEFAULT_WEB_APP_USER "\n");
+	printf("      --default-group NAME    Default group to start apps as, when user\n");
+	printf("                              switching is disabled. Default: the default\n");
+	printf("                              user's primary group\n");
+	printf("\n");
+	printf("      --log-level LEVEL       Logging level. [A] Default: %d\n", DEFAULT_LOG_LEVEL);
+	printf("\n");
+	printf("  -h, --help                  Show this help\n");
+	printf("\n");
+	printf("[A] = Automatically passed to supervised agents\n");
+}
+
+static void
+parseOptions(int argc, const char *argv[], VariantMap &options) {
+	OptionParser p(usage);
+	int i = 2;
+
+	while (i < argc) {
+		if (p.isValueFlag(argc, i, argv[i], '\0', "--passenger-root")) {
+			options.set("passenger_root", argv[i + 1]);
+			i += 2;
+		} else if (p.isFlag(argv[i], '\0', "--BS")
+			|| p.isFlag(argv[i], '\0', "--begin-server-args"))
+		{
+			i++;
+			while (i < argc) {
+				if (p.isFlag(argv[i], '\0', "--ES")
+				 || p.isFlag(argv[i], '\0', "--end-server-args"))
+				{
+					i++;
+					break;
+				} else if (!parseServerOption(argc, argv, i, options)) {
+					fprintf(stderr, "ERROR: unrecognized HTTP server argument %s. Please "
+						"type '%s server --help' for usage.\n", argv[i], argv[0]);
+					exit(1);
+				}
+			}
+		} else if (p.isFlag(argv[i], '\0', "--no-register-instance")) {
+			options.setBool("register_instance", false);
+			i++;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--instance-registry-dir")) {
+			options.set("instance_registry_dir", argv[i + 1]);
+			i += 2;
+		} else if (p.isFlag(argv[i], '\0', "--no-user-switching")) {
+			options.setBool("user_switching", false);
+			i++;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-user")) {
+			options.set("default_user", argv[i + 1]);
+			i += 2;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-group")) {
+			options.set("default_group", argv[i + 1]);
+			i += 2;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
+			options.setInt("log_level", atoi(argv[i + 1]));
+			i += 2;
+		} else if (p.isFlag(argv[i], 'h', "--help")) {
+			usage();
+			exit(0);
+		} else {
+			fprintf(stderr, "ERROR: unrecognized argument %s. Please type "
+				"'%s watchdog --help' for usage.\n", argv[i], argv[0]);
+			exit(1);
+		}
 	}
 }
 
@@ -456,7 +561,6 @@ initializeBareEssentials(int argc, char *argv[]) {
 	 * forcefully redirect stdout to stderr so that everything ends up in the
 	 * same place.
 	 */
-	int oldStdout = dup(1);
 	dup2(2, 1);
 
 	/*
@@ -470,53 +574,34 @@ initializeBareEssentials(int argc, char *argv[]) {
 	 */
 	oldOomScore = setOomScoreNeverKill();
 
-	agentsOptions = initializeAgent(argc, &argv, "PassengerWatchdog");
-
-	if (agentsOptions.get("test_binary", false) == "1") {
-		int ret;
-		do {
-			ret = write(oldStdout, "PASS\n", 5);
-		} while (ret == -1 && errno == EAGAIN);
-		exit(0);
-	}
-	close(oldStdout);
+	agentsOptions = new VariantMap();
+	*agentsOptions = initializeAgent(argc, &argv, "PassengerWatchdog",
+		parseOptions, 2);
 }
 
 static void
-initializeOptions() {
-	TRACE_POINT();
-	agentsOptions
-		.setDefaultInt ("log_level", DEFAULT_LOG_LEVEL)
-		.setDefault    ("temp_dir", getSystemTempDir())
+setAgentsOptionsDefaults() {
+	VariantMap &options = *agentsOptions;
 
-		.setDefaultBool("user_switching", true)
-		.setDefault    ("default_user", DEFAULT_WEB_APP_USER)
-		.setDefaultUid ("web_server_worker_uid", getuid())
-		.setDefaultGid ("web_server_worker_gid", getgid())
-		.setDefault    ("default_ruby", DEFAULT_RUBY)
-		.setDefault    ("default_python", DEFAULT_PYTHON)
-		.setDefaultInt ("max_pool_size", DEFAULT_MAX_POOL_SIZE)
-		.setDefaultInt ("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
-	agentsOptions.set  ("passenger_version", PASSENGER_VERSION);
-
-	// Check for required options
-	UPDATE_TRACE_POINT();
-	agentsOptions.get("passenger_root");
-	agentsOptions.getPid("web_server_pid");
-
-	// Fetch optional options
-	UPDATE_TRACE_POINT();
-	tempDir       = agentsOptions.get("temp_dir");
-	userSwitching = agentsOptions.getBool("user_switching");
-	defaultUser   = agentsOptions.get("default_user");
-	if (!agentsOptions.has("default_group")) {
-		agentsOptions.set("default_group", inferDefaultGroup(defaultUser));
+	options.setDefaultBool("register_instance", true);
+	options.setDefault("instance_registry_dir", getSystemTempDir());
+	options.setDefaultBool("user_switching", true);
+	options.setDefault("default_user", DEFAULT_WEB_APP_USER);
+	if (!options.has("default_group")) {
+		options.set("default_group",
+			inferDefaultGroup(options.get("default_user")));
 	}
-	defaultGroup       = agentsOptions.get("default_group");
-	webServerWorkerUid = agentsOptions.getUid("web_server_worker_uid");
-	webServerWorkerGid = agentsOptions.getGid("web_server_worker_gid");
+	options.setDefaultStrSet("cleanup_pidfiles", vector<string>());
+}
 
-	P_INFO("Options: " << agentsOptions.inspect());
+static void
+sanityCheckOptions() {
+	VariantMap &options = *agentsOptions;
+
+	if (!options.has("passenger_root")) {
+		fprintf(stderr, "ERROR: please set the --passenger-root argument.\n");
+		exit(1);
+	}
 }
 
 static void
@@ -527,15 +612,18 @@ maybeSetsid() {
 	 * we can kill all of our subprocesses in a single killpg().
 	 *
 	 * AgentsStarter.h already calls setsid() before exec()ing
-	 * the Watchdog, but FlyingPassenger does not.
+	 * the Watchdog, but Flying Passenger does not.
 	 */
-	if (agentsOptions.getBool("setsid", false)) {
+	if (agentsOptions->getBool("setsid", false)) {
 		setsid();
 	}
 }
 
 static void
 lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
+	VariantMap &options = *agentsOptions;
+	const string &defaultUser = options.get("default_user");
+	const string &defaultGroup = options.get("default_group");
 	struct passwd *userEntry;
 
 	userEntry = getpwnam(defaultUser.c_str());
@@ -555,62 +643,48 @@ lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 static void
 initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &serverInstanceDirToucher) {
 	TRACE_POINT();
+	VariantMap &options = *agentsOptions;
+
 	wo = boost::make_shared<WorkingObjects>();
-	wo->resourceLocator = boost::make_shared<ResourceLocator>(agentsOptions.get("passenger_root"));
-
-	UPDATE_TRACE_POINT();
-	// Must not used boost::make_shared() here because Watchdog.cpp
-	// deletes the raw pointer in cleanupAgentsInBackground().
-	if (agentsOptions.get("server_instance_dir", false).empty()) {
-		/* We embed the super structure version in the server instance directory name
-		 * because it's possible to upgrade Phusion Passenger without changing the
-		 * web server's PID. This way each incompatible upgrade will use its own
-		 * server instance directory.
-		 */
-		string path = tempDir +
-			"/passenger." +
-			toString(SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION) + "." +
-			toString(SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION) + "." +
-			toString<unsigned long long>(agentsOptions.getPid("web_server_pid"));
-		wo->serverInstanceDir.reset(new ServerInstanceDir(path));
-	} else {
-		wo->serverInstanceDir.reset(new ServerInstanceDir(agentsOptions.get("server_instance_dir")));
-		agentsOptions.set("server_instance_dir", wo->serverInstanceDir->getPath());
-	}
-	wo->generation = wo->serverInstanceDir->newGeneration(userSwitching, defaultUser,
-		defaultGroup, webServerWorkerUid, webServerWorkerGid);
-	agentsOptions.set("server_instance_dir", wo->serverInstanceDir->getPath());
-	agentsOptions.setInt("generation_number", wo->generation->getNumber());
-	agentsOptions.set("generation_path", wo->generation->getPath());
-
-	UPDATE_TRACE_POINT();
-	serverInstanceDirToucher = boost::make_shared<ServerInstanceDirToucher>(wo);
+	wo->resourceLocator = boost::make_shared<ResourceLocator>(agentsOptions->get("passenger_root"));
 
 	UPDATE_TRACE_POINT();
 	lookupDefaultUidGid(wo->defaultUid, wo->defaultGid);
 
 	UPDATE_TRACE_POINT();
-	wo->cleanupPidfiles = agentsOptions.getStrSet("cleanup_pidfiles", false);
+	if (options.getBool("register_instance")) {
+		InstanceDirectory::CreationOptions instanceOptions;
+		instanceOptions.userSwitching = options.getBool("user_switching");
+		instanceOptions.defaultUid = wo->defaultUid;
+		instanceOptions.defaultGid = wo->defaultGid;
+		wo->instanceDir = make_shared<InstanceDirectory>(instanceOptions,
+			options.get("instance_registry_dir"));
+		options.set("instance_dir", wo->instanceDir->getPath());
+	}
 
 	UPDATE_TRACE_POINT();
-	wo->loggingAgentAddress  = "unix:" + wo->generation->getPath() + "/logging";
+	serverInstanceDirToucher = boost::make_shared<ServerInstanceDirToucher>(wo);
+	wo->cleanupPidfiles = options.getStrSet("cleanup_pidfiles", false);
+
+	UPDATE_TRACE_POINT();
+	wo->loggingAgentAddress  = "unix:" + wo->instanceDir->getPath() + "/agents.s/logging";
 	wo->loggingAgentPassword = wo->randomGenerator.generateAsciiString(64);
-	wo->loggingAgentAdminAddress  = "unix:" + wo->generation->getPath() + "/logging_admin";
+	wo->loggingAgentAdminAddress  = "unix:" + wo->instanceDir->getPath() + "/agents.s/logging_admin";
 
 	UPDATE_TRACE_POINT();
 	wo->adminToolStatusPassword = wo->randomGenerator.generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 	wo->adminToolManipulationPassword = wo->randomGenerator.generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
-	agentsOptions.set("admin_tool_status_password", wo->adminToolStatusPassword);
-	agentsOptions.set("admin_tool_manipulation_password", wo->adminToolManipulationPassword);
-	if (geteuid() == 0 && !userSwitching) {
-		createFile(wo->generation->getPath() + "/passenger-status-password.txt",
+	options.set("admin_tool_status_password", wo->adminToolStatusPassword);
+	options.set("admin_tool_manipulation_password", wo->adminToolManipulationPassword);
+	if (geteuid() == 0 && !options.getBool("user_switching")) {
+		createFile(wo->instanceDir->getPath() + "/passenger-status-password.txt",
 			wo->adminToolStatusPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
-		createFile(wo->generation->getPath() + "/admin-manipulation-password.txt",
+		createFile(wo->instanceDir->getPath() + "/admin-manipulation-password.txt",
 			wo->adminToolManipulationPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
 	} else {
-		createFile(wo->generation->getPath() + "/passenger-status-password.txt",
+		createFile(wo->instanceDir->getPath() + "/passenger-status-password.txt",
 			wo->adminToolStatusPassword, S_IRUSR | S_IWUSR);
-		createFile(wo->generation->getPath() + "/admin-manipulation-password.txt",
+		createFile(wo->instanceDir->getPath() + "/admin-manipulation-password.txt",
 			wo->adminToolManipulationPassword, S_IRUSR | S_IWUSR);
 	}
 }
@@ -629,10 +703,20 @@ startAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 		try {
 			watcher->start();
 		} catch (const std::exception &e) {
-			writeArrayMessage(FEEDBACK_FD,
-				"Watchdog startup error",
-				e.what(),
-				NULL);
+			if (feedbackFdAvailable()) {
+				writeArrayMessage(FEEDBACK_FD,
+					"Watchdog startup error",
+					e.what(),
+					NULL);
+			} else {
+				const oxt::tracable_exception *e2 =
+					dynamic_cast<const oxt::tracable_exception *>(&e);
+				if (e2 != NULL) {
+					P_CRITICAL("*** ERROR: " << e2->what() << "\n" << e2->backtrace());
+				} else {
+					P_CRITICAL("*** ERROR: " << e.what());
+				}
+			}
 			forceAllAgentsShutdown(wo, watchers);
 			exit(1);
 		}
@@ -659,41 +743,52 @@ beginWatchingAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watche
 
 static void
 reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPtr> &watchers) {
-	TRACE_POINT();
-	VariantMap report;
+	if (feedbackFdAvailable()) {
+		TRACE_POINT();
+		VariantMap report;
 
-	report
-		.set("server_instance_dir", wo->serverInstanceDir->getPath())
-		.setInt("generation", wo->generation->getNumber());
+		report.set("instance_dir", wo->instanceDir->getPath());
 
-	foreach (AgentWatcherPtr watcher, watchers) {
-		watcher->reportAgentsInformation(report);
+		foreach (AgentWatcherPtr watcher, watchers) {
+			watcher->reportAgentsInformation(report);
+		}
+
+		report.writeToFd(FEEDBACK_FD, "Agents information");
 	}
-
-	report.writeToFd(FEEDBACK_FD, "Agents information");
 }
 
 int
 watchdogMain(int argc, char *argv[]) {
 	initializeBareEssentials(argc, argv);
-	P_DEBUG("Starting Watchdog...");
+	setAgentsOptionsDefaults();
+	sanityCheckOptions();
+	P_INFO("Staring Watchdog with options: " << agentsOptions->inspect());
 	WorkingObjectsPtr wo;
 	ServerInstanceDirToucherPtr serverInstanceDirToucher;
 	vector<AgentWatcherPtr> watchers;
 
 	try {
 		TRACE_POINT();
-		initializeOptions();
 		maybeSetsid();
 		initializeWorkingObjects(wo, serverInstanceDirToucher);
 		initializeAgentWatchers(wo, watchers);
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("before_watchdog_initialization");
 	} catch (const std::exception &e) {
-		writeArrayMessage(FEEDBACK_FD,
-			"Watchdog startup error",
-			e.what(),
-			NULL);
+		if (feedbackFdAvailable()) {
+			writeArrayMessage(FEEDBACK_FD,
+				"Watchdog startup error",
+				e.what(),
+				NULL);
+		} else {
+			const oxt::tracable_exception *e2 =
+				dynamic_cast<const oxt::tracable_exception *>(&e);
+			if (e2 != NULL) {
+				P_CRITICAL("*** ERROR: " << e2->what() << "\n" << e2->backtrace());
+			} else {
+				P_CRITICAL("*** ERROR: " << e.what());
+			}
+		}
 		if (wo != NULL) {
 			killCleanupPids(wo);
 		}
@@ -738,7 +833,7 @@ watchdogMain(int argc, char *argv[]) {
 		runHookScriptAndThrowOnError("after_watchdog_shutdown");
 		return exitGracefully ? 0 : 1;
 	} catch (const tracable_exception &e) {
-		P_ERROR(e.what() << "\n" << e.backtrace());
+		P_CRITICAL("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		return 1;
 	}
 }

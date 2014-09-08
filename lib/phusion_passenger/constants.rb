@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -51,12 +51,14 @@ module PhusionPassenger
 		DEFAULT_ANALYTICS_LOG_PERMISSIONS = "u=rwx,g=rx,o=rx"
 		DEFAULT_UNION_STATION_GATEWAY_ADDRESS = "gateway.unionstationapp.com"
 		DEFAULT_UNION_STATION_GATEWAY_PORT = 443
+		DEFAULT_HTTP_SERVER_LISTEN_ADDRESS = "tcp://127.0.0.1:3000"
 
 		# Size limits
 		MESSAGE_SERVER_MAX_USERNAME_SIZE = 100
 		MESSAGE_SERVER_MAX_PASSWORD_SIZE = 100
 		POOL_HELPER_THREAD_STACK_SIZE = 1024 * 256
 		DEFAULT_MBUF_CHUNK_SIZE = 16 * 32
+		SERVER_KIT_MAX_SERVER_ENDPOINTS = 4
 
 		# Time limits
 		PROCESS_SHUTDOWN_TIMEOUT = 60 # In seconds

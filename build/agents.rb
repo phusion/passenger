@@ -29,13 +29,15 @@ AGENT_OBJECTS = {
 		'ext/common/agents/Watchdog/HelperAgentWatcher.cpp',
 		'ext/common/agents/Watchdog/LoggingAgentWatcher.cpp',
 		'ext/common/agents/Watchdog/ServerInstanceDirToucher.cpp',
+		'ext/common/agents/HelperAgent/OptionParser.h',
 		'ext/common/Constants.h',
-		'ext/common/ServerInstanceDir.h',
+		'ext/common/InstanceDirectory.h',
 		'ext/common/ResourceLocator.h',
 		'ext/common/Utils/VariantMap.h'
 	],
 	'ServerMain.o' => [
 		'ext/common/agents/HelperAgent/Main.cpp',
+		'ext/common/agents/HelperAgent/OptionParser.h',
 		'ext/common/agents/HelperAgent/RequestHandler.h',
 		'ext/common/agents/HelperAgent/RequestHandler/Client.h',
 		'ext/common/agents/HelperAgent/RequestHandler/AppResponse.h',

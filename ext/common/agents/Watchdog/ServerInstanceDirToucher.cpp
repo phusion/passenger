@@ -67,12 +67,12 @@ private:
 				}
 
 				do {
-					ret = chdir(wo->serverInstanceDir->getPath().c_str());
+					ret = chdir(wo->instanceDir->getPath().c_str());
 				} while (ret == -1 && errno == EINTR);
 				if (ret == -1) {
 					e = errno;
 					fprintf(stderr, "chdir(\"%s\") failed: %s (%d)\n",
-						wo->serverInstanceDir->getPath().c_str(),
+						wo->instanceDir->getPath().c_str(),
 						strerror(e), e);
 					fflush(stderr);
 					_exit(1);

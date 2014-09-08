@@ -36,7 +36,7 @@ using namespace std;
 using namespace boost;
 
 
-struct AgentOptions: public VariantMap {
+struct AgentsOptions: public VariantMap {
 	pid_t   webServerPid;
 	string  serverInstanceDir;
 	string  tempDir;

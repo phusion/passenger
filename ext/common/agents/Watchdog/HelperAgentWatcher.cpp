@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -39,16 +39,19 @@ protected:
 	}
 
 	virtual void execProgram() const {
+		setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);
 		if (hasEnvOption("PASSENGER_RUN_HELPER_AGENT_IN_VALGRIND", false)) {
 			execlp("valgrind", "valgrind", "--dsymutil=yes",
-				helperAgentFilename.c_str(), (char *) 0);
+				helperAgentFilename.c_str(), "PassengerAgent", "server",
+				(char *) 0);
 		} else {
-			execl(helperAgentFilename.c_str(), "PassengerHelperAgent", (char *) 0);
+			execl(helperAgentFilename.c_str(), "PassengerAgent", "server",
+				(char *) 0);
 		}
 	}
 
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
-		VariantMap options = agentsOptions;
+		VariantMap options = *agentsOptions;
 		params.addTo(options);
 		options.writeToFd(fd);
 	}
@@ -67,20 +70,20 @@ public:
 	HelperAgentWatcher(const WorkingObjectsPtr &wo)
 		: AgentWatcher(wo)
 	{
-		helperAgentFilename = wo->resourceLocator->getAgentsDir() + "/PassengerHelperAgent";
+		helperAgentFilename = wo->resourceLocator->getAgentsDir() + "/PassengerAgent";
 
 		report
 			.set("request_socket_filename",
-				agentsOptions.get("request_socket_filename", false,
-					wo->generation->getPath() + "/request"))
+				agentsOptions->get("request_socket_filename", false,
+					wo->instanceDir->getPath() + "/agents.s/request"))
 			.set("request_socket_password",
-				agentsOptions.get("request_socket_password", false,
+				agentsOptions->get("request_socket_password", false,
 					wo->randomGenerator.generateAsciiString(REQUEST_SOCKET_PASSWORD_SIZE)))
 			.set("helper_agent_admin_socket_address",
-				agentsOptions.get("helper_agent_admin_socket_address", false,
-					"unix:" + wo->generation->getPath() + "/helper_admin"))
+				agentsOptions->get("helper_agent_admin_socket_address", false,
+					"unix:" + wo->instanceDir->getPath() + "/agents.s/helper_admin"))
 			.set("helper_agent_exit_password",
-				agentsOptions.get("helper_agent_exit_password", false,
+				agentsOptions->get("helper_agent_exit_password", false,
 					wo->randomGenerator.generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE)));
 
 		params = report;

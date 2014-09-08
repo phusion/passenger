@@ -45,6 +45,7 @@
 
 #include <Logging.h>
 #include <SafeLibev.h>
+#include <Constants.h>
 #include <ServerKit/Context.h>
 #include <ServerKit/Errors.h>
 #include <ServerKit/Hooks.h>
@@ -154,7 +155,7 @@ upon receiving exit signal on admin server:
  * ### Multiple listen endpoints
  *
  * The server can listen on multiple server endpoints at the same time (e.g. TCP and
- * Unix domain sockets), up to MAX_ENDPOINTS.
+ * Unix domain sockets), up to SERVER_KIT_MAX_SERVER_ENDPOINTS.
  *
  * ### Automatic backoff when too many file descriptors are active
  *
@@ -184,7 +185,6 @@ public:
 	};
 
 	static const unsigned int MAX_ACCEPT_BURST_COUNT = 127;
-	static const unsigned int MAX_ENDPOINTS = 4;
 
 	/***** Configuration *****/
 	unsigned int acceptBurstCount: 7;
@@ -205,7 +205,7 @@ private:
 	uint8_t nEndpoints: 3;
 	bool accept4Available: 1;
 	ev::timer acceptResumptionWatcher;
-	ev::io endpoints[MAX_ENDPOINTS];
+	ev::io endpoints[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 
 
 	/***** Private methods *****/
@@ -633,7 +633,7 @@ public:
 	}
 
 	void listen(int fd) {
-		assert(nEndpoints < MAX_ENDPOINTS);
+		assert(nEndpoints < SERVER_KIT_MAX_SERVER_ENDPOINTS);
 		setNonBlocking(fd);
 		ev_io_init(&endpoints[nEndpoints], _onAcceptable, fd, EV_READ);
 		endpoints[nEndpoints].data = this;

@@ -50,9 +50,8 @@
 
 #include <ev++.h>
 
+#include <agents/HelperAgent/OptionParser.h>
 #include <agents/HelperAgent/RequestHandler.h>
-#include <agents/HelperAgent/AgentOptions.h>
-
 #include <agents/Base.h>
 #include <Constants.h>
 #include <ServerKit/Server.h>
@@ -77,7 +76,7 @@ using namespace oxt;
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
 
-static VariantMap *agentOptions;
+static VariantMap *agentsOptions;
 
 
 #if 0
@@ -249,10 +248,8 @@ public:
 
 /***** Structures, constants, global variables and forward declarations *****/
 
-#define DEFAULT_LISTEN_ADDRESS "tcp://127.0.0.1:3000"
-
 struct WorkingObjects {
-	int serverFds[ServerKit::Server<>::MAX_ENDPOINTS];
+	int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 	ResourceLocator resourceLocator;
 	RandomGeneratorPtr randomGenerator;
 	UnionStation::CorePtr unionStationCore;
@@ -267,8 +264,6 @@ struct WorkingObjects {
 
 static WorkingObjects *workingObjects;
 
-static void usage();
-
 
 /***** Server stuff *****/
 
@@ -281,7 +276,7 @@ initializePrivilegedWorkingObjects() {
 static void
 initializeSingleAppMode(WorkingObjects *wo) {
 	TRACE_POINT();
-	VariantMap &options = *agentOptions;
+	VariantMap &options = *agentsOptions;
 
 	if (options.getBool("multi_app")) {
 		P_NOTICE("PassengerAgent server running in multi-application mode.");
@@ -315,7 +310,7 @@ initializeSingleAppMode(WorkingObjects *wo) {
 static void
 startListening(WorkingObjects *wo) {
 	TRACE_POINT();
-	vector<string> addresses = agentOptions->getStrSet("server_listen_addresses");
+	vector<string> addresses = agentsOptions->getStrSet("server_listen_addresses");
 
 	for (unsigned int i = 0; i < addresses.size(); i++) {
 		wo->serverFds[i] = createServer(addresses[i]);
@@ -370,7 +365,7 @@ onSigquit(EV_P_ struct ev_signal *watcher, int revents) {
 static void
 initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
 	TRACE_POINT();
-	VariantMap &options = *agentOptions;
+	VariantMap &options = *agentsOptions;
 	vector<string> addresses = options.getStrSet("server_listen_addresses");
 
 	wo->resourceLocator = ResourceLocator(options.get("passenger_root"));
@@ -388,7 +383,7 @@ initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
 	//	"TODO: logging agent address", "logging", "TODO: logging agent password");
 	wo->spawnerConfig = boost::make_shared<SpawnerConfig>();
 	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
-	wo->spawnerConfig->agentsOptions = agentOptions;
+	wo->spawnerConfig->agentsOptions = agentsOptions;
 	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
 	wo->spawnerConfig->finalize();
 
@@ -399,14 +394,14 @@ initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
 	ev_signal_init(&wo->sigquitWatcher, onSigquit, SIGQUIT);
 	ev_signal_start(wo->bgloop->loop, &wo->sigquitWatcher);
 
-	wo->appPool = boost::make_shared<Pool>(wo->spawnerFactory, agentOptions);
+	wo->appPool = boost::make_shared<Pool>(wo->spawnerFactory, agentsOptions);
 	wo->appPool->initialize();
 	wo->appPool->setMax(options.getInt("max_pool_size"));
 	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000);
 
 	UPDATE_TRACE_POINT();
 	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
-	wo->requestHandler = new RequestHandler(wo->serverKitContext, agentOptions);
+	wo->requestHandler = new RequestHandler(wo->serverKitContext, agentsOptions);
 	wo->requestHandler->resourceLocator = &wo->resourceLocator;
 	wo->requestHandler->appPool = wo->appPool;
 	wo->requestHandler->initialize();
@@ -420,7 +415,7 @@ initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
 
 static void
 reportInitializationInfo(WorkingObjects *wo) {
-	vector<string> addresses = agentOptions->getStrSet("server_listen_addresses");
+	vector<string> addresses = agentsOptions->getStrSet("server_listen_addresses");
 	string address;
 
 	P_NOTICE("PassengerAgent server online, PID " << getpid () <<
@@ -520,7 +515,7 @@ runServer() {
 		UPDATE_TRACE_POINT();
 		cleanup(workingObjects);
 	} catch (const tracable_exception &e) {
-		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
+		P_CRITICAL("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		return 1;
 	}
 
@@ -531,147 +526,30 @@ runServer() {
 
 /***** Entry point and command line argument parsing *****/
 
-static bool
-isFlag(const char *arg, char shortFlagName, const char *longFlagName) {
-	return strcmp(arg, longFlagName) == 0
-		|| (shortFlagName != '\0' && arg[0] == '-'
-			&& arg[1] == shortFlagName && arg[2] == '\0');
-}
-
-static bool
-isValueFlag(int argc, int i, const char *arg, char shortFlagName, const char *longFlagName) {
-	if (isFlag(arg, shortFlagName, longFlagName)) {
-		if (argc >= i + 2) {
-			return true;
-		} else {
-			fprintf(stderr, "ERROR: extra argument required for %s\n", arg);
-			usage();
-			exit(1);
-			return false; // Never reached
-		}
-	} else {
-		return false;
-	}
-}
-
-static void
-usage() {
-	printf("Usage: PassengerAgent server <OPTIONS...> [APP DIRECTORY]\n");
-	printf("Runs the " PROGRAM_NAME " standalone HTTP server.\n");
-	printf("\n");
-	printf("The server starts in single-app mode, unless --multi-app is specified. When\n");
-	printf("in single-app mode, it serves the app at the current working directory, or the\n");
-	printf("app specified by APP DIRECTORY.\n");
-	printf("\n");
-	printf("Required options:\n");
-	printf("  --passenger-root PATH     The location to the " PROGRAM_NAME " source\n");
-	printf("                            directory\n");
-	printf("\n");
-	printf("Socket options (optional):\n");
-	printf("  -l,  --listen ADDRESS     Listen on the given address. The address must be\n");
-	printf("                            formatted as tcp://IP:PORT for TCP sockets, or\n");
-	printf("                            unix:PATH for Unix domain sockets. You can specify\n");
-	printf("                            this option multiple times (up to %u times) to\n",
-		ServerKit::Server<>::MAX_ENDPOINTS);
-	printf("                            listen on multiple addresses. Default:\n");
-	printf("                            " DEFAULT_LISTEN_ADDRESS "\n");
-	printf("\n");
-	printf("Application serving options (optional):\n");
-	printf("  -e, --environment NAME    Default framework environment name to use.\n");
-	printf("                            Default: " DEFAULT_APP_ENV "\n");
-	printf("      --app-type TYPE       The type of application you want to serve\n");
-	printf("                            (single-app mode only)\n");
-	printf("      --startup-file PATH   The path of the app's startup file, relative to\n");
-	printf("                            the app root directory (single-app mode only)\n");
-	printf("\n");
-	printf("      --multi-app           Enable multi-app mode\n");
-	printf("\n");
-	printf("Process management options (optional):\n");
-	printf("      --max-pool-size N     Maximum number of application processes.\n");
-	printf("                            Default: %d\n", DEFAULT_MAX_POOL_SIZE);
-	printf("      --pool-idle-time SECS  Maximum number of seconds an application process\n");
-	printf("                             may be idle. Default: %d\n", DEFAULT_POOL_IDLE_TIME);
-	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
-	printf("\n");
-	printf("Other options (optional):\n");
-	printf("      --log-level LEVEL     Logging level. Default: %d\n", DEFAULT_LOG_LEVEL);
-	printf("  -h, --help                Show this help\n");
-}
-
 static void
 parseOptions(int argc, const char *argv[], VariantMap &options) {
 	int i = 2;
 
 	while (i < argc) {
-		if (isValueFlag(argc, i, argv[i], '\0', "--passenger-root")) {
-			options.set("passenger_root", argv[i + 1]);
-			i += 2;
-		} else if (isValueFlag(argc, i, argv[i], 'l', "--listen")) {
-			if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-				vector<string> addresses = options.getStrSet("listen", false);
-				if (addresses.size() == ServerKit::Server<>::MAX_ENDPOINTS) {
-					fprintf(stderr, "ERROR: you may specify up to %u --listen addresses.\n",
-						ServerKit::Server<>::MAX_ENDPOINTS);
-					exit(1);
-				}
-				addresses.push_back(argv[i + 1]);
-				options.setStrSet("server_listen_addresses", addresses);
-				i += 2;
-			} else {
-				fprintf(stderr, "ERROR: invalid address format for --listen. The address "
-					"must be formatted as tcp://IP:PORT for TCP sockets, or unix:PATH "
-					"for Unix domain sockets.\n");
-				exit(1);
-			}
-		} else if (isValueFlag(argc, i, argv[i], '\0', "--max-pool-size")) {
-			options.setInt("max_pool_size", atoi(argv[i + 1]));
-			i += 2;
-		} else if (isValueFlag(argc, i, argv[i], '\0', "--pool-idle-time")) {
-			options.setInt("pool_idle_time", atoi(argv[i + 1]));
-			i += 2;
-		} else if (isValueFlag(argc, i, argv[i], '\0', "--min-instances")) {
-			options.setInt("min_instances", atoi(argv[i + 1]));
-			i += 2;
-		} else if (isValueFlag(argc, i, argv[i], 'e', "--environment")) {
-			options.set("environment", argv[i + 1]);
-			i += 2;
-		} else if (isValueFlag(argc, i, argv[i], '\0', "--app-type")) {
-			options.set("app_type", argv[i + 1]);
-			i += 2;
-		} else if (isValueFlag(argc, i, argv[i], '\0', "--startup-file")) {
-			options.set("startup_file", argv[i + 1]);
-			i += 2;
-		} else if (isFlag(argv[i], '\0', "--multi-app")) {
-			options.setBool("multi_app", true);
-			i++;
-		} else if (isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
-			options.setInt("log_level", atoi(argv[i + 1]));
-			i += 2;
-		} else if (isFlag(argv[i], 'h', "--help")) {
-			usage();
-			exit(0);
-		} else if (startsWith(argv[i], "-")) {
+		if (!parseServerOption(argc, argv, i, options)) {
 			fprintf(stderr, "ERROR: unrecognized argument %s. Please type "
 				"'%s server --help' for usage.\n", argv[i], argv[0]);
 			exit(1);
-		} else {
-			if (!options.has("app_root")) {
-				options.set("app_root", argv[i]);
-				i++;
-			} else {
-				fprintf(stderr, "ERROR: you may not pass multiple application directories. "
-					"Please type '%s server --help' for usage.\n", argv[0]);
-				exit(1);
-			}
 		}
+	}
+
+	// Set log_level here so that initializeAgent() calls setLogLevel()
+	// with the right value.
+	if (options.has("server_log_level")) {
+		options.setInt("log_level", options.getInt("server_log_level"));
 	}
 }
 
 static void
-setAgentOptionsDefaults() {
-	VariantMap &options = *agentOptions;
+setAgentsOptionsDefaults() {
+	VariantMap &options = *agentsOptions;
 	set<string> defaultListenAddress;
-	defaultListenAddress.insert(DEFAULT_LISTEN_ADDRESS);
+	defaultListenAddress.insert(DEFAULT_HTTP_SERVER_LISTEN_ADDRESS);
 
 	options.setDefaultStrSet("server_listen_addresses", defaultListenAddress);
 	options.setDefaultBool("multi_app", false);
@@ -690,7 +568,7 @@ setAgentOptionsDefaults() {
 
 static void
 sanityCheckOptions() {
-	VariantMap &options = *agentOptions;
+	VariantMap &options = *agentsOptions;
 	bool ok = true;
 
 	if (!options.has("passenger_root")) {
@@ -729,9 +607,9 @@ sanityCheckOptions() {
 
 int
 serverMain(int argc, char *argv[]) {
-	agentOptions = new VariantMap();
-	*agentOptions = initializeAgent(argc, &argv, "PassengerHelperAgent", parseOptions, 2);
-	setAgentOptionsDefaults();
+	agentsOptions = new VariantMap();
+	*agentsOptions = initializeAgent(argc, &argv, "PassengerHelperAgent", parseOptions, 2);
+	setAgentsOptionsDefaults();
 	sanityCheckOptions();
 	return runServer();
 }
