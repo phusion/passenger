@@ -68,25 +68,25 @@ struct mhdr;
 typedef void (*mbuf_block_copy_t)(struct mbuf_block *, void *);
 
 struct mbuf_block {
-    uint32_t           magic;     /* mbuf_block magic (const) */
-    STAILQ_ENTRY(struct mbuf_block) next;    /* next mbuf_block */
-    char              *pos;       /* read marker */
-    char              *last;      /* write marker */
-    char              *start;     /* start of buffer (const) */
-    char              *end;       /* end of buffer (const) */
-    struct mbuf_pool  *pool;      /* containing pool (const) */
-    unsigned int       refcount;  /* number of references by mbuf subsets */
+	uint32_t           magic;     /* mbuf_block magic (const) */
+	STAILQ_ENTRY(struct mbuf_block) next;    /* next mbuf_block */
+	char              *pos;       /* read marker */
+	char              *last;      /* write marker */
+	char              *start;     /* start of buffer (const) */
+	char              *end;       /* end of buffer (const) */
+	struct mbuf_pool  *pool;      /* containing pool (const) */
+	unsigned int       refcount;  /* number of references by mbuf subsets */
 };
 
 STAILQ_HEAD(mhdr, struct mbuf_block);
 
 struct mbuf_pool {
-    uint32_t nfree_mbuf_blockq;   /* # free mbuf_block */
-    uint32_t nactive_mbuf_blockq; /* # active (non-free) mbuf_block */
-    struct mhdr free_mbuf_blockq; /* free mbuf_block q */
+	uint32_t nfree_mbuf_blockq;   /* # free mbuf_block */
+	uint32_t nactive_mbuf_blockq; /* # active (non-free) mbuf_block */
+	struct mhdr free_mbuf_blockq; /* free mbuf_block q */
 
-    size_t mbuf_block_chunk_size; /* mbuf_block chunk size - header + data (const) */
-    size_t mbuf_block_offset;     /* mbuf_block offset in chunk (const) */
+	size_t mbuf_block_chunk_size; /* mbuf_block chunk size - header + data (const) */
+	size_t mbuf_block_offset;     /* mbuf_block offset in chunk (const) */
 };
 
 #define MBUF_BLOCK_MAGIC      0xdeadbeef
@@ -113,7 +113,7 @@ void mbuf_block_insert(struct mhdr *mhdr, struct mbuf_block *mbuf_block);
 void mbuf_block_remove(struct mhdr *mhdr, struct mbuf_block *mbuf_block);
 void mbuf_block_copy(struct mbuf_block *mbuf_block, char *pos, size_t n);
 struct mbuf_block *mbuf_block_split(struct mbuf_pool *pool, struct mhdr *h,
-    char *pos, mbuf_block_copy_t cb, void *cbarg);
+	char *pos, mbuf_block_copy_t cb, void *cbarg);
 
 void mbuf_block_ref(struct mbuf_block *mbuf_block);
 void mbuf_block_unref(struct mbuf_block *mbuf_block);
@@ -122,155 +122,155 @@ void mbuf_block_unref(struct mbuf_block *mbuf_block);
 /* A subset of an mbuf_block. */
 class mbuf {
 private:
-    BOOST_COPYABLE_AND_MOVABLE(mbuf)
+	BOOST_COPYABLE_AND_MOVABLE(mbuf)
 
-    template<typename Address>
-    static Address clamp(Address value, Address min, Address max) {
-        return std::max(std::min(value, max), min);
-    }
+	template<typename Address>
+	static Address clamp(Address value, Address min, Address max) {
+		return std::max(std::min(value, max), min);
+	}
 
-    void initialize_with_block(unsigned int start, unsigned int len) {
-        this->start = clamp<char *>(
-            mbuf_block->start + start,
-            mbuf_block->start,
-            mbuf_block->end);
-        this->end = clamp<char *>(
-            mbuf_block->start + start + len,
-            mbuf_block->start,
-            mbuf_block->end);
-        if (mbuf_block != NULL) {
-            mbuf_block_ref(mbuf_block);
-        }
-    }
+	void initialize_with_block(unsigned int start, unsigned int len) {
+		this->start = clamp<char *>(
+			mbuf_block->start + start,
+			mbuf_block->start,
+			mbuf_block->end);
+		this->end = clamp<char *>(
+			mbuf_block->start + start + len,
+			mbuf_block->start,
+			mbuf_block->end);
+		if (mbuf_block != NULL) {
+			mbuf_block_ref(mbuf_block);
+		}
+	}
 
-    void initialize_with_mbuf(const mbuf &mbuf, unsigned int start, unsigned int len) {
-        mbuf_block = mbuf.mbuf_block;
-        this->start = clamp<char *>(
-            mbuf.start + start,
-            mbuf.start,
-            mbuf.end);
-        this->end = clamp<char *>(
-            mbuf.start + start + len,
-            mbuf.start,
-            mbuf.end);
-        if (mbuf.mbuf_block != NULL) {
-            mbuf_block_ref(mbuf.mbuf_block);
-        }
-    }
+	void initialize_with_mbuf(const mbuf &mbuf, unsigned int start, unsigned int len) {
+		mbuf_block = mbuf.mbuf_block;
+		this->start = clamp<char *>(
+			mbuf.start + start,
+			mbuf.start,
+			mbuf.end);
+		this->end = clamp<char *>(
+			mbuf.start + start + len,
+			mbuf.start,
+			mbuf.end);
+		if (mbuf.mbuf_block != NULL) {
+			mbuf_block_ref(mbuf.mbuf_block);
+		}
+	}
 
 public:
-    struct mbuf_block *mbuf_block; /* container block */
-    char              *start;      /* start of subset (const) */
-    char              *end;        /* end of subset (const) */
+	struct mbuf_block *mbuf_block; /* container block */
+	char              *start;      /* start of subset (const) */
+	char              *end;        /* end of subset (const) */
 
-    mbuf()
-        : mbuf_block(NULL),
-          start(NULL),
-          end(NULL)
-        { }
+	mbuf()
+		: mbuf_block(NULL),
+		  start(NULL),
+		  end(NULL)
+		{ }
 
-    explicit mbuf(struct mbuf_block *block, unsigned int start = 0)
-        : mbuf_block(block)
-    {
-        initialize_with_block(start, block->end - block->start);
-    }
+	explicit mbuf(struct mbuf_block *block, unsigned int start = 0)
+		: mbuf_block(block)
+	{
+		initialize_with_block(start, block->end - block->start);
+	}
 
-    explicit mbuf(struct mbuf_block *block, unsigned int start, unsigned int len)
-        : mbuf_block(block)
-    {
-        initialize_with_block(start, len);
-    }
+	explicit mbuf(struct mbuf_block *block, unsigned int start, unsigned int len)
+		: mbuf_block(block)
+	{
+		initialize_with_block(start, len);
+	}
 
-    // Create an mbuf as a dumb wrapper around a memory buffer.
-    explicit mbuf(const char *data, unsigned int len)
-        : mbuf_block(NULL),
-          start(const_cast<char *>(data)),
-          end(const_cast<char *>(data) + len)
-        { }
+	// Create an mbuf as a dumb wrapper around a memory buffer.
+	explicit mbuf(const char *data, unsigned int len)
+		: mbuf_block(NULL),
+		  start(const_cast<char *>(data)),
+		  end(const_cast<char *>(data) + len)
+		{ }
 
-    explicit mbuf(const char *data)
-        : mbuf_block(NULL),
-          start(const_cast<char *>(data)),
-          end(const_cast<char *>(data) + strlen(data))
-        { }
+	explicit mbuf(const char *data)
+		: mbuf_block(NULL),
+		  start(const_cast<char *>(data)),
+		  end(const_cast<char *>(data) + strlen(data))
+		{ }
 
-    // Copy constructor.
-    mbuf(const mbuf &mbuf, unsigned int start = 0) {
-        initialize_with_mbuf(mbuf, start, mbuf.end - mbuf.start);
-    }
+	// Copy constructor.
+	mbuf(const mbuf &mbuf, unsigned int start = 0) {
+		initialize_with_mbuf(mbuf, start, mbuf.end - mbuf.start);
+	}
 
-    // Take a subset of another mbuf.
-    mbuf(const mbuf &mbuf, unsigned int start, unsigned int len) {
-        initialize_with_mbuf(mbuf, start, len);
-    }
+	// Take a subset of another mbuf.
+	mbuf(const mbuf &mbuf, unsigned int start, unsigned int len) {
+		initialize_with_mbuf(mbuf, start, len);
+	}
 
-    // Move constructor.
-    explicit
-    mbuf(BOOST_RV_REF(mbuf) mbuf)
-        : mbuf_block(mbuf.mbuf_block),
-          start(mbuf.start),
-          end(mbuf.end)
-    {
-        mbuf.mbuf_block = NULL;
-        mbuf.start = NULL;
-        mbuf.end   = NULL;
-    }
+	// Move constructor.
+	explicit
+	mbuf(BOOST_RV_REF(mbuf) mbuf)
+		: mbuf_block(mbuf.mbuf_block),
+		  start(mbuf.start),
+		  end(mbuf.end)
+	{
+		mbuf.mbuf_block = NULL;
+		mbuf.start = NULL;
+		mbuf.end   = NULL;
+	}
 
-    ~mbuf() {
-        if (mbuf_block != NULL) {
-            mbuf_block_unref(mbuf_block);
-        }
-    }
+	~mbuf() {
+		if (mbuf_block != NULL) {
+			mbuf_block_unref(mbuf_block);
+		}
+	}
 
-    // Copy assignment.
-    mbuf &operator=(BOOST_COPY_ASSIGN_REF(mbuf) mbuf) {
-        struct mbuf_block *old_block = mbuf_block;
+	// Copy assignment.
+	mbuf &operator=(BOOST_COPY_ASSIGN_REF(mbuf) mbuf) {
+		struct mbuf_block *old_block = mbuf_block;
 
-        mbuf_block = mbuf.mbuf_block;
-        start      = mbuf.start;
-        end        = mbuf.end;
+		mbuf_block = mbuf.mbuf_block;
+		start      = mbuf.start;
+		end        = mbuf.end;
 
-        if (mbuf.mbuf_block != NULL) {
-            mbuf_block_ref(mbuf.mbuf_block);
-        }
-        if (old_block != NULL) {
-            mbuf_block_unref(old_block);
-        }
-        return *this;
-    }
+		if (mbuf.mbuf_block != NULL) {
+			mbuf_block_ref(mbuf.mbuf_block);
+		}
+		if (old_block != NULL) {
+			mbuf_block_unref(old_block);
+		}
+		return *this;
+	}
 
-    // Move assignment.
-    mbuf &operator=(BOOST_RV_REF(mbuf) mbuf) {
-        struct mbuf_block *old_block = mbuf_block;
+	// Move assignment.
+	mbuf &operator=(BOOST_RV_REF(mbuf) mbuf) {
+		struct mbuf_block *old_block = mbuf_block;
 
-        mbuf_block = mbuf.mbuf_block;
-        start      = mbuf.start;
-        end        = mbuf.end;
-        mbuf.mbuf_block = NULL;
-        mbuf.start = NULL;
-        mbuf.end   = NULL;
+		mbuf_block = mbuf.mbuf_block;
+		start      = mbuf.start;
+		end        = mbuf.end;
+		mbuf.mbuf_block = NULL;
+		mbuf.start = NULL;
+		mbuf.end   = NULL;
 
-        if (old_block != NULL) {
-            mbuf_block_unref(old_block);
-        }
+		if (old_block != NULL) {
+			mbuf_block_unref(old_block);
+		}
 
-        return *this;
-    }
+		return *this;
+	}
 
-    OXT_FORCE_INLINE
-    size_t size() const {
-        return end - start;
-    }
+	OXT_FORCE_INLINE
+	size_t size() const {
+		return end - start;
+	}
 
-    OXT_FORCE_INLINE
-    bool empty() const {
-        return start == end;
-    }
+	OXT_FORCE_INLINE
+	bool empty() const {
+		return start == end;
+	}
 
-    OXT_FORCE_INLINE
-    bool is_null() const {
-        return start == NULL;
-    }
+	OXT_FORCE_INLINE
+	bool is_null() const {
+		return start == NULL;
+	}
 };
 
 mbuf mbuf_block_subset(struct mbuf_block *mbuf_block, unsigned int start, unsigned int len);

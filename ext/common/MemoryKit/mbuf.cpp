@@ -27,109 +27,109 @@ namespace MemoryKit {
 static struct mbuf_block *
 _mbuf_block_get(struct mbuf_pool *pool)
 {
-    struct mbuf_block *mbuf_block;
-    char *buf;
+	struct mbuf_block *mbuf_block;
+	char *buf;
 
-    if (!STAILQ_EMPTY(&pool->free_mbuf_blockq)) {
-        assert(pool->nfree_mbuf_blockq > 0);
+	if (!STAILQ_EMPTY(&pool->free_mbuf_blockq)) {
+		assert(pool->nfree_mbuf_blockq > 0);
 
-        mbuf_block = STAILQ_FIRST(&pool->free_mbuf_blockq);
-        pool->nfree_mbuf_blockq--;
-        STAILQ_REMOVE_HEAD(&pool->free_mbuf_blockq, next);
+		mbuf_block = STAILQ_FIRST(&pool->free_mbuf_blockq);
+		pool->nfree_mbuf_blockq--;
+		STAILQ_REMOVE_HEAD(&pool->free_mbuf_blockq, next);
 
-        assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
-        goto done;
-    }
+		assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
+		goto done;
+	}
 
-    buf = (char *) malloc(pool->mbuf_block_chunk_size);
-    if (OXT_UNLIKELY(buf == NULL)) {
-        return NULL;
-    }
+	buf = (char *) malloc(pool->mbuf_block_chunk_size);
+	if (OXT_UNLIKELY(buf == NULL)) {
+		return NULL;
+	}
 
-    /*
-     * mbuf_block header is at the tail end of the mbuf_block. This enables us to catch
-     * buffer overrun early by asserting on the magic value during get or
-     * put operations
-     *
-     *   <------------- mbuf_block_chunk_size ------------------->
-     *   +-------------------------------------------------------+
-     *   |       mbuf_block data          |  mbuf_block header   |
-     *   |     (mbuf_block_offset)        | (struct mbuf_block)  |
-     *   +-------------------------------------------------------+
-     *   ^           ^          ^         ^^
-     *   |           |          |         ||
-     *   \           |          |         |\
-     * block->start  \          |         | block->end (one byte past valid bound)
-     *              block->pos  |         \
-     *                          \         block
-     *                          block->last (one byte past valid byte)
-     *
-     */
-    mbuf_block = (struct mbuf_block *)(buf + pool->mbuf_block_offset);
-    mbuf_block->magic = MBUF_BLOCK_MAGIC;
-    mbuf_block->pool  = pool;
-    mbuf_block->refcount = 1;
+	/*
+	 * mbuf_block header is at the tail end of the mbuf_block. This enables us to catch
+	 * buffer overrun early by asserting on the magic value during get or
+	 * put operations
+	 *
+	 *   <------------- mbuf_block_chunk_size ------------------->
+	 *   +-------------------------------------------------------+
+	 *   |       mbuf_block data          |  mbuf_block header   |
+	 *   |     (mbuf_block_offset)        | (struct mbuf_block)  |
+	 *   +-------------------------------------------------------+
+	 *   ^           ^          ^         ^^
+	 *   |           |          |         ||
+	 *   \           |          |         |\
+	 * block->start  \          |         | block->end (one byte past valid bound)
+	 *              block->pos  |         \
+	 *                          \         block
+	 *                          block->last (one byte past valid byte)
+	 *
+	 */
+	mbuf_block = (struct mbuf_block *)(buf + pool->mbuf_block_offset);
+	mbuf_block->magic = MBUF_BLOCK_MAGIC;
+	mbuf_block->pool  = pool;
+	mbuf_block->refcount = 1;
 
 done:
-    STAILQ_NEXT(mbuf_block, next) = NULL;
-    pool->nactive_mbuf_blockq++;
-    return mbuf_block;
+	STAILQ_NEXT(mbuf_block, next) = NULL;
+	pool->nactive_mbuf_blockq++;
+	return mbuf_block;
 }
 
 struct mbuf_block *
 mbuf_block_get(struct mbuf_pool *pool)
 {
-    struct mbuf_block *mbuf_block;
-    char *buf;
+	struct mbuf_block *mbuf_block;
+	char *buf;
 
-    mbuf_block = _mbuf_block_get(pool);
-    if (OXT_UNLIKELY(mbuf_block == NULL)) {
-        return NULL;
-    }
+	mbuf_block = _mbuf_block_get(pool);
+	if (OXT_UNLIKELY(mbuf_block == NULL)) {
+		return NULL;
+	}
 
-    buf = (char *)mbuf_block - pool->mbuf_block_offset;
-    mbuf_block->start = buf;
-    mbuf_block->end = buf + pool->mbuf_block_offset;
+	buf = (char *)mbuf_block - pool->mbuf_block_offset;
+	mbuf_block->start = buf;
+	mbuf_block->end = buf + pool->mbuf_block_offset;
 
-    assert(mbuf_block->end - mbuf_block->start == (int)pool->mbuf_block_offset);
-    assert(mbuf_block->start < mbuf_block->end);
+	assert(mbuf_block->end - mbuf_block->start == (int)pool->mbuf_block_offset);
+	assert(mbuf_block->start < mbuf_block->end);
 
-    mbuf_block->pos = mbuf_block->start;
-    mbuf_block->last = mbuf_block->start;
+	mbuf_block->pos = mbuf_block->start;
+	mbuf_block->last = mbuf_block->start;
 
-    //log_debug(LOG_VVERB, "get mbuf_block %p", mbuf_block);
+	//log_debug(LOG_VVERB, "get mbuf_block %p", mbuf_block);
 
-    return mbuf_block;
+	return mbuf_block;
 }
 
 static void
 mbuf_block_free(struct mbuf_pool *pool, struct mbuf_block *mbuf_block)
 {
-    char *buf;
+	char *buf;
 
-    //log_debug(LOG_VVERB, "put mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
+	//log_debug(LOG_VVERB, "put mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
 
-    assert(STAILQ_NEXT(mbuf_block, next) == NULL);
-    assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
+	assert(STAILQ_NEXT(mbuf_block, next) == NULL);
+	assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
 
-    buf = (char *) mbuf_block - pool->mbuf_block_offset;
-    free(buf);
+	buf = (char *) mbuf_block - pool->mbuf_block_offset;
+	free(buf);
 }
 
 void
 mbuf_block_put(struct mbuf_block *mbuf_block)
 {
-    //log_debug(LOG_VVERB, "put mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
+	//log_debug(LOG_VVERB, "put mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
 
-    assert(STAILQ_NEXT(mbuf_block, next) == NULL);
-    assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
-    assert(mbuf_block->refcount == 0);
-    assert(mbuf_block->pool->nactive_mbuf_blockq > 0);
+	assert(STAILQ_NEXT(mbuf_block, next) == NULL);
+	assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
+	assert(mbuf_block->refcount == 0);
+	assert(mbuf_block->pool->nactive_mbuf_blockq > 0);
 
-    mbuf_block->refcount = 1;
-    mbuf_block->pool->nfree_mbuf_blockq++;
-    mbuf_block->pool->nactive_mbuf_blockq--;
-    STAILQ_INSERT_HEAD(&mbuf_block->pool->free_mbuf_blockq, mbuf_block, next);
+	mbuf_block->refcount = 1;
+	mbuf_block->pool->nfree_mbuf_blockq++;
+	mbuf_block->pool->nactive_mbuf_blockq--;
+	STAILQ_INSERT_HEAD(&mbuf_block->pool->free_mbuf_blockq, mbuf_block, next);
 }
 
 /*
@@ -139,8 +139,8 @@ mbuf_block_put(struct mbuf_block *mbuf_block)
 void
 mbuf_block_rewind(struct mbuf_block *mbuf_block)
 {
-    mbuf_block->pos = mbuf_block->start;
-    mbuf_block->last = mbuf_block->start;
+	mbuf_block->pos = mbuf_block->start;
+	mbuf_block->last = mbuf_block->start;
 }
 
 /*
@@ -150,9 +150,9 @@ mbuf_block_rewind(struct mbuf_block *mbuf_block)
 uint32_t
 mbuf_block_length(struct mbuf_block *mbuf_block)
 {
-    assert(mbuf_block->last >= mbuf_block->pos);
+	assert(mbuf_block->last >= mbuf_block->pos);
 
-    return (uint32_t)(mbuf_block->last - mbuf_block->pos);
+	return (uint32_t)(mbuf_block->last - mbuf_block->pos);
 }
 
 /*
@@ -162,9 +162,9 @@ mbuf_block_length(struct mbuf_block *mbuf_block)
 uint32_t
 mbuf_block_size(struct mbuf_block *mbuf_block)
 {
-    assert(mbuf_block->end >= mbuf_block->last);
+	assert(mbuf_block->end >= mbuf_block->last);
 
-    return (uint32_t)(mbuf_block->end - mbuf_block->last);
+	return (uint32_t)(mbuf_block->end - mbuf_block->last);
 }
 
 /*
@@ -173,8 +173,8 @@ mbuf_block_size(struct mbuf_block *mbuf_block)
 void
 mbuf_block_insert(struct mhdr *mhdr, struct mbuf_block *mbuf_block)
 {
-    STAILQ_INSERT_TAIL(mhdr, mbuf_block, next);
-    //log_debug(LOG_VVERB, "insert mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
+	STAILQ_INSERT_TAIL(mhdr, mbuf_block, next);
+	//log_debug(LOG_VVERB, "insert mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
 }
 
 /*
@@ -183,10 +183,10 @@ mbuf_block_insert(struct mhdr *mhdr, struct mbuf_block *mbuf_block)
 void
 mbuf_block_remove(struct mhdr *mhdr, struct mbuf_block *mbuf_block)
 {
-    //log_debug(LOG_VVERB, "remove mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
+	//log_debug(LOG_VVERB, "remove mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
 
-    STAILQ_REMOVE(mhdr, mbuf_block, struct mbuf_block, next);
-    STAILQ_NEXT(mbuf_block, next) = NULL;
+	STAILQ_REMOVE(mhdr, mbuf_block, struct mbuf_block, next);
+	STAILQ_NEXT(mbuf_block, next) = NULL;
 }
 
 /*
@@ -198,18 +198,18 @@ mbuf_block_remove(struct mhdr *mhdr, struct mbuf_block *mbuf_block)
 void
 mbuf_block_copy(struct mbuf_block *mbuf_block, char *pos, size_t n)
 {
-    if (n == 0) {
-        return;
-    }
+	if (n == 0) {
+		return;
+	}
 
-    /* mbuf_block has space for n bytes */
-    assert(!MBUF_BLOCK_FULL(mbuf_block) && n <= mbuf_block_size(mbuf_block));
+	/* mbuf_block has space for n bytes */
+	assert(!MBUF_BLOCK_FULL(mbuf_block) && n <= mbuf_block_size(mbuf_block));
 
-    /* no overlapping copy */
-    assert(pos < mbuf_block->start || pos >= mbuf_block->end);
+	/* no overlapping copy */
+	assert(pos < mbuf_block->start || pos >= mbuf_block->end);
 
-    memcpy(mbuf_block->last, pos, n);
-    mbuf_block->last += n;
+	memcpy(mbuf_block->last, pos, n);
+	mbuf_block->last += n;
 }
 
 /*
@@ -221,60 +221,60 @@ mbuf_block_copy(struct mbuf_block *mbuf_block, char *pos, size_t n)
  */
 struct mbuf_block *
 mbuf_block_split(struct mbuf_pool *pool, struct mhdr *h, char *pos,
-    mbuf_block_copy_t cb, void *cbarg)
+	mbuf_block_copy_t cb, void *cbarg)
 {
-    struct mbuf_block *mbuf_block, *nbuf;
-    size_t size;
+	struct mbuf_block *mbuf_block, *nbuf;
+	size_t size;
 
-    assert(!STAILQ_EMPTY(h));
+	assert(!STAILQ_EMPTY(h));
 
-    mbuf_block = STAILQ_LAST(h, struct mbuf_block, next);
-    assert(pos >= mbuf_block->pos && pos <= mbuf_block->last);
+	mbuf_block = STAILQ_LAST(h, struct mbuf_block, next);
+	assert(pos >= mbuf_block->pos && pos <= mbuf_block->last);
 
-    nbuf = mbuf_block_get(pool);
-    if (nbuf == NULL) {
-        return NULL;
-    }
+	nbuf = mbuf_block_get(pool);
+	if (nbuf == NULL) {
+		return NULL;
+	}
 
-    if (cb != NULL) {
-        /* precopy nbuf */
-        cb(nbuf, cbarg);
-    }
+	if (cb != NULL) {
+		/* precopy nbuf */
+		cb(nbuf, cbarg);
+	}
 
-    /* copy data from mbuf_block to nbuf */
-    size = (size_t)(mbuf_block->last - pos);
-    mbuf_block_copy(nbuf, pos, size);
+	/* copy data from mbuf_block to nbuf */
+	size = (size_t)(mbuf_block->last - pos);
+	mbuf_block_copy(nbuf, pos, size);
 
-    /* adjust mbuf_block */
-    mbuf_block->last = pos;
+	/* adjust mbuf_block */
+	mbuf_block->last = pos;
 
-    //log_debug(LOG_VVERB, "split into mbuf_block %p len %"PRIu32" and nbuf %p len "
-    //          "%"PRIu32" copied %zu bytes", mbuf_block, mbuf_block_length(mbuf_block), nbuf,
-    //          mbuf_block_length(nbuf), size);
+	//log_debug(LOG_VVERB, "split into mbuf_block %p len %"PRIu32" and nbuf %p len "
+	//          "%"PRIu32" copied %zu bytes", mbuf_block, mbuf_block_length(mbuf_block), nbuf,
+	//          mbuf_block_length(nbuf), size);
 
-    return nbuf;
+	return nbuf;
 }
 
 void
 mbuf_pool_init(struct mbuf_pool *pool)
 {
-    pool->nfree_mbuf_blockq = 0;
-    pool->nactive_mbuf_blockq = 0;
-    STAILQ_INIT(&pool->free_mbuf_blockq);
+	pool->nfree_mbuf_blockq = 0;
+	pool->nactive_mbuf_blockq = 0;
+	STAILQ_INIT(&pool->free_mbuf_blockq);
 
-    pool->mbuf_block_offset = pool->mbuf_block_chunk_size - MBUF_BLOCK_HSIZE;
+	pool->mbuf_block_offset = pool->mbuf_block_chunk_size - MBUF_BLOCK_HSIZE;
 }
 
 void
 mbuf_pool_deinit(struct mbuf_pool *pool)
 {
-    while (!STAILQ_EMPTY(&pool->free_mbuf_blockq)) {
-        struct mbuf_block *mbuf_block = STAILQ_FIRST(&pool->free_mbuf_blockq);
-        mbuf_block_remove(&pool->free_mbuf_blockq, mbuf_block);
-        mbuf_block_free(pool, mbuf_block);
-        pool->nfree_mbuf_blockq--;
-    }
-    assert(pool->nfree_mbuf_blockq == 0);
+	while (!STAILQ_EMPTY(&pool->free_mbuf_blockq)) {
+		struct mbuf_block *mbuf_block = STAILQ_FIRST(&pool->free_mbuf_blockq);
+		mbuf_block_remove(&pool->free_mbuf_blockq, mbuf_block);
+		mbuf_block_free(pool, mbuf_block);
+		pool->nfree_mbuf_blockq--;
+	}
+	assert(pool->nfree_mbuf_blockq == 0);
 }
 
 /*
@@ -284,51 +284,51 @@ mbuf_pool_deinit(struct mbuf_pool *pool)
 size_t
 mbuf_pool_data_size(struct mbuf_pool *pool)
 {
-    return pool->mbuf_block_offset;
+	return pool->mbuf_block_offset;
 }
 
 
 void
 mbuf_block_ref(struct mbuf_block *mbuf_block)
 {
-    #ifdef MBUF_DEBUG
-        printf("mbuf_block ref %p: %u -> %u\n", mbuf_block,
-            mbuf_block->refcount, mbuf_block->refcount + 1);
-    #endif
-    mbuf_block->refcount++;
+	#ifdef MBUF_DEBUG
+		printf("mbuf_block ref %p: %u -> %u\n", mbuf_block,
+			mbuf_block->refcount, mbuf_block->refcount + 1);
+	#endif
+	mbuf_block->refcount++;
 }
 
 void
 mbuf_block_unref(struct mbuf_block *mbuf_block)
 {
-    #ifdef MBUF_DEBUG
-        printf("mbuf_block unref %p: %u -> %u\n", mbuf_block,
-            mbuf_block->refcount, mbuf_block->refcount - 1);
-    #endif
-    assert(mbuf_block->refcount > 0);
-    mbuf_block->refcount--;
-    if (mbuf_block->refcount == 0) {
-        mbuf_block_put(mbuf_block);
-    }
+	#ifdef MBUF_DEBUG
+		printf("mbuf_block unref %p: %u -> %u\n", mbuf_block,
+			mbuf_block->refcount, mbuf_block->refcount - 1);
+	#endif
+	assert(mbuf_block->refcount > 0);
+	mbuf_block->refcount--;
+	if (mbuf_block->refcount == 0) {
+		mbuf_block_put(mbuf_block);
+	}
 }
 
 mbuf
 mbuf_block_subset(struct mbuf_block *mbuf_block, unsigned int start, unsigned int len)
 {
-    return mbuf(mbuf_block, start, len);
+	return mbuf(mbuf_block, start, len);
 }
 
 mbuf
 mbuf_get(struct mbuf_pool *pool)
 {
-    struct mbuf_block *block = mbuf_block_get(pool);
-    if (OXT_UNLIKELY(block == NULL)) {
-        return mbuf();
-    }
+	struct mbuf_block *block = mbuf_block_get(pool);
+	if (OXT_UNLIKELY(block == NULL)) {
+		return mbuf();
+	}
 
-    assert(block->refcount == 1);
-    block->refcount--;
-    return mbuf(block, 0, block->end - block->start);
+	assert(block->refcount == 1);
+	block->refcount--;
+	return mbuf(block, 0, block->end - block->start);
 }
 
 
