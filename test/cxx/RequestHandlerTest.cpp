@@ -40,7 +40,7 @@ namespace tut {
 
 		string root;
 		string rackAppPath, wsgiAppPath;
-		
+
 		RequestHandlerTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			spawnerFactory = boost::make_shared<SpawnerFactory>(generation,
@@ -50,7 +50,7 @@ namespace tut {
 			serverFilename = generation->getPath() + "/server";
 			requestSocket = createUnixServer(serverFilename);
 			setNonBlocking(requestSocket);
-			setLogLevel(LVL_ERROR); // TODO: set to LVL_WARN
+			setLogLevel(LVL_WARN);
 			setPrintAppOutputAsDebuggingMessages(true);
 
 			agentOptions.passengerRoot = resourceLocator->getRoot();
@@ -65,7 +65,7 @@ namespace tut {
 			defaultHeaders["PASSENGER_SPAWN_METHOD"] = "direct";
 			defaultHeaders["REQUEST_METHOD"] = "GET";
 		}
-		
+
 		~RequestHandlerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			setPrintAppOutputAsDebuggingMessages(false);
@@ -283,7 +283,7 @@ namespace tut {
 	TEST_METHOD(5) {
 		set_test_name("It denies access if the connect password is wrong.");
 		agentOptions.requestSocketPassword = "hello world";
-		setLogLevel(-1);
+		setLogLevel(LVL_ERROR);
 		init();
 
 		connect();
@@ -319,7 +319,7 @@ namespace tut {
 	TEST_METHOD(6) {
 		set_test_name("It disconnects the client if the connect password is not sent within a certain time.");
 		agentOptions.requestSocketPassword = "hello world";
-		setLogLevel(-1);
+		setLogLevel(LVL_ERROR);
 		handler = boost::make_shared<RequestHandler>(bg.safe, requestSocket, pool, agentOptions);
 		handler->connectPasswordTimeout = 40;
 		bg.start();
@@ -358,7 +358,7 @@ namespace tut {
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'I have failed'");
 
-		setLogLevel(-2);
+		setLogLevel(LVL_CRIT);
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -383,7 +383,7 @@ namespace tut {
 			"STDERR.puts\n"
 			"STDERR.puts 'I have failed'\n");
 
-		setLogLevel(-2);
+		setLogLevel(LVL_CRIT);
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -407,7 +407,7 @@ namespace tut {
 		TempDir tempdir("tmp.handler");
 		writeFile("tmp.handler/start.rb", "");
 
-		setLogLevel(-2);
+		setLogLevel(LVL_CRIT);
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -435,7 +435,7 @@ namespace tut {
 		writeFile("tmp.handler/start.rb",
 			"STDERR.puts 'I have failed'");
 
-		setLogLevel(-2);
+		setLogLevel(LVL_CRIT);
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -460,7 +460,7 @@ namespace tut {
 			"STDERR.puts\n"
 			"STDERR.puts 'I have failed'\n");
 
-		setLogLevel(-2);
+		setLogLevel(LVL_CRIT);
 		init();
 		connect();
 		sendHeaders(defaultHeaders,
@@ -558,11 +558,11 @@ namespace tut {
 			"HTTP_X_WAIT_FOR_FILE", "/tmp/wait.txt",
 			"HTTP_X_OUTPUT", "/tmp/output.txt",
 			NULL);
-		
+
 		// Should not block.
 		writeExact(connection, requestBody);
 		shutdown(connection, SHUT_WR);
-		
+
 		EVENTUALLY(5,
 			result = containsSubstring(inspect(), "session initiated           = true");
 		);
@@ -615,7 +615,7 @@ namespace tut {
 		ensure(containsSubstring(response, "CONTENT_LENGTH = 5\n"));
 		ensure(!containsSubstring(response, "HTTP_CONTENT_LENGTH"));
 	}
-	
+
 	TEST_METHOD(27) {
 		set_test_name("It replaces HTTP_CONTENT_TYPE with CONTENT_TYPE.");
 		init();
@@ -772,7 +772,7 @@ namespace tut {
 		ensure_equals(result, "ok");
 		ensure_equals(readAll("/tmp/output.txt"), "ho");
 	}
-	
+
 
 	/***** Advanced connection handling tests *****/
 
@@ -804,7 +804,7 @@ namespace tut {
 	TEST_METHOD(41) {
 		set_test_name("If no Content-Length and no Transfer-Encoding are given, and buffering is on:  "
 			"it does not pass any request body data.");
-		
+
 		DeleteFileEventually d("/tmp/output.txt");
 
 		init();
@@ -828,7 +828,7 @@ namespace tut {
 	TEST_METHOD(42) {
 		set_test_name("If no Content-Length and no Transfer-Encoding are given, and buffering is off: "
 			"it does not pass any request body data.");
-		
+
 		DeleteFileEventually d("/tmp/output.txt");
 
 		init();
@@ -1149,7 +1149,7 @@ namespace tut {
 			"PATH_INFO", "/chunked_stream",
 			NULL
 		);
-		
+
 		char buf[1024 * 10];
 		unsigned long long timeout = 500000;
 		unsigned int size;
@@ -1418,7 +1418,7 @@ namespace tut {
 		ensure("status is not 200", containsSubstring(response, "Status: 200 OK\r\n"));
 		ensure("contains oowb header", !containsSubstring(response, "X-Passenger-Request-OOB-Work:"));
 		pid_t origPid = atoi(stripHeaders(response));
-		
+
 		// Get a reference to the orignal process and verify oobw has been requested.
 		ProcessPtr origProcess;
 		{
@@ -1427,7 +1427,7 @@ namespace tut {
 			ensure("OOBW requested", origProcess->oobwStatus == Process::OOBW_IN_PROGRESS);
 		}
 		ensure("sanity check", origPid == origProcess->pid); // just a sanity check
-		
+
 		// Issue requests until the new process handles it.
 		pid_t pid;
 		EVENTUALLY(2,
@@ -1441,13 +1441,13 @@ namespace tut {
 			pid = atoi(stripHeaders(response));
 			result = (pid != origPid);
 		);
-		
+
 		// Wait for the original process to finish oobw request.
 		EVENTUALLY(2,
 			boost::unique_lock<boost::mutex> lock(pool->syncher);
 			result = origProcess->oobwStatus == Process::OOBW_NOT_ACTIVE;
 		);
-		
+
 		// Final asserts.
 		{
 			boost::unique_lock<boost::mutex> lock(pool->syncher);
@@ -1459,6 +1459,6 @@ namespace tut {
 
 	// Test small response buffering.
 	// Test large response buffering.
-	
+
 	/***************************/
 }

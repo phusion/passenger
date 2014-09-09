@@ -7,6 +7,7 @@ Release 5.0.0 beta 1
  * Minimum required Nginx version is now 1.6.0
  * Full socket hijacking now requires the caller to output an HTTP status line
  * Lowered server instance dir toucher interval from 6 to 1 hour.
+ * Log levels revamped
 
 
 Release 4.0.50

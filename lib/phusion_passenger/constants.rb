@@ -34,7 +34,7 @@ module PhusionPassenger
 	# definitions.
 	module SharedConstants
 		# Default config values
-		DEFAULT_LOG_LEVEL = 0
+		DEFAULT_LOG_LEVEL = 3
 		DEFAULT_RUBY = "ruby"
 		DEFAULT_PYTHON = "python"
 		DEFAULT_NODEJS = "node"

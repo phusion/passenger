@@ -21,16 +21,18 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+PhusionPassenger.require_passenger_lib 'constants'
+
 module PhusionPassenger
 
 module DebugLogging
 	# We don't refer to STDERR directly because STDERR's reference might
 	# change during runtime.
-	@@log_level = 0
+	@@log_level = DEFAULT_LOG_LEVEL
 	@@log_device = nil
 	@@log_filename = nil
 	@@stderr_evaluator = lambda { STDERR }
-	
+
 	def self.included(klass)
 		klass.class_eval do
 			private :debug
@@ -41,11 +43,11 @@ module DebugLogging
 	def self.log_level
 		return @@log_level
 	end
-	
+
 	def self.log_level=(level)
 		@@log_level = level
 	end
-	
+
 	def self.log_file=(filename)
 		if filename && filename.empty?
 			@@log_filename = nil
@@ -55,11 +57,11 @@ module DebugLogging
 		@@log_device.close if @@log_device && !@@log_device.closed?
 		@@log_device = nil
 	end
-	
+
 	def self._log_device
 		return @@log_device
 	end
-	
+
 	def self.stderr_evaluator=(block)
 		if block
 			@@stderr_evaluator = block
@@ -67,23 +69,38 @@ module DebugLogging
 			@@stderr_evaluator = lambda { STDERR }
 		end
 	end
-	
+
 	def error(message)
-		trace(-1, message, 1)
+		_output(1, message, 1)
 	end
 	module_function :error
-	
+
 	def warn(message)
-		trace(0, message, 1)
+		_output(2, message, 1)
 	end
 	module_function :warn
-	
+
+	def notice(message)
+		_output(3, message, 1)
+	end
+	module_function :notice
+
+	def info(message)
+		_output(4, message, 1)
+	end
+	module_function :info
+
 	def debug(message)
-		trace(1, message, 1)
+		_output(5, message, 1)
 	end
 	module_function :debug
-	
-	def trace(level, message, nesting_level = 0)
+
+	def trace(level, message)
+		_output(4 + level, message, 1)
+	end
+	module_function :trace
+
+	def _output(level, message, nesting_level = 0)
 		if @@log_level >= level
 			if @@log_filename
 				if !@@log_device || @@log_device.closed?
@@ -112,7 +129,7 @@ module DebugLogging
 			output.flush
 		end
 	end
-	module_function :trace
+	module_function :_output
 end
 
 end

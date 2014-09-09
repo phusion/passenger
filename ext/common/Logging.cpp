@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,26 +27,25 @@
 #include <cstring>
 #include <fcntl.h>
 #include <unistd.h>
+
+#include <boost/atomic.hpp>
 #include <Logging.h>
+#include <Constants.h>
 #include <StaticString.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 
 namespace Passenger {
 
-int _logLevel = 0;
+volatile sig_atomic_t _logLevel = DEFAULT_LOG_LEVEL;
 int _logOutput = STDERR_FILENO;
 static bool printAppOutputAsDebuggingMessages = false;
 AssertionFailureInfo lastAssertionFailure;
 
-int
-getLogLevel() {
-	return _logLevel;
-}
-
 void
 setLogLevel(int value) {
 	_logLevel = value;
+	boost::atomic_signal_fence(boost::memory_order_seq_cst);
 }
 
 bool

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -45,6 +45,7 @@
 #include <cstdio>
 #include <ctime>
 #include <cerrno>
+#include <csignal>
 
 
 namespace Passenger {
@@ -63,13 +64,17 @@ struct AssertionFailureInfo {
 	unsigned int line;
 };
 
-extern int _logLevel;
+extern volatile sig_atomic_t _logLevel;
 extern int _logOutput;
 
 // If assert() or similar fails, we attempt to store its information here.
 extern AssertionFailureInfo lastAssertionFailure;
 
-int getLogLevel();
+inline OXT_FORCE_INLINE int
+getLogLevel() {
+	return (int) _logLevel;
+}
+
 void setLogLevel(int value);
 bool setDebugFile(const char *logFile = NULL);
 void _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line);
@@ -78,13 +83,13 @@ const char *_strdupStringStream(const std::stringstream &stream);
 
 
 enum PassengerLogLevel {
-	LVL_CRIT   = -2,
-	LVL_ERROR  = -1,
-	LVL_NOTICE = 0,
-	LVL_INFO   = 0,
-	LVL_WARN   = 0,
-	LVL_DEBUG  = 1,
-	LVL_DEBUG2 = 2
+	LVL_CRIT   = 0,
+	LVL_ERROR  = 1,
+	LVL_WARN   = 2,
+	LVL_NOTICE = 3,
+	LVL_INFO   = 4,
+	LVL_DEBUG  = 5,
+	LVL_DEBUG2 = 6
 };
 
 /**
@@ -92,7 +97,7 @@ enum PassengerLogLevel {
  */
 #define P_LOG(level, expr) \
 	do { \
-		if (Passenger::_logLevel >= (level)) { \
+		if (Passenger::getLogLevel() >= (level)) { \
 			std::stringstream sstream; \
 			Passenger::_prepareLogEntry(sstream, __FILE__, __LINE__); \
 			sstream << expr << "\n"; \
@@ -102,7 +107,7 @@ enum PassengerLogLevel {
 
 #define P_LOG_UNLIKELY(level, expr) \
 	do { \
-		if (OXT_UNLIKELY(Passenger::_logLevel >= (level))) { \
+		if (OXT_UNLIKELY(Passenger::getLogLevel() >= (level))) { \
 			std::stringstream sstream; \
 			Passenger::_prepareLogEntry(sstream, __FILE__, __LINE__); \
 			sstream << expr << "\n"; \
@@ -144,10 +149,10 @@ enum PassengerLogLevel {
  * Write the given expression, which represents a debugging message,
  * to the log stream.
  */
-#define P_DEBUG(expr) P_TRACE(LVL_DEBUG, expr)
+#define P_DEBUG(expr) P_TRACE(0, expr)
 
 #ifdef PASSENGER_DEBUG
-	#define P_TRACE(level, expr) P_LOG_UNLIKELY(level, expr)
+	#define P_TRACE(level, expr) P_LOG_UNLIKELY(LVL_INFO + level, expr)
 #else
 	#define P_TRACE(level, expr) do { /* nothing */ } while (false)
 #endif

@@ -1948,15 +1948,16 @@ information will be logged.
 
 Possible values are:
 
-- '0': Show only errors and warnings.
-- '1': Show the most important debugging information. This might be useful for
-       system administrators who are trying to figure out the cause of a
-       problem.
-- '2': Show more debugging information. This is typically only useful for developers.
-- '3': Show even more debugging information.
+- '0' (crit): Show only critical errors which would cause Phusion Passenger to abort.
+- '1' (error): Also show non-critical errors -- errors that do not cause Phusion Passenger to abort.
+- '2' (warn): Also show warnings. These are not errors, and Phusion Passenger continues to operate correctly, but they might be an indication that something is wrong with the system.
+- '3' (notice): Also show important informational messages. These give you a high-level overview of what Phusion Passenger is doing.
+- '4' (info): Also show less important informational messages. These messages show more details about what Phusion Passenger is doing. They're high-level enough to be readable by users.
+- '5' (debug): Also show the most important debugging information. Reading this information requires some system or programming knowledge, but the information shown is typically high-level enough to be understood by experienced system administrators.
+- '6' (debug2): Show more debugging information. This is typically only useful for developers.
+- '7' (debug3): Show even more debugging information.
 
-This option may only occur once, in the 'http' configuration block.
-The default is '0'.
+This option may only occur once, in the 'http' configuration block. The default is '3'.
 
 ==== passenger_debug_log_file <filename> ====
 By default Phusion Passenger debugging and error messages are written to the global

@@ -1316,7 +1316,7 @@ namespace tut {
 			result = code1 != -1 || code2 != -1;
 		);
 
-		setLogLevel(-2);
+		setLogLevel(LVL_CRIT);
 		debug->messages->send("Fail spawn loop iteration 3");
 		EVENTUALLY(5,
 			result = code1 == DR_ERROR;
@@ -1567,7 +1567,7 @@ namespace tut {
 			"sys.stderr.write('Something went wrong!')\n"
 			"exit(1)\n");
 
-		setLogLevel(-2);
+		setLogLevel(LVL_CRIT);
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = number == 1;
@@ -1606,7 +1606,7 @@ namespace tut {
 			"	sys.stderr.write('Something went wrong!')\n"
 			"	exit(1)\n");
 
-		setLogLevel(-2);
+		setLogLevel(LVL_CRIT);
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = number == 1;
@@ -1815,7 +1815,7 @@ namespace tut {
 			"exit(1)\n");
 
 		retainSessions = true;
-		setLogLevel(-2);
+		setLogLevel(LVL_CRIT);
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
@@ -1861,7 +1861,7 @@ namespace tut {
 			"sys.stderr.write('Something went wrong!')\n"
 			"exit(1)\n");
 		try {
-			setLogLevel(-2);
+			setLogLevel(LVL_CRIT);
 			currentSession = pool->get(options, &ticket);
 			fail("SpawnException expected");
 		} catch (const SpawnException &) {
