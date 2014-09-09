@@ -6,6 +6,7 @@ Release 5.0.0 beta 1
  * The X-Passenger-Request-OOB-Work header has now been renamed to !~Request-OOB-Work
  * Minimum required Nginx version is now 1.6.0
  * Full socket hijacking now requires the caller to output an HTTP status line
+ * Lowered server instance dir toucher interval from 6 to 1 hour.
 
 
 Release 4.0.50
