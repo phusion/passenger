@@ -792,6 +792,7 @@ startAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 				}
 			}
 			forceAllAgentsShutdown(wo, watchers);
+			wo->instanceDir->destroy();
 			exit(1);
 		}
 		// Allow other exceptions to propagate and crash the watchdog.
@@ -809,6 +810,7 @@ beginWatchingAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watche
 				e.what(),
 				NULL);
 			forceAllAgentsShutdown(wo, watchers);
+			wo->instanceDir->destroy();
 			exit(1);
 		}
 		// Allow other exceptions to propagate and crash the watchdog.
@@ -906,9 +908,19 @@ watchdogMain(int argc, char *argv[]) {
 		}
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("after_watchdog_shutdown");
+
+		// We need to call destroy() explicitly because of circular references.
+		if (wo->instanceDir->isOwner()) {
+			wo->instanceDir->destroy();
+		}
+
 		return exitGracefully ? 0 : 1;
 	} catch (const tracable_exception &e) {
 		P_CRITICAL("ERROR: " << e.what() << "\n" << e.backtrace());
+		// We need to call destroy() explicitly because of circular references.
+		if (wo->instanceDir->isOwner()) {
+			wo->instanceDir->destroy();
+		}
 		return 1;
 	}
 }

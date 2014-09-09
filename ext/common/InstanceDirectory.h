@@ -215,8 +215,13 @@ public:
 		owner = false;
 	}
 
+	bool isOwner() const {
+		return owner;
+	}
+
 	void destroy() {
 		assert(owner);
+		owner = false;
 		removeDirTree(path);
 	}
 };
