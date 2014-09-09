@@ -333,7 +333,6 @@ onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents) {
 	if (wo->terminationCount < 3) {
 		P_NOTICE("Signal received. Gracefully shutting down... (send signal " <<
 			(3 - wo->terminationCount) << " more time(s) to force shutdown)");
-		printf("%d\n", workingObjects->exitEvent.fd());
 		workingObjects->exitEvent.notify();
 	} else {
 		P_NOTICE("Signal received. Forcing shutdown.");
