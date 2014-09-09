@@ -32,6 +32,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include <sys/select.h>
 #include <sys/types.h>
@@ -89,23 +90,28 @@ static VariantMap *agentsOptions;
 
 /***** Working objects *****/
 
-struct WorkingObjects {
-	RandomGenerator randomGenerator;
-	EventFd errorEvent;
-	ResourceLocatorPtr resourceLocator;
-	uid_t defaultUid;
-	gid_t defaultGid;
-	InstanceDirectoryPtr instanceDir;
-	vector<string> cleanupPidfiles;
-	string loggingAgentAddress;
-	string loggingAgentPassword;
-	string loggingAgentAdminAddress;
-	string adminToolStatusPassword;
-	string adminToolManipulationPassword;
-};
+// Avoid namespace conflict with Server's WorkingObjects.
+namespace {
+	struct WorkingObjects {
+		RandomGenerator randomGenerator;
+		EventFd errorEvent;
+		EventFd exitEvent;
+		ResourceLocatorPtr resourceLocator;
+		uid_t defaultUid;
+		gid_t defaultGid;
+		InstanceDirectoryPtr instanceDir;
+		vector<string> cleanupPidfiles;
+		string loggingAgentAddress;
+		string loggingAgentPassword;
+		string loggingAgentAdminAddress;
+		string adminToolStatusPassword;
+		string adminToolManipulationPassword;
+	};
 
-typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
+	typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
+}
 
+static WorkingObjects *workingObjects;
 static string oldOomScore;
 
 #include "AgentWatcher.cpp"
@@ -200,6 +206,11 @@ setOomScoreNeverKill() {
 	return oldScore;
 }
 
+static void
+terminationHandler(int signo) {
+	write(workingObjects->exitEvent.writerFd(), "x", 1);
+}
+
 /**
  * Wait until the starter process has exited or sent us an exit command,
  * or until one of the watcher threads encounter an error. If a thread
@@ -211,20 +222,29 @@ setOomScoreNeverKill() {
  */
 static bool
 waitForStarterProcessOrWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
+	TRACE_POINT();
 	fd_set fds;
-	int max, ret;
+	int max = -1, ret;
 	char x;
 
+	struct sigaction action;
+	action.sa_handler = terminationHandler;
+	action.sa_flags = SA_RESTART;
+	sigemptyset(&action.sa_mask);
+	sigaction(SIGINT, &action, NULL);
+	sigaction(SIGTERM, &action, NULL);
+
 	FD_ZERO(&fds);
-	FD_SET(FEEDBACK_FD, &fds);
-	FD_SET(wo->errorEvent.fd(), &fds);
-
-	if (FEEDBACK_FD > wo->errorEvent.fd()) {
-		max = FEEDBACK_FD;
-	} else {
-		max = wo->errorEvent.fd();
+	if (feedbackFdAvailable()) {
+		FD_SET(FEEDBACK_FD, &fds);
+		max = std::max(max, FEEDBACK_FD);
 	}
+	FD_SET(wo->errorEvent.fd(), &fds);
+	max = std::max(max, wo->errorEvent.fd());
+	FD_SET(wo->exitEvent.fd(), &fds);
+	max = std::max(max, wo->exitEvent.fd());
 
+	UPDATE_TRACE_POINT();
 	ret = syscalls::select(max + 1, &fds, NULL, NULL, NULL);
 	if (ret == -1) {
 		int e = errno;
@@ -232,7 +252,12 @@ waitForStarterProcessOrWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcher
 		return false;
 	}
 
+	action.sa_handler = SIG_DFL;
+	sigaction(SIGINT, &action, NULL);
+	sigaction(SIGTERM, &action, NULL);
+
 	if (FD_ISSET(wo->errorEvent.fd(), &fds)) {
+		UPDATE_TRACE_POINT();
 		vector<AgentWatcherPtr>::const_iterator it;
 		string message, backtrace, watcherName;
 
@@ -249,7 +274,11 @@ waitForStarterProcessOrWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcher
 				message << "\n" << backtrace);
 		}
 		return false;
+	} else if (FD_ISSET(wo->exitEvent.fd(), &fds)) {
+		return true;
 	} else {
+		UPDATE_TRACE_POINT();
+		assert(feedbackFdAvailable());
 		ret = syscalls::read(FEEDBACK_FD, &x, 1);
 		return ret == 1 && x == 'c';
 	}
@@ -318,9 +347,10 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 				strcpy(argv[0], "PassengerWatchdog (cleaning up...)");
 			#endif
 
-			// Wait until all agent processes have exited. The starter
-			// process is responsible for telling the individual agents
-			// to exit.
+			P_DEBUG("Sending SIGTERM to all agent processes");
+			for (it = watchers.begin(); it != watchers.end(); it++) {
+				(*it)->signalShutdown();
+			}
 
 			max = 0;
 			FD_ZERO(&fds);
@@ -331,6 +361,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 				}
 			}
 
+			P_DEBUG("Waiting until all agent processes have exited...");
 			timer.start();
 			agentProcessesDone = 0;
 			while (agentProcessesDone != -1
@@ -364,12 +395,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 			} else {
 				P_DEBUG("All Phusion Passenger agent processes have exited. Forcing all subprocesses to shut down.");
 			}
-			P_DEBUG("Sending SIGTERM");
-			for (it = watchers.begin(); it != watchers.end(); it++) {
-				(*it)->signalShutdown();
-			}
-			usleep(1000000);
-			P_DEBUG("Sending SIGKILL");
+			P_DEBUG("Sending SIGKILL to all agent processes");
 			for (it = watchers.begin(); it != watchers.end(); it++) {
 				(*it)->forceShutdown();
 			}
@@ -380,7 +406,6 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 			// Notify given PIDs about our shutdown.
 			killCleanupPids(cleanupPids);
 
-			strcpy(argv[0], "PassengerWatchdog (cleaning up 6...)");
 			_exit(0);
 		} catch (const std::exception &e) {
 			P_CRITICAL("An exception occurred during cleaning up: " << e.what());
@@ -577,6 +602,9 @@ initializeBareEssentials(int argc, char *argv[]) {
 	agentsOptions = new VariantMap();
 	*agentsOptions = initializeAgent(argc, &argv, "PassengerWatchdog",
 		parseOptions, 2);
+
+	// Start all sub-agents with this environment variable.
+	setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);
 }
 
 static void
@@ -646,6 +674,7 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &ser
 	VariantMap &options = *agentsOptions;
 
 	wo = boost::make_shared<WorkingObjects>();
+	workingObjects = wo.get();
 	wo->resourceLocator = boost::make_shared<ResourceLocator>(agentsOptions->get("passenger_root"));
 
 	UPDATE_TRACE_POINT();
@@ -700,6 +729,7 @@ static void
 startAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	TRACE_POINT();
 	foreach (AgentWatcherPtr watcher, watchers) {
+		P_DEBUG("Starting agent: " << watcher->name());
 		try {
 			watcher->start();
 		} catch (const std::exception &e) {

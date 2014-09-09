@@ -1449,6 +1449,25 @@ initializeSyscallFailureSimulation(const char *processName) {
 	}
 }
 
+static bool isBlank(const char *str) {
+	while (*str != '\0') {
+		if (*str != ' ') {
+			return false;
+		}
+		str++;
+	}
+	return true;
+}
+
+static bool
+extraArgumentsPassed(int argc, char *argv[], int argStartIndex) {
+	assert(argc >= argStartIndex);
+	return argc > argStartIndex + 1
+		// Allow the Watchdog to pass an all-whitespace argument. This
+		// argument provides the memory space for us to change the process title.
+		|| (argc == argStartIndex + 1 && !isBlank(argv[argStartIndex]));
+}
+
 VariantMap
 initializeAgent(int argc, char **argv[], const char *processName,
 	OptionParserFunc optionParser, int argStartIndex)
@@ -1485,7 +1504,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 	TRACE_POINT();
 	try {
 		if (hasEnvOption("PASSENGER_USE_FEEDBACK_FD")) {
-			if (argc > argStartIndex) {
+			if (extraArgumentsPassed(argc, *argv, argStartIndex)) {
 				fprintf(stderr, "No arguments may be passed when using the feedback FD.\n");
 				exit(1);
 			}
@@ -1549,10 +1568,13 @@ initializeAgent(int argc, char **argv[], const char *processName,
 	}
 
 	// Change process title.
-	strncpy((*argv)[0], processName, strlen((*argv)[0]));
+	size_t totalArgLen = strlen((*argv)[0]);
 	for (int i = 1; i < argc; i++) {
-		memset((*argv)[i], '\0', strlen((*argv)[i]));
+		size_t len = strlen((*argv)[i]);
+		totalArgLen += len + 1;
+		memset((*argv)[i], '\0', len);
 	}
+	strncpy((*argv)[0], processName, totalArgLen);
 	*argv = origArgv;
 
 	P_DEBUG("Random seed: " << randomSeed);

@@ -186,11 +186,14 @@ public:
 
 	static const unsigned int MAX_ACCEPT_BURST_COUNT = 127;
 
+	typedef void (*Callback)(BaseServer *server);
+
 	/***** Configuration *****/
 	unsigned int acceptBurstCount: 7;
 	bool startReadingAfterAccept: 1;
 	unsigned int minSpareClients: 12;
 	unsigned int clientFreelistLimit: 12;
+	Callback shutdownFinishCallback;
 
 	/***** Working state and statistics (do not modify) *****/
 	State serverState;
@@ -417,6 +420,9 @@ private:
 	void finishShutdown() {
 		SKS_NOTICE("Shutdown finished");
 		serverState = FINISHED_SHUTDOWN;
+		if (shutdownFinishCallback != NULL) {
+			shutdownFinishCallback(this);
+		}
 	}
 
 	void logClientDataReceived(Client *client, const MemoryKit::mbuf &buffer, int errcode) {
@@ -594,6 +600,7 @@ public:
 		  startReadingAfterAccept(true),
 		  minSpareClients(128),
 		  clientFreelistLimit(1024),
+		  shutdownFinishCallback(NULL),
 		  serverState(ACTIVE),
 		  freeClientCount(0),
 		  activeClientCount(0),
@@ -685,7 +692,7 @@ public:
 		}
 
 		// When all active and disconnected clients are gone,
-		// shutdownCompleted() will be called to set state to FINISHED_SHUTDOWN.
+		// finishShutdown() will be called to set state to FINISHED_SHUTDOWN.
 	}
 
 

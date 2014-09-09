@@ -1056,7 +1056,7 @@ public:
 		debugSupport = boost::make_shared<DebugSupport>();
 	}
 
-	/** Should be called right after the HelperAgent has received
+	/** Should be called right after the agent has received
 	 * the message to exit gracefully. This will tell processes to
 	 * abort any long-running connections, e.g. WebSocket connections,
 	 * because the RequestHandler has to wait until all connections are

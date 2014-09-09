@@ -285,9 +285,7 @@ public:
 	~AgentsStarter() {
 		if (pid != 0) {
 			this_thread::disable_syscall_interruption dsi;
-			bool cleanShutdown = gracefullyShutdownAgent(helperAgentAdminSocketAddress,
-				"_web_server", helperAgentExitPassword);
-			cleanShutdown = cleanShutdown &&
+			bool cleanShutdown =
 				gracefullyShutdownAgent(loggingSocketAddress,
 					"logging", loggingSocketPassword);
 

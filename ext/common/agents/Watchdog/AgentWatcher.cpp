@@ -292,17 +292,19 @@ public:
 						NULL);
 					_exit(1);
 				} catch (...) {
-					fprintf(stderr, "Passenger Watchdog: dup2() failed: %s (%d)\n",
+					fprintf(stderr, "PassengerWatchdog: dup2() failed: %s (%d)\n",
 						strerror(e), e);
 					fflush(stderr);
 					_exit(1);
 				}
 			}
 
+			resetSignalHandlersAndMask();
 			closeAllFileDescriptors(FEEDBACK_FD);
 
 			/* Become the process group leader so that the watchdog can kill the
-			 * agent as well as all its descendant processes. */
+			 * agent as well as all its descendant processes, and so that a Ctrl-C
+			 * only affects the watchdog but not agents. */
 			setpgid(getpid(), getpid());
 
 			setOomScore(oldOomScore);
@@ -321,7 +323,7 @@ public:
 					toString(e).c_str(),
 					NULL);
 			} catch (...) {
-				fprintf(stderr, "Passenger Watchdog: could not execute %s: %s (%d)\n",
+				fprintf(stderr, "PassengerWatchdog: could not execute %s: %s (%d)\n",
 					exeFilename.c_str(), strerror(e), e);
 				fflush(stderr);
 			}

@@ -27,8 +27,6 @@ class HelperAgentWatcher: public AgentWatcher {
 protected:
 	string helperAgentFilename;
 	VariantMap params, report;
-	string requestSocketFilename;
-	string messageSocketFilename;
 
 	virtual const char *name() const {
 		return "Phusion Passenger helper agent";
@@ -39,14 +37,15 @@ protected:
 	}
 
 	virtual void execProgram() const {
-		setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);
 		if (hasEnvOption("PASSENGER_RUN_HELPER_AGENT_IN_VALGRIND", false)) {
 			execlp("valgrind", "valgrind", "--dsymutil=yes",
 				helperAgentFilename.c_str(), "PassengerAgent", "server",
-				(char *) 0);
+				// Some extra space to allow the child process to change its process title.
+				"                                                ", (char *) 0);
 		} else {
 			execl(helperAgentFilename.c_str(), "PassengerAgent", "server",
-				(char *) 0);
+				// Some extra space to allow the child process to change its process title.
+				"                                                ", (char *) 0);
 		}
 	}
 
@@ -57,13 +56,7 @@ protected:
 	}
 
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
-		if (args[0] == "initialized") {
-			requestSocketFilename = args[1];
-			messageSocketFilename = args[2];
-			return true;
-		} else {
-			return false;
-		}
+		return args[0] == "initialized";
 	}
 
 public:

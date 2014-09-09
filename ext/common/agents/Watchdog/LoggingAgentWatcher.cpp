@@ -37,7 +37,6 @@ protected:
 	}
 
 	virtual void execProgram() const {
-		setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);
 		execl(agentFilename.c_str(), "PassengerLoggingAgent", (char *) 0);
 	}
 

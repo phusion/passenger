@@ -39,6 +39,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 
@@ -248,29 +249,42 @@ public:
 
 /***** Structures, constants, global variables and forward declarations *****/
 
-struct WorkingObjects {
-	int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
-	ResourceLocator resourceLocator;
-	RandomGeneratorPtr randomGenerator;
-	UnionStation::CorePtr unionStationCore;
-	SpawnerConfigPtr spawnerConfig;
-	SpawnerFactoryPtr spawnerFactory;
-	BackgroundEventLoop *bgloop;
-	struct ev_signal sigquitWatcher;
-	PoolPtr appPool;
-	ServerKit::Context *serverKitContext;
-	RequestHandler *requestHandler;
-};
+// Avoid namespace conflict with Watchdog's WorkingObjects.
+namespace {
+	struct WorkingObjects {
+		int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
+		ResourceLocator resourceLocator;
+		RandomGeneratorPtr randomGenerator;
+		UnionStation::CorePtr unionStationCore;
+		SpawnerConfigPtr spawnerConfig;
+		SpawnerFactoryPtr spawnerFactory;
+		BackgroundEventLoop *bgloop;
+		struct ev_signal sigintWatcher;
+		struct ev_signal sigtermWatcher;
+		struct ev_signal sigquitWatcher;
+		PoolPtr appPool;
+		ServerKit::Context *serverKitContext;
+		RequestHandler *requestHandler;
+		EventFd exitEvent;
+		EventFd allClientsDisconnectedEvent;
+		unsigned int terminationCount;
+	};
+}
 
 static WorkingObjects *workingObjects;
 
 
 /***** Server stuff *****/
 
+static void waitForExitEvent(WorkingObjects *wo);
+static void cleanup(WorkingObjects *wo);
+static void requestHandlerShutdownFinished(ServerKit::BaseServer<RequestHandler, Client> *server);
+
 static void
 initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
 	workingObjects = new WorkingObjects();
+	workingObjects->terminationCount = 0;
 }
 
 static void
@@ -363,80 +377,6 @@ onSigquit(EV_P_ struct ev_signal *watcher, int revents) {
 }
 
 static void
-initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
-	TRACE_POINT();
-	VariantMap &options = *agentsOptions;
-	vector<string> addresses = options.getStrSet("server_listen_addresses");
-
-	wo->resourceLocator = ResourceLocator(options.get("passenger_root"));
-
-	wo->randomGenerator = boost::make_shared<RandomGenerator>();
-	// Check whether /dev/urandom is actually random.
-	// https://code.google.com/p/phusion-passenger/issues/detail?id=516
-	if (wo->randomGenerator->generateByteString(16) == wo->randomGenerator->generateByteString(16)) {
-		throw RuntimeException("Your random number device, /dev/urandom, appears to be broken. "
-			"It doesn't seem to be returning random data. Please fix this.");
-	}
-
-	UPDATE_TRACE_POINT();
-	//wo->unionStationCore = boost::make_shared<UnionStation::Core>(
-	//	"TODO: logging agent address", "logging", "TODO: logging agent password");
-	wo->spawnerConfig = boost::make_shared<SpawnerConfig>();
-	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
-	wo->spawnerConfig->agentsOptions = agentsOptions;
-	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
-	wo->spawnerConfig->finalize();
-
-	UPDATE_TRACE_POINT();
-	wo->spawnerFactory = boost::make_shared<SpawnerFactory>(wo->spawnerConfig);
-
-	wo->bgloop = new BackgroundEventLoop(true, true);
-	ev_signal_init(&wo->sigquitWatcher, onSigquit, SIGQUIT);
-	ev_signal_start(wo->bgloop->loop, &wo->sigquitWatcher);
-
-	wo->appPool = boost::make_shared<Pool>(wo->spawnerFactory, agentsOptions);
-	wo->appPool->initialize();
-	wo->appPool->setMax(options.getInt("max_pool_size"));
-	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000);
-
-	UPDATE_TRACE_POINT();
-	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
-	wo->requestHandler = new RequestHandler(wo->serverKitContext, agentsOptions);
-	wo->requestHandler->resourceLocator = &wo->resourceLocator;
-	wo->requestHandler->appPool = wo->appPool;
-	wo->requestHandler->initialize();
-
-	UPDATE_TRACE_POINT();
-	for (unsigned int i = 0; i < addresses.size(); i++) {
-		wo->requestHandler->listen(wo->serverFds[i]);
-	}
-	wo->requestHandler->createSpareClients();
-}
-
-static void
-reportInitializationInfo(WorkingObjects *wo) {
-	vector<string> addresses = agentsOptions->getStrSet("server_listen_addresses");
-	string address;
-
-	P_NOTICE("PassengerAgent server online, PID " << getpid () <<
-		", listening on " << addresses.size() << " socket(s):");
-	foreach (address, addresses) {
-		if (startsWith(address, "tcp://")) {
-			address.erase(0, sizeof("tcp://") - 1);
-			address.insert(0, "http://");
-			address.append("/");
-		}
-		P_NOTICE(" * " << address);
-	}
-
-	if (feedbackFdAvailable()) {
-		writeArrayMessage(FEEDBACK_FD,
-			"initialized",
-			NULL);
-	}
-}
-
-static void
 dumpDiagnosticsOnCrash(void *userData) {
 	WorkingObjects *wo = workingObjects;
 
@@ -479,19 +419,188 @@ dumpDiagnosticsOnCrash(void *userData) {
 }
 
 static void
+onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents) {
+	WorkingObjects *wo = workingObjects;
+
+	// Start output after '^C'
+	printf("\n");
+
+	wo->terminationCount++;
+	if (wo->terminationCount < 3) {
+		P_NOTICE("Signal received. Gracefully shutting down... (send signal " <<
+			(3 - wo->terminationCount) << " more time(s) to force shutdown)");
+		printf("%d\n", workingObjects->exitEvent.fd());
+		workingObjects->exitEvent.notify();
+	} else {
+		P_NOTICE("Signal received. Forcing shutdown.");
+		_exit(2);
+	}
+}
+
+static void
+initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
+	TRACE_POINT();
+	VariantMap &options = *agentsOptions;
+	vector<string> addresses = options.getStrSet("server_listen_addresses");
+
+	wo->resourceLocator = ResourceLocator(options.get("passenger_root"));
+
+	wo->randomGenerator = boost::make_shared<RandomGenerator>();
+	// Check whether /dev/urandom is actually random.
+	// https://code.google.com/p/phusion-passenger/issues/detail?id=516
+	if (wo->randomGenerator->generateByteString(16) == wo->randomGenerator->generateByteString(16)) {
+		throw RuntimeException("Your random number device, /dev/urandom, appears to be broken. "
+			"It doesn't seem to be returning random data. Please fix this.");
+	}
+
+	UPDATE_TRACE_POINT();
+	//wo->unionStationCore = boost::make_shared<UnionStation::Core>(
+	//	"TODO: logging agent address", "logging", "TODO: logging agent password");
+	wo->spawnerConfig = boost::make_shared<SpawnerConfig>();
+	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
+	wo->spawnerConfig->agentsOptions = agentsOptions;
+	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
+	wo->spawnerConfig->finalize();
+
+	UPDATE_TRACE_POINT();
+	wo->spawnerFactory = boost::make_shared<SpawnerFactory>(wo->spawnerConfig);
+
+	wo->bgloop = new BackgroundEventLoop(true, true);
+	ev_signal_init(&wo->sigquitWatcher, onSigquit, SIGQUIT);
+	ev_signal_start(wo->bgloop->loop, &wo->sigquitWatcher);
+	ev_signal_init(&wo->sigintWatcher, onTerminationSignal, SIGINT);
+	ev_signal_start(wo->bgloop->loop, &wo->sigintWatcher);
+	ev_signal_init(&wo->sigtermWatcher, onTerminationSignal, SIGTERM);
+	ev_signal_start(wo->bgloop->loop, &wo->sigtermWatcher);
+
+	wo->appPool = boost::make_shared<Pool>(wo->spawnerFactory, agentsOptions);
+	wo->appPool->initialize();
+	wo->appPool->setMax(options.getInt("max_pool_size"));
+	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000);
+
+	UPDATE_TRACE_POINT();
+	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
+	wo->requestHandler = new RequestHandler(wo->serverKitContext, agentsOptions);
+	wo->requestHandler->resourceLocator = &wo->resourceLocator;
+	wo->requestHandler->appPool = wo->appPool;
+	wo->requestHandler->shutdownFinishCallback = requestHandlerShutdownFinished;
+	wo->requestHandler->initialize();
+
+	UPDATE_TRACE_POINT();
+	for (unsigned int i = 0; i < addresses.size(); i++) {
+		wo->requestHandler->listen(wo->serverFds[i]);
+	}
+	wo->requestHandler->createSpareClients();
+}
+
+static void
+reportInitializationInfo(WorkingObjects *wo) {
+	vector<string> addresses = agentsOptions->getStrSet("server_listen_addresses");
+	string address;
+
+	P_NOTICE("PassengerAgent server online, PID " << getpid () <<
+		", listening on " << addresses.size() << " socket(s):");
+	foreach (address, addresses) {
+		if (startsWith(address, "tcp://")) {
+			address.erase(0, sizeof("tcp://") - 1);
+			address.insert(0, "http://");
+			address.append("/");
+		}
+		P_NOTICE(" * " << address);
+	}
+
+	if (feedbackFdAvailable()) {
+		writeArrayMessage(FEEDBACK_FD,
+			"initialized",
+			NULL);
+	}
+}
+
+static void
 mainLoop(WorkingObjects *wo) {
 	TRACE_POINT();
 	installDiagnosticsDumper(dumpDiagnosticsOnCrash, NULL);
 	wo->bgloop->start("Main event loop", 0);
-	while (true) {
-		sleep(100);
+	waitForExitEvent(wo);
+}
+
+static void
+requestHandlerShutdownFinished(ServerKit::BaseServer<RequestHandler, Client> *server) {
+	workingObjects->allClientsDisconnectedEvent.notify();
+}
+
+/* Wait until the watchdog closes the feedback fd (meaning it
+ * was killed) or until we receive an exit message.
+ */
+static void
+waitForExitEvent(WorkingObjects *wo) {
+	this_thread::disable_syscall_interruption dsi;
+	fd_set fds;
+	int largestFd = -1;
+
+	FD_ZERO(&fds);
+	if (feedbackFdAvailable()) {
+		FD_SET(FEEDBACK_FD, &fds);
+		largestFd = std::max(largestFd, FEEDBACK_FD);
 	}
-	installDiagnosticsDumper(NULL, NULL);
+	FD_SET(wo->exitEvent.fd(), &fds);
+	largestFd = std::max(largestFd, wo->exitEvent.fd());
+
+	TRACE_POINT();
+	if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
+		int e = errno;
+		installDiagnosticsDumper(NULL, NULL);
+		throw SystemException("select() failed", e);
+	}
+
+	if (FD_ISSET(FEEDBACK_FD, &fds)) {
+		UPDATE_TRACE_POINT();
+		/* If the watchdog has been killed then we'll kill all descendant
+		 * processes and exit. There's no point in keeping the server agent
+		 * running because we can't detect when the web server exits,
+		 * and because this server agent doesn't own the instance
+		 * directory. As soon as passenger-status is run, the instance
+		 * directory will be cleaned up, making the server inaccessible.
+		 */
+		P_WARN("Watchdog seems to be killed; forcing shutdown of all subprocesses");
+		// We send a SIGTERM first to allow processes to gracefully shut down.
+		syscalls::killpg(getpgrp(), SIGTERM);
+		usleep(500000);
+		syscalls::killpg(getpgrp(), SIGKILL);
+		_exit(2); // In case killpg() fails.
+	} else {
+		UPDATE_TRACE_POINT();
+		/* We received an exit command. */
+		P_NOTICE("Received command to shutdown gracefully. "
+			"Waiting until all clients have disconnected...");
+		wo->appPool->prepareForShutdown();
+		wo->requestHandler->shutdown();
+
+		UPDATE_TRACE_POINT();
+		FD_ZERO(&fds);
+		FD_SET(wo->allClientsDisconnectedEvent.fd(), &fds);
+		if (syscalls::select(wo->allClientsDisconnectedEvent.fd() + 1,
+			&fds, NULL, NULL, NULL) == -1)
+		{
+			int e = errno;
+			installDiagnosticsDumper(NULL, NULL);
+			throw SystemException("select() failed", e);
+		}
+
+		P_INFO("All clients have now disconnected. Proceeding with graceful shutdown");
+	}
 }
 
 static void
 cleanup(WorkingObjects *wo) {
 	TRACE_POINT();
+	P_DEBUG("Shutting down PassengerAgent server...");
+	wo->appPool->destroy();
+	installDiagnosticsDumper(NULL, NULL);
+	wo->bgloop->stop();
+	wo->appPool.reset();
+	delete wo->requestHandler;
+	P_NOTICE("PassengerAgent server shutdown finished");
 }
 
 static int
@@ -519,7 +628,6 @@ runServer() {
 		return 1;
 	}
 
-	P_TRACE(2, "PassengerAgent server exiting with code 0.");
 	return 0;
 }
 
