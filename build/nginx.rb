@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -40,9 +40,7 @@ task :_nginx => :nginx
 
 task :nginx_without_native_support => [
 	auto_generated_sources,
-	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',
-	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
-	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
+	AGENT_OUTPUT_DIR + 'PassengerAgent',
 	AGENT_OUTPUT_DIR + 'SpawnPreparer',
 	AGENT_OUTPUT_DIR + 'TempDirToucher',
 	COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).link_objects

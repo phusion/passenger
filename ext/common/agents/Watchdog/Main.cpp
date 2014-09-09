@@ -46,6 +46,7 @@
 
 #include <agents/Base.h>
 #include <agents/HelperAgent/OptionParser.h>
+#include <agents/LoggingAgent/OptionParser.h>
 #include <Constants.h>
 #include <InstanceDirectory.h>
 #include <ServerInstanceDir.h>
@@ -101,11 +102,6 @@ namespace {
 		gid_t defaultGid;
 		InstanceDirectoryPtr instanceDir;
 		vector<string> cleanupPidfiles;
-		string loggingAgentAddress;
-		string loggingAgentPassword;
-		string loggingAgentAdminAddress;
-		string adminToolStatusPassword;
-		string adminToolManipulationPassword;
 	};
 
 	typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
@@ -500,13 +496,12 @@ usage() {
 	printf("                              HTTP server\n");
 	printf("  --ES, --end-server-args     Signals the end of arguments to pass to the HTTP\n");
 	printf("                              server\n");
-	printf("  --BL, --begin-logging-args  Signals the beginning of arguments to pass to the\n");
+	printf("  --BL, --begin-logger-args   Signals the beginning of arguments to pass to the\n");
 	printf("                              logging server\n");
-	printf("  --EL, --end-logging-args    Signals the end of arguments to pass to the\n");
+	printf("  --EL, --end-logger-args     Signals the end of arguments to pass to the\n");
 	printf("                              logging server\n");
 	printf("\n");
 	printf("Other options (optional):\n");
-	printf("      --no-register-instance   Do not register this watchdog instance\n");
 	printf("      --instance-registry-dir  Directory to register instance into.\n");
 	printf("                               Default: %s\n", getSystemTempDir());
 	printf("\n");
@@ -543,15 +538,36 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 				{
 					i++;
 					break;
+				} else if (p.isFlag(argv[i], '\0', "--BL")
+				 || p.isFlag(argv[i], '\0', "--begin-logger-args"))
+				{
+					break;
 				} else if (!parseServerOption(argc, argv, i, options)) {
 					fprintf(stderr, "ERROR: unrecognized HTTP server argument %s. Please "
 						"type '%s server --help' for usage.\n", argv[i], argv[0]);
 					exit(1);
 				}
 			}
-		} else if (p.isFlag(argv[i], '\0', "--no-register-instance")) {
-			options.setBool("register_instance", false);
+		} else if (p.isFlag(argv[i], '\0', "--BL")
+			|| p.isFlag(argv[i], '\0', "--begin-logger-args"))
+		{
 			i++;
+			while (i < argc) {
+				if (p.isFlag(argv[i], '\0', "--EL")
+				 || p.isFlag(argv[i], '\0', "--end-logger-args"))
+				{
+					i++;
+					break;
+				} else if (p.isFlag(argv[i], '\0', "--BS")
+				 || p.isFlag(argv[i], '\0', "--begin-server-args"))
+				{
+					break;
+				} else if (!parseLoggingAgentOption(argc, argv, i, options)) {
+					fprintf(stderr, "ERROR: unrecognized logging agent argument %s. Please "
+						"type '%s logger --help' for usage.\n", argv[i], argv[0]);
+					exit(1);
+				}
+			}
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--instance-registry-dir")) {
 			options.set("instance_registry_dir", argv[i + 1]);
 			i += 2;
@@ -600,7 +616,7 @@ initializeBareEssentials(int argc, char *argv[]) {
 	oldOomScore = setOomScoreNeverKill();
 
 	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, "PassengerWatchdog",
+	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent watchdog",
 		parseOptions, 2);
 
 	// Start all sub-agents with this environment variable.
@@ -611,7 +627,6 @@ static void
 setAgentsOptionsDefaults() {
 	VariantMap &options = *agentsOptions;
 
-	options.setDefaultBool("register_instance", true);
 	options.setDefault("instance_registry_dir", getSystemTempDir());
 	options.setDefaultBool("user_switching", true);
 	options.setDefault("default_user", DEFAULT_WEB_APP_USER);
@@ -672,6 +687,7 @@ static void
 initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &serverInstanceDirToucher) {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
+	vector<string> strset;
 
 	wo = boost::make_shared<WorkingObjects>();
 	workingObjects = wo.get();
@@ -679,43 +695,71 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &ser
 
 	UPDATE_TRACE_POINT();
 	lookupDefaultUidGid(wo->defaultUid, wo->defaultGid);
-
-	UPDATE_TRACE_POINT();
-	if (options.getBool("register_instance")) {
-		InstanceDirectory::CreationOptions instanceOptions;
-		instanceOptions.userSwitching = options.getBool("user_switching");
-		instanceOptions.defaultUid = wo->defaultUid;
-		instanceOptions.defaultGid = wo->defaultGid;
-		wo->instanceDir = make_shared<InstanceDirectory>(instanceOptions,
-			options.get("instance_registry_dir"));
-		options.set("instance_dir", wo->instanceDir->getPath());
-	}
-
-	UPDATE_TRACE_POINT();
-	serverInstanceDirToucher = boost::make_shared<ServerInstanceDirToucher>(wo);
 	wo->cleanupPidfiles = options.getStrSet("cleanup_pidfiles", false);
 
 	UPDATE_TRACE_POINT();
-	wo->loggingAgentAddress  = "unix:" + wo->instanceDir->getPath() + "/agents.s/logging";
-	wo->loggingAgentPassword = wo->randomGenerator.generateAsciiString(64);
-	wo->loggingAgentAdminAddress  = "unix:" + wo->instanceDir->getPath() + "/agents.s/logging_admin";
+	InstanceDirectory::CreationOptions instanceOptions;
+	instanceOptions.userSwitching = options.getBool("user_switching");
+	instanceOptions.defaultUid = wo->defaultUid;
+	instanceOptions.defaultGid = wo->defaultGid;
+	wo->instanceDir = make_shared<InstanceDirectory>(instanceOptions,
+		options.get("instance_registry_dir"));
+	options.set("instance_dir", wo->instanceDir->getPath());
+	serverInstanceDirToucher = boost::make_shared<ServerInstanceDirToucher>(wo);
 
 	UPDATE_TRACE_POINT();
-	wo->adminToolStatusPassword = wo->randomGenerator.generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
-	wo->adminToolManipulationPassword = wo->randomGenerator.generateAsciiString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
-	options.set("admin_tool_status_password", wo->adminToolStatusPassword);
-	options.set("admin_tool_manipulation_password", wo->adminToolManipulationPassword);
+	string readOnlyAdminPassword = wo->randomGenerator.generateAsciiString(24);
+	string fullAdminPassword = wo->randomGenerator.generateAsciiString(24);
 	if (geteuid() == 0 && !options.getBool("user_switching")) {
-		createFile(wo->instanceDir->getPath() + "/passenger-status-password.txt",
-			wo->adminToolStatusPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
-		createFile(wo->instanceDir->getPath() + "/admin-manipulation-password.txt",
-			wo->adminToolManipulationPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
+		createFile(wo->instanceDir->getPath() + "/read_only_admin_password.txt",
+			readOnlyAdminPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
+		createFile(wo->instanceDir->getPath() + "/full_admin_password.txt",
+			fullAdminPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
 	} else {
-		createFile(wo->instanceDir->getPath() + "/passenger-status-password.txt",
-			wo->adminToolStatusPassword, S_IRUSR | S_IWUSR);
-		createFile(wo->instanceDir->getPath() + "/admin-manipulation-password.txt",
-			wo->adminToolManipulationPassword, S_IRUSR | S_IWUSR);
+		createFile(wo->instanceDir->getPath() + "/read_only_admin_password.txt",
+			readOnlyAdminPassword, S_IRUSR | S_IWUSR);
+		createFile(wo->instanceDir->getPath() + "/full_admin_password.txt",
+			fullAdminPassword, S_IRUSR | S_IWUSR);
 	}
+
+	UPDATE_TRACE_POINT();
+	options.setDefault("server_address",
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/server");
+	options.setDefault("server_password",
+		wo->randomGenerator.generateAsciiString(24));
+	strset = options.getStrSet("server_admin_addresses", false);
+	strset.insert(strset.begin(),
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/server_admin");
+	options.setStrSet("server_admin_addresses", strset);
+
+	UPDATE_TRACE_POINT();
+	options.setDefault("logging_agent_address",
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/logging");
+	options.setDefault("logging_agent_password",
+		wo->randomGenerator.generateAsciiString(24));
+	strset = options.getStrSet("logging_agent_admin_addresses", false);
+	strset.insert(strset.begin(),
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/logging_admin");
+	options.setStrSet("logging_agent_admin_addresses", strset);
+
+	UPDATE_TRACE_POINT();
+	strset = options.getStrSet("logging_agent_authorizations", false);
+	strset.insert(strset.begin(),
+		"readonly:ro_admin:" + wo->instanceDir->getPath() +
+		"/read_only_admin_password.txt");
+	strset.insert(strset.begin(),
+		"full:admin:" + wo->instanceDir->getPath() +
+		"/full_admin_password.txt");
+	options.setStrSet("logging_agent_authorizations", strset);
+
+	strset = options.getStrSet("server_authorizations", false);
+	strset.insert(strset.begin(),
+		"readonly:ro_admin:" + wo->instanceDir->getPath() +
+		"/read_only_admin_password.txt");
+	strset.insert(strset.begin(),
+		"full:admin:" + wo->instanceDir->getPath() +
+		"/full_admin_password.txt");
+	options.setStrSet("server_authorizations", strset);
 }
 
 static void
@@ -742,9 +786,9 @@ startAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 				const oxt::tracable_exception *e2 =
 					dynamic_cast<const oxt::tracable_exception *>(&e);
 				if (e2 != NULL) {
-					P_CRITICAL("*** ERROR: " << e2->what() << "\n" << e2->backtrace());
+					P_CRITICAL("ERROR: " << e2->what() << "\n" << e2->backtrace());
 				} else {
-					P_CRITICAL("*** ERROR: " << e.what());
+					P_CRITICAL("ERROR: " << e.what());
 				}
 			}
 			forceAllAgentsShutdown(wo, watchers);
@@ -792,7 +836,8 @@ watchdogMain(int argc, char *argv[]) {
 	initializeBareEssentials(argc, argv);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
-	P_INFO("Staring Watchdog with options: " << agentsOptions->inspect());
+	P_NOTICE("Starting PassengerAgent watchdog...");
+	P_DEBUG("Watchdog options: " << agentsOptions->inspect());
 	WorkingObjectsPtr wo;
 	ServerInstanceDirToucherPtr serverInstanceDirToucher;
 	vector<AgentWatcherPtr> watchers;
@@ -814,9 +859,9 @@ watchdogMain(int argc, char *argv[]) {
 			const oxt::tracable_exception *e2 =
 				dynamic_cast<const oxt::tracable_exception *>(&e);
 			if (e2 != NULL) {
-				P_CRITICAL("*** ERROR: " << e2->what() << "\n" << e2->backtrace());
+				P_CRITICAL("ERROR: " << e2->what() << "\n" << e2->backtrace());
 			} else {
-				P_CRITICAL("*** ERROR: " << e.what());
+				P_CRITICAL("ERROR: " << e.what());
 			}
 		}
 		if (wo != NULL) {
@@ -863,7 +908,7 @@ watchdogMain(int argc, char *argv[]) {
 		runHookScriptAndThrowOnError("after_watchdog_shutdown");
 		return exitGracefully ? 0 : 1;
 	} catch (const tracable_exception &e) {
-		P_CRITICAL("*** ERROR: " << e.what() << "\n" << e.backtrace());
+		P_CRITICAL("ERROR: " << e.what() << "\n" << e.backtrace());
 		return 1;
 	}
 }

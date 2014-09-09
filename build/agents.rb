@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -30,6 +30,7 @@ AGENT_OBJECTS = {
 		'ext/common/agents/Watchdog/LoggingAgentWatcher.cpp',
 		'ext/common/agents/Watchdog/ServerInstanceDirToucher.cpp',
 		'ext/common/agents/HelperAgent/OptionParser.h',
+		'ext/common/agents/LoggingAgent/OptionParser.h',
 		'ext/common/Constants.h',
 		'ext/common/InstanceDirectory.h',
 		'ext/common/ResourceLocator.h',
@@ -58,6 +59,22 @@ AGENT_OBJECTS = {
 		'ext/common/Utils/ProcessMetricsCollector.h',
 		'ext/common/Utils/SystemMetricsCollector.h',
 		'ext/common/Utils/VariantMap.h'
+	],
+	'LoggingMain.o' => [
+		'ext/common/agents/LoggingAgent/Main.cpp',
+		'ext/common/agents/LoggingAgent/OptionParser.h',
+		'ext/common/agents/LoggingAgent/AdminServer.h',
+		'ext/common/agents/LoggingAgent/LoggingServer.h',
+		'ext/common/agents/LoggingAgent/RemoteSender.h',
+		'ext/common/agents/LoggingAgent/DataStoreId.h',
+		'ext/common/agents/LoggingAgent/FilterSupport.h',
+		'ext/common/Constants.h',
+		'ext/common/ServerInstanceDir.h',
+		'ext/common/Logging.h',
+		'ext/common/EventedServer.h',
+		'ext/common/EventedClient.h',
+		'ext/common/Utils/VariantMap.h',
+		'ext/common/Utils/BlockingQueue.h'
 	],
 	'SystemMetricsTool.o' => [
 		'ext/common/agents/HelperAgent/SystemMetricsTool.cpp',
@@ -99,6 +116,8 @@ file AGENT_OUTPUT_DIR + 'PassengerAgent' => dependencies do
 		"#{EXTRA_PRE_CXXFLAGS} " <<
 		"-Iext -Iext/common " <<
 		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
+		"#{PlatformInfo.curl_flags} " <<
+		"#{PlatformInfo.zlib_flags} " <<
 		"#{EXTRA_CXXFLAGS}")
 	create_executable("#{AGENT_OUTPUT_DIR}PassengerAgent",
 		"#{AGENT_OUTPUT_DIR}PassengerAgent.o",
@@ -108,47 +127,6 @@ file AGENT_OUTPUT_DIR + 'PassengerAgent' => dependencies do
 		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
 		"#{LIBEV_LIBS} " <<
 		"#{LIBEIO_LIBS} " <<
-		"#{PlatformInfo.portability_cxx_ldflags} " <<
-		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_CXX_LDFLAGS}")
-end
-
-logging_agent_libs = COMMON_LIBRARY.only(:base, :logging_agent, 'AgentsBase.o',
-	'Utils/Base64.o', 'Utils/MD5.o', 'Utils/jsoncpp.o')
-dependencies = [
-	'ext/common/agents/LoggingAgent/Main.cpp',
-	'ext/common/agents/LoggingAgent/AdminController.h',
-	'ext/common/agents/LoggingAgent/LoggingServer.h',
-	'ext/common/agents/LoggingAgent/RemoteSender.h',
-	'ext/common/agents/LoggingAgent/DataStoreId.h',
-	'ext/common/agents/LoggingAgent/FilterSupport.h',
-	'ext/common/Constants.h',
-	'ext/common/ServerInstanceDir.h',
-	'ext/common/Logging.h',
-	'ext/common/EventedServer.h',
-	'ext/common/EventedClient.h',
-	'ext/common/Utils/VariantMap.h',
-	'ext/common/Utils/BlockingQueue.h',
-	logging_agent_libs.link_objects,
-	LIBBOOST_OXT,
-	LIBEV_TARGET
-].flatten.compact
-file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
-	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-	compile_cxx("ext/common/agents/LoggingAgent/Main.cpp",
-		"-o #{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o " <<
-		"#{EXTRA_PRE_CXXFLAGS} " <<
-		"-Iext -Iext/common " <<
-		"#{AGENT_CFLAGS} #{LIBEV_CFLAGS} " <<
-		"#{PlatformInfo.curl_flags} " <<
-		"#{PlatformInfo.zlib_flags} " <<
-		"#{EXTRA_CXXFLAGS}")
-	create_executable("#{AGENT_OUTPUT_DIR}PassengerLoggingAgent",
-		"#{AGENT_OUTPUT_DIR}PassengerLoggingAgent.o",
-		"#{logging_agent_libs.link_objects_as_string} " <<
-		"#{LIBBOOST_OXT} " <<
-		"#{EXTRA_PRE_CXX_LDFLAGS} " <<
-		"#{LIBEV_LIBS} " <<
 		"#{PlatformInfo.curl_libs} " <<
 		"#{PlatformInfo.zlib_libs} " <<
 		"#{PlatformInfo.portability_cxx_ldflags} " <<

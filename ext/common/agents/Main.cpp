@@ -31,6 +31,7 @@ using namespace std;
 
 int watchdogMain(int argc, char *argv[]);
 int serverMain(int argc, char *argv[]);
+int loggingAgentMain(int argc, char *argv[]);
 int systemMetricsMain(int argc, char *argv[]);
 
 static bool
@@ -50,6 +51,7 @@ usage(int argc, char *argv[]) {
 	printf("Daemon subcommands:\n");
 	printf("  server\n");
 	printf("  watchdog\n");
+	printf("  logger\n");
 	printf("\n");
 	printf("Utility subcommands:\n");
 	printf("  system-metrics\n");
@@ -77,6 +79,8 @@ dispatchSubcommand(int argc, char *argv[]) {
 		exit(watchdogMain(argc, argv));
 	} else if (strcmp(argv[1], "server") == 0) {
 		exit(serverMain(argc, argv));
+	} else if (strcmp(argv[1], "logger") == 0) {
+		exit(loggingAgentMain(argc, argv));
 	} else if (strcmp(argv[1], "system-metrics") == 0) {
 		exit(systemMetricsMain(argc, argv));
 	} else if (strcmp(argv[1], "test-binary") == 0) {

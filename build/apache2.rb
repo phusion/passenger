@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -90,9 +90,7 @@ auto_generated_sources = [
 desc "Build Apache 2 module"
 task :apache2 => [
 	APACHE2_MODULE,
-	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',
-	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
-	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
+	AGENT_OUTPUT_DIR + 'PassengerAgent',
 	AGENT_OUTPUT_DIR + 'SpawnPreparer',
 	AGENT_OUTPUT_DIR + 'TempDirToucher',
 	NATIVE_SUPPORT_TARGET

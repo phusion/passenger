@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -34,20 +34,25 @@
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
+#include <algorithm>
 #include <stdlib.h>
 #include <signal.h>
 
 #include <agents/Base.h>
+#include <agents/LoggingAgent/OptionParser.h>
 #include <agents/LoggingAgent/LoggingServer.h>
-#include <agents/LoggingAgent/AdminController.h>
+#include <agents/LoggingAgent/AdminServer.h>
 
 #include <AccountsDatabase.h>
 #include <Account.h>
 #include <Exceptions.h>
+#include <FileDescriptor.h>
+#include <BackgroundEventLoop.h>
 #include <ResourceLocator.h>
 #include <MessageServer.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/MessageIO.h>
 #include <Utils/Base64.h>
 #include <Utils/VariantMap.h>
@@ -56,47 +61,54 @@ using namespace oxt;
 using namespace Passenger;
 
 
-/***** Agent options *****/
-
-static VariantMap agentsOptions;
-static string passengerRoot;
-static string socketAddress;
-static string adminSocketAddress;
-static string password;
-static string username;
-static string groupname;
-static string adminToolStatusPassword;
-
 /***** Constants and working objects *****/
 
-static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 128 * 1024;
+// Avoid namespace conflict with Watchdog's WorkingObjects.
+namespace {
+	struct WorkingObjects {
+		string password;
+		FileDescriptor serverSocketFd;
+		vector<int> adminSockets;
+		vector<LoggingAgent::AdminServer::Authorization> adminAuthorizations;
 
-struct WorkingObjects {
-	ResourceLocatorPtr resourceLocator;
-	FileDescriptor serverSocketFd;
-	AccountsDatabasePtr adminAccountsDatabase;
-	MessageServerPtr adminServer;
-	boost::shared_ptr<oxt::thread> adminServerThread;
-	AccountsDatabasePtr accountsDatabase;
-	LoggingServerPtr loggingServer;
+		ResourceLocator *resourceLocator;
+		BackgroundEventLoop *bgloop;
+		ServerKit::Context *serverKitContext;
+		AccountsDatabasePtr accountsDatabase;
+		LoggingServer *loggingServer;
 
-	~WorkingObjects() {
-		// Stop thread before destroying anything else.
-		if (adminServerThread != NULL) {
-			adminServerThread->interrupt_and_join();
-		}
-	}
-};
+		LoggingAgent::AdminServer *adminServer;
+		EventFd exitEvent;
+		EventFd allClientsDisconnectedEvent;
 
-static struct ev_loop *eventLoop = NULL;
-static LoggingServer *loggingServer = NULL;
-static int exitCode = 0;
+		struct ev_signal sigintWatcher;
+		struct ev_signal sigtermWatcher;
+		struct ev_signal sigquitWatcher;
+		unsigned int terminationCount;
+
+		WorkingObjects()
+			: resourceLocator(NULL),
+			  bgloop(NULL),
+			  serverKitContext(NULL),
+			  loggingServer(NULL),
+			  terminationCount(0)
+			{ }
+	};
+}
+
+static VariantMap *agentsOptions;
+static WorkingObjects *workingObjects;
 
 
 /***** Functions *****/
 
+static void printInfo(EV_P_ struct ev_signal *watcher, int revents);
+static void onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents);
+static void adminServerShutdownFinished(LoggingAgent::AdminServer *server);
+static void waitForExitEvent();
+
 void
-feedbackFdBecameReadable(ev::io &watcher, int revents) {
+loggingAgentFeedbackFdBecameReadable(ev::io &watcher, int revents) {
 	/* This event indicates that the watchdog has been killed.
 	 * In this case we'll kill all descendant
 	 * processes and exit. There's no point in keeping this agent
@@ -108,29 +120,6 @@ feedbackFdBecameReadable(ev::io &watcher, int revents) {
 	 */
 	syscalls::killpg(getpgrp(), SIGKILL);
 	_exit(2); // In case killpg() fails.
-}
-
-static string
-myself() {
-	struct passwd *entry = getpwuid(geteuid());
-	if (entry != NULL) {
-		return entry->pw_name;
-	} else {
-		throw NonExistentUserException(string("The current user, UID ") +
-			toString(geteuid()) + ", doesn't have a corresponding " +
-			"entry in the system's user database. Please fix your " +
-			"system's user database first.");
-	}
-}
-
-static void
-initializeBareEssentials(int argc, char *argv[]) {
-	agentsOptions = initializeAgent(argc, &argv, "PassengerLoggingAgent");
-	curl_global_init(CURL_GLOBAL_ALL);
-	if (agentsOptions.get("test_binary", false) == "1") {
-		printf("PASS\n");
-		exit(0);
-	}
 }
 
 static string
@@ -147,204 +136,414 @@ findUnionStationGatewayCert(const ResourceLocator &locator,
 }
 
 static void
-initializeOptions(WorkingObjects &wo) {
-	passengerRoot      = agentsOptions.get("passenger_root");
-	socketAddress      = agentsOptions.get("logging_agent_address");
-	adminSocketAddress = agentsOptions.get("logging_agent_admin_address");
-	password           = agentsOptions.get("logging_agent_password");
-	username           = agentsOptions.get("analytics_log_user", false, myself());
-	groupname          = agentsOptions.get("analytics_log_group", false);
-	adminToolStatusPassword = agentsOptions.get("admin_tool_status_password");
+makeFileWorldReadableAndWritable(const string &path) {
+	int ret;
 
-	wo.resourceLocator = boost::make_shared<ResourceLocator>(passengerRoot);
-	agentsOptions.set("union_station_gateway_cert", findUnionStationGatewayCert(
-		*wo.resourceLocator, agentsOptions.get("union_station_gateway_cert", false)));
+	do {
+		ret = chmod(path.c_str(), parseModeString("u=rw,g=rw,o=rw"));
+	} while (ret == -1 && errno == EINTR);
 }
 
 static void
-initializePrivilegedWorkingObjects(WorkingObjects &wo) {
-	wo.serverSocketFd = createServer(socketAddress.c_str());
-	if (getSocketAddressType(socketAddress) == SAT_UNIX) {
-		int ret;
+parseAndAddAdminAuthorization(const string &description) {
+	TRACE_POINT();
+	WorkingObjects *wo = workingObjects;
+	LoggingAgent::AdminServer::Authorization auth;
+	vector<string> args;
 
-		do {
-			ret = chmod(parseUnixSocketAddress(socketAddress).c_str(),
-				S_ISVTX |
-				S_IRUSR | S_IWUSR | S_IXUSR |
-				S_IRGRP | S_IWGRP | S_IXGRP |
-				S_IROTH | S_IWOTH | S_IXOTH);
-		} while (ret == -1 && errno == EINTR);
-	}
+	split(description, ':', args);
 
-	wo.adminAccountsDatabase = boost::make_shared<AccountsDatabase>();
-	wo.adminAccountsDatabase->add("_passenger-status", adminToolStatusPassword, false);
-	wo.adminServer = boost::make_shared<MessageServer>(parseUnixSocketAddress(adminSocketAddress),
-		wo.adminAccountsDatabase);
-}
-
-static void
-lowerPrivilege(const string &username, const struct passwd *user, gid_t gid) {
-	int e;
-
-	if (initgroups(username.c_str(), gid) != 0) {
-		e = errno;
-		P_WARN("WARNING: Unable to set supplementary groups for " <<
-			"PassengerLoggingAgent: " << strerror(e) << " (" << e << ")");
-	}
-	if (setgid(gid) != 0) {
-		e = errno;
-		P_WARN("WARNING: Unable to lower PassengerLoggingAgent's "
-			"privilege to that of user '" << username <<
-			"': cannot set group ID to " << gid <<
-			": " << strerror(e) <<
-			" (" << e << ")");
-	}
-	if (setuid(user->pw_uid) != 0) {
-		e = errno;
-		P_WARN("WARNING: Unable to lower PassengerLoggingAgent's "
-			"privilege to that of user '" << username <<
-			"': cannot set user ID: " << strerror(e) <<
-			" (" << e << ")");
-	}
-
-	setenv("HOME", user->pw_dir, 1);
-}
-
-static void
-maybeLowerPrivilege() {
-	struct passwd *user;
-	gid_t gid;
-
-	/* Sanity check user accounts. */
-
-	user = getpwnam(username.c_str());
-	if (user == NULL) {
-		throw NonExistentUserException(string("The configuration option ") +
-			"'PassengerAnalyticsLogUser' (Apache) or " +
-			"'passenger_analytics_log_user' (Nginx) was set to '" +
-			username + "', but this user doesn't exist. Please fix " +
-			"the configuration option.");
-	}
-
-	if (groupname.empty()) {
-		gid = user->pw_gid;
-		groupname = getGroupName(user->pw_gid);
+	if (args.size() == 2) {
+		auth.level = LoggingAgent::AdminServer::FULL;
+		auth.username = args[0];
+		auth.password = strip(readAll(args[1]));
+	} else if (args.size() == 3) {
+		auth.level = LoggingAgent::AdminServer::parseLevel(args[0]);
+		auth.username = args[1];
+		auth.password = strip(readAll(args[2]));
 	} else {
-		gid = lookupGid(groupname);
-		if (gid == (gid_t) -1) {
-			throw NonExistentGroupException(string("The configuration option ") +
-				"'PassengerAnalyticsLogGroup' (Apache) or " +
-				"'passenger_analytics_log_group' (Nginx) was set to '" +
-				groupname + "', but this group doesn't exist. Please fix " +
-				"the configuration option.");
+		P_BUG("Too many elements in authorization description");
+	}
+
+	wo->adminAuthorizations.push_back(auth);
+}
+
+static void
+initializePrivilegedWorkingObjects() {
+	TRACE_POINT();
+	const VariantMap &options = *agentsOptions;
+	workingObjects = new WorkingObjects();
+
+	string password = options.get("logging_agent_password", false);
+	if (password.empty()) {
+		password = strip(readAll(options.get("logging_agent_password_file")));
+	}
+
+	vector<string> authorizations = options.getStrSet("logging_agent_authorizations",
+		false);
+	string description;
+
+	UPDATE_TRACE_POINT();
+	foreach (description, authorizations) {
+		parseAndAddAdminAuthorization(description);
+	}
+}
+
+static void
+startListening() {
+	TRACE_POINT();
+	const VariantMap &options = *agentsOptions;
+	WorkingObjects *wo = workingObjects;
+	string address;
+	vector<string> adminAddresses;
+
+	address = options.get("logging_agent_address");
+	wo->serverSocketFd = createServer(address.c_str());
+	if (getSocketAddressType(address) == SAT_UNIX) {
+		makeFileWorldReadableAndWritable(parseUnixSocketAddress(address));
+	}
+
+	UPDATE_TRACE_POINT();
+	adminAddresses = options.getStrSet("logging_agent_admin_addresses",
+		false);
+	foreach (address, adminAddresses) {
+		wo->adminSockets.push_back(createServer(address));
+		if (getSocketAddressType(address) == SAT_UNIX) {
+			makeFileWorldReadableAndWritable(parseUnixSocketAddress(address));
 		}
 	}
-
-	/* Now's a good time to lower the privilege. */
-	if (geteuid() == 0) {
-		lowerPrivilege(username, user, gid);
-	}
 }
 
-static struct ev_loop *
-createEventLoop() {
-	struct ev_loop *loop;
+static void
+lowerPrivilege() {
+	TRACE_POINT();
+	const VariantMap &options = *agentsOptions;
+	string userName = options.get("analytics_log_user", false);
 
-	// libev doesn't like choosing epoll and kqueue because the author thinks they're broken,
-	// so let's try to force it.
-	loop = ev_default_loop(EVBACKEND_EPOLL);
-	if (loop == NULL) {
-		loop = ev_default_loop(EVBACKEND_KQUEUE);
-	}
-	if (loop == NULL) {
-		loop = ev_default_loop(0);
-	}
-	if (loop == NULL) {
-		throw RuntimeException("Cannot create an event loop");
-	} else {
-		return loop;
+	if (geteuid() == 0 && !userName.empty()) {
+		string groupName = options.get("analytics_log_group", false);
+		struct passwd *pwUser = getpwnam(userName.c_str());
+		gid_t gid;
+
+		if (pwUser == NULL) {
+			throw RuntimeException("Cannot lookup user information for user " +
+				userName);
+		}
+
+		if (groupName.empty()) {
+			gid = pwUser->pw_gid;
+			groupName = getGroupName(pwUser->pw_gid);
+		} else {
+			gid = lookupGid(groupName);
+		}
+
+		if (initgroups(userName.c_str(), gid) != 0) {
+			int e = errno;
+			throw SystemException("Unable to lower PassengerAgent logger's privilege "
+				"to that of user '" + userName + "' and group '" + groupName +
+				"': cannot set supplementary groups", e);
+		}
+		if (setgid(gid) != 0) {
+			int e = errno;
+			throw SystemException("Unable to lower PassengerAgent logger's privilege "
+				"to that of user '" + userName + "' and group '" + groupName +
+				"': cannot set group ID to " + toString(gid), e);
+		}
+		if (setuid(pwUser->pw_uid) != 0) {
+			int e = errno;
+			throw SystemException("Unable to lower PassengerAgent logger's privilege "
+				"to that of user '" + userName + "' and group '" + groupName +
+				"': cannot set user ID to " + toString(pwUser->pw_uid), e);
+		}
+
+		setenv("USER", pwUser->pw_name, 1);
+		setenv("HOME", pwUser->pw_dir, 1);
+		setenv("UID", toString(gid).c_str(), 1);
 	}
 }
 
 static void
-initializeUnprivilegedWorkingObjects(WorkingObjects &wo) {
-	eventLoop = createEventLoop();
-	wo.accountsDatabase = boost::make_shared<AccountsDatabase>();
-	wo.accountsDatabase->add("logging", password, false);
+initializeUnprivilegedWorkingObjects() {
+	TRACE_POINT();
+	VariantMap &options = *agentsOptions;
+	WorkingObjects *wo = workingObjects;
+	int fd;
 
-	wo.loggingServer = boost::make_shared<LoggingServer>(eventLoop, wo.serverSocketFd,
-		wo.accountsDatabase, agentsOptions);
-	loggingServer = wo.loggingServer.get();
+	wo->resourceLocator = new ResourceLocator(options.get("passenger_root"));
+	options.set("union_station_gateway_cert", findUnionStationGatewayCert(
+		*wo->resourceLocator, options.get("union_station_gateway_cert", false)));
 
-	wo.adminServer->addHandler(boost::make_shared<AdminController>(wo.loggingServer));
-	boost::function<void ()> adminServerFunc = boost::bind(&MessageServer::mainLoop, wo.adminServer.get());
-	wo.adminServerThread = boost::make_shared<oxt::thread>(
-		boost::bind(runAndPrintExceptions, adminServerFunc, true),
-		"AdminServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
-	);
+	UPDATE_TRACE_POINT();
+	wo->bgloop = new BackgroundEventLoop(true, true);
+	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
+
+	UPDATE_TRACE_POINT();
+	wo->accountsDatabase = boost::make_shared<AccountsDatabase>();
+	wo->accountsDatabase->add("logging", wo->password, false);
+	wo->loggingServer = new LoggingServer(wo->bgloop->loop,
+		wo->serverSocketFd, wo->accountsDatabase, options);
+
+	UPDATE_TRACE_POINT();
+	wo->adminServer = new LoggingAgent::AdminServer(wo->serverKitContext);
+	wo->adminServer->loggingServer = wo->loggingServer;
+	wo->adminServer->exitEvent = &wo->exitEvent;
+	wo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
+	wo->adminServer->authorizations = wo->adminAuthorizations;
+	foreach (fd, wo->adminSockets) {
+		wo->adminServer->listen(fd);
+	}
+
+	UPDATE_TRACE_POINT();
+	ev_signal_init(&wo->sigquitWatcher, printInfo, SIGQUIT);
+	ev_signal_start(wo->bgloop->loop, &wo->sigquitWatcher);
+	ev_signal_init(&wo->sigintWatcher, onTerminationSignal, SIGINT);
+	ev_signal_start(wo->bgloop->loop, &wo->sigintWatcher);
+	ev_signal_init(&wo->sigtermWatcher, onTerminationSignal, SIGTERM);
+	ev_signal_start(wo->bgloop->loop, &wo->sigtermWatcher);
 }
 
-void
-caughtExitSignal(ev::sig &watcher, int revents) {
-	P_INFO("Caught signal, exiting...");
-	ev_break(eventLoop, EVBREAK_ONE);
-	/* We only consider the "exit" command to be a graceful way to shut down
-	 * the logging agent, so upon receiving an exit signal we want to return
-	 * a non-zero exit code. This is because we want the watchdog to restart
-	 * the logging agent when it's killed by SIGTERM.
-	 */
-	exitCode = 1;
+static void
+reportInitializationInfo() {
+	TRACE_POINT();
+
+	P_NOTICE("PassengerAgent logger online, PID " << getpid());
+	if (feedbackFdAvailable()) {
+		writeArrayMessage(FEEDBACK_FD,
+			"initialized",
+			NULL);
+	}
 }
 
-void
-printInfo(ev::sig &watcher, int revents) {
+static void
+printInfo(EV_P_ struct ev_signal *watcher, int revents) {
 	cerr << "---------- Begin LoggingAgent status ----------\n";
-	loggingServer->dump(cerr);
+	workingObjects->loggingServer->dump(cerr);
 	cerr.flush();
 	cerr << "---------- End LoggingAgent status   ----------\n";
 }
 
 static void
-runMainLoop(WorkingObjects &wo) {
-	ev::io feedbackFdWatcher(eventLoop);
-	ev::sig sigintWatcher(eventLoop);
-	ev::sig sigtermWatcher(eventLoop);
-	ev::sig sigquitWatcher(eventLoop);
+onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents) {
+	WorkingObjects *wo = workingObjects;
 
-	sigintWatcher.set<&caughtExitSignal>();
-	sigintWatcher.start(SIGINT);
-	sigtermWatcher.set<&caughtExitSignal>();
-	sigtermWatcher.start(SIGTERM);
-	sigquitWatcher.set<&printInfo>();
-	sigquitWatcher.start(SIGQUIT);
+	// Start output after '^C'
+	printf("\n");
 
-	P_WARN("PassengerLoggingAgent online, listening at " << socketAddress);
-	if (feedbackFdAvailable()) {
-		feedbackFdWatcher.set<&feedbackFdBecameReadable>();
-		feedbackFdWatcher.start(FEEDBACK_FD, ev::READ);
-		writeArrayMessage(FEEDBACK_FD, "initialized", NULL);
+	wo->terminationCount++;
+	if (wo->terminationCount < 3) {
+		P_NOTICE("Signal received. Gracefully shutting down... (send signal " <<
+			(3 - wo->terminationCount) << " more time(s) to force shutdown)");
+		printf("%d\n", workingObjects->exitEvent.fd());
+		workingObjects->exitEvent.notify();
+	} else {
+		P_NOTICE("Signal received. Forcing shutdown.");
+		_exit(2);
 	}
-	ev_run(eventLoop, 0);
+}
+
+static void
+mainLoop() {
+	workingObjects->bgloop->start("Main event loop", 0);
+	waitForExitEvent();
+}
+
+static void
+shutdownAdminServer() {
+	workingObjects->adminServer->shutdown();
+}
+
+static void
+adminServerShutdownFinished(LoggingAgent::AdminServer *server) {
+	workingObjects->allClientsDisconnectedEvent.notify();
+}
+
+/* Wait until the watchdog closes the feedback fd (meaning it
+ * was killed) or until we receive an exit message.
+ */
+static void
+waitForExitEvent() {
+	this_thread::disable_syscall_interruption dsi;
+	WorkingObjects *wo = workingObjects;
+	fd_set fds;
+	int largestFd = -1;
+
+	FD_ZERO(&fds);
+	if (feedbackFdAvailable()) {
+		FD_SET(FEEDBACK_FD, &fds);
+		largestFd = std::max(largestFd, FEEDBACK_FD);
+	}
+	FD_SET(wo->exitEvent.fd(), &fds);
+	largestFd = std::max(largestFd, wo->exitEvent.fd());
+
+	TRACE_POINT();
+	if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
+		int e = errno;
+		throw SystemException("select() failed", e);
+	}
+
+	if (FD_ISSET(FEEDBACK_FD, &fds)) {
+		UPDATE_TRACE_POINT();
+		/* If the watchdog has been killed then we'll exit. There's no
+		 * point in keeping the logging agent running because we can't
+		 * detect when the web server exits, and because this logging
+		 * agent doesn't own the instance directory. As soon as
+		 * passenger-status is run, the instance directory will be
+		 * cleaned up, making the server inaccessible.
+		 */
+		_exit(2);
+	} else {
+		UPDATE_TRACE_POINT();
+		/* We received an exit command. */
+		P_NOTICE("Received command to shutdown gracefully. "
+			"Waiting until all clients have disconnected...");
+		wo->bgloop->safe->runLater(shutdownAdminServer);
+
+		UPDATE_TRACE_POINT();
+		FD_ZERO(&fds);
+		FD_SET(wo->allClientsDisconnectedEvent.fd(), &fds);
+		if (syscalls::select(wo->allClientsDisconnectedEvent.fd() + 1,
+			&fds, NULL, NULL, NULL) == -1)
+		{
+			int e = errno;
+			throw SystemException("select() failed", e);
+		}
+
+		P_INFO("All clients have now disconnected. Proceeding with graceful shutdown");
+	}
+}
+
+static void
+cleanup() {
+	TRACE_POINT();
+	WorkingObjects *wo = workingObjects;
+
+	P_DEBUG("Shutting down PassengerAgent logger...");
+	wo->bgloop->stop();
+	delete wo->adminServer;
+	P_NOTICE("PassengerAgent logger shutdown finished");
+}
+
+static int
+runLoggingAgent() {
+	TRACE_POINT();
+	P_NOTICE("Starting PassengerAgent logger...");
+
+	try {
+		UPDATE_TRACE_POINT();
+		initializePrivilegedWorkingObjects();
+		startListening();
+		lowerPrivilege();
+		initializeUnprivilegedWorkingObjects();
+
+		UPDATE_TRACE_POINT();
+		reportInitializationInfo();
+		mainLoop();
+
+		UPDATE_TRACE_POINT();
+		cleanup();
+	} catch (const tracable_exception &e) {
+		P_ERROR("ERROR: " << e.what() << "\n" << e.backtrace());
+		return 1;
+	}
+
+	return 0;
+}
+
+
+/***** Entry point and command line argument parsing *****/
+
+static void
+parseOptions(int argc, const char *argv[], VariantMap &options) {
+	OptionParser p(loggingAgentUsage);
+	int i = 2;
+
+	while (i < argc) {
+		if (parseLoggingAgentOption(argc, argv, i, options)) {
+			continue;
+		} else if (p.isFlag(argv[i], 'h', "--help")) {
+			loggingAgentUsage();
+			exit(0);
+		} else {
+			fprintf(stderr, "ERROR: unrecognized argument %s. Please type "
+				"'%s logger --help' for usage.\n", argv[i], argv[0]);
+			exit(1);
+		}
+	}
+
+	// Set log_level here so that initializeAgent() calls setLogLevel()
+	// with the right value.
+	if (options.has("logging_agent_log_level")) {
+		options.setInt("log_level", options.getInt("logging_agent_log_level"));
+	}
+}
+
+static void
+setAgentsOptionsDefaults() {
+	VariantMap &options = *agentsOptions;
+	set<string> defaultAdminListenAddress;
+	defaultAdminListenAddress.insert(DEFAULT_LOGGING_AGENT_ADMIN_LISTEN_ADDRESS);
+
+	options.setDefault("logging_agent_address", DEFAULT_LOGGING_AGENT_LISTEN_ADDRESS);
+	options.setDefaultStrSet("logging_agent_admin_addresses", defaultAdminListenAddress);
+}
+
+static void
+sanityCheckOptions() {
+	VariantMap &options = *agentsOptions;
+	string webServerType = options.get("web_server_type", false);
+	bool ok = true;
+
+	if (!options.has("passenger_root")) {
+		fprintf(stderr, "ERROR: please set the --passenger-root argument.\n");
+		ok = false;
+	}
+
+	if (!options.has("logging_agent_password")
+	 && !options.has("logging_agent_password_file"))
+	{
+		fprintf(stderr, "ERROR: please set the --password-file argument.\n");
+		ok = false;
+	}
+
+	// Sanity check user accounts
+	string user = options.get("analytics_log_user", false);
+	if (!user.empty()) {
+		struct passwd *pwUser = getpwnam(user.c_str());
+		if (pwUser == NULL) {
+			fprintf(stderr, "ERROR: the username specified by --user, '%s', does not exist.\n",
+				user.c_str());
+			ok = false;
+		}
+
+		string group = options.get("analytics_log_group", false);
+		if (!group.empty() && lookupGid(group) == (gid_t) -1) {
+			fprintf(stderr, "ERROR: the group name specified by --group, '%s', does not exist.\n",
+				group.c_str());
+			ok = false;
+		}
+	} else if (options.has("analytics_log_group")) {
+		fprintf(stderr, "ERROR: setting --group also requires you to set --user.\n");
+		ok = false;
+	}
+
+	if (!ok) {
+		exit(1);
+	}
 }
 
 int
-main(int argc, char *argv[]) {
-	initializeBareEssentials(argc, argv);
-	P_DEBUG("Starting PassengerLoggingAgent...");
+loggingAgentMain(int argc, char *argv[]) {
+	agentsOptions = new VariantMap();
+	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent logger",
+		parseOptions, 2);
 
-	try {
-		TRACE_POINT();
-		WorkingObjects wo;
-
-		initializeOptions(wo);
-		initializePrivilegedWorkingObjects(wo);
-		maybeLowerPrivilege();
-		initializeUnprivilegedWorkingObjects(wo);
-		runMainLoop(wo);
-		P_DEBUG("Logging agent exiting with code " << exitCode << ".");
-		return exitCode;
-	} catch (const tracable_exception &e) {
-		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
-		return 1;
+	CURLcode code = curl_global_init(CURL_GLOBAL_ALL);
+	if (code != CURLE_OK) {
+		P_CRITICAL("ERROR: Could not initialize libcurl: " << curl_easy_strerror(code));
+		exit(1);
 	}
+
+	setAgentsOptionsDefaults();
+	sanityCheckOptions();
+	return runLoggingAgent();
 }

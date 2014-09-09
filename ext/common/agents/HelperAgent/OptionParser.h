@@ -26,7 +26,9 @@
 #define _PASSENGER_SERVER_OPTION_PARSER_H_
 
 #include <cstdio>
+#include <cstdlib>
 #include <Constants.h>
+#include <Utils.h>
 #include <Utils/VariantMap.h>
 #include <Utils/OptionParsing.h>
 
@@ -45,11 +47,11 @@ serverUsage() {
 	printf("app specified by APP DIRECTORY.\n");
 	printf("\n");
 	printf("Required options:\n");
-	printf("       --passenger-root PATH  The location to the " PROGRAM_NAME " source\n");
-	printf("                              directory\n");
+	printf("      --passenger-root PATH  The location to the " PROGRAM_NAME " source\n");
+	printf("                             directory\n");
 	printf("\n");
 	printf("Socket options (optional):\n");
-	printf("  -l,  --listen ADDRESS     Listen on the given address. The address must be\n");
+	printf("  -l, --listen ADDRESS      Listen on the given address. The address must be\n");
 	printf("                            formatted as tcp://IP:PORT for TCP sockets, or\n");
 	printf("                            unix:PATH for Unix domain sockets. You can specify\n");
 	printf("                            this option multiple times (up to %u times) to\n",
@@ -88,7 +90,7 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], 'l', "--listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			vector<string> addresses = options.getStrSet("listen", false);
+			vector<string> addresses = options.getStrSet("server_listen_addresses", false);
 			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
 				fprintf(stderr, "ERROR: you may specify up to %u --listen addresses.\n",
 					SERVER_KIT_MAX_SERVER_ENDPOINTS);
@@ -142,19 +144,6 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		return false;
 	}
 	return true;
-}
-
-void
-parseServerOptions(int argc, const char *argv[], int start, VariantMap &options) {
-	int i = start;
-
-	while (i < argc) {
-		if (!parseServerOption(argc, argv, i, options)) {
-			fprintf(stderr, "ERROR: unrecognized argument %s. Please type "
-				"'%s server --help' for usage.\n", argv[i], argv[0]);
-			exit(1);
-		}
-	}
 }
 
 

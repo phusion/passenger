@@ -268,6 +268,13 @@ namespace {
 		EventFd exitEvent;
 		EventFd allClientsDisconnectedEvent;
 		unsigned int terminationCount;
+
+		WorkingObjects()
+			: bgloop(NULL),
+			  serverKitContext(NULL),
+			  requestHandler(NULL),
+			  terminationCount(0)
+			{ }
 	};
 }
 
@@ -276,19 +283,18 @@ static WorkingObjects *workingObjects;
 
 /***** Server stuff *****/
 
-static void waitForExitEvent(WorkingObjects *wo);
-static void cleanup(WorkingObjects *wo);
-static void requestHandlerShutdownFinished(ServerKit::BaseServer<RequestHandler, Client> *server);
+static void waitForExitEvent();
+static void cleanup();
+static void requestHandlerShutdownFinished(RequestHandler *server);
 
 static void
 initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
 	workingObjects = new WorkingObjects();
-	workingObjects->terminationCount = 0;
 }
 
 static void
-initializeSingleAppMode(WorkingObjects *wo) {
+initializeSingleAppMode() {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
 
@@ -322,8 +328,9 @@ initializeSingleAppMode(WorkingObjects *wo) {
 }
 
 static void
-startListening(WorkingObjects *wo) {
+startListening() {
 	TRACE_POINT();
+	WorkingObjects *wo = workingObjects;
 	vector<string> addresses = agentsOptions->getStrSet("server_listen_addresses");
 
 	for (unsigned int i = 0; i < addresses.size(); i++) {
@@ -332,17 +339,17 @@ startListening(WorkingObjects *wo) {
 }
 
 static void
-createPidFile(WorkingObjects *wo) {
+createPidFile() {
 	TRACE_POINT();
 }
 
 static void
-lowerPrivilege(WorkingObjects *wo) {
+lowerPrivilege() {
 	TRACE_POINT();
 }
 
 static void
-onSigquit(EV_P_ struct ev_signal *watcher, int revents) {
+printInfo(EV_P_ struct ev_signal *watcher, int revents) {
 	WorkingObjects *wo = workingObjects;
 
 	cerr << "### Request handler state\n";
@@ -438,9 +445,10 @@ onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents) {
 }
 
 static void
-initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
+initializeNonPrivilegedWorkingObjects() {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
+	WorkingObjects *wo = workingObjects;
 	vector<string> addresses = options.getStrSet("server_listen_addresses");
 
 	wo->resourceLocator = ResourceLocator(options.get("passenger_root"));
@@ -466,7 +474,7 @@ initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
 	wo->spawnerFactory = boost::make_shared<SpawnerFactory>(wo->spawnerConfig);
 
 	wo->bgloop = new BackgroundEventLoop(true, true);
-	ev_signal_init(&wo->sigquitWatcher, onSigquit, SIGQUIT);
+	ev_signal_init(&wo->sigquitWatcher, printInfo, SIGQUIT);
 	ev_signal_start(wo->bgloop->loop, &wo->sigquitWatcher);
 	ev_signal_init(&wo->sigintWatcher, onTerminationSignal, SIGINT);
 	ev_signal_start(wo->bgloop->loop, &wo->sigintWatcher);
@@ -494,38 +502,45 @@ initializeNonPrivilegedWorkingObjects(WorkingObjects *wo) {
 }
 
 static void
-reportInitializationInfo(WorkingObjects *wo) {
-	vector<string> addresses = agentsOptions->getStrSet("server_listen_addresses");
-	string address;
-
-	P_NOTICE("PassengerAgent server online, PID " << getpid () <<
-		", listening on " << addresses.size() << " socket(s):");
-	foreach (address, addresses) {
-		if (startsWith(address, "tcp://")) {
-			address.erase(0, sizeof("tcp://") - 1);
-			address.insert(0, "http://");
-			address.append("/");
-		}
-		P_NOTICE(" * " << address);
-	}
-
+reportInitializationInfo() {
+	TRACE_POINT();
 	if (feedbackFdAvailable()) {
+		P_NOTICE("PassengerAgent server online, PID " << getpid());
 		writeArrayMessage(FEEDBACK_FD,
 			"initialized",
 			NULL);
+	} else {
+		vector<string> addresses = agentsOptions->getStrSet("server_listen_addresses");
+		string address;
+
+		P_NOTICE("PassengerAgent server online, PID " << getpid() <<
+			", listening on " << addresses.size() << " socket(s):");
+		foreach (address, addresses) {
+			if (startsWith(address, "tcp://")) {
+				address.erase(0, sizeof("tcp://") - 1);
+				address.insert(0, "http://");
+				address.append("/");
+			}
+			P_NOTICE(" * " << address);
+		}
 	}
 }
 
 static void
-mainLoop(WorkingObjects *wo) {
+mainLoop() {
 	TRACE_POINT();
 	installDiagnosticsDumper(dumpDiagnosticsOnCrash, NULL);
-	wo->bgloop->start("Main event loop", 0);
-	waitForExitEvent(wo);
+	workingObjects->bgloop->start("Main event loop", 0);
+	waitForExitEvent();
 }
 
 static void
-requestHandlerShutdownFinished(ServerKit::BaseServer<RequestHandler, Client> *server) {
+shutdownRequestHandler() {
+	workingObjects->requestHandler->shutdown();
+}
+
+static void
+requestHandlerShutdownFinished(RequestHandler *server) {
 	workingObjects->allClientsDisconnectedEvent.notify();
 }
 
@@ -533,8 +548,9 @@ requestHandlerShutdownFinished(ServerKit::BaseServer<RequestHandler, Client> *se
  * was killed) or until we receive an exit message.
  */
 static void
-waitForExitEvent(WorkingObjects *wo) {
+waitForExitEvent() {
 	this_thread::disable_syscall_interruption dsi;
+	WorkingObjects *wo = workingObjects;
 	fd_set fds;
 	int largestFd = -1;
 
@@ -574,7 +590,7 @@ waitForExitEvent(WorkingObjects *wo) {
 		P_NOTICE("Received command to shutdown gracefully. "
 			"Waiting until all clients have disconnected...");
 		wo->appPool->prepareForShutdown();
-		wo->requestHandler->shutdown();
+		wo->bgloop->safe->runLater(shutdownRequestHandler);
 
 		UPDATE_TRACE_POINT();
 		FD_ZERO(&fds);
@@ -592,8 +608,10 @@ waitForExitEvent(WorkingObjects *wo) {
 }
 
 static void
-cleanup(WorkingObjects *wo) {
+cleanup() {
 	TRACE_POINT();
+	WorkingObjects *wo = workingObjects;
+
 	P_DEBUG("Shutting down PassengerAgent server...");
 	wo->appPool->destroy();
 	installDiagnosticsDumper(NULL, NULL);
@@ -606,25 +624,25 @@ cleanup(WorkingObjects *wo) {
 static int
 runServer() {
 	TRACE_POINT();
-	P_DEBUG("Starting PassengerAgent server...");
+	P_NOTICE("Starting PassengerAgent server...");
 
 	try {
 		UPDATE_TRACE_POINT();
 		initializePrivilegedWorkingObjects();
-		initializeSingleAppMode(workingObjects);
-		startListening(workingObjects);
-		createPidFile(workingObjects);
-		lowerPrivilege(workingObjects);
-		initializeNonPrivilegedWorkingObjects(workingObjects);
+		initializeSingleAppMode();
+		startListening();
+		createPidFile();
+		lowerPrivilege();
+		initializeNonPrivilegedWorkingObjects();
 
 		UPDATE_TRACE_POINT();
-		reportInitializationInfo(workingObjects);
-		mainLoop(workingObjects);
+		reportInitializationInfo();
+		mainLoop();
 
 		UPDATE_TRACE_POINT();
-		cleanup(workingObjects);
+		cleanup();
 	} catch (const tracable_exception &e) {
-		P_CRITICAL("*** ERROR: " << e.what() << "\n" << e.backtrace());
+		P_CRITICAL("ERROR: " << e.what() << "\n" << e.backtrace());
 		return 1;
 	}
 
@@ -636,10 +654,16 @@ runServer() {
 
 static void
 parseOptions(int argc, const char *argv[], VariantMap &options) {
+	OptionParser p(serverUsage);
 	int i = 2;
 
 	while (i < argc) {
-		if (!parseServerOption(argc, argv, i, options)) {
+		if (parseServerOption(argc, argv, i, options)) {
+			continue;
+		} else if (p.isFlag(argv[i], 'h', "--help")) {
+			serverUsage();
+			exit(0);
+		} else {
 			fprintf(stderr, "ERROR: unrecognized argument %s. Please type "
 				"'%s server --help' for usage.\n", argv[i], argv[0]);
 			exit(1);
@@ -716,7 +740,7 @@ sanityCheckOptions() {
 int
 serverMain(int argc, char *argv[]) {
 	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, "PassengerHelperAgent", parseOptions, 2);
+	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent server", parseOptions, 2);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
 	return runServer();

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -37,36 +37,32 @@ protected:
 	}
 
 	virtual void execProgram() const {
-		execl(agentFilename.c_str(), "PassengerLoggingAgent", (char *) 0);
+		execl(agentFilename.c_str(), "PassengerAgent", "logger",
+			// Some extra space to allow the child process to change its process title.
+			"                                                ", (char *) 0);
 	}
 
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = *agentsOptions;
-		options.set("logging_agent_address", wo->loggingAgentAddress);
-		options.set("logging_agent_password", wo->loggingAgentPassword);
-		options.set("logging_agent_admin_address", wo->loggingAgentAdminAddress);
+		options.erase("server_password");
+		options.erase("server_authorizations");
 		options.writeToFd(fd);
 	}
 
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
-		if (args[0] == "initialized") {
-			return true;
-		} else {
-			return false;
-		}
+		return args[0] == "initialized";
 	}
 
 public:
 	LoggingAgentWatcher(const WorkingObjectsPtr &wo)
 		: AgentWatcher(wo)
 	{
-		agentFilename = wo->resourceLocator->getAgentsDir() + "/PassengerLoggingAgent";
+		agentFilename = wo->resourceLocator->getAgentsDir() + "/PassengerAgent";
 	}
 
 	virtual void reportAgentsInformation(VariantMap &report) {
-		report
-			.set("logging_socket_address", wo->loggingAgentAddress)
-			.set("logging_socket_password", wo->loggingAgentPassword)
-			.set("logging_socket_admin_address", wo->loggingAgentAdminAddress);
+		const VariantMap &options = *agentsOptions;
+		report.set("logging_agent_address", options.get("logging_agent_address"));
+		report.set("logging_agent_password", options.get("logging_agent_password"));
 	}
 };

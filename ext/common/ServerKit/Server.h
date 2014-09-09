@@ -186,7 +186,7 @@ public:
 
 	static const unsigned int MAX_ACCEPT_BURST_COUNT = 127;
 
-	typedef void (*Callback)(BaseServer *server);
+	typedef void (*Callback)(DerivedServer *server);
 
 	/***** Configuration *****/
 	unsigned int acceptBurstCount: 7;
@@ -421,7 +421,7 @@ private:
 		SKS_NOTICE("Shutdown finished");
 		serverState = FINISHED_SHUTDOWN;
 		if (shutdownFinishCallback != NULL) {
-			shutdownFinishCallback(this);
+			shutdownFinishCallback(static_cast<DerivedServer *>(this));
 		}
 	}
 
