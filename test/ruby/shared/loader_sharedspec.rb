@@ -100,8 +100,7 @@ private
 	def write_start_request(options)
 		write_request_line "passenger_root: #{PhusionPassenger.source_root}"
 		write_request_line "ruby_libdir: #{PhusionPassenger.ruby_libdir}"
-		write_request_line "generation_dir: #{Utils.passenger_tmpdir}"
-		write_request_line "log_level: 3" if DEBUG
+		write_request_line "log_level: 6" if DEBUG
 		options.each_pair do |key, value|
 			write_request_line "#{key}: #{value}"
 		end
@@ -144,7 +143,7 @@ class Preloader < Loader
 		begin
 			loader.send(:write_request_line, "spawn")
 			loader.send(:write_start_request, options)
-			
+
 			line = loader.output.readline
 			puts "<--- #{line.strip}" if DEBUG
 			if line != "OK\n"
@@ -173,7 +172,7 @@ module LoaderSpecHelper
 		klass.before(:each) do
 			@stubs = []
 		end
-		
+
 		klass.after(:each) do
 			begin
 				@loader.close if @loader
@@ -185,22 +184,22 @@ module LoaderSpecHelper
 			end
 		end
 	end
-	
+
 	def before_start(code)
 		@before_start = code
 	end
-	
+
 	def after_start(code)
 		@after_start = code
 	end
-	
+
 	def register_stub(stub)
 		@stubs << stub
 		File.prepend(stub.startup_file, "#{@before_start}\n")
 		File.append(stub.startup_file, "\n#{@after_start}")
 		return stub
 	end
-	
+
 	def register_app(app)
 		@apps << app
 		return app

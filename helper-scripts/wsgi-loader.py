@@ -62,10 +62,10 @@ def load_app():
 
 def create_server_socket():
 	global options
-
-	UNIX_PATH_MAX = options.get('UNIX_PATH_MAX', 100)
-	if 'generation_dir' in options:
-		socket_dir = options['generation_dir'] + '/backends'
+	
+	UNIX_PATH_MAX = int(options.get('UNIX_PATH_MAX', 100))
+	if 'socket_dir' in options:
+		socket_dir = options['socket_dir']
 		socket_prefix = 'wsgi'
 	else:
 		socket_dir = tempfile.gettempdir()

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -24,16 +24,16 @@
 # This file defines all supported Apache per-directory configuration options. The
 # build system automatically generates the corresponding Apache module boilerplate
 # code from the definitions in this file.
-# 
+#
 # Main configuration options are not defined in this file, but are defined in
 # ext/apache2/Configuraion.cpp instead.
-# 
+#
 # The following boilerplate code is generated:
-# 
+#
 #  * command_rec array members (ConfigurationCommands.cpp.erb)
-# 
+#
 # Options:
-# 
+#
 #  * name - The configuration option name. Required.
 #  * context - The context in which this configuration option is valid.
 #              Defaults to ["OR_OPTIONS", "ACCESS_CONF", "RSRC_CONF"]

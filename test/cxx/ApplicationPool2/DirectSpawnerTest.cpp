@@ -8,15 +8,12 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct ApplicationPool2_DirectSpawnerTest {
-		ServerInstanceDirPtr serverInstanceDir;
-		ServerInstanceDir::GenerationPtr generation;
 		SpawnObject object;
 		PipeWatcher::DataCallback gatherOutput;
 		string gatheredOutput;
 		boost::mutex gatheredOutputSyncher;
 
 		ApplicationPool2_DirectSpawnerTest() {
-			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 			gatherOutput = boost::bind(&ApplicationPool2_DirectSpawnerTest::_gatherOutput, this, _1, _2);
 			setLogLevel(LVL_ERROR); // TODO: change to LVL_WARN

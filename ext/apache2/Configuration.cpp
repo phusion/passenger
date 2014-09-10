@@ -197,7 +197,6 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->statThrottleRate = 0;
 	config->statThrottleRateSpecified = false;
 	config->restartDir = NULL;
-	config->uploadBufferDir = NULL;
 	config->friendlyErrorPages = DirConfig::UNSET;
 	config->unionStationSupport = DirConfig::UNSET;
 	config->bufferResponse = DirConfig::UNSET;
@@ -224,7 +223,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->maxPreloaderIdleTime = (add->maxPreloaderIdleTime == -1) ? base->maxPreloaderIdleTime : add->maxPreloaderIdleTime;
 	MERGE_INT_CONFIG(statThrottleRate);
 	MERGE_STR_CONFIG(restartDir);
-	MERGE_STR_CONFIG(uploadBufferDir);
 	MERGE_STRING_CONFIG(unionStationKey);
 	config->unionStationFilters = base->unionStationFilters;
 	for (vector<string>::const_iterator it = add->unionStationFilters.begin(); it != add->unionStationFilters.end(); it++) {
@@ -281,7 +279,6 @@ DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate,
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_group_name, appGroupName)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_restart_dir, restartDir)
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_upload_buffer_dir, uploadBufferDir)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_union_station_key, unionStationKey)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
@@ -536,11 +533,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The application's root directory."),
-	AP_INIT_TAKE1("PassengerUploadBufferDir",
-		(Take1Func) cmd_passenger_upload_buffer_dir,
-		NULL,
-		OR_OPTIONS,
-		"The directory in which upload buffer files should be placed."),
 	AP_INIT_TAKE1("UnionStationKey",
 		(Take1Func) cmd_union_station_key,
 		NULL,

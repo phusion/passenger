@@ -86,16 +86,6 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 	APLOG_USE_MODULE(passenger);
 #endif
 
-
-/**
- * If the HTTP client sends POST data larger than this value (in bytes),
- * then the POST data will be fully buffered into a temporary file, before
- * allocating a Ruby web application session.
- * File uploads smaller than this are buffered into memory instead.
- */
-#define LARGE_UPLOAD_THRESHOLD 1024 * 8
-
-
 #if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) > 2002
 	// Apache > 2.2.x
 	#define AP_GET_SERVER_VERSION_DEPRECATED
@@ -104,11 +94,6 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 	#if AP_SERVER_PATCHLEVEL_NUMBER >= 14
 		#define AP_GET_SERVER_VERSION_DEPRECATED
 	#endif
-#endif
-
-#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
-	// Apache >= 2.4
-	#define unixd_config ap_unixd_config
 #endif
 
 
@@ -239,12 +224,12 @@ private:
 		}
 	}
 
-	StaticString getRequestSocketFilename() const {
-		return agentsStarter.getRequestSocketFilename();
+	StaticString getServerAddress() const {
+		return agentsStarter.getServerAddress();
 	}
 
-	StaticString getRequestSocketPassword() const {
-		return agentsStarter.getRequestSocketPassword();
+	StaticString getServerPassword() const {
+		return agentsStarter.getServerPassword();
 	}
 
 	/**
@@ -257,8 +242,8 @@ private:
 		FileDescriptor conn;
 
 		try {
-			conn = connectToUnixServer(getRequestSocketFilename());
-			writeExact(conn, getRequestSocketPassword());
+			conn = connectToServer(getServerAddress());
+			writeExact(conn, getServerPassword());
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE || e.code() == ECONNREFUSED || e.code() == ENOENT) {
 				UPDATE_TRACE_POINT();
@@ -272,8 +257,8 @@ private:
 				time_t deadline = time(NULL) + 5;
 				while (!connected && time(NULL) < deadline) {
 					try {
-						conn = connectToUnixServer(getRequestSocketFilename());
-						writeExact(conn, getRequestSocketPassword());
+						conn = connectToServer(getServerAddress());
+						writeExact(conn, getServerPassword());
 						connected = true;
 					} catch (const SystemException &e) {
 						if (e.code() == EPIPE || e.code() == ECONNREFUSED || e.code() == ENOENT) {
@@ -290,7 +275,7 @@ private:
 				if (!connected) {
 					UPDATE_TRACE_POINT();
 					throw IOException("Cannot connect to the helper agent at " +
-						getRequestSocketFilename());
+						getServerAddress());
 				}
 			} else {
 				throw;
@@ -555,50 +540,10 @@ private:
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			bool expectingUploadData;
-			bool shouldBufferUploads;
-			string uploadDataMemory;
-			boost::shared_ptr<BufferedUpload> uploadDataFile;
 			const char *contentLength;
 
 			expectingUploadData = ap_should_client_block(r);
 			contentLength = lookupHeader(r, "Content-Length");
-			shouldBufferUploads = config->bufferUpload != DirConfig::DISABLED;
-
-			/* If the HTTP upload data is larger than a threshold, or if the HTTP
-			 * client sent HTTP upload data using the "chunked" transfer encoding
-			 * (which implies Content-Length == NULL), then buffer the upload
-			 * data into a tempfile. Otherwise, buffer it into memory.
-			 *
-			 * We never forward the data directly to the backend process because
-			 * the HTTP client might block indefinitely until it's done uploading.
-			 * This would quickly exhaust the application pool.
-			 */
-			if (expectingUploadData && shouldBufferUploads) {
-				if (contentLength == NULL || atol(contentLength) > LARGE_UPLOAD_THRESHOLD) {
-					uploadDataFile = receiveRequestBody(r);
-				} else {
-					receiveRequestBody(r, contentLength, uploadDataMemory);
-				}
-
-				/* We'll set the Content-Length header to the length of the
-				 * received upload data. Rails 2 requires this header for its
-				 * HTTP upload data multipart parsing process.
-				 * There are two reasons why we don't rely on the Content-Length
-				 * header as sent by the client:
-				 * - The client doesn't always send Content-Length, e.g. in case
-				 *   of "chunked" transfer encoding.
-				 * - mod_deflate input compression can make it so that the
-				 *   amount of upload we receive doesn't match Content-Length:
-				 *   http://httpd.apache.org/docs/2.0/mod/mod_deflate.html#enable
-				 */
-				if (uploadDataFile != NULL) {
-					apr_table_set(r->headers_in, "Content-Length",
-						toString(ftell(uploadDataFile->handle)).c_str());
-				} else {
-					apr_table_set(r->headers_in, "Content-Length",
-						toString(uploadDataMemory.size()).c_str());
-				}
-			}
 
 
 			/********** Step 3: forwarding the request and request body
@@ -620,20 +565,11 @@ private:
 			sizeString[ret] = '\0';
 			requestData[0] = StaticString(sizeString, ret);
 
-			if (expectingUploadData && shouldBufferUploads && uploadDataFile == NULL) {
-				requestData.push_back(uploadDataMemory);
-			}
-
 			FileDescriptor conn = connectToHelperAgent();
 			gatheredWrite(conn, &requestData[0], requestData.size());
 
 			if (expectingUploadData) {
-				if (shouldBufferUploads && uploadDataFile != NULL) {
-					sendRequestBody(conn, uploadDataFile);
-					uploadDataFile.reset();
-				} else if (!shouldBufferUploads) {
-					sendRequestBody(conn, r);
-				}
+				sendRequestBody(conn, r);
 			}
 
 			do {
@@ -1010,59 +946,6 @@ private:
 		return output.size();
 	}
 
-	void throwUploadBufferingException(request_rec *r, int code) {
-		DirConfig *config = getDirConfig(r);
-		string message("An error occured while "
-			"buffering HTTP upload data to "
-			"a temporary file in ");
-		message.append(getUploadBufferDir(config));
-
-		switch (code) {
-		case ENOSPC:
-			message.append(". Disk directory doesn't have enough disk space, "
-				"so please make sure that it has "
-				"enough disk space for buffering file uploads, "
-				"or set the 'PassengerUploadBufferDir' directive "
-				"to a directory that has enough disk space.");
-			throw RuntimeException(message);
-			break;
-		case EDQUOT:
-			message.append(". The current Apache worker process (which is "
-				"running as ");
-			message.append(getProcessUsername());
-			message.append(") cannot write to this directory because of "
-				"disk quota limits. Please make sure that the volume "
-				"that this directory resides on has enough disk space "
-				"quota for the Apache worker process, or set the "
-				"'PassengerUploadBufferDir' directive to a different "
-				"directory that has enough disk space quota.");
-			throw RuntimeException(message);
-			break;
-		case ENOENT:
-			message.append(". This directory doesn't exist, so please make "
-				"sure that this directory exists, or set the "
-				"'PassengerUploadBufferDir' directive to a "
-				"directory that exists and can be written to.");
-			throw RuntimeException(message);
-			break;
-		case EACCES:
-			message.append(". The current Apache worker process (which is "
-				"running as ");
-			message.append(getProcessUsername());
-			message.append(") doesn't have permissions to write to this "
-				"directory. Please change the permissions for this "
-				"directory (as well as all parent directories) so that "
-				"it is writable by the Apache worker process, or set "
-				"the 'PassengerUploadBufferDir' directive to a directory "
-				"that Apache can write to.");
-			throw RuntimeException(message);
-			break;
-		default:
-			throw SystemException(message, code);
-			break;
-		}
-	}
-
 	/**
 	 * Reads the next chunk of the request body and put it into a buffer.
 	 *
@@ -1173,98 +1056,6 @@ private:
 		return bufsiz;
 	}
 
-	string getUploadBufferDir(DirConfig *config) {
-		ServerInstanceDir::GenerationPtr generation = agentsStarter.getGeneration();
-		return config->getUploadBufferDir(generation.get());
-	}
-
-	/**
-	 * Receive the HTTP upload data and buffer it into a BufferedUpload temp file.
-	 *
-	 * @param r The request.
-	 * @throws RuntimeException
-	 * @throws SystemException
-	 * @throws IOException
-	 */
-	boost::shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r) {
-		TRACE_POINT();
-		DirConfig *config = getDirConfig(r);
-		boost::shared_ptr<BufferedUpload> tempFile;
-		try {
-			tempFile.reset(new BufferedUpload(getUploadBufferDir(config)));
-		} catch (const SystemException &e) {
-			throwUploadBufferingException(r, e.code());
-		}
-
-		char buf[1024 * 32];
-		apr_off_t len;
-		size_t total_written = 0;
-
-		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
-			size_t written = 0;
-			do {
-				size_t ret = fwrite(buf, 1, len - written, tempFile->handle);
-				if (ret <= 0 || fflush(tempFile->handle) == EOF) {
-					throwUploadBufferingException(r, errno);
-				}
-				written += ret;
-			} while (written < (size_t) len);
-			total_written += written;
-		}
-		return tempFile;
-	}
-
-	/**
-	 * Receive the HTTP upload data and buffer it into a string.
-	 *
-	 * @param r The request.
-	 * @param contentLength The value of the HTTP Content-Length header. This is used
-	 *                      to check whether the HTTP client has sent complete upload
-	 *                      data. NULL indicates that there is no Content-Length header,
-	 *                      i.e. that the HTTP client used chunked transfer encoding.
-	 * @param string The string to buffer into.
-	 * @throws RuntimeException
-	 * @throws IOException
-	 */
-	void receiveRequestBody(request_rec *r, const char *contentLength, string &buffer) {
-		TRACE_POINT();
-		unsigned long l_contentLength = 0;
-		char buf[1024 * 32];
-		apr_off_t len;
-
-		buffer.clear();
-		if (contentLength != NULL) {
-			l_contentLength = atol(contentLength);
-			buffer.reserve(l_contentLength);
-		}
-
-		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
-			buffer.append(buf, len);
-		}
-	}
-
-	void sendRequestBody(const FileDescriptor &fd, boost::shared_ptr<BufferedUpload> &uploadData) {
-		TRACE_POINT();
-		rewind(uploadData->handle);
-		while (!feof(uploadData->handle)) {
-			char buf[1024 * 32];
-			size_t size;
-
-			size = fread(buf, 1, sizeof(buf), uploadData->handle);
-			try {
-				writeExact(fd, buf, size);
-			} catch (const SystemException &e) {
-				if (e.code() == EPIPE || e.code() == ECONNRESET) {
-					// The HelperAgent stopped reading the body, probably
-					// because the application already sent EOF.
-					return;
-				} else {
-					throw e;
-				}
-			}
-		}
-	}
-
 	void sendRequestBody(const FileDescriptor &fd, request_rec *r) {
 		TRACE_POINT();
 		char buf[1024 * 32];
@@ -1310,11 +1101,17 @@ public:
 				"'passenger-install-apache2-module'.");
 		}
 
+		#ifdef AP_GET_SERVER_VERSION_DEPRECATED
+			const char *webServerDesc = ap_get_server_description();
+		#else
+			const char *webServerDesc = ap_get_server_version();
+		#endif
+
 		VariantMap params;
 		params
 			.setPid ("web_server_pid", getpid())
-			.setUid ("web_server_worker_uid", unixd_config.user_id)
-			.setGid ("web_server_worker_gid", unixd_config.group_id)
+			.set    ("web_server_description", webServerDesc)
+			.setBool("multi_app", true)
 			.setInt ("log_level", serverConfig.logLevel)
 			.set    ("debug_log_file", (serverConfig.debugLogFile == NULL) ? "" : serverConfig.debugLogFile)
 			.set    ("temp_dir", serverConfig.tempDir)
@@ -1337,17 +1134,9 @@ public:
 		agentsStarter.start(serverConfig.root, params);
 
 		// Store some relevant information in the generation directory.
-		string generationPath = agentsStarter.getGeneration()->getPath();
+		string instanceDir = agentsStarter.getInstanceDir();
 		server_rec *server;
 		string configFiles;
-
-		#ifdef AP_GET_SERVER_VERSION_DEPRECATED
-			createFile(generationPath + "/web_server.txt",
-				ap_get_server_description());
-		#else
-			createFile(generationPath + "/web_server.txt",
-				ap_get_server_version());
-		#endif
 
 		for (server = s; server != NULL; server = server->next) {
 			if (server->defn_name != NULL) {
@@ -1355,7 +1144,7 @@ public:
 				configFiles.append(1, '\n');
 			}
 		}
-		createFile(generationPath + "/config_files.txt", configFiles);
+		createFile(instanceDir + "/config_files.txt", configFiles);
 	}
 
 	void childInit(apr_pool_t *pchild, server_rec *s) {

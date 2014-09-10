@@ -24,8 +24,7 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct RequestHandlerTest {
-		ServerInstanceDirPtr serverInstanceDir;
-		ServerInstanceDir::GenerationPtr generation;
+		InstanceDirectoryPtr instanceDir;
 		string serverFilename;
 		FileDescriptor requestSocket;
 		AgentOptions agentOptions;
@@ -42,12 +41,12 @@ namespace tut {
 		string rackAppPath, wsgiAppPath;
 
 		RequestHandlerTest() {
-			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			spawnerFactory = boost::make_shared<SpawnerFactory>(generation,
+			createInstanceDir(instanceDir);
+			spawnerFactory = boost::make_shared<SpawnerFactory>(
 				make_shared<SpawnerConfig>(*resourceLocator));
 			pool = boost::make_shared<Pool>(spawnerFactory);
 			pool->initialize();
-			serverFilename = generation->getPath() + "/server";
+			serverFilename = instanceDir->getPath() + "/server";
 			requestSocket = createUnixServer(serverFilename);
 			setNonBlocking(requestSocket);
 			setLogLevel(LVL_WARN);

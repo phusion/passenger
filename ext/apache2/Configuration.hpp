@@ -26,7 +26,6 @@
 #define _PASSENGER_CONFIGURATION_HPP_
 
 #include <Logging.h>
-#include <ServerInstanceDir.h>
 #include <Constants.h>
 #include <Utils.h>
 #include <Utils/VariantMap.h>
@@ -119,12 +118,6 @@ struct DirConfig {
 	 */
 	const char *restartDir;
 
-	/**
-	 * The directory in which Passenger should place upload buffer
-	 * files. NULL means that the default directory should be used.
-	 */
-	const char *uploadBufferDir;
-
 	string unionStationKey;
 
 	vector<string> unionStationFilters;
@@ -191,16 +184,6 @@ struct DirConfig {
 			return restartDir;
 		} else {
 			return "";
-		}
-	}
-
-	string getUploadBufferDir(const ServerInstanceDir::Generation *generation) const {
-		if (uploadBufferDir != NULL) {
-			return uploadBufferDir;
-		} else if (generation != NULL) {
-			return generation->getPath() + "/buffered_uploads";
-		} else {
-			return getSystemTempDir();
 		}
 	}
 

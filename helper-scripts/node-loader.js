@@ -130,8 +130,8 @@ function generateServerSocketPath() {
 	var options = PhusionPassenger.options;
 	var socketDir, socketPrefix, socketSuffix;
 
-	if (options.generation_dir) {
-		socketDir = options.generation_dir + "/backends";
+	if (options.socket_dir) {
+		socketDir = options.socket_dir;
 		socketPrefix = "node";
 	} else {
 		socketDir = os.tmpdir().replace(/\/$/, '');

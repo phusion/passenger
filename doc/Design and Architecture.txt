@@ -152,7 +152,7 @@ Phusion Passenger initializes as follows.
  * `ext/apache2/Hooks.cpp`, in the constructor for the `Hooks` class.
  * `ext/common/AgentsStarter.h` and `AgentsStarter.cpp`. Most of the logic pertaining starting the Watchdog is in this file.
 
-3. The Watchdog first initializes a <<instance_state_and_communication,"server instance directory">>, which is a temporary directory containing files that will be used during the life time of this Phusion Passenger instance. For example, the directory contains Unix domain socket files, so that the different Phusion Passenger processes can communicate with each other. The Watchdog is implemented in `ext/common/agents/Watchdog/Main.cpp`.
+3. The Watchdog first initializes a <<instance_state_and_communication,"instance directory">>, which is a temporary directory containing files that will be used during the life time of this Phusion Passenger instance. For example, the directory contains Unix domain socket files, so that the different Phusion Passenger processes can communicate with each other. The Watchdog is implemented in `ext/common/agents/Watchdog/Main.cpp`.
 
 4. The Watchdog starts the HelperAgent and the LoggingAgent simultaneously. Each performs its own initialization.
 
@@ -174,7 +174,7 @@ The HelperAgent consists of two subsystems. One is the *request handling subsyst
 
 Recall that requests are first received from the web server. The web server serializes the request into a slightly modified version of link:http://en.wikipedia.org/wiki/SCGI[the SCGI format], and sends it to the HelperAgent's RequestHandler. The RequestHandler performs some work, and eventually sends back a regular HTTP response. The web server parses the RequestHandler response, and sends a response to the original HTTP client.
 
-The RequestHandler listens on a Unix domain socket file. This Unix domain socket file is called `request`, and is located in <<instance_state_and_communication,the server instance directory>>.
+The RequestHandler listens on a Unix domain socket file. This Unix domain socket file is called `request`, and is located in <<instance_state_and_communication,the instance directory>>.
 
 ==== One client per request
 
@@ -484,9 +484,9 @@ Every time you start Phusion Passenger, you've created a new *instance*. Every i
 
 Clearly, the processes can't listen on a specific TCP port for communication. Nor can they listen on a fixed Unix domain socket filename.
 
-That is where the 'server instance directory' comes in. Every Phusion Passenger instance has its own, unique temporary directory. That directory is removed when the instance halts. The directory contains Unix domain socket files that the processes listen on. Every Phusion Passenger related process knows where its own server instance directory is, and thus, knows how to communicate with other processes belonging to the same instance. The server instance directory is implemented in `ext/common/ServerInstanceDir.h`.
+That is where the 'instance directory' comes in. Every Phusion Passenger instance has its own, unique temporary directory. That directory is removed when the instance halts. The directory contains Unix domain socket files that the processes listen on. Every Phusion Passenger related process knows where its own instance directory is, and thus, knows how to communicate with other processes belonging to the same instance. The instance directory is implemented in `ext/common/InstanceDirectory.h`.
 
-Administration tools such as `passenger-status` query information using server instance directories. First, they check which server instance directories exist on the system. If they find only one, then they query the sockets inside that sole server instance directory. Otherwise, they abort with an error and ask the user to specifically select the instance to query.
+Administration tools such as `passenger-status` query information using instance directories. First, they check which instance directories exist on the system. If they find only one, then they query the sockets inside that sole instance directory. Otherwise, they abort with an error and ask the user to specifically select the instance to query.
 
 
 [appendix]

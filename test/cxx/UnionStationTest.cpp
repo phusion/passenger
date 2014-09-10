@@ -23,8 +23,7 @@ namespace tut {
 		#define TODAY_TXN_ID "cjb8n-abcd"
 		#define TODAY_TIMESTAMP_STR "cftz90m3k0"
 
-		ServerInstanceDirPtr serverInstanceDir;
-		ServerInstanceDir::GenerationPtr generation;
+		InstanceDirectoryPtr instanceDir;
 		string socketFilename;
 		string socketAddress;
 		string dumpFile;
@@ -36,10 +35,10 @@ namespace tut {
 		CorePtr core, core2, core3, core4;
 
 		UnionStationTest() {
-			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			socketFilename = generation->getPath() + "/logging.socket";
+			createInstanceDir(instanceDir);
+			socketFilename = instanceDir->getPath() + "/logging.socket";
 			socketAddress = "unix:" + socketFilename;
-			dumpFile = generation->getPath() + "/log.txt";
+			dumpFile = instanceDir->getPath() + "/log.txt";
 			accountsDatabase = ptr(new AccountsDatabase());
 			accountsDatabase->add("test", "1234", false);
 			setLogLevel(LVL_ERROR);

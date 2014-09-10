@@ -104,8 +104,8 @@ module PreloaderSharedHelpers
 		else
 			unix_path_max = options.fetch('UNIX_PATH_MAX', 100).to_i
 		end
-		if options['generation_dir']
-			socket_dir = "#{options['generation_dir']}/backends"
+		if options['socket_dir']
+			socket_dir = options['socket_dir']
 			socket_prefix = "preloader"
 		else
 			socket_dir = Dir.tmpdir

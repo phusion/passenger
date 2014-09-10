@@ -204,8 +204,8 @@ static void
 set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_conf_t *upstream_config) {
     ngx_http_upstream_server_t *servers = upstream_config->upstream->servers->elts;
     ngx_addr_t                 *address = &servers[0].addrs[0];
-    const char                 *request_socket_filename;
-    unsigned int                request_socket_filename_len;
+    const char                 *server_address;
+    unsigned int                server_address_len;
     struct sockaddr_un         *sockaddr;
 
     /* The Nginx API makes it extremely difficult to register an upstream server
@@ -218,13 +218,15 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
      */
     if (address->name.data == pp_placeholder_upstream_address.data) {
         sockaddr = (struct sockaddr_un *) address->sockaddr;
-        request_socket_filename =
-            pp_agents_starter_get_request_socket_filename(pp_agents_starter,
-                                                           &request_socket_filename_len);
+        server_address =
+            pp_agents_starter_get_server_address(pp_agents_starter,
+                                                 &server_address_len);
+        server_address += sizeof("unix:") - 1;
+        server_address_len -= sizeof("unix:") - 1;
 
-        address->name.data = (u_char *) request_socket_filename;
-        address->name.len  = request_socket_filename_len;
-        strncpy(sockaddr->sun_path, request_socket_filename, sizeof(sockaddr->sun_path));
+        address->name.data = (u_char *) server_address;
+        address->name.len  = server_address_len;
+        strncpy(sockaddr->sun_path, server_address, sizeof(sockaddr->sun_path));
         sockaddr->sun_path[sizeof(sockaddr->sun_path) - 1] = '\0';
     }
 }
@@ -242,8 +244,8 @@ fix_peer_address(ngx_http_request_t *r) {
     ngx_http_upstream_rr_peers_t     *peers;
     ngx_http_upstream_rr_peer_t      *peer;
     unsigned int                      peer_index;
-    const char                       *request_socket_filename;
-    unsigned int                      request_socket_filename_len;
+    const char                       *server_address;
+    unsigned int                      server_address_len;
 
     if (r->upstream->peer.get != ngx_http_upstream_get_round_robin_peer) {
         /* This function only supports the round-robin upstream method. */
@@ -252,24 +254,24 @@ fix_peer_address(ngx_http_request_t *r) {
 
     rrp        = r->upstream->peer.data;
     peers      = rrp->peers;
-    request_socket_filename =
-        pp_agents_starter_get_request_socket_filename(pp_agents_starter,
-                                                       &request_socket_filename_len);
+    server_address =
+        pp_agents_starter_get_server_address(pp_agents_starter,
+                                             &server_address_len);
 
     while (peers != NULL) {
         if (peers->name) {
-            if (peers->name->data == (u_char *) request_socket_filename) {
+            if (peers->name->data == (u_char *) server_address) {
                 /* Peer names already fixed. */
                 return;
             }
-            peers->name->data = (u_char *) request_socket_filename;
-            peers->name->len  = request_socket_filename_len;
+            peers->name->data = (u_char *) server_address;
+            peers->name->len  = server_address_len;
         }
         peer_index = 0;
         while (1) {
             peer = &peers->peer[peer_index];
-            peer->name.data = (u_char *) request_socket_filename;
-            peer->name.len  = request_socket_filename_len;
+            peer->name.data = (u_char *) server_address;
+            peer->name.len  = server_address_len;
             if (peer->down) {
                 peer_index++;
             } else {
@@ -325,8 +327,8 @@ static ngx_int_t
 create_request(ngx_http_request_t *r)
 {
     u_char                         ch;
-    const char *                   helper_agent_request_socket_password_data;
-    unsigned int                   helper_agent_request_socket_password_len;
+    const char *                   server_password_data;
+    unsigned int                   server_password_len;
     u_char                         buf[sizeof("4294967296") + 1];
     size_t                         len, size, key_len, val_len;
     const u_char                  *app_type_string;
@@ -502,10 +504,10 @@ create_request(ngx_http_request_t *r)
      * Build the request header data.
      **************************************************/
 
-    helper_agent_request_socket_password_data =
-        pp_agents_starter_get_request_socket_password(pp_agents_starter,
-            &helper_agent_request_socket_password_len);
-    size = helper_agent_request_socket_password_len +
+    server_password_data =
+        pp_agents_starter_get_server_password(pp_agents_starter,
+            &server_password_len);
+    size = server_password_len +
         /* netstring length + ":" + trailing "," */
         /* note: 10 == sizeof("4294967296") - 1 */
         len + 10 + 1 + 1;
@@ -523,8 +525,8 @@ create_request(ngx_http_request_t *r)
     cl->buf = b;
 
     /* Build SCGI header netstring length part. */
-    b->last = ngx_copy(b->last, helper_agent_request_socket_password_data,
-                       helper_agent_request_socket_password_len);
+    b->last = ngx_copy(b->last, server_password_data,
+                       server_password_len);
 
     b->last = ngx_snprintf(b->last, 10, "%ui", len);
     *b->last++ = (u_char) ':';

@@ -65,6 +65,8 @@
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -82,7 +84,6 @@
 #include <FileDescriptor.h>
 #include <Exceptions.h>
 #include <StaticString.h>
-#include <ServerInstanceDir.h>
 #include <Utils.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/ScopeGuard.h>
@@ -384,16 +385,18 @@ private:
 	void sendSpawnRequest(NegotiationDetails &details) {
 		TRACE_POINT();
 		try {
+			const size_t UNIX_PATH_MAX = sizeof(((struct sockaddr_un *) 0)->sun_path);
 			string data = "You have control 1.0\n"
 				"passenger_root: " + config->resourceLocator->getRoot() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
-				"gupid: " + details.gupid + "\n";
+				"gupid: " + details.gupid + "\n"
+				"UNIX_PATH_MAX: " + toString(UNIX_PATH_MAX) + "\n";
 			if (!details.options->groupSecret.empty()) {
 				"connect_password: " + details.options->groupSecret + "\n";
 			}
-			if (config->generation != NULL) {
-				data.append("generation_dir: " + config->generation->getPath() + "\n");
+			if (!config->instanceDir.empty()) {
+				data.append("socket_dir: " + config->instanceDir + "/apps.s\n");
 			}
 
 			vector<string> args;

@@ -38,6 +38,7 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <grp.h>
+#include <dirent.h>
 #include <cstring>
 #include <ctime>
 #include <cassert>

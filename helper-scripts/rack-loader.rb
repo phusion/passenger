@@ -28,7 +28,7 @@ module App
 	def self.options
 		return @@options
 	end
-	
+
 	def self.app
 		return @@app
 	end
@@ -53,31 +53,29 @@ module App
 			return 1
 		end
 	end
-	
+
 	def self.handshake_and_read_startup_request
 		STDOUT.sync = true
 		STDERR.sync = true
 		puts "!> I have control 1.0"
 		abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
-		
+
 		@@options = {}
 		while (line = STDIN.readline) != "\n"
 			name, value = line.strip.split(/: */, 2)
 			@@options[name] = value
 		end
 	end
-	
+
 	def self.init_passenger
 		require "#{options["ruby_libdir"]}/phusion_passenger"
 		PhusionPassenger.locate_directories(options["passenger_root"])
 		PhusionPassenger.require_passenger_lib 'native_support'
 		PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
-		PhusionPassenger.require_passenger_lib 'utils/tmpdir'
 		PhusionPassenger.require_passenger_lib 'loader_shared_helpers'
 		PhusionPassenger.require_passenger_lib 'request_handler'
 		PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'
 		@@options = LoaderSharedHelpers.init(@@options)
-		Utils.passenger_tmpdir = options["generation_dir"]
 		if defined?(NativeSupport)
 			NativeSupport.disable_stdio_buffering
 		end
@@ -90,12 +88,12 @@ module App
 		puts format_exception(e)
 		exit exit_code_for_exception(e)
 	end
-	
+
 	def self.load_app
 		LoaderSharedHelpers.before_loading_app_code_step1('config.ru', options)
 		LoaderSharedHelpers.run_load_path_setup_code(options)
 		LoaderSharedHelpers.before_loading_app_code_step2(options)
-		
+
 		begin
 			require 'rubygems'
 		rescue LoadError
@@ -107,7 +105,7 @@ module App
 		end
 		@@app = eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app",
 			TOPLEVEL_BINDING, rackup_file)
-		
+
 		LoaderSharedHelpers.after_loading_app_code(options)
 	rescue Exception => e
 		LoaderSharedHelpers.about_to_abort(e)
@@ -117,11 +115,11 @@ module App
 		puts format_exception(e)
 		exit exit_code_for_exception(e)
 	end
-	
-	
+
+
 	################## Main code ##################
-	
-	
+
+
 	handshake_and_read_startup_request
 	init_passenger
 	load_app
@@ -133,6 +131,6 @@ module App
 	handler.main_loop
 	handler.cleanup
 	LoaderSharedHelpers.after_handling_requests
-	
+
 end # module App
 end # module PhusionPassenger

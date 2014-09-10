@@ -13,15 +13,12 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct ApplicationPool2_SmartSpawnerTest {
-		ServerInstanceDirPtr serverInstanceDir;
-		ServerInstanceDir::GenerationPtr generation;
 		SpawnObject object;
 		PipeWatcher::DataCallback gatherOutput;
 		string gatheredOutput;
 		boost::mutex gatheredOutputSyncher;
 
 		ApplicationPool2_SmartSpawnerTest() {
-			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			PipeWatcher::onData = PipeWatcher::DataCallback();
 			gatherOutput = boost::bind(&ApplicationPool2_SmartSpawnerTest::_gatherOutput, this, _1, _2);
 			setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN

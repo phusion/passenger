@@ -153,30 +153,6 @@ namespace tut {
 	}
 
 
-	/***** Test BufferedUpload *****/
-
-	TEST_METHOD(20) {
-		// The resulting file handle is readable and writable.
-		TempDir td("utils_test.tmp");
-		BufferedUpload t("utils_test.tmp");
-		char line[30];
-
-		fprintf(t.handle, "hello world!");
-		fflush(t.handle);
-		fseek(t.handle, 0, SEEK_SET);
-		memset(line, 0, sizeof(line));
-		fgets(line, sizeof(line), t.handle);
-		ensure_equals(string(line), "hello world!");
-	}
-
-	TEST_METHOD(21) {
-		// It immediately unlinks the temp file.
-		DONT_RUN_IN_VAGRANT();
-		TempDir td("utils_test.tmp");
-		BufferedUpload t("utils_test.tmp");
-		ensure_equals(listDir("utils_test.tmp").size(), 0u);
-	}
-
 	/***** Test escapeForXml() *****/
 
 	TEST_METHOD(25) {

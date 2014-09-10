@@ -28,7 +28,7 @@
  * cleaners from weaking havoc:
  * http://code.google.com/p/phusion-passenger/issues/detail?id=365
  */
-class ServerInstanceDirToucher {
+class InstanceDirToucher {
 private:
 	WorkingObjectsPtr wo;
 	oxt::thread *thr;
@@ -101,16 +101,16 @@ private:
 	}
 
 public:
-	ServerInstanceDirToucher(const WorkingObjectsPtr &wo) {
+	InstanceDirToucher(const WorkingObjectsPtr &wo) {
 		this->wo = wo;
-		thr = new oxt::thread(boost::bind(&ServerInstanceDirToucher::threadMain, this),
+		thr = new oxt::thread(boost::bind(&InstanceDirToucher::threadMain, this),
 			"Server instance dir toucher", 256 * 1024);
 	}
 
-	~ServerInstanceDirToucher() {
+	~InstanceDirToucher() {
 		thr->interrupt_and_join();
 		delete thr;
 	}
 };
 
-typedef boost::shared_ptr<ServerInstanceDirToucher> ServerInstanceDirToucherPtr;
+typedef boost::shared_ptr<InstanceDirToucher> InstanceDirToucherPtr;

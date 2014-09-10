@@ -129,7 +129,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     FILE *f;
 
     last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/control_process.pid",
-                        pp_agents_starter_get_server_instance_dir(pp_agents_starter));
+                        pp_agents_starter_get_instance_dir(pp_agents_starter, NULL));
     *last = (u_char) '\0';
 
     f = fopen((const char *) filename, "w");
@@ -274,8 +274,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     }
 
     pp_variant_map_set_int    (params, "web_server_pid", getpid());
-    pp_variant_map_set_int    (params, "web_server_worker_uid", core_conf->user);
-    pp_variant_map_set_int    (params, "web_server_worker_gid", core_conf->group);
+    pp_variant_map_set_bool   (params, "multi_app", 1);
     pp_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);
     pp_variant_map_set_ngx_str(params, "debug_log_file", &passenger_main_conf.debug_log_file);
     pp_variant_map_set_ngx_str(params, "temp_dir", &passenger_main_conf.temp_dir);
@@ -318,7 +317,7 @@ start_watchdog(ngx_cycle_t *cycle) {
      */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/control_process.pid",
-                        pp_agents_starter_get_server_instance_dir(pp_agents_starter));
+                        pp_agents_starter_get_instance_dir(pp_agents_starter, NULL));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
         result = NGX_ERROR;
@@ -335,7 +334,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     /* Create various other info files. */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/web_server.txt",
-                        pp_agents_starter_get_generation_dir(pp_agents_starter));
+                        pp_agents_starter_get_instance_dir(pp_agents_starter, NULL));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) NGINX_VER, strlen(NGINX_VER)) != NGX_OK) {
         result = NGX_ERROR;
@@ -344,7 +343,7 @@ start_watchdog(ngx_cycle_t *cycle) {
 
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/config_files.txt",
-                        pp_agents_starter_get_generation_dir(pp_agents_starter));
+                        pp_agents_starter_get_instance_dir(pp_agents_starter, NULL));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, cycle->conf_file.data, cycle->conf_file.len) != NGX_OK) {
         result = NGX_ERROR;

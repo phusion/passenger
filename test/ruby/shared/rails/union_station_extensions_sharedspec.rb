@@ -1,15 +1,16 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'socket'
 require 'fileutils'
+require 'tmpdir'
 PhusionPassenger.require_passenger_lib 'union_station/core'
-PhusionPassenger.require_passenger_lib 'utils/tmpdir'
 
 module PhusionPassenger
 
 shared_examples_for "Union Station extensions for Rails" do
 	before :each do
 		@logging_agent_password = "1234"
-		@dump_file = "#{Utils.passenger_tmpdir}/log.txt"
+		@us_tmpdir = Dir.mktmpdir
+		@dump_file = "#{@us_tmpdir}/log.txt"
 		@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file,
 			@logging_agent_password)
 		@options = {
@@ -21,28 +22,29 @@ shared_examples_for "Union Station extensions for Rails" do
 			"app_group_name" => "foobar"
 		}
 	end
-	
+
 	after :each do
+		FileUtils.rm_rf(@us_tmpdir) if @us_tmpdir
 		@connection.close if @connection && @connection.closed?
 		Process.kill('KILL', @agent_pid)
 		Process.waitpid(@agent_pid)
 	end
-	
+
 	def send_request_to_app(headers)
 		headers = {
 			"PASSENGER_TXN_ID"     => "1234-abcd"
 		}.merge(headers)
 		return perform_request(headers)
 	end
-	
+
 	def read_log
 		return File.read(@dump_file)
 	end
-	
+
 	def base64(data)
 		return [data].pack('m').gsub("\n", "")
 	end
-	
+
 	it "doesn't install Union Station extensions if analytics logging is turned off" do
 		@options.delete("analytics")
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
@@ -62,7 +64,7 @@ shared_examples_for "Union Station extensions for Rails" do
 			File.exist?(filename) && File.read(filename) == "NilClass"
 		end
 	end
-	
+
 	it "logs the controller and action name" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
@@ -79,7 +81,7 @@ shared_examples_for "Union Station extensions for Rails" do
 			log.include?("Controller action: FooController#index\n")
 		end
 	end
-	
+
 	it "logs uncaught exceptions in controller actions" do
 		File.write("#{@stub.app_root}/app/controllers/crash_controller.rb", %Q{
 			class CrashController < ActionController::Base
@@ -100,7 +102,7 @@ shared_examples_for "Union Station extensions for Rails" do
 				log.include?("Controller action: CrashController#index")
 		end
 	end
-	
+
 	it "logs ActionController benchmarks" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
@@ -125,7 +127,7 @@ shared_examples_for "Union Station extensions for Rails" do
 				log.include?('END: BENCHMARK: hello')
 		end
 	end
-	
+
 	it "logs ActionView benchmarks" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
@@ -145,7 +147,7 @@ shared_examples_for "Union Station extensions for Rails" do
 				log.include?('END: BENCHMARK: hello')
 		end
 	end
-	
+
 	it "logs successful SQL queries" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
@@ -189,7 +191,7 @@ shared_examples_for "Union Station extensions for Rails" do
 				log =~ /END: DB BENCHMARK: .* \(.*\)$/
 		end
 	end
-	
+
 	it "logs failed SQL queries" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
@@ -220,7 +222,7 @@ shared_examples_for "Union Station extensions for Rails" do
 			end
 		end
 	end
-	
+
 	it "logs controller processing time of successful actions" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
@@ -238,7 +240,7 @@ shared_examples_for "Union Station extensions for Rails" do
 				log.include?("END: framework request processing")
 		end
 	end
-	
+
 	it "logs controller processing time of failed actions" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
@@ -256,7 +258,7 @@ shared_examples_for "Union Station extensions for Rails" do
 				log.include?("FAIL: framework request processing")
 		end
 	end
-	
+
 	it "logs view rendering time of successful actions" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
@@ -278,7 +280,7 @@ shared_examples_for "Union Station extensions for Rails" do
 				log =~ /View rendering time: \d+$/
 		end
 	end
-	
+
 	it "logs view rendering time of failed actions" do
 		File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 			class FooController < ActionController::Base
@@ -299,7 +301,7 @@ shared_examples_for "Union Station extensions for Rails" do
 				log.include?("FAIL: view rendering")
 		end
 	end
-	
+
 	it "logs cache hits" do
 		if rails_version >= '2.1'
 			File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
@@ -327,7 +329,7 @@ shared_examples_for "Union Station extensions for Rails" do
 			end
 		end
 	end
-	
+
 	it "logs cache misses" do
 		if rails_version >= '2.1'
 			File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{

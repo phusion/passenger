@@ -3,9 +3,9 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 
-#include "MessageServer.h"
-#include "MessageClient.h"
-#include "Utils.h"
+#include <MessageServer.h>
+#include <MessageClient.h>
+#include <Utils.h>
 #include <string>
 #include <cstring>
 #include <unistd.h>
@@ -17,8 +17,7 @@ using namespace std;
 
 namespace tut {
 	struct MessageServerTest {
-		ServerInstanceDirPtr serverInstanceDir;
-		ServerInstanceDir::GenerationPtr generation;
+		InstanceDirectoryPtr instanceDir;
 		string socketFilename;
 		string socketAddress;
 		AccountsDatabasePtr accountsDatabase;
@@ -27,8 +26,8 @@ namespace tut {
 		boost::shared_ptr<oxt::thread> serverThread;
 
 		MessageServerTest() {
-			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			socketFilename = generation->getPath() + "/socket";
+			createInstanceDir(instanceDir);
+			socketFilename = instanceDir->getPath() + "/socket";
 			socketAddress = "unix:" + socketFilename;
 			accountsDatabase = ptr(new AccountsDatabase());
 			clientAccount = accountsDatabase->add("test", "12345", false);

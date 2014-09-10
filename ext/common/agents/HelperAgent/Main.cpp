@@ -62,7 +62,6 @@
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
 #include <BackgroundEventLoop.cpp>
-#include <ServerInstanceDir.h>
 #include <UnionStation/Core.h>
 #include <Exceptions.h>
 #include <Utils.h>
@@ -467,6 +466,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
 	wo->spawnerConfig->agentsOptions = agentsOptions;
 	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
+	wo->spawnerConfig->instanceDir = options.get("instance_dir", false);
 	wo->spawnerConfig->finalize();
 
 	UPDATE_TRACE_POINT();

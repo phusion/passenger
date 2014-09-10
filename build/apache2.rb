@@ -50,7 +50,6 @@ APACHE2_MODULE_INPUT_FILES = {
 		ext/common/Exceptions.h
 		ext/common/Logging.h
 		ext/common/RandomGenerator.h
-		ext/common/ServerInstanceDir.h
 		ext/common/Utils.h
 		ext/common/Utils/Timer.h)
 }

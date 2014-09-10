@@ -1,5 +1,7 @@
 #include "TestSupport.h"
 #include "../support/valgrind.h"
+#include <oxt/backtrace.hpp>
+#include <sys/types.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -18,14 +20,17 @@ ResourceLocator *resourceLocator = NULL;
 Json::Value testConfig;
 
 
-void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
-                                          ServerInstanceDir::GenerationPtr &generation)
-{
-	string path = "/tmp/passenger-test." + toString(getpid());
-	serverInstanceDir.reset(new ServerInstanceDir(path));
-	generation = serverInstanceDir->newGeneration(geteuid() == 0,
-		"nobody", getPrimaryGroupName("nobody"),
-		geteuid(), getegid());
+void
+createInstanceDir(InstanceDirectoryPtr &instanceDir) {
+	InstanceDirectory::CreationOptions options;
+	struct passwd *pwUser;
+
+	pwUser = getpwnam("nobody");
+	options.prefix = "passenger-test";
+	options.userSwitching = geteuid() == 0;
+	options.defaultUid = pwUser->pw_uid;
+	options.defaultGid = pwUser->pw_gid;
+	instanceDir = make_shared<InstanceDirectory>(options);
 }
 
 static int

@@ -48,12 +48,14 @@ using namespace std;
 class InstanceDirectory {
 public:
 	struct CreationOptions {
+		string prefix;
 		bool userSwitching;
 		uid_t defaultUid;
 		gid_t defaultGid;
 
 		CreationOptions()
-			: userSwitching(true),
+			: prefix("passenger"),
+			  userSwitching(true),
 			  defaultUid(USER_NOT_GIVEN),
 			  defaultGid(GROUP_NOT_GIVEN)
 			{ }
@@ -63,12 +65,12 @@ private:
 	const string path;
 	bool owner;
 
-	static string createUniquePath(const string &registryDir) {
+	static string createUniquePath(const string &registryDir, const string &prefix) {
 		RandomGenerator generator;
 
 		for (int i = 0; i < 250; i++) {
 			string suffix = generator.generateAsciiString(7);
-			string path = registryDir + "/passenger." + suffix;
+			string path = registryDir + "/" + prefix + "." + suffix;
 			if (createPath(registryDir, path)) {
 				return path;
 			}
@@ -176,14 +178,14 @@ private:
 
 public:
 	InstanceDirectory(const CreationOptions &options)
-		: path(createUniquePath(getSystemTempDir())),
+		: path(createUniquePath(getSystemTempDir(), options.prefix)),
 		  owner(true)
 	{
 		initializeInstanceDirectory(options);
 	}
 
 	InstanceDirectory(const CreationOptions &options, const string &registryDir)
-		: path(createUniquePath(registryDir)),
+		: path(createUniquePath(registryDir, options.prefix)),
 		  owner(true)
 	{
 		initializeInstanceDirectory(options);

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2012-214 Phusion
+#  Copyright (c) 2012-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -426,7 +426,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 			AgentsStarter.h
 			ResourceLocator.h
 			MessageClient.h
-			ServerInstanceDir.h
 			Utils/IniFile.h
 			Utils/VariantMap.h
 		)

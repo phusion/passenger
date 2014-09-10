@@ -67,7 +67,8 @@ public:
 
 	virtual void reportAgentsInformation(VariantMap &report) {
 		const VariantMap &options = *agentsOptions;
-		report.set("server_address", options.get("server_address"));
+		vector<string> addresses = options.getStrSet("server_addresses");
+		report.set("server_address", addresses.front());
 		report.set("server_password", options.get("server_password"));
 	}
 };

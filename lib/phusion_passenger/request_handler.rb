@@ -30,7 +30,6 @@ PhusionPassenger.require_passenger_lib 'message_client'
 PhusionPassenger.require_passenger_lib 'debug_logging'
 PhusionPassenger.require_passenger_lib 'native_support'
 PhusionPassenger.require_passenger_lib 'utils'
-PhusionPassenger.require_passenger_lib 'utils/tmpdir'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'request_handler/thread_handler'
 
@@ -325,8 +324,8 @@ private
 		else
 			unix_path_max = options.fetch('UNIX_PATH_MAX', 100)
 		end
-		if options['generation_dir']
-			socket_dir = "#{options['generation_dir']}/backends"
+		if options['socket_dir']
+			socket_dir = options['socket_dir']
 			socket_prefix = "ruby"
 		else
 			socket_dir = Dir.tmpdir

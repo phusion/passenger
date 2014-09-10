@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -72,10 +72,9 @@ int pp_agents_starter_start(PP_AgentsStarter *as,
 	const PP_AfterForkCallback afterFork,
 	void *callbackArgument,
 	char **errorMessage);
-const char *pp_agents_starter_get_request_socket_filename(PP_AgentsStarter *as, unsigned int *size);
-const char *pp_agents_starter_get_request_socket_password(PP_AgentsStarter *as, unsigned int *size);
-const char *pp_agents_starter_get_server_instance_dir(PP_AgentsStarter *as);
-const char *pp_agents_starter_get_generation_dir(PP_AgentsStarter *as);
+const char *pp_agents_starter_get_server_address(PP_AgentsStarter *as, unsigned int *size);
+const char *pp_agents_starter_get_server_password(PP_AgentsStarter *as, unsigned int *size);
+const char *pp_agents_starter_get_instance_dir(PP_AgentsStarter *as, unsigned int *size);
 pid_t       pp_agents_starter_get_pid(PP_AgentsStarter *as);
 void        pp_agents_starter_detach(PP_AgentsStarter *as);
 void        pp_agents_starter_free(PP_AgentsStarter *as);
@@ -99,7 +98,6 @@ void        pp_agents_starter_free(PP_AgentsStarter *as);
 #include <Constants.h>
 #include <FileDescriptor.h>
 #include <MessageClient.h>
-#include <ServerInstanceDir.h>
 #include <Exceptions.h>
 #include <ResourceLocator.h>
 #include <Logging.h>
@@ -132,26 +130,17 @@ private:
 	 /** The watchdog's feedback file descriptor. */
 	FileDescriptor feedbackFd;
 
-	/** The helper agent's request socket filename and its password. This socket
-	 * is for serving SCGI requests. */
-	string requestSocketFilename;
-	string requestSocketPassword;
-
-	/** The socket on which the helper agent listens for administration commands,
-	 * and the corresponding password for the "web_server" account, which has the
-	 * authorization to shutdown the helper agent.
+	/** The address on which the Phusion Passenger HTTP server listens, and the
+	 * corresponding password.
 	 */
-	string helperAgentAdminSocketAddress;
-	string helperAgentExitPassword;
+	string serverAddress;
+	string serverPassword;
 
 	/** The logging agent's socket address and its password. */
-	string loggingSocketAddress;
-	string loggingSocketPassword;
+	string loggingAgentAddress;
+	string loggingAgentPassword;
 
-	/** The server instance dir and generation dir of the agents. */
-	ServerInstanceDirPtr serverInstanceDir;
-	/** The generation dir of the agents. */
-	ServerInstanceDir::GenerationPtr generation;
+	string instanceDir;
 
 	/**
 	 * Safely dup2() the given file descriptor to 3 (FEEDBACK_FD).
@@ -247,35 +236,12 @@ private:
 		return 0; // timed out
 	}
 
-	/**
-	 * Gracefully shutdown an agent process by sending an exit command to its socket.
-	 * Returns whether the agent has successfully processed the exit command.
-	 * Any exceptions are caught and will cause false to be returned.
-	 */
-	bool gracefullyShutdownAgent(const string &address, const string &username,
-		const string &password)
-	{
-		try {
-			MessageClient client;
-			vector<string> args;
-
-			client.connect(address, username, password);
-			client.write("exit", NULL);
-			return client.read(args) && args[0] == "Passed security" &&
-			       client.read(args) && args[0] == "exit command received";
-		} catch (const SystemException &) {
-		} catch (const IOException &) {
-		} catch (const SecurityException &) {
-		}
-		return false;
-	}
-
 public:
 	/**
 	 * Construct a AgentsStarter object. The watchdog and the agents
 	 * aren't started yet until you call start().
 	 *
-	 * @param type Whether one wants to start the Apache or the Nginx helper agent.
+	 * @param type Whether the start process is Apache or Nginx.
 	 */
 	AgentsStarter(PP_AgentsStarterType type) {
 		this->type = type;
@@ -285,37 +251,17 @@ public:
 	~AgentsStarter() {
 		if (pid != 0) {
 			this_thread::disable_syscall_interruption dsi;
-			bool cleanShutdown =
-				gracefullyShutdownAgent(loggingSocketAddress,
-					"logging", loggingSocketPassword);
 
 			/* Send a message down the feedback fd to tell the watchdog
-			 * Whether this is a clean shutdown. Closing the fd without
-			 * sending anything also indicates an unclean shutdown,
-			 * but we send a byte anyway in case there are other processes
-			 * who have the fd open.
+			 * that we're shutting down cleanly. Closing the fd without
+			 * sending anything indicates an unclean shutdown.
 			 */
-			if (cleanShutdown) {
-				syscalls::write(feedbackFd, "c", 1);
-			} else {
-				syscalls::write(feedbackFd, "u", 1);
-			}
-
-			/* If we failed to send an exit command to one of the agents then we have
-			 * to forcefully kill all agents now because otherwise one of them might
-			 * never exit. We do this by closing the feedback fd without sending a
-			 * random byte, to indicate that this is an abnormal shutdown. The watchdog
-			 * will then kill all agents.
-			 */
-
+			syscalls::write(feedbackFd, "c", 1);
 			feedbackFd.close();
 			syscalls::waitpid(pid, NULL, 0);
 		}
 	}
 
-	/**
-	 * Returns the type as was passed to the constructor.
-	 */
 	PP_AgentsStarterType getType() const {
 		return type;
 	}
@@ -330,36 +276,24 @@ public:
 
 	// The 'const string &' here is on purpose. The C getter functions
 	// return the string pointer directly.
-	const string &getRequestSocketFilename() const {
-		return requestSocketFilename;
+	const string &getServerAddress() const {
+		return serverAddress;
 	}
 
-	const string &getRequestSocketPassword() const {
-		return requestSocketPassword;
+	const string &getServerPassword() const {
+		return serverPassword;
 	}
 
-	string getHelperAgentAdminSocketFilename() const {
-		return parseUnixSocketAddress(helperAgentAdminSocketAddress);
+	const string &getLoggingAgentAddress() const {
+		return loggingAgentAddress;
 	}
 
-	string getHelperAgentExitPassword() const {
-		return helperAgentExitPassword;
+	const string &getLoggingAgentPassword() const {
+		return loggingAgentPassword;
 	}
 
-	string getLoggingSocketAddress() const {
-		return loggingSocketAddress;
-	}
-
-	string getLoggingSocketPassword() const {
-		return loggingSocketPassword;
-	}
-
-	ServerInstanceDirPtr getServerInstanceDir() const {
-		return serverInstanceDir;
-	}
-
-	ServerInstanceDir::GenerationPtr getGeneration() const {
-		return generation;
+	const string &getInstanceDir() const {
+		return instanceDir;
 	}
 
 	/**
@@ -378,7 +312,7 @@ public:
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		ResourceLocator locator(passengerRoot);
-		string watchdogFilename = locator.getAgentsDir() + "/PassengerWatchdog";
+		string agentFilename = locator.getAgentsDir() + "/PassengerAgent";
 		SocketPair fds;
 		int e;
 		pid_t pid;
@@ -419,11 +353,16 @@ public:
 			installFeedbackFd(fds[1]);
 			closeAllFileDescriptors(FEEDBACK_FD);
 
+			setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);
+
 			if (afterFork) {
 				afterFork();
 			}
 
-			execl(watchdogFilename.c_str(), "PassengerWatchdog", (char *) 0);
+			execl(agentFilename.c_str(), "PassengerAgent", "watchdog",
+				// Some extra space to allow the child process to change its process title.
+				"                                                ",
+				(char *) 0);
 			e = errno;
 			try {
 				writeArrayMessage(FEEDBACK_FD,
@@ -433,7 +372,7 @@ public:
 				_exit(1);
 			} catch (...) {
 				fprintf(stderr, "Passenger AgentsStarter: could not execute %s: %s (%d)\n",
-					watchdogFilename.c_str(), strerror(e), e);
+					agentFilename.c_str(), strerror(e), e);
 				fflush(stderr);
 				_exit(1);
 			}
@@ -482,7 +421,7 @@ public:
 				} else {
 					killProcessGroupAndWait(&pid, 5000);
 					guard.clear();
-					throw SystemException("Unable to start the Phusion Passenger watchdog: "
+					throw SystemException("Unable to start the " PROGRAM_NAME " watchdog: "
 						"unable to read its startup information report",
 						ex.code());
 				}
@@ -494,7 +433,7 @@ public:
 
 			if (args[0] == "Agents information") {
 				if ((args.size() - 1) % 2 != 0) {
-					throw RuntimeException("Unable to start the Phusion Passenger watchdog "
+					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog "
 						"because it sent an invalid startup information report (the number "
 						"of items is not an even number)");
 				}
@@ -508,19 +447,16 @@ public:
 
 				this->pid        = pid;
 				this->feedbackFd = feedbackFd;
-				requestSocketFilename   = info.get("request_socket_filename");
-				requestSocketPassword   = info.get("request_socket_password");
-				helperAgentAdminSocketAddress = info.get("helper_agent_admin_socket_address");
-				helperAgentExitPassword       = info.get("helper_agent_exit_password");
-				serverInstanceDir = boost::make_shared<ServerInstanceDir>(info.get("server_instance_dir"), false);
-				generation        = serverInstanceDir->getGeneration(info.getInt("generation"));
-				loggingSocketAddress  = info.get("logging_socket_address");
-				loggingSocketPassword = info.get("logging_socket_password");
+				serverAddress    = info.get("server_address");
+				serverPassword   = info.get("server_password");
+				instanceDir      = info.get("instance_dir");
+				loggingAgentAddress  = info.get("logging_agent_address");
+				loggingAgentPassword = info.get("logging_agent_password");
 				guard.clear();
 			} else if (args[0] == "Watchdog startup error") {
 				killProcessGroupAndWait(&pid, 5000);
 				guard.clear();
-				throw RuntimeException("Unable to start the Phusion Passenger watchdog "
+				throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog "
 					"because it encountered the following error during startup: " +
 					args[1]);
 			} else if (args[0] == "system error") {
@@ -541,8 +477,8 @@ public:
 						passengerRootConfig = "passenger_root";
 						docURL = NGINX_DOC_URL "#PassengerRoot";
 					}
-					throw RuntimeException("Unable to start the Phusion Passenger watchdog "
-						"because its executable (" + watchdogFilename + ") does "
+					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog "
+						"because its executable (" + agentFilename + ") does "
 						"not exist. This probably means that your Phusion Passenger "
 						"installation is broken or incomplete, or that your '" +
 						passengerRootConfig + "' directive is set to the wrong value. "
@@ -552,13 +488,14 @@ public:
 						docURL);
 				} else {
 					throw SystemException("Unable to start the Phusion Passenger watchdog (" +
-						watchdogFilename + ")", e);
+						agentFilename + ")", e);
 				}
 			} else {
 				UPDATE_TRACE_POINT();
 				killProcessGroupAndWait(&pid, 5000);
 				guard.clear();
-				throw RuntimeException("The Phusion Passenger watchdog sent an unknown feedback message '" + args[0] + "'");
+				throw RuntimeException("The " PROGRAM_NAME " watchdog sent an unknown feedback message '"
+					+ args[0] + "'");
 			}
 		}
 	}

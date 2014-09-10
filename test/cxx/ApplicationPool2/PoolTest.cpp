@@ -15,8 +15,6 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct ApplicationPool2_PoolTest {
-		ServerInstanceDirPtr serverInstanceDir;
-		ServerInstanceDir::GenerationPtr generation;
 		SpawnerConfigPtr spawnerConfig;
 		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr pool;
@@ -31,7 +29,6 @@ namespace tut {
 		bool retainSessions;
 
 		ApplicationPool2_PoolTest() {
-			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			retainSessions = false;
 			spawnerConfig = boost::make_shared<SpawnerConfig>();
 			spawnerConfig->resourceLocator = resourceLocator;

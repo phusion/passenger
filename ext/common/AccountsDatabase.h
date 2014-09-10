@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -29,9 +29,8 @@
 #include <map>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
-#include "Account.h"
-#include "ServerInstanceDir.h"
-#include "StaticString.h"
+#include <Account.h>
+#include <StaticString.h>
 
 /* This source file follows the security guidelines written in Account.h. */
 

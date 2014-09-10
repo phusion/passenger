@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2013 Phusion
+ *  Copyright (c) 2011-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -32,7 +32,6 @@
 #include <oxt/tracable_exception.hpp>
 #include <ResourceLocator.h>
 #include <RandomGenerator.h>
-#include <ServerInstanceDir.h>
 #include <StaticString.h>
 #include <MemoryKit/palloc.h>
 #include <DataStructures/StringKeyTable.h>
@@ -213,7 +212,7 @@ struct SpawnerConfig {
 
 	// Used by SmartSpawner and DirectSpawner.
 	RandomGeneratorPtr randomGenerator;
-	ServerInstanceDir::GenerationPtr generation;
+	string instanceDir;
 
 	// Used by DummySpawner and SpawnerFactory.
 	unsigned int concurrency;

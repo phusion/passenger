@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -137,33 +137,30 @@ pp_agents_starter_start(PP_AgentsStarter *as,
 }
 
 const char *
-pp_agents_starter_get_request_socket_filename(PP_AgentsStarter *as, unsigned int *size) {
+pp_agents_starter_get_server_address(PP_AgentsStarter *as, unsigned int *size) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	if (size != NULL) {
-		*size = agentsStarter->getRequestSocketFilename().size();
+		*size = agentsStarter->getServerAddress().size();
 	}
-	return agentsStarter->getRequestSocketFilename().c_str();
+	return agentsStarter->getServerAddress().c_str();
 }
 
 const char *
-pp_agents_starter_get_request_socket_password(PP_AgentsStarter *as, unsigned int *size) {
+pp_agents_starter_get_server_password(PP_AgentsStarter *as, unsigned int *size) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	if (size != NULL) {
-		*size = agentsStarter->getRequestSocketPassword().size();
+		*size = agentsStarter->getServerPassword().size();
 	}
-	return agentsStarter->getRequestSocketPassword().c_str();
+	return agentsStarter->getServerPassword().c_str();
 }
 
 const char *
-pp_agents_starter_get_server_instance_dir(PP_AgentsStarter *as) {
+pp_agents_starter_get_instance_dir(PP_AgentsStarter *as, unsigned int *size) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
-	return agentsStarter->getServerInstanceDir()->getPath().c_str();
-}
-
-const char *
-pp_agents_starter_get_generation_dir(PP_AgentsStarter *as) {
-	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
-	return agentsStarter->getGeneration()->getPath().c_str();
+	if (size != NULL) {
+		*size = agentsStarter->getInstanceDir().size();
+	}
+	return agentsStarter->getInstanceDir().c_str();
 }
 
 pid_t

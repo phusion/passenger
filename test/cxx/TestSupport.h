@@ -19,7 +19,7 @@
 
 #include "../tut/tut.h"
 #include <ResourceLocator.h>
-#include <ServerInstanceDir.h>
+#include <InstanceDirectory.h>
 #include <BackgroundEventLoop.h>
 #include <Exceptions.h>
 #include <Utils.h>
@@ -101,11 +101,9 @@ extern Json::Value testConfig;
 
 
 /**
- * Create a server instance directory and generation with default parameters,
- * suitable for unit testing.
+ * Create an instance directory with default parameters, suitable for unit testing.
  */
-void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
-                                          ServerInstanceDir::GenerationPtr &generation);
+void createInstanceDir(InstanceDirectoryPtr &instanceDir);
 
 void initializeLibeio();
 void shutdownLibeio();

@@ -39,6 +39,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#include <pwd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -49,7 +50,6 @@
 #include <agents/LoggingAgent/OptionParser.h>
 #include <Constants.h>
 #include <InstanceDirectory.h>
-#include <ServerInstanceDir.h>
 #include <FileDescriptor.h>
 #include <RandomGenerator.h>
 #include <Logging.h>
@@ -80,7 +80,7 @@ enum OomFileType {
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
 
-class ServerInstanceDirToucher;
+class InstanceDirToucher;
 class AgentWatcher;
 static void setOomScore(const StaticString &score);
 
@@ -111,7 +111,7 @@ static WorkingObjects *workingObjects;
 static string oldOomScore;
 
 #include "AgentWatcher.cpp"
-#include "ServerInstanceDirToucher.cpp"
+#include "InstanceDirToucher.cpp"
 #include "HelperAgentWatcher.cpp"
 #include "LoggingAgentWatcher.cpp"
 
@@ -684,7 +684,7 @@ lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 }
 
 static void
-initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &serverInstanceDirToucher) {
+initializeWorkingObjects(WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceDirToucher) {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
 	vector<string> strset;
@@ -705,7 +705,7 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, ServerInstanceDirToucherPtr &ser
 	wo->instanceDir = make_shared<InstanceDirectory>(instanceOptions,
 		options.get("instance_registry_dir"));
 	options.set("instance_dir", wo->instanceDir->getPath());
-	serverInstanceDirToucher = boost::make_shared<ServerInstanceDirToucher>(wo);
+	instanceDirToucher = boost::make_shared<InstanceDirToucher>(wo);
 
 	UPDATE_TRACE_POINT();
 	string readOnlyAdminPassword = wo->randomGenerator.generateAsciiString(24);
@@ -841,13 +841,13 @@ watchdogMain(int argc, char *argv[]) {
 	P_NOTICE("Starting PassengerAgent watchdog...");
 	P_DEBUG("Watchdog options: " << agentsOptions->inspect());
 	WorkingObjectsPtr wo;
-	ServerInstanceDirToucherPtr serverInstanceDirToucher;
+	InstanceDirToucherPtr instanceDirToucher;
 	vector<AgentWatcherPtr> watchers;
 
 	try {
 		TRACE_POINT();
 		maybeSetsid();
-		initializeWorkingObjects(wo, serverInstanceDirToucher);
+		initializeWorkingObjects(wo, instanceDirToucher);
 		initializeAgentWatchers(wo, watchers);
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("before_watchdog_initialization");

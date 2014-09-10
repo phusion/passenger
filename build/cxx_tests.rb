@@ -166,10 +166,6 @@ TEST_CXX_OBJECTS = {
 		ext/common/Account.h
 		ext/common/AccountsDatabase.h
 		ext/common/MessageServer.h),
-	'test/cxx/ServerInstanceDir.o' => %w(
-		test/cxx/ServerInstanceDirTest.cpp
-		ext/common/ServerInstanceDir.h
-		ext/common/Utils.h),
 	# 'test/cxx/RequestHandlerTest.o' => %w(
 	# 	test/cxx/RequestHandlerTest.cpp
 	# 	ext/common/agents/HelperAgent/RequestHandler.h
@@ -294,8 +290,8 @@ deps = [
 	'ext/oxt/thread.hpp',
 	'ext/oxt/tracable_exception.hpp',
 	'ext/common/Constants.h',
-	'ext/common/ServerInstanceDir.h',
 	'ext/common/Exceptions.h',
+	'ext/common/InstanceDirectory.h',
 	'ext/common/Utils.h',
 	'ext/common/Utils/SystemTime.h'
 ]

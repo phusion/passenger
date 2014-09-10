@@ -36,6 +36,8 @@
 #include <StaticString.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/Base64.h>
+#include <Utils/json.h>
+#include <Utils/JsonUtils.h>
 
 namespace Passenger {
 namespace LoggingAgent {
@@ -43,7 +45,15 @@ namespace LoggingAgent {
 using namespace std;
 
 
-class AdminServer: public ServerKit::HttpServer<AdminServer> {
+class Request: public ServerKit::BaseHttpRequest {
+public:
+	string body;
+	Json::Value jsonBody;
+
+	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Request);
+};
+
+class AdminServer: public ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > {
 public:
 	enum PrivilegeLevel {
 		NONE,
@@ -58,8 +68,8 @@ public:
 	};
 
 private:
-	typedef ServerKit::HttpRequest Request;
-	typedef ServerKit::HttpClient<ServerKit::HttpRequest> Client;
+	typedef ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > ParentClass;
+	typedef ServerKit::HttpClient<Request> Client;
 	typedef ServerKit::HeaderTable HeaderTable;
 
 	bool parseAuthorizationHeader(Request *req, string &username,
@@ -126,10 +136,8 @@ private:
 		}
 	}
 
-	void processShutdown(Client *client, Request *req) {
-		if (req->method != HTTP_PUT) {
-			respondWith405(client, req);
-		} else if (authorize(client, req, FULL)) {
+	void processPing(Client *client, Request *req) {
+		if (authorize(client, req, READONLY)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 			headers.insert(req->pool, "content-type", "application/json");
@@ -139,6 +147,61 @@ private:
 		} else {
 			respondWith401(client, req);
 		}
+	}
+
+	void processShutdown(Client *client, Request *req) {
+		if (req->method != HTTP_PUT) {
+			respondWith405(client, req);
+		} else if (authorize(client, req, FULL)) {
+			HeaderTable headers;
+			headers.insert(req->pool, "content-type", "application/json");
+			exitEvent->notify();
+			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
+			endRequest(&client, &req);
+		} else {
+			respondWith401(client, req);
+		}
+	}
+
+	void processConfig(Client *client, Request *req) {
+		if (req->method == HTTP_GET) {
+			if (!authorize(client, req, READONLY)) {
+				respondWith401(client, req);
+			}
+
+			HeaderTable headers;
+			Json::Value doc;
+
+			headers.insert(req->pool, "content-type", "application/json");
+			doc["log_level"] = getLogLevel();
+
+			writeSimpleResponse(client, 200, &headers, stringifyJson(doc));
+			endRequest(&client, &req);
+		} else if (req->method == HTTP_POST) {
+			if (!authorize(client, req, FULL)) {
+				respondWith401(client, req);
+			} else if (!req->hasBody()) {
+				endAsBadRequest(&client, &req, "Body required");
+			}
+			// Continue in processConfigBody()
+		} else {
+			respondWith405(client, req);
+		}
+	}
+
+	void processConfigBody(Client *client, Request *req) {
+		HeaderTable headers;
+
+		headers.insert(req->pool, "content-type", "application/json");
+
+		if (!req->jsonBody["log_level"].isInt()) {
+			respondWith422(client, req, "{\"status\": \"error\", \"message\": \"log_level required\"}");
+			return;
+		}
+
+		setLogLevel(req->jsonBody["log_level"].asInt());
+		writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
+		endRequest(&client, &req);
 	}
 
 	void respondWith401(Client *client, Request *req) {
@@ -163,15 +226,55 @@ private:
 		endRequest(&client, &req);
 	}
 
+	void respondWith422(Client *client, Request *req, const StaticString &body) {
+		HeaderTable headers;
+		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		writeSimpleResponse(client, 422, &headers, body);
+		endRequest(&client, &req);
+	}
+
 protected:
 	virtual void onRequestBegin(Client *client, Request *req) {
 		if (psg_lstr_cmp(&req->path, P_STATIC_STRING("/status.txt"))) {
 			processStatusTxt(client, req);
+		} else if (psg_lstr_cmp(&req->path, P_STATIC_STRING("/ping.json"))) {
+			processPing(client, req);
 		} else if (psg_lstr_cmp(&req->path, P_STATIC_STRING("/shutdown.json"))) {
 			processShutdown(client, req);
+		} else if (psg_lstr_cmp(&req->path, P_STATIC_STRING("/config.json"))) {
+			processConfig(client, req);
 		} else {
 			respondWith404(client, req);
 		}
+	}
+
+	virtual ServerKit::Channel::Result onRequestBody(Client *client, Request *req,
+		const MemoryKit::mbuf &buffer, int errcode)
+	{
+		if (buffer.size() > 0) {
+			// Data
+			req->body.append(buffer.start, buffer.size());
+		} else if (errcode == 0) {
+			// EOF
+			Json::Reader reader;
+			if (reader.parse(req->body, req->jsonBody)) {
+				processConfigBody(client, req);
+			} else {
+				respondWith422(client, req, reader.getFormattedErrorMessages());
+			}
+		} else {
+			// Error
+			disconnect(&client);
+		}
+		return ServerKit::Channel::Result(buffer.size(), false);
+	}
+
+	virtual void deinitializeRequest(Client *client, Request *req) {
+		req->body.clear();
+		if (!req->jsonBody.isNull()) {
+			req->jsonBody = Json::Value();
+		}
+		ParentClass::deinitializeRequest(client, req);
 	}
 
 public:
@@ -180,7 +283,7 @@ public:
 	vector<Authorization> authorizations;
 
 	AdminServer(ServerKit::Context *context)
-		: ServerKit::HttpServer<AdminServer>(context),
+		: ParentClass(context),
 		  loggingServer(NULL),
 		  exitEvent(NULL)
 		{ }

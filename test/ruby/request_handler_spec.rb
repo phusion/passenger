@@ -6,6 +6,7 @@ PhusionPassenger.require_passenger_lib 'union_station/core'
 PhusionPassenger.require_passenger_lib 'utils'
 
 require 'fileutils'
+require 'tmpdir'
 
 module PhusionPassenger
 
@@ -18,23 +19,19 @@ describe RequestHandler do
 
 	before :each do
 		preinitialize if respond_to?(:preinitialize)
-		@old_passenger_tmpdir = Utils.passenger_tmpdir
-		Utils.passenger_tmpdir = "request_handler_spec.tmp"
-		Utils.passenger_tmpdir
 		@owner_pipe = IO.pipe
 		@options ||= {}
 		@thread_handler = Class.new(DummyThreadHandler)
 		@options = {
 			"app_group_name" => "foobar",
 			"thread_handler" => @thread_handler,
-			"generation_dir" => "request_handler_spec.tmp"
+			"socket_dir"     => "request_handler_spec.tmp"
 		}.merge(@options)
 		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
 	end
 
 	after :each do
 		stop_request_handler
-		Utils.passenger_tmpdir = @old_passenger_tmpdir
 		FileUtils.chmod_R(0777, "request_handler_spec.tmp")
 		FileUtils.rm_rf("request_handler_spec.tmp")
 	end
@@ -520,7 +517,8 @@ describe RequestHandler do
 				Process.kill('KILL', @agent_pid)
 				Process.waitpid(@agent_pid)
 			end
-			@dump_file = "#{Utils.passenger_tmpdir}/log.txt"
+			@tmpdir = Dir.mktmpdir
+			@dump_file = "#{@tmpdir}/log.txt"
 			@logging_agent_password = "1234"
 			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file,
 				@logging_agent_password)
@@ -531,6 +529,7 @@ describe RequestHandler do
 		end
 
 		after :each do
+			FileUtils.rm_rf(@tmpdir) if @tmpdir
 			if @agent_pid
 				Process.kill('KILL', @agent_pid)
 				Process.waitpid(@agent_pid)
