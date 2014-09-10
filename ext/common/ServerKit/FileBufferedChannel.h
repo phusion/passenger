@@ -734,15 +734,15 @@ private:
 
 		inFileMode->writerState = WS_CREATING_FILE;
 		if (delayInFileModeSwitching == 0) {
-			FBC_DEBUG("Writer: delaying in-file mode switching for " <<
-				delayInFileModeSwitching << "ms");
+			FBC_DEBUG("Writer: creating file " << fcContext->path);
 			inFileMode->writerRequest = eio_open(fcContext->path.c_str(),
 				O_RDWR | O_CREAT | O_EXCL, 0600, 0,
 				bufferFileCreated, fcContext);
 		} else {
-			FBC_DEBUG("Writer: creating file " << fcContext->path);
+			FBC_DEBUG("Writer: delaying in-file mode switching for " <<
+				delayInFileModeSwitching << "ms");
 			inFileMode->writerRequest = eio_busy(
-				(eio_tstamp) delayInFileModeSwitching * 1000.0,
+				(eio_tstamp) delayInFileModeSwitching / 1000.0,
 				0, bufferFileDoneDelaying, fcContext);
 		}
 	}

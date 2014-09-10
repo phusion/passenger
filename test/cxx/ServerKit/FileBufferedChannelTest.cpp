@@ -34,6 +34,7 @@ namespace tut {
 			  endConsume(false),
 			  counter(0)
 		{
+			initializeLibeio();
 			channel.setDataCallback(dataCallback);
 			channel.setHooks(this);
 			Hooks::impl = NULL;
@@ -412,7 +413,7 @@ namespace tut {
 		set_test_name("Any fed data is immediately passed to the callback");
 
 		channel.threshold = 1;
-		channel.delayInFileModeSwitching = 20000;
+		channel.delayInFileModeSwitching = 50000;
 		channel.autoTruncateFile = false;
 		startLoop();
 
@@ -434,7 +435,7 @@ namespace tut {
 
 		toConsume = -1;
 		channel.threshold = 1;
-		channel.delayInFileModeSwitching = 20000;
+		channel.delayInFileModeSwitching = 50000;
 		channel.autoTruncateFile = false;
 		startLoop();
 

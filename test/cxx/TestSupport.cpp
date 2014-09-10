@@ -40,9 +40,10 @@ doNothing(eio_req *req) {
 
 void
 initializeLibeio() {
-	eio_set_idle_timeout(9999); // Never timeout.
-	eio_set_min_parallel(1);
+	eio_set_idle_timeout(1);
+	eio_set_min_parallel(0);
 	eio_set_max_parallel(1);
+	eio_set_max_idle(0);
 	if (RUNNING_ON_VALGRIND) {
 		// Start an EIO thread to warm up Valgrind.
 		eio_nop(0, doNothing, NULL);
@@ -51,7 +52,14 @@ initializeLibeio() {
 
 void
 shutdownLibeio() {
+	// For some reason, eio_nreqs() and eio_npending() never reach 0.
+	// We're probably not shutting down libeio correctly.
+	// As a workaround, we wait for 20 ms after deinitializing.
+	while (eio_nready() > 0) {
+		usleep(10000);
+	}
 	eio_deinit();
+	usleep(20000);
 }
 
 void

@@ -30,6 +30,7 @@ namespace tut {
 			: bg(false, true),
 			  context(bg.safe)
 		{
+			initializeLibeio();
 			setLogLevel(LVL_CRIT);
 			serverSocket1 = createUnixServer("tmp.server1");
 			serverSocket2 = createUnixServer("tmp.server2");
@@ -186,7 +187,9 @@ namespace tut {
 		set_test_name("Once a client has been disconnected, and the freelist has not "
 			"yet reached the limit, the client object is put on the freelist");
 
+		server->clientFreelistLimit = 10;
 		startServer();
+
 		FileDescriptor fd = connectToServer1();
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
@@ -224,6 +227,7 @@ namespace tut {
 			"put in the disconnecting list, then in the freelist when the last references disappear");
 
 		vector<ClientRefType> clients;
+		server->clientFreelistLimit = 10;
 		startServer();
 
 		FileDescriptor fd = connectToServer1();
