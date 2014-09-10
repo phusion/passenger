@@ -180,7 +180,6 @@ private:
 	StaticString loggingAgentPassword;
 	StaticString defaultUser;
 	StaticString defaultGroup;
-	StaticString serverName;
 	HashedStaticString PASSENGER_APP_GROUP_NAME;
 	HashedStaticString PASSENGER_MAX_REQUESTS;
 	HashedStaticString PASSENGER_STICKY_SESSIONS;
@@ -354,12 +353,6 @@ public:
 			agentsOptions->get("default_user", false));
 		defaultGroup = psg_pstrdup(stringPool,
 			agentsOptions->get("default_group", false));
-		if (agentsOptions->has("server_name")) {
-			serverName = psg_pstrdup(stringPool,
-				agentsOptions->get("server_name"));
-		} else {
-			serverName = PROGRAM_NAME "/" PASSENGER_VERSION;
-		}
 
 		if (!agentsOptions->getBool("multi_app")) {
 			boost::shared_ptr<Options> options = make_shared<Options>();

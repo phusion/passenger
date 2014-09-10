@@ -283,6 +283,9 @@ private:
 	{
 		if (buffer.size() > 0) {
 			size_t ret;
+			SKC_TRACE(client, 3, "Parsing " << buffer.size() <<
+				" bytes of HTTP header: \"" << cEscapeString(StaticString(
+					buffer.start, buffer.size())) << "\"");
 			{
 				ret = createRequestHeaderParser(this->getContext(), req).
 					feed(buffer);

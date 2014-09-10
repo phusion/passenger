@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -68,8 +68,9 @@ u_char int_buf[32], *end, *buf, *pos;
 <% for option in filter_eligible_options(LOCATION_CONFIGURATION_OPTIONS) %>
 	<% if option[:type] == :string %>
 		if (conf-><%= struct_field_for(option) %>.data != NULL) {
-			len += <%= header_name_for(option).size + 1 %>;
-			len += conf-><%= struct_field_for(option) %>.len + 1;
+			len += sizeof("!~<%= header_name_for(option) %>: ") - 1;
+			len += conf-><%= struct_field_for(option) %>.len;
+			len += sizeof("\r\n") - 1;
 		}
 	<% elsif option[:type] == :integer %>
 		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET) {
@@ -77,13 +78,16 @@ u_char int_buf[32], *end, *buf, *pos;
 				sizeof(int_buf) - 1,
 				"%d",
 				conf-><%= struct_field_for(option) %>);
-			len += <%= header_name_for(option).size + 1 %>;
-			len += end - int_buf + 1;
+			len += sizeof("!~<%= header_name_for(option) %>: ") - 1;
+			len += end - int_buf;
+			len += sizeof("\r\n") - 1;
 		}
 	<% elsif option[:type] == :flag %>
 		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET) {
-			len += <%= header_name_for(option).size + 1 %>;
-			len += conf-><%= struct_field_for(option) %> ? sizeof("true") : sizeof("false");
+			len += sizeof("!~<%= header_name_for(option) %>: ") - 1;
+			len += conf-><%= struct_field_for(option) %>
+				? sizeof("t\r\n") - 1
+				: sizeof("f\r\n") - 1;
 		}
 	<% else %>
 		<% raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}" %>
@@ -97,38 +101,34 @@ buf = pos = ngx_pnalloc(cf->pool, len);
 	<% if option[:type] == :string %>
 		if (conf-><%= struct_field_for(option) %>.data != NULL) {
 			pos = ngx_copy(pos,
-				"<%= header_name_for(option) %>",
-				<%= header_name_for(option).size + 1 %>);
+				"!~<%= header_name_for(option) %>: ",
+				sizeof("!~<%= header_name_for(option) %>: ") - 1);
 			pos = ngx_copy(pos,
 				conf-><%= struct_field_for(option) %>.data,
 				conf-><%= struct_field_for(option) %>.len);
-			*pos = '\0';
-			pos++;
+			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
 		}
 	<% elsif option[:type] == :integer %>
 		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET) {
 			pos = ngx_copy(pos,
-				"<%= header_name_for(option) %>",
-				<%= header_name_for(option).size + 1 %>);
+				"!~<%= header_name_for(option) %>: ",
+				sizeof("!~<%= header_name_for(option) %>: ") - 1);
 			end = ngx_snprintf(int_buf,
 				sizeof(int_buf) - 1,
 				"%d",
 				conf-><%= struct_field_for(option) %>);
-			pos = ngx_copy(pos,
-				int_buf,
-				end - int_buf);
-			*pos = '\0';
-			pos++;
+			pos = ngx_copy(pos, int_buf, end - int_buf);
+			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
 		}
 	<% elsif option[:type] == :flag %>
 		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET) {
 			pos = ngx_copy(pos,
-				"<%= header_name_for(option) %>",
-				<%= header_name_for(option).size + 1 %>);
+				"!~<%= header_name_for(option) %>: ",
+				sizeof("!~<%= header_name_for(option) %>: ") - 1);
 			if (conf-><%= struct_field_for(option) %>) {
-				pos = ngx_copy(pos, "true", sizeof("true"));
+				pos = ngx_copy(pos, "t\r\n", sizeof("t\r\n") - 1);
 			} else {
-				pos = ngx_copy(pos, "false", sizeof("false"));
+				pos = ngx_copy(pos, "f\r\n", sizeof("f\r\n") - 1);
 			}
 		}
 	<% else %>

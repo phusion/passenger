@@ -256,4 +256,20 @@ namespace tut {
 		psg_lstr_append(&str2, pool, "o!");
 		ensure(psg_lstr_cmp(&str, &str2));
 	}
+
+
+	/***** psg_lstr_make_contiguous *****/
+
+	TEST_METHOD(40) {
+		const LString *cstr;
+
+		psg_lstr_append(&str, pool, "hey");
+		psg_lstr_append(&str, pool, "my");
+		psg_lstr_append(&str, pool, "world");
+
+		cstr = psg_lstr_make_contiguous(&str, pool);
+		ensure_equals(cstr->size, strlen("heymyworld"));
+		ensure_equals<void *>(cstr->start->next, NULL);
+		ensure_equals(StaticString(cstr->start->data, cstr->size), "heymyworld");
+	}
 }

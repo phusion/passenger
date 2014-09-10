@@ -161,7 +161,7 @@ psg_lstr_null_terminate(const LString *str, psg_pool_t *pool) {
 	data = (char *) psg_pnalloc(pool, str->size + 1);
 	pos = data;
 	part = str->start;
-	while (part != str->end) {
+	while (part != NULL) {
 		memcpy(pos, part->data, part->size);
 		pos += part->size;
 		part = part->next;

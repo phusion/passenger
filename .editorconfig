@@ -48,7 +48,11 @@ indent_style = tab
 indent_size = 4
 trim_trailing_whitespace = true
 
-[ext/nginx/{*.c,*.h}]
+[ext/nginx/*.c]
+indent_style = space
+indent_size = 4
+
+[ext/nginx/*.h]
 indent_style = space
 indent_size = 4
 

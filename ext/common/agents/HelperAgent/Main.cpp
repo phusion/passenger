@@ -514,8 +514,14 @@ initializeNonPrivilegedWorkingObjects() {
 	}
 
 	UPDATE_TRACE_POINT();
-	//wo->unionStationCore = boost::make_shared<UnionStation::Core>(
-	//	"TODO: logging agent address", "logging", "TODO: logging agent password");
+	if (options.has("logging_agent_address")) {
+		wo->unionStationCore = boost::make_shared<UnionStation::Core>(
+			options.get("logging_agent_address"),
+			"logging",
+			options.get("logging_agent_password"));
+	}
+
+	UPDATE_TRACE_POINT();
 	wo->spawnerConfig = boost::make_shared<SpawnerConfig>();
 	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
 	wo->spawnerConfig->agentsOptions = agentsOptions;
@@ -547,6 +553,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->requestHandler->clientFreelistLimit = 1024;
 	wo->requestHandler->resourceLocator = &wo->resourceLocator;
 	wo->requestHandler->appPool = wo->appPool;
+	wo->requestHandler->unionStationCore = wo->unionStationCore;
 	wo->requestHandler->shutdownFinishCallback = requestHandlerShutdownFinished;
 	wo->requestHandler->initialize();
 	wo->shutdownCounter++;

@@ -129,7 +129,8 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	dataSize += state.methodStrLen + 1;
 
 	dataSize += sizeof("SERVER_NAME");
-	dataSize += serverName.size() + 1;
+	// TODO: set to Host without port number
+	dataSize += sizeof("TODO");
 
 	dataSize += sizeof("PASSENGER_CONNECT_PASSWORD");
 	dataSize += req->session->getGroupSecret().size() + 1;
@@ -180,7 +181,8 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SERVER_NAME"));
-	pos = appendData(pos, end, serverName);
+	// TODO: set to Host without port number
+	pos = appendData(pos, end, P_STATIC_STRING("TODO"));
 	pos = appendData(pos, end, "", 1);
 
 	value = req->headers.lookup(HTTP_CONTENT_LENGTH);

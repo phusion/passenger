@@ -183,7 +183,17 @@ createNewPoolOptions(Client *client, Request *req) {
 
 	fillPoolOptionsFromAgentsOptions(options);
 
-	fillPoolOption(req, options.appGroupName, "!~PASSENGER_APP_GROUP_NAME");
+	const LString *appType = secureHeaders.lookup("!~PASSENGER_APP_TYPE");
+	if (appType == NULL || appType->size == 0) {
+		AppTypeDetector detector;
+		PassengerAppType type = detector.checkAppRoot(options.appRoot);
+		// TODO: check for errors
+		options.appType = getAppTypeName(type);
+	} else {
+		fillPoolOption(req, options.appType, "!~PASSENGER_APP_TYPE");
+	}
+
+	fillPoolOption(req, options.appGroupName, PASSENGER_APP_GROUP_NAME);
 	fillPoolOption(req, options.appType, "!~PASSENGER_APP_TYPE");
 	fillPoolOption(req, options.environment, "!~PASSENGER_APP_ENV");
 	fillPoolOption(req, options.ruby, "!~PASSENGER_RUBY");
@@ -229,23 +239,28 @@ createNewPoolOptions(Client *client, Request *req) {
 
 void
 initializeUnionStation(Client *client, Request *req) {
-	if (getBoolOption(req, UNION_STATION_SUPPORT, false)) {
+	if (unionStationCore != NULL && getBoolOption(req, UNION_STATION_SUPPORT, false)) {
 		Options &options = req->options;
-		ServerKit::HeaderTable &headers = req->headers;
+		ServerKit::HeaderTable &headers = req->secureHeaders;
 
 		const LString *key = headers.lookup("!~UNION_STATION_KEY");
-		const LString *filters = headers.lookup("!~UNION_STATION_FILTERS");
 		if (key == NULL || key->size == 0) {
-			disconnectWithError(&client, "header UNION_STATION_KEY must be set.");
+			disconnectWithError(&client, "header !~UNION_STATION_KEY must be set.");
 			return;
 		}
-
 		key = psg_lstr_make_contiguous(key, req->pool);
-		filters = psg_lstr_make_contiguous(filters, req->pool);
+
+		const LString *filters = headers.lookup("!~UNION_STATION_FILTERS");
+		if (filters != NULL) {
+			filters = psg_lstr_make_contiguous(filters, req->pool);
+		}
+
 		options.transaction = unionStationCore->newTransaction(
 			options.getAppGroupName(), "requests",
 			string(key->start->data, key->size),
-			string(filters->start->data, filters->size));
+			(filters != NULL)
+				? string(filters->start->data, filters->size)
+				: string());
 		if (!options.transaction->isNull()) {
 			options.analytics = true;
 			options.unionStationKey = StaticString(key->start->data, key->size);
