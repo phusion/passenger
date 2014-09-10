@@ -30,7 +30,7 @@
 #include <limits.h>
 
 #ifndef ULLONG_MAX
-# define ULLONG_MAX ((uint64_t) -1) /* 2^64-1 */
+# define ULLONG_MAX ((boost::uint64_t) -1) /* 2^64-1 */
 #endif
 
 #ifndef MIN
@@ -196,7 +196,7 @@ static const int8_t unhex[256] =
 #endif
 
 
-static const uint8_t normal_url_char[32] = {
+static const boost::uint8_t normal_url_char[32] = {
 /*   0 nul    1 soh    2 stx    3 etx    4 eot    5 enq    6 ack    7 bel  */
         0    |   0    |   0    |   0    |   0    |   0    |   0    |   0,
 /*   8 bs     9 ht    10 nl    11 vt    12 np    13 cr    14 so    15 si   */
@@ -1501,7 +1501,7 @@ size_t http_parser_execute (http_parser *parser,
 
           case h_content_length:
           {
-            uint64_t t;
+            boost::uint64_t t;
 
             if (ch == ' ') break;
 
@@ -1718,8 +1718,8 @@ size_t http_parser_execute (http_parser *parser,
 
       case s_body_identity:
       {
-        uint64_t to_read = MIN(parser->content_length,
-                               (uint64_t) ((data + len) - p));
+        boost::uint64_t to_read = MIN(parser->content_length,
+                               (boost::uint64_t) ((data + len) - p));
 
         assert(parser->content_length != 0
             && parser->content_length != ULLONG_MAX);
@@ -1782,7 +1782,7 @@ size_t http_parser_execute (http_parser *parser,
 
       case s_chunk_size:
       {
-        uint64_t t;
+        boost::uint64_t t;
 
         assert(parser->flags & F_CHUNKED);
 
@@ -1846,8 +1846,8 @@ size_t http_parser_execute (http_parser *parser,
 
       case s_chunk_data:
       {
-        uint64_t to_read = MIN(parser->content_length,
-                               (uint64_t) ((data + len) - p));
+        boost::uint64_t to_read = MIN(parser->content_length,
+                               (boost::uint64_t) ((data + len) - p));
 
         assert(parser->flags & F_CHUNKED);
         assert(parser->content_length != 0
@@ -2226,7 +2226,7 @@ http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
       return 1;
     }
 
-    u->port = (uint16_t) v;
+    u->port = (boost::uint16_t) v;
   }
 
   return 0;

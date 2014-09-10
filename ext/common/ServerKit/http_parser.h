@@ -20,6 +20,9 @@
  */
 #ifndef http_parser_h
 #define http_parser_h
+
+#include <boost/cstdint.hpp>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -143,7 +146,7 @@ enum flags
 
 
 /* Map for errno-related constants
- * 
+ *
  * The provided argument should be a macro that takes 2 arguments.
  */
 #define HTTP_ERRNO_MAP(XX)                                           \
@@ -208,8 +211,8 @@ struct http_parser {
   unsigned int header_state : 8; /* enum header_state from http_parser.c */
   unsigned int index : 8;        /* index into current matcher */
 
-  uint32_t nread;          /* # bytes read in various scenarios */
-  uint64_t content_length; /* # bytes in body (0 if no Content-Length header) */
+  boost::uint32_t nread;          /* # bytes read in various scenarios */
+  boost::uint64_t content_length; /* # bytes in body (0 if no Content-Length header) */
 
   /** READ-ONLY **/
   unsigned short http_major;
@@ -262,12 +265,12 @@ enum http_parser_url_fields
  * a uint16_t.
  */
 struct http_parser_url {
-  uint16_t field_set;           /* Bitmask of (1 << UF_*) values */
-  uint16_t port;                /* Converted UF_PORT string */
+  boost::uint16_t field_set;           /* Bitmask of (1 << UF_*) values */
+  boost::uint16_t port;                /* Converted UF_PORT string */
 
   struct {
-    uint16_t off;               /* Offset into buffer in which field starts */
-    uint16_t len;               /* Length of run in buffer */
+    boost::uint16_t off;               /* Offset into buffer in which field starts */
+    boost::uint16_t len;               /* Length of run in buffer */
   } field_data[UF_MAX];
 };
 
