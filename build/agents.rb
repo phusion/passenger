@@ -39,6 +39,7 @@ AGENT_OBJECTS = {
 	'ServerMain.o' => [
 		'ext/common/agents/HelperAgent/Main.cpp',
 		'ext/common/agents/HelperAgent/OptionParser.h',
+		'ext/common/agents/HelperAgent/AdminServer.h',
 		'ext/common/agents/HelperAgent/RequestHandler.h',
 		'ext/common/agents/HelperAgent/RequestHandler/Client.h',
 		'ext/common/agents/HelperAgent/RequestHandler/AppResponse.h',

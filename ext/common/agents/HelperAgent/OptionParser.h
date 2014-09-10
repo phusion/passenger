@@ -31,6 +31,7 @@
 #include <Utils.h>
 #include <Utils/VariantMap.h>
 #include <Utils/OptionParsing.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 
@@ -58,6 +59,20 @@ serverUsage() {
 		SERVER_KIT_MAX_SERVER_ENDPOINTS);
 	printf("                            listen on multiple addresses. Default:\n");
 	printf("                            " DEFAULT_HTTP_SERVER_LISTEN_ADDRESS "\n");
+	printf("      --admin-listen ADDRESS\n");
+	printf("                            Listen on the given address for admin commands.\n");
+	printf("                            The same syntax and limitations as with --listen\n");
+	printf("                            are applicable\n");
+	printf("\n");
+	printf("Security options (optional):\n");
+	printf("      --multi-app-password-file PATH\n");
+	printf("                            Password-protect access to the HTTP server\n");
+	printf("                            (multi-app mode only)\n");
+	printf("      --authorize [LEVEL]:USERNAME:PASSWORDFILE\n");
+	printf("                            Enables authentication on the admin server, through\n");
+	printf("                            the given admin account. LEVEL indicates the\n");
+	printf("                            privilege level (see below). PASSWORDFILE must\n");
+	printf("                            point to a file containing the password\n");
 	printf("\n");
 	printf("Application serving options (optional):\n");
 	printf("  -e, --environment NAME    Default framework environment name to use.\n");
@@ -72,13 +87,18 @@ serverUsage() {
 	printf("Process management options (optional):\n");
 	printf("      --max-pool-size N     Maximum number of application processes.\n");
 	printf("                            Default: %d\n", DEFAULT_MAX_POOL_SIZE);
-	printf("      --pool-idle-time SECS  Maximum number of seconds an application process\n");
-	printf("                             may be idle. Default: %d\n", DEFAULT_POOL_IDLE_TIME);
+	printf("      --pool-idle-time SECS\n");
+	printf("                            Maximum number of seconds an application process\n");
+	printf("                            may be idle. Default: %d\n", DEFAULT_POOL_IDLE_TIME);
 	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
 	printf("\n");
 	printf("Other options (optional):\n");
 	printf("      --log-level LEVEL     Logging level. Default: %d\n", DEFAULT_LOG_LEVEL);
 	printf("  -h, --help                Show this help\n");
+	printf("\n");
+	printf("Admin account privilege levels (ordered from most to least privileges):\n");
+	printf("  readonly    Read-only access\n");
+	printf("  full        Full access (default)\n");
 }
 
 inline bool
@@ -90,14 +110,14 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], 'l', "--listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			vector<string> addresses = options.getStrSet("server_listen_addresses", false);
+			vector<string> addresses = options.getStrSet("server_addresses", false);
 			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
 				fprintf(stderr, "ERROR: you may specify up to %u --listen addresses.\n",
 					SERVER_KIT_MAX_SERVER_ENDPOINTS);
 				exit(1);
 			}
 			addresses.push_back(argv[i + 1]);
-			options.setStrSet("server_listen_addresses", addresses);
+			options.setStrSet("server_addresses", addresses);
 			i += 2;
 		} else {
 			fprintf(stderr, "ERROR: invalid address format for --listen. The address "
@@ -105,6 +125,39 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 				"for Unix domain sockets.\n");
 			exit(1);
 		}
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--admin-listen")) {
+		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
+			vector<string> addresses = options.getStrSet("server_admin_addresses",
+				false);
+			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
+				fprintf(stderr, "ERROR: you may specify up to %u --admin-listen addresses.\n",
+					SERVER_KIT_MAX_SERVER_ENDPOINTS);
+				exit(1);
+			}
+			addresses.push_back(argv[i + 1]);
+			options.setStrSet("server_admin_addresses", addresses);
+			i += 2;
+		} else {
+			fprintf(stderr, "ERROR: invalid address format for --admin-listen. The address "
+				"must be formatted as tcp://IP:PORT for TCP sockets, or unix:PATH "
+				"for Unix domain sockets.\n");
+			exit(1);
+		}
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--authorize")) {
+		vector<string> args;
+		vector<string> authorizations = options.getStrSet("server_authorizations",
+				false);
+
+		split(argv[i + 1], ':', args);
+		if (args.size() < 2 || args.size() > 3) {
+			fprintf(stderr, "ERROR: invalid format for --authorize. The syntax "
+				"is \"[LEVEL:]USERNAME:PASSWORDFILE\".\n");
+			exit(1);
+		}
+
+		authorizations.push_back(argv[i + 1]);
+		options.setStrSet("server_authorizations", authorizations);
+		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-pool-size")) {
 		options.setInt("max_pool_size", atoi(argv[i + 1]));
 		i += 2;

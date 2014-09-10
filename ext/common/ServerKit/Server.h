@@ -561,7 +561,7 @@ protected:
 	}
 
 	virtual bool shouldDisconnectClientOnShutdown(Client *client) {
-		return true;
+		return false;
 	}
 
 	virtual Channel::Result onClientDataReceived(Client *client, const MemoryKit::mbuf &buffer,
@@ -598,8 +598,8 @@ public:
 	BaseServer(Context *context)
 		: acceptBurstCount(32),
 		  startReadingAfterAccept(true),
-		  minSpareClients(128),
-		  clientFreelistLimit(1024),
+		  minSpareClients(0),
+		  clientFreelistLimit(0),
 		  shutdownFinishCallback(NULL),
 		  serverState(ACTIVE),
 		  freeClientCount(0),
@@ -785,7 +785,7 @@ public:
 	}
 
 	virtual StaticString getServerName() const {
-		return StaticString("Server", sizeof("Server") - 1);
+		return P_STATIC_STRING("Server");
 	}
 
 	virtual void configure(const Json::Value &doc) {
@@ -809,7 +809,6 @@ public:
 		doc["start_reading_after_accept"] = startReadingAfterAccept;
 		doc["min_spare_clients"] = minSpareClients;
 		doc["client_freelist_limit"] = clientFreelistLimit;
-		doc["total_clients_accepted"] = (Json::UInt64) totalClientsAccepted;
 		return doc;
 	}
 
@@ -824,6 +823,7 @@ public:
 		doc["active_client_count"] = activeClientCount;
 		Json::Value &disconnectedClientsDoc = doc["disconnected_clients"] = Json::Value(Json::objectValue);
 		doc["disconnected_client_count"] = disconnectedClientCount;
+		doc["total_clients_accepted"] = (Json::UInt64) totalClientsAccepted;
 
 		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
 			Json::Value subdoc;

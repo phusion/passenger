@@ -723,10 +723,13 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceD
 	}
 
 	UPDATE_TRACE_POINT();
-	options.setDefault("server_address",
+	strset = options.getStrSet("server_addresses", false);
+	strset.insert(strset.begin(),
 		"unix:" + wo->instanceDir->getPath() + "/agents.s/server");
+	options.setStrSet("server_addresses", strset);
 	options.setDefault("server_password",
 		wo->randomGenerator.generateAsciiString(24));
+
 	strset = options.getStrSet("server_admin_addresses", false);
 	strset.insert(strset.begin(),
 		"unix:" + wo->instanceDir->getPath() + "/agents.s/server_admin");

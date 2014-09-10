@@ -59,9 +59,9 @@ loggingAgentUsage() {
 	printf("                              The address must be in the same format as that\n");
 	printf("                              of --listen. Default: " DEFAULT_LOGGING_AGENT_ADMIN_LISTEN_ADDRESS "\n");
 	printf("      --authorize [LEVEL]:USERNAME:PASSWORDFILE\n");
-	printf("                              Enables authentication on the admin server, and\n");
-	printf("                              the given admin account. LEVEL indicates the\n");
-	printf("                              privilege level (see below). PASSWORDFILE must\n");
+	printf("                              Enables authentication on the admin server,\n");
+	printf("                              through the given admin account. LEVEL indicates\n");
+	printf("                              the privilege level (see below). PASSWORDFILE must\n");
 	printf("                              point to a file containing the password\n");
 	printf("\n");
 	printf("      --user USERNAME         Lower privilege to the given user. Only has\n");
@@ -103,8 +103,13 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
 			vector<string> addresses = options.getStrSet("logging_agent_admin_addresses",
 				false);
+			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
+				fprintf(stderr, "ERROR: you may specify up to %u --admin-listen addresses.\n",
+					SERVER_KIT_MAX_SERVER_ENDPOINTS);
+				exit(1);
+			}
 			addresses.push_back(argv[i + 1]);
-			options.setStrSet("logging_agent_admin_listen_addresses", addresses);
+			options.setStrSet("logging_agent_admin_addresses", addresses);
 			i += 2;
 		} else {
 			fprintf(stderr, "ERROR: invalid address format for --admin-listen. The address "

@@ -172,11 +172,11 @@ static void
 initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
 	const VariantMap &options = *agentsOptions;
-	workingObjects = new WorkingObjects();
+	WorkingObjects *wo = workingObjects = new WorkingObjects();
 
-	string password = options.get("logging_agent_password", false);
-	if (password.empty()) {
-		password = strip(readAll(options.get("logging_agent_password_file")));
+	wo->password = options.get("logging_agent_password", false);
+	if (wo->password.empty()) {
+		wo->password = strip(readAll(options.get("logging_agent_password_file")));
 	}
 
 	vector<string> authorizations = options.getStrSet("logging_agent_authorizations",

@@ -53,6 +53,7 @@
 
 #include <agents/HelperAgent/OptionParser.h>
 #include <agents/HelperAgent/RequestHandler.h>
+#include <agents/HelperAgent/AdminServer.h>
 #include <agents/Base.h>
 #include <Constants.h>
 #include <ServerKit/Server.h>
@@ -252,6 +253,10 @@ public:
 namespace {
 	struct WorkingObjects {
 		int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
+		int adminServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
+		string password;
+		vector<ServerAgent::AdminServer::Authorization> adminAuthorizations;
+
 		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
 		UnionStation::CorePtr unionStationCore;
@@ -264,15 +269,19 @@ namespace {
 		PoolPtr appPool;
 		ServerKit::Context *serverKitContext;
 		RequestHandler *requestHandler;
+		ServerAgent::AdminServer *adminServer;
 		EventFd exitEvent;
 		EventFd allClientsDisconnectedEvent;
 		unsigned int terminationCount;
+		unsigned int shutdownCounter;
 
 		WorkingObjects()
 			: bgloop(NULL),
 			  serverKitContext(NULL),
 			  requestHandler(NULL),
-			  terminationCount(0)
+			  adminServer(NULL),
+			  terminationCount(0),
+			  shutdownCounter(0)
 			{ }
 	};
 }
@@ -285,11 +294,51 @@ static WorkingObjects *workingObjects;
 static void waitForExitEvent();
 static void cleanup();
 static void requestHandlerShutdownFinished(RequestHandler *server);
+static void adminServerShutdownFinished(ServerAgent::AdminServer *server);
+
+static void
+parseAndAddAdminAuthorization(const string &description) {
+	TRACE_POINT();
+	WorkingObjects *wo = workingObjects;
+	ServerAgent::AdminServer::Authorization auth;
+	vector<string> args;
+
+	split(description, ':', args);
+
+	if (args.size() == 2) {
+		auth.level = ServerAgent::AdminServer::FULL;
+		auth.username = args[0];
+		auth.password = strip(readAll(args[1]));
+	} else if (args.size() == 3) {
+		auth.level = ServerAgent::AdminServer::parseLevel(args[0]);
+		auth.username = args[1];
+		auth.password = strip(readAll(args[2]));
+	} else {
+		P_BUG("Too many elements in authorization description");
+	}
+
+	wo->adminAuthorizations.push_back(auth);
+}
 
 static void
 initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
-	workingObjects = new WorkingObjects();
+	const VariantMap &options = *agentsOptions;
+	WorkingObjects *wo = workingObjects = new WorkingObjects();
+
+	wo->password = options.get("server_password", false);
+	if (wo->password.empty() && options.has("server_password_file")) {
+		wo->password = strip(readAll(options.get("server_password_file")));
+	}
+
+	vector<string> authorizations = options.getStrSet("server_authorizations",
+		false);
+	string description;
+
+	UPDATE_TRACE_POINT();
+	foreach (description, authorizations) {
+		parseAndAddAdminAuthorization(description);
+	}
 }
 
 static void
@@ -330,10 +379,14 @@ static void
 startListening() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
-	vector<string> addresses = agentsOptions->getStrSet("server_listen_addresses");
+	vector<string> addresses = agentsOptions->getStrSet("server_addresses");
+	vector<string> adminAddresses = agentsOptions->getStrSet("server_admin_addresses", false);
 
 	for (unsigned int i = 0; i < addresses.size(); i++) {
 		wo->serverFds[i] = createServer(addresses[i]);
+	}
+	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
+		wo->adminServerFds[i] = createServer(adminAddresses[i]);
 	}
 }
 
@@ -447,7 +500,8 @@ initializeNonPrivilegedWorkingObjects() {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects;
-	vector<string> addresses = options.getStrSet("server_listen_addresses");
+	vector<string> addresses = options.getStrSet("server_addresses");
+	vector<string> adminAddresses = options.getStrSet("server_admin_addresses", false);
 
 	wo->resourceLocator = ResourceLocator(options.get("passenger_root"));
 
@@ -487,15 +541,32 @@ initializeNonPrivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
+	wo->serverKitContext->secureModePassword = wo->password;
 	wo->requestHandler = new RequestHandler(wo->serverKitContext, agentsOptions);
+	wo->requestHandler->minSpareClients = 128;
+	wo->requestHandler->clientFreelistLimit = 1024;
 	wo->requestHandler->resourceLocator = &wo->resourceLocator;
 	wo->requestHandler->appPool = wo->appPool;
 	wo->requestHandler->shutdownFinishCallback = requestHandlerShutdownFinished;
 	wo->requestHandler->initialize();
+	wo->shutdownCounter++;
+
+	UPDATE_TRACE_POINT();
+	if (!adminAddresses.empty()) {
+		wo->adminServer = new ServerAgent::AdminServer(wo->serverKitContext);
+		wo->adminServer->requestHandler = wo->requestHandler;
+		wo->adminServer->exitEvent = &wo->exitEvent;
+		wo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
+		wo->adminServer->authorizations = wo->adminAuthorizations;
+		wo->shutdownCounter++;
+	}
 
 	UPDATE_TRACE_POINT();
 	for (unsigned int i = 0; i < addresses.size(); i++) {
 		wo->requestHandler->listen(wo->serverFds[i]);
+	}
+	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
+		wo->adminServer->listen(wo->adminServerFds[i]);
 	}
 	wo->requestHandler->createSpareClients();
 }
@@ -509,7 +580,8 @@ reportInitializationInfo() {
 			"initialized",
 			NULL);
 	} else {
-		vector<string> addresses = agentsOptions->getStrSet("server_listen_addresses");
+		vector<string> addresses = agentsOptions->getStrSet("server_addresses");
+		vector<string> adminAddresses = agentsOptions->getStrSet("server_admin_addresses", false);
 		string address;
 
 		P_NOTICE("PassengerAgent server online, PID " << getpid() <<
@@ -521,6 +593,18 @@ reportInitializationInfo() {
 				address.append("/");
 			}
 			P_NOTICE(" * " << address);
+		}
+
+		if (!adminAddresses.empty()) {
+			P_NOTICE("Admin server listening on " << adminAddresses.size() << " socket(s):");
+			foreach (address, adminAddresses) {
+				if (startsWith(address, "tcp://")) {
+					address.erase(0, sizeof("tcp://") - 1);
+					address.insert(0, "http://");
+					address.append("/");
+				}
+				P_NOTICE(" * " << address);
+			}
 		}
 	}
 }
@@ -539,8 +623,28 @@ shutdownRequestHandler() {
 }
 
 static void
+shutdownAdminServer() {
+	if (workingObjects->adminServer != NULL) {
+		workingObjects->adminServer->shutdown();
+	}
+}
+
+static void
+serverShutdownFinished() {
+	workingObjects->shutdownCounter--;
+	if (workingObjects->shutdownCounter == 0) {
+		workingObjects->allClientsDisconnectedEvent.notify();
+	}
+}
+
+static void
 requestHandlerShutdownFinished(RequestHandler *server) {
-	workingObjects->allClientsDisconnectedEvent.notify();
+	serverShutdownFinished();
+}
+
+static void
+adminServerShutdownFinished(ServerAgent::AdminServer *server) {
+	serverShutdownFinished();
 }
 
 /* Wait until the watchdog closes the feedback fd (meaning it
@@ -590,6 +694,7 @@ waitForExitEvent() {
 			"Waiting until all clients have disconnected...");
 		wo->appPool->prepareForShutdown();
 		wo->bgloop->safe->runLater(shutdownRequestHandler);
+		wo->bgloop->safe->runLater(shutdownAdminServer);
 
 		UPDATE_TRACE_POINT();
 		FD_ZERO(&fds);
@@ -679,10 +784,10 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 static void
 setAgentsOptionsDefaults() {
 	VariantMap &options = *agentsOptions;
-	set<string> defaultListenAddress;
-	defaultListenAddress.insert(DEFAULT_HTTP_SERVER_LISTEN_ADDRESS);
+	set<string> defaultAddress;
+	defaultAddress.insert(DEFAULT_HTTP_SERVER_LISTEN_ADDRESS);
 
-	options.setDefaultStrSet("server_listen_addresses", defaultListenAddress);
+	options.setDefaultStrSet("server_addresses", defaultAddress);
 	options.setDefaultBool("multi_app", false);
 	options.setDefault("environment", DEFAULT_APP_ENV);
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);

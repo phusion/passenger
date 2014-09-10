@@ -22,13 +22,13 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_LOGGING_AGENT_ADMIN_SERVER_H_
-#define _PASSENGER_LOGGING_AGENT_ADMIN_SERVER_H_
+#ifndef _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_
+#define _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_
 
 #include <sstream>
 #include <string>
 
-#include <agents/LoggingAgent/LoggingServer.h>
+#include <agents/HelperAgent/RequestHandler.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
 #include <FileDescriptor.h>
@@ -40,7 +40,7 @@
 #include <Utils/JsonUtils.h>
 
 namespace Passenger {
-namespace LoggingAgent {
+namespace ServerAgent {
 
 using namespace std;
 
@@ -123,13 +123,12 @@ private:
 			&& constantTimeCompare(password, auth->password);
 	}
 
-	void processStatusTxt(Client *client, Request *req) {
+	void processStatus(Client *client, Request *req) {
 		if (authorize(client, req, READONLY)) {
 			HeaderTable headers;
-			stringstream stream;
-			headers.insert(req->pool, "content-type", "text/plain");
-			loggingServer->dump(stream);
-			writeSimpleResponse(client, 200, &headers, stream.str());
+			headers.insert(req->pool, "content-type", "text/json");
+			writeSimpleResponse(client, 200, &headers,
+				requestHandler->inspectStateAsJson().toStyledString());
 			endRequest(&client, &req);
 		} else {
 			respondWith401(client, req);
@@ -169,12 +168,11 @@ private:
 			}
 
 			HeaderTable headers;
-			Json::Value doc;
-
 			headers.insert(req->pool, "content-type", "application/json");
+			Json::Value doc = requestHandler->getConfigAsJson();
 			doc["log_level"] = getLogLevel();
 
-			writeSimpleResponse(client, 200, &headers, stringifyJson(doc));
+			writeSimpleResponse(client, 200, &headers, doc.toStyledString());
 			endRequest(&client, &req);
 		} else if (req->method == HTTP_PUT) {
 			if (!authorize(client, req, FULL)) {
@@ -193,12 +191,11 @@ private:
 
 		headers.insert(req->pool, "content-type", "application/json");
 
-		if (!req->jsonBody["log_level"].isInt()) {
-			respondWith422(client, req, "{\"status\": \"error\", \"message\": \"log_level required\"}");
-			return;
+		if (req->jsonBody.isMember("log_level")) {
+			setLogLevel(req->jsonBody["log_level"].asInt());
 		}
 
-		setLogLevel(req->jsonBody["log_level"].asInt());
+		requestHandler->configure(req->jsonBody);
 		writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
 		endRequest(&client, &req);
 	}
@@ -238,11 +235,12 @@ protected:
 
 		if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG)) {
 			path = psg_lstr_make_contiguous(&req->path, req->pool);
-			P_INFO("Admin request: " << StaticString(path->start->data, path->size));
+			P_INFO("Admin request: " << http_method_str(req->method) <<
+				" " << StaticString(path->start->data, path->size));
 		}
 
-		if (psg_lstr_cmp(path, P_STATIC_STRING("/status.txt"))) {
-			processStatusTxt(client, req);
+		if (psg_lstr_cmp(path, P_STATIC_STRING("/status.json"))) {
+			processStatus(client, req);
 		} else if (psg_lstr_cmp(path, P_STATIC_STRING("/ping.json"))) {
 			processPing(client, req);
 		} else if (psg_lstr_cmp(path, P_STATIC_STRING("/shutdown.json"))) {
@@ -284,18 +282,18 @@ protected:
 	}
 
 public:
-	LoggingServer *loggingServer;
+	RequestHandler *requestHandler;
 	EventFd *exitEvent;
 	vector<Authorization> authorizations;
 
 	AdminServer(ServerKit::Context *context)
 		: ParentClass(context),
-		  loggingServer(NULL),
+		  requestHandler(NULL),
 		  exitEvent(NULL)
 		{ }
 
 	virtual StaticString getServerName() const {
-		return P_STATIC_STRING("LoggerAdminServer");
+		return P_STATIC_STRING("AdminServer");
 	}
 
 	static PrivilegeLevel parseLevel(const StaticString &level) {
@@ -310,7 +308,7 @@ public:
 };
 
 
-} // namespace LoggingAgent
+} // namespace ServerAgent
 } // namespace Passenger
 
-#endif /* _PASSENGER_LOGGING_AGENT_ADMIN_SERVER_H_ */
+#endif /* _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_ */
