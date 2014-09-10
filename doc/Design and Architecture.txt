@@ -313,8 +313,7 @@ All (pre)loaders are located in the `helper-scripts` directory in the source tre
 [options="header"]
 |================================================================================
 | Language/Framework         | Loader                  | Preloader
-| Ruby Rack and Rails >= 3.x | rack-loader.rb          | rack-preloader.rb
-| Ruby on Rails 1.x and 2.x  | classic-rails-loader.rb | classic-rails-preloader.rb
+| Ruby Rack and Rails        | rack-loader.rb          | rack-preloader.rb
 | Python                     | wsgi-loader.py          | -
 | Node.js and bundled Meteor | node-loader.js          | -
 | Unbundled Meteor           | meteor-loader.rb        | -

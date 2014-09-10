@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -651,9 +651,7 @@ public:
 	}
 
 	string getStartCommand(const ResourceLocator &resourceLocator) const {
-		if (appType == P_STATIC_STRING("classic-rails")) {
-			return ruby + "\t" + resourceLocator.getHelperScriptsDir() + "/classic-rails-loader.rb";
-		} else if (appType == P_STATIC_STRING("rack")) {
+		if (appType == P_STATIC_STRING("rack")) {
 			return ruby + "\t" + resourceLocator.getHelperScriptsDir() + "/rack-loader.rb";
 		} else if (appType == P_STATIC_STRING("wsgi")) {
 			return python + "\t" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";

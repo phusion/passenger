@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2013 Phusion
+ *  Copyright (c) 2013-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -39,7 +39,6 @@ namespace ApplicationPool2 {
 const AppTypeDefinition appTypeDefinitions[] = {
 	{ PAT_RACK, "rack", "config.ru", "Passenger RackApp" },
 	{ PAT_WSGI, "wsgi", "passenger_wsgi.py", "Passenger WsgiApp" },
-	{ PAT_CLASSIC_RAILS, "classic-rails", "config/environment.rb", "Passenger ClassicRailsApp" },
 	{ PAT_NODE, "node", "app.js", "Passenger NodeApp" },
 	{ PAT_METEOR, "meteor", ".meteor", "Passenger MeteorApp" },
 	{ PAT_NONE, NULL, NULL, NULL }

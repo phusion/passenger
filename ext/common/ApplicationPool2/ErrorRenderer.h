@@ -74,7 +74,7 @@ public:
 		params.set("ENVIRONMENT", options.environment);
 		params.set("MESSAGE", message);
 		params.set("IS_RUBY_APP",
-			(options.appType == "classic-rails" || options.appType == "rack")
+			(options.appType == "rack")
 			? "true" : "false");
 		if (e != NULL) {
 			params.set("TITLE", "Web application could not be started");

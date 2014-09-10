@@ -38,7 +38,7 @@ Supported languages and frameworks:
 | Ruby (MRI)          | 1.8.5
 | JRuby               | 1.7.0
 | Rubinius            | 2.2.0
-| Ruby on Rails       | 1.2
+| Ruby on Rails       | 2.3
 | Python              | 2.6
 | Node.js             | 0.10
 | Meteor              | 0.6

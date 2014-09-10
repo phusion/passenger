@@ -27,139 +27,8 @@ include::users_guide_snippets/support_information.txt[]
 include::users_guide_snippets/installation.txt[]
 
 
-[[deploying_a_ror_app]]
-== Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3) application ==
-
-Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
-the domain 'www.mycook.com'. You can either deploy your application to the
-virtual host's root (i.e. the application will be accessible from the root URL,
-'http://www.mycook.com/'), or in a sub URI (i.e. the application will be
-accessible from a sub URL, such as 'http://www.mycook.com/railsapplication').
-
-NOTE: The default `RAILS_ENV` environment in which deployed Rails applications
-are run, is ``production''. You can change this by changing the
-<<RailsEnv,rails_env>> configuration option.
-
-=== Deploying to a virtual host's root ===
-
-Add a 'server' virtual host entry to your Nginx configuration file. The virtual
-host's root must point to your Ruby on Rails application's 'public' folder.
-
-Inside the 'server' block, set 'passenger_enabled on'.
-
-For example:
--------------------------------------------
-http {
-    ...
-
-    server {
-        listen 80;
-        server_name www.mycook.com;
-        root /webapps/mycook/public;
-        passenger_enabled on;
-    }
-
-    ...
-}
--------------------------------------------
-Then restart Nginx. The application has now been deployed.
-
-[[deploying_rails_to_sub_uri]]
-=== Deploying to a sub URI ===
-
-Suppose that you already have a virtual host for the application `/websites/phusion`:
-
--------------------------------------------
-http {
-    ...
-
-    server {
-        listen 80;
-        server_name www.phusion.nl;
-        root /websites/phusion;
-        passenger_enabled on;
-    }
-
-    ...
-}
--------------------------------------------
-
-And you want your Rails application, located in `/websites/rails`, to be accessible from the URL
-'http://www.phusion.nl/subapp'.
-
-To do this, you need to perform the following:
-
- 1. Create a `location` with parameter `~ ^/<SUBURI>(/.*|$)`. This is a regular expression that says: "match everything that is exactly <SUBURI>, or starts with <SUBDURI>/".
- 2. Inside the location block, set `alias <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>$1`.
- 3. Inside the location block, set `passenger_base_uri <SUBURI>`.
- 4. Inside the location block, set `passenger_app_root <PATH TO YOUR APPLICATION ROOT>`.
- 5. Inside the location block, set `passenger_document_root <PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY>`.
- 6. Inside the location block, re-specify `passenger_enabled on`.
-
-Here is an example:
-
--------------------------------------------
-http {
-    ...
-
-    server {
-        listen 80;
-        server_name www.phusion.nl;
-        root /websites/phusion;
-
-        # This block has been added.
-        location ~ ^/subapp(/.*|$) {
-            alias /websites/rails/public$1;  # <-- be sure to point to 'public'!
-            passenger_base_uri /subapp;
-            passenger_app_root /websites/rails;
-            passenger_document_root /websites/rails/public;
-            passenger_enabled on;
-        }
-    }
-
-    ...
-}
--------------------------------------------
-
-Then restart Nginx. The application has now been deployed on the sub-URI.
-
-=== Redeploying (restarting the Ruby on Rails application) ===
-
-Deploying a new version of a Ruby on Rails application is as simple as
-re-uploading the application files, and restarting the application.
-
-There are two ways to restart the application:
-
-1. By restarting Nginx.
-2. By creating or modifying the file 'tmp/restart.txt' in the Rails
-   application's <<application_root,root folder>>. Phusion Passenger will
-   automatically restart the application during the next request.
-
-For example, to restart our example MyCook application, we type this in the
-command line:
--------------------------------------------
-touch /webapps/mycook/tmp/restart.txt
--------------------------------------------
-
-Please note that, unlike earlier versions of Phusion Passenger, 'restart.txt'
-is not automatically deleted. Phusion Passenger checks whether the timestamp
-of this file has changed in order to determine whether the application should
-be restarted.
-
-=== Migrations ===
-
-Phusion Passenger is not related to Ruby on Rails migrations in any way. To
-run migrations on your deployment server, please login to your deployment
-server (e.g. with 'ssh') and type `rake db:migrate RAILS_ENV=production` in
-a shell console, just like one would normally run migrations.
-
-=== Capistrano integration ===
-
-See <<capistrano,Capistrano recipe>>.
-
-
 [[deploying_a_rack_app]]
-== Deploying a Rack-based Ruby application (including Rails >= 3) ==
+== Deploying a Rack-based Ruby application ==
 
 Phusion Passenger supports arbitrary Ruby web applications that follow the
 link:http://rack.rubyforge.org/[Rack] interface.
@@ -776,8 +645,7 @@ By default, Phusion Passenger autodetects the type of the application, e.g. whet
 
 Allowed values are:
 
- * `rack` - Ruby on Rails >= 3.0 and Ruby Rack
- * `classic-rails` - Ruby on Rails 1.x and 2.0
+ * `rack` - Ruby and Rails
  * `wsgi` - Python
  * `node` - Node.js, or Meteor JS in bundled mode
  * `meteor` - Meteor JS in non-bundled mode

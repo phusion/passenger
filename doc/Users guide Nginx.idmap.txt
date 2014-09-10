@@ -76,333 +76,321 @@
 
 2.15. Moving to a different directory	=>	moving-to-a-different-directory-gif3wo
 
-3. Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3) application	=>	deploying-a-ruby-on-rails-1-x-or-2-x-but-not-rails-3-application-b69gqa
+3. Deploying a Rack-based Ruby application	=>	deploying-a-rack-based-ruby-application-including-rails-3--12benx3
 
-3.1. Deploying to a virtual host’s root	=>	deploying-to-a-virtual-host-s-root-1mh24z5
+3.1. Tutorial/example: writing and deploying a Hello World Rack application	=>	tutorial-example-writing-and-deploying-a-hello-world-rack-application-1wstx99
 
-3.2. Deploying to a sub URI	=>	deploying-to-a-sub-uri-1il2qj7
+3.2. Deploying to a virtual host’s root	=>	deploying-to-a-virtual-host-s-root-1mh24z5
 
-3.3. Redeploying (restarting the Ruby on Rails application)	=>	redeploying-restarting-the-ruby-on-rails-application--1eso761
+3.3. Deploying to a sub URI	=>	deploying-to-a-sub-uri-1il2qj7
 
-3.4. Migrations	=>	migrations-9yyb8w
+3.4. Redeploying (restarting the Rack application)	=>	redeploying-restarting-the-rack-application--xnbfam
 
-3.5. Capistrano integration	=>	capistrano-integration-1ktunm6
+3.5. Rackup specifications for various web frameworks	=>	rackup-specifications-for-various-web-frameworks-1a2cs41
 
-4. Deploying a Rack-based Ruby application (including Rails >= 3)	=>	deploying-a-rack-based-ruby-application-including-rails-3--12benx3
+3.5.1. Camping	=>	camping-16vz2yb
 
-4.1. Tutorial/example: writing and deploying a Hello World Rack application	=>	tutorial-example-writing-and-deploying-a-hello-world-rack-application-1wstx99
+3.5.2. Halcyon	=>	halcyon-1benlfl
+
+3.5.3. Mack	=>	mack-1ezijq6
+
+3.5.4. Merb	=>	merb-ddsh55
+
+3.5.5. Ramaze	=>	ramaze-1p2zod
+
+3.5.6. Sinatra	=>	sinatra-a7u9ag
+
+4. Deploying a WSGI (Python) application	=>	deploying-a-wsgi-python-application-1or2efo
+
+4.1. Tutorial/example: writing and deploying a Hello World WSGI application	=>	tutorial-example-writing-and-deploying-a-hello-world-wsgi-application-k5ron2
 
 4.2. Deploying to a virtual host’s root	=>	deploying-to-a-virtual-host-s-root-f02erj
 
 4.3. Deploying to a sub URI	=>	deploying-to-a-sub-uri-37q0ou
 
-4.4. Redeploying (restarting the Rack application)	=>	redeploying-restarting-the-rack-application--xnbfam
+4.4. Redeploying (restarting the WSGI application)	=>	redeploying-restarting-the-wsgi-application--10zdh2k
 
-4.5. Rackup specifications for various web frameworks	=>	rackup-specifications-for-various-web-frameworks-1a2cs41
+4.5. Sample passenger_wsgi.py for Django	=>	sample-passenger-wsgi-py-for-django-1cvndls
 
-4.5.1. Camping	=>	camping-16vz2yb
+5. Deploying a Node.js application	=>	deploying-a-node-js-application-15wbczd
 
-4.5.2. Halcyon	=>	halcyon-1benlfl
+6. Deploying a Meteor application	=>	deploying-a-meteor-application-1b51wl9
 
-4.5.3. Mack	=>	mack-1ezijq6
+7. Configuring Phusion Passenger	=>	configuring-phusion-passenger-1g1svey
 
-4.5.4. Merb	=>	merb-ddsh55
+7.1. passenger_root <directory>	=>	passenger-root-directory--bqvhhz
 
-4.5.5. Ramaze	=>	ramaze-1p2zod
+7.2. Deployment options	=>	deployment-options-1a1vxsp
 
-4.5.6. Sinatra	=>	sinatra-a7u9ag
+7.2.1. passenger_enabled <on|off>	=>	passenger-enabled-on-off--1rpb2t7
 
-5. Deploying a WSGI (Python) application	=>	deploying-a-wsgi-python-application-1or2efo
+7.2.2. passenger_base_uri <uri>	=>	passenger-base-uri-uri--1xtuo50
 
-5.1. Tutorial/example: writing and deploying a Hello World WSGI application	=>	tutorial-example-writing-and-deploying-a-hello-world-wsgi-application-k5ron2
+7.2.3. passenger_document_root <path>	=>	passenger-document-root-path--1pge8kd
 
-5.2. Deploying to a virtual host’s root	=>	deploying-to-a-virtual-host-s-root-1chcpbj
+7.3. Application loading options	=>	application-loading-options-f3skts
 
-5.3. Deploying to a sub URI	=>	deploying-to-a-sub-uri-5v6zmg
+7.3.1. passenger_ruby <filename>	=>	passenger-ruby-filename--1gnok5k
 
-5.4. Redeploying (restarting the WSGI application)	=>	redeploying-restarting-the-wsgi-application--10zdh2k
+7.3.2. passenger_python <filename>	=>	passenger-python-filename--14p554
 
-5.5. Sample passenger_wsgi.py for Django	=>	sample-passenger-wsgi-py-for-django-1cvndls
+7.3.3. passenger_nodejs <filename>	=>	passenger-nodejs-filename--16hzjsv
 
-6. Deploying a Node.js application	=>	deploying-a-node-js-application-15wbczd
+7.3.4. passenger_app_env <string>	=>	passenger-app-env-string--qjeimp
 
-7. Deploying a Meteor application	=>	deploying-a-meteor-application-1b51wl9
+7.3.5. rails_env <string>	=>	rails-env-string--jlh7v9
 
-8. Configuring Phusion Passenger	=>	configuring-phusion-passenger-1g1svey
+7.3.6. rack_env <string>	=>	rack-env-string--tqmrt0
 
-8.1. passenger_root <directory>	=>	passenger-root-directory--bqvhhz
+7.3.7. passenger_app_root <path/to/root>	=>	passenger-app-root-path-to-root--1dbudc6
 
-8.2. Deployment options	=>	deployment-options-1a1vxsp
+7.3.8. passenger_app_type <name>	=>	passenger-app-type-name--g9zccv
 
-8.2.1. passenger_enabled <on|off>	=>	passenger-enabled-on-off--1rpb2t7
+7.3.9. passenger_startup_file <filename>	=>	passenger-startup-file-filename--y4gy1m
 
-8.2.2. passenger_base_uri <uri>	=>	passenger-base-uri-uri--1xtuo50
+7.3.10. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
 
-8.2.3. passenger_document_root <path>	=>	passenger-document-root-path--1pge8kd
+7.3.11. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
 
-8.3. Application loading options	=>	application-loading-options-f3skts
+7.3.12. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
 
-8.3.1. passenger_ruby <filename>	=>	passenger-ruby-filename--1gnok5k
+7.3.13. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
 
-8.3.2. passenger_python <filename>	=>	passenger-python-filename--14p554
+7.4. Security options	=>	security-options-1bv93g4
 
-8.3.3. passenger_nodejs <filename>	=>	passenger-nodejs-filename--16hzjsv
+7.4.1. passenger_user_switching <on|off>	=>	passenger-user-switching-on-off--1p37u3l
 
-8.3.4. passenger_app_env <string>	=>	passenger-app-env-string--qjeimp
+7.4.2. passenger_user <username>	=>	passenger-user-username--b06ur7
 
-8.3.5. rails_env <string>	=>	rails-env-string--jlh7v9
+7.4.3. passenger_group <group name>	=>	passenger-user-group-name--1fco4j7
 
-8.3.6. rack_env <string>	=>	rack-env-string--tqmrt0
+7.4.4. passenger_default_user <username>	=>	passenger-default-user-username--1h6cdmf
 
-8.3.7. passenger_app_root <path/to/root>	=>	passenger-app-root-path-to-root--1dbudc6
+7.4.5. Passenger_default_group <group name>	=>	passenger-default-group-group-name--1qxn2qa
 
-8.3.8. passenger_app_type <name>	=>	passenger-app-type-name--g9zccv
+7.4.6. passenger_show_version_in_header <on|off>	=>	passenger-show-version-in-header-on-off--2h49av
 
-8.3.9. passenger_startup_file <filename>	=>	passenger-startup-file-filename--y4gy1m
+7.4.7. passenger_friendly_error_pages <on|off>	=>	passenger-friendly-error-pages-on-off--1ti1a0e
 
-8.3.10. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
+7.5. Resource control and optimization options	=>	resource-control-and-optimization-options-xd7evs
 
-8.3.11. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
+7.5.1. passenger_max_pool_size <integer>	=>	passenger-max-pool-size-integer--3jzefs
 
-8.3.12. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+7.5.2. passenger_min_instances <integer>	=>	passenger-min-instances-integer--uclykt
 
-8.3.13. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
+7.5.3. passenger_max_instances <integer>	=>	passenger-max-instances
 
-8.4. Security options	=>	security-options-1bv93g4
+7.5.4. passenger_max_instances_per_app <integer>	=>	passenger-max-instances-per-app-integer--1xhbbne
 
-8.4.1. passenger_user_switching <on|off>	=>	passenger-user-switching-on-off--1p37u3l
+7.5.5. passenger_pool_idle_time <integer>	=>	passenger-pool-idle-time-integer--xcw65o
 
-8.4.2. passenger_user <username>	=>	passenger-user-username--b06ur7
+7.5.6. passenger_max_preloader_idle_time <integer>	=>	rails-app-spawner-idle-time-integer--1xjqe4b
 
-8.4.3. passenger_group <group name>	=>	passenger-user-group-name--1fco4j7
+7.5.7. passenger_start_timeout <seconds>	=>	passenger-start-timeout-seconds--8xn504
 
-8.4.4. passenger_default_user <username>	=>	passenger-default-user-username--1h6cdmf
+7.5.8. passenger_concurrency_model <process|thread>	=>	passenger-concurrency-model-process-thread--brcvkk
 
-8.4.5. Passenger_default_group <group name>	=>	passenger-default-group-group-name--1qxn2qa
+7.5.9. passenger_thread_count <number>	=>	passenger-thread-count-number--1kd6ffy
 
-8.4.6. passenger_show_version_in_header <on|off>	=>	passenger-show-version-in-header-on-off--2h49av
+7.5.10. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint
 
-8.4.7. passenger_friendly_error_pages <on|off>	=>	passenger-friendly-error-pages-on-off--1ti1a0e
+7.5.11. passenger_max_request_time <seconds>	=>	passenger-max-request-time-seconds--1htog2g
 
-8.5. Resource control and optimization options	=>	resource-control-and-optimization-options-xd7evs
+7.5.12. passenger_memory_limit <integer>	=>	passenger-memory-limit-integer--1ry7dwx
 
-8.5.1. passenger_max_pool_size <integer>	=>	passenger-max-pool-size-integer--3jzefs
+7.5.13. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
 
-8.5.2. passenger_min_instances <integer>	=>	passenger-min-instances-integer--uclykt
+7.6. Connection handling options	=>	connection-handling-options-8jgq90
 
-8.5.3. passenger_max_instances <integer>	=>	passenger-max-instances
+7.6.1. passenger_set_cgi_param <CGI environment name> <value>	=>	passenger-set-cgi-param-cgi-environment-name-value--rx9gc0
 
-8.5.4. passenger_max_instances_per_app <integer>	=>	passenger-max-instances-per-app-integer--1xhbbne
+7.6.2. passenger_max_request_queue_size <number>	=>	passenger-max-request-queue-size-number--i0te1b
 
-8.5.5. passenger_pool_idle_time <integer>	=>	passenger-pool-idle-time-integer--xcw65o
+7.6.3. passenger_request_queue_overflow_status_code <code>	=>	passenger-request-queue-overflow-status-code-code--1wcwuxl
 
-8.5.6. passenger_max_preloader_idle_time <integer>	=>	rails-app-spawner-idle-time-integer--1xjqe4b
+7.6.4. passenger_sticky_sessions <on|off>	=>	passenger-sticky-sessions-on-off--lwvbxs
 
-8.5.7. passenger_start_timeout <seconds>	=>	passenger-start-timeout-seconds--8xn504
+7.6.5. passenger_sticky_sessions_cookie_name	=>	passenger-sticky-sessions-cookie-name-8hrox9
 
-8.5.8. passenger_concurrency_model <process|thread>	=>	passenger-concurrency-model-process-thread--brcvkk
+7.6.6. passenger_ignore_client_abort <on|off>	=>	passenger-ignore-client-abort
 
-8.5.9. passenger_thread_count <number>	=>	passenger-thread-count-number--1kd6ffy
+7.6.7. passenger_intercept_errors <on|off>	=>	passenger-intercept-errors-1uvcb9x
 
-8.5.10. passenger_max_requests <integer>	=>	passenger-max-requests-integer--sgzint
+7.6.8. passenger_pass_header <header name>	=>	passenger-pass-header-header-name--1cg31je
 
-8.5.11. passenger_max_request_time <seconds>	=>	passenger-max-request-time-seconds--1htog2g
+7.6.9. passenger_buffer_response <on|off>	=>	passenger-buffer-response
 
-8.5.12. passenger_memory_limit <integer>	=>	passenger-memory-limit-integer--1ry7dwx
+7.6.10. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
 
-8.5.13. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
+7.6.11. passenger_buffers	=>	passenger-busy-buffers
 
-8.6. Connection handling options	=>	connection-handling-options-8jgq90
+7.6.12. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
 
-8.6.1. passenger_set_cgi_param <CGI environment name> <value>	=>	passenger-set-cgi-param-cgi-environment-name-value--rx9gc0
+7.7. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
 
-8.6.2. passenger_max_request_queue_size <number>	=>	passenger-max-request-queue-size-number--i0te1b
+7.7.1. passenger_log_level <integer>	=>	passenger-log-level-integer--17snhon
 
-8.6.3. passenger_request_queue_overflow_status_code <code>	=>	passenger-request-queue-overflow-status-code-code--1wcwuxl
+7.7.2. passenger_debug_log_file <filename>	=>	passenger-debug-log-file-filename--21ubaj
 
-8.6.4. passenger_sticky_sessions <on|off>	=>	passenger-sticky-sessions-on-off--lwvbxs
+7.7.3. passenger_debugger <on|off>	=>	passenger-debugger-on-off--1wkuq85
 
-8.6.5. passenger_sticky_sessions_cookie_name	=>	passenger-sticky-sessions-cookie-name-8hrox9
+7.8. Advanced options	=>	advanced-options-hnuhqz
 
-8.6.6. passenger_ignore_client_abort <on|off>	=>	passenger-ignore-client-abort
+7.8.1. passenger_temp_dir <directory>	=>	passenger-temp-dir-directory--1t3opri
 
-8.6.7. passenger_intercept_errors <on|off>	=>	passenger-intercept-errors-1uvcb9x
+7.8.2. passenger_fly_with <socket filename>	=>	passenger-fly-with-socket-filename--1amd1xn
 
-8.6.8. passenger_pass_header <header name>	=>	passenger-pass-header-header-name--1cg31je
+7.9. Deprecated options	=>	deprecated-options-1dtzo0g
 
-8.6.9. passenger_buffer_response <on|off>	=>	passenger-buffer-response
+7.9.1. rails_spawn_method	=>	rails-spawn-method-17vdnpt
 
-8.6.10. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
+8. Troubleshooting	=>	troubleshooting-1pt0c76
 
-8.6.11. passenger_buffers	=>	passenger-busy-buffers
+8.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-xhe4nu
 
-8.6.12. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
+8.2. Why does the first request take a long time?	=>	why-does-the-first-request-take-a-long-time--1knj9fp
 
-8.7. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
+8.3. Upon accessing the web app, Nginx reports a "Permission denied" error	=>	upon-accessing-the-web-app-nginx-reports-a-permission-denied-error-1wgatlk
 
-8.7.1. passenger_log_level <integer>	=>	passenger-log-level-integer--17snhon
+8.4. I get "command not found" when running a Phusion Passenger command through sudo	=>	i-get-command-not-found-when-running-a-phusion-passenger-command-through-sudo-10fzwno
 
-8.7.2. passenger_debug_log_file <filename>	=>	passenger-debug-log-file-filename--21ubaj
+8.5. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-1e2m21h
 
-8.7.3. passenger_debugger <on|off>	=>	passenger-debugger-on-off--1wkuq85
+8.6. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-troubleshooting-n8u5u1
 
-8.8. Advanced options	=>	advanced-options-hnuhqz
+8.6.1. The "About your application’s environment" link does not work	=>	the-about-your-application-s-environment-link-does-not-work-9p7b2g
 
-8.8.1. passenger_temp_dir <directory>	=>	passenger-temp-dir-directory--1t3opri
+8.6.2. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-58ww8s
 
-8.8.2. passenger_fly_with <socket filename>	=>	passenger-fly-with-socket-filename--1amd1xn
+8.6.3. The Rails application’s log file is not being written to	=>	the-rails-application-s-log-file-is-not-being-written-to-9m2i5h
 
-8.9. Deprecated options	=>	deprecated-options-1dtzo0g
+9. Analysis and system maintenance	=>	analysis-and-system-maintenance-1nnlnj8
 
-8.9.1. rails_spawn_method	=>	rails-spawn-method-17vdnpt
+9.1. Inspecting memory usage	=>	inspecting-memory-usage-1k6y8v0
 
-9. Troubleshooting	=>	troubleshooting-1pt0c76
+9.2. Inspecting Phusion Passenger’s internal status	=>	inspecting-phusion-passenger-s-internal-status-v36wbc
 
-9.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-xhe4nu
+9.3. Debugging frozen applications	=>	debugging-frozen-applications-qoctl8
 
-9.2. Why does the first request take a long time?	=>	why-does-the-first-request-take-a-long-time--1knj9fp
+9.4. Accessing individual application processes	=>	accessing-individual-application-processes-1qe4fqk
 
-9.3. Upon accessing the web app, Nginx reports a "Permission denied" error	=>	upon-accessing-the-web-app-nginx-reports-a-permission-denied-error-1wgatlk
+9.5. Attaching an IRB console to an application process	=>	attaching-an-irb-console-to-an-application-process-d36enw
 
-9.4. I get "command not found" when running a Phusion Passenger command through sudo	=>	i-get-command-not-found-when-running-a-phusion-passenger-command-through-sudo-10fzwno
+10. Tips	=>	tips-n4c22d
 
-9.5. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-1e2m21h
+10.1. User Switching (security feature)	=>	user-switching-security--zmsy9o
 
-9.6. Ruby on Rails-specific troubleshooting	=>	ruby-on-rails-specific-troubleshooting-n8u5u1
+10.1.1. Requirements	=>	requirements-15ozqdj
 
-9.6.1. The "About your application’s environment" link does not work	=>	the-about-your-application-s-environment-link-does-not-work-9p7b2g
+10.1.2. Effects	=>	effects-nd2m44
 
-9.6.2. The Rails application reports that it’s unable to start because of a permission error	=>	the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error-58ww8s
+10.1.3. Caveats & troubleshooting	=>	caveats-troubleshooting-mbw582
 
-9.6.3. The Rails application’s log file is not being written to	=>	the-rails-application-s-log-file-is-not-being-written-to-9m2i5h
+10.1.4. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-1ni7zk6
 
-10. Analysis and system maintenance	=>	analysis-and-system-maintenance-1nnlnj8
+10.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1o3z66q
 
-10.1. Inspecting memory usage	=>	inspecting-memory-usage-1k6y8v0
+10.3. Capistrano recipe	=>	capistrano-recipe-pfn4qu
 
-10.2. Inspecting Phusion Passenger’s internal status	=>	inspecting-phusion-passenger-s-internal-status-v36wbc
+10.4. Bundler support	=>	bundler-support-19v1h43
 
-10.3. Debugging frozen applications	=>	debugging-frozen-applications-qoctl8
+10.4.1. Does Phusion Passenger itself need to be added to the Gemfile?	=>	does-phusion-passenger-itself-need-to-be-added-to-the-gemfile--xn1a11
 
-10.4. Accessing individual application processes	=>	accessing-individual-application-processes-1qe4fqk
+10.5. Installing multiple Ruby on Rails versions	=>	installing-multiple-ruby-on-rails-versions-1bp1fff
 
-10.5. Attaching an IRB console to an application process	=>	attaching-an-irb-console-to-an-application-process-d36enw
+10.6. Making the application restart after each request	=>	making-the-application-restart-after-each-request-vimy48
 
-11. Tips	=>	tips-n4c22d
+10.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-11mzwt6
 
-11.1. User Switching (security feature)	=>	user-switching-security--zmsy9o
+10.8. Out-of-Band Work and Out-of-Band Garbage Collection	=>	out-of-band-work-and-out-of-band-garbage-collection-v89lu2
 
-11.1.1. Requirements	=>	requirements-15ozqdj
+10.9. Hooks	=>	hooks-qrxle1
 
-11.1.2. Effects	=>	effects-nd2m44
+10.9.1. Example	=>	example-1orara9
 
-11.1.3. Caveats & troubleshooting	=>	caveats-troubleshooting-mbw582
+10.9.2. Environment	=>	environment-10uhg8m
 
-11.1.4. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-1ni7zk6
+10.9.3. Blocking and concurrency	=>	blocking-and-concurrency-g5njp1
 
-11.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1o3z66q
+10.9.4. Error handling	=>	error-handling-m78oxs
 
-11.3. Capistrano recipe	=>	capistrano-recipe-pfn4qu
+10.9.5. Compatibility	=>	compatibility-132b3ns
 
-11.4. Bundler support	=>	bundler-support-19v1h43
+10.9.6. Available hooks	=>	available-hooks-11w1prq
 
-11.4.1. Does Phusion Passenger itself need to be added to the Gemfile?	=>	does-phusion-passenger-itself-need-to-be-added-to-the-gemfile--xn1a11
+10.10. Flying Passenger	=>	flying-passenger-137qg5e
 
-11.5. Installing multiple Ruby on Rails versions	=>	installing-multiple-ruby-on-rails-versions-1bp1fff
+10.10.1. Requirements	=>	requirements-194ysj6
 
-11.6. Making the application restart after each request	=>	making-the-application-restart-after-each-request-vimy48
+10.10.2. Basic usage	=>	basic-usage-1qtgvwx
 
-11.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments	=>	how-to-fix-broken-images-css-javascript-uris-in-sub-uri-deployments-11mzwt6
+10.10.3. Configuring Flying Passenger	=>	configuring-flying-passenger-n558np
 
-11.8. Out-of-Band Work and Out-of-Band Garbage Collection	=>	out-of-band-work-and-out-of-band-garbage-collection-v89lu2
+10.10.4. Managing the Flying Passenger daemon	=>	managing-the-flying-passenger-daemon-vjmzdh
 
-11.9. Hooks	=>	hooks-qrxle1
+10.10.5. Using Flying Passenger with MRI 1.8 or JRuby	=>	using-flying-passenger-with-mri-1-8-or-jruby-pxho35
 
-11.9.1. Example	=>	example-1orara9
+10.10.6. Caveats and limitations	=>	caveats-and-limitations-15wakf
 
-11.9.2. Environment	=>	environment-10uhg8m
+11. Under the hood	=>	under-the-hood-8uney
 
-11.9.3. Blocking and concurrency	=>	blocking-and-concurrency-g5njp1
+11.1. Page caching support	=>	page-caching-support-nafhf6
 
-11.9.4. Error handling	=>	error-handling-m78oxs
+11.2. Phusion Passenger and its relationship with Ruby	=>	phusion-passenger-and-its-relationship-with-ruby-1hub1pa
 
-11.9.5. Compatibility	=>	compatibility-132b3ns
+11.2.1. How Ruby is used	=>	how-ruby-is-used-j7g2a4
 
-11.9.6. Available hooks	=>	available-hooks-11w1prq
+11.2.2. When the system has multiple Ruby interpreters	=>	when-the-system-has-multiple-ruby-interpreters-fwn3t
 
-11.10. Flying Passenger	=>	flying-passenger-137qg5e
+11.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-13qbmhn
 
-11.10.1. Requirements	=>	requirements-194ysj6
+12. Appendix A: About this document	=>	appendix-a-about-this-document-zfvixm
 
-11.10.2. Basic usage	=>	basic-usage-1qtgvwx
+13. Appendix B: Terminology	=>	appendix-b-terminology-wzv5ro
 
-11.10.3. Configuring Flying Passenger	=>	configuring-flying-passenger-n558np
+13.1. Application root	=>	application-root-1fd6bqv
 
-11.10.4. Managing the Flying Passenger daemon	=>	managing-the-flying-passenger-daemon-vjmzdh
+13.2. Idle process	=>	idle-process-13byfw9
 
-11.10.5. Using Flying Passenger with MRI 1.8 or JRuby	=>	using-flying-passenger-with-mri-1-8-or-jruby-pxho35
+13.3. Inactive process	=>	inactive-process-1d2h0po
 
-11.10.6. Caveats and limitations	=>	caveats-and-limitations-15wakf
+14. Appendix C: Spawning methods explained	=>	appendix-c-spawning-methods-explained-tcp8e6
 
-12. Under the hood	=>	under-the-hood-8uney
+14.1. The most straightforward and traditional way: direct spawning	=>	the-most-straightforward-and-traditional-way-conservative-spawning-civ29z
 
-12.1. Page caching support	=>	page-caching-support-nafhf6
+14.2. The smart spawning method	=>	the-smart-spawning-method-7nhgtj
 
-12.2. Phusion Passenger and its relationship with Ruby	=>	phusion-passenger-and-its-relationship-with-ruby-1hub1pa
+14.2.1. How it works	=>	how-it-works-f9umga
 
-12.2.1. How Ruby is used	=>	how-ruby-is-used-j7g2a4
+14.2.2. Summary of benefits	=>	summary-of-benefits-qovyvk
 
-12.2.2. When the system has multiple Ruby interpreters	=>	when-the-system-has-multiple-ruby-interpreters-fwn3t
+14.3. Smart spawning caveat #1: unintentional file descriptor sharing	=>	smart-spawning-gotcha-1-unintentional-file-descriptor-sharing-cebw6q
 
-12.3. How Phusion Passenger detects whether a virtual host is a web application	=>	how-phusion-passenger-detects-whether-a-virtual-host-is-a-web-application-13qbmhn
+14.3.1. Example 1: Memcached connection sharing (harmful)	=>	example-1-memcached-connection-sharing-harmful--1wfs3ad
 
-13. Appendix A: About this document	=>	appendix-a-about-this-document-zfvixm
+14.3.2. Example 2: Log file sharing (not harmful)	=>	example-2-log-file-sharing-not-harmful--ox4yfy
 
-14. Appendix B: Terminology	=>	appendix-b-terminology-wzv5ro
+14.4. Smart spawning caveat #2: the need to revive threads	=>	smart-spawning-gotcha-2-the-need-to-revive-threads-1ey176o
 
-14.1. Application root	=>	application-root-1fd6bqv
+15. Appendix D: About environment variables	=>	appendix-d-about-environment-variables-1t2cuff
 
-14.2. Idle process	=>	idle-process-13byfw9
+15.1. Working with environment variables	=>	working-with-environment-variables-1kmvq8w
 
-14.3. Inactive process	=>	inactive-process-1d2h0po
+15.2. The PATH environment variable	=>	the-path-environment-variable-vlp05e
 
-15. Appendix C: Spawning methods explained	=>	appendix-c-spawning-methods-explained-tcp8e6
+15.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-1flz2tu
 
-15.1. The most straightforward and traditional way: direct spawning	=>	the-most-straightforward-and-traditional-way-conservative-spawning-civ29z
+15.3. Making environment variables permanent	=>	making-environment-variables-permanent-1wjyhzt
 
-15.2. The smart spawning method	=>	the-smart-spawning-method-7nhgtj
+15.3.1. bash	=>	bash-19xsxec
 
-15.2.1. How it works	=>	how-it-works-f9umga
+15.3.2. Apache	=>	apache-9hqtyj
 
-15.2.2. Summary of benefits	=>	summary-of-benefits-qovyvk
+15.3.3. Nginx	=>	nginx-157dpwy
 
-15.3. Smart spawning caveat #1: unintentional file descriptor sharing	=>	smart-spawning-gotcha-1-unintentional-file-descriptor-sharing-cebw6q
+15.3.4. cron	=>	cron-1nuc9cz
 
-15.3.1. Example 1: Memcached connection sharing (harmful)	=>	example-1-memcached-connection-sharing-harmful--1wfs3ad
+15.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-uiewl5
 
-15.3.2. Example 2: Log file sharing (not harmful)	=>	example-2-log-file-sharing-not-harmful--ox4yfy
-
-15.4. Smart spawning caveat #2: the need to revive threads	=>	smart-spawning-gotcha-2-the-need-to-revive-threads-1ey176o
-
-16. Appendix D: About environment variables	=>	appendix-d-about-environment-variables-1t2cuff
-
-16.1. Working with environment variables	=>	working-with-environment-variables-1kmvq8w
-
-16.2. The PATH environment variable	=>	the-path-environment-variable-vlp05e
-
-16.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-1flz2tu
-
-16.3. Making environment variables permanent	=>	making-environment-variables-permanent-1wjyhzt
-
-16.3.1. bash	=>	bash-19xsxec
-
-16.3.2. Apache	=>	apache-9hqtyj
-
-16.3.3. Nginx	=>	nginx-157dpwy
-
-16.3.4. cron	=>	cron-1nuc9cz
-
-16.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-uiewl5
-
-16.4. Environment variables and sudo	=>	environment-variables-and-sudo-10lphxn
+15.4. Environment variables and sudo	=>	environment-variables-and-sudo-10lphxn
 
