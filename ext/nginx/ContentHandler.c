@@ -425,7 +425,7 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
         total_size += r->args.len + 1;
     }
 
-    PUSH_STATIC_STR(" HTTP/1.1\r\n");
+    PUSH_STATIC_STR(" HTTP/1.1\r\nConnection: close\r\n");
 
     part = &r->headers_in.headers.part;
     header = part->elts;
@@ -461,12 +461,6 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
     }
     total_size += (sizeof("!~: \r\n") - 1) + state->server_password.len;
 
-    #if (NGX_HTTP_SSL)
-        if (r->http_connection->ssl) {
-            PUSH_STATIC_STR("!~HTTPS: on\r\n");
-        }
-    #endif
-
     PUSH_STATIC_STR("!~DOCUMENT_ROOT: ");
     if (b != NULL) {
         b->last = ngx_copy(b->last, context->public_dir.data,
@@ -495,6 +489,8 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
         PUSH_STATIC_STR("\r\n");
     }
 
+    /* TODO: set REMOTE_ADDR */
+
     if (slcf->union_station_filters != NGX_CONF_UNSET_PTR
      && slcf->union_station_filters->nelts > 0)
     {
@@ -515,7 +511,18 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
     }
     total_size += slcf->options_cache.len;
 
-    PUSH_STATIC_STR("\r\n");
+    /* D = Dechunk response
+     *     Prevent Nginx from rechunking the response.
+     * S = SSL
+     */
+
+    PUSH_STATIC_STR("!~FLAGS: D");
+    #if (NGX_HTTP_SSL)
+        if (r->http_connection->ssl) {
+            PUSH_STATIC_STR("S");
+        }
+    #endif
+    PUSH_STATIC_STR("\r\n\r\n");
 
     return total_size;
 

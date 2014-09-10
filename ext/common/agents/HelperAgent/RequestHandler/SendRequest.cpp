@@ -63,7 +63,7 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		buffer = MemoryKit::mbuf(buffer, 0, bufferSize);
 		SKC_TRACE(client, 3, "Header data: \"" << cEscapeString(
 			StaticString(buffer.start, bufferSize)) << "\"");
-		req->appInput.feed(boost::move(buffer));
+		req->appInput.feed(buffer);
 	} else {
 		char *buffer = (char *) psg_pnalloc(req->pool, bufferSize);
 
@@ -135,6 +135,11 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	dataSize += sizeof("PASSENGER_CONNECT_PASSWORD");
 	dataSize += req->session->getGroupSecret().size() + 1;
 
+	if (req->https) {
+		dataSize += sizeof("HTTPS");
+		dataSize += sizeof("on");
+	}
+
 	if (req->options.analytics) {
 		dataSize += sizeof("PASSENGER_TXN_ID");
 		dataSize += req->options.transaction->getTxnId().size() + 1;
@@ -200,6 +205,11 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	pos = appendData(pos, end, req->session->getGroupSecret());
 	pos = appendData(pos, end, "", 1);
 
+	if (req->https) {
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("HTTPS"));
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("on"));
+	}
+
 	if (req->options.analytics) {
 		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PASSENGER_TXN_ID"));
 		pos = appendData(pos, end, req->options.transaction->getTxnId());
@@ -210,7 +220,7 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	while (*it != NULL) {
 		if ((it->header->hash == HTTP_CONTENT_TYPE_HASH
 			|| it->header->hash == HTTP_CONTENT_LENGTH.hash()
-			|| it->header->hash == HTTP_CONNECTION_HASH)
+			|| it->header->hash == HTTP_CONNECTION.hash())
 		 && (psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-type"))
 			|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length"))
 			|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))))
@@ -428,8 +438,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		it.next();
 	}
 
-	value = req->secureHeaders.lookup(HTTPS);
-	if (value != NULL && value->size > 0) {
+	if (req->https) {
 		if (buffers != NULL) {
 			buffers[i].iov_base = (void *) "X-Forwarded-Proto: https\r\n";
 			buffers[i].iov_len  = sizeof("X-Forwarded-Proto: https\r\n") - 1;

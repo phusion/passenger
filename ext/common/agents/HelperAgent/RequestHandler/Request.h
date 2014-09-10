@@ -68,6 +68,8 @@ public:
 
 	ev_tstamp startedAt;
 	bool halfCloseAppConnection;
+	bool dechunkResponse;
+	bool https;
 
 	Options options;
 	SessionPtr session;

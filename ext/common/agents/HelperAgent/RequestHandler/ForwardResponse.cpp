@@ -103,7 +103,12 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 				resp->bodyAlreadyRead << " of " <<
 				resp->aux.bodyInfo.contentLength << " bytes already read");
 
-			writeResponse(client, MemoryKit::mbuf(buffer, 0, remaining));
+			if (remaining > 0) {
+				writeResponse(client, MemoryKit::mbuf(buffer, 0, remaining));
+			} else {
+				SKC_TRACE(client, 2, "End of application response body reached");
+				endRequest(&client, &req);
+			}
 			return Channel::Result(remaining, false);
 		} else if (errcode == 0) {
 			// EOF
@@ -134,7 +139,12 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			Channel::Result result = createAppResponseChunkedBodyParser(client,
 				req, &errcode).feed(buffer);
 			resp->bodyAlreadyRead += result.consumed;
-			writeResponse(client, MemoryKit::mbuf(buffer, 0, result.consumed));
+
+			// If dechunkResponse is true, the parser itself is responsible
+			// for writing data to the client.
+			if (!req->dechunkResponse) {
+				writeResponse(client, MemoryKit::mbuf(buffer, 0, result.consumed));
+			}
 
 			if (result.end) {
 				if (resp->parserState.chunkedBodyParser.state !=
@@ -195,12 +205,20 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 
 void
 onAppResponseBegin(Client *client, Request *req) {
-	const AppResponse *resp = &req->appResponse;
+	AppResponse *resp = &req->appResponse;
 	ssize_t bytesWritten;
-	const LString *value;
+	bool oobw;
 
-	value = resp->secureHeaders.lookup(PASSENGER_REQUEST_OOB_WORK);
-	if (value != NULL) {
+	// Localize hash table operations for better CPU caching.
+	oobw = resp->secureHeaders.lookup(PASSENGER_REQUEST_OOB_WORK);
+	resp->headers.erase(HTTP_CONNECTION);
+	resp->headers.erase(HTTP_STATUS);
+	if (req->dechunkResponse && resp->bodyType == AppResponse::RBT_CHUNKED) {
+		resp->headers.erase(HTTP_TRANSFER_ENCODING);
+		req->wantKeepAlive = false;
+	}
+
+	if (OXT_UNLIKELY(oobw)) {
 		SKC_TRACE(client, 2, "Response with OOBW detected");
 		if (req->session != NULL) {
 			req->session->requestOOBW();
@@ -351,15 +369,6 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	PUSH_STATIC_BUFFER("\r\n");
 
 	while (*it != NULL) {
-		if ((it->header->hash == HTTP_CONNECTION_HASH
-			|| it->header->hash == HTTP_STATUS_HASH)
-		 && (psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
-			|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("status"))))
-		{
-			it.next();
-			continue;
-		}
-
 		dataSize += it->header->key.size + sizeof(": ") - 1;
 		dataSize += it->header->val.size + sizeof("\r\n") - 1;
 
@@ -552,8 +561,9 @@ createAppResponseChunkedBodyParser(Client *client, Request *req,
 	int *errcode = NULL)
 {
 	return AppResponseChunkedBodyParser(&req->appResponse.parserState.chunkedBodyParser,
-		&req->appResponse, &req->bodyChannel, NULL, errcode,
-		AppResponseChunkedBodyParserAdapter(req));
+		&req->appResponse, &req->bodyChannel,
+		req->dechunkResponse ? &client->output : NULL,
+		errcode, AppResponseChunkedBodyParserAdapter(req));
 }
 
 void prepareAppResponseChunkedBodyParsing(Client *client, Request *req) {

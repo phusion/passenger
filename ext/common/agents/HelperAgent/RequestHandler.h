@@ -186,15 +186,16 @@ private:
 	HashedStaticString PASSENGER_STICKY_SESSIONS_COOKIE_NAME;
 	HashedStaticString PASSENGER_REQUEST_OOB_WORK;
 	HashedStaticString UNION_STATION_SUPPORT;
-	HashedStaticString HTTPS;
 	HashedStaticString REMOTE_ADDR;
+	HashedStaticString FLAGS;
 	HashedStaticString HTTP_COOKIE;
 	HashedStaticString HTTP_DATE;
 	HashedStaticString HTTP_CONTENT_LENGTH;
 	HashedStaticString HTTP_EXPECT;
+	HashedStaticString HTTP_CONNECTION;
+	HashedStaticString HTTP_STATUS;
+	HashedStaticString HTTP_TRANSFER_ENCODING;
 	boost::uint32_t HTTP_CONTENT_TYPE_HASH;
-	boost::uint32_t HTTP_CONNECTION_HASH;
-	boost::uint32_t HTTP_STATUS_HASH;
 
 	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
 	bool singleAppMode;
@@ -244,6 +245,8 @@ protected:
 		req->state = Request::ANALYZING_REQUEST;
 		req->startedAt = 0;
 		req->halfCloseAppConnection = false;
+		req->dechunkResponse = false;
+		req->https = false;
 		req->sessionCheckedOut = false;
 		req->sessionCheckoutTry = 0;
 		req->stickySession = false;
@@ -317,7 +320,9 @@ protected:
 	}
 
 	virtual bool shouldDisconnectClientOnShutdown(Client *client) {
-		return client->currentRequest == NULL || client->currentRequest->upgraded();
+		return client->currentRequest == NULL
+			|| client->currentRequest->httpState == Request::PARSING_HEADERS
+			|| client->currentRequest->upgraded();
 	}
 
 public:
@@ -331,15 +336,16 @@ public:
 		  PASSENGER_STICKY_SESSIONS_COOKIE_NAME("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME"),
 		  PASSENGER_REQUEST_OOB_WORK("!~request-oob-work"),
 		  UNION_STATION_SUPPORT("!~UNION_STATION_SUPPORT"),
-		  HTTPS("!~HTTPS"),
 		  REMOTE_ADDR("!~REMOTE_ADDR"),
+		  FLAGS("!~FLAGS"),
 		  HTTP_COOKIE("cookie"),
 		  HTTP_DATE("date"),
 		  HTTP_CONTENT_LENGTH("content-length"),
 		  HTTP_EXPECT("expect"),
+		  HTTP_CONNECTION("connection"),
+		  HTTP_STATUS("status"),
+		  HTTP_TRANSFER_ENCODING("transfer-encoding"),
 		  HTTP_CONTENT_TYPE_HASH(HashedStaticString("content-type").hash()),
-		  HTTP_CONNECTION_HASH(HashedStaticString("connection").hash()),
-		  HTTP_STATUS_HASH(HashedStaticString("status").hash()),
 		  poolOptionsCache(4),
 		  singleAppMode(false)
 	{

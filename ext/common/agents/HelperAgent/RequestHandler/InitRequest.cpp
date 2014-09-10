@@ -2,23 +2,44 @@
 
 protected:
 
+struct RequestAnalysis {
+	const LString *flags;
+	ServerKit::HeaderTable::Cell *appGroupNameCell;
+	bool stickySessions;
+	bool unionStationSupport;
+};
+
 virtual void
 onRequestBegin(Client *client, Request *req) {
 	ParentClass::onRequestBegin(client, req);
 
-	SKC_TRACE(client, 2, "Initiating request");
-	req->startedAt = ev_now(getLoop());
-	req->bodyChannel.stop();
+	{
+		// Perform hash table operations as close to header parsing as possible,
+		// and localize them as much as possible, for better CPU caching.
+		RequestAnalysis analysis;
+		analysis.flags = req->secureHeaders.lookup(FLAGS);
+		analysis.appGroupNameCell = singleAppMode
+			? NULL
+			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
+		analysis.stickySessions = getBoolOption(req, PASSENGER_STICKY_SESSIONS, false);
+		analysis.unionStationSupport = unionStationCore != NULL
+			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
 
-	initializePoolOptions(client, req);
-	if (req->ended()) {
-		return;
+		SKC_TRACE(client, 2, "Initiating request");
+		req->startedAt = ev_now(getLoop());
+		req->bodyChannel.stop();
+
+		initializeFlags(client, req, analysis);
+		initializePoolOptions(client, req, analysis);
+		if (req->ended()) {
+			return;
+		}
+		initializeUnionStation(client, req, analysis);
+		if (req->ended()) {
+			return;
+		}
+		setStickySessionId(client, req, analysis);
 	}
-	initializeUnionStation(client, req);
-	if (req->ended()) {
-		return;
-	}
-	setStickySessionId(client, req);
 
 	checkoutSession(client, req);
 }
@@ -31,7 +52,41 @@ supportsUpgrade(Client *client, Request *req) {
 private:
 
 void
-initializePoolOptions(Client *client, Request *req) {
+initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
+	if (analysis.flags != NULL) {
+		const LString::Part *part = analysis.flags->start;
+		while (part != NULL) {
+			const char *data = part->data;
+			const char *end  = part->data + part->size;
+			while (data < end) {
+				switch (*data) {
+				case 'D':
+					req->dechunkResponse = true;
+					break;
+				case 'S':
+					req->https = true;
+					break;
+				default:
+					break;
+				}
+				data++;
+			}
+			part = part->next;
+		}
+
+		if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG2)) {
+			if (req->dechunkResponse) {
+				SKC_TRACE(client, 2, "Dechunk flag detected");
+			}
+			if (req->https) {
+				SKC_TRACE(client, 2, "HTTPS flag detected");
+			}
+		}
+	}
+}
+
+void
+initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 	boost::shared_ptr<Options> *options;
 
 	if (singleAppMode) {
@@ -39,8 +94,7 @@ initializePoolOptions(Client *client, Request *req) {
 		poolOptionsCache.lookupRandom(NULL, &options);
 		req->options = **options;
 	} else {
-		ServerKit::HeaderTable::Cell *appGroupNameCell =
-			req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
+		ServerKit::HeaderTable::Cell *appGroupNameCell = analysis.appGroupNameCell;
 		if (appGroupNameCell != NULL && appGroupNameCell->header->val.size > 0) {
 			const LString *appGroupName = psg_lstr_make_contiguous(
 				&appGroupNameCell->header->val,
@@ -238,8 +292,8 @@ createNewPoolOptions(Client *client, Request *req) {
 }
 
 void
-initializeUnionStation(Client *client, Request *req) {
-	if (unionStationCore != NULL && getBoolOption(req, UNION_STATION_SUPPORT, false)) {
+initializeUnionStation(Client *client, Request *req, RequestAnalysis &analysis) {
+	if (analysis.unionStationSupport) {
 		Options &options = req->options;
 		ServerKit::HeaderTable &headers = req->secureHeaders;
 
@@ -275,9 +329,8 @@ initializeUnionStation(Client *client, Request *req) {
 }
 
 void
-setStickySessionId(Client *client, Request *req) {
-	const LString *value = req->headers.lookup(PASSENGER_STICKY_SESSIONS);
-	if (value != NULL && value->size > 0 && psg_lstr_first_byte(value) == 't') {
+setStickySessionId(Client *client, Request *req, RequestAnalysis &analysis) {
+	if (analysis.stickySessions) {
 		// TODO: This is not entirely correct. Clients MAY send multiple Cookie
 		// headers, although this is in practice extremely rare.
 		// http://stackoverflow.com/questions/16305814/are-multiple-cookie-headers-allowed-in-an-http-request

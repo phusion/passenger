@@ -353,19 +353,24 @@ private:
 			maxRemaining = req->aux.bodyInfo.contentLength - req->bodyAlreadyRead;
 			remaining = std::min<boost::uint64_t>(buffer.size(), maxRemaining);
 			req->bodyAlreadyRead += remaining;
-			SKC_TRACE(client, 3, "Client response body: " <<
+			SKC_TRACE(client, 3, "Request body: " <<
 				req->bodyAlreadyRead << " of " <<
 				req->aux.bodyInfo.contentLength << " bytes already read");
 
-			req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, remaining));
-			if (!req->ended()) {
-				if (!req->bodyChannel.passedThreshold()) {
-					requestBodyConsumed(client, req);
-				} else {
-					client->input.stop();
-					req->bodyChannel.buffersFlushedCallback =
-						onRequestBodyChannelBuffersFlushed;
+			if (remaining > 0) {
+				req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, remaining));
+				if (!req->ended()) {
+					if (!req->bodyChannel.passedThreshold()) {
+						requestBodyConsumed(client, req);
+					} else {
+						client->input.stop();
+						req->bodyChannel.buffersFlushedCallback =
+							onRequestBodyChannelBuffersFlushed;
+					}
 				}
+			} else {
+				SKC_TRACE(client, 2, "End of request body reached");
+				endRequest(&client, &req);
 			}
 			return Channel::Result(remaining, false);
 		} else if (errcode == 0) {

@@ -244,12 +244,7 @@ public:
 					state->state = HttpChunkedBodyParserState::DONE;
 					input->stop();
 					message->aux.bodyInfo.endChunkReached = true;
-					if (output != NULL) {
-						output->feed(MemoryKit::mbuf());
-						return Channel::Result(current + 1 - buffer.start, false);
-					} else {
-						return Channel::Result(current + 1 - buffer.start, true);
-					}
+					return Channel::Result(current + 1 - buffer.start, true);
 				} else {
 					setError(CHUNK_FINALIZER_PARSE_ERROR);
 					break;
