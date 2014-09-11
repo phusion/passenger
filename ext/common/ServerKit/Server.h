@@ -201,6 +201,7 @@ public:
 	ClientList activeClients, disconnectedClients;
 	unsigned int freeClientCount, activeClientCount, disconnectedClientCount;
 	unsigned long totalClientsAccepted;
+	unsigned long long totalBytesConsumed;
 
 private:
 	Context *ctx;
@@ -443,8 +444,20 @@ private:
 		Client *client = static_cast<Client *>(static_cast<BaseClient *>(
 			channel->getHooks()->userData));
 		BaseServer *server = getServerFromClient(client);
+		const size_t bufferSize = buffer.size();
+
 		server->logClientDataReceived(client, buffer, errcode);
-		return server->onClientDataReceived(client, buffer, errcode);
+		Channel::Result result = server->onClientDataReceived(client, buffer, errcode);
+
+		// This counter is mostly useful for unit tests, so it's too much hassle to
+		// support cases where result.consumed < 1.
+		size_t consumed = std::max<size_t>(0,
+			std::min<size_t>(result.consumed, bufferSize));
+		server->totalBytesConsumed += consumed;
+		SKC_TRACE_FROM_STATIC(server, client, 2,
+			consumed << " bytes of client data consumed in this callback");
+
+		return result;
 	}
 
 	static void _onClientOutputError(FileBufferedFdOutputChannel *_channel, int errcode) {
@@ -606,6 +619,7 @@ public:
 		  activeClientCount(0),
 		  disconnectedClientCount(0),
 		  totalClientsAccepted(0),
+		  totalBytesConsumed(0),
 		  ctx(context),
 		  nextClientNumber(1),
 		  nEndpoints(0),
@@ -824,6 +838,7 @@ public:
 		Json::Value &disconnectedClientsDoc = doc["disconnected_clients"] = Json::Value(Json::objectValue);
 		doc["disconnected_client_count"] = disconnectedClientCount;
 		doc["total_clients_accepted"] = (Json::UInt64) totalClientsAccepted;
+		doc["total_bytes_consumed"] = (Json::UInt64) totalBytesConsumed;
 
 		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
 			Json::Value subdoc;

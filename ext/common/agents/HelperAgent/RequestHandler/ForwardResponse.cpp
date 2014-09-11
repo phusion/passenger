@@ -131,31 +131,43 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 	case AppResponse::PARSING_CHUNKED_BODY:
 		if (!buffer.empty()) {
 			// Data
-			int errcode;
+			int parseErrcode;
 
 			SKC_TRACE(client, 3, "Processing " << buffer.size() <<
 				" bytes of application data: \"" << cEscapeString(StaticString(
 					buffer.start, buffer.size())) << "\"");
 			Channel::Result result = createAppResponseChunkedBodyParser(client,
-				req, &errcode).feed(buffer);
+				req, &parseErrcode).feed(buffer);
+			assert(result.consumed >= 0);
 			resp->bodyAlreadyRead += result.consumed;
 
 			// If dechunkResponse is true, the parser itself is responsible
 			// for writing data to the client.
 			if (!req->dechunkResponse) {
 				writeResponse(client, MemoryKit::mbuf(buffer, 0, result.consumed));
+				if (req->ended()) {
+					return Channel::Result(result.consumed, false);
+				}
 			}
 
 			if (result.end) {
 				if (resp->parserState.chunkedBodyParser.state !=
 					ServerKit::HttpChunkedBodyParserState::ERROR)
 				{
-					writeResponse(client, MemoryKit::mbuf());
-					endRequest(&client, &req);
+					if (!req->ended()) {
+						writeResponse(client, MemoryKit::mbuf());
+						endRequest(&client, &req);
+					}
 				} else {
-					string message = "error parsing app response chunked encoding: ";
-					message.append(ServerKit::getErrorDesc(errcode));
-					disconnectWithError(&client, message);
+					if (req->dechunkResponse) {
+						// The parser already feeds an error to client->output.
+						assert(req->ended());
+					} else {
+						assert(!req->ended());
+						string message = "error parsing app response chunked encoding: ";
+						message.append(ServerKit::getErrorDesc(parseErrcode));
+						disconnectWithError(&client, message);
+					}
 				}
 			}
 			return Channel::Result(result.consumed, false);

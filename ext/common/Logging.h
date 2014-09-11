@@ -89,7 +89,8 @@ enum PassengerLogLevel {
 	LVL_NOTICE = 3,
 	LVL_INFO   = 4,
 	LVL_DEBUG  = 5,
-	LVL_DEBUG2 = 6
+	LVL_DEBUG2 = 6,
+	LVL_DEBUG3 = 7
 };
 
 /**

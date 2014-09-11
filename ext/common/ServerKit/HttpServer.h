@@ -64,7 +64,7 @@ public:
 
 	FreeRequestList freeRequests;
 	unsigned int freeRequestCount, requestFreelistLimit;
-	unsigned int totalRequestsAccepted;
+	unsigned long totalRequestsAccepted;
 
 private:
 	/***** Types and nested classes *****/
@@ -315,13 +315,14 @@ private:
 				onRequestBegin(client, req);
 				return Channel::Result(ret, false);
 			case Request::UPGRADED:
+				assert(!req->wantKeepAlive);
 				if (supportsUpgrade(client, req)) {
 					SKC_TRACE(client, 2, "Expecting connection upgrade");
 					onRequestBegin(client, req);
 					return Channel::Result(ret, false);
 				} else {
-					endAsBadRequest(&client, &req,
-						"Bad request (connection upgrading not allowed for this request)");
+					endWithErrorResponse(&client, &req, 422,
+						"Connection upgrading not allowed for this request");
 					return Channel::Result(0, true);
 				}
 			case Request::ERROR:
@@ -397,7 +398,21 @@ private:
 	{
 		if (buffer.size() > 0) {
 			req->bodyAlreadyRead += buffer.size();
-			return createChunkedBodyParser(client, req).feed(buffer);
+			Channel::Result result = createChunkedBodyParser(client, req).feed(buffer);
+			assert(result.consumed >= 0);
+			if (result.end) {
+				if (req->parserState.chunkedBodyParser.state !=
+					HttpChunkedBodyParserState::ERROR)
+				{
+					if (!req->ended()) {
+						req->bodyChannel.feed(MemoryKit::mbuf());
+					}
+				} else {
+					// The parser already feeds an error to client->output.
+					assert(req->ended());
+				}
+			}
+			return Channel::Result(result.consumed, false);
 		} else {
 			createChunkedBodyParser(client, req).feedUnexpectedEof(this,
 				client, req);
@@ -494,6 +509,7 @@ private:
 		if (client->currentRequest != NULL
 		 && client->currentRequest->httpState == Request::FLUSHING_OUTPUT)
 		{
+			client->currentRequest->httpState = Request::WAITING_FOR_REFERENCES;
 			self->doneWithCurrentRequest(&client);
 		}
 	}
@@ -775,6 +791,12 @@ protected:
 		client->currentRequest = NULL;
 	}
 
+	virtual bool shouldDisconnectClientOnShutdown(Client *client) {
+		return client->currentRequest == NULL
+			|| client->currentRequest->httpState == Request::PARSING_HEADERS
+			|| client->currentRequest->upgraded();
+	}
+
 
 	/***** New hooks *****/
 
@@ -887,7 +909,7 @@ public:
 	virtual Json::Value inspectStateAsJson() const {
 		Json::Value doc = ParentClass::inspectStateAsJson();
 		doc["free_request_count"] = freeRequestCount;
-		doc["total_requests_accepted"] = totalRequestsAccepted;
+		doc["total_requests_accepted"] = (Json::UInt64) totalRequestsAccepted;
 		return doc;
 	}
 

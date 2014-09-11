@@ -319,12 +319,6 @@ protected:
 		resp->secureHeaders.clear();
 	}
 
-	virtual bool shouldDisconnectClientOnShutdown(Client *client) {
-		return client->currentRequest == NULL
-			|| client->currentRequest->httpState == Request::PARSING_HEADERS
-			|| client->currentRequest->upgraded();
-	}
-
 public:
 	RequestHandler(ServerKit::Context *context, const VariantMap *_agentsOptions)
 		: ParentClass(context),

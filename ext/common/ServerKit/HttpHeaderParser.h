@@ -228,6 +228,9 @@ private:
 		{
 			// Validate previous header and insert into table.
 			if (!self->validateHeader(MessageType(), self->state->currentHeader)) {
+				// There's a bug in http_parser: even if we return 1 here, it doesn't
+				// set the error flag correctly. We fix that here.
+				self->state->parser.http_errno = HPE_CB_headers_complete;
 				return 1;
 			}
 			self->insertCurrentHeader();
@@ -303,13 +306,13 @@ private:
 			if (!state->parser.upgrade) {
 				message->httpState = Message::COMPLETE;
 				P_ASSERT_EQ(message->bodyType, Message::RBT_NO_BODY);
-			} else if (message->method == HTTP_HEAD) {
-				message->httpState      = Message::ERROR;
-				message->aux.parseError = UPGRADE_NOT_ALLOWED_FOR_HEAD_REQUESTS;
-			} else {
+			} else if (message->method != HTTP_HEAD) {
 				message->httpState = Message::UPGRADED;
 				message->bodyType  = Message::RBT_UPGRADE;
-				assert(!message->wantKeepAlive);
+				message->wantKeepAlive = false;
+			} else {
+				message->httpState      = Message::ERROR;
+				message->aux.parseError = UPGRADE_NOT_ALLOWED_FOR_HEAD_REQUESTS;
 			}
 		}
 	}

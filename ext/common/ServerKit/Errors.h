@@ -73,9 +73,9 @@ getErrorDesc(int errcode) {
 	case REQUEST_CONTAINS_CONTENT_LENGTH_AND_TRANSFER_ENCODING:
 		return "Bad request (request may not contain both Content-Length and Transfer-Encoding)";
 	case UPGRADE_NOT_ALLOWED_WHEN_REQUEST_BODY_EXISTS:
-		return "Bad request ('Upgrade' header is only allowed for requests without request body)";
+		return "Bad request (Connection upgrading is only allowed for requests without request body)";
 	case UPGRADE_NOT_ALLOWED_FOR_HEAD_REQUESTS:
-		return "Bad request ('Upgrade' header is not allowed for HEAD requests)";
+		return "Bad request (Connection upgrading is not allowed for HEAD requests)";
 	case RESPONSE_CONTAINS_CONTENT_LENGTH_AND_TRANSFER_ENCODING:
 		return "Response may not contain both Content-Length and Transfer-Encoding";
 	case SECURITY_PASSWORD_MISMATCH:

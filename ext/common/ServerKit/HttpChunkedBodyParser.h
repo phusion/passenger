@@ -110,6 +110,10 @@ public:
 	}
 
 	Channel::Result feed(const MemoryKit::mbuf &buffer) {
+		// Calling feed() on channels could result in the request being
+		// ended, which modifies the buffer. So we cache the original
+		// buffer start address here.
+		const char *bufferStart = buffer.start;
 		const char *current  = buffer.start;
 		const char *end      = buffer.start + buffer.size();
 		const char *needle;
@@ -134,14 +138,14 @@ public:
 						state->state = HttpChunkedBodyParserState::EXPECTING_NON_FINAL_CR;
 					}
 					if (output != NULL) {
-						output->feed(MemoryKit::mbuf(buffer, current - buffer.start, dataSize));
+						output->feed(MemoryKit::mbuf(buffer, current - bufferStart, dataSize));
 						if (!adapter.requestEnded() && !output->ended()
 						 && output->passedThreshold())
 						{
 							input->stop();
 							adapter.setOutputBuffersFlushedCallback();
 						}
-						return Channel::Result(current + dataSize - buffer.start, false);
+						return Channel::Result(current + dataSize - bufferStart, false);
 					} else {
 						current += dataSize;
 						break;
@@ -244,7 +248,7 @@ public:
 					state->state = HttpChunkedBodyParserState::DONE;
 					input->stop();
 					message->aux.bodyInfo.endChunkReached = true;
-					return Channel::Result(current + 1 - buffer.start, true);
+					return Channel::Result(current + 1 - bufferStart, true);
 				} else {
 					setError(CHUNK_FINALIZER_PARSE_ERROR);
 					break;
@@ -257,7 +261,7 @@ public:
 			}
 		}
 
-		return Channel::Result(current - buffer.start,
+		return Channel::Result(current - bufferStart,
 			state->state == HttpChunkedBodyParserState::ERROR);
 	}
 

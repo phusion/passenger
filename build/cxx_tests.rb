@@ -109,6 +109,20 @@ TEST_CXX_OBJECTS = {
 		ext/common/ServerKit/FileBufferedChannel.h
 		ext/common/ServerKit/FileBufferedFdOutputChannel.h
 		ext/common/ServerKit/Context.h),
+	'test/cxx/ServerKit/HttpServerTest.o' => %w(
+		test/cxx/ServerKit/HttpServerTest.cpp
+		ext/common/ServerKit/Server.h
+		ext/common/ServerKit/Client.h
+		ext/common/ServerKit/Channel.h
+		ext/common/ServerKit/FdInputChannel.h
+		ext/common/ServerKit/FileBufferedChannel.h
+		ext/common/ServerKit/FileBufferedFdOutputChannel.h
+		ext/common/ServerKit/Context.h
+		ext/common/ServerKit/HttpServer.h
+		ext/common/ServerKit/HttpClient.h
+		ext/common/ServerKit/HttpRequest.h
+		ext/common/ServerKit/HttpHeaderParser.h
+		ext/common/ServerKit/HttpChunkedBodyParser.h),
 	'test/cxx/DataStructures/LStringTest.o' => %w(
 		test/cxx/DataStructures/LStringTest.cpp
 		ext/common/DataStructures/LString.h),
