@@ -47,8 +47,9 @@ struct SessionProtocolWorkingState {
 	const LString *httpPath;
 	StaticString path;
 	StaticString queryString;
-	const char *methodStr;
-	size_t methodStrLen;
+	StaticString methodStr;
+	StaticString serverName;
+	StaticString serverPort;
 };
 
 void
@@ -129,14 +130,31 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	dataSize += sizeof("QUERY_STRING");
 	dataSize += state.queryString.size() + 1;
 
-	state.methodStr = http_method_str(req->method);
-	state.methodStrLen = strlen(state.methodStr);
+	state.methodStr = StaticString(http_method_str(req->method));
 	dataSize += sizeof("REQUEST_METHOD");
-	dataSize += state.methodStrLen + 1;
+	dataSize += state.methodStr.size() + 1;
+
+	if (req->host != NULL) {
+		const LString *host = psg_lstr_make_contiguous(req->host, req->pool);
+		const char *sep = (const char *) memchr(host->start->data, ':', host->size);
+		if (sep != NULL) {
+			state.serverName = StaticString(host->start->data, sep - host->start->data);
+			state.serverPort = StaticString(sep + 1,
+				host->start->data + host->size - sep - 1);
+		} else {
+			state.serverName = StaticString(host->start->data, host->size);
+			state.serverPort = P_STATIC_STRING("80");
+		}
+	} else {
+		state.serverName = defaultServerName;
+		state.serverPort = defaultServerPort;
+	}
 
 	dataSize += sizeof("SERVER_NAME");
-	// TODO: set to Host without port number
-	dataSize += sizeof("TODO");
+	dataSize += state.serverName.size() + 1;
+
+	dataSize += sizeof("SERVER_PORT");
+	dataSize += state.serverPort.size() + 1;
 
 	dataSize += sizeof("PASSENGER_CONNECT_PASSWORD");
 	dataSize += req->session->getGroupSecret().size() + 1;
@@ -188,12 +206,15 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("REQUEST_METHOD"));
-	pos = appendData(pos, end, StaticString(state.methodStr, state.methodStrLen));
+	pos = appendData(pos, end, state.methodStr);
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SERVER_NAME"));
-	// TODO: set to Host without port number
-	pos = appendData(pos, end, P_STATIC_STRING("TODO"));
+	pos = appendData(pos, end, state.serverName);
+	pos = appendData(pos, end, "", 1);
+
+	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SERVER_PORT"));
+	pos = appendData(pos, end, state.serverPort);
 	pos = appendData(pos, end, "", 1);
 
 	value = req->headers.lookup(HTTP_CONTENT_LENGTH);

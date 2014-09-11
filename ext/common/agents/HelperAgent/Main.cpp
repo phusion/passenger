@@ -540,6 +540,7 @@ initializeNonPrivilegedWorkingObjects() {
 	ev_signal_init(&wo->sigtermWatcher, onTerminationSignal, SIGTERM);
 	ev_signal_start(wo->bgloop->loop, &wo->sigtermWatcher);
 
+	UPDATE_TRACE_POINT();
 	wo->appPool = boost::make_shared<Pool>(wo->spawnerFactory, agentsOptions);
 	wo->appPool->initialize();
 	wo->appPool->setMax(options.getInt("max_pool_size"));
@@ -800,6 +801,19 @@ setAgentsOptionsDefaults() {
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 	options.setDefaultInt("min_instances", 1);
+
+	string firstAddress = options.getStrSet("server_addresses")[0];
+	if (getSocketAddressType(firstAddress) == SAT_TCP) {
+		string host;
+		unsigned short port;
+
+		parseTcpSocketAddress(firstAddress, host, port);
+		options.setDefault("default_server_name", host);
+		options.setDefaultInt("default_server_port", port);
+	} else {
+		options.setDefault("default_server_name", "localhost");
+		options.setDefaultInt("default_server_port", 80);
+	}
 
 	options.setDefault("default_ruby", DEFAULT_RUBY);
 	if (!options.getBool("multi_app") && !options.has("app_root")) {

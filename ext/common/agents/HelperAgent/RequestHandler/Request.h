@@ -70,6 +70,7 @@ public:
 
 	Options options;
 	SessionPtr session;
+	const LString *host;
 
 	struct {
 		UnionStation::ScopeLog *requestProcessing;

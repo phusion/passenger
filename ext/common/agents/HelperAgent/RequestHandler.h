@@ -182,6 +182,8 @@ private:
 	StaticString loggingAgentPassword;
 	StaticString defaultUser;
 	StaticString defaultGroup;
+	StaticString defaultServerName;
+	StaticString defaultServerPort;
 	HashedStaticString PASSENGER_APP_GROUP_NAME;
 	HashedStaticString PASSENGER_MAX_REQUESTS;
 	HashedStaticString PASSENGER_STICKY_SESSIONS;
@@ -192,6 +194,7 @@ private:
 	HashedStaticString FLAGS;
 	HashedStaticString HTTP_COOKIE;
 	HashedStaticString HTTP_DATE;
+	HashedStaticString HTTP_HOST;
 	HashedStaticString HTTP_CONTENT_LENGTH;
 	HashedStaticString HTTP_EXPECT;
 	HashedStaticString HTTP_CONNECTION;
@@ -251,10 +254,12 @@ protected:
 		req->stickySession = false;
 		req->halfCloseAppConnection = false;
 		req->sessionCheckoutTry = 0;
+		req->host = NULL;
 	}
 
 	virtual void deinitializeRequest(Client *client, Request *req) {
 		req->session.reset();
+
 		req->endScopeLog(&req->scopeLogs.requestProxying, false);
 		req->endScopeLog(&req->scopeLogs.getFromPool, false);
 		req->endScopeLog(&req->scopeLogs.bufferingRequestBody, false);
@@ -335,6 +340,7 @@ public:
 		  FLAGS("!~FLAGS"),
 		  HTTP_COOKIE("cookie"),
 		  HTTP_DATE("date"),
+		  HTTP_HOST("host"),
 		  HTTP_CONTENT_LENGTH("content-length"),
 		  HTTP_EXPECT("expect"),
 		  HTTP_CONNECTION("connection"),
@@ -354,6 +360,10 @@ public:
 			agentsOptions->get("default_user", false));
 		defaultGroup = psg_pstrdup(stringPool,
 			agentsOptions->get("default_group", false));
+		defaultServerName = psg_pstrdup(stringPool,
+			agentsOptions->get("default_server_name"));
+		defaultServerPort = psg_pstrdup(stringPool,
+			agentsOptions->get("default_server_port"));
 
 		if (!agentsOptions->getBool("multi_app")) {
 			boost::shared_ptr<Options> options = make_shared<Options>();

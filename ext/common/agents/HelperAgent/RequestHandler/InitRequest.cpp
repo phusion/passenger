@@ -23,6 +23,7 @@ onRequestBegin(Client *client, Request *req) {
 		analysis.unionStationSupport = unionStationCore != NULL
 			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
 		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS, false);
+		req->host = req->headers.lookup(HTTP_HOST);
 
 		SKC_TRACE(client, 2, "Initiating request");
 		req->startedAt = ev_now(getLoop());
