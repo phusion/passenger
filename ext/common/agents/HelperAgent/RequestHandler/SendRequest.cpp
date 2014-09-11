@@ -7,6 +7,12 @@ sendHeaderToApp(Client *client, Request *req) {
 	SKC_TRACE(client, 2, "Sending headers to application with " <<
 		req->session->getProtocol() << " protocol");
 	req->state = Request::SENDING_HEADER_TO_APP;
+
+	/**
+	 * HTTP does not formally support half-closing, and Node.js treats a
+	 * half-close as a full close, so we only half-close session sockets, not
+	 * HTTP sockets.
+	 */
 	if (req->session->getProtocol() == "session") {
 		req->halfCloseAppConnection = true;
 		sendHeaderToAppWithSessionProtocol(client, req);

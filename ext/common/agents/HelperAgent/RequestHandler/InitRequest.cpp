@@ -5,7 +5,6 @@ protected:
 struct RequestAnalysis {
 	const LString *flags;
 	ServerKit::HeaderTable::Cell *appGroupNameCell;
-	bool stickySessions;
 	bool unionStationSupport;
 };
 
@@ -21,9 +20,9 @@ onRequestBegin(Client *client, Request *req) {
 		analysis.appGroupNameCell = singleAppMode
 			? NULL
 			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
-		analysis.stickySessions = getBoolOption(req, PASSENGER_STICKY_SESSIONS, false);
 		analysis.unionStationSupport = unionStationCore != NULL
 			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
+		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS, false);
 
 		SKC_TRACE(client, 2, "Initiating request");
 		req->startedAt = ev_now(getLoop());
@@ -38,7 +37,7 @@ onRequestBegin(Client *client, Request *req) {
 		if (req->ended()) {
 			return;
 		}
-		setStickySessionId(client, req, analysis);
+		setStickySessionId(client, req);
 	}
 
 	checkoutSession(client, req);
@@ -329,8 +328,8 @@ initializeUnionStation(Client *client, Request *req, RequestAnalysis &analysis) 
 }
 
 void
-setStickySessionId(Client *client, Request *req, RequestAnalysis &analysis) {
-	if (analysis.stickySessions) {
+setStickySessionId(Client *client, Request *req) {
+	if (req->stickySession) {
 		// TODO: This is not entirely correct. Clients MAY send multiple Cookie
 		// headers, although this is in practice extremely rare.
 		// http://stackoverflow.com/questions/16305814/are-multiple-cookie-headers-allowed-in-an-http-request
@@ -339,7 +338,6 @@ setStickySessionId(Client *client, Request *req, RequestAnalysis &analysis) {
 		vector< pair<StaticString, StaticString> > cookies;
 		pair<StaticString, StaticString> cookie;
 
-		req->stickySession = true;
 		parseCookieHeader(req->pool, cookieHeader, cookies);
 		foreach (cookie, cookies) {
 			if (psg_lstr_cmp(cookieName, cookie.first)) {

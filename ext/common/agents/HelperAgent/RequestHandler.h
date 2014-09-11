@@ -173,6 +173,8 @@ private:
 	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
 	typedef ServerKit::FileBufferedFdOutputChannel FileBufferedFdOutputChannel;
 
+	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
+
 	const VariantMap *agentsOptions;
 	psg_pool_t *stringPool;
 	StaticString defaultRuby;
@@ -242,24 +244,17 @@ protected:
 		// appInput and appOutput are initialized in
 		// RequestHandler::checkoutSession().
 
-		req->state = Request::ANALYZING_REQUEST;
 		req->startedAt = 0;
-		req->halfCloseAppConnection = false;
+		req->state = Request::ANALYZING_REQUEST;
 		req->dechunkResponse = false;
 		req->https = false;
-		req->sessionCheckedOut = false;
-		req->sessionCheckoutTry = 0;
 		req->stickySession = false;
-		req->responseHeaderSeen = false;
-		req->chunkedResponse = false;
-		req->responseContentLength = -1;
-		req->responseBodyAlreadyRead = 0;
+		req->halfCloseAppConnection = false;
+		req->sessionCheckoutTry = 0;
 	}
 
 	virtual void deinitializeRequest(Client *client, Request *req) {
 		req->session.reset();
-		req->responseHeaderBufferer.reset();
-		req->responseDechunker.reset();
 		req->endScopeLog(&req->scopeLogs.requestProxying, false);
 		req->endScopeLog(&req->scopeLogs.getFromPool, false);
 		req->endScopeLog(&req->scopeLogs.bufferingRequestBody, false);
@@ -410,12 +405,15 @@ public:
 	virtual Json::Value inspectRequestStateAsJson(const Request *req) const {
 		Json::Value doc = ParentClass::inspectRequestStateAsJson(req);
 
-		doc["state"] = req->getStateString();
 		doc["started_at"] = timeToJson(req->startedAt * 1000000.0);
+		doc["state"] = req->getStateString();
+		doc["dechunk_response"] = req->dechunkResponse;
+		doc["https"] = req->https;
 		doc["sticky_session"] = req->stickySession;
 		if (req->stickySession) {
 			doc["sticky_session_id"] = req->options.stickySessionId;
 		}
+		doc["session_checkout_try"] = req->sessionCheckoutTry;
 
 		if (req->session != NULL) {
 			Json::Value &sessionDoc = doc["session"] = Json::Value(Json::objectValue);

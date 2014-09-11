@@ -49,59 +49,41 @@ using namespace ApplicationPool2;
 
 class Request: public ServerKit::BaseHttpRequest {
 public:
-	/***** RequestHandler <-> Application I/O channels, pipes and watchers *****/
-
-	ServerKit::FileBufferedFdOutputChannel appInput;
-	ServerKit::FdInputChannel appOutput;
-	AppResponse appResponse;
-
-
-	/***** State variables *****/
-
-	enum {
+	enum State {
 		ANALYZING_REQUEST,
 		CHECKING_OUT_SESSION,
 		SENDING_HEADER_TO_APP,
 		FORWARDING_BODY_TO_APP,
 		WAITING_FOR_APP_OUTPUT
-	} state;
+	};
 
 	ev_tstamp startedAt;
-	bool halfCloseAppConnection;
-	bool dechunkResponse;
-	bool https;
+
+	State state: 3;
+	bool dechunkResponse: 1;
+	bool https: 1;
+	bool stickySession: 1;
+	bool halfCloseAppConnection: 1;
+
+	// Range: 0..MAX_SESSION_CHECKOUT_TRY
+	boost::uint8_t sessionCheckoutTry;
 
 	Options options;
 	SessionPtr session;
+
 	struct {
 		UnionStation::ScopeLog *requestProcessing;
 		UnionStation::ScopeLog *bufferingRequestBody;
 		UnionStation::ScopeLog *getFromPool;
 		UnionStation::ScopeLog *requestProxying;
 	} scopeLogs;
-	unsigned int sessionCheckoutTry;
 
-	bool sessionCheckedOut;
-	bool stickySession;
-	bool responseHeaderSeen;
-	bool chunkedResponse;
-	/** The size of the response body, set based on the values of
-	 * the Content-Length and Transfer-Encoding response headers.
-	 * Possible values:
-	 *
-	 * -1: infinite. Should keep forwarding response body until end of stream.
-	 *     This is the case for WebSockets or for responses without Content-Length.
-	 *     Responses with "Transfer-Encoding: chunked" also fall under this
-	 *     category, though in this case encountering the zero-length chunk is
-	 *     treated the same as end of stream.
-	 * 0 : no client body. Should immediately close connection after forwarding
-	 *     headers.
-	 * >0: Should forward exactly this many bytes of the response body.
-	 */
-	long long responseContentLength;
-	unsigned long long responseBodyAlreadyRead;
-	HttpHeaderBufferer responseHeaderBufferer;
-	Dechunker responseDechunker;
+
+	/***** Application I/O channels and response information *****/
+
+	ServerKit::FileBufferedFdOutputChannel appInput;
+	ServerKit::FdInputChannel appOutput;
+	AppResponse appResponse;
 
 
 	const char *getStateString() const {
@@ -119,22 +101,8 @@ public:
 		}
 	}
 
-	/**
-	 * Checks whether we should half-close the application socket after forwarding
-	 * the request. HTTP does not formally support half-closing, and Node.js treats a
-	 * half-close as a full close, so we only half-close session sockets, not
-	 * HTTP sockets.
-	 */
-	bool shouldHalfCloseWrite() const {
-		return session->getProtocol() == "session";
-	}
-
 	bool useUnionStation() const {
 		return options.transaction != NULL;
-	}
-
-	UnionStation::TransactionPtr getUnionStationTransaction() const {
-		return options.transaction;
 	}
 
 	void beginScopeLog(UnionStation::ScopeLog **scopeLog, const char *name) {
@@ -153,42 +121,6 @@ public:
 
 	void logMessage(const StaticString &message) {
 		options.transaction->message(message);
-	}
-
-	void inspect(ostream &stream) const {
-		//const char *indent = "    ";
-
-		//stream << indent << "host                        = " << (scgiParser.getHeader("HTTP_HOST").empty() ? "(empty)" : scgiParser.getHeader("HTTP_HOST")) << "\n";
-		//stream << indent << "uri                         = " << (scgiParser.getHeader("REQUEST_URI").empty() ? "(empty)" : scgiParser.getHeader("REQUEST_URI")) << "\n";
-		//stream << indent << "connected at                = " << timestr << " (" << (unsigned long long) (ev_time() - connectedAt) << " sec ago)\n";
-		//stream << indent << "state                       = " << getStateName() << "\n";
-		/*if (session == NULL) {
-			stream << indent << "session                     = NULL\n";
-		} else {
-			stream << indent << "session pid                 = " << session->getPid() << " (" <<
-				session->getGroup()->name << ")\n";
-			stream << indent << "session gupid               = " << session->getGupid() << "\n";
-			stream << indent << "session initiated           = " << boolStr(session->initiated()) << "\n";
-		}
-		stream
-			<< indent << "requestBodyIsBuffered       = " << boolStr(requestBodyIsBuffered) << "\n"
-			<< indent << "requestIsChunked            = " << boolStr(requestIsChunked) << "\n"
-			<< indent << "requestBodyLength           = " << requestBodyLength << "\n"
-			<< indent << "requestBodyAlreadyRead      = " << requestBodyAlreadyRead << "\n"
-			<< indent << "responseContentLength       = " << responseContentLength << "\n"
-			<< indent << "responseBodyAlreadyRead     = " << responseBodyAlreadyRead << "\n"
-			<< indent << "clientBodyBuffer started    = " << boolStr(clientBodyBuffer->isStarted()) << "\n"
-			<< indent << "clientBodyBuffer reachedEnd = " << boolStr(clientBodyBuffer->reachedEnd()) << "\n"
-			<< indent << "clientOutputPipe started    = " << boolStr(clientOutputPipe->isStarted()) << "\n"
-			<< indent << "clientOutputPipe reachedEnd = " << boolStr(clientOutputPipe->reachedEnd()) << "\n"
-			<< indent << "clientOutputWatcher active  = " << boolStr(clientOutputWatcher.is_active()) << "\n"
-			<< indent << "appInput                    = " << appInput.get() << " " << appInput->inspect() << "\n"
-			<< indent << "appInput started            = " << boolStr(appInput->isStarted()) << "\n"
-			<< indent << "appInput reachedEnd         = " << boolStr(appInput->endReached()) << "\n"
-			<< indent << "responseHeaderSeen          = " << boolStr(responseHeaderSeen) << "\n"
-			<< indent << "useUnionStation             = " << boolStr(useUnionStation()) << "\n"
-			;
-		*/
 	}
 
 	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Request);

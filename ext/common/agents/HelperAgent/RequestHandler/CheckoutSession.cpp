@@ -96,10 +96,9 @@ initiateSession(Client *client, Request *req) {
 	try {
 		req->session->initiate();
 	} catch (const SystemException &e2) {
-		if (req->sessionCheckoutTry < 10) {
+		if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
 			SKC_DEBUG(client, "Error checking out session (" << e2.what() <<
 				"); retrying (attempt " << req->sessionCheckoutTry << ")");
-			req->sessionCheckedOut = false;
 			refRequest(req);
 			getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
 		} else {
