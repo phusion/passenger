@@ -32,7 +32,6 @@ extern const HashedStaticString TRANSFER_ENCODING;
 extern const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[];
 extern const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE;
 
-const HashedStaticString TRANSFER_ENCODING("transfer-encoding");
 const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[] =
 	"Status: 500 Internal Server Error\r\n"
 	"Content-Length: 22\r\n"

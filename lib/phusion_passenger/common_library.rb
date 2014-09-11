@@ -126,8 +126,17 @@ private
 			object_file = "#{@output_dir}/#{object_name}"
 
 			file(object_file => dependencies_for(options)) do
-				if options[:optimize]
+				case options[:optimize]
+				when :light
+					optimize = "-O1"
+				when true, :heavy
 					optimize = "-O2"
+				when :very_heavy
+					optimize = "-O3"
+				when nil
+					optimize = nil
+				else
+					raise "Unknown optimization level #{options[:optimize]}"
 				end
 				if options[:strict_aliasing] == false
 					optimize = "#{optimize} -fno-strict-aliasing"
@@ -322,7 +331,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 	define_component 'Logging.o',
 		:source   => 'Logging.cpp',
 		:category => :base,
-		:optimize => false,
+		:optimize => :light,
 		:deps     => %w(
 			Logging.cpp
 			Logging.h
@@ -342,20 +351,21 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 	define_component 'Utils/StrIntUtils.o',
 		:source   => 'Utils/StrIntUtils.cpp',
 		:category => :base,
-		:optimize => true,
+		:optimize => :very_heavy,
 		:deps     => %w(
 			Utils/StrIntUtils.h
 		)
 	define_component 'Utils/StrIntUtilsNoStrictAliasing.o',
 		:source   => 'Utils/StrIntUtilsNoStrictAliasing.cpp',
 		:category => :base,
-		:optimize => true,
+		:optimize => :very_heavy,
 		:strict_aliasing => false,
 		:deps     => %w(
 			Utils/StrIntUtils.h
 		)
 	define_component 'Utils/IOUtils.o',
 		:source   => 'Utils/IOUtils.cpp',
+		:optimize => :light,
 		:category => :base,
 		:deps     => %w(
 			Utils/IOUtils.h
@@ -466,7 +476,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 	define_component 'ServerKit/http_parser.o',
 		:source   => 'ServerKit/http_parser.cpp',
 		:category => :other,
-		:optimize => true,
+		:optimize => :very_heavy,
 		:deps     => %w(
 			ServerKit/http_parser.h
 		)
@@ -484,7 +494,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 	define_component 'Utils/Hasher.o',
 		:source   => 'Utils/Hasher.cpp',
 		:category => :other,
-		:optimize => true,
+		:optimize => :very_heavy,
 		:deps     => %w(
 			Utils/Hasher.h
 		)

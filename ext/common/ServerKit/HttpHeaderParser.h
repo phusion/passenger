@@ -42,8 +42,6 @@ namespace Passenger {
 namespace ServerKit {
 
 
-extern const HashedStaticString TRANSFER_ENCODING;
-
 struct HttpParseRequest {};
 struct HttpParseResponse {};
 

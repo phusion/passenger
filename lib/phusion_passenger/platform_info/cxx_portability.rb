@@ -70,7 +70,7 @@ private
 		return ok
 	end
 	private_class_method :check_unordered_map
-	
+
 	def self.check_hash_map(flags)
 		hash_namespace = nil
 		ok = false
@@ -131,7 +131,6 @@ private
 		end
 
 		if !send("#{cc_or_cxx}_is_sun_studio?")
-			flags << "-fcommon"
 			if send("#{cc_or_cxx}_supports_feliminate_unused_debug?")
 				flags << "-feliminate-unused-debug-symbols -feliminate-unused-debug-types"
 			end
