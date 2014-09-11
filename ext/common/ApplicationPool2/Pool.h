@@ -667,24 +667,43 @@ public:
 		}
 	}
 
-	void maybeDetachIdleProcess(GarbageCollectorState &state, const GroupPtr &group,
-		const ProcessPtr &process, ProcessList::iterator &p_it)
+	void checkWhetherProcessCanBeGarbageCollected(GarbageCollectorState &state,
+		const GroupPtr &group, const ProcessPtr &process, ProcessList &output)
 	{
 		assert(maxIdleTime > 0);
-		unsigned long long processGcTime =
-			process->lastUsed + maxIdleTime;
+		unsigned long long processGcTime = process->lastUsed + maxIdleTime;
 		if (process->sessions == 0
 		 && state.now >= processGcTime
 		 && (unsigned long) group->getProcessCount() > group->options.minProcesses)
 		{
-			ProcessList::iterator prev = p_it;
-			prev--;
+			if (output.capacity() == 0) {
+				output.reserve(group->enabledCount);
+			}
+			output.push_back(process);
+		} else {
+			maybeUpdateNextGcRuntime(state, processGcTime);
+		}
+	}
+
+	void garbageCollectProcessesInGroup(GarbageCollectorState &state,
+		const GroupPtr &group)
+	{
+		ProcessList &processes = group->enabledProcesses;
+		ProcessList processesToGc;
+		ProcessList::iterator p_it, p_end = processes.end();
+
+		for (p_it = processes.begin(); p_it != p_end; p_it++) {
+			const ProcessPtr &process = *p_it;
+			checkWhetherProcessCanBeGarbageCollected(state, group, process,
+				processesToGc);
+		}
+
+		p_end = processesToGc.end();
+		for (p_it = processesToGc.begin(); p_it != p_end; p_it++) {
+			ProcessPtr process = *p_it;
 			P_DEBUG("Garbage collect idle process: " << process->inspect() <<
 				", group=" << group->name);
 			group->detach(process, state.actions);
-			p_it = prev;
-		} else {
-			maybeUpdateNextGcRuntime(state, processGcTime);
 		}
 	}
 
@@ -725,14 +744,8 @@ public:
 				GroupPtr group = *g_it;
 
 				if (maxIdleTime > 0) {
-					ProcessList &processes = group->enabledProcesses;
-					ProcessList::iterator p_it, p_end = processes.end();
-
-					for (p_it = processes.begin(); p_it != p_end; p_it++) {
-						ProcessPtr process = *p_it;
-						// ...detach processes that have been idle for more than maxIdleTime.
-						maybeDetachIdleProcess(state, group, process, p_it);
-					}
+					// ...detach processes that have been idle for more than maxIdleTime.
+					garbageCollectProcessesInGroup(state, group);
 				}
 
 				group->verifyInvariants();

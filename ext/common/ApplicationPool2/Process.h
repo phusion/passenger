@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/container/vector.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/spin_lock.hpp>
 #include <oxt/macros.hpp>
@@ -56,7 +57,7 @@ using namespace std;
 using namespace boost;
 
 
-typedef vector<ProcessPtr> ProcessList;
+typedef boost::container::vector<ProcessPtr> ProcessList;
 
 /**
  * Represents an application process, as spawned by a Spawner. Every Process has
