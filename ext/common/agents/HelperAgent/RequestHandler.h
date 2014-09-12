@@ -236,6 +236,10 @@ protected:
 		req->appOutput.setDataCallback(_onAppOutputData);
 	}
 
+	virtual bool shouldThrottleClientBodyReceiving(Client *client, Request *req) {
+		return !req->requestBodyBuffering;
+	}
+
 	virtual void deinitializeClient(Client *client) {
 		ParentClass::deinitializeClient(client);
 		client->output.setBuffersFlushedCallback(NULL);
@@ -250,6 +254,7 @@ protected:
 		req->startedAt = 0;
 		req->state = Request::ANALYZING_REQUEST;
 		req->dechunkResponse = false;
+		req->requestBodyBuffering = false;
 		req->https = false;
 		req->stickySession = false;
 		req->halfCloseAppConnection = false;

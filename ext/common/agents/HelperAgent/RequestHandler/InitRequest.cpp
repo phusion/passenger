@@ -63,6 +63,9 @@ initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
 				case 'D':
 					req->dechunkResponse = true;
 					break;
+				case 'B':
+					req->requestBodyBuffering = true;
+					break;
 				case 'S':
 					req->https = true;
 					break;
@@ -77,6 +80,9 @@ initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
 		if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG2)) {
 			if (req->dechunkResponse) {
 				SKC_TRACE(client, 2, "Dechunk flag detected");
+			}
+			if (req->requestBodyBuffering) {
+				SKC_TRACE(client, 2, "Request body buffering enabled");
 			}
 			if (req->https) {
 				SKC_TRACE(client, 2, "HTTPS flag detected");

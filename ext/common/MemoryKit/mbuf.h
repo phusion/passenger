@@ -98,8 +98,6 @@ struct mbuf_pool {
 #define MBUF_BLOCK_EMPTY(mbuf_block) ((mbuf_block)->pos  == (mbuf_block)->last)
 #define MBUF_BLOCK_FULL(mbuf_block)  ((mbuf_block)->last == (mbuf_block)->end)
 
-//#define MBUF_DEBUG
-
 void mbuf_pool_init(struct mbuf_pool *pool);
 void mbuf_pool_deinit(struct mbuf_pool *pool);
 size_t mbuf_pool_data_size(struct mbuf_pool *pool);

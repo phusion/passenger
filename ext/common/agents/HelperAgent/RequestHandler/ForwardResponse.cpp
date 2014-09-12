@@ -180,7 +180,14 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			#endif
 			createAppResponseChunkedBodyParser(client, req).
 				feedUnexpectedEof(this, client, req);
-			assert(!client->connected());
+			if (req->dechunkResponse) {
+				// The parser already feeds an error to client->output.
+				assert(req->ended());
+			} else {
+				assert(!req->ended());
+				disconnectWithError(&client, "error parsing app response chunked encoding: "
+					"unexpected end-of-stream");
+			}
 			return Channel::Result(0, false);
 		} else {
 			// Error
@@ -517,10 +524,11 @@ sendResponseHeaderWithBuffering(Client *client, Request *req, unsigned int offse
 	(void) ok; // Shut up compiler warning
 
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
-	if (dataSize <= mbuf_pool.mbuf_block_chunk_size) {
+	const unsigned int MBUF_MAX_SIZE = mbuf_pool.mbuf_block_chunk_size -
+		mbuf_pool.mbuf_block_offset;
+	if (dataSize <= MBUF_MAX_SIZE) {
 		MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
-		gatherBuffers(buffer.start, mbuf_pool.mbuf_block_chunk_size,
-			buffers, nbuffers);
+		gatherBuffers(buffer.start, MBUF_MAX_SIZE, buffers, nbuffers);
 		buffer = MemoryKit::mbuf(buffer, offset, dataSize - offset);
 		writeResponse(client, buffer);
 	} else {
@@ -543,6 +551,10 @@ struct AppResponseChunkedBodyParserAdapter {
 
 	bool requestEnded() {
 		return req->ended();
+	}
+
+	bool shouldThrottleOutput() {
+		return false;
 	}
 
 	void setOutputBuffersFlushedCallback() {

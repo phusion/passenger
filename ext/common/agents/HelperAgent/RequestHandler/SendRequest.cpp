@@ -58,11 +58,13 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 	unsigned int bufferSize = determineHeaderSizeForSessionProtocol(req,
 		state);
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
+	const unsigned int MBUF_MAX_SIZE = mbuf_pool.mbuf_block_chunk_size -
+		mbuf_pool.mbuf_block_offset;
 	bool ok;
 
-	if (bufferSize <= mbuf_pool.mbuf_block_chunk_size) {
+	if (bufferSize <= MBUF_MAX_SIZE) {
 		MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
-		bufferSize = mbuf_pool.mbuf_block_chunk_size;
+		bufferSize = MBUF_MAX_SIZE;
 
 		ok = constructHeaderForSessionProtocol(req, buffer.start,
 			bufferSize, state);
@@ -576,10 +578,11 @@ sendHeaderToAppWithSessionProtocolWithBuffering(Request *req, unsigned int offse
 	(void) ok; // Shut up compiler warning
 
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
-	if (dataSize <= mbuf_pool.mbuf_block_chunk_size) {
+	const unsigned int MBUF_MAX_SIZE = mbuf_pool.mbuf_block_chunk_size -
+		mbuf_pool.mbuf_block_offset;
+	if (dataSize <= MBUF_MAX_SIZE) {
 		MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
-		gatherBuffers(buffer.start, mbuf_pool.mbuf_block_chunk_size,
-			buffers, nbuffers);
+		gatherBuffers(buffer.start, MBUF_MAX_SIZE, buffers, nbuffers);
 		buffer = MemoryKit::mbuf(buffer, offset, dataSize - offset);
 		req->appInput.feed(boost::move(buffer));
 	} else {

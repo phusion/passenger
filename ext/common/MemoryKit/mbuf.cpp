@@ -18,10 +18,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <oxt/macros.hpp>
+#include <oxt/thread.hpp>
 #include <MemoryKit/mbuf.h>
 
 namespace Passenger {
 namespace MemoryKit {
+
+//#define MBUF_DEBUG
 
 
 static struct mbuf_block *
@@ -97,7 +100,9 @@ mbuf_block_get(struct mbuf_pool *pool)
 	mbuf_block->pos = mbuf_block->start;
 	mbuf_block->last = mbuf_block->start;
 
-	//log_debug(LOG_VVERB, "get mbuf_block %p", mbuf_block);
+	#ifdef MBUF_DEBUG
+		printf("[%p] mbuf_block get %p\n", oxt::thread_signature, mbuf_block);
+	#endif
 
 	return mbuf_block;
 }
@@ -119,7 +124,9 @@ mbuf_block_free(struct mbuf_pool *pool, struct mbuf_block *mbuf_block)
 void
 mbuf_block_put(struct mbuf_block *mbuf_block)
 {
-	//log_debug(LOG_VVERB, "put mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
+	#ifdef MBUF_DEBUG
+		printf("[%p] mbuf_block put %p\n", oxt::thread_signature, mbuf_block);
+	#endif
 
 	assert(STAILQ_NEXT(mbuf_block, next) == NULL);
 	assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
@@ -292,7 +299,8 @@ void
 mbuf_block_ref(struct mbuf_block *mbuf_block)
 {
 	#ifdef MBUF_DEBUG
-		printf("mbuf_block ref %p: %u -> %u\n", mbuf_block,
+		printf("[%p] mbuf_block ref %p: %u -> %u\n",
+			oxt::thread_signature, mbuf_block,
 			mbuf_block->refcount, mbuf_block->refcount + 1);
 	#endif
 	mbuf_block->refcount++;
@@ -302,7 +310,8 @@ void
 mbuf_block_unref(struct mbuf_block *mbuf_block)
 {
 	#ifdef MBUF_DEBUG
-		printf("mbuf_block unref %p: %u -> %u\n", mbuf_block,
+		printf("[%p] mbuf_block unref %p: %u -> %u\n",
+			oxt::thread_signature, mbuf_block,
 			mbuf_block->refcount, mbuf_block->refcount - 1);
 	#endif
 	assert(mbuf_block->refcount > 0);

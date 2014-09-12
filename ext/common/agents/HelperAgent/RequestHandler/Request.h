@@ -59,6 +59,7 @@ public:
 
 	State state: 3;
 	bool dechunkResponse: 1;
+	bool requestBodyBuffering: 1;
 	bool https: 1;
 	bool stickySession: 1;
 	bool halfCloseAppConnection: 1;

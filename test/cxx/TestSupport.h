@@ -255,13 +255,22 @@ public:
 class TempThread {
 public:
 	oxt::thread thread;
+	bool joined;
 
 	TempThread(boost::function<void ()> func)
-		: thread(boost::bind(runAndPrintExceptions, func, true))
+		: thread(boost::bind(runAndPrintExceptions, func, true)),
+		  joined(false)
 		{ }
 
 	~TempThread() {
-		thread.interrupt_and_join();
+		if (!joined) {
+			thread.interrupt_and_join();
+		}
+	}
+
+	void join() {
+		thread.join();
+		joined = true;
 	}
 };
 

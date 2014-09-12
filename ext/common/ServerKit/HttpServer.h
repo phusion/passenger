@@ -108,6 +108,12 @@ private:
 			return req->ended();
 		}
 
+		bool shouldThrottleOutput() {
+			Client *client     = static_cast<Client *>(req->client);
+			HttpServer *server = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
+			return server->shouldThrottleClientBodyReceiving(client, req);
+		}
+
 		void setOutputBuffersFlushedCallback() {
 			req->bodyChannel.setBuffersFlushedCallback(outputBuffersFlushed);
 		}
@@ -360,7 +366,7 @@ private:
 
 			if (remaining > 0) {
 				req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, remaining));
-				if (!req->ended()) {
+				if (!req->ended() && shouldThrottleClientBodyReceiving(client, req)) {
 					if (!req->bodyChannel.passedThreshold()) {
 						requestBodyConsumed(client, req);
 					} else {
@@ -385,11 +391,11 @@ private:
 					req->aux.bodyInfo.contentLength << " bytes expected");
 				req->bodyChannel.feedError(UNEXPECTED_EOF);
 			}
-			return Channel::Result(0, false);
+			return Channel::Result(0, true);
 		} else {
 			// Error
 			req->bodyChannel.feedError(errcode);
-			return Channel::Result(0, false);
+			return Channel::Result(0, true);
 		}
 	}
 
@@ -397,6 +403,7 @@ private:
 		const MemoryKit::mbuf &buffer, int errcode)
 	{
 		if (buffer.size() > 0) {
+			// Data
 			req->bodyAlreadyRead += buffer.size();
 			Channel::Result result = createChunkedBodyParser(client, req).feed(buffer);
 			assert(result.consumed >= 0);
@@ -405,17 +412,27 @@ private:
 					HttpChunkedBodyParserState::ERROR)
 				{
 					if (!req->ended()) {
+						client->input.stop();
 						req->bodyChannel.feed(MemoryKit::mbuf());
 					}
 				} else {
-					// The parser already feeds an error to client->output.
-					assert(req->ended());
+					// The parser already feeds an error to req->bodyChannel.
+					assert(req->bodyChannel.ended());
+					// We're unable to accept any more data.
+					return Channel::Result(result.consumed, true);
 				}
 			}
 			return Channel::Result(result.consumed, false);
-		} else {
+		} else if (errcode == 0) {
+			// Premature EOF. This cannot be an expected EOF because
+			// the parser stops req->bodyChannel upon consuming the end
+			// of the chunked body.
 			createChunkedBodyParser(client, req).feedUnexpectedEof(this,
 				client, req);
+			return Channel::Result(0, true);
+		} else {
+			// Error
+			req->bodyChannel.feedError(errcode);
 			return Channel::Result(0, true);
 		}
 	}
@@ -428,6 +445,10 @@ private:
 			req->bodyAlreadyRead += buffer.size();
 			req->bodyChannel.feed(buffer);
 			if (!req->ended()) {
+				// We always throttle upgraded client data,
+				// regardless of what shouldThrottleClientBodyReceiving()
+				// returns. Upgraded connections should work like TCP
+				// connections with congestion control.
 				if (!req->bodyChannel.passedThreshold()) {
 					requestBodyConsumed(client, req);
 				} else {
@@ -705,6 +726,9 @@ protected:
 
 		if (OXT_UNLIKELY(!req->responseBegun)) {
 			writeDefault500Response(c, req);
+			if (req->ended()) {
+				return false;
+			}
 		}
 
 		// The memory buffers that we're writing out during the
@@ -823,6 +847,10 @@ protected:
 
 	virtual bool supportsUpgrade(Client *client, Request *req) {
 		return false;
+	}
+
+	virtual bool shouldThrottleClientBodyReceiving(Client *client, Request *req) {
+		return true;
 	}
 
 	virtual void reinitializeRequest(Client *client, Request *req) {

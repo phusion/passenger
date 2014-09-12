@@ -1,4 +1,6 @@
 #include <TestSupport.h>
+#include <boost/foreach.hpp>
+#include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
@@ -7,6 +9,7 @@
 #include <ServerKit/HttpServer.h>
 #include <Logging.h>
 #include <FileDescriptor.h>
+#include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/BufferedIO.h>
 
@@ -90,6 +93,22 @@ namespace tut {
 			}
 		}
 
+		void testBodyThrottle(MyClient *client, MyRequest *req) {
+			if (!req->hasBody() && !req->upgraded()) {
+				writeSimpleResponse(client, 422, NULL, "Body required");
+				endRequest(&client, &req);
+			} else if (throttleClientBody || req->upgraded()) {
+				refRequest(req);
+				req->bodyChannel.stop();
+				requestsWaitingToStartAcceptingBody.push_back(req);
+				// Continues in startAcceptingBody()
+			}
+		}
+
+		void startAcceptingBody(MyClient *client, MyRequest *req) {
+			req->bodyChannel.start();
+		}
+
 		void testLargeResponse(MyClient *client, MyRequest *req) {
 			const LString *value = req->headers.lookup("size");
 			value = psg_lstr_make_contiguous(value, req->pool);
@@ -106,6 +125,8 @@ namespace tut {
 
 			if (psg_lstr_cmp(&req->path, "/body_test")) {
 				testBody(client, req);
+			} else if (psg_lstr_cmp(&req->path, "/body_throttle_test")) {
+				testBodyThrottle(client, req);
 			} else if (psg_lstr_cmp(&req->path, "/large_response")) {
 				testLargeResponse(client, req);
 			} else {
@@ -118,19 +139,33 @@ namespace tut {
 		{
 			if (buffer.size() > 0) {
 				// Data
-				req->body.append(buffer.start, buffer.size());
+				if (psg_lstr_cmp(&req->path, "/body_test")) {
+					req->body.append(buffer.start, buffer.size());
+				} else {
+					bodyBytesRead += buffer.size();
+				}
 			} else if (errcode == 0) {
 				// EOF
-				req->body.insert(0, toString(req->body.size()) + " bytes: ");
-				writeSimpleResponse(client, 200, NULL, req->body);
+				if (psg_lstr_cmp(&req->path, "/body_test")) {
+					req->body.insert(0, toString(req->body.size()) + " bytes: ");
+					writeSimpleResponse(client, 200, NULL, req->body);
+				} else {
+					writeSimpleResponse(client, 200, NULL, "");
+				}
 				endRequest(&client, &req);
 			} else {
 				// Error
-				req->body.insert(0, string("Request body error: ") +
-					getErrorDesc(errcode) + "\n" +
-					toString(req->body.size()) + " bytes: ");
-				writeSimpleResponse(client, 422, NULL, req->body);
-				endRequest(&client, &req);
+				if (psg_lstr_cmp(&req->path, "/body_test")) {
+					req->body.insert(0, string("Request body error: ") +
+						getErrorDesc(errcode) + "\n" +
+						toString(req->body.size()) + " bytes: ");
+					writeSimpleResponse(client, 422, NULL, req->body);
+				} else {
+					P_WARN("Request body error: " << getErrorDesc(errcode));
+				}
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
 			}
 			return Channel::Result(buffer.size(), false);
 		}
@@ -140,17 +175,54 @@ namespace tut {
 			req->body.clear();
 		}
 
+		virtual void deinitializeRequest(MyClient *client, MyRequest *req) {
+			unsigned int i;
+
+			for (i = 0; i < requestsWaitingToStartAcceptingBody.size(); i++) {
+				if (requestsWaitingToStartAcceptingBody[i] == req) {
+					requestsWaitingToStartAcceptingBody.erase(
+						requestsWaitingToStartAcceptingBody.begin() + i);
+					unrefRequest(req);
+					break;
+				}
+			}
+			ParentClass::deinitializeRequest(client, req);
+		}
+
 		virtual bool supportsUpgrade(MyClient *client, MyRequest *req) {
 			return allowUpgrades;
 		}
 
+		virtual bool shouldThrottleClientBodyReceiving(MyClient *client, MyRequest *req) {
+			return throttleClientBody;
+		}
+
 	public:
 		bool allowUpgrades;
+		bool throttleClientBody;
+
+		vector<MyRequest *> requestsWaitingToStartAcceptingBody;
+		unsigned int bodyBytesRead;
 
 		MyServer(Context *context)
 			: ParentClass(context),
-			  allowUpgrades(true)
+			  allowUpgrades(true),
+			  throttleClientBody(true),
+			  bodyBytesRead(0)
 			{ }
+
+		void startAcceptingBody() {
+			MyRequest *req;
+			vector<MyRequest *> requestsWaitingToStartAcceptingBody;
+
+			requestsWaitingToStartAcceptingBody.swap(
+				this->requestsWaitingToStartAcceptingBody);
+
+			foreach (req, requestsWaitingToStartAcceptingBody) {
+				startAcceptingBody(static_cast<MyClient *>(req->client), req);
+				unrefRequest(req);
+			}
+		}
 	};
 
 	struct ServerKit_HttpServerTest {
@@ -178,6 +250,9 @@ namespace tut {
 			startLoop();
 			fd.close();
 			bg.safe->runSync(boost::bind(&MyServer::shutdown, server.get(), true));
+			while (getServerState() != MyServer::FINISHED_SHUTDOWN) {
+				syscalls::usleep(10000);
+			}
 			safelyClose(serverSocket);
 			unlink("tmp.server");
 			setLogLevel(DEFAULT_LOG_LEVEL);
@@ -216,6 +291,17 @@ namespace tut {
 			return waitUntilReadable(fd, &timeout);
 		}
 
+		MyServer::State getServerState() {
+			MyServer::State result;
+			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::_getServerState,
+				this, &result));
+			return result;
+		}
+
+		void _getServerState(MyServer::State *state) {
+			*state = server->serverState;
+		}
+
 		unsigned long long getTotalBytesConsumed() {
 			unsigned long long result;
 			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::_getTotalBytesConsumed,
@@ -236,6 +322,50 @@ namespace tut {
 
 		void _getTotalRequestsAccepted(unsigned long *result) {
 			*result = server->totalRequestsAccepted;
+		}
+
+		unsigned int getActiveClientCount() {
+			unsigned int result;
+			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::_getActiveClientCount,
+				this, &result));
+			return result;
+		}
+
+		void _getActiveClientCount(unsigned int *result) {
+			*result = server->activeClientCount;
+		}
+
+		void startAcceptingBody() {
+			bg.safe->runLater(boost::bind(&ServerKit_HttpServerTest::_startAcceptingBody,
+				this));
+		}
+
+		void _startAcceptingBody() {
+			server->startAcceptingBody();
+		}
+
+		unsigned int getNumRequestsWaitingToStartAcceptingBody() {
+			unsigned int result;
+			bg.safe->runSync(boost::bind(
+				&ServerKit_HttpServerTest::_getNumRequestsWaitingToStartAcceptingBody,
+				this, &result));
+			return result;
+		}
+
+		void _getNumRequestsWaitingToStartAcceptingBody(unsigned int *result) {
+			*result = server->requestsWaitingToStartAcceptingBody.size();
+		}
+
+		unsigned int getBodyBytesRead() {
+			unsigned int result;
+			bg.safe->runSync(boost::bind(
+				&ServerKit_HttpServerTest::_getBodyBytesRead,
+				this, &result));
+			return result;
+		}
+
+		void _getBodyBytesRead(unsigned int *result) {
+			*result = server->bodyBytesRead;
 		}
 
 		string stripHeaders(const string &str) {
@@ -268,11 +398,6 @@ namespace tut {
 	};
 
 	DEFINE_TEST_GROUP_WITH_LIMIT(ServerKit_HttpServerTest, 80);
-
-	#define USE_CUSTOM_SERVER_CLASS(Klass) \
-		server->shutdown(); \
-		server = boost::make_shared< Klass >(&context); \
-		server->listen(serverSocket1)
 
 
 	/***** Valid HTTP header parsing *****/
@@ -480,7 +605,7 @@ namespace tut {
 	}
 
 
-	/***** Fixed body parsing *****/
+	/***** Fixed body handling *****/
 
 	TEST_METHOD(20) {
 		set_test_name("An empty body is treated the same as no body");
@@ -572,8 +697,61 @@ namespace tut {
 		);
 	}
 
+	TEST_METHOD(25) {
+		set_test_name("Client body throttling enabled");
 
-	/***** Chunked body parsing *****/
+		connectToServer();
+		sendRequest(
+			"GET /body_throttle_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Content-Length: 1000000\r\n\r\n");
+		EVENTUALLY(5,
+			result = getNumRequestsWaitingToStartAcceptingBody() == 1;
+		);
+
+		string body(1000000, 'x');
+		body.append(
+			"GET / HTTP/1.1\r\n"
+			"Connection: close\r\n\r\n");
+		TempThread thr(boost::bind(writeExact, (int) fd,
+			(void *) body.data(), (unsigned int) body.size(),
+			(unsigned long long *) NULL));
+		SHOULD_NEVER_HAPPEN(100,
+			result = getTotalRequestsAccepted() > 1;
+		);
+
+		startAcceptingBody();
+		EVENTUALLY(5,
+			result = getTotalRequestsAccepted() > 1;
+		);
+		thr.join();
+	}
+
+	TEST_METHOD(26) {
+		set_test_name("Client body throttling disabled");
+
+		server->throttleClientBody = false;
+		connectToServer();
+		sendRequest(
+			"GET /body_throttle_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Content-Length: 1000000\r\n\r\n");
+
+		string body(1000000, 'x');
+		body.append(
+			"GET / HTTP/1.1\r\n"
+			"Connection: close\r\n\r\n");
+		TempThread thr(boost::bind(writeExact, (int) fd,
+			(void *) body.data(), (unsigned int) body.size(),
+			(unsigned long long *) NULL));
+		EVENTUALLY(5,
+			result = getTotalRequestsAccepted() > 1;
+		);
+		thr.join();
+	}
+
+
+	/***** Chunked body handling *****/
 
 	TEST_METHOD(30) {
 		set_test_name("Empty body");
@@ -657,25 +835,6 @@ namespace tut {
 	}
 
 	TEST_METHOD(34) {
-		set_test_name("Unterminated final chunk");
-
-		connectToServer();
-		sendRequestAndWait(
-			"GET /body_test HTTP/1.1\r\n"
-			"Connection: close\r\n"
-			"Transfer-Encoding: chunked\r\n\r\n"
-			"7\r\nhmok!!!\r\n0\r\n\r");
-		ensure(!hasResponseData());
-		syscalls::shutdown(fd, SHUT_WR);
-
-		string response = readAll(fd);
-		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
-		ensure("(2)", containsSubstring(response,
-			"Request body error: Unexpected end-of-stream\n"
-			"7 bytes: hmok!!!"));
-	}
-
-	TEST_METHOD(35) {
 		set_test_name("Trailing data after body");
 
 		connectToServer();
@@ -702,7 +861,87 @@ namespace tut {
 		);
 	}
 
+	TEST_METHOD(35) {
+		set_test_name("Client body throttling enabled");
+
+		connectToServer();
+		sendRequest(
+			"GET /body_throttle_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n");
+		EVENTUALLY(5,
+			result = getNumRequestsWaitingToStartAcceptingBody() == 1;
+		);
+
+		string body;
+		for (int i = 0; i < 100000; i++) {
+			body.append("a\r\nxxxxxxxxxx\r\n");
+		}
+		body.append("0\r\n\r\n");
+		body.append(
+			"GET / HTTP/1.1\r\n"
+			"Connection: close\r\n\r\n");
+		TempThread thr(boost::bind(writeExact, (int) fd,
+			(void *) body.data(), (unsigned int) body.size(),
+			(unsigned long long *) NULL));
+		SHOULD_NEVER_HAPPEN(100,
+			result = getTotalRequestsAccepted() > 1;
+		);
+
+		startAcceptingBody();
+		EVENTUALLY(5,
+			result = getTotalRequestsAccepted() > 1;
+		);
+		thr.join();
+	}
+
 	TEST_METHOD(36) {
+		set_test_name("Client body throttling disabled");
+
+		server->throttleClientBody = false;
+		connectToServer();
+		sendRequest(
+			"GET /body_throttle_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n");
+
+		string body;
+		for (int i = 0; i < 100000; i++) {
+			body.append("a\r\nxxxxxxxxxx\r\n");
+		}
+		body.append("0\r\n\r\n");
+		body.append(
+			"GET / HTTP/1.1\r\n"
+			"Connection: close\r\n\r\n");
+		TempThread thr(boost::bind(writeExact, (int) fd,
+			(void *) body.data(), (unsigned int) body.size(),
+			(unsigned long long *) NULL));
+		EVENTUALLY(5,
+			result = getTotalRequestsAccepted() > 1;
+		);
+		thr.join();
+	}
+
+	TEST_METHOD(37) {
+		set_test_name("Unterminated final chunk");
+
+		connectToServer();
+		sendRequestAndWait(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"7\r\nhmok!!!\r\n0\r\n\r");
+		ensure(!hasResponseData());
+		syscalls::shutdown(fd, SHUT_WR);
+
+		string response = readAll(fd);
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
+		ensure("(2)", containsSubstring(response,
+			"Request body error: Unexpected end-of-stream\n"
+			"7 bytes: hmok!!!"));
+	}
+
+	TEST_METHOD(38) {
 		set_test_name("Invalid chunk header");
 
 		connectToServer();
@@ -714,6 +953,21 @@ namespace tut {
 		string response = readAll(fd);
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response, "0 bytes: "));
+		ensure("(3)", !containsSubstring(response, "!"));
+	}
+
+	TEST_METHOD(39) {
+		set_test_name("Invalid chunk footer");
+
+		connectToServer();
+		sendRequest(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"2\r\nok!");
+		string response = readAll(fd);
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
+		ensure("(2)", containsSubstring(response, "2 bytes: ok"));
 		ensure("(3)", !containsSubstring(response, "!"));
 	}
 
@@ -770,6 +1024,37 @@ namespace tut {
 	}
 
 	TEST_METHOD(43) {
+		set_test_name("It always throttles the client body");
+
+		server->throttleClientBody = false;
+		connectToServer();
+		sendRequest(
+			"GET /body_throttle_test HTTP/1.1\r\n"
+			"Connection: upgrade\r\n"
+			"Upgrade: raw\r\n\r\n");
+		EVENTUALLY(5,
+			result = getNumRequestsWaitingToStartAcceptingBody() == 1;
+		);
+
+		string body(1000000, 'x');
+		TempThread thr(boost::bind(writeExact, (int) fd,
+			(void *) body.data(), (unsigned int) body.size(),
+			(unsigned long long *) NULL));
+		SHOULD_NEVER_HAPPEN(100,
+			result = getBodyBytesRead() == 1000000;
+		);
+
+		startAcceptingBody();
+		EVENTUALLY(5,
+			result = getBodyBytesRead() == 1000000;
+		);
+		thr.join();
+
+		// Ignore broken pipe error
+		setLogLevel(LVL_CRIT);
+	}
+
+	TEST_METHOD(44) {
 		set_test_name("It rejects the upgrade if supportsUpgrade() returns false");
 
 		server->allowUpgrades = false;
@@ -783,7 +1068,7 @@ namespace tut {
 		ensure("(2)", containsSubstring(response, "Connection upgrading not allowed for this request"));
 	}
 
-	TEST_METHOD(44) {
+	TEST_METHOD(45) {
 		set_test_name("It rejects the upgrade if the request contains a request body");
 
 		connectToServer();
@@ -798,7 +1083,7 @@ namespace tut {
 			"Connection upgrading is only allowed for requests without request body"));
 	}
 
-	TEST_METHOD(45) {
+	TEST_METHOD(46) {
 		set_test_name("It rejects the upgrade if the request is HEAD");
 
 		connectToServer();
@@ -1114,5 +1399,21 @@ namespace tut {
 			"Date: Thu, 11 Sep 2014 12:54:09 GMT\r\n"
 			"Connection: close\r\n"
 			"Content-Length: 7\r\n\r\n");
+	}
+
+	TEST_METHOD(77) {
+		set_test_name("Client socket write error handling");
+
+		setLogLevel(LVL_CRIT);
+		connectToServer();
+		sendRequest(
+			"GET /large_response HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Size: 1000000\r\n\r\n");
+		fd.close();
+
+		EVENTUALLY(5,
+			result = getActiveClientCount() == 0;
+		);
 	}
 }

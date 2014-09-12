@@ -139,8 +139,10 @@ public:
 					}
 					if (output != NULL) {
 						output->feed(MemoryKit::mbuf(buffer, current - bufferStart, dataSize));
-						if (!adapter.requestEnded() && !output->ended()
-						 && output->passedThreshold())
+						if (!adapter.requestEnded()
+						 && !output->ended()
+						 && output->passedThreshold()
+						 && adapter.shouldThrottleOutput())
 						{
 							input->stop();
 							adapter.setOutputBuffersFlushedCallback();
