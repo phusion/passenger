@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -55,6 +55,7 @@
 #include "Utils.h"
 #include "Utils/IOUtils.h"
 #include "Utils/Timer.h"
+#include "Utils/HttpConstants.h"
 #include "Logging.h"
 #include "AgentsStarter.h"
 #include "DirectoryMapper.h"
@@ -237,13 +238,12 @@ private:
 	 * wait and retry for a short period of time until the helper agent has been
 	 * restarted.
 	 */
-	FileDescriptor connectToHelperAgent() {
+	FileDescriptor connectToInternalServer() {
 		TRACE_POINT();
 		FileDescriptor conn;
 
 		try {
 			conn = connectToServer(getServerAddress());
-			writeExact(conn, getServerPassword());
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE || e.code() == ECONNREFUSED || e.code() == ENOENT) {
 				UPDATE_TRACE_POINT();
@@ -258,7 +258,6 @@ private:
 				while (!connected && time(NULL) < deadline) {
 					try {
 						conn = connectToServer(getServerAddress());
-						writeExact(conn, getServerPassword());
 						connected = true;
 					} catch (const SystemException &e) {
 						if (e.code() == EPIPE || e.code() == ECONNREFUSED || e.code() == ENOENT) {
@@ -539,48 +538,23 @@ private:
 
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
-			bool expectingUploadData;
-			const char *contentLength;
+			bool expectingBody;
 
-			expectingUploadData = ap_should_client_block(r);
-			contentLength = lookupHeader(r, "Content-Length");
+			expectingBody = ap_should_client_block(r);
 
 
 			/********** Step 3: forwarding the request and request body
 			                    to the HelperAgent **********/
 
-			vector<StaticString> requestData;
-			string headerData;
-			unsigned int size;
-			char sizeString[16];
 			int ret;
+			bool bodyIsChunked = false;
 
-			requestData.reserve(3);
-			headerData.reserve(1024 * 2);
-			requestData.push_back(StaticString());
-			size = constructHeaders(r, config, requestData, mapper, headerData);
-			requestData.push_back(",");
-
-			ret = snprintf(sizeString, sizeof(sizeString) - 1, "%u:", size);
-			sizeString[ret] = '\0';
-			requestData[0] = StaticString(sizeString, ret);
-
-			FileDescriptor conn = connectToHelperAgent();
-			gatheredWrite(conn, &requestData[0], requestData.size());
-
-			if (expectingUploadData) {
-				sendRequestBody(conn, r);
-			}
-
-			do {
-				ret = shutdown(conn, SHUT_WR);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1 && errno != ENOTCONN) {
-				// FreeBSD has a kernel bug which causes shutdown()
-				// to harmlessly return ENOTCONN sometimes. See comment
-				// in safelyClose().
-				int e = errno;
-				throw SystemException("Cannot shutdown(SHUT_WR) HelperAgent connection", e);
+			string headers = constructRequestHeaders(r, mapper, bodyIsChunked);
+			FileDescriptor conn = connectToInternalServer();
+			writeExact(conn, headers);
+			headers.clear();
+			if (expectingBody) {
+				sendRequestBody(conn, r, bodyIsChunked);
 			}
 
 
@@ -596,14 +570,16 @@ private:
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
 
 			bucketState = boost::make_shared<PassengerBucketState>(conn);
-			b = passenger_bucket_create(bucketState, r->connection->bucket_alloc, config->getBufferResponse());
+			b = passenger_bucket_create(bucketState, r->connection->bucket_alloc,
+				config->getBufferResponse());
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			/* Now read the HTTP response header, parse it and fill relevant
-			 * information in our request_rec structure.
+			 * information in our request_rec structure. We skip the status line
+			 * because ap_scan_script_header_err_brigade() can't handle it.
 			 */
 
 			/* I know the required size for backendData because I read
@@ -611,9 +587,10 @@ private:
 			 */
 			char backendData[MAX_STRING_LEN];
 			Timer timer;
-			int result = ap_scan_script_header_err_brigade(r, bb, backendData);
+			getsfunc_BRIGADE(backendData, MAX_STRING_LEN, bb);
+			ret = ap_scan_script_header_err_brigade(r, bb, backendData);
 
-			if (result == OK) {
+			if (ret == OK) {
 				// The API documentation for ap_scan_script_err_brigade() says it
 				// returns HTTP_OK on success, but it actually returns OK.
 
@@ -628,9 +605,12 @@ private:
 				 * Status header for retrieving the HTTP status.
 				 */
 				if (!r->status_line || *r->status_line == '\0') {
-					r->status_line = apr_psprintf(r->pool,
-						"%d Unknown Status",
-						r->status);
+					r->status_line = getStatusCodeAndReasonPhrase(r->status);
+					if (r->status_line == NULL) {
+						r->status_line = apr_psprintf(r->pool,
+							"%d Unknown Status",
+							r->status);
+					}
 				}
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 
@@ -765,94 +745,60 @@ private:
 		return NULL;
 	}
 
-	const char *lookupHeader(request_rec *r, const char *name) {
-		return lookupInTable(r->headers_in, name);
-	}
-
 	const char *lookupEnv(request_rec *r, const char *name) {
 		return lookupInTable(r->subprocess_env, name);
 	}
 
-	void addHeader(string &headers, const char *name, const char *value) {
-		if (name != NULL && value != NULL) {
-			headers.append(name);
-			headers.append(1, '\0');
+	void addHeader(string &headers, const StaticString &name, const char *value) {
+		if (value != NULL) {
+			headers.append(name.data(), name.size());
+			headers.append(": ", 2);
 			headers.append(value);
-			headers.append(1, '\0');
+			headers.append("\r\n", 2);
 		}
 	}
 
-	void addHeader(string &headers, const char *name, const StaticString &value) {
-		if (name != NULL) {
-			headers.append(name);
-			headers.append(1, '\0');
-			headers.append(value.c_str(), value.size());
-			headers.append(1, '\0');
-		}
+	void addHeader(string &headers, const StaticString &name, const StaticString &value) {
+		headers.append(name.data(), name.size());
+		headers.append(": ", 2);
+		headers.append(value.data(), value.size());
+		headers.append("\r\n", 2);
 	}
 
-	void addHeader(request_rec *r, string &headers, const char *name, int value) {
+	void addHeader(request_rec *r, string &headers, const StaticString &name, int value) {
 		if (value != UNSET_INT_VALUE) {
-			headers.append(name);
-			headers.append(1, '\0');
+			headers.append(name.data(), name.size());
+			headers.append(": ", 2);
 			headers.append(apr_psprintf(r->pool, "%d", value));
-			headers.append(1, '\0');
+			headers.append("\r\n", 2);
 		}
 	}
 
-	void addHeader(request_rec *r, string &headers, const char *name, DirConfig::Threeway value) {
+	void addHeader(string &headers, const StaticString &name, DirConfig::Threeway value) {
 		if (value != DirConfig::UNSET) {
-			headers.append(name);
+			headers.append(name.data(), name.size());
+			headers.append(": ", 2);
 			if (value == DirConfig::ENABLED) {
-				headers.append("\0true\0", 6);
+				headers.append("t", 1);
 			} else {
-				headers.append("\0false\0", 7);
+				headers.append("f", 1);
 			}
+			headers.append("\r\n", 2);
 		}
 	}
 
-	unsigned int constructHeaders(request_rec *r, DirConfig *config,
-		vector<StaticString> &requestData, DirectoryMapper &mapper,
-		string &output)
+	string constructRequestHeaders(request_rec *r, DirectoryMapper &mapper,
+		bool &bodyIsChunked)
 	{
 		const char *baseURI = mapper.getBaseURI();
+		DirConfig *config = getDirConfig(r);
+		string result;
 
-		/*
-		 * Apache unescapes URI's before passing them to Phusion Passenger,
-		 * but backend processes expect the escaped version.
-		 * http://code.google.com/p/phusion-passenger/issues/detail?id=404
-		 */
-		size_t uriLen = strlen(r->uri);
-		unsigned int escaped = escapeUri(NULL, (const unsigned char *) r->uri, uriLen);
-		char *escapedUri = (char *) apr_palloc(r->pool, uriLen + 2 * escaped + 1);
-		escapeUri((unsigned char *) escapedUri, (const unsigned char *) r->uri, uriLen);
-		escapedUri[uriLen + 2 * escaped] = '\0';
+		// Construct HTTP status line.
 
-
-		// Set standard CGI variables.
-		#ifdef AP_GET_SERVER_VERSION_DEPRECATED
-			addHeader(output, "SERVER_SOFTWARE", ap_get_server_banner());
-		#else
-			addHeader(output, "SERVER_SOFTWARE", ap_get_server_version());
-		#endif
-		addHeader(output, "SERVER_PROTOCOL", r->protocol);
-		addHeader(output, "SERVER_NAME",     ap_get_server_name(r));
-		addHeader(output, "SERVER_ADMIN",    r->server->server_admin);
-		addHeader(output, "SERVER_ADDR",     r->connection->local_ip);
-		addHeader(output, "SERVER_PORT",     apr_psprintf(r->pool, "%u", ap_get_server_port(r)));
-		#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
-			addHeader(output, "REMOTE_ADDR", r->connection->client_ip);
-			addHeader(output, "REMOTE_PORT", apr_psprintf(r->pool, "%d", r->connection->client_addr->port));
-		#else
-			addHeader(output, "REMOTE_ADDR", r->connection->remote_ip);
-			addHeader(output, "REMOTE_PORT", apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
-		#endif
-		addHeader(output, "REMOTE_USER",     r->user);
-		addHeader(output, "REQUEST_METHOD",  r->method);
-		addHeader(output, "QUERY_STRING",    r->args ? r->args : "");
-		addHeader(output, "HTTPS",           lookupEnv(r, "HTTPS"));
-		addHeader(output, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
-		addHeader(output, "DOCUMENT_ROOT",   ap_document_root(r));
+		result.reserve(4096);
+		result.append(r->method);
+		result.append(" ", 1);
 
 		if (config->allowsEncodedSlashes()) {
 			/*
@@ -864,28 +810,30 @@ private:
 			 * http://code.google.com/p/phusion-passenger/issues/detail?id=113
 			 * http://code.google.com/p/phusion-passenger/issues/detail?id=230
 			 */
-			addHeader(output, "REQUEST_URI", r->unparsed_uri);
+			result.append(r->unparsed_uri);
 		} else {
-			const char *request_uri;
+			size_t uriLen = strlen(r->uri);
+			unsigned int escaped = escapeUri(NULL, (const unsigned char *) r->uri, uriLen);
+			size_t escapedUriLen = uriLen + 2 * escaped;
+			char *escapedUri = (char *) apr_palloc(r->pool, escapedUriLen);
+			escapeUri((unsigned char *) escapedUri, (const unsigned char *) r->uri, uriLen);
+
+			result.append(escapedUri, escapedUriLen);
+
 			if (r->args != NULL) {
-				request_uri = apr_pstrcat(r->pool, escapedUri, "?", r->args, (char *) NULL);
-			} else {
-				request_uri = escapedUri;
+				result.append("?", 1);
+				result.append(r->args);
 			}
-			addHeader(output, "REQUEST_URI", request_uri);
 		}
 
-		if (baseURI == NULL) {
-			addHeader(output, "SCRIPT_NAME", "");
-			addHeader(output, "PATH_INFO", escapedUri);
-		} else {
-			addHeader(output, "SCRIPT_NAME", baseURI);
-			addHeader(output, "PATH_INFO", escapedUri + strlen(baseURI));
-		}
+		result.append(" HTTP/1.1\r\n", sizeof(" HTTP/1.1\r\n") - 1);
 
-		// Set HTTP headers.
+		// Construct HTTP headers.
+
 		const apr_array_header_t *hdrs_arr;
 		apr_table_entry_t *hdrs;
+		apr_table_entry_t *connectionHeader = NULL;
+		apr_table_entry_t *transferEncodingHeader = NULL;
 		int i;
 
 		hdrs_arr = apr_table_elts(r->headers_in);
@@ -893,48 +841,76 @@ private:
 		for (i = 0; i < hdrs_arr->nelts; ++i) {
 			if (hdrs[i].key == NULL) {
 				continue;
-			}
-			size_t keylen = strlen(hdrs[i].key);
-			// We only pass the Transfer-Encoding header if PassengerBufferUpload is disabled,
-			// so that the HelperAgent and the app knows that there is a request body despite
-			// there not being a Content-Length header.
-			if (!headerIsTransferEncoding(hdrs[i].key, keylen) || config->bufferUpload == DirConfig::DISABLED) {
-				addHeader(output, httpToEnv(r->pool, hdrs[i].key, keylen), hdrs[i].val);
+			} else if (connectionHeader == NULL
+				&& strcasecmp(hdrs[i].key, "Connection") == 0)
+			{
+				connectionHeader = &hdrs[i];
+			} else if (transferEncodingHeader == NULL
+				&& strcasecmp(hdrs[i].key, "Transfer-Encoding") == 0)
+			{
+				transferEncodingHeader = &hdrs[i];
+			} else {
+				result.append(hdrs[i].key);
+				result.append(": ", 2);
+				if (hdrs[i].val != NULL) {
+					result.append(hdrs[i].val);
+				}
+				result.append("\r\n", 2);
 			}
 		}
 
-		// Add other environment variables.
-		const apr_array_header_t *env_arr;
-		apr_table_entry_t *env;
+		if (connectionHeader == NULL || strcasecmp(connectionHeader->val, "keep-alive") == 0) {
+			result.append("Connection: close\r\n", sizeof("Connection: close\r\n") - 1);
+		} else {
+			result.append("Connection: ", sizeof("Connection: ") - 1);
+			result.append(connectionHeader->val);
+			result.append("\r\n", 2);
+		}
 
-		env_arr = apr_table_elts(r->subprocess_env);
-		env = (apr_table_entry_t*) env_arr->elts;
-		for (i = 0; i < env_arr->nelts; ++i) {
-			addHeader(output, env[i].key, env[i].val);
+		if (transferEncodingHeader != NULL) {
+			result.append("Transfer-Encoding: ", sizeof("Transfer-Encoding: ") - 1);
+			result.append(transferEncodingHeader->val);
+			result.append("\r\n", 2);
+			bodyIsChunked = strcasecmp(transferEncodingHeader->val, "chunked") == 0;
+		}
+
+		// Add secure headers.
+
+		result.append("!~: ", sizeof("!~: ") - 1);
+		result.append(getServerPassword().data(), getServerPassword().size());
+		result.append("\r\n!~DOCUMENT_ROOT: ", sizeof("\r\n!~DOCUMENT_ROOT: ") - 1);
+		result.append(ap_document_root(r));
+		result.append("\r\n", 2);
+
+		if (baseURI != NULL) {
+			result.append("!~SCRIPT_NAME: ", baseURI);
+			result.append("\r\n", 2);
 		}
 
 		// Phusion Passenger options.
-		addHeader(output, "PASSENGER_STATUS_LINE", "false");
-		addHeader(output, "PASSENGER_APP_ROOT", mapper.getAppRoot());
-		addHeader(output, "PASSENGER_APP_GROUP_NAME", config->getAppGroupName(mapper.getAppRoot()));
+		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_ROOT"), mapper.getAppRoot());
+		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_GROUP_NAME"),
+			config->getAppGroupName(mapper.getAppRoot()));
 		#include "SetHeaders.cpp"
-		addHeader(output, "PASSENGER_SPAWN_METHOD", config->getSpawnMethodString());
-		addHeader(r, output, "PASSENGER_MAX_REQUEST_QUEUE_SIZE", config->maxRequestQueueSize);
-		addHeader(output, "PASSENGER_APP_TYPE", mapper.getApplicationTypeName());
-		addHeader(output, "PASSENGER_MAX_PRELOADER_IDLE_TIME",
+		addHeader(result, P_STATIC_STRING("!~PASSENGER_SPAWN_METHOD"),
+			config->getSpawnMethodString());
+		addHeader(r, result, P_STATIC_STRING("!~PASSENGER_MAX_REQUEST_QUEUE_SIZE"),
+			config->maxRequestQueueSize);
+		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_TYPE"), mapper.getApplicationTypeName());
+		addHeader(result, P_STATIC_STRING("!~PASSENGER_MAX_PRELOADER_IDLE_TIME"),
 			apr_psprintf(r->pool, "%ld", config->maxPreloaderIdleTime));
-		addHeader(output, "PASSENGER_DEBUGGER", "false");
-		addHeader(output, "PASSENGER_SHOW_VERSION_IN_HEADER", "true");
-		addHeader(output, "PASSENGER_STAT_THROTTLE_RATE",
+		addHeader(result, "!~PASSENGER_DEBUGGER", "f");
+		addHeader(result, "!~PASSENGER_SHOW_VERSION_IN_HEADER", "t");
+		addHeader(result, "!~PASSENGER_STAT_THROTTLE_RATE",
 			apr_psprintf(r->pool, "%ld", config->getStatThrottleRate()));
-		addHeader(output, "PASSENGER_RESTART_DIR", config->getRestartDir());
-		addHeader(output, "PASSENGER_FRIENDLY_ERROR_PAGES",
-			config->showFriendlyErrorPages() ? "true" : "false");
+		addHeader(result, "!~PASSENGER_RESTART_DIR", config->getRestartDir());
+		addHeader(result, "!~PASSENGER_FRIENDLY_ERROR_PAGES",
+			config->showFriendlyErrorPages() ? "t" : "f");
 		if (config->useUnionStation() && !config->unionStationKey.empty()) {
-			addHeader(output, "UNION_STATION_SUPPORT", "true");
-			addHeader(output, "UNION_STATION_KEY", config->unionStationKey);
+			addHeader(result, "!~UNION_STATION_SUPPORT", "t");
+			addHeader(result, "!~UNION_STATION_KEY", config->unionStationKey);
 			if (!config->unionStationFilters.empty()) {
-				addHeader(output, "UNION_STATION_FILTERS",
+				addHeader(result, "!~UNION_STATION_FILTERS",
 					config->getUnionStationFilterString());
 			}
 		}
@@ -942,8 +918,90 @@ private:
 		/*********************/
 		/*********************/
 
-		requestData.push_back(output);
-		return output.size();
+		// Add environment variables.
+
+		const apr_array_header_t *env_arr;
+		apr_table_entry_t *env;
+
+		env_arr = apr_table_elts(r->subprocess_env);
+		env = (apr_table_entry_t*) env_arr->elts;
+		for (i = 0; i < env_arr->nelts; ++i) {
+			result.append("!~", 2);
+			result.append(env[i].key);
+			result.append(": ", 2);
+			if (env[i].val != NULL) {
+				result.append(env[i].val);
+			}
+			result.append("\r\n", 2);
+		}
+
+		// Add flags.
+		// B = Buffer request body
+		// S = SSL
+
+		bool bufferUpload = config->bufferUpload != DirConfig::DISABLED;
+		bool https = lookupEnv(r, "HTTPS") != NULL;
+		if (bufferUpload || https) {
+			result.append("!~FLAGS: ", sizeof("!~FLAGS: ") - 1);
+			if (bufferUpload) {
+				result.append("B", 1);
+			}
+			if (https) {
+				result.append("S", 1);
+			}
+			result.append("\r\n", 2);
+		}
+
+		result.append("\r\n", 2);
+
+		return result;
+	}
+
+	static int getsfunc_BRIGADE(char *buf, int len, void *arg) {
+		apr_bucket_brigade *bb = (apr_bucket_brigade *)arg;
+		const char *dst_end = buf + len - 1; /* leave room for terminating null */
+		char *dst = buf;
+		apr_bucket *e = APR_BRIGADE_FIRST(bb);
+		apr_status_t rv;
+		int done = 0;
+
+		while ((dst < dst_end) && !done && e != APR_BRIGADE_SENTINEL(bb)
+			&& !APR_BUCKET_IS_EOS(e))
+		{
+			const char *bucket_data;
+			apr_size_t bucket_data_len;
+			const char *src;
+			const char *src_end;
+			apr_bucket * next;
+
+			rv = apr_bucket_read(e, &bucket_data, &bucket_data_len,
+			                 APR_BLOCK_READ);
+			if (rv != APR_SUCCESS || (bucket_data_len == 0)) {
+				*dst = '\0';
+				return APR_STATUS_IS_TIMEUP(rv) ? -1 : 0;
+			}
+			src = bucket_data;
+			src_end = bucket_data + bucket_data_len;
+			while ((src < src_end) && (dst < dst_end) && !done) {
+				if (*src == '\n') {
+		    		done = 1;
+				}
+				else if (*src != '\r') {
+		    		*dst++ = *src;
+				}
+				src++;
+			}
+
+			if (src < src_end) {
+				apr_bucket_split(e, src - bucket_data);
+			}
+			next = APR_BUCKET_NEXT(e);
+			APR_BUCKET_REMOVE(e);
+			apr_bucket_destroy(e);
+			e = next;
+		}
+		*dst = 0;
+		return done;
 	}
 
 	/**
@@ -1056,14 +1114,30 @@ private:
 		return bufsiz;
 	}
 
-	void sendRequestBody(const FileDescriptor &fd, request_rec *r) {
+	void sendRequestBody(const FileDescriptor &fd, request_rec *r, bool chunk) {
 		TRACE_POINT();
 		char buf[1024 * 32];
 		apr_off_t len;
 
 		try {
 			while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
+				if (chunk) {
+					const apr_off_t BUFSIZE = 2 * sizeof(apr_off_t) + 3;
+					char buf[BUFSIZE];
+					char *pos;
+					const char *end = buf + BUFSIZE;
+
+					pos = buf + integerToHex<apr_off_t>(len, buf);
+					pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+					writeExact(fd, buf, pos - buf);
+				}
 				writeExact(fd, buf, len);
+				if (chunk) {
+					writeExact(fd, "\r\n");
+				}
+			}
+			if (chunk) {
+				writeExact(fd, "0\r\n\r\n");
 			}
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE || e.code() == ECONNRESET) {

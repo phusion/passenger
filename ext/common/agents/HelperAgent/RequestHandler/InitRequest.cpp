@@ -138,7 +138,7 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 static void
 fillPoolOption(Request *req, StaticString &field, const HashedStaticString &name) {
 	const LString *value = req->secureHeaders.lookup(name);
-	if (value != NULL) {
+	if (value != NULL && value->size > 0) {
 		value = psg_lstr_make_contiguous(value, req->pool);
 		field = StaticString(value->start->data, value->size);
 	}

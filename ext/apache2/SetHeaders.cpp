@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -40,62 +40,77 @@
 
 
 	
-		addHeader(output, "PASSENGER_RUBY", config->ruby ? config->ruby : serverConfig.defaultRuby);
+		addHeader(result, StaticString("!~PASSENGER_RUBY",
+			sizeof("!~PASSENGER_RUBY") - 1), config->ruby ? config->ruby : serverConfig.defaultRuby);
 	
 
 	
-		addHeader(output, "PASSENGER_PYTHON", config->python);
+		addHeader(result, StaticString("!~PASSENGER_PYTHON",
+			sizeof("!~PASSENGER_PYTHON") - 1), config->python);
 	
 
 	
-		addHeader(output, "PASSENGER_NODEJS", config->nodejs);
+		addHeader(result, StaticString("!~PASSENGER_NODEJS",
+			sizeof("!~PASSENGER_NODEJS") - 1), config->nodejs);
 	
 
 	
-		addHeader(output, "PASSENGER_APP_ENV", config->appEnv);
+		addHeader(result, StaticString("!~PASSENGER_APP_ENV",
+			sizeof("!~PASSENGER_APP_ENV") - 1), config->appEnv);
 	
 
 	
-		addHeader(r, output, "PASSENGER_MIN_PROCESSES", config->minInstances);
+		addHeader(r, result, StaticString("!~PASSENGER_MIN_PROCESSES",
+			sizeof("!~PASSENGER_MIN_PROCESSES") - 1), config->minInstances);
 	
 
 	
-		addHeader(r, output, "PASSENGER_MAX_PROCESSES", config->maxInstancesPerApp);
+		addHeader(r, result, StaticString("!~PASSENGER_MAX_PROCESSES",
+			sizeof("!~PASSENGER_MAX_PROCESSES") - 1), config->maxInstancesPerApp);
 	
 
 	
-		addHeader(output, "PASSENGER_USER", config->user);
+		addHeader(result, StaticString("!~PASSENGER_USER",
+			sizeof("!~PASSENGER_USER") - 1), config->user);
 	
 
 	
-		addHeader(output, "PASSENGER_GROUP", config->group);
+		addHeader(result, StaticString("!~PASSENGER_GROUP",
+			sizeof("!~PASSENGER_GROUP") - 1), config->group);
 	
 
 	
-		addHeader(r, output, "PASSENGER_MAX_REQUESTS", config->maxRequests);
+		addHeader(r, result, StaticString("!~PASSENGER_MAX_REQUESTS",
+			sizeof("!~PASSENGER_MAX_REQUESTS") - 1), config->maxRequests);
 	
 
 	
-		addHeader(r, output, "PASSENGER_START_TIMEOUT", config->startTimeout);
+		addHeader(r, result, StaticString("!~PASSENGER_START_TIMEOUT",
+			sizeof("!~PASSENGER_START_TIMEOUT") - 1), config->startTimeout);
 	
 
 	
-		addHeader(r, output, "PASSENGER_MAX_REQUEST_QUEUE_SIZE", config->maxRequestQueueSize);
+		addHeader(r, result, StaticString("!~PASSENGER_MAX_REQUEST_QUEUE_SIZE",
+			sizeof("!~PASSENGER_MAX_REQUEST_QUEUE_SIZE") - 1), config->maxRequestQueueSize);
 	
 
 	
-		addHeader(r, output, "PASSENGER_LOAD_SHELL_ENVVARS", config->loadShellEnvvars);
+		addHeader(result, StaticString("!~PASSENGER_LOAD_SHELL_ENVVARS",
+			sizeof("!~PASSENGER_LOAD_SHELL_ENVVARS") - 1), config->loadShellEnvvars);
 	
 
 	
-		addHeader(output, "PASSENGER_STARTUP_FILE", config->startupFile);
+		addHeader(result, StaticString("!~PASSENGER_STARTUP_FILE",
+			sizeof("!~PASSENGER_STARTUP_FILE") - 1), config->startupFile);
 	
 
 	
-		addHeader(r, output, "PASSENGER_STICKY_SESSIONS", config->stickySessions);
+		addHeader(result, StaticString("!~PASSENGER_STICKY_SESSIONS",
+			sizeof("!~PASSENGER_STICKY_SESSIONS") - 1), config->stickySessions);
 	
 
 	
-		addHeader(r, output, "PASSENGER_STICKY_SESSIONS_COOKIE_NAME", config->stickySessionsCookieName);
+		addHeader(result, StaticString("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME",
+			sizeof("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME") - 1), config->stickySessionsCookieName);
 	
 
