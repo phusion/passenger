@@ -128,17 +128,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/Base64Test.cpp
 		ext/common/Utils/Base64.h
 		ext/common/Utils/Base64.cpp),
-	'test/cxx/ScgiRequestParserTest.o' => %w(
-		test/cxx/ScgiRequestParserTest.cpp
-		ext/common/agents/HelperAgent/ScgiRequestParser.h
-		ext/common/StaticString.h),
 	'test/cxx/DechunkerTest.o' => %w(
 		test/cxx/DechunkerTest.cpp
 		ext/common/Utils/Dechunker.h),
-	'test/cxx/HttpHeaderBuffererTest.o' => %w(
-		test/cxx/HttpHeaderBuffererTest.cpp
-		ext/common/Utils/HttpHeaderBufferer.h
-		ext/common/Utils/StreamBoyerMooreHorspool.h),
 	'test/cxx/UnionStationTest.o' => %w(
 		test/cxx/UnionStationTest.cpp
 		ext/common/agents/LoggingAgent/LoggingServer.h

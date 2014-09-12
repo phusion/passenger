@@ -60,7 +60,6 @@
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
-#include <Utils/HttpHeaderBufferer.h>
 
 #ifndef HOST_NAME_MAX
 	#if defined(_POSIX_HOST_NAME_MAX)
@@ -80,7 +79,6 @@
 namespace Passenger {
 
 static string passengerTempDir;
-HttpHeaderBufferer::StaticData HttpHeaderBufferer::staticData;
 
 namespace {
 	/**

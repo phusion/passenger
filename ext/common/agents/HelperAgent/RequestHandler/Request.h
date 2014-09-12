@@ -37,8 +37,6 @@
 #include <UnionStation/ScopeLog.h>
 #include <agents/HelperAgent/RequestHandler/AppResponse.h>
 #include <Logging.h>
-#include <Utils/HttpHeaderBufferer.h>
-#include <Utils/Dechunker.h>
 
 namespace Passenger {
 
