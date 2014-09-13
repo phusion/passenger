@@ -444,7 +444,12 @@ private:
 				FBC_DEBUG("Reader: EOF encountered. Feeding EOF");
 				readerState = RS_FEEDING_EOF;
 				verifyInvariants();
-				Channel::feedWithoutRefGuard(peekBuffer());
+				{
+					// Make a copy of the buffer so that if the callback calls
+					// deinitialize(), it won't suddenly reset the buffer argument.
+					MemoryKit::mbuf buffer(peekBuffer());
+					Channel::feedWithoutRefGuard(buffer);
+				}
 				if (generation != this->generation || mode >= ERROR) {
 					// Callback deinitialized this object, or callback
 					// called a method that encountered an error.

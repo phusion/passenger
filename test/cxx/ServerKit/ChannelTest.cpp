@@ -595,6 +595,24 @@ namespace tut {
 		}
 	}
 
+	DEFINE_DATA_CALLBACK_METHOD(test_28_callback,
+		self->channel.deinitialize();
+		LOCK();
+		self->log.append("Buffer size: " + toString(buffer.size()));
+		return Channel::Result(buffer.size(), false);
+	);
+
+	TEST_METHOD(28) {
+		set_test_name("Deinitializing the channel doesn't invalidate the buffer argument");
+
+		setChannelDataCallback(test_28_callback);
+		feedChannel("abc");
+		EVENTUALLY(5,
+			result = !log.empty();
+		);
+		ensure_equals(log, "Buffer size: 3");
+	}
+
 
 	/***** When the callback is not in progress *****/
 

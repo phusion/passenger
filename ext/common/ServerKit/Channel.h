@@ -241,7 +241,12 @@ protected:
 		assert(state != CALLING || !buffer.empty());
 		assert(state != CALLING_WITH_EOF || buffer.empty());
 
-		cbResult = dataCallback(this, buffer, errcode);
+		{
+			// Make a copy of the buffer so that if the callback calls
+			// deinitialize(), it won't suddenly reset the buffer argument.
+			MemoryKit::mbuf copy(buffer);
+			cbResult = dataCallback(this, copy, errcode);
+		}
 		if (generation != this->generation) {
 			// Callback deinitialized this object.
 			return bytesConsumed;
