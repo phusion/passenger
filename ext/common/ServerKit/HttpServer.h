@@ -93,52 +93,6 @@ private:
 		}
 	};
 
-	struct ChunkedBodyParserAdapter {
-		typedef Request Message;
-		typedef FdInputChannel InputChannel;
-		typedef FileBufferedChannel OutputChannel;
-
-		Request *req;
-
-		ChunkedBodyParserAdapter(Request *_req)
-			: req(_req)
-			{ }
-
-		bool requestEnded() {
-			return req->ended();
-		}
-
-		bool shouldThrottleOutput() {
-			Client *client     = static_cast<Client *>(req->client);
-			HttpServer *server = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
-			return server->shouldThrottleClientBodyReceiving(client, req);
-		}
-
-		void setOutputBuffersFlushedCallback() {
-			req->bodyChannel.setBuffersFlushedCallback(outputBuffersFlushed);
-		}
-
-		static void outputBuffersFlushed(FileBufferedChannel *_channel) {
-			FileBufferedFdOutputChannel *channel =
-				reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
-			Request *req = static_cast<Request *>(static_cast<BaseHttpRequest *>(
-				channel->getHooks()->userData));
-			Client *client = static_cast<Client *>(req->client);
-			HttpServer::createChunkedBodyParser(client, req).
-				outputBuffersFlushed();
-		}
-
-		string getLoggingPrefix() {
-			char buf[256];
-			int size = snprintf(buf, sizeof(buf),
-				"[Client %u] ChunkedBodyParser: ",
-				static_cast<Client *>(req->client)->number);
-			return string(buf, size);
-		}
-	};
-
-	typedef HttpChunkedBodyParser<ChunkedBodyParserAdapter> ChunkedBodyParser;
-
 	friend class RequestHooksImpl;
 
 
@@ -355,6 +309,17 @@ private:
 	{
 		if (buffer.size() > 0) {
 			// Data
+			if (!req->bodyChannel.acceptingInput()) {
+				if (req->bodyChannel.mayAcceptInputLater()) {
+					client->input.stop();
+					req->bodyChannel.consumedCallback =
+						onRequestBodyChannelConsumed;
+					return Channel::Result(0, false);
+				} else {
+					return Channel::Result(0, true);
+				}
+			}
+
 			boost::uint64_t maxRemaining, remaining;
 
 			maxRemaining = req->aux.bodyInfo.contentLength - req->bodyAlreadyRead;
@@ -366,36 +331,45 @@ private:
 
 			if (remaining > 0) {
 				req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, remaining));
-				if (!req->ended() && shouldThrottleClientBodyReceiving(client, req)) {
-					if (!req->bodyChannel.passedThreshold()) {
-						requestBodyConsumed(client, req);
-					} else {
+				if (req->ended()) {
+					return Channel::Result(remaining, false);
+				}
+
+				if (req->bodyChannel.acceptingInput()) {
+					if (req->bodyFullyRead()) {
+						SKC_TRACE(client, 2, "End of request body reached");
 						client->input.stop();
-						req->bodyChannel.buffersFlushedCallback =
-							onRequestBodyChannelBuffersFlushed;
+						req->bodyChannel.feed(MemoryKit::mbuf());
 					}
+					return Channel::Result(remaining, false);
+				} else if (req->bodyChannel.mayAcceptInputLater()) {
+					client->input.stop();
+					req->bodyChannel.consumedCallback =
+						onRequestBodyChannelConsumed;
+					return Channel::Result(remaining, false);
+				} else {
+					return Channel::Result(remaining, true);
 				}
 			} else {
 				SKC_TRACE(client, 2, "End of request body reached");
-				endRequest(&client, &req);
-			}
-			return Channel::Result(remaining, false);
-		} else if (errcode == 0) {
-			// EOF
-			if (req->bodyFullyRead()) {
-				SKC_TRACE(client, 2, "Client sent EOF");
+				client->input.stop();
 				req->bodyChannel.feed(MemoryKit::mbuf());
-			} else {
-				SKC_DEBUG(client, "Client sent EOF before finishing response body: " <<
-					req->bodyAlreadyRead << " bytes already read, " <<
-					req->aux.bodyInfo.contentLength << " bytes expected");
-				req->bodyChannel.feedError(UNEXPECTED_EOF);
+				return Channel::Result(0, false);
 			}
-			return Channel::Result(0, true);
+		} else if (errcode == 0) {
+			// Premature EOF. This cannot be an expected EOF because we
+			// stop client->input upon consuming the end of the body,
+			// and we only resume it upon handling the next request.
+			assert(!req->bodyFullyRead());
+			SKC_DEBUG(client, "Client sent EOF before finishing response body: " <<
+				req->bodyAlreadyRead << " bytes already read, " <<
+				req->aux.bodyInfo.contentLength << " bytes expected");
+			return feedBodyChannelError(client, req, UNEXPECTED_EOF);
 		} else {
 			// Error
-			req->bodyChannel.feedError(errcode);
-			return Channel::Result(0, true);
+			SKC_TRACE(client, 2, "Request body receive error: " <<
+				getErrorDesc(errcode) << " (errno=" << errcode << ")");
+			return feedBodyChannelError(client, req, errcode);
 		}
 	}
 
@@ -404,36 +378,69 @@ private:
 	{
 		if (buffer.size() > 0) {
 			// Data
-			req->bodyAlreadyRead += buffer.size();
-			Channel::Result result = createChunkedBodyParser(client, req).feed(buffer);
-			assert(result.consumed >= 0);
-			if (result.end) {
-				if (req->parserState.chunkedBodyParser.state !=
-					HttpChunkedBodyParserState::ERROR)
-				{
-					if (!req->ended()) {
-						client->input.stop();
-						req->bodyChannel.feed(MemoryKit::mbuf());
-					}
+			if (!req->bodyChannel.acceptingInput()) {
+				if (req->bodyChannel.mayAcceptInputLater()) {
+					client->input.stop();
+					req->bodyChannel.consumedCallback =
+						onRequestBodyChannelConsumed;
+					return Channel::Result(0, false);
 				} else {
-					// The parser already feeds an error to req->bodyChannel.
-					assert(req->bodyChannel.ended());
-					// We're unable to accept any more data.
-					return Channel::Result(result.consumed, true);
+					return Channel::Result(0, true);
 				}
 			}
-			return Channel::Result(result.consumed, false);
+
+			HttpChunkedEvent event(createChunkedBodyParser(req).feed(buffer));
+			req->bodyAlreadyRead += event.consumed;
+
+			switch (event.type) {
+			case HttpChunkedEvent::NONE:
+				assert(!event.end);
+				return Channel::Result(event.consumed, false);
+			case HttpChunkedEvent::DATA:
+				assert(!event.end);
+				req->bodyChannel.feed(event.data);
+				if (!req->ended()) {
+					if (req->bodyChannel.acceptingInput()) {
+						return Channel::Result(event.consumed, false);
+					} else if (req->bodyChannel.mayAcceptInputLater()) {
+						client->input.stop();
+						req->bodyChannel.consumedCallback = onRequestBodyChannelConsumed;
+						return Channel::Result(event.consumed, false);
+					} else {
+						return Channel::Result(event.consumed, false);
+					}
+				} else {
+					return Channel::Result(event.consumed, false);
+				}
+			case HttpChunkedEvent::END:
+				assert(event.end);
+				client->input.stop();
+				req->aux.bodyInfo.endChunkReached = true;
+				req->bodyChannel.feed(MemoryKit::mbuf());
+				return Channel::Result(event.consumed, false);
+			case HttpChunkedEvent::ERROR:
+				assert(event.end);
+				client->input.stop();
+				req->wantKeepAlive = false;
+				req->bodyChannel.feedError(event.errcode);
+				return Channel::Result(event.consumed, true);
+			default:
+				P_BUG("Unknown HttpChunkedEvent type " << event.type);
+				return Channel::Result(0, true);
+			}
 		} else if (errcode == 0) {
-			// Premature EOF. This cannot be an expected EOF because
-			// the parser stops req->bodyChannel upon consuming the end
-			// of the chunked body.
-			createChunkedBodyParser(client, req).feedUnexpectedEof(this,
-				client, req);
+			// Premature EOF. This cannot be an expected EOF because we
+			// stop client->input upon consuming the end of the chunked body,
+			// and we only resume it upon handling the next request.
+			SKC_TRACE(client, 2, "Request body receive error: unexpected end of "
+				"chunked stream (errno=" << errcode << ")");
+			req->bodyChannel.feedError(UNEXPECTED_EOF);
 			return Channel::Result(0, true);
 		} else {
 			// Error
-			req->bodyChannel.feedError(errcode);
-			return Channel::Result(0, true);
+			SKC_TRACE(client, 2, "Request body receive error: " <<
+				getErrorDesc(errcode) << " (errno=" << errcode << ")");
+			return feedBodyChannelError(client, req, errcode);
 		}
 	}
 
@@ -442,30 +449,71 @@ private:
 	{
 		if (buffer.size() > 0) {
 			// Data
+			if (!req->bodyChannel.acceptingInput()) {
+				if (req->bodyChannel.mayAcceptInputLater()) {
+					client->input.stop();
+					req->bodyChannel.consumedCallback =
+						onRequestBodyChannelConsumed;
+					return Channel::Result(0, false);
+				} else {
+					return Channel::Result(0, true);
+				}
+			}
+
 			req->bodyAlreadyRead += buffer.size();
 			req->bodyChannel.feed(buffer);
 			if (!req->ended()) {
-				// We always throttle upgraded client data,
-				// regardless of what shouldThrottleClientBodyReceiving()
-				// returns. Upgraded connections should work like TCP
-				// connections with congestion control.
-				if (!req->bodyChannel.passedThreshold()) {
-					requestBodyConsumed(client, req);
-				} else {
+				if (req->bodyChannel.acceptingInput()) {
+					return Channel::Result(buffer.size(), false);
+				} else if (req->bodyChannel.mayAcceptInputLater()) {
 					client->input.stop();
-					req->bodyChannel.buffersFlushedCallback =
-						onRequestBodyChannelBuffersFlushed;
+					req->bodyChannel.consumedCallback =
+						onRequestBodyChannelConsumed;
+					return Channel::Result(buffer.size(), false);
+				} else {
+					return Channel::Result(buffer.size(), true);
 				}
+			} else {
+				return Channel::Result(buffer.size(), false);
 			}
-			return Channel::Result(buffer.size(), false);
 		} else if (errcode == 0) {
 			// EOF
-			req->bodyChannel.feed(MemoryKit::mbuf());
-			return Channel::Result(0, false);
+			SKC_TRACE(client, 2, "End of request body reached");
+			if (req->bodyChannel.acceptingInput()) {
+				req->bodyChannel.feed(MemoryKit::mbuf());
+				return Channel::Result(0, true);
+			} else if (req->bodyChannel.mayAcceptInputLater()) {
+				SKC_TRACE(client, 3, "BodyChannel currently busy; will feed "
+					"end of request body to bodyChannel later");
+				req->bodyChannel.consumedCallback =
+					onRequestBodyChannelConsumed_onBodyEof;
+				return Channel::Result(-1, false);
+			} else {
+				SKC_TRACE(client, 3, "BodyChannel already ended");
+				return Channel::Result(0, true);
+			}
 		} else {
 			// Error
+			SKC_TRACE(client, 2, "Request body receive error: " <<
+				getErrorDesc(errcode) << " (errno=" << errcode << ")");
+			return feedBodyChannelError(client, req, errcode);
+		}
+	}
+
+	Channel::Result feedBodyChannelError(Client *client, Request *req, int errcode) {
+		if (req->bodyChannel.acceptingInput()) {
 			req->bodyChannel.feedError(errcode);
-			return Channel::Result(0, false);
+			return Channel::Result(0, true);
+		} else if (req->bodyChannel.mayAcceptInputLater()) {
+			SKC_TRACE(client, 3, "BodyChannel currently busy; will feed "
+				"error to bodyChannel later");
+			req->bodyChannel.consumedCallback =
+				onRequestBodyChannelConsumed_onBodyError;
+			req->bodyError = errcode;
+			return Channel::Result(-1, false);
+		} else {
+			SKC_TRACE(client, 3, "BodyChannel already ended");
+			return Channel::Result(0, true);
 		}
 	}
 
@@ -500,22 +548,23 @@ private:
 			req, req->pool);
 	}
 
-	static ChunkedBodyParser createChunkedBodyParser(Client *client, Request *req) {
-		return ChunkedBodyParser(&req->parserState.chunkedBodyParser, req,
-			&client->input, &req->bodyChannel, NULL,
-			ChunkedBodyParserAdapter(req));
+	static HttpChunkedBodyParser createChunkedBodyParser(Request *req) {
+		return HttpChunkedBodyParser(&req->parserState.chunkedBodyParser,
+			formatChunkedBodyParserLoggingPrefix, req);
+	}
+
+	static unsigned int formatChunkedBodyParserLoggingPrefix(char *buf,
+		unsigned int bufsize, void *userData)
+	{
+		Request *req = static_cast<Request *>(userData);
+		return snprintf(buf, bufsize,
+			"[Client %u] ChunkedBodyParser: ",
+			static_cast<Client *>(req->client)->number);
 	}
 
 	void prepareChunkedBodyParsing(Client *client, Request *req) {
 		P_ASSERT_EQ(req->bodyType, Request::RBT_CHUNKED);
-		createChunkedBodyParser(client, req).initialize();
-	}
-
-	void requestBodyConsumed(Client *client, Request *req) {
-		if (req->bodyFullyRead()) {
-			client->input.stop();
-			req->bodyChannel.feed(MemoryKit::mbuf());
-		}
+		createChunkedBodyParser(req).initialize();
 	}
 
 
@@ -526,6 +575,7 @@ private:
 			reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
 		Client *client = static_cast<Client *>(static_cast<BaseClient *>(
 			channel->getHooks()->userData));
+
 		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
 		if (client->currentRequest != NULL
 		 && client->currentRequest->httpState == Request::FLUSHING_OUTPUT)
@@ -535,27 +585,54 @@ private:
 		}
 	}
 
-	static Channel::Result onRequestBodyChannelData(Channel *_channel,
+	static Channel::Result onRequestBodyChannelData(Channel *channel,
 		const MemoryKit::mbuf &buffer, int errcode)
 	{
-		FileBufferedChannel *channel = reinterpret_cast<FileBufferedChannel *>(_channel);
 		Request *req     = static_cast<Request *>(static_cast<BaseHttpRequest *>(
-			channel->getHooks()->userData));
+			channel->hooks->userData));
 		Client *client   = static_cast<Client *>(req->client);
 		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
 
 		return self->onRequestBody(client, req, buffer, errcode);
 	}
 
-	static void onRequestBodyChannelBuffersFlushed(FileBufferedChannel *channel) {
+	static void onRequestBodyChannelConsumed(Channel *channel, unsigned int size) {
 		Request *req     = static_cast<Request *>(static_cast<BaseHttpRequest *>(
-			channel->getHooks()->userData));
+			channel->hooks->userData));
 		Client *client   = static_cast<Client *>(req->client);
-		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
 
-		req->bodyChannel.buffersFlushedCallback = NULL;
-		client->input.start();
-		self->requestBodyConsumed(client, req);
+		channel->consumedCallback = NULL;
+		if (channel->acceptingInput()) {
+			if (req->bodyFullyRead()) {
+				req->bodyChannel.feed(MemoryKit::mbuf());
+			} else {
+				client->input.start();
+			}
+		}
+	}
+
+	static void onRequestBodyChannelConsumed_onBodyEof(Channel *channel, unsigned int size) {
+		Request *req     = static_cast<Request *>(static_cast<BaseHttpRequest *>(
+			channel->hooks->userData));
+		Client *client   = static_cast<Client *>(req->client);
+
+		channel->consumedCallback = NULL;
+		client->input.consumed(0, true);
+		if (channel->acceptingInput()) {
+			req->bodyChannel.feed(MemoryKit::mbuf());
+		}
+	}
+
+	static void onRequestBodyChannelConsumed_onBodyError(Channel *channel, unsigned int size) {
+		Request *req     = static_cast<Request *>(static_cast<BaseHttpRequest *>(
+			channel->hooks->userData));
+		Client *client   = static_cast<Client *>(req->client);
+
+		channel->consumedCallback = NULL;
+		client->input.consumed(0, true);
+		if (channel->acceptingInput()) {
+			req->bodyChannel.feedError(req->bodyError);
+		}
 	}
 
 protected:
@@ -828,8 +905,8 @@ protected:
 		req->hooks.impl = &requestHooksImpl;
 		req->hooks.userData = static_cast<BaseHttpRequest *>(req);
 		req->bodyChannel.setContext(this->getContext());
-		req->bodyChannel.setHooks(&req->hooks);
-		req->bodyChannel.setDataCallback(onRequestBodyChannelData);
+		req->bodyChannel.hooks = &req->hooks;
+		req->bodyChannel.dataCallback = onRequestBodyChannelData;
 	}
 
 	virtual void onRequestBegin(Client *client, Request *req) {
@@ -847,10 +924,6 @@ protected:
 
 	virtual bool supportsUpgrade(Client *client, Request *req) {
 		return false;
-	}
-
-	virtual bool shouldThrottleClientBodyReceiving(Client *client, Request *req) {
-		return true;
 	}
 
 	virtual void reinitializeRequest(Client *client, Request *req) {
@@ -906,8 +979,7 @@ protected:
 		req->httpState = Request::WAITING_FOR_REFERENCES;
 		req->headers.clear();
 		req->secureHeaders.clear();
-		req->bodyChannel.buffersFlushedCallback = NULL;
-		req->bodyChannel.dataFlushedCallback = NULL;
+		req->bodyChannel.consumedCallback = NULL;
 		req->bodyChannel.deinitialize();
 	}
 

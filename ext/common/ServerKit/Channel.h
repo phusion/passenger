@@ -61,50 +61,93 @@ using namespace boost;
  *
  * The data callback can consume the buffer immediately, and tell Channel how many bytes
  * it has consumed, and whether it accepts any further data, by returning a Channel::Result.
- * If the buffer was not fully consumed the buffer, and is still willing to accept further data,
- * then Channel will call the data callback again with the remainder of the buffer. This repeats
- * until the buffer is fully consumed, or until the callback indicates that it's no longer
- * accepting further data, or (if proper hooks are provided) until the client is disconnected.
+ * If the buffer was not fully consumed the data callback, and it is still willing to accept
+ * further data (by not transitioning to the end state or an error state), then Channel will
+ * call the data callback again with the remainder of the buffer. This repeats
+ * until:
  *
+ *  * the buffer is fully consumed,
+ *  * or until the callback indicates that it's no longer accepting further data,
+ *  * or (if proper hooks are provided) until the client is disconnected.
+ *
+ * Typical usage of Channel goes like this:
+ *
+ *     // Initialization. Set data callback.
  *     Channel channel;
  *     channel.dataCallback = channelDataReceived;
  *
- *     channel.consumedCallback = channelConsumed;
- *     channel.feed("hello");
+ *     // Begin feeding data.
+ *     feedMoreData();
  *
- *     void
- *     channelConsumed(Channel *channel, unsigned int size) {
- *         channel->consumedCallback = NULL;
- *         if (channel->acceptingInput()) {
- *             // The channel is now able to accept more data.
- *             // Write some more data...
- *             channel->consumedCallback = channelConsumed;
- *             channel->feed("hello");
+ *     void feedMoreData() {
+ *         channel.feed("hello");
+ *         // or channel.feed("") for EOF
+ *         // or channel.feedError(...)
+ *
+ *         if (channel.acceptingInput()) {
+ *             // The data callback has immediately consumed the data,
+ *             // and is ready to consume more. You can feed more data now.
+ *             ...call feedMoreData() some time later...
+ *         } else if (channel.mayAcceptInputLater()) {
+ *             // The data isn't consumed yet. We install a notification
+ *             // callback, and we try again later.
+ *             channel.consumedCallback = channelConsumed;
  *         } else if (channel->ended()) {
- *             ...the data callback no longer accepts further data...
+ *             // The data callback has immediately consumed the data,
+ *             // but no longer accepts further data.
+ *             ...
  *         } else {
- *             ...the data callback signaled an error...
+ *             // The data callback signaled an error.
+ *             ...
  *         }
  *     }
  *
- *     Channel::Result
- *     channelDataReceived(Channel *channel, mbuf &buffer, int errcode) {
- *         if (errcode != 0) {
- *             // An error occurred! Result doesn't matter in this case.
- *             fprintf(stderr, "An error occurred! errno=%d\n", errcode);
- *             return Channel::Result(0, false);
- *         } else if (buffer.empty()) {
- *             // EOF reached. Result doesn't matter in this case.
- *             return Channel::Result(0, false);
+ *     void channelConsumed(Channel *channel, unsigned int size) {
+ *         // The data callback is now done consuming, but it may have
+ *         // transitioned to the end or error state, so here we check
+ *         // whether that is the case and whether we can feed more data.
+ *         //
+ *         // There is no need to check for mayAcceptInputLater() here.
+ *
+ *         channel->consumedCallback = NULL;
+ *
+ *         if (channel->acceptingInput()) {
+ *             // The channel is now able to accept more data.
+ *             // Feed some more data...
+ *             ...call feedMoreData() some time later...
+ *         } else if (channel->ended()) {
+ *             // The data callback no longer accepts further data.
+ *             ...
  *         } else {
+ *             // The data callback signaled an error.
+ *             ...
+ *         }
+ *     }
+ *
+ *     Channel::Result channelDataReceived(Channel *channel, mbuf &buffer,
+ *         int errcode)
+ *     {
+ *         if (buffer.size() > 0) {
  *             int bytesProcessed;
  *             bool acceptFurtherData;
  *
  *             ...process buffer....
  *
  *             return Channel::Result(bytesProcessed, acceptFurtherData);
+ *         } else if (errcode == 0) {
+ *             // EOF reached. Result doesn't matter in this case.
+ *             return Channel::Result(0, false);
+ *         } else {
+ *             // An error occurred! Result doesn't matter in this case.
+ *             fprintf(stderr, "An error occurred! errno=%d\n", errcode);
+ *             return Channel::Result(0, false);
  *         }
  *     }
+ *
+ * A good example of this is FdInputChannel. It reads data from a file descriptor using
+ * `read()`, then writes them to a Channel. It stops reading from the file descriptor
+ * when the Channel is not accepting reads, and it starts reading from the file
+ * descriptor when the channel is accepting reads again.
  *
  * The data callback can also tell Channel that it wants to consume the buffer
  * *asynchronously*, by returning a Channel::Result with a negative consumption size.
@@ -113,20 +156,6 @@ using namespace boost;
  * writer that it is not accepting any new data, so that the writer can stop writing
  * temporarily. When the buffer is consumed, the Channel notifies the writer about
  * this so that it can continue writing.
- *
- * Typical usage goes like this:
- *
- * 1. Write to the Channel using `channel.feed()`.
- * 2. Check whether `channel.acceptingInput()`. If so, continue writing. If not, and
- *    `channel.mayAcceptInputLater()`, then stop writing and install a consumed
- *    callback with `channel.consumedCallback = ...`.
- * 3. When the consumed callback is called, `channel.consumedCallback = NULL` and
- *    check whether `channel.acceptingInput()`. It so, resume writing to the channel.
- *
- * A good example of this is FdInputChannel. It reads data from a file descriptor using
- * `read()`, then writes them to a Channel. It stops reading from the file descriptor
- * when the Channel is not accepting reads, and it starts reading from the file
- * descriptor when the channel is accepting reads again.
  */
 class Channel: public boost::noncopyable {
 public:
@@ -362,9 +391,9 @@ protected:
 public:
 	DataCallback dataCallback;
 	/**
-	 * Called whenever fed data has been fully consumed, or whenever the Channel
-	 * has become idle. Note that `size` may be 0, which could be triggered by
-	 * calling `stop()` then `start()` on an idle Channe.
+	 * Called whenever fed data has been fully consumed, or when it has become idle.
+	 * The latter is triggered by calling `stop()` on an idle channel, and then
+	 * `start()` again. In this case, `size` will be 0.
 	 */
 	ConsumedCallback consumedCallback;
 	Hooks *hooks;

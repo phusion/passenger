@@ -61,6 +61,14 @@ private:
 		ssize_t ret;
 		int e;
 
+		if (!acceptingInput()) {
+			ev_io_stop(ctx->libev->getLoop(), &watcher);
+			if (mayAcceptInputLater()) {
+				consumedCallback = onChannelConsumed;
+			}
+			return;
+		}
+
 		for (i = 0; i < burstReadCount && !done; i++) {
 			if (buffer.empty()) {
 				buffer = MemoryKit::mbuf_get(&ctx->mbuf_pool);
@@ -98,13 +106,15 @@ private:
 				}
 
 			} else if (ret == 0) {
-				ev_io_stop(ctx->libev->getLoop(), &watcher);
 				done = true;
+				ev_io_stop(ctx->libev->getLoop(), &watcher);
+				buffer = MemoryKit::mbuf();
 				feedWithoutRefGuard(MemoryKit::mbuf());
 
 			} else {
 				e = errno;
 				done = true;
+				buffer = MemoryKit::mbuf();
 				if (e != EAGAIN && e != EWOULDBLOCK) {
 					ev_io_stop(ctx->libev->getLoop(), &watcher);
 					feedError(e);
@@ -182,6 +192,10 @@ public:
 
 	void stop() {
 		Channel::stop();
+	}
+
+	void consumed(unsigned int size, bool end) {
+		Channel::consumed(size, end);
 	}
 
 	OXT_FORCE_INLINE

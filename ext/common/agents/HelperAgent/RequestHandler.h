@@ -212,117 +212,12 @@ public:
 
 protected:
 	#include <agents/HelperAgent/RequestHandler/Utils.cpp>
+	#include <agents/HelperAgent/RequestHandler/Hooks.cpp>
 	#include <agents/HelperAgent/RequestHandler/InitRequest.cpp>
+	#include <agents/HelperAgent/RequestHandler/BufferBody.cpp>
 	#include <agents/HelperAgent/RequestHandler/CheckoutSession.cpp>
 	#include <agents/HelperAgent/RequestHandler/SendRequest.cpp>
 	#include <agents/HelperAgent/RequestHandler/ForwardResponse.cpp>
-
-	virtual void
-	onClientAccepted(Client *client) {
-		ParentClass::onClientAccepted(client);
-		client->connectedAt = ev_now(getLoop());
-	}
-
-	virtual void
-	onRequestObjectCreated(Client *client, Request *req) {
-		ParentClass::onRequestObjectCreated(client, req);
-
-		req->appInput.setContext(getContext());
-		req->appInput.setHooks(&req->hooks);
-		req->appInput.errorCallback = onAppInputError;
-
-		req->appOutput.setContext(getContext());
-		req->appOutput.setHooks(&req->hooks);
-		req->appOutput.setDataCallback(_onAppOutputData);
-	}
-
-	virtual bool shouldThrottleClientBodyReceiving(Client *client, Request *req) {
-		return !req->requestBodyBuffering;
-	}
-
-	virtual void deinitializeClient(Client *client) {
-		ParentClass::deinitializeClient(client);
-		client->output.setBuffersFlushedCallback(NULL);
-	}
-
-	virtual void reinitializeRequest(Client *client, Request *req) {
-		ParentClass::reinitializeRequest(client, req);
-
-		// appInput and appOutput are initialized in
-		// RequestHandler::checkoutSession().
-
-		req->startedAt = 0;
-		req->state = Request::ANALYZING_REQUEST;
-		req->dechunkResponse = false;
-		req->requestBodyBuffering = false;
-		req->https = false;
-		req->stickySession = false;
-		req->halfCloseAppConnection = false;
-		req->sessionCheckoutTry = 0;
-		req->host = NULL;
-	}
-
-	virtual void deinitializeRequest(Client *client, Request *req) {
-		req->session.reset();
-
-		req->endScopeLog(&req->scopeLogs.requestProxying, false);
-		req->endScopeLog(&req->scopeLogs.getFromPool, false);
-		req->endScopeLog(&req->scopeLogs.bufferingRequestBody, false);
-		req->endScopeLog(&req->scopeLogs.requestProcessing, false);
-
-		req->appInput.deinitialize();
-		req->appInput.setBuffersFlushedCallback(NULL);
-		req->appInput.setDataFlushedCallback(NULL);
-		req->appOutput.deinitialize();
-
-		deinitializeAppResponse(client, req);
-
-		ParentClass::deinitializeRequest(client, req);
-	}
-
-	void reinitializeAppResponse(Client *client, Request *req) {
-		AppResponse *resp = &req->appResponse;
-
-		resp->httpMajor = 1;
-		resp->httpMinor = 0;
-		resp->httpState = AppResponse::PARSING_HEADERS;
-		resp->bodyType  = AppResponse::RBT_NO_BODY;
-		resp->wantKeepAlive = false;
-		resp->oneHundredContinueSent = false;
-		resp->statusCode = 0;
-		resp->parserState.headerParser = getHeaderParserStatePool().construct();
-		createAppResponseHeaderParser(getContext(), req).initialize();
-		resp->aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.
-		resp->bodyAlreadyRead = 0;
-	}
-
-	void deinitializeAppResponse(Client *client, Request *req) {
-		AppResponse *resp = &req->appResponse;
-
-		if (resp->httpState == AppResponse::PARSING_HEADERS
-		 && resp->parserState.headerParser != NULL)
-		{
-			getHeaderParserStatePool().destroy(resp->parserState.headerParser);
-			resp->parserState.headerParser = NULL;
-		}
-
-		ServerKit::HeaderTable::Iterator it(resp->headers);
-		while (*it != NULL) {
-			psg_lstr_deinit(&it->header->key);
-			psg_lstr_deinit(&it->header->val);
-			it.next();
-		}
-
-		it = ServerKit::HeaderTable::Iterator(resp->secureHeaders);
-		while (*it != NULL) {
-			psg_lstr_deinit(&it->header->key);
-			psg_lstr_deinit(&it->header->val);
-			it.next();
-		}
-
-		resp->headers.clear();
-		resp->secureHeaders.clear();
-	}
 
 public:
 	RequestHandler(ServerKit::Context *context, const VariantMap *_agentsOptions)

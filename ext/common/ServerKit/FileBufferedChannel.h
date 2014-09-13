@@ -1165,6 +1165,10 @@ public:
 		Channel::stop();
 	}
 
+	bool isStarted() const {
+		return Channel::isStarted();
+	}
+
 	void consumed(unsigned int size, bool end) {
 		Channel::consumed(size, end);
 	}

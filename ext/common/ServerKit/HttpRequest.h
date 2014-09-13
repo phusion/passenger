@@ -119,7 +119,7 @@ public:
 	// headers is variable, but the number of secure headers is more or less
 	// constant.
 	HeaderTable secureHeaders;
-	FileBufferedChannel bodyChannel;
+	Channel bodyChannel;
 
 	union {
 		/** Length of the message body. Only use when httpState != ERROR. */
@@ -138,6 +138,11 @@ public:
 		int parseError;
 	} aux;
 	boost::uint64_t bodyAlreadyRead;
+
+	/* When a body error is encountered and bodyChannel is not immediately available,
+	 * the error code is temporarily stored here.
+	 */
+	int bodyError;
 
 
 	BaseHttpRequest()

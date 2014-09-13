@@ -1,3 +1,28 @@
+/*
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2011-2014 Phusion
+ *
+ *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+
 // This file is included inside the RequestHandler class.
 // It handles app --> client data forwarding.
 
@@ -75,7 +100,7 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 				P_BUG("Invalid response HTTP state " << (int) resp->httpState);
 				return Channel::Result(0, true);
 			}
-		} else if (errcode == 0) {
+		} else if (errcode == 0 || errcode == ECONNRESET) {
 			// EOF
 			SKC_DEBUG(client, "Application sent EOF before finishing response headers");
 			endRequestWithAppSocketIncompleteResponse(&client, &req);
@@ -105,12 +130,16 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 
 			if (remaining > 0) {
 				writeResponse(client, MemoryKit::mbuf(buffer, 0, remaining));
+				if (!req->ended() && resp->bodyFullyRead()) {
+					SKC_TRACE(client, 2, "End of application response body reached");
+					endRequest(&client, &req);
+				}
 			} else {
 				SKC_TRACE(client, 2, "End of application response body reached");
 				endRequest(&client, &req);
 			}
 			return Channel::Result(remaining, false);
-		} else if (errcode == 0) {
+		} else if (errcode == 0 || errcode == ECONNRESET) {
 			// EOF
 			if (resp->bodyFullyRead()) {
 				SKC_TRACE(client, 2, "Application sent EOF");
@@ -131,63 +160,44 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 	case AppResponse::PARSING_CHUNKED_BODY:
 		if (!buffer.empty()) {
 			// Data
-			int parseErrcode;
-
 			SKC_TRACE(client, 3, "Processing " << buffer.size() <<
 				" bytes of application data: \"" << cEscapeString(StaticString(
 					buffer.start, buffer.size())) << "\"");
-			Channel::Result result = createAppResponseChunkedBodyParser(client,
-				req, &parseErrcode).feed(buffer);
-			assert(result.consumed >= 0);
-			resp->bodyAlreadyRead += result.consumed;
+			ServerKit::HttpChunkedEvent event(createAppResponseChunkedBodyParser(req)
+				.feed(buffer));
+			resp->bodyAlreadyRead += event.consumed;
 
-			// If dechunkResponse is true, the parser itself is responsible
-			// for writing data to the client.
-			if (!req->dechunkResponse) {
-				writeResponse(client, MemoryKit::mbuf(buffer, 0, result.consumed));
-				if (req->ended()) {
-					return Channel::Result(result.consumed, false);
-				}
-			}
-
-			if (result.end) {
-				if (resp->parserState.chunkedBodyParser.state !=
-					ServerKit::HttpChunkedBodyParserState::ERROR)
-				{
-					if (!req->ended()) {
-						writeResponse(client, MemoryKit::mbuf());
-						endRequest(&client, &req);
-					}
-				} else {
-					if (req->dechunkResponse) {
-						// The parser already feeds an error to client->output.
-						assert(req->ended());
-					} else {
-						assert(!req->ended());
+			if (req->dechunkResponse) {
+				switch (event.type) {
+				case ServerKit::HttpChunkedEvent::NONE:
+					assert(!event.end);
+					return Channel::Result(event.consumed, false);
+				case ServerKit::HttpChunkedEvent::DATA:
+					assert(!event.end);
+					writeResponse(client, event.data);
+					return Channel::Result(event.consumed, false);
+				case ServerKit::HttpChunkedEvent::END:
+					assert(event.end);
+					endRequest(&client, &req);
+					return Channel::Result(event.consumed, true);
+				case ServerKit::HttpChunkedEvent::ERROR:
+					assert(event.end);
+					{
 						string message = "error parsing app response chunked encoding: ";
-						message.append(ServerKit::getErrorDesc(parseErrcode));
+						message.append(ServerKit::getErrorDesc(event.errcode));
 						disconnectWithError(&client, message);
 					}
+					return Channel::Result(event.consumed, true);
 				}
-			}
-			return Channel::Result(result.consumed, false);
-		} else if (errcode == 0) {
-			// Premature EOF. This cannot be an expected EOF because
-			// the parser stops req->bodyChannel upon consuming the end
-			// of the chunked body.
-			#ifndef NDEBUG
-				RequestRef ref(req);
-			#endif
-			createAppResponseChunkedBodyParser(client, req).
-				feedUnexpectedEof(this, client, req);
-			if (req->dechunkResponse) {
-				// The parser already feeds an error to client->output.
-				assert(req->ended());
 			} else {
-				assert(!req->ended());
-				disconnectWithError(&client, "error parsing app response chunked encoding: "
-					"unexpected end-of-stream");
+				writeResponse(client, MemoryKit::mbuf(buffer, 0, event.consumed));
+				return Channel::Result(event.consumed, event.end);
 			}
+		} else if (errcode == 0 || errcode == ECONNRESET) {
+			// Premature EOF. This cannot be an expected EOF because
+			// we end the request upon consuming the end of the chunked body.
+			disconnectWithError(&client, "error parsing app response chunked encoding: "
+				"unexpected end-of-stream");
 			return Channel::Result(0, false);
 		} else {
 			// Error
@@ -205,7 +215,7 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			resp->bodyAlreadyRead += buffer.size();
 			writeResponse(client, buffer);
 			return Channel::Result(buffer.size(), false);
-		} else if (errcode == 0) {
+		} else if (errcode == 0 || errcode == ECONNRESET) {
 			// EOF
 			SKC_TRACE(client, 2, "Application sent EOF");
 			endRequest(&client, &req);
@@ -249,7 +259,7 @@ onAppResponseBegin(Client *client, Request *req) {
 			sendResponseHeaderWithBuffering(client, req, bytesWritten);
 		} else {
 			int e = errno;
-			assert(bytesWritten == -1);
+			P_ASSERT_EQ(bytesWritten, -1);
 			disconnectWithClientSocketWriteError(&client, e);
 		}
 	}
@@ -538,41 +548,6 @@ sendResponseHeaderWithBuffering(Client *client, Request *req, unsigned int offse
 	}
 }
 
-struct AppResponseChunkedBodyParserAdapter {
-	typedef AppResponse Message;
-	typedef FileBufferedChannel InputChannel;
-	typedef FileBufferedFdOutputChannel OutputChannel;
-
-	Request *req;
-
-	AppResponseChunkedBodyParserAdapter(Request *_req)
-		: req(_req)
-		{ }
-
-	bool requestEnded() {
-		return req->ended();
-	}
-
-	bool shouldThrottleOutput() {
-		return false;
-	}
-
-	void setOutputBuffersFlushedCallback() {
-		// Do nothing. Not necessary.
-	}
-
-	string getLoggingPrefix() {
-		char buf[256];
-		int size = snprintf(buf, sizeof(buf),
-			"[Client %u] AppResponse ChunkedBodyParser: ",
-			static_cast<Client *>(req->client)->number);
-		return string(buf, size);
-	}
-};
-
-typedef ServerKit::HttpChunkedBodyParser<AppResponseChunkedBodyParserAdapter> \
-	AppResponseChunkedBodyParser;
-
 static ServerKit::HttpHeaderParser<AppResponse, ServerKit::HttpParseResponse>
 createAppResponseHeaderParser(ServerKit::Context *ctx, Request *req) {
 	return ServerKit::HttpHeaderParser<AppResponse, ServerKit::HttpParseResponse>(
@@ -580,17 +555,24 @@ createAppResponseHeaderParser(ServerKit::Context *ctx, Request *req) {
 		&req->appResponse, req->pool, req->method);
 }
 
-static AppResponseChunkedBodyParser
-createAppResponseChunkedBodyParser(Client *client, Request *req,
-	int *errcode = NULL)
+static ServerKit::HttpChunkedBodyParser
+createAppResponseChunkedBodyParser(Request *req) {
+	return ServerKit::HttpChunkedBodyParser(
+		&req->appResponse.parserState.chunkedBodyParser,
+		formatAppResponseChunkedBodyParserLoggingPrefix,
+		req);
+}
+
+static unsigned int formatAppResponseChunkedBodyParserLoggingPrefix(char *buf,
+	unsigned int bufsize, void *userData)
 {
-	return AppResponseChunkedBodyParser(&req->appResponse.parserState.chunkedBodyParser,
-		&req->appResponse, &req->bodyChannel,
-		req->dechunkResponse ? &client->output : NULL,
-		errcode, AppResponseChunkedBodyParserAdapter(req));
+	Request *req = static_cast<Request *>(userData);
+	return snprintf(buf, bufsize,
+		"[Client %u] ChunkedBodyParser: ",
+		static_cast<Client *>(req->client)->number);
 }
 
 void prepareAppResponseChunkedBodyParsing(Client *client, Request *req) {
-	assert(req->appResponse.bodyType == AppResponse::RBT_CHUNKED);
-	createAppResponseChunkedBodyParser(client, req).initialize();
+	P_ASSERT_EQ(req->appResponse.bodyType, AppResponse::RBT_CHUNKED);
+	createAppResponseChunkedBodyParser(req).initialize();
 }

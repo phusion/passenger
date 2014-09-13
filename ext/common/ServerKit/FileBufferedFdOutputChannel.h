@@ -28,6 +28,7 @@
 #include <oxt/macros.hpp>
 #include <sys/types.h>
 #include <unistd.h>
+#include <Logging.h>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/FileBufferedChannel.h>
 
@@ -125,9 +126,27 @@ public:
 		FileBufferedChannel::feedError(errcode);
 	}
 
+	/**
+	 * Reinitialize the channel without a file descriptor. The channel
+	 * will be reinitialized in a stopped state. To start it, you must
+	 * first call `setFd()`, then `start()`.
+	 *
+	 * @post getFd() == fd
+	 */
+	void reinitialize() {
+		FileBufferedChannel::reinitialize();
+		stop();
+	}
+
+	/**
+	 * Reinitialize the channel with a file descriptor. Unlike `reinitialize()`,
+	 * this reinitializes the channel in the started state.
+	 *
+	 * @post getFd() == fd
+	 */
 	void reinitialize(int fd) {
 		FileBufferedChannel::reinitialize();
-		ev_io_init(&watcher, onWritable, fd, EV_WRITE);
+		setFd(fd);
 	}
 
 	void deinitialize() {
@@ -136,12 +155,25 @@ public:
 		FileBufferedChannel::deinitialize();
 	}
 
+	void start() {
+		FileBufferedChannel::start();
+	}
+
+	void stop() {
+		FileBufferedChannel::stop();
+	}
+
 	Channel::State getState() const {
 		return FileBufferedChannel::getState();
 	}
 
 	bool passedThreshold() const {
 		return FileBufferedChannel::passedThreshold();
+	}
+
+	void setFd(int fd) {
+		P_ASSERT_EQ(watcher.fd, -1);
+		ev_io_init(&watcher, onWritable, fd, EV_WRITE);
 	}
 
 	int getFd() const {

@@ -49,6 +49,7 @@ class Request: public ServerKit::BaseHttpRequest {
 public:
 	enum State {
 		ANALYZING_REQUEST,
+		BUFFERING_REQUEST_BODY,
 		CHECKING_OUT_SESSION,
 		SENDING_HEADER_TO_APP,
 		FORWARDING_BODY_TO_APP,
@@ -71,6 +72,12 @@ public:
 	SessionPtr session;
 	const LString *host;
 
+	ServerKit::FileBufferedFdOutputChannel appInput;
+	ServerKit::FdInputChannel appOutput;
+	AppResponse appResponse;
+
+	ServerKit::FileBufferedChannel bodyBuffer;
+
 	struct {
 		UnionStation::ScopeLog *requestProcessing;
 		UnionStation::ScopeLog *bufferingRequestBody;
@@ -79,17 +86,12 @@ public:
 	} scopeLogs;
 
 
-	/***** Application I/O channels and response information *****/
-
-	ServerKit::FileBufferedFdOutputChannel appInput;
-	ServerKit::FdInputChannel appOutput;
-	AppResponse appResponse;
-
-
 	const char *getStateString() const {
 		switch (state) {
 		case ANALYZING_REQUEST:
 			return "ANALYZING_REQUEST";
+		case BUFFERING_REQUEST_BODY:
+			return "BUFFERING_REQUEST_BODY";
 		case CHECKING_OUT_SESSION:
 			return "CHECKING_OUT_SESSION";
 		case SENDING_HEADER_TO_APP:
