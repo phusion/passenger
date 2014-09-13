@@ -78,8 +78,10 @@ define 'libcurl-dev' do
 		if release =~ /release 4/
 			# http://code.google.com/p/phusion-passenger/issues/detail?id=554
 			yum_install "curl-devel zlib-devel e2fsprogs-devel krb5-devel libidn-devel"
-		else
+		elsif release =~ /release 5/
 			yum_install "curl-devel"
+		else
+			yum_install "libcurl-devel"
 		end
 	end
 end
