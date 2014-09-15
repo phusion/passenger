@@ -1705,7 +1705,7 @@ to implement it like that:
   which web applications to pre-start. It's probably not completely impossible
   to obtain such a list, but this brings us to the following point;
 - Users expect things like 'mod_env' to work even in combination with Phusion
-  Passenger. For example some people put ``SetEnv PATH=....'' in their virtual
+  Passenger. For example some people put ``SetEnv PATH ....'' in their virtual
   host block and they expect the web application to pick that environment variable
   up when it's started. Information like this is stored in module-specific
   locations that Phusion Passenger cannot access directly. Even if the previous
