@@ -117,7 +117,7 @@ describe "Passenger Standalone" do
 	end
 
 	describe "start command" do
-		SUPPORT_BINARIES_DOWNLOAD_MESSAGE = " --> Downloading #{PROGRAM_NAME} support binaries for your platform"
+		SUPPORT_BINARIES_DOWNLOAD_MESSAGE = "--> Downloading #{PROGRAM_NAME} support binaries for your platform"
 		NGINX_BINARY_DOWNLOAD_MESSAGE = "Downloading web helper for your platform"
 		NGINX_SOURCE_DOWNLOAD_MESSAGE = "Downloading web helper source code..."
 		COMPILING_MESSAGE = "Installing #{PROGRAM_NAME} Standalone..."
@@ -224,7 +224,7 @@ describe "Passenger Standalone" do
 						command = "passenger start " +
 							"--runtime-dir '#{@runtime_dir}' " +
 							"--binaries-url-root '#{@base_url}'"
-						
+
 						@output = `#{command} --runtime-check-only --no-compile-runtime 2>&1`
 						$?.exitstatus.should_not == 0
 						@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
@@ -237,7 +237,7 @@ describe "Passenger Standalone" do
 						@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
 						@output.should include(COMPILING_MESSAGE)
 						File.exist?("#{PhusionPassenger.source_root}/buildout").should be_false
-						
+
 						test_serving_application("#{command} --no-compile-runtime")
 						File.exist?("#{PhusionPassenger.source_root}/buildout").should be_false
 					ensure
