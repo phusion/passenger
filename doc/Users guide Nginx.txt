@@ -1861,6 +1861,16 @@ This option may occur in the following places:
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
+==== passenger_ignore_headers <header names...> ====
+Disables processing of certain response header fields from the application, similar to how 'proxy_ignore_headers' works.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
 ==== passenger_buffer_response <on|off> ====
 When turned on, application-generated responses are buffered by Nginx. Buffering will
 happen in memory and also on disk if the response is larger than a certain threshold.
