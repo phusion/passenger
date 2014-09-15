@@ -221,7 +221,7 @@ function installServer() {
 }
 
 function listenAndMaybeInstall(port) {
-	if (port === 'passenger') {
+	if (port === 'passenger' || port == '/passenger') {
 		if (!PhusionPassenger._appInstalled) {
 			return installServer.apply(this, arguments);
 		} else {
