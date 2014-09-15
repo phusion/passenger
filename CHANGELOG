@@ -5,6 +5,7 @@ Release 4.0.51
  * Node.js apps can now also trigger the inverse port binding mechanism by passing `'/passenger'` as argument. This was introduced in order to be able to support the Hapi.js framework. Please read http://stackoverflow.com/questions/20645231/phusion-passenger-error-http-server-listen-was-called-more-than-once/20645549 for more information regarding Hapi.js support.
  * Passenger Standalone no longer automatically resolves symlinks in its paths.
  * `passenger-config system-metrics` no longer crashes when the system clock is set to a time in the past. Closes GH-1276.
+ * `passenger-status`, `passenger-memory-stats`, `passenger-install-apache2-module` and `passenger-install-nginx-module` no longer output ANSI color codes by default when STDOUT is not a TTY. Closes GH-487.
 
 
 Release 4.0.50

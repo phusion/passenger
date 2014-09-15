@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -623,6 +623,9 @@ parser = OptionParser.new do |opts|
 			"#{indent}languages (e.g.\n" <<
 			"#{indent}'ruby,python,nodejs,meteor')") do |value|
 		options[:languages] = value.split(",")
+	end
+	opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
+		options[:colorize] = true
 	end
 end
 begin

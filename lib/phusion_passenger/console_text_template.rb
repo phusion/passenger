@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -36,19 +36,20 @@ class ConsoleTextTemplate
 		else
 			data = input[:text]
 		end
-		@template = ERB.new(Utils::AnsiColors.ansi_colorize(data),
+		@colors = options[:colors] || AnsiColors.new
+		@template = ERB.new(@colors.ansi_colorize(data),
 			nil, '-', '@buffer')
 		@template.filename = filename if filename
 		options.each_pair do |name, value|
 			self[name] = value
 		end
 	end
-	
+
 	def []=(name, value)
 		instance_variable_set("@#{name}".to_sym, value)
 		return self
 	end
-	
+
 	def result
 		return @template.result(binding)
 	end
