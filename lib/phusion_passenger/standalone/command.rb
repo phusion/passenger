@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -185,19 +185,19 @@ private
 		end
 		if @args.empty?
 			if AppFinder.looks_like_app_directory?(".")
-				@options[:pid_file] ||= File.expand_path("tmp/pids/#{pid_basename}")
-				@options[:log_file] ||= File.expand_path("log/#{log_basename}")
+				@options[:pid_file] ||= absolute_path("tmp/pids/#{pid_basename}")
+				@options[:log_file] ||= absolute_path("log/#{log_basename}")
 				if create_subdirs
 					ensure_directory_exists(File.dirname(@options[:pid_file]))
 					ensure_directory_exists(File.dirname(@options[:log_file]))
 				end
 			else
-				@options[:pid_file] ||= File.expand_path(pid_basename)
-				@options[:log_file] ||= File.expand_path(log_basename)
+				@options[:pid_file] ||= absolute_path(pid_basename)
+				@options[:log_file] ||= absolute_path(log_basename)
 			end
 		else
-			@options[:pid_file] ||= File.expand_path(File.join(@args[0], pid_basename))
-			@options[:log_file] ||= File.expand_path(File.join(@args[0], log_basename))
+			@options[:pid_file] ||= absolute_path(File.join(@args[0], pid_basename))
+			@options[:log_file] ||= absolute_path(File.join(@args[0], log_basename))
 		end
 	end
 

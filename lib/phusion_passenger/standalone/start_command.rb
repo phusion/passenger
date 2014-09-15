@@ -146,11 +146,11 @@ private
 			end
 			opts.on("--ssl-certificate PATH", String,
 				wrap_desc("Specify the SSL certificate path")) do |val|
-				@options[:ssl_certificate] = File.expand_path(val)
+				@options[:ssl_certificate] = absolute_path(val)
 			end
 			opts.on("--ssl-certificate-key PATH", String,
 				wrap_desc("Specify the SSL key path")) do |val|
-				@options[:ssl_certificate_key] = File.expand_path(val)
+				@options[:ssl_certificate_key] = absolute_path(val)
 			end
 			opts.on("--ssl-port PORT", Integer,
 				wrap_desc("Listen for SSL on this port, while listening for HTTP on the normal port")) do |val|
@@ -203,11 +203,11 @@ private
 			end
 			opts.on("--static-files-dir PATH", String,
 				wrap_desc("Specify the static files dir")) do |val|
-				@options[:static_files_dir] = File.expand_path(val)
+				@options[:static_files_dir] = absolute_path(val)
 			end
 			opts.on("--restart-dir PATH", String,
 				wrap_desc("Specify the restart dir")) do |val|
-				@options[:restart_dir] = File.expand_path(val)
+				@options[:restart_dir] = absolute_path(val)
 			end
 			opts.on("--friendly-error-pages",
 				wrap_desc("Turn on friendly error pages")) do
@@ -292,11 +292,11 @@ private
 			opts.on("--nginx-tarball FILENAME", String,
 				wrap_desc("If Nginx needs to be installed, then the given tarball will " +
 				          "be used instead of downloading from the Internet")) do |value|
-				@options[:nginx_tarball] = File.expand_path(value)
+				@options[:nginx_tarball] = absolute_path(value)
 			end
 			opts.on("--nginx-config-template FILENAME", String,
 				wrap_desc("The template to use for generating the Nginx config file")) do |value|
-				@options[:nginx_config_template] = File.expand_path(value)
+				@options[:nginx_config_template] = absolute_path(value)
 			end
 			opts.on("--binaries-url-root URL", String,
 				wrap_desc("If Nginx needs to be installed, then the specified URL will be " +
@@ -309,7 +309,7 @@ private
 			end
 			opts.on("--runtime-dir DIRECTORY", String,
 				wrap_desc("Directory to use for Phusion Passenger Standalone runtime files")) do |value|
-				@options[:runtime_dir] = File.expand_path(value)
+				@options[:runtime_dir] = absolute_path(value)
 			end
 			opts.on("--runtime-check-only",
 				wrap_desc("Quit after checking whether the Phusion Passenger Standalone runtime files are installed")) do
@@ -737,7 +737,7 @@ private
 
 	def nginx_listen_address(options = @options, for_ping_port = false)
 		if options[:socket_file]
-			return "unix:" + File.expand_path(options[:socket_file])
+			return "unix:" + absolute_path(options[:socket_file])
 		else
 			if for_ping_port
 				port = options[:ping_port]
@@ -750,7 +750,7 @@ private
 
 	def nginx_listen_address_with_ssl_port(options = @options)
 		if options[:socket_file]
-			return "unix:" + File.expand_path(options[:socket_file])
+			return "unix:" + absolute_path(options[:socket_file])
 		else
 			return compose_ip_and_port(options[:address], options[:ssl_port])
 		end
