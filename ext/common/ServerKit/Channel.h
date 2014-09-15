@@ -256,7 +256,7 @@ protected:
 	Context *ctx;
 
 	int callDataCallback() {
-		RefGuard guard(hooks, this);
+		RefGuard guard(hooks, this, __FILE__, __LINE__);
 		return callDataCallbackWithoutRefGuard();
 	}
 
@@ -479,7 +479,7 @@ public:
 	}
 
 	int feed(BOOST_RV_REF(MemoryKit::mbuf) mbuf) {
-		RefGuard guard(hooks, this);
+		RefGuard guard(hooks, this, __FILE__, __LINE__);
 		return feedWithoutRefGuard(mbuf);
 	}
 

@@ -50,7 +50,7 @@ private:
 	}
 
 	void onReadable(ev_io *io, int revents) {
-		RefGuard guard(hooks, this);
+		RefGuard guard(hooks, this, __FILE__, __LINE__);
 		onReadableWithoutRefGuard();
 	}
 

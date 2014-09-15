@@ -96,21 +96,21 @@ enum PassengerLogLevel {
 /**
  * Write the given expression to the log stream.
  */
-#define P_LOG(level, expr) \
+#define P_LOG(level, file, line, expr) \
 	do { \
 		if (Passenger::getLogLevel() >= (level)) { \
 			std::stringstream sstream; \
-			Passenger::_prepareLogEntry(sstream, __FILE__, __LINE__); \
+			Passenger::_prepareLogEntry(sstream, file, line); \
 			sstream << expr << "\n"; \
 			Passenger::_writeLogEntry(sstream.str()); \
 		} \
 	} while (false)
 
-#define P_LOG_UNLIKELY(level, expr) \
+#define P_LOG_UNLIKELY(level, file, line, expr) \
 	do { \
 		if (OXT_UNLIKELY(Passenger::getLogLevel() >= (level))) { \
 			std::stringstream sstream; \
-			Passenger::_prepareLogEntry(sstream, __FILE__, __LINE__); \
+			Passenger::_prepareLogEntry(sstream, file, line); \
 			sstream << expr << "\n"; \
 			Passenger::_writeLogEntry(sstream.str()); \
 		} \
@@ -120,42 +120,50 @@ enum PassengerLogLevel {
  * Write the given expression, which represents a warning,
  * to the log stream.
  */
-#define P_WARN(expr) P_LOG(LVL_WARN, expr)
+#define P_WARN(expr) P_LOG(LVL_WARN, __FILE__, __LINE__, expr)
+#define P_WARN_WITH_POS(file, line, expr) P_LOG(LVL_WARN, file, line, expr)
 
 /**
  * Write the given expression, which represents a notice (important information),
  * to the log stream.
  */
-#define P_NOTICE(expr) P_LOG(LVL_NOTICE, expr)
+#define P_NOTICE(expr) P_LOG(LVL_NOTICE, __FILE__, __LINE__, expr)
+#define P_NOTICE_WITH_POS(file, line, expr) P_LOG(LVL_NOTICE, file, line, expr)
 
 /**
  * Write the given expression, which represents a normal information message,
  * to the log stream.
  */
-#define P_INFO(expr) P_LOG(LVL_INFO, expr)
+#define P_INFO(expr) P_LOG(LVL_INFO, __FILE__, __LINE__, expr)
+#define P_INFO_WITH_POS(file, line, expr) P_LOG(LVL_INFO, file, line, expr)
 
 /**
  * Write the given expression, which represents an error,
  * to the log stream.
  */
-#define P_ERROR(expr) P_LOG(LVL_ERROR, expr)
+#define P_ERROR(expr) P_LOG(LVL_ERROR, __FILE__, __LINE__, expr)
+#define P_ERROR_WITH_POS(file, line, expr) P_LOG(LVL_ERROR, file, line, expr)
 
 /**
  * Write the given expression, which represents a critical non-recoverable error,
  * to the log stream.
  */
-#define P_CRITICAL(expr) P_LOG(LVL_CRIT, expr)
+#define P_CRITICAL(expr) P_LOG(LVL_CRIT, __FILE__, __LINE__, expr)
+#define P_CRITICAL_WITH_POS(expr, file, line) P_LOG(LVL_CRIT, file, line, expr)
 
 /**
  * Write the given expression, which represents a debugging message,
  * to the log stream.
  */
-#define P_DEBUG(expr) P_TRACE(0, expr)
+#define P_DEBUG(expr) P_TRACE(1, expr)
+#define P_DEBUG_WITH_POS(file, line, expr) P_TRACE_WITH_POS(1, file, line, expr)
 
 #ifdef PASSENGER_DEBUG
-	#define P_TRACE(level, expr) P_LOG_UNLIKELY(LVL_INFO + level, expr)
+	#define P_TRACE(level, expr) P_LOG_UNLIKELY(LVL_INFO + level, __FILE__, __LINE__, expr)
+	#define P_TRACE_WITH_POS(level, file, line, expr) P_LOG_UNLIKELY(LVL_INFO + level, file, line, expr)
 #else
 	#define P_TRACE(level, expr) do { /* nothing */ } while (false)
+	#define P_TRACE_WITH_POS(level, file, line, expr) do { /* nothing */ } while (false)
 #endif
 
 /**

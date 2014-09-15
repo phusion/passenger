@@ -36,6 +36,8 @@ class HttpRequestRef {
 private:
 	BOOST_COPYABLE_AND_MOVABLE(HttpRequestRef);
 	Request *request;
+	const char *file;
+	unsigned int line;
 
 	static Server *getServer(Request *request) {
 		return static_cast<Server *>(
@@ -45,19 +47,33 @@ private:
 
 public:
 	explicit
-	HttpRequestRef(Request *_request)
-		: request(_request)
+	HttpRequestRef(Request *_request, const char *_file, unsigned int _line)
+		: request(_request),
+		  file(_file),
+		  line(_line)
 	{
 		if (_request != NULL) {
-			getServer(_request)->_refRequest(_request);
+			getServer(_request)->_refRequest(_request, _file, _line);
 		}
 	}
 
 	HttpRequestRef(const HttpRequestRef &ref)
-		: request(ref.request)
+		: request(ref.request),
+		  file(ref.file),
+		  line(ref.line)
 	{
 		if (ref.request != NULL) {
-			getServer(ref.request)->_refRequest(ref.request);
+			getServer(ref.request)->_refRequest(ref.request, ref.file, ref.line);
+		}
+	}
+
+	HttpRequestRef(const HttpRequestRef &ref, const char *_file, unsigned int _line)
+		: request(ref.request),
+		  file(_file),
+		  line(_line)
+	{
+		if (ref.request != NULL) {
+			getServer(ref.request)->_refRequest(ref.request, _file, _line);
 		}
 	}
 
@@ -70,7 +86,7 @@ public:
 
 	~HttpRequestRef() {
 		if (request != NULL) {
-			getServer(request)->_unrefRequest(request);
+			getServer(request)->_unrefRequest(request, file, line);
 		}
 	}
 
@@ -81,12 +97,16 @@ public:
 	HttpRequestRef &operator=(BOOST_COPY_ASSIGN_REF(HttpRequestRef) ref) {
 		if (request == ref.request) {
 			Request *oldRequest = request;
+			const char *oldFile = file;
+			unsigned int oldLine = line;
 			request = ref.request;
+			file = ref.file;
+			line = ref.line;
 			if (request != NULL) {
-				getServer(request)->_refRequest(request);
+				getServer(request)->_refRequest(ref.request, ref.file, ref.line);
 			}
 			if (oldRequest != NULL) {
-				getServer(oldRequest)->_unrefRequest(oldRequest);
+				getServer(oldRequest)->_unrefRequest(oldRequest, oldFile, oldLine);
 			}
 		}
 		return *this;
@@ -97,7 +117,7 @@ public:
 		request = ref.request;
 		ref.request = NULL;
 		if (oldRequest != NULL) {
-			getServer(oldRequest)->_unrefRequest(oldRequest);
+			getServer(oldRequest)->_unrefRequest(oldRequest, file, line);
 		}
 		return *this;
 	}

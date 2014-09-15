@@ -78,18 +78,18 @@ private:
 			return !req->ended();
 		}
 
-		virtual void hook_ref(Hooks *hooks, void *source) {
+		virtual void hook_ref(Hooks *hooks, void *source, const char *file, unsigned int line) {
 			Request *req       = static_cast<Request *>(static_cast<BaseHttpRequest *>(hooks->userData));
 			Client *client     = static_cast<Client *>(req->client);
 			HttpServer *server = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
-			server->refRequest(req);
+			server->refRequest(req, file, line);
 		}
 
-		virtual void hook_unref(Hooks *hooks, void *source) {
+		virtual void hook_unref(Hooks *hooks, void *source, const char *file, unsigned int line) {
 			Request *req       = static_cast<Request *>(static_cast<BaseHttpRequest *>(hooks->userData));
 			Client *client     = static_cast<Client *>(req->client);
 			HttpServer *server = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
-			server->unrefRequest(req);
+			server->unrefRequest(req, file, line);
 		}
 	};
 
@@ -158,7 +158,7 @@ private:
 			delete request;
 		}
 
-		this->unrefClient(client);
+		this->unrefClient(client, __FILE__, __LINE__);
 	}
 
 	bool addRequestToFreelist(Request *request) {
@@ -179,7 +179,7 @@ private:
 		// that this async callback outlives the Server.
 		this->getContext()->libev->runLater(boost::bind(
 			&HttpServer::passRequestToEventLoopThreadCallback,
-			this, RequestRef(request)));
+			this, RequestRef(request, __FILE__, __LINE__)));
 	}
 
 	void passRequestToEventLoopThreadCallback(RequestRef requestRef) {
@@ -207,17 +207,19 @@ private:
 		Client *c = *client;
 		assert(c->currentRequest != NULL);
 		Request *req = c->currentRequest;
-		bool keepAlive = req->canKeepAlive();
+		bool keepAlive = canKeepAlive(req);
 
 		P_ASSERT_EQ(req->httpState, Request::WAITING_FOR_REFERENCES);
 		assert(req->pool != NULL);
 		c->currentRequest = NULL;
 		psg_destroy_pool(req->pool);
 		req->pool = NULL;
-		unrefRequest(req);
+		unrefRequest(req, __FILE__, __LINE__);
 		if (keepAlive) {
+			SKC_TRACE(c, 3, "Keeping alive connection, handling next request");
 			handleNextRequest(c);
 		} else {
+			SKC_TRACE(c, 3, "Not keeping alive connection, disconnecting client");
 			this->disconnect(client);
 		}
 	}
@@ -225,7 +227,11 @@ private:
 	void handleNextRequest(Client *client) {
 		Request *req;
 
-		this->refClient(client);
+		// A request object references its client object.
+		// This reference will be removed when the request ends,
+		// in requestReachedZeroRefcount().
+		this->refClient(client, __FILE__, __LINE__);
+
 		client->input.start();
 		client->output.deinitialize();
 		client->output.reinitialize(client->getFd());
@@ -259,6 +265,13 @@ private:
 			SKC_TRACE(client, 2, "New request received");
 			headerParserStatePool.destroy(req->parserState.headerParser);
 			req->parserState.headerParser = NULL;
+
+			if (HttpServer::serverState == HttpServer::SHUTTING_DOWN
+			 && shouldDisconnectClientOnShutdown(client))
+			{
+				endWithErrorResponse(&client, &req, 503, "Server shutting down\n");
+				return Channel::Result(buffer.size(), false);
+			}
 
 			switch (req->httpState) {
 			case Request::COMPLETE:
@@ -639,31 +652,41 @@ protected:
 	/***** Protected API *****/
 
 	/** Increase request reference count. */
-	void refRequest(Request *request) {
-		request->refcount.fetch_add(1, boost::memory_order_relaxed);
+	void refRequest(Request *req, const char *file, unsigned int line) {
+		int oldRefcount = req->refcount.fetch_add(1, boost::memory_order_relaxed);
+		SKC_TRACE_WITH_POS(static_cast<Client *>(req->client), 3, file, line,
+			"Request refcount increased; it is now " << (oldRefcount + 1));
 	}
 
 	/** Decrease request reference count. Adds request to the
 	 * freelist if reference count drops to 0.
 	 */
-	void unrefRequest(Request *request) {
-		int oldRefcount = request->refcount.fetch_sub(1, boost::memory_order_release);
+	void unrefRequest(Request *req, const char *file, unsigned int line) {
+		int oldRefcount = req->refcount.fetch_sub(1, boost::memory_order_release);
 		assert(oldRefcount >= 1);
 
+		SKC_TRACE_WITH_POS(static_cast<Client *>(req->client), 3, file, line,
+			"Request refcount decreased; it is now " << (oldRefcount - 1));
 		if (oldRefcount == 1) {
 			boost::atomic_thread_fence(boost::memory_order_acquire);
 
 			if (this->getContext()->libev->onEventLoopThread()) {
-				requestReachedZeroRefcount(request);
+				requestReachedZeroRefcount(req);
 			} else {
 				// Let the event loop handle the request reaching the 0 refcount.
-				passRequestToEventLoopThread(request);
+				passRequestToEventLoopThread(req);
 			}
 		}
 	}
 
 	object_pool<HttpHeaderParserState> &getHeaderParserStatePool() {
 		return headerParserStatePool;
+	}
+
+	bool canKeepAlive(Request *req) const {
+		return req->wantKeepAlive
+			&& req->bodyFullyRead()
+			&& HttpServer::serverState < HttpServer::SHUTTING_DOWN;
 	}
 
 	void writeResponse(Client *client, const MemoryKit::mbuf &buffer) {
@@ -736,7 +759,7 @@ protected:
 
 		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("connection")) : NULL;
 		if (value == NULL) {
-			if (req->canKeepAlive()) {
+			if (canKeepAlive(req)) {
 				pos = appendData(pos, end, P_STATIC_STRING("Connection: keep-alive\r\n"));
 			} else {
 				pos = appendData(pos, end, P_STATIC_STRING("Connection: close\r\n"));
@@ -853,7 +876,7 @@ protected:
 	{
 		assert(client->currentRequest != NULL);
 		Request *req = client->currentRequest;
-		RequestRef ref(req);
+		RequestRef ref(req, __FILE__, __LINE__);
 
 		// Moved outside switch() so that the CPU branch predictor can do its work
 		if (req->httpState == Request::PARSING_HEADERS) {
@@ -883,7 +906,7 @@ protected:
 			Request *req = client->currentRequest;
 			deinitializeRequestAndAddToFreelist(client, req);
 			client->currentRequest = NULL;
-			unrefRequest(req);
+			unrefRequest(req, __FILE__, __LINE__);
 		}
 	}
 
@@ -894,7 +917,6 @@ protected:
 
 	virtual bool shouldDisconnectClientOnShutdown(Client *client) {
 		return client->currentRequest == NULL
-			|| client->currentRequest->httpState == Request::PARSING_HEADERS
 			|| client->currentRequest->upgraded();
 	}
 
@@ -1076,12 +1098,12 @@ public:
 
 	/***** Friend-public methods and hook implementations *****/
 
-	void _refRequest(Request *request) {
-		refRequest(request);
+	void _refRequest(Request *request, const char *file, unsigned int line) {
+		refRequest(request, file, line);
 	}
 
-	void _unrefRequest(Request *request) {
-		unrefRequest(request);
+	void _unrefRequest(Request *request, const char *file, unsigned int line) {
+		unrefRequest(request, file, line);
 	}
 };
 

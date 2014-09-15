@@ -76,7 +76,11 @@ using namespace oxt;
 #define SKC_ERROR(client, expr) SKC_ERROR_FROM_STATIC(this, client, expr)
 #define SKC_WARN(client, expr) SKC_WARN_FROM_STATIC(this, client, expr)
 #define SKC_DEBUG(client, expr) SKC_DEBUG_FROM_STATIC(this, client, expr)
+#define SKC_DEBUG_WITH_POS(client, file, line, expr) \
+	SKC_DEBUG_FROM_STATIC_WITH_POS(this, client, file, line, expr)
 #define SKC_TRACE(client, level, expr) SKC_TRACE_FROM_STATIC(this, client, level, expr)
+#define SKC_TRACE_WITH_POS(client, level, file, line, expr) \
+	SKC_TRACE_FROM_STATIC_WITH_POS(this, client, level, file, line, expr)
 
 #define SKC_ERROR_FROM_STATIC(server, client, expr) \
 	do { \
@@ -95,19 +99,25 @@ using namespace oxt;
 		} \
 	} while (0)
 #define SKC_DEBUG_FROM_STATIC(server, client, expr) \
+	SKC_DEBUG_FROM_STATIC_WITH_POS(server, client, __FILE__, __LINE__, expr)
+#define SKC_DEBUG_FROM_STATIC_WITH_POS(server, client, file, line, expr) \
 	do { \
 		if (OXT_UNLIKELY(Passenger::_logLevel >= LVL_DEBUG)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-			P_DEBUG("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+			P_DEBUG_WITH_POS(file, line, \
+				"[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
 		} \
 	} while (0)
 #define SKC_TRACE_FROM_STATIC(server, client, level, expr) \
+	SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, __FILE__, __LINE__, expr)
+#define SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, file, line, expr) \
 	do { \
 		if (OXT_UNLIKELY(Passenger::_logLevel >= level)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-			P_TRACE(level, "[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+			P_TRACE_WITH_POS(level, file, line, \
+				"[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
 		} \
 	} while (0)
 
@@ -397,7 +407,7 @@ private:
 		// clients are gone before destroying a Server, so we know for sure
 		// that this async callback outlives the Server.
 		ctx->libev->runLater(boost::bind(&BaseServer::passClientToEventLoopThreadCallback,
-			this, ClientRefType(client)));
+			this, ClientRefType(client, __FILE__, __LINE__)));
 	}
 
 	void passClientToEventLoopThreadCallback(ClientRefType clientRef) {
@@ -475,8 +485,8 @@ protected:
 	/** Get a thread-safe reference to the client. As long as the client
 	 * has a reference, it will never be added to the freelist.
 	 */
-	ClientRefType getClientRef(Client *client) {
-		return ClientRefType(client);
+	ClientRefType getClientRef(Client *client, const char *file, unsigned int line) {
+		return ClientRefType(client, file, line);
 	}
 
 	/**
@@ -493,19 +503,21 @@ protected:
 	}
 
 	/** Increase client reference count. */
-	void refClient(Client *client) {
+	void refClient(Client *client, const char *file, unsigned int line) {
 		int oldRefcount = client->refcount.fetch_add(1, boost::memory_order_relaxed);
-		SKC_TRACE(client, 3, "Refcount increased; it is now " << (oldRefcount + 1));
+		SKC_TRACE_WITH_POS(client, 3, file, line,
+			"Refcount increased; it is now " << (oldRefcount + 1));
 	}
 
 	/** Decrease client reference count. Adds client to the
 	 * freelist if reference count drops to 0.
 	 */
-	void unrefClient(Client *client) {
+	void unrefClient(Client *client, const char *file, unsigned int line) {
 		int oldRefcount = client->refcount.fetch_sub(1, boost::memory_order_release);
 		assert(oldRefcount >= 1);
 
-		SKC_TRACE(client, 3, "Refcount decreased; it is now " << (oldRefcount - 1));
+		SKC_TRACE_WITH_POS(client, 3, file, line,
+			"Refcount decreased; it is now " << (oldRefcount - 1));
 		if (oldRefcount == 1) {
 			boost::atomic_thread_fence(boost::memory_order_acquire);
 
@@ -557,7 +569,7 @@ protected:
 			// A Client object starts with a refcount of 2 so that we can
 			// be sure it won't be destroyted while we're looping inside this
 			// function. But we also need an extra unref here.
-			unrefClient(client);
+			unrefClient(client, __FILE__, __LINE__);
 		}
 	}
 
@@ -690,7 +702,7 @@ public:
 		clients.reserve(activeClientCount);
 		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
 			P_ASSERT_EQ(client->getConnState(), Client::ACTIVE);
-			refClient(client);
+			refClient(client, __FILE__, __LINE__);
 			clients.push_back(client);
 		}
 
@@ -698,11 +710,11 @@ public:
 		v_end = clients.end();
 		for (v_it = clients.begin(); v_it != v_end; v_it++) {
 			client = (Client *) *v_it;
+			Client *c = client;
 			if (forceDisconnect || shouldDisconnectClientOnShutdown(client)) {
-				Client *c = client;
 				disconnectWithError(&client, "server is shutting down");
-				unrefClient(c);
 			}
+			unrefClient(c, __FILE__, __LINE__);
 		}
 
 		// When all active and disconnected clients are gone,
@@ -722,7 +734,7 @@ public:
 
 		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
 			P_ASSERT_EQ(client->getConnState(), Client::ACTIVE);
-			result.push_back(ClientRefType(client));
+			result.push_back(ClientRefType(client, __FILE__, __LINE__));
 		}
 		return result;
 	}
@@ -776,7 +788,7 @@ public:
 
 		*client = NULL;
 		onClientDisconnected(c);
-		unrefClient(c);
+		unrefClient(c, __FILE__, __LINE__);
 		return true;
 	}
 
@@ -876,12 +888,12 @@ public:
 
 	/***** Friend-public methods and hook implementations *****/
 
-	void _refClient(Client *client) {
-		refClient(client);
+	void _refClient(Client *client, const char *file, unsigned int line) {
+		refClient(client, file, line);
 	}
 
-	void _unrefClient(Client *client) {
-		unrefClient(client);
+	void _unrefClient(Client *client, const char *file, unsigned int line) {
+		unrefClient(client, __FILE__, __LINE__);
 	}
 
 	virtual bool hook_isConnected(Hooks *hooks, void *source) {
@@ -889,14 +901,14 @@ public:
 		return client->connected();
 	}
 
-	virtual void hook_ref(Hooks *hooks, void *source) {
+	virtual void hook_ref(Hooks *hooks, void *source, const char *file, unsigned int line) {
 		Client *client = static_cast<Client *>(static_cast<BaseClient *>(hooks->userData));
-		refClient(client);
+		refClient(client, file, line);
 	}
 
-	virtual void hook_unref(Hooks *hooks, void *source) {
+	virtual void hook_unref(Hooks *hooks, void *source, const char *file, unsigned int line) {
 		Client *client = static_cast<Client *>(static_cast<BaseClient *>(hooks->userData));
-		unrefClient(client);
+		unrefClient(client, file, line);
 	}
 };
 

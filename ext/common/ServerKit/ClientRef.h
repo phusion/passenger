@@ -36,6 +36,8 @@ class ClientRef {
 private:
 	BOOST_COPYABLE_AND_MOVABLE(ClientRef);
 	Client *client;
+	const char *file;
+	unsigned int line;
 
 	static Server *getServer(Client *client) {
 		return static_cast<Server *>(
@@ -45,19 +47,33 @@ private:
 
 public:
 	explicit
-	ClientRef(Client *_client)
-		: client(_client)
+	ClientRef(Client *_client, const char *_file, unsigned int _line)
+		: client(_client),
+		  file(_file),
+		  line(_line)
 	{
 		if (_client != NULL) {
-			getServer(_client)->_refClient(_client);
+			getServer(_client)->_refClient(_client, _file, _line);
 		}
 	}
 
 	ClientRef(const ClientRef &ref)
-		: client(ref.client)
+		: client(ref.client),
+		  file(ref.file),
+		  line(ref.line)
 	{
 		if (ref.client != NULL) {
-			getServer(ref.client)->_refClient(ref.client);
+			getServer(ref.client)->_refClient(ref.client, ref.file, ref.line);
+		}
+	}
+
+	ClientRef(const ClientRef &ref, const char *_file, unsigned int _line)
+		: client(ref.client),
+		  file(_file),
+		  line(_line)
+	{
+		if (ref.client != NULL) {
+			getServer(ref.client)->_refClient(ref.client, _file, _line);
 		}
 	}
 
@@ -70,7 +86,7 @@ public:
 
 	~ClientRef() {
 		if (client != NULL) {
-			getServer(client)->_unrefClient(client);
+			getServer(client)->_unrefClient(client, file, line);
 		}
 	}
 
@@ -81,12 +97,16 @@ public:
 	ClientRef &operator=(BOOST_COPY_ASSIGN_REF(ClientRef) ref) {
 		if (client == ref.client) {
 			Client *oldClient = client;
+			const char *oldFile = file;
+			unsigned int oldLine = line;
 			client = ref.client;
+			file = ref.file;
+			line = ref.line;
 			if (client != NULL) {
-				getServer(client)->_refClient(client);
+				getServer(client)->_refClient(ref.client, ref.file, ref.line);
 			}
 			if (oldClient != NULL) {
-				getServer(oldClient)->_unrefClient(oldClient);
+				getServer(oldClient)->_unrefClient(oldClient, oldFile, oldLine);
 			}
 		}
 		return *this;
@@ -97,7 +117,7 @@ public:
 		client = ref.client;
 		ref.client = NULL;
 		if (oldClient != NULL) {
-			getServer(oldClient)->_unrefClient(oldClient);
+			getServer(oldClient)->_unrefClient(oldClient, file, line);
 		}
 		return *this;
 	}

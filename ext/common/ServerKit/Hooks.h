@@ -44,26 +44,30 @@ public:
 		return true;
 	}
 
-	virtual void hook_ref(Hooks *hooks, void *source) { }
-	virtual void hook_unref(Hooks *hooks, void *source) { }
+	virtual void hook_ref(Hooks *hooks, void *source, const char *file, unsigned int line) { }
+	virtual void hook_unref(Hooks *hooks, void *source, const char *file, unsigned int line) { }
 };
 
 struct RefGuard {
 	Hooks *hooks;
 	void *source;
+	const char *file;
+	unsigned int line;
 
-	RefGuard(Hooks *_hooks, void *_source)
+	RefGuard(Hooks *_hooks, void *_source, const char *_file, unsigned int _line)
 		: hooks(_hooks),
-		  source(_source)
+		  source(_source),
+		  file(_file),
+		  line(_line)
 	{
 		if (_hooks != NULL && _hooks->impl != NULL) {
-			_hooks->impl->hook_ref(_hooks, _source);
+			_hooks->impl->hook_ref(_hooks, _source, _file, _line);
 		}
 	}
 
 	~RefGuard() {
 		if (hooks != NULL && hooks->impl != NULL) {
-			hooks->impl->hook_unref(hooks, source);
+			hooks->impl->hook_unref(hooks, source, file, line);
 		}
 	}
 };

@@ -46,7 +46,7 @@ checkoutSession(Client *client, Request *req) {
 
 	options.currentTime = (unsigned long long) (ev_now(getLoop()) * 1000000);
 
-	refRequest(req);
+	refRequest(req, __FILE__, __LINE__);
 	appPool->asyncGet(options, callback);
 }
 
@@ -60,7 +60,7 @@ sessionCheckedOut(const SessionPtr &session, const ExceptionPtr &e,
 
 	if (self->getContext()->libev->onEventLoopThread()) {
 		self->sessionCheckedOutFromEventLoopThread(client, req, session, e);
-		self->unrefRequest(req);
+		self->unrefRequest(req, __FILE__, __LINE__);
 	} else {
 		self->getContext()->libev->runLater(
 			boost::bind(&RequestHandler::sessionCheckedOutFromAnotherThread,
@@ -73,7 +73,7 @@ sessionCheckedOutFromAnotherThread(Client *client, Request *req,
 	SessionPtr session, ExceptionPtr e)
 {
 	sessionCheckedOutFromEventLoopThread(client, req, session, e);
-	unrefRequest(req);
+	unrefRequest(req, __FILE__, __LINE__);
 }
 
 void
@@ -128,7 +128,7 @@ initiateSession(Client *client, Request *req) {
 		if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
 			SKC_DEBUG(client, "Error checking out session (" << e2.what() <<
 				"); retrying (attempt " << req->sessionCheckoutTry << ")");
-			refRequest(req);
+			refRequest(req, __FILE__, __LINE__);
 			getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
 		} else {
 			string message = "could not initiate a session (";
@@ -167,7 +167,7 @@ checkoutSessionLater(Request *req) {
 	if (!ended) {
 		self->checkoutSession(client, req);
 	}
-	self->unrefRequest(req);
+	self->unrefRequest(req, __FILE__, __LINE__);
 }
 
 void

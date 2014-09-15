@@ -423,7 +423,7 @@ private:
 	/***** Reader *****/
 
 	void readNext() {
-		RefGuard guard(hooks, this);
+		RefGuard guard(hooks, this, __FILE__, __LINE__);
 		readNextWithoutRefGuard();
 	}
 
@@ -621,7 +621,7 @@ private:
 	}
 
 	int nextChunkDoneReading(eio_req *req, MemoryKit::mbuf &buffer) {
-		RefGuard guard(hooks, this);
+		RefGuard guard(hooks, this, __FILE__, __LINE__);
 
 		FBC_DEBUG("Reader: done reading chunk");
 		P_ASSERT_EQ(readerState, RS_READING_FROM_FILE);
@@ -896,7 +896,7 @@ private:
 
 			if (moveContext->written == moveContext->buffer.size()) {
 				// Write completed. Proceed with next buffer.
-				RefGuard guard(self->hooks, self);
+				RefGuard guard(self->hooks, self, __FILE__, __LINE__);
 				unsigned int generation = self->generation;
 
 				FBC_DEBUG_FROM_STATIC("Writer: move complete");
@@ -1100,7 +1100,7 @@ public:
 	}
 
 	void feed(const MemoryKit::mbuf &buffer) {
-		RefGuard guard(hooks, this);
+		RefGuard guard(hooks, this, __FILE__, __LINE__);
 
 		FBC_DEBUG("Feeding " << buffer.size() << " bytes");
 		verifyInvariants();

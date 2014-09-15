@@ -457,7 +457,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 
 	if (resp->bodyType == AppResponse::RBT_UPGRADE) {
 		PUSH_STATIC_BUFFER("Connection: upgrade\r\n");
-	} else if (req->wantKeepAlive) {
+	} else if (canKeepAlive(req)) {
 		unsigned int httpVersion = req->httpMajor * 1000 + req->httpMinor * 10;
 		if (httpVersion < 1010) {
 			// HTTP < 1.1 defaults to "Connection: close"

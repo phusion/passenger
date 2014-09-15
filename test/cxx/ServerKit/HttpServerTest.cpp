@@ -98,7 +98,7 @@ namespace tut {
 				writeSimpleResponse(client, 422, NULL, "Body required");
 				endRequest(&client, &req);
 			} else {
-				refRequest(req);
+				refRequest(req, __FILE__, __LINE__);
 				req->bodyChannel.stop();
 				requestsWaitingToStartAcceptingBody.push_back(req);
 				// Continues in startAcceptingBody()
@@ -172,7 +172,7 @@ namespace tut {
 				if (requestsWaitingToStartAcceptingBody[i] == req) {
 					requestsWaitingToStartAcceptingBody.erase(
 						requestsWaitingToStartAcceptingBody.begin() + i);
-					unrefRequest(req);
+					unrefRequest(req, __FILE__, __LINE__);
 					break;
 				}
 			}
@@ -204,7 +204,7 @@ namespace tut {
 
 			foreach (req, requestsWaitingToStartAcceptingBody) {
 				startAcceptingBody(static_cast<MyClient *>(req->client), req);
-				unrefRequest(req);
+				unrefRequest(req, __FILE__, __LINE__);
 			}
 		}
 	};
@@ -340,6 +340,15 @@ namespace tut {
 			server->startAcceptingBody();
 		}
 
+		void shutdownServer() {
+			bg.safe->runLater(boost::bind(&ServerKit_HttpServerTest::_shutdownServer,
+				this));
+		}
+
+		void _shutdownServer() {
+			server->shutdown();
+		}
+
 		string stripHeaders(const string &str) {
 			string::size_type pos = str.find("\r\n\r\n");
 			if (pos == string::npos) {
@@ -369,7 +378,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(ServerKit_HttpServerTest, 80);
+	DEFINE_TEST_GROUP_WITH_LIMIT(ServerKit_HttpServerTest, 100);
 
 
 	/***** Valid HTTP header parsing *****/
@@ -1356,5 +1365,105 @@ namespace tut {
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 0;
 		);
+	}
+
+	TEST_METHOD(78) {
+		set_test_name("Upon shutting down the server, no requests will be "
+			"eligible for keep-alive");
+
+		connectToServer();
+		sendRequestAndWait(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Content-Length: 3\r\n\r\n");
+		shutdownServer();
+
+		sendRequest("ab\n"
+			"GET / HTTP/1.1\r\n"
+			"Connection: close\r\n\r\n");
+		string response = readAll(fd);
+		ensure("(1)", containsSubstring(response, "Connection: close"));
+		ensure("(2)", !containsSubstring(response, "Connection: keep-alive"));
+		ensure("(3)", !containsSubstring(response, "hello /"));
+	}
+
+	TEST_METHOD(79) {
+		set_test_name("Upon shutting down the server, requests for which the "
+			"headers are being parsed are not disconnected");
+
+		connectToServer();
+		sendRequestAndWait(
+			"GET / HTTP/1.1\r\n");
+		shutdownServer();
+		EVENTUALLY(100,
+			result = !hasResponseData();
+		);
+
+		sendRequest("\r\n");
+		string response = readAll(fd);
+		ensure("(1)", containsSubstring(response, "Connection: close"));
+		ensure("(2)", !containsSubstring(response, "Connection: keep-alive"));
+		ensure("(3)", containsSubstring(response, "hello /"));
+	}
+
+	TEST_METHOD(80) {
+		set_test_name("Upon shutting down the server, requests for which the "
+			"headers are being parsed are disconnected when they've been "
+			"identified as upgraded requests");
+
+		connectToServer();
+		sendRequestAndWait(
+			"GET / HTTP/1.1\r\n"
+			"Connection: upgrade\r\n"
+			"Upgrade: tcp\r\n");
+		shutdownServer();
+		EVENTUALLY(100,
+			result = !hasResponseData();
+		);
+
+		sendRequest("\r\n");
+		string response = readAll(fd);
+		ensure("(1)", containsSubstring(response, "503 Service Unavailable"));
+		ensure("(2)", containsSubstring(response, "Connection: close"));
+		ensure("(3)", !containsSubstring(response, "Connection: keep-alive"));
+	}
+
+	TEST_METHOD(81) {
+		set_test_name("Upon shutting down the server, normal requests which "
+			"are being processed are not disconnected");
+
+		connectToServer();
+		sendRequestAndWait(
+			"GET /body_test HTTP/1.1\r\n"
+			"Content-Length: 2\r\n\r\n");
+		shutdownServer();
+		EVENTUALLY(100,
+			result = !hasResponseData();
+		);
+
+		sendRequest("ab");
+		string response = readAll(fd);
+		ensure("(1)", containsSubstring(response, "Connection: close"));
+		ensure("(2)", !containsSubstring(response, "Connection: keep-alive"));
+		ensure("(3)", containsSubstring(response, "2 bytes: ab"));
+	}
+
+	TEST_METHOD(82) {
+		set_test_name("Upon shutting down the server, upgraded requests which "
+			"are being processed are disconnected");
+
+		setLogLevel(LVL_CRIT);
+		connectToServer();
+		sendRequestAndWait(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: upgrade\r\n"
+			"Upgrade: tcp\r\n\r\n");
+		shutdownServer();
+		EVENTUALLY(5,
+			result = hasResponseData();
+		);
+
+		string response = readAll(fd);
+		ensure_equals(response, "");
 	}
 }

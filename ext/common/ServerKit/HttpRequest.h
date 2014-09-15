@@ -216,10 +216,6 @@ public:
 		return bodyType == RBT_UPGRADE;
 	}
 
-	bool canKeepAlive() const {
-		return wantKeepAlive && bodyFullyRead();
-	}
-
 	// Not mutually exclusive with ended(). If a request has begun() and is ended(),
 	// then it just means that it hasn't been reinitialized for the next request yet.
 	bool begun() const {
