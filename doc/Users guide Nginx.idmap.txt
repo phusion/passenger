@@ -230,13 +230,15 @@
 
 8.6.8. passenger_pass_header <header name>	=>	passenger-pass-header-header-name--1cg31je
 
-8.6.9. passenger_buffer_response <on|off>	=>	passenger-buffer-response
+8.6.9. passenger_ignore_headers <header names…>	=>	passenger-ignore-headers-header-names--12zg5oh
 
-8.6.10. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
+8.6.10. passenger_buffer_response <on|off>	=>	passenger-buffer-response
 
-8.6.11. passenger_buffers	=>	passenger-busy-buffers
+8.6.11. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
 
-8.6.12. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
+8.6.12. passenger_buffers	=>	passenger-busy-buffers
+
+8.6.13. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
 
 8.7. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
 
