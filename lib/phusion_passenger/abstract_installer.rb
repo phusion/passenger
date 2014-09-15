@@ -281,13 +281,13 @@ protected
 	end
 
 	def print(text)
-		@stdout.write(Utils::AnsiColors.ansi_colorize(text))
+		@stdout.write(@colors.ansi_colorize(text))
 		@stdout.flush
 	end
 
 	def puts(text = nil)
 		if text
-			@stdout.puts(Utils::AnsiColors.ansi_colorize(text.to_s))
+			@stdout.puts(@colors.ansi_colorize(text.to_s))
 		else
 			@stdout.puts
 		end
@@ -295,7 +295,7 @@ protected
 	end
 
 	def puts_error(text)
-		@stderr.puts(Utils::AnsiColors.ansi_colorize("<red>#{text}</red>"))
+		@stderr.puts(@colors.ansi_colorize("<red>#{text}</red>"))
 		@stderr.flush
 	end
 
