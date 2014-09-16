@@ -41,7 +41,7 @@ require 'optparse'
 include PhusionPassenger::AdminTools
 include PhusionPassenger::Utils::AnsiColors
 
-DEFAULT_OPTIONS = { :show => 'pool' }.freeze
+DEFAULT_OPTIONS = { :show => 'pool', :color => STDOUT.tty? }.freeze
 
 
 ##### Show status command #####
@@ -93,7 +93,7 @@ def show_status(server_instance, options)
 	when 'pool'
 		client = server_instance.connect(:role => :passenger_status)
 		begin
-			puts client.pool_status(:verbose => options[:verbose], :colorize => true)
+			puts client.pool_status(:verbose => options[:verbose], :colorize => options[:color])
 		rescue SystemCallError => e
 			STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{server_instance.pid}:"
 			STDERR.puts e.to_s
@@ -230,6 +230,9 @@ def create_option_parser(options)
 			else
 				options[:show] = what
 			end
+		end
+		opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
+			options[:color] = true
 		end
 		opts.on("--verbose", "-v", "Show verbose information.") do
 			options[:verbose] = true

@@ -11,6 +11,18 @@ Release 5.0.0 beta 1
  * Rails 1.2-2.2 support removed. Rails 2.3 still supported
 
 
+Release 4.0.51
+--------------
+
+ * Fixed a null termination bug when autodetecting application types.
+ * Node.js apps can now also trigger the inverse port binding mechanism by passing `'/passenger'` as argument. This was introduced in order to be able to support the Hapi.js framework. Please read http://stackoverflow.com/questions/20645231/phusion-passenger-error-http-server-listen-was-called-more-than-once/20645549 for more information regarding Hapi.js support.
+ * It is now possible to abort Node.js WebSocket connections upon application restart. Please refer to https://github.com/phusion/passenger/wiki/Phusion-Passenger:-Node.js-tutorial#restarting_apps_that_serve_long_running_connections for more information. Closes GH-1200.
+ * Passenger Standalone no longer automatically resolves symlinks in its paths.
+ * `passenger-config system-metrics` no longer crashes when the system clock is set to a time in the past. Closes GH-1276.
+ * `passenger-status`, `passenger-memory-stats`, `passenger-install-apache2-module` and `passenger-install-nginx-module` no longer output ANSI color codes by default when STDOUT is not a TTY. Closes GH-487.
+ * `passenger-install-nginx-module --auto` is now all that's necessary to make it fully non-interactive. It is no longer necessary to provide all the answers through command line parameters. Closes GH-852.
+
+
 Release 4.0.50
 --------------
 

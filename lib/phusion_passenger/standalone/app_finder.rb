@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -20,12 +20,15 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
+PhusionPassenger.require_passenger_lib 'standalone/utils'
 PhusionPassenger.require_passenger_lib 'utils/file_system_watcher'
 
 module PhusionPassenger
 module Standalone
 
 class AppFinder
+	include Standalone::Utils
+
 	attr_accessor :dirs
 	attr_reader :apps
 
@@ -130,9 +133,9 @@ private
 
 	def find_app_root
 		if @dirs.empty?
-			return File.expand_path(".")
+			return absolute_path(".")
 		else
-			return File.expand_path(@dirs[0])
+			return absolute_path(@dirs[0])
 		end
 	end
 

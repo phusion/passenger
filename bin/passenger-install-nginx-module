@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -241,6 +241,9 @@ private
 		elsif @nginx_source_dir
 			puts "<b>=> Proceeding with choice 2.</b>"
 			return false
+		elsif @auto
+			puts "<b>=> Proceeding with choice 1.</b>"
+			return true
 		else
 			choice = prompt("Enter your choice (1 or 2) or press Ctrl-C to abort") do |input|
 				if input == "1" || input == "2"
@@ -337,6 +340,9 @@ private
 		if @prefix
 			puts "<b>=> #{@prefix}</b>"
 			return @prefix
+		elsif @auto
+			puts "<b>=> /opt/nginx</b>"
+			return "/opt/nginx"
 		else
 			prefix = prompt("Please specify a prefix directory [/opt/nginx]") do |input|
 				if input.empty? || input =~ %r(/)
@@ -414,6 +420,9 @@ private
 					puts "<b>=> #{extra_args}</b>"
 				end
 				return extra_args
+			elsif @auto
+				puts "<b>=> No extra configure flags.</b>"
+				return ""
 			else
 				extra_args = prompt "Extra arguments to pass to configure script"
 			
@@ -623,6 +632,9 @@ parser = OptionParser.new do |opts|
 			"#{indent}languages (e.g.\n" <<
 			"#{indent}'ruby,python,nodejs,meteor')") do |value|
 		options[:languages] = value.split(",")
+	end
+	opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
+		options[:colorize] = true
 	end
 end
 begin

@@ -156,6 +156,14 @@ private:
 		}
 	}
 
+	void resetOnClockSkew(unsigned long long timestamp) {
+		if (getLastSample().timestamp > timestamp) {
+			for (unsigned int i = 0; i < maxSamples; i++) {
+				samples[i] = Sample();
+			}
+		}
+	}
+
 public:
 	SpeedMeter()
 		: start(0),
@@ -168,8 +176,7 @@ public:
 		}
 
 		const Sample &lastSample = getLastSample();
-		// Timestamp must be larger than that of previous sample.
-		assert(lastSample.timestamp <= timestamp);
+		resetOnClockSkew(timestamp);
 
 		if (lastSample.timestamp <= timestamp - minAge) {
 			Sample &nextSample = samples[(start + count) % maxSamples];
@@ -235,7 +242,7 @@ public:
 		return numeric_limits<ValueType>::max();
 	}
 
-	#if 1
+	#if 0
 		void debug() const {
 			const unsigned long long timeThreshold = getTimeThreshold();
 

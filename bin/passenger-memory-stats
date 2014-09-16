@@ -36,21 +36,16 @@ PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'admin_tools/memory_stats'
+PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 include PhusionPassenger
 
-# ANSI color codes
-RESET   = "\e[0m"
-BOLD    = "\e[1m"
-WHITE   = "\e[37m"
-YELLOW  = "\e[33m"
-BLUE_BG = "\e[44m"
-
 # Container for tabular data.
 class Table
-	def initialize(column_names)
+	def initialize(column_names, colors)
 		@column_names = column_names
 		@rows = []
+		@colors = colors
 	end
 	
 	def add_row(values)
@@ -90,19 +85,19 @@ class Table
 				left_bar_size = free_space / 2
 				right_bar_size = free_space - left_bar_size
 			end
-			result = "#{BLUE_BG}#{BOLD}#{YELLOW}\n"
+			result = "#{@colors.blue_bg}#{@colors.bold}#{@colors.yellow}\n"
 			result << "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
 			if !@rows.empty?
-				result << WHITE
+				result << @colors.white
 				result << header
 			end
 		else
 			result = header.dup
 		end
 		if @rows.empty?
-			result << RESET
+			result << @colors.reset
 		else
-			result << ("-" * header.size) << "#{RESET}\n"
+			result << ("-" * header.size) << "#{@colors.reset}\n"
 			@rows.each do |row|
 				result << sprintf(format_string, *row).rstrip << "\n"
 			end
@@ -114,6 +109,7 @@ end
 class App
 	def initialize
 		@stats = AdminTools::MemoryStats.new
+		@colors = Utils::AnsiColors.new
 	end
 	
 	def start
@@ -122,7 +118,7 @@ class App
 		if @stats.apache_processes
 			print_process_list("Apache processes", @stats.apache_processes)
 		else
-			puts "#{BLUE_BG}#{BOLD}#{YELLOW}------------- Apache processes -------------#{RESET}\n"
+			puts "#{@colors.blue_bg}#{@colors.bold}#{@colors.yellow}------------- Apache processes -------------#{@colors.reset}\n"
 			STDERR.puts "*** WARNING: The Apache executable cannot be found."
 			STDERR.puts "Please set the APXS2 environment variable to your 'apxs2' " <<
 				"executable's filename, or set the HTTPD environment variable " <<
@@ -138,14 +134,14 @@ class App
 		if @stats.platform_provides_private_dirty_rss_information? &&
 		   Process.euid != 0 &&
 		   @stats.root_privileges_required_for_private_dirty_rss?
-			puts "*** WARNING: Please run this tool with #{BOLD}#{PlatformInfo.ruby_sudo_command}#{RESET}. Otherwise the " <<
+			puts "*** WARNING: Please run this tool with #{@colors.bold}#{PlatformInfo.ruby_sudo_command}#{@colors.reset}. Otherwise the " <<
 				"private dirty RSS (a reliable metric for real memory usage) of processes cannot be determined."
 		end
 	end
 	
 private
 	def print_process_list(title, processes, options = {})
-		table = Table.new(%w{PID PPID VMSize Private Resident Name})
+		table = Table.new(%w{PID PPID VMSize Private Resident Name}, @colors)
 		table.add_rows(processes)
 		if options.has_key?(:show_ppid) && !options[:show_ppid]
 			table.remove_column('PPID')
