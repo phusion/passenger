@@ -44,16 +44,22 @@
 	Threeway enabled;
 	/** Allow Apache to handle error response. */
 	Threeway errorOverride;
+	/** Whether to display friendly error pages when something goes wrong. */
+	Threeway friendlyErrorPages;
 	/** Enable or disable Passenger's high performance mode. */
 	Threeway highPerformance;
 	/** Whether to load environment variables from the shell before running the application. */
 	Threeway loadShellEnvvars;
+	/** Whether to show the Phusion Passenger version number in the X-Powered-By header. */
+	Threeway showVersionInHeader;
 	/** Whether to enable sticky sessions. */
 	Threeway stickySessions;
 	/** The cookie name to use for sticky sessions. */
 	Threeway stickySessionsCookieName;
 	/** The maximum number of simultaneously alive application instances a single application may occupy. */
 	int maxInstancesPerApp;
+	/** The maximum number of seconds that a preloader process may be idle before it is shutdown. */
+	int maxPreloaderIdleTime;
 	/** The maximum number of queued requests. */
 	int maxRequestQueueSize;
 	/** The maximum number of requests that an application instance may process. */
@@ -62,6 +68,8 @@
 	int minInstances;
 	/** A timeout for application startup. */
 	int startTimeout;
+	/** Limit the number of stat calls to once per given seconds. */
+	int statThrottleRate;
 	/** The environment under which applications are run. */
 	const char *appEnv;
 	/** Force specific application type. */
@@ -72,8 +80,12 @@
 	const char *nodejs;
 	/** The Python interpreter to use. */
 	const char *python;
+	/** The directory in which Passenger should look for restart.txt. */
+	const char *restartDir;
 	/** The Ruby interpreter to use. */
 	const char *ruby;
+	/** The spawn method to use. */
+	const char *spawnMethod;
 	/** Force specific startup file. */
 	const char *startupFile;
 	/** The user that Ruby applications must run as. */

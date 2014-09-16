@@ -48,6 +48,9 @@
 #             Setting this to nil will disable auto-generation of CGI header
 #             generation code. You are then responsible for writing CGI header
 #             passing code yourself in Hooks.cpp.
+#  * header_expression - The expression to be passed to `addHeader()`.
+#  * function - If nil, a setter function will be automatically generated. If
+#               non-nil, must be the name of the setter function.
 
 APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 	{
@@ -70,18 +73,6 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:name => "PassengerAppEnv",
 		:type => :string,
 		:desc => "The environment under which applications are run."
-	},
-	{
-		:name => "RailsEnv",
-		:type => :string,
-		:desc => "The environment under which applications are run.",
-		:alias_for => "PassengerAppEnv"
-	},
-	{
-		:name => "RackEnv",
-		:type => :string,
-		:desc => "The environment under which applications are run.",
-		:alias_for => "PassengerAppEnv"
 	},
 	{
 		:name => "PassengerMinInstances",
@@ -146,11 +137,18 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:header  => nil
 	},
 	{
-		:name => "PassengerMaxRequestQueueSize",
-		:type => :integer,
+		:name      => "PassengerMaxRequestQueueSize",
+		:type      => :integer,
 		:min_value => 0,
-		:context => ["OR_ALL"],
-		:desc => "The maximum number of queued requests."
+		:context   => ["OR_ALL"],
+		:desc      => "The maximum number of queued requests."
+	},
+	{
+		:name      => "PassengerMaxPreloaderIdleTime",
+		:type      => :integer,
+		:min_value => 0,
+		:context   => ["RSRC_CONF"],
+		:desc      => "The maximum number of seconds that a preloader process may be idle before it is shutdown."
 	},
 	{
 		:name => "PassengerLoadShellEnvvars",
@@ -188,5 +186,60 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:type    => :flag,
 		:context => ["OR_ALL"],
 		:desc    => "The cookie name to use for sticky sessions."
+	},
+	{
+		:name     => "PassengerSpawnMethod",
+		:type     => :string,
+		:context  => ["RSRC_CONF"],
+		:desc     => "The spawn method to use.",
+		:function => "cmd_passenger_spawn_method"
+	},
+	{
+		:name     => "PassengerShowVersionInHeader",
+		:type     => :flag,
+		:desc     => "Whether to show the Phusion Passenger version number in the X-Powered-By header."
+	},
+	{
+		:name     => "PassengerStatThrottleRate",
+		:type     => :integer,
+		:context  => ["OR_LIMIT", "ACCESS_CONF", "RSRC_CONF"],
+		:desc     => "Limit the number of stat calls to once per given seconds."
+	},
+	{
+		:name     => "PassengerFriendlyErrorPages",
+		:type     => :flag,
+		:context  => ["OR_OPTIONS", "ACCESS_CONF", "RSRC_CONF"],
+		:desc     => "Whether to display friendly error pages when something goes wrong."
+	},
+	{
+		:name     => "PassengerRestartDir",
+		:type     => :string,
+		:context  => ["OR_OPTIONS", "ACCESS_CONF", "RSRC_CONF"],
+		:desc     => "The directory in which Passenger should look for restart.txt."
+	},
+
+	##### Aliases #####
+
+	{
+		:name => "RailsEnv",
+		:type => :string,
+		:desc => "The environment under which applications are run.",
+		:alias_for => "PassengerAppEnv"
+	},
+	{
+		:name => "RackEnv",
+		:type => :string,
+		:desc => "The environment under which applications are run.",
+		:alias_for => "PassengerAppEnv"
+	},
+
+	##### Deprecated options #####
+
+	{
+		:name      => "RailsSpawnMethod",
+		:type      => :string,
+		:context   => ["RSRC_CONF"],
+		:desc      => "Deprecated option.",
+		:alias_for => "PassengerSpawnMethod"
 	}
 ]

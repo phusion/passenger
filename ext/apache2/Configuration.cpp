@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -190,14 +190,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	#include "CreateDirConfig.cpp"
 
 	config->appRoot = NULL;
-	config->spawnMethod = DirConfig::SM_UNSET;
-	config->maxPreloaderIdleTime = -1;
 	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
 	config->allowEncodedSlashes = DirConfig::UNSET;
-	config->statThrottleRate = 0;
-	config->statThrottleRateSpecified = false;
-	config->restartDir = NULL;
-	config->friendlyErrorPages = DirConfig::UNSET;
 	config->unionStationSupport = DirConfig::UNSET;
 	config->bufferResponse = DirConfig::UNSET;
 	/*************************************/
@@ -219,10 +213,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 
 	MERGE_STR_CONFIG(appRoot);
 	MERGE_STRING_CONFIG(appGroupName);
-	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
-	config->maxPreloaderIdleTime = (add->maxPreloaderIdleTime == -1) ? base->maxPreloaderIdleTime : add->maxPreloaderIdleTime;
-	MERGE_INT_CONFIG(statThrottleRate);
-	MERGE_STR_CONFIG(restartDir);
 	MERGE_STRING_CONFIG(unionStationKey);
 	config->unionStationFilters = base->unionStationFilters;
 	for (vector<string>::const_iterator it = add->unionStationFilters.begin(); it != add->unionStationFilters.end(); it++) {
@@ -232,7 +222,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	}
 	MERGE_THREEWAY_CONFIG(resolveSymlinksInDocRoot);
 	MERGE_THREEWAY_CONFIG(allowEncodedSlashes);
-	MERGE_THREEWAY_CONFIG(friendlyErrorPages);
 	MERGE_THREEWAY_CONFIG(unionStationSupport);
 	MERGE_THREEWAY_CONFIG(bufferResponse);
 	/*************************************/
@@ -275,14 +264,11 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 #include "ConfigurationSetters.cpp"
 
-DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_group_name, appGroupName)
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_restart_dir, restartDir)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_union_station_key, unionStationKey)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_friendly_error_pages, friendlyErrorPages)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_union_station_support, unionStationSupport)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_buffer_response, bufferResponse)
 
@@ -299,9 +285,9 @@ static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	if (strcmp(arg, "smart") == 0 || strcmp(arg, "smart-lv2") == 0) {
-		config->spawnMethod = DirConfig::SM_SMART;
+		config->spawnMethod = "smart";
 	} else if (strcmp(arg, "conservative") == 0 || strcmp(arg, "direct") == 0) {
-		config->spawnMethod = DirConfig::SM_DIRECT;
+		config->spawnMethod = "direct";
 	} else {
 		return "PassengerSpawnMethod may only be 'smart', 'direct'.";
 	}
@@ -338,28 +324,6 @@ cmd_union_station_filter(cmd_parms *cmd, void *pcfg, const char *arg) {
 			message.append(e.what());
 			return strdup(message.c_str());
 		}
-	}
-}
-
-
-/*************************************************
- * Rack-specific settings
- *************************************************/
-
-static const char *
-cmd_passenger_max_preloader_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long int result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerMaxPreloaderIdleTime.";
-	} else if (result < 0) {
-		return "Value for PassengerMaxPreloaderIdleTime must be at least 0.";
-	} else {
-		config->maxPreloaderIdleTime = result;
-		return NULL;
 	}
 }
 
@@ -505,11 +469,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Prestart the given web applications during startup."),
-	AP_INIT_TAKE1("PassengerSpawnMethod",
-		(Take1Func) cmd_passenger_spawn_method,
-		NULL,
-		RSRC_CONF,
-		"The spawn method to use."),
 
 	#include "ConfigurationCommands.cpp"
 
@@ -518,16 +477,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The temp directory that Passenger should use."),
-	AP_INIT_TAKE1("PassengerStatThrottleRate",
-		(Take1Func) cmd_passenger_stat_throttle_rate,
-		NULL,
-		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
-		"Limit the number of stat calls to once per given seconds."),
-	AP_INIT_TAKE1("PassengerRestartDir",
-		(Take1Func) cmd_passenger_restart_dir,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The directory in which Passenger should look for restart.txt."),
 	AP_INIT_TAKE1("PassengerAppRoot",
 		(Take1Func) cmd_passenger_app_root,
 		NULL,
@@ -558,11 +507,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Whether to support encoded slashes in the URL"),
-	AP_INIT_FLAG("PassengerFriendlyErrorPages",
-		(FlagFunc) cmd_passenger_friendly_error_pages,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Whether to display friendly error pages when something goes wrong"),
 	AP_INIT_TAKE1("PassengerBaseURI",
 		(Take1Func) cmd_passenger_base_uri,
 		NULL,
@@ -644,11 +588,6 @@ const command_rec passenger_commands[] = {
 		"Deprecated option."),
 	AP_INIT_TAKE1("RailsDefaultUser",
 		(Take1Func) cmd_passenger_default_user,
-		NULL,
-		RSRC_CONF,
-		"Deprecated option."),
-	AP_INIT_TAKE1("RailsSpawnMethod",
-		(Take1Func) cmd_passenger_spawn_method,
 		NULL,
 		RSRC_CONF,
 		"Deprecated option."),

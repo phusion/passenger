@@ -891,26 +891,14 @@ private:
 		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_ROOT"), mapper.getAppRoot());
 		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_GROUP_NAME"),
 			config->getAppGroupName(mapper.getAppRoot()));
-		#include "SetHeaders.cpp"
-		addHeader(result, P_STATIC_STRING("!~PASSENGER_SPAWN_METHOD"),
-			config->getSpawnMethodString());
-		addHeader(r, result, P_STATIC_STRING("!~PASSENGER_MAX_REQUEST_QUEUE_SIZE"),
-			config->maxRequestQueueSize);
 		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_TYPE"), mapper.getApplicationTypeName());
-		addHeader(result, P_STATIC_STRING("!~PASSENGER_MAX_PRELOADER_IDLE_TIME"),
-			apr_psprintf(r->pool, "%ld", config->maxPreloaderIdleTime));
-		addHeader(result, "!~PASSENGER_DEBUGGER", "f");
-		addHeader(result, "!~PASSENGER_SHOW_VERSION_IN_HEADER", "t");
-		addHeader(result, "!~PASSENGER_STAT_THROTTLE_RATE",
-			apr_psprintf(r->pool, "%ld", config->getStatThrottleRate()));
-		addHeader(result, "!~PASSENGER_RESTART_DIR", config->getRestartDir());
-		addHeader(result, "!~PASSENGER_FRIENDLY_ERROR_PAGES",
-			config->showFriendlyErrorPages() ? "t" : "f");
+		#include "SetHeaders.cpp"
+		addHeader(result, P_STATIC_STRING("!~PASSENGER_DEBUGGER"), P_STATIC_STRING("f"));
 		if (config->useUnionStation() && !config->unionStationKey.empty()) {
-			addHeader(result, "!~UNION_STATION_SUPPORT", "t");
-			addHeader(result, "!~UNION_STATION_KEY", config->unionStationKey);
+			addHeader(result, P_STATIC_STRING("!~UNION_STATION_SUPPORT"), P_STATIC_STRING("t"));
+			addHeader(result, P_STATIC_STRING("!~UNION_STATION_KEY"), config->unionStationKey);
 			if (!config->unionStationFilters.empty()) {
-				addHeader(result, "!~UNION_STATION_FILTERS",
+				addHeader(result, P_STATIC_STRING("!~UNION_STATION_FILTERS"),
 					config->getUnionStationFilterString());
 			}
 		}

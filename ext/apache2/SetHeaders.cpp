@@ -95,6 +95,11 @@
 	
 
 	
+		addHeader(r, result, StaticString("!~PASSENGER_MAX_PRELOADER_IDLE_TIME",
+			sizeof("!~PASSENGER_MAX_PRELOADER_IDLE_TIME") - 1), config->maxPreloaderIdleTime);
+	
+
+	
 		addHeader(result, StaticString("!~PASSENGER_LOAD_SHELL_ENVVARS",
 			sizeof("!~PASSENGER_LOAD_SHELL_ENVVARS") - 1), config->loadShellEnvvars);
 	
@@ -112,5 +117,30 @@
 	
 		addHeader(result, StaticString("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME",
 			sizeof("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME") - 1), config->stickySessionsCookieName);
+	
+
+	
+		addHeader(result, StaticString("!~PASSENGER_SPAWN_METHOD",
+			sizeof("!~PASSENGER_SPAWN_METHOD") - 1), config->spawnMethod);
+	
+
+	
+		addHeader(result, StaticString("!~PASSENGER_SHOW_VERSION_IN_HEADER",
+			sizeof("!~PASSENGER_SHOW_VERSION_IN_HEADER") - 1), config->showVersionInHeader);
+	
+
+	
+		addHeader(r, result, StaticString("!~PASSENGER_STAT_THROTTLE_RATE",
+			sizeof("!~PASSENGER_STAT_THROTTLE_RATE") - 1), config->statThrottleRate);
+	
+
+	
+		addHeader(result, StaticString("!~PASSENGER_FRIENDLY_ERROR_PAGES",
+			sizeof("!~PASSENGER_FRIENDLY_ERROR_PAGES") - 1), config->friendlyErrorPages);
+	
+
+	
+		addHeader(result, StaticString("!~PASSENGER_RESTART_DIR",
+			sizeof("!~PASSENGER_RESTART_DIR") - 1), config->restartDir);
 	
 

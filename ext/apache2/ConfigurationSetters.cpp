@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -281,6 +281,40 @@
 	
 	
 		static const char *
+		cmd_passenger_max_preloader_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			char *end;
+			long result;
+
+			result = strtol(arg, &end, 10);
+			if (*end != '\0') {
+				string message = "Invalid number specified for ";
+				message.append(cmd->directive->directive);
+				message.append(".");
+
+				char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+					message.size() + 1);
+				memcpy(messageStr, message.c_str(), message.size() + 1);
+				return messageStr;
+			
+				} else if (result < 0) {
+					string message = "Value for ";
+					message.append(cmd->directive->directive);
+					message.append(" must be greater than or equal to 0.");
+
+					char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+						message.size() + 1);
+					memcpy(messageStr, message.c_str(), message.size() + 1);
+					return messageStr;
+			
+			} else {
+				config->maxPreloaderIdleTime = (int) result;
+				return NULL;
+			}
+		}
+	
+	
+		static const char *
 		cmd_passenger_load_shell_envvars(cmd_parms *cmd, void *pcfg, const char *arg) {
 			DirConfig *config = (DirConfig *) pcfg;
 			config->loadShellEnvvars =
@@ -336,6 +370,60 @@
 				arg ?
 				DirConfig::ENABLED :
 				DirConfig::DISABLED;
+			return NULL;
+		}
+	
+	
+		static const char *
+		cmd_passenger_show_version_in_header(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			config->showVersionInHeader =
+				arg ?
+				DirConfig::ENABLED :
+				DirConfig::DISABLED;
+			return NULL;
+		}
+	
+	
+		static const char *
+		cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			char *end;
+			long result;
+
+			result = strtol(arg, &end, 10);
+			if (*end != '\0') {
+				string message = "Invalid number specified for ";
+				message.append(cmd->directive->directive);
+				message.append(".");
+
+				char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+					message.size() + 1);
+				memcpy(messageStr, message.c_str(), message.size() + 1);
+				return messageStr;
+			
+			} else {
+				config->statThrottleRate = (int) result;
+				return NULL;
+			}
+		}
+	
+	
+		static const char *
+		cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			config->friendlyErrorPages =
+				arg ?
+				DirConfig::ENABLED :
+				DirConfig::DISABLED;
+			return NULL;
+		}
+	
+	
+		static const char *
+		cmd_passenger_restart_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			config->restartDir = arg;
 			return NULL;
 		}
 	

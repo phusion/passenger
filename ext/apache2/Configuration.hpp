@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -63,7 +63,6 @@ using namespace std;
  */
 struct DirConfig {
 	enum Threeway { ENABLED, DISABLED, UNSET };
-	enum SpawnMethod { SM_UNSET, SM_SMART, SM_DIRECT };
 
 	#include "ConfigurationFields.hpp"
 
@@ -78,17 +77,6 @@ struct DirConfig {
 
 	string appGroupName;
 
-	/** The spawn method to use. */
-	SpawnMethod spawnMethod;
-
-	/**
-	 * The idle timeout, in seconds, of preloader processes.
-	 * May also be 0 (which indicates that the application spawner should
-	 * never idle timeout) or -1 (which means that the value is not specified,
-	 * and the default value should be used).
-	 */
-	long maxPreloaderIdleTime;
-
 	/** Whether symlinks in the document root path should be resolved.
 	 * The implication of this is documented in the users guide, section
 	 * "How Phusion Passenger detects whether a virtual host is a web application".
@@ -102,30 +90,9 @@ struct DirConfig {
 	 */
 	Threeway allowEncodedSlashes;
 
-	/**
-	 * Throttle the number of stat() calls on files like
-	 * restart.txt to the once per given number of seconds.
-	 */
-	unsigned long statThrottleRate;
-
-	/** Indicates whether the statThrottleRate option was
-	 * explicitly specified in the directory configuration. */
-	bool statThrottleRateSpecified;
-
-	/** The directory in which Passenger should look for
-	 * restart.txt. NULL means that the default directory
-	 * should be used.
-	 */
-	const char *restartDir;
-
 	string unionStationKey;
 
 	vector<string> unionStationFilters;
-
-	/**
-	 * Whether Phusion Passenger should show friendly error pages.
-	 */
-	Threeway friendlyErrorPages;
 
 	/**
 	 * Whether analytics logging should be enabled.
@@ -152,17 +119,6 @@ struct DirConfig {
 		}
 	}
 
-	StaticString getSpawnMethodString() const {
-		switch (spawnMethod) {
-		case SM_SMART:
-			return "smart";
-		case SM_DIRECT:
-			return "direct";
-		default:
-			return "smart";
-		}
-	}
-
 	bool highPerformanceMode() const {
 		return highPerformance == ENABLED;
 	}
@@ -171,24 +127,12 @@ struct DirConfig {
 		return allowEncodedSlashes == ENABLED;
 	}
 
-	unsigned long getStatThrottleRate() const {
-		if (statThrottleRateSpecified) {
+	int getStatThrottleRate() const {
+		if (statThrottleRate != UNSET_INT_VALUE) {
 			return statThrottleRate;
 		} else {
 			return 0;
 		}
-	}
-
-	StaticString getRestartDir() const {
-		if (restartDir != NULL) {
-			return restartDir;
-		} else {
-			return "";
-		}
-	}
-
-	bool showFriendlyErrorPages() const {
-		return friendlyErrorPages != DISABLED;
 	}
 
 	bool useUnionStation() const {

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -43,7 +43,8 @@ def filter_eligible_options(options)
 	return options.reject do |option|
 		option[:alias_for] ||
 			option.fetch(:field, true).nil? ||
-			option[:field].to_s =~ /\./
+			option[:field].to_s =~ /\./ ||
+			option[:function]
 	end
 end
 

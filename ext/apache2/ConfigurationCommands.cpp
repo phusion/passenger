@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -62,20 +62,6 @@
 
 	
 	AP_INIT_TAKE1("PassengerAppEnv",
-		(Take1Func) cmd_passenger_app_env,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The environment under which applications are run."),
-
-	
-	AP_INIT_TAKE1("RailsEnv",
-		(Take1Func) cmd_passenger_app_env,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The environment under which applications are run."),
-
-	
-	AP_INIT_TAKE1("RackEnv",
 		(Take1Func) cmd_passenger_app_env,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
@@ -152,6 +138,13 @@
 		"The maximum number of queued requests."),
 
 	
+	AP_INIT_TAKE1("PassengerMaxPreloaderIdleTime",
+		(Take1Func) cmd_passenger_max_preloader_idle_time,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of seconds that a preloader process may be idle before it is shutdown."),
+
+	
 	AP_INIT_FLAG("PassengerLoadShellEnvvars",
 		(FlagFunc) cmd_passenger_load_shell_envvars,
 		NULL,
@@ -192,4 +185,60 @@
 		NULL,
 		OR_ALL,
 		"The cookie name to use for sticky sessions."),
+
+	
+	AP_INIT_TAKE1("PassengerSpawnMethod",
+		(Take1Func) cmd_passenger_spawn_method,
+		NULL,
+		RSRC_CONF,
+		"The spawn method to use."),
+
+	
+	AP_INIT_FLAG("PassengerShowVersionInHeader",
+		(FlagFunc) cmd_passenger_show_version_in_header,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to show the Phusion Passenger version number in the X-Powered-By header."),
+
+	
+	AP_INIT_TAKE1("PassengerStatThrottleRate",
+		(Take1Func) cmd_passenger_stat_throttle_rate,
+		NULL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
+		"Limit the number of stat calls to once per given seconds."),
+
+	
+	AP_INIT_FLAG("PassengerFriendlyErrorPages",
+		(FlagFunc) cmd_passenger_friendly_error_pages,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to display friendly error pages when something goes wrong."),
+
+	
+	AP_INIT_TAKE1("PassengerRestartDir",
+		(Take1Func) cmd_passenger_restart_dir,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The directory in which Passenger should look for restart.txt."),
+
+	
+	AP_INIT_TAKE1("RailsEnv",
+		(Take1Func) cmd_passenger_app_env,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The environment under which applications are run."),
+
+	
+	AP_INIT_TAKE1("RackEnv",
+		(Take1Func) cmd_passenger_app_env,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The environment under which applications are run."),
+
+	
+	AP_INIT_TAKE1("RailsSpawnMethod",
+		(Take1Func) cmd_passenger_spawn_method,
+		NULL,
+		RSRC_CONF,
+		"The spawn method to use."),
 

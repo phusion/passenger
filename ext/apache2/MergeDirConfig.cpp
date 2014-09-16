@@ -138,6 +138,13 @@
 	
 
 	
+		config->maxPreloaderIdleTime =
+			(add->maxPreloaderIdleTime == UNSET_INT_VALUE) ?
+			base->maxPreloaderIdleTime :
+			add->maxPreloaderIdleTime;
+	
+
+	
 		config->loadShellEnvvars =
 			(add->loadShellEnvvars == DirConfig::UNSET) ?
 			base->loadShellEnvvars :
@@ -177,5 +184,40 @@
 			(add->stickySessionsCookieName == DirConfig::UNSET) ?
 			base->stickySessionsCookieName :
 			add->stickySessionsCookieName;
+	
+
+	
+		config->spawnMethod =
+			(add->spawnMethod == NULL) ?
+			base->spawnMethod :
+			add->spawnMethod;
+	
+
+	
+		config->showVersionInHeader =
+			(add->showVersionInHeader == DirConfig::UNSET) ?
+			base->showVersionInHeader :
+			add->showVersionInHeader;
+	
+
+	
+		config->statThrottleRate =
+			(add->statThrottleRate == UNSET_INT_VALUE) ?
+			base->statThrottleRate :
+			add->statThrottleRate;
+	
+
+	
+		config->friendlyErrorPages =
+			(add->friendlyErrorPages == DirConfig::UNSET) ?
+			base->friendlyErrorPages :
+			add->friendlyErrorPages;
+	
+
+	
+		config->restartDir =
+			(add->restartDir == NULL) ?
+			base->restartDir :
+			add->restartDir;
 	
 
