@@ -486,6 +486,15 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
                 context->public_dir.len);
         }
         total_size += context->public_dir.len;
+        if (slcf->environment.data != NULL) {
+            if (b != NULL) {
+                b->last = ngx_copy(b->last, " (", 2);
+                b->last = ngx_copy(b->last, slcf->environment.data,
+                    slcf->environment.len);
+                b->last = ngx_copy(b->last, ")", 1);
+            }
+            total_size += (sizeof(" (") - 1) + slcf->environment.len + (sizeof(")") - 1);
+        }
         PUSH_STATIC_STR("\r\n");
     }
 

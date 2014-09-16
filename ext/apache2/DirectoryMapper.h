@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -216,7 +216,7 @@ public:
 	 * @throws TimeRetrievalException
 	 * @throws boost::thread_interrupted
 	 */
-	string getPublicDirectory() {
+	const string &getPublicDirectory() {
 		autoDetect();
 		return publicDir;
 	}
@@ -230,7 +230,7 @@ public:
 	 * @throws TimeRetrievalException
 	 * @throws boost::thread_interrupted
 	 */
-	string getAppRoot() {
+	const string &getAppRoot() {
 		autoDetect();
 		return appRoot;
 	}

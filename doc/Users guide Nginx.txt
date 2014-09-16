@@ -1,4 +1,5 @@
-= Phusion Passenger users guide, Nginx version =
+Phusion Passenger users guide, Nginx version
+============================================
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
@@ -587,6 +588,8 @@ Phusion Passenger for Nginx sets the default value to **production**. If you're 
 
 If you want to set other environment variables, please refer to <<env_vars_passenger_apps,Setting environment variables for Phusion Passenger-served apps>>.
 
+Setting this option also adds the application environment name to the default <<PassengerAppGroupName,application group name>>, so that you can run multiple versions of your application with different application environment names.
+
 This option may occur in the following places:
 
  * In the 'http' configuration block.
@@ -635,6 +638,90 @@ server {
     passenger_app_root /var/rails/zena;
 }
 -----------------------------
+
+[[PassengerAppGroupName]]
+==== passenger_app_group_name <name>
+Sets the name of the application group that the current application should belong to. Its default value is the virtual host's root directory, plus (if it is set), the <<PassengerAppEnv,application environment name>>.
+
+Phusion Passenger stores and caches most application spawning settings -- such as environment variables, process limits, etc -- on a per-app-group-name basis. This means that if you want to start two versions of your application, with each version having different environment variables, then you must assign them under different application group names.
+
+For example, consider a situation in which you are running multiple versions of the same app, with each version intended for a different customer. You use the `CUSTOMER_NAME` environment variable to tell the app which customer that version should serve.
+
+------------------------------------
+# WRONG example! Doesn't work!
+
+server {
+    listen 80;
+    server_name customer1.foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+    passenger_set_cgi_param CUSTOMER_NAME customer1;
+}
+
+server {
+    listen 80;
+    server_name customer2.foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+    passenger_set_cgi_param CUSTOMER_NAME customer2;
+}
+------------------------------------
+
+This example doesn't work, because Phusion Passenger thinks that they are the same application. When a user visits customer1.foo.com, Phusion Passenger will start a process with `CUSTOMER_NAME=customer1`. When another user visits customer2.foo.com, Phusion Passenger will route the request to the application process that was started earlier. Because environment variables are only set during application process startup, the second user will be served the website for customer 1.
+
+To make this work, assign unique application group names:
+
+------------------------------------
+server {
+    listen 80;
+    server_name customer1.foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+    passenger_set_cgi_param CUSTOMER_NAME customer1;
+    passenger_app_group_name foo_customer1;
+}
+
+server {
+    listen 80;
+    server_name customer2.foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+    passenger_set_cgi_param CUSTOMER_NAME customer2;
+    passenger_app_group_name foo_customer2;
+}
+------------------------------------
+
+Note that it is not necessary to set `passenger_app_group_name` if you want to run two versions of your application under different <<PassengerAppEnv,application environment names>>, because the application environment name is included in the default application group name. For example, consider a situation in which you want to run a production and a staging version of your application. The following configuration will work fine:
+
+------------------------------------
+server {
+    listen 80;
+    server_name bar.com;
+    root /webapps/bar/public;
+    passenger_enabled on;
+    # Phusion Passenger implicitly sets:
+    # passenger_app_group_name /webapps/bar/public;
+}
+
+server {
+    listen 80;
+    server_name staging.com;
+    root /webapps/bar/public;
+    passenger_enabled on;
+    passenger_app_env staging;
+    # Phusion Passenger implicitly sets:
+    # passenger_app_group_name '/webapps/bar/public (staging)';
+}
+------------------------------------
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once.
 
 [[PassengerAppType]]
 ==== passenger_app_type <name>

@@ -212,7 +212,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	}
 
 	MERGE_STR_CONFIG(appRoot);
-	MERGE_STRING_CONFIG(appGroupName);
 	MERGE_STRING_CONFIG(unionStationKey);
 	config->unionStationFilters = base->unionStationFilters;
 	for (vector<string>::const_iterator it = add->unionStationFilters.begin(); it != add->unionStationFilters.end(); it++) {
@@ -265,7 +264,6 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 #include "ConfigurationSetters.cpp"
 
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_group_name, appGroupName)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_union_station_key, unionStationKey)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
@@ -472,11 +470,6 @@ const command_rec passenger_commands[] = {
 
 	#include "ConfigurationCommands.cpp"
 
-	AP_INIT_TAKE1("PassengerAppGroupName",
-		(Take1Func) cmd_passenger_app_group_name,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The temp directory that Passenger should use."),
 	AP_INIT_TAKE1("PassengerAppRoot",
 		(Take1Func) cmd_passenger_app_root,
 		NULL,

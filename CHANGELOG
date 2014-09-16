@@ -9,6 +9,7 @@ Release 5.0.0 beta 1
  * Lowered server instance dir toucher interval from 6 to 1 hour.
  * Log levels revamped
  * Rails 1.2-2.2 support removed. Rails 2.3 still supported
+ * PassengerAppGroupName now includes PassengerAppEnv by default. Closes GH-664.
 
 
 Release 4.0.51

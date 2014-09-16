@@ -208,14 +208,17 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 	{
 		:name     => "PassengerFriendlyErrorPages",
 		:type     => :flag,
-		:context  => ["OR_OPTIONS", "ACCESS_CONF", "RSRC_CONF"],
 		:desc     => "Whether to display friendly error pages when something goes wrong."
 	},
 	{
 		:name     => "PassengerRestartDir",
 		:type     => :string,
-		:context  => ["OR_OPTIONS", "ACCESS_CONF", "RSRC_CONF"],
 		:desc     => "The directory in which Passenger should look for restart.txt."
+	},
+	{
+		:name     => "PassengerAppGroupName",
+		:type     => :string,
+		:desc     => "Application process group name."
 	},
 
 	##### Aliases #####

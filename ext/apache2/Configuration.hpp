@@ -75,8 +75,6 @@ struct DirConfig {
 	 */
 	const char *appRoot;
 
-	string appGroupName;
-
 	/** Whether symlinks in the document root path should be resolved.
 	 * The implication of this is documented in the users guide, section
 	 * "How Phusion Passenger detects whether a virtual host is a web application".
@@ -109,14 +107,6 @@ struct DirConfig {
 
 	bool isEnabled() const {
 		return enabled != DISABLED;
-	}
-
-	StaticString getAppGroupName(const StaticString &appRoot) const {
-		if (appGroupName.empty()) {
-			return appRoot;
-		} else {
-			return appGroupName;
-		}
 	}
 
 	bool highPerformanceMode() const {

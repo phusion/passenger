@@ -887,12 +887,22 @@ private:
 			result.append("\r\n", 2);
 		}
 
+		// App group name.
+		if (config->appGroupName == NULL) {
+			result.append("!~PASSENGER_APP_GROUP_NAME: ",
+				sizeof("!~PASSENGER_APP_GROUP_NAME: ") - 1);
+			result.append(mapper.getAppRoot());
+			if (config->appEnv != NULL) {
+				result.append(" (", 2);
+				result.append(config->appEnv);
+				result.append(")", 1);
+			}
+			result.append("\r\n", 2);
+		}
+
 		// Phusion Passenger options.
 		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_ROOT"), mapper.getAppRoot());
-		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_GROUP_NAME"),
-			config->getAppGroupName(mapper.getAppRoot()));
 		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_TYPE"), mapper.getApplicationTypeName());
-		#include "SetHeaders.cpp"
 		addHeader(result, P_STATIC_STRING("!~PASSENGER_DEBUGGER"), P_STATIC_STRING("f"));
 		if (config->useUnionStation() && !config->unionStationKey.empty()) {
 			addHeader(result, P_STATIC_STRING("!~UNION_STATION_SUPPORT"), P_STATIC_STRING("t"));
@@ -902,6 +912,7 @@ private:
 					config->getUnionStationFilterString());
 			}
 		}
+		#include "SetHeaders.cpp"
 
 		/*********************/
 		/*********************/

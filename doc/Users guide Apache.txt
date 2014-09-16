@@ -599,6 +599,8 @@ Phusion Passenger for Apache sets the default value to **production**. If you're
 
 If you want to set other environment variables, please refer to <<env_vars_passenger_apps,Setting environment variables for Phusion Passenger-served apps>>.
 
+Setting this option also adds the application environment name to the default <<PassengerAppGroupName,application group name>>, so that you can run multiple versions of your application with different application environment names.
+
 This option may occur in the following places:
 
  * In the global server configuration.
@@ -643,6 +645,78 @@ Example:
     PassengerAppRoot /var/rails/zena
 </VirtualHost>
 -----------------------------
+
+[[PassengerAppGroupName]]
+==== PassengerAppGroupName <name>
+Sets the name of the application group that the current application should belong to. Its default value is the <<PassengerRoot,application root>>, plus (if it is set), the <<PassengerAppEnv,application environment name>>.
+
+Phusion Passenger stores and caches most application spawning settings -- such as environment variables, process limits, etc -- on a per-app-group-name basis. This means that if you want to start two versions of your application, with each version having different environment variables, then you must assign them under different application group names.
+
+For example, consider a situation in which you are running multiple versions of the same app, with each version intended for a different customer. You use the `CUSTOMER_NAME` environment variable to tell the app which customer that version should serve.
+
+------------------------------------
+# WRONG example! Doesn't work!
+
+<VirtualHost *:80>
+    ServerName customer1.foo.com
+    DocumentRoot /webapps/foo/public
+    SetEnv CUSTOMER_NAME customer1
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName customer2.foo.com
+    DocumentRoot /webapps/foo/public
+    SetEnv CUSTOMER_NAME customer2
+</VirtualHost>
+------------------------------------
+
+This example doesn't work, because Phusion Passenger thinks that they are the same application. When a user visits customer1.foo.com, Phusion Passenger will start a process with `CUSTOMER_NAME=customer1`. When another user visits customer2.foo.com, Phusion Passenger will route the request to the application process that was started earlier. Because environment variables are only set during application process startup, the second user will be served the website for customer 1.
+
+To make this work, assign unique application group names:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName customer1.foo.com
+    DocumentRoot /webapps/foo/public
+    SetEnv CUSTOMER_NAME customer1
+    PassengerAppGroupName foo_customer1
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName customer2.foo.com
+    DocumentRoot /webapps/foo/public
+    SetEnv CUSTOMER_NAME customer2
+    PassengerAppGroupName foo_customer2
+</VirtualHost>
+------------------------------------
+
+Note that it is not necessary to set `PassengerAppGroupName` if you want to run two versions of your application under different <<PassengerAppEnv,application environment names>>, because the application environment name is included in the default application group name. For example, consider a situation in which you want to run a production and a staging version of your application. The following configuration will work fine:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName bar.com
+    DocumentRoot /webapps/bar/public
+    # Phusion Passenger implicitly sets:
+    # PassengerAppGroupName /webapps/bar
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName staging.bar.com
+    DocumentRoot /webapps/bar/public
+    PassengerAppEnv staging
+    # Phusion Passenger implicitly sets:
+    # PassengerAppGroupName '/webapps/bar (staging)'
+</VirtualHost>
+------------------------------------
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once.
 
 [[PassengerAppType]]
 ==== PassengerAppType <name>

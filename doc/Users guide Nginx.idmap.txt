@@ -144,17 +144,19 @@
 
 7.3.7. passenger_app_root <path/to/root>	=>	passenger-app-root-path-to-root--1dbudc6
 
-7.3.8. passenger_app_type <name>	=>	passenger-app-type-name--g9zccv
+7.3.8. passenger_app_group_name <name>	=>	passenger-app-group-name-name--11jrx8u
 
-7.3.9. passenger_startup_file <filename>	=>	passenger-startup-file-filename--y4gy1m
+7.3.9. passenger_app_type <name>	=>	passenger-app-type-name--g9zccv
 
-7.3.10. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
+7.3.10. passenger_startup_file <filename>	=>	passenger-startup-file-filename--y4gy1m
 
-7.3.11. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
+7.3.11. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
 
-7.3.12. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+7.3.12. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
 
-7.3.13. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
+7.3.13. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+
+7.3.14. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
 
 7.4. Security options	=>	security-options-1bv93g4
 

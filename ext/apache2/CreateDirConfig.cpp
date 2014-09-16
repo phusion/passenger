@@ -64,4 +64,5 @@
 				config->statThrottleRate = UNSET_INT_VALUE;
 				config->friendlyErrorPages = DirConfig::UNSET;
 				config->restartDir = NULL;
+				config->appGroupName = NULL;
 	

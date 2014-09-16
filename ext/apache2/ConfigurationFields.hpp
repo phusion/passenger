@@ -72,6 +72,8 @@
 	int statThrottleRate;
 	/** The environment under which applications are run. */
 	const char *appEnv;
+	/** Application process group name. */
+	const char *appGroupName;
 	/** Force specific application type. */
 	const char *appType;
 	/** The group that Ruby applications must run as. */

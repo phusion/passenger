@@ -144,3 +144,8 @@
 			sizeof("!~PASSENGER_RESTART_DIR") - 1), config->restartDir);
 	
 
+	
+		addHeader(result, StaticString("!~PASSENGER_APP_GROUP_NAME",
+			sizeof("!~PASSENGER_APP_GROUP_NAME") - 1), config->appGroupName);
+	
+

@@ -222,6 +222,13 @@
 		"The directory in which Passenger should look for restart.txt."),
 
 	
+	AP_INIT_TAKE1("PassengerAppGroupName",
+		(Take1Func) cmd_passenger_app_group_name,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Application process group name."),
+
+	
 	AP_INIT_TAKE1("RailsEnv",
 		(Take1Func) cmd_passenger_app_env,
 		NULL,

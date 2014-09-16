@@ -221,3 +221,10 @@
 			add->restartDir;
 	
 
+	
+		config->appGroupName =
+			(add->appGroupName == NULL) ?
+			base->appGroupName :
+			add->appGroupName;
+	
+
