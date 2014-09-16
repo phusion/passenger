@@ -67,6 +67,7 @@ onRequestBegin(Client *client, Request *req) {
 	}
 
 	if (!req->hasBody() || !req->requestBodyBuffering) {
+		req->requestBodyBuffering = false;
 		checkoutSession(client, req);
 	} else {
 		beginBufferingBody(client, req);
