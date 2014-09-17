@@ -555,14 +555,10 @@ cEscapeString(const StaticString &input) {
 			// Printable ASCII.
 			result.append(1, c);
 		} else {
-			char buf[sizeof("\\xFF")];
+			char buf[sizeof("000")];
+			unsigned int size;
 
 			switch (c) {
-			case '\0':
-				// Explicitly in hex format in order to avoid confusion
-				// with any '0' characters that come after this byte.
-				result.append("\\x00");
-				break;
 			case '\t':
 				result.append("\\t");
 				break;
@@ -576,11 +572,11 @@ cEscapeString(const StaticString &input) {
 				result.append("\\e");
 				break;
 			default:
-				buf[0] = '\\';
-				buf[1] = 'x';
-				toHex(StaticString(current, 1), buf + 2, true);
-				buf[4] = '\0';
-				result.append(buf, sizeof(buf) - 1);
+				size = integerToOtherBase<unsigned char, 8>(
+					*current, buf, sizeof(buf));
+				result.append("\\", 1);
+				result.append(3 - size, '0');
+				result.append(buf, size);
 				break;
 			}
 		}
