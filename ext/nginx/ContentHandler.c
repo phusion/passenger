@@ -53,13 +53,6 @@ static void abort_request(ngx_http_request_t *r);
 static void finalize_request(ngx_http_request_t *r, ngx_int_t rc);
 
 
-static unsigned int
-uint_to_str(ngx_uint_t i, u_char *str, ngx_uint_t size) {
-    unsigned int len = ngx_snprintf(str, size - 1, "%ui", i) - str;
-    str[len] = '\0';
-    return len;
-}
-
 static FileType
 get_file_type(const u_char *filename, unsigned int throttle_rate) {
     struct stat buf;
@@ -352,7 +345,6 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
 #if (NGX_HAVE_INET6)
     struct sockaddr_in6  *sin6;
 #endif
-    u_char                buf[sizeof("65535")];
 
     switch (r->method) {
     case NGX_HTTP_GET:
@@ -448,7 +440,7 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
 
     ngx_uint_t       total_size = 0;
     ngx_str_t       *union_station_filters;
-    ngx_int_t        i;
+    ngx_uint_t       i;
     ngx_list_part_t *part;
     ngx_table_elt_t *header;
 
