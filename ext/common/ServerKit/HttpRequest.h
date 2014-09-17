@@ -113,6 +113,7 @@ public:
 	} parserState;
 	psg_pool_t *pool;
 	Hooks hooks;
+	// Guaranteed to be contiguous.
 	LString path;
 	HeaderTable headers;
 	// We separate headers and secure headers because the number of normal
@@ -138,6 +139,11 @@ public:
 		int parseError;
 	} aux;
 	boost::uint64_t bodyAlreadyRead;
+
+	/**
+	 * The start index of the '?' character in `path`. -1 when it doesn't exist.
+	 */
+	int queryStringIndex;
 
 	/* When a body error is encountered and bodyChannel is not immediately available,
 	 * the error code is temporarily stored here.
@@ -225,6 +231,23 @@ public:
 	bool ended() const {
 		// Branchless OR.
 		return ((int) httpState >= (int) ERROR) | !client->connected();
+	}
+
+	StaticString getPathWithoutQueryString() const {
+		if (queryStringIndex == -1) {
+			return StaticString(path.start->data, path.size);
+		} else {
+			return StaticString(path.start->data, queryStringIndex);
+		}
+	}
+
+	StaticString getQueryString() const {
+		if (queryStringIndex == -1) {
+			return StaticString();
+		} else {
+			return StaticString(path.start->data + queryStringIndex + 1,
+				path.size - queryStringIndex - 1);
+		}
 	}
 };
 

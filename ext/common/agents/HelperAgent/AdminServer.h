@@ -29,6 +29,7 @@
 #include <string>
 
 #include <agents/HelperAgent/RequestHandler.h>
+#include <ApplicationPool2/Pool.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
 #include <FileDescriptor.h>
@@ -123,13 +124,83 @@ private:
 			&& constantTimeCompare(password, auth->password);
 	}
 
+	static VariantMap parseQueryString(const StaticString &query) {
+		VariantMap params;
+		const char *pos = query.data();
+		const char *end = query.data() + query.size();
+
+		while (pos < end) {
+			const char *assignmentPos = (const char *) memchr(pos, '=', end - pos);
+			if (assignmentPos != NULL) {
+				string name = urldecode(StaticString(pos, assignmentPos - pos));
+				const char *sepPos = (const char *) memchr(assignmentPos + 1, '&',
+					end - assignmentPos - 1);
+				if (sepPos != NULL) {
+					string value = urldecode(StaticString(assignmentPos + 1,
+						sepPos - assignmentPos - 1));
+					params.set(name, value);
+					pos = sepPos + 1;
+				} else {
+					StaticString value(assignmentPos + 1, end - assignmentPos - 1);
+					params.set(name, value);
+					pos = end;
+				}
+			} else {
+				throw SyntaxError("Invalid query string format");
+			}
+		}
+
+		return params;
+	}
+
 	void processStatus(Client *client, Request *req) {
 		if (authorize(client, req, READONLY)) {
 			HeaderTable headers;
-			headers.insert(req->pool, "content-type", "text/json");
+			headers.insert(req->pool, "content-type", "application/json");
 			writeSimpleResponse(client, 200, &headers,
-				requestHandler->inspectStateAsJson().toStyledString());
+				psg_pstrdup(req->pool,
+					requestHandler->inspectStateAsJson().toStyledString()));
 			endRequest(&client, &req);
+		} else {
+			respondWith401(client, req);
+		}
+	}
+
+	void processPoolStatusXml(Client *client, Request *req) {
+		if (authorize(client, req, READONLY)) {
+			try {
+				VariantMap params = parseQueryString(req->getQueryString());
+				HeaderTable headers;
+				headers.insert(req->pool, "content-type", "text/xml");
+				writeSimpleResponse(client, 200, &headers,
+					psg_pstrdup(req->pool, appPool->toXml(
+						params.getBool("secrets", false, false))));
+			} catch (const SyntaxError &e) {
+				SKC_ERROR(client, e.what());
+			}
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			respondWith401(client, req);
+		}
+	}
+
+	void processPoolStatusTxt(Client *client, Request *req) {
+		if (authorize(client, req, READONLY)) {
+			try {
+				ApplicationPool2::Pool::InspectOptions options(
+					parseQueryString(req->getQueryString()));
+				HeaderTable headers;
+				headers.insert(req->pool, "content-type", "text/plain");
+				writeSimpleResponse(client, 200, &headers,
+					psg_pstrdup(req->pool, appPool->inspect(options)));
+			} catch (const SyntaxError &e) {
+				SKC_ERROR(client, e.what());
+			}
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		} else {
 			respondWith401(client, req);
 		}
@@ -172,7 +243,8 @@ private:
 			Json::Value doc = requestHandler->getConfigAsJson();
 			doc["log_level"] = getLogLevel();
 
-			writeSimpleResponse(client, 200, &headers, doc.toStyledString());
+			writeSimpleResponse(client, 200, &headers,
+				psg_pstrdup(req->pool, doc.toStyledString()));
 			endRequest(&client, &req);
 		} else if (req->method == HTTP_PUT) {
 			if (!authorize(client, req, FULL)) {
@@ -231,21 +303,22 @@ private:
 
 protected:
 	virtual void onRequestBegin(Client *client, Request *req) {
-		const LString *path = &req->path;
+		StaticString path = req->getPathWithoutQueryString();
 
-		if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG)) {
-			path = psg_lstr_make_contiguous(&req->path, req->pool);
-			P_INFO("Admin request: " << http_method_str(req->method) <<
-				" " << StaticString(path->start->data, path->size));
-		}
+		P_INFO("Admin request: " << http_method_str(req->method) <<
+			" " << StaticString(req->path.start->data, req->path.size));
 
-		if (psg_lstr_cmp(path, P_STATIC_STRING("/status.json"))) {
+		if (path == P_STATIC_STRING("/status.json")) {
 			processStatus(client, req);
-		} else if (psg_lstr_cmp(path, P_STATIC_STRING("/ping.json"))) {
+		} else if (path == P_STATIC_STRING("/pool.xml")) {
+			processPoolStatusXml(client, req);
+		} else if (path == P_STATIC_STRING("/pool.txt")) {
+			processPoolStatusTxt(client, req);
+		} else if (path == P_STATIC_STRING("/ping.json")) {
 			processPing(client, req);
-		} else if (psg_lstr_cmp(path, P_STATIC_STRING("/shutdown.json"))) {
+		} else if (path == P_STATIC_STRING("/shutdown.json")) {
 			processShutdown(client, req);
-		} else if (psg_lstr_cmp(path, P_STATIC_STRING("/config.json"))) {
+		} else if (path == P_STATIC_STRING("/config.json")) {
 			processConfig(client, req);
 		} else {
 			respondWith404(client, req);
@@ -283,6 +356,7 @@ protected:
 
 public:
 	RequestHandler *requestHandler;
+	ApplicationPool2::PoolPtr appPool;
 	EventFd *exitEvent;
 	vector<Authorization> authorizations;
 

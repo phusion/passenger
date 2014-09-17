@@ -28,6 +28,7 @@
 #include <boost/cstdint.hpp>
 #include <cstddef>
 #include <cassert>
+#include <cstring>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/Context.h>
 #include <ServerKit/HttpRequest.h>
@@ -238,8 +239,30 @@ private:
 
 		self->state->currentHeader = NULL;
 		self->message->httpState = Message::PARSED_HEADERS;
+		self->indexQueryString(MessageType());
 		http_parser_pause(parser, 1);
 		return 0;
+	}
+
+	OXT_FORCE_INLINE
+	void indexQueryString(const HttpParseRequest &tag) {
+		LString *contiguousPath = psg_lstr_make_contiguous(&message->path,
+			message->pool);
+		if (contiguousPath != &message->path) {
+			psg_lstr_deinit(&message->path);
+			message->path = *contiguousPath;
+		}
+
+		const char *pos = (const char *) memchr(message->path.start->data, '?',
+			message->path.size);
+		if (pos != NULL) {
+			message->queryStringIndex = pos - message->path.start->data;
+		}
+	}
+
+	OXT_FORCE_INLINE
+	void indexQueryString(const HttpParseResponse &tag) {
+		// Do nothing.
 	}
 
 	OXT_FORCE_INLINE

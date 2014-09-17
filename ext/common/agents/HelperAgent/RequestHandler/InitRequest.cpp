@@ -358,9 +358,7 @@ initializeUnionStation(Client *client, Request *req, RequestAnalysis &analysis) 
 
 		req->beginScopeLog(&req->scopeLogs.requestProcessing, "request processing");
 		req->logMessage(string("Request method: ") + http_method_str(req->method));
-
-		const LString *path = psg_lstr_make_contiguous(&req->path, req->pool);
-		req->logMessage("URI: " + StaticString(path->start->data, path->size));
+		req->logMessage("URI: " + StaticString(req->path.start->data, req->path.size));
 	}
 }
 

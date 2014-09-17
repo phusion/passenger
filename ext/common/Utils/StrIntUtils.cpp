@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -626,14 +626,37 @@ escapeHTML(const StaticString &input) {
 	return result;
 }
 
-StaticString
-makeStaticStringWithNull(const char *data) {
-	return StaticString(data, strlen(data) + 1);
-}
+string
+urldecode(const StaticString &url) {
+	const char *pos = url.data();
+	const char *end = url.data() + url.size();
+	string result;
 
-StaticString
-makeStaticStringWithNull(const string &data) {
-	return StaticString(data.c_str(), data.size() + 1);
+	result.reserve(url.size());
+
+	while (pos < end) {
+		switch (*pos) {
+		case '%':
+			if (end - pos >= 3) {
+				unsigned int ch = hexToUint(StaticString(pos + 1, 2));
+				result.append(1, ch);
+				pos += 3;
+			} else {
+				throw SyntaxError("Invalid URL encoded string");
+			}
+			break;
+		case '+':
+			result.append(1, ' ');
+			pos++;
+			break;
+		default:
+			result.append(1, *pos);
+			pos++;
+			break;
+		}
+	}
+
+	return result;
 }
 
 } // namespace Passenger

@@ -903,10 +903,10 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		SmallVector<StaticString, 10> data;
 
 		data.push_back(StaticString(sizeField, sizeof(boost::uint32_t)));
-		data.push_back(makeStaticStringWithNull("REQUEST_METHOD"));
-		data.push_back(makeStaticStringWithNull("OOBW"));
+		data.push_back(P_STATIC_STRING_WITH_NULL("REQUEST_METHOD"));
+		data.push_back(P_STATIC_STRING_WITH_NULL("OOBW"));
 
-		data.push_back(makeStaticStringWithNull("PASSENGER_CONNECT_PASSWORD"));
+		data.push_back(P_STATIC_STRING_WITH_NULL("PASSENGER_CONNECT_PASSWORD"));
 		data.push_back(StaticString(secret, SECRET_SIZE));
 		data.push_back(StaticString("", 1));
 

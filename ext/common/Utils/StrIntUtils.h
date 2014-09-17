@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -409,9 +409,12 @@ string cEscapeString(const StaticString &input);
  */
 string escapeHTML(const StaticString &input);
 
-StaticString makeStaticStringWithNull(const char *data);
-
-StaticString makeStaticStringWithNull(const string &data);
+/**
+ * URL-decodes the given string.
+ *
+ * @throws SyntaxError
+ */
+string urldecode(const StaticString &url);
 
 } // namespace Passenger
 

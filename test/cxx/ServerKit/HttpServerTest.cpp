@@ -89,14 +89,18 @@ namespace tut {
 		void testBody(MyClient *client, MyRequest *req) {
 			if (!req->hasBody() && !req->upgraded()) {
 				writeSimpleResponse(client, 422, NULL, "Body required");
-				endRequest(&client, &req);
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
 			}
 		}
 
 		void testBodyStop(MyClient *client, MyRequest *req) {
 			if (!req->hasBody() && !req->upgraded()) {
 				writeSimpleResponse(client, 422, NULL, "Body required");
-				endRequest(&client, &req);
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
 			} else {
 				refRequest(req, __FILE__, __LINE__);
 				req->bodyChannel.stop();
@@ -117,7 +121,20 @@ namespace tut {
 			char *body = (char *) psg_pnalloc(req->pool, size);
 			memset(body, 'x', size);
 			writeSimpleResponse(client, 200, NULL, StaticString(body, size));
-			endRequest(&client, &req);
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		}
+
+		void testPath(MyClient *client, MyRequest *req) {
+			if (req->path.start->next == NULL) {
+				writeSimpleResponse(client, 200, NULL, "Contiguous: 1");
+			} else {
+				writeSimpleResponse(client, 500, NULL, "Contiguous: 0");
+			}
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		}
 
 	protected:
@@ -130,6 +147,8 @@ namespace tut {
 				testBodyStop(client, req);
 			} else if (psg_lstr_cmp(&req->path, "/large_response")) {
 				testLargeResponse(client, req);
+			} else if (psg_lstr_cmp(&req->path, "/path_test")) {
+				testPath(client, req);
 			} else {
 				testRequest(client, req);
 			}
@@ -497,6 +516,19 @@ namespace tut {
 			"Content-Length: 19\r\n\r\n"
 			"hello /joo\n"
 			"Foo: bar");
+	}
+
+	TEST_METHOD(5) {
+		set_test_name("It ensures that req->path is contiguous");
+
+		connectToServer();
+		sendRequestAndWait("GET /p");
+		sendRequestAndWait(
+			"ath_test HTTP/1.1\r\n"
+			"Connection: close\r\n\r\n");
+
+		string response = readAll(fd);
+		ensure(containsSubstring(response, "Contiguous: 1"));
 	}
 
 

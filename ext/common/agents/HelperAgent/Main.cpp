@@ -563,6 +563,7 @@ initializeNonPrivilegedWorkingObjects() {
 	if (!adminAddresses.empty()) {
 		wo->adminServer = new ServerAgent::AdminServer(wo->serverKitContext);
 		wo->adminServer->requestHandler = wo->requestHandler;
+		wo->adminServer->appPool = wo->appPool;
 		wo->adminServer->exitEvent = &wo->exitEvent;
 		wo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
 		wo->adminServer->authorizations = wo->adminAuthorizations;

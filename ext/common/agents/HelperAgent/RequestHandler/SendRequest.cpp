@@ -69,7 +69,6 @@ sendHeaderToApp(Client *client, Request *req) {
 }
 
 struct SessionProtocolWorkingState {
-	const LString *httpPath;
 	StaticString path;
 	StaticString queryString;
 	StaticString methodStr;
@@ -135,23 +134,13 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	SessionProtocolWorkingState &state)
 {
 	unsigned int dataSize = sizeof(boost::uint32_t);
-	const char *queryStringStart;
 
-	state.httpPath = psg_lstr_make_contiguous(&req->path, req->pool);
-	queryStringStart = (const char *) memchr(
-		state.httpPath->start->data, '?', state.httpPath->size);
-	if (queryStringStart != NULL) {
-		state.path = StaticString(state.httpPath->start->data,
-			queryStringStart - state.httpPath->start->data);
-		state.queryString = StaticString(queryStringStart,
-			state.httpPath->start->data + state.httpPath->size - queryStringStart);
-	} else {
-		state.path = StaticString(state.httpPath->start->data, state.httpPath->size);
-	}
-
-	state.remoteAddr = req->secureHeaders.lookup(REMOTE_ADDR);
-	state.remotePort = req->secureHeaders.lookup(REMOTE_PORT);
-	state.remoteUser = req->secureHeaders.lookup(REMOTE_USER);
+	state.path        = req->getPathWithoutQueryString();
+	state.queryString = req->getQueryString();
+	state.methodStr   = StaticString(http_method_str(req->method));
+	state.remoteAddr  = req->secureHeaders.lookup(REMOTE_ADDR);
+	state.remotePort  = req->secureHeaders.lookup(REMOTE_PORT);
+	state.remoteUser  = req->secureHeaders.lookup(REMOTE_USER);
 	state.contentLength = req->headers.lookup(HTTP_CONTENT_LENGTH);
 
 	dataSize += sizeof("REQUEST_URI");
@@ -166,7 +155,6 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	dataSize += sizeof("QUERY_STRING");
 	dataSize += state.queryString.size() + 1;
 
-	state.methodStr = StaticString(http_method_str(req->method));
 	dataSize += sizeof("REQUEST_METHOD");
 	dataSize += state.methodStr.size() + 1;
 
@@ -255,7 +243,7 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	pos += sizeof(boost::uint32_t);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("REQUEST_URI"));
-	pos = appendData(pos, end, state.httpPath->start->data, state.httpPath->size);
+	pos = appendData(pos, end, req->path.start->data, req->path.size);
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PATH_INFO"));

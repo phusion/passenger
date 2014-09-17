@@ -963,6 +963,7 @@ protected:
 		req->bodyChannel.reinitialize();
 		req->aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.
 		req->bodyAlreadyRead = 0;
+		req->queryStringIndex = -1;
 	}
 
 	/**
