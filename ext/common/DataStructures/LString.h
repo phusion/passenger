@@ -32,6 +32,7 @@
 #include <MemoryKit/palloc.h>
 #include <MemoryKit/mbuf.h>
 #include <StaticString.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/Hasher.h>
 
 namespace Passenger {
@@ -375,6 +376,16 @@ psg_lstr_deinit(LString *str) {
 	}
 
 	psg_lstr_init(str);
+}
+
+inline char *
+appendData(char *pos, const char *end, const LString *str) {
+	const LString::Part *part = str->start;
+	while (part != NULL) {
+		pos = appendData(pos, end, part->data, part->size);
+		part = part->next;
+	}
+	return pos;
 }
 
 

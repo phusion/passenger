@@ -887,6 +887,19 @@ private:
 			result.append("\r\n", 2);
 		}
 
+		#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
+			addHeader(result, P_STATIC_STRING("!~REMOTE_ADDR"),
+				r->connection->client_ip);
+			addHeader(r, result, P_STATIC_STRING("!~REMOTE_PORT"),
+				r->connection->client_addr->port);
+		#else
+			addHeader(result, P_STATIC_STRING("!~REMOTE_ADDR"),
+				r->connection->remote_ip);
+			addHeader(r, result, P_STATIC_STRING("!~REMOTE_PORT"),
+				r->connection->remote_addr->port);
+		#endif
+		addHeader(result, P_STATIC_STRING("!~REMOTE_USER"), r->user);
+
 		// App group name.
 		if (config->appGroupName == NULL) {
 			result.append("!~PASSENGER_APP_GROUP_NAME: ",

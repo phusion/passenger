@@ -75,6 +75,10 @@ struct SessionProtocolWorkingState {
 	StaticString methodStr;
 	StaticString serverName;
 	StaticString serverPort;
+	const LString *remoteAddr;
+	const LString *remotePort;
+	const LString *remoteUser;
+	const LString *contentLength;
 };
 
 void
@@ -145,6 +149,11 @@ determineHeaderSizeForSessionProtocol(Request *req,
 		state.path = StaticString(state.httpPath->start->data, state.httpPath->size);
 	}
 
+	state.remoteAddr = req->secureHeaders.lookup(REMOTE_ADDR);
+	state.remotePort = req->secureHeaders.lookup(REMOTE_PORT);
+	state.remoteUser = req->secureHeaders.lookup(REMOTE_USER);
+	state.contentLength = req->headers.lookup(HTTP_CONTENT_LENGTH);
+
 	dataSize += sizeof("REQUEST_URI");
 	dataSize += req->path.size + 1;
 
@@ -183,6 +192,36 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	dataSize += sizeof("SERVER_PORT");
 	dataSize += state.serverPort.size() + 1;
 
+	dataSize += sizeof("SERVER_SOFTWARE");
+	dataSize += serverSoftware.size() + 1;
+
+	dataSize += sizeof("SERVER_PROTOCOL");
+	dataSize += sizeof("HTTP/1.1");
+
+	dataSize += sizeof("REMOTE_ADDR");
+	if (state.remoteAddr != NULL) {
+		dataSize += state.remoteAddr->size + 1;
+	} else {
+		dataSize += sizeof("127.0.0.1");
+	}
+
+	dataSize += sizeof("REMOTE_PORT");
+	if (state.remotePort != NULL) {
+		dataSize += state.remotePort->size + 1;
+	} else {
+		dataSize += sizeof("0");
+	}
+
+	if (state.remoteUser != NULL) {
+		dataSize += sizeof("REMOTE_USER");
+		dataSize += state.remoteUser->size + 1;
+	}
+
+	if (state.contentLength != NULL) {
+		dataSize += sizeof("CONTENT_LENGTH");
+		dataSize += state.contentLength->size + 1;
+	}
+
 	dataSize += sizeof("PASSENGER_CONNECT_PASSWORD");
 	dataSize += req->session->getGroupSecret().size() + 1;
 
@@ -212,8 +251,6 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 {
 	char *pos = buffer;
 	const char *end = buffer + size;
-	const LString *value;
-	const LString::Part *part;
 
 	pos += sizeof(boost::uint32_t);
 
@@ -244,14 +281,38 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	pos = appendData(pos, end, state.serverPort);
 	pos = appendData(pos, end, "", 1);
 
-	value = req->headers.lookup(HTTP_CONTENT_LENGTH);
-	if (value != NULL) {
+	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SERVER_SOFTWARE"));
+	pos = appendData(pos, end, serverSoftware);
+	pos = appendData(pos, end, "", 1);
+
+	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SERVER_PROTOCOL"));
+	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("HTTP/1.1"));
+
+	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("REMOTE_ADDR"));
+	if (state.remoteAddr != NULL) {
+		pos = appendData(pos, end, state.remoteAddr);
+		pos = appendData(pos, end, "", 1);
+	} else {
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("127.0.0.1"));
+	}
+
+	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("REMOTE_PORT"));
+	if (state.remotePort != NULL) {
+		pos = appendData(pos, end, state.remotePort);
+		pos = appendData(pos, end, "", 1);
+	} else {
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("0"));
+	}
+
+	if (state.remoteUser != NULL) {
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("REMOTE_USER"));
+		pos = appendData(pos, end, state.remoteUser);
+		pos = appendData(pos, end, "", 1);
+	}
+
+	if (state.contentLength != NULL) {
 		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("CONTENT_LENGTH"));
-		part = value->start;
-		while (part != NULL) {
-			pos = appendData(pos, end, part->data, part->size);
-			part = part->next;
-		}
+		pos = appendData(pos, end, state.contentLength);
 		pos = appendData(pos, end, "", 1);
 	}
 

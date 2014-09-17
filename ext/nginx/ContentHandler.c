@@ -339,13 +339,20 @@ typedef struct {
     ngx_str_t     app_type;
     ngx_str_t     escaped_uri;
     ngx_str_t     server_password;
+    ngx_str_t     remote_port;
 } buffer_construction_state;
 
-static void
+static ngx_int_t
 prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *context,
     buffer_construction_state *state)
 {
-    unsigned int len;
+    unsigned int          len;
+    ngx_uint_t            port;
+    struct sockaddr_in   *sin;
+#if (NGX_HAVE_INET6)
+    struct sockaddr_in6  *sin6;
+#endif
+    u_char                buf[sizeof("65535")];
 
     switch (r->method) {
     case NGX_HTTP_GET:
@@ -381,12 +388,49 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
         2 * ngx_escape_uri(NULL, r->uri.data, r->uri.len, NGX_ESCAPE_URI)
         + r->uri.len;
     state->escaped_uri.data = ngx_pnalloc(r->pool, state->escaped_uri.len);
+    if (state->escaped_uri.data == NULL) {
+        return NGX_ERROR;
+    }
     ngx_escape_uri(state->escaped_uri.data, r->uri.data, r->uri.len,
         NGX_ESCAPE_URI);
 
     state->server_password.data = (u_char *) pp_agents_starter_get_server_password(
         pp_agents_starter, &len);
     state->server_password.len  = len;
+
+    switch (r->connection->sockaddr->sa_family) {
+    #if (NGX_HAVE_INET6)
+    case AF_INET6:
+        sin6 = (struct sockaddr_in6 *) r->connection->sockaddr;
+        port = ntohs(sin6->sin6_port);
+        break;
+    #endif
+
+    #if (NGX_HAVE_UNIX_DOMAIN)
+    case AF_UNIX:
+        port = 0;
+        break;
+    #endif
+
+    default: /* AF_INET */
+        sin = (struct sockaddr_in *) r->connection->sockaddr;
+        port = ntohs(sin->sin_port);
+        break;
+    }
+
+    state->remote_port.data = ngx_pnalloc(r->pool, sizeof("65535") - 1);
+    if (state->remote_port.data == NULL) {
+        return NGX_ERROR;
+    }
+
+    if (port > 0 && port < 65536) {
+        state->remote_port.len = ngx_sprintf(state->remote_port.data, "%ui", port) -
+            state->remote_port.data;
+    } else {
+        state->remote_port.len = 0;
+    }
+
+    return NGX_OK;
 }
 
 static ngx_uint_t
@@ -479,6 +523,32 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
         PUSH_STATIC_STR("\r\n");
     }
 
+    PUSH_STATIC_STR("!~REMOTE_ADDR: ");
+    if (b != NULL) {
+        b->last = ngx_copy(b->last, r->connection->addr_text.data,
+            r->connection->addr_text.len);
+    }
+    total_size += r->connection->addr_text.len;
+    PUSH_STATIC_STR("\r\n");
+
+    PUSH_STATIC_STR("!~REMOTE_PORT: ");
+    if (b != NULL) {
+        b->last = ngx_copy(b->last, state->remote_port.data,
+            state->remote_port.len);
+    }
+    total_size += state->remote_port.len;
+    PUSH_STATIC_STR("\r\n");
+
+    if (r->headers_in.user.len > 0) {
+        PUSH_STATIC_STR("!~REMOTE_USER: ");
+        if (b != NULL) {
+            b->last = ngx_copy(b->last, r->headers_in.user.data,
+                r->headers_in.user.len);
+        }
+        total_size += r->headers_in.user.len;
+        PUSH_STATIC_STR("\r\n");
+    }
+
     if (slcf->app_group_name.data == NULL) {
         PUSH_STATIC_STR("!~PASSENGER_APP_GROUP_NAME: ");
         if (b != NULL) {
@@ -497,8 +567,6 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
         }
         PUSH_STATIC_STR("\r\n");
     }
-
-    /* TODO: set REMOTE_ADDR */
 
     if (slcf->union_station_filters != NGX_CONF_UNSET_PTR
      && slcf->union_station_filters->nelts > 0)
@@ -556,7 +624,9 @@ create_request(ngx_http_request_t *r)
 
     /* Construct and pass request headers */
 
-    prepare_request_buffer_construction(r, context, &state);
+    if (prepare_request_buffer_construction(r, context, &state) != NGX_OK) {
+        return NGX_ERROR;
+    }
     request_size = construct_request_buffer(r, slcf, context, &state, NULL);
 
     b = ngx_create_temp_buf(r->pool, request_size);

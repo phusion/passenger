@@ -184,6 +184,7 @@ private:
 	StaticString defaultGroup;
 	StaticString defaultServerName;
 	StaticString defaultServerPort;
+	StaticString serverSoftware;
 	HashedStaticString PASSENGER_APP_GROUP_NAME;
 	HashedStaticString PASSENGER_MAX_REQUESTS;
 	HashedStaticString PASSENGER_STICKY_SESSIONS;
@@ -191,6 +192,8 @@ private:
 	HashedStaticString PASSENGER_REQUEST_OOB_WORK;
 	HashedStaticString UNION_STATION_SUPPORT;
 	HashedStaticString REMOTE_ADDR;
+	HashedStaticString REMOTE_PORT;
+	HashedStaticString REMOTE_USER;
 	HashedStaticString FLAGS;
 	HashedStaticString HTTP_COOKIE;
 	HashedStaticString HTTP_DATE;
@@ -231,6 +234,8 @@ public:
 		  PASSENGER_REQUEST_OOB_WORK("!~request-oob-work"),
 		  UNION_STATION_SUPPORT("!~UNION_STATION_SUPPORT"),
 		  REMOTE_ADDR("!~REMOTE_ADDR"),
+		  REMOTE_PORT("!~REMOTE_PORT"),
+		  REMOTE_USER("!~REMOTE_USER"),
 		  FLAGS("!~FLAGS"),
 		  HTTP_COOKIE("cookie"),
 		  HTTP_DATE("date"),
@@ -258,6 +263,8 @@ public:
 			agentsOptions->get("default_server_name"));
 		defaultServerPort = psg_pstrdup(stringPool,
 			agentsOptions->get("default_server_port"));
+		serverSoftware = psg_pstrdup(stringPool,
+			agentsOptions->get("server_software"));
 
 		if (!agentsOptions->getBool("multi_app")) {
 			boost::shared_ptr<Options> options = make_shared<Options>();

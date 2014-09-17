@@ -801,6 +801,7 @@ setAgentsOptionsDefaults() {
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 	options.setDefaultInt("min_instances", 1);
+	options.setDefault("server_software", "Phusion Passenger/" PASSENGER_VERSION);
 
 	string firstAddress = options.getStrSet("server_addresses")[0];
 	if (getSocketAddressType(firstAddress) == SAT_TCP) {
