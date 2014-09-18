@@ -45,53 +45,6 @@ public:
 		: ServerKit::BaseHttpClient<Request>(server)
 		{ }
 
-	void inspect(struct ev_loop *loop, ostream &stream) const {
-		#if 0
-		const char *indent = "    ";
-		time_t the_time;
-		struct tm the_tm;
-		char timestr[60];
-
-		the_time = (time_t) connectedAt;
-		localtime_r(&the_time, &the_tm);
-		strftime(timestr, sizeof(timestr) - 1, "%F %H:%M:%S", &the_tm);
-
-		//stream << indent << "host                        = " << (scgiParser.getHeader("HTTP_HOST").empty() ? "(empty)" : scgiParser.getHeader("HTTP_HOST")) << "\n";
-		//stream << indent << "uri                         = " << (scgiParser.getHeader("REQUEST_URI").empty() ? "(empty)" : scgiParser.getHeader("REQUEST_URI")) << "\n";
-		stream << indent << "connected at                = " << timestr << " (" << (unsigned long long) (ev_time() - connectedAt) << " sec ago)\n";
-		/*
-		stream << indent << "state                       = " << getStateName() << "\n";
-		if (session == NULL) {
-			stream << indent << "session                     = NULL\n";
-		} else {
-			stream << indent << "session pid                 = " << session->getPid() << " (" <<
-				session->getGroup()->name << ")\n";
-			stream << indent << "session gupid               = " << session->getGupid() << "\n";
-			stream << indent << "session initiated           = " << boolStr(session->initiated()) << "\n";
-		}
-
-		stream
-			<< indent << "requestBodyIsBuffered       = " << boolStr(requestBodyIsBuffered) << "\n"
-			<< indent << "requestIsChunked            = " << boolStr(requestIsChunked) << "\n"
-			<< indent << "requestBodyLength           = " << requestBodyLength << "\n"
-			<< indent << "requestBodyAlreadyRead      = " << requestBodyAlreadyRead << "\n"
-			<< indent << "responseContentLength       = " << responseContentLength << "\n"
-			<< indent << "responseBodyAlreadyRead     = " << responseBodyAlreadyRead << "\n"
-			<< indent << "clientBodyBuffer started    = " << boolStr(clientBodyBuffer->isStarted()) << "\n"
-			<< indent << "clientBodyBuffer reachedEnd = " << boolStr(clientBodyBuffer->reachedEnd()) << "\n"
-			<< indent << "clientOutputPipe started    = " << boolStr(clientOutputPipe->isStarted()) << "\n"
-			<< indent << "clientOutputPipe reachedEnd = " << boolStr(clientOutputPipe->reachedEnd()) << "\n"
-			<< indent << "clientOutputWatcher active  = " << boolStr(clientOutputWatcher.is_active()) << "\n"
-			<< indent << "appInput                    = " << appInput.get() << " " << appInput->inspect() << "\n"
-			<< indent << "appInput started            = " << boolStr(appInput->isStarted()) << "\n"
-			<< indent << "appInput reachedEnd         = " << boolStr(appInput->endReached()) << "\n"
-			<< indent << "responseHeaderSeen          = " << boolStr(responseHeaderSeen) << "\n"
-			<< indent << "useUnionStation             = " << boolStr(useUnionStation()) << "\n"
-			;
-		*/
-		#endif
-	}
-
 	DEFINE_SERVER_KIT_BASE_HTTP_CLIENT_FOOTER(Client, Request);
 };
 

@@ -217,33 +217,6 @@ public:
 		return true;
 	}
 };
-
-class ExitHandler: public MessageServer::Handler {
-private:
-	EventFd &exitEvent;
-
-public:
-	ExitHandler(EventFd &_exitEvent)
-		: exitEvent(_exitEvent)
-	{ }
-
-	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
-	                            MessageServer::ClientContextPtr &handlerSpecificContext,
-	                            const vector<string> &args)
-	{
-		if (args[0] == "exit") {
-			TRACE_POINT();
-			commonContext.requireRights(Account::EXIT);
-			UPDATE_TRACE_POINT();
-			exitEvent.notify();
-			UPDATE_TRACE_POINT();
-			writeArrayMessage(commonContext.fd, "exit command received", NULL);
-			return true;
-		} else {
-			return false;
-		}
-	}
-};
 #endif
 
 
