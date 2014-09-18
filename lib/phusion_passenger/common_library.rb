@@ -387,6 +387,14 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:deps     => %w(
 			Utils/Base64.h
 		)
+	define_component 'Utils/modp_b64.o',
+		:source   => 'Utils/modp_b64.cpp',
+		:category => :other,
+		:optimize => true,
+		:deps     => %w(
+			Utils/modp_b64.h
+			Utils/modp_b64_data.h
+		)
 	define_component 'Utils/CachedFileStat.o',
 		:source   => 'Utils/CachedFileStat.cpp',
 		:category => :other,

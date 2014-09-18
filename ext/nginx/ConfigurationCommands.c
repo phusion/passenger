@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -271,11 +271,21 @@
 
 {
 	
-	ngx_string("passenger_set_cgi_param"),
-	NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE2,
-	set_null_terminated_keyval_slot,
+	ngx_string("passenger_env_var"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE2,
+	ngx_conf_set_keyval_slot,
 	NGX_HTTP_LOC_CONF_OFFSET,
-	offsetof(passenger_loc_conf_t, vars_source),
+	offsetof(passenger_loc_conf_t, env_vars),
+	NULL
+},
+
+{
+	
+	ngx_string("passenger_set_header"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE2,
+	ngx_conf_set_keyval_slot,
+	NGX_HTTP_LOC_CONF_OFFSET,
+	offsetof(passenger_loc_conf_t, headers_source),
 	NULL
 },
 
@@ -286,6 +296,26 @@
 	ngx_conf_set_str_array_slot,
 	NGX_HTTP_LOC_CONF_OFFSET,
 	offsetof(passenger_loc_conf_t, upstream_config.pass_headers),
+	NULL
+},
+
+{
+	
+	ngx_string("passenger_headers_hash_max_size"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+	ngx_conf_set_num_slot,
+	NGX_HTTP_LOC_CONF_OFFSET,
+	offsetof(passenger_loc_conf_t, headers_hash_max_size),
+	NULL
+},
+
+{
+	
+	ngx_string("passenger_headers_hash_bucket_size"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+	ngx_conf_set_num_slot,
+	NGX_HTTP_LOC_CONF_OFFSET,
+	offsetof(passenger_loc_conf_t, headers_hash_bucket_size),
 	NULL
 },
 

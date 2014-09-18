@@ -10,6 +10,7 @@ Release 5.0.0 beta 1
  * Log levels revamped
  * Rails 1.2-2.2 support removed. Rails 2.3 still supported
  * PassengerAppGroupName now includes PassengerAppEnv by default. Closes GH-664.
+ * passenger_set_cgi_param has been removed and replaced by passenger_set_header and passenger_env_var.
 
 
 Release 4.0.51

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -100,6 +100,14 @@
 	
 
 	
+		if (merge_string_array(cf, &prev->base_uris, &conf->base_uris) != NGX_OK) {
+			ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+				"cannot merge \"passenger_base_uri\" configurations");
+			return NGX_CONF_ERROR;
+		}
+	
+
+	
 		ngx_conf_merge_str_value(conf->document_root,
 			prev->document_root,
 			NULL);
@@ -142,6 +150,14 @@
 	
 
 	
+		if (merge_string_array(cf, &prev->union_station_filters, &conf->union_station_filters) != NGX_OK) {
+			ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+				"cannot merge \"union_station_filter\" configurations");
+			return NGX_CONF_ERROR;
+		}
+	
+
+	
 		ngx_conf_merge_value(conf->debugger,
 			prev->debugger,
 			NGX_CONF_UNSET);
@@ -157,6 +173,26 @@
 		ngx_conf_merge_value(conf->max_preloader_idle_time,
 			prev->max_preloader_idle_time,
 			NGX_CONF_UNSET);
+	
+
+	
+		if (merge_string_keyval_table(cf, &prev->env_vars, &conf->env_vars) != NGX_OK) {
+			ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+				"cannot merge \"passenger_env_var\" configurations");
+			return NGX_CONF_ERROR;
+		}
+	
+
+	
+		ngx_conf_merge_uint_value(conf->headers_hash_max_size,
+			prev->headers_hash_max_size,
+			512);
+	
+
+	
+		ngx_conf_merge_uint_value(conf->headers_hash_bucket_size,
+			prev->headers_hash_bucket_size,
+			64);
 	
 
 	

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -45,7 +45,15 @@
 
 	ngx_int_t enabled;
 
+	ngx_array_t *env_vars;
+
 	ngx_int_t friendly_error_pages;
+
+	ngx_uint_t headers_hash_bucket_size;
+
+	ngx_uint_t headers_hash_max_size;
+
+	ngx_array_t *headers_source;
 
 	ngx_int_t load_shell_envvars;
 
@@ -70,8 +78,6 @@
 	ngx_array_t *union_station_filters;
 
 	ngx_int_t union_station_support;
-
-	ngx_array_t *vars_source;
 
 	ngx_str_t app_group_name;
 

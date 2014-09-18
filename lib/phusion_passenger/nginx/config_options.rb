@@ -24,25 +24,26 @@
 # This file defines all supported Nginx per-location configuration options. The
 # build system automatically generates the corresponding Nginx module boilerplate
 # code from the definitions in this file.
-# 
+#
 # Main configuration options are not defined in this file, but are defined in
 # ext/nginx/Configuraion.c instead.
-# 
+#
 # The following boilerplate code is generated:
-# 
+#
 #  * ngx_command_t array members (ConfigurationCommands.c.erb)
 #  * Location configuration structure definition (ConfigurationFields.h.erb)
 #  * Location configuration structure initialization (CreateLocationConfig.c.erb)
 #  * Location configuration merging (MergeLocationConfig.c.erb)
 #  * Conversion of configuration options to CGI headers (CacheLocationConfig.c.erb)
-# 
+#
 # Options:
-# 
+#
 #  * name - The configuration option name. Required.
 #  * context - The context in which this configuration option is valid.
 #              Defaults to [:main, :srv, :loc, :lif]
 #  * type - This configuration option's value type. Allowed types:
-#           :string, :integer, :flag, :string_array, :string_keyval, :path
+#           :string, :integer, :uinteger, :flag, :string_array, :string_keyval,
+#           :path
 #  * take - Tells Nginx how many parameters and what kind of parameter
 #           this configuration option takes. It should be set to a string
 #           such as "NGX_CONF_FLAG".
@@ -137,8 +138,7 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:name   => 'passenger_base_uri',
 		:type   => :string_array,
 		:field  => 'base_uris',
-		:header => nil,
-		:auto_generate_nginx_merge_code => false
+		:header => nil
 	},
 	{
 		:name   => 'passenger_document_root',
@@ -175,8 +175,7 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:type     => :string_array,
 		:function => 'union_station_filter',
 		:field    => 'union_station_filters',
-		:header   => nil,
-		:auto_generate_nginx_merge_code => false
+		:header   => nil
 	},
 	{
 		:name  => 'passenger_debugger',
@@ -198,17 +197,35 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:post     => '&ngx_http_upstream_ignore_headers_masks'
 	},
 	{
-		:name   => 'passenger_set_cgi_param',
-		:context => [:srv, :loc, :lif],
+		:name   => 'passenger_env_var',
 		:type   => :string_keyval,
-		:field  => 'vars_source',
+		:field  => 'env_vars',
+		:header => nil
+	},
+	{
+		:name   => 'passenger_set_header',
+		:type   => :string_keyval,
+		:field  => 'headers_source',
 		:header => nil,
-		:auto_generate_nginx_merge_code => false
+		:auto_generate_nginx_create_code => false,
+		:auto_generate_nginx_merge_code  => false
 	},
 	{
 		:name  => 'passenger_pass_header',
 		:type  => :string_array,
 		:field => 'upstream_config.pass_headers'
+	},
+	{
+		:name    => 'passenger_headers_hash_max_size',
+		:type    => :uinteger,
+		:header  => nil,
+		:default => 512
+	},
+	{
+		:name    => 'passenger_headers_hash_bucket_size',
+		:type    => :uinteger,
+		:header  => nil,
+		:default => 64
 	},
 	{
 		:name  => 'passenger_ignore_client_abort',

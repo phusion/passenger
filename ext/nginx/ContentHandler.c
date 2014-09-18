@@ -443,6 +443,10 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
     ngx_uint_t       i;
     ngx_list_part_t *part;
     ngx_table_elt_t *header;
+    size_t           len;
+    ngx_http_script_len_code_pt lcode;
+    ngx_http_script_code_pt     code;
+    ngx_http_script_engine_t    e, le;
 
     if (b != NULL) {
         b->last = ngx_copy(b->last, state->method.data, state->method.len);
@@ -476,7 +480,10 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
             i = 0;
         }
 
-        if (header_is_transfer_encoding(&header[i].key)) {
+        if (ngx_hash_find(&slcf->headers_set_hash, header[i].hash,
+                          header[i].lowcase_key, header[i].key.len)
+         || header_is_transfer_encoding(&header[i].key))
+        {
             continue;
         }
 
@@ -487,6 +494,64 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
             b->last = ngx_copy(b->last, "\r\n", 2);
         }
         total_size += header[i].key.len + header[i].value.len + 4;
+    }
+
+    if (slcf->headers_set_len) {
+        ngx_memzero(&le, sizeof(ngx_http_script_engine_t));
+
+        ngx_http_script_flush_no_cacheable_variables(r, slcf->flushes);
+
+        le.ip = slcf->headers_set_len->elts;
+        le.request = r;
+        le.flushed = 1;
+
+        while (*(uintptr_t *) le.ip) {
+            while (*(uintptr_t *) le.ip) {
+                lcode = *(ngx_http_script_len_code_pt *) le.ip;
+                total_size += lcode(&le);
+            }
+            le.ip += sizeof(uintptr_t);
+        }
+
+        if (b != NULL) {
+            ngx_memzero(&e, sizeof(ngx_http_script_engine_t));
+
+            e.ip = slcf->headers_set->elts;
+            e.pos = b->last;
+            e.request = r;
+            e.flushed = 1;
+
+            le.ip = slcf->headers_set_len->elts;
+
+            while (*(uintptr_t *) le.ip) {
+                lcode = *(ngx_http_script_len_code_pt *) le.ip;
+
+                /* skip the header line name length */
+                (void) lcode(&le);
+
+                if (*(ngx_http_script_len_code_pt *) le.ip) {
+
+                    for (len = 0; *(uintptr_t *) le.ip; len += lcode(&le)) {
+                        lcode = *(ngx_http_script_len_code_pt *) le.ip;
+                    }
+
+                    e.skip = (len == sizeof("\r\n") - 1) ? 1 : 0;
+
+                } else {
+                    e.skip = 0;
+                }
+
+                le.ip += sizeof(uintptr_t);
+
+                while (*(uintptr_t *) e.ip) {
+                    code = *(ngx_http_script_code_pt *) e.ip;
+                    code((ngx_http_script_engine_t *) &e);
+                }
+                e.ip += sizeof(uintptr_t);
+            }
+
+            b->last = e.pos;
+        }
     }
 
     if (b != NULL) {
@@ -579,6 +644,15 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
         b->last = ngx_copy(b->last, slcf->options_cache.data, slcf->options_cache.len);
     }
     total_size += slcf->options_cache.len;
+
+    if (slcf->env_vars_cache.data != NULL) {
+        PUSH_STATIC_STR("!~PASSENGER_ENV_VARS: ");
+        if (b != NULL) {
+            b->last = ngx_copy(b->last, slcf->env_vars_cache.data, slcf->env_vars_cache.len);
+        }
+        total_size += slcf->env_vars_cache.len;
+        PUSH_STATIC_STR("\r\n");
+    }
 
     /* D = Dechunk response
      *     Prevent Nginx from rechunking the response.

@@ -90,7 +90,7 @@
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/Base64.h>
+#include <Utils/modp_b64.h>
 #include <Utils/ProcessMetricsCollector.h>
 
 namespace tut {
@@ -372,10 +372,6 @@ private:
 	static void appendNullTerminatedKeyValue(string &output, const StaticString &key,
 		const StaticString &value)
 	{
-		unsigned int minCapacity = key.size() + value.size() + 2;
-		if (output.capacity() < minCapacity) {
-			output.reserve(minCapacity + 1024);
-		}
 		output.append(key.data(), key.size());
 		output.append(1, '\0');
 		output.append(value.data(), value.size());
@@ -1139,14 +1135,27 @@ protected:
 				options.baseURI);
 		}
 
-		it  = options.environmentVariables.begin();
-		end = options.environmentVariables.end();
-		while (it != end) {
-			appendNullTerminatedKeyValue(result, it->first, it->second);
-			it++;
+		string envvarsData;
+		try {
+			envvarsData = modp::b64_decode(options.environmentVariables.data(),
+				options.environmentVariables.size());
+		} catch (const std::runtime_error &) {
+			P_WARN("Unable to decode base64-encoded environment variables: " <<
+				options.environmentVariables);
+			envvarsData.clear();
 		}
 
-		return Base64::encode(result);
+		if (!envvarsData.empty()) {
+			// The envvars data is in the same format as `result`,
+			// so we can just append it.
+			result.append(envvarsData);
+		}
+
+		try {
+			return modp::b64_encode(result);
+		} catch (const std::runtime_error &) {
+			throw RuntimeException("Unable to encode data into a base64 string");
+		}
 	}
 
 	void switchUser(const SpawnPreparationInfo &info) {

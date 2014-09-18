@@ -303,22 +303,9 @@ createNewPoolOptions(Client *client, Request *req) {
 	fillPoolOption(req, options.startupFile, "!~PASSENGER_STARTUP_FILE");
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");
 	fillPoolOption(req, options.debugger, "!~PASSENGER_DEBUGGER");
+	fillPoolOption(req, options.environmentVariables, "!~PASSENGER_ENV_VARS");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	/******************/
-
-	ServerKit::HeaderTable::Iterator it(secureHeaders);
-	while (*it != NULL) {
-		ServerKit::Header *header = it->header;
-		if (!psg_lstr_cmp(&header->key, P_STATIC_STRING("!~PASSENGER_"), sizeof("!~PASSENGER_") - 1)) {
-			LString *key = psg_lstr_make_contiguous(&header->key, req->pool);
-			LString *val = psg_lstr_make_contiguous(&header->val, req->pool);
-			options.environmentVariables.push_back(make_pair(
-				StaticString(key->start->data, key->size),
-				StaticString(val->start->data, val->size)
-			));
-		}
-		it.next();
-	}
 
 	boost::shared_ptr<Options> optionsCopy = make_shared<Options>(options);
 	optionsCopy->persist(options);

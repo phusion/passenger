@@ -104,6 +104,7 @@ private:
 		result.push_back(&options.ruby);
 		result.push_back(&options.python);
 		result.push_back(&options.nodejs);
+		result.push_back(&options.environmentVariables);
 		result.push_back(&options.loggingAgentAddress);
 		result.push_back(&options.loggingAgentUsername);
 		result.push_back(&options.loggingAgentPassword);
@@ -267,9 +268,12 @@ public:
 
 	/**
 	 * Environment variables which should be passed to the spawned application
-	 * process.
+	 * process. This is a base64-encoded string of key-value pairs, with each
+	 * element terminated by a NUL character. For example:
+	 *
+	 *     base64("PATH\0/usr/bin\0RUBY\0/usr/bin/ruby\0")
 	 */
-	vector< pair<StaticString, StaticString> > environmentVariables;
+	StaticString environmentVariables;
 
 	/** Whether debugger support should be enabled. */
 	bool debugger;
@@ -500,10 +504,6 @@ public:
 		for (i = 0; i < otherStrings.size(); i++) {
 			otherLen += otherStrings[i]->size() + 1;
 		}
-		for (i = 0; i < other.environmentVariables.size(); i++) {
-			otherLen += environmentVariables[i].first.size() + 1;
-			otherLen += environmentVariables[i].second.size() + 1;
-		}
 
 		shared_array<char> data(new char[otherLen]);
 		end = data.get();
@@ -523,28 +523,6 @@ public:
 			// Point current object's field to the data in the
 			// internal storage area.
 			*str = StaticString(pos, end - pos - 1);
-		}
-
-		// Copy environmentVariables names and values into the internal storage area.
-		for (i = 0; i < other.environmentVariables.size(); i++) {
-			const pair<StaticString, StaticString> &p = other.environmentVariables[i];
-
-			environmentVariables[i] = make_pair(
-				StaticString(end, p.first.size()),
-				StaticString(end + p.first.size() + 1, p.second.size())
-			);
-
-			// Copy over string data.
-			memcpy(end, p.first.data(), p.first.size());
-			end += p.first.size();
-			*end = '\0';
-			end++;
-
-			// Copy over value data.
-			memcpy(end, p.second.data(), p.second.size());
-			end += p.second.size();
-			*end = '\0';
-			end++;
 		}
 
 		storage = data;

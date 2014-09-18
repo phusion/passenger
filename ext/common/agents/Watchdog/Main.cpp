@@ -58,7 +58,6 @@
 #include <Hooks.h>
 #include <ResourceLocator.h>
 #include <Utils.h>
-#include <Utils/Base64.h>
 #include <Utils/Timer.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/StrIntUtils.h>

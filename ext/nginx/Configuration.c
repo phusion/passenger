@@ -31,12 +31,15 @@
 
 #include <sys/types.h>
 #include <pwd.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
 #include "ContentHandler.h"
 #include "common/Constants.h"
 #include "common/agents/LoggingAgent/FilterSupport.h"
+#include "common/Utils/modp_b64.h"
 
 
 static ngx_str_t headers_to_hide[] = {
@@ -55,6 +58,13 @@ passenger_main_conf_t passenger_main_conf;
 static ngx_path_init_t  ngx_http_proxy_temp_path = {
     ngx_string(NGX_HTTP_PROXY_TEMP_PATH), { 1, 2, 0 }
 };
+
+static ngx_int_t merge_headers(ngx_conf_t *cf, passenger_loc_conf_t *conf,
+    passenger_loc_conf_t *prev);
+static ngx_int_t merge_string_array(ngx_conf_t *cf, ngx_array_t **prev,
+    ngx_array_t **conf);
+static ngx_int_t merge_string_keyval_table(ngx_conf_t *cf, ngx_array_t **prev,
+    ngx_array_t **conf);
 
 
 void *
@@ -204,7 +214,6 @@ void *
 passenger_create_loc_conf(ngx_conf_t *cf)
 {
     passenger_loc_conf_t  *conf;
-    ngx_keyval_t          *kv;
 
     conf = ngx_pcalloc(cf->pool, sizeof(passenger_loc_conf_t));
     if (conf == NULL) {
@@ -272,39 +281,85 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.cyclic_temp_file = 0;
     conf->upstream_config.change_buffering = 1;
 
-    #define DEFINE_VAR_TO_PASS(header_name, var_name) \
-        kv = ngx_array_push(conf->vars_source);       \
-        kv->key.data = (u_char *) header_name;        \
-        kv->key.len  = strlen(header_name) + 1;       \
-        kv->value.data = (u_char *) var_name;         \
-        kv->value.len  = strlen(var_name) + 1
-
-    conf->vars_source = ngx_array_create(cf->pool, 4, sizeof(ngx_keyval_t));
-    if (conf->vars_source == NULL) {
-        return NGX_CONF_ERROR;
-    }
-
-    DEFINE_VAR_TO_PASS("SCGI",            "1");
-    DEFINE_VAR_TO_PASS("QUERY_STRING",    "$query_string");
-    DEFINE_VAR_TO_PASS("REQUEST_METHOD",  "$request_method");
-    DEFINE_VAR_TO_PASS("SERVER_PROTOCOL", "$server_protocol");
-    DEFINE_VAR_TO_PASS("SERVER_SOFTWARE", "nginx/$nginx_version");
-    DEFINE_VAR_TO_PASS("REMOTE_ADDR",     "$remote_addr");
-    DEFINE_VAR_TO_PASS("REMOTE_PORT",     "$remote_port");
-    DEFINE_VAR_TO_PASS("SERVER_ADDR",     "$server_addr");
-    DEFINE_VAR_TO_PASS("SERVER_PORT",     "$server_port");
-
 #if NGINX_VERSION_NUM >= 1000010
     ngx_str_set(&conf->upstream_config.module, "passenger");
 #endif
 
+    conf->options_cache.data  = NULL;
+    conf->options_cache.len   = 0;
+    conf->env_vars_cache.data = NULL;
+    conf->env_vars_cache.len  = 0;
+
     return conf;
 }
 
-static void
+static ngx_int_t
 cache_loc_conf_options(ngx_conf_t *cf, passenger_loc_conf_t *conf)
 {
+    ngx_uint_t     i;
+    ngx_keyval_t  *env_vars;
+    size_t         unencoded_len;
+    u_char        *unencoded_buf;
+
     #include "CacheLocationConfig.c"
+
+    if (conf->env_vars != NULL) {
+        /* Cache env vars data as base64-serialized string.
+         * First, calculate the length of the unencoded data.
+         */
+
+        unencoded_len = 0;
+        env_vars = (ngx_keyval_t *) conf->env_vars->elts;
+
+        for (i = 0; i < conf->env_vars->nelts; i++) {
+            unencoded_len += env_vars[i].key.len + 1 + env_vars[i].value.len + 1;
+        }
+
+        /* Create the unecoded data. */
+
+        unencoded_buf = pos = (u_char *) malloc(unencoded_len);
+        if (unencoded_buf == NULL) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "cannot allocate buffer of %z bytes for environment variables data",
+                               unencoded_len);
+            return NGX_ERROR;
+        }
+
+        for (i = 0; i < conf->env_vars->nelts; i++) {
+            pos = ngx_copy(pos, env_vars[i].key.data, env_vars[i].key.len);
+            *pos = '\0';
+            pos++;
+
+            pos = ngx_copy(pos, env_vars[i].value.data, env_vars[i].value.len);
+            *pos = '\0';
+            pos++;
+        }
+
+        assert((size_t) (pos - unencoded_buf) == unencoded_len);
+
+        /* Create base64-serialized string. */
+
+        buf = ngx_palloc(cf->pool, modp_b64_encode_len(unencoded_len));
+        if (buf == NULL) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "cannot allocate buffer of %z bytes for base64 encoding",
+                               modp_b64_encode_len(unencoded_len));
+            return NGX_ERROR;
+        }
+        len = modp_b64_encode((char *) buf, (const char *) unencoded_buf, unencoded_len);
+        if (len == (size_t) -1) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "error during base64 encoding");
+            free(unencoded_buf);
+            return NGX_ERROR;
+        }
+
+        conf->env_vars_cache.data = buf;
+        conf->env_vars_cache.len = len;
+        free(unencoded_buf);
+    }
+
+    return NGX_OK;
 }
 
 char *
@@ -313,56 +368,15 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     passenger_loc_conf_t         *prev = parent;
     passenger_loc_conf_t         *conf = child;
 
-    u_char                       *p;
     size_t                        size;
-    uintptr_t                    *code;
-    ngx_uint_t                    i;
-    ngx_str_t                    *prev_base_uris, *base_uri;
-    ngx_str_t                    *prev_union_station_filters, *union_station_filter;
-    ngx_keyval_t                 *src;
     ngx_hash_init_t               hash;
-    ngx_http_script_compile_t     sc;
-    ngx_http_script_copy_code_t  *copy;
 
     #include "MergeLocationConfig.c"
     if (prev->options_cache.data == NULL) {
-        cache_loc_conf_options(cf, prev);
-    }
-    cache_loc_conf_options(cf, conf);
-
-    if (prev->base_uris != NGX_CONF_UNSET_PTR) {
-        if (conf->base_uris == NGX_CONF_UNSET_PTR) {
-            conf->base_uris = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
-            if (conf->base_uris == NULL) {
-                return NGX_CONF_ERROR;
-            }
-        }
-
-        prev_base_uris = (ngx_str_t *) prev->base_uris->elts;
-        for (i = 0; i < prev->base_uris->nelts; i++) {
-            base_uri = (ngx_str_t *) ngx_array_push(conf->base_uris);
-            if (base_uri == NULL) {
-                return NGX_CONF_ERROR;
-            }
-            *base_uri = prev_base_uris[i];
-        }
-    }
-
-    if (prev->union_station_filters != NGX_CONF_UNSET_PTR) {
-        if (conf->union_station_filters == NGX_CONF_UNSET_PTR) {
-            conf->union_station_filters = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
-            if (conf->union_station_filters == NULL) {
-                return NGX_CONF_ERROR;
-            }
-        }
-
-        prev_union_station_filters = (ngx_str_t *) prev->union_station_filters->elts;
-        for (i = 0; i < prev->union_station_filters->nelts; i++) {
-            union_station_filter = (ngx_str_t *) ngx_array_push(conf->union_station_filters);
-            if (union_station_filter == NULL) {
-                return NGX_CONF_ERROR;
-            }
-            *union_station_filter = prev_union_station_filters[i];
+        if (cache_loc_conf_options(cf, prev) != NGX_OK) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "cannot create Phusion Passenger configuration cache");
+            return NGX_CONF_ERROR;
         }
     }
 
@@ -606,97 +620,178 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->upstream_config.upstream = prev->upstream_config.upstream;
     }
 
-    if (conf->vars_source == NULL) {
-        conf->flushes = prev->flushes;
-        conf->vars_len = prev->vars_len;
-        conf->vars = prev->vars;
-        conf->vars_source = prev->vars_source;
+    conf->headers_hash_bucket_size = ngx_align(conf->headers_hash_bucket_size,
+                                               ngx_cacheline_size);
+    hash.max_size = conf->headers_hash_max_size;
+    hash.bucket_size = conf->headers_hash_bucket_size;
+    hash.name = "passenger_headers_hash";
 
-        if (conf->vars_source == NULL) {
-            return NGX_CONF_OK;
+    if (merge_headers(cf, conf, prev) != NGX_OK) {
+        return NGX_CONF_ERROR;
+    }
+
+    if (cache_loc_conf_options(cf, conf) != NGX_OK) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "cannot create Phusion Passenger configuration cache");
+        return NGX_CONF_ERROR;
+    }
+
+    return NGX_CONF_OK;
+}
+
+static ngx_int_t
+merge_headers(ngx_conf_t *cf, passenger_loc_conf_t *conf, passenger_loc_conf_t *prev)
+{
+    u_char                       *p;
+    size_t                        size;
+    uintptr_t                    *code;
+    ngx_uint_t                    i;
+    ngx_array_t                   headers_names, headers_merged;
+    ngx_keyval_t                 *src, *s;
+    ngx_hash_key_t               *hk;
+    ngx_hash_init_t               hash;
+    ngx_http_script_compile_t     sc;
+    ngx_http_script_copy_code_t  *copy;
+
+    if (conf->headers_source == NULL) {
+        conf->flushes = prev->flushes;
+        conf->headers_set_len = prev->headers_set_len;
+        conf->headers_set = prev->headers_set;
+        conf->headers_set_hash = prev->headers_set_hash;
+        conf->headers_source = prev->headers_source;
+    }
+
+    if (conf->headers_set_hash.buckets
+#if (NGX_HTTP_CACHE)
+        && ((conf->upstream_config.cache == NULL) == (prev->upstream_config.cache == NULL))
+#endif
+       )
+    {
+        return NGX_OK;
+    }
+
+
+    if (ngx_array_init(&headers_names, cf->temp_pool, 4, sizeof(ngx_hash_key_t))
+        != NGX_OK)
+    {
+        return NGX_ERROR;
+    }
+
+    if (ngx_array_init(&headers_merged, cf->temp_pool, 4, sizeof(ngx_keyval_t))
+        != NGX_OK)
+    {
+        return NGX_ERROR;
+    }
+
+    if (conf->headers_source == NULL) {
+        conf->headers_source = ngx_array_create(cf->pool, 4,
+                                                sizeof(ngx_keyval_t));
+        if (conf->headers_source == NULL) {
+            return NGX_ERROR;
         }
     }
 
-    conf->vars_len = ngx_array_create(cf->pool, 64, 1);
-    if (conf->vars_len == NULL) {
-        return NGX_CONF_ERROR;
+    conf->headers_set_len = ngx_array_create(cf->pool, 64, 1);
+    if (conf->headers_set_len == NULL) {
+        return NGX_ERROR;
     }
 
-    conf->vars = ngx_array_create(cf->pool, 512, 1);
-    if (conf->vars == NULL) {
-        return NGX_CONF_ERROR;
+    conf->headers_set = ngx_array_create(cf->pool, 512, 1);
+    if (conf->headers_set == NULL) {
+        return NGX_ERROR;
     }
 
-    src = conf->vars_source->elts;
-    for (i = 0; i < conf->vars_source->nelts; i++) {
+
+    src = conf->headers_source->elts;
+    for (i = 0; i < conf->headers_source->nelts; i++) {
+
+        s = ngx_array_push(&headers_merged);
+        if (s == NULL) {
+            return NGX_ERROR;
+        }
+
+        *s = src[i];
+    }
+
+
+    src = headers_merged.elts;
+    for (i = 0; i < headers_merged.nelts; i++) {
+
+        hk = ngx_array_push(&headers_names);
+        if (hk == NULL) {
+            return NGX_ERROR;
+        }
+
+        hk->key = src[i].key;
+        hk->key_hash = ngx_hash_key_lc(src[i].key.data, src[i].key.len);
+        hk->value = (void *) 1;
+
+        if (src[i].value.len == 0) {
+            continue;
+        }
 
         if (ngx_http_script_variables_count(&src[i].value) == 0) {
-            copy = ngx_array_push_n(conf->vars_len,
+            copy = ngx_array_push_n(conf->headers_set_len,
                                     sizeof(ngx_http_script_copy_code_t));
             if (copy == NULL) {
-                return NGX_CONF_ERROR;
-            }
-
-            copy->code = (ngx_http_script_code_pt)
-                                                  ngx_http_script_copy_len_code;
-            copy->len = src[i].key.len;
-
-
-            copy = ngx_array_push_n(conf->vars_len,
-                                    sizeof(ngx_http_script_copy_code_t));
-            if (copy == NULL) {
-                return NGX_CONF_ERROR;
+                return NGX_ERROR;
             }
 
             copy->code = (ngx_http_script_code_pt)
                                                  ngx_http_script_copy_len_code;
-            copy->len = src[i].value.len;
+            copy->len = src[i].key.len + sizeof(": ") - 1
+                        + src[i].value.len + sizeof(CRLF) - 1;
 
 
             size = (sizeof(ngx_http_script_copy_code_t)
-                       + src[i].key.len + src[i].value.len
+                       + src[i].key.len + sizeof(": ") - 1
+                       + src[i].value.len + sizeof(CRLF) - 1
                        + sizeof(uintptr_t) - 1)
                     & ~(sizeof(uintptr_t) - 1);
 
-            copy = ngx_array_push_n(conf->vars, size);
+            copy = ngx_array_push_n(conf->headers_set, size);
             if (copy == NULL) {
-                return NGX_CONF_ERROR;
+                return NGX_ERROR;
             }
 
             copy->code = ngx_http_script_copy_code;
-            copy->len = src[i].key.len + src[i].value.len;
+            copy->len = src[i].key.len + sizeof(": ") - 1
+                        + src[i].value.len + sizeof(CRLF) - 1;
 
             p = (u_char *) copy + sizeof(ngx_http_script_copy_code_t);
 
             p = ngx_cpymem(p, src[i].key.data, src[i].key.len);
-            ngx_memcpy(p, src[i].value.data, src[i].value.len);
+            *p++ = ':'; *p++ = ' ';
+            p = ngx_cpymem(p, src[i].value.data, src[i].value.len);
+            *p++ = CR; *p = LF;
 
         } else {
-            copy = ngx_array_push_n(conf->vars_len,
+            copy = ngx_array_push_n(conf->headers_set_len,
                                     sizeof(ngx_http_script_copy_code_t));
             if (copy == NULL) {
-                return NGX_CONF_ERROR;
+                return NGX_ERROR;
             }
 
             copy->code = (ngx_http_script_code_pt)
                                                  ngx_http_script_copy_len_code;
-            copy->len = src[i].key.len;
+            copy->len = src[i].key.len + sizeof(": ") - 1;
 
 
             size = (sizeof(ngx_http_script_copy_code_t)
-                    + src[i].key.len + sizeof(uintptr_t) - 1)
+                    + src[i].key.len + sizeof(": ") - 1 + sizeof(uintptr_t) - 1)
                     & ~(sizeof(uintptr_t) - 1);
 
-            copy = ngx_array_push_n(conf->vars, size);
+            copy = ngx_array_push_n(conf->headers_set, size);
             if (copy == NULL) {
-                return NGX_CONF_ERROR;
+                return NGX_ERROR;
             }
 
             copy->code = ngx_http_script_copy_code;
-            copy->len = src[i].key.len;
+            copy->len = src[i].key.len + sizeof(": ") - 1;
 
             p = (u_char *) copy + sizeof(ngx_http_script_copy_code_t);
-            ngx_memcpy(p, src[i].key.data, src[i].key.len);
+            p = ngx_cpymem(p, src[i].key.data, src[i].key.len);
+            *p++ = ':'; *p = ' ';
 
 
             ngx_memzero(&sc, sizeof(ngx_http_script_compile_t));
@@ -704,38 +799,147 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
             sc.cf = cf;
             sc.source = &src[i].value;
             sc.flushes = &conf->flushes;
-            sc.lengths = &conf->vars_len;
-            sc.values = &conf->vars;
+            sc.lengths = &conf->headers_set_len;
+            sc.values = &conf->headers_set;
 
             if (ngx_http_script_compile(&sc) != NGX_OK) {
-                return NGX_CONF_ERROR;
+                return NGX_ERROR;
             }
+
+
+            copy = ngx_array_push_n(conf->headers_set_len,
+                                    sizeof(ngx_http_script_copy_code_t));
+            if (copy == NULL) {
+                return NGX_ERROR;
+            }
+
+            copy->code = (ngx_http_script_code_pt)
+                                                 ngx_http_script_copy_len_code;
+            copy->len = sizeof(CRLF) - 1;
+
+
+            size = (sizeof(ngx_http_script_copy_code_t)
+                    + sizeof(CRLF) - 1 + sizeof(uintptr_t) - 1)
+                    & ~(sizeof(uintptr_t) - 1);
+
+            copy = ngx_array_push_n(conf->headers_set, size);
+            if (copy == NULL) {
+                return NGX_ERROR;
+            }
+
+            copy->code = ngx_http_script_copy_code;
+            copy->len = sizeof(CRLF) - 1;
+
+            p = (u_char *) copy + sizeof(ngx_http_script_copy_code_t);
+            *p++ = CR; *p = LF;
         }
 
-        code = ngx_array_push_n(conf->vars_len, sizeof(uintptr_t));
+        code = ngx_array_push_n(conf->headers_set_len, sizeof(uintptr_t));
         if (code == NULL) {
-            return NGX_CONF_ERROR;
+            return NGX_ERROR;
         }
 
         *code = (uintptr_t) NULL;
 
-
-        code = ngx_array_push_n(conf->vars, sizeof(uintptr_t));
+        code = ngx_array_push_n(conf->headers_set, sizeof(uintptr_t));
         if (code == NULL) {
-            return NGX_CONF_ERROR;
+            return NGX_ERROR;
         }
 
         *code = (uintptr_t) NULL;
     }
 
-    code = ngx_array_push_n(conf->vars_len, sizeof(uintptr_t));
+    code = ngx_array_push_n(conf->headers_set_len, sizeof(uintptr_t));
     if (code == NULL) {
-        return NGX_CONF_ERROR;
+        return NGX_ERROR;
     }
 
     *code = (uintptr_t) NULL;
 
-    return NGX_CONF_OK;
+
+    hash.hash = &conf->headers_set_hash;
+    hash.key = ngx_hash_key_lc;
+    hash.max_size = conf->headers_hash_max_size;
+    hash.bucket_size = conf->headers_hash_bucket_size;
+    hash.name = "passenger_headers_hash";
+    hash.pool = cf->pool;
+    hash.temp_pool = NULL;
+
+    return ngx_hash_init(&hash, headers_names.elts, headers_names.nelts);
+}
+
+static ngx_int_t
+merge_string_array(ngx_conf_t *cf, ngx_array_t **prev, ngx_array_t **conf)
+{
+    ngx_str_t  *prev_elems, *elem;
+    ngx_uint_t  i;
+
+    if (*prev != NGX_CONF_UNSET_PTR) {
+        if (*conf == NGX_CONF_UNSET_PTR) {
+            *conf = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
+            if (*conf == NULL) {
+                return NGX_ERROR;
+            }
+        }
+
+        prev_elems = (ngx_str_t *) (*prev)->elts;
+        for (i = 0; i < (*prev)->nelts; i++) {
+            elem = (ngx_str_t *) ngx_array_push(*conf);
+            if (elem == NULL) {
+                return NGX_ERROR;
+            }
+            *elem = prev_elems[i];
+        }
+    }
+
+    return NGX_OK;
+}
+
+static int
+string_keyval_has_key(ngx_array_t *table, ngx_str_t *key)
+{
+    ngx_keyval_t  *elems;
+    ngx_uint_t     i;
+
+    elems = (ngx_keyval_t *) table->elts;
+    for (i = 0; i < table->nelts; i++) {
+        if (elems[i].key.len == key->len
+         && memcmp(elems[i].key.data, key->data, key->len) == 0)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+static ngx_int_t
+merge_string_keyval_table(ngx_conf_t *cf, ngx_array_t **prev, ngx_array_t **conf)
+{
+    ngx_keyval_t  *prev_elems, *elem;
+    ngx_uint_t     i;
+
+    if (*prev != NULL) {
+        if (*conf == NULL) {
+            *conf = ngx_array_create(cf->pool, 4, sizeof(ngx_keyval_t));
+            if (*conf == NULL) {
+                return NGX_ERROR;
+            }
+        }
+
+        prev_elems = (ngx_keyval_t *) (*prev)->elts;
+        for (i = 0; i < (*prev)->nelts; i++) {
+            if (!string_keyval_has_key(*conf, &prev_elems[i].key)) {
+                elem = (ngx_keyval_t *) ngx_array_push(*conf);
+                if (elem == NULL) {
+                    return NGX_ERROR;
+                }
+                *elem = prev_elems[i];
+            }
+        }
+    }
+
+    return NGX_OK;
 }
 
 #ifndef PASSENGER_IS_ENTERPRISE

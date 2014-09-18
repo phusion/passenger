@@ -296,6 +296,9 @@ u_char int_buf[32], *end, *buf, *pos;
 
 /* Create string */
 buf = pos = ngx_pnalloc(cf->pool, len);
+if (buf == NULL) {
+	return NGX_ERROR;
+}
 
 
 	

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -55,6 +55,31 @@ def struct_field_for(option)
 		return option[:name].sub(/^passenger_/, '')
 	end
 end
+
+def default_value_for(option)
+	case option[:type]
+	when :string
+		if option[:default]
+			return option[:default].inspect
+		else
+			return "NULL"
+		end
+	when :integer, :flag
+		if option[:default]
+			return option[:default]
+		else
+			return "NGX_CONF_UNSET"
+		end
+	when :uinteger
+		if option[:default]
+			return option[:default]
+		else
+			return "NGX_CONF_UNSET_UINT"
+		end
+	else
+		raise "Unknown type #{option[:type].inspect} for option #{option[:name]}"
+	end
+end
 %>
 
 <% for option in filter_eligible_options(LOCATION_CONFIGURATION_OPTIONS) %>
@@ -66,6 +91,22 @@ end
 		ngx_conf_merge_value(conf-><%= struct_field_for(option) %>,
 			prev-><%= struct_field_for(option) %>,
 			NGX_CONF_UNSET);
+	<% elsif option[:type] == :uinteger %>
+		ngx_conf_merge_uint_value(conf-><%= struct_field_for(option) %>,
+			prev-><%= struct_field_for(option) %>,
+			<%= default_value_for(option) || "NGX_CONF_UNSET_UINT" %>);
+	<% elsif option[:type] == :string_array %>
+		if (merge_string_array(cf, &prev-><%= struct_field_for(option) %>, &conf-><%= struct_field_for(option) %>) != NGX_OK) {
+			ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+				"cannot merge \"<%= option[:name] %>\" configurations");
+			return NGX_CONF_ERROR;
+		}
+	<% elsif option[:type] == :string_keyval %>
+		if (merge_string_keyval_table(cf, &prev-><%= struct_field_for(option) %>, &conf-><%= struct_field_for(option) %>) != NGX_OK) {
+			ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+				"cannot merge \"<%= option[:name] %>\" configurations");
+			return NGX_CONF_ERROR;
+		}
 	<% else %>
 		<% raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}" %>
 	<% end %>

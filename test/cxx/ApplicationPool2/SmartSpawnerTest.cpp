@@ -168,11 +168,13 @@ namespace tut {
 	TEST_METHOD(84) {
 		// If the preloader encountered an error, then the resulting SpawnException
 		// takes note of the process's environment variables.
+		string envvars = modp::b64_encode("PASSENGER_FOO\0foo\0",
+			sizeof("PASSENGER_FOO\0foo\0") - 1);
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
-		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
+		options.environmentVariables = envvars;
 
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");

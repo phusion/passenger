@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -64,7 +64,7 @@ def take_type_for(option)
 	return option[:take] if option[:take]
 
 	case option[:type]
-	when :string, :integer, :string_array
+	when :string, :integer, :uinteger, :string_array
 		return "NGX_CONF_TAKE1"
 	when :flag
 		return "NGX_CONF_FLAG"
@@ -81,14 +81,14 @@ def setter_function_for(option)
 	case option[:type]
 	when :string
 		return "ngx_conf_set_str_slot"
-	when :integer
+	when :integer, :uinteger
 		return "ngx_conf_set_num_slot"
 	when :flag
 		return "ngx_conf_set_flag_slot"
 	when :string_array
 		return "ngx_conf_set_str_array_slot"
 	when :string_keyval
-		return "set_null_terminated_keyval_slot"
+		return "ngx_conf_set_keyval_slot"
 	when :path
 		return "ngx_conf_set_path_slot"
 	else

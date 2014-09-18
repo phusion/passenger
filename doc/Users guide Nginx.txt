@@ -430,21 +430,31 @@ Please see <<deploying_a_rack_app,Deploying a Rack-based Ruby application>>
 and <<deploying_a_wsgi_app,Deploying a WSGI (Python) application>>
 for examples.
 
-When using `location` blocks, you must re-specify `passenger_enabled` in each `location` block that you want to enable Phusion Passenger. This is because each `location` block has `passenger_enabled` turned off by default. For example:
+.This configuration option is NOT inherited across contexts
+[WARNING]
+===============================================
+In each new context (e.g. in each new 'location' block), you must re-specify `passenger_enabled`. Values set in parent contexts have no effect on subcontexts. For example:
 
-----------------------------
+------------------------------
 server {
-    listen 80;
-    server_name www.foo.com;
-    root /webapps/foo/public;
+    ...
     passenger_enabled on;
 
-    location /attachments {
-        # Re-specify passenger_enabled here!
+    location /users {
+        passenger_set_header X-Foo bar;
+        # !!!THIS IS WRONG!!! We did not re-specify 'passenger_enabled on'
+        # here, so Phusion Passenger will not handle requests that begin with
+        # /users.
+    }
+
+    location /apps {
         passenger_enabled on;
+        passenger_set_header X-Foo bar;
+        # This is correct. Here we re-specify 'passenger_enabled'.
     }
 }
-----------------------------
+------------------------------
+===============================================
 
 [[PassengerBaseURI]]
 ==== passenger_base_uri <uri>
@@ -655,7 +665,7 @@ server {
     server_name customer1.foo.com;
     root /webapps/foo/public;
     passenger_enabled on;
-    passenger_set_cgi_param CUSTOMER_NAME customer1;
+    passenger_env_var CUSTOMER_NAME customer1;
 }
 
 server {
@@ -663,7 +673,7 @@ server {
     server_name customer2.foo.com;
     root /webapps/foo/public;
     passenger_enabled on;
-    passenger_set_cgi_param CUSTOMER_NAME customer2;
+    passenger_env_var CUSTOMER_NAME customer2;
 }
 ------------------------------------
 
@@ -677,7 +687,7 @@ server {
     server_name customer1.foo.com;
     root /webapps/foo/public;
     passenger_enabled on;
-    passenger_set_cgi_param CUSTOMER_NAME customer1;
+    passenger_env_var CUSTOMER_NAME customer1;
     passenger_app_group_name foo_customer1;
 }
 
@@ -686,7 +696,7 @@ server {
     server_name customer2.foo.com;
     root /webapps/foo/public;
     passenger_enabled on;
-    passenger_set_cgi_param CUSTOMER_NAME customer2;
+    passenger_env_var CUSTOMER_NAME customer2;
     passenger_app_group_name foo_customer2;
 }
 ------------------------------------
@@ -839,6 +849,35 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 In each place, it may be specified at most once. The default value is 'smart'.
+
+[[PassengerEnvVar]]
+==== passenger_env_var <name> <value>
+:version: 5.0.0
+include::users_guide_snippets/since_version.txt[]
+
+Sets environment variables to pass to the application. Environment variables are only set during application loading.
+
+Example:
+
+-------------------------
+server {
+    server_name www.foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+
+    passenger_env_var DATABASE_USERNAME foo_db;
+    passenger_env_var DATABASE_PASSWORD secret;
+}
+-------------------------
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified multiple times.
 
 [[PassengerLoadShellEnvvars]]
 ==== passenger_load_shell_envvars <on|off>
@@ -1596,65 +1635,46 @@ Yes. And it does not perform any certificate validation.
 
 === Connection handling options ===
 
-[[passenger_set_cgi_param]]
-==== passenger_set_cgi_param <CGI environment name> <value> ====
-Allows one to define additional CGI environment variables to pass to the web
-application. This is comparable to ngx_http_fastcgi_module's 'fastcgi_param'
-directive, and to ngx_http_proxy_module's 'proxy_set_header' option.
-Nginx variables in the value are interpolated.
+[[PassengerSetHeader]]
+==== passenger_set_header <HTTP header name> <value> ====
+Sets additional HTTP headers to pass to the web application. This is comparable to ngx_http_proxy_module's 'proxy_set_header' option. Nginx variables in the value are interpolated.
 
-These variables passed in the following manner:
+Example:
 
- * On every request, in the form of a request variable.
- * During application spawning, in the form of a system environment variable that can be looked up through `getenv()`.
+-------------------------
+server {
+    server_name www.foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
 
-Example usage:
-------------------------------
-# Application will see a CGI environment "APP_NAME" with value "my super blog".
-passenger_set_cgi_param APP_NAME "my super blog";
-
-# Nginx variables are interpolated.
-passenger_set_cgi_param EXTRA_REQUEST_METHOD method=$request_method;
-------------------------------
-
-.Use CGI environment names
-[NOTE]
-===============================================
-If you want to set an HTTP header, then you must set it in the CGI environment name
-format, i.e. 'HTTP_*':
-
-------------------------------
-# !!!THIS IS WRONG!!! Don't do this!
-passenger_set_cgi_param X-Forwarded-For 127.0.0.2;
-
-# Instead, write it like this:
-passenger_set_cgi_param HTTP_X_FORWARDED_FOR 127.0.0.2;
-------------------------------
-===============================================
+    passenger_set_header X-Power-Level 9000;
+    passenger_set_header X-Forwarded-For internal-router.foo.com;
+}
+-------------------------
 
 .This configuration option is NOT inherited across contexts
 [WARNING]
 ===============================================
-In each new context (e.g. in each new 'location' block), you must re-specify `passenger_set_cgi_param`. Values set in parent contexts have no effect on subcontexts. For example:
+In each new context (e.g. in each new 'location' block), you must re-specify `passenger_set_header`. Values set in parent contexts have no effect on subcontexts. For example:
 
 ------------------------------
 server {
     ...
-    passenger_set_cgi_param FOO foo;
+    passenger_set_header X-Foo foo;
 
     location /users {
-        passenger_enabled_on;
-        # !!!THIS IS WRONG!!! The 'FOO' CGI variable will not
-        # be passed URLs beginning with /users because you didn't
-        # re-specify passenger_set_cgi_param.
+        passenger_enabled on;
+        # !!!THIS IS WRONG!!! The 'X-Foo' header will not
+        # be passed URLs beginning with /users because we didn't
+        # re-specify passenger_set_header.
     }
 
     location /apps {
         passenger_enabled on;
-        # This is correct. Here we re-specify passenger_set_cgi_param,
-        # so the 'FOO' CGI variable will be correctly passed to URLs
+        # This is correct. Here we re-specify passenger_set_header,
+        # so the 'X-Foo' header will be correctly passed to URLs
         # starting with /apps.
-        passenger_set_cgi_param FOO foo;
+        passenger_set_header X-Foo foo;
     }
 }
 ------------------------------
@@ -1665,6 +1685,8 @@ This option may occur in the following places:
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
+
+In each place, it may be specified multiple times.
 
 [[passenger_max_request_queue_size]]
 ==== passenger_max_request_queue_size <number> ====
@@ -1825,6 +1847,30 @@ This option may occur in the following places:
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
+
+==== passenger_headers_hash_bucket_size <size> ====
+Sets the bucket size of the hash tables used by the <<PassengerSetHeader,passenger_set_header>> directive. The details of setting up hash tables are can be found in link:http://nginx.org/en/docs/hash.html[the Nginx documentation].
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '64'.
+
+==== passenger_headers_hash_max_size <size> ====
+Sets the maximum size of the hash tables used by the <<PassengerSetHeader,passenger_set_header>> directive. The details of setting up hash tables are can be found in link:http://nginx.org/en/docs/hash.html[the Nginx documentation].
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '512'.
 
 ==== passenger_buffer_response <on|off> ====
 When turned on, application-generated responses are buffered by Nginx. Buffering will

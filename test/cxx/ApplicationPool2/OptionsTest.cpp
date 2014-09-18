@@ -25,8 +25,6 @@ namespace tut {
 		Options options;
 		options.appRoot = appRoot;
 		options.processTitle = processTitle;
-		options.environmentVariables.push_back(make_pair(fooKey, fooValue));
-		options.environmentVariables.push_back(make_pair(barKey, barValue));
 
 		Options options2 = options.copyAndPersist();
 		appRoot[0] = processTitle[0] = 'x';
@@ -35,10 +33,5 @@ namespace tut {
 
 		ensure_equals(options2.appRoot, "appRoot");
 		ensure_equals(options2.processTitle, "processTitle");
-		ensure_equals(options2.environmentVariables.size(), 2u);
-		ensure_equals(options2.environmentVariables[0].first, "PASSENGER_FOO");
-		ensure_equals(options2.environmentVariables[0].second, "foo");
-		ensure_equals(options2.environmentVariables[1].first, "PASSENGER_BAR");
-		ensure_equals(options2.environmentVariables[1].second, "bar");
 	}
 }

@@ -152,11 +152,13 @@
 
 7.3.11. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
 
-7.3.12. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
+7.3.12. passenger_env_var <name> <value>	=>	passenger-env-var-name-value--y8e7wh
 
-7.3.13. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+7.3.13. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
 
-7.3.14. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
+7.3.14. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+
+7.3.15. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
 
 7.4. Security options	=>	security-options-1bv93g4
 
@@ -204,7 +206,7 @@
 
 7.6. Connection handling options	=>	connection-handling-options-8jgq90
 
-7.6.1. passenger_set_cgi_param <CGI environment name> <value>	=>	passenger-set-cgi-param-cgi-environment-name-value--rx9gc0
+7.6.1. passenger_set_header <HTTP header name> <value>	=>	passenger-set-cgi-param-cgi-environment-name-value--rx9gc0
 
 7.6.2. passenger_max_request_queue_size <number>	=>	passenger-max-request-queue-size-number--i0te1b
 
@@ -222,13 +224,17 @@
 
 7.6.9. passenger_ignore_headers <header names…>	=>	passenger-ignore-headers-header-names--12zg5oh
 
-7.6.10. passenger_buffer_response <on|off>	=>	passenger-buffer-response
+7.6.10. passenger_headers_hash_bucket_size <size>	=>	passenger-headers-hash-bucket-size-size--zx1rwf
 
-7.6.11. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
+7.6.11. passenger_headers_hash_max_size <size>	=>	passenger-headers-hash-max-size-size--1vl0i9u
 
-7.6.12. passenger_buffers	=>	passenger-busy-buffers
+7.6.12. passenger_buffer_response <on|off>	=>	passenger-buffer-response
 
-7.6.13. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
+7.6.13. passenger_buffer_size	=>	passenger-buffer-size-1jfkq87
+
+7.6.14. passenger_buffers	=>	passenger-busy-buffers
+
+7.6.15. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
 
 7.7. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
 

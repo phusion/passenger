@@ -190,12 +190,13 @@
 
 	TEST_METHOD(7) {
 		// Custom environment variables can be passed.
+		string envvars = modp::b64_encode("PASSENGER_FOO\0foo\0PASSENGER_BAR\0bar\0",
+			sizeof("PASSENGER_FOO\0foo\0PASSENGER_BAR\0bar\0") - 1);
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
-		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
-		options.environmentVariables.push_back(make_pair("PASSENGER_BAR", "bar"));
+		options.environmentVariables = envvars;
 		SpawnerPtr spawner = createSpawner(options);
 		object = spawner->spawn(options);
 		object.process->requiresShutdown = false;
@@ -204,18 +205,20 @@
 		Connection conn = object.process->sockets.front().checkoutConnection();
 		ScopeGuard guard(boost::bind(checkin, object.process, &conn));
 		writeExact(conn.fd, "envvars\n");
-		string envvars = readAll(conn.fd);
+		envvars = readAll(conn.fd);
 		ensure("(1)", envvars.find("PASSENGER_FOO = foo\n") != string::npos);
 		ensure("(2)", envvars.find("PASSENGER_BAR = bar\n") != string::npos);
 	}
 
 	TEST_METHOD(8) {
 		// Any raised SpawnExceptions take note of the process's environment variables.
+		string envvars = modp::b64_encode("PASSENGER_FOO\0foo\0",
+			sizeof("PASSENGER_FOO\0foo\0") - 1);
 		Options options = createOptions();
 		options.appRoot      = "stub";
 		options.startCommand = "echo\t" "!> hello world";
 		options.startupFile  = ".";
-		options.environmentVariables.push_back(make_pair("PASSENGER_FOO", "foo"));
+		options.environmentVariables = envvars;
 		SpawnerPtr spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
 		try {
