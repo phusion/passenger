@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008-2013 Phusion
+ * Copyright (c) 2008-2014 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,7 @@
 	#include <sstream>
 	#include <cstring>
 #endif
+#include <cstring>
 
 
 namespace oxt {
@@ -136,9 +137,9 @@ trace_point::trace_point(const char *_function, const char *_source, unsigned sh
 	const char *_data)
 	: function(_function),
 	  source(_source),
-	  data(_data),
 	  line(_line),
-	  m_detached(false)
+	  m_detached(false),
+	  m_hasDataFunc(false)
 {
 	thread_local_context *ctx = get_thread_local_context();
 	if (OXT_LIKELY(ctx != NULL)) {
@@ -147,16 +148,40 @@ trace_point::trace_point(const char *_function, const char *_source, unsigned sh
 	} else {
 		m_detached = true;
 	}
+	u.data = _data;
+}
+
+trace_point::trace_point(const char *_function, const char *_source, unsigned short _line,
+	DataFunction _dataFunc, void *_userData, bool detached)
+	: function(_function),
+	  source(_source),
+	  line(_line),
+	  m_detached(detached),
+	  m_hasDataFunc(true)
+{
+	if (!detached) {
+		thread_local_context *ctx = get_thread_local_context();
+		if (OXT_LIKELY(ctx != NULL)) {
+			spin_lock::scoped_lock l(ctx->backtrace_lock);
+			ctx->backtrace_list.push_back(this);
+		} else {
+			m_detached = true;
+		}
+	}
+	u.dataFunc.func = _dataFunc;
+	u.dataFunc.userData = _userData;
 }
 
 trace_point::trace_point(const char *_function, const char *_source, unsigned short _line,
 	const char *_data, const detached &detached_tag)
 	: function(_function),
 	  source(_source),
-	  data(_data),
 	  line(_line),
-	  m_detached(true)
-{ }
+	  m_detached(true),
+	  m_hasDataFunc(false)
+{
+	u.data = _data;
+}
 
 trace_point::~trace_point() {
 	if (OXT_LIKELY(!m_detached)) {
@@ -184,12 +209,23 @@ tracable_exception::tracable_exception() {
 
 		backtrace_copy.reserve(ctx->backtrace_list.size());
 		for (it = ctx->backtrace_list.begin(); it != end; it++) {
-			trace_point *p = new trace_point(
-				(*it)->function,
-				(*it)->source,
-				(*it)->line,
-				(*it)->data,
-				trace_point::detached());
+			trace_point *p;
+			if ((*it)->m_hasDataFunc) {
+				p = new trace_point(
+					(*it)->function,
+					(*it)->source,
+					(*it)->line,
+					(*it)->u.dataFunc.func,
+					(*it)->u.dataFunc.userData,
+					true);
+			} else {
+				p = new trace_point(
+					(*it)->function,
+					(*it)->source,
+					(*it)->line,
+					(*it)->u.data,
+					trace_point::detached());
+			}
 			backtrace_copy.push_back(p);
 		}
 	}
@@ -201,12 +237,23 @@ tracable_exception::tracable_exception(const tracable_exception &other)
 	vector<trace_point *>::const_iterator it, end = other.backtrace_copy.end();
 	backtrace_copy.reserve(other.backtrace_copy.size());
 	for (it = other.backtrace_copy.begin(); it != end; it++) {
-		trace_point *p = new trace_point(
-			(*it)->function,
-			(*it)->source,
-			(*it)->line,
-			(*it)->data,
-			trace_point::detached());
+		trace_point *p;
+		if ((*it)->m_hasDataFunc) {
+			p = new trace_point(
+				(*it)->function,
+				(*it)->source,
+				(*it)->line,
+				(*it)->u.dataFunc.func,
+				(*it)->u.dataFunc.userData,
+				true);
+		} else {
+			p = new trace_point(
+				(*it)->function,
+				(*it)->source,
+				(*it)->line,
+				(*it)->u.data,
+				trace_point::detached());
+		}
 		backtrace_copy.push_back(p);
 	}
 }
@@ -246,8 +293,18 @@ format_backtrace(const Collection &backtrace_list) {
 					source = p->source;
 				}
 				result << " (" << source << ":" << p->line << ")";
-				if (p->data != NULL) {
-					result << " -- " << p->data;
+				if (p->m_hasDataFunc) {
+					if (p->u.dataFunc.func != NULL) {
+						char buf[64];
+
+						memset(buf, sizeof(buf), 0);
+						if (p->u.dataFunc.func(buf, sizeof(buf) - 1, p->u.dataFunc.userData)) {
+							buf[63] = '\0';
+							result << " -- " << buf;
+						}
+					}
+				} else if (p->u.data != NULL) {
+					result << " -- " << p->u.data;
 				}
 			}
 			result << endl;

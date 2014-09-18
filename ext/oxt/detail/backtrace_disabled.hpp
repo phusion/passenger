@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010 Phusion
+ * Copyright (c) 2010-2014 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,7 @@ namespace oxt {
 #define TRACE_POINT() do { /* nothing */ } while (false)
 #define TRACE_POINT_WITH_NAME(name) do { /* nothing */ } while (false)
 #define TRACE_POINT_WITH_DATA(data) do { /* nothing */ } while (false)
+#define TRACE_POINT_WITH_DATA_FUNCTION(func, userData) do { /* nothing */ } while (false)
 #define UPDATE_TRACE_POINT() do { /* nothing */ } while (false)
 
 } // namespace oxt

@@ -72,6 +72,7 @@ void
 sessionCheckedOutFromAnotherThread(Client *client, Request *req,
 	SessionPtr session, ExceptionPtr e)
 {
+	SKC_LOG_EVENT(RequestHandler, client, "sessionCheckedOutFromAnotherThread");
 	sessionCheckedOutFromEventLoopThread(client, req, session, e);
 	unrefRequest(req, __FILE__, __LINE__);
 }
@@ -80,18 +81,21 @@ void
 sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 	const SessionPtr &session, const ExceptionPtr &e)
 {
-	TRACE_POINT();
 	if (req->ended()) {
 		return;
 	}
 
+	TRACE_POINT();
 	if (e == NULL) {
 		SKC_DEBUG(client, "Session checked out: pid=" << session->getPid() <<
 			", gupid=" << session->getGupid());
 		req->session = session;
+		UPDATE_TRACE_POINT();
 		maybeSend100Continue(client, req);
+		UPDATE_TRACE_POINT();
 		initiateSession(client, req);
 	} else {
+		UPDATE_TRACE_POINT();
 		req->endScopeLog(&req->scopeLogs.getFromPool, false);
 		reportSessionCheckoutError(client, req, e);
 	}
@@ -123,6 +127,7 @@ maybeSend100Continue(Client *client, Request *req) {
 
 void
 initiateSession(Client *client, Request *req) {
+	TRACE_POINT();
 	req->sessionCheckoutTry++;
 	try {
 		req->session->initiate();
@@ -141,6 +146,7 @@ initiateSession(Client *client, Request *req) {
 		return;
 	}
 
+	UPDATE_TRACE_POINT();
 	if (req->useUnionStation()) {
 		req->endScopeLog(&req->scopeLogs.getFromPool);
 		req->logMessage("Application PID: " +
@@ -149,6 +155,7 @@ initiateSession(Client *client, Request *req) {
 		req->beginScopeLog(&req->scopeLogs.requestProxying, "request proxying");
 	}
 
+	UPDATE_TRACE_POINT();
 	SKC_DEBUG(client, "Session initiated: fd=" << req->session->fd());
 	setNonBlocking(req->session->fd());
 	req->appInput.setFd(req->session->fd());
@@ -160,13 +167,12 @@ initiateSession(Client *client, Request *req) {
 
 static void
 checkoutSessionLater(Request *req) {
-	TRACE_POINT();
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(
 		RequestHandler::getServerFromClient(client));
-	bool ended = req->ended();
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "checkoutSessionLater");
 
-	if (!ended) {
+	if (!req->ended()) {
 		self->checkoutSession(client, req);
 	}
 	self->unrefRequest(req, __FILE__, __LINE__);
@@ -174,6 +180,7 @@ checkoutSessionLater(Request *req) {
 
 void
 reportSessionCheckoutError(Client *client, Request *req, const ExceptionPtr &e) {
+	TRACE_POINT();
 	{
 		boost::shared_ptr<RequestQueueFullException> e2 =
 			dynamic_pointer_cast<RequestQueueFullException>(e);
@@ -194,6 +201,7 @@ reportSessionCheckoutError(Client *client, Request *req, const ExceptionPtr &e) 
 
 void
 writeRequestQueueFullExceptionErrorResponse(Client *client, Request *req) {
+	TRACE_POINT();
 	const LString *value = req->secureHeaders.lookup("!~PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE");
 	int requestQueueOverflowStatusCode = 503;
 	if (value != NULL && value->size > 0) {
@@ -212,6 +220,7 @@ void
 writeSpawnExceptionErrorResponse(Client *client, Request *req,
 	const boost::shared_ptr<SpawnException> &e)
 {
+	TRACE_POINT();
 	SKC_ERROR(client, "Cannot checkout session because a spawning error occurred. " <<
 		"The identifier of the error is " << e->get("error_id") << ". Please see earlier logs for " <<
 		"details about the error.");
@@ -220,6 +229,7 @@ writeSpawnExceptionErrorResponse(Client *client, Request *req,
 
 void
 writeOtherExceptionErrorResponse(Client *client, Request *req, const ExceptionPtr &e) {
+	TRACE_POINT();
 	string typeName;
 	#ifdef CXX_ABI_API_AVAILABLE
 		int status;
@@ -270,6 +280,7 @@ void
 endRequestWithErrorResponse(Client **c, Request **r, const StaticString &message,
 	const SpawnException *e = NULL)
 {
+	TRACE_POINT();
 	Client *client = *c;
 	Request *req = *r;
 	ErrorRenderer renderer(*resourceLocator);

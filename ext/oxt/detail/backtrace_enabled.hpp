@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010, 2011, 2012 Phusion
+ * Copyright (c) 2010-2014 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,16 +41,27 @@ namespace oxt {
  * Except if you set the 'detached' argument to true.
  */
 struct trace_point {
+	typedef bool (*DataFunction)(char *output, unsigned int size, void *userData);
+
 	struct detached { };
 
 	const char *function;
 	const char *source;
-	const char *data;
+	union {
+		const char *data;
+		struct {
+			DataFunction func;
+			void *userData;
+		} dataFunc;
+	} u;
 	unsigned short line;
 	bool m_detached;
+	bool m_hasDataFunc;
 
 	trace_point(const char *function, const char *source, unsigned short line,
 		const char *data = 0);
+	trace_point(const char *function, const char *source, unsigned short line,
+		DataFunction dataFunc, void *userData, bool detached = false);
 	trace_point(const char *function, const char *source, unsigned short line,
 		const char *data, const detached &detached_tag);
 	~trace_point();
@@ -60,6 +71,8 @@ struct trace_point {
 #define TRACE_POINT() oxt::trace_point __p(BOOST_CURRENT_FUNCTION, __FILE__, __LINE__)
 #define TRACE_POINT_WITH_NAME(name) oxt::trace_point __p(name, __FILE__, __LINE__)
 #define TRACE_POINT_WITH_DATA(data) oxt::trace_point __p(BOOST_CURRENT_FUNCTION, __FILE__, __LINE__, data)
+#define TRACE_POINT_WITH_DATA_FUNCTION(func, userData) \
+	oxt::trace_point __p(BOOST_CURRENT_FUNCTION, __FILE__, __LINE__, func, (void *) userData)
 #define UPDATE_TRACE_POINT() __p.update(__FILE__, __LINE__)
 
 } // namespace oxt

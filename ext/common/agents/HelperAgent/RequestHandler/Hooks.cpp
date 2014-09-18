@@ -161,6 +161,7 @@ onAppInputError(FileBufferedFdOutputChannel *channel, int errcode) {
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "onAppInputError");
 
 	switch (req->state) {
 	case Request::BUFFERING_REQUEST_BODY:
@@ -184,6 +185,7 @@ onBodyBufferData(Channel *_channel, const MemoryKit::mbuf &buffer, int errcode) 
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "onBodyBufferData");
 
 	assert(req->requestBodyBuffering);
 	return self->whenSendingRequest_onRequestBody(client, req, buffer, errcode);

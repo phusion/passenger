@@ -29,6 +29,7 @@ private:
 
 void
 beginBufferingBody(Client *client, Request *req) {
+	TRACE_POINT();
 	req->state = Request::BUFFERING_REQUEST_BODY;
 	req->bodyChannel.start();
 	req->bodyBuffer.reinitialize();
@@ -39,6 +40,8 @@ Channel::Result
 whenBufferingBody_onRequestBody(Client *client, Request *req,
 	const MemoryKit::mbuf &buffer, int errcode)
 {
+	TRACE_POINT();
+
 	if (buffer.size() > 0) {
 		// Data
 		SKC_TRACE(client, 3, "Buffering " << buffer.size() <<
@@ -66,6 +69,7 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 
 void
 whenBufferingBody_onAppInputError(Client *client, Request *req, int errcode) {
+	TRACE_POINT();
 	assert(!req->responseBegun);
 	SKC_WARN(client, "Cannot write to application socket: " <<
 		ServerKit::getErrorDesc(errcode) << " (errcode=" << errcode << ")");

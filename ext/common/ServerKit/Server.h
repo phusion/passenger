@@ -121,19 +121,10 @@ using namespace oxt;
 		} \
 	} while (0)
 
-/*
-start main server
-start admin server
-main loop
-
-upon receiving exit signal on admin server:
-	set all servers to shutdown mode
-		- stop accepting new clients
-		- allow some clients to finish their request
-		- disconnect other clients
-	wait until servers are done shutting down (client count == 0)
-		exit main loop
-*/
+#define SKC_LOG_EVENT(klass, client, eventName) SKC_LOG_EVENT_FROM_STATIC(this, klass, client, eventName)
+#define SKC_LOG_EVENT_FROM_STATIC(server, klass, client, eventName) \
+	TRACE_POINT_WITH_DATA_FUNCTION(klass::_getClientNameFromTracePoint, client); \
+	SKC_TRACE_FROM_STATIC(server, client, 3, "Event: " eventName)
 
 /**
  * A highly optimized generic base class for evented socket servers, implementing basic,
@@ -229,6 +220,7 @@ private:
 	}
 
 	void onAcceptable(ev_io *io, int revents) {
+		TRACE_POINT();
 		unsigned int acceptCount = 0;
 		bool error = false;
 		int fd, errcode;
@@ -278,6 +270,7 @@ private:
 	}
 
 	void onAcceptResumeTimeout(ev::timer &timer, int revents) {
+		TRACE_POINT();
 		P_ASSERT_EQ(serverState, TOO_MANY_FDS);
 		SKS_NOTICE("Resuming accepting new clients");
 		serverState = ACTIVE;
@@ -366,6 +359,7 @@ private:
 	}
 
 	void clientReachedZeroRefcount(Client *client) {
+		TRACE_POINT();
 		assert(disconnectedClientCount > 0);
 		assert(!TAILQ_EMPTY(&disconnectedClients));
 
@@ -429,6 +423,7 @@ private:
 	}
 
 	void finishShutdown() {
+		TRACE_POINT();
 		SKS_NOTICE("Shutdown finished");
 		serverState = FINISHED_SHUTDOWN;
 		if (shutdownFinishCallback != NULL) {
@@ -540,6 +535,8 @@ protected:
 	/***** Hooks *****/
 
 	virtual void onClientObjectCreated(Client *client) {
+		TRACE_POINT();
+
 		client->hooks.impl        = this;
 		client->hooks.userData    = static_cast<BaseClient *>(client);
 
@@ -599,6 +596,7 @@ protected:
 	}
 
 	virtual void onClientOutputError(Client *client, int errcode) {
+		SKC_LOG_EVENT(DerivedServer, client, "onClientOutputError");
 		char message[1024];
 		int ret = snprintf(message, sizeof(message),
 			"client socket write error: %s (errno=%d)",
@@ -894,6 +892,17 @@ public:
 
 	void _unrefClient(Client *client, const char *file, unsigned int line) {
 		unrefClient(client, __FILE__, __LINE__);
+	}
+
+	static bool _getClientNameFromTracePoint(char *output, unsigned int size, void *userData) {
+		Client *client = static_cast<Client *>(userData);
+		BaseServer *server = getServerFromClient(client);
+		char *pos = output;
+		const char *end = output + size;
+
+		pos = appendData(pos, end, "Client ");
+		server->getClientName(client, pos, end - pos);
+		return true;
 	}
 
 	virtual bool hook_isConnected(Hooks *hooks, void *source) {

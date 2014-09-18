@@ -29,6 +29,7 @@ private:
 
 void
 sendHeaderToApp(Client *client, Request *req) {
+	TRACE_POINT();
 	SKC_TRACE(client, 2, "Sending headers to application with " <<
 		req->session->getProtocol() << " protocol");
 	req->state = Request::SENDING_HEADER_TO_APP;
@@ -39,19 +40,24 @@ sendHeaderToApp(Client *client, Request *req) {
 	 * HTTP sockets.
 	 */
 	if (req->session->getProtocol() == "session") {
+		UPDATE_TRACE_POINT();
 		req->halfCloseAppConnection = true;
 		sendHeaderToAppWithSessionProtocol(client, req);
 	} else {
+		UPDATE_TRACE_POINT();
 		req->halfCloseAppConnection = false;
 		sendHeaderToAppWithHttpProtocol(client, req);
 	}
 
+	UPDATE_TRACE_POINT();
 	if (!req->ended()) {
 		if (!req->appInput.ended()) {
 			if (!req->appInput.passedThreshold()) {
+				UPDATE_TRACE_POINT();
 				sendBodyToApp(client, req);
 				req->appOutput.startReading();
 			} else {
+				UPDATE_TRACE_POINT();
 				SKC_TRACE(client, 3, "Waiting for appInput buffers to be "
 					"flushed before sending body to application");
 				req->appInput.setBuffersFlushedCallback(sendBodyToAppWhenBuffersFlushed);
@@ -62,6 +68,7 @@ sendHeaderToApp(Client *client, Request *req) {
 			// application socket. But we don't care about that; we just care that
 			// ForwardResponse.cpp will now forward the response data and end the
 			// request.
+			UPDATE_TRACE_POINT();
 			req->state = Request::WAITING_FOR_APP_OUTPUT;
 			req->appOutput.startReading();
 		}
@@ -84,6 +91,7 @@ struct SessionProtocolWorkingState {
 
 void
 sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
+	TRACE_POINT();
 	SessionProtocolWorkingState state;
 	unsigned int bufferSize = determineHeaderSizeForSessionProtocol(req,
 		state);
@@ -126,6 +134,7 @@ sendBodyToAppWhenBuffersFlushed(FileBufferedChannel *_channel) {
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(
 		getServerFromClient(client));
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "sendBodyToAppWhenBuffersFlushed");
 
 	req->appInput.setBuffersFlushedCallback(NULL);
 	self->sendBodyToApp(client, req);
@@ -681,6 +690,7 @@ sendHeaderToAppWithSessionProtocolWithBuffering(Request *req, unsigned int offse
 
 void
 sendBodyToApp(Client *client, Request *req) {
+	TRACE_POINT();
 	if (req->hasBody() || req->upgraded()) {
 		// onRequestBody() will take care of forwarding
 		// the request body to the app.
@@ -701,6 +711,8 @@ Channel::Result
 whenSendingRequest_onRequestBody(Client *client, Request *req,
 	const MemoryKit::mbuf &buffer, int errcode)
 {
+	TRACE_POINT();
+
 	if (buffer.size() > 0) {
 		// Data
 		SKC_TRACE(client, 3, "Forwarding " << buffer.size() <<
@@ -745,6 +757,7 @@ resumeRequestBodyChannelWhenBuffersFlushed(FileBufferedChannel *_channel) {
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "resumeRequestBodyChannelWhenBuffersFlushed");
 
 	P_ASSERT_EQ(req->state, Request::FORWARDING_BODY_TO_APP);
 
@@ -801,6 +814,7 @@ halfCloseAppInputWhenDataFlushed(FileBufferedChannel *_channel) {
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(
 		getServerFromClient(client));
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "halfCloseAppInputWhenDataFlushed");
 
 	P_ASSERT_EQ(req->state, Request::WAITING_FOR_APP_OUTPUT);
 

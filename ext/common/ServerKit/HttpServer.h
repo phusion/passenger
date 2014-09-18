@@ -613,6 +613,8 @@ private:
 		Request *req     = static_cast<Request *>(static_cast<BaseHttpRequest *>(
 			channel->hooks->userData));
 		Client *client   = static_cast<Client *>(req->client);
+		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
+		SKC_LOG_EVENT_FROM_STATIC(self, HttpServer, client, "onRequestBodyChannelConsumed");
 
 		channel->consumedCallback = NULL;
 		if (channel->acceptingInput()) {
@@ -628,6 +630,8 @@ private:
 		Request *req     = static_cast<Request *>(static_cast<BaseHttpRequest *>(
 			channel->hooks->userData));
 		Client *client   = static_cast<Client *>(req->client);
+		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
+		SKC_LOG_EVENT_FROM_STATIC(self, HttpServer, client, "onRequestBodyChannelConsumed_onBodyEof");
 
 		channel->consumedCallback = NULL;
 		client->input.consumed(0, true);
@@ -640,6 +644,8 @@ private:
 		Request *req     = static_cast<Request *>(static_cast<BaseHttpRequest *>(
 			channel->hooks->userData));
 		Client *client   = static_cast<Client *>(req->client);
+		HttpServer *self = static_cast<HttpServer *>(HttpServer::getServerFromClient(client));
+		SKC_LOG_EVENT_FROM_STATIC(self, HttpServer, client, "onRequestBodyChannelConsumed_onBodyError");
 
 		channel->consumedCallback = NULL;
 		client->input.consumed(0, true);
@@ -862,11 +868,13 @@ protected:
 	/***** Hook overrides *****/
 
 	virtual void onClientObjectCreated(Client *client) {
+		SKC_LOG_EVENT(HttpServer, client, "onClientObjectCreated");
 		ParentClass::onClientObjectCreated(client);
 		client->output.setDataFlushedCallback(_onClientOutputDataFlushed);
 	}
 
 	virtual void onClientAccepted(Client *client) {
+		SKC_LOG_EVENT(HttpServer, client, "onClientAccepted");
 		ParentClass::onClientAccepted(client);
 		handleNextRequest(client);
 	}
@@ -874,6 +882,7 @@ protected:
 	virtual Channel::Result onClientDataReceived(Client *client, const MemoryKit::mbuf &buffer,
 		int errcode)
 	{
+		SKC_LOG_EVENT(HttpServer, client, "onClientDataReceived");
 		assert(client->currentRequest != NULL);
 		Request *req = client->currentRequest;
 		RequestRef ref(req, __FILE__, __LINE__);

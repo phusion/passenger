@@ -40,6 +40,7 @@ _onAppOutputData(Channel *_channel, const MemoryKit::mbuf &buffer, int errcode) 
 
 Channel::Result
 onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int errcode) {
+	SKC_LOG_EVENT(RequestHandler, client, "onAppOutputData");
 	AppResponse *resp = &req->appResponse;
 
 	switch (resp->httpState) {
