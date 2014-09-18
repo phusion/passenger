@@ -178,6 +178,7 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 					return Channel::Result(event.consumed, false);
 				case ServerKit::HttpChunkedEvent::END:
 					assert(event.end);
+					resp->aux.bodyInfo.endReached = true;
 					endRequest(&client, &req);
 					return Channel::Result(event.consumed, true);
 				case ServerKit::HttpChunkedEvent::ERROR:
@@ -190,8 +191,29 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 					return Channel::Result(event.consumed, true);
 				}
 			} else {
-				writeResponse(client, MemoryKit::mbuf(buffer, 0, event.consumed));
-				return Channel::Result(event.consumed, event.end);
+				switch (event.type) {
+				case ServerKit::HttpChunkedEvent::NONE:
+				case ServerKit::HttpChunkedEvent::DATA:
+					assert(!event.end);
+					writeResponse(client, MemoryKit::mbuf(buffer, 0, event.consumed));
+					return Channel::Result(event.consumed, false);
+				case ServerKit::HttpChunkedEvent::END:
+					assert(event.end);
+					resp->aux.bodyInfo.endReached = true;
+					writeResponse(client, MemoryKit::mbuf(buffer, 0, event.consumed));
+					if (!req->ended()) {
+						endRequest(&client, &req);
+					}
+					return Channel::Result(event.consumed, true);
+				case ServerKit::HttpChunkedEvent::ERROR:
+					assert(event.end);
+					{
+						string message = "error parsing app response chunked encoding: ";
+						message.append(ServerKit::getErrorDesc(event.errcode));
+						disconnectWithError(&client, message);
+					}
+					return Channel::Result(event.consumed, true);
+				}
 			}
 		} else if (errcode == 0 || errcode == ECONNRESET) {
 			// Premature EOF. This cannot be an expected EOF because
