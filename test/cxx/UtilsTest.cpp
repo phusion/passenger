@@ -553,8 +553,8 @@ namespace tut {
 		ensure_equals(cEscapeString("foo\n"), "foo\\n");
 		ensure_equals(cEscapeString("foo\r\nbar\e"), "foo\\r\\nbar\\e");
 		ensure_equals(cEscapeString(StaticString("\0\x1\x2\x3\x4\x5\x6\x7\x8\x9", 10)),
-			"\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t");
-		ensure_equals(cEscapeString("\xFF\xFE\t\xD0"), "\\xFF\\xFE\\t\\xD0");
+			"\\000\\001\\002\\003\\004\\005\\006\\007\\010\\t");
+		ensure_equals(cEscapeString("\xFF\xFE\t\xD0"), "\\377\\376\\t\\320");
 	}
 
 	/***** Test escapeHTML() *****/
