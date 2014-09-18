@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_SERVER_KIT_FD_INPUT_CHANNEL_H_
-#define _PASSENGER_SERVER_KIT_FD_INPUT_CHANNEL_H_
+#ifndef _PASSENGER_SERVER_KIT_FD_SOURCE_CHANNEL_H_
+#define _PASSENGER_SERVER_KIT_FD_SOURCE_CHANNEL_H_
 
 #include <oxt/macros.hpp>
 #include <boost/move/move.hpp>
@@ -40,13 +40,13 @@ namespace ServerKit {
 using namespace oxt;
 
 
-class FdInputChannel: protected Channel {
+class FdSourceChannel: protected Channel {
 private:
 	ev_io watcher;
 	MemoryKit::mbuf buffer;
 
 	static void _onReadable(EV_P_ ev_io *io, int revents) {
-		static_cast<FdInputChannel *>(io->data)->onReadable(io, revents);
+		static_cast<FdSourceChannel *>(io->data)->onReadable(io, revents);
 	}
 
 	void onReadable(ev_io *io, int revents) {
@@ -124,7 +124,7 @@ private:
 	}
 
 	static void onChannelConsumed(Channel *channel, unsigned int size) {
-		FdInputChannel *self = static_cast<FdInputChannel *>(channel);
+		FdSourceChannel *self = static_cast<FdSourceChannel *>(channel);
 		self->consumedCallback = NULL;
 		if (self->acceptingInput()) {
 			ev_io_start(self->ctx->libev->getLoop(), &self->watcher);
@@ -140,17 +140,17 @@ private:
 public:
 	unsigned int burstReadCount;
 
-	FdInputChannel() {
+	FdSourceChannel() {
 		initialize();
 	}
 
-	FdInputChannel(Context *context)
+	FdSourceChannel(Context *context)
 		: Channel(context)
 	{
 		initialize();
 	}
 
-	~FdInputChannel() {
+	~FdSourceChannel() {
 		if (ctx != NULL) {
 			ev_io_stop(ctx->libev->getLoop(), &watcher);
 		}
@@ -221,4 +221,4 @@ public:
 } // namespace ServerKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_SERVER_KIT_FD_INPUT_CHANNEL_H_ */
+#endif /* _PASSENGER_SERVER_KIT_FD_SOURCE_CHANNEL_H_ */

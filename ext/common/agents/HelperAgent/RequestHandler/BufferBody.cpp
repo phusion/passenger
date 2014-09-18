@@ -68,7 +68,7 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 }
 
 void
-whenBufferingBody_onAppInputError(Client *client, Request *req, int errcode) {
+whenBufferingBody_onAppSinkError(Client *client, Request *req, int errcode) {
 	TRACE_POINT();
 	assert(!req->responseBegun);
 	SKC_WARN(client, "Cannot write to application socket: " <<

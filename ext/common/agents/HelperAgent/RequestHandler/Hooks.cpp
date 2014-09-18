@@ -37,13 +37,13 @@ virtual void
 onRequestObjectCreated(Client *client, Request *req) {
 	ParentClass::onRequestObjectCreated(client, req);
 
-	req->appInput.setContext(getContext());
-	req->appInput.setHooks(&req->hooks);
-	req->appInput.errorCallback = onAppInputError;
+	req->appSink.setContext(getContext());
+	req->appSink.setHooks(&req->hooks);
+	req->appSink.errorCallback = onAppSinkError;
 
-	req->appOutput.setContext(getContext());
-	req->appOutput.setHooks(&req->hooks);
-	req->appOutput.setDataCallback(_onAppOutputData);
+	req->appSource.setContext(getContext());
+	req->appSource.setHooks(&req->hooks);
+	req->appSource.setDataCallback(_onAppSourceData);
 
 	req->bodyBuffer.setContext(getContext());
 	req->bodyBuffer.setHooks(&req->hooks);
@@ -59,7 +59,7 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	ParentClass::reinitializeRequest(client, req);
 
 	// bodyBuffer is initialized in RequestHandler::beginBufferingBody().
-	// appOutput is initialized in RequestHandler::checkoutSession().
+	// appSource is initialized in RequestHandler::checkoutSession().
 
 	req->startedAt = 0;
 	req->state = Request::ANALYZING_REQUEST;
@@ -71,7 +71,7 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	req->sessionCheckoutTry = 0;
 	req->strip100ContinueHeader = false;
 	req->host = NULL;
-	req->appInput.reinitialize();
+	req->appSink.reinitialize();
 }
 
 virtual void deinitializeRequest(Client *client, Request *req) {
@@ -82,10 +82,10 @@ virtual void deinitializeRequest(Client *client, Request *req) {
 	req->endScopeLog(&req->scopeLogs.bufferingRequestBody, false);
 	req->endScopeLog(&req->scopeLogs.requestProcessing, false);
 
-	req->appInput.deinitialize();
-	req->appInput.setBuffersFlushedCallback(NULL);
-	req->appInput.setDataFlushedCallback(NULL);
-	req->appOutput.deinitialize();
+	req->appSink.deinitialize();
+	req->appSink.setBuffersFlushedCallback(NULL);
+	req->appSink.setDataFlushedCallback(NULL);
+	req->appSource.deinitialize();
 	req->bodyBuffer.deinitialize();
 
 	deinitializeAppResponse(client, req);
@@ -156,21 +156,21 @@ onRequestBody(Client *client, Request *req, const MemoryKit::mbuf &buffer,
 private:
 
 static void
-onAppInputError(FileBufferedFdOutputChannel *channel, int errcode) {
+onAppSinkError(FileBufferedFdSinkChannel *channel, int errcode) {
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
-	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "onAppInputError");
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "onAppSinkError");
 
 	switch (req->state) {
 	case Request::BUFFERING_REQUEST_BODY:
-		self->whenBufferingBody_onAppInputError(client, req, errcode);
+		self->whenBufferingBody_onAppSinkError(client, req, errcode);
 		break;
 	case Request::SENDING_HEADER_TO_APP:
 	case Request::FORWARDING_BODY_TO_APP:
 	case Request::WAITING_FOR_APP_OUTPUT:
-		self->whenOtherCases_onAppInputError(client, req, errcode);
+		self->whenOtherCases_onAppSinkError(client, req, errcode);
 		break;
 	default:
 		P_BUG("Unknown state " << req->state);

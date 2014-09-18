@@ -158,9 +158,9 @@ initiateSession(Client *client, Request *req) {
 	UPDATE_TRACE_POINT();
 	SKC_DEBUG(client, "Session initiated: fd=" << req->session->fd());
 	setNonBlocking(req->session->fd());
-	req->appInput.setFd(req->session->fd());
-	req->appInput.start();
-	req->appOutput.reinitialize(req->session->fd());
+	req->appSink.setFd(req->session->fd());
+	req->appSink.start();
+	req->appSource.reinitialize(req->session->fd());
 	reinitializeAppResponse(client, req);
 	sendHeaderToApp(client, req);
 }

@@ -29,8 +29,8 @@
 #include <boost/atomic.hpp>
 #include <boost/cstdint.hpp>
 #include <ServerKit/Hooks.h>
-#include <ServerKit/FdInputChannel.h>
-#include <ServerKit/FileBufferedFdOutputChannel.h>
+#include <ServerKit/FdSourceChannel.h>
+#include <ServerKit/FileBufferedFdSinkChannel.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -84,8 +84,8 @@ public:
 
 	boost::atomic<int> refcount;
 	Hooks hooks;
-	FdInputChannel input;
-	FileBufferedFdOutputChannel output;
+	FdSourceChannel input;
+	FileBufferedFdSinkChannel output;
 
 	BaseClient(void *_server)
 		: server(_server),

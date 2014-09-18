@@ -584,8 +584,8 @@ private:
 	/***** Channel callbacks *****/
 
 	static void _onClientOutputDataFlushed(FileBufferedChannel *_channel) {
-		FileBufferedFdOutputChannel *channel =
-			reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
+		FileBufferedFdSinkChannel *channel =
+			reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
 		Client *client = static_cast<Client *>(static_cast<BaseClient *>(
 			channel->getHooks()->userData));
 

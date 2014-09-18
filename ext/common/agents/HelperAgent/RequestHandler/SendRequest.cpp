@@ -51,26 +51,26 @@ sendHeaderToApp(Client *client, Request *req) {
 
 	UPDATE_TRACE_POINT();
 	if (!req->ended()) {
-		if (!req->appInput.ended()) {
-			if (!req->appInput.passedThreshold()) {
+		if (!req->appSink.ended()) {
+			if (!req->appSink.passedThreshold()) {
 				UPDATE_TRACE_POINT();
 				sendBodyToApp(client, req);
-				req->appOutput.startReading();
+				req->appSource.startReading();
 			} else {
 				UPDATE_TRACE_POINT();
-				SKC_TRACE(client, 3, "Waiting for appInput buffers to be "
+				SKC_TRACE(client, 3, "Waiting for appSink buffers to be "
 					"flushed before sending body to application");
-				req->appInput.setBuffersFlushedCallback(sendBodyToAppWhenBuffersFlushed);
-				req->appOutput.startReading();
+				req->appSink.setBuffersFlushedCallback(sendBodyToAppWhenBuffersFlushed);
+				req->appSource.startReading();
 			}
 		} else {
-			// req->appInput.feed() encountered an error while writing to the
+			// req->appSink.feed() encountered an error while writing to the
 			// application socket. But we don't care about that; we just care that
 			// ForwardResponse.cpp will now forward the response data and end the
 			// request.
 			UPDATE_TRACE_POINT();
 			req->state = Request::WAITING_FOR_APP_OUTPUT;
-			req->appOutput.startReading();
+			req->appSource.startReading();
 		}
 	}
 }
@@ -110,7 +110,7 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		buffer = MemoryKit::mbuf(buffer, 0, bufferSize);
 		SKC_TRACE(client, 3, "Header data: \"" << cEscapeString(
 			StaticString(buffer.start, bufferSize)) << "\"");
-		req->appInput.feed(buffer);
+		req->appSink.feed(buffer);
 	} else {
 		char *buffer = (char *) psg_pnalloc(req->pool, bufferSize);
 
@@ -119,7 +119,7 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		assert(ok);
 		SKC_TRACE(client, 3, "Header data: \"" << cEscapeString(
 			StaticString(buffer, bufferSize)) << "\"");
-		req->appInput.feed(buffer, bufferSize);
+		req->appSink.feed(buffer, bufferSize);
 	}
 
 	(void) ok; // Shut up compiler warning
@@ -127,8 +127,8 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 
 static void
 sendBodyToAppWhenBuffersFlushed(FileBufferedChannel *_channel) {
-	FileBufferedFdOutputChannel *channel =
-		reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
+	FileBufferedFdSinkChannel *channel =
+		reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
@@ -136,7 +136,7 @@ sendBodyToAppWhenBuffersFlushed(FileBufferedChannel *_channel) {
 		getServerFromClient(client));
 	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "sendBodyToAppWhenBuffersFlushed");
 
-	req->appInput.setBuffersFlushedCallback(NULL);
+	req->appSink.setBuffersFlushedCallback(NULL);
 	self->sendBodyToApp(client, req);
 }
 
@@ -476,7 +476,7 @@ sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
 		} else {
 			int e = errno;
 			P_ASSERT_EQ(bytesWritten, -1);
-			onAppInputError(NULL, e);
+			onAppSinkError(NULL, e);
 		}
 	}
 }
@@ -680,11 +680,11 @@ sendHeaderToAppWithSessionProtocolWithBuffering(Request *req, unsigned int offse
 		MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
 		gatherBuffers(buffer.start, MBUF_MAX_SIZE, buffers, nbuffers);
 		buffer = MemoryKit::mbuf(buffer, offset, dataSize - offset);
-		req->appInput.feed(buffer);
+		req->appSink.feed(buffer);
 	} else {
 		char *buffer = (char *) psg_pnalloc(req->pool, dataSize);
 		gatherBuffers(buffer, dataSize, buffers, nbuffers);
-		req->appInput.feed(buffer + offset, dataSize - offset);
+		req->appSink.feed(buffer + offset, dataSize - offset);
 	}
 }
 
@@ -703,7 +703,7 @@ sendBodyToApp(Client *client, Request *req) {
 		// data is forwarded.
 		SKC_TRACE(client, 2, "No body to send to application");
 		req->state = Request::WAITING_FOR_APP_OUTPUT;
-		maybeHalfCloseAppInput(client, req);
+		maybeHalfCloseAppSink(client, req);
 	}
 }
 
@@ -719,10 +719,10 @@ whenSendingRequest_onRequestBody(Client *client, Request *req,
 			" bytes of client request body: \"" <<
 			cEscapeString(StaticString(buffer.start, buffer.size())) <<
 			"\"");
-		req->appInput.feed(buffer);
-		if (!req->appInput.ended()) {
-			if (req->appInput.passedThreshold()) {
-				req->appInput.setBuffersFlushedCallback(resumeRequestBodyChannelWhenBuffersFlushed);
+		req->appSink.feed(buffer);
+		if (!req->appSink.ended()) {
+			if (req->appSink.passedThreshold()) {
+				req->appSink.setBuffersFlushedCallback(resumeRequestBodyChannelWhenBuffersFlushed);
 				stopBodyChannel(client, req);
 			}
 			return Channel::Result(buffer.size(), false);
@@ -736,7 +736,7 @@ whenSendingRequest_onRequestBody(Client *client, Request *req,
 		// care of ending the request, once all response
 		// data is forwarded.
 		req->state = Request::WAITING_FOR_APP_OUTPUT;
-		maybeHalfCloseAppInput(client, req);
+		maybeHalfCloseAppSink(client, req);
 		return Channel::Result(0, true);
 	} else {
 		const unsigned int BUFSIZE = 1024;
@@ -751,8 +751,8 @@ whenSendingRequest_onRequestBody(Client *client, Request *req,
 
 static void
 resumeRequestBodyChannelWhenBuffersFlushed(FileBufferedChannel *_channel) {
-	FileBufferedFdOutputChannel *channel =
-		reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
+	FileBufferedFdSinkChannel *channel =
+		reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
@@ -761,7 +761,7 @@ resumeRequestBodyChannelWhenBuffersFlushed(FileBufferedChannel *_channel) {
 
 	P_ASSERT_EQ(req->state, Request::FORWARDING_BODY_TO_APP);
 
-	req->appInput.setBuffersFlushedCallback(NULL);
+	req->appSink.setBuffersFlushedCallback(NULL);
 	self->startBodyChannel(client, req);
 }
 
@@ -784,46 +784,46 @@ stopBodyChannel(Client *client, Request *req) {
 }
 
 void
-maybeHalfCloseAppInput(Client *client, Request *req) {
+maybeHalfCloseAppSink(Client *client, Request *req) {
 	P_ASSERT_EQ(req->state, Request::WAITING_FOR_APP_OUTPUT);
 	if (req->halfCloseAppConnection) {
-		if (!req->appInput.ended()) {
-			req->appInput.feed(MemoryKit::mbuf());
+		if (!req->appSink.ended()) {
+			req->appSink.feed(MemoryKit::mbuf());
 		}
-		if (req->appInput.endAcked()) {
-			halfCloseAppInput(client, req);
+		if (req->appSink.endAcked()) {
+			halfCloseAppSink(client, req);
 		} else {
-			req->appInput.setDataFlushedCallback(halfCloseAppInputWhenDataFlushed);
+			req->appSink.setDataFlushedCallback(halfCloseAppSinkWhenDataFlushed);
 		}
 	}
 }
 
 void
-halfCloseAppInput(Client *client, Request *req) {
+halfCloseAppSink(Client *client, Request *req) {
 	SKC_TRACE(client, 3, "Half-closing application socket with SHUT_WR");
 	assert(req->halfCloseAppConnection);
 	::shutdown(req->session->fd(), SHUT_WR);
 }
 
 static void
-halfCloseAppInputWhenDataFlushed(FileBufferedChannel *_channel) {
-	FileBufferedFdOutputChannel *channel =
-		reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
+halfCloseAppSinkWhenDataFlushed(FileBufferedChannel *_channel) {
+	FileBufferedFdSinkChannel *channel =
+		reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(
 		getServerFromClient(client));
-	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "halfCloseAppInputWhenDataFlushed");
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "halfCloseAppSinkWhenDataFlushed");
 
 	P_ASSERT_EQ(req->state, Request::WAITING_FOR_APP_OUTPUT);
 
-	req->appInput.setDataFlushedCallback(NULL);
-	self->halfCloseAppInput(client, req);
+	req->appSink.setDataFlushedCallback(NULL);
+	self->halfCloseAppSink(client, req);
 }
 
 void
-whenOtherCases_onAppInputError(Client *client, Request *req, int errcode) {
+whenOtherCases_onAppSinkError(Client *client, Request *req, int errcode) {
 	assert(req->state == Request::SENDING_HEADER_TO_APP
 		|| req->state == Request::FORWARDING_BODY_TO_APP
 		|| req->state == Request::WAITING_FOR_APP_OUTPUT);

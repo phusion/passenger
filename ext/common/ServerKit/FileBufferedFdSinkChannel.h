@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_SERVER_KIT_FILE_BUFFERED_FD_OUTPUT_CHANNEL_H_
-#define _PASSENGER_SERVER_KIT_FILE_BUFFERED_FD_OUTPUT_CHANNEL_H_
+#ifndef _PASSENGER_SERVER_KIT_FILE_BUFFERED_FD_SINK_CHANNEL_H_
+#define _PASSENGER_SERVER_KIT_FILE_BUFFERED_FD_SINK_CHANNEL_H_
 
 #include <oxt/macros.hpp>
 #include <sys/types.h>
@@ -36,9 +36,9 @@ namespace Passenger {
 namespace ServerKit {
 
 
-class FileBufferedFdOutputChannel: protected FileBufferedChannel {
+class FileBufferedFdSinkChannel: protected FileBufferedChannel {
 public:
-	typedef void (*ErrorCallback)(FileBufferedFdOutputChannel *channel, int errcode);
+	typedef void (*ErrorCallback)(FileBufferedFdSinkChannel *channel, int errcode);
 
 private:
 	ev_io watcher;
@@ -46,7 +46,7 @@ private:
 	static Channel::Result onDataCallback(Channel *channel, const MemoryKit::mbuf &buffer,
 		int errcode)
 	{
-		FileBufferedFdOutputChannel *self = static_cast<FileBufferedFdOutputChannel *>(channel);
+		FileBufferedFdSinkChannel *self = static_cast<FileBufferedFdSinkChannel *>(channel);
 		// A RefGuard is not necessary here. Both Channel and FileBufferedChannel
 		// install a RefGuard before calling this callback.
 
@@ -79,7 +79,7 @@ private:
 	}
 
 	static void onWritable(EV_P_ ev_io *io, int revents) {
-		FileBufferedFdOutputChannel *self = static_cast<FileBufferedFdOutputChannel *>(io->data);
+		FileBufferedFdSinkChannel *self = static_cast<FileBufferedFdSinkChannel *>(io->data);
 		ev_io_stop(self->ctx->libev->getLoop(), &self->watcher);
 		self->consumed(0, false);
 	}
@@ -93,7 +93,7 @@ private:
 public:
 	ErrorCallback errorCallback;
 
-	FileBufferedFdOutputChannel()
+	FileBufferedFdSinkChannel()
 		: errorCallback(NULL)
 	{
 		FileBufferedChannel::setDataCallback(onDataCallback);
@@ -101,7 +101,7 @@ public:
 		watcher.data = this;
 	}
 
-	~FileBufferedFdOutputChannel() {
+	~FileBufferedFdSinkChannel() {
 		ev_io_stop(ctx->libev->getLoop(), &watcher);
 	}
 
@@ -212,4 +212,4 @@ public:
 } // namespace ServerKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_SERVER_KIT_FILE_BUFFERED_FD_OUTPUT_CHANNEL_H_ */
+#endif /* _PASSENGER_SERVER_KIT_FILE_BUFFERED_FD_SINK_CHANNEL_H_ */

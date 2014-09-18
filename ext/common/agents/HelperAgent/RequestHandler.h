@@ -169,9 +169,9 @@ class RequestHandler: public ServerKit::HttpServer<RequestHandler, Client> {
 private:
 	typedef ServerKit::HttpServer<RequestHandler, Client> ParentClass;
 	typedef ServerKit::Channel Channel;
-	typedef ServerKit::FdInputChannel FdInputChannel;
+	typedef ServerKit::FdSourceChannel FdSourceChannel;
 	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
-	typedef ServerKit::FileBufferedFdOutputChannel FileBufferedFdOutputChannel;
+	typedef ServerKit::FileBufferedFdSinkChannel FileBufferedFdSinkChannel;
 
 	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
 

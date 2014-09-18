@@ -29,18 +29,18 @@
 private:
 
 static Channel::Result
-_onAppOutputData(Channel *_channel, const MemoryKit::mbuf &buffer, int errcode) {
-	FdInputChannel *channel = reinterpret_cast<FdInputChannel *>(_channel);
+_onAppSourceData(Channel *_channel, const MemoryKit::mbuf &buffer, int errcode) {
+	FdSourceChannel *channel = reinterpret_cast<FdSourceChannel *>(_channel);
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
-	return self->onAppOutputData(client, req, buffer, errcode);
+	return self->onAppSourceData(client, req, buffer, errcode);
 }
 
 Channel::Result
-onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int errcode) {
-	SKC_LOG_EVENT(RequestHandler, client, "onAppOutputData");
+onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int errcode) {
+	SKC_LOG_EVENT(RequestHandler, client, "onAppSourceData");
 	AppResponse *resp = &req->appResponse;
 
 	switch (resp->httpState) {
@@ -67,7 +67,7 @@ onAppOutputData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 
 			switch (resp->httpState) {
 			case AppResponse::COMPLETE:
-				req->appOutput.stop();
+				req->appSource.stop();
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
 			case AppResponse::PARSING_BODY_WITH_LENGTH:

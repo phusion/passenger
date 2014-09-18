@@ -150,7 +150,7 @@ using namespace oxt;
  * ### Channel I/O abstraction
  *
  * All input is handled through the Channel abstraction, and all output is
- * handled through the FileBufferedFdOutputChannel abstraction.. This makes writing
+ * handled through the FileBufferedFdSinkChannel abstraction.. This makes writing
  * evented servers very easy.
  *
  * ### Multiple listen endpoints
@@ -445,7 +445,7 @@ private:
 	static Channel::Result _onClientDataReceived(Channel *_channel,
 		const MemoryKit::mbuf &buffer, int errcode)
 	{
-		FdInputChannel *channel = reinterpret_cast<FdInputChannel *>(_channel);
+		FdSourceChannel *channel = reinterpret_cast<FdSourceChannel *>(_channel);
 		Client *client = static_cast<Client *>(static_cast<BaseClient *>(
 			channel->getHooks()->userData));
 		BaseServer *server = getServerFromClient(client);
@@ -465,9 +465,9 @@ private:
 		return result;
 	}
 
-	static void _onClientOutputError(FileBufferedFdOutputChannel *_channel, int errcode) {
-		FileBufferedFdOutputChannel *channel =
-			reinterpret_cast<FileBufferedFdOutputChannel *>(_channel);
+	static void _onClientOutputError(FileBufferedFdSinkChannel *_channel, int errcode) {
+		FileBufferedFdSinkChannel *channel =
+			reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
 		Client *client = static_cast<Client *>(static_cast<BaseClient *>(
 			channel->getHooks()->userData));
 		BaseServer *server = getServerFromClient(client);
