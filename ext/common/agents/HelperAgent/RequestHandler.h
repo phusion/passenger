@@ -206,7 +206,8 @@ private:
 	boost::uint32_t HTTP_CONTENT_TYPE_HASH;
 
 	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
-	bool singleAppMode;
+	bool singleAppMode: 1;
+	bool showVersionInHeader: 1;
 
 public:
 	ResourceLocator *resourceLocator;
@@ -247,7 +248,8 @@ public:
 		  HTTP_TRANSFER_ENCODING("transfer-encoding"),
 		  HTTP_CONTENT_TYPE_HASH(HashedStaticString("content-type").hash()),
 		  poolOptionsCache(4),
-		  singleAppMode(false)
+		  singleAppMode(false),
+		  showVersionInHeader(false)
 	{
 		defaultRuby = psg_pstrdup(stringPool,
 			agentsOptions->get("default_ruby"));
@@ -265,6 +267,9 @@ public:
 			agentsOptions->get("default_server_port"));
 		serverSoftware = psg_pstrdup(stringPool,
 			agentsOptions->get("server_software"));
+
+		showVersionInHeader = agentsOptions->getBool(
+			"show_version_in_header");
 
 		if (!agentsOptions->getBool("multi_app")) {
 			boost::shared_ptr<Options> options = make_shared<Options>();

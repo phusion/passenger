@@ -101,6 +101,7 @@ void reinitializeAppResponse(Client *client, Request *req) {
 	resp->bodyType  = AppResponse::RBT_NO_BODY;
 	resp->wantKeepAlive = false;
 	resp->oneHundredContinueSent = false;
+	resp->hasDateHeader = false;
 	resp->statusCode = 0;
 	resp->parserState.headerParser = getHeaderParserStatePool().construct();
 	createAppResponseHeaderParser(getContext(), req).initialize();

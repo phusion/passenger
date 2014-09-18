@@ -28,7 +28,7 @@ module Config
 
 class SystemMetricsCommand < Command
 	def run
-		exec("#{PhusionPassenger.agents_dir}/PassengerHelperAgent",
+		exec("#{PhusionPassenger.agents_dir}/PassengerAgent",
 			"system-metrics", *@argv)
 	end
 end

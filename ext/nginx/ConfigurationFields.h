@@ -69,8 +69,6 @@
 
 	ngx_int_t request_queue_overflow_status_code;
 
-	ngx_int_t show_version_in_header;
-
 	ngx_int_t start_timeout;
 
 	ngx_int_t sticky_sessions;

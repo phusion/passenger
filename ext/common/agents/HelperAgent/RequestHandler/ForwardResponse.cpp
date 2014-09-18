@@ -239,7 +239,8 @@ onAppResponseBegin(Client *client, Request *req) {
 	bool oobw;
 
 	// Localize hash table operations for better CPU caching.
-	oobw = resp->secureHeaders.lookup(PASSENGER_REQUEST_OOB_WORK);
+	oobw = resp->secureHeaders.lookup(PASSENGER_REQUEST_OOB_WORK) != NULL;
+	resp->hasDateHeader = resp->headers.lookup(HTTP_DATE) != NULL;
 	resp->headers.erase(HTTP_CONNECTION);
 	resp->headers.erase(HTTP_STATUS);
 	if (req->dechunkResponse && resp->bodyType == AppResponse::RBT_CHUNKED) {
@@ -325,7 +326,6 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 
 	AppResponse *resp = &req->appResponse;
 	ServerKit::HeaderTable::Iterator it(resp->headers);
-	const LString *value;
 	const LString::Part *part;
 	const char *statusAndReason;
 	unsigned int i = 0;
@@ -368,6 +368,16 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		}
 		INC_BUFFER_ITER(i);
 		dataSize += len;
+
+		PUSH_STATIC_BUFFER("\r\nStatus: ");
+		if (buffers != NULL) {
+			buffers[i].iov_base = (void *) statusAndReason;
+			buffers[i].iov_len  = len;
+		}
+		INC_BUFFER_ITER(i);
+		dataSize += len;
+
+		PUSH_STATIC_BUFFER("\r\n");
 	} else {
 		if (buffers != NULL) {
 			const unsigned int BUFSIZE = 8;
@@ -380,8 +390,13 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 			INC_BUFFER_ITER(i);
 			dataSize += size;
 
-			buffers[i].iov_base = (void *) " Unknown Reason-Phrase";
-			buffers[i].iov_len  = sizeof(" Unknown Reason-Phrase") - 1;
+			PUSH_STATIC_BUFFER(" Unknown Reason-Phrase\r\nStatus: ");
+			buffers[i].iov_base = (void *) buf;
+			buffers[i].iov_len  = size;
+			INC_BUFFER_ITER(i);
+			dataSize += size;
+
+			PUSH_STATIC_BUFFER("\r\n");
 		} else {
 			char buf[8];
 			const char *end = buf + sizeof(buf);
@@ -389,13 +404,15 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 			unsigned int size = uintToString(resp->statusCode, pos, end - pos);
 			INC_BUFFER_ITER(i);
 			dataSize += size;
+
+			dataSize += sizeof(" Unknown Reason-Phrase\r\nStatus: ") - 1;
+			INC_BUFFER_ITER(i);
+			dataSize += size;
+			INC_BUFFER_ITER(i);
+			dataSize += sizeof("\r\n");
+			INC_BUFFER_ITER(i);
 		}
-
-		INC_BUFFER_ITER(i);
-		dataSize += sizeof(" Unknown Reason-Phrase") - 1;
 	}
-
-	PUSH_STATIC_BUFFER("\r\n");
 
 	while (*it != NULL) {
 		dataSize += it->header->key.size + sizeof(": ") - 1;
@@ -435,8 +452,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	}
 
 	// Add Date header. https://code.google.com/p/phusion-passenger/issues/detail?id=485
-	value = resp->headers.lookup(HTTP_DATE);
-	if (value == NULL) {
+	if (!resp->hasDateHeader) {
 		unsigned int size;
 
 		if (buffers != NULL) {
@@ -471,7 +487,11 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		}
 	}
 
-	PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME "\r\n\r\n");
+	if (showVersionInHeader) {
+		PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME " " PASSENGER_VERSION "\r\n\r\n");
+	} else {
+		PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME "\r\n\r\n");
+	}
 
 	nbuffers = i;
 	return true;
@@ -496,7 +516,7 @@ constructDateHeaderBuffersForResponse(char *dateStr, unsigned int bufsize) {
 bool
 sendResponseHeaderWithWritev(Client *client, Request *req, ssize_t &bytesWritten) {
 	unsigned int maxbuffers = std::min<unsigned int>(
-		8 + req->appResponse.headers.size() * 4 + 4, IOV_MAX);
+		8 + req->appResponse.headers.size() * 4 + 8, IOV_MAX);
 	struct iovec *buffers = (struct iovec *) psg_palloc(req->pool,
 		sizeof(struct iovec) * maxbuffers);
 	unsigned int nbuffers, dataSize;

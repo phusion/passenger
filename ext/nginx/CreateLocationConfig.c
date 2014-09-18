@@ -130,10 +130,6 @@
 	
 
 	
-		conf->show_version_in_header = NGX_CONF_UNSET;
-	
-
-	
 		conf->max_preloader_idle_time = NGX_CONF_UNSET;
 	
 

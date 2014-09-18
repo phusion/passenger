@@ -520,8 +520,8 @@ describe RequestHandler do
 			@tmpdir = Dir.mktmpdir
 			@dump_file = "#{@tmpdir}/log.txt"
 			@logging_agent_password = "1234"
-			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file,
-				@logging_agent_password)
+			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(
+				@tmpdir, @dump_file, @logging_agent_password)
 
 			@union_station_core = UnionStation::Core.new(@socket_address, "logging",
 				"1234", "localhost")

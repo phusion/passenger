@@ -164,12 +164,6 @@
 	
 
 	
-		ngx_conf_merge_value(conf->show_version_in_header,
-			prev->show_version_in_header,
-			NGX_CONF_UNSET);
-	
-
-	
 		ngx_conf_merge_value(conf->max_preloader_idle_time,
 			prev->max_preloader_idle_time,
 			NGX_CONF_UNSET);

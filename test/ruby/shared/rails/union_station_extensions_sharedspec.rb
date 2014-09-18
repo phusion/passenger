@@ -11,8 +11,8 @@ shared_examples_for "Union Station extensions for Rails" do
 		@logging_agent_password = "1234"
 		@us_tmpdir = Dir.mktmpdir
 		@dump_file = "#{@us_tmpdir}/log.txt"
-		@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file,
-			@logging_agent_password)
+		@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@us_tmpdir,
+			@dump_file, @logging_agent_password)
 		@options = {
 			"analytics" => true,
 			"logging_agent_address" => @socket_address,

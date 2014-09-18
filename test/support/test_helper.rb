@@ -9,11 +9,11 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 # Module containing helper methods, to be included in unit tests.
 module TestHelper
 	######## Stub helpers ########
-	
+
 	class Stub
 		attr_reader :app_root
 		attr_reader :full_app_root
-		
+
 		def self.use(name, app_root = nil)
 			stub = new(name, app_root)
 			begin
@@ -22,13 +22,13 @@ module TestHelper
 				stub.destroy
 			end
 		end
-		
+
 		def initialize(name, app_root = nil)
 			@name = name
 			if !File.exist?(stub_source_dir)
 				raise Errno::ENOENT, "Stub '#{name}' not found."
 			end
-			
+
 			if app_root
 				@app_root = app_root
 			else
@@ -41,7 +41,7 @@ module TestHelper
 			copy_stub_contents
 			system("chmod", "-R", "a+rw", @full_app_root)
 		end
-		
+
 		def reset
 			# Empty directory without removing the directory itself,
 			# allowing processes with this directory as current working
@@ -52,39 +52,39 @@ module TestHelper
 			files.delete("#{@full_app_root}/..")
 			FileUtils.chmod_R(0777, files)
 			FileUtils.rm_rf(files)
-			
+
 			copy_stub_contents
 			system("chmod", "-R", "a+rw", @full_app_root)
 		end
-		
+
 		def move(new_app_root)
 			File.rename(@full_app_root, new_app_root)
 			@app_root = new_app_root
 			@full_app_root = File.expand_path(new_app_root)
 		end
-		
+
 		def destroy
 			remove_dir_tree(@full_app_root)
 		end
-		
+
 		def full_app_root
 			return File.expand_path(@app_root)
 		end
-		
+
 		def public_file(name)
 			return File.binread("#{@full_app_root}/public/#{name}")
 		end
-	
+
 	private
 		def stub_source_dir
 			return "stub/#{@name}"
 		end
-		
+
 		def copy_stub_contents
 			FileUtils.cp_r("#{stub_source_dir}/.", @full_app_root)
 		end
 	end
-	
+
 	class ClassicRailsStub < Stub
 		def self.use(name, app_root = nil)
 			stub = new(name, app_root)
@@ -94,22 +94,22 @@ module TestHelper
 				stub.destroy
 			end
 		end
-		
+
 		def startup_file
 			return environment_rb
 		end
-		
+
 		def environment_rb
 			return "#{@full_app_root}/config/environment.rb"
 		end
-		
+
 	private
 		def copy_stub_contents
 			super
 			FileUtils.mkdir_p("#{@full_app_root}/log")
 		end
 	end
-	
+
 	class RackStub < Stub
 		def startup_file
 			return "#{@full_app_root}/config.ru"
@@ -127,7 +127,7 @@ module TestHelper
 			return "#{@full_app_root}/app.js"
 		end
 	end
-	
+
 	def describe_rails_versions(matcher, &block)
 		if ENV['ONLY_RAILS_VERSION'] && !ENV['ONLY_RAILS_VERSION'].empty?
 			found_versions = [ENV['ONLY_RAILS_VERSION']]
@@ -145,7 +145,7 @@ module TestHelper
 				end
 			end
 		end
-		
+
 		case matcher
 		when /^<= (.+)$/
 			max_version = $1
@@ -165,7 +165,7 @@ module TestHelper
 		else
 			raise ArgumentError, "Unknown matcher string '#{matcher}'"
 		end
-		
+
 		found_versions.sort.each do |version|
 			klass = describe("Rails #{version}", &block)
 			klass.send(:define_method, :rails_version) do
@@ -173,12 +173,12 @@ module TestHelper
 			end
 		end
 	end
-	
-	
+
+
 	######## HTTP helpers ########
 	# Before using these methods, one must set the '@server' instance variable
 	# and implement the start_web_server_if_necessary method.
-	
+
 	def get(uri)
 		if @server.nil?
 			raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
@@ -186,7 +186,7 @@ module TestHelper
 		start_web_server_if_necessary
 		return Net::HTTP.get(URI.parse("#{@server}#{uri}"))
 	end
-	
+
 	def get_response(uri)
 		if @server.nil?
 			raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
@@ -194,7 +194,7 @@ module TestHelper
 		start_web_server_if_necessary
 		return Net::HTTP.get_response(URI.parse("#{@server}#{uri}"))
 	end
-	
+
 	def post(uri, params = {})
 		if @server.nil?
 			raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
@@ -211,7 +211,7 @@ module TestHelper
 			return Net::HTTP.post_form(url, params).body
 		end
 	end
-	
+
 	def check_hosts_configuration
 		begin
 			ok = Resolv.getaddress("passenger.test") == "127.0.0.1"
@@ -239,24 +239,24 @@ module TestHelper
 			exit!
 		end
 	end
-	
-	
+
+
 	######## Other helpers ########
-	
+
 	def when_user_switching_possible
 		if Process.euid == 0
 			yield
 		end
 	end
-	
+
 	alias when_running_as_root when_user_switching_possible
-	
+
 	def when_not_running_as_root
 		if Process.euid != 0
 			yield
 		end
 	end
-	
+
 	def eventually(deadline_duration = 2, check_interval = 0.05)
 		deadline = Time.now + deadline_duration
 		while Time.now < deadline
@@ -268,7 +268,7 @@ module TestHelper
 		end
 		raise "Time limit exceeded"
 	end
-	
+
 	def should_never_happen(deadline_duration = 1, check_interval = 0.05)
 		deadline = Time.now + deadline_duration
 		while Time.now < deadline
@@ -279,7 +279,7 @@ module TestHelper
 			end
 		end
 	end
-	
+
 	def remove_dir_tree(dir)
 		# FileUtils.chmod_R is susceptible to race conditions:
 		# if another thread/process deletes a file just before
@@ -297,7 +297,7 @@ module TestHelper
 		end
 		FileUtils.rm_rf(dir)
 	end
-	
+
 	def spawn_process(*args)
 		args.map! do |arg|
 			arg.to_s
@@ -310,7 +310,7 @@ module TestHelper
 			end
 		end
 	end
-	
+
 	# Run a script in a Ruby subprocess. *args are program arguments to
 	# pass to the script. Returns the script's stdout output.
 	def run_script(code, *args)
@@ -360,21 +360,21 @@ module TestHelper
 		rescue Errno::ECHILD, Errno::ESRCH
 		end
 	end
-	
-	def spawn_logging_agent(dump_file, password)
-		passenger_tmpdir = PhusionPassenger::Utils.passenger_tmpdir
-		socket_filename = "#{passenger_tmpdir}/logging.socket"
-		pid = spawn_process("#{PhusionPassenger.agents_dir}/PassengerLoggingAgent",
-			"passenger_root", PhusionPassenger.source_root,
-			"log_level", PhusionPassenger::DebugLogging.log_level,
-			"analytics_dump_file", dump_file,
-			"analytics_log_user",  CONFIG['normal_user_1'],
-			"analytics_log_group", CONFIG['normal_group_1'],
-			"analytics_log_permissions", "u=rwx,g=rwx,o=rwx",
-			"logging_agent_address", "unix:#{socket_filename}",
-			"logging_agent_password", password,
-			"logging_agent_admin_address", "unix:#{socket_filename}_admin",
-			"admin_tool_status_password", password)
+
+	def spawn_logging_agent(tmpdir, dump_file, password)
+		socket_filename = "#{tmpdir}/logging.socket"
+		password_filename = "#{tmpdir}/password"
+		File.write(password_filename, password)
+		pid = spawn_process("#{PhusionPassenger.agents_dir}/PassengerAgent",
+			"logger",
+			"--passenger-root", PhusionPassenger.source_root,
+			"--log-level", PhusionPassenger::DebugLogging.log_level,
+			"--dump-file", dump_file,
+			"--user",  CONFIG['normal_user_1'],
+			"--group", CONFIG['normal_group_1'],
+			"--permissions", "u=rwx,g=rwx,o=rwx",
+			"--listen", "unix:#{socket_filename}",
+			"--password-file", password_filename)
 		eventually do
 			File.exist?(socket_filename)
 		end
@@ -386,7 +386,7 @@ module TestHelper
 		end
 		raise e
 	end
-	
+
 	def flush_logging_agent(password, socket_address)
 		PhusionPassenger.require_passenger_lib 'message_client' if !defined?(PhusionPassenger::MessageClient)
 		client = PhusionPassenger::MessageClient.new("logging", password, socket_address)
@@ -397,7 +397,7 @@ module TestHelper
 			client.close
 		end
 	end
-	
+
 	def inspect_server(name)
 		instance = PhusionPassenger::AdminTools::ServerInstance.list.first
 		if name
@@ -428,7 +428,7 @@ File.class_eval do
 			f.write(original_content)
 		end
 	end
-	
+
 	def self.append(filename, data)
 		File.open(filename, 'a') do |f|
 			f.write(data)
@@ -443,12 +443,12 @@ File.class_eval do
 			f.write(content)
 		end
 	end
-	
+
 	def self.touch(filename, timestamp = nil)
 		File.open(filename, 'w').close
 		File.utime(timestamp, timestamp, filename) if timestamp
 	end
-	
+
 	def self.binread(filename)
 		return File.read(filename)
 	end if !respond_to?(:binread)

@@ -36,7 +36,8 @@ describe UnionStation::Core do
 	end
 
 	def start_agent
-		@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@dump_file, @password)
+		@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(
+			@tmpdir, @dump_file, @password)
 	end
 
 	def kill_agent

@@ -280,6 +280,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     pp_variant_map_set_ngx_str(params, "debug_log_file", &passenger_main_conf.debug_log_file);
     pp_variant_map_set_ngx_str(params, "temp_dir", &passenger_main_conf.temp_dir);
     pp_variant_map_set_bool   (params, "user_switching", passenger_main_conf.user_switching);
+    pp_variant_map_set_bool   (params, "show_version_in_header", passenger_main_conf.show_version_in_header);
     pp_variant_map_set_ngx_str(params, "default_user", &passenger_main_conf.default_user);
     pp_variant_map_set_ngx_str(params, "default_group", &passenger_main_conf.default_group);
     pp_variant_map_set_ngx_str(params, "default_ruby", &passenger_main_conf.default_ruby);

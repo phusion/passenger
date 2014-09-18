@@ -1058,14 +1058,8 @@ Server: nginx/1.3.11 + Phusion Passenger
 X-Powered-By: Phusion Passenger
 ----------------------------------------------------
 
-This option may occur in the following places:
-
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
-
-In each place, it may be specified at most once. The default value is 'on'.
+This option may only occur once, in the 'http' configuration block.
+The default value is 'on'.
 
 [[PassengerFriendlyErrorPages]]
 ==== passenger_friendly_error_pages <on|off> ====

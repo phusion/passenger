@@ -182,10 +182,6 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:type  => :flag
 	},
 	{
-		:name  => 'passenger_show_version_in_header',
-		:type  => :flag
-	},
-	{
 		:name  => 'passenger_max_preloader_idle_time',
 		:type  => :integer
 	},

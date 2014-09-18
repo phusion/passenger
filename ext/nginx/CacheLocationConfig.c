@@ -191,15 +191,6 @@ u_char int_buf[32], *end, *buf, *pos;
 	
 
 	
-		if (conf->show_version_in_header != NGX_CONF_UNSET) {
-			len += sizeof("!~PASSENGER_SHOW_VERSION_IN_HEADER: ") - 1;
-			len += conf->show_version_in_header
-				? sizeof("t\r\n") - 1
-				: sizeof("f\r\n") - 1;
-		}
-	
-
-	
 		if (conf->max_preloader_idle_time != NGX_CONF_UNSET) {
 			end = ngx_snprintf(int_buf,
 				sizeof(int_buf) - 1,
@@ -497,19 +488,6 @@ if (buf == NULL) {
 				"!~PASSENGER_DEBUGGER: ",
 				sizeof("!~PASSENGER_DEBUGGER: ") - 1);
 			if (conf->debugger) {
-				pos = ngx_copy(pos, "t\r\n", sizeof("t\r\n") - 1);
-			} else {
-				pos = ngx_copy(pos, "f\r\n", sizeof("f\r\n") - 1);
-			}
-		}
-	
-
-	
-		if (conf->show_version_in_header != NGX_CONF_UNSET) {
-			pos = ngx_copy(pos,
-				"!~PASSENGER_SHOW_VERSION_IN_HEADER: ",
-				sizeof("!~PASSENGER_SHOW_VERSION_IN_HEADER: ") - 1);
-			if (conf->show_version_in_header) {
 				pos = ngx_copy(pos, "t\r\n", sizeof("t\r\n") - 1);
 			} else {
 				pos = ngx_copy(pos, "f\r\n", sizeof("f\r\n") - 1);
