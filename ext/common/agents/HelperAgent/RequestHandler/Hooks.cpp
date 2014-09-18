@@ -69,6 +69,7 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	req->stickySession = false;
 	req->halfCloseAppConnection = false;
 	req->sessionCheckoutTry = 0;
+	req->strip100ContinueHeader = false;
 	req->host = NULL;
 	req->appInput.reinitialize();
 }

@@ -99,6 +99,9 @@ initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
 				case 'S':
 					req->https = true;
 					break;
+				case 'C':
+					req->strip100ContinueHeader = true;
+					break;
 				default:
 					break;
 				}
@@ -116,6 +119,9 @@ initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
 			}
 			if (req->https) {
 				SKC_TRACE(client, 2, "HTTPS flag detected");
+			}
+			if (req->strip100ContinueHeader) {
+				SKC_TRACE(client, 2, "Stripping 100 Continue header");
 			}
 		}
 	}

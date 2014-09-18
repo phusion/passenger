@@ -977,13 +977,14 @@ private:
 		}
 
 		// Add flags.
+		// C = Strip 100 Continue header
 		// B = Buffer request body
 		// S = SSL
 
 		bool bufferUpload = config->bufferUpload != DirConfig::DISABLED;
 		bool https = lookupEnv(r, "HTTPS") != NULL;
 		if (bufferUpload || https) {
-			result.append("!~FLAGS: ", sizeof("!~FLAGS: ") - 1);
+			result.append("!~FLAGS: C", sizeof("!~FLAGS: C") - 1);
 			if (bufferUpload) {
 				result.append("B", 1);
 			}

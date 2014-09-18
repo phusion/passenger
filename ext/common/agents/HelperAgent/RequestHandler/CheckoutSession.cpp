@@ -100,7 +100,9 @@ sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 void
 maybeSend100Continue(Client *client, Request *req) {
 	int httpVersion = req->httpMajor * 1000 + req->httpMinor * 10;
-	if (httpVersion >= 1010 && req->hasBody()) {
+	if (httpVersion >= 1010 && req->hasBody() && !req->strip100ContinueHeader) {
+		// Apps with the "session" protocol don't respond with 100-Continue,
+		// so we do it for them.
 		const LString *value = req->headers.lookup(HTTP_EXPECT);
 		if (value != NULL
 		 && psg_lstr_cmp(value, P_STATIC_STRING("100-continue"))

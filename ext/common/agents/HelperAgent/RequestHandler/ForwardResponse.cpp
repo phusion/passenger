@@ -294,15 +294,17 @@ onAppResponseBegin(Client *client, Request *req) {
 
 void
 onAppResponse100Continue(Client *client, Request *req) {
-	const unsigned int BUFSIZE = 32;
-	char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
-	int size = snprintf(buf, BUFSIZE, "HTTP/%d.%d 100 Continue\r\n",
-		(int) req->httpMajor, (int) req->httpMinor);
-	writeResponse(client, buf, size);
+	if (!req->strip100ContinueHeader) {
+		const unsigned int BUFSIZE = 32;
+		char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
+		int size = snprintf(buf, BUFSIZE, "HTTP/%d.%d 100 Continue\r\n",
+			(int) req->httpMajor, (int) req->httpMinor);
+		writeResponse(client, buf, size);
+	}
 	if (!req->ended()) {
 		deinitializeAppResponse(client, req);
 		reinitializeAppResponse(client, req);
-		req->appResponse.oneHundredContinueSent = true;
+		req->appResponse.oneHundredContinueSent = !req->strip100ContinueHeader;
 		// Allow sending more response headers.
 		req->responseBegun = false;
 	}

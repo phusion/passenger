@@ -677,10 +677,11 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
 
     /* D = Dechunk response
      *     Prevent Nginx from rechunking the response.
+     * C = Strip 100 Continue header
      * S = SSL
      */
 
-    PUSH_STATIC_STR("!~FLAGS: D");
+    PUSH_STATIC_STR("!~FLAGS: DC");
     #if (NGX_HTTP_SSL)
         if (r->http_connection->ssl) {
             PUSH_STATIC_STR("S");

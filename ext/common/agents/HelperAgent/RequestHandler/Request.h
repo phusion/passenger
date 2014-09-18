@@ -67,6 +67,7 @@ public:
 
 	// Range: 0..MAX_SESSION_CHECKOUT_TRY
 	boost::uint8_t sessionCheckoutTry;
+	bool strip100ContinueHeader;
 
 	Options options;
 	SessionPtr session;
