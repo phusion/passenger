@@ -448,13 +448,22 @@ httpHeaderToScgiUpperCase(unsigned char *data, unsigned int size) {
 	}
 }
 
+struct HttpHeaderConstructionCache {
+	StaticString methodStr;
+	const LString *remoteAddr;
+	bool cached;
+};
+
 void
 sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
 	ssize_t bytesWritten;
+	HttpHeaderConstructionCache cache;
 
-	if (!sendHeaderToAppWithHttpProtocolAndWritev(req, bytesWritten)) {
+	cache.cached = false;
+
+	if (!sendHeaderToAppWithHttpProtocolAndWritev(req, bytesWritten, cache)) {
 		if (bytesWritten >= 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
-			sendHeaderToAppWithSessionProtocolWithBuffering(req, bytesWritten);
+			sendHeaderToAppWithSessionProtocolWithBuffering(req, bytesWritten, cache);
 		} else {
 			int e = errno;
 			P_ASSERT_EQ(bytesWritten, -1);
@@ -482,7 +491,7 @@ sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
 bool
 constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	unsigned int maxbuffers, unsigned int & restrict_ref nbuffers,
-	unsigned int & restrict_ref dataSize)
+	unsigned int & restrict_ref dataSize, HttpHeaderConstructionCache &cache)
 {
 	#define INC_BUFFER_ITER(i) \
 		do { \
@@ -491,54 +500,54 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 			} \
 			i++; \
 		} while (false)
+	#define PUSH_STATIC_BUFFER(buf) \
+		do { \
+			if (buffers != NULL) { \
+				buffers[i].iov_base = (void *) buf; \
+				buffers[i].iov_len  = sizeof(buf) - 1; \
+			} \
+			INC_BUFFER_ITER(i); \
+			dataSize += sizeof(buf) - 1; \
+		} while (false)
 
 	ServerKit::HeaderTable::Iterator it(req->headers);
-	const LString *value;
 	const LString::Part *part;
-	const char *methodStr;
-	size_t methodStrLen;
 	unsigned int i = 0;
 
 	nbuffers = 0;
 	dataSize = 0;
 
-	methodStr    = http_method_str(req->method);
-	methodStrLen = strlen(methodStr);
-	if (buffers != NULL) {
-		buffers[i].iov_base = (void *) methodStr;
-		buffers[i].iov_len  = methodStrLen;
+	if (!cache.cached) {
+		cache.methodStr  = http_method_str(req->method);
+		cache.remoteAddr = req->secureHeaders.lookup(REMOTE_ADDR);
+		cache.cached     = true;
 	}
-	INC_BUFFER_ITER(i);
-	dataSize += sizeof(methodStrLen);
 
 	if (buffers != NULL) {
-		buffers[i].iov_base = (void *) " ";
-		buffers[i].iov_len  = 1;
+		buffers[i].iov_base = (void *) cache.methodStr.data();
+		buffers[i].iov_len  = cache.methodStr.size();
 	}
 	INC_BUFFER_ITER(i);
-	dataSize += 1;
+	dataSize += cache.methodStr.size();
 
-	part = req->path.start;
-	while (part != NULL) {
-		if (buffers != NULL) {
-			buffers[i].iov_base = (void *) part->data;
-			buffers[i].iov_len  = part->size;
-		}
-		INC_BUFFER_ITER(i);
-		part = part->next;
+	PUSH_STATIC_BUFFER(" ");
+
+	if (buffers != NULL) {
+		buffers[i].iov_base = (void *) req->path.start->data;
+		buffers[i].iov_len  = req->path.size;
 	}
+	INC_BUFFER_ITER(i);
 	dataSize += req->path.size;
 
-	if (buffers != NULL) {
-		buffers[i].iov_base = (void *) " HTTP/1.1\r\n";
-		buffers[i].iov_len  = sizeof(" HTTP/1.1\r\n") - 1;
-	}
-	INC_BUFFER_ITER(i);
-	dataSize += sizeof(" HTTP/1.1\r\n") - 1;
+	PUSH_STATIC_BUFFER(" HTTP/1.1\r\nConnection: close\r\n");
 
 	while (*it != NULL) {
-		dataSize += it->header->key.size + sizeof(": ") - 1;
-		dataSize += it->header->val.size + sizeof("\r\n") - 1;
+		if (it->header->hash == HTTP_CONNECTION.hash()
+		 && psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection")))
+		{
+			it.next();
+			continue;
+		}
 
 		part = it->header->key.start;
 		while (part != NULL) {
@@ -549,11 +558,9 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 			INC_BUFFER_ITER(i);
 			part = part->next;
 		}
-		if (buffers != NULL) {
-			buffers[i].iov_base = (void *) ": ";
-			buffers[i].iov_len  = sizeof(": ") - 1;
-		}
-		INC_BUFFER_ITER(i);
+		dataSize += it->header->key.size;
+
+		PUSH_STATIC_BUFFER(": ");
 
 		part = it->header->val.start;
 		while (part != NULL) {
@@ -564,35 +571,21 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 			INC_BUFFER_ITER(i);
 			part = part->next;
 		}
-		if (buffers != NULL) {
-			buffers[i].iov_base = (void *) "\r\n";
-			buffers[i].iov_len  = sizeof("\r\n") - 1;
-		}
-		INC_BUFFER_ITER(i);
+		dataSize += it->header->val.size;
+
+		PUSH_STATIC_BUFFER("\r\n");
 
 		it.next();
 	}
 
 	if (req->https) {
-		if (buffers != NULL) {
-			buffers[i].iov_base = (void *) "X-Forwarded-Proto: https\r\n";
-			buffers[i].iov_len  = sizeof("X-Forwarded-Proto: https\r\n") - 1;
-		}
-		INC_BUFFER_ITER(i);
-		dataSize += sizeof("X-Forwarded-Proto: https\r\n") - 1;
+		PUSH_STATIC_BUFFER("X-Forwarded-Proto: https\r\n");
 	}
 
-	value = req->secureHeaders.lookup(REMOTE_ADDR);
-	if (value != NULL && value->size > 0) {
-		dataSize += (sizeof("X-Forwarded-Proto: ") - 1) + (sizeof("\r\n") - 1);
+	if (cache.remoteAddr != NULL && cache.remoteAddr->size > 0) {
+		PUSH_STATIC_BUFFER("X-Forwarded-For: ");
 
-		if (buffers != NULL) {
-			buffers[i].iov_base = (void *) "X-Forwarded-For: ";
-			buffers[i].iov_len  = sizeof("X-Forwarded-For: ") - 1;
-		}
-		INC_BUFFER_ITER(i);
-
-		part = value->start;
+		part = cache.remoteAddr->start;
 		while (part != NULL) {
 			if (buffers != NULL) {
 				buffers[i].iov_base = (void *) part->data;
@@ -601,21 +594,13 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 			INC_BUFFER_ITER(i);
 			part = part->next;
 		}
+		dataSize += cache.remoteAddr->size;
 
-		if (buffers != NULL) {
-			buffers[i].iov_base = (void *) "\r\n";
-			buffers[i].iov_len  = sizeof("\r\n") - 1;
-		}
-		INC_BUFFER_ITER(i);
+		PUSH_STATIC_BUFFER("\r\n");
 	}
 
 	if (req->options.analytics) {
-		if (buffers != NULL) {
-			buffers[i].iov_base = (void *) "Passenger-Txn-Id: ";
-			buffers[i].iov_len  = sizeof("Passenger-Txn-Id: ") - 1;
-		}
-		INC_BUFFER_ITER(i);
-		dataSize += sizeof("Passenger-Txn-Id: ") - 1;
+		PUSH_STATIC_BUFFER("Passenger-Txn-Id: ");
 
 		if (buffers != NULL) {
 			buffers[i].iov_base = (void *) req->options.transaction->getTxnId().data();
@@ -624,28 +609,22 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		INC_BUFFER_ITER(i);
 		dataSize += req->options.transaction->getTxnId().size();
 
-		if (buffers != NULL) {
-			buffers[i].iov_base = (void *) "\r\n";
-			buffers[i].iov_len  = sizeof("\r\n") - 1;
-		}
-		INC_BUFFER_ITER(i);
+		PUSH_STATIC_BUFFER("\r\n");
 	}
 
-	if (buffers != NULL) {
-		buffers[i].iov_base = (void *) "\r\n";
-		buffers[i].iov_len  = sizeof("\r\n") - 1;
-	}
-	INC_BUFFER_ITER(i);
-	dataSize += sizeof("\r\n") - 1;
+	PUSH_STATIC_BUFFER("\r\n");
 
 	nbuffers = i;
 	return true;
 
 	#undef INC_BUFFER_ITER
+	#undef PUSH_STATIC_BUFFER
 }
 
 bool
-sendHeaderToAppWithHttpProtocolAndWritev(Request *req, ssize_t &bytesWritten) {
+sendHeaderToAppWithHttpProtocolAndWritev(Request *req, ssize_t &bytesWritten,
+	HttpHeaderConstructionCache &cache)
+{
 	unsigned int maxbuffers = std::min<unsigned int>(
 		4 + req->headers.size() * 4 + 4, IOV_MAX);
 	struct iovec *buffers = (struct iovec *) psg_palloc(req->pool,
@@ -653,7 +632,7 @@ sendHeaderToAppWithHttpProtocolAndWritev(Request *req, ssize_t &bytesWritten) {
 	unsigned int nbuffers, dataSize;
 
 	if (constructHeaderBuffersForHttpProtocol(req, buffers,
-		maxbuffers, nbuffers, dataSize))
+		maxbuffers, nbuffers, dataSize, cache))
 	{
 		ssize_t ret;
 		do {
@@ -668,18 +647,20 @@ sendHeaderToAppWithHttpProtocolAndWritev(Request *req, ssize_t &bytesWritten) {
 }
 
 void
-sendHeaderToAppWithSessionProtocolWithBuffering(Request *req, unsigned int offset) {
+sendHeaderToAppWithSessionProtocolWithBuffering(Request *req, unsigned int offset,
+	HttpHeaderConstructionCache &cache)
+{
 	struct iovec *buffers;
 	unsigned int nbuffers, dataSize;
 	bool ok;
 
-	ok = constructHeaderBuffersForHttpProtocol(req, NULL, 0, nbuffers, dataSize);
+	ok = constructHeaderBuffersForHttpProtocol(req, NULL, 0, nbuffers, dataSize, cache);
 	assert(ok);
 
 	buffers = (struct iovec *) psg_palloc(req->pool,
 		sizeof(struct iovec) * nbuffers);
 	ok = constructHeaderBuffersForHttpProtocol(req, buffers, nbuffers,
-		nbuffers, dataSize);
+		nbuffers, dataSize, cache);
 	assert(ok);
 	(void) ok; // Shut up compiler warning
 
@@ -690,7 +671,7 @@ sendHeaderToAppWithSessionProtocolWithBuffering(Request *req, unsigned int offse
 		MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
 		gatherBuffers(buffer.start, MBUF_MAX_SIZE, buffers, nbuffers);
 		buffer = MemoryKit::mbuf(buffer, offset, dataSize - offset);
-		req->appInput.feed(boost::move(buffer));
+		req->appInput.feed(buffer);
 	} else {
 		char *buffer = (char *) psg_pnalloc(req->pool, dataSize);
 		gatherBuffers(buffer, dataSize, buffers, nbuffers);
