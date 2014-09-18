@@ -331,6 +331,7 @@ typedef struct {
     ngx_str_t     method; /* Includes trailing space */
     ngx_str_t     app_type;
     ngx_str_t     escaped_uri;
+    ngx_str_t     content_length;
     ngx_str_t     server_password;
     ngx_str_t     remote_port;
 } buffer_construction_state;
@@ -386,6 +387,16 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
     ngx_escape_uri(state->escaped_uri.data, r->uri.data, r->uri.len,
         NGX_ESCAPE_URI);
 
+    if (r->headers_in.chunked) {
+        /* If the request body is chunked, then Nginx sets r->headers_in.content_length_n
+         * but does not set r->headers_in.headers, so we add this header ourselves.
+         */
+        state->content_length.data = ngx_pnalloc(r->pool, sizeof("4294967295") - 1);
+        state->content_length.len = ngx_snprintf(state->content_length.data,
+            sizeof("4294967295") - 1, "%O", r->headers_in.content_length_n)
+            - state->content_length.data;
+    }
+
     state->server_password.data = (u_char *) pp_agents_starter_get_server_password(
         pp_agents_starter, &len);
     state->server_password.len  = len;
@@ -416,8 +427,8 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
     }
 
     if (port > 0 && port < 65536) {
-        state->remote_port.len = ngx_sprintf(state->remote_port.data, "%ui", port) -
-            state->remote_port.data;
+        state->remote_port.len = ngx_snprintf(state->remote_port.data,
+            sizeof("65535") - 1, "%ui", port) - state->remote_port.data;
     } else {
         state->remote_port.len = 0;
     }
@@ -494,6 +505,16 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
             b->last = ngx_copy(b->last, "\r\n", 2);
         }
         total_size += header[i].key.len + header[i].value.len + 4;
+    }
+
+    if (r->headers_in.chunked) {
+        PUSH_STATIC_STR("Content-Length: ");
+        if (b != NULL) {
+            b->last = ngx_copy(b->last, state->content_length.data,
+                state->content_length.len);
+        }
+        total_size += state->content_length.len;
+        PUSH_STATIC_STR("\r\n");
     }
 
     if (slcf->headers_set_len) {
