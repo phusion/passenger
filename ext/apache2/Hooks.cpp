@@ -981,20 +981,14 @@ private:
 		// B = Buffer request body
 		// S = SSL
 
-		bool bufferUpload = config->bufferUpload != DirConfig::DISABLED;
-		bool https = lookupEnv(r, "HTTPS") != NULL;
-		if (bufferUpload || https) {
-			result.append("!~FLAGS: C", sizeof("!~FLAGS: C") - 1);
-			if (bufferUpload) {
-				result.append("B", 1);
-			}
-			if (https) {
-				result.append("S", 1);
-			}
-			result.append("\r\n", 2);
+		result.append("!~FLAGS: C", sizeof("!~FLAGS: C") - 1);
+		if (config->bufferUpload != DirConfig::DISABLED) {
+			result.append("B", 1);
 		}
-
-		result.append("\r\n", 2);
+		if (lookupEnv(r, "HTTPS") != NULL) {
+			result.append("S", 1);
+		}
+		result.append("\r\n\r\n", 4);
 
 		return result;
 	}
