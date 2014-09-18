@@ -78,6 +78,7 @@ struct SessionProtocolWorkingState {
 	const LString *remotePort;
 	const LString *remoteUser;
 	const LString *contentLength;
+	const LString *contentType;
 };
 
 void
@@ -142,6 +143,7 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	state.remotePort  = req->secureHeaders.lookup(REMOTE_PORT);
 	state.remoteUser  = req->secureHeaders.lookup(REMOTE_USER);
 	state.contentLength = req->headers.lookup(HTTP_CONTENT_LENGTH);
+	state.contentType   = req->headers.lookup(HTTP_CONTENT_TYPE);
 
 	dataSize += sizeof("REQUEST_URI");
 	dataSize += req->path.size + 1;
@@ -208,6 +210,11 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	if (state.contentLength != NULL) {
 		dataSize += sizeof("CONTENT_LENGTH");
 		dataSize += state.contentLength->size + 1;
+	}
+
+	if (state.contentLength != NULL) {
+		dataSize += sizeof("CONTENT_TYPE");
+		dataSize += state.contentType->size + 1;
 	}
 
 	dataSize += sizeof("PASSENGER_CONNECT_PASSWORD");
@@ -304,6 +311,12 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 		pos = appendData(pos, end, "", 1);
 	}
 
+	if (state.contentType != NULL) {
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("CONTENT_TYPE"));
+		pos = appendData(pos, end, state.contentType);
+		pos = appendData(pos, end, "", 1);
+	}
+
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PASSENGER_CONNECT_PASSWORD"));
 	pos = appendData(pos, end, req->session->getGroupSecret());
 	pos = appendData(pos, end, "", 1);
@@ -321,8 +334,8 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 
 	ServerKit::HeaderTable::Iterator it(req->headers);
 	while (*it != NULL) {
-		if ((it->header->hash == HTTP_CONTENT_TYPE_HASH
-			|| it->header->hash == HTTP_CONTENT_LENGTH.hash()
+		if ((it->header->hash == HTTP_CONTENT_LENGTH.hash()
+			|| it->header->hash == HTTP_CONTENT_TYPE.hash()
 			|| it->header->hash == HTTP_CONNECTION.hash())
 		 && (psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-type"))
 			|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length"))

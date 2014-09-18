@@ -199,11 +199,11 @@ private:
 	HashedStaticString HTTP_DATE;
 	HashedStaticString HTTP_HOST;
 	HashedStaticString HTTP_CONTENT_LENGTH;
+	HashedStaticString HTTP_CONTENT_TYPE;
 	HashedStaticString HTTP_EXPECT;
 	HashedStaticString HTTP_CONNECTION;
 	HashedStaticString HTTP_STATUS;
 	HashedStaticString HTTP_TRANSFER_ENCODING;
-	boost::uint32_t HTTP_CONTENT_TYPE_HASH;
 
 	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
 	bool singleAppMode: 1;
@@ -242,11 +242,11 @@ public:
 		  HTTP_DATE("date"),
 		  HTTP_HOST("host"),
 		  HTTP_CONTENT_LENGTH("content-length"),
+		  HTTP_CONTENT_TYPE("content-type"),
 		  HTTP_EXPECT("expect"),
 		  HTTP_CONNECTION("connection"),
 		  HTTP_STATUS("status"),
 		  HTTP_TRANSFER_ENCODING("transfer-encoding"),
-		  HTTP_CONTENT_TYPE_HASH(HashedStaticString("content-type").hash()),
 		  poolOptionsCache(4),
 		  singleAppMode(false),
 		  showVersionInHeader(false)
