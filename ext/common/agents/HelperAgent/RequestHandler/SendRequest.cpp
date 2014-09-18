@@ -79,6 +79,7 @@ struct SessionProtocolWorkingState {
 	const LString *remoteUser;
 	const LString *contentLength;
 	const LString *contentType;
+	bool hasBaseURI;
 };
 
 void
@@ -137,6 +138,13 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	unsigned int dataSize = sizeof(boost::uint32_t);
 
 	state.path        = req->getPathWithoutQueryString();
+	state.hasBaseURI  = req->options.baseURI != P_STATIC_STRING("/");
+	if (state.hasBaseURI) {
+		state.path = state.path.substr(req->options.baseURI.size());
+		if (state.path.empty()) {
+			state.path = P_STATIC_STRING("/");
+		}
+	}
 	state.queryString = req->getQueryString();
 	state.methodStr   = StaticString(http_method_str(req->method));
 	state.remoteAddr  = req->secureHeaders.lookup(REMOTE_ADDR);
@@ -152,7 +160,11 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	dataSize += state.path.size() + 1;
 
 	dataSize += sizeof("SCRIPT_NAME");
-	dataSize += sizeof("");
+	if (state.hasBaseURI) {
+		dataSize += req->options.baseURI.size();
+	} else {
+		dataSize += sizeof("");
+	}
 
 	dataSize += sizeof("QUERY_STRING");
 	dataSize += state.queryString.size() + 1;
@@ -258,7 +270,12 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SCRIPT_NAME"));
-	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL(""));
+	if (state.hasBaseURI) {
+		pos = appendData(pos, end, req->options.baseURI);
+		pos = appendData(pos, end, "", 1);
+	} else {
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL(""));
+	}
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("QUERY_STRING"));
 	pos = appendData(pos, end, state.queryString.data(), state.queryString.size());
@@ -512,8 +529,10 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	}
 	dataSize += req->path.size;
 
-	buffers[i].iov_base = (void *) " HTTP/1.1\r\n";
-	buffers[i].iov_len  = sizeof(" HTTP/1.1\r\n") - 1;
+	if (buffers != NULL) {
+		buffers[i].iov_base = (void *) " HTTP/1.1\r\n";
+		buffers[i].iov_len  = sizeof(" HTTP/1.1\r\n") - 1;
+	}
 	INC_BUFFER_ITER(i);
 	dataSize += sizeof(" HTTP/1.1\r\n") - 1;
 
