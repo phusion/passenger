@@ -26,6 +26,7 @@
 #define _PASSENGER_SERVER_KIT_CONTEXT_H_
 
 #include <boost/make_shared.hpp>
+#include <string>
 #include <cstddef>
 #include <MemoryKit/mbuf.h>
 #include <SafeLibev.h>
@@ -34,6 +35,22 @@
 namespace Passenger {
 namespace ServerKit {
 
+
+struct FileBufferedChannelConfig {
+	string bufferDir;
+	unsigned int threshold;
+	unsigned int delayInFileModeSwitching;
+	bool autoTruncateFile;
+	bool autoStartMover;
+
+	FileBufferedChannelConfig()
+		: bufferDir("/tmp"),
+		  threshold(1024 * 128),
+		  delayInFileModeSwitching(0),
+		  autoTruncateFile(true),
+		  autoStartMover(true)
+		{ }
+};
 
 class Context {
 private:
@@ -46,6 +63,7 @@ public:
 	SafeLibevPtr libev;
 	struct MemoryKit::mbuf_pool mbuf_pool;
 	string secureModePassword;
+	FileBufferedChannelConfig defaultFileBufferedChannelConfig;
 
 	Context(const SafeLibevPtr &_libev)
 		: libev(_libev)

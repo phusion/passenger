@@ -246,9 +246,11 @@
 
 7.8. Advanced options	=>	advanced-options-hnuhqz
 
-7.8.1. passenger_temp_dir <directory>	=>	passenger-temp-dir-directory--1t3opri
+7.8.1. passenger_instance_registry_dir <directory>	=>	passenger-instance-registry-dir-directory--1jl6zij
 
-7.8.2. passenger_fly_with <socket filename>	=>	passenger-fly-with-socket-filename--1amd1xn
+7.8.2. passenger_data_buffer_dir <directory>	=>	passenger-data-buffer-dir-directory--1isg9cm
+
+7.8.3. passenger_fly_with <socket filename>	=>	passenger-fly-with-socket-filename--1amd1xn
 
 7.9. Deprecated options	=>	deprecated-options-1dtzo0g
 

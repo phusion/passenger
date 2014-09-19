@@ -86,6 +86,10 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->log_level = (ngx_int_t) NGX_CONF_UNSET;
     conf->debug_log_file.data = NULL;
     conf->debug_log_file.len = 0;
+    conf->data_buffer_dir.data = NULL;
+    conf->data_buffer_dir.len = 0;
+    conf->instance_registry_dir.data = NULL;
+    conf->instance_registry_dir.len = 0;
     conf->abort_on_startup_error = NGX_CONF_UNSET;
     conf->max_pool_size = (ngx_uint_t) NGX_CONF_UNSET;
     conf->pool_idle_time = (ngx_uint_t) NGX_CONF_UNSET;
@@ -1148,11 +1152,18 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, debug_log_file),
       NULL },
 
-    { ngx_string("passenger_temp_dir"),
+    { ngx_string("passenger_data_buffer_dir"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, temp_dir),
+      offsetof(passenger_main_conf_t, data_buffer_dir),
+      NULL },
+
+    { ngx_string("passenger_instance_registry_dir"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, instance_registry_dir),
       NULL },
 
     { ngx_string("passenger_pre_start"),

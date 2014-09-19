@@ -1220,11 +1220,11 @@ public:
 		VariantMap params;
 		params
 			.setPid ("web_server_pid", getpid())
-			.set    ("web_server_description", webServerDesc)
+			.set    ("server_software", webServerDesc)
 			.setBool("multi_app", true)
-			.setInt ("log_level", serverConfig.logLevel)
 			.set    ("debug_log_file", (serverConfig.debugLogFile == NULL) ? "" : serverConfig.debugLogFile)
-			.set    ("temp_dir", serverConfig.tempDir)
+			.set    ("data_buffer_dir", serverConfig.dataBufferDir)
+			.set    ("instance_registry_dir", serverConfig.instanceRegistryDir)
 			.setBool("user_switching", serverConfig.userSwitching)
 			.set    ("default_user", serverConfig.defaultUser)
 			.set    ("default_group", serverConfig.defaultGroup)

@@ -808,6 +808,11 @@ public:
 		return ctx;
 	}
 
+	OXT_FORCE_INLINE
+	const Context *getContext() const {
+		return ctx;
+	}
+
 	virtual StaticString getServerName() const {
 		return P_STATIC_STRING("Server");
 	}

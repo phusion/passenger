@@ -203,8 +203,8 @@ struct ServerConfig {
 	/** See PoolOptions for more info. */
 	string defaultGroup;
 
-	/** The temp directory that Passenger should use. */
-	string tempDir;
+	string dataBufferDir;
+	string instanceRegistryDir;
 
 	string unionStationGatewayAddress;
 	int unionStationGatewayPort;
@@ -226,7 +226,6 @@ struct ServerConfig {
 		poolIdleTime       = DEFAULT_POOL_IDLE_TIME;
 		userSwitching      = true;
 		defaultUser        = DEFAULT_WEB_APP_USER;
-		tempDir            = getSystemTempDir();
 		unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
 		unionStationGatewayPort    = DEFAULT_UNION_STATION_GATEWAY_PORT;
 		unionStationGatewayCert    = string();

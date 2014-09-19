@@ -172,10 +172,13 @@ private
 				wrap_desc("Where to store the PID file")) do |value|
 				@options[:pid_file] = value
 			end
-			opts.on("--temp-dir PATH", String,
-				wrap_desc("Use the given temp dir")) do |value|
-				ENV['TMPDIR'] = value
-				@options[:temp_dir] = value
+			opts.on("--instance-registry-dir PATH", String,
+				wrap_desc("Use the given instance registry directory")) do |value|
+				@options[:instance_registry_dir] = value
+			end
+			opts.on("--data-buffer-dir PATH", String,
+				wrap_desc("Use the given data buffer directory")) do |value|
+				@options[:data_buffer_dir] = value
 			end
 
 			opts.separator ""

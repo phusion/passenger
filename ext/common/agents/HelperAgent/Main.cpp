@@ -522,6 +522,8 @@ initializeNonPrivilegedWorkingObjects() {
 	UPDATE_TRACE_POINT();
 	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
 	wo->serverKitContext->secureModePassword = wo->password;
+	wo->serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
+		options.get("data_buffer_dir");
 	wo->requestHandler = new RequestHandler(wo->serverKitContext, agentsOptions);
 	wo->requestHandler->minSpareClients = 128;
 	wo->requestHandler->clientFreelistLimit = 1024;
@@ -777,6 +779,7 @@ setAgentsOptionsDefaults() {
 	options.setDefaultInt("min_instances", 1);
 	options.setDefault("server_software", "Phusion Passenger/" PASSENGER_VERSION);
 	options.setDefaultBool("show_version_in_header", true);
+	options.setDefault("data_buffer_dir", getSystemTempDir());
 
 	string firstAddress = options.getStrSet("server_addresses")[0];
 	if (getSocketAddressType(firstAddress) == SAT_TCP) {

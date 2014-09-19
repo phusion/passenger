@@ -86,7 +86,7 @@ private:
 			} else {
 				int e = errno;
 				throw FileSystemException("Cannot create a subdirectory inside"
-					" instance registry directory" + registryDir, e, registryDir);
+					" instance registry directory " + registryDir, e, registryDir);
 			}
 		}
 		// Explicitly chmod the directory in case the umask is interfering.

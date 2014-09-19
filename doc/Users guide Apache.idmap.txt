@@ -234,9 +234,9 @@
 
 7.10. Advanced options	=>	advanced-options-1ab1jkq
 
-7.10.1. PassengerTempDir <directory>	=>	passengertempdir-directory--68h2ng
+7.10.1. PassengerInstanceRegistryDir <directory>	=>	passengerinstanceregistrydir-directory--7r1ks8
 
-7.10.2. PassengerUploadBufferDir <directory>	=>	passengeruploadbufferdir-directory--kdr8at
+7.10.2. PassengerDataBufferDir <directory>	=>	passengerdatabufferdir-directory--170fjqg
 
 7.11. Deprecated or removed options	=>	deprecated-options-pm9m57
 

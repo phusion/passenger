@@ -94,6 +94,12 @@ serverUsage() {
 	printf("\n");
 	printf("Other options (optional):\n");
 	printf("      --log-level LEVEL     Logging level. Default: %d\n", DEFAULT_LOG_LEVEL);
+	printf("      --no-show-version-in-header\n");
+	printf("                            Do not show " PROGRAM_NAME " version number in\n");
+	printf("                            HTTP headers.\n");
+	printf("      --data-buffer-dir PATH\n");
+	printf("                            Directory to store data buffers in. Default:\n");
+	printf("                            %s\n", getSystemTempDir());
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("Admin account privilege levels (ordered from most to least privileges):\n");
@@ -183,6 +189,12 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		// We do not set log_level because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log level.
 		options.setInt("server_log_level", atoi(argv[i + 1]));
+		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--no-show-version-in-header")) {
+		options.setBool("show_version_in_header", false);
+		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--data-buffer-dir")) {
+		options.setInt("data_buffer_dir", atoi(argv[i + 1]));
 		i += 2;
 	} else if (!startsWith(argv[i], "-")) {
 		if (!options.has("app_root")) {

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -623,12 +623,9 @@ absolutizePath(const StaticString &path, const StaticString &workingDir) {
 
 const char *
 getSystemTempDir() {
-	const char *temp_dir = getenv("PASSENGER_TEMP_DIR");
+	const char *temp_dir = getenv("TMPDIR");
 	if (temp_dir == NULL || *temp_dir == '\0') {
-		temp_dir = getenv("PASSENGER_TMPDIR");
-		if (temp_dir == NULL || *temp_dir == '\0') {
-			temp_dir = "/tmp";
-		}
+		temp_dir = "/tmp";
 	}
 	return temp_dir;
 }

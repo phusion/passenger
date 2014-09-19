@@ -323,8 +323,7 @@ public:
 			.setPid ("web_server_pid",  getpid())
 			.set    ("web_server_passenger_version", PASSENGER_VERSION)
 			.set    ("passenger_root",  passengerRoot)
-			.setInt ("log_level",       getLogLevel())
-			.set    ("temp_dir",        getSystemTempDir());
+			.setInt ("log_level",       getLogLevel());
 		extraParams.addTo(params);
 
 		fds = createUnixSocketPair();

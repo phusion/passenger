@@ -241,7 +241,8 @@ DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsi
 DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_user_switching, userSwitching)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_data_buffer_dir, dataBufferDir)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_instance_registry_dir, instanceRegistryDir)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_address, unionStationGatewayAddress)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_union_station_gateway_port, unionStationGatewayPort, int, 1)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGatewayCert)
@@ -422,11 +423,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The group that Ruby applications must run as when user switching fails or is disabled."),
-	AP_INIT_TAKE1("PassengerTempDir",
-		(Take1Func) cmd_passenger_temp_dir,
+	AP_INIT_TAKE1("PassengerDataBufferDir",
+		(Take1Func) cmd_passenger_data_buffer_dir,
 		NULL,
 		RSRC_CONF,
-		"The temp directory that Passenger should use."),
+		"The directory that data buffers should be stored into."),
+	AP_INIT_TAKE1("PassengerInstanceRegistryDir",
+		(Take1Func) cmd_passenger_instance_registry_dir,
+		NULL,
+		RSRC_CONF,
+		"The directory to register the instance to."),
 	AP_INIT_TAKE1("PassengerMaxPreloaderIdleTime",
 		(Take1Func) cmd_passenger_max_preloader_idle_time,
 		NULL,

@@ -1286,10 +1286,12 @@ In each place, it may be specified at most once. The default value is '90'.
 :version: 4.0.0
 include::users_guide_snippets/enterprise_only.txt[]
 
-Specifies the I/O concurrency model that should be used for application processes. Phusion Passenger supports two concurrency models:
+Specifies the I/O concurrency model that should be used for Ruby application processes. Phusion Passenger supports two concurrency models:
 
  * 'process' - single-threaded, multi-processed I/O concurrency. Each application process only has a single thread and can only handle 1 request at a time. This is the concurrency model that Ruby applications traditionally used. It has excellent compatiblity (can work with applications that are not designed to be thread-safe) but is unsuitable for workloads in which the application has to wait for a lot of external I/O (e.g. HTTP API calls), and uses more memory because each process has a large memory overhead.
  * 'thread' - multi-threaded, multi-processed I/O concurrency. Each application process has multiple threads (customizable via <<PassengerThreadCount,PassengerThreadCount>>). This model provides much better I/O concurrency and uses less memory because threads share memory with each other within the same process. However, using this model may cause compatibility problems if the application is not designed to be thread-safe.
+
+This option has no effect on non-Ruby applications.
 
 This option may occur in the following places:
 
@@ -1305,7 +1307,9 @@ In each place, it may be specified at most once. The default value is 'process'.
 :version: 4.0.0
 include::users_guide_snippets/enterprise_only.txt[]
 
-Specifies the number of threads that Phusion Passenger should spawn per application process. This option only has effect if <<PassengerConcurrencyModel,PassengerConcurrencyModel>> is 'thread'.
+Specifies the number of threads that Phusion Passenger should spawn per Ruby application process. This option only has effect if <<PassengerConcurrencyModel,PassengerConcurrencyModel>> is 'thread'.
+
+This option has no effect on non-Ruby applications.
 
 This option may occur in the following places:
 
@@ -1770,7 +1774,7 @@ http://www.foo.com/chatroom/ajax_update_poll only.
 :version: 4.0.26
 include::users_guide_snippets/since_version.txt[]
 
-When turned on, HTTP request uploads (HTTP POST request bodies) will be buffered before sending the request to the application. Enabling upload buffering protects the application from slow clients, but will also prevent the ability to track upload progress.
+When turned on, HTTP client request bodies <<PassengerDataBufferDir,will be buffered>> before they are sent the request to the application. This buffering protects the application from slow clients, but also prevents the ability to track upload progress.
 
 If you want to allow your application to track upload progress, it is recommended that you disable upload buffering for specific URIs only. For example:
 
@@ -2091,65 +2095,66 @@ In each place, it may be specified at most once. The default value is 'off'.
 
 === Advanced options
 
-[[PassengerTempDir]]
-==== PassengerTempDir <directory>
-Specifies the directory that Phusion Passenger should use for storing temporary
-files. This includes things such as Unix socket files, buffered file uploads
-(see also <<PassengerUploadBufferDir,PassengerUploadBufferDir>>), etc.
+[[PassengerInstanceRegistryDir]]
+==== PassengerInstanceRegistryDir <directory>
+:version: 5.0.0
+include::users_guide_snippets/since_version.txt[]
 
-This option may be specified once, in the global server configuration. The
-default temp directory that Phusion Passenger uses is '/tmp'.
+Specifies the directory that Phusion Passenger should use for registering its current instance.
 
-This option is especially useful if Apache is not allowed to write to /tmp
-(which is the case on some systems with strict SELinux policies) or if the
-partition that /tmp lives on doesn't have enough disk space.
+When Phusion Passenger starts up, it creates a temporary directory inside the 'instance registry directory'. This temporary directory is called the 'instance directory'. It contains all sorts of files that are important to that specific running Phusion Passenger instance, such as Unix domain socket files so that all the different Phusion Passenger processes can communicate with each other. Command line tools such as `passenger-status` use the files in this directory in order to query Phusion Passenger's status.
 
-.Command line tools
-Some Phusion Passenger command line administration tools, such as
-`passenger-status`, must know what Phusion Passenger's temp directory is
-in order to function properly. You can pass the directory through the
-`PASSENGER_TMPDIR` environment variable, or the `TMPDIR` environment variable
-(the former will be used if both are specified).
+It is therefore important that, while Phusion Passenger is working, the instance directory is never removed or tampered with. However, the default path for the instance registry directory is the system's temporary directory, and some systems may run background jobs that periodically clean this directory. If this happens, and the files inside the instance directory are removed, then it will cause Phusion Passenger to malfunction: Phusion Passenger won't be able to communicate with its own processes, and you will see all kinds of connection errors in the log files. This malfunction can only be recovered from by restarting Apache. You can prevent such cleaning background jobs from interfering by setting this option to a different directory.
 
-For example, if you set 'PassengerTempDir' to '/my_temp_dir', then invoke
-`passenger-status` after you've set the `PASSENGER_TMPDIR` or `TMPDIR`
-environment variable, like this:
+This option is also useful if Apache is not allowed to write to the system's temporary directory (which is the case on some systems with strict SELinux policies) or if the partition that the temporary directory lives on doesn't have enough disk space.
+
+The instance directory is automatically removed when Apache shuts down.
+
+This option may be specified once, in the global server configuration. The default value is the value of the `$TMPDIR` environment variable. Or, if `$TMPDIR` is not set, `/tmp`.
+
+:option: `--instance-registry-dir`
+include::users_guide_snippets/alternative_for_flying_passenger.txt[]
+
+.Note regarding command line tools
+Some Phusion Passenger command line administration tools, such as `passenger-status`, must know what Phusion Passenger's instance registry directory is in order to function properly. You can pass the directory through the `PASSENGER_INSTANCE_REGISTRY_DIR` or the `TMPDIR` environment variable.
+
+For example, if you set 'PassengerInstanceRegistryDir' to '/my_temp_dir', then invoke `passenger-status` after you've set the `PASSENGER_INSTANCE_REGISTRY_DIR`, like this:
 
 ----------------------------------------------------------
-export PASSENGER_TMPDIR=/my_temp-dir
+export PASSENGER_INSTANCE_REGISTRY_DIR=/my_temp-dir
 sudo -E passenger-status
-# The -E option tells 'sudo' to preserve environment variables.
 ----------------------------------------------------------
 
-[[PassengerUploadBufferDir]]
-==== PassengerUploadBufferDir <directory>
-Phusion Passenger buffers large file uploads to disk in order prevent slow file
-uploads from blocking web applications. By default, a subdirectory in the
-system's temporary files directory (or a subdirectory in the directory specified
-in <<PassengerTempDir,PassengerTempDir>>, if set) is automatically created for
-storing these buffered file uploads.
+Notes regarding the above example:
 
-This configuration directive allows you to specify a different directory for storing
-buffered file uploads. If you've specified such a directory (as opposed to using
-Phusion Passenger's default) then you *must* ensure that this directory exists.
+ * The -E option tells 'sudo' to preserve environment variables.
+ * If Phusion Passenger is installed through an RVM Ruby, then you must use `rvmsudo` instead of `sudo`.
 
-This configuration directive is also useful if you're using apache2-mpm-itk.
-The buffered file upload directory that Phusion Passenger creates by default has
-very strict permissions: it can only be accessed by the Apache worker processes.
-However, Phusion Passenger assumes that all Apache worker processes are running
-as the same user. apache2-mpm-itk breaks this assumption by running multiple
-Apache worker processes as different users. So if you're using apace2-mpm-itk,
-you should set this option to a directory that is writable by all Apache worker
-processes, such as '/tmp'.
+[[PassengerDataBufferDir]]
+==== PassengerDataBufferDir <directory>
+:version: 5.0.0
+include::users_guide_snippets/since_version.txt[]
 
-You may specify 'PassengerUploadBufferDir' in the following places:
+By default, Phusion Passenger buffers the following things to disk:
 
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverrides Options` is enabled.
+ * Large HTTP client request bodies. This prevents slow HTTP clients from blocking web applications by sending request bodies very slowly. Read <<PassengerBufferUpload,PassengerBufferUpload>> to learn more.
+ * Large web application responses. This prevents slow HTTP clients from blocking web applications by reading responses very slowly. This feature is also known as 'real-time disk-backed response buffering'.
 
-In each place, it may be specified at most once.
+By default, such buffers are stored in the directory given by the `$TMPDIR` environment variable, or (if `$TMPDIR` is not set) the `/tmp` directory. This configuration directive allows you to specify a different directory.
+
+Changing this option is especially useful in the following cases:
+
+ * If Apache is not allowed to write to the system's temporary directory. This is the case on some systems with strict SELinux policies.
+ * If the partition that the default directory lives on doesn't have enough disk space.
+
+If you've specified such a directory (as opposed to using Phusion Passenger's default) then you *must* ensure that this directory exists.
+
+You can disable client request body buffering by turning <<PassengerBufferUpload,PassengerBufferUpload>> off. It is not possible to turn off real-time disk-backed response buffering.
+
+This option may be specified once, in the global server configuration.
+
+:option: `--data-buffer-dir`
+include::users_guide_snippets/alternative_for_flying_passenger.txt[]
 
 === Deprecated or removed options ===
 

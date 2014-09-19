@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -25,14 +25,14 @@ module PhusionPassenger
 
 module AdminTools
 	def self.tmpdir
-		["PASSENGER_TEMP_DIR", "PASSENGER_TMPDIR"].each do |name|
+		["PASSENGER_INSTANCE_REGISTRY_DIR", "TMPDIR"].each do |name|
 			if ENV.has_key?(name) && !ENV[name].empty?
 				return ENV[name]
 			end
 		end
 		return "/tmp"
 	end
-	
+
 	def self.process_is_alive?(pid)
 		begin
 			Process.kill(0, pid)

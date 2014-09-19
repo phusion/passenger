@@ -162,8 +162,7 @@ main(int argc, char *argv[]) {
 	setenv("RAILS_ENV", "production", 1);
 	setenv("TESTING_PASSENGER", "1", 1);
 	setenv("PYTHONDONTWRITEBYTECODE", "1", 1);
-	unsetenv("PASSENGER_TMPDIR");
-	unsetenv("PASSENGER_TEMP_DIR");
+	unsetenv("TMPDIR");
 	oxt::initialize();
 	oxt::setup_syscall_interruption_support();
 

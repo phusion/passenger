@@ -63,8 +63,6 @@ using namespace std;
  * data will be written to disk and freed from memory. This allows you to buffer
  * a virtually unlimited amount of data, without using a lot of memory.
  *
- * ## Implementation
- *
  * FileBufferedChannel operates by default in the in-memory mode. All data is buffered
  * in memory. Beyond a threshold (determined by `passedThreshold()`), it switches
  * to in-file mode.
@@ -189,13 +187,6 @@ public:
 	// `buffered` is 25-bit. This is 2^25-1, or 32 MB.
 	static const unsigned int MAX_MEMORY_BUFFERING = 33554431;
 
-	/***** Configuration *****/
-
-	unsigned int threshold;
-	unsigned int delayInFileModeSwitching;
-	bool autoTruncateFile;
-	bool autoStartMover;
-
 
 private:
 	/**
@@ -301,6 +292,7 @@ private:
 		}
 	};
 
+	FileBufferedChannelConfig *config;
 	Mode mode;
 	ReaderState readerState;
 	/** Number of buffers in `firstBuffer` + `moreBuffers`. */
@@ -500,12 +492,12 @@ private:
 
 				if (!result.second) {
 					readerState = RS_INACTIVE;
-					if (autoTruncateFile) {
+					if (config->autoTruncateFile) {
 						FBC_DEBUG("Reader: no more buffers. Transitioning to RS_INACTIVE, truncating file");
 						switchToInMemoryMode();
 					} else {
 						FBC_DEBUG("Reader: no more buffers. Transitioning to RS_INACTIVE, "
-							"not truncating file because autoTruncateFile is turned off");
+							"not truncating file because config->autoTruncateFile is turned off");
 					}
 					verifyInvariants();
 					callDataFlushedCallback();
@@ -736,20 +728,21 @@ private:
 
 		FileCreationContext *fcContext = new FileCreationContext();
 		fcContext->self = this;
-		fcContext->path = "/tmp/buffer.";
+		fcContext->path = config->bufferDir;
+		fcContext->path.append("/buffer.");
 		fcContext->path.append(toString(rand()));
 
 		inFileMode->writerState = WS_CREATING_FILE;
-		if (delayInFileModeSwitching == 0) {
+		if (config->delayInFileModeSwitching == 0) {
 			FBC_DEBUG("Writer: creating file " << fcContext->path);
 			inFileMode->writerRequest = eio_open(fcContext->path.c_str(),
 				O_RDWR | O_CREAT | O_EXCL, 0600, 0,
 				bufferFileCreated, fcContext);
 		} else {
 			FBC_DEBUG("Writer: delaying in-file mode switching for " <<
-				delayInFileModeSwitching << "ms");
+				config->delayInFileModeSwitching << "ms");
 			inFileMode->writerRequest = eio_busy(
-				(eio_tstamp) delayInFileModeSwitching / 1000.0,
+				(eio_tstamp) config->delayInFileModeSwitching / 1000.0,
 				0, bufferFileDoneDelaying, fcContext);
 		}
 	}
@@ -1049,14 +1042,27 @@ private:
 	}
 
 public:
+	/**
+	 * Called when all the in-memory buffers have been popped. This could happen
+	 * (when we're in the in-memory mode) because the last in-memory buffer is being
+	 * processed by the data callback. It could also happen (when we're in the in-file
+	 * mode) when the last in-memory buffer has sucessfully been written to disk.
+	 *
+	 * This event does not imply that the data callback has consumed all memory
+	 * buffers. For example, in case of FileBufferedFdSinkChannel, this event does
+	 * not imply that all the in-memory buffers have been written to the sink FD.
+	 * That's what `dataFlushedCallback` is for.
+	 */
 	Callback buffersFlushedCallback;
+	/**
+	 * Called when all buffered data (whether in-memory or on-disk) has been consumed
+	 * by the data callback. In case of FileBufferedFdSinkChannel, this means that all
+	 * buffered data has been written out to the sink FD.
+	 */
 	Callback dataFlushedCallback;
 
 	FileBufferedChannel()
-		: threshold(1024 * 128),
-		  delayInFileModeSwitching(0),
-		  autoTruncateFile(true),
-		  autoStartMover(true),
+		: config(NULL),
 		  mode(IN_MEMORY_MODE),
 		  readerState(RS_INACTIVE),
 		  nbuffers(0),
@@ -1071,10 +1077,7 @@ public:
 
 	FileBufferedChannel(Context *context)
 		: Channel(context),
-		  threshold(1024 * 128),
-		  delayInFileModeSwitching(0),
-		  autoTruncateFile(true),
-		  autoStartMover(true),
+		  config(&context->defaultFileBufferedChannelConfig),
 		  mode(IN_MEMORY_MODE),
 		  readerState(RS_INACTIVE),
 		  nbuffers(0),
@@ -1097,6 +1100,9 @@ public:
 	// May only be called right after construction.
 	void setContext(Context *context) {
 		Channel::setContext(context);
+		if (config == NULL) {
+			config = &context->defaultFileBufferedChannelConfig;
+		}
 	}
 
 	void feed(const MemoryKit::mbuf &buffer) {
@@ -1113,7 +1119,7 @@ public:
 			switchToInFileMode();
 		} else if (mode == IN_FILE_MODE
 		        && inFileMode->writerState == WS_INACTIVE
-		        && autoStartMover)
+		        && config->autoStartMover)
 		{
 			moveNextBufferToFile();
 		}
@@ -1203,7 +1209,7 @@ public:
 	}
 
 	bool passedThreshold() const {
-		return bytesBuffered >= threshold;
+		return bytesBuffered >= config->threshold;
 	}
 
 	void setDataCallback(DataCallback callback) {

@@ -185,6 +185,7 @@ private:
 	StaticString defaultServerName;
 	StaticString defaultServerPort;
 	StaticString serverSoftware;
+
 	HashedStaticString PASSENGER_APP_GROUP_NAME;
 	HashedStaticString PASSENGER_MAX_REQUESTS;
 	HashedStaticString PASSENGER_STICKY_SESSIONS;
@@ -309,7 +310,20 @@ public:
 	virtual Json::Value getConfigAsJson() const {
 		Json::Value doc = ParentClass::getConfigAsJson();
 		doc["single_app_mode"] = singleAppMode;
+		doc["show_version_in_header"] = showVersionInHeader;
+		doc["data_buffer_dir"] = getContext()->defaultFileBufferedChannelConfig.bufferDir;
 		return doc;
+	}
+
+	virtual void configure(const Json::Value &doc) {
+		ParentClass::configure(doc);
+		if (doc.isMember("show_version_in_header")) {
+			showVersionInHeader = doc["show_version_in_header"].asBool();
+		}
+		if (doc.isMember("data_buffer_dir")) {
+			getContext()->defaultFileBufferedChannelConfig.bufferDir =
+				doc["data_buffer_dir"].asString();
+		}
 	}
 
 	virtual Json::Value inspectClientStateAsJson(const Client *client) const {

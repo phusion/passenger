@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -263,56 +263,6 @@ string absolutizePath(const StaticString &path, const StaticString &workingDir =
  * @ingroup Support
  */
 const char *getSystemTempDir();
-
-/* Create a temporary directory for storing Phusion Passenger instance-specific
- * temp files, such as temporarily buffered uploads, sockets for backend
- * processes, etc.
- * The directory that will be created is the one returned by
- * <tt>getPassengerTempDir(false, parentDir)</tt>. This call stores the path to
- * this temp directory in an internal variable, so that subsequent calls to
- * getPassengerTempDir() will return the same path.
- *
- * The created temp directory will have several subdirectories:
- * - webserver_private - for storing the web server's buffered uploads.
- * - info - for storing files that allow external tools to query information
- *          about a running Phusion Passenger instance.
- * - backends - for storing Unix sockets created by backend processes.
- * - master - for storing files such as the Passenger HelperServer socket.
- *
- * If a (sub)directory already exists, then it will not result in an error.
- *
- * The <em>userSwitching</em> and <em>lowestUser</em> arguments passed to
- * this method are used for determining the optimal permissions for the
- * (sub)directories. The permissions will be set as tightly as possible based
- * on the values. The <em>workerUid</em> and <em>workerGid</em> arguments
- * will be used for determining the owner of certain subdirectories.
- *
- * @note You should only call this method inside the web server's master
- *       process. In case of Apache, this is the Apache control process,
- *       the one that tends to run as root. This is because this function
- *       will set directory permissions and owners/groups, which may require
- *       root privileges.
- *
- * @param parentDir The directory under which the Phusion Passenger-specific
- *                  temp directory should be created. This argument may be the
- *                  empty string, in which case getSystemTempDir() will be used
- *                  as the parent directory.
- * @param userSwitching Whether user switching is turned on.
- * @param lowestUser The user that the spawn manager and the pool server will
- *                   run as, if user switching is turned off.
- * @param workerUid The UID that the web server's worker processes are running
- *                  as. On Apache, this is the UID that's associated with the
- *                  'User' directive.
- * @param workerGid The GID that the web server's worker processes are running
- *                  as. On Apache, this is the GID that's associated with the
- *                  'Group' directive.
- * @throws IOException Something went wrong.
- * @throws SystemException Something went wrong.
- * @throws FileSystemException Something went wrong.
- */
-/* void createPassengerTempDir(const string &parentDir, bool userSwitching,
-                            const string &lowestUser,
-                            uid_t workerUid, gid_t workerGid); */
 
 /**
  * Create the directory at the given path, creating intermediate directories
