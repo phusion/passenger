@@ -247,7 +247,6 @@ describe "Phusion Passenger for Nginx" do
 				server[:server_name] = "2.passenger.test"
 				server[:root]        = "#{@stub.full_app_root}/public"
 				server[:passenger_app_group_name] = "secondary"
-				server[:passenger_show_version_in_header] = "off"
 			end
 			@nginx.add_server do |server|
 				server[:server_name] = "3.passenger.test"
@@ -302,13 +301,6 @@ describe "Phusion Passenger for Nginx" do
 			response = get_response('/')
 			response["X-Powered-By"].should include("Phusion Passenger")
 			response["X-Powered-By"].should include(PhusionPassenger::VERSION_STRING)
-		end
-
-		it "omits the version number in X-Powered-By when passenger_show_version_in_header is off" do
-			@server = "http://2.passenger.test:#{@nginx.port}/"
-			response = get_response('/')
-			response["X-Powered-By"].should include("Phusion Passenger")
-			response["X-Powered-By"].should_not include(PhusionPassenger::VERSION_STRING)
 		end
 
 		it "respawns the app after handling max_requests requests" do
