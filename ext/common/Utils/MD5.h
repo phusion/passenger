@@ -55,9 +55,8 @@
     #include <string>
     #include <StaticString.h>
     namespace Passenger {
-#else
-    #include <stdint.h>
 #endif
+#include <stdint.h>
 
 /*
  * This package supports both compile-time and run-time determination of CPU
