@@ -201,13 +201,6 @@
 		"Whether to show the Phusion Passenger version number in the X-Powered-By header."),
 
 	
-	AP_INIT_TAKE1("PassengerStatThrottleRate",
-		(Take1Func) cmd_passenger_stat_throttle_rate,
-		NULL,
-		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
-		"Limit the number of stat calls to once per given seconds."),
-
-	
 	AP_INIT_FLAG("PassengerFriendlyErrorPages",
 		(FlagFunc) cmd_passenger_friendly_error_pages,
 		NULL,

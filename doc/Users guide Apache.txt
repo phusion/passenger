@@ -1447,8 +1447,7 @@ measure to avoid memory leaks.
 By default, Phusion Passenger performs several filesystem checks (or, in
 programmers jargon, 'stat() calls') each time a request is processed:
 
-- It checks whether 'config/environment.rb', 'config.ru' or 'passenger_wsgi.py'
-  is present, in order to autodetect Rails, Rack and WSGI applications.
+- It checks which the application <<PassengerStartupFile,startup files>> are present, in order to autodetect the application type.
 - It checks whether 'restart.txt' has changed or whether 'always_restart.txt'
   exists, in order to determine whether the application should be restarted.
 
@@ -1463,14 +1462,7 @@ seconds. Setting it to a value of '0' means that no throttling will take place,
 or in other words, that the above list of filesystem checks will be performed on
 every request.
 
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Limits` is on.
-
-In each place, it may be specified at most once. The default value is '0'.
+This option may be specified once, in the global server configuration. The default value is '10'.
 
 [[PassengerPreStart]]
 ==== PassengerPreStart <url> ====

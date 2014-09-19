@@ -62,8 +62,9 @@ typedef struct {
     ngx_flag_t   abort_on_startup_error;
     ngx_uint_t   max_pool_size;
     ngx_uint_t   pool_idle_time;
-    ngx_flag_t   user_switching;
+    ngx_uint_t   stat_throttle_rate;
     ngx_flag_t   show_version_in_header;
+    ngx_flag_t   user_switching;
     ngx_str_t    default_user;
     ngx_str_t    default_group;
     ngx_str_t    analytics_log_user;

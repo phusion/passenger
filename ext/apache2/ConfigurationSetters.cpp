@@ -386,30 +386,6 @@
 	
 	
 		static const char *
-		cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
-			DirConfig *config = (DirConfig *) pcfg;
-			char *end;
-			long result;
-
-			result = strtol(arg, &end, 10);
-			if (*end != '\0') {
-				string message = "Invalid number specified for ";
-				message.append(cmd->directive->directive);
-				message.append(".");
-
-				char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-					message.size() + 1);
-				memcpy(messageStr, message.c_str(), message.size() + 1);
-				return messageStr;
-			
-			} else {
-				config->statThrottleRate = (int) result;
-				return NULL;
-			}
-		}
-	
-	
-		static const char *
 		cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, const char *arg) {
 			DirConfig *config = (DirConfig *) pcfg;
 			config->friendlyErrorPages =

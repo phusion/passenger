@@ -130,11 +130,6 @@
 	
 
 	
-		addHeader(r, result, StaticString("!~PASSENGER_STAT_THROTTLE_RATE",
-			sizeof("!~PASSENGER_STAT_THROTTLE_RATE") - 1), config->statThrottleRate);
-	
-
-	
 		addHeader(result, StaticString("!~PASSENGER_FRIENDLY_ERROR_PAGES",
 			sizeof("!~PASSENGER_FRIENDLY_ERROR_PAGES") - 1), config->friendlyErrorPages);
 	

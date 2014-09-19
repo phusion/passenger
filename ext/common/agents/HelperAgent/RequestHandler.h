@@ -177,6 +177,7 @@ private:
 
 	const VariantMap *agentsOptions;
 	psg_pool_t *stringPool;
+	unsigned int statThrottleRate;
 	StaticString defaultRuby;
 	StaticString loggingAgentAddress;
 	StaticString loggingAgentPassword;
@@ -269,6 +270,7 @@ public:
 		serverSoftware = psg_pstrdup(stringPool,
 			agentsOptions->get("server_software"));
 
+		statThrottleRate = agentsOptions->getInt("stat_throttle_rate");
 		showVersionInHeader = agentsOptions->getBool(
 			"show_version_in_header");
 
@@ -310,6 +312,7 @@ public:
 	virtual Json::Value getConfigAsJson() const {
 		Json::Value doc = ParentClass::getConfigAsJson();
 		doc["single_app_mode"] = singleAppMode;
+		doc["stat_throttle_rate"] = statThrottleRate;
 		doc["show_version_in_header"] = showVersionInHeader;
 		doc["data_buffer_dir"] = getContext()->defaultFileBufferedChannelConfig.bufferDir;
 		return doc;

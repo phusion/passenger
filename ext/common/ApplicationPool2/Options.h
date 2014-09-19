@@ -465,7 +465,7 @@ public:
 		  maxRequestQueueSize(100),
 
 		  stickySessionId(0),
-		  statThrottleRate(10),
+		  statThrottleRate(DEFAULT_STAT_THROTTLE_RATE),
 		  maxRequests(0),
 		  currentTime(0),
 		  noop(false)

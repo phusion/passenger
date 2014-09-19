@@ -238,6 +238,7 @@ DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int,
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_debug_log_file, debugLogFile)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsigned int, 0)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned int, 0)
 DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_user_switching, userSwitching)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
@@ -438,6 +439,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that a preloader process may be idle before it is shutdown."),
+	AP_INIT_TAKE1("PassengerStatThrottleRate",
+		(Take1Func) cmd_passenger_stat_throttle_rate,
+		NULL,
+		RSRC_CONF,
+		"Limit the number of stat calls to once per given seconds."),
 	AP_INIT_TAKE1("UnionStationGatewayAddress",
 		(Take1Func) cmd_union_station_gateway_address,
 		NULL,

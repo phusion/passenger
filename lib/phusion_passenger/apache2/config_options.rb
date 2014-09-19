@@ -200,12 +200,6 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 		:desc     => "Whether to show the Phusion Passenger version number in the X-Powered-By header."
 	},
 	{
-		:name     => "PassengerStatThrottleRate",
-		:type     => :integer,
-		:context  => ["OR_LIMIT", "ACCESS_CONF", "RSRC_CONF"],
-		:desc     => "Limit the number of stat calls to once per given seconds."
-	},
-	{
 		:name     => "PassengerFriendlyErrorPages",
 		:type     => :flag,
 		:desc     => "Whether to display friendly error pages when something goes wrong."

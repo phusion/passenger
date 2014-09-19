@@ -358,7 +358,7 @@ private:
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
 		TRACE_POINT();
 
-		DirectoryMapper mapper(r, config, &cstat, config->getStatThrottleRate());
+		DirectoryMapper mapper(r, config, &cstat, serverConfig.statThrottleRate);
 		try {
 			if (mapper.getApplicationType() == PAT_NONE) {
 				// (B) is not true.
@@ -1231,6 +1231,7 @@ public:
 			.set    ("default_ruby", serverConfig.defaultRuby)
 			.setInt ("max_pool_size", serverConfig.maxPoolSize)
 			.setInt ("pool_idle_time", serverConfig.poolIdleTime)
+			.setInt ("statThrottleRate", serverConfig.statThrottleRate)
 			.set    ("analytics_log_user", serverConfig.analyticsLogUser)
 			.set    ("analytics_log_group", serverConfig.analyticsLogGroup)
 			.set    ("union_station_gateway_address", serverConfig.unionStationGatewayAddress)

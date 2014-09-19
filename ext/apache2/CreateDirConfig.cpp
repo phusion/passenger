@@ -61,7 +61,6 @@
 				config->stickySessionsCookieName = DirConfig::UNSET;
 				config->spawnMethod = NULL;
 				config->showVersionInHeader = DirConfig::UNSET;
-				config->statThrottleRate = UNSET_INT_VALUE;
 				config->friendlyErrorPages = DirConfig::UNSET;
 				config->restartDir = NULL;
 				config->appGroupName = NULL;

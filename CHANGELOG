@@ -12,6 +12,8 @@ Release 5.0.0 beta 1
  * PassengerAppGroupName now includes PassengerAppEnv by default. Closes GH-664.
  * passenger_set_cgi_param has been removed and replaced by passenger_set_header and passenger_env_var.
  * passenger_show_version_in_header is now only valid in the http context
+ * PassengerStatThrottleRate is now global.
+ * passenger_stat_throttle_rate introduced.
  * passenger_temp_dir (and Apache equivalent) has been replaced by two config options, passenger_instance_registry_dir and passenger_data_buffer_dir.PassengerUploadBufferDir has been replaced by PassengerDataBufferDir.
  * command line tools no longer respect PASSENGER_TEMP_DIR. use PASSENGER_INSTANCE_REGISTRY_DIR instead.
  * the Passenger Standalone config template has changed. users are encouraged to update it

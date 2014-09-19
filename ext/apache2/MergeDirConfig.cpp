@@ -201,13 +201,6 @@
 	
 
 	
-		config->statThrottleRate =
-			(add->statThrottleRate == UNSET_INT_VALUE) ?
-			base->statThrottleRate :
-			add->statThrottleRate;
-	
-
-	
 		config->friendlyErrorPages =
 			(add->friendlyErrorPages == DirConfig::UNSET) ?
 			base->friendlyErrorPages :

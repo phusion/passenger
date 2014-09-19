@@ -129,14 +129,6 @@ struct DirConfig {
 		return allowEncodedSlashes == ENABLED;
 	}
 
-	int getStatThrottleRate() const {
-		if (statThrottleRate != UNSET_INT_VALUE) {
-			return statThrottleRate;
-		} else {
-			return 0;
-		}
-	}
-
 	bool useUnionStation() const {
 		return unionStationSupport == ENABLED;
 	}
@@ -195,6 +187,8 @@ struct ServerConfig {
 	 * idle before it gets terminated. */
 	unsigned int poolIdleTime;
 
+	unsigned int statThrottleRate;
+
 	/** Whether user switching support is enabled. */
 	bool userSwitching;
 
@@ -224,6 +218,7 @@ struct ServerConfig {
 		debugLogFile       = NULL;
 		maxPoolSize        = DEFAULT_MAX_POOL_SIZE;
 		poolIdleTime       = DEFAULT_POOL_IDLE_TIME;
+		statThrottleRate   = DEFAULT_STAT_THROTTLE_RATE;
 		userSwitching      = true;
 		defaultUser        = DEFAULT_WEB_APP_USER;
 		unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS;

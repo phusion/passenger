@@ -175,6 +175,7 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 		options.defaultGroup = defaultGroup;
 	}
 	options.minProcesses = agentsOptions->getInt("min_instances");
+	options.statThrottleRate = statThrottleRate;
 }
 
 static void
@@ -304,7 +305,6 @@ createNewPoolOptions(Client *client, Request *req) {
 	fillPoolOptionSecToMsec(req, options.startTimeout, "!~PASSENGER_START_TIMEOUT");
 	fillPoolOption(req, options.maxPreloaderIdleTime, "!~PASSENGER_MAX_PRELOADER_IDLE_TIME");
 	fillPoolOption(req, options.maxRequestQueueSize, "!~PASSENGER_MAX_REQUEST_QUEUE_SIZE");
-	fillPoolOption(req, options.statThrottleRate, "!~PASSENGER_STAT_THROTTLE_RATE");
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");
 	fillPoolOption(req, options.startupFile, "!~PASSENGER_STARTUP_FILE");
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");

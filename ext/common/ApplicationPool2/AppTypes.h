@@ -51,8 +51,10 @@ typedef enum {
 
 typedef void PP_AppTypeDetector;
 
-PP_AppTypeDetector *pp_app_type_detector_new();
+PP_AppTypeDetector *pp_app_type_detector_new(unsigned int throttleRate);
 void pp_app_type_detector_free(PP_AppTypeDetector *detector);
+void pp_app_type_detector_set_throttle_rate(PP_AppTypeDetector *detector,
+	unsigned int throttleRate);
 PassengerAppType pp_app_type_detector_check_document_root(PP_AppTypeDetector *detector,
 	const char *documentRoot, unsigned int len, int resolveFirstSymlink,
 	PP_Error *error);
@@ -115,10 +117,10 @@ private:
 	}
 
 public:
-	AppTypeDetector() {
+	AppTypeDetector(unsigned int _throttleRate = 1) {
 		cstat = new CachedFileStat();
 		ownsCstat = true;
-		throttleRate = 1;
+		throttleRate = _throttleRate;
 	}
 
 	AppTypeDetector(CachedFileStat *_cstat, unsigned int _throttleRate) {
@@ -131,6 +133,10 @@ public:
 		if (ownsCstat) {
 			delete cstat;
 		}
+	}
+
+	void setThrottleRate(unsigned int val) {
+		throttleRate = val;
 	}
 
 	/**

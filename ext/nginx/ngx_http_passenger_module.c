@@ -43,6 +43,7 @@
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
 #include "ContentHandler.h"
+#include "common/Constants.h"
 #include "common/Utils/modp_b64.cpp" /* File is C compatible. */
 
 
@@ -261,6 +262,9 @@ start_watchdog(ngx_cycle_t *cycle) {
     params    = pp_variant_map_new();
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
 
+    pp_app_type_detector_set_throttle_rate(pp_app_type_detector,
+        passenger_main_conf.stat_throttle_rate);
+
     prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
     prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
     for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
@@ -288,6 +292,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     pp_variant_map_set_ngx_str(params, "default_ruby", &passenger_main_conf.default_ruby);
     pp_variant_map_set_int    (params, "max_pool_size", passenger_main_conf.max_pool_size);
     pp_variant_map_set_int    (params, "pool_idle_time", passenger_main_conf.pool_idle_time);
+    pp_variant_map_set_int    (params, "stat_throttle_rate", passenger_main_conf.stat_throttle_rate);
     pp_variant_map_set_ngx_str(params, "analytics_log_user", &passenger_main_conf.analytics_log_user);
     pp_variant_map_set_ngx_str(params, "analytics_log_group", &passenger_main_conf.analytics_log_group);
     pp_variant_map_set_ngx_str(params, "union_station_gateway_address", &passenger_main_conf.union_station_gateway_address);
@@ -402,7 +407,7 @@ pre_config_init(ngx_conf_t *cf)
     pp_placeholder_upstream_address.data = (u_char *) "unix:/passenger_helper_server";
     pp_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
     pp_stat_cache = pp_cached_file_stat_new(1024);
-    pp_app_type_detector = pp_app_type_detector_new();
+    pp_app_type_detector = pp_app_type_detector_new(DEFAULT_STAT_THROTTLE_RATE);
     pp_agents_starter = pp_agents_starter_new(AS_NGINX, &error_message);
 
     if (pp_agents_starter == NULL) {

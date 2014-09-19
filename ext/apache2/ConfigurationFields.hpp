@@ -68,8 +68,6 @@
 	int minInstances;
 	/** A timeout for application startup. */
 	int startTimeout;
-	/** Limit the number of stat calls to once per given seconds. */
-	int statThrottleRate;
 	/** The environment under which applications are run. */
 	const char *appEnv;
 	/** Application process group name. */

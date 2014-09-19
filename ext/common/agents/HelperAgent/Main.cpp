@@ -788,6 +788,7 @@ setAgentsOptionsDefaults() {
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 	options.setDefaultInt("min_instances", 1);
+	options.setDefaultInt("stat_throttle_rate", DEFAULT_STAT_THROTTLE_RATE);
 	options.setDefault("server_software", PROGRAM_NAME "/" PASSENGER_VERSION);
 	options.setDefaultBool("show_version_in_header", true);
 	options.setDefault("data_buffer_dir", getSystemTempDir());
