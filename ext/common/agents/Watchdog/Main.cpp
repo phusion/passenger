@@ -688,6 +688,9 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceD
 	VariantMap &options = *agentsOptions;
 	vector<string> strset;
 
+	options.set("instance_registry_dir",
+		absolutizePath(options.get("instance_registry_dir")));
+
 	wo = boost::make_shared<WorkingObjects>();
 	workingObjects = wo.get();
 	wo->resourceLocator = boost::make_shared<ResourceLocator>(agentsOptions->get("passenger_root"));

@@ -473,6 +473,14 @@ initializeNonPrivilegedWorkingObjects() {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects;
+
+	if (options.get("server_software").find(PROGRAM_NAME) == string::npos) {
+		options.set("server_software", options.get("server_software") +
+			(" " PROGRAM_NAME "/" PASSENGER_VERSION));
+	}
+	setenv("SERVER_SOFTWARE", options.get("server_software").c_str(), 1);
+	options.set("data_buffer_dir", absolutizePath(options.get("data_buffer_dir")));
+
 	vector<string> addresses = options.getStrSet("server_addresses");
 	vector<string> adminAddresses = options.getStrSet("server_admin_addresses", false);
 
@@ -500,6 +508,9 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawnerConfig->agentsOptions = agentsOptions;
 	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
 	wo->spawnerConfig->instanceDir = options.get("instance_dir", false);
+	if (!wo->spawnerConfig->instanceDir.empty()) {
+		wo->spawnerConfig->instanceDir = absolutizePath(wo->spawnerConfig->instanceDir);
+	}
 	wo->spawnerConfig->finalize();
 
 	UPDATE_TRACE_POINT();
@@ -777,7 +788,7 @@ setAgentsOptionsDefaults() {
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 	options.setDefaultInt("min_instances", 1);
-	options.setDefault("server_software", "Phusion Passenger/" PASSENGER_VERSION);
+	options.setDefault("server_software", PROGRAM_NAME "/" PASSENGER_VERSION);
 	options.setDefaultBool("show_version_in_header", true);
 	options.setDefault("data_buffer_dir", getSystemTempDir());
 

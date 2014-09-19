@@ -275,6 +275,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     }
 
     pp_variant_map_set_int    (params, "web_server_pid", getpid());
+    pp_variant_map_set        (params, "server_software", NGINX_VER, strlen(NGINX_VER));
     pp_variant_map_set_bool   (params, "multi_app", 1);
     pp_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);
     pp_variant_map_set_ngx_str(params, "debug_log_file", &passenger_main_conf.debug_log_file);
