@@ -124,7 +124,7 @@ private
 			headers_output = generate_headers_array(status, headers)
 			if output_body && should_add_message_length_header?(status, headers)
 				body_size = 0
-				body.each { |part| body_size += bytesize(part) }
+				body.each { |part| body_size += bytesize(part.to_s) }
 				headers_output << CONTENT_LENGTH_HEADER_AND_SEPARATOR
 				headers_output << body_size.to_s
 				headers_output << CRLF

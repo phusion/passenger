@@ -343,7 +343,7 @@ describe "Phusion Passenger for Nginx" do
 				end
 				app = lambda do |env|
 					if env['PATH_INFO'] == '/oobw'
-						[200, { "Content-Type" => "text/html", "X-Passenger-Request-OOB-Work" => 'true' }, [$$]]
+						[200, { "Content-Type" => "text/html", "!~Request-OOB-Work" => 'true' }, [$$]]
 					else
 						[200, { "Content-Type" => "text/html" }, [$$]]
 					end
