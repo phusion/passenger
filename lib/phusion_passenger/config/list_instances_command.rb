@@ -23,7 +23,7 @@
 
 require 'optparse'
 PhusionPassenger.require_passenger_lib 'constants'
-PhusionPassenger.require_passenger_lib 'admin_tools/server_instance'
+PhusionPassenger.require_passenger_lib 'admin_tools/instance_registry'
 PhusionPassenger.require_passenger_lib 'config/command'
 PhusionPassenger.require_passenger_lib 'config/utils'
 PhusionPassenger.require_passenger_lib 'utils/json'
@@ -36,13 +36,13 @@ class ListInstancesCommand < Command
 
 	def run
 		parse_options
-		server_instances = AdminTools::ServerInstance.list
+		instances = AdminTools::InstanceRegistry.new.list
 		if @options[:json]
-			print_json(server_instances)
-		elsif server_instances.empty?
+			print_json(instances)
+		elsif instances.empty?
 			print_no_instances_running
 		else
-			print_instances(server_instances)
+			print_instances(instances)
 		end
 	end
 
@@ -85,31 +85,19 @@ private
 		end
 	end
 
-	def print_json(server_instances)
+	def print_json(instances)
 		result = []
-		server_instances.each do |instance|
-			begin
-				description = instance.web_server_description
-			rescue Errno::EACCES, Errno::ENOENT
-				description = nil
-			end
-			result << {
-				:pid => instance.pid,
-				:description => description
-			}
+		instances.each do |instance|
+			result << instance.properties
 		end
 		puts PhusionPassenger::Utils::JSON.generate(result)
 	end
 
-	def print_instances(server_instances)
-		printf "%-8s   %s\n", "PID", "Description"
-		server_instances.each do |instance|
-			begin
-				description = instance.web_server_description
-			rescue Errno::EACCES, Errno::ENOENT
-				description = nil
-			end
-			printf "%-8s   %s\n", instance.pid, description
+	def print_instances(instances)
+		printf "%-25s  %s\n", "Name", "Description"
+		puts "------------------------------------------------------------------"
+		instances.each do |instance|
+			printf "%-25s  %s\n", instance.name, instance.server_software
 		end
 	end
 end

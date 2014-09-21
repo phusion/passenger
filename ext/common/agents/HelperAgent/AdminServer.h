@@ -25,6 +25,7 @@
 #ifndef _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_
 #define _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_
 
+#include <oxt/thread.hpp>
 #include <sstream>
 #include <string>
 
@@ -153,14 +154,16 @@ private:
 		return params;
 	}
 
-	void processStatus(Client *client, Request *req) {
+	void processConnectionsStatus(Client *client, Request *req) {
 		if (authorize(client, req, READONLY)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "application/json");
 			writeSimpleResponse(client, 200, &headers,
 				psg_pstrdup(req->pool,
 					requestHandler->inspectStateAsJson().toStyledString()));
-			endRequest(&client, &req);
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		} else {
 			respondWith401(client, req);
 		}
@@ -206,13 +209,116 @@ private:
 		}
 	}
 
+	void processPoolRestartAppGroup(Client *client, Request *req) {
+		if (req->method != HTTP_POST) {
+			respondWith405(client, req);
+		} else if (!authorize(client, req, FULL)) {
+			respondWith401(client, req);
+		} else if (!req->hasBody()) {
+			endAsBadRequest(&client, &req, "Body required");
+		} else if (requestBodyExceedsLimit(client, req)) {
+			respondWith413(client, req);
+		}
+		// Continues in processPoolRestartAppGroupBody().
+	}
+
+	void processPoolRestartAppGroupBody(Client *client, Request *req) {
+		HeaderTable headers;
+		RestartMethod method = ApplicationPool2::RM_DEFAULT;
+
+		headers.insert(req->pool, "content-type", "application/json");
+		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+
+		if (!req->jsonBody.isMember("name")) {
+			endAsBadRequest(&client, &req, "Name required");
+			return;
+		}
+
+		if (req->jsonBody.isMember("restart_method")) {
+			string restartMethodString = req->jsonBody["restart_method"].asString();
+			if (restartMethodString == "blocking") {
+				method = RM_BLOCKING;
+			} else if (restartMethodString == "rolling") {
+				method = RM_ROLLING;
+			} else {
+				endAsBadRequest(&client, &req, "Unsupported restart method");
+				return;
+			}
+		}
+
+		const char *response;
+		if (appPool->restartGroupByName(req->jsonBody["name"].asString(), method)) {
+			response = "{ \"restarted\": true }";
+		} else {
+			response = "{ \"restarted\": false }";
+		}
+		writeSimpleResponse(client, 200, &headers, response);
+
+		if (!req->ended()) {
+			endRequest(&client, &req);
+		}
+	}
+
+	void processPoolDetachProcess(Client *client, Request *req) {
+		if (req->method != HTTP_POST) {
+			respondWith405(client, req);
+		} else if (!authorize(client, req, FULL)) {
+			respondWith401(client, req);
+		} else if (!req->hasBody()) {
+			endAsBadRequest(&client, &req, "Body required");
+		} else if (requestBodyExceedsLimit(client, req)) {
+			respondWith413(client, req);
+		}
+		// Continues in processPoolDetachProcessBody().
+	}
+
+	void processPoolDetachProcessBody(Client *client, Request *req) {
+		HeaderTable headers;
+		RestartMethod method = ApplicationPool2::RM_DEFAULT;
+		const char *response;
+
+		headers.insert(req->pool, "content-type", "application/json");
+		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+
+		if (req->jsonBody.isMember("pid")) {
+			pid_t pid = (pid_t) req->jsonBody["pid"].asUInt();
+			if (appPool->detachProcess(pid)) {
+				response = "{ \"detached\": true }";
+			} else {
+				response = "{ \"detached\": false }";
+			}
+			writeSimpleResponse(client, 200, &headers, response);
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			endAsBadRequest(&client, &req, "PID required");
+		}
+	}
+
+	void processBacktraces(Client *client, Request *req) {
+		if (authorize(client, req, READONLY)) {
+			HeaderTable headers;
+			headers.insert(req->pool, "content-type", "text/plain");
+			writeSimpleResponse(client, 200, &headers,
+				psg_pstrdup(req->pool, oxt::thread::all_backtraces()));
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			respondWith401(client, req);
+		}
+	}
+
 	void processPing(Client *client, Request *req) {
 		if (authorize(client, req, READONLY)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 			headers.insert(req->pool, "content-type", "application/json");
 			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
-			endRequest(&client, &req);
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		} else {
 			respondWith401(client, req);
 		}
@@ -226,7 +332,9 @@ private:
 			headers.insert(req->pool, "content-type", "application/json");
 			exitEvent->notify();
 			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
-			endRequest(&client, &req);
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		} else {
 			respondWith401(client, req);
 		}
@@ -245,7 +353,9 @@ private:
 
 			writeSimpleResponse(client, 200, &headers,
 				psg_pstrdup(req->pool, doc.toStyledString()));
-			endRequest(&client, &req);
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		} else if (req->method == HTTP_PUT) {
 			if (!authorize(client, req, FULL)) {
 				respondWith401(client, req);
@@ -262,6 +372,7 @@ private:
 		HeaderTable headers;
 
 		headers.insert(req->pool, "content-type", "application/json");
+		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 
 		if (req->jsonBody.isMember("log_level")) {
 			setLogLevel(req->jsonBody["log_level"].asInt());
@@ -269,7 +380,16 @@ private:
 
 		requestHandler->configure(req->jsonBody);
 		writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
-		endRequest(&client, &req);
+		if (!req->ended()) {
+			endRequest(&client, &req);
+		}
+	}
+
+	bool requestBodyExceedsLimit(Client *client, Request *req, unsigned int limit = 1024 * 128) {
+		return (req->bodyType == Request::RBT_CONTENT_LENGTH
+				&& req->aux.bodyInfo.contentLength > limit)
+			|| (req->bodyType == Request::RBT_CHUNKED
+				&& req->body.size() > limit);
 	}
 
 	void respondWith401(Client *client, Request *req) {
@@ -277,65 +397,116 @@ private:
 		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 		headers.insert(req->pool, "www-authenticate", "Basic realm=\"admin\"");
 		writeSimpleResponse(client, 401, &headers, "Unauthorized");
-		endRequest(&client, &req);
+		if (!req->ended()) {
+			endRequest(&client, &req);
+		}
 	}
 
 	void respondWith404(Client *client, Request *req) {
 		HeaderTable headers;
 		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 		writeSimpleResponse(client, 404, &headers, "Not found");
-		endRequest(&client, &req);
+		if (!req->ended()) {
+			endRequest(&client, &req);
+		}
 	}
 
 	void respondWith405(Client *client, Request *req) {
 		HeaderTable headers;
 		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 		writeSimpleResponse(client, 405, &headers, "Method not allowed");
-		endRequest(&client, &req);
+		if (!req->ended()) {
+			endRequest(&client, &req);
+		}
+	}
+
+	void respondWith413(Client *client, Request *req) {
+		HeaderTable headers;
+		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		writeSimpleResponse(client, 413, &headers, "Request body too large");
+		if (!req->ended()) {
+			endRequest(&client, &req);
+		}
 	}
 
 	void respondWith422(Client *client, Request *req, const StaticString &body) {
 		HeaderTable headers;
 		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 		writeSimpleResponse(client, 422, &headers, body);
-		endRequest(&client, &req);
+		if (!req->ended()) {
+			endRequest(&client, &req);
+		}
 	}
 
 protected:
 	virtual void onRequestBegin(Client *client, Request *req) {
+		TRACE_POINT();
 		StaticString path = req->getPathWithoutQueryString();
 
 		P_INFO("Admin request: " << http_method_str(req->method) <<
 			" " << StaticString(req->path.start->data, req->path.size));
 
-		if (path == P_STATIC_STRING("/status.json")) {
-			processStatus(client, req);
-		} else if (path == P_STATIC_STRING("/pool.xml")) {
-			processPoolStatusXml(client, req);
-		} else if (path == P_STATIC_STRING("/pool.txt")) {
-			processPoolStatusTxt(client, req);
-		} else if (path == P_STATIC_STRING("/ping.json")) {
-			processPing(client, req);
-		} else if (path == P_STATIC_STRING("/shutdown.json")) {
-			processShutdown(client, req);
-		} else if (path == P_STATIC_STRING("/config.json")) {
-			processConfig(client, req);
-		} else {
-			respondWith404(client, req);
+		try {
+			if (path == P_STATIC_STRING("/connections.json")) {
+				processConnectionsStatus(client, req);
+			} else if (path == P_STATIC_STRING("/pool.xml")) {
+				processPoolStatusXml(client, req);
+			} else if (path == P_STATIC_STRING("/pool.txt")) {
+				processPoolStatusTxt(client, req);
+			} else if (path == P_STATIC_STRING("/pool/restart_app_group.json")) {
+				processPoolRestartAppGroup(client, req);
+			} else if (path == P_STATIC_STRING("/pool/detach_process.json")) {
+				processPoolDetachProcess(client, req);
+			} else if (path == P_STATIC_STRING("/backtraces.txt")) {
+				processBacktraces(client, req);
+			} else if (path == P_STATIC_STRING("/ping.json")) {
+				processPing(client, req);
+			} else if (path == P_STATIC_STRING("/shutdown.json")) {
+				processShutdown(client, req);
+			} else if (path == P_STATIC_STRING("/config.json")) {
+				processConfig(client, req);
+			} else {
+				respondWith404(client, req);
+			}
+		} catch (const oxt::tracable_exception &e) {
+			SKC_ERROR(client, "Exception: " << e.what() << "\n" << e.backtrace());
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		}
 	}
 
 	virtual ServerKit::Channel::Result onRequestBody(Client *client, Request *req,
 		const MemoryKit::mbuf &buffer, int errcode)
 	{
+		TRACE_POINT();
 		if (buffer.size() > 0) {
 			// Data
 			req->body.append(buffer.start, buffer.size());
+			if (requestBodyExceedsLimit(client, req)) {
+				respondWith413(client, req);
+			}
 		} else if (errcode == 0) {
 			// EOF
 			Json::Reader reader;
 			if (reader.parse(req->body, req->jsonBody)) {
-				processConfigBody(client, req);
+				StaticString path = req->getPathWithoutQueryString();
+				try {
+					if (path == P_STATIC_STRING("/pool/restart_app_group.json")) {
+						processPoolRestartAppGroupBody(client, req);
+					} else if (path == P_STATIC_STRING("/pool/detach_process.json")) {
+						processPoolDetachProcessBody(client, req);
+					} else if (path == P_STATIC_STRING("/config.json")) {
+						processConfigBody(client, req);
+					} else {
+						P_BUG("Unknown path for body processing: " << path);
+					}
+				} catch (const oxt::tracable_exception &e) {
+					SKC_ERROR(client, "Exception: " << e.what() << "\n" << e.backtrace());
+					if (!req->ended()) {
+						endRequest(&client, &req);
+					}
+				}
 			} else {
 				respondWith422(client, req, reader.getFormattedErrorMessages());
 			}

@@ -69,14 +69,13 @@ module PhusionPassenger
 
 		# Versions
 		PASSENGER_VERSION = PhusionPassenger::VERSION_STRING
-		SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION = 1
+		SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION = 2
 		SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION = 0
-		SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MAJOR_VERSION = 3
-		SERVER_INSTANCE_DIR_GENERATION_STRUCTURE_MINOR_VERSION = 0
 
 		# Misc
 		FEEDBACK_FD = 3
 		PROGRAM_NAME = "Phusion Passenger"
+		SERVER_TOKEN_NAME = "Phusion_Passenger"
 		INDEX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide.html"
 		APACHE2_DOC_URL     = "https://www.phusionpassenger.com/documentation/Users%20guide%20Apache.html"
 		NGINX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html"

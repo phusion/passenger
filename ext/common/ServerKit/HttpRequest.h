@@ -129,8 +129,6 @@ public:
 			boost::uint64_t contentLength;
 			// If bodyType == RBT_CHUNKED
 			bool endChunkReached;
-			// If bodyType == PARSING_BODY_UNTIL_EOF
-			bool endReached;
 		} bodyInfo;
 
 		/** If a request parsing error occurred, the error code is stored here.

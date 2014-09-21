@@ -33,115 +33,138 @@ require 'phusion_passenger'
 ## Magic comment: end bootstrap ##
 
 PhusionPassenger.locate_directories
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'platform_info'
-PhusionPassenger.require_passenger_lib 'admin_tools/server_instance'
+PhusionPassenger.require_passenger_lib 'admin_tools/instance_registry'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 require 'optparse'
+require 'socket'
+require 'net/http'
 
+include PhusionPassenger::SharedConstants
 include PhusionPassenger::AdminTools
 include PhusionPassenger::Utils::AnsiColors
 
-DEFAULT_OPTIONS = { :show => 'pool', :color => STDOUT.tty? }.freeze
+DEFAULT_OPTIONS = { :show => 'pool', :color => STDOUT.tty?, :header => true }.freeze
 
 
 ##### Show status command #####
 
 def command_show_status(argv, options)
 	if argv.empty?
-		server_instance = find_sole_server_instance
+		instance = find_sole_instance
 	else
-		server_instance = find_server_instance_on_pid(argv[0].to_i)
+		instance = find_instance_by_name_prefix(argv[0])
 	end
-	show_status(server_instance, options)
+	show_status(instance, options)
 end
 
-def find_sole_server_instance
-	server_instances = ServerInstance.list
-	if server_instances.empty?
-		abort "ERROR: Phusion Passenger doesn't seem to be running."
-	elsif server_instances.size == 1
-		return server_instances.first
+def find_sole_instance
+	instances = InstanceRegistry.new.list
+	if instances.empty?
+		abort "ERROR: #{PROGRAM_NAME} doesn't seem to be running. If you " +
+			"are sure that it is running, then the causes of this problem could be:\n\n" +
+			"1. You customized the instance registry directory using Apache's " +
+			"PassengerInstanceRegistryDir option, Nginx's passenger_instance_registry_dir " +
+			"option, or #{PROGRAM_NAME} Standalone's --instance-registry-dir command line " +
+			"argument. If so, please set the environment variable PASSENGER_INSTANCE_REGISTRY_DIR " +
+			"to that directory and run passenger-status again.\n" +
+			"2. The instance directory has been removed by an operating system background service. " +
+			"Please set a different instance registry directory using Apache's " +
+			"PassengerInstanceRegistryDir option, Nginx's passenger_instance_registry_dir " +
+			"option, or #{PROGRAM_NAME} Standalone's --instance-registry-dir command line " +
+			"argument."
+	elsif instances.size == 1
+		return instances.first
 	else
-		puts "It appears that multiple Passenger instances are running. Please select a"
-		puts "specific one by running:"
+		puts "It appears that multiple #{PROGRAM_NAME} instances are running. Please"
+		puts "select a specific one by running:"
 		puts
-		puts "  passenger-status <PID>"
+		puts "  passenger-status <NAME>"
 		puts
-		puts "The following Passenger instances are running:"
-		server_instances.each do |instance|
-			puts "  PID: #{instance.pid}"
+		puts "The following instances are running:"
+		puts
+		printf "%-25s  %s\n", "Name", "Description"
+		puts "------------------------------------------------------------------"
+		instances.each do |instance|
+			printf "%-25s  %s\n", instance.name, instance.server_software
 		end
 		exit 1
 	end
 end
 
-def find_server_instance_on_pid(pid)
-	if server_instance = ServerInstance.for_pid(pid)
-		return server_instance
+def find_instance_by_name_prefix(name)
+	instance = InstanceRegistry.new.find_by_name_prefix(name)
+	if instance == :ambigious
+		abort "ERROR: there are multiple instances whose name start with '#{name}'. Please specify the full name."
+	elsif instance
+		return instance
 	else
-		abort "ERROR: there doesn't seem to be a Phusion Passenger instance running on PID #{pid}."
+		abort "ERROR: there doesn't seem to be a #{PROGRAM_NAME} instance running with the name '#{name}'."
 	end
 end
 
-def show_status(server_instance, options)
-	if options[:show] != 'xml'
-		puts "Version : #{PhusionPassenger::VERSION_STRING}"
-		puts "Date    : #{Time.now}"
-		puts "Instance: #{server_instance.pid}"
-	end
+def show_status(instance, options)
+	print_header(STDOUT, instance) if options[:header]
+
 	case options[:show]
 	when 'pool'
-		client = server_instance.connect(:role => :passenger_status)
-		begin
-			puts client.pool_status(:verbose => options[:verbose], :colorize => options[:color])
-		rescue SystemCallError => e
-			STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{server_instance.pid}:"
-			STDERR.puts e.to_s
+		request = Net::HTTP::Get.new("/pool.txt?colorize=#{options[:color]}&verbose=#{options[:verbose]}")
+		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+		response = instance.http_request("agents.s/server_admin", request)
+		if response.code.to_i / 100 == 2
+			puts response.body
+		else
+			STDERR.puts "*** An error occured."
+			STDERR.puts response.body
 			exit 2
 		end
 
-	when 'requests'
-		client = server_instance.connect(:role => :passenger_status)
-		begin
-			puts client.helper_agent_requests
-		rescue SystemCallError => e
-			STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{server_instance.pid}:"
-			STDERR.puts e.to_s
+	when 'requests', 'connections'
+		request = Net::HTTP::Get.new("/connections.json")
+		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+		response = instance.http_request("agents.s/server_admin", request)
+		if response.code.to_i / 100 == 2
+			puts response.body
+		else
+			STDERR.puts "*** An error occured."
+			STDERR.puts response.body
 			exit 2
 		end
 
 	when 'backtraces'
-		client = server_instance.connect(:role => :passenger_status)
-		begin
-			text = client.helper_agent_backtraces
-		rescue SystemCallError => e
-			STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{control_process.pid}:"
-			STDERR.puts e.to_s
+		request = Net::HTTP::Get.new("/backtraces.txt")
+		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+		response = instance.http_request("agents.s/server_admin", request)
+		if response.code.to_i / 100 == 2
+			text = response.body
+			# Colorize output
+			color = PhusionPassenger::Utils::AnsiColors.new
+			text.gsub!(/^(Thread .*:)$/, color.black_bg + color.yellow + '\1' + color.reset)
+			text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + color.bold + '\2' + color.reset + '(')
+			puts text
+		else
+			STDERR.puts "*** An error occured."
+			STDERR.puts response.body
 			exit 2
 		end
-	
-		# Colorize output
-		text.gsub!(/^(Thread .*:)$/, BLACK_BG + YELLOW + '\1' + RESET)
-		text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
-	
-		puts text
 	
 	when 'xml'
-		client = server_instance.connect(:role => :passenger_status)
-		begin
-			xml = client.pool_xml
-		rescue SystemCallError => e
-			STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{control_process.pid}:"
-			STDERR.puts e.to_s
-			exit 2
-		end
-		
-		indented = format_with_xmllint(xml)
-		if indented
-			puts indented
+		request = Net::HTTP::Get.new("/pool.xml")
+		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+		response = instance.http_request("agents.s/server_admin", request)
+		if response.code.to_i / 100 == 2
+			indented = format_with_xmllint(response.body)
+			if indented
+				puts indented
+			else
+				puts response.body
+				STDERR.puts "*** Tip: if you install the 'xmllint' command then the XML output will be indented."
+			end
 		else
-			puts xml
-			STDERR.puts "*** Tip: if you install the 'xmllint' command then the XML output will be indented."
+			STDERR.puts "*** An error occured."
+			STDERR.puts response.body
+			exit 2
 		end
 
 	when 'union_station'
@@ -156,21 +179,29 @@ def show_status(server_instance, options)
 
 		puts response
 	end
-rescue ServerInstance::RoleDeniedError
-	PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-	STDERR.puts "*** ERROR: You are not authorized to query the status for this Phusion " <<
-		"Passenger instance. Please try again with '#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
-	exit 2
-rescue ServerInstance::CorruptedDirectoryError
-	STDERR.puts "*** ERROR: The server instance directory #{server_instance.path} is corrupted. " <<
-		"This could have two causes:\n" <<
-		"\n" <<
-		"  1. The Phusion Passenger instance is no longer running, but failed to cleanup the directory. " <<
-			"Please delete this directory and ignore the problem.\n" <<
-		"  2. An external program corrupted the directory. Please restart Phusion Passenger.\n"
-	exit 2
 ensure
 	client.close if client
+end
+
+def print_header(io, instance)
+	io.puts "Version : #{PhusionPassenger::VERSION_STRING}"
+	io.puts "Date    : #{Time.now}"
+	io.puts "Instance: #{instance.name} (#{instance.server_software})"
+end
+
+def obtain_read_only_admin_password(instance)
+	begin
+		password = instance.read_only_admin_password
+	rescue Errno::EACCES
+		print_permission_error_message
+		exit 2
+	end
+end
+
+def print_permission_error_message
+	PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+	STDERR.puts "*** ERROR: You are not authorized to query the status for this " <<
+		"#{PROGRAM_NAME} instance. Please try again with '#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
 end
 
 def format_with_xmllint(xml)
@@ -213,23 +244,29 @@ end
 
 def create_option_parser(options)
 	return OptionParser.new do |opts|
-		opts.banner = "Usage: passenger-status [options] [Phusion Passenger's PID]"
+		nl = "\n" << " " * 37
+		opts.banner = "Usage: passenger-status [options] [instance name]"
 		opts.separator ""
 		opts.separator "Tool for inspecting Phusion Passenger's internal status."
 		opts.separator ""
 
 		opts.separator "Options:"
-		opts.on("--show=pool|requests|backtraces|xml|union_station", String,
-		        "Whether to show the pool's contents,\n" <<
-		        "#{' ' * 37}the currently running requests,\n" <<
-		        "#{' ' * 37}the backtraces of all threads or an XML\n" <<
-		        "#{' ' * 37}description of the pool.") do |what|
-			if what !~ /\A(pool|requests|backtraces|xml|union_station)\Z/
+		opts.on("--show=pool|connections|backtraces|xml|union_station", String,
+		        "Whether to show the pool's contents,#{nl}" <<
+		        "the currently running requests,#{nl}" <<
+		        "the backtraces of all threads or an XML#{nl}" <<
+		        "description of the pool.") do |what|
+			if what !~ /\A(pool|connections|requests|backtraces|xml|union_station)\Z/
 				STDERR.puts "Invalid argument for --show."
 				exit 1
 			else
 				options[:show] = what
 			end
+		end
+		opts.on("--no-header", "Do not display an informative header#{nl}" <<
+		        "containing the timestamp, version number,#{nl}" <<
+		        "etc.") do
+			options[:header] = false
 		end
 		opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
 			options[:color] = true
@@ -256,7 +293,7 @@ def parse_argv
 end
 
 def infer_command
-	if !ARGV[0] || ARGV[0] =~ /\A[0-9]+\Z/
+	if !ARGV[0] || ARGV[0] !~ /^-/
 		return [:show_status, ARGV.dup]
 	else
 		command_name, *argv = ARGV

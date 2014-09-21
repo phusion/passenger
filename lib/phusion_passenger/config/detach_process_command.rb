@@ -22,10 +22,13 @@
 #  THE SOFTWARE.
 
 require 'optparse'
+require 'net/http'
+require 'socket'
 PhusionPassenger.require_passenger_lib 'constants'
-PhusionPassenger.require_passenger_lib 'admin_tools/server_instance'
+PhusionPassenger.require_passenger_lib 'admin_tools/instance_registry'
 PhusionPassenger.require_passenger_lib 'config/command'
 PhusionPassenger.require_passenger_lib 'config/utils'
+PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
 module Config
@@ -36,7 +39,6 @@ class DetachProcessCommand < Command
 	def run
 		parse_options
 		select_passenger_instance
-		@admin_client = connect_to_passenger_admin_socket(:role => :passenger_status)
 		perform_detach
 	end
 
@@ -46,15 +48,21 @@ private
 			nl = "\n" + ' ' * 37
 			opts.banner = "Usage: passenger-config detach-process [OPTIONS] <PID>\n"
 			opts.separator ""
-			opts.separator "  Remove an application process from the #{PROGRAM_NAME} process pool."
-			opts.separator "  Has a similar effect to killing the application process directly with"
-			opts.separator "  `kill <PID>`, but killing directly may cause the HTTP client to see an"
-			opts.separator "  error, while using this command guarantees that clients see no errors."
+			opts.separator "  Remove an application process from the #{PROGRAM_NAME} process pool, and"
+			opts.separator "  shut it down. Has a similar effect to killing the application process"
+			opts.separator "  directly with `kill <PID>`. But `kill` aborts any active requests, while"
+			opts.separator "  this command shuts down the process after active requests are finished."
+			opts.separator ""
+			opts.separator "  If you want to force abort a process and its active requests, just use `kill`."
 			opts.separator ""
 
 			opts.separator "Options:"
-			opts.on("--instance INSTANCE_PID", Integer, "The #{PROGRAM_NAME} instance to select") do |value|
+			opts.on("--instance NAME", String, "The #{PROGRAM_NAME} instance to select") do |value|
 				options[:instance] = value
+			end
+			opts.on("--ignore-nonexistant-pid", "Exit successfully even if the specified#{nl}" +
+				"PID is not in the process pool.") do
+				options[:ignore_nonexistant_pid] = true
 			end
 			opts.on("-h", "--help", "Show this help") do
 				options[:help] = true
@@ -80,10 +88,24 @@ private
 	end
 
 	def perform_detach
-		if @admin_client.pool_detach_process(@pid)
-			puts "Process #{@pid} detached."
+		request = Net::HTTP::Post.new("/pool/detach_process.json")
+		request.basic_auth("admin", obtain_full_admin_password(@instance))
+		request.content_type = "application/json"
+		request.body = PhusionPassenger::Utils::JSON.generate(:pid => @pid)
+		response = @instance.http_request("agents.s/server_admin", request)
+		if response.code.to_i / 100 == 2
+			body = PhusionPassenger::Utils::JSON.parse(response.body)
+			if body['detached']
+				puts "Process #{@pid} detached."
+			elsif @options[:ignore_nonexistant_pid]
+				puts "Could not detach process #{@pid}."
+			else
+				abort "Could not detach process #{@pid}."
+			end
 		else
-			abort "Could not detach process #{@pid}."
+			STDERR.puts "*** An error occured while communicating with the #{PROGRAM_NAME} server:"
+			STDERR.puts response.body
+			abort
 		end
 	end
 end

@@ -17,6 +17,7 @@ Release 5.0.0 beta 1
  * passenger_temp_dir (and Apache equivalent) has been replaced by two config options, passenger_instance_registry_dir and passenger_data_buffer_dir.PassengerUploadBufferDir has been replaced by PassengerDataBufferDir.
  * command line tools no longer respect PASSENGER_TEMP_DIR. use PASSENGER_INSTANCE_REGISTRY_DIR instead.
  * the Passenger Standalone config template has changed. users are encouraged to update it
+ * passenger-status --show=requests has been deprecated in favor of passenger-status --show=connections.
 
 
 Release 4.0.51

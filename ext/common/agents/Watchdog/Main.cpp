@@ -34,12 +34,20 @@
 #include <vector>
 #include <algorithm>
 
+#if !defined(sun) && !defined(__sun)
+	#define HAVE_FLOCK
+#endif
+
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#ifdef HAVE_FLOCK
+	#include <sys/file.h>
+#endif
 #include <sys/resource.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <fcntl.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -100,6 +108,7 @@ namespace {
 		uid_t defaultUid;
 		gid_t defaultGid;
 		InstanceDirectoryPtr instanceDir;
+		int lockFile;
 		vector<string> cleanupPidfiles;
 	};
 
@@ -633,6 +642,7 @@ setAgentsOptionsDefaults() {
 		options.set("default_group",
 			inferDefaultGroup(options.get("default_user")));
 	}
+	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 	options.setDefaultStrSet("cleanup_pidfiles", vector<string>());
 }
 
@@ -690,6 +700,10 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceD
 
 	options.set("instance_registry_dir",
 		absolutizePath(options.get("instance_registry_dir")));
+	if (options.get("server_software").find(SERVER_TOKEN_NAME) == string::npos) {
+		options.set("server_software", options.get("server_software") +
+			(" " SERVER_TOKEN_NAME "/" PASSENGER_VERSION));
+	}
 
 	wo = boost::make_shared<WorkingObjects>();
 	workingObjects = wo.get();
@@ -704,10 +718,21 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceD
 	instanceOptions.userSwitching = options.getBool("user_switching");
 	instanceOptions.defaultUid = wo->defaultUid;
 	instanceOptions.defaultGid = wo->defaultGid;
+	instanceOptions.properties["name"] = wo->randomGenerator.generateAsciiString(8);
+	instanceOptions.properties["server_software"] = options.get("server_software");
 	wo->instanceDir = make_shared<InstanceDirectory>(instanceOptions,
 		options.get("instance_registry_dir"));
 	options.set("instance_dir", wo->instanceDir->getPath());
 	instanceDirToucher = boost::make_shared<InstanceDirToucher>(wo);
+
+	UPDATE_TRACE_POINT();
+	string lockFilePath = wo->instanceDir->getPath() + "/lock";
+	wo->lockFile = syscalls::open(lockFilePath.c_str(), O_RDONLY);
+	if (wo->lockFile == -1) {
+		int e = errno;
+		throw FileSystemException("Cannot open " + lockFilePath + " for reading",
+			e, lockFilePath);
+	}
 
 	UPDATE_TRACE_POINT();
 	string readOnlyAdminPassword = wo->randomGenerator.generateAsciiString(24);
@@ -838,6 +863,19 @@ reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPt
 	}
 }
 
+static void
+finalizeInstanceDir(const WorkingObjectsPtr &wo) {
+	TRACE_POINT();
+	#ifdef HAVE_FLOCK
+		if (flock(wo->lockFile, LOCK_EX) == -1) {
+			int e = errno;
+			throw SystemException("Cannot obtain exclusive lock on the "
+				"instance directory lock file", e);
+		}
+	#endif
+	wo->instanceDir->finalizeCreation();
+}
+
 int
 watchdogMain(int argc, char *argv[]) {
 	initializeBareEssentials(argc, argv);
@@ -872,6 +910,10 @@ watchdogMain(int argc, char *argv[]) {
 			}
 		}
 		if (wo != NULL) {
+			// We need to call destroy() explicitly because of circular references.
+			if (wo->instanceDir->isOwner()) {
+				wo->instanceDir->destroy();
+			}
 			killCleanupPids(wo);
 		}
 		return 1;
@@ -883,6 +925,7 @@ watchdogMain(int argc, char *argv[]) {
 		startAgents(wo, watchers);
 		beginWatchingAgents(wo, watchers);
 		reportAgentsInformation(wo, watchers);
+		finalizeInstanceDir(wo);
 		P_INFO("All Phusion Passenger agents started!");
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("after_watchdog_initialization");

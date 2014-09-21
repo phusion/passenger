@@ -52,6 +52,7 @@ public:
 		bool userSwitching;
 		uid_t defaultUid;
 		gid_t defaultGid;
+		Json::Value properties;
 
 		CreationOptions()
 			: prefix("passenger"),
@@ -106,9 +107,10 @@ private:
 	}
 
 	void initializeInstanceDirectory(const CreationOptions &options) {
-		createPropertyFile();
+		createPropertyFile(options);
 		createAgentSocketsSubdir();
 		createAppSocketsSubdir(options);
+		createLockFile();
 	}
 
 	bool runningAsRoot() const {
@@ -156,7 +158,7 @@ private:
 		}
 	}
 
-	void createPropertyFile() {
+	void createPropertyFile(const CreationOptions &options) {
 		Json::Value props;
 
 		props["instance_dir"]["major_version"] = SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION;
@@ -165,15 +167,17 @@ private:
 		props["passenger_version"] = PASSENGER_VERSION;
 		props["watchdog_pid"] = (Json::UInt64) getpid();
 
-		// Write file atomically
-		string tempProperyFilePath = path + "/_properties.json";
-		string properyFilePath = path + "/properties.json";
-		createFile(tempProperyFilePath, props.toStyledString());
-		if (rename(tempProperyFilePath.c_str(), properyFilePath.c_str()) == -1) {
-			int e = errno;
-			throw SystemException("Cannot rename " + tempProperyFilePath +
-				" to " + properyFilePath, e);
+		Json::Value::Members members = options.properties.getMemberNames();
+		Json::Value::Members::const_iterator it, end = members.end();
+		for (it = members.begin(); it != end; it++) {
+			props[*it] = options.properties.get(*it, Json::Value());
 		}
+
+		createFile(path + "/properties.json", props.toStyledString());
+	}
+
+	void createLockFile() {
+		createFile(path + "/lock", "");
 	}
 
 public:

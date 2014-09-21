@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -28,7 +28,7 @@ module Config
 
 module Utils
 	extend self    # Make methods available as class methods.
-	
+
 	def self.included(klass)
 		# When included into another class, make sure that Utils
 		# methods are made private.
@@ -38,65 +38,89 @@ module Utils
 	end
 
 	def select_passenger_instance
-		if pid = @options[:instance]
-			@server_instance = AdminTools::ServerInstance.for_pid(pid)
-			if !@server_instance
-				puts "*** ERROR: there doesn't seem to be a #{PROGRAM_NAME} instance running on PID #{pid}."
-				list_all_passenger_instances(AdminTools::ServerInstance.list)
-				puts
-				puts "Please pass `--instance <#{PROGRAM_NAME}> PID>` to select a specific #{PROGRAM_NAME} instance."
+		if name = @options[:instance]
+			@instance = AdminTools::InstanceRegistry.new.find_by_name_prefix(name)
+			if !@instance
+				STDERR.puts "*** ERROR: there doesn't seem to be a #{PROGRAM_NAME} instance running with the name '#{name}'."
+				list_all_passenger_instances(AdminTools::InstanceRegistry.new.list)
+				STDERR.puts
+				STDERR.puts "Please pass `--instance <NAME>` to select a specific #{PROGRAM_NAME} instance."
 				abort
+			elsif @instance == :ambigious
+				abort "*** ERROR: there are multiple instances whose name start with '#{name}'. Please specify the full name."
 			end
 		else
-			server_instances = AdminTools::ServerInstance.list
-			if server_instances.empty?
-				abort "*** ERROR: #{PROGRAM_NAME} doesn't seem to be running."
-			elsif server_instances.size == 1
-				@server_instance = server_instances.first
+			instances = AdminTools::InstanceRegistry.new.list
+			if instances.empty?
+				STDERR.puts "*** ERROR: #{PROGRAM_NAME} doesn't seem to be running. If you are sure that it"
+				STDERR.puts "is running, then the causes of this problem could be one of:"
+				STDERR.puts
+				STDERR.puts " 1. You customized the instance registry directory using Apache's"
+				STDERR.puts "    PassengerInstanceRegistryDir option, Nginx's"
+				STDERR.puts "    passenger_instance_registry_dir option, or #{PROGRAM_NAME} Standalone's"
+				STDERR.puts "    --instance-registry-dir command line argument. If so, please set the"
+				STDERR.puts "    environment variable PASSENGER_INSTANCE_REGISTRY_DIR to that directory"
+				STDERR.puts "    and run this command again."
+				STDERR.puts " 2. The instance directory has been removed by an operating system background"
+				STDERR.puts "    service. Please set a different instance registry directory using Apache's"
+				STDERR.puts "    PassengerInstanceRegistryDir option, Nginx's passenger_instance_registry_dir"
+				STDERR.puts "    option, or #{PROGRAM_NAME} Standalone's --instance-registry-dir command"
+				STDERR.puts "    line argument."
+				abort
+			elsif instances.size == 1
+				@instance = instances.first
 			else
-				complain_that_multiple_passenger_instances_are_running(server_instances)
+				complain_that_multiple_passenger_instances_are_running(instances)
 				abort
 			end
 		end
 	end
 
-	def complain_that_multiple_passenger_instances_are_running(server_instances)
+	def complain_that_multiple_passenger_instances_are_running(instances)
 		puts "It appears that multiple #{PROGRAM_NAME} instances are running. Please select"
 		puts "a specific one by passing:"
 		puts
-		puts "  --instance <#{PROGRAM_NAME} PID>"
+		puts "  --instance <NAME>"
 		puts
-		list_all_passenger_instances(server_instances)
+		list_all_passenger_instances(instances)
 		abort
 	end
 
-	def list_all_passenger_instances(server_instances)
+	def list_all_passenger_instances(instances)
 		puts "The following #{PROGRAM_NAME} instances are running:"
-		server_instances.each do |instance|
-			begin
-				description = instance.web_server_description
-			rescue Errno::EACCES, Errno::ENOENT
-				description = nil
+		instances.each do |instance|
+			printf "%-25s  %s\n", "Name", "Description"
+			puts "------------------------------------------------------------------"
+			instances.each do |instance|
+				printf "%-25s  %s\n", instance.name, instance.server_software
 			end
-			printf "  PID: %-8s   %s\n", instance.pid, description
 		end
 	end
 
-	def connect_to_passenger_admin_socket(options)
-		return @server_instance.connect(options)
-	rescue AdminTools::ServerInstance::RoleDeniedError
+	def obtain_read_only_admin_password(instance)
+		begin
+			return instance.read_only_admin_password
+		rescue Errno::EACCES
+			print_instance_querying_permission_error
+			abort
+		end
+	end
+
+	def obtain_full_admin_password(instance)
+		begin
+			return instance.full_admin_password
+		rescue Errno::EACCES
+			print_instance_querying_permission_error
+			abort
+		end
+	end
+
+
+	def print_instance_querying_permission_error
 		PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-		STDERR.puts "*** ERROR: You are not authorized to query the status for " +
-			"this #{PROGRAM_NAME} instance. Please try again with '#{PlatformInfo.ruby_sudo_command}'."
-		exit 2
-	rescue AdminTools::ServerInstance::CorruptedDirectoryError
-		STDERR.puts "*** ERROR: The server instance directory #{server_instance.path} is corrupted. " +
-			"This could have two causes:\n" +
-			"\n" +
-			"  1. The #{PROGRAM_NAME} instance is no longer running, but it failed to cleanup the directory. " +
-				"Please delete this directory and ignore the problem.\n" +
-			"  2. An external program corrupted the directory. Please restart this #{PROGRAM_NAME} instance.\n"
-		exit 2
+		STDERR.puts "*** ERROR: You are not authorized to query the status for this "
+			"#{PROGRAM_NAME} instance. Please try again with " +
+			"'#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
 	end
 
 	def is_enterprise?

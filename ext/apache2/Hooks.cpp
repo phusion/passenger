@@ -1202,7 +1202,7 @@ public:
 		m_hasModXsendfile = UNKNOWN;
 
 		P_DEBUG("Initializing Phusion Passenger...");
-		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
+		ap_add_version_component(pconf, SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 
 		if (serverConfig.root == NULL) {
 			throw ConfigurationException("The 'PassengerRoot' configuration option "

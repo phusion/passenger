@@ -117,65 +117,6 @@ private:
 		writeArrayMessage(commonContext.fd, "false", NULL);
 	}
 
-	bool processInspect(CommonClientContext &commonContext, SpecificContext *specificContext,
-		const vector<string> &args)
-	{
-		TRACE_POINT();
-		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
-		if ((args.size() - 1) % 2 != 0) {
-			return false;
-		}
-
-		VariantMap options = argsToOptions(args);
-		writeScalarMessage(commonContext.fd, pool->inspect(Pool::InspectOptions(options)));
-		return true;
-	}
-
-	void processToXml(CommonClientContext &commonContext, SpecificContext *specificContext,
-		const vector<string> &args)
-	{
-		TRACE_POINT();
-		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
-		bool includeSensitiveInfo =
-			commonContext.account->hasRights(Account::INSPECT_SENSITIVE_INFO) &&
-			args[1] == "true";
-		writeScalarMessage(commonContext.fd, pool->toXml(includeSensitiveInfo));
-	}
-
-	void processBacktraces(CommonClientContext &commonContext, SpecificContext *specificContext,
-		const vector<string> &args)
-	{
-		TRACE_POINT();
-		commonContext.requireRights(Account::INSPECT_BACKTRACES);
-		writeScalarMessage(commonContext.fd, oxt::thread::all_backtraces());
-	}
-
-	void processRestartAppGroup(CommonClientContext &commonContext, SpecificContext *specificContext,
-		const vector<string> &args)
-	{
-		TRACE_POINT();
-		commonContext.requireRights(Account::RESTART);
-		VariantMap options = argsToOptions(args, 2);
-		RestartMethod method = RM_DEFAULT;
-		if (options.get("method", false) == "blocking") {
-			method = RM_BLOCKING;
-		} else if (options.get("method", false) == "rolling") {
-			method = RM_ROLLING;
-		}
-		bool result = pool->restartGroupByName(args[1], method);
-		writeArrayMessage(commonContext.fd, result ? "true" : "false", NULL);
-	}
-
-	void processRequests(CommonClientContext &commonContext, SpecificContext *specificContext,
-		const vector<string> &args)
-	{
-		TRACE_POINT();
-		stringstream stream;
-		commonContext.requireRights(Account::INSPECT_REQUESTS);
-		//requestHandler->inspect(stream);
-		writeScalarMessage(commonContext.fd, stream.str());
-	}
-
 public:
 	RemoteController(const boost::shared_ptr<RequestHandler> &requestHandler, const PoolPtr &pool) {
 		this->requestHandler = requestHandler;
@@ -474,9 +415,9 @@ initializeNonPrivilegedWorkingObjects() {
 	VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects;
 
-	if (options.get("server_software").find(PROGRAM_NAME) == string::npos) {
+	if (options.get("server_software").find(SERVER_TOKEN_NAME) == string::npos) {
 		options.set("server_software", options.get("server_software") +
-			(" " PROGRAM_NAME "/" PASSENGER_VERSION));
+			(" " SERVER_TOKEN_NAME "/" PASSENGER_VERSION));
 	}
 	setenv("SERVER_SOFTWARE", options.get("server_software").c_str(), 1);
 	options.set("data_buffer_dir", absolutizePath(options.get("data_buffer_dir")));
@@ -789,7 +730,7 @@ setAgentsOptionsDefaults() {
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 	options.setDefaultInt("min_instances", 1);
 	options.setDefaultInt("stat_throttle_rate", DEFAULT_STAT_THROTTLE_RATE);
-	options.setDefault("server_software", PROGRAM_NAME "/" PASSENGER_VERSION);
+	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 	options.setDefaultBool("show_version_in_header", true);
 	options.setDefault("data_buffer_dir", getSystemTempDir());
 
