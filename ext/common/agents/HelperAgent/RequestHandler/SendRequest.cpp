@@ -55,7 +55,9 @@ sendHeaderToApp(Client *client, Request *req) {
 			if (!req->appSink.passedThreshold()) {
 				UPDATE_TRACE_POINT();
 				sendBodyToApp(client, req);
-				req->appSource.startReading();
+				if (!req->ended()) {
+					req->appSource.startReading();
+				}
 			} else {
 				UPDATE_TRACE_POINT();
 				SKC_TRACE(client, 3, "Waiting for appSink buffers to be "

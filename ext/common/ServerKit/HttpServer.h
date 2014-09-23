@@ -854,6 +854,7 @@ protected:
 			doneWithCurrentRequest(&c);
 		} else {
 			// Call doneWithCurrentRequest() when data flushed
+			SKC_TRACE(c, 2, "Waiting until output is flushed");
 			req->httpState = Request::FLUSHING_OUTPUT;
 		}
 
