@@ -168,7 +168,7 @@ namespace tut {
 		}
 
 		void _channelEnableAutoStartMover(bool enabled) {
-			channel.autoStartMover = enabled;
+			context.defaultFileBufferedChannelConfig.autoStartMover = enabled;
 		}
 
 		void startChannel() {
@@ -391,7 +391,7 @@ namespace tut {
 			"it switches to the in-file mode and calls the callback later with the fed data");
 
 		toConsume = -1;
-		channel.threshold = 1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
 		startLoop();
 
 		feedChannel("hello");
@@ -412,9 +412,9 @@ namespace tut {
 	TEST_METHOD(21) {
 		set_test_name("Any fed data is immediately passed to the callback");
 
-		channel.threshold = 1;
-		channel.delayInFileModeSwitching = 50000;
-		channel.autoTruncateFile = false;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
+		context.defaultFileBufferedChannelConfig.delayInFileModeSwitching = 50000;
+		context.defaultFileBufferedChannelConfig.autoTruncateFile = false;
 		startLoop();
 
 		feedChannel("hello");
@@ -434,9 +434,9 @@ namespace tut {
 			"is done");
 
 		toConsume = -1;
-		channel.threshold = 1;
-		channel.delayInFileModeSwitching = 50000;
-		channel.autoTruncateFile = false;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
+		context.defaultFileBufferedChannelConfig.delayInFileModeSwitching = 50000;
+		context.defaultFileBufferedChannelConfig.autoTruncateFile = false;
 		startLoop();
 
 		feedChannel("hello");
@@ -485,7 +485,7 @@ namespace tut {
 		set_test_name("It slowly moves memory buffers to disk");
 
 		toConsume = -1;
-		channel.threshold = 1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
 		startLoop();
 
 		feedChannel("hello");
@@ -503,7 +503,7 @@ namespace tut {
 			"when new data is fed, the new data is also eventually moved to disk");
 
 		toConsume = -1;
-		channel.threshold = 1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
 		startLoop();
 
 		feedChannel("hello");
@@ -527,7 +527,7 @@ namespace tut {
 			"them to the callback");
 
 		toConsume = -1;
-		channel.threshold = 1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
 		startLoop();
 
 		feedChannel("hello");
@@ -554,7 +554,7 @@ namespace tut {
 			"in-memory buffer to the callback");
 
 		toConsume = -1;
-		channel.threshold = 1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
 		startLoop();
 
 		feedChannel("hello");
@@ -601,7 +601,7 @@ namespace tut {
 			"all on-disk and in-memory data is passed");
 
 		toConsume = -1;
-		channel.threshold = 1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
 		startLoop();
 
 		feedChannel("hello");
@@ -663,7 +663,7 @@ namespace tut {
 			"and it doesn't call the callback");
 
 		toConsume = -1;
-		channel.threshold = 1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
 		startLoop();
 
 		feedChannel("hello");
@@ -698,7 +698,7 @@ namespace tut {
 		set_test_name("When all on-disk and in-memory buffers have been read, it switches to in-memory mode");
 
 		toConsume = -1;
-		channel.threshold = 1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
 		startLoop();
 
 		feedChannel("hello");
