@@ -1,5 +1,8 @@
 require File.expand_path(File.dirname(__FILE__) + "/spec_helper")
 require 'support/nginx_controller'
+
+WEB_SERVER_DECHUNKS_REQUESTS = true
+
 require 'integration_tests/shared/example_webapp_tests'
 
 describe "Phusion Passenger for Nginx" do

@@ -274,7 +274,6 @@ private:
 
 	void processPoolDetachProcessBody(Client *client, Request *req) {
 		HeaderTable headers;
-		RestartMethod method = ApplicationPool2::RM_DEFAULT;
 		const char *response;
 
 		headers.insert(req->pool, "content-type", "application/json");

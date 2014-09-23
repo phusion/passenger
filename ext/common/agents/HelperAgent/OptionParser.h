@@ -64,6 +64,10 @@ serverUsage() {
 	printf("                            The same syntax and limitations as with --listen\n");
 	printf("                            are applicable\n");
 	printf("\n");
+	printf("Daemon options (optional):\n");
+	printf("      --pid-file PATH       Store the server's PID in the given file. The file\n");
+	printf("                            is deleted on exit.\n");
+	printf("\n");
 	printf("Security options (optional):\n");
 	printf("      --multi-app-password-file PATH\n");
 	printf("                            Password-protect access to the HTTP server\n");
@@ -152,6 +156,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 				"for Unix domain sockets.\n");
 			exit(1);
 		}
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--pid-file")) {
+		options.set("server_pid_file", argv[i + 1]);
+		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--authorize")) {
 		vector<string> args;
 		vector<string> authorizations = options.getStrSet("server_authorizations",

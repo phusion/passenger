@@ -4,7 +4,9 @@ require 'fileutils'
 require 'support/apache2_controller'
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'admin_tools'
-PhusionPassenger.require_passenger_lib 'admin_tools/server_instance'
+PhusionPassenger.require_passenger_lib 'admin_tools/instance_registry'
+
+WEB_SERVER_DECHUNKS_REQUESTS = false
 
 require 'integration_tests/shared/example_webapp_tests'
 
@@ -501,19 +503,19 @@ describe "Apache 2 module" do
 
 		it "is restarted if it crashes" do
 			# Make sure that all Apache worker processes have connected to
-			# the helper server.
+			# the helper agent.
 			10.times do
 				get('/').should == "front page"
 				sleep 0.1
 			end
 
-			# Now kill the helper server.
-			instance = AdminTools::ServerInstance.list.first
-			Process.kill('SIGKILL', instance.helper_agent_pid)
+			# Now kill the helper agent.
+			instance = AdminTools::InstanceRegistry.new.list.first
+			Process.kill('SIGKILL', instance.server_pid)
 			sleep 0.02 # Give the signal a small amount of time to take effect.
 
 			# Each worker process should detect that the old
-			# helper server has died, and should reconnect.
+			# helper agent has died, and should reconnect.
 			10.times do
 				get('/').should == "front page"
 				sleep 0.1
@@ -523,7 +525,7 @@ describe "Apache 2 module" do
 		it "exposes the application pool for passenger-status" do
 			File.touch("#{@stub.app_root}/tmp/restart.txt", 1)  # Get rid of all previous app processes.
 			get('/').should == "front page"
-			instance = AdminTools::ServerInstance.list.first
+			instance = AdminTools::InstanceRegistry.new.list.first
 
 			# Wait until the server has processed the session close event.
 			sleep 0.1

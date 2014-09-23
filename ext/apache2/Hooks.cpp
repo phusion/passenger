@@ -885,7 +885,8 @@ private:
 		result.append("\r\n", 2);
 
 		if (baseURI != NULL) {
-			result.append("!~SCRIPT_NAME: ", baseURI);
+			result.append("!~SCRIPT_NAME: ", sizeof("!~SCRIPT_NAME: ") - 1);
+			result.append(baseURI);
 			result.append("\r\n", 2);
 		}
 

@@ -748,6 +748,7 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceD
 		createFile(wo->instanceDir->getPath() + "/full_admin_password.txt",
 			fullAdminPassword, S_IRUSR | S_IWUSR);
 	}
+	options.setDefault("server_pid_file", wo->instanceDir->getPath() + "/server.pid");
 
 	UPDATE_TRACE_POINT();
 	strset = options.getStrSet("server_addresses", false);

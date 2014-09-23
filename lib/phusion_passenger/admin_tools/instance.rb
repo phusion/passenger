@@ -104,6 +104,10 @@ class Instance
 		return response
 	end
 
+	def server_pid
+		@server_pid ||= File.read("#{@path}/server.pid")
+	end
+
 	def full_admin_password
 		@full_admin_password ||= File.read("#{@path}/full_admin_password.txt")
 	end

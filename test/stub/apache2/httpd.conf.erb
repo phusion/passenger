@@ -61,10 +61,11 @@ PassengerRoot "<%= @passenger_root %>"
 PassengerDefaultRuby "<%= PlatformInfo.ruby_command %>"
 PassengerDefaultUser <%= CONFIG['default_user'] %>
 PassengerDefaultGroup <%= CONFIG['default_group'] %>
-PassengerTempDir "<%= @passenger_temp_dir %>"
+PassengerInstanceRegistryDir "<%= @passenger_temp_dir %>"
+PassengerDataBufferDir "<%= @passenger_temp_dir %>"
 RailsEnv production
 RackEnv production
-PassengerLogLevel 1
+PassengerLogLevel 7
 <% for line in @extra %>
 	<%= line %>
 <% end %>
@@ -93,6 +94,7 @@ MaxClients           10
 	AllowOverride all
 </Directory>
 
+Timeout 60
 ServerAdmin admin@passenger.test
 ServerName passenger.test
 DocumentRoot "<%= @server_root %>"

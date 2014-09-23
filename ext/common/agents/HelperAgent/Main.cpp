@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <grp.h>
 
@@ -207,6 +208,7 @@ static WorkingObjects *workingObjects;
 
 static void waitForExitEvent();
 static void cleanup();
+static void deletePidFile();
 static void requestHandlerShutdownFinished(RequestHandler *server);
 static void adminServerShutdownFinished(ServerAgent::AdminServer *server);
 
@@ -307,6 +309,22 @@ startListening() {
 static void
 createPidFile() {
 	TRACE_POINT();
+	string pidFile = agentsOptions->get("server_pid_file", false);
+	if (!pidFile.empty()) {
+		char pidStr[32];
+
+		snprintf(pidStr, sizeof(pidStr), "%lld", (long long) getpid());
+
+		int fd = syscalls::open(pidFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		if (fd == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot create PID file " + pidFile, e, pidFile);
+		}
+
+		UPDATE_TRACE_POINT();
+		writeExact(fd, pidStr, strlen(pidStr));
+		syscalls::close(fd);
+	}
 }
 
 static void
@@ -658,7 +676,17 @@ cleanup() {
 	wo->bgloop->stop();
 	wo->appPool.reset();
 	delete wo->requestHandler;
+	deletePidFile();
 	P_NOTICE("PassengerAgent server shutdown finished");
+}
+
+static void
+deletePidFile() {
+	TRACE_POINT();
+	string pidFile = agentsOptions->get("server_pid_file", false);
+	if (!pidFile.empty()) {
+		syscalls::unlink(pidFile.c_str());
+	}
 }
 
 static int
@@ -683,6 +711,7 @@ runServer() {
 		cleanup();
 	} catch (const tracable_exception &e) {
 		P_CRITICAL("ERROR: " << e.what() << "\n" << e.backtrace());
+		deletePidFile();
 		return 1;
 	}
 
