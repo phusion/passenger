@@ -1,6 +1,8 @@
 require File.expand_path(File.dirname(__FILE__) + "/spec_helper")
 require 'socket'
 require 'fileutils'
+require 'net/http'
+require 'rexml/document'
 require 'support/apache2_controller'
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'admin_tools'
@@ -246,7 +248,7 @@ describe "Apache 2 module" do
 		it "supports environment variable passing through mod_env" do
 			File.write("#{@stub.app_root}/public/.htaccess", 'SetEnv FOO "Foo Bar!"')
 			File.touch("#{@stub.app_root}/tmp/restart.txt", 2)  # Activate ENV changes.
-			get('/env').should =~ /^FOO = Foo Bar\!$/
+			get('/system_env').should =~ /^FOO = Foo Bar\!$/
 		end
 
 		it "supports mod_rewrite in the virtual host block" do
@@ -273,6 +275,7 @@ describe "Apache 2 module" do
 		before :all do
 			create_apache2_controller
 			@apache2 << "PassengerMaxPoolSize 3"
+			@apache2 << "PassengerStatThrottleRate 0"
 
 			@stub = RackStub.new('rack')
 			@stub_url_root = "http://5.passenger.test:#{@apache2.port}"
@@ -445,6 +448,7 @@ describe "Apache 2 module" do
 			@stub_url_root = "http://2.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost('2.passenger.test', "#{@stub.full_app_root}/public")
 
+			@apache2 << "PassengerFriendlyErrorPages on"
 			@apache2.start
 		end
 
@@ -487,6 +491,7 @@ describe "Apache 2 module" do
 			create_apache2_controller
 			@stub = RackStub.new('rack')
 			@stub_url_root = "http://1.passenger.test:#{@apache2.port}"
+			@apache2 << "PassengerStatThrottleRate 0"
 			@apache2.set_vhost('1.passenger.test', "#{@stub.full_app_root}/public")
 			@apache2.start
 			@server = "http://1.passenger.test:#{@apache2.port}"
@@ -530,12 +535,23 @@ describe "Apache 2 module" do
 			# Wait until the server has processed the session close event.
 			sleep 0.1
 
-			processes = instance.connect(:role => :passenger_status) do |client|
-				instance.processes(client)
+			request = Net::HTTP::Get.new("/pool.xml")
+			request.basic_auth("ro_admin", instance.read_only_admin_password)
+			response = instance.http_request("agents.s/server_admin", request)
+			if response.code.to_i / 100 == 2
+				doc = REXML::Document.new(response.body)
+			else
+				raise response.body
 			end
-			processes.should have(1).item
-			processes[0].group.name.should == @stub.full_app_root + "#default"
-			processes[0].processed.should == 1
+
+			groups = doc.get_elements("info/supergroups/supergroup/group")
+			groups.should have(1).item
+			groups.each do |group|
+				group.elements["name"].text.should == "#{@stub.full_app_root} (production)#default"
+				processes = group.get_elements("processes/process")
+				processes.should have(1).item
+				processes[0].elements["processed"].text.should == "1"
+			end
 		end
 	end
 

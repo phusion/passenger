@@ -105,7 +105,7 @@ class Instance
 	end
 
 	def server_pid
-		@server_pid ||= File.read("#{@path}/server.pid")
+		@server_pid ||= File.read("#{@path}/server.pid").to_i
 	end
 
 	def full_admin_password
