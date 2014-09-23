@@ -196,6 +196,7 @@ private:
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex, m_hasModXsendfile;
 	CachedFileStat cstat;
 	AgentsStarter agentsStarter;
+	boost::mutex cstatMutex;
 
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -358,7 +359,7 @@ private:
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
 		TRACE_POINT();
 
-		DirectoryMapper mapper(r, config, &cstat, serverConfig.statThrottleRate);
+		DirectoryMapper mapper(r, config, &cstat, &cstatMutex, serverConfig.statThrottleRate);
 		try {
 			if (mapper.getApplicationType() == PAT_NONE) {
 				// (B) is not true.

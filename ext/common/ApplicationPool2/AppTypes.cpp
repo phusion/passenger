@@ -54,7 +54,7 @@ using namespace Passenger::ApplicationPool2;
 PP_AppTypeDetector *
 pp_app_type_detector_new(unsigned int throttleRate) {
 	try {
-		return new AppTypeDetector(throttleRate);
+		return new AppTypeDetector(NULL, NULL, throttleRate);
 	} catch (const std::bad_alloc &) {
 		return 0;
 	}

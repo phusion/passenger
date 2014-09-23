@@ -27,6 +27,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
+#include <boost/thread.hpp>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string>
@@ -97,6 +98,8 @@ ptr(T *pointer) {
  *
  * @param filename The filename to check.
  * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param cstatMutex A mutex for locking cstat while this function uses it.
+ *                   Makes this function thread-safe. May be NULL.
  * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @return Whether the file exists.
  * @throws FileSystemException Unable to check because of a filesystem error.
@@ -105,13 +108,15 @@ ptr(T *pointer) {
  * @ingroup Support
  */
 bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
-                unsigned int throttleRate = 0);
+                boost::mutex *cstatMutex = NULL, unsigned int throttleRate = 0);
 
 /**
  * Check whether 'filename' exists and what kind of file it is.
  *
  * @param filename The filename to check. It MUST be NULL-terminated.
- * @param mstat A CachedFileStat object, if you want to use cached statting.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param cstatMutex A mutex for locking cstat while this function uses it.
+ *                   Makes this function thread-safe. May be NULL.
  * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @return The file type.
  * @throws FileSystemException Unable to check because of a filesystem error.
@@ -120,7 +125,7 @@ bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
  * @ingroup Support
  */
 FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
-                     unsigned int throttleRate = 0);
+                     boost::mutex *cstatMutex = NULL, unsigned int throttleRate = 0);
 
 /**
  * Create the given file with the given contents, permissions and ownership.

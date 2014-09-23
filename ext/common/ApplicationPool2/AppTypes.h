@@ -72,6 +72,7 @@ PassengerAppType pp_get_app_type2(const char *name, unsigned int len);
 #ifdef __cplusplus
 #include <oxt/macros.hpp>
 #include <oxt/backtrace.hpp>
+#include <boost/thread.hpp>
 #include <cstdlib>
 #include <limits.h>
 #include <string>
@@ -100,6 +101,7 @@ extern const AppTypeDefinition appTypeDefinitions[];
 class AppTypeDetector {
 private:
 	CachedFileStat *cstat;
+	boost::mutex *cstatMutex;
 	unsigned int throttleRate;
 	bool ownsCstat;
 
@@ -113,20 +115,20 @@ private:
 			TRACE_POINT();
 			throw RuntimeException("Not enough buffer space");
 		}
-		return getFileType(StaticString(buf, pos - buf), cstat, throttleRate) != FT_NONEXISTANT;
+		return getFileType(StaticString(buf, pos - buf), cstat, cstatMutex, throttleRate) != FT_NONEXISTANT;
 	}
 
 public:
-	AppTypeDetector(unsigned int _throttleRate = 1) {
-		cstat = new CachedFileStat();
-		ownsCstat = true;
-		throttleRate = _throttleRate;
-	}
-
-	AppTypeDetector(CachedFileStat *_cstat, unsigned int _throttleRate) {
-		cstat = _cstat;
-		ownsCstat = false;
-		throttleRate = _throttleRate;
+	AppTypeDetector(CachedFileStat *_cstat = NULL, boost::mutex *_cstatMutex = NULL, unsigned int _throttleRate = 1)
+		: cstat(_cstat),
+		  cstatMutex(_cstatMutex),
+		  throttleRate(_throttleRate),
+		  ownsCstat(false)
+	{
+		if (_cstat == NULL) {
+			cstat = new CachedFileStat();
+			ownsCstat = true;
+		}
 	}
 
 	~AppTypeDetector() {

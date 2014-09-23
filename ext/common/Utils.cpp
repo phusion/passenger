@@ -111,16 +111,24 @@ namespace {
 }
 
 bool
-fileExists(const StaticString &filename, CachedFileStat *cstat, unsigned int throttleRate) {
-	return getFileType(filename, cstat, throttleRate) == FT_REGULAR;
+fileExists(const StaticString &filename, CachedFileStat *cstat, boost::mutex *cstatMutex,
+	unsigned int throttleRate)
+{
+	return getFileType(filename, cstat, cstatMutex, throttleRate) == FT_REGULAR;
 }
 
 FileType
-getFileType(const StaticString &filename, CachedFileStat *cstat, unsigned int throttleRate) {
+getFileType(const StaticString &filename, CachedFileStat *cstat, boost::mutex *cstatMutex,
+	unsigned int throttleRate)
+{
 	struct stat buf;
 	int ret;
 
 	if (cstat != NULL) {
+		boost::unique_lock<boost::mutex> l;
+		if (cstatMutex != NULL) {
+			l = boost::unique_lock<boost::mutex>(*cstatMutex);
+		}
 		ret = cstat->stat(filename, &buf, throttleRate);
 	} else {
 		ret = stat(filename.c_str(), &buf);
