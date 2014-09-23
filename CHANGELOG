@@ -18,6 +18,7 @@ Release 5.0.0 beta 1
  * command line tools no longer respect PASSENGER_TEMP_DIR. use PASSENGER_INSTANCE_REGISTRY_DIR instead.
  * the Passenger Standalone config template has changed. users are encouraged to update it
  * passenger-status --show=requests has been deprecated in favor of passenger-status --show=connections.
+ * SIGUSR1 on ruby apps is no longer supported. use passenger-config detach-process
 
 
 Release 4.0.51

@@ -40,10 +40,8 @@ class RequestHandler
 	include DebugLogging
 	include Utils
 
-	# Signal which will cause the Rails application to exit immediately.
+	# Signal which will cause the application to exit immediately.
 	HARD_TERMINATION_SIGNAL = "SIGTERM"
-	# Signal which will cause the Rails application to exit as soon as it's done processing a request.
-	SOFT_TERMINATION_SIGNAL = "SIGUSR1"
 	BACKLOG_SIZE    = 500
 
 	# String constants which exist to relieve Ruby's garbage collector.
@@ -68,11 +66,6 @@ class RequestHandler
 
 	attr_reader :concurrency
 
-	# If a soft termination signal was received, then the main loop will quit
-	# the given amount of seconds after the last time a connection was accepted.
-	# Defaults to 3 seconds.
-	attr_accessor :soft_termination_linger_time
-
 	# A password with which clients must authenticate. Default is unauthenticated.
 	attr_accessor :connect_password
 
@@ -80,19 +73,14 @@ class RequestHandler
 	# +owner_pipe+ must be the readable part of a pipe IO object.
 	#
 	# Additionally, the following options may be given:
-	# - detach_key
 	# - connect_password
-	# - pool_account_username
-	# - pool_account_password_base64
 	def initialize(owner_pipe, options = {})
 		require_option(options, "app_group_name")
 		install_options_as_ivars(self, options,
 			"app",
 			"app_group_name",
 			"connect_password",
-			"detach_key",
-			"union_station_core",
-			"pool_account_username"
+			"union_station_core"
 		)
 
 		@force_http_session = ENV["_PASSENGER_FORCE_HTTP_SESSION"] == "true"
@@ -101,9 +89,6 @@ class RequestHandler
 		end
 		@thread_handler = options["thread_handler"] || ThreadHandler
 		@concurrency = 1
-		if options["pool_account_password_base64"]
-			@pool_account_password = options["pool_account_password_base64"].unpack('m').first
-		end
 
 		#############
 		#############
@@ -138,7 +123,6 @@ class RequestHandler
 		@main_loop_thread_cond = ConditionVariable.new
 		@threads = []
 		@threads_mutex = Mutex.new
-		@soft_termination_linger_time = 3
 		@main_loop_running  = false
 
 		#############
@@ -218,8 +202,7 @@ class RequestHandler
 			trace(2, "Request handler main loop interrupted by Interrupt exception")
 		rescue SignalException => signal
 			trace(2, "Request handler main loop interrupted by SignalException")
-			if signal.message != HARD_TERMINATION_SIGNAL &&
-			   signal.message != SOFT_TERMINATION_SIGNAL
+			if signal.message != HARD_TERMINATION_SIGNAL
 				raise
 			end
 		rescue Exception => e
@@ -253,31 +236,6 @@ class RequestHandler
 			while @main_loop_generation == current_generation
 				@main_loop_thread_cond.wait(@main_loop_thread_lock)
 			end
-		end
-	end
-
-	# Remove this request handler from the application pool so that no
-	# new connections will come in. Then make the main loop quit a few
-	# seconds after the last time a connection came in. This all is to
-	# ensure that no connections come in while we're shutting down.
-	#
-	# May only be called while the main loop is running. May be called
-	# from any thread.
-	def soft_shutdown
-		@soft_termination_linger_thread ||= Thread.new do
-			debug("Soft termination initiated")
-			if @detach_key && @pool_account_username && @pool_account_password
-				client = MessageClient.new(@pool_account_username, @pool_account_password)
-				begin
-					client.pool_detach_process_by_key(@detach_key)
-				ensure
-					client.close
-				end
-			end
-			wait_until_all_threads_are_idle
-			debug("Soft terminating in #{@soft_termination_linger_time} seconds")
-			sleep @soft_termination_linger_time
-			@graceful_termination_pipe[1].close rescue nil
 		end
 	end
 
@@ -377,14 +335,6 @@ private
 
 	def install_useful_signal_handlers
 		trappable_signals = Signal.list_trappable
-
-		trap(SOFT_TERMINATION_SIGNAL) do
-			begin
-				soft_shutdown
-			rescue => e
-				print_exception("Passenger RequestHandler soft shutdown routine", e)
-			end
-		end if trappable_signals.has_key?(SOFT_TERMINATION_SIGNAL.sub(/^SIG/, ''))
 
 		trap('ABRT') do
 			print_status_report
