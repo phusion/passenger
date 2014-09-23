@@ -280,7 +280,7 @@ private
 		if defined?(NativeSupport)
 			unix_path_max = NativeSupport::UNIX_PATH_MAX
 		else
-			unix_path_max = options.fetch('UNIX_PATH_MAX', 100)
+			unix_path_max = options.fetch('UNIX_PATH_MAX', 100).to_i
 		end
 		if options['socket_dir']
 			socket_dir = options['socket_dir']

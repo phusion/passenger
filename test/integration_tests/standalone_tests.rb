@@ -78,7 +78,7 @@ describe "Passenger Standalone" do
 
 	def create_dummy_support_binaries
 		Dir.mkdir("agents") if !File.exist?("agents")
-		["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
+		["PassengerAgent"].each do |exe|
 			File.open("agents/#{exe}", "w") do |f|
 				f.puts "#!/bin/bash"
 				f.puts "echo PASS"

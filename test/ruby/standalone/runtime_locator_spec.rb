@@ -61,7 +61,7 @@ describe RuntimeLocator do
 					@support_dir = "#{@temp_dir}/#{version}/support-#{cxx_compat_id}"
 					FileUtils.mkdir_p("#{@support_dir}/agents")
 					FileUtils.mkdir_p("#{@support_dir}/common/libpassenger_common/ApplicationPool2")
-					create_file("#{@support_dir}/agents/PassengerWatchdog")
+					create_file("#{@support_dir}/agents/PassengerAgent")
 					create_file("#{@support_dir}/common/libboost_oxt.a")
 					create_file("#{@support_dir}/common/libpassenger_common/ApplicationPool2/Implementation.o")
 				end

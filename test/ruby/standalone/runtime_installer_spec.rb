@@ -54,7 +54,7 @@ describe RuntimeInstaller do
 
 	def create_dummy_support_binaries
 		Dir.mkdir("agents")
-		["PassengerWatchdog", "PassengerHelperAgent", "PassengerLoggingAgent"].each do |exe|
+		["PassengerAgent",].each do |exe|
 			File.open("agents/#{exe}", "w") do |f|
 				f.puts "#!/bin/bash"
 				f.puts "echo PASS"
@@ -169,7 +169,7 @@ describe RuntimeInstaller do
 					end
 					true
 				end
-			
+
 			@installer.should_receive(:check_for_download_tool)
 			@installer.should_not_receive(:check_depdendencies)
 			@installer.should_not_receive(:compile_support_binaries)
@@ -363,7 +363,7 @@ describe RuntimeInstaller do
 		lambda { @installer.run }.should raise_error(SystemExit)
 		@logs.string.should =~ %r{Unable to download or extract Nginx source tarball}
 	end
-	
+
 	it "aborts if the Nginx binary cannot be built" do
 		create_installer(:targets => [:nginx],
 			:nginx_dir => "#{@temp_dir}/nginx",

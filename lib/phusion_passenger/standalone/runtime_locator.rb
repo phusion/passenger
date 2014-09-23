@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2013-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -39,7 +39,7 @@ class RuntimeLocator
 	end
 
 	def self.looks_like_support_dir?(dir)
-		File.exist?("#{dir}/agents/PassengerWatchdog") &&
+		File.exist?("#{dir}/agents/PassengerAgent") &&
 			File.exist?("#{dir}/common/libboost_oxt.a") &&
 			File.exist?("#{dir}/common/libpassenger_common/ApplicationPool2/Implementation.o")
 	end
