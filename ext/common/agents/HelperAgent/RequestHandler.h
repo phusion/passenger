@@ -337,16 +337,24 @@ public:
 
 	virtual Json::Value inspectRequestStateAsJson(const Request *req) const {
 		Json::Value doc = ParentClass::inspectRequestStateAsJson(req);
+		Json::Value flags;
 
 		doc["started_at"] = timeToJson(req->startedAt * 1000000.0);
 		doc["state"] = req->getStateString();
-		doc["dechunk_response"] = req->dechunkResponse;
-		doc["https"] = req->https;
-		doc["sticky_session"] = req->stickySession;
 		if (req->stickySession) {
 			doc["sticky_session_id"] = req->options.stickySessionId;
 		}
+		doc["sticky_session"] = req->stickySession;
 		doc["session_checkout_try"] = req->sessionCheckoutTry;
+
+		flags["dechunk_response"] = req->dechunkResponse;
+		flags["request_body_buffering"] = req->requestBodyBuffering;
+		flags["https"] = req->https;
+		doc["flags"] = flags;
+
+		if (req->requestBodyBuffering) {
+			doc["body_bytes_buffered"] = req->bodyBytesBuffered;
+		}
 
 		if (req->session != NULL) {
 			Json::Value &sessionDoc = doc["session"] = Json::Value(Json::objectValue);

@@ -52,7 +52,7 @@ describe "Apache 2 module" do
 			create_apache2_controller
 			@server = "http://1.passenger.test:#{@apache2.port}"
 			@stub = RackStub.new('rack')
-			@apache2 << "RailsMaxPoolSize 1"
+			@apache2 << "PassengerMaxPoolSize 1"
 			@apache2.set_vhost("1.passenger.test", "#{@stub.full_app_root}/public")
 			@apache2.start
 		end
@@ -74,7 +74,7 @@ describe "Apache 2 module" do
 			create_apache2_controller
 			@server = "http://1.passenger.test:#{@apache2.port}/subapp"
 			@stub = RackStub.new('rack')
-			@apache2 << "RailsMaxPoolSize 1"
+			@apache2 << "PassengerMaxPoolSize 1"
 			@apache2.set_vhost("1.passenger.test", File.expand_path("stub")) do |vhost|
 				vhost << %Q{
 					Alias /subapp #{@stub.full_app_root}/public
@@ -109,7 +109,7 @@ describe "Apache 2 module" do
 			create_apache2_controller
 			@server = "http://1.passenger.test:#{@apache2.port}"
 			@stub = PythonStub.new('wsgi')
-			@apache2 << "RailsMaxPoolSize 1"
+			@apache2 << "PassengerMaxPoolSize 1"
 			@apache2.set_vhost("1.passenger.test", "#{@stub.full_app_root}/public")
 			@apache2.start
 		end
@@ -131,7 +131,7 @@ describe "Apache 2 module" do
 			create_apache2_controller
 			@server = "http://1.passenger.test:#{@apache2.port}/subapp"
 			@stub = PythonStub.new('wsgi')
-			@apache2 << "RailsMaxPoolSize 1"
+			@apache2 << "PassengerMaxPoolSize 1"
 			@apache2.set_vhost("1.passenger.test", File.expand_path("stub")) do |vhost|
 				vhost << %Q{
 					Alias /subapp #{@stub.full_app_root}/public
@@ -166,7 +166,7 @@ describe "Apache 2 module" do
 			create_apache2_controller
 			@server = "http://1.passenger.test:#{@apache2.port}"
 			@stub = NodejsStub.new('node')
-			@apache2 << "RailsMaxPoolSize 1"
+			@apache2 << "PassengerMaxPoolSize 1"
 			@apache2.set_vhost("1.passenger.test", "#{@stub.full_app_root}/public")
 			@apache2.start
 		end
@@ -188,7 +188,7 @@ describe "Apache 2 module" do
 			create_apache2_controller
 			@server = "http://1.passenger.test:#{@apache2.port}/subapp"
 			@stub = NodejsStub.new('node')
-			@apache2 << "RailsMaxPoolSize 1"
+			@apache2 << "PassengerMaxPoolSize 1"
 			@apache2.set_vhost("1.passenger.test", File.expand_path("stub")) do |vhost|
 				vhost << %Q{
 					Alias /subapp #{@stub.full_app_root}/public
@@ -221,11 +221,11 @@ describe "Apache 2 module" do
 	describe "compatibility with other modules" do
 		before :all do
 			create_apache2_controller
-			@apache2 << "RailsMaxPoolSize 1"
+			@apache2 << "PassengerMaxPoolSize 1"
+			@apache2 << "PassengerStatThrottleRate 0"
 
 			@stub = RackStub.new('rack')
 			@server = "http://1.passenger.test:#{@apache2.port}"
-			@apache2 << "RailsMaxPoolSize 1"
 			@apache2.set_vhost("1.passenger.test", "#{@stub.full_app_root}/public") do |vhost|
 				vhost << "RewriteEngine on"
 				vhost << "RewriteRule ^/rewritten_frontpage$ / [PT,QSA,L]"
@@ -285,7 +285,7 @@ describe "Apache 2 module" do
 			@stub2 = RackStub.new('rack')
 			@stub2_url_root = "http://6.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost('6.passenger.test', "#{@stub2.full_app_root}/public") do |vhost|
-				vhost << "RailsEnv development"
+				vhost << "PassengerAppEnv development"
 				vhost << "PassengerSpawnMethod conservative"
 				vhost << "PassengerRestartDir #{@stub2.full_app_root}/public"
 				vhost << "AllowEncodedSlashes off"
@@ -305,12 +305,12 @@ describe "Apache 2 module" do
 			@stub2.reset
 		end
 
-		specify "RailsEnv is per-virtual host" do
+		specify "PassengerAppEnv is per-virtual host" do
 			@server = @stub_url_root
-			get('/system_env').should =~ /RAILS_ENV = production/
+			get('/system_env').should =~ /PASSENGER_APP_ENV = production/
 
 			@server = @stub2_url_root
-			get('/system_env').should =~ /RAILS_ENV = development/
+			get('/system_env').should =~ /PASSENGER_APP_ENV = development/
 		end
 
 		it "looks for restart.txt in the directory specified by PassengerRestartDir" do
@@ -438,7 +438,7 @@ describe "Apache 2 module" do
 			FileUtils.mkdir_p('tmp.webdir')
 			@webdir = File.expand_path('tmp.webdir')
 			@apache2.set_vhost('1.passenger.test', @webdir) do |vhost|
-				vhost << "RailsBaseURI /app-that-crashes-during-startup/public"
+				vhost << "PassengerBaseURI /app-that-crashes-during-startup/public"
 			end
 
 			@stub = RackStub.new('rack')

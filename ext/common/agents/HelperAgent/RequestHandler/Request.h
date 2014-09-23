@@ -78,6 +78,7 @@ public:
 	AppResponse appResponse;
 
 	ServerKit::FileBufferedChannel bodyBuffer;
+	boost::uint64_t bodyBytesBuffered; // After dechunking
 
 	struct {
 		UnionStation::ScopeLog *requestProcessing;

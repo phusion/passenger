@@ -72,6 +72,7 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	req->strip100ContinueHeader = false;
 	req->host = NULL;
 	req->appSink.reinitialize();
+	req->bodyBytesBuffered = 0;
 }
 
 virtual void deinitializeRequest(Client *client, Request *req) {

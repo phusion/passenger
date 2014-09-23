@@ -148,7 +148,7 @@ initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 			if (options != NULL) {
 				req->options = **options;
 			} else {
-				createNewPoolOptions(client, req);
+				createNewPoolOptions(client, req, appGroupName);
 			}
 		} else {
 			disconnectWithError(&client, "the !~PASSENGER_APP_GROUP_NAME header must be set");
@@ -232,9 +232,12 @@ fillPoolOptionSecToMsec(Request *req, unsigned int &field, const HashedStaticStr
 }
 
 void
-createNewPoolOptions(Client *client, Request *req) {
+createNewPoolOptions(Client *client, Request *req, const LString *appGroupName) {
 	ServerKit::HeaderTable &secureHeaders = req->secureHeaders;
 	Options &options = req->options;
+
+	SKC_TRACE(client, 2, "Creating new pool options: app group name=" <<
+		StaticString(appGroupName->start->data, appGroupName->size));
 
 	options = Options();
 
@@ -290,7 +293,8 @@ createNewPoolOptions(Client *client, Request *req) {
 		fillPoolOption(req, options.appType, "!~PASSENGER_APP_TYPE");
 	}
 
-	fillPoolOption(req, options.appGroupName, PASSENGER_APP_GROUP_NAME);
+	options.appGroupName = StaticString(appGroupName->start->data, appGroupName->size);
+
 	fillPoolOption(req, options.appType, "!~PASSENGER_APP_TYPE");
 	fillPoolOption(req, options.environment, "!~PASSENGER_APP_ENV");
 	fillPoolOption(req, options.ruby, "!~PASSENGER_RUBY");
