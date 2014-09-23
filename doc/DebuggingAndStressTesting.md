@@ -7,7 +7,7 @@ This guide tells you:
 
 ## Process output
 
-All Phusion Passenger agent processes (PassengerWatchdog, PassengerHelperAgent, PassengerLoggingAgent) as well as all spawned application processes have their stdout and stderr redirected to the _global web server error log_ (that is, _not_ the per-virtual host error log). This is usually '/var/log/apache2/error.log' or '/var/log/nginx/error.log'.
+All PassengerAgent processes as well as all spawned application processes have their stdout and stderr redirected to the _global web server error log_ (that is, _not_ the per-virtual host error log). This is usually '/var/log/apache2/error.log' or '/var/log/nginx/error.log'.
 
 Note that in case of Nginx, Phusion Passenger prints to the error log specified in the server context, not the "http" context. If the server context does not contain an `error_log` directive then the default error log location will be used. The default location depends on how Nginx is configured during compilation, but it is usually either '$PREFIX/logs/error.log' or '/var/log/nginx/error.log'. For example, if your Nginx configuration looks like this:
 
@@ -55,6 +55,6 @@ To enable, set the environment variable `PASSENGER_SIMULATE_SYSCALL_FAILURES`. T
 
 `program_nameN` specifies the name of the Phusion Passenger process for which system call failure simulation should be enabled. This is followed by a list of system call `errno` names and the respective probabilities (between 0 and 1). For example:
 
-    export PASSENGER_SIMULATE_SYSCALL_FAILURES='PassengerWatchdog=ENOSPC:0.01;PassengerHelperAgent=EMFILE:0.001,ECONNREFUSED:0.02'
+    export PASSENGER_SIMULATE_SYSCALL_FAILURES='watchdog=ENOSPC:0.01;server=EMFILE:0.001,ECONNREFUSED:0.02'
 
-This will enable system call failure simulation only for PassengerWatchdog and PassengerHelperAgent, but not for PassengerLoggingAgent. All system calls in PassengerWatchdog will have a 1% probability of throwing ENOSPC. All system calls in PassengerHelperAgent will have a 0.1% probability of throwing EMFILE, and a 2% probability of throwing ECONNREFUSED.
+This will enable system call failure simulation only for the watchdog and the HTTP server, but not for the logging agent. All system calls in the watchdog will have a 1% probability of throwing ENOSPC. All system calls in the HTTP server will have a 0.1% probability of throwing EMFILE, and a 2% probability of throwing ECONNREFUSED.
