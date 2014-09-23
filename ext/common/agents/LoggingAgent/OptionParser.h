@@ -64,6 +64,9 @@ loggingAgentUsage() {
 	printf("                              the privilege level (see below). PASSWORDFILE must\n");
 	printf("                              point to a file containing the password\n");
 	printf("\n");
+	printf("      --dump-file PATH        Dump transactions without Union Station key to the\n");
+	printf("                              following file. Default: /dev/null\n");
+	printf("\n");
 	printf("      --user USERNAME         Lower privilege to the given user. Only has\n");
 	printf("                              effect when started as root\n");
 	printf("      --group GROUPNAME       Lower privilege to the given group. Only has\n");
@@ -131,6 +134,9 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 
 		authorizations.push_back(argv[i + 1]);
 		options.setStrSet("logging_agent_authorizations", authorizations);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--dump-file")) {
+		options.set("analytics_dump_file", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--user")) {
 		options.set("analytics_log_user", argv[i + 1]);

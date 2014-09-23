@@ -102,7 +102,7 @@ DEADLINE_TIMER = DeadlineTimer.new(Thread.current, 30)
 RSpec.configure do |config|
 	config.before(:each) do
 		# Suppress warning messages.
-		PhusionPassenger::DebugLogging.log_level = -1
+		PhusionPassenger::DebugLogging.log_level = PhusionPassenger::LVL_CRIT
 		PhusionPassenger::DebugLogging.log_file = nil
 		PhusionPassenger::DebugLogging.stderr_evaluator = nil
 

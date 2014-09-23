@@ -35,7 +35,7 @@ class MessageClient
 
 	# Connect to the given server. By default it connects to the current
 	# generation's helper server.
-	def initialize(username, password)
+	def initialize(username, password, address)
 		@socket = connect_to_server(address)
 		begin
 			@channel = MessageChannel.new(@socket)

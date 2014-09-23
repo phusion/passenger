@@ -3,6 +3,7 @@ PhusionPassenger.require_passenger_lib 'request_handler'
 PhusionPassenger.require_passenger_lib 'request_handler/thread_handler'
 PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'
 PhusionPassenger.require_passenger_lib 'union_station/core'
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'utils'
 
 require 'fileutils'
@@ -18,6 +19,7 @@ describe RequestHandler do
 	end
 
 	before :each do
+		@temp_dir = Dir.mktmpdir
 		preinitialize if respond_to?(:preinitialize)
 		@owner_pipe = IO.pipe
 		@options ||= {}
@@ -25,15 +27,17 @@ describe RequestHandler do
 		@options = {
 			"app_group_name" => "foobar",
 			"thread_handler" => @thread_handler,
-			"socket_dir"     => "request_handler_spec.tmp"
+			"socket_dir"     => @temp_dir
 		}.merge(@options)
 		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
 	end
 
 	after :each do
 		stop_request_handler
-		FileUtils.chmod_R(0777, "request_handler_spec.tmp")
-		FileUtils.rm_rf("request_handler_spec.tmp")
+		if @temp_dir
+			FileUtils.chmod_R(0777, @temp_dir)
+			FileUtils.rm_rf(@temp_dir)
+		end
 	end
 
 	def stop_request_handler
@@ -69,14 +73,14 @@ describe RequestHandler do
 
 	it "creates a socket file in the Phusion Passenger temp folder, unless when using TCP sockets" do
 		if @request_handler.server_sockets[:main][1] == "unix"
-			File.chmod(0700, "request_handler_spec.tmp/backends")
-			Dir["request_handler_spec.tmp/backends/*"].should_not be_empty
+			File.chmod(0700, "#{@temp_dir}/backends")
+			Dir["#{@temp_dir}/backends/*"].should_not be_empty
 		end
 	end
 
 	specify "the main socket rejects headers that are too large" do
 		stderr = StringIO.new
-		DebugLogging.log_level = 0
+		DebugLogging.log_level = DEFAULT_LOG_LEVEL
 		DebugLogging.stderr_evaluator = lambda { stderr }
 		@request_handler.start_main_loop_thread
 		begin
@@ -143,7 +147,7 @@ describe RequestHandler do
 
 	specify "the HTTP socket rejects headers that are too large" do
 		stderr = StringIO.new
-		DebugLogging.log_level = 0
+		DebugLogging.log_level = DEFAULT_LOG_LEVEL
 		DebugLogging.stderr_evaluator = lambda { stderr }
 		@request_handler.start_main_loop_thread
 		begin
@@ -164,7 +168,7 @@ describe RequestHandler do
 	end
 
 	specify "the HTTP socket rejects unauthenticated connections, if a connect password is supplied" do
-		DebugLogging.log_level = -1
+		DebugLogging.log_level = LVL_ERROR
 		@request_handler.connect_password = "1234"
 		@request_handler.start_main_loop_thread
 		begin
@@ -194,7 +198,6 @@ describe RequestHandler do
 		lambda_called = false
 
 		# Here we test that the exception is not propagated to outside the request handler.
-		DebugLogging.log_level = -2
 		@options["app"] = lambda do |env|
 			lambda_called = true
 			raise "an error"
@@ -223,7 +226,6 @@ describe RequestHandler do
 		lambda_called = false
 
 		# Here we test that the exception is not propagated to outside the request handler.
-		DebugLogging.log_level = -2
 		@options["app"] = lambda do |env|
 			lambda_called = true
 			body = Object.new
@@ -315,6 +317,7 @@ describe RequestHandler do
 				"REQUEST_METHOD" => "GET",
 				"PATH_INFO" => "/")
 			client.read.should ==
+				"HTTP/1.1 200 Whatever\r\n" +
 				"Status: 200\r\n" +
 				"Content-Type: text/html\r\n" +
 				"\r\n" +
@@ -351,7 +354,9 @@ describe RequestHandler do
 			client.write("abc")
 			client.close_write
 			client.read.should ==
+				"HTTP/1.1 200 Whatever\r\n" +
 				"Status: 200\r\n" +
+				"Content-Length: 2\r\n" +
 				"\r\n" +
 				"ok"
 		ensure
@@ -391,7 +396,9 @@ describe RequestHandler do
 				"0\r\n\r\n")
 			client.close_write
 			client.read.should ==
+				"HTTP/1.1 200 Whatever\r\n" +
 				"Status: 200\r\n" +
+				"Content-Length: 2\r\n" +
 				"\r\n" +
 				"ok"
 		ensure
@@ -424,7 +431,9 @@ describe RequestHandler do
 				"PATH_INFO" => "/")
 			client.close_write
 			client.read.should ==
+				"HTTP/1.1 200 Whatever\r\n" +
 				"Status: 200\r\n" +
+				"Content-Length: 2\r\n" +
 				"\r\n" +
 				"ok"
 		ensure
@@ -500,6 +509,7 @@ describe RequestHandler do
 				client.write("hi")
 				client.close_write
 				client.read.should ==
+					"HTTP/1.1 200 Whatever\r\n" +
 					"Status: 200\r\n" +
 					"\r\n" +
 					"ok"
@@ -517,11 +527,10 @@ describe RequestHandler do
 				Process.kill('KILL', @agent_pid)
 				Process.waitpid(@agent_pid)
 			end
-			@tmpdir = Dir.mktmpdir
-			@dump_file = "#{@tmpdir}/log.txt"
+			@dump_file = "#{@temp_dir}/log.txt"
 			@logging_agent_password = "1234"
 			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(
-				@tmpdir, @dump_file, @logging_agent_password)
+				@temp_dir, @dump_file, @logging_agent_password)
 
 			@union_station_core = UnionStation::Core.new(@socket_address, "logging",
 				"1234", "localhost")
@@ -529,7 +538,6 @@ describe RequestHandler do
 		end
 
 		after :each do
-			FileUtils.rm_rf(@tmpdir) if @tmpdir
 			if @agent_pid
 				Process.kill('KILL', @agent_pid)
 				Process.waitpid(@agent_pid)
@@ -575,7 +583,6 @@ describe RequestHandler do
 			@request_handler.start_main_loop_thread
 			client = connect
 			begin
-				DebugLogging.log_level = -2
 				send_binary_request(client,
 					"REQUEST_METHOD" => "GET",
 					"PASSENGER_TXN_ID" => "1234-abcd")

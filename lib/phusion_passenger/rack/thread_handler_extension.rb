@@ -94,7 +94,7 @@ module ThreadHandlerExtension
 			return true if env[RACK_HIJACK_IO]
 
 			begin
-				process_body(env, connection, socket_wrapper, status, headers, body)
+				process_body(env, connection, socket_wrapper, status.to_i, headers, body)
 			ensure
 				body.close if body && body.respond_to?(:close)
 			end

@@ -372,7 +372,6 @@ module TestHelper
 			"--dump-file", dump_file,
 			"--user",  CONFIG['normal_user_1'],
 			"--group", CONFIG['normal_group_1'],
-			"--permissions", "u=rwx,g=rwx,o=rwx",
 			"--listen", "unix:#{socket_filename}",
 			"--password-file", password_filename)
 		eventually do

@@ -307,7 +307,6 @@ shared_examples_for "Union Station extensions for Rails" do
 			File.write("#{@stub.app_root}/app/controllers/foo_controller.rb", %Q{
 				class FooController < ActionController::Base
 					def index
-						STDERR.puts 'hi'
 						Rails.cache.write("key1", "foo")
 						Rails.cache.write("key2", "foo")
 						Rails.cache.write("key3", "foo")
