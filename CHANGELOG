@@ -21,7 +21,7 @@ Release 5.0.0 beta 1
  * SIGUSR1 on ruby apps is no longer supported. use passenger-config detach-process
 
 
-Release 4.0.51
+Release 4.0.52
 --------------
 
  * Fixed a null termination bug when autodetecting application types.
@@ -31,6 +31,7 @@ Release 4.0.51
  * `passenger-config system-metrics` no longer crashes when the system clock is set to a time in the past. Closes GH-1276.
  * `passenger-status`, `passenger-memory-stats`, `passenger-install-apache2-module` and `passenger-install-nginx-module` no longer output ANSI color codes by default when STDOUT is not a TTY. Closes GH-487.
  * `passenger-install-nginx-module --auto` is now all that's necessary to make it fully non-interactive. It is no longer necessary to provide all the answers through command line parameters. Closes GH-852.
+ * Minor contribution by Alessandro Lenzen.
 
 
 Release 4.0.50
