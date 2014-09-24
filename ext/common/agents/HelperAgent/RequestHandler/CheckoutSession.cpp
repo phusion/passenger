@@ -161,6 +161,8 @@ initiateSession(Client *client, Request *req) {
 	req->appSink.setFd(req->session->fd());
 	req->appSink.start();
 	req->appSource.reinitialize(req->session->fd());
+	/***************/
+	/***************/
 	reinitializeAppResponse(client, req);
 	sendHeaderToApp(client, req);
 }
@@ -313,3 +315,5 @@ friendlyErrorPagesEnabled(Request *req) {
 		&& req->options.environment != "production";
 	return getBoolOption(req, "!~PASSENGER_FRIENDLY_ERROR_PAGES", defaultValue);
 }
+
+/***************/

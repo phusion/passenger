@@ -197,7 +197,12 @@ namespace {
 			  adminServer(NULL),
 			  terminationCount(0),
 			  shutdownCounter(0)
-			{ }
+		{
+			for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
+				serverFds[i] = -1;
+				adminServerFds[i] = -1;
+			}
+		}
 	};
 }
 

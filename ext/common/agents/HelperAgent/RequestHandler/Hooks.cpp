@@ -73,6 +73,8 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	req->host = NULL;
 	req->appSink.reinitialize();
 	req->bodyBytesBuffered = 0;
+
+	/***************/
 }
 
 virtual void deinitializeRequest(Client *client, Request *req) {
@@ -88,6 +90,9 @@ virtual void deinitializeRequest(Client *client, Request *req) {
 	req->appSink.setDataFlushedCallback(NULL);
 	req->appSource.deinitialize();
 	req->bodyBuffer.deinitialize();
+
+	/***************/
+	/***************/
 
 	deinitializeAppResponse(client, req);
 

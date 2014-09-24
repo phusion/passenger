@@ -50,6 +50,9 @@ onRequestBegin(Client *client, Request *req) {
 		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS, false);
 		req->host = req->headers.lookup(HTTP_HOST);
 
+		/***************/
+		/***************/
+
 		SKC_TRACE(client, 2, "Initiating request");
 		req->startedAt = ev_now(getLoop());
 		req->bodyChannel.stop();

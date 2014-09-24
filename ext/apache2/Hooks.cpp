@@ -919,7 +919,6 @@ private:
 		// Phusion Passenger options.
 		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_ROOT"), mapper.getAppRoot());
 		addHeader(result, P_STATIC_STRING("!~PASSENGER_APP_TYPE"), mapper.getApplicationTypeName());
-		addHeader(result, P_STATIC_STRING("!~PASSENGER_DEBUGGER"), P_STATIC_STRING("f"));
 		if (config->useUnionStation() && !config->unionStationKey.empty()) {
 			addHeader(result, P_STATIC_STRING("!~UNION_STATION_SUPPORT"), P_STATIC_STRING("t"));
 			addHeader(result, P_STATIC_STRING("!~UNION_STATION_KEY"), config->unionStationKey);
