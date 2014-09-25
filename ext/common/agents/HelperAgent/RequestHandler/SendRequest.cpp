@@ -235,7 +235,7 @@ determineHeaderSizeForSessionProtocol(Request *req,
 		dataSize += state.contentLength->size + 1;
 	}
 
-	if (state.contentLength != NULL) {
+	if (state.contentType != NULL) {
 		dataSize += sizeof("CONTENT_TYPE");
 		dataSize += state.contentType->size + 1;
 	}
@@ -717,13 +717,23 @@ whenSendingRequest_onRequestBody(Client *client, Request *req,
 
 	if (buffer.size() > 0) {
 		// Data
-		SKC_TRACE(client, 3, "Forwarding " << buffer.size() <<
-			" bytes of client request body: \"" <<
-			cEscapeString(StaticString(buffer.start, buffer.size())) <<
-			"\"");
+		if (req->bodyType == Request::RBT_CONTENT_LENGTH) {
+			SKC_TRACE(client, 3, "Forwarding " << buffer.size() <<
+				" bytes of client request body (" << req->bodyAlreadyRead <<
+				" of " << req->aux.bodyInfo.contentLength << " bytes forwarded in total): \"" <<
+				cEscapeString(StaticString(buffer.start, buffer.size())) <<
+				"\"");
+		} else {
+			SKC_TRACE(client, 3, "Forwarding " << buffer.size() <<
+				" bytes of client request body (" << req->bodyAlreadyRead <<
+				" bytes forwarded in total): \"" <<
+				cEscapeString(StaticString(buffer.start, buffer.size())) <<
+				"\"");
+		}
 		req->appSink.feed(buffer);
 		if (!req->appSink.ended()) {
 			if (req->appSink.passedThreshold()) {
+				SKC_TRACE(client, 3, "AppSink passed threshold; waiting until its buffers are flushed");
 				req->appSink.setBuffersFlushedCallback(resumeRequestBodyChannelWhenBuffersFlushed);
 				stopBodyChannel(client, req);
 			}
@@ -763,6 +773,8 @@ resumeRequestBodyChannelWhenBuffersFlushed(FileBufferedChannel *_channel) {
 
 	P_ASSERT_EQ(req->state, Request::FORWARDING_BODY_TO_APP);
 
+	SKC_TRACE_FROM_STATIC(self, client, 3,
+		"AppSink buffers are flushed; continuing forwarding of request body");
 	req->appSink.setBuffersFlushedCallback(NULL);
 	self->startBodyChannel(client, req);
 }
@@ -830,9 +842,11 @@ whenOtherCases_onAppSinkError(Client *client, Request *req, int errcode) {
 		|| req->state == Request::FORWARDING_BODY_TO_APP
 		|| req->state == Request::WAITING_FOR_APP_OUTPUT);
 
-	if (errcode == EPIPE) {
+	if (errcode == EPIPE || errcode == ENOTCONN) {
 		// We consider an EPIPE non-fatal: we don't care whether the
 		// app stopped reading, we just care about its output.
+		// Some operating systems sometimes raise ENOTCONN instead of
+		// EPIPE.
 		SKC_DEBUG(client, "cannot write to application socket: "
 			"the application closed the socket prematurely");
 	} else if (req->responseBegun) {
