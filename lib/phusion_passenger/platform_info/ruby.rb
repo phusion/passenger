@@ -37,13 +37,21 @@ module PlatformInfo
 		gem_home = nil if gem_home.empty?
 	end
 	GEM_HOME = gem_home
-	
+
+	# Ditto for $GEM_PATH
+	gem_path = ENV['GEM_PATH']
+	if gem_path
+		gem_path = gem_path.strip.freeze
+		gem_path = nil if gem_path.empty?
+	end
+	GEM_PATH = gem_path
+
 	if defined?(::RUBY_ENGINE)
 		RUBY_ENGINE = ::RUBY_ENGINE
 	else
 		RUBY_ENGINE = "ruby"
 	end
-	
+
 	# Returns correct command for invoking the current Ruby interpreter.
 	# In case of RVM this function will return the path to the RVM wrapper script
 	# that executes the current Ruby interpreter in the currently active gem set.
@@ -81,7 +89,7 @@ module PlatformInfo
 				# Correctness of these commands are confirmed by mpapis.
 				# If we ever encounter a case for which this logic is not sufficient,
 				# try mpapis' pseudo code:
-				# 
+				#
 				#   rvm_update_prefix  = write_to rvm_path ? "" : "rvmsudo"
 				#   rvm_gemhome_prefix  = write_to GEM_HOME ? "" : "rvmsudo"
 				#   repair_command  = "#{rvm_update_prefix} rvm get stable && rvm reload && #{rvm_gemhome_prefix} rvm repair all"
@@ -121,7 +129,7 @@ module PlatformInfo
 		end
 	end
 	memoize :ruby_command
-	
+
 	# Returns the full path to the current Ruby interpreter's executable file.
 	# This might not be the actual correct command to use for invoking the Ruby
 	# interpreter; use ruby_command instead.
@@ -129,7 +137,7 @@ module PlatformInfo
 		@@ruby_executable ||=
 			rb_config['bindir'] + '/' + rb_config['RUBY_INSTALL_NAME'] + rb_config['EXEEXT']
 	end
-	
+
 	# Returns whether the Ruby interpreter supports process forking.
 	def self.ruby_supports_fork?
 		# MRI >= 1.9.2's respond_to? returns false for methods
@@ -146,7 +154,7 @@ module PlatformInfo
 		# Too much of a trouble for JRuby. We can do without it.
 		return RUBY_ENGINE != "jruby"
 	end
-	
+
 	# Returns the correct 'gem' command for this Ruby interpreter.
 	# If `:sudo => true` is given, then the gem command is prefixed by a
 	# sudo command if filesystem permissions require this.
@@ -169,7 +177,7 @@ module PlatformInfo
 		end
 	end
 	memoize :gem_install_requires_sudo?
-	
+
 	# Returns the absolute path to the Rake executable that
 	# belongs to the current Ruby interpreter. Returns nil if it
 	# doesn't exist.
@@ -180,7 +188,7 @@ module PlatformInfo
 		return locate_ruby_tool('rake')
 	end
 	memoize :rake
-	
+
 	# Returns the correct command string for invoking the Rake executable
 	# that belongs to the current Ruby interpreter. Returns nil if Rake is
 	# not found.
@@ -199,7 +207,7 @@ module PlatformInfo
 		end
 	end
 	memoize :rake_command
-	
+
 	# Returns the absolute path to the RSpec runner program that
 	# belongs to the current Ruby interpreter. Returns nil if it
 	# doesn't exist.
@@ -207,18 +215,18 @@ module PlatformInfo
 		return locate_ruby_tool('rspec')
 	end
 	memoize :rspec
-	
+
 	# Returns whether the current Ruby interpreter is managed by RVM.
 	def self.in_rvm?
 		bindir = rb_config['bindir']
 		return bindir.include?('/.rvm/') || bindir.include?('/rvm/')
 	end
-	
+
 	# If the current Ruby interpreter is managed by RVM, returns all
 	# directories in which RVM places its working files. This is usually
 	# ~/.rvm or /usr/local/rvm, but in mixed-mode installations there
 	# can be multiple such paths.
-	# 
+	#
 	# Otherwise returns nil.
 	def self.rvm_paths
 		if in_rvm?
@@ -250,7 +258,7 @@ module PlatformInfo
 		end
 	end
 	memoize :rvm_paths
-	
+
 	# If the current Ruby interpreter is managed by RVM, returns the
 	# RVM name which identifies the current Ruby interpreter plus the
 	# currently active gemset, e.g. something like this:
@@ -264,12 +272,12 @@ module PlatformInfo
 			# in the latest versions in order to fight env var pollution.
 			# Scanning $LOAD_PATH seems to be the only way to obtain
 			# the information.
-			
+
 			# Getting the RVM name of the Ruby interpreter ("ruby-1.9.2")
 			# isn't so hard, we can extract it from the #ruby_executable
 			# string. Getting the gemset name is a bit harder, so let's
 			# try various strategies...
-			
+
 			# $GEM_HOME usually contains the gem set name.
 			# It may be something like:
 			#   /Users/hongli/.rvm/gems/ruby-1.9.3-p392
@@ -278,9 +286,18 @@ module PlatformInfo
 			if GEM_HOME && GEM_HOME =~ %r{rvm/gems/(.+)}
 				return $1.sub(/\/.*/, '')
 			end
-			
-			# User somehow managed to nuke $GEM_HOME. Extract info
-			# from $LOAD_PATH.
+
+			# User might have explicitly set GEM_HOME to a custom directory,
+			# or might have nuked $GEM_HOME. Extract info from $GEM_PATH.
+			if GEM_PATH
+				GEM_PATH.split(':').each do |gem_path|
+					if gem_path =~ %r{rvm/gems/(.+)}
+						return $1.sub(/\/.*/, '')
+					end
+				end
+			end
+
+			# That failed too. Try extracting info from from $LOAD_PATH.
 			matching_path = $LOAD_PATH.find_all do |item|
 				item.include?("rvm/gems/")
 			end
@@ -327,7 +344,7 @@ module PlatformInfo
 			return nil
 		end
 	end
-	
+
 	# Returns either 'sudo' or 'rvmsudo' depending on whether the current
 	# Ruby interpreter is managed by RVM.
 	def self.ruby_sudo_command
@@ -360,7 +377,7 @@ module PlatformInfo
 			return "sudo -s #{args}".strip
 		end
 	end
-	
+
 	# Locates a Ruby tool command, e.g. 'gem', 'rake', 'bundle', etc. Instead of
 	# naively looking in $PATH, this function uses a variety of search heuristics
 	# to find the command that's really associated with the current Ruby interpreter.
@@ -433,7 +450,7 @@ private
 		filename
 	end
 	private_class_method :locate_ruby_tool_by_basename
-	
+
 	def self.is_ruby_program?(filename)
 		File.open(filename, 'rb') do |f|
 			return f.readline =~ /ruby/
@@ -442,7 +459,7 @@ private
 		return false
 	end
 	private_class_method :is_ruby_program?
-	
+
 	# Deduce Ruby's --program-prefix and --program-suffix from its install name
 	# and transforms the given input name accordingly.
 	#
