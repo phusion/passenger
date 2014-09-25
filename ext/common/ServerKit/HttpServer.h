@@ -1019,12 +1019,13 @@ protected:
 public:
 	HttpServer(Context *context)
 		: ParentClass(context),
-		  freeRequests(STAILQ_HEAD_INITIALIZER(freeRequests)),
 		  freeRequestCount(0),
 		  requestFreelistLimit(1024),
 		  totalRequestsAccepted(0),
 		  headerParserStatePool(16, 256)
-		{ }
+	{
+		STAILQ_INIT(&freeRequests);
+	}
 
 	virtual void configure(const Json::Value &doc) {
 		ParentClass::configure(doc);

@@ -276,7 +276,7 @@ public:
 			"show_version_in_header");
 
 		if (!agentsOptions->getBool("multi_app")) {
-			boost::shared_ptr<Options> options = make_shared<Options>();
+			boost::shared_ptr<Options> options = boost::make_shared<Options>();
 
 			singleAppMode = true;
 			fillPoolOptionsFromAgentsOptions(*options);

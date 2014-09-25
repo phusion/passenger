@@ -720,7 +720,7 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceD
 	instanceOptions.defaultGid = wo->defaultGid;
 	instanceOptions.properties["name"] = wo->randomGenerator.generateAsciiString(8);
 	instanceOptions.properties["server_software"] = options.get("server_software");
-	wo->instanceDir = make_shared<InstanceDirectory>(instanceOptions,
+	wo->instanceDir = boost::make_shared<InstanceDirectory>(instanceOptions,
 		options.get("instance_registry_dir"));
 	options.set("instance_dir", wo->instanceDir->getPath());
 	instanceDirToucher = boost::make_shared<InstanceDirToucher>(wo);

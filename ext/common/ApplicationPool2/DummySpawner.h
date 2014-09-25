@@ -68,7 +68,7 @@ public:
 			adminSocket.second, FileDescriptor(), sockets,
 			SystemTime::getUsec(), SystemTime::getUsec());
 		object.process->dummy = true;
-		return object;
+		return boost::move(object);
 	}
 
 	virtual bool cleanable() const {

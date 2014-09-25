@@ -72,7 +72,7 @@ public:
 	}
 
 	Context(struct ev_loop *loop)
-		: libev(make_shared<SafeLibev>(loop))
+		: libev(boost::make_shared<SafeLibev>(loop))
 	{
 		initialize();
 	}

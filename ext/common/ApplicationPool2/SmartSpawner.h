@@ -768,7 +768,7 @@ public:
 		SpawnObject object = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
 			", pid=" << object.process->pid);
-		return object;
+		return boost::move(object);
 	}
 
 	virtual bool cleanable() const {

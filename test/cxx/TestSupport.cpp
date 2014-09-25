@@ -30,7 +30,7 @@ createInstanceDir(InstanceDirectoryPtr &instanceDir) {
 	options.userSwitching = geteuid() == 0;
 	options.defaultUid = pwUser->pw_uid;
 	options.defaultGid = pwUser->pw_gid;
-	instanceDir = make_shared<InstanceDirectory>(options);
+	instanceDir = boost::make_shared<InstanceDirectory>(options);
 }
 
 static int

@@ -692,7 +692,7 @@ private:
 
 		FBC_DEBUG("Switching to in-file mode");
 		mode = IN_FILE_MODE;
-		inFileMode = make_shared<InFileMode>();
+		inFileMode = boost::make_shared<InFileMode>();
 		createBufferFile();
 	}
 

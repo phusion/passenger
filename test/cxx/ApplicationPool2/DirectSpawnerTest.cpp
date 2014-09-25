@@ -32,7 +32,7 @@ namespace tut {
 		}
 
 		SpawnerConfigPtr createSpawnerConfig() {
-			SpawnerConfigPtr config = make_shared<SpawnerConfig>();
+			SpawnerConfigPtr config = boost::make_shared<SpawnerConfig>();
 			config->resourceLocator = resourceLocator;
 			config->finalize();
 			return config;

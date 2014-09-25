@@ -320,7 +320,7 @@ createNewPoolOptions(Client *client, Request *req, const LString *appGroupName) 
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	/******************/
 
-	boost::shared_ptr<Options> optionsCopy = make_shared<Options>(options);
+	boost::shared_ptr<Options> optionsCopy = boost::make_shared<Options>(options);
 	optionsCopy->persist(options);
 	optionsCopy->clearPerRequestFields();
 	optionsCopy->detachFromUnionStationTransaction();

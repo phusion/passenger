@@ -229,7 +229,7 @@ public:
 			guard.clear();
 			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
 				", pid=" << object.process->pid);
-			return object;
+			return boost::move(object);
 		}
 	}
 };
