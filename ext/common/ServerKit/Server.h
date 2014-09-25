@@ -69,12 +69,14 @@ using namespace oxt;
 // We use 'this' so that the macros work in derived template classes like HttpServer<>.
 #define SKS_ERROR(expr)  P_ERROR("[" << this->getServerName() << "] " << expr)
 #define SKS_WARN(expr)   P_WARN("[" << this->getServerName() << "] " << expr)
+#define SKS_INFO(expr)   P_INFO("[" << this->getServerName() << "] " << expr)
 #define SKS_NOTICE(expr) P_NOTICE("[" << this->getServerName() << "] " << expr)
 #define SKS_DEBUG(expr)  P_DEBUG("[" << this->getServerName() << "] " << expr)
 #define SKS_TRACE(level, expr) P_TRACE(level, "[" << this->getServerName() << "] " << expr)
 
 #define SKC_ERROR(client, expr) SKC_ERROR_FROM_STATIC(this, client, expr)
 #define SKC_WARN(client, expr) SKC_WARN_FROM_STATIC(this, client, expr)
+#define SKC_INFO(client, expr) SKC_INFO_FROM_STATIC(this, client, expr)
 #define SKC_DEBUG(client, expr) SKC_DEBUG_FROM_STATIC(this, client, expr)
 #define SKC_DEBUG_WITH_POS(client, file, line, expr) \
 	SKC_DEBUG_FROM_STATIC_WITH_POS(this, client, file, line, expr)
@@ -96,6 +98,14 @@ using namespace oxt;
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_WARN("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		} \
+	} while (0)
+#define SKC_INFO_FROM_STATIC(server, client, expr) \
+	do { \
+		if (Passenger::_logLevel >= LVL_WARN) { \
+			char _clientName[16]; \
+			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+			P_INFO("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
 		} \
 	} while (0)
 #define SKC_DEBUG_FROM_STATIC(server, client, expr) \

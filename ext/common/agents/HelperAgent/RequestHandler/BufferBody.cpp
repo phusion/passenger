@@ -91,12 +91,3 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 		return Channel::Result(0, true);
 	}
 }
-
-void
-whenBufferingBody_onAppSinkError(Client *client, Request *req, int errcode) {
-	TRACE_POINT();
-	assert(!req->responseBegun);
-	SKC_WARN(client, "Cannot write to application socket: " <<
-		ServerKit::getErrorDesc(errcode) << " (errcode=" << errcode << ")");
-	endRequestAsBadGateway(&client, &req);
-}

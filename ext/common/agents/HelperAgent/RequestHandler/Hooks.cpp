@@ -39,7 +39,6 @@ onRequestObjectCreated(Client *client, Request *req) {
 
 	req->appSink.setContext(getContext());
 	req->appSink.setHooks(&req->hooks);
-	req->appSink.errorCallback = onAppSinkError;
 
 	req->appSource.setContext(getContext());
 	req->appSource.setHooks(&req->hooks);
@@ -59,7 +58,7 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	ParentClass::reinitializeRequest(client, req);
 
 	// bodyBuffer is initialized in RequestHandler::beginBufferingBody().
-	// appSource is initialized in RequestHandler::checkoutSession().
+	// appSink and appSource are initialized in RequestHandler::checkoutSession().
 
 	req->startedAt = 0;
 	req->state = Request::ANALYZING_REQUEST;
@@ -71,7 +70,6 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	req->sessionCheckoutTry = 0;
 	req->strip100ContinueHeader = false;
 	req->host = NULL;
-	req->appSink.reinitialize();
 	req->bodyBytesBuffered = 0;
 
 	/***************/
@@ -85,9 +83,8 @@ virtual void deinitializeRequest(Client *client, Request *req) {
 	req->endScopeLog(&req->scopeLogs.bufferingRequestBody, false);
 	req->endScopeLog(&req->scopeLogs.requestProcessing, false);
 
+	req->appSink.setConsumedCallback(NULL);
 	req->appSink.deinitialize();
-	req->appSink.setBuffersFlushedCallback(NULL);
-	req->appSink.setDataFlushedCallback(NULL);
 	req->appSource.deinitialize();
 	req->bodyBuffer.deinitialize();
 
@@ -160,29 +157,6 @@ onRequestBody(Client *client, Request *req, const MemoryKit::mbuf &buffer,
 }
 
 private:
-
-static void
-onAppSinkError(FileBufferedFdSinkChannel *channel, int errcode) {
-	Request *req = static_cast<Request *>(static_cast<
-		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
-	Client *client = static_cast<Client *>(req->client);
-	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
-	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "onAppSinkError");
-
-	switch (req->state) {
-	case Request::BUFFERING_REQUEST_BODY:
-		self->whenBufferingBody_onAppSinkError(client, req, errcode);
-		break;
-	case Request::SENDING_HEADER_TO_APP:
-	case Request::FORWARDING_BODY_TO_APP:
-	case Request::WAITING_FOR_APP_OUTPUT:
-		self->whenOtherCases_onAppSinkError(client, req, errcode);
-		break;
-	default:
-		P_BUG("Unknown state " << req->state);
-		break;
-	}
-}
 
 static Channel::Result
 onBodyBufferData(Channel *_channel, const MemoryKit::mbuf &buffer, int errcode) {

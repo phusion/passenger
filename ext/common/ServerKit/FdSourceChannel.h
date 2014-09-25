@@ -157,6 +157,7 @@ public:
 	}
 
 	// May only be called right after construction.
+	OXT_FORCE_INLINE
 	void setContext(Context *context) {
 		Channel::setContext(context);
 	}
@@ -186,14 +187,17 @@ public:
 		ev_io_start(ctx->libev->getLoop(), &watcher);
 	}
 
+	OXT_FORCE_INLINE
 	void start() {
 		Channel::start();
 	}
 
+	OXT_FORCE_INLINE
 	void stop() {
 		Channel::stop();
 	}
 
+	OXT_FORCE_INLINE
 	void consumed(unsigned int size, bool end) {
 		Channel::consumed(size, end);
 	}
@@ -203,6 +207,7 @@ public:
 		return watcher.fd;
 	}
 
+	OXT_FORCE_INLINE
 	void setDataCallback(DataCallback callback) {
 		Channel::dataCallback = callback;
 	}
@@ -212,6 +217,7 @@ public:
 		return hooks;
 	}
 
+	OXT_FORCE_INLINE
 	void setHooks(Hooks *hooks) {
 		this->hooks = hooks;
 	}

@@ -169,6 +169,7 @@ class RequestHandler: public ServerKit::HttpServer<RequestHandler, Client> {
 private:
 	typedef ServerKit::HttpServer<RequestHandler, Client> ParentClass;
 	typedef ServerKit::Channel Channel;
+	typedef ServerKit::FdSinkChannel FdSinkChannel;
 	typedef ServerKit::FdSourceChannel FdSourceChannel;
 	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
 	typedef ServerKit::FileBufferedFdSinkChannel FileBufferedFdSinkChannel;

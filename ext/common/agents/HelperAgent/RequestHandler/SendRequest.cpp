@@ -51,26 +51,28 @@ sendHeaderToApp(Client *client, Request *req) {
 
 	UPDATE_TRACE_POINT();
 	if (!req->ended()) {
-		if (!req->appSink.ended()) {
-			if (!req->appSink.passedThreshold()) {
-				UPDATE_TRACE_POINT();
-				sendBodyToApp(client, req);
-				if (!req->ended()) {
-					req->appSource.startReading();
-				}
-			} else {
-				UPDATE_TRACE_POINT();
-				SKC_TRACE(client, 3, "Waiting for appSink buffers to be "
-					"flushed before sending body to application");
-				req->appSink.setBuffersFlushedCallback(sendBodyToAppWhenBuffersFlushed);
+		if (req->appSink.acceptingInput()) {
+			UPDATE_TRACE_POINT();
+			sendBodyToApp(client, req);
+			if (!req->ended()) {
 				req->appSource.startReading();
 			}
-		} else {
-			// req->appSink.feed() encountered an error while writing to the
-			// application socket. But we don't care about that; we just care that
-			// ForwardResponse.cpp will now forward the response data and end the
-			// request.
+		} else if (req->appSink.mayAcceptInputLater()) {
 			UPDATE_TRACE_POINT();
+			SKC_TRACE(client, 3, "Waiting for appSink channel to become "
+				"idle before sending body to application");
+			req->appSink.setConsumedCallback(sendBodyToAppWhenAppSinkIdle);
+			req->appSource.startReading();
+		} else {
+			// Either we're done feeding to req->appSink, or req->appSink.feed()
+			// encountered an error while writing to the application socket.
+			// But we don't care about either scenarios; we just care that
+			// ForwardResponse.cpp will now forward the response data and end the
+			// request when it's done.
+			UPDATE_TRACE_POINT();
+			assert(!req->appSink.ended());
+			assert(req->appSink.hasError());
+			logAppSocketWriteError(client, req->appSink.getErrcode());
 			req->state = Request::WAITING_FOR_APP_OUTPUT;
 			req->appSource.startReading();
 		}
@@ -112,7 +114,7 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		buffer = MemoryKit::mbuf(buffer, 0, bufferSize);
 		SKC_TRACE(client, 3, "Header data: \"" << cEscapeString(
 			StaticString(buffer.start, bufferSize)) << "\"");
-		req->appSink.feed(buffer);
+		req->appSink.feedWithoutRefGuard(boost::move(buffer));
 	} else {
 		char *buffer = (char *) psg_pnalloc(req->pool, bufferSize);
 
@@ -121,25 +123,41 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		assert(ok);
 		SKC_TRACE(client, 3, "Header data: \"" << cEscapeString(
 			StaticString(buffer, bufferSize)) << "\"");
-		req->appSink.feed(buffer, bufferSize);
+		req->appSink.feedWithoutRefGuard(MemoryKit::mbuf(
+			buffer, bufferSize));
 	}
 
 	(void) ok; // Shut up compiler warning
 }
 
 static void
-sendBodyToAppWhenBuffersFlushed(FileBufferedChannel *_channel) {
-	FileBufferedFdSinkChannel *channel =
-		reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
+sendBodyToAppWhenAppSinkIdle(Channel *_channel, unsigned int size) {
+	FdSinkChannel *channel = reinterpret_cast<FdSinkChannel *>(_channel);
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(
 		getServerFromClient(client));
-	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "sendBodyToAppWhenBuffersFlushed");
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "sendBodyToAppWhenAppSinkIdle");
 
-	req->appSink.setBuffersFlushedCallback(NULL);
-	self->sendBodyToApp(client, req);
+	channel->setConsumedCallback(NULL);
+	if (channel->acceptingInput()) {
+		self->sendBodyToApp(client, req);
+		if (!req->ended()) {
+			req->appSource.startReading();
+		}
+	} else {
+		// req->appSink.feed() encountered an error while writing to the
+		// application socket. But we don't care about that; we just care that
+		// ForwardResponse.cpp will now forward the response data and end the
+		// request when it's done.
+		UPDATE_TRACE_POINT();
+		assert(!req->appSink.ended());
+		assert(req->appSink.hasError());
+		self->logAppSocketWriteError(client, req->appSink.getErrcode());
+		req->state = Request::WAITING_FOR_APP_OUTPUT;
+		req->appSource.startReading();
+	}
 }
 
 unsigned int
@@ -474,11 +492,11 @@ sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
 
 	if (!sendHeaderToAppWithHttpProtocolAndWritev(req, bytesWritten, cache)) {
 		if (bytesWritten >= 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
-			sendHeaderToAppWithSessionProtocolWithBuffering(req, bytesWritten, cache);
+			sendHeaderToAppWithHttpProtocolWithBuffering(req, bytesWritten, cache);
 		} else {
 			int e = errno;
 			P_ASSERT_EQ(bytesWritten, -1);
-			onAppSinkError(NULL, e);
+			disconnectWithAppSocketWriteError(&client, e);
 		}
 	}
 }
@@ -658,7 +676,7 @@ sendHeaderToAppWithHttpProtocolAndWritev(Request *req, ssize_t &bytesWritten,
 }
 
 void
-sendHeaderToAppWithSessionProtocolWithBuffering(Request *req, unsigned int offset,
+sendHeaderToAppWithHttpProtocolWithBuffering(Request *req, unsigned int offset,
 	HttpHeaderConstructionCache &cache)
 {
 	struct iovec *buffers;
@@ -682,17 +700,19 @@ sendHeaderToAppWithSessionProtocolWithBuffering(Request *req, unsigned int offse
 		MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
 		gatherBuffers(buffer.start, MBUF_MAX_SIZE, buffers, nbuffers);
 		buffer = MemoryKit::mbuf(buffer, offset, dataSize - offset);
-		req->appSink.feed(buffer);
+		req->appSink.feedWithoutRefGuard(boost::move(buffer));
 	} else {
 		char *buffer = (char *) psg_pnalloc(req->pool, dataSize);
 		gatherBuffers(buffer, dataSize, buffers, nbuffers);
-		req->appSink.feed(buffer + offset, dataSize - offset);
+		req->appSink.feedWithoutRefGuard(MemoryKit::mbuf(
+			buffer + offset, dataSize - offset));
 	}
 }
 
 void
 sendBodyToApp(Client *client, Request *req) {
 	TRACE_POINT();
+	assert(req->appSink.acceptingInput());
 	if (req->hasBody() || req->upgraded()) {
 		// onRequestBody() will take care of forwarding
 		// the request body to the app.
@@ -705,7 +725,16 @@ sendBodyToApp(Client *client, Request *req) {
 		// data is forwarded.
 		SKC_TRACE(client, 2, "No body to send to application");
 		req->state = Request::WAITING_FOR_APP_OUTPUT;
-		maybeHalfCloseAppSink(client, req);
+		halfCloseAppSink(client, req);
+	}
+}
+
+void
+halfCloseAppSink(Client *client, Request *req) {
+	P_ASSERT_EQ(req->state, Request::WAITING_FOR_APP_OUTPUT);
+	if (req->halfCloseAppConnection) {
+		SKC_TRACE(client, 3, "Half-closing application socket with SHUT_WR");
+		::shutdown(req->session->fd(), SHUT_WR);
 	}
 }
 
@@ -731,16 +760,27 @@ whenSendingRequest_onRequestBody(Client *client, Request *req,
 				"\"");
 		}
 		req->appSink.feed(buffer);
-		if (!req->appSink.ended()) {
-			if (req->appSink.passedThreshold()) {
-				SKC_TRACE(client, 3, "AppSink passed threshold; waiting until its buffers are flushed");
-				req->appSink.setBuffersFlushedCallback(resumeRequestBodyChannelWhenBuffersFlushed);
+		if (!req->appSink.acceptingInput()) {
+			if (req->appSink.mayAcceptInputLater()) {
+				SKC_TRACE(client, 3, "Waiting for appSink channel to become "
+					"idle before continuing sending body to application");
+				req->appSink.setConsumedCallback(resumeRequestBodyChannelWhenAppSinkIdle);
+				stopBodyChannel(client, req);
+				return Channel::Result(buffer.size(), false);
+			} else {
+				// Either we're done feeding to req->appSink, or req->appSink.feed()
+				// encountered an error while writing to the application socket.
+				// But we don't care about either scenarios; we just care that
+				// ForwardResponse.cpp will now forward the response data and end the
+				// request when it's done.
+				assert(!req->ended());
+				assert(req->appSink.hasError());
+				logAppSocketWriteError(client, req->appSink.getErrcode());
+				req->state = Request::WAITING_FOR_APP_OUTPUT;
 				stopBodyChannel(client, req);
 			}
-			return Channel::Result(buffer.size(), false);
-		} else {
-			return Channel::Result(buffer.size(), true);
 		}
+		return Channel::Result(buffer.size(), false);
 	} else if (errcode == 0 || errcode == ECONNRESET) {
 		// EOF
 		SKC_TRACE(client, 2, "End of request body encountered");
@@ -748,7 +788,7 @@ whenSendingRequest_onRequestBody(Client *client, Request *req,
 		// care of ending the request, once all response
 		// data is forwarded.
 		req->state = Request::WAITING_FOR_APP_OUTPUT;
-		maybeHalfCloseAppSink(client, req);
+		halfCloseAppSink(client, req);
 		return Channel::Result(0, true);
 	} else {
 		const unsigned int BUFSIZE = 1024;
@@ -762,21 +802,30 @@ whenSendingRequest_onRequestBody(Client *client, Request *req,
 }
 
 static void
-resumeRequestBodyChannelWhenBuffersFlushed(FileBufferedChannel *_channel) {
-	FileBufferedFdSinkChannel *channel =
-		reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
+resumeRequestBodyChannelWhenAppSinkIdle(Channel *_channel, unsigned int size) {
+	FdSinkChannel *channel = reinterpret_cast<FdSinkChannel *>(_channel);
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
 	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
-	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "resumeRequestBodyChannelWhenBuffersFlushed");
+	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "resumeRequestBodyChannelWhenAppSinkIdle");
 
 	P_ASSERT_EQ(req->state, Request::FORWARDING_BODY_TO_APP);
+	req->appSink.setConsumedCallback(NULL);
 
-	SKC_TRACE_FROM_STATIC(self, client, 3,
-		"AppSink buffers are flushed; continuing forwarding of request body");
-	req->appSink.setBuffersFlushedCallback(NULL);
-	self->startBodyChannel(client, req);
+	if (req->appSink.acceptingInput()) {
+		self->startBodyChannel(client, req);
+	} else {
+		// Either we're done feeding to req->appSink, or req->appSink.feed()
+		// encountered an error while writing to the application socket.
+		// But we don't care about either scenarios; we just care that
+		// ForwardResponse.cpp will now forward the response data and end the
+		// request when it's done.
+		assert(!req->ended());
+		assert(req->appSink.hasError());
+		self->logAppSocketWriteError(client, req->appSink.getErrcode());
+		req->state = Request::WAITING_FOR_APP_OUTPUT;
+	}
 }
 
 void
@@ -798,67 +847,12 @@ stopBodyChannel(Client *client, Request *req) {
 }
 
 void
-maybeHalfCloseAppSink(Client *client, Request *req) {
-	P_ASSERT_EQ(req->state, Request::WAITING_FOR_APP_OUTPUT);
-	if (req->halfCloseAppConnection) {
-		if (!req->appSink.ended()) {
-			req->appSink.feed(MemoryKit::mbuf());
-		}
-		if (req->appSink.endAcked()) {
-			halfCloseAppSink(client, req);
-		} else {
-			req->appSink.setDataFlushedCallback(halfCloseAppSinkWhenDataFlushed);
-		}
-	}
-}
-
-void
-halfCloseAppSink(Client *client, Request *req) {
-	SKC_TRACE(client, 3, "Half-closing application socket with SHUT_WR");
-	assert(req->halfCloseAppConnection);
-	::shutdown(req->session->fd(), SHUT_WR);
-}
-
-static void
-halfCloseAppSinkWhenDataFlushed(FileBufferedChannel *_channel) {
-	FileBufferedFdSinkChannel *channel =
-		reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
-	Request *req = static_cast<Request *>(static_cast<
-		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
-	Client *client = static_cast<Client *>(req->client);
-	RequestHandler *self = static_cast<RequestHandler *>(
-		getServerFromClient(client));
-	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "halfCloseAppSinkWhenDataFlushed");
-
-	P_ASSERT_EQ(req->state, Request::WAITING_FOR_APP_OUTPUT);
-
-	req->appSink.setDataFlushedCallback(NULL);
-	self->halfCloseAppSink(client, req);
-}
-
-void
-whenOtherCases_onAppSinkError(Client *client, Request *req, int errcode) {
-	assert(req->state == Request::SENDING_HEADER_TO_APP
-		|| req->state == Request::FORWARDING_BODY_TO_APP
-		|| req->state == Request::WAITING_FOR_APP_OUTPUT);
-
-	if (errcode == EPIPE || errcode == ENOTCONN) {
-		// We consider an EPIPE non-fatal: we don't care whether the
-		// app stopped reading, we just care about its output.
-		// Some operating systems sometimes raise ENOTCONN instead of
-		// EPIPE.
-		SKC_DEBUG(client, "cannot write to application socket: "
-			"the application closed the socket prematurely");
-	} else if (req->responseBegun) {
-		const unsigned int BUFSIZE = 1024;
-		char *message = (char *) psg_pnalloc(req->pool, BUFSIZE);
-		int size = snprintf(message, BUFSIZE,
-			"cannot write to application socket: %s (errno=%d)",
-			ServerKit::getErrorDesc(errcode), errcode);
-		disconnectWithError(&client, StaticString(message, size));
+logAppSocketWriteError(Client *client, int errcode) {
+	if (errcode == EPIPE) {
+		SKC_INFO(client, "App socket write error: the application closed the socket prematurely"
+			" (Broken pipe; errno=" << errcode << ")");
 	} else {
-		SKC_WARN(client, "Cannot write to application socket: " <<
-			ServerKit::getErrorDesc(errcode) << " (errcode=" << errcode << ")");
-		endRequestAsBadGateway(&client, &req);
+		SKC_INFO(client, "App socket write error: " << ServerKit::getErrorDesc(errcode) <<
+			" (errno=" << errcode << ")");
 	}
 }

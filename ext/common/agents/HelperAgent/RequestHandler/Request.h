@@ -29,7 +29,7 @@
 #include <string>
 
 #include <ServerKit/HttpRequest.h>
-#include <ServerKit/FileBufferedFdSinkChannel.h>
+#include <ServerKit/FdSinkChannel.h>
 #include <ServerKit/FdSourceChannel.h>
 #include <ApplicationPool2/Pool.h>
 #include <UnionStation/Core.h>
@@ -73,7 +73,7 @@ public:
 	SessionPtr session;
 	const LString *host;
 
-	ServerKit::FileBufferedFdSinkChannel appSink;
+	ServerKit::FdSinkChannel appSink;
 	ServerKit::FdSourceChannel appSource;
 	AppResponse appResponse;
 
