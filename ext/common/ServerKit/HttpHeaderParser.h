@@ -116,8 +116,8 @@ private:
 		bool &paused)
 	{
 		size_t ret = http_parser_execute(parser, settings, data, len);
-		if (len > 0 && ret != len && HTTP_PARSER_ERRNO(parser) == HPE_PAUSED) {
-			paused = true;
+		paused = len > 0 && ret != len && HTTP_PARSER_ERRNO(parser) == HPE_PAUSED;
+		if (paused) {
 			http_parser_pause(parser, 0);
 			http_parser_execute(parser, settings, data + len - 1, 1);
 		}

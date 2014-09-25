@@ -17,10 +17,6 @@ namespace tut {
 		// Test persist().
 		char appRoot[] = "appRoot";
 		char processTitle[] = "processTitle";
-		char fooKey[] = "PASSENGER_FOO";
-		char fooValue[] = "foo";
-		char barKey[] = "PASSENGER_BAR";
-		char barValue[] = "bar";
 
 		Options options;
 		options.appRoot = appRoot;
@@ -28,9 +24,6 @@ namespace tut {
 
 		Options options2 = options.copyAndPersist();
 		appRoot[0] = processTitle[0] = 'x';
-		fooKey[0]  = fooValue[0]     = 'x';
-		barKey[0]  = barValue[0]     = 'x';
-
 		ensure_equals(options2.appRoot, "appRoot");
 		ensure_equals(options2.processTitle, "processTitle");
 	}

@@ -183,7 +183,8 @@ namespace tut {
 		}
 
 		void disableProcess(ProcessPtr process, AtomicInt *result) {
-			*result = (int) pool->disableProcess(process->gupid);
+			*result = (int) pool->disableProcess(StaticString(process->gupid,
+				process->gupidSize));
 		}
 	};
 
@@ -1184,7 +1185,8 @@ namespace tut {
 		ensureMinProcesses(2);
 		vector<ProcessPtr> processes = pool->getProcesses();
 		ensure_equals("Disabling succeeds",
-			pool->disableProcess(processes[0]->gupid), DR_SUCCESS);
+			pool->disableProcess(StaticString(processes[0]->gupid,
+				processes[0]->gupidSize)), DR_SUCCESS);
 
 		LockGuard l(pool->syncher);
 		ensure(processes[0]->isAlive());
@@ -1233,7 +1235,8 @@ namespace tut {
 		vector<ProcessPtr> processes = pool->getProcesses();
 		ensure_equals("(1)", processes.size(), 1u);
 
-		DisableResult result = pool->disableProcess(processes[0]->gupid);
+		DisableResult result = pool->disableProcess(StaticString(
+			processes[0]->gupid, processes[0]->gupidSize));
 		ensure_equals("(2)", result, DR_ERROR);
 		ensure_equals("(3)", pool->getProcessCount(), 1u);
 	}
@@ -1250,13 +1253,15 @@ namespace tut {
 		SessionPtr session2 = pool->get(options, &ticket);
 		ensure_equals(pool->getProcessCount(), 2u);
 		GroupPtr group = session1->getGroup()->shared_from_this();
+		ProcessPtr process1 = session1->getProcess()->shared_from_this();
+		ProcessPtr process2 = session2->getProcess()->shared_from_this();
 
-		AtomicInt code1 = -1, code2 = -1;
+		AtomicInt code1 = -1, code2 = -2;
 		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
-			this, session1->getProcess()->shared_from_this(), &code1));
+			this, process1, &code1));
 		TempThread thr2(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
-			this, session2->getProcess()->shared_from_this(), &code2));
-		EVENTUALLY(2,
+			this, process2, &code2));
+		EVENTUALLY(5,
 			LockGuard l(pool->syncher);
 			result = group->enabledCount == 0
 				&& group->disablingCount == 2
@@ -1265,7 +1270,7 @@ namespace tut {
 		session1.reset();
 		session2.reset();
 		SHOULD_NEVER_HAPPEN(20,
-			result = code1 != -1 || code2 != -1;
+			result = code1 != -1 || code2 != -2;
 		);
 
 		debug->messages->send("Proceed with spawn loop iteration 3");
@@ -1358,7 +1363,7 @@ namespace tut {
 			result = code != -1;
 		);
 		session.reset();
-		EVENTUALLY(1,
+		EVENTUALLY(5,
 			result = code != -1;
 		);
 		ensure_equals(code, (int) DR_SUCCESS);
@@ -1377,7 +1382,8 @@ namespace tut {
 
 		vector<ProcessPtr> processes = pool->getProcesses();
 		ensure_equals(processes.size(), 2u);
-		DisableResult result = pool->disableProcess(processes[0]->gupid);
+		DisableResult result = pool->disableProcess(
+			StaticString(processes[0]->gupid, processes[0]->gupidSize));
 		ensure_equals(result, DR_SUCCESS);
 
 		{
@@ -2038,7 +2044,8 @@ namespace tut {
 		options.statThrottleRate = 0;
 
 		SessionPtr session = pool->get(options, &ticket);
-		string gupid = session->getProcess()->gupid;
+		string gupid(session->getProcess()->gupid,
+			session->getProcess()->gupidSize);
 		session.reset();
 		pool->detachProcess(gupid);
 		touchFile("tmp.wsgi/tmp/restart.txt", 1);

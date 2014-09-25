@@ -252,7 +252,7 @@ dependencies = [
 ].compact
 desc "Run unit tests for the Apache 2 and Nginx C++ components"
 task 'test:cxx' => dependencies do
-	args = ENV['GROUPS'].to_s.split(",").map{ |name| "-g #{name}" }
+	args = ENV['GROUPS'].to_s.split(";").map{ |name| "-g #{name}" }
 	command = "./cxx/CxxTestMain #{args.join(' ')}".strip
 	if boolean_option('GDB')
 		command = "gdb --args #{command}"

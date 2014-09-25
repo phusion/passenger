@@ -1373,12 +1373,12 @@ public:
 		return SuperGroupPtr();
 	}
 
-	ProcessPtr findProcessByGupid(const string &gupid, bool lock = true) const {
+	ProcessPtr findProcessByGupid(const StaticString &gupid, bool lock = true) const {
 		vector<ProcessPtr> processes = getProcesses(lock);
 		vector<ProcessPtr>::const_iterator it, end = processes.end();
 		for (it = processes.begin(); it != end; it++) {
 			const ProcessPtr &process = *it;
-			if (process->gupid == gupid) {
+			if (StaticString(process->gupid, process->gupidSize) == gupid) {
 				return process;
 			}
 		}
@@ -1503,7 +1503,7 @@ public:
 		}
 	}
 
-	DisableResult disableProcess(const string &gupid) {
+	DisableResult disableProcess(const StaticString &gupid) {
 		ScopedLock l(syncher);
 		ProcessPtr process = findProcessByGupid(gupid, false);
 		if (process != NULL) {
