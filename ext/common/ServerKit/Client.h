@@ -119,6 +119,8 @@ public:
 			return "ACTIVE";
 		case DISCONNECTED:
 			return "DISCONNECTED";
+		default:
+			return "UNKNOWN";
 		}
 	}
 

@@ -183,6 +183,8 @@ public:
 			return "WAITING_FOR_REFERENCES";
 		case IN_FREELIST:
 			return "IN_FREELIST";
+		default:
+			return "UNKNOWN";
 		}
 	}
 
@@ -196,6 +198,8 @@ public:
 			return "CONTENT_LENGTH";
 		case RBT_CHUNKED:
 			return "CHUNKED";
+		default:
+			return "UNKNOWN";
 		}
 	}
 
@@ -209,6 +213,8 @@ public:
 			return bodyAlreadyRead >= aux.bodyInfo.contentLength;
 		case RBT_CHUNKED:
 			return aux.bodyInfo.endChunkReached;
+		default:
+			return false;
 		}
 	}
 

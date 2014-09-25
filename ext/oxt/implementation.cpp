@@ -297,7 +297,7 @@ format_backtrace(const Collection &backtrace_list) {
 					if (p->u.dataFunc.func != NULL) {
 						char buf[64];
 
-						memset(buf, sizeof(buf), 0);
+						memset(buf, 0, sizeof(buf));
 						if (p->u.dataFunc.func(buf, sizeof(buf) - 1, p->u.dataFunc.userData)) {
 							buf[63] = '\0';
 							result << " -- " << buf;

@@ -62,8 +62,10 @@ fi
 
 pushd /vagrant
 if [[ ! -e ~/.test_deps_installed ]]; then
-	rake test:install_deps SUDO=1
+	rake test:install_deps SUDO=1 DEPS_TARGET=~/bundle
 	touch ~/.test_deps_installed
+else
+	bundle install --path ~/bundle
 fi
 popd
 

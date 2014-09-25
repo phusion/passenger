@@ -284,8 +284,8 @@ private:
 			{ }
 
 		~InFileMode() {
-			P_ASSERT_EQ(readRequest, NULL);
-			P_ASSERT_EQ(writerRequest, NULL);
+			P_ASSERT_EQ(readRequest, 0);
+			P_ASSERT_EQ(writerRequest, 0);
 			if (fd != -1) {
 				eio_close(fd, 0, NULL, NULL);
 			}
@@ -688,7 +688,7 @@ private:
 
 	void switchToInFileMode() {
 		P_ASSERT_EQ(mode, IN_MEMORY_MODE);
-		P_ASSERT_EQ(inFileMode, NULL);
+		P_ASSERT_EQ(inFileMode, 0);
 
 		FBC_DEBUG("Switching to in-file mode");
 		mode = IN_FILE_MODE;
@@ -1002,7 +1002,7 @@ private:
 		#ifndef NDEBUG
 			if (mode >= ERROR) {
 				P_ASSERT_EQ(readerState, RS_TERMINATED);
-				P_ASSERT_EQ(inFileMode, NULL);
+				P_ASSERT_EQ(inFileMode, 0);
 			}
 
 			switch (readerState) {

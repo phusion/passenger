@@ -43,6 +43,16 @@
  * </PRE>
  */
 
+#ifdef __cplusplus
+	#include <boost/cstdint.hpp>
+	typedef boost::uint8_t modp_uint8_t;
+	typedef boost::uint32_t modp_uint32_t;
+#else
+	#include <stdint.h>
+	typedef uint8_t modp_uint8_t;
+	typedef uint32_t modp_uint32_t;
+#endif
+
 #include "../../boost/detail/endian.hpp" /* File is C compatible. */
 
 /* public header */
@@ -72,13 +82,13 @@
 size_t modp_b64_encode(char* dest, const char* str, size_t len)
 {
 	size_t i = 0;
-	const uint8_t* s = (const uint8_t*) str;
-	uint8_t* p = (uint8_t*) dest;
+	const modp_uint8_t* s = (const modp_uint8_t*) str;
+	modp_uint8_t* p = (modp_uint8_t*) dest;
 
 	/* unsigned here is important! */
-	/* uint8_t is fastest on G4, amd */
-	/* uint32_t is fastest on Intel */
-	uint32_t t1, t2, t3;
+	/* modp_uint8_t is fastest on G4, amd */
+	/* modp_uint32_t is fastest on Intel */
+	modp_uint32_t t1, t2, t3;
 
 	if (len > 2) {
 		for (i = 0; i < len - 2; i += 3) {
@@ -109,7 +119,7 @@ size_t modp_b64_encode(char* dest, const char* str, size_t len)
 	}
 
 	*p = '\0';
-	return (size_t)(p - (uint8_t*)dest);
+	return (size_t)(p - (modp_uint8_t*)dest);
 }
 
 #ifdef BOOST_BIG_ENDIAN   /* BIG ENDIAN -- SUN / IBM / MOTOROLA */
@@ -134,11 +144,11 @@ size_t modp_b64_decode(char* dest, const char* src, size_t len)
 	size_t leftover = len % 4;
 	size_t chunks = (leftover == 0) ? len / 4 - 1 : len /4;
 
-	uint8_t* p = (uint8_t*) dest;
-	uint32_t x = 0;
-	uint32_t* destInt = (uint32_t*) p;
-	uint32_t* srcInt = (uint32_t*) src;
-	uint32_t y = *srcInt++;
+	modp_uint8_t* p = (modp_uint8_t*) dest;
+	modp_uint32_t x = 0;
+	modp_uint32_t* destInt = (modp_uint32_t*) p;
+	modp_uint32_t* srcInt = (modp_uint32_t*) src;
+	modp_uint32_t y = *srcInt++;
 	for (i = 0; i < chunks; ++i) {
 		x = d0[y >> 24 & 0xff] | d1[y >> 16 & 0xff] |
 			d2[y >> 8 & 0xff] | d3[y & 0xff];
@@ -146,7 +156,7 @@ size_t modp_b64_decode(char* dest, const char* src, size_t len)
 		if (x >= B64_BADCHAR)  return -1;
 		*destInt = x << 8;
 		p += 3;
-		destInt = (uint32_t*)p;
+		destInt = (modp_uint32_t*)p;
 		y = *srcInt++;
 	}
 
@@ -155,25 +165,25 @@ size_t modp_b64_decode(char* dest, const char* src, size_t len)
 		x = d0[y >> 24 & 0xff] | d1[y >> 16 & 0xff] |
 			d2[y >>  8 & 0xff] | d3[y & 0xff];
 		if (x >= B64_BADCHAR)  return -1;
-		*p++ = ((uint8_t*)&x)[1];
-		*p++ = ((uint8_t*)&x)[2];
-		*p = ((uint8_t*)&x)[3];
+		*p++ = ((modp_uint8_t*)&x)[1];
+		*p++ = ((modp_uint8_t*)&x)[2];
+		*p = ((modp_uint8_t*)&x)[3];
 		return (chunks+1)*3;
 #ifndef B64_DOPAD
 	case 1:  /* with padding this is an impossible case */
 		x = d3[y >> 24];
-		*p =  (uint8_t)x;
+		*p =  (modp_uint8_t)x;
 		break;
 #endif
 	case 2:
 		x = d3[y >> 24] *64 + d3[(y >> 16) & 0xff];
-		*p =  (uint8_t)(x >> 4);
+		*p =  (modp_uint8_t)(x >> 4);
 		break;
 	default:  /* case 3 */
 		x = (d3[y >> 24] *64 + d3[(y >> 16) & 0xff])*64 +
 			d3[(y >> 8) & 0xff];
-		*p++ = (uint8_t) (x >> 10);
-		*p = (uint8_t) (x >> 2);
+		*p++ = (modp_uint8_t) (x >> 10);
+		*p = (modp_uint8_t) (x >> 2);
 		break;
 	}
 
@@ -189,11 +199,11 @@ size_t modp_b64_decode(char* dest, const char* src, size_t len)
 	size_t leftover;
 	size_t chunks;
 
-	uint8_t* p;
-	uint32_t x;
-	uint32_t* destInt;
-	const uint32_t* srcInt = (const uint32_t*) src;
-	uint32_t y = *srcInt++;
+	modp_uint8_t* p;
+	modp_uint32_t x;
+	modp_uint32_t* destInt;
+	const modp_uint32_t* srcInt = (const modp_uint32_t*) src;
+	modp_uint32_t y = *srcInt++;
 
 	if (len == 0) return 0;
 
@@ -217,10 +227,10 @@ size_t modp_b64_decode(char* dest, const char* src, size_t len)
 	leftover = len % 4;
 	chunks = (leftover == 0) ? len / 4 - 1 : len /4;
 
-	p = (uint8_t*) dest;
+	p = (modp_uint8_t*) dest;
 	x = 0;
-	destInt = (uint32_t*) p;
-	srcInt = (const uint32_t*) src;
+	destInt = (modp_uint32_t*) p;
+	srcInt = (const modp_uint32_t*) src;
 	y = *srcInt++;
 	for (i = 0; i < chunks; ++i) {
 		x = d0[y & 0xff] |
@@ -233,7 +243,7 @@ size_t modp_b64_decode(char* dest, const char* src, size_t len)
 		}
 		*destInt = x ;
 		p += 3;
-		destInt = (uint32_t*)p;
+		destInt = (modp_uint32_t*)p;
 		y = *srcInt++;}
 
 
@@ -247,26 +257,26 @@ size_t modp_b64_decode(char* dest, const char* src, size_t len)
 		if (x >= B64_BADCHAR) {
 			return (size_t)-1;
 		}
-		*p++ =  ((uint8_t*)(&x))[0];
-		*p++ =  ((uint8_t*)(&x))[1];
-		*p =    ((uint8_t*)(&x))[2];
+		*p++ =  ((modp_uint8_t*)(&x))[0];
+		*p++ =  ((modp_uint8_t*)(&x))[1];
+		*p =    ((modp_uint8_t*)(&x))[2];
 		return (chunks+1)*3;
 #ifndef B64_DOPAD
 	case 1:  /* with padding this is an impossible case */
 		x = d0[y & 0xff];
-		*p = *((uint8_t*)(&x)); /* i.e. first char/byte in int */
+		*p = *((modp_uint8_t*)(&x)); /* i.e. first char/byte in int */
 		break;
 #endif
 	case 2: /* case 2, 1  output byte */
 		x = d0[y & 0xff] | d1[y >> 8 & 0xff];
-		*p = *((uint8_t*)(&x)); /* i.e. first char */
+		*p = *((modp_uint8_t*)(&x)); /* i.e. first char */
 		break;
 	default: /* case 3, 2 output bytes */
 		x = d0[y & 0xff] |
 			d1[y >> 8 & 0xff ] |
 			d2[y >> 16 & 0xff];  /* 0x3c */
-		*p++ =  ((uint8_t*)(&x))[0];
-		*p =  ((uint8_t*)(&x))[1];
+		*p++ =  ((modp_uint8_t*)(&x))[0];
+		*p =  ((modp_uint8_t*)(&x))[1];
 		break;
 	}
 

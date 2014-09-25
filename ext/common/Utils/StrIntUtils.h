@@ -284,7 +284,7 @@ integerToOtherBase(IntegerType value, char *output, unsigned int outputSize) {
 			output[1] = chars[value % radix];
 			output[2] = '\0';
 			return 2;
-		} else if (value < radix * radix * radix) {
+		} else if ((long long) value < radix * radix * radix) {
 			output[0] = chars[value / radix / radix];
 			output[1] = chars[value / radix % radix];
 			output[2] = chars[value % radix];

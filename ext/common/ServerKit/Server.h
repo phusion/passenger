@@ -429,6 +429,8 @@ private:
 			return "SHUTTING_DOWN";
 		case FINISHED_SHUTDOWN:
 			return "FINISHED_SHUTDOWN";
+		default:
+			return "UNKNOWN";
 		}
 	}
 
