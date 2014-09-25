@@ -80,88 +80,6 @@ using namespace Passenger::ApplicationPool2;
 
 static VariantMap *agentsOptions;
 
-
-#if 0
-class RemoteController: public MessageServer::Handler {
-private:
-	struct SpecificContext: public MessageServer::ClientContext {
-	};
-
-	typedef MessageServer::CommonClientContext CommonClientContext;
-
-	boost::shared_ptr<RequestHandler> requestHandler;
-	PoolPtr pool;
-
-
-	/*********************************************
-	 * Message handler methods
-	 *********************************************/
-
-	void processDetachProcess(CommonClientContext &commonContext, SpecificContext *specificContext,
-		const vector<string> &args)
-	{
-		TRACE_POINT();
-		commonContext.requireRights(Account::DETACH);
-		if (pool->detachProcess((pid_t) atoi(args[1]))) {
-			writeArrayMessage(commonContext.fd, "true", NULL);
-		} else {
-			writeArrayMessage(commonContext.fd, "false", NULL);
-		}
-	}
-
-	void processDetachProcessByKey(CommonClientContext &commonContext, SpecificContext *specificContext,
-		const vector<string> &args)
-	{
-		TRACE_POINT();
-		commonContext.requireRights(Account::DETACH);
-		// TODO: implement this
-		writeArrayMessage(commonContext.fd, "false", NULL);
-	}
-
-public:
-	RemoteController(const boost::shared_ptr<RequestHandler> &requestHandler, const PoolPtr &pool) {
-		this->requestHandler = requestHandler;
-		this->pool = pool;
-	}
-
-	virtual MessageServer::ClientContextPtr newClient(CommonClientContext &commonContext) {
-		return boost::make_shared<SpecificContext>();
-	}
-
-	virtual bool processMessage(CommonClientContext &commonContext,
-	                            MessageServer::ClientContextPtr &_specificContext,
-	                            const vector<string> &args)
-	{
-		SpecificContext *specificContext = (SpecificContext *) _specificContext.get();
-		try {
-			if (isCommand(args, "detach_process", 1)) {
-				processDetachProcess(commonContext, specificContext, args);
-			} else if (isCommand(args, "detach_process_by_key", 1)) {
-				processDetachProcessByKey(commonContext, specificContext, args);
-			} else if (args[0] == "inspect") {
-				return processInspect(commonContext, specificContext, args);
-			} else if (isCommand(args, "toXml", 1)) {
-				processToXml(commonContext, specificContext, args);
-			} else if (isCommand(args, "backtraces", 0)) {
-				processBacktraces(commonContext, specificContext, args);
-			} else if (isCommand(args, "restart_app_group", 1, 99)) {
-				processRestartAppGroup(commonContext, specificContext, args);
-			} else if (isCommand(args, "requests", 0)) {
-				processRequests(commonContext, specificContext, args);
-			} else {
-				return false;
-			}
-		} catch (const SecurityException &) {
-			/* Client does not have enough rights to perform a certain action.
-			 * It has already been notified of this; ignore exception and move on.
-			 */
-		}
-		return true;
-	}
-};
-#endif
-
-
 /***** Structures, constants, global variables and forward declarations *****/
 
 // Avoid namespace conflict with Watchdog's WorkingObjects.
@@ -189,6 +107,7 @@ namespace {
 		EventFd allClientsDisconnectedEvent;
 		unsigned int terminationCount;
 		unsigned int shutdownCounter;
+		oxt::thread *prestarterThread;
 
 		WorkingObjects()
 			: bgloop(NULL),
@@ -246,6 +165,8 @@ initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
 	const VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects = new WorkingObjects();
+
+	wo->prestarterThread = NULL;
 
 	wo->password = options.get("server_password", false);
 	if (wo->password == "-") {
@@ -540,6 +461,22 @@ initializeNonPrivilegedWorkingObjects() {
 }
 
 static void
+prestartWebApps() {
+	TRACE_POINT();
+	VariantMap &options = *agentsOptions;
+	WorkingObjects *wo = workingObjects;
+
+	boost::function<void ()> func = boost::bind(prestartWebApps,
+		wo->resourceLocator,
+		options.get("default_ruby"),
+		options.getStrSet("prestart_urls", false)
+	);
+	wo->prestarterThread = new oxt::thread(
+		boost::bind(runAndPrintExceptions, func, true)
+	);
+}
+
+static void
 reportInitializationInfo() {
 	TRACE_POINT();
 	if (feedbackFdAvailable()) {
@@ -690,6 +627,10 @@ cleanup() {
 	wo->bgloop->stop();
 	wo->appPool.reset();
 	delete wo->requestHandler;
+	if (wo->prestarterThread != NULL) {
+		wo->prestarterThread->interrupt_and_join();
+		delete wo->prestarterThread;
+	}
 	deletePidFile();
 	P_NOTICE("PassengerAgent server shutdown finished");
 }
@@ -716,6 +657,7 @@ runServer() {
 		createPidFile();
 		lowerPrivilege();
 		initializeNonPrivilegedWorkingObjects();
+		prestartWebApps();
 
 		UPDATE_TRACE_POINT();
 		reportInitializationInfo();
