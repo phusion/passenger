@@ -134,7 +134,9 @@ namespace tut {
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
 				SpawnException::PRELOADER_STARTUP_TIMEOUT);
-			ensure(e.getErrorPage().find("hello world\n") != string::npos);
+			if (e.getErrorPage().find("hello world\n") == string::npos) {
+				fail(("Unexpected error page:\n" + e.getErrorPage()).c_str());
+			}
 		}
 	}
 

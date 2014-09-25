@@ -11,13 +11,13 @@ namespace tut {
 	struct BufferedIOTest {
 		FileDescriptor reader, writer;
 		BufferedIO io;
-		
+
 		string readData;
 		unsigned int counter;
 		char buf[100];
 		BufferedIO::AcceptFunction a_eof;
 		BufferedIO::AcceptFunction a_twoBytesRead;
-		
+
 		BufferedIOTest() {
 			Pipe p = createPipe();
 			reader = p.first;
@@ -28,11 +28,11 @@ namespace tut {
 			a_eof = boost::bind(&BufferedIOTest::eof, this, _1, _2);
 			a_twoBytesRead = boost::bind(&BufferedIOTest::twoBytesRead, this, _1, _2);
 		}
-		
+
 		void write(const StaticString &data) {
 			::write(writer, data.c_str(), data.size());
 		}
-		
+
 		pair<unsigned int, bool> twoBytesRead(const char *data, unsigned int size) {
 			if (counter == 2) {
 				return make_pair(0, true);
@@ -43,27 +43,27 @@ namespace tut {
 				return make_pair(toRead, counter == 2);
 			}
 		}
-		
+
 		pair<unsigned int, bool> eof(const char *data, unsigned int size) {
 			readData.append(data, size);
 			return make_pair(size, false);
 		}
-		
+
 		static void writeAfterSomeTime(int fd, int sleepTime, string data) {
 			syscalls::usleep(sleepTime);
 			writeExact(fd, data);
 		}
-		
+
 		static void closeAfterSomeTime(FileDescriptor fd, int sleepTime) {
 			syscalls::usleep(sleepTime);
 			fd.close();
 		}
 	};
-	
+
 	DEFINE_TEST_GROUP(BufferedIOTest);
 
 	/***** Test readUntil() *****/
-	
+
 	TEST_METHOD(1) {
 		// If the connection is already closed and the buffer is empty, then it returns 0.
 		writer.close();
@@ -71,7 +71,7 @@ namespace tut {
 		ensure_equals(readData, "");
 		ensure_equals(io.getBuffer(), "");
 	}
-	
+
 	TEST_METHOD(2) {
 		// If the connection is already closed and the buffer is non-empty,
 		// then it reads from the buffer.
@@ -83,7 +83,7 @@ namespace tut {
 		ensure_equals(readData, "hello world");
 		ensure_equals(io.getBuffer(), "");
 	}
-	
+
 	TEST_METHOD(3) {
 		// If the buffer is empty then it reads from the connection.
 		write("hello world");
@@ -96,14 +96,14 @@ namespace tut {
 		ensure_equals("(8)", readData, "hello world");
 		ensure_equals(io.getBuffer(), "");
 	}
-	
+
 	TEST_METHOD(4) {
 		// If the buffer is non-empty then it reads from the
 		// buffer first, then from the connection.
 		io.unread("hel");
 		write("lo world");
 		writer.close();
-		
+
 		ensure_equals("(1)", io.readUntil(a_twoBytesRead), 2u);
 		ensure_equals("(2)", readData, "he");
 		counter = 0;
@@ -115,7 +115,7 @@ namespace tut {
 		ensure_equals("(8)", readData, "hello world");
 		ensure_equals(io.getBuffer(), "");
 	}
-	
+
 	TEST_METHOD(5) {
 		// It blocks until the acceptor function says it's done or until EOF.
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
@@ -124,7 +124,7 @@ namespace tut {
 		ensure_equals(readData, "aa");
 		ensure("At least 18 msec elapsed", timer1.elapsed() >= 18);
 		ensure("At most 90 msec elapsed", timer1.elapsed() <= 90);
-		
+
 		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer timer2;
 		ensure_equals(io.readUntil(a_twoBytesRead), 0u);
@@ -132,7 +132,7 @@ namespace tut {
 		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
 		ensure("At most 90 msec elapsed", timer2.elapsed() <= 90);
 	}
-	
+
 	TEST_METHOD(6) {
 		// It throws TimeoutException if it cannot read enough data
 		// within the specified timeout.
@@ -151,16 +151,16 @@ namespace tut {
 			ensure_equals(io.getBuffer(), "");
 		}
 	}
-	
+
 	/***** Test read() *****/
-	
+
 	TEST_METHOD(10) {
 		// If the connection is already closed and the buffer is empty, then it returns 0.
 		writer.close();
 		ensure_equals(io.read(buf, sizeof(buf)), 0u);
 		ensure_equals(io.getBuffer(), "");
 	}
-	
+
 	TEST_METHOD(11) {
 		// If the connection is already closed and the buffer is non-empty
 		// and >= N bytes, then it reads everything from the buffer.
@@ -171,7 +171,7 @@ namespace tut {
 		ensure_equals(StaticString(buf), "hello");
 		ensure_equals(io.getBuffer(), " world");
 	}
-	
+
 	TEST_METHOD(12) {
 		// If the connection is already closed and the buffer is non-empty
 		// and < N bytes, then it reads N bytes from the buffer and the rest
@@ -183,7 +183,7 @@ namespace tut {
 		ensure_equals(StaticString(buf), "hello world");
 		ensure_equals(io.getBuffer(), "");
 	}
-	
+
 	TEST_METHOD(13) {
 		// If the buffer is empty then it reads from the connection.
 		write("hello world");
@@ -191,21 +191,21 @@ namespace tut {
 		ensure_equals(StaticString(buf), "hello");
 		ensure_equals(io.getBuffer(), " world");
 	}
-	
+
 	TEST_METHOD(14) {
 		// If the buffer is non-empty then it reads from the
 		// buffer first, then from the connection.
 		write("hello world");
-		
+
 		ensure_equals(io.read(buf, 2), 2u);
 		ensure_equals(StaticString(buf), "he");
 		ensure_equals(io.getBuffer(), "llo world");
-		
+
 		ensure_equals(io.read(buf, 7), 7u);
 		ensure_equals(StaticString(buf), "llo wor");
 		ensure_equals(io.getBuffer(), "ld");
 	}
-	
+
 	TEST_METHOD(15) {
 		// It blocks until the given number of bytes are read or until EOF.
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
@@ -214,7 +214,7 @@ namespace tut {
 		ensure_equals(StaticString(buf), "aa");
 		ensure("At least 18 msec elapsed", timer1.elapsed() >= 18);
 		ensure("At most 90 msec elapsed", timer1.elapsed() <= 90);
-		
+
 		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer timer2;
 		ensure_equals(io.read(buf, sizeof(buf)), 0u);
@@ -222,7 +222,7 @@ namespace tut {
 		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
 		ensure("At most 90 msec elapsed", timer2.elapsed() <= 90);
 	}
-	
+
 	TEST_METHOD(16) {
 		// It throws TimeoutException if it cannot read enough data
 		// within the specified timeout.
@@ -240,9 +240,9 @@ namespace tut {
 			ensure_equals(io.getBuffer(), "");
 		}
 	}
-	
+
 	/***** Test readAll() *****/
-	
+
 	TEST_METHOD(20) {
 		// It reads everything until EOF.
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
@@ -251,9 +251,9 @@ namespace tut {
 		ensure_equals(io.readAll(), "aa");
 		ensure_equals(io.getBuffer(), "");
 		ensure("At least 38 msec elapsed", timer.elapsed() >= 38);
-		ensure("At most 95 msec elapsed", timer.elapsed() <= 95);
+		ensure("At most 150 msec elapsed", timer.elapsed() <= 150);
 	}
-	
+
 	TEST_METHOD(21) {
 		// It throws TimeoutException if it cannot read enough data
 		// within the specified timeout.
@@ -271,9 +271,9 @@ namespace tut {
 			ensure_equals(io.getBuffer(), "");
 		}
 	}
-	
+
 	/***** Test readLine() *****/
-	
+
 	TEST_METHOD(25) {
 		// If the connection is already closed and the buffer is empty,
 		// then it returns the empty string.
@@ -281,7 +281,7 @@ namespace tut {
 		ensure_equals(io.readLine(), "");
 		ensure_equals(io.getBuffer(), "");
 	}
-	
+
 	TEST_METHOD(26) {
 		// If the connection is already closed and the buffer is non-empty,
 		// then it returns the first line in the buffer.
@@ -294,14 +294,14 @@ namespace tut {
 		ensure_equals(io.readLine(), ".");
 		ensure_equals(io.getBuffer(), "");
 	}
-	
+
 	TEST_METHOD(27) {
 		// If the buffer is empty then it reads from the connection.
 		write("hello\nworld\n.");
 		ensure_equals(io.readLine(), "hello\n");
 		ensure_equals(io.getBuffer(), "world\n.");
 	}
-	
+
 	TEST_METHOD(28) {
 		// If the buffer is non-empty then it reads from the
 		// buffer first, then from the connection.
@@ -312,7 +312,7 @@ namespace tut {
 		ensure_equals(io.readLine(), "world\n");
 		ensure_equals(io.getBuffer(), ".");
 	}
-	
+
 	TEST_METHOD(29) {
 		// If the line is too long then it throws a SecurityException.
 		write("abcd");
@@ -323,7 +323,7 @@ namespace tut {
 			// Pass.
 		}
 	}
-	
+
 	TEST_METHOD(30) {
 		// It blocks until a line can be read or until EOF.
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "hello"));
@@ -333,7 +333,7 @@ namespace tut {
 		ensure_equals(io.getBuffer(), "world\n.");
 		ensure("At least 33 msec elapsed", timer1.elapsed() >= 33);
 		ensure("At most 95 msec elapsed", timer1.elapsed() <= 90);
-		
+
 		TempThread thr3(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer timer2;
 		ensure_equals(io.readLine(), "world\n");
@@ -343,7 +343,7 @@ namespace tut {
 		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
 		ensure("At most 95 msec elapsed", timer2.elapsed() <= 95);
 	}
-	
+
 	TEST_METHOD(31) {
 		// It throws TimeoutException if it cannot read enough data
 		// within the specified timeout.

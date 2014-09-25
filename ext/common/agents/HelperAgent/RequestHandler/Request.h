@@ -102,6 +102,8 @@ public:
 			return "FORWARDING_BODY_TO_APP";
 		case WAITING_FOR_APP_OUTPUT:
 			return "WAITING_FOR_APP_OUTPUT";
+		default:
+			return "UNKNOWN";
 		}
 	}
 

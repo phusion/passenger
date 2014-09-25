@@ -1070,14 +1070,16 @@ public:
 			doc["want_keep_alive"] = req->wantKeepAlive;
 			doc["request_body_type"] = req->getBodyTypeString();
 			doc["request_body_fully_read"] = req->bodyFullyRead();
-			doc["request_body_already_read"] = req->bodyAlreadyRead;
+			doc["request_body_already_read"] = (Json::Value::UInt64) req->bodyAlreadyRead;
 			doc["response_begun"] = req->responseBegun;
 			doc["method"] = http_method_str(req->method);
 			if (req->httpState != Request::ERROR) {
 				if (req->bodyType == Request::RBT_CONTENT_LENGTH) {
-					doc["content_length"] = req->aux.bodyInfo.contentLength;
+					doc["content_length"] = (Json::Value::UInt64)
+						req->aux.bodyInfo.contentLength;
 				} else if (req->bodyType == Request::RBT_CHUNKED) {
-					doc["end_chunk_reached"] = req->aux.bodyInfo.endChunkReached;
+					doc["end_chunk_reached"] = (Json::Value::UInt64)
+						req->aux.bodyInfo.endChunkReached;
 				}
 			} else {
 				doc["parse_error"] = getErrorDesc(req->aux.parseError);
