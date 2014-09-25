@@ -734,6 +734,8 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceD
 			e, lockFilePath);
 	}
 
+	createFile(wo->instanceDir->getPath() + "/watchdog.pid", toString(getpid()));
+
 	UPDATE_TRACE_POINT();
 	string readOnlyAdminPassword = wo->randomGenerator.generateAsciiString(24);
 	string fullAdminPassword = wo->randomGenerator.generateAsciiString(24);
