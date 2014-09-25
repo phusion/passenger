@@ -2063,9 +2063,6 @@ Notes regarding the above example:
  * The -E option tells 'sudo' to preserve environment variables.
  * If Phusion Passenger is installed through an RVM Ruby, then you must use `rvmsudo` instead of `sudo`.
 
-:option: `--instance-registry-dir`
-include::users_guide_snippets/alternative_for_flying_passenger.txt[]
-
 [[PassengerDataBufferDir]]
 ==== passenger_data_buffer_dir <directory>
 :version: 5.0.0
