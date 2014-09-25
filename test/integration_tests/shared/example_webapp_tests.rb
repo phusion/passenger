@@ -234,6 +234,7 @@ shared_examples_for "an example web app" do
 				socket.write("Content-Type: multipart/form-data\r\n")
 				socket.write("Content-Length: #{upload_data.size}\r\n")
 				socket.write("Connection: close\r\n")
+				socket.write("X-Index: #{i}\r\n")
 				socket.write("\r\n")
 				socket.write(upload_data[0 .. size_of_first_half - 1])
 				socket.flush
@@ -241,10 +242,13 @@ shared_examples_for "an example web app" do
 			Timeout.timeout(10) do
 				get('/').should == "front page"
 			end
-			sockets.each do |socket|
+			sockets.each_with_index do |socket, i|
 				socket.write(upload_data[size_of_first_half .. -1])
 				socket.flush
-				socket.read.should =~ /front page/
+				content = socket.read
+				if content !~ /front page/
+					raise "Connection #{i} did not send a correct response:\n#{content}"
+				end
 			end
 		ensure
 			sockets.each do |socket|
