@@ -47,35 +47,35 @@ task 'test:install_deps' do
 	gem_install = PlatformInfo.gem_command + " install --no-rdoc --no-ri"
 	gem_install = "#{PlatformInfo.ruby_sudo_command} #{gem_install}" if boolean_option('SUDO')
 	default = boolean_option('DEVDEPS_DEFAULT', true)
+	install_base_deps = boolean_option('BASE_DEPS', default)
+	install_doctools  = boolean_option('DOCTOOLS', default)
 
-	if boolean_option('BASE_DEPS', default)
-		sh "#{gem_install} mime-types -v 1.25"
-		sh "#{gem_install} rspec -v 2.14.1"
-		sh "#{gem_install} bundler daemon_controller json rack"
+	if deps_target = string_option('DEPS_TARGET')
+		bundle_args = " --path #{deps_target}"
 	end
-	if boolean_option('DOCTOOLS', default)
-		begin
-			require 'nokogiri'
-		rescue LoadError
-			if RUBY_VERSION < '1.9'
-				sh "#{gem_install} nokogiri -v 1.5.9"
-			else
-				sh "#{gem_install} nokogiri"
-			end
+
+	if !PlatformInfo.locate_ruby_tool('bundle')
+		sh "#{gem_install} bundler"
+	end
+
+	if install_base_deps && install_doctools
+		sh "bundle install #{bundle_args}"
+	else
+		if install_base_deps
+			sh "bundle install #{bundle_args} --without doc"
 		end
-		sh "#{gem_install} mizuho bluecloth"
+		if install_doctools
+			sh "bundle install #{bundle_args} --without base"
+		end
 	end
 	if boolean_option('RAILS_BUNDLES', default)
-		sh "cd test/stub/rails3.0 && bundle install"
-		sh "cd test/stub/rails3.1 && bundle install"
-		sh "cd test/stub/rails3.2 && bundle install"
-
-		ruby_version_int = RUBY_VERSION.split('.')[0..2].join.to_i
-
-		if ruby_version_int >= 190
-		    sh "cd test/stub/rails4.0 && bundle install"
-		    sh "cd test/stub/rails4.1 && bundle install"
-                end
+		sh "cd test/stub/rails3.0 && bundle install #{bundle_args}"
+		sh "cd test/stub/rails3.1 && bundle install #{bundle_args}"
+		sh "cd test/stub/rails3.2 && bundle install #{bundle_args}"
+		if RUBY_VERSION >= '1.9'
+			sh "cd test/stub/rails4.0 && bundle install #{bundle_args}"
+			sh "cd test/stub/rails4.1 && bundle install #{bundle_args}"
+		end
 	end
 	if boolean_option('NODE_MODULES', default)
 		sh "npm install"

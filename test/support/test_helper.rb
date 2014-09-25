@@ -1,3 +1,12 @@
+# Clean Bundler environment variables. Otherwise we can't test against multiple Rails versions.
+if defined?(Bundler)
+	clean_env = nil
+	Bundler.with_clean_env do
+		clean_env = ENV.to_hash
+	end
+	ENV.replace(clean_env)
+end
+
 require 'fileutils'
 require 'resolv'
 require 'net/http'

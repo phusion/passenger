@@ -203,15 +203,4 @@ intrusive_ptr_release(const Session *session) {
 } // namespace ApplicationPool2
 } // namespace Passenger
 
-
-namespace boost {
-	inline void intrusive_ptr_add_ref(const Passenger::ApplicationPool2::Session *session) {
-		session->ref();
-	}
-
-	inline void intrusive_ptr_release(const Passenger::ApplicationPool2::Session *session) {
-		session->unref();
-	}
-}
-
 #endif /* _PASSENGER_APPLICATION_POOL2_SESSION_H_ */

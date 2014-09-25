@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -38,64 +38,49 @@ end
 dependencies = integration_test_dependencies(:_apache2)
 desc "Run Apache 2 integration tests"
 task 'test:integration:apache2' => dependencies do
-	if PlatformInfo.rspec.nil?
-		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
-	else
-		command = "#{PlatformInfo.rspec} -c -f s integration_tests/apache2_tests.rb"
-		if boolean_option('SUDO')
-			command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
-		end
-		if grep = string_option('E')
-			require 'shellwords'
-			command << " -e #{Shellwords.escape(grep)}"
-		end
-		sh "cd test && exec #{command}"
+	command = "rspec -c -f s integration_tests/apache2_tests.rb"
+	if boolean_option('SUDO')
+		command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 	end
+	if grep = string_option('E')
+		require 'shellwords'
+		command << " -e #{Shellwords.escape(grep)}"
+	end
+	sh "cd test && exec bundle exec #{command}"
 end
 
 dependencies = integration_test_dependencies(:_nginx)
 desc "Run Nginx integration tests"
 task 'test:integration:nginx' => dependencies do
-	if PlatformInfo.rspec.nil?
-		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
-	else
-		command = "#{PlatformInfo.rspec} -c -f s integration_tests/nginx_tests.rb"
-		if boolean_option('SUDO')
-			command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
-		end
-		if grep = string_option('E')
-			require 'shellwords'
-			command << " -e #{Shellwords.escape(grep)}"
-		end
-		repeat = true
-		while repeat
-			sh "cd test && exec #{command}"
-			repeat = boolean_option('REPEAT')
-		end
+	command = "rspec -c -f s integration_tests/nginx_tests.rb"
+	if boolean_option('SUDO')
+		command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
+	end
+	if grep = string_option('E')
+		require 'shellwords'
+		command << " -e #{Shellwords.escape(grep)}"
+	end
+	repeat = true
+	while repeat
+		sh "cd test && exec bundle exec #{command}"
+		repeat = boolean_option('REPEAT')
 	end
 end
 
 dependencies = integration_test_dependencies(:_nginx)
 desc "Run Passenger Standalone integration tests"
 task 'test:integration:standalone' => dependencies do
-	if PlatformInfo.rspec.nil?
-		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
-	else
-		command = "#{PlatformInfo.rspec} -c -f s integration_tests/standalone_tests.rb"
-		if grep = string_option('E')
-			require 'shellwords'
-			command << " -e #{Shellwords.escape(grep)}"
-		end
-		sh "cd test && exec #{command}"
+	command = "rspec -c -f s integration_tests/standalone_tests.rb"
+	if grep = string_option('E')
+		require 'shellwords'
+		command << " -e #{Shellwords.escape(grep)}"
 	end
+	sh "cd test && exec bundle exec #{command}"
 end
 
 desc "Run native packaging tests"
 task 'test:integration:native_packaging' do
-	if PlatformInfo.rspec.nil?
-		abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo.ruby_command}'. Please install it."
-	end
-	command = "rspec -c -f s integration_tests/native_packaging_spec.rb"
+	command = "bundle exec rspec -c -f s integration_tests/native_packaging_spec.rb"
 	if boolean_option('SUDO')
 		command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 	end
@@ -145,7 +130,7 @@ task 'test:restart' => dependencies do
 		if grep = string_option('E')
 			command << " -e #{Shellwords.escape(grep)}"
 		end
-		sh "cd test && exec #{command}"
+		sh "cd test && exec bundle exec #{command}"
 		i += 1
 	end
 end

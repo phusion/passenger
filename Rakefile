@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (C) 2008-2013  Phusion
+#  Copyright (C) 2008-2014  Phusion
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -17,6 +17,22 @@
 source_root = File.expand_path(File.dirname(__FILE__))
 $LOAD_PATH.unshift(source_root)
 $LOAD_PATH.unshift("#{source_root}/lib")
+
+# Clean Bundler environment variables, preserve Rake environment variables.
+# Otherwise all Ruby commands will take slightly longer to start, which messes up
+# timing-sensitive tests like those in the C++ test suite.
+if defined?(Bundler)
+	clean_env = nil
+	Bundler.with_clean_env do
+		clean_env = ENV.to_hash
+	end
+	ENV.replace(clean_env)
+	ARGV.each do |arg|
+		if arg =~ /^(\w+)=(.*)$/m
+			ENV[$1] = $2
+		end
+	end
+end
 
 require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
 require 'build/basics'
