@@ -187,6 +187,7 @@ def print_header(io, instance)
 	io.puts "Version : #{PhusionPassenger::VERSION_STRING}"
 	io.puts "Date    : #{Time.now}"
 	io.puts "Instance: #{instance.name} (#{instance.server_software})"
+	io.puts
 end
 
 def obtain_read_only_admin_password(instance)

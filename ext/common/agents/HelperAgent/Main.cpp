@@ -248,7 +248,9 @@ initializePrivilegedWorkingObjects() {
 	WorkingObjects *wo = workingObjects = new WorkingObjects();
 
 	wo->password = options.get("server_password", false);
-	if (wo->password.empty() && options.has("server_password_file")) {
+	if (wo->password == "-") {
+		wo->password.clear();
+	} else if (wo->password.empty() && options.has("server_password_file")) {
 		wo->password = strip(readAll(options.get("server_password_file")));
 	}
 
@@ -521,6 +523,13 @@ initializeNonPrivilegedWorkingObjects() {
 	}
 
 	UPDATE_TRACE_POINT();
+	/* We do not delete Unix domain socket files at shutdown because
+	 * that can cause a race condition if the user tries to start another
+	 * server with the same addresses at the same time. The new server
+	 * would then delete the socket and replace it with its own,
+	 * while the old server would delete the file yet again shortly after.
+	 * This is especially noticeable on systems that heavily swap.
+	 */
 	for (unsigned int i = 0; i < addresses.size(); i++) {
 		wo->requestHandler->listen(wo->serverFds[i]);
 	}
