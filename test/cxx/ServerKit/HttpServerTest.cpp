@@ -252,6 +252,8 @@ namespace tut {
 		~ServerKit_HttpServerTest() {
 			startLoop();
 			fd.close();
+			// Silence error disconnection messages during shutdown.
+			setLogLevel(LVL_CRIT);
 			bg.safe->runSync(boost::bind(&MyServer::shutdown, server.get(), true));
 			while (getServerState() != MyServer::FINISHED_SHUTDOWN) {
 				syscalls::usleep(10000);

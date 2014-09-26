@@ -1164,9 +1164,14 @@ namespace tut {
 			ensure(process->enabled == Process::DETACHED);
 		}
 
+		// detachProcess() will spawn a new process. Prevent it from being
+		// spawned too soon.
+		debug->spawning = true;
+
 		pool->detachProcess(process);
 		debug->messages->send("Proceed with starting detached processes checker");
 		debug->messages->send("Proceed with starting detached processes checker");
+		debug->messages->send("Proceed with spawn loop iteration 2");
 
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 0;

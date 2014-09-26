@@ -118,7 +118,7 @@ namespace tut {
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
-		options.startTimeout = 300;
+		options.startTimeout = 100;
 
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");
@@ -135,7 +135,21 @@ namespace tut {
 			ensure_equals(e.getErrorKind(),
 				SpawnException::PRELOADER_STARTUP_TIMEOUT);
 			if (e.getErrorPage().find("hello world\n") == string::npos) {
-				fail(("Unexpected error page:\n" + e.getErrorPage()).c_str());
+				// This might be caused by the machine being too slow.
+				// Try again with a higher timeout.
+				options.startTimeout = 1000;
+				SmartSpawner spawner2(preloaderCommand, options, createSpawnerConfig());
+				try {
+					object = spawner2.spawn(options);
+					object.process->requiresShutdown = false;
+					fail("SpawnException expected");
+				} catch (const SpawnException &e2) {
+					ensure_equals(e2.getErrorKind(),
+						SpawnException::PRELOADER_STARTUP_TIMEOUT);
+					if (e2.getErrorPage().find("hello world\n") == string::npos) {
+						fail(("Unexpected error page:\n" + e2.getErrorPage()).c_str());
+					}
+				}
 			}
 		}
 	}

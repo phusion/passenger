@@ -233,6 +233,10 @@ namespace tut {
 			fail("SecurityException expected");
 		} catch (const SecurityException &e) {
 			// Pass.
+		} catch (const SystemException &e) {
+			if (e.code() != EPIPE) {
+				fail(("Unexpected SystemException: " + string(e.what())).c_str());
+			}
 		}
 	}
 
@@ -246,6 +250,10 @@ namespace tut {
 			fail("SecurityException expected");
 		} catch (const SecurityException &e) {
 			// Pass.
+		} catch (const SystemException &e) {
+			if (e.code() != EPIPE) {
+				fail(("Unexpected SystemException: " + string(e.what())).c_str());
+			}
 		}
 	}
 

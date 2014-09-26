@@ -150,7 +150,7 @@ class RequestHandler
 				socket.close if !socket.closed?
 			rescue IOError => e
 				# Ignore "stream closed" error, which occurs in unit tests.
-				if e.message !~ /stream closed/
+				if e.to_s !~ /stream closed/
 					raise e
 				end
 			end
