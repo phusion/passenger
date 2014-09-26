@@ -21,6 +21,12 @@ Release 5.0.0 beta 1
  * SIGUSR1 on ruby apps is no longer supported. use passenger-config detach-process
 
 
+Release 4.0.53
+--------------
+
+ * Improved RVM gemset autodetection.
+
+
 Release 4.0.52
 --------------
 
