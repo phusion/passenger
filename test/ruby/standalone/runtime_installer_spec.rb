@@ -177,7 +177,7 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			@installer.run
 
-			File.exist?("#{@temp_dir}/support/agents/PassengerWatchdog").should be_true
+			File.exist?("#{@temp_dir}/support/agents/PassengerAgent").should be_true
 		end
 
 		it "downloads the Nginx binary from the Internet if :nginx is specified as target" do
@@ -215,7 +215,7 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			@installer.run
 
-			File.exist?("#{@temp_dir}/support/agents/PassengerWatchdog").should be_true
+			File.exist?("#{@temp_dir}/support/agents/PassengerAgent").should be_true
 			File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_true
 		end
 
@@ -232,7 +232,7 @@ describe RuntimeInstaller do
 				"nginx_without_native_support CACHING=false OUTPUT_DIR='#{@temp_dir}/support'").
 				and_return do
 					FileUtils.mkdir_p("#{@temp_dir}/agents")
-					create_file("#{@temp_dir}/agents/PassengerWatchdog")
+					create_file("#{@temp_dir}/agents/PassengerAgent")
 
 					nginx_libs.each do |object_filename|
 						dir = File.dirname(object_filename)

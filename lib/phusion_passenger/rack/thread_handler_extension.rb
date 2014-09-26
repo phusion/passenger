@@ -224,20 +224,22 @@ private
 	end
 
 	if "".respond_to?(:bytesize)
-		BINARY = "binary".freeze
-
 		def bytesize(str)
 			str.bytesize
-		end
-
-		def force_binary(str)
-			str.force_encoding(BINARY)
 		end
 	else
 		def bytesize(str)
 			str.size
 		end
+	end
 
+	if "".respond_to?(:force_encoding)
+		BINARY = "binary".freeze
+
+		def force_binary(str)
+			str.force_encoding(BINARY)
+		end
+	else
 		def force_binary(str)
 			str
 		end

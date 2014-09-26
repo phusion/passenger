@@ -28,7 +28,6 @@ def boolean_option(name, default_value = false)
 end
 
 DEBUG = boolean_option('DEBUG')
-TEST_CLASSIC_RAILS = boolean_option('TEST_CLASSIC_RAILS', Gem::VERSION <= '1.9')
 
 ENV.delete('PASSENGER_DEBUG')
 

@@ -94,6 +94,8 @@
 
 	#define FEEDBACK_FD 3
 
+	#define FLYING_PASSENGER_NAME "Flying Passenger"
+
 	#define INDEX_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide.html"
 
 	#define MESSAGE_SERVER_MAX_PASSWORD_SIZE 100

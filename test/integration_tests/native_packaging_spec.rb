@@ -117,7 +117,11 @@ describe "A natively packaged Phusion Passenger" do
 			File.open(filename, "w") do |f|
 				f.write(output)
 			end
-			abort "Command #{command} exited with status #{$?.exitstatus}. Output written to #{filename}"
+			STDERR.puts "Command #{command} exited with status #{$?.exitstatus}. Output written to #{filename}"
+			if ENV['PRINT_FAILED_COMMAND_OUTPUT']
+				STDERR.puts output
+			end
+			abort
 		end
 	end
 
@@ -198,8 +202,8 @@ describe "A natively packaged Phusion Passenger" do
 
 	specify "the agents directory exists" do
 		File.directory?(AGENTS_DIR).should be_true
-		File.file?("#{AGENTS_DIR}/PassengerWatchdog").should be_true
-		File.executable?("#{AGENTS_DIR}/PassengerWatchdog").should be_true
+		File.file?("#{AGENTS_DIR}/PassengerAgent").should be_true
+		File.executable?("#{AGENTS_DIR}/PassengerAgent").should be_true
 	end
 
 	specify "the Apache 2 module exists" do

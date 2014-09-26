@@ -14,10 +14,13 @@ else
 	CACHE_DIR_ON_DOCKER_HOST=/tmp
 fi
 
+COMPILE_CONCURRENCY=${COMPILE_CONCURRENCY:-2}
+
 export VERBOSE=1
 export TRACE=1
 export DEVDEPS_DEFAULT=no
 export rvmsudo_secure_path=1
+unset BUNDLE_GEMFILE
 
 if [[ -e /etc/workaround-docker-2267/hosts ]]; then
 	HOSTS_FILE=/etc/workaround-docker-2267/hosts
@@ -91,6 +94,11 @@ function rake_test_install_deps()
 	else
 		run rake test:install_deps "$@"
 	fi
+	local bundle_path=`bundle show rack`
+	bundle_path=`dirname "$bundle_path"`
+	bundle_path=`dirname "$bundle_path"`
+	echo "Adding bundle path $bundle_path to GEM_PATH"
+	export GEM_PATH="$bundle_path:$GEM_PATH"
 }
 
 function install_test_deps_with_doctools()
@@ -133,8 +141,6 @@ run cp test/config.json.travis test/config.json
 # permission checks pass.
 run chmod g+x,o+x $HOME
 
-old_gem_home="$GEM_HOME"
-
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
 	echo "$ rvm use $TEST_RUBY_VERSION"
 	if [[ -f ~/.rvm/scripts/rvm ]]; then
@@ -153,10 +159,6 @@ if [[ "$TEST_RUBYGEMS_VERSION" != "" ]]; then
 	run gem --version
 fi
 
-if [[ "$old_gem_home" != "" ]]; then
-	export GEM_HOME="$old_gem_home"
-fi
-
 
 if [[ "$INSTALL_ALL_DEPS" = 1 ]]; then
 	# We do not use Bundler here because the goal is to
@@ -167,25 +169,25 @@ fi
 
 if [[ "$TEST_CXX" = 1 ]]; then
 	install_base_test_deps
-	run bundle exec rake test:cxx
+	run bundle exec drake -j$COMPILE_CONCURRENCY test:cxx
 	run bundle exec rake test:oxt
 fi
 
 if [[ "$TEST_RUBY" = 1 ]]; then
 	retry_run 3 rake_test_install_deps BASE_DEPS=yes RAILS_BUNDLES=yes
-	run bundle exec rake test:ruby
+	run bundle exec drake -j$COMPILE_CONCURRENCY test:ruby
 fi
 
 if [[ "$TEST_NODE" = 1 ]]; then
 	install_node_and_modules
-	run bundle exec rake test:node
+	run bundle exec drake -j$COMPILE_CONCURRENCY test:node
 fi
 
 if [[ "$TEST_NGINX" = 1 ]]; then
 	install_base_test_deps
 	install_node_and_modules
 	run ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download
-	run bundle exec rake test:integration:nginx
+	run bundle exec drake -j$COMPILE_CONCURRENCY test:integration:nginx
 fi
 
 if [[ "$TEST_APACHE2" = 1 ]]; then
@@ -196,12 +198,12 @@ if [[ "$TEST_APACHE2" = 1 ]]; then
 	install_node_and_modules
 	run ./bin/passenger-install-apache2-module --auto #--no-update-config
 	run rvmsudo ./bin/passenger-install-apache2-module --auto --no-compile
-	run bundle exec rake test:integration:apache2
+	run bundle exec drake -j$COMPILE_CONCURRENCY test:integration:apache2
 fi
 
 if [[ "$TEST_STANDALONE" = 1 ]]; then
 	install_base_test_deps
-	run bundle exec rake test:integration:standalone
+	run bundle exec drake -j$COMPILE_CONCURRENCY test:integration:standalone
 fi
 
 if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
@@ -213,9 +215,9 @@ if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	install_test_deps_with_doctools
 	install_node_and_modules
 	run bundle exec rake debian:dev debian:dev:reinstall
-	run bundle exec rake test:integration:native_packaging SUDO=1
+	run bundle exec drake -j$COMPILE_CONCURRENCY test:integration:native_packaging SUDO=1 PRINT_FAILED_COMMAND_OUTPUT=1
 	run env PASSENGER_LOCATION_CONFIGURATION_FILE=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
-		bundle exec rake test:integration:apache2 SUDO=1
+		bundle exec drake -j$COMPILE_CONCURRENCY test:integration:apache2 SUDO=1
 fi
 
 if [[ "$TEST_RPM_PACKAGING" = 1 ]]; then

@@ -700,7 +700,9 @@ initializeWorkingObjects(WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceD
 
 	options.set("instance_registry_dir",
 		absolutizePath(options.get("instance_registry_dir")));
-	if (options.get("server_software").find(SERVER_TOKEN_NAME) == string::npos) {
+	if (options.get("server_software").find(SERVER_TOKEN_NAME) == string::npos
+	 && options.get("server_software").find(FLYING_PASSENGER_NAME) == string::npos)
+	{
 		options.set("server_software", options.get("server_software") +
 			(" " SERVER_TOKEN_NAME "/" PASSENGER_VERSION));
 	}

@@ -85,6 +85,7 @@ module PhusionPassenger
 		FEEDBACK_FD = 3
 		PROGRAM_NAME = "Phusion Passenger"
 		SERVER_TOKEN_NAME = "Phusion_Passenger"
+		FLYING_PASSENGER_NAME = "Flying Passenger"
 		INDEX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide.html"
 		APACHE2_DOC_URL     = "https://www.phusionpassenger.com/documentation/Users%20guide%20Apache.html"
 		NGINX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html"

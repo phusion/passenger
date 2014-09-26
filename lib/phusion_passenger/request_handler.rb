@@ -146,7 +146,14 @@ class RequestHandler
 			socket = info[:socket]
 			type = get_socket_address_type(info[:address])
 
-			socket.close if !socket.closed?
+			begin
+				socket.close if !socket.closed?
+			rescue IOError => e
+				# Ignore "stream closed" error, which occurs in unit tests.
+				if e.message !~ /stream closed/
+					raise e
+				end
+			end
 			if type == :unix
 				filename = info[:address].sub(/^unix:/, '')
 				File.unlink(filename) rescue nil

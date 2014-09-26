@@ -94,34 +94,24 @@ module TestHelper
 		end
 	end
 
-	class ClassicRailsStub < Stub
-		def self.use(name, app_root = nil)
-			stub = new(name, app_root)
-			begin
-				yield stub
-			ensure
-				stub.destroy
-			end
-		end
-
+	class RackStub < Stub
 		def startup_file
-			return environment_rb
-		end
-
-		def environment_rb
-			return "#{@full_app_root}/config/environment.rb"
+			return "#{@full_app_root}/config.ru"
 		end
 
 	private
 		def copy_stub_contents
 			super
-			FileUtils.mkdir_p("#{@full_app_root}/log")
-		end
-	end
-
-	class RackStub < Stub
-		def startup_file
-			return "#{@full_app_root}/config.ru"
+			if PhusionPassenger.originally_packaged?
+				source_root = PhusionPassenger.source_root
+				if !File.exist?("#{@full_app_root}/Gemfile")
+					FileUtils.cp("#{source_root}/Gemfile", @full_app_root)
+					FileUtils.cp("#{source_root}/Gemfile.lock", @full_app_root)
+					if File.exist?("#{source_root}/.bundle")
+						FileUtils.cp_r("#{source_root}/.bundle", @full_app_root)
+					end
+				end
+			end
 		end
 	end
 

@@ -220,6 +220,15 @@ initializeSingleAppMode() {
 }
 
 static void
+makeFileWorldReadableAndWritable(const string &path) {
+	int ret;
+
+	do {
+		ret = chmod(path.c_str(), parseModeString("u=rw,g=rw,o=rw"));
+	} while (ret == -1 && errno == EINTR);
+}
+
+static void
 startListening() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
@@ -228,9 +237,15 @@ startListening() {
 
 	for (unsigned int i = 0; i < addresses.size(); i++) {
 		wo->serverFds[i] = createServer(addresses[i]);
+		if (getSocketAddressType(addresses[i]) == SAT_UNIX) {
+			makeFileWorldReadableAndWritable(parseUnixSocketAddress(addresses[i]));
+		}
 	}
 	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
 		wo->adminServerFds[i] = createServer(adminAddresses[i]);
+		if (getSocketAddressType(adminAddresses[i]) == SAT_UNIX) {
+			makeFileWorldReadableAndWritable(parseUnixSocketAddress(adminAddresses[i]));
+		}
 	}
 }
 
@@ -361,7 +376,9 @@ initializeNonPrivilegedWorkingObjects() {
 	VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects;
 
-	if (options.get("server_software").find(SERVER_TOKEN_NAME) == string::npos) {
+	if (options.get("server_software").find(SERVER_TOKEN_NAME) == string::npos
+	 && options.get("server_software").find(FLYING_PASSENGER_NAME) == string::npos)
+	{
 		options.set("server_software", options.get("server_software") +
 			(" " SERVER_TOKEN_NAME "/" PASSENGER_VERSION));
 	}
