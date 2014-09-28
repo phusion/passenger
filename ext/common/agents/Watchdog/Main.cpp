@@ -56,10 +56,12 @@
 #include <agents/Base.h>
 #include <agents/HelperAgent/OptionParser.h>
 #include <agents/LoggingAgent/OptionParser.h>
+#include <agents/Watchdog/AdminServer.h>
 #include <Constants.h>
 #include <InstanceDirectory.h>
 #include <FileDescriptor.h>
 #include <RandomGenerator.h>
+#include <BackgroundEventLoop.h>
 #include <Logging.h>
 #include <Exceptions.h>
 #include <StaticString.h>
@@ -106,6 +108,22 @@ namespace WatchdogAgent {
 		InstanceDirectoryPtr instanceDir;
 		int lockFile;
 		vector<string> cleanupPidfiles;
+
+		vector<AdminServer::Authorization> adminAuthorizations;
+		int adminServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
+		BackgroundEventLoop *bgloop;
+		ServerKit::Context *serverKitContext;
+		AdminServer *adminServer;
+
+		WorkingObjects()
+			: bgloop(NULL),
+			  serverKitContext(NULL),
+			  adminServer(NULL)
+		{
+			for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
+				adminServerFds[i] = -1;
+			}
+		}
 	};
 
 	typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
@@ -231,6 +249,8 @@ waitForStarterProcessOrWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcher
 	int max = -1, ret;
 	char x;
 
+	wo->bgloop->start("Main event loop", 0);
+
 	struct sigaction action;
 	action.sa_handler = terminationHandler;
 	action.sa_flags = SA_RESTART;
@@ -259,6 +279,14 @@ waitForStarterProcessOrWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcher
 	action.sa_handler = SIG_DFL;
 	sigaction(SIGINT, &action, NULL);
 	sigaction(SIGTERM, &action, NULL);
+
+	P_DEBUG("Stopping admin server");
+	wo->bgloop->stop();
+	for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
+		if (wo->adminServerFds[i] != -1) {
+			syscalls::close(wo->adminServerFds[i]);
+		}
+	}
 
 	if (FD_ISSET(wo->errorEvent.fd(), &fds)) {
 		UPDATE_TRACE_POINT();
@@ -510,6 +538,19 @@ usage() {
 	printf("                              logging server\n");
 	printf("\n");
 	printf("Other options (optional):\n");
+	printf("      --admin-listen ADDRESS\n");
+	printf("                            Listen on the given address for admin commands.\n");
+	printf("                            The address must be formatted as tcp://IP:PORT for\n");
+	printf("                            TCP sockets, or unix:PATH for Unix domain sockets.\n");
+	printf("                            You can specify this option multiple times (up to\n");
+	printf("                            %u times) to listen on multiple addresses.\n",
+		SERVER_KIT_MAX_SERVER_ENDPOINTS - 1);
+	printf("      --authorize [LEVEL]:USERNAME:PASSWORDFILE\n");
+	printf("                            Enables authentication on the admin server, through\n");
+	printf("                            the given admin account. LEVEL indicates the\n");
+	printf("                            privilege level (see below). PASSWORDFILE must\n");
+	printf("                            point to a file containing the password\n");
+	printf("\n");
 	printf("      --instance-registry-dir  Directory to register instance into.\n");
 	printf("                               Default: %s\n", getSystemTempDir());
 	printf("\n");
@@ -525,6 +566,10 @@ usage() {
 	printf("  -h, --help                  Show this help\n");
 	printf("\n");
 	printf("[A] = Automatically passed to supervised agents\n");
+	printf("\n");
+	printf("Admin account privilege levels (ordered from most to least privileges):\n");
+	printf("  readonly    Read-only access\n");
+	printf("  full        Full access (default)\n");
 }
 
 static void
@@ -576,6 +621,39 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 					exit(1);
 				}
 			}
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--admin-listen")) {
+			if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
+				vector<string> addresses = options.getStrSet("watchdog_admin_addresses",
+					false);
+				if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS - 1) {
+					fprintf(stderr, "ERROR: you may specify up to %u --admin-listen addresses.\n",
+						SERVER_KIT_MAX_SERVER_ENDPOINTS - 1);
+					exit(1);
+				}
+				addresses.push_back(argv[i + 1]);
+				options.setStrSet("watchdog_admin_addresses", addresses);
+				i += 2;
+			} else {
+				fprintf(stderr, "ERROR: invalid address format for --admin-listen. The address "
+					"must be formatted as tcp://IP:PORT for TCP sockets, or unix:PATH "
+					"for Unix domain sockets.\n");
+				exit(1);
+			}
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--authorize")) {
+			vector<string> args;
+			vector<string> authorizations = options.getStrSet("watchdog_authorizations",
+					false);
+
+			split(argv[i + 1], ':', args);
+			if (args.size() < 2 || args.size() > 3) {
+				fprintf(stderr, "ERROR: invalid format for --authorize. The syntax "
+					"is \"[LEVEL:]USERNAME:PASSWORDFILE\".\n");
+				exit(1);
+			}
+
+			authorizations.push_back(argv[i + 1]);
+			options.setStrSet("watchdog_authorizations", authorizations);
+			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--instance-registry-dir")) {
 			options.set("instance_registry_dir", argv[i + 1]);
 			i += 2;
@@ -644,6 +722,7 @@ setAgentsOptionsDefaults() {
 	}
 	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 	options.setDefaultStrSet("cleanup_pidfiles", vector<string>());
+	options.setDefault("data_buffer_dir", getSystemTempDir());
 }
 
 static void
@@ -805,6 +884,88 @@ initializeAgentWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &wa
 }
 
 static void
+makeFileWorldReadableAndWritable(const string &path) {
+	int ret;
+
+	do {
+		ret = chmod(path.c_str(), parseModeString("u=rw,g=rw,o=rw"));
+	} while (ret == -1 && errno == EINTR);
+}
+
+static void
+parseAndAddAdminAuthorization(const WorkingObjectsPtr &wo, const string &description) {
+	TRACE_POINT();
+	AdminServer::Authorization auth;
+	vector<string> args;
+
+	split(description, ':', args);
+
+	if (args.size() == 2) {
+		auth.level = AdminServer::FULL;
+		auth.username = args[0];
+		auth.password = strip(readAll(args[1]));
+	} else if (args.size() == 3) {
+		auth.level = AdminServer::parseLevel(args[0]);
+		auth.username = args[1];
+		auth.password = strip(readAll(args[2]));
+	} else {
+		P_BUG("Too many elements in authorization description");
+	}
+
+	wo->adminAuthorizations.push_back(auth);
+}
+
+static void
+initializeAdminServer(const WorkingObjectsPtr &wo) {
+	TRACE_POINT();
+	VariantMap &options = *agentsOptions;
+	vector<string> authorizations = options.getStrSet("watchdog_authorizations", false);
+	vector<string> adminAddresses = options.getStrSet("watchdog_admin_addresses", false);
+	string description;
+
+	UPDATE_TRACE_POINT();
+	authorizations.insert(authorizations.begin(),
+		"readonly:ro_admin:" + wo->instanceDir->getPath() +
+		"/read_only_admin_password.txt");
+	authorizations.insert(authorizations.begin(),
+		"full:admin:" + wo->instanceDir->getPath() +
+		"/full_admin_password.txt");
+	options.setStrSet("watchdog_authorizations", authorizations);
+
+	foreach (description, authorizations) {
+		parseAndAddAdminAuthorization(wo, description);
+	}
+
+	UPDATE_TRACE_POINT();
+	adminAddresses.insert(adminAddresses.begin(),
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/watchdog");
+	options.setStrSet("watchdog_admin_addresses", adminAddresses);
+
+	UPDATE_TRACE_POINT();
+	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
+		P_DEBUG("Admin server will listen on " << adminAddresses[i]);
+		wo->adminServerFds[i] = createServer(adminAddresses[i]);
+		if (getSocketAddressType(adminAddresses[i]) == SAT_UNIX) {
+			makeFileWorldReadableAndWritable(parseUnixSocketAddress(adminAddresses[i]));
+		}
+	}
+
+	UPDATE_TRACE_POINT();
+	wo->bgloop = new BackgroundEventLoop(true, true);
+	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
+	wo->serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
+		absolutizePath(options.get("data_buffer_dir"));
+
+	UPDATE_TRACE_POINT();
+	wo->adminServer = new AdminServer(wo->serverKitContext);
+	wo->adminServer->exitEvent = &wo->exitEvent;
+	wo->adminServer->authorizations = wo->adminAuthorizations;
+	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
+		wo->adminServer->listen(wo->adminServerFds[i]);
+	}
+}
+
+static void
 startAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	TRACE_POINT();
 	foreach (AgentWatcherPtr watcher, watchers) {
@@ -897,6 +1058,7 @@ watchdogMain(int argc, char *argv[]) {
 		maybeSetsid();
 		initializeWorkingObjects(wo, instanceDirToucher);
 		initializeAgentWatchers(wo, watchers);
+		initializeAdminServer(wo);
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("before_watchdog_initialization");
 	} catch (const std::exception &e) {

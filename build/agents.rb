@@ -29,6 +29,7 @@ AGENT_OBJECTS = {
 		'ext/common/agents/Watchdog/HelperAgentWatcher.cpp',
 		'ext/common/agents/Watchdog/LoggingAgentWatcher.cpp',
 		'ext/common/agents/Watchdog/InstanceDirToucher.cpp',
+		'ext/common/agents/Watchdog/AdminServer.h',
 		'ext/common/agents/HelperAgent/OptionParser.h',
 		'ext/common/agents/LoggingAgent/OptionParser.h',
 		'ext/common/Constants.h',

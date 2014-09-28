@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2013-2014 Phusion
+ *  Copyright (c) 2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,13 +22,12 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_LOGGING_AGENT_ADMIN_SERVER_H_
-#define _PASSENGER_LOGGING_AGENT_ADMIN_SERVER_H_
+#ifndef _PASSENGER_WATCHDOG_AGENT_ADMIN_SERVER_H_
+#define _PASSENGER_WATCHDOG_AGENT_ADMIN_SERVER_H_
 
 #include <sstream>
 #include <string>
 
-#include <agents/LoggingAgent/LoggingServer.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
 #include <Exceptions.h>
@@ -39,7 +38,7 @@
 #include <Utils/JsonUtils.h>
 
 namespace Passenger {
-namespace LoggingAgent {
+namespace WatchdogAgent {
 
 using namespace std;
 
@@ -120,6 +119,21 @@ private:
 		return auth != NULL
 			&& auth->level >= level
 			&& constantTimeCompare(password, auth->password);
+	}
+
+	void processStatusTxt(Client *client, Request *req) {
+		if (authorize(client, req, READONLY)) {
+			HeaderTable headers;
+			//stringstream stream;
+			headers.insert(req->pool, "content-type", "text/plain");
+			//loggingServer->dump(stream);
+			//writeSimpleResponse(client, 200, &headers, stream.str());
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			respondWith401(client, req);
+		}
 	}
 
 	void processPing(Client *client, Request *req) {
@@ -240,7 +254,9 @@ protected:
 
 		P_INFO("Admin request: " << path);
 
-		if (path == P_STATIC_STRING("/ping.json")) {
+		if (path == P_STATIC_STRING("/status.txt")) {
+			processStatusTxt(client, req);
+		} else if (path == P_STATIC_STRING("/ping.json")) {
 			processPing(client, req);
 		} else if (path == P_STATIC_STRING("/shutdown.json")) {
 			processShutdown(client, req);
@@ -281,18 +297,16 @@ protected:
 	}
 
 public:
-	LoggingServer *loggingServer;
 	EventFd *exitEvent;
 	vector<Authorization> authorizations;
 
 	AdminServer(ServerKit::Context *context)
 		: ParentClass(context),
-		  loggingServer(NULL),
 		  exitEvent(NULL)
 		{ }
 
 	virtual StaticString getServerName() const {
-		return P_STATIC_STRING("LoggerAdminServer");
+		return P_STATIC_STRING("WatchdogAdminServer");
 	}
 
 	static PrivilegeLevel parseLevel(const StaticString &level) {
@@ -307,7 +321,7 @@ public:
 };
 
 
-} // namespace LoggingAgent
+} // namespace WatchdogAgent
 } // namespace Passenger
 
-#endif /* _PASSENGER_LOGGING_AGENT_ADMIN_SERVER_H_ */
+#endif /* _PASSENGER_WATCHDOG_AGENT_ADMIN_SERVER_H_ */
