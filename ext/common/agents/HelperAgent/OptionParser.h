@@ -85,6 +85,8 @@ serverUsage() {
 	printf("                            (single-app mode only)\n");
 	printf("      --startup-file PATH   The path of the app's startup file, relative to\n");
 	printf("                            the app root directory (single-app mode only)\n");
+	printf("      --spawn-method NAME   Spawn method to use. Can either be 'smart' or\n");
+	printf("                            'direct'. Default: %s\n", DEFAULT_SPAWN_METHOD);
 	printf("\n");
 	printf("      --multi-app           Enable multi-app mode\n");
 	printf("\n");
@@ -191,6 +193,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--startup-file")) {
 		options.set("startup_file", argv[i + 1]);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--spawn-method")) {
+		options.set("spawn_method", argv[i + 1]);
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--multi-app")) {
 		options.setBool("multi_app", true);

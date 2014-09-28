@@ -178,6 +178,7 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 		options.defaultGroup = defaultGroup;
 	}
 	options.minProcesses = agentsOptions->getInt("min_instances");
+	options.spawnMethod = agentsOptions->get("spawn_method");
 	options.statThrottleRate = statThrottleRate;
 }
 

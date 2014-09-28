@@ -76,6 +76,8 @@
 
 	#define DEFAULT_RUBY "ruby"
 
+	#define DEFAULT_SPAWN_METHOD "smart"
+
 	#define DEFAULT_START_TIMEOUT 90000
 
 	#define DEFAULT_STAT_THROTTLE_RATE 10

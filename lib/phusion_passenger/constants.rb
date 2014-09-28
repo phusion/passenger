@@ -52,6 +52,7 @@ module PhusionPassenger
 		DEFAULT_START_TIMEOUT = 90_000
 		DEFAULT_WEB_APP_USER = "nobody"
 		DEFAULT_APP_ENV = "production"
+		DEFAULT_SPAWN_METHOD = "smart"
 		DEFAULT_CONCURRENCY_MODEL = "process"
 		DEFAULT_STICKY_SESSIONS_COOKIE_NAME = "_passenger_route"
 		DEFAULT_THREAD_COUNT = 1

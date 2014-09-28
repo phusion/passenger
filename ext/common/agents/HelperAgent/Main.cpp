@@ -728,6 +728,7 @@ setAgentsOptionsDefaults() {
 	options.setDefaultStrSet("server_addresses", defaultAddress);
 	options.setDefaultBool("multi_app", false);
 	options.setDefault("environment", DEFAULT_APP_ENV);
+	options.setDefault("spawn_method", DEFAULT_SPAWN_METHOD);
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 	options.setDefaultInt("min_instances", 1);

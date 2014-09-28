@@ -447,7 +447,7 @@ public:
 		  startTimeout(90 * 1000),
 		  environment(DEFAULT_APP_ENV, sizeof(DEFAULT_APP_ENV) - 1),
 		  baseURI("/", 1),
-		  spawnMethod("smart", sizeof("smart") - 1),
+		  spawnMethod(DEFAULT_SPAWN_METHOD, sizeof(DEFAULT_SPAWN_METHOD) - 1),
 		  defaultUser("nobody", sizeof("nobody") - 1),
 		  ruby(DEFAULT_RUBY, sizeof(DEFAULT_RUBY) - 1),
 		  python(DEFAULT_PYTHON, sizeof(DEFAULT_PYTHON) - 1),
