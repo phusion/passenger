@@ -94,7 +94,8 @@ static void setOomScore(const StaticString &score);
 
 /***** Working objects *****/
 
-namespace PassengerWatchdog {
+namespace Passenger {
+namespace WatchdogAgent {
 	struct WorkingObjects {
 		RandomGenerator randomGenerator;
 		EventFd errorEvent;
@@ -108,9 +109,10 @@ namespace PassengerWatchdog {
 	};
 
 	typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
-}
+} // namespace WatchdogAgent
+} // namespace Passenger
 
-using namespace PassengerWatchdog;
+using namespace Passenger::WatchdogAgent;
 
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;

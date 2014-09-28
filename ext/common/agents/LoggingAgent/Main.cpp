@@ -63,7 +63,8 @@ using namespace Passenger;
 
 /***** Constants and working objects *****/
 
-namespace PassengerLogger {
+namespace Passenger {
+namespace LoggingAgent {
 	struct WorkingObjects {
 		string password;
 		FileDescriptor serverSocketFd;
@@ -93,9 +94,10 @@ namespace PassengerLogger {
 			  terminationCount(0)
 			{ }
 	};
-}
+} // namespace LoggingAgent
+} // namespace Passenger
 
-using namespace PassengerLogger;
+using namespace Passenger::LoggingAgent;
 
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;

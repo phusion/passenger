@@ -81,7 +81,8 @@ using namespace Passenger::ApplicationPool2;
 
 /***** Structures, constants, global variables and forward declarations *****/
 
-namespace PassengerServer {
+namespace Passenger {
+namespace ServerAgent {
 	struct WorkingObjects {
 		int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		int adminServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
@@ -121,9 +122,10 @@ namespace PassengerServer {
 			}
 		}
 	};
-}
+} // namespace ServerAgent
+} // namespace Passenger
 
-using namespace PassengerServer;
+using namespace Passenger::ServerAgent;
 
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;
