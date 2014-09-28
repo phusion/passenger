@@ -78,12 +78,10 @@ using namespace oxt;
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
 
-static VariantMap *agentsOptions;
 
 /***** Structures, constants, global variables and forward declarations *****/
 
-// Avoid namespace conflict with Watchdog's WorkingObjects.
-namespace {
+namespace PassengerServer {
 	struct WorkingObjects {
 		int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		int adminServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
@@ -125,6 +123,9 @@ namespace {
 	};
 }
 
+using namespace PassengerServer;
+
+static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;
 
 

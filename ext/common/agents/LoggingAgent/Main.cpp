@@ -63,8 +63,7 @@ using namespace Passenger;
 
 /***** Constants and working objects *****/
 
-// Avoid namespace conflict with Watchdog's WorkingObjects.
-namespace {
+namespace PassengerLogger {
 	struct WorkingObjects {
 		string password;
 		FileDescriptor serverSocketFd;
@@ -95,6 +94,8 @@ namespace {
 			{ }
 	};
 }
+
+using namespace PassengerLogger;
 
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;

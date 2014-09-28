@@ -92,14 +92,9 @@ class AgentWatcher;
 static void setOomScore(const StaticString &score);
 
 
-/***** Agent options *****/
-
-static VariantMap *agentsOptions;
-
 /***** Working objects *****/
 
-// Avoid namespace conflict with Server's WorkingObjects.
-namespace {
+namespace PassengerWatchdog {
 	struct WorkingObjects {
 		RandomGenerator randomGenerator;
 		EventFd errorEvent;
@@ -115,6 +110,9 @@ namespace {
 	typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
 }
 
+using namespace PassengerWatchdog;
+
+static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;
 static string oldOomScore;
 
