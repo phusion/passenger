@@ -73,6 +73,7 @@ loggingAgentUsage() {
 	printf("                              effect when started as root. Default: primary\n");
 	printf("                              group of the username given by '--user'\n");
 	printf("\n");
+	printf("      --log-file PATH         Log to the given file.\n");
 	printf("      --log-level LEVEL       Logging level. Default: %d\n", DEFAULT_LOG_LEVEL);
 	printf("\n");
 	printf("  -h, --help                  Show this help\n");
@@ -148,6 +149,11 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 		// We do not set log_level because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log level.
 		options.setInt("logging_agent_log_level", atoi(argv[i + 1]));
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
+		// We do not set debug_log_file because, when this function is called from
+		// the Watchdog, we don't want to affect the Watchdog's own log file.
+		options.set("logging_agent_log_file", argv[i + 1]);
 		i += 2;
 	} else {
 		return false;

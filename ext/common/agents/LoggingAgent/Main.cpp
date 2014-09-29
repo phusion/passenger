@@ -473,9 +473,12 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 	}
 
 	// Set log_level here so that initializeAgent() calls setLogLevel()
-	// with the right value.
+	// and setLogFile() with the right value.
 	if (options.has("logging_agent_log_level")) {
 		options.setInt("log_level", options.getInt("logging_agent_log_level"));
+	}
+	if (options.has("logging_agent_log_file")) {
+		options.setInt("debug_log_file", options.getInt("logging_agent_log_file"));
 	}
 }
 

@@ -1195,7 +1195,7 @@ public:
 		serverConfig.finalize();
 		Passenger::setLogLevel(serverConfig.logLevel);
 		if (serverConfig.debugLogFile != NULL) {
-			Passenger::setDebugFile(serverConfig.debugLogFile);
+			Passenger::setLogFile(serverConfig.debugLogFile);
 		}
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;

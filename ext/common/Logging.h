@@ -65,8 +65,6 @@ struct AssertionFailureInfo {
 };
 
 extern volatile sig_atomic_t _logLevel;
-extern int _logOutput;
-
 // If assert() or similar fails, we attempt to store its information here.
 extern AssertionFailureInfo lastAssertionFailure;
 
@@ -76,7 +74,8 @@ getLogLevel() {
 }
 
 void setLogLevel(int value);
-bool setDebugFile(const char *logFile = NULL);
+bool setLogFile(const char *path); // Sets errno on error
+string getLogFile();
 void _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line);
 void _writeLogEntry(const std::string &str);
 const char *_strdupStringStream(const std::stringstream &stream);

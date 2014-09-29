@@ -1533,28 +1533,8 @@ initializeAgent(int argc, char **argv[], const char *processName,
 
 		options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
 		setLogLevel(options.getInt("log_level"));
-		if (!options.get("debug_log_file", false).empty()) {
-			if (strcmp(processName, "PassengerWatchdog") == 0) {
-				/* Have the watchdog set STDOUT and STDERR to the debug
-				 * log file so that system abort() calls that stuff
-				 * are properly logged.
-				 */
-				string filename = options.get("debug_log_file");
-				options.erase("debug_log_file");
-
-				int fd = open(filename.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0644);
-				if (fd == -1) {
-					int e = errno;
-					throw FileSystemException("Cannot open debug log file " +
-						filename, e, filename);
-				}
-
-				dup2(fd, STDOUT_FILENO);
-				dup2(fd, STDERR_FILENO);
-				close(fd);
-			} else {
-				setDebugFile(options.get("debug_log_file").c_str());
-			}
+		if (options.has("debug_log_file")) {
+			setLogFile(options.get("debug_log_file").c_str());
 		}
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());

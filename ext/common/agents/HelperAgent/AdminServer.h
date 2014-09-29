@@ -28,18 +28,19 @@
 #include <oxt/thread.hpp>
 #include <sstream>
 #include <string>
+#include <cstring>
 
 #include <agents/HelperAgent/RequestHandler.h>
 #include <ApplicationPool2/Pool.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
-#include <FileDescriptor.h>
 #include <Exceptions.h>
 #include <StaticString.h>
+#include <Logging.h>
+#include <Constants.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/Base64.h>
 #include <Utils/json.h>
-#include <Utils/JsonUtils.h>
 
 namespace Passenger {
 namespace ServerAgent {
@@ -346,9 +347,14 @@ private:
 			}
 
 			HeaderTable headers;
+			string logFile = getLogFile();
+
 			headers.insert(req->pool, "content-type", "application/json");
 			Json::Value doc = requestHandler->getConfigAsJson();
 			doc["log_level"] = getLogLevel();
+			if (!logFile.empty()) {
+				doc["log_file"] = logFile;
+			}
 
 			writeSimpleResponse(client, 200, &headers,
 				psg_pstrdup(req->pool, doc.toStyledString()));
@@ -369,18 +375,72 @@ private:
 
 	void processConfigBody(Client *client, Request *req) {
 		HeaderTable headers;
+		Json::Value &json = req->jsonBody;
 
 		headers.insert(req->pool, "content-type", "application/json");
 		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 
-		if (req->jsonBody.isMember("log_level")) {
-			setLogLevel(req->jsonBody["log_level"].asInt());
+		if (json.isMember("log_level")) {
+			setLogLevel(json["log_level"].asInt());
 		}
+		if (json.isMember("log_file")) {
+			if (!setLogFile(json["log_file"].asCString())) {
+				int e = errno;
+				unsigned int bufsize = 1024;
+				char *message = (char *) psg_pnalloc(req->pool, bufsize);
+				snprintf(message, bufsize, "{ \"status\": \"error\", "
+					"\"message\": \"Cannot open log file: %s (errno=%d)\" }",
+					strerror(e), e);
+				writeSimpleResponse(client, 500, &headers, message);
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
+				return;
+			}
+			P_NOTICE("Log file opened.");
+		}
+		requestHandler->configure(json);
 
-		requestHandler->configure(req->jsonBody);
 		writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
 		if (!req->ended()) {
 			endRequest(&client, &req);
+		}
+	}
+
+	void processReopenLogs(Client *client, Request *req) {
+		if (req->method != HTTP_POST) {
+			respondWith405(client, req);
+		} else if (authorize(client, req, FULL)) {
+			HeaderTable headers;
+			headers.insert(req->pool, "content-type", "application/json");
+
+			string logFile = getLogFile();
+			if (logFile.empty()) {
+				writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
+					"\"message\": \"" PROGRAM_NAME " was not configured with a log file.\" }\n");
+			} else {
+				if (!setLogFile(logFile.c_str())) {
+					int e = errno;
+					unsigned int bufsize = 1024;
+					char *message = (char *) psg_pnalloc(req->pool, bufsize);
+					snprintf(message, bufsize, "{ \"status\": \"error\", "
+						"\"message\": \"Cannot reopen log file: %s (errno=%d)\" }",
+						strerror(e), e);
+					writeSimpleResponse(client, 500, &headers, message);
+					if (!req->ended()) {
+						endRequest(&client, &req);
+					}
+					return;
+				}
+				P_NOTICE("Log file reopened.");
+				writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
+			}
+
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			respondWith401(client, req);
 		}
 	}
 
@@ -464,6 +524,8 @@ protected:
 				processShutdown(client, req);
 			} else if (path == P_STATIC_STRING("/config.json")) {
 				processConfig(client, req);
+			} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
+				processReopenLogs(client, req);
 			} else {
 				respondWith404(client, req);
 			}

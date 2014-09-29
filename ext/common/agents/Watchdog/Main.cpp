@@ -561,6 +561,7 @@ usage() {
 	printf("                              switching is disabled. Default: the default\n");
 	printf("                              user's primary group\n");
 	printf("\n");
+	printf("      --log-file PATH         Log to the given file.\n");
 	printf("      --log-level LEVEL       Logging level. [A] Default: %d\n", DEFAULT_LOG_LEVEL);
 	printf("\n");
 	printf("  -h, --help                  Show this help\n");
@@ -668,6 +669,9 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 			options.setInt("log_level", atoi(argv[i + 1]));
+			i += 2;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
+			options.set("debug_log_file", argv[i + 1]);
 			i += 2;
 		} else if (p.isFlag(argv[i], 'h', "--help")) {
 			usage();

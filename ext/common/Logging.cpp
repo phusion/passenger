@@ -38,9 +38,9 @@
 namespace Passenger {
 
 volatile sig_atomic_t _logLevel = DEFAULT_LOG_LEVEL;
-int _logOutput = STDERR_FILENO;
-static bool printAppOutputAsDebuggingMessages = false;
 AssertionFailureInfo lastAssertionFailure;
+static bool printAppOutputAsDebuggingMessages = false;
+static char *logFile = NULL;
 
 void
 setLogLevel(int value) {
@@ -49,13 +49,34 @@ setLogLevel(int value) {
 }
 
 bool
-setDebugFile(const char *logFile) {
-	int fd = open(logFile, O_WRONLY | O_CREAT | O_APPEND, 0644);
+setLogFile(const char *path) {
+	int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
 	if (fd != -1) {
-		_logOutput = fd;
+		char *newLogFile = strdup(path);
+		if (newLogFile == NULL) {
+			P_CRITICAL("Cannot allocate memory");
+			abort();
+		}
+
+		dup2(fd, STDOUT_FILENO);
+		dup2(fd, STDERR_FILENO);
+		close(fd);
+
+		if (logFile != NULL) {
+			free(logFile);
+		}
+		logFile = newLogFile;
 		return true;
 	} else {
 		return false;
+	}
+}
+
+string getLogFile() {
+	if (logFile == NULL) {
+		return string();
+	} else {
+		return string(logFile);
 	}
 }
 
@@ -92,7 +113,7 @@ _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line
 static void
 _writeLogEntry(const StaticString &str) {
 	try {
-		writeExact(_logOutput, str.data(), str.size());
+		writeExact(STDERR_FILENO, str.data(), str.size());
 	} catch (const SystemException &) {
 		/* The most likely reason why this fails is when the user has setup
 		 * Apache to log to a pipe (e.g. to a log rotation script). Upon
