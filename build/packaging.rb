@@ -399,18 +399,50 @@ task 'package:initiate_binaries_building' do
 end
 
 task 'package:initiate_debian_building' do
+	require 'yaml'
+	require 'uri'
+	require 'net/http'
+	require 'net/https'
 	version = VERSION_STRING
+	begin
+		website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
+	rescue Errno::ENOENT
+		STDERR.puts "-------------------"
+		abort "*** ERROR: Please put the Phusion Passenger website admin " +
+			"password in ~/.passenger_website.yml:\n" +
+			"admin_password: ..."
+	end
 	if is_open_source?
-		command = "cd /srv/passenger_apt_automation && " +
-			"/tools/silence-unless-failed " +
-			"./new_release https://github.com/phusion/passenger.git passenger #{git_tag}"
+		type = "open%20source"
+		jenkins_token = website_config["jenkins_token"]
+		if !jenkins_token
+			abort "*** ERROR: Please put the Passenger open source Jenkins " +
+				"authentication token in ~/.passenger_website.yml, under " +
+				"the 'jenkins_token' key."
+		end
 	else
-		command = "cd /srv/passenger_apt_automation && " +
-			"/tools/silence-unless-failed " +
-			"./new_release #{enterprise_git_url} passenger-enterprise #{git_tag}"
+		type = "Enterprise"
+		jenkins_token = website_config["jenkins_enterprise_token"]
+		if !jenkins_token
+			abort "*** ERROR: Please put the Passenger Enterprise Jenkins " +
+				"authentication token in ~/.passenger_website.yml, under " +
+				"the 'jenkins_enterprise_token' key."
+		end
 	end
 
-	sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
+	uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
+		"job=Passenger%20#{type}%20Debian%20packages%20(release)&token=#{jenkins_token}&ref=#{git_tag}")
+	http = Net::HTTP.new(uri.host, uri.port)
+	http.use_ssl = true
+	http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+	request = Net::HTTP::Post.new(uri.request_uri)
+	response = http.request(request)
+	if response.code != 200 && response.body != "Scheduled.\n"
+		abort "*** ERROR: Cannot initiate building of Debian packages:\n" +
+			"Status: #{response.code}\n\n" +
+			response.body
+	end
+	puts "Initiated building of Debian packages."
 end
 
 task 'package:build_osx_binaries' do
