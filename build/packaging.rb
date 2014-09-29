@@ -179,6 +179,9 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 					response.body
 			end
 
+			puts "Initiating building of binaries"
+			Rake::Task['package:initiate_binaries_building'].invoke
+
 			puts "Initiating building of Debian packages"
 			Rake::Task['package:initiate_debian_building'].invoke
 
@@ -216,11 +219,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			end
 
 			puts "Initiating building of binaries"
-			command = "cd /srv/passenger_autobuilder/app && " +
-				"/tools/silence-unless-failed -f /tmp/passenger_autobuilder.log " +
-				"chpst -l /var/cache/passenger_ci/lock " +
-				"./autobuild-with-pbuilder #{enterprise_git_url} passenger-enterprise --tag=#{git_tag}"
-			sh "ssh psg_autobuilder_run@juvia-helper.phusion.nl at now <<<'#{command}'"
+			Rake::Task['package:initiate_binaries_building'].invoke
 
 			puts "Initiating building of Debian packages"
 			Rake::Task['package:initiate_debian_building'].invoke
@@ -352,19 +351,98 @@ task 'package:update_homebrew' do
 	end
 end
 
-task 'package:initiate_debian_building' do
+task 'package:initiate_binaries_building' do
+	require 'yaml'
+	require 'uri'
+	require 'net/http'
+	require 'net/https'
 	version = VERSION_STRING
+	begin
+		website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
+	rescue Errno::ENOENT
+		STDERR.puts "-------------------"
+		abort "*** ERROR: Please put the Phusion Passenger website admin " +
+			"password in ~/.passenger_website.yml:\n" +
+			"admin_password: ..."
+	end
 	if is_open_source?
-		command = "cd /srv/passenger_apt_automation && " +
-			"/tools/silence-unless-failed " +
-			"./new_release https://github.com/phusion/passenger.git passenger #{git_tag}"
+		type = "open%20source"
+		jenkins_token = website_config["jenkins_token"]
+		if !jenkins_token
+			abort "*** ERROR: Please put the Passenger open source Jenkins " +
+				"authentication token in ~/.passenger_website.yml, under " +
+				"the 'jenkins_token' key."
+		end
 	else
-		command = "cd /srv/passenger_apt_automation && " +
-			"/tools/silence-unless-failed " +
-			"./new_release #{enterprise_git_url} passenger-enterprise #{git_tag}"
+		type = "Enterprise"
+		jenkins_token = website_config["jenkins_enterprise_token"]
+		if !jenkins_token
+			abort "*** ERROR: Please put the Passenger Enterprise Jenkins " +
+				"authentication token in ~/.passenger_website.yml, under " +
+				"the 'jenkins_enterprise_token' key."
+		end
 	end
 
-	sh "ssh psg_apt_automation@juvia-helper.phusion.nl at now <<<'#{command}'"
+	uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
+		"job=Passenger%20#{type}%20binaries%20(release)&token=#{jenkins_token}&tag=#{git_tag}")
+	http = Net::HTTP.new(uri.host, uri.port)
+	http.use_ssl = true
+	http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+	request = Net::HTTP::Post.new(uri.request_uri)
+	response = http.request(request)
+	if response.code != 200 && response.body != "Scheduled.\n"
+		abort "*** ERROR: Cannot initiate building of binaries:\n" +
+			"Status: #{response.code}\n\n" +
+			response.body
+	end
+	puts "Initiated building of binaries."
+end
+
+task 'package:initiate_debian_building' do
+	require 'yaml'
+	require 'uri'
+	require 'net/http'
+	require 'net/https'
+	version = VERSION_STRING
+	begin
+		website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
+	rescue Errno::ENOENT
+		STDERR.puts "-------------------"
+		abort "*** ERROR: Please put the Phusion Passenger website admin " +
+			"password in ~/.passenger_website.yml:\n" +
+			"admin_password: ..."
+	end
+	if is_open_source?
+		type = "open%20source"
+		jenkins_token = website_config["jenkins_token"]
+		if !jenkins_token
+			abort "*** ERROR: Please put the Passenger open source Jenkins " +
+				"authentication token in ~/.passenger_website.yml, under " +
+				"the 'jenkins_token' key."
+		end
+	else
+		type = "Enterprise"
+		jenkins_token = website_config["jenkins_enterprise_token"]
+		if !jenkins_token
+			abort "*** ERROR: Please put the Passenger Enterprise Jenkins " +
+				"authentication token in ~/.passenger_website.yml, under " +
+				"the 'jenkins_enterprise_token' key."
+		end
+	end
+
+	uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
+		"job=Passenger%20#{type}%20Debian%20packages%20(release)&token=#{jenkins_token}&ref=#{git_tag}")
+	http = Net::HTTP.new(uri.host, uri.port)
+	http.use_ssl = true
+	http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+	request = Net::HTTP::Post.new(uri.request_uri)
+	response = http.request(request)
+	if response.code != 200 && response.body != "Scheduled.\n"
+		abort "*** ERROR: Cannot initiate building of Debian packages:\n" +
+			"Status: #{response.code}\n\n" +
+			response.body
+	end
+	puts "Initiated building of Debian packages."
 end
 
 task 'package:build_osx_binaries' do

@@ -69,6 +69,9 @@ task :clean => 'clean:cache'
 task 'common:clean' => 'clean:cache'
 task 'clean:cache' do
 	sh "rm -rf #{OUTPUT_DIR}cache"
+	if OUTPUT_DIR == "buildout/"
+		sh "rm -rf buildout"
+	end
 end
 
 desc "Remove all generated files"
