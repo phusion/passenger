@@ -384,11 +384,12 @@ task 'package:initiate_binaries_building' do
 	end
 
 	uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
-		"job=Passenger%20#{type}%20binaries%20(release)&token=#{jenkins_token}&tag=#{git_tag}")
+		"job=Passenger%20#{type}%20binaries%20(release)&tag=#{git_tag}")
 	http = Net::HTTP.new(uri.host, uri.port)
 	http.use_ssl = true
 	http.verify_mode = OpenSSL::SSL::VERIFY_PEER
 	request = Net::HTTP::Post.new(uri.request_uri)
+	request.set_form_data("token" => jenkins_token)
 	response = http.request(request)
 	if response.code != 200 && response.body != "Scheduled.\n"
 		abort "*** ERROR: Cannot initiate building of binaries:\n" +
@@ -431,11 +432,12 @@ task 'package:initiate_debian_building' do
 	end
 
 	uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
-		"job=Passenger%20#{type}%20Debian%20packages%20(release)&token=#{jenkins_token}&ref=#{git_tag}")
+		"job=Passenger%20#{type}%20Debian%20packages%20(release)&ref=#{git_tag}")
 	http = Net::HTTP.new(uri.host, uri.port)
 	http.use_ssl = true
 	http.verify_mode = OpenSSL::SSL::VERIFY_PEER
 	request = Net::HTTP::Post.new(uri.request_uri)
+	request.set_form_data("token" => jenkins_token)
 	response = http.request(request)
 	if response.code != 200 && response.body != "Scheduled.\n"
 		abort "*** ERROR: Cannot initiate building of Debian packages:\n" +
