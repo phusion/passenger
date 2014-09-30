@@ -2,6 +2,7 @@ Release 4.0.53
 --------------
 
  * Improved RVM gemset autodetection.
+ * Fixed some Ruby 2.2 compatibility issues.
 
 
 Release 4.0.52

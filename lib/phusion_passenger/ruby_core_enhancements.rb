@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010, 2011, 2012 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -76,7 +76,7 @@ class IO
 		def writev(components)
 			return PhusionPassenger::NativeSupport.writev(fileno, components)
 		end
-		
+
 		# Like #writev, but accepts two arrays. The data is written in the given order.
 		#
 		#   io.writev2(["hello ", "world", "\n"], ["another ", "message\n"])
@@ -84,7 +84,7 @@ class IO
 			return PhusionPassenger::NativeSupport.writev2(fileno,
 				components, components2)
 		end
-		
+
 		# Like #writev, but accepts three arrays. The data is written in the given order.
 		#
 		#   io.writev3(["hello ", "world", "\n"],
@@ -124,7 +124,7 @@ class IO
 			return write(data)
 		end
 	end
-	
+
 	if IO.method_defined?(:close_on_exec=)
 		def close_on_exec!
 			self.close_on_exec = true
@@ -163,16 +163,17 @@ module Signal
 			result.delete("ALRM")
 			result.delete("VTALRM")
 		end
-		
+
 		# Don't touch SIGCHLD no matter what! On OS X waitpid() will
 		# malfunction if SIGCHLD doesn't have a correct handler.
 		result.delete("CLD")
 		result.delete("CHLD")
-		
+
 		# Other stuff that we don't want to trap no matter which
 		# Ruby engine.
 		result.delete("STOP")
-		
+		result.delete("KILL")
+
 		return result
 	end
 end
