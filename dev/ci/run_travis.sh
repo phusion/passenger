@@ -20,6 +20,7 @@ export VERBOSE=1
 export TRACE=1
 export DEVDEPS_DEFAULT=no
 export rvmsudo_secure_path=1
+export LC_CTYPE=C.UTF-8
 unset BUNDLE_GEMFILE
 
 if [[ -e /etc/workaround-docker-2267/hosts ]]; then
@@ -89,12 +90,19 @@ function apt_get_update() {
 
 function rake_test_install_deps()
 {
-	if [[ "$INSTALL_DEPS" == 0 ]]; then
-		echo "Skipping installation of dependencies"
-	else
-		run rake test:install_deps "$@"
+	# We do not use Bundler here because the goal might be to
+	# install the Rake version as specified in the Gemfile,
+	# which we may not have yet.
+	run env NOEXEC_DISABLE=1 rake test:install_deps "$@"
+	local code=$?
+	if [[ $code != 0 ]]; then
+		return $code
 	fi
-	local bundle_path=`bundle show rack`
+
+	local bundle_path
+	if ! bundle_path=`bundle show rake`; then
+		bundle_path=`bundle show nokogiri`
+	fi
 	bundle_path=`dirname "$bundle_path"`
 	bundle_path=`dirname "$bundle_path"`
 	echo "Adding bundle path $bundle_path to GEM_PATH"
@@ -121,8 +129,16 @@ function install_node_and_modules()
 {
 	if [[ "$install_node_and_modules" = "" ]]; then
 		install_node_and_modules=1
-		run curl --fail -O http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
-		run tar xzf node-v0.10.20-linux-x64.tar.gz
+		if [[ -e /host_cache ]]; then
+			if [[ ! -e /host_cache/node-v0.10.20-linux-x64.tar.gz ]]; then
+				run curl --fail -o /host_cache/node-v0.10.20-linux-x64.tar.gz \
+					http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
+			fi
+			run tar xzf /host_cache/node-v0.10.20-linux-x64.tar.gz
+		else
+			run curl --fail -O http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
+			run tar xzf node-v0.10.20-linux-x64.tar.gz
+		fi
 		export PATH=`pwd`/node-v0.10.20-linux-x64/bin:$PATH
 		retry_run 3 rake_test_install_deps NODE_MODULES=yes
 	fi
@@ -155,12 +171,12 @@ if [[ "$TEST_RUBYGEMS_VERSION" != "" ]]; then
 	run gem --version
 fi
 
+ORIG_GEM_PATH="$GEM_PATH"
+
 
 if [[ "$INSTALL_ALL_DEPS" = 1 ]]; then
-	# We do not use Bundler here because the goal is to
-	# install the Rake version as specified in the Gemfile,
-	# which we may not have yet.
-	run env NOEXEC_DISABLE=1 rake test:install_deps DEVDEPS_DEFAULT=yes
+	run rake_test_install_deps DEVDEPS_DEFAULT=yes
+	INSTALL_DEPS=0
 fi
 
 if [[ "$TEST_CXX" = 1 ]]; then
@@ -206,12 +222,24 @@ if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	apt_get_update
 	run sudo apt-get install -y --no-install-recommends \
 		devscripts debhelper rake apache2-mpm-worker apache2-threaded-dev \
-		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev rubygems libev-dev gdebi-core \
-		source-highlight
+		libev-dev gdebi-core source-highlight
+	if [[ `lsb_release -r -s` = 12.04 ]]; then
+		sudo apt-get install -y --no-install-recommends \
+			ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev rubygems
+	else
+		sudo apt-get install -y --no-install-recommends \
+			ruby1.9.1 ruby1.9.1-dev ruby2.0 ruby2.0-dev
+	fi
 	install_test_deps_with_doctools
 	install_node_and_modules
 	run bundle exec rake debian:dev debian:dev:reinstall
 	run bundle exec drake -j$COMPILE_CONCURRENCY test:integration:native_packaging SUDO=1 PRINT_FAILED_COMMAND_OUTPUT=1
+	(
+		export GEM_PATH="$ORIG_GEM_PATH"
+		if ! env NOEXEC_DISABLE=1 rvmsudo -E ruby -rrack -e '' 2>/dev/null; then
+			retry_run 3 gem install rack --no-rdoc --no-ri
+		fi
+	)
 	run env PASSENGER_LOCATION_CONFIGURATION_FILE=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
 		bundle exec drake -j$COMPILE_CONCURRENCY test:integration:apache2 SUDO=1
 fi

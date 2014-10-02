@@ -38,7 +38,7 @@ end
 dependencies = integration_test_dependencies(:_apache2)
 desc "Run Apache 2 integration tests"
 task 'test:integration:apache2' => dependencies do
-	command = "rspec -c -f s integration_tests/apache2_tests.rb"
+	command = "bundle exec rspec -c -f s integration_tests/apache2_tests.rb"
 	if boolean_option('SUDO')
 		command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 	end
@@ -46,13 +46,13 @@ task 'test:integration:apache2' => dependencies do
 		require 'shellwords'
 		command << " -e #{Shellwords.escape(grep)}"
 	end
-	sh "cd test && exec bundle exec #{command}"
+	sh "cd test && exec #{command}"
 end
 
 dependencies = integration_test_dependencies(:_nginx)
 desc "Run Nginx integration tests"
 task 'test:integration:nginx' => dependencies do
-	command = "rspec -c -f s integration_tests/nginx_tests.rb"
+	command = "bundle exec rspec -c -f s integration_tests/nginx_tests.rb"
 	if boolean_option('SUDO')
 		command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 	end
@@ -62,7 +62,7 @@ task 'test:integration:nginx' => dependencies do
 	end
 	repeat = true
 	while repeat
-		sh "cd test && exec bundle exec #{command}"
+		sh "cd test && exec #{command}"
 		repeat = boolean_option('REPEAT')
 	end
 end
@@ -70,12 +70,12 @@ end
 dependencies = integration_test_dependencies(:_nginx)
 desc "Run Passenger Standalone integration tests"
 task 'test:integration:standalone' => dependencies do
-	command = "rspec -c -f s integration_tests/standalone_tests.rb"
+	command = "bundle exec rspec -c -f s integration_tests/standalone_tests.rb"
 	if grep = string_option('E')
 		require 'shellwords'
 		command << " -e #{Shellwords.escape(grep)}"
 	end
-	sh "cd test && exec bundle exec #{command}"
+	sh "cd test && exec #{command}"
 end
 
 desc "Run native packaging tests"
@@ -126,11 +126,11 @@ task 'test:restart' => dependencies do
 	i = 1
 	while true do
 		puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
-		command = "rspec -c -f s integration_tests/apache2_tests.rb"
+		command = "bundle exec rspec -c -f s integration_tests/apache2_tests.rb"
 		if grep = string_option('E')
 			command << " -e #{Shellwords.escape(grep)}"
 		end
-		sh "cd test && exec bundle exec #{command}"
+		sh "cd test && exec #{command}"
 		i += 1
 	end
 end

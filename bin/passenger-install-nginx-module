@@ -225,7 +225,7 @@ private
 		new_screen
 		puts "<banner>Compiling Passenger support files...</banner>"
 		Dir.chdir(PhusionPassenger.build_system_dir) do
-			return sh("#{PlatformInfo.rake_command} nginx:clean nginx RELEASE=yes")
+			return sh("env NOEXEC_DISABLE=1 #{PlatformInfo.rake_command} nginx:clean nginx RELEASE=yes")
 		end
 	end
 	

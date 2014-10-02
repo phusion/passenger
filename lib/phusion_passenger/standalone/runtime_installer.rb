@@ -598,7 +598,7 @@ private
 	end
 
 	def rake
-		return PlatformInfo.rake_command
+		return "env NOEXEC_DISABLE=1 #{PlatformInfo.rake_command}"
 	end
 
 	def run_rake_task!(target)

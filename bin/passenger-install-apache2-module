@@ -348,7 +348,7 @@ private
 			else
 				rake = "#{PlatformInfo.rake_command} RELEASE=yes"
 			end
-			command = "#{rake} apache2:clean apache2"
+			command = "env NOEXEC_DISABLE=1 #{rake} apache2:clean apache2"
 			if PhusionPassenger.native_packaging_method == "homebrew"
 				# Running apache2:clean deletes some object files needed
 				# by passenger-install-nginx-module, so we ensure those

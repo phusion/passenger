@@ -30,6 +30,16 @@ if !["deb", "rpm", "homebrew"].include?(NATIVE_PACKAGING_METHOD)
 	abort "Please set NATIVE_PACKAGING_METHOD to either 'deb', 'rpm' or 'homebrew'"
 end
 
+# Clean Bundler environment variables. We don't want to start Passenger Standalone
+# with Bundler.
+if defined?(Bundler)
+	clean_env = nil
+	Bundler.with_clean_env do
+		clean_env = ENV.to_hash
+	end
+	ENV.replace(clean_env)
+end
+
 source_root = File.expand_path("../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
@@ -62,7 +72,11 @@ when "deb"
 	APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
 	SUPPORTS_COMPILING_APACHE_MODULE = false
 
-	APXS2 = "/usr/bin/apxs2"
+	if `lsb_release -r -s` <= '12.04'
+		APXS2 = "/usr/bin/apxs2"
+	else
+		APXS2 = "/usr/bin/apxs"
+	end
 	APACHE2 = "/usr/sbin/apache2"
 	APACHE2CTL = "/usr/sbin/apache2ctl"
 	APACHE_CONFIG_FILE = "/etc/apache2/apache2.conf"
