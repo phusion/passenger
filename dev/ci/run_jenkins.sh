@@ -17,6 +17,12 @@ if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
 	rm -rf "$JENKINS_CACHE_DIR/passenger_rpm/output"
 fi
 
+# Relax permissions. Necessary for unit tests which test permissions.
+echo "Relaxing permissions"
+umask u=rwx,g=rx,o=rx
+find . -type f -print0 | xargs -0 -n 512 chmod g+r,o+r
+find . -type d -print0 | xargs -0 -n 512 chmod g+rx,o+rx
+
 function run_exec()
 {
 	echo "$ $@"
