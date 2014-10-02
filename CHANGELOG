@@ -24,7 +24,9 @@ Release 5.0.0 beta 1
 Release 4.0.53
 --------------
 
+ * Upgraded the preferred Nginx version to 1.6.2.
  * Improved RVM gemset autodetection.
+ * Fixed some Ruby 2.2 compatibility issues.
 
 
 Release 4.0.52
