@@ -139,13 +139,15 @@ if USE_VENDORED_LIBEV
 
 	libev_sources = Dir["ext/libev/{*.c,*.h}"]
 	file LIBEV_OUTPUT_DIR + ".libs/libev.a" => [LIBEV_OUTPUT_DIR + "Makefile"] + libev_sources do
-		sh "rm -f #{LIBEV_OUTPUT_DIR}/libev.la"
+		sh "rm -f #{LIBEV_OUTPUT_DIR}libev.la"
 		sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la"
 	end
 
 	task 'libev:clean' do
-		if File.exist?(LIBEV_OUTPUT_DIR + "Makefile")
-			sh "cd #{LIBEV_OUTPUT_DIR} && make maintainer-clean"
+		patterns = %w(Makefile config.h config.log config.status libtool
+			stamp-h1 *.o *.lo *.la .libs .deps)
+		patterns.each do |pattern|
+			sh "rm -rf #{LIBEV_OUTPUT_DIR}#{pattern}"
 		end
 	end
 
@@ -196,11 +198,15 @@ if USE_VENDORED_LIBEIO
 		sh "cd #{LIBEIO_OUTPUT_DIR} && make libeio.la"
 	end
 
-	task :clean do
-		if File.exist?(LIBEIO_OUTPUT_DIR + "Makefile")
-			sh "cd #{LIBEIO_OUTPUT_DIR} && make maintainer-clean"
+	task 'libeio:clean' do
+		patterns = %w(Makefile config.h config.log config.status libtool
+			stamp-h1 *.o *.lo *.la .libs .deps)
+		patterns.each do |pattern|
+			sh "rm -rf #{LIBEIO_OUTPUT_DIR}#{pattern}"
 		end
 	end
+
+	task :clean => 'libeio:clean'
 else
 	LIBEIO_CFLAGS = string_option('LIBEIO_CFLAGS', '-I/usr/include/libeio')
 	LIBEIO_LIBS   = string_option('LIBEIO_LIBS', '-leio')
