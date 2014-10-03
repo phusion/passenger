@@ -72,7 +72,7 @@ when "deb"
 	APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
 	SUPPORTS_COMPILING_APACHE_MODULE = false
 
-	if `lsb_release -r -s` <= '12.04'
+	if `lsb_release -r -s`.strip <= '12.04'
 		APXS2 = "/usr/bin/apxs2"
 	else
 		APXS2 = "/usr/bin/apxs"
