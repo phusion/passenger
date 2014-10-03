@@ -1059,11 +1059,9 @@ process_header(ngx_http_request_t *r)
     ngx_http_upstream_header_t     *hh;
     ngx_http_upstream_main_conf_t  *umcf;
     ngx_http_core_loc_conf_t       *clcf;
-    passenger_loc_conf_t           *slcf;
 
     umcf = ngx_http_get_module_main_conf(r, ngx_http_upstream_module);
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
-    slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
 
     for ( ;; ) {
 
