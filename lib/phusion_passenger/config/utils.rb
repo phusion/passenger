@@ -88,6 +88,7 @@ module Utils
 
 	def list_all_passenger_instances(instances)
 		puts "The following #{PROGRAM_NAME} instances are running:"
+		puts
 		instances.each do |instance|
 			printf "%-25s  %s\n", "Name", "Description"
 			puts "------------------------------------------------------------------"

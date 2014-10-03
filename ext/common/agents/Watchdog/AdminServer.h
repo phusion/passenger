@@ -242,6 +242,7 @@ private:
 			string logFile = getLogFile();
 			if (logFile.empty()) {
 				writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
+					"\"code\": \"NO_LOG_FILE\", "
 					"\"message\": \"" PROGRAM_NAME " was not configured with a log file.\" }\n");
 			} else {
 				if (!setLogFile(logFile.c_str())) {
@@ -249,6 +250,7 @@ private:
 					unsigned int bufsize = 1024;
 					char *message = (char *) psg_pnalloc(req->pool, bufsize);
 					snprintf(message, bufsize, "{ \"status\": \"error\", "
+						"\"code\": \"LOG_FILE_OPEN_ERROR\", "
 						"\"message\": \"Cannot reopen log file: %s (errno=%d)\" }",
 						strerror(e), e);
 					writeSimpleResponse(client, 500, &headers, message);

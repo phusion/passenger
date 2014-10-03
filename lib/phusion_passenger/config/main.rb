@@ -31,12 +31,13 @@ module Config
 		["detach-process", "DetachProcessCommand"],
 		["restart-app", "RestartAppCommand"],
 		["list-instances", "ListInstancesCommand"],
+		["reopen-logs", "ReopenLogsCommand"],
 		["build-native-support", "BuildNativeSupportCommand"],
 		["validate-install", "ValidateInstallCommand"],
 		["system-metrics", "SystemMetricsCommand"],
 		["about", "AboutCommand"]
 	]
-	
+
 	ABOUT_OPTIONS = [
 		"root",
 		"includedir",
@@ -76,6 +77,8 @@ module Config
 		puts "Management commands:"
 		puts "  detach-process        Detach an application process from the process pool"
 		puts "  restart-app           Restart an application"
+		puts "  reopen-logs           Instruct #{PROGRAM_NAME} agents to reopen their log"
+		puts "                        files"
 		puts
 		puts "Informational commands:"
 		puts "  validate-install      Validate this #{PROGRAM_NAME} installation"
