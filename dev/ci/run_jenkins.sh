@@ -24,9 +24,9 @@ COMPILE_CONCURRENCY=${COMPILE_CONCURRENCY:-1}
 
 # Relax permissions. Necessary for unit tests which test permissions.
 echo "Relaxing permissions"
+umask u=rwx,g=rx,o=rx
 (
 	set -x
-	umask u=rwx,g=rx,o=rx
 	chmod g+r,o+r .
 	find * -type f -print0 | xargs -0 -n 512 chmod g+r,o+r
 	find * -type d -print0 | xargs -0 -n 512 chmod g+rx,o+rx
