@@ -11,7 +11,7 @@ if [[ "$WORKSPACE" = "" ]]; then
 	exit 1
 fi
 
-JENKINS_CACHE_DIR="$WORKSPACE/jenkins_cache"
+JENKINS_CACHE_DIR="$WORKSPACE/.jenkins_cache"
 mkdir -p "$JENKINS_CACHE_DIR"
 if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
 	rm -rf "$JENKINS_CACHE_DIR/passenger_rpm/output"
