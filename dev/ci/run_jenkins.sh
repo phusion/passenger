@@ -27,7 +27,7 @@ echo "Relaxing permissions"
 umask u=rwx,g=rx,o=rx
 (
 	set -x
-	chmod g+r,o+r .
+	chmod g+rx,o+rx .
 	find * -type f -print0 | xargs -0 -n 512 chmod g+r,o+r
 	find * -type d -print0 | xargs -0 -n 512 chmod g+rx,o+rx
 
