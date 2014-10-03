@@ -30,6 +30,10 @@ echo "Relaxing permissions"
 	chmod g+r,o+r .
 	find * -type f -print0 | xargs -0 -n 512 chmod g+r,o+r
 	find * -type d -print0 | xargs -0 -n 512 chmod g+rx,o+rx
+
+	# Create this file now because otherwise it would be owned by root,
+	# which Jenkins cannot remove.
+	touch test/test.log
 )
 
 function run_exec()
