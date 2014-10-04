@@ -159,7 +159,7 @@ public:
 	 * application, this is the folder that contains 'app/', 'public/', 'config/',
 	 * etc. This must be a valid directory, but the path does not have to be absolute.
 	 */
-	StaticString appRoot;
+	HashedStaticString appRoot;
 
 	/**
 	 * A name used by ApplicationPool to uniquely identify an application.
@@ -169,7 +169,7 @@ public:
 	 *
 	 * If left empty, then the app root is used as the app group name.
 	 */
-	StaticString appGroupName;
+	HashedStaticString appGroupName;
 
 	/** The application's type, used for determining the command to invoke to
 	 * spawn an application process as well as determining the startup file's
@@ -527,6 +527,10 @@ public:
 
 		storage = data;
 
+		// Fix up HashedStaticStrings' hashes.
+		appRoot.setHash(other.appRoot.hash());
+		appGroupName.setHash(other.appGroupName.hash());
+
 		return *this;
 	}
 
@@ -620,7 +624,7 @@ public:
 	 * Returns the app group name. If there is no explicitly set app group name
 	 * then the app root is considered to be the app group name.
 	 */
-	StaticString getAppGroupName() const {
+	const HashedStaticString &getAppGroupName() const {
 		if (appGroupName.empty()) {
 			return appRoot;
 		} else {

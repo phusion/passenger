@@ -89,6 +89,10 @@ public:
 		m_hash = h.finalize();
 	}
 
+	void setHash(boost::uint32_t value) {
+		m_hash = value;
+	}
+
 	OXT_FORCE_INLINE boost::uint32_t hash() const {
 		return m_hash;
 	}
