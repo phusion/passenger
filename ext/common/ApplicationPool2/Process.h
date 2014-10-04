@@ -441,19 +441,21 @@ public:
 	Socket *findSessionSocketWithLowestBusyness() const {
 		if (OXT_UNLIKELY(sessionSocketCount == 0)) {
 			return NULL;
-		}
+		} else if (sessionSocketCount == 1) {
+			return sessionSockets[0];
+		} else {
+			int leastBusySessionSocketIndex = 0;
+			int lowestBusyness = sessionSockets[0]->busyness();
 
-		int leastBusySessionSocketIndex = 0;
-		int lowestBusyness = sessionSockets[0]->busyness();
-
-		for (unsigned i = 1; i < sessionSocketCount; i++) {
-			if (sessionSockets[i]->busyness() < lowestBusyness) {
-				leastBusySessionSocketIndex = i;
-				lowestBusyness = sessionSockets[i]->busyness();
+			for (unsigned i = 1; i < sessionSocketCount; i++) {
+				if (sessionSockets[i]->busyness() < lowestBusyness) {
+					leastBusySessionSocketIndex = i;
+					lowestBusyness = sessionSockets[i]->busyness();
+				}
 			}
-		}
 
-		return sessionSockets[leastBusySessionSocketIndex];
+			return sessionSockets[leastBusySessionSocketIndex];
+		}
 	}
 
 	bool abortLongRunningConnections() {
