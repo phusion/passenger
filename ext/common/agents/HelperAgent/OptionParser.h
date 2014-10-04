@@ -110,6 +110,8 @@ serverUsage() {
 	printf("      --data-buffer-dir PATH\n");
 	printf("                            Directory to store data buffers in. Default:\n");
 	printf("                            %s\n", getSystemTempDir());
+	printf("      --benchmark MODE      Enable benchmark mode. Available modes:\n");
+	printf("                            before_checkout,after_checkout\n");
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("Admin account privilege levels (ordered from most to least privileges):\n");
@@ -219,6 +221,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--data-buffer-dir")) {
 		options.setInt("data_buffer_dir", atoi(argv[i + 1]));
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--benchmark")) {
+		options.set("benchmark_mode", argv[i + 1]);
 		i += 2;
 	} else if (!startsWith(argv[i], "-")) {
 		if (!options.has("app_root")) {

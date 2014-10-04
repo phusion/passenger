@@ -797,6 +797,13 @@ sanityCheckOptions() {
 			ok = false;
 		}
 	}
+	if (RequestHandler::parseBenchmarkMode(options.get("benchmark_mode", false))
+		== RequestHandler::BM_UNKNOWN)
+	{
+		fprintf(stderr, "ERROR: '%s' is not a valid mode for --benchmark.\n",
+			options.get("benchmark_mode", false).c_str());
+		ok = false;
+	}
 
 	if (!ok) {
 		exit(1);

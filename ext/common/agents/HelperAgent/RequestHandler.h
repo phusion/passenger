@@ -166,6 +166,14 @@ using namespace ApplicationPool2;
 
 
 class RequestHandler: public ServerKit::HttpServer<RequestHandler, Client> {
+public:
+	enum BenchmarkMode {
+		BM_NONE,
+		BM_BEFORE_CHECKOUT,
+		BM_AFTER_CHECKOUT,
+		BM_UNKNOWN
+	};
+
 private:
 	typedef ServerKit::HttpServer<RequestHandler, Client> ParentClass;
 	typedef ServerKit::Channel Channel;
@@ -176,9 +184,15 @@ private:
 
 	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
 
+	unsigned int statThrottleRate;
+	BenchmarkMode benchmarkMode: 2;
+	bool singleAppMode: 1;
+	bool showVersionInHeader: 1;
+
 	const VariantMap *agentsOptions;
 	psg_pool_t *stringPool;
-	unsigned int statThrottleRate;
+	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
+
 	StaticString defaultRuby;
 	StaticString loggingAgentAddress;
 	StaticString loggingAgentPassword;
@@ -208,10 +222,6 @@ private:
 	HashedStaticString HTTP_STATUS;
 	HashedStaticString HTTP_TRANSFER_ENCODING;
 
-	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
-	bool singleAppMode: 1;
-	bool showVersionInHeader: 1;
-
 public:
 	ResourceLocator *resourceLocator;
 	PoolPtr appPool;
@@ -229,8 +239,16 @@ protected:
 public:
 	RequestHandler(ServerKit::Context *context, const VariantMap *_agentsOptions)
 		: ParentClass(context),
+
+		  statThrottleRate(_agentsOptions->getInt("stat_throttle_rate")),
+		  benchmarkMode(parseBenchmarkMode(_agentsOptions->get("benchmark_mode", false))),
+		  singleAppMode(false),
+		  showVersionInHeader(_agentsOptions->getBool("show_version_in_header")),
+
 		  agentsOptions(_agentsOptions),
 		  stringPool(psg_create_pool(1024 * 4)),
+		  poolOptionsCache(4),
+
 		  PASSENGER_APP_GROUP_NAME("!~PASSENGER_APP_GROUP_NAME"),
 		  PASSENGER_MAX_REQUESTS("!~PASSENGER_MAX_REQUESTS"),
 		  PASSENGER_STICKY_SESSIONS("!~PASSENGER_STICKY_SESSIONS"),
@@ -249,10 +267,7 @@ public:
 		  HTTP_EXPECT("expect"),
 		  HTTP_CONNECTION("connection"),
 		  HTTP_STATUS("status"),
-		  HTTP_TRANSFER_ENCODING("transfer-encoding"),
-		  poolOptionsCache(4),
-		  singleAppMode(false),
-		  showVersionInHeader(false)
+		  HTTP_TRANSFER_ENCODING("transfer-encoding")
 	{
 		defaultRuby = psg_pstrdup(stringPool,
 			agentsOptions->get("default_ruby"));
@@ -270,10 +285,6 @@ public:
 			agentsOptions->get("default_server_port"));
 		serverSoftware = psg_pstrdup(stringPool,
 			agentsOptions->get("server_software"));
-
-		statThrottleRate = agentsOptions->getInt("stat_throttle_rate");
-		showVersionInHeader = agentsOptions->getBool(
-			"show_version_in_header");
 
 		if (!agentsOptions->getBool("multi_app")) {
 			boost::shared_ptr<Options> options = boost::make_shared<Options>();
@@ -295,6 +306,18 @@ public:
 
 	~RequestHandler() {
 		psg_destroy_pool(stringPool);
+	}
+
+	static BenchmarkMode parseBenchmarkMode(const StaticString mode) {
+		if (mode.empty()) {
+			return BM_NONE;
+		} else if (mode == "before_checkout") {
+			return BM_BEFORE_CHECKOUT;
+		} else if (mode == "after_checkout") {
+			return BM_AFTER_CHECKOUT;
+		} else {
+			return BM_UNKNOWN;
+		}
 	}
 
 	void initialize() {
