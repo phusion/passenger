@@ -225,6 +225,7 @@ public:
 	void startCheckingDetachedProcesses(bool immediately);
 	void detachedProcessesCheckerMain(GroupPtr self);
 	void wakeUpGarbageCollector();
+	bool selfCheckingEnabled() const;
 	bool poolAtFullCapacity() const;
 	bool anotherGroupIsWaitingForCapacity() const;
 	Group *findOtherGroupWaitingForCapacity() const;
@@ -239,6 +240,10 @@ public:
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
 		#ifndef NDEBUG
+		if (!selfCheckingEnabled()) {
+			return;
+		}
+
 		LifeStatus lifeStatus = getLifeStatus();
 
 		assert(enabledCount >= 0);
@@ -281,6 +286,10 @@ public:
 	void verifyExpensiveInvariants() const {
 		#ifndef NDEBUG
 		// !a || b: logical equivalent of a IMPLIES b.
+
+		if (!selfCheckingEnabled()) {
+			return;
+		}
 
 		ProcessList::const_iterator it, end;
 

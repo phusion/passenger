@@ -134,6 +134,7 @@ public:
 	mutable boost::mutex syncher;
 	unsigned int max;
 	unsigned long long maxIdleTime;
+	bool selfchecking;
 
 	boost::condition_variable garbageCollectionCond;
 
@@ -223,12 +224,20 @@ public:
 
 	void verifyInvariants() const {
 		// !a || b: logical equivalent of a IMPLIES b.
+		#ifndef NDEBUG
+		if (!selfchecking) {
+			return;
+		}
 		assert(!( !getWaitlist.empty() ) || ( atFullCapacity(false) ));
 		assert(!( !atFullCapacity(false) ) || ( getWaitlist.empty() ));
+		#endif
 	}
 
 	void verifyExpensiveInvariants() const {
 		#ifndef NDEBUG
+		if (!selfchecking) {
+			return;
+		}
 		vector<GetWaiter>::const_iterator it, end = getWaitlist.end();
 		for (it = getWaitlist.begin(); it != end; it++) {
 			const GetWaiter &waiter = *it;
@@ -1029,10 +1038,11 @@ public:
 			P_WARN("Unable to collect system metrics: " << e.what());
 		}
 
-		lifeStatus  = ALIVE;
-		max         = 6;
-		maxIdleTime = 60 * 1000000;
-		palloc      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+		lifeStatus   = ALIVE;
+		max          = 6;
+		maxIdleTime  = 60 * 1000000;
+		selfchecking = true;
+		palloc       = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 
 		// The following code only serve to instantiate certain inline methods
 		// so that they can be invoked from gdb.
@@ -1292,6 +1302,11 @@ public:
 		LockGuard l(syncher);
 		maxIdleTime = value;
 		garbageCollectionCond.notify_all();
+	}
+
+	void enableSelfChecking(bool enabled) {
+		LockGuard l(syncher);
+		selfchecking = enabled;
 	}
 
 	unsigned int capacityUsed(bool lock = true) const {

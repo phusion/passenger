@@ -112,6 +112,9 @@ serverUsage() {
 	printf("                            %s\n", getSystemTempDir());
 	printf("      --benchmark MODE      Enable benchmark mode. Available modes:\n");
 	printf("                            after_accept,before_checkout,after_checkout\n");
+	printf("      --disable-selfchecks  Disable various self-checks. This improves\n");
+	printf("                            performance, but might delay finding bugs in\n");
+	printf("                            " PROGRAM_NAME "\n");
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("Admin account privilege levels (ordered from most to least privileges):\n");
@@ -225,6 +228,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--benchmark")) {
 		options.set("benchmark_mode", argv[i + 1]);
 		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--disable-selfchecks")) {
+		options.setBool("selfchecks", false);
+		i++;
 	} else if (!startsWith(argv[i], "-")) {
 		if (!options.has("app_root")) {
 			options.set("app_root", argv[i]);

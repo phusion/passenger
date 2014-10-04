@@ -338,6 +338,11 @@ SuperGroup::generateSecret() const {
 	return getPool()->getRandomGenerator()->generateAsciiString(43);
 }
 
+bool
+SuperGroup::selfCheckingEnabled() const {
+	return getPool()->selfchecking;
+}
+
 void
 SuperGroup::runInitializationHooks() const {
 	getPool()->runHookScripts("after_initialize_supergroup",
@@ -1362,6 +1367,11 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 		detachedProcessesCheckerCond.timed_wait(lock,
 			posix_time::milliseconds(100));
 	}
+}
+
+bool
+Group::selfCheckingEnabled() const {
+	return getPool()->selfchecking;
 }
 
 void

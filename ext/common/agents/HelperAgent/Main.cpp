@@ -436,6 +436,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->appPool->initialize();
 	wo->appPool->setMax(options.getInt("max_pool_size"));
 	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000);
+	wo->appPool->enableSelfChecking(options.getBool("selfchecks"));
 
 	UPDATE_TRACE_POINT();
 	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
@@ -742,6 +743,7 @@ setAgentsOptionsDefaults() {
 	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 	options.setDefaultBool("show_version_in_header", true);
 	options.setDefault("data_buffer_dir", getSystemTempDir());
+	options.setDefaultBool("selfchecks", false);
 
 	string firstAddress = options.getStrSet("server_addresses")[0];
 	if (getSocketAddressType(firstAddress) == SAT_TCP) {
