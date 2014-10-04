@@ -1107,7 +1107,18 @@ public:
 
 	void feed(const MemoryKit::mbuf &buffer) {
 		RefGuard guard(hooks, this, __FILE__, __LINE__);
+		feedWithoutRefGuard(buffer);
+	}
 
+	void feed(const char *data, unsigned int size) {
+		feed(MemoryKit::mbuf(data, size));
+	}
+
+	void feed(const char *data) {
+		feed(MemoryKit::mbuf(data));
+	}
+
+	void feedWithoutRefGuard(const MemoryKit::mbuf &buffer) {
 		FBC_DEBUG("Feeding " << buffer.size() << " bytes");
 		verifyInvariants();
 		if (ended()) {
@@ -1132,12 +1143,8 @@ public:
 		}
 	}
 
-	void feed(const char *data, unsigned int size) {
-		feed(MemoryKit::mbuf(data, size));
-	}
-
-	void feed(const char *data) {
-		feed(MemoryKit::mbuf(data));
+	void feedWithoutRefGuard(const char *data, unsigned int size) {
+		feedWithoutRefGuard(MemoryKit::mbuf(data, size));
 	}
 
 	void feedError(int errcode) {
@@ -1159,7 +1166,9 @@ public:
 		mode = IN_MEMORY_MODE;
 		readerState = RS_INACTIVE;
 		errcode = 0;
-		inFileMode.reset();
+		if (OXT_UNLIKELY(inFileMode != NULL)) {
+			inFileMode.reset();
+		}
 		Channel::deinitialize();
 	}
 

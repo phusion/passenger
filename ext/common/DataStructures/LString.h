@@ -117,7 +117,9 @@ psg_lstr_append_part(LString *str, LString::Part *part) {
 }
 
 inline void
-psg_lstr_append(LString *str, psg_pool_t *pool, const MemoryKit::mbuf &buffer, const char *data, unsigned int size) {
+psg_lstr_append(LString *str, psg_pool_t *pool, const MemoryKit::mbuf &buffer,
+	const char *data, unsigned int size)
+{
 	if (size == 0) {
 		return;
 	}

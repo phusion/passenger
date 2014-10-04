@@ -129,12 +129,14 @@ private:
 		return self->onURL(MessageType(), data, len);
 	}
 
+	OXT_FORCE_INLINE
 	int onURL(const HttpParseRequest &tag, const char *data, size_t len) {
 		state->state = HttpHeaderParserState::PARSING_URL;
 		psg_lstr_append(&message->path, pool, *currentBuffer, data, len);
 		return 0;
 	}
 
+	OXT_FORCE_INLINE
 	int onURL(const HttpParseResponse &tag, const char *data, size_t len) {
 		P_BUG("Should never be called");
 		return 0;

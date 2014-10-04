@@ -110,16 +110,29 @@ public:
 		FileBufferedChannel::setContext(context);
 	}
 
+	OXT_FORCE_INLINE
 	void feed(const MemoryKit::mbuf &buffer) {
 		FileBufferedChannel::feed(buffer);
 	}
 
+	OXT_FORCE_INLINE
 	void feed(const char *data, unsigned int size) {
 		FileBufferedChannel::feed(data, size);
 	}
 
+	OXT_FORCE_INLINE
 	void feed(const char *data) {
 		FileBufferedChannel::feed(data);
+	}
+
+	OXT_FORCE_INLINE
+	void feedWithoutRefGuard(const MemoryKit::mbuf &buffer) {
+		FileBufferedChannel::feedWithoutRefGuard(buffer);
+	}
+
+	OXT_FORCE_INLINE
+	void feedWithoutRefGuard(const char *data, unsigned int size) {
+		FileBufferedChannel::feedWithoutRefGuard(data, size);
 	}
 
 	void feedError(int errcode) {

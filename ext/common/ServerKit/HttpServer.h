@@ -697,7 +697,7 @@ protected:
 
 	void writeResponse(Client *client, const MemoryKit::mbuf &buffer) {
 		client->currentRequest->responseBegun = true;
-		client->output.feed(buffer);
+		client->output.feedWithoutRefGuard(buffer);
 	}
 
 	void writeResponse(Client *client, const char *data, unsigned int size) {
@@ -848,7 +848,7 @@ protected:
 		req->pool = pool;
 
 		if (!c->output.ended()) {
-			c->output.feed(MemoryKit::mbuf());
+			c->output.feedWithoutRefGuard(MemoryKit::mbuf());
 		}
 		if (c->output.endAcked()) {
 			doneWithCurrentRequest(&c);
