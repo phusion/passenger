@@ -542,7 +542,7 @@ Group::Group(SuperGroup *_superGroup, const Options &options, const ComponentInf
 	processesBeingSpawned = 0;
 	m_spawning     = false;
 	m_restarting   = false;
-	lifeStatus     = ALIVE;
+	lifeStatus.store(ALIVE, boost::memory_order_relaxed);
 	lastRestartFileMtime = 0;
 	lastRestartFileCheckTime = 0;
 	alwaysRestartFileExists = false;
