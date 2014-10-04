@@ -93,9 +93,7 @@ struct psg_pool_s {
 
 psg_pool_t *psg_create_pool(size_t size);
 void psg_destroy_pool(psg_pool_t *pool);
-void psg_init_pool(psg_pool_t *pool, size_t size);
-void psg_deinit_pool(psg_pool_t *pool);
-void psg_reset_pool(psg_pool_t *pool);
+bool psg_reset_pool(psg_pool_t *pool, size_t size);
 
 /** Allocate `size` bytes from the pool, aligned on platform word size. */
 void *psg_palloc(psg_pool_t *pool, size_t size);

@@ -111,7 +111,7 @@ serverUsage() {
 	printf("                            Directory to store data buffers in. Default:\n");
 	printf("                            %s\n", getSystemTempDir());
 	printf("      --benchmark MODE      Enable benchmark mode. Available modes:\n");
-	printf("                            before_checkout,after_checkout\n");
+	printf("                            after_accept,before_checkout,after_checkout\n");
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("Admin account privilege levels (ordered from most to least privileges):\n");

@@ -169,6 +169,7 @@ class RequestHandler: public ServerKit::HttpServer<RequestHandler, Client> {
 public:
 	enum BenchmarkMode {
 		BM_NONE,
+		BM_AFTER_ACCEPT,
 		BM_BEFORE_CHECKOUT,
 		BM_AFTER_CHECKOUT,
 		BM_UNKNOWN
@@ -311,6 +312,8 @@ public:
 	static BenchmarkMode parseBenchmarkMode(const StaticString mode) {
 		if (mode.empty()) {
 			return BM_NONE;
+		} else if (mode == "after_accept") {
+			return BM_AFTER_ACCEPT;
 		} else if (mode == "before_checkout") {
 			return BM_BEFORE_CHECKOUT;
 		} else if (mode == "after_checkout") {

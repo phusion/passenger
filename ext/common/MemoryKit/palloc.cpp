@@ -29,9 +29,12 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <oxt/macros.hpp>
 #include <MemoryKit/palloc.h>
 
 
+static void psg_deinit_pool(psg_pool_t *pool);
+static void psg_init_pool(psg_pool_t *pool, size_t size);
 static void *psg_palloc_block(psg_pool_t *pool, size_t size);
 static void *psg_palloc_large(psg_pool_t *pool, size_t size);
 
@@ -75,7 +78,7 @@ psg_destroy_pool(psg_pool_t *pool)
 }
 
 
-void
+static void
 psg_init_pool(psg_pool_t *pool, size_t size)
 {
 	pool->data.last = (char *) pool + sizeof(psg_pool_t);
@@ -91,7 +94,7 @@ psg_init_pool(psg_pool_t *pool, size_t size)
 }
 
 
-void
+static void
 psg_deinit_pool(psg_pool_t *pool)
 {
 	psg_pool_t          *p;
@@ -110,8 +113,8 @@ psg_deinit_pool(psg_pool_t *pool)
 }
 
 
-void
-psg_reset_pool(psg_pool_t *pool)
+bool
+psg_reset_pool(psg_pool_t *pool, size_t size)
 {
 	psg_pool_t        *p;
 	psg_pool_large_t  *l;
@@ -122,10 +125,15 @@ psg_reset_pool(psg_pool_t *pool)
 		}
 	}
 
-	pool->large = NULL;
-
-	for (p = pool; p; p = p->data.next) {
-		p->data.last = (char *) p + sizeof(psg_pool_t);
+	if (pool->data.next == NULL) {
+		psg_init_pool(pool, size);
+		return true;
+	} else {
+		pool->large = NULL;
+		for (p = pool; p; p = p->data.next) {
+			p->data.last = (char *) p + sizeof(psg_pool_t);
+		}
+		return false;
 	}
 }
 
@@ -136,7 +144,7 @@ psg_palloc(psg_pool_t *pool, size_t size)
 	char        *m;
 	psg_pool_t  *p;
 
-	if (size <= pool->max) {
+	if (OXT_LIKELY(size <= pool->max)) {
 		p = pool->current;
 
 		do {

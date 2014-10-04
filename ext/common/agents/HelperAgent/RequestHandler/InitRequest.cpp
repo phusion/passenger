@@ -37,6 +37,8 @@ virtual void
 onRequestBegin(Client *client, Request *req) {
 	ParentClass::onRequestBegin(client, req);
 
+	RH_BENCHMARK_POINT(client, req, BM_AFTER_ACCEPT);
+
 	{
 		// Perform hash table operations as close to header parsing as possible,
 		// and localize them as much as possible, for better CPU caching.
