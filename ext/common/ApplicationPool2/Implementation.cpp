@@ -582,12 +582,26 @@ Group::initialize() {
 	nullProcess->setGroup(this);
 }
 
-Pool *
+OXT_FORCE_INLINE Pool *
 Group::getPool() const {
 	return getSuperGroup()->getPool();
 }
 
 void
+Group::_onSessionInitiateFailure(Session *session) {
+	Process *process = session->getProcess();
+	assert(process != NULL);
+	process->getGroup()->onSessionInitiateFailure(process, session);
+}
+
+void
+Group::_onSessionClose(Session *session) {
+	Process *process = session->getProcess();
+	assert(process != NULL);
+	process->getGroup()->onSessionClose(process, session);
+}
+
+OXT_FORCE_INLINE void
 Group::onSessionInitiateFailure(Process *process, Session *session) {
 	boost::container::vector<Callback> actions;
 
@@ -609,7 +623,7 @@ Group::onSessionInitiateFailure(Process *process, Session *session) {
 	runAllActions(actions);
 }
 
-void
+OXT_FORCE_INLINE void
 Group::onSessionClose(Process *process, Session *session) {
 	TRACE_POINT();
 	// Standard resource management boilerplate stuff...

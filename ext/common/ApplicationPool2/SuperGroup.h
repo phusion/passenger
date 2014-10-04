@@ -474,6 +474,7 @@ public:
 	 * because Pool::destroy() joins all threads, so Pool can never
 	 * be destroyed before all thread callbacks have finished.
 	 */
+	OXT_FORCE_INLINE
 	Pool *getPool() const {
 		return pool;
 	}

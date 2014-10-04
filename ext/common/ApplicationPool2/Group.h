@@ -188,22 +188,12 @@ public:
 	GroupPtr selfPointer;
 
 
-	static void _onSessionInitiateFailure(Session *session) {
-		Process *process = session->getProcess();
-		assert(process != NULL);
-		process->getGroup()->onSessionInitiateFailure(process, session);
-	}
-
-	static void _onSessionClose(Session *session) {
-		Process *process = session->getProcess();
-		assert(process != NULL);
-		process->getGroup()->onSessionClose(process, session);
-	}
-
 	static void generateSecret(const SuperGroup *superGroup, char *secret);
 	static string generateUuid(const SuperGroup *superGroup);
-	void onSessionInitiateFailure(Process *process, Session *session);
-	void onSessionClose(Process *process, Session *session);
+	static void _onSessionInitiateFailure(Session *session);
+	static void _onSessionClose(Session *session);
+	OXT_FORCE_INLINE void onSessionInitiateFailure(Process *process, Session *session);
+	OXT_FORCE_INLINE void onSessionClose(Process *process, Session *session);
 
 	/** Returns whether it is allowed to perform a new OOBW in this group. */
 	bool oobwAllowed() const;
@@ -940,7 +930,7 @@ public:
 	 * @pre getLifeState() != SHUT_DOWN
 	 * @post result != NULL
 	 */
-	Pool *getPool() const;
+	OXT_FORCE_INLINE Pool *getPool() const;
 
 	// Thread-safe.
 	bool isAlive() const {
