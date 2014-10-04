@@ -1126,7 +1126,7 @@ Group::spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options, un
 		done = done
 			|| (processLowerLimitsSatisfied() && getWaitlist.empty())
 			|| processUpperLimitsReached()
-			|| pool->atFullCapacity(false);
+			|| pool->atFullCapacityUnlocked();
 		m_spawning = !done;
 		if (done) {
 			P_DEBUG("Spawn loop done");
@@ -1395,7 +1395,7 @@ Group::wakeUpGarbageCollector() {
 
 bool
 Group::poolAtFullCapacity() const {
-	return getPool()->atFullCapacity(false);
+	return getPool()->atFullCapacityUnlocked();
 }
 
 bool
