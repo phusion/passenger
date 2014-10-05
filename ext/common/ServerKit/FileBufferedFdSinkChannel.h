@@ -63,7 +63,7 @@ private:
 			} else {
 				errcode = errno;
 				unsigned int generation = self->generation;
-				self->feedError(errcode);
+				self->feedError(errcode, __FILE__, __LINE__);
 				if (generation != self->generation) {
 					return Channel::Result(0, true);
 				}
@@ -135,8 +135,8 @@ public:
 		FileBufferedChannel::feedWithoutRefGuard(data, size);
 	}
 
-	void feedError(int errcode) {
-		FileBufferedChannel::feedError(errcode);
+	void feedError(int errcode, const char *file = NULL, unsigned int line = 0) {
+		FileBufferedChannel::feedError(errcode, file, line);
 	}
 
 	/**

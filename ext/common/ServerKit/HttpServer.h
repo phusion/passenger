@@ -264,7 +264,7 @@ private:
 			}
 
 			// Done parsing.
-			SKC_TRACE(client, 2, "New request received");
+			SKC_TRACE(client, 2, "New request received: #" << (totalRequestsAccepted + 1));
 			headerParserStatePool.destroy(req->parserState.headerParser);
 			req->parserState.headerParser = NULL;
 

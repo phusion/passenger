@@ -70,8 +70,7 @@ sendHeaderToApp(Client *client, Request *req) {
 			// ForwardResponse.cpp will now forward the response data and end the
 			// request when it's done.
 			UPDATE_TRACE_POINT();
-			assert(!req->appSink.ended());
-			assert(req->appSink.hasError());
+			assert(req->appSink.ended() || req->appSink.hasError());
 			logAppSocketWriteError(client, req->appSink.getErrcode());
 			req->state = Request::WAITING_FOR_APP_OUTPUT;
 			req->appSource.startReading();

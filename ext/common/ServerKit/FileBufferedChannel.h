@@ -50,6 +50,8 @@ using namespace std;
 
 #define FBC_DEBUG(expr) \
 	P_TRACE(3, "[FBC " << (void *) this << "] " << expr)
+#define FBC_DEBUG_WITH_POS(file, line, expr) \
+	P_TRACE_WITH_POS(3, file, line, "[FBC " << (void *) this << "] " << expr)
 #define FBC_DEBUG_FROM_STATIC(expr) \
 	P_TRACE(3, "[FBC " << (void *) self << "] " << expr)
 
@@ -648,7 +650,7 @@ private:
 				terminateReaderBecauseOfEOF();
 			}
 		} else {
-			setError(req->errorno);
+			setError(req->errorno, __FILE__, __LINE__);
 		}
 		return 0;
 	}
@@ -797,7 +799,7 @@ private:
 				self->createBufferFile();
 				self->verifyInvariants();
 			} else {
-				self->setError(req->errorno);
+				self->setError(req->errorno, __FILE__, __LINE__);
 			}
 		}
 		return 0;
@@ -919,7 +921,7 @@ private:
 			FBC_DEBUG_FROM_STATIC("Writer: file write failed");
 			delete moveContext;
 			self->inFileMode->writerState = WS_TERMINATED;
-			self->setError(req->errorno);
+			self->setError(req->errorno, __FILE__, __LINE__);
 		}
 		return 0;
 	}
@@ -927,13 +929,13 @@ private:
 
 	/***** Misc *****/
 
-	void setError(int errcode) {
+	void setError(int errcode, const char *file, unsigned int line) {
 		if (mode >= ERROR) {
 			return;
 		}
 
-		FBC_DEBUG("Reader: setting error: errno=" << errcode <<
-			" (" << getErrorDesc(errcode) << ")");
+		FBC_DEBUG_WITH_POS(file, line, "Setting error: errno=" <<
+			errcode << " (" << getErrorDesc(errcode) << ")");
 		cancelReader();
 		if (mode == IN_FILE_MODE) {
 			cancelWriter();
@@ -1147,8 +1149,14 @@ public:
 		feedWithoutRefGuard(MemoryKit::mbuf(data, size));
 	}
 
-	void feedError(int errcode) {
-		setError(errcode);
+	void feedError(int errcode, const char *file = NULL, unsigned int line = 0) {
+		if (file == NULL) {
+			file = __FILE__;
+		}
+		if (line == 0) {
+			line = __LINE__;
+		}
+		setError(errcode, file, line);
 	}
 
 	void reinitialize() {

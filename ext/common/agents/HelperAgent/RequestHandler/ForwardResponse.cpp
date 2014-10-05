@@ -179,6 +179,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 					return Channel::Result(event.consumed, false);
 				case ServerKit::HttpChunkedEvent::END:
 					assert(event.end);
+					SKC_TRACE(client, 2, "End of application response body reached");
 					resp->aux.bodyInfo.endReached = true;
 					endRequest(&client, &req);
 					return Channel::Result(event.consumed, true);
@@ -200,6 +201,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 					return Channel::Result(event.consumed, false);
 				case ServerKit::HttpChunkedEvent::END:
 					assert(event.end);
+					SKC_TRACE(client, 2, "End of application response body reached");
 					resp->aux.bodyInfo.endReached = true;
 					writeResponse(client, MemoryKit::mbuf(buffer, 0, event.consumed));
 					if (!req->ended()) {

@@ -83,7 +83,7 @@ public:
 
 	// Enum values are deliberately chosen so that hasBody() can be branchless.
 	enum BodyType {
-		/** The request has no body. */
+		/** The request has no body and the connection will not be upgraded. */
 		RBT_NO_BODY = 0,
 		/** The connection has been upgraded. */
 		RBT_UPGRADE = 1,
