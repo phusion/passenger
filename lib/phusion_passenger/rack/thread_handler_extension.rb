@@ -44,6 +44,7 @@ module ThreadHandlerExtension
 	CONTENT_LENGTH_HEADER     = "Content-Length"      # :nodoc:
 	CONTENT_LENGTH_HEADER_AND_SEPARATOR      = "Content-Length: " # :nodoc
 	TRANSFER_ENCODING_HEADER_AND_VALUE_CRLF2 = "Transfer-Encoding: chunked\r\n\r\n" # :nodoc:
+	CONNECTION_CLOSE_CRLF     = "Connection: close\r\n"     # :nodoc:
 	HTTPS          = "HTTPS"  # :nodoc:
 	HTTPS_DOWNCASE = "https"  # :nodoc:
 	HTTP           = "http"   # :nodoc:
@@ -104,11 +105,13 @@ module ThreadHandlerExtension
 	end
 
 private
+	# The code here is ugly, but it's necessary for performance.
 	def process_body(env, connection, socket_wrapper, status, headers, body)
 		if hijack_callback = headers[RACK_HIJACK]
 			# Application requested a partial socket hijack.
 			body = nil
 			headers_output = generate_headers_array(status, headers)
+			headers_output << "Connection: close\r\n"
 			headers_output << CRLF
 			connection.writev(headers_output)
 			connection.flush
@@ -122,6 +125,7 @@ private
 			body = body.to_a
 			output_body = should_output_body?(status)
 			headers_output = generate_headers_array(status, headers)
+			perform_keep_alive(env, headers_output)
 			if output_body && should_add_message_length_header?(status, headers)
 				body_size = 0
 				body.each { |part| body_size += bytesize(part.to_s) }
@@ -139,6 +143,7 @@ private
 		elsif body.is_a?(String)
 			output_body = should_output_body?(status)
 			headers_output = generate_headers_array(status, headers)
+			perform_keep_alive(env, headers_output)
 			if output_body && should_add_message_length_header?(status, headers)
 				headers_output << CONTENT_LENGTH_HEADER_AND_SEPARATOR
 				headers_output << bytesize(body).to_s
@@ -153,6 +158,7 @@ private
 		else
 			output_body = should_output_body?(status)
 			headers_output = generate_headers_array(status, headers)
+			perform_keep_alive(env, headers_output)
 			chunk = output_body && should_add_message_length_header?(status, headers)
 			if chunk
 				headers_output << TRANSFER_ENCODING_HEADER_AND_VALUE_CRLF2
@@ -188,10 +194,7 @@ private
 
 	def generate_headers_array(status, headers)
 		status_str = status.to_s
-		result = [
-			"HTTP/1.1 #{status_str} Whatever\r\n",
-			STATUS, status_str, CRLF
-		]
+		result = ["HTTP/1.1 #{status_str} Whatever\r\n"]
 		headers.each do |key, values|
 			if values.is_a?(String)
 				values = values.split(NEWLINE)
@@ -208,6 +211,14 @@ private
 			end
 		end
 		return result
+	end
+
+	def perform_keep_alive(env, headers)
+		if @can_keepalive
+			@keepalive_performed = true
+		else
+			headers << CONNECTION_CLOSE_CRLF
+		end
 	end
 
 	def should_output_body?(status)

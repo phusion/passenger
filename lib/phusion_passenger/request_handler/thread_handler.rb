@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -46,6 +46,7 @@ class ThreadHandler
 	OOBW           = 'OOBW'.freeze
 	PASSENGER_CONNECT_PASSWORD  = 'PASSENGER_CONNECT_PASSWORD'.freeze
 	CONTENT_LENGTH = 'CONTENT_LENGTH'.freeze
+	TRANSFER_ENCODING = 'TRANSFER_ENCODING'.freeze
 
 	MAX_HEADER_SIZE = 128 * 1024
 
@@ -123,7 +124,12 @@ private
 		@stats_mutex.synchronize do
 			@interruptable = true
 		end
-		connection = socket_wrapper.wrap(@server_socket.accept)
+		if @last_connection
+			connection = @last_connection
+			@last_connection = nil
+		else
+			connection = socket_wrapper.wrap(@server_socket.accept)
+		end
 		@stats_mutex.synchronize do
 			@interruptable = false
 			@iteration    += 1
@@ -133,7 +139,9 @@ private
 		if headers = parse_request(connection, channel, buffer)
 			prepare_request(connection, headers)
 			begin
-				if headers[REQUEST_METHOD] == PING
+				if headers[REQUEST_METHOD] == GET
+					process_request(headers, connection, socket_wrapper, @protocol == :http)
+				elsif headers[REQUEST_METHOD] == PING
 					process_ping(headers, connection)
 				elsif headers[REQUEST_METHOD] == OOBW
 					process_oobw(headers, connection)
@@ -172,10 +180,11 @@ private
 			raise e if should_reraise_error?(e)
 		end
 	ensure
-		# The 'close_write' here prevents forked child
-		# processes from unintentionally keeping the
-		# connection open.
-		if connection && !connection.closed?
+		# Close connection if keep-alive not possible
+		if connection && !connection.closed? && !@last_connection
+			# The 'close_write' here prevents forked child
+			# processes from unintentionally keeping the
+			# connection open.
 			begin
 				connection.close_write
 			rescue SystemCallError, IOError
@@ -276,6 +285,10 @@ private
 #	end
 
 	def prepare_request(connection, headers)
+		@can_keepalive = !headers.has_key?(TRANSFER_ENCODING) &&
+			!headers.has_key?(CONTENT_LENGTH)
+		@keepalive_performed = false
+
 		if @union_station_core && headers[PASSENGER_TXN_ID]
 			txn_id = headers[PASSENGER_TXN_ID]
 			union_station_key = headers[PASSENGER_UNION_STATION_KEY]
@@ -353,6 +366,11 @@ private
 					raise if !exception_occurred
 				end
 			end
+		end
+
+		if !has_error && @keepalive_performed
+			trace(3, "Keep-aliving connection.")
+			@last_connection = connection
 		end
 
 		#################

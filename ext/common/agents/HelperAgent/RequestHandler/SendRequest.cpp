@@ -41,7 +41,7 @@ sendHeaderToApp(Client *client, Request *req) {
 	 */
 	if (req->session->getProtocol() == "session") {
 		UPDATE_TRACE_POINT();
-		req->halfCloseAppConnection = true;
+		req->halfCloseAppConnection = req->bodyType != Request::RBT_NO_BODY;
 		sendHeaderToAppWithSessionProtocol(client, req);
 	} else {
 		UPDATE_TRACE_POINT();

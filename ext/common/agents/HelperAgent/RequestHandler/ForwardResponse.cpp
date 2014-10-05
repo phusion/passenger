@@ -133,10 +133,12 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 				writeResponse(client, MemoryKit::mbuf(buffer, 0, remaining));
 				if (!req->ended() && resp->bodyFullyRead()) {
 					SKC_TRACE(client, 2, "End of application response body reached");
+					keepAliveAppConnection(client, req);
 					endRequest(&client, &req);
 				}
 			} else {
 				SKC_TRACE(client, 2, "End of application response body reached");
+				keepAliveAppConnection(client, req);
 				endRequest(&client, &req);
 			}
 			return Channel::Result(remaining, false);
@@ -144,6 +146,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			// EOF
 			if (resp->bodyFullyRead()) {
 				SKC_TRACE(client, 2, "Application sent EOF");
+				keepAliveAppConnection(client, req);
 				endRequest(&client, &req);
 			} else {
 				SKC_WARN(client, "Application sent EOF before finishing response body: " <<
@@ -181,6 +184,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 					assert(event.end);
 					SKC_TRACE(client, 2, "End of application response body reached");
 					resp->aux.bodyInfo.endReached = true;
+					keepAliveAppConnection(client, req);
 					endRequest(&client, &req);
 					return Channel::Result(event.consumed, true);
 				case ServerKit::HttpChunkedEvent::ERROR:
@@ -203,6 +207,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 					assert(event.end);
 					SKC_TRACE(client, 2, "End of application response body reached");
 					resp->aux.bodyInfo.endReached = true;
+					keepAliveAppConnection(client, req);
 					writeResponse(client, MemoryKit::mbuf(buffer, 0, event.consumed));
 					if (!req->ended()) {
 						endRequest(&client, &req);
@@ -243,6 +248,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 		} else if (errcode == 0 || errcode == ECONNRESET) {
 			// EOF
 			SKC_TRACE(client, 2, "Application sent EOF");
+			req->session->close(true, false);
 			endRequest(&client, &req);
 			return Channel::Result(0, false);
 		} else {
@@ -291,6 +297,7 @@ onAppResponseBegin(Client *client, Request *req) {
 	}
 
 	if (!req->ended() && !resp->hasBody()) {
+		keepAliveAppConnection(client, req);
 		endRequest(&client, &req);
 	}
 }
@@ -622,4 +629,9 @@ static unsigned int formatAppResponseChunkedBodyParserLoggingPrefix(char *buf,
 void prepareAppResponseChunkedBodyParsing(Client *client, Request *req) {
 	P_ASSERT_EQ(req->appResponse.bodyType, AppResponse::RBT_CHUNKED);
 	createAppResponseChunkedBodyParser(req).initialize();
+}
+
+OXT_FORCE_INLINE void
+keepAliveAppConnection(Client *client, Request *req) {
+	req->session->close(true, req->appResponse.wantKeepAlive);
 }
