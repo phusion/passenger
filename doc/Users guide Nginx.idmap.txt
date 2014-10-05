@@ -202,7 +202,9 @@
 
 7.5.12. passenger_memory_limit <integer>	=>	passenger-memory-limit-integer--1ry7dwx
 
-7.5.13. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
+7.5.13. passenger_stat_throttle_rate <integer>	=>	passenger-stat-throttle-rate-integer--xzjbry
+
+7.5.14. passenger_pre_start <url>	=>	passenger-pre-start-url--npldeb
 
 7.6. Connection handling options	=>	connection-handling-options-8jgq90
 
