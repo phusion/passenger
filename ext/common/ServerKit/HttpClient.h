@@ -46,10 +46,12 @@ public:
 	 *         currentRequest->httpState != HttpRequest::IN_FREELIST
 	 */
 	Request *currentRequest;
+	unsigned int requestsAccepted;
 
 	BaseHttpClient(void *server)
 		: BaseClient(server),
-		  currentRequest(NULL)
+		  currentRequest(NULL),
+		  requestsAccepted(0)
 		{ }
 };
 

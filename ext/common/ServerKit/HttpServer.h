@@ -945,6 +945,7 @@ protected:
 
 	virtual void onRequestBegin(Client *client, Request *req) {
 		totalRequestsAccepted++;
+		client->requestsAccepted++;
 	}
 
 	virtual Channel::Result onRequestBody(Client *client, Request *req,
@@ -1058,6 +1059,7 @@ public:
 		if (client->currentRequest) {
 			doc["current_request"] = inspectRequestStateAsJson(client->currentRequest);
 		}
+		doc["requests_accepted"] = client->requestsAccepted;
 		doc["ended_request_count"] = client->endedRequestCount;
 		return doc;
 	}
