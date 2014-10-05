@@ -37,6 +37,7 @@
 #include <ApplicationPool2/Common.h>
 #include <Utils/SmallVector.h>
 #include <Utils/IOUtils.h>
+#include <Utils/ScopeGuard.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -86,6 +87,9 @@ private:
 		connection.fd = connectToServer(address);
 		connection.fail = true;
 		connection.persistent = false;
+		FdGuard guard(connection.fd);
+		setNonBlocking(connection.fd);
+		guard.clear();
 		return connection;
 	}
 
