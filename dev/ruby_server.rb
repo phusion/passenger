@@ -22,14 +22,16 @@ class TestServer
 		"Content-Length: 3\r\n" <<
 		"Connection: keep-alive\r\n" <<
 		"\r\n" <<
-		"ok\n"  
+		"ok\n"
 
 	def initialize(options = {})
 		@options = options
 		@options[:transport] ||= :tcp
+		@options[:protocol] ||= :http
 		@options[:port] ||= 3000
 		@options[:file] ||= './socket'
 		@options[:threads] ||= 2
+		@options[:processes] ||= 2
 		@forward = @options[:forward]
 		@forward_transport = @options[:forward_transport]
 		@forward_file = @options[:forward_file]
@@ -49,6 +51,18 @@ class TestServer
 		else
 			abort "Unknown transport #{@options[:transport]}"
 		end
+		@server.listen(100)
+
+		case @options[:protocol]
+		when :http
+			puts "Using HTTP protocol"
+			@protocol = :http
+		when :session
+			puts "Using session protocol"
+			@protocol = :session
+		else
+			abort "Unknown protocol #{@options[:protocol]}"
+		end
 
 		if @forward
 			case @forward_transport
@@ -59,13 +73,52 @@ class TestServer
 			end
 		end
 
-		puts "Using #{@options[:threads]} threads"
+		puts "Using #{@options[:processes]} processes"
+		puts "Using #{@options[:threads]} threads per process"
+		fork_children
 		threads = []
 		@options[:threads].times { threads << start_thread }
-		threads.each { |t| t.join }
+		begin
+			threads.each { |t| t.join }
+		rescue Interrupt
+		end
 	end
 
 private
+	def fork_children
+		if @options[:processes] == 1
+			return
+		end
+
+		children = []
+		@options[:processes].times do
+			pid = fork
+			if pid
+				# Parent
+				puts "Spawned child process: #{pid}"
+				children << pid
+			else
+				return
+			end
+		end
+		if !children.empty?
+			# Parent
+			begin
+				sleep 999999
+			rescue Interrupt
+				exit
+			ensure
+				children.each do |pid|
+					puts "Reaping child process: #{pid}"
+					Process.kill('INT', pid)
+				end
+				children.each do |pid|
+					Process.waitpid(pid)
+				end
+			end
+		end
+	end
+
 	def start_thread
 		Thread.new do
 			Thread.current.abort_on_exception = true
@@ -81,12 +134,10 @@ private
 	def handle_next_client(forward_connection)
 		client = @server.accept
 		begin
+			buffer = "".force_encoding("binary")
 			while true
 				begin
-					# Read request
-					while client.readline != "\r\n"
-						# Do nothing
-					end
+					read_header(client, buffer)
 
 					if @forward
 						forward(forward_connection)
@@ -100,6 +151,20 @@ private
 			end
 		ensure
 			client.close
+		end
+	end
+
+	def read_header(client, buffer)
+		if @protocol == :http
+			while client.readline != "\r\n"
+				# Do nothing.
+			end
+		else
+			temp = client.read(4, buffer)
+			raise EOFError if temp.nil?
+			size = temp.unpack('N')[0]
+			temp = client.read(size, buffer)
+			raise EOFError if temp.nil?
 		end
 	end
 
@@ -131,11 +196,10 @@ private
 end
 
 options = {}
-options = {}
 parser = OptionParser.new do |opts|
 	opts.banner = "Usage: ./ruby.rb [options]"
 	opts.separator ""
-	
+
 	opts.separator "Options:"
 	opts.on("--port PORT", Integer, "Listen on the given TCP port. Default: 3000") do |val|
 		options[:transport] = :tcp
@@ -145,8 +209,14 @@ parser = OptionParser.new do |opts|
 		options[:transport] = :unix
 		options[:file] = val
 	end
+	opts.on("--session-protocol", "Accept session protocol instead of HTTP") do
+		options[:protocol] = :session
+	end
 	opts.on("--threads N", Integer, "Number of threads to use. Default: 2") do |val|
 		options[:threads] = val
+	end
+	opts.on("--processes N", Integer, "Number of processes to use. Default: 2") do |val|
+		options[:processes] = val
 	end
 	opts.on("--forward-tcp PORT", Integer, "Forward request to another TCP server") do |val|
 		options[:forward] = true
