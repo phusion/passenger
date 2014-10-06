@@ -34,6 +34,8 @@ namespace Passenger {
 // TODO: use streaming murmurhash implementation: https://github.com/c9/murmur3
 
 struct JenkinsHash {
+	static const boost::uint32_t EMPTY_STRING_HASH = 0;
+
 	boost::uint32_t hash;
 
 	JenkinsHash()
