@@ -233,7 +233,7 @@ private:
 		TRACE_POINT();
 		unsigned int acceptCount = 0;
 		bool error = false;
-		int fd, errcode;
+		int fd, errcode = 0;
 		Client *client;
 		Client *acceptedClients[MAX_ACCEPT_BURST_COUNT];
 

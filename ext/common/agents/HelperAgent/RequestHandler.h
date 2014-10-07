@@ -187,7 +187,7 @@ private:
 	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
 
 	unsigned int statThrottleRate;
-	BenchmarkMode benchmarkMode: 2;
+	BenchmarkMode benchmarkMode: 3;
 	bool singleAppMode: 1;
 	bool showVersionInHeader: 1;
 

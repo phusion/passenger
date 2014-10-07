@@ -65,14 +65,14 @@ public:
 	/* Last field from BASE_CLIENT_FOOTER is an int, so we put an */ \
 	/* unsigned int here first to avoid an alignment hole on x86_64. */ \
 	unsigned int endedRequestCount; \
-	BaseHttpClient<RequestType>::RequestList endedRequests
+	Passenger::ServerKit::BaseHttpClient<RequestType>::RequestList endedRequests
 
 #define DEFINE_SERVER_KIT_BASE_HTTP_CLIENT_FOOTER_FOR_TEMPLATE_CLASS(ClientType, RequestType) \
 	DEFINE_SERVER_KIT_BASE_CLIENT_FOOTER(ClientType); \
 	/* Last field from BASE_CLIENT_FOOTER is an int, so we put an */ \
 	/* unsigned int here first to avoid an alignment hole on x86_64. */ \
 	unsigned int endedRequestCount; \
-	typename BaseHttpClient<RequestType>::RequestList endedRequests
+	typename Passenger::ServerKit::BaseHttpClient<RequestType>::RequestList endedRequests
 
 
 template<typename Request = HttpRequest>
