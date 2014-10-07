@@ -29,6 +29,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/move/move.hpp>
+#include <boost/atomic.hpp>
 #include <sys/types.h>
 #include <eio.h>
 #include <cassert>
@@ -191,6 +192,47 @@ public:
 
 
 private:
+	struct IOContext {
+		FileBufferedChannel *self;
+		SafeLibevPtr libev;
+		eio_req *req;
+		boost::atomic<bool> canceled;
+
+		eio_ssize_t result;
+		int errcode;
+
+		IOContext(FileBufferedChannel *_self)
+			: self(_self),
+			  libev(_self->ctx->libev),
+			  req(NULL),
+			  canceled(false),
+			  result(-1),
+			  errcode(-1)
+			{ }
+
+		virtual ~IOContext() { }
+
+		void cancel() {
+			if (req != NULL) {
+				eio_cancel(req);
+			}
+			canceled.store(true, boost::memory_order_release);
+		}
+
+		bool isCanceled() const {
+			return (req != NULL && EIO_CANCELLED(req))
+				|| canceled.load(boost::memory_order_acquire);
+		}
+
+		void eioFinished() {
+			result = req->result;
+			errcode = req->errorno;
+			req = NULL;
+		}
+	};
+
+	struct ReadContext;
+
 	/**
 	 * Holds all states for the in-file mode. Reasons why this is a separate
 	 * structure:
@@ -242,7 +284,7 @@ private:
 		 * @invariant
 		 *     (readRequest != NULL) == (readerState == RS_READING_FROM_FILE)
 		 */
-		eio_req *readRequest;
+		ReadContext *readRequest;
 
 
 		/***** Writer state *****/
@@ -256,7 +298,7 @@ private:
 		 * @invariant
 		 *     (writerRequest != NULL) == (writerState == WS_CREATING_FILE || writerState == WS_MOVING)
 		 */
-		eio_req *writerRequest;
+		IOContext *writerRequest;
 
 		/**
 		 * Number of bytes already read from the file by the reader.
@@ -577,12 +619,15 @@ private:
 		terminateReaderBecauseOfEOF();
 	}
 
-	struct ReadContext {
-		FileBufferedChannel *self;
+	struct ReadContext: public IOContext {
 		MemoryKit::mbuf buffer;
 		// Smart pointer to keep fd open until eio operation
 		// is finished.
 		boost::shared_ptr<InFileMode> inFileMode;
+
+		ReadContext(FileBufferedChannel *self)
+			: IOContext(self)
+			{ }
 	};
 
 	void readNextChunkFromFile() {
@@ -591,42 +636,61 @@ private:
 			ctx->mbuf_pool.mbuf_block_offset);
 		FBC_DEBUG("Reader: reading next chunk from file");
 		verifyInvariants();
-		ReadContext *readContext = new ReadContext();
-		readContext->self = this;
+		ReadContext *readContext = new ReadContext(this);
 		readContext->buffer = MemoryKit::mbuf_get(&ctx->mbuf_pool);
 		readContext->inFileMode = inFileMode;
 		readerState = RS_READING_FROM_FILE;
-		inFileMode->readRequest = eio_read(inFileMode->fd, readContext->buffer.start,
+		inFileMode->readRequest = readContext;
+		readContext->req = eio_read(inFileMode->fd, readContext->buffer.start,
 			size, inFileMode->readOffset, 0, _nextChunkDoneReading, readContext);
 		verifyInvariants();
 	}
 
 	static int _nextChunkDoneReading(eio_req *req) {
 		ReadContext *readContext = (ReadContext *) req->data;
-		if (EIO_CANCELLED(req)) {
+		readContext->eioFinished();
+		if (readContext->isCanceled()) {
 			delete readContext;
 			return 0;
 		}
 
-		MemoryKit::mbuf buffer(boost::move(readContext->buffer));
-		FileBufferedChannel *self = readContext->self;
-		delete readContext;
-		return self->nextChunkDoneReading(req, buffer);
+		if (readContext->libev->onEventLoopThread()) {
+			_nextChunkDoneReading_onEventLoopThread(readContext);
+		} else {
+			readContext->libev->runLater(boost::bind(
+				_nextChunkDoneReading_onEventLoopThread,
+				readContext));
+		}
+		return 0;
 	}
 
-	int nextChunkDoneReading(eio_req *req, MemoryKit::mbuf &buffer) {
+	static void _nextChunkDoneReading_onEventLoopThread(ReadContext *readContext) {
+		if (readContext->isCanceled()) {
+			delete readContext;
+			return;
+		}
+
+		FileBufferedChannel *self = readContext->self;
+		self->nextChunkDoneReading(readContext);
+	}
+
+	void nextChunkDoneReading(ReadContext *readContext) {
 		RefGuard guard(hooks, this, __FILE__, __LINE__);
 
 		FBC_DEBUG("Reader: done reading chunk");
 		P_ASSERT_EQ(readerState, RS_READING_FROM_FILE);
 		verifyInvariants();
+		int fd = readContext->result;
+		int errcode = readContext->errcode;
+		MemoryKit::mbuf buffer(boost::move(readContext->buffer));
+		delete readContext;
 		inFileMode->readRequest = NULL;
 
-		if (req->result != -1) {
+		if (fd != -1) {
 			unsigned int generation = this->generation;
 
-			assert(req->result <= inFileMode->written);
-			buffer = MemoryKit::mbuf(buffer, 0, req->result);
+			assert(fd <= inFileMode->written);
+			buffer = MemoryKit::mbuf(buffer, 0, fd);
 			inFileMode->readOffset += buffer.size();
 			inFileMode->written -= buffer.size();
 
@@ -636,7 +700,7 @@ private:
 			if (generation != this->generation || mode >= ERROR) {
 				// Callback deinitialized this object, or callback
 				// called a method that encountered an error.
-				return 0;
+				return;
 			}
 			P_ASSERT_EQ(readerState, RS_FEEDING);
 			verifyInvariants();
@@ -650,9 +714,8 @@ private:
 				terminateReaderBecauseOfEOF();
 			}
 		} else {
-			setError(req->errorno, __FILE__, __LINE__);
+			setError(errcode, __FILE__, __LINE__);
 		}
-		return 0;
 	}
 
 	// Returns (mbuf, found).
@@ -718,9 +781,12 @@ private:
 
 	/***** File creator *****/
 
-	struct FileCreationContext {
-		FileBufferedChannel *self;
+	struct FileCreationContext: public IOContext {
 		string path;
+
+		FileCreationContext(FileBufferedChannel *self)
+			: IOContext(self)
+			{ }
 	};
 
 	void createBufferFile() {
@@ -728,88 +794,138 @@ private:
 		P_ASSERT_EQ(inFileMode->writerState, WS_INACTIVE);
 		P_ASSERT_EQ(inFileMode->fd, -1);
 
-		FileCreationContext *fcContext = new FileCreationContext();
-		fcContext->self = this;
+		FileCreationContext *fcContext = new FileCreationContext(this);
 		fcContext->path = config->bufferDir;
 		fcContext->path.append("/buffer.");
 		fcContext->path.append(toString(rand()));
 
 		inFileMode->writerState = WS_CREATING_FILE;
+		inFileMode->writerRequest = fcContext;
+
 		if (config->delayInFileModeSwitching == 0) {
 			FBC_DEBUG("Writer: creating file " << fcContext->path);
-			inFileMode->writerRequest = eio_open(fcContext->path.c_str(),
+			fcContext->req = eio_open(fcContext->path.c_str(),
 				O_RDWR | O_CREAT | O_EXCL, 0600, 0,
-				bufferFileCreated, fcContext);
+				_bufferFileCreated, fcContext);
 		} else {
 			FBC_DEBUG("Writer: delaying in-file mode switching for " <<
 				config->delayInFileModeSwitching << "ms");
-			inFileMode->writerRequest = eio_busy(
+			fcContext->req = eio_busy(
 				(eio_tstamp) config->delayInFileModeSwitching / 1000.0,
-				0, bufferFileDoneDelaying, fcContext);
+				0, _bufferFileDoneDelaying, fcContext);
 		}
 	}
 
-	static int bufferFileDoneDelaying(eio_req *req) {
+	static int _bufferFileDoneDelaying(eio_req *req) {
 		FileCreationContext *fcContext = static_cast<FileCreationContext *>(req->data);
-		FileBufferedChannel *self = fcContext->self;
-
-		if (EIO_CANCELLED(req)) {
-			FBC_DEBUG_FROM_STATIC("Writer: creation of file " << fcContext->path <<
-				"canceled. Deleting file in the background");
-			eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
+		fcContext->eioFinished();
+		if (fcContext->isCanceled()) {
+			delete fcContext;
 			return 0;
 		}
 
-		FBC_DEBUG_FROM_STATIC("Writer: done delaying in-file mode switching. "
-			"Creating file: " << fcContext->path);
-		self->inFileMode->writerRequest = eio_open(fcContext->path.c_str(),
-			O_RDWR | O_CREAT | O_EXCL, 0600, 0,
-			bufferFileCreated, fcContext);
+		if (fcContext->libev->onEventLoopThread()) {
+			_bufferFileDoneDelaying_onEventLoopThread(fcContext);
+		} else {
+			fcContext->libev->runLater(boost::bind(
+				_bufferFileDoneDelaying_onEventLoopThread,
+				fcContext));
+		}
 		return 0;
 	}
 
-	static int bufferFileCreated(eio_req *req) {
-		FileCreationContext *fcContext = static_cast<FileCreationContext *>(req->data);
-		FileBufferedChannel *self = fcContext->self;
+	static void _bufferFileDoneDelaying_onEventLoopThread(FileCreationContext *fcContext) {
+		if (fcContext->isCanceled()) {
+			delete fcContext;
+			return;
+		}
 
-		if (EIO_CANCELLED(req)) {
+		FileBufferedChannel *self = fcContext->self;
+		self->bufferFileDoneDelaying(fcContext);
+	}
+
+	void bufferFileDoneDelaying(FileCreationContext *fcContext) {
+		FBC_DEBUG("Writer: done delaying in-file mode switching. "
+			"Creating file: " << fcContext->path);
+		fcContext->req = eio_open(fcContext->path.c_str(),
+			O_RDWR | O_CREAT | O_EXCL, 0600, 0,
+			_bufferFileCreated, fcContext);
+	}
+
+	static int _bufferFileCreated(eio_req *req) {
+		FileCreationContext *fcContext = static_cast<FileCreationContext *>(req->data);
+		fcContext->eioFinished();
+		if (fcContext->isCanceled()) {
 			if (req->result != -1) {
+				FileBufferedChannel *self = fcContext->self;
 				FBC_DEBUG_FROM_STATIC("Writer: creation of file " << fcContext->path <<
 					"canceled. Deleting file in the background");
 				eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
 				eio_close(req->result, 0, NULL, NULL);
+			} else {
+				delete fcContext;
 			}
 			return 0;
 		}
 
-		P_ASSERT_EQ(self->inFileMode->writerState, WS_CREATING_FILE);
-		self->verifyInvariants();
-		self->inFileMode->writerRequest = NULL;
-
-		if (req->result != -1) {
-			FBC_DEBUG_FROM_STATIC("Writer: file created. Deleting file in the background");
-			eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
-			self->inFileMode->fd = req->result;
-			self->moveNextBufferToFile();
+		if (fcContext->libev->onEventLoopThread()) {
+			_bufferFileCreated_onEventLoopThread(fcContext);
 		} else {
-			delete fcContext;
-			if (req->errorno == EEXIST) {
-				FBC_DEBUG_FROM_STATIC("Writer: file already exists, retrying");
-				self->inFileMode->writerState = WS_INACTIVE;
-				self->createBufferFile();
-				self->verifyInvariants();
-			} else {
-				self->setError(req->errorno, __FILE__, __LINE__);
-			}
+			fcContext->libev->runLater(boost::bind(
+				_bufferFileCreated_onEventLoopThread,
+				fcContext));
 		}
 		return 0;
+	}
+
+	static void _bufferFileCreated_onEventLoopThread(FileCreationContext *fcContext) {
+		if (fcContext->isCanceled()) {
+			if (fcContext->result != -1) {
+				FileBufferedChannel *self = fcContext->self;
+				FBC_DEBUG_FROM_STATIC("Writer: creation of file " << fcContext->path <<
+					"canceled. Deleting file in the background");
+				eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
+				eio_close(fcContext->result, 0, NULL, NULL);
+			} else {
+				delete fcContext;
+			}
+			return;
+		}
+
+		FileBufferedChannel *self = fcContext->self;
+		self->bufferFileCreated(fcContext);
+	}
+
+	void bufferFileCreated(FileCreationContext *fcContext) {
+		P_ASSERT_EQ(inFileMode->writerState, WS_CREATING_FILE);
+		verifyInvariants();
+		int fd = fcContext->result;
+		int errcode = fcContext->errcode;
+		inFileMode->writerRequest = NULL;
+
+		if (fd != -1) {
+			FBC_DEBUG("Writer: file created. Deleting file in the background");
+			eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
+			inFileMode->fd = fd;
+			moveNextBufferToFile();
+		} else {
+			delete fcContext;
+			if (errcode == EEXIST) {
+				FBC_DEBUG("Writer: file already exists, retrying");
+				inFileMode->writerState = WS_INACTIVE;
+				createBufferFile();
+				verifyInvariants();
+			} else {
+				setError(errcode, __FILE__, __LINE__);
+			}
+		}
 	}
 
 	static int bufferFileUnlinked(eio_req *req) {
 		FileCreationContext *fcContext = static_cast<FileCreationContext *>(req->data);
 		FileBufferedChannel *self = fcContext->self;
 
-		if (EIO_CANCELLED(req)) {
+		if (fcContext->isCanceled()) {
 			delete fcContext;
 			return 0;
 		}
@@ -822,20 +938,22 @@ private:
 		}
 
 		delete fcContext;
-
 		return 0;
 	}
 
 
 	/***** Mover *****/
 
-	struct MoveContext {
-		FileBufferedChannel *self;
+	struct MoveContext: public IOContext {
 		// Smart pointer to keep fd open until eio operation
 		// is finished.
 		boost::shared_ptr<InFileMode> inFileMode;
 		MemoryKit::mbuf buffer;
 		size_t written;
+
+		MoveContext(FileBufferedChannel *self)
+			: IOContext(self)
+			{ }
 	};
 
 	void moveNextBufferToFile() {
@@ -856,74 +974,97 @@ private:
 		FBC_DEBUG("Writer: moving next buffer to file: " <<
 			peekBuffer().size() << " bytes");
 
-		MoveContext *moveContext = new MoveContext();
-		moveContext->self = this;
+		MoveContext *moveContext = new MoveContext(this);
 		moveContext->inFileMode = inFileMode;
 		moveContext->buffer = peekBuffer();
 		moveContext->written = 0;
 
 		inFileMode->writerState = WS_MOVING;
-		inFileMode->writerRequest = eio_write(inFileMode->fd,
+		inFileMode->writerRequest = moveContext;
+		moveContext->req = eio_write(inFileMode->fd,
 			moveContext->buffer.start,
 			moveContext->buffer.size(),
 			inFileMode->readOffset + inFileMode->written,
-			0, bufferWrittenToFile, moveContext);
+			0, _bufferWrittenToFile, moveContext);
 		verifyInvariants();
 	}
 
-	static int bufferWrittenToFile(eio_req *req) {
+	static int _bufferWrittenToFile(eio_req *req) {
 		MoveContext *moveContext = static_cast<MoveContext *>(req->data);
-		FileBufferedChannel *self = moveContext->self;
-
-		if (EIO_CANCELLED(req)) {
+		moveContext->eioFinished();
+		if (moveContext->isCanceled()) {
 			delete moveContext;
 			return 0;
 		}
 
-		P_ASSERT_EQ(self->mode, IN_FILE_MODE);
-		assert(!self->peekBuffer().empty());
-		self->verifyInvariants();
-		self->inFileMode->writerRequest = NULL;
+		if (moveContext->libev->onEventLoopThread()) {
+			_bufferWrittenToFile_onEventLoopThread(moveContext);
+		} else {
+			moveContext->libev->runLater(boost::bind(
+				_bufferWrittenToFile_onEventLoopThread,
+				moveContext));
+		}
+		return 0;
+	}
 
-		if (req->result != -1) {
-			moveContext->written += req->result;
+	static void _bufferWrittenToFile_onEventLoopThread(MoveContext *moveContext) {
+		if (moveContext->isCanceled()) {
+			delete moveContext;
+			return;
+		}
+
+		FileBufferedChannel *self = moveContext->self;
+		self->bufferWrittenToFile(moveContext);
+	}
+
+	void bufferWrittenToFile(MoveContext *moveContext) {
+		P_ASSERT_EQ(mode, IN_FILE_MODE);
+		P_ASSERT_EQ(inFileMode->writerState, WS_MOVING);
+		assert(!peekBuffer().empty());
+		verifyInvariants();
+
+		if (moveContext->result != -1) {
+			moveContext->written += moveContext->result;
 			assert(moveContext->written <= moveContext->buffer.size());
 
 			if (moveContext->written == moveContext->buffer.size()) {
 				// Write completed. Proceed with next buffer.
-				RefGuard guard(self->hooks, self, __FILE__, __LINE__);
-				unsigned int generation = self->generation;
+				RefGuard guard(hooks, this, __FILE__, __LINE__);
+				unsigned int generation = this->generation;
 
-				FBC_DEBUG_FROM_STATIC("Writer: move complete");
-				delete moveContext;
+				FBC_DEBUG("Writer: move complete");
+				assert(peekBuffer().size() == moveContext->buffer.size());
+				inFileMode->written += moveContext->buffer.size();
 
-				assert(self->peekBuffer().size() == moveContext->buffer.size());
-				self->inFileMode->written += moveContext->buffer.size();
-				self->popBuffer();
-				if (generation != self->generation || self->mode >= ERROR) {
+				popBuffer();
+				if (generation != this->generation || mode >= ERROR) {
 					// buffersFlushedCallback deinitialized this object, or callback
 					// called a method that encountered an error.
-					return 0;
+					delete moveContext;
+					return;
 				}
 
-				self->moveNextBufferToFile();
+				inFileMode->writerRequest = NULL;
+				delete moveContext;
+				moveNextBufferToFile();
 			} else {
-				FBC_DEBUG_FROM_STATIC("Writer: move incomplete, proceeding " <<
+				FBC_DEBUG("Writer: move incomplete, proceeding " <<
 					"with writing rest of buffer");
-				self->inFileMode->writerRequest = eio_write(self->inFileMode->fd,
+				moveContext->req = eio_write(inFileMode->fd,
 					moveContext->buffer.start + moveContext->written,
 					moveContext->buffer.size() - moveContext->written,
-					self->inFileMode->readOffset + self->inFileMode->written,
-					0, bufferWrittenToFile, moveContext);
-				self->verifyInvariants();
+					inFileMode->readOffset + inFileMode->written,
+					0, _bufferWrittenToFile, moveContext);
+				verifyInvariants();
 			}
 		} else {
-			FBC_DEBUG_FROM_STATIC("Writer: file write failed");
+			FBC_DEBUG("Writer: file write failed");
+			int errcode = moveContext->errcode;
 			delete moveContext;
-			self->inFileMode->writerState = WS_TERMINATED;
-			self->setError(req->errorno, __FILE__, __LINE__);
+			inFileMode->writerRequest = NULL;
+			inFileMode->writerState = WS_TERMINATED;
+			setError(errcode, __FILE__, __LINE__);
 		}
-		return 0;
 	}
 
 
@@ -974,7 +1115,7 @@ private:
 		case RS_WAITING_FOR_CHANNEL_IDLE:
 			break;
 		case RS_READING_FROM_FILE:
-			eio_cancel(inFileMode->readRequest);
+			inFileMode->readRequest->cancel();
 			inFileMode->readRequest = NULL;
 			break;
 		case RS_INACTIVE:
@@ -991,7 +1132,7 @@ private:
 			break;
 		case WS_CREATING_FILE:
 		case WS_MOVING:
-			eio_cancel(inFileMode->writerRequest);
+			inFileMode->writerRequest->cancel();
 			inFileMode->writerRequest = NULL;
 			break;
 		case WS_TERMINATED:
