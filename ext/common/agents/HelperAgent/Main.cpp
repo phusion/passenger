@@ -96,6 +96,18 @@ namespace ServerAgent {
 			{ }
 	};
 
+	struct AdminWorkingObjects {
+		BackgroundEventLoop *bgloop;
+		ServerKit::Context *serverKitContext;
+		AdminServer *adminServer;
+
+		AdminWorkingObjects()
+			: bgloop(NULL),
+			  serverKitContext(NULL),
+			  adminServer(NULL)
+			{ }
+	};
+
 	struct WorkingObjects {
 		int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		int adminServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
@@ -107,13 +119,15 @@ namespace ServerAgent {
 		UnionStation::CorePtr unionStationCore;
 		SpawnerConfigPtr spawnerConfig;
 		SpawnerFactoryPtr spawnerFactory;
+		PoolPtr appPool;
 
 		vector<ThreadWorkingObjects> threadWorkingObjects;
 		struct ev_signal sigintWatcher;
 		struct ev_signal sigtermWatcher;
 		struct ev_signal sigquitWatcher;
-		PoolPtr appPool;
-		ServerAgent::AdminServer *adminServer;
+
+		AdminWorkingObjects adminWorkingObjects;
+
 		EventFd exitEvent;
 		EventFd allClientsDisconnectedEvent;
 		unsigned int terminationCount;
@@ -121,8 +135,7 @@ namespace ServerAgent {
 		oxt::thread *prestarterThread;
 
 		WorkingObjects()
-			: adminServer(NULL),
-			  terminationCount(0),
+			: terminationCount(0),
 			  shutdownCounter(0)
 		{
 			for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
@@ -516,6 +529,7 @@ initializeNonPrivilegedWorkingObjects() {
 		wo->threadWorkingObjects.push_back(two);
 	}
 
+	UPDATE_TRACE_POINT();
 	ev_signal_init(&wo->sigquitWatcher, printInfo, SIGQUIT);
 	ev_signal_start(firstLoop->loop, &wo->sigquitWatcher);
 	ev_signal_init(&wo->sigintWatcher, onTerminationSignal, SIGINT);
@@ -525,15 +539,31 @@ initializeNonPrivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	if (!adminAddresses.empty()) {
-		wo->adminServer = new ServerAgent::AdminServer(
-			wo->threadWorkingObjects[0].serverKitContext);
-		// TODO: take care of multiple threads
-		// TODO: run adminServer on its own thread
-		wo->adminServer->requestHandler = wo->threadWorkingObjects[0].requestHandler;
-		wo->adminServer->appPool = wo->appPool;
-		wo->adminServer->exitEvent = &wo->exitEvent;
-		wo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
-		wo->adminServer->authorizations = wo->adminAuthorizations;
+		UPDATE_TRACE_POINT();
+		AdminWorkingObjects *awo = &wo->adminWorkingObjects;
+
+		awo->bgloop = new BackgroundEventLoop(true, false);
+		awo->serverKitContext = new ServerKit::Context(awo->bgloop->safe);
+		awo->serverKitContext->secureModePassword = wo->password;
+		// Configure a large threshold so that it uses libeio as little as possible.
+		// libeio runs on the RequestHandler's first thread, and if there's a
+		// problem there we don't want it to affect the admin server.
+		awo->serverKitContext->defaultFileBufferedChannelConfig.threshold = 1024 * 1024;
+		awo->serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
+			options.get("data_buffer_dir");
+
+		UPDATE_TRACE_POINT();
+		awo->adminServer = new ServerAgent::AdminServer(awo->serverKitContext);
+		awo->adminServer->requestHandlers.reserve(wo->threadWorkingObjects.size());
+		for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
+			awo->adminServer->requestHandlers.push_back(
+				wo->threadWorkingObjects[i].requestHandler);
+		}
+		awo->adminServer->appPool = wo->appPool;
+		awo->adminServer->exitEvent = &wo->exitEvent;
+		awo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
+		awo->adminServer->authorizations = wo->adminAuthorizations;
+
 		wo->shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
 	}
 
@@ -553,7 +583,7 @@ initializeNonPrivilegedWorkingObjects() {
 		}
 	}
 	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
-		wo->adminServer->listen(wo->adminServerFds[i]);
+		wo->adminWorkingObjects.adminServer->listen(wo->adminServerFds[i]);
 	}
 }
 
@@ -619,6 +649,9 @@ mainLoop() {
 		ThreadWorkingObjects *two = &workingObjects->threadWorkingObjects[i];
 		two->bgloop->start("Main event loop: thread " + toString(i + 1), 0);
 	}
+	if (workingObjects->adminWorkingObjects.adminServer != NULL) {
+		workingObjects->adminWorkingObjects.bgloop->start("Admin event loop", 0);
+	}
 	waitForExitEvent();
 }
 
@@ -629,9 +662,7 @@ shutdownRequestHandler(ThreadWorkingObjects *two) {
 
 static void
 shutdownAdminServer() {
-	if (workingObjects->adminServer != NULL) {
-		workingObjects->adminServer->shutdown();
-	}
+	workingObjects->adminWorkingObjects.adminServer->shutdown();
 }
 
 static void
@@ -704,7 +735,9 @@ waitForExitEvent() {
 			ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 			two->bgloop->safe->runLater(boost::bind(shutdownRequestHandler, two));
 		}
-		wo->threadWorkingObjects[0].bgloop->safe->runLater(shutdownAdminServer);
+		if (wo->adminWorkingObjects.adminServer != NULL) {
+			wo->adminWorkingObjects.bgloop->safe->runLater(shutdownAdminServer);
+		}
 
 		UPDATE_TRACE_POINT();
 		FD_ZERO(&fds);
@@ -732,6 +765,9 @@ cleanup() {
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 		two->bgloop->stop();
+	}
+	if (wo->adminWorkingObjects.adminServer != NULL) {
+		wo->adminWorkingObjects.bgloop->stop();
 	}
 	wo->appPool.reset();
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
