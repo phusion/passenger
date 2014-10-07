@@ -127,7 +127,9 @@ private
 		end
 		if @last_connection
 			connection = @last_connection
+			channel.io = connection
 			@last_connection = nil
+			headers = parse_request(connection, channel, buffer)
 		else
 			connection = socket_wrapper.wrap(@server_socket.accept)
 		end
@@ -136,8 +138,12 @@ private
 			@iteration    += 1
 		end
 		trace(3, "Accepted new request on socket #{@socket_name}")
-		channel.io = connection
-		if headers = parse_request(connection, channel, buffer)
+		if !headers
+			# New socket accepted, instead of keeping-alive an old one
+			channel.io = connection
+			headers = parse_request(connection, channel, buffer)
+		end
+		if headers
 			prepare_request(connection, headers)
 			begin
 				if headers[REQUEST_METHOD] == GET
