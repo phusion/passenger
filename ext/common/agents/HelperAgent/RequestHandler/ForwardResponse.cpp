@@ -271,7 +271,7 @@ onAppResponseBegin(Client *client, Request *req) {
 
 	// Localize hash table operations for better CPU caching.
 	oobw = resp->secureHeaders.lookup(PASSENGER_REQUEST_OOB_WORK) != NULL;
-	resp->hasDateHeader = resp->headers.lookup(HTTP_DATE) != NULL;
+	resp->date = resp->headers.lookup(HTTP_DATE);
 	resp->headers.erase(HTTP_CONNECTION);
 	resp->headers.erase(HTTP_STATUS);
 	if (req->dechunkResponse && resp->bodyType == AppResponse::RBT_CHUNKED) {
@@ -486,7 +486,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	}
 
 	// Add Date header. https://code.google.com/p/phusion-passenger/issues/detail?id=485
-	if (!resp->hasDateHeader) {
+	if (resp->date == NULL) {
 		unsigned int size;
 
 		if (buffers != NULL) {

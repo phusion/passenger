@@ -79,7 +79,11 @@ public:
 		 */
 		EXTENDED_DISABLED,
 		/**
-		 * The user completely disabled turbocaching.
+		 * The user requested turbocaching to be always on.
+		 */
+		USER_ENABLED,
+		/**
+		 * The user requested turbocaching to be always off.
 		 */
 		USER_DISABLED
 	};
@@ -87,85 +91,10 @@ public:
 	typedef ResponseCache<Request> ResponseCacheType;
 	typedef typename ResponseCache<Request>::Entry ResponseCacheEntryType;
 
+private:
 	State state;
 	unsigned long long iterations;
 	ev_tstamp lastTimeout, nextTimeout;
-	ResponseCache<Request> responseCache;
-
-	TurboCaching()
-		: state(DISABLED),
-		  iterations(0),
-		  lastTimeout((ev_tstamp) std::time(NULL)),
-		  nextTimeout((ev_tstamp) std::time(NULL) + DISABLED_TIMEOUT)
-		{ }
-
-	bool isEnabled() const {
-		return state == ENABLED;
-	}
-
-	// Called when the event loop multiplexor returns.
-	void onEventLoopCheck(ev_tstamp now) {
-		if (OXT_UNLIKELY(state == USER_DISABLED)) {
-			return;
-		}
-
-		iterations++;
-		if (OXT_LIKELY(now < nextTimeout)) {
-			return;
-		}
-
-		switch (state) {
-		case DISABLED:
-			if (iterations / (now - lastTimeout) >= (double) THRESHOLD) {
-				P_INFO("Server is under heavy load. Turbocaching enabled");
-				state = ENABLED;
-				nextTimeout = now + ENABLED_TIMEOUT;
-			} else {
-				P_DEBUG("Server is not under enough load. Not enabling turbocaching");
-				nextTimeout = now + DISABLED_TIMEOUT;
-			}
-			P_DEBUG("Activities per second: " << (iterations / (now - lastTimeout)));
-			break;
-		case ENABLED:
-			if (responseCache.getFetches() > 1
-			 && responseCache.getHitRatio() < MIN_HIT_RATIO())
-			{
-				P_INFO("Poor turbocaching hit ratio detected (" <<
-					responseCache.getHits() << " hits, " <<
-					responseCache.getFetches() << " fetches, " <<
-					(int) (responseCache.getHitRatio() * 100) <<
-					"%). Force disabling turbocaching "
-					"for " << EXTENDED_DISABLED_TIMEOUT << " seconds");
-				state = EXTENDED_DISABLED;
-				nextTimeout = now + EXTENDED_DISABLED_TIMEOUT;
-			} else {
-				if (iterations / (now - lastTimeout) >= (double) THRESHOLD) {
-					P_INFO("Clearing turbocache");
-					nextTimeout = now + ENABLED_TIMEOUT;
-				} else {
-					P_INFO("Server is no longer under heavy load. Disabling turbocaching");
-					state = DISABLED;
-					nextTimeout = now + DISABLED_TIMEOUT;
-				}
-				P_INFO("Activities per second: " << (iterations / (now - lastTimeout)));
-			}
-			responseCache.resetStatistics();
-			responseCache.clear();
-			break;
-		case EXTENDED_DISABLED:
-			P_INFO("Stopping force disabling turbocaching");
-			state = DISABLED;
-			nextTimeout = now + DISABLED;
-			break;
-		default:
-			P_BUG("Unknown state " << (int) state);
-			break;
-		}
-
-		iterations = 0;
-		lastTimeout = now;
-	}
-
 
 	struct ResponsePreparation {
 		Request *req;
@@ -222,7 +151,6 @@ public:
 		}
 
 		PUSH_STATIC_STRING("Age: ");
-		PUSH_STATIC_STRING("\r\n");
 		result += prep.ageValueSize;
 		if (output != NULL) {
 			integerToOtherBase<time_t, 10>(prep.age, pos, end - pos);
@@ -239,24 +167,142 @@ public:
 		if (server->canKeepAlive(req)) {
 			if (httpVersion < 1010) {
 				// HTTP < 1.1 defaults to "Connection: close"
-				PUSH_STATIC_STRING("Connection: keep-alive\r\n\r\n");
+				PUSH_STATIC_STRING("Connection: keep-alive\r\n");
 			}
 		} else {
 			if (httpVersion >= 1010) {
 				// HTTP 1.1 defaults to "Connection: keep-alive"
-				PUSH_STATIC_STRING("Connection: close\r\n\r\n");
+				PUSH_STATIC_STRING("Connection: close\r\n");
 			}
 		}
+
+		PUSH_STATIC_STRING("\r\n");
 
 		#ifndef NDEBUG
 			if (output != NULL) {
 				assert(pos - output == result);
-				assert(pos - output == outputSize);
+				assert(pos - output <= outputSize);
 			}
 		#endif
 		return result;
 
 		#undef PUSH_STATIC_STRING
+	}
+
+public:
+	ResponseCache<Request> responseCache;
+
+	TurboCaching(State initialState = DISABLED)
+		: state(initialState),
+		  iterations(0),
+		  lastTimeout((ev_tstamp) time(NULL)),
+		  nextTimeout((ev_tstamp) time(NULL) + DISABLED_TIMEOUT)
+	{
+		if (initialState != DISABLED && initialState != USER_ENABLED && initialState != USER_DISABLED) {
+			throw RuntimeException("The initial turbocaching state may "
+				"only be DISABLED, USER_ENABLED and USER_DISABLED");
+		}
+	}
+
+	bool isEnabled() const {
+		return state == ENABLED || state == USER_ENABLED;
+	}
+
+	// Called when the event loop multiplexor returns.
+	void onEventLoopCheck(ev_tstamp now) {
+		if (OXT_UNLIKELY(state == USER_DISABLED)) {
+			return;
+		}
+
+		iterations++;
+		if (OXT_LIKELY(now < nextTimeout)) {
+			return;
+		}
+
+		switch (state) {
+		case DISABLED:
+			if (iterations / (now - lastTimeout) >= (double) THRESHOLD) {
+				P_INFO("Server is under heavy load. Turbocaching enabled");
+				state = ENABLED;
+				nextTimeout = now + ENABLED_TIMEOUT;
+			} else {
+				P_DEBUG("Server is not under enough load. Not enabling turbocaching");
+				nextTimeout = now + DISABLED_TIMEOUT;
+			}
+			P_DEBUG("Activities per second: " << (iterations / (now - lastTimeout)));
+			break;
+		case ENABLED:
+			if (responseCache.getFetches() > 1
+			 && responseCache.getHitRatio() < MIN_HIT_RATIO())
+			{
+				P_INFO("Poor turbocaching hit ratio detected (" <<
+					responseCache.getHits() << " hits, " <<
+					responseCache.getFetches() << " fetches, " <<
+					(int) (responseCache.getHitRatio() * 100) <<
+					"%). Force disabling turbocaching "
+					"for " << EXTENDED_DISABLED_TIMEOUT << " seconds");
+				state = EXTENDED_DISABLED;
+				nextTimeout = now + EXTENDED_DISABLED_TIMEOUT;
+			} else {
+				if (iterations / (now - lastTimeout) >= (double) THRESHOLD) {
+					P_INFO("Clearing turbocache");
+					nextTimeout = now + ENABLED_TIMEOUT;
+				} else {
+					P_INFO("Server is no longer under heavy load. Disabling turbocaching");
+					state = DISABLED;
+					nextTimeout = now + DISABLED_TIMEOUT;
+				}
+				P_INFO("Activities per second: " << (iterations / (now - lastTimeout)));
+			}
+			responseCache.resetStatistics();
+			responseCache.clear();
+			break;
+		case EXTENDED_DISABLED:
+			P_INFO("Stopping force disabling turbocaching");
+			state = DISABLED;
+			nextTimeout = now + DISABLED;
+			break;
+		case USER_ENABLED:
+		case USER_DISABLED:
+			nextTimeout = now + 9999;
+			break;
+		default:
+			P_BUG("Unknown state " << (int) state);
+			break;
+		}
+
+		iterations = 0;
+		lastTimeout = now;
+	}
+
+	template<typename Server, typename Client>
+	void writeResponse(Server *server, Client *client, Request *req, ResponseCacheEntryType &entry) {
+		MemoryKit::mbuf_pool &mbuf_pool = server->getContext()->mbuf_pool;
+		const unsigned int MBUF_MAX_SIZE = mbuf_pool.mbuf_block_chunk_size -
+			mbuf_pool.mbuf_block_offset;
+		ResponsePreparation prep;
+		unsigned int headerSize;
+
+		prepareResponseHeader(prep, server, req, entry);
+		headerSize = buildResponseHeader(prep, server, NULL, 0);
+
+		if (headerSize + entry.body->httpBodySize <= MBUF_MAX_SIZE) {
+			// Header and body fit inside a single mbuf
+			MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
+			buffer = MemoryKit::mbuf(buffer, 0, headerSize + entry.body->httpBodySize);
+
+			buildResponseHeader(prep, server, buffer.start, buffer.size());
+			memcpy(buffer.start + headerSize, entry.body->httpBodyData, entry.body->httpBodySize);
+
+			server->writeResponse(client, buffer);
+		} else {
+			char *buffer = (char *) psg_pnalloc(req->pool, headerSize + entry.body->httpBodySize);
+			buildResponseHeader(prep, server, buffer,
+				headerSize + entry.body->httpBodySize);
+			memcpy(buffer + headerSize, entry.body->httpBodyData, entry.body->httpBodySize);
+
+			server->writeResponse(client, buffer, headerSize + entry.body->httpBodySize);
+		}
 	}
 };
 

@@ -67,7 +67,8 @@ public:
 
 	// Range: 0..MAX_SESSION_CHECKOUT_TRY
 	boost::uint8_t sessionCheckoutTry;
-	bool strip100ContinueHeader;
+	bool strip100ContinueHeader: 1;
+	bool hasPragmaHeader: 1;
 
 	Options options;
 	SessionPtr session;
@@ -86,6 +87,9 @@ public:
 		UnionStation::ScopeLog *getFromPool;
 		UnionStation::ScopeLog *requestProxying;
 	} scopeLogs;
+
+	HashedStaticString cacheKey;
+	LString *cacheControl;
 
 
 	const char *getStateString() const {

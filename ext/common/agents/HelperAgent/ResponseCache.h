@@ -106,7 +106,7 @@ private:
 	unsigned int calculateKeyLength(Request *req, const LString *host) {
 		unsigned int size =
 			2  // protocol flag
-			+ ((host != NULL) ? 0 : host->size)
+			+ ((host != NULL) ? host->size : 0)
 			+ 1  // ':'
 			+ req->path.size;
 		if (size > MAX_KEY_LENGTH) {

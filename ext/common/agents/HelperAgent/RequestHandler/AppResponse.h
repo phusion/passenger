@@ -87,10 +87,14 @@ public:
 	HttpState httpState: 5;
 	bool wantKeepAlive: 1;
 	bool oneHundredContinueSent: 1;
-	bool hasDateHeader: 1;
 	BodyType bodyType;
 
 	boost::uint16_t statusCode;
+
+	LString *date;
+	LString *cacheControl;
+	LString *expiresHeader;
+	LString *lastModifiedHeader;
 
 	union {
 		// If httpState == PARSING_HEADERS

@@ -69,8 +69,11 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	req->halfCloseAppConnection = false;
 	req->sessionCheckoutTry = 0;
 	req->strip100ContinueHeader = false;
+	req->hasPragmaHeader = false;
 	req->host = NULL;
 	req->bodyBytesBuffered = 0;
+	req->cacheKey = HashedStaticString();
+	req->cacheControl = NULL;
 
 	/***************/
 }
@@ -105,8 +108,11 @@ void reinitializeAppResponse(Client *client, Request *req) {
 	resp->bodyType  = AppResponse::RBT_NO_BODY;
 	resp->wantKeepAlive = false;
 	resp->oneHundredContinueSent = false;
-	resp->hasDateHeader = false;
 	resp->statusCode = 0;
+	resp->date = NULL;
+	resp->cacheControl = NULL;
+	resp->expiresHeader = NULL;
+	resp->lastModifiedHeader = NULL;
 	resp->parserState.headerParser = getHeaderParserStatePool().construct();
 	createAppResponseHeaderParser(getContext(), req).initialize();
 	resp->aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.

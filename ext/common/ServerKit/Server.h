@@ -825,6 +825,11 @@ public:
 		return ctx;
 	}
 
+	OXT_FORCE_INLINE
+	struct ev_loop * getLoop() const {
+		return ctx->libev->getLoop();
+	}
+
 	virtual StaticString getServerName() const {
 		return P_STATIC_STRING("Server");
 	}

@@ -149,6 +149,7 @@
 #include <Utils/Timer.h>
 #include <agents/HelperAgent/RequestHandler/Client.h>
 #include <agents/HelperAgent/RequestHandler/AppResponse.h>
+#include <agents/HelperAgent/RequestHandler/TurboCaching.h>
 
 namespace Passenger {
 
@@ -224,6 +225,9 @@ private:
 	HashedStaticString HTTP_TRANSFER_ENCODING;
 
 	StaticString serverLogName;
+
+	friend class TurboCaching<Request>;
+	TurboCaching<Request> turboCaching;
 
 public:
 	ResourceLocator *resourceLocator;

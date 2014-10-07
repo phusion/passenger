@@ -35,11 +35,6 @@
 
 private:
 
-struct ev_loop *
-getLoop() {
-	return getContext()->libev->getLoop();
-}
-
 void
 generateServerLogName(unsigned int number) {
 	string name = "ServerThread " + toString(number);
