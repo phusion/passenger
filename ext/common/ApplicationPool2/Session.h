@@ -144,12 +144,19 @@ public:
 		return getSocket()->protocol;
 	}
 
-	void initiate() {
+	void initiate(bool blocking = true) {
 		assert(!closed);
 		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));
-		connection = socket->checkoutConnection();
+		Connection connection = socket->checkoutConnection();
 		connection.fail = true;
+		if (connection.blocking && !blocking) {
+			FdGuard g2(connection.fd);
+			setNonBlocking(connection.fd);
+			g2.clear();
+			connection.blocking = false;
+		}
 		g.clear();
+		this->connection = connection;
 	}
 
 	bool initiated() const {

@@ -37,7 +37,6 @@
 #include <ApplicationPool2/Common.h>
 #include <Utils/SmallVector.h>
 #include <Utils/IOUtils.h>
-#include <Utils/ScopeGuard.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -50,11 +49,13 @@ struct Connection {
 	int fd;
 	bool persistent: 1;
 	bool fail: 1;
+	bool blocking: 1;
 
 	Connection()
 		: fd(-1),
 		  persistent(false),
-		  fail(false)
+		  fail(false),
+		  blocking(true)
 		{ }
 
 	void close() {
@@ -87,9 +88,7 @@ private:
 		connection.fd = connectToServer(address);
 		connection.fail = true;
 		connection.persistent = false;
-		FdGuard guard(connection.fd);
-		setNonBlocking(connection.fd);
-		guard.clear();
+		connection.blocking = true;
 		return connection;
 	}
 

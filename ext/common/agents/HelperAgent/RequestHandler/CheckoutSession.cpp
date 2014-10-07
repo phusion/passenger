@@ -132,7 +132,7 @@ initiateSession(Client *client, Request *req) {
 	TRACE_POINT();
 	req->sessionCheckoutTry++;
 	try {
-		req->session->initiate();
+		req->session->initiate(false);
 	} catch (const SystemException &e2) {
 		if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
 			SKC_DEBUG(client, "Error checking out session (" << e2.what() <<
@@ -159,7 +159,6 @@ initiateSession(Client *client, Request *req) {
 
 	UPDATE_TRACE_POINT();
 	SKC_DEBUG(client, "Session initiated: fd=" << req->session->fd());
-	setNonBlocking(req->session->fd());
 	req->appSink.reinitialize(req->session->fd());
 	req->appSource.reinitialize(req->session->fd());
 	/***************/
