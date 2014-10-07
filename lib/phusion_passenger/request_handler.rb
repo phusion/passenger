@@ -83,6 +83,7 @@ class RequestHandler
 			"union_station_core"
 		)
 
+		@keepalive = options.fetch("keepalive", true).to_s == "true"
 		@force_http_session = ENV["_PASSENGER_FORCE_HTTP_SESSION"] == "true"
 		if @force_http_session
 			@connect_password = nil
@@ -367,7 +368,8 @@ private
 			:app              => @app,
 			:app_group_name   => @app_group_name,
 			:connect_password => @connect_password,
-			:union_station_core => @union_station_core
+			:union_station_core => @union_station_core,
+			:keepalive_enabled  => @keepalive
 		}
 		main_socket_options = common_options.merge(
 			:server_socket => @main_socket,

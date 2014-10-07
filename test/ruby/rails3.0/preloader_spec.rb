@@ -4,7 +4,7 @@ require 'ruby/shared/rails/union_station_extensions_sharedspec'
 
 module PhusionPassenger
 
-describe "Rack loader with Rails 3.0" do
+describe "Rack preloader with Rails 3.0" do
 	include LoaderSpecHelper
 
 	before :each do

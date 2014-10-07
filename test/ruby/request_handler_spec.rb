@@ -27,7 +27,8 @@ describe RequestHandler do
 		@options = {
 			"app_group_name" => "foobar",
 			"thread_handler" => @thread_handler,
-			"socket_dir"     => @temp_dir
+			"socket_dir"     => @temp_dir,
+			"keepalive"      => false
 		}.merge(@options)
 		@request_handler = RequestHandler.new(@owner_pipe[1], @options)
 	end
@@ -318,8 +319,8 @@ describe RequestHandler do
 				"PATH_INFO" => "/")
 			client.read.should ==
 				"HTTP/1.1 200 Whatever\r\n" +
-				"Status: 200\r\n" +
 				"Content-Type: text/html\r\n" +
+				"Connection: close\r\n" +
 				"\r\n" +
 				"Hijacked partial response!"
 		ensure
@@ -355,7 +356,7 @@ describe RequestHandler do
 			client.close_write
 			client.read.should ==
 				"HTTP/1.1 200 Whatever\r\n" +
-				"Status: 200\r\n" +
+				"Connection: close\r\n" +
 				"Content-Length: 2\r\n" +
 				"\r\n" +
 				"ok"
@@ -397,7 +398,7 @@ describe RequestHandler do
 			client.close_write
 			client.read.should ==
 				"HTTP/1.1 200 Whatever\r\n" +
-				"Status: 200\r\n" +
+				"Connection: close\r\n" +
 				"Content-Length: 2\r\n" +
 				"\r\n" +
 				"ok"
@@ -432,7 +433,7 @@ describe RequestHandler do
 			client.close_write
 			client.read.should ==
 				"HTTP/1.1 200 Whatever\r\n" +
-				"Status: 200\r\n" +
+				"Connection: close\r\n" +
 				"Content-Length: 2\r\n" +
 				"\r\n" +
 				"ok"
@@ -510,7 +511,7 @@ describe RequestHandler do
 				client.close_write
 				client.read.should ==
 					"HTTP/1.1 200 Whatever\r\n" +
-					"Status: 200\r\n" +
+					"Connection: close\r\n" +
 					"\r\n" +
 					"ok"
 			ensure

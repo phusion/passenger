@@ -285,7 +285,8 @@ private
 #	end
 
 	def prepare_request(connection, headers)
-		@can_keepalive = !headers.has_key?(TRANSFER_ENCODING) &&
+		@can_keepalive = @keepalive_enabled &&
+			!headers.has_key?(TRANSFER_ENCODING) &&
 			!headers.has_key?(CONTENT_LENGTH)
 		@keepalive_performed = false
 

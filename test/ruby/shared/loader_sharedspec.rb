@@ -100,6 +100,7 @@ private
 	def write_start_request(options)
 		write_request_line "passenger_root: #{PhusionPassenger.source_root}"
 		write_request_line "ruby_libdir: #{PhusionPassenger.ruby_libdir}"
+		write_request_line "keepalive: false"
 		write_request_line "log_level: 6" if DEBUG
 		options.each_pair do |key, value|
 			write_request_line "#{key}: #{value}"
@@ -216,6 +217,7 @@ module LoaderSpecHelper
 		socket = @loader.connect_and_send_request(headers)
 		headers = {}
 		line = socket.readline
+		headers["Status"] = line.split(" ")[1]
 		while line != "\r\n"
 			key, value = line.strip.split(/ *: */, 2)
 			headers[key] = value

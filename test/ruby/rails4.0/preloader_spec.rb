@@ -5,7 +5,7 @@ require 'ruby/shared/rails/union_station_extensions_sharedspec'
 if RUBY_VERSION_INT >= 190
 module PhusionPassenger
 
-describe "Rack loader with Rails 4.0" do
+describe "Rack preloader with Rails 4.0" do
 	include LoaderSpecHelper
 
 	before :each do
