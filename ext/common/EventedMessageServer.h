@@ -27,6 +27,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <ev++.h>
+#include <sys/types.h>
 #include <cstdarg>
 #include <cstdlib>
 #include <EventedServer.h>

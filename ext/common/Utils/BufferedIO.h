@@ -7,6 +7,7 @@
 #include <boost/function.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/macros.hpp>
+#include <sys/types.h>
 #include <cstring>
 #include <FileDescriptor.h>
 #include <Exceptions.h>
