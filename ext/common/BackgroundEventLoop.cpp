@@ -79,8 +79,8 @@ eioRepeat(EV_P_ ev_idle *w, int revents) {
 static void
 eioReady(EV_P_ ev_async *w, int revents) {
 	if (eio_poll() == -1) {
- 		ev_idle_start(EV_A_ &eioInstanceData->priv->eioRepeatWatcher);
- 	}
+		ev_idle_start(EV_A_ &eioInstanceData->priv->eioRepeatWatcher);
+	}
 }
 
 /* wake up the event loop */
