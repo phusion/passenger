@@ -41,6 +41,12 @@ getLoop() {
 }
 
 void
+generateServerLogName(unsigned int number) {
+	string name = "ServerThread " + toString(number);
+	serverLogName = psg_pstrdup(stringPool, name);
+}
+
+void
 disconnectWithClientSocketWriteError(Client **client, int e) {
 	stringstream message;
 	message << "client socket write error: ";

@@ -25,6 +25,7 @@
 #ifndef _PASSENGER_SERVER_OPTION_PARSER_H_
 #define _PASSENGER_SERVER_OPTION_PARSER_H_
 
+#include <boost/thread.hpp>
 #include <cstdio>
 #include <cstdlib>
 #include <Constants.h>
@@ -115,6 +116,9 @@ serverUsage() {
 	printf("      --disable-selfchecks  Disable various self-checks. This improves\n");
 	printf("                            performance, but might delay finding bugs in\n");
 	printf("                            " PROGRAM_NAME "\n");
+	printf("      --threads NUMBER      Number of threads to use for request handling.\n");
+	printf("                            Default: number of CPU cores (%d)\n",
+		boost::thread::hardware_concurrency());
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("Admin account privilege levels (ordered from most to least privileges):\n");
@@ -231,6 +235,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isFlag(argv[i], '\0', "--disable-selfchecks")) {
 		options.setBool("selfchecks", false);
 		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--threads")) {
+		options.setInt("server_threads", atoi(argv[i + 1]));
+		i += 2;
 	} else if (!startsWith(argv[i], "-")) {
 		if (!options.has("app_root")) {
 			options.set("app_root", argv[i]);

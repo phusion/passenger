@@ -223,6 +223,8 @@ private:
 	HashedStaticString HTTP_STATUS;
 	HashedStaticString HTTP_TRANSFER_ENCODING;
 
+	StaticString serverLogName;
+
 public:
 	ResourceLocator *resourceLocator;
 	PoolPtr appPool;
@@ -238,7 +240,8 @@ protected:
 	#include <agents/HelperAgent/RequestHandler/ForwardResponse.cpp>
 
 public:
-	RequestHandler(ServerKit::Context *context, const VariantMap *_agentsOptions)
+	RequestHandler(ServerKit::Context *context, const VariantMap *_agentsOptions,
+		unsigned int number = 1)
 		: ParentClass(context),
 
 		  statThrottleRate(_agentsOptions->getInt("stat_throttle_rate")),
@@ -286,6 +289,8 @@ public:
 			agentsOptions->get("default_server_port"));
 		serverSoftware = psg_pstrdup(stringPool,
 			agentsOptions->get("server_software"));
+
+		generateServerLogName(number);
 
 		if (!agentsOptions->getBool("multi_app")) {
 			boost::shared_ptr<Options> options = boost::make_shared<Options>();

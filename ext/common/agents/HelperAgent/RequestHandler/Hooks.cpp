@@ -156,6 +156,10 @@ onRequestBody(Client *client, Request *req, const MemoryKit::mbuf &buffer,
 	}
 }
 
+virtual StaticString getServerName() const {
+	return serverLogName;
+}
+
 private:
 
 static Channel::Result
