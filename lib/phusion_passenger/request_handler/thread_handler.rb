@@ -70,7 +70,8 @@ class ThreadHandler
 		Utils.install_options_as_ivars(self, options,
 			:app,
 			:union_station_core,
-			:connect_password
+			:connect_password,
+			:keepalive_enabled
 		)
 
 		@stats_mutex   = Mutex.new

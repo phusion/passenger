@@ -307,6 +307,10 @@ public:
 	 * @post result == !req->cacheKey.empty()
 	 */
 	bool prepareRequest(Request *req) {
+		if (req->upgraded()) {
+			return false;
+		}
+
 		const LString *host = req->headers.lookup(HOST);
 		unsigned int size = calculateKeyLength(req, host);
 		if (size == 0) {

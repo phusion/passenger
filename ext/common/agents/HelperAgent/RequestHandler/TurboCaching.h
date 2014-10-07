@@ -28,10 +28,17 @@
 #include <oxt/backtrace.hpp>
 #include <ev++.h>
 #include <ctime>
+#include <cassert>
+#include <MemoryKit/mbuf.h>
+#include <ServerKit/Context.h>
 #include <agents/HelperAgent/ResponseCache.h>
+#include <Constants.h>
 #include <Logging.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
+
+using namespace std;
 
 
 template<typename Request>
@@ -76,6 +83,9 @@ public:
 		 */
 		USER_DISABLED
 	};
+
+	typedef ResponseCache<Request> ResponseCacheType;
+	typedef typename ResponseCache<Request>::Entry ResponseCacheEntryType;
 
 	State state;
 	unsigned long long iterations;
@@ -154,6 +164,99 @@ public:
 
 		iterations = 0;
 		lastTimeout = now;
+	}
+
+
+	struct ResponsePreparation {
+		Request *req;
+		const ResponseCacheEntryType *entry;
+
+		time_t now;
+		time_t age;
+		unsigned int ageValueSize;
+		bool showVersionInHeader;
+	};
+
+	template<typename Server>
+	void prepareResponseHeader(ResponsePreparation &prep, Server *server,
+		Request *req, const ResponseCacheEntryType &entry)
+	{
+		prep.req   = req;
+		prep.entry = &entry;
+		prep.now   = (time_t) ev_now(server->getLoop());
+
+		if (prep.now >= entry.header->date) {
+			prep.age = prep.now - entry.header->date;
+		} else {
+			prep.age = 0;
+		}
+
+		prep.ageValueSize = integerSizeInOtherBase<time_t, 10>(prep.age);
+		prep.showVersionInHeader = server->showVersionInHeader;
+	}
+
+	template<typename Server>
+	unsigned int buildResponseHeader(const ResponsePreparation &prep, Server *server,
+		char *output, unsigned int outputSize)
+	{
+		#define PUSH_STATIC_STRING(str) \
+			do { \
+				result += sizeof(str) - 1; \
+				if (output != NULL) { \
+					pos = appendData(pos, end, str, sizeof(str) - 1); \
+				} \
+			} while (false)
+
+		const ResponseCacheEntryType *entry = prep.entry;
+		Request *req = prep.req;
+
+		unsigned int httpVersion = req->httpMajor * 1000 + req->httpMinor * 10;
+		unsigned int result = 0;
+		char *pos = output;
+		const char *end = output + outputSize;
+
+		result += entry->body->httpHeaderSize;
+		if (output != NULL) {
+			pos = appendData(pos, end, entry->body->httpHeaderData,
+				entry->body->httpHeaderSize);
+		}
+
+		PUSH_STATIC_STRING("Age: ");
+		PUSH_STATIC_STRING("\r\n");
+		result += prep.ageValueSize;
+		if (output != NULL) {
+			integerToOtherBase<time_t, 10>(prep.age, pos, end - pos);
+			pos += prep.ageValueSize;
+		}
+		PUSH_STATIC_STRING("\r\n");
+
+		if (prep.showVersionInHeader) {
+			PUSH_STATIC_STRING("X-Powered-By: " PROGRAM_NAME " " PASSENGER_VERSION "\r\n");
+		} else {
+			PUSH_STATIC_STRING("X-Powered-By: " PROGRAM_NAME "\r\n");
+		}
+
+		if (server->canKeepAlive(req)) {
+			if (httpVersion < 1010) {
+				// HTTP < 1.1 defaults to "Connection: close"
+				PUSH_STATIC_STRING("Connection: keep-alive\r\n\r\n");
+			}
+		} else {
+			if (httpVersion >= 1010) {
+				// HTTP 1.1 defaults to "Connection: keep-alive"
+				PUSH_STATIC_STRING("Connection: close\r\n\r\n");
+			}
+		}
+
+		#ifndef NDEBUG
+			if (output != NULL) {
+				assert(pos - output == result);
+				assert(pos - output == outputSize);
+			}
+		#endif
+		return result;
+
+		#undef PUSH_STATIC_STRING
 	}
 };
 
