@@ -224,6 +224,7 @@ private:
 	HashedStaticString HTTP_STATUS;
 	HashedStaticString HTTP_TRANSFER_ENCODING;
 
+	unsigned int threadNumber;
 	StaticString serverLogName;
 
 	friend class TurboCaching<Request>;
@@ -245,7 +246,7 @@ protected:
 
 public:
 	RequestHandler(ServerKit::Context *context, const VariantMap *_agentsOptions,
-		unsigned int number = 1)
+		unsigned int _threadNumber = 1)
 		: ParentClass(context),
 
 		  statThrottleRate(_agentsOptions->getInt("stat_throttle_rate")),
@@ -275,7 +276,9 @@ public:
 		  HTTP_EXPECT("expect"),
 		  HTTP_CONNECTION("connection"),
 		  HTTP_STATUS("status"),
-		  HTTP_TRANSFER_ENCODING("transfer-encoding")
+		  HTTP_TRANSFER_ENCODING("transfer-encoding"),
+
+		  threadNumber(_threadNumber)
 	{
 		defaultRuby = psg_pstrdup(stringPool,
 			agentsOptions->get("default_ruby"));
@@ -294,7 +297,7 @@ public:
 		serverSoftware = psg_pstrdup(stringPool,
 			agentsOptions->get("server_software"));
 
-		generateServerLogName(number);
+		generateServerLogName(_threadNumber);
 
 		if (!agentsOptions->getBool("multi_app")) {
 			boost::shared_ptr<Options> options = boost::make_shared<Options>();

@@ -734,8 +734,11 @@ public:
 
 	/***** Client management *****/
 
+	// Ensures that the buffer is NULL-terminated.
 	virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {
-		return uintToString(client->number, buf, size);
+		unsigned int ret = uintToString(client->number, buf, size - 1);
+		buf[ret] = '\0';
+		return ret;
 	}
 
 	vector<ClientRefType> getActiveClients() {

@@ -871,7 +871,6 @@ protected:
 	/***** Hook overrides *****/
 
 	virtual void onClientObjectCreated(Client *client) {
-		SKC_LOG_EVENT(HttpServer, client, "onClientObjectCreated");
 		ParentClass::onClientObjectCreated(client);
 		client->output.setDataFlushedCallback(_onClientOutputDataFlushed);
 	}

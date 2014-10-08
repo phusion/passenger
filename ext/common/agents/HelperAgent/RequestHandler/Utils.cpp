@@ -37,7 +37,7 @@ private:
 
 void
 generateServerLogName(unsigned int number) {
-	string name = "ServerThread " + toString(number);
+	string name = "ServerThr." + toString(number);
 	serverLogName = psg_pstrdup(stringPool, name);
 }
 

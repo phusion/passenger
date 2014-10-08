@@ -25,6 +25,18 @@
 
 // This file is included inside the RequestHandler class.
 
+public:
+
+virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {
+	char *pos = buf;
+	const char *end = buf + size - 1;
+	pos += uintToString(threadNumber, pos, end - pos);
+	pos = appendData(pos, end, ".", 1);
+	pos += uintToString(client->number, pos, end - pos);
+	*pos = '\0';
+	return pos - buf;
+}
+
 protected:
 
 virtual void
