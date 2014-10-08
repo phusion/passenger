@@ -707,7 +707,7 @@ initializeBareEssentials(int argc, char *argv[]) {
 
 	agentsOptions = new VariantMap();
 	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent watchdog",
-		parseOptions, 2);
+		parseOptions, NULL, 2);
 
 	// Start all sub-agents with this environment variable.
 	setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);

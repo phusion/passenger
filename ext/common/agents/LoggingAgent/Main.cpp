@@ -471,7 +471,10 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			exit(1);
 		}
 	}
+}
 
+static void
+preinitialize(VariantMap &options) {
 	// Set log_level here so that initializeAgent() calls setLogLevel()
 	// and setLogFile() with the right value.
 	if (options.has("logging_agent_log_level")) {
@@ -540,7 +543,7 @@ int
 loggingAgentMain(int argc, char *argv[]) {
 	agentsOptions = new VariantMap();
 	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent logger",
-		parseOptions, 2);
+		parseOptions, preinitialize, 2);
 
 	CURLcode code = curl_global_init(CURL_GLOBAL_ALL);
 	if (code != CURLE_OK) {

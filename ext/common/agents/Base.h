@@ -34,13 +34,15 @@ namespace Passenger {
 
 typedef void (*DiagnosticsDumper)(void *userData);
 typedef void (*OptionParserFunc)(int argc, const char **argv, VariantMap &options);
+typedef void (*PreinitializationFunc)(VariantMap &options);
 
 const char *getEnvString(const char *name, const char *defaultValue = NULL);
 bool hasEnvOption(const char *name, bool defaultValue = false);
 
 bool feedbackFdAvailable();
 VariantMap initializeAgent(int argc, char **argv[], const char *processName,
-	OptionParserFunc optionParser = NULL, int argStartIndex = 1);
+	OptionParserFunc optionParser = NULL, PreinitializationFunc preinit = NULL,
+	int argStartIndex = 1);
 void installAbortHandler();
 void installDiagnosticsDumper(DiagnosticsDumper func, void *userData);
 

@@ -1470,7 +1470,8 @@ extraArgumentsPassed(int argc, char *argv[], int argStartIndex) {
 
 VariantMap
 initializeAgent(int argc, char **argv[], const char *processName,
-	OptionParserFunc optionParser, int argStartIndex)
+	OptionParserFunc optionParser, PreinitializationFunc preinit,
+	int argStartIndex)
 {
 	VariantMap options;
 	const char *seedStr;
@@ -1531,6 +1532,9 @@ initializeAgent(int argc, char **argv[], const char *processName,
 			backtraceSanitizerPassProgramInfo = false;
 		}
 
+		if (preinit != NULL) {
+			preinit(options);
+		}
 		options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
 		setLogLevel(options.getInt("log_level"));
 		if (options.has("debug_log_file")) {

@@ -864,7 +864,10 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			exit(1);
 		}
 	}
+}
 
+static void
+preinitialize(VariantMap &options) {
 	// Set log_level here so that initializeAgent() calls setLogLevel()
 	// and setLogFile() with the right value.
 	if (options.has("server_log_level")) {
@@ -969,7 +972,8 @@ sanityCheckOptions() {
 int
 serverMain(int argc, char *argv[]) {
 	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent server", parseOptions, 2);
+	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent server", parseOptions,
+		preinitialize, 2);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
 	return runServer();
