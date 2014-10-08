@@ -348,6 +348,53 @@ public:
 		}
 	}
 
+	void disconnectLongRunningConnections(const StaticString &gupid) {
+		vector<Client *> clients;
+		vector<Client *>::iterator v_it, v_end;
+		Client *client;
+
+		// We collect all clients in a vector so that we don't have to worry about
+		// `activeClients` being mutated while we work.
+		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
+			P_ASSERT_EQ(client->getConnState(), Client::ACTIVE);
+			if (client->currentRequest != NULL) {
+				Request *req = client->currentRequest;
+				if (req->httpState >= Request::COMPLETE
+				 && req->upgraded()
+				 && req->session != NULL
+				 && req->session->getGupid() == gupid)
+				{
+					if (getLogLevel() >= LVL_INFO) {
+						char clientName[32];
+						unsigned int size;
+						const LString *host;
+						StaticString hostStr;
+
+						size = getClientName(client, clientName, sizeof(clientName));
+						if (req->host != NULL) {
+							host = psg_lstr_make_contiguous(req->host, req->pool);
+							hostStr = StaticString(host->start->data, host->size);
+						}
+						P_INFO("[" << getServerName() << "] Disconnecting client " <<
+							StaticString(clientName, size) << ": " <<
+							hostStr << StaticString(req->path.start->data, req->path.size));
+					}
+					refClient(client, __FILE__, __LINE__);
+					clients.push_back(client);
+				}
+			}
+		}
+
+		// Disconnect each eligible client.
+		v_end = clients.end();
+		for (v_it = clients.begin(); v_it != v_end; v_it++) {
+			client = *v_it;
+			Client *c = client;
+			disconnect(&client);
+			unrefClient(c, __FILE__, __LINE__);
+		}
+	}
+
 	virtual Json::Value getConfigAsJson() const {
 		Json::Value doc = ParentClass::getConfigAsJson();
 		doc["single_app_mode"] = singleAppMode;

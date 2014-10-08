@@ -218,6 +218,7 @@ public:
 	Group *findOtherGroupWaitingForCapacity() const;
 	ProcessPtr poolForceFreeCapacity(const Group *exclude, boost::container::vector<Callback> &postLockActions);
 	bool testOverflowRequestQueue() const;
+	void callAbortLongRunningConnectionsCallback(const ProcessPtr &process);
 	psg_pool_t *getPallocPool() const;
 	const ResourceLocator &getResourceLocator() const;
 	void runAttachHooks(const ProcessPtr process) const;
@@ -576,7 +577,7 @@ public:
 		} else if (&destination == &detachedProcesses) {
 			assert(process->isAlive());
 			process->enabled = Process::DETACHED;
-			process->abortLongRunningConnections();
+			callAbortLongRunningConnectionsCallback(process);
 		} else {
 			P_BUG("Unknown destination list");
 		}

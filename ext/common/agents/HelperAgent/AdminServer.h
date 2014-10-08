@@ -616,6 +616,15 @@ protected:
 		ParentClass::deinitializeRequest(client, req);
 	}
 
+	virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {
+		char *pos = buf;
+		const char *end = buf + size - 1;
+		pos = appendData(pos, end, "Adm.", 1);
+		pos += uintToString(client->number, pos, end - pos);
+		*pos = '\0';
+		return pos - buf;
+	}
+
 public:
 	vector<RequestHandler *> requestHandlers;
 	ApplicationPool2::PoolPtr appPool;

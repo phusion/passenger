@@ -123,9 +123,6 @@ public:
 	 * "session" or "http_session" protocol. */
 	Socket *sessionSockets[MAX_SESSION_SOCKETS];
 
-	void sendAbortLongRunningConnectionsMessage(const string &address);
-	static void realSendAbortLongRunningConnectionsMessage(string address);
-
 	static bool
 	isZombie(pid_t pid) {
 		string filename = "/proc/" + toString(pid) + "/status";
@@ -456,22 +453,6 @@ public:
 
 			return sessionSockets[leastBusySessionSocketIndex];
 		}
-	}
-
-	bool abortLongRunningConnections() {
-		bool sent = false;
-		if (!longRunningConnectionsAborted) {
-			SocketList::iterator it, end = sockets.end();
-			for (it = sockets.begin(); it != end; it++) {
-				Socket *socket = &(*it);
-				if (socket->name == "control") {
-					sendAbortLongRunningConnectionsMessage(socket->address);
-					sent = true;
-				}
-			}
-			longRunningConnectionsAborted = true;
-		}
-		return sent;
 	}
 
 	bool canTriggerShutdown() const {

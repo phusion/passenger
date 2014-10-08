@@ -74,6 +74,8 @@ using namespace oxt;
 
 class Pool: public boost::enable_shared_from_this<Pool> {
 public:
+	typedef void (*AbortLongRunningConnectionsCallback)(const ProcessPtr &process);
+
 	struct InspectOptions {
 		bool colorize;
 		bool verbose;
@@ -1046,9 +1048,12 @@ public:
 	const SuperGroupPtr getSuperGroup(const char *name);
 
 public:
+	AbortLongRunningConnectionsCallback abortLongRunningConnectionsCallback;
+
 	Pool(const SpawnerFactoryPtr &spawnerFactory,
 		const VariantMap *agentsOptions = NULL)
-		: sessionObjectPool(64, 1024)
+		: sessionObjectPool(64, 1024),
+		  abortLongRunningConnectionsCallback(NULL)
 	{
 		this->spawnerFactory = spawnerFactory;
 		this->agentsOptions = agentsOptions;
@@ -1111,11 +1116,12 @@ public:
 		ScopedLock lock(syncher);
 		assert(lifeStatus == ALIVE);
 		lifeStatus = PREPARED_FOR_SHUTDOWN;
-		vector<ProcessPtr> processes = getProcesses(false);
-		foreach (ProcessPtr process, processes) {
-			if (process->abortLongRunningConnections()) {
+		if (abortLongRunningConnectionsCallback != NULL) {
+			vector<ProcessPtr> processes = getProcesses(false);
+			foreach (ProcessPtr process, processes) {
 				// Ensure that the process is not immediately respawned.
 				process->getGroup()->options.minProcesses = 0;
+				abortLongRunningConnectionsCallback(process);
 			}
 		}
 	}

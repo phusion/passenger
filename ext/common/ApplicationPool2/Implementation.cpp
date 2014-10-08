@@ -1445,6 +1445,15 @@ Group::testOverflowRequestQueue() const {
 	}
 }
 
+void
+Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
+	Pool::AbortLongRunningConnectionsCallback callback =
+		getPool()->abortLongRunningConnectionsCallback;
+	if (callback != NULL) {
+		callback(process);
+	}
+}
+
 psg_pool_t *
 Group::getPallocPool() const {
 	return getPool()->palloc;
@@ -1501,28 +1510,6 @@ Process::getSuperGroup() const {
 StaticString
 Process::getGroupSecret() const {
 	return StaticString(getGroup()->secret, Group::SECRET_SIZE);
-}
-
-void
-Process::sendAbortLongRunningConnectionsMessage(const string &address) {
-	boost::function<void ()> func = boost::bind(
-		realSendAbortLongRunningConnectionsMessage, address);
-	return getPool()->nonInterruptableThreads.create_thread(
-		boost::bind(runAndPrintExceptions, func, false),
-		"Sending detached message to process " + toString(pid),
-		256 * 1024);
-}
-
-void
-Process::realSendAbortLongRunningConnectionsMessage(string address) {
-	TRACE_POINT();
-	FileDescriptor fd(connectToServer(address));
-	unsigned long long timeout = 3000000;
-	vector<string> args;
-
-	UPDATE_TRACE_POINT();
-	args.push_back("abort_long_running_connections");
-	writeArrayMessage(fd, args, &timeout);
 }
 
 SessionPtr

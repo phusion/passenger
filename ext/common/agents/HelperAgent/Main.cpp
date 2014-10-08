@@ -158,6 +158,7 @@ static WorkingObjects *workingObjects;
 static void waitForExitEvent();
 static void cleanup();
 static void deletePidFile();
+static void abortLongRunningConnections(const ApplicationPool2::ProcessPtr &process);
 static void requestHandlerShutdownFinished(RequestHandler *server);
 static void adminServerShutdownFinished(ServerAgent::AdminServer *server);
 static void printInfoInThread();
@@ -494,6 +495,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->appPool->setMax(options.getInt("max_pool_size"));
 	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000);
 	wo->appPool->enableSelfChecking(options.getBool("selfchecks"));
+	wo->appPool->abortLongRunningConnectionsCallback = abortLongRunningConnections;
 
 	UPDATE_TRACE_POINT();
 	unsigned int nthreads = options.getInt("server_threads");
@@ -653,6 +655,27 @@ mainLoop() {
 		workingObjects->adminWorkingObjects.bgloop->start("Admin event loop", 0);
 	}
 	waitForExitEvent();
+}
+
+static void
+abortLongRunningConnectionsOnRequestHandler(RequestHandler *requestHandler,
+	string gupid)
+{
+	requestHandler->disconnectLongRunningConnections(gupid);
+}
+
+static void
+abortLongRunningConnections(const ApplicationPool2::ProcessPtr &process) {
+	// We are inside the ApplicationPool lock. Be very careful here.
+	WorkingObjects *wo = workingObjects;
+	P_NOTICE("Disconnecting long-running connections for process " <<
+		process->pid << ", application " << process->getGroup()->name);
+	for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
+		wo->threadWorkingObjects[i].bgloop->safe->runLater(
+			boost::bind(abortLongRunningConnectionsOnRequestHandler,
+				wo->threadWorkingObjects[i].requestHandler,
+				string(process->gupid, process->gupidSize)));
+	}
 }
 
 static void
